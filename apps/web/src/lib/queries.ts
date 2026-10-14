@@ -903,6 +903,7 @@ export function invalidateCompetitorMutation(
   void client.invalidateQueries({ queryKey: appKeys.discoveryRoot(id) });
   void client.invalidateQueries({
     queryKey: appKeys.competitorSuggestions(id),
+    refetchType: "none",
   });
   void client.invalidateQueries({ queryKey: appKeys.serpMoversRoot(id) });
   void client.invalidateQueries({ queryKey: portfolioKey });

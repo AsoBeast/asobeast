@@ -437,9 +437,9 @@ test.describe("picking competitors inside the step", () => {
       ),
     ).toBeVisible();
     await expect(competitors.getByText("Done", { exact: true })).toBeVisible();
-    await expect(
-      suggested.getByRole("listitem").filter({ hasText: "Deep Work Sessions" }),
-    ).toHaveCount(0);
+    await expect(deepWork.getByRole("status")).toHaveText("Added");
+    await expect(deepFocus.getByRole("status")).toHaveText("Added");
+    await expect(deepWork.getByRole("checkbox")).toBeDisabled();
     await expect(
       competitors.getByRole("button", { name: "Add selected" }),
     ).toBeDisabled();

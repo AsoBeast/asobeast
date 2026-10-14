@@ -20,6 +20,15 @@ import {
 import { useAddCompetitors, type AddOutcome } from "./useAddCompetitors";
 
 const NOTHING_TICKED: ReadonlySet<string> = new Set();
+
+function withoutIds(
+  current: ReadonlySet<string>,
+  ids: readonly string[],
+): ReadonlySet<string> {
+  const next = new Set(current);
+  for (const id of ids) next.delete(id);
+  return next;
+}
 const ICON_SIZE = 32;
 
 function OutcomeLine({ outcome }: { outcome: AddOutcome | undefined }) {
@@ -78,6 +87,90 @@ function SuggestionRow({
   );
 }
 
+function SuggestionsBody({
+  appId,
+  collecting,
+  headingId,
+}: {
+  appId: string;
+  collecting: boolean;
+  headingId: string;
+}) {
+  const [ticked, setTicked] = useState(NOTHING_TICKED);
+  const suggestions = useQuery(competitorSuggestionsOptions(appId));
+  const { outcomes, run, adding } = useAddCompetitors(appId, (added) =>
+    setTicked((current) => withoutIds(current, added)),
+  );
+  const rows = discoveredRows(suggestions.data);
+  const selected = rows
+    .map((row) => row.storeAppId)
+    .filter((storeAppId) => ticked.has(storeAppId));
+  const toggle = (storeAppId: string, on: boolean) =>
+    setTicked((current) =>
+      on
+        ? new Set([...current, storeAppId])
+        : withoutIds(current, [storeAppId]),
+    );
+
+  if (!suggestions.data && suggestions.isError) {
+    return (
+      <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+        <span role="alert">
+          {apiErrorMessage(
+            suggestions.error,
+            "Could not load suggested competitors.",
+          )}
+        </span>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => void suggestions.refetch()}
+        >
+          <RefreshCw />
+          Retry
+        </Button>
+      </div>
+    );
+  }
+  if (!suggestions.data) return <Skeleton className="h-12 w-full" />;
+  if (rows.length === 0) {
+    return (
+      <p className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
+        {discoveredEmptyText(collecting, suggestions.data.similar)}
+      </p>
+    );
+  }
+  return (
+    <>
+      <ul aria-labelledby={headingId} className="flex flex-col divide-y">
+        {rows.map((row) => {
+          const outcome = outcomes[row.storeAppId];
+          return (
+            <SuggestionRow
+              key={row.storeAppId}
+              row={row}
+              store={suggestions.data.store}
+              checkboxId={`${headingId}-${row.storeAppId}`}
+              ticked={ticked.has(row.storeAppId)}
+              disabled={adding || outcome?.kind === "added"}
+              outcome={outcome}
+              onToggle={(on) => toggle(row.storeAppId, on)}
+            />
+          );
+        })}
+      </ul>
+      <Button
+        className="w-fit"
+        disabled={selected.length === 0 || adding}
+        onClick={() => run(selected)}
+      >
+        {adding ? <Loader2 className="animate-spin" /> : <Plus />}
+        {addButtonLabel(selected.length)}
+      </Button>
+    </>
+  );
+}
+
 export function DiscoveredApps({
   appId,
   collecting,
@@ -86,74 +179,17 @@ export function DiscoveredApps({
   collecting: boolean;
 }) {
   const headingId = useId();
-  const [ticked, setTicked] = useState(NOTHING_TICKED);
-  const suggestions = useQuery(competitorSuggestionsOptions(appId));
-  const { outcomes, run, adding } = useAddCompetitors(appId, () =>
-    setTicked(NOTHING_TICKED),
-  );
-  const rows = discoveredRows(suggestions.data);
-  const toggle = (storeAppId: string, on: boolean) =>
-    setTicked((current) => {
-      const next = new Set(current);
-      if (on) next.add(storeAppId);
-      else next.delete(storeAppId);
-      return next;
-    });
 
   return (
     <section aria-labelledby={headingId} className="flex flex-col gap-2">
       <h4 id={headingId} className="text-sm font-medium">
         Suggested competitors
       </h4>
-      {suggestions.isError ? (
-        <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-          <span role="alert">
-            {apiErrorMessage(
-              suggestions.error,
-              "Could not load suggested competitors.",
-            )}
-          </span>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => void suggestions.refetch()}
-          >
-            <RefreshCw />
-            Retry
-          </Button>
-        </div>
-      ) : !suggestions.data ? (
-        <Skeleton className="h-12 w-full" />
-      ) : rows.length === 0 ? (
-        <p className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
-          {discoveredEmptyText(collecting, suggestions.data.similar)}
-        </p>
-      ) : (
-        <>
-          <ul aria-labelledby={headingId} className="flex flex-col divide-y">
-            {rows.map((row) => (
-              <SuggestionRow
-                key={row.storeAppId}
-                row={row}
-                store={suggestions.data.store}
-                checkboxId={`${headingId}-${row.storeAppId}`}
-                ticked={ticked.has(row.storeAppId)}
-                disabled={adding}
-                outcome={outcomes[row.storeAppId]}
-                onToggle={(on) => toggle(row.storeAppId, on)}
-              />
-            ))}
-          </ul>
-          <Button
-            className="w-fit"
-            disabled={ticked.size === 0 || adding}
-            onClick={() => run([...ticked])}
-          >
-            {adding ? <Loader2 className="animate-spin" /> : <Plus />}
-            {addButtonLabel(ticked.size)}
-          </Button>
-        </>
-      )}
+      <SuggestionsBody
+        appId={appId}
+        collecting={collecting}
+        headingId={headingId}
+      />
     </section>
   );
 }

@@ -10,16 +10,21 @@ import { useSingleFlight } from "@/lib/single-flight";
 export type AddOutcome =
   { kind: "added" } | { kind: "failed"; message: string };
 
-export function useAddCompetitors(appId: string, onDone: () => void) {
+export function useAddCompetitors(
+  appId: string,
+  onAdded: (storeAppIds: string[]) => void,
+) {
   const queryClient = useQueryClient();
   const [outcomes, setOutcomes] = useState<Record<string, AddOutcome>>({});
   const record = (storeAppId: string, outcome: AddOutcome) =>
     setOutcomes((current) => ({ ...current, [storeAppId]: outcome }));
   const mutation = useMutation({
     mutationFn: async (storeAppIds: string[]) => {
+      const added: string[] = [];
       for (const storeAppId of storeAppIds) {
         try {
           await addCompetitor(appId, storeAppId);
+          added.push(storeAppId);
           record(storeAppId, { kind: "added" });
         } catch (error) {
           record(storeAppId, {
@@ -28,11 +33,10 @@ export function useAddCompetitors(appId: string, onDone: () => void) {
           });
         }
       }
+      return added;
     },
-    onSettled: () => {
-      onDone();
-      invalidateCompetitorMutation(queryClient, appId);
-    },
+    onSuccess: onAdded,
+    onSettled: () => invalidateCompetitorMutation(queryClient, appId),
   });
   return {
     outcomes,
