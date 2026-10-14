@@ -1,6 +1,7 @@
 import { execSync } from 'child_process';
+import { createHash } from 'crypto';
 import { join } from 'path';
-import { PrismaClient, Store } from '@prisma/client';
+import { KeywordSource, PrismaClient, Store } from '@prisma/client';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import {
   dropHistoricalFieldOrder,
@@ -8,6 +9,9 @@ import {
 } from './helpers/historical-field-order';
 import { migrationFolder, migrationSql } from './helpers/migration-sql';
 import { testDb } from './helpers/test-db';
+
+const FIRST_APPLIED_CHECKSUM =
+  'e9438d50fe5eb969f8b5bfd92a3c8bb1b37ce9140be5e7e419ea80b57b038b55';
 
 const statementOf = (sql: string, pattern: RegExp): string => {
   const found = pattern.exec(sql);
@@ -36,18 +40,35 @@ describe('the tracked keyword field order drop', () => {
       })
     ).id;
 
-  const seedFieldPhrase = async (
+  const seedTracked = async (
     appId: string,
     text: string,
-    { store = Store.APP_STORE, country = 'us', order = 0 } = {},
+    {
+      store = Store.APP_STORE,
+      country = 'us',
+      source = KeywordSource.MANUAL,
+    } = {},
   ) => {
     const keyword = await prisma.keyword.create({
       data: { text, store, country },
     });
     await prisma.trackedKeyword.create({
-      data: { appId, keywordId: keyword.id, source: 'KEYWORD_FIELD' },
+      data: { appId, keywordId: keyword.id, source },
     });
-    await prisma.$executeRaw`UPDATE "TrackedKeyword" SET "fieldOrder" = ${order} WHERE "appId" = ${appId} AND "keywordId" = ${keyword.id}`;
+    return keyword.id;
+  };
+
+  const seedFieldPhrase = async (
+    appId: string,
+    text: string,
+    { store = Store.APP_STORE, country = 'us', order = 0 } = {},
+  ) => {
+    const keywordId = await seedTracked(appId, text, {
+      store,
+      country,
+      source: KeywordSource.KEYWORD_FIELD,
+    });
+    await prisma.$executeRaw`UPDATE "TrackedKeyword" SET "fieldOrder" = ${order} WHERE "appId" = ${appId} AND "keywordId" = ${keywordId}`;
   };
 
   const hasFieldOrder = async () =>
@@ -92,10 +113,32 @@ describe('the tracked keyword field order drop', () => {
     await prisma.$disconnect();
   });
 
+  it('keeps the drop byte for byte as the databases that applied it recorded it', () => {
+    expect(createHash('sha256').update(drop).digest('hex')).toBe(
+      FIRST_APPLIED_CHECKSUM,
+    );
+  });
+
   it('drops the column once the backfill carried every field phrase', async () => {
     const appId = await seedApp();
     await seedFieldPhrase(appId, 'habit tracker');
     await seedFieldPhrase(appId, 'sleep', { order: 1 });
+    await prisma.$executeRawUnsafe(backfill);
+
+    await prisma.$executeRawUnsafe(guard);
+    await prisma.$executeRawUnsafe(drop);
+
+    await expect(hasFieldOrder()).resolves.toBe(false);
+  });
+
+  it('drops the column past keywords that were never in the keyword field', async () => {
+    const appId = await seedApp();
+    await seedFieldPhrase(appId, 'habit tracker');
+    await seedTracked(appId, 'sleep');
+    await seedTracked(appId, 'sleep', { country: 'gb' });
+    await seedTracked(await seedApp(Store.GOOGLE_PLAY), 'sleep', {
+      store: Store.GOOGLE_PLAY,
+    });
     await prisma.$executeRawUnsafe(backfill);
 
     await prisma.$executeRawUnsafe(guard);
