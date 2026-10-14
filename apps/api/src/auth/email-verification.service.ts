@@ -27,6 +27,8 @@ import {
 import { TrialClaims, type TrialClaimStore } from './trial-claims';
 import { VERIFICATION_HOURS, VerificationMailer } from './verification-mailer';
 
+const SPENT_LINK = 'That verification link is no longer valid';
+
 const CLAIM_JUSTIFICATION =
   'a confirmation link is claimed before the account has a workspace in scope';
 
@@ -153,12 +155,13 @@ export class EmailVerificationService {
     token: string,
     signedIn: User | null,
   ): Promise<AccountUser> {
+    const verificationHash = sha256(token);
     const user = await this.prisma.user.findUnique({
-      where: { verificationHash: sha256(token) },
+      where: { verificationHash },
       include: { workspace: true },
     });
     if (!user || !user.verificationExpiresAt) {
-      throw new NotFoundException('That verification link is no longer valid');
+      throw new NotFoundException(SPENT_LINK);
     }
     if (user.verificationExpiresAt <= new Date()) {
       throw new GoneException('That verification link has expired');
@@ -166,14 +169,15 @@ export class EmailVerificationService {
     refuseSessionSwap(signedIn, user);
 
     const emailVerifiedAt = new Date();
-    await this.prisma.user.update({
-      where: { id: user.id },
+    const { count } = await this.prisma.user.updateMany({
+      where: { id: user.id, verificationHash },
       data: {
         emailVerifiedAt,
         verificationHash: null,
         verificationExpiresAt: null,
       },
     });
+    if (count === 0) throw new NotFoundException(SPENT_LINK);
     return {
       ...user,
       emailVerifiedAt,

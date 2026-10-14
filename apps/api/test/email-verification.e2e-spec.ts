@@ -2,7 +2,7 @@ import './helpers/enable-billing';
 import { execSync } from 'child_process';
 import { createHash } from 'crypto';
 import { join } from 'path';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, Logger } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
 import cookieParser from 'cookie-parser';
@@ -271,6 +271,49 @@ describe('Email verification before the trial starts', () => {
       .post('/auth/verify')
       .send({ token })
       .expect(404);
+  });
+
+  it('confirms once when the same link is redeemed in parallel', async () => {
+    const redemptions = 4;
+    await register('owner@example.com').expect(201);
+    const token = tokenFrom(sent[0]);
+    const users = app.get(PrismaService).user;
+    const read = users.findUnique.bind(users);
+    let arrived = 0;
+    let release = () => undefined as void;
+    const allRead = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    jest.spyOn(users, 'findUnique').mockImplementation(((
+      args: Parameters<typeof read>[0],
+    ) =>
+      read(args).then(async (row) => {
+        if (!('verificationHash' in args.where)) return row;
+        arrived += 1;
+        if (arrived === redemptions) release();
+        await allRead;
+        return row;
+      })) as typeof read);
+    const warn = jest.spyOn(Logger.prototype, 'warn');
+
+    const statuses = (
+      await Promise.all(
+        Array.from({ length: redemptions }, () => confirm(token)),
+      )
+    ).map((response) => response.status);
+
+    expect(statuses.filter((status) => status === 200)).toHaveLength(1);
+    expect(statuses.filter((status) => status === 404)).toHaveLength(
+      redemptions - 1,
+    );
+    expect(
+      warn.mock.calls.filter(([message]) =>
+        String(message).includes('mailbox already had one'),
+      ),
+    ).toEqual([]);
+    await expect(workspaceRow()).resolves.toMatchObject({ plan: 'trial' });
+    await expect(prisma.trialClaim.count()).resolves.toBe(1);
+    jest.restoreAllMocks();
   });
 
   it('refuses a link past its expiry', async () => {
