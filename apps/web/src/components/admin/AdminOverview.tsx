@@ -1,7 +1,12 @@
 "use client";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { PLANS, type AdminOverview as Overview } from "@asobeast/shared";
+import {
+  ACTIVATION_WINDOW_DAYS,
+  PLANS,
+  type AdminActivation,
+  type AdminOverview as Overview,
+} from "@asobeast/shared";
 import {
   Card,
   CardContent,
@@ -9,6 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { InfoTip } from "@/components/ui/info-tip";
 import { StatTile, StatTileGroup } from "@/components/ui/stat-tile";
 import { formatNumber, pluralize, storeLabel } from "@/lib/format";
 import { adminOverviewOptions } from "@/lib/queries";
@@ -19,6 +25,35 @@ const joinParts = (parts: (string | null)[]) =>
 
 const countedPart = (count: number, label: string) =>
   count > 0 ? `${formatNumber(count)} ${label}` : null;
+
+const ACTIVATION_GUIDE =
+  "https://docs.asobeast.com/security/admin-surfaces#activation";
+
+function ActivationTile({ activation }: { activation: AdminActivation }) {
+  return (
+    <StatTile
+      label="Activation"
+      value={`${formatNumber(activation.rankedWithinADay)} of ${formatNumber(activation.importedLast30Days)}`}
+      note={`ranked within a day of import · ${formatNumber(activation.completedSetup)} completed setup`}
+      info={
+        <InfoTip
+          label="What activation means"
+          title="Activation"
+          summary={`Of the apps imported in the last ${ACTIVATION_WINDOW_DAYS} days, how many had a position for one of their keywords within 24 hours of the import, which is the time to value the guided setup is built for.`}
+        >
+          <a
+            href={ACTIVATION_GUIDE}
+            target="_blank"
+            rel="noreferrer"
+            className="font-medium text-foreground underline decoration-primary underline-offset-4 hover:decoration-2"
+          >
+            Read how activation is counted
+          </a>
+        </InfoTip>
+      }
+    />
+  );
+}
 
 function OverviewTiles({ overview }: { overview: Overview }) {
   const { workspaces, users, apps, keywords } = overview;
@@ -59,6 +94,9 @@ function OverviewTiles({ overview }: { overview: Overview }) {
         label="AI calls this month"
         value={formatNumber(overview.aiCallsThisMonth)}
       />
+      {overview.activation ? (
+        <ActivationTile activation={overview.activation} />
+      ) : null}
     </StatTileGroup>
   );
 }

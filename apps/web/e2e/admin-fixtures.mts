@@ -63,6 +63,11 @@ export const ADMIN_OVERVIEW: AdminOverview = {
   keywords: { trackedMarkets: 1234, searched: 987, storefronts: 5 },
   aiCallsThisMonth: 42,
   signups: SIGNUPS,
+  activation: {
+    importedLast30Days: 12,
+    rankedWithinADay: 9,
+    completedSetup: 7,
+  },
 };
 
 export const ADMIN_OVERVIEW_SELF_HOSTED: AdminOverview = {
