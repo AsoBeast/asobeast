@@ -3,11 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   activeKeywordCount,
   bannerApps,
-  loadingSentence,
   nextLabel,
   progressPercent,
+  progressValueLabel,
   progressSentence,
-  setupSentence,
   stepLabel,
 } from "./setup-progress";
 
@@ -28,14 +27,20 @@ describe("progressSentence", () => {
     expect(
       progressSentence(null, { done: 0, total: 3, next: "competitors" }),
     ).toBe("Set up this app · 0 of 3 · next: pick competitors");
-    expect(loadingSentence(null)).toBe("Set up this app · loading progress");
-    expect(setupSentence("Focus Timer")).toBe("Set up Focus Timer");
   });
 });
 
 describe("nextLabel", () => {
   it("lowercases the step title", () => {
     expect(nextLabel("countries")).toBe("add countries");
+  });
+});
+
+describe("progressValueLabel", () => {
+  it("reads the progress as settled steps", () => {
+    expect(progressValueLabel({ done: 2, total: 3, next: "countries" })).toBe(
+      "2 of 3 steps",
+    );
   });
 });
 
@@ -113,5 +118,16 @@ describe("bannerApps", () => {
         app("newest", "in_progress", "2026-10-14T09:00:00.000Z"),
       ]),
     ).toMatchObject({ app: { id: "newest" }, more: 2 });
+  });
+
+  it("puts apps never touched or with an unreadable time last", () => {
+    expect(
+      bannerApps([
+        app("never", "in_progress", null),
+        app("garbled", "in_progress", "not a date"),
+        app("other", "in_progress", null),
+        app("dated", "in_progress", "2026-10-13T09:00:00.000Z"),
+      ]),
+    ).toMatchObject({ app: { id: "dated" }, more: 3 });
   });
 });

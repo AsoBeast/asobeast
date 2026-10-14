@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import {
   progressPercent,
   progressSentence,
+  progressValueLabel,
   STEP_TITLES,
 } from "./setup-progress";
 
@@ -30,7 +31,7 @@ export function SetupProgress({
       <Progress
         value={progressPercent(progress)}
         aria-label="Setup progress"
-        getValueLabel={() => `${progress.done} of ${progress.total} steps`}
+        getValueLabel={() => progressValueLabel(progress)}
       />
       <nav aria-label="Setup steps">
         <ol className="flex flex-wrap gap-x-6 gap-y-2 text-sm">

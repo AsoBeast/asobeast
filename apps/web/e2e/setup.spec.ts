@@ -254,6 +254,34 @@ test("direct setup is resumable and completes after live checks", async ({
   expect(await storedSkipped(page)).toEqual(["keywords"]);
 });
 
+test("a completion that cannot be saved keeps the checklist open", async ({
+  page,
+}) => {
+  await startSetup(page, "app-1");
+  await stepCard(page, "Track keywords")
+    .getByRole("button", { name: "Skip this step" })
+    .click();
+  await page.getByRole("button", { name: "Countries reviewed" }).click();
+  const complete = page.getByRole("button", { name: "Complete setup" });
+  await expect(complete).toBeEnabled();
+  await expect.poll(() => storedSkipped(page)).toEqual(["keywords"]);
+  await page
+    .context()
+    .addCookies([
+      { name: "e2e_setup_fail", value: "1", domain: "localhost", path: "/" },
+    ]);
+
+  await complete.click();
+
+  await expect(
+    page.getByText("The server encountered an unexpected error."),
+  ).toBeVisible();
+  await expect(complete).toBeVisible();
+  await expect(page).toHaveURL("/apps/app-1/setup");
+  await page.context().clearCookies({ name: "e2e_setup_fail" });
+  expect(await storedStatus(page)).toBe("in_progress");
+});
+
 test("a country whose keyword count fails never blocks completion", async ({
   page,
 }) => {

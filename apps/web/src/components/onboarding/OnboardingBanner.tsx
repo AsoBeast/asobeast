@@ -12,15 +12,19 @@ import {
   bannerApps,
   progressPercent,
   progressSentence,
+  progressValueLabel,
+  type AppInSetup,
 } from "./setup-progress";
 import { useSetupDismissal } from "./use-setup-dismissal";
 
 export function OnboardingBanner() {
   const { data } = useSuspenseQuery(portfolioOptions);
-  const dismiss = useSetupDismissal();
   const picked = bannerApps(data.apps);
-  if (!picked) return null;
-  const { app, more } = picked;
+  return picked ? <SetupBanner app={picked.app} more={picked.more} /> : null;
+}
+
+function SetupBanner({ app, more }: { app: AppInSetup; more: number }) {
+  const dismiss = useSetupDismissal(app.id);
 
   return (
     <Alert
@@ -46,7 +50,7 @@ export function OnboardingBanner() {
         <Progress
           value={progressPercent(app.setup)}
           aria-label="Setup progress"
-          getValueLabel={() => `${app.setup.done} of ${app.setup.total} steps`}
+          getValueLabel={() => progressValueLabel(app.setup)}
           className="max-w-xs"
         />
       </AlertDescription>
@@ -58,7 +62,7 @@ export function OnboardingBanner() {
           size="sm"
           variant="ghost"
           disabled={dismiss.isPending}
-          onClick={() => dismiss.mutate(app.id)}
+          onClick={() => dismiss.mutate()}
         >
           Dismiss
         </Button>

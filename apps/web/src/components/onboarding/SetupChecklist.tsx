@@ -43,7 +43,7 @@ import {
 import { useFirstRunDiscovery } from "./use-first-run-discovery";
 import { useSetup } from "./use-setup";
 
-type Apply = (transition: SetupTransition) => void;
+type Apply = (transition: SetupTransition, onSaved?: () => void) => void;
 type LiveQuery = { data: unknown; isError: boolean; refetch: () => unknown };
 
 const lengthOrNull = <T,>(value: T[] | undefined): number | null =>
@@ -161,10 +161,9 @@ function ActiveSetup({
         completable={ready && canCompleteSetup(setup, counts)}
         onRetry={retry}
         onDismiss={() => apply(dismissSetup())}
-        onComplete={() => {
-          apply(completeSetup());
-          router.push(`/apps/${app.id}`);
-        }}
+        onComplete={() =>
+          apply(completeSetup(), () => router.push(`/apps/${app.id}`))
+        }
       />
     </div>
   );
@@ -220,7 +219,6 @@ function StartStatus({ onStart }: { onStart: () => void }) {
     <SetupStatus
       title="Start setup for this app"
       description="This checklist helps you reach a first set of positions. Nothing is changed until you add something."
-
       action="Start this setup"
       onAction={onStart}
     />

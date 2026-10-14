@@ -34,8 +34,6 @@ import { formatCountry } from "@/lib/format";
 import { appKeys, portfolioKey } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
 
-const SETUP_HINT = "Import complete. Open the app setup page to continue.";
-
 function StoreUrlField({
   url,
   error,
@@ -108,11 +106,7 @@ export function ImportAppDialog({
       void queryClient.invalidateQueries({ queryKey: portfolioKey });
       setOpen(false);
       toast.success(`Imported ${app.name ?? "app"}`);
-      try {
-        router.push(`/apps/${app.id}/setup`);
-      } catch {
-        toast.info(SETUP_HINT);
-      }
+      router.push(`/apps/${app.id}/setup`);
     },
     onError: (err) => {
       if (err instanceof ApiError) {

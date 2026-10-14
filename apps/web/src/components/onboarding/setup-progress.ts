@@ -26,14 +26,11 @@ export function progressSentence(
   return `Set up ${name ?? "this app"} · ${progress.done} of ${progress.total} · ${next}`;
 }
 
-export const setupSentence = (name: string | null): string =>
-  `Set up ${name ?? "this app"}`;
-
-export const loadingSentence = (name: string | null): string =>
-  `${setupSentence(name)} · loading progress`;
-
 export const progressPercent = ({ done, total }: SetupStepProgress): number =>
   total === 0 ? 0 : (done / total) * 100;
+
+export const progressValueLabel = ({ done, total }: SetupStepProgress) =>
+  `${done} of ${total} steps`;
 
 export function stepLabel(step: SetupStep): string {
   return `Step ${SETUP_STEPS.indexOf(step) + 1} of ${SETUP_STEPS.length}`;
@@ -48,14 +45,20 @@ export type AppInSetup = PortfolioApp & { setup: AppSetupSummary };
 const isInSetup = (app: PortfolioApp): app is AppInSetup =>
   app.setup?.status === "in_progress";
 
-const touchedAt = (app: AppInSetup): number =>
-  app.setup.updatedAt === null ? -Infinity : Date.parse(app.setup.updatedAt);
+const touchedAt = (app: AppInSetup): number => {
+  const time = Date.parse(app.setup.updatedAt ?? "");
+  return Number.isNaN(time) ? 0 : time;
+};
+
+const byLastTouched = (left: AppInSetup, right: AppInSetup): number => {
+  const [first, second] = [touchedAt(left), touchedAt(right)];
+  if (first === second) return 0;
+  return first > second ? -1 : 1;
+};
 
 export function bannerApps(
   apps: readonly PortfolioApp[],
 ): { app: AppInSetup; more: number } | null {
-  const [app, ...rest] = apps
-    .filter(isInSetup)
-    .sort((left, right) => touchedAt(right) - touchedAt(left));
+  const [app, ...rest] = apps.filter(isInSetup).sort(byLastTouched);
   return app ? { app, more: rest.length } : null;
 }

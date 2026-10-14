@@ -1,4 +1,5 @@
 import {
+  COUNTRY_PATTERN,
   SETUP_STEPS,
   type AppSetupState,
   type AppSetupUpdateRequest,
@@ -11,7 +12,7 @@ export type SetupTransition = (
 
 const normalizeMarket = (value: string): string | null => {
   const market = value.trim().toLowerCase();
-  return /^[a-z]{2}$/.test(market) ? market : null;
+  return COUNTRY_PATTERN.test(market) ? market : null;
 };
 
 const whileInProgress =
