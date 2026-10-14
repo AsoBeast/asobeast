@@ -46,7 +46,7 @@ export function assertProductionSafety(env: Env): void {
 
   if (!env.AUTH_COOKIE_SECURE) {
     throw new Error(
-      'AUTH_COOKIE_SECURE must be true when NODE_ENV is production. Session cookies would otherwise be sent over plain HTTP. Set AUTH_COOKIE_SECURE=false only for local development without TLS.',
+      'AUTH_COOKIE_SECURE must be true when NODE_ENV is production. Session cookies would otherwise be sent over plain HTTP. Keep it true and serve the web app over HTTPS.',
     );
   }
 
