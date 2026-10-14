@@ -3,9 +3,9 @@ import { Progress } from "@/components/ui/progress";
 import {
   SETUP_STEPS,
   type SetupStep,
-  type StepProgress,
-  type StepState,
-} from "@/lib/onboarding";
+  type SetupStepProgress,
+  type SetupStepState,
+} from "@asobeast/shared";
 import { cn } from "@/lib/utils";
 import {
   progressPercent,
@@ -19,8 +19,8 @@ export function SetupProgress({
   states,
 }: {
   name: string | null;
-  progress: StepProgress;
-  states: Record<SetupStep, StepState>;
+  progress: SetupStepProgress;
+  states: Record<SetupStep, SetupStepState>;
 }) {
   return (
     <div className="flex flex-col gap-3">

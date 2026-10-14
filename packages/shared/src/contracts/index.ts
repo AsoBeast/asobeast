@@ -4,6 +4,7 @@ export * from './jobs';
 export * from './keywords';
 export * from './localizations';
 export * from './markets';
+export * from './setup';
 export * from './rankings';
 export * from './category-ranks';
 export * from './analytics';

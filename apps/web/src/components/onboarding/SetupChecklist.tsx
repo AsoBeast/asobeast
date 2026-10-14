@@ -4,7 +4,14 @@ import { useQueries, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { CheckCircle2, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { AppDetail } from "@asobeast/shared";
+import {
+  canCompleteSetup,
+  setupProgress,
+  stepStates,
+  type AppDetail,
+  type SetupCounts,
+  type SetupStep,
+} from "@asobeast/shared";
 import { ErrorState } from "@/components/layout/ErrorState";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -17,18 +24,13 @@ import {
 } from "@/components/ui/card";
 import {
   activeKeywordCount,
-  canCompleteOnboarding,
   completeOnboarding,
   dismissOnboarding,
   restartOnboarding,
   setCountriesReviewed,
   setMarketSelected,
   setStepSkipped,
-  setupProgress,
-  stepStates,
   type OnboardingState,
-  type SetupCounts,
-  type SetupStep,
 } from "@/lib/onboarding";
 import {
   appDetailOptions,
@@ -178,7 +180,7 @@ function ActiveSetup({
       <SetupActions
         ready={ready}
         failed={failed}
-        completable={ready && canCompleteOnboarding(state, counts)}
+        completable={ready && canCompleteSetup(state, counts)}
         onRetry={retry}
         onDismiss={() => persist(dismissOnboarding)}
         onComplete={() => {

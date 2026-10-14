@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   activeKeywordCount,
   beginOnboarding,
-  canCompleteOnboarding,
   claimBrowserOnboarding,
   completeOnboarding,
   dismissOnboarding,
@@ -14,17 +13,14 @@ import {
   parseOnboardingState,
   readOnboardingState,
   restartOnboarding,
-  SETUP_KEYWORD_TARGET,
   setCountriesReviewed,
   setMarketSelected,
   setStepSkipped,
-  setupProgress,
   stepLabel,
-  stepState,
   writeOnboardingState,
   type OnboardingState,
-  type SetupCounts,
 } from "./onboarding";
+import type { SetupCounts } from "@asobeast/shared";
 
 const counts = (
   competitors: number | null,
@@ -228,119 +224,21 @@ describe("transitions", () => {
   });
 });
 
-describe("stepState", () => {
-  it("waits for the count a step reads", () => {
-    expect(stepState(started(), "competitors", counts(null, 4))).toBe(
-      "loading",
-    );
-    expect(stepState(started(), "keywords", counts(1, null))).toBe("loading");
-    expect(stepState(started(), "countries", counts(null, null))).toBe("open");
-  });
-
-  it("finishes the competitor step at one competitor", () => {
-    expect(stepState(started(), "competitors", counts(0, 0))).toBe("open");
-    expect(stepState(started(), "competitors", counts(1, 0))).toBe("done");
-  });
-
-  it("finishes the keyword step at the keyword target", () => {
-    expect(
-      stepState(started(), "keywords", counts(0, SETUP_KEYWORD_TARGET - 1)),
-    ).toBe("open");
-    expect(
-      stepState(started(), "keywords", counts(0, SETUP_KEYWORD_TARGET)),
-    ).toBe("done");
-  });
-
-  it("finishes the countries step on review", () => {
-    expect(
-      stepState(setCountriesReviewed(started()), "countries", counts(0, 0)),
-    ).toBe("done");
-  });
-
-  it("reports a skipped step as skipped until its target is reached", () => {
-    const state = setStepSkipped(started(), "competitors", true);
-
-    expect(stepState(state, "competitors", counts(null, 0))).toBe("skipped");
-    expect(stepState(state, "competitors", counts(0, 0))).toBe("skipped");
-    expect(stepState(state, "competitors", counts(1, 0))).toBe("done");
-    expect(
-      stepState(
-        setCountriesReviewed(setStepSkipped(started(), "countries", true)),
-        "countries",
-        counts(0, 0),
-      ),
-    ).toBe("done");
-    expect(
-      stepState(
-        setStepSkipped(state, "competitors", false),
-        "competitors",
-        counts(0, 0),
-      ),
-    ).toBe("open");
-  });
-});
-
-describe("setupProgress", () => {
-  it("counts done and skipped steps and names the first open one", () => {
-    expect(setupProgress(started(), counts(1, 4))).toEqual({
-      done: 1,
-      total: 3,
-      next: "keywords",
-    });
-    expect(
-      setupProgress(setStepSkipped(started(), "keywords", true), counts(1, 4)),
-    ).toEqual({ done: 2, total: 3, next: "countries" });
-  });
-
-  it("names a loading step as next", () => {
-    expect(setupProgress(started(), counts(null, null)).next).toBe(
-      "competitors",
-    );
-  });
-
-  it("names no next step once every step is settled", () => {
-    expect(
-      setupProgress(setCountriesReviewed(started()), counts(2, 12)),
-    ).toEqual({ done: 3, total: 3, next: null });
-  });
-});
-
-describe("canCompleteOnboarding", () => {
-  const settled = (): OnboardingState =>
-    setStepSkipped(
+describe("completeOnboarding", () => {
+  it("completes once every step is done or skipped", () => {
+    const settled = setStepSkipped(
       setStepSkipped(setCountriesReviewed(started()), "competitors", true),
       "keywords",
       true,
     );
 
-  it("completes once every step is done or skipped", () => {
-    expect(canCompleteOnboarding(settled(), counts(0, 0))).toBe(true);
-    expect(
-      canCompleteOnboarding(setCountriesReviewed(started()), counts(1, 10)),
-    ).toBe(true);
-    expect(completeOnboarding(settled(), counts(0, 0)).status).toBe(
-      "completed",
-    );
+    expect(completeOnboarding(settled, counts(0, 0)).status).toBe("completed");
   });
 
-  it("blocks completion while a count is loading", () => {
-    expect(
-      canCompleteOnboarding(setCountriesReviewed(started()), counts(null, 10)),
-    ).toBe(false);
-  });
-
-  it("blocks completion while a step is open", () => {
+  it("keeps a record whose step is still open", () => {
     const state = setCountriesReviewed(started());
 
-    expect(canCompleteOnboarding(state, counts(1, 9))).toBe(false);
-    expect(canCompleteOnboarding(started(), counts(1, 10))).toBe(false);
     expect(completeOnboarding(state, counts(1, 9))).toBe(state);
-  });
-
-  it("completes only a setup in progress", () => {
-    expect(canCompleteOnboarding(NOT_STARTED_ONBOARDING, counts(1, 10))).toBe(
-      false,
-    );
   });
 });
 

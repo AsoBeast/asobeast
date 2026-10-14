@@ -6,11 +6,8 @@ import Link from "next/link";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import {
-  dismissOnboarding,
-  setupProgress,
-  type OnboardingState,
-} from "@/lib/onboarding";
+import { setupProgress } from "@asobeast/shared";
+import { dismissOnboarding, type OnboardingState } from "@/lib/onboarding";
 import {
   competitorsOptions,
   keywordsOptions,

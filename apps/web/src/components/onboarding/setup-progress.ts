@@ -1,4 +1,4 @@
-import type { SetupStep, StepProgress } from "@/lib/onboarding";
+import type { SetupStep, SetupStepProgress } from "@asobeast/shared";
 
 export const STEP_TITLES: Record<SetupStep, string> = {
   competitors: "Pick competitors",
@@ -11,7 +11,7 @@ export const nextLabel = (step: SetupStep): string =>
 
 export function progressSentence(
   name: string | null,
-  progress: StepProgress,
+  progress: SetupStepProgress,
 ): string {
   const next =
     progress.next === null
@@ -26,5 +26,5 @@ export const setupSentence = (name: string | null): string =>
 export const loadingSentence = (name: string | null): string =>
   `${setupSentence(name)} · loading progress`;
 
-export const progressPercent = ({ done, total }: StepProgress): number =>
+export const progressPercent = ({ done, total }: SetupStepProgress): number =>
   total === 0 ? 0 : (done / total) * 100;

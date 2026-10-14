@@ -4,7 +4,10 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
-import type { TrackedKeywordItem } from "@asobeast/shared";
+import {
+  SETUP_KEYWORD_TARGET,
+  type TrackedKeywordItem,
+} from "@asobeast/shared";
 import {
   SuggestionList,
   suggestionListState,
@@ -13,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { addKeywords, ApiError } from "@/lib/api";
 import { pluralize } from "@/lib/format";
-import { activeKeywordCount, SETUP_KEYWORD_TARGET } from "@/lib/onboarding";
+import { activeKeywordCount } from "@/lib/onboarding";
 import {
   invalidateKeywordMutation,
   pickerSuggestionsOptions,

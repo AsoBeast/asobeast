@@ -1,3 +1,12 @@
+import {
+  canCompleteSetup,
+  SETUP_STATUSES,
+  SETUP_STEPS,
+  type SetupCounts,
+  type SetupStatus,
+  type SetupStep,
+} from "@asobeast/shared";
+
 export const ONBOARDING_STORAGE_KEY = "asobeast:onboarding";
 export const ONBOARDING_VERSION = 2 as const;
 export const ONBOARDING_CHANGE_EVENT = "asobeast:onboarding-change";
@@ -7,44 +16,17 @@ const ACCOUNT_KEY_PREFIX = `${ONBOARDING_STORAGE_KEY}:`;
 export const onboardingStorageKey = (account: string): string =>
   `${ACCOUNT_KEY_PREFIX}${account}`;
 
-export const SETUP_STEPS = ["competitors", "keywords", "countries"] as const;
-
-export type SetupStep = (typeof SETUP_STEPS)[number];
-
-export const SETUP_COMPETITOR_TARGET = 1;
-export const SETUP_KEYWORD_TARGET = 10;
-
-type CountedStep = Exclude<SetupStep, "countries">;
-
-export type SetupCounts = Record<CountedStep, number | null>;
-
-export type StepState = "done" | "skipped" | "open" | "loading";
-
 export const activeKeywordCount = (
   keywords: readonly { active: boolean }[],
 ): number => keywords.filter((keyword) => keyword.active).length;
-
-export interface StepProgress {
-  done: number;
-  total: number;
-  next: SetupStep | null;
-}
-
-const STEP_TARGETS: Record<CountedStep, number> = {
-  competitors: SETUP_COMPETITOR_TARGET,
-  keywords: SETUP_KEYWORD_TARGET,
-};
 
 export function stepLabel(step: SetupStep): string {
   return `Step ${SETUP_STEPS.indexOf(step) + 1} of ${SETUP_STEPS.length}`;
 }
 
-export type OnboardingStatus =
-  "not_started" | "in_progress" | "completed" | "dismissed";
-
 export interface OnboardingState {
   version: typeof ONBOARDING_VERSION;
-  status: OnboardingStatus;
+  status: SetupStatus;
   appId: string | null;
   selectedMarkets: string[];
   skipped: SetupStep[];
@@ -66,18 +48,11 @@ export const NOT_STARTED_ONBOARDING: OnboardingState = {
   countriesReviewed: false,
 };
 
-const STATUSES: OnboardingStatus[] = [
-  "not_started",
-  "in_progress",
-  "completed",
-  "dismissed",
-];
-
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
-const isStatus = (value: unknown): value is OnboardingStatus =>
-  typeof value === "string" && STATUSES.includes(value as OnboardingStatus);
+const isStatus = (value: unknown): value is SetupStatus =>
+  typeof value === "string" && SETUP_STATUSES.includes(value as SetupStatus);
 
 const areMarkets = (value: unknown): value is string[] =>
   Array.isArray(value) &&
@@ -123,7 +98,7 @@ function stepsOfRecord(
 }
 
 function hasValidLifecycle(
-  status: OnboardingStatus,
+  status: SetupStatus,
   appId: string | null,
   markets: string[],
 ): boolean {
@@ -340,63 +315,11 @@ export const setCountriesReviewed = (
     ? { ...state, countriesReviewed: true }
     : state;
 
-export function stepState(
-  state: OnboardingState,
-  step: SetupStep,
-  counts: SetupCounts,
-): StepState {
-  const reached =
-    step === "countries"
-      ? state.countriesReviewed
-      : (counts[step] ?? 0) >= STEP_TARGETS[step];
-  if (reached) return "done";
-  if (state.skipped.includes(step)) return "skipped";
-  return step !== "countries" && counts[step] === null ? "loading" : "open";
-}
-
-export function stepStates(
-  state: OnboardingState,
-  counts: SetupCounts,
-): Record<SetupStep, StepState> {
-  return {
-    competitors: stepState(state, "competitors", counts),
-    keywords: stepState(state, "keywords", counts),
-    countries: stepState(state, "countries", counts),
-  };
-}
-
-const isSettled = (step: StepState): boolean =>
-  step === "done" || step === "skipped";
-
-export function setupProgress(
-  state: OnboardingState,
-  counts: SetupCounts,
-): StepProgress {
-  const states = stepStates(state, counts);
-  const next = SETUP_STEPS.find((step) => !isSettled(states[step]));
-  return {
-    done: SETUP_STEPS.filter((step) => isSettled(states[step])).length,
-    total: SETUP_STEPS.length,
-    next: next ?? null,
-  };
-}
-
-export function canCompleteOnboarding(
-  state: OnboardingState,
-  counts: SetupCounts,
-): boolean {
-  return (
-    state.status === "in_progress" &&
-    state.selectedMarkets.length > 0 &&
-    setupProgress(state, counts).next === null
-  );
-}
-
 export function completeOnboarding(
   state: OnboardingState,
   counts: SetupCounts,
 ): OnboardingState {
-  return canCompleteOnboarding(state, counts)
+  return canCompleteSetup(state, counts)
     ? { ...state, status: "completed" }
     : state;
 }
