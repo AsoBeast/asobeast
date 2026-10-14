@@ -48,13 +48,11 @@ export class PortfolioService {
       },
     });
 
-    const [homeKeywords, changes7d] = await Promise.all([
-      this.activeHomeKeywords(apps),
+    const homeKeywords = this.activeHomeKeywords(apps);
+    const [members, changes7d] = await Promise.all([
+      Promise.all(apps.map((app) => this.portfolioMember(app, homeKeywords))),
       this.workspaceChanges(CHANGES_WINDOW_DAYS),
     ]);
-    const members = await Promise.all(
-      apps.map((app) => this.portfolioMember(app, homeKeywords.get(app.id))),
-    );
 
     const portfolioApps = members.map((member) => member.app);
     portfolioApps.sort(
@@ -98,12 +96,12 @@ export class PortfolioService {
       snapshots: { capturedAt: Date }[];
       appSetup: AppSetup | null;
     },
-    homeKeywords = 0,
+    homeKeywords: Promise<Map<string, number>>,
   ): Promise<GroupMember & { app: PortfolioApp }> {
-    const { rows, referenceDate: reference } = await sparklineRows(
-      this.prisma,
-      app.id,
-    );
+    const [{ rows, referenceDate: reference }, keywords] = await Promise.all([
+      sparklineRows(this.prisma, app.id),
+      homeKeywords,
+    ]);
 
     return {
       appId: app.id,
@@ -129,7 +127,7 @@ export class PortfolioService {
         lastCapturedAt: app.snapshots[0]?.capturedAt.toISOString() ?? null,
         setup: setupSummary(setupStateOf(app), {
           competitors: app._count.competitors,
-          keywords: homeKeywords,
+          keywords: keywords.get(app.id) ?? 0,
         }),
       },
     };
