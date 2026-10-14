@@ -1178,6 +1178,34 @@ test.describe("on the locale lab", () => {
       expect(deletes).toBe(1);
     });
 
+    test("cannot be closed while the removal runs", async ({ page }) => {
+      await seedLocalizations(page.request, LOCALES_APP, MX_SEED);
+      let release!: () => void;
+      const held = new Promise<void>((resolve) => (release = resolve));
+      await page.route("**/localizations/es-MX", async (route) => {
+        await held;
+        await route.continue();
+      });
+      await page.goto(`${LOCALES_METADATA}?fieldLocale=es-MX`);
+
+      await page.getByRole("button", { name: "Remove localization" }).click();
+      const confirm = page.getByRole("alertdialog", {
+        name: "Remove Spanish (Mexico)?",
+      });
+      await confirm
+        .getByRole("button", { name: "Remove", exact: true })
+        .click();
+      const cancel = confirm.getByRole("button", { name: "Cancel" });
+      await expect(cancel).toBeDisabled();
+      await page.keyboard.press("Escape");
+      await expect(confirm).toHaveAttribute("data-state", "open");
+      await expect(cancel).toBeDisabled();
+
+      release();
+      await expect(confirm).toHaveCount(0);
+      await expect(page.getByText("Removed Spanish (Mexico)")).toBeVisible();
+    });
+
     for (const viewport of [
       { width: 1280, height: 560 },
       { width: 375, height: 480 },
