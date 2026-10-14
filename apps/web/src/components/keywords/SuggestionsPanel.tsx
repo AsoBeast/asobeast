@@ -14,7 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import { addKeywords, ApiError } from "@/lib/api";
 import { storeLabel } from "@/lib/format";
 import {
@@ -109,9 +109,9 @@ export function SuggestionsPanel({
           >
             <TabsList>
               {STRATEGIES.map((item) => (
-                <TabsTrigger key={item.value} value={item.value}>
+                <TabsOption key={item.value} value={item.value}>
                   {item.label}
-                </TabsTrigger>
+                </TabsOption>
               ))}
             </TabsList>
           </Tabs>

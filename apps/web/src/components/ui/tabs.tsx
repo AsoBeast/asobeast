@@ -74,6 +74,10 @@ function TabsTrigger({
   );
 }
 
+function TabsOption(props: React.ComponentProps<typeof TabsTrigger>) {
+  return <TabsTrigger aria-controls={undefined} {...props} />;
+}
+
 function TabsContent({
   className,
   ...props
@@ -87,4 +91,11 @@ function TabsContent({
   );
 }
 
-export { Tabs, TabsList, TabsTrigger, TabsContent, tabsListVariants };
+export {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsOption,
+  TabsContent,
+  tabsListVariants,
+};

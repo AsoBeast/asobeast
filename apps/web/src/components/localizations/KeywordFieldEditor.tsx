@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState, type ReactNode } from "react";
+import { useId, useRef, useState, type ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 import {
   KEYWORD_FIELD_CHAR_LIMIT,
@@ -72,6 +72,8 @@ export function KeywordFieldEditor({
   leading?: ReactNode;
 }) {
   const countId = useId();
+  const editor = useRef<HTMLTextAreaElement>(null);
+  const saveButton = useRef<HTMLButtonElement>(null);
   const name = localizationName(item.localization);
   const [draft, setDraft] = useState<string | null>(null);
   const text = draft ?? item.phrases.join(",");
@@ -92,6 +94,7 @@ export function KeywordFieldEditor({
   return (
     <div className="flex flex-col gap-3">
       <Textarea
+        ref={editor}
         value={text}
         onChange={(event) => {
           setDraft(event.target.value);
@@ -121,6 +124,7 @@ export function KeywordFieldEditor({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>{leading}</div>
         <Button
+          ref={saveButton}
           disabled={
             busy || over || (!field.changed && field.phrases.length === 0)
           }
@@ -137,6 +141,12 @@ export function KeywordFieldEditor({
           error={error}
           onConfirm={confirm}
           onClose={dismiss}
+          returnFocus={() =>
+            (saveButton.current?.disabled
+              ? editor.current
+              : saveButton.current
+            )?.focus()
+          }
         />
       ) : null}
     </div>

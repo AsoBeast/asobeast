@@ -13,7 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TrackButton } from "@/components/competitors/TrackButton";
 import { formatDate } from "@/lib/format";
@@ -121,9 +121,9 @@ export function SerpMoversCard({ id }: { id: string }) {
         >
           <TabsList aria-label="SERP movers window" className="print:hidden">
             {MOVER_WINDOWS.map((window) => (
-              <TabsTrigger key={window} value={String(window)}>
+              <TabsOption key={window} value={String(window)}>
                 {window}d
-              </TabsTrigger>
+              </TabsOption>
             ))}
           </TabsList>
           <PrintRangeLabel preset={`${days}d`} />

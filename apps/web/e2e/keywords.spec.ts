@@ -989,3 +989,17 @@ test("tells the user an add failed while offline instead of waiting for the netw
   expect(posts.length).toBeLessThanOrEqual(1);
   await expect(dialog.getByText("Could not add keywords")).toBeVisible();
 });
+
+test("keeps focus in the search field after clearing it from the keyboard", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/keywords");
+  const search = page.getByRole("textbox", { name: /Search keywords/ });
+  await (await hydrated(search)).fill("todo");
+  await page.getByRole("button", { name: "Clear search" }).focus();
+
+  await page.keyboard.press("Enter");
+
+  await expect(search).toHaveValue("");
+  await expect(search).toBeFocused();
+});

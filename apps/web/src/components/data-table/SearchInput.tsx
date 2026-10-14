@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { Search, X } from "lucide-react";
 import { debounce, type Options } from "nuqs";
 import {
@@ -23,6 +24,7 @@ export function SearchInput({
   onSearch: (value: string, options: Options) => void;
   className?: string;
 }) {
+  const input = useRef<HTMLInputElement>(null);
   const search = (next: string) =>
     onSearch(next, {
       limitUrlUpdates: next === "" ? undefined : debounce(SEARCH_DEBOUNCE_MS),
@@ -34,6 +36,7 @@ export function SearchInput({
         <Search aria-hidden />
       </InputGroupAddon>
       <InputGroupInput
+        ref={input}
         aria-label={label}
         placeholder={label}
         value={value}
@@ -44,7 +47,10 @@ export function SearchInput({
           <InputGroupButton
             size="icon-xs"
             aria-label="Clear search"
-            onClick={() => search("")}
+            onClick={() => {
+              search("");
+              input.current?.focus();
+            }}
           >
             <X />
           </InputGroupButton>
