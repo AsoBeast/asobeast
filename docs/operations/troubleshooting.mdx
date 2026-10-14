@@ -23,6 +23,8 @@ Each entry below names the symptom the way you would describe it, then gives the
 
     - `AUTH_SECRET` is shorter than 32 characters. The API refuses to run with a weak signing secret. Generate one with `openssl rand -hex 32` and recreate the API container.
     - `AUTH_COOKIE_SECURE` is `false` while `NODE_ENV` is `production`, which the Docker image always sets. The log reads `AUTH_COOKIE_SECURE must be true when NODE_ENV is production.` Set it back to `true` and see [Sessions do not persist behind a proxy](#sessions-do-not-persist-behind-a-proxy) for ways to reach the stack without TLS. See [What the API refuses to start with](/security/hosting#what-the-api-refuses-to-start-with).
+
+    A failed migration also stops the API at boot. The log then reports `P3018` or `P3009` and names the migration. See [If a migration fails](/operations/upgrades#if-a-migration-fails).
   </Accordion>
 
   <Accordion title="I cannot register a second account">

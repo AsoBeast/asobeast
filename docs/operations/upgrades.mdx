@@ -1,12 +1,12 @@
 ---
 title: Upgrade an installation
 sidebarTitle: Upgrades
-description: "Which versions upgrade directly to the current release, what the API container does to your database on boot, and how the upgrade path is proven in CI before it reaches you."
+description: "Which versions upgrade directly to the current release, what the API container does to your database on boot, how the upgrade path is proven in CI before it reaches you, and how to recover when a migration fails."
 icon: circle-fedora
-keywords: ["upgrade","migration","prisma migrate deploy","supported versions","upgrade drill"]
+keywords: ["upgrade","migration","prisma migrate deploy","supported versions","upgrade drill","P3018","P3009","migrate resolve"]
 ---
 
-The API container runs `prisma migrate deploy` on boot. A migration that cannot apply to your data stops the container rather than warning, so an upgrade either completes or the old version keeps running. Nothing is applied halfway.
+The API container runs `prisma migrate deploy` on boot. A migration that cannot apply to your data stops the container rather than warning, and every later boot stops at the same point, so the API never serves a schema that is partly migrated. Getting the stack back is a deliberate step, described in [If a migration fails](#if-a-migration-fails).
 
 This page states which versions upgrade directly, and how that claim is tested.
 
@@ -76,4 +76,75 @@ The script refuses to run unless the database name ends in `_upgrade`, because i
 
 ## If a migration fails
 
-The container exits and your data is untouched, because a failed migration is rolled back. Roll back to the previous image tag to restore service, then report the failure with the migration name and the database error code from the container log. See [Troubleshooting](/operations/troubleshooting).
+Prisma does not run a migration inside a transaction. When a statement fails, every statement before it in the same migration stays applied, and the migration is recorded as failed in `_prisma_migrations`. `prisma migrate deploy` then refuses to apply anything while a failed migration is recorded, whichever image runs it. The API container exits on every boot, and starting the previous image tag fails at the same check, so changing the tag alone does not bring the stack back. The web app waits for a healthy API, so the site stays down until the API starts.
+
+When you run the published images, add `-f docker-compose.pull.yml` to every command below and keep `ASOBEAST_IMAGE_TAG` in the root `.env`, so each command runs the image you mean.
+
+### Read the failure
+
+The first boot after the upgrade names the migration and the database error.
+
+```bash
+docker compose logs --no-color api | grep --after-context=12 P3018
+```
+
+```text
+Error: P3018
+
+A migration failed to apply. New migrations cannot be applied before the error is recovered from. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+
+Migration name: 20261014120000_example
+
+Database error code: 23502
+
+Database error:
+ERROR: column "n" of relation "Example" contains null values
+```
+
+Every later boot reports `P3009`, `migrate found failed migrations in the target database`, and names the same migration. Stop the API so it stops restarting, then read the full error from the database, which keeps it after the container log is gone.
+
+```bash
+docker compose stop api
+docker compose exec -T postgres psql --username asobeast --dbname asobeast --expanded --command 'select migration_name, logs from "_prisma_migrations" where finished_at is null and rolled_back_at is null;'
+```
+
+### Return to the previous release
+
+This is the recovery to choose when the error comes from the migration meeting your data, such as a constraint or a type that existing rows violate, and the safe choice whenever you are unsure. Follow [Upgrade and roll back](/install/upgrade#roll-back): switch back to the previous version, then restore the backup you took before the upgrade. The archive predates both the partial changes and the failed record, so nothing needs resolving afterwards.
+
+[Report the failure](https://github.com/AsoBeast/asobeast/issues) with the migration name, the database error code and the error message.
+
+### Undo the migration by hand
+
+Use this when the cause lies outside the migration, such as a full disk or a lost connection, and you want to retry the same release once it is fixed, or when you have no backup from before the upgrade. A data error fails again on the same release, so after undoing it start the previous version.
+
+<Steps>
+  <Step title="Back up the current state">
+    Take a backup of the database as it is now, so a mistake in the next step can be undone. See [Back up your data](/operations/backups).
+  </Step>
+  <Step title="Reverse what the migration applied">
+    Read the migration from the image of the release that failed.
+
+    ```bash
+    docker compose run --rm api cat prisma/migrations/<migration>/migration.sql
+    ```
+
+    The database error names a table, a column or a constraint. Find the statement that touches it: every statement before it is applied, and the failing one and everything after it never ran. Reverse the applied statements in the opposite order with `psql`. A statement that changed or removed rows, such as an `UPDATE`, a `DELETE` or a `DROP`, cannot be reversed this way, so restore the backup from before the upgrade instead. Without one, report the failure before you change anything else.
+  </Step>
+  <Step title="Mark the migration rolled back">
+    ```bash
+    docker compose run --rm api npx prisma migrate resolve --rolled-back <migration>
+    ```
+
+    This changes only the record in `_prisma_migrations`, never the schema. Without the previous step, the next attempt fails again on the first statement that already ran, for example with `column already exists`.
+  </Step>
+  <Step title="Start the API">
+    Start the same release once the cause is fixed, and it applies the migration again from its first statement.
+
+    ```bash
+    docker compose up -d --wait
+    ```
+
+    To start the previous version instead, set the previous `ASOBEAST_IMAGE_TAG`, or check out the previous revision and add `--build` to the command above. It boots against the schema it expects.
+  </Step>
+</Steps>
