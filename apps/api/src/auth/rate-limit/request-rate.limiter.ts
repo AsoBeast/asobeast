@@ -12,6 +12,7 @@ import {
   type PlanName,
 } from '@asobeast/shared';
 import {
+  MCP_REQUESTS,
   oversizedBatchMessage,
   RateLimitExceededError,
   rateLimitMessage,
@@ -129,7 +130,7 @@ export class RequestRateLimiter {
         detail,
         rateLimitMessage(
           detail,
-          rule.budget === 'mcp' ? 'MCP requests' : undefined,
+          rule.budget === 'mcp' ? MCP_REQUESTS : undefined,
         ),
       );
     }

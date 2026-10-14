@@ -119,15 +119,11 @@ export function nestedTooDeep(root: unknown): boolean {
   const pending = [{ value: root, depth: 0 }];
   for (let next = 0; next < pending.length; next += 1) {
     const { value, depth } = pending[next];
-    const children = Array.isArray(value)
-      ? value
-      : isPlainObject(value)
-        ? Object.values(value)
-        : undefined;
+    const children = childrenOf('', value);
     if (!children) continue;
     if (depth >= MAX_NESTING_DEPTH) return true;
     for (const child of children) {
-      pending.push({ value: child as unknown, depth: depth + 1 });
+      pending.push({ value: child.value, depth: depth + 1 });
     }
   }
   return false;

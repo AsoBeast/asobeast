@@ -38,11 +38,13 @@ export function rateLimitMessage(
   return `Rate limit reached: ${allowance}. ${reopens}.`;
 }
 
+export const MCP_REQUESTS = 'MCP requests';
+
 export function oversizedBatchMessage(
   detail: RateLimitDetail,
   messages: number,
 ): string {
-  return `MCP batch too large: it carries ${messages} messages and the ${detail.plan} plan allows ${detail.limit} MCP requests ${WINDOW_NAMES[detail.window]}, so it can never be served. Split it into requests of at most ${detail.limit} messages.`;
+  return `MCP batch too large: it carries ${messages} messages and the ${detail.plan} plan allows ${detail.limit} ${MCP_REQUESTS} ${WINDOW_NAMES[detail.window]}, so it can never be served. Split it into requests of at most ${detail.limit} messages.`;
 }
 
 export class CredentialRateLimitError extends Error {

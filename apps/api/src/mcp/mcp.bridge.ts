@@ -22,11 +22,11 @@ import type { AuthenticatedRequest } from '../auth/auth.types';
 import { planScopeOf } from '../auth/plan-limits';
 import { RequestRateLimiter } from '../auth/rate-limit/request-rate.limiter';
 import { scrubText } from '../common/logging/log-redaction';
+import { secretLiterals } from '../common/logging/logger-options';
 import {
   NESTING_REQUIREMENT,
   nestedTooDeep,
 } from '../common/validation/storable-text.pipe';
-import { secretLiterals } from '../common/logging/logger-options';
 import type { Env } from '../config/env';
 import { InProcessGateway } from './in-process.gateway';
 import { authInfoFor, tokenScopeOf } from './mcp-auth-info';
