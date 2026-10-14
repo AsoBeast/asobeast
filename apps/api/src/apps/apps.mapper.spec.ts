@@ -2,6 +2,7 @@ import { AppSetup, AppSnapshot, Store } from '@prisma/client';
 import { NormalizedApp } from '../store-providers/types';
 import {
   defaultSetup,
+  setupStateOf,
   snapshotIcon,
   toListingMarkets,
   toSnapshotData,
@@ -213,6 +214,15 @@ describe('the setup state', () => {
       completedAt: '2026-10-14T09:30:00.000Z',
       updatedAt: '2026-10-14T09:00:00.000Z',
     });
+  });
+
+  it('reads the row of an app or falls back to its default', () => {
+    expect(
+      setupStateOf({ id: 'app_1', country: 'us', appSetup: row() }),
+    ).toEqual(toSetupState(row()));
+    expect(
+      setupStateOf({ id: 'app_1', country: 'us', appSetup: null }),
+    ).toEqual(defaultSetup({ id: 'app_1', country: 'us' }));
   });
 
   it('reads an unknown status as not started and drops an unknown step', () => {

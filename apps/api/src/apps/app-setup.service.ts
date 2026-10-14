@@ -8,7 +8,7 @@ import {
 } from '@asobeast/shared';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
-import { defaultSetup, toSetupState } from './apps.mapper';
+import { setupStateOf, toSetupState } from './apps.mapper';
 
 function completion(
   status: SetupStatus | undefined,
@@ -39,7 +39,7 @@ export class AppSetupService {
 
   async read(appId: string): Promise<AppSetupState> {
     const app = await this.primaryApp(appId);
-    return app.appSetup ? toSetupState(app.appSetup) : defaultSetup(app);
+    return setupStateOf(app);
   }
 
   async update(
@@ -49,7 +49,7 @@ export class AppSetupService {
     const app = await this.primaryApp(appId);
     const changes = changesOf(patch, app.appSetup);
     if (Object.values(changes).every((value) => value === undefined)) {
-      return app.appSetup ? toSetupState(app.appSetup) : defaultSetup(app);
+      return setupStateOf(app);
     }
     const row = await this.prisma.appSetup.upsert({
       where: { appId },

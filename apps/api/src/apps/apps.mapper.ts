@@ -251,3 +251,9 @@ export function toSetupState(row: AppSetup): AppSetupState {
     updatedAt: row.updatedAt.toISOString(),
   };
 }
+
+export function setupStateOf(
+  app: Pick<App, 'id' | 'country'> & { appSetup: AppSetup | null },
+): AppSetupState {
+  return app.appSetup ? toSetupState(app.appSetup) : defaultSetup(app);
+}

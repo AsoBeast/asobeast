@@ -18,7 +18,7 @@ import {
   windowVisibility,
 } from './analytics.support';
 import { countChangeDays } from './change-days';
-import { defaultSetup, toSetupState } from '../apps/apps.mapper';
+import { setupStateOf } from '../apps/apps.mapper';
 import { HOME_EVENTS, LATEST_HOME_LISTING } from '../apps/listing';
 
 const CHANGES_WINDOW_DAYS = 7;
@@ -127,10 +127,10 @@ export class PortfolioService {
         trackedKeywords: rows.length,
         competitors: app._count.competitors,
         lastCapturedAt: app.snapshots[0]?.capturedAt.toISOString() ?? null,
-        setup: setupSummary(
-          app.appSetup ? toSetupState(app.appSetup) : defaultSetup(app),
-          { competitors: app._count.competitors, keywords: homeKeywords },
-        ),
+        setup: setupSummary(setupStateOf(app), {
+          competitors: app._count.competitors,
+          keywords: homeKeywords,
+        }),
       },
     };
   }
@@ -138,6 +138,7 @@ export class PortfolioService {
   private async activeHomeKeywords(
     apps: { id: string; country: string }[],
   ): Promise<Map<string, number>> {
+    if (apps.length === 0) return new Map();
     const counts = await this.prisma.trackedKeyword.groupBy({
       by: ['appId'],
       where: {
