@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import { VisibilityHelp } from "@/components/visibility/VisibilityHelp";
 import { portfolioOptions } from "@/lib/queries";
 import {
@@ -73,12 +73,12 @@ export function AppsToolbar() {
         }
       >
         <TabsList>
-          <TabsTrigger value="cards" aria-label="Cards">
+          <TabsOption value="cards" aria-label="Cards">
             <LayoutGrid aria-hidden />
-          </TabsTrigger>
-          <TabsTrigger value="table" aria-label="Table">
+          </TabsOption>
+          <TabsOption value="table" aria-label="Table">
             <Rows3 aria-hidden />
-          </TabsTrigger>
+          </TabsOption>
         </TabsList>
       </Tabs>
     </>

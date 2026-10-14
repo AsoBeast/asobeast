@@ -4,6 +4,7 @@ import {
   mineReviewPhrases,
   REVIEW_THEME_MIN_MENTIONS,
 } from '../../keywords/review-mining';
+import { listingLanguages } from '../../keywords/listing-languages';
 import { logScale } from '../../scoring/formulas';
 import { round1, round2 } from '../audit-engine';
 import {
@@ -81,10 +82,16 @@ const recentReviews = (context: AuditContext): AuditReview[] => {
 
 export const complaintTheme = (
   reviews: AuditReview[],
-  reviewScoreMax: number,
+  context: AuditContext,
 ): { text: string; mentions: number } | null => {
-  const negative = reviews.filter((review) => review.score <= reviewScoreMax);
-  const [top] = mineReviewPhrases(negative, new Set());
+  const negative = reviews.filter(
+    (review) => review.score <= context.reviewScoreMax,
+  );
+  const [top] = mineReviewPhrases(
+    negative,
+    new Set(),
+    listingLanguages(context.store, context.country),
+  );
   const mentions = top?.usedByCount ?? 0;
   return top && mentions >= REVIEW_THEME_MIN_MENTIONS
     ? { text: top.text, mentions }
@@ -161,7 +168,7 @@ const recentCheck = (context: AuditContext): RubricCheck => {
     ? reviews.reduce((sum, review) => sum + review.score, 0) / reviews.length
     : null;
   const average = mean === null ? null : round1(mean);
-  const theme = complaintTheme(reviews, context.reviewScoreMax);
+  const theme = complaintTheme(reviews, context);
   const themeSentence = theme
     ? ` “${theme.text}” comes up in ${theme.mentions} of them.`
     : '';
@@ -240,7 +247,7 @@ const responseRateCheck = (context: AuditContext): RubricCheck | null => {
 };
 
 export const ratingChecks = (context: AuditContext): RubricCheck[] => {
-  const theme = complaintTheme(recentReviews(context), context.reviewScoreMax);
+  const theme = complaintTheme(recentReviews(context), context);
   const themeClause = theme ? ` and fix “${theme.text}”` : '';
   return [
     averageCheck(context, themeClause),

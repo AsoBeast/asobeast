@@ -58,6 +58,7 @@ function Stars({ score }: { score: number }) {
         "text-sm tracking-tight",
         low ? "text-destructive" : "text-foreground",
       )}
+      role="img"
       aria-label={`${score} out of 5 stars`}
     >
       <span aria-hidden>

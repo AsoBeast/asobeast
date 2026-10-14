@@ -25,7 +25,9 @@ function snapshot(
   return { keywordId: "kw-1", text: "focus timer", date, entries };
 }
 
-const lines = (value: SerpSnapshot) => serpCsv("app-1", value).split("\r\n");
+const VIEWER = { appId: "app-1", storeAppId: "904237743" };
+
+const lines = (value: SerpSnapshot) => serpCsv(VIEWER, value).split("\r\n");
 
 describe("serpCsv", () => {
   it("heads the file with the snapshot columns in order", () => {
@@ -67,6 +69,19 @@ describe("serpCsv", () => {
     expect(you).toContain(",you,");
     expect(rival).toContain(",competitor,");
     expect(sibling).toContain(",other,");
+  });
+
+  it("names the viewed app by its store id when the serp matched another row of it", () => {
+    const [, you] = lines(
+      snapshot([
+        entry({
+          appId: "comp-9",
+          isCompetitor: true,
+          storeAppId: VIEWER.storeAppId,
+        }),
+      ]),
+    );
+    expect(you).toContain(",you,");
   });
 });
 

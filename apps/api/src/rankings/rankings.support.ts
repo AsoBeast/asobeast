@@ -14,6 +14,17 @@ export function toDateKey(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
+interface KnownApp {
+  id: string;
+  storeAppId: string;
+  country: string;
+  isCompetitor: boolean;
+}
+
+function preferenceOf(app: KnownApp, country: string): number {
+  return (app.country === country ? 0 : 2) + (app.isCompetitor ? 1 : 0);
+}
+
 export async function appsByStoreAppId(
   prisma: PrismaService,
   store: Store,
@@ -24,12 +35,21 @@ export async function appsByStoreAppId(
     return new Map();
   }
   const apps = await prisma.app.findMany({
-    where: {
-      store,
-      country,
-      storeAppId: { in: storeAppIds },
-    },
-    select: { id: true, storeAppId: true, isCompetitor: true },
+    where: { store, storeAppId: { in: storeAppIds } },
+    select: { id: true, storeAppId: true, country: true, isCompetitor: true },
+    orderBy: { id: 'asc' },
   });
-  return new Map(apps.map((app) => [app.storeAppId, app]));
+  const known = new Map<string, KnownApp>();
+  for (const app of apps) {
+    const held = known.get(app.storeAppId);
+    if (!held || preferenceOf(app, country) < preferenceOf(held, country)) {
+      known.set(app.storeAppId, app);
+    }
+  }
+  return new Map(
+    [...known].map(([storeAppId, app]) => [
+      storeAppId,
+      { id: app.id, isCompetitor: app.isCompetitor },
+    ]),
+  );
 }

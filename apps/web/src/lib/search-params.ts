@@ -9,6 +9,7 @@ import {
   KEYWORD_SOURCES,
   KEYWORD_SUGGESTION_STRATEGIES,
   APP_STORE_LOCALIZATION_IDS,
+  COUNTRY_PATTERN,
   STORES,
   type ActionStatus,
 } from "@asobeast/shared";
@@ -271,7 +272,15 @@ export const overviewRangeParsers = {
 
 export const keywordIdsParser = parseAsArrayOf(parseAsString).withDefault([]);
 
-export const countryParser = parseAsString.withDefault("");
+export const countryParser = createParser({
+  parse(value) {
+    const country = value.toLowerCase();
+    return COUNTRY_PATTERN.test(country) ? country : null;
+  },
+  serialize(value: string) {
+    return value;
+  },
+}).withDefault("");
 
 export const marketParser = parseAsString.withDefault("");
 

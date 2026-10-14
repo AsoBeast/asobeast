@@ -178,6 +178,20 @@ describe('keyword.add_uncovered', () => {
     expect(evidence.keywordFieldCharsFree).toBe(90);
   });
 
+  it.each([
+    { latestPosition: null, latestDepth: null },
+    { latestPosition: null, latestDepth: 200 },
+    { latestPosition: 7, latestDepth: 200 },
+  ])('carries the depth of the latest check with $latestPosition', (latest) => {
+    const evidence = evidenceOf(
+      detectKeywordAddUncovered(
+        context([app({ trackedKeywords: [keyword(latest)] })]),
+      ),
+    );
+
+    expect(evidence).toMatchObject(latest);
+  });
+
   it('reports the full keyword field as free when the app has none yet', () => {
     const fields = APPLE_FIELDS.filter(
       (field) => field.field !== 'keywordField',

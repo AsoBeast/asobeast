@@ -23,7 +23,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import {
   ApiError,
   openBillingPortal,
@@ -211,9 +211,9 @@ export function UpgradeContent() {
         >
           <TabsList aria-label="Billing interval">
             {BILLING_INTERVALS.map((value) => (
-              <TabsTrigger key={value} value={value}>
+              <TabsOption key={value} value={value}>
                 {INTERVAL_LABEL[value]}
-              </TabsTrigger>
+              </TabsOption>
             ))}
           </TabsList>
         </Tabs>

@@ -2733,6 +2733,7 @@ export const ACTIONS: ActionItem[] = [
       volume: 62,
       relevance: 80,
       latestPosition: null,
+      latestDepth: null,
       indexedFields: ["title", "subtitle", "keywordField"],
       uncoveredFields: ["title", "subtitle", "keywordField"],
       keywordFieldCharsFree: 18,

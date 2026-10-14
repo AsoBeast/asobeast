@@ -4,6 +4,7 @@ import { ScoreEnqueueResult } from '@asobeast/shared';
 import { SpendsStoreCapacity } from '../auth/decorators/spends-store-capacity.decorator';
 import { OnDemandLimiter } from '../auth/on-demand.limiter';
 import { PipelineService } from './pipeline.service';
+import { QueuesWork } from '../redis/queues-work.decorator';
 
 @ApiTags('scoring')
 @Controller('keywords')
@@ -14,6 +15,7 @@ export class ScoringController {
   ) {}
 
   @Post(':keywordId/score')
+  @QueuesWork()
   @SpendsStoreCapacity()
   @HttpCode(202)
   @ApiOperation({ summary: 'Enqueue an on demand keyword score' })

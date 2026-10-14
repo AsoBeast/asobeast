@@ -111,7 +111,7 @@ export function discoveryColumns(appId: string) {
     columnHelper.display({
       id: "track",
       enableHiding: false,
-      header: () => null,
+      header: () => <span className="sr-only">Track</span>,
       cell: ({ row }) => (
         <div className="flex justify-end">
           <TrackButton

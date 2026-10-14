@@ -19,6 +19,7 @@ import { FirstRunStatusService } from './first-run-status.service';
 import { PipelineService } from './pipeline.service';
 import { RunStatusService } from './run-status.service';
 import { StoreHealthService } from './store-health.service';
+import { QueuesWork } from '../redis/queues-work.decorator';
 
 @ApiTags('jobs')
 @Controller('apps')
@@ -30,6 +31,7 @@ export class JobsController {
   ) {}
 
   @Post(':id/run-daily')
+  @QueuesWork()
   @SpendsStoreCapacity()
   @HttpCode(202)
   @ApiOperation({ summary: 'Manually run the daily pipeline for one app' })

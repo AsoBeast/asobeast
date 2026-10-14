@@ -102,6 +102,40 @@ describe('reviews.investigate_theme', () => {
     expect(crash?.discriminator).toBe(`crashes on launch~${CURRENT}`);
   });
 
+  it('samples only the reviews the theme was mined from', () => {
+    const counted = [
+      review(CURRENT, 1, 'crashes on launch every single time'),
+      review(CURRENT, 1, 'it crashes on launch after the update'),
+      review(CURRENT, 2, 'crashes on launch when I open my budget'),
+    ];
+    const across = review(CURRENT, 1, 'launch takes ages', {
+      title: 'It crashes on',
+    });
+    const inside = review(CURRENT, 1, 'recrashes on launchpad screen');
+    const detections = detectReviewsInvestigateTheme(
+      context([
+        app({
+          reviews: [
+            ...counted,
+            across,
+            inside,
+            review(CURRENT, 5, 'still love this planner'),
+            review(PREVIOUS, 1, 'too many adverts in the free plan'),
+          ],
+        }),
+      ]),
+      NOW,
+    );
+    const evidence = detections.find(
+      (detection) =>
+        (detection.evidence as ReviewsInvestigateThemeEvidence).theme ===
+        'crashes on launch',
+    )?.evidence as ReviewsInvestigateThemeEvidence;
+
+    expect(evidence.mentions).toBe(3);
+    expect(evidence.sampleReviewIds).toEqual(counted.map(({ id }) => id));
+  });
+
   it('carries review ids and never review bodies', () => {
     const detections = detectReviewsInvestigateTheme(context([app()]), NOW);
     const evidence = detections.find(

@@ -600,6 +600,18 @@ test.describe("on the locale lab", () => {
       await expect(dialog(page)).toBeVisible();
     }
 
+    test("returns focus to the save button when the review is dismissed", async ({
+      page,
+    }) => {
+      await seedLocalizations(page.request, LOCALES_APP, MX_SEED);
+      await openSpanishDialog(page, "temporizador, enfoque");
+
+      await page.keyboard.press("Escape");
+
+      await expect(dialog(page)).toBeHidden();
+      await expect(save(page)).toBeFocused();
+    });
+
     test("saves straight away when nothing new would be tracked", async ({
       page,
     }) => {

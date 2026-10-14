@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   Logger,
   UnauthorizedException,
@@ -22,6 +23,10 @@ import { planScopeOf } from '../auth/plan-limits';
 import { RequestRateLimiter } from '../auth/rate-limit/request-rate.limiter';
 import { scrubText } from '../common/logging/log-redaction';
 import { secretLiterals } from '../common/logging/logger-options';
+import {
+  NESTING_REQUIREMENT,
+  nestedTooDeep,
+} from '../common/validation/storable-text.pipe';
 import type { Env } from '../config/env';
 import { InProcessGateway } from './in-process.gateway';
 import { authInfoFor, tokenScopeOf } from './mcp-auth-info';
@@ -32,6 +37,8 @@ function authorization(
 ): Record<string, string | undefined> {
   return { authorization: request?.headers.get('authorization') ?? undefined };
 }
+
+export const MCP_BATCH_LIMIT = 100;
 
 export function messageCountOf(body: unknown): number {
   return Array.isArray(body) ? Math.max(body.length, 1) : 1;
@@ -95,13 +102,22 @@ export class McpBridge implements OnModuleDestroy {
     (req as Request & { auth?: AuthInfo }).auth = authInfoFor(
       tokenScope ?? 'read',
     );
+    if (nestedTooDeep(req.body)) {
+      throw new BadRequestException(`body ${NESTING_REQUIREMENT}`);
+    }
+    const messages = messageCountOf(req.body);
+    if (messages > MCP_BATCH_LIMIT) {
+      throw new BadRequestException(
+        `An MCP batch must not carry more than ${MCP_BATCH_LIMIT} messages. Split it into smaller requests.`,
+      );
+    }
     if (!user) return;
 
     const metered = this.config.get('BILLING_ENABLED', { infer: true });
     const { plan, limits } = planScopeOf(metered, user.workspace, new Date());
     await this.limiter.consumeMcp(
       { workspaceId: user.workspaceId, plan, limits },
-      messageCountOf(req.body),
+      messages,
     );
   }
 

@@ -45,6 +45,29 @@ test("market filter switches to an empty market with an add prompt", async ({
   ).toBeVisible();
 });
 
+test("reads an upper case market in the url as that market", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/keywords?country=PL");
+
+  await expect(
+    page.getByText(/No keywords tracked in Poland yet/),
+  ).toBeVisible();
+  await expect(page.getByText(/could not be loaded/)).toHaveCount(0);
+});
+
+test("falls back to the default market for a country that is no storefront code", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/keywords?country=ZZZ");
+
+  await expect(page.getByRole("button", { name: /^US/ })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(page.getByText(/could not be loaded/)).toHaveCount(0);
+});
+
 test("clicking a sort header updates the url and reorders rows", async ({
   page,
 }) => {
@@ -934,4 +957,40 @@ test.describe("the tags facet", () => {
       page.getByText("No keywords match these filters"),
     ).toBeVisible();
   });
+});
+
+test("tells the user an add failed while offline instead of waiting for the network", async ({
+  page,
+  context,
+}) => {
+  await page.goto("/apps/app-1/keywords");
+  const add = page.getByRole("button", { name: "Add keywords" }).first();
+  await (await hydrated(add)).click();
+  const dialog = page.getByRole("dialog");
+  await dialog
+    .getByRole("textbox", { name: /fitness tracker/ })
+    .fill("offline test phrase");
+
+  await context.setOffline(true);
+  await dialog.getByRole("button", { name: "Add keywords" }).click();
+
+  await expect(dialog.getByText("Could not add keywords")).toBeVisible();
+  await expect(
+    dialog.getByRole("button", { name: "Add keywords" }),
+  ).toBeEnabled();
+  await context.setOffline(false);
+});
+
+test("keeps focus in the search field after clearing it from the keyboard", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/keywords");
+  const search = page.getByRole("textbox", { name: /Search keywords/ });
+  await (await hydrated(search)).fill("todo");
+  await page.getByRole("button", { name: "Clear search" }).focus();
+
+  await page.keyboard.press("Enter");
+
+  await expect(search).toHaveValue("");
+  await expect(search).toBeFocused();
 });

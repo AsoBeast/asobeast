@@ -26,7 +26,9 @@ const TEXT_RULES = [
   },
 ] as const;
 
-const MAX_NESTING_DEPTH = 64;
+export const MAX_NESTING_DEPTH = 64;
+
+export const NESTING_REQUIREMENT = `must not be nested more than ${MAX_NESTING_DEPTH} levels deep`;
 
 interface Pending {
   path: string;
@@ -97,10 +99,7 @@ function firstViolation(
     const children = childrenOf(path, value);
     if (!children) continue;
     if (depth >= MAX_NESTING_DEPTH) {
-      return {
-        path: '',
-        requirement: `must not be nested more than ${MAX_NESTING_DEPTH} levels deep`,
-      };
+      return { path: '', requirement: NESTING_REQUIREMENT };
     }
     for (const child of children) {
       const hashed =
@@ -114,6 +113,20 @@ function firstViolation(
     }
   }
   return undefined;
+}
+
+export function nestedTooDeep(root: unknown): boolean {
+  const pending = [{ value: root, depth: 0 }];
+  for (let next = 0; next < pending.length; next += 1) {
+    const { value, depth } = pending[next];
+    const children = childrenOf('', value);
+    if (!children) continue;
+    if (depth >= MAX_NESTING_DEPTH) return true;
+    for (const child of children) {
+      pending.push({ value: child.value, depth: depth + 1 });
+    }
+  }
+  return false;
 }
 
 @Injectable()

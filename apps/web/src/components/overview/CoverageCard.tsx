@@ -4,7 +4,13 @@ import Link from "next/link";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useKeywordScope } from "@/components/app-detail/use-market";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { appDetailOptions, appSummaryOptions } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
@@ -18,7 +24,7 @@ function CoverageStat({ label, value }: { label: string; value: number }) {
 }
 
 export function CoverageCard({ id }: { id: string }) {
-  const { country } = useKeywordScope(id);
+  const { country, switchable } = useKeywordScope(id);
   const { data: summary } = useSuspenseQuery(appSummaryOptions(id, country));
   const { data: detail } = useSuspenseQuery(appDetailOptions(id));
   const coverage = summary.coverage;
@@ -35,6 +41,11 @@ export function CoverageCard({ id }: { id: string }) {
     <Card>
       <CardHeader>
         <CardTitle>Metadata coverage</CardTitle>
+        {switchable ? (
+          <CardDescription>
+            All markets, judged against the home listing
+          </CardDescription>
+        ) : null}
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <div

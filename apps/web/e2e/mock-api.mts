@@ -150,6 +150,7 @@ import type {
   WorkspaceDeletionStatus,
 } from "@asobeast/shared";
 import {
+  COUNTRY_PATTERN,
   DELETION_CONFIRMATION,
   KEYWORD_BULK_ADD_LIMIT,
   KEYWORD_IMPORT_LIMIT,
@@ -2376,6 +2377,17 @@ const routes: Route[] = [
       if (!dataset) return json(res, 404, errorEnvelope(404, path));
       const query = new URL(path, "http://localhost").searchParams;
       const country = query.get("country");
+      if (country !== null && !COUNTRY_PATTERN.test(country)) {
+        return json(
+          res,
+          400,
+          errorEnvelope(
+            400,
+            path,
+            `country must match ${COUNTRY_PATTERN} regular expression`,
+          ),
+        );
+      }
       const scoped = country
         ? dataset.keywords.filter((keyword) => keyword.country === country)
         : dataset.keywords;

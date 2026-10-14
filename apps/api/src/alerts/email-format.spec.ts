@@ -136,6 +136,27 @@ describe('formatEmail', () => {
 });
 
 describe('formatBatchEmail', () => {
+  it.each([
+    [
+      { from: '2026-10-13T15:41:20.146Z', to: '2026-10-14T15:41:25.371Z' },
+      'Window (UTC): 2026-10-13 → 2026-10-14',
+    ],
+    [
+      { from: '2026-10-14T15:41:20.146Z', to: '2026-10-14T15:41:25.371Z' },
+      'Window (UTC): 2026-10-14',
+    ],
+    [
+      { from: '2026-07-21', to: '2026-07-22' },
+      'Window (UTC): 2026-07-21 → 2026-07-22',
+    ],
+  ])('prints the report window %j as dates', async (window, line) => {
+    const email = await formatBatchEmail({ ...batch, window });
+
+    expect(email.text).toContain(line);
+    expect(email.html).toContain(line);
+    expect(email.text).not.toMatch(/T\d{2}:\d{2}/);
+  });
+
   it('counts each category in the subject with plurals', async () => {
     const email = await formatBatchEmail(batch);
     expect(email.subject).toBe(

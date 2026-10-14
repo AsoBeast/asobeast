@@ -32,6 +32,7 @@ import { ListingMarketQueryDto } from './dto/listing-market-query.dto';
 import { ListingQueryDto } from './dto/listing-query.dto';
 import { MarketAvailabilityQueryDto } from './dto/market-availability-query.dto';
 import { StoreDeadlineInterceptor } from '../store-providers/store-deadline.interceptor';
+import { QueuesWork } from '../redis/queues-work.decorator';
 
 @ApiTags('apps')
 @Controller('apps')
@@ -43,6 +44,7 @@ export class AppsController {
   ) {}
 
   @Post()
+  @QueuesWork()
   @SpendsStoreCapacity()
   @ApiOperation({ summary: 'Import an app from a store URL' })
   @UseInterceptors(StoreDeadlineInterceptor)
@@ -96,6 +98,7 @@ export class AppsController {
   }
 
   @Post(':id/refresh')
+  @QueuesWork()
   @SpendsStoreCapacity()
   @UseInterceptors(StoreDeadlineInterceptor)
   @HttpCode(200)
