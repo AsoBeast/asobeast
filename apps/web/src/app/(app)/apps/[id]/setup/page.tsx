@@ -4,10 +4,8 @@ import { getQueryClient } from "@/lib/get-query-client";
 import {
   appDetailOptions,
   competitorsOptions,
-  emailAlertsOptions,
   keywordsOptions,
   marketSuggestionsOptions,
-  webhooksOptions,
 } from "@/lib/queries";
 
 export default async function SetupPage({
@@ -22,8 +20,6 @@ export default async function SetupPage({
     queryClient.prefetchQuery(marketSuggestionsOptions(id)),
     queryClient.prefetchQuery(competitorsOptions(id)),
     queryClient.prefetchQuery(keywordsOptions(id, app.country)),
-    queryClient.prefetchQuery(webhooksOptions),
-    queryClient.prefetchQuery(emailAlertsOptions),
   ]);
 
   return (

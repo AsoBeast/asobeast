@@ -1,14 +1,10 @@
 "use client";
 
-import { Suspense } from "react";
 import { useQueries, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { CheckCircle2, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import type { AppDetail } from "@asobeast/shared";
-import { useAuth } from "@/components/auth/use-auth";
 import { ErrorState } from "@/components/layout/ErrorState";
-import { BudgetCard } from "@/components/settings/BudgetCard";
-import { BudgetCardSkeleton } from "@/components/settings/skeletons";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,46 +19,38 @@ import {
   completeOnboarding,
   dismissOnboarding,
   restartOnboarding,
-  reviewedStepsSentence,
+  setCountriesReviewed,
   setMarketSelected,
-  setOnboardingAcknowledgement,
-  setupSteps,
-  stepLabel,
-  type OnboardingAcknowledgements,
+  setStepSkipped,
+  stepState,
   type OnboardingState,
+  type SetupCounts,
   type SetupStep,
 } from "@/lib/onboarding";
 import {
   appDetailOptions,
-  budgetOptions,
   competitorsOptions,
-  emailAlertsOptions,
   keywordsOptions,
   marketSuggestionsOptions,
-  webhooksOptions,
 } from "@/lib/queries";
-import {
-  AlertsStep,
-  CompetitorsStep,
-  KeywordsStep,
-  MarketsStep,
-  SetupCheckbox,
-} from "./setup-steps";
+import { CompetitorsStep, CountriesStep, KeywordsStep } from "./setup-steps";
 import { SetupChecklistSkeleton } from "./SetupChecklistSkeleton";
 import { useOnboarding, type OnboardingTransition } from "./use-onboarding";
 
 type Persist = (transition: OnboardingTransition) => void;
-type LiveQuery = { data: unknown; isError: boolean; refetch: () => void };
+type LiveQuery = { data: unknown; isError: boolean; refetch: () => unknown };
 
-const lengthOrZero = <T,>(value: T[] | undefined): number => value?.length ?? 0;
 const lengthOrNull = <T,>(value: T[] | undefined): number | null =>
   value ? value.length : null;
+
+const activeCount = (
+  keywords: { active: boolean }[] | undefined,
+): number | null =>
+  keywords ? keywords.filter((keyword) => keyword.active).length : null;
 
 export function SetupChecklist({ id }: { id: string }) {
   const { data: app } = useSuspenseQuery(appDetailOptions(id));
   const { account, state, persist, userError, retryUser } = useOnboarding();
-  const { isOperator } = useAuth();
-  const steps = setupSteps(isOperator);
   const start = () => persist(() => restartOnboarding(id, app.country));
 
   if (userError) {
@@ -77,15 +65,12 @@ export function SetupChecklist({ id }: { id: string }) {
   if (!account) return <SetupChecklistSkeleton />;
 
   if (state.appId === id && state.status === "in_progress") {
-    return (
-      <ActiveSetup app={app} state={state} steps={steps} persist={persist} />
-    );
+    return <ActiveSetup app={app} state={state} persist={persist} />;
   }
   if (state.appId === id) {
     return (
       <TerminalStatus
         completed={state.status === "completed"}
-        steps={steps}
         onRestart={start}
       />
     );
@@ -101,19 +86,14 @@ export function SetupChecklist({ id }: { id: string }) {
 function ActiveSetup({
   app,
   state,
-  steps,
   persist,
 }: {
   app: AppDetail;
   state: OnboardingState;
-  steps: readonly SetupStep[];
   persist: Persist;
 }) {
-  const reviewsCapacity = steps.includes("capacity");
   const competitors = useQuery(competitorsOptions(app.id));
-  const budget = useQuery({ ...budgetOptions, enabled: reviewsCapacity });
-  const webhooks = useQuery(webhooksOptions);
-  const emailAlerts = useQuery(emailAlertsOptions);
+  const homeKeywords = useQuery(keywordsOptions(app.id, app.country));
   const suggestions = useQuery({
     ...marketSuggestionsOptions(app.id),
     retry: false,
@@ -123,36 +103,29 @@ function ActiveSetup({
       keywordsOptions(app.id, market),
     ),
   });
-  const channelQueries: LiveQuery[] = reviewsCapacity
-    ? [competitors, budget, webhooks, emailAlerts]
-    : [competitors, webhooks, emailAlerts];
-  const liveQueries = channelQueries.concat(keywordQueries);
-  const competitorCount = lengthOrZero(competitors.data);
-  const alertCount =
-    lengthOrZero(webhooks.data) + lengthOrZero(emailAlerts.data);
+  const countQueries: LiveQuery[] = [competitors, homeKeywords];
+  const liveQueries = countQueries.concat(keywordQueries);
+  const counts: SetupCounts = {
+    competitors: lengthOrNull(competitors.data),
+    keywords: activeCount(homeKeywords.data),
+  };
   const keywordCounts = state.selectedMarkets.map((market, index) => ({
     market,
-    active:
-      keywordQueries[index]?.data?.filter((keyword) => keyword.active).length ??
-      null,
+    active: activeCount(keywordQueries[index]?.data),
     error: keywordQueries[index]?.isError ?? false,
   }));
-  const channelsLoaded =
-    webhooks.data !== undefined && emailAlerts.data !== undefined;
   const ready = liveQueries.every((query) => query.data !== undefined);
   const failed = liveQueries.some((query) => query.isError);
   const retry = () => {
     for (const query of liveQueries) {
-      if (query.isError) query.refetch();
+      if (query.isError) void query.refetch();
     }
   };
-  const completable =
-    ready && canCompleteOnboarding(state, competitorCount, alertCount, steps);
-  const acknowledge = (
-    key: keyof OnboardingAcknowledgements,
-    checked: boolean,
-  ) =>
-    persist((current) => setOnboardingAcknowledgement(current, key, checked));
+  const step = (name: SetupStep) => ({
+    state: stepState(state, name, counts),
+    onSkip: (skipped: boolean) =>
+      persist((current) => setStepSkipped(current, name, skipped)),
+  });
 
   return (
     <div className="flex flex-col gap-6">
@@ -161,11 +134,25 @@ function ActiveSetup({
           Set up {app.name ?? "this app"}
         </h2>
         <p className="text-sm text-muted-foreground">
-          Work through each area below. Progress stays in this browser.
+          Three short steps. Each one is done once its number is reached, or
+          skipped when it does not apply.
         </p>
       </div>
-      <MarketsStep
-        label={stepLabel("markets", steps)}
+      <CompetitorsStep
+        {...step("competitors")}
+        appId={app.id}
+        count={counts.competitors}
+        error={competitors.isError}
+      />
+      <KeywordsStep
+        {...step("keywords")}
+        appId={app.id}
+        homeMarket={app.country}
+        homeCount={counts.keywords}
+        counts={keywordCounts}
+      />
+      <CountriesStep
+        {...step("countries")}
         appId={app.id}
         homeMarket={app.country}
         markets={state.selectedMarkets}
@@ -173,103 +160,19 @@ function ActiveSetup({
         onSelect={(market, selected) =>
           persist((current) => setMarketSelected(current, market, selected))
         }
-      />
-      <CompetitorsStep
-        label={stepLabel("competitors", steps)}
-        appId={app.id}
-        count={lengthOrNull(competitors.data)}
-        error={competitors.isError}
-        acknowledged={state.acknowledgements.noCompetitors}
-        onAcknowledge={(checked) => acknowledge("noCompetitors", checked)}
-      />
-      <KeywordsStep
-        label={stepLabel("keywords", steps)}
-        appId={app.id}
-        homeMarket={app.country}
-        counts={keywordCounts}
-        confirmed={state.acknowledgements.keywordsConfirmed}
-        onConfirm={(checked) => acknowledge("keywordsConfirmed", checked)}
-      />
-      {reviewsCapacity ? (
-        <CapacityStep
-          label={stepLabel("capacity", steps)}
-          loaded={Boolean(budget.data)}
-          error={budget.isError}
-          checked={state.acknowledgements.capacityReviewed}
-          onChange={(checked) => acknowledge("capacityReviewed", checked)}
-        />
-      ) : null}
-      <AlertsStep
-        label={stepLabel("alerts", steps)}
-        count={channelsLoaded ? alertCount : null}
-        error={webhooks.isError || emailAlerts.isError}
-        skipped={state.acknowledgements.alertsSkipped}
-        onSkip={(checked) => acknowledge("alertsSkipped", checked)}
+        onReviewed={() => persist(setCountriesReviewed)}
       />
       <SetupActions
         ready={ready}
         failed={failed}
-        completable={completable}
+        completable={ready && canCompleteOnboarding(state, counts)}
         onRetry={retry}
         onDismiss={() => persist(dismissOnboarding)}
         onComplete={() =>
-          persist((current) =>
-            completeOnboarding(current, competitorCount, alertCount, steps),
-          )
+          persist((current) => completeOnboarding(current, counts))
         }
       />
     </div>
-  );
-}
-
-function CapacityStep({
-  label,
-  loaded,
-  error,
-  checked,
-  onChange,
-}: {
-  label: string;
-  loaded: boolean;
-  error: boolean;
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-}) {
-  if (error) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardDescription>{label}</CardDescription>
-          <CardTitle>Daily request budget unavailable</CardTitle>
-          <CardDescription>
-            Try again before confirming capacity.
-          </CardDescription>
-        </CardHeader>
-      </Card>
-    );
-  }
-  if (!loaded) return <BudgetCardSkeleton />;
-  return (
-    <Suspense fallback={<BudgetCardSkeleton />}>
-      <BudgetCard
-        stepLabel={label}
-        footer={
-          <div className="flex w-full flex-wrap items-center justify-between gap-3">
-            <SetupCheckbox
-              id="setup-capacity-reviewed"
-              checked={checked}
-              onChange={onChange}
-              label="I reviewed daily request capacity"
-            />
-            <Button asChild variant="outline">
-              <Link href="/settings#daily-capacity">
-                Open capacity settings
-              </Link>
-            </Button>
-          </div>
-        }
-      />
-    </Suspense>
   );
 }
 
@@ -334,8 +237,8 @@ function StartStatus({
       }
       description={
         otherInProgress
-          ? "Switching will replace the unfinished browser checklist for the other app."
-          : "This opens a new browser-local checklist and does not change application data."
+          ? "Switching will replace the unfinished setup of the other app."
+          : "This checklist helps you reach a first set of positions. Nothing is changed until you add something."
       }
       action="Start this setup"
       onAction={onStart}
@@ -345,11 +248,9 @@ function StartStatus({
 
 function TerminalStatus({
   completed,
-  steps,
   onRestart,
 }: {
   completed: boolean;
-  steps: readonly SetupStep[];
   onRestart: () => void;
 }) {
   return (
@@ -357,7 +258,7 @@ function TerminalStatus({
       title={completed ? "Setup complete" : "Setup dismissed"}
       description={
         completed
-          ? reviewedStepsSentence(steps)
+          ? "Positions, competitors and countries are being collected."
           : "The checklist will not resume automatically. You can restart it whenever you need it."
       }
       action="Restart setup"

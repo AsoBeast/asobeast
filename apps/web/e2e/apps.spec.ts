@@ -7,18 +7,17 @@ import {
   completeOnboarding,
   NOT_STARTED_ONBOARDING,
   ONBOARDING_STORAGE_KEY,
-  setOnboardingAcknowledgement,
-  setupSteps,
+  setCountriesReviewed,
+  setStepSkipped,
 } from "../src/lib/onboarding";
 import { OWNER_ONBOARDING_KEY } from "./onboarding.mts";
 
 function finishedSetup() {
   let state = beginOnboarding(NOT_STARTED_ONBOARDING, "app-1", "us");
-  state = setOnboardingAcknowledgement(state, "noCompetitors", true);
-  state = setOnboardingAcknowledgement(state, "keywordsConfirmed", true);
-  state = setOnboardingAcknowledgement(state, "capacityReviewed", true);
-  state = setOnboardingAcknowledgement(state, "alertsSkipped", true);
-  return completeOnboarding(state, 0, 0, setupSteps(true));
+  state = setStepSkipped(state, "competitors", true);
+  state = setStepSkipped(state, "keywords", true);
+  state = setCountriesReviewed(state);
+  return completeOnboarding(state, { competitors: 0, keywords: 0 });
 }
 
 const utcDateFormatter = new Intl.DateTimeFormat("en-US", {

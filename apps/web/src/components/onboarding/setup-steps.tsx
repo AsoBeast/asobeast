@@ -1,10 +1,16 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { Check, ExternalLink, Plus, X } from "lucide-react";
+import { useState, type FormEvent, type ReactNode } from "react";
+import { ExternalLink, Plus, X } from "lucide-react";
 import Link from "next/link";
 import type { MarketSuggestionsResult } from "@asobeast/shared";
 import { formatCountry } from "@/lib/format";
+import {
+  SETUP_KEYWORD_TARGET,
+  stepLabel,
+  type SetupStep,
+  type StepState,
+} from "@/lib/onboarding";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,71 +20,194 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SuggestedMarkets } from "./SuggestedMarkets";
 
-function StepHeader({
-  label,
+const SKIP_REASON: Record<SetupStep, string> = {
+  competitors:
+    "Positions are compared against nobody until a competitor is added.",
+  keywords: "Only the phrases from your listing are tracked.",
+  countries: "Keywords are tracked in your home storefront only.",
+};
+
+export interface StepProps {
+  state: StepState;
+  onSkip: (skipped: boolean) => void;
+}
+
+function StepCard({
+  step,
+  state,
   title,
   description,
-}: {
-  label: string;
+  onSkip,
+  children,
+}: StepProps & {
+  step: SetupStep;
   title: string;
   description: string;
+  children: ReactNode;
 }) {
   return (
-    <CardHeader>
-      <CardDescription>{label}</CardDescription>
-      <CardTitle>{title}</CardTitle>
-      <CardDescription>{description}</CardDescription>
-    </CardHeader>
+    <Card>
+      <CardHeader>
+        <CardDescription>{stepLabel(step)}</CardDescription>
+        <div className="flex flex-wrap items-center gap-2">
+          <CardTitle asChild>
+            <h3>{title}</h3>
+          </CardTitle>
+          <StepBadge state={state} />
+        </div>
+        <CardDescription>{description}</CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        {children}
+        <SkipAction step={step} state={state} onSkip={onSkip} />
+      </CardContent>
+    </Card>
   );
 }
 
-export function SetupCheckbox({
-  id,
-  checked,
-  disabled,
-  label,
-  onChange,
-}: {
-  id: string;
-  checked: boolean;
-  disabled?: boolean;
-  label: string;
-  onChange: (checked: boolean) => void;
-}) {
+function StepBadge({ state }: { state: StepState }) {
+  if (state === "done") return <Badge variant="success">Done</Badge>;
+  if (state === "skipped") return <Badge variant="outline">Skipped</Badge>;
+  return null;
+}
+
+function SkipAction({ step, state, onSkip }: StepProps & { step: SetupStep }) {
+  if (state === "skipped") {
+    return (
+      <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+        Skipped. {SKIP_REASON[step]}
+        <Button
+          variant="link"
+          className="h-auto px-0"
+          onClick={() => onSkip(false)}
+        >
+          Undo skip
+        </Button>
+      </p>
+    );
+  }
+  if (state !== "open") return null;
   return (
-    <div className="flex items-start gap-2">
-      <Checkbox
-        id={id}
-        checked={checked}
-        disabled={disabled}
-        onCheckedChange={(value) => onChange(value === true)}
-      />
-      <Label htmlFor={id} className="leading-4">
-        {label}
-      </Label>
-    </div>
+    <Button
+      variant="link"
+      className="h-auto w-fit px-0"
+      onClick={() => onSkip(true)}
+    >
+      Skip this step
+    </Button>
   );
 }
 
-export function MarketsStep({
-  label,
+export function CompetitorsStep({
+  appId,
+  count,
+  error,
+  ...step
+}: StepProps & {
+  appId: string;
+  count: number | null;
+  error: boolean;
+}) {
+  return (
+    <StepCard
+      step="competitors"
+      title="Pick competitors"
+      description="Track at least one app you compete with, so every keyword search compares you against it. Two or three is typical."
+      {...step}
+    >
+      <p className="text-sm text-muted-foreground">
+        {error
+          ? "Competitor count is temporarily unavailable."
+          : count === null
+            ? "Loading competitors…"
+            : `${count} competitor${count === 1 ? "" : "s"} configured`}
+      </p>
+      <Button asChild variant="outline" className="w-fit">
+        <Link href={`/apps/${appId}/competitors`}>
+          Manage competitors
+          <ExternalLink />
+        </Link>
+      </Button>
+    </StepCard>
+  );
+}
+
+export interface MarketKeywordCount {
+  market: string;
+  active: number | null;
+  error: boolean;
+}
+
+export function KeywordsStep({
+  appId,
+  homeMarket,
+  homeCount,
+  counts,
+  ...step
+}: StepProps & {
+  appId: string;
+  homeMarket: string;
+  homeCount: number | null;
+  counts: MarketKeywordCount[];
+}) {
+  return (
+    <StepCard
+      step="keywords"
+      title="Track keywords"
+      description={`Track at least ${SETUP_KEYWORD_TARGET} keywords in your home storefront. The import already tracked the phrases of your title and subtitle.`}
+      {...step}
+    >
+      <p className="text-sm text-muted-foreground">
+        {homeCount === null
+          ? "Loading keywords…"
+          : `${homeCount} of ${SETUP_KEYWORD_TARGET} tracked`}
+      </p>
+      <ul className="grid gap-2 sm:grid-cols-2">
+        {counts.map(({ market, active, error }) => (
+          <li
+            key={market}
+            className="flex items-center justify-between rounded-lg border p-3"
+          >
+            <span>{formatCountry(market)}</span>
+            <span className="text-muted-foreground">
+              {error
+                ? "Unavailable"
+                : active === null
+                  ? "Loading…"
+                  : `${active} active`}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <Button asChild variant="outline" className="w-fit">
+        <Link href={`/apps/${appId}/keywords?country=${homeMarket}`}>
+          Review keywords
+          <ExternalLink />
+        </Link>
+      </Button>
+    </StepCard>
+  );
+}
+
+export function CountriesStep({
   appId,
   homeMarket,
   markets,
   suggestions,
   onSelect,
-}: {
-  label: string;
+  onReviewed,
+  ...step
+}: StepProps & {
   appId: string;
   homeMarket: string;
   markets: string[];
   suggestions: MarketSuggestionsResult | null;
   onSelect: (market: string, selected: boolean) => void;
+  onReviewed: () => void;
 }) {
   const suggested =
     suggestions !== null && suggestions.suggestions.length > 0
@@ -99,255 +228,81 @@ export function MarketsStep({
   };
 
   return (
-    <Card>
-      <StepHeader
-        label={label}
-        title="Choose markets"
-        description={
-          suggested
-            ? "Your home storefront is selected. Tick the storefronts that read a language your listing ships, or add any other storefront by its code."
-            : "Your home storefront is selected. Add any other storefronts where you want to track keywords."
-        }
-      />
-      <CardContent className="flex flex-col gap-4">
-        {suggested ? (
-          <SuggestedMarkets
-            appId={appId}
-            result={suggested}
-            selected={markets}
-            onSelect={onSelect}
-          />
-        ) : null}
-        <ul aria-label="Selected markets" className="flex flex-wrap gap-2">
-          {markets.map((market) => (
-            <li key={market}>
-              <Badge variant="secondary" className="h-7 gap-1 pl-2.5">
-                {formatCountry(market)} ({market.toUpperCase()})
-                {market !== homeMarket && markets.length > 1 ? (
-                  <button
-                    type="button"
-                    aria-label={`Remove ${formatCountry(market)}`}
-                    onClick={() => onSelect(market, false)}
-                    className="rounded-full p-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <X />
-                  </button>
-                ) : null}
-              </Badge>
-            </li>
-          ))}
-        </ul>
-        <form onSubmit={submit} className="flex max-w-sm items-start gap-2">
-          <div className="flex flex-1 flex-col gap-1">
-            <Label htmlFor="setup-market">
-              {suggested
-                ? "Another storefront? Add a country code"
-                : "Add a country code"}
-            </Label>
-            <Input
-              id="setup-market"
-              value={value}
-              maxLength={2}
-              placeholder="gb"
-              aria-invalid={Boolean(error)}
-              aria-describedby={error ? "setup-market-error" : undefined}
-              onChange={(event) => setValue(event.target.value)}
-            />
-            {error ? (
-              <span
-                id="setup-market-error"
-                className="text-xs text-destructive"
-              >
-                {error}
-              </span>
-            ) : null}
-          </div>
-          <Button type="submit" variant="outline" className="mt-4">
-            <Plus />
-            Add
-          </Button>
-        </form>
-        <div className="flex flex-wrap gap-2">
-          {markets.map((market) => (
-            <Button key={market} asChild variant="outline" size="sm">
-              <Link href={`/apps/${appId}/keywords?country=${market}`}>
-                Review {market.toUpperCase()} keywords
-                <ExternalLink />
-              </Link>
-            </Button>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-export function CompetitorsStep({
-  label,
-  appId,
-  count,
-  error,
-  acknowledged,
-  onAcknowledge,
-}: {
-  label: string;
-  appId: string;
-  count: number | null;
-  error: boolean;
-  acknowledged: boolean;
-  onAcknowledge: (checked: boolean) => void;
-}) {
-  return (
-    <Card>
-      <StepHeader
-        label={label}
-        title="Add competitors"
-        description="Track the apps you compete with so one search can compare every ranking."
-      />
-      <CardContent className="flex flex-col gap-4">
-        <p className="text-sm text-muted-foreground">
-          {error
-            ? "Competitor count is temporarily unavailable."
-            : count === null
-              ? "Loading competitors…"
-              : `${count} competitor${count === 1 ? "" : "s"} configured`}
-        </p>
-        <Button asChild variant="outline" className="w-fit">
-          <Link href={`/apps/${appId}/competitors`}>
-            Manage competitors
-            <ExternalLink />
-          </Link>
-        </Button>
-        {count === 0 ? (
-          <SetupCheckbox
-            id="setup-no-competitors"
-            checked={acknowledged}
-            onChange={onAcknowledge}
-            label="No competitors yet — continue setup without one"
-          />
-        ) : null}
-      </CardContent>
-    </Card>
-  );
-}
-
-export interface MarketKeywordCount {
-  market: string;
-  active: number | null;
-  error: boolean;
-}
-
-export function KeywordsStep({
-  label,
-  appId,
-  homeMarket,
-  counts,
-  confirmed,
-  onConfirm,
-}: {
-  label: string;
-  appId: string;
-  homeMarket: string;
-  counts: MarketKeywordCount[];
-  confirmed: boolean;
-  onConfirm: (checked: boolean) => void;
-}) {
-  return (
-    <Card>
-      <StepHeader
-        label={label}
-        title="Confirm keywords"
-        description="Review the active phrases in each selected market before the daily checks begin."
-      />
-      <CardContent className="flex flex-col gap-4">
-        <ul className="grid gap-2 sm:grid-cols-2">
-          {counts.map(({ market, active, error }) => (
-            <li
-              key={market}
-              className="flex items-center justify-between rounded-lg border p-3"
-            >
-              <span>{formatCountry(market)}</span>
-              <span className="text-muted-foreground">
-                {error
-                  ? "Unavailable"
-                  : active === null
-                    ? "Loading…"
-                    : `${active} active`}
-              </span>
-            </li>
-          ))}
-        </ul>
-        <Button asChild variant="outline" className="w-fit">
-          <Link
-            href={`/apps/${appId}/keywords?country=${counts[0]?.market ?? homeMarket}`}
-          >
-            Review keywords
-            <ExternalLink />
-          </Link>
-        </Button>
-        <SetupCheckbox
-          id="setup-keywords-confirmed"
-          checked={confirmed}
-          disabled={counts.some(
-            (count) => count.active === null || count.error,
-          )}
-          onChange={onConfirm}
-          label="I reviewed the keywords for these markets"
+    <StepCard
+      step="countries"
+      title="Add countries"
+      description="Add the storefronts you sell in. Your home storefront is selected."
+      {...step}
+    >
+      {suggested ? (
+        <SuggestedMarkets
+          appId={appId}
+          result={suggested}
+          selected={markets}
+          onSelect={onSelect}
         />
-      </CardContent>
-    </Card>
-  );
-}
-
-export function AlertsStep({
-  label,
-  count,
-  error,
-  skipped,
-  onSkip,
-}: {
-  label: string;
-  count: number | null;
-  error: boolean;
-  skipped: boolean;
-  onSkip: (checked: boolean) => void;
-}) {
-  return (
-    <Card>
-      <StepHeader
-        label={label}
-        title="Configure alerts"
-        description="Alert channels are optional. Add a webhook or email, or explicitly skip this step."
-      />
-      <CardContent className="flex flex-col gap-4">
-        <p className="text-sm text-muted-foreground">
-          {error
-            ? "Alert count is temporarily unavailable."
-            : count === null
-              ? "Loading alert channels…"
-              : `${count} alert channel${count === 1 ? "" : "s"} configured`}
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <Button asChild variant="outline">
-            <Link href="/settings#webhooks">Configure webhooks</Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link href="/settings#email-alerts">Configure email alerts</Link>
-          </Button>
-        </div>
-        {count === 0 ? (
-          <SetupCheckbox
-            id="setup-alerts-skipped"
-            checked={skipped}
-            onChange={onSkip}
-            label="Skip alerts for now"
+      ) : null}
+      <ul aria-label="Selected markets" className="flex flex-wrap gap-2">
+        {markets.map((market) => (
+          <li key={market}>
+            <Badge variant="secondary" className="h-7 gap-1 pl-2.5">
+              {formatCountry(market)} ({market.toUpperCase()})
+              {market !== homeMarket && markets.length > 1 ? (
+                <button
+                  type="button"
+                  aria-label={`Remove ${formatCountry(market)}`}
+                  onClick={() => onSelect(market, false)}
+                  className="rounded-full p-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <X />
+                </button>
+              ) : null}
+            </Badge>
+          </li>
+        ))}
+      </ul>
+      <form onSubmit={submit} className="flex max-w-sm items-start gap-2">
+        <div className="flex flex-1 flex-col gap-1">
+          <Label htmlFor="setup-market">
+            {suggested
+              ? "Another storefront? Add a country code"
+              : "Add a country code"}
+          </Label>
+          <Input
+            id="setup-market"
+            value={value}
+            maxLength={2}
+            placeholder="gb"
+            aria-invalid={Boolean(error)}
+            aria-describedby={error ? "setup-market-error" : undefined}
+            onChange={(event) => setValue(event.target.value)}
           />
-        ) : count && count > 0 ? (
-          <span className="inline-flex items-center gap-2 text-sm text-success">
-            <Check className="size-4" /> Alert setup is ready
-          </span>
-        ) : null}
-      </CardContent>
-    </Card>
+          {error ? (
+            <span id="setup-market-error" className="text-xs text-destructive">
+              {error}
+            </span>
+          ) : null}
+        </div>
+        <Button type="submit" variant="outline" className="mt-4">
+          <Plus />
+          Add
+        </Button>
+      </form>
+      <div className="flex flex-wrap gap-2">
+        {markets.map((market) => (
+          <Button key={market} asChild variant="outline" size="sm">
+            <Link href={`/apps/${appId}/keywords?country=${market}`}>
+              Review {market.toUpperCase()} keywords
+              <ExternalLink />
+            </Link>
+          </Button>
+        ))}
+      </div>
+      {step.state === "open" ? (
+        <Button variant="outline" className="w-fit" onClick={onReviewed}>
+          Countries reviewed
+        </Button>
+      ) : null}
+    </StepCard>
   );
 }

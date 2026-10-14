@@ -2,7 +2,6 @@ import type { APIRequestContext, Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
 import { parseOnboardingState } from "../src/lib/onboarding";
 import { OWNER_ONBOARDING_KEY } from "./onboarding.mts";
-import { seedViewer } from "./viewer.mts";
 
 const storedStatus = async (page: Page): Promise<string> => {
   const stored = await page.evaluate(
@@ -27,6 +26,19 @@ const storedMarkets = async (page: Page): Promise<string[]> => {
 
 const selectedMarkets = (page: Page) =>
   page.getByRole("list", { name: "Selected markets" });
+
+const stepCard = (page: Page, title: string) =>
+  page
+    .locator('[data-slot="card"]')
+    .filter({ has: page.getByRole("heading", { name: title, exact: true }) });
+
+const storedSkipped = async (page: Page): Promise<string[]> => {
+  const stored = await page.evaluate(
+    (key) => localStorage.getItem(key),
+    OWNER_ONBOARDING_KEY,
+  );
+  return parseOnboardingState(stored).skipped;
+};
 
 const startSetup = async (page: Page, id: string): Promise<void> => {
   await page.goto(`/apps/${id}/setup`);
@@ -92,18 +104,36 @@ test("direct setup is resumable and completes after live checks", async ({
   await expect(
     page.getByRole("heading", { name: "Set up Focus Timer" }),
   ).toBeVisible();
-  for (const title of [
-    "Choose markets",
-    "Add competitors",
-    "Confirm keywords",
-    "Daily request budget",
-    "Configure alerts",
-  ]) {
-    await expect(page.getByText(title, { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 3 })).toHaveText([
+    "Pick competitors",
+    "Track keywords",
+    "Add countries",
+  ]);
+  for (const label of ["Step 1 of 3", "Step 2 of 3", "Step 3 of 3"]) {
+    await expect(page.getByText(label, { exact: true })).toBeVisible();
   }
   await expect(page.getByText("United States (US)")).toBeVisible();
   await expect(page.getByText("1 competitor configured")).toBeVisible();
+  await expect(
+    stepCard(page, "Pick competitors").getByText("Done", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("4 of 10 tracked")).toBeVisible();
   await expect(page.getByText("4 active")).toBeVisible();
+  const complete = page.getByRole("button", { name: "Complete setup" });
+  await expect(complete).toBeDisabled();
+
+  const keywords = stepCard(page, "Track keywords");
+  await keywords.getByRole("button", { name: "Skip this step" }).click();
+  await expect(
+    keywords.getByText("Only the phrases from your listing are tracked."),
+  ).toBeVisible();
+  await expect(keywords.getByText("Skipped", { exact: true })).toBeVisible();
+  await expect(complete).toBeDisabled();
+  await page.getByRole("button", { name: "Countries reviewed" }).click();
+  await expect(
+    stepCard(page, "Add countries").getByText("Done", { exact: true }),
+  ).toBeVisible();
+  await expect(complete).toBeEnabled();
 
   await expect(
     page.getByText(
@@ -147,9 +177,6 @@ test("direct setup is resumable and completes after live checks", async ({
   ).toHaveAttribute("href", "/apps/app-1/keywords?country=pl");
   await expect(page.getByText("0 active")).toBeVisible();
 
-  await page.getByLabel("I reviewed the keywords for these markets").click();
-  await page.getByLabel("I reviewed daily request capacity").click();
-  const complete = page.getByRole("button", { name: "Complete setup" });
   await expect(complete).toBeEnabled();
   await complete.click();
   await expect(page.getByText("Setup complete", { exact: true })).toBeVisible();
@@ -157,34 +184,55 @@ test("direct setup is resumable and completes after live checks", async ({
   await page.reload();
   await expect(page.getByText("Setup complete", { exact: true })).toBeVisible();
   expect(await storedStatus(page)).toBe("completed");
+  expect(await storedSkipped(page)).toEqual(["keywords"]);
 });
 
-test("a customer completes setup without the capacity step", async ({
-  page,
-  context,
-}) => {
-  await seedViewer(context, "customer");
-  await startSetup(page, "app-1");
+test("a skipped step names its reason and can be undone", async ({ page }) => {
+  await startSetup(page, "app-2");
 
-  await expect(page.getByText("Step 4 of 4", { exact: true })).toBeVisible();
+  const competitors = stepCard(page, "Pick competitors");
+  await competitors.getByRole("button", { name: "Skip this step" }).click();
   await expect(
-    page.getByText("Configure alerts", { exact: true }),
-  ).toBeVisible();
-  await expect(
-    page.getByText("Daily request budget", { exact: true }),
-  ).toHaveCount(0);
-  await expect(
-    page.getByLabel("I reviewed daily request capacity"),
-  ).toHaveCount(0);
-
-  await page.getByLabel("I reviewed the keywords for these markets").click();
-  const complete = page.getByRole("button", { name: "Complete setup" });
-  await expect(complete).toBeEnabled();
-  await complete.click();
-  await expect(
-    page.getByText(
-      "Markets, competitors, keywords and alerts have been reviewed.",
+    competitors.getByText(
+      "Positions are compared against nobody until a competitor is added.",
     ),
+  ).toBeVisible();
+  await competitors.getByRole("button", { name: "Undo skip" }).click();
+
+  await expect(
+    competitors.getByRole("button", { name: "Skip this step" }),
+  ).toBeVisible();
+  expect(await storedSkipped(page)).toEqual([]);
+});
+
+test("a version 1 record resumes as in progress with its markets", async ({
+  page,
+}) => {
+  await page.addInitScript((key) => {
+    localStorage.setItem(
+      key,
+      JSON.stringify({
+        version: 1,
+        status: "in_progress",
+        appId: "app-1",
+        selectedMarkets: ["de", "us"],
+        acknowledgements: {
+          noCompetitors: true,
+          keywordsConfirmed: false,
+          capacityReviewed: false,
+          alertsSkipped: false,
+        },
+      }),
+    );
+  }, OWNER_ONBOARDING_KEY);
+  await page.goto("/apps/app-1/setup");
+
+  await expect(
+    page.getByRole("heading", { name: "Set up Focus Timer" }),
+  ).toBeVisible();
+  await expect(selectedMarkets(page).getByText("Germany (DE)")).toBeVisible();
+  await expect(
+    stepCard(page, "Pick competitors").getByText("Skipped", { exact: true }),
   ).toBeVisible();
 });
 
@@ -218,50 +266,6 @@ test("a failed live count blocks completion until a retry succeeds", async ({
   await expect(
     page.getByText("Some live counts could not be loaded."),
   ).toBeHidden();
-});
-
-test("setup links reach the existing workspaces and anchored settings", async ({
-  page,
-}) => {
-  await startSetup(page, "app-1");
-
-  await page.getByRole("link", { name: "Open capacity settings" }).click();
-  await expect(page).toHaveURL("/settings#daily-capacity");
-  await expect(
-    page.getByText("Daily request budget", { exact: true }),
-  ).toBeVisible();
-
-  await page.goBack();
-  await page.getByRole("link", { name: "Configure webhooks" }).click();
-  await expect(page).toHaveURL("/settings#webhooks");
-  await expect(page.getByText("Webhooks", { exact: true })).toBeVisible();
-
-  await page.goBack();
-  await page.getByRole("link", { name: "Configure email alerts" }).click();
-  await expect(page).toHaveURL("/settings#email-alerts");
-  await expect(
-    page.locator("#email-alerts").getByText("Email", { exact: true }),
-  ).toBeVisible();
-});
-
-test("optional alerts can be skipped to complete setup", async ({ page }) => {
-  await page.context().addCookies([
-    {
-      name: "e2e-empty-alerts",
-      value: "1",
-      domain: "localhost",
-      path: "/",
-    },
-  ]);
-  await startSetup(page, "app-2");
-
-  await page.getByLabel("No competitors yet").click();
-  await page.getByLabel("I reviewed the keywords for these markets").click();
-  await page.getByLabel("I reviewed daily request capacity").click();
-  await page.getByLabel("Skip alerts for now").click();
-  await page.getByRole("button", { name: "Complete setup" }).click();
-
-  await expect(page.getByText("Setup complete", { exact: true })).toBeVisible();
 });
 
 test("corrupt state resets and setup can be dismissed on a narrow dark layout", async ({

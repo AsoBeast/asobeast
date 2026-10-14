@@ -1,5 +1,5 @@
 export const ONBOARDING_STORAGE_KEY = "asobeast:onboarding";
-export const ONBOARDING_VERSION = 1 as const;
+export const ONBOARDING_VERSION = 2 as const;
 export const ONBOARDING_CHANGE_EVENT = "asobeast:onboarding-change";
 
 const ACCOUNT_KEY_PREFIX = `${ONBOARDING_STORAGE_KEY}:`;
@@ -7,52 +7,44 @@ const ACCOUNT_KEY_PREFIX = `${ONBOARDING_STORAGE_KEY}:`;
 export const onboardingStorageKey = (account: string): string =>
   `${ACCOUNT_KEY_PREFIX}${account}`;
 
-export const SETUP_STEPS = [
-  "markets",
-  "competitors",
-  "keywords",
-  "capacity",
-  "alerts",
-] as const;
+export const SETUP_STEPS = ["competitors", "keywords", "countries"] as const;
 
 export type SetupStep = (typeof SETUP_STEPS)[number];
 
-const CUSTOMER_SETUP_STEPS: readonly SetupStep[] = SETUP_STEPS.filter(
-  (step) => step !== "capacity",
-);
+export const SETUP_COMPETITOR_TARGET = 1;
+export const SETUP_KEYWORD_TARGET = 10;
 
-export function setupSteps(operator: boolean): readonly SetupStep[] {
-  return operator ? SETUP_STEPS : CUSTOMER_SETUP_STEPS;
+type CountedStep = Exclude<SetupStep, "countries">;
+
+export type SetupCounts = Record<CountedStep, number | null>;
+
+export type StepState = "done" | "skipped" | "open" | "loading";
+
+export interface StepProgress {
+  done: number;
+  total: number;
+  next: SetupStep | null;
 }
 
-export function stepLabel(
-  step: SetupStep,
-  steps: readonly SetupStep[],
-): string {
-  return `Step ${steps.indexOf(step) + 1} of ${steps.length}`;
-}
+const STEP_TARGETS: Record<CountedStep, number> = {
+  competitors: SETUP_COMPETITOR_TARGET,
+  keywords: SETUP_KEYWORD_TARGET,
+};
 
-export function reviewedStepsSentence(steps: readonly SetupStep[]): string {
-  const listed = `${steps.slice(0, -1).join(", ")} and ${steps.at(-1)}`;
-  return `${listed.charAt(0).toUpperCase()}${listed.slice(1)} have been reviewed.`;
+export function stepLabel(step: SetupStep): string {
+  return `Step ${SETUP_STEPS.indexOf(step) + 1} of ${SETUP_STEPS.length}`;
 }
 
 export type OnboardingStatus =
   "not_started" | "in_progress" | "completed" | "dismissed";
-
-export interface OnboardingAcknowledgements {
-  noCompetitors: boolean;
-  keywordsConfirmed: boolean;
-  capacityReviewed: boolean;
-  alertsSkipped: boolean;
-}
 
 export interface OnboardingState {
   version: typeof ONBOARDING_VERSION;
   status: OnboardingStatus;
   appId: string | null;
   selectedMarkets: string[];
-  acknowledgements: OnboardingAcknowledgements;
+  skipped: SetupStep[];
+  countriesReviewed: boolean;
 }
 
 export interface OnboardingStorage {
@@ -66,12 +58,8 @@ export const NOT_STARTED_ONBOARDING: OnboardingState = {
   status: "not_started",
   appId: null,
   selectedMarkets: [],
-  acknowledgements: {
-    noCompetitors: false,
-    keywordsConfirmed: false,
-    capacityReviewed: false,
-    alertsSkipped: false,
-  },
+  skipped: [],
+  countriesReviewed: false,
 };
 
 const STATUSES: OnboardingStatus[] = [
@@ -95,14 +83,40 @@ const areMarkets = (value: unknown): value is string[] =>
   ) &&
   new Set(value).size === value.length;
 
-const areAcknowledgements = (
+const areVersionOneAcknowledgements = (
   value: unknown,
-): value is OnboardingAcknowledgements =>
+): value is { noCompetitors: boolean } =>
   isRecord(value) &&
   typeof value.noCompetitors === "boolean" &&
   typeof value.keywordsConfirmed === "boolean" &&
   typeof value.capacityReviewed === "boolean" &&
   typeof value.alertsSkipped === "boolean";
+
+const areSkippedSteps = (value: unknown): value is SetupStep[] =>
+  Array.isArray(value) &&
+  value.every((step) => SETUP_STEPS.includes(step as SetupStep)) &&
+  new Set(value).size === value.length;
+
+const inStepOrder = (steps: readonly SetupStep[]): SetupStep[] =>
+  SETUP_STEPS.filter((step) => steps.includes(step));
+
+function stepsOfRecord(
+  record: Record<string, unknown>,
+): Pick<OnboardingState, "skipped" | "countriesReviewed"> | null {
+  if (record.version === 1) {
+    return areVersionOneAcknowledgements(record.acknowledgements)
+      ? {
+          skipped: record.acknowledgements.noCompetitors ? ["competitors"] : [],
+          countriesReviewed: false,
+        }
+      : null;
+  }
+  if (record.version !== ONBOARDING_VERSION) return null;
+  const { skipped, countriesReviewed } = record;
+  return areSkippedSteps(skipped) && typeof countriesReviewed === "boolean"
+    ? { skipped: inStepOrder(skipped), countriesReviewed }
+    : null;
+}
 
 function hasValidLifecycle(
   status: OnboardingStatus,
@@ -123,18 +137,14 @@ export function parseOnboardingState(value: string | null): OnboardingState {
   if (!value) return NOT_STARTED_ONBOARDING;
   try {
     const parsed: unknown = JSON.parse(value);
-    if (!isRecord(parsed) || parsed.version !== ONBOARDING_VERSION) {
-      return NOT_STARTED_ONBOARDING;
-    }
-    const status = parsed.status;
-    const appId = parsed.appId;
-    const selectedMarkets = parsed.selectedMarkets;
-    const acknowledgements = parsed.acknowledgements;
+    if (!isRecord(parsed)) return NOT_STARTED_ONBOARDING;
+    const steps = stepsOfRecord(parsed);
+    const { status, appId, selectedMarkets } = parsed;
     if (
+      !steps ||
       !isStatus(status) ||
       (appId !== null && typeof appId !== "string") ||
       !areMarkets(selectedMarkets) ||
-      !areAcknowledgements(acknowledgements) ||
       !hasValidLifecycle(status, appId, selectedMarkets)
     ) {
       return NOT_STARTED_ONBOARDING;
@@ -144,12 +154,7 @@ export function parseOnboardingState(value: string | null): OnboardingState {
       status,
       appId,
       selectedMarkets,
-      acknowledgements: {
-        noCompetitors: acknowledgements.noCompetitors,
-        keywordsConfirmed: acknowledgements.keywordsConfirmed,
-        capacityReviewed: acknowledgements.capacityReviewed,
-        alertsSkipped: acknowledgements.alertsSkipped,
-      },
+      ...steps,
     };
   } catch {
     return NOT_STARTED_ONBOARDING;
@@ -304,45 +309,76 @@ export function setMarketSelected(
   const markets = new Set(state.selectedMarkets);
   if (selected) markets.add(market);
   else if (markets.size > 1) markets.delete(market);
-  return { ...state, selectedMarkets: [...markets].sort() };
-}
-
-export function setOnboardingAcknowledgement(
-  state: OnboardingState,
-  key: keyof OnboardingAcknowledgements,
-  value: boolean,
-): OnboardingState {
-  if (state.status !== "in_progress") return state;
   return {
     ...state,
-    acknowledgements: { ...state.acknowledgements, [key]: value },
+    selectedMarkets: [...markets].sort(),
+    countriesReviewed: true,
+  };
+}
+
+export function setStepSkipped(
+  state: OnboardingState,
+  step: SetupStep,
+  skipped: boolean,
+): OnboardingState {
+  if (state.status !== "in_progress") return state;
+  const steps = new Set(state.skipped);
+  if (skipped) steps.add(step);
+  else steps.delete(step);
+  return { ...state, skipped: inStepOrder([...steps]) };
+}
+
+export const setCountriesReviewed = (
+  state: OnboardingState,
+): OnboardingState =>
+  state.status === "in_progress"
+    ? { ...state, countriesReviewed: true }
+    : state;
+
+export function stepState(
+  state: OnboardingState,
+  step: SetupStep,
+  counts: SetupCounts,
+): StepState {
+  if (state.skipped.includes(step)) return "skipped";
+  if (step === "countries") return state.countriesReviewed ? "done" : "open";
+  const count = counts[step];
+  if (count === null) return "loading";
+  return count >= STEP_TARGETS[step] ? "done" : "open";
+}
+
+const isSettled = (step: StepState): boolean =>
+  step === "done" || step === "skipped";
+
+export function setupProgress(
+  state: OnboardingState,
+  counts: SetupCounts,
+): StepProgress {
+  const states = SETUP_STEPS.map((step) => stepState(state, step, counts));
+  const next = SETUP_STEPS.find((_, index) => !isSettled(states[index]));
+  return {
+    done: states.filter(isSettled).length,
+    total: SETUP_STEPS.length,
+    next: next ?? null,
   };
 }
 
 export function canCompleteOnboarding(
   state: OnboardingState,
-  competitorCount: number,
-  alertCount: number,
-  steps: readonly SetupStep[],
+  counts: SetupCounts,
 ): boolean {
-  const ready = state.acknowledgements;
   return (
     state.status === "in_progress" &&
     state.selectedMarkets.length > 0 &&
-    (competitorCount > 0 || ready.noCompetitors) &&
-    ready.keywordsConfirmed &&
-    (!steps.includes("capacity") || ready.capacityReviewed) &&
-    (alertCount > 0 || ready.alertsSkipped)
+    setupProgress(state, counts).next === null
   );
 }
 
 export function completeOnboarding(
   state: OnboardingState,
-  competitorCount: number,
-  alertCount: number,
-  steps: readonly SetupStep[],
+  counts: SetupCounts,
 ): OnboardingState {
-  return canCompleteOnboarding(state, competitorCount, alertCount, steps)
+  return canCompleteOnboarding(state, counts)
     ? { ...state, status: "completed" }
     : state;
 }
