@@ -3,11 +3,16 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Info, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { parseStoreUrl, type Store } from "@asobeast/shared";
+import {
+  parseStoreUrl,
+  STORES,
+  type Store,
+  type StoreSearchResult,
+} from "@asobeast/shared";
 import { useRouter } from "next/navigation";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { CountrySelect } from "@/components/CountrySelect";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -19,61 +24,67 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ApiError, importApp } from "@/lib/api";
-import { COUNTRY_OPTIONS, OTHER, marketError } from "@/lib/countries";
-import { formatCountry } from "@/lib/format";
+import { marketError } from "@/lib/countries";
+import { storeLabel } from "@/lib/format";
 import { appKeys, portfolioKey } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
+import { StoreSearchField } from "./StoreSearchField";
+import { useStoreSearch } from "./useStoreSearch";
 
-function StoreUrlField({
-  url,
-  error,
-  note,
+const DEFAULT_STORE: Store = "APP_STORE";
+const DEFAULT_COUNTRY = "us";
+
+const PLACEHOLDERS: Record<Store, string> = {
+  APP_STORE: "Focus Timer or apps.apple.com/us/app/…/id123",
+  GOOGLE_PLAY: "Focus Timer or com.example.app",
+};
+
+function StoreTabs({
+  store,
   onChange,
 }: {
-  url: string;
-  error: string | null;
-  note: string | null;
-  onChange: (value: string) => void;
+  store: Store;
+  onChange: (store: Store) => void;
+}) {
+  return (
+    <Tabs value={store} onValueChange={(next) => onChange(next as Store)}>
+      <TabsList aria-label="Store">
+        {STORES.map((option) => (
+          <TabsTrigger key={option} value={option}>
+            {storeLabel(option)}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+    </Tabs>
+  );
+}
+
+function StorefrontField({
+  store,
+  country,
+  onChange,
+}: {
+  store: Store;
+  country: string;
+  onChange: (country: string) => void;
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <Label htmlFor="import-url">Store URL</Label>
-      <Input
-        id="import-url"
-        name="store-url"
-        type="text"
-        inputMode="url"
-        autoComplete="off"
-        autoCapitalize="none"
-        spellCheck={false}
-        value={url}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder="apps.apple.com/us/app/name/id123 or com.example.app"
-        autoFocus
-        aria-invalid={error !== null}
-        aria-describedby={error ? "import-url-error" : undefined}
+      <Label htmlFor="import-country">Home storefront</Label>
+      <p className="text-xs text-muted-foreground">
+        Where this app’s metadata and category ranks are read. Add other markets
+        later from the keyword monitor.
+      </p>
+      <CountrySelect
+        id="import-country"
+        store={store}
+        value={country}
+        onChange={onChange}
+        ariaLabel="Home storefront"
       />
-      {error ? (
-        <p id="import-url-error" className="text-body text-destructive">
-          {error}
-        </p>
-      ) : null}
-      {note ? (
-        <Alert>
-          <Info />
-          <AlertDescription>{note}</AlertDescription>
-        </Alert>
-      ) : null}
     </div>
   );
 }
@@ -92,11 +103,12 @@ export function ImportAppDialog({
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = openProp ?? uncontrolledOpen;
   const setOpen = onOpenChangeProp ?? setUncontrolledOpen;
-  const [url, setUrl] = useState("");
-  const [selected, setSelected] = useState("us");
-  const [custom, setCustom] = useState("");
+  const [value, setValue] = useState("");
+  const [store, setStore] = useState<Store>(DEFAULT_STORE);
+  const [country, setCountry] = useState(DEFAULT_COUNTRY);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
+  const search = useStoreSearch(store, country, value);
 
   const mutation = useMutation({
     mutationFn: ({ url, country }: { url: string; country: string }) =>
@@ -123,9 +135,9 @@ export function ImportAppDialog({
   const importOnce = useSingleFlight(mutation);
 
   function reset() {
-    setUrl("");
-    setSelected("us");
-    setCustom("");
+    setValue("");
+    setStore(DEFAULT_STORE);
+    setCountry(DEFAULT_COUNTRY);
     setError(null);
     setNote(null);
     mutation.reset();
@@ -138,45 +150,41 @@ export function ImportAppDialog({
     }
   }
 
-  function onUrlChange(value: string) {
-    setUrl(value);
+  function onValueChange(next: string) {
+    setValue(next);
     try {
-      const { country } = parseStoreUrl(value);
-      if (COUNTRY_OPTIONS.includes(country)) {
-        setSelected(country);
-        setCustom("");
-      } else {
-        setSelected(OTHER);
-        setCustom(country);
-      }
+      const parsed = parseStoreUrl(next);
+      setStore(parsed.store);
+      setCountry(parsed.country);
     } catch {
       return;
     }
+  }
+
+  function importFrom(target: Store, url: string) {
+    const invalidCountry = marketError(target, country);
+    if (invalidCountry) {
+      setError(invalidCountry);
+      return;
+    }
+    importOnce({ url, country });
+  }
+
+  function pick(result: StoreSearchResult) {
+    setError(null);
+    setNote(null);
+    importFrom(store, result.storeAppId);
   }
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     setNote(null);
-
-    let store: Store;
-    try {
-      store = parseStoreUrl(url).store;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unrecognized store URL");
-      return;
-    }
-
-    const country = (selected === OTHER ? custom : selected)
-      .trim()
-      .toLowerCase();
-    const invalidCountry = marketError(store, country);
-    if (invalidCountry) {
-      setError(invalidCountry);
-      return;
-    }
-
-    importOnce({ url, country });
+    const { input, enter } = search;
+    if (input.kind === "url") importFrom(input.parsed.store, value);
+    if (input.kind === "invalid") setError(input.message);
+    if (enter.kind === "pick") importFrom(store, enter.result.storeAppId);
+    if (enter.kind === "focus") search.firstResultRef.current?.focus();
   }
 
   return (
@@ -186,32 +194,42 @@ export function ImportAppDialog({
         <DialogHeader>
           <DialogTitle>Import an app</DialogTitle>
           <DialogDescription>
-            Paste an App Store or Google Play URL to import the app and start
-            tracking its keywords.
+            Search the App Store or Google Play by name, or paste a store URL,
+            to import the app and start tracking its keywords.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={submit} className="flex min-h-0 flex-col gap-4">
           <DialogBody>
-            <StoreUrlField
-              url={url}
+            <StoreTabs store={store} onChange={setStore} />
+
+            <StoreSearchField
+              id="import-url"
+              label="App name or store URL"
+              hint="Type a name to search, or paste a store URL."
+              placeholder={PLACEHOLDERS[store]}
+              store={store}
+              country={country}
+              value={value}
+              onChange={onValueChange}
+              onPick={pick}
+              search={search}
               error={error}
               note={note}
-              onChange={onUrlChange}
+              autoFocus
             />
 
-            <ImportCountryField
-              selected={selected}
-              custom={custom}
-              onSelectedChange={setSelected}
-              onCustomChange={setCustom}
+            <StorefrontField
+              store={store}
+              country={country}
+              onChange={setCountry}
             />
           </DialogBody>
 
           <DialogFooter>
             <Button
               type="submit"
-              disabled={mutation.isPending || url.trim() === ""}
+              disabled={mutation.isPending || value.trim() === ""}
             >
               {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
               {mutation.isPending ? "Importing…" : "Import"}
@@ -220,53 +238,5 @@ export function ImportAppDialog({
         </form>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function ImportCountryField({
-  selected,
-  custom,
-  onSelectedChange,
-  onCustomChange,
-}: {
-  selected: string;
-  custom: string;
-  onSelectedChange: (value: string) => void;
-  onCustomChange: (value: string) => void;
-}) {
-  return (
-    <div className="flex flex-col gap-2">
-      <Label htmlFor="import-country">Home storefront</Label>
-      <p className="text-xs text-muted-foreground">
-        Where this app’s metadata and category ranks are read. Add other markets
-        later from the keyword monitor.
-      </p>
-      <Select value={selected} onValueChange={onSelectedChange}>
-        <SelectTrigger id="import-country" className="w-[200px]">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {COUNTRY_OPTIONS.map((code) => (
-            <SelectItem key={code} value={code}>
-              {code.toUpperCase()} · {formatCountry(code)}
-            </SelectItem>
-          ))}
-          <SelectItem value={OTHER}>Other…</SelectItem>
-        </SelectContent>
-      </Select>
-      {selected === OTHER ? (
-        <Input
-          aria-label="Storefront country code"
-          name="country"
-          autoComplete="off"
-          spellCheck={false}
-          value={custom}
-          onChange={(event) => onCustomChange(event.target.value)}
-          placeholder="two letter code, e.g. se…"
-          maxLength={2}
-          className="w-[200px]"
-        />
-      ) : null}
-    </div>
   );
 }

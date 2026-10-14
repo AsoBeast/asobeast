@@ -6,6 +6,7 @@ import type {
   KeywordFieldQuery,
   KeywordImportRequest,
   KeywordSuggestionStrategy,
+  Store,
   WebhookItem,
 } from "@asobeast/shared";
 import { QUERY_BOUNDS } from "@asobeast/shared";
@@ -61,6 +62,7 @@ import {
   getMarketAvailability,
   getAppSetup,
   getMarketSuggestions,
+  searchStore,
   getMetadataAudit,
   getPortfolio,
   getPortfolioInsights,
@@ -199,6 +201,9 @@ export const appKeys = {
 export const setupKey = (id: string) => ["setup", id] as const;
 
 export const portfolioKey = ["portfolio"] as const;
+
+export const storeSearchKey = (store: Store, country: string, q: string) =>
+  ["store-search", store, country, q] as const;
 export const portfolioInsightsKey = [...portfolioKey, "insights"] as const;
 
 export const recentChangesKey = (limit?: number) =>
@@ -711,6 +716,14 @@ export const marketAvailabilityOptions = (id: string, country: string) =>
     queryFn: () => getMarketAvailability(id, country),
     staleTime: (query) =>
       query.state.data?.status === "unknown" ? 0 : ONE_DAY_MS,
+  });
+
+export const storeSearchOptions = (store: Store, country: string, q: string) =>
+  queryOptions({
+    queryKey: storeSearchKey(store, country, q),
+    queryFn: () => searchStore(store, country, q),
+    staleTime: ONE_DAY_MS,
+    retry: false,
   });
 
 export const marketSuggestionsOptions = (id: string) =>

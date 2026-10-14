@@ -81,6 +81,8 @@ import {
   emptyScreenshots,
   errorEnvelope,
   rateLimitedEnvelope,
+  STORE_SEARCH,
+  storeLookupRefusedEnvelope,
   MARKET_SUGGESTIONS,
   DEFAULT_SEED_TEXTS,
   SEED_REFUSED_MESSAGE,
@@ -1999,6 +2001,40 @@ const routes: Route[] = [
     method: "GET",
     pattern: /^\/apps$/,
     handler: (_p, _q, res) => json(res, 200, apps),
+  },
+  {
+    method: "GET",
+    pattern: /^\/store\/search$/,
+    handler: (_p, req, res) => {
+      const path = req.url ?? "/";
+      const query = new URL(path, "http://localhost").searchParams;
+      const store = query.get("store");
+      const country = query.get("country");
+      const q = query.get("q")?.trim().toLowerCase();
+      if (
+        (store !== "APP_STORE" && store !== "GOOGLE_PLAY") ||
+        !country ||
+        !q
+      ) {
+        return json(res, 400, errorEnvelope(400, path));
+      }
+      if (hasCookie(req, "e2e_store_search_spent", "1")) {
+        return json(res, 429, storeLookupRefusedEnvelope(path), {
+          "retry-after": String(RATE_LIMIT_RESET_SECONDS),
+        });
+      }
+      if (hasCookie(req, "e2e_store_search_fail", "1")) {
+        return json(res, 502, errorEnvelope(502, path));
+      }
+      const limit = Number(query.get("limit") ?? 10);
+      json(
+        res,
+        200,
+        STORE_SEARCH[store]
+          .filter((result) => result.title.toLowerCase().includes(q))
+          .slice(0, limit),
+      );
+    },
   },
   {
     method: "GET",

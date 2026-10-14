@@ -35,6 +35,8 @@ import {
   competitorsOptions,
   comparisonOptions,
   discoveryOptions,
+  storeSearchKey,
+  storeSearchOptions,
   emailAlertKeys,
   healthKey,
   invalidateApiTokenMutation,
@@ -413,6 +415,22 @@ describe("appKeys", () => {
   it("keys a deep search by its storefront", () => {
     expect(appKeys.spider(APP, "fitness", "de")).not.toEqual(
       appKeys.spider(APP, "fitness", "us"),
+    );
+  });
+
+  it("keys a name search by its store, storefront and name rather than by an app", () => {
+    const options = storeSearchOptions("APP_STORE", "us", "focus");
+
+    expect(options.queryKey).toEqual(
+      storeSearchKey("APP_STORE", "us", "focus"),
+    );
+    expect(options.retry).toBe(false);
+    expect(isPrefixOf(appKeys.all, options.queryKey)).toBe(false);
+    expect(storeSearchKey("APP_STORE", "us", "focus")).not.toEqual(
+      storeSearchKey("GOOGLE_PLAY", "us", "focus"),
+    );
+    expect(storeSearchKey("APP_STORE", "us", "focus")).not.toEqual(
+      storeSearchKey("APP_STORE", "de", "focus"),
     );
   });
 

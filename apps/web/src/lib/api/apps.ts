@@ -7,6 +7,8 @@ import type {
   ListingMarket,
   MarketAvailabilityResult,
   MarketSuggestionsResult,
+  Store,
+  StoreSearchResult,
 } from "@asobeast/shared";
 import { apiFetch, marketParams, withQuery } from "./client";
 
@@ -27,6 +29,21 @@ export function importApp(url: string, country?: string): Promise<AppDetail> {
     method: "POST",
     body: JSON.stringify({ url, country } satisfies AppImportRequest),
   });
+}
+
+export function searchStore(
+  store: Store,
+  country: string,
+  q: string,
+  limit?: number,
+): Promise<StoreSearchResult[]> {
+  const params = new URLSearchParams({
+    store,
+    country,
+    q,
+    ...(limit === undefined ? {} : { limit: String(limit) }),
+  });
+  return apiFetch<StoreSearchResult[]>(withQuery("/store/search", params));
 }
 
 export function deleteApp(id: string): Promise<void> {
