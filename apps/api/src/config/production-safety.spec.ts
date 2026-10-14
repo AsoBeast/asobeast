@@ -330,6 +330,27 @@ describe('production safety', () => {
         warningsFor({ WEB_PUBLIC_URL: 'https://app.example.com' }),
       ).toEqual([]);
     });
+
+    it.each([
+      'http://localhost:3001',
+      'http://app.localhost',
+      'http://127.0.0.1:3000',
+      'http://[::1]:3001',
+    ])('warns that links to %s open only on this machine', (url) => {
+      expect(warningsFor({ WEB_PUBLIC_URL: url }).join(' ')).toContain(
+        `WEB_PUBLIC_URL is ${url} in production`,
+      );
+    });
+
+    it('stays quiet about a loopback origin when no email is sent', () => {
+      expect(
+        warningsFor({
+          SMTP_HOST: undefined,
+          SMTP_FROM: undefined,
+          WEB_PUBLIC_URL: 'http://localhost:3001',
+        }),
+      ).toEqual([]);
+    });
   });
 
   describe('smtp transport', () => {

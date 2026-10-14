@@ -340,7 +340,7 @@ RETENTION_AI_CALLS_DAYS=400         # ai call ledger rows; never prunes the curr
 ACTIONS_MAX_OPEN_PER_APP=20         # new actions one generation run may open per app, highest impact first
 ACTIONS_SNOOZE_MAX_DAYS=90          # furthest a snooze may be set into the future
 ALERT_ACTIONS_MIN_PRIORITY=high     # lowest priority that fires action.opened: critical|high|medium|low
-WEB_PUBLIC_URL=                     # public web origin; builds every link in emails (confirmation, reset, invitation, deep links, logo, unsubscribe) and alert payloads. WARNS in production when empty with SMTP configured, because no email alert recipient can be asked to confirm
+WEB_PUBLIC_URL=                     # public web origin; builds every link in emails (confirmation, reset, invitation, deep links, logo, unsubscribe) and alert payloads. WARNS in production when empty with SMTP configured, because no email alert recipient can be asked to confirm, and when it names this machine with SMTP configured, because no recipient elsewhere can open its links
 RETENTION_ALERT_EVENTS_DAYS=30      # completed alert claims; unfinished claims are retained; 0 keeps forever
 SMTP_HOST=                          # email alerts stay disabled until SMTP_HOST and SMTP_FROM are both set
 SMTP_PORT=587                       # 465 with SMTP_SECURE=true, otherwise 587/25
