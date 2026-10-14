@@ -182,6 +182,18 @@ describe('OnDemandLimiter', () => {
 
     expect(expire).toHaveBeenCalledWith(expect.any(String) as string, 3_600);
   });
+
+  it('spends a store lookup in an hourly window', async () => {
+    incr.mockResolvedValue(
+      (PLAN_LIMITS.indie.onDemand?.storeLookup.limit ?? 0) + 1,
+    );
+
+    await expect(
+      scoped(() => limiterWith(true).consume('storeLookup', NOW)),
+    ).rejects.toMatchObject({
+      detail: { window: 'hour', resetSeconds: 1_800, action: 'storeLookup' },
+    });
+  });
 });
 
 describe('rate limit window keys', () => {
