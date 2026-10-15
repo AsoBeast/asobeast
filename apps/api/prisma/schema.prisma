@@ -515,6 +515,7 @@ model Review {
   reply          ReviewReply?
   createdAt      DateTime  @default(now())
 
+  @@unique([id, appId])
   @@unique([appId, reviewId])
   @@index([appId, reviewedAt])
   @@index([appId, score])
@@ -522,7 +523,7 @@ model Review {
 
 model ReviewReply {
   reviewId    String    @id
-  review      Review    @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  review      Review    @relation(fields: [reviewId, appId], references: [id, appId], onDelete: Cascade)
   appId       String
   workspaceId String
   app         App       @relation(fields: [appId, workspaceId], references: [id, workspaceId], onDelete: Cascade)
@@ -535,6 +536,7 @@ model ReviewReply {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
+  @@unique([reviewId, appId])
   @@index([appId, repliedAt])
   @@index([workspaceId])
 }

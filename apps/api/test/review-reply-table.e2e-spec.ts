@@ -83,7 +83,26 @@ describe('the review reply table (e2e)', () => {
     }
   });
 
+  it('refuses a reply whose review belongs to another app', async () => {
+    const { review } = await seedReview();
+    const other = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: 'b',
+        country: 'us',
+      },
+    });
+
+    await expect(
+      seedReply(other.id, review.id, DEFAULT_WORKSPACE_ID),
+    ).rejects.toThrow('ReviewReply_reviewId_appId_fkey');
+  });
+
   it('never reads the migration history table', () => {
     expect(sql).not.toContain('_prisma_migrations');
+    expect(migrationSql('tie_review_replies_to_their_review')).not.toContain(
+      '_prisma_migrations',
+    );
   });
 });
