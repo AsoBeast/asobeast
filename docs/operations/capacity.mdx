@@ -89,7 +89,7 @@ curl --silent --header "Authorization: Bearer $ASOBEAST_API_TOKEN" http://127.0.
 
 `utilization` is the fraction of a day the run will occupy at your configured limits. Above 1.0 the run cannot finish before the next one starts.
 
-`completion` answers the question a customer actually asks: `startsAt` is the next scheduled run, `hours` is how long the work takes at the current capacity, and `completesAt` is when the run should finish. When an egress proxy pool is configured the capacity behind those numbers is the healthy endpoint count rather than the single host budget, so the projection degrades honestly as endpoints cool down.
+`completion` answers the question a customer actually asks: `startsAt` is the next scheduled run, `hours` is how long the work takes at the current capacity, and `completesAt` is when the run should finish. When an egress proxy pool is configured the capacity behind those numbers is the healthy endpoint count, capped at `PROXY_WORKER_MAX_CONCURRENCY`, times `PROXY_ENDPOINT_RPM` rather than the single host budget, because a store job holds one endpoint for its whole run and the workers run at most that many jobs at once. Endpoints beyond the ceiling add no capacity until it is raised, and the projection degrades honestly as endpoints cool down.
 
 `quota` is present only when `BILLING_ENABLED` is true. It reports the plan, the apps and keyword markets used against their limits, and `overLimitSince` once a workspace has been over its keyword limit long enough for daily checks to cover only the first N keyword markets in a stable order.
 
