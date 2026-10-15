@@ -34,11 +34,6 @@ const build = (items: ChartItem[] = [], stored: StoredChart | null = null) => {
       findUnique: jest.fn().mockResolvedValue(stored),
       create: jest.fn().mockResolvedValue(STORED),
     },
-    chartApp: {
-      upsert: jest.fn(({ create }: { create: { storeAppId: string } }) =>
-        Promise.resolve({ id: `app-${create.storeAppId}` }),
-      ),
-    },
   };
   const topCharts = jest.fn().mockResolvedValue(items);
   const registry = { get: jest.fn().mockReturnValue({ topCharts }) };
@@ -91,27 +86,6 @@ describe('ChartCaptureService.captureToday', () => {
 
     expect(registry.get).toHaveBeenCalledWith(Store.APP_STORE);
     expect(topCharts).toHaveBeenCalledWith('free', '6014', 100, 'us');
-    expect(prisma.chartApp.upsert).toHaveBeenNthCalledWith(1, {
-      where: { store_storeAppId: { store: 'APP_STORE', storeAppId: '111' } },
-      create: {
-        store: 'APP_STORE',
-        storeAppId: '111',
-        title: 'First',
-        developer: 'Acme',
-        iconUrl: 'https://example.com/a.png',
-        genreId: '6014',
-        free: true,
-      },
-      update: {
-        title: 'First',
-        developer: 'Acme',
-        iconUrl: 'https://example.com/a.png',
-        genreId: '6014',
-        free: true,
-        seenAt: new Date('2026-10-15T09:30:00.000Z'),
-      },
-      select: { id: true },
-    });
     const [{ data }] = prisma.chartCapture.create.mock.calls[0] as [
       { data: Record<string, unknown> },
     ];
@@ -121,8 +95,16 @@ describe('ChartCaptureService.captureToday', () => {
       depth: 100,
       entries: {
         create: [
-          { position: 1, chartAppId: 'app-111' },
-          { position: 2, chartAppId: 'app-222' },
+          {
+            position: 1,
+            storeAppId: '111',
+            title: 'First',
+            developer: 'Acme',
+            iconUrl: 'https://example.com/a.png',
+            genreId: '6014',
+            free: true,
+          },
+          { position: 2, storeAppId: '222', title: 'Second' },
         ],
       },
     });
@@ -160,10 +142,9 @@ describe('ChartCaptureService.captureToday', () => {
       { data: { entries: { create: unknown[] } } },
     ];
     expect(data.entries.create).toEqual([
-      { position: 1, chartAppId: 'app-111' },
-      { position: 2, chartAppId: 'app-222' },
+      { position: 1, storeAppId: '111', title: 'First' },
+      { position: 2, storeAppId: '222', title: 'Second' },
     ]);
-    expect(prisma.chartApp.upsert).toHaveBeenCalledTimes(2);
   });
 
   it('lets a concurrent capture win', async () => {
@@ -202,6 +183,15 @@ describe('ChartCaptureService.captureToday', () => {
     expect(topCharts).not.toHaveBeenCalled();
   });
 
+  it('refuses an empty feed so the chart is fetched again', async () => {
+    const { service, prisma } = build([]);
+
+    await expect(service.captureToday(KEY)).rejects.toBeInstanceOf(
+      StoreRequestError,
+    );
+    expect(prisma.chartCapture.create).not.toHaveBeenCalled();
+  });
+
   it('never catches a store failure', async () => {
     const { service, prisma, topCharts } = build();
     const failure = new StoreRequestError('APP_STORE', 'topCharts', 'boom');
@@ -209,7 +199,6 @@ describe('ChartCaptureService.captureToday', () => {
 
     await expect(service.captureToday(KEY)).rejects.toBe(failure);
 
-    expect(prisma.chartApp.upsert).not.toHaveBeenCalled();
     expect(prisma.chartCapture.create).not.toHaveBeenCalled();
   });
 });

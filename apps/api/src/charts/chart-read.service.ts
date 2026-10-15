@@ -31,15 +31,10 @@ export interface ChartPageQuery extends ChartKey {
 type ChartListingItem = Omit<ChartEntryItem, 'previous' | 'delta' | 'movement'>;
 
 function listingsOf(store: Store, chart: StoredChart): ChartListingItem[] {
-  return chart.entries.map(({ position, app }) => ({
-    position,
-    storeAppId: app.storeAppId,
-    title: app.title,
-    developer: app.developer,
-    iconUrl: app.iconUrl,
-    genreId: app.genreId,
-    genreName: app.genreId === null ? null : chartGenreName(store, app.genreId),
-    free: app.free,
+  return chart.entries.map((entry) => ({
+    ...entry,
+    genreName:
+      entry.genreId === null ? null : chartGenreName(store, entry.genreId),
   }));
 }
 

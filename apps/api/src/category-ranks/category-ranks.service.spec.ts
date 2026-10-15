@@ -36,7 +36,8 @@ const makeService = (
     depth: CHART_DEPTH[store],
     entries: chart.map((item, index) => ({
       position: index + 1,
-      app: { storeAppId: item.storeAppId, title: item.title },
+      storeAppId: item.storeAppId,
+      title: item.title,
     })),
   });
   const service = new CategoryRanksService(

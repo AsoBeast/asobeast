@@ -21,6 +21,8 @@ A chart is one store, one storefront, one category, one kind and one device.
 
 The App Store chart feed answers 100 apps and Google Play answers 200, so a chart ends there. An app outside that depth is not in the chart, the same rule [category ranks](/guides/category-ranks) follow.
 
+Each row keeps the title, developer and icon its storefront showed on that day, so an older capture reads the way the chart looked then.
+
 Every filter lives in the page address, so a link to a chart on a day opens that chart on that day.
 
 ## Where do captures come from?
@@ -65,7 +67,7 @@ A refused capture or follow costs nothing. See [Rate limits](/api-reference/rate
 
 ## How long are captures kept?
 
-`RETENTION_CHARTS_DAYS` defaults to 365 days. Set it to `0` to keep chart history forever. An app no capture names any more is pruned with it. See [Configuration reference](/configuration/reference).
+`RETENTION_CHARTS_DAYS` defaults to 365 days. Set it to `0` to keep chart history forever. See [Configuration reference](/configuration/reference).
 
 ## Troubleshooting
 

@@ -22,14 +22,12 @@ const chart = (date: string, ids: string[]): StoredChart => ({
   capturedAt: new Date(`${date}T03:00:00.000Z`),
   entries: ids.map((storeAppId, index) => ({
     position: index + 1,
-    app: {
-      storeAppId,
-      title: storeAppId,
-      developer: null,
-      iconUrl: null,
-      genreId: storeAppId === 'a' ? '6014' : null,
-      free: null,
-    },
+    storeAppId,
+    title: storeAppId,
+    developer: null,
+    iconUrl: null,
+    genreId: storeAppId === 'a' ? '6014' : null,
+    free: null,
   })),
 });
 

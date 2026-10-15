@@ -168,9 +168,7 @@ describe('CategoryRanksController (e2e)', () => {
   });
 
   it("records the second workspace's positions without a store call", async () => {
-    await prisma.$executeRawUnsafe(
-      'TRUNCATE TABLE "ChartCapture", "ChartApp" CASCADE',
-    );
+    await prisma.$executeRawUnsafe('TRUNCATE TABLE "ChartCapture" CASCADE');
     topCharts.mockReset().mockResolvedValue([
       { storeAppId: 'other-1', title: 'Other' },
       { storeAppId: 'other-2', title: 'Other' },

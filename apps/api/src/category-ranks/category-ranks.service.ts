@@ -106,7 +106,7 @@ export class CategoryRanksService {
       chartKeyOf({ collection, genre, country, store }),
     );
     const positionByStoreAppId = new Map(
-      chart.entries.map((entry) => [entry.app.storeAppId, entry.position]),
+      chart.entries.map((entry) => [entry.storeAppId, entry.position]),
     );
 
     const rows = await this.loadAppBuckets({ store, country });

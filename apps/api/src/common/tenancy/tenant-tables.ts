@@ -28,7 +28,6 @@ export const TENANT_TABLES = [
 ] as const;
 
 export const SHARED_STORE_TABLES = [
-  'ChartApp',
   'ChartCapture',
   'ChartEntry',
   'Keyword',

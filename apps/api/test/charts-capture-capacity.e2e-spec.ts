@@ -44,7 +44,7 @@ describe('Chart capture capacity (e2e)', () => {
 
   beforeEach(async () => {
     await harness.prisma.$executeRawUnsafe(
-      'TRUNCATE TABLE "ChartCapture", "ChartApp" CASCADE',
+      'TRUNCATE TABLE "ChartCapture" CASCADE',
     );
     owner = await resetCapacity(harness);
   });

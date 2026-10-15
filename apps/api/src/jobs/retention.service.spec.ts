@@ -49,7 +49,6 @@ const buildPrisma = () => ({
   },
   screenshotText: { deleteMany: jest.fn().mockResolvedValue({ count: 14 }) },
   chartCapture: { deleteMany: jest.fn().mockResolvedValue({ count: 15 }) },
-  chartApp: { deleteMany: jest.fn().mockResolvedValue({ count: 16 }) },
 });
 
 const crossTenant = new CrossTenantAccess(new WorkspaceContext());
@@ -261,7 +260,6 @@ describe('RetentionService', () => {
     prisma.aiCall.updateMany.mockImplementation(boom);
     prisma.screenshotText.deleteMany.mockImplementation(boom);
     prisma.chartCapture.deleteMany.mockImplementation(boom);
-    prisma.chartApp.deleteMany.mockImplementation(boom);
     const service = new RetentionService(
       buildConfig({
         RETENTION_CHANGE_EVENTS_DAYS: 30,
@@ -361,20 +359,14 @@ describe('RetentionService action pruning', () => {
 
     const deleted = await service.prune();
 
-    const {
-      suggestProbe,
-      aiCallReservation,
-      screenshotText,
-      chartApp,
-      ...configurable
-    } = deleted;
+    const { suggestProbe, aiCallReservation, screenshotText, ...configurable } =
+      deleted;
     expect(Object.values(configurable).every((count) => count === 0)).toBe(
       true,
     );
     expect(suggestProbe).toBeGreaterThanOrEqual(0);
     expect(aiCallReservation).toBeGreaterThanOrEqual(0);
     expect(screenshotText).toBeGreaterThanOrEqual(0);
-    expect(chartApp).toBeGreaterThanOrEqual(0);
     for (const table of [
       prisma.keywordRanking,
       prisma.serpEntry,
@@ -503,7 +495,7 @@ describe('RetentionService ai call ledger', () => {
 describe('RetentionService top charts', () => {
   afterEach(() => jest.useRealTimers());
 
-  it('prunes chart captures older than the window and chart apps nothing names', async () => {
+  it('prunes chart captures older than the window', async () => {
     jest.useFakeTimers().setSystemTime(new Date('2026-10-15T09:30:00.000Z'));
     const prisma = buildPrisma();
     const service = new RetentionService(
@@ -517,16 +509,10 @@ describe('RetentionService top charts', () => {
     expect(prisma.chartCapture.deleteMany).toHaveBeenCalledWith({
       where: { date: { lt: new Date('2026-09-15T00:00:00.000Z') } },
     });
-    expect(prisma.chartApp.deleteMany).toHaveBeenCalledWith({
-      where: {
-        entries: { none: {} },
-        seenAt: { lt: new Date('2026-10-14T00:00:00.000Z') },
-      },
-    });
-    expect(deleted).toMatchObject({ chartCapture: 15, chartApp: 16 });
+    expect(deleted.chartCapture).toBe(15);
   });
 
-  it('keeps chart captures forever at 0 and still prunes chart apps nothing names', async () => {
+  it('keeps chart captures forever at 0', async () => {
     const prisma = buildPrisma();
     const service = new RetentionService(
       buildConfig({ RETENTION_CHARTS_DAYS: 0 }),
@@ -537,7 +523,6 @@ describe('RetentionService top charts', () => {
     const deleted = await service.prune();
 
     expect(prisma.chartCapture.deleteMany).not.toHaveBeenCalled();
-    expect(prisma.chartApp.deleteMany).toHaveBeenCalledTimes(1);
     expect(deleted.chartCapture).toBe(0);
   });
 });

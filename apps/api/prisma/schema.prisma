@@ -399,21 +399,6 @@ model CategoryRank {
   @@index([appId, date])
 }
 
-model ChartApp {
-  id         String       @id @default(cuid())
-  store      Store
-  storeAppId String
-  title      String
-  developer  String?
-  iconUrl    String?
-  genreId    String?
-  free       Boolean?
-  seenAt     DateTime     @default(now())
-  entries    ChartEntry[]
-
-  @@unique([store, storeAppId])
-}
-
 model ChartCapture {
   id         String       @id @default(cuid())
   store      Store
@@ -434,11 +419,14 @@ model ChartEntry {
   captureId  String
   capture    ChartCapture @relation(fields: [captureId], references: [id], onDelete: Cascade)
   position   Int
-  chartAppId String
-  app        ChartApp     @relation(fields: [chartAppId], references: [id], onDelete: Cascade)
+  storeAppId String
+  title      String
+  developer  String?
+  iconUrl    String?
+  genreId    String?
+  free       Boolean?
 
   @@id([captureId, position])
-  @@index([chartAppId])
 }
 
 model ChartFollow {

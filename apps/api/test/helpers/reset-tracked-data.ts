@@ -7,7 +7,7 @@ BEGIN
     TRUNCATE TABLE "App", "Keyword" RESTART IDENTITY CASCADE;
   END IF;
   IF to_regclass('public."ChartCapture"') IS NOT NULL THEN
-    TRUNCATE TABLE "ChartCapture", "ChartApp" CASCADE;
+    TRUNCATE TABLE "ChartCapture" CASCADE;
   END IF;
   IF to_regclass('public."TrialClaim"') IS NOT NULL THEN
     TRUNCATE TABLE "TrialClaim";

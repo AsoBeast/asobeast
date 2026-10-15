@@ -72,22 +72,8 @@ describe('ChartsController (e2e)', () => {
   beforeEach(async () => {
     topCharts.mockReset();
     await prisma.$executeRawUnsafe(
-      'TRUNCATE TABLE "App", "Keyword", "ChartCapture", "ChartApp", "ChartFollow" RESTART IDENTITY CASCADE',
+      'TRUNCATE TABLE "App", "Keyword", "ChartCapture", "ChartFollow" RESTART IDENTITY CASCADE',
     );
-    const ids = ['a', 'b', 'c', 'd', 'e'];
-    for (const storeAppId of ids) {
-      await prisma.chartApp.create({
-        data: {
-          id: `chart-${storeAppId}`,
-          store: Store.APP_STORE,
-          storeAppId,
-          title: storeAppId.toUpperCase(),
-          developer: storeAppId === 'a' ? 'Acme' : null,
-          genreId: '6014',
-          free: true,
-        },
-      });
-    }
     const capture = (date: Date, order: string[]) =>
       prisma.chartCapture.create({
         data: {
@@ -97,7 +83,11 @@ describe('ChartsController (e2e)', () => {
           entries: {
             create: order.map((storeAppId, index) => ({
               position: index + 1,
-              chartAppId: `chart-${storeAppId}`,
+              storeAppId,
+              title: storeAppId.toUpperCase(),
+              developer: storeAppId === 'a' ? 'Acme' : null,
+              genreId: '6014',
+              free: true,
             })),
           },
         },
@@ -321,6 +311,31 @@ describe('ChartsController (e2e)', () => {
 
     await api.post('/charts/capture').send(CAPTURE_KEY).expect(200);
     expect(topCharts).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps each storefront's own listing of an app", async () => {
+    const row = (title: string) => [
+      { storeAppId: 'shared', title, developer: `${title} Inc` },
+    ];
+    topCharts
+      .mockResolvedValueOnce(row('Habit Tracker'))
+      .mockResolvedValueOnce(row('習慣トラッカー'));
+
+    await api.post('/charts/capture').send(CAPTURE_KEY).expect(200);
+    await api
+      .post('/charts/capture')
+      .send({ ...CAPTURE_KEY, country: 'jp' })
+      .expect(200);
+
+    const us = await read({ genre: CAPTURE_KEY.genre }).expect(200);
+    const jp = await read({ genre: CAPTURE_KEY.genre, country: 'jp' }).expect(
+      200,
+    );
+    expect((us.body as ChartPage).entries[0]).toMatchObject({
+      title: 'Habit Tracker',
+      developer: 'Habit Tracker Inc',
+    });
+    expect((jp.body as ChartPage).entries[0].title).toBe('習慣トラッカー');
   });
 
   it("answers the store's failure as a bad gateway", async () => {
