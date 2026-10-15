@@ -50,7 +50,7 @@ Every store request runs on the machine hosting AsoBeast as an ordinary public s
 | ASO Action Center                | Fifteen deterministic rules produce recommendations with a priority, an estimated impact, the evidence behind them, a deep link, a full lifecycle and a verified outcome                  |
 | Portfolio analysis               | Group linked listings across stores and countries, compare group visibility and generate weekly digests                                                                                   |
 | Alerts                           | Signed webhooks or SMTP email for rank, SERP, metadata, review and new action events, with resumable batched delivery                                                                     |
-| MCP server                       | 31 read tools, plus 5 opt-in tools that change keywords, competitors and actions, over stdio or a remote endpoint, so Claude Code and Claude Desktop can work with your instance directly |
+| MCP server                       | 33 read tools, plus 5 opt-in tools that change keywords, competitors and actions, over stdio or a remote endpoint, so Claude Code and Claude Desktop can work with your instance directly |
 
 A guide for each of these lives in the [documentation](https://docs.asobeast.com).
 
@@ -140,7 +140,7 @@ Only the store requests themselves, which send each tracked phrase to the App St
 
 ### Can I connect AsoBeast to Claude or another AI agent?
 
-Yes. AsoBeast ships a Model Context Protocol server with 31 read tools, available as a local stdio process or as a remote endpoint on your instance. Every connection needs a personal API token and reads by default. Five more tools that change keywords, competitors and actions are listed only to a token you give the write scope. See [MCP](https://docs.asobeast.com/mcp/introduction).
+Yes. AsoBeast ships a Model Context Protocol server with 33 read tools, available as a local stdio process or as a remote endpoint on your instance. Every connection needs a personal API token and reads by default. Five more tools that change keywords, competitors and actions are listed only to a token you give the write scope. See [MCP](https://docs.asobeast.com/mcp/introduction).
 
 ### Is AsoBeast really free?
 

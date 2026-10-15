@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { COUNTRY_PATTERN, QUERY_BOUNDS } from "@asobeast/shared";
+import {
+  CHART_COMPARE_WINDOWS,
+  COUNTRY_PATTERN,
+  QUERY_BOUNDS,
+} from "@asobeast/shared";
 import { MCP_TOOLS, toolByName } from "./index";
 
 function fieldOf(tool: string, field: string): z.ZodTypeAny {
@@ -56,6 +60,7 @@ describe("mcp input bounds match the api", () => {
     ["app_summary", "country"],
     ["visibility_history", "country"],
     ["rank_distribution_history", "country"],
+    ["top_chart", "country"],
   ];
 
   it.each(COUNTRY_FIELDS)(
@@ -78,6 +83,7 @@ describe("mcp input bounds match the api", () => {
     ["audit_history", "to"],
     ["category_ranks", "from"],
     ["category_ranks", "to"],
+    ["top_chart", "date"],
   ];
 
   it.each(DATE_FIELDS)("%s.%s takes only a utc date", (tool, field) => {
@@ -127,5 +133,14 @@ describe("mcp input bounds match the api", () => {
     expect(actionId.safeParse("summary").success).toBe(false);
     expect(actionId.safeParse("activity").success).toBe(false);
     expect(actionId.safeParse("act-1").success).toBe(true);
+  });
+
+  it("takes only a compare window the api accepts", () => {
+    const schema = fieldOf("top_chart", "compare");
+
+    for (const window of CHART_COMPARE_WINDOWS) {
+      expect(schema.safeParse(window).success).toBe(true);
+    }
+    expect(schema.safeParse("2d").success).toBe(false);
   });
 });

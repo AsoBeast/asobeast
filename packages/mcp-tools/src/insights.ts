@@ -274,7 +274,7 @@ export const INSIGHT_TOOLS: ReadTool[] = [
     name: "category_ranks",
     title: "Category ranks",
     description:
-      "Daily chart positions of one app over a date window: one series per chart it was captured in, for the free, paid and grossing collections, in its own category and overall, each with the current position and the daily points. Home storefront only. Position is 1-based; null means the app was not found within the captured chart depth (render as >200), never zero. Defaults to the last 90 days, at most 365.",
+      "Daily chart positions of one app over a date window: one series per chart it was captured in, for the free, paid and grossing collections, in its own category and overall, each with the current position and the daily points. Home storefront only. Position is 1-based; null means the app was not found within the captured chart depth each series carries (render as >100 on the App Store, >200 on Google Play), never zero. Defaults to the last 90 days, at most 365.",
     inputSchema: z.object({ appId, from, to }),
     request: ({ appId, from, to }) => ({
       path: `/apps/${seg(appId)}/category-ranks`,
