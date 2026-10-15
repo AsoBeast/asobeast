@@ -205,6 +205,53 @@ describe('PipelineService', () => {
     ]);
   });
 
+  it('queues the followed categories on a manual workspace run', async () => {
+    const followed: CategoryBucket = {
+      collection: 'paid',
+      genre: '6014',
+      country: 'us',
+      store: 'APP_STORE',
+    };
+    const { service, appStoreQueue } = buildService({
+      chartFollows: buildChartFollows([followed]),
+    });
+
+    const summary = await service.fanOutWorkspaceDaily(DEFAULT_WORKSPACE_ID);
+
+    expect(summary.categories).toBe(1);
+    expect(appStoreQueue.add).toHaveBeenCalledWith(
+      JOBS.CHECK_CATEGORY,
+      expect.objectContaining(followed),
+      expect.anything(),
+    );
+  });
+
+  it('leaves the followed categories out of a per app run', async () => {
+    const chartFollows = buildChartFollows([
+      { collection: 'paid', genre: '6014', country: 'us', store: 'APP_STORE' },
+    ]);
+    const { service } = buildService({
+      chartFollows,
+      prisma: {
+        app: {
+          findFirst: jest.fn().mockResolvedValue({
+            id: 'primary',
+            store: 'APP_STORE',
+            country: 'us',
+            isCompetitor: false,
+            competitors: [],
+            tracked: [],
+          }),
+        },
+      },
+    });
+
+    const summary = await service.fanOutApp('primary');
+
+    expect(summary.categories).toBe(0);
+    expect(chartFollows.buckets).not.toHaveBeenCalled();
+  });
+
   it('covers only the plan limit once an over-limit workspace runs out of grace', async () => {
     const prisma = {
       app: {
