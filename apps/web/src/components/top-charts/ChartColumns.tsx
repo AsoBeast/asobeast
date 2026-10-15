@@ -10,7 +10,6 @@ import type { ChartPageQuery } from "@/lib/api";
 import { chartPageOptions } from "@/lib/queries";
 import { ChartColumn } from "./ChartColumn";
 import { categoryDates } from "./chart-column-rows";
-import { ChartFilters } from "./ChartFilters";
 import { chartCategoryOf } from "./chart-follows";
 import {
   chartKeyFrom,
@@ -19,7 +18,7 @@ import {
   type ChartSearchUpdate,
 } from "./chart-params";
 import { ChartsHeader } from "./ChartsHeader";
-import { ChartViewSwitch } from "./ChartViewSwitch";
+import { ChartToolbar } from "./ChartToolbar";
 import { FollowChartButton } from "./FollowChartButton";
 import { COLUMNS_GRID } from "./skeletons";
 import { TrendingPanel } from "./TrendingPanel";
@@ -51,21 +50,15 @@ export function ChartColumns({
     <>
       <ChartsHeader
         actions={
-          <>
-            <ChartViewSwitch
-              view={search.view}
-              onChange={(view) => onChange({ view })}
-            />
-            <FollowChartButton
-              category={chartCategoryOf(shownChartKey(pages[0]))}
-              primary
-            />
-          </>
+          <FollowChartButton
+            category={chartCategoryOf(shownChartKey(pages[0]))}
+            primary
+          />
         }
       />
-      <ChartFilters
+      <ChartToolbar
         chart={chartKeyFrom(search)}
-        withKind={false}
+        view={search.view}
         compare={search.compare}
         day={search.date ?? dates[0] ?? null}
         dates={dates}

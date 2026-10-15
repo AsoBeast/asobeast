@@ -8,7 +8,6 @@ import { CaptureTodayButton } from "./CaptureTodayButton";
 import { candidateApps } from "./chart-actions";
 import { capturableToday } from "./chart-column-rows";
 import { ChartEmpty } from "./ChartEmpty";
-import { ChartFilters } from "./ChartFilters";
 import { chartCategoryOf } from "./chart-follows";
 import {
   chartKeyFrom,
@@ -17,8 +16,8 @@ import {
   type ChartSearchUpdate,
 } from "./chart-params";
 import { ChartsHeader } from "./ChartsHeader";
+import { ChartToolbar } from "./ChartToolbar";
 import { ChartTable } from "./ChartTable";
-import { ChartViewSwitch } from "./ChartViewSwitch";
 import { FollowChartButton } from "./FollowChartButton";
 import { CHART_GRID, TRENDING_COLUMN } from "./skeletons";
 import { TrendingPanel } from "./TrendingPanel";
@@ -53,20 +52,10 @@ export function ChartTableView({
 
   return (
     <>
-      <ChartsHeader
-        actions={
-          <>
-            <ChartViewSwitch
-              view={search.view}
-              onChange={(view) => onChange({ view })}
-            />
-            {page.capture ? actions : null}
-          </>
-        }
-      />
-      <ChartFilters
+      <ChartsHeader actions={page.capture ? actions : null} />
+      <ChartToolbar
         chart={chartKeyFrom(search)}
-        withKind
+        view={search.view}
         compare={search.compare}
         day={page.capture?.date ?? search.date}
         dates={page.dates}

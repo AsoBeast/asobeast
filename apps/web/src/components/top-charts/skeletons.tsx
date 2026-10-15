@@ -8,7 +8,7 @@ export const TRENDING_COLUMN =
 
 export const COLUMNS_GRID = "grid gap-6 @4xl/charts:grid-cols-3 [&>*]:min-w-0";
 
-const FILTERS = 7;
+const FILTERS = 6;
 const ROWS = 10;
 const KINDS = 3;
 
@@ -85,9 +85,9 @@ export function TopChartsSkeleton({ view = "columns" }: { view?: ChartView }) {
         <Skeleton className="h-9 w-48" />
         <Skeleton shape="text" className="w-80 max-w-full" />
       </div>
-      <div className="flex flex-wrap items-end gap-3">
+      <div className="flex flex-wrap items-center gap-2">
         {Array.from({ length: FILTERS }, (_, index) => (
-          <Skeleton key={index} className="h-8 w-36" />
+          <Skeleton key={index} className="h-8 w-36 rounded-full" />
         ))}
       </div>
       {view === "table" ? (

@@ -189,7 +189,6 @@ test("keeps every filter in the url", async ({ page }) => {
   await expect(page).toHaveURL(/country=de/);
   await expect(page).toHaveURL(/genre=GAME_PUZZLE/);
   await expect(page).toHaveURL(/collection=grossing/);
-  await expect(page.getByRole("combobox", { name: "Device" })).toHaveCount(0);
 
   await page
     .getByRole("tablist", { name: "Store" })
@@ -200,12 +199,53 @@ test("keeps every filter in the url", async ({ page }) => {
   await expect(page.getByRole("combobox", { name: "Category" })).toHaveText(
     "Overall",
   );
-  const device = page.getByRole("combobox", { name: "Device" });
-  await expect(device).toHaveText("iPhone");
-  await device.click();
+});
+
+test("shows a device control only for a store with more than one device", async ({
+  page,
+}) => {
+  await page.goto("/charts?view=table");
+  await expect(page.getByRole("combobox", { name: "Category" })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: /device/i })).toHaveCount(0);
+
+  await page.goto("/charts?view=table&store=GOOGLE_PLAY");
+  await expect(page.getByRole("combobox", { name: "Category" })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: /device/i })).toHaveCount(0);
+});
+
+test("keeps the filters on one row without captions", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/charts");
+  const store = await page
+    .getByRole("tablist", { name: "Store" })
+    .boundingBox();
+  const layout = await page
+    .getByRole("tablist", { name: "Layout" })
+    .boundingBox();
+
+  expect(Math.abs((store?.y ?? 0) - (layout?.y ?? 100))).toBeLessThan(8);
+  await expect(page.getByText("Compare", { exact: true })).toHaveCount(0);
+});
+
+test("folds the filters into a sheet on a phone", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/charts");
+
+  await expect(page.getByRole("tablist", { name: "Store" })).toBeVisible();
   await expect(
-    page.getByRole("option", { name: "iPad · not captured yet" }),
-  ).toHaveAttribute("aria-disabled", "true");
+    page.getByRole("button", { name: /^Captured day/ }),
+  ).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Country" })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Filters" }).click();
+  const sheet = page.getByRole("dialog", { name: "Filters" });
+  await expect(sheet.getByRole("combobox", { name: "Country" })).toBeVisible();
+  await expect(sheet.getByRole("combobox", { name: /compare/i })).toBeVisible();
+  await pick(page, "Category", "Puzzle");
+
+  await expect(page).toHaveURL(/genre=7012/);
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "Filters 1" })).toBeVisible();
 });
 
 test("picks a captured day", async ({ page }) => {
@@ -743,9 +783,6 @@ test("names every chosen filter before hydration", async ({ page }) => {
   );
   await expect(page.getByRole("combobox", { name: "Category" })).toHaveText(
     "Games",
-  );
-  await expect(page.getByRole("combobox", { name: "Device" })).toHaveText(
-    "iPhone",
   );
 });
 
