@@ -35,6 +35,7 @@ describe('Monthly AI allowance on a self hosted instance that turned AI off (e2e
   let prisma: PrismaClient;
   let api: Awaited<ReturnType<typeof ownerAgent>>;
   let actionId: string;
+  let appId: string;
 
   beforeAll(async () => {
     execSync('pnpm prisma migrate deploy', {
@@ -73,7 +74,7 @@ describe('Monthly AI allowance on a self hosted instance that turned AI off (e2e
       aiCompletion({ explanation: 'Your title is missing it.' }, USAGE),
     );
     await prisma.aiCall.deleteMany();
-    await seedUncoveredKeyword(prisma);
+    ({ appId } = await seedUncoveredKeyword(prisma));
     await generateActionsAt(app, ACTION_DAY(0));
     ({ id: actionId } = await prisma.actionItem.findFirstOrThrow({
       select: { id: true },
@@ -107,6 +108,21 @@ describe('Monthly AI allowance on a self hosted instance that turned AI off (e2e
       upgradeTo: null,
     });
     expect(refused.headers['retry-after']).toBe(String(body.retryAfterSeconds));
+    expect(structured).not.toHaveBeenCalled();
+  });
+
+  it('refuses a review reply draft when the workspace includes no ai calls', async () => {
+    const review = await prisma.review.create({
+      data: { appId, reviewId: 'r1', score: 1, text: 'Broken' },
+    });
+
+    const refused = await api
+      .post(`/apps/${appId}/reviews/${review.id}/reply/draft`)
+      .send({})
+      .expect(429);
+
+    expect((refused.body as ApiErrorEnvelope).aiAllowance?.limit).toBe(0);
+    await expect(prisma.reviewReply.count()).resolves.toBe(0);
     expect(structured).not.toHaveBeenCalled();
   });
 });

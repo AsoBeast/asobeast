@@ -2,7 +2,7 @@ import { execSync } from 'child_process';
 import { join } from 'path';
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Store } from '@prisma/client';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
@@ -52,6 +52,33 @@ describe('AI without a key (e2e)', () => {
     const status = await api.get('/ai/status').expect(200);
 
     expect(status.body).toEqual({ configured: false, model: null });
+  });
+
+  it('refuses a review reply draft without a key', async () => {
+    await prisma.$executeRawUnsafe(
+      'TRUNCATE TABLE "App", "Keyword" RESTART IDENTITY CASCADE',
+    );
+    const created = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: '111',
+        country: 'us',
+      },
+    });
+    const review = await prisma.review.create({
+      data: { appId: created.id, reviewId: 'r1', score: 1, text: 'Broken' },
+    });
+
+    const refused = await api
+      .post(`/apps/${created.id}/reviews/${review.id}/reply/draft`)
+      .send({})
+      .expect(409);
+
+    expect((refused.body as { message: string }).message).toBe(
+      'AI features require OPENAI_API_KEY',
+    );
+    await expect(prisma.reviewReply.count()).resolves.toBe(0);
   });
 
   it('refuses an anonymous request', async () => {

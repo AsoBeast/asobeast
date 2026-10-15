@@ -4383,6 +4383,58 @@
         ]
       }
     },
+    "/apps/{id}/reviews/{reviewId}/reply/draft": {
+      "post": {
+        "operationId": "ReviewRepliesController_draft",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "reviewId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewReplyDraftDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The monthly AI allowance is spent; aiAllowance says when it renews"
+          }
+        },
+        "summary": "Draft the reply to a review with AI and keep it on the review",
+        "tags": [
+          "reviews"
+        ]
+      }
+    },
     "/apps/{id}/reviews/reply-guidelines": {
       "get": {
         "operationId": "ReviewReplyGuidelinesController_read",
@@ -6711,6 +6763,24 @@
           },
           "replied": {
             "type": "boolean"
+          }
+        }
+      },
+      "ReviewReplyDraftDto": {
+        "type": "object",
+        "properties": {
+          "tone": {
+            "enum": [
+              "friendly",
+              "neutral",
+              "formal"
+            ],
+            "type": "string",
+            "default": "neutral"
+          },
+          "instructions": {
+            "type": "string",
+            "maxLength": 500
           }
         }
       },
