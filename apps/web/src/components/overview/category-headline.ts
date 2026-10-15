@@ -4,6 +4,19 @@ import {
   type CategoryRankSeriesItem,
 } from "@asobeast/shared";
 
+const LEGACY_CHART_DEPTH = 200;
+
+const depthOf = (item: CategoryRankSeriesItem): number =>
+  item.depth ?? LEGACY_CHART_DEPTH;
+
+export function chartDepthOf(series: CategoryRankSeriesItem[]): number {
+  return Math.max(...series.map(depthOf));
+}
+
+export function notInChartLabel(item: CategoryRankSeriesItem): string {
+  return `Not in top ${depthOf(item)} in ${item.genreName}`;
+}
+
 const lastCapturedOn = (item: CategoryRankSeriesItem): string =>
   item.points.at(-1)?.date ?? "";
 

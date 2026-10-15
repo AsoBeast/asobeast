@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import {
   CategoryCollection,
+  CHART_DEPTH,
   CategoryRankSeries,
   CategoryRankSeriesItem,
   OVERALL_GENRE,
@@ -17,7 +18,6 @@ import { CheckCategoryPayload } from '../jobs/jobs.types';
 import { CategoryRankHistoryQueryDto } from './dto/category-rank-history-query.dto';
 import { LATEST_HOME_LISTING } from '../apps/listing';
 
-const CHART_DEPTH = 200;
 const DEFAULT_HISTORY_DAYS = 90;
 const MAX_HISTORY_DAYS = 365;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -102,9 +102,10 @@ export class CategoryRanksService {
 
   async checkCategory(payload: CheckCategoryPayload): Promise<void> {
     const { collection, genre, country, store } = payload;
+    const depth = CHART_DEPTH[store];
     const items = await this.registry
       .get(store)
-      .topCharts(collection, genre, CHART_DEPTH, country);
+      .topCharts(collection, genre, depth, country);
 
     const positionByStoreAppId = new Map<string, number>();
     items.forEach((item, index) => {
@@ -138,9 +139,9 @@ export class CategoryRanksService {
           collection,
           genre,
           position,
-          depth: CHART_DEPTH,
+          depth,
         },
-        update: { position, depth: CHART_DEPTH },
+        update: { position, depth },
       });
     }
   }
@@ -174,7 +175,13 @@ export class CategoryRanksService {
     const ranks = await this.prisma.categoryRank.findMany({
       where: { appId, date: { gte: from, lte: to } },
       orderBy: [{ collection: 'asc' }, { genre: 'asc' }, { date: 'asc' }],
-      select: { collection: true, genre: true, date: true, position: true },
+      select: {
+        collection: true,
+        genre: true,
+        date: true,
+        position: true,
+        depth: true,
+      },
     });
 
     const genreName = primaryGenreName(app.store, app.snapshots[0]?.raw);
@@ -195,6 +202,7 @@ export class CategoryRanksService {
       }
       item.points.push({ date: toDateKey(rank.date), position: rank.position });
       item.current = rank.position;
+      item.depth = rank.depth;
     }
 
     return { series: [...groups.values()] };

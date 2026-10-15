@@ -638,6 +638,7 @@ export const APP_1_CATEGORY_RANKS: CategoryRankSeries = {
       genre: "overall",
       genreName: "Overall",
       current: 42,
+      depth: 100,
       points: Array.from({ length: 30 }, (_, index) => ({
         date: utcDaysAgo(29 - index),
         position: 60 - index,
@@ -2139,12 +2140,14 @@ function categorySeries(
   genre: string,
   positions: Array<number | null>,
   lastCapturedDaysAgo = 0,
+  depth = 100,
 ): CategoryRankSeriesItem {
   return {
     collection,
     genre,
     genreName: genre === OVERALL_GENRE ? "Overall" : "Games",
     current: positions.at(-1) ?? null,
+    depth,
     points: positions.map((position, index) => ({
       date: utcDaysAgo(lastCapturedDaysAgo + positions.length - 1 - index),
       position,

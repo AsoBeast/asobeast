@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
   AppStoreLocalization,
   CategoryCollection,
+  CHART_DEPTH,
   MarketAvailability,
   MarketAvailabilityResult,
   OVERALL_GENRE,
@@ -31,7 +32,6 @@ import {
 } from './types';
 
 const RETRY_DELAYS_MS = [2000, 5000];
-const CHART_MAX = 200;
 
 const COLLECTION_CONSTANTS: Record<CategoryCollection, string> = {
   free: 'topfreeapplications',
@@ -110,8 +110,9 @@ export class AppStoreProvider implements StoreProvider {
       this.lib.list({
         collection: COLLECTION_CONSTANTS[collection],
         ...(genre === OVERALL_GENRE ? {} : { category: Number(genre) }),
-        num: Math.min(num, CHART_MAX),
+        num: Math.min(num, CHART_DEPTH.APP_STORE),
         country,
+        fullDetail: false,
         ...deadline,
       }),
     );

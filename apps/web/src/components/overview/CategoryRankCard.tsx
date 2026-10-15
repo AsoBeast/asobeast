@@ -27,7 +27,11 @@ import { appDetailOptions, categoryRanksOptions } from "@/lib/queries";
 import { presetToRange, RANGE_PRESETS, type RangePreset } from "@/lib/ranges";
 import { rangeParser } from "@/lib/search-params";
 import { MAX_SERIES } from "@/components/rankings/pivot";
-import { headlineSeries } from "./category-headline";
+import {
+  chartDepthOf,
+  headlineSeries,
+  notInChartLabel,
+} from "./category-headline";
 import { ChartNotice, ChartSkeleton } from "@/components/charts/ChartStates";
 import {
   CHART_HEIGHT,
@@ -42,12 +46,15 @@ import {
 
 const Y_TICKS = [1, 25, 50, 100, 150, 200];
 
+const ticksTo = (depth: number) => Y_TICKS.filter((tick) => tick <= depth);
+
 interface CategoryChartData {
   rows: Array<Record<string, string | number | null>>;
   config: ChartConfig;
   seriesLabels: Record<string, string>;
   keys: string[];
   totalSeries: number;
+  depth: number;
 }
 
 function seriesKey(item: CategoryRankSeriesItem): string {
@@ -85,6 +92,7 @@ function buildCategoryChart(all: CategoryRankSeriesItem[]): CategoryChartData {
     seriesLabels,
     keys: series.map(seriesKey),
     totalSeries: all.length,
+    depth: chartDepthOf(series),
   };
 }
 
@@ -131,7 +139,7 @@ function HeaderStat({
     <p className="text-sm">
       {headline.current === null ? (
         <span className="text-muted-foreground">
-          Not in top 200 in {headline.genreName}
+          {notInChartLabel(headline)}
         </span>
       ) : (
         <>
@@ -184,8 +192,8 @@ function CategoryRankBody({ id, range }: { id: string; range: RangePreset }) {
           <YAxis
             {...VALUE_AXIS_PROPS}
             reversed
-            domain={[1, 200]}
-            ticks={Y_TICKS}
+            domain={[1, chart.depth]}
+            ticks={ticksTo(chart.depth)}
             width={40}
             allowDataOverflow
           />

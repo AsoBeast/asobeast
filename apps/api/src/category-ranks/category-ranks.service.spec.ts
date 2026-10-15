@@ -267,6 +267,39 @@ describe('CategoryRanksService checkCategory', () => {
     ]);
   });
 
+  it.each([
+    [Store.APP_STORE, '6007', 100],
+    [Store.GOOGLE_PLAY, 'PRODUCTIVITY', 200],
+  ])('stores the %s depth the feed answers', async (store, genre, depth) => {
+    const { service, upsert, topCharts } = makeService(
+      [
+        app(
+          'a1',
+          '111',
+          { primaryGenreId: genre, genreId: genre, price: 0 },
+          'us',
+          store,
+        ),
+      ],
+      [{ storeAppId: '111', title: 'First' }],
+    );
+
+    await service.checkCategory({
+      collection: 'free',
+      genre,
+      country: 'us',
+      store,
+      workspaceId: 'ws_default',
+    });
+
+    expect(topCharts).toHaveBeenCalledWith('free', genre, depth, 'us');
+    const [[arg]] = upsert.mock.calls as [
+      [{ create: { depth: number }; update: { depth: number } }],
+    ];
+    expect(arg.create.depth).toBe(depth);
+    expect(arg.update.depth).toBe(depth);
+  });
+
   it('reruns idempotently via the same composite key', async () => {
     const { service, upsert } = makeService(
       [app('a1', '111', { primaryGenreId: '6007', price: 0 })],

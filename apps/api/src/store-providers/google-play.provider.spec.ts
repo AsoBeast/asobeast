@@ -296,7 +296,7 @@ describe('GooglePlayProvider', () => {
     expect(list).toHaveBeenCalledWith({
       collection: GPLAY_COLLECTIONS.TOP_PAID,
       category: 'GAME_ACTION',
-      num: 500,
+      num: 200,
       country: 'us',
       lang: 'en',
     });

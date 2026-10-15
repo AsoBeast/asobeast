@@ -92,6 +92,7 @@ describe('CategoryRanksController (e2e)', () => {
           collection: 'free',
           genre: '6007',
           position: 12,
+          depth: 100,
         },
         {
           appId: you.id,
@@ -99,6 +100,7 @@ describe('CategoryRanksController (e2e)', () => {
           collection: 'free',
           genre: '6007',
           position: 8,
+          depth: 100,
         },
         {
           appId: you.id,
@@ -106,6 +108,7 @@ describe('CategoryRanksController (e2e)', () => {
           collection: 'free',
           genre: 'overall',
           position: null,
+          depth: 100,
         },
       ],
     });
@@ -121,6 +124,7 @@ describe('CategoryRanksController (e2e)', () => {
       collection: 'free',
       genreName: 'Productivity',
       current: 8,
+      depth: 100,
     });
     expect(category?.points).toHaveLength(2);
     const overall = body.series.find((item) => item.genre === 'overall');
