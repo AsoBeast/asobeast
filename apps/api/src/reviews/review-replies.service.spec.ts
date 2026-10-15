@@ -13,6 +13,7 @@ const buildService = (
     review?: boolean;
     existingText?: string;
     guidelines?: string | null;
+    deleted?: number;
   } = {},
 ) => {
   const upsert = jest
@@ -31,7 +32,9 @@ const buildService = (
         updatedAt: NOW,
       }),
     );
-  const deleteMany = jest.fn().mockResolvedValue({ count: 0 });
+  const deleteMany = jest
+    .fn()
+    .mockResolvedValue({ count: options.deleted ?? 0 });
   const prisma = {
     app: {
       findFirst: jest.fn().mockResolvedValue(
@@ -112,15 +115,57 @@ describe('ReviewRepliesService.patch', () => {
   });
 
   it('removes the row when a mark is undone and no text is left', async () => {
-    const { service, upsert, deleteMany } = buildService({ existingText: '' });
+    const { service, upsert, deleteMany } = buildService({
+      existingText: '',
+      deleted: 1,
+    });
 
     const reply = await service.patch('app-1', 'rev-1', { replied: false });
 
     expect(upsert).not.toHaveBeenCalled();
     expect(deleteMany).toHaveBeenCalledWith({
-      where: { reviewId: 'rev-1', appId: 'app-1' },
+      where: { reviewId: 'rev-1', appId: 'app-1', text: '' },
     });
     expect(reply).toMatchObject({ text: '', repliedAt: null });
+  });
+
+  it('keeps text saved while a mark without text was being undone', async () => {
+    const { service, upsert } = buildService({ existingText: '', deleted: 0 });
+
+    await service.patch('app-1', 'rev-1', { replied: false });
+
+    expect(upsert.mock.calls[0][0].update).toEqual({
+      text: undefined,
+      repliedAt: null,
+    });
+  });
+
+  it('marks a review with no reply yet without keeping text', async () => {
+    const { service, upsert, deleteMany } = buildService();
+
+    await service.patch('app-1', 'rev-1', { replied: true });
+
+    expect(deleteMany).not.toHaveBeenCalled();
+    expect(upsert.mock.calls[0][0].create).toMatchObject({ text: '' });
+    expect(upsert.mock.calls[0][0].create.repliedAt).toBeInstanceOf(Date);
+  });
+
+  it('writes nothing when a review with no reply is unmarked', async () => {
+    const { service, upsert, deleteMany } = buildService();
+
+    const reply = await service.patch('app-1', 'rev-1', { replied: false });
+
+    expect(upsert).not.toHaveBeenCalled();
+    expect(deleteMany).toHaveBeenCalledTimes(1);
+    expect(reply).toMatchObject({ text: '', repliedAt: null });
+  });
+
+  it('refuses empty text when the mark is being undone', async () => {
+    const { service } = buildService({ existingText: 'Thanks!' });
+
+    await expect(
+      service.patch('app-1', 'rev-1', { text: '', replied: false }),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it("refuses text over the store's limit", async () => {

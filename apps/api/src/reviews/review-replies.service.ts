@@ -74,9 +74,11 @@ export class ReviewRepliesService {
     }
     const repliedAt = repliedAtOf(patch.replied);
 
-    if (patch.replied === false && !(text ?? review.reply?.text)) {
-      await this.prisma.reviewReply.deleteMany({ where: { reviewId, appId } });
-      return withoutReply();
+    if (patch.replied === false && text === undefined && !review.reply?.text) {
+      const { count } = await this.prisma.reviewReply.deleteMany({
+        where: { reviewId, appId, text: '' },
+      });
+      if (count > 0 || !review.reply) return withoutReply();
     }
 
     const row = await this.prisma.reviewReply.upsert({
