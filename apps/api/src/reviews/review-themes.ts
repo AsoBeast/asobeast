@@ -2,7 +2,7 @@ import { QUERY_BOUNDS, ReviewTheme, tokenize } from '@asobeast/shared';
 import { MinableReview, reviewPhrases } from '../keywords/review-mining';
 
 export const REVIEW_THEMES_LIMIT = 8;
-export const REVIEW_THEME_MIN_REVIEWS = 2;
+export const REVIEW_THEMES_MIN_REVIEWS = 2;
 export const REVIEW_THEMES_CAP = QUERY_BOUNDS.reviewsLimit.max;
 
 const GENERIC_WORDS = ['app', 'apps', 'application', 'game', 'games'];
@@ -78,7 +78,7 @@ export function reviewThemes(
   options: ThemeOptions,
 ): ReviewTheme[] {
   const repeated = mentionsOf(reviews, options).filter(
-    (theme) => theme.mentions >= REVIEW_THEME_MIN_REVIEWS,
+    (theme) => theme.mentions >= REVIEW_THEMES_MIN_REVIEWS,
   );
   return withoutShadowed(repeated).sort(rank).slice(0, REVIEW_THEMES_LIMIT);
 }
