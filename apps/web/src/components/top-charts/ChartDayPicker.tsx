@@ -166,8 +166,9 @@ function DayGrid({
                     onClick={() => onSelect(date)}
                     className={cn(
                       "numeric size-9 rounded-md font-mono text-sm text-muted-foreground disabled:cursor-not-allowed",
-                      "data-captured:bg-secondary data-captured:text-foreground data-captured:hover:bg-accent",
-                      "aria-pressed:bg-primary aria-pressed:text-primary-foreground aria-pressed:hover:bg-primary-hover",
+                      date === value
+                        ? "bg-primary text-primary-foreground hover:bg-primary-hover"
+                        : "data-captured:bg-secondary data-captured:text-foreground data-captured:hover:bg-accent",
                       "focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1 focus-visible:outline-ring",
                     )}
                   >

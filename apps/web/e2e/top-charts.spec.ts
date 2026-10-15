@@ -407,6 +407,21 @@ test("keeps the row actions on the chart on screen while the next one loads", as
   ).toHaveCount(0);
 });
 
+test("marks the chosen day apart from the other captured days", async ({
+  page,
+}) => {
+  await page.goto("/charts");
+
+  await page.getByRole("button", { name: /^Captured day/ }).click();
+  const chosen = page.locator('[data-captured][aria-pressed="true"]');
+  const other = page.locator('[data-captured][aria-pressed="false"]').first();
+  await expect(chosen).toHaveCount(1);
+  const background = (locator: typeof chosen) =>
+    locator.evaluate((element) => getComputedStyle(element).backgroundColor);
+
+  expect(await background(chosen)).not.toBe(await background(other));
+});
+
 test("moves through captured days with the keyboard from a day without one", async ({
   page,
 }) => {
