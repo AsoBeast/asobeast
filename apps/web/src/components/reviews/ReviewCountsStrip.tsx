@@ -31,9 +31,9 @@ export function ReviewCountsStrip({
   return (
     <section aria-label="Reply status" className="flex flex-col gap-2">
       <div className="flex items-center gap-1">
-        <h3 className="text-label text-muted-foreground uppercase">
+        <h2 className="text-label text-muted-foreground uppercase">
           Reply status
-        </h3>
+        </h2>
         <InfoTip
           label="About reply status"
           title="Reply status"
