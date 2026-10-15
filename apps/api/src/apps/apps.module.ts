@@ -18,6 +18,7 @@ import { ListingReadService } from './listing-read.service';
 import { LocalizationDetectionController } from './localization-detection.controller';
 import { LocalizationDetection } from './localization-detection.service';
 import { LocalizedListingCapture } from './localized-listing-capture.service';
+import { MarketLocalizationRecorder } from './market-localization-recorder';
 import { MarketSeedController } from './market-seed.controller';
 import { MarketSeedService } from './market-seed.service';
 import { MarketSuggestionsController } from './market-suggestions.controller';
@@ -58,6 +59,7 @@ import { SubtitleBackfill } from './subtitle-backfill.service';
     ListingReadService,
     LocalizationDetection,
     LocalizedListingCapture,
+    MarketLocalizationRecorder,
     MarketSeedService,
     MarketSuggestionsService,
     StoreSearchService,
