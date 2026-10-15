@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import {
+  CATEGORY_COLLECTIONS,
   CategoryCollection,
   CategoryRankSeries,
   CategoryRankSeriesItem,
@@ -43,7 +44,7 @@ function bucketsOf(rows: AppBucketRow[]): CategoryBucket[] {
   const seen = new Set<string>();
   const buckets: CategoryBucket[] = [];
   for (const row of rows) {
-    for (const collection of row.collections) {
+    for (const collection of CATEGORY_COLLECTIONS) {
       for (const genre of [row.genre, OVERALL_GENRE]) {
         const key = `${row.store}:${collection}:${genre}:${row.country}`;
         if (seen.has(key)) {

@@ -149,7 +149,7 @@ describe('Pipeline store routing (e2e)', () => {
 
     const response = await api.post(`/apps/${appId}/run-daily`).expect(202);
 
-    expect(response.body).toMatchObject({ enqueued: { categories: 4 } });
+    expect(response.body).toMatchObject({ enqueued: { categories: 6 } });
     const charts = (await jobsOn(QUEUES.APP_STORE))
       .filter((job) => job.name === JOBS.CHECK_CATEGORY)
       .map((job) => job.data as { collection: string; genre: string });
@@ -160,6 +160,8 @@ describe('Pipeline store routing (e2e)', () => {
       'free:overall',
       'grossing:6027',
       'grossing:overall',
+      'paid:6027',
+      'paid:overall',
     ]);
   });
 
