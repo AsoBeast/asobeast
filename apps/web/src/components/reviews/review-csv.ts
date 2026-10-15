@@ -1,4 +1,9 @@
-import type { ReviewItem, ReviewList, ReviewSort } from "@asobeast/shared";
+import {
+  replyStateOf,
+  type ReviewItem,
+  type ReviewList,
+  type ReviewSort,
+} from "@asobeast/shared";
 import { csvFilename, downloadCsv, toCsv } from "@/lib/csv";
 import { formatNumber } from "@/lib/format";
 
@@ -10,6 +15,8 @@ const REVIEW_CSV_HEADERS = [
   "version",
   "author",
   "reviewId",
+  "replyState",
+  "replyText",
 ];
 
 export function reviewCsv(reviews: readonly ReviewItem[]): string {
@@ -23,6 +30,8 @@ export function reviewCsv(reviews: readonly ReviewItem[]): string {
       review.version,
       review.userName,
       review.reviewId,
+      replyStateOf(review),
+      review.reply?.text || review.replyText || null,
     ]),
   );
 }

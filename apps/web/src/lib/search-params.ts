@@ -324,6 +324,8 @@ export const reviewSortParser =
 
 export const reviewQueryParser = parseAsString.withDefault("");
 
+export const reviewReplyParser = parseAsString;
+
 export const discoveryDaysParser = createParser({
   parse(value) {
     const days = Number(value);

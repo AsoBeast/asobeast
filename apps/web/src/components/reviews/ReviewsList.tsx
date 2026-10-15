@@ -13,14 +13,16 @@ import {
 } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatNumber } from "@/lib/format";
-import { reviewsOptions } from "@/lib/queries";
+import { appDetailOptions, reviewsOptions } from "@/lib/queries";
 import {
   reviewQueryParser,
+  reviewReplyParser,
   reviewReplyStateParser,
   reviewScoreParser,
   reviewSortParser,
   reviewVersionParser,
 } from "@/lib/search-params";
+import { ReplyComposer } from "./ReplyComposer";
 import { ReviewCard } from "./ReviewCard";
 import { ReviewCountsStrip } from "./ReviewCountsStrip";
 import { ReviewsToolbar } from "./ReviewsToolbar";
@@ -67,15 +69,20 @@ function ReviewCards({
   id,
   view,
   query,
+  reply,
+  onReply,
   onClearFilters,
   onResetSearch,
 }: {
   id: string;
   view: ReviewView;
   query: string;
+  reply: string | null;
+  onReply: (reviewId: string | null) => void;
   onClearFilters: () => void;
   onResetSearch: () => void;
 }) {
+  const { data: app } = useSuspenseQuery(appDetailOptions(id));
   const viewKey = JSON.stringify(view);
   const [expandedView, setExpandedView] = useState<string | null>(null);
   const expanded = expandedView === viewKey;
@@ -127,7 +134,32 @@ function ReviewCards({
       ) : (
         <div className="divide-y">
           {shown.map((review) => (
-            <ReviewCard key={review.id} review={review} />
+            <ReviewCard
+              key={review.id}
+              review={review}
+              actions={
+                reply === review.id ? null : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="ml-auto"
+                    onClick={() => onReply(review.id)}
+                  >
+                    {review.reply?.text ? "Edit reply" : "Reply"}
+                  </Button>
+                )
+              }
+            >
+              {reply === review.id ? (
+                <ReplyComposer
+                  appId={id}
+                  review={review}
+                  store={app.store}
+                  storeAppId={app.storeAppId}
+                  onClose={() => onReply(null)}
+                />
+              ) : null}
+            </ReviewCard>
           ))}
         </div>
       )}
@@ -150,6 +182,7 @@ export function ReviewsList({ id }: { id: string }) {
   );
   const [sort, setSort] = useQueryState("sort", reviewSortParser);
   const [query, setQuery] = useQueryState("q", reviewQueryParser);
+  const [reply, setReply] = useQueryState("reply", reviewReplyParser);
   const view: ReviewView = { score, version, replyState, sort };
 
   return (
@@ -181,6 +214,8 @@ export function ReviewsList({ id }: { id: string }) {
             id={id}
             view={view}
             query={query}
+            reply={reply}
+            onReply={(next) => void setReply(next)}
             onClearFilters={() => {
               void setScore(null);
               void setVersion(null);

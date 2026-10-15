@@ -78,14 +78,14 @@ test("exporting reviews asks for the newest 200 that match the filters", async (
   );
   const lines = readFileSync(await download.path(), "utf8").split("\r\n");
   expect(lines[0]).toBe(
-    "\uFEFFreviewedAt,score,title,text,version,author,reviewId",
+    "\uFEFFreviewedAt,score,title,text,version,author,reviewId,replyState,replyText",
   );
   expect(lines).toHaveLength(3);
   expect(lines[1]).toMatch(
-    /^\d{4}-\d{2}-\d{2}T[\d:.]+Z,2,Crashes often,It crashes when I start a session\.,3\.4\.0,Jordan,store-rev-2$/,
+    /^\d{4}-\d{2}-\d{2}T[\d:.]+Z,2,Crashes often,It crashes when I start a session\.,3\.4\.0,Jordan,store-rev-2,drafted,"Sorry about the crash, Jordan\. Version 3\.4\.1 fixes it; please update and tell us if it persists\."$/,
   );
   expect(lines[2]).toMatch(
-    /^\d{4}-\d{2}-\d{2}T[\d:.]+Z,1,,Please add dark mode\.,3\.4\.0,,store-rev-3$/,
+    /^\d{4}-\d{2}-\d{2}T[\d:.]+Z,1,,Please add dark mode\.,3\.4\.0,,store-rev-3,needs_reply,$/,
   );
 });
 

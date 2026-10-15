@@ -8,6 +8,9 @@ import type {
   KeywordFieldQuery,
   KeywordImportRequest,
   KeywordSuggestionStrategy,
+  ReviewItem,
+  ReviewList,
+  ReviewReplyItem,
   Store,
   WebhookItem,
 } from "@asobeast/shared";
@@ -97,6 +100,7 @@ import {
   type RankingParams,
   type ReviewFilters,
 } from "./api";
+import { withReviewReply } from "./review-reply-cache";
 import { runProgressInterval } from "./run-progress";
 import { keywordsPollInterval } from "./keyword-checks";
 import {
@@ -971,6 +975,34 @@ export function invalidateSetupMutation(
     client.invalidateQueries({ queryKey: setupKey(id) }),
     client.invalidateQueries({ queryKey: portfolioKey }),
   ]).then(() => undefined);
+}
+
+export function upsertReviewReply(
+  client: QueryClient,
+  id: string,
+  review: ReviewItem,
+  reply: ReviewReplyItem | null,
+): void {
+  for (const [queryKey, list] of client.getQueriesData<ReviewList>({
+    queryKey: appKeys.reviewsRoot(id),
+  })) {
+    if (!list) continue;
+    const filters = queryKey[queryKey.length - 1] as ReviewFilters;
+    client.setQueryData(
+      queryKey,
+      withReviewReply(list, filters, review, reply),
+    );
+  }
+}
+
+export function invalidateReviewReplyMutation(
+  client: QueryClient,
+  id: string,
+): void {
+  void client.invalidateQueries({
+    queryKey: appKeys.reviewsRoot(id),
+    refetchType: "none",
+  });
 }
 
 export function invalidateCompetitorMutation(

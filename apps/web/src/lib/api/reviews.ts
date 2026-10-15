@@ -2,6 +2,8 @@ import type {
   RatingsHistogram,
   RatingsHistory,
   ReviewList,
+  ReviewReplyItem,
+  ReviewReplyPatchRequest,
   ReviewReplyState,
   ReviewSort,
 } from "@asobeast/shared";
@@ -27,6 +29,27 @@ export function getReviews(
   if (sort) params.set("sort", sort);
   if (limit !== undefined) params.set("limit", String(limit));
   return apiFetch<ReviewList>(withQuery(`/apps/${appId}/reviews`, params));
+}
+
+const replyPath = (appId: string, reviewId: string) =>
+  `/apps/${appId}/reviews/${encodeURIComponent(reviewId)}/reply`;
+
+export function patchReviewReply(
+  appId: string,
+  reviewId: string,
+  body: ReviewReplyPatchRequest,
+): Promise<ReviewReplyItem> {
+  return apiFetch<ReviewReplyItem>(replyPath(appId, reviewId), {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+}
+
+export function deleteReviewReply(
+  appId: string,
+  reviewId: string,
+): Promise<void> {
+  return apiFetch<void>(replyPath(appId, reviewId), { method: "DELETE" });
 }
 
 export function getRatingsHistogram(appId: string): Promise<RatingsHistogram> {

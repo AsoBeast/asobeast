@@ -23,7 +23,7 @@ const lines = (reviews: ReviewItem[]) => reviewCsv(reviews).split("\r\n");
 describe("reviewCsv", () => {
   it("heads the file with the review columns in order", () => {
     expect(lines([])[0]).toBe(
-      "﻿reviewedAt,score,title,text,version,author,reviewId",
+      "﻿reviewedAt,score,title,text,version,author,reviewId,replyState,replyText",
     );
   });
 
@@ -40,7 +40,7 @@ describe("reviewCsv", () => {
 
   it("writes the score as a number, the author and the store review id", () => {
     expect(lines([review()])[1]).toBe(
-      `${reviewedAt},5,Love the focus timer,Best pomodoro app I have used.,3.4.1,Casey,store-rev-1`,
+      `${reviewedAt},5,Love the focus timer,Best pomodoro app I have used.,3.4.1,Casey,store-rev-1,needs_reply,`,
     );
   });
 
@@ -54,7 +54,34 @@ describe("reviewCsv", () => {
           reviewedAt: null,
         }),
       ])[1],
-    ).toBe(",5,,Best pomodoro app I have used.,,,store-rev-1");
+    ).toBe(",5,,Best pomodoro app I have used.,,,store-rev-1,needs_reply,");
+  });
+
+  it("writes the reply state and the owner's or the store's reply text", () => {
+    const reply = {
+      text: "Sorry about that",
+      tone: null,
+      model: null,
+      generatedAt: null,
+      updatedAt: reviewedAt,
+      repliedAt: null,
+    };
+    const tail = (item: ReviewItem) => lines([item])[1].split(",").slice(-2);
+
+    expect(tail(review({ reply }))).toEqual(["drafted", "Sorry about that"]);
+    expect(
+      tail(review({ repliedAt: reviewedAt, replyText: "Fixed in 2.1" })),
+    ).toEqual(["replied", "Fixed in 2.1"]);
+    expect(tail(review())).toEqual(["needs_reply", ""]);
+    expect(
+      tail(
+        review({
+          repliedAt: reviewedAt,
+          replyText: "Fixed in 2.1",
+          reply: { ...reply, text: "", repliedAt: reviewedAt },
+        }),
+      ),
+    ).toEqual(["replied", "Fixed in 2.1"]);
   });
 });
 
