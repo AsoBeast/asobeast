@@ -10,6 +10,8 @@ import type {
   ReviewReplyState,
   ReviewSort,
   ReviewThemes,
+  ReviewTranslation,
+  ReviewTranslationRequest,
 } from "@asobeast/shared";
 import { apiFetch, withQuery } from "./client";
 import type { RangeParams } from "./client";
@@ -83,6 +85,17 @@ export function draftReviewReply(
       method: "POST",
       body: JSON.stringify(body),
     },
+  );
+}
+
+export function translateReview(
+  appId: string,
+  reviewId: string,
+  body: ReviewTranslationRequest,
+): Promise<ReviewTranslation> {
+  return apiFetch<ReviewTranslation>(
+    `/apps/${appId}/reviews/${encodeURIComponent(reviewId)}/translation`,
+    { method: "POST", body: JSON.stringify(body) },
   );
 }
 

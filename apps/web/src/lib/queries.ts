@@ -11,6 +11,7 @@ import type {
   ReviewItem,
   ReviewList,
   ReviewReplyItem,
+  ReviewTranslation,
   Store,
   WebhookItem,
 } from "@asobeast/shared";
@@ -1024,6 +1025,24 @@ export function upsertReviewReply(
       withReviewReply(list, filtersOf(queryKey), review, reply),
     );
   }
+}
+
+export function seedReviewTranslation(
+  client: QueryClient,
+  id: string,
+  reviewId: string,
+  translation: ReviewTranslation,
+): void {
+  client.setQueriesData<ReviewList>(
+    { queryKey: appKeys.reviewsRoot(id) },
+    (list) =>
+      list && {
+        ...list,
+        reviews: list.reviews.map((row) =>
+          row.id === reviewId ? { ...row, translation } : row,
+        ),
+      },
+  );
 }
 
 export function invalidateReviewReplyMutation(

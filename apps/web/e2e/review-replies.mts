@@ -11,6 +11,7 @@ import {
   type ReviewReplyItem,
   type ReviewReplyPatchRequest,
   type ReviewReplyState,
+  type ReviewTranslation,
   type Store,
 } from "@asobeast/shared";
 
@@ -18,6 +19,7 @@ const DEFAULT_LIMIT = 50;
 
 const replies = new Map<string, ReviewReplyItem | null>();
 const guidelines = new Map<string, string>();
+const translations = new Map<string, ReviewTranslation>();
 
 const keyOf = (appId: string, reviewId: string) => `${appId}:${reviewId}`;
 
@@ -28,7 +30,12 @@ export class ReplyRefusal extends Error {}
 
 function withReply(appId: string, review: ReviewItem): ReviewItem {
   const key = keyOf(appId, review.id);
-  return replies.has(key) ? { ...review, reply: replies.get(key) } : review;
+  const translation = translations.get(key);
+  return {
+    ...review,
+    ...(replies.has(key) ? { reply: replies.get(key) } : {}),
+    ...(translation ? { translation } : {}),
+  };
 }
 
 const byLowest = (a: ReviewItem, b: ReviewItem) =>
@@ -146,6 +153,22 @@ export function draftReply(
   return { reply, language: draft.language, truncated: options.truncated };
 }
 
+export function translateReviewIn(
+  appId: string,
+  review: ReviewItem,
+  language: string,
+  translated: { title: string | null; text: string },
+): ReviewTranslation {
+  const translation: ReviewTranslation = {
+    language,
+    sourceLanguage: review.language ?? "und",
+    ...translated,
+    translatedAt: new Date().toISOString(),
+  };
+  translations.set(keyOf(appId, review.id), translation);
+  return translation;
+}
+
 export function guidelinesOf(appId: string): string {
   return guidelines.get(appId) ?? "";
 }
@@ -164,6 +187,9 @@ export function setGuidelines(appId: string, text: string): string {
 export function resetReviewReplies(appId: string): void {
   for (const key of replies.keys()) {
     if (key.startsWith(`${appId}:`)) replies.delete(key);
+  }
+  for (const key of translations.keys()) {
+    if (key.startsWith(`${appId}:`)) translations.delete(key);
   }
   guidelines.delete(appId);
 }

@@ -9,6 +9,7 @@ import { summarizeActions } from "./actions-summary.mts";
 import {
   discardReply,
   draftReply,
+  translateReviewIn,
   findReview,
   guidelinesOf,
   listReviews,
@@ -79,6 +80,7 @@ import {
   INITIAL_APPS,
   REVIEW_REPLY_DRAFT,
   REVIEW_REPLY_DRAFT_PLAY,
+  REVIEW_TRANSLATION_EN,
   HOT_BUDGET,
   LAPSED_BUDGET,
   METRICS_SCRAPE,
@@ -126,6 +128,7 @@ import {
 import type {
   AccountPlan,
   ReviewReplyDraftRequest,
+  ReviewTranslationRequest,
   ReviewReplyGuidelines,
   ReviewReplyPatchRequest,
   KeywordSuggestionStrategy,
@@ -3729,6 +3732,33 @@ const routes: Route[] = [
             model: METADATA_AI_MODEL,
             truncated: hasCookie(req, REPLY_TRUNCATED_COOKIE, "1"),
           }),
+        );
+      });
+    },
+  },
+  {
+    method: "POST",
+    pattern: /^\/apps\/([^/]+)\/reviews\/([^/]+)\/translation$/,
+    handler: ([id, reviewId], req, res) => {
+      withBody<ReviewTranslationRequest>(req, res, (body) => {
+        const path = req.url ?? "/";
+        const dataset = DATASETS[id];
+        const review = dataset && findReview(id, dataset.reviews, reviewId);
+        if (!review) return json(res, 404, errorEnvelope(404, path));
+        if (review.translation?.language === body.language) {
+          return json(res, 201, review.translation);
+        }
+        if (!hasCookie(req, METADATA_AI_COOKIE, "1")) {
+          return json(
+            res,
+            409,
+            errorEnvelope(409, path, "AI features require OPENAI_API_KEY"),
+          );
+        }
+        json(
+          res,
+          201,
+          translateReviewIn(id, review, body.language, REVIEW_TRANSLATION_EN),
         );
       });
     },

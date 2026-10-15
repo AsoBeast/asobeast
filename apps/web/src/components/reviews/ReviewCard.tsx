@@ -6,8 +6,13 @@ import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { ReplyStateBadge } from "./ReplyStateBadge";
+import { replyLanguageName } from "./reply-language";
+import { useReviewTranslation } from "./use-review-translation";
 
 const LOW_SCORE = 2;
+
+const LINK_BUTTON =
+  "rounded-sm text-caption font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline disabled:pointer-events-none";
 
 function Stars({ score }: { score: number }) {
   const low = score <= LOW_SCORE;
@@ -65,7 +70,7 @@ function ReviewText({ text }: { text: string }) {
           type="button"
           onClick={() => setExpanded((value) => !value)}
           aria-expanded={expanded}
-          className="rounded-sm text-caption font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+          className={LINK_BUTTON}
         >
           {expanded ? "Show less" : "Show more"}
         </button>
@@ -89,16 +94,49 @@ function DeveloperReply({ review }: { review: ReviewItem }) {
   );
 }
 
+function TranslateButton({
+  translation,
+}: {
+  translation: ReturnType<typeof useReviewTranslation>;
+}) {
+  if (!translation.offered) return null;
+  const label = translation.pending
+    ? "Translating…"
+    : translation.translation
+      ? "Show original"
+      : translation.kept
+        ? "Show translation"
+        : "Translate";
+  return (
+    <button
+      type="button"
+      onClick={translation.toggle}
+      disabled={translation.disabled}
+      className={LINK_BUTTON}
+    >
+      {label}
+    </button>
+  );
+}
+
 export function ReviewCard({
+  appId,
+  fallbackLanguage,
   review,
   actions,
   children,
 }: {
+  appId: string;
+  fallbackLanguage: string | null;
   review: ReviewItem;
   actions?: ReactNode;
   children?: ReactNode;
 }) {
   const low = review.score <= LOW_SCORE;
+  const translation = useReviewTranslation(appId, review, fallbackLanguage);
+  const shown = translation.translation;
+  const title = shown ? shown.title : review.title;
+  const text = shown ? shown.text : review.text;
   return (
     <article
       style={{ contentVisibility: "auto", containIntrinsicSize: "auto 8rem" }}
@@ -109,9 +147,7 @@ export function ReviewCard({
     >
       <div className="flex flex-wrap items-center gap-2">
         <Stars score={review.score} />
-        {review.title ? (
-          <span className="text-sm font-medium">{review.title}</span>
-        ) : null}
+        {title ? <span className="text-sm font-medium">{title}</span> : null}
         {review.version ? (
           <Badge variant="outline">v{review.version}</Badge>
         ) : null}
@@ -119,16 +155,22 @@ export function ReviewCard({
           <ReplyStateBadge review={review} />
         </span>
       </div>
-      {review.text.trim() ? (
-        <ReviewText text={review.text} />
+      {text.trim() ? (
+        <ReviewText key={shown ? "translated" : "original"} text={text} />
       ) : (
         <p className="text-body text-muted-foreground">No written review</p>
       )}
+      {shown ? (
+        <p className="text-caption text-muted-foreground">
+          Translated from {replyLanguageName(shown.sourceLanguage)} by AI
+        </p>
+      ) : null}
       <DeveloperReply review={review} />
       <div className="flex flex-wrap items-center gap-2">
         <p className="text-xs text-muted-foreground">
           {review.userName ?? "Anonymous"} · {formatDate(review.reviewedAt)}
         </p>
+        <TranslateButton translation={translation} />
         {actions}
       </div>
       {children}

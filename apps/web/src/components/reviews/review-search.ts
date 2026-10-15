@@ -9,6 +9,8 @@ export function matchesReviewQuery(review: ReviewItem, query: string): boolean {
       review.userName ?? "",
       review.replyText ?? "",
       review.reply?.text ?? "",
+      review.translation?.title ?? "",
+      review.translation?.text ?? "",
     ],
     query,
   );

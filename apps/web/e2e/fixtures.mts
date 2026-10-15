@@ -795,6 +795,7 @@ export const APP_GP_REVIEWS: ReviewList = {
       score: 2,
       title: "Stürzt ab",
       text: "Die App stürzt beim Start ab.",
+      language: "de",
       version: "2.7.0",
       reviewedAt: utcTimestampDaysAgo(4),
       repliedAt: utcTimestampDaysAgo(3),
@@ -808,6 +809,7 @@ export const APP_GP_REVIEWS: ReviewList = {
       score: 1,
       title: "Werbung",
       text: "Zu viel Werbung.",
+      language: "de",
       version: "2.8.0",
       reviewedAt: utcTimestampDaysAgo(2),
       repliedAt: null,
@@ -821,6 +823,7 @@ export const APP_GP_REVIEWS: ReviewList = {
       score: 4,
       title: "Jetzt besser",
       text: "Nach dem Update läuft es endlich.",
+      language: "de",
       version: "2.8.0",
       reviewedAt: utcTimestampDaysAgo(1),
       repliedAt: utcTimestampDaysAgo(3),
@@ -875,6 +878,11 @@ export const APP_1_REVIEW_THEMES: ReviewThemes = {
   ],
   reviews: 5,
   negativeScoreMax: 2,
+};
+
+export const REVIEW_TRANSLATION_EN = {
+  title: "Crashes",
+  text: "The app crashes on start.",
 };
 
 export const REVIEW_REPLY_DRAFT = {

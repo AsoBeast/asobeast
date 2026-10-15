@@ -3,6 +3,7 @@
 import { Suspense, useState } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
+import { storefrontLanguage } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -153,6 +154,8 @@ function ReviewCards({
           {shown.map((review) => (
             <ReviewCard
               key={review.id}
+              appId={id}
+              fallbackLanguage={storefrontLanguage(app.country)}
               review={review}
               actions={
                 reply === review.id ? null : (

@@ -25,6 +25,24 @@ describe("matchesReviewQuery", () => {
     expect(matchesReviewQuery(REVIEW, "dark mode")).toBe(false);
   });
 
+  it("matches the kept translation", () => {
+    expect(
+      matchesReviewQuery(
+        {
+          ...REVIEW,
+          translation: {
+            language: "en",
+            sourceLanguage: "de",
+            title: "Crashes on start",
+            text: "The app closes.",
+            translatedAt: "2026-10-02T00:00:00.000Z",
+          },
+        },
+        "closes",
+      ),
+    ).toBe(true);
+  });
+
   it("matches the developer reply text on google play", () => {
     expect(
       matchesReviewQuery(
