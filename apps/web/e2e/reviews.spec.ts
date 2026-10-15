@@ -364,3 +364,20 @@ test("a play review edited after the reply says so and has its own filter", asyn
       .getByRole("button", { name: /Updated after reply/ }),
   ).toHaveCount(0);
 });
+
+test("the needs reply tile opens the queue lowest score first", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/reviews");
+
+  await page
+    .getByRole("region", { name: "Reply status" })
+    .getByRole("button", { name: /Needs reply/ })
+    .click();
+
+  await expect(page).toHaveURL(/replyState=needs_reply/);
+  await expect(page).toHaveURL(/sort=lowest/);
+  await expect(page.getByRole("article").first()).toContainText(
+    "Please add dark mode.",
+  );
+});

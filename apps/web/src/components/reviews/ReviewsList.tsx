@@ -222,7 +222,10 @@ export function ReviewsList({ id }: { id: string }) {
           <ReviewCountsStrip
             id={id}
             view={view}
-            onSelect={(next) => void setReplyState(next)}
+            onSelect={(next) => {
+              void setReplyState(next);
+              if (next === "needs_reply") void setSort("lowest");
+            }}
           />
         </Suspense>
         <ReviewsToolbar
