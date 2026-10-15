@@ -442,6 +442,17 @@ test("lists the trending apps", async ({ page }) => {
   ).toHaveCount(0);
 });
 
+test("sorts by category", async ({ page }) => {
+  await page.goto("/charts?view=table");
+
+  await chartTable(page).getByRole("button", { name: "Category" }).click();
+
+  await expect(page).toHaveURL(/sort=genre/);
+  await expect(chartTable(page).locator("tbody tr").first()).toContainText(
+    "Chess Club",
+  );
+});
+
 test("sorts by movement", async ({ page }) => {
   await page.goto("/charts?view=table");
 

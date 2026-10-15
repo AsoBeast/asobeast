@@ -382,6 +382,7 @@ describe("chart parsers", () => {
     expect(chartTableParsers.sort.parseServerSide(undefined)).toBe("position");
     expect(chartTableParsers.sort.parseServerSide("rating")).toBe("position");
     expect(chartTableParsers.sort.parseServerSide("app")).toBe("app");
+    expect(chartTableParsers.sort.parseServerSide("genre")).toBe("genre");
   });
 });
 
