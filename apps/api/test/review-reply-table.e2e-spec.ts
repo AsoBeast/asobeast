@@ -83,6 +83,15 @@ describe('the review reply table (e2e)', () => {
     }
   });
 
+  it('keeps one reply per review', async () => {
+    const { app, review } = await seedReview();
+    await seedReply(app.id, review.id, DEFAULT_WORKSPACE_ID);
+
+    await expect(
+      seedReply(app.id, review.id, DEFAULT_WORKSPACE_ID),
+    ).rejects.toThrow('Unique constraint');
+  });
+
   it('refuses a reply whose review belongs to another app', async () => {
     const { review } = await seedReview();
     const other = await prisma.app.create({

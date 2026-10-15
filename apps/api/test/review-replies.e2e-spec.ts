@@ -4,7 +4,9 @@ import { INestApplication, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient, Store } from '@prisma/client';
 import {
-  countChars,
+  REVIEW_REPLY_GUIDELINES_MAX,
+  REVIEW_REPLY_INSTRUCTIONS_MAX,
+  REVIEW_REPLY_LIMITS,
   type ApiErrorEnvelope,
   type ReviewList,
   type ReviewReplyDraftResult,
@@ -22,6 +24,7 @@ import {
 } from '../src/ai/openai.client';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { ReviewRepliesService } from '../src/reviews/review-replies.service';
+import { ReviewReplyAssistant } from '../src/reviews/review-reply-assistant.service';
 import { seedApiToken } from './helpers/api-tokens';
 import { ownerAgent, useCookies } from './helpers/session';
 import { asWorkspace } from './helpers/tenancy';
@@ -194,11 +197,24 @@ describe('Review replies (e2e)', () => {
   });
 
   it('holds a google play reply to 350 characters', async () => {
-    const text = 'a'.repeat(351);
+    const text = 'a'.repeat(REVIEW_REPLY_LIMITS.GOOGLE_PLAY + 1);
 
     const refused = await api.patch(replyPath(play)).send({ text }).expect(400);
     expect((refused.body as ApiErrorEnvelope).message).toContain('350');
     await api.patch(replyPath(appStore)).send({ text }).expect(200);
+  });
+
+  it('holds an app store reply to 2000 characters', async () => {
+    await api
+      .patch(replyPath(appStore))
+      .send({ text: 'a'.repeat(REVIEW_REPLY_LIMITS.APP_STORE) })
+      .expect(200);
+    const refused = await api
+      .patch(replyPath(appStore))
+      .send({ text: 'a'.repeat(REVIEW_REPLY_LIMITS.APP_STORE + 1) })
+      .expect(400);
+
+    expect((refused.body as ApiErrorEnvelope).message).toContain('2000');
   });
 
   it('refuses an empty reply and an unknown field', async () => {
@@ -260,12 +276,25 @@ describe('Review replies (e2e)', () => {
     ).resolves.toMatchObject({ text: 'Thanks for the report' });
   });
 
-  it('refuses a read scoped token', async () => {
-    await request(app.getHttpServer())
-      .patch(replyPath(appStore))
-      .set('Authorization', `Bearer ${readToken}`)
-      .send({ text: 'Read only' })
-      .expect(403);
+  it('refuses a read scoped token on every reply write', async () => {
+    await api.patch(replyPath(appStore)).send({ text: 'Kept' }).expect(200);
+    const asReader = (test: request.Test) =>
+      test.set('Authorization', `Bearer ${readToken}`).expect(403);
+    const server = request(app.getHttpServer());
+
+    await asReader(server.patch(replyPath(appStore)).send({ text: 'Read' }));
+    await asReader(server.delete(replyPath(appStore)));
+    await asReader(
+      server
+        .put(`/apps/${appStore.appId}/reviews/reply-guidelines`)
+        .send({ guidelines: 'Read' }),
+    );
+
+    await expect(
+      prisma.reviewReply.findUniqueOrThrow({
+        where: { reviewId: appStore.reviewId },
+      }),
+    ).resolves.toMatchObject({ text: 'Kept' });
   });
 
   describe('reply guidelines', () => {
@@ -297,7 +326,7 @@ describe('Review replies (e2e)', () => {
     it('holds the guidelines to 1,000 characters', async () => {
       await api
         .put(guidelinesPath(appStore.appId))
-        .send({ guidelines: 'a'.repeat(1001) })
+        .send({ guidelines: 'a'.repeat(REVIEW_REPLY_GUIDELINES_MAX + 1) })
         .expect(400);
     });
 
@@ -386,14 +415,22 @@ describe('Review replies (e2e)', () => {
 
       await api.post(draftPath(appStore)).send({}).expect(201);
 
-      const [request] = structured.mock.calls[0];
-      const [part] = request.content;
+      const [aiRequest] = structured.mock.calls[0];
+      const [part] = aiRequest.content;
       const text = part.type === 'text' ? part.text : '';
-      expect(request.system).toContain('SECURITY');
-      expect(text).toContain('Crashes on launch');
-      expect(text).toContain('Sign as the Mine team.');
-      expect(text).toContain('Current version: 3.5.0');
-      expect(text).toContain('Fixed the launch crash.');
+      const block = text.indexOf('REFERENCE DATA');
+      const end = text.indexOf('END OF REFERENCE DATA');
+      expect(aiRequest.system).toContain('SECURITY');
+      expect(text).toContain('Current version: "3.5.0"');
+      expect(text.indexOf('Sign as the Mine team.')).toBeLessThan(block);
+      for (const untrusted of [
+        'Crashes on launch',
+        'Fixed the launch crash.',
+      ]) {
+        expect(text.indexOf(untrusted)).toBeGreaterThan(block);
+        expect(text.indexOf(untrusted)).toBeLessThan(end);
+      }
+      expect(text).not.toContain('com.example.replies');
       expect(text).not.toContain('GOOGLE_PLAY app');
     });
 
@@ -409,7 +446,40 @@ describe('Review replies (e2e)', () => {
 
       const body = drafted.body as ReviewReplyDraftResult;
       expect(body.truncated).toBe(true);
-      expect(countChars(body.reply.text)).toBeLessThanOrEqual(350);
+      expect(body.reply.text).toBe(`${'a'.repeat(300)}.`);
+    });
+
+    it('refuses a draft with an address the owner never gave and keeps the call counted', async () => {
+      structured.mockResolvedValue(
+        aiCompletion(
+          { reply: 'Sorry! Write to refunds@evil.example.', language: 'en' },
+          USAGE,
+        ),
+      );
+
+      await api.post(draftPath(appStore)).send({}).expect(502);
+
+      await expect(prisma.reviewReply.count()).resolves.toBe(0);
+      await expect(
+        prisma.aiCall.count({
+          where: { feature: 'reviewReply', status: 'counted' },
+        }),
+      ).resolves.toBe(1);
+    });
+
+    it('keeps a draft whose address the guidelines give', async () => {
+      structured.mockResolvedValue(
+        aiCompletion(
+          { reply: 'Sorry! Write to help@mine.app.', language: 'en' },
+          USAGE,
+        ),
+      );
+      await api
+        .put(`/apps/${appStore.appId}/reviews/reply-guidelines`)
+        .send({ guidelines: 'Support: help@mine.app' })
+        .expect(200);
+
+      await api.post(draftPath(appStore)).send({}).expect(201);
     });
 
     it("keeps the owner's mark when redrafting", async () => {
@@ -429,17 +499,33 @@ describe('Review replies (e2e)', () => {
       await api.post(draftPath(appStore)).send({ tone: 'angry' }).expect(400);
       await api
         .post(draftPath(appStore))
-        .send({ instructions: 'a'.repeat(501) })
+        .send({ instructions: 'a'.repeat(REVIEW_REPLY_INSTRUCTIONS_MAX + 1) })
         .expect(400);
 
       expect(structured).not.toHaveBeenCalled();
     });
 
-    it('answers 404 across workspaces before spending', async () => {
+    it('answers 404 for a review of another app before spending', async () => {
       await api
         .post(draftPath({ appId: appStore.appId, reviewId: play.reviewId }))
         .send({})
         .expect(404);
+
+      expect(structured).not.toHaveBeenCalled();
+      await expect(prisma.aiCall.count()).resolves.toBe(0);
+    });
+
+    it('answers 404 across workspaces before spending', async () => {
+      await expect(
+        asWorkspace(
+          app,
+          () =>
+            app
+              .get(ReviewReplyAssistant)
+              .draft(appStore.appId, appStore.reviewId, {}, 'user-1'),
+          OTHER_WORKSPACE,
+        ),
+      ).rejects.toBeInstanceOf(NotFoundException);
 
       expect(structured).not.toHaveBeenCalled();
       await expect(prisma.aiCall.count()).resolves.toBe(0);

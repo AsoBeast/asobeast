@@ -168,7 +168,7 @@ describe('ReviewReplyAssistant.draft', () => {
       orderBy: NEWEST_FIRST,
       select: { version: true, raw: true },
     });
-    expect(contextOf()).toContain('Current version: 3.5.0');
+    expect(contextOf()).toContain('Current version: "3.5.0"');
     expect(contextOf()).toContain('Fixed the launch crash.');
   });
 

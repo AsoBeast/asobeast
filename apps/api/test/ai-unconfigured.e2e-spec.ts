@@ -79,6 +79,7 @@ describe('AI without a key (e2e)', () => {
       'AI features require OPENAI_API_KEY',
     );
     await expect(prisma.reviewReply.count()).resolves.toBe(0);
+    await expect(prisma.aiCall.count()).resolves.toBe(0);
   });
 
   it('refuses an anonymous request', async () => {

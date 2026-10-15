@@ -2,7 +2,7 @@ import { Store } from '@prisma/client';
 import { countChars, ReviewReplyTone } from '@asobeast/shared';
 import { storeLabel } from '../alerts/alert-summary';
 
-export const DRAFT_MAX_OUTPUT_TOKENS = 512;
+export const DRAFT_MAX_OUTPUT_TOKENS = 2048;
 
 const RELEASE_NOTES_MAX = 1000;
 
@@ -24,6 +24,9 @@ export const END_OF_REFERENCE = 'END OF REFERENCE DATA';
 const LINK = /\b(?:https?:\/\/|www\.)[^\s<>"'()]+/gi;
 
 const EMAIL = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g;
+
+const DOMAIN =
+  /\b(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}(?:\/[^\s<>"'()]*)?/gi;
 
 export const SYSTEM_PROMPT = [
   'You write the developer reply to one app store review on behalf of the app owner.',
@@ -102,7 +105,7 @@ export function buildReplyContext(input: ReplyContext): string {
     `App: ${JSON.stringify(input.appName ?? 'unknown')}`,
     `Reply limit: ${input.limit} characters`,
     TONE_LINES[input.tone],
-    `Current version: ${input.currentVersion ?? 'unknown'}`,
+    `Current version: ${JSON.stringify(input.currentVersion ?? 'unknown')}`,
     `Owner guidelines: ${input.guidelines ? JSON.stringify(input.guidelines) : '(none)'}`,
     ...(input.instructions
       ? [`Owner instructions: ${JSON.stringify(input.instructions)}`]
@@ -117,15 +120,47 @@ export function buildReplyContext(input: ReplyContext): string {
 const trimTrailingPunctuation = (match: string) =>
   match.replace(/[.,!?;:]+$/, '');
 
-export function foreignContacts(text: string, allowed: string[]): string[] {
-  const sanctioned = allowed.join('\n').toLowerCase();
-  const contacts = [
-    ...(text.match(LINK) ?? []),
-    ...(text.match(EMAIL) ?? []),
+const hostOf = (link: string) =>
+  link
+    .replace(/^https?:\/\//i, '')
+    .replace(/^www\./i, '')
+    .split(/[/?#]/)[0]
+    .toLowerCase();
+
+interface Contact {
+  found: string;
+  key: string;
+  host: string;
+}
+
+function contactsIn(text: string): Contact[] {
+  const emails = (text.match(EMAIL) ?? []).map(trimTrailingPunctuation);
+  const withoutEmails = text.replace(EMAIL, ' ');
+  const links = [
+    ...(withoutEmails.match(LINK) ?? []),
+    ...(withoutEmails.replace(LINK, ' ').match(DOMAIN) ?? []),
   ].map(trimTrailingPunctuation);
-  return contacts.filter(
-    (contact) => !sanctioned.includes(contact.toLowerCase()),
+  return [
+    ...links.map((found) => ({
+      found,
+      key: hostOf(found),
+      host: hostOf(found),
+    })),
+    ...emails.map((found) => ({
+      found,
+      key: found.toLowerCase(),
+      host: found.slice(found.indexOf('@') + 1).toLowerCase(),
+    })),
+  ];
+}
+
+export function foreignContacts(text: string, allowed: string[]): string[] {
+  const sanctioned = new Set(
+    contactsIn(allowed.join('\n')).flatMap(({ key, host }) => [key, host]),
   );
+  return contactsIn(text)
+    .filter(({ key }) => !sanctioned.has(key))
+    .map(({ found }) => found);
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>

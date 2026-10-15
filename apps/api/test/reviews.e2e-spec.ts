@@ -115,8 +115,11 @@ describe('ReviewsController (e2e)', () => {
       where: { appId, reviewId: { in: ['r2', 'r3'] } },
       select: { id: true, reviewId: true },
     });
-    const idOf = (reviewId: string) =>
-      rows.find((row) => row.reviewId === reviewId)?.id ?? '';
+    const idOf = (reviewId: string) => {
+      const row = rows.find((candidate) => candidate.reviewId === reviewId);
+      if (!row) throw new Error(`seed review ${reviewId} not found`);
+      return row.id;
+    };
     await prisma.reviewReply.createMany({
       data: [
         {
@@ -577,6 +580,45 @@ describe('ReviewsController (e2e)', () => {
 
     expect(body.counts).toEqual({ needsReply: 1, drafted: 0, replied: 1 });
     expect(idsOf(replied)).toEqual(['g1']);
+  });
+
+  it('counts a play review the store answered as replied even with an unmarked draft', async () => {
+    const created = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.GOOGLE_PLAY,
+        storeAppId: 'com.example.overlap',
+        country: 'us',
+      },
+    });
+    const review = await prisma.review.create({
+      data: {
+        appId: created.id,
+        reviewId: 'g1',
+        score: 1,
+        text: 'Crashes',
+        repliedAt: new Date('2026-09-02T08:00:00.000Z'),
+        replyText: 'Fixed in 2.1',
+      },
+    });
+    await prisma.reviewReply.create({
+      data: {
+        reviewId: review.id,
+        appId: created.id,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        text: 'A new reply',
+      },
+    });
+
+    const body = await listReviews(created.id);
+
+    expect(body.counts).toEqual({ needsReply: 0, drafted: 0, replied: 1 });
+    expect(idsOf(await listReviews(created.id, '?replyState=replied'))).toEqual(
+      ['g1'],
+    );
+    expect(idsOf(await listReviews(created.id, '?replyState=drafted'))).toEqual(
+      [],
+    );
   });
 
   it('keeps the counts under the star filter', async () => {
