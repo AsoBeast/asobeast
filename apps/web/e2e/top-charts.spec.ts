@@ -547,8 +547,18 @@ test("marks the chosen day apart from the other captured days", async ({
   await expect(chosen).toHaveCount(1);
   const background = (locator: typeof chosen) =>
     locator.evaluate((element) => getComputedStyle(element).backgroundColor);
+  const fill = (className: string) =>
+    page.evaluate((name) => {
+      const probe = document.createElement("span");
+      probe.className = name;
+      document.body.append(probe);
+      const color = getComputedStyle(probe).backgroundColor;
+      probe.remove();
+      return color;
+    }, className);
 
-  expect(await background(chosen)).not.toBe(await background(other));
+  expect(await background(chosen)).toBe(await fill("bg-primary"));
+  expect(await background(other)).toBe(await fill("bg-secondary"));
 });
 
 test("moves through captured days with the keyboard from a day without one", async ({
