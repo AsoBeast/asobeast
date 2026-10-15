@@ -19,6 +19,7 @@ import {
   buildReplyContext,
   DRAFT_MAX_OUTPUT_TOKENS,
   fitReply,
+  foreignContacts,
   parseReplyOutput,
   REPLY_SCHEMA,
   ReplyContext,
@@ -68,6 +69,12 @@ export class ReviewReplyAssistant {
       );
     }
     const { text, truncated } = fitReply(parsed.reply, context.limit);
+    const owned = [context.guidelines ?? '', context.instructions ?? ''];
+    if (foreignContacts(text, owned).length > 0) {
+      throw new BadGatewayException(
+        'The assistant added a link or an address that is not in the reply guidelines; please try again.',
+      );
+    }
     const reply = await this.save(appId, reviewId, {
       text,
       tone: context.tone,
@@ -101,8 +108,8 @@ export class ReviewReplyAssistant {
         select: { version: true, raw: true },
       }),
       this.prisma.review.findMany({
-        where: { appId, replyText: { not: null } },
-        orderBy: { repliedAt: 'desc' },
+        where: { appId, id: { not: reviewId }, replyText: { not: null } },
+        orderBy: { repliedAt: { sort: 'desc', nulls: 'last' } },
         take: VOICE_EXAMPLES,
         select: { replyText: true },
       }),

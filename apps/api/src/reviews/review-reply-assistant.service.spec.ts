@@ -178,13 +178,19 @@ describe('ReviewReplyAssistant.draft', () => {
     await assistant.draft('app-1', 'rev-1', {}, 'user-1');
 
     expect(prisma.review.findMany).toHaveBeenCalledWith({
-      where: { appId: 'app-1', replyText: { not: null } },
-      orderBy: { repliedAt: 'desc' },
+      where: {
+        appId: 'app-1',
+        id: { not: 'rev-1' },
+        replyText: { not: null },
+      },
+      orderBy: { repliedAt: { sort: 'desc', nulls: 'last' } },
       take: 3,
       select: { replyText: true },
     });
-    expect(contextOf()).toContain('Previous reply: Thanks, fixed in 2.1');
-    expect(contextOf()).toContain('Owner guidelines: Sign as the Tomato team.');
+    expect(contextOf()).toContain('"Thanks, fixed in 2.1"');
+    expect(contextOf()).toContain(
+      'Owner guidelines: "Sign as the Tomato team."',
+    );
   });
 
   it('answers 502 when the model returns no usable reply', async () => {
@@ -194,6 +200,38 @@ describe('ReviewReplyAssistant.draft', () => {
       assistant.draft('app-1', 'rev-1', {}, 'user-1'),
     ).rejects.toBeInstanceOf(BadGatewayException);
     expect(upsert).not.toHaveBeenCalled();
+  });
+
+  it('refuses a draft that adds an address the owner never gave', async () => {
+    const { assistant, upsert } = setup({
+      output: {
+        reply: 'Sorry! Email refunds@evil.example for a refund.',
+        language: 'en',
+      },
+    });
+
+    await expect(
+      assistant.draft('app-1', 'rev-1', {}, 'user-1'),
+    ).rejects.toBeInstanceOf(BadGatewayException);
+    expect(upsert).not.toHaveBeenCalled();
+  });
+
+  it('keeps an address the instructions gave', async () => {
+    const { assistant, upsert } = setup({
+      output: {
+        reply: 'Sorry! Write to help@tomato.app and we will help.',
+        language: 'en',
+      },
+    });
+
+    await assistant.draft(
+      'app-1',
+      'rev-1',
+      { instructions: 'Point to help@tomato.app' },
+      'user-1',
+    );
+
+    expect(upsert).toHaveBeenCalled();
   });
 
   it('answers 409 before reading anything without a key', async () => {
