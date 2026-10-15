@@ -113,6 +113,24 @@ test("switches the layout", async ({ page }) => {
   await expect(kindRegion(page, "Grossing")).toBeVisible();
 });
 
+test("keeps keyboard focus on the layout switch", async ({ page }) => {
+  await page.goto("/charts");
+  const layout = page.getByRole("tablist", { name: "Layout" });
+  await expect(kindRegion(page, "Free")).toBeVisible();
+
+  await layout.getByRole("tab", { name: "Side by side" }).focus();
+  await page.keyboard.press("ArrowRight");
+
+  await expect(page).toHaveURL(/view=table/);
+  await expect(chartTable(page)).toBeVisible();
+  await expect(layout.getByRole("tab", { name: "Table" })).toBeFocused();
+
+  await page.keyboard.press("ArrowLeft");
+
+  await expect(kindRegion(page, "Free")).toBeVisible();
+  await expect(layout.getByRole("tab", { name: "Side by side" })).toBeFocused();
+});
+
 test("captures today from a column", async ({ page, request }) => {
   await request.get(`${MOCK_API}/__forget-chart-captures/6005`);
   await page.goto("/charts?genre=6005");

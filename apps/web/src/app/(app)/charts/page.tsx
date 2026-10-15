@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
-import { CATEGORY_COLLECTIONS } from "@asobeast/shared";
+import { chartPageQueries } from "@/components/top-charts/chart-pages";
 import { chartQueryFrom } from "@/components/top-charts/chart-params";
 import { TopChartsSkeleton } from "@/components/top-charts/skeletons";
 import { TopChartsView } from "@/components/top-charts/TopChartsView";
@@ -9,7 +9,6 @@ import {
   accountPlanOptions,
   appsOptions,
   chartFollowsOptions,
-  chartPageOptions,
 } from "@/lib/queries";
 import { loadChartSearch } from "@/lib/search-params";
 
@@ -19,15 +18,10 @@ export default async function ChartsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const search = loadChartSearch(await searchParams);
-  const query = chartQueryFrom(search);
-  const queries =
-    search.view === "table"
-      ? [query]
-      : CATEGORY_COLLECTIONS.map((collection) => ({ ...query, collection }));
   const queryClient = getQueryClient();
   await Promise.all([
-    ...queries.map((chart) =>
-      queryClient.prefetchQuery(chartPageOptions(chart)),
+    ...chartPageQueries(search.view, chartQueryFrom(search)).map((options) =>
+      queryClient.prefetchQuery(options),
     ),
     queryClient.prefetchQuery(appsOptions),
     queryClient.prefetchQuery(chartFollowsOptions),

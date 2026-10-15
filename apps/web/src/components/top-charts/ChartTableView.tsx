@@ -1,80 +1,53 @@
 "use client";
 
-import { useDeferredValue, useMemo } from "react";
-import { useSuspenseQuery } from "@tanstack/react-query";
-import type { ChartPageQuery } from "@/lib/api";
-import { appsOptions, chartPageOptions } from "@/lib/queries";
+import type { AppListItem, ChartPage } from "@asobeast/shared";
 import { CaptureTodayButton } from "./CaptureTodayButton";
-import { candidateApps } from "./chart-actions";
 import { capturableToday } from "./chart-column-rows";
 import { ChartEmpty } from "./ChartEmpty";
 import { chartCategoryOf } from "./chart-follows";
-import {
-  chartKeyFrom,
-  shownChartKey,
-  type ChartSearch,
-  type ChartSearchUpdate,
-} from "./chart-params";
-import { ChartsHeader } from "./ChartsHeader";
-import { ChartToolbar } from "./ChartToolbar";
+import { shownChartKey } from "./chart-params";
 import { ChartTable } from "./ChartTable";
 import { FollowChartButton } from "./FollowChartButton";
 import { CHART_GRID, TRENDING_COLUMN } from "./skeletons";
 import { TrendingPanel } from "./TrendingPanel";
 
-export function ChartTableView({
-  search,
-  query,
-  onChange,
-}: {
-  search: ChartSearch;
-  query: ChartPageQuery;
-  onChange: (next: ChartSearchUpdate) => void;
-}) {
-  const shown = useDeferredValue(query);
-  const { data: page } = useSuspenseQuery(chartPageOptions(shown));
-  const { data: apps } = useSuspenseQuery(appsOptions);
-  const onScreen = shownChartKey(page);
-  const candidates = useMemo(
-    () => candidateApps(apps, onScreen.store),
-    [apps, onScreen.store],
-  );
+export function TableActions({ page }: { page: ChartPage }) {
+  const chart = shownChartKey(page);
   const capturable = capturableToday(page);
-  const actions = (
+  return (
     <div className="flex flex-wrap items-center gap-2">
-      {capturable ? <CaptureTodayButton chart={onScreen} /> : null}
+      {capturable ? <CaptureTodayButton chart={chart} /> : null}
       <FollowChartButton
-        category={chartCategoryOf(onScreen)}
+        category={chartCategoryOf(chart)}
         primary={!capturable}
       />
     </div>
   );
+}
 
-  return (
-    <>
-      <ChartsHeader actions={page.capture ? actions : null} />
-      <ChartToolbar
-        chart={chartKeyFrom(search)}
-        view={search.view}
-        compare={search.compare}
-        day={page.capture?.date ?? search.date}
-        dates={page.dates}
-        onChange={onChange}
-      />
-      {page.capture ? (
-        <div aria-busy={shown !== query} className={CHART_GRID}>
-          <ChartTable page={page} apps={candidates} />
-          <aside aria-label="Trending" className={TRENDING_COLUMN}>
-            <TrendingPanel pages={[page]} />
-          </aside>
-        </div>
-      ) : (
-        <ChartEmpty
-          captured={page.dates.length > 0}
-          date={search.date}
-          action={actions}
-        />
-      )}
-    </>
+export function ChartTableView({
+  page,
+  apps,
+  busy,
+  date,
+}: {
+  page: ChartPage;
+  apps: readonly AppListItem[];
+  busy: boolean;
+  date: string | null;
+}) {
+  return page.capture ? (
+    <div aria-busy={busy} className={CHART_GRID}>
+      <ChartTable page={page} apps={apps} />
+      <aside aria-label="Trending" className={TRENDING_COLUMN}>
+        <TrendingPanel pages={[page]} />
+      </aside>
+    </div>
+  ) : (
+    <ChartEmpty
+      captured={page.dates.length > 0}
+      date={date}
+      action={<TableActions page={page} />}
+    />
   );
 }
