@@ -100,14 +100,27 @@ function ReviewCards({
 
   const filtered =
     view.score !== null || view.version !== "" || view.replyState !== null;
+  const queueCleared =
+    view.replyState === "needs_reply" &&
+    view.score === null &&
+    view.version === "";
+
   if (data.total === 0) {
     return filtered ? (
       <EmptyState
-        title="No reviews match these filters"
-        body="Nothing stored matches the selected rating, version and reply state."
+        title={
+          queueCleared
+            ? "Nothing needs a reply"
+            : "No reviews match these filters"
+        }
+        body={
+          queueCleared
+            ? "Every stored review has a reply or a saved draft."
+            : "Nothing stored matches the selected rating, version and reply state."
+        }
         action={
           <Button variant="outline" onClick={onClearFilters}>
-            Clear filters
+            {queueCleared ? "Show all reviews" : "Clear filters"}
           </Button>
         }
       />

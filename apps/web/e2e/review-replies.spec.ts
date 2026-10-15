@@ -411,6 +411,7 @@ test("exporting a search that matches nothing writes no file", async ({
   ).toBeVisible();
   expect(downloads).toEqual([]);
 });
+
 test("opening the composer moves focus to the text and closing it returns focus", async ({
   page,
 }) => {
@@ -431,4 +432,22 @@ test("opening the composer moves focus to the text and closing it returns focus"
 
   await expect(composer(page)).toHaveCount(0);
   await expect(replyButton).toBeFocused();
+});
+
+test("a queue with nothing left to answer says so", async ({ page }) => {
+  await page.goto(`${GP_PAGE}?reply=gp-rev-2`);
+
+  await composer(page).getByRole("button", { name: "Mark as replied" }).click();
+  await expect(
+    strip(page).getByRole("button", { name: /Needs reply/ }),
+  ).toContainText("0");
+
+  await page.goto(`${GP_PAGE}?replyState=needs_reply`);
+
+  await expect(page.getByText("Nothing needs a reply")).toBeVisible();
+
+  await page.getByRole("button", { name: "Show all reviews" }).click();
+
+  await expect(page).not.toHaveURL(/replyState=/);
+  await expect(page.getByRole("article")).toHaveCount(2);
 });
