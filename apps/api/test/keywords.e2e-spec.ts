@@ -334,6 +334,28 @@ describe('KeywordsController (e2e)', () => {
       );
     });
 
+    it('queues the first check ahead of the first score', async () => {
+      const id = await importAndClear();
+      const [keywordId] = idsOf(await add(id, ['deep focus']), ['deep focus']);
+      const queue = app.get<Queue>(getQueueToken(QUEUES.APP_STORE), {
+        strict: false,
+      });
+
+      const waiting = await queue.getJobs(['wait', 'paused'], 0, -1, true);
+
+      const check = waiting.findIndex(
+        (job) => job.id === firstRunCheckJobId(id, keywordId, utcDateKey()),
+      );
+      const score = waiting.findIndex(
+        (job) =>
+          job.name === JOBS.SCORE_KEYWORD &&
+          (job.data as { keywordId: string }).keywordId === keywordId,
+      );
+      expect(check).toBeGreaterThanOrEqual(0);
+      expect(score).toBeGreaterThanOrEqual(0);
+      expect(check).toBeLessThan(score);
+    });
+
     it('checks nothing for a keyword the app already tracks', async () => {
       const id = await importAndClear();
 

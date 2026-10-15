@@ -178,13 +178,13 @@ export class KeywordsService {
       await this.tracker.claimForManual(tx, appId, keywordIds);
     });
 
-    for (const keywordId of keywordIds) {
-      await this.tracker.enqueueFirstScore(keywordId, app);
-    }
     await this.checks.schedule(
       appId,
       keywordIds.filter((keywordId) => !alreadyActive.has(keywordId)),
     );
+    for (const keywordId of keywordIds) {
+      await this.tracker.enqueueFirstScore(keywordId, app);
+    }
     await this.listings.request(app, market);
 
     return this.listTracked(appId, undefined, market);
