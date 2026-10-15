@@ -302,6 +302,34 @@ describe('GooglePlayProvider', () => {
     });
   });
 
+  it('maps a chart row with its listing fields', async () => {
+    const icon = 'https://play-lh.googleusercontent.com/icon';
+    const list = jest.fn().mockResolvedValue([
+      {
+        appId: 'com.a',
+        title: 'First',
+        developer: 'Acme',
+        icon,
+        free: false,
+      },
+      { appId: 'com.b', title: 'Second', developer: 'Beta' },
+    ]);
+    const provider = new GooglePlayProvider(makeLib({ list }));
+
+    const items = await provider.topCharts('paid', 'GAME_ACTION', 200, 'us');
+
+    expect(items).toStrictEqual([
+      {
+        storeAppId: 'com.a',
+        title: 'First',
+        developer: 'Acme',
+        iconUrl: icon,
+        free: false,
+      },
+      { storeAppId: 'com.b', title: 'Second', developer: 'Beta' },
+    ]);
+  });
+
   it('maps the overall genre to the APPLICATION category', async () => {
     const list = jest.fn().mockResolvedValue([]);
     const provider = new GooglePlayProvider(makeLib({ list }));

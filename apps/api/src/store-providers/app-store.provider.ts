@@ -30,6 +30,7 @@ import {
   StoreProvider,
   SuggestItem,
 } from './types';
+import { toChartItem } from './chart-item';
 
 const RETRY_DELAYS_MS = [2000, 5000];
 
@@ -116,10 +117,16 @@ export class AppStoreProvider implements StoreProvider {
         ...deadline,
       }),
     );
-    return results.map((item) => ({
-      storeAppId: String(item.id),
-      title: item.title,
-    }));
+    return results.map((item) =>
+      toChartItem({
+        storeAppId: String(item.id),
+        title: item.title,
+        developer: item.developer,
+        iconUrl: item.icon,
+        genreId: item.genreId,
+        free: item.free,
+      }),
+    );
   }
 
   async reviews(

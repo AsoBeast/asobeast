@@ -46,6 +46,11 @@ export interface GooglePlaySearchResult {
   score?: number;
 }
 
+export interface GooglePlayListResult extends GooglePlaySearchResult {
+  icon?: string;
+  free?: boolean;
+}
+
 export interface GooglePlayReviewResult {
   id: string;
   userName: string;
@@ -110,7 +115,7 @@ export interface GooglePlayLib {
       country: string;
       lang: string;
     } & Abortable,
-  ): Promise<GooglePlaySearchResult[]>;
+  ): Promise<GooglePlayListResult[]>;
   reviews(
     options: {
       appId: string;

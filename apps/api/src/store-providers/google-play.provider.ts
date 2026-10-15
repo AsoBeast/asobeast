@@ -26,6 +26,7 @@ import {
   StoreProvider,
   SuggestItem,
 } from './types';
+import { toChartItem } from './chart-item';
 
 const SEARCH_MAX = 250;
 const REVIEWS_PER_PAGE = 50;
@@ -146,10 +147,15 @@ export class GooglePlayProvider implements StoreProvider {
         ...deadline,
       }),
     );
-    return results.map((item) => ({
-      storeAppId: item.appId,
-      title: item.title,
-    }));
+    return results.map((item) =>
+      toChartItem({
+        storeAppId: item.appId,
+        title: item.title,
+        developer: item.developer,
+        iconUrl: item.icon,
+        free: item.free,
+      }),
+    );
   }
 
   async reviews(
