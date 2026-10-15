@@ -44,9 +44,10 @@ export function ChartTable({
     }),
     [page.chart, page.apps, apps],
   );
+  const withGenre = page.entries.some((entry) => entry.genreName !== null);
   const columns = useMemo(
-    () => chartColumns(period, context),
-    [period, context],
+    () => chartColumns(period, context, withGenre),
+    [period, context, withGenre],
   );
   const [visibility, setVisibility] = useStoredColumnVisibility(
     "top-chart",

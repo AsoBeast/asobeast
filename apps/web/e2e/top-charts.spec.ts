@@ -391,6 +391,23 @@ test("shows the add in progress on the competitor menu", async ({
   await request.post(`${MOCK_API}/__reset/competitors/app-1`);
 });
 
+test("leaves out the category column when no row has one", async ({ page }) => {
+  await page.goto("/charts?store=GOOGLE_PLAY");
+
+  await expect(chartTable(page).locator("tbody tr")).toHaveCount(
+    TOP_CHART_APPS.length,
+  );
+  await expect(
+    chartTable(page).getByRole("columnheader", { name: "Category" }),
+  ).toHaveCount(0);
+
+  await page.goto("/charts");
+
+  await expect(
+    chartTable(page).getByRole("columnheader", { name: "Category" }),
+  ).toHaveCount(1);
+});
+
 test("names every chosen filter before hydration", async ({ page }) => {
   await page.route("**/_next/static/chunks/**", (route) => route.abort());
   await page.goto("/charts?country=de&genre=6014");

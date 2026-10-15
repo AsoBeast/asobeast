@@ -1787,6 +1787,18 @@ function withComparison(
   };
 }
 
+function asListedBy(store: Store, page: ChartPage): ChartPage {
+  if (store !== "GOOGLE_PLAY") return page;
+  return {
+    ...page,
+    entries: page.entries.map((entry) => ({
+      ...entry,
+      genreId: null,
+      genreName: null,
+    })),
+  };
+}
+
 function chartAnswer(req: IncomingMessage): [number, unknown] {
   const path = req.url ?? "/charts";
   const query = new URL(path, "http://localhost").searchParams;
@@ -1800,9 +1812,9 @@ function chartAnswer(req: IncomingMessage): [number, unknown] {
   }
   const compare = (query.get("compare") ?? "1d") as ChartPage["compare"];
   const key = chartKeyOf(query);
-  const page = withComparison(
-    chartPageFor(req, key, query.get("date")),
-    compare,
+  const page = asListedBy(
+    key.store,
+    withComparison(chartPageFor(req, key, query.get("date")), compare),
   );
   const followed =
     chartFollows.find((follow) => sameChart(chartKeyOf(follow), key)) ?? null;

@@ -17,7 +17,24 @@ function PriceCell({ free }: { free: boolean | null }) {
   return <Badge variant="outline">{free ? "Free" : "Paid"}</Badge>;
 }
 
-export function chartColumns(period: string, context: ChartRowContext) {
+function genreColumn() {
+  return columnHelper.accessor((row) => row.genreName ?? "", {
+    id: "genre",
+    sortFn: "text",
+    meta: { label: "Category" },
+    header: ({ column }) => <SortableHeader column={column} label="Category" />,
+    cell: ({ row }) =>
+      row.original.genreName ?? (
+        <span className="text-muted-foreground">—</span>
+      ),
+  });
+}
+
+export function chartColumns(
+  period: string,
+  context: ChartRowContext,
+  withGenre: boolean,
+) {
   return columnHelper.columns([
     columnHelper.accessor("position", {
       id: "position",
@@ -66,18 +83,7 @@ export function chartColumns(period: string, context: ChartRowContext) {
         </div>
       ),
     }),
-    columnHelper.accessor((row) => row.genreName ?? "", {
-      id: "genre",
-      sortFn: "text",
-      meta: { label: "Category" },
-      header: ({ column }) => (
-        <SortableHeader column={column} label="Category" />
-      ),
-      cell: ({ row }) =>
-        row.original.genreName ?? (
-          <span className="text-muted-foreground">—</span>
-        ),
-    }),
+    ...(withGenre ? [genreColumn()] : []),
     columnHelper.display({
       id: "price",
       meta: { label: "Price" },
