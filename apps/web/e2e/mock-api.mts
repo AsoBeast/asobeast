@@ -1229,7 +1229,7 @@ function keywordQuotaRefusal(
     ...errorEnvelope(
       403,
       path,
-      `keywordMarkets limit reached: ${used} of ${limit} used on the indie plan, ${requested} more requested`,
+      `Keyword markets limit reached: ${used} of ${limit} used on the indie plan, ${requested} more requested`,
     ),
     quota: {
       resource: "keywordMarkets",
@@ -2671,7 +2671,7 @@ const routes: Route[] = [
             ...errorEnvelope(
               403,
               path,
-              `keywordMarkets limit reached: ${used} of ${limit} used on the indie plan, ${activating.length} more requested`,
+              `Keyword markets limit reached: ${used} of ${limit} used on the indie plan, ${activating.length} more requested`,
             ),
             quota: {
               resource: "keywordMarkets",
@@ -2734,7 +2734,7 @@ const routes: Route[] = [
             ...errorEnvelope(
               403,
               path,
-              "keywordMarkets limit reached: 998 of 1000 used on the indie plan, 5 more requested",
+              "Keyword markets limit reached: 998 of 1000 used on the indie plan, 5 more requested",
             ),
             quota: {
               resource: "keywordMarkets",

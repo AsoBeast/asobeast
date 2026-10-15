@@ -145,7 +145,7 @@ describe('Remote MCP write tools with billing (e2e)', () => {
     });
 
     expect(result.result?.isError).toBe(true);
-    expect(textOf(result)).toContain('competitors limit reached');
+    expect(textOf(result)).toContain('Competitors limit reached');
     expect(textOf(result)).toContain('retrying will not help');
   });
 
