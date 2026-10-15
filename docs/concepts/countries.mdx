@@ -193,7 +193,7 @@ asobeast also records a native localization when it first captures one, which is
 
 What asobeast still cannot know:
 
-- A store page whose text equals the default listing looks the same as a page for a language you do not ship, so a localization with the default text is never detected. The default localization itself is never detected either. Add such a localization by hand.
+- A store page whose text equals the default listing looks the same as a page for a language you do not ship, so a localization with the default text is never detected. The store answers a language you do not ship with your app's primary text, so **Find localizations** never detects a localization whose text equals your home listing either, even in a market whose default language is another one. The default localization itself is never detected. Add such a localization by hand.
 - The keyword field of a localization is private, so asobeast never learns its contents. A localization you ship starts with an empty field until you type it.
 - A localization you never added, never saved a field for and the store never proved is not on the list. The list is what asobeast can prove or what you tell it.
 

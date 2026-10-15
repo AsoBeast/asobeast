@@ -19,6 +19,8 @@ import { LocalizationSweep } from '../src/jobs/localization-sweep.service';
 import { StoreJobsHandler } from '../src/jobs/store-jobs.handler';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import {
+  ENGLISH,
+  GERMAN,
   LocalizedRegistry,
   POLISH,
   US_APP_URL,
@@ -97,6 +99,18 @@ describe('Localization detection probe (e2e)', () => {
       } satisfies DetectLocalizationPayload,
     } as Job);
 
+  const captureListing = (appId: string, country: string) =>
+    app.get(StoreJobsHandler).handle({
+      name: JOBS.REFRESH_APP,
+      id: `refresh-${country}`,
+      queueName: QUEUES.APP_STORE,
+      data: {
+        appId,
+        country,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+      } satisfies RefreshAppPayload,
+    } as Job);
+
   const detectionJobs = async () =>
     (
       await app
@@ -131,6 +145,33 @@ describe('Localization detection probe (e2e)', () => {
     await runProbe(appId, 'es-MX', 'us');
 
     await expect(localizationsOf(appId)).resolves.toEqual([]);
+  });
+
+  it('does not detect a localization whose text echoes the home listing in another market', async () => {
+    const appId = await importApp();
+    registry.listings.set('de:default', GERMAN);
+    await captureListing(appId, 'de');
+    registry.listings.set('de:en-GB', ENGLISH);
+
+    await runProbe(appId, 'en-GB', 'de');
+
+    await expect(localizationsOf(appId)).resolves.toEqual([
+      { localization: 'de', origin: 'detected' },
+    ]);
+  });
+
+  it('records a localization served in another market apart from its default and the home listing', async () => {
+    const appId = await importApp();
+    registry.listings.set('de:default', GERMAN);
+    await captureListing(appId, 'de');
+    registry.listings.set('de:en-GB', POLISH);
+
+    await runProbe(appId, 'en-GB', 'de');
+
+    await expect(localizationsOf(appId)).resolves.toEqual([
+      { localization: 'de', origin: 'detected' },
+      { localization: 'en-GB', origin: 'detected' },
+    ]);
   });
 
   it('sends no request for a market without a stored default listing', async () => {
@@ -169,18 +210,6 @@ describe('Localization detection probe (e2e)', () => {
   });
 
   describe('after the first listing capture of a market', () => {
-    const captureListing = (appId: string, country: string) =>
-      app.get(StoreJobsHandler).handle({
-        name: JOBS.REFRESH_APP,
-        id: `refresh-${country}`,
-        queueName: QUEUES.APP_STORE,
-        data: {
-          appId,
-          country,
-          workspaceId: DEFAULT_WORKSPACE_ID,
-        } satisfies RefreshAppPayload,
-      } as Job);
-
     beforeEach(async () => {
       await obliterateQueues(app);
       await pauseQueues(app);
