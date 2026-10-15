@@ -88,7 +88,10 @@ export class ChartFollowsService {
   }
 
   async buckets(): Promise<CategoryBucket[]> {
+    const limit = await this.quota.limitFor('chartFollows');
     const follows = await this.prisma.chartFollow.findMany({
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+      take: limit ?? undefined,
       select: { store: true, country: true, collection: true, genre: true },
     });
     return follows.map((follow) => ({

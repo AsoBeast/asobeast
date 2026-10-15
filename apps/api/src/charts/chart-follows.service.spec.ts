@@ -32,6 +32,7 @@ const build = () => {
     },
   };
   const quota = {
+    limitFor: jest.fn().mockResolvedValue(null),
     admitChartFollow: jest.fn(
       (write: (client: typeof tx) => Promise<unknown>) => write(tx),
     ),
@@ -122,5 +123,30 @@ describe('ChartFollowsService', () => {
     await expect(service.buckets()).resolves.toEqual([
       { store: 'APP_STORE', country: 'us', collection: 'free', genre: '6014' },
     ]);
+  });
+
+  it('schedules only the oldest follows the plan has room for', async () => {
+    const { service, prisma, quota } = build();
+    quota.limitFor.mockResolvedValue(10);
+
+    await service.buckets();
+
+    expect(quota.limitFor).toHaveBeenCalledWith('chartFollows');
+    expect(prisma.chartFollow.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+        take: 10,
+      }),
+    );
+  });
+
+  it('schedules every follow when the plan sets no limit', async () => {
+    const { service, prisma } = build();
+
+    await service.buckets();
+
+    expect(prisma.chartFollow.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ take: undefined }),
+    );
   });
 });
