@@ -1,5 +1,8 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
+export const CHART_GRID =
+  "grid gap-6 @6xl/charts:grid-cols-[minmax(0,1fr)_20rem] [&>*]:min-w-0";
+
 const FILTERS = 7;
 const ROWS = 10;
 
@@ -52,7 +55,7 @@ export function TopChartsSkeleton() {
           <Skeleton key={index} className="h-8 w-36" />
         ))}
       </div>
-      <div className="grid gap-6 @6xl/charts:grid-cols-[minmax(0,1fr)_20rem] [&>*]:min-w-0">
+      <div className={CHART_GRID}>
         <ChartTableSkeleton />
         <TrendingPanelSkeleton />
       </div>

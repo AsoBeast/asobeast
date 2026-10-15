@@ -4,6 +4,7 @@ import {
   monthGrid,
   monthLabel,
   monthOf,
+  monthWeeks,
   shiftMonth,
 } from "./calendar-grid";
 
@@ -25,6 +26,14 @@ describe("calendar grid", () => {
     expect(cells[3].weekday).toBe(3);
     expect(cells.filter((cell) => cell.date !== null)).toHaveLength(31);
     expect(cells.at(-1)?.date).toBeNull();
+  });
+
+  it("splits a month into six weeks of seven days", () => {
+    const weeks = monthWeeks({ year: 2026, month: 10 });
+
+    expect(weeks).toHaveLength(6);
+    expect(weeks.every((week) => week.length === 7)).toBe(true);
+    expect(weeks[0][3].date).toBe("2026-10-01");
   });
 
   it("knows a leap february", () => {

@@ -33,6 +33,13 @@ export function monthLabel({ year, month }: Month): string {
   return monthLabelFormat.format(new Date(Date.UTC(year, month - 1, 1)));
 }
 
+export function monthWeeks(month: Month): CalendarCell[][] {
+  const cells = monthGrid(month);
+  return Array.from({ length: CELLS / WEEK }, (_, week) =>
+    cells.slice(week * WEEK, (week + 1) * WEEK),
+  );
+}
+
 export function monthGrid({ year, month }: Month): CalendarCell[] {
   const offset =
     (new Date(Date.UTC(year, month - 1, 1)).getUTCDay() + 6) % WEEK;

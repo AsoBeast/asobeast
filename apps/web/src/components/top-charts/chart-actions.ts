@@ -43,20 +43,16 @@ export function candidateApps(
   return apps.filter((app) => app.store === store);
 }
 
-function statusOf(error: unknown): number | null {
-  return error instanceof ApiError ? error.envelope.statusCode : null;
-}
-
 export function captureErrorText(error: unknown): string {
-  const status = statusOf(error);
-  if (status === 429 && error instanceof ApiError)
-    return error.envelope.message;
-  if (status === 502) return STORE_DID_NOT_ANSWER;
+  if (!(error instanceof ApiError)) return "Could not capture the chart.";
+  const { statusCode, message } = error.envelope;
+  if (statusCode === 429) return message;
+  if (statusCode === 502) return STORE_DID_NOT_ANSWER;
   return "Could not capture the chart.";
 }
 
 export function followErrorText(error: unknown): string {
-  return statusOf(error) === 403 && error instanceof ApiError
+  return error instanceof ApiError && error.envelope.statusCode === 403
     ? error.envelope.message
     : "Could not follow the chart.";
 }

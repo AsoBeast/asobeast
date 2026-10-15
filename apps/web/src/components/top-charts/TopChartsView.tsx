@@ -13,6 +13,7 @@ import { ChartFilters } from "./ChartFilters";
 import { chartKeyFrom, chartQueryFrom, shownChartKey } from "./chart-params";
 import { ChartTable } from "./ChartTable";
 import { FollowChartButton } from "./FollowChartButton";
+import { CHART_GRID } from "./skeletons";
 import { TrendingPanel } from "./TrendingPanel";
 
 function ChartActions({ chart, page }: { chart: ChartKey; page: ChartPage }) {
@@ -49,6 +50,10 @@ export function TopChartsView() {
   const { data: page } = useSuspenseQuery(chartPageOptions(shown));
   const { data: apps } = useSuspenseQuery(appsOptions);
   const onScreen = shownChartKey(page);
+  const candidates = useMemo(
+    () => candidateApps(apps, onScreen.store),
+    [apps, onScreen.store],
+  );
   const actions = <ChartActions chart={onScreen} page={page} />;
 
   return (
@@ -73,11 +78,8 @@ export function TopChartsView() {
         onChange={(next) => void setSearch(next)}
       />
       {page.capture ? (
-        <div
-          aria-busy={shown !== query}
-          className="grid gap-6 @6xl/charts:grid-cols-[minmax(0,1fr)_20rem] [&>*]:min-w-0"
-        >
-          <ChartTable page={page} apps={candidateApps(apps, onScreen.store)} />
+        <div aria-busy={shown !== query} className={CHART_GRID}>
+          <ChartTable page={page} apps={candidates} />
           <TrendingPanel page={page} />
         </div>
       ) : (

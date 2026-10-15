@@ -135,8 +135,8 @@ function HeaderStat({
   detail: AppDetail;
 }) {
   const headline = headlineSeries(series, detail.latestSnapshot?.price ?? null);
+  if (!headline) return null;
   const href = headlineChartHref(headline, detail);
-  if (!headline || !href) return null;
 
   return (
     <p className="text-sm">

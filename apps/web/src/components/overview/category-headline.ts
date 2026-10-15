@@ -12,7 +12,9 @@ const depthOf = (item: CategoryRankSeriesItem): number =>
   item.depth ?? LEGACY_CHART_DEPTH;
 
 export function chartDepthOf(series: CategoryRankSeriesItem[]): number {
-  return Math.max(...series.map(depthOf));
+  return series.length === 0
+    ? LEGACY_CHART_DEPTH
+    : Math.max(...series.map(depthOf));
 }
 
 export function notInChartLabel(item: CategoryRankSeriesItem): string {
@@ -42,10 +44,9 @@ export function headlineSeries(
 }
 
 export function headlineChartHref(
-  headline: CategoryRankSeriesItem | undefined,
+  headline: CategoryRankSeriesItem,
   app: { store: Store; country: string },
-): string | null {
-  if (!headline) return null;
+): string {
   const params = new URLSearchParams({
     store: app.store,
     country: app.country,

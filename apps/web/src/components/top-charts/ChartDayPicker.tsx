@@ -18,9 +18,9 @@ import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import {
   addUtcDays,
-  monthGrid,
   monthLabel,
   monthOf,
+  monthWeeks,
   shiftMonth,
   type Month,
 } from "./calendar-grid";
@@ -42,8 +42,6 @@ const KEY_STEPS: Record<string, number> = {
   ArrowUp: -7,
   ArrowDown: 7,
 };
-
-const WEEK = 7;
 
 function capturedNear(
   dates: readonly string[],
@@ -67,13 +65,6 @@ function firstCapturedIn(
 ): string | undefined {
   const prefix = `${year}-${String(month).padStart(2, "0")}-`;
   return [...dates].sort().find((date) => date.startsWith(prefix));
-}
-
-function weeksOf(month: Month) {
-  const cells = monthGrid(month);
-  return Array.from({ length: cells.length / WEEK }, (_, week) =>
-    cells.slice(week * WEEK, (week + 1) * WEEK),
-  );
 }
 
 function DayGrid({
@@ -159,20 +150,20 @@ function DayGrid({
             </span>
           ))}
         </div>
-        {weeksOf(month).map((week, index) => (
+        {monthWeeks(month).map((week, index) => (
           <div key={index} role="row" className="grid grid-cols-7 gap-1">
-            {week.map((cell) => (
-              <div key={cell.weekday} role="gridcell" className="size-9">
-                {cell.date ? (
+            {week.map(({ date, weekday }) => (
+              <div key={weekday} role="gridcell" className="size-9">
+                {date ? (
                   <button
                     type="button"
-                    data-date={cell.date}
-                    data-captured={captured.has(cell.date) || undefined}
-                    aria-label={formatDate(cell.date)}
-                    aria-pressed={cell.date === value}
-                    disabled={!captured.has(cell.date)}
-                    tabIndex={cell.date === focused ? 0 : -1}
-                    onClick={() => onSelect(cell.date as string)}
+                    data-date={date}
+                    data-captured={captured.has(date) || undefined}
+                    aria-label={formatDate(date)}
+                    aria-pressed={date === value}
+                    disabled={!captured.has(date)}
+                    tabIndex={date === focused ? 0 : -1}
+                    onClick={() => onSelect(date)}
                     className={cn(
                       "numeric size-9 rounded-md font-mono text-sm text-muted-foreground disabled:cursor-not-allowed",
                       "data-captured:bg-secondary data-captured:text-foreground data-captured:hover:bg-accent",
@@ -180,7 +171,7 @@ function DayGrid({
                       "focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1 focus-visible:outline-ring",
                     )}
                   >
-                    {Number(cell.date.slice(-2))}
+                    {Number(date.slice(-2))}
                   </button>
                 ) : null}
               </div>
