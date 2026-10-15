@@ -40,6 +40,25 @@ export interface ReviewListFilters {
 
 const REVIEW_TEXT_MAX = 500;
 
+interface StoredReply {
+  repliedAt: Date | null;
+  replyText: string | null;
+}
+
+function replyChanges(
+  stored: StoredReply,
+  fetched: ReviewResult | undefined,
+): Partial<StoredReply> {
+  return {
+    ...(fetched?.repliedAt && !stored.repliedAt
+      ? { repliedAt: fetched.repliedAt }
+      : {}),
+    ...(fetched?.replyText && fetched.replyText !== stored.replyText
+      ? { replyText: fetched.replyText }
+      : {}),
+  };
+}
+
 interface ReviewSource {
   id: string;
   store: Store;
@@ -93,9 +112,9 @@ export class ReviewsService {
 
     const existing = await this.prisma.review.findMany({
       where: { appId: app.id, reviewId: { in: [...fetched.keys()] } },
-      select: { reviewId: true },
+      select: { reviewId: true, repliedAt: true, replyText: true },
     });
-    const known = new Set(existing.map((row) => row.reviewId));
+    const known = new Map(existing.map((row) => [row.reviewId, row]));
     const inserted = [...fetched.values()].filter(
       (review) => !known.has(review.reviewId),
     );
@@ -139,31 +158,20 @@ export class ReviewsService {
   private async recordReplies(
     appId: string,
     fetched: Map<string, ReviewResult>,
-    known: Set<string>,
+    known: Map<string, StoredReply>,
     checkedAt: Date,
   ): Promise<void> {
     await this.prisma.review.updateMany({
-      where: { appId, reviewId: { in: [...known] } },
+      where: { appId, reviewId: { in: [...known.keys()] } },
       data: { replyCheckedAt: checkedAt },
     });
-    for (const reviewId of known) {
-      const { repliedAt, replyText } = fetched.get(reviewId) ?? {};
-      if (repliedAt) {
-        await this.prisma.review.updateMany({
-          where: { appId, reviewId, repliedAt: null },
-          data: { repliedAt },
-        });
-      }
-      if (replyText) {
-        await this.prisma.review.updateMany({
-          where: {
-            appId,
-            reviewId,
-            OR: [{ replyText: null }, { replyText: { not: replyText } }],
-          },
-          data: { replyText },
-        });
-      }
+    for (const [reviewId, stored] of known) {
+      const data = replyChanges(stored, fetched.get(reviewId));
+      if (Object.keys(data).length === 0) continue;
+      await this.prisma.review.updateMany({
+        where: { appId, reviewId },
+        data,
+      });
     }
   }
 

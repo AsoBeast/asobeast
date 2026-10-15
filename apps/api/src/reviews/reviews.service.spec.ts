@@ -31,6 +31,7 @@ const buildDeps = (options: {
   storedAlready?: boolean;
   storedReviewedAt?: Date | null;
   store?: Store;
+  stored?: Record<string, { repliedAt: Date | null; replyText: string | null }>;
 }) => {
   const storedReviewedAt =
     options.storedReviewedAt === undefined
@@ -58,9 +59,13 @@ const buildDeps = (options: {
       }),
     },
     review: {
-      findMany: jest
-        .fn()
-        .mockResolvedValue(options.existing.map((reviewId) => ({ reviewId }))),
+      findMany: jest.fn().mockResolvedValue(
+        options.existing.map((reviewId) => ({
+          reviewId,
+          repliedAt: options.stored?.[reviewId]?.repliedAt ?? null,
+          replyText: options.stored?.[reviewId]?.replyText ?? null,
+        })),
+      ),
       findFirst: jest.fn((args: { where: { reviewedAt?: unknown } }) => {
         if (!options.storedAlready) return Promise.resolve(null);
         if (args.where.reviewedAt !== undefined && storedReviewedAt === null) {
@@ -192,11 +197,7 @@ describe('ReviewsService.syncReviews', () => {
     });
     expect(firstUpdate.data.replyCheckedAt).toBeInstanceOf(Date);
     expect(updateMany).toHaveBeenNthCalledWith(2, {
-      where: {
-        appId: 'app1',
-        reviewId: 'known-now-replied',
-        repliedAt: null,
-      },
+      where: { appId: 'app1', reviewId: 'known-now-replied' },
       data: { repliedAt: replied },
     });
   });
@@ -241,20 +242,48 @@ describe('ReviewsService.syncReviews', () => {
 
     await service.syncReviews({ appId: 'app1', pages: 1, backfill: true });
 
-    expect(updateMany).toHaveBeenCalledWith({
-      where: { appId: 'app1', reviewId: 'known', repliedAt: null },
-      data: { repliedAt: replied },
+    expect(updateMany).toHaveBeenCalledTimes(2);
+    expect(updateMany).toHaveBeenLastCalledWith({
+      where: { appId: 'app1', reviewId: 'known' },
+      data: { repliedAt: replied, replyText: 'Thanks, fixed in 2.1' },
     });
-    expect(updateMany).toHaveBeenCalledWith({
-      where: {
-        appId: 'app1',
-        reviewId: 'known',
-        OR: [
-          { replyText: null },
-          { replyText: { not: 'Thanks, fixed in 2.1' } },
-        ],
-      },
-      data: { replyText: 'Thanks, fixed in 2.1' },
+  });
+
+  it('writes nothing more for a known reply that did not change', async () => {
+    const replied = new Date('2026-09-02T08:00:00.000Z');
+    const { service, updateMany } = buildDeps({
+      store: Store.GOOGLE_PLAY,
+      pages: [
+        [{ ...makeReview('known'), repliedAt: replied, replyText: 'Same' }],
+      ],
+      existing: ['known'],
+      stored: { known: { repliedAt: replied, replyText: 'Same' } },
+    });
+
+    await service.syncReviews({ appId: 'app1', pages: 1, backfill: true });
+
+    expect(updateMany).toHaveBeenCalledTimes(1);
+    expect(updateMany.mock.calls[0][0].data.replyCheckedAt).toBeInstanceOf(
+      Date,
+    );
+  });
+
+  it('refreshes only the text of a reply edited in the console', async () => {
+    const replied = new Date('2026-09-02T08:00:00.000Z');
+    const { service, updateMany } = buildDeps({
+      store: Store.GOOGLE_PLAY,
+      pages: [
+        [{ ...makeReview('known'), repliedAt: replied, replyText: 'Edited' }],
+      ],
+      existing: ['known'],
+      stored: { known: { repliedAt: replied, replyText: 'First' } },
+    });
+
+    await service.syncReviews({ appId: 'app1', pages: 1, backfill: true });
+
+    expect(updateMany).toHaveBeenLastCalledWith({
+      where: { appId: 'app1', reviewId: 'known' },
+      data: { replyText: 'Edited' },
     });
   });
 
