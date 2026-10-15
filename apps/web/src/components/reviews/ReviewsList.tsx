@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useDeferredValue, useState } from "react";
+import { Suspense, startTransition, useDeferredValue, useState } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
 import { storefrontLanguage } from "@asobeast/shared";
@@ -196,7 +196,7 @@ function ReviewCards({
         total={data.total}
         searching={query.trim() !== ""}
         expanded={expanded}
-        onShowAll={() => setExpandedView(viewKey)}
+        onShowAll={() => startTransition(() => setExpandedView(viewKey))}
       />
     </div>
   );
