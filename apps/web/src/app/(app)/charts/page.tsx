@@ -6,6 +6,7 @@ import { TopChartsSkeleton } from "@/components/top-charts/skeletons";
 import { TopChartsView } from "@/components/top-charts/TopChartsView";
 import { getQueryClient } from "@/lib/get-query-client";
 import {
+  accountPlanOptions,
   appsOptions,
   chartFollowsOptions,
   chartPageOptions,
@@ -30,6 +31,7 @@ export default async function ChartsPage({
     ),
     queryClient.prefetchQuery(appsOptions),
     queryClient.prefetchQuery(chartFollowsOptions),
+    queryClient.prefetchQuery(accountPlanOptions),
   ]);
 
   return (

@@ -1,5 +1,6 @@
 import { type APIRequestContext, type Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
+import { PLAN_LIMITS, UPGRADE_PATH, type AccountPlan } from "@asobeast/shared";
 import { contrastViolations, THEMES } from "./contrast-check.mts";
 import {
   TOP_CHART_APPS,
@@ -8,6 +9,7 @@ import {
   TOP_PAID_CHART_APPS,
   utcDaysAgo,
 } from "./fixtures.mts";
+import { routePlan } from "./plan-helpers.mts";
 
 const formatDayMonth = (date: string) =>
   new Intl.DateTimeFormat("en-US", {
@@ -170,6 +172,61 @@ for (const theme of THEMES) {
     );
   });
 }
+
+const uncaptured = (page: Page) =>
+  page.context().addCookies([
+    {
+      name: "e2e_chart_uncaptured",
+      value: "1",
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
+
+test("says what a capture costs on a plan", async ({ page }) => {
+  const plan: AccountPlan = {
+    plan: "indie",
+    displayName: "Indie",
+    billing: true,
+    entitled: true,
+    hasBillingAccount: true,
+    subscribed: true,
+    cancelAtPeriodEnd: false,
+    trialEndsAt: null,
+    renewsAt: "2026-11-09T00:00:00.000Z",
+    upgradeTo: "ultimate",
+    upgradePath: UPGRADE_PATH,
+    limits: PLAN_LIMITS.indie,
+    usage: {
+      apps: { used: 2, limit: PLAN_LIMITS.indie.apps },
+      keywordMarkets: { used: 12, limit: PLAN_LIMITS.indie.keywordMarkets },
+      aiCalls: { used: 4, limit: 200, resetsAt: "2026-11-01T00:00:00.000Z" },
+    },
+  };
+  await routePlan(page, plan);
+  await uncaptured(page);
+  await page.goto("/charts");
+
+  await expect(kindRegion(page, "Paid")).toContainText(
+    "Capture today spends one of the 30 chart captures your plan allows a day.",
+  );
+});
+
+test("says a capture reaches the store once on a self hosted instance", async ({
+  page,
+}) => {
+  await uncaptured(page);
+  await page.goto("/charts?view=table");
+
+  await expect(
+    page.getByText(
+      "Capture today reaches the store once and stores the chart for every workspace.",
+    ),
+  ).toBeVisible();
+  await expect(page.getByText(/chart captures your plan allows/)).toHaveCount(
+    0,
+  );
+});
 
 test("keeps every filter in the url", async ({ page }) => {
   await page.goto("/charts?view=table");

@@ -1,7 +1,12 @@
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
 import { Trophy } from "lucide-react";
 import type { ReactNode } from "react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatDate } from "@/lib/format";
+import { accountPlanOptions } from "@/lib/queries";
+import { emptyChartBody } from "./chart-actions";
 
 export function ChartEmpty({
   captured,
@@ -14,20 +19,17 @@ export function ChartEmpty({
   action?: ReactNode;
   className?: string;
 }) {
-  return captured ? (
+  const limits = useQuery(accountPlanOptions).data?.limits;
+  return (
     <EmptyState
       className={className}
       icon={Trophy}
-      title={`No capture of this chart on ${formatDate(date)}`}
-      body="Pick a captured day, or capture today."
-      action={action}
-    />
-  ) : (
-    <EmptyState
-      className={className}
-      icon={Trophy}
-      title="This chart has not been captured yet"
-      body="Capture it now, or follow it so the daily run keeps it."
+      title={
+        captured
+          ? `No capture of this chart on ${formatDate(date)}`
+          : "This chart has not been captured yet"
+      }
+      body={emptyChartBody(captured, limits)}
       action={action}
     />
   );

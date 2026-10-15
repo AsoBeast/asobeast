@@ -1,9 +1,16 @@
-import type { AppListItem, ChartAppLink } from "@asobeast/shared";
+import {
+  PLAN_LIMITS,
+  SELF_HOSTED_LIMITS,
+  type AppListItem,
+  type ChartAppLink,
+} from "@asobeast/shared";
 import { describe, expect, it } from "vitest";
 import { ApiError } from "@/lib/api";
 import {
   candidateApps,
+  captureCostText,
   captureErrorText,
+  emptyChartBody,
   followErrorText,
   rowContextOf,
   rowLink,
@@ -142,5 +149,57 @@ describe("rowContextOf", () => {
     expect(context.links.get("111")?.appId).toBe("app-1");
     expect(context.links.get("222")).toBeUndefined();
     expect(context.chart.country).toBe("us");
+  });
+});
+
+describe("captureCostText", () => {
+  it("names the plan's daily captures", () => {
+    expect(captureCostText(PLAN_LIMITS.indie)).toBe(
+      "Capture today spends one of the 30 chart captures your plan allows a day.",
+    );
+  });
+
+  it("says a self hosted capture reaches the store once", () => {
+    expect(captureCostText(SELF_HOSTED_LIMITS)).toBe(
+      "Capture today reaches the store once and stores the chart for every workspace.",
+    );
+  });
+
+  it("says a plan without captures has none", () => {
+    expect(captureCostText(PLAN_LIMITS.free)).toBe(
+      "Your plan includes no chart captures.",
+    );
+  });
+
+  it("names no number before the plan has loaded", () => {
+    expect(captureCostText(undefined)).toBe(
+      "Capture today reaches the store once.",
+    );
+  });
+});
+
+describe("emptyChartBody", () => {
+  it("offers a capture and names its cost", () => {
+    expect(emptyChartBody(true, PLAN_LIMITS.indie)).toBe(
+      "Pick a captured day, or capture today. Capture today spends one of the 30 chart captures your plan allows a day.",
+    );
+    expect(emptyChartBody(false, SELF_HOSTED_LIMITS)).toBe(
+      "Capture it now, or follow the category so the daily run keeps it. Capture today reaches the store once and stores the chart for every workspace.",
+    );
+  });
+
+  it("offers no capture on a plan without captures", () => {
+    expect(emptyChartBody(true, PLAN_LIMITS.free)).toBe(
+      "Pick a captured day. Your plan includes no chart captures.",
+    );
+    expect(emptyChartBody(false, PLAN_LIMITS.free)).toBe(
+      "Follow the category so the daily run keeps it. Your plan includes no chart captures.",
+    );
+  });
+
+  it("offers a capture before the plan has loaded", () => {
+    expect(emptyChartBody(false, undefined)).toBe(
+      "Capture it now, or follow the category so the daily run keeps it. Capture today reaches the store once.",
+    );
   });
 });
