@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { ReviewItem } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/format";
@@ -8,7 +8,6 @@ import { cn } from "@/lib/utils";
 import { ReplyStateBadge } from "./ReplyStateBadge";
 
 const LOW_SCORE = 2;
-const CLAMP_ABOVE = 240;
 
 function Stars({ score }: { score: number }) {
   const low = score <= LOW_SCORE;
@@ -29,12 +28,31 @@ function Stars({ score }: { score: number }) {
   );
 }
 
+function useOverflowing<T extends HTMLElement>() {
+  const ref = useRef<T>(null);
+  const [overflowing, setOverflowing] = useState(false);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    const measure = () =>
+      setOverflowing(node.scrollHeight > node.clientHeight + 1);
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  return [ref, overflowing] as const;
+}
+
 function ReviewText({ text }: { text: string }) {
   const [expanded, setExpanded] = useState(false);
+  const [ref, overflowing] = useOverflowing<HTMLParagraphElement>();
 
   return (
     <div className="flex flex-col items-start gap-1">
       <p
+        ref={ref}
         className={cn(
           "text-body break-words whitespace-pre-line",
           expanded ? null : "line-clamp-4",
@@ -42,7 +60,7 @@ function ReviewText({ text }: { text: string }) {
       >
         {text}
       </p>
-      {text.length > CLAMP_ABOVE ? (
+      {expanded || overflowing ? (
         <button
           type="button"
           onClick={() => setExpanded((value) => !value)}

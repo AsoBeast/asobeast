@@ -219,3 +219,26 @@ test("a search on a long list says it covers the loaded reviews", async ({
   ).toBeVisible();
   await expect(page.getByText("Showing 50 of 60")).toBeHidden();
 });
+
+test("show more appears only for a review that runs past four lines", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1512, height: 900 });
+  await page.goto("/apps/app-long/reviews");
+  const fits = page.getByRole("article").filter({ hasText: "Review number 2" });
+  const overflows = page
+    .getByRole("article")
+    .filter({ hasText: "Review number 3" });
+
+  await expect(fits.getByText(/The timer stops/)).toBeVisible();
+  await expect(fits.getByRole("button", { name: "Show more" })).toHaveCount(0);
+
+  const text = overflows.getByText(/Paragraph 1 of a review/);
+  const collapsed = (await text.boundingBox())?.height ?? 0;
+  await overflows.getByRole("button", { name: "Show more" }).click();
+
+  await expect(
+    overflows.getByRole("button", { name: "Show less" }),
+  ).toHaveAttribute("aria-expanded", "true");
+  expect((await text.boundingBox())?.height ?? 0).toBeGreaterThan(collapsed);
+});

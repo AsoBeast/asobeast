@@ -816,6 +816,20 @@ export const APP_GP_REVIEWS: ReviewList = {
   ],
 };
 
+export const REVIEW_TEXT_THAT_FITS =
+  "The timer stops when the screen locks and I lose the whole session, which happens every morning on my commute. I reinstalled twice and the problem stays. Please fix the background mode because otherwise this is the best focus app I have tried this year.";
+
+export const REVIEW_TEXT_THAT_OVERFLOWS = Array.from(
+  { length: 6 },
+  (_, line) => `Paragraph ${line + 1} of a review that keeps going.`,
+).join("\n");
+
+const LONG_LIST_TEXTS = [
+  undefined,
+  REVIEW_TEXT_THAT_FITS,
+  REVIEW_TEXT_THAT_OVERFLOWS,
+];
+
 export const APP_LONG_REVIEWS: ReviewList = {
   total: 60,
   versions: ["1.0.0"],
@@ -825,7 +839,7 @@ export const APP_LONG_REVIEWS: ReviewList = {
     userName: `Reviewer ${index + 1}`,
     score: (index % 5) + 1,
     title: `Review number ${index + 1}`,
-    text: `Long list review ${index + 1}.`,
+    text: LONG_LIST_TEXTS[index] ?? `Long list review ${index + 1}.`,
     version: "1.0.0",
     reviewedAt: utcTimestampDaysAgo(index),
     repliedAt: null,
