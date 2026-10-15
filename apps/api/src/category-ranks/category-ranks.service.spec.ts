@@ -1,7 +1,8 @@
 import { NotFoundException } from '@nestjs/common';
 import { Store } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
+import { CHART_DEPTH } from '@asobeast/shared';
+import { ChartCaptureService } from '../charts/chart-capture.service';
 import { scrapedAppStoreRaw } from '../store-providers/app-store-scraped.fixture';
 import { CategoryRanksService } from './category-ranks.service';
 
@@ -24,19 +25,25 @@ const app = (
 const makeService = (
   apps: AppRow[],
   chart: { storeAppId: string; title: string }[] = [],
+  store: Store = Store.APP_STORE,
 ) => {
   const upsert = jest.fn().mockResolvedValue(undefined);
   const prisma = {
     app: { findMany: jest.fn().mockResolvedValue(apps) },
     categoryRank: { upsert },
   };
-  const topCharts = jest.fn().mockResolvedValue(chart);
-  const registry = { get: jest.fn().mockReturnValue({ topCharts }) };
+  const captureToday = jest.fn().mockResolvedValue({
+    depth: CHART_DEPTH[store],
+    entries: chart.map((item, index) => ({
+      position: index + 1,
+      app: { storeAppId: item.storeAppId, title: item.title },
+    })),
+  });
   const service = new CategoryRanksService(
     prisma as unknown as PrismaService,
-    registry as unknown as StoreProviderRegistry,
+    { captureToday } as unknown as ChartCaptureService,
   );
-  return { service, upsert, topCharts, registry, prisma };
+  return { service, upsert, captureToday, prisma };
 };
 
 describe('CategoryRanksService buckets', () => {
@@ -187,7 +194,7 @@ describe('CategoryRanksService buckets', () => {
 
 describe('CategoryRanksService checkCategory', () => {
   it('upserts the chart position for matching apps and null for absent ones', async () => {
-    const { service, upsert, registry } = makeService(
+    const { service, upsert, captureToday } = makeService(
       [
         app('a1', '111', { primaryGenreId: '6007', price: 0 }),
         app('a2', '999', { primaryGenreId: '6007', price: 0 }),
@@ -204,7 +211,13 @@ describe('CategoryRanksService checkCategory', () => {
       workspaceId: 'ws_default',
     });
 
-    expect(registry.get).toHaveBeenCalledWith(Store.APP_STORE);
+    expect(captureToday).toHaveBeenCalledWith({
+      store: Store.APP_STORE,
+      country: 'us',
+      collection: 'free',
+      genre: '6007',
+      device: 'iphone',
+    });
     expect(upsert).toHaveBeenCalledTimes(2);
     const positions = upsert.mock.calls.map(
       ([arg]) =>
@@ -214,6 +227,26 @@ describe('CategoryRanksService checkCategory', () => {
       expect.objectContaining({ appId: 'a1', position: 1 }),
       expect.objectContaining({ appId: 'a2', position: null }),
     ]);
+  });
+
+  it("asks the capture for the bucket's chart key", async () => {
+    const { service, captureToday } = makeService([], [], Store.GOOGLE_PLAY);
+
+    await service.checkCategory({
+      collection: 'grossing',
+      genre: 'GAME_PUZZLE',
+      country: 'de',
+      store: 'GOOGLE_PLAY',
+      workspaceId: 'ws_default',
+    });
+
+    expect(captureToday).toHaveBeenCalledWith({
+      store: 'GOOGLE_PLAY',
+      country: 'de',
+      collection: 'grossing',
+      genre: 'GAME_PUZZLE',
+      device: 'android',
+    });
   });
 
   it('matches every collection member for the overall genre bucket', async () => {
@@ -270,8 +303,8 @@ describe('CategoryRanksService checkCategory', () => {
   it.each([
     [Store.APP_STORE, '6007', 100],
     [Store.GOOGLE_PLAY, 'PRODUCTIVITY', 200],
-  ])('stores the %s depth the feed answers', async (store, genre, depth) => {
-    const { service, upsert, topCharts } = makeService(
+  ])('stores the %s depth the capture records', async (store, genre, depth) => {
+    const { service, upsert } = makeService(
       [
         app(
           'a1',
@@ -282,6 +315,7 @@ describe('CategoryRanksService checkCategory', () => {
         ),
       ],
       [{ storeAppId: '111', title: 'First' }],
+      store,
     );
 
     await service.checkCategory({
@@ -292,7 +326,6 @@ describe('CategoryRanksService checkCategory', () => {
       workspaceId: 'ws_default',
     });
 
-    expect(topCharts).toHaveBeenCalledWith('free', genre, depth, 'us');
     const [[arg]] = upsert.mock.calls as [
       [{ create: { depth: number }; update: { depth: number } }],
     ];
@@ -351,10 +384,9 @@ describe('CategoryRanksService history', () => {
       app: { findFirst: jest.fn().mockResolvedValue(appRow) },
       categoryRank: { findMany: jest.fn().mockResolvedValue(ranks) },
     };
-    const registry = { get: jest.fn() };
     const service = new CategoryRanksService(
       prisma as unknown as PrismaService,
-      registry as unknown as StoreProviderRegistry,
+      {} as ChartCaptureService,
     );
     return { service };
   };

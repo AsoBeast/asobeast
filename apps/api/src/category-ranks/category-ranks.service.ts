@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import {
   CategoryCollection,
-  CHART_DEPTH,
   CategoryRankSeries,
   CategoryRankSeriesItem,
   OVERALL_GENRE,
@@ -13,7 +12,8 @@ import {
   primaryGenreKey,
   primaryGenreName,
 } from '../store-providers/raw-facts';
-import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
+import { ChartCaptureService } from '../charts/chart-capture.service';
+import { chartKeyOf } from '../charts/chart-key';
 import { CheckCategoryPayload } from '../jobs/jobs.types';
 import { CategoryRankHistoryQueryDto } from './dto/category-rank-history-query.dto';
 import { LATEST_HOME_LISTING } from '../apps/listing';
@@ -77,7 +77,7 @@ function toDateKey(date: Date): string {
 export class CategoryRanksService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly registry: StoreProviderRegistry,
+    private readonly charts: ChartCaptureService,
   ) {}
 
   async buckets(appIds: string[]): Promise<CategoryBucket[]> {
@@ -102,17 +102,12 @@ export class CategoryRanksService {
 
   async checkCategory(payload: CheckCategoryPayload): Promise<void> {
     const { collection, genre, country, store } = payload;
-    const depth = CHART_DEPTH[store];
-    const items = await this.registry
-      .get(store)
-      .topCharts(collection, genre, depth, country);
-
-    const positionByStoreAppId = new Map<string, number>();
-    items.forEach((item, index) => {
-      if (!positionByStoreAppId.has(item.storeAppId)) {
-        positionByStoreAppId.set(item.storeAppId, index + 1);
-      }
-    });
+    const chart = await this.charts.captureToday(
+      chartKeyOf({ collection, genre, country, store }),
+    );
+    const positionByStoreAppId = new Map(
+      chart.entries.map((entry) => [entry.app.storeAppId, entry.position]),
+    );
 
     const rows = await this.loadAppBuckets({ store, country });
     const date = utcToday();
@@ -139,9 +134,9 @@ export class CategoryRanksService {
           collection,
           genre,
           position,
-          depth,
+          depth: chart.depth,
         },
-        update: { position, depth },
+        update: { position, depth: chart.depth },
       });
     }
   }

@@ -11,11 +11,21 @@ import { testDb } from './helpers/test-db';
 import { ownerAgent, useCookies } from './helpers/session';
 import { obliterateQueues, settleBootRegistration } from './obliterate-queues';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
+import { CategoryRanksService } from '../src/category-ranks/category-ranks.service';
+import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
+import { StoreProvider } from '../src/store-providers/types';
+import { asWorkspace } from './helpers/tenancy';
+
+const OTHER_WORKSPACE = 'ws_category_other';
 
 describe('CategoryRanksController (e2e)', () => {
   let app: INestApplication<App>;
   let prisma: PrismaClient;
   let api: Awaited<ReturnType<typeof ownerAgent>>;
+  const topCharts = jest.fn();
+  const registry = {
+    get: () => ({ topCharts }) as unknown as StoreProvider,
+  };
 
   beforeAll(async () => {
     execSync('pnpm prisma migrate deploy', {
@@ -26,7 +36,10 @@ describe('CategoryRanksController (e2e)', () => {
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(StoreProviderRegistry)
+      .useValue(registry)
+      .compile();
 
     app = moduleFixture.createNestApplication();
     useCookies(app);
@@ -39,6 +52,11 @@ describe('CategoryRanksController (e2e)', () => {
       update: {},
       create: { id: DEFAULT_WORKSPACE_ID, name: 'Default' },
     });
+    await prisma.workspace.upsert({
+      where: { id: OTHER_WORKSPACE },
+      update: {},
+      create: { id: OTHER_WORKSPACE, name: 'Other' },
+    });
     api = await ownerAgent(app);
   });
 
@@ -49,6 +67,7 @@ describe('CategoryRanksController (e2e)', () => {
   });
 
   afterAll(async () => {
+    await prisma.workspace.deleteMany({ where: { id: OTHER_WORKSPACE } });
     await prisma.$disconnect();
     await obliterateQueues(app);
     await app.close();
@@ -146,5 +165,72 @@ describe('CategoryRanksController (e2e)', () => {
     });
 
     await api.get(`/apps/${app.id}/category-ranks`).query(query).expect(400);
+  });
+
+  it("records the second workspace's positions without a store call", async () => {
+    await prisma.$executeRawUnsafe(
+      'TRUNCATE TABLE "ChartCapture", "ChartApp" CASCADE',
+    );
+    topCharts.mockReset().mockResolvedValue([
+      { storeAppId: 'other-1', title: 'Other' },
+      { storeAppId: 'other-2', title: 'Other' },
+      { storeAppId: 'first-store', title: 'First' },
+    ]);
+    const seed = (workspaceId: string, storeAppId: string) =>
+      prisma.app.create({
+        data: {
+          workspaceId,
+          store: Store.APP_STORE,
+          storeAppId,
+          country: 'us',
+          name: storeAppId,
+          snapshots: {
+            create: {
+              title: storeAppId,
+              description: 'desc',
+              raw: { primaryGenreId: '6007', price: 0 },
+            },
+          },
+        },
+      });
+    const first = await seed(DEFAULT_WORKSPACE_ID, 'first-store');
+    const second = await seed(OTHER_WORKSPACE, 'second-store');
+    const ranks = app.get(CategoryRanksService);
+    const check = (workspaceId: string) =>
+      asWorkspace(
+        app,
+        () =>
+          ranks.checkCategory({
+            collection: 'free',
+            genre: '6007',
+            country: 'us',
+            store: 'APP_STORE',
+            workspaceId,
+          }),
+        workspaceId,
+      );
+
+    await check(DEFAULT_WORKSPACE_ID);
+    await check(OTHER_WORKSPACE);
+
+    expect(topCharts).toHaveBeenCalledTimes(1);
+    const positions = await prisma.categoryRank.findMany({
+      select: { appId: true, position: true, depth: true },
+      orderBy: { appId: 'asc' },
+    });
+    expect(positions).toEqual(
+      expect.arrayContaining([
+        { appId: first.id, position: 3, depth: 100 },
+        { appId: second.id, position: null, depth: 100 },
+      ]),
+    );
+    await expect(
+      asWorkspace(app, () =>
+        ranks.history(second.id, {}).then(
+          () => 'visible',
+          () => 'hidden',
+        ),
+      ),
+    ).resolves.toBe('hidden');
   });
 });
