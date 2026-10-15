@@ -242,3 +242,19 @@ test("show more appears only for a review that runs past four lines", async ({
   ).toHaveAttribute("aria-expanded", "true");
   expect((await text.boundingBox())?.height ?? 0).toBeGreaterThan(collapsed);
 });
+
+test("each ratings distribution row stays on one line on a laptop and a phone", async ({
+  page,
+}) => {
+  for (const width of [1512, 375]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/apps/app-1/reviews");
+    const row = page.getByRole("listitem").filter({ hasText: "5 star" });
+
+    await expect(row).toBeVisible();
+    const label = await row.getByText("5 star").boundingBox();
+    const count = await row.getByText(/17,230/).boundingBox();
+    expect(label?.height ?? 0).toBeLessThan(28);
+    expect(count?.height ?? 0).toBeLessThan(28);
+  }
+});
