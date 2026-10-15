@@ -10,7 +10,7 @@ import { CaptureTodayButton } from "./CaptureTodayButton";
 import { candidateApps } from "./chart-actions";
 import { ChartEmpty } from "./ChartEmpty";
 import { ChartFilters } from "./ChartFilters";
-import { chartKeyFrom, chartQueryFrom } from "./chart-params";
+import { chartKeyFrom, chartQueryFrom, shownChartKey } from "./chart-params";
 import { ChartTable } from "./ChartTable";
 import { FollowChartButton } from "./FollowChartButton";
 import { TrendingPanel } from "./TrendingPanel";
@@ -48,8 +48,8 @@ export function TopChartsView() {
   const shown = useDeferredValue(query);
   const { data: page } = useSuspenseQuery(chartPageOptions(shown));
   const { data: apps } = useSuspenseQuery(appsOptions);
-  const chart = chartKeyFrom(search);
-  const actions = <ChartActions chart={chart} page={page} />;
+  const onScreen = shownChartKey(page);
+  const actions = <ChartActions chart={onScreen} page={page} />;
 
   return (
     <>
@@ -66,7 +66,7 @@ export function TopChartsView() {
         {page.capture ? actions : null}
       </div>
       <ChartFilters
-        chart={chart}
+        chart={chartKeyFrom(search)}
         compare={compare}
         day={page.capture?.date ?? date}
         dates={page.dates}
@@ -77,7 +77,7 @@ export function TopChartsView() {
           aria-busy={shown !== query}
           className="grid gap-6 @6xl/charts:grid-cols-[minmax(0,1fr)_20rem] [&>*]:min-w-0"
         >
-          <ChartTable page={page} apps={candidateApps(apps, chart.store)} />
+          <ChartTable page={page} apps={candidateApps(apps, onScreen.store)} />
           <TrendingPanel page={page} />
         </div>
       ) : (

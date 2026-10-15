@@ -373,3 +373,28 @@ test("opens the store", async ({ page }) => {
     `https://apps.apple.com/us/app/id${TOP_CHART_APPS[0].storeAppId}`,
   );
 });
+
+test("keeps the row actions on the chart on screen while the next one loads", async ({
+  page,
+  context,
+}) => {
+  await page.goto("/charts");
+  await context.addCookies([
+    { name: "e2e_api_latency", value: "4000", domain: "localhost", path: "/" },
+  ]);
+
+  await page
+    .getByRole("tablist", { name: "Store" })
+    .getByRole("tab", { name: "Google Play" })
+    .click();
+
+  await expect(page).toHaveURL(/store=GOOGLE_PLAY/);
+  await expect(
+    page.getByRole("combobox", {
+      name: `Add ${TOP_CHART_APPS[0].title} as competitor to`,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Add to Tomato Clock" }),
+  ).toHaveCount(0);
+});

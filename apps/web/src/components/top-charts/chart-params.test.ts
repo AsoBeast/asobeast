@@ -3,6 +3,7 @@ import {
   chartKeyFrom,
   chartQueryFrom,
   chartTitle,
+  shownChartKey,
   stepDate,
   storeChanged,
   type ChartSearch,
@@ -109,5 +110,15 @@ describe("storeChanged", () => {
 
   it("drops a storefront the next store lacks", () => {
     expect(storeChanged("APP_STORE", { country: "zz" }).country).toBeNull();
+  });
+});
+
+describe("shownChartKey", () => {
+  it("reads the key of the chart a page answered", () => {
+    expect(
+      shownChartKey({
+        chart: { ...chartKeyFrom(SEARCH), genreName: "Overall" },
+      }),
+    ).toEqual(chartKeyFrom(SEARCH));
   });
 });

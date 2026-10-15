@@ -10,6 +10,7 @@ import {
   type ChartCompareWindow,
   type ChartDevice,
   type ChartKey,
+  type ChartPage,
   type Store,
 } from "@asobeast/shared";
 import type { ChartPageQuery } from "@/lib/api";
@@ -49,6 +50,11 @@ export function chartKeyFrom(search: ChartSearch): ChartKey {
         ? search.device
         : defaultChartDevice(store),
   };
+}
+
+export function shownChartKey(page: Pick<ChartPage, "chart">): ChartKey {
+  const { store, country, collection, genre, device } = page.chart;
+  return { store, country, collection, genre, device };
 }
 
 export function chartQueryFrom(search: ChartSearch): ChartPageQuery {
