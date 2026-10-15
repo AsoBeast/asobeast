@@ -158,7 +158,7 @@ export class CompetitorsService {
 
   async discovery(
     appId: string,
-    query: DiscoveryQueryDto,
+    query: Pick<DiscoveryQueryDto, 'days'>,
   ): Promise<CompetitorDiscovery> {
     const app = await this.prisma.app.findFirst({
       where: { id: appId },

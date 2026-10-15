@@ -1,35 +1,30 @@
 "use client";
 
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { ListChecks } from "lucide-react";
 import Link from "next/link";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { pluralize } from "@/lib/format";
+import { portfolioOptions } from "@/lib/queries";
 import {
-  dismissOnboarding,
-  setupProgress,
-  type OnboardingState,
-} from "@/lib/onboarding";
-import {
-  competitorsOptions,
-  keywordsOptions,
-  portfolioOptions,
-} from "@/lib/queries";
-import {
-  loadingSentence,
+  bannerApps,
   progressPercent,
   progressSentence,
-  setupSentence,
+  progressValueLabel,
+  type AppInSetup,
 } from "./setup-progress";
-import { useOnboarding } from "./use-onboarding";
+import { useSetupDismissal } from "./use-setup-dismissal";
 
 export function OnboardingBanner() {
-  const { state, persist } = useOnboarding();
   const { data } = useSuspenseQuery(portfolioOptions);
-  if (state.status !== "in_progress" || !state.appId) return null;
+  const picked = bannerApps(data.apps);
+  return picked ? <SetupBanner app={picked.app} more={picked.more} /> : null;
+}
 
-  const app = data.apps.find((item) => item.id === state.appId);
+function SetupBanner({ app, more }: { app: AppInSetup; more: number }) {
+  const dismiss = useSetupDismissal(app.id);
 
   return (
     <Alert
@@ -38,68 +33,40 @@ export function OnboardingBanner() {
     >
       <ListChecks />
       <AlertDescription className="flex flex-col gap-2">
-        {app ? (
-          <BannerProgress
-            appId={app.id}
-            country={app.country}
-            name={app.name}
-            state={state}
-          />
-        ) : (
-          <span>{setupSentence(null)}</span>
-        )}
+        <span>
+          {progressSentence(app.name, app.setup)}
+          {more > 0 ? (
+            <>
+              {" · "}
+              <Link
+                href="/?view=cards"
+                className="underline decoration-primary underline-offset-4"
+              >
+                and {pluralize(more, "more app", "more apps")}
+              </Link>
+            </>
+          ) : null}
+        </span>
+        <Progress
+          value={progressPercent(app.setup)}
+          aria-label="Setup progress"
+          getValueLabel={() => progressValueLabel(app.setup)}
+          className="max-w-xs"
+        />
       </AlertDescription>
       <div className="col-span-full flex flex-wrap gap-2 sm:col-span-1 sm:col-start-3 sm:row-span-2">
-        {app ? (
-          <Button asChild size="sm">
-            <Link href={`/apps/${app.id}/setup`}>Resume setup</Link>
-          </Button>
-        ) : null}
+        <Button asChild size="sm">
+          <Link href={`/apps/${app.id}/setup`}>Resume setup</Link>
+        </Button>
         <Button
           size="sm"
           variant="ghost"
-          onClick={() => persist(dismissOnboarding)}
+          disabled={dismiss.isPending}
+          onClick={() => dismiss.mutate()}
         >
           Dismiss
         </Button>
       </div>
     </Alert>
-  );
-}
-
-function BannerProgress({
-  appId,
-  country,
-  name,
-  state,
-}: {
-  appId: string;
-  country: string;
-  name: string | null;
-  state: OnboardingState;
-}) {
-  const competitors = useQuery(competitorsOptions(appId));
-  const keywords = useQuery(keywordsOptions(appId, country));
-  if (competitors.isError || keywords.isError) {
-    return <span>{setupSentence(name)}</span>;
-  }
-  if (!competitors.data || !keywords.data) {
-    return <span>{loadingSentence(name)}</span>;
-  }
-  const progress = setupProgress(state, {
-    competitors: competitors.data.length,
-    keywords: keywords.data.filter((keyword) => keyword.active).length,
-  });
-
-  return (
-    <>
-      <span>{progressSentence(name, progress)}</span>
-      <Progress
-        value={progressPercent(progress)}
-        aria-label="Setup progress"
-        getValueLabel={() => `${progress.done} of ${progress.total} steps`}
-        className="max-w-xs"
-      />
-    </>
   );
 }

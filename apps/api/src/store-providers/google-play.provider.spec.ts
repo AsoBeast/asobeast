@@ -285,6 +285,34 @@ describe('GooglePlayProvider', () => {
     ]);
   });
 
+  it('keeps the icon of a search result when the store sends one', async () => {
+    const icon = 'https://play-lh.googleusercontent.com/x=w512';
+    const search = jest.fn().mockResolvedValue([
+      { appId: 'com.a', title: 'A', developer: 'Dev A', icon },
+      { appId: 'com.b', title: 'B', developer: 'Dev B' },
+    ]);
+    const provider = new GooglePlayProvider(makeLib({ search }));
+
+    const [withIcon, withoutIcon] = await provider.search('note', 'us', 2);
+
+    expect(withIcon.iconUrl).toBe(icon);
+    expect(withoutIcon.iconUrl).toBeUndefined();
+  });
+
+  it('keeps the icon of a similar app', async () => {
+    const icon = 'https://play-lh.googleusercontent.com/y=w512';
+    const similar = jest.fn().mockResolvedValue([
+      { appId: 'com.c', title: 'C', developer: 'Dev C', icon },
+      { appId: 'com.d', title: 'D', developer: 'Dev D' },
+    ]);
+    const provider = new GooglePlayProvider(makeLib({ similar }));
+
+    const [withIcon, withoutIcon] = await provider.similar('com.x', 'us');
+
+    expect(withIcon.iconUrl).toBe(icon);
+    expect(withoutIcon.iconUrl).toBeUndefined();
+  });
+
   it('maps the collection and passes through the genre key', async () => {
     const list = jest
       .fn()

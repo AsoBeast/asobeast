@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { STORES, type AdminOverview } from '@asobeast/shared';
+import {
+  ACTIVATION_WINDOW_DAYS,
+  STORES,
+  type AdminActivation,
+  type AdminOverview,
+} from '@asobeast/shared';
 import { SPENDING_STATUSES } from '../ai/ai-gateway.service';
 import { aiPeriodOf } from '../ai/ai-period';
 import {
@@ -37,15 +42,25 @@ export class SupportOverviewService {
       async () => {
         const billing = this.config.get('BILLING_ENABLED', { infer: true });
         const since = signupWindowStart(now);
-        const [workspaces, users, apps, keywords, aiCallsThisMonth, signups] =
-          await Promise.all([
-            this.workspaceRows(),
-            this.userTotals(now),
-            this.appTotals(),
-            this.keywordTotals(),
-            this.aiCallsSince(aiPeriodOf(now).start),
-            this.signupsSince(since),
-          ]);
+        const [
+          workspaces,
+          users,
+          apps,
+          keywords,
+          aiCallsThisMonth,
+          signups,
+          activation,
+        ] = await Promise.all([
+          this.workspaceRows(),
+          this.userTotals(now),
+          this.appTotals(),
+          this.keywordTotals(),
+          this.aiCallsSince(aiPeriodOf(now).start),
+          this.signupsSince(since),
+          this.activationSince(
+            new Date(now.getTime() - ACTIVATION_WINDOW_DAYS * DAY_MS),
+          ),
+        ]);
         return {
           generatedAt: now.toISOString(),
           billing,
@@ -55,6 +70,7 @@ export class SupportOverviewService {
           keywords,
           aiCallsThisMonth,
           signups: signupSeries(signups.users, signups.workspaces, now),
+          activation,
         };
       },
     );
@@ -120,6 +136,23 @@ export class SupportOverviewService {
       `,
     ]);
     return { trackedMarkets: sumKeywordMarkets(markets), ...row };
+  }
+
+  private async activationSince(since: Date): Promise<AdminActivation> {
+    const [row] = await this.prisma.$queryRaw<AdminActivation[]>`
+      SELECT COUNT(*)::int AS "importedLast30Days",
+             COUNT(*) FILTER (WHERE EXISTS (
+               SELECT 1 FROM "KeywordRanking" r
+               WHERE r."appId" = a."id"
+                 AND r."position" IS NOT NULL
+                 AND r."createdAt" <= a."createdAt" + interval '1 day'
+             ))::int AS "rankedWithinADay",
+             COUNT(*) FILTER (WHERE s."completedAt" IS NOT NULL)::int AS "completedSetup"
+      FROM "App" a
+      LEFT JOIN "AppSetup" s ON s."appId" = a."id"
+      WHERE a."isCompetitor" = false AND a."createdAt" >= ${since}
+    `;
+    return row;
   }
 
   private aiCallsSince(start: Date): Promise<number> {

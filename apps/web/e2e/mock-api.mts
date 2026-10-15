@@ -81,6 +81,9 @@ import {
   emptyScreenshots,
   errorEnvelope,
   rateLimitedEnvelope,
+  SIMILAR_APPS,
+  STORE_SEARCH,
+  storeLookupRefusedEnvelope,
   chartCaptureSpent,
   TOP_CHART_DATES,
   TOP_CHART_PAGE_EMPTY,
@@ -132,6 +135,8 @@ import type {
   ActionStatus,
   AuthUser,
   CompetitorAddRequest,
+  CompetitorSuggestion,
+  CompetitorSuggestions,
   CompetitorItem,
   DailyBudget,
   EmailAlertCreateRequest,
@@ -156,6 +161,8 @@ import type {
   WebhookItem,
   WebhookUpdateRequest,
   WorkspaceDeletionStatus,
+  AppSetupState,
+  AppSetupUpdateRequest,
 } from "@asobeast/shared";
 import {
   COUNTRY_PATTERN,
@@ -180,6 +187,7 @@ import {
   parseStoreUrl,
   isStorefront,
   UnknownStorefrontError,
+  setupSummary,
   chartGenreName,
   isChartGenre,
   STORES,
@@ -188,6 +196,7 @@ import {
   type ChartPage,
   type Store,
 } from "@asobeast/shared";
+import { SETUP_SESSION_COOKIE } from "./setup-session.mts";
 import {
   ALL_VIEWERS,
   OWNER_ID,
@@ -282,6 +291,62 @@ const actions: ActionItem[] = ACTIONS.map((action) => structuredClone(action));
 const actionEvents: Record<string, ActionEventItem[]> =
   initialActionEvents(ACTIONS);
 const portfolioApps = [...PORTFOLIO.apps, PENDING_PORTFOLIO_APP];
+
+const setupSessions = new Map<string, Map<string, AppSetupState>>();
+
+function setupSession(req: IncomingMessage): Map<string, AppSetupState> {
+  const session = cookieValue(req, SETUP_SESSION_COOKIE) ?? "";
+  const setups = setupSessions.get(session) ?? new Map();
+  setupSessions.set(session, setups);
+  return setups;
+}
+
+function setupOf(
+  req: IncomingMessage,
+  app: { id: string; country: string },
+): AppSetupState {
+  return (
+    setupSession(req).get(app.id) ?? {
+      appId: app.id,
+      status: "not_started",
+      skipped: [],
+      countriesReviewed: false,
+      selectedMarkets: [app.country],
+      completedAt: null,
+      updatedAt: null,
+    }
+  );
+}
+
+function patchSetup(
+  current: AppSetupState,
+  patch: AppSetupUpdateRequest,
+): AppSetupState {
+  const now = new Date().toISOString();
+  const next = { ...current, ...patch, updatedAt: now };
+  if (patch.status === undefined) return next;
+  return {
+    ...next,
+    completedAt:
+      patch.status === "completed" ? (current.completedAt ?? now) : null,
+  };
+}
+
+function withSetup(
+  req: IncomingMessage,
+  app: PortfolioSummary["apps"][number],
+): PortfolioSummary["apps"][number] {
+  const dataset = DATASETS[app.id];
+  const counts = dataset
+    ? {
+        competitors: dataset.competitors.length,
+        keywords: dataset.keywords.filter(
+          (row) => row.active && row.country === app.country,
+        ).length,
+      }
+    : { competitors: app.competitors, keywords: app.trackedKeywords };
+  return { ...app, setup: setupSummary(setupOf(req, app), counts) };
+}
 const webhooks = [...WEBHOOKS];
 const emailAlerts = [...EMAIL_ALERTS];
 const UNSUBSCRIBED_ALERT: EmailAlertItem = {
@@ -1264,7 +1329,14 @@ function capturedCompetitor(
   const discovered = dataset.discovery.items.find(
     (item) => item.storeAppId === parsed.storeAppId,
   );
-  const title = discovered?.title ?? parsed.storeAppId;
+  const searched = STORE_SEARCH[parsed.store].find(
+    (item) => item.storeAppId === parsed.storeAppId,
+  );
+  const similar = Object.values(SIMILAR_APPS)
+    .flatMap((entry) => entry.items)
+    .find((item) => item.storeAppId === parsed.storeAppId);
+  const title =
+    discovered?.title ?? searched?.title ?? similar?.title ?? parsed.storeAppId;
 
   return {
     id: `comp-${parsed.storeAppId}`,
@@ -1277,13 +1349,43 @@ function capturedCompetitor(
       subtitle: parsed.store === "APP_STORE" ? CAPTURED_SUBTITLE : null,
       summary:
         parsed.store === "GOOGLE_PLAY" ? CAPTURED_SHORT_DESCRIPTION : null,
-      ratingAvg: discovered?.ratingAvg ?? null,
-      ratingCount: discovered?.ratingCount ?? null,
+      ratingAvg: discovered?.ratingAvg ?? searched?.ratingAvg ?? null,
+      ratingCount: discovered?.ratingCount ?? searched?.ratingCount ?? null,
       installs: null,
       price: 0,
       version: "1.0.0",
       capturedAt: new Date().toISOString(),
     },
+  };
+}
+
+const SUGGESTIONS_LIMIT = 10;
+
+function competitorSuggestionsOf(
+  id: string,
+  dataset: (typeof DATASETS)[string],
+  req: IncomingMessage,
+): CompetitorSuggestions {
+  const fixture = hasCookie(req, "e2e_similar_unavailable", "1")
+    ? { similar: "unavailable" as const, items: [] }
+    : (SIMILAR_APPS[id] ?? { similar: "ok" as const, items: [] });
+  const tracked = new Set(dataset.competitors.map((row) => row.id));
+  const serp: CompetitorSuggestion[] = dataset.discovery.items.map((item) => ({
+    storeAppId: item.storeAppId,
+    title: item.title,
+    developer: item.developer,
+    iconUrl: null,
+    source: "serp",
+    appearances: item.appearances,
+    bestPosition: item.bestPosition,
+  }));
+  return {
+    store: dataset.detail.store,
+    country: dataset.detail.country,
+    similar: fixture.similar,
+    items: [...serp, ...fixture.items]
+      .filter((item) => !tracked.has(`comp-${item.storeAppId}`))
+      .slice(0, SUGGESTIONS_LIMIT),
   };
 }
 
@@ -1563,10 +1665,28 @@ function runStatusFor(req: IncomingMessage): WorkspaceRunStatus {
 const FIRST_RUN_FAIL_COOKIE = "e2e_first_run_fail";
 const FIRST_RUN_LATENCY_COOKIE = "e2e_first_run_latency";
 
-function firstRunFor(appId: string): FirstRunStatus {
+const HISTORY_DAYS_COOKIE = "e2e_history_days";
+
+function withHistoryDays(
+  status: FirstRunStatus,
+  req: IncomingMessage,
+): FirstRunStatus {
+  const days = cookieValue(req, HISTORY_DAYS_COOKIE);
+  if (days === undefined) return status;
+  return {
+    ...status,
+    stages: status.stages.map((row) =>
+      row.stage === "history"
+        ? { ...row, ready: Number(days), complete: false }
+        : row,
+    ),
+  };
+}
+
+function firstRunFor(appId: string, req: IncomingMessage): FirstRunStatus {
   if (appId === "app-new") return FIRST_RUN_MID;
   if (appId === "app-2") return FIRST_RUN_UNSCHEDULED;
-  return { ...FIRST_RUN_COMPLETE, appId };
+  return withHistoryDays({ ...FIRST_RUN_COMPLETE, appId }, req);
 }
 
 const API_LATENCY_COOKIE = "e2e_api_latency";
@@ -2030,7 +2150,7 @@ const routes: Route[] = [
       if (hasCookie(req, FIRST_RUN_FAIL_COOKIE, "1")) {
         return json(res, 500, errorEnvelope(500, req.url ?? "/"));
       }
-      json(res, 200, firstRunFor(params[0]));
+      json(res, 200, firstRunFor(params[0], req));
     },
   },
   {
@@ -2139,6 +2259,40 @@ const routes: Route[] = [
   },
   {
     method: "GET",
+    pattern: /^\/store\/search$/,
+    handler: (_p, req, res) => {
+      const path = req.url ?? "/";
+      const query = new URL(path, "http://localhost").searchParams;
+      const store = query.get("store");
+      const country = query.get("country");
+      const q = query.get("q")?.trim().toLowerCase();
+      if (
+        (store !== "APP_STORE" && store !== "GOOGLE_PLAY") ||
+        !country ||
+        !q
+      ) {
+        return json(res, 400, errorEnvelope(400, path));
+      }
+      if (hasCookie(req, "e2e_store_search_spent", "1")) {
+        return json(res, 429, storeLookupRefusedEnvelope(path), {
+          "retry-after": String(RATE_LIMIT_RESET_SECONDS),
+        });
+      }
+      if (hasCookie(req, "e2e_store_search_fail", "1")) {
+        return json(res, 502, errorEnvelope(502, path));
+      }
+      const limit = Number(query.get("limit") ?? 10);
+      json(
+        res,
+        200,
+        STORE_SEARCH[store]
+          .filter((result) => result.title.toLowerCase().includes(q))
+          .slice(0, limit),
+      );
+    },
+  },
+  {
+    method: "GET",
     pattern: /^\/portfolio$/,
     handler: (_p, req, res) => {
       const path = req.url ?? "/portfolio";
@@ -2153,7 +2307,7 @@ const routes: Route[] = [
         : portfolioApps;
       json(res, 200, {
         ...PORTFOLIO,
-        apps: empty ? [] : listed,
+        apps: empty ? [] : listed.map((app) => withSetup(req, app)),
         groups: empty ? [] : PORTFOLIO.groups,
         totals: {
           ...PORTFOLIO.totals,
@@ -2239,7 +2393,8 @@ const routes: Route[] = [
   {
     method: "GET",
     pattern: /^\/alerts\/config$/,
-    handler: (_p, _q, res) => json(res, 200, { emailEnabled: true }),
+    handler: (_p, req, res) =>
+      json(res, 200, { emailEnabled: !hasCookie(req, "e2e_smtp_off", "1") }),
   },
   {
     method: "GET",
@@ -2383,10 +2538,17 @@ const routes: Route[] = [
   {
     method: "POST",
     pattern: /^\/apps$/,
-    handler: (_p, _q, res) => {
+    handler: (_p, req, res) => {
       if (!apps.some((app) => app.id === IMPORTED_APP.id)) {
         apps.push(IMPORTED_APP);
         portfolioApps.push(IMPORTED_PORTFOLIO_APP);
+      }
+      const setups = setupSession(req);
+      if (!setups.has(IMPORTED_APP.id)) {
+        setups.set(
+          IMPORTED_APP.id,
+          patchSetup(setupOf(req, IMPORTED_APP), { status: "in_progress" }),
+        );
       }
       json(res, 201, IMPORTED_APP_DETAIL);
     },
@@ -2394,6 +2556,26 @@ const routes: Route[] = [
   appRoute(/^\/apps\/([^/]+)$/, (dataset, query) =>
     isPolishListingOf(dataset, query) ? APP_1_PL_DETAIL : dataset.detail,
   ),
+  appRoute(/^\/apps\/([^/]+)\/setup$/, (dataset, _query, req) =>
+    setupOf(req, dataset.detail),
+  ),
+  {
+    method: "PATCH",
+    pattern: /^\/apps\/([^/]+)\/setup$/,
+    handler: ([id], req, res) => {
+      const path = req.url ?? "/";
+      const dataset = DATASETS[id];
+      if (!dataset) return json(res, 404, errorEnvelope(404, path));
+      withBody<AppSetupUpdateRequest>(req, res, (patch) => {
+        if (hasCookie(req, "e2e_setup_fail", "1")) {
+          return json(res, 500, errorEnvelope(500, path));
+        }
+        const next = patchSetup(setupOf(req, dataset.detail), patch);
+        setupSession(req).set(id, next);
+        json(res, 200, next);
+      });
+    },
+  },
   appRoute(/^\/apps\/([^/]+)\/market-suggestions$/, (dataset) =>
     marketSuggestionsOf(dataset),
   ),
@@ -2941,6 +3123,19 @@ const routes: Route[] = [
       const dataset = DATASETS[id];
       if (!dataset) return json(res, 404, errorEnvelope(404, path));
       json(res, 200, dataset.competitors);
+    },
+  },
+  {
+    method: "GET",
+    pattern: /^\/apps\/([^/]+)\/competitors\/suggestions$/,
+    handler: ([id], req, res) => {
+      const path = req.url ?? "/";
+      const dataset = DATASETS[id];
+      if (!dataset) return json(res, 404, errorEnvelope(404, path));
+      if (hasCookie(req, "e2e_suggestions_fail", "1")) {
+        return json(res, 500, errorEnvelope(500, path));
+      }
+      json(res, 200, competitorSuggestionsOf(id, dataset, req));
     },
   },
   {

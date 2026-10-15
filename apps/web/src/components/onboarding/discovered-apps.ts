@@ -1,23 +1,42 @@
 import type {
-  CompetitorDiscovery,
-  CompetitorDiscoveryItem,
+  CompetitorSuggestion,
+  CompetitorSuggestions,
+  SimilarLookupState,
+  Store,
 } from "@asobeast/shared";
-import { DISCOVERY_WINDOWS } from "@/lib/ranges";
+import { pluralize } from "@/lib/format";
 
-export const DISCOVERED_LIMIT = 5;
-export const DISCOVERY_WINDOW_DAYS = DISCOVERY_WINDOWS[1];
+const SIMILAR_ON: Record<Store, string> = {
+  APP_STORE: "Similar on the App Store",
+  GOOGLE_PLAY: "Similar on Google Play",
+};
 
 export function discoveredRows(
-  discovery: CompetitorDiscovery | undefined,
-): CompetitorDiscoveryItem[] {
-  return discovery ? discovery.items.slice(0, DISCOVERED_LIMIT) : [];
+  suggestions: CompetitorSuggestions | undefined,
+): CompetitorSuggestion[] {
+  return suggestions?.items ?? [];
+}
+
+export function suggestionMeta(
+  row: CompetitorSuggestion,
+  store: Store,
+): string {
+  if (row.source === "similar") return SIMILAR_ON[store];
+  return `${pluralize(row.appearances ?? 0, "appearance")} · best #${row.bestPosition}`;
+}
+
+export function addButtonLabel(count: number): string {
+  return count === 0 ? "Add selected" : `Add ${count} selected`;
 }
 
 export function discoveredEmptyText(
   collecting: boolean,
-  windowDays: number,
+  similar: SimilarLookupState,
 ): string {
-  return collecting
-    ? "Positions are still being collected. Apps that rank for your keywords appear here within minutes."
-    : `Nothing ranks beside you in the last ${windowDays} days yet.`;
+  if (collecting) {
+    return "Positions are still being collected. Apps that rank for your keywords appear here within minutes.";
+  }
+  return similar === "unavailable"
+    ? "The store did not list similar apps right now."
+    : "No suggestions yet.";
 }

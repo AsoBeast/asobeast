@@ -34,6 +34,7 @@ export interface AppStoreSearchResult {
   trackId?: number | string;
   title: string;
   developer?: string;
+  icon?: string;
   score?: number;
   reviews?: number;
   currentVersionReviews?: number;

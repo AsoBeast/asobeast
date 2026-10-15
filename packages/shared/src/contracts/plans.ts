@@ -20,6 +20,7 @@ export const ON_DEMAND_ACTIONS = [
   'spider',
   'importApp',
   'addCompetitor',
+  'storeLookup',
   'chartCapture',
 ] as const;
 
@@ -105,6 +106,7 @@ const NO_CAPACITY: PlanLimits = {
     spider: { limit: 0, windowSeconds: DAY_SECONDS },
     importApp: { limit: 0, windowSeconds: DAY_SECONDS },
     addCompetitor: { limit: 0, windowSeconds: DAY_SECONDS },
+    storeLookup: { limit: 0, windowSeconds: HOUR_SECONDS },
     chartCapture: { limit: 0, windowSeconds: DAY_SECONDS },
   },
 };
@@ -124,6 +126,7 @@ const INDIE: PlanLimits = {
     spider: { limit: 12, windowSeconds: DAY_SECONDS },
     importApp: { limit: 10, windowSeconds: DAY_SECONDS },
     addCompetitor: { limit: 60, windowSeconds: DAY_SECONDS },
+    storeLookup: { limit: 60, windowSeconds: HOUR_SECONDS },
     chartCapture: { limit: 30, windowSeconds: DAY_SECONDS },
   },
 };
@@ -145,6 +148,7 @@ const ULTIMATE: PlanLimits = {
     spider: { limit: 50, windowSeconds: DAY_SECONDS },
     importApp: { limit: 100, windowSeconds: DAY_SECONDS },
     addCompetitor: { limit: 300, windowSeconds: DAY_SECONDS },
+    storeLookup: { limit: 300, windowSeconds: HOUR_SECONDS },
     chartCapture: { limit: 150, windowSeconds: DAY_SECONDS },
   },
 };

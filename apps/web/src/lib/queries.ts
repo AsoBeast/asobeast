@@ -7,6 +7,7 @@ import type {
   KeywordFieldQuery,
   KeywordImportRequest,
   KeywordSuggestionStrategy,
+  Store,
   WebhookItem,
 } from "@asobeast/shared";
 import { QUERY_BOUNDS } from "@asobeast/shared";
@@ -51,6 +52,7 @@ import {
   getEmailAlerts,
   getComparison,
   getCompetitorDiscovery,
+  getCompetitorSuggestions,
   getCompetitors,
   getFirstRun,
   getHealth,
@@ -62,7 +64,9 @@ import {
   getMarketKeywordFields,
   getListingMarkets,
   getMarketAvailability,
+  getAppSetup,
   getMarketSuggestions,
+  searchStore,
   getMetadataAudit,
   getPortfolio,
   getPortfolioInsights,
@@ -160,6 +164,8 @@ export const appKeys = {
     ] as const,
   competitors: (id: string) => [...appKeys.detail(id), "competitors"] as const,
   discoveryRoot: (id: string) => [...appKeys.detail(id), "discovery"] as const,
+  competitorSuggestions: (id: string) =>
+    ["competitor-suggestions", id] as const,
   discovery: (id: string, days: number) =>
     [...appKeys.detail(id), "discovery", { days }] as const,
   changesRoot: (id: string) => [...appKeys.detail(id), "changes"] as const,
@@ -199,7 +205,12 @@ export const appKeys = {
   serp: (keywordId: string) => ["serp", keywordId] as const,
 };
 
+export const setupKey = (id: string) => ["setup", id] as const;
+
 export const portfolioKey = ["portfolio"] as const;
+
+export const storeSearchKey = (store: Store, country: string, q: string) =>
+  ["store-search", store, country, q] as const;
 export const portfolioInsightsKey = [...portfolioKey, "insights"] as const;
 
 export const recentChangesKey = (limit?: number) =>
@@ -680,6 +691,14 @@ export const competitorsOptions = (id: string) =>
     queryFn: () => getCompetitors(id),
   });
 
+export const competitorSuggestionsOptions = (id: string) =>
+  queryOptions({
+    queryKey: appKeys.competitorSuggestions(id),
+    queryFn: () => getCompetitorSuggestions(id),
+    staleTime: ONE_DAY_MS,
+    retry: false,
+  });
+
 export const discoveryOptions = (id: string, days: number) =>
   queryOptions({
     queryKey: appKeys.discovery(id, days),
@@ -747,11 +766,27 @@ export const marketAvailabilityOptions = (id: string, country: string) =>
       query.state.data?.status === "unknown" ? 0 : ONE_DAY_MS,
   });
 
+export const storeSearchOptions = (store: Store, country: string, q: string) =>
+  queryOptions({
+    queryKey: storeSearchKey(store, country, q),
+    queryFn: () => searchStore(store, country, q),
+    staleTime: ONE_DAY_MS,
+    retry: false,
+  });
+
 export const marketSuggestionsOptions = (id: string) =>
   queryOptions({
     queryKey: appKeys.marketSuggestions(id),
     queryFn: () => getMarketSuggestions(id),
     staleTime: ONE_DAY_MS,
+  });
+
+export const setupOptions = (id: string) =>
+  queryOptions({
+    queryKey: setupKey(id),
+    queryFn: () => getAppSetup(id),
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
 
 export const serpOptions = (keywordId: string) =>
@@ -841,7 +876,7 @@ export function invalidateKeywordMutation(
   void client.invalidateQueries({ queryKey: appKeys.keywordFieldRoot(id) });
   void client.invalidateQueries({ queryKey: appKeys.summary(id) });
   void client.invalidateQueries({ queryKey: appKeys.compareRoot(id) });
-  void client.invalidateQueries({ queryKey: portfolioInsightsKey });
+  void client.invalidateQueries({ queryKey: portfolioKey });
   void client.invalidateQueries({ queryKey: appKeys.localizations(id) });
   void client.invalidateQueries({
     queryKey: appKeys.marketKeywordFieldsRoot(id),
@@ -887,12 +922,26 @@ export function invalidateAppListing(client: QueryClient, id: string): void {
   void client.invalidateQueries({ queryKey: portfolioKey });
 }
 
+export function invalidateSetupMutation(
+  client: QueryClient,
+  id: string,
+): Promise<void> {
+  return Promise.all([
+    client.invalidateQueries({ queryKey: setupKey(id) }),
+    client.invalidateQueries({ queryKey: portfolioKey }),
+  ]).then(() => undefined);
+}
+
 export function invalidateCompetitorMutation(
   client: QueryClient,
   id: string,
 ): void {
   void client.invalidateQueries({ queryKey: appKeys.detail(id) });
   void client.invalidateQueries({ queryKey: appKeys.discoveryRoot(id) });
+  void client.invalidateQueries({
+    queryKey: appKeys.competitorSuggestions(id),
+    refetchType: "none",
+  });
   void client.invalidateQueries({ queryKey: appKeys.serpMoversRoot(id) });
   void client.invalidateQueries({ queryKey: portfolioKey });
   void client.invalidateQueries({ queryKey: appKeys.firstRun(id) });

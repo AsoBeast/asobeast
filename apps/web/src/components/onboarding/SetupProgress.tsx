@@ -3,13 +3,14 @@ import { Progress } from "@/components/ui/progress";
 import {
   SETUP_STEPS,
   type SetupStep,
-  type StepProgress,
-  type StepState,
-} from "@/lib/onboarding";
+  type SetupStepProgress,
+  type SetupStepState,
+} from "@asobeast/shared";
 import { cn } from "@/lib/utils";
 import {
   progressPercent,
   progressSentence,
+  progressValueLabel,
   STEP_TITLES,
 } from "./setup-progress";
 
@@ -19,8 +20,8 @@ export function SetupProgress({
   states,
 }: {
   name: string | null;
-  progress: StepProgress;
-  states: Record<SetupStep, StepState>;
+  progress: SetupStepProgress;
+  states: Record<SetupStep, SetupStepState>;
 }) {
   return (
     <div className="flex flex-col gap-3">
@@ -30,7 +31,7 @@ export function SetupProgress({
       <Progress
         value={progressPercent(progress)}
         aria-label="Setup progress"
-        getValueLabel={() => `${progress.done} of ${progress.total} steps`}
+        getValueLabel={() => progressValueLabel(progress)}
       />
       <nav aria-label="Setup steps">
         <ol className="flex flex-wrap gap-x-6 gap-y-2 text-sm">

@@ -16,6 +16,7 @@ const ON_DEMAND_LABELS: Record<OnDemandAction, string> = {
   spider: 'Deep search',
   importApp: 'Import app',
   addCompetitor: 'Add competitor',
+  storeLookup: 'Store lookup',
   chartCapture: 'Chart capture',
 };
 

@@ -40,6 +40,9 @@ import {
   competitorsOptions,
   comparisonOptions,
   discoveryOptions,
+  competitorSuggestionsOptions,
+  storeSearchKey,
+  storeSearchOptions,
   emailAlertKeys,
   healthKey,
   invalidateApiTokenMutation,
@@ -58,6 +61,7 @@ import {
   invalidateMarketSeed,
   invalidateKeywords,
   invalidateLinkMutation,
+  invalidateSetupMutation,
   invalidateWebhookMutation,
   seedEmailAlert,
   seedWebhook,
@@ -84,6 +88,8 @@ import {
   serpMoversOptions,
   screenshotsOptions,
   serpOptions,
+  setupKey,
+  setupOptions,
   spiderOptions,
   pickerSuggestionsOptions,
   suggestionsOptions,
@@ -418,6 +424,43 @@ describe("appKeys", () => {
     );
   });
 
+  it("keys a name search by its store, storefront and name rather than by an app", () => {
+    const options = storeSearchOptions("APP_STORE", "us", "focus");
+
+    expect(options.queryKey).toEqual(
+      storeSearchKey("APP_STORE", "us", "focus"),
+    );
+    expect(options.retry).toBe(false);
+    expect(isPrefixOf(appKeys.all, options.queryKey)).toBe(false);
+    expect(storeSearchKey("APP_STORE", "us", "focus")).not.toEqual(
+      storeSearchKey("GOOGLE_PLAY", "us", "focus"),
+    );
+    expect(storeSearchKey("APP_STORE", "us", "focus")).not.toEqual(
+      storeSearchKey("APP_STORE", "de", "focus"),
+    );
+  });
+
+  it("keys competitor suggestions outside the app so only a competitor change refetches them", async () => {
+    const client = new QueryClient();
+    const options = competitorSuggestionsOptions(APP);
+    client.setQueryData(options.queryKey, {
+      store: "APP_STORE",
+      country: "us",
+      similar: "ok",
+      items: [],
+    });
+
+    expect(options.queryKey).toEqual(appKeys.competitorSuggestions(APP));
+    expect(options.retry).toBe(false);
+    expect(isPrefixOf(appKeys.detail(APP), options.queryKey)).toBe(false);
+
+    await client.invalidateQueries({ queryKey: appKeys.detail(APP) });
+    expect(client.getQueryState(options.queryKey)?.isInvalidated).toBe(false);
+
+    invalidateCompetitorMutation(client, APP);
+    expect(client.getQueryState(options.queryKey)?.isInvalidated).toBe(true);
+  });
+
   it("keys a serp by its keyword rather than by an app", () => {
     expect(serpOptions("kw-1").queryKey).toEqual(appKeys.serp("kw-1"));
     expect(isPrefixOf(appKeys.all, appKeys.serp("kw-1"))).toBe(false);
@@ -585,7 +628,7 @@ describe("invalidation sets", () => {
       appKeys.keywordFieldRoot(APP),
       appKeys.summary(APP),
       appKeys.compareRoot(APP),
-      portfolioInsightsKey,
+      portfolioKey,
       appKeys.localizations(APP),
       appKeys.marketKeywordFieldsRoot(APP),
       appKeys.marketSuggestions(APP),
@@ -605,7 +648,7 @@ describe("invalidation sets", () => {
       appKeys.keywordFieldRoot(APP),
       appKeys.summary(APP),
       appKeys.compareRoot(APP),
-      portfolioInsightsKey,
+      portfolioKey,
       appKeys.localizations(APP),
       appKeys.marketKeywordFieldsRoot(APP),
       appKeys.marketSuggestions(APP),
@@ -625,7 +668,7 @@ describe("invalidation sets", () => {
       appKeys.keywordFieldRoot(APP),
       appKeys.summary(APP),
       appKeys.compareRoot(APP),
-      portfolioInsightsKey,
+      portfolioKey,
       appKeys.localizations(APP),
       appKeys.marketKeywordFieldsRoot(APP),
       appKeys.marketSuggestions(APP),
@@ -644,7 +687,7 @@ describe("invalidation sets", () => {
       appKeys.keywordFieldRoot(APP),
       appKeys.summary(APP),
       appKeys.compareRoot(APP),
-      portfolioInsightsKey,
+      portfolioKey,
       appKeys.localizations(APP),
       appKeys.marketKeywordFieldsRoot(APP),
       appKeys.marketSuggestions(APP),
@@ -664,7 +707,7 @@ describe("invalidation sets", () => {
       appKeys.keywordFieldRoot(APP),
       appKeys.summary(APP),
       appKeys.compareRoot(APP),
-      portfolioInsightsKey,
+      portfolioKey,
       appKeys.localizations(APP),
       appKeys.marketKeywordFieldsRoot(APP),
       appKeys.marketSuggestions(APP),
@@ -673,12 +716,21 @@ describe("invalidation sets", () => {
     ]);
   });
 
+  it("refreshes the setup and the portfolio after a setup mutation", () => {
+    expect(
+      invalidatedKeys((client) => {
+        void invalidateSetupMutation(client, APP);
+      }),
+    ).toEqual([setupKey(APP), portfolioKey]);
+  });
+
   it("invalidates everything a competitor mutation changes", () => {
     expect(
       invalidatedKeys((client) => invalidateCompetitorMutation(client, APP)),
     ).toEqual([
       appKeys.detail(APP),
       appKeys.discoveryRoot(APP),
+      appKeys.competitorSuggestions(APP),
       appKeys.serpMoversRoot(APP),
       portfolioKey,
       appKeys.firstRun(APP),
@@ -789,6 +841,19 @@ describe("portfolio insights key", () => {
   it("sits under the portfolio key so a portfolio invalidation reaches it", () => {
     expect(isPrefixOf(portfolioKey, portfolioInsightsKey)).toBe(true);
     expect(portfolioInsightsOptions.queryKey).toEqual(portfolioInsightsKey);
+  });
+});
+
+describe("setup key", () => {
+  it("sits outside the app detail so a listing or competitor invalidation never refetches it mid save", () => {
+    expect(isPrefixOf(appKeys.detail(APP), setupKey(APP))).toBe(false);
+    expect(isPrefixOf(appKeys.all, setupKey(APP))).toBe(false);
+    expect(setupOptions(APP).queryKey).toEqual(setupKey(APP));
+  });
+
+  it("refetches whenever another tab or device may have changed it", () => {
+    expect(setupOptions(APP).staleTime).toBe(0);
+    expect(setupOptions(APP).refetchOnWindowFocus).toBe(true);
   });
 });
 

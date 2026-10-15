@@ -212,6 +212,12 @@ describe('AppsController (e2e)', () => {
 
     expect(await prisma.app.count()).toBe(1);
     expect(await prisma.appSnapshot.count()).toBe(1);
+    await expect(
+      prisma.appSetup.findUnique({
+        where: { appId: body.id },
+        select: { status: true, selectedMarkets: true },
+      }),
+    ).resolves.toEqual({ status: 'in_progress', selectedMarkets: ['us'] });
   });
 
   it('auto tracks the words of a japanese google play listing', async () => {

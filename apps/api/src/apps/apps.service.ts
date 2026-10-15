@@ -24,6 +24,7 @@ import {
   reviewsBackfillJobId,
 } from '../jobs/jobs.types';
 import { AppCaptureService } from './app-capture.service';
+import { AppSetupService } from './app-setup.service';
 import { reviewSyncJobOptions } from '../jobs/job-options';
 import { QuotaService } from '../auth/quota.service';
 import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
@@ -55,6 +56,7 @@ export class AppsService {
     private readonly workspace: WorkspaceContext,
     private readonly firstRun: FirstRunScheduler,
     private readonly localizations: LocalizedListingCapture,
+    private readonly setups: AppSetupService,
   ) {}
 
   private queueFor(store: Store): Queue {
@@ -97,6 +99,7 @@ export class AppsService {
       { admit: this.quota.admitApp() },
     );
 
+    await this.beginSetup(app);
     await this.localizations.capture(app, market, snapshot);
     await this.keywords.syncFromSnapshot(app.id);
 
@@ -115,6 +118,16 @@ export class AppsService {
     await this.scheduleFirstRun(app.id);
 
     return toAppDetail(app, snapshot, [], null);
+  }
+
+  private async beginSetup(app: { id: string; country: string }) {
+    try {
+      await this.setups.begin(app);
+    } catch (error: unknown) {
+      this.logger.error(
+        `could not start the guided setup of ${app.id}, so it opens as not started: ${reason(error)}`,
+      );
+    }
   }
 
   private async scheduleFirstRun(appId: string): Promise<void> {

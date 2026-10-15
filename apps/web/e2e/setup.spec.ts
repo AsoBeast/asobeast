@@ -1,17 +1,11 @@
 import type { APIRequestContext, Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
-import { parseOnboardingState } from "../src/lib/onboarding";
-import { OWNER_ONBOARDING_KEY } from "./onboarding.mts";
+import { storedSetup } from "./setup-session.mts";
 
 test.describe.configure({ mode: "serial" });
 
-const storedStatus = async (page: Page): Promise<string> => {
-  const stored = await page.evaluate(
-    (key) => localStorage.getItem(key),
-    OWNER_ONBOARDING_KEY,
-  );
-  return parseOnboardingState(stored).status;
-};
+const storedStatus = async (page: Page, appId = "app-1"): Promise<string> =>
+  (await storedSetup(page.context(), appId)).status;
 
 const MOCK_API_URL = `http://localhost:${process.env.MOCK_API_PORT ?? 4100}`;
 
@@ -29,13 +23,8 @@ const suggestionRow = (page: Page, text: string) =>
     .getByRole("listitem")
     .filter({ has: page.getByText(text, { exact: true }) });
 
-const storedMarkets = async (page: Page): Promise<string[]> => {
-  const stored = await page.evaluate(
-    (key) => localStorage.getItem(key),
-    OWNER_ONBOARDING_KEY,
-  );
-  return parseOnboardingState(stored).selectedMarkets;
-};
+const storedMarkets = async (page: Page, appId = "app-1"): Promise<string[]> =>
+  (await storedSetup(page.context(), appId)).selectedMarkets;
 
 const selectedMarkets = (page: Page) =>
   page.getByRole("list", { name: "Selected countries" });
@@ -45,13 +34,8 @@ const stepCard = (page: Page, title: string) =>
     .locator('[data-slot="card"]')
     .filter({ has: page.getByRole("heading", { name: title, exact: true }) });
 
-const storedSkipped = async (page: Page): Promise<string[]> => {
-  const stored = await page.evaluate(
-    (key) => localStorage.getItem(key),
-    OWNER_ONBOARDING_KEY,
-  );
-  return parseOnboardingState(stored).skipped;
-};
+const storedSkipped = async (page: Page, appId = "app-1"): Promise<string[]> =>
+  (await storedSetup(page.context(), appId)).skipped;
 
 const startSetup = async (page: Page, id: string): Promise<void> => {
   await page.goto(`/apps/${id}/setup`);
@@ -70,43 +54,80 @@ test("unknown and unavailable apps render route boundaries", async ({
   await expect(page.getByRole("main").getByRole("alert")).toBeVisible();
 });
 
-test("setup offers a retry when the account cannot be loaded", async ({
+test("a competitor has no setup and renders the not found page", async ({
   page,
 }) => {
-  await page.route("**/api/backend/auth/me", (route) =>
-    route.fulfill({ status: 503, json: { statusCode: 503 } }),
-  );
-  await page.goto("/apps/app-1/setup");
+  await page.goto("/apps/app-rival/setup");
 
-  const failure = page
-    .getByRole("main")
-    .getByRole("alert")
-    .filter({ hasText: "Account could not be loaded" });
-  await expect(failure).toBeVisible();
-
-  await page.unroute("**/api/backend/auth/me");
-  await failure.getByRole("button", { name: "Try again" }).click();
-
+  await expect(page.getByRole("main").getByText("App not found")).toBeVisible();
+  await expect(page.getByRole("main").getByRole("alert")).toHaveCount(0);
   await expect(
-    page.getByText("Start setup for this app", { exact: true }),
-  ).toBeVisible();
+    page.getByRole("button", { name: "Start this setup" }),
+  ).toHaveCount(0);
 });
 
-test("a direct visit never enrols without an explicit start", async ({
+test("a not started app offers to start and never enrols on a visit", async ({
   page,
 }) => {
-  await page.goto("/apps/app-1/setup");
+  await page.goto("/apps/app-2/setup");
 
   await expect(
     page.getByText("Start setup for this app", { exact: true }),
   ).toBeVisible();
-  expect(await storedStatus(page)).toBe("not_started");
+  expect(await storedStatus(page, "app-2")).toBe("not_started");
 
   await page.goto("/");
   await expect(page.getByRole("link", { name: "Resume setup" })).toBeHidden();
 
+  await startSetup(page, "app-2");
+  await expect(
+    page.getByRole("heading", { name: /^Set up Habit Tracker/ }),
+  ).toBeVisible();
+  await expect.poll(() => storedStatus(page, "app-2")).toBe("in_progress");
+});
+
+test("progress written in one tab is read in another", async ({ page }) => {
   await startSetup(page, "app-1");
-  expect(await storedStatus(page)).toBe("in_progress");
+  await page.getByRole("button", { name: "Countries reviewed" }).click();
+  await expect(
+    stepCard(page, "Add countries").getByText("Done", { exact: true }),
+  ).toBeVisible();
+  await expect.poll(() => storedStatus(page)).toBe("in_progress");
+
+  const other = await page.context().newPage();
+  await other.goto("/apps/app-1/setup");
+
+  await expect(
+    stepCard(other, "Add countries").getByText("Done", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    other.getByRole("button", { name: "Start this setup" }),
+  ).toHaveCount(0);
+});
+
+test("a failed save rolls the step back", async ({ page }) => {
+  await startSetup(page, "app-1");
+  const keywords = stepCard(page, "Track keywords");
+  await expect(
+    keywords.getByRole("button", { name: "Skip this step" }),
+  ).toBeVisible();
+  await page
+    .context()
+    .addCookies([
+      { name: "e2e_setup_fail", value: "1", domain: "localhost", path: "/" },
+    ]);
+
+  await keywords.getByRole("button", { name: "Skip this step" }).click();
+
+  await expect(
+    page.getByText("The server encountered an unexpected error."),
+  ).toBeVisible();
+  await expect(
+    keywords.getByRole("button", { name: "Skip this step" }),
+  ).toBeVisible();
+  await expect(keywords.getByText("Skipped", { exact: true })).toHaveCount(0);
+  await page.context().clearCookies({ name: "e2e_setup_fail" });
+  expect(await storedSkipped(page)).toEqual([]);
 });
 
 test("direct setup is resumable and completes after live checks", async ({
@@ -195,7 +216,8 @@ test("direct setup is resumable and completes after live checks", async ({
       .filter({ hasText: "Germany" })
       .filter({ hasText: "active" }),
   ).toBeVisible();
-  await page.getByLabel("Germany (DE)").uncheck();
+  await page.getByLabel("Germany (DE)").click();
+  await expect(page.getByLabel("Germany (DE)")).not.toBeChecked();
   await expect(selectedMarkets(page).getByText("Germany (DE)")).toHaveCount(0);
 
   const add = page.getByRole("button", { name: "Add", exact: true });
@@ -222,7 +244,7 @@ test("direct setup is resumable and completes after live checks", async ({
   await expect(complete).toBeEnabled();
   await complete.click();
   await expect(page).toHaveURL("/apps/app-1");
-  expect(await storedStatus(page)).toBe("completed");
+  await expect.poll(() => storedStatus(page)).toBe("completed");
 
   await page.goto("/apps/app-1/setup");
   await expect(page.getByText("Setup complete", { exact: true })).toBeVisible();
@@ -230,6 +252,34 @@ test("direct setup is resumable and completes after live checks", async ({
     page.getByRole("link", { name: "Open the overview" }),
   ).toHaveAttribute("href", "/apps/app-1");
   expect(await storedSkipped(page)).toEqual(["keywords"]);
+});
+
+test("a completion that cannot be saved keeps the checklist open", async ({
+  page,
+}) => {
+  await startSetup(page, "app-1");
+  await stepCard(page, "Track keywords")
+    .getByRole("button", { name: "Skip this step" })
+    .click();
+  await page.getByRole("button", { name: "Countries reviewed" }).click();
+  const complete = page.getByRole("button", { name: "Complete setup" });
+  await expect(complete).toBeEnabled();
+  await expect.poll(() => storedSkipped(page)).toEqual(["keywords"]);
+  await page
+    .context()
+    .addCookies([
+      { name: "e2e_setup_fail", value: "1", domain: "localhost", path: "/" },
+    ]);
+
+  await complete.click();
+
+  await expect(
+    page.getByText("The server encountered an unexpected error."),
+  ).toBeVisible();
+  await expect(complete).toBeVisible();
+  await expect(page).toHaveURL("/apps/app-1/setup");
+  await page.context().clearCookies({ name: "e2e_setup_fail" });
+  expect(await storedStatus(page)).toBe("in_progress");
 });
 
 test("a country whose keyword count fails never blocks completion", async ({
@@ -267,7 +317,7 @@ test("a skipped step turns done once its target is reached", async ({
   await competitors.getByRole("button", { name: "Skip this step" }).click();
   await expect(competitors.getByText("Skipped", { exact: true })).toBeVisible();
   await competitors
-    .getByLabel("Competitor App Store URL")
+    .getByLabel("Competitor name or App Store URL")
     .fill("https://apps.apple.com/us/app/rival/id555000998");
   await competitors.getByRole("button", { name: "Add competitor" }).click();
 
@@ -295,38 +345,7 @@ test("a skipped step names its reason and can be undone", async ({ page }) => {
   await expect(
     competitors.getByRole("button", { name: "Skip this step" }),
   ).toBeVisible();
-  expect(await storedSkipped(page)).toEqual([]);
-});
-
-test("a version 1 record resumes as in progress with its markets", async ({
-  page,
-}) => {
-  await page.addInitScript((key) => {
-    localStorage.setItem(
-      key,
-      JSON.stringify({
-        version: 1,
-        status: "in_progress",
-        appId: "app-2",
-        selectedMarkets: ["de", "us"],
-        acknowledgements: {
-          noCompetitors: true,
-          keywordsConfirmed: false,
-          capacityReviewed: false,
-          alertsSkipped: false,
-        },
-      }),
-    );
-  }, OWNER_ONBOARDING_KEY);
-  await page.goto("/apps/app-2/setup");
-
-  await expect(
-    page.getByRole("heading", { name: /^Set up Habit Tracker · 1 of 3/ }),
-  ).toBeVisible();
-  await expect(selectedMarkets(page).getByText("Germany (DE)")).toBeVisible();
-  await expect(
-    stepCard(page, "Pick competitors").getByText("Skipped", { exact: true }),
-  ).toBeVisible();
+  await expect.poll(() => storedSkipped(page, "app-2")).toEqual([]);
 });
 
 test("a failed live count blocks completion until a retry succeeds", async ({
@@ -377,7 +396,7 @@ test.describe("picking competitors inside the step", () => {
     const competitors = stepCard(page, "Pick competitors");
     await expect(competitors.getByText("No competitor yet")).toBeVisible();
     await competitors
-      .getByLabel("Competitor App Store URL")
+      .getByLabel("Competitor name or App Store URL")
       .fill("https://apps.apple.com/us/app/rival/id555000999");
     await competitors.getByRole("button", { name: "Add competitor" }).click();
 
@@ -387,29 +406,102 @@ test.describe("picking competitors inside the step", () => {
     await expect(page).toHaveURL("/apps/app-2/setup");
   });
 
-  test("a discovered app can be tracked from the step", async ({
+  test("suggested competitors are added together", async ({
     page,
     request,
   }) => {
     await resetCompetitors(request, "app-1");
     await startSetup(page, "app-1");
 
-    const discovered = page.getByRole("list", {
-      name: "Apps ranking for your keywords",
+    const competitors = stepCard(page, "Pick competitors");
+    const suggested = competitors.getByRole("list", {
+      name: "Suggested competitors",
     });
-    const row = discovered
+    const deepWork = suggested
       .getByRole("listitem")
       .filter({ hasText: "Deep Work Sessions" });
-    await row.getByRole("button", { name: "Track" }).click();
+    const deepFocus = suggested
+      .getByRole("listitem")
+      .filter({ hasText: "Deep Focus Pro" });
+    await expect(deepWork).toContainText("14 appearances · best #2");
+    await expect(deepFocus).toContainText("Similar on the App Store");
+    await expect(deepFocus.locator("img")).toHaveCount(1);
+
+    await deepWork.getByRole("checkbox").check();
+    await deepFocus.getByRole("checkbox").check();
+    await competitors.getByRole("button", { name: "Add 2 selected" }).click();
 
     await expect(
-      page.getByText("Now tracking Deep Work Sessions"),
+      competitors.getByText(
+        "3 tracked: Rival Focus, Deep Work Sessions, and Deep Focus Pro",
+      ),
     ).toBeVisible();
+    await expect(competitors.getByText("Done", { exact: true })).toBeVisible();
+    await expect(deepWork.getByRole("status")).toHaveText("Added");
+    await expect(deepFocus.getByRole("status")).toHaveText("Added");
+    await expect(deepWork.getByRole("checkbox")).toBeDisabled();
     await expect(
-      page.getByText("2 tracked: Rival Focus and Deep Work Sessions"),
-    ).toBeVisible();
+      competitors.getByRole("button", { name: "Add selected" }),
+    ).toBeDisabled();
+  });
+
+  test("a failed suggestion load offers a retry", async ({ page, request }) => {
+    await resetCompetitors(request, "app-1");
+    await page.context().addCookies([
+      {
+        name: "e2e_suggestions_fail",
+        value: "1",
+        url: "http://localhost:3000",
+      },
+    ]);
+    await startSetup(page, "app-1");
+
+    const competitors = stepCard(page, "Pick competitors");
+    await expect(competitors.getByRole("alert")).toBeVisible();
+
+    await page.context().clearCookies({ name: "e2e_suggestions_fail" });
+    await competitors.getByRole("button", { name: "Retry" }).click();
+
     await expect(
-      stepCard(page, "Pick competitors").getByText("Done", { exact: true }),
+      competitors.getByRole("list", { name: "Suggested competitors" }),
+    ).toContainText("Deep Work Sessions");
+  });
+
+  test("an unavailable similar lookup still shows the keyword result apps", async ({
+    page,
+    request,
+  }) => {
+    await resetCompetitors(request, "app-1");
+    await page.context().addCookies([
+      {
+        name: "e2e_similar_unavailable",
+        value: "1",
+        url: "http://localhost:3000",
+      },
+    ]);
+    await startSetup(page, "app-1");
+
+    const suggested = stepCard(page, "Pick competitors").getByRole("list", {
+      name: "Suggested competitors",
+    });
+    await expect(suggested).toContainText("Deep Work Sessions");
+    await expect(suggested.getByText(/^Similar on/)).toHaveCount(0);
+  });
+
+  test("an app with nothing to suggest says why", async ({ page }) => {
+    await page.context().addCookies([
+      {
+        name: "e2e_similar_unavailable",
+        value: "1",
+        url: "http://localhost:3000",
+      },
+    ]);
+    await startSetup(page, "app-long");
+
+    await expect(
+      stepCard(page, "Pick competitors").getByText(
+        "The store did not list similar apps right now.",
+      ),
     ).toBeVisible();
   });
 });
@@ -546,18 +638,11 @@ test("the discovered list says positions are still collected on a new app", asyn
       "Positions are still being collected. Apps that rank for your keywords appear here within minutes.",
     ),
   ).toBeVisible({ timeout: 1_500 });
-  await expect(page.getByText(/^Nothing ranks beside you/)).toHaveCount(0);
+  await expect(page.getByText("No suggestions yet.")).toHaveCount(0);
 });
 
-test("corrupt state resets and setup can be dismissed on a narrow dark layout", async ({
-  page,
-}) => {
-  await page.addInitScript((key) => {
-    if (localStorage.getItem(key) === null) {
-      localStorage.setItem(key, "{broken");
-    }
-    localStorage.setItem("theme", "dark");
-  }, OWNER_ONBOARDING_KEY);
+test("setup can be dismissed on a narrow dark layout", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("theme", "dark"));
   await page.setViewportSize({ width: 390, height: 844 });
   await startSetup(page, "app-2");
 
@@ -633,7 +718,7 @@ test.describe("seeding suggested markets", () => {
         .filter({ hasText: "2 active" }),
     ).toBeVisible();
     expect(await storedStatus(page)).toBe("in_progress");
-    expect(await storedMarkets(page)).toEqual(["at", "us"]);
+    await expect.poll(() => storedMarkets(page)).toEqual(["at", "us"]);
   });
 
   test("a market can be added without seeding", async ({ page }) => {

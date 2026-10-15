@@ -49,7 +49,7 @@ Set `AUTH_ALLOW_REGISTRATION=true` only when further sign ups should stay availa
 
 ## Import your first app
 
-Paste an App Store or Google Play URL into the import dialog. asobeast then does the following, in order.
+Type your app's name into the import dialog and pick it from the results, or paste its App Store or Google Play URL. asobeast then does the following, in order.
 
 1. Parses the store and the home storefront from the URL. A bare iTunes id, or a URL with no country segment, falls back to `DEFAULT_COUNTRY`, which defaults to `us`.
 2. Fetches the listing and writes the first metadata snapshot, keeping the raw payload so a later parser fix can reprocess it.
@@ -75,11 +75,11 @@ Two horizons are worth knowing before you read it.
 
 The first import opens a guided setup with three steps, in this order, each one done inside its own card.
 
-1. **Pick competitors.** Track at least one. The apps already ranking for your auto tracked keywords are listed with a Track button, and any other app can be added from its store URL.
+1. **Pick competitors.** Track at least one. The apps ranking in your keyword results and the apps the store calls similar are suggested with a checkbox each and added together, and any other app can be added by name or from its store URL. See [Suggested competitors](/guides/competitors#suggested-competitors).
 2. **Track keywords.** Track at least ten in your home storefront. Tick phrases from your listing or from the store autocomplete and track them in one click.
 3. **Add countries.** The storefronts that read a language your listing ships are suggested with their daily request cost, and any other country can be chosen from the list. See [How do you add a market?](/concepts/countries#how-do-you-add-a-market)
 
-A step can be skipped with one click and undone later. Completing the setup opens the app overview, where the first run panel lists the first positions as they arrive. Progress is kept in your browser for now.
+A step can be skipped with one click and undone later. Completing the setup opens the app overview, where the first run panel lists the first positions as they arrive. Progress is kept on your account, so you can continue on another device and a teammate sees the same steps. Each imported app has a setup of its own, so two apps can be set up at once, and the dashboard names the one you touched last.
 
 ## Check that collection is running
 

@@ -96,20 +96,66 @@ test("the add competitor example names the store of the app in view", async ({
   await page.goto(`/apps/${APP_GP_DETAIL.id}/competitors`);
 
   await expect(
-    page.getByRole("textbox", { name: "Competitor Google Play URL" }),
+    page.getByRole("textbox", { name: "Competitor name or Google Play URL" }),
   ).toHaveAttribute(
     "placeholder",
-    "https://play.google.com/store/apps/details?id=com.example.app",
+    "Focus Timer or https://play.google.com/store/apps/details?id=com.example.app",
   );
 
   await page.goto(`/apps/${APP_1_DE_DETAIL.id}/competitors`);
 
   await expect(
-    page.getByRole("textbox", { name: "Competitor App Store URL" }),
+    page.getByRole("textbox", { name: "Competitor name or App Store URL" }),
   ).toHaveAttribute(
     "placeholder",
-    "https://apps.apple.com/us/app/name/id123456789",
+    "Focus Timer or https://apps.apple.com/us/app/name/id123456789",
   );
+});
+
+test("a competitor is found by name in the storefront of the app and added", async ({
+  page,
+}) => {
+  const adds: unknown[] = [];
+  page.on("request", (request) => {
+    if (
+      request.method() === "POST" &&
+      request
+        .url()
+        .endsWith(`/api/backend/apps/${APP_1_DE_DETAIL.id}/competitors`)
+    ) {
+      adds.push(request.postDataJSON());
+    }
+  });
+  await page.goto(`/apps/${APP_1_DE_DETAIL.id}/competitors`);
+
+  await page
+    .getByRole("textbox", { name: "Competitor name or App Store URL" })
+    .fill("focus");
+  const results = page.getByRole("list", {
+    name: "Results from App Store in Germany",
+  });
+  await results.getByRole("button", { name: /Focus Keeper/ }).click();
+
+  await expect(page.getByText("Added Focus Keeper")).toBeVisible();
+  expect(adds).toEqual([{ url: "987654321" }]);
+});
+
+test("a competitor url still adds without a search", async ({ page }) => {
+  const searches: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().includes("/api/backend/store/search")) {
+      searches.push(request.url());
+    }
+  });
+  await page.goto(`/apps/${APP_1_DE_DETAIL.id}/competitors`);
+
+  await page
+    .getByRole("textbox", { name: "Competitor name or App Store URL" })
+    .fill("https://apps.apple.com/de/app/rival/id555000997");
+  await page.getByRole("button", { name: "Add competitor" }).click();
+
+  await expect(page.getByText("Added 555000997")).toBeVisible();
+  expect(searches).toEqual([]);
 });
 
 test("the discovery panel names the store its rows come from", async ({

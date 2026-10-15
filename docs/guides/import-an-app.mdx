@@ -1,16 +1,22 @@
 ---
 title: Import an app
-description: "Paste an App Store or Google Play URL and asobeast captures the first snapshot, extracts keywords and tracks them in the home storefront."
+description: "Search a store by name or paste an App Store or Google Play URL, and asobeast captures the first snapshot, extracts keywords and tracks them in the home storefront."
 icon: download
 keywords: ["import","app store url","google play url","snapshot","refresh","home storefront"]
 ---
 
 When you finish this guide you have one tracked app, its first metadata snapshot and a set of keywords already tracking in its home storefront.
 
-## Import from a store URL
+## Import by name or store URL
+
+The import dialog takes either the name of the app or its store URL in one field.
+
+A name searches the store you pick, App Store or Google Play, in the storefront you pick, and lists up to ten listings with their icon, developer and rating. Picking one imports it by its store id, exactly as if you had pasted its URL. Each name search reaches the store while you wait and spends one store lookup of the hourly allowance, so a search is only sent once you stop typing. See [Rate limits and quotas](/api-reference/rate-limits#a-spent-on-demand-allowance-names-its-action).
+
+A URL, a bare App Store id or a Google Play package name never searches. It imports as described below.
 
 <Steps>
-  <Step title="Copy the store URL">
+  <Step title="Type the app's name or copy its store URL">
     Any public listing URL works, for either store.
 
     ```text

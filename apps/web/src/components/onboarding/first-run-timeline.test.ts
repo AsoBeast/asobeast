@@ -12,6 +12,7 @@ import {
   listingSettled,
   rankingsAdvanced,
   rankingsCollecting,
+  rankingsFinished,
   rankingsTracked,
 } from "./first-run-timeline";
 
@@ -244,6 +245,14 @@ describe("rankingsAdvanced", () => {
   it("stays quiet without both answers", () => {
     expect(rankingsAdvanced(undefined, ranked(5))).toBe(false);
     expect(rankingsAdvanced(ranked(3), undefined)).toBe(false);
+  });
+
+  it("says the first positions finished only on the answer that completes them", () => {
+    expect(rankingsFinished(ranked(5), ranked(8))).toBe(true);
+    expect(rankingsFinished(ranked(3), ranked(5))).toBe(false);
+    expect(rankingsFinished(ranked(8), ranked(8))).toBe(false);
+    expect(rankingsFinished(undefined, ranked(8))).toBe(false);
+    expect(rankingsFinished(ranked(5), undefined)).toBe(false);
   });
 
   it("knows whether any keyword expects a position", () => {

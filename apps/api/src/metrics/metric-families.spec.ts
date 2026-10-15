@@ -29,6 +29,7 @@ const workspace: WorkspaceMetrics = {
     spider: 2,
     importApp: 1,
     addCompetitor: 4,
+    storeLookup: 5,
     chartCapture: 0,
   },
   aiCallsMonth: 12,

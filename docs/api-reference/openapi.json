@@ -1761,6 +1761,78 @@
         ]
       }
     },
+    "/apps/{id}/setup": {
+      "get": {
+        "description": "The status, the skipped steps, whether countries were reviewed and the selected markets of the guided setup, kept on the account so every member and every device sees the same progress. An import starts it in progress; a primary app without a row answers not_started with its home market selected and updatedAt null. Answers 404 for a competitor or an unknown app.",
+        "operationId": "AppSetupController_read",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Read the guided setup of an app",
+        "tags": [
+          "apps"
+        ]
+      },
+      "patch": {
+        "description": "Changes the fields given and keeps the rest; an empty body changes nothing. Skipped steps are stored in step order. completed stamps completedAt once and keeps that time when completed again; any other status clears it. Answers 400 for an unknown status or step, a repeated step or market, a market that is not a lowercase two letter code, no market or more than 50, and 404 for a competitor or an unknown app.",
+        "operationId": "AppSetupController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAppSetupDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Update the guided setup of an app",
+        "tags": [
+          "apps"
+        ]
+      }
+    },
     "/apps/{id}/localizations/detect": {
       "post": {
         "description": "Takes the localizations the markets of the app read, drops the ones the app ships and, when the home listing declares its languages, the ones in languages it does not declare, then queues one deferred store lookup per remaining localization in the first market that has a stored default listing and can probe it. A lookup records the localization as detected when the store serves a listing that differs from the default one. Spends one refresh allowance only when at least one lookup is newly queued; a localization already queued today queues nothing and spends nothing. Answers 202 with the number of lookups queued and every candidate. Answers 400 for a Google Play app, 404 for an unknown app and 429 when the refresh allowance is spent.",
@@ -1862,6 +1934,80 @@
           }
         },
         "summary": "Suggest storefronts from the languages the home listing declares",
+        "tags": [
+          "apps"
+        ]
+      }
+    },
+    "/store/search": {
+      "get": {
+        "description": "Lists up to 25 listings the store returns for a name in one storefront, with the store app id, title, developer, rating and icon, so an app or a competitor can be picked by name before it is imported or added by its id. Reaches the store while you wait, so it answers within the store deadline and spends one store lookup of the hourly allowance; a request the validation refuses spends nothing.",
+        "operationId": "StoreSearchController_search",
+        "parameters": [
+          {
+            "name": "store",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "APP_STORE",
+                "GOOGLE_PLAY"
+              ]
+            }
+          },
+          {
+            "name": "country",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "pattern": "^[a-z]{2}$",
+              "example": "us",
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "maxLength": 80,
+              "example": "focus timer",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 25,
+              "default": 10,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Search a store by app name",
         "tags": [
           "apps"
         ]
@@ -5034,6 +5180,38 @@
         ]
       }
     },
+    "/apps/{id}/competitors/suggestions": {
+      "get": {
+        "description": "The untracked apps that recur in this app's own keyword results over the last 30 days, with how often and how high they rank, followed by the apps the store lists as similar, each with its icon, minus the app and its tracked competitors, at most ten. The similar apps lookup reaches the store while you wait, answers within the store deadline and spends one store lookup of the hourly allowance; when the store fails or the allowance is spent the keyword result apps are still answered and similar reads unavailable. Answers 404 for a competitor or an unknown app.",
+        "operationId": "CompetitorsController_suggest",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Suggest competitors from the keyword results and similar apps",
+        "tags": [
+          "competitors"
+        ]
+      }
+    },
     "/apps/{id}/competitors": {
       "post": {
         "operationId": "CompetitorsController_add",
@@ -5897,6 +6075,53 @@
         "required": [
           "appId"
         ]
+      },
+      "UpdateAppSetupDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "enum": [
+              "not_started",
+              "in_progress",
+              "completed",
+              "dismissed"
+            ],
+            "type": "string",
+            "example": "in_progress"
+          },
+          "skipped": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "enum": [
+                "competitors",
+                "keywords",
+                "countries"
+              ]
+            },
+            "example": [
+              "competitors"
+            ]
+          },
+          "countriesReviewed": {
+            "type": "boolean",
+            "example": true
+          },
+          "selectedMarkets": {
+            "uniqueItems": true,
+            "minItems": 1,
+            "example": [
+              "us",
+              "de"
+            ],
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
       },
       "MarketSeedDto": {
         "type": "object",

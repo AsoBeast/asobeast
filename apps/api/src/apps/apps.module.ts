@@ -8,6 +8,8 @@ import { ScreenshotsModule } from '../screenshots/screenshots.module';
 import { StoreProvidersModule } from '../store-providers/store-providers.module';
 import { AppCaptureService } from './app-capture.service';
 import { AppGroupsService } from './app-groups.service';
+import { AppSetupController } from './app-setup.controller';
+import { AppSetupService } from './app-setup.service';
 import { AppsController } from './apps.controller';
 import { AppsService } from './apps.service';
 import { FirstRunScheduler } from './first-run.scheduler';
@@ -20,6 +22,8 @@ import { MarketSeedController } from './market-seed.controller';
 import { MarketSeedService } from './market-seed.service';
 import { MarketSuggestionsController } from './market-suggestions.controller';
 import { MarketSuggestionsService } from './market-suggestions.service';
+import { StoreSearchController } from './store-search.controller';
+import { StoreSearchService } from './store-search.service';
 import { SubtitleBackfill } from './subtitle-backfill.service';
 
 @Module({
@@ -38,14 +42,17 @@ import { SubtitleBackfill } from './subtitle-backfill.service';
   ],
   controllers: [
     AppsController,
+    AppSetupController,
     LocalizationDetectionController,
     MarketSeedController,
     MarketSuggestionsController,
+    StoreSearchController,
   ],
   providers: [
     AppsService,
     AppCaptureService,
     AppGroupsService,
+    AppSetupService,
     FirstRunScheduler,
     ListingCaptureService,
     ListingReadService,
@@ -53,6 +60,7 @@ import { SubtitleBackfill } from './subtitle-backfill.service';
     LocalizedListingCapture,
     MarketSeedService,
     MarketSuggestionsService,
+    StoreSearchService,
     SubtitleBackfill,
   ],
   exports: [

@@ -23,6 +23,7 @@ export const QUERY_BOUNDS = {
   reviewsLimit: { min: 1, max: 200, default: 50 },
   reviewScore: { min: 1, max: 5 },
   suggestionsLimit: { min: 1, max: 100, default: 30 },
+  storeSearchLimit: { min: 1, max: 25, default: 10 },
   recentChangesLimit: { min: 1, max: 50, default: 20 },
   serpMoverDays: { min: 1, max: 30, default: 7 },
   changeTimelineDays: { min: 1, max: 365, default: 90 },

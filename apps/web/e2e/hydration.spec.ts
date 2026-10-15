@@ -17,11 +17,7 @@ import {
 import { collectPageErrors, expectHydratesCleanly } from "./page-errors.mts";
 import { firstRunHeadline } from "../src/components/onboarding/first-run-timeline";
 import { formatNumber } from "../src/lib/format";
-import {
-  NOT_STARTED_ONBOARDING,
-  type OnboardingState,
-} from "../src/lib/onboarding";
-import { OWNER_ONBOARDING_KEY } from "./onboarding.mts";
+import { startedSetup } from "./setup-session.mts";
 
 const SLOW_API_MS = 300;
 const SLOW_FIRST_RUN_MS = 1000;
@@ -36,13 +32,6 @@ const HYDRATION_APPS = [
 ] as const;
 
 const MOCK_API_URL = `http://localhost:${process.env.MOCK_API_PORT ?? 4100}`;
-
-const IN_PROGRESS_ONBOARDING: OnboardingState = {
-  ...NOT_STARTED_ONBOARDING,
-  status: "in_progress",
-  appId: "app-1",
-  selectedMarkets: ["us"],
-};
 
 const DEEP_LINKS = [
   {
@@ -218,14 +207,11 @@ test("settings hydrates after the shell has already loaded the session", async (
   expect(errors, `the settings page threw: ${errors.join(", ")}`).toEqual([]);
 });
 
-test("a stored onboarding checklist hydrates without an uncaught error", async ({
+test("a setup in progress hydrates the banner without an uncaught error", async ({
   page,
   context,
 }) => {
-  await context.addInitScript(
-    ([key, state]) => window.localStorage.setItem(key, state),
-    [OWNER_ONBOARDING_KEY, JSON.stringify(IN_PROGRESS_ONBOARDING)] as const,
-  );
+  await startedSetup(context, "app-1");
   const errors = collectPageErrors(page);
 
   await page.goto("/");

@@ -1,6 +1,6 @@
 import type { TrackedKeywordItem } from "@asobeast/shared";
 import { pluralize } from "@/lib/format";
-import { activeKeywordCount } from "@/lib/onboarding";
+import { activeKeywordCount } from "./setup-progress";
 
 export const FIRST_POSITIONS_LIMIT = 8;
 

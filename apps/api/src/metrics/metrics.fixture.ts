@@ -29,6 +29,7 @@ export function workspaceMetricsOf(
       spider: 0,
       importApp: 0,
       addCompetitor: 0,
+      storeLookup: 0,
       chartCapture: 0,
     },
     aiCallsMonth: 12,

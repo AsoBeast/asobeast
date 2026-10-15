@@ -266,6 +266,9 @@ async function seedWorkspace(
       origin: 'manual',
     },
   });
+  await db.appSetup.create({
+    data: { appId: apple.id, workspaceId: id, status: 'in_progress' },
+  });
 
   const keyword = await db.keyword.upsert({
     where: {

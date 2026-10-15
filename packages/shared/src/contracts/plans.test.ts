@@ -165,6 +165,22 @@ describe('plan limits', () => {
     });
   });
 
+  it('counts store lookups per hour, more on the larger plan', () => {
+    expect(PLAN_LIMITS.free.onDemand?.storeLookup).toEqual({
+      limit: 0,
+      windowSeconds: 3_600,
+    });
+    expect(PLAN_LIMITS.indie.onDemand?.storeLookup).toEqual({
+      limit: 60,
+      windowSeconds: 3_600,
+    });
+    expect(PLAN_LIMITS.trial.onDemand?.storeLookup.limit).toBe(60);
+    expect(PLAN_LIMITS.ultimate.onDemand?.storeLookup).toEqual({
+      limit: 300,
+      windowSeconds: 3_600,
+    });
+  });
+
   it('leaves a free workspace no capacity to spend', () => {
     expect(PLAN_LIMITS.free.apps).toBe(0);
     expect(PLAN_LIMITS.free.keywordMarkets).toBe(0);

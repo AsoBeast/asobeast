@@ -5,6 +5,8 @@ export const ADMIN_LIST_LIMIT = 1000;
 
 export const ADMIN_SIGNUP_DAYS = 30;
 
+export const ACTIVATION_WINDOW_DAYS = 30;
+
 export interface AdminCount<K extends string> {
   key: K;
   count: number;
@@ -14,6 +16,12 @@ export interface AdminSignupDay {
   date: string;
   users: number;
   workspaces: number;
+}
+
+export interface AdminActivation {
+  importedLast30Days: number;
+  rankedWithinADay: number;
+  completedSetup: number;
 }
 
 export interface AdminOverview {
@@ -43,6 +51,7 @@ export interface AdminOverview {
   };
   aiCallsThisMonth: number;
   signups: AdminSignupDay[];
+  activation?: AdminActivation;
 }
 
 export interface AdminUser {

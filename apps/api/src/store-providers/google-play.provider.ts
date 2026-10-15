@@ -17,6 +17,7 @@ import {
   GooglePlayCountryAvailability,
   GooglePlayLib,
   GooglePlayReviewsPage,
+  GooglePlaySearchResult,
 } from './google-play.lib';
 import {
   ChartItem,
@@ -243,16 +244,12 @@ export class GooglePlayProvider implements StoreProvider {
     return results.map((item) => this.toSearchItem(item));
   }
 
-  private toSearchItem(item: {
-    appId: string;
-    title: string;
-    developer: string;
-    score?: number;
-  }): SearchItem {
+  private toSearchItem(item: GooglePlaySearchResult): SearchItem {
     return {
       storeAppId: item.appId,
       title: item.title,
       developer: item.developer,
+      ...(item.icon ? { iconUrl: item.icon } : {}),
       ratingAvg: item.score,
     };
   }
