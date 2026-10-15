@@ -1,6 +1,6 @@
 "use client";
 
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import { rangeLabel, type DayPreset } from "@/lib/ranges";
 
 export function PrintRangeLabel({ preset }: { preset: DayPreset }) {
@@ -24,11 +24,11 @@ export function RangePicker<T extends DayPreset>({
 }) {
   return (
     <Tabs value={value} onValueChange={(next) => onChange(next as T)}>
-      <TabsList aria-label={label} className="print:hidden">
+      <TabsList aria-label={label ?? "Date range"} className="print:hidden">
         {presets.map((preset) => (
-          <TabsTrigger key={preset} value={preset}>
+          <TabsOption key={preset} value={preset}>
             {preset}
-          </TabsTrigger>
+          </TabsOption>
         ))}
       </TabsList>
       <PrintRangeLabel preset={value} />

@@ -25,9 +25,12 @@ function onDemandMessage(
   return `${ON_DEMAND_LABELS[action]} limit reached: the ${detail.plan} plan allows ${detail.limit} requests ${WINDOW_NAMES[detail.window]}. Try again in ${describeWait(detail.resetSeconds)}.`;
 }
 
-export function rateLimitMessage(detail: RateLimitDetail): string {
+export function rateLimitMessage(
+  detail: RateLimitDetail,
+  requests = `${detail.rateClass} requests`,
+): string {
   if (detail.action) return onDemandMessage(detail.action, detail);
-  const allowance = `the ${detail.plan} plan allows ${detail.limit} ${detail.rateClass} requests ${WINDOW_NAMES[detail.window]}`;
+  const allowance = `the ${detail.plan} plan allows ${detail.limit} ${requests} ${WINDOW_NAMES[detail.window]}`;
   const reopens =
     detail.window === 'concurrent'
       ? 'Send fewer requests at once'
@@ -35,11 +38,13 @@ export function rateLimitMessage(detail: RateLimitDetail): string {
   return `Rate limit reached: ${allowance}. ${reopens}.`;
 }
 
+export const MCP_REQUESTS = 'MCP requests';
+
 export function oversizedBatchMessage(
   detail: RateLimitDetail,
   messages: number,
 ): string {
-  return `MCP batch too large: it carries ${messages} messages and the ${detail.plan} plan allows ${detail.limit} MCP requests ${WINDOW_NAMES[detail.window]}, so it can never be served. Split it into requests of at most ${detail.limit} messages.`;
+  return `MCP batch too large: it carries ${messages} messages and the ${detail.plan} plan allows ${detail.limit} ${MCP_REQUESTS} ${WINDOW_NAMES[detail.window]}, so it can never be served. Split it into requests of at most ${detail.limit} messages.`;
 }
 
 export class CredentialRateLimitError extends Error {

@@ -194,7 +194,11 @@ export function TeamCard() {
               <TableHead>Email</TableHead>
               <TableHead>Role</TableHead>
               <TableHead className="hidden sm:table-cell">Joined</TableHead>
-              {isOwner ? <TableHead className="w-10" /> : null}
+              {isOwner ? (
+                <TableHead className="w-10">
+                  <span className="sr-only">Actions</span>
+                </TableHead>
+              ) : null}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -234,7 +238,11 @@ export function TeamCard() {
               <TableRow>
                 <TableHead>Email</TableHead>
                 <TableHead>Expires</TableHead>
-                {isOwner ? <TableHead className="w-10" /> : null}
+                {isOwner ? (
+                  <TableHead className="w-10">
+                    <span className="sr-only">Actions</span>
+                  </TableHead>
+                ) : null}
               </TableRow>
             </TableHeader>
             <TableBody>

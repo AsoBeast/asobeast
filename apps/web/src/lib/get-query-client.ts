@@ -30,6 +30,9 @@ function makeQueryClient(): QueryClient {
         retry: isServer ? 0 : shouldRetry,
         retryDelay: retryDelayFor,
       },
+      mutations: {
+        networkMode: "always",
+      },
       dehydrate: {
         shouldDehydrateQuery: (query) =>
           defaultShouldDehydrateQuery(query) ||

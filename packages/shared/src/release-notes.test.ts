@@ -82,6 +82,20 @@ describe('releaseNotesText', () => {
     const notes = 'Bug fixes\n- Faster sync\n- New widgets';
     expect(releaseNotesText(notes)).toBe(notes);
   });
+
+  it.each([
+    ['<a', 50_000],
+    ['<br', 33_333],
+  ])(
+    'strips 100 KB of unclosed %s openings in linear time',
+    (opening, count) => {
+      const started = performance.now();
+      const text = releaseNotesText(opening.repeat(count));
+
+      expect(performance.now() - started).toBeLessThan(250);
+      expect(text).toBe(opening.repeat(count - 1));
+    },
+  );
 });
 
 describe('releaseNotesLines', () => {

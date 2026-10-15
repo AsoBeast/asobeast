@@ -43,6 +43,7 @@ import { ActionActivityQueryDto } from './dto/action-activity-query.dto';
 import { BulkUpdateActionsDto } from './dto/bulk-update-actions.dto';
 import { ListActionsQueryDto } from './dto/list-actions-query.dto';
 import { UpdateActionDto } from './dto/update-action.dto';
+import { QueuesWork } from '../redis/queues-work.decorator';
 
 @ApiTags('actions')
 @Controller('actions')
@@ -136,6 +137,7 @@ export class ActionsController {
   }
 
   @Post('run')
+  @QueuesWork()
   @HttpCode(202)
   @ApiAcceptedResponse({ description: 'Generation was queued' })
   @ApiOperation({ summary: 'Queue an action generation run' })

@@ -138,6 +138,16 @@ describe('selectCaption', () => {
       selectCaption([line('  | Plan your week ,', 100, 200)], IMAGE_HEIGHT),
     ).toBe('Plan your week');
   });
+
+  it('cleans a long run of punctuation inside a line in linear time', () => {
+    const text = `${'a'.repeat(40_000)}${'-'.repeat(20_000)}b`;
+
+    const started = performance.now();
+    const caption = selectCaption([line(text, 100, 200)], IMAGE_HEIGHT);
+
+    expect(performance.now() - started).toBeLessThan(250);
+    expect(caption).toBe('a'.repeat(MAX_CAPTION_CHARS));
+  });
 });
 
 describe('selectCaption on the issue screenshots', () => {

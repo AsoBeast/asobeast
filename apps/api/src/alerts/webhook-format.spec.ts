@@ -376,6 +376,21 @@ describe('formatWebhookBody', () => {
     apps: [],
   };
 
+  it('prints the report window as dates in discord and slack', () => {
+    const discord = JSON.parse(
+      formatWebhookBody('https://discord.com/api/webhooks/123/abc', batch),
+    ) as { embeds: { description: string }[] };
+    const slack = JSON.parse(
+      formatWebhookBody('https://hooks.slack.com/services/T/B/x', batch),
+    ) as { blocks: Array<{ elements?: { text: string }[] }> };
+    const context = slack.blocks.find((block) => block.elements)?.elements;
+
+    expect(discord.embeds[0].description).toBe(
+      'Window \\(UTC\\): 2026\\-07\\-22',
+    );
+    expect(context?.[0].text).toBe('Window (UTC): 2026-07-22');
+  });
+
   it('renders a discord embed with per-app detail fields', () => {
     const body = formatWebhookBody(
       'https://discord.com/api/webhooks/123/abc',
@@ -393,7 +408,7 @@ describe('formatWebhookBody', () => {
 
     expect(parsed.allowed_mentions).toEqual({ parse: [] });
     expect(embed.title).toBe('📊 Daily app update · 3 changes across 2 apps');
-    expect(embed.description).toContain('2026\\-07\\-22T09:00:00\\.000Z');
+    expect(embed.description).toContain('2026\\-07\\-22');
     expect(embed.fields).toHaveLength(2);
     expect(embed.fields[0].name).toBe('Alpha · App Store · US');
     expect(embed.fields[0].value).toContain('habit tracker  3 → \\>200 ▼');

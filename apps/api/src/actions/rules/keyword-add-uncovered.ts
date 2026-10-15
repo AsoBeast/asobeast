@@ -78,6 +78,7 @@ function detectForApp(app: ActionContextApp): DetectedAction[] {
       volume: keyword.volume,
       relevance: keyword.relevance,
       latestPosition: keyword.latestPosition,
+      latestDepth: keyword.latestDepth,
       indexedFields: indexed,
       uncoveredFields: row.fields
         .filter((field) => !field.covered)

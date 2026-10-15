@@ -1,4 +1,4 @@
-import { Logger } from '@nestjs/common';
+import { Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { User, Workspace } from '@prisma/client';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
@@ -38,14 +38,14 @@ describe('EmailVerificationService confirming an address', () => {
     Promise<{ count: number }>,
     [{ where: Record<string, unknown>; data: Record<string, unknown> }]
   >();
-  const userUpdate = jest.fn();
+  const userUpdateMany = jest.fn<Promise<{ count: number }>, [unknown]>();
   const claim = jest.fn<Promise<boolean>, [unknown, string]>();
   const release = jest.fn<Promise<void>, [unknown, string]>();
   const isClaimed = jest.fn<Promise<boolean>, [unknown, string]>();
   const warn = jest.spyOn(Logger.prototype, 'warn');
 
   const prisma = {
-    user: { findUnique, update: userUpdate },
+    user: { findUnique, updateMany: userUpdateMany },
     workspace: { findUniqueOrThrow, updateMany },
     withTransaction: (run: (tx: unknown) => Promise<unknown>) =>
       run({ workspace: { updateMany } }),
@@ -73,13 +73,31 @@ describe('EmailVerificationService confirming an address', () => {
 
   beforeEach(() => {
     findUnique.mockReset().mockResolvedValue({ ...userOf(), workspace: {} });
-    userUpdate.mockReset().mockResolvedValue(undefined);
+    userUpdateMany.mockReset().mockResolvedValue({ count: 1 });
     findUniqueOrThrow.mockReset().mockResolvedValue(workspaceOf());
     updateMany.mockReset().mockResolvedValue({ count: 1 });
     claim.mockReset().mockResolvedValue(true);
     release.mockReset().mockResolvedValue(undefined);
     isClaimed.mockReset().mockResolvedValue(false);
     warn.mockReset().mockImplementation(() => undefined);
+  });
+
+  it('spends the link only while it still holds the hash it was read with', async () => {
+    await confirm();
+
+    expect(userUpdateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'usr_1', verificationHash: sha256(TOKEN) },
+      }),
+    );
+  });
+
+  it('refuses a link another redemption spent first and starts no trial', async () => {
+    userUpdateMany.mockResolvedValue({ count: 0 });
+
+    await expect(confirm()).rejects.toBeInstanceOf(NotFoundException);
+    expect(claim).not.toHaveBeenCalled();
+    expect(warn).not.toHaveBeenCalled();
   });
 
   it('looks the link up by its hash', async () => {

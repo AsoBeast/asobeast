@@ -9,6 +9,7 @@ import { API_TOKEN_PREFIX, ApiErrorEnvelope } from '@asobeast/shared';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
+import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import { restoreAuthEnv } from './helpers/auth-env';
 import { startRedisOutage, type RedisOutage } from './helpers/redis-outage';
 import { OWNER, ownerAgent } from './helpers/session';
@@ -20,6 +21,11 @@ const REJECTED_TOKEN = `${API_TOKEN_PREFIX}${'3'.repeat(48)}`;
 const RECOVERY_DEADLINE_MS = 15_000;
 const RECONNECT_CYCLES_MS = 2_500;
 const OUTAGE_WARNING = 'redis is unreachable';
+const NO_STORE = {
+  get: () => {
+    throw new Error('no store request may leave while redis is down');
+  },
+};
 
 function within(test: request.Test): request.Test {
   return test.timeout({
@@ -28,11 +34,20 @@ function within(test: request.Test): request.Test {
   });
 }
 
+async function refusedWithWait(test: request.Test): Promise<void> {
+  const response = await within(test).expect(503);
+  const body = response.body as ApiErrorEnvelope;
+  expect(body.retryAfterSeconds).toBeGreaterThan(0);
+  expect(response.headers['retry-after']).toBe(String(body.retryAfterSeconds));
+}
+
 describe('Redis outage (e2e)', () => {
   let app: INestApplication<App>;
   let prisma: PrismaClient;
   let outage: RedisOutage;
   let agent: ReturnType<typeof request.agent>;
+  let appId: string;
+  let pausedKeywordId: string;
   const upstreamPort = Number(process.env.REDIS_PORT);
 
   beforeAll(async () => {
@@ -47,7 +62,10 @@ describe('Redis outage (e2e)', () => {
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(StoreProviderRegistry)
+      .useValue(NO_STORE)
+      .compile();
     app = moduleFixture.createNestApplication<App>();
     app.use(cookieParser());
     await app.init();
@@ -60,15 +78,39 @@ describe('Redis outage (e2e)', () => {
       create: { id: DEFAULT_WORKSPACE_ID, name: 'Default' },
     });
     await prisma.$executeRawUnsafe(
-      'TRUNCATE TABLE "App", "User" RESTART IDENTITY CASCADE',
+      'TRUNCATE TABLE "App", "Keyword", "User" RESTART IDENTITY CASCADE',
     );
     agent = await ownerAgent(app);
+    appId = (
+      await prisma.app.create({
+        data: {
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          store: 'APP_STORE',
+          storeAppId: '904237743',
+          country: 'us',
+          name: 'Queued While Down',
+        },
+      })
+    ).id;
+    pausedKeywordId = (
+      await prisma.keyword.create({
+        data: { text: 'notizen', store: 'APP_STORE', country: 'de' },
+      })
+    ).id;
+    await prisma.trackedKeyword.create({
+      data: {
+        appId,
+        keywordId: pausedKeywordId,
+        source: 'MANUAL',
+        active: false,
+      },
+    });
   });
 
   afterAll(async () => {
     await outage.restore().catch(() => undefined);
     await prisma.$executeRawUnsafe(
-      'TRUNCATE TABLE "User" RESTART IDENTITY CASCADE',
+      'TRUNCATE TABLE "App", "Keyword", "User" RESTART IDENTITY CASCADE',
     );
     await obliterateQueues(app);
     await app.close();
@@ -116,6 +158,50 @@ describe('Redis outage (e2e)', () => {
       expect(body.retryAfterSeconds).toBeGreaterThan(0);
       expect(response.headers['retry-after']).toBe(
         String(body.retryAfterSeconds),
+      );
+    });
+
+    it.each([
+      ['an added keyword', 'post', 'keywords', { keywords: ['notes'] }],
+      ['a deep search', 'post', 'keywords/spider', { term: 'notes' }],
+      ['a run daily', 'post', 'run-daily', {}],
+      ['a refresh', 'post', 'refresh', {}],
+      [
+        'a keyword import',
+        'post',
+        'keywords/import',
+        { rows: [{ keyword: 'notes' }] },
+      ],
+      ['a keyword field', 'put', 'keyword-field', { text: 'notes' }],
+      [
+        'an added competitor',
+        'post',
+        'competitors',
+        { url: 'https://apps.apple.com/us/app/x/id1' },
+      ],
+      ['a market seed', 'post', 'market-seed', { country: 'de' }],
+    ] as const)(
+      'refuses %s with 503 and a wait instead of waiting on the queue',
+      async (_label, method, path, body) => {
+        await refusedWithWait(
+          agent[method](`/apps/${appId}/${path}`).send(body),
+        );
+      },
+    );
+
+    it('refuses to resume a keyword of another market with 503 instead of waiting on the queue', async () => {
+      await refusedWithWait(
+        agent
+          .patch(`/apps/${appId}/keywords/${pausedKeywordId}`)
+          .send({ active: true }),
+      );
+    });
+
+    it('refuses an app import with 503 instead of waiting on the queue', async () => {
+      await refusedWithWait(
+        agent
+          .post('/apps')
+          .send({ url: 'https://apps.apple.com/us/app/things-3/id904237744' }),
       );
     });
 

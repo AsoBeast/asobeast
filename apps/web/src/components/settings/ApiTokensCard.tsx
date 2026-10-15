@@ -363,7 +363,9 @@ export function ApiTokensCard() {
                   <TableHead>Last used</TableHead>
                   <TableHead className="numeric text-right">Requests</TableHead>
                   <TableHead>Created</TableHead>
-                  <TableHead className="w-0" />
+                  <TableHead className="w-0">
+                    <span className="sr-only">Actions</span>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

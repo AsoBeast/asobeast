@@ -117,7 +117,7 @@ export class KeywordSuggestionService {
       );
     }
     if (strategy === 'reviews') {
-      return this.suggestFromReviews(appId, tracked, limit);
+      return this.suggestFromReviews(appId, tracked, limit, languages.home);
     }
     return this.suggestFromMetadata(appId, tracked, limit, languages.home);
   }
@@ -126,6 +126,7 @@ export class KeywordSuggestionService {
     appId: string,
     excluded: Set<string>,
     limit: number,
+    languages: readonly string[],
   ): Promise<KeywordSuggestion[]> {
     const reviews = await this.prisma.review.findMany({
       where: { appId },
@@ -133,7 +134,7 @@ export class KeywordSuggestionService {
       take: REVIEW_MINING_CAP,
       select: { title: true, text: true },
     });
-    return mineReviewPhrases(reviews, excluded).slice(0, limit);
+    return mineReviewPhrases(reviews, excluded, languages).slice(0, limit);
   }
 
   private async suggestFromCompetitors(

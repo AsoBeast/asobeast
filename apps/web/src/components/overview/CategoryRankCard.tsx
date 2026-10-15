@@ -217,7 +217,7 @@ export function CategoryRankCard({ id }: { id: string }) {
   return (
     <Card>
       <CardHeader>
-        <CardDescription>Category ranks</CardDescription>
+        <CardDescription>Category ranks · Home market</CardDescription>
         <CardTitle>Top charts position</CardTitle>
         <CardAction>
           <RangePicker

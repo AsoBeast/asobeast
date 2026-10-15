@@ -30,6 +30,7 @@ import { MarketQueryDto } from './dto/market-query.dto';
 import { LocalizationPipe } from './localization.pipe';
 import { LocalizedKeywordFieldService } from './localized-keyword-field.service';
 import { MarketKeywordFieldsService } from './market-keyword-fields.service';
+import { QueuesWork } from '../redis/queues-work.decorator';
 
 @ApiTags('keywords')
 @Controller('apps/:id')
@@ -91,6 +92,7 @@ export class LocalizationsController {
   }
 
   @Put('keyword-fields/:localization')
+  @QueuesWork()
   @ApiOperation({
     summary: 'Save the keyword field of one localization',
     description:

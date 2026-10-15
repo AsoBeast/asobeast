@@ -19,7 +19,7 @@ import type {
   ReviewsReplyNegativeEvidence,
   SerpHoldVolatileEvidence,
 } from "@asobeast/shared";
-import { formatRankPosition } from "@asobeast/shared";
+import { formatCheckedPosition, formatRankPosition } from "@asobeast/shared";
 import { formatDate, formatMeasure, formatNumber } from "@/lib/format";
 import type { GradeMetric } from "@/lib/grade";
 import { METADATA_FIELD_LABELS } from "@/lib/metadata-display";
@@ -93,6 +93,14 @@ const overtakenItem = (keyword: ActionOvertakenKeyword): EvidenceListItem => ({
 
 type Sections = Pick<EvidenceSections, "facts" | "lists">;
 
+const latestPositionText = (
+  position: number | null,
+  depth: number | null | undefined,
+): string =>
+  depth === undefined
+    ? formatRankPosition(position)
+    : (formatCheckedPosition(position, depth) ?? "Not checked yet");
+
 function uncoveredSections(evidence: KeywordAddUncoveredEvidence): Sections {
   return {
     facts: [
@@ -104,7 +112,7 @@ function uncoveredSections(evidence: KeywordAddUncoveredEvidence): Sections {
         "Latest position",
         evidence.latestPosition,
         "position",
-        formatRankPosition,
+        (position) => latestPositionText(position, evidence.latestDepth),
       ),
       fact("Keyword field free", optional(evidence.keywordFieldCharsFree)),
       fact(

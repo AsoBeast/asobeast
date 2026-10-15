@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
@@ -142,9 +142,9 @@ export function PrimitiveGallery() {
       <Row title="tabs">
         <Tabs defaultValue="a">
           <TabsList>
-            <TabsTrigger value="a">7d</TabsTrigger>
-            <TabsTrigger value="b">30d</TabsTrigger>
-            <TabsTrigger value="c">90d</TabsTrigger>
+            <TabsOption value="a">7d</TabsOption>
+            <TabsOption value="b">30d</TabsOption>
+            <TabsOption value="c">90d</TabsOption>
           </TabsList>
         </Tabs>
       </Row>

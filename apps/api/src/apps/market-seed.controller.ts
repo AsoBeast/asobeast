@@ -13,6 +13,7 @@ import { OnDemandLimiter } from '../auth/on-demand.limiter';
 import { StoreDeadlineInterceptor } from '../store-providers/store-deadline.interceptor';
 import { MarketSeedDto } from './dto/market-seed.dto';
 import { MarketSeedService } from './market-seed.service';
+import { QueuesWork } from '../redis/queues-work.decorator';
 
 @ApiTags('apps')
 @Controller('apps/:id')
@@ -23,6 +24,7 @@ export class MarketSeedController {
   ) {}
 
   @Post('market-seed')
+  @QueuesWork()
   @HttpCode(200)
   @SpendsStoreCapacity()
   @UseInterceptors(StoreDeadlineInterceptor)

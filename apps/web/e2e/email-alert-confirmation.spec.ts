@@ -223,3 +223,20 @@ test("an unsubscribed recipient offers no resend that would be refused", async (
   ).toHaveCount(0);
   await expect(row.getByRole("button", { name: "Send test" })).toHaveCount(0);
 });
+
+test("keeps the whole recipient readable in its row on a phone", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  const address = `phone-${randomUUID().slice(0, 8)}@example.com`;
+  const row = await addRecipient(page, address);
+  await expect(row.getByText(AWAITING)).toBeVisible();
+
+  const label = row.getByText(address, { exact: true });
+  await expect(label).toBeVisible();
+  const clipped = await label.evaluate(
+    (element) => element.scrollWidth > element.clientWidth,
+  );
+  expect(clipped).toBe(false);
+  expect((await label.boundingBox())?.width ?? 0).toBeGreaterThan(200);
+});

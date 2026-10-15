@@ -3,6 +3,11 @@ import { csvFilename, downloadCsv, toCsv } from "@/lib/csv";
 
 type SerpRole = "you" | "competitor" | "other";
 
+export interface SerpViewer {
+  appId: string;
+  storeAppId: string | undefined;
+}
+
 const SERP_CSV_HEADERS = [
   "keyword",
   "capturedOn",
@@ -15,12 +20,14 @@ const SERP_CSV_HEADERS = [
   "storeAppId",
 ];
 
-function roleOf(entry: SerpEntryItem, appId: string): SerpRole {
-  if (entry.appId === appId) return "you";
+export function serpRole(entry: SerpEntryItem, viewer: SerpViewer): SerpRole {
+  if (entry.appId === viewer.appId || entry.storeAppId === viewer.storeAppId) {
+    return "you";
+  }
   return entry.isCompetitor ? "competitor" : "other";
 }
 
-export function serpCsv(appId: string, snapshot: SerpSnapshot): string {
+export function serpCsv(viewer: SerpViewer, snapshot: SerpSnapshot): string {
   return toCsv(
     SERP_CSV_HEADERS,
     snapshot.entries.map((entry) => [
@@ -31,7 +38,7 @@ export function serpCsv(appId: string, snapshot: SerpSnapshot): string {
       entry.developer,
       entry.ratingAvg,
       entry.ratingCount,
-      roleOf(entry, appId),
+      serpRole(entry, viewer),
       entry.storeAppId,
     ]),
   );
@@ -46,6 +53,6 @@ export function serpFilename(appId: string, snapshot: SerpSnapshot): string {
   );
 }
 
-export function exportSerp(appId: string, snapshot: SerpSnapshot): void {
-  downloadCsv(serpFilename(appId, snapshot), serpCsv(appId, snapshot));
+export function exportSerp(viewer: SerpViewer, snapshot: SerpSnapshot): void {
+  downloadCsv(serpFilename(viewer.appId, snapshot), serpCsv(viewer, snapshot));
 }

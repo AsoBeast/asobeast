@@ -3,7 +3,7 @@
 import { Suspense } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import type { ActionStatus } from "@asobeast/shared";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import { formatNumber, pluralize } from "@/lib/format";
 import { actionSummaryFor } from "@/lib/queries";
 import { presetCount, presetOf, STATUS_PRESETS } from "./status-presets";
@@ -35,7 +35,7 @@ function Tabbed({
         {STATUS_PRESETS.map((preset) => {
           const count = byStatus ? presetCount(preset, byStatus) : null;
           return (
-            <TabsTrigger
+            <TabsOption
               key={preset.key}
               value={preset.key}
               aria-controls="queue"
@@ -52,7 +52,7 @@ function Tabbed({
                   {formatNumber(count)}
                 </span>
               )}
-            </TabsTrigger>
+            </TabsOption>
           );
         })}
       </TabsList>
