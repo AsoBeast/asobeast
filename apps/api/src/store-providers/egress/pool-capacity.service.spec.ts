@@ -59,6 +59,16 @@ describe('PoolCapacity', () => {
     );
   });
 
+  it('counts the healthy endpoints the workers can run at once', async () => {
+    await expect(capacityWith().usable(Store.APP_STORE)).resolves.toBe(4);
+
+    count.mockResolvedValue(100);
+    await expect(capacityWith().usable(Store.APP_STORE)).resolves.toBe(8);
+
+    count.mockResolvedValue(0);
+    await expect(capacityWith().usable(Store.APP_STORE)).resolves.toBe(0);
+  });
+
   it('excludes endpoints cooling down for that store only', async () => {
     const now = new Date('2026-08-08T10:00:00Z');
 
