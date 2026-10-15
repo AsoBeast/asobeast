@@ -1051,12 +1051,11 @@ export function invalidateReviewReplyMutation(
   client: QueryClient,
   id: string,
 ): void {
-  for (const queryKey of [
-    appKeys.reviewsRoot(id),
-    appKeys.reviewThemesRoot(id),
-  ]) {
-    void client.invalidateQueries({ queryKey, refetchType: "none" });
-  }
+  void client.invalidateQueries({
+    queryKey: appKeys.reviewsRoot(id),
+    refetchType: "none",
+  });
+  void client.invalidateQueries({ queryKey: appKeys.reviewThemesRoot(id) });
 }
 
 export function invalidateCompetitorMutation(
