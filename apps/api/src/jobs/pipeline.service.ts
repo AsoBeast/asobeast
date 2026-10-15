@@ -8,6 +8,7 @@ import {
 } from '@asobeast/shared';
 import { FlowJobNode, FlowProducer, JobsOptions, Queue } from 'bullmq';
 import { CategoryRanksService } from '../category-ranks/category-ranks.service';
+import { ChartFollowsService } from '../charts/chart-follows.service';
 import {
   WorkspaceContext,
   WorkspaceScope,
@@ -77,6 +78,7 @@ export class PipelineService {
     private readonly flowProducer: FlowProducer,
     private readonly prisma: PrismaService,
     private readonly categoryRanks: CategoryRanksService,
+    private readonly chartFollows: ChartFollowsService,
     private readonly targets: DailyTargetsCollector,
     private readonly workspace: WorkspaceContext,
     private readonly fanOut: WorkspaceFanOut,
@@ -133,9 +135,10 @@ export class PipelineService {
     const targets = await this.targets.collect((keywords) =>
       this.withinKeywordLimit(keywords),
     );
-    const buckets = dedupeBuckets(
-      await this.categoryRanks.buckets(targets.apps.map((app) => app.id)),
-    );
+    const buckets = dedupeBuckets([
+      ...(await this.categoryRanks.buckets(targets.apps.map((app) => app.id))),
+      ...(await this.chartFollows.buckets()),
+    ]);
     const childOptions = (jobId: string) => ({
       ...JOB_OPTIONS,
       jobId,

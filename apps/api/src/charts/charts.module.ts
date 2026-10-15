@@ -9,6 +9,6 @@ import { ChartsController } from './charts.controller';
   imports: [StoreProvidersModule],
   controllers: [ChartsController],
   providers: [ChartCaptureService, ChartFollowsService, ChartReadService],
-  exports: [ChartCaptureService],
+  exports: [ChartCaptureService, ChartFollowsService],
 })
 export class ChartsModule {}

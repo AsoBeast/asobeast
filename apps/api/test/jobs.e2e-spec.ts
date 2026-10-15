@@ -163,6 +163,41 @@ describe('Pipeline store routing (e2e)', () => {
     ]);
   });
 
+  it('counts a followed chart as one more category job unless an app already sits in it', async () => {
+    await prisma.chartFollow.deleteMany({});
+    const appId = await seedApp(Store.APP_STORE, 'apple-followed');
+    await prisma.appSnapshot.create({
+      data: {
+        appId,
+        title: 'Charts',
+        description: 'Fixture description',
+        raw: (await scrapedAppStoreRaw()) as Prisma.InputJsonObject,
+      },
+    });
+    const follow = (genre: string) =>
+      prisma.chartFollow.create({
+        data: {
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          store: Store.APP_STORE,
+          country: 'us',
+          collection: 'free',
+          genre,
+          device: 'iphone',
+        },
+      });
+    const categories = async () =>
+      (await asWorkspace(app, () => budget.estimate())).categories;
+
+    const before = await categories();
+    await follow('6014');
+    const followed = await categories();
+    await follow('6027');
+    const alreadyCharted = await categories();
+    await prisma.chartFollow.deleteMany({});
+
+    expect([followed - before, alreadyCharted - followed]).toEqual([1, 0]);
+  });
+
   it('reports a per-store budget that sums to the top-level totals', async () => {
     await seedApp(Store.APP_STORE, 'apple-1');
 

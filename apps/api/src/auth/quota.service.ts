@@ -82,6 +82,18 @@ export class QuotaService {
       });
   }
 
+  admitChartFollow<T>(write: (tx: Tx) => Promise<T>): Promise<T> {
+    return this.prisma.withTransaction((tx) =>
+      this.admit({
+        tx,
+        resource: 'chartFollows',
+        scope: '',
+        write: () => write(tx),
+        count: () => tx.chartFollow.count(),
+      }),
+    );
+  }
+
   admitKeywordMarkets<T>(write: (tx: Tx) => Promise<T>): Promise<T> {
     return this.prisma.withTransaction((tx) =>
       this.admit({

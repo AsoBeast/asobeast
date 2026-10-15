@@ -14,6 +14,7 @@ import { AppsModule } from '../apps/apps.module';
 import { AuditModule } from '../audit/audit.module';
 import { ADMIN_QUEUES_ROUTE, requireAdminAccess } from '../auth/admin-access';
 import { CategoryRanksModule } from '../category-ranks/category-ranks.module';
+import { ChartsModule } from '../charts/charts.module';
 import { Env } from '../config/env';
 import { redisConnection } from '../redis/redis-connection';
 import { KeywordsModule } from '../keywords/keywords.module';
@@ -97,6 +98,7 @@ const bullBoardModules: DynamicModule[] =
     AppsModule,
     RankingsModule,
     CategoryRanksModule,
+    ChartsModule,
     KeywordsModule,
     ScoringModule,
     AlertsModule,

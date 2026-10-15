@@ -45,6 +45,11 @@ export function assertChartKey(key: ChartKey): void {
   }
 }
 
+export function chartKeyFrom(query: ChartKey): ChartKey {
+  const { store, country, collection, genre, device } = query;
+  return { store, country, collection, genre, device };
+}
+
 export function chartKeyOf(bucket: CategoryBucket): ChartKey {
   return { ...bucket, device: defaultChartDevice(bucket.store) };
 }

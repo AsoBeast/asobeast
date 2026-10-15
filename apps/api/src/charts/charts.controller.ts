@@ -1,19 +1,26 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
+  HttpStatus,
+  Param,
   Post,
   Query,
+  Res,
   UseInterceptors,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import { ChartGenre, ChartPage } from '@asobeast/shared';
+import { ChartFollowItem, ChartGenre, ChartPage } from '@asobeast/shared';
 import { SpendsStoreCapacity } from '../auth/decorators/spends-store-capacity.decorator';
 import { OnDemandLimiter } from '../auth/on-demand.limiter';
 import { StoreDeadlineInterceptor } from '../store-providers/store-deadline.interceptor';
+import { ChartFollowsService } from './chart-follows.service';
 import { ChartReadService } from './chart-read.service';
 import { ChartCaptureDto } from './dto/chart-capture.dto';
+import { ChartFollowDto } from './dto/chart-follow.dto';
 import { ChartGenresQueryDto } from './dto/chart-genres-query.dto';
 import { ChartPageQueryDto } from './dto/chart-page-query.dto';
 
@@ -22,6 +29,7 @@ import { ChartPageQueryDto } from './dto/chart-page-query.dto';
 export class ChartsController {
   constructor(
     private readonly charts: ChartReadService,
+    private readonly follows: ChartFollowsService,
     private readonly limiter: OnDemandLimiter,
   ) {}
 
@@ -54,5 +62,33 @@ export class ChartsController {
     return this.charts.captureToday(dto, () =>
       this.limiter.consume('chartCapture'),
     );
+  }
+
+  @Get('follows')
+  @ApiOperation({ summary: 'List the top charts this workspace follows' })
+  listFollows(): Promise<ChartFollowItem[]> {
+    return this.follows.list();
+  }
+
+  @Post('follows')
+  @ApiOperation({
+    summary: 'Follow a top chart',
+    description:
+      'Asks the daily run to capture this chart every day. Answers 201 for a new follow and 200 with the existing one when the workspace already follows the chart. Writes nothing to the store; capture today separately.',
+  })
+  async follow(
+    @Body() dto: ChartFollowDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<ChartFollowItem> {
+    const { item, created } = await this.follows.follow(dto);
+    res.status(created ? HttpStatus.CREATED : HttpStatus.OK);
+    return item;
+  }
+
+  @Delete('follows/:id')
+  @HttpCode(204)
+  @ApiOperation({ summary: 'Stop following a top chart' })
+  forget(@Param('id') id: string): Promise<void> {
+    return this.follows.forget(id);
   }
 }

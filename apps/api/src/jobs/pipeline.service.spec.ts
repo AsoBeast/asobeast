@@ -4,6 +4,7 @@ import {
   CategoryBucket,
   CategoryRanksService,
 } from '../category-ranks/category-ranks.service';
+import { ChartFollowsService } from '../charts/chart-follows.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { WorkspaceFanOut } from '../common/tenancy/workspace-fanout';
 import { DEFAULT_WORKSPACE_ID } from '../common/tenancy/default-workspace';
@@ -96,6 +97,9 @@ describe('PipelineService', () => {
   const buildCategoryRanks = (buckets: CategoryBucket[] = []) => ({
     buckets: jest.fn().mockResolvedValue(buckets),
   });
+  const buildChartFollows = (buckets: CategoryBucket[] = []) => ({
+    buckets: jest.fn().mockResolvedValue(buckets),
+  });
   const emptyPrisma = () => ({
     app: { findMany: jest.fn().mockResolvedValue([]) },
     $queryRaw: jest.fn().mockResolvedValue([]),
@@ -116,6 +120,7 @@ describe('PipelineService', () => {
     flowProducer = buildFlowProducer(),
     prisma = emptyPrisma(),
     categoryRanks = buildCategoryRanks(),
+    chartFollows = buildChartFollows(),
     trackedKeywords = buildTrackedKeywords(),
     quota = quotaOff,
     capacity = hostCapacity(),
@@ -126,6 +131,7 @@ describe('PipelineService', () => {
     flowProducer?: ReturnType<typeof buildFlowProducer>;
     prisma?: unknown;
     categoryRanks?: ReturnType<typeof buildCategoryRanks>;
+    chartFollows?: ReturnType<typeof buildChartFollows>;
     trackedKeywords?: ReturnType<typeof buildTrackedKeywords>;
     quota?: QuotaService;
     capacity?: DailyCapacity;
@@ -141,6 +147,7 @@ describe('PipelineService', () => {
       flowProducer as unknown as FlowProducer,
       prisma as PrismaService,
       categoryRanks as unknown as CategoryRanksService,
+      chartFollows as unknown as ChartFollowsService,
       new DailyTargetsCollector(prisma as PrismaService),
       workspace,
       workspaces,
@@ -158,6 +165,40 @@ describe('PipelineService', () => {
 
   afterEach(() => {
     jest.useRealTimers();
+  });
+
+  it('schedules a followed chart as a category bucket', async () => {
+    const bucket: CategoryBucket = {
+      collection: 'free',
+      genre: '6007',
+      country: 'us',
+      store: 'APP_STORE',
+    };
+    const followed: CategoryBucket = { ...bucket, genre: '6014' };
+    const { service, flowProducer } = buildService({
+      categoryRanks: buildCategoryRanks([bucket]),
+      chartFollows: buildChartFollows([followed, { ...bucket }]),
+      workspaces: {
+        ...fanOut,
+        eachOf: async <T>(_ids: string[], work: () => Promise<T>) => ({
+          results: [await workspace.run('ws_one', work)],
+          failures: [],
+        }),
+      } as unknown as WorkspaceFanOut,
+    });
+
+    const summary = await service.fanOutDaily();
+
+    expect(summary.categories).toBe(2);
+    const [flow] = flowProducer.add.mock.calls[0] as [FlowJob];
+    expect(
+      flow.children
+        ?.filter((child) => child.name === JOBS.CHECK_CATEGORY)
+        .map((child) => child.data as CategoryBucket),
+    ).toEqual([
+      expect.objectContaining(bucket),
+      expect.objectContaining(followed),
+    ]);
   });
 
   it('covers only the plan limit once an over-limit workspace runs out of grace', async () => {

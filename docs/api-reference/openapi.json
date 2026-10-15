@@ -3654,6 +3654,86 @@
         ]
       }
     },
+    "/charts/follows": {
+      "get": {
+        "operationId": "ChartsController_listFollows",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "List the top charts this workspace follows",
+        "tags": [
+          "charts"
+        ]
+      },
+      "post": {
+        "description": "Asks the daily run to capture this chart every day. Answers 201 for a new follow and 200 with the existing one when the workspace already follows the chart. Writes nothing to the store; capture today separately.",
+        "operationId": "ChartsController_follow",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChartFollowDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Follow a top chart",
+        "tags": [
+          "charts"
+        ]
+      }
+    },
+    "/charts/follows/{id}": {
+      "delete": {
+        "operationId": "ChartsController_forget",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Stop following a top chart",
+        "tags": [
+          "charts"
+        ]
+      }
+    },
     "/apps/{id}/summary": {
       "get": {
         "operationId": "AnalyticsController_getSummary",
@@ -6079,6 +6159,51 @@
         ]
       },
       "ChartCaptureDto": {
+        "type": "object",
+        "properties": {
+          "store": {
+            "enum": [
+              "APP_STORE",
+              "GOOGLE_PLAY"
+            ],
+            "type": "string"
+          },
+          "country": {
+            "type": "string",
+            "example": "us",
+            "pattern": "^[a-z]{2}$"
+          },
+          "collection": {
+            "enum": [
+              "free",
+              "paid",
+              "grossing"
+            ],
+            "type": "string"
+          },
+          "genre": {
+            "type": "string",
+            "maxLength": 32,
+            "example": "6014",
+            "description": "A chart genre of the store, or overall"
+          },
+          "device": {
+            "enum": [
+              "iphone",
+              "android"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "store",
+          "country",
+          "collection",
+          "genre",
+          "device"
+        ]
+      },
+      "ChartFollowDto": {
         "type": "object",
         "properties": {
           "store": {

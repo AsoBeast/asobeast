@@ -19,7 +19,7 @@ import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
 import { chartAppLinks } from './chart-apps';
 import { ChartCaptureService, StoredChart } from './chart-capture.service';
 import { ChartFollowsService } from './chart-follows.service';
-import { assertChartKey } from './chart-key';
+import { assertChartKey, chartKeyFrom } from './chart-key';
 import { movementOf, trendingOf } from './chart-movement';
 
 export interface ChartPageQuery extends ChartKey {
@@ -29,11 +29,6 @@ export interface ChartPageQuery extends ChartKey {
 }
 
 type ChartListingItem = Omit<ChartEntryItem, 'previous' | 'delta' | 'movement'>;
-
-export function chartKeyFrom(query: ChartKey): ChartKey {
-  const { store, country, collection, genre, device } = query;
-  return { store, country, collection, genre, device };
-}
 
 function listingsOf(store: Store, chart: StoredChart): ChartListingItem[] {
   return chart.entries.map(({ position, app }) => ({

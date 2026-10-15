@@ -6,6 +6,7 @@ import {
   CategoryBucket,
   CategoryRanksService,
 } from '../category-ranks/category-ranks.service';
+import { ChartFollowsService } from '../charts/chart-follows.service';
 import { Env } from '../config/env';
 import { DailyBudgetService } from './daily-budget.service';
 import { DailyCapacity } from './daily-capacity.service';
@@ -42,12 +43,14 @@ describe('DailyBudgetService', () => {
   const collect = jest.fn<Promise<DailyTargets>, []>();
   const shipped = jest.fn<Promise<Map<string, string[]>>, []>();
   const buckets = jest.fn<Promise<CategoryBucket[]>, []>();
+  const followed = jest.fn<Promise<CategoryBucket[]>, []>();
   const perDay = jest.fn<Promise<number>, [Store]>();
 
   const build = (quota: Partial<QuotaService> = { enforced: false }) =>
     new DailyBudgetService(
       { collect, shipped } as unknown as DailyTargetsCollector,
       { buckets } as unknown as CategoryRanksService,
+      { buckets: followed } as unknown as ChartFollowsService,
       { perDay } as unknown as DailyCapacity,
       quota as unknown as QuotaService,
       {
@@ -70,6 +73,7 @@ describe('DailyBudgetService', () => {
     collect.mockReset().mockResolvedValue(targetsOf());
     shipped.mockReset().mockResolvedValue(new Map());
     buckets.mockReset().mockResolvedValue(BUCKETS);
+    followed.mockReset().mockResolvedValue([]);
     perDay
       .mockReset()
       .mockImplementation((store) =>
@@ -100,6 +104,17 @@ describe('DailyBudgetService', () => {
         marketListings: 0,
       }),
     ]);
+  });
+
+  it('counts a followed chart once beside the charts the apps sit in', async () => {
+    followed.mockResolvedValue([BUCKETS[0], { ...BUCKETS[0], genre: '6014' }]);
+
+    const budget = await build().estimate();
+
+    expect(budget.categories).toBe(3);
+    expect(
+      budget.stores.find((store) => store.store === 'APP_STORE')?.categories,
+    ).toBe(2);
   });
 
   it('charges a market listing as an app job and reports it', async () => {
