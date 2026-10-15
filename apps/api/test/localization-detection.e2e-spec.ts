@@ -147,7 +147,7 @@ describe('Localization detection probe (e2e)', () => {
     await expect(localizationsOf(appId)).resolves.toEqual([]);
   });
 
-  it('records nothing when the store echoes the home listing in another market', async () => {
+  it('does not detect a localization whose text echoes the home listing in another market', async () => {
     const appId = await importApp();
     registry.listings.set('de:default', GERMAN);
     await captureListing(appId, 'de');
