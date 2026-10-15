@@ -29,6 +29,7 @@ export interface SearchItem {
   storeAppId: string;
   title: string;
   developer?: string;
+  summary?: string;
   iconUrl?: string;
   ratingAvg?: number;
   ratingCount?: number;

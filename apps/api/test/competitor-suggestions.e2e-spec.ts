@@ -37,6 +37,31 @@ const SIMILAR: SearchItem[] = [
   { storeAppId: '555000555', title: 'Study Bunny' },
 ];
 
+const PLAY_PRIMARY_ID = 'com.lingo.app';
+const PLAY_SIMILAR: SearchItem[] = [
+  {
+    storeAppId: 'com.video.app',
+    title: 'Video Tube',
+    summary: 'Watch videos, listen to music and learn something new every day.',
+  },
+  {
+    storeAppId: 'com.pins.app',
+    title: 'Pin Board',
+    summary: 'Discover recipes, home ideas and style inspiration.',
+  },
+  {
+    storeAppId: 'com.speak.app',
+    title: 'Speak Easy - Learn Languages',
+    summary: 'Learn languages like Spanish and French in minutes a day.',
+  },
+  {
+    storeAppId: 'com.words.app',
+    title: 'Word Lab: Language Lessons',
+    summary:
+      'Learn Spanish, French and English with fun lessons from native speakers.',
+  },
+];
+
 class SuggestionsRegistry {
   similarCalls: [string, string][] = [];
   failure: Error | null = null;
@@ -57,7 +82,9 @@ class SuggestionsRegistry {
         this.similarCalls.push([storeAppId, country]);
         return this.failure
           ? Promise.reject(this.failure)
-          : Promise.resolve(SIMILAR);
+          : Promise.resolve(
+              store === Store.GOOGLE_PLAY ? PLAY_SIMILAR : SIMILAR,
+            );
       },
     } as unknown as StoreProvider;
   }
@@ -258,6 +285,33 @@ describe('Competitor suggestions (e2e)', () => {
     const items = (res.body as CompetitorSuggestions).items;
     expect(items).toHaveLength(10);
     expect(items.every((item) => item.source === 'serp')).toBe(true);
+  });
+
+  it('keeps only the google play similar apps that share the listing terms', async () => {
+    const primary = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.GOOGLE_PLAY,
+        storeAppId: PLAY_PRIMARY_ID,
+        country: 'us',
+        name: 'Lingo',
+        snapshots: {
+          create: {
+            title: 'Lingo: Learn Languages',
+            summary:
+              'Learn Spanish, French, English and more with fun, quick lessons.',
+            description: 'Fixture',
+            raw: {},
+          },
+        },
+      },
+    });
+
+    const res = await suggest(primary.id).expect(200);
+
+    expect(
+      (res.body as CompetitorSuggestions).items.map((item) => item.storeAppId),
+    ).toEqual(['com.words.app', 'com.speak.app']);
   });
 
   it('answers 404 for a competitor app and an unknown app', async () => {

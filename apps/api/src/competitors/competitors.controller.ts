@@ -59,7 +59,7 @@ export class CompetitorsController {
   @ApiOperation({
     summary: 'Suggest competitors from the keyword results and similar apps',
     description:
-      "The untracked apps that recur in this app's own keyword results over the last 30 days, with how often and how high they rank, followed by the apps the store lists as similar, each with its icon, minus the app and its tracked competitors, at most ten. The similar apps lookup reaches the store while you wait, answers within the store deadline and spends one store lookup of the hourly allowance; when the store fails or the allowance is spent the keyword result apps are still answered and similar reads unavailable. Answers 404 for a competitor or an unknown app.",
+      "The untracked apps that recur in this app's own keyword results over the last 30 days, with how often and how high they rank, followed by the apps the store lists as similar, each with its icon, minus the app and its tracked competitors, at most ten. On Google Play a similar app is kept only when its title and description share at least half as many of the words in this app's title and short description as the closest similar app does, most shared first. The similar apps lookup reaches the store while you wait, answers within the store deadline and spends one store lookup of the hourly allowance; when the store fails or the allowance is spent the keyword result apps are still answered and similar reads unavailable. Answers 404 for a competitor or an unknown app.",
   })
   suggest(@Param('id') id: string): Promise<CompetitorSuggestions> {
     return this.suggestions.suggest(id, () =>
