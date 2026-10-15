@@ -20,6 +20,7 @@ import { withKnownSubtitle } from './known-subtitle';
 import { listingIn, NEWEST_FIRST, storedMarket } from './listing';
 import { LocalizationDetection } from './localization-detection.service';
 import { LocalizedListingCapture } from './localized-listing-capture.service';
+import { MarketLocalizationRecorder } from './market-localization-recorder';
 import { diffSnapshots, withRecordedChanges } from './snapshot-diff';
 
 @Injectable()
@@ -36,6 +37,7 @@ export class ListingCaptureService {
     private readonly screenshotQueue: ScreenshotQueue,
     private readonly localizations: LocalizedListingCapture,
     private readonly detection: LocalizationDetection,
+    private readonly recorder: MarketLocalizationRecorder,
   ) {}
 
   async refresh(
@@ -149,10 +151,12 @@ export class ListingCaptureService {
           before,
           after,
         );
-    const localized = await this.localizations.capture(app, market, {
+    const listing = {
       ...snapshot,
       subtitleUnavailable: normalized.subtitleUnavailable,
-    });
+    };
+    const localized = await this.localizations.capture(app, market, listing);
+    await this.recorder.record(app, market, listing, localized);
     if (
       !home &&
       !previous &&
@@ -167,7 +171,7 @@ export class ListingCaptureService {
       snapshotId: snapshot.id,
       changes: [
         ...withRecordedChanges(diffSnapshots(previous, snapshot), recorded),
-        ...localized,
+        ...localized.changes,
       ],
       country: market,
     };

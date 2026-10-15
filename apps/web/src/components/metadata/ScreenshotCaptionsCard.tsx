@@ -12,7 +12,7 @@ import {
 } from "@/lib/screenshot-captions";
 
 const HEADING_ID = "screenshot-captions-heading";
-const THUMB_WIDTH = 112;
+const THUMB_HEIGHT = 224;
 
 export function ScreenshotCaptionsCard({
   id,
@@ -51,18 +51,19 @@ export function ScreenshotCaptionsCard({
               {data.screenshots.map((item) => (
                 <li
                   key={item.position}
-                  className="flex w-28 shrink-0 flex-col gap-2"
+                  className="flex w-min shrink-0 flex-col gap-2"
                 >
                   <ScreenshotThumb
                     src={item.url}
                     alt={`Screenshot ${item.position}`}
-                    width={THUMB_WIDTH}
+                    height={THUMB_HEIGHT}
+                    className="self-start"
                   />
                   <Badge variant="outline" className="self-start">
                     {CAPTION_STATUS_LABELS[item.status]}
                   </Badge>
                   {item.caption !== null ? (
-                    <p className="text-body font-medium break-words text-foreground">
+                    <p className="min-w-28 text-body font-medium break-words text-foreground">
                       {item.caption}
                     </p>
                   ) : null}

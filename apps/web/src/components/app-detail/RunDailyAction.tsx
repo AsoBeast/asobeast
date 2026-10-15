@@ -36,6 +36,7 @@ export function RunDailyAction({ appId }: { appId: string }) {
         keywords > 0
           ? `rank checks for ${pluralize(keywords, "keyword")}`
           : pluralize(jobs, "job"),
+        "Follow the run in the header; tables update as positions land.",
       );
     },
     onError: (error) => {

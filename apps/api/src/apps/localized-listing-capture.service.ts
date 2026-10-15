@@ -23,10 +23,21 @@ import { capturedLocalizations } from './market-localizations';
 import { shippedLocalizations } from './shipped-localizations';
 import { diffSnapshots, withRecordedChanges } from './snapshot-diff';
 
-type ListedApp = Pick<
+export type ListedApp = Pick<
   App,
   'id' | 'workspaceId' | 'store' | 'storeAppId' | 'country' | 'isCompetitor'
 >;
+
+export interface LocalizedCapture {
+  changes: SnapshotChange[];
+  listings: ComparableListing[];
+  complete: boolean;
+}
+
+interface LocalizationRead {
+  changes: SnapshotChange[];
+  listing: ComparableListing;
+}
 
 interface LocalizedListing {
   market: string;
@@ -53,25 +64,30 @@ export class LocalizedListingCapture {
     app: ListedApp,
     market: string,
     fallback: ComparableListing,
-  ): Promise<SnapshotChange[]> {
-    if (app.store !== Store.APP_STORE) return [];
+  ): Promise<LocalizedCapture> {
+    const captured: LocalizedCapture = {
+      changes: [],
+      listings: [],
+      complete: true,
+    };
+    if (app.store !== Store.APP_STORE) return captured;
     const shipped =
       app.isCompetitor || readLocalizations(market).length < 2
         ? []
         : await shippedLocalizations(this.prisma, app);
-    const changes: SnapshotChange[] = [];
     for (const localization of capturedLocalizations(market, shipped)) {
       try {
-        changes.push(
-          ...(await this.captureOne(app, market, localization, fallback)),
-        );
+        const read = await this.captureOne(app, market, localization, fallback);
+        captured.changes.push(...read.changes);
+        captured.listings.push(read.listing);
       } catch (error: unknown) {
+        captured.complete = false;
         this.logger.warn(
           `could not capture the ${localization} listing of ${app.id} in ${market}, so it waits for the next refresh: ${reason(error)}`,
         );
       }
     }
-    return changes;
+    return captured;
   }
 
   private async captureOne(
@@ -79,7 +95,7 @@ export class LocalizedListingCapture {
     market: string,
     localization: AppStoreLocalization,
     fallback: ComparableListing,
-  ): Promise<SnapshotChange[]> {
+  ): Promise<LocalizationRead> {
     const normalized = await this.egress.through(app.store, market, () =>
       this.registry.get(app.store).getApp(app.storeAppId, market, localization),
     );
@@ -91,7 +107,7 @@ export class LocalizedListingCapture {
       throw new Error('its product page did not answer');
     }
     if (!previous && !servesLocalization(app.store, fallback, normalized)) {
-      return [];
+      return { changes: [], listing: normalized };
     }
     const snapshot = await this.store(
       app,
@@ -111,9 +127,13 @@ export class LocalizedListingCapture {
         : null,
       toChangeSnapshot(snapshot, snapshotIcon(app.store, snapshot), app.store),
     );
-    return withRecordedChanges(diffSnapshots(previous, snapshot), recorded).map(
-      (change) => ({ ...change, localization }),
-    );
+    return {
+      changes: withRecordedChanges(
+        diffSnapshots(previous, snapshot),
+        recorded,
+      ).map((change) => ({ ...change, localization })),
+      listing: normalized,
+    };
   }
 
   private async store(

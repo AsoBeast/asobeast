@@ -625,6 +625,47 @@ describe('KeywordsService country tracking', () => {
     expect(lookup.where.country).toBe('pl');
   });
 
+  it('checks the first position before it asks for the first score', async () => {
+    const order: string[] = [];
+    const queue = {
+      add: jest.fn(() => {
+        order.push('score');
+        return Promise.resolve();
+      }),
+    };
+    const schedule = jest.fn(() => {
+      order.push('check');
+      return Promise.resolve(1);
+    });
+    const prisma = {
+      keywordField: { findMany: jest.fn().mockResolvedValue([]) },
+      app: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'app1',
+          store: Store.APP_STORE,
+          country: 'us',
+          storeAppId: 's',
+        }),
+      },
+      keyword: {
+        createMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findMany: jest.fn().mockResolvedValue([{ id: 'kw1', text: 'fitness' }]),
+      },
+      keywordMetric: { findFirst: jest.fn().mockResolvedValue(null) },
+      trackedKeyword: {
+        createMany: jest.fn().mockResolvedValue({ count: 1 }),
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      appSnapshot: { findFirst: jest.fn().mockResolvedValue(null) },
+      withTransaction: (run: (tx: unknown) => unknown) => run(prisma),
+    };
+
+    await buildService(prisma, queue, schedule).addManual('app1', ['fitness']);
+
+    expect(order).toEqual(['check', 'score']);
+  });
+
   it('checks the positions of the keywords it starts tracking, not those already active', async () => {
     const schedule = jest.fn().mockResolvedValue(1);
     const prisma = {

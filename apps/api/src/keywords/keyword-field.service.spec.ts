@@ -6,6 +6,7 @@ import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import { KeywordFieldService } from './keyword-field.service';
+import { FirstPositionChecks } from './first-position-checks';
 import { KeywordFieldWriter } from './keyword-field-writer';
 import { KeywordTracker } from './keyword-tracker';
 import { MarketListingRequests } from './market-listing.requests';
@@ -212,6 +213,7 @@ function buildService(prisma: ReturnType<typeof buildPrisma>) {
     ),
     { require: () => APP.workspaceId } as unknown as WorkspaceContext,
     { request: jest.fn() } as unknown as MarketListingRequests,
+    { schedule: jest.fn() } as unknown as FirstPositionChecks,
   );
   return new KeywordFieldService(prisma as unknown as PrismaService, writer);
 }

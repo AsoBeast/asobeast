@@ -50,6 +50,19 @@ export const APP_TOOLS: ReadTool[] = [
   }),
 
   defineReadTool({
+    name: "app_run_status",
+    title: "Today's run of an app",
+    description:
+      "Where today's data collection stands for one app: the listings captured for the app and its competitors in the home storefront and every tracked market, the active keywords whose position was checked and the category charts read, each as ready of total and counted since the daily trigger, or since midnight UTC once the trigger has passed. state is running while counts are missing, complete when every count is in, and delayed when the run started over twenty hours ago with counts missing. Read this after tracking keywords or a Run daily, before list_keywords, to know whether the positions you read are today's. Reads stored rows only and never touches the queue or the store.",
+    inputSchema: z.object({
+      appId: z.string().describe("The app id from list_apps."),
+    }),
+    request: ({ appId }) => ({ path: `/apps/${seg(appId)}/run-status` }),
+    unavailableOn404:
+      "Today's run status is not available on this instance; it needs a newer asobeast API.",
+  }),
+
+  defineReadTool({
     name: "portfolio",
     title: "Portfolio summary",
     description:

@@ -79,6 +79,17 @@ describe("the tool catalog", () => {
     ]);
   });
 
+  it("places the run status after the app summary in the apps group", () => {
+    expect(APP_TOOLS.map((tool) => tool.name)).toEqual([
+      "list_apps",
+      "get_app",
+      "app_summary",
+      "app_run_status",
+      "portfolio",
+      "market_suggestions",
+    ]);
+  });
+
   it("places the market suggestions after the portfolio in the apps group", () => {
     expect(APP_TOOLS.map((tool) => tool.name).slice(-2)).toEqual([
       "portfolio",

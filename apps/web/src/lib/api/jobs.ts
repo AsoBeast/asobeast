@@ -1,4 +1,5 @@
 import type {
+  AppRunStatus,
   DailyBudget,
   FirstRunStatus,
   HealthStatus,
@@ -41,4 +42,8 @@ export function getStoreHealth(): Promise<StoreHealthReport> {
 
 export function getFirstRun(id: string): Promise<FirstRunStatus> {
   return apiFetch<FirstRunStatus>(`/apps/${id}/first-run`);
+}
+
+export function getAppRunStatus(id: string): Promise<AppRunStatus> {
+  return apiFetch<AppRunStatus>(`/apps/${id}/run-status`);
 }

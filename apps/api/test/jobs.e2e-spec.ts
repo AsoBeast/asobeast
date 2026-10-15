@@ -6,6 +6,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { Prisma, PrismaClient, Store } from '@prisma/client';
 import { Job, Queue } from 'bullmq';
 import {
+  APP_RUN_STAGES,
+  type AppRunStatus,
   FIRST_RUN_HISTORY_DAYS,
   FIRST_RUN_STAGES,
   type FirstRunStageStatus,
@@ -26,6 +28,7 @@ import { DailyBudgetService } from '../src/jobs/daily-budget.service';
 import { PipelineService } from '../src/jobs/pipeline.service';
 import { PipelineWorker } from '../src/jobs/pipeline.worker';
 import { requestsFor } from '../src/jobs/request-weights';
+import { utcToday } from '../src/rankings/rankings.support';
 import { scrapedAppStoreRaw } from '../src/store-providers/app-store-scraped.fixture';
 
 const OTHER_WORKSPACE_ID = 'ws_jobs_other';
@@ -421,6 +424,134 @@ describe('Pipeline store routing (e2e)', () => {
       });
 
       await api.get(`/apps/${other.id}/first-run`).expect(404);
+    });
+  });
+
+  describe("today's run of one app", () => {
+    const runOf = async (appId: string): Promise<AppRunStatus> =>
+      (await api.get(`/apps/${appId}/run-status`).expect(200))
+        .body as AppRunStatus;
+
+    const stageOf = (status: AppRunStatus, stage: string) =>
+      status.stages.find((row) => row.stage === stage);
+
+    const trackMore = async (appId: string, texts: string[]) => {
+      for (const text of texts) {
+        const keyword = await prisma.keyword.create({
+          data: { text, store: Store.APP_STORE, country: 'us' },
+        });
+        await prisma.trackedKeyword.create({
+          data: { appId, keywordId: keyword.id, source: 'MANUAL' },
+        });
+      }
+    };
+
+    it('answers the stages in contract order with totals from the tracked keywords', async () => {
+      const appId = await seedApp(Store.APP_STORE, 'apple-run-status');
+      await trackMore(appId, ['journal', 'diary']);
+
+      const status = await runOf(appId);
+
+      expect(status.stages.map((row) => row.stage)).toEqual([
+        ...APP_RUN_STAGES,
+      ]);
+      expect(stageOf(status, 'keywords')).toEqual({
+        stage: 'keywords',
+        ready: 0,
+        total: 3,
+        complete: false,
+      });
+      expect(stageOf(status, 'listings')).toMatchObject({
+        ready: 0,
+        total: 1,
+      });
+      expect(status).toMatchObject({
+        appId,
+        lastCaptureAt: null,
+      });
+      expect(['running', 'delayed']).toContain(status.state);
+    });
+
+    it('advances the keywords stage as a rank check lands', async () => {
+      const appId = await seedApp(Store.APP_STORE, 'apple-run-advance');
+      const { keywordId } = await prisma.trackedKeyword.findFirstOrThrow({
+        where: { appId },
+        select: { keywordId: true },
+      });
+      await prisma.keywordRanking.create({
+        data: {
+          appId,
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          keywordId,
+          date: utcToday(),
+          position: 4,
+        },
+      });
+
+      const status = await runOf(appId);
+
+      expect(stageOf(status, 'keywords')).toMatchObject({
+        ready: 1,
+        total: 1,
+        complete: true,
+      });
+      expect(status.lastCaptureAt).not.toBeNull();
+    });
+
+    it('counts the listing captured today', async () => {
+      const appId = await seedApp(Store.APP_STORE, 'apple-run-listing');
+      await prisma.appSnapshot.create({
+        data: { appId, title: 'Fixture', description: 'Fixture', raw: {} },
+      });
+
+      const status = await runOf(appId);
+
+      expect(stageOf(status, 'listings')).toMatchObject({
+        ready: 1,
+        total: 1,
+        complete: true,
+      });
+    });
+
+    it('answers 404 for an unknown app and for an app of another workspace', async () => {
+      await prisma.workspace.upsert({
+        where: { id: OTHER_WORKSPACE_ID },
+        update: {},
+        create: { id: OTHER_WORKSPACE_ID, name: 'Other' },
+      });
+      const other = await prisma.app.create({
+        data: {
+          workspaceId: OTHER_WORKSPACE_ID,
+          store: Store.APP_STORE,
+          storeAppId: 'apple-run-other',
+          country: 'us',
+          name: 'Other',
+          isCompetitor: false,
+        },
+      });
+
+      await api.get('/apps/missing/run-status').expect(404);
+      await api.get(`/apps/${other.id}/run-status`).expect(404);
+    });
+
+    it('answers a competitor app like any other', async () => {
+      const primaryAppId = await seedApp(Store.APP_STORE, 'apple-run-primary');
+      const rival = await prisma.app.create({
+        data: {
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          store: Store.APP_STORE,
+          storeAppId: 'apple-run-rival',
+          country: 'us',
+          name: 'Rival',
+          isCompetitor: true,
+          primaryAppId,
+        },
+      });
+
+      const status = await runOf(rival.id);
+
+      expect(stageOf(status, 'listings')).toMatchObject({ total: 1 });
+      expect(stageOf(status, 'keywords')).toMatchObject({ total: 0 });
     });
   });
 });

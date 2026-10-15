@@ -11,7 +11,12 @@ import {
 } from '@asobeast/shared';
 import { Queue } from 'bullmq';
 import request from 'supertest';
-import { JOBS, QUEUES } from '../src/jobs/jobs.types';
+import {
+  firstRunCheckJobId,
+  JOBS,
+  QUEUES,
+  utcDateKey,
+} from '../src/jobs/jobs.types';
 import {
   resetBillingState,
   startBillingHarness,
@@ -461,6 +466,77 @@ describe('Localized keyword fields (e2e)', () => {
       );
       expect(keywordIds).toHaveLength(4);
       expect(scores).toHaveLength(4);
+    });
+
+    const processingOrder = () =>
+      harness.app
+        .get<Queue>(getQueueToken(QUEUES.APP_STORE), { strict: false })
+        .getJobs(['wait', 'paused'], 0, -1, true);
+
+    const fieldKeywordIds = async (appId: string, country: string) =>
+      (
+        await harness.prisma.trackedKeyword.findMany({
+          where: {
+            appId,
+            source: 'KEYWORD_FIELD',
+            keyword: { is: { country } },
+          },
+          select: { keywordId: true },
+        })
+      ).map((row) => row.keywordId);
+
+    it('E-SAV-20 checks the first position of every phrase it tracked, ahead of its score', async () => {
+      const appId = await seedApp();
+      await withMarkets(appId, 'de');
+
+      await save(appId, 'de', {
+        text: 'fokus timer,lernen',
+        trackIn: ['de'],
+      }).expect(200);
+
+      const jobs = await processingOrder();
+      const keywordIds = await fieldKeywordIds(appId, 'de');
+      expect(keywordIds).toHaveLength(2);
+      for (const keywordId of keywordIds) {
+        const check = jobs.findIndex(
+          (job) =>
+            job.id === firstRunCheckJobId(appId, keywordId, utcDateKey()),
+        );
+        const score = jobs.findIndex(
+          (job) =>
+            job.name === JOBS.SCORE_KEYWORD &&
+            (job.data as { keywordId: string }).keywordId === keywordId,
+        );
+        expect(check).toBeGreaterThanOrEqual(0);
+        expect(check).toBeLessThan(score);
+      }
+    });
+
+    it('E-SAV-21 checks nothing for a phrase the app already tracks in that market', async () => {
+      const appId = await seedApp();
+      await trackActive(appId, 'de', ['lernen']);
+
+      await save(appId, 'de', { text: 'lernen', trackIn: ['de'] }).expect(200);
+
+      const [keywordId] = (
+        await harness.prisma.keyword.findMany({
+          where: { country: 'de', text: 'lernen' },
+          select: { id: true },
+        })
+      ).map((row) => row.id);
+      expect(keywordId).toBeDefined();
+      const jobs = await processingOrder();
+      expect(
+        jobs.some(
+          (job) =>
+            job.name === JOBS.SCORE_KEYWORD &&
+            (job.data as { keywordId: string }).keywordId === keywordId,
+        ),
+      ).toBe(true);
+      const checks = jobs.filter(
+        (job) => job.id === firstRunCheckJobId(appId, keywordId, utcDateKey()),
+      );
+      expect(checks).toEqual([]);
     });
 
     it('E-SAV-19 refuses a competitor app and writes nothing', async () => {

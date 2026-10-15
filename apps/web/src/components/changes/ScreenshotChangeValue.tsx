@@ -3,7 +3,7 @@ import { ScreenshotThumb } from "@/components/screenshots/ScreenshotThumb";
 import { cn } from "@/lib/utils";
 import { screenshotChangeSummary } from "./screenshot-change";
 
-const THUMB_WIDTH = 56;
+const THUMB_HEIGHT = 96;
 
 function Strip({
   label,
@@ -32,7 +32,7 @@ function Strip({
             key={ref.position}
             src={ref.url}
             alt={`${label}, screenshot ${ref.position}`}
-            width={THUMB_WIDTH}
+            height={THUMB_HEIGHT}
             className={cn(marked.includes(ref.position) && `ring-2 ${ring}`)}
           />
         ))}

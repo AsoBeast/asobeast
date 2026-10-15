@@ -80,7 +80,7 @@ export function AddKeywordsDialog({
         description:
           duplicates > 0
             ? `${duplicates} already tracked`
-            : "Positions arrive within minutes.",
+            : "Positions arrive within minutes. The table updates as they land.",
       });
     },
     onError: (err) =>

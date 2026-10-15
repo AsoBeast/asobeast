@@ -57,6 +57,7 @@ import {
   getCompetitorSuggestions,
   getCompetitors,
   getFirstRun,
+  getAppRunStatus,
   getHealth,
   getKeywordCountries,
   previewKeywordImport,
@@ -96,6 +97,8 @@ import {
   type RankingParams,
   type ReviewFilters,
 } from "./api";
+import { runProgressInterval } from "./run-progress";
+import { keywordsPollInterval } from "./keyword-checks";
 import {
   hasPendingScreenshots,
   SCREENSHOT_POLL_MS,
@@ -187,6 +190,7 @@ export const appKeys = {
   marketSuggestions: (id: string) =>
     [...appKeys.detail(id), "market-suggestions"] as const,
   firstRun: (id: string) => [...appKeys.detail(id), "first-run"] as const,
+  runStatus: (id: string) => [...appKeys.detail(id), "run-status"] as const,
   screenshots: (id: string, market?: string, localization?: string) =>
     [
       ...appKeys.detail(id),
@@ -559,6 +563,8 @@ export const keywordsOptions = (id: string, country?: string) =>
   queryOptions({
     queryKey: appKeys.keywords(id, country),
     queryFn: () => getKeywords(id, undefined, country),
+    refetchInterval: (query) =>
+      keywordsPollInterval(query.state.data, query.state.dataUpdateCount),
   });
 
 export const keywordCountriesOptions = (id: string) =>
@@ -882,6 +888,13 @@ export const firstRunOptions = (id: string) =>
       collectingNow(query.state.data) ? FIRST_RUN_POLL_MS : false,
   });
 
+export const appRunStatusOptions = (id: string) =>
+  queryOptions({
+    queryKey: appKeys.runStatus(id),
+    queryFn: () => getAppRunStatus(id),
+    refetchInterval: (query) => runProgressInterval(query.state.data),
+  });
+
 export function invalidateKeywords(client: QueryClient, id: string): void {
   void client.invalidateQueries({ queryKey: appKeys.keywordsRoot(id) });
 }
@@ -935,6 +948,14 @@ export function invalidateLocalizationMutation(
 export function invalidateKeywordImport(client: QueryClient, id: string): void {
   invalidateKeywordMutation(client, id);
   void client.invalidateQueries({ queryKey: appKeys.importPreviewRoot(id) });
+}
+
+export function invalidateRunResults(client: QueryClient, id: string): void {
+  const runStatus = JSON.stringify(appKeys.runStatus(id));
+  void client.invalidateQueries({
+    queryKey: appKeys.detail(id),
+    predicate: (query) => JSON.stringify(query.queryKey) !== runStatus,
+  });
 }
 
 export function invalidateAppListing(client: QueryClient, id: string): void {

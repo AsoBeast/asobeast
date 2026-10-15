@@ -1,14 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useQueryState } from "nuqs";
 import { Plus } from "lucide-react";
-import { toast } from "sonner";
-import type {
-  AppLocalizationsResult,
-  AppStoreLocalization,
-} from "@asobeast/shared";
+import type { AppLocalizationsResult } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -27,17 +21,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { addAppLocalization } from "@/lib/api";
 import {
   addableGroups,
   type AddableLocalization,
-  upsertLocalization,
 } from "@/lib/app-localizations";
 import { localizationName } from "@/lib/localizations";
-import { appKeys, invalidateLocalizationMutation } from "@/lib/queries";
-import { fieldLocaleParser } from "@/lib/search-params";
-import { useSingleFlight } from "@/lib/single-flight";
 import { apiErrorMessage } from "./api-error-message";
+import { useAddLocalization } from "./useAddLocalization";
 
 export function AddLocalizationDialog({
   id,
@@ -46,48 +36,27 @@ export function AddLocalizationDialog({
   id: string;
   result: AppLocalizationsResult;
 }) {
-  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [, setFieldLocale] = useQueryState("fieldLocale", fieldLocaleParser);
+  const { add, pending, error, reset } = useAddLocalization(id, () =>
+    setOpen(false),
+  );
   const groups = addableGroups(result.localizations, result.markets);
-
-  const add = useMutation({
-    mutationFn: (localization: AppStoreLocalization) =>
-      addAppLocalization(id, { localization }),
-    onSuccess: (item) => {
-      queryClient.setQueryData<AppLocalizationsResult>(
-        appKeys.localizations(id),
-        (current) => current && upsertLocalization(current, item),
-      );
-      invalidateLocalizationMutation(queryClient, id);
-      setOpen(false);
-      void setFieldLocale(item.localization, { history: "replace" });
-      toast.success(`Added ${localizationName(item.localization)}`);
-    },
-    onError: (err) =>
-      setError(apiErrorMessage(err, "Could not add the localization")),
-  });
-  const addOnce = useSingleFlight(add);
+  const message = error
+    ? apiErrorMessage(error, "Could not add the localization")
+    : null;
 
   function onOpenChange(next: boolean) {
-    if (add.isPending) return;
+    if (pending) return;
     setOpen(next);
-    if (!next) {
-      setError(null);
-      add.reset();
-    }
+    if (!next) reset();
   }
 
   const option = ({ localization, readIn }: AddableLocalization) => (
     <CommandItem
       key={localization}
       value={`${localizationName(localization)} ${localization}`}
-      disabled={add.isPending}
-      onSelect={() => {
-        setError(null);
-        addOnce(localization);
-      }}
+      disabled={pending}
+      onSelect={() => add(localization)}
     >
       <span className="flex min-w-0 flex-1 items-baseline justify-between gap-2">
         <span>{localizationName(localization)}</span>
@@ -133,9 +102,9 @@ export function AddLocalizationDialog({
               ) : null}
             </CommandList>
           </Command>
-          {error ? (
+          {message ? (
             <p role="alert" className="text-sm text-destructive">
-              {error}
+              {message}
             </p>
           ) : null}
         </DialogBody>

@@ -1,6 +1,7 @@
 import { Store } from '@prisma/client';
 import { QuotaService } from '../auth/quota.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
+import { FirstPositionChecks } from './first-position-checks';
 import { KeywordFieldWriter } from './keyword-field-writer';
 import { pairKey } from './keyword-import';
 import { KeywordTracker } from './keyword-tracker';
@@ -16,6 +17,7 @@ const APP = {
 
 const build = (stored: string[] = []) => {
   const events: string[] = [];
+  const queued: string[] = [];
   const tx = {
     $executeRaw: jest.fn<Promise<number>, unknown[]>(() => {
       events.push('field lock');
@@ -59,16 +61,26 @@ const build = (stored: string[] = []) => {
           ),
         ),
     ),
-    enqueueFirstScores: jest.fn().mockResolvedValue(undefined),
+    enqueueFirstScores: jest.fn(() => {
+      queued.push('score');
+      return Promise.resolve();
+    }),
   };
   const listings = { request: jest.fn().mockResolvedValue(0) };
+  const checks = {
+    schedule: jest.fn<Promise<number>, [string, string[]]>(() => {
+      queued.push('check');
+      return Promise.resolve(0);
+    }),
+  };
   const writer = new KeywordFieldWriter(
     tracker as unknown as KeywordTracker,
     quota as unknown as QuotaService,
     { require: () => APP.workspaceId } as unknown as WorkspaceContext,
     listings as unknown as MarketListingRequests,
+    checks as unknown as FirstPositionChecks,
   );
-  return { writer, tx, quota, tracker, listings, events };
+  return { writer, tx, quota, tracker, listings, checks, events, queued };
 };
 
 describe('KeywordFieldWriter', () => {
@@ -210,6 +222,53 @@ describe('KeywordFieldWriter', () => {
       tracker.enqueueFirstScores.mock.invocationCallOrder[0],
     ).toBeGreaterThan(
       Math.max(...tx.trackedKeyword.createMany.mock.invocationCallOrder),
+    );
+  });
+
+  it('checks the first position of every keyword it starts tracking, before the first score', async () => {
+    const { writer, checks, queued } = build();
+
+    await writer.save({
+      app: APP,
+      localization: 'es-MX',
+      phrases: ['habito'],
+      markets: ['us', 'mx'],
+    });
+
+    expect(checks.schedule).toHaveBeenCalledWith(APP.id, [
+      'us:habito',
+      'mx:habito',
+    ]);
+    expect(queued).toEqual(['check', 'score']);
+  });
+
+  it('checks nothing for a keyword the app already tracks in that market', async () => {
+    const { writer, tx, checks } = build();
+    tx.trackedKeyword.findMany.mockResolvedValue([{ keywordId: 'mx:habito' }]);
+
+    await writer.save({
+      app: APP,
+      localization: 'es-MX',
+      phrases: ['habito'],
+      markets: ['us', 'mx'],
+    });
+
+    expect(checks.schedule).toHaveBeenCalledWith(APP.id, ['us:habito']);
+  });
+
+  it('checks nothing when no market is given', async () => {
+    const { writer, checks } = build();
+
+    await writer.save({
+      app: APP,
+      localization: 'es-MX',
+      phrases: ['habito'],
+      markets: [],
+    });
+
+    expect(checks.schedule).not.toHaveBeenCalledWith(
+      APP.id,
+      expect.arrayContaining([expect.any(String)]),
     );
   });
 

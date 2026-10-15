@@ -30,6 +30,25 @@ test("labels a replaced screenshot of a competitor and shows both sets", async (
   ).toHaveAttribute("tabindex", "0");
 });
 
+test("draws the before and after screenshots whole", async ({ page }) => {
+  await page.goto("/apps/app-1/changes");
+  const before = rows(page, "screenshotImages")
+    .getByRole("group", { name: "Before screenshots" })
+    .getByRole("img")
+    .first();
+  await expect
+    .poll(() => before.evaluate((node: HTMLImageElement) => node.naturalWidth))
+    .toBeGreaterThan(0);
+
+  const box = await before.boundingBox();
+
+  expect(box).not.toBeNull();
+  expect(Math.round(box?.height ?? 0)).toBe(96);
+  expect(Math.abs((box?.width ?? 0) - (box?.height ?? 0))).toBeLessThanOrEqual(
+    1,
+  );
+});
+
 test("shows the captions that appeared and disappeared", async ({ page }) => {
   await page.goto("/apps/app-1/changes");
 

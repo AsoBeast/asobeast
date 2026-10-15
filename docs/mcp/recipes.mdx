@@ -92,7 +92,7 @@ for my approval, then track them in de.
 
 Exercises `keyword_suggestions`, `list_keywords` and, with a write token, `track_keywords`.
 
-Each phrase that is new to your instance queues a store scoring job and joins the daily ranking run, so add the few that matter. Tracking counts against your plan's keyword market limit. See [Countries and markets](/concepts/countries).
+Each phrase you start tracking queues a first position check ahead of its store scoring job and joins the daily ranking run, so add the few that matter. Read `app_run_status` until its `state` is `complete` before you read the new positions. Tracking counts against your plan's keyword market limit. See [Countries and markets](/concepts/countries).
 
 ## Decide where to track next
 

@@ -30,10 +30,11 @@ On an App Store app, the **App Store localizations** section lists the localizat
 
 Each shipped localization is another title, subtitle and keyword field for search in every storefront that reads it, and the section counts that room for you. The rules, their source and their limits are in [Which localizations does a storefront read?](/concepts/countries#which-localizations-does-a-storefront-read) and [Which localizations does an app ship?](/concepts/countries#which-localizations-does-an-app-ship) The **Listing market** control above the fields shows what each of those storefronts actually serves.
 
-Three buttons manage the list.
+These controls manage the list.
 
 - **Add localization** adds a language you ship in App Store Connect. The dialog lists the languages your markets read first, then every other language, and searches both names and codes.
 - **Find localizations** asks the store which of those languages your listing really serves and adds the ones it proves, marked **Detected**. It spends one refresh from your on demand allowance and the answers arrive as the queue drains, so the list fills in over a few minutes. It cannot see a localization whose text equals the default listing or your home listing; add that one by hand. See [Which localizations does an app ship?](/concepts/countries#which-localizations-does-an-app-ship)
+- **Not listed yet**, under the items, names every localization one of your markets reads that is not on the list, with the markets that read it and an **Add** button that adds it and opens its keyword field. A localization the store serves as a market's own language arrives on its own after the next capture of that market, so this list is for a language you ship with the same text as your home listing, or for an additional language such as Spanish (Mexico) in the United States.
 - **Remove localization**, at the foot of an item, deletes the localization's field and stops tracking its phrases as keyword field phrases. Phrases you track for another reason stay tracked. The home localization has no remove button.
 
 ## Check keyword coverage
@@ -117,6 +118,7 @@ Each localization item has a **Draft with AI** button that picks it in the menu 
 - **Character counts differ from App Store Connect.** asobeast counts characters, so an emoji or an accented character counts as the store counts it in the stored value.
 - **The Localization menu is missing.** The app is on Google Play, none of your storefronts lists an additional language (the United Kingdom lists none), or asobeast could not read your keyword markets when the page loaded.
 - **Find localizations found nothing.** The store proves only a localization whose text differs from the default listing of the market it is asked in and from your home listing, and only for languages your home listing says the app supports. Add a localization with the default text by hand.
+- **I track a market and see its listing but no keyword field for its language.** The localization is added after the next capture of that market. Press **Refresh** with that market chosen, or add it from **Not listed yet**.
 - **A localization came back after I removed it.** **Find localizations** adds every localization the store serves again. Remove it once more after the run, or leave it: a localization the store serves is one your app ships.
 
 ## Related

@@ -73,7 +73,7 @@ test.describe("Run daily", () => {
     expect(await page.getByText(/searches\/minute/).count()).toBe(0);
     await expect(
       page.getByText(
-        "The rate-limited worker runs it in the background. Results appear as the cache refetches.",
+        "Follow the run in the header; tables update as positions land.",
       ),
     ).toBeVisible();
   });

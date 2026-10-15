@@ -20,6 +20,8 @@ import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import {
   ENGLISH,
+  FRENCH,
+  GERMAN,
   LocalizedRegistry,
   PL_APP_URL,
   POLISH,
@@ -474,6 +476,95 @@ describe('Native localizations of a listing (e2e)', () => {
       await api.post(`/apps/${appId}/refresh`).expect(200);
 
       await expect(localizationsOf(appId)).resolves.toEqual([]);
+    });
+
+    describe('the default localization of a market', () => {
+      const trackIn = async (appId: string, country: string) => {
+        await api
+          .post(`/apps/${appId}/keywords`)
+          .send({ keywords: ['geo quiz'], country })
+          .expect(201);
+      };
+
+      it('ships the default localization of a market whose listing the store localizes', async () => {
+        registry.listings.set('de:default', GERMAN);
+        const appId = await importFrom(US_APP_URL);
+        await trackIn(appId, 'de');
+
+        await api.post(`/apps/${appId}/refresh?country=de`).expect(200);
+
+        const { localizations } = (
+          await api.get(`/apps/${appId}/localizations`).expect(200)
+        ).body as AppLocalizationsResult;
+        expect(localizations).toContainEqual(
+          expect.objectContaining({
+            localization: 'de',
+            origin: 'detected',
+            readBy: [{ country: 'de', role: 'default', home: false }],
+          }),
+        );
+      });
+
+      it('ships nothing for a market whose listing echoes the home one', async () => {
+        const appId = await importFrom(US_APP_URL);
+        await trackIn(appId, 'de');
+
+        await api.post(`/apps/${appId}/refresh?country=de`).expect(200);
+
+        const { localizations } = (
+          await api.get(`/apps/${appId}/localizations`).expect(200)
+        ).body as AppLocalizationsResult;
+        expect(localizations.map((item) => item.localization)).toEqual([
+          'en-US',
+        ]);
+      });
+
+      it('records the default once however many captures run', async () => {
+        registry.listings.set('de:default', GERMAN);
+        const appId = await importFrom(US_APP_URL);
+        await trackIn(appId, 'de');
+
+        await api.post(`/apps/${appId}/refresh?country=de`).expect(200);
+        await api.post(`/apps/${appId}/refresh?country=de`).expect(200);
+
+        await expect(localizationsOf(appId)).resolves.toEqual([
+          { localization: 'de', origin: 'detected' },
+        ]);
+      });
+
+      it('does not ship the default of a market while one of its localizations could not be read', async () => {
+        registry.listings.set('ch:default', GERMAN);
+        registry.failing = 'fr';
+        const appId = await importFrom(US_APP_URL);
+        await api
+          .post(`/apps/${appId}/localizations`)
+          .send({ localization: 'fr' })
+          .expect(201);
+        await trackIn(appId, 'ch');
+
+        await api.post(`/apps/${appId}/refresh?country=ch`).expect(200);
+
+        await expect(localizationsOf(appId)).resolves.toEqual([
+          { localization: 'fr', origin: 'manual' },
+        ]);
+      });
+
+      it('does not ship the default of a market where an additional localization echoes the listing', async () => {
+        registry.listings.set('ch:default', FRENCH);
+        registry.listings.set('ch:fr', FRENCH);
+        const appId = await importFrom(US_APP_URL);
+        await api
+          .post(`/apps/${appId}/localizations`)
+          .send({ localization: 'fr' })
+          .expect(201);
+        await trackIn(appId, 'ch');
+
+        await api.post(`/apps/${appId}/refresh?country=ch`).expect(200);
+
+        await expect(localizationsOf(appId)).resolves.toEqual([
+          { localization: 'fr', origin: 'manual' },
+        ]);
+      });
     });
   });
 });

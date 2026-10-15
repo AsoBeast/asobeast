@@ -20,6 +20,7 @@ describe("app tools", () => {
       "list_apps",
       "get_app",
       "app_summary",
+      "app_run_status",
       "portfolio",
       "market_suggestions",
     ]) {
