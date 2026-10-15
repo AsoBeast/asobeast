@@ -16,24 +16,16 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { followChart, unfollowChart } from "@/lib/api";
+import { followChart } from "@/lib/api";
 import { invalidateChartMutation } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
 import { followErrorText } from "./chart-actions";
 import { chartTitle } from "./chart-params";
+import { useUnfollowChart } from "./use-unfollow-chart";
 
 function Following({ follow }: { follow: ChartFollowItem }) {
-  const queryClient = useQueryClient();
   const [confirming, setConfirming] = useState(false);
-  const mutation = useMutation({
-    mutationFn: () => unfollowChart(follow.id),
-    onSuccess: () => {
-      setConfirming(false);
-      invalidateChartMutation(queryClient);
-      toast.success("Stopped following");
-    },
-    onError: () => toast.error("Could not stop following the chart."),
-  });
+  const mutation = useUnfollowChart(() => setConfirming(false));
   const unfollowOnce = useSingleFlight(mutation);
 
   return (
@@ -58,7 +50,7 @@ function Following({ follow }: { follow: ChartFollowItem }) {
               disabled={mutation.isPending}
               onClick={(event) => {
                 event.preventDefault();
-                unfollowOnce();
+                unfollowOnce(follow.id);
               }}
             >
               Stop following
