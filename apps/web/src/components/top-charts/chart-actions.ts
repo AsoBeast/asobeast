@@ -54,5 +54,5 @@ export function captureErrorText(error: unknown): string {
 export function followErrorText(error: unknown): string {
   return error instanceof ApiError && error.envelope.statusCode === 403
     ? error.envelope.message
-    : "Could not follow the chart.";
+    : "Could not follow the category.";
 }

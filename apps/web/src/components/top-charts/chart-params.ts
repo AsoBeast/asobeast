@@ -15,6 +15,7 @@ import {
 } from "@asobeast/shared";
 import type { ChartPageQuery } from "@/lib/api";
 import { formatCountry } from "@/lib/format";
+import type { ChartCategory } from "./chart-follows";
 
 export interface ChartSearch {
   store: Store;
@@ -65,12 +66,15 @@ export function chartQueryFrom(search: ChartSearch): ChartPageQuery {
   };
 }
 
-export function chartTitle(key: ChartKey): string {
+export function categoryTitle(category: ChartCategory): string {
   return [
-    COLLECTION_TITLES[key.collection],
-    chartGenreName(key.store, key.genre) ?? key.genre,
-    formatCountry(key.country),
+    chartGenreName(category.store, category.genre) ?? category.genre,
+    formatCountry(category.country),
   ].join(" · ");
+}
+
+export function chartTitle(key: ChartKey): string {
+  return [COLLECTION_TITLES[key.collection], categoryTitle(key)].join(" · ");
 }
 
 export function chartHref(key: ChartKey): string {

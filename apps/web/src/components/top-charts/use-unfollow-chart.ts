@@ -3,17 +3,22 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { unfollowChart } from "@/lib/api";
-import { forgetChartFollow } from "@/lib/queries";
+import { forgetChartFollow, invalidateChartMutation } from "@/lib/queries";
 
 export function useUnfollowChart(onStopped?: () => void) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => unfollowChart(id),
-    onSuccess: (_result, id) => {
+    mutationFn: async (ids: readonly string[]) => {
+      for (const id of ids) await unfollowChart(id);
+    },
+    onSuccess: (_result, ids) => {
       onStopped?.();
-      forgetChartFollow(queryClient, id);
+      for (const id of ids) forgetChartFollow(queryClient, id);
       toast.success("Stopped following");
     },
-    onError: () => toast.error("Could not stop following the chart."),
+    onError: () => {
+      invalidateChartMutation(queryClient);
+      toast.error("Could not stop following the category.");
+    },
   });
 }

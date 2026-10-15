@@ -4,7 +4,6 @@ import { Suspense, useId, useState } from "react";
 import Link from "next/link";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { BellOff, ListChecks, Loader2 } from "lucide-react";
-import type { ChartFollowItem } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -19,30 +18,32 @@ import { storeLabel } from "@/lib/format";
 import { accountPlanOptions, chartFollowsOptions } from "@/lib/queries";
 import { formatQuotaUsage } from "@/lib/quota-usage";
 import { useSingleFlight } from "@/lib/single-flight";
-import { chartHref, chartTitle } from "./chart-params";
+import { followedCategories, type FollowedCategory } from "./chart-follows";
+import { categoryTitle, chartHref } from "./chart-params";
 import { useUnfollowChart } from "./use-unfollow-chart";
 
 function FollowRow({
-  follow,
+  category,
   onNavigate,
 }: {
-  follow: ChartFollowItem;
+  category: FollowedCategory;
   onNavigate: () => void;
 }) {
   const mutation = useUnfollowChart();
   const unfollowOnce = useSingleFlight(mutation);
-  const title = chartTitle(follow);
+  const title = categoryTitle(category);
+  const kinds = category.follows.map((follow) => follow.collection).join(", ");
 
   return (
     <li className="flex items-center gap-2">
       <Link
-        href={chartHref(follow)}
+        href={chartHref(category.follows[0])}
         onClick={onNavigate}
         className="flex min-w-0 flex-1 flex-col rounded-md px-2 py-1.5 hover:bg-accent"
       >
         <span className="truncate text-sm">{title}</span>
         <span className="text-caption text-muted-foreground">
-          {storeLabel(follow.store)}
+          {storeLabel(category.store)} · {kinds}
         </span>
       </Link>
       <Button
@@ -50,7 +51,9 @@ function FollowRow({
         size="icon-sm"
         aria-label={`Stop following ${title}`}
         disabled={mutation.isPending}
-        onClick={() => unfollowOnce(follow.id)}
+        onClick={() =>
+          unfollowOnce(category.follows.map((follow) => follow.id))
+        }
       >
         {mutation.isPending ? (
           <Loader2 className="animate-spin" aria-hidden />
@@ -64,26 +67,27 @@ function FollowRow({
 
 function FollowList({ onNavigate }: { onNavigate: () => void }) {
   const { data: follows } = useSuspenseQuery(chartFollowsOptions);
+  const categories = followedCategories(follows);
   const limit = useQuery(accountPlanOptions).data?.limits.chartFollows;
 
   return (
     <div className="flex flex-col gap-2">
       {limit === undefined ? null : (
         <p className="text-caption text-muted-foreground">
-          {formatQuotaUsage({ used: follows.length, limit }, "followed")}
+          {formatQuotaUsage({ used: categories.length, limit }, "followed")}
         </p>
       )}
-      {follows.length === 0 ? (
+      {categories.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          No charts followed yet. Follow a chart to have the daily run capture
-          it.
+          No categories followed yet. Follow a category to have the daily run
+          capture its charts.
         </p>
       ) : (
         <ul className="-mx-2 flex max-h-80 flex-col gap-0.5 overflow-y-auto">
-          {follows.map((follow) => (
+          {categories.map((category) => (
             <FollowRow
-              key={follow.id}
-              follow={follow}
+              key={category.follows[0].id}
+              category={category}
               onNavigate={onNavigate}
             />
           ))}

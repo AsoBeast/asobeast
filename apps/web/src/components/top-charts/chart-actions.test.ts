@@ -108,7 +108,7 @@ describe("error texts", () => {
       "The indie plan allows 10",
     );
     expect(followErrorText(refused(500, "boom"))).toBe(
-      "Could not follow the chart.",
+      "Could not follow the category.",
     );
   });
 });

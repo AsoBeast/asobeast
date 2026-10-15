@@ -1724,6 +1724,9 @@ const confirmCalls = new Map<string, number>();
 const resendCalls = new Map<string, number>();
 
 const chartFollows: ChartFollowItem[] = [];
+let chartFollowIds = 0;
+const CHART_FOLLOW_LIMIT_COOKIE = "e2e_chart_follow_limit";
+const CHART_FOLLOW_LIMIT = 10;
 const chartCaptures: ChartKey[] = [];
 
 function chartKeyOf(source: URLSearchParams | ChartKey): ChartKey {
@@ -1872,9 +1875,36 @@ const routes: Route[] = [
           sameChart(chartKeyOf(follow), key),
         );
         if (existing) return json(res, 200, existing);
+        const inFollowedCategory = chartFollows.some((follow) =>
+          sameChart(chartKeyOf(follow), {
+            ...key,
+            collection: follow.collection,
+          }),
+        );
+        if (
+          hasCookie(req, CHART_FOLLOW_LIMIT_COOKIE, "1") &&
+          !inFollowedCategory
+        ) {
+          return json(res, 403, {
+            ...errorEnvelope(
+              403,
+              req.url ?? "/",
+              `Followed chart categories limit reached: ${CHART_FOLLOW_LIMIT} of ${CHART_FOLLOW_LIMIT} used on the indie plan, 1 more requested`,
+            ),
+            quota: {
+              resource: "chartFollows",
+              plan: "indie",
+              limit: CHART_FOLLOW_LIMIT,
+              used: CHART_FOLLOW_LIMIT,
+              requested: 1,
+              upgradeTo: "ultimate",
+            },
+          });
+        }
+        chartFollowIds += 1;
         const follow: ChartFollowItem = {
           ...key,
-          id: `follow-${chartFollows.length + 1}`,
+          id: `follow-${chartFollowIds}`,
           genreName: chartGenreName(key.store, key.genre) ?? key.genre,
           createdAt: new Date().toISOString(),
         };

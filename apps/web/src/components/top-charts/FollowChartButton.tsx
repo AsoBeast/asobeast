@@ -1,10 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { BellPlus, Check, Loader2 } from "lucide-react";
-import { toast } from "sonner";
-import type { ChartFollowItem, ChartKey } from "@asobeast/shared";
+import type { CategoryCollection, ChartFollowItem } from "@asobeast/shared";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,14 +15,17 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { followChart } from "@/lib/api";
-import { invalidateChartMutation } from "@/lib/queries";
+import { chartFollowsOptions } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
-import { followErrorText } from "./chart-actions";
-import { chartTitle } from "./chart-params";
+import {
+  categoryFollows,
+  missingKinds,
+  type ChartCategory,
+} from "./chart-follows";
+import { useFollowCategory } from "./use-follow-category";
 import { useUnfollowChart } from "./use-unfollow-chart";
 
-function Following({ follow }: { follow: ChartFollowItem }) {
+function Following({ follows }: { follows: ChartFollowItem[] }) {
   const [confirming, setConfirming] = useState(false);
   const mutation = useUnfollowChart(() => setConfirming(false));
   const unfollowOnce = useSingleFlight(mutation);
@@ -37,9 +39,10 @@ function Following({ follow }: { follow: ChartFollowItem }) {
       <AlertDialog open={confirming} onOpenChange={setConfirming}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Stop following this chart?</AlertDialogTitle>
+            <AlertDialogTitle>Stop following this category?</AlertDialogTitle>
             <AlertDialogDescription>
-              The daily run stops capturing it; stored days stay.
+              The daily run stops capturing its free, paid and grossing charts;
+              stored days stay.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -50,7 +53,7 @@ function Following({ follow }: { follow: ChartFollowItem }) {
               disabled={mutation.isPending}
               onClick={(event) => {
                 event.preventDefault();
-                unfollowOnce(follow.id);
+                unfollowOnce(follows.map((follow) => follow.id));
               }}
             >
               Stop following
@@ -62,48 +65,47 @@ function Following({ follow }: { follow: ChartFollowItem }) {
   );
 }
 
-function Follow({ chart, primary }: { chart: ChartKey; primary: boolean }) {
-  const queryClient = useQueryClient();
-  const mutation = useMutation({
-    mutationFn: () => followChart(chart),
-    onSuccess: () => {
-      invalidateChartMutation(queryClient);
-      toast.success(
-        `Following ${chartTitle(chart)}; the daily run captures it from tomorrow`,
-      );
-    },
-    onError: (error) => toast.error(followErrorText(error)),
-  });
+function Follow({
+  category,
+  missing,
+  primary,
+}: {
+  category: ChartCategory;
+  missing: CategoryCollection[];
+  primary: boolean;
+}) {
+  const mutation = useFollowCategory(category);
   const followOnce = useSingleFlight(mutation);
 
   return (
     <Button
       variant={primary ? "default" : "outline"}
       disabled={mutation.isPending}
-      onClick={() => followOnce()}
+      onClick={() => followOnce(missing)}
     >
       {mutation.isPending ? (
         <Loader2 className="animate-spin" aria-hidden />
       ) : (
         <BellPlus aria-hidden />
       )}
-      Follow chart
+      Follow category
     </Button>
   );
 }
 
 export function FollowChartButton({
-  chart,
-  followed,
+  category,
   primary,
 }: {
-  chart: ChartKey;
-  followed: ChartFollowItem | null;
+  category: ChartCategory;
   primary: boolean;
 }) {
-  return followed ? (
-    <Following follow={followed} />
+  const { data: follows } = useSuspenseQuery(chartFollowsOptions);
+  const missing = missingKinds(category, follows);
+
+  return missing.length === 0 ? (
+    <Following follows={categoryFollows(category, follows)} />
   ) : (
-    <Follow chart={chart} primary={primary} />
+    <Follow category={category} missing={missing} primary={primary} />
   );
 }

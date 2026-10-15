@@ -10,6 +10,7 @@ import { CaptureTodayButton } from "./CaptureTodayButton";
 import { candidateApps } from "./chart-actions";
 import { ChartEmpty } from "./ChartEmpty";
 import { ChartFilters } from "./ChartFilters";
+import { chartCategoryOf } from "./chart-follows";
 import { chartKeyFrom, chartQueryFrom, shownChartKey } from "./chart-params";
 import { ChartTable } from "./ChartTable";
 import { FollowChartButton } from "./FollowChartButton";
@@ -23,8 +24,7 @@ function ChartActions({ chart, page }: { chart: ChartKey; page: ChartPage }) {
     <div className="flex flex-wrap items-center gap-2">
       {capturable ? <CaptureTodayButton chart={chart} /> : null}
       <FollowChartButton
-        chart={chart}
-        followed={page.followed}
+        category={chartCategoryOf(chart)}
         primary={!capturable}
       />
     </div>

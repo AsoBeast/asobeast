@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  categoryTitle,
   chartKeyFrom,
   chartQueryFrom,
   chartTitle,
@@ -75,6 +76,30 @@ describe("chartTitle", () => {
         collection: "paid",
       }),
     ).toBe("Top paid · Games · United States");
+  });
+});
+
+describe("categoryTitle", () => {
+  it("names the category and the country without a kind", () => {
+    expect(
+      categoryTitle({
+        store: "APP_STORE",
+        country: "us",
+        genre: "6014",
+        device: "iphone",
+      }),
+    ).toBe("Games · United States");
+  });
+
+  it("falls back to the genre id the store does not name", () => {
+    expect(
+      categoryTitle({
+        store: "APP_STORE",
+        country: "de",
+        genre: "9999",
+        device: "iphone",
+      }),
+    ).toBe("9999 · Germany");
   });
 });
 
