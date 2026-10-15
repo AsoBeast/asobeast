@@ -34,6 +34,8 @@ import {
   reviewScopeWhere,
 } from './review-list-query';
 import { toReviewReplyItem } from './review-reply.mapper';
+import { reviewLanguage } from './review-language';
+import { toReviewTranslation, TranslationColumns } from './review-translation';
 import { StoredReview, storedReviewChanges } from './stored-review-changes';
 
 export interface ReviewListFilters extends ReviewScope {
@@ -289,19 +291,21 @@ export class ReviewsService {
     };
   }
 
-  private toReviewItem(review: {
-    id: string;
-    reviewId: string;
-    userName: string | null;
-    score: number;
-    title: string | null;
-    text: string;
-    version: string | null;
-    reviewedAt: Date | null;
-    repliedAt: Date | null;
-    replyText: string | null;
-    reply: ReviewReply | null;
-  }): ReviewItem {
+  private toReviewItem(
+    review: TranslationColumns & {
+      id: string;
+      reviewId: string;
+      userName: string | null;
+      score: number;
+      title: string | null;
+      text: string;
+      version: string | null;
+      reviewedAt: Date | null;
+      repliedAt: Date | null;
+      replyText: string | null;
+      reply: ReviewReply | null;
+    },
+  ): ReviewItem {
     return {
       id: review.id,
       reviewId: review.reviewId,
@@ -314,6 +318,8 @@ export class ReviewsService {
       repliedAt: review.repliedAt ? review.repliedAt.toISOString() : null,
       replyText: review.replyText,
       reply: review.reply ? toReviewReplyItem(review.reply) : null,
+      language: reviewLanguage(`${review.title ?? ''} ${review.text}`),
+      translation: toReviewTranslation(review),
     };
   }
 

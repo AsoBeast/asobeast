@@ -1,4 +1,5 @@
 import { ReviewResult } from '../store-providers/types';
+import { TRANSLATION_CLEARED } from './review-translation';
 import { StoredReview, storedReviewChanges } from './stored-review-changes';
 
 const STORED: StoredReview = {
@@ -49,7 +50,18 @@ describe('storedReviewChanges', () => {
       text: 'Works now, thanks',
       version: '2.0.1',
       reviewedAt: edited,
+      ...TRANSLATION_CLEARED,
     });
+  });
+
+  it('keeps the translation when only the score of an edited review changed', () => {
+    const changes = storedReviewChanges(
+      STORED,
+      fetched({ score: 4, updatedAt: new Date('2026-09-05T08:00:00Z') }),
+    );
+
+    expect(changes).toMatchObject({ score: 4 });
+    expect(changes).not.toHaveProperty('translatedText');
   });
 
   it('keeps the stored version when the edited review names none', () => {

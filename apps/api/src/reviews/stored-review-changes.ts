@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { ReviewResult } from '../store-providers/types';
+import { TRANSLATION_CLEARED } from './review-translation';
 
 export interface StoredReview {
   score: number;
@@ -22,12 +23,15 @@ function editChanges(
   fetched: ReviewResult,
 ): Prisma.ReviewUpdateManyMutationInput {
   if (!isAfter(fetched.updatedAt, stored.reviewedAt)) return {};
+  const title = fetched.title ?? null;
+  const reworded = title !== stored.title || fetched.text !== stored.text;
   return {
     score: fetched.score,
-    title: fetched.title ?? null,
+    title,
     text: fetched.text,
     version: fetched.version ?? stored.version,
     reviewedAt: fetched.updatedAt,
+    ...(reworded ? TRANSLATION_CLEARED : {}),
   };
 }
 
