@@ -4,7 +4,7 @@ const QUOTA_LABELS: Record<QuotaResource, string> = {
   apps: 'Apps',
   keywordMarkets: 'Keyword markets',
   competitors: 'Competitors',
-  chartFollows: 'Followed charts',
+  chartFollows: 'Followed chart categories',
 };
 
 export class QuotaExceededError extends Error {

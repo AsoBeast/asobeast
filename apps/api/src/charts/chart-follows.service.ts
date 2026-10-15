@@ -12,6 +12,7 @@ import type { CategoryBucket } from '../category-ranks/category-ranks.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
 import { isUniqueViolation } from '../prisma/unique-violation';
+import { oldestCategories } from './chart-category';
 import { assertChartKey, chartKeyFrom } from './chart-key';
 
 export interface FollowResult {
@@ -85,12 +86,21 @@ export class ChartFollowsService {
     const limit = await this.quota.limitFor('chartFollows');
     const follows = await this.prisma.chartFollow.findMany({
       orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
-      take: limit ?? undefined,
-      select: { store: true, country: true, collection: true, genre: true },
+      select: {
+        store: true,
+        country: true,
+        collection: true,
+        genre: true,
+        device: true,
+      },
     });
-    return follows.map((follow) => ({
-      ...follow,
-      collection: follow.collection as CategoryCollection,
-    }));
+    return oldestCategories(follows, limit).map(
+      ({ store, country, collection, genre }) => ({
+        store,
+        country,
+        genre,
+        collection: collection as CategoryCollection,
+      }),
+    );
   }
 }

@@ -176,13 +176,13 @@ describe('Pipeline store routing (e2e)', () => {
         raw: (await scrapedAppStoreRaw()) as Prisma.InputJsonObject,
       },
     });
-    const follow = (genre: string) =>
+    const follow = (genre: string, collection = 'free') =>
       prisma.chartFollow.create({
         data: {
           workspaceId: DEFAULT_WORKSPACE_ID,
           store: Store.APP_STORE,
           country: 'us',
-          collection: 'free',
+          collection,
           genre,
           device: 'iphone',
         },
@@ -193,11 +193,17 @@ describe('Pipeline store routing (e2e)', () => {
     const before = await categories();
     await follow('6014');
     const followed = await categories();
+    await follow('6014', 'paid');
+    const secondKind = await categories();
     await follow('6027');
     const alreadyCharted = await categories();
     await prisma.chartFollow.deleteMany({});
 
-    expect([followed - before, alreadyCharted - followed]).toEqual([1, 0]);
+    expect([
+      followed - before,
+      secondKind - followed,
+      alreadyCharted - secondKind,
+    ]).toEqual([1, 1, 0]);
   });
 
   it('reports a per-store budget that sums to the top-level totals', async () => {

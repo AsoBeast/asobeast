@@ -13,11 +13,32 @@ const DAY_MS = 24 * 60 * 60_000;
 const past = new Date(Date.now() - DAY_MS);
 const future = new Date(Date.now() + DAY_MS);
 
+interface FollowRow {
+  store: string;
+  country: string;
+  collection: string;
+  genre: string;
+  device: string;
+}
+
+type Distinct = { distinct: (keyof FollowRow)[] };
+
+const followOf = (genre: string, collection = 'free'): FollowRow => ({
+  store: 'APP_STORE',
+  country: 'us',
+  collection,
+  genre,
+  device: 'iphone',
+});
+
+const categoriesOf = (count: number): FollowRow[] =>
+  Array.from({ length: count }, (_, index) => followOf(`60${index}`));
+
 interface Stored {
   apps: number;
   competitors: number;
   markets: number;
-  chartFollows: number;
+  chartFollows: FollowRow[];
   plan: string;
   trialEndsAt: Date | null;
   planExpiresAt: Date | null;
@@ -29,7 +50,7 @@ describe('QuotaService', () => {
       apps: 0,
       competitors: 0,
       markets: 0,
-      chartFollows: 0,
+      chartFollows: [],
       plan: 'premium',
       trialEndsAt: null,
       planExpiresAt: null,
@@ -47,7 +68,16 @@ describe('QuotaService', () => {
     const client = {
       app: { count: appCount },
       chartFollow: {
-        count: jest.fn(() => Promise.resolve(stored.chartFollows)),
+        findMany: jest.fn(({ distinct }: Distinct) =>
+          Promise.resolve([
+            ...new Map(
+              stored.chartFollows.map((row) => [
+                distinct.map((column) => row[column]).join('~'),
+                row,
+              ]),
+            ).values(),
+          ]),
+        ),
       },
       workspace: {
         findFirst: jest.fn(() =>
@@ -335,7 +365,7 @@ describe('QuotaService', () => {
   it('refuses a chart follow past the room the plan leaves', async () => {
     const { quota, scoped } = build(true, {
       plan: 'indie',
-      chartFollows: PLAN_LIMITS.indie.chartFollows as number,
+      chartFollows: categoriesOf(PLAN_LIMITS.indie.chartFollows as number),
     });
 
     await expect(
@@ -345,6 +375,60 @@ describe('QuotaService', () => {
       limit: PLAN_LIMITS.indie.chartFollows,
       used: PLAN_LIMITS.indie.chartFollows,
     });
+  });
+
+  it('refuses a follow of a new category at the limit', async () => {
+    const { quota, stored, scoped } = build(true, {
+      plan: 'indie',
+      chartFollows: categoriesOf(PLAN_LIMITS.indie.chartFollows as number),
+    });
+
+    await expect(
+      detailOf(() =>
+        scoped(() =>
+          quota.admitChartFollow(() => {
+            stored.chartFollows.push(followOf('7000'));
+            return Promise.resolve('followed');
+          }),
+        ),
+      ),
+    ).resolves.toMatchObject({
+      resource: 'chartFollows',
+      used: PLAN_LIMITS.indie.chartFollows,
+      requested: 1,
+    });
+  });
+
+  it('admits another kind of a category the workspace already follows at the limit', async () => {
+    const { quota, stored, scoped } = build(true, {
+      plan: 'indie',
+      chartFollows: categoriesOf(PLAN_LIMITS.indie.chartFollows as number),
+    });
+
+    await expect(
+      scoped(() =>
+        quota.admitChartFollow(() => {
+          stored.chartFollows.push(followOf('600', 'paid'));
+          return Promise.resolve('followed');
+        }),
+      ),
+    ).resolves.toBe('followed');
+  });
+
+  it('counts a category once however many kinds it holds', async () => {
+    const { quota, scoped } = build(true, {
+      plan: 'indie',
+      chartFollows: [
+        ...categoriesOf((PLAN_LIMITS.indie.chartFollows as number) - 1),
+        followOf('7000', 'free'),
+        followOf('7000', 'paid'),
+        followOf('7000', 'grossing'),
+      ],
+    });
+
+    await expect(
+      detailOf(() => scoped(() => quota.assertRoom('chartFollows'))),
+    ).resolves.toMatchObject({ used: PLAN_LIMITS.indie.chartFollows });
   });
 
   it('reports unlimited as null rather than a large number', async () => {

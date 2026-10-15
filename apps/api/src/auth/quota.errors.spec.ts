@@ -5,7 +5,7 @@ describe('QuotaExceededError', () => {
     ['apps', 'Apps'],
     ['keywordMarkets', 'Keyword markets'],
     ['competitors', 'Competitors'],
-    ['chartFollows', 'Followed charts'],
+    ['chartFollows', 'Followed chart categories'],
   ] as const)('names the %s quota in words', (resource, label) => {
     const error = new QuotaExceededError({
       resource,

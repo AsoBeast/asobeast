@@ -32,8 +32,19 @@ describe('Chart follows (e2e)', () => {
   let harness: CapacityHarness;
   let owner: OwnerAgent;
 
-  const follow = (genre: string = KEY.genre) =>
-    owner.post('/charts/follows').send({ ...KEY, genre });
+  const genres = APP_STORE_CHART_GENRES.map((genre) => genre.id);
+
+  const follow = (
+    genre: string = KEY.genre,
+    collection: string = KEY.collection,
+  ) => owner.post('/charts/follows').send({ ...KEY, genre, collection });
+
+  const spendEveryUnit = async () => {
+    for (const genre of genres.slice(0, FOLLOW_LIMIT)) {
+      await follow(genre).expect(201);
+    }
+    await clearRateLimitCounters(harness.app);
+  };
 
   beforeAll(async () => {
     harness = await startCapacityHarness();
@@ -119,11 +130,7 @@ describe('Chart follows (e2e)', () => {
   });
 
   it("refuses past the plan's room", async () => {
-    const genres = APP_STORE_CHART_GENRES.map((genre) => genre.id);
-    for (const genre of genres.slice(0, FOLLOW_LIMIT)) {
-      await follow(genre).expect(201);
-    }
-    await clearRateLimitCounters(harness.app);
+    await spendEveryUnit();
 
     const refused = await follow(genres[FOLLOW_LIMIT]).expect(403);
 
@@ -135,6 +142,31 @@ describe('Chart follows (e2e)', () => {
     await expect(harness.prisma.chartFollow.count()).resolves.toBe(
       FOLLOW_LIMIT,
     );
+  });
+
+  it('admits the other kinds of a followed category at the limit', async () => {
+    await spendEveryUnit();
+
+    await follow(genres[0], 'paid').expect(201);
+    await follow(genres[0], 'grossing').expect(201);
+
+    await expect(harness.prisma.chartFollow.count()).resolves.toBe(
+      FOLLOW_LIMIT + 2,
+    );
+  });
+
+  it('refuses a new category once every unit is spent, whatever its kind', async () => {
+    await spendEveryUnit();
+    await follow(genres[0], 'paid').expect(201);
+    await follow(genres[0], 'grossing').expect(201);
+
+    const refused = await follow(genres[FOLLOW_LIMIT], 'grossing').expect(403);
+
+    expect((refused.body as ApiErrorEnvelope).quota).toMatchObject({
+      resource: 'chartFollows',
+      limit: FOLLOW_LIMIT,
+      used: FOLLOW_LIMIT,
+    });
   });
 
   it("never shows another workspace's follows", async () => {

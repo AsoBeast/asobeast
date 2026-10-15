@@ -74,7 +74,7 @@ export class ChartsController {
   @ApiOperation({
     summary: 'Follow a top chart',
     description:
-      'Asks the daily run to capture this chart every day. Answers 201 for a new follow and 200 with the existing one when the workspace already follows the chart. Writes nothing to the store; capture today separately.',
+      "Asks the daily run to capture this chart every day. The plan's follow limit counts categories, so the free, paid and grossing charts of one store, country, category and device cost one follow together. Answers 201 for a new follow and 200 with the existing one when the workspace already follows the chart. Writes nothing to the store; capture today separately.",
   })
   async follow(
     @Body() dto: ChartFollowDto,
