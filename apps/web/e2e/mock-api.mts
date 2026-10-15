@@ -81,10 +81,12 @@ import {
   emptyScreenshots,
   errorEnvelope,
   rateLimitedEnvelope,
+  chartCaptureSpent,
   TOP_CHART_DATES,
   TOP_CHART_PAGE_EMPTY,
   TOP_CHART_PAGE_UNCAPTURED,
   topChartPage,
+  utcDaysAgo,
   MARKET_SUGGESTIONS,
   DEFAULT_SEED_TEXTS,
   SEED_REFUSED_MESSAGE,
@@ -181,6 +183,8 @@ import {
   chartGenreName,
   isChartGenre,
   STORES,
+  type ChartFollowItem,
+  type ChartKey,
   type ChartPage,
   type Store,
 } from "@asobeast/shared";
@@ -1599,6 +1603,24 @@ const unsubscribeCalls = new Map<string, number>();
 const confirmCalls = new Map<string, number>();
 const resendCalls = new Map<string, number>();
 
+const chartFollows: ChartFollowItem[] = [];
+const chartCaptures: unknown[] = [];
+
+function chartKeyOf(source: URLSearchParams | ChartKey): ChartKey {
+  const read = (name: keyof ChartKey) =>
+    source instanceof URLSearchParams ? (source.get(name) ?? "") : source[name];
+  return {
+    store: read("store") as ChartKey["store"],
+    country: read("country"),
+    collection: read("collection") as ChartKey["collection"],
+    genre: read("genre"),
+    device: read("device") as ChartKey["device"],
+  };
+}
+
+const sameChart = (a: ChartKey, b: ChartKey) =>
+  (Object.keys(a) as (keyof ChartKey)[]).every((name) => a[name] === b[name]);
+
 function chartPageFor(req: IncomingMessage, date: string | null): ChartPage {
   if (hasCookie(req, "e2e_chart_uncaptured", "1")) {
     return TOP_CHART_PAGE_UNCAPTURED;
@@ -1641,17 +1663,15 @@ function chartAnswer(req: IncomingMessage): [number, unknown] {
   }
   const compare = (query.get("compare") ?? "1d") as ChartPage["compare"];
   const page = withComparison(chartPageFor(req, query.get("date")), compare);
+  const key = chartKeyOf(query);
+  const followed =
+    chartFollows.find((follow) => sameChart(chartKeyOf(follow), key)) ?? null;
   return [
     200,
     {
       ...page,
-      chart: {
-        ...page.chart,
-        store,
-        genre,
-        country: query.get("country") ?? page.chart.country,
-        genreName: chartGenreName(store as Store, genre) ?? genre,
-      },
+      followed,
+      chart: { ...key, genreName: chartGenreName(key.store, genre) ?? genre },
     },
   ];
 }
@@ -1661,6 +1681,88 @@ const routes: Route[] = [
     method: "GET",
     pattern: /^\/charts$/,
     handler: (_p, req, res) => json(res, ...chartAnswer(req)),
+  },
+  {
+    method: "POST",
+    pattern: /^\/charts\/capture$/,
+    handler: (_p, req, res) =>
+      withBody<ChartKey>(req, res, (body) => {
+        if (hasCookie(req, "e2e_chart_capture_spent", "1")) {
+          return json(
+            res,
+            429,
+            chartCaptureSpent(req.url ?? "/charts/capture"),
+          );
+        }
+        chartCaptures.push(body);
+        const today = utcDaysAgo(0);
+        json(res, 200, {
+          ...topChartPage(),
+          capture: {
+            date: today,
+            depth: 100,
+            capturedAt: `${today}T09:00:00.000Z`,
+          },
+          dates: [today, ...TOP_CHART_DATES.filter((date) => date !== today)],
+          chart: {
+            ...chartKeyOf(body),
+            genreName: chartGenreName(body.store, body.genre) ?? body.genre,
+          },
+        });
+      }),
+  },
+  {
+    method: "GET",
+    pattern: /^\/charts\/follows$/,
+    handler: (_p, _req, res) => json(res, 200, chartFollows),
+  },
+  {
+    method: "POST",
+    pattern: /^\/charts\/follows$/,
+    handler: (_p, req, res) =>
+      withBody<ChartKey>(req, res, (body) => {
+        const key = chartKeyOf(body);
+        const existing = chartFollows.find((follow) =>
+          sameChart(chartKeyOf(follow), key),
+        );
+        if (existing) return json(res, 200, existing);
+        const follow: ChartFollowItem = {
+          ...key,
+          id: `follow-${chartFollows.length + 1}`,
+          genreName: chartGenreName(key.store, key.genre) ?? key.genre,
+          createdAt: new Date().toISOString(),
+        };
+        chartFollows.push(follow);
+        json(res, 201, follow);
+      }),
+  },
+  {
+    method: "DELETE",
+    pattern: /^\/charts\/follows\/([^/]+)$/,
+    handler: ([id], req, res) => {
+      const index = chartFollows.findIndex((follow) => follow.id === id);
+      if (index < 0) return json(res, 404, errorEnvelope(404, req.url ?? "/"));
+      chartFollows.splice(index, 1);
+      res.writeHead(204).end();
+    },
+  },
+  {
+    method: "GET",
+    pattern: /^\/__chart-follows$/,
+    handler: (_p, _req, res) => json(res, 200, chartFollows),
+  },
+  {
+    method: "GET",
+    pattern: /^\/__reset-chart-follows$/,
+    handler: (_p, _req, res) => {
+      chartFollows.splice(0, chartFollows.length);
+      json(res, 200, { reset: true });
+    },
+  },
+  {
+    method: "GET",
+    pattern: /^\/__chart-captures$/,
+    handler: (_p, _req, res) => json(res, 200, chartCaptures),
   },
   {
     method: "GET",

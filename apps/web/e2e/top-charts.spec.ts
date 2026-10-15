@@ -96,7 +96,7 @@ test("picks a captured day", async ({ page }) => {
     page.getByRole("button", { name: formatDay(newest) }),
   ).toBeEnabled();
   await expect(
-    page.getByRole("button", { name: formatDay(utcDaysAgo(3)) }),
+    page.getByRole("button", { name: formatDay(utcDaysAgo(4)) }),
   ).toBeDisabled();
   if (oldest.slice(0, 7) !== newest.slice(0, 7)) {
     await page.getByRole("button", { name: "Previous month" }).click();
@@ -121,9 +121,9 @@ test("shows the empty day and the uncaptured chart", async ({
   page,
   context,
 }) => {
-  await page.goto(`/charts?date=${utcDaysAgo(3)}`);
+  await page.goto(`/charts?date=${utcDaysAgo(4)}`);
   await expect(
-    page.getByText(`No capture of this chart on ${formatDay(utcDaysAgo(3))}`),
+    page.getByText(`No capture of this chart on ${formatDay(utcDaysAgo(4))}`),
   ).toBeVisible();
 
   await context.addCookies([
@@ -226,5 +226,114 @@ test("sorts by movement", async ({ page }) => {
   await expect(page).toHaveURL(/sort=movement/);
   await expect(chartTable(page).locator("tbody tr").first()).toContainText(
     "New entry",
+  );
+});
+
+const MOCK_API = "http://localhost:4100";
+
+test("captures today", async ({ page, request }) => {
+  await page.goto(`/charts?date=${TOP_CHART_DATES[2]}`);
+
+  await page.getByRole("button", { name: "Capture today" }).click();
+
+  await expect(page.getByText("Captured today's chart")).toBeVisible();
+  await expect(page).not.toHaveURL(/date=/);
+  await expect(chartTable(page).locator("caption")).toContainText(
+    formatDay(utcDaysAgo(0)),
+  );
+  await expect(page.getByRole("button", { name: "Capture today" })).toHaveCount(
+    0,
+  );
+  const captures = (await (
+    await request.get(`${MOCK_API}/__chart-captures`)
+  ).json()) as Array<Record<string, string>>;
+  expect(captures.at(-1)).toEqual({
+    store: "APP_STORE",
+    country: "us",
+    collection: "free",
+    genre: "overall",
+    device: "iphone",
+  });
+});
+
+test("a spent allowance is shown", async ({ page, context }) => {
+  await context.addCookies([
+    {
+      name: "e2e_chart_capture_spent",
+      value: "1",
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
+  await page.goto("/charts");
+
+  await page.getByRole("button", { name: "Capture today" }).click();
+
+  await expect(page.getByText(/Chart capture limit reached/)).toBeVisible();
+});
+
+test("follows and unfollows", async ({ page, request }) => {
+  await request.get(`${MOCK_API}/__reset-chart-follows`);
+  await page.goto("/charts?genre=7012");
+
+  await page.getByRole("button", { name: "Follow chart" }).click();
+
+  await expect(page.getByText(/^Following Top free · Puzzle/)).toBeVisible();
+  const follows = async () =>
+    (await (await request.get(`${MOCK_API}/__chart-follows`)).json()) as Array<
+      Record<string, string>
+    >;
+  expect((await follows()).map((follow) => follow.genre)).toEqual(["7012"]);
+
+  await page.getByRole("button", { name: "Following" }).click();
+  await page.getByRole("button", { name: "Stop following" }).click();
+
+  await expect(page.getByText("Stopped following")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Follow chart" }),
+  ).toBeVisible();
+  expect(await follows()).toEqual([]);
+});
+
+test("badges the workspace's apps", async ({ page }) => {
+  await page.goto("/charts");
+  const rows = chartTable(page).locator("tbody tr");
+
+  await expect(
+    rows.nth(2).getByRole("link", { name: "Yours" }),
+  ).toHaveAttribute("href", "/apps/app-1");
+  await expect(
+    rows.nth(4).getByRole("link", { name: "Competitor of Focus Timer" }),
+  ).toHaveAttribute("href", "/apps/app-1/competitors");
+  await expect(rows.nth(2).getByRole("combobox")).toHaveCount(0);
+  await expect(rows.nth(4).getByRole("combobox")).toHaveCount(0);
+});
+
+test("adds a row as a competitor", async ({ page, request }) => {
+  await page.goto("/charts");
+  const row = TOP_CHART_APPS[0];
+  const posted = page.waitForRequest(
+    (sent) =>
+      sent.method() === "POST" &&
+      sent.url().endsWith("/apps/app-1/competitors"),
+  );
+
+  await pick(page, `Add ${row.title} as competitor to`, "Focus Timer");
+
+  expect((await posted).postDataJSON()).toEqual({ url: row.storeAppId });
+  await expect(page.getByText(/^Now tracking/)).toBeVisible();
+  await request.post(`${MOCK_API}/__reset/competitors/app-1`);
+});
+
+test("opens the store", async ({ page }) => {
+  await page.goto("/charts");
+
+  await expect(
+    page.getByRole("link", {
+      name: `Open ${TOP_CHART_APPS[0].title} in the store`,
+    }),
+  ).toHaveAttribute(
+    "href",
+    `https://apps.apple.com/us/app/id${TOP_CHART_APPS[0].storeAppId}`,
   );
 });

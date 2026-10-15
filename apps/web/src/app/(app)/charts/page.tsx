@@ -4,7 +4,7 @@ import { chartQueryFrom } from "@/components/top-charts/chart-params";
 import { TopChartsSkeleton } from "@/components/top-charts/skeletons";
 import { TopChartsView } from "@/components/top-charts/TopChartsView";
 import { getQueryClient } from "@/lib/get-query-client";
-import { chartPageOptions } from "@/lib/queries";
+import { appsOptions, chartPageOptions } from "@/lib/queries";
 import { loadChartSearch } from "@/lib/search-params";
 
 export default async function ChartsPage({
@@ -14,7 +14,10 @@ export default async function ChartsPage({
 }) {
   const query = chartQueryFrom(loadChartSearch(await searchParams));
   const queryClient = getQueryClient();
-  await queryClient.prefetchQuery(chartPageOptions(query));
+  await Promise.all([
+    queryClient.prefetchQuery(chartPageOptions(query)),
+    queryClient.prefetchQuery(appsOptions),
+  ]);
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>

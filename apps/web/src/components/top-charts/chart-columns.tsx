@@ -8,6 +8,7 @@ import type { DataTableFeatures } from "@/components/data-table/table-features";
 import { Badge } from "@/components/ui/badge";
 import { movementSortValue } from "./movement";
 import { MovementCell } from "./MovementCell";
+import { RowActions, type ChartRowContext } from "./RowActions";
 
 const columnHelper = createColumnHelper<DataTableFeatures, ChartEntryItem>();
 
@@ -16,7 +17,7 @@ function PriceCell({ free }: { free: boolean | null }) {
   return <Badge variant="outline">{free ? "Free" : "Paid"}</Badge>;
 }
 
-export function chartColumns(period: string) {
+export function chartColumns(period: string, context: ChartRowContext) {
   return columnHelper.columns([
     columnHelper.accessor("position", {
       id: "position",
@@ -82,6 +83,12 @@ export function chartColumns(period: string) {
       meta: { label: "Price" },
       header: () => "Price",
       cell: ({ row }) => <PriceCell free={row.original.free} />,
+    }),
+    columnHelper.display({
+      id: "actions",
+      enableHiding: false,
+      header: () => <span className="sr-only">Actions</span>,
+      cell: ({ row }) => <RowActions entry={row.original} context={context} />,
     }),
   ]);
 }

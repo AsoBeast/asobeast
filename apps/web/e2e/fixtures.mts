@@ -4687,7 +4687,7 @@ function chartRow(
   const delta = previous === null ? null : position - previous;
   return {
     position,
-    storeAppId: `chart-${slug}`,
+    storeAppId: String(6_400_000_000 + position),
     title,
     developer: `${title} Labs`,
     iconUrl: position <= 2 ? TOP_CHART_ICON(slug) : null,
@@ -4715,7 +4715,7 @@ export const TOP_CHART_APPS: ChartEntryItem[] = [
   chartRow(10, "Bubble Pop", 10),
 ];
 
-export const TOP_CHART_DATES = [0, 1, 2, 4, 7].map(utcDaysAgo);
+export const TOP_CHART_DATES = [1, 2, 3, 5, 8].map(utcDaysAgo);
 
 const moverOf = (row: ChartEntryItem): ChartMover => ({
   storeAppId: row.storeAppId,
@@ -4729,6 +4729,7 @@ const moverOf = (row: ChartEntryItem): ChartMover => ({
 
 const exitOf = (title: string, previous: number): ChartMover => ({
   ...moverOf(chartRow(previous, title, previous)),
+  storeAppId: String(6_500_000_000 + previous),
   position: null,
   delta: null,
 });
@@ -4759,7 +4760,22 @@ export function topChartPage(date: string = TOP_CHART_DATES[0]): ChartPage {
     },
     dates: TOP_CHART_DATES,
     followed: null,
-    apps: [],
+    apps: [
+      {
+        storeAppId: TOP_CHART_APPS[2].storeAppId,
+        appId: APP_1.id,
+        primaryAppId: null,
+        name: APP_1.name,
+        role: "own",
+      },
+      {
+        storeAppId: TOP_CHART_APPS[4].storeAppId,
+        appId: "competitor-chart",
+        primaryAppId: APP_1.id,
+        name: APP_1.name,
+        role: "competitor",
+      },
+    ],
   };
 }
 
@@ -4775,3 +4791,24 @@ export const TOP_CHART_PAGE_UNCAPTURED: ChartPage = {
   ...TOP_CHART_PAGE_EMPTY,
   dates: [],
 };
+
+export function chartCaptureSpent(path: string): ApiErrorEnvelope {
+  return {
+    statusCode: 429,
+    error: "Too Many Requests",
+    message:
+      "Chart capture limit reached: the indie plan allows 30 requests per day. Try again in 3 hours.",
+    path,
+    timestamp: new Date().toISOString(),
+    rateLimit: {
+      window: "day",
+      rateClass: "store",
+      plan: "indie",
+      limit: 30,
+      resetSeconds: 10_800,
+      upgradeTo: "ultimate",
+      action: "chartCapture",
+    },
+    retryAfterSeconds: 10_800,
+  };
+}

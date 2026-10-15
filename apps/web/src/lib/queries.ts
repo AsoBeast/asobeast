@@ -1,5 +1,6 @@
 import type {
   AlertChannel,
+  ChartPage,
   AppAuditResult,
   EmailAlertItem,
   FirstRunStatus,
@@ -393,6 +394,29 @@ export const chartPageOptions = (query: ChartPageQuery) =>
     queryFn: () => getChart(query),
     staleTime: 5 * 60 * 1000,
   });
+
+export function invalidateChartMutation(client: QueryClient): void {
+  void client.invalidateQueries({ queryKey: chartKeys.all });
+}
+
+export function seedChartCapture(client: QueryClient, page: ChartPage): void {
+  void client.invalidateQueries({
+    queryKey: chartKeys.all,
+    refetchType: "none",
+  });
+  const { store, country, collection, genre, device } = page.chart;
+  client.setQueryData(
+    chartKeys.page({
+      store,
+      country,
+      collection,
+      genre,
+      device,
+      compare: page.compare,
+    }),
+    page,
+  );
+}
 
 export const actionKeys = {
   all: ["actions"] as const,

@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { flexRender, useTable } from "@tanstack/react-table";
 import { useQueryStates } from "nuqs";
-import type { ChartPage } from "@asobeast/shared";
+import type { AppListItem, ChartPage } from "@asobeast/shared";
 import { ColumnMenu } from "@/components/data-table/ColumnMenu";
 import { FilteredEmpty } from "@/components/data-table/FilteredEmpty";
 import { RowCount } from "@/components/data-table/RowCount";
@@ -27,10 +27,27 @@ import { chartColumns } from "./chart-columns";
 import { chartTitle } from "./chart-params";
 import { compareLabel } from "./movement";
 
-export function ChartTable({ page }: { page: ChartPage }) {
+export function ChartTable({
+  page,
+  apps,
+}: {
+  page: ChartPage;
+  apps: readonly AppListItem[];
+}) {
   const [params, setParams] = useQueryStates(chartTableParsers);
   const period = compareLabel(page.compare, page.comparison);
-  const columns = useMemo(() => chartColumns(period), [period]);
+  const context = useMemo(
+    () => ({
+      chart: page.chart,
+      links: new Map(page.apps.map((link) => [link.storeAppId, link])),
+      apps,
+    }),
+    [page.chart, page.apps, apps],
+  );
+  const columns = useMemo(
+    () => chartColumns(period, context),
+    [period, context],
+  );
   const [visibility, setVisibility] = useStoredColumnVisibility(
     "top-chart",
     columns,
