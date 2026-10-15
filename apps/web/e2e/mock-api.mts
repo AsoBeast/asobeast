@@ -50,6 +50,10 @@ import {
   EMAIL_DELIVERIES,
   FIRST_RUN_COMPLETE,
   FIRST_RUN_MID,
+  APP_RUN_COMPLETE,
+  APP_RUN_DELAYED,
+  APP_RUN_IDLE,
+  APP_RUN_RUNNING,
   FIRST_RUN_UNSCHEDULED,
   HEALTH,
   RUN_STATUS,
@@ -138,6 +142,7 @@ import type {
   EmailAlertUpdateRequest,
   EmailAlertItem,
   FirstRunStatus,
+  AppRunStatus,
   KeywordFieldRequest,
   KeywordAddRequest,
   KeywordFieldResult,
@@ -1678,6 +1683,19 @@ function firstRunFor(appId: string, req: IncomingMessage): FirstRunStatus {
   return withHistoryDays({ ...FIRST_RUN_COMPLETE, appId }, req);
 }
 
+const appRunAdvances = new Map<string, number>();
+
+function appRunFor(appId: string, req: IncomingMessage): AppRunStatus {
+  if (appId === "app-2") return APP_RUN_IDLE;
+  if (appId !== "app-new") return { ...APP_RUN_COMPLETE, appId };
+  if (hasCookie(req, "e2e_app_run_delayed", "1")) return APP_RUN_DELAYED;
+  const token = cookieValue(req, "e2e_app_run_advance");
+  if (token === undefined) return APP_RUN_RUNNING;
+  const calls = appRunAdvances.get(token) ?? 0;
+  appRunAdvances.set(token, calls + 1);
+  return calls === 0 ? APP_RUN_RUNNING : { ...APP_RUN_COMPLETE, appId };
+}
+
 const API_LATENCY_COOKIE = "e2e_api_latency";
 const BUDGET_HOLD_COOKIE = "e2e_budget_hold";
 const BUDGET_QUOTA_COOKIE = "e2e_budget_quota";
@@ -1981,6 +1999,11 @@ const routes: Route[] = [
     method: "GET",
     pattern: /^\/jobs\/store-health$/,
     handler: (_p, req, res) => json(res, 200, storeHealthFor(req)),
+  },
+  {
+    method: "GET",
+    pattern: /^\/apps\/([^/]+)\/run-status$/,
+    handler: (params, req, res) => json(res, 200, appRunFor(params[0], req)),
   },
   {
     method: "GET",

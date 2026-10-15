@@ -15,6 +15,7 @@ import type {
   DailyBudget,
   EmailAlertItem,
   FirstRunStatus,
+  AppRunStatus,
   KeywordComparison,
   KeywordCountrySummary,
   KeywordSource,
@@ -59,6 +60,7 @@ import { summarizeActions } from "./actions-summary.mts";
 import {
   FIRST_RUN_HISTORY_DAYS,
   FIRST_RUN_STAGES,
+  APP_RUN_STAGES,
   OVERALL_GENRE,
   PLAN_LIMITS,
   RANK_DEPTH,
@@ -206,6 +208,48 @@ export const FIRST_RUN_COMPLETE: FirstRunStatus = {
     expectedBy: null,
   })),
 };
+
+const appRun = (
+  appId: string,
+  state: AppRunStatus["state"],
+  counts: readonly (readonly [number, number])[],
+): AppRunStatus => ({
+  appId,
+  date: "2026-10-15",
+  state,
+  startedAt: "2026-10-15T03:00:00.000Z",
+  lastCaptureAt: state === "idle" ? null : "2026-10-15T03:20:00.000Z",
+  stages: APP_RUN_STAGES.map((stage, index) => ({
+    stage,
+    ready: counts[index][0],
+    total: counts[index][1],
+    complete: counts[index][0] >= counts[index][1],
+  })),
+});
+
+export const APP_RUN_RUNNING = appRun("app-new", "running", [
+  [2, 3],
+  [3, 8],
+  [1, 1],
+]);
+
+export const APP_RUN_COMPLETE = appRun("app-1", "complete", [
+  [3, 3],
+  [8, 8],
+  [1, 1],
+]);
+
+export const APP_RUN_IDLE = appRun("app-2", "idle", [
+  [0, 0],
+  [0, 0],
+  [0, 0],
+]);
+
+export const APP_RUN_DELAYED = appRun("app-new", "delayed", [
+  [3, 3],
+  [5, 8],
+  [1, 1],
+]);
 
 export const RUN_STATUS_DELAYED: WorkspaceRunStatus = {
   state: "delayed",

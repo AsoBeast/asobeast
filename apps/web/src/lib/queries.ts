@@ -52,6 +52,7 @@ import {
   getCompetitorSuggestions,
   getCompetitors,
   getFirstRun,
+  getAppRunStatus,
   getHealth,
   getKeywordCountries,
   previewKeywordImport,
@@ -90,6 +91,7 @@ import {
   type RankingParams,
   type ReviewFilters,
 } from "./api";
+import { runProgressInterval } from "./run-progress";
 import { keywordsPollInterval } from "./keyword-checks";
 import {
   hasPendingScreenshots,
@@ -182,6 +184,7 @@ export const appKeys = {
   marketSuggestions: (id: string) =>
     [...appKeys.detail(id), "market-suggestions"] as const,
   firstRun: (id: string) => [...appKeys.detail(id), "first-run"] as const,
+  runStatus: (id: string) => [...appKeys.detail(id), "run-status"] as const,
   screenshots: (id: string, market?: string, localization?: string) =>
     [
       ...appKeys.detail(id),
@@ -826,6 +829,13 @@ export const firstRunOptions = (id: string) =>
     queryFn: () => getFirstRun(id),
     refetchInterval: (query) =>
       collectingNow(query.state.data) ? FIRST_RUN_POLL_MS : false,
+  });
+
+export const appRunStatusOptions = (id: string) =>
+  queryOptions({
+    queryKey: appKeys.runStatus(id),
+    queryFn: () => getAppRunStatus(id),
+    refetchInterval: (query) => runProgressInterval(query.state.data),
   });
 
 export function invalidateKeywords(client: QueryClient, id: string): void {
