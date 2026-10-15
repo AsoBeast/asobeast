@@ -893,6 +893,14 @@ export function invalidateKeywordImport(client: QueryClient, id: string): void {
   void client.invalidateQueries({ queryKey: appKeys.importPreviewRoot(id) });
 }
 
+export function invalidateRunResults(client: QueryClient, id: string): void {
+  const runStatus = JSON.stringify(appKeys.runStatus(id));
+  void client.invalidateQueries({
+    queryKey: appKeys.detail(id),
+    predicate: (query) => JSON.stringify(query.queryKey) !== runStatus,
+  });
+}
+
 export function invalidateAppListing(client: QueryClient, id: string): void {
   void client.invalidateQueries({ queryKey: appKeys.detail(id) });
   void client.invalidateQueries({ queryKey: portfolioKey });

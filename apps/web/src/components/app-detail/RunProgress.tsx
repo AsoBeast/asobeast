@@ -10,7 +10,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { appRunStatusOptions, invalidateAppListing } from "@/lib/queries";
+import { appRunStatusOptions, invalidateRunResults } from "@/lib/queries";
 import {
   pillLabel,
   pillText,
@@ -42,7 +42,7 @@ export function RunProgress({ appId }: { appId: string }) {
 
   useEffect(() => {
     if (runAdvanced(previous.current, data)) {
-      invalidateAppListing(queryClient, appId);
+      invalidateRunResults(queryClient, appId);
     }
     previous.current = data;
   }, [appId, data, queryClient]);
