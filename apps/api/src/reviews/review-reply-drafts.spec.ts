@@ -294,6 +294,20 @@ describe('foreignContacts', () => {
     ).toEqual([]);
   });
 
+  it('reads a long run of address or punctuation characters in linear time', () => {
+    const inputs = [
+      `${'+'.repeat(60_000)}x`,
+      `https://a.example/${'!'.repeat(60_000)}x`,
+      `${'a'.repeat(60_000)}!`,
+    ];
+
+    for (const input of inputs) {
+      const started = performance.now();
+      foreignContacts(input, [input]);
+      expect(performance.now() - started).toBeLessThan(250);
+    }
+  });
+
   it('finds nothing in a reply without contacts', () => {
     expect(foreignContacts('Thanks, version 2.1 fixes it.', [])).toEqual([]);
   });

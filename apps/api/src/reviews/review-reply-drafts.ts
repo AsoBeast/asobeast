@@ -23,10 +23,9 @@ export const END_OF_REFERENCE = 'END OF REFERENCE DATA';
 
 const LINK = /\b(?:https?:\/\/|www\.)[^\s<>"'()]+/gi;
 
-const EMAIL = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g;
+const EMAIL = /(?<![\w.+-])[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g;
 
-const DOMAIN =
-  /\b(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}(?:\/[^\s<>"'()]*)?/gi;
+const DOMAIN = /(?<![a-z0-9.-])(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s<>"'()]*)?/gi;
 
 export const SYSTEM_PROMPT = [
   'You write the developer reply to one app store review on behalf of the app owner.',
@@ -117,8 +116,13 @@ export function buildReplyContext(input: ReplyContext): string {
   ].join('\n');
 }
 
-const trimTrailingPunctuation = (match: string) =>
-  match.replace(/[.,!?;:]+$/, '');
+const TRAILING_PUNCTUATION = new Set(['.', ',', '!', '?', ';', ':']);
+
+function trimTrailingPunctuation(match: string): string {
+  let end = match.length;
+  while (end > 0 && TRAILING_PUNCTUATION.has(match[end - 1])) end--;
+  return match.slice(0, end);
+}
 
 const hostOf = (link: string) =>
   link
