@@ -58,6 +58,8 @@ export const APP_TOOLS: ReadTool[] = [
       appId: z.string().describe("The app id from list_apps."),
     }),
     request: ({ appId }) => ({ path: `/apps/${seg(appId)}/run-status` }),
+    unavailableOn404:
+      "Today's run status is not available on this instance; it needs a newer asobeast API.",
   }),
 
   defineReadTool({
