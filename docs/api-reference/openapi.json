@@ -3474,6 +3474,153 @@
         ]
       }
     },
+    "/charts": {
+      "get": {
+        "description": "One day of a free, paid or grossing chart of one store, country, category and device: every row with its position, its position on the comparison day and the movement between them, the climbers, fallers, new entries and exits, the days a capture exists for, whether this workspace follows the chart, and which rows are its own apps or competitors. Reads what the daily run or a capture stored; never reaches the store.",
+        "operationId": "ChartsController_page",
+        "parameters": [
+          {
+            "name": "store",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "APP_STORE",
+                "GOOGLE_PLAY"
+              ]
+            }
+          },
+          {
+            "name": "country",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "pattern": "^[a-z]{2}$",
+              "example": "us",
+              "type": "string"
+            }
+          },
+          {
+            "name": "collection",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "free",
+                "paid",
+                "grossing"
+              ]
+            }
+          },
+          {
+            "name": "genre",
+            "required": true,
+            "in": "query",
+            "description": "A chart genre of the store, or overall",
+            "schema": {
+              "maxLength": 32,
+              "example": "6014",
+              "type": "string"
+            }
+          },
+          {
+            "name": "device",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "iphone",
+                "android"
+              ]
+            }
+          },
+          {
+            "name": "date",
+            "required": false,
+            "in": "query",
+            "description": "The UTC day to read. Omitted reads the newest capture.",
+            "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-10-13",
+              "type": "string"
+            }
+          },
+          {
+            "name": "compare",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "1d",
+              "type": "string",
+              "enum": [
+                "1d",
+                "7d",
+                "30d"
+              ]
+            }
+          },
+          {
+            "name": "dates",
+            "required": false,
+            "in": "query",
+            "description": "How many captured days to list, newest first.",
+            "schema": {
+              "minimum": 1,
+              "maximum": 365,
+              "default": 90,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Read a top chart for one day",
+        "tags": [
+          "charts"
+        ]
+      }
+    },
+    "/charts/genres": {
+      "get": {
+        "operationId": "ChartsController_genres",
+        "parameters": [
+          {
+            "name": "store",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "APP_STORE",
+                "GOOGLE_PLAY"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "List the chart categories of a store",
+        "tags": [
+          "charts"
+        ]
+      }
+    },
     "/apps/{id}/summary": {
       "get": {
         "operationId": "AnalyticsController_getSummary",

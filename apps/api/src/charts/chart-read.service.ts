@@ -1,0 +1,126 @@
+import { Injectable } from '@nestjs/common';
+import {
+  CHART_TRENDING_LIMIT,
+  ChartCaptureSummary,
+  ChartEntryItem,
+  ChartGenre,
+  chartGenreName,
+  chartGenresOf,
+  ChartKey,
+  ChartPage,
+  compareDays,
+  Store,
+} from '@asobeast/shared';
+import { addDays, toDateKey, utcToday } from '../analytics/analytics.support';
+import { PrismaService } from '../prisma/prisma.service';
+import { chartAppLinks } from './chart-apps';
+import { ChartCaptureService, StoredChart } from './chart-capture.service';
+import { ChartFollowsService } from './chart-follows.service';
+import { assertChartKey } from './chart-key';
+import { movementOf, trendingOf } from './chart-movement';
+import { ChartPageQueryDto } from './dto/chart-page-query.dto';
+
+type ChartListingItem = Omit<ChartEntryItem, 'previous' | 'delta' | 'movement'>;
+
+export function chartKeyFrom(query: ChartKey): ChartKey {
+  const { store, country, collection, genre, device } = query;
+  return { store, country, collection, genre, device };
+}
+
+function listingsOf(store: Store, chart: StoredChart): ChartListingItem[] {
+  return chart.entries.map(({ position, app }) => ({
+    position,
+    storeAppId: app.storeAppId,
+    title: app.title,
+    developer: app.developer,
+    iconUrl: app.iconUrl,
+    genreId: app.genreId,
+    genreName: app.genreId === null ? null : chartGenreName(store, app.genreId),
+    free: app.free,
+  }));
+}
+
+function summaryOf(chart: StoredChart | null): ChartCaptureSummary | null {
+  return (
+    chart && {
+      date: toDateKey(chart.date),
+      depth: chart.depth,
+      capturedAt: chart.capturedAt.toISOString(),
+    }
+  );
+}
+
+@Injectable()
+export class ChartReadService {
+  constructor(
+    private readonly captures: ChartCaptureService,
+    private readonly follows: ChartFollowsService,
+    private readonly prisma: PrismaService,
+  ) {}
+
+  async page(query: ChartPageQueryDto): Promise<ChartPage> {
+    const key = chartKeyFrom(query);
+    assertChartKey(key);
+    const capture = query.date
+      ? await this.captures.stored(key, new Date(query.date))
+      : await this.captures.newestOnOrBefore(key, utcToday());
+    const comparison =
+      capture && (await this.comparisonOf(key, capture, query));
+    const current = capture ? listingsOf(key.store, capture) : [];
+    const previous = comparison && listingsOf(key.store, comparison);
+    const storeAppIds = current.map((row) => row.storeAppId);
+    const [dates, followed, apps] = await Promise.all([
+      this.captures.capturedDates(key, query.dates),
+      this.follows.of(key),
+      this.workspaceApps(key.store, storeAppIds),
+    ]);
+
+    return {
+      chart: {
+        ...key,
+        genreName: chartGenreName(key.store, key.genre) ?? key.genre,
+      },
+      capture: summaryOf(capture),
+      comparison: summaryOf(comparison),
+      compare: query.compare,
+      entries: movementOf(current, previous),
+      trending: trendingOf(current, previous, CHART_TRENDING_LIMIT),
+      dates,
+      followed,
+      apps,
+    };
+  }
+
+  genres(store: Store): readonly ChartGenre[] {
+    return chartGenresOf(store);
+  }
+
+  private comparisonOf(
+    key: ChartKey,
+    capture: StoredChart,
+    query: ChartPageQueryDto,
+  ): Promise<StoredChart | null> {
+    const window = compareDays(query.compare);
+    return this.captures.newestOnOrBefore(
+      key,
+      addDays(capture.date, -window),
+      addDays(capture.date, -2 * window),
+    );
+  }
+
+  private async workspaceApps(store: Store, storeAppIds: string[]) {
+    if (storeAppIds.length === 0) return [];
+    const apps = await this.prisma.app.findMany({
+      where: { store, storeAppId: { in: storeAppIds } },
+      select: {
+        id: true,
+        storeAppId: true,
+        name: true,
+        isCompetitor: true,
+        primaryAppId: true,
+        primaryApp: { select: { name: true } },
+      },
+    });
+    return chartAppLinks(apps, storeAppIds);
+  }
+}

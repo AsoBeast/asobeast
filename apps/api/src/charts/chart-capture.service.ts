@@ -104,9 +104,13 @@ export class ChartCaptureService {
     });
   }
 
-  newestOnOrBefore(key: ChartKey, date: Date): Promise<StoredChart | null> {
+  newestOnOrBefore(
+    key: ChartKey,
+    date: Date,
+    notBefore?: Date,
+  ): Promise<StoredChart | null> {
     return this.prisma.chartCapture.findFirst({
-      where: { ...key, date: { lte: date } },
+      where: { ...key, date: { lte: date, gte: notBefore } },
       orderBy: { date: 'desc' },
       ...WITH_ENTRIES,
     });
