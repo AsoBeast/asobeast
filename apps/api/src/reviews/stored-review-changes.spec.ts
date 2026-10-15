@@ -54,6 +54,18 @@ describe('storedReviewChanges', () => {
     });
   });
 
+  it('clears the translation when an edit changes only the title', () => {
+    const changes = storedReviewChanges(
+      STORED,
+      fetched({
+        title: 'Fixed',
+        updatedAt: new Date('2026-09-05T08:00:00Z'),
+      }),
+    );
+
+    expect(changes).toMatchObject({ title: 'Fixed', ...TRANSLATION_CLEARED });
+  });
+
   it('keeps the translation when only the score of an edited review changed', () => {
     const changes = storedReviewChanges(
       STORED,
