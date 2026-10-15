@@ -47,3 +47,20 @@ test("the trending panel stays in view while the table scrolls", async ({
   expect(top).toBeGreaterThanOrEqual(56);
   expect(top).toBeLessThanOrEqual(120);
 });
+
+test("the trending list tabs fit inside the side panel", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/charts?view=table");
+  const panel = await trendingPanel(page).boundingBox();
+  const tabs = await trendingPanel(page)
+    .getByRole("tablist", { name: "Trending list" })
+    .getByRole("tab")
+    .evaluateAll((nodes) =>
+      nodes.map((node) => node.getBoundingClientRect().right),
+    );
+
+  expect(tabs).toHaveLength(4);
+  for (const right of tabs) {
+    expect(right).toBeLessThanOrEqual((panel?.x ?? 0) + (panel?.width ?? 0));
+  }
+});
