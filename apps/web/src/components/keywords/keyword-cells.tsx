@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { StickyNote } from "lucide-react";
+import { LoaderCircle, StickyNote } from "lucide-react";
 import type {
   ScoreProvenance,
   ScoringConfidence,
@@ -24,6 +24,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { formatDateTime } from "@/lib/format";
+import { isChecking } from "@/lib/keyword-checks";
 import { tagsLabel, visibleTags } from "@/lib/keyword-tags";
 import { grade, gradeLabel, type GradeMetric } from "@/lib/grade";
 import { cn } from "@/lib/utils";
@@ -245,6 +246,25 @@ export function PositionCell({ keyword }: { keyword: TrackedKeywordItem }) {
     keyword.latestPosition,
     keyword.latestDepth,
   );
+  if (label === null && isChecking(keyword)) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span
+            aria-label="Position: checking"
+            className="inline-flex items-center gap-1.5 text-muted-foreground"
+          >
+            <LoaderCircle aria-hidden className="size-3.5 animate-spin" />
+            Checking…
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>
+          Queued for its first check. Scores can land first; the table updates
+          on its own.
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
   if (label === null) {
     return (
       <Tooltip>
@@ -256,9 +276,7 @@ export function PositionCell({ keyword }: { keyword: TrackedKeywordItem }) {
             —
           </span>
         </TooltipTrigger>
-        <TooltipContent>
-          The daily pipeline has not checked this keyword yet
-        </TooltipContent>
+        <TooltipContent>This keyword has not been checked yet</TooltipContent>
       </Tooltip>
     );
   }

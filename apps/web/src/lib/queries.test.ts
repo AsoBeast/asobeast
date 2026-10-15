@@ -49,6 +49,7 @@ import {
   invalidateActionMutation,
   invalidateAiUsage,
   invalidateAppListing,
+  invalidateRunResults,
   invalidateAuth,
   invalidatePasswordChange,
   invalidateCompetitorMutation,
@@ -416,6 +417,25 @@ describe("appKeys", () => {
     expect(
       client.getQueryState(appKeys.metadataAudit(APP, "de"))?.isInvalidated,
     ).toBe(true);
+  });
+
+  it("refreshes what a run collects without asking for the run status again", () => {
+    const client = new QueryClient();
+    client.setQueryData(appKeys.keywords(APP, "de"), []);
+    client.setQueryData(appKeys.listing(APP, "de"), {});
+    client.setQueryData(appKeys.runStatus(APP), {});
+
+    invalidateRunResults(client, APP);
+
+    expect(
+      client.getQueryState(appKeys.keywords(APP, "de"))?.isInvalidated,
+    ).toBe(true);
+    expect(
+      client.getQueryState(appKeys.listing(APP, "de"))?.isInvalidated,
+    ).toBe(true);
+    expect(client.getQueryState(appKeys.runStatus(APP))?.isInvalidated).toBe(
+      false,
+    );
   });
 
   it("keys a deep search by its storefront", () => {

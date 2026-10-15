@@ -21,7 +21,7 @@ You need an imported app. See [Import an app](/guides/import-an-app).
     A single add takes one phrase. Bulk add accepts a list, one phrase per line, and creates them all in the selected market. To add a list that carries countries, tags or notes, [import it from a CSV file](#import-keywords-from-a-csv-file).
   </Step>
   <Step title="Read the first position">
-    A keyword added by hand or by CSV import is checked within minutes, like the keywords the import tracked, so its first position does not wait for the daily run.
+    A keyword added by hand, by CSV import, by a market seed or by **Save and track** on a keyword field is checked within minutes, ahead of its popularity and difficulty, so its first position does not wait for the daily run. Until it lands the row says **Checking** and the table refreshes itself.
   </Step>
 </Steps>
 
@@ -251,7 +251,7 @@ A customer of a hosted instance watches their keyword markets on the plan card i
 
 ## Troubleshooting
 
-- **A new keyword shows no position.** The first check happens on the next daily pipeline run. Nothing is wrong on the day you add it.
+- **A new keyword says Checking for long.** Its check waits in the store queue behind the other work of the day, at the store rate limit. The row updates on its own for ten minutes and after a reload. If it stays, look for a failed `check-keyword` job on `/admin/queues`.
 - **A keyword shows `>200` every day.** It was checked and the app was not in the top 200. See [Positions and rank depth](/concepts/positions).
 - **Popularity and difficulty are empty.** Scoring runs weekly on `CRON_SCORING`, which defaults to Sunday 04:00 UTC.
 - **The budget card warns the operator the instance is over capacity.** Remove keywords or markets, or raise the per store rate limit and accept the risk of the store throttling your IP address.

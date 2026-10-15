@@ -59,6 +59,7 @@ describe.each([
   "app_localizations",
   "market_keyword_fields",
   "market_suggestions",
+  "app_run_status",
 ])("%s", (name) => {
   const tool = catalogTool(name);
 

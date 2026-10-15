@@ -331,6 +331,27 @@ describe('KeywordImportService.import', () => {
     expect(checks.schedule).toHaveBeenCalledWith('app1', ['pl:a1', 'de:a2']);
   });
 
+  it('checks the first positions before it asks for the first scores', async () => {
+    const order: string[] = [];
+    const { tx, tracker, checks, service } = build([], {
+      limit: 10,
+      used: 0,
+    });
+    tx.trackedKeyword.createMany.mockResolvedValue({ count: 1 });
+    tracker.enqueueFirstScores.mockImplementation(() => {
+      order.push('score');
+      return Promise.resolve();
+    });
+    checks.schedule.mockImplementation(() => {
+      order.push('check');
+      return Promise.resolve(1);
+    });
+
+    await service.import('app1', { rows: [{ keyword: 'a1', country: 'pl' }] });
+
+    expect(order).toEqual(['check', 'score']);
+  });
+
   it('reports the keyword markets in use after the import, not before it', async () => {
     const { tx, quota, service } = build([], { limit: 10, used: 8 });
     tx.trackedKeyword.createMany.mockResolvedValue({ count: 2 });

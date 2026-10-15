@@ -7,6 +7,21 @@ import { seedCookies } from "./routes.mts";
 const strip = (page: Page) =>
   page.getByRole("list", { name: "Screenshots in store order" });
 
+const STRIP_HEIGHT = 224;
+const LANDSCAPE_PIXELS =
+  "iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAAC0lEQVR4nGNoAAMACocDAcTGH2YAAAAASUVORK5CYII=";
+
+const boxOf = async (page: Page, name: string) => {
+  const image = strip(page).getByRole("img", { name, exact: true });
+  await expect(image).toBeVisible();
+  await expect
+    .poll(() => image.evaluate((node) => node.getBoundingClientRect().height))
+    .toBeGreaterThan(0);
+  const box = await image.boundingBox();
+  if (!box) throw new Error(`no box for ${name}`);
+  return box;
+};
+
 const coverageTable = (page: Page) =>
   page.getByRole("table", { name: /Keyword coverage across/ });
 
@@ -25,6 +40,54 @@ test("lists every screenshot in store order with the caption read from it", asyn
   await expect(
     page.getByText("2 of 4 screenshots carry a caption."),
   ).toBeVisible();
+});
+
+test("draws a screenshot at its own aspect ratio instead of cropping it", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/metadata");
+  const image = strip(page).getByRole("img", {
+    name: "Screenshot 1",
+    exact: true,
+  });
+  await expect
+    .poll(() => image.evaluate((node: HTMLImageElement) => node.naturalWidth))
+    .toBeGreaterThan(0);
+
+  const box = await boxOf(page, "Screenshot 1");
+
+  expect(Math.round(box.height)).toBe(STRIP_HEIGHT);
+  expect(Math.abs(box.width - box.height)).toBeLessThanOrEqual(1);
+});
+
+test("draws a landscape screenshot whole without covering the next one", async ({
+  page,
+}) => {
+  await page.route(
+    (url) =>
+      url.pathname === "/_next/image" &&
+      (url.searchParams.get("url") ?? "").includes("/e2e-focus/1.jpg/"),
+    (route) =>
+      route.fulfill({
+        contentType: "image/png",
+        body: Buffer.from(LANDSCAPE_PIXELS, "base64"),
+      }),
+  );
+  await page.goto("/apps/app-1/metadata");
+  const image = strip(page).getByRole("img", {
+    name: "Screenshot 1",
+    exact: true,
+  });
+  await expect
+    .poll(() => image.evaluate((node: HTMLImageElement) => node.naturalWidth))
+    .toBe(2);
+
+  const box = await boxOf(page, "Screenshot 1");
+  const next = await boxOf(page, "Screenshot 2");
+
+  expect(Math.round(box.height)).toBe(STRIP_HEIGHT);
+  expect(Math.abs(box.width - 2 * box.height)).toBeLessThanOrEqual(3);
+  expect(next.x).toBeGreaterThanOrEqual(box.x + box.width);
 });
 
 test("adds a screenshot text column that does not count as coverage", async ({
@@ -141,6 +204,8 @@ test("shows a screenshot again after switching away from a market whose image fa
   await expect(
     strip(page).getByRole("img", { name: "Screenshot 1, image unavailable" }),
   ).toBeVisible();
+  const placeholder = await boxOf(page, "Screenshot 1, image unavailable");
+  expect(Math.round(placeholder.height)).toBe(STRIP_HEIGHT);
 
   await page.getByRole("combobox", { name: "Listing market" }).click();
   await page.getByRole("option", { name: "PL · Poland" }).click();

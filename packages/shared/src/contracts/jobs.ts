@@ -149,3 +149,39 @@ export interface FirstRunStatus {
   complete: boolean;
   stages: FirstRunStageStatus[];
 }
+
+export const APP_RUN_STAGES = ['listings', 'keywords', 'categories'] as const;
+
+export type AppRunStage = (typeof APP_RUN_STAGES)[number];
+
+export interface AppRunStageStatus {
+  stage: AppRunStage;
+  ready: number;
+  total: number;
+  complete: boolean;
+}
+
+export interface AppRunStatus {
+  appId: string;
+  date: string;
+  state: RunState;
+  startedAt: string;
+  lastCaptureAt: string | null;
+  stages: AppRunStageStatus[];
+}
+
+export interface AppRunTotals {
+  ready: number;
+  total: number;
+}
+
+export const appRunTotals = (
+  status: Pick<AppRunStatus, 'stages'>,
+): AppRunTotals =>
+  status.stages.reduce(
+    (sum, stage) => ({
+      ready: sum.ready + stage.ready,
+      total: sum.total + stage.total,
+    }),
+    { ready: 0, total: 0 },
+  );

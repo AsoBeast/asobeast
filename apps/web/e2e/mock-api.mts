@@ -16,6 +16,7 @@ import {
 import {
   ACTIONS,
   ACTION_SUMMARY,
+  APP_1_KEYWORDS,
   APP_1_MARKET_SUMMARIES,
   APP_AUDIT,
   AUDIT_HISTORY_POINTS,
@@ -49,6 +50,10 @@ import {
   EMAIL_DELIVERIES,
   FIRST_RUN_COMPLETE,
   FIRST_RUN_MID,
+  APP_RUN_COMPLETE,
+  APP_RUN_DELAYED,
+  APP_RUN_IDLE,
+  APP_RUN_RUNNING,
   FIRST_RUN_UNSCHEDULED,
   HEALTH,
   RUN_STATUS,
@@ -143,6 +148,7 @@ import type {
   EmailAlertUpdateRequest,
   EmailAlertItem,
   FirstRunStatus,
+  AppRunStatus,
   KeywordFieldRequest,
   KeywordAddRequest,
   KeywordFieldResult,
@@ -172,6 +178,7 @@ import {
   isKeywordTag,
   KEYWORD_FIELD_CHAR_LIMIT,
   KEYWORD_TAGS_MAX,
+  RANK_DEPTH,
   normalizeKeywordNote,
   normalizeKeywordTags,
   keywordFieldChars,
@@ -1689,6 +1696,19 @@ function firstRunFor(appId: string, req: IncomingMessage): FirstRunStatus {
   return withHistoryDays({ ...FIRST_RUN_COMPLETE, appId }, req);
 }
 
+const appRunAdvances = new Map<string, number>();
+
+function appRunFor(appId: string, req: IncomingMessage): AppRunStatus {
+  if (appId === "app-2") return APP_RUN_IDLE;
+  if (appId !== "app-new") return { ...APP_RUN_COMPLETE, appId };
+  if (hasCookie(req, "e2e_app_run_delayed", "1")) return APP_RUN_DELAYED;
+  const token = cookieValue(req, "e2e_app_run_advance");
+  if (token === undefined) return APP_RUN_RUNNING;
+  const calls = appRunAdvances.get(token) ?? 0;
+  appRunAdvances.set(token, calls + 1);
+  return calls === 0 ? APP_RUN_RUNNING : { ...APP_RUN_COMPLETE, appId };
+}
+
 const API_LATENCY_COOKIE = "e2e_api_latency";
 const BUDGET_HOLD_COOKIE = "e2e_budget_hold";
 const BUDGET_QUOTA_COOKIE = "e2e_budget_quota";
@@ -1718,6 +1738,40 @@ const budgetHold = (token: string) => holdFor(budgetHolds, token);
 const insightsHold = (token: string) => holdFor(insightsHolds, token);
 const activityHolds: Holds = new Map();
 const activityHold = (token: string) => holdFor(activityHolds, token);
+
+const firstCheckCalls = new Map<string, number>();
+
+function firstCheckRows(req: IncomingMessage): TrackedKeywordItem[] {
+  const token = cookieValue(req, "e2e_first_check");
+  if (token === undefined) return [];
+  const calls = firstCheckCalls.get(token) ?? 0;
+  firstCheckCalls.set(token, calls + 1);
+  const checked = calls > 0;
+  const unchecked = {
+    latestPosition: null,
+    latestDepth: null,
+    previousPosition: null,
+    positionDelta1d: null,
+    positionDelta7d: null,
+    serpVolatility7d: null,
+  };
+  return [
+    {
+      ...APP_1_KEYWORDS[0],
+      ...unchecked,
+      keywordId: "kw-fresh",
+      text: "fresh phrase",
+      ...(checked ? { latestPosition: 7, latestDepth: RANK_DEPTH } : {}),
+    },
+    {
+      ...APP_1_KEYWORDS[0],
+      ...unchecked,
+      keywordId: "kw-dormant",
+      text: "dormant phrase",
+      active: false,
+    },
+  ];
+}
 
 const unsubscribeCalls = new Map<string, number>();
 const confirmCalls = new Map<string, number>();
@@ -2183,6 +2237,11 @@ const routes: Route[] = [
     method: "GET",
     pattern: /^\/jobs\/store-health$/,
     handler: (_p, req, res) => json(res, 200, storeHealthFor(req)),
+  },
+  {
+    method: "GET",
+    pattern: /^\/apps\/([^/]+)\/run-status$/,
+    handler: (params, req, res) => json(res, 200, appRunFor(params[0], req)),
   },
   {
     method: "GET",
@@ -2837,7 +2896,10 @@ const routes: Route[] = [
         res,
         200,
         sortKeywords(
-          scoped.map((keyword) => annotated(id, keyword)),
+          [
+            ...scoped.map((keyword) => annotated(id, keyword)),
+            ...(id === "app-1" ? firstCheckRows(req) : []),
+          ],
           query.get("sort"),
         ),
       );

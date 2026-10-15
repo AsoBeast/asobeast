@@ -112,8 +112,8 @@ export class MarketSeedService {
     });
     if (seeded === 0) return 0;
     const keywordIds = rows.map(({ keywordId }) => keywordId);
-    await this.tracker.enqueueFirstScores(keywordIds, app);
     await this.checks.schedule(app.id, keywordIds);
+    await this.tracker.enqueueFirstScores(keywordIds, app);
     await this.listings.request(app, country);
     return seeded;
   }

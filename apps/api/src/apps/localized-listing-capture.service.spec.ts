@@ -127,7 +127,9 @@ describe('LocalizedListingCapture', () => {
     const getApp = jest.fn().mockResolvedValue(normalized(POLISH));
     const { capture, create, request, record } = build({ getApp });
 
-    await expect(capture.capture(APP, 'pl', fallback)).resolves.toEqual([]);
+    await expect(capture.capture(APP, 'pl', fallback)).resolves.toMatchObject({
+      changes: [],
+    });
 
     expect(getApp).toHaveBeenCalledWith('6657987209', 'pl', 'pl');
     expect(create).toHaveBeenCalledWith({
@@ -156,7 +158,9 @@ describe('LocalizedListingCapture', () => {
     });
     const { capture, create, recordMarketRefresh } = build({ getApp });
 
-    await expect(capture.capture(APP, 'pl', fallback)).resolves.toEqual([]);
+    await expect(capture.capture(APP, 'pl', fallback)).resolves.toMatchObject({
+      changes: [],
+    });
 
     expect(create).not.toHaveBeenCalled();
     expect(recordMarketRefresh).not.toHaveBeenCalled();
@@ -186,7 +190,9 @@ describe('LocalizedListingCapture', () => {
     const getApp = jest.fn().mockResolvedValue(normalized(ENGLISH));
     const { capture, create, recordMarketRefresh } = build({ getApp });
 
-    await expect(capture.capture(APP, 'pl', fallback)).resolves.toEqual([]);
+    await expect(capture.capture(APP, 'pl', fallback)).resolves.toMatchObject({
+      changes: [],
+    });
 
     expect(create).not.toHaveBeenCalled();
     expect(recordMarketRefresh).not.toHaveBeenCalled();
@@ -200,7 +206,9 @@ describe('LocalizedListingCapture', () => {
     });
     const { capture, create, recordMarketRefresh } = build({ getApp });
 
-    await expect(capture.capture(APP, 'pl', fallback)).resolves.toEqual([]);
+    await expect(capture.capture(APP, 'pl', fallback)).resolves.toMatchObject({
+      changes: [],
+    });
 
     expect(create).not.toHaveBeenCalled();
     expect(recordMarketRefresh).not.toHaveBeenCalled();
@@ -250,7 +258,7 @@ describe('LocalizedListingCapture', () => {
       created: row(ENGLISH, 'pl'),
     });
 
-    const changes = await capture.capture(APP, 'pl', fallback);
+    const { changes } = await capture.capture(APP, 'pl', fallback);
 
     expect(create).toHaveBeenCalledTimes(1);
     expect(recordMarketRefresh).toHaveBeenCalledWith(
@@ -277,9 +285,58 @@ describe('LocalizedListingCapture', () => {
       { field: 'whatsNew', before: 'Stare', after: 'Nowe' },
     ]);
 
-    await expect(capture.capture(APP, 'pl', fallback)).resolves.toEqual([
-      { field: 'whatsNew', before: 'Stare', after: 'Nowe', localization: 'pl' },
-    ]);
+    await expect(capture.capture(APP, 'pl', fallback)).resolves.toMatchObject({
+      changes: [
+        {
+          field: 'whatsNew',
+          before: 'Stare',
+          after: 'Nowe',
+          localization: 'pl',
+        },
+      ],
+    });
+  });
+
+  it('answers every listing it read, echoed or served', async () => {
+    const getApp = jest
+      .fn()
+      .mockResolvedValueOnce(normalized(ENGLISH))
+      .mockResolvedValueOnce(normalized(POLISH));
+    const { capture } = build({ getApp });
+
+    await expect(
+      capture.capture({ ...APP, country: 'us' }, 'be', fallback),
+    ).resolves.toMatchObject({
+      listings: [
+        expect.objectContaining({ title: ENGLISH.title }),
+        expect.objectContaining({ title: POLISH.title }),
+      ],
+      complete: true,
+    });
+  });
+
+  it('answers incomplete when a localization it asks for fails', async () => {
+    const warn = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
+    const getApp = jest
+      .fn()
+      .mockRejectedValueOnce(
+        new StoreRequestError(Store.APP_STORE, 'getApp', 'HTTP 429'),
+      )
+      .mockResolvedValueOnce(normalized(POLISH));
+    const { capture } = build({ getApp });
+
+    try {
+      await expect(
+        capture.capture({ ...APP, country: 'us' }, 'be', fallback),
+      ).resolves.toMatchObject({
+        listings: [expect.objectContaining({ title: POLISH.title })],
+        complete: false,
+      });
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it('asks for every native localization of a storefront in order', async () => {
@@ -308,7 +365,7 @@ describe('LocalizedListingCapture', () => {
 
     await expect(
       capture.capture({ ...APP, country: 'us' }, 'be', fallback),
-    ).resolves.toEqual([]);
+    ).resolves.toMatchObject({ changes: [] });
 
     expect(create).toHaveBeenCalledTimes(1);
     expect(create).toHaveBeenCalledWith({

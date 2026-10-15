@@ -4,37 +4,18 @@ import { Sparkles } from "lucide-react";
 import type {
   AppLocalizationItem,
   AppStoreLocalization,
-  LocalizationReader,
 } from "@asobeast/shared";
 import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { localizationName } from "@/lib/localizations";
 import { KeywordFieldEditor } from "./KeywordFieldEditor";
 import { OriginBadge } from "./OriginBadge";
-import { ReadRoleBadge } from "./ReadRoleBadge";
+import { ReaderChips } from "./ReadRoleBadge";
 import { RemoveLocalizationDialog } from "./RemoveLocalizationDialog";
-
-function ReaderChips({ readers }: { readers: readonly LocalizationReader[] }) {
-  if (readers.length === 0) {
-    return <Badge variant="outline">Not read in your markets</Badge>;
-  }
-  return (
-    <>
-      {readers.map((reader) => (
-        <ReadRoleBadge
-          key={reader.country}
-          role={reader.role}
-          prefix={reader.country.toUpperCase()}
-        />
-      ))}
-    </>
-  );
-}
 
 export function LocalizationItem({
   id,

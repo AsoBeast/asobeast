@@ -103,6 +103,19 @@ describe("requestOf", () => {
     expect(annotationsOf(tool)).toMatchObject({ readOnlyHint: true });
   });
 
+  it("reads today's run of an app as a read only call", () => {
+    const tool = toolByName("app_run_status")!;
+
+    expect(requestOf(tool, { appId: "app_1" })).toEqual({
+      method: "GET",
+      path: "/apps/app_1/run-status",
+    });
+    expect(requestOf(tool, { appId: "a/b" })).toMatchObject({
+      path: "/apps/a%2Fb/run-status",
+    });
+    expect(annotationsOf(tool)).toMatchObject({ readOnlyHint: true });
+  });
+
   it("reads one market's keyword fields", () => {
     expect(
       requestOf(toolByName("market_keyword_fields")!, {
