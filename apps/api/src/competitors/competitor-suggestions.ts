@@ -5,15 +5,23 @@ import {
 } from '@asobeast/shared';
 import { SearchItem } from '../store-providers/types';
 
-function fromSerp(
-  item: CompetitorDiscoveryItem,
-  similarIcon: string | undefined,
-): CompetitorSuggestion {
+export function withSimilarIcons(
+  serp: readonly CompetitorDiscoveryItem[],
+  similar: readonly SearchItem[],
+): CompetitorDiscoveryItem[] {
+  const icons = new Map(similar.map((item) => [item.storeAppId, item.iconUrl]));
+  return serp.map((item) => ({
+    ...item,
+    iconUrl: item.iconUrl ?? icons.get(item.storeAppId) ?? null,
+  }));
+}
+
+function fromSerp(item: CompetitorDiscoveryItem): CompetitorSuggestion {
   return {
     storeAppId: item.storeAppId,
     title: item.title,
     developer: item.developer,
-    iconUrl: item.iconUrl ?? similarIcon ?? null,
+    iconUrl: item.iconUrl ?? null,
     source: 'serp',
     appearances: item.appearances,
     bestPosition: item.bestPosition,
@@ -40,11 +48,8 @@ export function mergeSuggestions(
 ): CompetitorSuggestion[] {
   const seen = new Set(exclude);
   const merged: CompetitorSuggestion[] = [];
-  const similarIcons = new Map(
-    similar.map((item) => [item.storeAppId, item.iconUrl]),
-  );
   for (const suggestion of [
-    ...serp.map((item) => fromSerp(item, similarIcons.get(item.storeAppId))),
+    ...serp.map(fromSerp),
     ...similar.map(fromSimilar),
   ]) {
     if (merged.length === limit) break;

@@ -9,7 +9,7 @@ import { StoreRequestError } from '../store-providers/errors';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { SearchItem } from '../store-providers/types';
 import { CompetitorsService } from './competitors.service';
-import { mergeSuggestions } from './competitor-suggestions';
+import { mergeSuggestions, withSimilarIcons } from './competitor-suggestions';
 import { closestSimilar, listingTerms } from './similar-relevance';
 
 const DISCOVERY_WINDOW_DAYS = 30;
@@ -46,13 +46,20 @@ export class CompetitorSuggestionsService {
       days: DISCOVERY_WINDOW_DAYS,
     });
     const similar = await this.similarApps(app, spend);
+    const shown = new Set([
+      ...exclude,
+      ...serp.items.map((item) => item.storeAppId),
+    ]);
+    const unshown = (similar ?? []).filter(
+      (item) => !shown.has(item.storeAppId),
+    );
     return {
       store: app.store,
       country: app.country,
       similar: similar ? 'ok' : 'unavailable',
       items: mergeSuggestions(
-        serp.items,
-        similar ? await this.onTopic(app, similar) : [],
+        withSimilarIcons(serp.items, similar ?? []),
+        await this.onTopic(app, unshown),
         exclude,
       ),
     };

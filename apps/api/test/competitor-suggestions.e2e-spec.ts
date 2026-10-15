@@ -42,7 +42,7 @@ const PLAY_SIMILAR: SearchItem[] = [
   {
     storeAppId: 'com.video.app',
     title: 'Video Tube',
-    summary: 'Watch videos, listen to music and learn something new every day.',
+    summary: 'Watch videos and listen to music every day.',
   },
   {
     storeAppId: 'com.pins.app',
@@ -51,8 +51,8 @@ const PLAY_SIMILAR: SearchItem[] = [
   },
   {
     storeAppId: 'com.speak.app',
-    title: 'Speak Easy - Learn Languages',
-    summary: 'Learn languages like Spanish and French in minutes a day.',
+    title: 'Speak Easy',
+    summary: 'Practice Spanish conversation with friendly tutors.',
   },
   {
     storeAppId: 'com.words.app',
@@ -287,31 +287,57 @@ describe('Competitor suggestions (e2e)', () => {
     expect(items.every((item) => item.source === 'serp')).toBe(true);
   });
 
-  it('keeps only the google play similar apps that share the listing terms', async () => {
-    const primary = await prisma.app.create({
+  const createPlayPrimary = (withListing = true) =>
+    prisma.app.create({
       data: {
         workspaceId: DEFAULT_WORKSPACE_ID,
         store: Store.GOOGLE_PLAY,
         storeAppId: PLAY_PRIMARY_ID,
         country: 'us',
         name: 'Lingo',
-        snapshots: {
-          create: {
-            title: 'Lingo: Learn Languages',
-            summary:
-              'Learn Spanish, French, English and more with fun, quick lessons.',
-            description: 'Fixture',
-            raw: {},
+        ...(withListing && {
+          snapshots: {
+            create: {
+              title: 'Lingo: Learn Languages',
+              summary:
+                'Learn Spanish, French, English and more with fun, quick lessons.',
+              description: 'Fixture',
+              raw: {},
+            },
           },
-        },
+        }),
       },
     });
 
-    const res = await suggest(primary.id).expect(200);
+  const suggestedIds = async (appId: string) =>
+    (
+      (await suggest(appId).expect(200)).body as CompetitorSuggestions
+    ).items.map((item) => item.storeAppId);
 
-    expect(
-      (res.body as CompetitorSuggestions).items.map((item) => item.storeAppId),
-    ).toEqual(['com.words.app', 'com.speak.app']);
+  it('keeps only the google play similar apps that share the listing terms', async () => {
+    const primary = await createPlayPrimary();
+
+    expect(await suggestedIds(primary.id)).toEqual(['com.words.app']);
+  });
+
+  it('judges google play similar apps without the tracked competitors', async () => {
+    const primary = await createPlayPrimary();
+    await api
+      .post(`/apps/${primary.id}/competitors`)
+      .send({
+        url: 'https://play.google.com/store/apps/details?id=com.words.app',
+      })
+      .expect(201);
+
+    expect(await suggestedIds(primary.id)).toEqual(['com.speak.app']);
+  });
+
+  it('keeps the store order for a google play app without a listing', async () => {
+    const primary = await createPlayPrimary(false);
+
+    expect(await suggestedIds(primary.id)).toEqual(
+      PLAY_SIMILAR.map((item) => item.storeAppId),
+    );
   });
 
   it('answers 404 for a competitor app and an unknown app', async () => {

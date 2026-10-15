@@ -4,15 +4,16 @@ import { extractCandidates } from '../keywords/extraction';
 import { ListingText } from '../keywords/listing-texts';
 import { SearchItem } from '../store-providers/types';
 
-export const SHARE_OF_BEST_MATCH = 0.5;
+const SHARE_OF_BEST_MATCH = 0.5;
 
-export function listingTerms({ languages, ...listing }: ListingText): string[] {
+export function listingTerms({
+  title,
+  subtitle,
+  summary,
+  languages,
+}: ListingText): string[] {
   return extractCandidates(
-    {
-      title: listing.title,
-      subtitle: listing.subtitle ?? undefined,
-      summary: listing.summary ?? undefined,
-    },
+    { title, subtitle: subtitle ?? undefined, summary: summary ?? undefined },
     languages,
   ).map((candidate) => candidate.text);
 }
