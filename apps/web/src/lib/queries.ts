@@ -1,5 +1,6 @@
 import type {
   AlertChannel,
+  ChartFollowItem,
   ChartPage,
   AppAuditResult,
   EmailAlertItem,
@@ -398,7 +399,8 @@ export const portfolioInsightsOptions = queryOptions({
 
 export const chartKeys = {
   all: ["charts"] as const,
-  page: (query: ChartPageQuery) => ["charts", "page", query] as const,
+  pages: ["charts", "page"] as const,
+  page: (query: ChartPageQuery) => [...chartKeys.pages, query] as const,
   follows: ["charts", "follows"] as const,
 };
 
@@ -417,6 +419,16 @@ export const chartPageOptions = (query: ChartPageQuery) =>
 
 export function invalidateChartMutation(client: QueryClient): void {
   void client.invalidateQueries({ queryKey: chartKeys.all });
+}
+
+export function forgetChartFollow(client: QueryClient, id: string): void {
+  client.setQueryData<ChartFollowItem[]>(chartKeys.follows, (follows) =>
+    follows?.filter((follow) => follow.id !== id),
+  );
+  client.setQueriesData<ChartPage>({ queryKey: chartKeys.pages }, (page) =>
+    page?.followed?.id === id ? { ...page, followed: null } : page,
+  );
+  invalidateChartMutation(client);
 }
 
 export function seedChartCapture(client: QueryClient, page: ChartPage): void {

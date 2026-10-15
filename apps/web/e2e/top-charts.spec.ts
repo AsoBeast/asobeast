@@ -321,8 +321,10 @@ test.describe.serial("chart follows", () => {
     (await (await request.get(`${MOCK_API}/__chart-follows`)).json()) as Array<
       Record<string, string>
     >;
-  const follow = (request: APIRequestContext, key: Record<string, string>) =>
-    request.post(`${MOCK_API}/charts/follows`, { data: key });
+  const followChart = (
+    request: APIRequestContext,
+    key: Record<string, string>,
+  ) => request.post(`${MOCK_API}/charts/follows`, { data: key });
 
   test("follows and unfollows", async ({ page, request }) => {
     await request.get(`${MOCK_API}/__reset-chart-follows`);
@@ -347,14 +349,14 @@ test.describe.serial("chart follows", () => {
 
   test("lists the followed charts", async ({ page, request }) => {
     await request.get(`${MOCK_API}/__reset-chart-follows`);
-    await follow(request, {
+    await followChart(request, {
       store: "APP_STORE",
       country: "us",
       collection: "free",
       genre: "7012",
       device: "iphone",
     });
-    await follow(request, {
+    await followChart(request, {
       store: "GOOGLE_PLAY",
       country: "de",
       collection: "grossing",
@@ -391,7 +393,7 @@ test.describe.serial("chart follows", () => {
 
   test("stops following a chart from the list", async ({ page, request }) => {
     await request.get(`${MOCK_API}/__reset-chart-follows`);
-    await follow(request, {
+    await followChart(request, {
       store: "APP_STORE",
       country: "us",
       collection: "free",
@@ -411,6 +413,47 @@ test.describe.serial("chart follows", () => {
     await expect(page.getByText("Stopped following")).toBeVisible();
     await expect(list.getByText("No charts followed yet")).toBeVisible();
     expect(await follows(request)).toEqual([]);
+  });
+
+  test("drops an unfollowed chart before the lists load again", async ({
+    page,
+    context,
+    request,
+  }) => {
+    await request.get(`${MOCK_API}/__reset-chart-follows`);
+    await followChart(request, {
+      store: "APP_STORE",
+      country: "us",
+      collection: "free",
+      genre: "7012",
+      device: "iphone",
+    });
+    await page.goto("/charts?genre=7012");
+    await page.getByRole("button", { name: "Followed charts" }).click();
+    const list = page.getByRole("dialog", { name: "Followed charts" });
+    await expect(list.getByRole("listitem")).toHaveCount(1);
+    await context.addCookies([
+      {
+        name: "e2e_api_latency",
+        value: "1500",
+        domain: "localhost",
+        path: "/",
+      },
+    ]);
+
+    await list
+      .getByRole("button", {
+        name: "Stop following Top free · Puzzle · United States",
+      })
+      .click();
+    await expect(page.getByText("Stopped following")).toBeVisible();
+
+    await expect(list.getByText("No charts followed yet")).toBeVisible({
+      timeout: 1000,
+    });
+    await expect(
+      page.getByRole("button", { name: "Follow chart" }),
+    ).toBeVisible({ timeout: 1000 });
   });
 });
 
