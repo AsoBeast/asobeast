@@ -225,6 +225,7 @@ export class KeywordsService {
         });
         await this.tracker.claimForManual(tx, appId, [keywordId]);
       });
+      if (!keyword.active) await this.checks.schedule(appId, [keywordId]);
       await this.listings.request(app, keyword.country);
     } else {
       await this.prisma.trackedKeyword.update({
@@ -334,15 +335,18 @@ export class KeywordsService {
   private async ensureTracked(
     appId: string,
     keywordId: string,
-  ): Promise<{ store: Store; country: string }> {
+  ): Promise<{ store: Store; country: string; active: boolean }> {
     const tracked = await this.prisma.trackedKeyword.findUnique({
       where: { appId_keywordId: { appId, keywordId } },
-      select: { keyword: { select: { store: true, country: true } } },
+      select: {
+        active: true,
+        keyword: { select: { store: true, country: true } },
+      },
     });
     if (!tracked) {
       throw new NotFoundException(`Keyword ${keywordId} is not tracked`);
     }
-    return tracked.keyword;
+    return { ...tracked.keyword, active: tracked.active };
   }
 
   private async getTrackedItem(

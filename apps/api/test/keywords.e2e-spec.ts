@@ -381,6 +381,38 @@ describe('KeywordsController (e2e)', () => {
       expect(await checkedJobIds()).toEqual([]);
     });
 
+    it('checks a paused keyword again once it is resumed', async () => {
+      const id = await importAndClear();
+      const [paused] = idsOf(await add(id, ['deep focus']), ['deep focus']);
+      await api
+        .patch(`/apps/${id}/keywords/${paused}`)
+        .send({ active: false })
+        .expect(200);
+      await obliterateQueues(app);
+      await pauseQueues(app);
+
+      await api
+        .patch(`/apps/${id}/keywords/${paused}`)
+        .send({ active: true })
+        .expect(200);
+
+      expect(await checkedJobIds()).toEqual(firstRunIds(id, [paused]));
+    });
+
+    it('checks nothing when an active keyword is edited', async () => {
+      const id = await importAndClear();
+      const [keywordId] = idsOf(await add(id, ['deep focus']), ['deep focus']);
+      await obliterateQueues(app);
+      await pauseQueues(app);
+
+      await api
+        .patch(`/apps/${id}/keywords/${keywordId}`)
+        .send({ active: true, note: 'kept' })
+        .expect(200);
+
+      expect(await checkedJobIds()).toEqual([]);
+    });
+
     it('checks a paused keyword again once it is added back', async () => {
       const id = await importAndClear();
       const [paused] = idsOf(await add(id, ['deep focus']), ['deep focus']);
