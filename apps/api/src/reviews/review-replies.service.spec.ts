@@ -160,6 +160,15 @@ describe('ReviewRepliesService.patch', () => {
     expect(reply).toMatchObject({ text: '', repliedAt: null });
   });
 
+  it('keeps the stored text when a mark sends empty text', async () => {
+    const { service, upsert } = buildService({ existingText: 'Thanks!' });
+
+    await service.patch('app-1', 'rev-1', { text: '  ', replied: true });
+
+    expect(upsert.mock.calls[0][0].update.text).toBeUndefined();
+    expect(upsert.mock.calls[0][0].update.repliedAt).toBeInstanceOf(Date);
+  });
+
   it('refuses empty text when the mark is being undone', async () => {
     const { service } = buildService({ existingText: 'Thanks!' });
 

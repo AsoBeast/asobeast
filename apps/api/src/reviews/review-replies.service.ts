@@ -59,13 +59,11 @@ export class ReviewRepliesService {
     const app = await this.appOf(appId);
     const review = await this.reviewOf(appId, reviewId);
 
-    const text = patch.text?.trim();
-    if (text !== undefined) {
-      if (text === '' && patch.replied !== true) {
-        throw new BadRequestException('A reply needs some text');
-      }
-      assertWithinReplyLimit(app.store, text);
+    const text = patch.text?.trim() || undefined;
+    if (patch.text !== undefined && text === undefined && !patch.replied) {
+      throw new BadRequestException('A reply needs some text');
     }
+    if (text !== undefined) assertWithinReplyLimit(app.store, text);
     const repliedAt = repliedAtOf(patch.replied);
 
     if (patch.replied === false && text === undefined && !review.reply?.text) {
