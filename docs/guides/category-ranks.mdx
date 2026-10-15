@@ -9,7 +9,7 @@ Category ranks are your position in a store chart rather than in a search result
 
 ## What is captured?
 
-Every app is scheduled daily against the grossing chart and against its own free or paid chart, depending on its price. Each observation records the app, the date, the collection and the genre.
+The daily run captures the free, paid and grossing charts of the app's category and of the overall chart. The app's position is recorded in its own free or paid chart, depending on its price, and in the grossing chart, which is why a paid app shows no free series. Each observation records the app, the date, the collection and the genre.
 
 | Field | Meaning |
 | --- | --- |
@@ -33,7 +33,7 @@ Read a chart movement against your keyword positions on the same dates. A chart 
 
 ## What does it cost?
 
-Two charts per app per day, because every app is scheduled against the grossing chart as well as its own free or paid chart, in its category and overall. Each chart costs one store request a day, shared by every app and workspace in that chart, because the same capture serves the whole instance. See [Read top charts](/guides/top-charts) for the whole chart behind a position.
+Three charts for the app's category and three for the overall chart, each one store request a day, shared by every app and workspace in that chart, because the same capture serves the whole instance. See [Read top charts](/guides/top-charts) for the whole chart behind a position and [The daily pipeline and rate limits](/concepts/pipeline) for the budget.
 
 Category jobs remain the smallest slice of the daily budget, and the budget card in settings, shown to the platform operator, reports the real number. See [The daily pipeline and rate limits](/concepts/pipeline).
 

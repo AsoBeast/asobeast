@@ -52,14 +52,14 @@ Daily request volume is roughly tracked keywords multiplied by tracked markets, 
 | Google Play position check at depth 200 | Roughly 8 requests |
 | Apple score job | 3 to 11 requests |
 | Google Play score job | 12 to 20 requests |
-| Category ranks per app | Two charts, the grossing chart plus its free or paid chart, each one request a day captured once for the whole instance |
-| Followed top chart | One chart a day, shared with any app or workspace already in it |
+| Category ranks per app | The free, paid and grossing charts of its category and of the overall chart, each one request a day captured once for the whole instance |
+| Followed category | Three charts a day, shared with any app or workspace already in them |
 | Market listing refresh | One job per app and market, the same weight as an app refresh |
 | Localization read | One more listing read per native localization of a storefront and per localization your app ships that the storefront reads besides its default |
 
 `GET /jobs/budget` returns an estimate broken down by kind, and the settings page renders it as a budget card with a utilization meter. The dashboard warns when the daily pipeline would exceed 85 percent of capacity. Both are [shown only to the platform operator](/security/admin-surfaces#views-only-the-operator-sees).
 
-Category charts are the smallest slice of the daily budget, but they count, because every app is scheduled against the grossing chart as well as its own free or paid chart, and every followed chart is one more. A chart is fetched once a day however many apps and workspaces sit in it. See [Read top charts](/guides/top-charts).
+Category charts are the smallest slice of the daily budget, but they count, because the daily run captures every chart kind of each category an app sits in and of the overall chart, and every followed category adds its three charts. A chart is fetched once a day however many apps and workspaces sit in it. See [Read top charts](/guides/top-charts).
 
 ## Can you call the store outside the queue?
 
