@@ -7,6 +7,7 @@ import { isUniqueViolation } from '../prisma/unique-violation';
 import { StoreRequestError } from '../store-providers/errors';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { ChartItem } from '../store-providers/types';
+import { chartCategoryKey } from './chart-category';
 
 export interface ChartRowListing {
   position: number;
@@ -51,49 +52,45 @@ function entriesOf(
   });
 }
 
+interface Progress {
+  reachedStore: boolean;
+}
+
+interface Flight {
+  capture: Promise<StoredChart>;
+  progress: Progress;
+}
+
 const directly = <T>(work: () => Promise<T>): Promise<T> => work();
+
+function flightOf(key: ChartKey, date: Date): string {
+  return `${chartCategoryKey(key)}~${key.collection}~${toDateKey(date)}`;
+}
 
 @Injectable()
 export class ChartCaptureService {
+  private readonly inFlight = new Map<string, Flight>();
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly registry: StoreProviderRegistry,
   ) {}
 
-  async captureToday(
+  captureToday(
     key: ChartKey,
-    { spend, through = directly }: CaptureOptions = {},
+    options: CaptureOptions = {},
   ): Promise<StoredChart> {
     const date = utcToday();
-    const stored = await this.stored(key, date);
-    if (stored) return stored;
-    await spend?.();
+    const name = flightOf(key, date);
+    const running = this.inFlight.get(name);
+    if (running) return this.join(running, key, options);
 
-    const depth = CHART_DEPTH[key.store];
-    const items = await through(() =>
-      this.registry
-        .get(key.store)
-        .topCharts(key.collection, key.genre, depth, key.country),
+    const progress: Progress = { reachedStore: false };
+    const capture = this.capture(key, date, options, progress).finally(() =>
+      this.inFlight.delete(name),
     );
-    if (items.length === 0) {
-      throw new StoreRequestError(
-        key.store,
-        'topCharts',
-        'the chart feed answered no entries',
-      );
-    }
-
-    try {
-      return await this.prisma.chartCapture.create({
-        data: { ...key, date, depth, entries: { create: entriesOf(items) } },
-        ...WITH_ENTRIES,
-      });
-    } catch (error) {
-      if (!isUniqueViolation(error)) throw error;
-      const winner = await this.stored(key, date);
-      if (!winner) throw error;
-      return winner;
-    }
+    this.inFlight.set(name, { capture, progress });
+    return capture;
   }
 
   stored(key: ChartKey, date: Date): Promise<StoredChart | null> {
@@ -123,5 +120,56 @@ export class ChartCaptureService {
       select: { date: true },
     });
     return rows.map((row) => toDateKey(row.date));
+  }
+
+  private async join(
+    flight: Flight,
+    key: ChartKey,
+    options: CaptureOptions,
+  ): Promise<StoredChart> {
+    try {
+      return await flight.capture;
+    } catch (error) {
+      if (flight.progress.reachedStore) throw error;
+      return this.captureToday(key, options);
+    }
+  }
+
+  private async capture(
+    key: ChartKey,
+    date: Date,
+    { spend, through = directly }: CaptureOptions,
+    progress: Progress,
+  ): Promise<StoredChart> {
+    const stored = await this.stored(key, date);
+    if (stored) return stored;
+    await spend?.();
+
+    const depth = CHART_DEPTH[key.store];
+    progress.reachedStore = true;
+    const items = await through(() =>
+      this.registry
+        .get(key.store)
+        .topCharts(key.collection, key.genre, depth, key.country),
+    );
+    if (items.length === 0) {
+      throw new StoreRequestError(
+        key.store,
+        'topCharts',
+        'the chart feed answered no entries',
+      );
+    }
+
+    try {
+      return await this.prisma.chartCapture.create({
+        data: { ...key, date, depth, entries: { create: entriesOf(items) } },
+        ...WITH_ENTRIES,
+      });
+    } catch (error) {
+      if (!isUniqueViolation(error)) throw error;
+      const winner = await this.stored(key, date);
+      if (!winner) throw error;
+      return winner;
+    }
   }
 }

@@ -147,7 +147,7 @@ describe('ChartCaptureService.captureToday', () => {
     ]);
   });
 
-  it('lets a concurrent capture win', async () => {
+  it('lets a concurrent capture from another process win', async () => {
     const { service, prisma } = build([{ storeAppId: '111', title: 'First' }]);
     const winner = { ...STORED, id: 'cap-other' };
     prisma.chartCapture.findUnique
@@ -156,6 +156,100 @@ describe('ChartCaptureService.captureToday', () => {
     prisma.chartCapture.create.mockRejectedValue(uniqueViolation());
 
     await expect(service.captureToday(KEY)).resolves.toBe(winner);
+  });
+
+  const deferredFeed = (topCharts: jest.Mock) => {
+    let answer: (items: ChartItem[]) => void = () => undefined;
+    topCharts.mockReturnValueOnce(
+      new Promise<ChartItem[]>((resolve) => {
+        answer = resolve;
+      }),
+    );
+    return (items: ChartItem[]) => answer(items);
+  };
+
+  it('reaches the store once and spends once for two concurrent first captures', async () => {
+    const { service, prisma, topCharts } = build();
+    const answer = deferredFeed(topCharts);
+    const spend = jest.fn().mockResolvedValue(undefined);
+
+    const first = service.captureToday(KEY, { spend });
+    const second = service.captureToday(KEY, { spend });
+    await jest.advanceTimersByTimeAsync(0);
+    answer([{ storeAppId: '111', title: 'First' }]);
+
+    const results = await Promise.allSettled([first, second]);
+
+    expect(topCharts).toHaveBeenCalledTimes(1);
+    expect(spend).toHaveBeenCalledTimes(1);
+    expect(prisma.chartCapture.create).toHaveBeenCalledTimes(1);
+    expect(results).toEqual([
+      { status: 'fulfilled', value: STORED },
+      { status: 'fulfilled', value: STORED },
+    ]);
+  });
+
+  it('starts a new flight once the first settled', async () => {
+    const { service, prisma, topCharts } = build([
+      { storeAppId: '111', title: 'First' },
+    ]);
+
+    await service.captureToday(KEY);
+    prisma.chartCapture.findUnique.mockResolvedValue(STORED);
+    await expect(service.captureToday(KEY)).resolves.toBe(STORED);
+
+    expect(topCharts).toHaveBeenCalledTimes(1);
+    expect(prisma.chartCapture.findUnique).toHaveBeenCalledTimes(2);
+  });
+
+  it('captures two kinds of one category in flights of their own', async () => {
+    const { service, topCharts } = build([
+      { storeAppId: '111', title: 'First' },
+    ]);
+
+    await Promise.all([
+      service.captureToday(KEY),
+      service.captureToday({ ...KEY, collection: 'paid' }),
+    ]);
+
+    expect(topCharts).toHaveBeenCalledTimes(2);
+  });
+
+  it('shares a store failure with a concurrent capture', async () => {
+    const { service, topCharts } = build();
+    const failure = new StoreRequestError('APP_STORE', 'topCharts', 'boom');
+    topCharts.mockRejectedValue(failure);
+
+    const results = await Promise.allSettled([
+      service.captureToday(KEY),
+      service.captureToday(KEY),
+    ]);
+
+    expect(results).toEqual([
+      { status: 'rejected', reason: failure },
+      { status: 'rejected', reason: failure },
+    ]);
+    expect(topCharts).toHaveBeenCalledTimes(1);
+  });
+
+  it('captures on its own allowance when the first caller was refused before the store', async () => {
+    const { service, topCharts } = build([
+      { storeAppId: '111', title: 'First' },
+    ]);
+    const refused = new Error('spent');
+    const spend = jest.fn().mockResolvedValue(undefined);
+
+    const results = await Promise.allSettled([
+      service.captureToday(KEY, { spend: () => Promise.reject(refused) }),
+      service.captureToday(KEY, { spend }),
+    ]);
+
+    expect(results).toEqual([
+      { status: 'rejected', reason: refused },
+      { status: 'fulfilled', value: STORED },
+    ]);
+    expect(spend).toHaveBeenCalledTimes(1);
+    expect(topCharts).toHaveBeenCalledTimes(1);
   });
 
   it('spends only when the store is reached', async () => {
