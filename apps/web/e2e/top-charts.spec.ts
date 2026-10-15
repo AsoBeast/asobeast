@@ -368,6 +368,9 @@ test.describe.serial("chart follows", () => {
     await page.getByRole("button", { name: "Followed charts" }).click();
 
     const list = page.getByRole("dialog", { name: "Followed charts" });
+    await expect(list).toHaveAccessibleDescription(
+      "The daily run captures these every day.",
+    );
     await expect(list.getByText("2 of Unlimited")).toBeVisible();
     await expect(
       list.getByRole("link", { name: "Top free · Puzzle · United States" }),

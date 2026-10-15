@@ -92,6 +92,7 @@ function FollowList({ onOpen }: { onOpen: () => void }) {
 export function FollowedCharts() {
   const [open, setOpen] = useState(false);
   const titleId = useId();
+  const descriptionId = useId();
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -101,10 +102,15 @@ export function FollowedCharts() {
           Followed charts
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-80" aria-labelledby={titleId}>
+      <PopoverContent
+        align="end"
+        className="w-80"
+        aria-labelledby={titleId}
+        aria-describedby={descriptionId}
+      >
         <PopoverHeader>
           <PopoverTitle id={titleId}>Followed charts</PopoverTitle>
-          <PopoverDescription>
+          <PopoverDescription id={descriptionId}>
             The daily run captures these every day.
           </PopoverDescription>
         </PopoverHeader>
