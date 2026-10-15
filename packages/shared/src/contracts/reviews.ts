@@ -7,6 +7,7 @@ export const REVIEW_REPLY_STATES = [
   'needs_reply',
   'drafted',
   'replied',
+  'updated',
 ] as const;
 export type ReviewReplyState = (typeof REVIEW_REPLY_STATES)[number];
 
@@ -36,6 +37,7 @@ export interface ReviewReplyCounts {
   needsReply: number;
   drafted: number;
   replied: number;
+  updated: number;
 }
 
 export interface ReviewReplyDraftRequest {
@@ -91,10 +93,23 @@ export interface ReviewThemes {
   negativeScoreMax: number;
 }
 
+const editedAfter = (
+  reviewedAt: string | null | undefined,
+  repliedAt: string,
+): boolean =>
+  typeof reviewedAt === 'string' &&
+  Date.parse(reviewedAt) > Date.parse(repliedAt);
+
 export function replyStateOf(
-  review: Pick<ReviewItem, 'repliedAt' | 'reply'>,
+  review: Pick<ReviewItem, 'repliedAt' | 'reply'> &
+    Partial<Pick<ReviewItem, 'reviewedAt'>>,
 ): ReviewReplyState {
-  if (review.repliedAt || review.reply?.repliedAt) return 'replied';
+  if (review.repliedAt) {
+    return editedAfter(review.reviewedAt, review.repliedAt)
+      ? 'updated'
+      : 'replied';
+  }
+  if (review.reply?.repliedAt) return 'replied';
   if (review.reply) return 'drafted';
   return 'needs_reply';
 }

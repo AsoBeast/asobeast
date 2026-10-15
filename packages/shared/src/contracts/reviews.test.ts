@@ -26,6 +26,36 @@ describe('replyStateOf', () => {
     ).toBe('replied');
   });
 
+  it('answers updated for a review edited after google play showed the reply', () => {
+    expect(
+      replyStateOf({
+        reviewedAt: '2026-09-05T08:00:00.000Z',
+        repliedAt: '2026-09-02T08:00:00.000Z',
+        reply: null,
+      }),
+    ).toBe('updated');
+  });
+
+  it('answers replied for a review the reply came after or that has no date', () => {
+    const repliedAt = '2026-09-02T08:00:00.000Z';
+
+    expect(
+      replyStateOf({ reviewedAt: '2026-09-01T08:00:00.000Z', repliedAt }),
+    ).toBe('replied');
+    expect(replyStateOf({ reviewedAt: repliedAt, repliedAt })).toBe('replied');
+    expect(replyStateOf({ reviewedAt: null, repliedAt })).toBe('replied');
+  });
+
+  it('keeps a marked review replied whatever its date', () => {
+    expect(
+      replyStateOf({
+        reviewedAt: '2026-10-05T00:00:00.000Z',
+        repliedAt: null,
+        reply: { ...REPLY, repliedAt: '2026-10-01T00:00:00.000Z' },
+      }),
+    ).toBe('replied');
+  });
+
   it('answers replied for a review the owner marked', () => {
     expect(
       replyStateOf({
@@ -58,7 +88,12 @@ describe('review reply constants', () => {
 
   it('lists the tones, states and sorts the api accepts', () => {
     expect(REVIEW_REPLY_TONES).toEqual(['friendly', 'neutral', 'formal']);
-    expect(REVIEW_REPLY_STATES).toEqual(['needs_reply', 'drafted', 'replied']);
+    expect(REVIEW_REPLY_STATES).toEqual([
+      'needs_reply',
+      'drafted',
+      'replied',
+      'updated',
+    ]);
     expect(REVIEW_SORTS).toEqual(['newest', 'lowest']);
   });
 });
