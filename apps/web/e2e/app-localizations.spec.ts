@@ -1022,6 +1022,92 @@ test.describe("on the locale lab", () => {
     }
   });
 
+  test.describe("localizations your markets read that are not listed", () => {
+    const US_READS = [
+      "ar",
+      "zh-Hans",
+      "zh-Hant",
+      "fr",
+      "ko",
+      "pt-BR",
+      "ru",
+      "es-MX",
+      "vi",
+    ] as const;
+
+    const unlisted = (page: Page) =>
+      page.getByRole("region", { name: SECTION }).getByRole("list", {
+        name: "Localizations your markets read that are not listed",
+      });
+
+    test("lists the localization a market reads that the app does not ship, with an add button", async ({
+      page,
+    }) => {
+      await seedLocalizations(page.request, LOCALES_APP, { markets: ["de"] });
+      await page.goto(LOCALES_METADATA);
+
+      const german = unlisted(page)
+        .getByRole("listitem")
+        .filter({ hasText: /^German/ });
+      await expect(german).toContainText("DE · Default");
+      await expect(
+        german.getByRole("button", { name: "Add German" }),
+      ).toBeVisible();
+      await expect(unlisted(page).getByRole("listitem").first()).toContainText(
+        "German",
+      );
+    });
+
+    test("adds an unlisted localization and opens its keyword field", async ({
+      page,
+    }) => {
+      await seedLocalizations(page.request, LOCALES_APP, { markets: ["de"] });
+      await page.goto(LOCALES_METADATA);
+
+      await unlisted(page).getByRole("button", { name: "Add German" }).click();
+
+      await expect(page.getByText("Added German")).toBeVisible();
+      await expect(page).toHaveURL(/fieldLocale=de(&|$)/);
+      await expect(localizationItem(page, "German").trigger).toBeVisible();
+      await expect(editor(page, "German")).toBeVisible();
+      await expect(
+        unlisted(page).getByRole("button", { name: "Add German" }),
+      ).toHaveCount(0);
+    });
+
+    test("shows nothing when every read localization is shipped", async ({
+      page,
+    }) => {
+      await seedLocalizations(page.request, LOCALES_APP, {
+        shipped: US_READS.map((localization) => ({
+          localization,
+          origin: "manual" as const,
+        })),
+      });
+      await page.goto(LOCALES_METADATA);
+
+      await expect(
+        page.getByRole("region", { name: SECTION }).getByRole("button", {
+          name: "Add localization",
+        }),
+      ).toBeVisible();
+      await expect(unlisted(page)).toHaveCount(0);
+    });
+
+    test("keeps the add available to keyboard users", async ({ page }) => {
+      await seedLocalizations(page.request, LOCALES_APP, { markets: ["de"] });
+      await page.goto(LOCALES_METADATA);
+      const add = unlisted(page).getByRole("button", { name: "Add German" });
+
+      await add.focus();
+      await expect(add).toBeFocused();
+      await page.keyboard.press("Enter");
+
+      await expect(page.getByText("Added German")).toBeVisible();
+      await expect(page).toHaveURL(/fieldLocale=de(&|$)/);
+    });
+  });
+
   test.describe("adding and removing", () => {
     const dialog = (page: Page) => page.getByRole("dialog");
 
