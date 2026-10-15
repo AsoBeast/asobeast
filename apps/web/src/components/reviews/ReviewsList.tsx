@@ -1,8 +1,9 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, startTransition, useDeferredValue, useState } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
+import { storefrontLanguage } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -19,14 +20,17 @@ import {
   reviewReplyParser,
   reviewReplyStateParser,
   reviewScoreParser,
+  reviewSinceParser,
   reviewSortParser,
   reviewVersionParser,
 } from "@/lib/search-params";
 import { ReplyComposer } from "./ReplyComposer";
 import { ReviewCard } from "./ReviewCard";
 import { ReviewCountsStrip } from "./ReviewCountsStrip";
+import { ReviewThemesStrip } from "./ReviewThemesStrip";
 import { ReviewsToolbar } from "./ReviewsToolbar";
 import {
+  narrowsReviews,
   REVIEWS_SHOW_ALL_LIMIT,
   reviewFilters,
   type ReviewView,
@@ -90,7 +94,8 @@ function ReviewCards({
   const viewKey = JSON.stringify(view);
   const [expandedView, setExpandedView] = useState<string | null>(null);
   const [closed, setClosed] = useState<string | null>(null);
-  const expanded = expandedView === viewKey;
+  const searching = useDeferredValue(query.trim() !== "");
+  const expanded = expandedView === viewKey || searching;
   const { data } = useSuspenseQuery(
     reviewsOptions(
       id,
@@ -98,12 +103,9 @@ function ReviewCards({
     ),
   );
 
-  const filtered =
-    view.score !== null || view.version !== "" || view.replyState !== null;
-  const queueCleared =
-    view.replyState === "needs_reply" &&
-    view.score === null &&
-    view.version === "";
+  const narrowed = narrowsReviews(view);
+  const filtered = narrowed || view.replyState !== null;
+  const queueCleared = view.replyState === "needs_reply" && !narrowed;
 
   if (data.total === 0) {
     return filtered ? (
@@ -116,7 +118,7 @@ function ReviewCards({
         body={
           queueCleared
             ? "Every stored review has a reply or a saved draft."
-            : "Nothing stored matches the selected rating, version and reply state."
+            : "Nothing stored matches the selected rating, version, period and reply state."
         }
         action={
           <Button variant="outline" onClick={onClearFilters}>
@@ -153,6 +155,8 @@ function ReviewCards({
           {shown.map((review) => (
             <ReviewCard
               key={review.id}
+              appId={id}
+              fallbackLanguage={storefrontLanguage(app.country)}
               review={review}
               actions={
                 reply === review.id ? null : (
@@ -192,7 +196,7 @@ function ReviewCards({
         total={data.total}
         searching={query.trim() !== ""}
         expanded={expanded}
-        onShowAll={() => setExpandedView(viewKey)}
+        onShowAll={() => startTransition(() => setExpandedView(viewKey))}
       />
     </div>
   );
@@ -201,6 +205,7 @@ function ReviewCards({
 export function ReviewsList({ id }: { id: string }) {
   const [score, setScore] = useQueryState("score", reviewScoreParser);
   const [version, setVersion] = useQueryState("version", reviewVersionParser);
+  const [since, setSince] = useQueryState("since", reviewSinceParser);
   const [replyState, setReplyState] = useQueryState(
     "replyState",
     reviewReplyStateParser,
@@ -208,7 +213,7 @@ export function ReviewsList({ id }: { id: string }) {
   const [sort, setSort] = useQueryState("sort", reviewSortParser);
   const [query, setQuery] = useQueryState("q", reviewQueryParser);
   const [reply, setReply] = useQueryState("reply", reviewReplyParser);
-  const view: ReviewView = { score, version, replyState, sort };
+  const view: ReviewView = { score, version, since, replyState, sort };
 
   return (
     <Card>
@@ -221,7 +226,10 @@ export function ReviewsList({ id }: { id: string }) {
           <ReviewCountsStrip
             id={id}
             view={view}
-            onSelect={(next) => void setReplyState(next)}
+            onSelect={(next) => {
+              void setReplyState(next);
+              if (next === "needs_reply") void setSort("lowest");
+            }}
           />
         </Suspense>
         <ReviewsToolbar
@@ -230,10 +238,19 @@ export function ReviewsList({ id }: { id: string }) {
           query={query}
           onScore={(next) => void setScore(next)}
           onVersion={(next) => void setVersion(next || null)}
+          onSince={(next) => void setSince(next)}
           onReplyState={(next) => void setReplyState(next)}
           onSort={(next) => void setSort(next === "newest" ? null : next)}
           onQuery={(next, options) => void setQuery(next || null, options)}
         />
+        <Suspense fallback={null}>
+          <ReviewThemesStrip
+            id={id}
+            view={view}
+            query={query}
+            onSelect={(next) => void setQuery(next || null)}
+          />
+        </Suspense>
         <Suspense fallback={<ReviewsListSkeleton />}>
           <ReviewCards
             id={id}
@@ -244,6 +261,7 @@ export function ReviewsList({ id }: { id: string }) {
             onClearFilters={() => {
               void setScore(null);
               void setVersion(null);
+              void setSince(null);
               void setReplyState(null);
               void setSort(null);
               void setQuery(null);

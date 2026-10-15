@@ -84,6 +84,19 @@ describe('Write isolation', () => {
     await expect(fixture.db.reviewReply.count()).resolves.toBe(0);
   });
 
+  it('answers 404 when translating another workspace review', async () => {
+    await fixture.b.agent
+      .post(
+        `/apps/${fixture.a.appleAppId}/reviews/${fixture.a.reviewId}/translation`,
+      )
+      .send({ language: 'es' })
+      .expect(404);
+
+    await expect(
+      fixture.db.review.count({ where: { translatedAt: { not: null } } }),
+    ).resolves.toBe(0);
+  });
+
   it('answers 404 and leaves the row when deleting another workspace app', async () => {
     await fixture.a.agent.delete(`/apps/${fixture.b.appleAppId}`).expect(404);
 

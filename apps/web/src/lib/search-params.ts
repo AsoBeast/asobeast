@@ -319,6 +319,8 @@ export const reviewVersionParser = parseAsString.withDefault("");
 
 export const reviewReplyStateParser = parseAsStringLiteral(REVIEW_REPLY_STATES);
 
+export const reviewSinceParser = parseAsStringLiteral(RATINGS_RANGES);
+
 export const reviewSortParser =
   parseAsStringLiteral(REVIEW_SORTS).withDefault("newest");
 

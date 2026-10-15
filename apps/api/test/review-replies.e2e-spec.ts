@@ -11,6 +11,7 @@ import {
   type ReviewList,
   type ReviewReplyDraftResult,
   type ReviewReplyItem,
+  type ReviewTranslation,
 } from '@asobeast/shared';
 import request from 'supertest';
 import { App } from 'supertest/types';
@@ -536,6 +537,88 @@ describe('Review replies (e2e)', () => {
         .post(draftPath(appStore))
         .set('Authorization', `Bearer ${readToken}`)
         .send({})
+        .expect(403);
+
+      expect(structured).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('translation', () => {
+    const TRANSLATED = {
+      title: '',
+      text: 'Se bloquea al abrir',
+      sourceLanguage: 'en',
+    };
+    const translationPath = (target: { appId: string; reviewId: string }) =>
+      `/apps/${target.appId}/reviews/${target.reviewId}/translation`;
+
+    it('translates once, keeps it on the review and answers it again for free', async () => {
+      structured.mockResolvedValue(aiCompletion(TRANSLATED, USAGE));
+
+      const first = await api
+        .post(translationPath(appStore))
+        .send({ language: 'es' })
+        .expect(201);
+      const again = await api
+        .post(translationPath(appStore))
+        .send({ language: 'es' })
+        .expect(201);
+
+      expect(first.body as ReviewTranslation).toMatchObject({
+        language: 'es',
+        sourceLanguage: 'en',
+        title: null,
+        text: 'Se bloquea al abrir',
+      });
+      expect(again.body).toEqual(first.body);
+      expect(structured).toHaveBeenCalledTimes(1);
+      await expect(
+        prisma.aiCall.count({
+          where: { feature: 'reviewTranslation', status: 'counted' },
+        }),
+      ).resolves.toBe(1);
+      const [listed] = (await listOf(appStore.appId)).reviews;
+      expect(listed.translation).toEqual(first.body);
+    });
+
+    it('refuses a malformed or unknown language and a review without text before spending', async () => {
+      const blank = await prisma.review.create({
+        data: { appId: appStore.appId, reviewId: 'blank', score: 4, text: ' ' },
+      });
+
+      await api
+        .post(translationPath(appStore))
+        .send({ language: 'en-US' })
+        .expect(400);
+      await api
+        .post(translationPath(appStore))
+        .send({ language: 'qq' })
+        .expect(400);
+      await api
+        .post(translationPath({ appId: appStore.appId, reviewId: blank.id }))
+        .send({ language: 'es' })
+        .expect(400);
+
+      expect(structured).not.toHaveBeenCalled();
+      await expect(prisma.aiCall.count()).resolves.toBe(0);
+    });
+
+    it('answers 404 for a review of another app before spending', async () => {
+      await api
+        .post(
+          translationPath({ appId: appStore.appId, reviewId: play.reviewId }),
+        )
+        .send({ language: 'es' })
+        .expect(404);
+
+      expect(structured).not.toHaveBeenCalled();
+    });
+
+    it('refuses a read scoped token with 403', async () => {
+      await request(app.getHttpServer())
+        .post(translationPath(appStore))
+        .set('Authorization', `Bearer ${readToken}`)
+        .send({ language: 'es' })
         .expect(403);
 
       expect(structured).not.toHaveBeenCalled();

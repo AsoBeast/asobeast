@@ -11,6 +11,7 @@ import type {
   ReviewItem,
   ReviewList,
   ReviewReplyItem,
+  ReviewTranslation,
   Store,
   WebhookItem,
 } from "@asobeast/shared";
@@ -87,6 +88,7 @@ import {
   getAiStatus,
   getReviewReplyGuidelines,
   getReviews,
+  getReviewThemes,
   getSerp,
   getSerpMovers,
   getWebHealth,
@@ -102,6 +104,7 @@ import {
   type RangeParams,
   type RankingParams,
   type ReviewFilters,
+  type ReviewThemeFilters,
 } from "./api";
 import { withReviewReply } from "./review-reply-cache";
 import { runProgressInterval } from "./run-progress";
@@ -186,6 +189,10 @@ export const appKeys = {
   changeImpact: (id: string, days: number, country: string) =>
     [...appKeys.detail(id), "changes", "impact", { days, country }] as const,
   reviewsRoot: (id: string) => [...appKeys.detail(id), "reviews"] as const,
+  reviewThemesRoot: (id: string) =>
+    [...appKeys.detail(id), "review-themes"] as const,
+  reviewThemes: (id: string, filters: ReviewThemeFilters) =>
+    [...appKeys.reviewThemesRoot(id), filters] as const,
   replyGuidelines: (id: string) =>
     [...appKeys.detail(id), "reply-guidelines"] as const,
   reviews: (id: string, filters: ReviewFilters) =>
@@ -774,6 +781,12 @@ export const reviewsOptions = (id: string, filters: ReviewFilters) =>
     queryFn: () => getReviews(id, filters),
   });
 
+export const reviewThemesOptions = (id: string, filters: ReviewThemeFilters) =>
+  queryOptions({
+    queryKey: appKeys.reviewThemes(id, filters),
+    queryFn: () => getReviewThemes(id, filters),
+  });
+
 export const replyGuidelinesOptions = (id: string) =>
   queryOptions({
     queryKey: appKeys.replyGuidelines(id),
@@ -1016,6 +1029,24 @@ export function upsertReviewReply(
   }
 }
 
+export function seedReviewTranslation(
+  client: QueryClient,
+  id: string,
+  reviewId: string,
+  translation: ReviewTranslation,
+): void {
+  client.setQueriesData<ReviewList>(
+    { queryKey: appKeys.reviewsRoot(id) },
+    (list) =>
+      list && {
+        ...list,
+        reviews: list.reviews.map((row) =>
+          row.id === reviewId ? { ...row, translation } : row,
+        ),
+      },
+  );
+}
+
 export function invalidateReviewReplyMutation(
   client: QueryClient,
   id: string,
@@ -1024,6 +1055,7 @@ export function invalidateReviewReplyMutation(
     queryKey: appKeys.reviewsRoot(id),
     refetchType: "none",
   });
+  void client.invalidateQueries({ queryKey: appKeys.reviewThemesRoot(id) });
 }
 
 export function invalidateCompetitorMutation(

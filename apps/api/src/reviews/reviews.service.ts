@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Prisma, ReviewReply, Store } from '@prisma/client';
+import { ReviewReply, Store } from '@prisma/client';
 import {
   RatingsHistogram,
   RATING_STARS,
@@ -27,37 +27,19 @@ import { ReviewResult, StoreProvider } from '../store-providers/types';
 import { SyncReviewsPayload } from '../jobs/jobs.types';
 import { sortVersionsNewestFirst } from './version-order';
 import { HOME_LISTING, NEWEST_FIRST } from '../apps/listing';
-import { replyStateWhere, reviewOrder } from './review-list-query';
+import { reviewOrder, ReviewScope, reviewsWhere } from './review-list-query';
 import { toReviewReplyItem } from './review-reply.mapper';
+import { reviewLanguage } from './review-language';
+import { toReviewTranslation, TranslationColumns } from './review-translation';
+import { StoredReview, storedReviewChanges } from './stored-review-changes';
 
-export interface ReviewListFilters {
-  score?: number;
-  version?: string;
+export interface ReviewListFilters extends ReviewScope {
   limit: number;
   replyState?: ReviewReplyState;
   sort: ReviewSort;
 }
 
 const REVIEW_TEXT_MAX = 500;
-
-interface StoredReply {
-  repliedAt: Date | null;
-  replyText: string | null;
-}
-
-function replyChanges(
-  stored: StoredReply,
-  fetched: ReviewResult | undefined,
-): Partial<StoredReply> {
-  return {
-    ...(fetched?.repliedAt && !stored.repliedAt
-      ? { repliedAt: fetched.repliedAt }
-      : {}),
-    ...(fetched?.replyText && fetched.replyText !== stored.replyText
-      ? { replyText: fetched.replyText }
-      : {}),
-  };
-}
 
 interface ReviewSource {
   id: string;
@@ -112,15 +94,24 @@ export class ReviewsService {
 
     const existing = await this.prisma.review.findMany({
       where: { appId: app.id, reviewId: { in: [...fetched.keys()] } },
-      select: { reviewId: true, repliedAt: true, replyText: true },
+      select: {
+        reviewId: true,
+        score: true,
+        title: true,
+        text: true,
+        version: true,
+        reviewedAt: true,
+        repliedAt: true,
+        replyText: true,
+      },
     });
     const known = new Map(existing.map((row) => [row.reviewId, row]));
     const inserted = [...fetched.values()].filter(
       (review) => !known.has(review.reviewId),
     );
 
-    const tracksReplies = app.store === Store.GOOGLE_PLAY;
-    const checkedAt = tracksReplies ? new Date() : null;
+    const tracksUpdates = app.store === Store.GOOGLE_PLAY;
+    const checkedAt = tracksUpdates ? new Date() : null;
 
     if (inserted.length > 0) {
       await this.prisma.review.createMany({
@@ -133,8 +124,8 @@ export class ReviewsService {
           text: review.text,
           version: review.version ?? null,
           reviewedAt: review.updatedAt ?? null,
-          repliedAt: tracksReplies ? (review.repliedAt ?? null) : null,
-          replyText: tracksReplies ? (review.replyText ?? null) : null,
+          repliedAt: tracksUpdates ? (review.repliedAt ?? null) : null,
+          replyText: tracksUpdates ? (review.replyText ?? null) : null,
           replyCheckedAt: checkedAt,
         })),
         skipDuplicates: true,
@@ -142,7 +133,7 @@ export class ReviewsService {
     }
 
     if (checkedAt !== null && known.size > 0) {
-      await this.recordReplies(app.id, fetched, known, checkedAt);
+      await this.recordUpdates(app.id, fetched, known, checkedAt);
     }
 
     if (!payload.backfill) {
@@ -155,10 +146,10 @@ export class ReviewsService {
     return inserted;
   }
 
-  private async recordReplies(
+  private async recordUpdates(
     appId: string,
     fetched: Map<string, ReviewResult>,
-    known: Map<string, StoredReply>,
+    known: Map<string, StoredReview>,
     checkedAt: Date,
   ): Promise<void> {
     await this.prisma.review.updateMany({
@@ -166,7 +157,7 @@ export class ReviewsService {
       data: { replyCheckedAt: checkedAt },
     });
     for (const [reviewId, stored] of known) {
-      const data = replyChanges(stored, fetched.get(reviewId));
+      const data = storedReviewChanges(stored, fetched.get(reviewId));
       if (Object.keys(data).length === 0) continue;
       await this.prisma.review.updateMany({
         where: { appId, reviewId },
@@ -246,15 +237,12 @@ export class ReviewsService {
   async list(appId: string, filters: ReviewListFilters): Promise<ReviewList> {
     await this.ensureApp(appId);
 
-    const where: Prisma.ReviewWhereInput = {
-      appId,
-      ...(filters.score !== undefined ? { score: filters.score } : {}),
-      ...(filters.version !== undefined ? { version: filters.version } : {}),
-    };
+    const { repliedAt } = this.prisma.review.fields;
+    const inState = (state: ReviewReplyState | undefined) =>
+      reviewsWhere(appId, filters, state, repliedAt);
+    const listed = inState(filters.replyState);
 
-    const listed = { ...where, ...replyStateWhere(filters.replyState) };
-
-    const [reviews, total, versions, needsReply, drafted, replied] =
+    const [reviews, total, versions, needsReply, drafted, replied, updated] =
       await this.prisma.withTransaction((tx) =>
         Promise.all([
           tx.review.findMany({
@@ -270,11 +258,16 @@ export class ReviewsService {
             select: { version: true },
           }),
           ...REVIEW_REPLY_STATES.map((state) =>
-            tx.review.count({ where: { ...where, ...replyStateWhere(state) } }),
+            tx.review.count({ where: inState(state) }),
           ),
         ]),
       );
-    const counts: ReviewReplyCounts = { needsReply, drafted, replied };
+    const counts: ReviewReplyCounts = {
+      needsReply,
+      drafted,
+      replied,
+      updated,
+    };
 
     return {
       reviews: reviews.map((review) => this.toReviewItem(review)),
@@ -288,19 +281,21 @@ export class ReviewsService {
     };
   }
 
-  private toReviewItem(review: {
-    id: string;
-    reviewId: string;
-    userName: string | null;
-    score: number;
-    title: string | null;
-    text: string;
-    version: string | null;
-    reviewedAt: Date | null;
-    repliedAt: Date | null;
-    replyText: string | null;
-    reply: ReviewReply | null;
-  }): ReviewItem {
+  private toReviewItem(
+    review: TranslationColumns & {
+      id: string;
+      reviewId: string;
+      userName: string | null;
+      score: number;
+      title: string | null;
+      text: string;
+      version: string | null;
+      reviewedAt: Date | null;
+      repliedAt: Date | null;
+      replyText: string | null;
+      reply: ReviewReply | null;
+    },
+  ): ReviewItem {
     return {
       id: review.id,
       reviewId: review.reviewId,
@@ -313,6 +308,8 @@ export class ReviewsService {
       repliedAt: review.repliedAt ? review.repliedAt.toISOString() : null,
       replyText: review.replyText,
       reply: review.reply ? toReviewReplyItem(review.reply) : null,
+      language: reviewLanguage(`${review.title ?? ''} ${review.text}`),
+      translation: toReviewTranslation(review),
     };
   }
 

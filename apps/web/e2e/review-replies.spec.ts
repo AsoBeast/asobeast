@@ -449,5 +449,143 @@ test("a queue with nothing left to answer says so", async ({ page }) => {
   await page.getByRole("button", { name: "Show all reviews" }).click();
 
   await expect(page).not.toHaveURL(/replyState=/);
-  await expect(page.getByRole("article")).toHaveCount(2);
+  await expect(page.getByRole("article")).toHaveCount(3);
+});
+
+test("a review in another language is translated once and toggles back", async ({
+  page,
+  context,
+}) => {
+  await enableAi(context);
+  await page.goto(GP_PAGE);
+  const article = articleOf(page, "Lena");
+
+  const [request] = await Promise.all([
+    page.waitForRequest(
+      (candidate) =>
+        candidate.method() === "POST" &&
+        candidate.url().endsWith(`/reviews/gp-rev-1/translation`),
+    ),
+    article.getByRole("button", { name: "Translate" }).click(),
+  ]);
+
+  expect(request.postDataJSON()).toEqual({ language: "en" });
+  await expect(article.getByText("The app crashes on start.")).toBeVisible();
+  await expect(article.getByText("Translated from German by AI")).toBeVisible();
+
+  await article.getByRole("button", { name: "Show original" }).click();
+
+  await expect(
+    article.getByText("Die App stürzt beim Start ab."),
+  ).toBeVisible();
+
+  let posted = false;
+  page.on("request", (candidate) => {
+    if (candidate.url().endsWith("/translation")) posted = true;
+  });
+  await article.getByRole("button", { name: "Show translation" }).click();
+
+  await expect(article.getByText("The app crashes on start.")).toBeVisible();
+  expect(posted).toBe(false);
+});
+
+test("translation is offered only with a key and only for another language", async ({
+  page,
+  context,
+}) => {
+  await page.goto(GP_PAGE);
+  await expect(page.getByRole("article").first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Translate" })).toHaveCount(0);
+
+  await enableAi(context);
+  await page.goto(REPLIES_PAGE);
+
+  await expect(
+    articleOf(page, "Please add dark mode.").getByRole("button", {
+      name: "Reply",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Translate" })).toHaveCount(0);
+});
+
+test("two saves in a row keep the newer text even when the first answers last", async ({
+  page,
+}) => {
+  await page.route("**/api/backend/apps/*/reviews/*/reply", async (route) => {
+    if (route.request().postDataJSON()?.text === "First reply") {
+      await new Promise((resolve) => setTimeout(resolve, 800));
+    }
+    await route.continue();
+  });
+  await page.goto(`${REPLIES_PAGE}?reply=rep-3`);
+  const textbox = composer(page).getByRole("textbox", { name: "Reply text" });
+
+  await textbox.fill("First reply");
+  await textbox.blur();
+  await textbox.fill("Second reply");
+  const settled = page.waitForResponse(
+    (response) =>
+      response.request().method() === "PATCH" &&
+      response.request().postDataJSON()?.text === "Second reply",
+  );
+  await textbox.blur();
+  await settled;
+  await page.unrouteAll({ behavior: "wait" });
+  await page.reload();
+
+  await expect(
+    composer(page).getByRole("textbox", { name: "Reply text" }),
+  ).toHaveValue("Second reply");
+});
+
+test("going back to an earlier text while a save waits keeps the text typed last", async ({
+  page,
+}) => {
+  await page.route("**/api/backend/apps/*/reviews/*/reply", async (route) => {
+    if (route.request().postDataJSON()?.text === "First reply") {
+      await new Promise((resolve) => setTimeout(resolve, 800));
+    }
+    await route.continue();
+  });
+  await page.goto(`${REPLIES_PAGE}?reply=rep-3`);
+  const textbox = composer(page).getByRole("textbox", { name: "Reply text" });
+  const saved = (text: string) =>
+    page.waitForResponse(
+      (response) =>
+        response.request().method() === "PATCH" &&
+        response.request().postDataJSON()?.text === text,
+    );
+
+  await textbox.fill("First reply");
+  await textbox.blur();
+  await textbox.fill("Second reply");
+  await textbox.blur();
+  const second = saved("Second reply");
+  await textbox.fill("First reply");
+  await textbox.blur();
+  await second;
+  await page.waitForTimeout(300);
+  await page.unrouteAll({ behavior: "wait" });
+  await page.reload();
+
+  await expect(
+    composer(page).getByRole("textbox", { name: "Reply text" }),
+  ).toHaveValue("First reply");
+});
+
+test("copying without a clipboard says so instead of failing silently", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "clipboard", { value: undefined });
+  });
+  await page.goto(`${REPLIES_PAGE}?reply=rep-3`);
+
+  await composer(page)
+    .getByRole("textbox", { name: "Reply text" })
+    .fill("Dark mode ships next month.");
+  await composer(page).getByRole("button", { name: "Copy" }).click();
+
+  await expect(page.getByText(/Couldn't copy/)).toBeVisible();
 });

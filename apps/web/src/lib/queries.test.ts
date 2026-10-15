@@ -53,6 +53,7 @@ import {
   invalidateAuth,
   invalidatePasswordChange,
   invalidateCompetitorMutation,
+  invalidateReviewReplyMutation,
   invalidateEmailAlertMutation,
   invalidateAudit,
   invalidateKeywordImport,
@@ -742,6 +743,12 @@ describe("invalidation sets", () => {
         void invalidateSetupMutation(client, APP);
       }),
     ).toEqual([setupKey(APP), portfolioKey]);
+  });
+
+  it("marks the review lists and the themes stale after a reply change", () => {
+    expect(
+      invalidatedKeys((client) => invalidateReviewReplyMutation(client, APP)),
+    ).toEqual([appKeys.reviewsRoot(APP), appKeys.reviewThemesRoot(APP)]);
   });
 
   it("invalidates everything a competitor mutation changes", () => {

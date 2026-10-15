@@ -136,7 +136,9 @@ export function ReplyComposer({
     unsaved && !over && !draft.drafting ? save(trimmed) : Promise.resolve(null);
 
   const copy = async () => {
-    const copied = navigator.clipboard.writeText(trimmed);
+    const copied = navigator.clipboard
+      ? navigator.clipboard.writeText(trimmed)
+      : Promise.reject(new Error("clipboard unavailable"));
     void saveIfChanged().catch(() => null);
     try {
       await copied;

@@ -1,16 +1,16 @@
 ---
 title: Enable the optional AI features
 sidebarTitle: AI features
-description: "Set OPENAI_API_KEY to enable the AI creative analysis, metadata drafts, action explanations and review reply drafts. Every other feature works with the key left unset."
+description: "Set OPENAI_API_KEY to enable the AI creative analysis, metadata drafts, action explanations, review reply drafts and review translations. Every other feature works with the key left unset."
 icon: sparkles
-keywords: ["OpenAI","OPENAI_API_KEY","AI_MODEL","metadata drafts","creative analysis","review replies","optional"]
+keywords: ["OpenAI","OPENAI_API_KEY","AI_MODEL","metadata drafts","creative analysis","review replies","review translation","optional"]
 ---
 
 AI in asobeast is garnish, not foundation. Every score, rule and recommendation is deterministic and works with no key configured, which is the default.
 
 ## What does the key enable?
 
-Four features, all bring your own key.
+Five features, all bring your own key.
 
 | Feature | Where | What it does |
 | --- | --- | --- |
@@ -18,6 +18,7 @@ Four features, all bring your own key.
 | Metadata drafts | Metadata workbench | Proposes field values grounded in your tracked keywords, coverage gaps and competitor titles, for the primary listing or for an additional language one of your storefronts reads |
 | Action explanations | Action card | Turns typed evidence into two to four plain sentences |
 | Review reply drafts | Reviews page | Drafts the developer reply to one review in its language, in the tone you pick and within the store's limit, following the app's reply guidelines |
+| Review translations | Reviews page | Translates the title and text of one review into your browser's language and keeps the translation on the review |
 
 Each feature is a single completion per run. The creative analysis runs in the background after you start it, so leaving the page does not cancel it. It is reused while the icon, the screenshots, the competitor icons and `AI_MODEL` are unchanged, so analyzing an unchanged listing again costs nothing, and a finished analysis records today's audit score. The nightly score snapshot reads the stored observations and never calls OpenAI.
 
@@ -31,6 +32,7 @@ Every AI call spends one call from a monthly allowance that the whole workspace 
 | One set of metadata drafts | Starting an analysis while one is already queued or running |
 | One creative analysis | A request refused before it reaches the model, such as an unsupported field |
 | One review reply draft, including Draft again | A reply you write by hand, copy or mark |
+| One review translation | Showing a translation already kept for the same language |
 | An answer the model gave that could not be used, such as a refusal or an incomplete set of drafts | A call OpenAI never answered: a timeout, an outage, a rejected key |
 
 Two clicks on the same button while the first is still working spend one call. A creative analysis that retries in the background is still one call.
@@ -96,6 +98,8 @@ OpenAI downloads the images from the store CDNs itself; asobeast never proxies i
 The action explanation prompt receives the app's store, country and title, the rule, the priority, the impact and the evidence object, and nothing else.
 
 The metadata draft prompt receives the store, the listing's current metadata, up to 25 tracked keywords of the home market with their scores and coverage, competitor titles and your instructions. A draft for an additional language also sends the language and the codes of your markets that read it.
+
+The review translation prompt receives the target language and the title and text of the one review being translated, and nothing else.
 
 The review reply prompt receives the store, the app name, the one review being answered (its score, title, text, version, date, author and the developer reply Google Play shows), the listing's current version and release notes, the app's reply guidelines, up to three of the app's most recent Google Play replies as examples of your voice, the tone and your instruction line. Never another review and never other workspaces' data.
 

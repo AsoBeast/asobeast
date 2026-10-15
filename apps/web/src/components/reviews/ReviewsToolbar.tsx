@@ -31,15 +31,20 @@ import {
   reviewsOptions,
 } from "@/lib/queries";
 import { literalOf } from "@/lib/literal";
+import { RATINGS_RANGES, rangeLabel, type RatingsRange } from "@/lib/ranges";
 import { useSingleFlight } from "@/lib/single-flight";
 import {
   EXPORT_ORDER,
   exportReviews,
   truncatedExportNotice,
 } from "./review-csv";
-import { reviewFilters, type ReviewView } from "./review-filters";
+import {
+  countsFilters,
+  reviewFilters,
+  type ReviewView,
+} from "./review-filters";
 import { matchesReviewQuery } from "./review-search";
-import { REPLY_STATE_OPTIONS } from "./reply-state";
+import { shownReplyStates } from "./reply-state";
 import { ReplyGuidelinesDialog } from "./ReplyGuidelinesDialog";
 
 const STAR_FILTERS = [5, 4, 3, 2, 1] as const;
@@ -56,6 +61,7 @@ export interface ReviewsToolbarProps {
   query: string;
   onScore: (score: number | null) => void;
   onVersion: (version: string) => void;
+  onSince: (since: RatingsRange | null) => void;
   onReplyState: (state: ReviewReplyState | null) => void;
   onSort: (sort: ReviewSort) => void;
   onQuery: (query: string, options: Options) => void;
@@ -85,6 +91,68 @@ function VersionSelect({
         {data.versions.map((item) => (
           <SelectItem key={item} value={item}>
             v{item}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+function ReplyStateSelect({
+  id,
+  view,
+  onChange,
+}: {
+  id: string;
+  view: ReviewView;
+  onChange: (next: ReviewReplyState | null) => void;
+}) {
+  const { data } = useQuery(reviewsOptions(id, countsFilters(view)));
+
+  return (
+    <Select
+      value={view.replyState ?? ALL}
+      onValueChange={(next) =>
+        onChange(literalOf(REVIEW_REPLY_STATES, next) ?? null)
+      }
+    >
+      <SelectTrigger className="w-[170px]" aria-label="Filter by reply state">
+        <SelectValue placeholder="Any reply state" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={ALL}>Any reply state</SelectItem>
+        {shownReplyStates(data?.counts, view.replyState).map((option) => (
+          <SelectItem key={option.value} value={option.value}>
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+function SinceSelect({
+  since,
+  onChange,
+}: {
+  since: RatingsRange | null;
+  onChange: (next: RatingsRange | null) => void;
+}) {
+  return (
+    <Select
+      value={since ?? ALL}
+      onValueChange={(next) =>
+        onChange(literalOf(RATINGS_RANGES, next) ?? null)
+      }
+    >
+      <SelectTrigger className="w-[150px]" aria-label="Filter by date">
+        <SelectValue placeholder="Any time" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={ALL}>Any time</SelectItem>
+        {RATINGS_RANGES.map((preset) => (
+          <SelectItem key={preset} value={preset}>
+            {rangeLabel(preset)}
           </SelectItem>
         ))}
       </SelectContent>
@@ -146,6 +214,7 @@ export function ReviewsToolbar({
   query,
   onScore,
   onVersion,
+  onSince,
   onReplyState,
   onSort,
   onQuery,
@@ -173,24 +242,8 @@ export function ReviewsToolbar({
       <Suspense fallback={null}>
         <VersionSelect id={id} version={view.version} onChange={onVersion} />
       </Suspense>
-      <Select
-        value={view.replyState ?? ALL}
-        onValueChange={(next) =>
-          onReplyState(literalOf(REVIEW_REPLY_STATES, next) ?? null)
-        }
-      >
-        <SelectTrigger className="w-[150px]" aria-label="Filter by reply state">
-          <SelectValue placeholder="Any reply state" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value={ALL}>Any reply state</SelectItem>
-          {REPLY_STATE_OPTIONS.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <SinceSelect since={view.since} onChange={onSince} />
+      <ReplyStateSelect id={id} view={view} onChange={onReplyState} />
       <Select
         value={view.sort}
         onValueChange={(next) =>

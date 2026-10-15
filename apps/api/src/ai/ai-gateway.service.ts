@@ -20,6 +20,7 @@ export const AI_FEATURES = [
   'metadataDrafts',
   'actionExplanation',
   'reviewReply',
+  'reviewTranslation',
 ] as const;
 
 export type AiFeature = (typeof AI_FEATURES)[number];

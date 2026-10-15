@@ -9,6 +9,9 @@ import type {
   ReviewReplyPatchRequest,
   ReviewReplyState,
   ReviewSort,
+  ReviewThemes,
+  ReviewTranslation,
+  ReviewTranslationRequest,
 } from "@asobeast/shared";
 import { apiFetch, withQuery } from "./client";
 import type { RangeParams } from "./client";
@@ -16,22 +19,48 @@ import type { RangeParams } from "./client";
 export interface ReviewFilters {
   score?: number;
   version?: string;
+  from?: string;
   replyState?: ReviewReplyState;
   sort?: ReviewSort;
   limit?: number;
 }
 
-export function getReviews(
-  appId: string,
-  { score, version, replyState, sort, limit }: ReviewFilters = {},
-): Promise<ReviewList> {
+export type ReviewThemeFilters = Pick<
+  ReviewFilters,
+  "score" | "version" | "from" | "replyState"
+>;
+
+function scopeParams({
+  score,
+  version,
+  from,
+  replyState,
+}: ReviewThemeFilters): URLSearchParams {
   const params = new URLSearchParams();
   if (score !== undefined) params.set("score", String(score));
   if (version) params.set("version", version);
+  if (from) params.set("from", from);
   if (replyState) params.set("replyState", replyState);
+  return params;
+}
+
+export function getReviews(
+  appId: string,
+  { sort, limit, ...scope }: ReviewFilters = {},
+): Promise<ReviewList> {
+  const params = scopeParams(scope);
   if (sort) params.set("sort", sort);
   if (limit !== undefined) params.set("limit", String(limit));
   return apiFetch<ReviewList>(withQuery(`/apps/${appId}/reviews`, params));
+}
+
+export function getReviewThemes(
+  appId: string,
+  filters: ReviewThemeFilters = {},
+): Promise<ReviewThemes> {
+  return apiFetch<ReviewThemes>(
+    withQuery(`/apps/${appId}/reviews/themes`, scopeParams(filters)),
+  );
 }
 
 const replyPath = (appId: string, reviewId: string) =>
@@ -66,6 +95,17 @@ export function draftReviewReply(
       method: "POST",
       body: JSON.stringify(body),
     },
+  );
+}
+
+export function translateReview(
+  appId: string,
+  reviewId: string,
+  body: ReviewTranslationRequest,
+): Promise<ReviewTranslation> {
+  return apiFetch<ReviewTranslation>(
+    `/apps/${appId}/reviews/${encodeURIComponent(reviewId)}/translation`,
+    { method: "POST", body: JSON.stringify(body) },
   );
 }
 

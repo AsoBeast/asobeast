@@ -43,6 +43,7 @@ import type {
   RankingPoint,
   RankingSeries,
   RatingsHistogram,
+  ReviewThemes,
   RatingsHistory,
   ReviewList,
   SerpMovers,
@@ -784,7 +785,7 @@ export const APP_1_REVIEWS: ReviewList = {
 };
 
 export const APP_GP_REVIEWS: ReviewList = {
-  total: 2,
+  total: 3,
   versions: ["2.8.0", "2.7.0"],
   reviews: [
     {
@@ -794,6 +795,7 @@ export const APP_GP_REVIEWS: ReviewList = {
       score: 2,
       title: "Stürzt ab",
       text: "Die App stürzt beim Start ab.",
+      language: "de",
       version: "2.7.0",
       reviewedAt: utcTimestampDaysAgo(4),
       repliedAt: utcTimestampDaysAgo(3),
@@ -807,10 +809,25 @@ export const APP_GP_REVIEWS: ReviewList = {
       score: 1,
       title: "Werbung",
       text: "Zu viel Werbung.",
+      language: "de",
       version: "2.8.0",
       reviewedAt: utcTimestampDaysAgo(2),
       repliedAt: null,
       replyText: null,
+      reply: null,
+    },
+    {
+      id: "gp-rev-3",
+      reviewId: "gp-store-rev-3",
+      userName: "Mia",
+      score: 4,
+      title: "Jetzt besser",
+      text: "Nach dem Update läuft es endlich.",
+      language: "de",
+      version: "2.8.0",
+      reviewedAt: utcTimestampDaysAgo(1),
+      repliedAt: utcTimestampDaysAgo(3),
+      replyText: "Danke, das Update behebt den Fehler.",
       reply: null,
     },
   ],
@@ -846,6 +863,26 @@ export const APP_LONG_REVIEWS: ReviewList = {
     replyText: null,
     reply: null,
   })),
+};
+
+export const EMPTY_REVIEW_THEMES: ReviewThemes = {
+  themes: [],
+  reviews: 0,
+  negativeScoreMax: 2,
+};
+
+export const APP_1_REVIEW_THEMES: ReviewThemes = {
+  themes: [
+    { phrase: "crashes", mentions: 2, negative: 2 },
+    { phrase: "dark mode", mentions: 2, negative: 1 },
+  ],
+  reviews: 5,
+  negativeScoreMax: 2,
+};
+
+export const REVIEW_TRANSLATION_EN = {
+  title: "Crashes",
+  text: "The app crashes on start.",
 };
 
 export const REVIEW_REPLY_DRAFT = {
@@ -2147,6 +2184,7 @@ export interface AppDataset {
   categoryRanks: CategoryRankSeries;
   competitors: CompetitorItem[];
   reviews: ReviewList;
+  reviewThemes?: ReviewThemes;
   ratingsHistory: RatingsHistory;
   ratingsHistogram: RatingsHistogram;
   changes: ChangeTimeline;
@@ -2244,6 +2282,7 @@ export const DATASETS: Record<string, AppDataset> = {
     categoryRanks: APP_1_CATEGORY_RANKS,
     competitors: APP_1_COMPETITORS,
     reviews: APP_1_REVIEWS,
+    reviewThemes: APP_1_REVIEW_THEMES,
     ratingsHistory: APP_1_RATINGS_HISTORY,
     ratingsHistogram: APP_1_RATINGS_HISTOGRAM,
     changes: APP_1_CHANGES,

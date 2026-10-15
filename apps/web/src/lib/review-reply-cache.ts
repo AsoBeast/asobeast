@@ -12,11 +12,13 @@ export const COUNT_OF: Record<ReviewReplyState, keyof ReviewReplyCounts> = {
   needs_reply: "needsReply",
   drafted: "drafted",
   replied: "replied",
+  updated: "updated",
 };
 
 const countedUnder = (review: ReviewItem, filters: ReviewFilters) =>
   (filters.score === undefined || filters.score === review.score) &&
-  (!filters.version || filters.version === review.version);
+  (!filters.version || filters.version === review.version) &&
+  (!filters.from || (review.reviewedAt ?? "") >= filters.from);
 
 function moved(
   counts: ReviewReplyCounts,

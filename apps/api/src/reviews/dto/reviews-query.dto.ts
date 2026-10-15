@@ -1,6 +1,15 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import {
+  IsIn,
+  IsInt,
+  IsISO8601,
+  IsOptional,
+  IsString,
+  Matches,
+  Max,
+  Min,
+} from 'class-validator';
 import {
   QUERY_BOUNDS,
   REVIEW_REPLY_STATES,
@@ -20,6 +29,15 @@ export class ReviewsQueryDto {
   @IsOptional()
   @IsString()
   version?: string;
+
+  @ApiPropertyOptional({
+    description: 'Only reviews written on or after this UTC date',
+    example: '2026-09-15',
+  })
+  @IsOptional()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/)
+  @IsISO8601({ strict: true })
+  from?: string;
 
   @IsOptional()
   @Type(() => Number)

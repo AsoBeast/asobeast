@@ -8,7 +8,7 @@ import { formatNumber } from "@/lib/format";
 import { reviewsOptions } from "@/lib/queries";
 import { COUNT_OF } from "@/lib/review-reply-cache";
 import { countsFilters, type ReviewView } from "./review-filters";
-import { REPLY_STATE_OPTIONS, REPLY_STATES_GUIDE } from "./reply-state";
+import { REPLY_STATES_GUIDE, shownReplyStates } from "./reply-state";
 
 export function ReviewCountsStrip({
   id,
@@ -22,6 +22,7 @@ export function ReviewCountsStrip({
   const { data } = useSuspenseQuery(reviewsOptions(id, countsFilters(view)));
   const counts = data.counts;
   if (!counts) return null;
+  const states = shownReplyStates(counts, view.replyState);
 
   return (
     <section aria-label="Reply status" className="flex flex-col gap-2">
@@ -32,7 +33,7 @@ export function ReviewCountsStrip({
         <InfoTip
           label="About reply status"
           title="Reply status"
-          summary="Needs reply: no reply anywhere. Draft saved: a reply is kept here and not marked. Replied: Google Play shows a developer reply, or you marked the review as replied."
+          summary="Needs reply: no reply anywhere. Draft saved: a reply is kept here and not marked. Replied: Google Play shows a developer reply, or you marked the review as replied. Updated after reply: the reviewer edited the review after the Google Play reply, so read it again."
         >
           <a
             href={REPLY_STATES_GUIDE}
@@ -44,8 +45,12 @@ export function ReviewCountsStrip({
           </a>
         </InfoTip>
       </div>
-      <StatTileGroup className="grid-cols-3">
-        {REPLY_STATE_OPTIONS.map(({ value, label }) => (
+      <StatTileGroup
+        className={
+          states.length > 3 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"
+        }
+      >
+        {states.map(({ value, label }) => (
           <StatTile
             key={value}
             label={label}

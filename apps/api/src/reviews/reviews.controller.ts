@@ -1,18 +1,26 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import { RatingsHistogram, ReviewList } from '@asobeast/shared';
+import { RatingsHistogram, ReviewList, ReviewThemes } from '@asobeast/shared';
+import { ReviewThemesQueryDto } from './dto/review-themes-query.dto';
 import { ReviewsQueryDto } from './dto/reviews-query.dto';
+import { ReviewThemesService } from './review-themes.service';
 import { ReviewsService } from './reviews.service';
+
+const dayOf = (value: string | undefined) =>
+  value === undefined ? undefined : new Date(value);
 
 @ApiTags('reviews')
 @Controller('apps/:id/reviews')
 export class ReviewsController {
-  constructor(private readonly reviews: ReviewsService) {}
+  constructor(
+    private readonly reviews: ReviewsService,
+    private readonly themes: ReviewThemesService,
+  ) {}
 
   @Get()
   @ApiOperation({
     summary:
-      'Stored reviews for an app, filtered by star, version and reply state',
+      'Stored reviews for an app, filtered by star, version, date and reply state',
   })
   list(
     @Param('id') id: string,
@@ -21,9 +29,27 @@ export class ReviewsController {
     return this.reviews.list(id, {
       score: query.score,
       version: query.version,
+      from: dayOf(query.from),
       limit: query.limit,
       replyState: query.replyState,
       sort: query.sort,
+    });
+  }
+
+  @Get('themes')
+  @ApiOperation({
+    summary:
+      'Phrases repeated across the reviews of an app, the ones in low rated reviews first',
+  })
+  listThemes(
+    @Param('id') id: string,
+    @Query() query: ReviewThemesQueryDto,
+  ): Promise<ReviewThemes> {
+    return this.themes.themes(id, {
+      score: query.score,
+      version: query.version,
+      from: dayOf(query.from),
+      replyState: query.replyState,
     });
   }
 

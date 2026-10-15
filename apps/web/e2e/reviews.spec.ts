@@ -209,15 +209,26 @@ test("show all loads up to two hundred reviews", async ({ page }) => {
   await expect(page.getByText("Showing 50 of 60")).toBeHidden();
 });
 
-test("a search on a long list says it covers the loaded reviews", async ({
+test("a search loads every review the page can hold before it filters", async ({
   page,
 }) => {
-  await page.goto("/apps/app-long/reviews?q=number%201");
+  await page.goto("/apps/app-long/reviews");
+  await expect(page.getByRole("article")).toHaveCount(50);
 
-  await expect(
-    page.getByText("Search covers the 50 loaded of 60 reviews"),
-  ).toBeVisible();
-  await expect(page.getByText("Showing 50 of 60")).toBeHidden();
+  const [request] = await Promise.all([
+    page.waitForRequest((candidate) => {
+      const url = new URL(candidate.url());
+      return (
+        url.pathname === "/api/backend/apps/app-long/reviews" &&
+        url.searchParams.get("limit") === "200"
+      );
+    }),
+    page.getByRole("textbox", { name: "Search reviews" }).fill("number 5"),
+  ]);
+
+  expect(request).toBeTruthy();
+  await expect(page.getByRole("article")).toHaveCount(11);
+  await expect(page.getByText(/Search covers the/)).toBeHidden();
 });
 
 test("show more appears only for a review that runs past four lines", async ({
@@ -271,4 +282,113 @@ test("the reply status tiles share one row on a phone", async ({ page }) => {
     nodes.map((node) => Math.round(node.getBoundingClientRect().top)),
   );
   expect(new Set(tops).size).toBe(1);
+});
+
+test("a since filter writes to the url and keeps the reviews of that period", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-long/reviews");
+
+  await page.getByRole("combobox", { name: "Filter by date" }).click();
+  const [request] = await Promise.all([
+    page.waitForRequest((candidate) => {
+      const url = new URL(candidate.url());
+      return (
+        url.pathname === "/api/backend/apps/app-long/reviews" &&
+        url.searchParams.has("from")
+      );
+    }),
+    page.getByRole("option", { name: "Last 30 days" }).click(),
+  ]);
+
+  await expect(page).toHaveURL(/since=30d/);
+  expect(new URL(request.url()).searchParams.get("from")).toMatch(
+    /^\d{4}-\d{2}-\d{2}$/,
+  );
+  await expect(page.getByRole("article")).toHaveCount(31);
+  await expect(page.getByText("Review number 45")).toBeHidden();
+});
+
+test("a theme searches for its phrase and a second press clears it", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/reviews");
+  const themes = page.getByRole("region", { name: "What people mention" });
+  const crashes = themes.getByRole("button", { name: /^crashes in/ });
+
+  await expect(themes.getByRole("listitem")).toHaveCount(2);
+  await expect(crashes).toHaveAccessibleName(
+    "crashes in 2 reviews, 2 at 2 stars or less",
+  );
+
+  await crashes.click();
+
+  await expect(page).toHaveURL(/q=crashes/);
+  await expect(crashes).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("article")).toHaveCount(1);
+  await expect(
+    page.getByRole("textbox", { name: "Search reviews" }),
+  ).toHaveValue("crashes");
+
+  await crashes.click();
+
+  await expect(page).not.toHaveURL(/q=/);
+  await expect(page.getByRole("article")).toHaveCount(5);
+});
+
+test("the themes strip stays hidden when nothing is repeated", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-long/reviews");
+
+  await expect(page.getByRole("article").first()).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "What people mention" }),
+  ).toHaveCount(0);
+});
+
+test("a play review edited after the reply says so and has its own filter", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-gp/reviews");
+  const strip = page.getByRole("region", { name: "Reply status" });
+  const updated = strip.getByRole("button", { name: /Updated after reply/ });
+
+  await expect(
+    page
+      .getByRole("article")
+      .filter({ hasText: "Jetzt besser" })
+      .getByText("Updated after reply"),
+  ).toBeVisible();
+  await expect(updated).toContainText("1");
+
+  await updated.click();
+
+  await expect(page).toHaveURL(/replyState=updated/);
+  await expect(page.getByRole("article")).toHaveCount(1);
+
+  await page.goto("/apps/app-1/reviews");
+
+  await expect(
+    page
+      .getByRole("region", { name: "Reply status" })
+      .getByRole("button", { name: /Updated after reply/ }),
+  ).toHaveCount(0);
+});
+
+test("the needs reply tile opens the queue lowest score first", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/reviews");
+
+  await page
+    .getByRole("region", { name: "Reply status" })
+    .getByRole("button", { name: /Needs reply/ })
+    .click();
+
+  await expect(page).toHaveURL(/replyState=needs_reply/);
+  await expect(page).toHaveURL(/sort=lowest/);
+  await expect(page.getByRole("article").first()).toContainText(
+    "Please add dark mode.",
+  );
 });

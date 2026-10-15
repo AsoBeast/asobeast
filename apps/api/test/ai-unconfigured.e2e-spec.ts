@@ -42,7 +42,12 @@ describe('AI without a key (e2e)', () => {
     api = await ownerAgent(app);
   });
 
+  beforeEach(async () => {
+    await prisma.aiCall.deleteMany();
+  });
+
   afterAll(async () => {
+    await prisma.aiCall.deleteMany();
     await prisma.$disconnect();
     await obliterateQueues(app);
     await app.close();
@@ -79,6 +84,39 @@ describe('AI without a key (e2e)', () => {
       'AI features require OPENAI_API_KEY',
     );
     await expect(prisma.reviewReply.count()).resolves.toBe(0);
+    await expect(prisma.aiCall.count()).resolves.toBe(0);
+  });
+
+  it('refuses a new review translation without a key and answers a kept one', async () => {
+    await prisma.$executeRawUnsafe(
+      'TRUNCATE TABLE "App", "Keyword" RESTART IDENTITY CASCADE',
+    );
+    const created = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: '111',
+        country: 'us',
+      },
+    });
+    const review = await prisma.review.create({
+      data: {
+        appId: created.id,
+        reviewId: 'r1',
+        score: 1,
+        text: 'Kaputt',
+        translationLanguage: 'en',
+        sourceLanguage: 'de',
+        translatedText: 'Broken',
+        translatedAt: new Date('2026-10-15T00:00:00Z'),
+      },
+    });
+    const path = `/apps/${created.id}/reviews/${review.id}/translation`;
+
+    await api.post(path).send({ language: 'fr' }).expect(409);
+    const kept = await api.post(path).send({ language: 'en' }).expect(201);
+
+    expect(kept.body).toMatchObject({ language: 'en', text: 'Broken' });
     await expect(prisma.aiCall.count()).resolves.toBe(0);
   });
 
