@@ -42,7 +42,12 @@ describe('AI without a key (e2e)', () => {
     api = await ownerAgent(app);
   });
 
+  beforeEach(async () => {
+    await prisma.aiCall.deleteMany();
+  });
+
   afterAll(async () => {
+    await prisma.aiCall.deleteMany();
     await prisma.$disconnect();
     await obliterateQueues(app);
     await app.close();
