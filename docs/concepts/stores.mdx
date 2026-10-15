@@ -74,6 +74,18 @@ Nine things the schema cannot tell you.
 
 A localization that has no saved field reads as an empty result with 0 characters used rather than a 404, because an empty field is a normal state. A localization tag outside the 50 answers 400 naming it. Removing a localization that is not on the list answers 404, and removing the home localization answers 409. A Google Play app refuses every operation on this page with 400.
 
+## Developer replies
+
+Each store shows one public developer reply under a review, and the developer can edit it.
+
+|  | Google Play | App Store |
+| --- | --- | --- |
+| Length | Its API refuses a reply of more than about 350 characters | Apple publishes no limit. asobeast's composer stops at 2,000 characters of its own accord |
+| When it appears | Shortly after it is posted, and the reviewer is notified | Within up to 24 hours |
+| What asobeast reads | The reply's date and text, with every daily sync | Nothing, because the public review feed carries no response |
+
+A review is **replied** when the store shows a reply or when you marked it as replied on the reviews page. On the App Store only the mark exists. The counter in the composer counts characters the way the stores count them, so a letter such as ą or a Chinese, Japanese or Korean character counts once. See [Reply to reviews](/guides/reviews#reply-to-reviews).
+
 ## Why is the Google Play short description its indexed surface?
 
 The 80 character short description, called `summary` in the store payload, is Google Play's equivalent of the surfaces Apple splits across a subtitle and a keyword field. asobeast treats it accordingly.

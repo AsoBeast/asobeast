@@ -15,7 +15,7 @@ An app is one row with a home storefront. Keywords are separate rows scoped by t
 | `User` | An account with a role and a plan | Email is unique. The first account bootstraps as owner |
 | `ApiToken` | A revocable personal API token | Stored as a SHA-256 hash, never as plaintext |
 | `AppGroup` | A linked group of listings across stores | Unique on group and store, so a group holds one app per store |
-| `App` | One tracked listing | Unique on workspace, store, store app id and country |
+| `App` | One tracked listing, with the reply guidelines its AI drafts follow in `replyGuidelines` | Unique on workspace, store, store app id and country |
 | `AppSnapshot` | A captured copy of the listing metadata | Keeps the raw payload for reprocessing. One stream per market: a snapshot with no market is the home listing |
 | `Keyword` | A phrase in one store and one storefront | Unique on `text`, `store`, `country` |
 | `TrackedKeyword` | The link between an app and a keyword | Keyed on app and keyword, carries `source` and `relevance` |
@@ -29,7 +29,8 @@ An app is one row with a home storefront. Keywords are separate rows scoped by t
 | `ChartCapture` | One day of one top chart, captured once for every workspace | Shared store data with no workspace. Unique on store, country, collection, genre, device and date. Carries `depth`, the number of positions the store answered |
 | `ChartEntry` | One row of a top chart capture: a position and the app's title, developer, icon, genre and price class as that storefront showed them that day | Shared store data. Keyed on capture and position, deleted with its capture |
 | `ChartFollow` | One chart kind of a category a workspace wants captured every day; the plan's follow limit counts the categories the rows belong to | Tenant owned. Unique on workspace and chart key |
-| `Review` | A synced store review | Unique on app and store review id |
+| `Review` | A synced store review, with the text of the developer reply Google Play shows in `replyText` | Unique on app and store review id |
+| `ReviewReply` | The reply kept for one review: its text, how it was made and the owner's replied mark | Keyed on review. Tenant owned, deleted with its review and its app |
 | `ChangeEvent` | A detected metadata change | Covers owned and competitor apps, in the home market or any other market you track |
 | `AuditScore` | A daily audit score snapshot | Keyed on app and date |
 | `ActionItem` | One Action Center recommendation | Unique on workspace and fingerprint |
@@ -50,6 +51,8 @@ erDiagram
   App ||--o{ KeywordField : "stores one per localization"
   App ||--o{ AppLocalization : ships
   App ||--o| AppSetup : "is set up through"
+  App ||--o{ Review : collects
+  Review ||--o| ReviewReply : "is answered by"
   Keyword ||--o{ TrackedKeyword : "is tracked by"
   Keyword ||--o{ KeywordMetric : scores
   App ||--o{ KeywordRanking : "is ranked in"
