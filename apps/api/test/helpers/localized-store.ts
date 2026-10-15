@@ -37,6 +37,13 @@ export const GERMAN: Listing = {
   screenshots: [5, 6].map(shot),
 };
 
+export const FRENCH: Listing = {
+  title: 'Où suis-je ? Quiz Géo',
+  subtitle: 'Jeu de géographie mondiale',
+  description: 'Découvrez le monde',
+  screenshots: [7, 8].map(shot),
+};
+
 export class LocalizedRegistry {
   readonly listings = new Map<string, Listing>();
   readonly calls: Array<{ country: string; localization?: string }> = [];

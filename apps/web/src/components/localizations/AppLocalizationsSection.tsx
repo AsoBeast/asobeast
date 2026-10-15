@@ -24,6 +24,7 @@ import { AddLocalizationDialog } from "./AddLocalizationDialog";
 import { FindLocalizationsButton } from "./FindLocalizationsButton";
 import { LocalizationList } from "./LocalizationList";
 import { LocalizationMatrix } from "./LocalizationMatrix";
+import { UnlistedLocalizations } from "./UnlistedLocalizations";
 
 const HEADING_ID = "app-localizations-heading";
 
@@ -78,6 +79,7 @@ function LocalizationsPanel({
           />
         ) : null}
         <LocalizationList id={id} result={result} canDraft={canDraft} />
+        <UnlistedLocalizations id={id} result={result} />
       </CardContent>
     </Card>
   );

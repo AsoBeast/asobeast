@@ -41,6 +41,7 @@ import { DailyCategoryBuckets } from './daily-category-buckets.service';
 import { DailyCapacity } from './daily-capacity.service';
 import { DailyTargetsCollector } from './daily-targets.service';
 import { FirstRunStatusService } from './first-run-status.service';
+import { AppRunStatusService } from './app-run-status.service';
 import { FLOW_PRODUCERS, QUEUES } from './jobs.types';
 import { PipelineService } from './pipeline.service';
 import { PipelineWorker } from './pipeline.worker';
@@ -126,6 +127,7 @@ const bullBoardModules: DynamicModule[] =
     DailyCapacity,
     DailyTargetsCollector,
     FirstRunStatusService,
+    AppRunStatusService,
     JobTargetCountry,
     OverLimitRegistry,
     StoreJobsHandler,

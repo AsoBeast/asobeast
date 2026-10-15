@@ -334,10 +334,81 @@ describe('KeywordsController (e2e)', () => {
       );
     });
 
+    it('queues the first check ahead of the first score', async () => {
+      const id = await importAndClear();
+      const [keywordId] = idsOf(await add(id, ['deep focus']), ['deep focus']);
+      const queue = app.get<Queue>(getQueueToken(QUEUES.APP_STORE), {
+        strict: false,
+      });
+
+      const waiting = await queue.getJobs(['wait', 'paused'], 0, -1, true);
+
+      const check = waiting.findIndex(
+        (job) => job.id === firstRunCheckJobId(id, keywordId, utcDateKey()),
+      );
+      const score = waiting.findIndex(
+        (job) =>
+          job.name === JOBS.SCORE_KEYWORD &&
+          (job.data as { keywordId: string }).keywordId === keywordId,
+      );
+      expect(check).toBeGreaterThanOrEqual(0);
+      expect(score).toBeGreaterThanOrEqual(0);
+      expect(check).toBeLessThan(score);
+    });
+
+    it('checks the first position of every phrase a keyword field save starts tracking', async () => {
+      const id = await importAndClear();
+
+      const saved = (
+        await api
+          .put(`/apps/${id}/keyword-field`)
+          .send({ text: 'deep focus,exam timer,habit' })
+          .expect(200)
+      ).body as KeywordFieldResult;
+
+      const [focus, timer] = ['deep focus', 'exam timer'].map(
+        (text) =>
+          saved.tracked.find((item) => item.text === text)?.keywordId ?? '',
+      );
+      expect(await checkedJobIds()).toEqual(firstRunIds(id, [focus, timer]));
+    });
+
     it('checks nothing for a keyword the app already tracks', async () => {
       const id = await importAndClear();
 
       await add(id, ['habit']);
+
+      expect(await checkedJobIds()).toEqual([]);
+    });
+
+    it('checks a paused keyword again once it is resumed', async () => {
+      const id = await importAndClear();
+      const [paused] = idsOf(await add(id, ['deep focus']), ['deep focus']);
+      await api
+        .patch(`/apps/${id}/keywords/${paused}`)
+        .send({ active: false })
+        .expect(200);
+      await obliterateQueues(app);
+      await pauseQueues(app);
+
+      await api
+        .patch(`/apps/${id}/keywords/${paused}`)
+        .send({ active: true })
+        .expect(200);
+
+      expect(await checkedJobIds()).toEqual(firstRunIds(id, [paused]));
+    });
+
+    it('checks nothing when an active keyword is edited', async () => {
+      const id = await importAndClear();
+      const [keywordId] = idsOf(await add(id, ['deep focus']), ['deep focus']);
+      await obliterateQueues(app);
+      await pauseQueues(app);
+
+      await api
+        .patch(`/apps/${id}/keywords/${keywordId}`)
+        .send({ active: true, note: 'kept' })
+        .expect(200);
 
       expect(await checkedJobIds()).toEqual([]);
     });

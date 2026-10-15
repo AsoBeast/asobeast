@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  APP_RUN_STAGES,
+  appRunTotals,
   FIRST_RUN_HISTORY_DAYS,
   FIRST_RUN_STAGES,
   RUN_STATES,
@@ -7,6 +9,8 @@ import {
   STORE_HEALTH_STATES,
 } from './jobs';
 import type {
+  AppRunStage,
+  AppRunStatus,
   FirstRunStage,
   FirstRunStatus,
   StoreHealthReport,
@@ -122,5 +126,31 @@ describe('store health', () => {
     expect(report.degraded).toBe(
       report.stores.some((store) => store.state === 'broken'),
     );
+  });
+});
+
+describe('the app run status', () => {
+  it('lists every app run stage exactly once, in the order the pill shows them', () => {
+    const every: Record<AppRunStage, true> = {
+      listings: true,
+      keywords: true,
+      categories: true,
+    };
+
+    expect(APP_RUN_STAGES).toEqual(['listings', 'keywords', 'categories']);
+    expect(new Set(APP_RUN_STAGES).size).toBe(Object.keys(every).length);
+  });
+
+  it('sums the counts of a status', () => {
+    const status: Pick<AppRunStatus, 'stages'> = {
+      stages: [
+        { stage: 'listings', ready: 2, total: 6, complete: false },
+        { stage: 'keywords', ready: 12, total: 40, complete: false },
+        { stage: 'categories', ready: 1, total: 1, complete: true },
+      ],
+    };
+
+    expect(appRunTotals(status)).toEqual({ ready: 15, total: 47 });
+    expect(appRunTotals({ stages: [] })).toEqual({ ready: 0, total: 0 });
   });
 });

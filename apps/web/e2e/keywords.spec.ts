@@ -1,8 +1,10 @@
+import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import type { Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
 import { hoverForTooltip } from "./hover.mts";
 import { hydrated } from "./hydrated.mts";
+import { seedCookies } from "./routes.mts";
 
 test("table renders fixture keywords and distinguishes a paused row", async ({
   page,
@@ -24,6 +26,37 @@ test("table renders fixture keywords and distinguishes a paused row", async ({
   const pausedRow = page.getByRole("row", { name: /time blocking/ });
   await expect(pausedRow).toBeVisible();
   await expect(pausedRow.getByText("Paused")).toBeVisible();
+});
+
+test.describe("a keyword awaiting its first check", () => {
+  test.beforeEach(async ({ context }) => {
+    await seedCookies(context, { e2e_first_check: randomUUID() });
+  });
+
+  test("says so and gets its position without a reload", async ({ page }) => {
+    await page.goto("/apps/app-1/keywords");
+
+    const fresh = page.getByRole("row", { name: /fresh phrase/ });
+    const checking = fresh.getByLabel("Position: checking");
+    await expect(checking).toHaveText("Checking…");
+
+    await expect(fresh.getByLabel("Position: checking")).toHaveCount(0, {
+      timeout: 20_000,
+    });
+    await expect(fresh.getByText(/^Position 7, /)).toBeAttached();
+  });
+
+  test("keeps the dash for a paused keyword that was never checked", async ({
+    page,
+  }) => {
+    await page.goto("/apps/app-1/keywords");
+
+    const dormant = page.getByRole("row", { name: /dormant phrase/ });
+    await expect(dormant.getByLabel("Position: not checked yet")).toHaveText(
+      "—",
+    );
+    await expect(dormant.getByLabel("Position: checking")).toHaveCount(0);
+  });
 });
 
 test("market filter switches to an empty market with an add prompt", async ({

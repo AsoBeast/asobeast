@@ -35,6 +35,7 @@ import {
   shouldConfirmSave,
   tracksNewPhrases,
   uniqueWordCount,
+  unlistedReads,
   unshippedReads,
   upsertLocalization,
   withoutLocalization,
@@ -358,6 +359,52 @@ describe("upsertLocalization", () => {
       "es-MX",
     ]);
     expect(RESULT).toEqual(before);
+  });
+});
+
+describe("unlistedReads", () => {
+  const result = (
+    markets: string[],
+    shipped: AppStoreLocalization[],
+  ): AppLocalizationsResult => ({
+    home: "us",
+    markets,
+    localizations: shipped.map((localization) =>
+      item(localization, "manual", []),
+    ),
+  });
+
+  it("W-LOC-16 lists the unshipped localizations the markets read, default readers first", () => {
+    const reads = unlistedReads(result(["us", "de", "ch"], ["en-US", "fr"]));
+
+    expect(reads.slice(0, 2)).toEqual([
+      {
+        localization: "de",
+        readIn: [reader("de", "default"), reader("ch", "default")],
+      },
+      { localization: "ar", readIn: [reader("us", "additional", true)] },
+    ]);
+    expect(reads.map((read) => read.localization)).toEqual([
+      "de",
+      "ar",
+      "zh-Hans",
+      "zh-Hant",
+      "en-GB",
+      "it",
+      "ko",
+      "pt-BR",
+      "ru",
+      "es-MX",
+      "vi",
+    ]);
+    expect(reads.find((read) => read.localization === "en-GB")).toEqual({
+      localization: "en-GB",
+      readIn: [reader("de", "additional"), reader("ch", "additional")],
+    });
+  });
+
+  it("W-LOC-17 answers nothing when every read localization is shipped", () => {
+    expect(unlistedReads(result(["gb"], ["en-US", "en-GB"]))).toEqual([]);
   });
 });
 

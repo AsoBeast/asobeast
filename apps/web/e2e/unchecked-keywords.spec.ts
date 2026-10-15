@@ -11,7 +11,7 @@ test("a keyword the pipeline never checked is not reported as ranking beyond dep
   const row = page.getByRole("row", { name: new RegExp(NEVER_CHECKED) });
   await expect(row).toBeVisible();
   await expect(row).not.toContainText(">200");
-  await expect(row.getByLabel(/not checked yet/i)).toBeVisible();
+  await expect(row.getByLabel("Position: checking")).toHaveText("Checking…");
 });
 
 test("the rankings chart offers no widen prompt when nothing was ever checked", async ({

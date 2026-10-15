@@ -4,6 +4,7 @@ import type { AppStoreLocalization } from '@asobeast/shared';
 import { QuotaService } from '../auth/quota.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { recordAppLocalizations } from './app-localization-records';
+import { FirstPositionChecks } from './first-position-checks';
 import { indexKeywordFields, storedPhrases } from './keyword-field-index';
 import { pairKey } from './keyword-import';
 import { KeywordTracker } from './keyword-tracker';
@@ -37,6 +38,7 @@ export class KeywordFieldWriter {
     private readonly quota: QuotaService,
     private readonly workspace: WorkspaceContext,
     private readonly listings: MarketListingRequests,
+    private readonly checks: FirstPositionChecks,
   ) {}
 
   async save({
@@ -46,12 +48,12 @@ export class KeywordFieldWriter {
     markets,
   }: KeywordFieldSave): Promise<KeywordFieldWrite> {
     const resolved = await this.resolveKeywords(app, phrases, markets);
-    await this.quota.admitKeywordMarkets(async (tx) => {
+    const started = await this.quota.admitKeywordMarkets(async (tx) => {
       await this.serialize(tx, app.id);
       const before = await storedPhrases(tx, app.id, localization);
       await this.storePhrases(tx, app.id, localization, phrases);
       await this.recordShipped(tx, app, localization, phrases);
-      await this.trackAll(
+      const tracked = await this.trackAll(
         tx,
         app.id,
         resolved.flatMap((entry) => entry.keywordIds),
@@ -62,8 +64,9 @@ export class KeywordFieldWriter {
         localization,
         before.filter((phrase) => !phrases.includes(phrase)),
       );
+      return tracked;
     });
-    return this.announce(app, resolved);
+    return this.announce(app, resolved, started);
   }
 
   async remove(
@@ -107,8 +110,12 @@ export class KeywordFieldWriter {
     tx: Prisma.TransactionClient,
     appId: string,
     keywordIds: string[],
-  ): Promise<void> {
-    if (keywordIds.length === 0) return;
+  ): Promise<string[]> {
+    if (keywordIds.length === 0) return [];
+    const active = await tx.trackedKeyword.findMany({
+      where: { appId, active: true, keywordId: { in: keywordIds } },
+      select: { keywordId: true },
+    });
     await tx.trackedKeyword.createMany({
       data: keywordIds.map((keywordId) => ({
         appId,
@@ -122,13 +129,17 @@ export class KeywordFieldWriter {
       where: { appId, active: false, keywordId: { in: keywordIds } },
       data: { active: true },
     });
+    const tracked = new Set(active.map((row) => row.keywordId));
+    return keywordIds.filter((keywordId) => !tracked.has(keywordId));
   }
 
   private async announce(
     app: KeywordApp,
     resolved: MarketKeywords[],
+    started: string[],
   ): Promise<KeywordFieldWrite> {
     const keywordIds = resolved.flatMap((entry) => entry.keywordIds);
+    await this.checks.schedule(app.id, started);
     await this.tracker.enqueueFirstScores(keywordIds, app);
     const trackedIn = resolved
       .filter((entry) => entry.keywordIds.length > 0)

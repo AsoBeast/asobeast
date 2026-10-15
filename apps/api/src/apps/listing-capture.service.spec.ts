@@ -10,6 +10,7 @@ import type { StoreProviderRegistry } from '../store-providers/store-provider.re
 import { ListingCaptureService } from './listing-capture.service';
 import type { LocalizationDetection } from './localization-detection.service';
 import type { LocalizedListingCapture } from './localized-listing-capture.service';
+import type { MarketLocalizationRecorder } from './market-localization-recorder';
 
 const APP = {
   id: 'app_1',
@@ -47,6 +48,12 @@ const REORDERED = {
   },
 };
 
+const captured = (changes: unknown[]) => ({
+  changes,
+  listings: [],
+  complete: true,
+});
+
 const build = (overrides: {
   syncFromSnapshot?: jest.Mock;
   recordRefresh?: jest.Mock;
@@ -55,6 +62,7 @@ const build = (overrides: {
   app?: typeof APP;
   previous?: typeof SNAPSHOT | null;
   detect?: jest.Mock;
+  recordDefault?: jest.Mock;
 }) => {
   const tx = {
     appSnapshot: { create: jest.fn().mockResolvedValue(SNAPSHOT) },
@@ -97,10 +105,14 @@ const build = (overrides: {
   const record = jest.fn().mockResolvedValue(2);
   const screenshots = { record } as unknown as ScreenshotRecorder;
   const request = jest.fn().mockResolvedValue(undefined);
-  const capture = jest.fn().mockResolvedValue(overrides.localized ?? []);
+  const capture = jest
+    .fn()
+    .mockResolvedValue(captured(overrides.localized ?? []));
   const detect =
     overrides.detect ??
     jest.fn().mockResolvedValue({ queued: 0, candidates: [] });
+  const recordDefault =
+    overrides.recordDefault ?? jest.fn().mockResolvedValue(undefined);
   const service = new ListingCaptureService(
     prisma,
     registry,
@@ -111,8 +123,9 @@ const build = (overrides: {
     { request } as unknown as ScreenshotQueue,
     { capture } as unknown as LocalizedListingCapture,
     { request: detect } as unknown as LocalizationDetection,
+    { record: recordDefault } as unknown as MarketLocalizationRecorder,
   );
-  return { service, request, record, capture, detect };
+  return { service, request, record, capture, detect, recordDefault };
 };
 
 describe('ListingCaptureService.refresh', () => {
@@ -219,7 +232,7 @@ describe('ListingCaptureService localized listings', () => {
     });
     capture.mockImplementation(() => {
       order.push('localizations');
-      return Promise.resolve([]);
+      return Promise.resolve(captured([]));
     });
 
     await service.refresh(APP.id);
@@ -237,7 +250,7 @@ describe('ListingCaptureService localized listings', () => {
     });
     capture.mockImplementation(() => {
       order.push('localizations');
-      return Promise.resolve([]);
+      return Promise.resolve(captured([]));
     });
 
     await service.refresh(APP.id);
@@ -255,7 +268,7 @@ describe('ListingCaptureService localized listings', () => {
     });
     capture.mockImplementation(() => {
       order.push('localizations');
-      return Promise.resolve([]);
+      return Promise.resolve(captured([]));
     });
 
     await service.refreshListing(APP.id, 'pl');
@@ -357,5 +370,40 @@ describe('ListingCaptureService localization detection', () => {
     } finally {
       warn.mockRestore();
     }
+  });
+});
+
+describe('ListingCaptureService market default localization', () => {
+  it('records the default localization of a market after the localized captures', async () => {
+    const order: string[] = [];
+    const read = { changes: [], listings: [SNAPSHOT], complete: true };
+    const { service, capture, recordDefault } = build({
+      recordDefault: jest.fn(() => {
+        order.push('default');
+        return Promise.resolve();
+      }),
+    });
+    capture.mockImplementation(() => {
+      order.push('localizations');
+      return Promise.resolve(read);
+    });
+
+    await service.refreshListing(APP.id, 'de');
+
+    expect(order).toEqual(['localizations', 'default']);
+    expect(recordDefault).toHaveBeenCalledWith(
+      expect.objectContaining({ id: APP.id }),
+      'de',
+      { ...SNAPSHOT, subtitleUnavailable: false },
+      read,
+    );
+  });
+
+  it('asks on every capture of a market, not only the first', async () => {
+    const { service, recordDefault } = build({ previous: SNAPSHOT });
+
+    await service.refreshListing(APP.id, 'de');
+
+    expect(recordDefault).toHaveBeenCalledTimes(1);
   });
 });

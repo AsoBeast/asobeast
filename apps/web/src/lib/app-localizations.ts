@@ -16,6 +16,7 @@ import {
   type AppStoreLocalization,
   type KeywordFieldSavePreview,
   type KeywordImportQuota,
+  type LocalizationReader,
   type LocalizationReadRole,
   type LocalizedKeywordFieldResult,
   type MarketLocalizationRead,
@@ -352,6 +353,30 @@ export function addableGroups(
     read: candidates.filter((candidate) => candidate.readIn.length > 0),
     other: candidates.filter((candidate) => candidate.readIn.length === 0),
   };
+}
+
+export interface UnlistedRead {
+  localization: AppStoreLocalization;
+  readIn: LocalizationReader[];
+}
+
+const readByDefault = (read: UnlistedRead): boolean =>
+  read.readIn.some((reader) => reader.role === "default");
+
+export function unlistedReads(result: AppLocalizationsResult): UnlistedRead[] {
+  const reads = addableGroups(result.localizations, result.markets).read.map(
+    ({ localization, readIn }) => ({
+      localization,
+      readIn: readIn.flatMap((country) => {
+        const role = readRole(country, localization);
+        return role ? [{ country, role, home: country === result.home }] : [];
+      }),
+    }),
+  );
+  return [
+    ...reads.filter(readByDefault),
+    ...reads.filter((read) => !readByDefault(read)),
+  ];
 }
 
 export function withoutLocalization(

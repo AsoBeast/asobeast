@@ -1,13 +1,13 @@
 ---
 title: MCP tool reference
 sidebarTitle: Tools
-description: "34 read only tools covering apps, keywords, competitors, top charts, rankings, SERPs, audits, reviews, analytics and the Action Center, plus 5 opt in tools that change keywords, competitors and actions."
+description: "35 read only tools covering apps, keywords, competitors, top charts, rankings, SERPs, audits, reviews, analytics and the Action Center, plus 5 opt in tools that change keywords, competitors and actions."
 icon: wrench
 keywords: ["MCP tools","list_apps","ranking_history","serp_movers","app_audit","actions_summary","track_keywords","set_action_status","read only","write tools"]
 mode: wide
 ---
 
-This page is generated from the tool catalog both transports share, so it cannot drift. 34 tools read and nothing else: each is a `GET` annotated `readOnlyHint: true`. 5 more tools change things and are listed only to a token with the write scope. Almost all of them take an `appId`, which you get from `list_apps`.
+This page is generated from the tool catalog both transports share, so it cannot drift. 35 tools read and nothing else: each is a `GET` annotated `readOnlyHint: true`. 5 more tools change things and are listed only to a token with the write scope. Almost all of them take an `appId`, which you get from `list_apps`.
 
 ## Apps
 
@@ -16,6 +16,7 @@ This page is generated from the tool catalog both transports share, so it cannot
 | `list_apps` | List apps | List every tracked app with its store, home country, latest visibility score and keyword count | None |
 | `get_app` | Get app | Full detail for one app: store metadata, home storefront, latest snapshot and category | `appId` (required), `country` |
 | `app_summary` | App summary | Headline metrics for one app: tracked keyword count, visibility, average position and recent movement | `appId` (required), `country` |
+| `app_run_status` | Today's run of an app | Where today's data collection stands for one app: the listings captured for the app and its competitors in the home storefront and every tracked market, the active keywords whose position was checked and the category charts read, each as ready of total and counted since the daily trigger, or since midnight UTC once the trigger has passed | `appId` (required) |
 | `portfolio` | Portfolio summary | Cross-app portfolio roll-up: totals and per-app visibility, keyword and movement figures across every tracked app | None |
 | `market_suggestions` | Suggest markets from the app's languages | App Store storefronts that read a localization in a language the app's home listing declares, the home storefront left out, each with the localization, its role in that storefront (default or additional), whether the app already tracks keywords there and the daily store requests the market would cost: the listing reads of the app and its competitors and the requests one tracked keyword adds | `appId` (required) |
 

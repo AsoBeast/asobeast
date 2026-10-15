@@ -175,8 +175,8 @@ export class KeywordImportService {
       await this.tracker.claimForManual(tx, app.id, keywordIds);
       imported = added.count + reactivated.count;
     });
-    await this.tracker.enqueueFirstScores(keywordIds, app);
     await this.checks.schedule(app.id, keywordIds);
+    await this.tracker.enqueueFirstScores(keywordIds, app);
     const markets = new Set(
       located.map(({ addition }) => addition.candidate.country),
     );
