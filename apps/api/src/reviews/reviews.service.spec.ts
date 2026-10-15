@@ -246,7 +246,14 @@ describe('ReviewsService.syncReviews', () => {
       data: { repliedAt: replied },
     });
     expect(updateMany).toHaveBeenCalledWith({
-      where: { appId: 'app1', reviewId: 'known' },
+      where: {
+        appId: 'app1',
+        reviewId: 'known',
+        OR: [
+          { replyText: null },
+          { replyText: { not: 'Thanks, fixed in 2.1' } },
+        ],
+      },
       data: { replyText: 'Thanks, fixed in 2.1' },
     });
   });

@@ -156,7 +156,11 @@ export class ReviewsService {
       }
       if (replyText) {
         await this.prisma.review.updateMany({
-          where: { appId, reviewId },
+          where: {
+            appId,
+            reviewId,
+            OR: [{ replyText: null }, { replyText: { not: replyText } }],
+          },
           data: { replyText },
         });
       }

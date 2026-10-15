@@ -222,6 +222,51 @@ describe('ReviewsController (e2e)', () => {
     ]);
   });
 
+  it('fills and refreshes the reply text of a review it already stored', async () => {
+    const created = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.GOOGLE_PLAY,
+        storeAppId: 'com.example.edited',
+        country: 'us',
+        name: 'Play App',
+      },
+    });
+    await prisma.review.create({
+      data: { appId: created.id, reviewId: 'g1', score: 2, text: 'Crashes' },
+    });
+    const syncWith = async (replyText: string) => {
+      jest.spyOn(app.get(StoreProviderRegistry), 'get').mockReturnValue({
+        store: Store.GOOGLE_PLAY,
+        reviews: jest.fn().mockResolvedValue([
+          {
+            reviewId: 'g1',
+            score: 2,
+            text: 'Crashes',
+            repliedAt: new Date('2026-09-02T08:00:00.000Z'),
+            replyText,
+          },
+        ]),
+      } as unknown as ReturnType<StoreProviderRegistry['get']>);
+      await asWorkspace(app, () =>
+        app
+          .get(ReviewsService)
+          .syncReviews({ appId: created.id, pages: 1, backfill: true }),
+      );
+      return prisma.review.findFirstOrThrow({
+        where: { appId: created.id, reviewId: 'g1' },
+        select: { replyText: true },
+      });
+    };
+
+    await expect(syncWith('We are on it')).resolves.toEqual({
+      replyText: 'We are on it',
+    });
+    await expect(syncWith('Fixed in 2.1')).resolves.toEqual({
+      replyText: 'Fixed in 2.1',
+    });
+  });
+
   it('stores a Google Play review that has a rating and no text next to the others', async () => {
     const created = await prisma.app.create({
       data: {
