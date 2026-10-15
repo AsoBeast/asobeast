@@ -1,9 +1,9 @@
 import { ChartKey } from '@asobeast/shared';
 import { PrismaService } from '../prisma/prisma.service';
+import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
 import { ChartCaptureService, StoredChart } from './chart-capture.service';
 import { ChartFollowsService } from './chart-follows.service';
-import { ChartReadService } from './chart-read.service';
-import { ChartPageQueryDto } from './dto/chart-page-query.dto';
+import { ChartPageQuery, ChartReadService } from './chart-read.service';
 
 const KEY: ChartKey = {
   store: 'APP_STORE',
@@ -47,12 +47,17 @@ const build = (current: StoredChart | null, previous: StoredChart | null) => {
     captures as unknown as ChartCaptureService,
     { of: jest.fn().mockResolvedValue(null) } as unknown as ChartFollowsService,
     prisma as unknown as PrismaService,
+    { through: jest.fn() } as unknown as ProxyEgress,
   );
   return { service, captures };
 };
 
-const query = (over: Partial<ChartPageQueryDto> = {}): ChartPageQueryDto =>
-  Object.assign(new ChartPageQueryDto(), KEY, over);
+const query = (over: Partial<ChartPageQuery> = {}): ChartPageQuery => ({
+  ...KEY,
+  compare: '1d',
+  dates: 90,
+  ...over,
+});
 
 describe('ChartReadService.page', () => {
   beforeEach(() => {

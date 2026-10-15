@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import {
   CHART_TRENDING_LIMIT,
   ChartCaptureSummary,
+  ChartCompareWindow,
   ChartEntryItem,
   ChartGenre,
   chartGenreName,
@@ -9,16 +10,23 @@ import {
   ChartKey,
   ChartPage,
   compareDays,
+  QUERY_BOUNDS,
   Store,
 } from '@asobeast/shared';
 import { addDays, toDateKey, utcToday } from '../analytics/analytics.support';
 import { PrismaService } from '../prisma/prisma.service';
+import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
 import { chartAppLinks } from './chart-apps';
 import { ChartCaptureService, StoredChart } from './chart-capture.service';
 import { ChartFollowsService } from './chart-follows.service';
 import { assertChartKey } from './chart-key';
 import { movementOf, trendingOf } from './chart-movement';
-import { ChartPageQueryDto } from './dto/chart-page-query.dto';
+
+export interface ChartPageQuery extends ChartKey {
+  date?: string;
+  compare: ChartCompareWindow;
+  dates: number;
+}
 
 type ChartListingItem = Omit<ChartEntryItem, 'previous' | 'delta' | 'movement'>;
 
@@ -56,9 +64,26 @@ export class ChartReadService {
     private readonly captures: ChartCaptureService,
     private readonly follows: ChartFollowsService,
     private readonly prisma: PrismaService,
+    private readonly egress: ProxyEgress,
   ) {}
 
-  async page(query: ChartPageQueryDto): Promise<ChartPage> {
+  async captureToday(
+    query: ChartKey,
+    spend: () => Promise<void>,
+  ): Promise<ChartPage> {
+    const key = chartKeyFrom(query);
+    assertChartKey(key);
+    await this.egress.through(key.store, key.country, () =>
+      this.captures.captureToday(key, spend),
+    );
+    return this.page({
+      ...key,
+      compare: '1d',
+      dates: QUERY_BOUNDS.chartDates.default,
+    });
+  }
+
+  async page(query: ChartPageQuery): Promise<ChartPage> {
     const key = chartKeyFrom(query);
     assertChartKey(key);
     const capture = query.date
@@ -98,7 +123,7 @@ export class ChartReadService {
   private comparisonOf(
     key: ChartKey,
     capture: StoredChart,
-    query: ChartPageQueryDto,
+    query: ChartPageQuery,
   ): Promise<StoredChart | null> {
     const window = compareDays(query.compare);
     return this.captures.newestOnOrBefore(

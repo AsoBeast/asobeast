@@ -12,6 +12,7 @@ import {
   utcToday,
 } from '../src/analytics/analytics.support';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
+import { StoreRequestError } from '../src/store-providers/errors';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import { StoreProvider } from '../src/store-providers/types';
 import { testDb } from './helpers/test-db';
@@ -69,6 +70,7 @@ describe('ChartsController (e2e)', () => {
   });
 
   beforeEach(async () => {
+    topCharts.mockReset();
     await prisma.$executeRawUnsafe(
       'TRUNCATE TABLE "App", "Keyword", "ChartCapture", "ChartApp", "ChartFollow" RESTART IDENTITY CASCADE',
     );
@@ -105,7 +107,6 @@ describe('ChartsController (e2e)', () => {
   });
 
   afterAll(async () => {
-    expect(topCharts).not.toHaveBeenCalled();
     await prisma.workspace.deleteMany({ where: { id: OTHER_WORKSPACE } });
     await prisma.$disconnect();
     await obliterateQueues(app);
@@ -277,6 +278,74 @@ describe('ChartsController (e2e)', () => {
     ['a day that does not exist', { date: '2026-02-30' }],
   ])('refuses %s and never reaches the store', async (_case, query) => {
     await read(query).expect(400);
+    expect(topCharts).not.toHaveBeenCalled();
+  });
+
+  const CAPTURE_KEY = { ...KEY, genre: '6007' };
+
+  it("captures today's chart on demand", async () => {
+    topCharts.mockResolvedValue([
+      {
+        storeAppId: 'x',
+        title: 'X',
+        developer: 'Xco',
+        iconUrl: 'https://example.com/x.png',
+        genreId: '6007',
+        free: true,
+      },
+      { storeAppId: 'y', title: 'Y', developer: 'Yco', free: false },
+      { storeAppId: 'z', title: 'Z' },
+    ]);
+
+    const response = await api
+      .post('/charts/capture')
+      .send(CAPTURE_KEY)
+      .expect(200);
+    const page = response.body as ChartPage;
+
+    expect(page.capture?.date).toBe(toDateKey(today));
+    expect(page.entries).toEqual([
+      expect.objectContaining({
+        storeAppId: 'x',
+        developer: 'Xco',
+        iconUrl: 'https://example.com/x.png',
+        genreName: 'Productivity',
+        free: true,
+        movement: 'none',
+      }),
+      expect.objectContaining({ storeAppId: 'y', free: false }),
+      expect.objectContaining({ storeAppId: 'z', developer: null }),
+    ]);
+    const stored = await read({ genre: CAPTURE_KEY.genre }).expect(200);
+    expect((stored.body as ChartPage).entries).toHaveLength(3);
+
+    await api.post('/charts/capture').send(CAPTURE_KEY).expect(200);
+    expect(topCharts).toHaveBeenCalledTimes(1);
+  });
+
+  it("answers the store's failure as a bad gateway", async () => {
+    topCharts.mockRejectedValue(
+      new StoreRequestError('APP_STORE', 'topCharts', 'boom'),
+    );
+
+    await api.post('/charts/capture').send(CAPTURE_KEY).expect(502);
+
+    await expect(
+      prisma.chartCapture.count({ where: { genre: '6007' } }),
+    ).resolves.toBe(0);
+  });
+
+  it('refuses a bad key before the store', async () => {
+    await api
+      .post('/charts/capture')
+      .send({ ...CAPTURE_KEY, genre: '9999' })
+      .expect(400);
+    await api
+      .post('/charts/capture')
+      .send({ ...CAPTURE_KEY, device: 'ipad' })
+      .expect(400);
+
+    expect(topCharts).not.toHaveBeenCalled();
   });
 
   it('lists the genres', async () => {

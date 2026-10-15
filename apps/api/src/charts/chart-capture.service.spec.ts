@@ -177,6 +177,31 @@ describe('ChartCaptureService.captureToday', () => {
     await expect(service.captureToday(KEY)).resolves.toBe(winner);
   });
 
+  it('spends only when the store is reached', async () => {
+    const spend = jest.fn().mockResolvedValue(undefined);
+    const stored = build([], STORED);
+    const missing = build([{ storeAppId: '111', title: 'First' }]);
+
+    await stored.service.captureToday(KEY, spend);
+    expect(spend).not.toHaveBeenCalled();
+
+    await missing.service.captureToday(KEY, spend);
+    expect(spend).toHaveBeenCalledTimes(1);
+    expect(spend.mock.invocationCallOrder[0]).toBeLessThan(
+      missing.topCharts.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('never reaches the store when the allowance is spent', async () => {
+    const { service, topCharts } = build([{ storeAppId: '111', title: 'A' }]);
+    const refused = new Error('spent');
+
+    await expect(
+      service.captureToday(KEY, () => Promise.reject(refused)),
+    ).rejects.toBe(refused);
+    expect(topCharts).not.toHaveBeenCalled();
+  });
+
   it('never catches a store failure', async () => {
     const { service, prisma, topCharts } = build();
     const failure = new StoreRequestError('APP_STORE', 'topCharts', 'boom');

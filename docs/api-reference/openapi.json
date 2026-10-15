@@ -3621,6 +3621,39 @@
         ]
       }
     },
+    "/charts/capture": {
+      "post": {
+        "description": "Fetches today's chart from the store while you wait and stores it for every workspace, then answers the page for today. A chart already captured today is answered without a store request. Reaches the store, so it answers within the store deadline and spends one chart capture of the daily allowance only when a request is made; a refused key spends nothing.",
+        "operationId": "ChartsController_capture",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChartCaptureDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Capture a top chart today",
+        "tags": [
+          "charts"
+        ]
+      }
+    },
     "/apps/{id}/summary": {
       "get": {
         "operationId": "AnalyticsController_getSummary",
@@ -6043,6 +6076,51 @@
         },
         "required": [
           "text"
+        ]
+      },
+      "ChartCaptureDto": {
+        "type": "object",
+        "properties": {
+          "store": {
+            "enum": [
+              "APP_STORE",
+              "GOOGLE_PLAY"
+            ],
+            "type": "string"
+          },
+          "country": {
+            "type": "string",
+            "example": "us",
+            "pattern": "^[a-z]{2}$"
+          },
+          "collection": {
+            "enum": [
+              "free",
+              "paid",
+              "grossing"
+            ],
+            "type": "string"
+          },
+          "genre": {
+            "type": "string",
+            "maxLength": 32,
+            "example": "6014",
+            "description": "A chart genre of the store, or overall"
+          },
+          "device": {
+            "enum": [
+              "iphone",
+              "android"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "store",
+          "country",
+          "collection",
+          "genre",
+          "device"
         ]
       },
       "MetadataAssistantDto": {

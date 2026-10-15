@@ -67,10 +67,14 @@ export class ChartCaptureService {
     private readonly registry: StoreProviderRegistry,
   ) {}
 
-  async captureToday(key: ChartKey): Promise<StoredChart> {
+  async captureToday(
+    key: ChartKey,
+    spend?: () => Promise<void>,
+  ): Promise<StoredChart> {
     const date = utcToday();
     const stored = await this.stored(key, date);
     if (stored) return stored;
+    await spend?.();
 
     const depth = CHART_DEPTH[key.store];
     const items = await this.registry
