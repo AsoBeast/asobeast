@@ -524,7 +524,16 @@ describe('Localized keyword fields (e2e)', () => {
           select: { id: true },
         })
       ).map((row) => row.id);
-      const checks = (await processingOrder()).filter(
+      expect(keywordId).toBeDefined();
+      const jobs = await processingOrder();
+      expect(
+        jobs.some(
+          (job) =>
+            job.name === JOBS.SCORE_KEYWORD &&
+            (job.data as { keywordId: string }).keywordId === keywordId,
+        ),
+      ).toBe(true);
+      const checks = jobs.filter(
         (job) => job.id === firstRunCheckJobId(appId, keywordId, utcDateKey()),
       );
       expect(checks).toEqual([]);

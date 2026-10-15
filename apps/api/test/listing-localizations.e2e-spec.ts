@@ -532,6 +532,23 @@ describe('Native localizations of a listing (e2e)', () => {
         ]);
       });
 
+      it('does not ship the default of a market while one of its localizations could not be read', async () => {
+        registry.listings.set('ch:default', GERMAN);
+        registry.failing = 'fr';
+        const appId = await importFrom(US_APP_URL);
+        await api
+          .post(`/apps/${appId}/localizations`)
+          .send({ localization: 'fr' })
+          .expect(201);
+        await trackIn(appId, 'ch');
+
+        await api.post(`/apps/${appId}/refresh?country=ch`).expect(200);
+
+        await expect(localizationsOf(appId)).resolves.toEqual([
+          { localization: 'fr', origin: 'manual' },
+        ]);
+      });
+
       it('does not ship the default of a market where an additional localization echoes the listing', async () => {
         registry.listings.set('ch:default', FRENCH);
         registry.listings.set('ch:fr', FRENCH);
