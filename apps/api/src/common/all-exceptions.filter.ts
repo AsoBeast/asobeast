@@ -31,6 +31,7 @@ import { RedisUnavailableError } from '../redis/redis.errors';
 import { BillingConflictError } from '../billing/billing.errors';
 import { UnknownPriceError } from '../billing/price-catalog';
 import { ErrorTracking } from '../observability/error-tracking.service';
+import { UnknownChartKeyError } from '../charts/chart-key';
 import {
   StoreAppNotFoundError,
   StoreNotSupportedError,
@@ -110,7 +111,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
   private resolve(exception: unknown): ResolvedError {
     if (
       exception instanceof InvalidStoreUrlError ||
-      exception instanceof UnknownStorefrontError
+      exception instanceof UnknownStorefrontError ||
+      exception instanceof UnknownChartKeyError
     ) {
       return {
         statusCode: HttpStatus.BAD_REQUEST,
