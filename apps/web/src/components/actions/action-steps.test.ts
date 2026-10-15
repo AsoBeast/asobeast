@@ -98,13 +98,35 @@ describe("actionSteps", () => {
     ]);
   });
 
-  it("sends unanswered Play reviews to Play Console", () => {
+  it("sends unanswered Play reviews to the reply composer", () => {
     const reply = ACTIONS.find((item) => item.id === "act-reply")!;
 
     expect(actionSteps(reply)).toEqual([
-      "Open Reviews in Play Console",
-      "Reply to the lowest scores first and say what you are fixing",
-      "AsoBeast rechecks replies every day",
+      "Open the reviews that need a reply, lowest first",
+      "Draft or write each reply, copy it and paste it in Play Console",
+      "Mark the review as replied; AsoBeast also sees the reply on the store the next day",
+      CONFIRMATION_STEP,
+    ]);
+  });
+
+  it("sends a review theme to the reviews page to reply", () => {
+    const theme = ACTIONS.find((item) => item.id === "act-reviews")!;
+
+    expect(actionSteps(theme)).toEqual([
+      'Read the low reviews that mention "crashes on launch"',
+      "Check what changed in version 4.2.0",
+      "Reply from the reviews page where a fix is coming",
+      CONFIRMATION_STEP,
+    ]);
+  });
+
+  it("sends a rating decline to the reviews page to reply", () => {
+    const decline = ACTIONS.find((item) => item.id === "act-decline")!;
+
+    expect(actionSteps(decline)).toEqual([
+      "Read the recent low reviews",
+      "Check what changed in version 4.2.0",
+      "Reply from the reviews page where a fix is on its way",
       CONFIRMATION_STEP,
     ]);
   });

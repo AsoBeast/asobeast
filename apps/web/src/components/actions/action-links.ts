@@ -24,8 +24,9 @@ export function actionHref(item: ActionItem): string {
     case "listing.ship_update":
       return `/apps/${appId}/audit`;
     case "reviews.investigate_theme":
-    case "reviews.reply_negative":
       return `/apps/${appId}/reviews?score=1`;
+    case "reviews.reply_negative":
+      return `/apps/${appId}/reviews?replyState=needs_reply&sort=lowest`;
     case "market.improve_country":
     case "rank.investigate_unexplained_drop":
       return `/apps/${appId}/keywords?country=${country}`;
