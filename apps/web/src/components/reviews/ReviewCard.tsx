@@ -61,7 +61,8 @@ function DeveloperReply({ review }: { review: ReviewItem }) {
   return (
     <div className="flex flex-col gap-1 border-l-2 border-border pl-3">
       <p className="text-caption text-muted-foreground">
-        Developer reply · {formatDate(review.repliedAt ?? null)}
+        Developer reply
+        {review.repliedAt ? ` · ${formatDate(review.repliedAt)}` : null}
       </p>
       <p className="text-body break-words whitespace-pre-line">
         {review.replyText}

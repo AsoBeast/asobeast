@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useId, useState } from "react";
+import { useId, useState } from "react";
 import { Copy, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -25,7 +25,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { storeLabel } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { ReplyDraftControls } from "./ReplyDraftControls";
-import { ReplyDraftControlsSkeleton } from "./skeletons";
 import { consoleHref, consoleLabel } from "./store-console";
 import { useReplyDraft } from "./use-reply-draft";
 import { useReviewReply } from "./use-review-reply";
@@ -48,12 +47,42 @@ function useReplyText(saved: string) {
   return [text, setText] as const;
 }
 
+function ReplyCounter({
+  id,
+  text,
+  store,
+}: {
+  id: string;
+  text: string;
+  store: Store;
+}) {
+  const limit = REVIEW_REPLY_LIMITS[store];
+  const length = countChars(text);
+  const over = length > limit;
+  return (
+    <p
+      id={id}
+      className={cn(
+        "text-caption numeric",
+        over ? "text-destructive" : "text-muted-foreground",
+      )}
+    >
+      {length} / {limit}
+      <span aria-live="polite">
+        {over
+          ? ` · ${storeLabel(store)} allows at most ${limit} characters`
+          : null}
+      </span>
+    </p>
+  );
+}
+
 function DiscardReplyButton({
-  console,
+  consoleName,
   disabled,
   onDiscard,
 }: {
-  console: string;
+  consoleName: string;
   disabled: boolean;
   onDiscard: () => void;
 }) {
@@ -69,7 +98,7 @@ function DiscardReplyButton({
           <AlertDialogTitle>Discard this reply?</AlertDialogTitle>
           <AlertDialogDescription>
             The text and the replied mark kept for this review are removed. A
-            reply already posted in {console} stays there.
+            reply already posted in {consoleName} stays there.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -97,20 +126,20 @@ export function ReplyComposer({
   const busy = pending || draft.drafting;
   const counterId = useId();
   const limit = REVIEW_REPLY_LIMITS[store];
-  const length = countChars(text);
-  const over = length > limit;
+  const over = countChars(text) > limit;
   const trimmed = text.trim();
   const unsaved = trimmed !== "" && trimmed !== saved;
   const marked = Boolean(review.reply?.repliedAt);
-  const console = consoleLabel(store);
+  const consoleName = consoleLabel(store);
 
   const saveIfChanged = () =>
-    unsaved && !over ? save(trimmed) : Promise.resolve(null);
+    unsaved && !over && !draft.drafting ? save(trimmed) : Promise.resolve(null);
 
   const copy = async () => {
-    await saveIfChanged().catch(() => null);
+    const copied = navigator.clipboard.writeText(trimmed);
+    void saveIfChanged().catch(() => null);
     try {
-      await navigator.clipboard.writeText(trimmed);
+      await copied;
       toast.success("Reply copied");
     } catch {
       toast.error("Couldn't copy — select and copy it manually");
@@ -128,14 +157,13 @@ export function ReplyComposer({
           you post it in the console.
         </p>
       ) : null}
-      <Suspense fallback={<ReplyDraftControlsSkeleton />}>
-        <ReplyDraftControls
-          review={review}
-          store={store}
-          busy={pending}
-          draft={draft}
-        />
-      </Suspense>
+      <ReplyDraftControls
+        review={review}
+        store={store}
+        busy={pending}
+        draft={draft}
+        text={text}
+      />
       <div className="flex flex-col gap-1">
         <Textarea
           aria-label="Reply text"
@@ -148,25 +176,12 @@ export function ReplyComposer({
           placeholder="Write the reply the store will show under this review"
           className="min-h-24 bg-card"
         />
-        <p
-          id={counterId}
-          className={cn(
-            "text-caption numeric",
-            over ? "text-destructive" : "text-muted-foreground",
-          )}
-        >
-          {length} / {limit}
-          <span aria-live="polite">
-            {over
-              ? ` · ${storeLabel(store)} allows at most ${limit} characters`
-              : null}
-          </span>
-        </p>
+        <ReplyCounter id={counterId} text={text} store={store} />
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <Button
           size="sm"
-          disabled={over || trimmed === ""}
+          disabled={over || trimmed === "" || draft.drafting}
           onClick={() => void copy()}
         >
           <Copy />
@@ -179,13 +194,13 @@ export function ReplyComposer({
             rel="noreferrer"
           >
             <ExternalLink />
-            Open {console}
+            Open {consoleName}
           </a>
         </Button>
         <Button
           variant="outline"
           size="sm"
-          disabled={over || busy}
+          disabled={(over && !marked) || busy}
           onClick={() =>
             void mark(
               marked
@@ -197,7 +212,7 @@ export function ReplyComposer({
           {marked ? "Undo" : "Mark as replied"}
         </Button>
         <DiscardReplyButton
-          console={console}
+          consoleName={consoleName}
           disabled={busy || (!review.reply && text === "")}
           onDiscard={() =>
             void discard()
@@ -210,7 +225,7 @@ export function ReplyComposer({
         </Button>
       </div>
       <p className="text-caption text-muted-foreground">
-        AsoBeast never writes to the store. Paste the reply in {console}.
+        AsoBeast never writes to the store. Paste the reply in {consoleName}.
       </p>
     </section>
   );

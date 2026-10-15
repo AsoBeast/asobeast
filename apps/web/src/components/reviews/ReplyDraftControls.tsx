@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Loader2, Sparkles } from "lucide-react";
 import {
   REVIEW_REPLY_INSTRUCTIONS_MAX,
   REVIEW_REPLY_LIMITS,
   REVIEW_REPLY_TONES,
   type ReviewItem,
+  type ReviewReplyDraftResult,
   type ReviewReplyTone,
   type Store,
 } from "@asobeast/shared";
@@ -32,26 +33,52 @@ const TONE_LABELS: Record<ReviewReplyTone, string> = {
   formal: "Formal",
 };
 
+function DraftNotice({
+  result,
+  store,
+}: {
+  result: ReviewReplyDraftResult | undefined;
+  store: Store;
+}) {
+  return (
+    <div aria-live="polite" className="flex flex-col gap-1">
+      {result ? (
+        <p className="text-caption text-muted-foreground">
+          Drafted in {replyLanguageName(result.language)}
+        </p>
+      ) : null}
+      {result?.truncated ? (
+        <p className="text-caption text-warning">
+          Shortened to fit {storeLabel(store)}&apos;s{" "}
+          {REVIEW_REPLY_LIMITS[store]} characters; read it before you copy.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 export function ReplyDraftControls({
   review,
   store,
   busy,
   draft: { draft, drafting, result },
+  text,
 }: {
   review: ReviewItem;
   store: Store;
   busy: boolean;
   draft: ReplyDraft;
+  text: string;
 }) {
-  const { data: status } = useSuspenseQuery(aiStatusOptions);
+  const { data: status } = useQuery(aiStatusOptions);
   const spent = useAiAllowanceSpent();
   const [tone, setTone] = useState<ReviewReplyTone>(
     review.reply?.tone ?? "neutral",
   );
   const [instructions, setInstructions] = useState("");
 
-  if (!status.configured) return null;
-  const limit = REVIEW_REPLY_LIMITS[store];
+  if (!status?.configured) return null;
+  const shown = !drafting && result?.reply.text === text ? result : undefined;
 
   return (
     <div className="flex flex-col gap-2">
@@ -92,19 +119,7 @@ export function ReplyDraftControls({
         </Button>
       </div>
       <AiCallsLeft />
-      <div aria-live="polite" className="flex flex-col gap-1">
-        {result ? (
-          <p className="text-caption text-muted-foreground">
-            Drafted in {replyLanguageName(result.language)}
-          </p>
-        ) : null}
-        {result?.truncated ? (
-          <p className="text-caption text-warning">
-            Shortened to fit {storeLabel(store)}&apos;s {limit} characters; read
-            it before you copy.
-          </p>
-        ) : null}
-      </div>
+      <DraftNotice result={shown} store={store} />
     </div>
   );
 }

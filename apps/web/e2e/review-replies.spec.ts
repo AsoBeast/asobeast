@@ -359,3 +359,55 @@ test("two clicks spend one call", async ({ page, context }) => {
   ).toHaveValue(REVIEW_REPLY_DRAFT.text);
   expect(drafts).toHaveLength(1);
 });
+
+test("the drafted notice goes once the text is edited", async ({
+  page,
+  context,
+}) => {
+  await enableAi(context);
+  await page.goto(`${REPLIES_PAGE}?reply=rep-1`);
+
+  await composer(page).getByRole("button", { name: "Draft with AI" }).click();
+  await expect(composer(page).getByText("Drafted in English")).toBeVisible();
+  await composer(page)
+    .getByRole("textbox", { name: "Reply text" })
+    .press("End");
+  await composer(page).getByRole("textbox", { name: "Reply text" }).press("!");
+
+  await expect(composer(page).getByText("Drafted in English")).toBeHidden();
+});
+
+test("undo stays available while the text runs past the limit", async ({
+  page,
+}) => {
+  await page.goto(`${GP_PAGE}?reply=gp-rev-2`);
+  await composer(page).getByRole("button", { name: "Mark as replied" }).click();
+  await expect(
+    composer(page).getByRole("button", { name: "Undo" }),
+  ).toBeVisible();
+
+  await composer(page)
+    .getByRole("textbox", { name: "Reply text" })
+    .fill("a".repeat(351));
+
+  await expect(
+    composer(page).getByRole("button", { name: "Undo" }),
+  ).toBeEnabled();
+});
+
+test("exporting a search that matches nothing writes no file", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/reviews?q=zzzz");
+  const downloads: string[] = [];
+  page.on("download", (download) =>
+    downloads.push(download.suggestedFilename()),
+  );
+
+  await page.getByRole("button", { name: "Export reviews to CSV" }).click();
+
+  await expect(
+    page.getByText("Nothing to export: no review matches this search"),
+  ).toBeVisible();
+  expect(downloads).toEqual([]);
+});

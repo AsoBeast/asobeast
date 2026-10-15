@@ -1,16 +1,16 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-
-export function ReplyDraftControlsSkeleton() {
-  return <Skeleton className="h-8 w-full" />;
-}
+import { StatTileGroup } from "@/components/ui/stat-tile";
 
 export function ReviewCountsSkeleton() {
   return (
-    <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,12rem),1fr))] gap-3">
-      {Array.from({ length: 3 }).map((_, index) => (
-        <Skeleton key={index} className="h-[5.5rem] rounded-xl" />
-      ))}
+    <div className="flex flex-col gap-2">
+      <Skeleton className="h-4 w-28" />
+      <StatTileGroup>
+        {Array.from({ length: 3 }).map((_, index) => (
+          <Skeleton key={index} className="h-[5.5rem] rounded-xl" />
+        ))}
+      </StatTileGroup>
     </div>
   );
 }

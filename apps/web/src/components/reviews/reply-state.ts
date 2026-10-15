@@ -34,11 +34,11 @@ export function replyBadgeLabel(
   review: Pick<ReviewItem, "repliedAt" | "reply">,
 ): string {
   const state = replyStateOf(review);
-  if (state !== "replied") return STATE_LABELS[state];
+  if (state !== "replied") return replyStateLabel(state);
   return review.repliedAt ? "Replied on Google Play" : "Marked replied";
 }
 
 export const REPLY_STATE_OPTIONS = REVIEW_REPLY_STATES.map((state) => ({
   value: state,
-  label: STATE_LABELS[state],
+  label: replyStateLabel(state),
 }));

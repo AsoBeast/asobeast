@@ -101,10 +101,14 @@ function ExportReviewsButton({
   const exporting = useMutation({
     mutationFn: () => queryClient.fetchQuery(reviewsExportOptions(id, filters)),
     onSuccess: (list) => {
-      exportReviews(
-        id,
-        list.reviews.filter((review) => matchesReviewQuery(review, query)),
+      const rows = list.reviews.filter((review) =>
+        matchesReviewQuery(review, query),
       );
+      if (rows.length === 0) {
+        toast.info("Nothing to export: no review matches this search");
+        return;
+      }
+      exportReviews(id, rows);
       const notice = truncatedExportNotice(list, view.sort);
       if (notice) toast.info(notice);
     },
@@ -197,9 +201,7 @@ export function ReviewsToolbar({
         </SelectContent>
       </Select>
       <SearchInput label="Search reviews" value={query} onSearch={onQuery} />
-      <Suspense fallback={null}>
-        <ReplyGuidelinesDialog id={id} />
-      </Suspense>
+      <ReplyGuidelinesDialog id={id} />
       <ExportReviewsButton id={id} view={view} query={query} />
     </div>
   );

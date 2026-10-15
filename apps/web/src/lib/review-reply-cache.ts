@@ -8,7 +8,7 @@ import {
 } from "@asobeast/shared";
 import type { ReviewFilters } from "./api";
 
-const COUNT_OF: Record<ReviewReplyState, keyof ReviewReplyCounts> = {
+export const COUNT_OF: Record<ReviewReplyState, keyof ReviewReplyCounts> = {
   needs_reply: "needsReply",
   drafted: "drafted",
   replied: "replied",

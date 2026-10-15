@@ -44,7 +44,7 @@ export function StatTile({
       data-slot="stat-tile"
       data-selected={selected}
       {...(onSelect
-        ? { type: "button", onClick: onSelect, "aria-pressed": selected }
+        ? { type: "button", onClick: onSelect, "aria-pressed": !!selected }
         : {})}
       className={cn(
         "row-span-3 grid grid-rows-subgrid gap-1 rounded-xl border bg-card px-4 py-3",

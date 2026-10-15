@@ -1,19 +1,14 @@
 "use client";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
-import type { ReviewReplyCounts, ReviewReplyState } from "@asobeast/shared";
+import type { ReviewReplyState } from "@asobeast/shared";
 import { InfoTip } from "@/components/ui/info-tip";
 import { StatTile, StatTileGroup } from "@/components/ui/stat-tile";
 import { formatNumber } from "@/lib/format";
 import { reviewsOptions } from "@/lib/queries";
+import { COUNT_OF } from "@/lib/review-reply-cache";
 import { countsFilters, type ReviewView } from "./review-filters";
 import { REPLY_STATE_OPTIONS, REPLY_STATES_GUIDE } from "./reply-state";
-
-const COUNT_OF: Record<ReviewReplyState, keyof ReviewReplyCounts> = {
-  needs_reply: "needsReply",
-  drafted: "drafted",
-  replied: "replied",
-};
 
 export function ReviewCountsStrip({
   id,

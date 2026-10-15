@@ -1,7 +1,11 @@
-import type { ReviewReplyState, ReviewSort } from "@asobeast/shared";
+import {
+  QUERY_BOUNDS,
+  type ReviewReplyState,
+  type ReviewSort,
+} from "@asobeast/shared";
 import type { ReviewFilters } from "@/lib/api";
 
-export const REVIEWS_SHOW_ALL_LIMIT = 200;
+export const REVIEWS_SHOW_ALL_LIMIT = QUERY_BOUNDS.reviewsLimit.max;
 
 export interface ReviewView {
   score: number | null;
@@ -24,5 +28,5 @@ export function reviewFilters(
 }
 
 export function countsFilters(view: ReviewView): ReviewFilters {
-  return reviewFilters({ ...view, replyState: null });
+  return reviewFilters({ ...view, replyState: null, sort: "newest" });
 }

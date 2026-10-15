@@ -222,8 +222,12 @@ export function ReviewsList({ id }: { id: string }) {
               void setReplyState(null);
               void setSort(null);
               void setQuery(null);
+              void setReply(null);
             }}
-            onResetSearch={() => void setQuery(null)}
+            onResetSearch={() => {
+              void setQuery(null);
+              void setReply(null);
+            }}
           />
         </Suspense>
       </CardContent>

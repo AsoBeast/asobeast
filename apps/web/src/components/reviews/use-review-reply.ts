@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type {
@@ -16,39 +17,52 @@ import { useKeyedFlight } from "@/lib/single-flight";
 
 const byText = (text: string) => text;
 
-const messageOf = (error: Error, fallback: string) =>
-  error instanceof ApiError ? error.envelope.message : fallback;
+const failWith = (fallback: string) => (error: Error) =>
+  toast.error(error instanceof ApiError ? error.envelope.message : fallback);
+
+const removedBy = (body: ReviewReplyPatchRequest, reply: ReviewReplyItem) =>
+  body.replied === false && !reply.text;
 
 export function useReviewReply(appId: string, review: ReviewItem) {
   const queryClient = useQueryClient();
-  const settle = {
-    onSuccess: (reply: ReviewReplyItem | null) =>
-      upsertReviewReply(queryClient, appId, review, reply),
-    onSettled: () => invalidateReviewReplyMutation(queryClient, appId),
-  };
-  const patching = useMutation({
-    mutationFn: (body: ReviewReplyPatchRequest) =>
-      patchReviewReply(appId, review.id, body),
-    ...settle,
-    onSuccess: (reply: ReviewReplyItem, body: ReviewReplyPatchRequest) =>
-      settle.onSuccess(body.replied === false && !reply.text ? null : reply),
-    onError: (error) =>
-      toast.error(messageOf(error, "Could not save the reply")),
-  });
+  const lastSave = useRef<Promise<unknown>>(Promise.resolve());
+  const seed = (reply: ReviewReplyItem | null) =>
+    upsertReviewReply(queryClient, appId, review, reply);
+  const onSettled = () => invalidateReviewReplyMutation(queryClient, appId);
+
   const saving = useMutation({
     mutationFn: (text: string) => patchReviewReply(appId, review.id, { text }),
-    ...settle,
-    onError: (error) =>
-      toast.error(messageOf(error, "Could not save the reply")),
+    onSuccess: seed,
+    onSettled,
+    onError: failWith("Could not save the reply"),
+  });
+  const patching = useMutation({
+    mutationFn: async (body: ReviewReplyPatchRequest) => {
+      await lastSave.current;
+      return patchReviewReply(appId, review.id, body);
+    },
+    onSuccess: (reply, body) => seed(removedBy(body, reply) ? null : reply),
+    onSettled,
+    onError: failWith("Could not save the reply"),
   });
   const discarding = useMutation({
-    mutationFn: () => deleteReviewReply(appId, review.id),
-    ...settle,
-    onSuccess: () => settle.onSuccess(null),
-    onError: (error) =>
-      toast.error(messageOf(error, "Could not discard the reply")),
+    mutationFn: async () => {
+      await lastSave.current;
+      return deleteReviewReply(appId, review.id);
+    },
+    onSuccess: () => seed(null),
+    onSettled,
+    onError: failWith("Could not discard the reply"),
   });
-  const save = useKeyedFlight(saving.mutateAsync, byText);
+  const keyedSave = useKeyedFlight(saving.mutateAsync, byText);
+  const save = useCallback(
+    (text: string) => {
+      const pending = keyedSave(text);
+      lastSave.current = pending.catch(() => null);
+      return pending;
+    },
+    [keyedSave],
+  );
 
   return {
     save,
