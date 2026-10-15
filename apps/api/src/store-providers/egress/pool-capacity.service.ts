@@ -25,8 +25,12 @@ export class PoolCapacity {
 
   async concurrencyFor(store: Store): Promise<number | null> {
     if (!this.config.enabled) return null;
+    return Math.max(await this.usable(store), 1);
+  }
+
+  async usable(store: Store): Promise<number> {
     const healthy = await this.healthy(store);
-    return Math.min(Math.max(healthy, 1), this.config.maxWorkerConcurrency);
+    return Math.min(healthy, this.config.maxWorkerConcurrency);
   }
 
   async healthy(store: Store, now = new Date()): Promise<number> {
