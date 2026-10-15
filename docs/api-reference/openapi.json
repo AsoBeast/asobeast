@@ -4304,6 +4304,85 @@
         ]
       }
     },
+    "/apps/{id}/reviews/{reviewId}/reply": {
+      "patch": {
+        "operationId": "ReviewRepliesController_patch",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "reviewId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewReplyPatchDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Save the reply text of a review or mark it as replied",
+        "tags": [
+          "reviews"
+        ]
+      },
+      "delete": {
+        "operationId": "ReviewRepliesController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "reviewId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Discard the reply kept for a review",
+        "tags": [
+          "reviews"
+        ]
+      }
+    },
     "/apps/{id}/audit": {
       "get": {
         "operationId": "AuditController_getAudit",
@@ -6552,6 +6631,18 @@
           "genre",
           "device"
         ]
+      },
+      "ReviewReplyPatchDto": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "replied": {
+            "type": "boolean"
+          }
+        }
       },
       "MetadataAssistantDto": {
         "type": "object",

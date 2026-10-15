@@ -73,6 +73,17 @@ describe('Write isolation', () => {
     ).resolves.toBe(1);
   });
 
+  it('answers 404 when saving a reply on another workspace review', async () => {
+    await fixture.b.agent
+      .patch(
+        `/apps/${fixture.a.appleAppId}/reviews/${fixture.a.reviewId}/reply`,
+      )
+      .send({ text: 'Hijacked reply' })
+      .expect(404);
+
+    await expect(fixture.db.reviewReply.count()).resolves.toBe(0);
+  });
+
   it('answers 404 and leaves the row when deleting another workspace app', async () => {
     await fixture.a.agent.delete(`/apps/${fixture.b.appleAppId}`).expect(404);
 

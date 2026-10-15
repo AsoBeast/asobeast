@@ -1,0 +1,194 @@
+import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { Store } from '@prisma/client';
+import type { WorkspaceContext } from '../common/tenancy/workspace-context';
+import type { PrismaService } from '../prisma/prisma.service';
+import { ReviewRepliesService } from './review-replies.service';
+
+const NOW = new Date('2026-10-15T12:00:00.000Z');
+
+const buildService = (
+  options: {
+    store?: Store;
+    app?: boolean;
+    review?: boolean;
+    existingText?: string;
+  } = {},
+) => {
+  const upsert = jest
+    .fn<Promise<unknown>, [Record<string, Record<string, unknown>>]>()
+    .mockImplementation((args) =>
+      Promise.resolve({
+        reviewId: 'rev-1',
+        appId: 'app-1',
+        workspaceId: 'ws_1',
+        text: 'Thanks!',
+        tone: null,
+        model: null,
+        generatedAt: null,
+        repliedAt: (args.create.repliedAt as Date | null) ?? null,
+        createdAt: NOW,
+        updatedAt: NOW,
+      }),
+    );
+  const deleteMany = jest.fn().mockResolvedValue({ count: 0 });
+  const prisma = {
+    app: {
+      findFirst: jest
+        .fn()
+        .mockResolvedValue(
+          options.app === false
+            ? null
+            : { store: options.store ?? Store.APP_STORE },
+        ),
+    },
+    review: {
+      findFirst: jest.fn().mockResolvedValue(
+        options.review === false
+          ? null
+          : {
+              id: 'rev-1',
+              reply:
+                options.existingText === undefined
+                  ? null
+                  : { text: options.existingText },
+            },
+      ),
+    },
+    reviewReply: { upsert, deleteMany },
+  };
+  const workspace = {
+    require: () => 'ws_1',
+  } as unknown as WorkspaceContext;
+  const service = new ReviewRepliesService(
+    prisma as unknown as PrismaService,
+    workspace,
+  );
+  return { service, upsert, deleteMany, prisma };
+};
+
+describe('ReviewRepliesService.patch', () => {
+  it('creates a reply from its text', async () => {
+    const { service, upsert } = buildService();
+
+    await service.patch('app-1', 'rev-1', { text: 'Thanks!' });
+
+    expect(upsert).toHaveBeenCalledWith({
+      where: { reviewId: 'rev-1' },
+      create: {
+        reviewId: 'rev-1',
+        appId: 'app-1',
+        workspaceId: 'ws_1',
+        text: 'Thanks!',
+        repliedAt: null,
+      },
+      update: { text: 'Thanks!', repliedAt: undefined },
+    });
+  });
+
+  it('marks a reply as replied and keeps its text', async () => {
+    const { service, upsert } = buildService({ existingText: 'Thanks!' });
+
+    const reply = await service.patch('app-1', 'rev-1', { replied: true });
+
+    const [args] = upsert.mock.calls[0];
+    expect(args.create.repliedAt).toBeInstanceOf(Date);
+    expect(args.create.text).toBe('');
+    expect(args.update.repliedAt).toBeInstanceOf(Date);
+    expect(args.update.text).toBeUndefined();
+    expect(reply.repliedAt).not.toBeNull();
+  });
+
+  it('undoes a mark', async () => {
+    const { service, upsert } = buildService({ existingText: 'Thanks!' });
+
+    await service.patch('app-1', 'rev-1', { replied: false });
+
+    expect(upsert.mock.calls[0][0].update.repliedAt).toBeNull();
+  });
+
+  it('removes the row when a mark is undone and no text is left', async () => {
+    const { service, upsert, deleteMany } = buildService({ existingText: '' });
+
+    const reply = await service.patch('app-1', 'rev-1', { replied: false });
+
+    expect(upsert).not.toHaveBeenCalled();
+    expect(deleteMany).toHaveBeenCalledWith({
+      where: { reviewId: 'rev-1', appId: 'app-1' },
+    });
+    expect(reply).toMatchObject({ text: '', repliedAt: null });
+  });
+
+  it("refuses text over the store's limit", async () => {
+    const play = buildService({ store: Store.GOOGLE_PLAY });
+    const appStore = buildService({ store: Store.APP_STORE });
+
+    await expect(
+      play.service.patch('app-1', 'rev-1', { text: 'a'.repeat(351) }),
+    ).rejects.toThrow(
+      new BadRequestException('A Google Play reply is at most 350 characters'),
+    );
+    await expect(
+      appStore.service.patch('app-1', 'rev-1', { text: 'a'.repeat(351) }),
+    ).resolves.toBeDefined();
+    await expect(
+      appStore.service.patch('app-1', 'rev-1', { text: 'a'.repeat(2001) }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('counts characters the way the store does', async () => {
+    const { service } = buildService({ store: Store.GOOGLE_PLAY });
+
+    await expect(
+      service.patch('app-1', 'rev-1', {
+        text: 'ą好'.repeat(175),
+      }),
+    ).resolves.toBeDefined();
+  });
+
+  it('refuses empty text on a reply that is not being marked', async () => {
+    const { service } = buildService();
+
+    await expect(
+      service.patch('app-1', 'rev-1', { text: '   ' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('refuses a patch that changes nothing', async () => {
+    const { service, prisma } = buildService();
+
+    await expect(service.patch('app-1', 'rev-1', {})).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(prisma.app.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('answers 404 for an unknown app or review', async () => {
+    await expect(
+      buildService({ app: false }).service.patch('app-1', 'rev-1', {
+        text: 'x',
+      }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    await expect(
+      buildService({ review: false }).service.patch('app-1', 'rev-1', {
+        text: 'x',
+      }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+});
+
+describe('ReviewRepliesService.remove', () => {
+  it('discards a reply', async () => {
+    const { service, deleteMany } = buildService();
+
+    await expect(service.remove('app-1', 'rev-1')).resolves.toBeUndefined();
+    expect(deleteMany).toHaveBeenCalledWith({
+      where: { reviewId: 'rev-1', appId: 'app-1' },
+    });
+  });
+
+  it('answers 404 for an unknown app', async () => {
+    await expect(
+      buildService({ app: false }).service.remove('app-1', 'rev-1'),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+});
