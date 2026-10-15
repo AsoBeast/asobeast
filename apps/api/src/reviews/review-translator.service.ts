@@ -7,6 +7,7 @@ import {
 import { ReviewTranslation } from '@asobeast/shared';
 import { AiGateway } from '../ai/ai-gateway.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { foreignContacts } from './review-reply-drafts';
 import {
   buildTranslationContext,
   hasWords,
@@ -68,20 +69,30 @@ export class ReviewTranslator {
         'The assistant did not return a translation; please try again.',
       );
     }
-    const row = await this.prisma.review.update({
-      where: { id: review.id },
+    const source = [review.title ?? '', review.text];
+    const words = [translated.title ?? '', translated.text].join('\n');
+    if (foreignContacts(words, source).length > 0) {
+      throw new BadGatewayException(
+        'The assistant added a link or an address that is not in the review; please try again.',
+      );
+    }
+    const translatedAt = new Date();
+    await this.prisma.review.updateMany({
+      where: { id: review.id, title: review.title, text: review.text },
       data: {
         translationLanguage: language,
         sourceLanguage: translated.sourceLanguage,
         translatedTitle: translated.title,
         translatedText: translated.text,
-        translatedAt: new Date(),
+        translatedAt,
       },
     });
-    const translation = toReviewTranslation(row);
-    if (!translation) {
-      throw new BadGatewayException('The translation could not be stored.');
-    }
-    return translation;
+    return {
+      language,
+      sourceLanguage: translated.sourceLanguage,
+      title: translated.title,
+      text: translated.text,
+      translatedAt: translatedAt.toISOString(),
+    };
   }
 }

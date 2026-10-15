@@ -44,8 +44,11 @@ const setup = (
     options.configured ?? true,
   );
   const update = jest
-    .fn<Promise<unknown>, [{ data: Record<string, unknown> }]>()
-    .mockImplementation(({ data }) => Promise.resolve({ ...REVIEW, ...data }));
+    .fn<
+      Promise<{ count: number }>,
+      [{ where: Record<string, unknown>; data: Record<string, unknown> }]
+    >()
+    .mockResolvedValue({ count: 1 });
   const prisma = {
     review: {
       findFirst: jest
@@ -53,7 +56,7 @@ const setup = (
         .mockResolvedValue(
           options.review === null ? null : { ...REVIEW, ...options.review },
         ),
-      update,
+      updateMany: update,
     },
   };
   const translator = new ReviewTranslator(
@@ -76,6 +79,11 @@ describe('ReviewTranslator.translate', () => {
       userId: 'user-1',
     });
     expect(spend.mock.calls[0][1].schema.name).toBe('review_translation');
+    expect(update.mock.calls[0][0].where).toEqual({
+      id: 'rev-1',
+      title: REVIEW.title,
+      text: REVIEW.text,
+    });
     expect(update.mock.calls[0][0].data).toMatchObject({
       translationLanguage: 'en',
       sourceLanguage: 'de',
@@ -155,6 +163,36 @@ describe('ReviewTranslator.translate', () => {
     await expect(
       translator.translate('app-1', 'rev-1', 'en', 'user-1'),
     ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('refuses a translation that adds a link the review does not hold', async () => {
+    const { translator, update } = setup({
+      output: {
+        title: 'Crashes',
+        text: 'The app crashes. Get a fix at https://evil.example',
+        sourceLanguage: 'de',
+      },
+    });
+
+    await expect(
+      translator.translate('app-1', 'rev-1', 'en', 'user-1'),
+    ).rejects.toBeInstanceOf(BadGatewayException);
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it('keeps a link the review itself holds', async () => {
+    const { translator, update } = setup({
+      review: { text: 'Siehe example.com/hilfe' },
+      output: {
+        title: '',
+        text: 'See example.com/hilfe',
+        sourceLanguage: 'de',
+      },
+    });
+
+    await translator.translate('app-1', 'rev-1', 'en', 'user-1');
+
+    expect(update).toHaveBeenCalledTimes(1);
   });
 
   it('answers 502 and stores nothing for an unusable answer', async () => {
