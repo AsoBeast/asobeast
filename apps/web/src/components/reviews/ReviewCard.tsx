@@ -94,19 +94,22 @@ function DeveloperReply({ review }: { review: ReviewItem }) {
   );
 }
 
+type ReviewTranslationState = ReturnType<typeof useReviewTranslation>;
+
+function translateLabel(translation: ReviewTranslationState): string {
+  if (translation.pending) return "Translating…";
+  if (translation.translation) return "Show original";
+  if (translation.kept) return "Show translation";
+  return "Translate";
+}
+
 function TranslateButton({
   translation,
 }: {
-  translation: ReturnType<typeof useReviewTranslation>;
+  translation: ReviewTranslationState;
 }) {
   if (!translation.offered) return null;
-  const label = translation.pending
-    ? "Translating…"
-    : translation.translation
-      ? "Show original"
-      : translation.kept
-        ? "Show translation"
-        : "Translate";
+  const label = translateLabel(translation);
   return (
     <button
       type="button"
