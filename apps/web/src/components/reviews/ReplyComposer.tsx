@@ -140,7 +140,7 @@ export function ReplyComposer({
     void saveIfChanged().catch(() => null);
     try {
       await copied;
-      toast.success("Reply copied");
+      toast.success(`Reply copied. Paste it in ${consoleName}.`);
     } catch {
       toast.error("Couldn't copy — select and copy it manually");
     }
@@ -170,11 +170,16 @@ export function ReplyComposer({
           aria-label="Reply text"
           aria-describedby={counterId}
           aria-invalid={over || undefined}
+          aria-busy={draft.drafting || undefined}
           readOnly={draft.drafting}
           value={text}
           onChange={(event) => setText(event.target.value)}
           onBlur={() => void saveIfChanged().catch(() => null)}
-          placeholder="Write the reply the store will show under this review"
+          placeholder={
+            draft.drafting
+              ? "Drafting a reply…"
+              : "Write the reply the store will show under this review"
+          }
           className="min-h-24 bg-card"
         />
         <ReplyCounter id={counterId} text={text} store={store} />
