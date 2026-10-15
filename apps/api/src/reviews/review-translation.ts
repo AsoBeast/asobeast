@@ -59,7 +59,10 @@ export interface TranslatedReview {
 
 const LANGUAGE_NAMES = new Intl.DisplayNames(['en'], { type: 'language' });
 
+const NOT_A_LANGUAGE = new Set(['und', 'mul', 'mis', 'zxx']);
+
 export function languageName(language: string): string | null {
+  if (NOT_A_LANGUAGE.has(language)) return null;
   const name = LANGUAGE_NAMES.of(language);
   return name && name !== language ? name : null;
 }

@@ -51,6 +51,8 @@ describe('languageName', () => {
   it('names a known language and refuses an unknown code', () => {
     expect(languageName('de')).toBe('German');
     expect(languageName('qq')).toBeNull();
+    expect(languageName('und')).toBeNull();
+    expect(languageName('zxx')).toBeNull();
   });
 });
 
