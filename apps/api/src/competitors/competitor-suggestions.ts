@@ -5,12 +5,15 @@ import {
 } from '@asobeast/shared';
 import { SearchItem } from '../store-providers/types';
 
-function fromSerp(item: CompetitorDiscoveryItem): CompetitorSuggestion {
+function fromSerp(
+  item: CompetitorDiscoveryItem,
+  similarIcon: string | undefined,
+): CompetitorSuggestion {
   return {
     storeAppId: item.storeAppId,
     title: item.title,
     developer: item.developer,
-    iconUrl: null,
+    iconUrl: item.iconUrl ?? similarIcon ?? null,
     source: 'serp',
     appearances: item.appearances,
     bestPosition: item.bestPosition,
@@ -37,8 +40,11 @@ export function mergeSuggestions(
 ): CompetitorSuggestion[] {
   const seen = new Set(exclude);
   const merged: CompetitorSuggestion[] = [];
+  const similarIcons = new Map(
+    similar.map((item) => [item.storeAppId, item.iconUrl]),
+  );
   for (const suggestion of [
-    ...serp.map(fromSerp),
+    ...serp.map((item) => fromSerp(item, similarIcons.get(item.storeAppId))),
     ...similar.map(fromSimilar),
   ]) {
     if (merged.length === limit) break;

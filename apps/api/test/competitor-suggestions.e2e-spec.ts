@@ -21,6 +21,8 @@ import { obliterateQueues, pauseQueues } from './obliterate-queues';
 
 const PRIMARY_ID = '111000111';
 const SIMILAR_ICON = 'https://is1-ssl.mzstatic.com/image/thumb/s/512x512bb.jpg';
+const rankedIcon = (storeAppId: string) =>
+  `https://is1-ssl.mzstatic.com/image/thumb/${storeAppId}/512x512bb.jpg`;
 const D1 = addDays(utcToday(), -1);
 const D2 = addDays(utcToday(), -2);
 
@@ -136,6 +138,7 @@ describe('Competitor suggestions (e2e)', () => {
         storeAppId: entry.storeAppId,
         title: `Ranked ${entry.storeAppId}`,
         developer: 'Ranked Co',
+        iconUrl: rankedIcon(entry.storeAppId),
       })),
     });
   };
@@ -163,7 +166,7 @@ describe('Competitor suggestions (e2e)', () => {
           storeAppId: '222000222',
           title: 'Ranked 222000222',
           developer: 'Ranked Co',
-          iconUrl: null,
+          iconUrl: rankedIcon('222000222'),
           source: 'serp',
           appearances: 2,
           bestPosition: 2,
@@ -172,7 +175,7 @@ describe('Competitor suggestions (e2e)', () => {
           storeAppId: '333000333',
           title: 'Ranked 333000333',
           developer: 'Ranked Co',
-          iconUrl: null,
+          iconUrl: rankedIcon('333000333'),
           source: 'serp',
           appearances: 1,
           bestPosition: 7,

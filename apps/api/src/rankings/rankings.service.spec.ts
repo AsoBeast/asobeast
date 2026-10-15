@@ -421,6 +421,23 @@ describe('RankingsService.checkKeyword', () => {
     expect(entries.every((entry) => entry.keywordId === 'kw1')).toBe(true);
   });
 
+  it('persists the icon each serp entry was found with', async () => {
+    const icon = 'https://is1-ssl.mzstatic.com/image/thumb/a/512x512bb.jpg';
+    const { service, createMany } = setup({
+      searchResults: [
+        { storeAppId: 'with-icon', title: 'With icon', iconUrl: icon },
+        { storeAppId: 'without-icon', title: 'Without icon' },
+      ],
+    });
+
+    await service.checkKeyword('kw1');
+
+    expect(createMany.mock.calls[0][0].data).toEqual([
+      expect.objectContaining({ storeAppId: 'with-icon', iconUrl: icon }),
+      expect.objectContaining({ storeAppId: 'without-icon', iconUrl: null }),
+    ]);
+  });
+
   it('stores position 200 and the captured depth for a complete result set', async () => {
     const searchResults = Array.from({ length: RANK_DEPTH }, (_, index) => ({
       storeAppId: index === RANK_DEPTH - 1 ? 'primary-store' : `other-${index}`,

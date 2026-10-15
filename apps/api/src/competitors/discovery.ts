@@ -4,6 +4,7 @@ export interface DiscoveryRow {
   storeAppId: string;
   title: string;
   developer: string | null;
+  iconUrl: string | null;
   ratingAvg: number | null;
   ratingCount: number | null;
   position: number;
@@ -56,6 +57,7 @@ export function aggregateDiscovery(
       storeAppId,
       title: group.latest.title,
       developer: group.latest.developer,
+      iconUrl: group.latest.iconUrl,
       ratingAvg: group.latest.ratingAvg,
       ratingCount: group.latest.ratingCount,
       appearances: group.appearances,

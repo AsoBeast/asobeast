@@ -21,6 +21,7 @@ export interface CompetitorDiscoveryItem {
   storeAppId: string;
   title: string;
   developer: string | null;
+  iconUrl?: string | null;
   ratingAvg: number | null;
   ratingCount: number | null;
   appearances: number;
