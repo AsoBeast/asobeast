@@ -369,6 +369,28 @@ test("adds a row as a competitor", async ({ page, request }) => {
   await request.post(`${MOCK_API}/__reset/competitors/app-1`);
 });
 
+test("shows the add in progress on the competitor menu", async ({
+  page,
+  context,
+  request,
+}) => {
+  await page.goto("/charts");
+  await context.addCookies([
+    { name: "e2e_api_latency", value: "1500", domain: "localhost", path: "/" },
+  ]);
+  const row = TOP_CHART_APPS[0];
+  const menu = page.getByRole("combobox", {
+    name: `Add ${row.title} as competitor to`,
+  });
+
+  await pick(page, `Add ${row.title} as competitor to`, "Focus Timer");
+
+  await expect(menu).toHaveAttribute("aria-busy", "true");
+  await expect(menu.locator(".animate-spin")).toBeVisible();
+  await expect(page.getByText(/^Now tracking/)).toBeVisible();
+  await request.post(`${MOCK_API}/__reset/competitors/app-1`);
+});
+
 test("names every chosen filter before hydration", async ({ page }) => {
   await page.route("**/_next/static/chunks/**", (route) => route.abort());
   await page.goto("/charts?country=de&genre=6014");

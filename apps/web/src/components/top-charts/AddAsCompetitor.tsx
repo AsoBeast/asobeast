@@ -73,8 +73,12 @@ export function AddAsCompetitor({
       <SelectTrigger
         size="sm"
         aria-label={`Add ${title} as competitor to`}
+        aria-busy={mutation.isPending}
         className="w-44"
       >
+        {mutation.isPending ? (
+          <Loader2 className="animate-spin" aria-hidden />
+        ) : null}
         <SelectValue placeholder="Add as competitor…" />
       </SelectTrigger>
       <SelectContent>
