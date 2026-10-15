@@ -19,6 +19,7 @@ export const TENANT_TABLES = [
   'KeywordField',
   'KeywordRanking',
   'Review',
+  'ReviewReply',
   'SnapshotScreenshot',
   'SuggestProbe',
   'TrackedKeyword',

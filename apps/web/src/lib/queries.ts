@@ -8,6 +8,9 @@ import type {
   KeywordFieldQuery,
   KeywordImportRequest,
   KeywordSuggestionStrategy,
+  ReviewItem,
+  ReviewList,
+  ReviewReplyItem,
   Store,
   WebhookItem,
 } from "@asobeast/shared";
@@ -17,6 +20,7 @@ import {
   queryOptions,
   skipToken,
   type QueryClient,
+  type QueryKey,
 } from "@tanstack/react-query";
 import {
   getChart,
@@ -80,6 +84,8 @@ import {
   getRecentChanges,
   getRunStatus,
   getStoreHealth,
+  getAiStatus,
+  getReviewReplyGuidelines,
   getReviews,
   getSerp,
   getSerpMovers,
@@ -97,6 +103,7 @@ import {
   type RankingParams,
   type ReviewFilters,
 } from "./api";
+import { withReviewReply } from "./review-reply-cache";
 import { runProgressInterval } from "./run-progress";
 import { keywordsPollInterval } from "./keyword-checks";
 import {
@@ -179,6 +186,8 @@ export const appKeys = {
   changeImpact: (id: string, days: number, country: string) =>
     [...appKeys.detail(id), "changes", "impact", { days, country }] as const,
   reviewsRoot: (id: string) => [...appKeys.detail(id), "reviews"] as const,
+  replyGuidelines: (id: string) =>
+    [...appKeys.detail(id), "reply-guidelines"] as const,
   reviews: (id: string, filters: ReviewFilters) =>
     [...appKeys.detail(id), "reviews", filters] as const,
   ratingsHistory: (id: string, params: RangeParams) =>
@@ -765,6 +774,18 @@ export const reviewsOptions = (id: string, filters: ReviewFilters) =>
     queryFn: () => getReviews(id, filters),
   });
 
+export const replyGuidelinesOptions = (id: string) =>
+  queryOptions({
+    queryKey: appKeys.replyGuidelines(id),
+    queryFn: () => getReviewReplyGuidelines(id),
+  });
+
+export const aiStatusOptions = queryOptions({
+  queryKey: ["ai", "status"] as const,
+  queryFn: getAiStatus,
+  staleTime: 5 * 60 * 1000,
+});
+
 export const REVIEWS_EXPORT_LIMIT = QUERY_BOUNDS.reviewsLimit.max;
 
 export const reviewsExportOptions = (
@@ -971,6 +992,38 @@ export function invalidateSetupMutation(
     client.invalidateQueries({ queryKey: setupKey(id) }),
     client.invalidateQueries({ queryKey: portfolioKey }),
   ]).then(() => undefined);
+}
+
+function filtersOf(queryKey: QueryKey): ReviewFilters {
+  const filters = queryKey.at(-1);
+  return typeof filters === "object" && filters !== null ? filters : {};
+}
+
+export function upsertReviewReply(
+  client: QueryClient,
+  id: string,
+  review: ReviewItem,
+  reply: ReviewReplyItem | null,
+): void {
+  for (const [queryKey, list] of client.getQueriesData<ReviewList>({
+    queryKey: appKeys.reviewsRoot(id),
+  })) {
+    if (!list) continue;
+    client.setQueryData(
+      queryKey,
+      withReviewReply(list, filtersOf(queryKey), review, reply),
+    );
+  }
+}
+
+export function invalidateReviewReplyMutation(
+  client: QueryClient,
+  id: string,
+): void {
+  void client.invalidateQueries({
+    queryKey: appKeys.reviewsRoot(id),
+    refetchType: "none",
+  });
 }
 
 export function invalidateCompetitorMutation(

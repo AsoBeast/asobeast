@@ -111,7 +111,7 @@ function ruleSteps(
       return [
         `Read the low reviews that mention "${evidence.theme}"`,
         `Check what changed in version ${evidence.version ?? "the latest version"}`,
-        `Reply in ${STORE_CONSOLE[store]} where a fix is coming`,
+        "Reply from the reviews page where a fix is coming",
       ];
     case "market.improve_country":
       return [
@@ -137,13 +137,13 @@ function ruleSteps(
       return [
         "Read the recent low reviews",
         `Check what changed in version ${evidence.latestVersion ?? "the latest version"}`,
-        "Reply where a fix is on its way",
+        "Reply from the reviews page where a fix is on its way",
       ];
     case "reviews.reply_negative":
       return [
-        `Open Reviews in ${STORE_CONSOLE[store]}`,
-        "Reply to the lowest scores first and say what you are fixing",
-        "AsoBeast rechecks replies every day",
+        "Open the reviews that need a reply, lowest first",
+        `Draft or write each reply, copy it and paste it in ${STORE_CONSOLE[store]}`,
+        "Mark the review as replied; AsoBeast also sees the reply on the store the next day",
       ];
     case "listing.ship_update":
       return [

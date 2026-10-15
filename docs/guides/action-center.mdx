@@ -146,7 +146,7 @@ Fifteen rules, with fixed constants.
 
 Unanswered audit checks never count toward `audit.fix_factor`, and Apple only surfaces are skipped on Google Play rather than recommended impossibly. A factor less than half measured opens no action, and each audit action lists the checks that failed or warned.
 
-`reviews.reply_negative` runs on Google Play only, because only Google Play replies are recorded. When a more specific rule explains the same finding, the broader one stays quiet without closing: a review theme holds back a rating decline, `keyword.defend` or a volatile result holds back a push into the top 10, and your own recent change hands a drop to `rank.investigate_drop`.
+`reviews.reply_negative` runs on Google Play only, because only Google Play replies are recorded. Its link opens the reviews page filtered to the reviews that need a reply, lowest first, where the composer drafts each reply. The rule keeps reading the reply Google Play shows, so a review you mark as replied closes it only once the store shows the reply the next day. See [Reply to reviews](/guides/reviews#reply-to-reviews). When a more specific rule explains the same finding, the broader one stays quiet without closing: a review theme holds back a rating decline, `keyword.defend` or a volatile result holds back a push into the top 10, and your own recent change hands a drop to `rank.investigate_drop`.
 
 ## Priority and impact
 

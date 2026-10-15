@@ -151,6 +151,16 @@ export function exportTables(prisma: PrismaService): ExportTable[] {
         prisma.review.findMany({ skip, take, orderBy: { id: 'asc' } }),
     ),
     table(
+      'reviewReply',
+      () => prisma.reviewReply.count(),
+      (skip, take) =>
+        prisma.reviewReply.findMany({
+          skip,
+          take,
+          orderBy: { reviewId: 'asc' },
+        }),
+    ),
+    table(
       'changeEvent',
       () => prisma.changeEvent.count(),
       (skip, take) =>

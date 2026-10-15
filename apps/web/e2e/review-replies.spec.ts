@@ -1,0 +1,453 @@
+import type { BrowserContext, Page } from "@playwright/test";
+import type { ApiErrorEnvelope } from "@asobeast/shared";
+import { expect, test } from "./session.mts";
+import {
+  APP_GP_DETAIL,
+  APP_REPLIES_ID,
+  REVIEW_REPLY_DRAFT,
+} from "./fixtures.mts";
+import { fulfillJson } from "./plan-helpers.mts";
+import { seedCookies } from "./routes.mts";
+
+const MOCK_API_URL = `http://localhost:${process.env.MOCK_API_PORT ?? 4100}`;
+const REPLIES_PAGE = `/apps/${APP_REPLIES_ID}/reviews`;
+const GP_PAGE = `/apps/${APP_GP_DETAIL.id}/reviews`;
+
+test.describe.configure({ mode: "serial" });
+
+test.beforeEach(async ({ request }) => {
+  for (const id of [APP_REPLIES_ID, APP_GP_DETAIL.id]) {
+    await request.post(`${MOCK_API_URL}/__reset/review-replies/${id}`, {
+      failOnStatusCode: true,
+    });
+  }
+});
+
+const articleOf = (page: Page, text: string) =>
+  page.getByRole("article").filter({ hasText: text });
+
+const composer = (page: Page) =>
+  page.getByRole("region", { name: "Reply to review" });
+
+const strip = (page: Page) =>
+  page.getByRole("region", { name: "Reply status" });
+
+test("writing a reply by hand saves it and the list shows a draft", async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.goto(REPLIES_PAGE);
+  const article = articleOf(page, "Please add dark mode.");
+
+  await article.getByRole("button", { name: "Reply", exact: true }).click();
+
+  await expect(page).toHaveURL(/reply=rep-3/);
+  await expect(composer(page)).toBeVisible();
+  await expect(composer(page).getByRole("textbox")).toHaveValue("");
+
+  await composer(page)
+    .getByRole("textbox", { name: "Reply text" })
+    .fill("Dark mode is on our list, thanks for asking.");
+  await expect(composer(page).getByText("44 / 2000")).toBeVisible();
+
+  const [request] = await Promise.all([
+    page.waitForRequest(
+      (candidate) =>
+        candidate.method() === "PATCH" &&
+        candidate.url().endsWith(`/apps/${APP_REPLIES_ID}/reviews/rep-3/reply`),
+    ),
+    composer(page).getByRole("button", { name: "Copy" }).click(),
+  ]);
+
+  expect(request.postDataJSON()).toEqual({
+    text: "Dark mode is on our list, thanks for asking.",
+  });
+  await expect(page.getByText("Reply copied")).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+    "Dark mode is on our list, thanks for asking.",
+  );
+  await expect(article.getByText("Draft saved")).toBeVisible();
+  await expect(
+    strip(page).getByRole("button", { name: /Draft saved/ }),
+  ).toContainText("2");
+});
+
+test("the composer counts against the google play limit and refuses more", async ({
+  page,
+}) => {
+  await page.goto(`${GP_PAGE}?reply=gp-rev-2`);
+
+  await composer(page)
+    .getByRole("textbox", { name: "Reply text" })
+    .fill("a".repeat(351));
+
+  await expect(
+    composer(page).getByText(
+      "351 / 350 · Google Play allows at most 350 characters",
+    ),
+  ).toBeVisible();
+  await expect(
+    composer(page).getByRole("button", { name: "Copy" }),
+  ).toBeDisabled();
+  await expect(
+    composer(page).getByRole("button", { name: "Mark as replied" }),
+  ).toBeDisabled();
+});
+
+test("marking a review as replied and undoing it", async ({ page }) => {
+  await page.goto(`${REPLIES_PAGE}?reply=rep-2`);
+  const article = articleOf(page, "Crashes often");
+
+  await composer(page).getByRole("button", { name: "Mark as replied" }).click();
+
+  await expect(article.getByText("Marked replied")).toBeVisible();
+  await expect(
+    strip(page).getByRole("button", { name: /Replied/ }),
+  ).toContainText("2");
+  await expect(
+    strip(page).getByRole("button", { name: /Draft saved/ }),
+  ).toContainText("0");
+
+  await composer(page).getByRole("button", { name: "Undo" }).click();
+
+  await expect(article.getByText("Draft saved")).toBeVisible();
+});
+
+test("the first click after typing marks the review while the text saves", async ({
+  page,
+}) => {
+  await page.route("**/api/backend/apps/*/reviews/*/reply", async (route) => {
+    if (route.request().postDataJSON()?.replied === undefined) {
+      await new Promise((resolve) => setTimeout(resolve, 600));
+    }
+    await route.continue();
+  });
+  await page.goto(`${REPLIES_PAGE}?reply=rep-3`);
+  const article = articleOf(page, "Please add dark mode.");
+
+  await composer(page)
+    .getByRole("textbox", { name: "Reply text" })
+    .fill("Dark mode ships next month.");
+  await composer(page)
+    .getByRole("button", { name: "Mark as replied" })
+    .click({ delay: 150 });
+
+  await expect(article.getByText("Marked replied")).toBeVisible();
+  await expect(
+    composer(page).getByRole("textbox", { name: "Reply text" }),
+  ).toHaveValue("Dark mode ships next month.");
+});
+
+test("discarding a reply asks first and clears the draft", async ({ page }) => {
+  await page.goto(`${REPLIES_PAGE}?reply=rep-2`);
+  const article = articleOf(page, "Crashes often");
+
+  await composer(page).getByRole("button", { name: "Discard" }).click();
+  const dialog = page.getByRole("alertdialog");
+  await expect(dialog).toContainText("Discard this reply?");
+
+  const [request] = await Promise.all([
+    page.waitForRequest((candidate) => candidate.method() === "DELETE"),
+    dialog.getByRole("button", { name: "Discard" }).click(),
+  ]);
+
+  expect(request.url()).toContain(
+    `/apps/${APP_REPLIES_ID}/reviews/rep-2/reply`,
+  );
+  await expect(article.getByText("Needs reply")).toBeVisible();
+  await expect(composer(page)).toBeVisible();
+  await expect(composer(page).getByRole("textbox")).toHaveValue("");
+});
+
+test("the console link names the store and opens in a new tab", async ({
+  page,
+}) => {
+  await page.goto(`${REPLIES_PAGE}?reply=rep-3`);
+  const appStore = composer(page).getByRole("link", {
+    name: "Open App Store Connect",
+  });
+
+  await expect(appStore).toHaveAttribute(
+    "href",
+    /\/apps\/123456789\/distribution\/activity\/ios\/ratingsResponses$/,
+  );
+  await expect(appStore).toHaveAttribute("target", "_blank");
+  await expect(appStore).toHaveAttribute("rel", "noreferrer");
+
+  await page.goto(`${GP_PAGE}?reply=gp-rev-2`);
+
+  await expect(
+    composer(page).getByRole("link", { name: "Open Play Console" }),
+  ).toBeVisible();
+});
+
+test("a reload reopens the composer with the saved text", async ({ page }) => {
+  await page.goto(`${REPLIES_PAGE}?reply=rep-3`);
+  const textbox = composer(page).getByRole("textbox", { name: "Reply text" });
+
+  await textbox.fill("Dark mode ships next month.");
+  await Promise.all([
+    page.waitForResponse(
+      (response) =>
+        response.request().method() === "PATCH" && response.status() === 200,
+    ),
+    textbox.blur(),
+  ]);
+  await page.reload();
+
+  await expect(
+    composer(page).getByRole("textbox", { name: "Reply text" }),
+  ).toHaveValue("Dark mode ships next month.");
+});
+
+test("the existing play reply is shown read only above the composer", async ({
+  page,
+}) => {
+  await page.goto(`${GP_PAGE}?reply=gp-rev-1`);
+
+  await expect(
+    articleOf(page, "Stürzt ab").getByText(/^Developer reply/),
+  ).toHaveCount(1);
+  await expect(
+    composer(page).getByText(
+      "Google Play already shows a reply; a new text here replaces it when you post it in the console.",
+    ),
+  ).toBeVisible();
+  await expect(composer(page).getByRole("textbox")).toHaveValue("");
+});
+
+const enableAi = (
+  context: BrowserContext,
+  extra: Record<string, string> = {},
+) => seedCookies(context, { e2e_metadata_ai: "1", ...extra });
+
+const REFUSAL: ApiErrorEnvelope = {
+  statusCode: 429,
+  error: "Too Many Requests",
+  message: "The monthly AI allowance is spent.",
+  path: `/apps/${APP_REPLIES_ID}/reviews/rep-1/reply/draft`,
+  timestamp: "2026-10-17T10:00:00.000Z",
+  aiAllowance: {
+    plan: "indie",
+    limit: 200,
+    used: 200,
+    resetsAt: "2026-11-01T00:00:00.000Z",
+    upgradeTo: "ultimate",
+  },
+  retryAfterSeconds: 1_260_000,
+};
+
+test("the ai controls are hidden without a key", async ({ page }) => {
+  await page.goto("/apps/app-1/reviews?reply=rev-3");
+
+  await expect(composer(page).getByRole("textbox")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Draft with AI" })).toHaveCount(
+    0,
+  );
+  await expect(
+    page.getByRole("button", { name: "Reply guidelines" }),
+  ).toHaveCount(0);
+});
+
+test("drafting fills the textarea and keeps it", async ({ page, context }) => {
+  await enableAi(context);
+  await page.goto(`${REPLIES_PAGE}?reply=rep-1`);
+  const article = articleOf(page, "Love the focus timer");
+
+  await composer(page).getByRole("combobox", { name: "Tone" }).click();
+  await page.getByRole("option", { name: "Friendly" }).click();
+  await composer(page)
+    .getByRole("textbox", { name: "Instructions (optional)" })
+    .fill("Mention the new widgets");
+  const [request] = await Promise.all([
+    page.waitForRequest((candidate) =>
+      candidate.url().endsWith("/reviews/rep-1/reply/draft"),
+    ),
+    composer(page).getByRole("button", { name: "Draft with AI" }).click(),
+  ]);
+
+  expect(request.postDataJSON()).toEqual({
+    tone: "friendly",
+    instructions: "Mention the new widgets",
+  });
+  await expect(
+    composer(page).getByRole("textbox", { name: "Reply text" }),
+  ).toHaveValue(REVIEW_REPLY_DRAFT.text);
+  await expect(composer(page).getByText("Drafted in English")).toBeVisible();
+  await expect(article.getByText("Draft saved")).toBeVisible();
+  await expect(
+    composer(page).getByRole("button", { name: "Draft again" }),
+  ).toBeVisible();
+});
+
+test("a fitted draft says so", async ({ page, context }) => {
+  await enableAi(context, { e2e_reply_truncated: "1" });
+  await page.goto(`${GP_PAGE}?reply=gp-rev-2`);
+
+  await composer(page).getByRole("button", { name: "Draft with AI" }).click();
+
+  await expect(
+    composer(page).getByText(
+      "Shortened to fit Google Play's 350 characters; read it before you copy.",
+    ),
+  ).toBeVisible();
+});
+
+test("a refused draft shows the allowance toast", async ({ page, context }) => {
+  await enableAi(context);
+  await page.route("**/api/backend/apps/*/reviews/*/reply/draft", (route) =>
+    route.fulfill(fulfillJson(429, REFUSAL)),
+  );
+  await page.goto(`${REPLIES_PAGE}?reply=rep-1`);
+
+  await composer(page).getByRole("button", { name: "Draft with AI" }).click();
+
+  await expect(
+    page.getByText(
+      "This workspace has used the 200 AI calls its plan includes this month. Renews Nov 1, 2026.",
+    ),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "See plans" })).toBeVisible();
+  await expect(
+    composer(page).getByRole("textbox", { name: "Reply text" }),
+  ).toHaveValue("");
+});
+
+test("reply guidelines are saved and read back", async ({ page, context }) => {
+  await enableAi(context);
+  await page.goto(REPLIES_PAGE);
+  const text = "Sign as the Tomato team. Support: help@tomato.app";
+
+  await page.getByRole("button", { name: "Reply guidelines" }).click();
+  const dialog = page.getByRole("dialog", { name: "Reply guidelines" });
+  await expect(dialog).toHaveAccessibleDescription(/Every AI draft/);
+  await dialog.getByRole("textbox", { name: "Reply guidelines" }).fill(text);
+  await expect(dialog.getByText("49 / 1000")).toBeVisible();
+  const [request] = await Promise.all([
+    page.waitForRequest((candidate) => candidate.method() === "PUT"),
+    dialog.getByRole("button", { name: "Save" }).click(),
+  ]);
+
+  expect(request.postDataJSON()).toEqual({ guidelines: text });
+  await expect(page.getByText("Reply guidelines saved")).toBeVisible();
+  await expect(dialog).toBeHidden();
+
+  await page.getByRole("button", { name: "Reply guidelines" }).click();
+
+  await expect(
+    page
+      .getByRole("dialog", { name: "Reply guidelines" })
+      .getByRole("textbox", { name: "Reply guidelines" }),
+  ).toHaveValue(text);
+});
+
+test("two clicks spend one call", async ({ page, context }) => {
+  await enableAi(context);
+  const drafts: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().endsWith("/reply/draft")) drafts.push(request.url());
+  });
+  await page.goto(`${REPLIES_PAGE}?reply=rep-1`);
+
+  await composer(page)
+    .getByRole("button", { name: "Draft with AI" })
+    .dblclick();
+
+  await expect(
+    composer(page).getByRole("textbox", { name: "Reply text" }),
+  ).toHaveValue(REVIEW_REPLY_DRAFT.text);
+  expect(drafts).toHaveLength(1);
+});
+
+test("the drafted notice goes once the text is edited", async ({
+  page,
+  context,
+}) => {
+  await enableAi(context);
+  await page.goto(`${REPLIES_PAGE}?reply=rep-1`);
+
+  await composer(page).getByRole("button", { name: "Draft with AI" }).click();
+  await expect(composer(page).getByText("Drafted in English")).toBeVisible();
+  await composer(page)
+    .getByRole("textbox", { name: "Reply text" })
+    .press("End");
+  await composer(page).getByRole("textbox", { name: "Reply text" }).press("!");
+
+  await expect(composer(page).getByText("Drafted in English")).toBeHidden();
+});
+
+test("undo stays available while the text runs past the limit", async ({
+  page,
+}) => {
+  await page.goto(`${GP_PAGE}?reply=gp-rev-2`);
+  await composer(page).getByRole("button", { name: "Mark as replied" }).click();
+  await expect(
+    composer(page).getByRole("button", { name: "Undo" }),
+  ).toBeVisible();
+
+  await composer(page)
+    .getByRole("textbox", { name: "Reply text" })
+    .fill("a".repeat(351));
+
+  await expect(
+    composer(page).getByRole("button", { name: "Undo" }),
+  ).toBeEnabled();
+});
+
+test("exporting a search that matches nothing writes no file", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/reviews?q=zzzz");
+  const downloads: string[] = [];
+  page.on("download", (download) =>
+    downloads.push(download.suggestedFilename()),
+  );
+
+  await page.getByRole("button", { name: "Export reviews to CSV" }).click();
+
+  await expect(
+    page.getByText("Nothing to export: no review matches this search"),
+  ).toBeVisible();
+  expect(downloads).toEqual([]);
+});
+
+test("opening the composer moves focus to the text and closing it returns focus", async ({
+  page,
+}) => {
+  await page.goto(REPLIES_PAGE);
+  const article = articleOf(page, "Please add dark mode.");
+  const replyButton = article.getByRole("button", {
+    name: "Reply",
+    exact: true,
+  });
+
+  await replyButton.click();
+
+  await expect(
+    composer(page).getByRole("textbox", { name: "Reply text" }),
+  ).toBeFocused();
+
+  await composer(page).getByRole("button", { name: "Close" }).click();
+
+  await expect(composer(page)).toHaveCount(0);
+  await expect(replyButton).toBeFocused();
+});
+
+test("a queue with nothing left to answer says so", async ({ page }) => {
+  await page.goto(`${GP_PAGE}?reply=gp-rev-2`);
+
+  await composer(page).getByRole("button", { name: "Mark as replied" }).click();
+  await expect(
+    strip(page).getByRole("button", { name: /Needs reply/ }),
+  ).toContainText("0");
+
+  await page.goto(`${GP_PAGE}?replyState=needs_reply`);
+
+  await expect(page.getByText("Nothing needs a reply")).toBeVisible();
+
+  await page.getByRole("button", { name: "Show all reviews" }).click();
+
+  await expect(page).not.toHaveURL(/replyState=/);
+  await expect(page.getByRole("article")).toHaveCount(2);
+});

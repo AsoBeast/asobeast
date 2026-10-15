@@ -1,3 +1,4 @@
+import type { AiStatus } from './ai';
 import type { ScoreProvenance } from './keywords';
 import type { AuditCheckStatus } from './audit';
 import type { ChangeField } from './changes';
@@ -555,10 +556,7 @@ export interface ActionExplanation {
   generatedAt: string;
 }
 
-export interface ActionAiStatus {
-  configured: boolean;
-  model: string | null;
-}
+export type ActionAiStatus = AiStatus;
 
 export interface ActionOpenedPayload {
   event: 'action.opened';

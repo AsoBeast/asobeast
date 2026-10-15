@@ -19,6 +19,7 @@ export const AI_FEATURES = [
   'creativeAnalysis',
   'metadataDrafts',
   'actionExplanation',
+  'reviewReply',
 ] as const;
 
 export type AiFeature = (typeof AI_FEATURES)[number];

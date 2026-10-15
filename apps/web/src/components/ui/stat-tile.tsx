@@ -26,19 +26,30 @@ export function StatTile({
   value,
   note,
   info,
+  selected,
+  onSelect,
   className,
 }: {
   label: string;
   value: ReactNode;
   note?: ReactNode;
   info?: ReactNode;
+  selected?: boolean;
+  onSelect?: () => void;
   className?: string;
 }) {
+  const Tile = onSelect ? "button" : "div";
   return (
-    <div
+    <Tile
       data-slot="stat-tile"
+      data-selected={selected}
+      {...(onSelect
+        ? { type: "button", onClick: onSelect, "aria-pressed": !!selected }
+        : {})}
       className={cn(
         "row-span-3 grid grid-rows-subgrid gap-1 rounded-xl border bg-card px-4 py-3",
+        onSelect &&
+          "cursor-pointer text-left transition-colors outline-none hover:bg-muted focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 data-[selected=true]:border-primary data-[selected=true]:ring-2 data-[selected=true]:ring-primary",
         className,
       )}
     >
@@ -50,6 +61,6 @@ export function StatTile({
       <span className="text-caption text-balance text-muted-foreground">
         {note}
       </span>
-    </div>
+    </Tile>
   );
 }

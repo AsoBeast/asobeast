@@ -29,7 +29,7 @@ function HistogramBars({
         const percent = percentOf(count, total);
         return (
           <li key={star} className="flex items-center gap-3 text-sm">
-            <span className="w-12 shrink-0 numeric font-mono text-muted-foreground">
+            <span className="w-14 shrink-0 numeric font-mono whitespace-nowrap text-muted-foreground">
               {star} star
             </span>
             <span
@@ -45,7 +45,7 @@ function HistogramBars({
                 style={{ width: `${percent}%` }}
               />
             </span>
-            <span className="w-28 shrink-0 text-right numeric font-mono text-muted-foreground">
+            <span className="min-w-28 shrink-0 text-right numeric font-mono whitespace-nowrap text-muted-foreground">
               {formatNumber(count)} · {percent.toFixed(1)}%
             </span>
           </li>

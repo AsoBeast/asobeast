@@ -206,6 +206,13 @@ test("disables every ai button once the allowance is spent", async ({
     panel.getByRole("button", { name: "Analyze creative" }),
   ).toBeDisabled();
   await expect(panel.getByText(SPENT_HINT)).toBeVisible();
+
+  await page.goto("/apps/app-1/reviews?reply=rev-3");
+  const composer = page.getByRole("region", { name: "Reply to review" });
+  await expect(
+    composer.getByRole("button", { name: "Draft with AI" }),
+  ).toBeDisabled();
+  await expect(composer.getByText(SPENT_HINT)).toBeVisible();
 });
 
 test("shows the calls left beside ai buttons only when a limit applies", async ({

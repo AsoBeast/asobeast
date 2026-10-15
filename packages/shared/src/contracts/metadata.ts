@@ -1,3 +1,4 @@
+import type { AiStatus } from './ai';
 import { KeywordBucket, Store } from '../index';
 import { LintIssue } from '../aso/lint';
 import { MetadataField } from '../aso/limits';
@@ -67,10 +68,7 @@ export interface MetadataAssistantResult {
   localization?: AppStoreLocalization | null;
 }
 
-export interface MetadataAssistantStatus {
-  configured: boolean;
-  model: string | null;
-}
+export type MetadataAssistantStatus = AiStatus;
 
 export interface MetadataAssistantRequest {
   fields?: MetadataField[];

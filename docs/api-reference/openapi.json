@@ -488,6 +488,28 @@
         ]
       }
     },
+    "/ai/status": {
+      "get": {
+        "operationId": "AiController_status",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Whether the optional AI features are configured",
+        "tags": [
+          "ai"
+        ]
+      }
+    },
     "/webhooks": {
       "get": {
         "operationId": "WebhooksController_list",
@@ -4174,6 +4196,32 @@
             }
           },
           {
+            "name": "replyState",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "needs_reply",
+                "drafted",
+                "replied"
+              ]
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "newest",
+              "type": "string",
+              "enum": [
+                "newest",
+                "lowest"
+              ]
+            }
+          },
+          {
             "name": "score",
             "required": false,
             "in": "query",
@@ -4219,7 +4267,7 @@
             }
           }
         },
-        "summary": "Stored reviews for an app, filtered by star and version",
+        "summary": "Stored reviews for an app, filtered by star, version and reply state",
         "tags": [
           "reviews"
         ]
@@ -4251,6 +4299,207 @@
           }
         },
         "summary": "Ratings distribution from the latest snapshot (Google Play only)",
+        "tags": [
+          "reviews"
+        ]
+      }
+    },
+    "/apps/{id}/reviews/{reviewId}/reply": {
+      "patch": {
+        "operationId": "ReviewRepliesController_patch",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "reviewId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewReplyPatchDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Save the reply text of a review or mark it as replied",
+        "tags": [
+          "reviews"
+        ]
+      },
+      "delete": {
+        "operationId": "ReviewRepliesController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "reviewId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Discard the reply kept for a review",
+        "tags": [
+          "reviews"
+        ]
+      }
+    },
+    "/apps/{id}/reviews/{reviewId}/reply/draft": {
+      "post": {
+        "operationId": "ReviewRepliesController_draft",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "reviewId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewReplyDraftDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The monthly AI allowance is spent; aiAllowance says when it renews"
+          }
+        },
+        "summary": "Draft the reply to a review with AI and keep it on the review",
+        "tags": [
+          "reviews"
+        ]
+      }
+    },
+    "/apps/{id}/reviews/reply-guidelines": {
+      "get": {
+        "operationId": "ReviewReplyGuidelinesController_read",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "The reply guidelines every AI draft follows",
+        "tags": [
+          "reviews"
+        ]
+      },
+      "put": {
+        "operationId": "ReviewReplyGuidelinesController_write",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewReplyGuidelinesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Replace the reply guidelines of an app",
         "tags": [
           "reviews"
         ]
@@ -6503,6 +6752,48 @@
           "collection",
           "genre",
           "device"
+        ]
+      },
+      "ReviewReplyPatchDto": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "replied": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ReviewReplyDraftDto": {
+        "type": "object",
+        "properties": {
+          "tone": {
+            "enum": [
+              "friendly",
+              "neutral",
+              "formal"
+            ],
+            "type": "string",
+            "default": "neutral"
+          },
+          "instructions": {
+            "type": "string",
+            "maxLength": 500
+          }
+        }
+      },
+      "ReviewReplyGuidelinesDto": {
+        "type": "object",
+        "properties": {
+          "guidelines": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "guidelines"
         ]
       },
       "MetadataAssistantDto": {

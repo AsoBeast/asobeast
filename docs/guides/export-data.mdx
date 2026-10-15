@@ -68,7 +68,7 @@ Positions are written the way the matrix shows them, so an app that does not ran
 
 ## Export reviews to CSV
 
-The reviews list exports the newest 200 reviews that match the star and version filters, newest first, named `reviews-<appId>-<date>.csv`. The reviews endpoint returns at most 200 reviews in one request and does not page, so older reviews are not in the file. When more reviews match, a notice after the download says how many the file holds. Narrow the filters to reach a different set, for example one version at a time.
+The reviews list exports up to 200 reviews that match the star, version and reply state filters, in the order the page shows them, newest or lowest first, and keeps only the reviews the search matches, named `reviews-<appId>-<date>.csv`. The reviews endpoint returns at most 200 reviews in one request and does not page, so older reviews are not in the file. When more reviews match, a notice after the download says how many the file holds. Narrow the filters to reach a different set, for example one version at a time.
 
 | Column | What it holds |
 | --- | --- |
@@ -78,6 +78,8 @@ The reviews list exports the newest 200 reviews that match the star and version 
 | `version` | The app version the store attached to the review, when it sent one |
 | `author` | The reviewer's display name |
 | `reviewId` | The store's own id for the review |
+| `replyState` | `needs_reply`, `drafted` or `replied` |
+| `replyText` | The reply kept on the review, or the reply Google Play shows when none is kept |
 
 ## Export a SERP snapshot to CSV
 

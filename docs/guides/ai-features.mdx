@@ -1,22 +1,23 @@
 ---
 title: Enable the optional AI features
 sidebarTitle: AI features
-description: "Set OPENAI_API_KEY to enable the AI creative analysis, metadata drafts and action explanations. Every other feature works with the key left unset."
+description: "Set OPENAI_API_KEY to enable the AI creative analysis, metadata drafts, action explanations and review reply drafts. Every other feature works with the key left unset."
 icon: sparkles
-keywords: ["OpenAI","OPENAI_API_KEY","AI_MODEL","metadata drafts","creative analysis","optional"]
+keywords: ["OpenAI","OPENAI_API_KEY","AI_MODEL","metadata drafts","creative analysis","review replies","optional"]
 ---
 
 AI in asobeast is garnish, not foundation. Every score, rule and recommendation is deterministic and works with no key configured, which is the default.
 
 ## What does the key enable?
 
-Three features, all bring your own key.
+Four features, all bring your own key.
 
 | Feature | Where | What it does |
 | --- | --- | --- |
 | AI creative analysis | Audit tab | Reads the icon, up to six screenshots and up to five competitor icons, and reports captions, caption language, message type, text in the icon, element count, contrast and similarity to a competitor icon. The audit rules score what it reports |
 | Metadata drafts | Metadata workbench | Proposes field values grounded in your tracked keywords, coverage gaps and competitor titles, for the primary listing or for an additional language one of your storefronts reads |
 | Action explanations | Action card | Turns typed evidence into two to four plain sentences |
+| Review reply drafts | Reviews page | Drafts the developer reply to one review in its language, in the tone you pick and within the store's limit, following the app's reply guidelines |
 
 Each feature is a single completion per run. The creative analysis runs in the background after you start it, so leaving the page does not cancel it. It is reused while the icon, the screenshots, the competitor icons and `AI_MODEL` are unchanged, so analyzing an unchanged listing again costs nothing, and a finished analysis records today's audit score. The nightly score snapshot reads the stored observations and never calls OpenAI.
 
@@ -29,6 +30,7 @@ Every AI call spends one call from a monthly allowance that the whole workspace 
 | Explaining an action, including Regenerate | A creative analysis of a listing that has not changed since the last one |
 | One set of metadata drafts | Starting an analysis while one is already queued or running |
 | One creative analysis | A request refused before it reaches the model, such as an unsupported field |
+| One review reply draft, including Draft again | A reply you write by hand, copy or mark |
 | An answer the model gave that could not be used, such as a refusal or an incomplete set of drafts | A call OpenAI never answered: a timeout, an outage, a rejected key |
 
 Two clicks on the same button while the first is still working spend one call. A creative analysis that retries in the background is still one call.
@@ -43,13 +45,14 @@ A self hosted instance has no allowance unless you set `AI_CALLS_PER_MONTH`, whi
 
 ## What happens without a key?
 
-The product is fully usable. Precisely three things differ.
+The product is fully usable. Precisely four things differ.
 
 | Surface | With no key |
 | --- | --- |
 | AI endpoints | Answer `409` |
 | Metadata drafts card | Hidden |
 | Audit tab | Shows a one line setup hint instead of the analyze button |
+| Reply composer | Works without AI. The Draft with AI button and the reply guidelines are hidden |
 
 Every other audit check still scores. The creative checks are listed as unanswered rather than guessed, and the audit weights each factor by how much of it was measured, so they neither raise nor lower the score. See [Run an ASO audit](/guides/aso-audit).
 
@@ -57,7 +60,7 @@ Every other audit check still scores. The creative checks are listed as unanswer
 
 | Variable | Default | Notes |
 | --- | --- | --- |
-| `OPENAI_API_KEY` | Empty | Empty disables all three features |
+| `OPENAI_API_KEY` | Empty | Empty disables all four features |
 | `AI_MODEL` | `gpt-5.6-luna` | Must accept image input and structured outputs, because the creative analysis reads images and answers in a fixed schema. `gpt-4o` also qualifies |
 | `AI_CALLS_PER_MONTH` | Empty | Calls each workspace may make per month on a self hosted instance. Empty is unlimited |
 
@@ -68,6 +71,8 @@ All three live in `apps/api/.env`. Restart the API after changing them.
 It may only summarize an action that already exists. It can never create, rank, re order or suppress one, and the explanation prompt is told it may not change the recommendation.
 
 The stored summary is labelled as an AI summary of deterministic evidence, so a reader can always tell which part of the card is computed and which part is prose. See [Work the Action Center](/guides/action-center).
+
+A review reply draft is a suggestion the composer holds until you copy it, and the kept reply records that it came from the model.
 
 Metadata drafts are constrained the same way. Every draft is linted again on the server and clamped to the store field limit, and asobeast has no write path to the stores, so a draft ends at a copy button rather than being published.
 
@@ -91,6 +96,8 @@ OpenAI downloads the images from the store CDNs itself; asobeast never proxies i
 The action explanation prompt receives the app's store, country and title, the rule, the priority, the impact and the evidence object, and nothing else.
 
 The metadata draft prompt receives the store, the listing's current metadata, up to 25 tracked keywords of the home market with their scores and coverage, competitor titles and your instructions. A draft for an additional language also sends the language and the codes of your markets that read it.
+
+The review reply prompt receives the store, the app name, the one review being answered (its score, title, text, version, date, author and the developer reply Google Play shows), the listing's current version and release notes, the app's reply guidelines, up to three of the app's most recent Google Play replies as examples of your voice, the tone and your instruction line. Never another review and never other workspaces' data.
 
 ## Troubleshooting
 

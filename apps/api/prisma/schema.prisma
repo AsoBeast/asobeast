@@ -56,6 +56,7 @@ model Workspace {
   keywordFields KeywordField[]
   appLocalizations AppLocalization[]
   appSetups   AppSetup[]
+  reviewReplies ReviewReply[]
   chartFollows ChartFollow[]
   rankings    KeywordRanking[]
   plan                String    @default("free")
@@ -197,6 +198,8 @@ model App {
   categoryRanks CategoryRank[]
   changeEvents ChangeEvent[]
   reviews      Review[]
+  reviewReplies ReviewReply[]
+  replyGuidelines String?
   suggestProbes SuggestProbe[]
   auditInsight AuditInsight?
   appSetup     AppSetup?
@@ -508,11 +511,34 @@ model Review {
   reviewedAt     DateTime?
   repliedAt      DateTime?
   replyCheckedAt DateTime?
+  replyText      String?
+  reply          ReviewReply?
   createdAt      DateTime  @default(now())
 
+  @@unique([id, appId])
   @@unique([appId, reviewId])
   @@index([appId, reviewedAt])
   @@index([appId, score])
+}
+
+model ReviewReply {
+  reviewId    String    @id
+  review      Review    @relation(fields: [reviewId, appId], references: [id, appId], onDelete: Cascade)
+  appId       String
+  workspaceId String
+  app         App       @relation(fields: [appId, workspaceId], references: [id, workspaceId], onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  text        String
+  tone        String?
+  model       String?
+  generatedAt DateTime?
+  repliedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([reviewId, appId])
+  @@index([appId, repliedAt])
+  @@index([workspaceId])
 }
 
 model Webhook {

@@ -190,6 +190,14 @@ describe('Workspace deletion (e2e)', () => {
         text: 'crashes on launch',
       },
     });
+    await prisma.reviewReply.create({
+      data: {
+        reviewId: review.id,
+        appId: owned.id,
+        workspaceId,
+        text: 'Sorry about the crash',
+      },
+    });
     const change = await prisma.changeEvent.create({
       data: { appId: owned.id, field: 'title', before: 'a', after: 'b' },
     });
@@ -351,6 +359,7 @@ describe('Workspace deletion (e2e)', () => {
       categoryRank,
       chartFollow,
       review,
+      reviewReply,
       changeEvent,
       auditInsight,
       auditScore,
@@ -383,6 +392,7 @@ describe('Workspace deletion (e2e)', () => {
       prisma.categoryRank.count({ where: { appId: target.appId } }),
       prisma.chartFollow.count({ where: { workspaceId: WORKSPACE } }),
       prisma.review.count({ where: { id: target.reviewId } }),
+      prisma.reviewReply.count({ where: { reviewId: target.reviewId } }),
       prisma.changeEvent.count({ where: { id: target.changeId } }),
       prisma.auditInsight.count({ where: { appId: target.appId } }),
       prisma.auditScore.count({ where: { appId: target.appId } }),
@@ -413,6 +423,7 @@ describe('Workspace deletion (e2e)', () => {
       CategoryRank: categoryRank,
       ChartFollow: chartFollow,
       Review: review,
+      ReviewReply: reviewReply,
       ChangeEvent: changeEvent,
       AuditInsight: auditInsight,
       AuditScore: auditScore,

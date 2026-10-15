@@ -386,6 +386,12 @@ describe('Monthly AI allowance (e2e)', () => {
     });
   });
 
+  it('answers that ai is configured with the model', async () => {
+    const status = await api.get('/ai/status').expect(200);
+
+    expect(status.body).toEqual({ configured: true, model: 'gpt-test' });
+  });
+
   it("reports the month's ai usage and allowance on the plan", async () => {
     await spent(3);
 

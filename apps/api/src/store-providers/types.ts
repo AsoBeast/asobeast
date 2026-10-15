@@ -60,6 +60,7 @@ export interface ReviewResult {
   version?: string;
   updatedAt?: Date;
   repliedAt?: Date;
+  replyText?: string;
 }
 
 export interface StoreProvider {

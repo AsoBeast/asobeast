@@ -11,7 +11,8 @@ export class ReviewsController {
 
   @Get()
   @ApiOperation({
-    summary: 'Stored reviews for an app, filtered by star and version',
+    summary:
+      'Stored reviews for an app, filtered by star, version and reply state',
   })
   list(
     @Param('id') id: string,
@@ -21,6 +22,8 @@ export class ReviewsController {
       score: query.score,
       version: query.version,
       limit: query.limit,
+      replyState: query.replyState,
+      sort: query.sort,
     });
   }
 

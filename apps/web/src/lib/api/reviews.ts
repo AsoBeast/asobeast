@@ -2,6 +2,13 @@ import type {
   RatingsHistogram,
   RatingsHistory,
   ReviewList,
+  ReviewReplyDraftRequest,
+  ReviewReplyDraftResult,
+  ReviewReplyGuidelines,
+  ReviewReplyItem,
+  ReviewReplyPatchRequest,
+  ReviewReplyState,
+  ReviewSort,
 } from "@asobeast/shared";
 import { apiFetch, withQuery } from "./client";
 import type { RangeParams } from "./client";
@@ -9,18 +16,75 @@ import type { RangeParams } from "./client";
 export interface ReviewFilters {
   score?: number;
   version?: string;
+  replyState?: ReviewReplyState;
+  sort?: ReviewSort;
   limit?: number;
 }
 
 export function getReviews(
   appId: string,
-  { score, version, limit }: ReviewFilters = {},
+  { score, version, replyState, sort, limit }: ReviewFilters = {},
 ): Promise<ReviewList> {
   const params = new URLSearchParams();
   if (score !== undefined) params.set("score", String(score));
   if (version) params.set("version", version);
+  if (replyState) params.set("replyState", replyState);
+  if (sort) params.set("sort", sort);
   if (limit !== undefined) params.set("limit", String(limit));
   return apiFetch<ReviewList>(withQuery(`/apps/${appId}/reviews`, params));
+}
+
+const replyPath = (appId: string, reviewId: string) =>
+  `/apps/${appId}/reviews/${encodeURIComponent(reviewId)}/reply`;
+
+export function patchReviewReply(
+  appId: string,
+  reviewId: string,
+  body: ReviewReplyPatchRequest,
+): Promise<ReviewReplyItem> {
+  return apiFetch<ReviewReplyItem>(replyPath(appId, reviewId), {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+}
+
+export function deleteReviewReply(
+  appId: string,
+  reviewId: string,
+): Promise<void> {
+  return apiFetch<void>(replyPath(appId, reviewId), { method: "DELETE" });
+}
+
+export function draftReviewReply(
+  appId: string,
+  reviewId: string,
+  body: ReviewReplyDraftRequest,
+): Promise<ReviewReplyDraftResult> {
+  return apiFetch<ReviewReplyDraftResult>(
+    `${replyPath(appId, reviewId)}/draft`,
+    {
+      method: "POST",
+      body: JSON.stringify(body),
+    },
+  );
+}
+
+export function getReviewReplyGuidelines(
+  appId: string,
+): Promise<ReviewReplyGuidelines> {
+  return apiFetch<ReviewReplyGuidelines>(
+    `/apps/${appId}/reviews/reply-guidelines`,
+  );
+}
+
+export function putReviewReplyGuidelines(
+  appId: string,
+  body: ReviewReplyGuidelines,
+): Promise<ReviewReplyGuidelines> {
+  return apiFetch<ReviewReplyGuidelines>(
+    `/apps/${appId}/reviews/reply-guidelines`,
+    { method: "PUT", body: JSON.stringify(body) },
+  );
 }
 
 export function getRatingsHistogram(appId: string): Promise<RatingsHistogram> {

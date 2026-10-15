@@ -1,8 +1,8 @@
 ---
-title: Sync reviews and mine keyword ideas
-description: Reviews sync in the daily pipeline for the home storefront. Repeated language in negative reviews becomes keyword ideas and action items.
+title: Sync reviews, reply to them and mine keyword ideas
+description: Reviews sync in the daily pipeline for the home storefront. Draft and track a reply to each one, and turn repeated language in negative reviews into keyword ideas and action items.
 icon: message-square
-keywords: ["reviews","ratings history","review mining","negative reviews","themes"]
+keywords: ["reviews","ratings history","review mining","negative reviews","themes","reply to reviews","AI reply"]
 ---
 
 Reviews give asobeast two things a listing cannot: the words your users actually use, and an early signal that something in the latest release is going wrong.
@@ -15,7 +15,25 @@ A Google Play review can carry a star rating and no text. It is stored like any 
 
 Review sync stays on the home market, like category ranks and the ratings history. See [Countries and markets](/concepts/countries).
 
-Stored reviews are listed on the app's reviews page, filtered by star and version, and export to CSV. The version filter lists the newest version first and compares the numbers in each version, so `3.123.0` ranks above `3.95.0` and `450.0.0.24.77` above `6.12.2`. See [Export reviews to CSV](/guides/export-data#export-reviews-to-csv).
+Stored reviews are listed on the app's reviews page, filtered by star, version and reply state, sorted, searched, and exported to CSV. The version filter lists the newest version first and compares the numbers in each version, so `3.123.0` ranks above `3.95.0` and `450.0.0.24.77` above `6.12.2`. See [Export reviews to CSV](/guides/export-data#export-reviews-to-csv).
+
+## Reply to reviews
+
+Every review on the reviews page has a **Reply** button that opens a composer under it. Write the reply yourself or, with `OPENAI_API_KEY` set, press **Draft with AI**. Edit the text, press **Copy**, open the store console with the link beside it, paste the reply there and press **Mark as replied**. asobeast never writes to the store, so the reply is posted only when you paste it. What a draft sends and what it costs is on [Enable the optional AI features](/guides/ai-features).
+
+The text is saved on the review as you leave the field and whenever you press a button, so a reload or a teammate sees the same draft and a draft is never paid for twice. **Discard** removes the text and the replied mark. The counter under the text measures it against the store's limit, and the buttons wait until the text fits. The limits and the two sources of a replied review are explained once, under [Developer replies](/concepts/stores#developer-replies).
+
+Each review shows one of three states. **Needs reply** has no reply anywhere, **Draft saved** has a reply kept here that is not marked, and **Replied** is either a reply Google Play already shows or a review you marked. The badge says which: **Replied on Google Play** or **Marked replied**. The counts at the top of the list filter it by state. The toolbar sorts the newest or the lowest scores first and searches the titles, texts, authors and replies of the reviews loaded on the page. The page loads 50 reviews and **Show all** raises that to 200.
+
+### Reply guidelines
+
+With AI configured, the **Reply guidelines** button on the toolbar keeps up to 1,000 characters for the app: who signs, the support address, what never to promise. Every draft for the app follows them.
+
+### What a draft does
+
+A draft is written in the review's language, addresses the reviewer by name when there is one and stays on the one thing the review says. It never asks for a better rating, never promotes, and names a link or an address only when your guidelines or your instruction contain it; asobeast checks the draft for that and refuses one that adds any other, which still counts as a call. The text of the review is handed to the model as data, so a review that tries to give the model instructions does not steer the draft. It suggests updating only when the review was left on an older version than the listing shows, and describes a fix only when the release notes say so. Pick a tone, friendly, neutral or formal, and add a one line instruction for this review if you want to steer it. A draft that would run past the store's limit is shortened on a sentence boundary and the composer says so.
+
+The Action Center's unanswered reviews action opens this page filtered to the reviews that need a reply, lowest first. See [Work the Action Center](/guides/action-center).
 
 ## Read the ratings history
 
@@ -50,6 +68,10 @@ The dashboard's new low ratings and the weekly digest's negative review count an
 - **No reviews appear.** The store returns reviews for the home storefront, and a new or low volume app may genuinely have none in the window the store exposes.
 - **The rating count moves without new reviews.** Ratings and reviews are different things. Users can rate without writing.
 - **A theme did not fire.** Check that the version has at least 5 reviews and that the phrase reached 3 negative mentions with twice the previous version's rate.
+- **Draft with AI is missing.** No `OPENAI_API_KEY` is set. With the monthly AI allowance spent the button stays but is disabled until the 1st.
+- **The badge says replied but I never replied here.** Google Play shows a reply someone posted in Play Console, and asobeast reads it with the next daily sync.
+- **Drafting fails with "added a link or an address".** The model put a link or an email address in the draft that your guidelines do not contain. Draft again, or add the address to the guidelines if it is yours.
+- **My reply is cut.** It ran past the store's limit. Shorten it or edit it before you copy it.
 - **A review has stars and no text.** Google Play lets users rate without writing, and a few old reviews on the store carry only the rating. They are kept so the star counts stay right.
 
 ## Related

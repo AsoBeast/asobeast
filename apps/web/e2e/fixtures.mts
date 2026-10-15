@@ -710,6 +710,9 @@ export const APP_1_REVIEWS: ReviewList = {
       text: "Best pomodoro app I have used.",
       version: "3.4.1",
       reviewedAt: utcTimestampDaysAgo(1),
+      repliedAt: null,
+      replyText: null,
+      reply: null,
     },
     {
       id: "rev-2",
@@ -720,6 +723,16 @@ export const APP_1_REVIEWS: ReviewList = {
       text: "It crashes when I start a session.",
       version: "3.4.0",
       reviewedAt: utcTimestampDaysAgo(3),
+      repliedAt: null,
+      replyText: null,
+      reply: {
+        text: "Sorry about the crash, Jordan. Version 3.4.1 fixes it; please update and tell us if it persists.",
+        tone: "friendly",
+        model: "gpt-test",
+        generatedAt: utcTimestampDaysAgo(1),
+        updatedAt: utcTimestampDaysAgo(1),
+        repliedAt: null,
+      },
     },
     {
       id: "rev-3",
@@ -730,6 +743,9 @@ export const APP_1_REVIEWS: ReviewList = {
       text: "Please add dark mode.",
       version: "3.4.0",
       reviewedAt: utcTimestampDaysAgo(5),
+      repliedAt: null,
+      replyText: null,
+      reply: null,
     },
     {
       id: "rev-4",
@@ -740,6 +756,16 @@ export const APP_1_REVIEWS: ReviewList = {
       text: "",
       version: "3.4.1",
       reviewedAt: utcTimestampDaysAgo(6),
+      repliedAt: null,
+      replyText: null,
+      reply: {
+        text: "Thank you!",
+        tone: null,
+        model: null,
+        generatedAt: null,
+        updatedAt: utcTimestampDaysAgo(2),
+        repliedAt: utcTimestampDaysAgo(2),
+      },
     },
     {
       id: "rev-5",
@@ -750,8 +776,86 @@ export const APP_1_REVIEWS: ReviewList = {
       text: " \n ",
       version: "3.4.1",
       reviewedAt: utcTimestampDaysAgo(7),
+      repliedAt: null,
+      replyText: null,
+      reply: null,
     },
   ],
+};
+
+export const APP_GP_REVIEWS: ReviewList = {
+  total: 2,
+  versions: ["2.8.0", "2.7.0"],
+  reviews: [
+    {
+      id: "gp-rev-1",
+      reviewId: "gp-store-rev-1",
+      userName: "Lena",
+      score: 2,
+      title: "Stürzt ab",
+      text: "Die App stürzt beim Start ab.",
+      version: "2.7.0",
+      reviewedAt: utcTimestampDaysAgo(4),
+      repliedAt: utcTimestampDaysAgo(3),
+      replyText: "Danke für den Hinweis, Version 2.8.0 behebt den Absturz.",
+      reply: null,
+    },
+    {
+      id: "gp-rev-2",
+      reviewId: "gp-store-rev-2",
+      userName: "Jonas",
+      score: 1,
+      title: "Werbung",
+      text: "Zu viel Werbung.",
+      version: "2.8.0",
+      reviewedAt: utcTimestampDaysAgo(2),
+      repliedAt: null,
+      replyText: null,
+      reply: null,
+    },
+  ],
+};
+
+export const REVIEW_TEXT_THAT_FITS =
+  "The timer stops when the screen locks and I lose the whole session, which happens every morning on my commute. I reinstalled twice and the problem stays. Please fix the background mode because otherwise this is the best focus app I have tried this year.";
+
+export const REVIEW_TEXT_THAT_OVERFLOWS = Array.from(
+  { length: 6 },
+  (_, line) => `Paragraph ${line + 1} of a review that keeps going.`,
+).join("\n");
+
+const LONG_LIST_TEXTS = [
+  undefined,
+  REVIEW_TEXT_THAT_FITS,
+  REVIEW_TEXT_THAT_OVERFLOWS,
+];
+
+export const APP_LONG_REVIEWS: ReviewList = {
+  total: 60,
+  versions: ["1.0.0"],
+  reviews: Array.from({ length: 60 }, (_, index) => ({
+    id: `long-rev-${index + 1}`,
+    reviewId: `long-store-rev-${index + 1}`,
+    userName: `Reviewer ${index + 1}`,
+    score: (index % 5) + 1,
+    title: `Review number ${index + 1}`,
+    text: LONG_LIST_TEXTS[index] ?? `Long list review ${index + 1}.`,
+    version: "1.0.0",
+    reviewedAt: utcTimestampDaysAgo(index),
+    repliedAt: null,
+    replyText: null,
+    reply: null,
+  })),
+};
+
+export const REVIEW_REPLY_DRAFT = {
+  text: "Thanks for the kind words, Casey! Glad the focus timer keeps you on track.",
+  language: "en",
+};
+
+export const REVIEW_REPLY_DRAFT_PLAY = {
+  text: "Danke für dein Feedback, Jonas! Wir prüfen die Werbung im nächsten Update.",
+  language: "de",
 };
 
 export const APP_1_RATINGS_HISTORY: RatingsHistory = {
@@ -2175,7 +2279,7 @@ export const DATASETS: Record<string, AppDataset> = {
     rankDistributionHistory: EMPTY_RANK_DISTRIBUTION_HISTORY,
     categoryRanks: EMPTY_CATEGORY_RANKS,
     competitors: [],
-    reviews: EMPTY_REVIEWS,
+    reviews: APP_LONG_REVIEWS,
     ratingsHistory: EMPTY_RATINGS_HISTORY,
     ratingsHistogram: EMPTY_RATINGS_HISTOGRAM,
     changes: EMPTY_CHANGES,
@@ -2265,7 +2369,7 @@ export const DATASETS: Record<string, AppDataset> = {
     rankDistributionHistory: EMPTY_RANK_DISTRIBUTION_HISTORY,
     categoryRanks: EMPTY_CATEGORY_RANKS,
     competitors: APP_GP_COMPETITORS,
-    reviews: EMPTY_REVIEWS,
+    reviews: APP_GP_REVIEWS,
     ratingsHistory: EMPTY_RATINGS_HISTORY,
     ratingsHistogram: EMPTY_RATINGS_HISTOGRAM,
     changes: EMPTY_CHANGES,
@@ -2454,6 +2558,20 @@ DATASETS[APP_TAGS_ID] = {
     tags: [],
     note: null,
   })),
+};
+
+export const APP_REPLIES_ID = "app-replies";
+
+DATASETS[APP_REPLIES_ID] = {
+  ...DATASETS["app-1"],
+  detail: { ...APP_1_DETAIL, id: APP_REPLIES_ID, name: "Reply Lab" },
+  reviews: {
+    ...APP_1_REVIEWS,
+    reviews: APP_1_REVIEWS.reviews.map((review) => ({
+      ...structuredClone(review),
+      id: review.id.replace("rev-", "rep-"),
+    })),
+  },
 };
 
 export const APP_IMPORT_ID = "app-import";

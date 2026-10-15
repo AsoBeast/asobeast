@@ -1,5 +1,19 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { StatTileGroup } from "@/components/ui/stat-tile";
+
+export function ReviewCountsSkeleton() {
+  return (
+    <div className="flex flex-col gap-2">
+      <Skeleton className="h-4 w-28" />
+      <StatTileGroup className="grid-cols-3">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <Skeleton key={index} className="h-[5.5rem] rounded-xl" />
+        ))}
+      </StatTileGroup>
+    </div>
+  );
+}
 
 export function ReviewsListSkeleton() {
   return (
