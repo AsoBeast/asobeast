@@ -43,4 +43,10 @@ UPDATE "EmailAlert"
 SET "confirmedAt" = "createdAt"
 WHERE "id" = 'mail_ops';
 
+INSERT INTO "AppSetup" ("appId", "workspaceId", "status", "skipped", "countriesReviewed", "selectedMarkets", "createdAt", "updatedAt")
+SELECT a."id", a."workspaceId", 'not_started', '{}', false, ARRAY[a."country"], a."createdAt", a."createdAt"
+FROM "App" a
+WHERE a."isCompetitor" = false
+ON CONFLICT ("appId") DO NOTHING;
+
 COMMIT;
