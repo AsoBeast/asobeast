@@ -2,7 +2,11 @@
 
 import { useId } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import type { ReviewTheme } from "@asobeast/shared";
+import {
+  REVIEW_THEME_KINDS,
+  type ReviewTheme,
+  type ReviewThemeKind,
+} from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import { InfoTip } from "@/components/ui/info-tip";
 import { formatNumber, pluralize } from "@/lib/format";
@@ -10,11 +14,46 @@ import { reviewThemesOptions } from "@/lib/queries";
 import { searchText } from "@/lib/search-text";
 import { themesFilters, type ReviewView } from "./review-filters";
 
+const KIND_LABELS: Record<ReviewThemeKind, string> = {
+  complaint: "Complaints",
+  praise: "Praise",
+};
+
 const THEMES_GUIDE =
   "https://docs.asobeast.com/guides/reviews#see-what-people-mention";
 
 function themeDetail(theme: ReviewTheme, negativeScoreMax: number): string {
   return `in ${pluralize(theme.mentions, "review")}, ${formatNumber(theme.negative)} at ${pluralize(negativeScoreMax, "star")} or less`;
+}
+
+function ThemeChip({
+  theme,
+  negativeScoreMax,
+  selected,
+  onSelect,
+}: {
+  theme: ReviewTheme;
+  negativeScoreMax: number;
+  selected: boolean;
+  onSelect: (phrase: string) => void;
+}) {
+  return (
+    <Button
+      size="sm"
+      variant={selected ? "default" : "outline"}
+      aria-pressed={selected}
+      onClick={() => onSelect(selected ? "" : theme.phrase)}
+    >
+      {theme.phrase}
+      <span
+        aria-hidden
+        className={selected ? "numeric" : "numeric text-muted-foreground"}
+      >
+        {formatNumber(theme.mentions)}
+      </span>
+      <span className="sr-only">{themeDetail(theme, negativeScoreMax)}</span>
+    </Button>
+  );
 }
 
 export function ReviewThemesStrip({
@@ -47,7 +86,7 @@ export function ReviewThemesStrip({
         <InfoTip
           label="About what people mention"
           title="What people mention"
-          summary={`Phrases repeated in the newest ${pluralize(data.reviews, "review")} that match the filters. Phrases from reviews at ${pluralize(data.negativeScoreMax, "star")} or less come first. Pick one to search for it.`}
+          summary={`Complaints come up mostly in reviews at ${pluralize(data.negativeScoreMax, "star")} or less, praise mostly in the others, compared with every review of the version and period. Counts cover the newest ${pluralize(data.reviews, "review")} that match the filters. Pick one to search for it.`}
         >
           <a
             href={THEMES_GUIDE}
@@ -59,34 +98,35 @@ export function ReviewThemesStrip({
           </a>
         </InfoTip>
       </div>
-      <ul className="flex flex-wrap gap-1.5">
-        {data.themes.map((theme) => {
-          const selected = active === searchText(theme.phrase);
-          return (
-            <li key={theme.phrase}>
-              <Button
-                size="sm"
-                variant={selected ? "default" : "outline"}
-                aria-pressed={selected}
-                onClick={() => onSelect(selected ? "" : theme.phrase)}
-              >
-                {theme.phrase}
-                <span
-                  aria-hidden
-                  className={
-                    selected ? "numeric" : "numeric text-muted-foreground"
-                  }
-                >
-                  {formatNumber(theme.mentions)}
-                </span>
-                <span className="sr-only">
-                  {themeDetail(theme, data.negativeScoreMax)}
-                </span>
-              </Button>
-            </li>
-          );
-        })}
-      </ul>
+      {REVIEW_THEME_KINDS.map((kind) => {
+        const themes = data.themes.filter((theme) => theme.kind === kind);
+        if (themes.length === 0) return null;
+        return (
+          <div key={kind} className="flex flex-wrap items-center gap-1.5">
+            <span
+              id={`${headingId}-${kind}`}
+              className="w-20 shrink-0 text-caption text-muted-foreground"
+            >
+              {KIND_LABELS[kind]}
+            </span>
+            <ul
+              aria-labelledby={`${headingId}-${kind}`}
+              className="flex flex-wrap gap-1.5"
+            >
+              {themes.map((theme) => (
+                <li key={theme.phrase}>
+                  <ThemeChip
+                    theme={theme}
+                    negativeScoreMax={data.negativeScoreMax}
+                    selected={active === searchText(theme.phrase)}
+                    onSelect={onSelect}
+                  />
+                </li>
+              ))}
+            </ul>
+          </div>
+        );
+      })}
     </section>
   );
 }

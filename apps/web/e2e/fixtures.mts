@@ -873,8 +873,9 @@ export const EMPTY_REVIEW_THEMES: ReviewThemes = {
 
 export const APP_1_REVIEW_THEMES: ReviewThemes = {
   themes: [
-    { phrase: "crashes", mentions: 2, negative: 2 },
-    { phrase: "dark mode", mentions: 2, negative: 1 },
+    { phrase: "crashes", kind: "complaint", mentions: 1, negative: 1 },
+    { phrase: "dark mode", kind: "complaint", mentions: 1, negative: 1 },
+    { phrase: "focus timer", kind: "praise", mentions: 1, negative: 0 },
   ],
   reviews: 5,
   negativeScoreMax: 2,
