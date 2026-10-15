@@ -15,6 +15,7 @@ import {
   type QueryClient,
 } from "@tanstack/react-query";
 import {
+  getChart,
   getAction,
   getActionActivity,
   getAdminApps,
@@ -82,6 +83,7 @@ import {
   type ActionActivityScope,
   type ActionFilters,
   type ActionSummaryScope,
+  type ChartPageQuery,
   type RangeParams,
   type RankingParams,
   type ReviewFilters,
@@ -379,6 +381,18 @@ export const portfolioInsightsOptions = queryOptions({
   queryFn: getPortfolioInsights,
   staleTime: 60_000,
 });
+
+export const chartKeys = {
+  all: ["charts"] as const,
+  page: (query: ChartPageQuery) => ["charts", "page", query] as const,
+};
+
+export const chartPageOptions = (query: ChartPageQuery) =>
+  queryOptions({
+    queryKey: chartKeys.page(query),
+    queryFn: () => getChart(query),
+    staleTime: 5 * 60 * 1000,
+  });
 
 export const actionKeys = {
   all: ["actions"] as const,

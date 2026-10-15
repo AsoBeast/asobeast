@@ -26,6 +26,8 @@ const ROUTES: ReadonlyArray<
   ["action center", "/actions"],
   ["app action center", "/apps/app-1/actions"],
   ["action sheet", "/actions?action=act-push"],
+  ["top charts", "/charts"],
+  ["top charts on google play", "/charts?store=GOOGLE_PLAY&genre=GAME_PUZZLE"],
 ];
 
 async function overflowingElements(page: import("@playwright/test").Page) {

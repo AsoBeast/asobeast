@@ -27,6 +27,8 @@ import { DEFAULT_MCP_CLIENT, MCP_CLIENTS } from "./mcp-snippets";
 import { GRADES } from "./grade";
 import { POSITION_BANDS } from "./table/facets";
 import {
+  chartParsers,
+  chartTableParsers,
   COMBINATION_URL_KEYS,
   COMBINATION_WORD_FILTERS,
   combinationParsers,
@@ -339,6 +341,43 @@ describe("action queue parsers", () => {
       "de",
     ]);
     expect(actionQueueParsers.app.parseServerSide("app-1")).toEqual(["app-1"]);
+  });
+});
+
+describe("chart parsers", () => {
+  const serialize = createSerializer(chartParsers);
+
+  it("leaves the default chart out of the url", () => {
+    expect(
+      serialize({
+        store: "APP_STORE",
+        country: "",
+        collection: "free",
+        genre: "overall",
+        device: null,
+        date: null,
+        compare: "1d",
+      }),
+    ).toBe("");
+  });
+
+  it("keeps only a day on the calendar", () => {
+    expect(chartParsers.date.parseServerSide("2026-10-13")).toBe("2026-10-13");
+    expect(chartParsers.date.parseServerSide("2026-02-30")).toBeNull();
+    expect(chartParsers.date.parseServerSide("13-10-2026")).toBeNull();
+  });
+
+  it("falls back for an unknown store, chart, device or window", () => {
+    expect(chartParsers.store.parseServerSide("AMAZON")).toBe("APP_STORE");
+    expect(chartParsers.collection.parseServerSide("top")).toBe("free");
+    expect(chartParsers.device.parseServerSide("ipad")).toBeNull();
+    expect(chartParsers.compare.parseServerSide("2d")).toBe("1d");
+  });
+
+  it("sorts the chart by position unless told otherwise", () => {
+    expect(chartTableParsers.sort.parseServerSide(undefined)).toBe("position");
+    expect(chartTableParsers.sort.parseServerSide("rating")).toBe("position");
+    expect(chartTableParsers.sort.parseServerSide("app")).toBe("app");
   });
 });
 

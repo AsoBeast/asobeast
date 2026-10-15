@@ -9,11 +9,17 @@ import {
   KEYWORD_SOURCES,
   KEYWORD_SUGGESTION_STRATEGIES,
   APP_STORE_LOCALIZATION_IDS,
+  CATEGORY_COLLECTIONS,
+  CHART_COMPARE_WINDOWS,
+  CHART_DEVICES,
   COUNTRY_PATTERN,
+  OVERALL_GENRE,
   STORES,
+  isUtcCalendarDate,
   type ActionStatus,
 } from "@asobeast/shared";
 import {
+  createLoader,
   createParser,
   parseAsArrayOf,
   parseAsBoolean,
@@ -407,3 +413,32 @@ export const localizationParser = parseAsStringLiteral(
 export const draftLocaleParser = localizationParser;
 
 export const fieldLocaleParser = localizationParser;
+
+export const utcDateParser = createParser({
+  parse(value) {
+    return isUtcCalendarDate(value) ? value : null;
+  },
+  serialize(value: string) {
+    return value;
+  },
+});
+
+export const chartParsers = {
+  store: parseAsStringLiteral(STORES).withDefault("APP_STORE"),
+  country: countryParser,
+  collection: parseAsStringLiteral(CATEGORY_COLLECTIONS).withDefault("free"),
+  genre: parseAsString.withDefault(OVERALL_GENRE),
+  device: parseAsStringLiteral(CHART_DEVICES),
+  date: utcDateParser,
+  compare: parseAsStringLiteral(CHART_COMPARE_WINDOWS).withDefault("1d"),
+};
+
+export const loadChartSearch = createLoader(chartParsers);
+
+export const CHART_SORTS = ["position", "app"] as const;
+
+export const chartTableParsers = {
+  sort: parseAsStringLiteral(CHART_SORTS).withDefault("position"),
+  dir: sortDirectionParser,
+  q: searchParser,
+};

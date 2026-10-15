@@ -5,6 +5,7 @@ export * from "./keywords";
 export * from "./localizations";
 export * from "./rankings";
 export * from "./competitors";
+export * from "./charts";
 export * from "./analytics";
 export * from "./reviews";
 export * from "./audit";

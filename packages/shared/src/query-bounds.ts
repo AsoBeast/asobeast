@@ -2,6 +2,14 @@ export const COUNTRY_PATTERN = /^[a-z]{2}$/;
 
 export const UTC_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
+export function isUtcCalendarDate(value: string): boolean {
+  if (!UTC_DATE_PATTERN.test(value)) return false;
+  const instant = Date.parse(`${value}T00:00:00.000Z`);
+  return (
+    !Number.isNaN(instant) && new Date(instant).toISOString().startsWith(value)
+  );
+}
+
 export interface QueryBound {
   min: number;
   max: number;

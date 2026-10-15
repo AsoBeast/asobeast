@@ -10,6 +10,8 @@ import type {
 import { APP_AUDIT_EXAMPLE } from "@/components/audit/audit-example";
 import { queryMarket } from "./market";
 import {
+  chartKeys,
+  chartPageOptions,
   adminKeys,
   actionActivityOptions,
   actionDetailOptions,
@@ -446,6 +448,33 @@ describe("localized listing keys", () => {
     expect(
       client.getQueryState(appKeys.screenshots(APP, "pl", "pl"))?.isInvalidated,
     ).toBe(true);
+  });
+});
+
+describe("chartKeys", () => {
+  const QUERY = {
+    store: "APP_STORE",
+    country: "us",
+    collection: "free",
+    genre: "6014",
+    device: "iphone",
+    compare: "1d",
+  } as const;
+
+  it("carries the whole query in the page key", () => {
+    expect(chartPageOptions(QUERY).queryKey).toEqual(["charts", "page", QUERY]);
+  });
+
+  it("keeps two days of one chart apart", () => {
+    expect(
+      chartPageOptions({ ...QUERY, date: "2026-10-12" }).queryKey,
+    ).not.toEqual(chartPageOptions({ ...QUERY, date: "2026-10-13" }).queryKey);
+  });
+
+  it("reaches every chart page from the chart root", () => {
+    expect(isPrefixOf(chartKeys.all, chartPageOptions(QUERY).queryKey)).toBe(
+      true,
+    );
   });
 });
 

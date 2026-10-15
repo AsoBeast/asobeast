@@ -81,6 +81,10 @@ import {
   emptyScreenshots,
   errorEnvelope,
   rateLimitedEnvelope,
+  TOP_CHART_DATES,
+  TOP_CHART_PAGE_EMPTY,
+  TOP_CHART_PAGE_UNCAPTURED,
+  topChartPage,
   MARKET_SUGGESTIONS,
   DEFAULT_SEED_TEXTS,
   SEED_REFUSED_MESSAGE,
@@ -174,6 +178,11 @@ import {
   parseStoreUrl,
   isStorefront,
   UnknownStorefrontError,
+  chartGenreName,
+  isChartGenre,
+  STORES,
+  type ChartPage,
+  type Store,
 } from "@asobeast/shared";
 import {
   ALL_VIEWERS,
@@ -1590,7 +1599,49 @@ const unsubscribeCalls = new Map<string, number>();
 const confirmCalls = new Map<string, number>();
 const resendCalls = new Map<string, number>();
 
+function chartPageFor(req: IncomingMessage, date: string | null): ChartPage {
+  if (hasCookie(req, "e2e_chart_uncaptured", "1")) {
+    return TOP_CHART_PAGE_UNCAPTURED;
+  }
+  if (!date) return topChartPage();
+  return TOP_CHART_DATES.includes(date)
+    ? topChartPage(date)
+    : TOP_CHART_PAGE_EMPTY;
+}
+
+function chartAnswer(req: IncomingMessage): [number, unknown] {
+  const path = req.url ?? "/charts";
+  const query = new URL(path, "http://localhost").searchParams;
+  const store = query.get("store") ?? "";
+  const genre = query.get("genre") ?? "";
+  if (
+    !STORES.includes(store as Store) ||
+    !isChartGenre(store as Store, genre)
+  ) {
+    return [400, errorEnvelope(400, path)];
+  }
+  const page = chartPageFor(req, query.get("date"));
+  return [
+    200,
+    {
+      ...page,
+      chart: {
+        ...page.chart,
+        store,
+        genre,
+        country: query.get("country") ?? page.chart.country,
+        genreName: chartGenreName(store as Store, genre) ?? genre,
+      },
+    },
+  ];
+}
+
 const routes: Route[] = [
+  {
+    method: "GET",
+    pattern: /^\/charts$/,
+    handler: (_p, req, res) => json(res, ...chartAnswer(req)),
+  },
   {
     method: "GET",
     pattern: /^\/__unsubscribes\/([^/]+)$/,

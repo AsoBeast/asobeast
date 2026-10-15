@@ -10,6 +10,9 @@ import type {
   AppSummary,
   CategoryCollection,
   CategoryRankSeries,
+  ChartEntryItem,
+  ChartMover,
+  ChartPage,
   CategoryRankSeriesItem,
   CompetitorDiscovery,
   DailyBudget,
@@ -4669,4 +4672,106 @@ export const PROVISIONAL_AUDIT: AppAuditResult = {
       checks: 1,
     },
   ],
+};
+
+const TOP_CHART_ICON = (slug: string) =>
+  `https://is1-ssl.mzstatic.com/image/thumb/e2e-${slug}/100x100bb.png`;
+
+function chartRow(
+  position: number,
+  title: string,
+  previous: number | null,
+  overrides: Partial<ChartEntryItem> = {},
+): ChartEntryItem {
+  const slug = title.toLowerCase().replaceAll(" ", "-");
+  const delta = previous === null ? null : position - previous;
+  return {
+    position,
+    storeAppId: `chart-${slug}`,
+    title,
+    developer: `${title} Labs`,
+    iconUrl: position <= 2 ? TOP_CHART_ICON(slug) : null,
+    genreId: "6014",
+    genreName: "Games",
+    free: true,
+    previous,
+    delta,
+    movement:
+      delta === null ? "new" : delta < 0 ? "up" : delta > 0 ? "down" : "same",
+    ...overrides,
+  };
+}
+
+export const TOP_CHART_APPS: ChartEntryItem[] = [
+  chartRow(1, "Puzzle Quest", 3),
+  chartRow(2, "Tower Builder", 1),
+  chartRow(3, "Word Garden", 3),
+  chartRow(4, "Star Racer", null),
+  chartRow(5, "Card Castle", 9, { free: false }),
+  chartRow(6, "Ocean Match", 5),
+  chartRow(7, "Farm Story", null, { developer: null }),
+  chartRow(8, "Block Drop", 12),
+  chartRow(9, "Chess Club", 7, { developer: null, genreName: "Board" }),
+  chartRow(10, "Bubble Pop", 10),
+];
+
+export const TOP_CHART_DATES = [0, 1, 2, 4, 7].map(utcDaysAgo);
+
+const moverOf = (row: ChartEntryItem): ChartMover => ({
+  storeAppId: row.storeAppId,
+  title: row.title,
+  developer: row.developer,
+  iconUrl: row.iconUrl,
+  position: row.position,
+  previous: row.previous,
+  delta: row.delta,
+});
+
+const exitOf = (title: string, previous: number): ChartMover => ({
+  ...moverOf(chartRow(previous, title, previous)),
+  position: null,
+  delta: null,
+});
+
+const CHART_KEY = {
+  store: "APP_STORE",
+  country: "us",
+  collection: "free",
+  genre: "6014",
+  device: "iphone",
+} as const;
+
+export function topChartPage(date: string = TOP_CHART_DATES[0]): ChartPage {
+  const previous = TOP_CHART_DATES[TOP_CHART_DATES.indexOf(date) + 1];
+  return {
+    chart: { ...CHART_KEY, genreName: "Games" },
+    capture: { date, depth: 100, capturedAt: `${date}T03:10:00.000Z` },
+    comparison: previous
+      ? { date: previous, depth: 100, capturedAt: `${previous}T03:10:00.000Z` }
+      : null,
+    compare: "1d",
+    entries: TOP_CHART_APPS,
+    trending: {
+      climbers: [TOP_CHART_APPS[7], TOP_CHART_APPS[4]].map(moverOf),
+      fallers: [TOP_CHART_APPS[1], TOP_CHART_APPS[5]].map(moverOf),
+      entries: [TOP_CHART_APPS[3], TOP_CHART_APPS[6]].map(moverOf),
+      exits: [exitOf("Snake Run", 4), exitOf("Gem Rush", 8)],
+    },
+    dates: TOP_CHART_DATES,
+    followed: null,
+    apps: [],
+  };
+}
+
+export const TOP_CHART_PAGE_EMPTY: ChartPage = {
+  ...topChartPage(),
+  capture: null,
+  comparison: null,
+  entries: [],
+  trending: { climbers: [], fallers: [], entries: [], exits: [] },
+};
+
+export const TOP_CHART_PAGE_UNCAPTURED: ChartPage = {
+  ...TOP_CHART_PAGE_EMPTY,
+  dates: [],
 };
