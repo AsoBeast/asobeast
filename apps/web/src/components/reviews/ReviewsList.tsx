@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useDeferredValue, useState } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
 import { storefrontLanguage } from "@asobeast/shared";
@@ -94,7 +94,8 @@ function ReviewCards({
   const viewKey = JSON.stringify(view);
   const [expandedView, setExpandedView] = useState<string | null>(null);
   const [closed, setClosed] = useState<string | null>(null);
-  const expanded = expandedView === viewKey;
+  const searching = useDeferredValue(query.trim() !== "");
+  const expanded = expandedView === viewKey || searching;
   const { data } = useSuspenseQuery(
     reviewsOptions(
       id,

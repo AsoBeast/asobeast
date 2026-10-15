@@ -209,15 +209,26 @@ test("show all loads up to two hundred reviews", async ({ page }) => {
   await expect(page.getByText("Showing 50 of 60")).toBeHidden();
 });
 
-test("a search on a long list says it covers the loaded reviews", async ({
+test("a search loads every review the page can hold before it filters", async ({
   page,
 }) => {
-  await page.goto("/apps/app-long/reviews?q=number%201");
+  await page.goto("/apps/app-long/reviews");
+  await expect(page.getByRole("article")).toHaveCount(50);
 
-  await expect(
-    page.getByText("Search covers the 50 loaded of 60 reviews"),
-  ).toBeVisible();
-  await expect(page.getByText("Showing 50 of 60")).toBeHidden();
+  const [request] = await Promise.all([
+    page.waitForRequest((candidate) => {
+      const url = new URL(candidate.url());
+      return (
+        url.pathname === "/api/backend/apps/app-long/reviews" &&
+        url.searchParams.get("limit") === "200"
+      );
+    }),
+    page.getByRole("textbox", { name: "Search reviews" }).fill("number 5"),
+  ]);
+
+  expect(request).toBeTruthy();
+  await expect(page.getByRole("article")).toHaveCount(11);
+  await expect(page.getByText(/Search covers the/)).toBeHidden();
 });
 
 test("show more appears only for a review that runs past four lines", async ({

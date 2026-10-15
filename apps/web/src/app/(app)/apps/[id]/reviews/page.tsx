@@ -14,6 +14,7 @@ import {
   reviewThemesOptions,
 } from "@/lib/queries";
 import {
+  reviewQueryParser,
   reviewReplyStateParser,
   reviewScoreParser,
   reviewSinceParser,
@@ -22,6 +23,7 @@ import {
 } from "@/lib/search-params";
 import {
   countsFilters,
+  REVIEWS_SHOW_ALL_LIMIT,
   reviewFilters,
   themesFilters,
   type ReviewView,
@@ -38,6 +40,7 @@ export default async function ReviewsPage({
     since?: string | string[];
     replyState?: string | string[];
     sort?: string | string[];
+    q?: string | string[];
   }>;
 }) {
   const { id } = await params;
@@ -53,7 +56,17 @@ export default async function ReviewsPage({
   const queryClient = getQueryClient();
   await Promise.all([
     queryClient.prefetchQuery(reviewsOptions(id, {})),
-    queryClient.prefetchQuery(reviewsOptions(id, reviewFilters(view))),
+    queryClient.prefetchQuery(
+      reviewsOptions(
+        id,
+        reviewFilters(
+          view,
+          reviewQueryParser.parseServerSide(sp.q).trim()
+            ? REVIEWS_SHOW_ALL_LIMIT
+            : undefined,
+        ),
+      ),
+    ),
     queryClient.prefetchQuery(reviewsOptions(id, countsFilters(view))),
     queryClient.prefetchQuery(reviewThemesOptions(id, themesFilters(view))),
     queryClient.prefetchQuery(ratingsHistoryOptions(id, presetToRange("30d"))),

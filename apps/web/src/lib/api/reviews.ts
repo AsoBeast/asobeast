@@ -39,15 +39,20 @@ export function getReviews(
   return apiFetch<ReviewList>(withQuery(`/apps/${appId}/reviews`, params));
 }
 
-export type ReviewThemeFilters = Pick<ReviewFilters, "version" | "from">;
+export type ReviewThemeFilters = Pick<
+  ReviewFilters,
+  "score" | "version" | "from" | "replyState"
+>;
 
 export function getReviewThemes(
   appId: string,
-  { version, from }: ReviewThemeFilters = {},
+  { score, version, from, replyState }: ReviewThemeFilters = {},
 ): Promise<ReviewThemes> {
   const params = new URLSearchParams();
+  if (score !== undefined) params.set("score", String(score));
   if (version) params.set("version", version);
   if (from) params.set("from", from);
+  if (replyState) params.set("replyState", replyState);
   return apiFetch<ReviewThemes>(
     withQuery(`/apps/${appId}/reviews/themes`, params),
   );

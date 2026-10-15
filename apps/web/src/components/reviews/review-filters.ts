@@ -35,8 +35,8 @@ export function narrowsReviews({ score, version, since }: ReviewView): boolean {
 }
 
 export function themesFilters(view: ReviewView): ReviewThemeFilters {
-  const { version, from } = reviewFilters(view);
-  return { version, from };
+  const { score, version, from, replyState } = reviewFilters(view);
+  return { score, version, from, replyState };
 }
 
 export function countsFilters(view: ReviewView): ReviewFilters {

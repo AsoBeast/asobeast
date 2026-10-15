@@ -47,7 +47,7 @@ export function ReviewThemesStrip({
         <InfoTip
           label="About what people mention"
           title="What people mention"
-          summary={`Phrases repeated in the newest ${pluralize(data.reviews, "review")} that match the version and period. Phrases from reviews at ${pluralize(data.negativeScoreMax, "star")} or less come first. Pick one to search for it.`}
+          summary={`Phrases repeated in the newest ${pluralize(data.reviews, "review")} that match the filters. Phrases from reviews at ${pluralize(data.negativeScoreMax, "star")} or less come first. Pick one to search for it.`}
         >
           <a
             href={THEMES_GUIDE}
