@@ -30,8 +30,16 @@ const rank = (a: ReviewTheme, b: ReviewTheme) =>
 const countsOf = ({ negative, mentions }: ReviewTheme) =>
   `${negative}:${mentions}`;
 
-const contains = (outer: string, inner: string) =>
-  outer !== inner && ` ${outer} `.includes(` ${inner} `);
+function shorterPhrasesOf(phrase: string): string[] {
+  const tokens = phrase.split(' ');
+  const shorter: string[] = [];
+  for (let size = 1; size < tokens.length; size += 1) {
+    for (let start = 0; start + size <= tokens.length; start += 1) {
+      shorter.push(tokens.slice(start, start + size).join(' '));
+    }
+  }
+  return shorter;
+}
 
 function mentionsOf(
   reviews: readonly ThemeReview[],
@@ -52,16 +60,17 @@ function mentionsOf(
 }
 
 function withoutShadowed(themes: ReviewTheme[]): ReviewTheme[] {
-  const peers = new Map<string, ReviewTheme[]>();
+  const byPhrase = new Map(themes.map((theme) => [theme.phrase, theme]));
+  const shadowed = new Set<string>();
   for (const theme of themes) {
-    peers.set(countsOf(theme), [...(peers.get(countsOf(theme)) ?? []), theme]);
+    for (const phrase of shorterPhrasesOf(theme.phrase)) {
+      const shorter = byPhrase.get(phrase);
+      if (shorter && countsOf(shorter) === countsOf(theme)) {
+        shadowed.add(phrase);
+      }
+    }
   }
-  return themes.filter(
-    (theme) =>
-      !(peers.get(countsOf(theme)) ?? []).some((peer) =>
-        contains(peer.phrase, theme.phrase),
-      ),
-  );
+  return themes.filter((theme) => !shadowed.has(theme.phrase));
 }
 
 export function reviewThemes(
