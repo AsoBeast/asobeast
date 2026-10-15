@@ -83,6 +83,8 @@ import {
   getRecentChanges,
   getRunStatus,
   getStoreHealth,
+  getAiStatus,
+  getReviewReplyGuidelines,
   getReviews,
   getSerp,
   getSerpMovers,
@@ -183,6 +185,8 @@ export const appKeys = {
   changeImpact: (id: string, days: number, country: string) =>
     [...appKeys.detail(id), "changes", "impact", { days, country }] as const,
   reviewsRoot: (id: string) => [...appKeys.detail(id), "reviews"] as const,
+  replyGuidelines: (id: string) =>
+    [...appKeys.detail(id), "reply-guidelines"] as const,
   reviews: (id: string, filters: ReviewFilters) =>
     [...appKeys.detail(id), "reviews", filters] as const,
   ratingsHistory: (id: string, params: RangeParams) =>
@@ -768,6 +772,18 @@ export const reviewsOptions = (id: string, filters: ReviewFilters) =>
     queryKey: appKeys.reviews(id, filters),
     queryFn: () => getReviews(id, filters),
   });
+
+export const replyGuidelinesOptions = (id: string) =>
+  queryOptions({
+    queryKey: appKeys.replyGuidelines(id),
+    queryFn: () => getReviewReplyGuidelines(id),
+  });
+
+export const aiStatusOptions = queryOptions({
+  queryKey: ["ai", "status"] as const,
+  queryFn: getAiStatus,
+  staleTime: 5 * 60 * 1000,
+});
 
 export const REVIEWS_EXPORT_LIMIT = QUERY_BOUNDS.reviewsLimit.max;
 

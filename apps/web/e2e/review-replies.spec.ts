@@ -1,6 +1,13 @@
-import type { Page } from "@playwright/test";
+import type { BrowserContext, Page } from "@playwright/test";
+import type { ApiErrorEnvelope } from "@asobeast/shared";
 import { expect, test } from "./session.mts";
-import { APP_GP_DETAIL, APP_REPLIES_ID } from "./fixtures.mts";
+import {
+  APP_GP_DETAIL,
+  APP_REPLIES_ID,
+  REVIEW_REPLY_DRAFT,
+} from "./fixtures.mts";
+import { fulfillJson } from "./plan-helpers.mts";
+import { seedCookies } from "./routes.mts";
 
 const MOCK_API_URL = `http://localhost:${process.env.MOCK_API_PORT ?? 4100}`;
 const REPLIES_PAGE = `/apps/${APP_REPLIES_ID}/reviews`;
@@ -181,4 +188,147 @@ test("the existing play reply is shown read only above the composer", async ({
     ),
   ).toBeVisible();
   await expect(composer(page).getByRole("textbox")).toHaveValue("");
+});
+
+const enableAi = (
+  context: BrowserContext,
+  extra: Record<string, string> = {},
+) => seedCookies(context, { e2e_metadata_ai: "1", ...extra });
+
+const REFUSAL: ApiErrorEnvelope = {
+  statusCode: 429,
+  error: "Too Many Requests",
+  message: "The monthly AI allowance is spent.",
+  path: `/apps/${APP_REPLIES_ID}/reviews/rep-1/reply/draft`,
+  timestamp: "2026-10-17T10:00:00.000Z",
+  aiAllowance: {
+    plan: "indie",
+    limit: 200,
+    used: 200,
+    resetsAt: "2026-11-01T00:00:00.000Z",
+    upgradeTo: "ultimate",
+  },
+  retryAfterSeconds: 1_260_000,
+};
+
+test("the ai controls are hidden without a key", async ({ page }) => {
+  await page.goto("/apps/app-1/reviews?reply=rev-3");
+
+  await expect(composer(page).getByRole("textbox")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Draft with AI" })).toHaveCount(
+    0,
+  );
+  await expect(
+    page.getByRole("button", { name: "Reply guidelines" }),
+  ).toHaveCount(0);
+});
+
+test("drafting fills the textarea and keeps it", async ({ page, context }) => {
+  await enableAi(context);
+  await page.goto(`${REPLIES_PAGE}?reply=rep-1`);
+  const article = articleOf(page, "Love the focus timer");
+
+  await composer(page).getByRole("combobox", { name: "Tone" }).click();
+  await page.getByRole("option", { name: "Friendly" }).click();
+  await composer(page)
+    .getByRole("textbox", { name: "Instructions (optional)" })
+    .fill("Mention the new widgets");
+  const [request] = await Promise.all([
+    page.waitForRequest((candidate) =>
+      candidate.url().endsWith("/reviews/rep-1/reply/draft"),
+    ),
+    composer(page).getByRole("button", { name: "Draft with AI" }).click(),
+  ]);
+
+  expect(request.postDataJSON()).toEqual({
+    tone: "friendly",
+    instructions: "Mention the new widgets",
+  });
+  await expect(
+    composer(page).getByRole("textbox", { name: "Reply text" }),
+  ).toHaveValue(REVIEW_REPLY_DRAFT.text);
+  await expect(composer(page).getByText("Drafted in English")).toBeVisible();
+  await expect(article.getByText("Draft saved")).toBeVisible();
+  await expect(
+    composer(page).getByRole("button", { name: "Draft again" }),
+  ).toBeVisible();
+});
+
+test("a fitted draft says so", async ({ page, context }) => {
+  await enableAi(context, { e2e_reply_truncated: "1" });
+  await page.goto(`${GP_PAGE}?reply=gp-rev-2`);
+
+  await composer(page).getByRole("button", { name: "Draft with AI" }).click();
+
+  await expect(
+    composer(page).getByText(
+      "Shortened to fit Google Play's 350 characters; read it before you copy.",
+    ),
+  ).toBeVisible();
+});
+
+test("a refused draft shows the allowance toast", async ({ page, context }) => {
+  await enableAi(context);
+  await page.route("**/api/backend/apps/*/reviews/*/reply/draft", (route) =>
+    route.fulfill(fulfillJson(429, REFUSAL)),
+  );
+  await page.goto(`${REPLIES_PAGE}?reply=rep-1`);
+
+  await composer(page).getByRole("button", { name: "Draft with AI" }).click();
+
+  await expect(
+    page.getByText(
+      "This workspace has used the 200 AI calls its plan includes this month. Renews Nov 1, 2026.",
+    ),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "See plans" })).toBeVisible();
+  await expect(
+    composer(page).getByRole("textbox", { name: "Reply text" }),
+  ).toHaveValue("");
+});
+
+test("reply guidelines are saved and read back", async ({ page, context }) => {
+  await enableAi(context);
+  await page.goto(REPLIES_PAGE);
+  const text = "Sign as the Tomato team. Support: help@tomato.app";
+
+  await page.getByRole("button", { name: "Reply guidelines" }).click();
+  const dialog = page.getByRole("dialog", { name: "Reply guidelines" });
+  await expect(dialog).toHaveAccessibleDescription(/Every AI draft/);
+  await dialog.getByRole("textbox", { name: "Reply guidelines" }).fill(text);
+  await expect(dialog.getByText("49 / 1000")).toBeVisible();
+  const [request] = await Promise.all([
+    page.waitForRequest((candidate) => candidate.method() === "PUT"),
+    dialog.getByRole("button", { name: "Save" }).click(),
+  ]);
+
+  expect(request.postDataJSON()).toEqual({ guidelines: text });
+  await expect(page.getByText("Reply guidelines saved")).toBeVisible();
+  await expect(dialog).toBeHidden();
+
+  await page.getByRole("button", { name: "Reply guidelines" }).click();
+
+  await expect(
+    page
+      .getByRole("dialog", { name: "Reply guidelines" })
+      .getByRole("textbox", { name: "Reply guidelines" }),
+  ).toHaveValue(text);
+});
+
+test("two clicks spend one call", async ({ page, context }) => {
+  await enableAi(context);
+  const drafts: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().endsWith("/reply/draft")) drafts.push(request.url());
+  });
+  await page.goto(`${REPLIES_PAGE}?reply=rep-1`);
+
+  await composer(page)
+    .getByRole("button", { name: "Draft with AI" })
+    .dblclick();
+
+  await expect(
+    composer(page).getByRole("textbox", { name: "Reply text" }),
+  ).toHaveValue(REVIEW_REPLY_DRAFT.text);
+  expect(drafts).toHaveLength(1);
 });

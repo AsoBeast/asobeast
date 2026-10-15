@@ -34,6 +34,7 @@ import {
 import { reviewFilters, type ReviewView } from "./review-filters";
 import { matchesReviewQuery } from "./review-search";
 import { REPLY_STATE_OPTIONS } from "./reply-state";
+import { ReplyGuidelinesDialog } from "./ReplyGuidelinesDialog";
 
 const STAR_FILTERS = [5, 4, 3, 2, 1] as const;
 const ALL = "all";
@@ -196,6 +197,9 @@ export function ReviewsToolbar({
         </SelectContent>
       </Select>
       <SearchInput label="Search reviews" value={query} onSearch={onQuery} />
+      <Suspense fallback={null}>
+        <ReplyGuidelinesDialog id={id} />
+      </Suspense>
       <ExportReviewsButton id={id} view={view} query={query} />
     </div>
   );

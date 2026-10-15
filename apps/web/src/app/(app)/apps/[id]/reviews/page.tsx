@@ -6,7 +6,9 @@ import { ReviewsList } from "@/components/reviews/ReviewsList";
 import { getQueryClient } from "@/lib/get-query-client";
 import { presetToRange } from "@/lib/ranges";
 import {
+  aiStatusOptions,
   ratingsHistogramOptions,
+  replyGuidelinesOptions,
   ratingsHistoryOptions,
   reviewsOptions,
 } from "@/lib/queries";
@@ -50,7 +52,9 @@ export default async function ReviewsPage({
     queryClient.prefetchQuery(reviewsOptions(id, countsFilters(view))),
     queryClient.prefetchQuery(ratingsHistoryOptions(id, presetToRange("30d"))),
     queryClient.prefetchQuery(ratingsHistogramOptions(id)),
+    queryClient.prefetchQuery(aiStatusOptions),
   ]);
+  void queryClient.prefetchQuery(replyGuidelinesOptions(id));
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>

@@ -2,6 +2,9 @@ import type {
   RatingsHistogram,
   RatingsHistory,
   ReviewList,
+  ReviewReplyDraftRequest,
+  ReviewReplyDraftResult,
+  ReviewReplyGuidelines,
   ReviewReplyItem,
   ReviewReplyPatchRequest,
   ReviewReplyState,
@@ -50,6 +53,38 @@ export function deleteReviewReply(
   reviewId: string,
 ): Promise<void> {
   return apiFetch<void>(replyPath(appId, reviewId), { method: "DELETE" });
+}
+
+export function draftReviewReply(
+  appId: string,
+  reviewId: string,
+  body: ReviewReplyDraftRequest,
+): Promise<ReviewReplyDraftResult> {
+  return apiFetch<ReviewReplyDraftResult>(
+    `${replyPath(appId, reviewId)}/draft`,
+    {
+      method: "POST",
+      body: JSON.stringify(body),
+    },
+  );
+}
+
+export function getReviewReplyGuidelines(
+  appId: string,
+): Promise<ReviewReplyGuidelines> {
+  return apiFetch<ReviewReplyGuidelines>(
+    `/apps/${appId}/reviews/reply-guidelines`,
+  );
+}
+
+export function putReviewReplyGuidelines(
+  appId: string,
+  body: ReviewReplyGuidelines,
+): Promise<ReviewReplyGuidelines> {
+  return apiFetch<ReviewReplyGuidelines>(
+    `/apps/${appId}/reviews/reply-guidelines`,
+    { method: "PUT", body: JSON.stringify(body) },
+  );
 }
 
 export function getRatingsHistogram(appId: string): Promise<RatingsHistogram> {

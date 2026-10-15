@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { Copy, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -25,6 +25,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { storeLabel } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { DeveloperReply } from "./ReviewCard";
+import { ReplyDraftControls } from "./ReplyDraftControls";
+import { ReplyDraftControlsSkeleton } from "./skeletons";
 import { consoleHref, consoleLabel } from "./store-console";
 import { useReviewReply } from "./use-review-reply";
 
@@ -91,6 +93,15 @@ export function ReplyComposer({
           </p>
         </div>
       ) : null}
+      <Suspense fallback={<ReplyDraftControlsSkeleton />}>
+        <ReplyDraftControls
+          appId={appId}
+          review={review}
+          store={store}
+          busy={pending}
+          onDraft={setText}
+        />
+      </Suspense>
       <div className="flex flex-col gap-1">
         <Textarea
           aria-label="Reply text"
