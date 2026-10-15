@@ -90,6 +90,7 @@ import {
   type RankingParams,
   type ReviewFilters,
 } from "./api";
+import { keywordsPollInterval } from "./keyword-checks";
 import {
   hasPendingScreenshots,
   SCREENSHOT_POLL_MS,
@@ -502,6 +503,8 @@ export const keywordsOptions = (id: string, country?: string) =>
   queryOptions({
     queryKey: appKeys.keywords(id, country),
     queryFn: () => getKeywords(id, undefined, country),
+    refetchInterval: (query) =>
+      keywordsPollInterval(query.state.data, query.state.dataUpdateCount),
   });
 
 export const keywordCountriesOptions = (id: string) =>

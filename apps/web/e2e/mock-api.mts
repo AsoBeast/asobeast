@@ -16,6 +16,7 @@ import {
 import {
   ACTIONS,
   ACTION_SUMMARY,
+  APP_1_KEYWORDS,
   APP_1_MARKET_SUMMARIES,
   APP_AUDIT,
   AUDIT_HISTORY_POINTS,
@@ -166,6 +167,7 @@ import {
   isKeywordTag,
   KEYWORD_FIELD_CHAR_LIMIT,
   KEYWORD_TAGS_MAX,
+  RANK_DEPTH,
   normalizeKeywordNote,
   normalizeKeywordTags,
   keywordFieldChars,
@@ -1706,6 +1708,40 @@ const insightsHold = (token: string) => holdFor(insightsHolds, token);
 const activityHolds: Holds = new Map();
 const activityHold = (token: string) => holdFor(activityHolds, token);
 
+const firstCheckCalls = new Map<string, number>();
+
+function firstCheckRows(req: IncomingMessage): TrackedKeywordItem[] {
+  const token = cookieValue(req, "e2e_first_check");
+  if (token === undefined) return [];
+  const calls = firstCheckCalls.get(token) ?? 0;
+  firstCheckCalls.set(token, calls + 1);
+  const checked = calls > 0;
+  const unchecked = {
+    latestPosition: null,
+    latestDepth: null,
+    previousPosition: null,
+    positionDelta1d: null,
+    positionDelta7d: null,
+    serpVolatility7d: null,
+  };
+  return [
+    {
+      ...APP_1_KEYWORDS[0],
+      ...unchecked,
+      keywordId: "kw-fresh",
+      text: "fresh phrase",
+      ...(checked ? { latestPosition: 7, latestDepth: RANK_DEPTH } : {}),
+    },
+    {
+      ...APP_1_KEYWORDS[0],
+      ...unchecked,
+      keywordId: "kw-dormant",
+      text: "dormant phrase",
+      active: false,
+    },
+  ];
+}
+
 const unsubscribeCalls = new Map<string, number>();
 const confirmCalls = new Map<string, number>();
 const resendCalls = new Map<string, number>();
@@ -2599,7 +2635,10 @@ const routes: Route[] = [
         res,
         200,
         sortKeywords(
-          scoped.map((keyword) => annotated(id, keyword)),
+          [
+            ...scoped.map((keyword) => annotated(id, keyword)),
+            ...(id === "app-1" ? firstCheckRows(req) : []),
+          ],
           query.get("sort"),
         ),
       );
