@@ -1,7 +1,9 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const CHART_GRID =
-  "grid gap-6 @6xl/charts:grid-cols-[minmax(0,1fr)_20rem] [&>*]:min-w-0";
+  "grid gap-6 @4xl/charts:grid-cols-[minmax(0,1fr)_20rem] [&>*]:min-w-0";
+export const TRENDING_COLUMN =
+  "@4xl/charts:sticky @4xl/charts:top-20 @4xl/charts:self-start";
 
 const FILTERS = 7;
 const ROWS = 10;
@@ -57,7 +59,9 @@ export function TopChartsSkeleton() {
       </div>
       <div className={CHART_GRID}>
         <ChartTableSkeleton />
-        <TrendingPanelSkeleton />
+        <div className={TRENDING_COLUMN}>
+          <TrendingPanelSkeleton />
+        </div>
       </div>
     </div>
   );

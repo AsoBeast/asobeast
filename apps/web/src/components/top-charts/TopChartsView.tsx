@@ -14,7 +14,7 @@ import { chartKeyFrom, chartQueryFrom, shownChartKey } from "./chart-params";
 import { ChartTable } from "./ChartTable";
 import { FollowChartButton } from "./FollowChartButton";
 import { FollowedCharts } from "./FollowedCharts";
-import { CHART_GRID } from "./skeletons";
+import { CHART_GRID, TRENDING_COLUMN } from "./skeletons";
 import { TrendingPanel } from "./TrendingPanel";
 
 function ChartActions({ chart, page }: { chart: ChartKey; page: ChartPage }) {
@@ -84,7 +84,9 @@ export function TopChartsView() {
       {page.capture ? (
         <div aria-busy={shown !== query} className={CHART_GRID}>
           <ChartTable page={page} apps={candidates} />
-          <TrendingPanel page={page} />
+          <aside aria-label="Trending" className={TRENDING_COLUMN}>
+            <TrendingPanel page={page} />
+          </aside>
         </div>
       ) : (
         <ChartEmpty
