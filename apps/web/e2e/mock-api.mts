@@ -7,6 +7,17 @@ import { setTimeout as delay } from "node:timers/promises";
 import { planMockImport } from "./keyword-import.mts";
 import { summarizeActions } from "./actions-summary.mts";
 import {
+  discardReply,
+  draftReply,
+  findReview,
+  guidelinesOf,
+  listReviews,
+  patchReply,
+  ReplyRefusal,
+  resetReviewReplies,
+  setGuidelines,
+} from "./review-replies.mts";
+import {
   ACTION_ACTIVITY,
   EMPTY_ACTION_ACTIVITY,
   initialActionEvents,
@@ -66,6 +77,8 @@ import {
   MANY_PORTFOLIO_APPS,
   PENDING_PORTFOLIO_APP,
   INITIAL_APPS,
+  REVIEW_REPLY_DRAFT,
+  REVIEW_REPLY_DRAFT_PLAY,
   HOT_BUDGET,
   LAPSED_BUDGET,
   METRICS_SCRAPE,
@@ -111,6 +124,9 @@ import {
 } from "./portfolio-insights.mts";
 import type {
   AccountPlan,
+  ReviewReplyDraftRequest,
+  ReviewReplyGuidelines,
+  ReviewReplyPatchRequest,
   KeywordSuggestionStrategy,
   AddAppLocalizationRequest,
   AppLocalizationItem,
@@ -427,6 +443,12 @@ const ACCOUNT_PLAN: AccountPlan = {
 const BILLING_COOKIE = "e2e_billing";
 const METADATA_AI_COOKIE = "e2e_metadata_ai";
 const METADATA_AI_MODEL = "gpt-test";
+const REPLY_TRUNCATED_COOKIE = "e2e_reply_truncated";
+
+const aiStatusFor = (req: IncomingMessage) =>
+  hasCookie(req, METADATA_AI_COOKIE, "1")
+    ? { configured: true, model: METADATA_AI_MODEL }
+    : { configured: false, model: null };
 const BILLING_ACCOUNT_PLAN: AccountPlan = { ...ACCOUNT_PLAN, billing: true };
 const PLAN_COOKIE = "e2e_plan";
 
@@ -587,6 +609,20 @@ async function delayFromCookie(
 ): Promise<void> {
   const ms = Number(cookieValue(req, name));
   if (ms > 0) await delay(ms);
+}
+
+function replyAnswer(
+  res: ServerResponse,
+  path: string,
+  status: number,
+  answer: () => unknown,
+): void {
+  try {
+    json(res, status, answer());
+  } catch (error) {
+    if (!(error instanceof ReplyRefusal)) throw error;
+    json(res, 400, errorEnvelope(400, path, error.message));
+  }
 }
 
 function hasCookie(
@@ -3002,14 +3038,12 @@ const routes: Route[] = [
   {
     method: "GET",
     pattern: /^\/metadata\/assistant$/,
-    handler: (_p, req, res) =>
-      json(
-        res,
-        200,
-        hasCookie(req, METADATA_AI_COOKIE, "1")
-          ? { configured: true, model: METADATA_AI_MODEL }
-          : { configured: false, model: null },
-      ),
+    handler: (_p, req, res) => json(res, 200, aiStatusFor(req)),
+  },
+  {
+    method: "GET",
+    pattern: /^\/ai\/status$/,
+    handler: (_p, req, res) => json(res, 200, aiStatusFor(req)),
   },
   {
     method: "POST",
@@ -3611,18 +3645,95 @@ const routes: Route[] = [
       const dataset = DATASETS[id];
       if (!dataset) return json(res, 404, errorEnvelope(404, path));
       const query = new URL(path, "http://localhost").searchParams;
-      const score = query.get("score");
-      const version = query.get("version");
-      const filtered = dataset.reviews.reviews.filter(
-        (review) =>
-          (!score || review.score === Number(score)) &&
-          (!version || review.version === version),
-      );
-      json(res, 200, {
-        reviews: filtered,
-        total: filtered.length,
-        versions: dataset.reviews.versions,
+      json(res, 200, listReviews(id, dataset.reviews, query));
+    },
+  },
+  {
+    method: "GET",
+    pattern: /^\/apps\/([^/]+)\/reviews\/reply-guidelines$/,
+    handler: ([id], req, res) => {
+      if (!DATASETS[id]) {
+        return json(res, 404, errorEnvelope(404, req.url ?? "/"));
+      }
+      json(res, 200, { guidelines: guidelinesOf(id) });
+    },
+  },
+  {
+    method: "PUT",
+    pattern: /^\/apps\/([^/]+)\/reviews\/reply-guidelines$/,
+    handler: ([id], req, res) => {
+      withBody<ReviewReplyGuidelines>(req, res, (body) => {
+        const path = req.url ?? "/";
+        if (!DATASETS[id]) return json(res, 404, errorEnvelope(404, path));
+        replyAnswer(res, path, 200, () => ({
+          guidelines: setGuidelines(id, body.guidelines ?? ""),
+        }));
       });
+    },
+  },
+  {
+    method: "PATCH",
+    pattern: /^\/apps\/([^/]+)\/reviews\/([^/]+)\/reply$/,
+    handler: ([id, reviewId], req, res) => {
+      withBody<ReviewReplyPatchRequest>(req, res, (body) => {
+        const path = req.url ?? "/";
+        const dataset = DATASETS[id];
+        const review = dataset && findReview(id, dataset.reviews, reviewId);
+        if (!review) return json(res, 404, errorEnvelope(404, path));
+        replyAnswer(res, path, 200, () =>
+          patchReply(id, dataset.detail.store, review, body),
+        );
+      });
+    },
+  },
+  {
+    method: "DELETE",
+    pattern: /^\/apps\/([^/]+)\/reviews\/([^/]+)\/reply$/,
+    handler: ([id, reviewId], req, res) => {
+      if (!DATASETS[id]) {
+        return json(res, 404, errorEnvelope(404, req.url ?? "/"));
+      }
+      discardReply(id, reviewId);
+      res.writeHead(204).end();
+    },
+  },
+  {
+    method: "POST",
+    pattern: /^\/apps\/([^/]+)\/reviews\/([^/]+)\/reply\/draft$/,
+    handler: ([id, reviewId], req, res) => {
+      withBody<ReviewReplyDraftRequest>(req, res, (body) => {
+        const path = req.url ?? "/";
+        if (!hasCookie(req, METADATA_AI_COOKIE, "1")) {
+          return json(
+            res,
+            409,
+            errorEnvelope(409, path, "AI features require OPENAI_API_KEY"),
+          );
+        }
+        const dataset = DATASETS[id];
+        const review = dataset && findReview(id, dataset.reviews, reviewId);
+        if (!review) return json(res, 404, errorEnvelope(404, path));
+        const draft =
+          dataset.detail.store === "GOOGLE_PLAY"
+            ? REVIEW_REPLY_DRAFT_PLAY
+            : REVIEW_REPLY_DRAFT;
+        json(
+          res,
+          201,
+          draftReply(id, review, body, draft, {
+            model: METADATA_AI_MODEL,
+            truncated: hasCookie(req, REPLY_TRUNCATED_COOKIE, "1"),
+          }),
+        );
+      });
+    },
+  },
+  {
+    method: "POST",
+    pattern: /^\/__reset\/review-replies\/([^/]+)$/,
+    handler: ([id], _req, res) => {
+      resetReviewReplies(id);
+      json(res, 200, { reset: true });
     },
   },
   {
