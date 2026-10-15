@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
-import { APP_1_SUMMARY, IMPORTED_APP } from "./fixtures.mts";
+import { APP_1_SUMMARY, IMPORTED_APP, STORE_SEARCH } from "./fixtures.mts";
 import { startedSetup, storedSetup } from "./setup-session.mts";
 
 const utcDateFormatter = new Intl.DateTimeFormat("en-US", {
@@ -18,7 +18,7 @@ test("importing an app posts to the api and shows the new app", async ({
   await page.getByRole("button", { name: "Import app" }).focus();
   await page.keyboard.press("Enter");
   await page
-    .getByLabel("Store URL")
+    .getByLabel("App name or store URL")
     .fill("https://apps.apple.com/us/app/focus-timer/id123456789");
   await page.getByRole("button", { name: "Import", exact: true }).focus();
   await page.keyboard.press("Enter");
@@ -45,7 +45,7 @@ for (const input of [
     await page.goto("/");
 
     await page.getByRole("button", { name: "Import app" }).click();
-    await page.getByLabel("Store URL").fill(input);
+    await page.getByLabel("App name or store URL").fill(input);
     await page.getByRole("button", { name: "Import", exact: true }).click();
 
     await expect(page.getByText(`Imported ${IMPORTED_APP.name}`)).toBeVisible();
@@ -68,7 +68,7 @@ test("the import dialog refuses an apple page that is not a listing", async ({
   await page.goto("/");
 
   await page.getByRole("button", { name: "Import app" }).click();
-  await page.getByLabel("Store URL").fill(developerPage);
+  await page.getByLabel("App name or store URL").fill(developerPage);
   await page.getByRole("button", { name: "Import", exact: true }).click();
 
   await expect(
@@ -94,7 +94,7 @@ test.describe("a fast double click", () => {
 
     await page.getByRole("button", { name: "Import app" }).click();
     await page
-      .getByLabel("Store URL")
+      .getByLabel("App name or store URL")
       .fill("https://apps.apple.com/us/app/focus-timer/id123456789");
     await page.getByRole("button", { name: "Import", exact: true }).dblclick();
 
@@ -120,7 +120,7 @@ test.describe("a fast double click", () => {
     const startImport = async () => {
       await page.getByRole("button", { name: "Import app" }).click();
       await page
-        .getByLabel("Store URL")
+        .getByLabel("App name or store URL")
         .fill("https://apps.apple.com/us/app/focus-timer/id123456789");
       await page.getByRole("button", { name: "Import", exact: true }).click();
     };
@@ -159,10 +159,233 @@ test.describe("a fast double click", () => {
   });
 });
 
+test.describe("importing by name", () => {
+  const recordSearches = (page: Page) => {
+    const searches: URL[] = [];
+    page.on("request", (request) => {
+      const url = new URL(request.url());
+      if (url.pathname.endsWith("/api/backend/store/search")) {
+        searches.push(url);
+      }
+    });
+    return searches;
+  };
+
+  const recordImports = (page: Page) => {
+    const bodies: unknown[] = [];
+    page.on("request", (request) => {
+      if (
+        request.method() === "POST" &&
+        request.url().endsWith("/api/backend/apps")
+      ) {
+        bodies.push(request.postDataJSON());
+      }
+    });
+    return bodies;
+  };
+
+  const openDialog = async (page: Page) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Import app" }).click();
+    return page.getByRole("dialog", { name: "Import an app" });
+  };
+
+  test("a name search lists results and imports the picked one", async ({
+    page,
+  }) => {
+    const imports = recordImports(page);
+    const dialog = await openDialog(page);
+
+    await dialog.getByLabel("App name or store URL").fill("focus");
+
+    const results = dialog.getByRole("list", {
+      name: "Results from App Store in United States",
+    });
+    const focusTimer = results.getByRole("button", { name: /Focus Timer/ });
+    await expect(focusTimer).toContainText("Acme");
+    await expect(focusTimer).toContainText("4.6 · 1,200 ratings");
+    await expect(focusTimer.locator("img")).toHaveCount(1);
+    await expect(results.getByRole("button")).toHaveText([
+      /Focus Timer/,
+      /Focus Keeper/,
+      /Focused Study/,
+    ]);
+
+    await focusTimer.click();
+
+    await expect(page.getByText(`Imported ${IMPORTED_APP.name}`)).toBeVisible();
+    await expect(page).toHaveURL("/apps/app-new/setup");
+    expect(imports).toEqual([{ url: "123456789", country: "us" }]);
+  });
+
+  test("a name search follows the store tabs and the storefront", async ({
+    page,
+  }) => {
+    const searches = recordSearches(page);
+    const dialog = await openDialog(page);
+
+    await dialog.getByRole("tab", { name: "Google Play" }).click();
+    await dialog.getByRole("combobox", { name: "Home storefront" }).click();
+    await page.getByRole("option", { name: "DE · Germany" }).click();
+    await dialog.getByLabel("App name or store URL").fill("fok");
+
+    const results = dialog.getByRole("list", {
+      name: "Results from Google Play in Germany",
+    });
+    await expect(results.getByRole("button")).toHaveCount(
+      STORE_SEARCH.GOOGLE_PLAY.length,
+    );
+    const last = searches.at(-1);
+    expect(last?.searchParams.get("store")).toBe("GOOGLE_PLAY");
+    expect(last?.searchParams.get("country")).toBe("de");
+    expect(last?.searchParams.get("q")).toBe("fok");
+  });
+
+  test("a spent allowance is shown in place of results", async ({ page }) => {
+    await page.context().addCookies([
+      {
+        name: "e2e_store_search_spent",
+        value: "1",
+        url: "http://localhost:3000",
+      },
+    ]);
+    const dialog = await openDialog(page);
+
+    await dialog.getByLabel("App name or store URL").fill("focus");
+
+    await expect(dialog.getByRole("alert")).toHaveText(
+      /Store lookup limit reached/,
+    );
+    await expect(dialog.getByRole("button", { name: "Retry" })).toBeVisible();
+  });
+
+  test("a store that does not answer says so", async ({ page }) => {
+    await page.context().addCookies([
+      {
+        name: "e2e_store_search_fail",
+        value: "1",
+        url: "http://localhost:3000",
+      },
+    ]);
+    const dialog = await openDialog(page);
+
+    await dialog.getByLabel("App name or store URL").fill("focus");
+
+    await expect(dialog.getByRole("alert")).toHaveText(
+      "The store did not answer. Try again in a moment.",
+    );
+  });
+
+  test("a name the store does not know says so", async ({ page }) => {
+    const dialog = await openDialog(page);
+
+    await dialog.getByLabel("App name or store URL").fill("zzz");
+
+    await expect(
+      dialog.getByText("No listing named “zzz” in United States."),
+    ).toBeVisible();
+  });
+
+  test("typing a url never searches", async ({ page }) => {
+    const searches = recordSearches(page);
+    const dialog = await openDialog(page);
+
+    await dialog
+      .getByLabel("App name or store URL")
+      .fill("https://apps.apple.com/us/app/focus-timer/id123456789");
+    await dialog.getByRole("button", { name: "Import", exact: true }).click();
+
+    await expect(page.getByText(`Imported ${IMPORTED_APP.name}`)).toBeVisible();
+    expect(searches).toEqual([]);
+  });
+
+  test("enter imports the only result", async ({ page }) => {
+    const imports = recordImports(page);
+    const dialog = await openDialog(page);
+
+    const field = dialog.getByLabel("App name or store URL");
+    await field.fill("focused");
+    await expect(
+      dialog.getByRole("button", { name: /Focused Study/ }),
+    ).toBeVisible();
+    await field.press("Enter");
+
+    await expect(page.getByText(`Imported ${IMPORTED_APP.name}`)).toBeVisible();
+    expect(imports).toEqual([{ url: "555000333", country: "us" }]);
+  });
+
+  test("a name that starts with a digit keeps the chosen store and storefront", async ({
+    page,
+  }) => {
+    const dialog = await openDialog(page);
+
+    await dialog.getByRole("tab", { name: "Google Play" }).click();
+    await dialog.getByRole("combobox", { name: "Home storefront" }).click();
+    await page.getByRole("option", { name: "DE · Germany" }).click();
+    await dialog
+      .getByLabel("App name or store URL")
+      .pressSequentially("2 Player");
+
+    await expect(
+      dialog.getByText("No listing named “2 Player” in Germany."),
+    ).toBeVisible();
+    await expect(
+      dialog.getByRole("tab", { name: "Google Play" }),
+    ).toHaveAttribute("aria-selected", "true");
+  });
+
+  test("a name with a colon or a slash is searched rather than refused", async ({
+    page,
+  }) => {
+    const searches = recordSearches(page);
+    const dialog = await openDialog(page);
+
+    await dialog.getByLabel("App name or store URL").fill("Focus: Deep/Work");
+
+    await expect(
+      dialog.getByText("No listing named “Focus: Deep/Work” in United States."),
+    ).toBeVisible();
+    expect(searches.at(-1)?.searchParams.get("q")).toBe("Focus: Deep/Work");
+  });
+
+  test("enter on a one letter name asks for more", async ({ page }) => {
+    const imports = recordImports(page);
+    const dialog = await openDialog(page);
+
+    const field = dialog.getByLabel("App name or store URL");
+    await field.fill("f");
+    await field.press("Enter");
+
+    await expect(
+      dialog.getByText("Type at least 2 characters to search."),
+    ).toBeVisible();
+    expect(imports).toEqual([]);
+  });
+
+  test("enter moves to the results when there is a choice", async ({
+    page,
+  }) => {
+    const imports = recordImports(page);
+    const dialog = await openDialog(page);
+
+    const field = dialog.getByLabel("App name or store URL");
+    await field.fill("focus");
+    await expect(
+      dialog.getByRole("button", { name: /Focus Keeper/ }),
+    ).toBeVisible();
+    await field.press("Enter");
+
+    await expect(
+      dialog.getByRole("button", { name: /Focus Timer/ }),
+    ).toBeFocused();
+    expect(imports).toEqual([]);
+  });
+});
+
 const importFocusTimer = async (page: Page) => {
   await page.getByRole("button", { name: "Import app" }).click();
   await page
-    .getByLabel("Store URL")
+    .getByLabel("App name or store URL")
     .fill("https://apps.apple.com/us/app/focus-timer/id123456789");
   await page.getByRole("button", { name: "Import", exact: true }).click();
 };
@@ -207,7 +430,7 @@ test("a first import replaces the first run screen without a reload", async ({
 
   await page.getByRole("button", { name: "Import app" }).click();
   await page
-    .getByLabel("Store URL")
+    .getByLabel("App name or store URL")
     .fill("https://apps.apple.com/us/app/focus-timer/id123456789");
   await page.getByRole("button", { name: "Import", exact: true }).click();
 

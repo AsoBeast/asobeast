@@ -30,6 +30,9 @@ import type {
   CompetitorItem,
   HealthStatus,
   StoreHealthReport,
+  StoreSearchResult,
+  CompetitorSuggestion,
+  SimilarLookupState,
   WorkspaceRunStatus,
   PortfolioSummary,
   RankDistributionHistory,
@@ -883,6 +886,114 @@ export const APP_2_DETAIL: AppDetail = {
   competitors: [],
   group: null,
 };
+
+export const STORE_SEARCH_ICON_URL =
+  "https://is1-ssl.mzstatic.com/image/thumb/e2e-focus-timer/512x512bb.png";
+
+export const STORE_SEARCH: Record<
+  "APP_STORE" | "GOOGLE_PLAY",
+  StoreSearchResult[]
+> = {
+  APP_STORE: [
+    {
+      storeAppId: "123456789",
+      title: "Focus Timer",
+      developer: "Acme",
+      ratingAvg: 4.6,
+      ratingCount: 1200,
+      iconUrl: STORE_SEARCH_ICON_URL,
+    },
+    {
+      storeAppId: "987654321",
+      title: "Focus Keeper",
+      developer: "Keeper Labs",
+      ratingAvg: 4.4,
+      ratingCount: 830,
+      iconUrl: null,
+    },
+    {
+      storeAppId: "555000333",
+      title: "Focused Study",
+      developer: null,
+      ratingAvg: null,
+      ratingCount: null,
+      iconUrl: null,
+    },
+  ],
+  GOOGLE_PLAY: [
+    {
+      storeAppId: "com.fokus.timer",
+      title: "Fokus Timer",
+      developer: "Fokus GmbH",
+      ratingAvg: 4.3,
+      ratingCount: 5400,
+      iconUrl: null,
+    },
+    {
+      storeAppId: "com.fokus.lernen",
+      title: "Fokus Lernen",
+      developer: "Lernwerk",
+      ratingAvg: 4.1,
+      ratingCount: 900,
+      iconUrl: null,
+    },
+  ],
+};
+
+export const SIMILAR_ICON_URL =
+  "https://is1-ssl.mzstatic.com/image/thumb/e2e-deep-focus-pro/512x512bb.png";
+
+export const SIMILAR_APPS: Record<
+  string,
+  { similar: SimilarLookupState; items: CompetitorSuggestion[] }
+> = {
+  "app-1": {
+    similar: "ok",
+    items: [
+      {
+        storeAppId: "555000444",
+        title: "Deep Focus Pro",
+        developer: "Calm Works",
+        iconUrl: SIMILAR_ICON_URL,
+        source: "similar",
+        appearances: null,
+        bestPosition: null,
+      },
+      {
+        storeAppId: "555000555",
+        title: "Study Bunny",
+        developer: null,
+        iconUrl: null,
+        source: "similar",
+        appearances: null,
+        bestPosition: null,
+      },
+    ],
+  },
+  "app-new": { similar: "unavailable", items: [] },
+};
+
+export const STORE_LOOKUP_LIMIT = 60;
+
+export function storeLookupRefusedEnvelope(path: string): ApiErrorEnvelope {
+  return {
+    statusCode: 429,
+    error: "Too Many Requests",
+    message: `Store lookup limit reached: the indie plan allows ${STORE_LOOKUP_LIMIT} requests per hour. Wait ${RATE_LIMIT_RESET_SECONDS} seconds before the next one, because retrying before then will fail.`,
+    path,
+    timestamp: new Date().toISOString(),
+    rateLimit: {
+      window: "hour",
+      rateClass: "store",
+      plan: "indie",
+      limit: STORE_LOOKUP_LIMIT,
+      resetSeconds: RATE_LIMIT_RESET_SECONDS,
+      upgradeTo: "ultimate",
+      action: "storeLookup",
+    },
+    retryAfterSeconds: RATE_LIMIT_RESET_SECONDS,
+  };
+}
 
 export const APP_2_ICON_URL =
   "https://is1-ssl.mzstatic.com/image/thumb/e2e-habit-tracker/512x512bb.png";

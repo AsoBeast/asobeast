@@ -1,7 +1,5 @@
 "use client";
 
-import { useState } from "react";
-import type { FormEvent } from "react";
 import {
   useMutation,
   useQueryClient,
@@ -9,11 +7,8 @@ import {
 } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { EmailAlertItem, WebhookEvent } from "@asobeast/shared";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   ApiError,
-  createEmailAlert,
   deleteEmailAlert,
   resendEmailAlertConfirmation,
   testEmailAlert,
@@ -25,15 +20,15 @@ import {
   invalidateEmailAlertMutation,
   seedEmailAlert,
 } from "@/lib/queries";
-import { EventSelection } from "./alert-events";
+import { awaitsConfirmation, recipientToast } from "./email-alert-recipient";
 import {
   AlertChannelCard,
   AlertChannelEmpty,
   AlertChannelList,
 } from "./alert-channel/AlertChannelCard";
-import { AlertChannelDialog } from "./alert-channel/AlertChannelDialog";
+import { AddEmailAlertDialog } from "./AddEmailAlertDialog";
 import { AlertChannelRow } from "./alert-channel/AlertChannelRow";
-import { useSharedFlight, useSingleFlight } from "@/lib/single-flight";
+import { useSharedFlight } from "@/lib/single-flight";
 
 const SMTP_VARS = [
   "SMTP_HOST",
@@ -43,95 +38,6 @@ const SMTP_VARS = [
   "SMTP_PASSWORD",
   "SMTP_FROM",
 ];
-
-function awaitsConfirmation(alert: EmailAlertItem): boolean {
-  return alert.confirmed === false;
-}
-
-function recipientToast(alert: EmailAlertItem) {
-  return { id: `email-alert-${alert.id}` };
-}
-
-function AddEmailAlertDialog() {
-  const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
-  const [email, setEmail] = useState("");
-  const [events, setEvents] = useState<WebhookEvent[]>(["metadata.changed"]);
-  const [error, setError] = useState<string | null>(null);
-
-  const mutation = useMutation({
-    mutationFn: () => createEmailAlert({ email, events }),
-    onSuccess: (saved) => {
-      invalidateEmailAlertMutation(queryClient);
-      if (saved.confirmationSent === false) {
-        toast.warning(
-          `Email alert added. The confirmation email to ${saved.email} could not be sent, so use Resend confirmation to try again.`,
-          recipientToast(saved),
-        );
-      } else {
-        toast.success(
-          awaitsConfirmation(saved)
-            ? `Confirmation email sent to ${saved.email}`
-            : "Email alert added",
-          recipientToast(saved),
-        );
-      }
-      setOpen(false);
-      setEmail("");
-      setEvents(["metadata.changed"]);
-    },
-    onError: (err) => {
-      setError(
-        err instanceof ApiError
-          ? err.envelope.message
-          : "Could not add email alert",
-      );
-    },
-  });
-  const createOnce = useSingleFlight(mutation);
-
-  function submit(formEvent: FormEvent<HTMLFormElement>) {
-    formEvent.preventDefault();
-    setError(null);
-
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError("Enter a valid email address");
-      return;
-    }
-    if (events.length === 0) {
-      setError("Select at least one event");
-      return;
-    }
-
-    createOnce();
-  }
-
-  return (
-    <AlertChannelDialog
-      open={open}
-      onOpenChange={setOpen}
-      label="Add email alert"
-      description="AsoBeast emails this recipient when a subscribed event fires, using your configured SMTP server. Unless it is the verified account email of a member of this workspace, the recipient confirms the address from the link in a first email."
-      error={error}
-      pending={mutation.isPending}
-      onSubmit={submit}
-    >
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="email-alert-address">Recipient email</Label>
-        <Input
-          id="email-alert-address"
-          type="email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          placeholder="alerts@example.com"
-          aria-invalid={error !== null}
-        />
-      </div>
-
-      <EventSelection value={events} onChange={setEvents} />
-    </AlertChannelDialog>
-  );
-}
 
 function EmailAlertRow({ alert }: { alert: EmailAlertItem }) {
   const queryClient = useQueryClient();

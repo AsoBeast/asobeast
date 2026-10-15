@@ -1,13 +1,13 @@
 ---
 title: MCP tool reference
 sidebarTitle: Tools
-description: "31 read only tools covering apps, keywords, competitors, rankings, SERPs, audits, reviews, analytics and the Action Center, plus 5 opt in tools that change keywords, competitors and actions."
+description: "32 read only tools covering apps, keywords, competitors, rankings, SERPs, audits, reviews, analytics and the Action Center, plus 5 opt in tools that change keywords, competitors and actions."
 icon: wrench
 keywords: ["MCP tools","list_apps","ranking_history","serp_movers","app_audit","actions_summary","track_keywords","set_action_status","read only","write tools"]
 mode: wide
 ---
 
-This page is generated from the tool catalog both transports share, so it cannot drift. 31 tools read and nothing else: each is a `GET` annotated `readOnlyHint: true`. 5 more tools change things and are listed only to a token with the write scope. Almost all of them take an `appId`, which you get from `list_apps`.
+This page is generated from the tool catalog both transports share, so it cannot drift. 32 tools read and nothing else: each is a `GET` annotated `readOnlyHint: true`. 5 more tools change things and are listed only to a token with the write scope. Almost all of them take an `appId`, which you get from `list_apps`.
 
 ## Apps
 
@@ -42,6 +42,7 @@ Every parameter is validated by the tool before a request leaves, against the sa
 | --- | --- | --- | --- |
 | `list_competitors` | List competitors | The competitor apps tracked against one app, oldest first, each with its id, store, name, icon and the summary of its latest snapshot | `appId` (required) |
 | `competitor_analysis` | Competitor analysis | Positioning against the competitors of one app: a metadata comparison (title and subtitle with their character counts), three keyword gap lists (theyRankYouDont, youRankTheyDont and outranked, each row with volume, difficulty, opportunity and both positions), and a position map of visibility and rating per app | `appId` (required) |
+| `competitor_suggestions` | Suggest competitors | Apps worth tracking as competitors of one app: the untracked apps that recur in its own keyword results over the last 30 days, with how often and how high they rank, then the apps the store lists as similar, minus the app and its tracked competitors, at most ten, each with its source (serp or similar) | `appId` (required) |
 
 Competitors belong to one primary app, so pass the primary app's id. `keyword_comparison`, listed under Keywords, puts the positions of the app and each competitor side by side, and `onlyGaps` narrows it to the keywords where a competitor leads.
 

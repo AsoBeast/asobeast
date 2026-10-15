@@ -6,6 +6,7 @@ import { PrintReportButton } from "@/components/app-detail/PrintReportButton";
 import { MarketSwitcherSkeleton } from "@/components/app-detail/skeletons";
 import { TOP_ACTION_LIMIT } from "@/lib/action-filters";
 import { ActionsSummaryCardSkeleton } from "@/components/actions/skeletons";
+import { AlertsNudge } from "@/components/onboarding/AlertsNudge";
 import { FirstRunTimeline } from "@/components/onboarding/FirstRunTimeline";
 import { CategoryRankCard } from "@/components/overview/CategoryRankCard";
 import { CoverageCard } from "@/components/overview/CoverageCard";
@@ -96,6 +97,8 @@ export default async function AppOverviewPage({
         </Suspense>
 
         <FirstRunTimeline id={id} />
+
+        <AlertsNudge id={id} />
 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Suspense fallback={<Skeleton className="h-12 w-full max-w-md" />}>

@@ -351,6 +351,34 @@ describe('AppStoreProvider', () => {
     expect(similar).toHaveBeenCalledWith({ id: 1, country: 'us' });
   });
 
+  it('keeps the icon of a search result when the store sends one', async () => {
+    const icon = 'https://is1-ssl.mzstatic.com/image/thumb/a/512x512bb.jpg';
+    const search = jest.fn().mockResolvedValue([
+      { id: 1, title: 'With icon', icon },
+      { id: 2, title: 'Without icon' },
+    ]);
+    const provider = new AppStoreProvider(makeLib({ search }));
+
+    const [withIcon, withoutIcon] = await provider.search('focus', 'us', 2);
+
+    expect(withIcon.iconUrl).toBe(icon);
+    expect(withoutIcon.iconUrl).toBeUndefined();
+  });
+
+  it('keeps the icon of a similar app', async () => {
+    const icon = 'https://is1-ssl.mzstatic.com/image/thumb/b/512x512bb.jpg';
+    const similar = jest.fn().mockResolvedValue([
+      { id: 7, title: 'Similar', icon },
+      { id: 8, title: 'Plain' },
+    ]);
+    const provider = new AppStoreProvider(makeLib({ similar }));
+
+    const [withIcon, withoutIcon] = await provider.similar('1', 'us');
+
+    expect(withIcon.iconUrl).toBe(icon);
+    expect(withoutIcon.iconUrl).toBeUndefined();
+  });
+
   it('maps the collection union, passes the genre, and preserves order', async () => {
     const list = jest.fn().mockResolvedValue([
       { id: 111, appId: 'com.a', title: 'First' },

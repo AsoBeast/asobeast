@@ -44,6 +44,7 @@ describe('rateLimitMessage', () => {
     ['spider', 'Deep search'],
     ['importApp', 'Import app'],
     ['addCompetitor', 'Add competitor'],
+    ['storeLookup', 'Store lookup'],
   ] as const)('labels the %s action %s', (action, label) => {
     const message = rateLimitMessage({
       ...DETAIL,

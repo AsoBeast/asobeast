@@ -317,7 +317,7 @@ test("a skipped step turns done once its target is reached", async ({
   await competitors.getByRole("button", { name: "Skip this step" }).click();
   await expect(competitors.getByText("Skipped", { exact: true })).toBeVisible();
   await competitors
-    .getByLabel("Competitor App Store URL")
+    .getByLabel("Competitor name or App Store URL")
     .fill("https://apps.apple.com/us/app/rival/id555000998");
   await competitors.getByRole("button", { name: "Add competitor" }).click();
 
@@ -396,7 +396,7 @@ test.describe("picking competitors inside the step", () => {
     const competitors = stepCard(page, "Pick competitors");
     await expect(competitors.getByText("No competitor yet")).toBeVisible();
     await competitors
-      .getByLabel("Competitor App Store URL")
+      .getByLabel("Competitor name or App Store URL")
       .fill("https://apps.apple.com/us/app/rival/id555000999");
     await competitors.getByRole("button", { name: "Add competitor" }).click();
 
@@ -406,29 +406,102 @@ test.describe("picking competitors inside the step", () => {
     await expect(page).toHaveURL("/apps/app-2/setup");
   });
 
-  test("a discovered app can be tracked from the step", async ({
+  test("suggested competitors are added together", async ({
     page,
     request,
   }) => {
     await resetCompetitors(request, "app-1");
     await startSetup(page, "app-1");
 
-    const discovered = page.getByRole("list", {
-      name: "Apps ranking for your keywords",
+    const competitors = stepCard(page, "Pick competitors");
+    const suggested = competitors.getByRole("list", {
+      name: "Suggested competitors",
     });
-    const row = discovered
+    const deepWork = suggested
       .getByRole("listitem")
       .filter({ hasText: "Deep Work Sessions" });
-    await row.getByRole("button", { name: "Track" }).click();
+    const deepFocus = suggested
+      .getByRole("listitem")
+      .filter({ hasText: "Deep Focus Pro" });
+    await expect(deepWork).toContainText("14 appearances · best #2");
+    await expect(deepFocus).toContainText("Similar on the App Store");
+    await expect(deepFocus.locator("img")).toHaveCount(1);
+
+    await deepWork.getByRole("checkbox").check();
+    await deepFocus.getByRole("checkbox").check();
+    await competitors.getByRole("button", { name: "Add 2 selected" }).click();
 
     await expect(
-      page.getByText("Now tracking Deep Work Sessions"),
+      competitors.getByText(
+        "3 tracked: Rival Focus, Deep Work Sessions, and Deep Focus Pro",
+      ),
     ).toBeVisible();
+    await expect(competitors.getByText("Done", { exact: true })).toBeVisible();
+    await expect(deepWork.getByRole("status")).toHaveText("Added");
+    await expect(deepFocus.getByRole("status")).toHaveText("Added");
+    await expect(deepWork.getByRole("checkbox")).toBeDisabled();
     await expect(
-      page.getByText("2 tracked: Rival Focus and Deep Work Sessions"),
-    ).toBeVisible();
+      competitors.getByRole("button", { name: "Add selected" }),
+    ).toBeDisabled();
+  });
+
+  test("a failed suggestion load offers a retry", async ({ page, request }) => {
+    await resetCompetitors(request, "app-1");
+    await page.context().addCookies([
+      {
+        name: "e2e_suggestions_fail",
+        value: "1",
+        url: "http://localhost:3000",
+      },
+    ]);
+    await startSetup(page, "app-1");
+
+    const competitors = stepCard(page, "Pick competitors");
+    await expect(competitors.getByRole("alert")).toBeVisible();
+
+    await page.context().clearCookies({ name: "e2e_suggestions_fail" });
+    await competitors.getByRole("button", { name: "Retry" }).click();
+
     await expect(
-      stepCard(page, "Pick competitors").getByText("Done", { exact: true }),
+      competitors.getByRole("list", { name: "Suggested competitors" }),
+    ).toContainText("Deep Work Sessions");
+  });
+
+  test("an unavailable similar lookup still shows the keyword result apps", async ({
+    page,
+    request,
+  }) => {
+    await resetCompetitors(request, "app-1");
+    await page.context().addCookies([
+      {
+        name: "e2e_similar_unavailable",
+        value: "1",
+        url: "http://localhost:3000",
+      },
+    ]);
+    await startSetup(page, "app-1");
+
+    const suggested = stepCard(page, "Pick competitors").getByRole("list", {
+      name: "Suggested competitors",
+    });
+    await expect(suggested).toContainText("Deep Work Sessions");
+    await expect(suggested.getByText(/^Similar on/)).toHaveCount(0);
+  });
+
+  test("an app with nothing to suggest says why", async ({ page }) => {
+    await page.context().addCookies([
+      {
+        name: "e2e_similar_unavailable",
+        value: "1",
+        url: "http://localhost:3000",
+      },
+    ]);
+    await startSetup(page, "app-long");
+
+    await expect(
+      stepCard(page, "Pick competitors").getByText(
+        "The store did not list similar apps right now.",
+      ),
     ).toBeVisible();
   });
 });
@@ -565,7 +638,7 @@ test("the discovered list says positions are still collected on a new app", asyn
       "Positions are still being collected. Apps that rank for your keywords appear here within minutes.",
     ),
   ).toBeVisible({ timeout: 1_500 });
-  await expect(page.getByText(/^Nothing ranks beside you/)).toHaveCount(0);
+  await expect(page.getByText("No suggestions yet.")).toHaveCount(0);
 });
 
 test("setup can be dismissed on a narrow dark layout", async ({ page }) => {

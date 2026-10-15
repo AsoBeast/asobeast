@@ -18,7 +18,25 @@ test("a fresh install invites an import instead of showing an empty dashboard", 
     page.getByRole("heading", { name: "Track your first app", level: 1 }),
   ).toBeVisible();
   await expect(page.getByText("Changes this week")).toHaveCount(0);
-  await expect(page.getByRole("main").getByRole("listitem")).toHaveCount(0);
+  await expect(page.getByRole("main").getByRole("listitem")).toHaveCount(3);
+});
+
+test("the empty dashboard lists what an import delivers", async ({ page }) => {
+  await page.context().addCookies([
+    {
+      name: "portfolio_empty",
+      value: "1",
+      url: "http://localhost:3000",
+    },
+  ]);
+
+  await page.goto("/");
+
+  const deliveries = page
+    .getByRole("list", { name: "What you get" })
+    .getByRole("listitem");
+  await expect(deliveries).toHaveCount(3);
+  await expect(deliveries.first()).toContainText("within minutes");
 });
 
 test("an app awaiting its first run says so instead of showing zeros", async ({

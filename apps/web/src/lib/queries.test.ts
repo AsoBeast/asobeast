@@ -35,6 +35,9 @@ import {
   competitorsOptions,
   comparisonOptions,
   discoveryOptions,
+  competitorSuggestionsOptions,
+  storeSearchKey,
+  storeSearchOptions,
   emailAlertKeys,
   healthKey,
   invalidateApiTokenMutation,
@@ -416,6 +419,43 @@ describe("appKeys", () => {
     );
   });
 
+  it("keys a name search by its store, storefront and name rather than by an app", () => {
+    const options = storeSearchOptions("APP_STORE", "us", "focus");
+
+    expect(options.queryKey).toEqual(
+      storeSearchKey("APP_STORE", "us", "focus"),
+    );
+    expect(options.retry).toBe(false);
+    expect(isPrefixOf(appKeys.all, options.queryKey)).toBe(false);
+    expect(storeSearchKey("APP_STORE", "us", "focus")).not.toEqual(
+      storeSearchKey("GOOGLE_PLAY", "us", "focus"),
+    );
+    expect(storeSearchKey("APP_STORE", "us", "focus")).not.toEqual(
+      storeSearchKey("APP_STORE", "de", "focus"),
+    );
+  });
+
+  it("keys competitor suggestions outside the app so only a competitor change refetches them", async () => {
+    const client = new QueryClient();
+    const options = competitorSuggestionsOptions(APP);
+    client.setQueryData(options.queryKey, {
+      store: "APP_STORE",
+      country: "us",
+      similar: "ok",
+      items: [],
+    });
+
+    expect(options.queryKey).toEqual(appKeys.competitorSuggestions(APP));
+    expect(options.retry).toBe(false);
+    expect(isPrefixOf(appKeys.detail(APP), options.queryKey)).toBe(false);
+
+    await client.invalidateQueries({ queryKey: appKeys.detail(APP) });
+    expect(client.getQueryState(options.queryKey)?.isInvalidated).toBe(false);
+
+    invalidateCompetitorMutation(client, APP);
+    expect(client.getQueryState(options.queryKey)?.isInvalidated).toBe(true);
+  });
+
   it("keys a serp by its keyword rather than by an app", () => {
     expect(serpOptions("kw-1").queryKey).toEqual(appKeys.serp("kw-1"));
     expect(isPrefixOf(appKeys.all, appKeys.serp("kw-1"))).toBe(false);
@@ -627,6 +667,7 @@ describe("invalidation sets", () => {
     ).toEqual([
       appKeys.detail(APP),
       appKeys.discoveryRoot(APP),
+      appKeys.competitorSuggestions(APP),
       appKeys.serpMoversRoot(APP),
       portfolioKey,
       appKeys.firstRun(APP),

@@ -857,7 +857,7 @@ test("a refused import sends an unconfirmed account to a page that asks it to co
   await page.goto("/");
   await page.getByRole("button", { name: "Import app" }).click();
   await page
-    .getByLabel("Store URL")
+    .getByLabel("App name or store URL")
     .fill("https://apps.apple.com/us/app/focus-timer/id123456789");
   await page.getByRole("button", { name: "Import", exact: true }).click();
 
@@ -1007,7 +1007,7 @@ test("a write refused for a suspension shows the notice without a reload", async
   await expect(page.getByText(SUSPENSION_NOTICE)).toHaveCount(0);
   await page.getByRole("button", { name: "Import app" }).click();
   await page
-    .getByLabel("Store URL")
+    .getByLabel("App name or store URL")
     .fill("https://apps.apple.com/us/app/focus-timer/id123456789");
   await page.getByRole("button", { name: "Import", exact: true }).click();
 

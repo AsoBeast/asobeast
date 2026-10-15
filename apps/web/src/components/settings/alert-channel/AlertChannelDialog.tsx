@@ -22,6 +22,7 @@ export function AlertChannelDialog({
   error,
   pending,
   onSubmit,
+  trigger,
   children,
 }: {
   open: boolean;
@@ -31,15 +32,18 @@ export function AlertChannelDialog({
   error: string | null;
   pending: boolean;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  trigger?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Plus />
-          {label}
-        </Button>
+        {trigger ?? (
+          <Button variant="outline" size="sm">
+            <Plus />
+            {label}
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <form onSubmit={onSubmit} className="flex min-h-0 flex-col gap-4">

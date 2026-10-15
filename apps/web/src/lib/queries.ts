@@ -6,6 +6,7 @@ import type {
   KeywordFieldQuery,
   KeywordImportRequest,
   KeywordSuggestionStrategy,
+  Store,
   WebhookItem,
 } from "@asobeast/shared";
 import { QUERY_BOUNDS } from "@asobeast/shared";
@@ -48,6 +49,7 @@ import {
   getEmailAlerts,
   getComparison,
   getCompetitorDiscovery,
+  getCompetitorSuggestions,
   getCompetitors,
   getFirstRun,
   getHealth,
@@ -61,6 +63,7 @@ import {
   getMarketAvailability,
   getAppSetup,
   getMarketSuggestions,
+  searchStore,
   getMetadataAudit,
   getPortfolio,
   getPortfolioInsights,
@@ -157,6 +160,8 @@ export const appKeys = {
     ] as const,
   competitors: (id: string) => [...appKeys.detail(id), "competitors"] as const,
   discoveryRoot: (id: string) => [...appKeys.detail(id), "discovery"] as const,
+  competitorSuggestions: (id: string) =>
+    ["competitor-suggestions", id] as const,
   discovery: (id: string, days: number) =>
     [...appKeys.detail(id), "discovery", { days }] as const,
   changesRoot: (id: string) => [...appKeys.detail(id), "changes"] as const,
@@ -199,6 +204,9 @@ export const appKeys = {
 export const setupKey = (id: string) => ["setup", id] as const;
 
 export const portfolioKey = ["portfolio"] as const;
+
+export const storeSearchKey = (store: Store, country: string, q: string) =>
+  ["store-search", store, country, q] as const;
 export const portfolioInsightsKey = [...portfolioKey, "insights"] as const;
 
 export const recentChangesKey = (limit?: number) =>
@@ -646,6 +654,14 @@ export const competitorsOptions = (id: string) =>
     queryFn: () => getCompetitors(id),
   });
 
+export const competitorSuggestionsOptions = (id: string) =>
+  queryOptions({
+    queryKey: appKeys.competitorSuggestions(id),
+    queryFn: () => getCompetitorSuggestions(id),
+    staleTime: ONE_DAY_MS,
+    retry: false,
+  });
+
 export const discoveryOptions = (id: string, days: number) =>
   queryOptions({
     queryKey: appKeys.discovery(id, days),
@@ -711,6 +727,14 @@ export const marketAvailabilityOptions = (id: string, country: string) =>
     queryFn: () => getMarketAvailability(id, country),
     staleTime: (query) =>
       query.state.data?.status === "unknown" ? 0 : ONE_DAY_MS,
+  });
+
+export const storeSearchOptions = (store: Store, country: string, q: string) =>
+  queryOptions({
+    queryKey: storeSearchKey(store, country, q),
+    queryFn: () => searchStore(store, country, q),
+    staleTime: ONE_DAY_MS,
+    retry: false,
   });
 
 export const marketSuggestionsOptions = (id: string) =>
@@ -877,6 +901,10 @@ export function invalidateCompetitorMutation(
 ): void {
   void client.invalidateQueries({ queryKey: appKeys.detail(id) });
   void client.invalidateQueries({ queryKey: appKeys.discoveryRoot(id) });
+  void client.invalidateQueries({
+    queryKey: appKeys.competitorSuggestions(id),
+    refetchType: "none",
+  });
   void client.invalidateQueries({ queryKey: appKeys.serpMoversRoot(id) });
   void client.invalidateQueries({ queryKey: portfolioKey });
   void client.invalidateQueries({ queryKey: appKeys.firstRun(id) });
