@@ -1,8 +1,26 @@
 import {
+  defaultChartDevice,
   OVERALL_GENRE,
   type CategoryCollection,
   type CategoryRankSeriesItem,
+  type Store,
 } from "@asobeast/shared";
+import { chartHref } from "@/components/top-charts/chart-params";
+
+const LEGACY_CHART_DEPTH = 200;
+
+const depthOf = (item: CategoryRankSeriesItem): number =>
+  item.depth ?? LEGACY_CHART_DEPTH;
+
+export function chartDepthOf(series: CategoryRankSeriesItem[]): number {
+  return series.length === 0
+    ? LEGACY_CHART_DEPTH
+    : Math.max(...series.map(depthOf));
+}
+
+export function notInChartLabel(item: CategoryRankSeriesItem): string {
+  return `Not in top ${depthOf(item)} in ${item.genreName}`;
+}
 
 const lastCapturedOn = (item: CategoryRankSeriesItem): string =>
   item.points.at(-1)?.date ?? "";
@@ -24,4 +42,17 @@ export function headlineSeries(
     .map((collection) => pool.find((item) => item.collection === collection))
     .filter((item): item is CategoryRankSeriesItem => item !== undefined);
   return preferred.find((item) => item.current !== null) ?? preferred[0];
+}
+
+export function headlineChartHref(
+  headline: CategoryRankSeriesItem,
+  app: { store: Store; country: string },
+): string {
+  return chartHref({
+    store: app.store,
+    country: app.country,
+    collection: headline.collection,
+    genre: headline.genre,
+    device: defaultChartDevice(app.store),
+  });
 }

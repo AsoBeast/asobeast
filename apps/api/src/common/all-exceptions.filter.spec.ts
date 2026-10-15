@@ -19,6 +19,7 @@ import {
   StoreNotSupportedError,
   StoreRequestError,
 } from '../store-providers/errors';
+import { UnknownChartGenreError } from '../charts/chart-key';
 import { AllExceptionsFilter } from './all-exceptions.filter';
 
 const FUTURE_STORE = 'AMAZON' as Store;
@@ -89,6 +90,15 @@ describe('AllExceptionsFilter', () => {
       'RateLimit-Reset': '46275',
       'Retry-After': '46275',
     });
+  });
+
+  it('refuses a chart the store does not list with 400', () => {
+    const { status, envelope } = capture(
+      new UnknownChartGenreError('APP_STORE', '9999'),
+    );
+
+    expect(status).toBe(HttpStatus.BAD_REQUEST);
+    expect(envelope.message).toBe('9999 is not an App Store chart category');
   });
 
   it('names the store a request asked for that this version cannot serve', () => {

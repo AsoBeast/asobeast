@@ -284,6 +284,16 @@ describe('Workspace deletion (e2e)', () => {
         payload: {},
       },
     });
+    await prisma.chartFollow.create({
+      data: {
+        workspaceId,
+        store: Store.APP_STORE,
+        country: 'us',
+        collection: 'free',
+        genre: '6014',
+        device: 'iphone',
+      },
+    });
     await prisma.billingEvent.create({
       data: {
         id: `evt-${workspaceId}`,
@@ -339,6 +349,7 @@ describe('Workspace deletion (e2e)', () => {
       appSetup,
       keywordRanking,
       categoryRank,
+      chartFollow,
       review,
       changeEvent,
       auditInsight,
@@ -370,6 +381,7 @@ describe('Workspace deletion (e2e)', () => {
       prisma.appSetup.count({ where: { appId: target.appId } }),
       prisma.keywordRanking.count({ where: { workspaceId: WORKSPACE } }),
       prisma.categoryRank.count({ where: { appId: target.appId } }),
+      prisma.chartFollow.count({ where: { workspaceId: WORKSPACE } }),
       prisma.review.count({ where: { id: target.reviewId } }),
       prisma.changeEvent.count({ where: { id: target.changeId } }),
       prisma.auditInsight.count({ where: { appId: target.appId } }),
@@ -399,6 +411,7 @@ describe('Workspace deletion (e2e)', () => {
       AppSetup: appSetup,
       KeywordRanking: keywordRanking,
       CategoryRank: categoryRank,
+      ChartFollow: chartFollow,
       Review: review,
       ChangeEvent: changeEvent,
       AuditInsight: auditInsight,

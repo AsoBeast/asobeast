@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { QUERY_BOUNDS } from "@asobeast/shared";
 import type {
   AppAuditResult,
+  ChartPage,
   AuditAiRunState,
   EmailAlertItem,
   WebhookItem,
@@ -10,6 +11,10 @@ import type {
 import { APP_AUDIT_EXAMPLE } from "@/components/audit/audit-example";
 import { queryMarket } from "./market";
 import {
+  chartKeys,
+  chartPageOptions,
+  invalidateChartMutation,
+  seedChartCapture,
   adminKeys,
   actionActivityOptions,
   actionDetailOptions,
@@ -489,6 +494,64 @@ describe("localized listing keys", () => {
     expect(
       client.getQueryState(appKeys.screenshots(APP, "pl", "pl"))?.isInvalidated,
     ).toBe(true);
+  });
+});
+
+describe("chartKeys", () => {
+  const QUERY = {
+    store: "APP_STORE",
+    country: "us",
+    collection: "free",
+    genre: "6014",
+    device: "iphone",
+    compare: "1d",
+  } as const;
+
+  it("carries the whole query in the page key", () => {
+    expect(chartPageOptions(QUERY).queryKey).toEqual(["charts", "page", QUERY]);
+  });
+
+  it("keeps two days of one chart apart", () => {
+    expect(
+      chartPageOptions({ ...QUERY, date: "2026-10-12" }).queryKey,
+    ).not.toEqual(chartPageOptions({ ...QUERY, date: "2026-10-13" }).queryKey);
+  });
+
+  it("seeds the newest page of the captured chart and marks the rest stale", () => {
+    const client = new QueryClient();
+    const older = { ...QUERY, date: "2026-10-12" };
+    client.setQueryData(chartKeys.page(older), { stale: true });
+    const page = {
+      chart: { ...QUERY, genreName: "Games" },
+      compare: "1d",
+    } as unknown as ChartPage;
+
+    seedChartCapture(client, page);
+
+    expect(client.getQueryData(chartKeys.page(QUERY))).toBe(page);
+    expect(client.getQueryState(chartKeys.page(QUERY))?.isInvalidated).toBe(
+      false,
+    );
+    expect(client.getQueryState(chartKeys.page(older))?.isInvalidated).toBe(
+      true,
+    );
+  });
+
+  it("invalidates every chart page after a follow changes", () => {
+    const client = new QueryClient();
+    client.setQueryData(chartKeys.page(QUERY), {});
+
+    invalidateChartMutation(client);
+
+    expect(client.getQueryState(chartKeys.page(QUERY))?.isInvalidated).toBe(
+      true,
+    );
+  });
+
+  it("reaches every chart page from the chart root", () => {
+    expect(isPrefixOf(chartKeys.all, chartPageOptions(QUERY).queryKey)).toBe(
+      true,
+    );
   });
 });
 

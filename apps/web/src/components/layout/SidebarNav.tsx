@@ -16,6 +16,7 @@ import {
   Swords,
   Tags,
   TrendingUp,
+  Trophy,
   type LucideIcon,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -56,6 +57,7 @@ const SECTION_ICONS: Record<AppSectionSegment, LucideIcon> = {
 const WORKSPACE = [
   { href: "/", label: "Dashboard", icon: LayoutGrid },
   { href: "/actions", label: "Action Center", icon: ListChecks },
+  { href: "/charts", label: "Top charts", icon: Trophy },
   { href: "/settings", label: "Settings", icon: Settings },
 ] as const;
 

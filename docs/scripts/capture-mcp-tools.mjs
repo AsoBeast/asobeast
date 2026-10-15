@@ -9,6 +9,7 @@ const CATALOG = new URL(
 const {
   ACTION_TOOLS,
   APP_TOOLS,
+  CHART_TOOLS,
   COMPETITOR_TOOLS,
   INSIGHT_TOOLS,
   KEYWORD_TOOLS,
@@ -44,6 +45,11 @@ const GROUPS = [
     title: "Competitors",
     tools: COMPETITOR_TOOLS,
     note: "Competitors belong to one primary app, so pass the primary app's id. `keyword_comparison`, listed under Keywords, puts the positions of the app and each competitor side by side, and `onlyGaps` narrows it to the keywords where a competitor leads.",
+  },
+  {
+    title: "Top charts",
+    tools: CHART_TOOLS,
+    note: "`chart_genres` lists the categories of one store, and `top_chart` reads one day of one chart with the movement against an earlier day and the trending apps. Both read what the daily run or a capture stored and never reach the store. See [Read top charts](/guides/top-charts).",
   },
   {
     title: "Insights",
@@ -137,7 +143,7 @@ function render() {
     "---",
     "title: MCP tool reference",
     "sidebarTitle: Tools",
-    `description: "${reads} read only tools covering apps, keywords, competitors, rankings, SERPs, audits, reviews, analytics and the Action Center, plus ${writes} opt in tools that change keywords, competitors and actions."`,
+    `description: "${reads} read only tools covering apps, keywords, competitors, top charts, rankings, SERPs, audits, reviews, analytics and the Action Center, plus ${writes} opt in tools that change keywords, competitors and actions."`,
     "icon: wrench",
     'keywords: ["MCP tools","list_apps","ranking_history","serp_movers","app_audit","actions_summary","track_keywords","set_action_status","read only","write tools"]',
     "mode: wide",

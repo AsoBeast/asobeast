@@ -82,6 +82,18 @@ export class QuotaService {
       });
   }
 
+  admitChartFollow<T>(write: (tx: Tx) => Promise<T>): Promise<T> {
+    return this.prisma.withTransaction((tx) =>
+      this.admit({
+        tx,
+        resource: 'chartFollows',
+        scope: '',
+        write: () => write(tx),
+        count: () => tx.chartFollow.count(),
+      }),
+    );
+  }
+
   admitKeywordMarkets<T>(write: (tx: Tx) => Promise<T>): Promise<T> {
     return this.prisma.withTransaction((tx) =>
       this.admit({
@@ -174,6 +186,7 @@ export class QuotaService {
   private countOf(resource: QuotaResource, scope: string): Promise<number> {
     if (resource === 'apps') return countApps(this.prisma);
     if (resource === 'keywordMarkets') return countKeywordMarkets(this.prisma);
+    if (resource === 'chartFollows') return this.prisma.chartFollow.count();
     return this.prisma.app.count({
       where: { primaryAppId: scope, isCompetitor: true },
     });
@@ -202,5 +215,6 @@ function countCompetitors(client: Tx, appId: string): Promise<number> {
 function limitOf(limits: PlanLimits, resource: QuotaResource): PlanLimit {
   if (resource === 'apps') return limits.apps;
   if (resource === 'keywordMarkets') return limits.keywordMarkets;
+  if (resource === 'chartFollows') return limits.chartFollows;
   return limits.competitorsPerApp;
 }

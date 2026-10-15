@@ -17,6 +17,7 @@ interface Stored {
   apps: number;
   competitors: number;
   markets: number;
+  chartFollows: number;
   plan: string;
   trialEndsAt: Date | null;
   planExpiresAt: Date | null;
@@ -28,6 +29,7 @@ describe('QuotaService', () => {
       apps: 0,
       competitors: 0,
       markets: 0,
+      chartFollows: 0,
       plan: 'premium',
       trialEndsAt: null,
       planExpiresAt: null,
@@ -44,6 +46,9 @@ describe('QuotaService', () => {
     );
     const client = {
       app: { count: appCount },
+      chartFollow: {
+        count: jest.fn(() => Promise.resolve(stored.chartFollows)),
+      },
       workspace: {
         findFirst: jest.fn(() =>
           Promise.resolve({
@@ -319,6 +324,29 @@ describe('QuotaService', () => {
     );
   });
 
+  it('reads the chart follow limit from the plan', async () => {
+    const { quota, scoped } = build(true, { plan: 'ultimate' });
+
+    await expect(scoped(() => quota.limitFor('chartFollows'))).resolves.toBe(
+      PLAN_LIMITS.ultimate.chartFollows,
+    );
+  });
+
+  it('refuses a chart follow past the room the plan leaves', async () => {
+    const { quota, scoped } = build(true, {
+      plan: 'indie',
+      chartFollows: PLAN_LIMITS.indie.chartFollows as number,
+    });
+
+    await expect(
+      detailOf(() => scoped(() => quota.assertRoom('chartFollows'))),
+    ).resolves.toMatchObject({
+      resource: 'chartFollows',
+      limit: PLAN_LIMITS.indie.chartFollows,
+      used: PLAN_LIMITS.indie.chartFollows,
+    });
+  });
+
   it('reports unlimited as null rather than a large number', async () => {
     const { quota, scoped } = build(false);
 
@@ -329,6 +357,9 @@ describe('QuotaService', () => {
     await expect(scoped(() => quota.limitFor('competitors'))).resolves.toBe(
       SELF_HOSTED_LIMITS.competitorsPerApp,
     );
+    await expect(
+      scoped(() => quota.limitFor('chartFollows')),
+    ).resolves.toBeNull();
   });
 
   it('offers no upgrade path on a self hosted instance', async () => {

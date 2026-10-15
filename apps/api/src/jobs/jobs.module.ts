@@ -14,6 +14,7 @@ import { AppsModule } from '../apps/apps.module';
 import { AuditModule } from '../audit/audit.module';
 import { ADMIN_QUEUES_ROUTE, requireAdminAccess } from '../auth/admin-access';
 import { CategoryRanksModule } from '../category-ranks/category-ranks.module';
+import { ChartsModule } from '../charts/charts.module';
 import { Env } from '../config/env';
 import { redisConnection } from '../redis/redis-connection';
 import { KeywordsModule } from '../keywords/keywords.module';
@@ -36,6 +37,7 @@ import {
 } from './jobs.controller';
 import { CapacityService } from './capacity.service';
 import { DailyBudgetService } from './daily-budget.service';
+import { DailyCategoryBuckets } from './daily-category-buckets.service';
 import { DailyCapacity } from './daily-capacity.service';
 import { DailyTargetsCollector } from './daily-targets.service';
 import { FirstRunStatusService } from './first-run-status.service';
@@ -97,6 +99,7 @@ const bullBoardModules: DynamicModule[] =
     AppsModule,
     RankingsModule,
     CategoryRanksModule,
+    ChartsModule,
     KeywordsModule,
     ScoringModule,
     AlertsModule,
@@ -119,6 +122,7 @@ const bullBoardModules: DynamicModule[] =
     LocalizationSweep,
     CapacityService,
     DailyBudgetService,
+    DailyCategoryBuckets,
     DailyCapacity,
     DailyTargetsCollector,
     FirstRunStatusService,

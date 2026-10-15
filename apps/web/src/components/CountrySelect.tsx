@@ -13,6 +13,9 @@ import {
 import { COUNTRY_OPTIONS, OTHER, marketError } from "@/lib/countries";
 import { formatCountry } from "@/lib/format";
 
+const countryLabel = (code: string) =>
+  `${code.toUpperCase()} · ${formatCountry(code)}`;
+
 export function CountrySelect({
   id,
   store,
@@ -37,12 +40,12 @@ export function CountrySelect({
         onValueChange={(next) => onChange(next === OTHER ? "" : next)}
       >
         <SelectTrigger id={id} aria-label={ariaLabel} className="w-[220px]">
-          <SelectValue />
+          <SelectValue>{other ? "Other…" : countryLabel(value)}</SelectValue>
         </SelectTrigger>
         <SelectContent>
           {COUNTRY_OPTIONS.map((code) => (
             <SelectItem key={code} value={code}>
-              {code.toUpperCase()} · {formatCountry(code)}
+              {countryLabel(code)}
             </SelectItem>
           ))}
           <SelectItem value={OTHER}>Other…</SelectItem>

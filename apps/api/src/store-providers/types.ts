@@ -45,6 +45,10 @@ export interface SuggestItem {
 export interface ChartItem {
   storeAppId: string;
   title: string;
+  developer?: string;
+  iconUrl?: string;
+  genreId?: string;
+  free?: boolean;
 }
 
 export interface ReviewResult {

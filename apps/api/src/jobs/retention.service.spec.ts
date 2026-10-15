@@ -13,6 +13,7 @@ const buildConfig = (days: Days): ConfigService<Env, true> => {
     RETENTION_SERP_DAYS: 90,
     RETENTION_SNAPSHOTS_DAYS: 180,
     RETENTION_CATEGORY_RANKS_DAYS: 365,
+    RETENTION_CHARTS_DAYS: 365,
     RETENTION_CHANGE_EVENTS_DAYS: 0,
     RETENTION_DELIVERIES_DAYS: 30,
     RETENTION_AUDIT_SCORES_DAYS: 0,
@@ -47,6 +48,7 @@ const buildPrisma = () => ({
     updateMany: jest.fn().mockResolvedValue({ count: 13 }),
   },
   screenshotText: { deleteMany: jest.fn().mockResolvedValue({ count: 14 }) },
+  chartCapture: { deleteMany: jest.fn().mockResolvedValue({ count: 15 }) },
 });
 
 const crossTenant = new CrossTenantAccess(new WorkspaceContext());
@@ -257,6 +259,7 @@ describe('RetentionService', () => {
     prisma.aiCall.deleteMany.mockImplementation(boom);
     prisma.aiCall.updateMany.mockImplementation(boom);
     prisma.screenshotText.deleteMany.mockImplementation(boom);
+    prisma.chartCapture.deleteMany.mockImplementation(boom);
     const service = new RetentionService(
       buildConfig({
         RETENTION_CHANGE_EVENTS_DAYS: 30,
@@ -341,6 +344,7 @@ describe('RetentionService action pruning', () => {
         RETENTION_SERP_DAYS: 0,
         RETENTION_SNAPSHOTS_DAYS: 0,
         RETENTION_CATEGORY_RANKS_DAYS: 0,
+        RETENTION_CHARTS_DAYS: 0,
         RETENTION_CHANGE_EVENTS_DAYS: 0,
         RETENTION_DELIVERIES_DAYS: 0,
         RETENTION_AUDIT_SCORES_DAYS: 0,
@@ -374,6 +378,7 @@ describe('RetentionService action pruning', () => {
       prisma.auditScore,
       prisma.actionItem,
       prisma.billingEvent,
+      prisma.chartCapture,
     ]) {
       expect(table.deleteMany).not.toHaveBeenCalled();
     }
@@ -484,5 +489,40 @@ describe('RetentionService ai call ledger', () => {
     expect(prisma.aiCall.deleteMany).not.toHaveBeenCalled();
     expect(deleted.aiCall).toBe(0);
     expect(prisma.aiCall.updateMany).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('RetentionService top charts', () => {
+  afterEach(() => jest.useRealTimers());
+
+  it('prunes chart captures older than the window', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-10-15T09:30:00.000Z'));
+    const prisma = buildPrisma();
+    const service = new RetentionService(
+      buildConfig({ RETENTION_CHARTS_DAYS: 30 }),
+      prisma as unknown as PrismaService,
+      crossTenant,
+    );
+
+    const deleted = await service.prune();
+
+    expect(prisma.chartCapture.deleteMany).toHaveBeenCalledWith({
+      where: { date: { lt: new Date('2026-09-15T00:00:00.000Z') } },
+    });
+    expect(deleted.chartCapture).toBe(15);
+  });
+
+  it('keeps chart captures forever at 0', async () => {
+    const prisma = buildPrisma();
+    const service = new RetentionService(
+      buildConfig({ RETENTION_CHARTS_DAYS: 0 }),
+      prisma as unknown as PrismaService,
+      crossTenant,
+    );
+
+    const deleted = await service.prune();
+
+    expect(prisma.chartCapture.deleteMany).not.toHaveBeenCalled();
+    expect(deleted.chartCapture).toBe(0);
   });
 });

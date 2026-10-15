@@ -5,6 +5,7 @@ import {
   PLANS,
   PLAN_LIMITS,
   PLAN_NAMES,
+  QUOTA_RESOURCES,
   SELF_HOSTED_LIMITS,
   effectivePlan,
   isPaidPlan,
@@ -206,6 +207,25 @@ describe('plan limits', () => {
       mcpRequestsPerMinute: null,
       onDemand: null,
     });
+  });
+
+  it('sizes the chart capture allowance', () => {
+    const daily = (limit: number) => ({ limit, windowSeconds: 86_400 });
+
+    expect(PLAN_LIMITS.indie.onDemand?.chartCapture).toEqual(daily(30));
+    expect(PLAN_LIMITS.ultimate.onDemand?.chartCapture).toEqual(daily(150));
+    expect(PLAN_LIMITS.free.onDemand?.chartCapture).toEqual(daily(0));
+    expect(PLAN_LIMITS.trial.onDemand?.chartCapture).toEqual(
+      PLAN_LIMITS.indie.onDemand?.chartCapture,
+    );
+  });
+
+  it('limits chart follows per plan', () => {
+    expect(PLAN_LIMITS.indie.chartFollows).toBe(10);
+    expect(PLAN_LIMITS.ultimate.chartFollows).toBe(50);
+    expect(PLAN_LIMITS.free.chartFollows).toBe(0);
+    expect(SELF_HOSTED_LIMITS.chartFollows).toBeNull();
+    expect(QUOTA_RESOURCES).toContain('chartFollows');
   });
 
   it('keeps the competitor cap on a self hosted instance', () => {

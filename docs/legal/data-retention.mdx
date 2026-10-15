@@ -32,7 +32,7 @@ What the archive contains:
 | --- | --- |
 | Workspace, users, personal API tokens, invites | Password hashes |
 | Apps, groups, snapshots, tracked keywords with their phrases | Personal API token hashes |
-| Rankings, category ranks, reviews, listing changes | Webhook signing secrets |
+| Rankings, category ranks, followed top charts, reviews, listing changes | Webhook signing secrets |
 | Audits, audit scores, action items | Anything owned by another workspace |
 | Webhooks, email alerts, delivery log, alert events |  |
 
@@ -65,19 +65,20 @@ Deletion is confirmed, delayed and reversible. An immediate irreversible delete 
 
 ### What erasure removes
 
-Everything the workspace owns: the workspace, its users, personal API tokens and invites, apps and groups, snapshots, tracked keywords, rankings, category ranks, reviews, listing changes, audits, audit scores, action items, webhooks, email alerts, the delivery log and alert events.
+Everything the workspace owns: the workspace, its users, personal API tokens and invites, apps and groups, snapshots, tracked keywords, rankings, category ranks, followed top charts, reviews, listing changes, audits, audit scores, action items, webhooks, email alerts, the delivery log and alert events.
 
 An end to end test seeds a row in **every** tenant owned table, deletes the workspace, and asserts each one is gone. The same test fails if a future table is added without being covered, which is what keeps this list true rather than aspirational.
 
 ### What erasure does not remove
 
-Four things survive, deliberately, and pretending otherwise would be dishonest.
+Five things survive, deliberately, and pretending otherwise would be dishonest.
 
 | Survives | Why | For how long |
 | --- | --- | --- |
 | Stored billing events | The link to your workspace is removed, but the payment provider's event record is kept for accounting and idempotency | 90 days, then pruned |
 | Support access records | An audit trail of operator access that expired with the account would not be an audit trail | Indefinitely. It holds an operator email, an action and a reason, never your data |
 | Keyword rows | One search serves every workspace tracking that phrase and market. The row is shared and carries no owner | While anyone tracks it |
+| Top chart captures | One capture of a public store chart serves every workspace reading it. The rows are shared and carry no owner | `RETENTION_CHARTS_DAYS`, 365 days by default |
 | Trial claims | One free trial per mailbox is only enforceable if the record outlives the workspace that took it. The row is a keyed hash of the mailbox (an HMAC under the instance secret), not the address, and it holds no workspace or account reference | Until the instance secret is rotated. Hosted retention is stated in the privacy policy |
 
 Beyond the application:

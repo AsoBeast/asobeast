@@ -166,6 +166,8 @@ describe("the competitor, comparison and chart tools", () => {
     "competitor_analysis",
     "keyword_comparison",
     "category_ranks",
+    "top_chart",
+    "chart_genres",
   ])("lists %s", (name) => {
     expect(toolByName(name)).toBeDefined();
   });
@@ -194,6 +196,34 @@ describe("the competitor, comparison and chart tools", () => {
       { appId: "app-1", from: "2026-09-01", to: "2026-09-30" },
       "/apps/app-1/category-ranks",
       { from: "2026-09-01", to: "2026-09-30" },
+    ],
+    [
+      "top_chart",
+      {
+        store: "APP_STORE",
+        country: "us",
+        collection: "free",
+        genre: "6014",
+        device: "iphone",
+        date: "2026-10-13",
+        compare: "7d",
+      },
+      "/charts",
+      {
+        store: "APP_STORE",
+        country: "us",
+        collection: "free",
+        genre: "6014",
+        device: "iphone",
+        date: "2026-10-13",
+        compare: "7d",
+      },
+    ],
+    [
+      "chart_genres",
+      { store: "GOOGLE_PLAY" },
+      "/charts/genres",
+      { store: "GOOGLE_PLAY" },
     ],
   ])("routes %s to its endpoint", (name, input, path, params) => {
     expect(toolByName(name)?.request(input)).toEqual(

@@ -24,6 +24,7 @@ import { AppsModule } from './apps/apps.module';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { CompetitorsModule } from './competitors/competitors.module';
+import { ChartsModule } from './charts/charts.module';
 import { McpModule } from './mcp/mcp.module';
 import { MetadataModule } from './metadata/metadata.module';
 import { HealthModule } from './health/health.module';
@@ -57,6 +58,7 @@ import { envConfigModule } from './config/env-config.module';
     McpModule,
     MetadataModule,
     CompetitorsModule,
+    ChartsModule,
     AlertsModule,
     ReviewsModule,
     BillingModule,

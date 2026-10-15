@@ -336,7 +336,7 @@ test("a quota error stops the run and names what was tracked", async ({
 
   await expect(
     page.getByText(
-      "keywordMarkets limit reached: 206 of 210 used on the indie plan, 24 more requested",
+      "Keyword markets limit reached: 206 of 210 used on the indie plan, 24 more requested",
     ),
   ).toBeVisible();
   await expect(

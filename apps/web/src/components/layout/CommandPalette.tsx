@@ -1,7 +1,13 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { LayoutDashboard, ListChecks, Search, Settings } from "lucide-react";
+import {
+  LayoutDashboard,
+  ListChecks,
+  Search,
+  Settings,
+  Trophy,
+} from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppIcon } from "@/components/AppIcon";
@@ -35,6 +41,7 @@ import { appsOptions } from "@/lib/queries";
 const GENERAL = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/actions", label: "Action Center", icon: ListChecks },
+  { href: "/charts", label: "Top charts", icon: Trophy },
   { href: "/settings", label: "Settings", icon: Settings },
 ] as const;
 

@@ -19,9 +19,13 @@ Every app is scheduled daily against the grossing chart and against its own free
 
 Capture stays on the home market, like reviews. See [Countries and markets](/concepts/countries).
 
+The headline on the overview card links to the chart it was read from, so you can read every app in that chart. See [Read top charts](/guides/top-charts).
+
 ## Read the chart
 
 Chart positions use the same convention as keyword positions: 1 based, with an absent position meaning the app was not found within the captured chart depth rather than zero. See [Positions and rank depth](/concepts/positions).
+
+The App Store chart feed answers 100 positions and Google Play answers 200, so the captured depth is 100 for an App Store chart and 200 for a Google Play chart. An App Store app outside its chart reads `Not in top 100`.
 
 The overview card headlines the chart the app competes in: the paid chart for an app whose latest snapshot has a price above zero, the free chart otherwise. The headline names the chart it read, as in `#2 in Games · paid chart`. When that chart was captured but the app is outside it, the headline reads the grossing chart if the app ranks there and says so. When the app's own chart has no capture on the latest capture date, for example just after a price change, it reads the grossing chart too. Only series captured on that latest date are read, so an older position on the app's own chart never stands in for the current one. The overall chart is read only when no genre chart exists. The legend and the tooltip keep listing every series the chart captured.
 
@@ -29,7 +33,7 @@ Read a chart movement against your keyword positions on the same dates. A chart 
 
 ## What does it cost?
 
-Two jobs per app per day, because every app is scheduled against the grossing chart as well as its own free or paid chart. That is roughly twice the count of price collection alone.
+Two charts per app per day, because every app is scheduled against the grossing chart as well as its own free or paid chart, in its category and overall. Each chart costs one store request a day, shared by every app and workspace in that chart, because the same capture serves the whole instance. See [Read top charts](/guides/top-charts) for the whole chart behind a position.
 
 Category jobs remain the smallest slice of the daily budget, and the budget card in settings, shown to the platform operator, reports the real number. See [The daily pipeline and rate limits](/concepts/pipeline).
 

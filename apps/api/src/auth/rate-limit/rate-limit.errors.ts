@@ -17,6 +17,7 @@ const ON_DEMAND_LABELS: Record<OnDemandAction, string> = {
   importApp: 'Import app',
   addCompetitor: 'Add competitor',
   storeLookup: 'Store lookup',
+  chartCapture: 'Chart capture',
 };
 
 function onDemandMessage(

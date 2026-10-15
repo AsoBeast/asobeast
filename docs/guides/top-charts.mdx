@@ -1,0 +1,92 @@
+---
+title: Read top charts
+description: "Read the free, paid and grossing charts of any storefront and category, see who climbed, entered, fell and dropped out, follow a chart and capture today on demand."
+icon: trophy
+keywords: ["top charts","trending","free","paid","grossing","follow","chart capture","category"]
+---
+
+The top charts page shows the whole chart an app is ranked in, not just your own position. Open **Top charts** in the sidebar, pick a chart and a day, and read every app in it with how far it moved.
+
+## What is a chart?
+
+A chart is one store, one storefront, one category, one kind and one device.
+
+| Part | Values |
+| --- | --- |
+| Store | App Store or Google Play |
+| Country | Any storefront of that store |
+| Category | Overall, or one of the 25 app categories and 16 game genres Apple charts. On Google Play, the categories the Play chart lists, grouped as apps, games and family |
+| Kind | Free, paid or grossing |
+| Device | iPhone on the App Store. Google Play charts have no device, and iPad charts are not captured yet |
+
+The App Store chart feed answers 100 apps and Google Play answers 200, so a chart ends there. An app outside that depth is not in the chart, the same rule [category ranks](/guides/category-ranks) follow.
+
+Each row keeps the title, developer and icon its storefront showed on that day, so an older capture reads the way the chart looked then.
+
+Every filter lives in the page address, so a link to a chart on a day opens that chart on that day.
+
+## Where do captures come from?
+
+A chart is captured once a day, and one capture serves every workspace on the instance.
+
+- **Your apps.** The daily run captures every chart a tracked app sits in, its category and overall, for its free or paid chart and the grossing chart. Your [category ranks](/guides/category-ranks) are read from the same capture.
+- **Followed charts.** Press **Follow chart** and the daily run captures that chart every day from tomorrow, even when none of your apps is in it. Following writes nothing to the store until the next run. **Followed charts** lists every chart the workspace follows against the plan's limit, opens any of them and stops following one.
+- **Capture today.** When today has no capture, **Capture today** fetches the chart while you wait and shows it.
+
+The day picker enables only the days a capture exists for. The arrows beside it step to the previous and next captured day.
+
+## How do you read movement?
+
+Each row compares its position with an earlier capture. Pick the window with **Compare**: the previous day, 7 days ago or 30 days ago. The comparison is the newest capture at or before the chosen day minus the window, and no older than one more window, so a 7 day comparison reads a capture between 7 and 14 days earlier.
+
+| Change | Meaning |
+| --- | --- |
+| Up or down | The app moved by that many places. The previous position is shown beside it |
+| No change | The app held its position |
+| New | The app is in this chart but was not in the comparison capture |
+| No earlier capture | No capture exists inside the window, so nothing can be compared |
+
+The trending panel lists the climbers, the new entries, the fallers and the apps that dropped out of the chart since the comparison, up to ten each. Sort the table by **Change** to read the new entries first, then the biggest climbs.
+
+## How do you act on a row?
+
+- A row that is one of your apps is badged **Yours** and links to its overview.
+- A row you track as a competitor is badged with the app it competes with and links to that app's competitors.
+- Any other row offers **Add as competitor** to one of your apps on the same store. The competitor is checked in the searches its app already runs. See [Track competitors](/guides/competitors).
+- Every row opens its listing in the store.
+
+## What does it cost?
+
+| Action | Cost |
+| --- | --- |
+| A chart in the daily run | One store request a day, on either store, shared by every app and workspace in that chart |
+| Capture today | One store request, and one chart capture of the daily allowance: 30 a day on Indie, 150 on Ultimate, unmetered on a self hosted instance. A chart already captured today costs nothing |
+| Follow a chart | One more chart in the daily run. Indie follows up to 10 charts, Ultimate 50, and a self hosted instance has no limit. After a move to a smaller plan, the daily run keeps capturing only the oldest follows the plan has room for |
+
+A refused capture or follow costs nothing. See [Rate limits](/api-reference/rate-limits) for how the allowance is counted and [The daily pipeline and rate limits](/concepts/pipeline) for the budget.
+
+## How long are captures kept?
+
+`RETENTION_CHARTS_DAYS` defaults to 365 days. Set it to `0` to keep chart history forever. See [Configuration reference](/configuration/reference).
+
+## Troubleshooting
+
+- **A day has no capture.** Nothing asked for that chart that day: no app of yours sat in it and nobody followed it, or the run shed category work under pressure. Follow the chart so the daily run keeps it.
+- **An app you expected is missing.** It is outside the depth the store answers: 100 on the App Store, 200 on Google Play.
+- **A category is missing from the list.** The list follows the categories Apple and Google Play chart today. Kids is an age band on the App Store, not a chart.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Follow category ranks" icon="trophy" href="/guides/category-ranks">
+    Your own position in the charts over time.
+  </Card>
+
+  <Card title="Track competitors" icon="swords" href="/guides/competitors">
+    Compare titles, keywords and positions with the apps you add.
+  </Card>
+
+  <Card title="The daily pipeline" icon="clock" href="/concepts/pipeline">
+    What the daily run captures and what it costs.
+  </Card>
+</CardGroup>

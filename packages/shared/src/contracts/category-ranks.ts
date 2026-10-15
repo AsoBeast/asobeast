@@ -13,6 +13,7 @@ export interface CategoryRankSeriesItem {
   genre: string;
   genreName: string;
   current: number | null;
+  depth?: number;
   points: CategoryRankPoint[];
 }
 

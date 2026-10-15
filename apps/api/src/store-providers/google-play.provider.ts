@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
   CategoryCollection,
+  CHART_DEPTH,
   MarketAvailability,
   MarketAvailabilityResult,
   OVERALL_GENRE,
@@ -26,9 +27,9 @@ import {
   StoreProvider,
   SuggestItem,
 } from './types';
+import { toChartItem } from './chart-item';
 
 const SEARCH_MAX = 250;
-const CHART_MAX = 500;
 const REVIEWS_PER_PAGE = 50;
 const DEVELOPER_APPS_MAX = 30;
 const VERSION_VARIES_WITH_DEVICE = 'VARY';
@@ -141,16 +142,21 @@ export class GooglePlayProvider implements StoreProvider {
       this.lib.list({
         collection: COLLECTION_CONSTANTS[collection],
         category,
-        num: Math.min(num, CHART_MAX),
+        num: Math.min(num, CHART_DEPTH.GOOGLE_PLAY),
         country,
         lang,
         ...deadline,
       }),
     );
-    return results.map((item) => ({
-      storeAppId: item.appId,
-      title: item.title,
-    }));
+    return results.map((item) =>
+      toChartItem({
+        storeAppId: item.appId,
+        title: item.title,
+        developer: item.developer,
+        iconUrl: item.icon,
+        free: item.free,
+      }),
+    );
   }
 
   async reviews(
