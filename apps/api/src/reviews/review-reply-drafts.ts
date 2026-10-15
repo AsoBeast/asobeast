@@ -1,5 +1,9 @@
 import { Store } from '@prisma/client';
-import { countChars, ReviewReplyTone } from '@asobeast/shared';
+import {
+  countChars,
+  ReviewReplyTone,
+  UNKNOWN_LANGUAGE,
+} from '@asobeast/shared';
 import { storeLabel } from '../alerts/alert-summary';
 
 export const DRAFT_MAX_OUTPUT_TOKENS = 2048;
@@ -178,7 +182,7 @@ export function languageTagOf(value: unknown): string {
   const language = typeof value === 'string' ? value.trim() : '';
   return language.length <= LANGUAGE_TAG_MAX && LANGUAGE_TAG.test(language)
     ? language
-    : 'und';
+    : UNKNOWN_LANGUAGE;
 }
 
 export function parseReplyOutput(

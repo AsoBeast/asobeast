@@ -1,5 +1,5 @@
 import { Review } from '@prisma/client';
-import { ReviewTranslation } from '@asobeast/shared';
+import { ReviewTranslation, UNKNOWN_LANGUAGE } from '@asobeast/shared';
 import {
   END_OF_REFERENCE,
   isRecord,
@@ -59,7 +59,7 @@ export interface TranslatedReview {
 
 const LANGUAGE_NAMES = new Intl.DisplayNames(['en'], { type: 'language' });
 
-const NOT_A_LANGUAGE = new Set(['und', 'mul', 'mis', 'zxx']);
+const NOT_A_LANGUAGE = new Set([UNKNOWN_LANGUAGE, 'mul', 'mis', 'zxx']);
 
 export function languageName(language: string): string | null {
   if (NOT_A_LANGUAGE.has(language)) return null;
@@ -107,7 +107,7 @@ export function toReviewTranslation(
   }
   return {
     language: translationLanguage,
-    sourceLanguage: sourceLanguage ?? 'und',
+    sourceLanguage: sourceLanguage ?? UNKNOWN_LANGUAGE,
     title: row.translatedTitle,
     text: translatedText,
     translatedAt: translatedAt.toISOString(),

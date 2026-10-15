@@ -1,7 +1,9 @@
-import { REVIEW_TRANSLATION_LANGUAGE, type ReviewItem } from "@asobeast/shared";
+import {
+  REVIEW_TRANSLATION_LANGUAGE,
+  UNKNOWN_LANGUAGE,
+  type ReviewItem,
+} from "@asobeast/shared";
 import { replyLanguageName } from "./reply-language";
-
-const UNKNOWN_LANGUAGE = "und";
 
 export function translationCaption(sourceLanguage: string): string {
   return sourceLanguage === UNKNOWN_LANGUAGE

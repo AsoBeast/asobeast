@@ -62,6 +62,8 @@ export interface ReviewReplyGuidelines {
 
 export const REVIEW_TRANSLATION_LANGUAGE = /^[a-z]{2,3}$/;
 
+export const UNKNOWN_LANGUAGE = 'und';
+
 export interface ReviewTranslationRequest {
   language: string;
 }

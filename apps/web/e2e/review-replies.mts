@@ -13,6 +13,7 @@ import {
   type ReviewReplyState,
   type ReviewTranslation,
   type Store,
+  UNKNOWN_LANGUAGE,
 } from "@asobeast/shared";
 
 const DEFAULT_LIMIT = 50;
@@ -161,7 +162,7 @@ export function translateReviewIn(
 ): ReviewTranslation {
   const translation: ReviewTranslation = {
     language,
-    sourceLanguage: review.language ?? "und",
+    sourceLanguage: review.language ?? UNKNOWN_LANGUAGE,
     ...translated,
     translatedAt: new Date().toISOString(),
   };
