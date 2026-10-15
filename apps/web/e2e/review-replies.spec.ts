@@ -538,3 +538,19 @@ test("two saves in a row keep the newer text even when the first answers last", 
     composer(page).getByRole("textbox", { name: "Reply text" }),
   ).toHaveValue("Second reply");
 });
+
+test("copying without a clipboard says so instead of failing silently", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "clipboard", { value: undefined });
+  });
+  await page.goto(`${REPLIES_PAGE}?reply=rep-3`);
+
+  await composer(page)
+    .getByRole("textbox", { name: "Reply text" })
+    .fill("Dark mode ships next month.");
+  await composer(page).getByRole("button", { name: "Copy" }).click();
+
+  await expect(page.getByText(/Couldn't copy/)).toBeVisible();
+});
