@@ -16,6 +16,7 @@ import type { RangeParams } from "./client";
 export interface ReviewFilters {
   score?: number;
   version?: string;
+  from?: string;
   replyState?: ReviewReplyState;
   sort?: ReviewSort;
   limit?: number;
@@ -23,11 +24,12 @@ export interface ReviewFilters {
 
 export function getReviews(
   appId: string,
-  { score, version, replyState, sort, limit }: ReviewFilters = {},
+  { score, version, from, replyState, sort, limit }: ReviewFilters = {},
 ): Promise<ReviewList> {
   const params = new URLSearchParams();
   if (score !== undefined) params.set("score", String(score));
   if (version) params.set("version", version);
+  if (from) params.set("from", from);
   if (replyState) params.set("replyState", replyState);
   if (sort) params.set("sort", sort);
   if (limit !== undefined) params.set("limit", String(limit));

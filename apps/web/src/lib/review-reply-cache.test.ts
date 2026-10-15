@@ -62,6 +62,25 @@ describe("withReviewReply", () => {
     );
   });
 
+  it("leaves a list whose period starts after the review was written", () => {
+    const before = list([]);
+
+    expect(
+      withReviewReply(before, { from: "2026-10-02" }, review(), REPLY),
+    ).toBe(before);
+    expect(
+      withReviewReply(
+        before,
+        { from: "2026-10-02" },
+        review({ reviewedAt: null }),
+        REPLY,
+      ),
+    ).toBe(before);
+    expect(
+      withReviewReply(before, { from: "2026-10-01" }, review(), REPLY).counts,
+    ).toEqual({ needsReply: 3, drafted: 2, replied: 2 });
+  });
+
   it("moves a discarded draft back to needs reply", () => {
     const drafted = review({ reply: REPLY });
 

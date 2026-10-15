@@ -41,6 +41,7 @@ export function listReviews(
 ): ReviewList {
   const score = query.get("score");
   const version = query.get("version");
+  const from = query.get("from");
   const state = query.get("replyState") as ReviewReplyState | null;
   const limit = Number(query.get("limit") ?? DEFAULT_LIMIT);
   const matching = list.reviews
@@ -48,7 +49,8 @@ export function listReviews(
     .filter(
       (review) =>
         (!score || review.score === Number(score)) &&
-        (!version || review.version === version),
+        (!version || review.version === version) &&
+        (!from || (review.reviewedAt ?? "") >= from),
     );
   const countOf = (target: ReviewReplyState) =>
     matching.filter((review) => replyStateOf(review) === target).length;

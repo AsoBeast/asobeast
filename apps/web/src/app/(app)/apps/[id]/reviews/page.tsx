@@ -15,6 +15,7 @@ import {
 import {
   reviewReplyStateParser,
   reviewScoreParser,
+  reviewSinceParser,
   reviewSortParser,
   reviewVersionParser,
 } from "@/lib/search-params";
@@ -32,6 +33,7 @@ export default async function ReviewsPage({
   searchParams: Promise<{
     score?: string | string[];
     version?: string | string[];
+    since?: string | string[];
     replyState?: string | string[];
     sort?: string | string[];
   }>;
@@ -41,6 +43,7 @@ export default async function ReviewsPage({
   const view: ReviewView = {
     score: reviewScoreParser.parseServerSide(sp.score),
     version: reviewVersionParser.parseServerSide(sp.version),
+    since: reviewSinceParser.parseServerSide(sp.since),
     replyState: reviewReplyStateParser.parseServerSide(sp.replyState),
     sort: reviewSortParser.parseServerSide(sp.sort),
   };

@@ -272,3 +272,28 @@ test("the reply status tiles share one row on a phone", async ({ page }) => {
   );
   expect(new Set(tops).size).toBe(1);
 });
+
+test("a since filter writes to the url and keeps the reviews of that period", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-long/reviews");
+
+  await page.getByRole("combobox", { name: "Filter by date" }).click();
+  const [request] = await Promise.all([
+    page.waitForRequest((candidate) => {
+      const url = new URL(candidate.url());
+      return (
+        url.pathname === "/api/backend/apps/app-long/reviews" &&
+        url.searchParams.has("from")
+      );
+    }),
+    page.getByRole("option", { name: "Last 30 days" }).click(),
+  ]);
+
+  await expect(page).toHaveURL(/since=30d/);
+  expect(new URL(request.url()).searchParams.get("from")).toMatch(
+    /^\d{4}-\d{2}-\d{2}$/,
+  );
+  await expect(page.getByRole("article")).toHaveCount(31);
+  await expect(page.getByText("Review number 45")).toBeHidden();
+});

@@ -31,6 +31,7 @@ import {
   reviewsOptions,
 } from "@/lib/queries";
 import { literalOf } from "@/lib/literal";
+import { RATINGS_RANGES, rangeLabel, type RatingsRange } from "@/lib/ranges";
 import { useSingleFlight } from "@/lib/single-flight";
 import {
   EXPORT_ORDER,
@@ -56,6 +57,7 @@ export interface ReviewsToolbarProps {
   query: string;
   onScore: (score: number | null) => void;
   onVersion: (version: string) => void;
+  onSince: (since: RatingsRange | null) => void;
   onReplyState: (state: ReviewReplyState | null) => void;
   onSort: (sort: ReviewSort) => void;
   onQuery: (query: string, options: Options) => void;
@@ -85,6 +87,35 @@ function VersionSelect({
         {data.versions.map((item) => (
           <SelectItem key={item} value={item}>
             v{item}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+function SinceSelect({
+  since,
+  onChange,
+}: {
+  since: RatingsRange | null;
+  onChange: (next: RatingsRange | null) => void;
+}) {
+  return (
+    <Select
+      value={since ?? ALL}
+      onValueChange={(next) =>
+        onChange(literalOf(RATINGS_RANGES, next) ?? null)
+      }
+    >
+      <SelectTrigger className="w-[150px]" aria-label="Filter by date">
+        <SelectValue placeholder="Any time" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={ALL}>Any time</SelectItem>
+        {RATINGS_RANGES.map((preset) => (
+          <SelectItem key={preset} value={preset}>
+            {rangeLabel(preset)}
           </SelectItem>
         ))}
       </SelectContent>
@@ -146,6 +177,7 @@ export function ReviewsToolbar({
   query,
   onScore,
   onVersion,
+  onSince,
   onReplyState,
   onSort,
   onQuery,
@@ -173,6 +205,7 @@ export function ReviewsToolbar({
       <Suspense fallback={null}>
         <VersionSelect id={id} version={view.version} onChange={onVersion} />
       </Suspense>
+      <SinceSelect since={view.since} onChange={onSince} />
       <Select
         value={view.replyState ?? ALL}
         onValueChange={(next) =>
