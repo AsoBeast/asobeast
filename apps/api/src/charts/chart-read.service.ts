@@ -102,6 +102,7 @@ export class ChartReadService {
       entries: movementOf(current, previous),
       trending: trendingOf(current, previous, CHART_TRENDING_LIMIT),
       dates,
+      today: toDateKey(utcToday()),
       followed,
       apps,
     };

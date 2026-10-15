@@ -1670,6 +1670,7 @@ function chartAnswer(req: IncomingMessage): [number, unknown] {
     200,
     {
       ...page,
+      today: cookieValue(req, "e2e_chart_api_day") ?? page.today,
       followed,
       chart: { ...key, genreName: chartGenreName(key.store, genre) ?? genre },
     },

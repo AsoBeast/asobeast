@@ -5,7 +5,6 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryStates } from "nuqs";
 import type { ChartKey, ChartPage } from "@asobeast/shared";
 import { appsOptions, chartPageOptions } from "@/lib/queries";
-import { todayUtc } from "@/lib/ranges";
 import { chartParsers } from "@/lib/search-params";
 import { CaptureTodayButton } from "./CaptureTodayButton";
 import { candidateApps } from "./chart-actions";
@@ -17,7 +16,7 @@ import { FollowChartButton } from "./FollowChartButton";
 import { TrendingPanel } from "./TrendingPanel";
 
 function ChartActions({ chart, page }: { chart: ChartKey; page: ChartPage }) {
-  const capturable = page.dates[0] !== todayUtc();
+  const capturable = page.dates[0] !== page.today;
   return (
     <div className="flex flex-wrap items-center gap-2">
       {capturable ? <CaptureTodayButton chart={chart} /> : null}

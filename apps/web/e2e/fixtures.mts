@@ -4759,6 +4759,7 @@ export function topChartPage(date: string = TOP_CHART_DATES[0]): ChartPage {
       exits: [exitOf("Snake Run", 4), exitOf("Gem Rush", 8)],
     },
     dates: TOP_CHART_DATES,
+    today: utcDaysAgo(0),
     followed: null,
     apps: [
       {

@@ -257,6 +257,7 @@ export interface ChartPage {
   entries: ChartEntryItem[];
   trending: ChartTrending;
   dates: string[];
+  today: string;
   followed: ChartFollowItem | null;
   apps: ChartAppLink[];
 }

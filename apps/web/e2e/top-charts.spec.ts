@@ -256,6 +256,28 @@ test("captures today", async ({ page, request }) => {
   });
 });
 
+test("offers a capture only when the api has no capture for its day", async ({
+  page,
+  context,
+}) => {
+  await context.addCookies([
+    {
+      name: "e2e_chart_api_day",
+      value: TOP_CHART_DATES[0],
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
+  await page.goto("/charts");
+
+  await expect(
+    page.getByRole("button", { name: "Follow chart" }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Capture today" })).toHaveCount(
+    0,
+  );
+});
+
 test("a spent allowance is shown", async ({ page, context }) => {
   await context.addCookies([
     {

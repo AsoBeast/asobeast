@@ -140,6 +140,7 @@ describe('ChartsController (e2e)', () => {
       exits: [],
     });
     expect(page.dates).toEqual([toDateKey(today), toDateKey(weekAgo)]);
+    expect(page.today).toBe(toDateKey(today));
     expect(page.followed).toBeNull();
     expect(page.apps).toEqual([]);
   });
