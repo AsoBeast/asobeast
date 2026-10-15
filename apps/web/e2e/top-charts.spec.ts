@@ -715,8 +715,17 @@ test("badges the workspace's apps", async ({ page }) => {
   await expect(
     rows.nth(4).getByRole("link", { name: "Competitor of Focus Timer" }),
   ).toHaveAttribute("href", "/apps/app-1/competitors");
-  await expect(rows.nth(2).getByRole("combobox")).toHaveCount(0);
-  await expect(rows.nth(4).getByRole("combobox")).toHaveCount(0);
+  await expect(rows.nth(2).getByRole("button", { name: /^Add / })).toHaveCount(
+    0,
+  );
+  await expect(rows.nth(4).getByRole("button", { name: /^Add / })).toHaveCount(
+    0,
+  );
+  await expect(
+    rows.nth(0).getByRole("button", {
+      name: `Add ${TOP_CHART_APPS[0].title} as competitor`,
+    }),
+  ).toBeVisible();
 });
 
 test("adds a row as a competitor", async ({ page, request }) => {
@@ -728,7 +737,10 @@ test("adds a row as a competitor", async ({ page, request }) => {
       sent.url().endsWith("/apps/app-1/competitors"),
   );
 
-  await pick(page, `Add ${row.title} as competitor to`, "Focus Timer");
+  await page
+    .getByRole("button", { name: `Add ${row.title} as competitor` })
+    .click();
+  await page.getByRole("menuitem", { name: "Focus Timer" }).click();
 
   expect((await posted).postDataJSON()).toEqual({ url: row.storeAppId });
   await expect(page.getByText(/^Now tracking/)).toBeVisible();
@@ -745,16 +757,67 @@ test("shows the add in progress on the competitor menu", async ({
     { name: "e2e_api_latency", value: "1500", domain: "localhost", path: "/" },
   ]);
   const row = TOP_CHART_APPS[0];
-  const menu = page.getByRole("combobox", {
-    name: `Add ${row.title} as competitor to`,
+  const menu = page.getByRole("button", {
+    name: `Add ${row.title} as competitor`,
   });
 
-  await pick(page, `Add ${row.title} as competitor to`, "Focus Timer");
+  await menu.click();
+  await page.getByRole("menuitem", { name: "Focus Timer" }).click();
 
   await expect(menu).toHaveAttribute("aria-busy", "true");
   await expect(menu.locator(".animate-spin")).toBeVisible();
   await expect(page.getByText(/^Now tracking/)).toBeVisible();
   await request.post(`${MOCK_API}/__reset/competitors/app-1`);
+});
+
+test("hides the price column on a free chart", async ({ page }) => {
+  await page.goto("/charts?view=table");
+  await expect(chartTable(page).locator("tbody tr")).toHaveCount(
+    TOP_CHART_APPS.length,
+  );
+  await expect(
+    chartTable(page).getByRole("columnheader", { name: "Price" }),
+  ).toHaveCount(0);
+
+  await page.goto("/charts?view=table&collection=paid");
+
+  await expect(
+    chartTable(page).getByRole("columnheader", { name: "Price" }),
+  ).toBeVisible();
+});
+
+test("shows a dash for an unchanged row", async ({ page }) => {
+  await page.goto("/charts?view=table");
+  const unchanged = chartTable(page)
+    .locator("tbody tr")
+    .filter({ hasText: "Word Garden" });
+
+  const change = unchanged.getByRole("cell").nth(1);
+  await expect(change).toContainText("—");
+  await expect(change).toContainText("No change");
+  await expect(change).not.toContainText("from #");
+});
+
+test("offers the row actions in a column", async ({ page }) => {
+  await page.goto("/charts");
+  const first = kindRegion(page, "Free").getByRole("listitem").first();
+
+  await expect(
+    first.getByRole("button", {
+      name: `Add ${TOP_CHART_APPS[0].title} as competitor`,
+    }),
+  ).toBeVisible();
+  await expect(
+    first.getByRole("link", {
+      name: `Open ${TOP_CHART_APPS[0].title} in the store`,
+    }),
+  ).toBeVisible();
+  await expect(
+    kindRegion(page, "Free")
+      .getByRole("listitem")
+      .nth(2)
+      .getByRole("link", { name: "Yours" }),
+  ).toBeVisible();
 });
 
 test("leaves out the category column when no row has one", async ({ page }) => {
@@ -815,12 +878,14 @@ test("keeps the row actions on the chart on screen while the next one loads", as
 
   await expect(page).toHaveURL(/store=GOOGLE_PLAY/);
   await expect(
-    page.getByRole("combobox", {
-      name: `Add ${TOP_CHART_APPS[0].title} as competitor to`,
+    page.getByRole("button", {
+      name: `Add ${TOP_CHART_APPS[0].title} as competitor`,
     }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Add to Tomato Clock" }),
+    page.getByRole("button", {
+      name: `Add ${TOP_CHART_APPS[0].title} to Tomato Clock`,
+    }),
   ).toHaveCount(0);
 });
 

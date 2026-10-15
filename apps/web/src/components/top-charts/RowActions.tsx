@@ -1,21 +1,10 @@
 import Link from "next/link";
 import { ExternalLink } from "lucide-react";
-import type {
-  AppListItem,
-  ChartAppLink,
-  ChartEntryItem,
-  ChartKey,
-} from "@asobeast/shared";
+import type { ChartEntryItem } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AddAsCompetitor } from "./AddAsCompetitor";
-import { rowLink, storeUrl } from "./chart-actions";
-
-export interface ChartRowContext {
-  chart: ChartKey;
-  links: ReadonlyMap<string, ChartAppLink>;
-  apps: readonly AppListItem[];
-}
+import { rowLink, storeUrl, type ChartRowContext } from "./chart-actions";
 
 export function RowActions({
   entry,
@@ -27,10 +16,16 @@ export function RowActions({
   const link = rowLink(context.links.get(entry.storeAppId));
 
   return (
-    <div className="flex items-center justify-end gap-2">
+    <div className="flex min-w-0 items-center justify-end gap-1">
       {link ? (
-        <Badge asChild variant={link.role === "own" ? "info" : "secondary"}>
-          <Link href={link.href}>{link.label}</Link>
+        <Badge
+          asChild
+          variant={link.role === "own" ? "info" : "secondary"}
+          className="max-w-40 min-w-0 shrink"
+        >
+          <Link href={link.href} title={link.label}>
+            <span className="truncate">{link.label}</span>
+          </Link>
         </Badge>
       ) : (
         <AddAsCompetitor

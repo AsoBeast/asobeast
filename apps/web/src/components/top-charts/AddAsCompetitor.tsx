@@ -6,12 +6,12 @@ import { toast } from "sonner";
 import type { AppListItem } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { addCompetitor, ApiError } from "@/lib/api";
 import {
   invalidateChartMutation,
@@ -44,50 +44,49 @@ export function AddAsCompetitor({
       ),
   });
   const addOnce = useSingleFlight(mutation);
+  const icon = mutation.isPending ? (
+    <Loader2 className="animate-spin" aria-hidden />
+  ) : (
+    <Plus aria-hidden />
+  );
 
   if (apps.length === 0) return null;
   if (apps.length === 1) {
     const [app] = apps;
     return (
       <Button
-        variant="outline"
-        size="sm"
+        variant="ghost"
+        size="icon-sm"
+        aria-label={`Add ${title} to ${app.name ?? "your app"}`}
+        aria-busy={mutation.isPending}
         disabled={mutation.isPending}
         onClick={() => addOnce(app.id)}
       >
-        {mutation.isPending ? (
-          <Loader2 className="animate-spin" aria-hidden />
-        ) : (
-          <Plus aria-hidden />
-        )}
-        Add to {app.name ?? "your app"}
+        {icon}
       </Button>
     );
   }
   return (
-    <Select
-      value=""
-      disabled={mutation.isPending}
-      onValueChange={(appId) => addOnce(appId)}
-    >
-      <SelectTrigger
-        size="sm"
-        aria-label={`Add ${title} as competitor to`}
-        aria-busy={mutation.isPending}
-        className="w-44"
-      >
-        {mutation.isPending ? (
-          <Loader2 className="animate-spin" aria-hidden />
-        ) : null}
-        <SelectValue placeholder="Add as competitor…" />
-      </SelectTrigger>
-      <SelectContent>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label={`Add ${title} as competitor`}
+          aria-busy={mutation.isPending}
+          disabled={mutation.isPending}
+        >
+          {icon}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuLabel>Add as competitor to</DropdownMenuLabel>
         {apps.map((app) => (
-          <SelectItem key={app.id} value={app.id}>
+          <DropdownMenuItem key={app.id} onSelect={() => addOnce(app.id)}>
             {app.name ?? app.id}
-          </SelectItem>
+          </DropdownMenuItem>
         ))}
-      </SelectContent>
-    </Select>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

@@ -1,10 +1,11 @@
 "use client";
 
-import { useId } from "react";
+import { useId, useMemo } from "react";
 import Link from "next/link";
-import type { ChartPage } from "@asobeast/shared";
+import type { AppListItem, ChartPage } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
 import { CaptureTodayButton } from "./CaptureTodayButton";
+import { rowContextOf } from "./chart-actions";
 import {
   capturableToday,
   columnCaption,
@@ -19,15 +20,22 @@ import {
 } from "./chart-params";
 import { compareLabel } from "./movement";
 import { MovementCell } from "./MovementCell";
+import { RowActions } from "./RowActions";
 
 export function ChartColumn({
   page,
+  apps,
   search,
 }: {
   page: ChartPage;
+  apps: readonly AppListItem[];
   search: Pick<ChartSearch, "compare" | "date">;
 }) {
   const headingId = useId();
+  const context = useMemo(
+    () => rowContextOf({ chart: page.chart, apps: page.apps }, apps),
+    [page.chart, page.apps, apps],
+  );
   const chart = shownChartKey(page);
   const label = COLLECTION_LABELS[chart.collection];
   const period = compareLabel(page.compare, page.comparison);
@@ -64,13 +72,13 @@ export function ChartColumn({
           {columnRows(page).map((entry) => (
             <li
               key={entry.storeAppId}
-              className="flex items-center gap-3 py-2 first:pt-0 last:pb-0"
+              className="flex items-center gap-2 py-2 first:pt-0 last:pb-0"
             >
-              <span className="numeric w-7 shrink-0 text-right font-mono">
+              <span className="numeric w-6 shrink-0 text-right font-mono">
                 {entry.position}
               </span>
               <AppIcon src={entry.iconUrl} name={entry.title} size={28} />
-              <div className="flex min-w-0 flex-1 flex-col">
+              <div className="flex min-w-20 flex-1 flex-col">
                 <span className="truncate font-medium" translate="no">
                   {entry.title}
                 </span>
@@ -81,8 +89,9 @@ export function ChartColumn({
                 ) : null}
               </div>
               <span className="shrink-0 text-right">
-                <MovementCell entry={entry} period={period} />
+                <MovementCell entry={entry} period={period} compact />
               </span>
+              <RowActions entry={entry} context={context} />
             </li>
           ))}
         </ol>

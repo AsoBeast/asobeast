@@ -1,13 +1,15 @@
 "use client";
 
-import { useDeferredValue } from "react";
+import { useDeferredValue, useMemo } from "react";
 import {
   useSuspenseQueries,
+  useSuspenseQuery,
   type UseSuspenseQueryResult,
 } from "@tanstack/react-query";
 import { CATEGORY_COLLECTIONS, type ChartPage } from "@asobeast/shared";
 import type { ChartPageQuery } from "@/lib/api";
-import { chartPageOptions } from "@/lib/queries";
+import { appsOptions, chartPageOptions } from "@/lib/queries";
+import { candidateApps } from "./chart-actions";
 import { ChartColumn } from "./ChartColumn";
 import { categoryDates } from "./chart-column-rows";
 import { chartCategoryOf } from "./chart-follows";
@@ -43,6 +45,9 @@ export function ChartColumns({
     ),
     combine: pagesOf,
   });
+  const { data: apps } = useSuspenseQuery(appsOptions);
+  const store = pages[0].chart.store;
+  const candidates = useMemo(() => candidateApps(apps, store), [apps, store]);
   const dates = categoryDates(pages);
   const shownSearch = { compare: shown.compare, date: shown.date ?? null };
 
@@ -69,6 +74,7 @@ export function ChartColumns({
           <ChartColumn
             key={page.chart.collection}
             page={page}
+            apps={candidates}
             search={shownSearch}
           />
         ))}

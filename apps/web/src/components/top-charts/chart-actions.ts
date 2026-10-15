@@ -2,6 +2,8 @@ import type {
   AppListItem,
   ChartAppLink,
   ChartAppRole,
+  ChartKey,
+  ChartPage,
   Store,
 } from "@asobeast/shared";
 import { ApiError } from "@/lib/api";
@@ -33,6 +35,23 @@ export function rowLink(link: ChartAppLink | undefined): RowLink | null {
     href: `/apps/${link.primaryAppId ?? link.appId}/competitors`,
     label: `Competitor of ${link.name ?? "your app"}`,
     role: "competitor",
+  };
+}
+
+export interface ChartRowContext {
+  chart: ChartKey;
+  links: ReadonlyMap<string, ChartAppLink>;
+  apps: readonly AppListItem[];
+}
+
+export function rowContextOf(
+  page: Pick<ChartPage, "chart" | "apps">,
+  apps: readonly AppListItem[],
+): ChartRowContext {
+  return {
+    chart: page.chart,
+    links: new Map(page.apps.map((link) => [link.storeAppId, link])),
+    apps,
   };
 }
 

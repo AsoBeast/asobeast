@@ -5,6 +5,7 @@ import {
   candidateApps,
   captureErrorText,
   followErrorText,
+  rowContextOf,
   rowLink,
   storeUrl,
 } from "./chart-actions";
@@ -110,5 +111,36 @@ describe("error texts", () => {
     expect(followErrorText(refused(500, "boom"))).toBe(
       "Could not follow the category.",
     );
+  });
+});
+
+describe("rowContextOf", () => {
+  it("indexes the page's app links by store id", () => {
+    const context = rowContextOf(
+      {
+        chart: {
+          store: "APP_STORE",
+          country: "us",
+          collection: "free",
+          genre: "6014",
+          device: "iphone",
+          genreName: "Games",
+        },
+        apps: [
+          {
+            storeAppId: "111",
+            appId: "app-1",
+            primaryAppId: null,
+            name: "Focus Timer",
+            role: "own",
+          },
+        ],
+      },
+      [],
+    );
+
+    expect(context.links.get("111")?.appId).toBe("app-1");
+    expect(context.links.get("222")).toBeUndefined();
+    expect(context.chart.country).toBe("us");
   });
 });

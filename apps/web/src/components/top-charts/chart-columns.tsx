@@ -8,7 +8,8 @@ import type { DataTableFeatures } from "@/components/data-table/table-features";
 import { Badge } from "@/components/ui/badge";
 import { movementSortValue } from "./movement";
 import { MovementCell } from "./MovementCell";
-import { RowActions, type ChartRowContext } from "./RowActions";
+import type { ChartRowContext } from "./chart-actions";
+import { RowActions } from "./RowActions";
 
 const columnHelper = createColumnHelper<DataTableFeatures, ChartEntryItem>();
 
@@ -30,10 +31,19 @@ function genreColumn() {
   });
 }
 
+function priceColumn() {
+  return columnHelper.display({
+    id: "price",
+    meta: { label: "Price" },
+    header: () => "Price",
+    cell: ({ row }) => <PriceCell free={row.original.free} />,
+  });
+}
+
 export function chartColumns(
   period: string,
   context: ChartRowContext,
-  withGenre: boolean,
+  { withGenre, withPrice }: { withGenre: boolean; withPrice: boolean },
 ) {
   return columnHelper.columns([
     columnHelper.accessor("position", {
@@ -84,12 +94,7 @@ export function chartColumns(
       ),
     }),
     ...(withGenre ? [genreColumn()] : []),
-    columnHelper.display({
-      id: "price",
-      meta: { label: "Price" },
-      header: () => "Price",
-      cell: ({ row }) => <PriceCell free={row.original.free} />,
-    }),
+    ...(withPrice ? [priceColumn()] : []),
     columnHelper.display({
       id: "actions",
       enableHiding: false,
