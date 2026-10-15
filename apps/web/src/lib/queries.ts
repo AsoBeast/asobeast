@@ -19,6 +19,7 @@ import {
 } from "@tanstack/react-query";
 import {
   getChart,
+  listChartFollows,
   getAction,
   getActionActivity,
   getAdminApps,
@@ -398,7 +399,14 @@ export const portfolioInsightsOptions = queryOptions({
 export const chartKeys = {
   all: ["charts"] as const,
   page: (query: ChartPageQuery) => ["charts", "page", query] as const,
+  follows: ["charts", "follows"] as const,
 };
+
+export const chartFollowsOptions = queryOptions({
+  queryKey: chartKeys.follows,
+  queryFn: listChartFollows,
+  staleTime: 60_000,
+});
 
 export const chartPageOptions = (query: ChartPageQuery) =>
   queryOptions({

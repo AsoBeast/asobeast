@@ -73,6 +73,17 @@ export function chartTitle(key: ChartKey): string {
   ].join(" · ");
 }
 
+export function chartHref(key: ChartKey): string {
+  const params = new URLSearchParams({
+    store: key.store,
+    country: key.country,
+    collection: key.collection,
+    genre: key.genre,
+    device: key.device,
+  });
+  return `/charts?${params.toString()}`;
+}
+
 export function stepDate(
   dates: readonly string[],
   current: string,

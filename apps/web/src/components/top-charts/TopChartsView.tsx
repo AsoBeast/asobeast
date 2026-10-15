@@ -13,6 +13,7 @@ import { ChartFilters } from "./ChartFilters";
 import { chartKeyFrom, chartQueryFrom, shownChartKey } from "./chart-params";
 import { ChartTable } from "./ChartTable";
 import { FollowChartButton } from "./FollowChartButton";
+import { FollowedCharts } from "./FollowedCharts";
 import { CHART_GRID } from "./skeletons";
 import { TrendingPanel } from "./TrendingPanel";
 
@@ -68,7 +69,10 @@ export function TopChartsView() {
             once a day.
           </p>
         </div>
-        {page.capture ? actions : null}
+        <div className="flex flex-wrap items-center gap-2">
+          <FollowedCharts />
+          {page.capture ? actions : null}
+        </div>
       </div>
       <ChartFilters
         chart={chartKeyFrom(search)}

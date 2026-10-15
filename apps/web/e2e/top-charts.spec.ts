@@ -1,4 +1,4 @@
-import { type Page } from "@playwright/test";
+import { type APIRequestContext, type Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
 import { TOP_CHART_APPS, TOP_CHART_DATES, utcDaysAgo } from "./fixtures.mts";
 
@@ -316,27 +316,102 @@ test("a spent allowance is shown", async ({ page, context }) => {
   await expect(page.getByText(/Chart capture limit reached/)).toBeVisible();
 });
 
-test("follows and unfollows", async ({ page, request }) => {
-  await request.get(`${MOCK_API}/__reset-chart-follows`);
-  await page.goto("/charts?genre=7012");
-
-  await page.getByRole("button", { name: "Follow chart" }).click();
-
-  await expect(page.getByText(/^Following Top free · Puzzle/)).toBeVisible();
-  const follows = async () =>
+test.describe.serial("chart follows", () => {
+  const follows = async (request: APIRequestContext) =>
     (await (await request.get(`${MOCK_API}/__chart-follows`)).json()) as Array<
       Record<string, string>
     >;
-  expect((await follows()).map((follow) => follow.genre)).toEqual(["7012"]);
+  const follow = (request: APIRequestContext, key: Record<string, string>) =>
+    request.post(`${MOCK_API}/charts/follows`, { data: key });
 
-  await page.getByRole("button", { name: "Following" }).click();
-  await page.getByRole("button", { name: "Stop following" }).click();
+  test("follows and unfollows", async ({ page, request }) => {
+    await request.get(`${MOCK_API}/__reset-chart-follows`);
+    await page.goto("/charts?genre=7012");
 
-  await expect(page.getByText("Stopped following")).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Follow chart" }),
-  ).toBeVisible();
-  expect(await follows()).toEqual([]);
+    await page.getByRole("button", { name: "Follow chart" }).click();
+
+    await expect(page.getByText(/^Following Top free · Puzzle/)).toBeVisible();
+    expect((await follows(request)).map((follow) => follow.genre)).toEqual([
+      "7012",
+    ]);
+
+    await page.getByRole("button", { name: "Following" }).click();
+    await page.getByRole("button", { name: "Stop following" }).click();
+
+    await expect(page.getByText("Stopped following")).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Follow chart" }),
+    ).toBeVisible();
+    expect(await follows(request)).toEqual([]);
+  });
+
+  test("lists the followed charts", async ({ page, request }) => {
+    await request.get(`${MOCK_API}/__reset-chart-follows`);
+    await follow(request, {
+      store: "APP_STORE",
+      country: "us",
+      collection: "free",
+      genre: "7012",
+      device: "iphone",
+    });
+    await follow(request, {
+      store: "GOOGLE_PLAY",
+      country: "de",
+      collection: "grossing",
+      genre: "GAME_PUZZLE",
+      device: "android",
+    });
+    await page.goto("/charts");
+
+    await page.getByRole("button", { name: "Followed charts" }).click();
+
+    const list = page.getByRole("dialog", { name: "Followed charts" });
+    await expect(list.getByText("2 of Unlimited")).toBeVisible();
+    await expect(
+      list.getByRole("link", { name: "Top free · Puzzle · United States" }),
+    ).toHaveAttribute(
+      "href",
+      "/charts?store=APP_STORE&country=us&collection=free&genre=7012&device=iphone",
+    );
+    await expect(
+      list.getByRole("link", { name: "Top grossing · Puzzle · Germany" }),
+    ).toHaveAttribute(
+      "href",
+      "/charts?store=GOOGLE_PLAY&country=de&collection=grossing&genre=GAME_PUZZLE&device=android",
+    );
+
+    await list
+      .getByRole("link", { name: "Top grossing · Puzzle · Germany" })
+      .click();
+
+    await expect(page).toHaveURL(/store=GOOGLE_PLAY/);
+    await expect(page).toHaveURL(/genre=GAME_PUZZLE/);
+    await expect(list).toBeHidden();
+  });
+
+  test("stops following a chart from the list", async ({ page, request }) => {
+    await request.get(`${MOCK_API}/__reset-chart-follows`);
+    await follow(request, {
+      store: "APP_STORE",
+      country: "us",
+      collection: "free",
+      genre: "7012",
+      device: "iphone",
+    });
+    await page.goto("/charts");
+
+    await page.getByRole("button", { name: "Followed charts" }).click();
+    const list = page.getByRole("dialog", { name: "Followed charts" });
+    await list
+      .getByRole("button", {
+        name: "Stop following Top free · Puzzle · United States",
+      })
+      .click();
+
+    await expect(page.getByText("Stopped following")).toBeVisible();
+    await expect(list.getByText("No charts followed yet")).toBeVisible();
+    expect(await follows(request)).toEqual([]);
+  });
 });
 
 test("badges the workspace's apps", async ({ page }) => {

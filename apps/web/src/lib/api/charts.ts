@@ -33,6 +33,10 @@ export function captureChart(key: ChartCaptureRequest): Promise<ChartPage> {
   });
 }
 
+export function listChartFollows(): Promise<ChartFollowItem[]> {
+  return apiFetch<ChartFollowItem[]>("/charts/follows");
+}
+
 export function followChart(key: ChartFollowRequest): Promise<ChartFollowItem> {
   return apiFetch<ChartFollowItem>("/charts/follows", {
     method: "POST",
