@@ -16,14 +16,14 @@ import { runStateOf } from './run-state';
 const HOUR_MS = 3_600_000;
 const DAY_MS = 24 * HOUR_MS;
 
-interface ListedApp {
+interface FamilyMember {
   id: string;
   store: Store;
   country: string;
 }
 
-interface RunApp extends ListedApp {
-  competitors: ListedApp[];
+interface RunApp extends FamilyMember {
+  competitors: FamilyMember[];
   tracked: { keyword: { country: string } }[];
 }
 
