@@ -1,7 +1,8 @@
 "use client";
 
 import { Suspense } from "react";
-import type { CategoryRankSeriesItem } from "@asobeast/shared";
+import Link from "next/link";
+import type { AppDetail, CategoryRankSeriesItem } from "@asobeast/shared";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
@@ -29,6 +30,7 @@ import { rangeParser } from "@/lib/search-params";
 import { MAX_SERIES } from "@/components/rankings/pivot";
 import {
   chartDepthOf,
+  headlineChartHref,
   headlineSeries,
   notInChartLabel,
 } from "./category-headline";
@@ -127,31 +129,39 @@ function CategoryTooltip({
 
 function HeaderStat({
   series,
-  price,
+  detail,
 }: {
   series: CategoryRankSeriesItem[];
-  price: number | null;
+  detail: AppDetail;
 }) {
-  const headline = headlineSeries(series, price);
-  if (!headline) return null;
+  const headline = headlineSeries(series, detail.latestSnapshot?.price ?? null);
+  const href = headlineChartHref(headline, detail);
+  if (!headline || !href) return null;
 
   return (
     <p className="text-sm">
-      {headline.current === null ? (
+      <Link
+        href={href}
+        className="underline decoration-primary underline-offset-4 hover:decoration-2"
+      >
+        {headline.current === null ? (
+          <span className="text-muted-foreground">
+            {notInChartLabel(headline)}
+          </span>
+        ) : (
+          <>
+            <span className="font-mono text-lg font-semibold numeric font-mono">
+              #{headline.current}
+            </span>{" "}
+            <span className="text-muted-foreground">
+              in {headline.genreName}
+            </span>
+          </>
+        )}{" "}
         <span className="text-muted-foreground">
-          {notInChartLabel(headline)}
+          · {headline.collection} chart
         </span>
-      ) : (
-        <>
-          <span className="font-mono text-lg font-semibold numeric font-mono">
-            #{headline.current}
-          </span>{" "}
-          <span className="text-muted-foreground">in {headline.genreName}</span>
-        </>
-      )}{" "}
-      <span className="text-muted-foreground">
-        · {headline.collection} chart
-      </span>
+      </Link>
     </p>
   );
 }
@@ -176,10 +186,7 @@ function CategoryRankBody({ id, range }: { id: string; range: RangePreset }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <HeaderStat
-        series={data.series}
-        price={detail.latestSnapshot?.price ?? null}
-      />
+      <HeaderStat series={data.series} detail={detail} />
       <ChartContainer
         config={chart.config}
         className={`${CHART_HEIGHT.tall} w-full`}

@@ -87,3 +87,24 @@ test("a free app with only an overall chart reads the overall position", async (
   await expect(stat).toContainText("#42 in Overall");
   await expect(stat).toContainText("free chart");
 });
+
+test("the headline opens the chart it was read from", async ({ page }) => {
+  const stat = await headline(page, APP_PAID_TOP_CHART_ID);
+  const link = stat.getByRole("link");
+
+  await expect(link).toHaveAttribute(
+    "href",
+    "/charts?store=APP_STORE&country=us&collection=paid&genre=6014&device=iphone",
+  );
+  await link.click();
+
+  await expect(page).toHaveURL(/\/charts\?/);
+  await expect(page.getByRole("combobox", { name: "Category" })).toHaveText(
+    "Games",
+  );
+  await expect(
+    page
+      .getByRole("tablist", { name: "Chart" })
+      .getByRole("tab", { name: "Paid" }),
+  ).toHaveAttribute("aria-selected", "true");
+});

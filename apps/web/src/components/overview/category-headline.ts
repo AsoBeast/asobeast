@@ -1,7 +1,9 @@
 import {
+  defaultChartDevice,
   OVERALL_GENRE,
   type CategoryCollection,
   type CategoryRankSeriesItem,
+  type Store,
 } from "@asobeast/shared";
 
 const LEGACY_CHART_DEPTH = 200;
@@ -37,4 +39,19 @@ export function headlineSeries(
     .map((collection) => pool.find((item) => item.collection === collection))
     .filter((item): item is CategoryRankSeriesItem => item !== undefined);
   return preferred.find((item) => item.current !== null) ?? preferred[0];
+}
+
+export function headlineChartHref(
+  headline: CategoryRankSeriesItem | undefined,
+  app: { store: Store; country: string },
+): string | null {
+  if (!headline) return null;
+  const params = new URLSearchParams({
+    store: app.store,
+    country: app.country,
+    collection: headline.collection,
+    genre: headline.genre,
+    device: defaultChartDevice(app.store),
+  });
+  return `/charts?${params.toString()}`;
 }

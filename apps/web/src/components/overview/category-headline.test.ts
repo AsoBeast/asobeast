@@ -6,6 +6,7 @@ import {
 import { describe, expect, it } from "vitest";
 import {
   chartDepthOf,
+  headlineChartHref,
   headlineSeries,
   notInChartLabel,
 } from "./category-headline";
@@ -221,5 +222,30 @@ describe("chartDepthOf", () => {
         series("grossing", "6014", [null]),
       ]),
     ).toBe(200);
+  });
+});
+
+describe("headlineChartHref", () => {
+  const app = { store: "APP_STORE", country: "us" } as const;
+
+  it("opens the chart the headline was read from", () => {
+    expect(headlineChartHref(headlineSeries(PAID_FIRST_PAGE, 1.99), app)).toBe(
+      "/charts?store=APP_STORE&country=us&collection=paid&genre=6014&device=iphone",
+    );
+  });
+
+  it("opens the overall chart when that is the headline", () => {
+    expect(
+      headlineChartHref(series("free", OVERALL_GENRE, [12]), {
+        store: "GOOGLE_PLAY",
+        country: "de",
+      }),
+    ).toBe(
+      "/charts?store=GOOGLE_PLAY&country=de&collection=free&genre=overall&device=android",
+    );
+  });
+
+  it("links nowhere without a headline", () => {
+    expect(headlineChartHref(undefined, app)).toBeNull();
   });
 });
