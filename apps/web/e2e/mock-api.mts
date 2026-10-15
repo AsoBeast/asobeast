@@ -1604,7 +1604,7 @@ const confirmCalls = new Map<string, number>();
 const resendCalls = new Map<string, number>();
 
 const chartFollows: ChartFollowItem[] = [];
-const chartCaptures: unknown[] = [];
+const chartCaptures: ChartKey[] = [];
 
 function chartKeyOf(source: URLSearchParams | ChartKey): ChartKey {
   const read = (name: keyof ChartKey) =>
@@ -1621,9 +1621,26 @@ function chartKeyOf(source: URLSearchParams | ChartKey): ChartKey {
 const sameChart = (a: ChartKey, b: ChartKey) =>
   (Object.keys(a) as (keyof ChartKey)[]).every((name) => a[name] === b[name]);
 
-function chartPageFor(req: IncomingMessage, date: string | null): ChartPage {
+function capturedTodayPage(): ChartPage {
+  const today = utcDaysAgo(0);
+  return {
+    ...topChartPage(),
+    capture: { date: today, depth: 100, capturedAt: `${today}T09:00:00.000Z` },
+    dates: [today, ...TOP_CHART_DATES],
+  };
+}
+
+function chartPageFor(
+  req: IncomingMessage,
+  key: ChartKey,
+  date: string | null,
+): ChartPage {
   if (hasCookie(req, "e2e_chart_uncaptured", "1")) {
     return TOP_CHART_PAGE_UNCAPTURED;
+  }
+  const captured = chartCaptures.some((body) => sameChart(body, key));
+  if (captured && (!date || date === utcDaysAgo(0))) {
+    return capturedTodayPage();
   }
   if (!date) return topChartPage();
   return TOP_CHART_DATES.includes(date)
@@ -1662,8 +1679,11 @@ function chartAnswer(req: IncomingMessage): [number, unknown] {
     return [400, errorEnvelope(400, path)];
   }
   const compare = (query.get("compare") ?? "1d") as ChartPage["compare"];
-  const page = withComparison(chartPageFor(req, query.get("date")), compare);
   const key = chartKeyOf(query);
+  const page = withComparison(
+    chartPageFor(req, key, query.get("date")),
+    compare,
+  );
   const followed =
     chartFollows.find((follow) => sameChart(chartKeyOf(follow), key)) ?? null;
   return [
@@ -1695,16 +1715,9 @@ const routes: Route[] = [
             chartCaptureSpent(req.url ?? "/charts/capture"),
           );
         }
-        chartCaptures.push(body);
-        const today = utcDaysAgo(0);
+        chartCaptures.push(chartKeyOf(body));
         json(res, 200, {
-          ...topChartPage(),
-          capture: {
-            date: today,
-            depth: 100,
-            capturedAt: `${today}T09:00:00.000Z`,
-          },
-          dates: [today, ...TOP_CHART_DATES.filter((date) => date !== today)],
+          ...capturedTodayPage(),
           chart: {
             ...chartKeyOf(body),
             genreName: chartGenreName(body.store, body.genre) ?? body.genre,

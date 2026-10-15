@@ -11,6 +11,7 @@ import type {
 } from "@asobeast/shared";
 import { QUERY_BOUNDS } from "@asobeast/shared";
 import {
+  hashKey,
   queryOptions,
   skipToken,
   type QueryClient,
@@ -400,22 +401,20 @@ export function invalidateChartMutation(client: QueryClient): void {
 }
 
 export function seedChartCapture(client: QueryClient, page: ChartPage): void {
+  const { store, country, collection, genre, device } = page.chart;
+  const seeded = chartKeys.page({
+    store,
+    country,
+    collection,
+    genre,
+    device,
+    compare: page.compare,
+  });
+  client.setQueryData(seeded, page);
   void client.invalidateQueries({
     queryKey: chartKeys.all,
-    refetchType: "none",
+    predicate: (query) => query.queryHash !== hashKey(seeded),
   });
-  const { store, country, collection, genre, device } = page.chart;
-  client.setQueryData(
-    chartKeys.page({
-      store,
-      country,
-      collection,
-      genre,
-      device,
-      compare: page.compare,
-    }),
-    page,
-  );
 }
 
 export const actionKeys = {

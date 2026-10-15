@@ -232,7 +232,7 @@ test("sorts by movement", async ({ page }) => {
 const MOCK_API = "http://localhost:4100";
 
 test("captures today", async ({ page, request }) => {
-  await page.goto(`/charts?date=${TOP_CHART_DATES[2]}`);
+  await page.goto(`/charts?genre=6014&date=${TOP_CHART_DATES[2]}`);
 
   await page.getByRole("button", { name: "Capture today" }).click();
 
@@ -251,9 +251,23 @@ test("captures today", async ({ page, request }) => {
     store: "APP_STORE",
     country: "us",
     collection: "free",
-    genre: "overall",
+    genre: "6014",
     device: "iphone",
   });
+});
+
+test("shows today's capture while comparing an older window", async ({
+  page,
+}) => {
+  await page.goto("/charts?genre=6000&compare=7d");
+
+  await page.getByRole("button", { name: "Capture today" }).click();
+
+  await expect(page.getByText("Captured today's chart")).toBeVisible();
+  await expect(page).toHaveURL(/compare=7d/);
+  await expect(chartTable(page).locator("caption")).toContainText(
+    formatDay(utcDaysAgo(0)),
+  );
 });
 
 test("offers a capture only when the api has no capture for its day", async ({
