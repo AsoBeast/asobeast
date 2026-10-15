@@ -798,6 +798,21 @@ describe('ReviewsController (e2e)', () => {
       negative: 2,
     });
     expect(recent.reviews).toBe(4);
+    const lowRated = (
+      await api
+        .get(`/apps/${seeded.id}/reviews/themes`)
+        .query({ score: 5, replyState: 'needs_reply' })
+        .expect(200)
+    ).body as ReviewThemes;
+    expect(lowRated.reviews).toBe(2);
+    expect(lowRated.themes).toContainEqual({
+      phrase: 'love',
+      mentions: 2,
+      negative: 0,
+    });
+    expect(lowRated.themes.map((theme) => theme.phrase)).not.toContain(
+      'sync fails',
+    );
     expect(recent.themes[0]).toEqual({
       phrase: 'sync fails',
       mentions: 2,

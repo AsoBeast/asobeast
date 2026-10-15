@@ -46,8 +46,10 @@ export class ReviewsController {
     @Query() query: ReviewThemesQueryDto,
   ): Promise<ReviewThemes> {
     return this.themes.themes(id, {
+      score: query.score,
       version: query.version,
       from: dayOf(query.from),
+      replyState: query.replyState,
     });
   }
 

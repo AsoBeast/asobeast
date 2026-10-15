@@ -1,9 +1,9 @@
-import { ReviewTheme, tokenize } from '@asobeast/shared';
+import { QUERY_BOUNDS, ReviewTheme, tokenize } from '@asobeast/shared';
 import { MinableReview, reviewPhrases } from '../keywords/review-mining';
 
 export const REVIEW_THEMES_LIMIT = 8;
 export const REVIEW_THEME_MIN_REVIEWS = 2;
-export const REVIEW_THEMES_CAP = 500;
+export const REVIEW_THEMES_CAP = QUERY_BOUNDS.reviewsLimit.max;
 
 const GENERIC_WORDS = ['app', 'apps', 'application', 'game', 'games'];
 

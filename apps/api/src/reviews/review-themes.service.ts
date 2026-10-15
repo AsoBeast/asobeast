@@ -1,10 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ReviewThemes } from '@asobeast/shared';
+import { ReviewReplyState, ReviewThemes } from '@asobeast/shared';
 import { Env } from '../config/env';
 import { listingLanguages } from '../keywords/listing-languages';
 import { PrismaService } from '../prisma/prisma.service';
 import {
+  replyStateWhere,
   reviewOrder,
   ReviewScope,
   reviewScopeWhere,
@@ -22,7 +23,10 @@ export class ReviewThemesService {
     private readonly config: ConfigService<Env, true>,
   ) {}
 
-  async themes(appId: string, scope: ReviewScope): Promise<ReviewThemes> {
+  async themes(
+    appId: string,
+    scope: ReviewScope & { replyState?: ReviewReplyState },
+  ): Promise<ReviewThemes> {
     const app = await this.prisma.app.findFirst({
       where: { id: appId },
       select: { store: true, country: true, name: true },
@@ -31,7 +35,13 @@ export class ReviewThemesService {
       throw new NotFoundException(`App ${appId} not found`);
     }
     const reviews = await this.prisma.review.findMany({
-      where: reviewScopeWhere(appId, scope),
+      where: {
+        ...reviewScopeWhere(appId, scope),
+        ...replyStateWhere(
+          scope.replyState,
+          this.prisma.review.fields.repliedAt,
+        ),
+      },
       orderBy: reviewOrder('newest'),
       take: REVIEW_THEMES_CAP,
       select: { title: true, text: true, score: true },
