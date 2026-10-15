@@ -25,36 +25,41 @@ export interface ReviewFilters {
   limit?: number;
 }
 
-export function getReviews(
-  appId: string,
-  { score, version, from, replyState, sort, limit }: ReviewFilters = {},
-): Promise<ReviewList> {
-  const params = new URLSearchParams();
-  if (score !== undefined) params.set("score", String(score));
-  if (version) params.set("version", version);
-  if (from) params.set("from", from);
-  if (replyState) params.set("replyState", replyState);
-  if (sort) params.set("sort", sort);
-  if (limit !== undefined) params.set("limit", String(limit));
-  return apiFetch<ReviewList>(withQuery(`/apps/${appId}/reviews`, params));
-}
-
 export type ReviewThemeFilters = Pick<
   ReviewFilters,
   "score" | "version" | "from" | "replyState"
 >;
 
-export function getReviewThemes(
-  appId: string,
-  { score, version, from, replyState }: ReviewThemeFilters = {},
-): Promise<ReviewThemes> {
+function scopeParams({
+  score,
+  version,
+  from,
+  replyState,
+}: ReviewThemeFilters): URLSearchParams {
   const params = new URLSearchParams();
   if (score !== undefined) params.set("score", String(score));
   if (version) params.set("version", version);
   if (from) params.set("from", from);
   if (replyState) params.set("replyState", replyState);
+  return params;
+}
+
+export function getReviews(
+  appId: string,
+  { sort, limit, ...scope }: ReviewFilters = {},
+): Promise<ReviewList> {
+  const params = scopeParams(scope);
+  if (sort) params.set("sort", sort);
+  if (limit !== undefined) params.set("limit", String(limit));
+  return apiFetch<ReviewList>(withQuery(`/apps/${appId}/reviews`, params));
+}
+
+export function getReviewThemes(
+  appId: string,
+  filters: ReviewThemeFilters = {},
+): Promise<ReviewThemes> {
   return apiFetch<ReviewThemes>(
-    withQuery(`/apps/${appId}/reviews/themes`, params),
+    withQuery(`/apps/${appId}/reviews/themes`, scopeParams(filters)),
   );
 }
 
