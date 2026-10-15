@@ -79,6 +79,18 @@ export interface ReviewList {
   counts?: ReviewReplyCounts;
 }
 
+export interface ReviewTheme {
+  phrase: string;
+  mentions: number;
+  negative: number;
+}
+
+export interface ReviewThemes {
+  themes: ReviewTheme[];
+  reviews: number;
+  negativeScoreMax: number;
+}
+
 export function replyStateOf(
   review: Pick<ReviewItem, 'repliedAt' | 'reply'>,
 ): ReviewReplyState {
