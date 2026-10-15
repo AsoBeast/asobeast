@@ -4,6 +4,7 @@ import {
   keptTranslation,
   offersTranslation,
   primaryLanguage,
+  translationCaption,
 } from "./review-translation";
 
 const TRANSLATION: ReviewTranslation = {
@@ -88,5 +89,12 @@ describe("keptTranslation", () => {
     expect(keptTranslation(translated, "en")).toBe(TRANSLATION);
     expect(keptTranslation(translated, "fr")).toBeNull();
     expect(keptTranslation(translated, null)).toBeNull();
+  });
+});
+
+describe("translationCaption", () => {
+  it("names the source language and leaves out one the model could not tell", () => {
+    expect(translationCaption("de")).toBe("Translated from German by AI");
+    expect(translationCaption("und")).toBe("Translated by AI");
   });
 });

@@ -1,4 +1,13 @@
 import { REVIEW_TRANSLATION_LANGUAGE, type ReviewItem } from "@asobeast/shared";
+import { replyLanguageName } from "./reply-language";
+
+const UNKNOWN_LANGUAGE = "und";
+
+export function translationCaption(sourceLanguage: string): string {
+  return sourceLanguage === UNKNOWN_LANGUAGE
+    ? "Translated by AI"
+    : `Translated from ${replyLanguageName(sourceLanguage)} by AI`;
+}
 
 export function primaryLanguage(tag: string | null | undefined): string | null {
   const primary = tag?.split(/[-_]/)[0]?.toLowerCase() ?? "";

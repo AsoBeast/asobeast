@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { ReplyStateBadge } from "./ReplyStateBadge";
-import { replyLanguageName } from "./reply-language";
+import { translationCaption } from "./review-translation";
 import { useReviewTranslation } from "./use-review-translation";
 
 const LOW_SCORE = 2;
@@ -162,7 +162,7 @@ export function ReviewCard({
       )}
       {shown ? (
         <p className="text-caption text-muted-foreground">
-          Translated from {replyLanguageName(shown.sourceLanguage)} by AI
+          {translationCaption(shown.sourceLanguage)}
         </p>
       ) : null}
       <DeveloperReply review={review} />
