@@ -11,5 +11,7 @@ describe("replyLanguageName", () => {
   it("falls back to the tag itself", () => {
     expect(replyLanguageName("tlh")).toBe("tlh");
     expect(replyLanguageName("und")).toBe("und");
+    expect(replyLanguageName("__proto__")).toBe("__proto__");
+    expect(replyLanguageName("constructor")).toBe("constructor");
   });
 });

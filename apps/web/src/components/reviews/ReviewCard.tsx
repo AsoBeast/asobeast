@@ -56,7 +56,7 @@ function ReviewText({ text }: { text: string }) {
   );
 }
 
-export function DeveloperReply({ review }: { review: ReviewItem }) {
+function DeveloperReply({ review }: { review: ReviewItem }) {
   if (!review.replyText) return null;
   return (
     <div className="flex flex-col gap-1 border-l-2 border-border pl-3">

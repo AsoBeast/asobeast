@@ -12,7 +12,9 @@ import {
   invalidateReviewReplyMutation,
   upsertReviewReply,
 } from "@/lib/queries";
-import { useSharedFlight } from "@/lib/single-flight";
+import { useKeyedFlight } from "@/lib/single-flight";
+
+const byText = (text: string) => text;
 
 const messageOf = (error: Error, fallback: string) =>
   error instanceof ApiError ? error.envelope.message : fallback;
@@ -46,12 +48,12 @@ export function useReviewReply(appId: string, review: ReviewItem) {
     onError: (error) =>
       toast.error(messageOf(error, "Could not discard the reply")),
   });
-  const save = useSharedFlight(saving.mutateAsync);
+  const save = useKeyedFlight(saving.mutateAsync, byText);
 
   return {
     save,
     mark: patching.mutateAsync,
     discard: discarding.mutateAsync,
-    pending: patching.isPending || saving.isPending || discarding.isPending,
+    pending: patching.isPending || discarding.isPending,
   };
 }

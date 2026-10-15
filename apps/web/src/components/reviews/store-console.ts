@@ -4,7 +4,7 @@ const PLAY_CONSOLE = "https://play.google.com/console/";
 
 export function consoleHref(store: Store, storeAppId: string): string {
   return store === "APP_STORE"
-    ? `https://appstoreconnect.apple.com/apps/${storeAppId}/distribution/activity/ios/ratingsResponses`
+    ? `https://appstoreconnect.apple.com/apps/${encodeURIComponent(storeAppId)}/distribution/activity/ios/ratingsResponses`
     : PLAY_CONSOLE;
 }
 

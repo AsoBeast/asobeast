@@ -1,26 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import {
-  useMutation,
-  useQueryClient,
-  useSuspenseQuery,
-} from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { Loader2, Sparkles } from "lucide-react";
 import {
   REVIEW_REPLY_INSTRUCTIONS_MAX,
   REVIEW_REPLY_LIMITS,
   REVIEW_REPLY_TONES,
   type ReviewItem,
-  type ReviewReplyDraftResult,
   type ReviewReplyTone,
   type Store,
 } from "@asobeast/shared";
-import {
-  AiCallsLeft,
-  useAiAllowanceSpent,
-  useAiFailureToast,
-} from "@/components/ai/ai-allowance";
+import { AiCallsLeft, useAiAllowanceSpent } from "@/components/ai/ai-allowance";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -30,16 +21,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { draftReviewReply } from "@/lib/api";
 import { storeLabel } from "@/lib/format";
-import {
-  aiStatusOptions,
-  invalidateAiUsage,
-  invalidateReviewReplyMutation,
-  upsertReviewReply,
-} from "@/lib/queries";
-import { useSingleFlight } from "@/lib/single-flight";
+import { aiStatusOptions } from "@/lib/queries";
 import { replyLanguageName } from "./reply-language";
+import type { ReplyDraft } from "./use-reply-draft";
 
 const TONE_LABELS: Record<ReviewReplyTone, string> = {
   friendly: "Friendly",
@@ -48,46 +33,24 @@ const TONE_LABELS: Record<ReviewReplyTone, string> = {
 };
 
 export function ReplyDraftControls({
-  appId,
   review,
   store,
   busy,
-  onDraft,
+  draft: { draft, drafting, result },
 }: {
-  appId: string;
   review: ReviewItem;
   store: Store;
   busy: boolean;
-  onDraft: (text: string) => void;
+  draft: ReplyDraft;
 }) {
   const { data: status } = useSuspenseQuery(aiStatusOptions);
-  const queryClient = useQueryClient();
   const spent = useAiAllowanceSpent();
-  const failAi = useAiFailureToast();
   const [tone, setTone] = useState<ReviewReplyTone>(
     review.reply?.tone ?? "neutral",
   );
   const [instructions, setInstructions] = useState("");
-  const drafting = useMutation({
-    mutationFn: () =>
-      draftReviewReply(appId, review.id, {
-        tone,
-        instructions: instructions.trim() || undefined,
-      }),
-    onSuccess: (result: ReviewReplyDraftResult) => {
-      upsertReviewReply(queryClient, appId, review, result.reply);
-      onDraft(result.reply.text);
-    },
-    onError: (error) => failAi(error, "Could not draft a reply"),
-    onSettled: () => {
-      invalidateAiUsage(queryClient);
-      invalidateReviewReplyMutation(queryClient, appId);
-    },
-  });
-  const draftOnce = useSingleFlight(drafting);
 
   if (!status.configured) return null;
-  const result = drafting.data;
   const limit = REVIEW_REPLY_LIMITS[store];
 
   return (
@@ -119,14 +82,12 @@ export function ReplyDraftControls({
         <Button
           variant="outline"
           size="sm"
-          onClick={() => draftOnce()}
-          disabled={drafting.isPending || spent || busy}
+          onClick={() =>
+            draft({ tone, instructions: instructions.trim() || undefined })
+          }
+          disabled={drafting || spent || busy}
         >
-          {drafting.isPending ? (
-            <Loader2 className="animate-spin" />
-          ) : (
-            <Sparkles />
-          )}
+          {drafting ? <Loader2 className="animate-spin" /> : <Sparkles />}
           {review.reply?.text ? "Draft again" : "Draft with AI"}
         </Button>
       </div>

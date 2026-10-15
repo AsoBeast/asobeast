@@ -114,6 +114,31 @@ test("marking a review as replied and undoing it", async ({ page }) => {
   await expect(article.getByText("Draft saved")).toBeVisible();
 });
 
+test("the first click after typing marks the review while the text saves", async ({
+  page,
+}) => {
+  await page.route("**/api/backend/apps/*/reviews/*/reply", async (route) => {
+    if (route.request().postDataJSON()?.replied === undefined) {
+      await new Promise((resolve) => setTimeout(resolve, 600));
+    }
+    await route.continue();
+  });
+  await page.goto(`${REPLIES_PAGE}?reply=rep-3`);
+  const article = articleOf(page, "Please add dark mode.");
+
+  await composer(page)
+    .getByRole("textbox", { name: "Reply text" })
+    .fill("Dark mode ships next month.");
+  await composer(page)
+    .getByRole("button", { name: "Mark as replied" })
+    .click({ delay: 150 });
+
+  await expect(article.getByText("Marked replied")).toBeVisible();
+  await expect(
+    composer(page).getByRole("textbox", { name: "Reply text" }),
+  ).toHaveValue("Dark mode ships next month.");
+});
+
 test("discarding a reply asks first and clears the draft", async ({ page }) => {
   await page.goto(`${REPLIES_PAGE}?reply=rep-2`);
   const article = articleOf(page, "Crashes often");
@@ -181,7 +206,9 @@ test("the existing play reply is shown read only above the composer", async ({
 }) => {
   await page.goto(`${GP_PAGE}?reply=gp-rev-1`);
 
-  await expect(composer(page).getByText(/^Developer reply/)).toBeVisible();
+  await expect(
+    articleOf(page, "Stürzt ab").getByText(/^Developer reply/),
+  ).toHaveCount(1);
   await expect(
     composer(page).getByText(
       "Google Play already shows a reply; a new text here replaces it when you post it in the console.",

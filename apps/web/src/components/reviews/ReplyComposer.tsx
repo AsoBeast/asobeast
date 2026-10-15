@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useId, useState } from "react";
 import { Copy, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -24,10 +24,10 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { storeLabel } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { DeveloperReply } from "./ReviewCard";
 import { ReplyDraftControls } from "./ReplyDraftControls";
 import { ReplyDraftControlsSkeleton } from "./skeletons";
 import { consoleHref, consoleLabel } from "./store-console";
+import { useReplyDraft } from "./use-reply-draft";
 import { useReviewReply } from "./use-review-reply";
 
 export interface ReplyComposerProps {
@@ -48,6 +48,41 @@ function useReplyText(saved: string) {
   return [text, setText] as const;
 }
 
+function DiscardReplyButton({
+  console,
+  disabled,
+  onDiscard,
+}: {
+  console: string;
+  disabled: boolean;
+  onDiscard: () => void;
+}) {
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button variant="outline" size="sm" disabled={disabled}>
+          Discard
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Discard this reply?</AlertDialogTitle>
+          <AlertDialogDescription>
+            The text and the replied mark kept for this review are removed. A
+            reply already posted in {console} stays there.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Keep it</AlertDialogCancel>
+          <AlertDialogAction variant="destructive" onClick={onDiscard}>
+            Discard
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
 export function ReplyComposer({
   appId,
   review,
@@ -58,6 +93,9 @@ export function ReplyComposer({
   const saved = review.reply?.text ?? "";
   const [text, setText] = useReplyText(saved);
   const { save, mark, discard, pending } = useReviewReply(appId, review);
+  const draft = useReplyDraft(appId, review, setText);
+  const busy = pending || draft.drafting;
+  const counterId = useId();
   const limit = REVIEW_REPLY_LIMITS[store];
   const length = countChars(text);
   const over = length > limit;
@@ -85,27 +123,25 @@ export function ReplyComposer({
       className="flex flex-col gap-3 rounded-lg border bg-muted/40 p-3"
     >
       {review.replyText ? (
-        <div className="flex flex-col gap-1">
-          <DeveloperReply review={review} />
-          <p className="text-caption text-muted-foreground">
-            Google Play already shows a reply; a new text here replaces it when
-            you post it in the console.
-          </p>
-        </div>
+        <p className="text-caption text-muted-foreground">
+          Google Play already shows a reply; a new text here replaces it when
+          you post it in the console.
+        </p>
       ) : null}
       <Suspense fallback={<ReplyDraftControlsSkeleton />}>
         <ReplyDraftControls
-          appId={appId}
           review={review}
           store={store}
           busy={pending}
-          onDraft={setText}
+          draft={draft}
         />
       </Suspense>
       <div className="flex flex-col gap-1">
         <Textarea
           aria-label="Reply text"
+          aria-describedby={counterId}
           aria-invalid={over || undefined}
+          readOnly={draft.drafting}
           value={text}
           onChange={(event) => setText(event.target.value)}
           onBlur={() => void saveIfChanged().catch(() => null)}
@@ -113,16 +149,18 @@ export function ReplyComposer({
           className="min-h-24 bg-card"
         />
         <p
-          aria-live="polite"
+          id={counterId}
           className={cn(
             "text-caption numeric",
             over ? "text-destructive" : "text-muted-foreground",
           )}
         >
           {length} / {limit}
-          {over
-            ? ` · ${storeLabel(store)} allows at most ${limit} characters`
-            : null}
+          <span aria-live="polite">
+            {over
+              ? ` · ${storeLabel(store)} allows at most ${limit} characters`
+              : null}
+          </span>
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
@@ -147,7 +185,7 @@ export function ReplyComposer({
         <Button
           variant="outline"
           size="sm"
-          disabled={over || pending}
+          disabled={over || busy}
           onClick={() =>
             void mark(
               marked
@@ -158,38 +196,15 @@ export function ReplyComposer({
         >
           {marked ? "Undo" : "Mark as replied"}
         </Button>
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={pending || (!review.reply && text === "")}
-            >
-              Discard
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Discard this reply?</AlertDialogTitle>
-              <AlertDialogDescription>
-                The text and the replied mark kept for this review are removed.
-                A reply already posted in {console} stays there.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Keep it</AlertDialogCancel>
-              <AlertDialogAction
-                variant="destructive"
-                onClick={() => {
-                  setText("");
-                  void discard().catch(() => null);
-                }}
-              >
-                Discard
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <DiscardReplyButton
+          console={console}
+          disabled={busy || (!review.reply && text === "")}
+          onDiscard={() =>
+            void discard()
+              .then(() => setText(""))
+              .catch(() => null)
+          }
+        />
         <Button variant="ghost" size="sm" className="ml-auto" onClick={onClose}>
           Close
         </Button>

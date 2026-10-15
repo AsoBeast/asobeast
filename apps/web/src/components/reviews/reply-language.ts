@@ -26,5 +26,5 @@ const LANGUAGE_NAMES: Record<string, string> = {
 
 export function replyLanguageName(tag: string): string {
   const primary = tag.split(/[-_]/)[0]?.toLowerCase() ?? "";
-  return LANGUAGE_NAMES[primary] ?? tag;
+  return Object.hasOwn(LANGUAGE_NAMES, primary) ? LANGUAGE_NAMES[primary] : tag;
 }
