@@ -4201,6 +4201,7 @@
             "in": "query",
             "description": "Only reviews written on or after this UTC date",
             "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
               "example": "2026-09-15",
               "type": "string"
             }
@@ -4302,8 +4303,33 @@
             "in": "query",
             "description": "Only reviews written on or after this UTC date",
             "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
               "example": "2026-09-15",
               "type": "string"
+            }
+          },
+          {
+            "name": "replyState",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "needs_reply",
+                "drafted",
+                "replied",
+                "updated"
+              ]
+            }
+          },
+          {
+            "name": "score",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 5,
+              "type": "number"
             }
           },
           {
