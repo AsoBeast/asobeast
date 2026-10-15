@@ -2,10 +2,10 @@ import { tokenize } from '@asobeast/shared';
 import { FUNCTION_WORDS } from '../keywords/function-words';
 
 const ENGLISH = new Set(
-  `the a an and or but is are was were be been it its this that these those
-  to of in on at for with from by not no very so too i my me we our you your
-  they them he she his her have has had do does did can could would should
-  will just than then there here what when why how all any`
+  `the an and or but is are was were be been it its this that these those
+  of in on at for with from by not very too my we our you your they them
+  she his her have has had does did can could would should will just than
+  then there here what when why how all any`
     .split(/\s+/)
     .filter(Boolean),
 );
@@ -47,13 +47,12 @@ function scriptLanguage(text: string, letters: string[]): string | null {
 
 function wordLanguage(text: string): string | null {
   const tokens = tokenize(text);
-  const ranked = Object.entries(LATIN_WORDS)
+  const [best, runnerUp] = Object.entries(LATIN_WORDS)
     .map(([language, words]) => ({
       language,
       hits: tokens.filter((token) => words.has(token)).length,
     }))
     .sort((a, b) => b.hits - a.hits);
-  const [best, runnerUp] = ranked;
   return best.hits >= MIN_HITS && best.hits > runnerUp.hits
     ? best.language
     : null;

@@ -17,6 +17,11 @@ describe('reviewLanguage', () => {
     expect(reviewLanguage(text)).toBe(language);
   });
 
+  it('never reads a short spanish or portuguese review as english', () => {
+    expect(reviewLanguage('no me funciona')).not.toBe('en');
+    expect(reviewLanguage('a app não abre no meu telefone')).not.toBe('en');
+  });
+
   it('answers nothing for text too short or too ambiguous to tell', () => {
     expect(reviewLanguage('Great app')).toBeNull();
     expect(reviewLanguage('Super!')).toBeNull();
