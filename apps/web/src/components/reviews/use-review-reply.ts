@@ -13,9 +13,11 @@ import {
   invalidateReviewReplyMutation,
   upsertReviewReply,
 } from "@/lib/queries";
-import { useKeyedFlight } from "@/lib/single-flight";
 
-const byText = (text: string) => text;
+interface QueuedSave {
+  text: string;
+  pending: Promise<ReviewReplyItem>;
+}
 
 const failWith = (fallback: string) => (error: Error) =>
   toast.error(error instanceof ApiError ? error.envelope.message : fallback);
@@ -26,6 +28,7 @@ const removedBy = (body: ReviewReplyPatchRequest, reply: ReviewReplyItem) =>
 export function useReviewReply(appId: string, review: ReviewItem) {
   const queryClient = useQueryClient();
   const lastSave = useRef<Promise<unknown>>(Promise.resolve());
+  const lastQueued = useRef<QueuedSave | null>(null);
   const seed = (reply: ReviewReplyItem | null) =>
     upsertReviewReply(queryClient, appId, review, reply);
   const onSettled = () => invalidateReviewReplyMutation(queryClient, appId);
@@ -54,18 +57,20 @@ export function useReviewReply(appId: string, review: ReviewItem) {
     onSettled,
     onError: failWith("Could not discard the reply"),
   });
-  const saveAfterLast = useCallback(
-    (text: string) => lastSave.current.then(() => saving.mutateAsync(text)),
-    [saving.mutateAsync],
-  );
-  const keyedSave = useKeyedFlight(saveAfterLast, byText);
   const save = useCallback(
     (text: string) => {
-      const pending = keyedSave(text);
+      const queued = lastQueued.current;
+      if (queued?.text === text) return queued.pending;
+      const pending = lastSave.current.then(() => saving.mutateAsync(text));
+      const entry = { text, pending };
+      lastQueued.current = entry;
       lastSave.current = pending.catch(() => null);
+      void lastSave.current.then(() => {
+        if (lastQueued.current === entry) lastQueued.current = null;
+      });
       return pending;
     },
-    [keyedSave],
+    [saving.mutateAsync],
   );
 
   return {

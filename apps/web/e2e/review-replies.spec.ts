@@ -539,6 +539,41 @@ test("two saves in a row keep the newer text even when the first answers last", 
   ).toHaveValue("Second reply");
 });
 
+test("going back to an earlier text while a save waits keeps the text typed last", async ({
+  page,
+}) => {
+  await page.route("**/api/backend/apps/*/reviews/*/reply", async (route) => {
+    if (route.request().postDataJSON()?.text === "First reply") {
+      await new Promise((resolve) => setTimeout(resolve, 800));
+    }
+    await route.continue();
+  });
+  await page.goto(`${REPLIES_PAGE}?reply=rep-3`);
+  const textbox = composer(page).getByRole("textbox", { name: "Reply text" });
+  const saved = (text: string) =>
+    page.waitForResponse(
+      (response) =>
+        response.request().method() === "PATCH" &&
+        response.request().postDataJSON()?.text === text,
+    );
+
+  await textbox.fill("First reply");
+  await textbox.blur();
+  await textbox.fill("Second reply");
+  await textbox.blur();
+  const second = saved("Second reply");
+  await textbox.fill("First reply");
+  await textbox.blur();
+  await second;
+  await page.waitForTimeout(300);
+  await page.unrouteAll({ behavior: "wait" });
+  await page.reload();
+
+  await expect(
+    composer(page).getByRole("textbox", { name: "Reply text" }),
+  ).toHaveValue("First reply");
+});
+
 test("copying without a clipboard says so instead of failing silently", async ({
   page,
 }) => {
