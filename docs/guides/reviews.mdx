@@ -1,8 +1,8 @@
 ---
 title: Sync reviews, reply to them and mine keyword ideas
-description: Reviews sync in the daily pipeline for the home storefront. Draft and track a reply to each one, and turn repeated language in negative reviews into keyword ideas and action items.
+description: Reviews sync in the daily pipeline for the home storefront. See what people mention, translate a review, draft and track a reply to each one, and turn repeated language in negative reviews into keyword ideas and action items.
 icon: message-square
-keywords: ["reviews","ratings history","review mining","negative reviews","themes","reply to reviews","AI reply"]
+keywords: ["reviews","ratings history","review mining","negative reviews","themes","reply to reviews","AI reply","translate reviews","updated after reply"]
 ---
 
 Reviews give asobeast two things a listing cannot: the words your users actually use, and an early signal that something in the latest release is going wrong.
@@ -11,11 +11,19 @@ Reviews give asobeast two things a listing cannot: the words your users actually
 
 Reviews sync as part of the daily pipeline, which starts at `CRON_DAILY` and defaults to 03:00 UTC. Each review is stored once, keyed by the app and the store review id, so re running a sync does not duplicate rows.
 
+A reviewer on Google Play can edit a review after it was posted, and the store keeps the same review id. The daily sync takes the newer score, title, text, version and date of an edited review it already stored, and sends no alert for it. When the store also shows a developer reply that is older than the edit, the review is **Updated after reply**, described under [Reply to reviews](#reply-to-reviews).
+
 A Google Play review can carry a star rating and no text. It is stored like any other review, shows as "No written review" on the reviews page, counts in the star filters and the negative review totals, and sends a `review.negative` alert that reads "no written review" when its rating is at or below `ALERT_REVIEW_SCORE_MAX`. A review whose text is only white space is shown the same way. It contributes nothing to the keyword ideas mined from review text.
 
 Review sync stays on the home market, like category ranks and the ratings history. See [Countries and markets](/concepts/countries).
 
-Stored reviews are listed on the app's reviews page, filtered by star, version and reply state, sorted, searched, and exported to CSV. The version filter lists the newest version first and compares the numbers in each version, so `3.123.0` ranks above `3.95.0` and `450.0.0.24.77` above `6.12.2`. See [Export reviews to CSV](/guides/export-data#export-reviews-to-csv).
+Stored reviews are listed on the app's reviews page, filtered by star, version, period and reply state, sorted, searched, and exported to CSV. The period filter keeps the reviews written in the last 30, 90 or 180 days, the same windows as the ratings chart, so it answers what came in since a release. The version filter lists the newest version first and compares the numbers in each version, so `3.123.0` ranks above `3.95.0` and `450.0.0.24.77` above `6.12.2`. See [Export reviews to CSV](/guides/export-data#export-reviews-to-csv).
+
+## See what people mention
+
+Above the list, **What people mention** shows up to eight phrases repeated in at least two of the newest 500 reviews that match the version and period filters. Phrases from reviews at or below `ALERT_REVIEW_SCORE_MAX` stars come first, then the ones mentioned most often. The number on each phrase is how many reviews mention it. Pressing a phrase searches the list for it, and pressing it again clears the search. The app's own name and words such as `app` and `game` are left out, and a shorter phrase is shown only when it is mentioned beyond the longer phrase that contains it.
+
+The phrases come from the same extraction as the keyword ideas described under [Mine reviews for keyword ideas](#mine-reviews-for-keyword-ideas). No AI is involved and no store request is made.
 
 ## Reply to reviews
 
@@ -23,7 +31,11 @@ Every review on the reviews page has a **Reply** button that opens a composer un
 
 The text is saved on the review as you leave the field and whenever you press a button, so a reload or a teammate sees the same draft and a draft is never paid for twice. **Discard** removes the text and the replied mark. The counter under the text measures it against the store's limit, and the buttons wait until the text fits. The limits and the two sources of a replied review are explained once, under [Developer replies](/concepts/stores#developer-replies).
 
-Each review shows one of three states. **Needs reply** has no reply anywhere, **Draft saved** has a reply kept here that is not marked, and **Replied** is either a reply Google Play already shows or a review you marked. The badge says which: **Replied on Google Play** or **Marked replied**. The counts at the top of the list filter it by state. The toolbar sorts the newest or the lowest scores first and searches the titles, texts, authors and replies of the reviews loaded on the page. The page loads 50 reviews and **Show all** raises that to 200.
+Each review shows one of four states. **Needs reply** has no reply anywhere, **Draft saved** has a reply kept here that is not marked, and **Replied** is either a reply Google Play already shows or a review you marked. The badge says which: **Replied on Google Play** or **Marked replied**. **Updated after reply** is a Google Play review the reviewer edited after the developer reply the store shows, often with a new rating, so it is worth reading again. That state appears in the counts and the filter only while a review is in it. The counts at the top of the list filter it by state, and pressing **Needs reply** also sorts the lowest scores first, because a reply queue is worked worst first. The toolbar sorts the newest or the lowest scores first and searches the titles, texts, authors and replies of the reviews loaded on the page. The page loads 50 reviews and **Show all** raises that to 200.
+
+### Translate a review
+
+With AI configured, a review written in a language other than your browser's shows **Translate** next to its author. Pressing it spends one AI call and shows the title and text in your language with the language it was translated from. **Show original** and **Show translation** switch back and forth without another call, because the translation is kept on the review, so a reload or a teammate who reads the same language sees it for free. Translating into another language replaces the kept translation, and a reviewer's edit clears it. asobeast guesses the language of a review from its words and script, and falls back to the storefront's language when a review is too short to tell. What a translation sends is on [Enable the optional AI features](/guides/ai-features).
 
 ### Reply guidelines
 
@@ -68,6 +80,8 @@ The dashboard's new low ratings and the weekly digest's negative review count an
 - **No reviews appear.** The store returns reviews for the home storefront, and a new or low volume app may genuinely have none in the window the store exposes.
 - **The rating count moves without new reviews.** Ratings and reviews are different things. Users can rate without writing.
 - **A theme did not fire.** Check that the version has at least 5 reviews and that the phrase reached 3 negative mentions with twice the previous version's rate.
+- **Translate is missing.** No `OPENAI_API_KEY` is set, or the review is already in your browser's language. A kept translation still shows without a key.
+- **A review moved to Updated after reply.** The reviewer edited it on Google Play after the developer reply. Read it again and update the reply in Play Console if needed.
 - **Draft with AI is missing.** No `OPENAI_API_KEY` is set. With the monthly AI allowance spent the button stays but is disabled until the 1st.
 - **The badge says replied but I never replied here.** Google Play shows a reply someone posted in Play Console, and asobeast reads it with the next daily sync.
 - **Drafting fails with "added a link or an address".** The model put a link or an email address in the draft that your guidelines do not contain. Draft again, or add the address to the guidelines if it is yours.

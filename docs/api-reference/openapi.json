@@ -4196,6 +4196,16 @@
             }
           },
           {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Only reviews written on or after this UTC date",
+            "schema": {
+              "example": "2026-09-15",
+              "type": "string"
+            }
+          },
+          {
             "name": "replyState",
             "required": false,
             "in": "query",
@@ -4204,7 +4214,8 @@
               "enum": [
                 "needs_reply",
                 "drafted",
-                "replied"
+                "replied",
+                "updated"
               ]
             }
           },
@@ -4267,7 +4278,56 @@
             }
           }
         },
-        "summary": "Stored reviews for an app, filtered by star, version and reply state",
+        "summary": "Stored reviews for an app, filtered by star, version, date and reply state",
+        "tags": [
+          "reviews"
+        ]
+      }
+    },
+    "/apps/{id}/reviews/themes": {
+      "get": {
+        "operationId": "ReviewsController_listThemes",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Only reviews written on or after this UTC date",
+            "schema": {
+              "example": "2026-09-15",
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Phrases repeated across the reviews of an app, the ones in low rated reviews first",
         "tags": [
           "reviews"
         ]
@@ -4500,6 +4560,58 @@
           }
         },
         "summary": "Replace the reply guidelines of an app",
+        "tags": [
+          "reviews"
+        ]
+      }
+    },
+    "/apps/{id}/reviews/{reviewId}/translation": {
+      "post": {
+        "operationId": "ReviewTranslationController_translate",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "reviewId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewTranslationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The monthly AI allowance is spent; aiAllowance says when it renews"
+          }
+        },
+        "summary": "Translate a review with AI, or answer the translation already kept for that language",
         "tags": [
           "reviews"
         ]
@@ -6794,6 +6906,19 @@
         },
         "required": [
           "guidelines"
+        ]
+      },
+      "ReviewTranslationDto": {
+        "type": "object",
+        "properties": {
+          "language": {
+            "type": "string",
+            "description": "ISO 639 code of the language to translate into",
+            "example": "en"
+          }
+        },
+        "required": [
+          "language"
         ]
       },
       "MetadataAssistantDto": {
