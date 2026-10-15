@@ -89,6 +89,7 @@ function ReviewCards({
   const { data: app } = useSuspenseQuery(appDetailOptions(id));
   const viewKey = JSON.stringify(view);
   const [expandedView, setExpandedView] = useState<string | null>(null);
+  const [closed, setClosed] = useState<string | null>(null);
   const expanded = expandedView === viewKey;
   const { data } = useSuspenseQuery(
     reviewsOptions(
@@ -99,7 +100,6 @@ function ReviewCards({
 
   const filtered =
     view.score !== null || view.version !== "" || view.replyState !== null;
-
   if (data.total === 0) {
     return filtered ? (
       <EmptyState
@@ -147,7 +147,11 @@ function ReviewCards({
                     variant="outline"
                     size="sm"
                     className="ml-auto"
-                    onClick={() => onReply(review.id)}
+                    autoFocus={closed === review.id}
+                    onClick={() => {
+                      setClosed(null);
+                      onReply(review.id);
+                    }}
                   >
                     {review.reply?.text ? "Edit reply" : "Reply"}
                   </Button>
@@ -160,7 +164,10 @@ function ReviewCards({
                   review={review}
                   store={app.store}
                   storeAppId={app.storeAppId}
-                  onClose={() => onReply(null)}
+                  onClose={() => {
+                    setClosed(review.id);
+                    onReply(null);
+                  }}
                 />
               ) : null}
             </ReviewCard>

@@ -166,6 +166,7 @@ export function ReplyComposer({
       />
       <div className="flex flex-col gap-1">
         <Textarea
+          autoFocus
           aria-label="Reply text"
           aria-describedby={counterId}
           aria-invalid={over || undefined}

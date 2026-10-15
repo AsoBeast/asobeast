@@ -411,3 +411,24 @@ test("exporting a search that matches nothing writes no file", async ({
   ).toBeVisible();
   expect(downloads).toEqual([]);
 });
+test("opening the composer moves focus to the text and closing it returns focus", async ({
+  page,
+}) => {
+  await page.goto(REPLIES_PAGE);
+  const article = articleOf(page, "Please add dark mode.");
+  const replyButton = article.getByRole("button", {
+    name: "Reply",
+    exact: true,
+  });
+
+  await replyButton.click();
+
+  await expect(
+    composer(page).getByRole("textbox", { name: "Reply text" }),
+  ).toBeFocused();
+
+  await composer(page).getByRole("button", { name: "Close" }).click();
+
+  await expect(composer(page)).toHaveCount(0);
+  await expect(replyButton).toBeFocused();
+});
