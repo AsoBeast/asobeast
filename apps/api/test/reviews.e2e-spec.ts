@@ -271,6 +271,70 @@ describe('ReviewsController (e2e)', () => {
     });
   });
 
+  it('takes the edit of a play review and lists it as updated after the reply', async () => {
+    const created = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.GOOGLE_PLAY,
+        storeAppId: 'com.example.updated',
+        country: 'us',
+        name: 'Play App',
+      },
+    });
+    await prisma.review.create({
+      data: {
+        appId: created.id,
+        reviewId: 'g1',
+        score: 1,
+        text: 'Crashes on start',
+        version: '2.0.0',
+        reviewedAt: new Date('2026-09-01T08:00:00.000Z'),
+        repliedAt: new Date('2026-09-02T08:00:00.000Z'),
+        replyText: 'Fixed in 2.0.1',
+      },
+    });
+    jest.spyOn(app.get(StoreProviderRegistry), 'get').mockReturnValue({
+      store: Store.GOOGLE_PLAY,
+      reviews: jest.fn().mockResolvedValue([
+        {
+          reviewId: 'g1',
+          score: 5,
+          text: 'Works now, thanks',
+          version: '2.0.1',
+          updatedAt: new Date('2026-09-05T08:00:00.000Z'),
+          repliedAt: new Date('2026-09-02T08:00:00.000Z'),
+          replyText: 'Fixed in 2.0.1',
+        },
+      ]),
+    } as unknown as ReturnType<StoreProviderRegistry['get']>);
+
+    await asWorkspace(app, () =>
+      app
+        .get(ReviewsService)
+        .syncReviews({ appId: created.id, pages: 1, backfill: true }),
+    );
+
+    const updated = await listReviews(created.id, '?replyState=updated');
+    expect(updated.reviews).toEqual([
+      expect.objectContaining({
+        score: 5,
+        text: 'Works now, thanks',
+        version: '2.0.1',
+        reviewedAt: '2026-09-05T08:00:00.000Z',
+        repliedAt: '2026-09-02T08:00:00.000Z',
+      }),
+    ]);
+    expect(updated.counts).toEqual({
+      needsReply: 0,
+      drafted: 0,
+      replied: 0,
+      updated: 1,
+    });
+    expect((await listReviews(created.id, '?replyState=replied')).total).toBe(
+      0,
+    );
+  });
+
   it('stores a Google Play review that has a rating and no text next to the others', async () => {
     const created = await prisma.app.create({
       data: {
@@ -526,7 +590,12 @@ describe('ReviewsController (e2e)', () => {
       repliedAt: null,
     });
     expect(byId.r3.reply?.repliedAt).toBe('2026-07-13T00:00:00.000Z');
-    expect(body.counts).toEqual({ needsReply: 1, drafted: 1, replied: 1 });
+    expect(body.counts).toEqual({
+      needsReply: 1,
+      drafted: 1,
+      replied: 1,
+      updated: 0,
+    });
   });
 
   it('filters to the reviews that need a reply', async () => {
@@ -537,7 +606,12 @@ describe('ReviewsController (e2e)', () => {
 
     expect(idsOf(body)).toEqual(['r1']);
     expect(body.total).toBe(1);
-    expect(body.counts).toEqual({ needsReply: 1, drafted: 1, replied: 1 });
+    expect(body.counts).toEqual({
+      needsReply: 1,
+      drafted: 1,
+      replied: 1,
+      updated: 0,
+    });
   });
 
   it('filters to drafted and replied', async () => {
@@ -579,7 +653,12 @@ describe('ReviewsController (e2e)', () => {
     const body = await listReviews(created.id);
     const replied = await listReviews(created.id, '?replyState=replied');
 
-    expect(body.counts).toEqual({ needsReply: 1, drafted: 0, replied: 1 });
+    expect(body.counts).toEqual({
+      needsReply: 1,
+      drafted: 0,
+      replied: 1,
+      updated: 0,
+    });
     expect(idsOf(replied)).toEqual(['g1']);
   });
 
@@ -613,7 +692,12 @@ describe('ReviewsController (e2e)', () => {
 
     const body = await listReviews(created.id);
 
-    expect(body.counts).toEqual({ needsReply: 0, drafted: 0, replied: 1 });
+    expect(body.counts).toEqual({
+      needsReply: 0,
+      drafted: 0,
+      replied: 1,
+      updated: 0,
+    });
     expect(idsOf(await listReviews(created.id, '?replyState=replied'))).toEqual(
       ['g1'],
     );
@@ -628,7 +712,12 @@ describe('ReviewsController (e2e)', () => {
 
     const body = await listReviews(seeded.id, '?score=1');
 
-    expect(body.counts).toEqual({ needsReply: 0, drafted: 1, replied: 1 });
+    expect(body.counts).toEqual({
+      needsReply: 0,
+      drafted: 1,
+      replied: 1,
+      updated: 0,
+    });
   });
 
   it('sorts the lowest scores first on request', async () => {
@@ -647,7 +736,12 @@ describe('ReviewsController (e2e)', () => {
 
     expect(idsOf(body)).toEqual(['r3', 'r2']);
     expect(body.total).toBe(2);
-    expect(body.counts).toEqual({ needsReply: 0, drafted: 1, replied: 1 });
+    expect(body.counts).toEqual({
+      needsReply: 0,
+      drafted: 1,
+      replied: 1,
+      updated: 0,
+    });
   });
 
   it('refuses a from that is not a date', async () => {

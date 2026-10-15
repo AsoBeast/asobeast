@@ -6,16 +6,24 @@ const NEWEST_FIRST: Prisma.ReviewOrderByWithRelationInput[] = [
   { id: 'desc' },
 ];
 
-const REPLY_STATE_WHERE: Record<ReviewReplyState, Prisma.ReviewWhereInput> = {
+export type RepliedAtRef = Prisma.FieldRef<'Review', 'DateTime'>;
+
+const replyStateWheres = (
+  repliedAt: RepliedAtRef,
+): Record<ReviewReplyState, Prisma.ReviewWhereInput> => ({
+  updated: { repliedAt: { not: null }, reviewedAt: { gt: repliedAt } },
   replied: {
     OR: [
-      { repliedAt: { not: null } },
-      { reply: { is: { repliedAt: { not: null } } } },
+      {
+        repliedAt: { not: null },
+        OR: [{ reviewedAt: null }, { reviewedAt: { lte: repliedAt } }],
+      },
+      { repliedAt: null, reply: { is: { repliedAt: { not: null } } } },
     ],
   },
   drafted: { repliedAt: null, reply: { is: { repliedAt: null } } },
   needs_reply: { repliedAt: null, reply: { is: null } },
-};
+});
 
 export interface ReviewScope {
   score?: number;
@@ -36,9 +44,10 @@ export function reviewScopeWhere(
 }
 
 export function replyStateWhere(
-  state?: ReviewReplyState,
+  state: ReviewReplyState | undefined,
+  repliedAt: RepliedAtRef,
 ): Prisma.ReviewWhereInput {
-  return state ? REPLY_STATE_WHERE[state] : {};
+  return state ? replyStateWheres(repliedAt)[state] : {};
 }
 
 export function reviewOrder(

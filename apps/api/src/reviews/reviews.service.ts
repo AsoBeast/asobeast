@@ -34,6 +34,7 @@ import {
   reviewScopeWhere,
 } from './review-list-query';
 import { toReviewReplyItem } from './review-reply.mapper';
+import { StoredReview, storedReviewChanges } from './stored-review-changes';
 
 export interface ReviewListFilters extends ReviewScope {
   limit: number;
@@ -42,25 +43,6 @@ export interface ReviewListFilters extends ReviewScope {
 }
 
 const REVIEW_TEXT_MAX = 500;
-
-interface StoredReply {
-  repliedAt: Date | null;
-  replyText: string | null;
-}
-
-function replyChanges(
-  stored: StoredReply,
-  fetched: ReviewResult | undefined,
-): Partial<StoredReply> {
-  return {
-    ...(fetched?.repliedAt && !stored.repliedAt
-      ? { repliedAt: fetched.repliedAt }
-      : {}),
-    ...(fetched?.replyText && fetched.replyText !== stored.replyText
-      ? { replyText: fetched.replyText }
-      : {}),
-  };
-}
 
 interface ReviewSource {
   id: string;
@@ -115,15 +97,24 @@ export class ReviewsService {
 
     const existing = await this.prisma.review.findMany({
       where: { appId: app.id, reviewId: { in: [...fetched.keys()] } },
-      select: { reviewId: true, repliedAt: true, replyText: true },
+      select: {
+        reviewId: true,
+        score: true,
+        title: true,
+        text: true,
+        version: true,
+        reviewedAt: true,
+        repliedAt: true,
+        replyText: true,
+      },
     });
     const known = new Map(existing.map((row) => [row.reviewId, row]));
     const inserted = [...fetched.values()].filter(
       (review) => !known.has(review.reviewId),
     );
 
-    const tracksReplies = app.store === Store.GOOGLE_PLAY;
-    const checkedAt = tracksReplies ? new Date() : null;
+    const tracksUpdates = app.store === Store.GOOGLE_PLAY;
+    const checkedAt = tracksUpdates ? new Date() : null;
 
     if (inserted.length > 0) {
       await this.prisma.review.createMany({
@@ -136,8 +127,8 @@ export class ReviewsService {
           text: review.text,
           version: review.version ?? null,
           reviewedAt: review.updatedAt ?? null,
-          repliedAt: tracksReplies ? (review.repliedAt ?? null) : null,
-          replyText: tracksReplies ? (review.replyText ?? null) : null,
+          repliedAt: tracksUpdates ? (review.repliedAt ?? null) : null,
+          replyText: tracksUpdates ? (review.replyText ?? null) : null,
           replyCheckedAt: checkedAt,
         })),
         skipDuplicates: true,
@@ -145,7 +136,7 @@ export class ReviewsService {
     }
 
     if (checkedAt !== null && known.size > 0) {
-      await this.recordReplies(app.id, fetched, known, checkedAt);
+      await this.recordUpdates(app.id, fetched, known, checkedAt);
     }
 
     if (!payload.backfill) {
@@ -158,10 +149,10 @@ export class ReviewsService {
     return inserted;
   }
 
-  private async recordReplies(
+  private async recordUpdates(
     appId: string,
     fetched: Map<string, ReviewResult>,
-    known: Map<string, StoredReply>,
+    known: Map<string, StoredReview>,
     checkedAt: Date,
   ): Promise<void> {
     await this.prisma.review.updateMany({
@@ -169,7 +160,7 @@ export class ReviewsService {
       data: { replyCheckedAt: checkedAt },
     });
     for (const [reviewId, stored] of known) {
-      const data = replyChanges(stored, fetched.get(reviewId));
+      const data = storedReviewChanges(stored, fetched.get(reviewId));
       if (Object.keys(data).length === 0) continue;
       await this.prisma.review.updateMany({
         where: { appId, reviewId },
@@ -251,9 +242,13 @@ export class ReviewsService {
 
     const where = reviewScopeWhere(appId, filters);
 
-    const listed = { ...where, ...replyStateWhere(filters.replyState) };
+    const { repliedAt } = this.prisma.review.fields;
+    const listed = {
+      ...where,
+      ...replyStateWhere(filters.replyState, repliedAt),
+    };
 
-    const [reviews, total, versions, needsReply, drafted, replied] =
+    const [reviews, total, versions, needsReply, drafted, replied, updated] =
       await this.prisma.withTransaction((tx) =>
         Promise.all([
           tx.review.findMany({
@@ -269,11 +264,18 @@ export class ReviewsService {
             select: { version: true },
           }),
           ...REVIEW_REPLY_STATES.map((state) =>
-            tx.review.count({ where: { ...where, ...replyStateWhere(state) } }),
+            tx.review.count({
+              where: { ...where, ...replyStateWhere(state, repliedAt) },
+            }),
           ),
         ]),
       );
-    const counts: ReviewReplyCounts = { needsReply, drafted, replied };
+    const counts: ReviewReplyCounts = {
+      needsReply,
+      drafted,
+      replied,
+      updated,
+    };
 
     return {
       reviews: reviews.map((review) => this.toReviewItem(review)),

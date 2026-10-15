@@ -530,7 +530,7 @@ describe('ReviewsService negative review alerts', () => {
 });
 
 describe('ReviewsService.list', () => {
-  it("embeds the owner's reply and the three counts", async () => {
+  it("embeds the owner's reply and the four counts", async () => {
     const updatedAt = new Date('2026-10-01T00:00:00.000Z');
     const tx = {
       review: {
@@ -568,11 +568,22 @@ describe('ReviewsService.list', () => {
           .mockResolvedValueOnce(1)
           .mockResolvedValueOnce(4)
           .mockResolvedValueOnce(1)
-          .mockResolvedValueOnce(2),
+          .mockResolvedValueOnce(2)
+          .mockResolvedValueOnce(3),
       },
     };
     const prisma = {
       app: { findFirst: jest.fn().mockResolvedValue({ id: 'app1' }) },
+      review: {
+        fields: {
+          repliedAt: {
+            modelName: 'Review',
+            name: 'repliedAt',
+            typeName: 'DateTime',
+            isList: false,
+          },
+        },
+      },
       withTransaction: jest.fn((run: (client: typeof tx) => unknown) =>
         run(tx),
       ),
@@ -590,7 +601,12 @@ describe('ReviewsService.list', () => {
       replyState: 'drafted',
     });
 
-    expect(list.counts).toEqual({ needsReply: 4, drafted: 1, replied: 2 });
+    expect(list.counts).toEqual({
+      needsReply: 4,
+      drafted: 1,
+      replied: 2,
+      updated: 3,
+    });
     expect(list.reviews[0].reply).toEqual({
       text: 'Sorry about that',
       tone: null,

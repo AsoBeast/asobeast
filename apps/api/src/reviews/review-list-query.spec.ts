@@ -1,35 +1,53 @@
 import {
+  RepliedAtRef,
   replyStateWhere,
   reviewOrder,
   reviewScopeWhere,
 } from './review-list-query';
 
+const repliedAt: RepliedAtRef = {
+  modelName: 'Review',
+  name: 'repliedAt',
+  typeName: 'DateTime',
+  isList: false,
+};
+
 describe('replyStateWhere', () => {
-  it("answers the replied rows as the store's reply or the owner's mark", () => {
-    expect(replyStateWhere('replied')).toEqual({
+  it('answers updated as a review edited after the reply the store shows', () => {
+    expect(replyStateWhere('updated', repliedAt)).toEqual({
+      repliedAt: { not: null },
+      reviewedAt: { gt: repliedAt },
+    });
+  });
+
+  it("answers replied as the store's reply on an unedited review or the owner's mark", () => {
+    expect(replyStateWhere('replied', repliedAt)).toEqual({
       OR: [
-        { repliedAt: { not: null } },
-        { reply: { is: { repliedAt: { not: null } } } },
+        {
+          repliedAt: { not: null },
+          OR: [{ reviewedAt: null }, { reviewedAt: { lte: repliedAt } }],
+        },
+        { repliedAt: null, reply: { is: { repliedAt: { not: null } } } },
       ],
     });
   });
 
   it('answers drafted as a reply without a mark on a review the store shows no reply on', () => {
-    expect(replyStateWhere('drafted')).toEqual({
+    expect(replyStateWhere('drafted', repliedAt)).toEqual({
       repliedAt: null,
       reply: { is: { repliedAt: null } },
     });
   });
 
   it('answers needs reply as no reply anywhere', () => {
-    expect(replyStateWhere('needs_reply')).toEqual({
+    expect(replyStateWhere('needs_reply', repliedAt)).toEqual({
       repliedAt: null,
       reply: { is: null },
     });
   });
 
   it('answers nothing for no state', () => {
-    expect(replyStateWhere(undefined)).toEqual({});
+    expect(replyStateWhere(undefined, repliedAt)).toEqual({});
   });
 });
 
