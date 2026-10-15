@@ -7,6 +7,7 @@ import {
   ApiErrorEnvelope,
   RatingsHistogram,
   ReviewList,
+  ReviewThemes,
 } from '@asobeast/shared';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
@@ -653,6 +654,68 @@ describe('ReviewsController (e2e)', () => {
     const seeded = await seedApp();
 
     await api.get(`/apps/${seeded.id}/reviews?from=last-week`).expect(400);
+  });
+
+  it('answers the phrases repeated across the reviews, low rated first', async () => {
+    const seeded = await seedApp();
+    await prisma.review.createMany({
+      data: [
+        {
+          appId: seeded.id,
+          reviewId: 't1',
+          score: 1,
+          text: 'Sync fails every morning',
+          version: '2.0.0',
+          reviewedAt: new Date('2026-07-14T00:00:00Z'),
+        },
+        {
+          appId: seeded.id,
+          reviewId: 't2',
+          score: 2,
+          text: 'Sync fails after the update',
+          version: '2.0.0',
+          reviewedAt: new Date('2026-07-15T00:00:00Z'),
+        },
+        {
+          appId: seeded.id,
+          reviewId: 't3',
+          score: 5,
+          text: 'Sync fails rarely, love it',
+          version: '1.0.0',
+          reviewedAt: new Date('2026-06-01T00:00:00Z'),
+        },
+      ],
+    });
+
+    const all = (await api.get(`/apps/${seeded.id}/reviews/themes`).expect(200))
+      .body as ReviewThemes;
+    const recent = (
+      await api
+        .get(`/apps/${seeded.id}/reviews/themes`)
+        .query({ from: '2026-07-01', version: '2.0.0' })
+        .expect(200)
+    ).body as ReviewThemes;
+
+    expect(all.reviews).toBe(6);
+    expect(all.negativeScoreMax).toBe(2);
+    expect(all.themes[0]).toEqual({
+      phrase: 'sync fails',
+      mentions: 3,
+      negative: 2,
+    });
+    expect(recent.reviews).toBe(4);
+    expect(recent.themes[0]).toEqual({
+      phrase: 'sync fails',
+      mentions: 2,
+      negative: 2,
+    });
+  });
+
+  it('answers 404 for the themes of an unknown app and 400 for a bad date', async () => {
+    const seeded = await seedApp();
+
+    await api.get('/apps/missing/reviews/themes').expect(404);
+    await api.get(`/apps/${seeded.id}/reviews/themes?from=soon`).expect(400);
   });
 
   it('refuses an unknown reply state or sort', async () => {

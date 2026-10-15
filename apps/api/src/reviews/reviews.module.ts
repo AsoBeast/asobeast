@@ -6,6 +6,7 @@ import { ReviewRepliesController } from './review-replies.controller';
 import { ReviewRepliesService } from './review-replies.service';
 import { ReviewReplyAssistant } from './review-reply-assistant.service';
 import { ReviewReplyGuidelinesController } from './review-reply-guidelines.controller';
+import { ReviewThemesService } from './review-themes.service';
 import { ReviewsController } from './reviews.controller';
 import { ReviewsService } from './reviews.service';
 
@@ -16,7 +17,12 @@ import { ReviewsService } from './reviews.service';
     ReviewRepliesController,
     ReviewReplyGuidelinesController,
   ],
-  providers: [ReviewsService, ReviewRepliesService, ReviewReplyAssistant],
+  providers: [
+    ReviewsService,
+    ReviewRepliesService,
+    ReviewReplyAssistant,
+    ReviewThemesService,
+  ],
   exports: [ReviewsService],
 })
 export class ReviewsModule {}
