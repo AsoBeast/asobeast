@@ -24,10 +24,10 @@ import { useUnfollowChart } from "./use-unfollow-chart";
 
 function FollowRow({
   follow,
-  onOpen,
+  onNavigate,
 }: {
   follow: ChartFollowItem;
-  onOpen: () => void;
+  onNavigate: () => void;
 }) {
   const mutation = useUnfollowChart();
   const unfollowOnce = useSingleFlight(mutation);
@@ -37,7 +37,7 @@ function FollowRow({
     <li className="flex items-center gap-2">
       <Link
         href={chartHref(follow)}
-        onClick={onOpen}
+        onClick={onNavigate}
         className="flex min-w-0 flex-1 flex-col rounded-md px-2 py-1.5 hover:bg-accent"
       >
         <span className="truncate text-sm">{title}</span>
@@ -62,7 +62,7 @@ function FollowRow({
   );
 }
 
-function FollowList({ onOpen }: { onOpen: () => void }) {
+function FollowList({ onNavigate }: { onNavigate: () => void }) {
   const { data: follows } = useSuspenseQuery(chartFollowsOptions);
   const limit = useQuery(accountPlanOptions).data?.limits.chartFollows;
 
@@ -81,7 +81,11 @@ function FollowList({ onOpen }: { onOpen: () => void }) {
       ) : (
         <ul className="-mx-2 flex max-h-80 flex-col gap-0.5 overflow-y-auto">
           {follows.map((follow) => (
-            <FollowRow key={follow.id} follow={follow} onOpen={onOpen} />
+            <FollowRow
+              key={follow.id}
+              follow={follow}
+              onNavigate={onNavigate}
+            />
           ))}
         </ul>
       )}
@@ -115,7 +119,7 @@ export function FollowedCharts() {
           </PopoverDescription>
         </PopoverHeader>
         <Suspense fallback={<Skeleton className="h-16 w-full" />}>
-          <FollowList onOpen={() => setOpen(false)} />
+          <FollowList onNavigate={() => setOpen(false)} />
         </Suspense>
       </PopoverContent>
     </Popover>

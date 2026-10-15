@@ -45,11 +45,7 @@ export function GenreSelect({
   return (
     <Select value={value} onValueChange={onChange}>
       <SelectTrigger aria-label="Category" className="w-[220px]">
-        <SelectValue>
-          {value === OVERALL_GENRE
-            ? "Overall"
-            : (chartGenreName(store, value) ?? value)}
-        </SelectValue>
+        <SelectValue>{chartGenreName(store, value) ?? value}</SelectValue>
       </SelectTrigger>
       <SelectContent>
         <SelectItem value={OVERALL_GENRE}>Overall</SelectItem>
