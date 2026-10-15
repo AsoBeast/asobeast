@@ -319,6 +319,14 @@ describe('QuotaService', () => {
     );
   });
 
+  it('reads the chart follow limit from the plan', async () => {
+    const { quota, scoped } = build(true, { plan: 'ultimate' });
+
+    await expect(scoped(() => quota.limitFor('chartFollows'))).resolves.toBe(
+      PLAN_LIMITS.ultimate.chartFollows,
+    );
+  });
+
   it('reports unlimited as null rather than a large number', async () => {
     const { quota, scoped } = build(false);
 
@@ -329,6 +337,9 @@ describe('QuotaService', () => {
     await expect(scoped(() => quota.limitFor('competitors'))).resolves.toBe(
       SELF_HOSTED_LIMITS.competitorsPerApp,
     );
+    await expect(
+      scoped(() => quota.limitFor('chartFollows')),
+    ).resolves.toBeNull();
   });
 
   it('offers no upgrade path on a self hosted instance', async () => {

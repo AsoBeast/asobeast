@@ -202,5 +202,6 @@ function countCompetitors(client: Tx, appId: string): Promise<number> {
 function limitOf(limits: PlanLimits, resource: QuotaResource): PlanLimit {
   if (resource === 'apps') return limits.apps;
   if (resource === 'keywordMarkets') return limits.keywordMarkets;
+  if (resource === 'chartFollows') return limits.chartFollows;
   return limits.competitorsPerApp;
 }

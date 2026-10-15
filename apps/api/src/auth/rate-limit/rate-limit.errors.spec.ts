@@ -44,6 +44,7 @@ describe('rateLimitMessage', () => {
     ['spider', 'Deep search'],
     ['importApp', 'Import app'],
     ['addCompetitor', 'Add competitor'],
+    ['chartCapture', 'Chart capture'],
   ] as const)('labels the %s action %s', (action, label) => {
     const message = rateLimitMessage({
       ...DETAIL,
@@ -54,6 +55,22 @@ describe('rateLimitMessage', () => {
 
     expect(message).toBe(
       `${label} limit reached: the indie plan allows 60 requests per hour. Try again in 34 seconds.`,
+    );
+  });
+
+  it('words the chart capture allowance per day', () => {
+    expect(
+      rateLimitMessage({
+        window: 'day',
+        rateClass: 'store',
+        plan: 'indie',
+        limit: 30,
+        resetSeconds: 3_600,
+        upgradeTo: 'ultimate',
+        action: 'chartCapture',
+      }),
+    ).toBe(
+      'Chart capture limit reached: the indie plan allows 30 requests per day. Try again in 1 hour.',
     );
   });
 

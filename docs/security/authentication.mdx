@@ -151,7 +151,7 @@ Data belongs to the customer; capacity is what the plan pays for. An unentitled 
 | Still available | Refused with `402` |
 | --- | --- |
 | Reading apps, keywords, rankings, audits and reviews in the web app | Importing an app, tracking a keyword, adding a competitor |
-| Exporting anything already collected as CSV or JSON | On demand refresh, daily run, scoring, keyword suggestions and deep search |
+| Exporting anything already collected as CSV or JSON | On demand refresh, daily run, scoring, keyword suggestions, deep search and top chart captures |
 | Reaching the account, plan and upgrade routes | Every other request authenticated with a personal API token, including the MCP server |
 
 Reads stay open only to a browser session. A personal API token keeps the account, plan and upgrade routes, the account export among them, so a script can still take the data out, and is refused everywhere else, because the token surface is part of what the plan sells. Nothing is deleted when entitlement lapses.

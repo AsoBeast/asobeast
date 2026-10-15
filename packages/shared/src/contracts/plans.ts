@@ -20,6 +20,7 @@ export const ON_DEMAND_ACTIONS = [
   'spider',
   'importApp',
   'addCompetitor',
+  'chartCapture',
 ] as const;
 
 export type OnDemandAction = (typeof ON_DEMAND_ACTIONS)[number];
@@ -37,6 +38,7 @@ export interface PlanLimits {
   apps: PlanLimit;
   keywordMarkets: PlanLimit;
   competitorsPerApp: PlanLimit;
+  chartFollows: PlanLimit;
   apiRequestsPerMinute: PlanLimit;
   apiWritesPerMinute: PlanLimit;
   apiRequestsPerDay: PlanLimit;
@@ -91,6 +93,7 @@ const NO_CAPACITY: PlanLimits = {
   apps: 0,
   keywordMarkets: 0,
   competitorsPerApp: 0,
+  chartFollows: 0,
   ...INDIE_RATES,
   mcpRequestsPerMinute: 0,
   aiCallsPerMonth: 0,
@@ -102,6 +105,7 @@ const NO_CAPACITY: PlanLimits = {
     spider: { limit: 0, windowSeconds: DAY_SECONDS },
     importApp: { limit: 0, windowSeconds: DAY_SECONDS },
     addCompetitor: { limit: 0, windowSeconds: DAY_SECONDS },
+    chartCapture: { limit: 0, windowSeconds: DAY_SECONDS },
   },
 };
 
@@ -109,6 +113,7 @@ const INDIE: PlanLimits = {
   apps: 5,
   keywordMarkets: 1_000,
   competitorsPerApp: 10,
+  chartFollows: 10,
   ...INDIE_RATES,
   aiCallsPerMonth: 200,
   onDemand: {
@@ -119,6 +124,7 @@ const INDIE: PlanLimits = {
     spider: { limit: 12, windowSeconds: DAY_SECONDS },
     importApp: { limit: 10, windowSeconds: DAY_SECONDS },
     addCompetitor: { limit: 60, windowSeconds: DAY_SECONDS },
+    chartCapture: { limit: 30, windowSeconds: DAY_SECONDS },
   },
 };
 
@@ -128,6 +134,7 @@ const ULTIMATE: PlanLimits = {
   apps: 50,
   keywordMarkets: 10_000,
   competitorsPerApp: 25,
+  chartFollows: 50,
   ...ULTIMATE_RATES,
   aiCallsPerMonth: 2_000,
   onDemand: {
@@ -138,6 +145,7 @@ const ULTIMATE: PlanLimits = {
     spider: { limit: 50, windowSeconds: DAY_SECONDS },
     importApp: { limit: 100, windowSeconds: DAY_SECONDS },
     addCompetitor: { limit: 300, windowSeconds: DAY_SECONDS },
+    chartCapture: { limit: 150, windowSeconds: DAY_SECONDS },
   },
 };
 
@@ -145,6 +153,7 @@ export const SELF_HOSTED_LIMITS: PlanLimits = {
   apps: null,
   keywordMarkets: null,
   competitorsPerApp: INDIE.competitorsPerApp,
+  chartFollows: null,
   apiRequestsPerMinute: null,
   apiWritesPerMinute: null,
   apiRequestsPerDay: null,
@@ -250,6 +259,7 @@ export const QUOTA_RESOURCES = [
   'apps',
   'keywordMarkets',
   'competitors',
+  'chartFollows',
 ] as const;
 
 export type QuotaResource = (typeof QUOTA_RESOURCES)[number];
