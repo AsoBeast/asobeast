@@ -40,6 +40,17 @@ test("a running app shows its progress pill and the stages", async ({
   ).toBeVisible();
 });
 
+test("announces the run on a phone where the count is hidden", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/apps/app-new");
+
+  await expect(
+    page.getByRole("status").filter({ hasText: "Today's run:" }),
+  ).toHaveText("Today's run: 6 of 12 checks done");
+});
+
 test("a complete app says so and an idle app shows nothing", async ({
   page,
 }) => {

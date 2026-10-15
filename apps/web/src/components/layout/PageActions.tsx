@@ -12,7 +12,7 @@ export function PageActions() {
 
   return (
     <div className="flex items-center gap-2">
-      <RunProgress appId={appId} />
+      <RunProgress key={appId} appId={appId} />
       <RefreshAction appId={appId} />
       <RunDailyAction appId={appId} />
     </div>
