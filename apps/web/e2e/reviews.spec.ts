@@ -258,3 +258,17 @@ test("each ratings distribution row stays on one line on a laptop and a phone", 
     expect(count?.height ?? 0).toBeLessThan(28);
   }
 });
+
+test("the reply status tiles share one row on a phone", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/apps/app-1/reviews");
+  const tiles = page
+    .getByRole("region", { name: "Reply status" })
+    .getByRole("button", { name: /Needs reply|Draft saved|Replied/ });
+
+  await expect(tiles).toHaveCount(3);
+  const tops = await tiles.evaluateAll((nodes) =>
+    nodes.map((node) => Math.round(node.getBoundingClientRect().top)),
+  );
+  expect(new Set(tops).size).toBe(1);
+});

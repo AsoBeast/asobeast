@@ -44,7 +44,7 @@ export function ReviewCountsStrip({
           </a>
         </InfoTip>
       </div>
-      <StatTileGroup>
+      <StatTileGroup className="grid-cols-3">
         {REPLY_STATE_OPTIONS.map(({ value, label }) => (
           <StatTile
             key={value}

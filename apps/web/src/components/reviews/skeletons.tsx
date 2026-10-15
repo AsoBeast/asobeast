@@ -6,7 +6,7 @@ export function ReviewCountsSkeleton() {
   return (
     <div className="flex flex-col gap-2">
       <Skeleton className="h-4 w-28" />
-      <StatTileGroup>
+      <StatTileGroup className="grid-cols-3">
         {Array.from({ length: 3 }).map((_, index) => (
           <Skeleton key={index} className="h-[5.5rem] rounded-xl" />
         ))}

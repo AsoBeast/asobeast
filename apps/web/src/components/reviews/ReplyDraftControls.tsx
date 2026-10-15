@@ -83,7 +83,7 @@ export function ReplyDraftControls({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-end gap-2">
+      <div className="grid grid-cols-[auto_1fr] items-center gap-2 sm:grid-cols-[auto_1fr_auto]">
         <Select
           value={tone}
           onValueChange={(next) => {
@@ -108,11 +108,12 @@ export function ReplyDraftControls({
           value={instructions}
           maxLength={REVIEW_REPLY_INSTRUCTIONS_MAX}
           onChange={(event) => setInstructions(event.target.value)}
-          className="min-w-0 flex-1 bg-card"
+          className="order-last col-span-2 min-w-0 bg-card sm:order-none sm:col-span-1"
         />
         <Button
           variant="outline"
           size="sm"
+          className="justify-self-end sm:justify-self-auto"
           onClick={() =>
             draft({ tone, instructions: instructions.trim() || undefined })
           }
