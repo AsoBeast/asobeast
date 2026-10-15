@@ -99,8 +99,12 @@ export interface ReviewList {
   counts?: ReviewReplyCounts;
 }
 
+export const REVIEW_THEME_KINDS = ['complaint', 'praise'] as const;
+export type ReviewThemeKind = (typeof REVIEW_THEME_KINDS)[number];
+
 export interface ReviewTheme {
   phrase: string;
+  kind: ReviewThemeKind;
   mentions: number;
   negative: number;
 }
