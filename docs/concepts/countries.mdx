@@ -179,13 +179,15 @@ An app ships a localization when it has its own text in App Store Connect. asobe
 | --- | --- | --- |
 | Home | The default localization of your home storefront | It is always shipped, it is never stored and it cannot be removed |
 | Manual | Any of the 50 localizations | You added it, or you saved a non-empty keyword field for it |
-| Detected | A localization the store served | asobeast captured the native localization of a listing, or **Find localizations** found the store serving it |
+| Detected | A localization the store served | asobeast captured the native localization of a listing, the listing of a market proved the market's default localization, or **Find localizations** found the store serving it |
 
 Saving a non-empty keyword field for a localization ships it, because writing a field for a language means shipping that language. A detected localization stays detected when you save its field. Emptying a field keeps the localization on the list. Only **Remove localization** takes one off, and it refuses the home localization and a localization that is not on the list.
 
 **Find localizations** asks the store, for each language that one of your markets reads, that is not on the list yet and that your home listing says the app supports, whether it serves that localization's text. The questions are store lookups that run behind the daily run, and each language is asked at most once a day, so a second click on the same day queues nothing. Finding localizations spends one refresh from your on demand allowance, and only when it queues at least one lookup. See [A spent on demand allowance names its action](/api-reference/rate-limits#a-spent-on-demand-allowance-names-its-action). A localization the store proves is added as detected. If you removed it, it comes back the next time you run **Find localizations**, because the store still says you ship it.
 
 asobeast also asks the store on its own. The lookups queue after the first capture of a market's listing, for the localizations that market reads, and once a week for every App Store app (`CRON_LOCALIZATION_SWEEP`, Monday 07:00 UTC, see the [configuration reference](/configuration/reference)). Neither spends your allowance, so **Find localizations** is for when you want the answer today. A detected localization you removed comes back only if the store still serves it.
+
+The default localization of a market needs no lookup. Every capture of a market's listing compares it with your home listing and with every additional localization read in that market at the same time. When it differs from all of them, the store is serving the market's own language, and that localization is added as detected. Germany tracked with a German listing adds German after its next capture, so by the next daily run at the latest, or at once when you press **Refresh** on that market. A market whose listing repeats your home text adds nothing, because the store is not serving its language; add it by hand if you ship it with the same words.
 
 asobeast also records a native localization when it first captures one, which is how English storefronts such as Poland or India add their native languages without a click. See [What about storefronts that default to English?](#what-about-storefronts-that-default-to-english)
 
