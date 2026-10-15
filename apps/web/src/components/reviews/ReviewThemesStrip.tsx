@@ -13,8 +13,8 @@ import { themesFilters, type ReviewView } from "./review-filters";
 const THEMES_GUIDE =
   "https://docs.asobeast.com/guides/reviews#see-what-people-mention";
 
-function themeLabel(theme: ReviewTheme, negativeScoreMax: number): string {
-  return `${theme.phrase}: ${pluralize(theme.mentions, "review")}, ${formatNumber(theme.negative)} at ${pluralize(negativeScoreMax, "star")} or less`;
+function themeDetail(theme: ReviewTheme, negativeScoreMax: number): string {
+  return `in ${pluralize(theme.mentions, "review")}, ${formatNumber(theme.negative)} at ${pluralize(negativeScoreMax, "star")} or less`;
 }
 
 export function ReviewThemesStrip({
@@ -68,7 +68,6 @@ export function ReviewThemesStrip({
                 size="sm"
                 variant={selected ? "default" : "outline"}
                 aria-pressed={selected}
-                aria-label={themeLabel(theme, data.negativeScoreMax)}
                 onClick={() => onSelect(selected ? "" : theme.phrase)}
               >
                 {theme.phrase}
@@ -79,6 +78,9 @@ export function ReviewThemesStrip({
                   }
                 >
                   {formatNumber(theme.mentions)}
+                </span>
+                <span className="sr-only">
+                  {themeDetail(theme, data.negativeScoreMax)}
                 </span>
               </Button>
             </li>

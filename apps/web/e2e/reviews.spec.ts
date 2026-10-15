@@ -314,11 +314,11 @@ test("a theme searches for its phrase and a second press clears it", async ({
 }) => {
   await page.goto("/apps/app-1/reviews");
   const themes = page.getByRole("region", { name: "What people mention" });
-  const crashes = themes.getByRole("button", { name: /^crashes:/ });
+  const crashes = themes.getByRole("button", { name: /^crashes in/ });
 
   await expect(themes.getByRole("listitem")).toHaveCount(2);
   await expect(crashes).toHaveAccessibleName(
-    "crashes: 2 reviews, 2 at 2 stars or less",
+    "crashes in 2 reviews, 2 at 2 stars or less",
   );
 
   await crashes.click();
