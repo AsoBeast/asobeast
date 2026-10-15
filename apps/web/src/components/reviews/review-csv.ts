@@ -1,4 +1,4 @@
-import type { ReviewItem, ReviewList } from "@asobeast/shared";
+import type { ReviewItem, ReviewList, ReviewSort } from "@asobeast/shared";
 import { csvFilename, downloadCsv, toCsv } from "@/lib/csv";
 import { formatNumber } from "@/lib/format";
 
@@ -34,10 +34,16 @@ export function exportReviews(
   downloadCsv(csvFilename("reviews", appId), reviewCsv(reviews));
 }
 
+export const EXPORT_ORDER: Record<ReviewSort, string> = {
+  newest: "newest",
+  lowest: "lowest scored",
+};
+
 export function truncatedExportNotice(
   list: Pick<ReviewList, "reviews" | "total">,
+  sort: ReviewSort = "newest",
 ): string | null {
   const exported = list.reviews.length;
   if (list.total <= exported) return null;
-  return `Exported the newest ${formatNumber(exported)} of ${formatNumber(list.total)} reviews. Narrow the filters to reach the others.`;
+  return `Exported the ${EXPORT_ORDER[sort]} ${formatNumber(exported)} of ${formatNumber(list.total)} reviews. Narrow the filters to reach the others.`;
 }

@@ -14,6 +14,8 @@ import {
   CHART_DEVICES,
   COUNTRY_PATTERN,
   OVERALL_GENRE,
+  REVIEW_REPLY_STATES,
+  REVIEW_SORTS,
   STORES,
   isUtcCalendarDate,
   type ActionStatus,
@@ -314,6 +316,13 @@ export const reviewScoreParser = createParser({
 });
 
 export const reviewVersionParser = parseAsString.withDefault("");
+
+export const reviewReplyStateParser = parseAsStringLiteral(REVIEW_REPLY_STATES);
+
+export const reviewSortParser =
+  parseAsStringLiteral(REVIEW_SORTS).withDefault("newest");
+
+export const reviewQueryParser = parseAsString.withDefault("");
 
 export const discoveryDaysParser = createParser({
   parse(value) {

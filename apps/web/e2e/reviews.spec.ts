@@ -99,3 +99,112 @@ test("the reviews export is disabled when no review matches", async ({
     page.getByRole("button", { name: "Export reviews to CSV" }),
   ).toBeDisabled();
 });
+
+test("the counts strip filters the list by reply state", async ({ page }) => {
+  await page.goto("/apps/app-1/reviews");
+  const strip = page.getByRole("region", { name: "Reply status" });
+  const needsReply = strip.getByRole("button", { name: /Needs reply/ });
+
+  await expect(needsReply).toContainText("3");
+  await expect(
+    strip.getByRole("button", { name: /Draft saved/ }),
+  ).toContainText("1");
+  await expect(strip.getByRole("button", { name: /Replied/ })).toContainText(
+    "1",
+  );
+
+  await needsReply.click();
+
+  await expect(page).toHaveURL(/replyState=needs_reply/);
+  await expect(needsReply).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("article")).toHaveCount(3);
+
+  await needsReply.click();
+
+  await expect(page).not.toHaveURL(/replyState=/);
+  await expect(page.getByRole("article")).toHaveCount(5);
+});
+
+test("a reply state badge names the state and its source", async ({ page }) => {
+  await page.goto("/apps/app-1/reviews");
+
+  await expect(
+    page
+      .getByRole("article")
+      .filter({ hasText: "Crashes often" })
+      .getByText("Draft saved"),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("article")
+      .filter({ hasText: "Sam" })
+      .getByText("Marked replied"),
+  ).toBeVisible();
+
+  await page.goto("/apps/app-gp/reviews");
+  const replied = page.getByRole("article").filter({ hasText: "Stürzt ab" });
+
+  await expect(replied.getByText("Replied on Google Play")).toBeVisible();
+  await expect(replied.getByText(/^Developer reply/)).toBeVisible();
+  await expect(
+    replied.getByText(
+      "Danke für den Hinweis, Version 2.8.0 behebt den Absturz.",
+    ),
+  ).toBeVisible();
+});
+
+test("sorting by lowest score puts the one star review first", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/reviews");
+
+  await page.getByRole("combobox", { name: "Sort reviews" }).click();
+  await page.getByRole("option", { name: "Lowest first" }).click();
+
+  await expect(page).toHaveURL(/sort=lowest/);
+  await expect(page.getByRole("article").first()).toContainText(
+    "Please add dark mode.",
+  );
+});
+
+test("searching narrows the list in the browser", async ({ page }) => {
+  await page.goto("/apps/app-1/reviews");
+  await expect(page.getByRole("article")).toHaveCount(5);
+
+  await page.getByRole("textbox", { name: "Search reviews" }).fill("crash");
+
+  await expect(page.getByRole("article")).toHaveCount(1);
+  await expect(page).toHaveURL(/q=crash/);
+  await expect(
+    page
+      .getByRole("region", { name: "Reply status" })
+      .getByRole("button", { name: /Needs reply/ }),
+  ).toContainText("3");
+
+  await page.getByRole("textbox", { name: "Search reviews" }).fill("zzz");
+  await page.getByRole("button", { name: "Reset search" }).click();
+
+  await expect(page.getByRole("article")).toHaveCount(5);
+});
+
+test("show all loads up to two hundred reviews", async ({ page }) => {
+  await page.goto("/apps/app-long/reviews");
+
+  await expect(page.getByRole("article")).toHaveCount(50);
+  await expect(page.getByText("Showing 50 of 60")).toBeVisible();
+
+  const [request] = await Promise.all([
+    page.waitForRequest((candidate) => {
+      const url = new URL(candidate.url());
+      return (
+        url.pathname === "/api/backend/apps/app-long/reviews" &&
+        url.searchParams.get("limit") === "200"
+      );
+    }),
+    page.getByRole("button", { name: "Show all" }).click(),
+  ]);
+
+  expect(request).toBeTruthy();
+  await expect(page.getByRole("article")).toHaveCount(60);
+  await expect(page.getByText("Showing 50 of 60")).toBeHidden();
+});

@@ -2,6 +2,8 @@ import type {
   RatingsHistogram,
   RatingsHistory,
   ReviewList,
+  ReviewReplyState,
+  ReviewSort,
 } from "@asobeast/shared";
 import { apiFetch, withQuery } from "./client";
 import type { RangeParams } from "./client";
@@ -9,16 +11,20 @@ import type { RangeParams } from "./client";
 export interface ReviewFilters {
   score?: number;
   version?: string;
+  replyState?: ReviewReplyState;
+  sort?: ReviewSort;
   limit?: number;
 }
 
 export function getReviews(
   appId: string,
-  { score, version, limit }: ReviewFilters = {},
+  { score, version, replyState, sort, limit }: ReviewFilters = {},
 ): Promise<ReviewList> {
   const params = new URLSearchParams();
   if (score !== undefined) params.set("score", String(score));
   if (version) params.set("version", version);
+  if (replyState) params.set("replyState", replyState);
+  if (sort) params.set("sort", sort);
   if (limit !== undefined) params.set("limit", String(limit));
   return apiFetch<ReviewList>(withQuery(`/apps/${appId}/reviews`, params));
 }

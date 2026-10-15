@@ -10,7 +10,17 @@ import {
   ratingsHistoryOptions,
   reviewsOptions,
 } from "@/lib/queries";
-import { reviewScoreParser, reviewVersionParser } from "@/lib/search-params";
+import {
+  reviewReplyStateParser,
+  reviewScoreParser,
+  reviewSortParser,
+  reviewVersionParser,
+} from "@/lib/search-params";
+import {
+  countsFilters,
+  reviewFilters,
+  type ReviewView,
+} from "@/components/reviews/review-filters";
 
 export default async function ReviewsPage({
   params,
@@ -20,22 +30,24 @@ export default async function ReviewsPage({
   searchParams: Promise<{
     score?: string | string[];
     version?: string | string[];
+    replyState?: string | string[];
+    sort?: string | string[];
   }>;
 }) {
   const { id } = await params;
   const sp = await searchParams;
-  const score = reviewScoreParser.parseServerSide(sp.score);
-  const version = reviewVersionParser.parseServerSide(sp.version);
+  const view: ReviewView = {
+    score: reviewScoreParser.parseServerSide(sp.score),
+    version: reviewVersionParser.parseServerSide(sp.version),
+    replyState: reviewReplyStateParser.parseServerSide(sp.replyState),
+    sort: reviewSortParser.parseServerSide(sp.sort),
+  };
 
   const queryClient = getQueryClient();
   await Promise.all([
     queryClient.prefetchQuery(reviewsOptions(id, {})),
-    queryClient.prefetchQuery(
-      reviewsOptions(id, {
-        score: score ?? undefined,
-        version: version || undefined,
-      }),
-    ),
+    queryClient.prefetchQuery(reviewsOptions(id, reviewFilters(view))),
+    queryClient.prefetchQuery(reviewsOptions(id, countsFilters(view))),
     queryClient.prefetchQuery(ratingsHistoryOptions(id, presetToRange("30d"))),
     queryClient.prefetchQuery(ratingsHistogramOptions(id)),
   ]);

@@ -1,17 +1,8 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-  useSuspenseQuery,
-} from "@tanstack/react-query";
-import { Download } from "lucide-react";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
-import { toast } from "sonner";
-import type { ReviewItem } from "@asobeast/shared";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -20,135 +11,89 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { EmptyState } from "@/components/ui/empty-state";
-import type { ReviewFilters } from "@/lib/api";
-import { cn } from "@/lib/utils";
-import { formatDate } from "@/lib/format";
+import { formatNumber } from "@/lib/format";
+import { reviewsOptions } from "@/lib/queries";
 import {
-  REVIEWS_EXPORT_LIMIT,
-  reviewsExportOptions,
-  reviewsOptions,
-} from "@/lib/queries";
-import { reviewScoreParser, reviewVersionParser } from "@/lib/search-params";
-import { useSingleFlight } from "@/lib/single-flight";
-import { exportReviews, truncatedExportNotice } from "./review-csv";
-import { ReviewsListSkeleton } from "./skeletons";
+  reviewQueryParser,
+  reviewReplyStateParser,
+  reviewScoreParser,
+  reviewSortParser,
+  reviewVersionParser,
+} from "@/lib/search-params";
+import { ReviewCard } from "./ReviewCard";
+import { ReviewCountsStrip } from "./ReviewCountsStrip";
+import { ReviewsToolbar } from "./ReviewsToolbar";
+import {
+  REVIEWS_SHOW_ALL_LIMIT,
+  reviewFilters,
+  type ReviewView,
+} from "./review-filters";
+import { matchesReviewQuery } from "./review-search";
+import { ReviewCountsSkeleton, ReviewsListSkeleton } from "./skeletons";
 
-const STAR_FILTERS = [5, 4, 3, 2, 1] as const;
-const LOW_SCORE = 2;
-const CLAMP_ABOVE = 240;
-const EXPORT_SCOPE = `Exports the newest ${REVIEWS_EXPORT_LIMIT} reviews that match the filters`;
-
-function reviewFilters(score: number | null, version: string): ReviewFilters {
-  return { score: score ?? undefined, version: version || undefined };
-}
-
-function Stars({ score }: { score: number }) {
-  const low = score <= LOW_SCORE;
+function ShowAll({
+  shown,
+  total,
+  expanded,
+  onShowAll,
+}: {
+  shown: number;
+  total: number;
+  expanded: boolean;
+  onShowAll: () => void;
+}) {
+  if (total <= shown) return null;
   return (
-    <span
-      className={cn(
-        "text-sm tracking-tight",
-        low ? "text-destructive" : "text-foreground",
-      )}
-      role="img"
-      aria-label={`${score} out of 5 stars`}
-    >
-      <span aria-hidden>
-        {"★".repeat(score)}
-        <span className="text-muted-foreground">{"☆".repeat(5 - score)}</span>
-      </span>
-    </span>
-  );
-}
-
-function ReviewText({ text }: { text: string }) {
-  const [expanded, setExpanded] = useState(false);
-
-  return (
-    <div className="flex flex-col items-start gap-1">
-      <p
-        className={cn(
-          "text-body break-words whitespace-pre-line",
-          expanded ? null : "line-clamp-4",
-        )}
-      >
-        {text}
+    <div className="flex flex-wrap items-center gap-3 pt-2">
+      <p className="text-caption text-muted-foreground">
+        Showing {formatNumber(shown)} of {formatNumber(total)}
       </p>
-      {text.length > CLAMP_ABOVE ? (
-        <button
-          type="button"
-          onClick={() => setExpanded((value) => !value)}
-          aria-expanded={expanded}
-          className="rounded-sm text-caption font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-        >
-          {expanded ? "Show less" : "Show more"}
-        </button>
-      ) : null}
-    </div>
-  );
-}
-
-function ReviewCard({ review }: { review: ReviewItem }) {
-  const low = review.score <= LOW_SCORE;
-  return (
-    <article
-      style={{ contentVisibility: "auto", containIntrinsicSize: "auto 8rem" }}
-      className={cn(
-        "flex flex-col gap-2 border-l-2 py-3 pl-4",
-        low ? "border-destructive/60" : "border-transparent",
-      )}
-    >
-      <div className="flex flex-wrap items-center gap-2">
-        <Stars score={review.score} />
-        {review.title ? (
-          <span className="text-sm font-medium">{review.title}</span>
-        ) : null}
-        {review.version ? (
-          <Badge variant="outline">v{review.version}</Badge>
-        ) : null}
-      </div>
-      {review.text.trim() ? (
-        <ReviewText text={review.text} />
+      {expanded ? (
+        <p className="text-caption text-muted-foreground">
+          The page shows at most {REVIEWS_SHOW_ALL_LIMIT} reviews; narrow the
+          filters to reach the others.
+        </p>
       ) : (
-        <p className="text-body text-muted-foreground">No written review</p>
+        <Button variant="outline" size="sm" onClick={onShowAll}>
+          Show all
+        </Button>
       )}
-      <p className="text-xs text-muted-foreground">
-        {review.userName ?? "Anonymous"} · {formatDate(review.reviewedAt)}
-      </p>
-    </article>
+    </div>
   );
 }
 
 function ReviewCards({
   id,
-  score,
-  version,
+  view,
+  query,
   onClearFilters,
+  onResetSearch,
 }: {
   id: string;
-  score: number | null;
-  version: string;
+  view: ReviewView;
+  query: string;
   onClearFilters: () => void;
+  onResetSearch: () => void;
 }) {
+  const viewKey = JSON.stringify(view);
+  const [expandedView, setExpandedView] = useState<string | null>(null);
+  const expanded = expandedView === viewKey;
   const { data } = useSuspenseQuery(
-    reviewsOptions(id, reviewFilters(score, version)),
+    reviewsOptions(
+      id,
+      reviewFilters(view, expanded ? REVIEWS_SHOW_ALL_LIMIT : undefined),
+    ),
   );
 
-  const filtered = score !== null || version !== "";
+  const filtered =
+    view.score !== null || view.version !== "" || view.replyState !== null;
 
   if (data.total === 0) {
     return filtered ? (
       <EmptyState
         title="No reviews match these filters"
-        body="Nothing stored matches the selected rating and version."
+        body="Nothing stored matches the selected rating, version and reply state."
         action={
           <Button variant="outline" onClick={onClearFilters}>
             Clear filters
@@ -163,133 +108,87 @@ function ReviewCards({
     );
   }
 
+  const shown = data.reviews.filter((review) =>
+    matchesReviewQuery(review, query),
+  );
+
   return (
-    <div className="divide-y">
-      {data.reviews.map((review) => (
-        <ReviewCard key={review.id} review={review} />
-      ))}
+    <div className="flex flex-col">
+      {shown.length === 0 ? (
+        <EmptyState
+          title="No reviews match this search"
+          body="Search looks through the titles, texts, authors and replies of the reviews loaded here."
+          action={
+            <Button variant="outline" onClick={onResetSearch}>
+              Reset search
+            </Button>
+          }
+        />
+      ) : (
+        <div className="divide-y">
+          {shown.map((review) => (
+            <ReviewCard key={review.id} review={review} />
+          ))}
+        </div>
+      )}
+      <ShowAll
+        shown={data.reviews.length}
+        total={data.total}
+        expanded={expanded}
+        onShowAll={() => setExpandedView(viewKey)}
+      />
     </div>
-  );
-}
-
-function VersionSelect({
-  id,
-  version,
-  onChange,
-}: {
-  id: string;
-  version: string;
-  onChange: (next: string) => void;
-}) {
-  const { data } = useSuspenseQuery(reviewsOptions(id, {}));
-
-  return (
-    <Select
-      value={version || "all"}
-      onValueChange={(next) => onChange(next === "all" ? "" : next)}
-    >
-      <SelectTrigger className="w-[140px]" aria-label="Filter by version">
-        <SelectValue placeholder="All versions" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="all">All versions</SelectItem>
-        {data.versions.map((item) => (
-          <SelectItem key={item} value={item}>
-            v{item}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
-}
-
-function ExportReviewsButton({
-  id,
-  filters,
-}: {
-  id: string;
-  filters: ReviewFilters;
-}) {
-  const queryClient = useQueryClient();
-  const { data } = useQuery(reviewsOptions(id, filters));
-  const exporting = useMutation({
-    mutationFn: () => queryClient.fetchQuery(reviewsExportOptions(id, filters)),
-    onSuccess: (list) => {
-      exportReviews(id, list.reviews);
-      const notice = truncatedExportNotice(list);
-      if (notice) toast.info(notice);
-    },
-    onError: () => {
-      toast.error("Could not export reviews");
-    },
-  });
-  const exportOnce = useSingleFlight(exporting);
-
-  return (
-    <Button
-      variant="outline"
-      size="sm"
-      className="ml-auto"
-      disabled={(data?.total ?? 0) === 0 || exporting.isPending}
-      onClick={() => exportOnce()}
-      aria-label="Export reviews to CSV"
-      title={EXPORT_SCOPE}
-    >
-      <Download />
-      Export CSV
-    </Button>
   );
 }
 
 export function ReviewsList({ id }: { id: string }) {
   const [score, setScore] = useQueryState("score", reviewScoreParser);
   const [version, setVersion] = useQueryState("version", reviewVersionParser);
+  const [replyState, setReplyState] = useQueryState(
+    "replyState",
+    reviewReplyStateParser,
+  );
+  const [sort, setSort] = useQueryState("sort", reviewSortParser);
+  const [query, setQuery] = useQueryState("q", reviewQueryParser);
+  const view: ReviewView = { score, version, replyState, sort };
 
   return (
     <Card>
-      <CardHeader className="flex-row items-start justify-between gap-4">
-        <div className="flex flex-col gap-1.5">
-          <CardDescription>Reviews</CardDescription>
-          <CardTitle>User reviews</CardTitle>
-        </div>
-        <Suspense fallback={null}>
-          <VersionSelect id={id} version={version} onChange={setVersion} />
-        </Suspense>
+      <CardHeader>
+        <CardDescription>Reviews</CardDescription>
+        <CardTitle>User reviews</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <div
-            className="flex flex-wrap gap-1.5"
-            role="group"
-            aria-label="Filter by star rating"
-          >
-            {STAR_FILTERS.map((star) => (
-              <Button
-                key={star}
-                size="sm"
-                variant={score === star ? "default" : "outline"}
-                aria-pressed={score === star}
-                onClick={() => void setScore(score === star ? null : star)}
-              >
-                {star}
-                <span aria-hidden>{"★"}</span>
-              </Button>
-            ))}
-          </div>
-          <ExportReviewsButton
+        <Suspense fallback={<ReviewCountsSkeleton />}>
+          <ReviewCountsStrip
             id={id}
-            filters={reviewFilters(score, version)}
+            view={view}
+            onSelect={(next) => void setReplyState(next)}
           />
-        </div>
+        </Suspense>
+        <ReviewsToolbar
+          id={id}
+          view={view}
+          query={query}
+          onScore={(next) => void setScore(next)}
+          onVersion={(next) => void setVersion(next || null)}
+          onReplyState={(next) => void setReplyState(next)}
+          onSort={(next) => void setSort(next === "newest" ? null : next)}
+          onQuery={(next, options) => void setQuery(next || null, options)}
+        />
         <Suspense fallback={<ReviewsListSkeleton />}>
           <ReviewCards
             id={id}
-            score={score}
-            version={version}
+            view={view}
+            query={query}
             onClearFilters={() => {
               void setScore(null);
               void setVersion(null);
+              void setReplyState(null);
+              void setSort(null);
+              void setQuery(null);
             }}
+            onResetSearch={() => void setQuery(null)}
           />
         </Suspense>
       </CardContent>

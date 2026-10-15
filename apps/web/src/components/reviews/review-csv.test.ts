@@ -67,6 +67,17 @@ describe("truncatedExportNotice", () => {
     );
   });
 
+  it("names the order of a lowest first export", () => {
+    expect(
+      truncatedExportNotice(
+        { reviews: [review(), review()], total: 1800 },
+        "lowest",
+      ),
+    ).toBe(
+      "Exported the lowest scored 2 of 1,800 reviews. Narrow the filters to reach the others.",
+    );
+  });
+
   it("stays quiet when every matching review is in the file", () => {
     expect(truncatedExportNotice({ reviews: [review()], total: 1 })).toBeNull();
   });
