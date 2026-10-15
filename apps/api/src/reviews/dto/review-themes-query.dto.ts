@@ -6,4 +6,4 @@ export class ReviewThemesQueryDto extends PickType(ReviewsQueryDto, [
   'version',
   'from',
   'replyState',
-] as const) {}
+]) {}
