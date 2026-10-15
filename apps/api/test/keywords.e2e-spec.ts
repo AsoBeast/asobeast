@@ -356,6 +356,23 @@ describe('KeywordsController (e2e)', () => {
       expect(check).toBeLessThan(score);
     });
 
+    it('checks the first position of every phrase a keyword field save starts tracking', async () => {
+      const id = await importAndClear();
+
+      const saved = (
+        await api
+          .put(`/apps/${id}/keyword-field`)
+          .send({ text: 'deep focus,exam timer,habit' })
+          .expect(200)
+      ).body as KeywordFieldResult;
+
+      const [focus, timer] = ['deep focus', 'exam timer'].map(
+        (text) =>
+          saved.tracked.find((item) => item.text === text)?.keywordId ?? '',
+      );
+      expect(await checkedJobIds()).toEqual(firstRunIds(id, [focus, timer]));
+    });
+
     it('checks nothing for a keyword the app already tracks', async () => {
       const id = await importAndClear();
 
