@@ -1,7 +1,17 @@
 import { ChartItem } from './types';
 
-export function toChartItem(fields: ChartItem): ChartItem {
-  return Object.fromEntries(
-    Object.entries(fields).filter(([, value]) => value !== undefined),
-  ) as ChartItem;
+export function toChartItem({
+  storeAppId,
+  title,
+  ...listing
+}: ChartItem): ChartItem {
+  return {
+    storeAppId,
+    title,
+    ...Object.fromEntries(
+      Object.entries(listing).filter(
+        ([, value]) => value !== undefined && value !== '',
+      ),
+    ),
+  };
 }

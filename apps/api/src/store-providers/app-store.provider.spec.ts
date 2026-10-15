@@ -404,6 +404,19 @@ describe('AppStoreProvider', () => {
     ]);
   });
 
+  it('leaves out a listing field the feed answered empty', async () => {
+    const list = jest
+      .fn()
+      .mockResolvedValue([
+        { id: 111, title: 'First', icon: '', developer: '', genreId: '' },
+      ]);
+    const provider = new AppStoreProvider(makeLib({ list }));
+
+    await expect(
+      provider.topCharts('free', '6007', 100, 'us'),
+    ).resolves.toStrictEqual([{ storeAppId: '111', title: 'First' }]);
+  });
+
   it('caps num at 100 and asks for the feed rows only', async () => {
     const list = jest.fn().mockResolvedValue([]);
     const provider = new AppStoreProvider(makeLib({ list }));
