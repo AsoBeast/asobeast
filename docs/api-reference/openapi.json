@@ -488,6 +488,28 @@
         ]
       }
     },
+    "/ai/status": {
+      "get": {
+        "operationId": "AiController_status",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Whether the optional AI features are configured",
+        "tags": [
+          "ai"
+        ]
+      }
+    },
     "/webhooks": {
       "get": {
         "operationId": "WebhooksController_list",
