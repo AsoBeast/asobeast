@@ -59,6 +59,7 @@ import {
   getMarketKeywordFields,
   getListingMarkets,
   getMarketAvailability,
+  getAppSetup,
   getMarketSuggestions,
   getMetadataAudit,
   getPortfolio,
@@ -194,6 +195,8 @@ export const appKeys = {
     ] as const,
   serp: (keywordId: string) => ["serp", keywordId] as const,
 };
+
+export const setupKey = (id: string) => ["setup", id] as const;
 
 export const portfolioKey = ["portfolio"] as const;
 export const portfolioInsightsKey = [...portfolioKey, "insights"] as const;
@@ -717,6 +720,14 @@ export const marketSuggestionsOptions = (id: string) =>
     staleTime: ONE_DAY_MS,
   });
 
+export const setupOptions = (id: string) =>
+  queryOptions({
+    queryKey: setupKey(id),
+    queryFn: () => getAppSetup(id),
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+  });
+
 export const serpOptions = (keywordId: string) =>
   queryOptions({
     queryKey: appKeys.serp(keywordId),
@@ -804,7 +815,7 @@ export function invalidateKeywordMutation(
   void client.invalidateQueries({ queryKey: appKeys.keywordFieldRoot(id) });
   void client.invalidateQueries({ queryKey: appKeys.summary(id) });
   void client.invalidateQueries({ queryKey: appKeys.compareRoot(id) });
-  void client.invalidateQueries({ queryKey: portfolioInsightsKey });
+  void client.invalidateQueries({ queryKey: portfolioKey });
   void client.invalidateQueries({ queryKey: appKeys.localizations(id) });
   void client.invalidateQueries({
     queryKey: appKeys.marketKeywordFieldsRoot(id),
@@ -848,6 +859,16 @@ export function invalidateKeywordImport(client: QueryClient, id: string): void {
 export function invalidateAppListing(client: QueryClient, id: string): void {
   void client.invalidateQueries({ queryKey: appKeys.detail(id) });
   void client.invalidateQueries({ queryKey: portfolioKey });
+}
+
+export function invalidateSetupMutation(
+  client: QueryClient,
+  id: string,
+): Promise<void> {
+  return Promise.all([
+    client.invalidateQueries({ queryKey: setupKey(id) }),
+    client.invalidateQueries({ queryKey: portfolioKey }),
+  ]).then(() => undefined);
 }
 
 export function invalidateCompetitorMutation(

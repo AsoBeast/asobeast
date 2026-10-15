@@ -3,6 +3,7 @@ export * from "./error-digest";
 export * from "./apps";
 export * from "./keywords";
 export * from "./localizations";
+export * from "./setup";
 export * from "./rankings";
 export * from "./competitors";
 export * from "./analytics";

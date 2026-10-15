@@ -1,11 +1,19 @@
+import { randomUUID } from "node:crypto";
 import { SESSION_COOKIE } from "@asobeast/shared";
 import { test as base } from "./reporting.mts";
+import { SETUP_SESSION_COOKIE } from "./setup-session.mts";
 
 export const test = base.extend<{ session: void }>({
   session: [
     async ({ context }, use) => {
       await context.addCookies([
         { name: SESSION_COOKIE, value: "e2e", domain: "localhost", path: "/" },
+        {
+          name: SETUP_SESSION_COOKIE,
+          value: randomUUID(),
+          domain: "localhost",
+          path: "/",
+        },
       ]);
       await use();
     },

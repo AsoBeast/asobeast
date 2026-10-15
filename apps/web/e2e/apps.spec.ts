@@ -1,24 +1,7 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
 import { APP_1_SUMMARY, IMPORTED_APP } from "./fixtures.mts";
-import { seedViewer } from "./viewer.mts";
-import {
-  beginOnboarding,
-  completeOnboarding,
-  NOT_STARTED_ONBOARDING,
-  ONBOARDING_STORAGE_KEY,
-  setCountriesReviewed,
-  setStepSkipped,
-} from "../src/lib/onboarding";
-import { OWNER_ONBOARDING_KEY } from "./onboarding.mts";
-
-function finishedSetup() {
-  let state = beginOnboarding(NOT_STARTED_ONBOARDING, "app-1", "us");
-  state = setStepSkipped(state, "competitors", true);
-  state = setStepSkipped(state, "keywords", true);
-  state = setCountriesReviewed(state);
-  return completeOnboarding(state, { competitors: 0, keywords: 0 });
-}
+import { startedSetup, storedSetup } from "./setup-session.mts";
 
 const utcDateFormatter = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC",
@@ -122,15 +105,14 @@ test.describe("a fast double click", () => {
   test("still lets Import run again after the dialog closed mid request", async ({
     page,
   }) => {
-    await page.addInitScript(
-      ({ key, value }) => localStorage.setItem(key, value),
-      { key: OWNER_ONBOARDING_KEY, value: JSON.stringify(finishedSetup()) },
-    );
+    let held = false;
     await page.route("**/api/backend/apps", async (route) => {
-      if (route.request().method() === "POST") {
-        await new Promise((resolve) => setTimeout(resolve, 500));
+      if (route.request().method() !== "POST" || held) {
+        return route.fallback();
       }
-      await route.fallback();
+      held = true;
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      await route.fulfill({ status: 503, json: { statusCode: 503 } });
     });
     const imports = countRequests(page, "POST", /\/api\/backend\/apps$/);
     await page.goto("/");
@@ -177,32 +159,41 @@ test.describe("a fast double click", () => {
   });
 });
 
-test("finished setup suppresses redirects after later imports", async ({
-  page,
-}) => {
-  await page.addInitScript(
-    ({ key, value }) => localStorage.setItem(key, value),
-    { key: OWNER_ONBOARDING_KEY, value: JSON.stringify(finishedSetup()) },
-  );
-  await page.goto("/");
-
+const importFocusTimer = async (page: Page) => {
   await page.getByRole("button", { name: "Import app" }).click();
   await page
     .getByLabel("Store URL")
     .fill("https://apps.apple.com/us/app/focus-timer/id123456789");
   await page.getByRole("button", { name: "Import", exact: true }).click();
+};
 
-  await expect(page).toHaveURL("/");
-  await expect(page.getByText(`Imported ${IMPORTED_APP.name}`)).toBeVisible();
+test("an import always opens the setup of the imported app and keeps its progress", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await importFocusTimer(page);
+
+  await expect(page).toHaveURL("/apps/app-new/setup");
+  await page.getByRole("button", { name: "Countries reviewed" }).click();
+  await expect
+    .poll(
+      async () =>
+        (await storedSetup(page.context(), "app-new")).countriesReviewed,
+    )
+    .toBe(true);
+
+  await page.goto("/");
+  await importFocusTimer(page);
+
+  await expect(page).toHaveURL("/apps/app-new/setup");
+  await expect(
+    page.getByRole("heading", { name: /^Set up Imported App · 1 of 3/ }),
+  ).toBeVisible();
 });
 
 test("a first import replaces the first run screen without a reload", async ({
   page,
 }) => {
-  await page.addInitScript(
-    ({ key, value }) => localStorage.setItem(key, value),
-    { key: OWNER_ONBOARDING_KEY, value: JSON.stringify(finishedSetup()) },
-  );
   await page
     .context()
     .addCookies([
@@ -221,6 +212,8 @@ test("a first import replaces the first run screen without a reload", async ({
   await page.getByRole("button", { name: "Import", exact: true }).click();
 
   await expect(page.getByText(`Imported ${IMPORTED_APP.name}`)).toBeVisible();
+  await expect(page).toHaveURL("/apps/app-new/setup");
+  await page.goBack();
   await expect(page).toHaveURL("/");
   await expect(
     page.getByRole("link", { name: IMPORTED_APP.name ?? "" }).first(),
@@ -230,61 +223,17 @@ test("a first import replaces the first run screen without a reload", async ({
   ).toHaveCount(0);
 });
 
-test("an import whose account is unknown still points at the setup page", async ({
+test("an import whose account cannot be loaded still opens the setup page", async ({
   page,
 }) => {
   await page.route("**/api/backend/auth/me", (route) =>
     route.fulfill({ status: 503, json: { statusCode: 503 } }),
   );
   await page.goto("/");
-
-  await page.getByRole("button", { name: "Import app" }).click();
-  await page
-    .getByLabel("Store URL")
-    .fill("https://apps.apple.com/us/app/focus-timer/id123456789");
-  await page.getByRole("button", { name: "Import", exact: true }).click();
+  await importFocusTimer(page);
 
   await expect(page.getByText(`Imported ${IMPORTED_APP.name}`)).toBeVisible();
-  await expect(
-    page.getByText("Import complete. Open the app setup page to continue."),
-  ).toBeVisible();
-});
-
-test("setup finished before progress was kept per account is not asked again", async ({
-  page,
-}) => {
-  await page.addInitScript(
-    ({ key, value }) => localStorage.setItem(key, value),
-    { key: ONBOARDING_STORAGE_KEY, value: JSON.stringify(finishedSetup()) },
-  );
-  await page
-    .context()
-    .addCookies([
-      { name: "portfolio_empty", value: "1", url: "http://localhost:3000" },
-    ]);
-  await page.goto("/");
-
-  await page.getByRole("button", { name: "Import app" }).click();
-  await page
-    .getByLabel("Store URL")
-    .fill("https://apps.apple.com/us/app/focus-timer/id123456789");
-  await page.context().clearCookies({ name: "portfolio_empty" });
-  await page.getByRole("button", { name: "Import", exact: true }).click();
-
-  await expect(page.getByText(`Imported ${IMPORTED_APP.name}`)).toBeVisible();
-  await expect(
-    page.getByRole("link", { name: IMPORTED_APP.name ?? "" }).first(),
-  ).toBeVisible();
-  await expect(page).toHaveURL("/");
-  expect(
-    await page.evaluate(
-      ([legacy, owned]) => [
-        localStorage.getItem(legacy),
-        localStorage.getItem(owned),
-      ],
-      [ONBOARDING_STORAGE_KEY, OWNER_ONBOARDING_KEY],
-    ),
-  ).toEqual([null, JSON.stringify(finishedSetup())]);
+  await expect(page).toHaveURL("/apps/app-new/setup");
 });
 
 test("deleting the last app returns the dashboard to the first run screen", async ({
@@ -319,48 +268,47 @@ test("deleting the last app returns the dashboard to the first run screen", asyn
   ).toBeVisible();
 });
 
-test("setup another account finished in this browser still guides a new account", async ({
+test("a second import keeps the setup of the first app in progress", async ({
   page,
 }) => {
-  const importApp = async () => {
-    await page.goto("/");
-    await page.getByRole("button", { name: "Import app" }).click();
-    await page
-      .getByLabel("Store URL")
-      .fill("https://apps.apple.com/us/app/focus-timer/id123456789");
-    await page.getByRole("button", { name: "Import", exact: true }).click();
-    await expect(page).toHaveURL("/apps/app-new/setup");
-  };
+  await startedSetup(page.context(), "app-1");
+  await page.goto("/");
+  await importFocusTimer(page);
 
-  await importApp();
-  await page.getByRole("button", { name: "Dismiss setup" }).click();
-  await expect(page.getByText("Setup dismissed")).toBeVisible();
-
-  await seedViewer(page.context(), "customer");
-  await importApp();
+  await expect(page).toHaveURL("/apps/app-new/setup");
   await expect(
     page.getByRole("heading", { name: /^Set up Imported App/ }),
+  ).toBeVisible();
+  expect((await storedSetup(page.context(), "app-1")).status).toBe(
+    "in_progress",
+  );
+
+  await page.goto("/apps/app-1/setup");
+  await expect(
+    page.getByRole("heading", { name: /^Set up Focus Timer/ }),
   ).toBeVisible();
 });
 
 test("pending setup can be resumed or dismissed from the dashboard", async ({
   page,
 }) => {
-  const state = beginOnboarding(NOT_STARTED_ONBOARDING, "app-1", "us");
-  await page.addInitScript(
-    ({ key, value }) => {
-      if (localStorage.getItem(key) === null) localStorage.setItem(key, value);
-    },
-    { key: OWNER_ONBOARDING_KEY, value: JSON.stringify(state) },
-  );
+  await startedSetup(page.context(), "app-2");
+  await startedSetup(page.context(), "app-1");
+  const patches: unknown[] = [];
+  page.on("request", (request) => {
+    if (
+      request.method() === "PATCH" &&
+      request.url().endsWith("/api/backend/apps/app-1/setup")
+    ) {
+      patches.push(request.postDataJSON());
+    }
+  });
   await page.goto("/");
 
-  const banner = page
-    .getByRole("status")
-    .filter({ hasText: "Set up Focus Timer" });
-  await expect(
-    banner.getByText("Set up Focus Timer · 1 of 3 · next: track keywords"),
-  ).toBeVisible();
+  const banner = page.getByRole("status").filter({ hasText: /^Set up / });
+  await expect(banner.getByText(/^Set up Focus Timer/)).toHaveText(
+    "Set up Focus Timer · 1 of 3 · next: track keywords · and 1 more app",
+  );
   await expect(
     banner.getByRole("progressbar", { name: "Setup progress" }),
   ).toHaveAttribute("aria-valuetext", "1 of 3 steps");
@@ -369,10 +317,14 @@ test("pending setup can be resumed or dismissed from the dashboard", async ({
   await expect(page).toHaveURL("/apps/app-1/setup");
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Dismiss" }).click();
-  await expect(page.getByText(/^Set up Focus Timer/)).toBeHidden();
+  await banner.getByRole("button", { name: "Dismiss" }).click();
+  await expect(banner.getByText(/^Set up Habit Tracker/)).toHaveText(
+    "Set up Habit Tracker · 0 of 3 · next: pick competitors",
+  );
+  expect(patches).toEqual([{ status: "dismissed" }]);
   await page.reload();
   await expect(page.getByText(/^Set up Focus Timer/)).toBeHidden();
+  await expect(banner.getByText(/^Set up Habit Tracker/)).toBeVisible();
 });
 
 test("an existing portfolio is not enrolled without an import", async ({
@@ -383,39 +335,6 @@ test("an existing portfolio is not enrolled without an import", async ({
     page.getByRole("link", { name: "Focus Timer" }).first(),
   ).toBeVisible();
   await expect(page.getByRole("link", { name: "Resume setup" })).toHaveCount(0);
-});
-
-test("blocked onboarding storage does not turn import success into failure", async ({
-  page,
-}) => {
-  await page.addInitScript(
-    ({ key, stale }) => {
-      localStorage.setItem(key, stale);
-      const setItem = Storage.prototype.setItem;
-      Storage.prototype.setItem = function (name, value) {
-        if (name === key) throw new Error("blocked");
-        setItem.call(this, name, value);
-      };
-    },
-    {
-      key: OWNER_ONBOARDING_KEY,
-      stale: JSON.stringify(NOT_STARTED_ONBOARDING),
-    },
-  );
-  await page.goto("/");
-
-  await page.getByRole("button", { name: "Import app" }).click();
-  await page
-    .getByLabel("Store URL")
-    .fill("https://apps.apple.com/us/app/focus-timer/id123456789");
-  await page.getByRole("button", { name: "Import", exact: true }).click();
-
-  await expect(page.getByText(`Imported ${IMPORTED_APP.name}`)).toBeVisible();
-  await expect(page).toHaveURL("/apps/app-new/setup");
-  await expect(
-    page.getByRole("heading", { name: /^Set up Imported App/ }),
-  ).toBeVisible();
-  await expect(page.getByText("Could not reach the api")).toHaveCount(0);
 });
 
 test("app overview renders summary numbers and a utc refresh date", async ({

@@ -25,11 +25,13 @@ export function StatTile({
   label,
   value,
   note,
+  info,
   className,
 }: {
   label: string;
   value: ReactNode;
   note?: ReactNode;
+  info?: ReactNode;
   className?: string;
 }) {
   return (
@@ -42,6 +44,7 @@ export function StatTile({
     >
       <span className="text-label text-balance text-muted-foreground uppercase">
         {label}
+        {info ? <span className="ml-1 normal-case">{info}</span> : null}
       </span>
       <span className="numeric self-end font-mono text-display">{value}</span>
       <span className="text-caption text-balance text-muted-foreground">

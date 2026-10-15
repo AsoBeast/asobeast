@@ -53,6 +53,7 @@ import {
   invalidateMarketSeed,
   invalidateKeywords,
   invalidateLinkMutation,
+  invalidateSetupMutation,
   invalidateWebhookMutation,
   seedEmailAlert,
   seedWebhook,
@@ -79,6 +80,8 @@ import {
   serpMoversOptions,
   screenshotsOptions,
   serpOptions,
+  setupKey,
+  setupOptions,
   spiderOptions,
   pickerSuggestionsOptions,
   suggestionsOptions,
@@ -522,7 +525,7 @@ describe("invalidation sets", () => {
       appKeys.keywordFieldRoot(APP),
       appKeys.summary(APP),
       appKeys.compareRoot(APP),
-      portfolioInsightsKey,
+      portfolioKey,
       appKeys.localizations(APP),
       appKeys.marketKeywordFieldsRoot(APP),
       appKeys.marketSuggestions(APP),
@@ -542,7 +545,7 @@ describe("invalidation sets", () => {
       appKeys.keywordFieldRoot(APP),
       appKeys.summary(APP),
       appKeys.compareRoot(APP),
-      portfolioInsightsKey,
+      portfolioKey,
       appKeys.localizations(APP),
       appKeys.marketKeywordFieldsRoot(APP),
       appKeys.marketSuggestions(APP),
@@ -562,7 +565,7 @@ describe("invalidation sets", () => {
       appKeys.keywordFieldRoot(APP),
       appKeys.summary(APP),
       appKeys.compareRoot(APP),
-      portfolioInsightsKey,
+      portfolioKey,
       appKeys.localizations(APP),
       appKeys.marketKeywordFieldsRoot(APP),
       appKeys.marketSuggestions(APP),
@@ -581,7 +584,7 @@ describe("invalidation sets", () => {
       appKeys.keywordFieldRoot(APP),
       appKeys.summary(APP),
       appKeys.compareRoot(APP),
-      portfolioInsightsKey,
+      portfolioKey,
       appKeys.localizations(APP),
       appKeys.marketKeywordFieldsRoot(APP),
       appKeys.marketSuggestions(APP),
@@ -601,13 +604,21 @@ describe("invalidation sets", () => {
       appKeys.keywordFieldRoot(APP),
       appKeys.summary(APP),
       appKeys.compareRoot(APP),
-      portfolioInsightsKey,
+      portfolioKey,
       appKeys.localizations(APP),
       appKeys.marketKeywordFieldsRoot(APP),
       appKeys.marketSuggestions(APP),
       appKeys.firstRun(APP),
       appKeys.importPreviewRoot(APP),
     ]);
+  });
+
+  it("refreshes the setup and the portfolio after a setup mutation", () => {
+    expect(
+      invalidatedKeys((client) => {
+        void invalidateSetupMutation(client, APP);
+      }),
+    ).toEqual([setupKey(APP), portfolioKey]);
   });
 
   it("invalidates everything a competitor mutation changes", () => {
@@ -726,6 +737,19 @@ describe("portfolio insights key", () => {
   it("sits under the portfolio key so a portfolio invalidation reaches it", () => {
     expect(isPrefixOf(portfolioKey, portfolioInsightsKey)).toBe(true);
     expect(portfolioInsightsOptions.queryKey).toEqual(portfolioInsightsKey);
+  });
+});
+
+describe("setup key", () => {
+  it("sits outside the app detail so a listing or competitor invalidation never refetches it mid save", () => {
+    expect(isPrefixOf(appKeys.detail(APP), setupKey(APP))).toBe(false);
+    expect(isPrefixOf(appKeys.all, setupKey(APP))).toBe(false);
+    expect(setupOptions(APP).queryKey).toEqual(setupKey(APP));
+  });
+
+  it("refetches whenever another tab or device may have changed it", () => {
+    expect(setupOptions(APP).staleTime).toBe(0);
+    expect(setupOptions(APP).refetchOnWindowFocus).toBe(true);
   });
 });
 

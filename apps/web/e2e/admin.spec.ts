@@ -37,6 +37,19 @@ test.describe("the admin area for the platform operator", () => {
     await expect(tile(page, "Users")).toContainText("5");
     await expect(tile(page, "Tracked apps")).toContainText("4");
     await expect(tile(page, "Keyword markets")).toContainText("1,234");
+    await expect(tile(page, "Activation")).toContainText("9 of 12");
+    await expect(tile(page, "Activation")).toContainText(
+      "ranked within a day of import · 7 completed setup",
+    );
+    await tile(page, "Activation")
+      .getByRole("button", { name: "What activation means" })
+      .click();
+    await expect(
+      page.getByRole("link", { name: "Read how activation is counted" }),
+    ).toHaveAttribute(
+      "href",
+      "https://docs.asobeast.com/security/admin-surfaces#activation",
+    );
     await expect(page.getByRole("heading", { name: "Plans" })).toBeVisible();
   });
 

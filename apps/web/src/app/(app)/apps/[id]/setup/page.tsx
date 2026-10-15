@@ -1,4 +1,5 @@
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
+import { notFound } from "next/navigation";
 import { DISCOVERY_WINDOW_DAYS } from "@/components/onboarding/discovered-apps";
 import { SetupChecklist } from "@/components/onboarding/SetupChecklist";
 import { getQueryClient } from "@/lib/get-query-client";
@@ -10,6 +11,7 @@ import {
   keywordsOptions,
   marketSuggestionsOptions,
   pickerSuggestionsOptions,
+  setupOptions,
 } from "@/lib/queries";
 
 export default async function SetupPage({
@@ -20,7 +22,9 @@ export default async function SetupPage({
   const { id } = await params;
   const queryClient = getQueryClient();
   const app = await queryClient.fetchQuery(appDetailOptions(id));
+  if (app.isCompetitor) notFound();
   await Promise.all([
+    queryClient.prefetchQuery(setupOptions(id)),
     queryClient.prefetchQuery(marketSuggestionsOptions(id)),
     queryClient.prefetchQuery(competitorsOptions(id)),
     queryClient.prefetchQuery(firstRunOptions(id)),

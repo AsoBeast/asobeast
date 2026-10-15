@@ -3,6 +3,8 @@ import { ChartSkeleton } from "@/components/charts/ChartStates";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
+const TILE_COUNT = 7;
+
 function CardHeaderSkeleton() {
   return (
     <CardHeader className="flex flex-col gap-2">
@@ -16,7 +18,7 @@ export function AdminOverviewSkeleton() {
   return (
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,12rem),1fr))] gap-3">
-        {Array.from({ length: 6 }).map((_, index) => (
+        {Array.from({ length: TILE_COUNT }).map((_, index) => (
           <div
             key={index}
             className="flex flex-col gap-2 rounded-xl border bg-card px-4 py-3"

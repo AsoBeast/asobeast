@@ -3,23 +3,19 @@
 import { Suspense, useState, type FormEvent, type ReactNode } from "react";
 import { ExternalLink, Plus, X } from "lucide-react";
 import Link from "next/link";
-import type {
-  CompetitorItem,
-  MarketSuggestionsResult,
-  Store,
-  TrackedKeywordItem,
+import {
+  SETUP_KEYWORD_TARGET,
+  type CompetitorItem,
+  type MarketSuggestionsResult,
+  type SetupStep,
+  type SetupStepState,
+  type Store,
+  type TrackedKeywordItem,
 } from "@asobeast/shared";
 import { CountrySelect } from "@/components/CountrySelect";
 import { AddCompetitorForm } from "@/components/competitors/AddCompetitorForm";
 import { COUNTRY_OPTIONS, marketError } from "@/lib/countries";
 import { formatCountry, formatList } from "@/lib/format";
-import {
-  activeKeywordCount,
-  SETUP_KEYWORD_TARGET,
-  stepLabel,
-  type SetupStep,
-  type StepState,
-} from "@/lib/onboarding";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,7 +29,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DiscoveredApps } from "./DiscoveredApps";
 import { KeywordPicker } from "./KeywordPicker";
-import { STEP_TITLES } from "./setup-progress";
+import { activeKeywordCount, STEP_TITLES, stepLabel } from "./setup-progress";
 import { MarketCostTip, SuggestedMarkets } from "./SuggestedMarkets";
 
 const SKIP_REASON: Record<SetupStep, string> = {
@@ -44,7 +40,7 @@ const SKIP_REASON: Record<SetupStep, string> = {
 };
 
 export interface StepProps {
-  state: StepState;
+  state: SetupStepState;
   onSkip: (skipped: boolean) => void;
 }
 
@@ -79,7 +75,7 @@ function StepCard({
   );
 }
 
-function StepBadge({ state }: { state: StepState }) {
+function StepBadge({ state }: { state: SetupStepState }) {
   if (state === "done") return <Badge variant="success">Done</Badge>;
   if (state === "skipped") return <Badge variant="outline">Skipped</Badge>;
   return null;

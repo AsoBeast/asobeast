@@ -150,6 +150,8 @@ import type {
   WebhookItem,
   WebhookUpdateRequest,
   WorkspaceDeletionStatus,
+  AppSetupState,
+  AppSetupUpdateRequest,
 } from "@asobeast/shared";
 import {
   COUNTRY_PATTERN,
@@ -174,7 +176,9 @@ import {
   parseStoreUrl,
   isStorefront,
   UnknownStorefrontError,
+  setupSummary,
 } from "@asobeast/shared";
+import { SETUP_SESSION_COOKIE } from "./setup-session.mts";
 import {
   ALL_VIEWERS,
   OWNER_ID,
@@ -269,6 +273,62 @@ const actions: ActionItem[] = ACTIONS.map((action) => structuredClone(action));
 const actionEvents: Record<string, ActionEventItem[]> =
   initialActionEvents(ACTIONS);
 const portfolioApps = [...PORTFOLIO.apps, PENDING_PORTFOLIO_APP];
+
+const setupSessions = new Map<string, Map<string, AppSetupState>>();
+
+function setupSession(req: IncomingMessage): Map<string, AppSetupState> {
+  const session = cookieValue(req, SETUP_SESSION_COOKIE) ?? "";
+  const setups = setupSessions.get(session) ?? new Map();
+  setupSessions.set(session, setups);
+  return setups;
+}
+
+function setupOf(
+  req: IncomingMessage,
+  app: { id: string; country: string },
+): AppSetupState {
+  return (
+    setupSession(req).get(app.id) ?? {
+      appId: app.id,
+      status: "not_started",
+      skipped: [],
+      countriesReviewed: false,
+      selectedMarkets: [app.country],
+      completedAt: null,
+      updatedAt: null,
+    }
+  );
+}
+
+function patchSetup(
+  current: AppSetupState,
+  patch: AppSetupUpdateRequest,
+): AppSetupState {
+  const now = new Date().toISOString();
+  const next = { ...current, ...patch, updatedAt: now };
+  if (patch.status === undefined) return next;
+  return {
+    ...next,
+    completedAt:
+      patch.status === "completed" ? (current.completedAt ?? now) : null,
+  };
+}
+
+function withSetup(
+  req: IncomingMessage,
+  app: PortfolioSummary["apps"][number],
+): PortfolioSummary["apps"][number] {
+  const dataset = DATASETS[app.id];
+  const counts = dataset
+    ? {
+        competitors: dataset.competitors.length,
+        keywords: dataset.keywords.filter(
+          (row) => row.active && row.country === app.country,
+        ).length,
+      }
+    : { competitors: app.competitors, keywords: app.trackedKeywords };
+  return { ...app, setup: setupSummary(setupOf(req, app), counts) };
+}
 const webhooks = [...WEBHOOKS];
 const emailAlerts = [...EMAIL_ALERTS];
 const UNSUBSCRIBED_ALERT: EmailAlertItem = {
@@ -1957,7 +2017,7 @@ const routes: Route[] = [
         : portfolioApps;
       json(res, 200, {
         ...PORTFOLIO,
-        apps: empty ? [] : listed,
+        apps: empty ? [] : listed.map((app) => withSetup(req, app)),
         groups: empty ? [] : PORTFOLIO.groups,
         totals: {
           ...PORTFOLIO.totals,
@@ -2187,10 +2247,17 @@ const routes: Route[] = [
   {
     method: "POST",
     pattern: /^\/apps$/,
-    handler: (_p, _q, res) => {
+    handler: (_p, req, res) => {
       if (!apps.some((app) => app.id === IMPORTED_APP.id)) {
         apps.push(IMPORTED_APP);
         portfolioApps.push(IMPORTED_PORTFOLIO_APP);
+      }
+      const setups = setupSession(req);
+      if (!setups.has(IMPORTED_APP.id)) {
+        setups.set(
+          IMPORTED_APP.id,
+          patchSetup(setupOf(req, IMPORTED_APP), { status: "in_progress" }),
+        );
       }
       json(res, 201, IMPORTED_APP_DETAIL);
     },
@@ -2198,6 +2265,26 @@ const routes: Route[] = [
   appRoute(/^\/apps\/([^/]+)$/, (dataset, query) =>
     isPolishListingOf(dataset, query) ? APP_1_PL_DETAIL : dataset.detail,
   ),
+  appRoute(/^\/apps\/([^/]+)\/setup$/, (dataset, _query, req) =>
+    setupOf(req, dataset.detail),
+  ),
+  {
+    method: "PATCH",
+    pattern: /^\/apps\/([^/]+)\/setup$/,
+    handler: ([id], req, res) => {
+      const path = req.url ?? "/";
+      const dataset = DATASETS[id];
+      if (!dataset) return json(res, 404, errorEnvelope(404, path));
+      withBody<AppSetupUpdateRequest>(req, res, (patch) => {
+        if (hasCookie(req, "e2e_setup_fail", "1")) {
+          return json(res, 500, errorEnvelope(500, path));
+        }
+        const next = patchSetup(setupOf(req, dataset.detail), patch);
+        setupSession(req).set(id, next);
+        json(res, 200, next);
+      });
+    },
+  },
   appRoute(/^\/apps\/([^/]+)\/market-suggestions$/, (dataset) =>
     marketSuggestionsOf(dataset),
   ),

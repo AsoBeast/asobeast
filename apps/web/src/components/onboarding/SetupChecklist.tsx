@@ -4,8 +4,15 @@ import { useQueries, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { CheckCircle2, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { AppDetail } from "@asobeast/shared";
-import { ErrorState } from "@/components/layout/ErrorState";
+import {
+  canCompleteSetup,
+  setupProgress,
+  stepStates,
+  type AppDetail,
+  type AppSetupState,
+  type SetupCounts,
+  type SetupStep,
+} from "@asobeast/shared";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,33 +23,27 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  activeKeywordCount,
-  canCompleteOnboarding,
-  completeOnboarding,
-  dismissOnboarding,
-  restartOnboarding,
-  setCountriesReviewed,
-  setMarketSelected,
-  setStepSkipped,
-  setupProgress,
-  stepStates,
-  type OnboardingState,
-  type SetupCounts,
-  type SetupStep,
-} from "@/lib/onboarding";
-import {
   appDetailOptions,
   competitorsOptions,
   keywordsOptions,
   marketSuggestionsOptions,
 } from "@/lib/queries";
+import { activeKeywordCount } from "./setup-progress";
 import { CompetitorsStep, CountriesStep, KeywordsStep } from "./setup-steps";
-import { SetupChecklistSkeleton } from "./SetupChecklistSkeleton";
 import { SetupProgress } from "./SetupProgress";
+import {
+  beginSetup,
+  completeSetup,
+  dismissSetup,
+  reviewCountries,
+  selectMarket,
+  skipStep,
+  type SetupTransition,
+} from "./setup-transitions";
 import { useFirstRunDiscovery } from "./use-first-run-discovery";
-import { useOnboarding, type OnboardingTransition } from "./use-onboarding";
+import { useSetup } from "./use-setup";
 
-type Persist = (transition: OnboardingTransition) => void;
+type Apply = (transition: SetupTransition, onSaved?: () => void) => void;
 type LiveQuery = { data: unknown; isError: boolean; refetch: () => unknown };
 
 const lengthOrNull = <T,>(value: T[] | undefined): number | null =>
@@ -54,48 +55,30 @@ const activeCount = (
 
 export function SetupChecklist({ id }: { id: string }) {
   const { data: app } = useSuspenseQuery(appDetailOptions(id));
-  const { account, state, persist, userError, retryUser } = useOnboarding();
-  const start = () => persist(() => restartOnboarding(id, app.country));
+  const { setup, apply } = useSetup(id);
+  const start = () => apply(beginSetup(app.country));
 
-  if (userError) {
-    return (
-      <ErrorState
-        error={userError}
-        retry={retryUser}
-        title="Account could not be loaded"
-      />
-    );
+  if (setup.status === "in_progress") {
+    return <ActiveSetup app={app} setup={setup} apply={apply} />;
   }
-  if (!account) return <SetupChecklistSkeleton />;
-
-  if (state.appId === id && state.status === "in_progress") {
-    return <ActiveSetup app={app} state={state} persist={persist} />;
-  }
-  if (state.appId === id) {
-    return (
-      <TerminalStatus
-        appId={id}
-        completed={state.status === "completed"}
-        onRestart={start}
-      />
-    );
-  }
+  if (setup.status === "not_started") return <StartStatus onStart={start} />;
   return (
-    <StartStatus
-      otherInProgress={state.status === "in_progress"}
-      onStart={start}
+    <TerminalStatus
+      appId={id}
+      completed={setup.status === "completed"}
+      onRestart={start}
     />
   );
 }
 
 function ActiveSetup({
   app,
-  state,
-  persist,
+  setup,
+  apply,
 }: {
   app: AppDetail;
-  state: OnboardingState;
-  persist: Persist;
+  setup: AppSetupState;
+  apply: Apply;
 }) {
   const router = useRouter();
   const competitors = useQuery(competitorsOptions(app.id));
@@ -106,7 +89,7 @@ function ActiveSetup({
     retry: false,
   });
   const keywordQueries = useQueries({
-    queries: state.selectedMarkets.map((market) =>
+    queries: setup.selectedMarkets.map((market) =>
       keywordsOptions(app.id, market),
     ),
   });
@@ -116,7 +99,7 @@ function ActiveSetup({
     competitors: lengthOrNull(competitors.data),
     keywords: activeCount(homeKeywords.data),
   };
-  const keywordCounts = state.selectedMarkets.map((market, index) => ({
+  const keywordCounts = setup.selectedMarkets.map((market, index) => ({
     market,
     active: activeCount(keywordQueries[index]?.data),
     error: keywordQueries[index]?.isError ?? false,
@@ -128,11 +111,10 @@ function ActiveSetup({
       if (query.isError) void query.refetch();
     }
   };
-  const states = stepStates(state, counts);
+  const states = stepStates(setup, counts);
   const step = (name: SetupStep) => ({
     state: states[name],
-    onSkip: (skipped: boolean) =>
-      persist((current) => setStepSkipped(current, name, skipped)),
+    onSkip: (skipped: boolean) => apply(skipStep(name, skipped)),
   });
 
   return (
@@ -140,7 +122,7 @@ function ActiveSetup({
       <div className="flex flex-col gap-3">
         <SetupProgress
           name={app.name}
-          progress={setupProgress(state, counts)}
+          progress={setupProgress(setup, counts)}
           states={states}
         />
         <p className="text-sm text-muted-foreground">
@@ -168,23 +150,20 @@ function ActiveSetup({
         appId={app.id}
         store={app.store}
         homeMarket={app.country}
-        markets={state.selectedMarkets}
+        markets={setup.selectedMarkets}
         suggestions={suggestions.data ?? null}
-        onSelect={(market, selected) =>
-          persist((current) => setMarketSelected(current, market, selected))
-        }
-        onReviewed={() => persist(setCountriesReviewed)}
+        onSelect={(market, selected) => apply(selectMarket(market, selected))}
+        onReviewed={() => apply(reviewCountries())}
       />
       <SetupActions
         ready={ready}
         failed={failed}
-        completable={ready && canCompleteOnboarding(state, counts)}
+        completable={ready && canCompleteSetup(setup, counts)}
         onRetry={retry}
-        onDismiss={() => persist(dismissOnboarding)}
-        onComplete={() => {
-          persist((current) => completeOnboarding(current, counts));
-          router.push(`/apps/${app.id}`);
-        }}
+        onDismiss={() => apply(dismissSetup())}
+        onComplete={() =>
+          apply(completeSetup(), () => router.push(`/apps/${app.id}`))
+        }
       />
     </div>
   );
@@ -235,25 +214,11 @@ function SetupActions({
   );
 }
 
-function StartStatus({
-  otherInProgress,
-  onStart,
-}: {
-  otherInProgress: boolean;
-  onStart: () => void;
-}) {
+function StartStatus({ onStart }: { onStart: () => void }) {
   return (
     <SetupStatus
-      title={
-        otherInProgress
-          ? "Another setup is in progress"
-          : "Start setup for this app"
-      }
-      description={
-        otherInProgress
-          ? "Switching will replace the unfinished setup of the other app."
-          : "This checklist helps you reach a first set of positions. Nothing is changed until you add something."
-      }
+      title="Start setup for this app"
+      description="This checklist helps you reach a first set of positions. Nothing is changed until you add something."
       action="Start this setup"
       onAction={onStart}
     />

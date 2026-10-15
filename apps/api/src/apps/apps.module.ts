@@ -8,6 +8,8 @@ import { ScreenshotsModule } from '../screenshots/screenshots.module';
 import { StoreProvidersModule } from '../store-providers/store-providers.module';
 import { AppCaptureService } from './app-capture.service';
 import { AppGroupsService } from './app-groups.service';
+import { AppSetupController } from './app-setup.controller';
+import { AppSetupService } from './app-setup.service';
 import { AppsController } from './apps.controller';
 import { AppsService } from './apps.service';
 import { FirstRunScheduler } from './first-run.scheduler';
@@ -38,6 +40,7 @@ import { SubtitleBackfill } from './subtitle-backfill.service';
   ],
   controllers: [
     AppsController,
+    AppSetupController,
     LocalizationDetectionController,
     MarketSeedController,
     MarketSuggestionsController,
@@ -46,6 +49,7 @@ import { SubtitleBackfill } from './subtitle-backfill.service';
     AppsService,
     AppCaptureService,
     AppGroupsService,
+    AppSetupService,
     FirstRunScheduler,
     ListingCaptureService,
     ListingReadService,

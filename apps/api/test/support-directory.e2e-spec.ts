@@ -25,6 +25,8 @@ import { testDb } from './helpers/test-db';
 import { obliterateQueues, pauseQueues } from './obliterate-queues';
 
 const OVERVIEW = '/admin/support/overview';
+const HOUR_MS = 60 * 60_000;
+const DAY_MS = 24 * HOUR_MS;
 const USERS = '/admin/support/users';
 const APPS = '/admin/support/apps';
 const SECRET_FIELDS = [
@@ -58,12 +60,21 @@ describe('Support directory (e2e)', () => {
         name: 'Tenant Habits',
       },
     });
-    await prisma.app.create({
+    const android = await prisma.app.create({
       data: {
         workspaceId: TENANT_WORKSPACE,
         store: 'GOOGLE_PLAY',
         storeAppId: 'com.tenant.habits',
         name: 'Tenant Habits for Android',
+        createdAt: new Date(Date.now() - 3 * DAY_MS),
+      },
+    });
+    await prisma.appSetup.create({
+      data: {
+        appId: android.id,
+        workspaceId: TENANT_WORKSPACE,
+        status: 'completed',
+        completedAt: new Date(),
       },
     });
     await prisma.app.create({
@@ -82,6 +93,26 @@ describe('Support directory (e2e)', () => {
       });
       await prisma.trackedKeyword.create({
         data: { appId: appStore.id, keywordId: keyword.id, source: 'MANUAL' },
+      });
+      await prisma.keywordRanking.create({
+        data: {
+          appId: appStore.id,
+          workspaceId: TENANT_WORKSPACE,
+          keywordId: keyword.id,
+          date: new Date(new Date().toISOString().slice(0, 10)),
+          position: country === 'us' ? 3 : null,
+          createdAt: new Date(appStore.createdAt.getTime() + HOUR_MS),
+        },
+      });
+      await prisma.keywordRanking.create({
+        data: {
+          appId: android.id,
+          workspaceId: TENANT_WORKSPACE,
+          keywordId: keyword.id,
+          date: new Date(new Date().toISOString().slice(0, 10)),
+          position: 5,
+          createdAt: new Date(android.createdAt.getTime() + 2 * DAY_MS),
+        },
       });
     }
   }
@@ -209,6 +240,11 @@ describe('Support directory (e2e)', () => {
       expect(body.signups).toHaveLength(30);
       expect(body.signups.at(-1)?.date).toBe(today);
       expect(body.signups.at(-1)?.users).toBeGreaterThanOrEqual(1);
+      expect(body.activation).toEqual({
+        importedLast30Days: 2,
+        rankedWithinADay: 1,
+        completedSetup: 1,
+      });
     });
 
     it('answers the operator read token', async () => {

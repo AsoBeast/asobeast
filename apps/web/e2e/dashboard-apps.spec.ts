@@ -93,7 +93,9 @@ test("a pending app card still only says it is waiting", async ({ page }) => {
   await page.goto("/");
 
   const pending = card(page, "Pending App");
-  await expect(pending.getByText(/Awaiting the first daily run/)).toBeVisible();
+  await expect(
+    pending.getByText(/^Collecting the first positions/),
+  ).toBeVisible();
   await expect(pending.getByRole("img")).toHaveCount(0);
   await expect(pending).not.toContainText("Rating");
   await expect(pending.getByText("0", { exact: true })).toHaveCount(0);
