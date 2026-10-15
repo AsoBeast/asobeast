@@ -133,6 +133,12 @@ export function exportTables(prisma: PrismaService): ExportTable[] {
         }),
     ),
     table(
+      'chartFollow',
+      () => prisma.chartFollow.count(),
+      (skip, take) =>
+        prisma.chartFollow.findMany({ skip, take, orderBy: { id: 'asc' } }),
+    ),
+    table(
       'review',
       () => prisma.review.count(),
       (skip, take) =>

@@ -7,6 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
 
 const SUGGEST_PROBE_DAYS = 7;
 const SCREENSHOT_TEXT_DAYS = 90;
+const UNNAMED_CHART_APP_DAYS = 1;
 const ABANDONED_RESERVATION_MS = 60 * 60 * 1000;
 
 @Injectable()
@@ -32,6 +33,8 @@ export class RetentionService {
       ['keywordRanking', () => this.pruneRankings(now)],
       ['serpEntry', () => this.pruneSerp(now)],
       ['categoryRank', () => this.pruneCategoryRanks(now)],
+      ['chartCapture', () => this.pruneChartCaptures(now)],
+      ['chartApp', () => this.pruneChartApps(now)],
       ['changeEvent', () => this.pruneChangeEvents(now)],
       ['appSnapshot', () => this.pruneSnapshots(now)],
       ['alertDelivery', () => this.pruneDeliveries(now)],
@@ -107,6 +110,27 @@ export class RetentionService {
     }
     const { count } = await this.prisma.categoryRank.deleteMany({
       where: { date: { lt: this.cutoff(days, now) } },
+    });
+    return count;
+  }
+
+  private async pruneChartCaptures(now: Date): Promise<number> {
+    const days = this.config.get('RETENTION_CHARTS_DAYS', { infer: true });
+    if (days === 0) {
+      return 0;
+    }
+    const { count } = await this.prisma.chartCapture.deleteMany({
+      where: { date: { lt: this.cutoff(days, now) } },
+    });
+    return count;
+  }
+
+  private async pruneChartApps(now: Date): Promise<number> {
+    const { count } = await this.prisma.chartApp.deleteMany({
+      where: {
+        entries: { none: {} },
+        seenAt: { lt: this.cutoff(UNNAMED_CHART_APP_DAYS, now) },
+      },
     });
     return count;
   }

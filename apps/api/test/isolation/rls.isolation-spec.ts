@@ -13,6 +13,7 @@ const SCOPED_TABLES = [
   'keywordField',
   'keywordRanking',
   'categoryRank',
+  'chartFollow',
   'changeEvent',
   'review',
   'auditScore',

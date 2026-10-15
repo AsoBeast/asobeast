@@ -55,6 +55,7 @@ model Workspace {
   snapshotScreenshots SnapshotScreenshot[]
   keywordFields KeywordField[]
   appLocalizations AppLocalization[]
+  chartFollows ChartFollow[]
   rankings    KeywordRanking[]
   plan                String    @default("free")
   trialStartedAt      DateTime?
@@ -396,6 +397,63 @@ model CategoryRank {
 
   @@id([appId, date, collection, genre])
   @@index([appId, date])
+}
+
+model ChartApp {
+  id         String       @id @default(cuid())
+  store      Store
+  storeAppId String
+  title      String
+  developer  String?
+  iconUrl    String?
+  genreId    String?
+  free       Boolean?
+  seenAt     DateTime     @default(now())
+  entries    ChartEntry[]
+
+  @@unique([store, storeAppId])
+}
+
+model ChartCapture {
+  id         String       @id @default(cuid())
+  store      Store
+  country    String
+  collection String
+  genre      String
+  device     String
+  date       DateTime     @db.Date
+  depth      Int
+  capturedAt DateTime     @default(now())
+  entries    ChartEntry[]
+
+  @@unique([store, country, collection, genre, device, date])
+  @@index([date])
+}
+
+model ChartEntry {
+  captureId  String
+  capture    ChartCapture @relation(fields: [captureId], references: [id], onDelete: Cascade)
+  position   Int
+  chartAppId String
+  app        ChartApp     @relation(fields: [chartAppId], references: [id], onDelete: Cascade)
+
+  @@id([captureId, position])
+  @@index([chartAppId])
+}
+
+model ChartFollow {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  store       Store
+  country     String
+  collection  String
+  genre       String
+  device      String
+  createdAt   DateTime  @default(now())
+
+  @@unique([workspaceId, store, country, collection, genre, device])
+  @@index([workspaceId])
 }
 
 model SerpEntry {

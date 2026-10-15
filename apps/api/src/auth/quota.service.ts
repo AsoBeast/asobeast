@@ -174,6 +174,7 @@ export class QuotaService {
   private countOf(resource: QuotaResource, scope: string): Promise<number> {
     if (resource === 'apps') return countApps(this.prisma);
     if (resource === 'keywordMarkets') return countKeywordMarkets(this.prisma);
+    if (resource === 'chartFollows') return this.prisma.chartFollow.count();
     return this.prisma.app.count({
       where: { primaryAppId: scope, isCompetitor: true },
     });

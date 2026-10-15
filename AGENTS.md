@@ -331,6 +331,7 @@ RETENTION_RANKINGS_DAYS=365         # keyword rankings; 0 keeps forever
 RETENTION_SERP_DAYS=90              # serp entries; 0 keeps forever
 RETENTION_SNAPSHOTS_DAYS=180        # app snapshots; newest per app and market always kept; 0 keeps forever
 RETENTION_CATEGORY_RANKS_DAYS=365   # category ranks; 0 keeps forever
+RETENTION_CHARTS_DAYS=365           # top chart captures; chart apps no capture names go with them; 0 keeps forever
 RETENTION_CHANGE_EVENTS_DAYS=0      # change events; 0 keeps forever
 RETENTION_DELIVERIES_DAYS=30        # alert delivery log rows; 0 keeps forever
 RETENTION_AUDIT_SCORES_DAYS=0       # audit score rows; 0 keeps forever
