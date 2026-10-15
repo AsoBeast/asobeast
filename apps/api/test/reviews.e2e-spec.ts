@@ -758,74 +758,53 @@ describe('ReviewsController (e2e)', () => {
     await api.get(`/apps/${seeded.id}/reviews?from=20260915`).expect(400);
   });
 
-  it('answers the phrases repeated across the reviews, low rated first', async () => {
+  it('answers the complaints and praise that stand out, judged against the whole period', async () => {
     const seeded = await seedApp();
+    const day = (offset: number) =>
+      new Date(Date.UTC(2026, 6, 14 + offset, 0, 0, 0));
     await prisma.review.createMany({
       data: [
-        {
+        ...Array.from({ length: 5 }, (_, index) => ({
           appId: seeded.id,
-          reviewId: 't1',
+          reviewId: `sync-${index}`,
           score: 1,
-          text: 'Sync fails every morning',
+          text: 'Sync fails',
           version: '2.0.0',
-          reviewedAt: new Date('2026-07-14T00:00:00Z'),
-        },
-        {
+          reviewedAt: day(index),
+        })),
+        ...Array.from({ length: 12 }, (_, index) => ({
           appId: seeded.id,
-          reviewId: 't2',
-          score: 2,
-          text: 'Sync fails after the update',
-          version: '2.0.0',
-          reviewedAt: new Date('2026-07-15T00:00:00Z'),
-        },
-        {
-          appId: seeded.id,
-          reviewId: 't3',
+          reviewId: `dark-${index}`,
           score: 5,
-          text: 'Sync fails rarely, love it',
-          version: '1.0.0',
-          reviewedAt: new Date('2026-06-01T00:00:00Z'),
-        },
+          text: 'Dark mode',
+          version: '2.0.0',
+          reviewedAt: day(index),
+        })),
       ],
     });
+    const themesOf = async (query: Record<string, string | number> = {}) =>
+      (
+        await api
+          .get(`/apps/${seeded.id}/reviews/themes`)
+          .query(query)
+          .expect(200)
+      ).body as ReviewThemes;
 
-    const all = (await api.get(`/apps/${seeded.id}/reviews/themes`).expect(200))
-      .body as ReviewThemes;
-    const recent = (
-      await api
-        .get(`/apps/${seeded.id}/reviews/themes`)
-        .query({ from: '2026-07-01', version: '2.0.0' })
-        .expect(200)
-    ).body as ReviewThemes;
+    const all = await themesOf();
+    const lowRated = await themesOf({ score: 1 });
+    const earlier = await themesOf({ from: '2026-08-01' });
 
-    expect(all.reviews).toBe(6);
     expect(all.negativeScoreMax).toBe(2);
-    expect(all.themes[0]).toEqual({
-      phrase: 'sync fails',
-      mentions: 3,
-      negative: 2,
-    });
-    expect(recent.reviews).toBe(4);
-    const fiveStarAwaitingReply = (
-      await api
-        .get(`/apps/${seeded.id}/reviews/themes`)
-        .query({ score: 5, replyState: 'needs_reply' })
-        .expect(200)
-    ).body as ReviewThemes;
-    expect(fiveStarAwaitingReply.reviews).toBe(2);
-    expect(fiveStarAwaitingReply.themes).toContainEqual({
-      phrase: 'love',
-      mentions: 2,
-      negative: 0,
-    });
-    expect(
-      fiveStarAwaitingReply.themes.map((theme) => theme.phrase),
-    ).not.toContain('sync fails');
-    expect(recent.themes[0]).toEqual({
-      phrase: 'sync fails',
-      mentions: 2,
-      negative: 2,
-    });
+    expect(all.reviews).toBe(20);
+    expect(all.themes).toEqual([
+      { phrase: 'sync fails', kind: 'complaint', mentions: 5, negative: 5 },
+      { phrase: 'dark mode', kind: 'praise', mentions: 12, negative: 0 },
+    ]);
+    expect(lowRated.reviews).toBe(7);
+    expect(lowRated.themes).toEqual([
+      { phrase: 'sync fails', kind: 'complaint', mentions: 5, negative: 5 },
+    ]);
+    expect(earlier).toEqual({ themes: [], reviews: 0, negativeScoreMax: 2 });
   });
 
   it('answers 404 for the themes of an unknown app and 400 for a bad date', async () => {

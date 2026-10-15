@@ -1,97 +1,169 @@
 import {
-  REVIEW_THEMES_LIMIT,
+  REVIEW_THEME_LIMITS,
   reviewThemes,
-  themeExclusions,
+  themeIgnoredWords,
   ThemeReview,
 } from './review-themes';
 
 const OPTIONS = {
   languages: [],
   negativeScoreMax: 2,
-  excluded: themeExclusions('Focus Timer'),
+  ignored: themeIgnoredWords('Focus Timer'),
 };
 
-const review = (text: string, score = 1): ThemeReview => ({
+let nextId = 0;
+
+const review = (text: string, score: number): ThemeReview => ({
+  id: `review-${(nextId += 1)}`,
   title: null,
   text,
   score,
 });
 
-describe('reviewThemes', () => {
-  it('counts each phrase once per review and keeps those repeated in two', () => {
-    const themes = reviewThemes(
-      [
-        review('Sync fails. Sync fails again.'),
-        review('Sync fails on my tablet'),
-        review('Beautiful colors', 5),
-      ],
-      OPTIONS,
-    );
+const times = (count: number, text: string, score: number) =>
+  Array.from({ length: count }, () => review(text, score));
 
-    expect(themes).toEqual([
-      { phrase: 'sync fails', mentions: 2, negative: 2 },
+const phrasesOf = (themes: { phrase: string }[]) =>
+  themes.map((theme) => theme.phrase);
+
+const PRAISED = times(14, 'Dark mode', 5);
+
+describe('reviewThemes', () => {
+  it('names a phrase of low rated reviews a complaint and one of high rated reviews praise', () => {
+    const reviews = [
+      ...times(6, 'Sync fails', 1),
+      ...PRAISED,
+      ...times(2, 'Battery drain', 1),
+      ...times(4, 'Battery drain', 5),
+    ];
+
+    expect(reviewThemes(reviews, reviews, OPTIONS)).toEqual([
+      { phrase: 'sync fails', kind: 'complaint', mentions: 6, negative: 6 },
+      { phrase: 'dark mode', kind: 'praise', mentions: 14, negative: 0 },
     ]);
   });
 
-  it('ranks the phrases of low rated reviews ahead of praise mentioned more often', () => {
-    const themes = reviewThemes(
-      [
-        review('Dark mode please', 5),
-        review('Dark mode is great', 5),
-        review('Dark mode rocks', 4),
-        review('Widget crashes', 1),
-        review('Widget crashes daily', 2),
-      ],
-      OPTIONS,
-    );
+  it('judges a phrase against every review of the period and counts the reviews shown', () => {
+    const negative = times(6, 'Sync fails', 1);
+    const baseline = [...negative, ...PRAISED];
 
-    expect(themes.map((theme) => theme.phrase)).toEqual([
-      'widget crashes',
+    expect(reviewThemes(baseline, negative, OPTIONS)).toEqual([
+      { phrase: 'sync fails', kind: 'complaint', mentions: 6, negative: 6 },
+    ]);
+    expect(reviewThemes(baseline, negative.slice(0, 1), OPTIONS)).toEqual([]);
+  });
+
+  it('keeps a shorter phrase only when it reaches beyond the longer one', () => {
+    const reviews = [
+      ...times(3, 'Battery drain overnight', 1),
+      ...times(3, 'Battery hungry', 1),
+      ...PRAISED,
+    ];
+
+    expect(
+      phrasesOf(reviewThemes(reviews, reviews, OPTIONS)).filter((phrase) =>
+        phrase.startsWith('battery'),
+      ),
+    ).toEqual(['battery', 'battery drain overnight', 'battery hungry']);
+  });
+
+  it('joins overlapping words into the one phrase that holds them', () => {
+    const reviews = [
+      ...times(2, 'I encountered a fatal error today', 1),
+      ...PRAISED,
+    ];
+
+    expect(phrasesOf(reviewThemes(reviews, reviews, OPTIONS))).toContain(
+      'encountered a fatal error',
+    );
+  });
+
+  it('never starts or ends a phrase with the app name or a filler word', () => {
+    const reviews = [
+      ...times(4, 'Focus Timer keeps crashing every time', 1),
+      ...PRAISED,
+    ];
+
+    expect(phrasesOf(reviewThemes(reviews, reviews, OPTIONS))).toEqual([
+      'crashing',
       'dark mode',
     ]);
-    expect(themes[1]).toEqual({
-      phrase: 'dark mode',
-      mentions: 3,
-      negative: 0,
-    });
   });
 
-  it('keeps a shorter phrase only when it is mentioned beyond the longer one', () => {
-    const themes = reviewThemes(
-      [
-        review('Battery drain overnight'),
-        review('Battery drain overnight again'),
-        review('Battery hungry'),
-      ],
-      OPTIONS,
-    );
+  it("leaves out the function words of each review's own language", () => {
+    const reviews = [
+      ...times(4, 'La aplicación se cierra cuando abro el chat que uso', 1),
+      ...PRAISED,
+    ];
+    const phrases = phrasesOf(reviewThemes(reviews, reviews, OPTIONS));
 
-    expect(themes.map((theme) => theme.phrase)).toEqual([
-      'battery',
-      'battery drain overnight',
+    for (const word of ['que', 'el', 'se', 'cuando']) {
+      expect(phrases).not.toContain(word);
+    }
+  });
+
+  it('keeps a shorter phrase a filter leaves without its longer one', () => {
+    const baseline = [
+      ...times(10, 'Crashes on launch constantly', 1),
+      ...times(3, 'Crashes', 2),
+      ...times(20, 'Dark mode', 5),
+    ];
+    const twoStar = baseline.filter((review) => review.score === 2);
+
+    expect(reviewThemes(baseline, twoStar, OPTIONS)).toEqual([
+      { phrase: 'crashes', kind: 'complaint', mentions: 3, negative: 3 },
     ]);
   });
 
-  it('leaves out the app name and generic words', () => {
-    const themes = reviewThemes(
-      [review('Focus timer app broke'), review('Focus timer app broke')],
-      OPTIONS,
-    );
+  it('still names complaints when most reviews of the period are low rated', () => {
+    const reviews = [
+      ...times(20, 'Crash after update', 1),
+      ...times(8, 'Slow sync', 1),
+      ...times(2, 'Dark mode', 5),
+    ];
+    const themes = reviewThemes(reviews, reviews, OPTIONS);
 
-    expect(themes.map((theme) => theme.phrase)).not.toEqual(
-      expect.arrayContaining(['app', 'focus', 'timer', 'focus timer']),
-    );
-    expect(themes.map((theme) => theme.phrase)).toContain('timer app broke');
+    expect(
+      themes
+        .filter((theme) => theme.kind === 'complaint')
+        .map((theme) => theme.phrase),
+    ).toEqual(['crash after update', 'slow sync']);
   });
 
-  it(`answers at most ${REVIEW_THEMES_LIMIT} themes`, () => {
-    const words = Array.from({ length: 12 }, (_, index) => `word${index}x`);
-    const reviews = [review(words.join('. ')), review(words.join('. '))];
+  it('names praise when every review is high rated', () => {
+    const praise = [...times(8, 'Dark mode', 5), ...times(3, 'Widgets', 4)];
 
-    expect(reviewThemes(reviews, OPTIONS)).toHaveLength(REVIEW_THEMES_LIMIT);
+    expect(reviewThemes(praise, praise, OPTIONS)).toEqual([
+      { phrase: 'dark mode', kind: 'praise', mentions: 8, negative: 0 },
+      { phrase: 'widgets', kind: 'praise', mentions: 3, negative: 0 },
+    ]);
   });
 
-  it('answers nothing for no reviews', () => {
-    expect(reviewThemes([], OPTIONS)).toEqual([]);
+  it('answers at most the limit of each kind', () => {
+    const words = Array.from({ length: 9 }, (_, index) => `fault${index}x`);
+    const reviews = [
+      ...words.flatMap((word) => times(4, word, 1)),
+      ...times(100, 'Dark mode', 5),
+    ];
+    const themes = reviewThemes(reviews, reviews, OPTIONS);
+
+    expect(themes.filter((theme) => theme.kind === 'complaint')).toHaveLength(
+      REVIEW_THEME_LIMITS.complaint,
+    );
+  });
+
+  it('answers nothing for no reviews or a single one', () => {
+    const one = times(1, 'Sync fails', 1);
+
+    expect(reviewThemes([], [], OPTIONS)).toEqual([]);
+    expect(reviewThemes(one, one, OPTIONS)).toEqual([]);
+  });
+});
+
+describe('themeIgnoredWords', () => {
+  it('ignores the words of the app name and works without one', () => {
+    expect(themeIgnoredWords('Where Am I?').has('where')).toBe(true);
+    expect(themeIgnoredWords(null).has('good')).toBe(true);
+    expect(themeIgnoredWords(null).has('')).toBe(false);
   });
 });
