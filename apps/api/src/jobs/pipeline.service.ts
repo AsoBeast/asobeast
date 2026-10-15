@@ -8,7 +8,6 @@ import {
 } from '@asobeast/shared';
 import { FlowJobNode, FlowProducer, JobsOptions, Queue } from 'bullmq';
 import { CategoryRanksService } from '../category-ranks/category-ranks.service';
-import { ChartFollowsService } from '../charts/chart-follows.service';
 import {
   WorkspaceContext,
   WorkspaceScope,
@@ -39,12 +38,12 @@ import { JOB_OPTIONS, reviewSyncJobOptions } from './job-options';
 import { ActiveWorkspaces } from './active-workspaces';
 import { enqueueReplacingFailed } from './enqueue-replacing-failed';
 import { DailyCapacity } from './daily-capacity.service';
+import { DailyCategoryBuckets } from './daily-category-buckets.service';
 import {
   appFamilyMarketListings,
   AppTarget,
   DailyTargets,
   DailyTargetsCollector,
-  dedupeBuckets,
   dedupeKeywords,
   KeywordTarget,
   MarketListingTarget,
@@ -78,7 +77,7 @@ export class PipelineService {
     private readonly flowProducer: FlowProducer,
     private readonly prisma: PrismaService,
     private readonly categoryRanks: CategoryRanksService,
-    private readonly chartFollows: ChartFollowsService,
+    private readonly categoryBuckets: DailyCategoryBuckets,
     private readonly targets: DailyTargetsCollector,
     private readonly workspace: WorkspaceContext,
     private readonly fanOut: WorkspaceFanOut,
@@ -135,10 +134,9 @@ export class PipelineService {
     const targets = await this.targets.collect((keywords) =>
       this.withinKeywordLimit(keywords),
     );
-    const buckets = dedupeBuckets([
-      ...(await this.categoryRanks.buckets(targets.apps.map((app) => app.id))),
-      ...(await this.chartFollows.buckets()),
-    ]);
+    const buckets = await this.categoryBuckets.of(
+      targets.apps.map((app) => app.id),
+    );
     const childOptions = (jobId: string) => ({
       ...JOB_OPTIONS,
       jobId,

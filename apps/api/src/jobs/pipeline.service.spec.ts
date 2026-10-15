@@ -10,6 +10,7 @@ import { WorkspaceFanOut } from '../common/tenancy/workspace-fanout';
 import { DEFAULT_WORKSPACE_ID } from '../common/tenancy/default-workspace';
 import { TrackedKeywordAccess } from '../keywords/tracked-keyword.access';
 import { PrismaService } from '../prisma/prisma.service';
+import { DailyCategoryBuckets } from './daily-category-buckets.service';
 import { JOB_OPTIONS, REVIEW_SYNC_JOB_OPTIONS } from './job-options';
 import { JOBS, QUEUES } from './jobs.types';
 import { QuotaService } from '../auth/quota.service';
@@ -147,7 +148,10 @@ describe('PipelineService', () => {
       flowProducer as unknown as FlowProducer,
       prisma as PrismaService,
       categoryRanks as unknown as CategoryRanksService,
-      chartFollows as unknown as ChartFollowsService,
+      new DailyCategoryBuckets(
+        categoryRanks as unknown as CategoryRanksService,
+        chartFollows as unknown as ChartFollowsService,
+      ),
       new DailyTargetsCollector(prisma as PrismaService),
       workspace,
       workspaces,

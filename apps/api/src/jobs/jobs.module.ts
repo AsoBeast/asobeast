@@ -37,6 +37,7 @@ import {
 } from './jobs.controller';
 import { CapacityService } from './capacity.service';
 import { DailyBudgetService } from './daily-budget.service';
+import { DailyCategoryBuckets } from './daily-category-buckets.service';
 import { DailyCapacity } from './daily-capacity.service';
 import { DailyTargetsCollector } from './daily-targets.service';
 import { FirstRunStatusService } from './first-run-status.service';
@@ -121,6 +122,7 @@ const bullBoardModules: DynamicModule[] =
     LocalizationSweep,
     CapacityService,
     DailyBudgetService,
+    DailyCategoryBuckets,
     DailyCapacity,
     DailyTargetsCollector,
     FirstRunStatusService,

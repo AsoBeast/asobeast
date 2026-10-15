@@ -9,6 +9,7 @@ import {
 import { ChartFollowsService } from '../charts/chart-follows.service';
 import { Env } from '../config/env';
 import { DailyBudgetService } from './daily-budget.service';
+import { DailyCategoryBuckets } from './daily-category-buckets.service';
 import { DailyCapacity } from './daily-capacity.service';
 import { DailyTargets, DailyTargetsCollector } from './daily-targets.service';
 import { OverLimitRegistry } from './over-limit.registry';
@@ -49,8 +50,10 @@ describe('DailyBudgetService', () => {
   const build = (quota: Partial<QuotaService> = { enforced: false }) =>
     new DailyBudgetService(
       { collect, shipped } as unknown as DailyTargetsCollector,
-      { buckets } as unknown as CategoryRanksService,
-      { buckets: followed } as unknown as ChartFollowsService,
+      new DailyCategoryBuckets(
+        { buckets } as unknown as CategoryRanksService,
+        { buckets: followed } as unknown as ChartFollowsService,
+      ),
       { perDay } as unknown as DailyCapacity,
       quota as unknown as QuotaService,
       {

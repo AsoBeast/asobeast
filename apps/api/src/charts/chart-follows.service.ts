@@ -6,11 +6,12 @@ import {
   ChartKey,
   chartGenreName,
 } from '@asobeast/shared';
-import { ChartFollow, Prisma } from '@prisma/client';
+import { ChartFollow } from '@prisma/client';
 import { QuotaService } from '../auth/quota.service';
 import type { CategoryBucket } from '../category-ranks/category-ranks.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
+import { isUniqueViolation } from '../prisma/unique-violation';
 import { assertChartKey, chartKeyFrom } from './chart-key';
 
 export interface FollowResult {
@@ -29,13 +30,6 @@ export function chartFollowItem(follow: ChartFollow): ChartFollowItem {
     genreName: chartGenreName(follow.store, follow.genre) ?? follow.genre,
     createdAt: follow.createdAt.toISOString(),
   };
-}
-
-function isUniqueViolation(error: unknown): boolean {
-  return (
-    error instanceof Prisma.PrismaClientKnownRequestError &&
-    error.code === 'P2002'
-  );
 }
 
 @Injectable()

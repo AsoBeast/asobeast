@@ -3,6 +3,7 @@ import { CHART_DEPTH, ChartKey } from '@asobeast/shared';
 import { Prisma } from '@prisma/client';
 import { toDateKey, utcToday } from '../analytics/analytics.support';
 import { PrismaService } from '../prisma/prisma.service';
+import { isUniqueViolation } from '../prisma/unique-violation';
 import { StoreRequestError } from '../store-providers/errors';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { ChartItem } from '../store-providers/types';
@@ -48,13 +49,6 @@ function entriesOf(
     seen.add(item.storeAppId);
     return [{ ...item, position: index + 1 }];
   });
-}
-
-function isUniqueViolation(error: unknown): boolean {
-  return (
-    error instanceof Prisma.PrismaClientKnownRequestError &&
-    error.code === 'P2002'
-  );
 }
 
 const directly = <T>(work: () => Promise<T>): Promise<T> => work();

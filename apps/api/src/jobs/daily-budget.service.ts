@@ -9,16 +9,11 @@ import {
   StoreDailyBudget,
 } from '@asobeast/shared';
 import { QuotaService } from '../auth/quota.service';
-import { CategoryRanksService } from '../category-ranks/category-ranks.service';
-import { ChartFollowsService } from '../charts/chart-follows.service';
 import { Env } from '../config/env';
 import { DailyCapacity } from './daily-capacity.service';
 import { completionHours, nextDailyRun } from './daily-schedule';
-import {
-  DailyTargets,
-  DailyTargetsCollector,
-  dedupeBuckets,
-} from './daily-targets.service';
+import { DailyCategoryBuckets } from './daily-category-buckets.service';
+import { DailyTargets, DailyTargetsCollector } from './daily-targets.service';
 import { localizationReads } from './localization-reads';
 import { OverLimitRegistry } from './over-limit.registry';
 import { requestsFor } from './request-weights';
@@ -29,8 +24,7 @@ const HOUR_MS = 3_600_000;
 export class DailyBudgetService {
   constructor(
     private readonly targets: DailyTargetsCollector,
-    private readonly categoryRanks: CategoryRanksService,
-    private readonly chartFollows: ChartFollowsService,
+    private readonly categoryBuckets: DailyCategoryBuckets,
     private readonly capacity: DailyCapacity,
     private readonly quota: QuotaService,
     private readonly overLimit: OverLimitRegistry,
@@ -42,10 +36,9 @@ export class DailyBudgetService {
       this.targets.collect(),
       this.targets.shipped(),
     ]);
-    const buckets = dedupeBuckets([
-      ...(await this.categoryRanks.buckets(targets.apps.map((app) => app.id))),
-      ...(await this.chartFollows.buckets()),
-    ]);
+    const buckets = await this.categoryBuckets.of(
+      targets.apps.map((app) => app.id),
+    );
 
     const stores = await Promise.all(
       STORES.map((store) =>
