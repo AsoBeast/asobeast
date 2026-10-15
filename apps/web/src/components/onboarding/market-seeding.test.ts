@@ -67,11 +67,11 @@ describe("withoutOutcomes", () => {
 
 describe("seedButtonLabel", () => {
   it.each([
-    [0, 0, "Add markets"],
-    [1, 0, "Add 1 market"],
-    [1, 1, "Add 1 market and seed 1"],
-    [3, 2, "Add 3 markets and seed 2"],
-  ])("labels %i markets with %i seeds as %s", (markets, seeds, label) => {
+    [0, 0, "Add countries"],
+    [1, 0, "Add 1 country"],
+    [1, 1, "Add 1 country and seed 1"],
+    [3, 2, "Add 3 countries and seed 2"],
+  ])("labels %i countries with %i seeds as %s", (markets, seeds, label) => {
     expect(seedButtonLabel(markets, seeds)).toBe(label);
   });
 });

@@ -1,6 +1,5 @@
 "use client";
 
-import type { ReactNode } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { TriangleAlert } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -8,7 +7,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -26,10 +24,7 @@ import { localizationsNote, marketListingsNote } from "./market-listings-note";
 const WARNING_COPY =
   "Daily jobs may not finish within store rate limits; remove keywords or countries, or raise SCRAPE_ITUNES_RPM at your own risk.";
 
-export function BudgetCard({
-  footer,
-  stepLabel,
-}: { footer?: ReactNode; stepLabel?: string } = {}) {
+export function BudgetCard() {
   const { data: budget } = useSuspenseQuery(budgetOptions);
   const level = utilizationLevel(budget.utilization);
   const completion = budgetCompletionSentence(budget.completion, budget.total);
@@ -48,7 +43,6 @@ export function BudgetCard({
   return (
     <Card>
       <CardHeader>
-        {stepLabel ? <CardDescription>{stepLabel}</CardDescription> : null}
         <CardTitle>Daily request budget</CardTitle>
         <CardDescription>
           Estimated store requests the daily pipeline enqueues, against your
@@ -122,7 +116,6 @@ export function BudgetCard({
           </Alert>
         ) : null}
       </CardContent>
-      {footer ? <CardFooter>{footer}</CardFooter> : null}
     </Card>
   );
 }

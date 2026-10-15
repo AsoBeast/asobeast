@@ -85,7 +85,7 @@ export function AddCompetitorForm({ id }: { id: string }) {
         </Button>
       </div>
       <p className="text-xs text-muted-foreground">
-        New competitors get positions on the next daily run.
+        A new competitor gets positions on the next keyword check.
       </p>
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
       {note ? (

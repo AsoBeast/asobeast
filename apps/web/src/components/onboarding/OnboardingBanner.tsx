@@ -1,12 +1,27 @@
 "use client";
 
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { ListChecks } from "lucide-react";
 import Link from "next/link";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { dismissOnboarding } from "@/lib/onboarding";
-import { portfolioOptions } from "@/lib/queries";
+import { Progress } from "@/components/ui/progress";
+import {
+  dismissOnboarding,
+  setupProgress,
+  type OnboardingState,
+} from "@/lib/onboarding";
+import {
+  competitorsOptions,
+  keywordsOptions,
+  portfolioOptions,
+} from "@/lib/queries";
+import {
+  loadingSentence,
+  progressPercent,
+  progressSentence,
+  setupSentence,
+} from "./setup-progress";
 import { useOnboarding } from "./use-onboarding";
 
 export function OnboardingBanner() {
@@ -15,7 +30,6 @@ export function OnboardingBanner() {
   if (state.status !== "in_progress" || !state.appId) return null;
 
   const app = data.apps.find((item) => item.id === state.appId);
-  const name = app?.name ?? "your app";
 
   return (
     <Alert
@@ -23,14 +37,24 @@ export function OnboardingBanner() {
       className="items-center gap-y-3 sm:grid-cols-[auto_1fr_auto]"
     >
       <ListChecks />
-      <AlertDescription>
-        Finish setting up {name}. Your checklist progress is saved in this
-        browser.
+      <AlertDescription className="flex flex-col gap-2">
+        {app ? (
+          <BannerProgress
+            appId={app.id}
+            country={app.country}
+            name={app.name}
+            state={state}
+          />
+        ) : (
+          <span>{setupSentence(null)}</span>
+        )}
       </AlertDescription>
       <div className="col-span-full flex flex-wrap gap-2 sm:col-span-1 sm:col-start-3 sm:row-span-2">
-        <Button asChild size="sm">
-          <Link href={`/apps/${state.appId}/setup`}>Resume setup</Link>
-        </Button>
+        {app ? (
+          <Button asChild size="sm">
+            <Link href={`/apps/${app.id}/setup`}>Resume setup</Link>
+          </Button>
+        ) : null}
         <Button
           size="sm"
           variant="ghost"
@@ -40,5 +64,42 @@ export function OnboardingBanner() {
         </Button>
       </div>
     </Alert>
+  );
+}
+
+function BannerProgress({
+  appId,
+  country,
+  name,
+  state,
+}: {
+  appId: string;
+  country: string;
+  name: string | null;
+  state: OnboardingState;
+}) {
+  const competitors = useQuery(competitorsOptions(appId));
+  const keywords = useQuery(keywordsOptions(appId, country));
+  if (competitors.isError || keywords.isError) {
+    return <span>{setupSentence(name)}</span>;
+  }
+  if (!competitors.data || !keywords.data) {
+    return <span>{loadingSentence(name)}</span>;
+  }
+  const progress = setupProgress(state, {
+    competitors: competitors.data.length,
+    keywords: keywords.data.filter((keyword) => keyword.active).length,
+  });
+
+  return (
+    <>
+      <span>{progressSentence(name, progress)}</span>
+      <Progress
+        value={progressPercent(progress)}
+        aria-label="Setup progress"
+        getValueLabel={() => `${progress.done} of ${progress.total} steps`}
+        className="max-w-xs"
+      />
+    </>
   );
 }

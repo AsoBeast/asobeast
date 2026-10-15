@@ -47,7 +47,7 @@ Two places show you the cost before it bites.
 
 Each market with keywords also adds one listing refresh per app and competitor to the daily run, and the budget counts them: `GET /jobs/budget` reports them as `marketListings`, a part of `apps`.
 
-A seeded market adds its keywords as daily searches like any keyword you track. The guided setup and `GET /apps/{id}/market-suggestions` show what a market would cost before you add it: the listing reads a day, for the app and each competitor, and the requests each keyword adds.
+A seeded market adds its keywords as daily searches like any keyword you track. The countries step of the guided setup and `GET /apps/{id}/market-suggestions` show what a market would cost before you add it: the listing reads a day, for the app and each competitor, and the requests each keyword adds.
 
 When you are over budget, remove keywords or markets, or raise `SCRAPE_ITUNES_RPM` and accept the risk. See [The daily pipeline and rate limits](/concepts/pipeline).
 
@@ -101,7 +101,7 @@ The API takes the same choice as an optional `country` on `GET /apps/{id}/summar
 
 ## How do you add a market?
 
-The guided setup suggests storefronts from the languages your home listing declares, groups them by localization and lets you tick the ones to track. Each ticked storefront can be seeded with up to 15 keywords from its own title and subtitle, so the keyword monitor, the coverage check and the wasted words check have something to show on day one. A storefront whose default is the localization is ticked for seeding by default; one that reads it as an additional language is not.
+The countries step of the guided setup suggests storefronts from the languages your home listing declares, groups them by localization and lets you tick the ones to track. Each ticked storefront can be seeded with up to 15 keywords from its own title and subtitle, so the keyword monitor, the coverage check and the wasted words check have something to show on day one. A storefront whose default is the localization is ticked for seeding by default; one that reads it as an additional language is not.
 
 | You | asobeast |
 | --- | --- |

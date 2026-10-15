@@ -18,6 +18,8 @@ import type {
   KeywordComparison,
   KeywordCountrySummary,
   KeywordSource,
+  KeywordSuggestion,
+  KeywordSuggestionStrategy,
   MarketKeywordFields,
   MarketSuggestion,
   MarketSuggestionsResult,
@@ -1890,6 +1892,83 @@ export interface AppDataset {
   comparison: KeywordComparison;
 }
 
+const newAppKeyword = (
+  index: number,
+  text: string,
+  position: number | null,
+  depth: number | null,
+): TrackedKeywordItem => ({
+  keywordId: `kw-new-${index}`,
+  text,
+  country: "us",
+  serpVolatility7d: null,
+  source: index <= 2 ? "TITLE" : "SUBTITLE",
+  active: true,
+  latestPosition: position,
+  latestDepth: depth,
+  previousPosition: null,
+  positionDelta1d: null,
+  positionDelta7d: null,
+  traffic: null,
+  difficulty: null,
+  volume: null,
+  relevance: null,
+  opportunity: null,
+  bucket: null,
+  scoredAt: null,
+  scoreProvenance: null,
+});
+
+export const APP_NEW_KEYWORDS: TrackedKeywordItem[] = [
+  newAppKeyword(1, "focus timer", 2, RANK_DEPTH),
+  newAppKeyword(2, "pomodoro", 15, RANK_DEPTH),
+  newAppKeyword(3, "study timer", 40, RANK_DEPTH),
+  newAppKeyword(4, "deep work timer", null, RANK_DEPTH),
+  newAppKeyword(5, "break timer", null, null),
+  newAppKeyword(6, "task timer", null, null),
+  newAppKeyword(7, "flow timer", null, null),
+  newAppKeyword(8, "exam timer", null, null),
+];
+
+const listingSuggestions = (texts: string[]): KeywordSuggestion[] =>
+  texts.map((text) => ({ text, strategy: "metadata" }));
+
+export const SUGGESTIONS: Record<
+  string,
+  Partial<Record<KeywordSuggestionStrategy, KeywordSuggestion[]>>
+> = {
+  "app-1": {
+    metadata: listingSuggestions([
+      "deep focus",
+      "pomodoro timer",
+      "study sessions",
+      "focus timer",
+    ]),
+    search: [
+      { text: "focus timer app", strategy: "search", priority: 7200 },
+      { text: "focus music", strategy: "search", priority: 6100 },
+      { text: "focus mode", strategy: "search", priority: 5400 },
+    ],
+  },
+  "app-2": {
+    metadata: listingSuggestions(["habit streaks", "daily habits"]),
+  },
+  "app-new": {
+    metadata: listingSuggestions([
+      "imported timer",
+      "work sessions",
+      "break reminder",
+      "task focus",
+      "time blocking",
+      "study clock",
+      "focus sounds",
+      "productivity timer",
+      "deep work",
+      "flow state",
+    ]),
+  },
+};
+
 export const DATASETS: Record<string, AppDataset> = {
   "app-1": {
     detail: APP_1_DETAIL,
@@ -2038,7 +2117,7 @@ export const DATASETS: Record<string, AppDataset> = {
   "app-new": {
     detail: IMPORTED_APP_DETAIL,
     summary: APP_2_SUMMARY,
-    keywords: [],
+    keywords: APP_NEW_KEYWORDS,
     rankings: EMPTY_RANKINGS,
     serpMovers: EMPTY_SERP_MOVERS,
     visibility: EMPTY_VISIBILITY,

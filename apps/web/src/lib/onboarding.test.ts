@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  activeKeywordCount,
   beginOnboarding,
   canCompleteOnboarding,
   claimBrowserOnboarding,
@@ -13,34 +14,41 @@ import {
   parseOnboardingState,
   readOnboardingState,
   restartOnboarding,
+  SETUP_KEYWORD_TARGET,
+  setCountriesReviewed,
   setMarketSelected,
-  setOnboardingAcknowledgement,
-  setupSteps,
+  setStepSkipped,
+  setupProgress,
   stepLabel,
-  reviewedStepsSentence,
+  stepState,
   writeOnboardingState,
   type OnboardingState,
+  type SetupCounts,
 } from "./onboarding";
 
-const acknowledged = (state: OnboardingState): OnboardingState =>
-  (
-    [
-      "noCompetitors",
-      "keywordsConfirmed",
-      "capacityReviewed",
-      "alertsSkipped",
-    ] as const
-  ).reduce(
-    (current, key) => setOnboardingAcknowledgement(current, key, true),
-    state,
-  );
+const counts = (
+  competitors: number | null,
+  keywords: number | null,
+): SetupCounts => ({ competitors, keywords });
 
-const readyExceptCapacity = (): OnboardingState =>
-  setOnboardingAcknowledgement(
-    beginOnboarding(NOT_STARTED_ONBOARDING, "app-1", "us"),
-    "keywordsConfirmed",
-    true,
-  );
+const started = (): OnboardingState =>
+  beginOnboarding(NOT_STARTED_ONBOARDING, "app-1", "us");
+
+const versionOne = (acknowledgements: Record<string, unknown>) =>
+  JSON.stringify({
+    version: 1,
+    status: "in_progress",
+    appId: "app-1",
+    selectedMarkets: ["de", "us"],
+    acknowledgements,
+  });
+
+const VERSION_ONE_ACKNOWLEDGEMENTS = {
+  noCompetitors: true,
+  keywordsConfirmed: true,
+  capacityReviewed: true,
+  alertsSkipped: true,
+};
 
 const unavailableStorage = {
   getItem: () => {
@@ -71,15 +79,31 @@ describe("parseOnboardingState", () => {
   it.each([
     ["missing", null],
     ["unparsable", "not json"],
-    ["a newer version", '{"version":2}'],
-    ["an unknown status", '{"version":1,"status":"paused","appId":"app-1"}'],
+    ["a newer version", '{"version":3}'],
+    ["an unknown status", '{"version":2,"status":"paused","appId":"app-1"}'],
     [
       "a lifecycle without an app",
-      '{"version":1,"status":"in_progress","appId":null,"selectedMarkets":["us"]}',
+      '{"version":2,"status":"in_progress","appId":null,"selectedMarkets":["us"],"skipped":[],"countriesReviewed":false}',
     ],
     [
       "an unnormalized market",
-      '{"version":1,"status":"in_progress","appId":"app-1","selectedMarkets":["US"],"acknowledgements":{"noCompetitors":false,"keywordsConfirmed":false,"capacityReviewed":false,"alertsSkipped":false}}',
+      '{"version":2,"status":"in_progress","appId":"app-1","selectedMarkets":["US"],"skipped":[],"countriesReviewed":false}',
+    ],
+    [
+      "an unknown skipped step",
+      '{"version":2,"status":"in_progress","appId":"app-1","selectedMarkets":["us"],"skipped":["alerts"],"countriesReviewed":false}',
+    ],
+    [
+      "a repeated skipped step",
+      '{"version":2,"status":"in_progress","appId":"app-1","selectedMarkets":["us"],"skipped":["keywords","keywords"],"countriesReviewed":false}',
+    ],
+    [
+      "a missing review flag",
+      '{"version":2,"status":"in_progress","appId":"app-1","selectedMarkets":["us"],"skipped":[]}',
+    ],
+    [
+      "a version 1 record with a corrupt acknowledgement",
+      versionOne({ ...VERSION_ONE_ACKNOWLEDGEMENTS, alertsSkipped: "yes" }),
     ],
   ])("resets %s record", (_case, stored) => {
     expect(parseOnboardingState(stored)).toEqual(NOT_STARTED_ONBOARDING);
@@ -90,6 +114,39 @@ describe("parseOnboardingState", () => {
 
     expect(parseOnboardingState(JSON.stringify(state))).toEqual(state);
     expect(state.version).toBe(ONBOARDING_VERSION);
+  });
+
+  it("upgrades a version 1 record and keeps its status, app and markets", () => {
+    expect(
+      parseOnboardingState(versionOne(VERSION_ONE_ACKNOWLEDGEMENTS)),
+    ).toEqual({
+      version: ONBOARDING_VERSION,
+      status: "in_progress",
+      appId: "app-1",
+      selectedMarkets: ["de", "us"],
+      skipped: ["competitors"],
+      countriesReviewed: false,
+    });
+  });
+
+  it("upgrades a version 1 record without competitors acknowledged to no skipped step", () => {
+    expect(
+      parseOnboardingState(
+        versionOne({ ...VERSION_ONE_ACKNOWLEDGEMENTS, noCompetitors: false }),
+      ).skipped,
+    ).toEqual([]);
+  });
+
+  it("reads skipped steps back in step order", () => {
+    const stored = JSON.stringify({
+      ...started(),
+      skipped: ["countries", "competitors"],
+    });
+
+    expect(parseOnboardingState(stored).skipped).toEqual([
+      "competitors",
+      "countries",
+    ]);
   });
 });
 
@@ -130,96 +187,181 @@ describe("transitions", () => {
     expect(state.selectedMarkets).toEqual(["us"]);
   });
 
-  it("completes only when every decision is made", () => {
-    const state = acknowledged(
-      beginOnboarding(NOT_STARTED_ONBOARDING, "app-1", "us"),
+  it("marks countries reviewed once a market is chosen", () => {
+    expect(started().countriesReviewed).toBe(false);
+    expect(setMarketSelected(started(), "pl", true).countriesReviewed).toBe(
+      true,
     );
-
-    expect(canCompleteOnboarding(state, 0, 0, setupSteps(true))).toBe(true);
-    expect(completeOnboarding(state, 0, 0, setupSteps(true)).status).toBe(
-      "completed",
-    );
-    expect(
-      canCompleteOnboarding(
-        setOnboardingAcknowledgement(state, "capacityReviewed", false),
-        0,
-        0,
-        setupSteps(true),
-      ),
-    ).toBe(false);
+    expect(setCountriesReviewed(started()).countriesReviewed).toBe(true);
   });
 
-  it("accepts live counts in place of acknowledgements", () => {
-    let state = beginOnboarding(NOT_STARTED_ONBOARDING, "app-1", "us");
-    state = setOnboardingAcknowledgement(state, "keywordsConfirmed", true);
-    state = setOnboardingAcknowledgement(state, "capacityReviewed", true);
+  it("leaves countries unreviewed when a choice changes nothing", () => {
+    expect(setMarketSelected(started(), "us", true).countriesReviewed).toBe(
+      false,
+    );
+    expect(setMarketSelected(started(), "us", false).countriesReviewed).toBe(
+      false,
+    );
+  });
 
-    expect(canCompleteOnboarding(state, 2, 1, setupSteps(true))).toBe(true);
-    expect(canCompleteOnboarding(state, 0, 1, setupSteps(true))).toBe(false);
+  it("counts only active keywords", () => {
+    expect(
+      activeKeywordCount([
+        { active: true },
+        { active: false },
+        { active: true },
+      ]),
+    ).toBe(2);
   });
 
   it("dismisses and freezes terminal records", () => {
-    const state = acknowledged(
-      beginOnboarding(NOT_STARTED_ONBOARDING, "app-1", "us"),
-    );
+    const state = setCountriesReviewed(started());
     const dismissed = dismissOnboarding(state);
-    const completed = completeOnboarding(state, 0, 0, setupSteps(true));
+    const completed = completeOnboarding(state, counts(1, 10));
 
     expect(dismissed.status).toBe("dismissed");
+    expect(completed.status).toBe("completed");
     expect(dismissOnboarding(completed)).toBe(completed);
     expect(setMarketSelected(dismissed, "pl", true)).toBe(dismissed);
-    expect(
-      setOnboardingAcknowledgement(completed, "alertsSkipped", false),
-    ).toBe(completed);
+    expect(setStepSkipped(completed, "keywords", true)).toBe(completed);
+    expect(setCountriesReviewed(dismissed)).toBe(dismissed);
   });
 });
 
-describe("setupSteps", () => {
-  it("includes capacity for the platform operator", () => {
-    expect(setupSteps(true)).toEqual([
-      "markets",
-      "competitors",
-      "keywords",
-      "capacity",
-      "alerts",
-    ]);
+describe("stepState", () => {
+  it("waits for the count a step reads", () => {
+    expect(stepState(started(), "competitors", counts(null, 4))).toBe(
+      "loading",
+    );
+    expect(stepState(started(), "keywords", counts(1, null))).toBe("loading");
+    expect(stepState(started(), "countries", counts(null, null))).toBe("open");
   });
 
-  it("leaves capacity out for everyone else", () => {
-    expect(setupSteps(false)).toEqual([
-      "markets",
-      "competitors",
-      "keywords",
-      "alerts",
-    ]);
+  it("finishes the competitor step at one competitor", () => {
+    expect(stepState(started(), "competitors", counts(0, 0))).toBe("open");
+    expect(stepState(started(), "competitors", counts(1, 0))).toBe("done");
   });
 
-  it("completes without a capacity review when capacity is not a step", () => {
-    const state = readyExceptCapacity();
-    expect(canCompleteOnboarding(state, 1, 1, setupSteps(false))).toBe(true);
-    expect(canCompleteOnboarding(state, 1, 1, setupSteps(true))).toBe(false);
-    expect(completeOnboarding(state, 1, 1, setupSteps(false)).status).toBe(
+  it("finishes the keyword step at the keyword target", () => {
+    expect(
+      stepState(started(), "keywords", counts(0, SETUP_KEYWORD_TARGET - 1)),
+    ).toBe("open");
+    expect(
+      stepState(started(), "keywords", counts(0, SETUP_KEYWORD_TARGET)),
+    ).toBe("done");
+  });
+
+  it("finishes the countries step on review", () => {
+    expect(
+      stepState(setCountriesReviewed(started()), "countries", counts(0, 0)),
+    ).toBe("done");
+  });
+
+  it("reports a skipped step as skipped until its target is reached", () => {
+    const state = setStepSkipped(started(), "competitors", true);
+
+    expect(stepState(state, "competitors", counts(null, 0))).toBe("skipped");
+    expect(stepState(state, "competitors", counts(0, 0))).toBe("skipped");
+    expect(stepState(state, "competitors", counts(1, 0))).toBe("done");
+    expect(
+      stepState(
+        setCountriesReviewed(setStepSkipped(started(), "countries", true)),
+        "countries",
+        counts(0, 0),
+      ),
+    ).toBe("done");
+    expect(
+      stepState(
+        setStepSkipped(state, "competitors", false),
+        "competitors",
+        counts(0, 0),
+      ),
+    ).toBe("open");
+  });
+});
+
+describe("setupProgress", () => {
+  it("counts done and skipped steps and names the first open one", () => {
+    expect(setupProgress(started(), counts(1, 4))).toEqual({
+      done: 1,
+      total: 3,
+      next: "keywords",
+    });
+    expect(
+      setupProgress(setStepSkipped(started(), "keywords", true), counts(1, 4)),
+    ).toEqual({ done: 2, total: 3, next: "countries" });
+  });
+
+  it("names a loading step as next", () => {
+    expect(setupProgress(started(), counts(null, null)).next).toBe(
+      "competitors",
+    );
+  });
+
+  it("names no next step once every step is settled", () => {
+    expect(
+      setupProgress(setCountriesReviewed(started()), counts(2, 12)),
+    ).toEqual({ done: 3, total: 3, next: null });
+  });
+});
+
+describe("canCompleteOnboarding", () => {
+  const settled = (): OnboardingState =>
+    setStepSkipped(
+      setStepSkipped(setCountriesReviewed(started()), "competitors", true),
+      "keywords",
+      true,
+    );
+
+  it("completes once every step is done or skipped", () => {
+    expect(canCompleteOnboarding(settled(), counts(0, 0))).toBe(true);
+    expect(
+      canCompleteOnboarding(setCountriesReviewed(started()), counts(1, 10)),
+    ).toBe(true);
+    expect(completeOnboarding(settled(), counts(0, 0)).status).toBe(
       "completed",
     );
+  });
+
+  it("blocks completion while a count is loading", () => {
+    expect(
+      canCompleteOnboarding(setCountriesReviewed(started()), counts(null, 10)),
+    ).toBe(false);
+  });
+
+  it("blocks completion while a step is open", () => {
+    const state = setCountriesReviewed(started());
+
+    expect(canCompleteOnboarding(state, counts(1, 9))).toBe(false);
+    expect(canCompleteOnboarding(started(), counts(1, 10))).toBe(false);
+    expect(completeOnboarding(state, counts(1, 9))).toBe(state);
+  });
+
+  it("completes only a setup in progress", () => {
+    expect(canCompleteOnboarding(NOT_STARTED_ONBOARDING, counts(1, 10))).toBe(
+      false,
+    );
+  });
+});
+
+describe("setStepSkipped", () => {
+  it("adds and removes a step once, in step order", () => {
+    let state = setStepSkipped(started(), "countries", true);
+    state = setStepSkipped(state, "competitors", true);
+    state = setStepSkipped(state, "competitors", true);
+
+    expect(state.skipped).toEqual(["competitors", "countries"]);
+    expect(setStepSkipped(state, "countries", false).skipped).toEqual([
+      "competitors",
+    ]);
   });
 });
 
 describe("stepLabel", () => {
-  it("numbers a step within the steps shown", () => {
-    expect(stepLabel("alerts", setupSteps(false))).toBe("Step 4 of 4");
-    expect(stepLabel("alerts", setupSteps(true))).toBe("Step 5 of 5");
-    expect(stepLabel("capacity", setupSteps(true))).toBe("Step 4 of 5");
-  });
-});
-
-describe("reviewedStepsSentence", () => {
-  it("names every step shown", () => {
-    expect(reviewedStepsSentence(setupSteps(true))).toBe(
-      "Markets, competitors, keywords, capacity and alerts have been reviewed.",
-    );
-    expect(reviewedStepsSentence(setupSteps(false))).toBe(
-      "Markets, competitors, keywords and alerts have been reviewed.",
-    );
+  it("numbers a step among three", () => {
+    expect(stepLabel("competitors")).toBe("Step 1 of 3");
+    expect(stepLabel("keywords")).toBe("Step 2 of 3");
+    expect(stepLabel("countries")).toBe("Step 3 of 3");
   });
 });
 

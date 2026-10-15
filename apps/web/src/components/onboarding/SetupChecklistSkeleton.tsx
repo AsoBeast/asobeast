@@ -3,8 +3,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export function SetupChecklistSkeleton() {
   return (
-    <div className="flex flex-col gap-4">
-      {Array.from({ length: 5 }, (_, index) => (
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-3">
+        <Skeleton className="h-7 w-full max-w-md" />
+        <Skeleton className="h-1 w-full rounded-full" />
+        <Skeleton className="h-5 w-full max-w-sm" />
+      </div>
+      {Array.from({ length: 3 }, (_, index) => (
         <Card key={index}>
           <CardHeader className="gap-2">
             <Skeleton className="h-4 w-20" />
@@ -12,26 +17,9 @@ export function SetupChecklistSkeleton() {
             <Skeleton className="h-4 w-full max-w-lg" />
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            {index === 3 ? (
-              <>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  {Array.from({ length: 4 }, (_, metric) => (
-                    <div key={metric} className="flex flex-col gap-1">
-                      <Skeleton className="h-4 w-16" />
-                      <Skeleton className="h-6 w-10" />
-                    </div>
-                  ))}
-                </div>
-                <Skeleton className="h-2 w-full rounded-full" />
-              </>
-            ) : (
-              <Skeleton className="h-4 w-36" />
-            )}
-            <div className="flex flex-wrap gap-2">
-              <Skeleton className="h-9 w-40" />
-              <Skeleton className="h-9 w-32" />
-            </div>
-            <Skeleton className="h-4 w-56" />
+            <Skeleton className="h-4 w-36" />
+            <Skeleton className="h-9 w-40" />
+            <Skeleton className="h-4 w-24" />
           </CardContent>
         </Card>
       ))}

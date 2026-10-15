@@ -5,6 +5,7 @@ import { QuotaService } from '../auth/quota.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
+import { FirstPositionChecks } from './first-position-checks';
 import { KeywordTracker } from './keyword-tracker';
 import { KeywordsService } from './keywords.service';
 import { MarketListingRequests } from './market-listing.requests';
@@ -28,6 +29,7 @@ describe('KeywordsService.syncFromSnapshot', () => {
       ),
       quotaOff(prisma as PrismaService),
       { request: jest.fn() } as unknown as MarketListingRequests,
+      { schedule: jest.fn() } as unknown as FirstPositionChecks,
     );
 
   const buildPrisma = () => {
@@ -414,6 +416,7 @@ describe('KeywordsService.compare', () => {
       ),
       quotaOff(prisma as PrismaService),
       { request: jest.fn() } as unknown as MarketListingRequests,
+      { schedule: jest.fn() } as unknown as FirstPositionChecks,
     );
 
   const buildPrisma = () => ({
@@ -486,6 +489,7 @@ describe('KeywordsService.listTracked serp volatility', () => {
       ),
       quotaOff(prisma as PrismaService),
       { request: jest.fn() } as unknown as MarketListingRequests,
+      { schedule: jest.fn() } as unknown as FirstPositionChecks,
     );
 
   const trackedRow = (keywordId: string, text: string) => ({
@@ -562,7 +566,11 @@ describe('KeywordsService.listTracked serp volatility', () => {
 });
 
 describe('KeywordsService country tracking', () => {
-  const buildService = (prisma: unknown, queue: { add: jest.Mock }) =>
+  const buildService = (
+    prisma: unknown,
+    queue: { add: jest.Mock },
+    schedule: jest.Mock = jest.fn(),
+  ) =>
     new KeywordsService(
       prisma as PrismaService,
       new KeywordTracker(
@@ -573,6 +581,7 @@ describe('KeywordsService country tracking', () => {
       ),
       quotaOff(prisma as PrismaService),
       { request: jest.fn() } as unknown as MarketListingRequests,
+      { schedule } as unknown as FirstPositionChecks,
     );
 
   it('adds a keyword into the requested market, not the app home country', async () => {
@@ -614,6 +623,50 @@ describe('KeywordsService country tracking', () => {
       >
     )[0][0];
     expect(lookup.where.country).toBe('pl');
+  });
+
+  it('checks the positions of the keywords it starts tracking, not those already active', async () => {
+    const schedule = jest.fn().mockResolvedValue(1);
+    const prisma = {
+      keywordField: { findMany: jest.fn().mockResolvedValue([]) },
+      app: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'app1',
+          store: Store.APP_STORE,
+          country: 'us',
+          storeAppId: 's',
+        }),
+      },
+      keyword: {
+        createMany: jest.fn().mockResolvedValue({ count: 2 }),
+        findMany: jest.fn().mockResolvedValue([
+          { id: 'kw1', text: 'fitness' },
+          { id: 'kw2', text: 'workout' },
+        ]),
+      },
+      keywordMetric: { findFirst: jest.fn().mockResolvedValue(null) },
+      trackedKeyword: {
+        createMany: jest.fn().mockResolvedValue({ count: 1 }),
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+        findMany: jest
+          .fn()
+          .mockResolvedValueOnce([{ keywordId: 'kw2' }])
+          .mockResolvedValue([]),
+      },
+      appSnapshot: { findFirst: jest.fn().mockResolvedValue(null) },
+      withTransaction: (run: (tx: unknown) => unknown) => run(prisma),
+    };
+
+    await buildService(prisma, { add: jest.fn() }, schedule).addManual('app1', [
+      'fitness',
+      'workout',
+    ]);
+
+    expect(prisma.trackedKeyword.findMany).toHaveBeenNthCalledWith(1, {
+      where: { appId: 'app1', active: true, keywordId: { in: ['kw1', 'kw2'] } },
+      select: { keywordId: true },
+    });
+    expect(schedule).toHaveBeenCalledWith('app1', ['kw1']);
   });
 
   it('summarizes tracked markets home-first with counts including an empty home', async () => {

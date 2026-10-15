@@ -80,7 +80,7 @@ export function AddKeywordsDialog({
         description:
           duplicates > 0
             ? `${duplicates} already tracked`
-            : "Rankings capture on the next run.",
+            : "Positions arrive within minutes.",
       });
     },
     onError: (err) =>

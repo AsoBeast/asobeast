@@ -25,7 +25,7 @@ import {
 import { suggestionStrategyParser } from "@/lib/search-params";
 import { cn } from "@/lib/utils";
 import { SpiderDialog } from "./SpiderDialog";
-import { SuggestionList } from "./SuggestionList";
+import { SuggestionList, suggestionListState } from "./SuggestionList";
 import { STRATEGIES } from "./suggestion-strategies";
 
 export function SuggestionsPanel({
@@ -67,12 +67,6 @@ export function SuggestionsPanel({
           : `Could not track ${text}`,
       ),
   });
-
-  const state = suggestions.isPending
-    ? ({ status: "pending" } as const)
-    : suggestions.isError
-      ? ({ status: "error", error: suggestions.error } as const)
-      : ({ status: "ready", suggestions: suggestions.data } as const);
 
   return (
     <Card>
@@ -130,10 +124,13 @@ export function SuggestionsPanel({
 
           <SuggestionList
             strategy={strategy}
-            state={state}
+            state={suggestionListState(suggestions)}
             trackedTexts={trackedTexts}
-            pendingText={track.isPending ? track.variables : undefined}
-            onTrack={(text) => track.mutate(text)}
+            action={{
+              kind: "track",
+              pendingText: track.isPending ? track.variables : undefined,
+              onTrack: (text) => track.mutate(text),
+            }}
             onRetry={() => void suggestions.refetch()}
           />
         </CardContent>

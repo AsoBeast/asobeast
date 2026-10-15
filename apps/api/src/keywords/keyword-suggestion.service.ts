@@ -73,6 +73,7 @@ export class KeywordSuggestionService {
     strategy: KeywordSuggestionStrategy,
     limit: number,
     country?: string,
+    spend?: () => Promise<void>,
   ): Promise<KeywordSuggestion[]> {
     const app = await ensureApp(this.prisma, appId);
     const market = { ...app, country: country ?? app.country };
@@ -89,6 +90,7 @@ export class KeywordSuggestionService {
     };
     const work = () => this.dispatch(strategy, request);
     if (!REACHES_THE_STORE[strategy]) return work();
+    await spend?.();
     return this.egress.through(market.store, market.country, work);
   }
 

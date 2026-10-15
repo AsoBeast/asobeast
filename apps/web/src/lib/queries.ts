@@ -542,6 +542,16 @@ export const suggestionsOptions = (
     queryFn: () => getSuggestions(id, strategy, undefined, country),
   });
 
+export const pickerSuggestionsOptions = (
+  id: string,
+  strategy: KeywordSuggestionStrategy,
+  country: string,
+) =>
+  queryOptions({
+    ...suggestionsOptions(id, strategy, country),
+    staleTime: ONE_DAY_MS,
+  });
+
 export const spiderOptions = (id: string, term: string, country?: string) =>
   queryOptions({
     queryKey: appKeys.spider(id, term, country),
@@ -800,6 +810,7 @@ export function invalidateKeywordMutation(
     queryKey: appKeys.marketKeywordFieldsRoot(id),
   });
   void client.invalidateQueries({ queryKey: appKeys.marketSuggestions(id) });
+  void client.invalidateQueries({ queryKey: appKeys.firstRun(id) });
 }
 
 export function invalidateMarketSeed(
@@ -847,6 +858,7 @@ export function invalidateCompetitorMutation(
   void client.invalidateQueries({ queryKey: appKeys.discoveryRoot(id) });
   void client.invalidateQueries({ queryKey: appKeys.serpMoversRoot(id) });
   void client.invalidateQueries({ queryKey: portfolioKey });
+  void client.invalidateQueries({ queryKey: appKeys.firstRun(id) });
 }
 
 export function invalidateLinkMutation(

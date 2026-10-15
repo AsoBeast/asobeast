@@ -23,12 +23,32 @@ test("a mid run app names what is still finishing", async ({ page }) => {
   await expect(scores).toContainText("weekly run");
 });
 
+test("a mid run app lists its first positions", async ({ page }) => {
+  await page.goto(`/apps/${MID_RUN_APP}`);
+
+  const positions = page.getByRole("list", { name: "First positions" });
+  await expect(
+    page.getByText("Your app ranks #2 for “focus timer”."),
+  ).toBeVisible();
+  await expect(positions.getByRole("listitem")).toHaveText([
+    "“focus timer” · #2",
+    "“pomodoro” · #15",
+    "“study timer” · #40",
+    "“deep work timer” · not in the top 200",
+  ]);
+  await expect(page.getByText("break timer")).toHaveCount(0);
+  await expect(
+    page.getByRole("link", { name: "See every position" }),
+  ).toHaveAttribute("href", `/apps/${MID_RUN_APP}/rankings`);
+});
+
 test("a fully collected app renders no panel at all", async ({ page }) => {
   await page.goto(`/apps/${APP_1_DETAIL.id}`);
 
   await expect(page.getByText(/steps are still finishing/i)).toHaveCount(0);
   await expect(page.getByText(/step is still finishing/i)).toHaveCount(0);
   await expect(page.getByText("Positions collected")).toHaveCount(0);
+  await expect(page.getByText("First positions")).toHaveCount(0);
 });
 
 test("an unreadable schedule is reported as queued rather than as a date", async ({

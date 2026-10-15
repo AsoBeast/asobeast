@@ -10,6 +10,9 @@ import {
   firstRunHeadline,
   firstRunRows,
   listingSettled,
+  rankingsAdvanced,
+  rankingsCollecting,
+  rankingsTracked,
 } from "./first-run-timeline";
 
 const NOW = new Date("2026-08-10T09:00:00Z").getTime();
@@ -217,6 +220,45 @@ describe("listingSettled", () => {
 
   it("stays quiet while the next answer is still loading", () => {
     expect(listingSettled(waiting, undefined)).toBe(false);
+  });
+});
+
+describe("rankingsAdvanced", () => {
+  const ranked = (ready: number) =>
+    statusOf(
+      FIRST_RUN_STAGES.map((name) =>
+        name === "rankings"
+          ? stage(name, { ready, total: 8, complete: ready === 8 })
+          : stage(name),
+      ),
+    );
+
+  it("fires when more keywords have a position than before", () => {
+    expect(rankingsAdvanced(ranked(3), ranked(5))).toBe(true);
+  });
+
+  it("stays quiet while the count holds", () => {
+    expect(rankingsAdvanced(ranked(3), ranked(3))).toBe(false);
+  });
+
+  it("stays quiet without both answers", () => {
+    expect(rankingsAdvanced(undefined, ranked(5))).toBe(false);
+    expect(rankingsAdvanced(ranked(3), undefined)).toBe(false);
+  });
+
+  it("knows whether any keyword expects a position", () => {
+    expect(rankingsTracked(ranked(3))).toBe(true);
+    expect(
+      rankingsTracked(
+        statusOf([stage("rankings", { ready: 0, total: 0, complete: true })]),
+      ),
+    ).toBe(false);
+  });
+
+  it("reports collection only while the rankings stage is incomplete", () => {
+    expect(rankingsCollecting(ranked(3))).toBe(true);
+    expect(rankingsCollecting(ranked(8))).toBe(false);
+    expect(rankingsCollecting(undefined)).toBe(false);
   });
 });
 

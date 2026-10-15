@@ -48,6 +48,8 @@ Four things, in order.
 3. **A review backfill is queued.** The first three pages of reviews are collected so ratings history starts with something in it.
 4. **The first pass is scheduled.** Every auto tracked keyword is queued for a rank check. The action queue for your workspace is generated when those first rank checks finish, so the first recommendations read real positions instead of an empty database.
 
+The import then opens the guided setup, which walks through competitors, keywords and countries. See [Complete the guided setup](/quickstart#complete-the-guided-setup).
+
 The first pass is what fills the listing. Positions and scores arrive as the queue drains rather than waiting for the next scheduled run, so a fresh instance with an empty queue shows real numbers within minutes on the App Store and within tens of minutes on Google Play. See [The daily pipeline and rate limits](/concepts/pipeline) for the throughput those waits come from.
 
 ### Importing twice costs nothing extra

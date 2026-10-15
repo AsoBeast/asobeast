@@ -10,11 +10,11 @@ import {
   ResolveSubtitlePayload,
   resolveSubtitleJobId,
 } from '../jobs/jobs.types';
+import { FirstPositionChecks } from '../keywords/first-position-checks';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { StoreRequestError } from '../store-providers/errors';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
-import { FirstRunScheduler } from './first-run.scheduler';
 import { HOME_LISTING } from './listing';
 
 const RESOLVE_SUBTITLE_OPTIONS = {
@@ -32,7 +32,7 @@ export class SubtitleBackfill {
     private readonly prisma: PrismaService,
     private readonly registry: StoreProviderRegistry,
     private readonly keywords: KeywordsService,
-    private readonly firstRun: FirstRunScheduler,
+    private readonly checks: FirstPositionChecks,
     private readonly workspace: WorkspaceContext,
     @InjectQueue(QUEUES.APP_STORE) private readonly appStoreQueue: Queue,
   ) {}
@@ -98,7 +98,7 @@ export class SubtitleBackfill {
     const added = (await this.trackedKeywordIds(appId)).filter(
       (keywordId) => !before.has(keywordId),
     );
-    await this.firstRun.checkKeywords(appId, added);
+    await this.checks.schedule(appId, added);
   }
 
   private async trackedKeywordIds(appId: string): Promise<string[]> {

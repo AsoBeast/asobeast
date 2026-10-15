@@ -54,6 +54,8 @@ The keyword field text may run to 1,000 characters, so spacing and duplicates in
 | Write | Configuration changes such as adding a keyword or a competitor | The tighter write budget |
 | Store | Refresh, finding localizations, run daily, score, keyword suggestions, deep search, importing an app and adding a competitor | The write budget, plus its own on demand allowance |
 
+Keyword suggestions reach the store only for the search, similar and developer strategies. The listing, competitor, seasonal and review strategies answer from stored data and spend no lookup.
+
 Reading a year of stored rankings is cheap. Triggering a refresh is not, which is why store endpoints carry a separate on demand allowance on top of the request rate.
 
 Three classes do not mean three budgets. There are two per minute budgets, one for reads and one shared by writes and store requests, and a single daily allowance every class spends from. The class names how a request is priced, never how much room it buys.

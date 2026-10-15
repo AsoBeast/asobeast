@@ -44,6 +44,7 @@ import {
   type LocalizationSeed,
   BUDGET,
   DATASETS,
+  SUGGESTIONS,
   EMAIL_ALERTS,
   EMAIL_DELIVERIES,
   FIRST_RUN_COMPLETE,
@@ -96,6 +97,7 @@ import {
 } from "./portfolio-insights.mts";
 import type {
   AccountPlan,
+  KeywordSuggestionStrategy,
   AddAppLocalizationRequest,
   AppLocalizationItem,
   AppLocalizationOrigin,
@@ -202,6 +204,18 @@ const initialKeywords = new Map(
     structuredClone(dataset.keywords),
   ]),
 );
+
+const initialCompetitors = new Map(
+  Object.entries(DATASETS).map(([id, dataset]) => [
+    id,
+    structuredClone(dataset.competitors),
+  ]),
+);
+
+function resetCompetitors(id: string): void {
+  const competitors = initialCompetitors.get(id);
+  if (competitors) DATASETS[id].competitors = structuredClone(competitors);
+}
 
 function resetKeywords(only?: string): void {
   for (const [id, keywords] of initialKeywords) {
@@ -1703,6 +1717,14 @@ const routes: Route[] = [
   },
   {
     method: "POST",
+    pattern: /^\/__reset\/competitors\/([^/]+)$/,
+    handler: ([id], _req, res) => {
+      resetCompetitors(id);
+      json(res, 200, { reset: true });
+    },
+  },
+  {
+    method: "POST",
     pattern: /^\/__reset\/market-seed\/([^/]+)\/([^/]+)$/,
     handler: ([id, country], _req, res) => {
       const dataset = DATASETS[id];
@@ -2673,6 +2695,21 @@ const routes: Route[] = [
     /^\/apps\/([^/]+)\/competitors\/discovery$/,
     (dataset) => dataset.discovery,
   ),
+  {
+    method: "GET",
+    pattern: /^\/apps\/([^/]+)\/keywords\/suggestions$/,
+    handler: ([id], req, res) => {
+      const path = req.url ?? "/";
+      if (hasCookie(req, "e2e_suggestions_fail", "1")) {
+        return json(res, 500, errorEnvelope(500, path));
+      }
+      if (!DATASETS[id]) return json(res, 404, errorEnvelope(404, path));
+      const strategy = (new URL(path, "http://localhost").searchParams.get(
+        "strategy",
+      ) ?? "metadata") as KeywordSuggestionStrategy;
+      json(res, 200, SUGGESTIONS[id]?.[strategy] ?? []);
+    },
+  },
   appRoute(/^\/apps\/([^/]+)\/keywords\/compare$/, (dataset, query) =>
     query.get("onlyGaps") === "true"
       ? {

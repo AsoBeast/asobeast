@@ -20,8 +20,8 @@ You need an imported app. See [Import an app](/guides/import-an-app).
   <Step title="Add one keyword or paste several">
     A single add takes one phrase. Bulk add accepts a list, one phrase per line, and creates them all in the selected market. To add a list that carries countries, tags or notes, [import it from a CSV file](#import-keywords-from-a-csv-file).
   </Step>
-  <Step title="Wait for the next daily run">
-    Positions appear after the next daily pipeline, which defaults to 03:00 UTC.
+  <Step title="Read the first position">
+    A keyword added by hand or by CSV import is checked within minutes, like the keywords the import tracked, so its first position does not wait for the daily run.
   </Step>
 </Steps>
 
@@ -29,7 +29,7 @@ Every added keyword carries a source, which sets its starting relevance. A keywo
 
 ## Seed a market from its listing
 
-The markets step of the guided setup suggests storefronts that read a language your listing ships. Tick one, leave **Seed with its listing** on and press the add button: asobeast captures that storefront's listing and tracks up to 15 phrases from its title and subtitle, with the sources `TITLE` and `SUBTITLE`, so the market starts with keywords from its own text.
+The countries step of the guided setup suggests storefronts that read a language your listing ships. Tick one, leave **Seed with its listing** on and press the add button: asobeast captures that storefront's listing and tracks up to 15 phrases from its title and subtitle, with the sources `TITLE` and `SUBTITLE`, so the market starts with keywords from its own text.
 
 Each storefront reports its outcome on its row. The same seed is one request, `POST /apps/{id}/market-seed` with a `country`, and it answers:
 
@@ -62,7 +62,7 @@ The two rows are genuinely independent: positions, popularity and difficulty all
     The table lists each row with a status and, for a refused row, the reason. Filter it by status. Nothing is saved yet.
   </Step>
   <Step title="Import">
-    The button says how many keywords it will track. Rankings appear after the next daily run, as for any new keyword.
+    The button says how many keywords it will track. Their first positions are checked within minutes, as for any new keyword.
   </Step>
 </Steps>
 

@@ -2,12 +2,12 @@ import { App, AppSnapshot, Store } from '@prisma/client';
 import { Queue } from 'bullmq';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { JOBS } from '../jobs/jobs.types';
+import { FirstPositionChecks } from '../keywords/first-position-checks';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { StoreRequestError } from '../store-providers/errors';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { NormalizedApp } from '../store-providers/types';
-import { FirstRunScheduler } from './first-run.scheduler';
 import { SubtitleBackfill } from './subtitle-backfill.service';
 
 const APP_ID = 'app_1';
@@ -37,7 +37,7 @@ function backfillWith(listing: Partial<NormalizedApp> = {}) {
   });
   const syncFromSnapshot = jest.fn().mockResolvedValue(undefined);
   const trackedFindMany = jest.fn().mockResolvedValue([]);
-  const checkKeywords = jest.fn().mockResolvedValue(0);
+  const scheduleChecks = jest.fn().mockResolvedValue(0);
   const workspace = new WorkspaceContext();
   const backfill = new SubtitleBackfill(
     {
@@ -47,7 +47,7 @@ function backfillWith(listing: Partial<NormalizedApp> = {}) {
     } as unknown as PrismaService,
     { get: () => ({ getApp }) } as unknown as StoreProviderRegistry,
     { syncFromSnapshot } as unknown as KeywordsService,
-    { checkKeywords } as unknown as FirstRunScheduler,
+    { schedule: scheduleChecks } as unknown as FirstPositionChecks,
     workspace,
     { add } as unknown as Queue,
   );
@@ -62,7 +62,7 @@ function backfillWith(listing: Partial<NormalizedApp> = {}) {
     getApp,
     syncFromSnapshot,
     trackedFindMany,
-    checkKeywords,
+    scheduleChecks,
     inWorkspace,
   };
 }
@@ -128,7 +128,7 @@ describe('SubtitleBackfill', () => {
         getApp,
         syncFromSnapshot,
         trackedFindMany,
-        checkKeywords,
+        scheduleChecks,
       } = backfillWith();
       trackedFindMany
         .mockResolvedValueOnce([{ keywordId: 'k1' }])
@@ -148,18 +148,18 @@ describe('SubtitleBackfill', () => {
         data: { subtitle: 'AI assistant for life and work' },
       });
       expect(syncFromSnapshot).toHaveBeenCalledWith(APP_ID);
-      expect(checkKeywords).toHaveBeenCalledWith(APP_ID, ['k2']);
+      expect(scheduleChecks).toHaveBeenCalledWith(APP_ID, ['k2']);
     });
 
     it('leaves a snapshot a refresh already filled alone', async () => {
-      const { backfill, updateMany, syncFromSnapshot, checkKeywords } =
+      const { backfill, updateMany, syncFromSnapshot, scheduleChecks } =
         backfillWith();
       updateMany.mockResolvedValueOnce({ count: 0 });
 
       await backfill.resolve(PAYLOAD);
 
       expect(syncFromSnapshot).not.toHaveBeenCalled();
-      expect(checkKeywords).not.toHaveBeenCalled();
+      expect(scheduleChecks).not.toHaveBeenCalled();
     });
 
     it('completes quietly when the app was deleted meanwhile', async () => {

@@ -125,24 +125,30 @@ export function SuggestedMarkets({
           {seedButtonLabel(pending.length, plan.seed.length)}
         </Button>
         <p className="flex items-center gap-1 text-caption text-muted-foreground">
-          Each market adds requests a day to the daily run.
-          <InfoTip
-            label="About market costs"
-            title="What a market costs"
-            summary={`A market adds one listing read a day for the app and for every competitor, one more for each localization captured there, and one search a day for every keyword tracked there. Seeding tracks up to ${MARKET_SEED_LIMIT} keywords from the market's own title and subtitle; each one adds a daily search.`}
-          >
-            <a
-              href={MARKET_COST_GUIDE}
-              target="_blank"
-              rel="noreferrer"
-              className="font-medium text-foreground underline decoration-primary underline-offset-4 hover:decoration-2"
-            >
-              Read what a market costs
-            </a>
-          </InfoTip>
+          Each country adds requests a day to the daily run.
+          <MarketCostTip />
         </p>
       </div>
     </div>
+  );
+}
+
+export function MarketCostTip() {
+  return (
+    <InfoTip
+      label="About market costs"
+      title="What a market costs"
+      summary={`A market adds one listing read a day for the app and for every competitor, one more for each localization captured there, and one search a day for every keyword tracked there. Seeding tracks up to ${MARKET_SEED_LIMIT} keywords from the market's own title and subtitle; each one adds a daily search.`}
+    >
+      <a
+        href={MARKET_COST_GUIDE}
+        target="_blank"
+        rel="noreferrer"
+        className="font-medium text-foreground underline decoration-primary underline-offset-4 hover:decoration-2"
+      >
+        Read what a market costs
+      </a>
+    </InfoTip>
   );
 }
 

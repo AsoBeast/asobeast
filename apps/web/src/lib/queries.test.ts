@@ -80,6 +80,7 @@ import {
   screenshotsOptions,
   serpOptions,
   spiderOptions,
+  pickerSuggestionsOptions,
   suggestionsOptions,
   visibilityOptions,
   webhookKeys,
@@ -132,6 +133,11 @@ const APP_SCOPED_OPTIONS = [
     "suggestions",
     suggestionsOptions(APP, "metadata", "us"),
     appKeys.suggestions(APP, "metadata", "us"),
+  ],
+  [
+    "picker suggestions",
+    pickerSuggestionsOptions(APP, "search", "us"),
+    appKeys.suggestions(APP, "search", "us"),
   ],
   [
     "spider",
@@ -520,6 +526,7 @@ describe("invalidation sets", () => {
       appKeys.localizations(APP),
       appKeys.marketKeywordFieldsRoot(APP),
       appKeys.marketSuggestions(APP),
+      appKeys.firstRun(APP),
     ]);
   });
 
@@ -539,6 +546,7 @@ describe("invalidation sets", () => {
       appKeys.localizations(APP),
       appKeys.marketKeywordFieldsRoot(APP),
       appKeys.marketSuggestions(APP),
+      appKeys.firstRun(APP),
       appKeys.listingMarkets(APP),
       budgetKey,
     ]);
@@ -558,6 +566,7 @@ describe("invalidation sets", () => {
       appKeys.localizations(APP),
       appKeys.marketKeywordFieldsRoot(APP),
       appKeys.marketSuggestions(APP),
+      appKeys.firstRun(APP),
       appKeys.metadataAuditRoot(APP),
     ]);
   });
@@ -576,6 +585,7 @@ describe("invalidation sets", () => {
       appKeys.localizations(APP),
       appKeys.marketKeywordFieldsRoot(APP),
       appKeys.marketSuggestions(APP),
+      appKeys.firstRun(APP),
       appKeys.metadataAuditRoot(APP),
       accountPlanKey,
     ]);
@@ -595,6 +605,7 @@ describe("invalidation sets", () => {
       appKeys.localizations(APP),
       appKeys.marketKeywordFieldsRoot(APP),
       appKeys.marketSuggestions(APP),
+      appKeys.firstRun(APP),
       appKeys.importPreviewRoot(APP),
     ]);
   });
@@ -607,6 +618,7 @@ describe("invalidation sets", () => {
       appKeys.discoveryRoot(APP),
       appKeys.serpMoversRoot(APP),
       portfolioKey,
+      appKeys.firstRun(APP),
     ]);
   });
 

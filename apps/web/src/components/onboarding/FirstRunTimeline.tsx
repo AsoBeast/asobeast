@@ -4,11 +4,20 @@ import { useEffect, useId, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, LoaderCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { firstRunOptions, invalidateAppListing } from "@/lib/queries";
+import { Separator } from "@/components/ui/separator";
+import {
+  appDetailOptions,
+  firstRunOptions,
+  invalidateAppListing,
+  invalidateKeywords,
+} from "@/lib/queries";
+import { FirstPositions } from "./FirstPositions";
 import {
   firstRunHeadline,
   firstRunRows,
   listingSettled,
+  rankingsAdvanced,
+  rankingsTracked,
   type FirstRunRow,
 } from "./first-run-timeline";
 
@@ -44,11 +53,15 @@ export function FirstRunTimeline({ id }: { id: string }) {
   const headingId = useId();
   const queryClient = useQueryClient();
   const { data, dataUpdatedAt } = useQuery(firstRunOptions(id));
+  const { data: app } = useQuery(appDetailOptions(id));
   const previous = useRef(data);
 
   useEffect(() => {
     if (listingSettled(previous.current, data)) {
       invalidateAppListing(queryClient, id);
+    }
+    if (rankingsAdvanced(previous.current, data)) {
+      invalidateKeywords(queryClient, id);
     }
     previous.current = data;
   }, [data, id, queryClient]);
@@ -58,18 +71,28 @@ export function FirstRunTimeline({ id }: { id: string }) {
   }
 
   return (
-    <Card aria-live="polite" className="print:hidden">
-      <CardHeader>
+    <Card className="print:hidden">
+      <CardHeader aria-live="polite">
         <CardTitle asChild>
           <h2 id={headingId}>{firstRunHeadline(data)}</h2>
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <ul aria-labelledby={headingId} className="flex flex-col gap-3">
+      <CardContent className="flex flex-col gap-4">
+        <ul
+          aria-labelledby={headingId}
+          aria-live="polite"
+          className="flex flex-col gap-3"
+        >
           {firstRunRows(data, dataUpdatedAt).map((row) => (
             <StageRow key={row.stage} row={row} />
           ))}
         </ul>
+        {app && rankingsTracked(data) ? (
+          <>
+            <Separator />
+            <FirstPositions id={id} country={app.country} />
+          </>
+        ) : null}
       </CardContent>
     </Card>
   );
