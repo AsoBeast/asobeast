@@ -7,6 +7,7 @@ import { Store } from '@prisma/client';
 import {
   countChars,
   REVIEW_REPLY_LIMITS,
+  ReviewReplyGuidelines,
   ReviewReplyItem,
   ReviewReplyPatchRequest,
 } from '@asobeast/shared';
@@ -95,6 +96,32 @@ export class ReviewRepliesService {
   async remove(appId: string, reviewId: string): Promise<void> {
     await this.appOf(appId);
     await this.prisma.reviewReply.deleteMany({ where: { reviewId, appId } });
+  }
+
+  async guidelines(appId: string): Promise<ReviewReplyGuidelines> {
+    const app = await this.prisma.app.findFirst({
+      where: { id: appId },
+      select: { replyGuidelines: true },
+    });
+    if (!app) {
+      throw new NotFoundException(`App ${appId} not found`);
+    }
+    return { guidelines: app.replyGuidelines ?? '' };
+  }
+
+  async setGuidelines(
+    appId: string,
+    guidelines: string,
+  ): Promise<ReviewReplyGuidelines> {
+    const trimmed = guidelines.trim();
+    const { count } = await this.prisma.app.updateMany({
+      where: { id: appId },
+      data: { replyGuidelines: trimmed || null },
+    });
+    if (count === 0) {
+      throw new NotFoundException(`App ${appId} not found`);
+    }
+    return { guidelines: trimmed };
   }
 
   private async appOf(appId: string): Promise<{ store: Store }> {

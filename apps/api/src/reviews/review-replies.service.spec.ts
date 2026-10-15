@@ -12,6 +12,7 @@ const buildService = (
     app?: boolean;
     review?: boolean;
     existingText?: string;
+    guidelines?: string | null;
   } = {},
 ) => {
   const upsert = jest
@@ -33,13 +34,17 @@ const buildService = (
   const deleteMany = jest.fn().mockResolvedValue({ count: 0 });
   const prisma = {
     app: {
-      findFirst: jest
+      findFirst: jest.fn().mockResolvedValue(
+        options.app === false
+          ? null
+          : {
+              store: options.store ?? Store.APP_STORE,
+              replyGuidelines: options.guidelines ?? null,
+            },
+      ),
+      updateMany: jest
         .fn()
-        .mockResolvedValue(
-          options.app === false
-            ? null
-            : { store: options.store ?? Store.APP_STORE },
-        ),
+        .mockResolvedValue({ count: options.app === false ? 0 : 1 }),
     },
     review: {
       findFirst: jest.fn().mockResolvedValue(
@@ -190,5 +195,56 @@ describe('ReviewRepliesService.remove', () => {
     await expect(
       buildService({ app: false }).service.remove('app-1', 'rev-1'),
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+});
+
+describe('ReviewRepliesService guidelines', () => {
+  it('answers the guidelines of an app, empty when none', async () => {
+    await expect(
+      buildService({ guidelines: null }).service.guidelines('app-1'),
+    ).resolves.toEqual({ guidelines: '' });
+    await expect(
+      buildService({
+        guidelines: 'Sign as the Habit team.',
+      }).service.guidelines('app-1'),
+    ).resolves.toEqual({ guidelines: 'Sign as the Habit team.' });
+  });
+
+  it('replaces the guidelines and trims them', async () => {
+    const { service, prisma } = buildService();
+
+    const saved = await service.setGuidelines(
+      'app-1',
+      '  Sign as the Habit team.  ',
+    );
+
+    expect(prisma.app.updateMany).toHaveBeenCalledWith({
+      where: { id: 'app-1' },
+      data: { replyGuidelines: 'Sign as the Habit team.' },
+    });
+    expect(saved).toEqual({ guidelines: 'Sign as the Habit team.' });
+  });
+
+  it('clears the guidelines with an empty text', async () => {
+    const { service, prisma } = buildService();
+
+    const saved = await service.setGuidelines('app-1', '');
+
+    expect(prisma.app.updateMany).toHaveBeenCalledWith({
+      where: { id: 'app-1' },
+      data: { replyGuidelines: null },
+    });
+    expect(saved).toEqual({ guidelines: '' });
+  });
+
+  it('answers 404 for an unknown app', async () => {
+    const { service } = buildService({ app: false });
+
+    await expect(service.guidelines('app-1')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    await expect(service.setGuidelines('app-1', 'x')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
   });
 });

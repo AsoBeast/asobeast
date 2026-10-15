@@ -237,4 +237,72 @@ describe('Review replies (e2e)', () => {
       .send({ text: 'Read only' })
       .expect(403);
   });
+
+  describe('reply guidelines', () => {
+    const guidelinesPath = (appId: string) =>
+      `/apps/${appId}/reviews/reply-guidelines`;
+
+    it('keeps reply guidelines per app', async () => {
+      const text = 'Support: help@example.com. Never promise a date.';
+      await api
+        .get(guidelinesPath(appStore.appId))
+        .expect(200, { guidelines: '' });
+
+      await api
+        .put(guidelinesPath(appStore.appId))
+        .send({ guidelines: text })
+        .expect(200, { guidelines: text });
+      await api
+        .get(guidelinesPath(appStore.appId))
+        .expect(200, { guidelines: text });
+      await api
+        .put(guidelinesPath(appStore.appId))
+        .send({ guidelines: '' })
+        .expect(200, { guidelines: '' });
+      await api
+        .get(guidelinesPath(appStore.appId))
+        .expect(200, { guidelines: '' });
+    });
+
+    it('holds the guidelines to 1,000 characters', async () => {
+      await api
+        .put(guidelinesPath(appStore.appId))
+        .send({ guidelines: 'a'.repeat(1001) })
+        .expect(400);
+    });
+
+    it('keeps the guidelines of one app out of another', async () => {
+      await api
+        .put(guidelinesPath(appStore.appId))
+        .send({ guidelines: 'Sign as the team.' })
+        .expect(200);
+
+      await api.get(guidelinesPath(play.appId)).expect(200, { guidelines: '' });
+    });
+
+    it('answers 404 across workspaces', async () => {
+      const replies = app.get(ReviewRepliesService);
+
+      await expect(
+        asWorkspace(
+          app,
+          () => replies.guidelines(appStore.appId),
+          OTHER_WORKSPACE,
+        ),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      await expect(
+        asWorkspace(
+          app,
+          () => replies.setGuidelines(appStore.appId, 'Hijacked'),
+          OTHER_WORKSPACE,
+        ),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      await expect(
+        prisma.app.findUniqueOrThrow({
+          where: { id: appStore.appId },
+          select: { replyGuidelines: true },
+        }),
+      ).resolves.toEqual({ replyGuidelines: null });
+    });
+  });
 });

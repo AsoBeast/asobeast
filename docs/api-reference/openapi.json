@@ -4383,6 +4383,76 @@
         ]
       }
     },
+    "/apps/{id}/reviews/reply-guidelines": {
+      "get": {
+        "operationId": "ReviewReplyGuidelinesController_read",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "The reply guidelines every AI draft follows",
+        "tags": [
+          "reviews"
+        ]
+      },
+      "put": {
+        "operationId": "ReviewReplyGuidelinesController_write",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewReplyGuidelinesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Replace the reply guidelines of an app",
+        "tags": [
+          "reviews"
+        ]
+      }
+    },
     "/apps/{id}/audit": {
       "get": {
         "operationId": "AuditController_getAudit",
@@ -6643,6 +6713,18 @@
             "type": "boolean"
           }
         }
+      },
+      "ReviewReplyGuidelinesDto": {
+        "type": "object",
+        "properties": {
+          "guidelines": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "guidelines"
+        ]
       },
       "MetadataAssistantDto": {
         "type": "object",
