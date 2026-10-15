@@ -37,11 +37,13 @@ import { ReviewCountsSkeleton, ReviewsListSkeleton } from "./skeletons";
 function ShowAll({
   shown,
   total,
+  searching,
   expanded,
   onShowAll,
 }: {
   shown: number;
   total: number;
+  searching: boolean;
   expanded: boolean;
   onShowAll: () => void;
 }) {
@@ -49,7 +51,9 @@ function ShowAll({
   return (
     <div className="flex flex-wrap items-center gap-3 pt-2">
       <p className="text-caption text-muted-foreground">
-        Showing {formatNumber(shown)} of {formatNumber(total)}
+        {searching
+          ? `Search covers the ${formatNumber(shown)} loaded of ${formatNumber(total)} reviews`
+          : `Showing ${formatNumber(shown)} of ${formatNumber(total)}`}
       </p>
       {expanded ? (
         <p className="text-caption text-muted-foreground">
@@ -166,6 +170,7 @@ function ReviewCards({
       <ShowAll
         shown={data.reviews.length}
         total={data.total}
+        searching={query.trim() !== ""}
         expanded={expanded}
         onShowAll={() => setExpandedView(viewKey)}
       />

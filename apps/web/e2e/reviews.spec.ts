@@ -208,3 +208,14 @@ test("show all loads up to two hundred reviews", async ({ page }) => {
   await expect(page.getByRole("article")).toHaveCount(60);
   await expect(page.getByText("Showing 50 of 60")).toBeHidden();
 });
+
+test("a search on a long list says it covers the loaded reviews", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-long/reviews?q=number%201");
+
+  await expect(
+    page.getByText("Search covers the 50 loaded of 60 reviews"),
+  ).toBeVisible();
+  await expect(page.getByText("Showing 50 of 60")).toBeHidden();
+});

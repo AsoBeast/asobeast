@@ -20,6 +20,7 @@ import {
   queryOptions,
   skipToken,
   type QueryClient,
+  type QueryKey,
 } from "@tanstack/react-query";
 import {
   getChart,
@@ -993,6 +994,11 @@ export function invalidateSetupMutation(
   ]).then(() => undefined);
 }
 
+function filtersOf(queryKey: QueryKey): ReviewFilters {
+  const filters = queryKey.at(-1);
+  return typeof filters === "object" && filters !== null ? filters : {};
+}
+
 export function upsertReviewReply(
   client: QueryClient,
   id: string,
@@ -1003,10 +1009,9 @@ export function upsertReviewReply(
     queryKey: appKeys.reviewsRoot(id),
   })) {
     if (!list) continue;
-    const filters = queryKey[queryKey.length - 1] as ReviewFilters;
     client.setQueryData(
       queryKey,
-      withReviewReply(list, filters, review, reply),
+      withReviewReply(list, filtersOf(queryKey), review, reply),
     );
   }
 }

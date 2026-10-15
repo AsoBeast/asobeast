@@ -10,7 +10,12 @@ import {
 import { Download } from "lucide-react";
 import type { Options } from "nuqs";
 import { toast } from "sonner";
-import type { ReviewReplyState, ReviewSort } from "@asobeast/shared";
+import {
+  REVIEW_REPLY_STATES,
+  REVIEW_SORTS,
+  type ReviewReplyState,
+  type ReviewSort,
+} from "@asobeast/shared";
 import { SearchInput } from "@/components/data-table/SearchInput";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,6 +30,7 @@ import {
   reviewsExportOptions,
   reviewsOptions,
 } from "@/lib/queries";
+import { literalOf } from "@/lib/literal";
 import { useSingleFlight } from "@/lib/single-flight";
 import {
   EXPORT_ORDER,
@@ -170,7 +176,7 @@ export function ReviewsToolbar({
       <Select
         value={view.replyState ?? ALL}
         onValueChange={(next) =>
-          onReplyState(next === ALL ? null : (next as ReviewReplyState))
+          onReplyState(literalOf(REVIEW_REPLY_STATES, next) ?? null)
         }
       >
         <SelectTrigger className="w-[150px]" aria-label="Filter by reply state">
@@ -187,7 +193,9 @@ export function ReviewsToolbar({
       </Select>
       <Select
         value={view.sort}
-        onValueChange={(next) => onSort(next as ReviewSort)}
+        onValueChange={(next) =>
+          onSort(literalOf(REVIEW_SORTS, next) ?? "newest")
+        }
       >
         <SelectTrigger className="w-[140px]" aria-label="Sort reviews">
           <SelectValue />

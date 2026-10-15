@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { storeLabel } from "@/lib/format";
+import { literalOf } from "@/lib/literal";
 import { aiStatusOptions } from "@/lib/queries";
 import { replyLanguageName } from "./reply-language";
 import type { ReplyDraft } from "./use-reply-draft";
@@ -85,7 +86,10 @@ export function ReplyDraftControls({
       <div className="flex flex-wrap items-end gap-2">
         <Select
           value={tone}
-          onValueChange={(next) => setTone(next as ReviewReplyTone)}
+          onValueChange={(next) => {
+            const picked = literalOf(REVIEW_REPLY_TONES, next);
+            if (picked) setTone(picked);
+          }}
         >
           <SelectTrigger className="w-[130px] bg-card" aria-label="Tone">
             <SelectValue />
