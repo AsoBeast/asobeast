@@ -37,7 +37,11 @@ export function CountrySelect({
         onValueChange={(next) => onChange(next === OTHER ? "" : next)}
       >
         <SelectTrigger id={id} aria-label={ariaLabel} className="w-[220px]">
-          <SelectValue />
+          <SelectValue>
+            {other
+              ? "Other…"
+              : `${value.toUpperCase()} · ${formatCountry(value)}`}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           {COUNTRY_OPTIONS.map((code) => (

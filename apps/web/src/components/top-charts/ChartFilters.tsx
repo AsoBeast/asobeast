@@ -54,7 +54,7 @@ function DeviceSelect() {
   return (
     <Select value="iphone">
       <SelectTrigger aria-label="Device" className="w-[200px]">
-        <SelectValue />
+        <SelectValue>iPhone</SelectValue>
       </SelectTrigger>
       <SelectContent>
         <SelectItem value="iphone">iPhone</SelectItem>

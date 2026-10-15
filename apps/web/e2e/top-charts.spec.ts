@@ -369,6 +369,21 @@ test("adds a row as a competitor", async ({ page, request }) => {
   await request.post(`${MOCK_API}/__reset/competitors/app-1`);
 });
 
+test("names every chosen filter before hydration", async ({ page }) => {
+  await page.route("**/_next/static/chunks/**", (route) => route.abort());
+  await page.goto("/charts?country=de&genre=6014");
+
+  await expect(page.getByRole("combobox", { name: "Country" })).toHaveText(
+    "DE · Germany",
+  );
+  await expect(page.getByRole("combobox", { name: "Category" })).toHaveText(
+    "Games",
+  );
+  await expect(page.getByRole("combobox", { name: "Device" })).toHaveText(
+    "iPhone",
+  );
+});
+
 test("opens the store", async ({ page }) => {
   await page.goto("/charts");
 
