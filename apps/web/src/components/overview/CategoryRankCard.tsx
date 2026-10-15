@@ -1,7 +1,8 @@
 "use client";
 
 import { Suspense } from "react";
-import type { CategoryRankSeriesItem } from "@asobeast/shared";
+import Link from "next/link";
+import type { AppDetail, CategoryRankSeriesItem } from "@asobeast/shared";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
@@ -27,7 +28,12 @@ import { appDetailOptions, categoryRanksOptions } from "@/lib/queries";
 import { presetToRange, RANGE_PRESETS, type RangePreset } from "@/lib/ranges";
 import { rangeParser } from "@/lib/search-params";
 import { MAX_SERIES } from "@/components/rankings/pivot";
-import { headlineSeries } from "./category-headline";
+import {
+  chartDepthOf,
+  headlineChartHref,
+  headlineSeries,
+  notInChartLabel,
+} from "./category-headline";
 import { ChartNotice, ChartSkeleton } from "@/components/charts/ChartStates";
 import {
   CHART_HEIGHT,
@@ -42,12 +48,15 @@ import {
 
 const Y_TICKS = [1, 25, 50, 100, 150, 200];
 
+const ticksTo = (depth: number) => Y_TICKS.filter((tick) => tick <= depth);
+
 interface CategoryChartData {
   rows: Array<Record<string, string | number | null>>;
   config: ChartConfig;
   seriesLabels: Record<string, string>;
   keys: string[];
   totalSeries: number;
+  depth: number;
 }
 
 function seriesKey(item: CategoryRankSeriesItem): string {
@@ -85,6 +94,7 @@ function buildCategoryChart(all: CategoryRankSeriesItem[]): CategoryChartData {
     seriesLabels,
     keys: series.map(seriesKey),
     totalSeries: all.length,
+    depth: chartDepthOf(series),
   };
 }
 
@@ -119,31 +129,39 @@ function CategoryTooltip({
 
 function HeaderStat({
   series,
-  price,
+  detail,
 }: {
   series: CategoryRankSeriesItem[];
-  price: number | null;
+  detail: AppDetail;
 }) {
-  const headline = headlineSeries(series, price);
+  const headline = headlineSeries(series, detail.latestSnapshot?.price ?? null);
   if (!headline) return null;
+  const href = headlineChartHref(headline, detail);
 
   return (
     <p className="text-sm">
-      {headline.current === null ? (
+      <Link
+        href={href}
+        className="underline decoration-primary underline-offset-4 hover:decoration-2"
+      >
+        {headline.current === null ? (
+          <span className="text-muted-foreground">
+            {notInChartLabel(headline)}
+          </span>
+        ) : (
+          <>
+            <span className="font-mono text-lg font-semibold numeric font-mono">
+              #{headline.current}
+            </span>{" "}
+            <span className="text-muted-foreground">
+              in {headline.genreName}
+            </span>
+          </>
+        )}{" "}
         <span className="text-muted-foreground">
-          Not in top 200 in {headline.genreName}
+          · {headline.collection} chart
         </span>
-      ) : (
-        <>
-          <span className="font-mono text-lg font-semibold numeric font-mono">
-            #{headline.current}
-          </span>{" "}
-          <span className="text-muted-foreground">in {headline.genreName}</span>
-        </>
-      )}{" "}
-      <span className="text-muted-foreground">
-        · {headline.collection} chart
-      </span>
+      </Link>
     </p>
   );
 }
@@ -168,10 +186,7 @@ function CategoryRankBody({ id, range }: { id: string; range: RangePreset }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <HeaderStat
-        series={data.series}
-        price={detail.latestSnapshot?.price ?? null}
-      />
+      <HeaderStat series={data.series} detail={detail} />
       <ChartContainer
         config={chart.config}
         className={`${CHART_HEIGHT.tall} w-full`}
@@ -184,8 +199,8 @@ function CategoryRankBody({ id, range }: { id: string; range: RangePreset }) {
           <YAxis
             {...VALUE_AXIS_PROPS}
             reversed
-            domain={[1, 200]}
-            ticks={Y_TICKS}
+            domain={[1, chart.depth]}
+            ticks={ticksTo(chart.depth)}
             width={40}
             allowDataOverflow
           />

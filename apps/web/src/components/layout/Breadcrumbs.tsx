@@ -20,6 +20,7 @@ import { useCachedQueryData } from "@/lib/use-cached-query-data";
 const WORKSPACE_LABELS: Record<string, string> = {
   "/": "Dashboard",
   "/actions": "Action Center",
+  "/charts": "Top charts",
   "/settings": "Settings",
 };
 

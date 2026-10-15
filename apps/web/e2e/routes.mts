@@ -7,6 +7,7 @@ export const APP = "app-1";
 export const SIGNED_IN_ROUTES = [
   ["portfolio", "/"],
   ["action-center", "/actions"],
+  ["top-charts", "/charts"],
   ["settings", "/settings"],
   ["upgrade", "/upgrade"],
   ["admin-overview", "/admin"],

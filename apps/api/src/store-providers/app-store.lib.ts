@@ -52,6 +52,10 @@ export interface AppStoreListResult {
   id: number | string;
   appId?: string;
   title: string;
+  icon?: string;
+  developer?: string;
+  genreId?: string;
+  free?: boolean;
 }
 
 export interface AppStoreListOptions extends Abortable {
@@ -59,6 +63,7 @@ export interface AppStoreListOptions extends Abortable {
   category?: number;
   num: number;
   country: string;
+  fullDetail: false;
 }
 
 export interface AppStoreReviewResult {

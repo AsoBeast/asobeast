@@ -27,6 +27,7 @@ import {
   VALUE_AXIS_PROPS,
 } from "@/components/charts/theme";
 import { formatDayMonth } from "@/lib/format";
+import { todayUtc } from "@/lib/ranges";
 import { notFoundKey, type RankingChartData } from "./pivot";
 
 const Y_TICKS = [1, 10, 25, 50, 100, 200];
@@ -36,10 +37,6 @@ const RANK_BANDS = [
   { from: 3, to: 10, fill: "var(--rank-band-2)", label: "Top 10" },
   { from: 10, to: 25, fill: "var(--rank-band-3)", label: "Top 25" },
 ] as const;
-
-function todayUtc(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 function RankingTooltip({
   active,

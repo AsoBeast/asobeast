@@ -28,7 +28,7 @@ export const SHARED_COMPETITOR_ID = '222222222';
 export const PASSWORD = 'supersecret1';
 
 export const TENANT_TABLES_TRUNCATE =
-  '"App", "Keyword", "AlertEvent", "Webhook", "EmailAlert", "AlertDelivery", "ApiToken", "WorkspaceInvite", "User"';
+  '"App", "Keyword", "AlertEvent", "Webhook", "EmailAlert", "AlertDelivery", "ApiToken", "WorkspaceInvite", "User", "ChartFollow"';
 
 export interface IsolationWorkspace {
   id: string;
@@ -339,6 +339,17 @@ async function seedWorkspace(
       genre: '6007',
       position: id === 'ws_iso_a' ? 5 : 55,
       depth: 200,
+    },
+  });
+
+  await db.chartFollow.create({
+    data: {
+      workspaceId: id,
+      store: Store.APP_STORE,
+      country: 'us',
+      collection: 'free',
+      genre: '6014',
+      device: 'iphone',
     },
   });
 

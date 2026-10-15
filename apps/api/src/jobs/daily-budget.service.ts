@@ -9,10 +9,10 @@ import {
   StoreDailyBudget,
 } from '@asobeast/shared';
 import { QuotaService } from '../auth/quota.service';
-import { CategoryRanksService } from '../category-ranks/category-ranks.service';
 import { Env } from '../config/env';
 import { DailyCapacity } from './daily-capacity.service';
 import { completionHours, nextDailyRun } from './daily-schedule';
+import { DailyCategoryBuckets } from './daily-category-buckets.service';
 import { DailyTargets, DailyTargetsCollector } from './daily-targets.service';
 import { localizationReads } from './localization-reads';
 import { OverLimitRegistry } from './over-limit.registry';
@@ -24,7 +24,7 @@ const HOUR_MS = 3_600_000;
 export class DailyBudgetService {
   constructor(
     private readonly targets: DailyTargetsCollector,
-    private readonly categoryRanks: CategoryRanksService,
+    private readonly categoryBuckets: DailyCategoryBuckets,
     private readonly capacity: DailyCapacity,
     private readonly quota: QuotaService,
     private readonly overLimit: OverLimitRegistry,
@@ -36,7 +36,7 @@ export class DailyBudgetService {
       this.targets.collect(),
       this.targets.shipped(),
     ]);
-    const buckets = await this.categoryRanks.buckets(
+    const buckets = await this.categoryBuckets.of(
       targets.apps.map((app) => app.id),
     );
 

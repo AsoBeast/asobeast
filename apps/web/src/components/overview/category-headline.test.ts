@@ -4,7 +4,12 @@ import {
   type CategoryRankSeriesItem,
 } from "@asobeast/shared";
 import { describe, expect, it } from "vitest";
-import { headlineSeries } from "./category-headline";
+import {
+  chartDepthOf,
+  headlineChartHref,
+  headlineSeries,
+  notInChartLabel,
+} from "./category-headline";
 
 const LATEST = Date.UTC(2026, 9, 5);
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -182,5 +187,65 @@ describe("headlineSeries", () => {
 
   it("returns nothing when only the other price's chart exists", () => {
     expect(pick([series("free", "6014", [3])], 1.99)).toBeUndefined();
+  });
+});
+
+describe("notInChartLabel", () => {
+  it("says the depth the chart was captured at", () => {
+    expect(
+      notInChartLabel({
+        ...series("free", "6007", [null]),
+        genreName: "Productivity",
+        depth: 100,
+      }),
+    ).toBe("Not in top 100 in Productivity");
+  });
+
+  it("keeps the old depth for a series captured before depth was recorded", () => {
+    expect(notInChartLabel(series("free", "6014", [null]))).toBe(
+      "Not in top 200 in Games",
+    );
+  });
+});
+
+describe("chartDepthOf", () => {
+  it("reads the deepest chart among the series", () => {
+    expect(
+      chartDepthOf([
+        { ...series("free", "6014", [3]), depth: 100 },
+        { ...series("free", OVERALL_GENRE, [80]), depth: 100 },
+      ]),
+    ).toBe(100);
+    expect(
+      chartDepthOf([
+        { ...series("free", "6014", [3]), depth: 100 },
+        series("grossing", "6014", [null]),
+      ]),
+    ).toBe(200);
+  });
+
+  it("answers the old depth without a series", () => {
+    expect(chartDepthOf([])).toBe(200);
+  });
+});
+
+describe("headlineChartHref", () => {
+  const app = { store: "APP_STORE", country: "us" } as const;
+
+  it("opens the chart the headline was read from", () => {
+    expect(headlineChartHref(PAID_FIRST_PAGE[2], app)).toBe(
+      "/charts?store=APP_STORE&country=us&collection=paid&genre=6014&device=iphone",
+    );
+  });
+
+  it("opens the overall chart when that is the headline", () => {
+    expect(
+      headlineChartHref(series("free", OVERALL_GENRE, [12]), {
+        store: "GOOGLE_PLAY",
+        country: "de",
+      }),
+    ).toBe(
+      "/charts?store=GOOGLE_PLAY&country=de&collection=free&genre=overall&device=android",
+    );
   });
 });

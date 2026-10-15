@@ -32,6 +32,7 @@ export class RetentionService {
       ['keywordRanking', () => this.pruneRankings(now)],
       ['serpEntry', () => this.pruneSerp(now)],
       ['categoryRank', () => this.pruneCategoryRanks(now)],
+      ['chartCapture', () => this.pruneChartCaptures(now)],
       ['changeEvent', () => this.pruneChangeEvents(now)],
       ['appSnapshot', () => this.pruneSnapshots(now)],
       ['alertDelivery', () => this.pruneDeliveries(now)],
@@ -106,6 +107,17 @@ export class RetentionService {
       return 0;
     }
     const { count } = await this.prisma.categoryRank.deleteMany({
+      where: { date: { lt: this.cutoff(days, now) } },
+    });
+    return count;
+  }
+
+  private async pruneChartCaptures(now: Date): Promise<number> {
+    const days = this.config.get('RETENTION_CHARTS_DAYS', { infer: true });
+    if (days === 0) {
+      return 0;
+    }
+    const { count } = await this.prisma.chartCapture.deleteMany({
       where: { date: { lt: this.cutoff(days, now) } },
     });
     return count;

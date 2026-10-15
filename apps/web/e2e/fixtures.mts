@@ -10,6 +10,9 @@ import type {
   AppSummary,
   CategoryCollection,
   CategoryRankSeries,
+  ChartEntryItem,
+  ChartMover,
+  ChartPage,
   CategoryRankSeriesItem,
   CompetitorDiscovery,
   DailyBudget,
@@ -685,6 +688,7 @@ export const APP_1_CATEGORY_RANKS: CategoryRankSeries = {
       genre: "overall",
       genreName: "Overall",
       current: 42,
+      depth: 100,
       points: Array.from({ length: 30 }, (_, index) => ({
         date: utcDaysAgo(29 - index),
         position: 60 - index,
@@ -2294,12 +2298,14 @@ function categorySeries(
   genre: string,
   positions: Array<number | null>,
   lastCapturedDaysAgo = 0,
+  depth = 100,
 ): CategoryRankSeriesItem {
   return {
     collection,
     genre,
     genreName: genre === OVERALL_GENRE ? "Overall" : "Games",
     current: positions.at(-1) ?? null,
+    depth,
     points: positions.map((position, index) => ({
       date: utcDaysAgo(lastCapturedDaysAgo + positions.length - 1 - index),
       position,
@@ -4822,3 +4828,143 @@ export const PROVISIONAL_AUDIT: AppAuditResult = {
     },
   ],
 };
+
+const TOP_CHART_ICON = (slug: string) =>
+  `https://is1-ssl.mzstatic.com/image/thumb/e2e-${slug}/100x100bb.png`;
+
+function chartRow(
+  position: number,
+  title: string,
+  previous: number | null,
+  overrides: Partial<ChartEntryItem> = {},
+): ChartEntryItem {
+  const slug = title.toLowerCase().replaceAll(" ", "-");
+  const delta = previous === null ? null : position - previous;
+  return {
+    position,
+    storeAppId: String(6_400_000_000 + position),
+    title,
+    developer: `${title} Labs`,
+    iconUrl: position <= 2 ? TOP_CHART_ICON(slug) : null,
+    genreId: "6014",
+    genreName: "Games",
+    free: true,
+    previous,
+    delta,
+    movement:
+      delta === null ? "new" : delta < 0 ? "up" : delta > 0 ? "down" : "same",
+    ...overrides,
+  };
+}
+
+export const TOP_CHART_APPS: ChartEntryItem[] = [
+  chartRow(1, "Puzzle Quest", 3),
+  chartRow(2, "Tower Builder", 1),
+  chartRow(3, "Word Garden", 3),
+  chartRow(4, "Star Racer", null),
+  chartRow(5, "Card Castle", 9, { free: false }),
+  chartRow(6, "Ocean Match", 5),
+  chartRow(7, "Farm Story", null, { developer: null }),
+  chartRow(8, "Block Drop", 12),
+  chartRow(9, "Chess Club", 7, { developer: null, genreName: "Board" }),
+  chartRow(10, "Bubble Pop", 10),
+];
+
+export const TOP_CHART_DATES = [1, 2, 3, 5, 8].map(utcDaysAgo);
+
+const moverOf = (row: ChartEntryItem): ChartMover => ({
+  storeAppId: row.storeAppId,
+  title: row.title,
+  developer: row.developer,
+  iconUrl: row.iconUrl,
+  position: row.position,
+  previous: row.previous,
+  delta: row.delta,
+});
+
+const exitOf = (title: string, previous: number): ChartMover => ({
+  ...moverOf(chartRow(previous, title, previous)),
+  storeAppId: String(6_500_000_000 + previous),
+  position: null,
+  delta: null,
+});
+
+const CHART_KEY = {
+  store: "APP_STORE",
+  country: "us",
+  collection: "free",
+  genre: "6014",
+  device: "iphone",
+} as const;
+
+export function topChartPage(date: string = TOP_CHART_DATES[0]): ChartPage {
+  const previous = TOP_CHART_DATES[TOP_CHART_DATES.indexOf(date) + 1];
+  return {
+    chart: { ...CHART_KEY, genreName: "Games" },
+    capture: { date, depth: 100, capturedAt: `${date}T03:10:00.000Z` },
+    comparison: previous
+      ? { date: previous, depth: 100, capturedAt: `${previous}T03:10:00.000Z` }
+      : null,
+    compare: "1d",
+    entries: TOP_CHART_APPS,
+    trending: {
+      climbers: [TOP_CHART_APPS[7], TOP_CHART_APPS[4]].map(moverOf),
+      fallers: [TOP_CHART_APPS[1], TOP_CHART_APPS[5]].map(moverOf),
+      entries: [TOP_CHART_APPS[3], TOP_CHART_APPS[6]].map(moverOf),
+      exits: [exitOf("Snake Run", 4), exitOf("Gem Rush", 8)],
+    },
+    dates: TOP_CHART_DATES,
+    today: utcDaysAgo(0),
+    followed: null,
+    apps: [
+      {
+        storeAppId: TOP_CHART_APPS[2].storeAppId,
+        appId: APP_1.id,
+        primaryAppId: null,
+        name: APP_1.name,
+        role: "own",
+      },
+      {
+        storeAppId: TOP_CHART_APPS[4].storeAppId,
+        appId: "competitor-chart",
+        primaryAppId: APP_1.id,
+        name: APP_1.name,
+        role: "competitor",
+      },
+    ],
+  };
+}
+
+export const TOP_CHART_PAGE_EMPTY: ChartPage = {
+  ...topChartPage(),
+  capture: null,
+  comparison: null,
+  entries: [],
+  trending: { climbers: [], fallers: [], entries: [], exits: [] },
+};
+
+export const TOP_CHART_PAGE_UNCAPTURED: ChartPage = {
+  ...TOP_CHART_PAGE_EMPTY,
+  dates: [],
+};
+
+export function chartCaptureSpent(path: string): ApiErrorEnvelope {
+  return {
+    statusCode: 429,
+    error: "Too Many Requests",
+    message:
+      "Chart capture limit reached: the indie plan allows 30 requests per day. Try again in 3 hours.",
+    path,
+    timestamp: new Date().toISOString(),
+    rateLimit: {
+      window: "day",
+      rateClass: "store",
+      plan: "indie",
+      limit: 30,
+      resetSeconds: 10_800,
+      upgradeTo: "ultimate",
+      action: "chartCapture",
+    },
+    retryAfterSeconds: 10_800,
+  };
+}

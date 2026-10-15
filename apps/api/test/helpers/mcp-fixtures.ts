@@ -24,6 +24,8 @@ export class FakeRegistry {
       search: () => Promise.resolve([]),
       suggest: () => Promise.resolve([]),
       similar: () => Promise.resolve([]),
+      topCharts: () =>
+        Promise.resolve([{ storeAppId: FIXTURE.storeAppId, title: 'Rival' }]),
       availability: (_id: string, countries: string[]) =>
         Promise.resolve(
           countries.map((country) => ({

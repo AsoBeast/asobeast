@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
   AppStoreLocalization,
   CategoryCollection,
+  CHART_DEPTH,
   MarketAvailability,
   MarketAvailabilityResult,
   OVERALL_GENRE,
@@ -29,9 +30,9 @@ import {
   StoreProvider,
   SuggestItem,
 } from './types';
+import { toChartItem } from './chart-item';
 
 const RETRY_DELAYS_MS = [2000, 5000];
-const CHART_MAX = 200;
 
 const COLLECTION_CONSTANTS: Record<CategoryCollection, string> = {
   free: 'topfreeapplications',
@@ -110,15 +111,22 @@ export class AppStoreProvider implements StoreProvider {
       this.lib.list({
         collection: COLLECTION_CONSTANTS[collection],
         ...(genre === OVERALL_GENRE ? {} : { category: Number(genre) }),
-        num: Math.min(num, CHART_MAX),
+        num: Math.min(num, CHART_DEPTH.APP_STORE),
         country,
+        fullDetail: false,
         ...deadline,
       }),
     );
-    return results.map((item) => ({
-      storeAppId: String(item.id),
-      title: item.title,
-    }));
+    return results.map((item) =>
+      toChartItem({
+        storeAppId: String(item.id),
+        title: item.title,
+        developer: item.developer,
+        iconUrl: item.icon,
+        genreId: item.genreId,
+        free: item.free,
+      }),
+    );
   }
 
   async reviews(

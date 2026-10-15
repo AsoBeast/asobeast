@@ -30,6 +30,7 @@ const workspace: WorkspaceMetrics = {
     importApp: 1,
     addCompetitor: 4,
     storeLookup: 5,
+    chartCapture: 0,
   },
   aiCallsMonth: 12,
   aiTokensMonth: { input: 9_000, cachedInput: 1_024, output: 1_400 },

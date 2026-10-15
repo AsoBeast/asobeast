@@ -12,12 +12,12 @@ import {
   primaryGenreKey,
   primaryGenreName,
 } from '../store-providers/raw-facts';
-import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
+import { ChartCaptureService } from '../charts/chart-capture.service';
+import { chartKeyOf } from '../charts/chart-key';
 import { CheckCategoryPayload } from '../jobs/jobs.types';
 import { CategoryRankHistoryQueryDto } from './dto/category-rank-history-query.dto';
 import { LATEST_HOME_LISTING } from '../apps/listing';
 
-const CHART_DEPTH = 200;
 const DEFAULT_HISTORY_DAYS = 90;
 const MAX_HISTORY_DAYS = 365;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -77,7 +77,7 @@ function toDateKey(date: Date): string {
 export class CategoryRanksService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly registry: StoreProviderRegistry,
+    private readonly charts: ChartCaptureService,
   ) {}
 
   async buckets(appIds: string[]): Promise<CategoryBucket[]> {
@@ -102,16 +102,12 @@ export class CategoryRanksService {
 
   async checkCategory(payload: CheckCategoryPayload): Promise<void> {
     const { collection, genre, country, store } = payload;
-    const items = await this.registry
-      .get(store)
-      .topCharts(collection, genre, CHART_DEPTH, country);
-
-    const positionByStoreAppId = new Map<string, number>();
-    items.forEach((item, index) => {
-      if (!positionByStoreAppId.has(item.storeAppId)) {
-        positionByStoreAppId.set(item.storeAppId, index + 1);
-      }
-    });
+    const chart = await this.charts.captureToday(
+      chartKeyOf({ collection, genre, country, store }),
+    );
+    const positionByStoreAppId = new Map(
+      chart.entries.map((entry) => [entry.storeAppId, entry.position]),
+    );
 
     const rows = await this.loadAppBuckets({ store, country });
     const date = utcToday();
@@ -138,9 +134,9 @@ export class CategoryRanksService {
           collection,
           genre,
           position,
-          depth: CHART_DEPTH,
+          depth: chart.depth,
         },
-        update: { position, depth: CHART_DEPTH },
+        update: { position, depth: chart.depth },
       });
     }
   }
@@ -174,7 +170,13 @@ export class CategoryRanksService {
     const ranks = await this.prisma.categoryRank.findMany({
       where: { appId, date: { gte: from, lte: to } },
       orderBy: [{ collection: 'asc' }, { genre: 'asc' }, { date: 'asc' }],
-      select: { collection: true, genre: true, date: true, position: true },
+      select: {
+        collection: true,
+        genre: true,
+        date: true,
+        position: true,
+        depth: true,
+      },
     });
 
     const genreName = primaryGenreName(app.store, app.snapshots[0]?.raw);
@@ -195,6 +197,7 @@ export class CategoryRanksService {
       }
       item.points.push({ date: toDateKey(rank.date), position: rank.position });
       item.current = rank.position;
+      item.depth = rank.depth;
     }
 
     return { series: [...groups.values()] };

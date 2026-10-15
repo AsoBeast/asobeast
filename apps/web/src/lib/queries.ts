@@ -1,5 +1,7 @@
 import type {
   AlertChannel,
+  ChartFollowItem,
+  ChartPage,
   AppAuditResult,
   EmailAlertItem,
   FirstRunStatus,
@@ -11,11 +13,14 @@ import type {
 } from "@asobeast/shared";
 import { QUERY_BOUNDS } from "@asobeast/shared";
 import {
+  hashKey,
   queryOptions,
   skipToken,
   type QueryClient,
 } from "@tanstack/react-query";
 import {
+  getChart,
+  listChartFollows,
   getAction,
   getActionActivity,
   getAdminApps,
@@ -87,6 +92,7 @@ import {
   type ActionActivityScope,
   type ActionFilters,
   type ActionSummaryScope,
+  type ChartPageQuery,
   type RangeParams,
   type RankingParams,
   type ReviewFilters,
@@ -394,6 +400,57 @@ export const portfolioInsightsOptions = queryOptions({
   queryFn: getPortfolioInsights,
   staleTime: 60_000,
 });
+
+export const chartKeys = {
+  all: ["charts"] as const,
+  pages: ["charts", "page"] as const,
+  page: (query: ChartPageQuery) => [...chartKeys.pages, query] as const,
+  follows: ["charts", "follows"] as const,
+};
+
+export const chartFollowsOptions = queryOptions({
+  queryKey: chartKeys.follows,
+  queryFn: listChartFollows,
+  staleTime: 60_000,
+});
+
+export const chartPageOptions = (query: ChartPageQuery) =>
+  queryOptions({
+    queryKey: chartKeys.page(query),
+    queryFn: () => getChart(query),
+    staleTime: 5 * 60 * 1000,
+  });
+
+export function invalidateChartMutation(client: QueryClient): void {
+  void client.invalidateQueries({ queryKey: chartKeys.all });
+}
+
+export function forgetChartFollow(client: QueryClient, id: string): void {
+  client.setQueryData<ChartFollowItem[]>(chartKeys.follows, (follows) =>
+    follows?.filter((follow) => follow.id !== id),
+  );
+  client.setQueriesData<ChartPage>({ queryKey: chartKeys.pages }, (page) =>
+    page?.followed?.id === id ? { ...page, followed: null } : page,
+  );
+  invalidateChartMutation(client);
+}
+
+export function seedChartCapture(client: QueryClient, page: ChartPage): void {
+  const { store, country, collection, genre, device } = page.chart;
+  const seeded = chartKeys.page({
+    store,
+    country,
+    collection,
+    genre,
+    device,
+    compare: page.compare,
+  });
+  client.setQueryData(seeded, page);
+  void client.invalidateQueries({
+    queryKey: chartKeys.all,
+    predicate: (query) => query.queryHash !== hashKey(seeded),
+  });
+}
 
 export const actionKeys = {
   all: ["actions"] as const,

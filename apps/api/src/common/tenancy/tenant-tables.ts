@@ -14,6 +14,7 @@ export const TENANT_TABLES = [
   'AuditScore',
   'CategoryRank',
   'ChangeEvent',
+  'ChartFollow',
   'EmailAlert',
   'KeywordField',
   'KeywordRanking',
@@ -28,6 +29,8 @@ export const TENANT_TABLES = [
 ] as const;
 
 export const SHARED_STORE_TABLES = [
+  'ChartCapture',
+  'ChartEntry',
   'Keyword',
   'KeywordMetric',
   'ScreenshotText',

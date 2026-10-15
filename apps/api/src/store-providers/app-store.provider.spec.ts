@@ -386,7 +386,7 @@ describe('AppStoreProvider', () => {
     ]);
     const provider = new AppStoreProvider(makeLib({ list }));
 
-    const items = await provider.topCharts('paid', '6007', 200, 'us');
+    const items = await provider.topCharts('paid', '6007', 100, 'us');
 
     expect(items).toEqual([
       { storeAppId: '111', title: 'First' },
@@ -395,21 +395,67 @@ describe('AppStoreProvider', () => {
     expect(list).toHaveBeenCalledWith({
       collection: 'toppaidapplications',
       category: 6007,
-      num: 200,
+      num: 100,
       country: 'us',
+      fullDetail: false,
     });
   });
 
-  it('omits the category for the overall genre and caps num at 200', async () => {
+  it('maps a chart row with its listing fields', async () => {
+    const icon = 'https://is1-ssl.mzstatic.com/image/thumb/a/100x100bb.png';
+    const list = jest.fn().mockResolvedValue([
+      {
+        id: 111,
+        appId: 'com.a',
+        title: 'First',
+        icon,
+        developer: 'Acme',
+        genreId: '6007',
+        free: true,
+      },
+      { id: 222, title: 'Second' },
+    ]);
+    const provider = new AppStoreProvider(makeLib({ list }));
+
+    const items = await provider.topCharts('free', '6007', 100, 'us');
+
+    expect(items).toStrictEqual([
+      {
+        storeAppId: '111',
+        title: 'First',
+        developer: 'Acme',
+        iconUrl: icon,
+        genreId: '6007',
+        free: true,
+      },
+      { storeAppId: '222', title: 'Second' },
+    ]);
+  });
+
+  it('leaves out a listing field the feed answered empty', async () => {
+    const list = jest
+      .fn()
+      .mockResolvedValue([
+        { id: 111, title: 'First', icon: '', developer: '', genreId: '' },
+      ]);
+    const provider = new AppStoreProvider(makeLib({ list }));
+
+    await expect(
+      provider.topCharts('free', '6007', 100, 'us'),
+    ).resolves.toStrictEqual([{ storeAppId: '111', title: 'First' }]);
+  });
+
+  it('caps num at 100 and asks for the feed rows only', async () => {
     const list = jest.fn().mockResolvedValue([]);
     const provider = new AppStoreProvider(makeLib({ list }));
 
-    await provider.topCharts('free', 'overall', 500, 'us');
+    await provider.topCharts('free', 'overall', 200, 'us');
 
     expect(list).toHaveBeenCalledWith({
       collection: 'topfreeapplications',
-      num: 200,
+      num: 100,
       country: 'us',
+      fullDetail: false,
     });
   });
 

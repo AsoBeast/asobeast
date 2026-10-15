@@ -843,7 +843,7 @@ test.describe("on the locale lab", () => {
 
       await expect(
         dialog(page).getByText(
-          "keywordMarkets limit reached: 998 of 1000 used on the indie plan, 5 more requested",
+          "Keyword markets limit reached: 998 of 1000 used on the indie plan, 5 more requested",
         ),
       ).toBeVisible();
       await expect(

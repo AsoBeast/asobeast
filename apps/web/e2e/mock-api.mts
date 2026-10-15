@@ -89,6 +89,12 @@ import {
   SIMILAR_APPS,
   STORE_SEARCH,
   storeLookupRefusedEnvelope,
+  chartCaptureSpent,
+  TOP_CHART_DATES,
+  TOP_CHART_PAGE_EMPTY,
+  TOP_CHART_PAGE_UNCAPTURED,
+  topChartPage,
+  utcDaysAgo,
   MARKET_SUGGESTIONS,
   DEFAULT_SEED_TEXTS,
   SEED_REFUSED_MESSAGE,
@@ -189,6 +195,13 @@ import {
   isStorefront,
   UnknownStorefrontError,
   setupSummary,
+  chartGenreName,
+  isChartGenre,
+  STORES,
+  type ChartFollowItem,
+  type ChartKey,
+  type ChartPage,
+  type Store,
 } from "@asobeast/shared";
 import { SETUP_SESSION_COOKIE } from "./setup-session.mts";
 import {
@@ -1223,7 +1236,7 @@ function keywordQuotaRefusal(
     ...errorEnvelope(
       403,
       path,
-      `keywordMarkets limit reached: ${used} of ${limit} used on the indie plan, ${requested} more requested`,
+      `Keyword markets limit reached: ${used} of ${limit} used on the indie plan, ${requested} more requested`,
     ),
     quota: {
       resource: "keywordMarkets",
@@ -1764,7 +1777,202 @@ const unsubscribeCalls = new Map<string, number>();
 const confirmCalls = new Map<string, number>();
 const resendCalls = new Map<string, number>();
 
+const chartFollows: ChartFollowItem[] = [];
+const chartCaptures: ChartKey[] = [];
+
+function chartKeyOf(source: URLSearchParams | ChartKey): ChartKey {
+  const read = (name: keyof ChartKey) =>
+    source instanceof URLSearchParams ? (source.get(name) ?? "") : source[name];
+  return {
+    store: read("store") as ChartKey["store"],
+    country: read("country"),
+    collection: read("collection") as ChartKey["collection"],
+    genre: read("genre"),
+    device: read("device") as ChartKey["device"],
+  };
+}
+
+const sameChart = (a: ChartKey, b: ChartKey) =>
+  (Object.keys(a) as (keyof ChartKey)[]).every((name) => a[name] === b[name]);
+
+function capturedTodayPage(): ChartPage {
+  const today = utcDaysAgo(0);
+  return {
+    ...topChartPage(),
+    capture: { date: today, depth: 100, capturedAt: `${today}T09:00:00.000Z` },
+    dates: [today, ...TOP_CHART_DATES],
+  };
+}
+
+function chartPageFor(
+  req: IncomingMessage,
+  key: ChartKey,
+  date: string | null,
+): ChartPage {
+  if (hasCookie(req, "e2e_chart_uncaptured", "1")) {
+    return TOP_CHART_PAGE_UNCAPTURED;
+  }
+  const captured = chartCaptures.some((body) => sameChart(body, key));
+  if (captured && (!date || date === utcDaysAgo(0))) {
+    return capturedTodayPage();
+  }
+  if (!date) return topChartPage();
+  return TOP_CHART_DATES.includes(date)
+    ? topChartPage(date)
+    : TOP_CHART_PAGE_EMPTY;
+}
+
+function withComparison(
+  page: ChartPage,
+  compare: ChartPage["compare"],
+): ChartPage {
+  if (compare !== "30d") return { ...page, compare };
+  return {
+    ...page,
+    compare,
+    comparison: null,
+    entries: page.entries.map((entry) => ({
+      ...entry,
+      previous: null,
+      delta: null,
+      movement: "none",
+    })),
+    trending: { climbers: [], fallers: [], entries: [], exits: [] },
+  };
+}
+
+function asListedBy(store: Store, page: ChartPage): ChartPage {
+  if (store !== "GOOGLE_PLAY") return page;
+  return {
+    ...page,
+    entries: page.entries.map((entry) => ({
+      ...entry,
+      genreId: null,
+      genreName: null,
+    })),
+  };
+}
+
+function chartAnswer(req: IncomingMessage): [number, unknown] {
+  const path = req.url ?? "/charts";
+  const query = new URL(path, "http://localhost").searchParams;
+  const store = query.get("store") ?? "";
+  const genre = query.get("genre") ?? "";
+  if (
+    !STORES.includes(store as Store) ||
+    !isChartGenre(store as Store, genre)
+  ) {
+    return [400, errorEnvelope(400, path)];
+  }
+  const compare = (query.get("compare") ?? "1d") as ChartPage["compare"];
+  const key = chartKeyOf(query);
+  const page = asListedBy(
+    key.store,
+    withComparison(chartPageFor(req, key, query.get("date")), compare),
+  );
+  const followed =
+    chartFollows.find((follow) => sameChart(chartKeyOf(follow), key)) ?? null;
+  return [
+    200,
+    {
+      ...page,
+      today: cookieValue(req, "e2e_chart_api_day") ?? page.today,
+      followed,
+      chart: { ...key, genreName: chartGenreName(key.store, genre) ?? genre },
+    },
+  ];
+}
+
 const routes: Route[] = [
+  {
+    method: "GET",
+    pattern: /^\/charts$/,
+    handler: (_p, req, res) => json(res, ...chartAnswer(req)),
+  },
+  {
+    method: "POST",
+    pattern: /^\/charts\/capture$/,
+    handler: (_p, req, res) =>
+      withBody<ChartKey>(req, res, (body) => {
+        if (hasCookie(req, "e2e_chart_capture_spent", "1")) {
+          return json(
+            res,
+            429,
+            chartCaptureSpent(req.url ?? "/charts/capture"),
+          );
+        }
+        chartCaptures.push(chartKeyOf(body));
+        json(res, 200, {
+          ...capturedTodayPage(),
+          chart: {
+            ...chartKeyOf(body),
+            genreName: chartGenreName(body.store, body.genre) ?? body.genre,
+          },
+        });
+      }),
+  },
+  {
+    method: "GET",
+    pattern: /^\/charts\/follows$/,
+    handler: (_p, _req, res) => json(res, 200, chartFollows),
+  },
+  {
+    method: "POST",
+    pattern: /^\/charts\/follows$/,
+    handler: (_p, req, res) =>
+      withBody<ChartKey>(req, res, (body) => {
+        const key = chartKeyOf(body);
+        const existing = chartFollows.find((follow) =>
+          sameChart(chartKeyOf(follow), key),
+        );
+        if (existing) return json(res, 200, existing);
+        const follow: ChartFollowItem = {
+          ...key,
+          id: `follow-${chartFollows.length + 1}`,
+          genreName: chartGenreName(key.store, key.genre) ?? key.genre,
+          createdAt: new Date().toISOString(),
+        };
+        chartFollows.push(follow);
+        json(res, 201, follow);
+      }),
+  },
+  {
+    method: "DELETE",
+    pattern: /^\/charts\/follows\/([^/]+)$/,
+    handler: ([id], req, res) => {
+      const index = chartFollows.findIndex((follow) => follow.id === id);
+      if (index < 0) return json(res, 404, errorEnvelope(404, req.url ?? "/"));
+      chartFollows.splice(index, 1);
+      res.writeHead(204).end();
+    },
+  },
+  {
+    method: "GET",
+    pattern: /^\/__chart-follows$/,
+    handler: (_p, _req, res) => json(res, 200, chartFollows),
+  },
+  {
+    method: "GET",
+    pattern: /^\/__reset-chart-follows$/,
+    handler: (_p, _req, res) => {
+      chartFollows.splice(0, chartFollows.length);
+      json(res, 200, { reset: true });
+    },
+  },
+  {
+    method: "GET",
+    pattern: /^\/__forget-chart-captures\/([^/]+)$/,
+    handler: ([genre], _req, res) => {
+      const kept = chartCaptures.filter((key) => key.genre !== genre);
+      chartCaptures.splice(0, chartCaptures.length, ...kept);
+      json(res, 200, { forgotten: genre });
+    },
+  },
+  {
+    method: "GET",
+    pattern: /^\/__chart-captures$/,
+    handler: (_p, _req, res) => json(res, 200, chartCaptures),
+  },
   {
     method: "GET",
     pattern: /^\/__unsubscribes\/([^/]+)$/,
@@ -2522,7 +2730,7 @@ const routes: Route[] = [
             ...errorEnvelope(
               403,
               path,
-              `keywordMarkets limit reached: ${used} of ${limit} used on the indie plan, ${activating.length} more requested`,
+              `Keyword markets limit reached: ${used} of ${limit} used on the indie plan, ${activating.length} more requested`,
             ),
             quota: {
               resource: "keywordMarkets",
@@ -2585,7 +2793,7 @@ const routes: Route[] = [
             ...errorEnvelope(
               403,
               path,
-              "keywordMarkets limit reached: 998 of 1000 used on the indie plan, 5 more requested",
+              "Keyword markets limit reached: 998 of 1000 used on the indie plan, 5 more requested",
             ),
             quota: {
               resource: "keywordMarkets",

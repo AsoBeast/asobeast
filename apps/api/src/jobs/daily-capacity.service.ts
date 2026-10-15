@@ -19,8 +19,8 @@ export class DailyCapacity {
     if (!this.pool.enabled) {
       return this.hostRpm(store) * MINUTES_PER_DAY;
     }
-    const healthy = await this.poolCapacity.healthy(store);
-    return healthy * this.pool.endpointRpm * MINUTES_PER_DAY;
+    const usable = await this.poolCapacity.usable(store);
+    return usable * this.pool.endpointRpm * MINUTES_PER_DAY;
   }
 
   private hostRpm(store: Store): number {
