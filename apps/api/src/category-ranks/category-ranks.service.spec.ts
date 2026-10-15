@@ -47,6 +47,13 @@ const makeService = (
   return { service, upsert, captureToday, prisma };
 };
 
+const bucket = (collection: string, genre: string) => ({
+  collection,
+  genre,
+  country: 'us',
+  store: 'APP_STORE',
+});
+
 describe('CategoryRanksService buckets', () => {
   it('schedules an app stored the way the App Store scraper maps it', async () => {
     const { service } = makeService([
@@ -56,25 +63,12 @@ describe('CategoryRanksService buckets', () => {
     const buckets = await service.buckets(['a1']);
 
     expect(buckets).toEqual([
-      { collection: 'free', genre: '6027', country: 'us', store: 'APP_STORE' },
-      {
-        collection: 'free',
-        genre: 'overall',
-        country: 'us',
-        store: 'APP_STORE',
-      },
-      {
-        collection: 'grossing',
-        genre: '6027',
-        country: 'us',
-        store: 'APP_STORE',
-      },
-      {
-        collection: 'grossing',
-        genre: 'overall',
-        country: 'us',
-        store: 'APP_STORE',
-      },
+      bucket('free', '6027'),
+      bucket('free', 'overall'),
+      bucket('paid', '6027'),
+      bucket('paid', 'overall'),
+      bucket('grossing', '6027'),
+      bucket('grossing', 'overall'),
     ]);
   });
 
@@ -99,29 +93,16 @@ describe('CategoryRanksService buckets', () => {
     const buckets = await service.buckets(['a1', 'a2']);
 
     expect(buckets).toEqual([
-      { collection: 'free', genre: '6007', country: 'us', store: 'APP_STORE' },
-      {
-        collection: 'free',
-        genre: 'overall',
-        country: 'us',
-        store: 'APP_STORE',
-      },
-      {
-        collection: 'grossing',
-        genre: '6007',
-        country: 'us',
-        store: 'APP_STORE',
-      },
-      {
-        collection: 'grossing',
-        genre: 'overall',
-        country: 'us',
-        store: 'APP_STORE',
-      },
+      bucket('free', '6007'),
+      bucket('free', 'overall'),
+      bucket('paid', '6007'),
+      bucket('paid', 'overall'),
+      bucket('grossing', '6007'),
+      bucket('grossing', 'overall'),
     ]);
   });
 
-  it('schedules grossing for every app alongside its price collection', async () => {
+  it('schedules every chart kind for an app whatever its price', async () => {
     const { service } = makeService([
       app('a1', '111', { primaryGenreId: '6007', price: 2.99 }),
     ]);
@@ -130,10 +111,10 @@ describe('CategoryRanksService buckets', () => {
       (bucket) => bucket.collection,
     );
 
-    expect(new Set(collections)).toEqual(new Set(['paid', 'grossing']));
+    expect(new Set(collections)).toEqual(new Set(['free', 'paid', 'grossing']));
   });
 
-  it('splits free and paid apps into separate collections', async () => {
+  it('schedules one bucket per kind however the apps are priced', async () => {
     const { service } = makeService([
       app('a1', '111', { primaryGenreId: '6007', price: 0 }),
       app('a2', '222', { primaryGenreId: '6014', price: 2.99 }),
@@ -142,38 +123,15 @@ describe('CategoryRanksService buckets', () => {
     const buckets = await service.buckets(['a1', 'a2']);
 
     expect(buckets).toEqual([
-      { collection: 'free', genre: '6007', country: 'us', store: 'APP_STORE' },
-      {
-        collection: 'free',
-        genre: 'overall',
-        country: 'us',
-        store: 'APP_STORE',
-      },
-      {
-        collection: 'grossing',
-        genre: '6007',
-        country: 'us',
-        store: 'APP_STORE',
-      },
-      {
-        collection: 'grossing',
-        genre: 'overall',
-        country: 'us',
-        store: 'APP_STORE',
-      },
-      { collection: 'paid', genre: '6014', country: 'us', store: 'APP_STORE' },
-      {
-        collection: 'paid',
-        genre: 'overall',
-        country: 'us',
-        store: 'APP_STORE',
-      },
-      {
-        collection: 'grossing',
-        genre: '6014',
-        country: 'us',
-        store: 'APP_STORE',
-      },
+      bucket('free', '6007'),
+      bucket('free', 'overall'),
+      bucket('paid', '6007'),
+      bucket('paid', 'overall'),
+      bucket('grossing', '6007'),
+      bucket('grossing', 'overall'),
+      bucket('free', '6014'),
+      bucket('paid', '6014'),
+      bucket('grossing', '6014'),
     ]);
   });
 
@@ -248,6 +206,32 @@ describe('CategoryRanksService checkCategory', () => {
       genre: 'GAME_PUZZLE',
       device: 'android',
     });
+  });
+
+  it('writes no rank row for an app in a chart its price class never enters', async () => {
+    const { service, upsert } = makeService(
+      [
+        app('a1', '111', { primaryGenreId: '6007', price: 0 }),
+        app('a2', '222', { primaryGenreId: '6007', price: 4.99 }),
+      ],
+      [{ storeAppId: '222', title: 'Second' }],
+    );
+
+    await service.checkCategory({
+      collection: 'paid',
+      genre: '6007',
+      country: 'us',
+      store: 'APP_STORE',
+      workspaceId: 'ws_default',
+    });
+
+    const positions = upsert.mock.calls.map(
+      ([arg]) =>
+        (arg as { create: { appId: string; position: number | null } }).create,
+    );
+    expect(positions).toEqual([
+      expect.objectContaining({ appId: 'a2', position: 1 }),
+    ]);
   });
 
   it('matches every collection member for the overall genre bucket', async () => {

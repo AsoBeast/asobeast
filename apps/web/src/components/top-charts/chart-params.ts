@@ -15,8 +15,11 @@ import {
 } from "@asobeast/shared";
 import type { ChartPageQuery } from "@/lib/api";
 import { formatCountry } from "@/lib/format";
+import type { ChartView } from "@/lib/search-params";
+import type { ChartCategory } from "./chart-follows";
 
 export interface ChartSearch {
+  view: ChartView;
   store: Store;
   country: string;
   collection: CategoryCollection;
@@ -30,13 +33,19 @@ export type ChartSearchUpdate = {
   [Key in keyof ChartSearch]?: ChartSearch[Key] | null;
 };
 
+export const COLLECTION_LABELS: Record<CategoryCollection, string> = {
+  free: "Free",
+  paid: "Paid",
+  grossing: "Grossing",
+};
+
 const COLLECTION_TITLES: Record<CategoryCollection, string> = {
   free: "Top free",
   paid: "Top paid",
   grossing: "Top grossing",
 };
 
-export function chartKeyFrom(search: ChartSearch): ChartKey {
+export function chartKeyFrom(search: Omit<ChartSearch, "view">): ChartKey {
   const { store, collection } = search;
   return {
     store,
@@ -57,7 +66,9 @@ export function shownChartKey(page: Pick<ChartPage, "chart">): ChartKey {
   return { store, country, collection, genre, device };
 }
 
-export function chartQueryFrom(search: ChartSearch): ChartPageQuery {
+export function chartQueryFrom(
+  search: Omit<ChartSearch, "view">,
+): ChartPageQuery {
   return {
     ...chartKeyFrom(search),
     compare: search.compare,
@@ -65,22 +76,39 @@ export function chartQueryFrom(search: ChartSearch): ChartPageQuery {
   };
 }
 
-export function chartTitle(key: ChartKey): string {
+export function categoryTitle(category: ChartCategory): string {
   return [
-    COLLECTION_TITLES[key.collection],
-    chartGenreName(key.store, key.genre) ?? key.genre,
-    formatCountry(key.country),
+    chartGenreName(category.store, category.genre) ?? category.genre,
+    formatCountry(category.country),
   ].join(" · ");
 }
 
-export function chartHref(key: ChartKey): string {
-  const params = new URLSearchParams({
-    store: key.store,
-    country: key.country,
-    collection: key.collection,
-    genre: key.genre,
-    device: key.device,
+export function chartTitle(key: ChartKey): string {
+  return [COLLECTION_TITLES[key.collection], categoryTitle(key)].join(" · ");
+}
+
+function categoryParams(category: ChartCategory): URLSearchParams {
+  return new URLSearchParams({
+    store: category.store,
+    country: category.country,
+    genre: category.genre,
+    device: category.device,
   });
+}
+
+export function chartHref(category: ChartCategory): string {
+  return `/charts?${categoryParams(category).toString()}`;
+}
+
+export function tableHref(
+  key: ChartKey,
+  { compare, date }: Partial<Pick<ChartSearch, "compare" | "date">> = {},
+): string {
+  const params = categoryParams(key);
+  params.set("view", "table");
+  params.set("collection", key.collection);
+  if (compare && compare !== "1d") params.set("compare", compare);
+  if (date) params.set("date", date);
   return `/charts?${params.toString()}`;
 }
 

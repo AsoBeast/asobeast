@@ -44,8 +44,10 @@ import {
   actionStatusParser,
   APP_SORTS,
   APP_VIEWS,
+  CHART_VIEWS,
   appSortParser,
   appViewParser,
+  chartViewParser,
   CHANGE_OWNERS,
   changeDaysParser,
   changeOwnerParser,
@@ -116,6 +118,7 @@ const LITERAL_PARSERS: readonly LiteralParserCase[] = [
   ["changeOwner", changeOwnerParser, CHANGE_OWNERS, "all"],
   ["appSort", appSortParser, APP_SORTS, "visibility"],
   ["appView", appViewParser, APP_VIEWS, "cards"],
+  ["chartView", chartViewParser, CHART_VIEWS, "columns"],
 ] as const;
 
 const NUMERIC_PARSERS = [
@@ -350,6 +353,7 @@ describe("chart parsers", () => {
   it("leaves the default chart out of the url", () => {
     expect(
       serialize({
+        view: "columns",
         store: "APP_STORE",
         country: "",
         collection: "free",
@@ -378,6 +382,7 @@ describe("chart parsers", () => {
     expect(chartTableParsers.sort.parseServerSide(undefined)).toBe("position");
     expect(chartTableParsers.sort.parseServerSide("rating")).toBe("position");
     expect(chartTableParsers.sort.parseServerSide("app")).toBe("app");
+    expect(chartTableParsers.sort.parseServerSide("genre")).toBe("genre");
   });
 });
 

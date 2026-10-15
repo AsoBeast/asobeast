@@ -80,7 +80,9 @@ A class is also not a permission. A read only token may call any endpoint that d
 | App imports per day | 10 | 100 |
 | Competitors added per day | 60 | 300 |
 | Top chart captures per day | 30 | 150 |
-| Followed top charts | 10 | 50 |
+| Followed chart categories | 10 | 50 |
+
+A chart category is one store, storefront, category and device, and its free, paid and grossing charts count once. See [Read top charts](/guides/top-charts#what-does-it-cost).
 
 A trial runs at Indie limits. A workspace whose plan has lapsed keeps the same read allowance, because its data stays readable and exportable while its capacity does not.
 
@@ -154,7 +156,7 @@ Finding localizations (`POST /apps/{id}/localizations/detect`) is not an allowan
 
 The allowance resets at 00:00 UTC for a daily window and at the top of the hour for an hourly one, so `Retry-After` is the exact wait.
 
-A deep search spends one allowance for the 27 lookups it queues, and only when it queues something. Starting a term whose lookups are all stored for today, or still waiting in the queue from an earlier start, costs nothing. Importing an app the workspace already tracks, adding a competitor it already has, capturing a top chart already captured today, and a request the plan has no room for cost nothing either, because they make no store request.
+A deep search spends one allowance for the 27 lookups it queues, and only when it queues something. Starting a term whose lookups are all stored for today, or still waiting in the queue from an earlier start, costs nothing. Importing an app the workspace already tracks, adding a competitor it already has, capturing a top chart already captured today or being captured by another request at that moment, and a request the plan has no room for cost nothing either, because they make no store request.
 
 ## A rate limit is not a quota
 

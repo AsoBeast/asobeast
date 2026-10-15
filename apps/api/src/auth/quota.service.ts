@@ -12,6 +12,7 @@ import {
 } from '@asobeast/shared';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { Env } from '../config/env';
+import { CHART_CATEGORY_COLUMNS } from '../charts/chart-category';
 import { PrismaService } from '../prisma/prisma.service';
 import { countKeywordMarkets } from './keyword-markets';
 import { planScopeOf, selfHostedLimits, type PlanScope } from './plan-limits';
@@ -89,7 +90,7 @@ export class QuotaService {
         resource: 'chartFollows',
         scope: '',
         write: () => write(tx),
-        count: () => tx.chartFollow.count(),
+        count: () => countChartCategories(tx),
       }),
     );
   }
@@ -186,7 +187,7 @@ export class QuotaService {
   private countOf(resource: QuotaResource, scope: string): Promise<number> {
     if (resource === 'apps') return countApps(this.prisma);
     if (resource === 'keywordMarkets') return countKeywordMarkets(this.prisma);
-    if (resource === 'chartFollows') return this.prisma.chartFollow.count();
+    if (resource === 'chartFollows') return countChartCategories(this.prisma);
     return this.prisma.app.count({
       where: { primaryAppId: scope, isCompetitor: true },
     });
@@ -204,6 +205,16 @@ export class QuotaService {
 
 function countApps(client: Tx | PrismaService): Promise<number> {
   return client.app.count({ where: { isCompetitor: false } });
+}
+
+async function countChartCategories(
+  client: Tx | PrismaService,
+): Promise<number> {
+  const categories = await client.chartFollow.findMany({
+    distinct: [...CHART_CATEGORY_COLUMNS],
+    select: { id: true },
+  });
+  return categories.length;
 }
 
 function countCompetitors(client: Tx, appId: string): Promise<number> {

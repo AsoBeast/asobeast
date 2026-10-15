@@ -27,6 +27,7 @@ const ROUTES: ReadonlyArray<
   ["app action center", "/apps/app-1/actions"],
   ["action sheet", "/actions?action=act-push"],
   ["top charts", "/charts"],
+  ["top charts table", "/charts?view=table"],
   ["top charts on google play", "/charts?store=GOOGLE_PLAY&genre=GAME_PUZZLE"],
 ];
 

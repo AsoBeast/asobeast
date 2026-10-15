@@ -1778,6 +1778,9 @@ const confirmCalls = new Map<string, number>();
 const resendCalls = new Map<string, number>();
 
 const chartFollows: ChartFollowItem[] = [];
+let chartFollowIds = 0;
+const CHART_FOLLOW_LIMIT_COOKIE = "e2e_chart_follow_limit";
+const CHART_FOLLOW_LIMIT = 10;
 const chartCaptures: ChartKey[] = [];
 
 function chartKeyOf(source: URLSearchParams | ChartKey): ChartKey {
@@ -1795,10 +1798,10 @@ function chartKeyOf(source: URLSearchParams | ChartKey): ChartKey {
 const sameChart = (a: ChartKey, b: ChartKey) =>
   (Object.keys(a) as (keyof ChartKey)[]).every((name) => a[name] === b[name]);
 
-function capturedTodayPage(): ChartPage {
+function capturedTodayPage(collection: ChartKey["collection"]): ChartPage {
   const today = utcDaysAgo(0);
   return {
-    ...topChartPage(),
+    ...topChartPage(TOP_CHART_DATES[0], collection),
     capture: { date: today, depth: 100, capturedAt: `${today}T09:00:00.000Z` },
     dates: [today, ...TOP_CHART_DATES],
   };
@@ -1814,11 +1817,11 @@ function chartPageFor(
   }
   const captured = chartCaptures.some((body) => sameChart(body, key));
   if (captured && (!date || date === utcDaysAgo(0))) {
-    return capturedTodayPage();
+    return capturedTodayPage(key.collection);
   }
-  if (!date) return topChartPage();
+  if (!date) return topChartPage(TOP_CHART_DATES[0], key.collection);
   return TOP_CHART_DATES.includes(date)
-    ? topChartPage(date)
+    ? topChartPage(date, key.collection)
     : TOP_CHART_PAGE_EMPTY;
 }
 
@@ -1903,7 +1906,7 @@ const routes: Route[] = [
         }
         chartCaptures.push(chartKeyOf(body));
         json(res, 200, {
-          ...capturedTodayPage(),
+          ...capturedTodayPage(chartKeyOf(body).collection),
           chart: {
             ...chartKeyOf(body),
             genreName: chartGenreName(body.store, body.genre) ?? body.genre,
@@ -1926,9 +1929,36 @@ const routes: Route[] = [
           sameChart(chartKeyOf(follow), key),
         );
         if (existing) return json(res, 200, existing);
+        const inFollowedCategory = chartFollows.some((follow) =>
+          sameChart(chartKeyOf(follow), {
+            ...key,
+            collection: follow.collection,
+          }),
+        );
+        if (
+          hasCookie(req, CHART_FOLLOW_LIMIT_COOKIE, "1") &&
+          !inFollowedCategory
+        ) {
+          return json(res, 403, {
+            ...errorEnvelope(
+              403,
+              req.url ?? "/",
+              `Followed chart categories limit reached: ${CHART_FOLLOW_LIMIT} of ${CHART_FOLLOW_LIMIT} used on the indie plan, 1 more requested`,
+            ),
+            quota: {
+              resource: "chartFollows",
+              plan: "indie",
+              limit: CHART_FOLLOW_LIMIT,
+              used: CHART_FOLLOW_LIMIT,
+              requested: 1,
+              upgradeTo: "ultimate",
+            },
+          });
+        }
+        chartFollowIds += 1;
         const follow: ChartFollowItem = {
           ...key,
-          id: `follow-${chartFollows.length + 1}`,
+          id: `follow-${chartFollowIds}`,
           genreName: chartGenreName(key.store, key.genre) ?? key.genre,
           createdAt: new Date().toISOString(),
         };

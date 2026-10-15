@@ -8,6 +8,7 @@ const AFFECTED_ROUTES = [
   ["app-actions", "/apps/app-1/actions"],
   ["admin-apps", "/admin/apps"],
   ["app-metadata-localization", "/apps/app-1/metadata?fieldLocale=es-MX"],
+  ["top-charts-table", "/charts?view=table"],
 ] as const;
 
 for (const [name, path] of SIGNED_IN_ROUTES) {

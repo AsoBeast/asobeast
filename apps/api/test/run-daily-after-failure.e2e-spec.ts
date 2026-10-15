@@ -122,13 +122,13 @@ describe('Run daily after a failed collection (e2e)', () => {
     const second = await runDaily(app.id);
     await harness.resumeQueues();
 
-    expect(second.enqueued.categories).toBe(4);
+    expect(second.enqueued.categories).toBe(6);
     await harness.waitFor(async () => {
       const charts = (await harness.allJobs(QUEUES.APP_STORE)).filter(
         (job) => job.name === JOBS.CHECK_CATEGORY,
       );
       const states = await Promise.all(charts.map((job) => job.getState()));
-      expect(states).toEqual(Array(4).fill('completed'));
+      expect(states).toEqual(Array(6).fill('completed'));
     });
   });
 

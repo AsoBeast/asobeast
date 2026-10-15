@@ -423,7 +423,15 @@ export const utcDateParser = createParser({
   },
 });
 
+export const CHART_VIEWS = ["columns", "table"] as const;
+
+export type ChartView = (typeof CHART_VIEWS)[number];
+
+export const chartViewParser =
+  parseAsStringLiteral(CHART_VIEWS).withDefault("columns");
+
 export const chartParsers = {
+  view: chartViewParser,
   store: parseAsStringLiteral(STORES).withDefault("APP_STORE"),
   country: countryParser,
   collection: parseAsStringLiteral(CATEGORY_COLLECTIONS).withDefault("free"),
@@ -435,7 +443,7 @@ export const chartParsers = {
 
 export const loadChartSearch = createLoader(chartParsers);
 
-export const CHART_SORTS = ["position", "movement", "app"] as const;
+export const CHART_SORTS = ["position", "movement", "app", "genre"] as const;
 
 export const chartTableParsers = {
   sort: parseAsStringLiteral(CHART_SORTS).withDefault("position"),

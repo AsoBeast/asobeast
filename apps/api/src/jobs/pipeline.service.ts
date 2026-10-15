@@ -7,7 +7,10 @@ import {
   STORES,
 } from '@asobeast/shared';
 import { FlowJobNode, FlowProducer, JobsOptions, Queue } from 'bullmq';
-import { CategoryRanksService } from '../category-ranks/category-ranks.service';
+import {
+  CategoryBucket,
+  CategoryRanksService,
+} from '../category-ranks/category-ranks.service';
 import {
   WorkspaceContext,
   WorkspaceScope,
@@ -344,6 +347,7 @@ export class PipelineService {
 
     return this.enqueue(
       { apps, keywords, reviewApps, marketListings },
+      await this.categoryRanks.buckets(apps.map((target) => target.id)),
       app.workspaceId,
     );
   }
@@ -351,13 +355,16 @@ export class PipelineService {
   async fanOutWorkspaceDaily(workspaceId: string): Promise<FanOutSummary> {
     const { results, failures } = await this.fanOut.eachOf(
       [workspaceId],
-      async () =>
-        this.enqueue(
-          await this.targets.collect((keywords) =>
-            this.withinKeywordLimit(keywords),
-          ),
+      async () => {
+        const targets = await this.targets.collect((keywords) =>
+          this.withinKeywordLimit(keywords),
+        );
+        return this.enqueue(
+          targets,
+          await this.categoryBuckets.of(targets.apps.map((app) => app.id)),
           workspaceId,
-        ),
+        );
+      },
     );
     const failure = workspaceFailure(
       failures,
@@ -465,13 +472,11 @@ export class PipelineService {
 
   private async enqueue(
     targets: DailyTargets,
+    buckets: CategoryBucket[],
     workspaceId: string,
   ): Promise<FanOutSummary> {
     const date = utcDateKey();
     const scope = { workspaceId, correlationId: this.workspace.correlationId };
-    const buckets = await this.categoryRanks.buckets(
-      targets.apps.map((app) => app.id),
-    );
     const requests: ManualJob[] = [
       ...targets.apps.map((app) => ({
         store: app.store,

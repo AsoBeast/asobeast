@@ -234,7 +234,7 @@ describe("headlineChartHref", () => {
 
   it("opens the chart the headline was read from", () => {
     expect(headlineChartHref(PAID_FIRST_PAGE[2], app)).toBe(
-      "/charts?store=APP_STORE&country=us&collection=paid&genre=6014&device=iphone",
+      "/charts?store=APP_STORE&country=us&genre=6014&device=iphone&view=table&collection=paid",
     );
   });
 
@@ -245,7 +245,7 @@ describe("headlineChartHref", () => {
         country: "de",
       }),
     ).toBe(
-      "/charts?store=GOOGLE_PLAY&country=de&collection=free&genre=overall&device=android",
+      "/charts?store=GOOGLE_PLAY&country=de&genre=overall&device=android&view=table&collection=free",
     );
   });
 });

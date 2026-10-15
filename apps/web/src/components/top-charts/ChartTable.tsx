@@ -23,6 +23,7 @@ import {
 import { formatDate } from "@/lib/format";
 import { chartTableParsers } from "@/lib/search-params";
 import { ariaSort } from "@/lib/table/sorting";
+import { rowContextOf } from "./chart-actions";
 import { chartColumns } from "./chart-columns";
 import { chartTitle } from "./chart-params";
 import { compareLabel } from "./movement";
@@ -37,17 +38,14 @@ export function ChartTable({
   const [params, setParams] = useQueryStates(chartTableParsers);
   const period = compareLabel(page.compare, page.comparison);
   const context = useMemo(
-    () => ({
-      chart: page.chart,
-      links: new Map(page.apps.map((link) => [link.storeAppId, link])),
-      apps,
-    }),
+    () => rowContextOf({ chart: page.chart, apps: page.apps }, apps),
     [page.chart, page.apps, apps],
   );
   const withGenre = page.entries.some((entry) => entry.genreName !== null);
+  const withPrice = page.chart.collection !== "free";
   const columns = useMemo(
-    () => chartColumns(period, context, withGenre),
-    [period, context, withGenre],
+    () => chartColumns(period, context, { withGenre, withPrice }),
+    [period, context, withGenre, withPrice],
   );
   const [visibility, setVisibility] = useStoredColumnVisibility(
     "top-chart",

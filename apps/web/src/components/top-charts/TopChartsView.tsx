@@ -1,42 +1,53 @@
 "use client";
 
 import { useDeferredValue, useMemo } from "react";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useSuspenseQueries, useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryStates } from "nuqs";
-import type { ChartKey, ChartPage } from "@asobeast/shared";
-import { appsOptions, chartPageOptions } from "@/lib/queries";
+import type { ChartPage } from "@asobeast/shared";
+import { appsOptions } from "@/lib/queries";
 import { chartParsers } from "@/lib/search-params";
-import { CaptureTodayButton } from "./CaptureTodayButton";
 import { candidateApps } from "./chart-actions";
-import { ChartEmpty } from "./ChartEmpty";
-import { ChartFilters } from "./ChartFilters";
-import { chartKeyFrom, chartQueryFrom, shownChartKey } from "./chart-params";
-import { ChartTable } from "./ChartTable";
+import { categoryDates } from "./chart-column-rows";
+import { ChartColumns } from "./ChartColumns";
+import { chartCategoryOf } from "./chart-follows";
+import { chartPageQueries, pagesOf } from "./chart-pages";
+import {
+  chartKeyFrom,
+  chartQueryFrom,
+  shownChartKey,
+  type ChartSearchUpdate,
+} from "./chart-params";
+import { ChartsHeader } from "./ChartsHeader";
+import { ChartTableView, TableActions } from "./ChartTableView";
+import { ChartToolbar } from "./ChartToolbar";
 import { FollowChartButton } from "./FollowChartButton";
-import { FollowedCharts } from "./FollowedCharts";
-import { CHART_GRID } from "./skeletons";
-import { TrendingPanel } from "./TrendingPanel";
 
-function ChartActions({ chart, page }: { chart: ChartKey; page: ChartPage }) {
-  const capturable = page.dates[0] !== page.today;
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      {capturable ? <CaptureTodayButton chart={chart} /> : null}
+function HeaderActions({
+  inTable,
+  page,
+}: {
+  inTable: boolean;
+  page: ChartPage;
+}) {
+  if (!inTable) {
+    return (
       <FollowChartButton
-        chart={chart}
-        followed={page.followed}
-        primary={!capturable}
+        category={chartCategoryOf(shownChartKey(page))}
+        primary
       />
-    </div>
-  );
+    );
+  }
+  return page.capture ? <TableActions page={page} /> : null;
 }
 
 export function TopChartsView() {
   const [search, setSearch] = useQueryStates(chartParsers);
-  const { store, country, collection, genre, device, date, compare } = search;
-  const query = useMemo(
-    () =>
-      chartQueryFrom({
+  const { view, store, country, collection, genre, device, date, compare } =
+    search;
+  const request = useMemo(
+    () => ({
+      view,
+      query: chartQueryFrom({
         store,
         country,
         collection,
@@ -45,52 +56,49 @@ export function TopChartsView() {
         date,
         compare,
       }),
-    [store, country, collection, genre, device, date, compare],
+    }),
+    [view, store, country, collection, genre, device, date, compare],
   );
-  const shown = useDeferredValue(query);
-  const { data: page } = useSuspenseQuery(chartPageOptions(shown));
+  const shown = useDeferredValue(request);
+  const pages = useSuspenseQueries({
+    queries: chartPageQueries(shown.view, shown.query),
+    combine: pagesOf,
+  });
   const { data: apps } = useSuspenseQuery(appsOptions);
-  const onScreen = shownChartKey(page);
+  const [page] = pages;
   const candidates = useMemo(
-    () => candidateApps(apps, onScreen.store),
-    [apps, onScreen.store],
+    () => candidateApps(apps, page.chart.store),
+    [apps, page.chart.store],
   );
-  const actions = <ChartActions chart={onScreen} page={page} />;
+  const busy = shown !== request;
+  const inTable = shown.view === "table";
+  const dates = inTable ? page.dates : categoryDates(pages);
+  const day = inTable
+    ? (page.capture?.date ?? date)
+    : (date ?? dates[0] ?? null);
 
   return (
     <>
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-display tracking-tight text-balance">
-            Top charts
-          </h1>
-          <p className="text-body text-muted-foreground">
-            Free, paid and grossing charts by country and category, captured
-            once a day.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <FollowedCharts />
-          {page.capture ? actions : null}
-        </div>
-      </div>
-      <ChartFilters
+      <ChartsHeader actions={<HeaderActions inTable={inTable} page={page} />} />
+      <ChartToolbar
         chart={chartKeyFrom(search)}
+        view={view}
         compare={compare}
-        day={page.capture?.date ?? date}
-        dates={page.dates}
-        onChange={(next) => void setSearch(next)}
+        day={day}
+        dates={dates}
+        onChange={(next: ChartSearchUpdate) => void setSearch(next)}
       />
-      {page.capture ? (
-        <div aria-busy={shown !== query} className={CHART_GRID}>
-          <ChartTable page={page} apps={candidates} />
-          <TrendingPanel page={page} />
-        </div>
+      {inTable ? (
+        <ChartTableView page={page} apps={candidates} busy={busy} date={date} />
       ) : (
-        <ChartEmpty
-          captured={page.dates.length > 0}
-          date={date}
-          action={actions}
+        <ChartColumns
+          pages={pages}
+          apps={candidates}
+          busy={busy}
+          search={{
+            compare: shown.query.compare,
+            date: shown.query.date ?? null,
+          }}
         />
       )}
     </>

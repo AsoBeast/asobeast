@@ -94,11 +94,12 @@ test("the headline opens the chart it was read from", async ({ page }) => {
 
   await expect(link).toHaveAttribute(
     "href",
-    "/charts?store=APP_STORE&country=us&collection=paid&genre=6014&device=iphone",
+    "/charts?store=APP_STORE&country=us&genre=6014&device=iphone&view=table&collection=paid",
   );
   await link.click();
 
-  await expect(page).toHaveURL(/\/charts\?/);
+  await expect(page).toHaveURL(/view=table/);
+  await expect(page.getByRole("table")).toBeVisible();
   await expect(page.getByRole("combobox", { name: "Category" })).toHaveText(
     "Games",
   );

@@ -114,39 +114,60 @@ describe('ChartFollowsService', () => {
     );
   });
 
+  const follow = (genre: string, collection: string) => ({
+    store: 'APP_STORE',
+    country: 'us',
+    collection,
+    genre,
+    device: 'iphone',
+  });
+  const bucket = (genre: string, collection: string) => ({
+    store: 'APP_STORE',
+    country: 'us',
+    collection,
+    genre,
+  });
+
   it('turns every follow into a category bucket', async () => {
     const { service, prisma } = build();
+    prisma.chartFollow.findMany.mockResolvedValue([follow('6014', 'free')]);
+
+    await expect(service.buckets()).resolves.toEqual([bucket('6014', 'free')]);
+  });
+
+  it('schedules only the oldest categories the plan has room for', async () => {
+    const { service, prisma, quota } = build();
+    quota.limitFor.mockResolvedValue(1);
     prisma.chartFollow.findMany.mockResolvedValue([
-      { store: 'APP_STORE', country: 'us', collection: 'free', genre: '6014' },
+      follow('6014', 'free'),
+      follow('6014', 'grossing'),
+      follow('6007', 'free'),
     ]);
 
     await expect(service.buckets()).resolves.toEqual([
-      { store: 'APP_STORE', country: 'us', collection: 'free', genre: '6014' },
+      bucket('6014', 'free'),
+      bucket('6014', 'grossing'),
     ]);
-  });
-
-  it('schedules only the oldest follows the plan has room for', async () => {
-    const { service, prisma, quota } = build();
-    quota.limitFor.mockResolvedValue(10);
-
-    await service.buckets();
-
     expect(quota.limitFor).toHaveBeenCalledWith('chartFollows');
     expect(prisma.chartFollow.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
-        take: 10,
       }),
     );
   });
 
   it('schedules every follow when the plan sets no limit', async () => {
     const { service, prisma } = build();
+    prisma.chartFollow.findMany.mockResolvedValue([
+      follow('6014', 'free'),
+      follow('6007', 'paid'),
+    ]);
 
-    await service.buckets();
-
-    expect(prisma.chartFollow.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ take: undefined }),
-    );
+    await expect(service.buckets()).resolves.toEqual([
+      bucket('6014', 'free'),
+      bucket('6007', 'paid'),
+    ]);
+    const [[query]] = prisma.chartFollow.findMany.mock.calls as [[object]];
+    expect(query).not.toHaveProperty('take');
   });
 });

@@ -3,6 +3,8 @@ import { ApiErrorEnvelope, ChartPage, PLAN_LIMITS } from '@asobeast/shared';
 import { OnDemandLimiter } from '../src/auth/on-demand.limiter';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { WorkspaceContext } from '../src/common/tenancy/workspace-context';
+import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
+import { StoreProvider } from '../src/store-providers/types';
 import {
   allowanceSpendsDuring,
   CapacityHarness,
@@ -68,6 +70,41 @@ describe('Chart capture capacity (e2e)', () => {
     );
 
     expect(calls).toBe(0);
+  });
+
+  it('spends one allowance for two captures that race', async () => {
+    const registry = harness.app.get(StoreProviderRegistry);
+    const fake = registry.get.bind(registry);
+    const topCharts = jest.fn(
+      () =>
+        new Promise((resolve) =>
+          setTimeout(
+            () => resolve([{ storeAppId: '111', title: 'Rival' }]),
+            200,
+          ),
+        ),
+    );
+    const get = jest
+      .spyOn(registry, 'get')
+      .mockImplementation(
+        (store) => ({ ...fake(store), topCharts }) as unknown as StoreProvider,
+      );
+
+    try {
+      const [answers, calls] = await allowanceSpendsDuring(harness, () =>
+        Promise.all([capture().expect(200), capture().expect(200)]),
+      );
+
+      const [first, second] = answers.map(
+        (answer) => (answer.body as ChartPage).capture?.capturedAt,
+      );
+      expect(first).toBeDefined();
+      expect(second).toBe(first);
+      expect(topCharts).toHaveBeenCalledTimes(1);
+      expect(calls).toBe(1);
+    } finally {
+      get.mockRestore();
+    }
   });
 
   it('spends nothing when the key is refused', async () => {

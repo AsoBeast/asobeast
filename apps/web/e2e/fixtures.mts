@@ -4870,6 +4870,48 @@ export const TOP_CHART_APPS: ChartEntryItem[] = [
   chartRow(10, "Bubble Pop", 10),
 ];
 
+export const TOP_PAID_CHART_APPS: ChartEntryItem[] = [
+  "Sleep Pro",
+  "Photo Pro",
+  "Notes Pro",
+  "Budget Pro",
+  "Weather Pro",
+  "Habit Pro",
+  "Scanner Pro",
+  "Workout Pro",
+  "Recipe Pro",
+  "Journal Pro",
+].map((title, index) =>
+  chartRow(index + 1, title, index + 2, {
+    storeAppId: String(6_400_001_000 + index + 1),
+    free: false,
+  }),
+);
+
+export const TOP_GROSSING_CHART_APPS: ChartEntryItem[] = [
+  "Kingdom Clash",
+  "Dragon Legends",
+  "Slot Palace",
+  "Merge Manor",
+  "Racing Rivals",
+  "Hero Arena",
+  "Bingo Bash",
+  "Tile Town",
+  "Space Siege",
+  "Golf Tour",
+].map((title, index) =>
+  chartRow(index + 1, title, index % 2 === 0 ? index + 3 : index, {
+    storeAppId: String(6_400_002_000 + index + 1),
+    free: index % 3 !== 0,
+  }),
+);
+
+const TOP_CHART_ROWS: Record<CategoryCollection, ChartEntryItem[]> = {
+  free: TOP_CHART_APPS,
+  paid: TOP_PAID_CHART_APPS,
+  grossing: TOP_GROSSING_CHART_APPS,
+};
+
 export const TOP_CHART_DATES = [1, 2, 3, 5, 8].map(utcDaysAgo);
 
 const moverOf = (row: ChartEntryItem): ChartMover => ({
@@ -4897,20 +4939,24 @@ const CHART_KEY = {
   device: "iphone",
 } as const;
 
-export function topChartPage(date: string = TOP_CHART_DATES[0]): ChartPage {
+export function topChartPage(
+  date: string = TOP_CHART_DATES[0],
+  collection: CategoryCollection = "free",
+): ChartPage {
   const previous = TOP_CHART_DATES[TOP_CHART_DATES.indexOf(date) + 1];
+  const rows = TOP_CHART_ROWS[collection];
   return {
-    chart: { ...CHART_KEY, genreName: "Games" },
+    chart: { ...CHART_KEY, collection, genreName: "Games" },
     capture: { date, depth: 100, capturedAt: `${date}T03:10:00.000Z` },
     comparison: previous
       ? { date: previous, depth: 100, capturedAt: `${previous}T03:10:00.000Z` }
       : null,
     compare: "1d",
-    entries: TOP_CHART_APPS,
+    entries: rows,
     trending: {
-      climbers: [TOP_CHART_APPS[7], TOP_CHART_APPS[4]].map(moverOf),
-      fallers: [TOP_CHART_APPS[1], TOP_CHART_APPS[5]].map(moverOf),
-      entries: [TOP_CHART_APPS[3], TOP_CHART_APPS[6]].map(moverOf),
+      climbers: [rows[7], rows[4]].map(moverOf),
+      fallers: [rows[1], rows[5]].map(moverOf),
+      entries: [rows[3], rows[6]].map(moverOf),
       exits: [exitOf("Snake Run", 4), exitOf("Gem Rush", 8)],
     },
     dates: TOP_CHART_DATES,
