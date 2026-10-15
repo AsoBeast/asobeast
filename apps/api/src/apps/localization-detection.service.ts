@@ -115,18 +115,25 @@ export class LocalizationDetection {
       },
     });
     if (!app || app.store !== Store.APP_STORE || app.isCompetitor) return;
-    const stored = await this.prisma.appSnapshot.findFirst({
-      where: { appId, ...listingIn(app.country, country) },
-      orderBy: NEWEST_FIRST,
-    });
-    if (!stored) return;
+    const markets = [...new Set([country, app.country])];
+    const stored = await Promise.all(
+      markets.map((market) =>
+        this.prisma.appSnapshot.findFirst({
+          where: { appId, ...listingIn(app.country, market) },
+          orderBy: NEWEST_FIRST,
+        }),
+      ),
+    );
+    if (!stored.every((listing) => listing !== null)) return;
     const provider = this.registry.get(app.store);
     const served = await provider.getApp(app.storeAppId, country, localization);
-    const fallback =
-      (stored.version ?? null) === (served.version ?? null)
-        ? stored
-        : await provider.getApp(app.storeAppId, country);
-    if (!servesLocalization(app.store, fallback, served)) return;
+    for (const [index, listing] of stored.entries()) {
+      const fallback =
+        (listing.version ?? null) === (served.version ?? null)
+          ? listing
+          : await provider.getApp(app.storeAppId, markets[index]);
+      if (!servesLocalization(app.store, fallback, served)) return;
+    }
     await recordAppLocalizations(this.prisma, [
       {
         appId,

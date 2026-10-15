@@ -23,6 +23,13 @@ const SPANISH = {
   raw: { screenshots: [] },
 };
 
+const GERMAN = {
+  title: 'Wo bin ich? Geo Quiz',
+  subtitle: 'Welt Geografie Spiel',
+  description: 'Entdecke die Welt',
+  raw: { screenshots: [] },
+};
+
 const APP = {
   workspaceId: 'ws_a',
   store: Store.APP_STORE,
@@ -41,24 +48,31 @@ const build = (
   options: {
     app?: object | null;
     stored?: object | null;
+    home?: object | null;
     served?: object;
-    fresh?: object;
+    fresh?: Record<string, object>;
     failure?: Error;
   } = {},
 ) => {
   const appFindFirst = jest
     .fn()
     .mockResolvedValue(options.app === undefined ? APP : options.app);
-  const snapshotFindFirst = jest
-    .fn()
-    .mockResolvedValue(options.stored === undefined ? ENGLISH : options.stored);
+  const stored = options.stored === undefined ? ENGLISH : options.stored;
+  const snapshotFindFirst = jest.fn(
+    ({ where }: { where: { country: string | null } }) =>
+      Promise.resolve(
+        where.country === null && options.home !== undefined
+          ? options.home
+          : stored,
+      ),
+  );
   const createMany = jest.fn().mockResolvedValue({ count: 1 });
   const getApp = options.failure
     ? jest.fn().mockRejectedValue(options.failure)
-    : jest.fn((_id: string, _country: string, localization?: string) =>
+    : jest.fn((_id: string, country: string, localization?: string) =>
         Promise.resolve(
-          localization === undefined && options.fresh
-            ? options.fresh
+          localization === undefined && options.fresh?.[country]
+            ? options.fresh[country]
             : (options.served ?? SPANISH),
         ),
       );
@@ -130,7 +144,7 @@ describe('LocalizationDetection.probe', () => {
     const { detection, getApp, createMany } = build({
       stored: { ...ENGLISH, version: '4.0' },
       served: released,
-      fresh: released,
+      fresh: { mx: released, us: released },
     });
 
     await detection.probe(PROBE);
@@ -157,6 +171,70 @@ describe('LocalizationDetection.probe', () => {
     await detection.probe(PROBE);
 
     expect(createMany).not.toHaveBeenCalled();
+  });
+
+  it('records nothing when the localized text echoes the home listing of another market', async () => {
+    const { detection, createMany } = build({
+      stored: GERMAN,
+      home: ENGLISH,
+      served: ENGLISH,
+    });
+
+    await detection.probe({ ...PROBE, localization: 'en-GB', country: 'de' });
+
+    expect(createMany).not.toHaveBeenCalled();
+  });
+
+  it('records a localization whose text differs from both the market and the home listing', async () => {
+    const { detection, createMany } = build({
+      stored: GERMAN,
+      home: ENGLISH,
+      served: SPANISH,
+    });
+
+    await detection.probe({ ...PROBE, localization: 'en-GB', country: 'de' });
+
+    expect(createMany).toHaveBeenCalledTimes(1);
+  });
+
+  it('compares with a fresh home listing when the app released a version since the stored one', async () => {
+    const released = {
+      ...ENGLISH,
+      version: '5.0',
+      raw: { screenshots: [], releaseNotes: 'New in 5.0' },
+    };
+    const { detection, getApp, createMany } = build({
+      stored: { ...GERMAN, version: '4.0' },
+      home: { ...ENGLISH, version: '4.0' },
+      served: released,
+      fresh: { de: { ...GERMAN, version: '5.0' }, us: released },
+    });
+
+    await detection.probe({ ...PROBE, localization: 'en-GB', country: 'de' });
+
+    expect(getApp).toHaveBeenCalledWith('6657987209', 'us');
+    expect(createMany).not.toHaveBeenCalled();
+  });
+
+  it('sends no request when the app has no stored home listing', async () => {
+    const { detection, getApp, createMany } = build({
+      stored: GERMAN,
+      home: null,
+    });
+
+    await detection.probe({ ...PROBE, localization: 'en-GB', country: 'de' });
+
+    expect(getApp).not.toHaveBeenCalled();
+    expect(createMany).not.toHaveBeenCalled();
+  });
+
+  it('reads one stored listing when the probe market is the home market', async () => {
+    const { detection, snapshotFindFirst, getApp } = build();
+
+    await detection.probe({ ...PROBE, country: 'us' });
+
+    expect(snapshotFindFirst).toHaveBeenCalledTimes(1);
+    expect(getApp).toHaveBeenCalledTimes(1);
   });
 
   it('sends no request when the market has no stored default listing', async () => {
