@@ -2,7 +2,9 @@ import { ReviewsInvestigateThemeEvidence } from '@asobeast/shared';
 import {
   mineReviewPhrases,
   REVIEW_THEME_MIN_MENTIONS,
+  reviewPhrases,
 } from '../../keywords/review-mining';
+import { listingLanguages } from '../../keywords/listing-languages';
 import type {
   ActionContext,
   ActionContextApp,
@@ -31,14 +33,30 @@ function withinWindow(reviews: ActionReview[], now: Date): ActionReview[] {
   );
 }
 
-function mentionsByPhrase(reviews: ActionReview[]): Map<string, number> {
+function mentionsByPhrase(
+  reviews: ActionReview[],
+  app: ActionContextApp,
+): Map<string, number> {
   const mined = mineReviewPhrases(
     reviews.map((review) => ({ title: review.title, text: review.text })),
     new Set(),
+    listingLanguages(app.store, app.country),
   );
   return new Map(
     mined.map((suggestion) => [suggestion.text, suggestion.usedByCount ?? 0]),
   );
+}
+
+function sampleIds(
+  reviews: ActionReview[],
+  theme: string,
+  app: ActionContextApp,
+): string[] {
+  const languages = listingLanguages(app.store, app.country);
+  return reviews
+    .filter((review) => reviewPhrases(review, languages).has(theme))
+    .slice(0, REVIEW_THEME_MAX_SAMPLES)
+    .map((review) => review.id);
 }
 
 function averageScore(reviews: ActionReview[]): number | null {
@@ -88,8 +106,8 @@ function detectForApp(
   );
   if (negative.length === 0 || previousNegative.length === 0) return [];
 
-  const current = mentionsByPhrase(negative);
-  const previous = mentionsByPhrase(previousNegative);
+  const current = mentionsByPhrase(negative, app);
+  const previous = mentionsByPhrase(previousNegative, app);
 
   const ratingAvgDelta = scoreDelta(
     forVersion,
@@ -119,14 +137,7 @@ function detectForApp(
         negativeReviews: negative.length,
         totalReviews: forVersion.length,
         ratingAvgDelta,
-        sampleReviewIds: negative
-          .filter((review) =>
-            `${review.title ?? ''} ${review.text}`
-              .toLowerCase()
-              .includes(theme),
-          )
-          .slice(0, REVIEW_THEME_MAX_SAMPLES)
-          .map((review) => review.id),
+        sampleReviewIds: sampleIds(negative, theme, app),
       };
 
       const ratingDropTerm = clamp(

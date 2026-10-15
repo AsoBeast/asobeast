@@ -13,6 +13,7 @@ import {
   changeLines,
   sectionBlocks,
   summarize,
+  windowLine,
 } from './alert-summary';
 import { AlertEmail, type AlertAction } from './emails/alert-email';
 import { alertFooterText, type AlertEmailContext } from './emails/alert-footer';
@@ -32,7 +33,6 @@ import {
   more,
   ownedSummary,
   ownedText,
-  windowLine,
 } from './email-text-parts';
 
 const WITHOUT_LINKS: AlertEmailContext = { origin: null, unsubscribe: null };

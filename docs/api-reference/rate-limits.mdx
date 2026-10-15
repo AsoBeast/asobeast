@@ -86,7 +86,7 @@ A trial runs at Indie limits. A workspace whose plan has lapsed keeps the same r
 
 `POST /mcp` draws from a per minute budget of its own, the MCP requests per minute in the table above. Every JSON-RPC message in the body costs one unit. An ordinary request carries one message and costs one, and a batch of ten messages costs ten, exactly what the same ten requests would cost sent one at a time.
 
-A request the remaining budget cannot cover is refused whole with the `429` described below, and none of its messages runs. A refused request still counts against the window, so waiting for `Retry-After` is the fix. A request that carries more messages than the whole per minute budget can never be served: it is refused without being counted, and the fix is to split it into smaller requests. `POST /mcp` reports this budget only on a `429`, so its successful responses carry no `RateLimit` headers for it. The tool calls inside a request also spend the read or write budget of the route they use, so this budget comes on top of the limits above rather than replacing them.
+A request the remaining budget cannot cover is refused whole with the `429` described below, and none of its messages runs. A refused request still counts against the window, so waiting for `Retry-After` is the fix. A request that carries more messages than the whole per minute budget can never be served: it is refused without being counted, and the fix is to split it into smaller requests. A batch of more than 100 messages, or a body nested more than 64 levels deep, is refused with `400` before the budget is read, whatever the plan, so it costs nothing either. `POST /mcp` reports this budget only on a `429`, so its successful responses carry no `RateLimit` headers for it. The tool calls inside a request also spend the read or write budget of the route they use, so this budget comes on top of the limits above rather than replacing them.
 
 ## Read the headers
 
@@ -180,11 +180,12 @@ Counters live in Redis, and a counter that cannot be read must never make the re
 | Plan request limits and the parallel request cap | The request is served and not counted |
 | Rejected credential count per address | The credential is checked and not counted |
 | Sign in, register, confirm, recovery and the other authentication endpoints | Answered `503` with `Retry-After`, because an attempt that cannot be counted could be a password guess |
-| Refresh, finding localizations, run daily, score, keyword suggestions, deep search, importing an app and adding a competitor | Answered `503` with `Retry-After`, because the work they queue needs Redis too |
+| Refresh, finding localizations, run daily, score, keyword suggestions, deep search, importing an app and adding a competitor | Answered `503` with `Retry-After`, because the allowance they spend is counted in Redis |
+| Every request that queues work: importing an app, refresh, finding localizations, run daily, score, deep search, adding or importing keywords, saving a keyword field, seeding a market, adding a competitor, an AI audit run, an action run and a report flush | Answered `503` with `Retry-After`, because the queue needs Redis too |
 
 Everything that only reads PostgreSQL keeps working, so a signed in browser session keeps its dashboards and exports through a Redis restart. A client that gets the `503` should wait the seconds in `Retry-After`. The first attempt after Redis returns succeeds within a couple of seconds, with no restart of the API. The API log names the outage in one JSON warning every thirty seconds, for the request path and the queues together, and prints no stack trace for each reconnect attempt. Queued work waits and resumes on its own once Redis is back. The same holds for an API that starts while Redis is already down: it serves requests at once, registers its scheduled jobs when Redis returns, and stops promptly on a shutdown signal either way.
 
-A self hosted instance has no plan limits, so the first and last rows do not apply to it. The other two rows apply to every instance.
+A self hosted instance has no plan limits, so the first row and the row about allowances do not apply to it. The other three rows apply to every instance.
 
 ## Suspension
 

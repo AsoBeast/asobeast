@@ -21,6 +21,7 @@ import {
   sectionBlocks,
   stars,
   storeLabel,
+  windowLine,
 } from './alert-summary';
 
 const DIGEST_APP_CAP = 10;
@@ -306,14 +307,10 @@ function omittedLine(
   return count > 0 ? `+${count} more ${noun}${count === 1 ? '' : 's'}` : null;
 }
 
-function batchWindow(payload: AlertBatchPayload): string {
-  return `Window (UTC) ${payload.window.from} → ${payload.window.to}`;
-}
-
 function batchDiscordBody(payload: AlertBatchPayload): unknown {
   const formatter = batchFormatter(payload);
   const title = clamp(formatter.headline(payload), DISCORD_NAME_MAX);
-  const description = escapeDiscord(batchWindow(payload));
+  const description = escapeDiscord(windowLine(payload));
   const fields: { name: string; value: string }[] = [];
   let used = title.length + description.length;
   for (const section of payload.apps.slice(0, BATCH_APP_CAP)) {
@@ -403,7 +400,7 @@ function batchSlackBody(payload: AlertBatchPayload): unknown {
   }
   blocks.push({
     type: 'context',
-    elements: [{ type: 'mrkdwn', text: escapeSlack(batchWindow(payload)) }],
+    elements: [{ type: 'mrkdwn', text: escapeSlack(windowLine(payload)) }],
   });
   return { blocks };
 }

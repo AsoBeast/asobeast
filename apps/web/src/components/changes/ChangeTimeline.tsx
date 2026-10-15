@@ -15,7 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import {
   Tooltip,
   TooltipContent,
@@ -279,9 +279,9 @@ export function ChangeTimeline({ id }: { id: string }) {
           >
             <TabsList>
               {CHANGE_WINDOWS.map((window) => (
-                <TabsTrigger key={window} value={String(window)}>
+                <TabsOption key={window} value={String(window)}>
                   {window}d
-                </TabsTrigger>
+                </TabsOption>
               ))}
             </TabsList>
           </Tabs>

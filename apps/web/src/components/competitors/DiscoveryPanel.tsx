@@ -28,7 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/ui/empty-state";
 import { appDetailOptions, discoveryOptions } from "@/lib/queries";
 import { storeLabel } from "@/lib/format";
@@ -191,9 +191,9 @@ export function DiscoveryPanel({ id }: { id: string }) {
         >
           <TabsList>
             {DISCOVERY_WINDOWS.map((window) => (
-              <TabsTrigger key={window} value={String(window)}>
+              <TabsOption key={window} value={String(window)}>
                 {window}d
-              </TabsTrigger>
+              </TabsOption>
             ))}
           </TabsList>
         </Tabs>

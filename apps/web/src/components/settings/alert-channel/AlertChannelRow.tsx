@@ -128,7 +128,7 @@ export function AlertChannelRow({
   return (
     <li className="flex flex-col gap-3 p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <span className="min-w-0 flex-1 truncate font-medium" title={label}>
+        <span className="min-w-0 flex-1 basis-48 font-medium wrap-anywhere">
           {label}
         </span>
         <div className="flex items-center gap-2">

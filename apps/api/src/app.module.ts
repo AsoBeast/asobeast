@@ -12,6 +12,7 @@ import { EntitlementGuard } from './auth/guards/entitlement.guard';
 import { SuspensionGuard } from './auth/abuse/suspension.guard';
 import { TokenScopeGuard } from './auth/guards/token-scope.guard';
 import { RateLimitGuard } from './auth/rate-limit/rate-limit.guard';
+import { QueueReachableGuard } from './redis/queue-reachable.guard';
 import { AllExceptionsFilter } from './common/all-exceptions.filter';
 import { LoggingModule } from './common/logging/logging.module';
 import { StorableTextPipe } from './common/validation/storable-text.pipe';
@@ -81,6 +82,7 @@ import { envConfigModule } from './config/env-config.module';
     { provide: APP_GUARD, useClass: SuspensionGuard },
     { provide: APP_GUARD, useClass: TokenScopeGuard },
     { provide: APP_GUARD, useClass: RateLimitGuard },
+    { provide: APP_GUARD, useClass: QueueReachableGuard },
   ],
 })
 export class AppModule {}

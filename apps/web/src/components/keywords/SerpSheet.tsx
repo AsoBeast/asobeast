@@ -15,12 +15,18 @@ import {
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate, formatNumber, formatRating } from "@/lib/format";
-import { serpOptions } from "@/lib/queries";
+import { appDetailOptions, serpOptions } from "@/lib/queries";
 import { serpParser } from "@/lib/search-params";
-import { exportSerp } from "./serp-csv";
+import { exportSerp, serpRole, type SerpViewer } from "./serp-csv";
+
+function useSerpViewer(appId: string): SerpViewer {
+  const { data } = useQuery(appDetailOptions(appId));
+  return { appId, storeAppId: data?.storeAppId };
+}
 
 function SerpRows({ appId, keywordId }: { appId: string; keywordId: string }) {
   const { data } = useSuspenseQuery(serpOptions(keywordId));
+  const viewer = useSerpViewer(appId);
 
   if (data.entries.length === 0) {
     return (
@@ -36,38 +42,41 @@ function SerpRows({ appId, keywordId }: { appId: string; keywordId: string }) {
         Captured {formatDate(data.date)}
       </p>
       <ol className="flex flex-col gap-1">
-        {data.entries.map((entry) => (
-          <li
-            key={entry.position}
-            className="flex items-start gap-3 rounded-lg px-2 py-2 hover:bg-muted/50"
-          >
-            <span className="w-6 shrink-0 pt-0.5 text-right font-medium numeric font-mono text-muted-foreground">
-              {entry.position}
-            </span>
-            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-              <span className="flex items-center gap-2">
-                <span className="truncate font-medium">{entry.title}</span>
-                {entry.appId === appId ? <Badge>You</Badge> : null}
-                {entry.isCompetitor ? (
-                  <Badge variant="secondary">Competitor</Badge>
-                ) : null}
+        {data.entries.map((entry) => {
+          const role = serpRole(entry, viewer);
+          return (
+            <li
+              key={entry.position}
+              className="flex items-start gap-3 rounded-lg px-2 py-2 hover:bg-muted/50"
+            >
+              <span className="w-6 shrink-0 pt-0.5 text-right font-medium numeric font-mono text-muted-foreground">
+                {entry.position}
               </span>
-              {entry.developer ? (
-                <span className="truncate text-xs text-muted-foreground">
-                  {entry.developer}
+              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <span className="flex items-center gap-2">
+                  <span className="truncate font-medium">{entry.title}</span>
+                  {role === "you" ? <Badge>You</Badge> : null}
+                  {role === "competitor" ? (
+                    <Badge variant="secondary">Competitor</Badge>
+                  ) : null}
+                </span>
+                {entry.developer ? (
+                  <span className="truncate text-xs text-muted-foreground">
+                    {entry.developer}
+                  </span>
+                ) : null}
+              </div>
+              {entry.ratingAvg !== null ? (
+                <span className="shrink-0 pt-0.5 text-xs numeric font-mono text-muted-foreground">
+                  {formatRating(entry.ratingAvg)}
+                  {entry.ratingCount !== null
+                    ? ` · ${formatNumber(entry.ratingCount)}`
+                    : ""}
                 </span>
               ) : null}
-            </div>
-            {entry.ratingAvg !== null ? (
-              <span className="shrink-0 pt-0.5 text-xs numeric font-mono text-muted-foreground">
-                {formatRating(entry.ratingAvg)}
-                {entry.ratingCount !== null
-                  ? ` · ${formatNumber(entry.ratingCount)}`
-                  : ""}
-              </span>
-            ) : null}
-          </li>
-        ))}
+            </li>
+          );
+        })}
       </ol>
     </div>
   );
@@ -96,14 +105,19 @@ function SerpExportButton({
   keywordId: string;
 }) {
   const { data } = useQuery(serpOptions(keywordId));
+  const viewer = useSerpViewer(appId);
   return (
     <Button
       variant="outline"
       size="sm"
       className="self-start"
-      disabled={data === undefined || data.entries.length === 0}
+      disabled={
+        data === undefined ||
+        data.entries.length === 0 ||
+        viewer.storeAppId === undefined
+      }
       onClick={() => {
-        if (data) exportSerp(appId, data);
+        if (data) exportSerp(viewer, data);
       }}
       aria-label="Export top 10 to CSV"
     >

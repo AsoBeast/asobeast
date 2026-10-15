@@ -10,6 +10,7 @@ import { AlertDeliveriesService } from './alert-deliveries.service';
 import { AlertFlushService } from './alert-flush.service';
 import { ListDeliveriesQueryDto } from './dto/list-deliveries-query.dto';
 import { MailerService } from './mailer.service';
+import { QueuesWork } from '../redis/queues-work.decorator';
 
 @ApiTags('alerts')
 @Controller('alerts')
@@ -33,6 +34,7 @@ export class AlertsController {
   }
 
   @Post('flush')
+  @QueuesWork()
   @ApiOperation({ summary: 'Flush the alert outbox into grouped deliveries' })
   flushNow(): Promise<AlertFlushResult> {
     return this.flush.flush();

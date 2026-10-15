@@ -114,6 +114,7 @@ export interface KeywordAddUncoveredEvidence {
   volume: number | null;
   relevance: number | null;
   latestPosition: number | null;
+  latestDepth?: number | null;
   indexedFields: MetadataField[];
   uncoveredFields: MetadataField[];
   keywordFieldCharsFree: number | null;

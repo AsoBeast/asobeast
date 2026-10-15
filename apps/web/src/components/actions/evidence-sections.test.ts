@@ -45,6 +45,25 @@ describe("evidenceSections", () => {
     ]);
   });
 
+  it.each([
+    { latestPosition: null, latestDepth: null, shown: "Not checked yet" },
+    { latestPosition: null, latestDepth: 200, shown: ">200" },
+    { latestPosition: null, latestDepth: 100, shown: ">100" },
+    { latestPosition: 14, latestDepth: 200, shown: "14" },
+    { latestPosition: null, latestDepth: undefined, shown: ">200" },
+  ])(
+    "shows $shown as the latest position of an uncovered keyword checked to $latestDepth",
+    ({ latestPosition, latestDepth, shown }) => {
+      const evidence = {
+        ...evidenceOf("act-uncovered"),
+        latestPosition,
+        latestDepth,
+      } as ActionEvidence;
+
+      expect(factValues(evidence)["Latest position"]).toBe(shown);
+    },
+  );
+
   it("lists the entrants of a defended keyword with their positions", () => {
     const evidence = evidenceOf("act-defend");
 

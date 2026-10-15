@@ -195,6 +195,54 @@ describe('Remote MCP transport (e2e)', () => {
     consume.mockRestore();
   });
 
+  const nestedCall = (depth: number) =>
+    `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"list_apps","arguments":{"x":${'['.repeat(depth)}${']'.repeat(depth)}}}}`;
+
+  it.each([65, 10_000])(
+    'refuses a body nested %i levels deep with 400 before it reaches the transport',
+    async (depth) => {
+      const consume = jest.spyOn(app.get(RequestRateLimiter), 'consumeMcp');
+
+      const response = await request(app.getHttpServer())
+        .post('/mcp')
+        .set('Authorization', `Bearer ${TOKEN}`)
+        .set('Accept', 'application/json, text/event-stream')
+        .set('Content-Type', 'application/json')
+        .send(nestedCall(depth))
+        .expect(400);
+
+      expect((response.body as { message: string }).message).toBe(
+        'body must not be nested more than 64 levels deep',
+      );
+      expect(consume).not.toHaveBeenCalled();
+      consume.mockRestore();
+    },
+  );
+
+  it('refuses a batch over 100 messages with 400 without charging it', async () => {
+    const consume = jest.spyOn(app.get(RequestRateLimiter), 'consumeMcp');
+
+    const response = await request(app.getHttpServer())
+      .post('/mcp')
+      .set('Authorization', `Bearer ${TOKEN}`)
+      .set('Accept', 'application/json, text/event-stream')
+      .set('Content-Type', 'application/json')
+      .send(
+        Array.from({ length: 101 }, (_, id) => ({
+          jsonrpc: '2.0',
+          id,
+          method: 'tools/list',
+        })),
+      )
+      .expect(400);
+
+    expect((response.body as { message: string }).message).toBe(
+      'An MCP batch must not carry more than 100 messages. Split it into smaller requests.',
+    );
+    expect(consume).not.toHaveBeenCalled();
+    consume.mockRestore();
+  });
+
   it('refuses a browser session even when it belongs to the owner', async () => {
     const signedIn = await request(app.getHttpServer())
       .post('/auth/login')

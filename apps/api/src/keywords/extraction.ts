@@ -44,7 +44,7 @@ const phraseWidth = (text: string): number =>
     0,
   );
 
-const usableIn =
+export const usableIn =
   (isFunctionWord: TokenTest): TokenTest =>
   (token) =>
     countChars(token) >= MIN_TOKEN_LENGTH &&

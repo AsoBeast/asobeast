@@ -34,12 +34,14 @@ export function SaveKeywordFieldDialog({
   error,
   onConfirm,
   onClose,
+  returnFocus,
 }: {
   preview: KeywordFieldSavePreview;
   pending: boolean;
   error: string | null;
   onConfirm: (trackIn: string[]) => void;
   onClose: () => void;
+  returnFocus: () => void;
 }) {
   const groupId = useId();
   const name = localizationName(preview.localization);
@@ -66,7 +68,13 @@ export function SaveKeywordFieldDialog({
         if (!next && !pending) onClose();
       }}
     >
-      <DialogContent size="md">
+      <DialogContent
+        size="md"
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          returnFocus();
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Save the {name} keyword field</DialogTitle>
           <DialogDescription>

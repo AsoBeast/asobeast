@@ -130,6 +130,97 @@ describe('SerpController (e2e)', () => {
     expect(body.entries[2]).toMatchObject({ appId: null, isCompetitor: false });
   });
 
+  async function appRow(
+    storeAppId: string,
+    country: string,
+    primaryAppId?: string,
+  ) {
+    return prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId,
+        country,
+        name: storeAppId,
+        isCompetitor: primaryAppId !== undefined,
+        primaryAppId,
+      },
+    });
+  }
+
+  async function serpIn(
+    trackerId: string,
+    country: string,
+    storeAppIds: string[],
+  ) {
+    const keyword = await prisma.keyword.create({
+      data: { text: 'meditation', store: Store.APP_STORE, country },
+    });
+    await prisma.trackedKeyword.create({
+      data: { appId: trackerId, keywordId: keyword.id, source: 'MANUAL' },
+    });
+    await prisma.serpEntry.createMany({
+      data: storeAppIds.map((storeAppId, index) => ({
+        keywordId: keyword.id,
+        date: DATE,
+        position: index + 1,
+        storeAppId,
+        title: storeAppId,
+      })),
+    });
+    const response = await api.get(`/keywords/${keyword.id}/serp`).expect(200);
+    return (response.body as SerpSnapshot).entries;
+  }
+
+  it('recognises your app and its competitors in a market other than home', async () => {
+    const you = await appRow('self-store', 'us');
+    const rival = await appRow('rival-store', 'us', you.id);
+
+    const entries = await serpIn(you.id, 'de', [
+      'self-store',
+      'rival-store',
+      'other-store',
+    ]);
+
+    expect(entries).toEqual([
+      expect.objectContaining({ appId: you.id, isCompetitor: false }),
+      expect.objectContaining({ appId: rival.id, isCompetitor: true }),
+      expect.objectContaining({ appId: null, isCompetitor: false }),
+    ]);
+  });
+
+  it('prefers the row of the keyword storefront when an app was imported twice', async () => {
+    const you = await appRow('self-store', 'us');
+    const german = await appRow('self-store', 'de');
+
+    const entries = await serpIn(you.id, 'de', ['self-store']);
+
+    expect(entries[0]).toMatchObject({ appId: german.id, isCompetitor: false });
+  });
+
+  it('prefers your own app over a competitor row of another storefront', async () => {
+    const you = await appRow('self-store', 'us');
+    const other = await appRow('other-primary', 'gb');
+    await appRow('self-store', 'gb', other.id);
+
+    const entries = await serpIn(you.id, 'de', ['self-store']);
+
+    expect(entries[0]).toMatchObject({ appId: you.id, isCompetitor: false });
+  });
+
+  it('prefers the row of the keyword storefront over a primary of another storefront', async () => {
+    await appRow('self-store', 'us');
+    const other = await appRow('other-primary', 'de');
+    const competitor = await appRow('self-store', 'de', other.id);
+
+    const entries = await serpIn(other.id, 'de', ['self-store']);
+
+    expect(entries[0]).toMatchObject({
+      appId: competitor.id,
+      isCompetitor: true,
+    });
+  });
+
   describe('the snapshot date', () => {
     async function trackedKeywordWithSnapshotOn(date: string) {
       const you = await prisma.app.create({

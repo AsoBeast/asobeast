@@ -39,7 +39,7 @@ Alerts are not part of the guided setup, because nothing can move before positio
 | `action.opened` | An action opens or reopens at or above the priority floor | `ALERT_ACTIONS_MIN_PRIORITY`, default `high` |
 | `metadata.changed` | A snapshot differs from the previous one | None |
 | `serp.entrant` | A new app enters a tracked keyword's top 10 | None |
-| `digest.weekly` | The weekly portfolio digest | `CRON_DIGEST`, webhook only |
+| `digest.weekly` | The weekly portfolio digest | `CRON_DIGEST` |
 
 A new event never joins an existing subscription. To opt in, open **Edit events** on the channel in Settings, tick the events and save. A webhook keeps its url and its secret.
 
@@ -72,7 +72,7 @@ Verify the signature by computing an HMAC-SHA256 of the raw request body with yo
 
 ### Which endpoints a webhook may reach
 
-A webhook url must be `http` or `https`, must not embed credentials, and must resolve to a public address. Loopback, private, carrier grade NAT, link local and cloud metadata ranges are refused, in both their IPv4 and their IPv6 mapped forms. The check runs twice, once when the subscription is saved and again on the socket as it connects, so a hostname that answers with a public address and then with an internal one is still refused. Redirects are never followed, which keeps the payload and its signature on the origin you registered.
+A webhook url must be `http` or `https`, must not embed credentials, and must resolve to a public address. Loopback, private, carrier grade NAT, link local and cloud metadata ranges are refused, in both their IPv4 and their IPv6 mapped forms. When the subscription is saved, a literal address in a refused range and a name that can only be local, such as one without a dot or one ending in `.local` or `.internal`, are refused at once. Every address a hostname resolves to is checked on the socket as it connects, so a hostname that resolves to an internal address, at save time or only later, is refused at delivery and recorded as not delivered. Redirects are never followed, which keeps the payload and its signature on the origin you registered.
 
 A name that only resolves inside a network is refused the same way. That covers a bare hostname such as `hooks` or `n8n`, `localhost`, and any name ending in `.local`, `.localhost`, `.internal` or `.home.arpa`. The error names the host and says it resolves inside this network.
 

@@ -42,6 +42,7 @@ import { KeywordSuggestionService } from './keyword-suggestion.service';
 import { KeywordsService } from './keywords.service';
 import { SpiderService } from './spider.service';
 import { StoreDeadlineInterceptor } from '../store-providers/store-deadline.interceptor';
+import { QueuesWork } from '../redis/queues-work.decorator';
 
 @ApiTags('keywords')
 @Controller('apps/:id')
@@ -106,6 +107,7 @@ export class KeywordsController {
   }
 
   @Post('keywords/spider')
+  @QueuesWork()
   @SpendsStoreCapacity()
   @HttpCode(202)
   @ApiOperation({ summary: 'Enqueue suggest spider probes for a term' })
@@ -119,6 +121,7 @@ export class KeywordsController {
   }
 
   @Post('keywords')
+  @QueuesWork()
   @ApiOperation({ summary: 'Add manual keywords' })
   add(
     @Param('id') id: string,
@@ -144,6 +147,7 @@ export class KeywordsController {
   }
 
   @Post('keywords/import')
+  @QueuesWork()
   @HttpCode(200)
   @ApiOperation({
     summary: 'Import keywords with tags, notes and markets',
@@ -158,6 +162,7 @@ export class KeywordsController {
   }
 
   @Patch('keywords/:keywordId')
+  @QueuesWork()
   @ApiOperation({
     summary: 'Update a tracked keyword active flag or relevance',
   })
@@ -203,6 +208,7 @@ export class KeywordsController {
   }
 
   @Put('keyword-field')
+  @QueuesWork()
   @ApiOperation({
     summary: 'Set an iOS keyword field',
     description:

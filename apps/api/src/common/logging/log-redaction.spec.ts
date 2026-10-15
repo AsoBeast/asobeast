@@ -1,3 +1,4 @@
+import { REQUEST_BODY_LIMIT_BYTES } from '@asobeast/shared';
 import {
   CIRCULAR,
   REDACTED,
@@ -59,6 +60,26 @@ describe('scrubSecrets', () => {
     expect(scrubText('http://user:pass@proxy.example.com:80', [])).toBe(
       `http://${REDACTED}@proxy.example.com:80`,
     );
+  });
+
+  it('scrubs a body-sized run of letters in linear time', () => {
+    const text = `App ${'a'.repeat(REQUEST_BODY_LIMIT_BYTES)}`;
+
+    const started = performance.now();
+    const scrubbed = scrubText(text, []);
+
+    expect(performance.now() - started).toBeLessThan(250);
+    expect(scrubbed).toBe(text);
+  });
+
+  it('redacts a credentialed url behind an overlong scheme', () => {
+    const scrubbed = scrubText(
+      `${'a'.repeat(100)}://user:pass@proxy.example.com`,
+      [],
+    );
+
+    expect(scrubbed).not.toContain('pass@');
+    expect(scrubbed).toContain(`${REDACTED}@proxy.example.com`);
   });
 
   it('scrubs an error message, stack and cause while keeping its shape', () => {

@@ -14,7 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import { portfolioOptions, recentChangesOptions } from "@/lib/queries";
 import { changeOwnerParser, type ChangeOwner } from "@/lib/search-params";
 import { groupChangesByDay } from "./change-days";
@@ -75,9 +75,9 @@ function RecentChangesList({ today }: { today: string }) {
         >
           <TabsList>
             {OWNER_TABS.map((tab) => (
-              <TabsTrigger key={tab.value} value={tab.value}>
+              <TabsOption key={tab.value} value={tab.value}>
                 {tab.label}
-              </TabsTrigger>
+              </TabsOption>
             ))}
           </TabsList>
         </Tabs>
