@@ -508,3 +508,33 @@ test("translation is offered only with a key and only for another language", asy
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "Translate" })).toHaveCount(0);
 });
+
+test("two saves in a row keep the newer text even when the first answers last", async ({
+  page,
+}) => {
+  await page.route("**/api/backend/apps/*/reviews/*/reply", async (route) => {
+    if (route.request().postDataJSON()?.text === "First reply") {
+      await new Promise((resolve) => setTimeout(resolve, 800));
+    }
+    await route.continue();
+  });
+  await page.goto(`${REPLIES_PAGE}?reply=rep-3`);
+  const textbox = composer(page).getByRole("textbox", { name: "Reply text" });
+
+  await textbox.fill("First reply");
+  await textbox.blur();
+  await textbox.fill("Second reply");
+  const settled = page.waitForResponse(
+    (response) =>
+      response.request().method() === "PATCH" &&
+      response.request().postDataJSON()?.text === "Second reply",
+  );
+  await textbox.blur();
+  await settled;
+  await page.unrouteAll({ behavior: "wait" });
+  await page.reload();
+
+  await expect(
+    composer(page).getByRole("textbox", { name: "Reply text" }),
+  ).toHaveValue("Second reply");
+});

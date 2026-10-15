@@ -54,7 +54,11 @@ export function useReviewReply(appId: string, review: ReviewItem) {
     onSettled,
     onError: failWith("Could not discard the reply"),
   });
-  const keyedSave = useKeyedFlight(saving.mutateAsync, byText);
+  const saveAfterLast = useCallback(
+    (text: string) => lastSave.current.then(() => saving.mutateAsync(text)),
+    [saving.mutateAsync],
+  );
+  const keyedSave = useKeyedFlight(saveAfterLast, byText);
   const save = useCallback(
     (text: string) => {
       const pending = keyedSave(text);
