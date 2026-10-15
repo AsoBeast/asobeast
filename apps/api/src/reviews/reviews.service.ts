@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Prisma, ReviewReply, Store } from '@prisma/client';
+import { ReviewReply, Store } from '@prisma/client';
 import {
   RatingsHistogram,
   RATING_STARS,
@@ -27,12 +27,15 @@ import { ReviewResult, StoreProvider } from '../store-providers/types';
 import { SyncReviewsPayload } from '../jobs/jobs.types';
 import { sortVersionsNewestFirst } from './version-order';
 import { HOME_LISTING, NEWEST_FIRST } from '../apps/listing';
-import { replyStateWhere, reviewOrder } from './review-list-query';
+import {
+  replyStateWhere,
+  reviewOrder,
+  ReviewScope,
+  reviewScopeWhere,
+} from './review-list-query';
 import { toReviewReplyItem } from './review-reply.mapper';
 
-export interface ReviewListFilters {
-  score?: number;
-  version?: string;
+export interface ReviewListFilters extends ReviewScope {
   limit: number;
   replyState?: ReviewReplyState;
   sort: ReviewSort;
@@ -246,11 +249,7 @@ export class ReviewsService {
   async list(appId: string, filters: ReviewListFilters): Promise<ReviewList> {
     await this.ensureApp(appId);
 
-    const where: Prisma.ReviewWhereInput = {
-      appId,
-      ...(filters.score !== undefined ? { score: filters.score } : {}),
-      ...(filters.version !== undefined ? { version: filters.version } : {}),
-    };
+    const where = reviewScopeWhere(appId, filters);
 
     const listed = { ...where, ...replyStateWhere(filters.replyState) };
 

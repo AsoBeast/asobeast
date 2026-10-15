@@ -638,6 +638,23 @@ describe('ReviewsController (e2e)', () => {
     expect(idsOf(body)).toEqual(['r3', 'r2', 'r1']);
   });
 
+  it('lists and counts the reviews written on or after a date', async () => {
+    const seeded = await seedApp();
+    await seedReplies(seeded.id);
+
+    const body = await listReviews(seeded.id, '?from=2026-07-11');
+
+    expect(idsOf(body)).toEqual(['r3', 'r2']);
+    expect(body.total).toBe(2);
+    expect(body.counts).toEqual({ needsReply: 0, drafted: 1, replied: 1 });
+  });
+
+  it('refuses a from that is not a date', async () => {
+    const seeded = await seedApp();
+
+    await api.get(`/apps/${seeded.id}/reviews?from=last-week`).expect(400);
+  });
+
   it('refuses an unknown reply state or sort', async () => {
     const seeded = await seedApp();
 

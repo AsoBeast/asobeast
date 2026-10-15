@@ -17,6 +17,24 @@ const REPLY_STATE_WHERE: Record<ReviewReplyState, Prisma.ReviewWhereInput> = {
   needs_reply: { repliedAt: null, reply: { is: null } },
 };
 
+export interface ReviewScope {
+  score?: number;
+  version?: string;
+  from?: Date;
+}
+
+export function reviewScopeWhere(
+  appId: string,
+  { score, version, from }: ReviewScope,
+): Prisma.ReviewWhereInput {
+  return {
+    appId,
+    ...(score !== undefined ? { score } : {}),
+    ...(version !== undefined ? { version } : {}),
+    ...(from !== undefined ? { reviewedAt: { gte: from } } : {}),
+  };
+}
+
 export function replyStateWhere(
   state?: ReviewReplyState,
 ): Prisma.ReviewWhereInput {

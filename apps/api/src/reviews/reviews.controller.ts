@@ -12,7 +12,7 @@ export class ReviewsController {
   @Get()
   @ApiOperation({
     summary:
-      'Stored reviews for an app, filtered by star, version and reply state',
+      'Stored reviews for an app, filtered by star, version, date and reply state',
   })
   list(
     @Param('id') id: string,
@@ -21,6 +21,7 @@ export class ReviewsController {
     return this.reviews.list(id, {
       score: query.score,
       version: query.version,
+      from: query.from === undefined ? undefined : new Date(query.from),
       limit: query.limit,
       replyState: query.replyState,
       sort: query.sort,

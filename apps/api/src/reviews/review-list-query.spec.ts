@@ -1,4 +1,8 @@
-import { replyStateWhere, reviewOrder } from './review-list-query';
+import {
+  replyStateWhere,
+  reviewOrder,
+  reviewScopeWhere,
+} from './review-list-query';
 
 describe('replyStateWhere', () => {
   it("answers the replied rows as the store's reply or the owner's mark", () => {
@@ -40,5 +44,24 @@ describe('reviewOrder', () => {
       { reviewedAt: { sort: 'desc', nulls: 'last' } },
       { id: 'desc' },
     ]);
+  });
+});
+
+describe('reviewScopeWhere', () => {
+  it('scopes to the app alone without filters', () => {
+    expect(reviewScopeWhere('app1', {})).toEqual({ appId: 'app1' });
+  });
+
+  it('adds the star, the version and the first day', () => {
+    const from = new Date('2026-09-15T00:00:00Z');
+
+    expect(
+      reviewScopeWhere('app1', { score: 1, version: '2.0.0', from }),
+    ).toEqual({
+      appId: 'app1',
+      score: 1,
+      version: '2.0.0',
+      reviewedAt: { gte: from },
+    });
   });
 });
