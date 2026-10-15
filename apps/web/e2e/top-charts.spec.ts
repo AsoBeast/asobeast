@@ -91,17 +91,22 @@ test("picks a captured day", async ({ page }) => {
   const oldest = TOP_CHART_DATES.at(-1) ?? "";
   const newest = TOP_CHART_DATES[0];
 
-  await page.getByRole("button", { name: "Captured day", exact: true }).click();
+  await page.getByRole("button", { name: /^Captured day/ }).click();
   await expect(
-    page.getByRole("button", { name: formatDay(newest) }),
+    page.getByRole("grid").getByRole("button", { name: formatDay(newest) }),
   ).toBeEnabled();
   await expect(
-    page.getByRole("button", { name: formatDay(utcDaysAgo(4)) }),
+    page
+      .getByRole("grid")
+      .getByRole("button", { name: formatDay(utcDaysAgo(4)) }),
   ).toBeDisabled();
   if (oldest.slice(0, 7) !== newest.slice(0, 7)) {
     await page.getByRole("button", { name: "Previous month" }).click();
   }
-  await page.getByRole("button", { name: formatDay(oldest) }).click();
+  await page
+    .getByRole("grid")
+    .getByRole("button", { name: formatDay(oldest) })
+    .click();
 
   await expect(page).toHaveURL(new RegExp(`date=${oldest}`));
   await expect(chartTable(page).locator("caption")).toContainText(
@@ -232,6 +237,7 @@ test("sorts by movement", async ({ page }) => {
 const MOCK_API = "http://localhost:4100";
 
 test("captures today", async ({ page, request }) => {
+  await request.get(`${MOCK_API}/__forget-chart-captures/6014`);
   await page.goto(`/charts?genre=6014&date=${TOP_CHART_DATES[2]}`);
 
   await page.getByRole("button", { name: "Capture today" }).click();
@@ -247,7 +253,7 @@ test("captures today", async ({ page, request }) => {
   const captures = (await (
     await request.get(`${MOCK_API}/__chart-captures`)
   ).json()) as Array<Record<string, string>>;
-  expect(captures.at(-1)).toEqual({
+  expect(captures).toContainEqual({
     store: "APP_STORE",
     country: "us",
     collection: "free",
@@ -258,7 +264,9 @@ test("captures today", async ({ page, request }) => {
 
 test("shows today's capture while comparing an older window", async ({
   page,
+  request,
 }) => {
+  await request.get(`${MOCK_API}/__forget-chart-captures/6000`);
   await page.goto("/charts?genre=6000&compare=7d");
 
   await page.getByRole("button", { name: "Capture today" }).click();
@@ -397,4 +405,24 @@ test("keeps the row actions on the chart on screen while the next one loads", as
   await expect(
     page.getByRole("button", { name: "Add to Tomato Clock" }),
   ).toHaveCount(0);
+});
+
+test("moves through captured days with the keyboard from a day without one", async ({
+  page,
+}) => {
+  await page.goto(`/charts?date=${utcDaysAgo(4)}`);
+
+  const trigger = page.getByRole("button", { name: /^Captured day/ });
+  await expect(trigger).toHaveAccessibleName(
+    `Captured day, ${formatDay(utcDaysAgo(4))}`,
+  );
+  await trigger.click();
+  const focused = page.locator(":focus");
+  await expect(focused).toHaveAttribute("data-captured", "true");
+  await expect(focused).toBeEnabled();
+
+  await page.keyboard.press("ArrowLeft");
+  await page.keyboard.press("Enter");
+
+  await expect(page).toHaveURL(new RegExp(`date=${TOP_CHART_DATES[4]}`));
 });

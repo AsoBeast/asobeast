@@ -56,6 +56,19 @@ function capturedNear(
     : stepDate(dates, wanted, step > 0 ? 1 : -1);
 }
 
+function nearestCaptured(dates: readonly string[], date: string): string {
+  if (dates.includes(date)) return date;
+  return stepDate(dates, date, -1) ?? stepDate(dates, date, 1) ?? date;
+}
+
+function firstCapturedIn(
+  dates: readonly string[],
+  { year, month }: Month,
+): string | undefined {
+  const prefix = `${year}-${String(month).padStart(2, "0")}-`;
+  return [...dates].sort().find((date) => date.startsWith(prefix));
+}
+
 function weeksOf(month: Month) {
   const cells = monthGrid(month);
   return Array.from({ length: cells.length / WEEK }, (_, week) =>
@@ -72,16 +85,26 @@ function DayGrid({
   value: string;
   onSelect: (date: string) => void;
 }) {
-  const [month, setMonth] = useState(() => monthOf(value));
-  const [focused, setFocused] = useState(value);
+  const start = nearestCaptured(dates, value);
+  const [month, setMonth] = useState(() => monthOf(start));
+  const [focused, setFocused] = useState(start);
+  const pendingFocus = useRef(true);
   const grid = useRef<HTMLDivElement>(null);
   const captured = useMemo(() => new Set(dates), [dates]);
 
   useEffect(() => {
+    if (!pendingFocus.current) return;
+    pendingFocus.current = false;
     grid.current
       ?.querySelector<HTMLButtonElement>(`[data-date="${focused}"]`)
       ?.focus();
   }, [focused, month]);
+
+  const showMonth = (next: Month) => {
+    setMonth(next);
+    const first = firstCapturedIn(dates, next);
+    if (first) setFocused(first);
+  };
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const step = KEY_STEPS[event.key];
@@ -89,6 +112,7 @@ function DayGrid({
     event.preventDefault();
     const next = capturedNear(dates, focused, step);
     if (!next) return;
+    pendingFocus.current = true;
     setMonth(monthOf(next));
     setFocused(next);
   };
@@ -100,7 +124,7 @@ function DayGrid({
           variant="ghost"
           size="icon-sm"
           aria-label="Previous month"
-          onClick={() => setMonth(shiftMonth(month, -1))}
+          onClick={() => showMonth(shiftMonth(month, -1))}
         >
           <ChevronLeft aria-hidden />
         </Button>
@@ -111,7 +135,7 @@ function DayGrid({
           variant="ghost"
           size="icon-sm"
           aria-label="Next month"
-          onClick={() => setMonth(shiftMonth(month, 1))}
+          onClick={() => showMonth(shiftMonth(month, 1))}
         >
           <ChevronRight aria-hidden />
         </Button>
@@ -192,7 +216,9 @@ export function ChartDayPicker({
         <PopoverTrigger asChild>
           <Button
             variant="outline"
-            aria-label="Captured day"
+            aria-label={
+              value ? `Captured day, ${formatDate(value)}` : "Captured day"
+            }
             disabled={anchor === null}
             className="min-w-36 justify-start"
           >

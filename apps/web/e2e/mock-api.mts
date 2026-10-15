@@ -1775,6 +1775,15 @@ const routes: Route[] = [
   },
   {
     method: "GET",
+    pattern: /^\/__forget-chart-captures\/([^/]+)$/,
+    handler: ([genre], _req, res) => {
+      const kept = chartCaptures.filter((key) => key.genre !== genre);
+      chartCaptures.splice(0, chartCaptures.length, ...kept);
+      json(res, 200, { forgotten: genre });
+    },
+  },
+  {
+    method: "GET",
     pattern: /^\/__chart-captures$/,
     handler: (_p, _req, res) => json(res, 200, chartCaptures),
   },
