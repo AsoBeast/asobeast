@@ -189,8 +189,10 @@ export const appKeys = {
   changeImpact: (id: string, days: number, country: string) =>
     [...appKeys.detail(id), "changes", "impact", { days, country }] as const,
   reviewsRoot: (id: string) => [...appKeys.detail(id), "reviews"] as const,
+  reviewThemesRoot: (id: string) =>
+    [...appKeys.detail(id), "review-themes"] as const,
   reviewThemes: (id: string, filters: ReviewThemeFilters) =>
-    [...appKeys.detail(id), "review-themes", filters] as const,
+    [...appKeys.reviewThemesRoot(id), filters] as const,
   replyGuidelines: (id: string) =>
     [...appKeys.detail(id), "reply-guidelines"] as const,
   reviews: (id: string, filters: ReviewFilters) =>
@@ -1049,10 +1051,12 @@ export function invalidateReviewReplyMutation(
   client: QueryClient,
   id: string,
 ): void {
-  void client.invalidateQueries({
-    queryKey: appKeys.reviewsRoot(id),
-    refetchType: "none",
-  });
+  for (const queryKey of [
+    appKeys.reviewsRoot(id),
+    appKeys.reviewThemesRoot(id),
+  ]) {
+    void client.invalidateQueries({ queryKey, refetchType: "none" });
+  }
 }
 
 export function invalidateCompetitorMutation(
