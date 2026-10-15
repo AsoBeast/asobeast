@@ -55,7 +55,7 @@ Keywords dominate the count, and a keyword is counted once per market. What that
 
 | Store mix | Keyword markets one host carries a day | Why |
 | --- | --- | --- |
-| Apple only | Roughly **20,000** | One request a search against 21,600 requests, minus the app, review and category work |
+| Apple only | Roughly **20,000** | One request a search against 21,600 requests, minus the app, review and category work. A chart costs one request a day, fetched once for every workspace in it |
 | Even split | Roughly **3,600** | The Play half costs 8 requests a search, so 1,800 Play markets exhaust 14,400 requests while 1,800 Apple markets use a tenth of theirs |
 | Play only | Roughly **1,800** | 14,400 requests at 8 requests a search |
 
@@ -97,7 +97,7 @@ Operators get the cross-tenant view at `GET /api/backend/admin/capacity`, which 
 
 ## Under pressure
 
-When the previous run's backlog plus today's demand passes the daily capacity, the run sheds work in a stated order rather than overlapping itself. Category ranks and review sync go first, app refreshes next, and rank checks are never dropped because they are the product. The decision is logged at error level with the pressure figure and what was shed.
+When the previous run's backlog plus today's demand passes the daily capacity, the run sheds work in a stated order rather than overlapping itself. Category ranks and review sync go first, followed top charts with them, app refreshes next, and rank checks are never dropped because they are the product. The decision is logged at error level with the pressure figure and what was shed.
 
 On demand actions are limited per workspace so one frustrated customer cannot spend the pool. Manual refresh, run daily, keyword scoring, deep search, app imports, competitor adds and top chart captures are capped per day; suggestion lookups are capped per hour. Over the limit the API answers `429` with `retryAfterSeconds` in the error envelope. Nothing is limited while `BILLING_ENABLED` is `false`, so a self hosted instance behaves as before.
 

@@ -25,10 +25,10 @@ An app is one row with a home storefront. Keywords are separate rows scoped by t
 | `KeywordRanking` | One position observation | Keyed on app, keyword and date. Carries `depth` |
 | `SerpEntry` | One search result row for a keyword and day | Keyed on keyword, date and position |
 | `CategoryRank` | A free, paid or grossing chart position | Keyed on app, date, collection and genre |
-| `ChartCapture` | One day of one top chart | Shared store data with no workspace. Unique on store, country, collection, genre, device and date. Carries `depth` |
-| `ChartEntry` | One row of a top chart capture | Shared store data. Keyed on capture and position |
+| `ChartCapture` | One day of one top chart, captured once for every workspace | Shared store data with no workspace. Unique on store, country, collection, genre, device and date. Carries `depth`, the number of positions the store answered |
+| `ChartEntry` | One row of a top chart capture: a position and the app at it | Shared store data. Keyed on capture and position, deleted with its capture |
 | `ChartApp` | An app a top chart named, with its newest title, developer, icon, genre and price class | Shared store data. Unique on store and store id |
-| `ChartFollow` | A top chart a workspace wants captured every day | Tenant owned. Unique on workspace and chart key |
+| `ChartFollow` | A top chart a workspace wants captured every day, scheduled by the daily run like a chart its apps sit in | Tenant owned. Unique on workspace and chart key |
 | `Review` | A synced store review | Unique on app and store review id |
 | `ChangeEvent` | A detected metadata change | Covers owned and competitor apps, in the home market or any other market you track |
 | `AuditScore` | A daily audit score snapshot | Keyed on app and date |

@@ -52,7 +52,7 @@ Competitors belong to one primary app, so pass the primary app's id. `keyword_co
 | `top_chart` | Top chart | One day of a free, paid or grossing chart of one store, country, category and device, as the daily run or a capture stored it: every row with its position, its position on the comparison day and the movement between them (up, down, same, new, or none when no earlier capture exists), the climbers, fallers, new entries and exits, the days a capture exists for, whether this workspace follows the chart, and which rows are its own apps or competitors | `store` (required), `country` (required), `collection` (required), `genre` (required), `device` (required), `date`, `compare` |
 | `chart_genres` | Chart genres | The categories a top chart can be read for on one store: id, name and group (apps, games, family) | `store` (required) |
 
-`chart_genres` lists the categories of one store, and `top_chart` reads one day of one chart with the movement against an earlier day and the trending apps. Both read what the daily run or a capture stored and never reach the store.
+`chart_genres` lists the categories of one store, and `top_chart` reads one day of one chart with the movement against an earlier day and the trending apps. Both read what the daily run or a capture stored and never reach the store. See [Read top charts](/guides/top-charts).
 
 ## Insights
 

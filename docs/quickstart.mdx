@@ -93,7 +93,7 @@ A healthy queue has no jobs in the failed list and shows the daily pipeline as s
 
 ## What happens on day two?
 
-The daily pipeline starts at `CRON_DAILY`, which defaults to `0 3 * * *`, meaning 03:00 UTC. It checks every tracked keyword in every tracked market, captures SERP snapshots and category ranks, syncs reviews, generates action items and then flushes batched alerts.
+The daily pipeline starts at `CRON_DAILY`, which defaults to `0 3 * * *`, meaning 03:00 UTC. It checks every tracked keyword in every tracked market, captures SERP snapshots, category ranks and the top charts your apps sit in or you follow, syncs reviews, generates action items and then flushes batched alerts.
 
 The import already collected the first positions, scores and action items, so the daily run is what keeps them current rather than what produces them. What it adds on day two is the second capture, which is the first point a chart can draw a line between. See [The daily pipeline and rate limits](/concepts/pipeline).
 

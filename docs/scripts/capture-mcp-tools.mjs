@@ -49,7 +49,7 @@ const GROUPS = [
   {
     title: "Top charts",
     tools: CHART_TOOLS,
-    note: "`chart_genres` lists the categories of one store, and `top_chart` reads one day of one chart with the movement against an earlier day and the trending apps. Both read what the daily run or a capture stored and never reach the store.",
+    note: "`chart_genres` lists the categories of one store, and `top_chart` reads one day of one chart with the movement against an earlier day and the trending apps. Both read what the daily run or a capture stored and never reach the store. See [Read top charts](/guides/top-charts).",
   },
   {
     title: "Insights",
