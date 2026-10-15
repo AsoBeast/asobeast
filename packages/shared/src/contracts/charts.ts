@@ -1,5 +1,5 @@
 import type { Store } from '../index';
-import { CategoryCollection, OVERALL_GENRE } from './category-ranks';
+import { OVERALL_GENRE, type CategoryCollection } from './category-ranks';
 
 export const CHART_DEVICES = ['iphone', 'android'] as const;
 export type ChartDevice = (typeof CHART_DEVICES)[number];
@@ -25,8 +25,14 @@ export const CHART_DEPTH: Record<Store, number> = {
 export const CHART_COMPARE_WINDOWS = ['1d', '7d', '30d'] as const;
 export type ChartCompareWindow = (typeof CHART_COMPARE_WINDOWS)[number];
 
+const COMPARE_DAYS: Record<ChartCompareWindow, number> = {
+  '1d': 1,
+  '7d': 7,
+  '30d': 30,
+};
+
 export function compareDays(window: ChartCompareWindow): number {
-  return Number(window.slice(0, -1));
+  return COMPARE_DAYS[window];
 }
 
 export const CHART_TRENDING_LIMIT = 10;
