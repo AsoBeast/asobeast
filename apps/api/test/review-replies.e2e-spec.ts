@@ -224,6 +224,12 @@ describe('Review replies (e2e)', () => {
       .patch(replyPath({ appId: appStore.appId, reviewId: play.reviewId }))
       .send({ text: 'Wrong app' })
       .expect(404);
+    await api
+      .delete(replyPath({ appId: appStore.appId, reviewId: play.reviewId }))
+      .expect(404);
+    await api
+      .delete(replyPath({ appId: appStore.appId, reviewId: 'unknown' }))
+      .expect(404);
   });
 
   it('answers 404 across workspaces', async () => {

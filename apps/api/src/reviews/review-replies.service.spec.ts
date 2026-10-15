@@ -241,6 +241,15 @@ describe('ReviewRepliesService.remove', () => {
       buildService({ app: false }).service.remove('app-1', 'rev-1'),
     ).rejects.toBeInstanceOf(NotFoundException);
   });
+
+  it('answers 404 for a review the app does not have', async () => {
+    const { service, deleteMany } = buildService({ review: false });
+
+    await expect(service.remove('app-1', 'rev-1')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    expect(deleteMany).not.toHaveBeenCalled();
+  });
 });
 
 describe('ReviewRepliesService guidelines', () => {

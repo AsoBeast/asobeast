@@ -57,13 +57,7 @@ export class ReviewRepliesService {
       throw new BadRequestException('Send the reply text or a replied mark');
     }
     const app = await this.appOf(appId);
-    const review = await this.prisma.review.findFirst({
-      where: { id: reviewId, appId },
-      select: { id: true, reply: { select: { text: true } } },
-    });
-    if (!review) {
-      throw new NotFoundException(`Review ${reviewId} not found`);
-    }
+    const review = await this.reviewOf(appId, reviewId);
 
     const text = patch.text?.trim();
     if (text !== undefined) {
@@ -97,6 +91,7 @@ export class ReviewRepliesService {
 
   async remove(appId: string, reviewId: string): Promise<void> {
     await this.appOf(appId);
+    await this.reviewOf(appId, reviewId);
     await this.prisma.reviewReply.deleteMany({ where: { reviewId, appId } });
   }
 
@@ -124,6 +119,20 @@ export class ReviewRepliesService {
       throw new NotFoundException(`App ${appId} not found`);
     }
     return { guidelines: trimmed };
+  }
+
+  private async reviewOf(
+    appId: string,
+    reviewId: string,
+  ): Promise<{ reply: { text: string } | null }> {
+    const review = await this.prisma.review.findFirst({
+      where: { id: reviewId, appId },
+      select: { reply: { select: { text: true } } },
+    });
+    if (!review) {
+      throw new NotFoundException(`Review ${reviewId} not found`);
+    }
+    return review;
   }
 
   private async appOf(appId: string): Promise<{ store: Store }> {
