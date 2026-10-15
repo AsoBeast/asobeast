@@ -61,6 +61,7 @@ export interface GooglePlayReviewResult {
   text?: string;
   version?: string | null;
   replyDate?: string | null;
+  replyText?: string | null;
 }
 
 export interface GooglePlayReviewsPage {

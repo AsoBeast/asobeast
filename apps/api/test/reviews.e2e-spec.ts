@@ -131,6 +131,7 @@ describe('ReviewsController (e2e)', () => {
           text: 'Crashes',
           updatedAt: new Date('2026-09-01T10:00:00.000Z'),
           repliedAt: replied,
+          replyText: 'Thanks, fixed in 2.1',
         },
         {
           reviewId: 'g2',
@@ -151,11 +152,41 @@ describe('ReviewsController (e2e)', () => {
     const rows = await prisma.review.findMany({
       where: { appId: created.id },
       orderBy: { reviewId: 'asc' },
-      select: { reviewId: true, repliedAt: true, replyCheckedAt: true },
+      select: {
+        reviewId: true,
+        repliedAt: true,
+        replyCheckedAt: true,
+        replyText: true,
+      },
     });
-    expect(rows[0]).toMatchObject({ reviewId: 'g1', repliedAt: replied });
+    expect(rows[0]).toMatchObject({
+      reviewId: 'g1',
+      repliedAt: replied,
+      replyText: 'Thanks, fixed in 2.1',
+    });
     expect(rows[0].replyCheckedAt).not.toBeNull();
-    expect(rows[1]).toMatchObject({ reviewId: 'g2', repliedAt: null });
+    expect(rows[1]).toMatchObject({
+      reviewId: 'g2',
+      repliedAt: null,
+      replyText: null,
+    });
+
+    const response = await api.get(`/apps/${created.id}/reviews`).expect(200);
+    const body = response.body as ReviewList;
+    expect(
+      body.reviews.map(({ reviewId, repliedAt, replyText }) => ({
+        reviewId,
+        repliedAt,
+        replyText,
+      })),
+    ).toEqual([
+      { reviewId: 'g2', repliedAt: null, replyText: null },
+      {
+        reviewId: 'g1',
+        repliedAt: replied.toISOString(),
+        replyText: 'Thanks, fixed in 2.1',
+      },
+    ]);
   });
 
   it('stores a Google Play review that has a rating and no text next to the others', async () => {
@@ -230,6 +261,9 @@ describe('ReviewsController (e2e)', () => {
       'r1',
     ]);
     expect(body.versions).toEqual(['2.0.0', '1.0.0']);
+    for (const review of body.reviews) {
+      expect(review).toMatchObject({ repliedAt: null, replyText: null });
+    }
   });
 
   it('lists the version facet newest version first, not alphabetically', async () => {

@@ -107,6 +107,7 @@ export class ReviewsService {
           version: review.version ?? null,
           reviewedAt: review.updatedAt ?? null,
           repliedAt: tracksReplies ? (review.repliedAt ?? null) : null,
+          replyText: tracksReplies ? (review.replyText ?? null) : null,
           replyCheckedAt: checkedAt,
         })),
         skipDuplicates: true,
@@ -138,12 +139,19 @@ export class ReviewsService {
       data: { replyCheckedAt: checkedAt },
     });
     for (const reviewId of known) {
-      const repliedAt = fetched.get(reviewId)?.repliedAt;
-      if (!repliedAt) continue;
-      await this.prisma.review.updateMany({
-        where: { appId, reviewId, repliedAt: null },
-        data: { repliedAt },
-      });
+      const { repliedAt, replyText } = fetched.get(reviewId) ?? {};
+      if (repliedAt) {
+        await this.prisma.review.updateMany({
+          where: { appId, reviewId, repliedAt: null },
+          data: { repliedAt },
+        });
+      }
+      if (replyText) {
+        await this.prisma.review.updateMany({
+          where: { appId, reviewId },
+          data: { replyText },
+        });
+      }
     }
   }
 
@@ -263,6 +271,8 @@ export class ReviewsService {
     text: string;
     version: string | null;
     reviewedAt: Date | null;
+    repliedAt: Date | null;
+    replyText: string | null;
   }): ReviewItem {
     return {
       id: review.id,
@@ -273,6 +283,8 @@ export class ReviewsService {
       text: review.text,
       version: review.version,
       reviewedAt: review.reviewedAt ? review.reviewedAt.toISOString() : null,
+      repliedAt: review.repliedAt ? review.repliedAt.toISOString() : null,
+      replyText: review.replyText,
     };
   }
 

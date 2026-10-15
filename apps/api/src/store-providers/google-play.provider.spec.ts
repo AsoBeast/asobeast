@@ -467,6 +467,53 @@ describe('GooglePlayProvider', () => {
     ]);
   });
 
+  it('maps the developer reply text with its date', async () => {
+    const reviews = jest.fn().mockResolvedValue({
+      data: [
+        {
+          id: 'r1',
+          userName: 'a',
+          date: '2026-09-01T10:00:00.000Z',
+          score: 2,
+          text: 'Crashes',
+          replyDate: '2026-09-02T08:00:00.000Z',
+          replyText: 'Thanks, fixed in 2.1',
+        },
+      ],
+      nextPaginationToken: null,
+    });
+    const provider = new GooglePlayProvider(makeLib({ reviews }));
+
+    const [result] = await provider.reviews('com.example.app', 'us', 1);
+
+    expect(result).toMatchObject({
+      repliedAt: new Date('2026-09-02T08:00:00.000Z'),
+      replyText: 'Thanks, fixed in 2.1',
+    });
+  });
+
+  it('maps a review without a reply to no text', async () => {
+    const reviews = jest.fn().mockResolvedValue({
+      data: [
+        {
+          id: 'r1',
+          userName: 'a',
+          date: '2026-09-01T10:00:00.000Z',
+          score: 5,
+          text: 'Great',
+          replyDate: null,
+          replyText: null,
+        },
+      ],
+      nextPaginationToken: null,
+    });
+    const provider = new GooglePlayProvider(makeLib({ reviews }));
+
+    const [result] = await provider.reviews('com.example.app', 'us', 1);
+
+    expect(result.replyText).toBeUndefined();
+  });
+
   it('maps a rating only review to empty text and no optional fields', async () => {
     const reviews = jest.fn().mockResolvedValue({
       data: [

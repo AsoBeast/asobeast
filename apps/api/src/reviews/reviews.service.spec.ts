@@ -201,6 +201,69 @@ describe('ReviewsService.syncReviews', () => {
     });
   });
 
+  it('stores the reply text of a new google play review', async () => {
+    const { service, createMany } = buildDeps({
+      store: Store.GOOGLE_PLAY,
+      pages: [
+        [
+          {
+            ...makeReview('new'),
+            repliedAt: new Date('2026-09-02T08:00:00.000Z'),
+            replyText: 'Thanks, fixed in 2.1',
+          },
+        ],
+      ],
+      existing: [],
+    });
+
+    await service.syncReviews({ appId: 'app1', pages: 1, backfill: true });
+
+    expect(createMany.mock.calls[0][0].data[0]).toMatchObject({
+      replyText: 'Thanks, fixed in 2.1',
+    });
+  });
+
+  it('refreshes the reply text of a known review', async () => {
+    const replied = new Date('2026-09-02T08:00:00.000Z');
+    const { service, updateMany } = buildDeps({
+      store: Store.GOOGLE_PLAY,
+      pages: [
+        [
+          {
+            ...makeReview('known'),
+            repliedAt: replied,
+            replyText: 'Thanks, fixed in 2.1',
+          },
+        ],
+      ],
+      existing: ['known'],
+    });
+
+    await service.syncReviews({ appId: 'app1', pages: 1, backfill: true });
+
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { appId: 'app1', reviewId: 'known', repliedAt: null },
+      data: { repliedAt: replied },
+    });
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { appId: 'app1', reviewId: 'known' },
+      data: { replyText: 'Thanks, fixed in 2.1' },
+    });
+  });
+
+  it('stores no reply text for an app store review', async () => {
+    const { service, createMany } = buildDeps({
+      pages: [[{ ...makeReview('a'), replyText: 'Ignored' }]],
+      existing: [],
+    });
+
+    await service.syncReviews({ appId: 'app1', pages: 1, backfill: true });
+
+    expect(createMany.mock.calls[0][0].data[0]).toMatchObject({
+      replyText: null,
+    });
+  });
+
   it('records no reply state for App Store reviews', async () => {
     const { service, createMany, updateMany } = buildDeps({
       pages: [[makeReview('a')]],
