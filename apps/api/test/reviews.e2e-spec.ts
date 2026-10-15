@@ -748,6 +748,8 @@ describe('ReviewsController (e2e)', () => {
     const seeded = await seedApp();
 
     await api.get(`/apps/${seeded.id}/reviews?from=last-week`).expect(400);
+    await api.get(`/apps/${seeded.id}/reviews?from=2026-W37`).expect(400);
+    await api.get(`/apps/${seeded.id}/reviews?from=20260915`).expect(400);
   });
 
   it('answers the phrases repeated across the reviews, low rated first', async () => {

@@ -6,6 +6,7 @@ import {
   IsISO8601,
   IsOptional,
   IsString,
+  Matches,
   Max,
   Min,
 } from 'class-validator';
@@ -34,6 +35,7 @@ export class ReviewsQueryDto {
     example: '2026-09-15',
   })
   @IsOptional()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/)
   @IsISO8601({ strict: true })
   from?: string;
 
