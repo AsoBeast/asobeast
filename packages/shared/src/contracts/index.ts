@@ -6,6 +6,7 @@ export * from './localizations';
 export * from './markets';
 export * from './rankings';
 export * from './category-ranks';
+export * from './charts';
 export * from './analytics';
 export * from './audit';
 export * from './metadata';

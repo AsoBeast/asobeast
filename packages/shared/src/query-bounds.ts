@@ -18,6 +18,7 @@ export const QUERY_BOUNDS = {
   recentChangesLimit: { min: 1, max: 50, default: 20 },
   serpMoverDays: { min: 1, max: 30, default: 7 },
   changeTimelineDays: { min: 1, max: 365, default: 90 },
+  chartDates: { min: 1, max: 365, default: 90 },
 } as const satisfies Record<string, QueryBound>;
 
 export type QueryBoundName = keyof typeof QUERY_BOUNDS;
