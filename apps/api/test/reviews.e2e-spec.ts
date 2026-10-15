@@ -110,6 +110,39 @@ describe('ReviewsController (e2e)', () => {
     return created;
   };
 
+  const seedReplies = async (appId: string) => {
+    const rows = await prisma.review.findMany({
+      where: { appId, reviewId: { in: ['r2', 'r3'] } },
+      select: { id: true, reviewId: true },
+    });
+    const idOf = (reviewId: string) =>
+      rows.find((row) => row.reviewId === reviewId)?.id ?? '';
+    await prisma.reviewReply.createMany({
+      data: [
+        {
+          reviewId: idOf('r2'),
+          appId,
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          text: 'Sorry about that',
+        },
+        {
+          reviewId: idOf('r3'),
+          appId,
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          text: 'Fixed in 2.0.1',
+          repliedAt: new Date('2026-07-13T00:00:00Z'),
+        },
+      ],
+    });
+  };
+
+  const listReviews = async (appId: string, query = '') =>
+    (await api.get(`/apps/${appId}/reviews${query}`).expect(200))
+      .body as ReviewList;
+
+  const idsOf = (list: ReviewList) =>
+    list.reviews.map((review) => review.reviewId);
+
   it('stores the developer reply state a Google Play sync returns', async () => {
     const created = await prisma.app.create({
       data: {
@@ -424,5 +457,104 @@ describe('ReviewsController (e2e)', () => {
       total: null,
       capturedAt: null,
     });
+  });
+
+  it('lists every review with its reply state', async () => {
+    const seeded = await seedApp();
+    await seedReplies(seeded.id);
+
+    const body = await listReviews(seeded.id);
+
+    const byId = Object.fromEntries(
+      body.reviews.map((review) => [review.reviewId, review]),
+    );
+    expect(byId.r1.reply).toBeNull();
+    expect(byId.r2.reply).toMatchObject({
+      text: 'Sorry about that',
+      tone: null,
+      model: null,
+      generatedAt: null,
+      repliedAt: null,
+    });
+    expect(byId.r3.reply?.repliedAt).toBe('2026-07-13T00:00:00.000Z');
+    expect(body.counts).toEqual({ needsReply: 1, drafted: 1, replied: 1 });
+  });
+
+  it('filters to the reviews that need a reply', async () => {
+    const seeded = await seedApp();
+    await seedReplies(seeded.id);
+
+    const body = await listReviews(seeded.id, '?replyState=needs_reply');
+
+    expect(idsOf(body)).toEqual(['r1']);
+    expect(body.total).toBe(1);
+    expect(body.counts).toEqual({ needsReply: 1, drafted: 1, replied: 1 });
+  });
+
+  it('filters to drafted and replied', async () => {
+    const seeded = await seedApp();
+    await seedReplies(seeded.id);
+
+    expect(idsOf(await listReviews(seeded.id, '?replyState=drafted'))).toEqual([
+      'r2',
+    ]);
+    expect(idsOf(await listReviews(seeded.id, '?replyState=replied'))).toEqual([
+      'r3',
+    ]);
+  });
+
+  it('counts a google play reply the store shows as replied', async () => {
+    const created = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.GOOGLE_PLAY,
+        storeAppId: 'com.example.replied',
+        country: 'us',
+        name: 'Play App',
+      },
+    });
+    await prisma.review.createMany({
+      data: [
+        {
+          appId: created.id,
+          reviewId: 'g1',
+          score: 2,
+          text: 'Crashes',
+          repliedAt: new Date('2026-09-02T08:00:00.000Z'),
+          replyText: 'Thanks, fixed in 2.1',
+        },
+        { appId: created.id, reviewId: 'g2', score: 5, text: 'Great' },
+      ],
+    });
+
+    const body = await listReviews(created.id);
+    const replied = await listReviews(created.id, '?replyState=replied');
+
+    expect(body.counts).toEqual({ needsReply: 1, drafted: 0, replied: 1 });
+    expect(idsOf(replied)).toEqual(['g1']);
+  });
+
+  it('keeps the counts under the star filter', async () => {
+    const seeded = await seedApp();
+    await seedReplies(seeded.id);
+
+    const body = await listReviews(seeded.id, '?score=1');
+
+    expect(body.counts).toEqual({ needsReply: 0, drafted: 1, replied: 1 });
+  });
+
+  it('sorts the lowest scores first on request', async () => {
+    const seeded = await seedApp();
+
+    const body = await listReviews(seeded.id, '?sort=lowest');
+
+    expect(idsOf(body)).toEqual(['r3', 'r2', 'r1']);
+  });
+
+  it('refuses an unknown reply state or sort', async () => {
+    const seeded = await seedApp();
+
+    await api.get(`/apps/${seeded.id}/reviews?replyState=open`).expect(400);
+    await api.get(`/apps/${seeded.id}/reviews?sort=oldest`).expect(400);
   });
 });

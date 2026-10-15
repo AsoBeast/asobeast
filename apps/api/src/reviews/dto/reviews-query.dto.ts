@@ -1,6 +1,13 @@
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
-import { QUERY_BOUNDS } from '@asobeast/shared';
+import { IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import {
+  QUERY_BOUNDS,
+  REVIEW_REPLY_STATES,
+  REVIEW_SORTS,
+  type ReviewReplyState,
+  type ReviewSort,
+} from '@asobeast/shared';
 
 export class ReviewsQueryDto {
   @IsOptional()
@@ -20,4 +27,14 @@ export class ReviewsQueryDto {
   @Min(QUERY_BOUNDS.reviewsLimit.min)
   @Max(QUERY_BOUNDS.reviewsLimit.max)
   limit = QUERY_BOUNDS.reviewsLimit.default;
+
+  @ApiPropertyOptional({ enum: REVIEW_REPLY_STATES })
+  @IsOptional()
+  @IsIn([...REVIEW_REPLY_STATES])
+  replyState?: ReviewReplyState;
+
+  @ApiPropertyOptional({ enum: REVIEW_SORTS, default: 'newest' })
+  @IsOptional()
+  @IsIn([...REVIEW_SORTS])
+  sort: ReviewSort = 'newest';
 }

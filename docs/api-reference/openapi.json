@@ -4196,6 +4196,32 @@
             }
           },
           {
+            "name": "replyState",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "needs_reply",
+                "drafted",
+                "replied"
+              ]
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "newest",
+              "type": "string",
+              "enum": [
+                "newest",
+                "lowest"
+              ]
+            }
+          },
+          {
             "name": "score",
             "required": false,
             "in": "query",
@@ -4241,7 +4267,7 @@
             }
           }
         },
-        "summary": "Stored reviews for an app, filtered by star and version",
+        "summary": "Stored reviews for an app, filtered by star, version and reply state",
         "tags": [
           "reviews"
         ]

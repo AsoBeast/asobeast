@@ -1,11 +1,15 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Prisma, Store } from '@prisma/client';
+import { Prisma, ReviewReply, Store } from '@prisma/client';
 import {
   RatingsHistogram,
   RATING_STARS,
+  REVIEW_REPLY_STATES,
   ReviewItem,
   ReviewList,
+  ReviewReplyCounts,
+  ReviewReplyState,
+  ReviewSort,
 } from '@asobeast/shared';
 import { AlertsDispatcher } from '../alerts/alerts.dispatcher';
 import { Env } from '../config/env';
@@ -23,11 +27,15 @@ import { ReviewResult, StoreProvider } from '../store-providers/types';
 import { SyncReviewsPayload } from '../jobs/jobs.types';
 import { sortVersionsNewestFirst } from './version-order';
 import { HOME_LISTING, NEWEST_FIRST } from '../apps/listing';
+import { replyStateWhere, reviewOrder } from './review-list-query';
+import { toReviewReplyItem } from './review-reply.mapper';
 
 export interface ReviewListFilters {
   score?: number;
   version?: string;
   limit: number;
+  replyState?: ReviewReplyState;
+  sort: ReviewSort;
 }
 
 const REVIEW_TEXT_MAX = 500;
@@ -232,28 +240,34 @@ export class ReviewsService {
       ...(filters.version !== undefined ? { version: filters.version } : {}),
     };
 
-    const [reviews, total, versions] = await this.prisma.withTransaction((tx) =>
-      Promise.all([
-        tx.review.findMany({
-          where,
-          orderBy: [
-            { reviewedAt: { sort: 'desc', nulls: 'last' } },
-            { id: 'desc' },
-          ],
-          take: filters.limit,
-        }),
-        tx.review.count({ where }),
-        tx.review.findMany({
-          where: { appId, version: { not: null } },
-          distinct: ['version'],
-          select: { version: true },
-        }),
-      ]),
-    );
+    const listed = { ...where, ...replyStateWhere(filters.replyState) };
+
+    const [reviews, total, versions, needsReply, drafted, replied] =
+      await this.prisma.withTransaction((tx) =>
+        Promise.all([
+          tx.review.findMany({
+            where: listed,
+            orderBy: reviewOrder(filters.sort),
+            take: filters.limit,
+            include: { reply: true },
+          }),
+          tx.review.count({ where: listed }),
+          tx.review.findMany({
+            where: { appId, version: { not: null } },
+            distinct: ['version'],
+            select: { version: true },
+          }),
+          ...REVIEW_REPLY_STATES.map((state) =>
+            tx.review.count({ where: { ...where, ...replyStateWhere(state) } }),
+          ),
+        ]),
+      );
+    const counts: ReviewReplyCounts = { needsReply, drafted, replied };
 
     return {
       reviews: reviews.map((review) => this.toReviewItem(review)),
       total,
+      counts,
       versions: sortVersionsNewestFirst(
         versions
           .map((row) => row.version)
@@ -273,6 +287,7 @@ export class ReviewsService {
     reviewedAt: Date | null;
     repliedAt: Date | null;
     replyText: string | null;
+    reply: ReviewReply | null;
   }): ReviewItem {
     return {
       id: review.id,
@@ -285,6 +300,7 @@ export class ReviewsService {
       reviewedAt: review.reviewedAt ? review.reviewedAt.toISOString() : null,
       repliedAt: review.repliedAt ? review.repliedAt.toISOString() : null,
       replyText: review.replyText,
+      reply: review.reply ? toReviewReplyItem(review.reply) : null,
     };
   }
 

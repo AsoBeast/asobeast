@@ -492,3 +492,84 @@ describe('ReviewsService negative review alerts', () => {
     expect(payload.review.text).toHaveLength(500);
   });
 });
+
+describe('ReviewsService.list', () => {
+  it("embeds the owner's reply and the three counts", async () => {
+    const updatedAt = new Date('2026-10-01T00:00:00.000Z');
+    const tx = {
+      review: {
+        findMany: jest
+          .fn<Promise<unknown[]>, [Record<string, unknown>]>()
+          .mockResolvedValueOnce([
+            {
+              id: 'rev-1',
+              reviewId: 'r1',
+              userName: null,
+              score: 1,
+              title: null,
+              text: 'Crashes',
+              version: '1.0.0',
+              reviewedAt: null,
+              repliedAt: null,
+              replyText: null,
+              reply: {
+                reviewId: 'rev-1',
+                appId: 'app1',
+                workspaceId: 'ws_1',
+                text: 'Sorry about that',
+                tone: 'angry',
+                model: null,
+                generatedAt: null,
+                repliedAt: null,
+                createdAt: updatedAt,
+                updatedAt,
+              },
+            },
+          ])
+          .mockResolvedValueOnce([{ version: '1.0.0' }]),
+        count: jest
+          .fn()
+          .mockResolvedValueOnce(1)
+          .mockResolvedValueOnce(4)
+          .mockResolvedValueOnce(1)
+          .mockResolvedValueOnce(2),
+      },
+    };
+    const prisma = {
+      app: { findFirst: jest.fn().mockResolvedValue({ id: 'app1' }) },
+      withTransaction: jest.fn((run: (client: typeof tx) => unknown) =>
+        run(tx),
+      ),
+    };
+    const service = new ReviewsService(
+      prisma as unknown as PrismaService,
+      {} as StoreProviderRegistry,
+      {} as ConfigService<Env, true>,
+      {} as AlertsDispatcher,
+    );
+
+    const list = await service.list('app1', {
+      limit: 50,
+      sort: 'newest',
+      replyState: 'drafted',
+    });
+
+    expect(list.counts).toEqual({ needsReply: 4, drafted: 1, replied: 2 });
+    expect(list.reviews[0].reply).toEqual({
+      text: 'Sorry about that',
+      tone: null,
+      model: null,
+      generatedAt: null,
+      updatedAt: updatedAt.toISOString(),
+      repliedAt: null,
+    });
+    expect(tx.review.findMany.mock.calls[0][0]).toMatchObject({
+      where: {
+        appId: 'app1',
+        repliedAt: null,
+        reply: { is: { repliedAt: null } },
+      },
+      include: { reply: true },
+    });
+  });
+});
