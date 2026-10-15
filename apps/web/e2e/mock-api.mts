@@ -113,6 +113,7 @@ import {
   SEED_REFUSED_MESSAGE,
   SEED_TEXTS,
   SEED_UNLISTED_MARKET,
+  EMPTY_REVIEW_THEMES,
 } from "./fixtures.mts";
 import {
   EMPTY_PORTFOLIO_INSIGHTS,
@@ -3634,6 +3635,10 @@ const routes: Route[] = [
   appRoute(
     /^\/apps\/([^/]+)\/reviews\/histogram$/,
     (dataset) => dataset.ratingsHistogram,
+  ),
+  appRoute(
+    /^\/apps\/([^/]+)\/reviews\/themes$/,
+    (dataset) => dataset.reviewThemes ?? EMPTY_REVIEW_THEMES,
   ),
   {
     method: "GET",

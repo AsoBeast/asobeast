@@ -9,6 +9,7 @@ import type {
   ReviewReplyPatchRequest,
   ReviewReplyState,
   ReviewSort,
+  ReviewThemes,
 } from "@asobeast/shared";
 import { apiFetch, withQuery } from "./client";
 import type { RangeParams } from "./client";
@@ -34,6 +35,20 @@ export function getReviews(
   if (sort) params.set("sort", sort);
   if (limit !== undefined) params.set("limit", String(limit));
   return apiFetch<ReviewList>(withQuery(`/apps/${appId}/reviews`, params));
+}
+
+export type ReviewThemeFilters = Pick<ReviewFilters, "version" | "from">;
+
+export function getReviewThemes(
+  appId: string,
+  { version, from }: ReviewThemeFilters = {},
+): Promise<ReviewThemes> {
+  const params = new URLSearchParams();
+  if (version) params.set("version", version);
+  if (from) params.set("from", from);
+  return apiFetch<ReviewThemes>(
+    withQuery(`/apps/${appId}/reviews/themes`, params),
+  );
 }
 
 const replyPath = (appId: string, reviewId: string) =>

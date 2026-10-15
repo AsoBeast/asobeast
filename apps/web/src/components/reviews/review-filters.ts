@@ -3,7 +3,7 @@ import {
   type ReviewReplyState,
   type ReviewSort,
 } from "@asobeast/shared";
-import type { ReviewFilters } from "@/lib/api";
+import type { ReviewFilters, ReviewThemeFilters } from "@/lib/api";
 import { presetToRange, type RatingsRange } from "@/lib/ranges";
 
 export const REVIEWS_SHOW_ALL_LIMIT = QUERY_BOUNDS.reviewsLimit.max;
@@ -32,6 +32,11 @@ export function reviewFilters(
 
 export function narrowsReviews({ score, version, since }: ReviewView): boolean {
   return score !== null || version !== "" || since !== null;
+}
+
+export function themesFilters(view: ReviewView): ReviewThemeFilters {
+  const { version, from } = reviewFilters(view);
+  return { version, from };
 }
 
 export function countsFilters(view: ReviewView): ReviewFilters {

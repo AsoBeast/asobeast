@@ -43,6 +43,7 @@ import type {
   RankingPoint,
   RankingSeries,
   RatingsHistogram,
+  ReviewThemes,
   RatingsHistory,
   ReviewList,
   SerpMovers,
@@ -846,6 +847,21 @@ export const APP_LONG_REVIEWS: ReviewList = {
     replyText: null,
     reply: null,
   })),
+};
+
+export const EMPTY_REVIEW_THEMES: ReviewThemes = {
+  themes: [],
+  reviews: 0,
+  negativeScoreMax: 2,
+};
+
+export const APP_1_REVIEW_THEMES: ReviewThemes = {
+  themes: [
+    { phrase: "crashes", mentions: 2, negative: 2 },
+    { phrase: "dark mode", mentions: 2, negative: 1 },
+  ],
+  reviews: 5,
+  negativeScoreMax: 2,
 };
 
 export const REVIEW_REPLY_DRAFT = {
@@ -2147,6 +2163,7 @@ export interface AppDataset {
   categoryRanks: CategoryRankSeries;
   competitors: CompetitorItem[];
   reviews: ReviewList;
+  reviewThemes?: ReviewThemes;
   ratingsHistory: RatingsHistory;
   ratingsHistogram: RatingsHistogram;
   changes: ChangeTimeline;
@@ -2244,6 +2261,7 @@ export const DATASETS: Record<string, AppDataset> = {
     categoryRanks: APP_1_CATEGORY_RANKS,
     competitors: APP_1_COMPETITORS,
     reviews: APP_1_REVIEWS,
+    reviewThemes: APP_1_REVIEW_THEMES,
     ratingsHistory: APP_1_RATINGS_HISTORY,
     ratingsHistogram: APP_1_RATINGS_HISTOGRAM,
     changes: APP_1_CHANGES,

@@ -297,3 +297,41 @@ test("a since filter writes to the url and keeps the reviews of that period", as
   await expect(page.getByRole("article")).toHaveCount(31);
   await expect(page.getByText("Review number 45")).toBeHidden();
 });
+
+test("a theme searches for its phrase and a second press clears it", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/reviews");
+  const themes = page.getByRole("region", { name: "What people mention" });
+  const crashes = themes.getByRole("button", { name: /^crashes:/ });
+
+  await expect(themes.getByRole("listitem")).toHaveCount(2);
+  await expect(crashes).toHaveAccessibleName(
+    "crashes: 2 reviews, 2 at 2 stars or less",
+  );
+
+  await crashes.click();
+
+  await expect(page).toHaveURL(/q=crashes/);
+  await expect(crashes).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("article")).toHaveCount(1);
+  await expect(
+    page.getByRole("textbox", { name: "Search reviews" }),
+  ).toHaveValue("crashes");
+
+  await crashes.click();
+
+  await expect(page).not.toHaveURL(/q=/);
+  await expect(page.getByRole("article")).toHaveCount(5);
+});
+
+test("the themes strip stays hidden when nothing is repeated", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-long/reviews");
+
+  await expect(page.getByRole("article").first()).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "What people mention" }),
+  ).toHaveCount(0);
+});

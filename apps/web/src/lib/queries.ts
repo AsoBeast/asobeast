@@ -87,6 +87,7 @@ import {
   getAiStatus,
   getReviewReplyGuidelines,
   getReviews,
+  getReviewThemes,
   getSerp,
   getSerpMovers,
   getWebHealth,
@@ -102,6 +103,7 @@ import {
   type RangeParams,
   type RankingParams,
   type ReviewFilters,
+  type ReviewThemeFilters,
 } from "./api";
 import { withReviewReply } from "./review-reply-cache";
 import { runProgressInterval } from "./run-progress";
@@ -186,6 +188,8 @@ export const appKeys = {
   changeImpact: (id: string, days: number, country: string) =>
     [...appKeys.detail(id), "changes", "impact", { days, country }] as const,
   reviewsRoot: (id: string) => [...appKeys.detail(id), "reviews"] as const,
+  reviewThemes: (id: string, filters: ReviewThemeFilters) =>
+    [...appKeys.detail(id), "review-themes", filters] as const,
   replyGuidelines: (id: string) =>
     [...appKeys.detail(id), "reply-guidelines"] as const,
   reviews: (id: string, filters: ReviewFilters) =>
@@ -772,6 +776,12 @@ export const reviewsOptions = (id: string, filters: ReviewFilters) =>
   queryOptions({
     queryKey: appKeys.reviews(id, filters),
     queryFn: () => getReviews(id, filters),
+  });
+
+export const reviewThemesOptions = (id: string, filters: ReviewThemeFilters) =>
+  queryOptions({
+    queryKey: appKeys.reviewThemes(id, filters),
+    queryFn: () => getReviewThemes(id, filters),
   });
 
 export const replyGuidelinesOptions = (id: string) =>

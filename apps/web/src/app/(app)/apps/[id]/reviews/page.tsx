@@ -11,6 +11,7 @@ import {
   replyGuidelinesOptions,
   ratingsHistoryOptions,
   reviewsOptions,
+  reviewThemesOptions,
 } from "@/lib/queries";
 import {
   reviewReplyStateParser,
@@ -22,6 +23,7 @@ import {
 import {
   countsFilters,
   reviewFilters,
+  themesFilters,
   type ReviewView,
 } from "@/components/reviews/review-filters";
 
@@ -53,6 +55,7 @@ export default async function ReviewsPage({
     queryClient.prefetchQuery(reviewsOptions(id, {})),
     queryClient.prefetchQuery(reviewsOptions(id, reviewFilters(view))),
     queryClient.prefetchQuery(reviewsOptions(id, countsFilters(view))),
+    queryClient.prefetchQuery(reviewThemesOptions(id, themesFilters(view))),
     queryClient.prefetchQuery(ratingsHistoryOptions(id, presetToRange("30d"))),
     queryClient.prefetchQuery(ratingsHistogramOptions(id)),
     queryClient.prefetchQuery(aiStatusOptions),
