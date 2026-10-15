@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import {
   type AppStoreLocalization,
   isAppStoreLocalization,
@@ -39,19 +40,23 @@ export class KeywordFieldService {
     target: KeywordFieldTarget,
     duplicatesRemoved: number,
   ): Promise<StoredKeywordFieldResult> {
-    const phrases = await storedPhrases(
-      this.prisma,
-      app.id,
-      target.localization,
-    );
-    const rows = await this.prisma.trackedKeyword.findMany({
-      where: {
-        appId: app.id,
-        active: true,
-        keyword: { is: { country: target.country, text: { in: phrases } } },
+    const { phrases, rows } = await this.prisma.withTransaction(
+      async (tx) => {
+        const phrases = await storedPhrases(tx, app.id, target.localization);
+        const rows = await tx.trackedKeyword.findMany({
+          where: {
+            appId: app.id,
+            active: true,
+            keyword: {
+              is: { country: target.country, text: { in: phrases } },
+            },
+          },
+          ...trackedArgs(app.id),
+        });
+        return { phrases, rows };
       },
-      ...trackedArgs(app.id),
-    });
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
     const order = new Map(phrases.map((phrase, index) => [phrase, index]));
     rows.sort(
       (left, right) =>
