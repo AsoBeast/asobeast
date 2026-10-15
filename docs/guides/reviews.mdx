@@ -31,7 +31,7 @@ With AI configured, the **Reply guidelines** button on the toolbar keeps up to 1
 
 ### What a draft does
 
-A draft is written in the review's language, addresses the reviewer by name when there is one and stays on the one thing the review says. It never asks for a better rating, never promotes, and names a link or an address only when your guidelines contain it. It suggests updating only when the review was left on an older version than the listing shows, and describes a fix only when the release notes say so. Pick a tone, friendly, neutral or formal, and add a one line instruction for this review if you want to steer it. A draft that would run past the store's limit is shortened on a sentence boundary and the composer says so.
+A draft is written in the review's language, addresses the reviewer by name when there is one and stays on the one thing the review says. It never asks for a better rating, never promotes, and names a link or an address only when your guidelines or your instruction contain it; asobeast checks the draft for that and refuses one that adds any other, which still counts as a call. The text of the review is handed to the model as data, so a review that tries to give the model instructions does not steer the draft. It suggests updating only when the review was left on an older version than the listing shows, and describes a fix only when the release notes say so. Pick a tone, friendly, neutral or formal, and add a one line instruction for this review if you want to steer it. A draft that would run past the store's limit is shortened on a sentence boundary and the composer says so.
 
 The Action Center's unanswered reviews action opens this page filtered to the reviews that need a reply, lowest first. See [Work the Action Center](/guides/action-center).
 
@@ -70,6 +70,7 @@ The dashboard's new low ratings and the weekly digest's negative review count an
 - **A theme did not fire.** Check that the version has at least 5 reviews and that the phrase reached 3 negative mentions with twice the previous version's rate.
 - **Draft with AI is missing.** No `OPENAI_API_KEY` is set. With the monthly AI allowance spent the button stays but is disabled until the 1st.
 - **The badge says replied but I never replied here.** Google Play shows a reply someone posted in Play Console, and asobeast reads it with the next daily sync.
+- **Drafting fails with "added a link or an address".** The model put a link or an email address in the draft that your guidelines do not contain. Draft again, or add the address to the guidelines if it is yours.
 - **My reply is cut.** It ran past the store's limit. Shorten it or edit it before you copy it.
 - **A review has stars and no text.** Google Play lets users rate without writing, and a few old reviews on the store carry only the rating. They are kept so the star counts stay right.
 
