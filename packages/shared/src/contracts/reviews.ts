@@ -60,6 +60,20 @@ export interface ReviewReplyGuidelines {
   guidelines: string;
 }
 
+export const REVIEW_TRANSLATION_LANGUAGE = /^[a-z]{2,3}$/;
+
+export interface ReviewTranslationRequest {
+  language: string;
+}
+
+export interface ReviewTranslation {
+  language: string;
+  sourceLanguage: string;
+  title: string | null;
+  text: string;
+  translatedAt: string;
+}
+
 export interface ReviewItem {
   id: string;
   reviewId: string;
@@ -72,6 +86,8 @@ export interface ReviewItem {
   repliedAt?: string | null;
   replyText?: string | null;
   reply?: ReviewReplyItem | null;
+  language?: string | null;
+  translation?: ReviewTranslation | null;
 }
 
 export interface ReviewList {
