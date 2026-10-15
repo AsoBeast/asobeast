@@ -163,10 +163,10 @@ describe('ChartCaptureService.captureToday', () => {
     const stored = build([], STORED);
     const missing = build([{ storeAppId: '111', title: 'First' }]);
 
-    await stored.service.captureToday(KEY, spend);
+    await stored.service.captureToday(KEY, { spend });
     expect(spend).not.toHaveBeenCalled();
 
-    await missing.service.captureToday(KEY, spend);
+    await missing.service.captureToday(KEY, { spend });
     expect(spend).toHaveBeenCalledTimes(1);
     expect(spend.mock.invocationCallOrder[0]).toBeLessThan(
       missing.topCharts.mock.invocationCallOrder[0],
@@ -178,7 +178,7 @@ describe('ChartCaptureService.captureToday', () => {
     const refused = new Error('spent');
 
     await expect(
-      service.captureToday(KEY, () => Promise.reject(refused)),
+      service.captureToday(KEY, { spend: () => Promise.reject(refused) }),
     ).rejects.toBe(refused);
     expect(topCharts).not.toHaveBeenCalled();
   });
@@ -190,6 +190,18 @@ describe('ChartCaptureService.captureToday', () => {
       StoreRequestError,
     );
     expect(prisma.chartCapture.create).not.toHaveBeenCalled();
+  });
+
+  it('routes only the store request through the egress it is given', async () => {
+    const through = jest.fn(<T>(work: () => Promise<T>) => work());
+    const stored = build([], STORED);
+    const missing = build([{ storeAppId: '111', title: 'First' }]);
+
+    await stored.service.captureToday(KEY, { through });
+    expect(through).not.toHaveBeenCalled();
+
+    await missing.service.captureToday(KEY, { through });
+    expect(through).toHaveBeenCalledTimes(1);
   });
 
   it('never catches a store failure', async () => {

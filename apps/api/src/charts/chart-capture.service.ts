@@ -25,6 +25,11 @@ export interface StoredChart {
   entries: ChartRowListing[];
 }
 
+export interface CaptureOptions {
+  spend?: () => Promise<void>;
+  through?: <T>(work: () => Promise<T>) => Promise<T>;
+}
+
 const WITH_ENTRIES = {
   include: {
     entries: {
@@ -52,6 +57,8 @@ function isUniqueViolation(error: unknown): boolean {
   );
 }
 
+const directly = <T>(work: () => Promise<T>): Promise<T> => work();
+
 @Injectable()
 export class ChartCaptureService {
   constructor(
@@ -61,7 +68,7 @@ export class ChartCaptureService {
 
   async captureToday(
     key: ChartKey,
-    spend?: () => Promise<void>,
+    { spend, through = directly }: CaptureOptions = {},
   ): Promise<StoredChart> {
     const date = utcToday();
     const stored = await this.stored(key, date);
@@ -69,9 +76,11 @@ export class ChartCaptureService {
     await spend?.();
 
     const depth = CHART_DEPTH[key.store];
-    const items = await this.registry
-      .get(key.store)
-      .topCharts(key.collection, key.genre, depth, key.country);
+    const items = await through(() =>
+      this.registry
+        .get(key.store)
+        .topCharts(key.collection, key.genre, depth, key.country),
+    );
     if (items.length === 0) {
       throw new StoreRequestError(
         key.store,

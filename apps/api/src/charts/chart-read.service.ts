@@ -63,9 +63,10 @@ export class ChartReadService {
   ): Promise<ChartPage> {
     const key = chartKeyFrom(query);
     assertChartKey(key);
-    await this.egress.through(key.store, key.country, () =>
-      this.captures.captureToday(key, spend),
-    );
+    await this.captures.captureToday(key, {
+      spend,
+      through: (work) => this.egress.through(key.store, key.country, work),
+    });
     return this.page({
       ...key,
       compare: '1d',
