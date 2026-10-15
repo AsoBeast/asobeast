@@ -1744,10 +1744,10 @@ function chartKeyOf(source: URLSearchParams | ChartKey): ChartKey {
 const sameChart = (a: ChartKey, b: ChartKey) =>
   (Object.keys(a) as (keyof ChartKey)[]).every((name) => a[name] === b[name]);
 
-function capturedTodayPage(): ChartPage {
+function capturedTodayPage(collection: ChartKey["collection"]): ChartPage {
   const today = utcDaysAgo(0);
   return {
-    ...topChartPage(),
+    ...topChartPage(TOP_CHART_DATES[0], collection),
     capture: { date: today, depth: 100, capturedAt: `${today}T09:00:00.000Z` },
     dates: [today, ...TOP_CHART_DATES],
   };
@@ -1763,11 +1763,11 @@ function chartPageFor(
   }
   const captured = chartCaptures.some((body) => sameChart(body, key));
   if (captured && (!date || date === utcDaysAgo(0))) {
-    return capturedTodayPage();
+    return capturedTodayPage(key.collection);
   }
-  if (!date) return topChartPage();
+  if (!date) return topChartPage(TOP_CHART_DATES[0], key.collection);
   return TOP_CHART_DATES.includes(date)
-    ? topChartPage(date)
+    ? topChartPage(date, key.collection)
     : TOP_CHART_PAGE_EMPTY;
 }
 
@@ -1852,7 +1852,7 @@ const routes: Route[] = [
         }
         chartCaptures.push(chartKeyOf(body));
         json(res, 200, {
-          ...capturedTodayPage(),
+          ...capturedTodayPage(chartKeyOf(body).collection),
           chart: {
             ...chartKeyOf(body),
             genreName: chartGenreName(body.store, body.genre) ?? body.genre,

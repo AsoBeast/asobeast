@@ -21,7 +21,7 @@ test("the trending panel sits beside the table on a laptop and below it on a tab
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
-  await page.goto("/charts");
+  await page.goto("/charts?view=table");
   await expect(trendingPanel(page)).toBeVisible();
   expect(await trendingBeside(page)).toBe(true);
 
@@ -33,7 +33,7 @@ test("the trending panel stays in view while the table scrolls", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 600 });
-  await page.goto("/charts");
+  await page.goto("/charts?view=table");
   await expect(trendingPanel(page)).toBeVisible();
   const before = await panelTop(page);
 

@@ -5,7 +5,7 @@ import {
   type CategoryRankSeriesItem,
   type Store,
 } from "@asobeast/shared";
-import { chartHref } from "@/components/top-charts/chart-params";
+import { tableHref } from "@/components/top-charts/chart-params";
 
 const LEGACY_CHART_DEPTH = 200;
 
@@ -48,7 +48,7 @@ export function headlineChartHref(
   headline: CategoryRankSeriesItem,
   app: { store: Store; country: string },
 ): string {
-  return chartHref({
+  return tableHref({
     store: app.store,
     country: app.country,
     collection: headline.collection,

@@ -21,14 +21,12 @@ import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import { storeLabel } from "@/lib/format";
 import { ChartCountry } from "./ChartCountry";
 import { ChartDayPicker } from "./ChartDayPicker";
-import { storeChanged, type ChartSearchUpdate } from "./chart-params";
+import {
+  COLLECTION_LABELS,
+  storeChanged,
+  type ChartSearchUpdate,
+} from "./chart-params";
 import { GenreSelect } from "./GenreSelect";
-
-const COLLECTION_LABELS: Record<CategoryCollection, string> = {
-  free: "Free",
-  paid: "Paid",
-  grossing: "Grossing",
-};
 
 const COMPARE_OPTIONS: ReadonlyArray<{
   value: ChartCompareWindow;
@@ -68,12 +66,14 @@ function DeviceSelect() {
 
 export function ChartFilters({
   chart,
+  withKind,
   compare,
   day,
   dates,
   onChange,
 }: {
   chart: ChartKey;
+  withKind: boolean;
   compare: ChartCompareWindow;
   day: string | null;
   dates: readonly string[];
@@ -110,22 +110,24 @@ export function ChartFilters({
           onChange={(genre) => onChange({ genre })}
         />
       </Field>
-      <Field label="Chart">
-        <Tabs
-          value={chart.collection}
-          onValueChange={(next) =>
-            onChange({ collection: next as CategoryCollection })
-          }
-        >
-          <TabsList aria-label="Chart">
-            {CATEGORY_COLLECTIONS.map((collection) => (
-              <TabsOption key={collection} value={collection}>
-                {COLLECTION_LABELS[collection]}
-              </TabsOption>
-            ))}
-          </TabsList>
-        </Tabs>
-      </Field>
+      {withKind ? (
+        <Field label="Chart">
+          <Tabs
+            value={chart.collection}
+            onValueChange={(next) =>
+              onChange({ collection: next as CategoryCollection })
+            }
+          >
+            <TabsList aria-label="Chart">
+              {CATEGORY_COLLECTIONS.map((collection) => (
+                <TabsOption key={collection} value={collection}>
+                  {COLLECTION_LABELS[collection]}
+                </TabsOption>
+              ))}
+            </TabsList>
+          </Tabs>
+        </Field>
+      ) : null}
       {chart.store === "APP_STORE" ? (
         <Field label="Device">
           <DeviceSelect />

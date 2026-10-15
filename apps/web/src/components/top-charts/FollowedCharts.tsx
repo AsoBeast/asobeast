@@ -19,7 +19,7 @@ import { accountPlanOptions, chartFollowsOptions } from "@/lib/queries";
 import { formatQuotaUsage } from "@/lib/quota-usage";
 import { useSingleFlight } from "@/lib/single-flight";
 import { followedCategories, type FollowedCategory } from "./chart-follows";
-import { categoryTitle, chartHref } from "./chart-params";
+import { categoryTitle, chartHref, COLLECTION_LABELS } from "./chart-params";
 import { useUnfollowChart } from "./use-unfollow-chart";
 
 function FollowRow({
@@ -32,12 +32,14 @@ function FollowRow({
   const mutation = useUnfollowChart();
   const unfollowOnce = useSingleFlight(mutation);
   const title = categoryTitle(category);
-  const kinds = category.follows.map((follow) => follow.collection).join(", ");
+  const kinds = category.follows
+    .map((follow) => COLLECTION_LABELS[follow.collection])
+    .join(", ");
 
   return (
     <li className="flex items-center gap-2">
       <Link
-        href={chartHref(category.follows[0])}
+        href={chartHref(category)}
         onClick={onNavigate}
         className="flex min-w-0 flex-1 flex-col rounded-md px-2 py-1.5 hover:bg-accent"
       >

@@ -1,16 +1,19 @@
 import { describe, expect, it } from "vitest";
 import {
   categoryTitle,
+  chartHref,
   chartKeyFrom,
   chartQueryFrom,
   chartTitle,
   shownChartKey,
   stepDate,
   storeChanged,
+  tableHref,
   type ChartSearch,
 } from "./chart-params";
 
 const SEARCH: ChartSearch = {
+  view: "columns",
   store: "APP_STORE",
   country: "",
   collection: "free",
@@ -119,6 +122,44 @@ describe("stepDate", () => {
   it("stops at either end", () => {
     expect(stepDate(DATES, "2026-10-13", 1)).toBeNull();
     expect(stepDate(DATES, "2026-10-08", -1)).toBeNull();
+  });
+});
+
+describe("chartHref", () => {
+  it("links a category to its columns", () => {
+    expect(
+      chartHref({
+        store: "APP_STORE",
+        country: "us",
+        genre: "6014",
+        device: "iphone",
+      }),
+    ).toBe("/charts?store=APP_STORE&country=us&genre=6014&device=iphone");
+  });
+});
+
+describe("tableHref", () => {
+  const PAID = {
+    store: "GOOGLE_PLAY",
+    country: "de",
+    collection: "paid",
+    genre: "GAME_PUZZLE",
+    device: "android",
+  } as const;
+
+  it("links one kind to its table", () => {
+    expect(tableHref(PAID)).toBe(
+      "/charts?store=GOOGLE_PLAY&country=de&genre=GAME_PUZZLE&device=android&view=table&collection=paid",
+    );
+  });
+
+  it("keeps the day and a comparison other than the default", () => {
+    expect(tableHref(PAID, { compare: "7d", date: "2026-10-13" })).toBe(
+      "/charts?store=GOOGLE_PLAY&country=de&genre=GAME_PUZZLE&device=android&view=table&collection=paid&compare=7d&date=2026-10-13",
+    );
+    expect(tableHref(PAID, { compare: "1d", date: null })).toBe(
+      tableHref(PAID),
+    );
   });
 });
 

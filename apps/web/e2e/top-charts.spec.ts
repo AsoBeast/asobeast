@@ -1,6 +1,13 @@
 import { type APIRequestContext, type Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
-import { TOP_CHART_APPS, TOP_CHART_DATES, utcDaysAgo } from "./fixtures.mts";
+import { contrastViolations, THEMES } from "./contrast-check.mts";
+import {
+  TOP_CHART_APPS,
+  TOP_CHART_DATES,
+  TOP_GROSSING_CHART_APPS,
+  TOP_PAID_CHART_APPS,
+  utcDaysAgo,
+} from "./fixtures.mts";
 
 const formatDayMonth = (date: string) =>
   new Intl.DateTimeFormat("en-US", {
@@ -19,13 +26,16 @@ const formatDay = (date: string) =>
 
 const chartTable = (page: Page) => page.getByRole("table");
 
+const kindRegion = (page: Page, name: string) =>
+  page.getByRole("region", { name, exact: true });
+
 const pick = async (page: Page, control: string, option: string) => {
   await page.getByRole("combobox", { name: control }).click();
   await page.getByRole("option", { name: option, exact: true }).click();
 };
 
 test("renders the chart for the default filters", async ({ page }) => {
-  await page.goto("/charts");
+  await page.goto("/charts?view=table");
 
   await expect(
     page.getByRole("heading", { level: 1, name: "Top charts" }),
@@ -49,8 +59,120 @@ test("renders the chart for the default filters", async ({ page }) => {
   await expect(first).toContainText(TOP_CHART_APPS[0].developer ?? "");
 });
 
-test("keeps every filter in the url", async ({ page }) => {
+test("opens on the three charts side by side", async ({ page }) => {
   await page.goto("/charts");
+
+  for (const [name, rows] of [
+    ["Free", TOP_CHART_APPS],
+    ["Paid", TOP_PAID_CHART_APPS],
+    ["Grossing", TOP_GROSSING_CHART_APPS],
+  ] as const) {
+    const items = kindRegion(page, name).getByRole("listitem");
+    await expect(items).toHaveCount(rows.length);
+    await expect(items.first()).toContainText(rows[0].title);
+    await expect(items.first()).toContainText("1");
+  }
+  await expect(
+    kindRegion(page, "Free").getByText("Puzzle Quest", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    kindRegion(page, "Paid").getByText("Puzzle Quest", { exact: true }),
+  ).toHaveCount(0);
+  await expect(page.getByRole("table")).toHaveCount(0);
+  await expect(
+    page.getByRole("tablist", { name: "Chart", exact: true }),
+  ).toHaveCount(0);
+});
+
+test("opens the table of one kind from its column", async ({ page }) => {
+  await page.goto("/charts");
+
+  await kindRegion(page, "Paid")
+    .getByRole("link", { name: "Open table of Paid" })
+    .click();
+
+  await expect(page).toHaveURL(/view=table/);
+  await expect(page).toHaveURL(/collection=paid/);
+  await expect(page.getByRole("table", { name: /^Top paid/ })).toBeVisible();
+});
+
+test("switches the layout", async ({ page }) => {
+  await page.goto("/charts");
+  const layout = page.getByRole("tablist", { name: "Layout" });
+
+  await layout.getByRole("tab", { name: "Table" }).click();
+
+  await expect(page).toHaveURL(/view=table/);
+  await expect(chartTable(page)).toBeVisible();
+
+  await layout.getByRole("tab", { name: "Side by side" }).click();
+
+  await expect(page).not.toHaveURL(/view=/);
+  await expect(kindRegion(page, "Grossing")).toBeVisible();
+});
+
+test("captures today from a column", async ({ page, request }) => {
+  await request.get(`${MOCK_API}/__forget-chart-captures/6005`);
+  await page.goto("/charts?genre=6005");
+  await expect(page.getByRole("button", { name: "Capture today" })).toHaveCount(
+    3,
+  );
+
+  await kindRegion(page, "Paid")
+    .getByRole("button", { name: "Capture today" })
+    .click();
+
+  await expect(page.getByText("Captured today's chart")).toBeVisible();
+  await expect(kindRegion(page, "Paid")).toContainText(
+    formatDayMonth(utcDaysAgo(0)),
+  );
+  await expect(
+    kindRegion(page, "Paid").getByRole("button", { name: "Capture today" }),
+  ).toHaveCount(0);
+  await expect(
+    kindRegion(page, "Free").getByRole("button", { name: "Capture today" }),
+  ).toBeVisible();
+  const captures = (await (
+    await request.get(`${MOCK_API}/__chart-captures`)
+  ).json()) as Array<Record<string, string>>;
+  expect(captures.filter((capture) => capture.genre === "6005")).toEqual([
+    {
+      store: "APP_STORE",
+      country: "us",
+      collection: "paid",
+      genre: "6005",
+      device: "iphone",
+    },
+  ]);
+});
+
+test("shows movement for each kind in the trending panel", async ({ page }) => {
+  await page.goto("/charts");
+  const trending = page.getByRole("complementary", { name: "Trending" });
+
+  await expect(trending.getByText(TOP_CHART_APPS[7].title)).toBeVisible();
+
+  await trending
+    .getByRole("tablist", { name: "Chart kind" })
+    .getByRole("tab", { name: "Paid" })
+    .click();
+
+  await expect(trending.getByText(TOP_PAID_CHART_APPS[7].title)).toBeVisible();
+  await expect(trending.getByText(TOP_CHART_APPS[7].title)).toHaveCount(0);
+});
+
+for (const theme of THEMES) {
+  test(`the table view has no contrast violation in the ${theme} theme`, async ({
+    page,
+  }) => {
+    expect(await contrastViolations(page, theme, "/charts?view=table")).toEqual(
+      [],
+    );
+  });
+}
+
+test("keeps every filter in the url", async ({ page }) => {
+  await page.goto("/charts?view=table");
 
   await page
     .getByRole("tablist", { name: "Store" })
@@ -87,7 +209,7 @@ test("keeps every filter in the url", async ({ page }) => {
 });
 
 test("picks a captured day", async ({ page }) => {
-  await page.goto("/charts");
+  await page.goto("/charts?view=table");
   const oldest = TOP_CHART_DATES.at(-1) ?? "";
   const newest = TOP_CHART_DATES[0];
 
@@ -116,7 +238,7 @@ test("picks a captured day", async ({ page }) => {
   await page.getByRole("button", { name: "Next captured day" }).click();
   await expect(page).toHaveURL(new RegExp(`date=${TOP_CHART_DATES.at(-2)}`));
 
-  await page.goto(`/charts?date=${newest}`);
+  await page.goto(`/charts?view=table&date=${newest}`);
   await expect(
     page.getByRole("button", { name: "Next captured day" }),
   ).toBeDisabled();
@@ -126,7 +248,7 @@ test("shows the empty day and the uncaptured chart", async ({
   page,
   context,
 }) => {
-  await page.goto(`/charts?date=${utcDaysAgo(4)}`);
+  await page.goto(`/charts?view=table&date=${utcDaysAgo(4)}`);
   await expect(
     page.getByText(`No capture of this chart on ${formatDay(utcDaysAgo(4))}`),
   ).toBeVisible();
@@ -139,14 +261,14 @@ test("shows the empty day and the uncaptured chart", async ({
       path: "/",
     },
   ]);
-  await page.goto("/charts");
+  await page.goto("/charts?view=table");
   await expect(
     page.getByText("This chart has not been captured yet"),
   ).toBeVisible();
 });
 
 test("filters the rows in the browser", async ({ page }) => {
-  await page.goto("/charts");
+  await page.goto("/charts?view=table");
 
   await page
     .getByRole("textbox", { name: "Search apps" })
@@ -176,7 +298,7 @@ test("is reachable from the sidebar and the palette", async ({ page }) => {
 });
 
 test("shows each row's movement", async ({ page }) => {
-  await page.goto("/charts");
+  await page.goto("/charts?view=table");
   const rows = chartTable(page).locator("tbody tr");
 
   await expect(rows.nth(0)).toContainText("Up 2 from #3");
@@ -187,7 +309,7 @@ test("shows each row's movement", async ({ page }) => {
 });
 
 test("compares against the chosen window", async ({ page }) => {
-  await page.goto("/charts");
+  await page.goto("/charts?view=table");
   const request = page.waitForRequest(/\/charts\?.*compare=7d/);
 
   await pick(page, "Filter by compare", "vs 7 days ago");
@@ -200,7 +322,7 @@ test("compares against the chosen window", async ({ page }) => {
 });
 
 test("lists the trending apps", async ({ page }) => {
-  await page.goto("/charts");
+  await page.goto("/charts?view=table");
   const trending = page.getByRole("tablist", { name: "Trending list" });
 
   await expect(trending.getByRole("tab", { name: /Climbers/ })).toHaveAttribute(
@@ -214,7 +336,7 @@ test("lists the trending apps", async ({ page }) => {
   await trending.getByRole("tab", { name: /Dropped out/ }).click();
   await expect(page.getByRole("tabpanel")).toContainText("Was #4");
 
-  await page.goto("/charts?compare=30d");
+  await page.goto("/charts?view=table&compare=30d");
   await expect(
     page.getByText("Capture more days to see movement."),
   ).toBeVisible();
@@ -224,7 +346,7 @@ test("lists the trending apps", async ({ page }) => {
 });
 
 test("sorts by movement", async ({ page }) => {
-  await page.goto("/charts");
+  await page.goto("/charts?view=table");
 
   await page.getByRole("button", { name: "Change" }).click();
 
@@ -238,7 +360,7 @@ const MOCK_API = "http://localhost:4100";
 
 test("captures today", async ({ page, request }) => {
   await request.get(`${MOCK_API}/__forget-chart-captures/6014`);
-  await page.goto(`/charts?genre=6014&date=${TOP_CHART_DATES[2]}`);
+  await page.goto(`/charts?view=table&genre=6014&date=${TOP_CHART_DATES[2]}`);
 
   await page.getByRole("button", { name: "Capture today" }).click();
 
@@ -267,7 +389,7 @@ test("shows today's capture while comparing an older window", async ({
   request,
 }) => {
   await request.get(`${MOCK_API}/__forget-chart-captures/6000`);
-  await page.goto("/charts?genre=6000&compare=7d");
+  await page.goto("/charts?view=table&genre=6000&compare=7d");
 
   await page.getByRole("button", { name: "Capture today" }).click();
 
@@ -290,7 +412,7 @@ test("offers a capture only when the api has no capture for its day", async ({
       path: "/",
     },
   ]);
-  await page.goto("/charts");
+  await page.goto("/charts?view=table");
 
   await expect(
     page.getByRole("button", { name: "Follow category" }),
@@ -309,7 +431,7 @@ test("a spent allowance is shown", async ({ page, context }) => {
       path: "/",
     },
   ]);
-  await page.goto("/charts");
+  await page.goto("/charts?view=table");
 
   await page.getByRole("button", { name: "Capture today" }).click();
 
@@ -331,7 +453,7 @@ test.describe.serial("chart follows", () => {
     request,
   }) => {
     await request.get(`${MOCK_API}/__reset-chart-follows`);
-    await page.goto("/charts?genre=7012");
+    await page.goto("/charts?view=table&genre=7012");
 
     await page.getByRole("button", { name: "Follow category" }).click();
 
@@ -369,7 +491,7 @@ test.describe.serial("chart follows", () => {
         device: "iphone",
       })
     ).json()) as Record<string, string>;
-    await page.goto("/charts?genre=7012");
+    await page.goto("/charts?view=table&genre=7012");
 
     await page.getByRole("button", { name: "Follow category" }).click();
 
@@ -395,7 +517,7 @@ test.describe.serial("chart follows", () => {
         path: "/",
       },
     ]);
-    await page.goto("/charts?genre=7012");
+    await page.goto("/charts?view=table&genre=7012");
 
     await page.getByRole("button", { name: "Follow category" }).click();
 
@@ -417,7 +539,7 @@ test.describe.serial("chart follows", () => {
         device: "iphone",
       });
     }
-    await page.goto("/charts");
+    await page.goto("/charts?view=table");
 
     await page.getByRole("button", { name: "Followed charts" }).click();
 
@@ -425,7 +547,7 @@ test.describe.serial("chart follows", () => {
     await expect(list.getByRole("listitem")).toHaveCount(1);
     await expect(
       list.getByRole("link", { name: "Games · United States" }),
-    ).toContainText("free, paid, grossing");
+    ).toContainText("Free, Paid, Grossing");
     await expect(list.getByText("1 of Unlimited")).toBeVisible();
   });
 
@@ -445,7 +567,7 @@ test.describe.serial("chart follows", () => {
       genre: "GAME_PUZZLE",
       device: "android",
     });
-    await page.goto("/charts");
+    await page.goto("/charts?view=table");
 
     await page.getByRole("button", { name: "Followed charts" }).click();
 
@@ -456,18 +578,18 @@ test.describe.serial("chart follows", () => {
     await expect(list.getByText("2 of Unlimited")).toBeVisible();
     await expect(
       list.getByRole("link", { name: "Puzzle · United States" }),
-    ).toContainText("App Store · free");
+    ).toContainText("App Store · Free");
     await expect(
       list.getByRole("link", { name: "Puzzle · United States" }),
     ).toHaveAttribute(
       "href",
-      "/charts?store=APP_STORE&country=us&collection=free&genre=7012&device=iphone",
+      "/charts?store=APP_STORE&country=us&genre=7012&device=iphone",
     );
     await expect(
       list.getByRole("link", { name: "Puzzle · Germany" }),
     ).toHaveAttribute(
       "href",
-      "/charts?store=GOOGLE_PLAY&country=de&collection=grossing&genre=GAME_PUZZLE&device=android",
+      "/charts?store=GOOGLE_PLAY&country=de&genre=GAME_PUZZLE&device=android",
     );
 
     await list.getByRole("link", { name: "Puzzle · Germany" }).click();
@@ -486,7 +608,7 @@ test.describe.serial("chart follows", () => {
       genre: "7012",
       device: "iphone",
     });
-    await page.goto("/charts");
+    await page.goto("/charts?view=table");
 
     await page.getByRole("button", { name: "Followed charts" }).click();
     const list = page.getByRole("dialog", { name: "Followed charts" });
@@ -514,7 +636,7 @@ test.describe.serial("chart follows", () => {
       genre: "7012",
       device: "iphone",
     });
-    await page.goto("/charts?genre=7012");
+    await page.goto("/charts?view=table&genre=7012");
     await page.getByRole("button", { name: "Followed charts" }).click();
     const list = page.getByRole("dialog", { name: "Followed charts" });
     await expect(list.getByRole("listitem")).toHaveCount(1);
@@ -544,7 +666,7 @@ test.describe.serial("chart follows", () => {
 });
 
 test("badges the workspace's apps", async ({ page }) => {
-  await page.goto("/charts");
+  await page.goto("/charts?view=table");
   const rows = chartTable(page).locator("tbody tr");
 
   await expect(
@@ -558,7 +680,7 @@ test("badges the workspace's apps", async ({ page }) => {
 });
 
 test("adds a row as a competitor", async ({ page, request }) => {
-  await page.goto("/charts");
+  await page.goto("/charts?view=table");
   const row = TOP_CHART_APPS[0];
   const posted = page.waitForRequest(
     (sent) =>
@@ -578,7 +700,7 @@ test("shows the add in progress on the competitor menu", async ({
   context,
   request,
 }) => {
-  await page.goto("/charts");
+  await page.goto("/charts?view=table");
   await context.addCookies([
     { name: "e2e_api_latency", value: "1500", domain: "localhost", path: "/" },
   ]);
@@ -596,7 +718,7 @@ test("shows the add in progress on the competitor menu", async ({
 });
 
 test("leaves out the category column when no row has one", async ({ page }) => {
-  await page.goto("/charts?store=GOOGLE_PLAY");
+  await page.goto("/charts?view=table&store=GOOGLE_PLAY");
 
   await expect(chartTable(page).locator("tbody tr")).toHaveCount(
     TOP_CHART_APPS.length,
@@ -605,7 +727,7 @@ test("leaves out the category column when no row has one", async ({ page }) => {
     chartTable(page).getByRole("columnheader", { name: "Category" }),
   ).toHaveCount(0);
 
-  await page.goto("/charts");
+  await page.goto("/charts?view=table");
 
   await expect(
     chartTable(page).getByRole("columnheader", { name: "Category" }),
@@ -614,7 +736,7 @@ test("leaves out the category column when no row has one", async ({ page }) => {
 
 test("names every chosen filter before hydration", async ({ page }) => {
   await page.route("**/_next/static/chunks/**", (route) => route.abort());
-  await page.goto("/charts?country=de&genre=6014");
+  await page.goto("/charts?view=table&country=de&genre=6014");
 
   await expect(page.getByRole("combobox", { name: "Country" })).toHaveText(
     "DE · Germany",
@@ -628,7 +750,7 @@ test("names every chosen filter before hydration", async ({ page }) => {
 });
 
 test("opens the store", async ({ page }) => {
-  await page.goto("/charts");
+  await page.goto("/charts?view=table");
 
   await expect(
     page.getByRole("link", {
@@ -644,7 +766,7 @@ test("keeps the row actions on the chart on screen while the next one loads", as
   page,
   context,
 }) => {
-  await page.goto("/charts");
+  await page.goto("/charts?view=table");
   await context.addCookies([
     { name: "e2e_api_latency", value: "4000", domain: "localhost", path: "/" },
   ]);
@@ -668,7 +790,7 @@ test("keeps the row actions on the chart on screen while the next one loads", as
 test("marks the chosen day apart from the other captured days", async ({
   page,
 }) => {
-  await page.goto("/charts");
+  await page.goto("/charts?view=table");
 
   await page.getByRole("button", { name: /^Captured day/ }).click();
   const chosen = page.locator('[data-captured][aria-pressed="true"]');
@@ -693,7 +815,7 @@ test("marks the chosen day apart from the other captured days", async ({
 test("moves through captured days with the keyboard from a day without one", async ({
   page,
 }) => {
-  await page.goto(`/charts?date=${utcDaysAgo(4)}`);
+  await page.goto(`/charts?view=table&date=${utcDaysAgo(4)}`);
 
   const trigger = page.getByRole("button", { name: /^Captured day/ });
   await expect(trigger).toHaveAccessibleName(
