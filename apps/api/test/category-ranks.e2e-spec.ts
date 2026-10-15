@@ -1,6 +1,6 @@
 import { execSync } from 'child_process';
 import { join } from 'path';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient, Store } from '@prisma/client';
 import { ApiErrorEnvelope, CategoryRankSeries } from '@asobeast/shared';
@@ -217,18 +217,13 @@ describe('CategoryRanksController (e2e)', () => {
       orderBy: { appId: 'asc' },
     });
     expect(positions).toEqual(
-      expect.arrayContaining([
+      [
         { appId: first.id, position: 3, depth: 100 },
         { appId: second.id, position: null, depth: 100 },
-      ]),
+      ].sort((a, b) => a.appId.localeCompare(b.appId)),
     );
     await expect(
-      asWorkspace(app, () =>
-        ranks.history(second.id, {}).then(
-          () => 'visible',
-          () => 'hidden',
-        ),
-      ),
-    ).resolves.toBe('hidden');
+      asWorkspace(app, () => ranks.history(second.id, {})),
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 });
