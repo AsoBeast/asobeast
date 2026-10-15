@@ -1609,6 +1609,25 @@ function chartPageFor(req: IncomingMessage, date: string | null): ChartPage {
     : TOP_CHART_PAGE_EMPTY;
 }
 
+function withComparison(
+  page: ChartPage,
+  compare: ChartPage["compare"],
+): ChartPage {
+  if (compare !== "30d") return { ...page, compare };
+  return {
+    ...page,
+    compare,
+    comparison: null,
+    entries: page.entries.map((entry) => ({
+      ...entry,
+      previous: null,
+      delta: null,
+      movement: "none",
+    })),
+    trending: { climbers: [], fallers: [], entries: [], exits: [] },
+  };
+}
+
 function chartAnswer(req: IncomingMessage): [number, unknown] {
   const path = req.url ?? "/charts";
   const query = new URL(path, "http://localhost").searchParams;
@@ -1620,7 +1639,8 @@ function chartAnswer(req: IncomingMessage): [number, unknown] {
   ) {
     return [400, errorEnvelope(400, path)];
   }
-  const page = chartPageFor(req, query.get("date"));
+  const compare = (query.get("compare") ?? "1d") as ChartPage["compare"];
+  const page = withComparison(chartPageFor(req, query.get("date")), compare);
   return [
     200,
     {

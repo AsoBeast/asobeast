@@ -6,6 +6,8 @@ import { AppIcon } from "@/components/AppIcon";
 import { SortableHeader } from "@/components/data-table/SortableHeader";
 import type { DataTableFeatures } from "@/components/data-table/table-features";
 import { Badge } from "@/components/ui/badge";
+import { movementSortValue } from "./movement";
+import { MovementCell } from "./MovementCell";
 
 const columnHelper = createColumnHelper<DataTableFeatures, ChartEntryItem>();
 
@@ -14,7 +16,7 @@ function PriceCell({ free }: { free: boolean | null }) {
   return <Badge variant="outline">{free ? "Free" : "Paid"}</Badge>;
 }
 
-export function chartColumns() {
+export function chartColumns(period: string) {
   return columnHelper.columns([
     columnHelper.accessor("position", {
       id: "position",
@@ -26,6 +28,15 @@ export function chartColumns() {
       cell: ({ row }) => (
         <span className="numeric font-mono">{row.original.position}</span>
       ),
+    }),
+    columnHelper.accessor(movementSortValue, {
+      id: "movement",
+      sortFn: "basic",
+      sortDescFirst: false,
+      enableHiding: false,
+      meta: { label: "Change", phone: true },
+      header: ({ column }) => <SortableHeader column={column} label="Change" />,
+      cell: ({ row }) => <MovementCell entry={row.original} period={period} />,
     }),
     columnHelper.accessor("title", {
       id: "app",

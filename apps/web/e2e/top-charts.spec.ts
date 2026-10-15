@@ -2,6 +2,13 @@ import { type Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
 import { TOP_CHART_APPS, TOP_CHART_DATES, utcDaysAgo } from "./fixtures.mts";
 
+const formatDayMonth = (date: string) =>
+  new Intl.DateTimeFormat("en-US", {
+    timeZone: "UTC",
+    month: "short",
+    day: "numeric",
+  }).format(new Date(date));
+
 const formatDay = (date: string) =>
   new Intl.DateTimeFormat("en-US", {
     timeZone: "UTC",
@@ -161,4 +168,63 @@ test("is reachable from the sidebar and the palette", async ({ page }) => {
   await page.keyboard.press("ControlOrMeta+k");
   await page.getByRole("option", { name: "Top charts" }).click();
   await expect(page).toHaveURL(/\/charts$/);
+});
+
+test("shows each row's movement", async ({ page }) => {
+  await page.goto("/charts");
+  const rows = chartTable(page).locator("tbody tr");
+
+  await expect(rows.nth(0)).toContainText("Up 2 from #3");
+  await expect(rows.nth(0).locator("svg.lucide-arrow-up")).toBeVisible();
+  await expect(rows.nth(1)).toContainText("Down 1 from #1");
+  await expect(rows.nth(2)).toContainText("No change");
+  await expect(rows.nth(3).getByText("New", { exact: true })).toBeVisible();
+});
+
+test("compares against the chosen window", async ({ page }) => {
+  await page.goto("/charts");
+  const request = page.waitForRequest(/\/charts\?.*compare=7d/);
+
+  await pick(page, "Filter by compare", "vs 7 days ago");
+
+  await expect(page).toHaveURL(/compare=7d/);
+  await request;
+  await expect(
+    page.getByText(`vs ${formatDayMonth(TOP_CHART_DATES[1])}`, { exact: true }),
+  ).toBeVisible();
+});
+
+test("lists the trending apps", async ({ page }) => {
+  await page.goto("/charts");
+  const trending = page.getByRole("tablist", { name: "Trending list" });
+
+  await expect(trending.getByRole("tab", { name: /Climbers/ })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  const panel = page.getByRole("tabpanel");
+  await expect(panel.getByRole("listitem")).toHaveCount(2);
+  await expect(panel).toContainText(TOP_CHART_APPS[7].title);
+
+  await trending.getByRole("tab", { name: /Dropped out/ }).click();
+  await expect(page.getByRole("tabpanel")).toContainText("Was #4");
+
+  await page.goto("/charts?compare=30d");
+  await expect(
+    page.getByText("Capture more days to see movement."),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("tablist", { name: "Trending list" }),
+  ).toHaveCount(0);
+});
+
+test("sorts by movement", async ({ page }) => {
+  await page.goto("/charts");
+
+  await page.getByRole("button", { name: "Change" }).click();
+
+  await expect(page).toHaveURL(/sort=movement/);
+  await expect(chartTable(page).locator("tbody tr").first()).toContainText(
+    "New entry",
+  );
 });

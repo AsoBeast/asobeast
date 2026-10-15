@@ -435,7 +435,7 @@ export const chartParsers = {
 
 export const loadChartSearch = createLoader(chartParsers);
 
-export const CHART_SORTS = ["position", "app"] as const;
+export const CHART_SORTS = ["position", "movement", "app"] as const;
 
 export const chartTableParsers = {
   sort: parseAsStringLiteral(CHART_SORTS).withDefault("position"),

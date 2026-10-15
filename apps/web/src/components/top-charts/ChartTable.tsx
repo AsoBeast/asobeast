@@ -25,10 +25,12 @@ import { chartTableParsers } from "@/lib/search-params";
 import { ariaSort } from "@/lib/table/sorting";
 import { chartColumns } from "./chart-columns";
 import { chartTitle } from "./chart-params";
+import { compareLabel } from "./movement";
 
 export function ChartTable({ page }: { page: ChartPage }) {
   const [params, setParams] = useQueryStates(chartTableParsers);
-  const columns = useMemo(() => chartColumns(), []);
+  const period = compareLabel(page.compare, page.comparison);
+  const columns = useMemo(() => chartColumns(period), [period]);
   const [visibility, setVisibility] = useStoredColumnVisibility(
     "top-chart",
     columns,

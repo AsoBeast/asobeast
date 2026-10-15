@@ -18,7 +18,7 @@ export default async function ChartsPage({
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <div className="page-full flex flex-col gap-6">
+      <div className="page-full @container/charts flex flex-col gap-6">
         <Suspense fallback={<TopChartsSkeleton />}>
           <TopChartsView />
         </Suspense>

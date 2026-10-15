@@ -23,6 +23,23 @@ export function ChartTableSkeleton() {
   );
 }
 
+export function TrendingPanelSkeleton() {
+  return (
+    <div className="flex flex-col gap-4 rounded-xl border p-4">
+      <Skeleton shape="text" className="w-20" />
+      <Skeleton className="h-6 w-32" />
+      <Skeleton className="h-8 w-full" />
+      {Array.from({ length: 5 }, (_, index) => (
+        <div key={index} className="flex items-center gap-3">
+          <Skeleton className="size-7 rounded-xl" />
+          <Skeleton shape="text" className="flex-1" />
+          <Skeleton shape="text" className="w-12" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function TopChartsSkeleton() {
   return (
     <div className="flex flex-col gap-6">
@@ -35,7 +52,10 @@ export function TopChartsSkeleton() {
           <Skeleton key={index} className="h-8 w-36" />
         ))}
       </div>
-      <ChartTableSkeleton />
+      <div className="grid gap-6 @6xl/charts:grid-cols-[minmax(0,1fr)_20rem] [&>*]:min-w-0">
+        <ChartTableSkeleton />
+        <TrendingPanelSkeleton />
+      </div>
     </div>
   );
 }

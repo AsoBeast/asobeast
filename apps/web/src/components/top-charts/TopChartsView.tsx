@@ -9,6 +9,7 @@ import { ChartEmpty } from "./ChartEmpty";
 import { ChartFilters } from "./ChartFilters";
 import { chartKeyFrom, chartQueryFrom } from "./chart-params";
 import { ChartTable } from "./ChartTable";
+import { TrendingPanel } from "./TrendingPanel";
 
 export function TopChartsView() {
   const [search, setSearch] = useQueryStates(chartParsers);
@@ -45,13 +46,17 @@ export function TopChartsView() {
         dates={page.dates}
         onChange={(next) => void setSearch(next)}
       />
-      <div aria-busy={shown !== query} className="flex flex-col gap-4">
-        {page.capture ? (
+      {page.capture ? (
+        <div
+          aria-busy={shown !== query}
+          className="grid gap-6 @6xl/charts:grid-cols-[minmax(0,1fr)_20rem] [&>*]:min-w-0"
+        >
           <ChartTable page={page} />
-        ) : (
-          <ChartEmpty captured={page.dates.length > 0} date={date} />
-        )}
-      </div>
+          <TrendingPanel page={page} />
+        </div>
+      ) : (
+        <ChartEmpty captured={page.dates.length > 0} date={date} />
+      )}
     </>
   );
 }
