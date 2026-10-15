@@ -617,9 +617,10 @@ describe('ReviewsService.list', () => {
     });
     expect(tx.review.findMany.mock.calls[0][0]).toMatchObject({
       where: {
-        appId: 'app1',
-        repliedAt: null,
-        reply: { is: { repliedAt: null } },
+        AND: [
+          { appId: 'app1' },
+          { repliedAt: null, reply: { is: { repliedAt: null } } },
+        ],
       },
       include: { reply: true },
     });

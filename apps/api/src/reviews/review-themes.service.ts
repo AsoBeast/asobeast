@@ -4,12 +4,7 @@ import { ReviewReplyState, ReviewThemes } from '@asobeast/shared';
 import { Env } from '../config/env';
 import { listingLanguages } from '../keywords/listing-languages';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  replyStateWhere,
-  reviewOrder,
-  ReviewScope,
-  reviewScopeWhere,
-} from './review-list-query';
+import { reviewOrder, ReviewScope, reviewsWhere } from './review-list-query';
 import {
   REVIEW_THEMES_CAP,
   reviewThemes,
@@ -35,13 +30,12 @@ export class ReviewThemesService {
       throw new NotFoundException(`App ${appId} not found`);
     }
     const reviews = await this.prisma.review.findMany({
-      where: {
-        ...reviewScopeWhere(appId, scope),
-        ...replyStateWhere(
-          scope.replyState,
-          this.prisma.review.fields.repliedAt,
-        ),
-      },
+      where: reviewsWhere(
+        appId,
+        scope,
+        scope.replyState,
+        this.prisma.review.fields.repliedAt,
+      ),
       orderBy: reviewOrder('newest'),
       take: REVIEW_THEMES_CAP,
       select: { title: true, text: true, score: true },

@@ -50,6 +50,17 @@ export function replyStateWhere(
   return state ? replyStateWheres(repliedAt)[state] : {};
 }
 
+export function reviewsWhere(
+  appId: string,
+  scope: ReviewScope,
+  state: ReviewReplyState | undefined,
+  repliedAt: RepliedAtRef,
+): Prisma.ReviewWhereInput {
+  return {
+    AND: [reviewScopeWhere(appId, scope), replyStateWhere(state, repliedAt)],
+  };
+}
+
 export function reviewOrder(
   sort: ReviewSort,
 ): Prisma.ReviewOrderByWithRelationInput[] {

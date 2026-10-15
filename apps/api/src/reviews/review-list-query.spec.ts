@@ -3,6 +3,7 @@ import {
   replyStateWhere,
   reviewOrder,
   reviewScopeWhere,
+  reviewsWhere,
 } from './review-list-query';
 
 const repliedAt: RepliedAtRef = {
@@ -80,6 +81,19 @@ describe('reviewScopeWhere', () => {
       score: 1,
       version: '2.0.0',
       reviewedAt: { gte: from },
+    });
+  });
+});
+
+describe('reviewsWhere', () => {
+  it('keeps the period and the updated state apart, though both read reviewedAt', () => {
+    const from = new Date('2026-09-06T00:00:00Z');
+
+    expect(reviewsWhere('app1', { from }, 'updated', repliedAt)).toEqual({
+      AND: [
+        { appId: 'app1', reviewedAt: { gte: from } },
+        { repliedAt: { not: null }, reviewedAt: { gt: repliedAt } },
+      ],
     });
   });
 });

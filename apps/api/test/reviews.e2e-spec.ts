@@ -333,6 +333,12 @@ describe('ReviewsController (e2e)', () => {
     expect((await listReviews(created.id, '?replyState=replied')).total).toBe(
       0,
     );
+    const afterEdit = await listReviews(
+      created.id,
+      '?replyState=updated&from=2026-09-06',
+    );
+    expect(afterEdit.total).toBe(0);
+    expect(afterEdit.counts?.updated).toBe(0);
   });
 
   it('stores a Google Play review that has a rating and no text next to the others', async () => {
@@ -800,21 +806,21 @@ describe('ReviewsController (e2e)', () => {
       negative: 2,
     });
     expect(recent.reviews).toBe(4);
-    const lowRated = (
+    const fiveStarAwaitingReply = (
       await api
         .get(`/apps/${seeded.id}/reviews/themes`)
         .query({ score: 5, replyState: 'needs_reply' })
         .expect(200)
     ).body as ReviewThemes;
-    expect(lowRated.reviews).toBe(2);
-    expect(lowRated.themes).toContainEqual({
+    expect(fiveStarAwaitingReply.reviews).toBe(2);
+    expect(fiveStarAwaitingReply.themes).toContainEqual({
       phrase: 'love',
       mentions: 2,
       negative: 0,
     });
-    expect(lowRated.themes.map((theme) => theme.phrase)).not.toContain(
-      'sync fails',
-    );
+    expect(
+      fiveStarAwaitingReply.themes.map((theme) => theme.phrase),
+    ).not.toContain('sync fails');
     expect(recent.themes[0]).toEqual({
       phrase: 'sync fails',
       mentions: 2,

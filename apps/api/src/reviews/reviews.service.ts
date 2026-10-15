@@ -27,12 +27,7 @@ import { ReviewResult, StoreProvider } from '../store-providers/types';
 import { SyncReviewsPayload } from '../jobs/jobs.types';
 import { sortVersionsNewestFirst } from './version-order';
 import { HOME_LISTING, NEWEST_FIRST } from '../apps/listing';
-import {
-  replyStateWhere,
-  reviewOrder,
-  ReviewScope,
-  reviewScopeWhere,
-} from './review-list-query';
+import { reviewOrder, ReviewScope, reviewsWhere } from './review-list-query';
 import { toReviewReplyItem } from './review-reply.mapper';
 import { reviewLanguage } from './review-language';
 import { toReviewTranslation, TranslationColumns } from './review-translation';
@@ -242,13 +237,10 @@ export class ReviewsService {
   async list(appId: string, filters: ReviewListFilters): Promise<ReviewList> {
     await this.ensureApp(appId);
 
-    const where = reviewScopeWhere(appId, filters);
-
     const { repliedAt } = this.prisma.review.fields;
-    const listed = {
-      ...where,
-      ...replyStateWhere(filters.replyState, repliedAt),
-    };
+    const inState = (state: ReviewReplyState | undefined) =>
+      reviewsWhere(appId, filters, state, repliedAt);
+    const listed = inState(filters.replyState);
 
     const [reviews, total, versions, needsReply, drafted, replied, updated] =
       await this.prisma.withTransaction((tx) =>
@@ -266,9 +258,7 @@ export class ReviewsService {
             select: { version: true },
           }),
           ...REVIEW_REPLY_STATES.map((state) =>
-            tx.review.count({
-              where: { ...where, ...replyStateWhere(state, repliedAt) },
-            }),
+            tx.review.count({ where: inState(state) }),
           ),
         ]),
       );
