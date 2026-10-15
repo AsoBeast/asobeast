@@ -155,7 +155,9 @@ describe('Localization detection probe (e2e)', () => {
 
     await runProbe(appId, 'en-GB', 'de');
 
-    await expect(localizationsOf(appId)).resolves.toEqual([]);
+    await expect(localizationsOf(appId)).resolves.toEqual([
+      { localization: 'de', origin: 'detected' },
+    ]);
   });
 
   it('records a localization served in another market apart from its default and the home listing', async () => {
@@ -167,6 +169,7 @@ describe('Localization detection probe (e2e)', () => {
     await runProbe(appId, 'en-GB', 'de');
 
     await expect(localizationsOf(appId)).resolves.toEqual([
+      { localization: 'de', origin: 'detected' },
       { localization: 'en-GB', origin: 'detected' },
     ]);
   });
