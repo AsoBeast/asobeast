@@ -449,5 +449,5 @@ test("a queue with nothing left to answer says so", async ({ page }) => {
   await page.getByRole("button", { name: "Show all reviews" }).click();
 
   await expect(page).not.toHaveURL(/replyState=/);
-  await expect(page.getByRole("article")).toHaveCount(2);
+  await expect(page.getByRole("article")).toHaveCount(3);
 });

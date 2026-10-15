@@ -785,7 +785,7 @@ export const APP_1_REVIEWS: ReviewList = {
 };
 
 export const APP_GP_REVIEWS: ReviewList = {
-  total: 2,
+  total: 3,
   versions: ["2.8.0", "2.7.0"],
   reviews: [
     {
@@ -812,6 +812,19 @@ export const APP_GP_REVIEWS: ReviewList = {
       reviewedAt: utcTimestampDaysAgo(2),
       repliedAt: null,
       replyText: null,
+      reply: null,
+    },
+    {
+      id: "gp-rev-3",
+      reviewId: "gp-store-rev-3",
+      userName: "Mia",
+      score: 4,
+      title: "Jetzt besser",
+      text: "Nach dem Update läuft es endlich.",
+      version: "2.8.0",
+      reviewedAt: utcTimestampDaysAgo(1),
+      repliedAt: utcTimestampDaysAgo(3),
+      replyText: "Danke, das Update behebt den Fehler.",
       reply: null,
     },
   ],

@@ -335,3 +335,32 @@ test("the themes strip stays hidden when nothing is repeated", async ({
     page.getByRole("region", { name: "What people mention" }),
   ).toHaveCount(0);
 });
+
+test("a play review edited after the reply says so and has its own filter", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-gp/reviews");
+  const strip = page.getByRole("region", { name: "Reply status" });
+  const updated = strip.getByRole("button", { name: /Updated after reply/ });
+
+  await expect(
+    page
+      .getByRole("article")
+      .filter({ hasText: "Jetzt besser" })
+      .getByText("Updated after reply"),
+  ).toBeVisible();
+  await expect(updated).toContainText("1");
+
+  await updated.click();
+
+  await expect(page).toHaveURL(/replyState=updated/);
+  await expect(page.getByRole("article")).toHaveCount(1);
+
+  await page.goto("/apps/app-1/reviews");
+
+  await expect(
+    page
+      .getByRole("region", { name: "Reply status" })
+      .getByRole("button", { name: /Updated after reply/ }),
+  ).toHaveCount(0);
+});

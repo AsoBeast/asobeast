@@ -38,9 +38,13 @@ import {
   exportReviews,
   truncatedExportNotice,
 } from "./review-csv";
-import { reviewFilters, type ReviewView } from "./review-filters";
+import {
+  countsFilters,
+  reviewFilters,
+  type ReviewView,
+} from "./review-filters";
 import { matchesReviewQuery } from "./review-search";
-import { REPLY_STATE_OPTIONS } from "./reply-state";
+import { shownReplyStates } from "./reply-state";
 import { ReplyGuidelinesDialog } from "./ReplyGuidelinesDialog";
 
 const STAR_FILTERS = [5, 4, 3, 2, 1] as const;
@@ -87,6 +91,39 @@ function VersionSelect({
         {data.versions.map((item) => (
           <SelectItem key={item} value={item}>
             v{item}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+function ReplyStateSelect({
+  id,
+  view,
+  onChange,
+}: {
+  id: string;
+  view: ReviewView;
+  onChange: (next: ReviewReplyState | null) => void;
+}) {
+  const { data } = useQuery(reviewsOptions(id, countsFilters(view)));
+
+  return (
+    <Select
+      value={view.replyState ?? ALL}
+      onValueChange={(next) =>
+        onChange(literalOf(REVIEW_REPLY_STATES, next) ?? null)
+      }
+    >
+      <SelectTrigger className="w-[170px]" aria-label="Filter by reply state">
+        <SelectValue placeholder="Any reply state" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={ALL}>Any reply state</SelectItem>
+        {shownReplyStates(data?.counts, view.replyState).map((option) => (
+          <SelectItem key={option.value} value={option.value}>
+            {option.label}
           </SelectItem>
         ))}
       </SelectContent>
@@ -206,24 +243,7 @@ export function ReviewsToolbar({
         <VersionSelect id={id} version={view.version} onChange={onVersion} />
       </Suspense>
       <SinceSelect since={view.since} onChange={onSince} />
-      <Select
-        value={view.replyState ?? ALL}
-        onValueChange={(next) =>
-          onReplyState(literalOf(REVIEW_REPLY_STATES, next) ?? null)
-        }
-      >
-        <SelectTrigger className="w-[150px]" aria-label="Filter by reply state">
-          <SelectValue placeholder="Any reply state" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value={ALL}>Any reply state</SelectItem>
-          {REPLY_STATE_OPTIONS.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <ReplyStateSelect id={id} view={view} onChange={onReplyState} />
       <Select
         value={view.sort}
         onValueChange={(next) =>

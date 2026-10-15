@@ -12,6 +12,7 @@ export const COUNT_OF: Record<ReviewReplyState, keyof ReviewReplyCounts> = {
   needs_reply: "needsReply",
   drafted: "drafted",
   replied: "replied",
+  updated: "updated",
 };
 
 const countedUnder = (review: ReviewItem, filters: ReviewFilters) =>

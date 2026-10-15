@@ -67,6 +67,7 @@ export function listReviews(
       needsReply: countOf("needs_reply"),
       drafted: countOf("drafted"),
       replied: countOf("replied"),
+      updated: countOf("updated"),
     },
   };
 }

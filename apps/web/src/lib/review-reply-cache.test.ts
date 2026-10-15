@@ -31,7 +31,7 @@ const list = (reviews: ReviewItem[]): ReviewList => ({
   reviews,
   total: reviews.length,
   versions: ["1.0.0"],
-  counts: { needsReply: 4, drafted: 1, replied: 2 },
+  counts: { needsReply: 4, drafted: 1, replied: 2, updated: 0 },
 });
 
 describe("withReviewReply", () => {
@@ -39,7 +39,12 @@ describe("withReviewReply", () => {
     const next = withReviewReply(list([review()]), {}, review(), REPLY);
 
     expect(next.reviews[0].reply).toEqual(REPLY);
-    expect(next.counts).toEqual({ needsReply: 3, drafted: 2, replied: 2 });
+    expect(next.counts).toEqual({
+      needsReply: 3,
+      drafted: 2,
+      replied: 2,
+      updated: 0,
+    });
   });
 
   it("moves the count of a row the list does not hold when the filters count it", () => {
@@ -50,7 +55,12 @@ describe("withReviewReply", () => {
       REPLY,
     );
 
-    expect(next.counts).toEqual({ needsReply: 3, drafted: 2, replied: 2 });
+    expect(next.counts).toEqual({
+      needsReply: 3,
+      drafted: 2,
+      replied: 2,
+      updated: 0,
+    });
   });
 
   it("leaves a list whose star or version filter does not count the row", () => {
@@ -78,7 +88,7 @@ describe("withReviewReply", () => {
     ).toBe(before);
     expect(
       withReviewReply(before, { from: "2026-10-01" }, review(), REPLY).counts,
-    ).toEqual({ needsReply: 3, drafted: 2, replied: 2 });
+    ).toEqual({ needsReply: 3, drafted: 2, replied: 2, updated: 0 });
   });
 
   it("moves a discarded draft back to needs reply", () => {
@@ -87,7 +97,30 @@ describe("withReviewReply", () => {
     const next = withReviewReply(list([drafted]), {}, drafted, null);
 
     expect(next.reviews[0].reply).toBeNull();
-    expect(next.counts).toEqual({ needsReply: 5, drafted: 0, replied: 2 });
+    expect(next.counts).toEqual({
+      needsReply: 5,
+      drafted: 0,
+      replied: 2,
+      updated: 0,
+    });
+  });
+
+  it("keeps a review edited after the store's reply counted as updated", () => {
+    const updated = review({
+      reviewedAt: "2026-10-03T00:00:00.000Z",
+      repliedAt: ISO,
+    });
+    const before = {
+      ...list([updated]),
+      counts: { needsReply: 4, drafted: 1, replied: 2, updated: 1 },
+    };
+
+    const next = withReviewReply(before, {}, updated, {
+      ...REPLY,
+      repliedAt: ISO,
+    });
+
+    expect(next.counts).toEqual(before.counts);
   });
 
   it("keeps the counts of a google play reply the store already shows", () => {
@@ -95,6 +128,11 @@ describe("withReviewReply", () => {
 
     const next = withReviewReply(list([replied]), {}, replied, REPLY);
 
-    expect(next.counts).toEqual({ needsReply: 4, drafted: 1, replied: 2 });
+    expect(next.counts).toEqual({
+      needsReply: 4,
+      drafted: 1,
+      replied: 2,
+      updated: 0,
+    });
   });
 });
