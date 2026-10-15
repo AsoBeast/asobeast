@@ -44,7 +44,10 @@ export function ScreenshotThumb({
       height={height}
       loading="lazy"
       style={{ height, width: "auto" }}
-      className={cn("shrink-0 rounded-lg border object-contain", className)}
+      className={cn(
+        "max-w-none shrink-0 rounded-lg border object-contain",
+        className,
+      )}
       onError={() => setFailedSrc(src)}
     />
   );

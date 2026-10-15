@@ -51,12 +51,13 @@ export function ScreenshotCaptionsCard({
               {data.screenshots.map((item) => (
                 <li
                   key={item.position}
-                  className="flex max-w-56 shrink-0 flex-col gap-2"
+                  className="flex w-min shrink-0 flex-col gap-2"
                 >
                   <ScreenshotThumb
                     src={item.url}
                     alt={`Screenshot ${item.position}`}
                     height={THUMB_HEIGHT}
+                    className="self-start"
                   />
                   <Badge variant="outline" className="self-start">
                     {CAPTION_STATUS_LABELS[item.status]}
