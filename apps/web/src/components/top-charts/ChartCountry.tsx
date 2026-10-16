@@ -13,7 +13,14 @@ export function ChartCountry({
   country: string;
   onChange: (country: string) => void;
 }) {
+  const chart = `${store}~${country}`;
   const [draft, setDraft] = useState(country);
+  const [draftChart, setDraftChart] = useState(chart);
+
+  if (draftChart !== chart) {
+    setDraftChart(chart);
+    setDraft(country);
+  }
 
   return (
     <CountrySelect
