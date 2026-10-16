@@ -20,7 +20,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import { ApiError, importApp } from "@/lib/api";
 import { marketError } from "@/lib/countries";
 import { storeLabel } from "@/lib/format";
@@ -49,9 +49,9 @@ function StoreTabs({
     <Tabs value={store} onValueChange={(next) => onChange(next as Store)}>
       <TabsList aria-label="Store">
         {STORES.map((option) => (
-          <TabsTrigger key={option} value={option}>
+          <TabsOption key={option} value={option}>
             {storeLabel(option)}
-          </TabsTrigger>
+          </TabsOption>
         ))}
       </TabsList>
     </Tabs>
