@@ -1,4 +1,4 @@
-import { mineReviewPhrases } from './review-mining';
+import { mineReviewPhrases, reviewPhrases } from './review-mining';
 
 describe('mineReviewPhrases', () => {
   it('ranks phrases by the number of distinct reviews containing them', () => {
@@ -138,5 +138,32 @@ describe('mineReviewPhrases', () => {
     );
 
     expect(suggestions.map((item) => item.text)).not.toContain('sync widget');
+  });
+});
+
+describe('reviewPhrases', () => {
+  const REVIEW = { title: null, text: 'I encountered a fatal error today' };
+
+  it('reads up to three words unless asked for more', () => {
+    expect(reviewPhrases(REVIEW, [])).not.toContain(
+      'encountered a fatal error',
+    );
+    expect(reviewPhrases(REVIEW, [], { maxWords: 4 })).toContain(
+      'encountered a fatal error',
+    );
+    expect(reviewPhrases(REVIEW, [], { maxWords: 4 })).not.toContain(
+      'encountered a fatal error today',
+    );
+  });
+
+  it('keeps an ignored word inside a phrase and never at its edges', () => {
+    const phrases = reviewPhrases(REVIEW, [], {
+      maxWords: 4,
+      ignored: new Set(['fatal']),
+    });
+
+    expect(phrases).toContain('encountered a fatal error');
+    expect(phrases).not.toContain('fatal');
+    expect(phrases).not.toContain('fatal error');
   });
 });

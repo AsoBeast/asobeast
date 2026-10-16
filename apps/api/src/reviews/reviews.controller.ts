@@ -39,7 +39,7 @@ export class ReviewsController {
   @Get('themes')
   @ApiOperation({
     summary:
-      'Phrases repeated across the reviews of an app, the ones in low rated reviews first',
+      'Complaint and praise phrases that stand out in the reviews of an app against its period',
   })
   listThemes(
     @Param('id') id: string,
@@ -50,6 +50,7 @@ export class ReviewsController {
       version: query.version,
       from: dayOf(query.from),
       replyState: query.replyState,
+      sort: query.sort,
     });
   }
 

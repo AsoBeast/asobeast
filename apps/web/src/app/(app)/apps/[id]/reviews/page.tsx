@@ -25,7 +25,6 @@ import {
   countsFilters,
   REVIEWS_SHOW_ALL_LIMIT,
   reviewFilters,
-  themesFilters,
   type ReviewView,
 } from "@/components/reviews/review-filters";
 
@@ -68,7 +67,7 @@ export default async function ReviewsPage({
       ),
     ),
     queryClient.prefetchQuery(reviewsOptions(id, countsFilters(view))),
-    queryClient.prefetchQuery(reviewThemesOptions(id, themesFilters(view))),
+    queryClient.prefetchQuery(reviewThemesOptions(id, reviewFilters(view))),
     queryClient.prefetchQuery(ratingsHistoryOptions(id, presetToRange("30d"))),
     queryClient.prefetchQuery(ratingsHistogramOptions(id)),
     queryClient.prefetchQuery(aiStatusOptions),

@@ -22,8 +22,19 @@ const REVIEW_FILLERS: ReadonlySet<string> = new Set([
   'please',
 ]);
 
-function* ngramsOf(tokens: string[], isUsable: TokenTest): Generator<string> {
-  for (let n = 1; n <= MAX_NGRAM; n += 1) {
+export interface PhraseOptions {
+  maxWords?: number;
+  ignored?: ReadonlySet<string>;
+}
+
+const NOTHING_IGNORED: ReadonlySet<string> = new Set();
+
+function* ngramsOf(
+  tokens: string[],
+  isUsable: TokenTest,
+  maxWords: number,
+): Generator<string> {
+  for (let n = 1; n <= maxWords; n += 1) {
     for (let i = 0; i + n <= tokens.length; i += 1) {
       if (!isUsable(tokens[i]) || !isUsable(tokens[i + n - 1])) continue;
       const text = tokens.slice(i, i + n).join(' ');
@@ -32,11 +43,15 @@ function* ngramsOf(tokens: string[], isUsable: TokenTest): Generator<string> {
   }
 }
 
-function phrasesOf(review: MinableReview, isUsable: TokenTest): Set<string> {
+function phrasesOf(
+  review: MinableReview,
+  isUsable: TokenTest,
+  maxWords = MAX_NGRAM,
+): Set<string> {
   const phrases = new Set<string>();
   for (const field of [review.title ?? '', review.text]) {
     for (const segment of listingSegments(field)) {
-      for (const text of ngramsOf(tokenize(segment), isUsable)) {
+      for (const text of ngramsOf(tokenize(segment), isUsable, maxWords)) {
         phrases.add(text);
       }
     }
@@ -44,16 +59,21 @@ function phrasesOf(review: MinableReview, isUsable: TokenTest): Set<string> {
   return phrases;
 }
 
-function usableFor(languages: readonly string[]): TokenTest {
+function usableFor(
+  languages: readonly string[],
+  ignored: ReadonlySet<string> = NOTHING_IGNORED,
+): TokenTest {
   const usable = usableIn(functionWordTest(languages));
-  return (token) => usable(token) && !REVIEW_FILLERS.has(token);
+  return (token) =>
+    usable(token) && !REVIEW_FILLERS.has(token) && !ignored.has(token);
 }
 
 export function reviewPhrases(
   review: MinableReview,
   languages: readonly string[],
+  { maxWords = MAX_NGRAM, ignored }: PhraseOptions = {},
 ): Set<string> {
-  return phrasesOf(review, usableFor(languages));
+  return phrasesOf(review, usableFor(languages, ignored), maxWords);
 }
 
 export function mineReviewPhrases(
