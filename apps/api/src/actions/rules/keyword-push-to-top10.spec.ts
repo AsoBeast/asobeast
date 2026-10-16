@@ -229,7 +229,7 @@ describe('keyword.push_to_top10', () => {
       entries: ids.map((storeAppId, index) => ({
         storeAppId,
         position: index + 1,
-        title: `App ${storeAppId}`,
+        title: `Habit ${storeAppId}`,
       })),
     });
     const settled = ['x1', 'x2', 'x3'];

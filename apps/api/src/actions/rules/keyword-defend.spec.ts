@@ -50,7 +50,7 @@ const snapshot = (
   entries: ids.map(([storeAppId, position]) => ({
     storeAppId,
     position,
-    title: `App ${storeAppId}`,
+    title: `Budget ${storeAppId}`,
   })),
 });
 
@@ -480,6 +480,139 @@ describe('keyword.defend', () => {
 
       expect(detections[0].terms.confidence).toBe(0.3);
       expect(detections[0].dampenedBy).toBe('serp.hold_volatile');
+    });
+  });
+
+  describe('niche entrants', () => {
+    const titled = (
+      offset: number,
+      entries: Array<[string, number, string]>,
+    ): SerpSnapshotDay => ({
+      date: day(offset),
+      entries: entries.map(([storeAppId, position, title]) => ({
+        storeAppId,
+        position,
+        title,
+      })),
+    });
+
+    const OPENING: Array<[string, number, string]> = [
+      ['worldguessr', 1, 'WorldGuessr'],
+      ['seterra', 2, 'Seterra Geography'],
+      [OWN, 6, 'Where Am I? GeoGuess Map Quiz'],
+    ];
+
+    const invadedBy = (
+      first: [string, string],
+      second: [string, string],
+    ): SerpSnapshotDay[] => [
+      titled(4, OPENING),
+      titled(3, OPENING),
+      titled(2, OPENING),
+      titled(1, [
+        [first[0], 1, first[1]],
+        [second[0], 2, second[1]],
+        [OWN, 6, 'Where Am I? GeoGuess Map Quiz'],
+      ]),
+    ];
+
+    const PADDING = invadedBy(['x', 'X'], ['maps', 'Google Maps']);
+    const GUESSERS = invadedBy(
+      ['city-map', 'City Map Guesser'],
+      ['country', 'Country Guesser'],
+    );
+
+    const cityguessr = keyword({ text: 'cityguessr' });
+    const otherKeyword = (country = 'us') =>
+      keyword({ keywordId: 'kw_2', text: 'location guesser', country });
+
+    const defendWith = (overrides: Partial<ActionContextApp>) =>
+      detectKeywordDefend(
+        context([
+          app({
+            trackedKeywords: [cityguessr],
+            serpDaysByKeyword: new Map([['kw_1', PADDING]]),
+            ...overrides,
+          }),
+        ]),
+        NOW,
+      ).filter((detection) => detection.keywordId === 'kw_1');
+
+    it('ignores popular apps padding the results', () => {
+      expect(defendWith({})).toEqual([]);
+    });
+
+    it('counts apps that also rank for another keyword of the app', () => {
+      const detections = defendWith({
+        trackedKeywords: [cityguessr, otherKeyword()],
+        serpDaysByKeyword: new Map([
+          ['kw_1', GUESSERS],
+          ['kw_2', GUESSERS],
+        ]),
+      });
+
+      expect(detections).toHaveLength(1);
+      expect(
+        evidenceOf(detections).entrants.map((entrant) => entrant.title),
+      ).toEqual(['City Map Guesser', 'Country Guesser']);
+    });
+
+    it('never counts padding that only another keyword of the app shares', () => {
+      expect(
+        defendWith({
+          trackedKeywords: [cityguessr, otherKeyword()],
+          serpDaysByKeyword: new Map([
+            ['kw_1', PADDING],
+            ['kw_2', GUESSERS],
+          ]),
+        }),
+      ).toEqual([]);
+    });
+
+    it('counts a keyword in another storefront as no evidence', () => {
+      expect(
+        defendWith({
+          trackedKeywords: [cityguessr, otherKeyword('de')],
+          serpDaysByKeyword: new Map([
+            ['kw_1', PADDING],
+            ['kw_2', PADDING],
+          ]),
+        }),
+      ).toEqual([]);
+    });
+
+    it('counts an app whose title shares a word with the keyword', () => {
+      const detections = defendWith({
+        trackedKeywords: [keyword({ text: 'city guesser' })],
+        serpDaysByKeyword: new Map([['kw_1', GUESSERS]]),
+      });
+
+      expect(evidenceOf(detections).entrants).toHaveLength(2);
+    });
+
+    it('never counts a shared stopword as a shared word', () => {
+      expect(
+        defendWith({
+          trackedKeywords: [keyword({ text: 'guess the map' })],
+          serpDaysByKeyword: new Map([
+            [
+              'kw_1',
+              invadedBy(['sims', 'The Sims'], ['x', 'X the everything app']),
+            ],
+          ]),
+        }),
+      ).toEqual([]);
+    });
+
+    it('counts a tracked competitor', () => {
+      expect(
+        defendWith({
+          competitorAppIdsByStoreAppId: new Map([
+            ['x', 'competitor_x'],
+            ['maps', 'competitor_maps'],
+          ]),
+        }),
+      ).toHaveLength(1);
     });
   });
 });
