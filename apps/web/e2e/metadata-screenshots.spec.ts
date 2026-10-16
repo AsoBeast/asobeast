@@ -138,7 +138,7 @@ test("keeps a portrait screenshot on a small rendition", async ({ page }) => {
   await expect
     .poll(() => image.evaluate((node: HTMLImageElement) => node.naturalHeight))
     .toBe(2);
-  await page.waitForTimeout(1500);
+  await page.waitForLoadState("networkidle");
 
   expect(requests).toBe(1);
   expect(await requestedWidth(page, "Screenshot 2")).toBeLessThanOrEqual(256);

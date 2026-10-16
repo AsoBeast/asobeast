@@ -225,7 +225,7 @@ test.describe("importing by name", () => {
         name: "Results from App Store in United States",
       }),
     ).toBeVisible();
-    await page.waitForTimeout(600);
+    await page.waitForLoadState("networkidle");
     return terms;
   };
 
