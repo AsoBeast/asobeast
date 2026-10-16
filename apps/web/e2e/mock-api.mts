@@ -64,6 +64,7 @@ import {
   FIRST_RUN_MID,
   APP_RUN_COMPLETE,
   APP_RUN_DELAYED,
+  APP_RUN_PAUSED,
   APP_RUN_IDLE,
   APP_RUN_RUNNING,
   FIRST_RUN_UNSCHEDULED,
@@ -1739,8 +1740,10 @@ function firstRunFor(appId: string, req: IncomingMessage): FirstRunStatus {
 const appRunAdvances = new Map<string, number>();
 
 function appRunFor(appId: string, req: IncomingMessage): AppRunStatus {
+  const paused = hasCookie(req, "e2e_app_run_paused", "1");
   if (appId === "app-2") return APP_RUN_IDLE;
-  if (appId !== "app-new") return { ...APP_RUN_COMPLETE, appId };
+  if (appId !== "app-new") return { ...APP_RUN_COMPLETE, appId, paused };
+  if (paused) return APP_RUN_PAUSED;
   if (hasCookie(req, "e2e_app_run_delayed", "1")) return APP_RUN_DELAYED;
   const token = cookieValue(req, "e2e_app_run_advance");
   if (token === undefined) return APP_RUN_RUNNING;
