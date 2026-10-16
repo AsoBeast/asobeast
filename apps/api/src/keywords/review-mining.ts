@@ -1,6 +1,6 @@
 import { KeywordSuggestion, tokenize } from '@asobeast/shared';
 import { usableIn } from './extraction';
-import { functionWordTest } from './function-words';
+import { reviewWordTest } from './function-words';
 import type { TokenTest } from './function-words';
 import { listingSegments } from './listing-segments';
 
@@ -20,6 +20,11 @@ const REVIEW_FILLERS: ReadonlySet<string> = new Set([
   'even',
   'still',
   'please',
+  'now',
+  'every',
+  'much',
+  'ever',
+  'also',
 ]);
 
 export interface PhraseOptions {
@@ -63,7 +68,7 @@ function usableFor(
   languages: readonly string[],
   ignored: ReadonlySet<string> = NOTHING_IGNORED,
 ): TokenTest {
-  const usable = usableIn(functionWordTest(languages));
+  const usable = usableIn(reviewWordTest(languages));
   return (token) =>
     usable(token) && !REVIEW_FILLERS.has(token) && !ignored.has(token);
 }
