@@ -195,7 +195,7 @@ export class StoreConnectionService {
   }
 
   private async items(): Promise<StoreConnectionItem[]> {
-    const [rows, apps, ranges] = await Promise.all([
+    const [rows, apps] = await Promise.all([
       this.prisma.storeConnection.findMany({ orderBy: { store: 'asc' } }),
       this.prisma.app.findMany({
         where: { isCompetitor: false },
@@ -210,12 +210,20 @@ export class StoreConnectionService {
           },
         },
       }),
-      this.prisma.storeFunnelDay.groupBy({
-        by: ['appId'],
-        _min: { date: true },
-        _max: { date: true },
-      }),
     ]);
+    const reported = apps.filter((app) =>
+      rows.some((row) => row.store === app.store),
+    );
+    const ranges = await Promise.all(
+      reported.map(async (app) => ({
+        appId: app.id,
+        ...(await this.prisma.storeFunnelDay.aggregate({
+          where: { appId: app.id },
+          _min: { date: true },
+          _max: { date: true },
+        })),
+      })),
+    );
     return connectionItems(rows, apps, ranges);
   }
 

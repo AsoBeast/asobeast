@@ -20,11 +20,7 @@ export interface StoreFunnelQuery {
   days: number;
 }
 
-const FUNNEL_COLUMNS = {
-  date: true,
-  country: true,
-  sourceType: true,
-  pageType: true,
+const COUNTERS = {
   impressions: true,
   uniqueImpressions: true,
   pageViews: true,
@@ -68,9 +64,10 @@ export class StoreFunnelService {
     const from = addDays(today, 1 - Math.max(days, FUNNEL_LOOKBACK_DAYS));
     const market = country ? { country } : {};
     const [rows, first] = await Promise.all([
-      this.prisma.storeFunnelDay.findMany({
+      this.prisma.storeFunnelDay.groupBy({
+        by: ['date', 'sourceType', 'pageType'],
         where: { appId, date: { gte: from }, ...market },
-        select: FUNNEL_COLUMNS,
+        _sum: COUNTERS,
       }),
       this.prisma.storeFunnelDay.aggregate({
         where: { appId },
@@ -84,8 +81,16 @@ export class StoreFunnelService {
       source: app.store === 'APP_STORE' ? 'appStoreConnect' : 'playConsole',
       ...measureStoreFunnel({
         rows: rows.map((row): FunnelDayRow => ({
-          ...row,
           date: toDateKey(row.date),
+          country: country ?? null,
+          sourceType: row.sourceType,
+          pageType: row.pageType,
+          impressions: row._sum.impressions ?? 0,
+          uniqueImpressions: row._sum.uniqueImpressions ?? 0,
+          pageViews: row._sum.pageViews ?? 0,
+          uniquePageViews: row._sum.uniquePageViews ?? 0,
+          gets: row._sum.gets ?? 0,
+          uniqueGets: row._sum.uniqueGets ?? 0,
         })),
         days,
         today,

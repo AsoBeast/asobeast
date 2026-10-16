@@ -23,18 +23,19 @@ function build(overrides: Partial<Setup> = {}) {
     app: { findFirst: jest.fn().mockResolvedValue(app) },
     storeReportRequest: { findFirst: jest.fn().mockResolvedValue(request) },
     storeFunnelDay: {
-      findMany: jest.fn().mockResolvedValue([
+      groupBy: jest.fn().mockResolvedValue([
         {
           date: new Date('2026-10-10T00:00:00.000Z'),
-          country: 'us',
           sourceType: 'search',
           pageType: 'productPage',
-          impressions: 10,
-          uniqueImpressions: 10,
-          pageViews: 4,
-          uniquePageViews: 4,
-          gets: 1,
-          uniqueGets: 1,
+          _sum: {
+            impressions: 10,
+            uniqueImpressions: 10,
+            pageViews: 4,
+            uniquePageViews: 4,
+            gets: 1,
+            uniqueGets: 1,
+          },
         },
       ]),
       aggregate: jest.fn().mockResolvedValue({
@@ -67,7 +68,7 @@ describe('StoreFunnelService', () => {
       points: [],
       windows: [],
     });
-    expect(prisma.storeFunnelDay.findMany).not.toHaveBeenCalled();
+    expect(prisma.storeFunnelDay.groupBy).not.toHaveBeenCalled();
   });
 
   it('answers connected false when no active request reports the app', async () => {
@@ -113,8 +114,9 @@ describe('StoreFunnelService', () => {
       NOW,
     );
 
-    expect(prisma.storeFunnelDay.findMany).toHaveBeenCalledWith(
+    expect(prisma.storeFunnelDay.groupBy).toHaveBeenCalledWith(
       expect.objectContaining({
+        by: ['date', 'sourceType', 'pageType'],
         where: {
           appId: 'app_1',
           date: { gte: new Date('2026-07-19T00:00:00.000Z') },

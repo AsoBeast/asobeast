@@ -96,14 +96,15 @@ function harness(box: SecretBox | null = new SecretBox(randomBytes(32))) {
       ),
     },
     storeFunnelDay: {
-      groupBy: jest.fn(() =>
-        Promise.resolve([
-          {
-            appId: 'app_1',
-            _min: { date: new Date('2024-01-01T00:00:00.000Z') },
-            _max: { date: new Date('2026-10-12T00:00:00.000Z') },
-          },
-        ]),
+      aggregate: jest.fn(({ where }: { where: { appId: string } }) =>
+        Promise.resolve(
+          where.appId === 'app_1'
+            ? {
+                _min: { date: new Date('2024-01-01T00:00:00.000Z') },
+                _max: { date: new Date('2026-10-12T00:00:00.000Z') },
+              }
+            : { _min: { date: null }, _max: { date: null } },
+        ),
       ),
     },
   };
