@@ -3381,6 +3381,229 @@
         ]
       }
     },
+    "/store-connections": {
+      "get": {
+        "description": "Every connected store console key with its status, the access its report requests were granted, and each primary app of that store with its report state and the first and last day of stored funnel rows. Never returns key material. available is false when the instance has no STORE_CONNECT_ENCRYPTION_KEY.",
+        "operationId": "StoreConnectionsController_state",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "The store consoles this workspace has connected",
+        "tags": [
+          "store-connect"
+        ]
+      }
+    },
+    "/store-connections/{store}": {
+      "put": {
+        "description": "Verifies the key with the store, seals it at rest bound to this workspace and replaces any key connected before, then queues a report sync. Owner only, through a signed in session. Answers 422 when the store refuses the key and 409 when the instance has store connections off.",
+        "operationId": "StoreConnectionsController_connect",
+        "parameters": [
+          {
+            "name": "store",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "APP_STORE",
+                "GOOGLE_PLAY"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoreConnectionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Connect a store console key",
+        "tags": [
+          "store-connect"
+        ]
+      },
+      "delete": {
+        "description": "Deletes the sealed key and its report requests, even while the instance has store connections off. The funnel rows already stored stay.",
+        "operationId": "StoreConnectionsController_disconnect",
+        "parameters": [
+          {
+            "name": "store",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "APP_STORE",
+                "GOOGLE_PLAY"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Disconnect a store console",
+        "tags": [
+          "store-connect"
+        ]
+      }
+    },
+    "/store-connections/{store}/verify": {
+      "post": {
+        "description": "Asks the store whether the stored key still works. A refused key marks the connection rejected; an accepted one clears that and queues a report sync. Answers 409 when the stored key can no longer be decrypted.",
+        "operationId": "StoreConnectionsController_verify",
+        "parameters": [
+          {
+            "name": "store",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "APP_STORE",
+                "GOOGLE_PLAY"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Verify the connected store console key again",
+        "tags": [
+          "store-connect"
+        ]
+      }
+    },
+    "/store-connections/{store}/sync": {
+      "post": {
+        "description": "Queues the download of the reports the store has published since the last sync. A sync already waiting is not queued twice. Answers 409 while the store refuses the key.",
+        "operationId": "StoreConnectionsController_sync",
+        "parameters": [
+          {
+            "name": "store",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "APP_STORE",
+                "GOOGLE_PLAY"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Queue a report sync for the connected store console",
+        "tags": [
+          "store-connect"
+        ]
+      }
+    },
+    "/apps/{id}/funnel": {
+      "get": {
+        "description": "Reads the rows the connected store console reported: a zero filled daily series of the requested days with the total and the search share, and the 7, 14 and 28 day windows of complete days against the period before. A day is complete once it is three days old and the store has delivered it. Answers connected false and empty series for a competitor, a store without an active connection, or an app the connected key does not report.",
+        "operationId": "StoreFunnelController_report",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "country",
+            "required": false,
+            "in": "query",
+            "description": "Count only the storefront of this market. Omitted means every market the console reports.",
+            "schema": {
+              "pattern": "^[a-z]{2}$",
+              "example": "de",
+              "type": "string"
+            }
+          },
+          {
+            "name": "days",
+            "required": false,
+            "in": "query",
+            "description": "Days of daily points, ending today",
+            "schema": {
+              "minimum": 7,
+              "maximum": 365,
+              "default": 90,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Store impressions, page views, downloads and conversion of an app by market and window",
+        "tags": [
+          "store-connect"
+        ]
+      }
+    },
     "/apps/{id}/screenshots": {
       "get": {
         "operationId": "ScreenshotsController_list",
@@ -4993,229 +5216,6 @@
         "summary": "Egress proxy pool health for operators",
         "tags": [
           "admin"
-        ]
-      }
-    },
-    "/store-connections": {
-      "get": {
-        "description": "Every connected store console key with its status, the access its report requests were granted, and each primary app of that store with its report state and the first and last day of stored funnel rows. Never returns key material. available is false when the instance has no STORE_CONNECT_ENCRYPTION_KEY.",
-        "operationId": "StoreConnectionsController_state",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            }
-          }
-        },
-        "summary": "The store consoles this workspace has connected",
-        "tags": [
-          "store-connect"
-        ]
-      }
-    },
-    "/store-connections/{store}": {
-      "put": {
-        "description": "Verifies the key with the store, seals it at rest bound to this workspace and replaces any key connected before, then queues a report sync. Owner only, through a signed in session. Answers 422 when the store refuses the key and 409 when the instance has store connections off.",
-        "operationId": "StoreConnectionsController_connect",
-        "parameters": [
-          {
-            "name": "store",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "APP_STORE",
-                "GOOGLE_PLAY"
-              ]
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/StoreConnectionDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Connect a store console key",
-        "tags": [
-          "store-connect"
-        ]
-      },
-      "delete": {
-        "description": "Deletes the sealed key and its report requests, even while the instance has store connections off. The funnel rows already stored stay.",
-        "operationId": "StoreConnectionsController_disconnect",
-        "parameters": [
-          {
-            "name": "store",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "APP_STORE",
-                "GOOGLE_PLAY"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": ""
-          }
-        },
-        "summary": "Disconnect a store console",
-        "tags": [
-          "store-connect"
-        ]
-      }
-    },
-    "/store-connections/{store}/verify": {
-      "post": {
-        "description": "Asks the store whether the stored key still works. A refused key marks the connection rejected; an accepted one clears that and queues a report sync. Answers 409 when the stored key can no longer be decrypted.",
-        "operationId": "StoreConnectionsController_verify",
-        "parameters": [
-          {
-            "name": "store",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "APP_STORE",
-                "GOOGLE_PLAY"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Verify the connected store console key again",
-        "tags": [
-          "store-connect"
-        ]
-      }
-    },
-    "/store-connections/{store}/sync": {
-      "post": {
-        "description": "Queues the download of the reports the store has published since the last sync. A sync already waiting is not queued twice. Answers 409 while the store refuses the key.",
-        "operationId": "StoreConnectionsController_sync",
-        "parameters": [
-          {
-            "name": "store",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "APP_STORE",
-                "GOOGLE_PLAY"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "202": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Queue a report sync for the connected store console",
-        "tags": [
-          "store-connect"
-        ]
-      }
-    },
-    "/apps/{id}/funnel": {
-      "get": {
-        "description": "Reads the rows the connected store console reported: a zero filled daily series of the requested days with the total and the search share, and the 7, 14 and 28 day windows of complete days against the period before. A day is complete once it is three days old and the store has delivered it. Answers connected false and empty series for a competitor, a store without an active connection, or an app the connected key does not report.",
-        "operationId": "StoreFunnelController_report",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "country",
-            "required": false,
-            "in": "query",
-            "description": "Count only the storefront of this market. Omitted means every market the console reports.",
-            "schema": {
-              "pattern": "^[a-z]{2}$",
-              "example": "de",
-              "type": "string"
-            }
-          },
-          {
-            "name": "days",
-            "required": false,
-            "in": "query",
-            "description": "Days of daily points, ending today",
-            "schema": {
-              "minimum": 7,
-              "maximum": 365,
-              "default": 90,
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Store impressions, page views, downloads and conversion of an app by market and window",
-        "tags": [
-          "store-connect"
         ]
       }
     },
@@ -7042,6 +7042,38 @@
           "text"
         ]
       },
+      "StoreConnectionDto": {
+        "type": "object",
+        "properties": {
+          "store": {
+            "enum": [
+              "APP_STORE"
+            ],
+            "type": "string"
+          },
+          "issuerId": {
+            "type": "string",
+            "example": "57246542-96fe-1a63-e053-0824d011072a",
+            "description": "Issuer ID from Users and Access, Integrations, Team Keys"
+          },
+          "keyId": {
+            "type": "string",
+            "example": "2X9R4HXF34",
+            "description": "Ten character key ID"
+          },
+          "privateKey": {
+            "type": "string",
+            "maxLength": 4096,
+            "description": "The whole contents of the downloaded .p8 file. Verified with Apple, sealed at rest and never returned."
+          }
+        },
+        "required": [
+          "store",
+          "issuerId",
+          "keyId",
+          "privateKey"
+        ]
+      },
       "ChartCaptureDto": {
         "type": "object",
         "properties": {
@@ -7266,38 +7298,6 @@
             "description": "An App Store localization to draft instead of the primary listing. Refused for a Google Play app"
           }
         }
-      },
-      "StoreConnectionDto": {
-        "type": "object",
-        "properties": {
-          "store": {
-            "enum": [
-              "APP_STORE"
-            ],
-            "type": "string"
-          },
-          "issuerId": {
-            "type": "string",
-            "example": "57246542-96fe-1a63-e053-0824d011072a",
-            "description": "Issuer ID from Users and Access, Integrations, Team Keys"
-          },
-          "keyId": {
-            "type": "string",
-            "example": "2X9R4HXF34",
-            "description": "Ten character key ID"
-          },
-          "privateKey": {
-            "type": "string",
-            "maxLength": 4096,
-            "description": "The whole contents of the downloaded .p8 file. Verified with Apple, sealed at rest and never returned."
-          }
-        },
-        "required": [
-          "store",
-          "issuerId",
-          "keyId",
-          "privateKey"
-        ]
       },
       "BulkUpdateActionsDto": {
         "type": "object",

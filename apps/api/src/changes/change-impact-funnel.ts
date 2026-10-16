@@ -1,0 +1,64 @@
+import type {
+  ChangeImpactFunnel,
+  ChangeImpactWindowDays,
+  Store,
+} from '@asobeast/shared';
+import {
+  between,
+  countsChange,
+  countsOf,
+  shiftDate,
+  type FunnelDayRow,
+} from '../store-connect/store-funnel';
+
+export interface ChangeFunnelInput {
+  rows: FunnelDayRow[];
+  changedOn: string;
+  days: ChangeImpactWindowDays;
+  completeThrough: string;
+  firstDate: string | null;
+  store: Store;
+}
+
+const UNMEASURED: ChangeImpactFunnel = {
+  status: 'unmeasured',
+  completeDays: 0,
+  before: null,
+  after: null,
+  change: null,
+};
+
+const WAITING: ChangeImpactFunnel = { ...UNMEASURED, status: 'pending' };
+
+const daysBetween = (from: string, to: string): number =>
+  Math.round(
+    (Date.parse(`${to}T00:00:00.000Z`) - Date.parse(`${from}T00:00:00.000Z`)) /
+      86_400_000,
+  ) + 1;
+
+export function measureChangeFunnel({
+  rows,
+  changedOn,
+  days,
+  completeThrough,
+  firstDate,
+  store,
+}: ChangeFunnelInput): ChangeImpactFunnel {
+  const beforeFrom = shiftDate(changedOn, -days);
+  const beforeTo = shiftDate(changedOn, -1);
+  if (firstDate === null || firstDate > beforeFrom) return UNMEASURED;
+  if (beforeTo > completeThrough) return WAITING;
+  const before = countsOf(between(rows, beforeFrom, beforeTo), store);
+  const afterTo = [shiftDate(changedOn, days - 1), completeThrough].sort()[0];
+  const completeDays = Math.max(0, daysBetween(changedOn, afterTo));
+  if (completeDays === 0) return { ...WAITING, before };
+  const after = countsOf(between(rows, changedOn, afterTo), store);
+  const measured = completeDays === days;
+  return {
+    status: measured ? 'measured' : 'pending',
+    completeDays,
+    before,
+    after,
+    change: measured ? countsChange(after, before) : null,
+  };
+}

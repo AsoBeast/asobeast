@@ -50,7 +50,7 @@ const LONGEST_WINDOW = Math.max(...STORE_FUNNEL_WINDOWS);
 export const FUNNEL_LOOKBACK_DAYS =
   2 * LONGEST_WINDOW + STORE_FUNNEL_COMPLETE_AFTER_DAYS;
 
-const shift = (date: string, days: number): string =>
+export const shiftDate = (date: string, days: number): string =>
   toDateKey(addDays(new Date(`${date}T00:00:00.000Z`), days));
 
 export const completeThrough = (today: Date): string =>
@@ -105,7 +105,7 @@ export function countsChange(
   };
 }
 
-const between = (rows: FunnelDayRow[], from: string, to: string) =>
+export const between = (rows: FunnelDayRow[], from: string, to: string) =>
   rows.filter((row) => row.date >= from && row.date <= to);
 
 function funnelPoints(
@@ -120,7 +120,7 @@ function funnelPoints(
     else byDate.set(row.date, [row]);
   }
   return Array.from({ length: days }, (_, index) => {
-    const date = shift(last, index - days + 1);
+    const date = shiftDate(last, index - days + 1);
     const day = byDate.get(date) ?? [];
     return {
       date,
@@ -149,9 +149,9 @@ function funnelWindow(
   days: StoreFunnelWindowDays,
   to: string,
 ): StoreFunnelWindow {
-  const from = shift(to, 1 - days);
-  const previousTo = shift(from, -1);
-  const previousFrom = shift(from, -days);
+  const from = shiftDate(to, 1 - days);
+  const previousTo = shiftDate(from, -1);
+  const previousFrom = shiftDate(from, -days);
   const status = windowStatus(firstDate, from, to, previousFrom);
   const current =
     status === 'unmeasured' ? null : countsOf(between(rows, from, to), store);
