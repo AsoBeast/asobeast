@@ -20,6 +20,17 @@ const TRAFFIC_COLUMNS = [
 ] as const;
 
 const SEARCH_TERM_COLUMN = 'Search term';
+export const MAX_TERM_CHARS = 200;
+
+const storableTerm = (raw: string): string =>
+  [
+    ...raw
+      .replaceAll('\u0000', '')
+      .replace(/\p{Surrogate}/gu, '\uFFFD')
+      .trim(),
+  ]
+    .slice(0, MAX_TERM_CHARS)
+    .join('');
 
 export const PLAY_TRAFFIC_SOURCES: Record<string, StoreFunnelSource> = {
   'google play search': 'search',
@@ -236,7 +247,7 @@ export function searchTermsOf(rows: string[][]): SearchTermRow[] {
   const cell = reader(header, TRAFFIC_COLUMNS);
   const byTerm = new Map<string, SearchTermRow>();
   for (const cells of lines) {
-    const term = cell(cells, SEARCH_TERM_COLUMN).trim();
+    const term = storableTerm(cell(cells, SEARCH_TERM_COLUMN));
     const counts = countsOf(cells, cell);
     if (!counts || !term || term.toLowerCase() === OTHER_TERM) continue;
     const month = `${counts.date.slice(0, 7)}-01`;

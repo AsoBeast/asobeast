@@ -1,9 +1,13 @@
 import { generateKeyPairSync } from 'node:crypto';
+import { ResponseTooLargeError } from '../bounded-body';
 import {
   GcsApi,
   GcsBucketError,
   GcsRateLimitedError,
   GcsRejectedError,
+  GcsTooLargeError,
+  MAX_LISTED_OBJECTS,
+  PLAY_REPORT_MAX_BYTES,
   STORE_PERFORMANCE_PREFIX,
   storePerformanceObjects,
 } from './gcs-api';
@@ -67,7 +71,7 @@ describe('GcsApi', () => {
       { status: 200, body: { items: [item('b.csv', '2')] } },
     );
 
-    const objects = await api.listStorePerformance();
+    const objects = await api.listStorePerformance('com.example.habits');
 
     expect(objects.map((object) => object.name)).toEqual([
       `${STORE_PERFORMANCE_PREFIX}a.csv`,
@@ -82,7 +86,9 @@ describe('GcsApi', () => {
     });
     const first = new URL(requests[1].url);
     expect(first.pathname).toBe(`/storage/v1/b/${BUCKET}/o`);
-    expect(first.searchParams.get('prefix')).toBe('stats/store_performance/');
+    expect(first.searchParams.get('prefix')).toBe(
+      'stats/store_performance/store_performance_com.example.habits_',
+    );
     expect(requests[1].bearer).toBe('ya29');
     expect(new URL(requests[2].url).searchParams.get('pageToken')).toBe('p2');
   });
@@ -101,6 +107,40 @@ describe('GcsApi', () => {
       `https://storage.googleapis.com/storage/v1/b/${BUCKET}/o/stats%2Fstore_performance%2Fx.csv?alt=media`,
     );
     expect(requests[1].binary).toBe(true);
+    expect(requests[1].maxBytes).toBe(PLAY_REPORT_MAX_BYTES);
+  });
+
+  it('answers a too large error for a body past the ceiling', async () => {
+    const api = new GcsApi(
+      (request) =>
+        request.method === 'POST'
+          ? Promise.resolve(TOKEN)
+          : Promise.reject(new ResponseTooLargeError(PLAY_REPORT_MAX_BYTES)),
+      ACCOUNT,
+      BUCKET,
+    );
+
+    await expect(api.download('stats/x.csv')).rejects.toBeInstanceOf(
+      GcsTooLargeError,
+    );
+  });
+
+  it('stops listing after the object ceiling', async () => {
+    const page = (token?: string) => ({
+      status: 200,
+      body: {
+        items: Array.from({ length: 300 }, (_, index) =>
+          item(`f${token ?? ''}${index}.csv`, '1'),
+        ),
+        nextPageToken: 'more',
+      },
+    });
+    const { api, requests } = recorded(page('a'), page('b'), page('c'));
+
+    const objects = await api.listStorePerformance('com.x');
+
+    expect(objects).toHaveLength(MAX_LISTED_OBJECTS);
+    expect(requests).toHaveLength(3);
   });
 
   it.each([
@@ -111,7 +151,9 @@ describe('GcsApi', () => {
   ])('maps a %i to its error', async (status, type) => {
     const { api } = recorded({ status, body: null });
 
-    await expect(api.listStorePerformance()).rejects.toBeInstanceOf(type);
+    await expect(api.listStorePerformance('com.x')).rejects.toBeInstanceOf(
+      type,
+    );
   });
 
   it('maps a refused token request to a rejected account', async () => {

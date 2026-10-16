@@ -10,9 +10,13 @@ export function dateOf(raw: string): string | null {
   return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
 }
 
+const MAX_COUNT = 2_147_483_647;
+
 export function countOf(raw: string): number | null {
   const value = raw.trim().replace(/,/g, '');
   if (value.length === 0) return 0;
   const count = Number(value);
-  return Number.isFinite(count) ? count : null;
+  return Number.isInteger(count) && count >= 0 && count <= MAX_COUNT
+    ? count
+    : null;
 }

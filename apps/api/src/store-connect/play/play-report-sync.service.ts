@@ -12,7 +12,7 @@ import {
   GcsBucketError,
   GcsRateLimitedError,
   GcsRejectedError,
-  hasStorePerformance,
+  PLAY_REPORT_MAX_BYTES,
   storePerformanceObjects,
   type GcsApi,
   type GcsObject,
@@ -30,6 +30,8 @@ const STORE = 'GOOGLE_PLAY';
 const ACCESS_TYPE = 'ONGOING';
 export const PLAY_MONTHS_IMPORTED = 2;
 export const PLAY_GRANULARITY = 'MONTHLY';
+export const PLAY_PARTIAL_SYNC =
+  'Some store performance files could not be read or were too large. They are tried again on the next sync.';
 
 type Breakdown = 'country' | 'traffic';
 
@@ -118,7 +120,6 @@ export class PlayReportSync {
     if (!connection || connection.status === 'rejected') return null;
     const summary = emptySummary();
     try {
-      const objects = await connection.api.listStorePerformance();
       const apps = await this.prisma.app.findMany({
         where: { store: STORE, isCompetitor: false },
         orderBy: { createdAt: 'asc' },
@@ -126,17 +127,31 @@ export class PlayReportSync {
       });
       summary.apps = apps.length;
       for (const app of apps) {
+        const objects = await connection.api.listStorePerformance(
+          app.storeAppId,
+        );
         const requestId = await this.placeRequest(
           connection.id,
           app,
-          hasStorePerformance(objects, app.storeAppId),
+          objects.length > 0,
         );
         const target = { api: connection.api, requestId, appId: app.id };
         for (const file of monthFiles(objects, app.storeAppId, now)) {
+          if (file.object.size > PLAY_REPORT_MAX_BYTES) {
+            summary.failed += 1;
+            this.logger.warn(
+              `${file.object.name} is ${file.object.size} bytes, above the ${PLAY_REPORT_MAX_BYTES} byte ceiling, and is skipped`,
+            );
+            continue;
+          }
           await this.importFile(target, file, summary);
         }
       }
-      await this.connections.markSynced(STORE, 'admin', null);
+      await this.connections.markSynced(
+        STORE,
+        'admin',
+        summary.failed > 0 ? PLAY_PARTIAL_SYNC : null,
+      );
     } catch (error) {
       await this.failed(error, connection.api, summary, connection.lastError);
     }
@@ -200,7 +215,7 @@ export class PlayReportSync {
       summary.unchanged += 1;
       return;
     }
-    const raw = Buffer.from(await api.download(object.name));
+    const raw = await api.download(object.name);
     const processed = processedOn(object);
     const { rows, terms } = imported(breakdown, raw, processed);
     const workspaceId = this.workspace.require('a play report file');

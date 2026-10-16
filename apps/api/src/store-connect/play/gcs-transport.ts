@@ -1,4 +1,5 @@
 import { fetch } from 'undici';
+import { readBounded, ResponseTooLargeError } from '../bounded-body';
 
 export const GCS_TRANSPORT = Symbol('GCS_TRANSPORT');
 export const GCS_TIMEOUT_MS = 20_000;
@@ -10,12 +11,13 @@ export interface GcsRequest {
   bearer?: string;
   form?: Record<string, string>;
   binary?: boolean;
+  maxBytes?: number;
 }
 
 export interface GcsResponse {
   status: number;
   body: unknown;
-  bytes?: Buffer;
+  bytes?: Buffer<ArrayBuffer>;
 }
 
 export type GcsTransport = (request: GcsRequest) => Promise<GcsResponse>;
@@ -43,12 +45,13 @@ export function createGcsTransport({
   timeoutMs: number;
   downloadTimeoutMs: number;
 }): GcsTransport {
-  return async ({ method, url, bearer, form, binary }) => {
+  return async ({ method, url, bearer, form, binary, maxBytes }) => {
     try {
       const response = await fetch(url, {
         method,
         headers: {
           ...(bearer ? { authorization: `Bearer ${bearer}` } : {}),
+          ...(binary ? { 'accept-encoding': 'identity' } : {}),
           ...(form
             ? { 'content-type': 'application/x-www-form-urlencoded' }
             : {}),
@@ -58,10 +61,15 @@ export function createGcsTransport({
         redirect: 'error',
       });
       if (binary && response.ok) {
+        const limit = maxBytes ?? Number.POSITIVE_INFINITY;
+        if (Number(response.headers.get('content-length') ?? 0) > limit) {
+          await response.body?.cancel();
+          throw new ResponseTooLargeError(limit);
+        }
         return {
           status: response.status,
           body: null,
-          bytes: Buffer.from(await response.arrayBuffer()),
+          bytes: await readBounded(response.body, limit),
         };
       }
       return {
@@ -69,6 +77,7 @@ export function createGcsTransport({
         body: parseBody(await response.text()),
       };
     } catch (error) {
+      if (error instanceof ResponseTooLargeError) throw error;
       throw new GcsUnreachableError(
         error instanceof Error ? error.message : String(error),
       );

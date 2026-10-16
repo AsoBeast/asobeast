@@ -7,6 +7,7 @@ import {
   pivotTrafficFile,
   playSourceOf,
   PlayHeaderError,
+  MAX_TERM_CHARS,
   searchTermsOf,
 } from './play-store-performance';
 
@@ -144,6 +145,22 @@ describe('pivotTrafficFile', () => {
 });
 
 describe('searchTermsOf', () => {
+  it('keeps a search term storable: no NUL, no lone surrogate, at most the term length', () => {
+    const csv = [
+      'Date,Traffic source,Search term,Store listing acquisitions,Store listing visitors',
+      `2026-09-01,Google Play search,"habit\u0000 tracker\ud800",3,40`,
+      `2026-09-01,Google Play search,"${'x'.repeat(MAX_TERM_CHARS + 50)}",1,10`,
+      '2026-09-01,Google Play search,huge,1,99999999999',
+    ].join('\n');
+
+    const terms = searchTermsOf(parseCsv(csv));
+
+    expect(terms.map((term) => term.term)).toEqual([
+      'habit tracker\ufffd',
+      'x'.repeat(MAX_TERM_CHARS),
+    ]);
+  });
+
   it('sums each search term across the month and skips Other', () => {
     const terms = searchTermsOf(parseCsv(decodeCsv(TRAFFIC)));
 

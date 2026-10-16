@@ -8,9 +8,14 @@ import {
   GcsBucketError,
   GcsRateLimitedError,
   GcsRejectedError,
+  PLAY_REPORT_MAX_BYTES,
   type GcsObject,
 } from './gcs-api';
-import { importedMonths, PlayReportSync } from './play-report-sync.service';
+import {
+  importedMonths,
+  PLAY_PARTIAL_SYNC,
+  PlayReportSync,
+} from './play-report-sync.service';
 
 const PACKAGE = 'com.example.habits';
 const NOW = new Date('2026-10-05T03:00:00.000Z');
@@ -94,7 +99,11 @@ function harness(objects: GcsObject[]) {
   };
   const api = {
     bucket: 'pubsite_prod_rev_1',
-    listStorePerformance: jest.fn(() => Promise.resolve(objects)),
+    listStorePerformance: jest.fn((packageName: string) =>
+      Promise.resolve(
+        objects.filter((each) => each.name.includes(`_${packageName}_`)),
+      ),
+    ),
     download: jest.fn((name: string) =>
       Promise.resolve(
         FILES[name.endsWith('_country.csv') ? 'country' : 'traffic_source'],
@@ -280,6 +289,25 @@ describe('PlayReportSync', () => {
     });
     expect(connections.markRejected).not.toHaveBeenCalled();
     expect(connections.markSynced).toHaveBeenCalled();
+  });
+
+  it('skips a file larger than the ceiling without downloading it, and says so', async () => {
+    const { service, api, connections } = harness([
+      { ...object('202609', 'country'), size: PLAY_REPORT_MAX_BYTES + 1 },
+      object('202609', 'traffic_source'),
+    ]);
+
+    const summary = await service.run(NOW);
+
+    expect(api.download.mock.calls.map(([name]) => name)).toEqual([
+      object('202609', 'traffic_source').name,
+    ]);
+    expect(summary).toMatchObject({ instances: 1, failed: 1 });
+    expect(connections.markSynced).toHaveBeenCalledWith(
+      'GOOGLE_PLAY',
+      'admin',
+      PLAY_PARTIAL_SYNC,
+    );
   });
 
   it('does nothing without an active connection', async () => {

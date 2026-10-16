@@ -10,7 +10,7 @@ export class ResponseTooLargeError extends Error {
 export async function readBounded(
   body: ReadableStream<Uint8Array> | null,
   limit: number,
-): Promise<Buffer> {
+): Promise<Buffer<ArrayBuffer>> {
   if (!body) return Buffer.alloc(0);
   const chunks: Buffer[] = [];
   let total = 0;

@@ -5,6 +5,7 @@ import {
   type ServerResponse,
 } from 'node:http';
 import type { AddressInfo } from 'node:net';
+import { ResponseTooLargeError } from '../bounded-body';
 import { createGcsTransport, GcsUnreachableError } from './gcs-transport';
 
 type Handler = (request: IncomingMessage, response: ServerResponse) => void;
@@ -82,6 +83,25 @@ describe('createGcsTransport', () => {
     });
 
     expect(answer.bytes).toEqual(Buffer.from([0xff, 0xfe, 0x44, 0x00]));
+  });
+
+  it('stops reading a download past its limit and asks for it as stored', async () => {
+    handler = (_, response) => {
+      response.writeHead(200);
+      response.write(Buffer.alloc(3));
+      response.end(Buffer.alloc(3));
+    };
+
+    await expect(
+      transport({
+        method: 'GET',
+        url: `${origin}/media`,
+        bearer: 'ya29',
+        binary: true,
+        maxBytes: 4,
+      }),
+    ).rejects.toBeInstanceOf(ResponseTooLargeError);
+    expect(seen[0].headers['accept-encoding']).toBe('identity');
   });
 
   it('keeps the status and body of a refusal', async () => {

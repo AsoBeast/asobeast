@@ -4,10 +4,13 @@ import {
   type GoogleTokenAnswer,
   type ServiceAccount,
 } from './service-account';
+import { ResponseTooLargeError } from '../bounded-body';
 import type { GcsResponse, GcsTransport } from './gcs-transport';
 
 export const GCS_ORIGIN = 'https://storage.googleapis.com';
 export const STORE_PERFORMANCE_PREFIX = 'stats/store_performance/';
+export const PLAY_REPORT_MAX_BYTES = 20 * 1024 * 1024;
+export const MAX_LISTED_OBJECTS = 500;
 const JWT_GRANT = 'urn:ietf:params:oauth:grant-type:jwt-bearer';
 const LIST_FIELDS = 'nextPageToken,items(name,size,md5Hash,updated,generation)';
 
@@ -45,6 +48,8 @@ export class GcsBucketError extends GcsError {}
 
 export class GcsRateLimitedError extends GcsError {}
 
+export class GcsTooLargeError extends GcsError {}
+
 function errorOf(response: GcsResponse, what: string): GcsError {
   const message = `Google answered ${response.status} to ${what}`;
   if (response.status === 404) return new GcsBucketError(message, 404);
@@ -68,6 +73,9 @@ interface ListPage {
 
 const isSuccess = (response: GcsResponse): boolean =>
   response.status >= 200 && response.status < 300;
+
+const filePrefix = (packageName: string): string =>
+  `${STORE_PERFORMANCE_PREFIX}store_performance_${packageName}_`;
 
 export class GcsApi {
   private readonly tokens: GoogleTokenCache;
@@ -97,12 +105,12 @@ export class GcsApi {
     if (!isSuccess(response)) throw errorOf(response, 'the bucket listing');
   }
 
-  async listStorePerformance(): Promise<GcsObject[]> {
+  async listStorePerformance(packageName: string): Promise<GcsObject[]> {
     const objects: GcsObject[] = [];
     let pageToken: string | undefined;
     do {
       const query = new URLSearchParams({
-        prefix: STORE_PERFORMANCE_PREFIX,
+        prefix: filePrefix(packageName),
         fields: LIST_FIELDS,
         ...(pageToken ? { pageToken } : {}),
       });
@@ -124,17 +132,24 @@ export class GcsApi {
         });
       }
       pageToken = page.nextPageToken;
-    } while (pageToken);
-    return objects;
+    } while (pageToken && objects.length < MAX_LISTED_OBJECTS);
+    return objects.slice(0, MAX_LISTED_OBJECTS);
   }
 
-  async download(name: string): Promise<Buffer> {
-    const response = await this.transport({
-      method: 'GET',
-      url: `${this.origins.storage}/storage/v1/b/${encodeURIComponent(this.bucket)}/o/${encodeURIComponent(name)}?alt=media`,
-      bearer: await this.tokens.get(),
-      binary: true,
-    });
+  async download(name: string): Promise<Buffer<ArrayBuffer>> {
+    let response: GcsResponse;
+    try {
+      response = await this.transport({
+        method: 'GET',
+        url: `${this.origins.storage}/storage/v1/b/${encodeURIComponent(this.bucket)}/o/${encodeURIComponent(name)}?alt=media`,
+        bearer: await this.tokens.get(),
+        binary: true,
+        maxBytes: PLAY_REPORT_MAX_BYTES,
+      });
+    } catch (error) {
+      if (!(error instanceof ResponseTooLargeError)) throw error;
+      throw new GcsTooLargeError(`The file ${name} is too large`, 413);
+    }
     if (!isSuccess(response)) throw errorOf(response, `the file ${name}`);
     return response.bytes ?? Buffer.alloc(0);
   }
@@ -161,15 +176,6 @@ export interface MonthFiles {
   country: GcsObject | null;
   traffic: GcsObject | null;
 }
-
-const filePrefix = (packageName: string): string =>
-  `${STORE_PERFORMANCE_PREFIX}store_performance_${packageName}_`;
-
-export const hasStorePerformance = (
-  objects: GcsObject[],
-  packageName: string,
-): boolean =>
-  objects.some((object) => object.name.startsWith(filePrefix(packageName)));
 
 export function storePerformanceObjects(
   objects: GcsObject[],
