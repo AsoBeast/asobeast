@@ -271,6 +271,121 @@ test.describe("bulk tagging", () => {
     expect(sent).toEqual([{ tags: ["core"] }, { tags: ["core"] }]);
   });
 
+  test("keeps focus in the table after a tag is applied", async ({
+    page,
+    request,
+  }) => {
+    await seedTags(request, "kw-1", []);
+    await seedTags(request, "kw-2", []);
+    await tagSelection(page, ["focus timer", "pomodoro"], "launch");
+
+    await page.getByRole("button", { name: "Add to 2 keywords" }).click();
+
+    await expect(page.getByText("Tagged 2 keywords")).toBeVisible();
+    await expect(
+      page.getByRole("group", { name: "Bulk keyword actions" }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("checkbox", { name: "Select all keywords" }),
+    ).toBeFocused();
+  });
+
+  test("keeps focus in the table after the selection is cleared", async ({
+    page,
+  }) => {
+    await page.goto(KEYWORDS);
+    await page.getByRole("checkbox", { name: "Select focus timer" }).check();
+
+    await page
+      .getByRole("group", { name: "Bulk keyword actions" })
+      .getByRole("button", { name: "Pause" })
+      .click();
+
+    await expect(
+      page.getByRole("group", { name: "Bulk keyword actions" }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("checkbox", { name: "Select all keywords" }),
+    ).toBeFocused();
+  });
+
+  test("returns focus to Remove when the removal is cancelled", async ({
+    page,
+  }) => {
+    await page.goto(KEYWORDS);
+    await page.getByRole("checkbox", { name: "Select focus timer" }).check();
+    const remove = page
+      .getByRole("group", { name: "Bulk keyword actions" })
+      .getByRole("button", { name: "Remove", exact: true });
+
+    await remove.click();
+    await page
+      .getByRole("alertdialog")
+      .getByRole("button", { name: "Cancel" })
+      .click();
+
+    await expect(page.getByRole("alertdialog")).toHaveCount(0);
+    await expect(remove).toBeFocused();
+  });
+
+  test("keeps focus in the table after a removal is confirmed", async ({
+    page,
+  }) => {
+    await page.route("**/api/backend/apps/app-tags/keywords/*", (route) =>
+      route.request().method() === "DELETE"
+        ? route.fulfill({ status: 204 })
+        : route.fallback(),
+    );
+    await page.goto(KEYWORDS);
+    await page.getByRole("checkbox", { name: "Select focus timer" }).check();
+
+    await page
+      .getByRole("group", { name: "Bulk keyword actions" })
+      .getByRole("button", { name: "Remove", exact: true })
+      .click();
+    await page
+      .getByRole("alertdialog")
+      .getByRole("button", { name: "Stop tracking" })
+      .click();
+
+    await expect(page.getByRole("alertdialog")).toHaveCount(0);
+    await expect(
+      page.getByRole("checkbox", { name: "Select all keywords" }),
+    ).toBeFocused();
+  });
+
+  test("moves focus to Add keywords after the last keyword is removed", async ({
+    page,
+  }) => {
+    let removed = false;
+    await page.route("**/api/backend/apps/app-tags/keywords**", (route) => {
+      const request = route.request();
+      if (request.method() === "DELETE") {
+        removed = true;
+        return route.fulfill({ status: 204 });
+      }
+      const listed = new URL(request.url()).pathname.endsWith("/keywords");
+      return removed && listed ? route.fulfill({ json: [] }) : route.fallback();
+    });
+    await page.goto(KEYWORDS);
+    await page.getByRole("checkbox", { name: "Select all keywords" }).check();
+
+    await page
+      .getByRole("group", { name: "Bulk keyword actions" })
+      .getByRole("button", { name: "Remove", exact: true })
+      .click();
+    await page
+      .getByRole("alertdialog")
+      .getByRole("button", { name: "Stop tracking" })
+      .click();
+
+    const emptyState = page.locator('[data-slot="empty-state"]');
+    await expect(emptyState).toBeVisible();
+    await expect(
+      emptyState.getByRole("button", { name: "Add keywords" }),
+    ).toBeFocused();
+  });
+
   test("removes a tag only from the keywords carrying it", async ({
     page,
     request,

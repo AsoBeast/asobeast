@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import type { Store, TrackedKeywordItem } from "@asobeast/shared";
 import { useTable, type RowSelectionState } from "@tanstack/react-table";
@@ -14,7 +14,11 @@ import {
   serpParser,
   sortDirectionParser,
 } from "@/lib/search-params";
-import { HIDDEN_KEYWORD_COLUMNS, keywordColumns } from "./keyword-columns";
+import {
+  HIDDEN_KEYWORD_COLUMNS,
+  keywordColumns,
+  SELECT_ALL_KEYWORDS,
+} from "./keyword-columns";
 import { keywordColumnFilters } from "./keyword-filters";
 import { keywordTableFeatures } from "./keyword-table-features";
 import { exportKeywords } from "./keyword-csv";
@@ -42,6 +46,12 @@ export function KeywordsTable({
   const [filters, setFilters] = useQueryStates(keywordFilterParsers);
   const { data: keywords } = useSuspenseQuery(keywordsOptions(id, country));
   const [selection, setSelection] = useState<RowSelectionState>({});
+  const tableArea = useRef<HTMLDivElement>(null);
+  const refocusTable = useRef(false);
+  const clearSelection = () => {
+    refocusTable.current = true;
+    setSelection({});
+  };
 
   const rowSelection = useMemo(
     () => selectedKeywordsStillOnScreen(selection, keywords),
@@ -101,13 +111,39 @@ export function KeywordsTable({
     .rows.map((row) => row.original);
   const selectedIds = selectedKeywords.map((keyword) => keyword.keywordId);
 
-  if (keywords.length === 0) {
-    return <KeywordsEmptyState appId={id} store={store} country={country} />;
+  useEffect(() => {
+    if (!refocusTable.current || selectedIds.length > 0) return;
+    refocusTable.current = false;
+    tableArea.current
+      ?.querySelector<HTMLElement>(`[aria-label="${SELECT_ALL_KEYWORDS}"]`)
+      ?.focus();
+  }, [selectedIds.length]);
+
+  const isEmpty = keywords.length === 0;
+  const showedTable = useRef(!isEmpty);
+  const addKeywords = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    const emptied = isEmpty && showedTable.current;
+    showedTable.current = !isEmpty;
+    if (emptied && document.activeElement === document.body) {
+      addKeywords.current?.focus();
+    }
+  }, [isEmpty]);
+
+  if (isEmpty) {
+    return (
+      <KeywordsEmptyState
+        appId={id}
+        store={store}
+        country={country}
+        addRef={addKeywords}
+      />
+    );
   }
 
   return (
     <>
-      <div className="flex flex-col gap-3">
+      <div ref={tableArea} className="flex flex-col gap-3">
         <KeywordsFilterBar
           appId={id}
           table={table}
@@ -125,7 +161,7 @@ export function KeywordsTable({
               appId={id}
               selectedKeywords={selectedKeywords}
               marketTags={tagsIn(keywords)}
-              onClear={() => setSelection({})}
+              onClear={clearSelection}
               onExport={() => exportKeywords(id, selectedKeywords)}
             />
           </div>
