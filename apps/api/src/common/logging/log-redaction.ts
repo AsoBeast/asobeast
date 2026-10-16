@@ -16,10 +16,11 @@ export const REDACTION_PATHS = [
   '*.secret',
   '*.token',
   '*.apiKey',
+  '*.privateKey',
 ];
 
 const SECRET_KEY =
-  /^(authorization|cookie|set-cookie|pass|password|passphrase|secret|token|api[-_]?key|credentials?)$/i;
+  /^(authorization|cookie|set-cookie|pass|password|passphrase|secret|token|api[-_]?key|credentials?|private[-_]?key)$/i;
 
 const SECRET_SHAPES: [RegExp, string][] = [
   [new RegExp(`${API_TOKEN_PREFIX}[A-Za-z0-9_-]{8,}`, 'g'), REDACTED],

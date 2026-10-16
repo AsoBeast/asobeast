@@ -56,6 +56,15 @@ describe('scrubSecrets', () => {
     });
   });
 
+  it('redacts a private key field even without its PEM header', () => {
+    expect(
+      scrubSecrets(
+        { privateKey: 'MIGHAgEAMBMGByqGSM49AgEGCCqG', private_key: 'MIIEv' },
+        [],
+      ),
+    ).toEqual({ privateKey: REDACTED, private_key: REDACTED });
+  });
+
   it('keeps the host of a credentialed url readable', () => {
     expect(scrubText('http://user:pass@proxy.example.com:80', [])).toBe(
       `http://${REDACTED}@proxy.example.com:80`,
