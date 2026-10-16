@@ -259,6 +259,16 @@ export function exportTables(prisma: PrismaService): ExportTable[] {
         }),
     ),
     table(
+      'storeFunnelSearchTerm',
+      () => prisma.storeFunnelSearchTerm.count(),
+      (skip, take) =>
+        prisma.storeFunnelSearchTerm.findMany({
+          skip,
+          take,
+          orderBy: [{ appId: 'asc' }, { month: 'asc' }, { id: 'asc' }],
+        }),
+    ),
+    table(
       'webhook',
       () => prisma.webhook.count(),
       (skip, take) =>
