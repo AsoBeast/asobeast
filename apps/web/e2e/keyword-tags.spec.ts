@@ -271,6 +271,44 @@ test.describe("bulk tagging", () => {
     expect(sent).toEqual([{ tags: ["core"] }, { tags: ["core"] }]);
   });
 
+  test("keeps focus in the table after a tag is applied", async ({
+    page,
+    request,
+  }) => {
+    await seedTags(request, "kw-1", []);
+    await seedTags(request, "kw-2", []);
+    await tagSelection(page, ["focus timer", "pomodoro"], "launch");
+
+    await page.getByRole("button", { name: "Add to 2 keywords" }).click();
+
+    await expect(page.getByText("Tagged 2 keywords")).toBeVisible();
+    await expect(
+      page.getByRole("group", { name: "Bulk keyword actions" }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("checkbox", { name: "Select all keywords" }),
+    ).toBeFocused();
+  });
+
+  test("keeps focus in the table after the selection is cleared", async ({
+    page,
+  }) => {
+    await page.goto(KEYWORDS);
+    await page.getByRole("checkbox", { name: "Select focus timer" }).check();
+
+    await page
+      .getByRole("group", { name: "Bulk keyword actions" })
+      .getByRole("button", { name: "Pause" })
+      .click();
+
+    await expect(
+      page.getByRole("group", { name: "Bulk keyword actions" }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("checkbox", { name: "Select all keywords" }),
+    ).toBeFocused();
+  });
+
   test("removes a tag only from the keywords carrying it", async ({
     page,
     request,

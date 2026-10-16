@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import type { Store, TrackedKeywordItem } from "@asobeast/shared";
 import { useTable, type RowSelectionState } from "@tanstack/react-table";
@@ -14,7 +14,11 @@ import {
   serpParser,
   sortDirectionParser,
 } from "@/lib/search-params";
-import { HIDDEN_KEYWORD_COLUMNS, keywordColumns } from "./keyword-columns";
+import {
+  HIDDEN_KEYWORD_COLUMNS,
+  keywordColumns,
+  SELECT_ALL_KEYWORDS,
+} from "./keyword-columns";
 import { keywordColumnFilters } from "./keyword-filters";
 import { keywordTableFeatures } from "./keyword-table-features";
 import { exportKeywords } from "./keyword-csv";
@@ -42,6 +46,13 @@ export function KeywordsTable({
   const [filters, setFilters] = useQueryStates(keywordFilterParsers);
   const { data: keywords } = useSuspenseQuery(keywordsOptions(id, country));
   const [selection, setSelection] = useState<RowSelectionState>({});
+  const tableArea = useRef<HTMLDivElement>(null);
+  const clearSelection = () => {
+    setSelection({});
+    tableArea.current
+      ?.querySelector<HTMLElement>(`[aria-label="${SELECT_ALL_KEYWORDS}"]`)
+      ?.focus();
+  };
 
   const rowSelection = useMemo(
     () => selectedKeywordsStillOnScreen(selection, keywords),
@@ -107,7 +118,7 @@ export function KeywordsTable({
 
   return (
     <>
-      <div className="flex flex-col gap-3">
+      <div ref={tableArea} className="flex flex-col gap-3">
         <KeywordsFilterBar
           appId={id}
           table={table}
@@ -125,7 +136,7 @@ export function KeywordsTable({
               appId={id}
               selectedKeywords={selectedKeywords}
               marketTags={tagsIn(keywords)}
-              onClear={() => setSelection({})}
+              onClear={clearSelection}
               onExport={() => exportKeywords(id, selectedKeywords)}
             />
           </div>
