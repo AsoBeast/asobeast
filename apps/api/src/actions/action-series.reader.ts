@@ -162,18 +162,26 @@ export class ActionSeriesReader {
     item: ActionItem,
     { from, to }: TrendWindow,
   ): Promise<SeriesBody> {
-    const rows = await this.prisma.storeFunnelDay.groupBy({
-      by: ['date'],
-      where: {
-        appId: item.scope.appId,
-        country: item.scope.country,
-        date: {
-          gte: from,
-          lte: new Date(`${completeThrough(new Date())}T00:00:00.000Z`),
-        },
+    const where = {
+      appId: item.scope.appId,
+      country: item.scope.country,
+      date: {
+        gte: from,
+        lte: new Date(`${completeThrough(new Date())}T00:00:00.000Z`),
       },
-      _sum: { gets: true, uniqueImpressions: true },
-    });
+    };
+    const rows =
+      item.evidence?.rule === 'listing.cpp_underperforms'
+        ? await this.prisma.storeFunnelPageDay.groupBy({
+            by: ['date'],
+            where: { ...where, pageTitle: item.evidence.pageTitle },
+            _sum: { gets: true, uniqueImpressions: true },
+          })
+        : await this.prisma.storeFunnelDay.groupBy({
+            by: ['date'],
+            where,
+            _sum: { gets: true, uniqueImpressions: true },
+          });
     return {
       depth: null,
       points: dailyPoints(

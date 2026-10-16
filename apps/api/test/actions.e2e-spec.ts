@@ -975,4 +975,69 @@ describe('ActionsController (e2e)', () => {
       }),
     ).resolves.toBe(0);
   });
+
+  const seedPages = async (pageTitle: string) => {
+    await seedConversionFunnel(10);
+    await prisma.storeFunnelPageDay.deleteMany({ where: { appId } });
+    const today = new Date(new Date().toISOString().slice(0, 10));
+    await prisma.storeFunnelPageDay.createMany({
+      data: Array.from({ length: 14 }, (_, index) =>
+        [
+          ['default product page', 1000, 40],
+          [pageTitle, 500, 5],
+        ].map(([title, uniqueImpressions, gets]) => ({
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          appId,
+          date: new Date(today.getTime() - (3 + index) * DAY_MS),
+          territory: 'United States',
+          country: 'us',
+          pageTitle: title as string,
+          uniqueImpressions: uniqueImpressions as number,
+          gets: gets as number,
+          processingDate: today,
+        })),
+      ).flat(),
+    });
+  };
+
+  it('flags a custom product page converting below the default, and follows a renamed page', async () => {
+    await seedPages('Summer sale');
+
+    await runActions();
+
+    const first = (
+      await api
+        .get('/actions')
+        .query({ rule: 'listing.cpp_underperforms' })
+        .expect(200)
+    ).body as ActionListResult;
+    expect(first.items).toHaveLength(1);
+    expect(first.items[0].evidence).toEqual({
+      rule: 'listing.cpp_underperforms',
+      country: 'us',
+      pageTitle: 'Summer sale',
+      windowDays: 14,
+      pageUniqueImpressions: 7000,
+      pageConversion: 0.01,
+      defaultConversion: 0.04,
+      ratio: 0.25,
+    });
+
+    await seedPages('Summer deal');
+    await runActions();
+
+    const rows = await prisma.actionItem.findMany({
+      where: { rule: 'listing.cpp_underperforms' },
+      orderBy: { firstSeenAt: 'asc' },
+    });
+    expect(
+      rows.map((row) => [
+        (row.evidence as { pageTitle: string }).pageTitle,
+        row.status,
+      ]),
+    ).toEqual([
+      ['Summer sale', 'RESOLVED'],
+      ['Summer deal', 'OPEN'],
+    ]);
+  });
 });

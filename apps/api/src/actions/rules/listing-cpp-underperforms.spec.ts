@@ -1,0 +1,109 @@
+import type { ActionPageDay } from '../action-funnel';
+import { actionFingerprint } from '../action-fingerprint';
+import { actionContext, contextApp } from './rule-context.fixture';
+import {
+  CPP_MIN_UNIQUE_IMPRESSIONS,
+  detectListingCppUnderperforms,
+} from './listing-cpp-underperforms';
+
+const THROUGH = '2026-10-13';
+
+const pageDay = (
+  pageTitle: string,
+  uniqueImpressions: number,
+  gets: number,
+  date = '2026-10-10',
+): ActionPageDay => ({ date, pageTitle, uniqueImpressions, gets });
+
+const detect = (pages: ActionPageDay[]) =>
+  detectListingCppUnderperforms(
+    actionContext([
+      contextApp({ funnel: { completeThrough: THROUGH, days: [], pages } }),
+    ]),
+  );
+
+const DEFAULT = pageDay('default product page', 10_000, 400);
+
+describe('listing.cpp_underperforms', () => {
+  it('opens for a page under four fifths of the default, never at the boundary', () => {
+    expect(detect([DEFAULT, pageDay('Summer sale', 1000, 32)])).toHaveLength(0);
+    expect(detect([DEFAULT, pageDay('Summer sale', 1000, 31)])).toHaveLength(1);
+  });
+
+  it('needs a hundred unique impressions on the page', () => {
+    expect(
+      detect([
+        DEFAULT,
+        pageDay('Summer sale', CPP_MIN_UNIQUE_IMPRESSIONS - 1, 0),
+      ]),
+    ).toHaveLength(0);
+    expect(
+      detect([DEFAULT, pageDay('Summer sale', CPP_MIN_UNIQUE_IMPRESSIONS, 0)]),
+    ).toHaveLength(1);
+  });
+
+  it('needs a default page conversion', () => {
+    expect(detect([pageDay('Summer sale', 1000, 1)])).toHaveLength(0);
+    expect(
+      detect([
+        pageDay('default product page', 0, 0),
+        pageDay('Summer sale', 1000, 1),
+      ]),
+    ).toHaveLength(0);
+  });
+
+  it('opens one action per page with the title as the discriminator, never for the default page', () => {
+    const actions = detect([
+      DEFAULT,
+      pageDay('Summer sale', 1000, 10),
+      pageDay('Winter deal', 2000, 20),
+    ]);
+
+    expect(actions.map((action) => action.discriminator).sort()).toEqual([
+      'Summer sale',
+      'Winter deal',
+    ]);
+    expect(actions.every((action) => action.keywordId === null)).toBe(true);
+  });
+
+  it('reads only the last fourteen complete days', () => {
+    expect(
+      detect([
+        DEFAULT,
+        pageDay('Summer sale', 1000, 1, '2026-09-28'),
+        pageDay('Summer sale', 1000, 1, '2026-10-14'),
+      ]),
+    ).toHaveLength(0);
+  });
+
+  it('normalizes the title in the fingerprint and keeps it in the evidence', () => {
+    const [first] = detect([DEFAULT, pageDay('Summer  Sale', 1000, 10)]);
+    const [second] = detect([DEFAULT, pageDay('summer sale', 1000, 10)]);
+
+    expect(actionFingerprint(first)).toBe(actionFingerprint(second));
+    expect(first.evidence).toMatchObject({ pageTitle: 'Summer  Sale' });
+  });
+
+  it('carries the evidence and scores reach by impression share, severity by the shortfall, confidence by the sample', () => {
+    const [action] = detect([
+      DEFAULT,
+      pageDay('Summer sale', 1000, 20, '2026-09-30'),
+    ]);
+
+    expect(action.evidence).toEqual({
+      rule: 'listing.cpp_underperforms',
+      country: 'us',
+      pageTitle: 'Summer sale',
+      windowDays: 14,
+      pageUniqueImpressions: 1000,
+      pageConversion: 0.02,
+      defaultConversion: 0.04,
+      ratio: 0.5,
+    });
+    expect(action.terms).toEqual({
+      reach: 0.0909,
+      severity: 0.5,
+      confidence: 1,
+    });
+  });
+});
