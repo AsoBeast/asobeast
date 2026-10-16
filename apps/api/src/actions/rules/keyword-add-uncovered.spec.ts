@@ -284,12 +284,38 @@ describe('keyword.add_uncovered', () => {
     expect(detectKeywordAddUncovered(context([foreign]))).toEqual([]);
   });
 
-  it('never fires on a score from an older formula', () => {
+  it('withholds an uncovered keyword while its score is outdated', () => {
     const outdated = app({
-      trackedKeywords: [keyword({ scoreOutdated: true })],
+      trackedKeywords: [
+        keyword({ scoreOutdated: true, volume: 5, opportunity: 10 }),
+      ],
     });
 
-    expect(detectKeywordAddUncovered(context([outdated]))).toEqual([]);
+    const detections = detectKeywordAddUncovered(context([outdated]));
+
+    expect(detections).toHaveLength(1);
+    expect(detections[0]).toMatchObject({
+      keywordId: 'kw_1',
+      withheld: true,
+    });
+  });
+
+  it('withholds nothing for an outdated keyword that is covered or paused', () => {
+    const covered = app({
+      trackedKeywords: [keyword({ scoreOutdated: true })],
+      coverage: [coverage({ title: true, subtitle: false })],
+    });
+    const paused = app({
+      trackedKeywords: [keyword({ scoreOutdated: true, active: false })],
+    });
+
+    expect(detectKeywordAddUncovered(context([covered, paused]))).toEqual([]);
+  });
+
+  it('never withholds a keyword whose score is current', () => {
+    const detections = detectKeywordAddUncovered(context([app()]));
+
+    expect(detections[0]).not.toHaveProperty('withheld');
   });
 
   it('lowers confidence for weaker score provenance', () => {
