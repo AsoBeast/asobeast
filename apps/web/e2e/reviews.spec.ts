@@ -572,8 +572,8 @@ test("every review card is named and its buttons carry the review", async ({
   page,
 }) => {
   await page.goto("/apps/app-1/reviews");
+  await expect(page.getByRole("article")).toHaveCount(5);
   const articles = await page.getByRole("article").all();
-  expect(articles).toHaveLength(5);
   for (const article of articles) {
     await expect(article).toHaveAccessibleName(/^\d star review by .+ on /);
   }

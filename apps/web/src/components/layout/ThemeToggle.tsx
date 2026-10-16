@@ -3,6 +3,7 @@
 import { Monitor, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
+import { useHydrated } from "@/lib/use-hydrated";
 
 const ORDER = [
   { value: "light", Icon: Sun },
@@ -14,8 +15,9 @@ const FALLBACK = ORDER.length - 1;
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
+  const hydrated = useHydrated();
   const found = ORDER.findIndex((choice) => choice.value === theme);
-  const index = found === -1 ? FALLBACK : found;
+  const index = hydrated && found !== -1 ? found : FALLBACK;
   const { value, Icon } = ORDER[index];
 
   return (

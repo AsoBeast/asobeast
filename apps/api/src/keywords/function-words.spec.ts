@@ -1,5 +1,10 @@
 import { countChars } from '@asobeast/shared';
-import { FUNCTION_WORDS, functionWordTest } from './function-words';
+import {
+  FUNCTION_WORDS,
+  functionWordTest,
+  REVIEW_ONLY_FUNCTION_WORDS,
+  reviewWordTest,
+} from './function-words';
 
 const LISTS = Object.entries(FUNCTION_WORDS).map(
   ([language, words]) => [language, [...words]] as const,
@@ -100,7 +105,23 @@ describe('functionWordTest', () => {
       ['de', 'la', 'el', 'en', 'los', 'las', 'del', 'para', 'tu', 'tus', 'te'],
     ],
     ['pt', ['de', 'em', 'um', 'uma', 'com', 'para', 'pra', 'os']],
-    ['fr', ['de', 'la', 'le', 'les', 'du', 'des', 'et', 'avec', 'sur']],
+    [
+      'fr',
+      [
+        'de',
+        'la',
+        'le',
+        'les',
+        'du',
+        'des',
+        'et',
+        'avec',
+        'sur',
+        'depuis',
+        'avant',
+        'suis',
+      ],
+    ],
     ['de', ['der', 'die', 'das', 'den', 'und', 'mit', 'für', 'ihr', 'ist']],
     ['it', ['il', 'la', 'dei', 'del', 'di', 'per', 'con', 'che']],
     ['nl', ['de', 'het', 'een', 'van', 'voor', 'met', 'en']],
@@ -108,7 +129,21 @@ describe('functionWordTest', () => {
     ['no', ['og', 'det', 'dette', 'til', 'på', 'ikke']],
     ['da', ['og', 'det', 'til', 'af', 'på', 'ikke']],
     ['fi', ['ja', 'että', 'tai', 'mutta', 'ei', 'kanssa']],
-    ['pl', ['dla', 'na', 'do', 'się', 'nie', 'jest', 'oraz']],
+    [
+      'pl',
+      [
+        'dla',
+        'na',
+        'do',
+        'się',
+        'nie',
+        'jest',
+        'oraz',
+        'coś',
+        'zamiast',
+        'zawsze',
+      ],
+    ],
     ['tr', ['ve', 'ile', 'için', 'bir', 'bu']],
     ['id', ['yang', 'dan', 'di', 'untuk', 'dengan']],
     ['ro', ['și', 'şi', 'sau', 'pentru', 'cu']],
@@ -138,5 +173,98 @@ describe('functionWordTest', () => {
   it('does not read a language that was not asked for', () => {
     expect(functionWordTest(['es'])('der')).toBe(false);
     expect(functionWordTest(['de'])('el')).toBe(false);
+  });
+});
+
+const REVIEW_LISTS = Object.entries(REVIEW_ONLY_FUNCTION_WORDS).map(
+  ([language, words]) => [language, [...words]] as const,
+);
+
+describe('REVIEW_ONLY_FUNCTION_WORDS', () => {
+  it('has a list for the languages whose listings keep a function word', () => {
+    expect(Object.keys(REVIEW_ONLY_FUNCTION_WORDS).sort()).toEqual([
+      'de',
+      'fr',
+    ]);
+  });
+
+  it.each(REVIEW_LISTS)(
+    'keeps every word of %s lower case and at least two letters',
+    (_language, words) => {
+      expect(
+        words.filter(
+          (word) => word !== word.toLowerCase() || countChars(word) < 2,
+        ),
+      ).toEqual([]);
+    },
+  );
+
+  it.each(REVIEW_LISTS)(
+    'repeats no word of the shared list of %s',
+    (language, words) => {
+      expect(
+        words.filter((word) => FUNCTION_WORDS[language].has(word)),
+      ).toEqual([]);
+    },
+  );
+
+  it('holds the words the listings of French and German leave to themselves', () => {
+    expect([...REVIEW_ONLY_FUNCTION_WORDS.fr].sort()).toEqual([
+      'ma',
+      'mes',
+      'mon',
+      'sans',
+    ]);
+    expect([...REVIEW_ONLY_FUNCTION_WORDS.de].sort()).toEqual(['hat', 'war']);
+  });
+});
+
+describe('reviewWordTest', () => {
+  it('knows the shared list and the review only list of a language', () => {
+    const french = reviewWordTest(['fr']);
+    const german = reviewWordTest(['de']);
+
+    expect(
+      ['de', 'mes', 'mon', 'ma', 'sans', 'depuis'].filter(
+        (word) => !french(word),
+      ),
+    ).toEqual([]);
+    expect(['der', 'hat', 'war'].filter((word) => !german(word))).toEqual([]);
+  });
+
+  it('leaves the listing test alone', () => {
+    expect(functionWordTest(['fr'])('mes')).toBe(false);
+    expect(functionWordTest(['de'])('war')).toBe(false);
+  });
+
+  it('does not read a language that was not asked for', () => {
+    expect(reviewWordTest([])('war')).toBe(false);
+    expect(reviewWordTest(['es'])('mes')).toBe(false);
+    expect(reviewWordTest(['de'])('mes')).toBe(false);
+    expect(reviewWordTest(['xx', 'toString'])('war')).toBe(false);
+  });
+
+  it('leaves the words the issue scopes out', () => {
+    const french = reviewWordTest(['fr']);
+    const polish = reviewWordTest(['pl']);
+    const german = reviewWordTest(['de']);
+
+    expect(
+      [
+        'elle',
+        'plus',
+        'fait',
+        'bien',
+        'donc',
+        'alors',
+        'quand',
+        'était',
+        'fais',
+        'faire',
+        'utile',
+      ].filter(french),
+    ).toEqual([]);
+    expect(['chce', 'wiem'].filter(polish)).toEqual([]);
+    expect(['got', 'one'].filter(german)).toEqual([]);
   });
 });
