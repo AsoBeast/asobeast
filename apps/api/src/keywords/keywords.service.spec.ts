@@ -611,6 +611,9 @@ describe('KeywordsService.listTracked play acquisitions', () => {
       findFirst: jest.fn().mockResolvedValue(null),
       findMany: jest.fn().mockResolvedValue([]),
     },
+    storeReportRequest: {
+      findFirst: jest.fn().mockResolvedValue({ id: 'req_play' }),
+    },
     storeFunnelSearchTerm: {
       findMany: jest.fn().mockResolvedValue([
         {
@@ -649,6 +652,16 @@ describe('KeywordsService.listTracked play acquisitions', () => {
         },
       }),
     );
+  });
+
+  it('answers no acquisitions while play is not connected', async () => {
+    const prisma = buildPrisma(Store.GOOGLE_PLAY);
+    prisma.storeReportRequest.findFirst.mockResolvedValue(null);
+
+    const items = await buildService(prisma).listTracked('app1');
+
+    expect(items.every((item) => item.playAcquisitions === null)).toBe(true);
+    expect(prisma.storeFunnelSearchTerm.findMany).not.toHaveBeenCalled();
   });
 
   it('leaves app store keywords without the field', async () => {

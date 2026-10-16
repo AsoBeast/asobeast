@@ -936,6 +936,27 @@ describe('KeywordsController (e2e)', () => {
       .post(`/apps/${play.id}/keywords`)
       .send({ keywords: ['habit tracker', 'sleep timer'] })
       .expect(201);
+    await prisma.storeConnection.deleteMany({});
+    const connection = await prisma.storeConnection.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.GOOGLE_PLAY,
+        issuerId: 'reports@focus-123.iam.gserviceaccount.com',
+        keyId: 'a1b2c3d4e5f6',
+        keyFingerprint: '0123456789abcdef',
+        credentialCiphertext: 'v1.sealed',
+        bucket: 'pubsite_prod_rev_1',
+      },
+    });
+    await prisma.storeReportRequest.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        connectionId: connection.id,
+        appId: play.id,
+        accessType: 'ONGOING',
+        remoteId: 'com.example.habits',
+      },
+    });
     await prisma.storeFunnelSearchTerm.createMany({
       data: [
         ['2026-08-01', 'habit tracker', 900, 50],
@@ -967,6 +988,7 @@ describe('KeywordsController (e2e)', () => {
       .body as TrackedKeywordItem[];
     expect(apple.length).toBeGreaterThan(0);
     expect(apple.every((item) => !('playAcquisitions' in item))).toBe(true);
+    await prisma.storeConnection.deleteMany({});
   });
 
   it('answers 404 for the keyword field of a missing app', async () => {

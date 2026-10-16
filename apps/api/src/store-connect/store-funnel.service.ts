@@ -42,6 +42,13 @@ const COUNTERS = {
   uniqueGets: true,
 } as const;
 
+export const reportingRequest = (appIds: string[], store?: Store) => ({
+  appId: { in: appIds },
+  accessType: 'ONGOING',
+  state: 'requested',
+  connection: { status: 'active', ...(store ? { store } : {}) },
+});
+
 @Injectable()
 export class StoreFunnelService {
   constructor(
@@ -173,12 +180,7 @@ export class StoreFunnelService {
   async connectedApps(appIds: string[], store?: Store): Promise<Set<string>> {
     if (!this.box || appIds.length === 0) return new Set();
     const requests = await this.prisma.storeReportRequest.findMany({
-      where: {
-        appId: { in: appIds },
-        accessType: 'ONGOING',
-        state: 'requested',
-        connection: { status: 'active', ...(store ? { store } : {}) },
-      },
+      where: reportingRequest(appIds, store),
       select: { appId: true },
     });
     return new Set(requests.map((request) => request.appId));

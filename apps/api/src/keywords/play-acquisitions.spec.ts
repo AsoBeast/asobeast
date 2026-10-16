@@ -34,6 +34,20 @@ describe('newestAcquisitions', () => {
     });
   });
 
+  it('prefers the newest complete month over the month in progress', () => {
+    const terms = newestAcquisitions(
+      [
+        row('2026-10-01', 'habit tracker', 20, 1),
+        row('2026-09-01', 'habit tracker', 900, 50),
+        row('2026-10-01', 'daily planner', 30, 2),
+      ],
+      '2026-10-01',
+    );
+
+    expect(terms.get('habit tracker')?.month).toBe('2026-09-01');
+    expect(terms.get('daily planner')?.month).toBe('2026-10-01');
+  });
+
   it('answers nothing without rows', () => {
     expect(newestAcquisitions([]).size).toBe(0);
   });
