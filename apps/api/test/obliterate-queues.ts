@@ -1,41 +1,37 @@
 import { getQueueToken, WorkerHost } from '@nestjs/bullmq';
 import { INestApplication } from '@nestjs/common';
 import { DiscoveryService } from '@nestjs/core';
-import { Queue, Worker } from 'bullmq';
+import { Queue } from 'bullmq';
 import { QUEUES } from '../src/jobs/jobs.types';
 import { PipelineWorker } from '../src/jobs/pipeline.worker';
 
-function workersOf(app: INestApplication): Worker[] {
-  return app
+function queuesOf(app: INestApplication): Queue[] {
+  return Object.values(QUEUES).map((name) =>
+    app.get<Queue>(getQueueToken(name), { strict: false }),
+  );
+}
+
+export async function obliterateQueues(app: INestApplication): Promise<void> {
+  const queues = queuesOf(app);
+  await Promise.all(queues.map((queue) => queue.pause()));
+  await waitForIdleQueues(app);
+  for (const queue of queues) {
+    for (const parent of await queue.getJobs(['waiting-children'])) {
+      await parent.remove({ removeChildren: false });
+    }
+    await queue.obliterate({ force: true });
+  }
+}
+
+export async function closeWorkers(app: INestApplication): Promise<void> {
+  const hosts = app
     .get(DiscoveryService, { strict: false })
     .getProviders()
     .map((wrapper): unknown => wrapper.instance)
     .filter(
       (instance): instance is WorkerHost => instance instanceof WorkerHost,
-    )
-    .map((host) => host.worker);
-}
-
-export async function obliterateQueues(app: INestApplication): Promise<void> {
-  const running = workersOf(app).filter(
-    (worker) => !worker.closing && !worker.isPaused(),
-  );
-  try {
-    await Promise.all(running.map((worker) => worker.pause()));
-    for (const name of Object.values(QUEUES)) {
-      const queue = app.get<Queue>(getQueueToken(name), { strict: false });
-      for (const parent of await queue.getJobs(['waiting-children'])) {
-        await parent.remove({ removeChildren: false });
-      }
-      await queue.obliterate({ force: true });
-    }
-  } finally {
-    await Promise.all(running.map((worker) => worker.resume()));
-  }
-}
-
-export async function closeWorkers(app: INestApplication): Promise<void> {
-  await Promise.all(workersOf(app).map((worker) => worker.close()));
+    );
+  await Promise.all(hosts.map((host) => host.worker.close()));
 }
 
 export async function settleBootRegistration(
@@ -45,10 +41,7 @@ export async function settleBootRegistration(
 }
 
 export async function pauseQueues(app: INestApplication): Promise<void> {
-  for (const name of Object.values(QUEUES)) {
-    const queue = app.get<Queue>(getQueueToken(name), { strict: false });
-    await queue.pause();
-  }
+  for (const queue of queuesOf(app)) await queue.pause();
   await settleBootRegistration(app);
 }
 
@@ -56,12 +49,11 @@ export async function waitForIdleQueues(
   app: INestApplication,
   timeout = 15_000,
 ): Promise<void> {
+  const queues = queuesOf(app);
   const deadline = Date.now() + timeout;
   while (Date.now() < deadline) {
     const active = await Promise.all(
-      Object.values(QUEUES).map((name) =>
-        app.get<Queue>(getQueueToken(name), { strict: false }).getActiveCount(),
-      ),
+      queues.map((queue) => queue.getActiveCount()),
     );
     if (active.every((count) => count === 0)) return;
     await new Promise((resolve) => setTimeout(resolve, 50));
@@ -74,7 +66,6 @@ export async function isolateQueues(
   ...running: (typeof QUEUES)[keyof typeof QUEUES][]
 ): Promise<void> {
   await pauseQueues(app);
-  await waitForIdleQueues(app);
   await obliterateQueues(app);
   await pauseQueues(app);
   for (const name of running) {
