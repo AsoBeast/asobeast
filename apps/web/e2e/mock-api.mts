@@ -2366,8 +2366,7 @@ const routes: Route[] = [
     method: "GET",
     pattern: /^\/auth\/me$/,
     handler: (_p, req, res) => {
-      const authenticated = hasCookie(req, SESSION_COOKIE);
-      if (!authenticated) {
+      if (!signedIn(req)) {
         return json(res, 401, errorEnvelope(401, req.url ?? "/auth/me"));
       }
       json(res, 200, viewerOf(req));
