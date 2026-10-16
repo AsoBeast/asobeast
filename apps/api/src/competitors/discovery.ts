@@ -9,44 +9,64 @@ export interface DiscoveryRow {
   ratingCount: number | null;
   position: number;
   date: Date;
+  country: string;
   keywordText: string;
+}
+
+interface DiscoveryGroup {
+  latest: DiscoveryRow;
+  iconRow: DiscoveryRow | null;
+  appearances: number;
+  positionSum: number;
+  bestPosition: number;
+  keywords: Set<string>;
 }
 
 const DISCOVERY_LIMIT = 20;
 const KEYWORD_SAMPLE = 5;
 
+function outranks(
+  candidate: DiscoveryRow,
+  current: DiscoveryRow,
+  homeCountry: string,
+): boolean {
+  const candidateAtHome = candidate.country === homeCountry;
+  if (candidateAtHome !== (current.country === homeCountry)) {
+    return candidateAtHome;
+  }
+  if (candidate.date.getTime() !== current.date.getTime()) {
+    return candidate.date > current.date;
+  }
+  return candidate.country < current.country;
+}
+
+const newGroup = (row: DiscoveryRow): DiscoveryGroup => ({
+  latest: row,
+  iconRow: null,
+  appearances: 0,
+  positionSum: 0,
+  bestPosition: row.position,
+  keywords: new Set<string>(),
+});
+
 export function aggregateDiscovery(
   rows: DiscoveryRow[],
+  homeCountry: string,
 ): CompetitorDiscoveryItem[] {
-  const groups = new Map<
-    string,
-    {
-      latest: DiscoveryRow;
-      appearances: number;
-      positionSum: number;
-      bestPosition: number;
-      keywords: Set<string>;
-    }
-  >();
+  const groups = new Map<string, DiscoveryGroup>();
 
   for (const row of rows) {
-    const group = groups.get(row.storeAppId);
-    if (!group) {
-      groups.set(row.storeAppId, {
-        latest: row,
-        appearances: 1,
-        positionSum: row.position,
-        bestPosition: row.position,
-        keywords: new Set([row.keywordText]),
-      });
-      continue;
-    }
+    const group = groups.get(row.storeAppId) ?? newGroup(row);
+    groups.set(row.storeAppId, group);
     group.appearances += 1;
     group.positionSum += row.position;
     group.bestPosition = Math.min(group.bestPosition, row.position);
     group.keywords.add(row.keywordText);
-    if (row.date > group.latest.date) {
+    if (outranks(row, group.latest, homeCountry)) {
       group.latest = row;
+    }
+    if (row.iconUrl && (!group.iconRow || row.date > group.iconRow.date)) {
+      group.iconRow = row;
     }
   }
 
@@ -57,7 +77,7 @@ export function aggregateDiscovery(
       storeAppId,
       title: group.latest.title,
       developer: group.latest.developer,
-      iconUrl: group.latest.iconUrl,
+      iconUrl: group.latest.iconUrl ?? group.iconRow?.iconUrl ?? null,
       ratingAvg: group.latest.ratingAvg,
       ratingCount: group.latest.ratingCount,
       appearances: group.appearances,
