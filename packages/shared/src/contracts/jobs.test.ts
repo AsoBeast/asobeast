@@ -153,4 +153,20 @@ describe('the app run status', () => {
     expect(appRunTotals(status)).toEqual({ ready: 15, total: 47 });
     expect(appRunTotals({ stages: [] })).toEqual({ ready: 0, total: 0 });
   });
+
+  it('keeps the run states closed and the paused flag optional', () => {
+    const base = {
+      appId: 'app_1',
+      date: '2026-10-16',
+      state: 'running',
+      startedAt: '2026-10-16T03:00:00.000Z',
+      lastCaptureAt: null,
+      stages: [],
+    } satisfies AppRunStatus;
+    const paused = { ...base, paused: true } satisfies AppRunStatus;
+
+    expect([...RUN_STATES]).toEqual(['idle', 'running', 'complete', 'delayed']);
+    expect(base).not.toHaveProperty('paused');
+    expect(paused.paused).toBe(true);
+  });
 });

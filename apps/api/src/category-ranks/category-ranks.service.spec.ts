@@ -151,6 +151,74 @@ describe('CategoryRanksService buckets', () => {
   });
 });
 
+describe('CategoryRanksService rankedCharts', () => {
+  const keysOf = (charts: { collection: string; genre: string }[]) =>
+    charts.map(({ collection, genre }) => `${collection}~${genre}`).sort();
+
+  it('reports the charts an app is ranked in', async () => {
+    const free = makeService([
+      app('a1', '425073498', await scrapedAppStoreRaw()),
+    ]);
+    const paid = makeService([
+      app('a2', '222', { primaryGenreId: 6014, price: 4.99 }),
+    ]);
+    const bare = makeService([
+      {
+        id: 'a3',
+        storeAppId: '333',
+        country: 'us',
+        store: Store.APP_STORE,
+        snapshots: [],
+      },
+    ]);
+
+    expect(keysOf(await free.service.rankedCharts('a1'))).toEqual([
+      'free~6027',
+      'free~overall',
+      'grossing~6027',
+      'grossing~overall',
+    ]);
+    expect(keysOf(await paid.service.rankedCharts('a2'))).toEqual([
+      'grossing~6014',
+      'grossing~overall',
+      'paid~6014',
+      'paid~overall',
+    ]);
+    expect(await bare.service.rankedCharts('a3')).toEqual([]);
+  });
+
+  it('ranks an app only in charts the daily run reads', async () => {
+    const { service } = makeService([
+      app('a1', '425073498', await scrapedAppStoreRaw()),
+    ]);
+
+    const ranked = keysOf(await service.rankedCharts('a1'));
+    const read = keysOf(await service.buckets(['a1']));
+
+    expect(read).toEqual(expect.arrayContaining(ranked));
+    expect(read.filter((key) => !ranked.includes(key))).toEqual([
+      'paid~6027',
+      'paid~overall',
+    ]);
+  });
+
+  it('writes the rank rows that rankedCharts names', async () => {
+    const { service, upsert } = makeService([
+      app('a1', '425073498', await scrapedAppStoreRaw()),
+    ]);
+
+    for (const read of await service.buckets(['a1'])) {
+      await service.checkCategory({ ...read, workspaceId: 'ws' });
+    }
+    const written = upsert.mock.calls.map(
+      ([args]: [{ create: { collection: string; genre: string } }]) =>
+        `${args.create.collection}~${args.create.genre}`,
+    );
+
+    expect(written.sort()).toEqual(keysOf(await service.rankedCharts('a1')));
+  });
+});
+
 describe('CategoryRanksService checkCategory', () => {
   it('upserts the chart position for matching apps and null for absent ones', async () => {
     const { service, upsert, captureToday } = makeService(

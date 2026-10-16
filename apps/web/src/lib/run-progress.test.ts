@@ -18,6 +18,7 @@ const status = (
     [8, 40],
     [2, 2],
   ],
+  paused?: boolean,
 ): AppRunStatus => ({
   appId: "app-1",
   date: "2026-10-15",
@@ -32,6 +33,7 @@ const status = (
       complete: counts[index][0] >= counts[index][1],
     }),
   ),
+  ...(paused === undefined ? {} : { paused }),
 });
 
 describe("the run progress pill", () => {
@@ -109,6 +111,24 @@ describe("the run progress pill", () => {
   it("W-RUN-05 formats the start time with the pinned clock", () => {
     expect(startedSentence(status("running"))).toBe(
       `Started ${formatDateTime("2026-10-15T03:00:00.000Z")}.`,
+    );
+  });
+  it("W-RUN-06 hides the pill of a paused run that has not finished", () => {
+    expect(pillText(status("running", undefined, true))).toBeNull();
+    expect(pillText(status("delayed", undefined, true))).toBeNull();
+  });
+
+  it("W-RUN-07 keeps the pill of a run that finished before the pause", () => {
+    expect(pillText(status("complete", undefined, true))).toBe("Run complete");
+  });
+
+  it("W-RUN-08 does not poll a paused run", () => {
+    expect(runProgressInterval(status("running", undefined, true))).toBe(false);
+    expect(runProgressInterval(status("complete", undefined, true))).toBe(
+      false,
+    );
+    expect(runProgressInterval(status("running", undefined, false))).toBe(
+      RUN_PROGRESS_POLL_MS,
     );
   });
 });
