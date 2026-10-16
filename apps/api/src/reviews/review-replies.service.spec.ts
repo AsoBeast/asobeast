@@ -1,10 +1,14 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Store } from '@prisma/client';
+import type { ReviewReplyPatchRequest } from '@asobeast/shared';
 import type { WorkspaceContext } from '../common/tenancy/workspace-context';
 import type { PrismaService } from '../prisma/prisma.service';
 import { ReviewRepliesService } from './review-replies.service';
 
 const NOW = new Date('2026-10-15T12:00:00.000Z');
+
+const withNullMark = (body: Record<string, unknown>) =>
+  body as unknown as ReviewReplyPatchRequest;
 
 const buildService = (
   options: {
@@ -219,6 +223,57 @@ describe('ReviewRepliesService.patch', () => {
       BadRequestException,
     );
     expect(prisma.app.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('refuses a null replied mark that carries no text', async () => {
+    const { service, upsert, prisma } = buildService();
+
+    await expect(
+      service.patch('app-1', 'rev-1', withNullMark({ replied: null })),
+    ).rejects.toThrow(
+      new BadRequestException('Send the reply text or a replied mark'),
+    );
+    expect(prisma.app.findFirst).not.toHaveBeenCalled();
+    expect(upsert).not.toHaveBeenCalled();
+  });
+
+  it('refuses whitespace text sent with a null replied mark', async () => {
+    const { service, upsert } = buildService();
+
+    await expect(
+      service.patch(
+        'app-1',
+        'rev-1',
+        withNullMark({ text: '   ', replied: null }),
+      ),
+    ).rejects.toThrow(new BadRequestException('A reply needs some text'));
+    expect(upsert).not.toHaveBeenCalled();
+  });
+
+  it('refuses a null text sent with a null replied mark', async () => {
+    const { service, upsert } = buildService();
+
+    await expect(
+      service.patch(
+        'app-1',
+        'rev-1',
+        withNullMark({ text: null, replied: null }),
+      ),
+    ).rejects.toThrow(new BadRequestException('A reply needs some text'));
+    expect(upsert).not.toHaveBeenCalled();
+  });
+
+  it('still saves text sent with a null replied mark', async () => {
+    const { service, upsert } = buildService();
+
+    await expect(
+      service.patch(
+        'app-1',
+        'rev-1',
+        withNullMark({ text: 'Thanks', replied: null }),
+      ),
+    ).resolves.toBeDefined();
+    expect(upsert.mock.calls[0][0].update.text).toBe('Thanks');
   });
 
   it('answers 404 for an unknown app or review', async () => {

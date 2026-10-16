@@ -1,4 +1,11 @@
 import { readFileSync } from "node:fs";
+import type { Page } from "@playwright/test";
+import {
+  UNBROKEN_REVIEW_AUTHOR,
+  UNBROKEN_REVIEW_TEXT,
+  UNBROKEN_REVIEW_TITLE,
+} from "./fixtures.mts";
+import { seedCookies } from "./routes.mts";
 import { expect, test } from "./session.mts";
 
 test("reviews tab lists stored reviews and the ratings chart", async ({
@@ -87,6 +94,66 @@ test("exporting reviews asks for the newest 200 that match the filters", async (
   expect(lines[2]).toMatch(
     /^\d{4}-\d{2}-\d{2}T[\d:.]+Z,1,,Please add dark mode\.,3\.4\.0,,store-rev-3,needs_reply,$/,
   );
+});
+
+async function claimMoreReviews(page: Page, total: number) {
+  await page.route(
+    (url) =>
+      url.pathname === "/api/backend/apps/app-1/reviews" &&
+      url.searchParams.get("limit") === "200",
+    async (route) => {
+      const response = await route.fetch();
+      await route.fulfill({
+        response,
+        json: { ...((await response.json()) as object), total },
+      });
+    },
+  );
+}
+
+test("a searched export says what the file holds and where the search stopped", async ({
+  page,
+}) => {
+  await claimMoreReviews(page, 450);
+  await page.goto("/apps/app-1/reviews");
+  await page.getByRole("textbox", { name: "Search reviews" }).fill("crash");
+  await expect(
+    page.getByText("Search covers the 5 loaded of 450 reviews"),
+  ).toBeVisible();
+
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: "Export reviews to CSV" }).click(),
+  ]);
+
+  expect(
+    readFileSync(await download.path(), "utf8").split("\r\n"),
+  ).toHaveLength(2);
+  await expect(
+    page.getByText(
+      "Exported 1 review found in the newest 5 of 450. Narrow the filters to search the others.",
+    ),
+  ).toBeVisible();
+  await expect(page.getByText(/^Exported the newest/)).toHaveCount(0);
+});
+
+test("an export without a search keeps the unsearched notice", async ({
+  page,
+}) => {
+  await claimMoreReviews(page, 450);
+  await page.goto("/apps/app-1/reviews");
+  await page.waitForLoadState("networkidle");
+
+  await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: "Export reviews to CSV" }).click(),
+  ]);
+
+  await expect(
+    page.getByText(
+      "Exported the newest 5 of 450 reviews. Narrow the filters to reach the others.",
+    ),
+  ).toBeVisible();
 });
 
 test("the reviews export is disabled when no review matches", async ({
@@ -254,6 +321,45 @@ test("show more appears only for a review that runs past four lines", async ({
   expect((await text.boundingBox())?.height ?? 0).toBeGreaterThan(collapsed);
 });
 
+for (const [width, clamped] of [
+  [375, true],
+  [768, true],
+  [1440, false],
+] as const) {
+  test(`a long unbroken title, text and author wrap inside the card at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/apps/app-long/reviews");
+    const card = page
+      .getByRole("article")
+      .filter({ hasText: UNBROKEN_REVIEW_TITLE });
+    await expect(card).toBeVisible();
+    const edge = (await card.boundingBox())!;
+    const right = edge.x + edge.width;
+
+    for (const token of [
+      card.getByText(UNBROKEN_REVIEW_TITLE),
+      card.getByText(UNBROKEN_REVIEW_TEXT),
+      card.getByText(new RegExp(`^${UNBROKEN_REVIEW_AUTHOR}`)),
+    ]) {
+      const box = (await token.boundingBox())!;
+      expect(box.x + box.width).toBeLessThanOrEqual(right + 1);
+    }
+
+    const more = card.getByRole("button", { name: "Show more" });
+    if (!clamped) {
+      await expect(more).toHaveCount(0);
+      return;
+    }
+    await expect(more).toBeVisible();
+    const text = card.getByText(UNBROKEN_REVIEW_TEXT);
+    const collapsed = (await text.boundingBox())!.height;
+    await more.click();
+    expect((await text.boundingBox())!.height).toBeGreaterThan(collapsed);
+  });
+}
+
 test("each ratings distribution row stays on one line on a laptop and a phone", async ({
   page,
 }) => {
@@ -351,6 +457,86 @@ test("the themes strip stays hidden when nothing is repeated", async ({
   ).toHaveCount(0);
 });
 
+test("a failing themes request keeps the reviews page and offers a retry", async ({
+  page,
+}) => {
+  let failing = true;
+  await page.route("**/api/backend/apps/app-1/reviews/themes*", (route) =>
+    failing
+      ? route.fulfill({ status: 500, json: { statusCode: 500 } })
+      : route.fallback(),
+  );
+  await page.goto("/apps/app-1/reviews");
+  const themes = page.getByRole("region", { name: "What people mention" });
+  await expect(themes).toBeVisible();
+
+  await page
+    .getByRole("region", { name: "Reply status" })
+    .getByRole("button", { name: /Needs reply/ })
+    .click();
+
+  const failure = page
+    .getByRole("alert")
+    .filter({ hasText: "Could not load what people mention." });
+  await expect(failure).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("article")).toHaveCount(3);
+  await expect(
+    page.getByRole("region", { name: "Average rating and review volume" }),
+  ).toBeVisible();
+  await expect(page.getByText("Reviews could not be loaded")).toHaveCount(0);
+
+  failing = false;
+  await page.getByRole("button", { name: "Retry" }).click();
+
+  await expect(themes).toBeVisible();
+  await expect(failure).toHaveCount(0);
+});
+
+test("retrying a failed themes request keeps focus on Retry", async ({
+  page,
+}) => {
+  await page.route("**/api/backend/apps/app-1/reviews/themes*", (route) =>
+    route.fulfill({ status: 500, json: { statusCode: 500 } }),
+  );
+  await page.goto("/apps/app-1/reviews");
+  await page
+    .getByRole("region", { name: "Reply status" })
+    .getByRole("button", { name: /Needs reply/ })
+    .click();
+  const failure = page
+    .getByRole("alert")
+    .filter({ hasText: "Could not load what people mention." });
+  await expect(failure).toBeVisible({ timeout: 15_000 });
+  const retry = page.getByRole("button", { name: "Retry" });
+
+  await retry.focus();
+  await page.keyboard.press("Enter");
+
+  await expect(retry).toBeFocused();
+  await expect(retry).toHaveAttribute("aria-disabled", "true");
+  await expect(retry).not.toHaveAttribute("aria-disabled", "true", {
+    timeout: 15_000,
+  });
+  await expect(retry).toBeFocused();
+  await expect(failure).toBeVisible();
+});
+
+test("themes that fail on first load leave the page in place", async ({
+  context,
+  page,
+}) => {
+  await seedCookies(context, { e2e_themes_failing: "1" });
+  await page.goto("/apps/app-1/reviews");
+
+  await expect(page.getByRole("article")).toHaveCount(5);
+  await expect(
+    page
+      .getByRole("alert")
+      .filter({ hasText: "Could not load what people mention." }),
+  ).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText("Reviews could not be loaded")).toHaveCount(0);
+});
+
 test("a play review edited after the reply says so and has its own filter", async ({
   page,
 }) => {
@@ -378,6 +564,91 @@ test("a play review edited after the reply says so and has its own filter", asyn
       .getByRole("region", { name: "Reply status" })
       .getByRole("button", { name: /Updated after reply/ }),
   ).toHaveCount(0);
+});
+
+const REVIEW_DAY = /[A-Z][a-z]{2} \d{1,2}, \d{4}/;
+
+test("every review card is named and its buttons carry the review", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/reviews");
+  const articles = await page.getByRole("article").all();
+  expect(articles).toHaveLength(5);
+  for (const article of articles) {
+    await expect(article).toHaveAccessibleName(/^\d star review by .+ on /);
+  }
+
+  const jordan = page.getByRole("article").filter({ hasText: "Crashes often" });
+  await expect(
+    jordan.getByRole("button", {
+      name: new RegExp(
+        `^Edit reply to the 2 star review by Jordan on ${REVIEW_DAY.source}$`,
+      ),
+    }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("article")
+      .filter({ hasText: "Please add dark mode." })
+      .getByRole("button", {
+        name: new RegExp(
+          `^Reply to the 1 star review by Anonymous on ${REVIEW_DAY.source}$`,
+        ),
+      }),
+  ).toBeVisible();
+
+  const names = await Promise.all(
+    (await page.getByRole("article").getByRole("button").all()).map((button) =>
+      button.getAttribute("aria-label"),
+    ),
+  );
+  expect(names).toHaveLength(5);
+  expect(new Set(names).size).toBe(names.length);
+});
+
+test("show more and show less name the review they open", async ({ page }) => {
+  await page.setViewportSize({ width: 1512, height: 900 });
+  await page.goto("/apps/app-long/reviews");
+  const card = page.getByRole("article").filter({ hasText: "Review number 3" });
+
+  const more = card.getByRole("button", {
+    name: new RegExp(
+      `^Show more of the 3 star review by Reviewer 3 on ${REVIEW_DAY.source}$`,
+    ),
+  });
+  await more.click();
+
+  await expect(
+    card.getByRole("button", {
+      name: new RegExp(
+        `^Show less of the 3 star review by Reviewer 3 on ${REVIEW_DAY.source}$`,
+      ),
+    }),
+  ).toHaveAttribute("aria-expanded", "true");
+});
+
+test("translate buttons name the review they translate", async ({
+  context,
+  page,
+}) => {
+  await seedCookies(context, { e2e_metadata_ai: "1" });
+  await page.goto("/apps/app-gp/reviews");
+
+  const lena = page.getByRole("article").filter({ hasText: "Stürzt ab" });
+  await expect(
+    lena.getByRole("button", {
+      name: new RegExp(
+        `^Translate the 2 star review by Lena on ${REVIEW_DAY.source}$`,
+      ),
+    }),
+  ).toBeVisible();
+  const names = await Promise.all(
+    (await page.getByRole("button", { name: /^Translate the / }).all()).map(
+      (button) => button.getAttribute("aria-label"),
+    ),
+  );
+  expect(names).toHaveLength(3);
+  expect(new Set(names).size).toBe(3);
 });
 
 test("the needs reply tile opens the queue lowest score first", async ({
