@@ -210,3 +210,17 @@ describe('CRON_STORE_REPORTS', () => {
     ).toThrow();
   });
 });
+
+describe('RETENTION_STORE_REPORTS_DAYS', () => {
+  const base = { AUTH_SECRET: 'a'.repeat(32) };
+
+  it('keeps downloaded report files for 35 days by default', () => {
+    expect(validateEnv(base).RETENTION_STORE_REPORTS_DAYS).toBe(35);
+  });
+
+  it('refuses a negative number of days', () => {
+    expect(() =>
+      validateEnv({ ...base, RETENTION_STORE_REPORTS_DAYS: '-1' }),
+    ).toThrow();
+  });
+});

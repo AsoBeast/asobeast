@@ -157,6 +157,7 @@ See [Read screenshot captions](/guides/screenshot-captions).
 | `RETENTION_AUDIT_SCORES_DAYS` | `0` | No | Prunes audit score history older than N days |
 | `RETENTION_ACTIONS_DAYS` | `180` | No | Prunes closed action items only. Open and snoozed actions are never pruned by age |
 | `RETENTION_AI_CALLS_DAYS` | `400` | No | Days the AI call ledger is kept. Never prunes the current month, which the monthly AI allowance still counts. `0` keeps forever |
+| `RETENTION_STORE_REPORTS_DAYS` | `35` | No | Days a downloaded store console report file is kept so it can be read again after a parser change. The funnel rows built from it are never pruned by age. `0` keeps forever, which is not recommended because the files grow with every app and day |
 | `RETENTION_BILLING_EVENTS_DAYS` | `90` | No | Days to keep stored Stripe webhook payloads, which carry customer billing details. `0` keeps them forever |
 
 ## Runtime
