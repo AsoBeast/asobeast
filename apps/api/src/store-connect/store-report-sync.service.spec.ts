@@ -3,6 +3,7 @@ import type { PrismaService } from '../prisma/prisma.service';
 import type { AscAnalyticsApi, AscInstance } from './asc-analytics-api';
 import {
   AscAgreementError,
+  AscError,
   AscRateLimitedError,
   AscRejectedKeyError,
   AscSegmentSizeError,
@@ -333,5 +334,56 @@ describe('StoreReportSyncService', () => {
 
     expect(applier.apply).toHaveBeenCalled();
     expect(connections.markRejected).not.toHaveBeenCalled();
+  });
+
+  it('keeps the standard lane when listing the detailed report fails', async () => {
+    const { service, api, applier, connections } = build();
+    api.discoveryReport.mockImplementation(
+      (_remoteId: string, variant: string) =>
+        variant === 'detailed'
+          ? Promise.reject(new AscError('gone', 500, 'UNEXPECTED_ERROR'))
+          : Promise.resolve({ id: 'report' }),
+    );
+
+    await expect(service.run('APP_STORE')).resolves.not.toBeNull();
+
+    expect(applier.apply).toHaveBeenCalled();
+    expect(connections.markRejected).not.toHaveBeenCalled();
+  });
+
+  it('never rejects the key over a detailed instance and keeps applying the standard ones', async () => {
+    const { service, api, applier, connections } = build();
+    api.discoveryReport.mockImplementation(
+      (_remoteId: string, variant: string) =>
+        Promise.resolve({
+          id: variant === 'detailed' ? 'detailed-report' : 'report',
+        }),
+    );
+    api.dailyInstances.mockImplementation((reportId: string) =>
+      Promise.resolve(
+        reportId === 'detailed-report'
+          ? [instance('d1', '2026-09-01')]
+          : [instance('o1', '2026-09-02'), instance('o2', '2026-09-03')],
+      ),
+    );
+    applier.apply.mockImplementation(
+      (_api: unknown, item: { variant: string }) =>
+        item.variant === 'detailed'
+          ? Promise.reject(
+              new AscRejectedKeyError('no', 403, 'FORBIDDEN_ERROR'),
+            )
+          : Promise.resolve({ rows: 1, unresolved: [] }),
+    );
+
+    await service.run('APP_STORE');
+
+    expect(connections.markRejected).not.toHaveBeenCalled();
+    expect(
+      applier.apply.mock.calls
+        .map(
+          ([, item]: [unknown, { instance: AscInstance }]) => item.instance.id,
+        )
+        .filter((id: string) => id.startsWith('o')),
+    ).toEqual(['o1', 'o1', 'o2', 'o2']);
   });
 });

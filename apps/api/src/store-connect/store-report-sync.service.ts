@@ -30,7 +30,8 @@ export const PARTIAL_SYNC =
 export const ADMIN_KEY_NEEDED =
   'This key can download reports but not request them. Connect an Admin key once; a Sales and Reports key can take over afterwards.';
 
-const isLaneFailure = (error: unknown): boolean =>
+const isLaneFailure = (error: unknown, variant: DiscoveryVariant): boolean =>
+  (variant === 'detailed' && !(error instanceof AscRateLimitedError)) ||
   error instanceof AscSegmentSizeError ||
   error instanceof AscUnreachableError ||
   error instanceof DiscoveryHeaderError ||
@@ -137,7 +138,7 @@ export class StoreReportSyncService {
         summary.rows += applied.rows;
         applied.unresolved.forEach((territory) => unresolved.add(territory));
       } catch (error) {
-        if (!isLaneFailure(error)) throw error;
+        if (!isLaneFailure(error, item.variant)) throw error;
         blocked.add(lane);
         if (!(error instanceof AscSegmentSizeError)) summary.failed += 1;
         this.logger.warn(
@@ -175,7 +176,10 @@ export class StoreReportSyncService {
     try {
       return await this.instancesOf(connection, request, 'detailed');
     } catch (error) {
-      if (!(error instanceof AscRejectedKeyError)) throw error;
+      if (error instanceof AscRateLimitedError) throw error;
+      this.logger.warn(
+        `the detailed report of request ${request.id} is skipped this run: ${(error as Error).message}`,
+      );
       return [];
     }
   }
