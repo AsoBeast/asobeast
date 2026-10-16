@@ -3,6 +3,7 @@ import { Equals, IsString, Matches, MaxLength } from 'class-validator';
 import type { PlayConnectionRequest } from '@asobeast/shared';
 
 const BUCKET = /^pubsite_prod(_rev)?_\d+$/;
+export const BUCKET_MAX_LENGTH = 63;
 export const SERVICE_ACCOUNT_MAX_LENGTH = 16_384;
 
 export class PlayConnectionDto implements PlayConnectionRequest {
@@ -23,7 +24,9 @@ export class PlayConnectionDto implements PlayConnectionRequest {
     example: 'pubsite_prod_rev_01234567890987654321',
     description:
       'The Cloud Storage bucket id shown under Download reports in Play Console',
+    maxLength: BUCKET_MAX_LENGTH,
   })
+  @MaxLength(BUCKET_MAX_LENGTH)
   @Matches(BUCKET, {
     message:
       'bucket must be the pubsite_prod bucket id shown under Download reports in Play Console',

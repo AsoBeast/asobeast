@@ -365,6 +365,13 @@ describe('Store connections (e2e)', () => {
       .expect(400);
     await owner
       .put(PLAY_PATH)
+      .send({
+        ...PLAY_CONNECTION_REQUEST,
+        bucket: `pubsite_prod_rev_${'1'.repeat(5000)}`,
+      })
+      .expect(400);
+    await owner
+      .put(PLAY_PATH)
       .send({ ...PLAY_CONNECTION_REQUEST, serviceAccountJson: '{}' })
       .expect(400);
     await owner

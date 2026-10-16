@@ -7100,6 +7100,7 @@
           },
           "bucket": {
             "type": "string",
+            "maxLength": 63,
             "example": "pubsite_prod_rev_01234567890987654321",
             "description": "The Cloud Storage bucket id shown under Download reports in Play Console"
           }
