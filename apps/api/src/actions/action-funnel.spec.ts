@@ -64,11 +64,20 @@ const APPS = [
 ];
 
 describe('ActionFunnelReader', () => {
-  it('reads nothing for apps whose store connection does not report them', async () => {
+  it('reads nothing without apps', async () => {
     const { reader, prisma } = build([]);
 
-    await expect(reader.forApps(APPS, NOW, 35)).resolves.toEqual(new Map());
+    await expect(reader.forApps([], NOW, 35)).resolves.toEqual(new Map());
     expect(prisma.storeFunnelDay.findMany).not.toHaveBeenCalled();
+  });
+
+  it('keeps the rows of an app whose connection stopped reporting it, marked as not reporting', async () => {
+    const { reader } = build([]);
+
+    const funnels = await reader.forApps(APPS, NOW, 35);
+
+    expect(funnels.get('app_1')).toMatchObject({ reporting: false });
+    expect(funnels.get('app_1')?.pages[0]?.pageTitle).toBe('Summer sale');
   });
 
   it('loads the complete days of the home market of each connected app', async () => {
@@ -79,7 +88,10 @@ describe('ActionFunnelReader', () => {
     expect(prisma.storeFunnelDay.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
-          OR: [{ appId: 'app_1', country: 'us' }],
+          OR: [
+            { appId: 'app_1', country: 'us' },
+            { appId: 'app_2', country: 'de' },
+          ],
           date: {
             gte: new Date('2026-09-09T00:00:00.000Z'),
             lte: new Date('2026-10-13T00:00:00.000Z'),
@@ -88,6 +100,7 @@ describe('ActionFunnelReader', () => {
       }),
     );
     expect(funnels.get('app_1')).toEqual({
+      reporting: true,
       completeThrough: '2026-10-13',
       days: [
         { date: '2026-10-11', pageViews: 20, gets: 4, uniqueImpressions: 80 },
@@ -102,6 +115,10 @@ describe('ActionFunnelReader', () => {
         },
       ],
     });
-    expect(funnels.has('app_2')).toBe(false);
+    expect(funnels.get('app_2')).toMatchObject({
+      reporting: false,
+      days: [],
+      pages: [],
+    });
   });
 });

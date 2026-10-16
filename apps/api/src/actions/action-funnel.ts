@@ -24,6 +24,7 @@ export interface ActionPageDay {
 }
 
 export interface ActionFunnel {
+  reporting: boolean;
   completeThrough: string;
   days: ActionFunnelDay[];
   pages: ActionPageDay[];
@@ -38,6 +39,7 @@ interface FunnelApp {
 const dateOf = (key: string): Date => new Date(`${key}T00:00:00.000Z`);
 
 export const emptyFunnel = (now: Date): ActionFunnel => ({
+  reporting: false,
   completeThrough: completeThrough(now),
   days: [],
   pages: [],
@@ -63,6 +65,16 @@ function dailyFunnel(rows: FunnelDayRow[], app: FunnelApp): ActionFunnelDay[] {
     });
 }
 
+function groupByApp<T extends { appId: string }>(rows: T[]): Map<string, T[]> {
+  const byApp = new Map<string, T[]>();
+  for (const row of rows) {
+    const list = byApp.get(row.appId);
+    if (list) list.push(row);
+    else byApp.set(row.appId, [row]);
+  }
+  return byApp;
+}
+
 @Injectable()
 export class ActionFunnelReader {
   constructor(
@@ -78,15 +90,14 @@ export class ActionFunnelReader {
     const connected = await this.funnel.connectedApps(
       apps.map((app) => app.id),
     );
-    const reported = apps.filter((app) => connected.has(app.id));
     const funnels = new Map<string, ActionFunnel>();
-    if (reported.length === 0) return funnels;
+    if (apps.length === 0) return funnels;
     const through = completeThrough(now);
     const date = {
       gte: dateOf(shiftDate(through, 1 - windowDays)),
       lte: dateOf(through),
     };
-    const homes = reported.map((app) => ({
+    const homes = apps.map((app) => ({
       appId: app.id,
       country: app.country,
     }));
@@ -119,23 +130,25 @@ export class ActionFunnelReader {
         orderBy: { date: 'asc' },
       }),
     ]);
-    for (const app of reported) {
+    const daysOf = groupByApp(days);
+    const pagesOf = groupByApp(pages);
+    for (const app of apps) {
       funnels.set(app.id, {
+        reporting: connected.has(app.id),
         completeThrough: through,
         days: dailyFunnel(
-          days
-            .filter((row) => row.appId === app.id)
-            .map((row) => ({ ...row, date: toDateKey(row.date) })),
+          (daysOf.get(app.id) ?? []).map((row) => ({
+            ...row,
+            date: toDateKey(row.date),
+          })),
           app,
         ),
-        pages: pages
-          .filter((row) => row.appId === app.id)
-          .map((row) => ({
-            date: toDateKey(row.date),
-            pageTitle: row.pageTitle,
-            uniqueImpressions: row.uniqueImpressions,
-            gets: row.gets,
-          })),
+        pages: (pagesOf.get(app.id) ?? []).map((row) => ({
+          date: toDateKey(row.date),
+          pageTitle: row.pageTitle,
+          uniqueImpressions: row.uniqueImpressions,
+          gets: row.gets,
+        })),
       });
     }
     return funnels;

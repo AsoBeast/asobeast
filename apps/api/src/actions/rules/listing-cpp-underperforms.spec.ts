@@ -15,12 +15,22 @@ const pageDay = (
   date = '2026-10-10',
 ): ActionPageDay => ({ date, pageTitle, uniqueImpressions, gets });
 
-const detect = (pages: ActionPageDay[]) =>
+const detectAll = (pages: ActionPageDay[], reporting = true) =>
   detectListingCppUnderperforms(
     actionContext([
-      contextApp({ funnel: { completeThrough: THROUGH, days: [], pages } }),
+      contextApp({
+        funnel: { reporting, completeThrough: THROUGH, days: [], pages },
+      }),
     ]),
   );
+
+const detect = (pages: ActionPageDay[]) =>
+  detectAll(pages).filter((action) => !action.withheld);
+
+const withheld = (pages: ActionPageDay[], reporting = true) =>
+  detectAll(pages, reporting)
+    .filter((action) => action.withheld)
+    .map((action) => action.discriminator);
 
 const DEFAULT = pageDay('default product page', 10_000, 400);
 
@@ -64,6 +74,34 @@ describe('listing.cpp_underperforms', () => {
       'Winter deal',
     ]);
     expect(actions.every((action) => action.keywordId === null)).toBe(true);
+  });
+
+  it('holds the actions of every page it saw while the console stops reporting', () => {
+    expect(
+      withheld([DEFAULT, pageDay('Summer sale', 1000, 10)], false),
+    ).toEqual(['Summer sale']);
+  });
+
+  it('holds a page it cannot judge instead of resolving it', () => {
+    expect(
+      withheld([DEFAULT, pageDay('Summer sale', 1000, 1, '2026-09-20')]),
+    ).toEqual(['Summer sale']);
+    expect(
+      withheld([
+        pageDay('default product page', CPP_MIN_UNIQUE_IMPRESSIONS - 1, 10),
+        pageDay('Summer sale', 1000, 1),
+      ]),
+    ).toEqual(['Summer sale']);
+    expect(
+      withheld([
+        DEFAULT,
+        pageDay('Summer sale', CPP_MIN_UNIQUE_IMPRESSIONS - 1, 0),
+      ]),
+    ).toEqual(['Summer sale']);
+  });
+
+  it('resolves a page that now converts like the default', () => {
+    expect(detectAll([DEFAULT, pageDay('Summer sale', 1000, 40)])).toEqual([]);
   });
 
   it('reads only the last fourteen complete days', () => {

@@ -2,6 +2,7 @@ import {
   funnelConversion,
   type ConversionInvestigateDropEvidence,
 } from '@asobeast/shared';
+import { shiftDate } from '../../store-connect/store-funnel';
 import type { ActionContext, ActionContextApp } from '../action-context';
 import type { ActionFunnelDay } from '../action-funnel';
 import { clampUnit } from '../action-impact';
@@ -39,48 +40,56 @@ function periodOf(days: ActionFunnelDay[]): Period {
 const relativeChange = (after: number, before: number): number =>
   round((after - before) / before);
 
-function detectForApp(app: ActionContextApp): DetectedAction | null {
-  const span = CONVERSION_WINDOW_DAYS + CONVERSION_BASELINE_DAYS;
-  const complete = app.funnel.days.filter(
-    (day) => day.date <= app.funnel.completeThrough,
-  );
-  if (complete.length < span) return null;
-  const days = complete.slice(-span);
+const SPAN = CONVERSION_WINDOW_DAYS + CONVERSION_BASELINE_DAYS;
+
+function calendarDays(app: ActionContextApp): ActionFunnelDay[] | null {
+  const byDate = new Map(app.funnel.days.map((day) => [day.date, day]));
+  const days: ActionFunnelDay[] = [];
+  for (let back = SPAN - 1; back >= 0; back -= 1) {
+    const day = byDate.get(shiftDate(app.funnel.completeThrough, -back));
+    if (!day) return null;
+    days.push(day);
+  }
+  return days;
+}
+
+interface Measured {
+  baseline: Period;
+  recent: Period;
+  evidence: ConversionInvestigateDropEvidence;
+}
+
+function measure(app: ActionContextApp, days: ActionFunnelDay[]): Measured {
   const baseline = periodOf(days.slice(0, CONVERSION_BASELINE_DAYS));
   const recent = periodOf(days.slice(CONVERSION_BASELINE_DAYS));
-  const pageViewsBefore = baseline.pageViews / CONVERSION_BASELINE_DAYS;
-  const pageViewsAfter = recent.pageViews / CONVERSION_WINDOW_DAYS;
-  const getsBefore = baseline.gets / CONVERSION_BASELINE_DAYS;
-  const getsAfter = recent.gets / CONVERSION_WINDOW_DAYS;
-  if (pageViewsBefore === 0 || getsBefore === 0) return null;
-  const pageViewsShift = Math.abs(
-    relativeChange(pageViewsAfter, pageViewsBefore),
-  );
-  const drop = -relativeChange(getsAfter, getsBefore);
-  const lost = (getsBefore - getsAfter) * CONVERSION_WINDOW_DAYS;
-  if (
-    pageViewsShift > CONVERSION_PAGE_VIEW_TOLERANCE ||
-    drop < CONVERSION_MIN_DROP ||
-    lost < CONVERSION_MIN_GETS
-  ) {
-    return null;
-  }
-  const evidence: ConversionInvestigateDropEvidence = {
-    rule: 'conversion.investigate_drop',
-    country: app.country,
-    windowDays: CONVERSION_WINDOW_DAYS,
-    baselineDays: CONVERSION_BASELINE_DAYS,
-    completeThrough: app.funnel.completeThrough,
-    pageViewsBefore: round1(pageViewsBefore),
-    pageViewsAfter: round1(pageViewsAfter),
-    getsBefore: round1(getsBefore),
-    getsAfter: round1(getsAfter),
-    conversionBefore: funnelConversion(
-      baseline.gets,
-      baseline.uniqueImpressions,
-    ),
-    conversionAfter: funnelConversion(recent.gets, recent.uniqueImpressions),
+  return {
+    baseline,
+    recent,
+    evidence: {
+      rule: 'conversion.investigate_drop',
+      country: app.country,
+      windowDays: CONVERSION_WINDOW_DAYS,
+      baselineDays: CONVERSION_BASELINE_DAYS,
+      completeThrough: app.funnel.completeThrough,
+      pageViewsBefore: round1(baseline.pageViews / CONVERSION_BASELINE_DAYS),
+      pageViewsAfter: round1(recent.pageViews / CONVERSION_WINDOW_DAYS),
+      getsBefore: round1(baseline.gets / CONVERSION_BASELINE_DAYS),
+      getsAfter: round1(recent.gets / CONVERSION_WINDOW_DAYS),
+      conversionBefore: funnelConversion(
+        baseline.gets,
+        baseline.uniqueImpressions,
+      ),
+      conversionAfter: funnelConversion(recent.gets, recent.uniqueImpressions),
+    },
   };
+}
+
+function detection(
+  app: ActionContextApp,
+  evidence: ConversionInvestigateDropEvidence,
+  terms: DetectedAction['terms'],
+  withheld: boolean,
+): DetectedAction {
   return {
     rule: 'conversion.investigate_drop',
     appId: app.id,
@@ -88,15 +97,44 @@ function detectForApp(app: ActionContextApp): DetectedAction | null {
     country: app.country,
     keywordId: null,
     discriminator: null,
-    terms: {
+    terms,
+    evidence,
+    ...(withheld ? { withheld: true as const } : {}),
+  };
+}
+
+const NO_TERMS = { reach: 0, severity: 0, confidence: 0 };
+
+function detectForApp(app: ActionContextApp): DetectedAction | null {
+  const days = app.funnel.reporting ? calendarDays(app) : null;
+  const { baseline, recent, evidence } = measure(app, days ?? []);
+  const hold = () => detection(app, evidence, NO_TERMS, true);
+  if (!days || baseline.pageViews === 0 || baseline.gets === 0) return hold();
+  const pageViewsBefore = baseline.pageViews / CONVERSION_BASELINE_DAYS;
+  const pageViewsAfter = recent.pageViews / CONVERSION_WINDOW_DAYS;
+  const getsBefore = baseline.gets / CONVERSION_BASELINE_DAYS;
+  const getsAfter = recent.gets / CONVERSION_WINDOW_DAYS;
+  if (
+    Math.abs(relativeChange(pageViewsAfter, pageViewsBefore)) >
+    CONVERSION_PAGE_VIEW_TOLERANCE
+  ) {
+    return hold();
+  }
+  const drop = -relativeChange(getsAfter, getsBefore);
+  const lost = (getsBefore - getsAfter) * CONVERSION_WINDOW_DAYS;
+  if (drop < CONVERSION_MIN_DROP || lost < CONVERSION_MIN_GETS) return null;
+  return detection(
+    app,
+    evidence,
+    {
       reach: clampUnit(drop),
       severity: clampUnit(drop / CONVERSION_SEVERE_DROP),
       confidence: clampUnit(
         (getsBefore * CONVERSION_WINDOW_DAYS) / CONVERSION_CONFIDENCE_GETS,
       ),
     },
-    evidence,
-  };
+    false,
+  );
 }
 
 export function detectConversionInvestigateDrop(
