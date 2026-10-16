@@ -232,10 +232,15 @@ test("a play app shows play installs per search term and sorts by them", async (
 test("an app store app has no play installs column, even from a play sort link", async ({
   page,
 }) => {
-  await page.goto("/apps/app-1/keywords?sort=acquisitions");
+  await page.goto("/apps/app-1/keywords");
   const table = page.getByRole("table", { name: /Tracked keywords/ });
+  const first = await table.getByRole("row").nth(1).textContent();
+  await page.goto("/apps/app-1/keywords?sort=acquisitions");
 
-  await expect(table.getByRole("row").nth(1)).toBeVisible();
+  await expect(table.getByRole("row").nth(1)).toHaveText(first ?? "");
+  await expect(
+    table.getByRole("columnheader", { name: /Opportunity/ }),
+  ).toHaveAttribute("aria-sort", "descending");
   await expect(
     table.getByRole("button", { name: "Play installs", exact: true }),
   ).toHaveCount(0);

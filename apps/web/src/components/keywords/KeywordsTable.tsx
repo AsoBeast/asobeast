@@ -59,7 +59,9 @@ export function KeywordsTable({
   );
 
   const { sorting, onSortingChange } = useUrlSorting(
-    { sort: columns.some((column) => column.id === sort) ? sort : null, dir },
+    columns.some((column) => column.id === sort)
+      ? { sort, dir }
+      : { sort: keywordSortParser.defaultValue, dir: null },
     columns,
     (next) =>
       void setSortParams({
