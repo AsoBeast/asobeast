@@ -16,8 +16,10 @@ import type { StoreReportApplier } from './store-report-applier';
 import type { StoreReportRequester } from './store-report-requester';
 import {
   ADMIN_KEY_NEEDED,
+  PARTIAL_SYNC,
   StoreReportSyncService,
 } from './store-report-sync.service';
+import { DiscoveryHeaderError } from './discovery-report';
 
 const instance = (id: string, processingDate: string): AscInstance => ({
   id,
@@ -49,9 +51,12 @@ function build(status: OpenedConnection['status'] = 'active') {
     markRejected: jest.fn().mockResolvedValue(undefined),
   };
   const requester = {
-    ensure: jest
-      .fn()
-      .mockResolvedValue({ apps: 1, reportAccess: 'admin', forbidden: false }),
+    ensure: jest.fn().mockResolvedValue({
+      apps: 1,
+      reportAccess: 'admin',
+      forbidden: false,
+      failed: 0,
+    }),
   };
   const applier = {
     apply: jest.fn().mockResolvedValue({ rows: 4, unresolved: [] }),
@@ -157,6 +162,39 @@ describe('StoreReportSyncService', () => {
 
     expect(appliedIds(applier)).toEqual(['s1', 'o1']);
     expect(summary?.instances).toBe(1);
+  });
+
+  it('keeps applying the other requests when one instance cannot be read, and says so', async () => {
+    const { service, applier, connections } = build();
+    applier.apply.mockRejectedValueOnce(new DiscoveryHeaderError(['Counts']));
+
+    const summary = await service.run('APP_STORE');
+
+    expect(appliedIds(applier)).toEqual(['s1', 'o1']);
+    expect(summary).toMatchObject({ instances: 1, failed: 1 });
+    expect(connections.markSynced).toHaveBeenCalledWith(
+      'APP_STORE',
+      'admin',
+      PARTIAL_SYNC,
+    );
+  });
+
+  it('says so when apple failed one of the apps', async () => {
+    const { service, requester, connections } = build();
+    requester.ensure.mockResolvedValue({
+      apps: 2,
+      reportAccess: 'admin',
+      forbidden: false,
+      failed: 1,
+    });
+
+    await service.run('APP_STORE');
+
+    expect(connections.markSynced).toHaveBeenCalledWith(
+      'APP_STORE',
+      'admin',
+      PARTIAL_SYNC,
+    );
   });
 
   it('ends the run normally on a rate limit after recording what was applied', async () => {

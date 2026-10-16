@@ -4,10 +4,13 @@ import type { Store } from '@asobeast/shared';
 import { toDateKey } from '../analytics/analytics.support';
 import { PrismaService } from '../prisma/prisma.service';
 import {
+  AscError,
   AscRateLimitedError,
   AscRejectedKeyError,
   AscSegmentSizeError,
+  AscUnreachableError,
 } from './asc-errors';
+import { DiscoveryHeaderError, DiscoveryLineError } from './discovery-report';
 import { refusalOf } from './asc-http-errors';
 import {
   StoreConnectionService,
@@ -20,14 +23,29 @@ import {
 import { StoreReportRequester } from './store-report-requester';
 
 export const MAX_INSTANCES_PER_RUN = 200;
+export const PARTIAL_SYNC =
+  'Apple answered an error for some apps or reports, or sent a report AsoBeast could not read. They are tried again on the next sync.';
 export const ADMIN_KEY_NEEDED =
   'This key can download reports but not request them. Connect an Admin key once; a Sales and Reports key can take over afterwards.';
+
+const isLaneFailure = (error: unknown): boolean =>
+  error instanceof AscSegmentSizeError ||
+  error instanceof AscUnreachableError ||
+  error instanceof DiscoveryHeaderError ||
+  error instanceof DiscoveryLineError ||
+  (error instanceof AscError &&
+    !(error instanceof AscRejectedKeyError) &&
+    !(error instanceof AscRateLimitedError));
+
+const lastErrorOf = (forbidden: boolean, failed: number): string | null =>
+  forbidden ? ADMIN_KEY_NEEDED : failed > 0 ? PARTIAL_SYNC : null;
 
 export interface SyncSummary {
   apps: number;
   instances: number;
   rows: number;
   rateLimited: boolean;
+  failed: number;
   unresolved: string[];
 }
 
@@ -51,16 +69,18 @@ export class StoreReportSyncService {
       instances: 0,
       rows: 0,
       rateLimited: false,
+      failed: 0,
       unresolved: [],
     };
     try {
       const outcome = await this.requester.ensure(connection, store);
       summary.apps = outcome.apps;
+      summary.failed = outcome.failed;
       await this.download(connection, summary);
       await this.connections.markSynced(
         store,
         outcome.reportAccess,
-        outcome.forbidden ? ADMIN_KEY_NEEDED : null,
+        lastErrorOf(outcome.forbidden, summary.failed),
       );
     } catch (error) {
       if (error instanceof AscRejectedKeyError) {
@@ -95,10 +115,11 @@ export class StoreReportSyncService {
         summary.rows += applied.rows;
         applied.unresolved.forEach((territory) => unresolved.add(territory));
       } catch (error) {
-        if (!(error instanceof AscSegmentSizeError)) throw error;
+        if (!isLaneFailure(error)) throw error;
         blocked.add(item.requestId);
+        if (!(error instanceof AscSegmentSizeError)) summary.failed += 1;
         this.logger.warn(
-          `report instance ${item.instance.id} arrived incomplete and waits for the next sync: ${error.message}`,
+          `report instance ${item.instance.id} waits for the next sync: ${(error as Error).message}`,
         );
       }
     }

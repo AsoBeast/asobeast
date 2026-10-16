@@ -10,7 +10,9 @@ const APPS = [
   { id: 'app_2', storeAppId: '222' },
 ];
 
-function build(requested: { appId: string; accessType: string }[] = []) {
+function build(
+  requested: { appId: string; accessType: string; remoteId?: string }[] = [],
+) {
   const upsert = jest.fn().mockResolvedValue({});
   const prisma = {
     app: { findMany: jest.fn().mockResolvedValue(APPS) },
@@ -48,7 +50,7 @@ const placed = (upsert: jest.Mock) =>
   upsert.mock.calls.map(
     ([args]: [
       {
-        where: { appId_accessType: object };
+        where: { appId_accessType: { appId: string; accessType: string } };
         update: { state: string; remoteId: string | null };
       },
     ]) => ({
@@ -73,6 +75,7 @@ describe('StoreReportRequester', () => {
       apps: 2,
       reportAccess: 'admin',
       forbidden: false,
+      failed: 0,
     });
     expect(placed(upsert)).toEqual([
       {
@@ -147,6 +150,7 @@ describe('StoreReportRequester', () => {
       apps: 2,
       reportAccess: 'readOnly',
       forbidden: true,
+      failed: 0,
     });
     expect(placed(upsert).slice(0, 2)).toEqual([
       {
@@ -203,17 +207,66 @@ describe('StoreReportRequester', () => {
 
   it('leaves apps whose requests are in place alone', async () => {
     const { requester, connection, upsert, api } = build([
-      { appId: 'app_1', accessType: 'ONGOING' },
+      { appId: 'app_1', accessType: 'ONGOING', remoteId: 'remote-ongoing' },
       { appId: 'app_1', accessType: 'ONE_TIME_SNAPSHOT' },
-      { appId: 'app_2', accessType: 'ONGOING' },
+      { appId: 'app_2', accessType: 'ONGOING', remoteId: 'remote-2' },
       { appId: 'app_2', accessType: 'ONE_TIME_SNAPSHOT' },
+    ]);
+    api.reportRequests.mockResolvedValue([
+      {
+        id: 'remote-ongoing',
+        accessType: 'ONGOING',
+        stoppedDueToInactivity: false,
+      },
     ]);
 
     const outcome = await requester.ensure(connection, 'APP_STORE');
 
     expect(outcome.apps).toBe(0);
-    expect(api.reportRequests).not.toHaveBeenCalled();
+    expect(api.reportRequests).toHaveBeenCalledTimes(1);
     expect(upsert).not.toHaveBeenCalled();
+  });
+
+  it('places the ongoing request again when apple stopped it', async () => {
+    const { requester, connection, upsert, api } = build([
+      { appId: 'app_1', accessType: 'ONGOING', remoteId: 'remote-ongoing' },
+      { appId: 'app_1', accessType: 'ONE_TIME_SNAPSHOT' },
+    ]);
+    api.reportRequests.mockResolvedValue([
+      {
+        id: 'remote-ongoing',
+        accessType: 'ONGOING',
+        stoppedDueToInactivity: true,
+      },
+    ]);
+
+    await requester.ensure(connection, 'APP_STORE');
+
+    expect(api.createReportRequest).toHaveBeenCalledWith('111', 'ONGOING');
+    expect(placed(upsert)).toContainEqual({
+      appId: 'app_1',
+      accessType: 'ONGOING',
+      state: 'requested',
+      remoteId: 'remote-ONGOING',
+    });
+  });
+
+  it('keeps placing the other apps when apple fails one', async () => {
+    const { requester, connection, upsert, api } = build();
+    api.appsById.mockResolvedValue([
+      { id: '111', name: 'Focus' },
+      { id: '222', name: 'Habits' },
+    ]);
+    api.reportRequests.mockImplementation((storeAppId: string) =>
+      storeAppId === '111'
+        ? Promise.reject(new AscError('busy', 409, 'STATE_ERROR'))
+        : Promise.resolve([]),
+    );
+
+    const outcome = await requester.ensure(connection, 'APP_STORE');
+
+    expect(outcome.failed).toBe(1);
+    expect(placed(upsert).map((row) => row.appId)).toEqual(['app_2', 'app_2']);
   });
 
   it('asks nothing without primary apps', async () => {

@@ -66,6 +66,7 @@ Apple names a market by its territory. asobeast matches each territory to an App
 
 - One App Store Connect key per workspace.
 - Apple allows each key 3,500 requests an hour. A sync downloads at most 200 daily files and leaves the rest for the next day, so a long history arrives over a few days.
+- When Apple answers an error for one app, or sends a report asobeast cannot read, the other apps and reports still sync and the section says that some were left for the next sync. A request Apple stopped for inactivity is asked for again on the next sync.
 - When Apple refuses the key during a sync, the connection is marked rejected and nothing is downloaded until you verify it or connect a new one. The numbers already stored stay.
 - The downloaded files are kept for `RETENTION_STORE_REPORTS_DAYS` so a parser change can read them again. The funnel rows built from them are kept.
 

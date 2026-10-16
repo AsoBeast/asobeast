@@ -92,7 +92,9 @@ describe('Store report sync (e2e)', () => {
       .map((request) => request.absoluteUrl ?? request.path.split('?')[0]);
 
   const scriptApple = () => {
+    const created: { type: string; id: string; attributes: object }[] = [];
     harness.asc
+      .on('GET', /\/analyticsReportRequests\?/, () => answer({ data: created }))
       .on(
         'GET',
         /^\/v1\/apps\?filter/,
@@ -106,16 +108,13 @@ describe('Store report sync (e2e)', () => {
         const accessType = (
           request.body as { data: { attributes: { accessType: string } } }
         ).data.attributes.accessType;
-        return answer(
-          {
-            data: {
-              type: 'analyticsReportRequests',
-              id: accessType === 'ONGOING' ? 'ongoing' : 'snapshot',
-              attributes: { accessType, stoppedDueToInactivity: false },
-            },
-          },
-          201,
-        );
+        const data = {
+          type: 'analyticsReportRequests',
+          id: accessType === 'ONGOING' ? 'ongoing' : 'snapshot',
+          attributes: { accessType, stoppedDueToInactivity: false },
+        };
+        created.push(data);
+        return answer({ data }, 201);
       })
       .on(
         'GET',

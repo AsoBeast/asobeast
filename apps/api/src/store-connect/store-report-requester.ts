@@ -11,7 +11,12 @@ import type {
   AscAnalyticsApi,
   AscReportRequest,
 } from './asc-analytics-api';
-import { AscError, AscForbiddenError } from './asc-errors';
+import {
+  AscError,
+  AscForbiddenError,
+  AscRateLimitedError,
+  AscRejectedKeyError,
+} from './asc-errors';
 import type { OpenedConnection } from './store-connection.service';
 
 export const ACCESS_TYPES: readonly AscAccessType[] = [
@@ -24,6 +29,7 @@ export interface RequestOutcome {
   apps: number;
   reportAccess: StoreReportAccess;
   forbidden: boolean;
+  failed: number;
 }
 
 interface PrimaryApp {
@@ -34,6 +40,29 @@ interface PrimaryApp {
 interface Placement {
   state: StoreReportState;
   remoteId: string | null;
+}
+
+interface RequestedRow {
+  accessType: string;
+  remoteId: string | null;
+}
+
+const isAppFailure = (error: unknown): boolean =>
+  error instanceof AscError &&
+  !(error instanceof AscRejectedKeyError) &&
+  !(error instanceof AscRateLimitedError);
+
+function inPlace(
+  type: AscAccessType,
+  requested: RequestedRow[],
+  remote: AscReportRequest[] | null,
+): boolean {
+  const row = requested.find((each) => each.accessType === type);
+  if (!row) return false;
+  if (type !== 'ONGOING' || !remote) return true;
+  return remote.some(
+    (request) => request.id === row.remoteId && !request.stoppedDueToInactivity,
+  );
 }
 
 @Injectable()
@@ -51,6 +80,7 @@ export class StoreReportRequester {
       apps: 0,
       reportAccess: connection.reportAccess,
       forbidden: false,
+      failed: 0,
     };
     const apps = await this.prisma.app.findMany({
       where: { store, isCompetitor: false },
@@ -65,34 +95,55 @@ export class StoreReportRequester {
     );
     const requested = await this.prisma.storeReportRequest.findMany({
       where: { connectionId: connection.id, state: 'requested' },
-      select: { appId: true, accessType: true },
+      select: { appId: true, accessType: true, remoteId: true },
     });
     for (const app of apps) {
-      const missing = ACCESS_TYPES.filter(
-        (type) =>
-          !requested.some(
-            (row) => row.appId === app.id && row.accessType === type,
-          ),
-      );
-      if (missing.length === 0) continue;
-      outcome.apps += 1;
-      const placements = visible.has(app.storeAppId)
-        ? await this.place(connection.api, app, missing, outcome)
-        : missing.map(() => ({ state: 'unmatched' as const, remoteId: null }));
-      for (const [index, type] of missing.entries()) {
-        await this.record(connection.id, app.id, type, placements[index]);
+      try {
+        await this.ensureApp(
+          connection,
+          app,
+          visible.has(app.storeAppId),
+          requested.filter((row) => row.appId === app.id),
+          outcome,
+        );
+      } catch (error) {
+        if (!isAppFailure(error)) throw error;
+        outcome.failed += 1;
       }
     }
     return outcome;
+  }
+
+  private async ensureApp(
+    connection: OpenedConnection,
+    app: PrimaryApp,
+    visible: boolean,
+    requested: RequestedRow[],
+    outcome: RequestOutcome,
+  ): Promise<void> {
+    const remote = visible
+      ? await this.remoteRequests(connection.api, app.storeAppId)
+      : null;
+    const missing = ACCESS_TYPES.filter(
+      (type) => !inPlace(type, requested, remote),
+    );
+    if (missing.length === 0) return;
+    outcome.apps += 1;
+    const placements = visible
+      ? await this.place(connection.api, app, missing, remote, outcome)
+      : missing.map(() => ({ state: 'unmatched' as const, remoteId: null }));
+    for (const [index, type] of missing.entries()) {
+      await this.record(connection.id, app.id, type, placements[index]);
+    }
   }
 
   private async place(
     api: AscAnalyticsApi,
     app: PrimaryApp,
     missing: AscAccessType[],
+    remote: AscReportRequest[] | null,
     outcome: RequestOutcome,
   ): Promise<Placement[]> {
-    const remote = await this.remoteRequests(api, app.storeAppId);
     if (!remote) {
       return missing.map(() => ({ state: 'unmatched', remoteId: null }));
     }
