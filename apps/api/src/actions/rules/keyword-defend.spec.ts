@@ -569,6 +569,18 @@ describe('keyword.defend', () => {
       ).toEqual([]);
     });
 
+    it('counts a paused keyword as no evidence', () => {
+      expect(
+        defendWith({
+          trackedKeywords: [cityguessr, { ...otherKeyword(), active: false }],
+          serpDaysByKeyword: new Map([
+            ['kw_1', PADDING],
+            ['kw_2', PADDING],
+          ]),
+        }),
+      ).toEqual([]);
+    });
+
     it('counts a keyword in another storefront as no evidence', () => {
       expect(
         defendWith({

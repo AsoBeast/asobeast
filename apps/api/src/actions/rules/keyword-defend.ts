@@ -93,6 +93,7 @@ function serpReachByCountry(
 ): Map<string, Map<string, number>> {
   const byCountry = new Map<string, Map<string, number>>();
   for (const keyword of app.trackedKeywords) {
+    if (!keyword.active) continue;
     const reach = byCountry.get(keyword.country) ?? new Map<string, number>();
     byCountry.set(keyword.country, reach);
     const seen = new Set(
