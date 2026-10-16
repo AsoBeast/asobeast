@@ -1,4 +1,8 @@
-import { type APIRequestContext, type Page } from "@playwright/test";
+import {
+  type APIRequestContext,
+  type BrowserContext,
+  type Page,
+} from "@playwright/test";
 import { expect, test } from "./session.mts";
 import { PLAN_LIMITS, UPGRADE_PATH, type AccountPlan } from "@asobeast/shared";
 import { contrastViolations, THEMES } from "./contrast-check.mts";
@@ -1077,6 +1081,67 @@ test("keeps the row actions on the chart on screen while the next one loads", as
       name: `Add ${TOP_CHART_APPS[0].title} to Tomato Clock`,
     }),
   ).toHaveCount(0);
+});
+
+const LOAD_DELAY_MS = "1500";
+
+const delayApi = (context: BrowserContext) =>
+  context.addCookies([
+    {
+      name: "e2e_api_latency",
+      value: LOAD_DELAY_MS,
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
+
+const loadingCue = (page: Page, text: string) =>
+  page.getByRole("status").filter({ hasText: text });
+
+for (const [layout, path] of [
+  ["side by side", "/charts"],
+  ["table", "/charts?view=table"],
+] as const) {
+  test(`says the requested store is loading while the previous chart stays, ${layout}`, async ({
+    page,
+    context,
+  }) => {
+    await page.goto(path);
+    await delayApi(context);
+
+    await page
+      .getByRole("tablist", { name: "Store" })
+      .getByRole("tab", { name: "Google Play" })
+      .click();
+
+    const storeLink = page
+      .getByRole("link", {
+        name: `Open ${TOP_CHART_APPS[0].title} in the store`,
+      })
+      .first();
+    const cue = loadingCue(page, "Loading Google Play · United States");
+    await expect(cue).toBeVisible({ timeout: 1000 });
+    await expect(page.locator('[aria-busy="true"]')).toHaveCount(1);
+    await expect(storeLink).toHaveAttribute("href", /apps\.apple\.com/);
+    await expect(cue).toBeHidden({ timeout: 6000 });
+    await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
+    await expect(storeLink).toHaveAttribute("href", /play\.google\.com/);
+  });
+}
+
+test("names the requested country while a new country loads", async ({
+  page,
+  context,
+}) => {
+  await page.goto("/charts?view=table");
+  await delayApi(context);
+
+  await pick(page, "Country", "DE · Germany");
+
+  await expect(loadingCue(page, "Loading App Store · Germany")).toBeVisible({
+    timeout: 1000,
+  });
+  await expect(loadingCue(page, "Loading")).toBeHidden({ timeout: 6000 });
 });
 
 test("marks the chosen day apart from the other captured days", async ({
