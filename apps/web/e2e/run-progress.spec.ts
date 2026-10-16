@@ -123,10 +123,10 @@ test("a paused run shows no pill and is not polled", async ({
   await expect(page.getByRole("button", { name: /^Today's run/ })).toHaveCount(
     0,
   );
-  const loaded = runStatus();
+  await expect.poll(runStatus).toBe(1);
   await page.waitForTimeout(RUN_PROGRESS_POLL_MS + 1_500);
 
-  expect(runStatus()).toBe(loaded);
+  expect(runStatus()).toBe(1);
 });
 
 test("a run that completed before the pause keeps its pill", async ({

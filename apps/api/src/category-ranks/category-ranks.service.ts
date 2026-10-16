@@ -107,10 +107,14 @@ export class CategoryRanksService {
     );
   }
 
-  async checkCategory(payload: CheckCategoryPayload): Promise<void> {
+  async checkCategory(
+    payload: CheckCategoryPayload,
+    finalAttempt: boolean,
+  ): Promise<void> {
     const { collection, genre, country, store } = payload;
     const chart = await this.charts.captureToday(
       chartKeyOf({ collection, genre, country, store }),
+      { finalAttempt },
     );
     const positionByStoreAppId = new Map(
       chart.entries.map((entry) => [entry.storeAppId, entry.position]),

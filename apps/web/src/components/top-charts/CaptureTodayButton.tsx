@@ -11,7 +11,8 @@ import { captureChart } from "@/lib/api";
 import { seedChartCapture } from "@/lib/queries";
 import { chartParsers } from "@/lib/search-params";
 import { useSingleFlight } from "@/lib/single-flight";
-import { captureErrorText } from "./chart-actions";
+import { captureErrorText, noAppsToast } from "./chart-actions";
+import { listsNoApps } from "./chart-column-rows";
 
 export function CaptureTodayButton({
   chart,
@@ -25,8 +26,16 @@ export function CaptureTodayButton({
   const mutation = useMutation({
     mutationFn: () => captureChart(chart),
     onSuccess: (page) => {
+      if (page.answeredNoApps) {
+        toast.info(noAppsToast(page.chart.store));
+        return;
+      }
       seedChartCapture(queryClient, page);
-      toast.success("Captured today's chart");
+      toast.success(
+        listsNoApps(page)
+          ? noAppsToast(page.chart.store)
+          : "Captured today's chart",
+      );
       void setSearch({ date: null });
     },
     onError: (error) => toast.error(captureErrorText(error)),

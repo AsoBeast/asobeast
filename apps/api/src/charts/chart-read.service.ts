@@ -19,6 +19,7 @@ import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
 import { chartAppLinks } from './chart-apps';
 import { ChartCaptureService, StoredChart } from './chart-capture.service';
 import { ChartFollowsService } from './chart-follows.service';
+import { ChartListsNoAppsError } from './chart-lists-no-apps.error';
 import { assertChartKey, chartKeyFrom } from './chart-key';
 import { movementOf, trendingOf } from './chart-movement';
 
@@ -63,10 +64,19 @@ export class ChartReadService {
   ): Promise<ChartPage> {
     const key = chartKeyFrom(query);
     assertChartKey(key);
-    await this.captures.captureToday(key, {
-      spend,
-      through: (work) => this.egress.through(key.store, key.country, work),
-    });
+    try {
+      await this.captures.captureToday(key, {
+        spend,
+        through: (work) => this.egress.through(key.store, key.country, work),
+      });
+    } catch (error) {
+      if (!(error instanceof ChartListsNoAppsError)) throw error;
+      return { ...(await this.todayPage(key)), answeredNoApps: true };
+    }
+    return this.todayPage(key);
+  }
+
+  private todayPage(key: ChartKey): Promise<ChartPage> {
     return this.page({
       ...key,
       compare: '1d',

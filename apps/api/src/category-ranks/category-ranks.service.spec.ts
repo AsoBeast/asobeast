@@ -208,7 +208,7 @@ describe('CategoryRanksService rankedCharts', () => {
     ]);
 
     for (const read of await service.buckets(['a1'])) {
-      await service.checkCategory({ ...read, workspaceId: 'ws' });
+      await service.checkCategory({ ...read, workspaceId: 'ws' }, true);
     }
     const written = upsert.mock.calls.map(
       ([args]: [{ create: { collection: string; genre: string } }]) =>
@@ -230,21 +230,27 @@ describe('CategoryRanksService checkCategory', () => {
       [{ storeAppId: '111', title: 'First' }],
     );
 
-    await service.checkCategory({
-      collection: 'free',
-      genre: '6007',
-      country: 'us',
-      store: 'APP_STORE',
-      workspaceId: 'ws_default',
-    });
+    await service.checkCategory(
+      {
+        collection: 'free',
+        genre: '6007',
+        country: 'us',
+        store: 'APP_STORE',
+        workspaceId: 'ws_default',
+      },
+      true,
+    );
 
-    expect(captureToday).toHaveBeenCalledWith({
-      store: Store.APP_STORE,
-      country: 'us',
-      collection: 'free',
-      genre: '6007',
-      device: 'iphone',
-    });
+    expect(captureToday).toHaveBeenCalledWith(
+      {
+        store: Store.APP_STORE,
+        country: 'us',
+        collection: 'free',
+        genre: '6007',
+        device: 'iphone',
+      },
+      { finalAttempt: true },
+    );
     expect(upsert).toHaveBeenCalledTimes(2);
     const positions = upsert.mock.calls.map(
       ([arg]) =>
@@ -256,24 +262,76 @@ describe('CategoryRanksService checkCategory', () => {
     ]);
   });
 
+  it('hands the final attempt flag to the capture', async () => {
+    const { service, captureToday } = makeService([]);
+    const payload = {
+      collection: 'free' as const,
+      genre: '6007',
+      country: 'us',
+      store: Store.APP_STORE,
+      workspaceId: 'ws_default',
+    };
+
+    await service.checkCategory(payload, false);
+    await service.checkCategory(payload, true);
+
+    expect(
+      (captureToday.mock.calls as unknown[][]).map((call) => call[1]),
+    ).toEqual([{ finalAttempt: false }, { finalAttempt: true }]);
+  });
+
+  it('writes a null position for every matching app when the chart has no rows', async () => {
+    const { service, upsert } = makeService(
+      [
+        app('a1', '111', { primaryGenreId: '6007', price: 0 }),
+        app('a2', '222', { primaryGenreId: '6007', price: 0 }),
+      ],
+      [],
+    );
+
+    await service.checkCategory(
+      {
+        collection: 'free',
+        genre: '6007',
+        country: 'us',
+        store: 'APP_STORE',
+        workspaceId: 'ws_default',
+      },
+      true,
+    );
+
+    expect(upsert).toHaveBeenCalledTimes(2);
+    for (const [arg] of upsert.mock.calls) {
+      expect(
+        (arg as { create: { position: number | null; depth: number } }).create,
+      ).toMatchObject({ position: null, depth: 100 });
+    }
+  });
+
   it("asks the capture for the bucket's chart key", async () => {
     const { service, captureToday } = makeService([], [], Store.GOOGLE_PLAY);
 
-    await service.checkCategory({
-      collection: 'grossing',
-      genre: 'GAME_PUZZLE',
-      country: 'de',
-      store: 'GOOGLE_PLAY',
-      workspaceId: 'ws_default',
-    });
+    await service.checkCategory(
+      {
+        collection: 'grossing',
+        genre: 'GAME_PUZZLE',
+        country: 'de',
+        store: 'GOOGLE_PLAY',
+        workspaceId: 'ws_default',
+      },
+      true,
+    );
 
-    expect(captureToday).toHaveBeenCalledWith({
-      store: 'GOOGLE_PLAY',
-      country: 'de',
-      collection: 'grossing',
-      genre: 'GAME_PUZZLE',
-      device: 'android',
-    });
+    expect(captureToday).toHaveBeenCalledWith(
+      {
+        store: 'GOOGLE_PLAY',
+        country: 'de',
+        collection: 'grossing',
+        genre: 'GAME_PUZZLE',
+        device: 'android',
+      },
+      { finalAttempt: true },
+    );
   });
 
   it('writes no rank row for an app in a chart its price class never enters', async () => {
@@ -285,13 +343,16 @@ describe('CategoryRanksService checkCategory', () => {
       [{ storeAppId: '222', title: 'Second' }],
     );
 
-    await service.checkCategory({
-      collection: 'paid',
-      genre: '6007',
-      country: 'us',
-      store: 'APP_STORE',
-      workspaceId: 'ws_default',
-    });
+    await service.checkCategory(
+      {
+        collection: 'paid',
+        genre: '6007',
+        country: 'us',
+        store: 'APP_STORE',
+        workspaceId: 'ws_default',
+      },
+      true,
+    );
 
     const positions = upsert.mock.calls.map(
       ([arg]) =>
@@ -312,13 +373,16 @@ describe('CategoryRanksService checkCategory', () => {
       [{ storeAppId: '222', title: 'Second' }],
     );
 
-    await service.checkCategory({
-      collection: 'free',
-      genre: 'overall',
-      country: 'us',
-      store: 'APP_STORE',
-      workspaceId: 'ws_default',
-    });
+    await service.checkCategory(
+      {
+        collection: 'free',
+        genre: 'overall',
+        country: 'us',
+        store: 'APP_STORE',
+        workspaceId: 'ws_default',
+      },
+      true,
+    );
 
     const appIds = upsert.mock.calls.map(
       ([arg]) => (arg as { create: { appId: string } }).create.appId,
@@ -335,13 +399,16 @@ describe('CategoryRanksService checkCategory', () => {
       [{ storeAppId: '222', title: 'Second' }],
     );
 
-    await service.checkCategory({
-      collection: 'grossing',
-      genre: '6007',
-      country: 'us',
-      store: 'APP_STORE',
-      workspaceId: 'ws_default',
-    });
+    await service.checkCategory(
+      {
+        collection: 'grossing',
+        genre: '6007',
+        country: 'us',
+        store: 'APP_STORE',
+        workspaceId: 'ws_default',
+      },
+      true,
+    );
 
     const positions = upsert.mock.calls.map(
       ([arg]) =>
@@ -371,13 +438,16 @@ describe('CategoryRanksService checkCategory', () => {
       store,
     );
 
-    await service.checkCategory({
-      collection: 'free',
-      genre,
-      country: 'us',
-      store,
-      workspaceId: 'ws_default',
-    });
+    await service.checkCategory(
+      {
+        collection: 'free',
+        genre,
+        country: 'us',
+        store,
+        workspaceId: 'ws_default',
+      },
+      true,
+    );
 
     const [[arg]] = upsert.mock.calls as [
       [{ create: { depth: number }; update: { depth: number } }],
@@ -392,20 +462,26 @@ describe('CategoryRanksService checkCategory', () => {
       [{ storeAppId: '111', title: 'First' }],
     );
 
-    await service.checkCategory({
-      collection: 'free',
-      genre: '6007',
-      country: 'us',
-      store: 'APP_STORE',
-      workspaceId: 'ws_default',
-    });
-    await service.checkCategory({
-      collection: 'free',
-      genre: '6007',
-      country: 'us',
-      store: 'APP_STORE',
-      workspaceId: 'ws_default',
-    });
+    await service.checkCategory(
+      {
+        collection: 'free',
+        genre: '6007',
+        country: 'us',
+        store: 'APP_STORE',
+        workspaceId: 'ws_default',
+      },
+      true,
+    );
+    await service.checkCategory(
+      {
+        collection: 'free',
+        genre: '6007',
+        country: 'us',
+        store: 'APP_STORE',
+        workspaceId: 'ws_default',
+      },
+      true,
+    );
 
     for (const [arg] of upsert.mock.calls) {
       const where = (
