@@ -134,6 +134,42 @@ describe('audit.fix_factor', () => {
     ]);
   });
 
+  it('opens no action for a weak rankings factor', () => {
+    const weakRankings = factor({
+      id: 'rankings',
+      label: 'Keyword rankings',
+      weight: 20,
+      score: 1.9,
+    });
+
+    expect(
+      detectAuditFixFactor(
+        context([app({ audit: snapshot({ factors: [weakRankings] }) })]),
+        NOW,
+      ),
+    ).toEqual([]);
+  });
+
+  it.each(['ratings', 'conversion'])(
+    'opens no action for a weak %s outcome factor',
+    (id) => {
+      const detections = detectAuditFixFactor(
+        context([
+          app({
+            audit: snapshot({
+              factors: [factor({ id, weight: 20, score: 2 }), factor()],
+            }),
+          }),
+        ]),
+        NOW,
+      );
+
+      expect(detections.map((detection) => detection.discriminator)).toEqual([
+        'screenshots',
+      ]);
+    },
+  );
+
   it('fires just below the weak score and not at it', () => {
     const fires = (score: number): boolean =>
       detectAuditFixFactor(
