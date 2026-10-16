@@ -354,6 +354,38 @@ test.describe("bulk tagging", () => {
     ).toBeFocused();
   });
 
+  test("moves focus to Add keywords after the last keyword is removed", async ({
+    page,
+  }) => {
+    let removed = false;
+    await page.route("**/api/backend/apps/app-tags/keywords**", (route) => {
+      const request = route.request();
+      if (request.method() === "DELETE") {
+        removed = true;
+        return route.fulfill({ status: 204 });
+      }
+      const listed = new URL(request.url()).pathname.endsWith("/keywords");
+      return removed && listed ? route.fulfill({ json: [] }) : route.fallback();
+    });
+    await page.goto(KEYWORDS);
+    await page.getByRole("checkbox", { name: "Select all keywords" }).check();
+
+    await page
+      .getByRole("group", { name: "Bulk keyword actions" })
+      .getByRole("button", { name: "Remove", exact: true })
+      .click();
+    await page
+      .getByRole("alertdialog")
+      .getByRole("button", { name: "Stop tracking" })
+      .click();
+
+    const emptyState = page.locator('[data-slot="empty-state"]');
+    await expect(emptyState).toBeVisible();
+    await expect(
+      emptyState.getByRole("button", { name: "Add keywords" }),
+    ).toBeFocused();
+  });
+
   test("removes a tag only from the keywords carrying it", async ({
     page,
     request,

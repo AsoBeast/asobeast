@@ -119,8 +119,26 @@ export function KeywordsTable({
       ?.focus();
   }, [selectedIds.length]);
 
-  if (keywords.length === 0) {
-    return <KeywordsEmptyState appId={id} store={store} country={country} />;
+  const isEmpty = keywords.length === 0;
+  const showedTable = useRef(!isEmpty);
+  const addKeywords = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    const emptied = isEmpty && showedTable.current;
+    showedTable.current = !isEmpty;
+    if (emptied && document.activeElement === document.body) {
+      addKeywords.current?.focus();
+    }
+  }, [isEmpty]);
+
+  if (isEmpty) {
+    return (
+      <KeywordsEmptyState
+        appId={id}
+        store={store}
+        country={country}
+        addRef={addKeywords}
+      />
+    );
   }
 
   return (
