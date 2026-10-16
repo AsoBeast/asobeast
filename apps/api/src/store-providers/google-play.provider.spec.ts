@@ -313,6 +313,19 @@ describe('GooglePlayProvider', () => {
     expect(withoutIcon.iconUrl).toBeUndefined();
   });
 
+  it('keeps the summary of a similar app', async () => {
+    const similar = jest.fn().mockResolvedValue([
+      { appId: 'com.c', title: 'C', developer: 'Dev C', summary: 'Learn' },
+      { appId: 'com.d', title: 'D', developer: 'Dev D' },
+    ]);
+    const provider = new GooglePlayProvider(makeLib({ similar }));
+
+    const [withSummary, withoutSummary] = await provider.similar('com.x', 'us');
+
+    expect(withSummary.summary).toBe('Learn');
+    expect(withoutSummary).not.toHaveProperty('summary');
+  });
+
   it('maps the collection and passes through the genre key', async () => {
     const list = jest
       .fn()

@@ -1,15 +1,17 @@
 import { CompetitorDiscoveryItem } from '@asobeast/shared';
 import { SearchItem } from '../store-providers/types';
-import { mergeSuggestions } from './competitor-suggestions';
+import { mergeSuggestions, withSimilarIcons } from './competitor-suggestions';
 
 const serp = (
   storeAppId: string,
   appearances = 1,
   bestPosition = 5,
+  iconUrl: string | null = null,
 ): CompetitorDiscoveryItem => ({
   storeAppId,
   title: `Serp ${storeAppId}`,
   developer: 'Ranked Co',
+  iconUrl,
   ratingAvg: 4.1,
   ratingCount: 10,
   appearances,
@@ -51,6 +53,16 @@ describe('mergeSuggestions', () => {
     expect(merged).toEqual([
       expect.objectContaining({ storeAppId: 'both', source: 'serp' }),
     ]);
+  });
+
+  it('shows the icon the serp row was captured with', () => {
+    const merged = mergeSuggestions(
+      [serp('ranked', 1, 3, 'https://icon/ranked.jpg')],
+      [],
+      new Set(),
+    );
+
+    expect(merged[0].iconUrl).toBe('https://icon/ranked.jpg');
   });
 
   it('never names an excluded app', () => {
@@ -128,5 +140,31 @@ describe('mergeSuggestions', () => {
         bestPosition: null,
       },
     ]);
+  });
+});
+
+describe('withSimilarIcons', () => {
+  it('borrows the similar icon for a serp row captured without one', () => {
+    const [row] = withSimilarIcons(
+      [serp('both', 2, 4)],
+      [similar('both', { iconUrl: 'https://icon/both.jpg' })],
+    );
+
+    expect(row.iconUrl).toBe('https://icon/both.jpg');
+  });
+
+  it('keeps the icon the serp row was captured with', () => {
+    const [row] = withSimilarIcons(
+      [serp('both', 2, 4, 'https://icon/serp.jpg')],
+      [similar('both', { iconUrl: 'https://icon/similar.jpg' })],
+    );
+
+    expect(row.iconUrl).toBe('https://icon/serp.jpg');
+  });
+
+  it('leaves a serp row without a known icon empty', () => {
+    const [row] = withSimilarIcons([serp('alone')], [similar('other')]);
+
+    expect(row.iconUrl).toBeNull();
   });
 });

@@ -474,6 +474,7 @@ model SerpEntry {
   storeAppId  String
   title       String
   developer   String?
+  iconUrl     String?
   ratingAvg   Float?
   ratingCount Int?
   createdAt   DateTime @default(now())

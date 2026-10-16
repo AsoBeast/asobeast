@@ -43,6 +43,7 @@ export interface GooglePlaySearchResult {
   appId: string;
   title: string;
   developer: string;
+  summary?: string;
   icon?: string;
   score?: number;
 }

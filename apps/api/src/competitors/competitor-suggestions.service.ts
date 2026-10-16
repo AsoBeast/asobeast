@@ -1,18 +1,22 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { CompetitorSuggestions } from '@asobeast/shared';
+import { Store } from '@prisma/client';
 import { RateLimitExceededError } from '../auth/rate-limit/rate-limit.errors';
+import { listingTexts } from '../keywords/listing-texts';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
 import { StoreRequestError } from '../store-providers/errors';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { SearchItem } from '../store-providers/types';
 import { CompetitorsService } from './competitors.service';
-import { mergeSuggestions } from './competitor-suggestions';
+import { mergeSuggestions, withSimilarIcons } from './competitor-suggestions';
+import { closestSimilar, listingTerms } from './similar-relevance';
 
 const DISCOVERY_WINDOW_DAYS = 30;
 
 interface PrimaryApp {
-  store: CompetitorSuggestions['store'];
+  id: string;
+  store: Store;
   storeAppId: string;
   country: string;
   competitors: { storeAppId: string }[];
@@ -42,11 +46,22 @@ export class CompetitorSuggestionsService {
       days: DISCOVERY_WINDOW_DAYS,
     });
     const similar = await this.similarApps(app, spend);
+    const shown = new Set([
+      ...exclude,
+      ...serp.items.map((item) => item.storeAppId),
+    ]);
+    const unshown = (similar ?? []).filter(
+      (item) => !shown.has(item.storeAppId),
+    );
     return {
       store: app.store,
       country: app.country,
       similar: similar ? 'ok' : 'unavailable',
-      items: mergeSuggestions(serp.items, similar ?? [], exclude),
+      items: mergeSuggestions(
+        withSimilarIcons(serp.items, similar ?? []),
+        await this.onTopic(app, unshown),
+        exclude,
+      ),
     };
   }
 
@@ -54,6 +69,7 @@ export class CompetitorSuggestionsService {
     const app = await this.prisma.app.findFirst({
       where: { id: appId, isCompetitor: false },
       select: {
+        id: true,
         store: true,
         storeAppId: true,
         country: true,
@@ -64,6 +80,15 @@ export class CompetitorSuggestionsService {
       throw new NotFoundException(`App ${appId} not found`);
     }
     return app;
+  }
+
+  private async onTopic(
+    app: PrimaryApp,
+    similar: SearchItem[],
+  ): Promise<SearchItem[]> {
+    if (app.store !== Store.GOOGLE_PLAY) return similar;
+    const home = (await listingTexts(this.prisma, app)).at(-1);
+    return closestSimilar(home ? listingTerms(home) : [], similar);
   }
 
   private async similarApps(

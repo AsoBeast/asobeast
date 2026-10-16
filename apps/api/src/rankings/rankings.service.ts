@@ -101,6 +101,7 @@ export class RankingsService {
       storeAppId: item.storeAppId,
       title: item.title,
       developer: item.developer ?? null,
+      iconUrl: item.iconUrl ?? null,
       ratingAvg: item.ratingAvg ?? null,
       ratingCount: item.ratingCount ?? null,
     }));

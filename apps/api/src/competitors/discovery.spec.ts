@@ -4,6 +4,7 @@ const row = (over: Partial<DiscoveryRow>): DiscoveryRow => ({
   storeAppId: 'app-a',
   title: 'App A',
   developer: 'Dev A',
+  iconUrl: null,
   ratingAvg: 4,
   ratingCount: 100,
   position: 5,
@@ -47,6 +48,18 @@ describe('aggregateDiscovery', () => {
     ]);
 
     expect(items[0].title).toBe('New');
+  });
+
+  it('takes the icon from the most recent row', () => {
+    const items = aggregateDiscovery([
+      row({
+        date: new Date('2026-07-05T00:00:00.000Z'),
+        iconUrl: 'https://icon/new.jpg',
+      }),
+      row({ date: new Date('2026-06-01T00:00:00.000Z') }),
+    ]);
+
+    expect(items[0].iconUrl).toBe('https://icon/new.jpg');
   });
 
   it('orders by appearances then best position', () => {

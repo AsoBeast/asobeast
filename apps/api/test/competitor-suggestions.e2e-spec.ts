@@ -21,6 +21,8 @@ import { obliterateQueues, pauseQueues } from './obliterate-queues';
 
 const PRIMARY_ID = '111000111';
 const SIMILAR_ICON = 'https://is1-ssl.mzstatic.com/image/thumb/s/512x512bb.jpg';
+const rankedIcon = (storeAppId: string) =>
+  `https://is1-ssl.mzstatic.com/image/thumb/${storeAppId}/512x512bb.jpg`;
 const D1 = addDays(utcToday(), -1);
 const D2 = addDays(utcToday(), -2);
 
@@ -33,6 +35,31 @@ const SIMILAR: SearchItem[] = [
     iconUrl: SIMILAR_ICON,
   },
   { storeAppId: '555000555', title: 'Study Bunny' },
+];
+
+const PLAY_PRIMARY_ID = 'com.lingo.app';
+const PLAY_SIMILAR: SearchItem[] = [
+  {
+    storeAppId: 'com.video.app',
+    title: 'Video Tube',
+    summary: 'Watch videos and listen to music every day.',
+  },
+  {
+    storeAppId: 'com.pins.app',
+    title: 'Pin Board',
+    summary: 'Discover recipes, home ideas and style inspiration.',
+  },
+  {
+    storeAppId: 'com.speak.app',
+    title: 'Speak Easy',
+    summary: 'Practice Spanish conversation with friendly tutors.',
+  },
+  {
+    storeAppId: 'com.words.app',
+    title: 'Word Lab: Language Lessons',
+    summary:
+      'Learn Spanish, French and English with fun lessons from native speakers.',
+  },
 ];
 
 class SuggestionsRegistry {
@@ -55,7 +82,9 @@ class SuggestionsRegistry {
         this.similarCalls.push([storeAppId, country]);
         return this.failure
           ? Promise.reject(this.failure)
-          : Promise.resolve(SIMILAR);
+          : Promise.resolve(
+              store === Store.GOOGLE_PLAY ? PLAY_SIMILAR : SIMILAR,
+            );
       },
     } as unknown as StoreProvider;
   }
@@ -136,6 +165,7 @@ describe('Competitor suggestions (e2e)', () => {
         storeAppId: entry.storeAppId,
         title: `Ranked ${entry.storeAppId}`,
         developer: 'Ranked Co',
+        iconUrl: rankedIcon(entry.storeAppId),
       })),
     });
   };
@@ -163,7 +193,7 @@ describe('Competitor suggestions (e2e)', () => {
           storeAppId: '222000222',
           title: 'Ranked 222000222',
           developer: 'Ranked Co',
-          iconUrl: null,
+          iconUrl: rankedIcon('222000222'),
           source: 'serp',
           appearances: 2,
           bestPosition: 2,
@@ -172,7 +202,7 @@ describe('Competitor suggestions (e2e)', () => {
           storeAppId: '333000333',
           title: 'Ranked 333000333',
           developer: 'Ranked Co',
-          iconUrl: null,
+          iconUrl: rankedIcon('333000333'),
           source: 'serp',
           appearances: 1,
           bestPosition: 7,
@@ -255,6 +285,59 @@ describe('Competitor suggestions (e2e)', () => {
     const items = (res.body as CompetitorSuggestions).items;
     expect(items).toHaveLength(10);
     expect(items.every((item) => item.source === 'serp')).toBe(true);
+  });
+
+  const createPlayPrimary = (withListing = true) =>
+    prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.GOOGLE_PLAY,
+        storeAppId: PLAY_PRIMARY_ID,
+        country: 'us',
+        name: 'Lingo',
+        ...(withListing && {
+          snapshots: {
+            create: {
+              title: 'Lingo: Learn Languages',
+              summary:
+                'Learn Spanish, French, English and more with fun, quick lessons.',
+              description: 'Fixture',
+              raw: {},
+            },
+          },
+        }),
+      },
+    });
+
+  const suggestedIds = async (appId: string) =>
+    (
+      (await suggest(appId).expect(200)).body as CompetitorSuggestions
+    ).items.map((item) => item.storeAppId);
+
+  it('keeps only the google play similar apps that share the listing terms', async () => {
+    const primary = await createPlayPrimary();
+
+    expect(await suggestedIds(primary.id)).toEqual(['com.words.app']);
+  });
+
+  it('judges google play similar apps without the tracked competitors', async () => {
+    const primary = await createPlayPrimary();
+    await api
+      .post(`/apps/${primary.id}/competitors`)
+      .send({
+        url: 'https://play.google.com/store/apps/details?id=com.words.app',
+      })
+      .expect(201);
+
+    expect(await suggestedIds(primary.id)).toEqual(['com.speak.app']);
+  });
+
+  it('keeps the store order for a google play app without a listing', async () => {
+    const primary = await createPlayPrimary(false);
+
+    expect(await suggestedIds(primary.id)).toEqual(
+      PLAY_SIMILAR.map((item) => item.storeAppId),
+    );
   });
 
   it('answers 404 for a competitor app and an unknown app', async () => {

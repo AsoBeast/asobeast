@@ -250,6 +250,7 @@ export class GooglePlayProvider implements StoreProvider {
       storeAppId: item.appId,
       title: item.title,
       developer: item.developer,
+      ...(item.summary ? { summary: item.summary } : {}),
       ...(item.icon ? { iconUrl: item.icon } : {}),
       ratingAvg: item.score,
     };
