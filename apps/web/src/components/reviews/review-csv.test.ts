@@ -86,6 +86,39 @@ describe("reviewCsv", () => {
 });
 
 describe("truncatedExportNotice", () => {
+  it("says how many reviews a search found among the loaded ones", () => {
+    const loaded = { reviews: [review(), review()], total: 450 };
+
+    expect(truncatedExportNotice(loaded, "newest", 1)).toBe(
+      "Exported 1 review found in the newest 2 of 450. Narrow the filters to search the others.",
+    );
+    expect(truncatedExportNotice(loaded, "newest", 2)).toBe(
+      "Exported 2 reviews found in the newest 2 of 450. Narrow the filters to search the others.",
+    );
+  });
+
+  it("names the order of a lowest first searched export", () => {
+    expect(
+      truncatedExportNotice(
+        { reviews: [review(), review()], total: 1800 },
+        "lowest",
+        1,
+      ),
+    ).toBe(
+      "Exported 1 review found in the lowest scored 2 of 1,800. Narrow the filters to search the others.",
+    );
+  });
+
+  it("stays quiet when the search covered every matching review", () => {
+    expect(
+      truncatedExportNotice(
+        { reviews: [review(), review()], total: 2 },
+        "newest",
+        1,
+      ),
+    ).toBeNull();
+  });
+
   it("says how many of the matching reviews the file holds when it stops short", () => {
     expect(
       truncatedExportNotice({ reviews: [review(), review()], total: 1800 }),

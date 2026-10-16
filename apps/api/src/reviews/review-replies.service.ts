@@ -53,7 +53,8 @@ export class ReviewRepliesService {
     reviewId: string,
     patch: ReviewReplyPatchRequest,
   ): Promise<ReviewReplyItem> {
-    if (patch.text === undefined && patch.replied === undefined) {
+    const marks = patch.replied !== undefined && patch.replied !== null;
+    if (patch.text === undefined && !marks) {
       throw new BadRequestException('Send the reply text or a replied mark');
     }
     const app = await this.appOf(appId);

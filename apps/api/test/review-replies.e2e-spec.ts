@@ -224,6 +224,42 @@ describe('Review replies (e2e)', () => {
     await api.patch(replyPath(appStore)).send({}).expect(400);
   });
 
+  it('refuses a null replied mark that holds no text', async () => {
+    const refused = await api
+      .patch(replyPath(appStore))
+      .send({ replied: null })
+      .expect(400);
+
+    expect((refused.body as ApiErrorEnvelope).message).toBe(
+      'Send the reply text or a replied mark',
+    );
+    expect((await listOf(appStore.appId)).reviews[0].reply).toBeNull();
+    expect(await prisma.reviewReply.count()).toBe(0);
+
+    const blank = await api
+      .patch(replyPath(appStore))
+      .send({ text: '   ', replied: null })
+      .expect(400);
+    expect((blank.body as ApiErrorEnvelope).message).toBe(
+      'A reply needs some text',
+    );
+    await api
+      .patch(replyPath(appStore))
+      .send({ text: null, replied: null })
+      .expect(400);
+    expect(await prisma.reviewReply.count()).toBe(0);
+  });
+
+  it('keeps saving text that arrives with a null replied mark', async () => {
+    const saved = await api
+      .patch(replyPath(appStore))
+      .send({ text: 'Thanks for the report', replied: null })
+      .expect(200);
+
+    expect((saved.body as ReviewReplyItem).text).toBe('Thanks for the report');
+    expect((await listOf(appStore.appId)).counts?.drafted).toBe(1);
+  });
+
   it('discards a reply', async () => {
     await api
       .patch(replyPath(appStore))
