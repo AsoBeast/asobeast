@@ -5164,6 +5164,61 @@
         ]
       }
     },
+    "/apps/{id}/funnel": {
+      "get": {
+        "description": "Reads the rows the connected store console reported: a zero filled daily series of the requested days with the total and the search share, and the 7, 14 and 28 day windows of complete days against the period before. A day is complete three days after it ends. Answers connected false and empty series for a competitor, a store without an active connection, or an app the connected key does not report.",
+        "operationId": "StoreFunnelController_report",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "country",
+            "required": false,
+            "in": "query",
+            "description": "Count only the storefront of this market. Omitted means every market the console reports.",
+            "schema": {
+              "pattern": "^[a-z]{2}$",
+              "example": "de",
+              "type": "string"
+            }
+          },
+          {
+            "name": "days",
+            "required": false,
+            "in": "query",
+            "description": "Days of daily points, ending today",
+            "schema": {
+              "minimum": 7,
+              "maximum": 365,
+              "default": 90,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Store impressions, page views, downloads and conversion of an app by market and window",
+        "tags": [
+          "store-connect"
+        ]
+      }
+    },
     "/actions": {
       "get": {
         "operationId": "ActionsController_list",
