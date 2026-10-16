@@ -672,6 +672,41 @@ test("an app with no suggested markets keeps the country select", async ({
   await expect(page.locator("legend")).toHaveCount(0);
 });
 
+const marketCostTip = async (page: Page) => {
+  await stepCard(page, "Add countries")
+    .getByRole("button", { name: "About market costs" })
+    .first()
+    .click();
+  return page.getByRole("dialog", { name: "What a market costs" });
+};
+
+test("words the keywords step and the cost tip for a google play app", async ({
+  page,
+}) => {
+  await startSetup(page, "app-gp");
+
+  const keywords = stepCard(page, "Track keywords");
+  await expect(keywords).toContainText("title and short description");
+  await expect(keywords).not.toContainText("subtitle");
+  const tip = await marketCostTip(page);
+  await expect(tip).toContainText("listing read a day");
+  await expect(tip).not.toContainText("Seeding");
+  await expect(tip).not.toContainText("subtitle");
+});
+
+test("keeps the app store wording of the keywords step and the cost tip", async ({
+  page,
+}) => {
+  await startSetup(page, "app-1");
+
+  await expect(stepCard(page, "Track keywords")).toContainText(
+    "title and subtitle",
+  );
+  await expect(await marketCostTip(page)).toContainText(
+    "Seeding tracks up to 15 keywords",
+  );
+});
+
 test("suggested markets fit a narrow dark layout", async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("theme", "dark"));
   await page.setViewportSize({ width: 390, height: 844 });

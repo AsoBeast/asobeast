@@ -18,7 +18,22 @@ export function ScreenshotThumb({
   className?: string;
 }) {
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const [measured, setMeasured] = useState<{
+    src: string;
+    width: number;
+  } | null>(null);
   const placeholderWidth = Math.round(height * PLACEHOLDER_RATIO);
+  const width = measured?.src === src ? measured.width : placeholderWidth;
+
+  const measure = ({ naturalWidth, naturalHeight }: HTMLImageElement) => {
+    if (naturalHeight === 0) return;
+    const next = Math.round((height * naturalWidth) / naturalHeight);
+    setMeasured((current) =>
+      current?.src === src && current.width === next
+        ? current
+        : { src, width: next },
+    );
+  };
 
   if (failedSrc === src) {
     return (
@@ -40,7 +55,7 @@ export function ScreenshotThumb({
     <Image
       src={src}
       alt={alt}
-      width={placeholderWidth}
+      width={width}
       height={height}
       loading="lazy"
       style={{ height, width: "auto" }}
@@ -48,6 +63,7 @@ export function ScreenshotThumb({
         "max-w-none shrink-0 rounded-lg border object-contain",
         className,
       )}
+      onLoad={(event) => measure(event.currentTarget)}
       onError={() => setFailedSrc(src)}
     />
   );

@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import {
-  MARKET_SEED_LIMIT,
   type MarketSuggestion,
   type MarketSuggestionsResult,
+  type Store,
 } from "@asobeast/shared";
 import { ReadRoleBadge } from "@/components/localizations/ReadRoleBadge";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +26,7 @@ import {
   groupSuggestions,
   languageNames,
   MARKET_COST_GUIDE,
+  marketCostSummary,
   marketCostText,
 } from "./market-suggestions";
 import { useMarketSeeding } from "./useMarketSeeding";
@@ -43,11 +44,13 @@ const toggled = (
 
 export function SuggestedMarkets({
   appId,
+  store,
   result,
   selected,
   onSelect,
 }: {
   appId: string;
+  store: Store;
   result: MarketSuggestionsResult;
   selected: readonly string[];
   onSelect: (market: string, selected: boolean) => void;
@@ -126,19 +129,19 @@ export function SuggestedMarkets({
         </Button>
         <p className="flex items-center gap-1 text-caption text-muted-foreground">
           Each country adds requests a day to the daily run.
-          <MarketCostTip />
+          <MarketCostTip store={store} />
         </p>
       </div>
     </div>
   );
 }
 
-export function MarketCostTip() {
+export function MarketCostTip({ store }: { store: Store }) {
   return (
     <InfoTip
       label="About market costs"
       title="What a market costs"
-      summary={`A market adds one listing read a day for the app and for every competitor, one more for each localization captured there, and one search a day for every keyword tracked there. Seeding tracks up to ${MARKET_SEED_LIMIT} keywords from the market's own title and subtitle; each one adds a daily search.`}
+      summary={marketCostSummary(store)}
     >
       <a
         href={MARKET_COST_GUIDE}

@@ -6,6 +6,7 @@ import type {
 import {
   groupSuggestions,
   languageNames,
+  marketCostSummary,
   marketCostText,
 } from "./market-suggestions";
 
@@ -73,6 +74,12 @@ describe("languageNames", () => {
     ]);
   });
 
+  it("names a language the app store has no localization for", () => {
+    expect(
+      languageNames({ ...RESULT, languages: ["en", "be", "fa", "uz"] }),
+    ).toEqual(["English", "Belarusian", "Persian", "Uzbek"]);
+  });
+
   it("names both chinese scripts and portuguese by their language", () => {
     expect(languageNames({ ...RESULT, languages: ["zh", "pt", "es"] })).toEqual(
       ["Chinese", "Portuguese", "Spanish"],
@@ -91,5 +98,16 @@ describe("marketCostText", () => {
         dailyRequests: { listing: 1, perKeyword: 8 },
       }),
     ).toBe("1 listing read a day, 8 per keyword");
+  });
+});
+
+describe("marketCostSummary", () => {
+  it("words the cost of a market for each store", () => {
+    expect(marketCostSummary("APP_STORE")).toBe(
+      "A market adds one listing read a day for the app and for every competitor, one more for each localization captured there, and one search a day for every keyword tracked there. Seeding tracks up to 15 keywords from the market's own title and subtitle; each one adds a daily search.",
+    );
+    expect(marketCostSummary("GOOGLE_PLAY")).toBe(
+      "A market adds one listing read a day for the app and for every competitor, and one search a day for every keyword tracked there.",
+    );
   });
 });

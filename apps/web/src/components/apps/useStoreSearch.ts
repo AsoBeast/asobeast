@@ -46,7 +46,7 @@ export function useStoreSearch(
 
   const query = useQuery({
     ...storeSearchOptions(store, country, term),
-    enabled: term !== "" && q !== "",
+    enabled: q !== "" && term === q,
     placeholderData: (previous, previousQuery) =>
       previousQuery?.queryKey[1] === store &&
       previousQuery.queryKey[2] === country
