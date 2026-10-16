@@ -44,7 +44,7 @@ Open **Settings** and the **Store connections** section, press **Connect App Sto
 | **Verify** | Asks Apple again whether the stored key works. A key Apple refuses is marked rejected; a key it accepts again clears that and queues a sync |
 | **Sync now** | Queues the download of the reports Apple published since the last sync. A sync already waiting is not queued twice |
 | **Replace key** | Connects another key in place of this one |
-| **Disconnect** | Deletes the stored key and stops the downloads. The numbers already stored stay |
+| **Disconnect** | Deletes the stored key and stops the downloads. The numbers already stored are kept, hidden while no key reports them, and appear again once you connect a key |
 
 When the connected key cannot ask for reports, the section says that an Admin key is needed once. Connect one, press **Sync now**, and switch back to a Sales and Reports key afterwards if you prefer.
 
@@ -67,7 +67,7 @@ Apple names a market by its territory. asobeast matches each territory to an App
 - One App Store Connect key per workspace.
 - Apple allows each key 3,500 requests an hour. A sync downloads at most 200 daily files and leaves the rest for the next day, so a long history arrives over a few days.
 - When Apple answers an error for one app, or sends a report asobeast cannot read, the other apps and reports still sync and the section says that some were left for the next sync. A request Apple stopped for inactivity is asked for again on the next sync.
-- When Apple refuses the key during a sync, the connection is marked rejected and nothing is downloaded until you verify it or connect a new one. The numbers already stored stay.
+- When Apple refuses the key during a sync, the connection is marked rejected and nothing is downloaded until you verify it or connect a new one. The numbers already stored are kept and the card shows them again once the key is accepted.
 - The downloaded files are kept for `RETENTION_STORE_REPORTS_DAYS` so a parser change can read them again. The funnel rows built from them are kept.
 
 The variables are on the [configuration reference](/configuration/reference#store-consoles).

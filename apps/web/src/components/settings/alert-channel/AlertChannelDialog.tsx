@@ -55,7 +55,11 @@ export function AlertChannelDialog({
           <DialogBody>
             {children}
 
-            {error ? <p className="text-sm text-destructive">{error}</p> : null}
+            {error ? (
+              <p role="alert" className="text-sm text-destructive">
+                {error}
+              </p>
+            ) : null}
           </DialogBody>
 
           <DialogFooter>

@@ -79,8 +79,9 @@ function DisconnectButton() {
           <AlertDialogTitle>Disconnect App Store Connect?</AlertDialogTitle>
           <AlertDialogDescription>
             AsoBeast deletes the stored key and stops downloading reports. The
-            numbers already stored stay. Revoke the key in App Store Connect too
-            if you no longer need it.
+            numbers already stored are kept and appear again once you connect a
+            key. Revoke the key in App Store Connect too if you no longer need
+            it.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

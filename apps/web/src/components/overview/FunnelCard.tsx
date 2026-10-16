@@ -69,11 +69,35 @@ const TILES: Tile[] = [
   },
 ];
 
+const SETTINGS_LINK =
+  "text-body font-medium text-foreground underline decoration-primary underline-offset-4 hover:decoration-2";
+
 function NotReporting({ reason }: { reason: string }) {
   return (
     <EmptyState
       title={`App Store Connect reports nothing for this app yet: ${reason}.`}
       body="The connected key sees this app once it belongs to the key's team and Apple has published its first report."
+    />
+  );
+}
+
+function KeyRefused() {
+  const { isOwner } = useAuth();
+  return (
+    <EmptyState
+      title="App Store Connect refused the connected key."
+      body={
+        isOwner
+          ? "The numbers already stored come back once the key is accepted again. Verify it, or connect a new key."
+          : "Ask the workspace owner to verify the key in settings."
+      }
+      action={
+        isOwner ? (
+          <Link href="/settings#store-connections" className={SETTINGS_LINK}>
+            Verify in settings
+          </Link>
+        ) : null
+      }
     />
   );
 }
@@ -84,17 +108,10 @@ function NotConnected({ id }: { id: string }) {
   const connection = connections.connections.find(
     (item) => item.store === "APP_STORE",
   );
+  if (connection?.status === "rejected") return <KeyRefused />;
   if (connection) {
     const app = connection.apps.find((item) => item.appId === id);
-    return (
-      <NotReporting
-        reason={
-          connection.status === "rejected"
-            ? "the key was refused"
-            : appStateLabel(app?.state ?? null)
-        }
-      />
-    );
+    return <NotReporting reason={appStateLabel(app?.state ?? null)} />;
   }
   return (
     <EmptyState
@@ -106,10 +123,7 @@ function NotConnected({ id }: { id: string }) {
       }
       action={
         isOwner ? (
-          <Link
-            href="/settings#store-connections"
-            className="text-body font-medium text-foreground underline decoration-primary underline-offset-4 hover:decoration-2"
-          >
+          <Link href="/settings#store-connections" className={SETTINGS_LINK}>
             Connect in settings
           </Link>
         ) : null

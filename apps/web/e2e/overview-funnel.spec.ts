@@ -62,6 +62,29 @@ test("sends an owner without a connection to settings", async ({ page }) => {
   ).toHaveAttribute("href", "/settings#store-connections");
 });
 
+test("sends the owner to settings when the store refused the key", async ({
+  page,
+}) => {
+  await page.context().addCookies([
+    {
+      name: STORE_CONNECTION_COOKIE,
+      value: "rejected",
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
+  await page.goto("/apps/app-2");
+
+  const funnel = funnelCard(page);
+  await expect(funnel).toContainText(
+    "App Store Connect refused the connected key.",
+  );
+  await expect(funnel).not.toContainText("belongs to the key's team");
+  await expect(
+    funnel.getByRole("link", { name: "Verify in settings" }),
+  ).toHaveAttribute("href", "/settings#store-connections");
+});
+
 test("names why a connected key reports nothing for this app", async ({
   page,
 }) => {

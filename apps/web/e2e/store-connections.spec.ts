@@ -52,7 +52,7 @@ test("the owner connects app store connect and sees the apps it reports", async 
   await dialog
     .getByRole("button", { name: "Connect App Store Connect" })
     .click();
-  await expect(dialog).toContainText(
+  await expect(dialog.getByRole("alert")).toContainText(
     "Paste the whole contents of the .p8 file",
   );
   expect(sent).toEqual([]);
@@ -162,7 +162,9 @@ test("disconnecting asks first and returns the card to its empty state", async (
 
   await section(page).getByRole("button", { name: "Disconnect" }).click();
   const confirm = page.getByRole("alertdialog");
-  await expect(confirm).toContainText("The numbers already stored stay");
+  await expect(confirm).toContainText(
+    "The numbers already stored are kept and appear again once you connect a key.",
+  );
   await confirm.getByRole("button", { name: "Disconnect" }).click();
 
   await expect(section(page)).toContainText("No store connected");
