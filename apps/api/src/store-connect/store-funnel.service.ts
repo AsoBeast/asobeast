@@ -75,6 +75,7 @@ export class StoreFunnelService {
       this.prisma.storeFunnelDay.aggregate({
         where: { appId },
         _min: { date: true },
+        _max: { date: true },
       }),
     ]);
     return {
@@ -90,6 +91,7 @@ export class StoreFunnelService {
         today,
         store: app.store,
         firstDate: first._min.date ? toDateKey(first._min.date) : null,
+        lastDate: first._max.date ? toDateKey(first._max.date) : null,
       }),
     };
   }

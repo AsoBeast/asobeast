@@ -37,6 +37,7 @@ export interface StoreFunnelInput {
   today: Date;
   store: Store;
   firstDate: string | null;
+  lastDate?: string | null;
 }
 
 export type StoreFunnelMeasurement = Pick<
@@ -54,6 +55,14 @@ const shift = (date: string, days: number): string =>
 
 export const completeThrough = (today: Date): string =>
   toDateKey(addDays(startOfUtcDay(today), -STORE_FUNNEL_COMPLETE_AFTER_DAYS));
+
+export function reportedThrough(
+  today: Date,
+  lastDate: string | null | undefined,
+): string {
+  const through = completeThrough(today);
+  return lastDate && lastDate < through ? lastDate : through;
+}
 
 export function countsOf(
   rows: FunnelDayRow[],
@@ -164,7 +173,7 @@ function funnelWindow(
 export function measureStoreFunnel(
   input: StoreFunnelInput,
 ): StoreFunnelMeasurement {
-  const through = completeThrough(input.today);
+  const through = reportedThrough(input.today, input.lastDate);
   return {
     completeThrough: through,
     points: funnelPoints(input, through),

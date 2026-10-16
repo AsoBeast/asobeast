@@ -227,6 +227,30 @@ describe('measureStoreFunnel windows', () => {
     expect(windows.every((window) => window.status === 'measured')).toBe(true);
   });
 
+  it('never counts a day the store has not delivered as complete', () => {
+    const delivered = rows.filter((row) => row.date <= daysBack(10));
+    const {
+      completeThrough: through,
+      points,
+      windows,
+    } = measureStoreFunnel({
+      rows: delivered,
+      days: 90,
+      today: TODAY,
+      store: 'APP_STORE',
+      firstDate: daysBack(69),
+      lastDate: daysBack(10),
+    });
+    const week = windows.find((window) => window.days === 7);
+
+    expect(through).toBe(daysBack(10));
+    expect(week).toMatchObject({ to: daysBack(10), status: 'measured' });
+    expect(week?.current?.gets).toBe(35);
+    expect(points.find((point) => point.date === daysBack(5))?.complete).toBe(
+      false,
+    );
+  });
+
   it('keeps a window pending while its current period has a complete day but not all of them', () => {
     const { windows } = measureStoreFunnel({
       rows: everyDay(5, { gets: 1 }),

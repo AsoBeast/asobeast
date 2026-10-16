@@ -54,7 +54,7 @@ What asobeast stores and how is on [Store console credentials](/security/store-c
 
 asobeast asks Apple for the **App Store Discovery and Engagement** report of each app twice: once as a one time snapshot of the history Apple keeps, back to 1 January 2024, and once as an ongoing request for every new day. Apple produces the first files a day or two after the request, so the card waits for them before it shows numbers.
 
-Every day at 05:30 UTC, after the daily run has started, asobeast downloads the files Apple published since the last sync and adds their rows to the funnel. Apple finishes a day within three days and sometimes sends a corrected file for an earlier day; the newest file always wins, and the card counts a day as complete once it is three days old.
+Every day at 05:30 UTC, after the daily run has started, asobeast downloads the files Apple published since the last sync and adds their rows to the funnel. Apple finishes a day within three days and sometimes sends a corrected file for an earlier day; the newest file always wins, and the card counts a day as complete once it is three days old and Apple has delivered it, so a sync that falls behind never shows missing days as zeros.
 
 Apple drops rows under five users and adds a small amount of noise, so a number is close rather than exact. The card adds unique counts across markets and sources, which reads slightly high for the same person seen in two places.
 

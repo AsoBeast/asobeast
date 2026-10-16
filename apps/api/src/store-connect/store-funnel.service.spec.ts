@@ -39,6 +39,7 @@ function build(overrides: Partial<Setup> = {}) {
       ]),
       aggregate: jest.fn().mockResolvedValue({
         _min: { date: new Date('2026-08-01T00:00:00.000Z') },
+        _max: { date: new Date('2026-10-15T00:00:00.000Z') },
       }),
     },
   };

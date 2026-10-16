@@ -14,7 +14,7 @@ export class StoreFunnelController {
     summary:
       'Store impressions, page views, downloads and conversion of an app by market and window',
     description:
-      'Reads the rows the connected store console reported: a zero filled daily series of the requested days with the total and the search share, and the 7, 14 and 28 day windows of complete days against the period before. A day is complete three days after it ends. Answers connected false and empty series for a competitor, a store without an active connection, or an app the connected key does not report.',
+      'Reads the rows the connected store console reported: a zero filled daily series of the requested days with the total and the search share, and the 7, 14 and 28 day windows of complete days against the period before. A day is complete once it is three days old and the store has delivered it. Answers connected false and empty series for a competitor, a store without an active connection, or an app the connected key does not report.',
   })
   report(
     @Param('id') id: string,
