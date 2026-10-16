@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Inject,
   Injectable,
@@ -8,7 +9,7 @@ import {
 import type {
   Store,
   StoreConnectionItem,
-  AppStoreConnectionRequest,
+  StoreConnectionRequest,
   StoreConnectionState,
   StoreConnectionStatus,
   StoreConnectionSyncResult,
@@ -18,27 +19,29 @@ import { type SecretBox, SecretBoxError } from '../common/crypto/secret-box';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AscAnalyticsApi } from './asc-analytics-api';
-import { AscApiFactory } from './asc-api.factory';
-import { AscRejectedKeyError } from './asc-errors';
-import { refusalOf, toHttpException } from './asc-http-errors';
-import {
-  keyFingerprintOf,
-  normalizePrivateKey,
-  type AscCredentials,
-} from './asc-token';
+import type { GcsApi } from './play/gcs-api';
 import { SECRET_BOX } from './secret-box.provider';
 import { connectionItems } from './store-connection-items';
 import {
+  isAscCredentials,
+  isPlayCredentials,
   needsReseal,
   openCredentials,
   sealCredentials,
+  type StoreCredentials,
 } from './store-credentials';
+import {
+  AppStoreKeys,
+  type ParsedKey,
+  PlayKeys,
+  type StoreKeys,
+} from './store-keys';
 import { StoreReportQueue } from './store-report-queue';
 
 export const STORE_CONNECT_OFF =
   'Store connections are off on this instance. Set STORE_CONNECT_ENCRYPTION_KEY to turn them on.';
-export const PLAY_ARRIVES_LATER =
-  'Google Play connections arrive in a later release';
+export const STORE_MISMATCH =
+  'The store in the body must match the store in the path';
 export const CREDENTIAL_UNREADABLE =
   'The stored key can no longer be decrypted, usually because STORE_CONNECT_ENCRYPTION_KEY changed without STORE_CONNECT_ENCRYPTION_KEY_PREVIOUS. Connect the key again.';
 const NOT_CONNECTED = 'This workspace has not connected that store';
@@ -48,12 +51,34 @@ const REJECTED =
   'The store refused the connected key. Verify it or connect a new one first.';
 const OPERATION = 'a store connection';
 
-export interface OpenedConnection {
+export interface OpenedConnection<A = AscAnalyticsApi> {
   id: string;
   status: StoreConnectionStatus;
   reportAccess: StoreReportAccess;
   lastError: string | null;
-  api: AscAnalyticsApi;
+  api: A;
+}
+
+interface Admitted extends ParsedKey<StoreCredentials> {
+  reportAccess: StoreReportAccess;
+}
+
+interface Unsealed {
+  id: string;
+  status: StoreConnectionStatus;
+  reportAccess: StoreReportAccess;
+  lastError: string | null;
+  credentials: StoreCredentials;
+}
+
+async function admitted<R, C extends StoreCredentials, A>(
+  keys: StoreKeys<R, C, A>,
+  request: R,
+): Promise<Admitted> {
+  const parsed = keys.parse(request);
+  const refusal = await keys.refusal(parsed.credentials);
+  if (refusal) throw new UnprocessableEntityException(refusal);
+  return { ...parsed, reportAccess: keys.reportAccess };
 }
 
 @Injectable()
@@ -62,7 +87,8 @@ export class StoreConnectionService {
     private readonly prisma: PrismaService,
     private readonly workspace: WorkspaceContext,
     @Inject(SECRET_BOX) private readonly box: SecretBox | null,
-    private readonly factory: AscApiFactory,
+    private readonly appStore: AppStoreKeys,
+    private readonly play: PlayKeys,
     private readonly queue: StoreReportQueue,
   ) {}
 
@@ -73,36 +99,32 @@ export class StoreConnectionService {
 
   async connect(
     store: Store,
-    request: AppStoreConnectionRequest,
+    request: StoreConnectionRequest,
     userId: string,
   ): Promise<StoreConnectionItem> {
     const box = this.requireBox();
-    if (store !== request.store) {
-      throw new NotFoundException(PLAY_ARRIVES_LATER);
-    }
-    const credentials: AscCredentials = {
-      issuerId: request.issuerId,
-      keyId: request.keyId,
-      privateKey: normalizePrivateKey(request.privateKey),
-    };
-    const keyFingerprint = fingerprintOf(credentials.privateKey);
-    const refusal = await this.refusal(this.factory.open(credentials));
-    if (refusal) throw new UnprocessableEntityException(refusal);
+    if (store !== request.store) throw new BadRequestException(STORE_MISMATCH);
+    const key =
+      request.store === 'APP_STORE'
+        ? await admitted(this.appStore, request)
+        : await admitted(this.play, request);
     const workspaceId = this.workspace.require(OPERATION);
     await this.prisma.withTransaction(async (tx) => {
-      await tx.storeConnection.deleteMany({ where: { store: store } });
+      await tx.storeConnection.deleteMany({ where: { store } });
       await tx.storeConnection.create({
         data: {
           workspaceId,
-          store: store,
-          issuerId: credentials.issuerId,
-          keyId: credentials.keyId,
-          keyFingerprint,
+          store,
+          issuerId: key.issuerId,
+          keyId: key.keyId,
+          keyFingerprint: key.keyFingerprint,
+          bucket: key.bucket,
+          reportAccess: key.reportAccess,
           credentialCiphertext: sealCredentials(
             box,
             workspaceId,
             store,
-            credentials,
+            key.credentials,
           ),
           createdByUserId: userId,
           verifiedAt: new Date(),
@@ -114,8 +136,10 @@ export class StoreConnectionService {
   }
 
   async verify(store: Store): Promise<StoreConnectionItem> {
-    const connection = await this.requireConnection(store);
-    const refusal = await this.refusal(connection.api);
+    this.requireBox();
+    const connection = await this.readable(store);
+    if (!connection) throw new NotFoundException(NOT_CONNECTED);
+    const refusal = await this.refusalOf(connection.credentials);
     if (refusal) {
       await this.markRejected(store, refusal);
       return this.item(store);
@@ -129,8 +153,13 @@ export class StoreConnectionService {
   }
 
   async sync(store: Store): Promise<StoreConnectionSyncResult> {
-    const connection = await this.requireConnection(store);
-    if (connection.status === 'rejected') throw new ConflictException(REJECTED);
+    this.requireBox();
+    const row = await this.prisma.storeConnection.findFirst({
+      where: { store },
+      select: { status: true },
+    });
+    if (!row) throw new NotFoundException(NOT_CONNECTED);
+    if (row.status === 'rejected') throw new ConflictException(REJECTED);
     return this.queue.enqueue(this.workspace.require(OPERATION), store);
   }
 
@@ -138,7 +167,53 @@ export class StoreConnectionService {
     await this.prisma.storeConnection.deleteMany({ where: { store } });
   }
 
-  async open(store: Store): Promise<OpenedConnection | null> {
+  async openAppStore(): Promise<OpenedConnection | null> {
+    const connection = await this.unsealedOrNull('APP_STORE');
+    if (!connection || !isAscCredentials(connection.credentials)) return null;
+    return this.opened(connection, this.appStore.api(connection.credentials));
+  }
+
+  async openPlay(): Promise<OpenedConnection<GcsApi> | null> {
+    const connection = await this.unsealedOrNull('GOOGLE_PLAY');
+    if (!connection || !isPlayCredentials(connection.credentials)) return null;
+    return this.opened(connection, this.play.api(connection.credentials));
+  }
+
+  async markRejected(store: Store, reason: string): Promise<void> {
+    await this.prisma.storeConnection.updateMany({
+      where: { store },
+      data: { status: 'rejected', lastError: reason },
+    });
+  }
+
+  async markSynced(
+    store: Store,
+    reportAccess: StoreReportAccess,
+    lastError: string | null,
+  ): Promise<void> {
+    await this.prisma.storeConnection.updateMany({
+      where: { store },
+      data: { reportAccess, lastError, lastSyncedAt: new Date() },
+    });
+  }
+
+  private opened<A>(connection: Unsealed, api: A): OpenedConnection<A> {
+    return {
+      id: connection.id,
+      status: connection.status,
+      reportAccess: connection.reportAccess,
+      lastError: connection.lastError,
+      api,
+    };
+  }
+
+  private refusalOf(credentials: StoreCredentials): Promise<string | null> {
+    return isPlayCredentials(credentials)
+      ? this.play.refusal(credentials)
+      : this.appStore.refusal(credentials);
+  }
+
+  private async unsealedOrNull(store: Store): Promise<Unsealed | null> {
     try {
       return await this.unsealed(store);
     } catch (error) {
@@ -147,7 +222,31 @@ export class StoreConnectionService {
     }
   }
 
-  private async unsealed(store: Store): Promise<OpenedConnection | null> {
+  private async readable(store: Store): Promise<Unsealed | null> {
+    try {
+      return await this.unsealed(store);
+    } catch (error) {
+      if (!(error instanceof CredentialUnreadableError)) throw error;
+      throw new ConflictException(CREDENTIAL_UNREADABLE);
+    }
+  }
+
+  private async credentialsOf(
+    box: SecretBox,
+    workspaceId: string,
+    store: Store,
+    sealed: string,
+  ): Promise<StoreCredentials> {
+    try {
+      return openCredentials(box, workspaceId, store, sealed);
+    } catch (error) {
+      if (!(error instanceof SecretBoxError)) throw error;
+      await this.markRejected(store, CREDENTIAL_UNREADABLE);
+      throw new CredentialUnreadableError();
+    }
+  }
+
+  private async unsealed(store: Store): Promise<Unsealed | null> {
     if (!this.box) return null;
     const row = await this.prisma.storeConnection.findFirst({
       where: { store },
@@ -178,26 +277,8 @@ export class StoreConnectionService {
       status: row.status as StoreConnectionStatus,
       reportAccess: row.reportAccess as StoreReportAccess,
       lastError: row.lastError,
-      api: this.factory.open(credentials),
+      credentials,
     };
-  }
-
-  async markRejected(store: Store, reason: string): Promise<void> {
-    await this.prisma.storeConnection.updateMany({
-      where: { store },
-      data: { status: 'rejected', lastError: reason },
-    });
-  }
-
-  async markSynced(
-    store: Store,
-    reportAccess: StoreReportAccess,
-    lastError: string | null,
-  ): Promise<void> {
-    await this.prisma.storeConnection.updateMany({
-      where: { store },
-      data: { reportAccess, lastError, lastSyncedAt: new Date() },
-    });
   }
 
   private async item(store: Store): Promise<StoreConnectionItem> {
@@ -239,54 +320,8 @@ export class StoreConnectionService {
     return connectionItems(rows, apps, ranges);
   }
 
-  private async requireConnection(store: Store): Promise<OpenedConnection> {
-    this.requireBox();
-    let connection: OpenedConnection | null;
-    try {
-      connection = await this.unsealed(store);
-    } catch (error) {
-      if (!(error instanceof CredentialUnreadableError)) throw error;
-      throw new ConflictException(CREDENTIAL_UNREADABLE);
-    }
-    if (!connection) throw new NotFoundException(NOT_CONNECTED);
-    return connection;
-  }
-
-  private async credentialsOf(
-    box: SecretBox,
-    workspaceId: string,
-    store: Store,
-    sealed: string,
-  ): Promise<AscCredentials> {
-    try {
-      return openCredentials(box, workspaceId, store, sealed);
-    } catch (error) {
-      if (!(error instanceof SecretBoxError)) throw error;
-      await this.markRejected(store, CREDENTIAL_UNREADABLE);
-      throw new CredentialUnreadableError();
-    }
-  }
-
   private requireBox(): SecretBox {
     if (!this.box) throw new ConflictException(STORE_CONNECT_OFF);
     return this.box;
-  }
-
-  private async refusal(api: AscAnalyticsApi): Promise<string | null> {
-    try {
-      await api.verify();
-      return null;
-    } catch (error) {
-      if (error instanceof AscRejectedKeyError) return refusalOf(error);
-      throw toHttpException(error);
-    }
-  }
-}
-
-function fingerprintOf(privateKey: string): string {
-  try {
-    return keyFingerprintOf(privateKey);
-  } catch (error) {
-    throw toHttpException(error);
   }
 }

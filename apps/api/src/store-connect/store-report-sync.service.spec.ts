@@ -49,7 +49,7 @@ function build(status: OpenedConnection['status'] = 'active') {
     api: api as unknown as AscAnalyticsApi,
   };
   const connections = {
-    open: jest.fn().mockResolvedValue(connection),
+    openAppStore: jest.fn().mockResolvedValue(connection),
     markSynced: jest.fn().mockResolvedValue(undefined),
     markRejected: jest.fn().mockResolvedValue(undefined),
   };
@@ -108,7 +108,7 @@ const appliedIds = (applier: { apply: jest.Mock }) =>
 describe('StoreReportSyncService', () => {
   it('ends without a connection or with a rejected one', async () => {
     const { service, connections, requester } = build();
-    connections.open.mockResolvedValueOnce(null);
+    connections.openAppStore.mockResolvedValueOnce(null);
     await expect(service.run('APP_STORE')).resolves.toBeNull();
 
     const rejected = build('rejected');

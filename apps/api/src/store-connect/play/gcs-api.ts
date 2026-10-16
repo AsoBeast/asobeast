@@ -83,6 +83,20 @@ export class GcsApi {
     );
   }
 
+  async verify(): Promise<void> {
+    const query = new URLSearchParams({
+      prefix: STORE_PERFORMANCE_PREFIX,
+      maxResults: '1',
+      fields: 'items(name)',
+    });
+    const response = await this.transport({
+      method: 'GET',
+      url: `${this.origins.storage}/storage/v1/b/${encodeURIComponent(this.bucket)}/o?${query.toString()}`,
+      bearer: await this.tokens.get(),
+    });
+    if (!isSuccess(response)) throw errorOf(response, 'the bucket listing');
+  }
+
   async listStorePerformance(): Promise<GcsObject[]> {
     const objects: GcsObject[] = [];
     let pageToken: string | undefined;

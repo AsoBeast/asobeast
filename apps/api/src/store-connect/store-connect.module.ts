@@ -3,9 +3,12 @@ import { Module } from '@nestjs/common';
 import { QUEUES } from '../jobs/jobs.types';
 import { AscApiFactory } from './asc-api.factory';
 import { ASC_TRANSPORT, undiciTransport } from './asc-transport';
+import { GcsApiFactory } from './play/gcs-api.factory';
+import { GCS_TRANSPORT, undiciGcsTransport } from './play/gcs-transport';
 import { SECRET_BOX, secretBoxProvider } from './secret-box.provider';
 import { StoreConnectionService } from './store-connection.service';
 import { StoreConnectionsController } from './store-connections.controller';
+import { AppStoreKeys, PlayKeys } from './store-keys';
 import { StoreFunnelController } from './store-funnel.controller';
 import { StoreFunnelService } from './store-funnel.service';
 import { StoreReportApplier } from './store-report-applier';
@@ -21,6 +24,10 @@ import { StoreReportsWorker } from './store-reports.worker';
     secretBoxProvider,
     { provide: ASC_TRANSPORT, useValue: undiciTransport },
     AscApiFactory,
+    { provide: GCS_TRANSPORT, useValue: undiciGcsTransport },
+    GcsApiFactory,
+    AppStoreKeys,
+    PlayKeys,
     StoreConnectionService,
     StoreReportQueue,
     StoreReportRequester,

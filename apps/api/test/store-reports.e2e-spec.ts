@@ -303,7 +303,7 @@ describe('Store report sync (e2e)', () => {
     await asWorkspace(harness.app, async () => {
       const connection = await harness.app
         .get(StoreConnectionService)
-        .open('APP_STORE');
+        .openAppStore();
       await harness.app.get(StoreReportApplier).apply(connection!.api, {
         requestId: request.id,
         appId,

@@ -30,7 +30,7 @@ const FIELDS = {
   privateKey: 'private_key',
 } as const;
 
-function rsaKey(pem: string): KeyObject {
+export function rsaKey(pem: string): KeyObject {
   try {
     const key = createPrivateKey(pem);
     if (key.asymmetricKeyType === 'rsa') return key;

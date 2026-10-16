@@ -12,7 +12,9 @@ import { seedApiToken } from './helpers/api-tokens';
 import { ownerAgent } from './helpers/session';
 import {
   CONNECTION_REQUEST,
+  gcsAnswer,
   pauseStoreReports,
+  PLAY_CONNECTION_REQUEST,
   refusal,
   startStoreConnectApp,
   type StoreConnectHarness,
@@ -25,6 +27,7 @@ const MEMBER = {
   password: 'membersecret1',
 };
 const PATH = '/store-connections/APP_STORE';
+const PLAY_PATH = '/store-connections/GOOGLE_PLAY';
 
 describe('Store connections (e2e)', () => {
   let harness: StoreConnectHarness;
@@ -60,6 +63,7 @@ describe('Store connections (e2e)', () => {
 
   beforeEach(async () => {
     harness.asc.reset();
+    harness.gcs.reset();
     await harness.prisma.storeConnection.deleteMany({});
     await harness.prisma.$executeRawUnsafe(
       'TRUNCATE TABLE "App", "Keyword" RESTART IDENTITY CASCADE',
@@ -311,16 +315,117 @@ describe('Store connections (e2e)', () => {
     ]);
   });
 
-  it('answers 404 for google play and 400 for an unknown store', async () => {
-    const play = await owner
-      .put('/store-connections/GOOGLE_PLAY')
-      .send(CONNECTION_REQUEST)
-      .expect(404);
-    expect((play.body as ApiErrorEnvelope).message).toContain('later release');
+  it('refuses a body whose store differs from the path and an unknown store', async () => {
+    await owner.put(PLAY_PATH).send(CONNECTION_REQUEST).expect(400);
+    await owner.put(PATH).send(PLAY_CONNECTION_REQUEST).expect(400);
+    await owner
+      .put(PATH)
+      .send({ ...CONNECTION_REQUEST, store: 'windows' })
+      .expect(400);
     await owner
       .put('/store-connections/windows')
       .send(CONNECTION_REQUEST)
       .expect(400);
+    expect(harness.asc.requests).toEqual([]);
+    expect(harness.gcs.requests).toEqual([]);
+  });
+
+  it('connects a play service account after listing its bucket', async () => {
+    const response = await owner
+      .put(PLAY_PATH)
+      .send(PLAY_CONNECTION_REQUEST)
+      .expect(200);
+    const item = response.body as StoreConnectionItem;
+
+    expect(item).toMatchObject({
+      store: 'GOOGLE_PLAY',
+      status: 'active',
+      reportAccess: 'admin',
+      issuerId: 'reports@focus-123.iam.gserviceaccount.com',
+      keyId: 'a1b2c3d4e5f6',
+      bucket: PLAY_CONNECTION_REQUEST.bucket,
+    });
+    expect(JSON.stringify(response.body)).not.toContain('PRIVATE KEY');
+    const listing = harness.gcs.requests.find((each) => each.method === 'GET');
+    expect(listing?.url).toContain(
+      `/storage/v1/b/${PLAY_CONNECTION_REQUEST.bucket}/o?prefix=stats%2Fstore_performance%2F`,
+    );
+    expect(listing?.bearer).toBe('ya29.test');
+    const row = await harness.prisma.storeConnection.findFirstOrThrow({
+      where: { store: Store.GOOGLE_PLAY },
+    });
+    expect(row.bucket).toBe(PLAY_CONNECTION_REQUEST.bucket);
+    expect(row.credentialCiphertext).not.toContain('PRIVATE');
+  });
+
+  it('refuses a bad bucket id or service account with 400 and a refused account with 422', async () => {
+    await owner
+      .put(PLAY_PATH)
+      .send({ ...PLAY_CONNECTION_REQUEST, bucket: 'my-bucket' })
+      .expect(400);
+    await owner
+      .put(PLAY_PATH)
+      .send({ ...PLAY_CONNECTION_REQUEST, serviceAccountJson: '{}' })
+      .expect(400);
+    await owner
+      .put(PLAY_PATH)
+      .send({ ...PLAY_CONNECTION_REQUEST, privateKey: 'extra' })
+      .expect(400);
+    expect(harness.gcs.requests).toEqual([]);
+
+    harness.gcs.on('GET', /\/o\?/, gcsAnswer({ error: 'forbidden' }, 403));
+    const refused = await owner
+      .put(PLAY_PATH)
+      .send(PLAY_CONNECTION_REQUEST)
+      .expect(422);
+    expect((refused.body as ApiErrorEnvelope).message).toContain(
+      'Users and permissions',
+    );
+    harness.gcs.on('GET', /\/o\?/, gcsAnswer({ error: 'not found' }, 404));
+    const missing = await owner
+      .put(PLAY_PATH)
+      .send(PLAY_CONNECTION_REQUEST)
+      .expect(422);
+    expect((missing.body as ApiErrorEnvelope).message).toContain(
+      PLAY_CONNECTION_REQUEST.bucket,
+    );
+    harness.gcs.unreachable = true;
+    await owner.put(PLAY_PATH).send(PLAY_CONNECTION_REQUEST).expect(502);
+    await expect(
+      harness.prisma.storeConnection.count({
+        where: { store: Store.GOOGLE_PLAY },
+      }),
+    ).resolves.toBe(0);
+  });
+
+  it('lists both connections with the bucket on the play one', async () => {
+    await connect().expect(200);
+    await owner.put(PLAY_PATH).send(PLAY_CONNECTION_REQUEST).expect(200);
+
+    const { connections } = await state();
+
+    const byStore = new Map(connections.map((each) => [each.store, each]));
+    expect([...byStore.keys()].sort()).toEqual(['APP_STORE', 'GOOGLE_PLAY']);
+    expect(byStore.get('APP_STORE')).not.toHaveProperty('bucket');
+    expect(byStore.get('GOOGLE_PLAY')?.bucket).toBe(
+      PLAY_CONNECTION_REQUEST.bucket,
+    );
+  });
+
+  it('verifies, syncs and disconnects a play connection', async () => {
+    await owner.put(PLAY_PATH).send(PLAY_CONNECTION_REQUEST).expect(200);
+    harness.gcs.on('GET', /\/o\?/, gcsAnswer({ error: 'revoked' }, 401));
+
+    const rejected = await owner.post(`${PLAY_PATH}/verify`).expect(200);
+    expect((rejected.body as StoreConnectionItem).status).toBe('rejected');
+    await owner.post(`${PLAY_PATH}/sync`).expect(409);
+
+    harness.gcs.reset();
+    const restored = await owner.post(`${PLAY_PATH}/verify`).expect(200);
+    expect((restored.body as StoreConnectionItem).status).toBe('active');
+    await owner.post(`${PLAY_PATH}/sync`).expect(202);
+    await owner.delete(PLAY_PATH).expect(204);
+    expect((await state()).connections).toEqual([]);
   });
 
   it('never shows or touches the connection of another workspace', async () => {

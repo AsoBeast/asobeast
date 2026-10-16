@@ -84,7 +84,8 @@ export class StoreReportSyncService {
   ) {}
 
   async run(store: Store): Promise<SyncSummary | null> {
-    const connection = await this.connections.open(store);
+    const connection =
+      store === 'APP_STORE' ? await this.connections.openAppStore() : null;
     if (!connection || connection.status === 'rejected') return null;
     const summary: SyncSummary = {
       apps: 0,
