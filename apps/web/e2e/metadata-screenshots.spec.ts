@@ -10,6 +10,29 @@ const strip = (page: Page) =>
 const STRIP_HEIGHT = 224;
 const LANDSCAPE_PIXELS =
   "iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAAC0lEQVR4nGNoAAMACocDAcTGH2YAAAAASUVORK5CYII=";
+const PORTRAIT_PIXELS =
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAACCAIAAAAW4yFwAAAADklEQVR4nGPo6OhgAGIADMgDMYVmI7sAAAAASUVORK5CYII=";
+
+const isScreenshot = (url: URL, file: string) =>
+  url.pathname === "/_next/image" &&
+  (url.searchParams.get("url") ?? "").includes(`/e2e-focus/${file}/`);
+
+const routeScreenshot = (page: Page, file: string, pixels: string) =>
+  page.route(
+    (url) => isScreenshot(url, file),
+    (route) =>
+      route.fulfill({
+        contentType: "image/png",
+        body: Buffer.from(pixels, "base64"),
+      }),
+  );
+
+const requestedWidth = (page: Page, name: string) =>
+  strip(page)
+    .getByRole("img", { name, exact: true })
+    .evaluate((node: HTMLImageElement) =>
+      Number(new URL(node.currentSrc).searchParams.get("w")),
+    );
 
 const boxOf = async (page: Page, name: string) => {
   const image = strip(page).getByRole("img", { name, exact: true });
@@ -63,16 +86,7 @@ test("draws a screenshot at its own aspect ratio instead of cropping it", async 
 test("draws a landscape screenshot whole without covering the next one", async ({
   page,
 }) => {
-  await page.route(
-    (url) =>
-      url.pathname === "/_next/image" &&
-      (url.searchParams.get("url") ?? "").includes("/e2e-focus/1.jpg/"),
-    (route) =>
-      route.fulfill({
-        contentType: "image/png",
-        body: Buffer.from(LANDSCAPE_PIXELS, "base64"),
-      }),
-  );
+  await routeScreenshot(page, "1.jpg", LANDSCAPE_PIXELS);
   await page.goto("/apps/app-1/metadata");
   const image = strip(page).getByRole("img", {
     name: "Screenshot 1",
@@ -88,6 +102,46 @@ test("draws a landscape screenshot whole without covering the next one", async (
   expect(Math.round(box.height)).toBe(STRIP_HEIGHT);
   expect(Math.abs(box.width - 2 * box.height)).toBeLessThanOrEqual(3);
   expect(next.x).toBeGreaterThanOrEqual(box.x + box.width);
+});
+
+test("requests a rendition as wide as the landscape screenshot is drawn", async ({
+  page,
+}) => {
+  await routeScreenshot(page, "1.jpg", LANDSCAPE_PIXELS);
+  await page.goto("/apps/app-1/metadata");
+  const image = strip(page).getByRole("img", {
+    name: "Screenshot 1",
+    exact: true,
+  });
+  await expect
+    .poll(() => image.evaluate((node: HTMLImageElement) => node.naturalWidth))
+    .toBe(2);
+
+  const box = await boxOf(page, "Screenshot 1");
+
+  await expect
+    .poll(() => requestedWidth(page, "Screenshot 1"))
+    .toBeGreaterThanOrEqual(box.width);
+});
+
+test("keeps a portrait screenshot on a small rendition", async ({ page }) => {
+  await routeScreenshot(page, "2.jpg", PORTRAIT_PIXELS);
+  let requests = 0;
+  page.on("request", (request) => {
+    if (isScreenshot(new URL(request.url()), "2.jpg")) requests += 1;
+  });
+  await page.goto("/apps/app-1/metadata");
+  const image = strip(page).getByRole("img", {
+    name: "Screenshot 2",
+    exact: true,
+  });
+  await expect
+    .poll(() => image.evaluate((node: HTMLImageElement) => node.naturalHeight))
+    .toBe(2);
+  await page.waitForTimeout(1500);
+
+  expect(requests).toBe(1);
+  expect(await requestedWidth(page, "Screenshot 2")).toBeLessThanOrEqual(256);
 });
 
 test("adds a screenshot text column that does not count as coverage", async ({
