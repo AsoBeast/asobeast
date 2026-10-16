@@ -11,8 +11,12 @@ export const FUNNEL_UPSERT_BATCH = 500;
 type CounterRow = FunnelCounters & {
   date: string;
   territory: string;
+  country?: string | null;
   processingDate: string;
 };
+
+const countryOf = (row: CounterRow): string | null =>
+  row.country === undefined ? countryOfTerritory(row.territory) : row.country;
 
 interface UpsertTarget<R extends CounterRow> {
   table: 'StoreFunnelDay' | 'StoreFunnelPageDay';
@@ -70,7 +74,7 @@ function upserts<R extends CounterRow>(
             Prisma.sql`${appId}`,
             Prisma.sql`${dateValue(row.date)}::date`,
             Prisma.sql`${row.territory}`,
-            Prisma.sql`${countryOfTerritory(row.territory)}`,
+            Prisma.sql`${countryOf(row)}`,
             ...target.keyValues(row),
             ...COUNTER_COLUMNS.map((column) => Prisma.sql`${row[column]}`),
             Prisma.sql`${dateValue(row.processingDate)}::date`,
@@ -116,8 +120,8 @@ export function unresolvedTerritories(rows: CounterRow[]): string[] {
   return [
     ...new Set(
       rows
-        .map((row) => row.territory)
-        .filter((territory) => countryOfTerritory(territory) === null),
+        .filter((row) => row.country === undefined && countryOf(row) === null)
+        .map((row) => row.territory),
     ),
   ];
 }
