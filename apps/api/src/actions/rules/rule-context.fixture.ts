@@ -69,6 +69,7 @@ export const contextApp = (
   previousVersion: null,
   latestStoreUpdatedAt: null,
   competitorUpdatedAt: [],
+  funnel: { completeThrough: '2026-10-13', days: [], pages: [] },
   ...overrides,
 });
 

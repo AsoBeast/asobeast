@@ -166,16 +166,20 @@ export class StoreFunnelService {
   }
 
   async connected(appId: string, store: Store): Promise<boolean> {
-    if (!this.box) return false;
-    const request = await this.prisma.storeReportRequest.findFirst({
+    return (await this.connectedApps([appId], store)).has(appId);
+  }
+
+  async connectedApps(appIds: string[], store?: Store): Promise<Set<string>> {
+    if (!this.box || appIds.length === 0) return new Set();
+    const requests = await this.prisma.storeReportRequest.findMany({
       where: {
-        appId,
+        appId: { in: appIds },
         accessType: 'ONGOING',
         state: 'requested',
-        connection: { store, status: 'active' },
+        connection: { status: 'active', ...(store ? { store } : {}) },
       },
-      select: { id: true },
+      select: { appId: true },
     });
-    return request !== null;
+    return new Set(requests.map((request) => request.appId));
   }
 }

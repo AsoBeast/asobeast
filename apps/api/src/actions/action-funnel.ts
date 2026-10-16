@@ -1,0 +1,143 @@
+import { Injectable } from '@nestjs/common';
+import { toDateKey } from '../analytics/analytics.support';
+import { PrismaService } from '../prisma/prisma.service';
+import {
+  completeThrough,
+  countsOf,
+  shiftDate,
+  type FunnelDayRow,
+} from '../store-connect/store-funnel';
+import { StoreFunnelService } from '../store-connect/store-funnel.service';
+
+export interface ActionFunnelDay {
+  date: string;
+  pageViews: number;
+  gets: number;
+  uniqueImpressions: number;
+}
+
+export interface ActionPageDay {
+  date: string;
+  pageTitle: string;
+  uniqueImpressions: number;
+  gets: number;
+}
+
+export interface ActionFunnel {
+  completeThrough: string;
+  days: ActionFunnelDay[];
+  pages: ActionPageDay[];
+}
+
+interface FunnelApp {
+  id: string;
+  store: 'APP_STORE' | 'GOOGLE_PLAY';
+  country: string;
+}
+
+const dateOf = (key: string): Date => new Date(`${key}T00:00:00.000Z`);
+
+export const emptyFunnel = (now: Date): ActionFunnel => ({
+  completeThrough: completeThrough(now),
+  days: [],
+  pages: [],
+});
+
+function dailyFunnel(rows: FunnelDayRow[], app: FunnelApp): ActionFunnelDay[] {
+  const byDate = new Map<string, FunnelDayRow[]>();
+  for (const row of rows) {
+    const day = byDate.get(row.date);
+    if (day) day.push(row);
+    else byDate.set(row.date, [row]);
+  }
+  return [...byDate.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([date, day]) => {
+      const counts = countsOf(day, app.store);
+      return {
+        date,
+        pageViews: counts.pageViews,
+        gets: counts.gets,
+        uniqueImpressions: counts.uniqueImpressions ?? counts.pageViews,
+      };
+    });
+}
+
+@Injectable()
+export class ActionFunnelReader {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly funnel: StoreFunnelService,
+  ) {}
+
+  async forApps(
+    apps: FunnelApp[],
+    now: Date,
+    windowDays: number,
+  ): Promise<Map<string, ActionFunnel>> {
+    const connected = await this.funnel.connectedApps(
+      apps.map((app) => app.id),
+    );
+    const reported = apps.filter((app) => connected.has(app.id));
+    const funnels = new Map<string, ActionFunnel>();
+    if (reported.length === 0) return funnels;
+    const through = completeThrough(now);
+    const date = {
+      gte: dateOf(shiftDate(through, 1 - windowDays)),
+      lte: dateOf(through),
+    };
+    const homes = reported.map((app) => ({
+      appId: app.id,
+      country: app.country,
+    }));
+    const [days, pages] = await Promise.all([
+      this.prisma.storeFunnelDay.findMany({
+        where: { OR: homes, date },
+        select: {
+          appId: true,
+          date: true,
+          country: true,
+          sourceType: true,
+          pageType: true,
+          impressions: true,
+          uniqueImpressions: true,
+          pageViews: true,
+          uniquePageViews: true,
+          gets: true,
+          uniqueGets: true,
+        },
+      }),
+      this.prisma.storeFunnelPageDay.findMany({
+        where: { OR: homes, date },
+        select: {
+          appId: true,
+          date: true,
+          pageTitle: true,
+          uniqueImpressions: true,
+          gets: true,
+        },
+        orderBy: { date: 'asc' },
+      }),
+    ]);
+    for (const app of reported) {
+      funnels.set(app.id, {
+        completeThrough: through,
+        days: dailyFunnel(
+          days
+            .filter((row) => row.appId === app.id)
+            .map((row) => ({ ...row, date: toDateKey(row.date) })),
+          app,
+        ),
+        pages: pages
+          .filter((row) => row.appId === app.id)
+          .map((row) => ({
+            date: toDateKey(row.date),
+            pageTitle: row.pageTitle,
+            uniqueImpressions: row.uniqueImpressions,
+            gets: row.gets,
+          })),
+      });
+    }
+    return funnels;
+  }
+}
