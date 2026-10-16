@@ -40,7 +40,11 @@ const doneCount = (status: AppRunStatus): string => {
   return countOf(ready, total);
 };
 
+const isPaused = (status: AppRunStatus): boolean =>
+  status.paused === true && status.state !== "complete";
+
 export function pillText(status: AppRunStatus): string | null {
+  if (isPaused(status)) return null;
   switch (status.state) {
     case "running":
       return doneCount(status);
@@ -77,7 +81,9 @@ export function runRows(status: AppRunStatus): RunRow[] {
 export function runProgressInterval(
   status: AppRunStatus | undefined,
 ): number | false {
-  return status?.state === "running" ? RUN_PROGRESS_POLL_MS : false;
+  return status && status.state === "running" && !isPaused(status)
+    ? RUN_PROGRESS_POLL_MS
+    : false;
 }
 
 export function runAdvanced(

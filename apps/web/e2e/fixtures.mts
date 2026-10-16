@@ -255,6 +255,11 @@ export const APP_RUN_DELAYED = appRun("app-new", "delayed", [
   [1, 1],
 ]);
 
+export const APP_RUN_PAUSED: AppRunStatus = {
+  ...APP_RUN_RUNNING,
+  paused: true,
+};
+
 export const RUN_STATUS_DELAYED: WorkspaceRunStatus = {
   state: "delayed",
   startedAt: new Date(Date.now() - 22 * 60 * 60 * 1000).toISOString(),

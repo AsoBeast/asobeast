@@ -168,6 +168,7 @@ export interface AppRunStatus {
   startedAt: string;
   lastCaptureAt: string | null;
   stages: AppRunStageStatus[];
+  paused?: boolean;
 }
 
 export interface AppRunTotals {
