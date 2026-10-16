@@ -178,12 +178,12 @@ test("keeps the wrapped trending tabs inside their strip", async ({ page }) => {
   const tabs = strip.getByRole("tab");
   await expect(tabs).toHaveCount(4);
 
-  const stripBox = (await strip.boundingBox())!;
-  const lastTab = (await tabs.last().boundingBox())!;
-  const firstRow = (await trending
-    .getByRole("listitem")
-    .first()
-    .boundingBox())!;
+  const stripBox = await strip.boundingBox();
+  const lastTab = await tabs.last().boundingBox();
+  const firstRow = await trending.getByRole("listitem").first().boundingBox();
+  if (!stripBox || !lastTab || !firstRow) {
+    throw new Error("trending panel not rendered");
+  }
 
   expect(lastTab.y + lastTab.height).toBeLessThanOrEqual(
     stripBox.y + stripBox.height + 1,
