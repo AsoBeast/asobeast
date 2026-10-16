@@ -198,13 +198,16 @@ describe('CategoryRanksController (e2e)', () => {
       asWorkspace(
         app,
         () =>
-          ranks.checkCategory({
-            collection: 'free',
-            genre: '6007',
-            country: 'us',
-            store: 'APP_STORE',
-            workspaceId,
-          }),
+          ranks.checkCategory(
+            {
+              collection: 'free',
+              genre: '6007',
+              country: 'us',
+              store: 'APP_STORE',
+              workspaceId,
+            },
+            true,
+          ),
         workspaceId,
       );
 

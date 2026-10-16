@@ -351,6 +351,88 @@ describe('ChartsController (e2e)', () => {
     ).resolves.toBe(0);
   });
 
+  describe('a chart the store lists no apps in', () => {
+    const PLAY_KEY = {
+      store: 'GOOGLE_PLAY',
+      country: 'pl',
+      collection: 'paid',
+      genre: 'SHOPPING',
+      device: 'android',
+    } as const;
+
+    const playCapture = (date: Date, ids: string[]) =>
+      prisma.chartCapture.create({
+        data: {
+          ...PLAY_KEY,
+          date,
+          depth: 200,
+          entries: {
+            create: ids.map((storeAppId, index) => ({
+              position: index + 1,
+              storeAppId,
+              title: storeAppId,
+            })),
+          },
+        },
+      });
+
+    const playCaptures = () =>
+      prisma.chartCapture.count({ where: { genre: 'SHOPPING', date: today } });
+
+    beforeEach(() => topCharts.mockResolvedValue([]));
+
+    it('answers a first empty answer without storing it', async () => {
+      const response = await api
+        .post('/charts/capture')
+        .send(PLAY_KEY)
+        .expect(200);
+      const page = response.body as ChartPage;
+
+      expect(page.capture).toBeNull();
+      expect(page.entries).toEqual([]);
+      expect(page.answeredNoApps).toBe(true);
+      expect(page.dates).not.toContain(toDateKey(today));
+      await expect(playCaptures()).resolves.toBe(0);
+    });
+
+    it('stores an empty capture for a chart that was already empty', async () => {
+      await playCapture(addDays(today, -1), []);
+
+      const response = await api
+        .post('/charts/capture')
+        .send(PLAY_KEY)
+        .expect(200);
+      await api.post('/charts/capture').send(PLAY_KEY).expect(200);
+
+      const page = response.body as ChartPage;
+      expect(page.capture?.date).toBe(toDateKey(today));
+      expect(page.entries).toEqual([]);
+      expect(page.answeredNoApps).toBeUndefined();
+      expect(topCharts).toHaveBeenCalledTimes(1);
+      await expect(playCaptures()).resolves.toBe(1);
+    });
+
+    it('refuses an empty answer for a chart that listed apps yesterday', async () => {
+      await playCapture(addDays(today, -1), ['a']);
+
+      await api.post('/charts/capture').send(PLAY_KEY).expect(502);
+
+      await expect(playCaptures()).resolves.toBe(0);
+    });
+
+    it('treats apps last listed eight days ago as no history', async () => {
+      await playCapture(addDays(today, -8), ['a']);
+
+      const response = await api
+        .post('/charts/capture')
+        .send(PLAY_KEY)
+        .expect(200);
+
+      expect((response.body as ChartPage).answeredNoApps).toBe(true);
+      await expect(playCaptures()).resolves.toBe(0);
+    });
+  });
+
   it('refuses a bad key before the store', async () => {
     await api
       .post('/charts/capture')

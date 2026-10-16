@@ -24,6 +24,7 @@ import {
   SyncReviewsPayload,
 } from './jobs.types';
 import { requireJobScope } from './job-workspace';
+import { isFinalAttempt } from './final-attempt';
 
 const ELIGIBILITY_GATED_JOBS: ReadonlySet<string> = new Set([
   JOBS.SPIDER_PROBE,
@@ -82,6 +83,7 @@ export class StoreJobsHandler {
       case JOBS.CHECK_CATEGORY:
         await this.categoryRanks.checkCategory(
           job.data as CheckCategoryPayload,
+          isFinalAttempt(job),
         );
         return;
       case JOBS.SCORE_KEYWORD:
