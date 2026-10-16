@@ -4323,6 +4323,19 @@
             }
           },
           {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "newest",
+              "type": "string",
+              "enum": [
+                "newest",
+                "lowest"
+              ]
+            }
+          },
+          {
             "name": "score",
             "required": false,
             "in": "query",

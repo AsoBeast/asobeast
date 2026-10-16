@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
-import { ReviewReplyState, ReviewThemes } from '@asobeast/shared';
+import { ReviewReplyState, ReviewSort, ReviewThemes } from '@asobeast/shared';
 import { Env } from '../config/env';
 import { listingLanguages } from '../keywords/listing-languages';
 import { PrismaService } from '../prisma/prisma.service';
@@ -22,7 +22,7 @@ export class ReviewThemesService {
 
   async themes(
     appId: string,
-    scope: ReviewScope & { replyState?: ReviewReplyState },
+    scope: ReviewScope & { replyState?: ReviewReplyState; sort?: ReviewSort },
   ): Promise<ReviewThemes> {
     const app = await this.prisma.app.findFirst({
       where: { id: appId },
@@ -32,25 +32,31 @@ export class ReviewThemesService {
       throw new NotFoundException(`App ${appId} not found`);
     }
     const { repliedAt } = this.prisma.review.fields;
-    const newest = (where: Prisma.ReviewWhereInput, take: number) =>
+    const read = (
+      where: Prisma.ReviewWhereInput,
+      sort: ReviewSort,
+      take: number,
+    ) =>
       this.prisma.review.findMany({
         where,
-        orderBy: reviewOrder('newest'),
+        orderBy: reviewOrder(sort),
         take,
         select: { id: true, title: true, text: true, score: true },
       });
     const [baseline, shown] = await Promise.all([
-      newest(
+      read(
         reviewsWhere(
           appId,
           { version: scope.version, from: scope.from },
           undefined,
           repliedAt,
         ),
+        'newest',
         REVIEW_THEMES_BASELINE,
       ),
-      newest(
+      read(
         reviewsWhere(appId, scope, scope.replyState, repliedAt),
+        scope.sort ?? 'newest',
         REVIEW_THEMES_CAP,
       ),
     ]);

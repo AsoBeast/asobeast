@@ -50,6 +50,7 @@ export class ReviewsController {
       version: query.version,
       from: dayOf(query.from),
       replyState: query.replyState,
+      sort: query.sort,
     });
   }
 

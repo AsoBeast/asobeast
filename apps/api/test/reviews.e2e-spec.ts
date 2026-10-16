@@ -805,6 +805,55 @@ describe('ReviewsController (e2e)', () => {
       { phrase: 'sync fails', kind: 'complaint', mentions: 5, negative: 5 },
     ]);
     expect(earlier).toEqual({ themes: [], reviews: 0, negativeScoreMax: 2 });
+    expect((await themesOf({ sort: 'lowest' })).themes).toEqual(all.themes);
+  });
+
+  it('counts the themes of the reviews in a reply state and judges them against the whole period', async () => {
+    const seeded = await seedApp();
+    await prisma.review.createMany({
+      data: [
+        ...Array.from({ length: 5 }, (_, index) => ({
+          appId: seeded.id,
+          reviewId: `sync-${index}`,
+          score: 1,
+          text: 'Sync fails',
+        })),
+        ...Array.from({ length: 12 }, (_, index) => ({
+          appId: seeded.id,
+          reviewId: `dark-${index}`,
+          score: 5,
+          text: 'Dark mode',
+        })),
+      ],
+    });
+    const answered = await prisma.review.findMany({
+      where: { appId: seeded.id, reviewId: { in: ['sync-0', 'sync-1'] } },
+      select: { id: true },
+    });
+    await prisma.reviewReply.createMany({
+      data: answered.map(({ id }) => ({
+        reviewId: id,
+        appId: seeded.id,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        text: 'We are on it',
+        repliedAt: new Date('2026-07-20T00:00:00Z'),
+      })),
+    });
+
+    const replied = (
+      await api
+        .get(`/apps/${seeded.id}/reviews/themes`)
+        .query({ replyState: 'replied' })
+        .expect(200)
+    ).body as ReviewThemes;
+
+    expect(replied).toEqual({
+      themes: [
+        { phrase: 'sync fails', kind: 'complaint', mentions: 2, negative: 2 },
+      ],
+      reviews: 2,
+      negativeScoreMax: 2,
+    });
   });
 
   it('answers 404 for the themes of an unknown app and 400 for a bad date', async () => {
