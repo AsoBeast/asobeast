@@ -1,47 +1,118 @@
 import { Prisma } from '@prisma/client';
-import type { FunnelRow } from './discovery-report';
+import type {
+  FunnelCounters,
+  FunnelRow,
+  PageFunnelRow,
+} from './discovery-report';
 import { countryOfTerritory } from './territory-codes';
 
 export const FUNNEL_UPSERT_BATCH = 500;
 
-const dateValue = (key: string): Date => new Date(`${key}T00:00:00.000Z`);
+type CounterRow = FunnelCounters & {
+  date: string;
+  territory: string;
+  processingDate: string;
+};
 
-function valuesOf(
-  workspaceId: string,
-  appId: string,
-  row: FunnelRow,
-): Prisma.Sql {
-  return Prisma.sql`(gen_random_uuid()::text, ${workspaceId}, ${appId}, ${dateValue(row.date)}::date, ${row.territory}, ${countryOfTerritory(row.territory)}, ${row.sourceType}, ${row.pageType}, ${row.impressions}, ${row.uniqueImpressions}, ${row.pageViews}, ${row.uniquePageViews}, ${row.gets}, ${row.uniqueGets}, ${dateValue(row.processingDate)}::date)`;
+interface UpsertTarget<R extends CounterRow> {
+  table: 'StoreFunnelDay' | 'StoreFunnelPageDay';
+  keyColumns: readonly string[];
+  keyValues: (row: R) => Prisma.Sql[];
 }
 
-export function funnelUpserts(
+const COUNTER_COLUMNS = [
+  'impressions',
+  'uniqueImpressions',
+  'pageViews',
+  'uniquePageViews',
+  'gets',
+  'uniqueGets',
+] as const;
+
+const dateValue = (key: string): Date => new Date(`${key}T00:00:00.000Z`);
+
+const quoted = (columns: readonly string[]): Prisma.Sql =>
+  Prisma.raw(columns.map((column) => `"${column}"`).join(', '));
+
+function upserts<R extends CounterRow>(
+  target: UpsertTarget<R>,
   workspaceId: string,
   appId: string,
-  rows: FunnelRow[],
+  rows: R[],
 ): Prisma.Sql[] {
+  const table = Prisma.raw(`"${target.table}"`);
+  const columns = [
+    'id',
+    'workspaceId',
+    'appId',
+    'date',
+    'territory',
+    'country',
+    ...target.keyColumns,
+    ...COUNTER_COLUMNS,
+    'processingDate',
+  ];
+  const updates = Prisma.raw(
+    ['country', ...COUNTER_COLUMNS, 'processingDate']
+      .map((column) => `"${column}" = EXCLUDED."${column}"`)
+      .join(', '),
+  );
+  const conflict = quoted(['appId', 'date', 'territory', ...target.keyColumns]);
   const batches: Prisma.Sql[] = [];
   for (let start = 0; start < rows.length; start += FUNNEL_UPSERT_BATCH) {
     const values = rows
       .slice(start, start + FUNNEL_UPSERT_BATCH)
-      .map((row) => valuesOf(workspaceId, appId, row));
+      .map(
+        (row) =>
+          Prisma.sql`(${Prisma.join([
+            Prisma.sql`gen_random_uuid()::text`,
+            Prisma.sql`${workspaceId}`,
+            Prisma.sql`${appId}`,
+            Prisma.sql`${dateValue(row.date)}::date`,
+            Prisma.sql`${row.territory}`,
+            Prisma.sql`${countryOfTerritory(row.territory)}`,
+            ...target.keyValues(row),
+            ...COUNTER_COLUMNS.map((column) => Prisma.sql`${row[column]}`),
+            Prisma.sql`${dateValue(row.processingDate)}::date`,
+          ])})`,
+      );
     batches.push(Prisma.sql`
-      INSERT INTO "StoreFunnelDay" ("id", "workspaceId", "appId", "date", "territory", "country", "sourceType", "pageType", "impressions", "uniqueImpressions", "pageViews", "uniquePageViews", "gets", "uniqueGets", "processingDate")
+      INSERT INTO ${table} (${quoted(columns)})
       VALUES ${Prisma.join(values)}
-      ON CONFLICT ("appId", "date", "territory", "sourceType", "pageType") DO UPDATE SET
-        "country" = EXCLUDED."country",
-        "impressions" = EXCLUDED."impressions",
-        "uniqueImpressions" = EXCLUDED."uniqueImpressions",
-        "pageViews" = EXCLUDED."pageViews",
-        "uniquePageViews" = EXCLUDED."uniquePageViews",
-        "gets" = EXCLUDED."gets",
-        "uniqueGets" = EXCLUDED."uniqueGets",
-        "processingDate" = EXCLUDED."processingDate"
-      WHERE "StoreFunnelDay"."processingDate" <= EXCLUDED."processingDate"`);
+      ON CONFLICT (${conflict}) DO UPDATE SET ${updates}
+      WHERE ${table}."processingDate" <= EXCLUDED."processingDate"`);
   }
   return batches;
 }
 
-export function unresolvedTerritories(rows: FunnelRow[]): string[] {
+const FUNNEL_DAY: UpsertTarget<FunnelRow> = {
+  table: 'StoreFunnelDay',
+  keyColumns: ['sourceType', 'pageType'],
+  keyValues: (row) => [
+    Prisma.sql`${row.sourceType}`,
+    Prisma.sql`${row.pageType}`,
+  ],
+};
+
+const FUNNEL_PAGE_DAY: UpsertTarget<PageFunnelRow> = {
+  table: 'StoreFunnelPageDay',
+  keyColumns: ['pageTitle'],
+  keyValues: (row) => [Prisma.sql`${row.pageTitle}`],
+};
+
+export const funnelUpserts = (
+  workspaceId: string,
+  appId: string,
+  rows: FunnelRow[],
+): Prisma.Sql[] => upserts(FUNNEL_DAY, workspaceId, appId, rows);
+
+export const pageUpserts = (
+  workspaceId: string,
+  appId: string,
+  rows: PageFunnelRow[],
+): Prisma.Sql[] => upserts(FUNNEL_PAGE_DAY, workspaceId, appId, rows);
+
+export function unresolvedTerritories(rows: CounterRow[]): string[] {
   return [
     ...new Set(
       rows

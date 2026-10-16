@@ -22,6 +22,7 @@ function build(overrides: Partial<Setup> = {}) {
   const prisma = {
     app: { findFirst: jest.fn().mockResolvedValue(app) },
     storeReportRequest: { findFirst: jest.fn().mockResolvedValue(request) },
+    storeFunnelPageDay: { findMany: jest.fn().mockResolvedValue([]) },
     storeFunnelDay: {
       groupBy: jest.fn().mockResolvedValue([
         {

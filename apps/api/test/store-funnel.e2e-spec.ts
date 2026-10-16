@@ -260,4 +260,48 @@ describe('Store funnel (e2e)', () => {
 
     expect((response.body as StoreFunnelReport).connected).toBe(true);
   });
+
+  it('answers each product page with its ratio to the default page, default first', async () => {
+    const connection = await connect();
+    await reportOn(connection.id, appId);
+    for (const [pageTitle, uniqueImpressions, gets] of [
+      ['Summer sale', 400, 8],
+      ['default product page', 1000, 40],
+    ] as const) {
+      await harness.prisma.storeFunnelPageDay.create({
+        data: {
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          appId,
+          date: utcDay(5),
+          territory: 'United States',
+          country: 'us',
+          pageTitle,
+          impressions: uniqueImpressions,
+          uniqueImpressions,
+          gets,
+          uniqueGets: gets,
+          processingDate: utcDay(4),
+        },
+      });
+    }
+
+    const report = await funnel(`/apps/${appId}/funnel`);
+
+    expect(report.pages?.map((page) => [page.title, page.ratio])).toEqual([
+      ['default product page', 1],
+      ['Summer sale', 0.5],
+    ]);
+    expect(
+      (await funnel(`/apps/${appId}/funnel?country=de`)).pages,
+    ).toBeUndefined();
+  });
+
+  it('leaves pages out when the detailed report brought nothing', async () => {
+    const connection = await connect();
+    await reportOn(connection.id, appId);
+
+    const report = await funnel(`/apps/${appId}/funnel`);
+
+    expect(report).not.toHaveProperty('pages');
+  });
 });

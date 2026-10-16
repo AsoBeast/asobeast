@@ -15,7 +15,13 @@ export const DISCOVERY_REQUIRED_COLUMNS = [
   'Unique Counts',
 ] as const;
 
-type Column = (typeof DISCOVERY_REQUIRED_COLUMNS)[number];
+const PAGE_TITLE_COLUMN = 'Page Title';
+const NO_PAGE_TITLE = 'no page';
+
+export const DETAILED_REQUIRED_COLUMNS = [
+  ...DISCOVERY_REQUIRED_COLUMNS,
+  PAGE_TITLE_COLUMN,
+] as const;
 
 export interface FunnelKey {
   date: string;
@@ -34,6 +40,15 @@ export interface FunnelCounters {
 }
 
 export type FunnelRow = FunnelKey & FunnelCounters & { processingDate: string };
+
+export interface PageFunnelKey {
+  date: string;
+  territory: string;
+  pageTitle: string;
+}
+
+export type PageFunnelRow = PageFunnelKey &
+  FunnelCounters & { processingDate: string };
 
 export class DiscoveryHeaderError extends Error {
   constructor(missing: string[]) {
@@ -124,18 +139,17 @@ async function* linesOf(gzip: Buffer): AsyncGenerator<string> {
   if (rest.length > 0) yield rest;
 }
 
-function columnsOf(header: string): Map<Column, number> {
+function columnsOf(
+  header: string,
+  required: readonly string[],
+): Map<string, number> {
   const names = header
     .replace(/^\uFEFF/, '')
     .split('\t')
     .map((name) => name.trim());
-  const missing = DISCOVERY_REQUIRED_COLUMNS.filter(
-    (column) => !names.includes(column),
-  );
+  const missing = required.filter((column) => !names.includes(column));
   if (missing.length > 0) throw new DiscoveryHeaderError(missing);
-  return new Map(
-    DISCOVERY_REQUIRED_COLUMNS.map((column) => [column, names.indexOf(column)]),
-  );
+  return new Map(required.map((column) => [column, names.indexOf(column)]));
 }
 
 function counterOf(
@@ -148,38 +162,75 @@ function counterOf(
     : COUNTERS[name];
 }
 
-export async function pivotDiscoveryReport(
+type Cell = (column: string) => string;
+
+async function pivot<K extends { date: string }>(
   gzip: Buffer,
   processingDate: string,
-): Promise<FunnelRow[]> {
+  required: readonly string[],
+  keyOf: (cell: Cell, date: string) => K | null,
+): Promise<(K & FunnelCounters & { processingDate: string })[]> {
   if (gzip.length === 0) return [];
-  const rows = new Map<string, FunnelRow>();
-  let columns: Map<Column, number> | null = null;
+  const rows = new Map<
+    string,
+    K & FunnelCounters & { processingDate: string }
+  >();
+  let columns: Map<string, number> | null = null;
   for await (const raw of linesOf(gzip)) {
     const line = raw.replace(/\r$/, '');
     if (line.trim().length === 0) continue;
     if (!columns) {
-      columns = columnsOf(line);
+      columns = columnsOf(line, required);
       continue;
     }
     const cells = line.split('\t');
-    const cell = (column: Column): string => cells[columns!.get(column)!] ?? '';
+    const index = columns;
+    const cell: Cell = (column) => cells[index.get(column) ?? -1] ?? '';
     const counter = counterOf(cell('Event'), cell('Engagement Type'));
     const date = dateOf(cell('Date'));
     const counts = countOf(cell('Counts'));
     const uniques = countOf(cell('Unique Counts'));
     if (!counter || !date || counts === null || uniques === null) continue;
-    const key: FunnelKey = {
-      date,
-      territory: cell('Territory').trim(),
-      sourceType: sourceTypeOf(cell('Source Type')),
-      pageType: pageTypeOf(cell('Page Type')),
-    };
-    const id = `${key.date}|${key.territory}|${key.sourceType}|${key.pageType}`;
+    const key = keyOf(cell, date);
+    if (!key) continue;
+    const id = Object.values(key).join('|');
     const row = rows.get(id) ?? { ...key, ...emptyCounters(), processingDate };
     row[counter[0]] += counts;
     row[counter[1]] += uniques;
     rows.set(id, row);
   }
   return [...rows.values()];
+}
+
+export function pivotDiscoveryReport(
+  gzip: Buffer,
+  processingDate: string,
+): Promise<FunnelRow[]> {
+  return pivot(
+    gzip,
+    processingDate,
+    DISCOVERY_REQUIRED_COLUMNS,
+    (cell, date) => ({
+      date,
+      territory: cell('Territory').trim(),
+      sourceType: sourceTypeOf(cell('Source Type')),
+      pageType: pageTypeOf(cell('Page Type')),
+    }),
+  );
+}
+
+export function pivotDetailedReport(
+  gzip: Buffer,
+  processingDate: string,
+): Promise<PageFunnelRow[]> {
+  return pivot(
+    gzip,
+    processingDate,
+    DETAILED_REQUIRED_COLUMNS,
+    (cell, date) => {
+      const pageTitle = cell(PAGE_TITLE_COLUMN).trim();
+      if (!pageTitle || normalized(pageTitle) === NO_PAGE_TITLE) return null;
+      return { date, territory: cell('Territory').trim(), pageTitle };
+    },
+  );
 }

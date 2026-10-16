@@ -307,6 +307,18 @@ describe('Workspace deletion (e2e)', () => {
         processingDate: new Date('2026-10-01T00:00:00.000Z'),
       },
     });
+    await prisma.storeFunnelPageDay.create({
+      data: {
+        workspaceId,
+        appId: owned.id,
+        date: new Date('2026-09-30T00:00:00.000Z'),
+        territory: 'United States',
+        country: 'us',
+        pageTitle: 'Summer sale',
+        uniqueImpressions: 10,
+        processingDate: new Date('2026-10-01T00:00:00.000Z'),
+      },
+    });
     const webhook = await prisma.webhook.create({
       data: {
         workspaceId,
@@ -418,6 +430,7 @@ describe('Workspace deletion (e2e)', () => {
       storeReportRequest,
       storeReportInstance,
       storeFunnelDay,
+      storeFunnelPageDay,
       webhook,
       emailAlert,
       alertDelivery,
@@ -455,6 +468,7 @@ describe('Workspace deletion (e2e)', () => {
       prisma.storeReportRequest.count({ where: { appId: target.appId } }),
       prisma.storeReportInstance.count({ where: { appId: target.appId } }),
       prisma.storeFunnelDay.count({ where: { appId: target.appId } }),
+      prisma.storeFunnelPageDay.count({ where: { appId: target.appId } }),
       prisma.webhook.count({ where: { id: target.webhookId } }),
       prisma.emailAlert.count({ where: { id: target.emailAlertId } }),
       prisma.alertDelivery.count({ where: { id: target.deliveryId } }),
@@ -490,6 +504,7 @@ describe('Workspace deletion (e2e)', () => {
       StoreReportRequest: storeReportRequest,
       StoreReportInstance: storeReportInstance,
       StoreFunnelDay: storeFunnelDay,
+      StoreFunnelPageDay: storeFunnelPageDay,
       Webhook: webhook,
       EmailAlert: emailAlert,
       AlertDelivery: alertDelivery,

@@ -10,10 +10,17 @@ import type { SecretBox } from '../common/crypto/secret-box';
 import { PrismaService } from '../prisma/prisma.service';
 import { SECRET_BOX } from './secret-box.provider';
 import {
+  completeThrough,
   FUNNEL_LOOKBACK_DAYS,
+  FUNNEL_PAGES_DAYS,
+  funnelPages,
   measureStoreFunnel,
+  shiftDate,
   type FunnelDayRow,
+  type PageDayRow,
 } from './store-funnel';
+
+const dateOf = (key: string): Date => new Date(`${key}T00:00:00.000Z`);
 
 export interface StoreFunnelQuery {
   country?: string;
@@ -67,9 +74,10 @@ export class StoreFunnelService {
     }
     const today = startOfUtcDay(now);
     const from = addDays(today, 1 - Math.max(days, FUNNEL_LOOKBACK_DAYS));
-    const [rows, range] = await Promise.all([
+    const [rows, range, pageRows] = await Promise.all([
       this.rows(appId, from, country),
       this.range(appId),
+      this.pageRows(appId, today, country),
     ]);
     return {
       ...empty,
@@ -82,6 +90,9 @@ export class StoreFunnelService {
         store: app.store,
         ...range,
       }),
+      ...(pageRows.length > 0
+        ? { pages: funnelPages(pageRows, app.store) }
+        : {}),
     };
   }
 
@@ -107,6 +118,35 @@ export class StoreFunnelService {
       gets: row._sum.gets ?? 0,
       uniqueGets: row._sum.uniqueGets ?? 0,
     }));
+  }
+
+  private async pageRows(
+    appId: string,
+    today: Date,
+    country?: string,
+  ): Promise<PageDayRow[]> {
+    const to = completeThrough(today);
+    const rows = await this.prisma.storeFunnelPageDay.findMany({
+      where: {
+        appId,
+        date: {
+          gte: dateOf(shiftDate(to, 1 - FUNNEL_PAGES_DAYS)),
+          lte: dateOf(to),
+        },
+        ...(country ? { country } : {}),
+      },
+      select: {
+        date: true,
+        pageTitle: true,
+        impressions: true,
+        uniqueImpressions: true,
+        pageViews: true,
+        uniquePageViews: true,
+        gets: true,
+        uniqueGets: true,
+      },
+    });
+    return rows.map((row) => ({ ...row, date: toDateKey(row.date) }));
   }
 
   async range(appId: string): Promise<FunnelRange> {

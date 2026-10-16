@@ -29,7 +29,9 @@ const instance = (id: string, processingDate: string): AscInstance => ({
 
 function build(status: OpenedConnection['status'] = 'active') {
   const api = {
-    discoveryReport: jest.fn().mockResolvedValue({ id: 'report' }),
+    discoveryReport: jest.fn((_remoteId: string, variant: string) =>
+      Promise.resolve(variant === 'standard' ? { id: 'report' } : null),
+    ),
     dailyInstances: jest.fn((reportId: string) =>
       Promise.resolve(
         reportId === 'snapshot-report'
@@ -71,6 +73,8 @@ function build(status: OpenedConnection['status'] = 'active') {
           remoteId: 'remote-snapshot',
           reportId: 'snapshot-report',
           lastProcessingDate: null,
+          detailedReportId: null,
+          detailedLastProcessingDate: null,
         },
         {
           id: 'req_ongoing',
@@ -79,6 +83,8 @@ function build(status: OpenedConnection['status'] = 'active') {
           remoteId: 'remote-ongoing',
           reportId: null,
           lastProcessingDate: new Date('2026-09-01T00:00:00.000Z'),
+          detailedReportId: null,
+          detailedLastProcessingDate: null,
         },
       ]),
       update: jest.fn().mockResolvedValue({}),
@@ -136,7 +142,7 @@ describe('StoreReportSyncService', () => {
 
   it('waits while no discovery report exists yet', async () => {
     const { service, api, applier } = build();
-    api.discoveryReport.mockResolvedValue(null);
+    api.discoveryReport.mockImplementation(() => Promise.resolve(null));
 
     await service.run('APP_STORE');
 
@@ -280,5 +286,52 @@ describe('StoreReportSyncService', () => {
 
     await expect(service.run('APP_STORE')).rejects.toThrow('database down');
     expect(connections.markSynced).not.toHaveBeenCalled();
+  });
+
+  it('asks for the detailed report beside the standard one and applies its instances as page rows', async () => {
+    const { service, api, applier, prisma } = build();
+    api.discoveryReport.mockImplementation(
+      (_remoteId: string, variant: string) =>
+        Promise.resolve({
+          id: variant === 'detailed' ? 'detailed-report' : 'report',
+        }),
+    );
+    api.dailyInstances.mockImplementation((reportId: string) =>
+      Promise.resolve(
+        reportId === 'detailed-report' ? [instance('d1', '2026-09-04')] : [],
+      ),
+    );
+
+    await service.run('APP_STORE');
+
+    expect(api.discoveryReport).toHaveBeenCalledWith(
+      'remote-ongoing',
+      'detailed',
+    );
+    expect(prisma.storeReportRequest.update).toHaveBeenCalledWith({
+      where: { id: 'req_ongoing' },
+      data: { detailedReportId: 'detailed-report' },
+    });
+    const variants = applier.apply.mock.calls.map(
+      ([, item]: [unknown, { variant: string }]) => item.variant,
+    );
+    expect(variants).toEqual(['detailed', 'detailed']);
+  });
+
+  it('ignores a detailed report the key may not read', async () => {
+    const { service, api, applier, connections } = build();
+    api.discoveryReport.mockImplementation(
+      (_remoteId: string, variant: string) =>
+        variant === 'detailed'
+          ? Promise.reject(
+              new AscRejectedKeyError('no', 403, 'FORBIDDEN_ERROR'),
+            )
+          : Promise.resolve({ id: 'report' }),
+    );
+
+    await expect(service.run('APP_STORE')).resolves.not.toBeNull();
+
+    expect(applier.apply).toHaveBeenCalled();
+    expect(connections.markRejected).not.toHaveBeenCalled();
   });
 });

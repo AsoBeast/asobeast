@@ -306,6 +306,7 @@ describe('Store report sync (e2e)', () => {
       await harness.app.get(StoreReportApplier).apply(connection!.api, {
         requestId: request.id,
         appId,
+        variant: 'standard',
         instance: {
           id: 'old',
           granularity: 'DAILY',
@@ -375,5 +376,74 @@ describe('Store report sync (e2e)', () => {
         OTHER_WORKSPACE,
       ),
     ).resolves.toBe(0);
+  });
+
+  it('reads the detailed report beside the standard one into product page rows', async () => {
+    scriptApple();
+    const detailed = gzipSync(
+      readFileSync(
+        join(
+          __dirname,
+          '..',
+          'src',
+          'store-connect',
+          'fixtures',
+          'asc',
+          'discovery-detailed.tsv',
+        ),
+      ),
+    );
+    harness.asc
+      .on(
+        'GET',
+        /\/analyticsReportRequests\/ongoing\/reports/,
+        answer({
+          data: [
+            ...report('ongoing').data,
+            {
+              type: 'analyticsReports',
+              id: 'ongoing-detailed',
+              attributes: {
+                name: 'App Store Discovery and Engagement Detailed',
+                category: 'APP_STORE_ENGAGEMENT',
+              },
+            },
+          ],
+        }),
+      )
+      .on(
+        'GET',
+        /\/analyticsReports\/ongoing-detailed\/instances/,
+        answer(instances(['d1', '2026-09-12'])),
+      )
+      .on(
+        'GET',
+        /\/analyticsReportInstances\/d1\/segments/,
+        answer(segmentOf('d1', detailed)),
+      )
+      .on('GET', /d1\.csv\.gz$/, bytes(detailed));
+
+    const summary = await run();
+
+    expect(summary).toMatchObject({ instances: 2 });
+    const pages = await harness.prisma.storeFunnelPageDay.findMany({
+      where: { appId },
+      orderBy: { pageTitle: 'asc' },
+    });
+    expect(
+      pages.map((page) => [page.pageTitle, page.uniqueImpressions, page.gets]),
+    ).toEqual([
+      ['Summer sale', 350, 7],
+      ['default product page', 950, 40],
+    ]);
+    const request = await harness.prisma.storeReportRequest.findFirstOrThrow({
+      where: { accessType: 'ONGOING' },
+    });
+    expect(request).toMatchObject({
+      reportId: 'ongoing-standard',
+      detailedReportId: 'ongoing-detailed',
+      detailedLastProcessingDate: new Date('2026-09-12T00:00:00.000Z'),
+    });
+    await expect(funnelRows()).resolves.toHaveLength(7);
   });
 });

@@ -61,6 +61,7 @@ function build(checksums: [string, string]) {
   const pending = {
     requestId: 'req_1',
     appId: 'app_1',
+    variant: 'standard' as const,
     instance: {
       id: 'i1',
       granularity: 'DAILY' as const,
@@ -143,5 +144,32 @@ describe('StoreReportApplier', () => {
       applier.apply(api as unknown as AscAnalyticsApi, pending),
     ).rejects.toThrow('deadlock');
     expect(tx.storeReportRequest.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('writes a detailed instance into page rows and advances its own processing date', async () => {
+    const detailed = gzipSync(
+      Buffer.from(
+        'Date\tApp Apple Identifier\tEvent\tPage Type\tSource Type\tEngagement Type\tTerritory\tPage Title\tCounts\tUnique Counts\n2026-09-10\t1\tImpression\tProduct page\tApp Store search\t\tUnited States\tSummer sale\t10\t8\n',
+      ),
+    );
+    const { applier, api, tx, pending } = build([md5(first), md5(second)]);
+    api.segments.mockResolvedValue([segment('d', detailed, md5(detailed))]);
+    api.download.mockResolvedValue(detailed);
+
+    const applied = await applier.apply(api as unknown as AscAnalyticsApi, {
+      ...pending,
+      variant: 'detailed',
+    });
+
+    expect(applied.rows).toBe(1);
+    const [statement] = tx.$executeRaw.mock.calls[0] as [{ sql: string }];
+    expect(statement.sql).toContain('"StoreFunnelPageDay"');
+    expect(tx.storeReportRequest.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: {
+          detailedLastProcessingDate: new Date('2026-09-12T00:00:00.000Z'),
+        },
+      }),
+    );
   });
 });

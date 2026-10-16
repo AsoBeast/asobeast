@@ -1,7 +1,9 @@
 import {
   completeThrough,
+  funnelPages,
   measureStoreFunnel,
   type FunnelDayRow,
+  type PageDayRow,
 } from './store-funnel';
 
 const TODAY = new Date('2026-10-16T12:00:00.000Z');
@@ -329,5 +331,56 @@ describe('measureStoreFunnel windows', () => {
     expect(windows.find((window) => window.days === 28)?.status).toBe(
       'measured',
     );
+  });
+});
+
+describe('funnelPages', () => {
+  const page = (
+    pageTitle: string,
+    uniqueImpressions: number,
+    gets: number,
+  ): PageDayRow => ({
+    date: '2026-10-10',
+    pageTitle,
+    impressions: uniqueImpressions,
+    uniqueImpressions,
+    pageViews: 50,
+    uniquePageViews: 50,
+    gets,
+    uniqueGets: gets,
+  });
+
+  it('puts the default page first, then pages by unique impressions, with the ratio to the default', () => {
+    const pages = funnelPages(
+      [
+        page('Summer sale', 200, 4),
+        page('default product page', 1000, 40),
+        page('Winter deal', 500, 30),
+        page('Summer sale', 100, 2),
+      ],
+      'APP_STORE',
+    );
+
+    expect(pages.map((each) => each.title)).toEqual([
+      'default product page',
+      'Winter deal',
+      'Summer sale',
+    ]);
+    expect(pages[0]).toMatchObject({ defaultConversion: 0.04, ratio: 1 });
+    expect(pages[1]).toMatchObject({ ratio: 1.5 });
+    expect(pages[2]).toMatchObject({
+      counts: { uniqueImpressions: 300, gets: 6, conversion: 0.02 },
+      ratio: 0.5,
+    });
+  });
+
+  it('answers a null ratio without a default page conversion', () => {
+    const pages = funnelPages([page('Summer sale', 200, 4)], 'APP_STORE');
+
+    expect(pages[0]).toMatchObject({ defaultConversion: null, ratio: null });
+  });
+
+  it('answers no pages without rows', () => {
+    expect(funnelPages([], 'APP_STORE')).toEqual([]);
   });
 });

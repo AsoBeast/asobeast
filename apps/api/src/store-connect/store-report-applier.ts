@@ -1,16 +1,59 @@
 import { createHash } from 'node:crypto';
 import { Injectable, Logger } from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
-import type { AscAnalyticsApi, AscInstance } from './asc-analytics-api';
-import { pivotDiscoveryReport } from './discovery-report';
-import { funnelUpserts, unresolvedTerritories } from './store-funnel-rows';
+import type {
+  AscAnalyticsApi,
+  AscInstance,
+  DiscoveryVariant,
+} from './asc-analytics-api';
+import { pivotDetailedReport, pivotDiscoveryReport } from './discovery-report';
+import {
+  funnelUpserts,
+  pageUpserts,
+  unresolvedTerritories,
+} from './store-funnel-rows';
 
 export interface PendingInstance {
   requestId: string;
   appId: string;
+  variant: DiscoveryVariant;
   instance: AscInstance;
 }
+
+interface Pivoted {
+  statements: (workspaceId: string) => Prisma.Sql[];
+  rows: number;
+  unresolved: string[];
+}
+
+async function pivoted(
+  variant: DiscoveryVariant,
+  raw: Buffer,
+  processingDate: string,
+  appId: string,
+): Promise<Pivoted> {
+  if (variant === 'detailed') {
+    const rows = await pivotDetailedReport(raw, processingDate);
+    return {
+      statements: (workspaceId) => pageUpserts(workspaceId, appId, rows),
+      rows: rows.length,
+      unresolved: unresolvedTerritories(rows),
+    };
+  }
+  const rows = await pivotDiscoveryReport(raw, processingDate);
+  return {
+    statements: (workspaceId) => funnelUpserts(workspaceId, appId, rows),
+    rows: rows.length,
+    unresolved: unresolvedTerritories(rows),
+  };
+}
+
+const PROCESSED_COLUMN = {
+  standard: 'lastProcessingDate',
+  detailed: 'detailedLastProcessingDate',
+} as const satisfies Record<DiscoveryVariant, string>;
 
 export interface AppliedInstance {
   rows: number;
@@ -30,7 +73,7 @@ export class StoreReportApplier {
 
   async apply(
     api: AscAnalyticsApi,
-    { requestId, appId, instance }: PendingInstance,
+    { requestId, appId, variant, instance }: PendingInstance,
   ): Promise<AppliedInstance> {
     const segments = await api.segments(instance.id);
     const parts: Buffer[] = [];
@@ -45,7 +88,7 @@ export class StoreReportApplier {
       parts.push(bytes);
     }
     const raw = Buffer.concat(parts);
-    const rows = await pivotDiscoveryReport(raw, instance.processingDate);
+    const pivot = await pivoted(variant, raw, instance.processingDate, appId);
     const workspaceId = this.workspace.require('a report instance');
     const processingDate = dateValue(instance.processingDate);
     await this.prisma.withTransaction(async (tx) => {
@@ -69,24 +112,22 @@ export class StoreReportApplier {
           fetchedAt: new Date(),
         },
       });
-      for (const statement of funnelUpserts(workspaceId, appId, rows)) {
+      for (const statement of pivot.statements(workspaceId)) {
         await tx.$executeRaw(statement);
       }
+      const column = PROCESSED_COLUMN[variant];
       await tx.storeReportRequest.updateMany({
         where: {
           id: requestId,
-          OR: [
-            { lastProcessingDate: null },
-            { lastProcessingDate: { lt: processingDate } },
-          ],
+          OR: [{ [column]: null }, { [column]: { lt: processingDate } }],
         },
-        data: { lastProcessingDate: processingDate },
+        data: { [column]: processingDate },
       });
       await tx.storeReportInstance.update({
         where: { id: stored.id },
         data: { appliedAt: new Date() },
       });
     });
-    return { rows: rows.length, unresolved: unresolvedTerritories(rows) };
+    return { rows: pivot.rows, unresolved: pivot.unresolved };
   }
 }
