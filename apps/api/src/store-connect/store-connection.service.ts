@@ -8,7 +8,7 @@ import {
 import type {
   Store,
   StoreConnectionItem,
-  StoreConnectionRequest,
+  AppStoreConnectionRequest,
   StoreConnectionState,
   StoreConnectionStatus,
   StoreConnectionSyncResult,
@@ -73,7 +73,7 @@ export class StoreConnectionService {
 
   async connect(
     store: Store,
-    request: StoreConnectionRequest,
+    request: AppStoreConnectionRequest,
     userId: string,
   ): Promise<StoreConnectionItem> {
     const box = this.requireBox();
