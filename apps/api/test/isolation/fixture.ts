@@ -438,6 +438,51 @@ async function seedWorkspace(
       status: 'counted',
     },
   });
+  const connection = await db.storeConnection.create({
+    data: {
+      workspaceId: id,
+      store: Store.APP_STORE,
+      issuerId: `${id}-issuer`,
+      keyId: 'ABCDEFGHIJ',
+      keyFingerprint: '0123456789abcdef',
+      credentialCiphertext: `v1.${id}.sealed`,
+    },
+  });
+  const reportRequest = await db.storeReportRequest.create({
+    data: {
+      workspaceId: id,
+      connectionId: connection.id,
+      appId: apple.id,
+      accessType: 'ONGOING',
+      remoteId: `${id}-request`,
+    },
+  });
+  await db.storeReportInstance.create({
+    data: {
+      workspaceId: id,
+      requestId: reportRequest.id,
+      appId: apple.id,
+      remoteId: `${id}-instance`,
+      granularity: 'DAILY',
+      processingDate: utcDay(0),
+      raw: Buffer.from(''),
+      sizeInBytes: 0,
+      segments: 1,
+    },
+  });
+  await db.storeFunnelDay.create({
+    data: {
+      workspaceId: id,
+      appId: apple.id,
+      date: utcDay(1),
+      territory: 'United States',
+      country: 'us',
+      sourceType: 'search',
+      pageType: 'productPage',
+      impressions: id === 'ws_iso_a' ? 100 : 900,
+      processingDate: utcDay(0),
+    },
+  });
 
   return {
     id,

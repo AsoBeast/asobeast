@@ -38,6 +38,7 @@ interface Seeded {
   reviewId: string;
   changeId: string;
   aiCallId: string;
+  storeConnectionId: string;
 }
 
 describe('Workspace deletion (e2e)', () => {
@@ -261,6 +262,51 @@ describe('Workspace deletion (e2e)', () => {
         status: 'counted',
       },
     });
+    const storeConnection = await prisma.storeConnection.create({
+      data: {
+        workspaceId,
+        store: Store.APP_STORE,
+        issuerId: `${workspaceId}-issuer`,
+        keyId: 'ABCDEFGHIJ',
+        keyFingerprint: '0123456789abcdef',
+        credentialCiphertext: `v1.${workspaceId}.sealed`,
+        createdByUserId: user.id,
+      },
+    });
+    const reportRequest = await prisma.storeReportRequest.create({
+      data: {
+        workspaceId,
+        connectionId: storeConnection.id,
+        appId: owned.id,
+        accessType: 'ONGOING',
+      },
+    });
+    await prisma.storeReportInstance.create({
+      data: {
+        workspaceId,
+        requestId: reportRequest.id,
+        appId: owned.id,
+        remoteId: `${workspaceId}-instance`,
+        granularity: 'DAILY',
+        processingDate: new Date('2026-10-01T00:00:00.000Z'),
+        raw: Buffer.from('raw'),
+        sizeInBytes: 3,
+        segments: 1,
+      },
+    });
+    await prisma.storeFunnelDay.create({
+      data: {
+        workspaceId,
+        appId: owned.id,
+        date: new Date('2026-09-30T00:00:00.000Z'),
+        territory: 'United States',
+        country: 'us',
+        sourceType: 'search',
+        pageType: 'productPage',
+        impressions: 10,
+        processingDate: new Date('2026-10-01T00:00:00.000Z'),
+      },
+    });
     const webhook = await prisma.webhook.create({
       data: {
         workspaceId,
@@ -338,6 +384,7 @@ describe('Workspace deletion (e2e)', () => {
       reviewId: review.id,
       changeId: change.id,
       aiCallId: aiCall.id,
+      storeConnectionId: storeConnection.id,
     };
   }
 
@@ -367,6 +414,10 @@ describe('Workspace deletion (e2e)', () => {
       actionItem,
       actionEvent,
       aiCall,
+      storeConnection,
+      storeReportRequest,
+      storeReportInstance,
+      storeFunnelDay,
       webhook,
       emailAlert,
       alertDelivery,
@@ -400,6 +451,10 @@ describe('Workspace deletion (e2e)', () => {
       prisma.actionItem.count({ where: { id: target.actionId } }),
       prisma.actionEvent.count({ where: { actionId: target.actionId } }),
       prisma.aiCall.count({ where: { id: target.aiCallId } }),
+      prisma.storeConnection.count({ where: { id: target.storeConnectionId } }),
+      prisma.storeReportRequest.count({ where: { appId: target.appId } }),
+      prisma.storeReportInstance.count({ where: { appId: target.appId } }),
+      prisma.storeFunnelDay.count({ where: { appId: target.appId } }),
       prisma.webhook.count({ where: { id: target.webhookId } }),
       prisma.emailAlert.count({ where: { id: target.emailAlertId } }),
       prisma.alertDelivery.count({ where: { id: target.deliveryId } }),
@@ -431,6 +486,10 @@ describe('Workspace deletion (e2e)', () => {
       ActionItem: actionItem,
       ActionEvent: actionEvent,
       AiCall: aiCall,
+      StoreConnection: storeConnection,
+      StoreReportRequest: storeReportRequest,
+      StoreReportInstance: storeReportInstance,
+      StoreFunnelDay: storeFunnelDay,
       Webhook: webhook,
       EmailAlert: emailAlert,
       AlertDelivery: alertDelivery,
@@ -524,6 +583,12 @@ describe('Workspace deletion (e2e)', () => {
     ).resolves.toBe(2);
     await expect(
       prisma.aiCall.count({ where: { workspaceId: NEIGHBOUR } }),
+    ).resolves.toBe(1);
+    await expect(
+      prisma.storeConnection.count({ where: { workspaceId: NEIGHBOUR } }),
+    ).resolves.toBe(1);
+    await expect(
+      prisma.storeFunnelDay.count({ where: { workspaceId: NEIGHBOUR } }),
     ).resolves.toBe(1);
     await expect(
       prisma.appLocalization.count({ where: { workspaceId: NEIGHBOUR } }),
