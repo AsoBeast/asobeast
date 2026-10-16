@@ -24,6 +24,11 @@ const dayMonthFormatter = new Intl.DateTimeFormat("en-US", {
   month: "short",
   day: "numeric",
 });
+const monthFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: "UTC",
+  month: "long",
+  year: "numeric",
+});
 const priceFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
@@ -96,6 +101,10 @@ export function formatDate(value: string | null): string {
 
 export function formatDayMonth(value: string): string {
   return dayMonthFormatter.format(new Date(value));
+}
+
+export function formatMonth(value: string): string {
+  return monthFormatter.format(new Date(value));
 }
 
 function formatClock(instant: Date): string {

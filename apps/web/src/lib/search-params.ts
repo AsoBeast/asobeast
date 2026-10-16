@@ -52,6 +52,7 @@ export const KEYWORD_TABLE_SORTS = [
   "keyword",
   "source",
   "delta7d",
+  "acquisitions",
 ] as const;
 
 export const keywordSortParser =

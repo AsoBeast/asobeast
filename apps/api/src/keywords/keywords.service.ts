@@ -6,6 +6,7 @@ import {
   KeywordCountrySummary,
   KeywordSort,
   KeywordUpdateRequest,
+  normalizeText,
   TrackedKeywordItem,
 } from '@asobeast/shared';
 import { QuotaService } from '../auth/quota.service';
@@ -26,6 +27,7 @@ import { listingFacts } from './listing-facts';
 import { seedCandidates } from './listing-seed';
 import { listingTexts } from './listing-texts';
 import { MarketListingRequests } from './market-listing.requests';
+import { playAcquisitions } from './play-acquisitions';
 import { ensureApp, normalizeKeyword, trackedArgs } from './keywords.support';
 
 @Injectable()
@@ -48,7 +50,7 @@ export class KeywordsService {
       where: { appId, ...(country ? { keyword: { is: { country } } } : {}) },
       ...trackedArgs(appId),
     });
-    const [facts, volatility] = await Promise.all([
+    const [facts, volatility, acquisitions] = await Promise.all([
       listingFacts(this.prisma, app, [
         ...new Set(rows.map((row) => row.keyword.country)),
       ]),
@@ -56,16 +58,29 @@ export class KeywordsService {
         this.prisma,
         rows.map((row) => row.keywordId),
       ),
+      app.store === Store.GOOGLE_PLAY
+        ? playAcquisitions(
+            this.prisma,
+            appId,
+            rows.map((row) => row.keyword.text),
+          )
+        : null,
     ]);
     return sortTracked(
       classifyBuckets(
-        rows.map((row) =>
-          toTrackedKeywordItem(
+        rows.map((row) => ({
+          ...toTrackedKeywordItem(
             row,
             facts,
             volatility.get(row.keywordId) ?? null,
           ),
-        ),
+          ...(acquisitions
+            ? {
+                playAcquisitions:
+                  acquisitions.get(normalizeText(row.keyword.text)) ?? null,
+              }
+            : {}),
+        })),
       ),
       sort,
     );

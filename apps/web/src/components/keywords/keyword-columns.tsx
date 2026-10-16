@@ -5,6 +5,7 @@ import { ListOrdered } from "lucide-react";
 import type {
   KeywordBucket,
   KeywordSource,
+  Store,
   TrackedKeywordItem,
 } from "@asobeast/shared";
 import type { KeywordTableFeatures } from "./keyword-table-features";
@@ -23,6 +24,7 @@ import { KeywordRowActions } from "./KeywordRowActions";
 import {
   DerivedScoreCell,
   NoteButton,
+  PlayAcquisitionsCell,
   PositionCell,
   ScoreCell,
   TagBadges,
@@ -65,15 +67,18 @@ function gradeFilter(
 
 export function keywordColumns({
   appId,
+  store,
   onOpenSerp,
 }: {
   appId: string;
+  store: Store;
   onOpenSerp: (keywordId: string) => void;
 }) {
   return columnHelper.columns([
     ...identityColumns(),
     positionColumn(),
     ...scoreColumns(),
+    ...(store === "GOOGLE_PLAY" ? [acquisitionsColumn()] : []),
     deltaColumn(),
     volatilityColumn(),
     actionsColumn({ appId, onOpenSerp }),
@@ -272,6 +277,24 @@ function scoreColumns() {
       ),
     }),
   ];
+}
+
+function acquisitionsColumn() {
+  return columnHelper.accessor(
+    (row) => nullsLast(row.playAcquisitions?.acquisitions ?? null),
+    {
+      id: "acquisitions",
+      meta: { label: "Play installs" },
+      ...SORTABLE,
+      sortDescFirst: true,
+      header: ({ column }) => (
+        <SortableHeader column={column} label="Play installs" />
+      ),
+      cell: ({ row }) => (
+        <PlayAcquisitionsCell value={row.original.playAcquisitions ?? null} />
+      ),
+    },
+  );
 }
 
 function volatilityColumn() {

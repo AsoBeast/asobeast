@@ -52,13 +52,14 @@ export function KeywordsTable({
     () =>
       keywordColumns({
         appId: id,
+        store,
         onOpenSerp: (keywordId) => void setSerp(keywordId),
       }),
-    [id, setSerp],
+    [id, store, setSerp],
   );
 
   const { sorting, onSortingChange } = useUrlSorting(
-    { sort, dir },
+    { sort: columns.some((column) => column.id === sort) ? sort : null, dir },
     columns,
     (next) =>
       void setSortParams({
