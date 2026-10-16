@@ -433,17 +433,38 @@ test("a theme searches for its phrase and a second press clears it", async ({
 
   await crashes.click();
 
-  await expect(page).toHaveURL(/q=crashes/);
+  await expect(page).toHaveURL(/q=%22crashes%22/);
   await expect(crashes).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("article")).toHaveCount(1);
   await expect(
     page.getByRole("textbox", { name: "Search reviews" }),
-  ).toHaveValue("crashes");
+  ).toHaveValue('"crashes"');
 
   await crashes.click();
 
   await expect(page).not.toHaveURL(/q=/);
   await expect(page.getByRole("article")).toHaveCount(5);
+});
+
+test("a pressed theme lists as many reviews as its number counts", async ({
+  context,
+  page,
+}) => {
+  await seedCookies(context, { e2e_reviews: "update" });
+  await page.goto("/apps/app-1/reviews");
+  const update = page
+    .getByRole("region", { name: "What people mention" })
+    .getByRole("button", { name: /^update in/ });
+  const counted = Number(
+    await update.locator("span[aria-hidden]").textContent(),
+  );
+
+  await update.click();
+
+  await expect(update).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByText("The last update broke sync.")).toBeVisible();
+  await expect(page.getByRole("article")).toHaveCount(counted);
+  expect(counted).toBe(2);
 });
 
 test("the themes strip stays hidden when nothing is repeated", async ({
