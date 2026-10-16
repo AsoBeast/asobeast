@@ -208,7 +208,7 @@ describe('CategoryRanksService rankedCharts', () => {
     ]);
 
     for (const read of await service.buckets(['a1'])) {
-      await service.checkCategory({ ...read, workspaceId: 'ws' });
+      await service.checkCategory({ ...read, workspaceId: 'ws' }, true);
     }
     const written = upsert.mock.calls.map(
       ([args]: [{ create: { collection: string; genre: string } }]) =>
