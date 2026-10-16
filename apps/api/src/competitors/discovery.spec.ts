@@ -215,6 +215,27 @@ describe('aggregateDiscovery', () => {
       expect(item.iconUrl).toBe('https://icon/us.jpg');
     });
 
+    it('borrows the same icon whatever the order of equally new rows', () => {
+      const home = row({ country: 'us', date: D(1), iconUrl: null });
+      const de = row({
+        country: 'de',
+        date: D(4),
+        iconUrl: 'https://icon/de.jpg',
+      });
+      const gb = row({
+        country: 'gb',
+        date: D(4),
+        iconUrl: 'https://icon/gb.jpg',
+      });
+
+      expect(aggregateDiscovery([home, de, gb], 'us')[0].iconUrl).toBe(
+        'https://icon/de.jpg',
+      );
+      expect(aggregateDiscovery([home, gb, de], 'us')[0].iconUrl).toBe(
+        'https://icon/de.jpg',
+      );
+    });
+
     it('leaves the icon empty when no row has one', () => {
       const [item] = aggregateDiscovery(
         [row({ country: 'us' }), row({ country: 'de', date: D(5) })],

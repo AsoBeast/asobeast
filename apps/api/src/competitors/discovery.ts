@@ -25,6 +25,13 @@ interface DiscoveryGroup {
 const DISCOVERY_LIMIT = 20;
 const KEYWORD_SAMPLE = 5;
 
+function fresher(candidate: DiscoveryRow, current: DiscoveryRow): boolean {
+  if (candidate.date.getTime() !== current.date.getTime()) {
+    return candidate.date > current.date;
+  }
+  return candidate.country < current.country;
+}
+
 function outranks(
   candidate: DiscoveryRow,
   current: DiscoveryRow,
@@ -34,10 +41,7 @@ function outranks(
   if (candidateAtHome !== (current.country === homeCountry)) {
     return candidateAtHome;
   }
-  if (candidate.date.getTime() !== current.date.getTime()) {
-    return candidate.date > current.date;
-  }
-  return candidate.country < current.country;
+  return fresher(candidate, current);
 }
 
 const newGroup = (row: DiscoveryRow): DiscoveryGroup => ({
@@ -65,7 +69,7 @@ export function aggregateDiscovery(
     if (outranks(row, group.latest, homeCountry)) {
       group.latest = row;
     }
-    if (row.iconUrl && (!group.iconRow || row.date > group.iconRow.date)) {
+    if (row.iconUrl && (!group.iconRow || fresher(row, group.iconRow))) {
       group.iconRow = row;
     }
   }
