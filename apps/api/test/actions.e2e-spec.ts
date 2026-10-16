@@ -872,7 +872,7 @@ describe('ActionsController (e2e)', () => {
           store: Store.APP_STORE,
         },
       },
-      update: {},
+      update: { status: 'active' },
       create: {
         workspaceId: DEFAULT_WORKSPACE_ID,
         store: Store.APP_STORE,
@@ -884,7 +884,7 @@ describe('ActionsController (e2e)', () => {
     });
     await prisma.storeReportRequest.upsert({
       where: { appId_accessType: { appId, accessType: 'ONGOING' } },
-      update: {},
+      update: { connectionId: connection.id, state: 'requested' },
       create: {
         workspaceId: DEFAULT_WORKSPACE_ID,
         connectionId: connection.id,

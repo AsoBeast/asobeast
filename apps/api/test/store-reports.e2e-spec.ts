@@ -180,6 +180,7 @@ describe('Store report sync (e2e)', () => {
   });
 
   afterAll(async () => {
+    await harness.prisma.storeConnection.deleteMany({});
     await harness.prisma.workspace.deleteMany({
       where: { id: OTHER_WORKSPACE },
     });
