@@ -295,6 +295,7 @@ test("the hint goes once the reply is discarded and never shows without one", as
   page,
 }) => {
   await page.goto(`${REPLIES_PAGE}?reply=rep-3`);
+  await page.waitForLoadState("networkidle");
   const textbox = composer(page).getByRole("textbox", { name: "Reply text" });
   const hint = composer(page).getByText(
     /Emptying the field keeps the saved reply/,
@@ -304,6 +305,7 @@ test("the hint goes once the reply is discarded and never shows without one", as
   await expect(hint).toHaveCount(0);
 
   await page.goto(`${REPLIES_PAGE}?reply=rep-2`);
+  await page.waitForLoadState("networkidle");
   const saved = composer(page).getByRole("textbox", { name: "Reply text" });
   await saved.fill("");
   await expect(hint).toBeVisible();
