@@ -115,7 +115,10 @@ test("unmeasured windows and unanchored changes say why", async ({ page }) => {
   await expect(unanchored).toContainText(
     "No rank check just before this change",
   );
-  await expect(unanchored.getByRole("heading", { level: 4 })).toHaveCount(0);
+  await expect(unanchored.getByRole("heading", { level: 4 })).toHaveCount(1);
+  await expect(windowTile(page, UNANCHORED.changedOn, 7)).toContainText(
+    "Get taps300 → 270",
+  );
 });
 
 test("the timeline window drives the impact report", async ({ page }) => {
@@ -217,7 +220,7 @@ test("a measured window reads Get taps and conversion from the console", async (
   const tile = windowTile(page, OLDER.changedOn, 7);
   await expect(tile).toContainText("Get taps412 → 486");
   await expect(tile).toContainText("Conversion3.1% → 3.6%");
-  await expect(tile.getByLabel("up 18 percent in Get taps")).toBeVisible();
+  await expect(tile.getByLabel("up 18 percent in Get taps")).toHaveText("18%");
 });
 
 test("a window still filling says when Apple's numbers are final", async ({
@@ -242,8 +245,11 @@ test("the timeline marks the conversion change beside the day of a change", asyn
     timeline(page).getByRole("heading", { level: 2, name: /Conversion \+16%/ }),
   ).toContainText(formatDate(OLDER.changedOn));
   await expect(
+    timeline(page).getByRole("heading", { level: 2, name: /Conversion -11%/ }),
+  ).toContainText(formatDate(UNANCHORED.changedOn));
+  await expect(
     timeline(page).getByRole("heading", { level: 2, name: /Conversion/ }),
-  ).toHaveCount(1);
+  ).toHaveCount(2);
 });
 
 test("the timeline of a market listing shows no home conversion beside its days", async ({

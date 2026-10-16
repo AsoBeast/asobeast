@@ -1743,7 +1743,33 @@ export const APP_1_CHANGE_IMPACT: ChangeImpactReport = {
       fields: ["screenshots"],
       baselineDate: null,
       windows: [
-        openWindow("unmeasured", 70, 7),
+        {
+          ...openWindow("unmeasured", 70, 7),
+          funnel: {
+            status: "measured",
+            completeDays: 7,
+            before: {
+              impressions: 9000,
+              uniqueImpressions: 9000,
+              pageViews: 1500,
+              gets: 300,
+              conversion: 0.0333,
+            },
+            after: {
+              impressions: 9100,
+              uniqueImpressions: 9100,
+              pageViews: 1520,
+              gets: 270,
+              conversion: 0.0297,
+            },
+            change: {
+              impressions: 0.011,
+              pageViews: 0.013,
+              gets: -0.1,
+              conversion: -0.108,
+            },
+          },
+        },
         openWindow("unmeasured", 70, 14),
         openWindow("unmeasured", 70, 28),
       ],

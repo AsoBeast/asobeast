@@ -62,7 +62,7 @@ function MeasuredFacts({ impact }: { impact: ChangeImpactWindow }) {
   );
 }
 
-function FunnelFacts({ impact }: { impact: ChangeImpactWindow }) {
+export function FunnelFacts({ impact }: { impact: ChangeImpactWindow }) {
   const ranges = funnelRanges(impact.funnel);
   const note = funnelNote(impact.funnel, impact.days);
   if (!ranges && !note) return null;
@@ -80,6 +80,7 @@ function FunnelFacts({ impact }: { impact: ChangeImpactWindow }) {
                 value={gets === null ? null : Math.round(gets * 100)}
                 polarity="higher-is-better"
                 period="percent in Get taps"
+                unit="%"
               />
             </dd>
             <dd className="flex flex-wrap items-center gap-2">
