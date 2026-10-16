@@ -5,6 +5,7 @@ import { WorkspaceContext } from '../../common/tenancy/workspace-context';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { FunnelRow } from '../discovery-report';
 import { StoreConnectionService } from '../store-connection.service';
+import { PLAY_ALL_MARKETS } from '../store-funnel';
 import { funnelUpserts } from '../store-funnel-rows';
 import { bucketMissing, PLAY_REFUSED } from '../store-keys';
 import { emptySummary, type SyncSummary } from '../store-sync-summary';
@@ -114,6 +115,19 @@ function fileOutcome(error: unknown): FileOutcome | null {
     return 'failed';
   }
   return null;
+}
+
+const BREAKDOWN_ROWS = {
+  country: { sourceType: 'all', NOT: { territory: PLAY_ALL_MARKETS } },
+  traffic: { territory: PLAY_ALL_MARKETS },
+} as const satisfies Record<Breakdown, object>;
+
+function monthRange(month: string): { gte: Date; lt: Date } {
+  const start = dateValue(month);
+  return {
+    gte: start,
+    lt: new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 1)),
+  };
 }
 
 const remoteIdOf = (object: GcsObject): string =>
@@ -296,6 +310,9 @@ export class PlayReportSync {
           segments: 1,
         },
         update: { raw, sizeInBytes: raw.length },
+      });
+      await tx.storeFunnelDay.deleteMany({
+        where: { appId, date: monthRange(month), ...BREAKDOWN_ROWS[breakdown] },
       });
       for (const statement of funnelUpserts(workspaceId, appId, rows)) {
         await tx.$executeRaw(statement);

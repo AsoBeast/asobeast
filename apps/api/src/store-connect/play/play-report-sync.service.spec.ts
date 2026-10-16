@@ -61,6 +61,9 @@ function harness(objects: GcsObject[]) {
         return Promise.resolve({});
       }),
     },
+    storeFunnelDay: {
+      deleteMany: jest.fn(() => Promise.resolve({ count: 0 })),
+    },
     storeFunnelSearchTerm: {
       deleteMany: jest.fn(() => Promise.resolve({ count: 0 })),
       createMany: jest.fn(() => Promise.resolve({ count: 0 })),
@@ -202,6 +205,31 @@ describe('PlayReportSync', () => {
     expect(trafficValues).toEqual(
       expect.arrayContaining(['all', null, 'search', 'browse', 'referrer']),
     );
+  });
+
+  it("replaces the month's rows of the breakdown a newer file brings", async () => {
+    const { service, tx } = harness([
+      object('202609', 'country'),
+      object('202609', 'traffic_source'),
+    ]);
+
+    await service.run(NOW);
+
+    const month = {
+      gte: new Date('2026-09-01T00:00:00.000Z'),
+      lt: new Date('2026-10-01T00:00:00.000Z'),
+    };
+    expect(tx.storeFunnelDay.deleteMany).toHaveBeenCalledWith({
+      where: {
+        appId: 'app_play',
+        date: month,
+        sourceType: 'all',
+        NOT: { territory: 'all' },
+      },
+    });
+    expect(tx.storeFunnelDay.deleteMany).toHaveBeenCalledWith({
+      where: { appId: 'app_play', date: month, territory: 'all' },
+    });
   });
 
   it("replaces the month's search terms", async () => {
