@@ -1,29 +1,41 @@
 import { getQueueToken, WorkerHost } from '@nestjs/bullmq';
 import { INestApplication } from '@nestjs/common';
 import { DiscoveryService } from '@nestjs/core';
-import { Queue } from 'bullmq';
+import { Queue, Worker } from 'bullmq';
 import { QUEUES } from '../src/jobs/jobs.types';
 import { PipelineWorker } from '../src/jobs/pipeline.worker';
 
-export async function obliterateQueues(app: INestApplication): Promise<void> {
-  for (const name of Object.values(QUEUES)) {
-    const queue = app.get<Queue>(getQueueToken(name), { strict: false });
-    for (const parent of await queue.getJobs(['waiting-children'])) {
-      await parent.remove({ removeChildren: false });
-    }
-    await queue.obliterate({ force: true });
-  }
-}
-
-export async function closeWorkers(app: INestApplication): Promise<void> {
-  const hosts = app
+function workersOf(app: INestApplication): Worker[] {
+  return app
     .get(DiscoveryService, { strict: false })
     .getProviders()
     .map((wrapper): unknown => wrapper.instance)
     .filter(
       (instance): instance is WorkerHost => instance instanceof WorkerHost,
-    );
-  await Promise.all(hosts.map((host) => host.worker.close()));
+    )
+    .map((host) => host.worker);
+}
+
+export async function obliterateQueues(app: INestApplication): Promise<void> {
+  const running = workersOf(app).filter(
+    (worker) => !worker.closing && !worker.isPaused(),
+  );
+  try {
+    await Promise.all(running.map((worker) => worker.pause()));
+    for (const name of Object.values(QUEUES)) {
+      const queue = app.get<Queue>(getQueueToken(name), { strict: false });
+      for (const parent of await queue.getJobs(['waiting-children'])) {
+        await parent.remove({ removeChildren: false });
+      }
+      await queue.obliterate({ force: true });
+    }
+  } finally {
+    await Promise.all(running.map((worker) => worker.resume()));
+  }
+}
+
+export async function closeWorkers(app: INestApplication): Promise<void> {
+  await Promise.all(workersOf(app).map((worker) => worker.close()));
 }
 
 export async function settleBootRegistration(
