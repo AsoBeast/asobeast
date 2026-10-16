@@ -27,6 +27,14 @@ Each row keeps the title, developer and icon its storefront showed on that day, 
 
 Every filter lives in the page address, so a link to a chart on a day opens that chart on that day. On a phone, the country, category and comparison sit behind **Filters**.
 
+## Why does the App Store overall chart differ by kind?
+
+On the App Store the free overall chart holds no games, while the paid and grossing overall charts do. In a US capture of the top 100, the free chart holds none, the grossing chart about a third and the paid chart over half. asobeast stores exactly what Apple's chart feed answers for each kind, and that feed leaves games out of the free overall list only. Apple's own web charts can differ from the feed, so a position here may not match the one Apple shows.
+
+Read games in a games chart. Pick the **Games** category, or one of the game genres, and all three kinds list games. Google Play answers the same apps list for all three kinds, so this applies to the App Store only.
+
+The same rule shapes [category ranks](/guides/category-ranks): a free game has no position in the overall free chart, while the same game can hold a real position in the overall grossing chart.
+
 ## Where do captures come from?
 
 A chart is captured once a day, and one capture serves every workspace on the instance.
@@ -79,6 +87,7 @@ A refused capture or follow costs nothing. See [Rate limits](/api-reference/rate
 - **Only the first 25 rows show in a column.** A column lists the top 25. Open the table for the rest of the chart.
 - **An app you expected is missing.** It is outside the depth the store answers: 100 on the App Store, 200 on Google Play.
 - **A category is missing from the list.** The list follows the categories Apple and Google Play chart today. Kids is an age band on the App Store, not a chart.
+- **A game is missing from the free overall chart.** The App Store free overall chart holds no games. Open the Games category instead. See [Why does the App Store overall chart differ by kind?](#why-does-the-app-store-overall-chart-differ-by-kind).
 
 ## Related
 
