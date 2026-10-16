@@ -21,6 +21,7 @@ export interface LintContext {
 
 const UNDER_UTILIZED_RATIO = 0.7;
 const GENERIC_WORDS: ReadonlySet<string> = new Set(['app', 'apps', 'free']);
+const CATEGORY_WORD_TITLES = 2;
 const SPECIAL_CHARS = /[™®]/;
 const WEAK_HOOK = /^\s*welcome to\b/i;
 const CTA_PATTERN =
@@ -55,6 +56,29 @@ const contentTokens = (text: string): string[] =>
 
 const toSet = (words: readonly string[] | undefined): ReadonlySet<string> =>
   new Set((words ?? []).flatMap((word) => tokenize(word)));
+
+const competitorBrands = (context: LintContext): ReadonlySet<string> => {
+  const ownWords = new Set([
+    ...toSet(context.titleWords),
+    ...toSet(context.subtitleWords),
+    ...(context.trackedKeywords ?? []).map(normalizeText),
+    ...GENERIC_WORDS,
+  ]);
+  const titles = new Map<string, number>();
+  for (const name of context.competitorNames ?? []) {
+    for (const token of new Set(contentTokens(name))) {
+      titles.set(token, (titles.get(token) ?? 0) + 1);
+    }
+  }
+  return new Set(
+    [...titles]
+      .filter(
+        ([token, count]) =>
+          count < CATEGORY_WORD_TITLES && !ownWords.has(token),
+      )
+      .map(([token]) => token),
+  );
+};
 
 const overLimit = (text: string, limit: number): LintIssue[] => {
   const chars = countChars(text);
@@ -322,7 +346,7 @@ export function lintKeywordField(
     ),
   );
 
-  const competitors = toSet(context.competitorNames);
+  const competitors = competitorBrands(context);
   const competitorSeen = new Set<string>();
   for (const token of tokens) {
     if (competitors.has(token) && !competitorSeen.has(token)) {

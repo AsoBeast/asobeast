@@ -6,8 +6,10 @@ import {
   lintShortDescription,
   lintSubtitle,
   lintTitle,
+  LintContext,
   LintIssue,
 } from './lint';
+import { tokenize } from '../text';
 
 const rules = (issues: LintIssue[]): string[] =>
   issues.map((issue) => issue.rule);
@@ -232,6 +234,52 @@ describe('lintKeywordField', () => {
     expect(rules(lintKeywordField('spanish,learn', ctx))).not.toContain(
       'contains-competitor-brand',
     );
+  });
+
+  const competitorBrands = (field: string, context: LintContext) =>
+    lintKeywordField(field, context)
+      .filter((issue) => issue.rule === 'contains-competitor-brand')
+      .map((issue) => issue.offendingText);
+
+  it('flags only the brand among category words in competitor titles', () => {
+    const context: LintContext = {
+      titleWords: tokenize('Where Am I? GeoGuess Map Quiz'),
+      subtitleWords: tokenize('World Geography Trivia Game'),
+      competitorNames: [
+        'Location Guesser: GeoGuesser',
+        'Guess the Spot - GeoGuess Game',
+        'GeoGuessr',
+      ],
+      trackedKeywords: ['guess', 'location', 'guesser', 'location guesser'],
+    };
+    expect(
+      competitorBrands('guess,location,guesser,geoguessr', context),
+    ).toEqual(['geoguessr']);
+  });
+
+  it('treats a word two competitor titles share as category vocabulary', () => {
+    const context: LintContext = {
+      competitorNames: [
+        'Location Guesser: GeoGuesser',
+        'Place Guesser: GeoGuess Game',
+        'Seterra Geography (full)',
+        'GeoGuessr',
+      ],
+    };
+    expect(
+      competitorBrands('guesser,location,seterra,geoguessr', context),
+    ).toEqual(['location', 'seterra', 'geoguessr']);
+  });
+
+  it('never calls an own title word, a generic word or a stopword a competitor brand', () => {
+    const context: LintContext = {
+      titleWords: ['map'],
+      subtitleWords: ['quiz'],
+      competitorNames: ['Map Quiz Free App', 'Guess the Spot'],
+    };
+    expect(competitorBrands('map,quiz,free,app,the,spot', context)).toEqual([
+      'spot',
+    ]);
   });
 
   it.each([

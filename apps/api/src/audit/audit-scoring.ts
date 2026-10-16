@@ -461,4 +461,5 @@ export const lintContext = (context: AuditContext) => ({
     ...tokenize(context.rawFacts.developerName ?? ''),
   ],
   competitorNames: competitorNames(context),
+  trackedKeywords: context.keywords.map((keyword) => keyword.text),
 });
