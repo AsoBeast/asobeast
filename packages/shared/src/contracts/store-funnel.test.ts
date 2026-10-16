@@ -11,6 +11,8 @@ import {
   funnelChange,
   funnelConversion,
   type StoreFunnelCounts,
+  type StoreFunnelPage,
+  type StoreFunnelReport,
 } from './store-funnel';
 
 describe('store funnel contract', () => {
@@ -54,5 +56,20 @@ describe('store funnel contract', () => {
     expect(STORE_FUNNEL_COMPLETE_AFTER_DAYS).toBe(3);
     expect(STORE_FUNNEL_DEFAULT_DAYS).toBe(90);
     expect(STORE_FUNNEL_MAX_DAYS).toBe(365);
+  });
+});
+
+describe('product pages', () => {
+  it('types a product page with its ratio to the default page', () => {
+    expectTypeOf<StoreFunnelPage['ratio']>().toEqualTypeOf<number | null>();
+    expectTypeOf<
+      StoreFunnelPage['counts']
+    >().toEqualTypeOf<StoreFunnelCounts>();
+  });
+
+  it('keeps pages optional on the report', () => {
+    expectTypeOf<StoreFunnelReport['pages']>().toEqualTypeOf<
+      StoreFunnelPage[] | undefined
+    >();
   });
 });

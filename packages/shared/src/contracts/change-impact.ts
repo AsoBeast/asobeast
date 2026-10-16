@@ -1,4 +1,5 @@
 import type { ChangeField } from './changes';
+import type { StoreFunnelChange, StoreFunnelCounts } from './store-funnel';
 
 export const CHANGE_IMPACT_WINDOWS = [7, 14, 28] as const;
 export type ChangeImpactWindowDays = (typeof CHANGE_IMPACT_WINDOWS)[number];
@@ -14,6 +15,14 @@ export interface ChangeImpactMovement {
   measured: number;
 }
 
+export interface ChangeImpactFunnel {
+  status: ChangeImpactStatus;
+  completeDays: number;
+  before: StoreFunnelCounts | null;
+  after: StoreFunnelCounts | null;
+  change: StoreFunnelChange | null;
+}
+
 export interface ChangeImpactWindow {
   days: ChangeImpactWindowDays;
   status: ChangeImpactStatus;
@@ -25,6 +34,7 @@ export interface ChangeImpactWindow {
   visibilityAfter: number | null;
   visibilityChange: number | null;
   overlappingChanges: string[];
+  funnel?: ChangeImpactFunnel | null;
 }
 
 export interface ChangeImpactItem {

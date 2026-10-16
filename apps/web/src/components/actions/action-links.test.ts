@@ -21,6 +21,8 @@ const HREF: Record<ActionRule, string> = {
   "reviews.reply_negative":
     "/apps/app-1/reviews?replyState=needs_reply&sort=lowest",
   "listing.ship_update": "/apps/app-1/audit",
+  "conversion.investigate_drop": "/apps/app-1?market=us",
+  "listing.cpp_underperforms": "/apps/app-1?market=us",
 };
 
 describe("actionHref", () => {

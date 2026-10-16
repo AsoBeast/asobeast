@@ -1,5 +1,7 @@
 import { ActionEvidence, ActionOpenedPayload } from '@asobeast/shared';
 
+const percent = (ratio: number): string => `${(ratio * 100).toFixed(1)}%`;
+
 const RULE_SUMMARY = (evidence: ActionEvidence): string => {
   switch (evidence.rule) {
     case 'keyword.add_uncovered':
@@ -32,6 +34,10 @@ const RULE_SUMMARY = (evidence: ActionEvidence): string => {
       return evidence.competitorMedianDays === null
         ? `last store update ${evidence.daysSinceUpdate} days ago`
         : `last store update ${evidence.daysSinceUpdate} days ago, competitor median ${evidence.competitorMedianDays} days`;
+    case 'conversion.investigate_drop':
+      return `Get taps ${evidence.getsBefore} → ${evidence.getsAfter} while page views went ${evidence.pageViewsBefore} → ${evidence.pageViewsAfter}, daily means of the last ${evidence.windowDays} complete days against the ${evidence.baselineDays} before`;
+    case 'listing.cpp_underperforms':
+      return `"${evidence.pageTitle}" converts at ${percent(evidence.pageConversion)} against ${percent(evidence.defaultConversion)} on the default page over ${evidence.windowDays} days`;
     case 'metadata.fix_lint':
       return `${evidence.issues.length} store rule ${evidence.issues.length === 1 ? 'problem' : 'problems'} in ${evidence.field}, ${evidence.chars}/${evidence.limit} characters`;
     default: {

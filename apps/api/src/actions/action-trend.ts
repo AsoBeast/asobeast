@@ -1,4 +1,5 @@
 import {
+  funnelConversion,
   ActionRule,
   ActionTrendDirection,
   ActionTrendMetric,
@@ -32,6 +33,8 @@ export const TREND_METRIC: Record<ActionRule, ActionTrendMetric> = {
   'reviews.investigate_rating_decline': 'rating',
   'reviews.reply_negative': 'rating',
   'listing.ship_update': 'updateAge',
+  'conversion.investigate_drop': 'conversion',
+  'listing.cpp_underperforms': 'conversion',
 };
 
 export const TREND_DIRECTION: Record<ActionTrendMetric, ActionTrendDirection> =
@@ -41,6 +44,7 @@ export const TREND_DIRECTION: Record<ActionTrendMetric, ActionTrendDirection> =
     audit: 'higher_is_better',
     rating: 'higher_is_better',
     updateAge: 'lower_is_better',
+    conversion: 'higher_is_better',
   };
 
 export interface TrendWindow {
@@ -94,6 +98,14 @@ export function dailyPoints(
 }
 
 const round2 = (value: number): number => Math.round(value * 100) / 100;
+
+export function conversionPercent(
+  gets: number,
+  uniqueImpressions: number,
+): number | null {
+  const ratio = funnelConversion(gets, uniqueImpressions);
+  return ratio === null ? null : round2(ratio * 100);
+}
 
 export function trailingMeanPoints(
   scores: ReadonlyArray<{ date: Date; score: number }>,

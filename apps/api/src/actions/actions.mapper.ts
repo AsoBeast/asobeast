@@ -96,6 +96,20 @@ const EVIDENCE_FIELDS: Record<ActionRule, readonly string[]> = {
   ],
   'reviews.reply_negative': ['unanswered', 'checked', 'sampleReviewIds'],
   'listing.ship_update': ['storeUpdatedAt', 'daysSinceUpdate'],
+  'conversion.investigate_drop': [
+    'country',
+    'pageViewsBefore',
+    'pageViewsAfter',
+    'getsBefore',
+    'getsAfter',
+  ],
+  'listing.cpp_underperforms': [
+    'country',
+    'pageTitle',
+    'pageConversion',
+    'defaultConversion',
+    'ratio',
+  ],
 };
 
 const WITHDRAWN_EVIDENCE_FIELDS: Partial<

@@ -23,6 +23,9 @@ export function actionHref(item: ActionItem): string {
     case "audit.fix_factor":
     case "listing.ship_update":
       return `/apps/${appId}/audit`;
+    case "conversion.investigate_drop":
+    case "listing.cpp_underperforms":
+      return `/apps/${appId}?market=${country}`;
     case "reviews.investigate_theme":
       return `/apps/${appId}/reviews?score=1`;
     case "reviews.reply_negative":

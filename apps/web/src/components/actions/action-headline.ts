@@ -107,6 +107,10 @@ export function actionHeadline(item: ActionItem): string {
       return `Reply to ${pluralize(evidence.unanswered, "unanswered low review")}`;
     case "listing.ship_update":
       return `Ship an update: your listing is ${formatMeasure(evidence.daysSinceUpdate)} days old`;
+    case "conversion.investigate_drop":
+      return `Fewer Get taps while page views held in ${evidence.country.toUpperCase()}`;
+    case "listing.cpp_underperforms":
+      return `"${evidence.pageTitle}" converts below your default product page`;
     case "metadata.fix_lint":
       return `Fix ${pluralize(evidence.issues.length, "store rule problem")} in your ${METADATA_FIELD_LABELS[evidence.field].toLowerCase()}`;
     default: {

@@ -5281,7 +5281,9 @@
                   "competitor.investigate_overtake",
                   "reviews.investigate_rating_decline",
                   "reviews.reply_negative",
-                  "listing.ship_update"
+                  "listing.ship_update",
+                  "conversion.investigate_drop",
+                  "listing.cpp_underperforms"
                 ]
               }
             }
@@ -5676,7 +5678,9 @@
                   "competitor.investigate_overtake",
                   "reviews.investigate_rating_decline",
                   "reviews.reply_negative",
-                  "listing.ship_update"
+                  "listing.ship_update",
+                  "conversion.investigate_drop",
+                  "listing.cpp_underperforms"
                 ]
               }
             }
