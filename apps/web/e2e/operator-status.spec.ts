@@ -36,6 +36,30 @@ test.describe("api status badge", () => {
       expect(healthChecks).toEqual([]);
     });
   }
+
+  test("reads unreachable once a later poll fails and recovers on the next answer", async ({
+    page,
+  }) => {
+    const header = page.getByRole("banner");
+    const pollUntilShown = (label: string) =>
+      expect(async () => {
+        await page.clock.runFor(5_000);
+        await expect(header.getByText(label, { exact: true })).toBeVisible({
+          timeout: 500,
+        });
+      }).toPass({ timeout: 20_000 });
+    await page.clock.install();
+    await seedSession(page);
+    await page.goto("/settings");
+    await expect(header.getByText("api", { exact: true })).toBeVisible();
+
+    await page.route("**/api/backend/health", (route) => route.abort());
+    await pollUntilShown("unreachable");
+    await expect(header.locator("svg.lucide-circle-x")).toHaveCount(1);
+
+    await page.unroute("**/api/backend/health");
+    await pollUntilShown("api");
+  });
 });
 
 test.describe("instance capacity", () => {
