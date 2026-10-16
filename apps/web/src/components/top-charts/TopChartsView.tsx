@@ -89,27 +89,20 @@ export function TopChartsView() {
         dates={dates}
         onChange={(next: ChartSearchUpdate) => void setSearch(next)}
       />
-      <div className="relative flex flex-col gap-6">
-        <ChartPending chart={busy ? chartKeyFrom(search) : null} />
-        {inTable ? (
-          <ChartTableView
-            page={page}
-            apps={candidates}
-            busy={busy}
-            date={date}
-          />
-        ) : (
-          <ChartColumns
-            pages={pages}
-            apps={candidates}
-            busy={busy}
-            search={{
-              compare: shown.query.compare,
-              date: shown.query.date ?? null,
-            }}
-          />
-        )}
-      </div>
+      <ChartPending chart={busy ? chartKeyFrom(search) : null} />
+      {inTable ? (
+        <ChartTableView page={page} apps={candidates} busy={busy} date={date} />
+      ) : (
+        <ChartColumns
+          pages={pages}
+          apps={candidates}
+          busy={busy}
+          search={{
+            compare: shown.query.compare,
+            date: shown.query.date ?? null,
+          }}
+        />
+      )}
     </>
   );
 }

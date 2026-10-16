@@ -10,7 +10,7 @@ export function ChartPending({
   return (
     <div
       role="status"
-      className="pointer-events-none absolute inset-x-0 -top-4 z-10 flex justify-center"
+      className="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex justify-center px-4"
     >
       {chart ? (
         <span className="flex animate-in items-center gap-2 rounded-full border bg-popover px-3 py-1.5 text-body text-popover-foreground shadow-overlay delay-300 duration-150 fade-in-0 fill-mode-backwards">

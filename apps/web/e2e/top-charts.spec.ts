@@ -1129,6 +1129,39 @@ for (const [layout, path] of [
   });
 }
 
+test("keeps the loading cue clear of the table toolbar", async ({
+  page,
+  context,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/charts?view=table");
+  await delayApi(context);
+
+  await page
+    .getByRole("tablist", { name: "Store" })
+    .getByRole("tab", { name: "Google Play" })
+    .click();
+
+  const cue = loadingCue(page, "Loading Google Play · United States");
+  await expect(cue).toBeVisible({ timeout: 1000 });
+  const pill = await cue.locator("span").first().boundingBox();
+  const controls = [
+    page.getByRole("textbox", { name: "Search apps" }),
+    page.getByRole("button", { name: "Columns" }),
+  ];
+  for (const control of controls) {
+    const box = await control.boundingBox();
+    const overlaps =
+      pill !== null &&
+      box !== null &&
+      pill.x < box.x + box.width &&
+      box.x < pill.x + pill.width &&
+      pill.y < box.y + box.height &&
+      box.y < pill.y + pill.height;
+    expect(overlaps).toBe(false);
+  }
+});
+
 test("names the requested country while a new country loads", async ({
   page,
   context,
