@@ -2,8 +2,10 @@ import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { QUEUES } from '../jobs/jobs.types';
 import { AscApiFactory } from './asc-api.factory';
+import { AscReportSync } from './asc-report-sync.service';
 import { ASC_TRANSPORT, undiciTransport } from './asc-transport';
 import { GcsApiFactory } from './play/gcs-api.factory';
+import { PlayReportSync } from './play/play-report-sync.service';
 import { GCS_TRANSPORT, undiciGcsTransport } from './play/gcs-transport';
 import { SECRET_BOX, secretBoxProvider } from './secret-box.provider';
 import { StoreConnectionService } from './store-connection.service';
@@ -32,6 +34,8 @@ import { StoreReportsWorker } from './store-reports.worker';
     StoreReportQueue,
     StoreReportRequester,
     StoreReportApplier,
+    AscReportSync,
+    PlayReportSync,
     StoreReportSyncService,
     StoreReportsWorker,
     StoreFunnelService,

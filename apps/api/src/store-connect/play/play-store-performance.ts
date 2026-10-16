@@ -1,8 +1,8 @@
 import { normalizeText, type StoreFunnelSource } from '@asobeast/shared';
 import type { FunnelRow } from '../discovery-report';
 import { countOf, dateOf } from '../report-cells';
+import { PLAY_ALL_MARKETS } from '../store-funnel';
 
-export const PLAY_ALL = 'all';
 const OTHER_TERM = 'other';
 
 const COUNTRY_COLUMNS = [
@@ -218,7 +218,7 @@ export function pivotTrafficFile(
         rowOf(
           {
             date: counts.date,
-            territory: PLAY_ALL,
+            territory: PLAY_ALL_MARKETS,
             country: null,
             sourceType: playSourceOf(cell(cells, 'Traffic source')),
           },

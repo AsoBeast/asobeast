@@ -175,22 +175,23 @@ export class ActionSeriesReader {
         ? await this.prisma.storeFunnelPageDay.groupBy({
             by: ['date'],
             where: { ...where, pageTitle: item.evidence.pageTitle },
-            _sum: { gets: true, uniqueImpressions: true },
+            _sum: { gets: true, uniqueImpressions: true, pageViews: true },
           })
         : await this.prisma.storeFunnelDay.groupBy({
             by: ['date'],
             where,
-            _sum: { gets: true, uniqueImpressions: true },
+            _sum: { gets: true, uniqueImpressions: true, pageViews: true },
           });
+    const base = (sum: (typeof rows)[number]['_sum']): number =>
+      (item.scope.store === 'GOOGLE_PLAY'
+        ? sum.pageViews
+        : sum.uniqueImpressions) ?? 0;
     return {
       depth: null,
       points: dailyPoints(
         rows.map((row) => ({
           date: row.date,
-          value: conversionPercent(
-            row._sum.gets ?? 0,
-            row._sum.uniqueImpressions ?? 0,
-          ),
+          value: conversionPercent(row._sum.gets ?? 0, base(row._sum)),
         })),
         from,
         to,

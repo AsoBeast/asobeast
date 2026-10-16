@@ -1,6 +1,7 @@
 import {
   completeThrough,
   funnelPages,
+  funnelScope,
   measureStoreFunnel,
   type FunnelDayRow,
   type PageDayRow,
@@ -37,6 +38,18 @@ const everyDay = (
 describe('completeThrough', () => {
   it('is three days before today', () => {
     expect(completeThrough(TODAY)).toBe('2026-10-13');
+  });
+});
+
+describe('funnelScope', () => {
+  it('reads country rows for a market and traffic rows for all markets on google play', () => {
+    expect(funnelScope('GOOGLE_PLAY', 'de')).toEqual({ country: 'de' });
+    expect(funnelScope('GOOGLE_PLAY')).toEqual({ territory: 'all' });
+  });
+
+  it('reads every row of the app store for all markets', () => {
+    expect(funnelScope('APP_STORE')).toEqual({});
+    expect(funnelScope('APP_STORE', 'us')).toEqual({ country: 'us' });
   });
 });
 
@@ -156,7 +169,7 @@ describe('measureStoreFunnel points', () => {
     expect(points[0].total.conversion).toBeNull();
   });
 
-  it('reads google play conversion from page views and reports no impressions', () => {
+  it('answers null impressions and a visitor based conversion for google play', () => {
     const { points } = measureStoreFunnel({
       rows: [row(daysBack(4), { sourceType: 'all', pageViews: 200, gets: 50 })],
       days: 5,

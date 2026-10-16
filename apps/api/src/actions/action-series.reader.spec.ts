@@ -197,7 +197,7 @@ describe('ActionSeriesReader conversion', () => {
   const sums = [
     {
       date: new Date('2026-07-20T00:00:00.000Z'),
-      _sum: { gets: 30, uniqueImpressions: 1000 },
+      _sum: { gets: 30, uniqueImpressions: 1000, pageViews: 600 },
     },
   ];
 
@@ -238,6 +238,20 @@ describe('ActionSeriesReader conversion', () => {
       checked: true,
       value: 3,
     });
+  });
+
+  it('reads google play conversion from store listing visitors', async () => {
+    const { reader } = conversionReader();
+    const base = item('conversion.investigate_drop', null);
+
+    const trend = await reader.read(
+      { ...base, scope: { ...base.scope, store: 'GOOGLE_PLAY' } },
+      TODAY,
+    );
+
+    expect(
+      trend?.points.find((point) => point.date === '2026-07-20')?.value,
+    ).toBe(5);
   });
 
   it('reads the conversion of the product page a page action names', async () => {

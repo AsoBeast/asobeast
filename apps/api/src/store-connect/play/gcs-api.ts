@@ -75,7 +75,7 @@ export class GcsApi {
   constructor(
     private readonly transport: GcsTransport,
     account: ServiceAccount,
-    private readonly bucket: string,
+    readonly bucket: string,
     private readonly origins: GcsOrigins = GOOGLE_ORIGINS,
   ) {
     this.tokens = new GoogleTokenCache(account, (assertion) =>
@@ -162,13 +162,22 @@ export interface MonthFiles {
   traffic: GcsObject | null;
 }
 
+const filePrefix = (packageName: string): string =>
+  `${STORE_PERFORMANCE_PREFIX}store_performance_${packageName}_`;
+
+export const hasStorePerformance = (
+  objects: GcsObject[],
+  packageName: string,
+): boolean =>
+  objects.some((object) => object.name.startsWith(filePrefix(packageName)));
+
 export function storePerformanceObjects(
   objects: GcsObject[],
   packageName: string,
   month: string,
 ): MonthFiles {
   const name = (breakdown: string) =>
-    `${STORE_PERFORMANCE_PREFIX}store_performance_${packageName}_${month}_${breakdown}.csv`;
+    `${filePrefix(packageName)}${month}_${breakdown}.csv`;
   const find = (breakdown: string) =>
     objects.find((object) => object.name === name(breakdown)) ?? null;
   return { country: find('country'), traffic: find('traffic_source') };
