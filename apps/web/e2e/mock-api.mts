@@ -117,6 +117,8 @@ import {
   SEED_TEXTS,
   SEED_UNLISTED_MARKET,
   EMPTY_REVIEW_THEMES,
+  UPDATE_REVIEW_THEMES,
+  UPDATE_THEME_REVIEWS,
 } from "./fixtures.mts";
 import {
   EMPTY_PORTFOLIO_INSIGHTS,
@@ -709,6 +711,9 @@ function withScreenshotText(
   }
   return result;
 }
+
+const updateReviews = (req: IncomingMessage) =>
+  hasCookie(req, "e2e_reviews", "update");
 
 function appRoute(
   pattern: RegExp,
@@ -3703,7 +3708,10 @@ const routes: Route[] = [
   ),
   appRoute(
     /^\/apps\/([^/]+)\/reviews\/themes$/,
-    (dataset) => dataset.reviewThemes ?? EMPTY_REVIEW_THEMES,
+    (dataset, _query, req) =>
+      updateReviews(req)
+        ? UPDATE_REVIEW_THEMES
+        : (dataset.reviewThemes ?? EMPTY_REVIEW_THEMES),
     (req) => hasCookie(req, "e2e_themes_failing", "1"),
   ),
   {
@@ -3716,7 +3724,10 @@ const routes: Route[] = [
       const dataset = DATASETS[id];
       if (!dataset) return json(res, 404, errorEnvelope(404, path));
       const query = new URL(path, "http://localhost").searchParams;
-      json(res, 200, listReviews(id, dataset.reviews, query));
+      const reviews = updateReviews(req)
+        ? UPDATE_THEME_REVIEWS
+        : dataset.reviews;
+      json(res, 200, listReviews(id, reviews, query));
     },
   },
   {

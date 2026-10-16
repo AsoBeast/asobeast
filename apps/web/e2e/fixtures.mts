@@ -894,7 +894,6 @@ export const APP_1_REVIEW_THEMES: ReviewThemes = {
   themes: [
     { phrase: "crashes", kind: "complaint", mentions: 1, negative: 1 },
     { phrase: "dark mode", kind: "complaint", mentions: 1, negative: 1 },
-    { phrase: "update", kind: "complaint", mentions: 2, negative: 2 },
     { phrase: "focus timer", kind: "praise", mentions: 1, negative: 0 },
   ],
   reviews: 5,
@@ -929,6 +928,12 @@ export const UPDATE_THEME_REVIEWS: ReviewList = {
     updateReview(4, "Updates keep failing."),
     updateReview(5, "Sync is slow.", "Please update to 3.4.1."),
   ],
+};
+
+export const UPDATE_REVIEW_THEMES: ReviewThemes = {
+  themes: [{ phrase: "update", kind: "complaint", mentions: 2, negative: 2 }],
+  reviews: 5,
+  negativeScoreMax: 2,
 };
 
 export const REVIEW_TRANSLATION_EN = {

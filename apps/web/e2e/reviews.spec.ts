@@ -1,11 +1,9 @@
 import { readFileSync } from "node:fs";
 import type { Page } from "@playwright/test";
-import { QUERY_BOUNDS } from "@asobeast/shared";
 import {
   UNBROKEN_REVIEW_AUTHOR,
   UNBROKEN_REVIEW_TEXT,
   UNBROKEN_REVIEW_TITLE,
-  UPDATE_THEME_REVIEWS,
 } from "./fixtures.mts";
 import { seedCookies } from "./routes.mts";
 import { expect, test } from "./session.mts";
@@ -425,7 +423,7 @@ test("a theme searches for its phrase and a second press clears it", async ({
   const complaints = themes.getByRole("list", { name: "Complaints" });
   const crashes = complaints.getByRole("button", { name: /^crashes in/ });
 
-  await expect(complaints.getByRole("listitem")).toHaveCount(3);
+  await expect(complaints.getByRole("listitem")).toHaveCount(2);
   await expect(
     themes.getByRole("list", { name: "Praise" }).getByRole("listitem"),
   ).toHaveCount(1);
@@ -449,14 +447,10 @@ test("a theme searches for its phrase and a second press clears it", async ({
 });
 
 test("a pressed theme lists as many reviews as its number counts", async ({
+  context,
   page,
 }) => {
-  await page.route(
-    (url) =>
-      url.pathname === "/api/backend/apps/app-1/reviews" &&
-      url.searchParams.get("limit") === String(QUERY_BOUNDS.reviewsLimit.max),
-    (route) => route.fulfill({ json: UPDATE_THEME_REVIEWS }),
-  );
+  await seedCookies(context, { e2e_reviews: "update" });
   await page.goto("/apps/app-1/reviews");
   const update = page
     .getByRole("region", { name: "What people mention" })
