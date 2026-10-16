@@ -71,6 +71,28 @@ function ReplyCounter({
   );
 }
 
+function ClearedReplyHint({
+  text,
+  saved,
+  drafting,
+}: {
+  text: string;
+  saved: string;
+  drafting: boolean;
+}) {
+  const kept = text === "" && saved !== "" && !drafting;
+  return (
+    <p
+      aria-live="polite"
+      className="text-caption text-muted-foreground empty:hidden"
+    >
+      {kept
+        ? "Emptying the field keeps the saved reply. Press Discard to remove it."
+        : null}
+    </p>
+  );
+}
+
 function DiscardReplyButton({
   consoleName,
   disabled,
@@ -178,6 +200,11 @@ export function ReplyComposer({
           className="min-h-24 bg-card"
         />
         <ReplyCounter id={counterId} measure={measure} store={store} />
+        <ClearedReplyHint
+          text={trimmed}
+          saved={saved}
+          drafting={draft.drafting}
+        />
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <Button

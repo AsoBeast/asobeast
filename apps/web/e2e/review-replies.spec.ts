@@ -259,6 +259,68 @@ test("a reload reopens the composer with the saved text", async ({ page }) => {
   ).toHaveValue("Dark mode ships next month.");
 });
 
+test("emptying a saved reply says it stays until discard and sends nothing", async ({
+  page,
+}) => {
+  const writes: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().includes("/reply") && request.method() !== "GET") {
+      writes.push(request.method());
+    }
+  });
+  await page.goto(`${REPLIES_PAGE}?reply=rep-2`);
+  await page.waitForLoadState("networkidle");
+  const article = articleOf(page, "Crashes often");
+  const textbox = composer(page).getByRole("textbox", { name: "Reply text" });
+  const hint = composer(page).getByText(
+    "Emptying the field keeps the saved reply. Press Discard to remove it.",
+  );
+  await expect(hint).toHaveCount(0);
+
+  await textbox.fill("");
+  await textbox.blur();
+
+  await expect(hint).toBeVisible();
+  await expect(article.getByText("Draft saved")).toBeVisible();
+  expect(writes).toEqual([]);
+
+  await page.reload();
+  await expect(
+    composer(page).getByRole("textbox", { name: "Reply text" }),
+  ).toHaveValue(/^Sorry about the crash, Jordan/);
+  await expect(hint).toHaveCount(0);
+});
+
+test("the hint goes once the reply is discarded and never shows without one", async ({
+  page,
+}) => {
+  await page.goto(`${REPLIES_PAGE}?reply=rep-3`);
+  const textbox = composer(page).getByRole("textbox", { name: "Reply text" });
+  const hint = composer(page).getByText(
+    /Emptying the field keeps the saved reply/,
+  );
+
+  await textbox.fill("");
+  await expect(hint).toHaveCount(0);
+
+  await page.goto(`${REPLIES_PAGE}?reply=rep-2`);
+  const saved = composer(page).getByRole("textbox", { name: "Reply text" });
+  await saved.fill("");
+  await expect(hint).toBeVisible();
+  await saved.fill("Sorry");
+  await expect(hint).toHaveCount(0);
+  await saved.fill("");
+  await expect(hint).toBeVisible();
+
+  await composer(page).getByRole("button", { name: "Discard" }).click();
+  await page
+    .getByRole("alertdialog")
+    .getByRole("button", { name: "Discard" })
+    .click();
+
+  await expect(hint).toHaveCount(0);
+});
+
 test("the existing play reply is shown read only above the composer", async ({
   page,
 }) => {
