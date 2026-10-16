@@ -95,6 +95,64 @@ test("the composer counts against the google play limit and refuses more", async
   ).toBeDisabled();
 });
 
+test("a reply at the limit followed by a newline still fits", async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.goto(`${GP_PAGE}?reply=gp-rev-2`);
+  const textbox = composer(page).getByRole("textbox", { name: "Reply text" });
+
+  await textbox.fill(`${"a".repeat(350)}\n`);
+
+  await expect(composer(page).getByText("350 / 350")).toBeVisible();
+  await expect(composer(page).getByText(/allows at most/)).toHaveCount(0);
+  await expect(textbox).not.toHaveAttribute("aria-invalid", "true");
+  await expect(
+    composer(page).getByRole("button", { name: "Copy" }),
+  ).toBeEnabled();
+  await expect(
+    composer(page).getByRole("button", { name: "Mark as replied" }),
+  ).toBeEnabled();
+
+  const [request] = await Promise.all([
+    page.waitForRequest(
+      (candidate) =>
+        candidate.method() === "PATCH" &&
+        candidate.url().endsWith("/reviews/gp-rev-2/reply"),
+    ),
+    composer(page).getByRole("button", { name: "Copy" }).click(),
+  ]);
+
+  expect(request.postDataJSON()).toEqual({ text: "a".repeat(350) });
+});
+
+test("whitespace around a reply is not counted but its characters are", async ({
+  page,
+}) => {
+  await page.goto(`${GP_PAGE}?reply=gp-rev-2`);
+  const textbox = composer(page).getByRole("textbox", { name: "Reply text" });
+
+  await textbox.fill(`  ${"a".repeat(350)}  `);
+  await expect(composer(page).getByText("350 / 350")).toBeVisible();
+
+  await textbox.fill(`${"a".repeat(351)}\n`);
+  await expect(
+    composer(page).getByText(
+      "351 / 350 · Google Play allows at most 350 characters",
+    ),
+  ).toBeVisible();
+  await expect(
+    composer(page).getByRole("button", { name: "Copy" }),
+  ).toBeDisabled();
+
+  await textbox.fill("  \n ");
+  await expect(composer(page).getByText("0 / 350")).toBeVisible();
+  await expect(
+    composer(page).getByRole("button", { name: "Copy" }),
+  ).toBeDisabled();
+});
+
 test("marking a review as replied and undoing it", async ({ page }) => {
   await page.goto(`${REPLIES_PAGE}?reply=rep-2`);
   const article = articleOf(page, "Crashes often");
