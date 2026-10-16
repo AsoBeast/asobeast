@@ -25,9 +25,9 @@ export class AscUnreachableError extends Error {
 }
 
 export class AscSegmentSizeError extends Error {
-  constructor(expected: number, received: number) {
+  constructor(expected: number, received: number | null) {
     super(
-      `A report segment arrived with ${received} bytes instead of ${expected}`,
+      `A report segment arrived with ${received ?? 'more'} bytes instead of ${expected}`,
     );
     this.name = 'AscSegmentSizeError';
   }

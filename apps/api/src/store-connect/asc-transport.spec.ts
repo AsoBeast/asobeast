@@ -7,6 +7,7 @@ import {
 import type { AddressInfo } from 'node:net';
 import { AscUnreachableError } from './asc-errors';
 import { ASC_ORIGIN, createAscTransport } from './asc-transport';
+import { ResponseTooLargeError } from './bounded-body';
 
 type Handler = (request: IncomingMessage, response: ServerResponse) => void;
 
@@ -108,6 +109,38 @@ describe('createAscTransport', () => {
     expect(answer.status).toBe(200);
     expect(answer.bytes).toEqual(Buffer.from([0x1f, 0x8b, 0x08]));
     expect(seen[0].headers.authorization).toBeUndefined();
+  });
+
+  it('asks for the body as it is stored and stops reading past the limit', async () => {
+    handler = (_, response) => {
+      response.writeHead(200);
+      response.write(Buffer.alloc(3));
+      response.end(Buffer.alloc(3));
+    };
+
+    await expect(
+      transport()({
+        method: 'GET',
+        path: '',
+        absoluteUrl: `${origin}/segment.csv.gz`,
+        maxBytes: 4,
+      }),
+    ).rejects.toBeInstanceOf(ResponseTooLargeError);
+    expect(seen[0].headers['accept-encoding']).toBe('identity');
+  });
+
+  it('refuses a declared length over the limit without reading it', async () => {
+    handler = (_, response) =>
+      response.writeHead(200, { 'content-length': '6' }).end(Buffer.alloc(6));
+
+    await expect(
+      transport()({
+        method: 'GET',
+        path: '',
+        absoluteUrl: `${origin}/segment.csv.gz`,
+        maxBytes: 4,
+      }),
+    ).rejects.toBeInstanceOf(ResponseTooLargeError);
   });
 
   it('times out at the configured bound', async () => {

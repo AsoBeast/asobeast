@@ -1,5 +1,6 @@
 import { setTimeout as sleep } from 'node:timers/promises';
 import { AscError, AscSegmentSizeError, errorOf } from './asc-errors';
+import { isPublicHttps, ResponseTooLargeError } from './bounded-body';
 import type { AscTokenCache } from './asc-token';
 import {
   ASC_ORIGIN,
@@ -205,14 +206,25 @@ export class AscAnalyticsApi {
   }
 
   async download(segment: AscSegment): Promise<Buffer> {
-    if (!segment.url.startsWith('https://')) {
-      throw new AscError('A report segment link is not https', 502, null);
+    if (!isPublicHttps(segment.url)) {
+      throw new AscError(
+        'A report segment link is not a public https address',
+        502,
+        null,
+      );
     }
-    const response = await this.send({
-      method: 'GET',
-      path: '',
-      absoluteUrl: segment.url,
-    });
+    let response: AscResponse;
+    try {
+      response = await this.send({
+        method: 'GET',
+        path: '',
+        absoluteUrl: segment.url,
+        maxBytes: segment.sizeInBytes,
+      });
+    } catch (error) {
+      if (!(error instanceof ResponseTooLargeError)) throw error;
+      throw new AscSegmentSizeError(segment.sizeInBytes, null);
+    }
     const bytes = response.bytes ?? Buffer.alloc(0);
     if (bytes.length !== segment.sizeInBytes) {
       throw new AscSegmentSizeError(segment.sizeInBytes, bytes.length);

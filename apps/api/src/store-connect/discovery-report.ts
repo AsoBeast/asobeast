@@ -100,12 +100,24 @@ const emptyCounters = (): FunnelCounters => ({
   uniqueGets: 0,
 });
 
+export const MAX_LINE_CHARS = 1_000_000;
+
+export class DiscoveryLineError extends Error {
+  constructor() {
+    super(
+      `The discovery report holds a line longer than ${MAX_LINE_CHARS} characters`,
+    );
+    this.name = 'DiscoveryLineError';
+  }
+}
+
 async function* linesOf(gzip: Buffer): AsyncGenerator<string> {
   const decoder = new StringDecoder('utf8');
   let rest = '';
   for await (const chunk of Readable.from([gzip]).pipe(createGunzip())) {
     const lines = (rest + decoder.write(chunk as Buffer)).split('\n');
     rest = lines.pop() ?? '';
+    if (rest.length > MAX_LINE_CHARS) throw new DiscoveryLineError();
     yield* lines;
   }
   rest += decoder.end();

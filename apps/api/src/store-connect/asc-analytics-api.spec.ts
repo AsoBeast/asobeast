@@ -14,6 +14,7 @@ import {
   AscSegmentSizeError,
 } from './asc-errors';
 import { AscTokenCache } from './asc-token';
+import { ResponseTooLargeError } from './bounded-body';
 import type { AscRequest, AscResponse, AscTransport } from './asc-transport';
 
 const fixture = (name: string): unknown =>
@@ -273,6 +274,7 @@ describe('AscAnalyticsApi segments', () => {
       method: 'GET',
       path: '',
       absoluteUrl: segment.url,
+      maxBytes: segment.sizeInBytes,
     });
   });
 
@@ -283,6 +285,38 @@ describe('AscAnalyticsApi segments', () => {
       bytes: Buffer.from('abcd'),
       retryAfter: null,
     });
+
+    await expect(api.download(segment)).rejects.toBeInstanceOf(
+      AscSegmentSizeError,
+    );
+  });
+
+  it('refuses a segment link to an address literal or a private host', async () => {
+    const { api, requests } = recorded();
+
+    for (const url of [
+      'https://127.0.0.1/segment.csv.gz',
+      'https://[::1]/segment.csv.gz',
+      'https://169.254.169.254/latest/meta-data',
+      'https://localhost/segment.csv.gz',
+      'https://reports.internal/segment.csv.gz',
+    ]) {
+      await expect(api.download({ ...segment, url })).rejects.toBeInstanceOf(
+        AscError,
+      );
+    }
+    expect(requests).toHaveLength(0);
+  });
+
+  it('answers a size error when the body outgrows the listed size', async () => {
+    const api = new AscAnalyticsApi(
+      () => Promise.reject(new ResponseTooLargeError(segment.sizeInBytes)),
+      new AscTokenCache({
+        issuerId: 'issuer',
+        keyId: 'KEY1234567',
+        privateKey: PEM,
+      }),
+    );
 
     await expect(api.download(segment)).rejects.toBeInstanceOf(
       AscSegmentSizeError,

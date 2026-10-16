@@ -3,6 +3,8 @@ import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import {
   DiscoveryHeaderError,
+  DiscoveryLineError,
+  MAX_LINE_CHARS,
   pageTypeOf,
   pivotDiscoveryReport,
   sourceTypeOf,
@@ -125,6 +127,14 @@ describe('pivotDiscoveryReport', () => {
 
     expect(rows).toHaveLength(1);
     expect(rows[0].impressions).toBe(200_000);
+  });
+
+  it('refuses a line longer than the bound instead of buffering it', async () => {
+    const [header] = FIXTURE.split('\n');
+
+    await expect(
+      pivot(`${header}\n${'x'.repeat(MAX_LINE_CHARS + 10)}`),
+    ).rejects.toBeInstanceOf(DiscoveryLineError);
   });
 
   it('answers no rows for an empty file', async () => {
