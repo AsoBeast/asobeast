@@ -199,9 +199,9 @@ test("a member sees the state without a single control", async ({ page }) => {
   await page.goto("/settings#store-connections");
 
   await expect(section(page)).toContainText("2X9R4HXF34");
-  await expect(section(page)).toContainText(
-    "Only the workspace owner can connect a store.",
-  );
+  await expect(
+    section(page).getByText("Only the workspace owner can connect a store."),
+  ).toHaveCount(1);
   await expect(section(page).getByRole("button")).toHaveCount(0);
 });
 

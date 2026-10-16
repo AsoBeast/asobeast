@@ -215,9 +215,6 @@ function StoreConsoleCard({
         ) : (
           <p className="text-body text-muted-foreground">{copy.empty}</p>
         )}
-        {user && !isOwner ? (
-          <p className="text-body text-muted-foreground">{OWNER_ONLY}</p>
-        ) : null}
         {owner && connection ? <ConnectionActions item={connection} /> : null}
       </CardContent>
     </Card>
@@ -225,6 +222,7 @@ function StoreConsoleCard({
 }
 
 export function StoreConnectionsCard() {
+  const { user, isOwner } = useAuth();
   const { data } = useSuspenseQuery(storeConnectionsOptions);
 
   if (!data.available) {
@@ -250,6 +248,9 @@ export function StoreConnectionsCard() {
           connection={data.connections.find((item) => item.store === store)}
         />
       ))}
+      {user && !isOwner ? (
+        <p className="text-body text-muted-foreground">{OWNER_ONLY}</p>
+      ) : null}
     </div>
   );
 }
