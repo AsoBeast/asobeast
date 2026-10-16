@@ -101,7 +101,7 @@ export function funnelNote(
     return "No console data before this change";
   }
   if (funnel.finalOn) {
-    return `Apple's numbers for this window are final by ${formatDate(funnel.finalOn)}`;
+    return `The console's numbers for this window are final by ${formatDate(funnel.finalOn)}`;
   }
-  return `Apple's numbers for this window are final in ${plural(days - funnel.completeDays, "day")}`;
+  return `The console's numbers for this window are final in ${plural(days - funnel.completeDays, "day")}`;
 }
