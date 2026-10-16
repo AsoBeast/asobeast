@@ -5,7 +5,10 @@ import { useQuery } from "@tanstack/react-query";
 import { Loader2, Plus } from "lucide-react";
 import type { CompetitorSuggestion, Store } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
-import { InlineQueryError } from "@/components/layout/InlineQueryError";
+import {
+  failedRead,
+  InlineQueryError,
+} from "@/components/layout/InlineQueryError";
 import { apiErrorMessage } from "@/components/localizations/api-error-message";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -113,14 +116,14 @@ function SuggestionsBody({
         : withoutIds(current, [storeAppId]),
     );
 
-  if (!suggestions.data && suggestions.isError) {
+  if (failedRead(suggestions)) {
     return (
       <InlineQueryError
         message={apiErrorMessage(
           suggestions.error,
           "Could not load suggested competitors.",
         )}
-        onRetry={() => void suggestions.refetch()}
+        read={suggestions}
       />
     );
   }

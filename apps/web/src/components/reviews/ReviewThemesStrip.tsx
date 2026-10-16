@@ -7,7 +7,10 @@ import {
   type ReviewTheme,
   type ReviewThemeKind,
 } from "@asobeast/shared";
-import { InlineQueryError } from "@/components/layout/InlineQueryError";
+import {
+  failedRead,
+  InlineQueryError,
+} from "@/components/layout/InlineQueryError";
 import { Button } from "@/components/ui/button";
 import { InfoTip } from "@/components/ui/info-tip";
 import { formatNumber, pluralize } from "@/lib/format";
@@ -69,14 +72,13 @@ export function ReviewThemesStrip({
   onSelect: (phrase: string) => void;
 }) {
   const headingId = useId();
-  const { data, isError, refetch } = useQuery(
-    reviewThemesOptions(id, reviewFilters(view)),
-  );
-  if (!data && isError) {
+  const themes = useQuery(reviewThemesOptions(id, reviewFilters(view)));
+  const { data } = themes;
+  if (failedRead(themes)) {
     return (
       <InlineQueryError
         message="Could not load what people mention."
-        onRetry={() => void refetch()}
+        read={themes}
       />
     );
   }

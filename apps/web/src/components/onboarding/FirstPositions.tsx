@@ -3,7 +3,10 @@
 import { useId } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { InlineQueryError } from "@/components/layout/InlineQueryError";
+import {
+  failedRead,
+  InlineQueryError,
+} from "@/components/layout/InlineQueryError";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { keywordsOptions } from "@/lib/queries";
@@ -23,11 +26,11 @@ function FirstPositionsBody({
     refetchOnMount: "always",
   });
 
-  if (!keywords.data && keywords.isError) {
+  if (failedRead(keywords)) {
     return (
       <InlineQueryError
         message="Could not load the first positions."
-        onRetry={() => void keywords.refetch()}
+        read={keywords}
       />
     );
   }

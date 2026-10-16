@@ -492,6 +492,35 @@ test("a failing themes request keeps the reviews page and offers a retry", async
   await expect(failure).toHaveCount(0);
 });
 
+test("retrying a failed themes request keeps focus on Retry", async ({
+  page,
+}) => {
+  await page.route("**/api/backend/apps/app-1/reviews/themes*", (route) =>
+    route.fulfill({ status: 500, json: { statusCode: 500 } }),
+  );
+  await page.goto("/apps/app-1/reviews");
+  await page
+    .getByRole("region", { name: "Reply status" })
+    .getByRole("button", { name: /Needs reply/ })
+    .click();
+  const failure = page
+    .getByRole("alert")
+    .filter({ hasText: "Could not load what people mention." });
+  await expect(failure).toBeVisible({ timeout: 15_000 });
+  const retry = page.getByRole("button", { name: "Retry" });
+
+  await retry.focus();
+  await page.keyboard.press("Enter");
+
+  await expect(retry).toBeFocused();
+  await expect(retry).toHaveAttribute("aria-disabled", "true");
+  await expect(retry).not.toHaveAttribute("aria-disabled", "true", {
+    timeout: 15_000,
+  });
+  await expect(retry).toBeFocused();
+  await expect(failure).toBeVisible();
+});
+
 test("themes that fail on first load leave the page in place", async ({
   context,
   page,
