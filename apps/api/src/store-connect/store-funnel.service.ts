@@ -161,10 +161,6 @@ export class StoreFunnelService {
     };
   }
 
-  async firstDate(appId: string): Promise<string | null> {
-    return (await this.range(appId)).firstDate;
-  }
-
   async connected(appId: string, store: Store): Promise<boolean> {
     return (await this.connectedApps([appId], store)).has(appId);
   }

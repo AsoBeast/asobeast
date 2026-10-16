@@ -1,6 +1,6 @@
 import { NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { addDays, utcToday } from '../analytics/analytics.support';
+import { addDays, toDateKey, utcToday } from '../analytics/analytics.support';
 import { PrismaService } from '../prisma/prisma.service';
 import { StoreFunnelService } from '../store-connect/store-funnel.service';
 import { changeDays, impactReadPlan } from './change-impact';
@@ -13,7 +13,7 @@ describe('ChangeImpactService', () => {
   const funnel = {
     connected: jest.fn(),
     rows: jest.fn(),
-    firstDate: jest.fn(),
+    range: jest.fn(),
   };
   let service: ChangeImpactService;
 
@@ -27,7 +27,9 @@ describe('ChangeImpactService', () => {
     trackedFindMany.mockReset().mockResolvedValue([]);
     funnel.connected.mockReset().mockResolvedValue(false);
     funnel.rows.mockReset().mockResolvedValue([]);
-    funnel.firstDate.mockReset().mockResolvedValue(null);
+    funnel.range
+      .mockReset()
+      .mockResolvedValue({ firstDate: null, lastDate: null });
     const moduleRef = await Test.createTestingModule({
       providers: [
         ChangeImpactService,
@@ -153,7 +155,10 @@ describe('ChangeImpactService', () => {
   it('reads the market rows once from four weeks before the oldest change and merges a funnel into every window', async () => {
     eventFindMany.mockResolvedValue([titleEvent]);
     funnel.connected.mockResolvedValue(true);
-    funnel.firstDate.mockResolvedValue('2024-01-01');
+    funnel.range.mockResolvedValue({
+      firstDate: '2024-01-01',
+      lastDate: toDateKey(today),
+    });
 
     const report = await service.report('app_1', 60, 'gb');
 
@@ -166,5 +171,21 @@ describe('ChangeImpactService', () => {
     expect(
       report.items[0].windows.map((window) => window.funnel?.status),
     ).toEqual(['measured', 'pending', 'pending']);
+  });
+
+  it('never counts a day the console has not delivered as final', async () => {
+    eventFindMany.mockResolvedValue([titleEvent]);
+    funnel.connected.mockResolvedValue(true);
+    funnel.range.mockResolvedValue({
+      firstDate: '2024-01-01',
+      lastDate: toDateKey(addDays(changedOn, 2)),
+    });
+
+    const report = await service.report('app_1', 60, 'gb');
+
+    expect(report.items[0].windows[0].funnel).toMatchObject({
+      status: 'pending',
+      completeDays: 3,
+    });
   });
 });

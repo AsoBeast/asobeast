@@ -21,6 +21,7 @@ export interface ChangeImpactFunnel {
   before: StoreFunnelCounts | null;
   after: StoreFunnelCounts | null;
   change: StoreFunnelChange | null;
+  finalOn?: string;
 }
 
 export interface ChangeImpactWindow {

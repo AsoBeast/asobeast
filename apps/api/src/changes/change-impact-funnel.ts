@@ -1,7 +1,8 @@
-import type {
-  ChangeImpactFunnel,
-  ChangeImpactWindowDays,
-  Store,
+import {
+  STORE_FUNNEL_COMPLETE_AFTER_DAYS,
+  type ChangeImpactFunnel,
+  type ChangeImpactWindowDays,
+  type Store,
 } from '@asobeast/shared';
 import {
   between,
@@ -47,11 +48,13 @@ export function measureChangeFunnel({
   const beforeFrom = shiftDate(changedOn, -days);
   const beforeTo = shiftDate(changedOn, -1);
   if (firstDate === null || firstDate > beforeFrom) return UNMEASURED;
-  if (beforeTo > completeThrough) return WAITING;
+  const afterEnd = shiftDate(changedOn, days - 1);
+  const finalOn = shiftDate(afterEnd, STORE_FUNNEL_COMPLETE_AFTER_DAYS);
+  if (beforeTo > completeThrough) return { ...WAITING, finalOn };
   const before = countsOf(between(rows, beforeFrom, beforeTo), store);
-  const afterTo = [shiftDate(changedOn, days - 1), completeThrough].sort()[0];
+  const afterTo = [afterEnd, completeThrough].sort()[0];
   const completeDays = Math.max(0, daysBetween(changedOn, afterTo));
-  if (completeDays === 0) return { ...WAITING, before };
+  if (completeDays === 0) return { ...WAITING, before, finalOn };
   const after = countsOf(between(rows, changedOn, afterTo), store);
   const measured = completeDays === days;
   return {
@@ -60,5 +63,6 @@ export function measureChangeFunnel({
     before,
     after,
     change: measured ? countsChange(after, before) : null,
+    finalOn,
   };
 }

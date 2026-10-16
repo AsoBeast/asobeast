@@ -402,6 +402,7 @@ describe('ChangeImpactController (e2e)', () => {
 
   it('measures store conversion before and after the change for a connected app', async () => {
     const id = await seed();
+    await prisma.storeConnection.deleteMany({});
     const connection = await prisma.storeConnection.create({
       data: {
         workspaceId: DEFAULT_WORKSPACE_ID,
@@ -466,6 +467,7 @@ describe('ChangeImpactController (e2e)', () => {
         conversion: 0.06,
       },
       change: { impressions: 0, pageViews: 0, gets: 0.5, conversion: 0.5 },
+      finalOn: toDateKey(on(9)),
     });
     expect(fortnight.funnel).toMatchObject({
       status: 'measured',

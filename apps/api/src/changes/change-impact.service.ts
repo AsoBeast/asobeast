@@ -16,7 +16,7 @@ import {
   measureChangeImpact,
 } from './change-impact';
 import { HOME_EVENTS } from '../apps/listing';
-import { completeThrough } from '../store-connect/store-funnel';
+import { reportedThrough } from '../store-connect/store-funnel';
 import { StoreFunnelService } from '../store-connect/store-funnel.service';
 import { measureChangeFunnel } from './change-impact-funnel';
 
@@ -86,11 +86,11 @@ export class ChangeImpactService {
       new Date(`${oldest}T00:00:00.000Z`),
       -Math.max(...CHANGE_IMPACT_WINDOWS),
     );
-    const [rows, firstDate] = await Promise.all([
+    const [rows, { firstDate, lastDate }] = await Promise.all([
       this.funnel.rows(app.id, from, market),
-      this.funnel.firstDate(app.id),
+      this.funnel.range(app.id),
     ]);
-    const through = completeThrough(today);
+    const through = reportedThrough(today, lastDate);
     return items.map((item) => ({
       ...item,
       windows: item.windows.map((window) => ({

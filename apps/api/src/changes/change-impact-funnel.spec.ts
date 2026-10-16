@@ -41,6 +41,7 @@ describe('measureChangeFunnel', () => {
     expect(funnel).toEqual({
       status: 'measured',
       completeDays: 7,
+      finalOn: day(29),
       before: {
         impressions: 700,
         uniqueImpressions: 700,
@@ -110,6 +111,16 @@ describe('measureChangeFunnel', () => {
       before: null,
       after: null,
       change: null,
+    });
+  });
+
+  it('names the day the window becomes final', () => {
+    expect(
+      measureChangeFunnel({ ...base, completeThrough: day(22) }),
+    ).toMatchObject({ status: 'pending', finalOn: day(29) });
+    expect(measureChangeFunnel(base)).toMatchObject({
+      status: 'measured',
+      finalOn: day(29),
     });
   });
 

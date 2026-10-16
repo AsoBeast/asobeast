@@ -182,6 +182,22 @@ describe("store funnel lines", () => {
     ).toBe("Apple's numbers for this window are final in 1 day");
   });
 
+  it("names the day the numbers become final when the api states it", () => {
+    expect(
+      funnelNote(
+        {
+          status: "pending",
+          completeDays: 0,
+          before: null,
+          after: null,
+          change: null,
+          finalOn: "2026-10-25",
+        },
+        7,
+      ),
+    ).toBe("Apple's numbers for this window are final by Oct 25, 2026");
+  });
+
   it("says the console reports nothing before an unmeasured change", () => {
     expect(
       funnelNote(
