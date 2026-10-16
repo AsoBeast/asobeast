@@ -90,6 +90,22 @@ describe('pivotCountryFile', () => {
     });
   });
 
+  it('reads a header whatever its case and the country region heading', () => {
+    const csv = [
+      'DATE,Package Name,Country/Region,STORE LISTING ACQUISITIONS,Store Listing Visitors',
+      '2026-09-01,com.example.habits,DE,10,250',
+    ].join('\n');
+
+    expect(pivotCountryFile(parseCsv(csv), '2026-10-03')).toEqual([
+      expect.objectContaining({
+        date: '2026-09-01',
+        country: 'de',
+        pageViews: 250,
+        gets: 10,
+      }),
+    ]);
+  });
+
   it('refuses a header missing a required column by name and ignores extra columns', () => {
     expect(() =>
       pivotCountryFile(

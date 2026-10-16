@@ -122,11 +122,22 @@ export function parseCsv(text: string): string[][] {
 
 type Cell = (cells: string[], column: string) => string;
 
+const HEADER_ALIASES: Record<string, string> = {
+  'country/region': 'country',
+};
+
+const headingOf = (name: string): string => {
+  const heading = name.trim().toLowerCase();
+  return HEADER_ALIASES[heading] ?? heading;
+};
+
 function reader(header: string[], required: readonly string[]): Cell {
-  const names = header.map((name) => name.trim());
-  const missing = required.filter((column) => !names.includes(column));
+  const names = header.map(headingOf);
+  const missing = required.filter(
+    (column) => !names.includes(headingOf(column)),
+  );
   if (missing.length > 0) throw new PlayHeaderError(missing);
-  return (cells, column) => cells[names.indexOf(column)] ?? '';
+  return (cells, column) => cells[names.indexOf(headingOf(column))] ?? '';
 }
 
 interface PlayCounts {
