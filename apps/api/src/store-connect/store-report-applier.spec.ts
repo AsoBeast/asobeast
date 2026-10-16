@@ -89,6 +89,17 @@ describe('StoreReportApplier', () => {
     expect(tx.$executeRaw).toHaveBeenCalledTimes(1);
   });
 
+  it('restarts the retention of an instance downloaded again', async () => {
+    const { applier, api, tx, pending } = build([md5(first), md5(second)]);
+
+    await applier.apply(api as unknown as AscAnalyticsApi, pending);
+
+    const [{ update }] = tx.storeReportInstance.upsert.mock.calls[0] as [
+      { update: { fetchedAt?: Date } },
+    ];
+    expect(update.fetchedAt).toBeInstanceOf(Date);
+  });
+
   it('advances the last processing date and marks the instance applied inside the transaction', async () => {
     const { applier, api, tx, pending } = build([md5(first), md5(second)]);
 

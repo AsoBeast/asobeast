@@ -62,7 +62,12 @@ export class StoreReportApplier {
           sizeInBytes: raw.length,
           segments: segments.length,
         },
-        update: { raw, sizeInBytes: raw.length, segments: segments.length },
+        update: {
+          raw,
+          sizeInBytes: raw.length,
+          segments: segments.length,
+          fetchedAt: new Date(),
+        },
       });
       for (const statement of funnelUpserts(workspaceId, appId, rows)) {
         await tx.$executeRaw(statement);
