@@ -40,7 +40,7 @@ test("writing a reply by hand saves it and the list shows a draft", async ({
   await page.goto(REPLIES_PAGE);
   const article = articleOf(page, "Please add dark mode.");
 
-  await article.getByRole("button", { name: "Reply", exact: true }).click();
+  await article.getByRole("button", { name: /^Reply to/ }).click();
 
   await expect(page).toHaveURL(/reply=rep-3/);
   await expect(composer(page)).toBeVisible();
@@ -417,10 +417,7 @@ test("opening the composer moves focus to the text and closing it returns focus"
 }) => {
   await page.goto(REPLIES_PAGE);
   const article = articleOf(page, "Please add dark mode.");
-  const replyButton = article.getByRole("button", {
-    name: "Reply",
-    exact: true,
-  });
+  const replyButton = article.getByRole("button", { name: /^Reply to/ });
 
   await replyButton.click();
 
@@ -502,8 +499,7 @@ test("translation is offered only with a key and only for another language", asy
 
   await expect(
     articleOf(page, "Please add dark mode.").getByRole("button", {
-      name: "Reply",
-      exact: true,
+      name: /^Reply to/,
     }),
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "Translate" })).toHaveCount(0);

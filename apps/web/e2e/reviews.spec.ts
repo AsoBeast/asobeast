@@ -476,6 +476,91 @@ test("a play review edited after the reply says so and has its own filter", asyn
   ).toHaveCount(0);
 });
 
+const REVIEW_DAY = /[A-Z][a-z]{2} \d{1,2}, \d{4}/;
+
+test("every review card is named and its buttons carry the review", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/reviews");
+  const articles = await page.getByRole("article").all();
+  expect(articles).toHaveLength(5);
+  for (const article of articles) {
+    await expect(article).toHaveAccessibleName(/^\d star review by .+ on /);
+  }
+
+  const jordan = page.getByRole("article").filter({ hasText: "Crashes often" });
+  await expect(
+    jordan.getByRole("button", {
+      name: new RegExp(
+        `^Edit reply to the 2 star review by Jordan on ${REVIEW_DAY.source}$`,
+      ),
+    }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("article")
+      .filter({ hasText: "Please add dark mode." })
+      .getByRole("button", {
+        name: new RegExp(
+          `^Reply to the 1 star review by Anonymous on ${REVIEW_DAY.source}$`,
+        ),
+      }),
+  ).toBeVisible();
+
+  const names = await Promise.all(
+    (await page.getByRole("article").getByRole("button").all()).map((button) =>
+      button.getAttribute("aria-label"),
+    ),
+  );
+  expect(names).toHaveLength(5);
+  expect(new Set(names).size).toBe(names.length);
+});
+
+test("show more and show less name the review they open", async ({ page }) => {
+  await page.setViewportSize({ width: 1512, height: 900 });
+  await page.goto("/apps/app-long/reviews");
+  const card = page.getByRole("article").filter({ hasText: "Review number 3" });
+
+  const more = card.getByRole("button", {
+    name: new RegExp(
+      `^Show more of the 3 star review by Reviewer 3 on ${REVIEW_DAY.source}$`,
+    ),
+  });
+  await more.click();
+
+  await expect(
+    card.getByRole("button", {
+      name: new RegExp(
+        `^Show less of the 3 star review by Reviewer 3 on ${REVIEW_DAY.source}$`,
+      ),
+    }),
+  ).toHaveAttribute("aria-expanded", "true");
+});
+
+test("translate buttons name the review they translate", async ({
+  context,
+  page,
+}) => {
+  await seedCookies(context, { e2e_metadata_ai: "1" });
+  await page.goto("/apps/app-gp/reviews");
+
+  const lena = page.getByRole("article").filter({ hasText: "Stürzt ab" });
+  await expect(
+    lena.getByRole("button", {
+      name: new RegExp(
+        `^Translate the 2 star review by Lena on ${REVIEW_DAY.source}$`,
+      ),
+    }),
+  ).toBeVisible();
+  const names = await Promise.all(
+    (await page.getByRole("button", { name: /^Translate the / }).all()).map(
+      (button) => button.getAttribute("aria-label"),
+    ),
+  );
+  expect(names).toHaveLength(3);
+  expect(new Set(names).size).toBe(3);
+});
+
 test("the needs reply tile opens the queue lowest score first", async ({
   page,
 }) => {

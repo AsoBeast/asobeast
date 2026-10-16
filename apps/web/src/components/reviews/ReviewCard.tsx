@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { ReplyStateBadge } from "./ReplyStateBadge";
+import { reviewActionLabel, reviewSubject } from "./review-subject";
 import { translationCaption } from "./review-translation";
 import { useReviewTranslation } from "./use-review-translation";
 
@@ -50,7 +51,7 @@ function useOverflowing<T extends HTMLElement>() {
   return [ref, overflowing] as const;
 }
 
-function ReviewText({ text }: { text: string }) {
+function ReviewText({ text, review }: { text: string; review: ReviewItem }) {
   const [expanded, setExpanded] = useState(false);
   const [ref, overflowing] = useOverflowing<HTMLParagraphElement>();
 
@@ -70,6 +71,10 @@ function ReviewText({ text }: { text: string }) {
           type="button"
           onClick={() => setExpanded((value) => !value)}
           aria-expanded={expanded}
+          aria-label={reviewActionLabel(
+            expanded ? "Show less of" : "Show more of",
+            review,
+          )}
           className={LINK_BUTTON}
         >
           {expanded ? "Show less" : "Show more"}
@@ -96,28 +101,38 @@ function DeveloperReply({ review }: { review: ReviewItem }) {
 
 type ReviewTranslationState = ReturnType<typeof useReviewTranslation>;
 
-function translateLabel(translation: ReviewTranslationState): string {
-  if (translation.pending) return "Translating…";
-  if (translation.translation) return "Show original";
-  if (translation.kept) return "Show translation";
-  return "Translate";
+function translateAction(translation: ReviewTranslationState): {
+  text: string;
+  lead: string | null;
+} {
+  if (translation.pending) return { text: "Translating…", lead: null };
+  if (translation.translation) {
+    return { text: "Show original", lead: "Show original of" };
+  }
+  if (translation.kept) {
+    return { text: "Show translation", lead: "Show translation of" };
+  }
+  return { text: "Translate", lead: "Translate" };
 }
 
 function TranslateButton({
   translation,
+  review,
 }: {
   translation: ReviewTranslationState;
+  review: ReviewItem;
 }) {
   if (!translation.offered) return null;
-  const label = translateLabel(translation);
+  const { text, lead } = translateAction(translation);
   return (
     <button
       type="button"
       onClick={translation.toggle}
       disabled={translation.disabled}
+      aria-label={lead ? reviewActionLabel(lead, review) : undefined}
       className={LINK_BUTTON}
     >
-      {label}
+      {text}
     </button>
   );
 }
@@ -142,6 +157,7 @@ export function ReviewCard({
   const text = shown ? shown.text : review.text;
   return (
     <article
+      aria-label={reviewSubject(review)}
       style={{ contentVisibility: "auto", containIntrinsicSize: "auto 8rem" }}
       className={cn(
         "flex flex-col gap-2 border-l-2 py-3 pl-4",
@@ -161,7 +177,11 @@ export function ReviewCard({
         </span>
       </div>
       {text.trim() ? (
-        <ReviewText key={shown ? "translated" : "original"} text={text} />
+        <ReviewText
+          key={shown ? "translated" : "original"}
+          text={text}
+          review={review}
+        />
       ) : (
         <p className="text-body text-muted-foreground">No written review</p>
       )}
@@ -175,7 +195,7 @@ export function ReviewCard({
         <p className="text-xs text-muted-foreground wrap-anywhere">
           {review.userName ?? "Anonymous"} · {formatDate(review.reviewedAt)}
         </p>
-        <TranslateButton translation={translation} />
+        <TranslateButton translation={translation} review={review} />
         {actions}
       </div>
       {children}

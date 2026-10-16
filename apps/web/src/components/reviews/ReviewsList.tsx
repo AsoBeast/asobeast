@@ -36,6 +36,7 @@ import {
   type ReviewView,
 } from "./review-filters";
 import { matchesReviewQuery } from "./review-search";
+import { reviewActionLabel } from "./review-subject";
 import { ReviewCountsSkeleton, ReviewsListSkeleton } from "./skeletons";
 
 function ShowAll({
@@ -165,6 +166,10 @@ function ReviewCards({
                     size="sm"
                     className="ml-auto"
                     autoFocus={closed === review.id}
+                    aria-label={reviewActionLabel(
+                      review.reply?.text ? "Edit reply to" : "Reply to",
+                      review,
+                    )}
                     onClick={() => {
                       setClosed(null);
                       onReply(review.id);
