@@ -27,6 +27,11 @@ const SECRET_SHAPES: [RegExp, string][] = [
   [/\b(?:sk|rk|pk)_(?:live|test)_[A-Za-z0-9]{8,}/g, REDACTED],
   [/\bwhsec_[A-Za-z0-9]{8,}/g, REDACTED],
   [
+    /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----/g,
+    REDACTED,
+  ],
+  [/\beyJ[\w-]{10,}\.[\w-]{10,}\.[\w-]{10,}/g, REDACTED],
+  [
     new RegExp(`${SESSION_COOKIE}=[^;\\s"']+`, 'g'),
     `${SESSION_COOKIE}=${REDACTED}`,
   ],

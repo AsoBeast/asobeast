@@ -231,6 +231,15 @@ Optional, off by default. With an Apple Ads API key, asobeast reads Apple's own 
 | `APPLE_ADS_AD_ACCOUNT_ID` | Empty | No | Ad account to read through. Empty uses the first one the credentials can read |
 | `CRON_APPLE_POPULARITY` | `0 9 * * 1` | No | When the weekly sync runs, UTC. Never scheduled while the credentials are unset |
 
+## Store consoles
+
+Optional, off by default. Owners connect their store consoles in settings; these keys protect what they paste. See [Read impressions and conversion from your console](/guides/store-funnel).
+
+| Variable | Default | Required | Effect |
+| --- | --- | --- | --- |
+| `STORE_CONNECT_ENCRYPTION_KEY` | Empty | No | Base64 of 32 random bytes, generated with `openssl rand -base64 32`. Seals the App Store Connect and Play Console keys owners connect in settings. Empty keeps every store connection off, and nothing contacts Apple or Google. A value that is not 32 bytes refuses to boot. Never logged |
+| `STORE_CONNECT_ENCRYPTION_KEY_PREVIOUS` | Empty | No | The key being rotated away from. A stored credential sealed with it is opened and resealed with the current key on first use. Refuses to boot when set without `STORE_CONNECT_ENCRYPTION_KEY` |
+
 ## Admin surfaces
 
 See [The queue dashboard and the OpenAPI surface](/security/admin-surfaces).

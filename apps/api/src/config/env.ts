@@ -5,6 +5,7 @@ import {
   OCR_LANGUAGES,
 } from '../screenshots/ocr-languages';
 import { assertAppleAdsConfiguration } from './apple-ads-config';
+import { assertStoreConnectConfiguration } from './store-connect-config';
 import { assertProductionSafety } from './production-safety';
 import { assertSmtpDkimConfiguration } from './smtp-dkim-config';
 import { TrustedProxyHops } from './trusted-proxy';
@@ -225,6 +226,8 @@ export const EnvSchema = z.object({
   APPLE_ADS_PRIVATE_KEY_PATH: optionalText,
   APPLE_ADS_AD_ACCOUNT_ID: optionalText,
   CRON_APPLE_POPULARITY: cronPattern('0 9 * * 1'),
+  STORE_CONNECT_ENCRYPTION_KEY: optionalText,
+  STORE_CONNECT_ENCRYPTION_KEY_PREVIOUS: optionalText,
   LOG_LEVEL: z
     .enum(['error', 'warn', 'log', 'debug', 'verbose'])
     .default('debug'),
@@ -243,5 +246,6 @@ export function validateEnv(config: Record<string, unknown>): Env {
   assertProductionSafety(env);
   assertAppleAdsConfiguration(env);
   assertSmtpDkimConfiguration(env);
+  assertStoreConnectConfiguration(env);
   return env;
 }
