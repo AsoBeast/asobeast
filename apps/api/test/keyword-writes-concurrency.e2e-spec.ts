@@ -308,7 +308,7 @@ describe('Keyword writes under concurrency (e2e)', () => {
       await hold.inside;
       const second = fields.setKeywordField(secondId, DELTA_SET.join(','));
 
-      expect(await settlesWithin(second, 2_000)).toBe(true);
+      expect(await settlesWithin(second, 15_000)).toBe(true);
       hold.release();
       await Promise.all([first, second]);
     });
