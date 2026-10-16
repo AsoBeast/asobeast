@@ -129,10 +129,27 @@ test("says the newest days may still grow while the windows fill", async ({
   );
 });
 
-test("shows no store funnel for a google play app", async ({ page }) => {
+test("shows the google play funnel with visitors, acquisitions and conversion", async ({
+  page,
+}) => {
   await page.goto("/apps/app-gp");
 
-  await expect(page.getByText(/^Store funnel/)).toHaveCount(0);
+  const funnel = card(page, "Store funnel");
+  const tiles = funnel.locator('[data-slot="stat-tile"]');
+  await expect(funnel).toContainText("Google Play Console");
+  await expect(tiles).toHaveCount(3);
+  await expect(
+    tiles.filter({ hasText: "Store listing visitors" }),
+  ).toContainText("2,240");
+  await expect(tiles.filter({ hasText: "Acquisitions" })).toContainText("112");
+  await expect(tiles.filter({ hasText: "Conversion" })).toContainText("5.0%");
+  await expect(funnel).not.toContainText("Impressions");
+  await expect(funnel).toContainText("Search: 65% of store listing visitors.");
+
+  await funnel.getByRole("button", { name: "About the store funnel" }).click();
+  await expect(
+    page.getByRole("dialog", { name: "Store funnel" }),
+  ).toContainText("store performance files");
 });
 
 test("shows no store funnel while store connections are off", async ({

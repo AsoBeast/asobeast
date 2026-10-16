@@ -4,6 +4,7 @@ import type {
 } from "@asobeast/shared";
 
 export const STORE_CONNECTION_COOKIE = "e2e_store_connection";
+export const PLAY_CONNECTION_COOKIE = "e2e_play_connection";
 export const STORE_CONNECT_OFF_COOKIE = "e2e_store_connect_off";
 
 export const ADMIN_KEY_NEEDED =
@@ -54,6 +55,31 @@ export const STORE_CONNECTION_READ_ONLY: StoreConnectionItem = {
   ),
 };
 
+export const PLAY_BUCKET = "pubsite_prod_rev_01234567890987654321";
+
+export const PLAY_CONNECTION_ACTIVE: StoreConnectionItem = {
+  store: "GOOGLE_PLAY",
+  status: "active",
+  reportAccess: "admin",
+  issuerId: "reports@focus-123.iam.gserviceaccount.com",
+  keyId: "a1b2c3d4e5f6",
+  keyFingerprint: "7c1e09ab53fd2468",
+  createdAt: "2026-10-02T10:00:00.000Z",
+  verifiedAt: "2026-10-02T10:00:00.000Z",
+  lastSyncedAt: "2026-10-15T05:40:00.000Z",
+  lastError: null,
+  bucket: PLAY_BUCKET,
+  apps: [
+    {
+      appId: "app-gp",
+      name: "Tomato Clock",
+      state: "requested",
+      firstDate: "2026-09-01",
+      lastDate: "2026-10-09",
+    },
+  ],
+};
+
 const CONNECTIONS: Record<string, StoreConnectionItem> = {
   active: STORE_CONNECTION_ACTIVE,
   rejected: STORE_CONNECTION_REJECTED,
@@ -69,11 +95,23 @@ export function storeConnectionOf(
 export function storeConnectionState(
   value: string | undefined,
   off: boolean,
+  play = false,
 ): StoreConnectionState {
   if (off) return { available: false, connections: [] };
   const connection = storeConnectionOf(value);
-  return { available: true, connections: connection ? [connection] : [] };
+  return {
+    available: true,
+    connections: [
+      ...(connection ? [connection] : []),
+      ...(play ? [PLAY_CONNECTION_ACTIVE] : []),
+    ],
+  };
 }
+
+export const playConnectionCookie = (connected: boolean): string =>
+  connected
+    ? `${PLAY_CONNECTION_COOKIE}=active; Path=/`
+    : `${PLAY_CONNECTION_COOKIE}=; Path=/; Max-Age=0`;
 
 export const storeConnectionCookie = (value: string | null): string =>
   value === null

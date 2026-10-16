@@ -11,6 +11,10 @@ import {
   STORE_CONNECT_OFF_COOKIE,
   STORE_CONNECTION_ACTIVE,
   STORE_CONNECTION_COOKIE,
+  PLAY_BUCKET,
+  PLAY_CONNECTION_ACTIVE,
+  PLAY_CONNECTION_COOKIE,
+  playConnectionCookie,
   storeConnectionCookie,
   storeConnectionOf,
   storeConnectionState,
@@ -2415,8 +2419,54 @@ const routes: Route[] = [
         storeConnectionState(
           cookieValue(req, STORE_CONNECTION_COOKIE),
           hasCookie(req, STORE_CONNECT_OFF_COOKIE, "1"),
+          hasCookie(req, PLAY_CONNECTION_COOKIE, "active"),
         ),
       ),
+  },
+  {
+    method: "PUT",
+    pattern: /^\/store-connections\/GOOGLE_PLAY$/,
+    handler: (_p, req, res) =>
+      withBody<{ bucket?: string; serviceAccountJson?: string }>(
+        req,
+        res,
+        (body) => {
+          const path = req.url ?? "/store-connections/GOOGLE_PLAY";
+          if (!body.serviceAccountJson?.includes("private_key")) {
+            return json(
+              res,
+              400,
+              errorEnvelope(
+                400,
+                path,
+                "The service account key has no private_key. Choose the JSON key file Google Cloud downloaded.",
+              ),
+            );
+          }
+          if (body.bucket !== PLAY_BUCKET) {
+            return json(
+              res,
+              422,
+              errorEnvelope(
+                422,
+                path,
+                `Google Cloud Storage has no bucket ${body.bucket ?? ""} this service account can read. Copy the bucket id from Download reports in Play Console.`,
+              ),
+            );
+          }
+          json(res, 200, PLAY_CONNECTION_ACTIVE, {
+            "set-cookie": playConnectionCookie(true),
+          });
+        },
+      ),
+  },
+  {
+    method: "DELETE",
+    pattern: /^\/store-connections\/GOOGLE_PLAY$/,
+    handler: (_p, _req, res) => {
+      res.writeHead(204, { "set-cookie": playConnectionCookie(false) });
+      res.end();
+    },
   },
   {
     method: "PUT",

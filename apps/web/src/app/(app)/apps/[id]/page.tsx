@@ -89,7 +89,7 @@ export default async function AppOverviewPage({
     listingMarkets,
     queryClient.prefetchQuery(storeConnectionsOptions),
   ]);
-  const funnel = app.store === "APP_STORE" && !app.isCompetitor;
+  const funnel = !app.isCompetitor;
   if (funnel) {
     void scope.then((country) =>
       queryClient.prefetchQuery(funnelOptions(id, FUNNEL_SERIES_DAYS, country)),
@@ -128,11 +128,9 @@ export default async function AppOverviewPage({
           <StatCards id={id} />
         </Suspense>
 
-        {funnel ? (
-          <Suspense fallback={<FunnelCardSkeleton />}>
-            <FunnelCard id={id} />
-          </Suspense>
-        ) : null}
+        <Suspense fallback={<FunnelCardSkeleton />}>
+          <FunnelCard id={id} store={app.store} />
+        </Suspense>
 
         <Suspense fallback={<ActionsSummaryCardSkeleton />}>
           <ActionsSummaryCard appId={id} />

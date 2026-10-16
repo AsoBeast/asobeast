@@ -1,18 +1,25 @@
-import type { StoreConnectionApp } from "@asobeast/shared";
+import type { Store, StoreConnectionApp } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
-import { appStateLabel, historyLine } from "@/lib/store-connection-copy";
+import {
+  appStateLabel,
+  historyLine,
+  STORE_CONSOLES,
+} from "@/lib/store-connection-copy";
 
-export function StoreConnectionApps({ apps }: { apps: StoreConnectionApp[] }) {
+export function StoreConnectionApps({
+  store,
+  apps,
+}: {
+  store: Store;
+  apps: StoreConnectionApp[];
+}) {
+  const copy = STORE_CONSOLES[store];
   if (apps.length === 0) {
-    return (
-      <p className="text-body text-muted-foreground">
-        Import an App Store app to read its numbers through this key.
-      </p>
-    );
+    return <p className="text-body text-muted-foreground">{copy.noApps}</p>;
   }
   return (
     <ul
-      aria-label="Apps this key reports"
+      aria-label={copy.appsLabel}
       className="flex flex-col divide-y rounded-xl border"
     >
       {apps.map((app) => (
@@ -29,7 +36,7 @@ export function StoreConnectionApps({ apps }: { apps: StoreConnectionApp[] }) {
             </span>
           </div>
           <Badge variant={app.state === "requested" ? "success" : "outline"}>
-            {appStateLabel(app.state)}
+            {appStateLabel(app.state, store)}
           </Badge>
         </li>
       ))}

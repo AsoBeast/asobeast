@@ -4,6 +4,7 @@ import {
   appStateLabel,
   connectionStatusLine,
   historyLine,
+  STORE_CONSOLES,
 } from "./store-connection-copy";
 
 const APP: StoreConnectionApp = {
@@ -98,6 +99,39 @@ describe("historyLine", () => {
   it("says when nothing is stored yet", () => {
     expect(historyLine({ ...APP, firstDate: null, lastDate: null })).toBe(
       "No data yet",
+    );
+  });
+});
+
+describe("google play copy", () => {
+  const PLAY: StoreConnectionItem = {
+    ...ITEM,
+    store: "GOOGLE_PLAY",
+    issuerId: "reports@focus-123.iam.gserviceaccount.com",
+    keyId: "a1b2c3d4e5f6",
+    bucket: "pubsite_prod_rev_01234567890987654321",
+  };
+
+  it("names the service account, key id and bucket", () => {
+    expect(STORE_CONSOLES.GOOGLE_PLAY.facts(PLAY).slice(0, 3)).toEqual([
+      ["Service account", "reports@focus-123.iam.gserviceaccount.com"],
+      ["Key ID", "a1b2c3d4e5f6"],
+      ["Bucket", "pubsite_prod_rev_01234567890987654321"],
+    ]);
+  });
+
+  it("says google refused the service account and what to do", () => {
+    expect(connectionStatusLine({ ...PLAY, status: "rejected" }).text).toBe(
+      "Google refused this service account. Check its access in Play Console, verify it again, or connect a new one.",
+    );
+  });
+
+  it("waits for the first file and labels an app without files", () => {
+    expect(
+      connectionStatusLine({ ...PLAY, lastSyncedAt: null }).text,
+    ).toContain("first store performance file");
+    expect(appStateLabel("unmatched", "GOOGLE_PLAY")).toBe(
+      "No files in this bucket",
     );
   });
 });
