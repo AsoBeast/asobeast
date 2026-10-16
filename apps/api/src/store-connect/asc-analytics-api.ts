@@ -91,10 +91,10 @@ export class AscAnalyticsApi {
   ) {}
 
   async verify(): Promise<void> {
-    await this.send({
-      method: 'GET',
-      path: '/v1/apps?fields[apps]=name&limit=1',
-    });
+    await this.send(
+      { method: 'GET', path: '/v1/apps?fields[apps]=name&limit=1' },
+      false,
+    );
   }
 
   async appsById(ids: string[]): Promise<AscApp[]> {
@@ -244,13 +244,13 @@ export class AscAnalyticsApi {
     return items;
   }
 
-  private async send(request: AscRequest): Promise<AscResponse> {
+  private async send(request: AscRequest, retry = true): Promise<AscResponse> {
     const signed =
       request.absoluteUrl === undefined
         ? { ...request, token: this.tokens.get() }
         : request;
     let response = await this.transport(signed);
-    if (isServerError(response)) {
+    if (retry && isServerError(response)) {
       await this.pause(ASC_RETRY_PAUSE_MS);
       response = await this.transport(signed);
     }

@@ -341,7 +341,9 @@ describe('AscAnalyticsApi failures', () => {
       failure(500, 'UNEXPECTED_ERROR'),
     );
 
-    await expect(api.verify()).rejects.toMatchObject({ status: 500 });
+    await expect(api.appsById(['111'])).rejects.toMatchObject({
+      status: 500,
+    });
     expect(requests).toHaveLength(2);
     expect(pause).toHaveBeenCalledWith(ASC_RETRY_PAUSE_MS);
     expect(ASC_RETRY_PAUSE_MS).toBe(2_000);
@@ -350,7 +352,18 @@ describe('AscAnalyticsApi failures', () => {
   it('answers after a 500 that recovers', async () => {
     const { api } = recorded(failure(503, 'UNAVAILABLE'), ok(apps));
 
-    await expect(api.verify()).resolves.toBeUndefined();
+    await expect(api.appsById(['111'])).resolves.toHaveLength(2);
+  });
+
+  it('checks a key with one attempt so a connect answers within the proxy deadline', async () => {
+    const { api, requests, pause } = recorded(
+      failure(503, 'UNAVAILABLE'),
+      ok(apps),
+    );
+
+    await expect(api.verify()).rejects.toMatchObject({ status: 503 });
+    expect(requests).toHaveLength(1);
+    expect(pause).not.toHaveBeenCalled();
   });
 
   it('keeps a refused segment download apart from a refused key', async () => {
