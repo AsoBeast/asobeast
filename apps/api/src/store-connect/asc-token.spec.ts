@@ -95,6 +95,14 @@ describe('signAscToken', () => {
 });
 
 describe('normalizePrivateKey', () => {
+  it('reads a hostile header run in linear time', () => {
+    const hostile = `-----BEGIN  -----${'-----BEGIN  -----a'.repeat(40_000)}`;
+    const started = performance.now();
+
+    expect(normalizePrivateKey(hostile)).toBe(hostile.trim());
+    expect(performance.now() - started).toBeLessThan(200);
+  });
+
   it('rebuilds a key pasted on one line, the way a password field sends it', () => {
     const oneLine = PEM.replace(/\r?\n/g, '');
 
