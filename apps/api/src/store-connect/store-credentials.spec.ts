@@ -13,6 +13,13 @@ const CREDENTIALS = {
   privateKey: '-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----',
 };
 
+const PLAY_CREDENTIALS = {
+  clientEmail: 'reports@focus-123.iam.gserviceaccount.com',
+  privateKeyId: 'a1b2c3d4e5',
+  privateKey: '-----BEGIN PRIVATE KEY-----\nrsa\n-----END PRIVATE KEY-----',
+  bucket: 'pubsite_prod_rev_01234567890987654321',
+};
+
 describe('store credentials', () => {
   const box = new SecretBox(randomBytes(32));
 
@@ -49,6 +56,23 @@ describe('store credentials', () => {
     );
 
     expect(() => openCredentials(box, 'ws_1', 'APP_STORE', sealed)).toThrow(
+      SecretBoxError,
+    );
+  });
+
+  it('opens a play credential and refuses an app store shape sealed for play', () => {
+    const sealed = sealCredentials(
+      box,
+      'ws_1',
+      'GOOGLE_PLAY',
+      PLAY_CREDENTIALS,
+    );
+    const wrong = sealCredentials(box, 'ws_1', 'GOOGLE_PLAY', CREDENTIALS);
+
+    expect(openCredentials(box, 'ws_1', 'GOOGLE_PLAY', sealed)).toEqual(
+      PLAY_CREDENTIALS,
+    );
+    expect(() => openCredentials(box, 'ws_1', 'GOOGLE_PLAY', wrong)).toThrow(
       SecretBoxError,
     );
   });

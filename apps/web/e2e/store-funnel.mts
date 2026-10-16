@@ -91,6 +91,43 @@ export const APP_LONG_FUNNEL = report("app-long", {
   windows: windowsOf(counts(640, 75, 19, 0.0297), "pending"),
 });
 
+const playCounts = (
+  pageViews: number,
+  gets: number,
+  conversion: number,
+): StoreFunnelCounts => ({
+  impressions: null,
+  uniqueImpressions: null,
+  pageViews,
+  gets,
+  conversion,
+});
+
+const playPoints = (visitors: number, search: number): StoreFunnelPoint[] =>
+  points(0, 0).map((point) => ({
+    ...point,
+    total: playCounts(visitors, 4, 0.05),
+    search: playCounts(search, 3, 0.06),
+  }));
+
+export const APP_GP_FUNNEL = report("app-gp", {
+  store: "GOOGLE_PLAY",
+  source: "playConsole",
+  points: playPoints(80, 52),
+  windows: windowsOf(playCounts(2_240, 112, 0.05), "measured").map(
+    (window) => ({
+      ...window,
+      previous: window.previous && playCounts(2_000, 92, 0.046),
+      change: window.change && {
+        impressions: null,
+        pageViews: 0.12,
+        gets: 0.217,
+        conversion: 0.087,
+      },
+    }),
+  ),
+});
+
 export const NOT_CONNECTED_FUNNEL = (appId: string): StoreFunnelReport =>
   report(appId, {
     connected: false,
@@ -108,5 +145,6 @@ export function funnelFor(
     return country === "pl" ? APP_1_FUNNEL_PL : APP_1_FUNNEL;
   }
   if (appId === "app-long") return APP_LONG_FUNNEL;
+  if (appId === "app-gp") return APP_GP_FUNNEL;
   return NOT_CONNECTED_FUNNEL(appId);
 }

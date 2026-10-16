@@ -305,4 +305,93 @@ describe('Store funnel (e2e)', () => {
 
     expect(report).not.toHaveProperty('pages');
   });
+
+  it('answers a play app from its country rows for a market and its traffic rows for all markets', async () => {
+    const play = await harness.prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.GOOGLE_PLAY,
+        storeAppId: 'com.example.habits',
+        country: 'us',
+        name: 'Habits',
+      },
+    });
+    const connection = await harness.prisma.storeConnection.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.GOOGLE_PLAY,
+        issuerId: 'reports@focus-123.iam.gserviceaccount.com',
+        keyId: 'a1b2c3d4e5f6',
+        keyFingerprint: '0123456789abcdef',
+        credentialCiphertext: 'v1.sealed',
+        reportAccess: 'admin',
+        bucket: 'pubsite_prod_rev_1',
+      },
+    });
+    await reportOn(connection.id, play.id);
+    const day = utcDay(10);
+    const counters = (visitors: number, acquisitions: number) => ({
+      impressions: 0,
+      uniqueImpressions: 0,
+      pageViews: visitors,
+      uniquePageViews: visitors,
+      gets: acquisitions,
+      uniqueGets: acquisitions,
+    });
+    await harness.prisma.storeFunnelDay.createMany({
+      data: [
+        {
+          territory: 'us',
+          country: 'us',
+          sourceType: 'all',
+          ...counters(800, 40),
+        },
+        {
+          territory: 'de',
+          country: 'de',
+          sourceType: 'all',
+          ...counters(200, 10),
+        },
+        {
+          territory: 'all',
+          country: null,
+          sourceType: 'search',
+          ...counters(600, 30),
+        },
+        {
+          territory: 'all',
+          country: null,
+          sourceType: 'browse',
+          ...counters(400, 20),
+        },
+      ].map((row) => ({
+        ...row,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        appId: play.id,
+        date: day,
+        pageType: 'productPage',
+        processingDate: day,
+      })),
+    });
+
+    const all = await funnel(`/apps/${play.id}/funnel?days=30`);
+    const point = (report: StoreFunnelReport) =>
+      report.points.find((each) => each.date === dateKey(day));
+
+    expect(all).toMatchObject({ connected: true, source: 'playConsole' });
+    expect(point(all)?.total).toEqual({
+      impressions: null,
+      uniqueImpressions: null,
+      pageViews: 1000,
+      gets: 50,
+      conversion: 0.05,
+    });
+    expect(point(all)?.search).toMatchObject({ pageViews: 600, gets: 30 });
+    const de = await funnel(`/apps/${play.id}/funnel?days=30&country=de`);
+    expect(point(de)?.total).toMatchObject({
+      impressions: null,
+      pageViews: 200,
+      gets: 10,
+    });
+  });
 });

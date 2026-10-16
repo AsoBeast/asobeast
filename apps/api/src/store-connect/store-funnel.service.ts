@@ -14,6 +14,7 @@ import {
   FUNNEL_LOOKBACK_DAYS,
   FUNNEL_PAGES_DAYS,
   funnelPages,
+  funnelScope,
   measureStoreFunnel,
   shiftDate,
   type FunnelDayRow,
@@ -40,6 +41,13 @@ const COUNTERS = {
   gets: true,
   uniqueGets: true,
 } as const;
+
+export const reportingRequest = (appIds: string[], store?: Store) => ({
+  appId: { in: appIds },
+  accessType: 'ONGOING',
+  state: 'requested',
+  connection: { status: 'active', ...(store ? { store } : {}) },
+});
 
 @Injectable()
 export class StoreFunnelService {
@@ -75,7 +83,7 @@ export class StoreFunnelService {
     const today = startOfUtcDay(now);
     const from = addDays(today, 1 - Math.max(days, FUNNEL_LOOKBACK_DAYS));
     const [rows, range, pageRows] = await Promise.all([
-      this.rows(appId, from, country),
+      this.rows(app, from, country),
       this.range(appId),
       this.pageRows(appId, today, country),
     ]);
@@ -97,13 +105,17 @@ export class StoreFunnelService {
   }
 
   async rows(
-    appId: string,
+    app: { id: string; store: Store },
     from: Date,
     country?: string,
   ): Promise<FunnelDayRow[]> {
     const rows = await this.prisma.storeFunnelDay.groupBy({
       by: ['date', 'sourceType', 'pageType'],
-      where: { appId, date: { gte: from }, ...(country ? { country } : {}) },
+      where: {
+        appId: app.id,
+        date: { gte: from },
+        ...funnelScope(app.store, country),
+      },
       _sum: COUNTERS,
     });
     return rows.map((row): FunnelDayRow => ({
@@ -168,12 +180,7 @@ export class StoreFunnelService {
   async connectedApps(appIds: string[], store?: Store): Promise<Set<string>> {
     if (!this.box || appIds.length === 0) return new Set();
     const requests = await this.prisma.storeReportRequest.findMany({
-      where: {
-        appId: { in: appIds },
-        accessType: 'ONGOING',
-        state: 'requested',
-        connection: { status: 'active', ...(store ? { store } : {}) },
-      },
+      where: reportingRequest(appIds, store),
       select: { appId: true },
     });
     return new Set(requests.map((request) => request.appId));

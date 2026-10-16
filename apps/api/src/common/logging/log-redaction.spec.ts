@@ -194,6 +194,12 @@ describe('scrubText and key material', () => {
     expect(scrubText(publicKey, [])).toBe(publicKey);
   });
 
+  it('scrubs a google access token', () => {
+    expect(
+      scrubText('bearer ya29.a0AfB_byC3x9Kq-ZtLm2PpQw8rTnY4 failed', []),
+    ).toBe(`bearer ${REDACTED} failed`);
+  });
+
   it('scrubs a signed JWT', () => {
     expect(scrubText(`Bearer ${JWT} was refused`, [])).toBe(
       `Bearer ${REDACTED} was refused`,

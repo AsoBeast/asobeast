@@ -19,6 +19,7 @@ export interface ConnectionRow {
   verifiedAt: Date | null;
   lastSyncedAt: Date | null;
   lastError: string | null;
+  bucket: string | null;
 }
 
 export interface ConnectedAppRow {
@@ -78,5 +79,6 @@ export function connectionItems(
     lastSyncedAt: isoOf(row.lastSyncedAt),
     lastError: row.lastError,
     apps: appsOf(row.store, apps, byApp),
+    ...(row.store === 'GOOGLE_PLAY' ? { bucket: row.bucket } : {}),
   }));
 }

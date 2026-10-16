@@ -6,6 +6,7 @@ import {
   formatDate,
   formatDateTime,
   formatDayMonth,
+  formatMonth,
   formatMeasure,
   formatNumber,
   formatPrice,
@@ -91,6 +92,12 @@ describe("formatDate", () => {
 describe("formatDayMonth", () => {
   it("renders the utc day and month", () => {
     expect(formatDayMonth("2026-01-01")).toBe("Jan 1");
+  });
+});
+
+describe("formatMonth", () => {
+  it("renders the utc month and year of the first day", () => {
+    expect(formatMonth("2026-09-01")).toBe("September 2026");
   });
 });
 

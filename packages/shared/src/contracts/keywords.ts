@@ -54,6 +54,13 @@ export interface TrackedKeywordItem {
   scoreOutdated?: boolean;
   tags?: string[];
   note?: string | null;
+  playAcquisitions?: PlayAcquisitions | null;
+}
+
+export interface PlayAcquisitions {
+  month: string;
+  visitors: number;
+  acquisitions: number;
 }
 
 export interface KeywordCountrySummary {

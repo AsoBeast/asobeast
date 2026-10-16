@@ -3406,7 +3406,7 @@
     },
     "/store-connections/{store}": {
       "put": {
-        "description": "Verifies the key with the store, seals it at rest bound to this workspace and replaces any key connected before, then queues a report sync. Owner only, through a signed in session. Answers 422 when the store refuses the key and 409 when the instance has store connections off.",
+        "description": "Verifies the key with the store, seals it at rest bound to this workspace and replaces any key connected before, then queues a report sync. App Store Connect takes an issuer ID, a key ID and a .p8 private key; Google Play takes a service account JSON key and the bucket id of its Play Console reports. The store in the body must match the path. Owner only, through a signed in session. Answers 422 when the store refuses the key and 409 when the instance has store connections off.",
         "operationId": "StoreConnectionsController_connect",
         "parameters": [
           {
@@ -3427,7 +3427,17 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/StoreConnectionDto"
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/AppStoreConnectionDto"
+                  },
+                  {
+                    "$ref": "#/components/schemas/PlayConnectionDto"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "store"
+                }
               }
             }
           }
@@ -7042,7 +7052,7 @@
           "text"
         ]
       },
-      "StoreConnectionDto": {
+      "AppStoreConnectionDto": {
         "type": "object",
         "properties": {
           "store": {
@@ -7072,6 +7082,33 @@
           "issuerId",
           "keyId",
           "privateKey"
+        ]
+      },
+      "PlayConnectionDto": {
+        "type": "object",
+        "properties": {
+          "store": {
+            "enum": [
+              "GOOGLE_PLAY"
+            ],
+            "type": "string"
+          },
+          "serviceAccountJson": {
+            "type": "string",
+            "maxLength": 16384,
+            "description": "The whole contents of the JSON key file Google Cloud downloaded for the service account. Verified with Google, sealed at rest and never returned."
+          },
+          "bucket": {
+            "type": "string",
+            "maxLength": 63,
+            "example": "pubsite_prod_rev_01234567890987654321",
+            "description": "The Cloud Storage bucket id shown under Download reports in Play Console"
+          }
+        },
+        "required": [
+          "store",
+          "serviceAccountJson",
+          "bucket"
         ]
       },
       "ChartCaptureDto": {

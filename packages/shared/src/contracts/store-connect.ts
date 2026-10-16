@@ -34,6 +34,7 @@ export interface StoreConnectionItem {
   lastSyncedAt: string | null;
   lastError: string | null;
   apps: StoreConnectionApp[];
+  bucket?: string | null;
 }
 
 export interface StoreConnectionState {
@@ -48,7 +49,14 @@ export interface AppStoreConnectionRequest {
   privateKey: string;
 }
 
-export type StoreConnectionRequest = AppStoreConnectionRequest;
+export interface PlayConnectionRequest {
+  store: 'GOOGLE_PLAY';
+  serviceAccountJson: string;
+  bucket: string;
+}
+
+export type StoreConnectionRequest =
+  AppStoreConnectionRequest | PlayConnectionRequest;
 
 export const STORE_CONNECTION_SYNC_OUTCOMES = ['queued', 'running'] as const;
 export type StoreConnectionSyncOutcome =

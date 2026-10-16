@@ -155,7 +155,7 @@ describe("store funnel lines", () => {
     expect(funnelRanges(undefined)).toBeNull();
   });
 
-  it("says how many days are left while Apple is still finishing them", () => {
+  it("says how many days are left while the console is still finishing them", () => {
     expect(
       funnelNote(
         {
@@ -167,7 +167,7 @@ describe("store funnel lines", () => {
         },
         7,
       ),
-    ).toBe("Apple's numbers for this window are final in 2 days");
+    ).toBe("The console's numbers for this window are final in 2 days");
     expect(
       funnelNote(
         {
@@ -179,7 +179,7 @@ describe("store funnel lines", () => {
         },
         7,
       ),
-    ).toBe("Apple's numbers for this window are final in 1 day");
+    ).toBe("The console's numbers for this window are final in 1 day");
   });
 
   it("names the day the numbers become final when the api states it", () => {
@@ -195,7 +195,7 @@ describe("store funnel lines", () => {
         },
         7,
       ),
-    ).toBe("Apple's numbers for this window are final by Oct 25, 2026");
+    ).toBe("The console's numbers for this window are final by Oct 25, 2026");
   });
 
   it("says the console reports nothing before an unmeasured change", () => {

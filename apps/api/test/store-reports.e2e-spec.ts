@@ -10,15 +10,17 @@ import type { AscRequest } from '../src/store-connect/asc-transport';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { StoreConnectionService } from '../src/store-connect/store-connection.service';
 import { StoreReportApplier } from '../src/store-connect/store-report-applier';
-import {
-  ADMIN_KEY_NEEDED,
-  StoreReportSyncService,
-} from '../src/store-connect/store-report-sync.service';
+import { ADMIN_KEY_NEEDED } from '../src/store-connect/asc-report-sync.service';
+import { importedMonths } from '../src/store-connect/play/play-report-sync.service';
+import { StoreReportSyncService } from '../src/store-connect/store-report-sync.service';
 import { ownerAgent } from './helpers/session';
 import {
   answer,
   bytes,
   CONNECTION_REQUEST,
+  gcsAnswer,
+  gcsBytes,
+  PLAY_CONNECTION_REQUEST,
   refusal,
   startStoreConnectApp,
   type StoreConnectHarness,
@@ -157,6 +159,7 @@ describe('Store report sync (e2e)', () => {
 
   beforeEach(async () => {
     harness.asc.reset();
+    harness.gcs.reset();
     await harness.prisma.storeConnection.deleteMany({});
     await harness.prisma.$executeRawUnsafe(
       'TRUNCATE TABLE "App", "Keyword" RESTART IDENTITY CASCADE',
@@ -303,7 +306,7 @@ describe('Store report sync (e2e)', () => {
     await asWorkspace(harness.app, async () => {
       const connection = await harness.app
         .get(StoreConnectionService)
-        .open('APP_STORE');
+        .openAppStore();
       await harness.app.get(StoreReportApplier).apply(connection!.api, {
         requestId: request.id,
         appId,
@@ -446,5 +449,126 @@ describe('Store report sync (e2e)', () => {
       detailedLastProcessingDate: new Date('2026-09-12T00:00:00.000Z'),
     });
     await expect(funnelRows()).resolves.toHaveLength(7);
+  });
+
+  it('imports the monthly play files into funnel rows and search terms, once per generation', async () => {
+    const PACKAGE = 'com.example.habits';
+    const [current, previous] = importedMonths(new Date());
+    const play = await harness.prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.GOOGLE_PLAY,
+        storeAppId: PACKAGE,
+        country: 'us',
+        name: 'Habits',
+      },
+    });
+    await owner
+      .put('/store-connections/GOOGLE_PLAY')
+      .send(PLAY_CONNECTION_REQUEST)
+      .expect(200);
+    const playFile = (breakdown: string): Buffer => {
+      const text = readFileSync(
+        join(
+          __dirname,
+          '..',
+          'src',
+          'store-connect',
+          'fixtures',
+          'play',
+          `store_performance_${PACKAGE}_202609_${breakdown}.csv`,
+        ),
+      )
+        .subarray(2)
+        .toString('utf16le')
+        .replaceAll('2026-09-', `${previous.date.slice(0, 8)}`);
+      return Buffer.concat([
+        Buffer.from([0xff, 0xfe]),
+        Buffer.from(text, 'utf16le'),
+      ]);
+    };
+    const name = (month: string, breakdown: string) =>
+      `stats/store_performance/store_performance_${PACKAGE}_${month}_${breakdown}.csv`;
+    const objects = [
+      name(previous.file, 'country'),
+      name(previous.file, 'traffic_source'),
+      name(current.file, 'country'),
+      name('201901', 'country'),
+    ].map((object) => ({
+      name: object,
+      size: '100',
+      generation: '1',
+      updated: new Date().toISOString(),
+    }));
+    harness.gcs.reset();
+    harness.gcs
+      .on('GET', /\/o\?prefix=/, gcsAnswer({ items: objects }))
+      .on('GET', /_country\.csv\?alt=media$/, gcsBytes(playFile('country')))
+      .on(
+        'GET',
+        /_traffic_source\.csv\?alt=media$/,
+        gcsBytes(playFile('traffic_source')),
+      );
+    const runPlay = () =>
+      asWorkspace(harness.app, () =>
+        harness.app.get(StoreReportSyncService).run('GOOGLE_PLAY'),
+      );
+
+    await expect(runPlay()).resolves.toMatchObject({
+      apps: 1,
+      instances: 3,
+      unchanged: 0,
+    });
+
+    const downloads = harness.gcs.requests
+      .filter((each) => each.url.endsWith('?alt=media'))
+      .map((each) => decodeURIComponent(each.url.split('/o/')[1]));
+    expect(downloads).not.toContain(`${name('201901', 'country')}?alt=media`);
+    expect(downloads).toHaveLength(3);
+    const rows = await harness.prisma.storeFunnelDay.findMany({
+      where: { appId: play.id },
+    });
+    const byMarket = rows.filter((row) => row.sourceType === 'all');
+    const byTraffic = rows.filter((row) => row.territory === 'all');
+    expect(new Set(byMarket.map((row) => row.country))).toEqual(
+      new Set(['us', 'de']),
+    );
+    expect(byTraffic.every((row) => row.country === null)).toBe(true);
+    expect(new Set(byTraffic.map((row) => row.sourceType))).toEqual(
+      new Set(['search', 'browse', 'referrer']),
+    );
+    expect(
+      byMarket.find((row) => row.country === 'de' && row.gets === 1200)
+        ?.pageViews,
+    ).toBe(3400);
+    const terms = await harness.prisma.storeFunnelSearchTerm.findMany({
+      where: { appId: play.id },
+      orderBy: { term: 'asc' },
+    });
+    expect(terms.map((term) => [term.term, term.normalized])).toEqual([
+      ['Habit  Tracker', 'habit tracker'],
+      ['habit tracker', 'habit tracker'],
+    ]);
+    const instance = await harness.prisma.storeReportInstance.findFirstOrThrow({
+      where: { appId: play.id, remoteId: { contains: 'traffic_source' } },
+    });
+    expect(instance.raw.subarray(0, 2)).toEqual(Buffer.from([0xff, 0xfe]));
+    expect(instance.granularity).toBe('MONTHLY');
+    const state = (await owner.get('/store-connections').expect(200))
+      .body as StoreConnectionState;
+    expect(
+      state.connections.find((each) => each.store === 'GOOGLE_PLAY')?.apps,
+    ).toEqual([
+      expect.objectContaining({ appId: play.id, state: 'requested' }),
+    ]);
+
+    harness.gcs.requests.length = 0;
+    await expect(runPlay()).resolves.toMatchObject({
+      instances: 0,
+      unchanged: 3,
+    });
+    expect(
+      harness.gcs.requests.filter((each) => each.url.endsWith('?alt=media')),
+    ).toEqual([]);
   });
 });

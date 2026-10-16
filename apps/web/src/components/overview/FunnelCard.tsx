@@ -3,11 +3,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import type {
-  StoreFunnelChange,
-  StoreFunnelReport,
-  StoreFunnelWindow,
-} from "@asobeast/shared";
+import type { Store, StoreFunnelReport } from "@asobeast/shared";
 import { useKeywordScope } from "@/components/app-detail/use-market";
 import { useAuth } from "@/components/auth/use-auth";
 import {
@@ -23,11 +19,13 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { StatTile, StatTileGroup } from "@/components/ui/stat-tile";
 import { formatDate } from "@/lib/format";
 import {
+  FUNNEL_COPY,
   FUNNEL_HEADLINE_DAYS,
   FUNNEL_SERIES_DAYS,
   formatConversion,
   formatCount,
   funnelState,
+  funnelTiles,
   searchShare,
   trendValue,
   windowOf,
@@ -37,60 +35,26 @@ import { appStateLabel } from "@/lib/store-connection-copy";
 import { FunnelHelp } from "./FunnelHelp";
 import { FunnelTilesSkeleton } from "./skeletons";
 
-const FRESHNESS_NOTE =
-  "Apple finishes a day within three days; the newest days may still grow.";
-
-interface Tile {
-  label: string;
-  metric: keyof StoreFunnelChange;
-  value: (window: StoreFunnelWindow | null) => string;
-}
-
-const TILES: Tile[] = [
-  {
-    label: "Impressions",
-    metric: "impressions",
-    value: (window) => formatCount(window?.current?.impressions ?? null),
-  },
-  {
-    label: "Product page views",
-    metric: "pageViews",
-    value: (window) => formatCount(window?.current?.pageViews ?? null),
-  },
-  {
-    label: "Get taps",
-    metric: "gets",
-    value: (window) => formatCount(window?.current?.gets ?? null),
-  },
-  {
-    label: "Conversion",
-    metric: "conversion",
-    value: (window) => formatConversion(window?.current?.conversion ?? null),
-  },
-];
-
 const SETTINGS_LINK =
   "text-body font-medium text-foreground underline decoration-primary underline-offset-4 hover:decoration-2";
 
-function NotReporting({ reason }: { reason: string }) {
+function NotReporting({ store, reason }: { store: Store; reason: string }) {
+  const copy = FUNNEL_COPY[store];
   return (
     <EmptyState
-      title={`App Store Connect reports nothing for this app yet: ${reason}.`}
-      body="The connected key sees this app once it belongs to the key's team and Apple has published its first report."
+      title={`${copy.console} reports nothing for this app yet: ${reason}.`}
+      body={copy.notReporting}
     />
   );
 }
 
-function KeyRefused() {
+function KeyRefused({ store }: { store: Store }) {
   const { isOwner } = useAuth();
+  const copy = FUNNEL_COPY[store];
   return (
     <EmptyState
-      title="App Store Connect refused the connected key."
-      body={
-        isOwner
-          ? "The numbers already stored come back once the key is accepted again. Verify it, or connect a new key."
-          : "Ask the workspace owner to verify the key in settings."
-      }
+      title={`${copy.console} refused the connected key.`}
+      body={isOwner ? copy.refusedBody : copy.refusedAskOwner}
       action={
         isOwner ? (
           <Link href="/settings#store-connections" className={SETTINGS_LINK}>
@@ -102,25 +66,27 @@ function KeyRefused() {
   );
 }
 
-function NotConnected({ id }: { id: string }) {
+function NotConnected({ id, store }: { id: string; store: Store }) {
   const { isOwner } = useAuth();
+  const copy = FUNNEL_COPY[store];
   const { data: connections } = useSuspenseQuery(storeConnectionsOptions);
   const connection = connections.connections.find(
-    (item) => item.store === "APP_STORE",
+    (item) => item.store === store,
   );
-  if (connection?.status === "rejected") return <KeyRefused />;
+  if (connection?.status === "rejected") return <KeyRefused store={store} />;
   if (connection) {
     const app = connection.apps.find((item) => item.appId === id);
-    return <NotReporting reason={appStateLabel(app?.state ?? null)} />;
+    return (
+      <NotReporting
+        store={store}
+        reason={appStateLabel(app?.state ?? null, store)}
+      />
+    );
   }
   return (
     <EmptyState
-      title="Connect App Store Connect to see impressions and conversion here."
-      body={
-        isOwner
-          ? "A key from App Store Connect lets AsoBeast read Apple's own numbers for this app, back to 2024."
-          : "Ask the workspace owner to connect App Store Connect."
-      }
+      title={copy.connectTitle}
+      body={isOwner ? copy.connectBody : copy.askOwner}
       action={
         isOwner ? (
           <Link href="/settings#store-connections" className={SETTINGS_LINK}>
@@ -137,15 +103,20 @@ function FunnelTiles({ report }: { report: StoreFunnelReport }) {
   const week = windowOf(report, 7);
   const share = searchShare(report, headline);
   const settled = headline?.status === "measured";
+  const copy = FUNNEL_COPY[report.store];
 
   return (
     <div className="flex flex-col gap-3">
       <StatTileGroup>
-        {TILES.map((tile) => (
+        {funnelTiles(report).map((tile) => (
           <StatTile
             key={tile.label}
             label={tile.label}
-            value={tile.value(headline)}
+            value={
+              tile.metric === "conversion"
+                ? formatConversion(headline?.current?.conversion ?? null)
+                : formatCount(headline?.current?.[tile.metric] ?? null)
+            }
             note={
               <span className="flex flex-wrap gap-3">
                 <TrendChip
@@ -164,10 +135,10 @@ function FunnelTiles({ report }: { report: StoreFunnelReport }) {
         ))}
       </StatTileGroup>
       <p className="text-caption text-muted-foreground">
-        {share === null ? null : `Search: ${share}% of impressions. `}
+        {share === null ? null : `Search: ${share}% of ${copy.base}. `}
         {headline && settled
           ? `Last 28 complete days through ${formatDate(headline.to)}, against the 28 before.`
-          : FRESHNESS_NOTE}
+          : copy.freshness}
       </p>
     </div>
   );
@@ -179,13 +150,13 @@ function FunnelBody({ id }: { id: string }) {
     funnelOptions(id, FUNNEL_SERIES_DAYS, country),
   );
   return funnelState(report) === "off" ? (
-    <NotConnected id={id} />
+    <NotConnected id={id} store={report.store} />
   ) : (
     <FunnelTiles report={report} />
   );
 }
 
-export function FunnelCard({ id }: { id: string }) {
+export function FunnelCard({ id, store }: { id: string; store: Store }) {
   const { country, switchable } = useKeywordScope(id);
   const { data: connections } = useSuspenseQuery(storeConnectionsOptions);
   if (!connections.available) return null;
@@ -196,10 +167,10 @@ export function FunnelCard({ id }: { id: string }) {
   return (
     <Card>
       <CardHeader>
-        <CardDescription>App Store Connect</CardDescription>
+        <CardDescription>{FUNNEL_COPY[store].console}</CardDescription>
         <CardTitle>Store funnel{market}</CardTitle>
         <CardAction>
-          <FunnelHelp />
+          <FunnelHelp store={store} />
         </CardAction>
       </CardHeader>
       <CardContent>

@@ -115,7 +115,7 @@ export default async function SettingsPage({
         <SettingsSection
           id="store-connections"
           title="Store connections"
-          description="Connect App Store Connect so impressions, page views and downloads appear beside your rankings."
+          description="Connect App Store Connect or the Google Play Console so store listing visits, downloads and conversion appear beside your rankings."
         >
           <Suspense fallback={<StoreConnectionsSkeleton />}>
             <StoreConnectionsCard />
