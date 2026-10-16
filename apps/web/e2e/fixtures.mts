@@ -45,6 +45,7 @@ import type {
   RatingsHistogram,
   ReviewThemes,
   RatingsHistory,
+  ReviewItem,
   ReviewList,
   SerpMovers,
   SerpSnapshot,
@@ -852,6 +853,18 @@ const LONG_LIST_TEXTS = [
   REVIEW_TEXT_THAT_OVERFLOWS,
 ];
 
+export const UNBROKEN_REVIEW_TITLE = "T".repeat(150);
+export const UNBROKEN_REVIEW_TEXT = `https://example.com/${"verylongpath".repeat(40)}`;
+export const UNBROKEN_REVIEW_AUTHOR = "A".repeat(200);
+
+const LONG_LIST_OVERRIDES: Record<number, Partial<ReviewItem>> = {
+  3: {
+    title: UNBROKEN_REVIEW_TITLE,
+    text: UNBROKEN_REVIEW_TEXT,
+    userName: UNBROKEN_REVIEW_AUTHOR,
+  },
+};
+
 export const APP_LONG_REVIEWS: ReviewList = {
   total: 60,
   versions: ["1.0.0"],
@@ -867,6 +880,7 @@ export const APP_LONG_REVIEWS: ReviewList = {
     repliedAt: null,
     replyText: null,
     reply: null,
+    ...LONG_LIST_OVERRIDES[index],
   })),
 };
 

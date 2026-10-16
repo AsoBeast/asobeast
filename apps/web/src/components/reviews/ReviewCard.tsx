@@ -59,7 +59,7 @@ function ReviewText({ text }: { text: string }) {
       <p
         ref={ref}
         className={cn(
-          "text-body break-words whitespace-pre-line",
+          "text-body wrap-anywhere whitespace-pre-line",
           expanded ? null : "line-clamp-4",
         )}
       >
@@ -87,7 +87,7 @@ function DeveloperReply({ review }: { review: ReviewItem }) {
         Developer reply
         {review.repliedAt ? ` · ${formatDate(review.repliedAt)}` : null}
       </p>
-      <p className="text-body break-words whitespace-pre-line">
+      <p className="text-body wrap-anywhere whitespace-pre-line">
         {review.replyText}
       </p>
     </div>
@@ -150,7 +150,9 @@ export function ReviewCard({
     >
       <div className="flex flex-wrap items-center gap-2">
         <Stars score={review.score} />
-        {title ? <span className="text-sm font-medium">{title}</span> : null}
+        {title ? (
+          <span className="text-sm font-medium wrap-anywhere">{title}</span>
+        ) : null}
         {review.version ? (
           <Badge variant="outline">v{review.version}</Badge>
         ) : null}
@@ -170,7 +172,7 @@ export function ReviewCard({
       ) : null}
       <DeveloperReply review={review} />
       <div className="flex flex-wrap items-center gap-2">
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-muted-foreground wrap-anywhere">
           {review.userName ?? "Anonymous"} · {formatDate(review.reviewedAt)}
         </p>
         <TranslateButton translation={translation} />

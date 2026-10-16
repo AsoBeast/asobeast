@@ -1,4 +1,9 @@
 import { readFileSync } from "node:fs";
+import {
+  UNBROKEN_REVIEW_AUTHOR,
+  UNBROKEN_REVIEW_TEXT,
+  UNBROKEN_REVIEW_TITLE,
+} from "./fixtures.mts";
 import { seedCookies } from "./routes.mts";
 import { expect, test } from "./session.mts";
 
@@ -254,6 +259,45 @@ test("show more appears only for a review that runs past four lines", async ({
   ).toHaveAttribute("aria-expanded", "true");
   expect((await text.boundingBox())?.height ?? 0).toBeGreaterThan(collapsed);
 });
+
+for (const [width, clamped] of [
+  [375, true],
+  [768, true],
+  [1440, false],
+] as const) {
+  test(`a long unbroken title, text and author wrap inside the card at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/apps/app-long/reviews");
+    const card = page
+      .getByRole("article")
+      .filter({ hasText: UNBROKEN_REVIEW_TITLE });
+    await expect(card).toBeVisible();
+    const edge = (await card.boundingBox())!;
+    const right = edge.x + edge.width;
+
+    for (const token of [
+      card.getByText(UNBROKEN_REVIEW_TITLE),
+      card.getByText(UNBROKEN_REVIEW_TEXT),
+      card.getByText(new RegExp(`^${UNBROKEN_REVIEW_AUTHOR}`)),
+    ]) {
+      const box = (await token.boundingBox())!;
+      expect(box.x + box.width).toBeLessThanOrEqual(right + 1);
+    }
+
+    const more = card.getByRole("button", { name: "Show more" });
+    if (!clamped) {
+      await expect(more).toHaveCount(0);
+      return;
+    }
+    await expect(more).toBeVisible();
+    const text = card.getByText(UNBROKEN_REVIEW_TEXT);
+    const collapsed = (await text.boundingBox())!.height;
+    await more.click();
+    expect((await text.boundingBox())!.height).toBeGreaterThan(collapsed);
+  });
+}
 
 test("each ratings distribution row stays on one line on a laptop and a phone", async ({
   page,
