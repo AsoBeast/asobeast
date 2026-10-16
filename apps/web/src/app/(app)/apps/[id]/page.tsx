@@ -10,12 +10,14 @@ import { AlertsNudge } from "@/components/onboarding/AlertsNudge";
 import { FirstRunTimeline } from "@/components/onboarding/FirstRunTimeline";
 import { CategoryRankCard } from "@/components/overview/CategoryRankCard";
 import { CoverageCard } from "@/components/overview/CoverageCard";
+import { FunnelCard } from "@/components/overview/FunnelCard";
 import { MoversCard } from "@/components/overview/MoversCard";
 import { OverviewReportHeader } from "@/components/overview/OverviewReportHeader";
 import { RankDistributionChart } from "@/components/overview/RankDistributionChart";
 import { RankDistributionHistoryChart } from "@/components/overview/RankDistributionHistoryChart";
 import {
   ChartCardSkeleton,
+  FunnelCardSkeleton,
   PanelCardSkeleton,
   StatCardsSkeleton,
 } from "@/components/overview/skeletons";
@@ -32,10 +34,13 @@ import {
   appSummaryOptions,
   categoryRanksOptions,
   firstRunOptions,
+  funnelOptions,
   listingMarketsOptions,
   rankDistributionHistoryOptions,
+  storeConnectionsOptions,
   visibilityOptions,
 } from "@/lib/queries";
+import { FUNNEL_SERIES_DAYS } from "@/lib/funnel";
 import { keywordScope, queryMarket, resolveMarket } from "@/lib/market";
 import { presetToRange } from "@/lib/ranges";
 import { marketParser, rangeParser } from "@/lib/search-params";
@@ -82,7 +87,14 @@ export default async function AppOverviewPage({
   const [app, markets] = await Promise.all([
     queryClient.fetchQuery(appDetailOptions(id)),
     listingMarkets,
+    queryClient.prefetchQuery(storeConnectionsOptions),
   ]);
+  const funnel = app.store === "APP_STORE";
+  if (funnel) {
+    void scope.then((country) =>
+      queryClient.prefetchQuery(funnelOptions(id, FUNNEL_SERIES_DAYS, country)),
+    );
+  }
   const market = resolveMarket(requested, markets, app.country);
   await queryClient.prefetchQuery(
     appListingOptions(id, queryMarket(market, app.country)),
@@ -115,6 +127,12 @@ export default async function AppOverviewPage({
         <Suspense fallback={<StatCardsSkeleton />}>
           <StatCards id={id} />
         </Suspense>
+
+        {funnel ? (
+          <Suspense fallback={<FunnelCardSkeleton />}>
+            <FunnelCard id={id} />
+          </Suspense>
+        ) : null}
 
         <Suspense fallback={<ActionsSummaryCardSkeleton />}>
           <ActionsSummaryCard appId={id} />

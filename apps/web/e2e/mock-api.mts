@@ -6,6 +6,7 @@ import {
 import { setTimeout as delay } from "node:timers/promises";
 import { planMockImport } from "./keyword-import.mts";
 import { summarizeActions } from "./actions-summary.mts";
+import { funnelFor } from "./store-funnel.mts";
 import {
   STORE_CONNECT_OFF_COOKIE,
   STORE_CONNECTION_ACTIVE,
@@ -2890,6 +2891,9 @@ const routes: Route[] = [
       res.writeHead(204).end();
     },
   },
+  appRoute(/^\/apps\/([^/]+)\/funnel$/, (dataset, query) =>
+    funnelFor(dataset.detail.id, query.get("country")),
+  ),
   appRoute(/^\/apps\/([^/]+)\/summary$/, (dataset, query) =>
     dataset.detail.id === "app-1"
       ? (APP_1_MARKET_SUMMARIES[query.get("country") ?? ""] ?? dataset.summary)
