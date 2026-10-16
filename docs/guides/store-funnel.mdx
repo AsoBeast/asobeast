@@ -1,12 +1,12 @@
 ---
 title: Read impressions and conversion from your console
 sidebarTitle: Store funnel
-description: "Connect an App Store Connect key once and see impressions, product page views, Get taps and conversion by market beside your rankings, read from Apple's own Discovery and Engagement report."
+description: "Connect an App Store Connect key or a Google Play service account once and see the store's own funnel by market beside your rankings: impressions, page views, Get taps and conversion on the App Store, store listing visitors, acquisitions and installs per search term on Google Play."
 icon: funnel
-keywords: ["App Store Connect","impressions","conversion","product page views","funnel","analytics reports"]
+keywords: ["App Store Connect","Google Play Console","impressions","conversion","product page views","store listing visitors","acquisitions","search terms","funnel","analytics reports"]
 ---
 
-Rankings say where your listing shows. The store funnel says whether people take it. Connect an App Store Connect key in settings and every App Store app the key covers gains a **Store funnel** card on its overview with four numbers Apple reports for it.
+Rankings say where your listing shows. The store funnel says whether people take it. Connect an App Store Connect key in settings and every App Store app the key covers gains a **Store funnel** card on its overview with four numbers Apple reports for it. Connect a Google Play service account and every Google Play app it can read gains the same card with three numbers Google reports. See [Google Play](#google-play).
 
 ## What you get
 
@@ -19,7 +19,7 @@ Rankings say where your listing shows. The store funnel says whether people take
 
 The card shows the last 28 complete days, with the change against the 28 days before and the change of the last 7 complete days against the 7 before, the same windows the [change impact](/guides/listing-changes) uses. It also says what share of the impressions came from App Store search. The card follows the market switcher like every other overview card, so **All markets** adds every storefront and a market reads that storefront alone.
 
-An app the key does not cover, a competitor and a Google Play app show no numbers. A member sees the card and the connection, and only the owner connects, verifies or disconnects.
+An app the connection does not cover and a competitor show no numbers. A member sees the card and the connection, and only the owner connects, verifies or disconnects.
 
 ## Create the key
 
@@ -66,12 +66,53 @@ When the key may read it, the sync also downloads the detailed version of the re
 
 Apple names a market by its territory. asobeast matches each territory to an App Store storefront, so a market on the switcher reads the rows of that storefront. A territory it cannot match still counts in **All markets** and is named in the API log of the sync, so the list can grow.
 
+## Google Play
+
+Google publishes no daily analytics API for store listings. Play Console writes monthly report files to a Cloud Storage bucket instead, and asobeast reads them through a service account you invite.
+
+| Number | What it counts |
+| --- | --- |
+| Store listing visitors | People without the app who opened the store listing |
+| Acquisitions | People who installed the app after opening the store listing |
+| Conversion | Acquisitions divided by store listing visitors |
+
+Google reports no impressions, so the card has three tiles.
+
+<Steps>
+  <Step title="Create a service account">
+    In the Google Cloud console, open **IAM and Admin**, then **Service accounts**, create an account in any project and add a key of type **JSON**. Google downloads the key file once.
+  </Step>
+  <Step title="Invite it in Play Console">
+    In Play Console, open **Users and permissions**, invite the service account's email address and grant **View app information and download bulk reports**, for all apps or for the apps you want measured. Google can take up to a day to apply the permission.
+  </Step>
+  <Step title="Copy the bucket id">
+    Open **Download reports** in Play Console and copy the Cloud Storage URI. The bucket id is the part after `gs://` that starts with `pubsite_prod`.
+  </Step>
+  <Step title="Connect it">
+    In **Settings**, **Store connections**, press **Connect Google Play**, paste the bucket id and choose the JSON key file or paste its contents. asobeast lists the bucket with the key before it stores anything, so a refused account or a wrong bucket id is answered on the spot.
+  </Step>
+</Steps>
+
+**Verify**, **Sync now**, **Replace service account** and **Disconnect** work as they do for App Store Connect.
+
+### How the Play numbers are read
+
+The daily sync lists the bucket once and, for every Google Play app of the workspace, reads two files of the current and the previous month: the country file and the traffic source file under `stats/store_performance/`. A file is downloaded only when Google wrote a new version of it since the last sync, so a sync without news downloads nothing. An app with no file in the bucket is shown as **No files in this bucket**.
+
+A market on the switcher reads the country file. **All markets** reads the traffic source file, which splits the visitors by Google Play search, explore and third party referrers, so the card states the search share there only. The two views never add rows of both files together.
+
+Google posts a day three to seven days after it ends, later than Apple, so the newest days of the card fill in over the following week. Google also changed how it counts store listing visitors and acquisitions on 10 July 2026, so compare periods that fall on the same side of that date.
+
+### Installs per search term
+
+The traffic source file also names the Google Play search terms that brought visitors. The keywords page of a Google Play app gains a **Play installs** column that shows, for each tracked keyword, the acquisitions and visitors of the newest month in which Google reported that term, with the month in its tooltip. A term matches a keyword when both read the same after asobeast normalizes them, so case, spacing and punctuation do not matter. Google reports the terms for all markets together, so the column is the same in every market, and a dash means Google reported no visitors for that term. See [Track keywords](/guides/track-keywords#see-play-installs-per-search-term).
+
 ## Limits
 
-- One App Store Connect key per workspace.
+- One App Store Connect key and one Google Play service account per workspace.
 - Apple allows each key 3,500 requests an hour. A sync downloads at most 200 daily files and leaves the rest for the next day, so a long history arrives over a few days.
 - When Apple answers an error for one app, or sends a report asobeast cannot read, the other apps and reports still sync and the section says that some were left for the next sync. A request Apple stopped for inactivity is asked for again on the next sync.
-- When Apple refuses the key during a sync, the connection is marked rejected and nothing is downloaded until you verify it or connect a new one. The numbers already stored are kept and the card shows them again once the key is accepted.
+- When Apple refuses the key during a sync, the connection is marked rejected and nothing is downloaded until you verify it or connect a new one. The numbers already stored are kept and the card shows them again once the key is accepted. A refused service account or a bucket that disappeared is handled the same way.
 - The downloaded files are kept for `RETENTION_STORE_REPORTS_DAYS` so a parser change can read them again. The funnel rows built from them are kept.
 
 The variables are on the [configuration reference](/configuration/reference#store-consoles).

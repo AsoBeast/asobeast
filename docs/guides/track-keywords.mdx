@@ -110,6 +110,10 @@ The dialog sends JSON rows, so a script can do the same: `POST /apps/{id}/keywor
 
 Both answers carry the same fields. `summary` and `results` describe the plan, row by row. On the import, `imported` counts the keywords that request actually tracked or resumed, which is lower than `new` plus `resume` only when another request tracked some of the same keywords in between. `quota.used` counts the keyword markets in use when the answer was made, so after an import it already includes the rows just tracked.
 
+## See Play installs per search term
+
+The keywords page of a Google Play app shows a **Play installs** column: the acquisitions and the store listing visitors that the keyword brought as a Google Play search term, from the newest month Google reported it. The tooltip names the month. A dash means Google reported no visitors for that term, or that the workspace has not connected the Google Play Console. The column sorts like the others, hides on a phone and can be hidden from the **Columns** menu. See [Installs per search term](/guides/store-funnel#installs-per-search-term).
+
 ## See what each market reads
 
 The 100 character iOS keyword field never appears on the public listing, so asobeast cannot read it. You type it on the metadata page, once for each localization your app ships. See [Edit the iOS keyword field](/guides/metadata-workbench#edit-the-ios-keyword-field).
