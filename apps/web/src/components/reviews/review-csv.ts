@@ -5,7 +5,7 @@ import {
   type ReviewSort,
 } from "@asobeast/shared";
 import { csvFilename, downloadCsv, toCsv } from "@/lib/csv";
-import { formatNumber } from "@/lib/format";
+import { formatNumber, pluralize } from "@/lib/format";
 
 const REVIEW_CSV_HEADERS = [
   "reviewedAt",
@@ -51,8 +51,14 @@ export const EXPORT_ORDER: Record<ReviewSort, string> = {
 export function truncatedExportNotice(
   list: Pick<ReviewList, "reviews" | "total">,
   sort: ReviewSort = "newest",
+  searchHits: number | null = null,
 ): string | null {
-  const exported = list.reviews.length;
-  if (list.total <= exported) return null;
-  return `Exported the ${EXPORT_ORDER[sort]} ${formatNumber(exported)} of ${formatNumber(list.total)} reviews. Narrow the filters to reach the others.`;
+  const loaded = list.reviews.length;
+  if (list.total <= loaded) return null;
+  const order = EXPORT_ORDER[sort];
+  const counted = `${formatNumber(loaded)} of ${formatNumber(list.total)}`;
+  if (searchHits === null) {
+    return `Exported the ${order} ${counted} reviews. Narrow the filters to reach the others.`;
+  }
+  return `Exported ${pluralize(searchHits, "review")} found in the ${order} ${counted}. Narrow the filters to search the others.`;
 }

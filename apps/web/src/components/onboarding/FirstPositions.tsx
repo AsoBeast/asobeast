@@ -3,7 +3,10 @@
 import { useId } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { RefreshCw } from "lucide-react";
+import {
+  failedRead,
+  InlineQueryError,
+} from "@/components/layout/InlineQueryError";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { keywordsOptions } from "@/lib/queries";
@@ -23,19 +26,12 @@ function FirstPositionsBody({
     refetchOnMount: "always",
   });
 
-  if (!keywords.data && keywords.isError) {
+  if (failedRead(keywords)) {
     return (
-      <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-        <span role="alert">Could not load the first positions.</span>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => void keywords.refetch()}
-        >
-          <RefreshCw />
-          Retry
-        </Button>
-      </div>
+      <InlineQueryError
+        message="Could not load the first positions."
+        read={keywords}
+      />
     );
   }
   if (!keywords.data) return <Skeleton className="h-16 w-full" />;

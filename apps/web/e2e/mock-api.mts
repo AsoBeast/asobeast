@@ -711,6 +711,7 @@ function appRoute(
     query: URLSearchParams,
     req: IncomingMessage,
   ) => unknown,
+  refuses: (req: IncomingMessage) => boolean = () => false,
 ): Route {
   return {
     method: "GET",
@@ -718,7 +719,11 @@ function appRoute(
     handler: (params, req, res) => {
       const [id] = params;
       const path = req.url ?? "/";
-      if (id === ERROR_ID || hasCookie(req, "e2e-fail-app", "1")) {
+      if (
+        id === ERROR_ID ||
+        hasCookie(req, "e2e-fail-app", "1") ||
+        refuses(req)
+      ) {
         return json(res, 500, errorEnvelope(500, path));
       }
       const dataset = DATASETS[id];
@@ -3685,6 +3690,7 @@ const routes: Route[] = [
   appRoute(
     /^\/apps\/([^/]+)\/reviews\/themes$/,
     (dataset) => dataset.reviewThemes ?? EMPTY_REVIEW_THEMES,
+    (req) => hasCookie(req, "e2e_themes_failing", "1"),
   ),
   {
     method: "GET",
