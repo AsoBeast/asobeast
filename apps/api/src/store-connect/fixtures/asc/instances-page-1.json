@@ -1,0 +1,24 @@
+{
+  "data": [
+    {
+      "type": "analyticsReportInstances",
+      "id": "i-0912",
+      "attributes": { "granularity": "DAILY", "processingDate": "2026-09-12" }
+    },
+    {
+      "type": "analyticsReportInstances",
+      "id": "i-0910",
+      "attributes": { "granularity": "DAILY", "processingDate": "2026-09-10" }
+    },
+    {
+      "type": "analyticsReportInstances",
+      "id": "i-w0907",
+      "attributes": { "granularity": "WEEKLY", "processingDate": "2026-09-11" }
+    }
+  ],
+  "links": {
+    "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r-engagement-standard/instances",
+    "next": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r-engagement-standard/instances?filter%5Bgranularity%5D=DAILY&cursor=Mg.AJ8&limit=200"
+  },
+  "meta": { "paging": { "total": 5, "limit": 200 } }
+}

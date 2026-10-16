@@ -1,0 +1,16 @@
+{
+  "data": [
+    {
+      "type": "apps",
+      "id": "1476097583",
+      "attributes": { "name": "Focus Timer", "bundleId": "com.example.focus" }
+    },
+    {
+      "type": "apps",
+      "id": "1232780281",
+      "attributes": { "name": "Habit Loop", "bundleId": "com.example.habits" }
+    }
+  ],
+  "links": { "self": "https://api.appstoreconnect.apple.com/v1/apps" },
+  "meta": { "paging": { "total": 2, "limit": 200 } }
+}

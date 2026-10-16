@@ -1,0 +1,17 @@
+{
+  "data": [
+    {
+      "type": "analyticsReportSegments",
+      "id": "s-1",
+      "attributes": {
+        "checksum": "0d8ec53a5d9d4b5c8e6f1c2a7b3e9f10",
+        "sizeInBytes": 156,
+        "url": "https://example-bucket.s3.amazonaws.com/segment-1.csv.gz?X-Amz-Signature=abc"
+      }
+    }
+  ],
+  "links": {
+    "self": "https://api.appstoreconnect.apple.com/v1/analyticsReportInstances/i-0912/segments"
+  },
+  "meta": { "paging": { "total": 1, "limit": 200 } }
+}
