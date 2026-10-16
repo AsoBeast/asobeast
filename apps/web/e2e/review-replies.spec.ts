@@ -95,6 +95,64 @@ test("the composer counts against the google play limit and refuses more", async
   ).toBeDisabled();
 });
 
+test("a reply at the limit followed by a newline still fits", async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.goto(`${GP_PAGE}?reply=gp-rev-2`);
+  const textbox = composer(page).getByRole("textbox", { name: "Reply text" });
+
+  await textbox.fill(`${"a".repeat(350)}\n`);
+
+  await expect(composer(page).getByText("350 / 350")).toBeVisible();
+  await expect(composer(page).getByText(/allows at most/)).toHaveCount(0);
+  await expect(textbox).not.toHaveAttribute("aria-invalid", "true");
+  await expect(
+    composer(page).getByRole("button", { name: "Copy" }),
+  ).toBeEnabled();
+  await expect(
+    composer(page).getByRole("button", { name: "Mark as replied" }),
+  ).toBeEnabled();
+
+  const [request] = await Promise.all([
+    page.waitForRequest(
+      (candidate) =>
+        candidate.method() === "PATCH" &&
+        candidate.url().endsWith("/reviews/gp-rev-2/reply"),
+    ),
+    composer(page).getByRole("button", { name: "Copy" }).click(),
+  ]);
+
+  expect(request.postDataJSON()).toEqual({ text: "a".repeat(350) });
+});
+
+test("whitespace around a reply is not counted but its characters are", async ({
+  page,
+}) => {
+  await page.goto(`${GP_PAGE}?reply=gp-rev-2`);
+  const textbox = composer(page).getByRole("textbox", { name: "Reply text" });
+
+  await textbox.fill(`  ${"a".repeat(350)}  `);
+  await expect(composer(page).getByText("350 / 350")).toBeVisible();
+
+  await textbox.fill(`${"a".repeat(351)}\n`);
+  await expect(
+    composer(page).getByText(
+      "351 / 350 · Google Play allows at most 350 characters",
+    ),
+  ).toBeVisible();
+  await expect(
+    composer(page).getByRole("button", { name: "Copy" }),
+  ).toBeDisabled();
+
+  await textbox.fill("  \n ");
+  await expect(composer(page).getByText("0 / 350")).toBeVisible();
+  await expect(
+    composer(page).getByRole("button", { name: "Copy" }),
+  ).toBeDisabled();
+});
+
 test("marking a review as replied and undoing it", async ({ page }) => {
   await page.goto(`${REPLIES_PAGE}?reply=rep-2`);
   const article = articleOf(page, "Crashes often");
@@ -199,6 +257,68 @@ test("a reload reopens the composer with the saved text", async ({ page }) => {
   await expect(
     composer(page).getByRole("textbox", { name: "Reply text" }),
   ).toHaveValue("Dark mode ships next month.");
+});
+
+test("emptying a saved reply says it stays until discard and sends nothing", async ({
+  page,
+}) => {
+  const writes: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().includes("/reply") && request.method() !== "GET") {
+      writes.push(request.method());
+    }
+  });
+  await page.goto(`${REPLIES_PAGE}?reply=rep-2`);
+  await page.waitForLoadState("networkidle");
+  const article = articleOf(page, "Crashes often");
+  const textbox = composer(page).getByRole("textbox", { name: "Reply text" });
+  const hint = composer(page).getByText(
+    "Emptying the field keeps the saved reply. Press Discard to remove it.",
+  );
+  await expect(hint).toHaveCount(0);
+
+  await textbox.fill("");
+  await textbox.blur();
+
+  await expect(hint).toBeVisible();
+  await expect(article.getByText("Draft saved")).toBeVisible();
+  expect(writes).toEqual([]);
+
+  await page.reload();
+  await expect(
+    composer(page).getByRole("textbox", { name: "Reply text" }),
+  ).toHaveValue(/^Sorry about the crash, Jordan/);
+  await expect(hint).toHaveCount(0);
+});
+
+test("the hint goes once the reply is discarded and never shows without one", async ({
+  page,
+}) => {
+  await page.goto(`${REPLIES_PAGE}?reply=rep-3`);
+  const textbox = composer(page).getByRole("textbox", { name: "Reply text" });
+  const hint = composer(page).getByText(
+    /Emptying the field keeps the saved reply/,
+  );
+
+  await textbox.fill("");
+  await expect(hint).toHaveCount(0);
+
+  await page.goto(`${REPLIES_PAGE}?reply=rep-2`);
+  const saved = composer(page).getByRole("textbox", { name: "Reply text" });
+  await saved.fill("");
+  await expect(hint).toBeVisible();
+  await saved.fill("Sorry");
+  await expect(hint).toHaveCount(0);
+  await saved.fill("");
+  await expect(hint).toBeVisible();
+
+  await composer(page).getByRole("button", { name: "Discard" }).click();
+  await page
+    .getByRole("alertdialog")
+    .getByRole("button", { name: "Discard" })
+    .click();
+
+  await expect(hint).toHaveCount(0);
 });
 
 test("the existing play reply is shown read only above the composer", async ({

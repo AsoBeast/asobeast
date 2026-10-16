@@ -3,12 +3,7 @@
 import { useId, useState } from "react";
 import { Copy, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
-import {
-  countChars,
-  REVIEW_REPLY_LIMITS,
-  type ReviewItem,
-  type Store,
-} from "@asobeast/shared";
+import type { ReviewItem, Store } from "@asobeast/shared";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { storeLabel } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { ReplyDraftControls } from "./ReplyDraftControls";
+import { measureReply, type ReplyMeasure } from "./reply-text";
 import { consoleHref, consoleLabel } from "./store-console";
 import { useReplyDraft } from "./use-reply-draft";
 import { useReviewReply } from "./use-review-reply";
@@ -49,16 +45,14 @@ function useReplyText(saved: string) {
 
 function ReplyCounter({
   id,
-  text,
+  measure,
   store,
 }: {
   id: string;
-  text: string;
+  measure: ReplyMeasure;
   store: Store;
 }) {
-  const limit = REVIEW_REPLY_LIMITS[store];
-  const length = countChars(text);
-  const over = length > limit;
+  const { length, limit, over } = measure;
   return (
     <p
       id={id}
@@ -73,6 +67,28 @@ function ReplyCounter({
           ? ` · ${storeLabel(store)} allows at most ${limit} characters`
           : null}
       </span>
+    </p>
+  );
+}
+
+function ClearedReplyHint({
+  text,
+  saved,
+  drafting,
+}: {
+  text: string;
+  saved: string;
+  drafting: boolean;
+}) {
+  const kept = text === "" && saved !== "" && !drafting;
+  return (
+    <p
+      aria-live="polite"
+      className="text-caption text-muted-foreground empty:hidden"
+    >
+      {kept
+        ? "Emptying the field keeps the saved reply. Press Discard to remove it."
+        : null}
     </p>
   );
 }
@@ -125,9 +141,8 @@ export function ReplyComposer({
   const draft = useReplyDraft(appId, review, setText);
   const busy = pending || draft.drafting;
   const counterId = useId();
-  const limit = REVIEW_REPLY_LIMITS[store];
-  const over = countChars(text) > limit;
-  const trimmed = text.trim();
+  const measure = measureReply(text, store);
+  const { trimmed, over } = measure;
   const unsaved = trimmed !== "" && trimmed !== saved;
   const marked = Boolean(review.reply?.repliedAt);
   const consoleName = consoleLabel(store);
@@ -184,7 +199,12 @@ export function ReplyComposer({
           }
           className="min-h-24 bg-card"
         />
-        <ReplyCounter id={counterId} text={text} store={store} />
+        <ReplyCounter id={counterId} measure={measure} store={store} />
+        <ClearedReplyHint
+          text={trimmed}
+          saved={saved}
+          drafting={draft.drafting}
+        />
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <Button
