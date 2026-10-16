@@ -511,6 +511,7 @@ describe('Pipeline store routing (e2e)', () => {
         complete: true,
       });
       expect(status.lastCaptureAt).not.toBeNull();
+      expect(status.paused).toBe(false);
     });
 
     it('counts the listing captured today', async () => {
@@ -581,6 +582,29 @@ describe('Pipeline store routing (e2e)', () => {
         complete: true,
       });
       expect(status.state).toBe('complete');
+    });
+
+    it("reports a suspended workspace's run as paused", async () => {
+      const appId = await seedApp(Store.APP_STORE, 'apple-run-paused');
+      await prisma.workspace.update({
+        where: { id: DEFAULT_WORKSPACE_ID },
+        data: { suspendedAt: new Date() },
+      });
+      try {
+        const status = await runOf(appId);
+
+        expect(status.paused).toBe(true);
+        expect(['running', 'delayed']).toContain(status.state);
+        expect(stageOf(status, 'listings')).toMatchObject({
+          ready: 0,
+          total: 1,
+        });
+      } finally {
+        await prisma.workspace.update({
+          where: { id: DEFAULT_WORKSPACE_ID },
+          data: { suspendedAt: null },
+        });
+      }
     });
 
     it('answers 404 for an unknown app and for an app of another workspace', async () => {

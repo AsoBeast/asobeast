@@ -1,6 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
 import { Store } from '@prisma/client';
+import type { CollectionEligibility } from '../auth/collection-eligibility.service';
 import type { CategoryRanksService } from '../category-ranks/category-ranks.service';
 import type { Env } from '../config/env';
 import type { PrismaService } from '../prisma/prisma.service';
@@ -27,6 +28,7 @@ interface Options {
   ranked?: { collection: string; genre: string }[];
   charts?: { collection: string; genre: string }[];
   cron?: string;
+  eligible?: boolean;
 }
 
 const build = (options: Options = {}) => {
@@ -53,10 +55,18 @@ const build = (options: Options = {}) => {
   const categoryRanks = {
     rankedCharts: jest.fn().mockResolvedValue(options.ranked ?? []),
   } as unknown as CategoryRanksService;
+  const forWorkspace = jest.fn().mockResolvedValue(options.eligible ?? true);
+  const eligibility = { forWorkspace } as unknown as CollectionEligibility;
   return {
-    service: new AppRunStatusService(prisma, config, categoryRanks),
+    service: new AppRunStatusService(
+      prisma,
+      config,
+      categoryRanks,
+      eligibility,
+    ),
     snapshots,
     charts,
+    forWorkspace,
   };
 };
 
@@ -261,5 +271,42 @@ describe('AppRunStatusService', () => {
     await expect(
       none.service.forApp(APP.id, TWO_HOURS_LATER),
     ).resolves.toMatchObject({ lastCaptureAt: null });
+  });
+  it('reports paused when the workspace may not be collected for', async () => {
+    const paused = await build({ eligible: false }).service.forApp(
+      APP.id,
+      TWO_HOURS_LATER,
+    );
+    const active = await build().service.forApp(APP.id, TWO_HOURS_LATER);
+
+    expect(paused.paused).toBe(true);
+    expect(paused.state).toBe('running');
+    expect(paused.stages).toEqual(active.stages);
+    expect(paused.state).toBe(active.state);
+  });
+
+  it('reports not paused for an eligible workspace', async () => {
+    const status = await build().service.forApp(APP.id, TWO_HOURS_LATER);
+
+    expect(status.paused).toBe(false);
+  });
+
+  it('asks eligibility at the time of the status', async () => {
+    const { service, forWorkspace } = build();
+
+    await service.forApp(APP.id, TWO_HOURS_LATER);
+
+    expect(forWorkspace).toHaveBeenCalledWith(TWO_HOURS_LATER);
+  });
+
+  it('keeps a completed run complete when the workspace is paused afterwards', async () => {
+    const status = await build({
+      eligible: false,
+      snapshots: [{ appId: APP.id, country: null }],
+      captures: { captured: 2, lastCaptureAt: TWO_HOURS_LATER },
+    }).service.forApp(APP.id, TWO_HOURS_LATER);
+
+    expect(status.state).toBe('complete');
+    expect(status.paused).toBe(true);
   });
 });

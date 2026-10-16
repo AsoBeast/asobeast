@@ -4,6 +4,7 @@ import { Store } from '@prisma/client';
 import { appRunTotals, type AppRunStatus } from '@asobeast/shared';
 import { startOfUtcDay } from '../analytics/analytics.support';
 import { EVERY_LISTING, listingMarket } from '../apps/listing';
+import { CollectionEligibility } from '../auth/collection-eligibility.service';
 import { CategoryRanksService } from '../category-ranks/category-ranks.service';
 import { rankedChartKey } from '../category-ranks/ranked-charts';
 import { Env } from '../config/env';
@@ -46,6 +47,7 @@ export class AppRunStatusService {
     private readonly prisma: PrismaService,
     private readonly config: ConfigService<Env, true>,
     private readonly categoryRanks: CategoryRanksService,
+    private readonly eligibility: CollectionEligibility,
   ) {}
 
   async forApp(appId: string, now = new Date()): Promise<AppRunStatus> {
@@ -72,10 +74,11 @@ export class AppRunStatusService {
     const since = new Date(
       Math.min(trigger.getTime(), startOfUtcDay(now).getTime()),
     );
-    const [listings, keywords, categories] = await Promise.all([
+    const [listings, keywords, categories, eligible] = await Promise.all([
       this.listings(app, since),
       this.keywords(app, since),
       this.categories(app.id, since),
+      this.eligibility.forWorkspace(now),
     ]);
     const stages = appRunStages({ listings, keywords, categories });
     const totals = appRunTotals({ stages });
@@ -91,6 +94,7 @@ export class AppRunStatusService {
       startedAt: trigger.toISOString(),
       lastCaptureAt: keywords.lastCaptureAt?.toISOString() ?? null,
       stages,
+      paused: !eligible,
     };
   }
 
