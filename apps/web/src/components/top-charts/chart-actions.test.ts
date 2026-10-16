@@ -12,6 +12,8 @@ import {
   captureErrorText,
   emptyChartBody,
   followErrorText,
+  noAppsBody,
+  noAppsToast,
   rowContextOf,
   rowLink,
   storeUrl,
@@ -200,6 +202,22 @@ describe("emptyChartBody", () => {
   it("offers a capture before the plan has loaded", () => {
     expect(emptyChartBody(false, undefined)).toBe(
       "Capture it now, or follow the category so the daily run keeps it. Capture today reaches the store once.",
+    );
+  });
+});
+
+describe("no apps wording", () => {
+  it("names the store, the category and the day", () => {
+    expect(
+      noAppsBody({ store: "GOOGLE_PLAY", genreName: "Shopping" }, "2026-10-16"),
+    ).toBe(
+      "Google Play listed no apps in Shopping on Oct 16, 2026. A category can have no apps of one kind, such as paid apps.",
+    );
+  });
+
+  it("toasts the store that lists no apps today", () => {
+    expect(noAppsToast("APP_STORE")).toBe(
+      "App Store lists no apps in this chart today",
     );
   });
 });

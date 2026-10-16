@@ -2,8 +2,9 @@
 
 import type { AppListItem, ChartPage } from "@asobeast/shared";
 import { CaptureTodayButton } from "./CaptureTodayButton";
-import { capturableToday } from "./chart-column-rows";
+import { capturableToday, listsNoApps } from "./chart-column-rows";
 import { ChartEmpty } from "./ChartEmpty";
+import { ChartNoApps } from "./ChartNoApps";
 import { chartCategoryOf } from "./chart-follows";
 import { shownChartKey } from "./chart-params";
 import { ChartTable } from "./ChartTable";
@@ -36,6 +37,7 @@ export function ChartTableView({
   busy: boolean;
   date: string | null;
 }) {
+  if (listsNoApps(page)) return <ChartNoApps page={page} />;
   return page.capture ? (
     <div aria-busy={busy} className={CHART_GRID}>
       <ChartTable page={page} apps={apps} />

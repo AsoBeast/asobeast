@@ -382,6 +382,97 @@ test("shows the empty day and the uncaptured chart", async ({
   ).toBeVisible();
 });
 
+const PLAY_SHOPPING = "/charts?store=GOOGLE_PLAY&country=pl&genre=SHOPPING";
+
+const chartCookie = (name: string) => ({
+  name,
+  value: "1",
+  domain: "localhost",
+  path: "/",
+});
+
+test("says a chart lists no apps when the store listed none", async ({
+  page,
+  context,
+}) => {
+  await context.addCookies([chartCookie("e2e_chart_lists_no_apps")]);
+  const body = `Google Play listed no apps in Shopping on ${formatDay(utcDaysAgo(0))}.`;
+
+  await page.goto(PLAY_SHOPPING);
+  const paid = kindRegion(page, "Paid");
+  await expect(paid.getByText("No apps in this chart")).toBeVisible();
+  await expect(paid.getByText(body)).toBeVisible();
+  await expect(
+    paid.getByText(`No apps · ${formatDayMonth(utcDaysAgo(0))}`),
+  ).toBeVisible();
+  await expect(paid.getByRole("listitem")).toHaveCount(0);
+  await expect(paid.getByRole("button", { name: "Capture today" })).toHaveCount(
+    0,
+  );
+  await expect(paid.getByText(/^0 apps/)).toHaveCount(0);
+
+  await page.goto(`${PLAY_SHOPPING}&view=table&collection=paid`);
+  await expect(page.getByText("No apps in this chart")).toBeVisible();
+  await expect(page.getByText(body)).toBeVisible();
+  await expect(page.getByRole("table")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Capture today" })).toHaveCount(
+    0,
+  );
+});
+
+test("captures a chart the store lists no apps in and says so", async ({
+  page,
+  context,
+  request,
+}) => {
+  await request.get(`${MOCK_API}/__forget-chart-captures/SHOPPING`);
+  await context.addCookies([chartCookie("e2e_chart_capture_lists_no_apps")]);
+
+  await page.goto(PLAY_SHOPPING);
+  await kindRegion(page, "Paid")
+    .getByRole("button", { name: "Capture today" })
+    .click();
+
+  await expect(
+    page.getByText("Google Play lists no apps in this chart today"),
+  ).toBeVisible();
+  await expect(page.getByText("Captured today's chart")).toHaveCount(0);
+  await expect(
+    kindRegion(page, "Paid").getByText("No apps in this chart"),
+  ).toBeVisible();
+  await expect(
+    kindRegion(page, "Paid").getByRole("button", { name: "Capture today" }),
+  ).toHaveCount(0);
+  await expect(
+    kindRegion(page, "Free").getByRole("button", { name: "Capture today" }),
+  ).toBeVisible();
+});
+
+test("says a first empty answer was not stored", async ({
+  page,
+  context,
+  request,
+}) => {
+  await request.get(`${MOCK_API}/__forget-chart-captures/SHOPPING`);
+  await context.addCookies([chartCookie("e2e_chart_capture_answers_no_apps")]);
+
+  await page.goto(PLAY_SHOPPING);
+  await kindRegion(page, "Paid")
+    .getByRole("button", { name: "Capture today" })
+    .click();
+
+  await expect(
+    page.getByText("Google Play lists no apps in this chart today"),
+  ).toBeVisible();
+  await expect(page.getByText("Captured today's chart")).toHaveCount(0);
+  await expect(
+    kindRegion(page, "Paid").getByRole("button", { name: "Capture today" }),
+  ).toBeVisible();
+  await expect(
+    kindRegion(page, "Paid").getByText("No apps in this chart"),
+  ).toHaveCount(0);
+});
+
 test("filters the rows in the browser", async ({ page }) => {
   await page.goto("/charts?view=table");
 

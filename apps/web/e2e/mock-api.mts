@@ -1838,8 +1838,27 @@ function chartKeyOf(source: URLSearchParams | ChartKey): ChartKey {
 const sameChart = (a: ChartKey, b: ChartKey) =>
   (Object.keys(a) as (keyof ChartKey)[]).every((name) => a[name] === b[name]);
 
-function capturedTodayPage(collection: ChartKey["collection"]): ChartPage {
+function pageWithoutApps(): ChartPage {
   const today = utcDaysAgo(0);
+  return {
+    ...TOP_CHART_PAGE_EMPTY,
+    capture: { date: today, depth: 200, capturedAt: `${today}T03:10:00.000Z` },
+    dates: [today, ...TOP_CHART_DATES],
+  };
+}
+
+const listsNoApps = (
+  req: IncomingMessage,
+  cookie: string,
+  collection: ChartKey["collection"],
+) => collection === "paid" && hasCookie(req, cookie, "1");
+
+function capturedTodayPage(
+  collection: ChartKey["collection"],
+  withoutApps = false,
+): ChartPage {
+  const today = utcDaysAgo(0);
+  if (withoutApps) return pageWithoutApps();
   return {
     ...topChartPage(TOP_CHART_DATES[0], collection),
     capture: { date: today, depth: 100, capturedAt: `${today}T09:00:00.000Z` },
@@ -1855,9 +1874,15 @@ function chartPageFor(
   if (hasCookie(req, "e2e_chart_uncaptured", "1")) {
     return TOP_CHART_PAGE_UNCAPTURED;
   }
+  if (listsNoApps(req, "e2e_chart_lists_no_apps", key.collection)) {
+    return pageWithoutApps();
+  }
   const captured = chartCaptures.some((body) => sameChart(body, key));
   if (captured && (!date || date === utcDaysAgo(0))) {
-    return capturedTodayPage(key.collection);
+    return capturedTodayPage(
+      key.collection,
+      listsNoApps(req, "e2e_chart_capture_lists_no_apps", key.collection),
+    );
   }
   if (!date) return topChartPage(TOP_CHART_DATES[0], key.collection);
   return TOP_CHART_DATES.includes(date)
@@ -1944,13 +1969,28 @@ const routes: Route[] = [
             chartCaptureSpent(req.url ?? "/charts/capture"),
           );
         }
-        chartCaptures.push(chartKeyOf(body));
+        const key = chartKeyOf(body);
+        const chart = {
+          ...key,
+          genreName: chartGenreName(body.store, body.genre) ?? body.genre,
+        };
+        if (
+          listsNoApps(req, "e2e_chart_capture_answers_no_apps", key.collection)
+        ) {
+          return json(res, 200, {
+            ...TOP_CHART_PAGE_EMPTY,
+            dates: TOP_CHART_DATES,
+            answeredNoApps: true,
+            chart,
+          });
+        }
+        chartCaptures.push(key);
         json(res, 200, {
-          ...capturedTodayPage(chartKeyOf(body).collection),
-          chart: {
-            ...chartKeyOf(body),
-            genreName: chartGenreName(body.store, body.genre) ?? body.genre,
-          },
+          ...capturedTodayPage(
+            key.collection,
+            listsNoApps(req, "e2e_chart_capture_lists_no_apps", key.collection),
+          ),
+          chart,
         });
       }),
   },
