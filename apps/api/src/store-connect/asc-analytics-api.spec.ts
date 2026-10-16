@@ -7,6 +7,7 @@ import {
   type AscSegment,
 } from './asc-analytics-api';
 import {
+  AscAgreementError,
   AscError,
   AscForbiddenError,
   AscRateLimitedError,
@@ -350,6 +351,28 @@ describe('AscAnalyticsApi failures', () => {
     const { api } = recorded(failure(503, 'UNAVAILABLE'), ok(apps));
 
     await expect(api.verify()).resolves.toBeUndefined();
+  });
+
+  it('keeps a refused segment download apart from a refused key', async () => {
+    const { api } = recorded(failure(403, 'AccessDenied'));
+
+    const download = api.download({
+      id: 's',
+      checksum: '',
+      sizeInBytes: 3,
+      url: 'https://reports.example.test/s.csv.gz',
+    });
+
+    await expect(download).rejects.toBeInstanceOf(AscError);
+    await expect(download).rejects.not.toBeInstanceOf(AscRejectedKeyError);
+  });
+
+  it('names a missing agreement instead of a refused key', async () => {
+    const { api } = recorded(
+      failure(403, 'FORBIDDEN.REQUIRED_AGREEMENTS_MISSING_OR_EXPIRED'),
+    );
+
+    await expect(api.verify()).rejects.toBeInstanceOf(AscAgreementError);
   });
 
   it('throws a rate limit error on 429 without retrying', async () => {

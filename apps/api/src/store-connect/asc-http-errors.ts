@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { RequestThrottledError } from '../auth/rate-limit/rate-limit.errors';
 import {
+  AscAgreementError,
   AscError,
   AscRateLimitedError,
   AscRejectedKeyError,
@@ -15,7 +16,13 @@ import { InvalidPrivateKeyError } from './asc-token';
 export const KEY_REFUSED =
   'App Store Connect refused this key. Check the issuer ID and the key ID, and that the key is active.';
 
+export const AGREEMENT_MISSING =
+  'Apple asks the account holder to accept the latest agreement in App Store Connect, under Business. Accept it, then verify the key again.';
+
 export const RATE_LIMIT_RETRY_SECONDS = 60;
+
+export const refusalOf = (error: AscRejectedKeyError): string =>
+  error instanceof AscAgreementError ? AGREEMENT_MISSING : KEY_REFUSED;
 
 export function toHttpException(error: unknown): unknown {
   if (error instanceof InvalidPrivateKeyError) {
@@ -25,7 +32,7 @@ export function toHttpException(error: unknown): unknown {
     return new BadGatewayException(error.message);
   }
   if (error instanceof AscRejectedKeyError) {
-    return new UnprocessableEntityException(KEY_REFUSED);
+    return new UnprocessableEntityException(refusalOf(error));
   }
   if (error instanceof AscRateLimitedError) {
     return new RequestThrottledError(

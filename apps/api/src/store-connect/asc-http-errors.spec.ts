@@ -5,12 +5,17 @@ import {
 } from '@nestjs/common';
 import { RequestThrottledError } from '../auth/rate-limit/rate-limit.errors';
 import {
+  AscAgreementError,
   AscError,
   AscRateLimitedError,
   AscRejectedKeyError,
   AscUnreachableError,
 } from './asc-errors';
-import { KEY_REFUSED, toHttpException } from './asc-http-errors';
+import {
+  AGREEMENT_MISSING,
+  KEY_REFUSED,
+  toHttpException,
+} from './asc-http-errors';
 import { InvalidPrivateKeyError } from './asc-token';
 
 describe('toHttpException', () => {
@@ -28,6 +33,21 @@ describe('toHttpException', () => {
 
     expect(mapped).toBeInstanceOf(UnprocessableEntityException);
     expect((mapped as UnprocessableEntityException).message).toBe(KEY_REFUSED);
+  });
+
+  it('answers 422 naming the agreement the account holder must accept', () => {
+    const mapped = toHttpException(
+      new AscAgreementError(
+        'agreement',
+        403,
+        'FORBIDDEN.REQUIRED_AGREEMENTS_MISSING_OR_EXPIRED',
+      ),
+    );
+
+    expect(mapped).toBeInstanceOf(UnprocessableEntityException);
+    expect((mapped as UnprocessableEntityException).message).toBe(
+      AGREEMENT_MISSING,
+    );
   });
 
   it('answers 502 when Apple cannot be reached', () => {

@@ -21,7 +21,9 @@ export function connectionStatusLine(item: StoreConnectionItem): StatusLine {
   if (item.status === "rejected") {
     return {
       tone: "warning",
-      text: "App Store Connect refused this key. Verify it again, or connect a new key.",
+      text:
+        item.lastError ??
+        "App Store Connect refused this key. Verify it again, or connect a new key.",
     };
   }
   if (item.lastError) return { tone: "warning", text: item.lastError };

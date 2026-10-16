@@ -20,7 +20,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import type { AscAnalyticsApi } from './asc-analytics-api';
 import { AscApiFactory } from './asc-api.factory';
 import { AscRejectedKeyError } from './asc-errors';
-import { KEY_REFUSED, toHttpException } from './asc-http-errors';
+import { refusalOf, toHttpException } from './asc-http-errors';
 import {
   keyFingerprintOf,
   normalizePrivateKey,
@@ -82,9 +82,8 @@ export class StoreConnectionService {
       privateKey: normalizePrivateKey(request.privateKey),
     };
     const keyFingerprint = fingerprintOf(credentials.privateKey);
-    if (!(await this.accepts(this.factory.open(credentials)))) {
-      throw new UnprocessableEntityException(KEY_REFUSED);
-    }
+    const refusal = await this.refusal(this.factory.open(credentials));
+    if (refusal) throw new UnprocessableEntityException(refusal);
     const workspaceId = this.workspace.require(OPERATION);
     await this.prisma.withTransaction(async (tx) => {
       await tx.storeConnection.deleteMany({ where: { store: store } });
@@ -112,8 +111,9 @@ export class StoreConnectionService {
 
   async verify(store: Store): Promise<StoreConnectionItem> {
     const connection = await this.requireConnection(store);
-    if (!(await this.accepts(connection.api))) {
-      await this.markRejected(store, KEY_REFUSED);
+    const refusal = await this.refusal(connection.api);
+    if (refusal) {
+      await this.markRejected(store, refusal);
       return this.item(store);
     }
     await this.prisma.storeConnection.update({
@@ -239,12 +239,12 @@ export class StoreConnectionService {
     return this.box;
   }
 
-  private async accepts(api: AscAnalyticsApi): Promise<boolean> {
+  private async refusal(api: AscAnalyticsApi): Promise<string | null> {
     try {
       await api.verify();
-      return true;
+      return null;
     } catch (error) {
-      if (error instanceof AscRejectedKeyError) return false;
+      if (error instanceof AscRejectedKeyError) return refusalOf(error);
       throw toHttpException(error);
     }
   }

@@ -118,7 +118,7 @@ test("a rejected key leads with verify, which clears it", async ({ page }) => {
 
   const status = section(page).getByRole("status");
   await expect(status).toHaveText(
-    "App Store Connect refused this key. Verify it again, or connect a new key.",
+    "App Store Connect refused this key. Check the issuer ID and the key ID, and that the key is active.",
   );
   await expect(status).toHaveClass(/text-warning/);
   await expect(section(page).getByRole("button").first()).toHaveText("Verify");

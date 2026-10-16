@@ -2,10 +2,12 @@ import { UnrecoverableError } from 'bullmq';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { AscAnalyticsApi, AscInstance } from './asc-analytics-api';
 import {
+  AscAgreementError,
   AscRateLimitedError,
   AscRejectedKeyError,
   AscSegmentSizeError,
 } from './asc-errors';
+import { AGREEMENT_MISSING } from './asc-http-errors';
 import type {
   OpenedConnection,
   StoreConnectionService,
@@ -187,6 +189,25 @@ describe('StoreReportSyncService', () => {
       expect.stringContaining('refused this key'),
     );
     expect(connections.markSynced).not.toHaveBeenCalled();
+  });
+
+  it('marks the connection rejected with the agreement Apple asks for', async () => {
+    const { service, requester, connections } = build();
+    requester.ensure.mockRejectedValue(
+      new AscAgreementError(
+        'agreement',
+        403,
+        'FORBIDDEN.REQUIRED_AGREEMENTS_MISSING_OR_EXPIRED',
+      ),
+    );
+
+    await expect(service.run('APP_STORE')).rejects.toBeInstanceOf(
+      UnrecoverableError,
+    );
+    expect(connections.markRejected).toHaveBeenCalledWith(
+      'APP_STORE',
+      AGREEMENT_MISSING,
+    );
   });
 
   it('marks the connection synced with the access it learned', async () => {

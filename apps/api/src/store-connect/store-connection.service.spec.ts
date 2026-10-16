@@ -10,7 +10,8 @@ import type { WorkspaceContext } from '../common/tenancy/workspace-context';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { AscAnalyticsApi } from './asc-analytics-api';
 import type { AscApiFactory } from './asc-api.factory';
-import { AscRejectedKeyError } from './asc-errors';
+import { AscAgreementError, AscRejectedKeyError } from './asc-errors';
+import { AGREEMENT_MISSING } from './asc-http-errors';
 import { sealCredentials } from './store-credentials';
 import { StoreConnectionService } from './store-connection.service';
 import type { StoreReportQueue } from './store-report-queue';
@@ -188,6 +189,28 @@ describe('StoreConnectionService', () => {
       service.connect('APP_STORE', REQUEST, 'user_1'),
     ).rejects.toBeInstanceOf(UnprocessableEntityException);
     expect(tx.storeConnection.create).not.toHaveBeenCalled();
+  });
+
+  it('names a missing agreement on connect and on verify', async () => {
+    const { service, api } = harness();
+    const agreement = new AscAgreementError(
+      'agreement',
+      403,
+      'FORBIDDEN.REQUIRED_AGREEMENTS_MISSING_OR_EXPIRED',
+    );
+    api.verify.mockRejectedValueOnce(agreement);
+
+    await expect(
+      service.connect('APP_STORE', REQUEST, 'user_1'),
+    ).rejects.toThrow(AGREEMENT_MISSING);
+
+    await service.connect('APP_STORE', REQUEST, 'user_1');
+    api.verify.mockRejectedValueOnce(agreement);
+    const rejected = await service.verify('APP_STORE');
+    expect(rejected).toMatchObject({
+      status: 'rejected',
+      lastError: AGREEMENT_MISSING,
+    });
   });
 
   it('refuses a malformed key before apple is called', async () => {

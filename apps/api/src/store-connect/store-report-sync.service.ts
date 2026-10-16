@@ -8,7 +8,7 @@ import {
   AscRejectedKeyError,
   AscSegmentSizeError,
 } from './asc-errors';
-import { KEY_REFUSED } from './asc-http-errors';
+import { refusalOf } from './asc-http-errors';
 import {
   StoreConnectionService,
   type OpenedConnection,
@@ -64,8 +64,9 @@ export class StoreReportSyncService {
       );
     } catch (error) {
       if (error instanceof AscRejectedKeyError) {
-        await this.connections.markRejected(store, KEY_REFUSED);
-        throw new UnrecoverableError(KEY_REFUSED);
+        const reason = refusalOf(error);
+        await this.connections.markRejected(store, reason);
+        throw new UnrecoverableError(reason);
       }
       if (!(error instanceof AscRateLimitedError)) throw error;
       summary.rateLimited = true;

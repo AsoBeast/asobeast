@@ -13,6 +13,10 @@ export class AscError extends Error {
 
 export class AscRejectedKeyError extends AscError {}
 
+export class AscAgreementError extends AscRejectedKeyError {}
+
+const AGREEMENT_CODE = 'FORBIDDEN.REQUIRED_AGREEMENTS_MISSING_OR_EXPIRED';
+
 export class AscForbiddenError extends AscError {}
 
 export class AscRateLimitedError extends AscError {}
@@ -52,6 +56,12 @@ export function errorOf(response: AscResponse, request: AscRequest): AscError {
     textOf(error?.detail) ??
     textOf(error?.title) ??
     `App Store Connect answered ${response.status}`;
+  if (request.absoluteUrl !== undefined) {
+    return new AscError(message, response.status, code);
+  }
+  if (code === AGREEMENT_CODE) {
+    return new AscAgreementError(message, response.status, code);
+  }
   if (
     response.status === 403 &&
     request.method === 'POST' &&

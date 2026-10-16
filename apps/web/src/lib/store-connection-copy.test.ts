@@ -36,6 +36,15 @@ describe("connectionStatusLine", () => {
     });
   });
 
+  it("names the reason apple gave when it refused the key", () => {
+    const reason =
+      "Apple asks the account holder to accept the latest agreement in App Store Connect, under Business. Accept it, then verify the key again.";
+
+    expect(
+      connectionStatusLine({ ...ITEM, status: "rejected", lastError: reason }),
+    ).toEqual({ tone: "warning", text: reason });
+  });
+
   it("repeats the reason a read only key cannot request reports", () => {
     const reason =
       "This key can download reports but not request them. Connect an Admin key once; a Sales and Reports key can take over afterwards.";
