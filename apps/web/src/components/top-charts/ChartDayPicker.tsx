@@ -218,7 +218,11 @@ export function ChartDayPicker({
             {value ? formatDate(value) : "No capture yet"}
           </Button>
         </PopoverTrigger>
-        <PopoverContent align="start" className="w-auto">
+        <PopoverContent
+          align="start"
+          aria-label="Choose captured day"
+          className="w-auto"
+        >
           {anchor ? (
             <DayGrid dates={dates} value={anchor} onSelect={pick} />
           ) : null}

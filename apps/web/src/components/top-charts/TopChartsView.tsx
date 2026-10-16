@@ -9,6 +9,7 @@ import { chartParsers } from "@/lib/search-params";
 import { candidateApps } from "./chart-actions";
 import { categoryDates } from "./chart-column-rows";
 import { ChartColumns } from "./ChartColumns";
+import { ChartPending } from "./ChartPending";
 import { chartCategoryOf } from "./chart-follows";
 import { chartPageQueries, pagesOf } from "./chart-pages";
 import {
@@ -88,6 +89,7 @@ export function TopChartsView() {
         dates={dates}
         onChange={(next: ChartSearchUpdate) => void setSearch(next)}
       />
+      <ChartPending chart={busy ? chartKeyFrom(search) : null} />
       {inTable ? (
         <ChartTableView page={page} apps={candidates} busy={busy} date={date} />
       ) : (

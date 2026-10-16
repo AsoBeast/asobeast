@@ -67,7 +67,11 @@ export function FacetFilter<T extends string>({
           ) : null}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-60 p-0">
+      <PopoverContent
+        align="start"
+        aria-label={`Filter by ${title.toLowerCase()}`}
+        className="w-60 p-0"
+      >
         <Command>
           <CommandInput
             placeholder={title}

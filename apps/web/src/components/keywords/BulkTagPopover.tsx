@@ -59,7 +59,11 @@ export function BulkTagPopover({
           Tag
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="flex w-72 flex-col gap-3">
+      <PopoverContent
+        align="start"
+        aria-label="Tag keywords"
+        className="flex w-72 flex-col gap-3"
+      >
         <div className="flex flex-col gap-2">
           <Label htmlFor={inputId}>Tag to add or remove</Label>
           <Input

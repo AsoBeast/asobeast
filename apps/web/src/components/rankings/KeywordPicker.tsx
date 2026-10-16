@@ -53,7 +53,11 @@ export function KeywordPicker({
           <ChevronsUpDown className="size-4 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-72 p-0" align="start">
+      <PopoverContent
+        aria-label="Choose keywords"
+        className="w-72 p-0"
+        align="start"
+      >
         <Command>
           <CommandInput placeholder="Search keywords…" />
           <CommandList>
