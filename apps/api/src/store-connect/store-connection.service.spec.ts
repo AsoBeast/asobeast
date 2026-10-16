@@ -1,5 +1,6 @@
 import { randomBytes, generateKeyPairSync } from 'node:crypto';
 import {
+  BadGatewayException,
   BadRequestException,
   ConflictException,
   NotFoundException,
@@ -12,7 +13,12 @@ import type { AscAnalyticsApi } from './asc-analytics-api';
 import type { AscApiFactory } from './asc-api.factory';
 import { AscAgreementError, AscRejectedKeyError } from './asc-errors';
 import { AGREEMENT_MISSING } from './asc-http-errors';
-import { GcsBucketError, GcsRejectedError, type GcsApi } from './play/gcs-api';
+import {
+  GcsBucketError,
+  GcsError,
+  GcsRejectedError,
+  type GcsApi,
+} from './play/gcs-api';
 import type { GcsApiFactory } from './play/gcs-api.factory';
 import { sealCredentials } from './store-credentials';
 import {
@@ -348,6 +354,15 @@ describe('StoreConnectionService', () => {
     const missing = service.connect('GOOGLE_PLAY', PLAY_REQUEST, 'user_1');
     await expect(missing).rejects.toThrow(PLAY_REQUEST.bucket);
     expect(tx.storeConnection.create).not.toHaveBeenCalled();
+  });
+
+  it('answers 502 when google fails while checking a service account', async () => {
+    const { service, gcs } = harness();
+    gcs.verify.mockRejectedValueOnce(new GcsError('busy', 503));
+
+    await expect(
+      service.connect('GOOGLE_PLAY', PLAY_REQUEST, 'user_1'),
+    ).rejects.toBeInstanceOf(BadGatewayException);
   });
 
   it('refuses a service account that is not json before google is called', async () => {

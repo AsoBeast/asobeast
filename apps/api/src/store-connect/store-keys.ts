@@ -26,6 +26,7 @@ import { publicKeyFingerprint } from './key-fingerprint';
 import {
   type GcsApi,
   GcsBucketError,
+  GcsError,
   GcsRateLimitedError,
   GcsRejectedError,
 } from './play/gcs-api';
@@ -152,6 +153,9 @@ export class PlayKeys implements StoreKeys<
       }
       if (error instanceof GcsUnreachableError) {
         throw new BadGatewayException(error.message);
+      }
+      if (error instanceof GcsError) {
+        throw new BadGatewayException(`Google answered ${error.status}`);
       }
       throw error;
     }
