@@ -15,6 +15,7 @@ import {
   FIRST_RUN_UNSCHEDULED,
 } from "./fixtures.mts";
 import { collectPageErrors, expectHydratesCleanly } from "./page-errors.mts";
+import { THEMES } from "./contrast-check.mts";
 import { firstRunHeadline } from "../src/components/onboarding/first-run-timeline";
 import { formatNumber } from "../src/lib/format";
 import { startedSetup } from "./setup-session.mts";
@@ -136,6 +137,33 @@ for (const [name, path, cookies] of SIGNED_OUT_ROUTES) {
     async ({ page, context }) => {
       await seedCookies(context, cookies);
       await expectHydratesCleanly(page, name, path);
+    },
+  );
+}
+
+const storeTheme = (page: Page, theme: string) =>
+  page.addInitScript(
+    (value) => window.localStorage.setItem("theme", value),
+    theme,
+  );
+
+for (const theme of THEMES) {
+  test(`hydrates with a stored ${theme} theme`, async ({ page }) => {
+    await storeTheme(page, theme);
+    await expectHydratesCleanly(page, "settings", "/settings");
+    await expect(
+      page.getByRole("button", { name: `Theme: ${theme}. Switch theme` }),
+    ).toBeVisible();
+  });
+
+  signedOut(
+    `hydrates with a stored ${theme} theme when signed out`,
+    async ({ page }) => {
+      await storeTheme(page, theme);
+      await expectHydratesCleanly(page, "login", "/login");
+      await expect(
+        page.getByRole("button", { name: `Theme: ${theme}. Switch theme` }),
+      ).toBeVisible();
     },
   );
 }

@@ -1,9 +1,9 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { paidPlanOf, type AuthStatus, type AuthUser } from "@asobeast/shared";
 import { authMeOptions, authStatusOptions } from "@/lib/queries";
+import { useHydrated } from "@/lib/use-hydrated";
 
 export interface AuthState {
   status: AuthStatus | undefined;
@@ -17,18 +17,6 @@ export interface AuthState {
   isMember: boolean;
   isOwner: boolean;
   isOperator: boolean;
-}
-
-function subscribeToNothing(): () => void {
-  return () => {};
-}
-
-function useHydrated(): boolean {
-  return useSyncExternalStore(
-    subscribeToNothing,
-    () => true,
-    () => false,
-  );
 }
 
 const SERVER_AUTH_STATE: AuthState = {
