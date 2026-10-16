@@ -5065,7 +5065,7 @@
         ]
       },
       "delete": {
-        "description": "Deletes the sealed key and its report requests. The funnel rows already stored stay.",
+        "description": "Deletes the sealed key and its report requests, even while the instance has store connections off. The funnel rows already stored stay.",
         "operationId": "StoreConnectionsController_disconnect",
         "parameters": [
           {
@@ -5094,7 +5094,7 @@
     },
     "/store-connections/{store}/verify": {
       "post": {
-        "description": "Asks the store whether the stored key still works. A refused key marks the connection rejected; an accepted one clears that and queues a report sync.",
+        "description": "Asks the store whether the stored key still works. A refused key marks the connection rejected; an accepted one clears that and queues a report sync. Answers 409 when the stored key can no longer be decrypted.",
         "operationId": "StoreConnectionsController_verify",
         "parameters": [
           {

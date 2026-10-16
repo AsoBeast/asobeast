@@ -13,7 +13,10 @@ import type { AscApiFactory } from './asc-api.factory';
 import { AscAgreementError, AscRejectedKeyError } from './asc-errors';
 import { AGREEMENT_MISSING } from './asc-http-errors';
 import { sealCredentials } from './store-credentials';
-import { StoreConnectionService } from './store-connection.service';
+import {
+  CREDENTIAL_UNREADABLE,
+  StoreConnectionService,
+} from './store-connection.service';
 import type { StoreReportQueue } from './store-report-queue';
 
 const PEM = generateKeyPairSync('ec', { namedCurve: 'prime256v1' })
@@ -356,10 +359,41 @@ describe('StoreConnectionService', () => {
     await expect(
       service.connect('APP_STORE', REQUEST, 'user_1'),
     ).rejects.toBeInstanceOf(ConflictException);
-    await expect(service.disconnect('APP_STORE')).rejects.toBeInstanceOf(
-      ConflictException,
-    );
     await expect(service.open('APP_STORE')).resolves.toBeNull();
+  });
+
+  it('answers 409 and marks the connection rejected when its credential no longer opens', async () => {
+    const { service, rows, prisma } = harness();
+    rows.push({
+      id: 'conn_1',
+      store: 'APP_STORE',
+      status: 'active',
+      credentialCiphertext: sealCredentials(
+        new SecretBox(randomBytes(32)),
+        'ws_1',
+        'APP_STORE',
+        { issuerId: REQUEST.issuerId, keyId: REQUEST.keyId, privateKey: PEM },
+      ),
+    });
+
+    await expect(service.verify('APP_STORE')).rejects.toThrow(
+      CREDENTIAL_UNREADABLE,
+    );
+    expect(prisma.storeConnection.updateMany).toHaveBeenCalledWith({
+      where: { store: 'APP_STORE' },
+      data: { status: 'rejected', lastError: CREDENTIAL_UNREADABLE },
+    });
+    await expect(service.open('APP_STORE')).resolves.toBeNull();
+  });
+
+  it('disconnects even while store connections are off', async () => {
+    const { service, prisma } = harness(null);
+
+    await service.disconnect('APP_STORE');
+
+    expect(prisma.storeConnection.deleteMany).toHaveBeenCalledWith({
+      where: { store: 'APP_STORE' },
+    });
   });
 
   it('disconnects by deleting the connection', async () => {

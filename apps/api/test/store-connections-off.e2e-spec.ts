@@ -39,7 +39,7 @@ describe('Store connections without an encryption key (e2e)', () => {
     );
     await owner.post('/store-connections/APP_STORE/sync').expect(409);
     await owner.post('/store-connections/APP_STORE/verify').expect(409);
-    await owner.delete('/store-connections/APP_STORE').expect(409);
+    await owner.delete('/store-connections/APP_STORE').expect(204);
     expect(harness.asc.requests).toHaveLength(0);
   });
 });

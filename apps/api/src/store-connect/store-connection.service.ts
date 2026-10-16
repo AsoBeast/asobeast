@@ -14,7 +14,7 @@ import type {
   StoreConnectionSyncResult,
   StoreReportAccess,
 } from '@asobeast/shared';
-import type { SecretBox } from '../common/crypto/secret-box';
+import { type SecretBox, SecretBoxError } from '../common/crypto/secret-box';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AscAnalyticsApi } from './asc-analytics-api';
@@ -39,7 +39,11 @@ export const STORE_CONNECT_OFF =
   'Store connections are off on this instance. Set STORE_CONNECT_ENCRYPTION_KEY to turn them on.';
 export const PLAY_ARRIVES_LATER =
   'Google Play connections arrive in a later release';
+export const CREDENTIAL_UNREADABLE =
+  'The stored key can no longer be decrypted, usually because STORE_CONNECT_ENCRYPTION_KEY changed without STORE_CONNECT_ENCRYPTION_KEY_PREVIOUS. Connect the key again.';
 const NOT_CONNECTED = 'This workspace has not connected that store';
+
+class CredentialUnreadableError extends Error {}
 const REJECTED =
   'The store refused the connected key. Verify it or connect a new one first.';
 const OPERATION = 'a store connection';
@@ -131,18 +135,26 @@ export class StoreConnectionService {
   }
 
   async disconnect(store: Store): Promise<void> {
-    this.requireBox();
     await this.prisma.storeConnection.deleteMany({ where: { store } });
   }
 
   async open(store: Store): Promise<OpenedConnection | null> {
+    try {
+      return await this.unsealed(store);
+    } catch (error) {
+      if (error instanceof CredentialUnreadableError) return null;
+      throw error;
+    }
+  }
+
+  private async unsealed(store: Store): Promise<OpenedConnection | null> {
     if (!this.box) return null;
     const row = await this.prisma.storeConnection.findFirst({
       where: { store },
     });
     if (!row) return null;
     const workspaceId = this.workspace.require(OPERATION);
-    const credentials = openCredentials(
+    const credentials = await this.credentialsOf(
       this.box,
       workspaceId,
       store,
@@ -229,9 +241,30 @@ export class StoreConnectionService {
 
   private async requireConnection(store: Store): Promise<OpenedConnection> {
     this.requireBox();
-    const connection = await this.open(store);
+    let connection: OpenedConnection | null;
+    try {
+      connection = await this.unsealed(store);
+    } catch (error) {
+      if (!(error instanceof CredentialUnreadableError)) throw error;
+      throw new ConflictException(CREDENTIAL_UNREADABLE);
+    }
     if (!connection) throw new NotFoundException(NOT_CONNECTED);
     return connection;
+  }
+
+  private async credentialsOf(
+    box: SecretBox,
+    workspaceId: string,
+    store: Store,
+    sealed: string,
+  ): Promise<AscCredentials> {
+    try {
+      return openCredentials(box, workspaceId, store, sealed);
+    } catch (error) {
+      if (!(error instanceof SecretBoxError)) throw error;
+      await this.markRejected(store, CREDENTIAL_UNREADABLE);
+      throw new CredentialUnreadableError();
+    }
   }
 
   private requireBox(): SecretBox {

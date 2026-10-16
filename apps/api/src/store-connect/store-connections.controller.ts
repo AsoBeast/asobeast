@@ -61,7 +61,7 @@ export class StoreConnectionsController {
   @ApiOperation({
     summary: 'Verify the connected store console key again',
     description:
-      'Asks the store whether the stored key still works. A refused key marks the connection rejected; an accepted one clears that and queues a report sync.',
+      'Asks the store whether the stored key still works. A refused key marks the connection rejected; an accepted one clears that and queues a report sync. Answers 409 when the stored key can no longer be decrypted.',
   })
   verify(@Param() { store }: StoreParamDto): Promise<StoreConnectionItem> {
     return this.connections.verify(store);
@@ -87,7 +87,7 @@ export class StoreConnectionsController {
   @ApiOperation({
     summary: 'Disconnect a store console',
     description:
-      'Deletes the sealed key and its report requests. The funnel rows already stored stay.',
+      'Deletes the sealed key and its report requests, even while the instance has store connections off. The funnel rows already stored stay.',
   })
   disconnect(@Param() { store }: StoreParamDto): Promise<void> {
     return this.connections.disconnect(store);
