@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import type { Store, TrackedKeywordItem } from "@asobeast/shared";
 import { useTable, type RowSelectionState } from "@tanstack/react-table";
@@ -47,11 +47,10 @@ export function KeywordsTable({
   const { data: keywords } = useSuspenseQuery(keywordsOptions(id, country));
   const [selection, setSelection] = useState<RowSelectionState>({});
   const tableArea = useRef<HTMLDivElement>(null);
+  const refocusTable = useRef(false);
   const clearSelection = () => {
+    refocusTable.current = true;
     setSelection({});
-    tableArea.current
-      ?.querySelector<HTMLElement>(`[aria-label="${SELECT_ALL_KEYWORDS}"]`)
-      ?.focus();
   };
 
   const rowSelection = useMemo(
@@ -111,6 +110,14 @@ export function KeywordsTable({
     .getFilteredSelectedRowModel()
     .rows.map((row) => row.original);
   const selectedIds = selectedKeywords.map((keyword) => keyword.keywordId);
+
+  useEffect(() => {
+    if (!refocusTable.current || selectedIds.length > 0) return;
+    refocusTable.current = false;
+    tableArea.current
+      ?.querySelector<HTMLElement>(`[aria-label="${SELECT_ALL_KEYWORDS}"]`)
+      ?.focus();
+  }, [selectedIds.length]);
 
   if (keywords.length === 0) {
     return <KeywordsEmptyState appId={id} store={store} country={country} />;
