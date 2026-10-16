@@ -1,9 +1,11 @@
 import { readFileSync } from "node:fs";
 import type { Page } from "@playwright/test";
+import { QUERY_BOUNDS } from "@asobeast/shared";
 import {
   UNBROKEN_REVIEW_AUTHOR,
   UNBROKEN_REVIEW_TEXT,
   UNBROKEN_REVIEW_TITLE,
+  UPDATE_THEME_REVIEWS,
 } from "./fixtures.mts";
 import { seedCookies } from "./routes.mts";
 import { expect, test } from "./session.mts";
@@ -423,7 +425,7 @@ test("a theme searches for its phrase and a second press clears it", async ({
   const complaints = themes.getByRole("list", { name: "Complaints" });
   const crashes = complaints.getByRole("button", { name: /^crashes in/ });
 
-  await expect(complaints.getByRole("listitem")).toHaveCount(2);
+  await expect(complaints.getByRole("listitem")).toHaveCount(3);
   await expect(
     themes.getByRole("list", { name: "Praise" }).getByRole("listitem"),
   ).toHaveCount(1);
@@ -433,17 +435,42 @@ test("a theme searches for its phrase and a second press clears it", async ({
 
   await crashes.click();
 
-  await expect(page).toHaveURL(/q=crashes/);
+  await expect(page).toHaveURL(/q=%22crashes%22/);
   await expect(crashes).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("article")).toHaveCount(1);
   await expect(
     page.getByRole("textbox", { name: "Search reviews" }),
-  ).toHaveValue("crashes");
+  ).toHaveValue('"crashes"');
 
   await crashes.click();
 
   await expect(page).not.toHaveURL(/q=/);
   await expect(page.getByRole("article")).toHaveCount(5);
+});
+
+test("a pressed theme lists as many reviews as its number counts", async ({
+  page,
+}) => {
+  await page.route(
+    (url) =>
+      url.pathname === "/api/backend/apps/app-1/reviews" &&
+      url.searchParams.get("limit") === String(QUERY_BOUNDS.reviewsLimit.max),
+    (route) => route.fulfill({ json: UPDATE_THEME_REVIEWS }),
+  );
+  await page.goto("/apps/app-1/reviews");
+  const update = page
+    .getByRole("region", { name: "What people mention" })
+    .getByRole("button", { name: /^update in/ });
+  const counted = Number(
+    await update.locator("span[aria-hidden]").textContent(),
+  );
+
+  await update.click();
+
+  await expect(update).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByText("The last update broke sync.")).toBeVisible();
+  await expect(page.getByRole("article")).toHaveCount(counted);
+  expect(counted).toBe(2);
 });
 
 test("the themes strip stays hidden when nothing is repeated", async ({

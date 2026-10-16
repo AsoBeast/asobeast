@@ -35,7 +35,7 @@ import {
   reviewFilters,
   type ReviewView,
 } from "./review-filters";
-import { matchesReviewQuery } from "./review-search";
+import { matchesReviewQuery, quotedPhrase } from "./review-search";
 import { reviewActionLabel } from "./review-subject";
 import { ReviewCountsSkeleton, ReviewsListSkeleton } from "./skeletons";
 
@@ -144,7 +144,11 @@ function ReviewCards({
       {shown.length === 0 ? (
         <EmptyState
           title="No reviews match this search"
-          body="Search looks through the titles, texts, authors and replies of the reviews loaded here."
+          body={
+            quotedPhrase(query) === null
+              ? "Search looks through the titles, texts, authors and replies of the reviews loaded here."
+              : "A search in quotes matches whole words in the titles and texts of the reviews loaded here."
+          }
           action={
             <Button variant="outline" onClick={onResetSearch}>
               Reset search

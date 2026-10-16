@@ -894,10 +894,41 @@ export const APP_1_REVIEW_THEMES: ReviewThemes = {
   themes: [
     { phrase: "crashes", kind: "complaint", mentions: 1, negative: 1 },
     { phrase: "dark mode", kind: "complaint", mentions: 1, negative: 1 },
+    { phrase: "update", kind: "complaint", mentions: 2, negative: 2 },
     { phrase: "focus timer", kind: "praise", mentions: 1, negative: 0 },
   ],
   reviews: 5,
   negativeScoreMax: 2,
+};
+
+const updateReview = (
+  index: number,
+  text: string,
+  replyText: string | null = null,
+): ReviewItem => ({
+  id: `update-rev-${index}`,
+  reviewId: `update-store-rev-${index}`,
+  userName: null,
+  score: 1,
+  title: null,
+  text,
+  version: "3.4.1",
+  reviewedAt: utcTimestampDaysAgo(index),
+  repliedAt: null,
+  replyText,
+  reply: null,
+});
+
+export const UPDATE_THEME_REVIEWS: ReviewList = {
+  total: 5,
+  versions: ["3.4.1"],
+  reviews: [
+    updateReview(1, "Since the update it lags."),
+    updateReview(2, "The last update broke sync."),
+    updateReview(3, "Updated today and now it crashes."),
+    updateReview(4, "Updates keep failing."),
+    updateReview(5, "Sync is slow.", "Please update to 3.4.1."),
+  ],
 };
 
 export const REVIEW_TRANSLATION_EN = {
