@@ -15,6 +15,7 @@ export const QUEUES = {
   BILLING: 'billing',
   AI: 'ai',
   SCREENSHOTS: 'screenshots',
+  STORE_CONNECT: 'store-connect',
 } as const;
 
 export const FLOW_PRODUCERS = {
@@ -75,6 +76,7 @@ export const JOBS = {
   BILLING_RECONCILE: 'billing-reconcile',
   TRIAL_NOTICES: 'trial-notices',
   READ_SCREENSHOTS: 'read-screenshots',
+  SYNC_STORE_REPORTS: 'sync-store-reports',
 } as const;
 
 export interface BillingEventPayload {
@@ -177,6 +179,17 @@ export function utcDateKey(date = new Date()): string {
 
 export function dailyCompleteJobId(date: string): string {
   return `daily-complete~${date}`;
+}
+
+export interface SyncStoreReportsPayload extends WorkspaceJobPayload {
+  store: Store;
+}
+
+export function storeReportsDeduplicationId(
+  workspaceId: string,
+  store: Store,
+): string {
+  return `store-reports~${workspaceId}~${store}`;
 }
 
 export function actionsRunDeduplicationId(workspaceId: string): string {

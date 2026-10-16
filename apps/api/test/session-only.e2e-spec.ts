@@ -48,7 +48,7 @@ describe('Routes that manage credentials, the team and the workspace', () => {
   let memberId: string;
 
   const withToken = (
-    method: 'post' | 'delete',
+    method: 'post' | 'put' | 'delete',
     path: string,
     body?: object,
   ): request.Test => {
@@ -216,6 +216,18 @@ describe('Routes that manage credentials, the team and the workspace', () => {
       .send({ email: 'owner@example.com', password: PASSWORD })
       .expect(200);
   });
+
+  it.each([
+    ['put', '/store-connections/APP_STORE'],
+    ['post', '/store-connections/APP_STORE/verify'],
+    ['post', '/store-connections/APP_STORE/sync'],
+    ['delete', '/store-connections/APP_STORE'],
+  ] as const)(
+    'refuses a write-scoped token that tries to %s %s',
+    async (method, path) => {
+      refused(await withToken(method, path, {}));
+    },
+  );
 
   it('still lets the signed in owner do every one of those things', async () => {
     const minted = await withSession('post', '/auth/tokens', {
