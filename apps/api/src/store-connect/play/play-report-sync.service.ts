@@ -10,6 +10,7 @@ import { bucketMissing, PLAY_REFUSED } from '../store-keys';
 import { emptySummary, type SyncSummary } from '../store-sync-summary';
 import {
   GcsBucketError,
+  GcsError,
   GcsRateLimitedError,
   GcsRejectedError,
   PLAY_REPORT_MAX_BYTES,
@@ -22,9 +23,11 @@ import {
   parseCsv,
   pivotCountryFile,
   pivotTrafficFile,
+  PlayHeaderError,
   searchTermsOf,
   type SearchTermRow,
 } from './play-store-performance';
+import { GcsUnreachableError } from './gcs-transport';
 
 const STORE = 'GOOGLE_PLAY';
 const ACCESS_TYPE = 'ONGOING';
@@ -97,6 +100,22 @@ function imported(
   };
 }
 
+type FileOutcome = 'forbidden' | 'vanished' | 'failed';
+
+function fileOutcome(error: unknown): FileOutcome | null {
+  if (error instanceof GcsRejectedError) return 'forbidden';
+  if (error instanceof GcsBucketError) return 'vanished';
+  if (error instanceof GcsRateLimitedError) return null;
+  if (
+    error instanceof PlayHeaderError ||
+    error instanceof GcsError ||
+    error instanceof GcsUnreachableError
+  ) {
+    return 'failed';
+  }
+  return null;
+}
+
 const remoteIdOf = (object: GcsObject): string =>
   `${object.name}#${object.generation}`;
 
@@ -120,6 +139,7 @@ export class PlayReportSync {
     if (!connection || connection.status === 'rejected') return null;
     const summary = emptySummary();
     try {
+      await connection.api.verify();
       const apps = await this.prisma.app.findMany({
         where: { store: STORE, isCompetitor: false },
         orderBy: { createdAt: 'asc' },
@@ -127,25 +147,22 @@ export class PlayReportSync {
       });
       summary.apps = apps.length;
       for (const app of apps) {
-        const objects = await connection.api.listStorePerformance(
-          app.storeAppId,
-        );
+        const objects = await this.listed(connection.api, app.storeAppId);
+        if (!objects) {
+          await this.placeRequest(connection.id, app, 'forbidden');
+          continue;
+        }
         const requestId = await this.placeRequest(
           connection.id,
           app,
-          objects.length > 0,
+          objects.length > 0 ? 'requested' : 'unmatched',
         );
         const target = { api: connection.api, requestId, appId: app.id };
-        for (const file of monthFiles(objects, app.storeAppId, now)) {
-          if (file.object.size > PLAY_REPORT_MAX_BYTES) {
-            summary.failed += 1;
-            this.logger.warn(
-              `${file.object.name} is ${file.object.size} bytes, above the ${PLAY_REPORT_MAX_BYTES} byte ceiling, and is skipped`,
-            );
-            continue;
-          }
-          await this.importFile(target, file, summary);
-        }
+        await this.importApp(
+          target,
+          monthFiles(objects, app.storeAppId, now),
+          summary,
+        );
       }
       await this.connections.markSynced(
         STORE,
@@ -156,6 +173,39 @@ export class PlayReportSync {
       await this.failed(error, connection.api, summary, connection.lastError);
     }
     return summary;
+  }
+
+  private async importApp(
+    target: Target,
+    files: MonthFile[],
+    summary: SyncSummary,
+  ): Promise<void> {
+    for (const file of files) {
+      if (file.object.size > PLAY_REPORT_MAX_BYTES) {
+        summary.failed += 1;
+        this.logger.warn(
+          `${file.object.name} is ${file.object.size} bytes, above the ${PLAY_REPORT_MAX_BYTES} byte ceiling, and is skipped`,
+        );
+        continue;
+      }
+      try {
+        await this.importFile(target, file, summary);
+      } catch (error) {
+        const outcome = fileOutcome(error);
+        if (!outcome) throw error;
+        this.logger.warn(
+          `${file.object.name} waits for the next sync: ${(error as Error).message}`,
+        );
+        if (outcome === 'forbidden') {
+          await this.prisma.storeReportRequest.update({
+            where: { id: target.requestId },
+            data: { state: 'forbidden' },
+          });
+          return;
+        }
+        if (outcome === 'failed') summary.failed += 1;
+      }
+    }
   }
 
   private async failed(
@@ -179,12 +229,23 @@ export class PlayReportSync {
     await this.connections.markSynced(STORE, 'admin', lastError);
   }
 
+  private async listed(
+    api: GcsApi,
+    packageName: string,
+  ): Promise<GcsObject[] | null> {
+    try {
+      return await api.listStorePerformance(packageName);
+    } catch (error) {
+      if (!(error instanceof GcsRejectedError)) throw error;
+      return null;
+    }
+  }
+
   private async placeRequest(
     connectionId: string,
     app: { id: string; storeAppId: string },
-    matched: boolean,
+    state: 'requested' | 'unmatched' | 'forbidden',
   ): Promise<string> {
-    const state = matched ? 'requested' : 'unmatched';
     const request = await this.prisma.storeReportRequest.upsert({
       where: { appId_accessType: { appId: app.id, accessType: ACCESS_TYPE } },
       create: {

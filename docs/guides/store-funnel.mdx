@@ -97,7 +97,7 @@ Google reports no impressions, so the card has three tiles.
 
 ### How the Play numbers are read
 
-The daily sync lists the files of every Google Play app of the workspace in the bucket and reads two files of the current and the previous month: the country file and the traffic source file under `stats/store_performance/`. A file is downloaded only when Google wrote a new version of it since the last sync, so a sync without news downloads nothing. A file over 20 MB is skipped and named in the section, since a real monthly file is a few kilobytes. An app with no file in the bucket is shown as **No files in this bucket**.
+The daily sync lists the files of every Google Play app of the workspace in the bucket and reads two files of the current and the previous month: the country file and the traffic source file under `stats/store_performance/`. A file is downloaded only when Google wrote a new version of it since the last sync, so a sync without news downloads nothing. A file over 20 MB is skipped and named in the section, since a real monthly file is a few kilobytes. An app with no file in the bucket is shown as **No files in this bucket**, and one whose files Google refuses to the service account as **No access to this app**. A file that cannot be read waits for the next sync without holding back the others, and the section says so.
 
 A market on the switcher reads the country file. **All markets** reads the traffic source file, which splits the visitors by Google Play search, explore and third party referrers, so the card states the search share there only. The two views never add rows of both files together.
 

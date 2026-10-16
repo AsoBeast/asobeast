@@ -83,6 +83,7 @@ function harness(objects: GcsObject[]) {
       ),
     },
     storeReportRequest: {
+      update: jest.fn(() => Promise.resolve({})),
       upsert: jest.fn(
         ({ where }: { where: { appId_accessType: { appId: string } } }) =>
           Promise.resolve({ id: `req_${where.appId_accessType.appId}` }),
@@ -99,6 +100,7 @@ function harness(objects: GcsObject[]) {
   };
   const api = {
     bucket: 'pubsite_prod_rev_1',
+    verify: jest.fn(() => Promise.resolve()),
     listStorePerformance: jest.fn((packageName: string) =>
       Promise.resolve(
         objects.filter((each) => each.name.includes(`_${packageName}_`)),
@@ -268,7 +270,7 @@ describe('PlayReportSync', () => {
       [new GcsBucketError('no', 404), 'pubsite_prod_rev_1'],
     ] as const) {
       const { service, api, connections } = harness(twoMonths);
-      api.listStorePerformance.mockRejectedValueOnce(error);
+      api.verify.mockRejectedValueOnce(error);
 
       await expect(service.run(NOW)).rejects.toBeInstanceOf(UnrecoverableError);
       expect(connections.markRejected).toHaveBeenCalledWith(
@@ -280,9 +282,7 @@ describe('PlayReportSync', () => {
 
   it('keeps the connection active and reports a rate limit', async () => {
     const { service, api, connections } = harness(twoMonths);
-    api.listStorePerformance.mockRejectedValueOnce(
-      new GcsRateLimitedError('slow', 429),
-    );
+    api.verify.mockRejectedValueOnce(new GcsRateLimitedError('slow', 429));
 
     await expect(service.run(NOW)).resolves.toMatchObject({
       rateLimited: true,
@@ -308,6 +308,78 @@ describe('PlayReportSync', () => {
       'admin',
       PLAY_PARTIAL_SYNC,
     );
+  });
+
+  it('keeps importing the other files when one cannot be read, and says so', async () => {
+    const { service, api, connections } = harness([
+      object('202609', 'country'),
+      object('202609', 'traffic_source'),
+    ]);
+    api.download.mockImplementation((name: string) =>
+      Promise.resolve(
+        name.endsWith('_country.csv')
+          ? Buffer.from('Day,Visitors\n2026-09-01,4\n')
+          : FILES.traffic_source,
+      ),
+    );
+
+    const summary = await service.run(NOW);
+
+    expect(summary).toMatchObject({ instances: 1, failed: 1 });
+    expect(connections.markRejected).not.toHaveBeenCalled();
+    expect(connections.markSynced).toHaveBeenCalledWith(
+      'GOOGLE_PLAY',
+      'admin',
+      PLAY_PARTIAL_SYNC,
+    );
+  });
+
+  it('marks one app forbidden when google refuses its file, and keeps the connection', async () => {
+    const { service, api, prisma, connections } = harness([
+      object('202609', 'country'),
+      object('202609', 'traffic_source'),
+    ]);
+    api.download.mockRejectedValue(new GcsRejectedError('no', 403));
+
+    await expect(service.run(NOW)).resolves.not.toBeNull();
+
+    expect(prisma.storeReportRequest.update).toHaveBeenCalledWith({
+      where: { id: 'req_app_play' },
+      data: { state: 'forbidden' },
+    });
+    expect(api.download).toHaveBeenCalledTimes(1);
+    expect(connections.markRejected).not.toHaveBeenCalled();
+  });
+
+  it('marks an app forbidden when google refuses to list its files', async () => {
+    const { service, api, prisma, connections } = harness(twoMonths);
+    api.listStorePerformance.mockImplementation((packageName: string) =>
+      packageName === PACKAGE
+        ? Promise.reject(new GcsRejectedError('no', 403))
+        : Promise.resolve([]),
+    );
+
+    await service.run(NOW);
+
+    expect(prisma.storeReportRequest.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
+          appId: 'app_play',
+          state: 'forbidden',
+        }) as unknown,
+      }),
+    );
+    expect(connections.markRejected).not.toHaveBeenCalled();
+  });
+
+  it('skips a file that vanished between listing and download', async () => {
+    const { service, api, connections } = harness([
+      object('202609', 'country'),
+    ]);
+    api.download.mockRejectedValue(new GcsBucketError('gone', 404));
+
+    await expect(service.run(NOW)).resolves.toMatchObject({ instances: 0 });
+    expect(connections.markRejected).not.toHaveBeenCalled();
   });
 
   it('does nothing without an active connection', async () => {
