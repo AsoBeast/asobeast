@@ -110,3 +110,34 @@ test("run daily refreshes the pill at once", async ({ page }) => {
 
   await expect.poll(runStatus, { timeout: 2_000 }).toBeGreaterThan(before);
 });
+
+test("a paused run shows no pill and is not polled", async ({
+  page,
+  context,
+}) => {
+  await seedCookies(context, { e2e_app_run_paused: "1" });
+  const runStatus = requestsTo(page, "/api/backend/apps/app-new/run-status");
+
+  await page.goto("/apps/app-new");
+  await expect(page.getByRole("button", { name: "Run daily" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Today's run/ })).toHaveCount(
+    0,
+  );
+  const loaded = runStatus();
+  await page.waitForTimeout(RUN_PROGRESS_POLL_MS + 1_500);
+
+  expect(runStatus()).toBe(loaded);
+});
+
+test("a run that completed before the pause keeps its pill", async ({
+  page,
+  context,
+}) => {
+  await seedCookies(context, { e2e_app_run_paused: "1" });
+
+  await page.goto("/apps/app-1");
+
+  await expect(
+    page.getByRole("button", { name: "Today's run complete" }),
+  ).toBeVisible();
+});
