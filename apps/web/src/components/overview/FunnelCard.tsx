@@ -33,6 +33,7 @@ import {
   windowOf,
 } from "@/lib/funnel";
 import { funnelOptions, storeConnectionsOptions } from "@/lib/queries";
+import { appStateLabel } from "@/lib/store-connection-copy";
 import { FunnelHelp } from "./FunnelHelp";
 import { FunnelTilesSkeleton } from "./skeletons";
 
@@ -68,8 +69,33 @@ const TILES: Tile[] = [
   },
 ];
 
-function NotConnected() {
+function NotReporting({ reason }: { reason: string }) {
+  return (
+    <EmptyState
+      title={`App Store Connect reports nothing for this app yet: ${reason}.`}
+      body="The connected key sees this app once it belongs to the key's team and Apple has published its first report."
+    />
+  );
+}
+
+function NotConnected({ id }: { id: string }) {
   const { isOwner } = useAuth();
+  const { data: connections } = useSuspenseQuery(storeConnectionsOptions);
+  const connection = connections.connections.find(
+    (item) => item.store === "APP_STORE",
+  );
+  if (connection) {
+    const app = connection.apps.find((item) => item.appId === id);
+    return (
+      <NotReporting
+        reason={
+          connection.status === "rejected"
+            ? "the key was refused"
+            : appStateLabel(app?.state ?? null)
+        }
+      />
+    );
+  }
   return (
     <EmptyState
       title="Connect App Store Connect to see impressions and conversion here."
@@ -108,9 +134,14 @@ function FunnelTiles({ report }: { report: StoreFunnelReport }) {
             value={tile.value(headline)}
             note={
               <span className="flex flex-wrap gap-3">
-                <TrendChip label="7d" value={trendValue(week, tile.metric)} />
+                <TrendChip
+                  label="7d"
+                  unit="%"
+                  value={trendValue(week, tile.metric)}
+                />
                 <TrendChip
                   label="28d"
+                  unit="%"
                   value={trendValue(headline, tile.metric)}
                 />
               </span>
@@ -134,7 +165,7 @@ function FunnelBody({ id }: { id: string }) {
     funnelOptions(id, FUNNEL_SERIES_DAYS, country),
   );
   return funnelState(report) === "off" ? (
-    <NotConnected />
+    <NotConnected id={id} />
   ) : (
     <FunnelTiles report={report} />
   );

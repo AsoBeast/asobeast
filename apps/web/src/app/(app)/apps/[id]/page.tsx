@@ -89,7 +89,7 @@ export default async function AppOverviewPage({
     listingMarkets,
     queryClient.prefetchQuery(storeConnectionsOptions),
   ]);
-  const funnel = app.store === "APP_STORE";
+  const funnel = app.store === "APP_STORE" && !app.isCompetitor;
   if (funnel) {
     void scope.then((country) =>
       queryClient.prefetchQuery(funnelOptions(id, FUNNEL_SERIES_DAYS, country)),

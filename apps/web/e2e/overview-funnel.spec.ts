@@ -1,7 +1,10 @@
 import type { Page } from "@playwright/test";
 import { settled } from "./page-errors.mts";
 import { expect, test } from "./session.mts";
-import { STORE_CONNECT_OFF_COOKIE } from "./store-connections.mts";
+import {
+  STORE_CONNECT_OFF_COOKIE,
+  STORE_CONNECTION_COOKIE,
+} from "./store-connections.mts";
 import { seedViewer } from "./viewer.mts";
 
 const card = (page: Page, label: string) =>
@@ -29,8 +32,8 @@ test("shows the store funnel of every market with its trend chips", async ({
     "12,345",
   );
   await expect(tile(page, "All markets", "Conversion")).toContainText("3.1%");
-  await expect(tile(page, "All markets", "Get taps")).toContainText("+18 7d");
-  await expect(tile(page, "All markets", "Get taps")).toContainText("+18 28d");
+  await expect(tile(page, "All markets", "Get taps")).toContainText("+18% 7d");
+  await expect(tile(page, "All markets", "Get taps")).toContainText("+18% 28d");
   await expect(funnel).toContainText("Search: 62% of impressions.");
   await expect(funnel).toContainText("Last 28 complete days through");
 });
@@ -57,6 +60,26 @@ test("sends an owner without a connection to settings", async ({ page }) => {
   await expect(
     funnel.getByRole("link", { name: "Connect in settings" }),
   ).toHaveAttribute("href", "/settings#store-connections");
+});
+
+test("names why a connected key reports nothing for this app", async ({
+  page,
+}) => {
+  await page.context().addCookies([
+    {
+      name: STORE_CONNECTION_COOKIE,
+      value: "active",
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
+  await page.goto("/apps/app-2");
+
+  const funnel = funnelCard(page);
+  await expect(funnel).toContainText(
+    "App Store Connect reports nothing for this app yet: Not in this team.",
+  );
+  await expect(funnel).not.toContainText("Connect App Store Connect to see");
 });
 
 test("tells a member who can connect", async ({ page }) => {
