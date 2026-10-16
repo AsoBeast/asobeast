@@ -210,6 +210,25 @@ function ConversionChip({ value }: { value: number }) {
   );
 }
 
+function DayConversion({
+  id,
+  days,
+  day,
+  homeCountry,
+}: {
+  id: string;
+  days: number;
+  day: string;
+  homeCountry: string;
+}) {
+  const [impactCountry] = useQueryState("country", countryParser);
+  const { data: impact } = useSuspenseQuery(
+    changeImpactOptions(id, days, impactCountry || homeCountry),
+  );
+  const chip = conversionChip(funnelByDay(impact).get(day));
+  return chip === null ? null : <ConversionChip value={chip} />;
+}
+
 function ChangeList({
   id,
   days,
@@ -222,11 +241,6 @@ function ChangeList({
   homeCountry: string;
 }) {
   const { data } = useSuspenseQuery(changesOptions(id, days, market));
-  const [impactCountry] = useQueryState("country", countryParser);
-  const { data: impact } = useSuspenseQuery(
-    changeImpactOptions(id, days, impactCountry || homeCountry),
-  );
-  const funnels = funnelByDay(impact);
 
   if (data.events.length === 0) {
     return (
@@ -250,24 +264,30 @@ function ChangeList({
 
   return (
     <div className="flex flex-col gap-6">
-      {Array.from(groups.entries()).map(([day, events]) => {
-        const chip = conversionChip(funnels.get(day));
-        return (
-          <section key={day} className="flex flex-col gap-2">
-            <h2 className="flex items-center gap-2 text-label text-muted-foreground uppercase">
-              <span aria-hidden className="size-1.5 rounded-full bg-border" />
-              {formatDate(day)}
-              {chip === null ? null : <ConversionChip value={chip} />}
-              <span aria-hidden className="h-px flex-1 bg-border" />
-            </h2>
-            <div className="flex flex-col gap-2">
-              {events.map((event) => (
-                <ChangeRow key={event.id} event={event} dense={false} />
-              ))}
-            </div>
-          </section>
-        );
-      })}
+      {Array.from(groups.entries()).map(([day, events]) => (
+        <section key={day} className="flex flex-col gap-2">
+          <h2 className="flex items-center gap-2 text-label text-muted-foreground uppercase">
+            <span aria-hidden className="size-1.5 rounded-full bg-border" />
+            {formatDate(day)}
+            {market === undefined ? (
+              <Suspense fallback={null}>
+                <DayConversion
+                  id={id}
+                  days={days}
+                  day={day}
+                  homeCountry={homeCountry}
+                />
+              </Suspense>
+            ) : null}
+            <span aria-hidden className="h-px flex-1 bg-border" />
+          </h2>
+          <div className="flex flex-col gap-2">
+            {events.map((event) => (
+              <ChangeRow key={event.id} event={event} dense={false} />
+            ))}
+          </div>
+        </section>
+      ))}
     </div>
   );
 }

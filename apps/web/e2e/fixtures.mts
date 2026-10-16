@@ -1391,6 +1391,17 @@ export const APP_1_PL_CHANGES: ChangeTimeline = {
       country: "pl",
     },
     {
+      id: "chg-pl-2",
+      appId: "app-1",
+      appName: "Focus Timer",
+      isCompetitor: false,
+      field: "subtitle",
+      before: "Minutnik",
+      after: "Minutnik i notatki",
+      capturedAt: utcTimestampDaysAgo(40),
+      country: "pl",
+    },
+    {
       id: "chg-pl-sc-1",
       appId: "app-1",
       appName: "Focus Timer",

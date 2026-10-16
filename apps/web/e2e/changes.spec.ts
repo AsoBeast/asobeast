@@ -246,6 +246,17 @@ test("the timeline marks the conversion change beside the day of a change", asyn
   ).toHaveCount(1);
 });
 
+test("the timeline of a market listing shows no home conversion beside its days", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/changes?days=90&market=pl");
+
+  await expect(timeline(page)).toBeVisible();
+  await expect(
+    timeline(page).getByRole("heading", { level: 2, name: /Conversion/ }),
+  ).toHaveCount(0);
+});
+
 test("an app without a console connection shows no store funnel", async ({
   page,
 }) => {
