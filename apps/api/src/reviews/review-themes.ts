@@ -29,8 +29,8 @@ const IGNORED_WORDS = `
   star stars five
   use used using get gets got getting make made makes want wants wanted need
   needs try trying tried said say says know think see seen way thing things
-  lot lots much many every without always never ever since later also even
-  really time times day days keep keeps kept first new back work works
+  lot lots many without always never since later time times day days keep
+  keeps kept first new back work works
   working worked play played playing plays people everything anything
   something nothing someone everyone experience give gave come came go going
   went take took look looks put let lets able add added help
