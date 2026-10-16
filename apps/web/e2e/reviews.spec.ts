@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import type { Page } from "@playwright/test";
 import {
   UNBROKEN_REVIEW_AUTHOR,
   UNBROKEN_REVIEW_TEXT,
@@ -93,6 +94,66 @@ test("exporting reviews asks for the newest 200 that match the filters", async (
   expect(lines[2]).toMatch(
     /^\d{4}-\d{2}-\d{2}T[\d:.]+Z,1,,Please add dark mode\.,3\.4\.0,,store-rev-3,needs_reply,$/,
   );
+});
+
+async function claimMoreReviews(page: Page, total: number) {
+  await page.route(
+    (url) =>
+      url.pathname === "/api/backend/apps/app-1/reviews" &&
+      url.searchParams.get("limit") === "200",
+    async (route) => {
+      const response = await route.fetch();
+      await route.fulfill({
+        response,
+        json: { ...((await response.json()) as object), total },
+      });
+    },
+  );
+}
+
+test("a searched export says what the file holds and where the search stopped", async ({
+  page,
+}) => {
+  await claimMoreReviews(page, 450);
+  await page.goto("/apps/app-1/reviews");
+  await page.getByRole("textbox", { name: "Search reviews" }).fill("crash");
+  await expect(
+    page.getByText("Search covers the 5 loaded of 450 reviews"),
+  ).toBeVisible();
+
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: "Export reviews to CSV" }).click(),
+  ]);
+
+  expect(
+    readFileSync(await download.path(), "utf8").split("\r\n"),
+  ).toHaveLength(2);
+  await expect(
+    page.getByText(
+      "Exported 1 review found in the newest 5 of 450. Narrow the filters to search the others.",
+    ),
+  ).toBeVisible();
+  await expect(page.getByText(/^Exported the newest/)).toHaveCount(0);
+});
+
+test("an export without a search keeps the unsearched notice", async ({
+  page,
+}) => {
+  await claimMoreReviews(page, 450);
+  await page.goto("/apps/app-1/reviews");
+  await page.waitForLoadState("networkidle");
+
+  await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: "Export reviews to CSV" }).click(),
+  ]);
+
+  await expect(
+    page.getByText(
+      "Exported the newest 5 of 450 reviews. Narrow the filters to reach the others.",
+    ),
+  ).toBeVisible();
 });
 
 test("the reviews export is disabled when no review matches", async ({
