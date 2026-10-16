@@ -58,6 +58,10 @@ Every day at 05:30 UTC, after the daily run has started, asobeast downloads the 
 
 Apple drops rows under five users and adds a small amount of noise, so a number is close rather than exact. The card adds unique counts across markets and sources, which reads slightly high for the same person seen in two places.
 
+## Product pages
+
+When the key may read it, the sync also downloads the detailed version of the report, which names the custom product page behind each number. The funnel endpoint then lists each page of the last 28 complete days with its counts, the default product page first, and its conversion against the default page as a ratio. A ratio under 1 converts below the default. The [Action Center](/guides/action-center) opens `listing.cpp_underperforms` for a page with at least 100 unique impressions that converts under 0.8 of the default.
+
 ## Markets
 
 Apple names a market by its territory. asobeast matches each territory to an App Store storefront, so a market on the switcher reads the rows of that storefront. A territory it cannot match still counts in **All markets** and is named in the API log of the sync, so the list can grow.
