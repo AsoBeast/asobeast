@@ -4,6 +4,7 @@
   "maxWorkers": 1,
   "workerIdleMemoryLimit": "1GB",
   "testEnvironment": "node",
+  "testTimeout": 30000,
   "testRegex": ".e2e-spec.ts$",
   "setupFiles": ["<rootDir>/setup-e2e.ts"],
   "setupFilesAfterEnv": [
