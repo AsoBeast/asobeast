@@ -51,6 +51,8 @@ Collection runs in two BullMQ workers, one per store, both at concurrency 1 behi
 
 A parse failure fails the job. BullMQ retries it with backoff, and request handling is never affected. See [The daily pipeline and rate limits](/concepts/pipeline).
 
+The optional store console connection lives in its own module and queue, `store-connect`. It reaches App Store Connect only with a key a workspace owner connected, keeps that key sealed at rest, and never shares the store workers' limiters. See [Store console credentials](/security/store-credentials).
+
 ## The component graph
 
 ```mermaid
@@ -61,6 +63,8 @@ graph LR
   A --> R[(Redis queues)]
   R --> K[Store workers]
   K --> S[App Store and Google Play]
+  R --> C[Store console worker]
+  C --> X[App Store Connect]
 ```
 
 The browser talks only to the Next.js web app, which proxies to the NestJS API. The API reads and writes PostgreSQL for durable state and enqueues work in Redis. The store workers drain those queues and are the only components that reach the App Store and Google Play endpoints.

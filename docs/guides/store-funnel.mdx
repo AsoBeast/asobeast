@@ -1,0 +1,72 @@
+---
+title: Read impressions and conversion from your console
+sidebarTitle: Store funnel
+description: "Connect an App Store Connect key once and see impressions, product page views, Get taps and conversion by market beside your rankings, read from Apple's own Discovery and Engagement report."
+icon: funnel
+keywords: ["App Store Connect","impressions","conversion","product page views","funnel","analytics reports"]
+---
+
+Rankings say where your listing shows. The store funnel says whether people take it. Connect an App Store Connect key in settings and every App Store app the key covers gains a **Store funnel** card on its overview with four numbers Apple reports for it.
+
+## What you get
+
+| Number | What it counts |
+| --- | --- |
+| Impressions | Times the app appeared in the App Store, on every page type |
+| Product page views | Times someone opened the product page |
+| Get taps | Taps on Get, the closest daily figure to a download Apple publishes in this report |
+| Conversion | Get taps divided by unique impressions |
+
+The card shows the last 28 complete days, with the change against the 28 days before and the change of the last 7 complete days against the 7 before, the same windows the [change impact](/guides/listing-changes) uses. It also says what share of the impressions came from App Store search. The card follows the market switcher like every other overview card, so **All markets** adds every storefront and a market reads that storefront alone.
+
+An app the key does not cover, a competitor and a Google Play app show no numbers. A member sees the card and the connection, and only the owner connects, verifies or disconnects.
+
+## Create the key
+
+<Steps>
+  <Step title="Open the team keys">
+    In App Store Connect, open **Users and Access**, then **Integrations**, then **Team Keys**. The issuer ID is shown above the list.
+  </Step>
+  <Step title="Generate a key with the right role">
+    Use the **Admin** role the first time. Apple lets only an Admin key ask for reports. Once an Admin key has asked for them, a **Sales and Reports** key can read them from then on, and you can connect one instead.
+  </Step>
+  <Step title="Download the key once">
+    Apple offers the `.p8` file a single time. Keep it, and note the ten character key ID beside the key.
+  </Step>
+</Steps>
+
+## Connect it
+
+Open **Settings** and the **Store connections** section, press **Connect App Store Connect**, then paste the issuer ID, the key ID and the contents of the `.p8` file, or choose the file. asobeast asks Apple whether the key works before it stores anything, so a mistyped ID or a revoked key is refused on the spot.
+
+| Control | What it does |
+| --- | --- |
+| **Verify** | Asks Apple again whether the stored key works. A key Apple refuses is marked rejected; a key it accepts again clears that and queues a sync |
+| **Sync now** | Queues the download of the reports Apple published since the last sync. A sync already waiting is not queued twice |
+| **Replace key** | Connects another key in place of this one |
+| **Disconnect** | Deletes the stored key and stops the downloads. The numbers already stored stay |
+
+When the connected key cannot ask for reports, the section says that an Admin key is needed once. Connect one, press **Sync now**, and switch back to a Sales and Reports key afterwards if you prefer.
+
+What asobeast stores and how is on [Store console credentials](/security/store-credentials).
+
+## How the numbers are read
+
+asobeast asks Apple for the **App Store Discovery and Engagement** report of each app twice: once as a one time snapshot of the history Apple keeps, back to 1 January 2024, and once as an ongoing request for every new day. Apple produces the first files a day or two after the request, so the card waits for them before it shows numbers.
+
+Every day at 05:30 UTC, after the daily run has started, asobeast downloads the files Apple published since the last sync and adds their rows to the funnel. Apple finishes a day within three days and sometimes sends a corrected file for an earlier day; the newest file always wins, and the card counts a day as complete once it is three days old.
+
+Apple drops rows under five users and adds a small amount of noise, so a number is close rather than exact. The card adds unique counts across markets and sources, which reads slightly high for the same person seen in two places.
+
+## Markets
+
+Apple names a market by its territory. asobeast matches each territory to an App Store storefront, so a market on the switcher reads the rows of that storefront. A territory it cannot match still counts in **All markets** and is named in the API log of the sync, so the list can grow.
+
+## Limits
+
+- One App Store Connect key per workspace.
+- Apple allows each key 3,500 requests an hour. A sync downloads at most 200 daily files and leaves the rest for the next day, so a long history arrives over a few days.
+- When Apple refuses the key during a sync, the connection is marked rejected and nothing is downloaded until you verify it or connect a new one. The numbers already stored stay.
+- The downloaded files are kept for `RETENTION_STORE_REPORTS_DAYS` so a parser change can read them again. The funnel rows built from them are kept.
+
+The variables are on the [configuration reference](/configuration/reference#store-consoles).
