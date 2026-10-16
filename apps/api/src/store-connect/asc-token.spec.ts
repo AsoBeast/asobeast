@@ -10,6 +10,7 @@ import {
   AscTokenCache,
   InvalidPrivateKeyError,
   keyFingerprintOf,
+  normalizePrivateKey,
   parsePrivateKey,
   signAscToken,
 } from './asc-token';
@@ -90,6 +91,28 @@ describe('signAscToken', () => {
     expect(() =>
       signAscToken({ ...CREDENTIALS, privateKey: pasted }, NOW),
     ).not.toThrow();
+  });
+});
+
+describe('normalizePrivateKey', () => {
+  it('rebuilds a key pasted on one line, the way a password field sends it', () => {
+    const oneLine = PEM.replace(/\r?\n/g, '');
+
+    expect(normalizePrivateKey(oneLine)).toBe(PEM);
+    expect(() =>
+      signAscToken(
+        { ...CREDENTIALS, privateKey: normalizePrivateKey(oneLine) },
+        NOW,
+      ),
+    ).not.toThrow();
+  });
+
+  it('keeps a well formed key as it is', () => {
+    expect(normalizePrivateKey(`\n  ${PEM}\n`)).toBe(PEM);
+  });
+
+  it('leaves text that holds no key for the parser to refuse', () => {
+    expect(normalizePrivateKey(' nope ')).toBe('nope');
   });
 });
 

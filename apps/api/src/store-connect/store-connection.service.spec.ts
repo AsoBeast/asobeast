@@ -158,6 +158,25 @@ describe('StoreConnectionService', () => {
     });
   });
 
+  it('connects a key pasted on one line and stores it as a well formed key', async () => {
+    const { service, rows, box } = harness();
+    const oneLine = PEM.replace(/\r?\n/g, '');
+
+    await service.connect(
+      'APP_STORE',
+      { ...REQUEST, privateKey: oneLine },
+      'user_1',
+    );
+
+    const opened = JSON.parse(
+      box!.open(
+        rows[0].credentialCiphertext as string,
+        'store-connection:ws_1:APP_STORE',
+      ),
+    ) as { privateKey: string };
+    expect(opened.privateKey).toBe(PEM);
+  });
+
   it('stores no row when apple refuses', async () => {
     const { service, api, tx } = harness();
     api.verify.mockRejectedValueOnce(

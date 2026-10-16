@@ -21,7 +21,11 @@ import type { AscAnalyticsApi } from './asc-analytics-api';
 import { AscApiFactory } from './asc-api.factory';
 import { AscRejectedKeyError } from './asc-errors';
 import { KEY_REFUSED, toHttpException } from './asc-http-errors';
-import { keyFingerprintOf, type AscCredentials } from './asc-token';
+import {
+  keyFingerprintOf,
+  normalizePrivateKey,
+  type AscCredentials,
+} from './asc-token';
 import { SECRET_BOX } from './secret-box.provider';
 import { connectionItems } from './store-connection-items';
 import {
@@ -75,7 +79,7 @@ export class StoreConnectionService {
     const credentials: AscCredentials = {
       issuerId: request.issuerId,
       keyId: request.keyId,
-      privateKey: request.privateKey.trim(),
+      privateKey: normalizePrivateKey(request.privateKey),
     };
     const keyFingerprint = fingerprintOf(credentials.privateKey);
     if (!(await this.accepts(this.factory.open(credentials)))) {

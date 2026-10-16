@@ -24,10 +24,20 @@ export class InvalidPrivateKeyError extends Error {
   }
 }
 
+const PEM_BLOCK = /-----BEGIN ([A-Z ]+)-----([\s\S]*?)-----END \1-----/;
+
+export function normalizePrivateKey(text: string): string {
+  const block = PEM_BLOCK.exec(text);
+  if (!block) return text.trim();
+  const [, label, body] = block;
+  const lines = body.replace(/\s+/g, '').match(/.{1,64}/g) ?? [];
+  return `-----BEGIN ${label}-----\n${lines.join('\n')}\n-----END ${label}-----\n`;
+}
+
 export function parsePrivateKey(pem: string): KeyObject {
   let key: KeyObject;
   try {
-    key = createPrivateKey(pem.trim());
+    key = createPrivateKey(normalizePrivateKey(pem));
   } catch {
     throw new InvalidPrivateKeyError(
       'The private key is not a PEM encoded PKCS8 key. Paste the whole contents of the .p8 file.',
