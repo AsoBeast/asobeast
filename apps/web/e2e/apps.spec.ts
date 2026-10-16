@@ -184,6 +184,51 @@ test.describe("importing by name", () => {
     return bodies;
   };
 
+  const failTerm = async (page: Page, failing: string) => {
+    const terms: string[] = [];
+    await page.route("**/api/backend/store/search*", (route) => {
+      const q = new URL(route.request().url()).searchParams.get("q") ?? "";
+      terms.push(q);
+      return q === failing
+        ? route.fulfill({
+            status: 502,
+            json: {
+              statusCode: 502,
+              error: "Bad Gateway",
+              message: "The store did not answer.",
+              path: "/store/search",
+              timestamp: new Date().toISOString(),
+            },
+          })
+        : route.fallback();
+    });
+    return terms;
+  };
+
+  const searchAfterFailure = async (
+    page: Page,
+    clear: (field: ReturnType<Page["getByLabel"]>) => Promise<void>,
+  ) => {
+    const terms = await failTerm(page, "first term");
+    const dialog = await openDialog(page);
+    const field = dialog.getByLabel("App name or store URL");
+    await field.pressSequentially("first term", { delay: 20 });
+    await expect(dialog.getByRole("alert")).toHaveText(
+      "The store did not answer. Try again in a moment.",
+    );
+
+    await clear(field);
+    await field.pressSequentially("focus", { delay: 20 });
+
+    await expect(
+      dialog.getByRole("list", {
+        name: "Results from App Store in United States",
+      }),
+    ).toBeVisible();
+    await page.waitForLoadState("networkidle");
+    return terms;
+  };
+
   const openDialog = async (page: Page) => {
     await page.goto("/");
     await page.getByRole("button", { name: "Import app" }).click();
@@ -274,6 +319,39 @@ test.describe("importing by name", () => {
     await expect(dialog.getByRole("alert")).toHaveText(
       "The store did not answer. Try again in a moment.",
     );
+  });
+
+  test("does not resend a failed term after the field is cleared and retyped", async ({
+    page,
+  }) => {
+    const terms = await searchAfterFailure(page, (field) => field.fill(""));
+
+    expect(terms).toEqual(["first term", "focus"]);
+  });
+
+  test("does not resend a failed term after select all and overtype", async ({
+    page,
+  }) => {
+    const terms = await searchAfterFailure(page, (field) =>
+      field.press("ControlOrMeta+a"),
+    );
+
+    expect(terms).toEqual(["first term", "focus"]);
+  });
+
+  test("still retries a failed term when Retry is pressed", async ({
+    page,
+  }) => {
+    const terms = await failTerm(page, "focus");
+    const dialog = await openDialog(page);
+    await dialog
+      .getByLabel("App name or store URL")
+      .pressSequentially("focus", { delay: 20 });
+    await expect(dialog.getByRole("alert")).toBeVisible();
+
+    await dialog.getByRole("button", { name: "Retry" }).click();
+
+    await expect.poll(() => terms).toEqual(["focus", "focus"]);
   });
 
   test("a name the store does not know says so", async ({ page }) => {

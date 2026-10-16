@@ -13,7 +13,7 @@ import {
   suggestionListState,
 } from "@/components/keywords/SuggestionList";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import { addKeywords, ApiError } from "@/lib/api";
 import { pluralize } from "@/lib/format";
 import {
@@ -90,9 +90,9 @@ export function KeywordPicker({
       >
         <TabsList>
           {PICKER_STRATEGIES.map((value) => (
-            <TabsTrigger key={value} value={value}>
+            <TabsOption key={value} value={value}>
               {PICKER_LABELS[value]}
-            </TabsTrigger>
+            </TabsOption>
           ))}
         </TabsList>
       </Tabs>

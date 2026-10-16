@@ -1,6 +1,9 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
 
+const LANDSCAPE_PIXELS =
+  "iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAAC0lEQVR4nGNoAAMACocDAcTGH2YAAAAASUVORK5CYII=";
+
 const timeline = (page: Page) =>
   page
     .getByText("Metadata change timeline")
@@ -47,6 +50,42 @@ test("draws the before and after screenshots whole", async ({ page }) => {
   expect(Math.abs((box?.width ?? 0) - (box?.height ?? 0))).toBeLessThanOrEqual(
     1,
   );
+});
+
+test("requests a fitting rendition for a wide screenshot in a change", async ({
+  page,
+}) => {
+  await page.route(
+    (url) =>
+      url.pathname === "/_next/image" &&
+      (url.searchParams.get("url") ?? "").includes("/e2e-focus/"),
+    (route) =>
+      route.fulfill({
+        contentType: "image/png",
+        body: Buffer.from(LANDSCAPE_PIXELS, "base64"),
+      }),
+  );
+  await page.goto("/apps/app-1/changes");
+  const before = rows(page, "screenshotImages")
+    .getByRole("group", { name: "Before screenshots" })
+    .getByRole("img")
+    .first();
+  await expect
+    .poll(() => before.evaluate((node: HTMLImageElement) => node.naturalWidth))
+    .toBe(2);
+  await expect
+    .poll(() => before.evaluate((node) => node.getBoundingClientRect().width))
+    .toBeGreaterThan(150);
+
+  const box = await before.boundingBox();
+
+  await expect
+    .poll(() =>
+      before.evaluate((node: HTMLImageElement) =>
+        Number(new URL(node.currentSrc).searchParams.get("w")),
+      ),
+    )
+    .toBeGreaterThanOrEqual(box?.width ?? Infinity);
 });
 
 test("shows the captions that appeared and disappeared", async ({ page }) => {
