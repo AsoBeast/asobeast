@@ -18,6 +18,8 @@ export * from './serp';
 export * from './store-search';
 export * from './changes';
 export * from './change-impact';
+export * from './store-connect';
+export * from './store-funnel';
 export * from './spider';
 export * from './reviews';
 export * from './portfolio';
