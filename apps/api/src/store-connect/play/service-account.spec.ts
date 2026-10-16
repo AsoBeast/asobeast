@@ -29,6 +29,24 @@ const decode = (part: string): Record<string, unknown> =>
   >;
 
 describe('parseServiceAccount', () => {
+  it('accepts only the 2048 bit rsa keys google issues, before any signing', () => {
+    for (const modulusLength of [1024, 3072]) {
+      const pem = generateKeyPairSync('rsa', { modulusLength })
+        .privateKey.export({ type: 'pkcs8', format: 'pem' })
+        .toString();
+
+      expect(() =>
+        parseServiceAccount(
+          JSON.stringify({
+            client_email: 'a@b.iam.gserviceaccount.com',
+            private_key_id: 'k',
+            private_key: pem,
+          }),
+        ),
+      ).toThrow(ServiceAccountError);
+    }
+  });
+
   it('reads the client email, key id and private key from the JSON', () => {
     expect(parseServiceAccount(JSON.stringify(KEY))).toEqual({
       clientEmail: KEY.client_email,

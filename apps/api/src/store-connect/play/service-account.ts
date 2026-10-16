@@ -30,18 +30,26 @@ const FIELDS = {
   privateKey: 'private_key',
 } as const;
 
+export const SERVICE_ACCOUNT_KEY_BITS = 2048;
+
 export function rsaKey(pem: string): KeyObject {
+  let key: KeyObject;
   try {
-    const key = createPrivateKey(pem);
-    if (key.asymmetricKeyType === 'rsa') return key;
+    key = createPrivateKey(pem);
   } catch {
     throw new ServiceAccountError(
       'The service account private_key is not a PEM encoded RSA private key.',
     );
   }
-  throw new ServiceAccountError(
-    'The service account private_key is not an RSA private key.',
-  );
+  if (
+    key.asymmetricKeyType !== 'rsa' ||
+    key.asymmetricKeyDetails?.modulusLength !== SERVICE_ACCOUNT_KEY_BITS
+  ) {
+    throw new ServiceAccountError(
+      'The service account private_key is not the 2048 bit RSA key Google Cloud issues.',
+    );
+  }
+  return key;
 }
 
 export function parseServiceAccount(json: string): ServiceAccount {
