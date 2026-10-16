@@ -29,7 +29,12 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DiscoveredApps } from "./DiscoveredApps";
 import { KeywordPicker } from "./KeywordPicker";
-import { activeKeywordCount, STEP_TITLES, stepLabel } from "./setup-progress";
+import {
+  activeKeywordCount,
+  keywordsStepDescription,
+  STEP_TITLES,
+  stepLabel,
+} from "./setup-progress";
 import { MarketCostTip, SuggestedMarkets } from "./SuggestedMarkets";
 
 const SKIP_REASON: Record<SetupStep, string> = {
@@ -175,6 +180,7 @@ function homeKeywordsLine(
 
 export function KeywordsStep({
   appId,
+  store,
   homeMarket,
   tracked,
   error,
@@ -182,6 +188,7 @@ export function KeywordsStep({
   ...step
 }: StepProps & {
   appId: string;
+  store: Store;
   homeMarket: string;
   tracked: TrackedKeywordItem[] | null;
   error: boolean;
@@ -190,7 +197,7 @@ export function KeywordsStep({
   return (
     <StepCard
       step="keywords"
-      description={`Track at least ${SETUP_KEYWORD_TARGET} keywords in your home storefront. The import already tracked the phrases of your title and subtitle.`}
+      description={keywordsStepDescription(store)}
       {...step}
     >
       <p className="text-sm text-muted-foreground">
@@ -268,7 +275,8 @@ export function CountriesStep({
       description={
         <>
           Your home country is selected. Add the countries you sell in; each one
-          adds daily requests. {suggested ? null : <MarketCostTip />}
+          adds daily requests.{" "}
+          {suggested ? null : <MarketCostTip store={store} />}
         </>
       }
       {...step}
@@ -276,6 +284,7 @@ export function CountriesStep({
       {suggested ? (
         <SuggestedMarkets
           appId={appId}
+          store={store}
           result={suggested}
           selected={markets}
           onSelect={onSelect}

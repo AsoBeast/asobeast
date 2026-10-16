@@ -1,9 +1,11 @@
 import {
+  SETUP_KEYWORD_TARGET,
   SETUP_STEPS,
   type AppSetupSummary,
   type PortfolioApp,
   type SetupStep,
   type SetupStepProgress,
+  type Store,
 } from "@asobeast/shared";
 
 export const STEP_TITLES: Record<SetupStep, string> = {
@@ -11,6 +13,14 @@ export const STEP_TITLES: Record<SetupStep, string> = {
   keywords: "Track keywords",
   countries: "Add countries",
 };
+
+const INDEXED_SURFACES: Record<Store, string> = {
+  APP_STORE: "title and subtitle",
+  GOOGLE_PLAY: "title and short description",
+};
+
+export const keywordsStepDescription = (store: Store): string =>
+  `Track at least ${SETUP_KEYWORD_TARGET} keywords in your home storefront. The import already tracked the phrases of your ${INDEXED_SURFACES[store]}.`;
 
 export const nextLabel = (step: SetupStep): string =>
   STEP_TITLES[step].toLowerCase();

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   activeKeywordCount,
   bannerApps,
+  keywordsStepDescription,
   nextLabel,
   progressPercent,
   progressValueLabel,
@@ -129,5 +130,19 @@ describe("bannerApps", () => {
         app("dated", "in_progress", "2026-10-13T09:00:00.000Z"),
       ]),
     ).toMatchObject({ app: { id: "dated" }, more: 3 });
+  });
+});
+
+describe("keywordsStepDescription", () => {
+  it("names the title and subtitle of an App Store listing", () => {
+    expect(keywordsStepDescription("APP_STORE")).toBe(
+      "Track at least 10 keywords in your home storefront. The import already tracked the phrases of your title and subtitle.",
+    );
+  });
+
+  it("names the title and short description of a Google Play listing", () => {
+    expect(keywordsStepDescription("GOOGLE_PLAY")).toBe(
+      "Track at least 10 keywords in your home storefront. The import already tracked the phrases of your title and short description.",
+    );
   });
 });

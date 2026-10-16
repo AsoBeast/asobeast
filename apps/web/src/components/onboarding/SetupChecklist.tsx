@@ -140,6 +140,7 @@ function ActiveSetup({
       <KeywordsStep
         {...step("keywords")}
         appId={app.id}
+        store={app.store}
         homeMarket={app.country}
         tracked={homeKeywords.data ?? null}
         error={homeKeywords.isError}
