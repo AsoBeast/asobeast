@@ -157,6 +157,23 @@ describe('keyword.push_to_top10', () => {
     ).toEqual([]);
   });
 
+  const firesOn = (positions: number[]): boolean =>
+    live([
+      app({
+        trackedKeywords: [keyword({ latestPosition: positions.at(-1) })],
+        rankingDaysByKeyword: new Map([['kw_1', lastWeek(positions)]]),
+      }),
+    ]).length === 1;
+
+  it('keeps firing through a daily wobble that ends a place below the first day', () => {
+    expect(firesOn([16, 18, 17, 17, 18, 18, 17])).toBe(true);
+  });
+
+  it('keeps firing while the trend slips by less than two places', () => {
+    expect(firesOn([14, 14, 14, 15, 15, 15, 15])).toBe(true);
+    expect(firesOn([13, 13, 13, 14, 15, 15, 15])).toBe(false);
+  });
+
   it('stays silent once a strong field covers the keyword', () => {
     expect(
       detect([app({ coverage: [coverage('kw_1', ['subtitle'])] })]),
