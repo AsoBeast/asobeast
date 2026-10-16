@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/tooltip";
 import { CHANGE_FIELD_LABELS } from "@/lib/change-fields";
 import { localizedLabel } from "@/lib/localizations";
-import { changesOptions } from "@/lib/queries";
+import { changeImpactOptions, changesOptions } from "@/lib/queries";
 import {
   formatCountry,
   formatDate,
@@ -32,9 +32,10 @@ import {
 } from "@/lib/format";
 import { queryMarket } from "@/lib/market";
 import { CHANGE_WINDOWS } from "@/lib/ranges";
-import { changeDaysParser } from "@/lib/search-params";
+import { changeDaysParser, countryParser } from "@/lib/search-params";
 import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
+import { conversionChip, funnelByDay } from "./change-funnel";
 import { releaseNotesInline } from "./release-notes";
 import { hasScreenshotDetail } from "./screenshot-change";
 import { ScreenshotChangeValue } from "./ScreenshotChangeValue";
@@ -194,16 +195,38 @@ export function ChangeRow({
   );
 }
 
+function ConversionChip({ value }: { value: number }) {
+  const tone =
+    value > 0
+      ? "text-signal-up"
+      : value < 0
+        ? "text-signal-down"
+        : "text-muted-foreground";
+  return (
+    <span className={cn("numeric font-mono normal-case", tone)}>
+      Conversion {value > 0 ? "+" : ""}
+      {value}%
+    </span>
+  );
+}
+
 function ChangeList({
   id,
   days,
   market,
+  homeCountry,
 }: {
   id: string;
   days: number;
   market?: string;
+  homeCountry: string;
 }) {
   const { data } = useSuspenseQuery(changesOptions(id, days, market));
+  const [impactCountry] = useQueryState("country", countryParser);
+  const { data: impact } = useSuspenseQuery(
+    changeImpactOptions(id, days, impactCountry || homeCountry),
+  );
+  const funnels = funnelByDay(impact);
 
   if (data.events.length === 0) {
     return (
@@ -227,20 +250,24 @@ function ChangeList({
 
   return (
     <div className="flex flex-col gap-6">
-      {Array.from(groups.entries()).map(([day, events]) => (
-        <section key={day} className="flex flex-col gap-2">
-          <h2 className="flex items-center gap-2 text-label text-muted-foreground uppercase">
-            <span aria-hidden className="size-1.5 rounded-full bg-border" />
-            {formatDate(day)}
-            <span aria-hidden className="h-px flex-1 bg-border" />
-          </h2>
-          <div className="flex flex-col gap-2">
-            {events.map((event) => (
-              <ChangeRow key={event.id} event={event} dense={false} />
-            ))}
-          </div>
-        </section>
-      ))}
+      {Array.from(groups.entries()).map(([day, events]) => {
+        const chip = conversionChip(funnels.get(day));
+        return (
+          <section key={day} className="flex flex-col gap-2">
+            <h2 className="flex items-center gap-2 text-label text-muted-foreground uppercase">
+              <span aria-hidden className="size-1.5 rounded-full bg-border" />
+              {formatDate(day)}
+              {chip === null ? null : <ConversionChip value={chip} />}
+              <span aria-hidden className="h-px flex-1 bg-border" />
+            </h2>
+            <div className="flex flex-col gap-2">
+              {events.map((event) => (
+                <ChangeRow key={event.id} event={event} dense={false} />
+              ))}
+            </div>
+          </section>
+        );
+      })}
     </div>
   );
 }
@@ -252,7 +279,14 @@ function MarketHeading({ id }: { id: string }) {
 
 function MarketChangeList({ id, days }: { id: string; days: number }) {
   const { market, home } = useMarket(id);
-  return <ChangeList id={id} days={days} market={queryMarket(market, home)} />;
+  return (
+    <ChangeList
+      id={id}
+      days={days}
+      market={queryMarket(market, home)}
+      homeCountry={home}
+    />
+  );
 }
 
 export function ChangeTimeline({ id }: { id: string }) {

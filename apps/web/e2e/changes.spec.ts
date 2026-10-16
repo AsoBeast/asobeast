@@ -208,3 +208,49 @@ test("a single market app has no picker and measures its home market", async ({
   await page.getByRole("tab", { name: "30d" }).click();
   await request;
 });
+
+test("a measured window reads Get taps and conversion from the console", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/changes");
+
+  const tile = windowTile(page, OLDER.changedOn, 7);
+  await expect(tile).toContainText("Get taps412 → 486");
+  await expect(tile).toContainText("Conversion3.1% → 3.6%");
+  await expect(tile.getByLabel("up 18 percent in Get taps")).toBeVisible();
+});
+
+test("a window still filling says when Apple's numbers are final", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/changes");
+
+  await expect(windowTile(page, MEASURED.changedOn, 14)).toContainText(
+    "Apple's numbers for this window are final in 5 days",
+  );
+  await expect(windowTile(page, OLDER.changedOn, 28)).toContainText(
+    "No console data before this change",
+  );
+});
+
+test("the timeline marks the conversion change beside the day of a change", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/changes?days=90");
+
+  await expect(
+    timeline(page).getByRole("heading", { level: 2, name: /Conversion \+16%/ }),
+  ).toContainText(formatDate(OLDER.changedOn));
+  await expect(
+    timeline(page).getByRole("heading", { level: 2, name: /Conversion/ }),
+  ).toHaveCount(1);
+});
+
+test("an app without a console connection shows no store funnel", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-2/changes");
+
+  await expect(page.getByText("Store funnel")).toHaveCount(0);
+  await expect(page.getByText(/Conversion [+-]/)).toHaveCount(0);
+});

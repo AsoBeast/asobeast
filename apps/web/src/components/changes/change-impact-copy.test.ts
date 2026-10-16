@@ -9,6 +9,8 @@ import {
   visibilityRange,
   windowStatusLine,
   windowTitle,
+  funnelNote,
+  funnelRanges,
 } from "./change-impact-copy";
 
 const movement = (
@@ -115,5 +117,99 @@ describe("impactScopeLine", () => {
 describe("windowTitle", () => {
   it("names a window by its length", () => {
     expect(windowTitle(7)).toBe("After 7 days");
+  });
+});
+
+describe("store funnel lines", () => {
+  const counts = (gets: number, conversion: number) => ({
+    impressions: 10_000,
+    uniqueImpressions: 10_000,
+    pageViews: 2_000,
+    gets,
+    conversion,
+  });
+
+  it("reads Get taps and conversion before and after a measured window", () => {
+    expect(
+      funnelRanges({
+        status: "measured",
+        completeDays: 7,
+        before: counts(412, 0.031),
+        after: counts(486, 0.036),
+        change: { impressions: 0, pageViews: 0, gets: 0.18, conversion: 0.161 },
+      }),
+    ).toEqual({ gets: "412 → 486", conversion: "3.1% → 3.6%" });
+  });
+
+  it("draws no ranges until the window is measured", () => {
+    expect(
+      funnelRanges({
+        status: "pending",
+        completeDays: 3,
+        before: counts(412, 0.031),
+        after: counts(200, 0.036),
+        change: null,
+      }),
+    ).toBeNull();
+    expect(funnelRanges(null)).toBeNull();
+    expect(funnelRanges(undefined)).toBeNull();
+  });
+
+  it("says how many days are left while Apple is still finishing them", () => {
+    expect(
+      funnelNote(
+        {
+          status: "pending",
+          completeDays: 5,
+          before: null,
+          after: null,
+          change: null,
+        },
+        7,
+      ),
+    ).toBe("Apple's numbers for this window are final in 2 days");
+    expect(
+      funnelNote(
+        {
+          status: "pending",
+          completeDays: 6,
+          before: null,
+          after: null,
+          change: null,
+        },
+        7,
+      ),
+    ).toBe("Apple's numbers for this window are final in 1 day");
+  });
+
+  it("says the console reports nothing before an unmeasured change", () => {
+    expect(
+      funnelNote(
+        {
+          status: "unmeasured",
+          completeDays: 0,
+          before: null,
+          after: null,
+          change: null,
+        },
+        7,
+      ),
+    ).toBe("No console data before this change");
+  });
+
+  it("writes no note for a measured window or without a connection", () => {
+    expect(funnelNote(undefined, 7)).toBeNull();
+    expect(
+      funnelNote(
+        {
+          status: "measured",
+          completeDays: 7,
+          before: counts(1, 0.1),
+          after: counts(1, 0.1),
+          change: null,
+        },
+        7,
+      ),
+    ).toBeNull();
   });
 });
