@@ -483,6 +483,18 @@ async function seedWorkspace(
       processingDate: utcDay(0),
     },
   });
+  await db.storeFunnelPageDay.create({
+    data: {
+      workspaceId: id,
+      appId: apple.id,
+      date: utcDay(1),
+      territory: 'United States',
+      country: 'us',
+      pageTitle: `${id} page`,
+      uniqueImpressions: id === 'ws_iso_a' ? 100 : 900,
+      processingDate: utcDay(0),
+    },
+  });
 
   return {
     id,

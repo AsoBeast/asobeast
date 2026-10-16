@@ -3,6 +3,7 @@ import { DailyBudget, TrackedKeywordItem } from '@asobeast/shared';
 import { Env } from '../config/env';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { DEFAULT_WORKSPACE_ID } from '../common/tenancy/default-workspace';
+import { ActionFunnelReader } from './action-funnel';
 import { PrismaService } from '../prisma/prisma.service';
 import { KeywordsService } from '../keywords/keywords.service';
 import { MetadataService } from '../metadata/metadata.service';
@@ -137,9 +138,14 @@ const workspaceScope = {
   require: () => DEFAULT_WORKSPACE_ID,
 } as unknown as WorkspaceContext;
 
+const noFunnels = {
+  forApps: jest.fn(() => Promise.resolve(new Map())),
+} as unknown as ActionFunnelReader;
+
 const loaderFor = (
   prisma: ReturnType<typeof buildPrisma>,
   tracked: TrackedKeywordItem[] = [],
+  funnels: ActionFunnelReader = noFunnels,
 ): ActionContextLoader =>
   new ActionContextLoader(
     prisma as unknown as PrismaService,
@@ -157,6 +163,7 @@ const loaderFor = (
       ),
     } as unknown as MetadataService,
     workspaceScope,
+    funnels,
   );
 
 describe('ActionContextLoader', () => {
@@ -726,6 +733,7 @@ describe('ActionContextLoader', () => {
         ),
       } as unknown as MetadataService,
       workspaceScope,
+      noFunnels,
     );
 
     const context = await loader.load(budget, NOW);
@@ -749,11 +757,43 @@ describe('ActionContextLoader', () => {
         ),
       } as unknown as MetadataService,
       workspaceScope,
+      noFunnels,
     );
 
     const context = await loader.load(budget, NOW);
 
     expect(context.apps).toEqual([]);
     expect(prisma.serpEntry.findMany).not.toHaveBeenCalled();
+  });
+
+  it('attaches the funnel of each connected app and an empty one otherwise', async () => {
+    const prisma = buildPrisma({
+      apps: [APP, { ...APP, id: 'app_2', storeAppId: '2000' }],
+    });
+    const funnel = {
+      completeThrough: '2026-07-27',
+      days: [
+        { date: '2026-07-27', pageViews: 10, gets: 2, uniqueImpressions: 50 },
+      ],
+      pages: [],
+    };
+    const forApps = jest.fn(() =>
+      Promise.resolve(new Map([['app_1', funnel]])),
+    );
+
+    const context = await loaderFor(prisma, [], {
+      forApps,
+    } as unknown as ActionFunnelReader).load(budget, NOW);
+
+    expect(forApps).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({ id: 'app_1', country: 'us' }),
+        expect.objectContaining({ id: 'app_2' }),
+      ],
+      NOW,
+      35,
+    );
+    expect(context.apps[0].funnel).toBe(funnel);
+    expect(context.apps[1].funnel).toMatchObject({ days: [], pages: [] });
   });
 });

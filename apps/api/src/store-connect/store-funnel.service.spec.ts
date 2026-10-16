@@ -21,7 +21,12 @@ function build(overrides: Partial<Setup> = {}) {
   };
   const prisma = {
     app: { findFirst: jest.fn().mockResolvedValue(app) },
-    storeReportRequest: { findFirst: jest.fn().mockResolvedValue(request) },
+    storeReportRequest: {
+      findMany: jest
+        .fn()
+        .mockResolvedValue(request ? [{ appId: 'app_1' }] : []),
+    },
+    storeFunnelPageDay: { findMany: jest.fn().mockResolvedValue([]) },
     storeFunnelDay: {
       groupBy: jest.fn().mockResolvedValue([
         {
@@ -86,7 +91,7 @@ describe('StoreFunnelService', () => {
     const report = await service.report('app_1', { days: 90 }, NOW);
 
     expect(report.connected).toBe(false);
-    expect(prisma.storeReportRequest.findFirst).not.toHaveBeenCalled();
+    expect(prisma.storeReportRequest.findMany).not.toHaveBeenCalled();
   });
 
   it('asks only for an ongoing request in the requested state of an active connection', async () => {
@@ -94,14 +99,14 @@ describe('StoreFunnelService', () => {
 
     await service.report('app_1', { days: 90 }, NOW);
 
-    expect(prisma.storeReportRequest.findFirst).toHaveBeenCalledWith({
+    expect(prisma.storeReportRequest.findMany).toHaveBeenCalledWith({
       where: {
-        appId: 'app_1',
+        appId: { in: ['app_1'] },
         accessType: 'ONGOING',
         state: 'requested',
-        connection: { store: 'APP_STORE', status: 'active' },
+        connection: { status: 'active', store: 'APP_STORE' },
       },
-      select: { id: true },
+      select: { appId: true },
     });
   });
 

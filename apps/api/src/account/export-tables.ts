@@ -249,6 +249,16 @@ export function exportTables(prisma: PrismaService): ExportTable[] {
         }),
     ),
     table(
+      'storeFunnelPageDay',
+      () => prisma.storeFunnelPageDay.count(),
+      (skip, take) =>
+        prisma.storeFunnelPageDay.findMany({
+          skip,
+          take,
+          orderBy: [{ appId: 'asc' }, { date: 'asc' }, { id: 'asc' }],
+        }),
+    ),
+    table(
       'webhook',
       () => prisma.webhook.count(),
       (skip, take) =>

@@ -16,6 +16,8 @@ import { marketImproveCountryDetector } from './rules/market-improve-country';
 import { rankInvestigateDropDetector } from './rules/rank-investigate-drop';
 import { reviewsInvestigateThemeDetector } from './rules/reviews-investigate-theme';
 import { serpHoldVolatileDetector } from './rules/serp-hold-volatile';
+import { conversionInvestigateDropDetector } from './rules/conversion-investigate-drop';
+import { listingCppUnderperformsDetector } from './rules/listing-cpp-underperforms';
 
 export interface DetectedAction {
   rule: ActionRule;
@@ -51,4 +53,6 @@ export const ACTION_DETECTORS: readonly ActionDetector[] = Object.freeze([
   reviewsInvestigateRatingDeclineDetector,
   reviewsReplyNegativeDetector,
   listingShipUpdateDetector,
+  conversionInvestigateDropDetector,
+  listingCppUnderperformsDetector,
 ]);

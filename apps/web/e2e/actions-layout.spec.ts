@@ -68,7 +68,7 @@ test("the rail shows the open work by app and filters to it", async ({
     .locator("xpath=..");
   const focus = where.getByRole("link", { name: /Focus Timer · US/ });
 
-  await expect(focus).toContainText("16");
+  await expect(focus).toContainText("18");
   await focus.click();
 
   await expect(page).toHaveURL(/app=app-1/);

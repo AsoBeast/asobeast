@@ -33,6 +33,7 @@ import { StoreReportsWorker } from './store-reports.worker';
     StoreConnectionService,
     StoreReportQueue,
     StoreReportSyncService,
+    StoreFunnelService,
     SECRET_BOX,
   ],
 })

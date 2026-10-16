@@ -86,12 +86,34 @@ const describeEvidence = (evidence: ActionEvidence): string => {
       return `unanswered ${evidence.unanswered}`;
     case 'listing.ship_update':
       return `days ${evidence.daysSinceUpdate}`;
+    case 'conversion.investigate_drop':
+      return `gets ${evidence.getsBefore} to ${evidence.getsAfter}`;
+    case 'listing.cpp_underperforms':
+      return `${evidence.pageTitle} ${evidence.ratio}`;
     default: {
       const never: never = evidence;
       return never;
     }
   }
 };
+
+describe('the conversion rules', () => {
+  it('names the two conversion rules as advisory conversion rules', () => {
+    expect(ACTION_RULES).toHaveLength(17);
+    expect(ACTION_RULES.slice(-2)).toEqual([
+      'conversion.investigate_drop',
+      'listing.cpp_underperforms',
+    ]);
+    for (const rule of ACTION_RULES.slice(-2)) {
+      expect(ACTION_RULE_CATEGORY[rule]).toBe('conversion');
+      expect(ACTION_ADVISORY_RULES).toContain(rule);
+    }
+  });
+
+  it('measures their outcome by conversion', () => {
+    expect(ACTION_TREND_METRICS).toContain('conversion');
+  });
+});
 
 describe('action vocabularies', () => {
   it('accepts every declared value and rejects everything else', () => {
@@ -353,6 +375,29 @@ describe('action evidence', () => {
         competitorMedianDays: 25,
         competitorsCompared: 3,
       },
+      {
+        rule: 'conversion.investigate_drop',
+        country: 'us',
+        windowDays: 7,
+        baselineDays: 14,
+        completeThrough: '2026-10-13',
+        pageViewsBefore: 1400,
+        pageViewsAfter: 1380,
+        getsBefore: 420,
+        getsAfter: 140,
+        conversionBefore: 0.03,
+        conversionAfter: 0.01,
+      },
+      {
+        rule: 'listing.cpp_underperforms',
+        country: 'us',
+        pageTitle: 'Summer sale',
+        windowDays: 14,
+        pageUniqueImpressions: 500,
+        pageConversion: 0.02,
+        defaultConversion: 0.04,
+        ratio: 0.5,
+      },
     ];
 
     expect(samples.map((evidence) => evidence.rule).sort()).toEqual(
@@ -374,6 +419,8 @@ describe('action evidence', () => {
       'drop 0.8',
       'unanswered 3',
       'days 142',
+      'gets 420 to 140',
+      'Summer sale 0.5',
     ]);
   });
 

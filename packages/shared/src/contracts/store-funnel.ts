@@ -68,6 +68,13 @@ export interface StoreFunnelWindow {
   change: StoreFunnelChange | null;
 }
 
+export interface StoreFunnelPage {
+  title: string;
+  counts: StoreFunnelCounts;
+  defaultConversion: number | null;
+  ratio: number | null;
+}
+
 export interface StoreFunnelReport {
   appId: string;
   store: Store;
@@ -78,6 +85,7 @@ export interface StoreFunnelReport {
   completeThrough: string | null;
   points: StoreFunnelPoint[];
   windows: StoreFunnelWindow[];
+  pages?: StoreFunnelPage[];
 }
 
 const round = (value: number, places: number): number => {

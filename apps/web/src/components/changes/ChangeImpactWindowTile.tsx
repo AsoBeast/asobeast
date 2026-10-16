@@ -3,6 +3,8 @@ import { TriangleAlert } from "lucide-react";
 import type { ChangeImpactWindow } from "@asobeast/shared";
 import { DeltaChip } from "@/components/ui/delta-chip";
 import {
+  funnelNote,
+  funnelRanges,
   measuredLine,
   movementLine,
   overlapNotice,
@@ -60,6 +62,40 @@ function MeasuredFacts({ impact }: { impact: ChangeImpactWindow }) {
   );
 }
 
+export function FunnelFacts({ impact }: { impact: ChangeImpactWindow }) {
+  const ranges = funnelRanges(impact.funnel);
+  const note = funnelNote(impact.funnel, impact.days);
+  if (!ranges && !note) return null;
+  const gets = impact.funnel?.change?.gets ?? null;
+
+  return (
+    <dl className="flex flex-col gap-2 text-body">
+      <Fact label="Store funnel">
+        {ranges ? (
+          <>
+            <dd className="flex flex-wrap items-center gap-2">
+              <span>Get taps</span>
+              <span className="numeric font-mono">{ranges.gets}</span>
+              <DeltaChip
+                value={gets === null ? null : Math.round(gets * 100)}
+                polarity="higher-is-better"
+                period="percent in Get taps"
+                unit="%"
+              />
+            </dd>
+            <dd className="flex flex-wrap items-center gap-2">
+              <span>Conversion</span>
+              <span className="numeric font-mono">{ranges.conversion}</span>
+            </dd>
+          </>
+        ) : (
+          <dd className="text-caption text-muted-foreground">{note}</dd>
+        )}
+      </Fact>
+    </dl>
+  );
+}
+
 export function ChangeImpactWindowTile({
   impact,
 }: {
@@ -74,6 +110,7 @@ export function ChangeImpactWindowTile({
         {windowStatusLine(impact)}
       </p>
       <MeasuredFacts impact={impact} />
+      <FunnelFacts impact={impact} />
       {notice ? (
         <p className="flex items-start gap-1.5 text-caption text-muted-foreground">
           <TriangleAlert

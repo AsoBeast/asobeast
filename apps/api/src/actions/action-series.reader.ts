@@ -15,8 +15,10 @@ import {
   TrendWindow,
   trendWindow,
   updateAgePoints,
+  conversionPercent,
 } from './action-trend';
 import { HOME_LISTING } from '../apps/listing';
+import { completeThrough } from '../store-connect/store-funnel';
 
 interface SeriesBody {
   depth: number | null;
@@ -61,6 +63,8 @@ export class ActionSeriesReader {
         return this.rating(item, window);
       case 'updateAge':
         return this.updateAge(item, window);
+      case 'conversion':
+        return this.conversion(item, window);
     }
   }
 
@@ -150,6 +154,46 @@ export class ActionSeriesReader {
         from,
         to,
         ACTION_TREND_RATING_DAYS,
+      ),
+    };
+  }
+
+  private async conversion(
+    item: ActionItem,
+    { from, to }: TrendWindow,
+  ): Promise<SeriesBody> {
+    const where = {
+      appId: item.scope.appId,
+      country: item.scope.country,
+      date: {
+        gte: from,
+        lte: new Date(`${completeThrough(new Date())}T00:00:00.000Z`),
+      },
+    };
+    const rows =
+      item.evidence?.rule === 'listing.cpp_underperforms'
+        ? await this.prisma.storeFunnelPageDay.groupBy({
+            by: ['date'],
+            where: { ...where, pageTitle: item.evidence.pageTitle },
+            _sum: { gets: true, uniqueImpressions: true },
+          })
+        : await this.prisma.storeFunnelDay.groupBy({
+            by: ['date'],
+            where,
+            _sum: { gets: true, uniqueImpressions: true },
+          });
+    return {
+      depth: null,
+      points: dailyPoints(
+        rows.map((row) => ({
+          date: row.date,
+          value: conversionPercent(
+            row._sum.gets ?? 0,
+            row._sum.uniqueImpressions ?? 0,
+          ),
+        })),
+        from,
+        to,
       ),
     };
   }

@@ -5,10 +5,12 @@ import type {
   ActionOvertakenKeyword,
   AuditFixFactorEvidence,
   CompetitorInvestigateOvertakeEvidence,
+  ConversionInvestigateDropEvidence,
   KeywordAddUncoveredEvidence,
   KeywordDefendEvidence,
   KeywordPruneEvidence,
   KeywordPushToTop10Evidence,
+  ListingCppUnderperformsEvidence,
   ListingShipUpdateEvidence,
   MarketImproveCountryEvidence,
   MetadataFixLintEvidence,
@@ -23,7 +25,7 @@ import { formatCheckedPosition, formatRankPosition } from "@asobeast/shared";
 import { formatDate, formatMeasure, formatNumber } from "@/lib/format";
 import type { GradeMetric } from "@/lib/grade";
 import { METADATA_FIELD_LABELS } from "@/lib/metadata-display";
-import { ACTION_RULE_LABEL, summarizeEvidence } from "./action-copy";
+import { ACTION_RULE_LABEL, percent, summarizeEvidence } from "./action-copy";
 import { CHANGE_FIELD_WORD } from "./action-headline";
 
 export interface EvidenceFact {
@@ -384,6 +386,51 @@ function staleSections(evidence: ListingShipUpdateEvidence): Sections {
   };
 }
 
+function conversionSections(
+  evidence: ConversionInvestigateDropEvidence,
+): Sections {
+  return {
+    facts: [
+      fact("Market", evidence.country.toUpperCase()),
+      fact(
+        "Get taps a day",
+        `${formatMeasure(evidence.getsBefore)} → ${formatMeasure(evidence.getsAfter)}`,
+      ),
+      fact(
+        "Page views a day",
+        `${formatMeasure(evidence.pageViewsBefore)} → ${formatMeasure(evidence.pageViewsAfter)}`,
+      ),
+      fact(
+        "Conversion",
+        `${percent(evidence.conversionBefore)} → ${percent(evidence.conversionAfter)}`,
+      ),
+      fact(
+        "Compared",
+        `last ${evidence.windowDays} days against the ${evidence.baselineDays} before`,
+      ),
+      fact("Complete through", formatDate(evidence.completeThrough)),
+    ],
+    lists: [],
+  };
+}
+
+function productPageSections(
+  evidence: ListingCppUnderperformsEvidence,
+): Sections {
+  return {
+    facts: [
+      fact("Market", evidence.country.toUpperCase()),
+      fact("Product page", evidence.pageTitle),
+      fact("Page conversion", percent(evidence.pageConversion)),
+      fact("Default page conversion", percent(evidence.defaultConversion)),
+      fact("Ratio", formatMeasure(evidence.ratio)),
+      fact("Unique impressions", formatNumber(evidence.pageUniqueImpressions)),
+      fact("Window", `${evidence.windowDays} days`),
+    ],
+    lists: [],
+  };
+}
+
 function marketSections(evidence: MarketImproveCountryEvidence): Sections {
   return {
     facts: [
@@ -485,6 +532,10 @@ function sections(evidence: ActionEvidence): Sections {
       return replySections(evidence);
     case "listing.ship_update":
       return staleSections(evidence);
+    case "conversion.investigate_drop":
+      return conversionSections(evidence);
+    case "listing.cpp_underperforms":
+      return productPageSections(evidence);
     case "metadata.fix_lint":
       return lintSections(evidence);
     default: {

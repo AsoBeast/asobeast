@@ -1,0 +1,9 @@
+Date	App Name	App Apple Identifier	Event	Page Type	Source Type	Engagement Type	Device	Platform Version	Territory	Page Title	Source Info	Campaign	Counts	Unique Counts
+2026-09-10	Focus Timer	1476097583	Impression	Product page	App Store search		iPhone	iOS 18.0	United States	default product page			1000	800
+2026-09-10	Focus Timer	1476097583	Impression	Product page	App Store browse		iPad	iPadOS 18.0	United States	default product page			200	150
+2026-09-10	Focus Timer	1476097583	Page view	Product page	App Store search		iPhone	iOS 18.0	United States	default product page			300	250
+2026-09-10	Focus Timer	1476097583	Tap	Product page	App Store search	Get	iPhone	iOS 18.0	United States	default product page			40	38
+2026-09-10	Focus Timer	1476097583	Impression	Product page	App Store search		iPhone	iOS 18.0	United States	Summer sale			400	350
+2026-09-10	Focus Timer	1476097583	Tap	Product page	App Store search	Get	iPhone	iOS 18.0	United States	Summer sale			7	7
+2026-09-10	Focus Timer	1476097583	Impression	No page	App Store search		iPhone	iOS 18.0	United States	no page			900	700
+2026-09-10	Focus Timer	1476097583	Tap	Product page	App Store search	Open	iPhone	iOS 18.0	United States	Summer sale			3	3
