@@ -170,6 +170,27 @@ test("captures today from a column", async ({ page, request }) => {
   ]);
 });
 
+test("keeps the wrapped trending tabs inside their strip", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/charts?view=table");
+  const trending = page.getByRole("complementary", { name: "Trending" });
+  const strip = trending.getByRole("tablist", { name: "Trending list" });
+  const tabs = strip.getByRole("tab");
+  await expect(tabs).toHaveCount(4);
+
+  const stripBox = (await strip.boundingBox())!;
+  const lastTab = (await tabs.last().boundingBox())!;
+  const firstRow = (await trending
+    .getByRole("listitem")
+    .first()
+    .boundingBox())!;
+
+  expect(lastTab.y + lastTab.height).toBeLessThanOrEqual(
+    stripBox.y + stripBox.height + 1,
+  );
+  expect(firstRow.y).toBeGreaterThanOrEqual(stripBox.y + stripBox.height);
+});
+
 test("shows movement for each kind in the trending panel", async ({ page }) => {
   await page.goto("/charts");
   const trending = page.getByRole("complementary", { name: "Trending" });
