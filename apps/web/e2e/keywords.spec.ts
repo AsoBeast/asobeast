@@ -209,6 +209,10 @@ test("a play app shows play installs per search term and sorts by them", async (
   await expect(
     table.getByRole("button", { name: "Play installs", exact: true }),
   ).toBeVisible();
+  await table.getByRole("button", { name: "About Play installs" }).click();
+  await expect(
+    page.getByRole("dialog", { name: "Play installs" }),
+  ).toContainText("acquisitions and store listing visitors");
   await expect(
     rows
       .filter({ hasText: "lernphasen timer" })

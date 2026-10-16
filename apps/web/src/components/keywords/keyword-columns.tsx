@@ -12,6 +12,7 @@ import type { KeywordTableFeatures } from "./keyword-table-features";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { InfoTip } from "@/components/ui/info-tip";
 import {
   Tooltip,
   TooltipContent,
@@ -288,7 +289,14 @@ function acquisitionsColumn() {
       ...SORTABLE,
       sortDescFirst: true,
       header: ({ column }) => (
-        <SortableHeader column={column} label="Play installs" />
+        <span className="inline-flex items-center gap-1">
+          <SortableHeader column={column} label="Play installs" />
+          <InfoTip
+            label="About Play installs"
+            title="Play installs"
+            summary="The acquisitions and store listing visitors this keyword brought as a Google Play search term, from the newest complete month Play Console reported. A dash means Google reported no visitors for it."
+          />
+        </span>
       ),
       cell: ({ row }) => (
         <PlayAcquisitionsCell value={row.original.playAcquisitions ?? null} />

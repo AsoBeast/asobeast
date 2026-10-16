@@ -150,6 +150,9 @@ test("shows the google play funnel with visitors, acquisitions and conversion", 
   await expect(
     page.getByRole("dialog", { name: "Store funnel" }),
   ).toContainText("store performance files");
+  await expect(
+    page.getByRole("dialog", { name: "Store funnel" }),
+  ).toContainText("July 10, 2026");
 });
 
 test("shows no store funnel while store connections are off", async ({

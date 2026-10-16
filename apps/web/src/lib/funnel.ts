@@ -64,7 +64,7 @@ export const FUNNEL_COPY: Record<Store, FunnelCopy> = {
     console: "Google Play Console",
     base: "store listing visitors",
     freshness:
-      "Google posts a day three to seven days later; counting changed on 2026-07-10.",
+      "Google posts a day three to seven days later; counting changed on July 10, 2026.",
     connectTitle:
       "Connect the Google Play Console to see store listing visitors and conversion here.",
     connectBody:

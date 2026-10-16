@@ -159,7 +159,7 @@ describe("google play funnel", () => {
 
   it("names google's lag and the counting change", () => {
     expect(FUNNEL_COPY.GOOGLE_PLAY.freshness).toBe(
-      "Google posts a day three to seven days later; counting changed on 2026-07-10.",
+      "Google posts a day three to seven days later; counting changed on July 10, 2026.",
     );
   });
 });

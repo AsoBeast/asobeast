@@ -15,7 +15,7 @@ const HELP: Record<Store, { summary: string; detail: string }> = {
     summary:
       "Store listing visitors and acquisitions come from the monthly store performance files Play Console writes to its Cloud Storage bucket, read through the service account connected in settings. Conversion is acquisitions divided by visitors.",
     detail:
-      "A market reads the country file and All markets the traffic source file, so the two split sources differently. Google posts a day three to seven days later and changed how it counts visitors and acquisitions on 2026-07-10, so compare periods on the same side of that date.",
+      "A market reads the country file and All markets the traffic source file, so the two split sources differently. Google posts a day three to seven days later and changed how it counts visitors and acquisitions on July 10, 2026, so compare periods on the same side of that date.",
   },
 };
 
