@@ -132,6 +132,9 @@ export function ConnectAppStoreDialog({ label }: { label: string }) {
           placeholder="Contents of AuthKey_2X9R4HXF34.p8"
           autoComplete="off"
           spellCheck={false}
+          data-1p-ignore="true"
+          data-lpignore="true"
+          data-bwignore="true"
         />
         <Label htmlFor="asc-private-key-file" className="sr-only">
           Private key file

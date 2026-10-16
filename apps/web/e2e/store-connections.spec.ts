@@ -36,6 +36,9 @@ test("the owner connects app store connect and sees the apps it reports", async 
   const key = dialog.getByLabel("Private key", { exact: true });
   await expect(key).toHaveAttribute("type", "password");
   await expect(key).toHaveAttribute("autocomplete", "off");
+  await expect(key).toHaveAttribute("data-1p-ignore", "true");
+  await expect(key).toHaveAttribute("data-lpignore", "true");
+  await expect(key).toHaveAttribute("data-bwignore", "true");
 
   const sent: string[] = [];
   page.on("request", (request) => {
