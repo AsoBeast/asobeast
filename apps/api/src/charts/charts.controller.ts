@@ -56,7 +56,7 @@ export class ChartsController {
   @ApiOperation({
     summary: 'Capture a top chart today',
     description:
-      "Fetches today's chart from the store while you wait and stores it for every workspace, then answers the page for today. A chart already captured today is answered without a store request. Reaches the store, so it answers within the store deadline and spends one chart capture of the daily allowance only when a request is made; a refused key spends nothing.",
+      "Fetches today's chart from the store while you wait and stores it for every workspace, then answers the page for today. A chart already captured today is answered without a store request. Reaches the store, so it answers within the store deadline and spends one chart capture of the daily allowance only when a request is made; a refused key spends nothing. A chart the store answers with no apps is stored as empty when it was empty before; a first empty answer is not stored and comes back with answeredNoApps, and the daily run stores it after retrying.",
   })
   capture(@Body() dto: ChartCaptureDto): Promise<ChartPage> {
     return this.charts.captureToday(dto, () =>

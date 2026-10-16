@@ -135,6 +135,7 @@ export function AppSwitcher() {
           </PopoverTrigger>
           <PopoverContent
             align="start"
+            aria-label="Switch app"
             side={isMobile ? "bottom" : "right"}
             className="w-72 p-0"
           >

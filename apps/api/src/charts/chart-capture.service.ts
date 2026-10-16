@@ -5,6 +5,8 @@ import { toDateKey, utcToday } from '../analytics/analytics.support';
 import { PrismaService } from '../prisma/prisma.service';
 import { isUniqueViolation } from '../prisma/unique-violation';
 import { StoreRequestError } from '../store-providers/errors';
+import { isImplausiblyEmpty } from '../store-providers/result-plausibility';
+import { ChartListsNoAppsError } from './chart-lists-no-apps.error';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { ChartItem } from '../store-providers/types';
 import { chartCategoryKey } from './chart-category';
@@ -30,6 +32,7 @@ export interface StoredChart {
 export interface CaptureOptions {
   spend?: () => Promise<void>;
   through?: <T>(work: () => Promise<T>) => Promise<T>;
+  finalAttempt?: boolean;
 }
 
 const WITH_ENTRIES = {
@@ -138,7 +141,7 @@ export class ChartCaptureService {
   private async capture(
     key: ChartKey,
     date: Date,
-    { spend, through = directly }: CaptureOptions,
+    { spend, through = directly, finalAttempt }: CaptureOptions,
     progress: Progress,
   ): Promise<StoredChart> {
     const stored = await this.stored(key, date);
@@ -152,13 +155,7 @@ export class ChartCaptureService {
         .get(key.store)
         .topCharts(key.collection, key.genre, depth, key.country),
     );
-    if (items.length === 0) {
-      throw new StoreRequestError(
-        key.store,
-        'topCharts',
-        'the chart feed answered no entries',
-      );
-    }
+    if (items.length === 0) await this.admitEmpty(key, date, finalAttempt);
 
     try {
       return await this.prisma.chartCapture.create({
@@ -171,5 +168,46 @@ export class ChartCaptureService {
       if (!winner) throw error;
       return winner;
     }
+  }
+
+  private async admitEmpty(
+    key: ChartKey,
+    date: Date,
+    finalAttempt: boolean | undefined,
+  ): Promise<void> {
+    const [lastListed, latest] = await Promise.all([
+      this.prisma.chartCapture.findFirst({
+        where: { ...key, date: { lt: date }, entries: { some: {} } },
+        orderBy: { date: 'desc' },
+        select: { date: true },
+      }),
+      this.prisma.chartCapture.findFirst({
+        where: { ...key, date: { lt: date } },
+        orderBy: { date: 'desc' },
+        select: { _count: { select: { entries: true } } },
+      }),
+    ]);
+    if (
+      lastListed &&
+      isImplausiblyEmpty({
+        resultCount: 0,
+        lastSeenOn: lastListed.date,
+        today: date,
+      })
+    ) {
+      throw new StoreRequestError(
+        key.store,
+        'topCharts',
+        `the chart feed answered no entries although it listed apps on ${toDateKey(lastListed.date)}`,
+      );
+    }
+    if (finalAttempt || latest?._count.entries === 0) return;
+    throw finalAttempt === undefined
+      ? new ChartListsNoAppsError(key)
+      : new StoreRequestError(
+          key.store,
+          'topCharts',
+          'the chart feed answered no entries and has no history',
+        );
   }
 }

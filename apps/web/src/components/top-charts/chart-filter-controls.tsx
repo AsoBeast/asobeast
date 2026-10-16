@@ -41,7 +41,6 @@ export interface ChartFilterProps {
 export function ChartCountryFilter({ chart, onChange }: ChartFilterProps) {
   return (
     <ChartCountry
-      key={`${chart.store}~${chart.country}`}
       store={chart.store}
       country={chart.country}
       onChange={(country) => onChange({ country })}

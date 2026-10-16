@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo } from "react";
+import { useId, useMemo, type ReactNode } from "react";
 import Link from "next/link";
 import type { AppListItem, ChartPage } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
@@ -10,8 +10,10 @@ import {
   capturableToday,
   columnCaption,
   columnRows,
+  listsNoApps,
 } from "./chart-column-rows";
 import { ChartEmpty } from "./ChartEmpty";
+import { ChartNoApps } from "./ChartNoApps";
 import {
   COLLECTION_LABELS,
   shownChartKey,
@@ -42,6 +44,19 @@ export function ChartColumn({
   const capture = capturableToday(page) ? (
     <CaptureTodayButton chart={chart} variant="outline" size="sm" />
   ) : null;
+  let empty: ReactNode = null;
+  if (listsNoApps(page)) {
+    empty = <ChartNoApps page={page} className="px-4 py-8" />;
+  } else if (!page.capture) {
+    empty = (
+      <ChartEmpty
+        className="px-4 py-8"
+        captured={page.dates.length > 0}
+        date={search.date}
+        action={capture}
+      />
+    );
+  }
 
   return (
     <section
@@ -67,7 +82,7 @@ export function ChartColumn({
           </Link>
         </div>
       </div>
-      {page.capture ? (
+      {empty ?? (
         <ol className="flex flex-col divide-y">
           {columnRows(page).map((entry) => (
             <li
@@ -95,13 +110,6 @@ export function ChartColumn({
             </li>
           ))}
         </ol>
-      ) : (
-        <ChartEmpty
-          className="px-4 py-8"
-          captured={page.dates.length > 0}
-          date={search.date}
-          action={capture}
-        />
       )}
     </section>
   );

@@ -1,4 +1,8 @@
-import { type APIRequestContext, type Page } from "@playwright/test";
+import {
+  type APIRequestContext,
+  type BrowserContext,
+  type Page,
+} from "@playwright/test";
 import { expect, test } from "./session.mts";
 import { PLAN_LIMITS, UPGRADE_PATH, type AccountPlan } from "@asobeast/shared";
 import { contrastViolations, THEMES } from "./contrast-check.mts";
@@ -276,6 +280,54 @@ test("keeps every filter in the url", async ({ page }) => {
   );
 });
 
+test("keeps focus on the country select after a pick", async ({ page }) => {
+  await page.goto("/charts?view=table");
+  const country = page.getByRole("combobox", { name: "Country" });
+
+  await pick(page, "Country", "DE · Germany");
+
+  await expect(page).toHaveURL(/country=de/);
+  await expect(country).toHaveText("DE · Germany");
+  await expect(country).toBeFocused();
+});
+
+test("keeps focus in the storefront code while a custom code is typed", async ({
+  page,
+}) => {
+  await page.goto("/charts?view=table");
+  await pick(page, "Country", "Other…");
+  const code = page.getByRole("textbox", { name: "Storefront country code" });
+
+  await code.click();
+  await code.pressSequentially("se");
+
+  await expect(page).toHaveURL(/country=se/);
+  await expect(code).toHaveValue("se");
+  await expect(code).toBeFocused();
+});
+
+test("drops an unfinished custom code when the store changes", async ({
+  page,
+}) => {
+  await page.goto("/charts?view=table");
+  await pick(page, "Country", "Other…");
+  await page
+    .getByRole("textbox", { name: "Storefront country code" })
+    .fill("x");
+
+  await page
+    .getByRole("tablist", { name: "Store" })
+    .getByRole("tab", { name: "Google Play" })
+    .click();
+
+  await expect(page.getByRole("combobox", { name: "Country" })).toHaveText(
+    "US · United States",
+  );
+  await expect(
+    page.getByRole("textbox", { name: "Storefront country code" }),
+  ).toHaveCount(0);
+});
+
 test("shows a device control only for a store with more than one device", async ({
   page,
 }) => {
@@ -380,6 +432,97 @@ test("shows the empty day and the uncaptured chart", async ({
   await expect(
     page.getByText("This chart has not been captured yet"),
   ).toBeVisible();
+});
+
+const PLAY_SHOPPING = "/charts?store=GOOGLE_PLAY&country=pl&genre=SHOPPING";
+
+const chartCookie = (name: string) => ({
+  name,
+  value: "1",
+  domain: "localhost",
+  path: "/",
+});
+
+test("says a chart lists no apps when the store listed none", async ({
+  page,
+  context,
+}) => {
+  await context.addCookies([chartCookie("e2e_chart_lists_no_apps")]);
+  const body = `Google Play listed no apps in Shopping on ${formatDay(utcDaysAgo(0))}.`;
+
+  await page.goto(PLAY_SHOPPING);
+  const paid = kindRegion(page, "Paid");
+  await expect(paid.getByText("No apps in this chart")).toBeVisible();
+  await expect(paid.getByText(body)).toBeVisible();
+  await expect(
+    paid.getByText(`No apps · ${formatDayMonth(utcDaysAgo(0))}`),
+  ).toBeVisible();
+  await expect(paid.getByRole("listitem")).toHaveCount(0);
+  await expect(paid.getByRole("button", { name: "Capture today" })).toHaveCount(
+    0,
+  );
+  await expect(paid.getByText(/^0 apps/)).toHaveCount(0);
+
+  await page.goto(`${PLAY_SHOPPING}&view=table&collection=paid`);
+  await expect(page.getByText("No apps in this chart")).toBeVisible();
+  await expect(page.getByText(body)).toBeVisible();
+  await expect(page.getByRole("table")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Capture today" })).toHaveCount(
+    0,
+  );
+});
+
+test("captures a chart the store lists no apps in and says so", async ({
+  page,
+  context,
+  request,
+}) => {
+  await request.get(`${MOCK_API}/__forget-chart-captures/SHOPPING`);
+  await context.addCookies([chartCookie("e2e_chart_capture_lists_no_apps")]);
+
+  await page.goto(PLAY_SHOPPING);
+  await kindRegion(page, "Paid")
+    .getByRole("button", { name: "Capture today" })
+    .click();
+
+  await expect(
+    page.getByText("Google Play lists no apps in this chart today"),
+  ).toBeVisible();
+  await expect(page.getByText("Captured today's chart")).toHaveCount(0);
+  await expect(
+    kindRegion(page, "Paid").getByText("No apps in this chart"),
+  ).toBeVisible();
+  await expect(
+    kindRegion(page, "Paid").getByRole("button", { name: "Capture today" }),
+  ).toHaveCount(0);
+  await expect(
+    kindRegion(page, "Free").getByRole("button", { name: "Capture today" }),
+  ).toBeVisible();
+});
+
+test("says a first empty answer was not stored", async ({
+  page,
+  context,
+  request,
+}) => {
+  await request.get(`${MOCK_API}/__forget-chart-captures/SHOPPING`);
+  await context.addCookies([chartCookie("e2e_chart_capture_answers_no_apps")]);
+
+  await page.goto(PLAY_SHOPPING);
+  await kindRegion(page, "Paid")
+    .getByRole("button", { name: "Capture today" })
+    .click();
+
+  await expect(
+    page.getByText("Google Play lists no apps in this chart today"),
+  ).toBeVisible();
+  await expect(page.getByText("Captured today's chart")).toHaveCount(0);
+  await expect(
+    kindRegion(page, "Paid").getByRole("button", { name: "Capture today" }),
+  ).toBeVisible();
+  await expect(
+    kindRegion(page, "Paid").getByText("No apps in this chart"),
+  ).toHaveCount(0);
 });
 
 test("filters the rows in the browser", async ({ page }) => {
@@ -603,6 +746,62 @@ test.describe.serial("chart follows", () => {
     await expect(
       page.getByRole("button", { name: "Follow category" }),
     ).toBeVisible();
+    expect(await follows(request)).toEqual([]);
+  });
+
+  const followAllKinds = async (request: APIRequestContext, genre: string) => {
+    for (const collection of ["free", "paid", "grossing"]) {
+      await followChart(request, {
+        store: "APP_STORE",
+        country: "us",
+        collection,
+        genre,
+        device: "iphone",
+      });
+    }
+  };
+
+  test("returns focus to Following when the unfollow dialog is dismissed", async ({
+    page,
+    request,
+  }) => {
+    await request.get(`${MOCK_API}/__reset-chart-follows`);
+    await followAllKinds(request, "7012");
+    await page.goto("/charts?view=table&genre=7012");
+    const following = page.getByRole("button", { name: "Following" });
+    const dialog = page.getByRole("alertdialog", {
+      name: "Stop following this category?",
+    });
+
+    await following.focus();
+    await page.keyboard.press("Enter");
+    await expect(dialog).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(following).toBeFocused();
+
+    await page.keyboard.press("Enter");
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+    await expect(dialog).toBeHidden();
+    await expect(following).toBeFocused();
+  });
+
+  test("moves focus to Follow category after the category is unfollowed", async ({
+    page,
+    request,
+  }) => {
+    await request.get(`${MOCK_API}/__reset-chart-follows`);
+    await followAllKinds(request, "7012");
+    await page.goto("/charts?view=table&genre=7012");
+
+    await page.getByRole("button", { name: "Following" }).focus();
+    await page.keyboard.press("Enter");
+    await page.getByRole("button", { name: "Stop following" }).click();
+
+    await expect(page.getByText("Stopped following")).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Follow category" }),
+    ).toBeFocused();
     expect(await follows(request)).toEqual([]);
   });
 
@@ -973,6 +1172,100 @@ test("keeps the row actions on the chart on screen while the next one loads", as
       name: `Add ${TOP_CHART_APPS[0].title} to Tomato Clock`,
     }),
   ).toHaveCount(0);
+});
+
+const LOAD_DELAY_MS = "1500";
+
+const delayApi = (context: BrowserContext) =>
+  context.addCookies([
+    {
+      name: "e2e_api_latency",
+      value: LOAD_DELAY_MS,
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
+
+const loadingCue = (page: Page, text: string) =>
+  page.getByRole("status").filter({ hasText: text });
+
+for (const [layout, path] of [
+  ["side by side", "/charts"],
+  ["table", "/charts?view=table"],
+] as const) {
+  test(`says the requested store is loading while the previous chart stays, ${layout}`, async ({
+    page,
+    context,
+  }) => {
+    await page.goto(path);
+    await delayApi(context);
+
+    await page
+      .getByRole("tablist", { name: "Store" })
+      .getByRole("tab", { name: "Google Play" })
+      .click();
+
+    const storeLink = page
+      .getByRole("link", {
+        name: `Open ${TOP_CHART_APPS[0].title} in the store`,
+      })
+      .first();
+    const cue = loadingCue(page, "Loading Google Play · United States");
+    await expect(cue).toBeVisible({ timeout: 1000 });
+    await expect(page.locator('[aria-busy="true"]')).toHaveCount(1);
+    await expect(storeLink).toHaveAttribute("href", /apps\.apple\.com/);
+    await expect(cue).toBeHidden({ timeout: 6000 });
+    await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
+    await expect(storeLink).toHaveAttribute("href", /play\.google\.com/);
+  });
+}
+
+test("keeps the loading cue clear of the table toolbar", async ({
+  page,
+  context,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/charts?view=table");
+  await delayApi(context);
+
+  await page
+    .getByRole("tablist", { name: "Store" })
+    .getByRole("tab", { name: "Google Play" })
+    .click();
+
+  const cue = loadingCue(page, "Loading Google Play · United States");
+  await expect(cue).toBeVisible({ timeout: 1000 });
+  const pill = await cue.locator("span").first().boundingBox();
+  const controls = [
+    page.getByRole("textbox", { name: "Search apps" }),
+    page.getByRole("button", { name: "Columns" }),
+  ];
+  for (const control of controls) {
+    const box = await control.boundingBox();
+    const overlaps =
+      pill !== null &&
+      box !== null &&
+      pill.x < box.x + box.width &&
+      box.x < pill.x + pill.width &&
+      pill.y < box.y + box.height &&
+      box.y < pill.y + pill.height;
+    expect(overlaps).toBe(false);
+  }
+});
+
+test("names the requested country while a new country loads", async ({
+  page,
+  context,
+}) => {
+  await page.goto("/charts?view=table");
+  await delayApi(context);
+
+  await pick(page, "Country", "DE · Germany");
+
+  await expect(loadingCue(page, "Loading App Store · Germany")).toBeVisible({
+    timeout: 1000,
+  });
+  await expect(loadingCue(page, "Loading")).toBeHidden({ timeout: 6000 });
 });
 
 test("marks the chosen day apart from the other captured days", async ({

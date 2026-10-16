@@ -266,6 +266,7 @@ export interface ChartPage {
   today: string;
   followed: ChartFollowItem | null;
   apps: ChartAppLink[];
+  answeredNoApps?: boolean;
 }
 
 export type ChartCaptureRequest = ChartKey;

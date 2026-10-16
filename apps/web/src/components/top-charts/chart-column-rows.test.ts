@@ -6,6 +6,7 @@ import {
   CHART_COLUMN_ROWS,
   columnCaption,
   columnRows,
+  listsNoApps,
 } from "./chart-column-rows";
 
 const entry = (position: number): ChartEntryItem => ({
@@ -108,5 +109,21 @@ describe("categoryDates", () => {
 
   it("answers no day for charts never captured", () => {
     expect(categoryDates([{ dates: [] }, { dates: [] }])).toEqual([]);
+  });
+});
+
+describe("listsNoApps", () => {
+  it("is true only for a capture without rows", () => {
+    expect(listsNoApps({ ...CAPTURED, entries: [] })).toBe(true);
+    expect(listsNoApps(CAPTURED)).toBe(false);
+    expect(listsNoApps({ ...CAPTURED, capture: null, entries: [] })).toBe(
+      false,
+    );
+  });
+
+  it("captions a capture without rows as no apps", () => {
+    expect(columnCaption({ ...CAPTURED, entries: [] }, null)).toBe(
+      "No apps · Oct 14",
+    );
   });
 });

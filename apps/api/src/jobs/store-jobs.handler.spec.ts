@@ -22,6 +22,7 @@ describe('StoreJobsHandler', () => {
   const resolveSubtitle = jest.fn();
   const runSpiderProbe = jest.fn();
   const probeLocalization = jest.fn();
+  const checkCategory = jest.fn().mockResolvedValue(undefined);
   const forWorkspace = jest.fn<Promise<boolean>, []>();
   const through = jest.fn(
     (_store: Store, _country: string | undefined, work: () => Promise<void>) =>
@@ -48,7 +49,7 @@ describe('StoreJobsHandler', () => {
       { refreshApp, refreshListing } as unknown as AppsService,
       {} as RankingsService,
       {} as ScoringService,
-      {} as CategoryRanksService,
+      { checkCategory } as unknown as CategoryRanksService,
       {} as ReviewsService,
       { runSpiderProbe } as unknown as SpiderService,
       workspace,
@@ -63,6 +64,29 @@ describe('StoreJobsHandler', () => {
   function job(data: unknown, queueName = QUEUES.APP_STORE): Job {
     return { name: JOBS.REFRESH_APP, id: '1', data, queueName } as Job;
   }
+
+  it('passes the final attempt of the job to the category check', async () => {
+    const payload = {
+      collection: 'paid',
+      genre: 'SHOPPING',
+      country: 'pl',
+      store: Store.GOOGLE_PLAY,
+      workspaceId: 'ws_a',
+    };
+    const chartJob = (attemptsMade: number) =>
+      ({
+        ...job(payload, QUEUES.GPLAY),
+        name: JOBS.CHECK_CATEGORY,
+        attemptsMade,
+        opts: { attempts: 3 },
+      }) as Job;
+
+    await handler.handle(chartJob(0));
+    await handler.handle(chartJob(2));
+
+    expect(checkCategory).toHaveBeenNthCalledWith(1, payload, false);
+    expect(checkCategory).toHaveBeenNthCalledWith(2, payload, true);
+  });
 
   it('runs the job inside the workspace its payload carries', async () => {
     await handler.handle(job({ appId: 'a1', workspaceId: 'ws_a' }));

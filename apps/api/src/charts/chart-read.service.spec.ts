@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
 import { ChartCaptureService, StoredChart } from './chart-capture.service';
 import { ChartFollowsService } from './chart-follows.service';
+import { ChartListsNoAppsError } from './chart-lists-no-apps.error';
 import { ChartPageQuery, ChartReadService } from './chart-read.service';
 
 const KEY: ChartKey = {
@@ -130,5 +131,30 @@ describe('ChartReadService.page', () => {
     expect(captures.newestOnOrBefore).not.toHaveBeenCalled();
     expect(page.capture).toBeNull();
     expect(page.entries).toEqual([]);
+  });
+});
+
+describe('ChartReadService.captureToday', () => {
+  it('answers a chart the store lists no apps in with the page of today and answeredNoApps', async () => {
+    const { service, captures } = build(null, null);
+    Object.assign(captures, {
+      captureToday: jest.fn().mockRejectedValue(new ChartListsNoAppsError(KEY)),
+    });
+
+    const page = await service.captureToday(KEY, jest.fn());
+
+    expect(page.capture).toBeNull();
+    expect(page.entries).toEqual([]);
+    expect(page.answeredNoApps).toBe(true);
+  });
+
+  it('lets any other capture failure through', async () => {
+    const { service, captures } = build(null, null);
+    const failure = new Error('store down');
+    Object.assign(captures, {
+      captureToday: jest.fn().mockRejectedValue(failure),
+    });
+
+    await expect(service.captureToday(KEY, jest.fn())).rejects.toBe(failure);
   });
 });

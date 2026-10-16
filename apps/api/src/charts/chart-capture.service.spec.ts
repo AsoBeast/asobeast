@@ -5,6 +5,7 @@ import { StoreRequestError } from '../store-providers/errors';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { ChartItem } from '../store-providers/types';
 import { ChartCaptureService, StoredChart } from './chart-capture.service';
+import { ChartListsNoAppsError } from './chart-lists-no-apps.error';
 
 const KEY: ChartKey = {
   store: 'APP_STORE',
@@ -28,10 +29,29 @@ const uniqueViolation = () =>
     clientVersion: '7.8.0',
   });
 
-const build = (items: ChartItem[] = [], stored: StoredChart | null = null) => {
+interface History {
+  lastListed?: { date: Date } | null;
+  latestEntries?: number | null;
+}
+
+const build = (
+  items: ChartItem[] = [],
+  stored: StoredChart | null = null,
+  history: History = {},
+) => {
+  const findFirst = jest.fn((args: { where: Record<string, unknown> }) =>
+    Promise.resolve(
+      'entries' in args.where
+        ? (history.lastListed ?? null)
+        : history.latestEntries == null
+          ? null
+          : { _count: { entries: history.latestEntries } },
+    ),
+  );
   const prisma = {
     chartCapture: {
       findUnique: jest.fn().mockResolvedValue(stored),
+      findFirst,
       create: jest.fn().mockResolvedValue(STORED),
     },
   };
@@ -277,13 +297,105 @@ describe('ChartCaptureService.captureToday', () => {
     expect(topCharts).not.toHaveBeenCalled();
   });
 
-  it('refuses an empty feed so the chart is fetched again', async () => {
+  it('refuses an empty answer on an early attempt for a chart with no history', async () => {
     const { service, prisma } = build([]);
 
-    await expect(service.captureToday(KEY)).rejects.toBeInstanceOf(
-      StoreRequestError,
-    );
+    await expect(
+      service.captureToday(KEY, { finalAttempt: false }),
+    ).rejects.toBeInstanceOf(StoreRequestError);
     expect(prisma.chartCapture.create).not.toHaveBeenCalled();
+  });
+
+  it('stores an empty capture on the last attempt for a chart with no history', async () => {
+    const { service, prisma } = build([]);
+
+    await expect(
+      service.captureToday(KEY, { finalAttempt: true }),
+    ).resolves.toBe(STORED);
+    const [created] = prisma.chartCapture.create.mock.calls[0] as [
+      { data: { date: Date; depth: number; entries: unknown } },
+    ];
+    expect(created.data).toMatchObject({
+      date: new Date('2026-10-15T00:00:00.000Z'),
+      depth: 100,
+      entries: { create: [] },
+    });
+  });
+
+  it.each([
+    [false, '2026-10-14'],
+    [true, '2026-10-14'],
+    [false, '2026-10-08'],
+    [true, '2026-10-08'],
+  ])(
+    'refuses an empty answer on every attempt when the chart listed apps within a week (final %s, listed %s)',
+    async (finalAttempt, listed) => {
+      const { service, prisma } = build([], null, {
+        lastListed: { date: new Date(`${listed}T00:00:00.000Z`) },
+        latestEntries: 3,
+      });
+
+      await expect(
+        service.captureToday(KEY, { finalAttempt }),
+      ).rejects.toBeInstanceOf(StoreRequestError);
+      expect(prisma.chartCapture.create).not.toHaveBeenCalled();
+      expect(prisma.chartCapture.findFirst).toHaveBeenCalledWith({
+        where: {
+          ...KEY,
+          date: { lt: new Date('2026-10-15T00:00:00.000Z') },
+          entries: { some: {} },
+        },
+        orderBy: { date: 'desc' },
+        select: { date: true },
+      });
+    },
+  );
+
+  it('treats a last listing older than a week as no history', async () => {
+    const history = {
+      lastListed: { date: new Date('2026-10-07T00:00:00.000Z') },
+      latestEntries: 3,
+    };
+    const early = build([], null, history);
+    const last = build([], null, history);
+
+    await expect(
+      early.service.captureToday(KEY, { finalAttempt: false }),
+    ).rejects.toBeInstanceOf(StoreRequestError);
+    await expect(
+      last.service.captureToday(KEY, { finalAttempt: true }),
+    ).resolves.toBe(STORED);
+  });
+
+  it.each([false, true, undefined])(
+    'stores an empty capture at once for a chart already empty before (final %s)',
+    async (finalAttempt) => {
+      const { service, prisma } = build([], null, { latestEntries: 0 });
+
+      await expect(service.captureToday(KEY, { finalAttempt })).resolves.toBe(
+        STORED,
+      );
+      expect(prisma.chartCapture.create).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it('answers an on demand request for a chart with no history without storing it', async () => {
+    const spend = jest.fn().mockResolvedValue(undefined);
+    const { service, prisma } = build([]);
+
+    await expect(service.captureToday(KEY, { spend })).rejects.toBeInstanceOf(
+      ChartListsNoAppsError,
+    );
+    expect(spend).toHaveBeenCalledTimes(1);
+    expect(prisma.chartCapture.create).not.toHaveBeenCalled();
+  });
+
+  it('does not read the history for a feed with apps', async () => {
+    const { service, prisma } = build([{ storeAppId: '111', title: 'A' }]);
+
+    await service.captureToday(KEY, { finalAttempt: false });
+
+    expect(prisma.chartCapture.findFirst).not.toHaveBeenCalled();
   });
 
   it('routes only the store request through the egress it is given', async () => {

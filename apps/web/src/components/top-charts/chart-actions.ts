@@ -8,6 +8,7 @@ import type {
   Store,
 } from "@asobeast/shared";
 import { ApiError } from "@/lib/api";
+import { formatDate, storeLabel } from "@/lib/format";
 
 const STORE_DID_NOT_ANSWER = "The store did not answer. Try again in a moment.";
 
@@ -106,4 +107,15 @@ export function emptyChartBody(
 ): string {
   const capturable = limits?.onDemand?.chartCapture.limit !== 0;
   return `${emptyHint(captured, capturable)} ${captureCostText(limits)}`;
+}
+
+export function noAppsBody(
+  chart: Pick<ChartPage["chart"], "store" | "genreName">,
+  day: string,
+): string {
+  return `${storeLabel(chart.store)} listed no apps in ${chart.genreName} on ${formatDate(day)}. A category can have no apps of one kind, such as paid apps.`;
+}
+
+export function noAppsToast(store: Store): string {
+  return `${storeLabel(store)} lists no apps in this chart today`;
 }
