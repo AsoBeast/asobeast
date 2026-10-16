@@ -1,12 +1,13 @@
 "use client";
 
 import { useId } from "react";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   REVIEW_THEME_KINDS,
   type ReviewTheme,
   type ReviewThemeKind,
 } from "@asobeast/shared";
+import { InlineQueryError } from "@/components/layout/InlineQueryError";
 import { Button } from "@/components/ui/button";
 import { InfoTip } from "@/components/ui/info-tip";
 import { formatNumber, pluralize } from "@/lib/format";
@@ -68,10 +69,18 @@ export function ReviewThemesStrip({
   onSelect: (phrase: string) => void;
 }) {
   const headingId = useId();
-  const { data } = useSuspenseQuery(
+  const { data, isError, refetch } = useQuery(
     reviewThemesOptions(id, reviewFilters(view)),
   );
-  if (data.themes.length === 0) return null;
+  if (!data && isError) {
+    return (
+      <InlineQueryError
+        message="Could not load what people mention."
+        onRetry={() => void refetch()}
+      />
+    );
+  }
+  if (!data || data.themes.length === 0) return null;
   const active = searchText(query);
 
   return (

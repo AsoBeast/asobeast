@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { seedCookies } from "./routes.mts";
 import { expect, test } from "./session.mts";
 
 test("reviews tab lists stored reviews and the ratings chart", async ({
@@ -349,6 +350,57 @@ test("the themes strip stays hidden when nothing is repeated", async ({
   await expect(
     page.getByRole("region", { name: "What people mention" }),
   ).toHaveCount(0);
+});
+
+test("a failing themes request keeps the reviews page and offers a retry", async ({
+  page,
+}) => {
+  let failing = true;
+  await page.route("**/api/backend/apps/app-1/reviews/themes*", (route) =>
+    failing
+      ? route.fulfill({ status: 500, json: { statusCode: 500 } })
+      : route.fallback(),
+  );
+  await page.goto("/apps/app-1/reviews");
+  const themes = page.getByRole("region", { name: "What people mention" });
+  await expect(themes).toBeVisible();
+
+  await page
+    .getByRole("region", { name: "Reply status" })
+    .getByRole("button", { name: /Needs reply/ })
+    .click();
+
+  const failure = page
+    .getByRole("alert")
+    .filter({ hasText: "Could not load what people mention." });
+  await expect(failure).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("article")).toHaveCount(3);
+  await expect(
+    page.getByRole("region", { name: "Average rating and review volume" }),
+  ).toBeVisible();
+  await expect(page.getByText("Reviews could not be loaded")).toHaveCount(0);
+
+  failing = false;
+  await page.getByRole("button", { name: "Retry" }).click();
+
+  await expect(themes).toBeVisible();
+  await expect(failure).toHaveCount(0);
+});
+
+test("themes that fail on first load leave the page in place", async ({
+  context,
+  page,
+}) => {
+  await seedCookies(context, { e2e_themes_failing: "1" });
+  await page.goto("/apps/app-1/reviews");
+
+  await expect(page.getByRole("article")).toHaveCount(5);
+  await expect(
+    page
+      .getByRole("alert")
+      .filter({ hasText: "Could not load what people mention." }),
+  ).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText("Reviews could not be loaded")).toHaveCount(0);
 });
 
 test("a play review edited after the reply says so and has its own filter", async ({

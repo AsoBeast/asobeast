@@ -243,14 +243,12 @@ export function ReviewsList({ id }: { id: string }) {
           onSort={(next) => void setSort(next === "newest" ? null : next)}
           onQuery={(next, options) => void setQuery(next || null, options)}
         />
-        <Suspense fallback={null}>
-          <ReviewThemesStrip
-            id={id}
-            view={view}
-            query={query}
-            onSelect={(next) => void setQuery(next || null)}
-          />
-        </Suspense>
+        <ReviewThemesStrip
+          id={id}
+          view={view}
+          query={query}
+          onSelect={(next) => void setQuery(next || null)}
+        />
         <Suspense fallback={<ReviewsListSkeleton />}>
           <ReviewCards
             id={id}
