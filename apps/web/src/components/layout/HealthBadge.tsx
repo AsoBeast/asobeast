@@ -70,21 +70,6 @@ function resolveState(
       detail: "Checking API status…",
     };
   }
-  if (data?.status === "ok") {
-    const detail = degradedDetail(data);
-    if (detail) {
-      return {
-        mark: glyphMark(TriangleAlert, "text-warning"),
-        label: "degraded",
-        detail,
-      };
-    }
-    return {
-      mark: dotMark("bg-success"),
-      label: "api",
-      detail: "API healthy · database up",
-    };
-  }
   if (error instanceof ApiError) {
     return {
       mark: glyphMark(TriangleAlert, "text-warning"),
@@ -92,10 +77,25 @@ function resolveState(
       detail: "API up · database unavailable",
     };
   }
+  if (error || data?.status !== "ok") {
+    return {
+      mark: glyphMark(CircleX, "text-destructive"),
+      label: "unreachable",
+      detail: "API unreachable",
+    };
+  }
+  const detail = degradedDetail(data);
+  if (detail) {
+    return {
+      mark: glyphMark(TriangleAlert, "text-warning"),
+      label: "degraded",
+      detail,
+    };
+  }
   return {
-    mark: glyphMark(CircleX, "text-destructive"),
-    label: "unreachable",
-    detail: "API unreachable",
+    mark: dotMark("bg-success"),
+    label: "api",
+    detail: "API healthy · database up",
   };
 }
 
