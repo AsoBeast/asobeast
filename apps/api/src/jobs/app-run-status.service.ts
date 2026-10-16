@@ -5,6 +5,7 @@ import { appRunTotals, type AppRunStatus } from '@asobeast/shared';
 import { startOfUtcDay } from '../analytics/analytics.support';
 import { EVERY_LISTING, listingMarket } from '../apps/listing';
 import { CategoryRanksService } from '../category-ranks/category-ranks.service';
+import { rankedChartKey } from '../category-ranks/ranked-charts';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import { appRunStages, type StageCount } from './app-run-stages';
@@ -38,9 +39,6 @@ interface KeywordCount extends StageCount {
 
 const listingKey = (appId: string, country: string): string =>
   `${appId}~${country}`;
-
-const chartKey = (row: { collection: string; genre: string }): string =>
-  `${row.collection}~${row.genre}`;
 
 @Injectable()
 export class AppRunStatusService {
@@ -144,7 +142,7 @@ export class AppRunStatusService {
 
   private async categories(appId: string, since: Date): Promise<StageCount> {
     const expected = new Set(
-      (await this.categoryRanks.buckets([appId])).map(chartKey),
+      (await this.categoryRanks.rankedCharts(appId)).map(rankedChartKey),
     );
     const rows = await this.prisma.categoryRank.findMany({
       where: { appId, createdAt: { gte: since } },
@@ -152,7 +150,7 @@ export class AppRunStatusService {
       distinct: ['collection', 'genre'],
     });
     return {
-      ready: rows.filter((row) => expected.has(chartKey(row))).length,
+      ready: rows.filter((row) => expected.has(rankedChartKey(row))).length,
       total: expected.size,
     };
   }

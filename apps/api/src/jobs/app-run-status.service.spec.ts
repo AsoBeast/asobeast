@@ -24,7 +24,7 @@ interface Options {
   app?: typeof APP | null;
   snapshots?: { appId: string; country: string | null }[];
   captures?: { captured: number; lastCaptureAt: Date | null };
-  buckets?: { collection: string; genre: string }[];
+  ranked?: { collection: string; genre: string }[];
   charts?: { collection: string; genre: string }[];
   cron?: string;
 }
@@ -51,7 +51,7 @@ const build = (options: Options = {}) => {
     get: () => options.cron ?? '0 3 * * *',
   } as unknown as ConfigService<Env, true>;
   const categoryRanks = {
-    buckets: jest.fn().mockResolvedValue(options.buckets ?? []),
+    rankedCharts: jest.fn().mockResolvedValue(options.ranked ?? []),
   } as unknown as CategoryRanksService;
   return {
     service: new AppRunStatusService(prisma, config, categoryRanks),
@@ -143,9 +143,9 @@ describe('AppRunStatusService', () => {
     expect(stage(status, 'listings')).toMatchObject({ ready: 1, total: 3 });
   });
 
-  it("counts the chart reads against the app's buckets", async () => {
+  it('counts the chart reads against the charts the app is ranked in', async () => {
     const { service } = build({
-      buckets: [
+      ranked: [
         { collection: 'topfreeapplications', genre: '6013' },
         { collection: 'topfreeapplications', genre: '36' },
       ],

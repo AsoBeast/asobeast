@@ -55,7 +55,7 @@ export class JobsController {
   @ApiOperation({
     summary: "Today's run of one app",
     description:
-      'Counts, for one app, the listings captured for the app and its competitors in the home storefront and every tracked market, the active keywords whose position was checked and the category charts read against the charts the app sits in, since the daily trigger or since midnight UTC once the trigger has passed. state is running while counts are missing, complete when every count is in and delayed twenty hours after the trigger with counts still missing. Reads stored rows only and never touches the queue. Answers 404 for an unknown app.',
+      'Counts, for one app, the listings captured for the app and its competitors in the home storefront and every tracked market, the active keywords whose position was checked and the category charts read against the charts the app is ranked in (the chart of its price class and the grossing chart, each in its category and overall), since the daily trigger or since midnight UTC once the trigger has passed. state is running while counts are missing, complete when every count is in and delayed twenty hours after the trigger with counts still missing. Reads stored rows only and never touches the queue. Answers 404 for an unknown app.',
   })
   runStatus(@Param('id') id: string): Promise<AppRunStatus> {
     return this.appRunStatus.forApp(id);

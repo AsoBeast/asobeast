@@ -18,7 +18,7 @@ import { chartKeyOf } from '../charts/chart-key';
 import { CheckCategoryPayload } from '../jobs/jobs.types';
 import { CategoryRankHistoryQueryDto } from './dto/category-rank-history-query.dto';
 import { LATEST_HOME_LISTING } from '../apps/listing';
-import { isRankedIn } from './ranked-charts';
+import { type ChartRef, isRankedIn, rankedChartsOf } from './ranked-charts';
 
 const DEFAULT_HISTORY_DAYS = 90;
 const MAX_HISTORY_DAYS = 365;
@@ -84,6 +84,11 @@ export class CategoryRanksService {
 
   async buckets(appIds: string[]): Promise<CategoryBucket[]> {
     return bucketsOf(await this.loadAppBuckets({ id: { in: appIds } }));
+  }
+
+  async rankedCharts(appId: string): Promise<ChartRef[]> {
+    const rows = await this.loadAppBuckets({ id: appId });
+    return rows.flatMap(rankedChartsOf);
   }
 
   async bucketsByWorkspace(): Promise<Map<string, CategoryBucket[]>> {

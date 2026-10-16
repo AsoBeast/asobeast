@@ -23,7 +23,14 @@ import {
   pauseQueues,
 } from './obliterate-queues';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
-import { JOBS, QUEUES, resolveSubtitleJobId } from '../src/jobs/jobs.types';
+import {
+  type CheckCategoryPayload,
+  JOBS,
+  QUEUES,
+  resolveSubtitleJobId,
+} from '../src/jobs/jobs.types';
+import { CategoryRanksService } from '../src/category-ranks/category-ranks.service';
+import { ChartCaptureService } from '../src/charts/chart-capture.service';
 import { DailyBudgetService } from '../src/jobs/daily-budget.service';
 import { PipelineService } from '../src/jobs/pipeline.service';
 import { PipelineWorker } from '../src/jobs/pipeline.worker';
@@ -519,6 +526,61 @@ describe('Pipeline store routing (e2e)', () => {
         total: 1,
         complete: true,
       });
+    });
+
+    it('completes the charts stage once the daily run read every chart', async () => {
+      const appId = await seedApp(Store.APP_STORE, 'apple-run-charts');
+      await prisma.appSnapshot.create({
+        data: {
+          appId,
+          title: 'Charts',
+          description: 'Fixture description',
+          raw: (await scrapedAppStoreRaw()) as Prisma.InputJsonObject,
+        },
+      });
+      const { keywordId } = await prisma.trackedKeyword.findFirstOrThrow({
+        where: { appId },
+        select: { keywordId: true },
+      });
+      await prisma.keywordRanking.create({
+        data: {
+          appId,
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          keywordId,
+          date: utcToday(),
+          position: 4,
+        },
+      });
+      await api.post(`/apps/${appId}/run-daily`).expect(202);
+      const charts = (await jobsOn(QUEUES.APP_STORE)).filter(
+        (job) => job.name === JOBS.CHECK_CATEGORY,
+      );
+      const capture = jest
+        .spyOn(app.get(ChartCaptureService), 'captureToday')
+        .mockResolvedValue({ depth: 100, entries: [] } as never);
+      try {
+        for (const job of charts) {
+          await asWorkspace(app, () =>
+            app
+              .get(CategoryRanksService)
+              .checkCategory(job.data as CheckCategoryPayload),
+          );
+        }
+      } finally {
+        capture.mockRestore();
+      }
+
+      const status = await runOf(appId);
+
+      expect(charts).toHaveLength(6);
+      expect(await prisma.categoryRank.count({ where: { appId } })).toBe(4);
+      expect(stageOf(status, 'categories')).toEqual({
+        stage: 'categories',
+        ready: 4,
+        total: 4,
+        complete: true,
+      });
+      expect(status.state).toBe('complete');
     });
 
     it('answers 404 for an unknown app and for an app of another workspace', async () => {
