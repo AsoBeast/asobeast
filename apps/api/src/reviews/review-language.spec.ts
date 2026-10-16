@@ -7,6 +7,8 @@ describe('reviewLanguage', () => {
     ['La aplicación se cierra cuando abro el temporizador', 'es'],
     ["L'application plante quand je lance le minuteur pour la séance", 'fr'],
     ['Aplikacja się zawiesza i nie da się jej używać na telefonie', 'pl'],
+    ['Suis là depuis avant', 'fr'],
+    ['Zawsze coś zamiast przycisku', 'pl'],
     ['アプリが起動しません。助けてください', 'ja'],
     ['应用程序无法启动', 'zh'],
     ['앱이 실행되지 않아요', 'ko'],

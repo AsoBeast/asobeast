@@ -124,6 +124,67 @@ describe('mineReviewPhrases', () => {
     expect(texts).not.toContain('mit');
   });
 
+  const startingOrEndingWith = (texts: string[], words: readonly string[]) =>
+    texts.filter((text) => {
+      const tokens = text.split(' ');
+      return (
+        words.includes(tokens[0]) || words.includes(tokens[tokens.length - 1])
+      );
+    });
+
+  it.each([
+    {
+      language: 'fr',
+      reviews: [
+        'Je scanne mes courses depuis des mois pour mon budget',
+        'Je suis contente, avant je ne savais jamais ce que je mangeais',
+        'Appli pratique sans publicité',
+      ],
+      skipped: ['depuis', 'avant', 'suis', 'mes', 'mon', 'ma', 'sans'],
+      kept: ['scanne mes courses', 'pratique sans publicité', 'courses'],
+    },
+    {
+      language: 'de',
+      reviews: ['Der Artikel hat Fehler', 'Die Lieferung war schnell'],
+      skipped: ['hat', 'war'],
+      kept: ['artikel hat fehler', 'lieferung war schnell'],
+    },
+    {
+      language: 'pl',
+      reviews: ['Zawsze coś nie działa, zamiast przycisku jest błąd'],
+      skipped: ['zawsze', 'coś', 'zamiast'],
+      kept: ['działa', 'przycisku jest błąd'],
+    },
+  ])(
+    'never starts or ends a $language review idea with $skipped',
+    ({ language, reviews, skipped, kept }) => {
+      const texts = textsOf(reviews, [language]);
+
+      expect(startingOrEndingWith(texts, skipped)).toEqual([]);
+      expect(texts).toEqual(expect.arrayContaining(kept));
+    },
+  );
+
+  it('never starts or ends a review idea with now, every, much, ever or also', () => {
+    const texts = textsOf([
+      'Works fine now, but also crashes every time',
+      'Much slower than ever',
+    ]);
+
+    expect(
+      startingOrEndingWith(texts, ['now', 'every', 'much', 'ever', 'also']),
+    ).toEqual([]);
+    expect(texts).toEqual(
+      expect.arrayContaining(['works fine', 'crashes every time', 'slower']),
+    );
+  });
+
+  it('leaves the words the issue keeps out of the lists to the reviewer', () => {
+    expect(textsOf(['Elle fait bien le travail'], ['fr'])).toEqual(
+      expect.arrayContaining(['elle', 'fait', 'bien']),
+    );
+  });
+
   it('reads a version number as a quantity rather than words', () => {
     const texts = textsOf(['crashes in 0.78.8 and 0.1']);
 

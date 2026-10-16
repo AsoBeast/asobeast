@@ -29,6 +29,30 @@ const phrasesOf = (themes: { phrase: string }[]) =>
 const PRAISED = times(14, 'Dark mode', 5);
 
 describe('reviewThemes', () => {
+  const complaintsOf = (reviews: ThemeReview[], languages: string[]) =>
+    phrasesOf(
+      reviewThemes(reviews, reviews, { ...OPTIONS, languages }).filter(
+        (theme) => theme.kind === 'complaint',
+      ),
+    );
+
+  it('never names a theme that starts or ends with a function word of the storefront language', () => {
+    const reviews = [
+      ...times(6, 'Coś nie działa zamiast aktualizacji', 1),
+      ...PRAISED,
+    ];
+
+    expect(complaintsOf(reviews, ['pl'])).toEqual([
+      'działa zamiast aktualizacji',
+    ]);
+  });
+
+  it('never ends a theme with now', () => {
+    const reviews = [...times(6, 'Crashes now', 1), ...PRAISED];
+
+    expect(complaintsOf(reviews, [])).toEqual(['crashes']);
+  });
+
   it('names a phrase of low rated reviews a complaint and one of high rated reviews praise', () => {
     const reviews = [
       ...times(6, 'Sync fails', 1),

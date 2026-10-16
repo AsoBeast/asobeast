@@ -1,7 +1,9 @@
 const words = (list: string): ReadonlySet<string> =>
   new Set(list.split(/\s+/).filter(Boolean));
 
-export const FUNCTION_WORDS: Readonly<Record<string, ReadonlySet<string>>> = {
+type WordLists = Readonly<Record<string, ReadonlySet<string>>>;
+
+export const FUNCTION_WORDS: WordLists = {
   es: words(`
     de del la las el los lo al un una unos unas le les se su sus tu tus te nos
     que qué como cómo cuando cuándo donde dónde para por con sin sobre entre
@@ -29,7 +31,7 @@ export const FUNCTION_WORDS: Readonly<Record<string, ReadonlySet<string>>> = {
     qui sa se ses sur ta te tes toi ton tu un une vos votre vous est sont être
     ont avoir sous chez vers très aussi comme dont où si tout tous toute
     toutes chaque autre autres même quel quelle quels quelles ni ça ceci cela
-    eux
+    eux avant depuis suis
   `),
   de: words(`
     der die das den dem des ein eine einen einem einer eines und oder aber
@@ -113,7 +115,8 @@ export const FUNCTION_WORDS: Readonly<Record<string, ReadonlySet<string>>> = {
     jemu jestem jeśli jeżeli ją kiedy kto ktoś którego której których którym
     mają mam mamy mimo mnie może można musi nam nas natomiast nawet nic nich
     niego niej niemu nigdy nim nimi niż około ponieważ sobie tak taka taki
-    takie także tam temu teraz wam was wiele więc wtedy właśnie żeby
+    takie także tam temu teraz wam was wiele więc wtedy właśnie żeby coś
+    zamiast zawsze
   `),
   tr: words(`
     ve ile için bir bu şu da de ki mı mu mü ne ama fakat çok daha en gibi
@@ -139,11 +142,35 @@ export const FUNCTION_WORDS: Readonly<Record<string, ReadonlySet<string>>> = {
   `),
 };
 
+export const REVIEW_ONLY_FUNCTION_WORDS: WordLists = {
+  fr: words(`
+    mon ma mes sans
+  `),
+  de: words(`
+    hat war
+  `),
+};
+
 export type TokenTest = (token: string) => boolean;
 
-export function functionWordTest(languages: readonly string[]): TokenTest {
-  const lists = languages.flatMap((language) =>
-    Object.hasOwn(FUNCTION_WORDS, language) ? [FUNCTION_WORDS[language]] : [],
+const listsOf = (
+  source: WordLists,
+  languages: readonly string[],
+): ReadonlySet<string>[] =>
+  languages.flatMap((language) =>
+    Object.hasOwn(source, language) ? [source[language]] : [],
   );
-  return (token) => lists.some((list) => list.has(token));
-}
+
+const containedIn =
+  (lists: readonly ReadonlySet<string>[]): TokenTest =>
+  (token) =>
+    lists.some((list) => list.has(token));
+
+export const functionWordTest = (languages: readonly string[]): TokenTest =>
+  containedIn(listsOf(FUNCTION_WORDS, languages));
+
+export const reviewWordTest = (languages: readonly string[]): TokenTest =>
+  containedIn([
+    ...listsOf(FUNCTION_WORDS, languages),
+    ...listsOf(REVIEW_ONLY_FUNCTION_WORDS, languages),
+  ]);

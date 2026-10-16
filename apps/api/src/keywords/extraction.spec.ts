@@ -383,6 +383,12 @@ describe('extractCandidates', () => {
       expect(texts({ title: 'Mein O2' }, ['de'])).toContain('mein o2');
       expect(texts({ title: 'Mijn KPN' }, ['nl'])).toContain('mijn kpn');
       expect(texts({ title: 'Mon Orange' }, ['fr'])).toContain('mon orange');
+      expect(texts({ title: 'Ma Banque' }, ['fr'])).toContain('ma banque');
+      expect(texts({ title: 'Mes Courses' }, ['fr'])).toContain('mes courses');
+      expect(texts({ title: 'Sans Souci' }, ['fr'])).toContain('sans souci');
+      expect(texts({ title: 'War Robots' }, ['de'])).toContain('war robots');
+      expect(texts({ title: 'Hat Trick' }, ['de'])).toContain('hat trick');
+      expect(texts({ title: 'Now TV' }, [])).toContain('now tv');
       expect(texts({ title: 'Pro Camera' }, ['pt', 'pl'])).toContain(
         'pro camera',
       );
