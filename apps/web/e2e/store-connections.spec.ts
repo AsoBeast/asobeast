@@ -129,6 +129,8 @@ test("the owner connects the google play console with its json key file", async 
   );
   const key = dialog.getByLabel("Service account key", { exact: true });
   await expect(key).toHaveAttribute("type", "password");
+  await expect(key).toHaveAttribute("data-1p-ignore", "true");
+  await expect(key).toHaveAttribute("data-lpignore", "true");
   const submit = dialog.getByRole("button", { name: "Connect Google Play" });
 
   await dialog.getByLabel("Bucket id").fill("my-reports");
@@ -149,7 +151,9 @@ test("the owner connects the google play console with its json key file", async 
     "Google Cloud Storage has no bucket pubsite_prod_rev_42",
   );
 
-  await dialog.getByLabel("Bucket id").fill(PLAY_BUCKET);
+  await dialog
+    .getByLabel("Bucket id")
+    .fill(`gs://${PLAY_BUCKET}/stats/store_performance/`);
   await submit.click();
 
   await expect(page.getByText("Google Play Console connected")).toBeVisible();

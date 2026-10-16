@@ -13,6 +13,12 @@ import { useSingleFlight } from "@/lib/single-flight";
 import { AlertChannelDialog } from "./alert-channel/AlertChannelDialog";
 
 const BUCKET = /^pubsite_prod(_rev)?_\d+$/;
+
+const bucketOf = (raw: string): string =>
+  raw
+    .trim()
+    .replace(/^gs:\/\//, "")
+    .split("/")[0];
 const KEY_FIELDS = ["client_email", "private_key_id", "private_key"] as const;
 
 function isServiceAccountKey(text: string): boolean {
@@ -60,7 +66,7 @@ export function ConnectPlayDialog({ label }: { label: string }) {
     mutationFn: () =>
       connectStore({
         store: "GOOGLE_PLAY",
-        bucket: bucket.trim(),
+        bucket: bucketOf(bucket),
         serviceAccountJson,
       }),
     onSuccess: () => {
@@ -79,7 +85,7 @@ export function ConnectPlayDialog({ label }: { label: string }) {
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const problem = problemOf(bucket.trim(), serviceAccountJson);
+    const problem = problemOf(bucketOf(bucket), serviceAccountJson);
     setError(problem);
     if (!problem) connectOnce();
   }
@@ -130,6 +136,9 @@ export function ConnectPlayDialog({ label }: { label: string }) {
           placeholder="Contents of the downloaded JSON key"
           autoComplete="off"
           spellCheck={false}
+          data-1p-ignore="true"
+          data-lpignore="true"
+          data-bwignore="true"
         />
         <Label htmlFor="play-service-account-file" className="sr-only">
           Service account key file
