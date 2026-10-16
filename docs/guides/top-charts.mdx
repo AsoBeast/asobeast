@@ -33,9 +33,17 @@ A chart is captured once a day, and one capture serves every workspace on the in
 
 - **Your apps.** The daily run captures the free, paid and grossing charts of every category a tracked app sits in, and of the overall chart, for its home storefront. Your [category ranks](/guides/category-ranks) are read from the same capture, and an app is still judged only against its own price class and grossing.
 - **Followed categories.** Press **Follow category** and the daily run captures the three charts of that category every day from tomorrow, even when none of your apps is in it. Following writes nothing to the store until the next run. The plan counts a category once however many of its kinds the workspace follows. **Followed charts** lists one entry per category against the plan's limit, opens any of them and stops following one.
-- **Capture today.** When today has no capture, **Capture today** fetches that chart while you wait and shows it. Each column and the table carry their own button, and the empty state says what a capture costs on your plan.
+- **Capture today.** When today has no capture, **Capture today** fetches that chart while you wait and shows it. Each column and the table carry their own button, and the empty state says what a capture costs on your plan. A chart the store lists no apps in is captured as empty once it is known to be empty, and the confirmation says so.
 
 The day picker enables only the days a capture exists for. The arrows beside it step to the previous and next captured day.
+
+## What does an empty chart mean?
+
+Some charts are empty by nature. Google Play lists no paid apps in the Shopping category of several storefronts, for example. The daily run asks the store, and when a chart that listed no app in the last seven days answers empty on every attempt of its job, AsoBeast stores the answer as a capture with no rows. The column and the table then read **No apps in this chart** with the store, the category and the day, the day appears in the day picker, and **Capture today** is not offered for a day that is already captured. From then on the chart is stored on the first attempt, once a day like any other, and adds no failed job.
+
+**Capture today** has no second attempt to wait for. On a chart the daily run has not yet found empty, an empty answer is reported ("Google Play lists no apps in this chart today") but not stored, so the day stays open and the daily run settles it. On a chart that was already stored empty, the capture is stored at once.
+
+A chart that listed apps within the last seven days and suddenly answers empty is treated as a store that did not answer, because that is how a blocked request looks. The answer is not stored, the daily job fails and the queue retries it, and **Capture today** says the store did not answer. After a week without a listed app, the empty answer follows the rules above. See [What happens when a job fails?](/concepts/pipeline#what-happens-when-a-job-fails)
 
 ## How do you read movement?
 
@@ -76,6 +84,7 @@ A refused capture or follow costs nothing. See [Rate limits](/api-reference/rate
 ## Troubleshooting
 
 - **A day has no capture.** Nothing asked for that category that day: no app of yours sat in it and nobody followed it, or the run shed category work under pressure. Follow the category so the daily run keeps it.
+- **A column says the store listed no apps.** The store answered and the chart had no rows that day. A category can have free apps and no paid ones, so open another kind or another day. **Capture today** cannot fill a day that is already captured, and on a chart not yet known to be empty it reports the empty answer without storing it until the daily run has confirmed it.
 - **Only the first 25 rows show in a column.** A column lists the top 25. Open the table for the rest of the chart.
 - **An app you expected is missing.** It is outside the depth the store answers: 100 on the App Store, 200 on Google Play.
 - **A category is missing from the list.** The list follows the categories Apple and Google Play chart today. Kids is an age band on the App Store, not a chart.
