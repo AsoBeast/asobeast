@@ -3,6 +3,41 @@
 All notable changes to asobeast are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [1.11.0](https://github.com/AsoBeast/asobeast/compare/v1.10.0...v1.11.0) (2026-10-16)
+
+
+### Features
+
+* **api:** report run progress and ship the localization a market reads ([#364](https://github.com/AsoBeast/asobeast/issues/364)) ([6fcaf3d](https://github.com/AsoBeast/asobeast/commit/6fcaf3d874b092346db5a46325cef56a983d4715))
+* **api:** track top charts and trending apps per country and category ([#360](https://github.com/AsoBeast/asobeast/issues/360)) ([f550c7f](https://github.com/AsoBeast/asobeast/commit/f550c7f7574f7f299d52824ff5d225abaa018bfe))
+* **apps:** keep the guided setup on the account and measure activation ([#357](https://github.com/AsoBeast/asobeast/issues/357)) ([8b58506](https://github.com/AsoBeast/asobeast/commit/8b58506746898b5150594ddd3826f5b79cd93469))
+* **apps:** search the store by name and suggest competitors ([#358](https://github.com/AsoBeast/asobeast/issues/358)) ([71679c4](https://github.com/AsoBeast/asobeast/commit/71679c46b982abfc280dbd678fc021c362386418))
+* **web:** draft, copy and track review replies from the reviews page ([#370](https://github.com/AsoBeast/asobeast/issues/370)) ([d93d521](https://github.com/AsoBeast/asobeast/commit/d93d521e03649cf5bf2dc4ab3fbaf15d028e270a))
+* **web:** rank review themes by contrast and split complaints from praise ([#373](https://github.com/AsoBeast/asobeast/issues/373)) ([583cba1](https://github.com/AsoBeast/asobeast/commit/583cba1250102e32792a9e3066814cffd4d6a513))
+* **web:** read top charts side by side and capture a baseline daily ([#365](https://github.com/AsoBeast/asobeast/issues/365)) ([37fcab3](https://github.com/AsoBeast/asobeast/commit/37fcab3172c7eba7a2ba5bd7c66c2739780f557a))
+* **web:** rework the guided setup into outcome steps ([#339](https://github.com/AsoBeast/asobeast/issues/339)) ([7d9c542](https://github.com/AsoBeast/asobeast/commit/7d9c5421b891ff6bf8feaa9b735006af9360a3cd))
+* **web:** show review themes, filter by period and translate reviews ([#371](https://github.com/AsoBeast/asobeast/issues/371)) ([a602c17](https://github.com/AsoBeast/asobeast/commit/a602c176207a3da4880b4912205f0c1aba615a64))
+
+
+### Bug Fixes
+
+* **api:** refuse a null replied mark and align the reply composer ([#404](https://github.com/AsoBeast/asobeast/issues/404)) ([0554ad7](https://github.com/AsoBeast/asobeast/commit/0554ad7a7b425dc0e8012af37ce310c35570fb36))
+* **api:** store a top chart with no apps as empty, not as a failure ([#397](https://github.com/AsoBeast/asobeast/issues/397)) ([90d70b2](https://github.com/AsoBeast/asobeast/commit/90d70b2ec961827b74a521c3c5baff058690e0ab))
+* **apps:** stop detecting a localization that echoes the home listing ([#366](https://github.com/AsoBeast/asobeast/issues/366)) ([e0caaa0](https://github.com/AsoBeast/asobeast/commit/e0caaa04a3ec87b31e5ce5d46065e506b6276b62))
+* **competitors:** show suggestion icons and filter play similar apps ([#372](https://github.com/AsoBeast/asobeast/issues/372)) ([6aa9c56](https://github.com/AsoBeast/asobeast/commit/6aa9c5630b796635814eb3cd8b2e746e5888707f))
+* **competitors:** take a suggestion's title from the app's home market ([#403](https://github.com/AsoBeast/asobeast/issues/403)) ([06d2d48](https://github.com/AsoBeast/asobeast/commit/06d2d4889e0a38cf4cd9df1284dfdbfb57dc4c98))
+* **jobs:** cap pool capacity at the worker concurrency ceiling ([#363](https://github.com/AsoBeast/asobeast/issues/363)) ([37f12bb](https://github.com/AsoBeast/asobeast/commit/37f12bb1d083aa193c829a76aec44c560894dac0))
+* **jobs:** complete the run status and report a paused workspace ([#396](https://github.com/AsoBeast/asobeast/issues/396)) ([0ed87b2](https://github.com/AsoBeast/asobeast/commit/0ed87b291ec41be72bb3ab266dd8eeffb03d3ffd))
+* **keywords:** complete the function word lists review ideas read ([#406](https://github.com/AsoBeast/asobeast/issues/406)) ([b0b78b7](https://github.com/AsoBeast/asobeast/commit/b0b78b7508941e64bee64ca5eff89df3ee279eff))
+* **web:** harden the reviews page against long text and failures ([#405](https://github.com/AsoBeast/asobeast/issues/405)) ([06274f9](https://github.com/AsoBeast/asobeast/commit/06274f9bddf1e541433da3112b5cd4e8f0372c71))
+* **web:** keep the phone header in view and guard the upgrade page ([#408](https://github.com/AsoBeast/asobeast/issues/408)) ([ec92f70](https://github.com/AsoBeast/asobeast/commit/ec92f70c6741d41c360e4af2096b9b74735facc1))
+* **web:** list the reviews a pressed theme counts ([#416](https://github.com/AsoBeast/asobeast/issues/416)) ([258fbd1](https://github.com/AsoBeast/asobeast/commit/258fbd1ed861d47a4732477c207cac0914bd1561))
+* **web:** polish screenshots, name search, setup wording and tabs ([#402](https://github.com/AsoBeast/asobeast/issues/402)) ([7b32aa9](https://github.com/AsoBeast/asobeast/commit/7b32aa9e3bc3789b9cf0dfc1867f970d2070a569))
+* **web:** show the api unreachable once a later health poll fails ([#415](https://github.com/AsoBeast/asobeast/issues/415)) ([d15f918](https://github.com/AsoBeast/asobeast/commit/d15f9181dc07cf139f45fbe8993e01491c2d90bc))
+* **web:** stop the theme toggle failing hydration once a theme is chosen ([#410](https://github.com/AsoBeast/asobeast/issues/410)) ([335c36f](https://github.com/AsoBeast/asobeast/commit/335c36f47b26937a1e96504a625cc7a54e92012b))
+* **web:** top charts dialog names, focus and loading state ([#399](https://github.com/AsoBeast/asobeast/issues/399)) ([2f3a363](https://github.com/AsoBeast/asobeast/commit/2f3a363954aece2aaff91c9d89828d3ab77c6443))
+* **web:** wrap the trending tabs and keep focus after a bulk action ([#411](https://github.com/AsoBeast/asobeast/issues/411)) ([e16095f](https://github.com/AsoBeast/asobeast/commit/e16095f7705e938fb6012ddec6537f6631e74169))
+
 ## [1.10.0](https://github.com/AsoBeast/asobeast/compare/v1.9.0...v1.10.0) (2026-10-14)
 
 
