@@ -25,31 +25,29 @@ export interface ReviewFilters {
   limit?: number;
 }
 
-export type ReviewThemeFilters = Pick<
-  ReviewFilters,
-  "score" | "version" | "from" | "replyState"
->;
+export type ReviewThemeFilters = Omit<ReviewFilters, "limit">;
 
-function scopeParams({
+function filterParams({
   score,
   version,
   from,
   replyState,
+  sort,
 }: ReviewThemeFilters): URLSearchParams {
   const params = new URLSearchParams();
   if (score !== undefined) params.set("score", String(score));
   if (version) params.set("version", version);
   if (from) params.set("from", from);
   if (replyState) params.set("replyState", replyState);
+  if (sort) params.set("sort", sort);
   return params;
 }
 
 export function getReviews(
   appId: string,
-  { sort, limit, ...scope }: ReviewFilters = {},
+  { limit, ...filters }: ReviewFilters = {},
 ): Promise<ReviewList> {
-  const params = scopeParams(scope);
-  if (sort) params.set("sort", sort);
+  const params = filterParams(filters);
   if (limit !== undefined) params.set("limit", String(limit));
   return apiFetch<ReviewList>(withQuery(`/apps/${appId}/reviews`, params));
 }
@@ -59,7 +57,7 @@ export function getReviewThemes(
   filters: ReviewThemeFilters = {},
 ): Promise<ReviewThemes> {
   return apiFetch<ReviewThemes>(
-    withQuery(`/apps/${appId}/reviews/themes`, scopeParams(filters)),
+    withQuery(`/apps/${appId}/reviews/themes`, filterParams(filters)),
   );
 }
 

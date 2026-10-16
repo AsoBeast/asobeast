@@ -12,7 +12,7 @@ import { InfoTip } from "@/components/ui/info-tip";
 import { formatNumber, pluralize } from "@/lib/format";
 import { reviewThemesOptions } from "@/lib/queries";
 import { searchText } from "@/lib/search-text";
-import { themesFilters, type ReviewView } from "./review-filters";
+import { reviewFilters, type ReviewView } from "./review-filters";
 
 const KIND_LABELS: Record<ReviewThemeKind, string> = {
   complaint: "Complaints",
@@ -69,7 +69,7 @@ export function ReviewThemesStrip({
 }) {
   const headingId = useId();
   const { data } = useSuspenseQuery(
-    reviewThemesOptions(id, themesFilters(view)),
+    reviewThemesOptions(id, reviewFilters(view)),
   );
   if (data.themes.length === 0) return null;
   const active = searchText(query);
