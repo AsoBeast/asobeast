@@ -396,6 +396,7 @@ APPLE_ADS_AD_ACCOUNT_ID=          # optional; empty uses the first ad account th
 CRON_APPLE_POPULARITY=0 9 * * 1   # weekly Apple search popularity sync, UTC. Never scheduled while the Apple Ads credentials are unset
 STORE_CONNECT_ENCRYPTION_KEY=       # optional. base64 of 32 random bytes (openssl rand -base64 32). Seals the App Store Connect and Play Console keys owners connect in settings; empty keeps every store connection off and nothing contacts Apple or Google. REFUSES TO BOOT when set and not 32 bytes. Never logged
 STORE_CONNECT_ENCRYPTION_KEY_PREVIOUS= # optional. The key being rotated away from; a stored credential sealed with it is opened and resealed with the current key on first use. REFUSES TO BOOT when set without STORE_CONNECT_ENCRYPTION_KEY
+CRON_STORE_REPORTS=30 5 * * *      # daily download of the reports each connected store console published, UTC. Never scheduled while STORE_CONNECT_ENCRYPTION_KEY is empty
 LOG_LEVEL=debug
 ```
 

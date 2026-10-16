@@ -10,6 +10,7 @@ import type {
   StoreConnectionItem,
   StoreConnectionRequest,
   StoreConnectionState,
+  StoreConnectionStatus,
   StoreConnectionSyncResult,
   StoreReportAccess,
 } from '@asobeast/shared';
@@ -41,8 +42,9 @@ const OPERATION = 'a store connection';
 
 export interface OpenedConnection {
   id: string;
-  status: string;
-  reportAccess: string;
+  status: StoreConnectionStatus;
+  reportAccess: StoreReportAccess;
+  lastError: string | null;
   api: AscAnalyticsApi;
 }
 
@@ -157,8 +159,9 @@ export class StoreConnectionService {
     }
     return {
       id: row.id,
-      status: row.status,
-      reportAccess: row.reportAccess,
+      status: row.status as StoreConnectionStatus,
+      reportAccess: row.reportAccess as StoreReportAccess,
+      lastError: row.lastError,
       api: this.factory.open(credentials),
     };
   }

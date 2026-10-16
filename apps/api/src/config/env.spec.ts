@@ -196,3 +196,17 @@ describe('STORE_CONNECT_ENCRYPTION_KEY', () => {
     ).toThrow('STORE_CONNECT_ENCRYPTION_KEY_PREVIOUS is set without');
   });
 });
+
+describe('CRON_STORE_REPORTS', () => {
+  const base = { AUTH_SECRET: 'a'.repeat(32) };
+
+  it('runs at 05:30 UTC by default', () => {
+    expect(validateEnv(base).CRON_STORE_REPORTS).toBe('30 5 * * *');
+  });
+
+  it('refuses a value that is not a cron pattern', () => {
+    expect(() =>
+      validateEnv({ ...base, CRON_STORE_REPORTS: 'every day' }),
+    ).toThrow();
+  });
+});

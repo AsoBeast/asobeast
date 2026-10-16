@@ -1,11 +1,14 @@
 import { execSync } from 'node:child_process';
 import { generateKeyPairSync } from 'node:crypto';
 import { join } from 'node:path';
+import { getQueueToken } from '@nestjs/bullmq';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import type { PrismaClient } from '@prisma/client';
+import { Queue } from 'bullmq';
 import type { App } from 'supertest/types';
 import { AppModule } from '../../src/app.module';
+import { QUEUES } from '../../src/jobs/jobs.types';
 import { AscUnreachableError } from '../../src/store-connect/asc-errors';
 import {
   ASC_TRANSPORT,
@@ -88,6 +91,10 @@ export interface StoreConnectHarness {
   asc: ScriptedAppStoreConnect;
 }
 
+export async function pauseStoreReports(app: INestApplication): Promise<void> {
+  await app.get<Queue>(getQueueToken(QUEUES.STORE_CONNECT)).pause();
+}
+
 export async function startStoreConnectApp(): Promise<StoreConnectHarness> {
   execSync('pnpm prisma migrate deploy', {
     cwd: join(__dirname, '..', '..'),
@@ -105,5 +112,6 @@ export async function startStoreConnectApp(): Promise<StoreConnectHarness> {
   useCookies(app);
   await app.init();
   await settleBootRegistration(app);
+  await pauseStoreReports(app);
   return { app, prisma: testDb(), asc };
 }

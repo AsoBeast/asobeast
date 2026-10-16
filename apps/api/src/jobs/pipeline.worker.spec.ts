@@ -22,6 +22,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RedisOutageLog } from '../redis/redis-outage-log';
 import { PublishedStatusService } from '../store-providers/canary/published-status.service';
 import { LocalizationSweep } from './localization-sweep.service';
+import { StoreReportFanOut } from './store-report-fanout';
 import { StoreCanaryService } from '../store-providers/canary/store-canary.service';
 import { ProxyPoolMaintenance } from '../store-providers/egress/proxy-pool.maintenance';
 import { PipelineService } from './pipeline.service';
@@ -127,6 +128,10 @@ describe('PipelineWorker', () => {
       run: jest.fn().mockResolvedValue({ countries: 1, rows: 2, week: 'w' }),
     };
     const sweep = { run: jest.fn().mockResolvedValue(3) };
+    const storeReports = {
+      enabled: false,
+      run: jest.fn().mockResolvedValue(2),
+    };
     const worker = new PipelineWorker(
       pipelineQueue as unknown as Queue,
       config as unknown as ConfigService<Env, true>,
@@ -151,6 +156,7 @@ describe('PipelineWorker', () => {
       popularity as unknown as ApplePopularitySync,
       new RedisOutageLog(),
       sweep as unknown as LocalizationSweep,
+      storeReports as unknown as StoreReportFanOut,
     );
     return {
       worker,
@@ -170,6 +176,7 @@ describe('PipelineWorker', () => {
       tracking,
       popularity,
       sweep,
+      storeReports,
     };
   };
 
@@ -339,6 +346,45 @@ describe('PipelineWorker', () => {
     expect(pipelineQueue.removeJobScheduler).toHaveBeenCalledWith(
       'store-canary',
     );
+  });
+
+  describe('the store report sync', () => {
+    it('schedules store reports when store connections are on', async () => {
+      const { worker, pipelineQueue, storeReports } = build();
+      storeReports.enabled = true;
+
+      await worker.registerSchedules();
+
+      expect(pipelineQueue.upsertJobScheduler).toHaveBeenCalledWith(
+        'store-reports',
+        { pattern: 'value:CRON_STORE_REPORTS', tz: 'UTC' },
+        { name: JOBS.STORE_REPORTS },
+      );
+      expect(pipelineQueue.removeJobScheduler).not.toHaveBeenCalledWith(
+        'store-reports',
+      );
+    });
+
+    it('removes the scheduler when store connections are off', async () => {
+      const { worker, pipelineQueue } = build();
+
+      await worker.registerSchedules();
+
+      expect(
+        pipelineQueue.upsertJobScheduler.mock.calls.map(([key]) => key),
+      ).not.toContain('store-reports');
+      expect(pipelineQueue.removeJobScheduler).toHaveBeenCalledWith(
+        'store-reports',
+      );
+    });
+
+    it('dispatches the store reports job to the fan out', async () => {
+      const { worker, storeReports } = build();
+
+      await worker.process(job(JOBS.STORE_REPORTS));
+
+      expect(storeReports.run).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('the weekly localization sweep', () => {

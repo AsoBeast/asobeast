@@ -76,6 +76,7 @@ export const JOBS = {
   BILLING_RECONCILE: 'billing-reconcile',
   TRIAL_NOTICES: 'trial-notices',
   READ_SCREENSHOTS: 'read-screenshots',
+  STORE_REPORTS: 'store-reports',
   SYNC_STORE_REPORTS: 'sync-store-reports',
 } as const;
 

@@ -12,6 +12,7 @@ import { seedApiToken } from './helpers/api-tokens';
 import { ownerAgent } from './helpers/session';
 import {
   CONNECTION_REQUEST,
+  pauseStoreReports,
   refusal,
   startStoreConnectApp,
   type StoreConnectHarness,
@@ -64,6 +65,7 @@ describe('Store connections (e2e)', () => {
       'TRUNCATE TABLE "App", "Keyword" RESTART IDENTITY CASCADE',
     );
     await obliterateQueues(harness.app);
+    await pauseStoreReports(harness.app);
     await clearRateLimitCounters(harness.app);
   });
 

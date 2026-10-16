@@ -239,6 +239,7 @@ Optional, off by default. Owners connect their store consoles in settings; these
 | --- | --- | --- | --- |
 | `STORE_CONNECT_ENCRYPTION_KEY` | Empty | No | Base64 of 32 random bytes, generated with `openssl rand -base64 32`. Seals the App Store Connect and Play Console keys owners connect in settings. Empty keeps every store connection off, and nothing contacts Apple or Google. A value that is not 32 bytes refuses to boot. Never logged |
 | `STORE_CONNECT_ENCRYPTION_KEY_PREVIOUS` | Empty | No | The key being rotated away from. A stored credential sealed with it is opened and resealed with the current key on first use. Refuses to boot when set without `STORE_CONNECT_ENCRYPTION_KEY` |
+| `CRON_STORE_REPORTS` | `30 5 * * *` | No | When the daily download of the reports each connected console published runs, UTC. Never scheduled while `STORE_CONNECT_ENCRYPTION_KEY` is empty |
 
 ## Admin surfaces
 

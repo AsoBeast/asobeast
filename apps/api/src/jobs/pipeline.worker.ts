@@ -47,6 +47,7 @@ import { registerInBackground } from './schedule-registration';
 import { AccountDeletionService } from '../account/account-deletion.service';
 import { LocalizationSweep } from './localization-sweep.service';
 import { RetentionService } from './retention.service';
+import { StoreReportFanOut } from './store-report-fanout';
 
 @Processor(QUEUES.PIPELINE)
 export class PipelineWorker extends WorkerHost implements OnModuleInit {
@@ -75,6 +76,7 @@ export class PipelineWorker extends WorkerHost implements OnModuleInit {
     private readonly popularity: ApplePopularitySync,
     private readonly outage: RedisOutageLog,
     private readonly sweep: LocalizationSweep,
+    private readonly storeReports: StoreReportFanOut,
   ) {
     super();
   }
@@ -125,6 +127,7 @@ export class PipelineWorker extends WorkerHost implements OnModuleInit {
     await this.schedulePublishedStatus();
     await this.scheduleApplePopularity();
     await this.scheduleLocalizationSweep();
+    await this.scheduleStoreReports();
     await this.rescoreOutdatedKeywords();
   }
 
@@ -149,6 +152,21 @@ export class PipelineWorker extends WorkerHost implements OnModuleInit {
     } catch (error) {
       this.logger.error('outdated score check failed', error);
     }
+  }
+
+  private async scheduleStoreReports(): Promise<void> {
+    if (!this.storeReports.enabled) {
+      await this.pipelineQueue.removeJobScheduler('store-reports');
+      return;
+    }
+    await this.pipelineQueue.upsertJobScheduler(
+      'store-reports',
+      {
+        pattern: this.config.get('CRON_STORE_REPORTS', { infer: true }),
+        tz: 'UTC',
+      },
+      { name: JOBS.STORE_REPORTS },
+    );
   }
 
   private async scheduleProxySync(): Promise<void> {
@@ -277,6 +295,11 @@ export class PipelineWorker extends WorkerHost implements OnModuleInit {
     }
     if (job.name === JOBS.STORE_STATUS) {
       await this.publishedStatus.run();
+      return;
+    }
+    if (job.name === JOBS.STORE_REPORTS) {
+      const queued = await this.storeReports.run();
+      this.logger.log(`store report sync ${JSON.stringify({ queued })}`);
       return;
     }
     if (job.name === JOBS.LOCALIZATION_SWEEP) {
