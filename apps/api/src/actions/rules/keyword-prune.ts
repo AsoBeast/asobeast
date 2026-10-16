@@ -111,7 +111,9 @@ function detectForApp(
 export function detectKeywordPrune(context: ActionContext): DetectedAction[] {
   const claimed = new Set(
     detectKeywordAddUncovered(context)
-      .filter((detection) => detection.keywordId !== null)
+      .filter(
+        (detection) => !detection.withheld && detection.keywordId !== null,
+      )
       .map((detection) => `${detection.appId}:${detection.keywordId}`),
   );
   const utilization = context.budget.utilization;
