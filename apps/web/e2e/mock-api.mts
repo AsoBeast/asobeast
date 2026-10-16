@@ -639,6 +639,12 @@ function hasCookie(
   return actual !== undefined && (value === undefined || actual === value);
 }
 
+const STALE_SESSION = "stale";
+
+const signedIn = (req: IncomingMessage) =>
+  hasCookie(req, SESSION_COOKIE) &&
+  !hasCookie(req, SESSION_COOKIE, STALE_SESSION);
+
 function json(
   res: ServerResponse,
   status: number,
@@ -2347,7 +2353,7 @@ const routes: Route[] = [
     pattern: /^\/auth\/status$/,
     handler: (_p, req, res) => {
       const setupRequired = hasCookie(req, "e2e_setup_required", "1");
-      const authenticated = hasCookie(req, SESSION_COOKIE);
+      const authenticated = signedIn(req);
       json(res, 200, {
         billing: hasCookie(req, BILLING_COOKIE, "1"),
         registrationOpen: setupRequired,
@@ -2360,8 +2366,7 @@ const routes: Route[] = [
     method: "GET",
     pattern: /^\/auth\/me$/,
     handler: (_p, req, res) => {
-      const authenticated = hasCookie(req, SESSION_COOKIE);
-      if (!authenticated) {
+      if (!signedIn(req)) {
         return json(res, 401, errorEnvelope(401, req.url ?? "/auth/me"));
       }
       json(res, 200, viewerOf(req));
@@ -2384,7 +2389,16 @@ const routes: Route[] = [
   {
     method: "GET",
     pattern: /^\/billing\/catalog$/,
-    handler: (_p, _q, res) => json(res, 200, { enabled: false, prices: [] }),
+    handler: (_p, req, res) => {
+      if (!signedIn(req)) {
+        return json(
+          res,
+          401,
+          errorEnvelope(401, req.url ?? "/billing/catalog"),
+        );
+      }
+      json(res, 200, { enabled: false, prices: [] });
+    },
   },
   {
     method: "GET",
@@ -2435,7 +2449,7 @@ const routes: Route[] = [
     method: "GET",
     pattern: /^\/auth\/plan$/,
     handler: (_p, req, res) => {
-      if (!hasCookie(req, SESSION_COOKIE)) {
+      if (!signedIn(req)) {
         return json(res, 401, errorEnvelope(401, req.url ?? "/auth/plan"));
       }
       json(res, 200, accountPlanFor(req));

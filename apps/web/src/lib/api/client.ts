@@ -1,4 +1,8 @@
-import { BACKEND_PROXY_PATH, type ApiErrorEnvelope } from "@asobeast/shared";
+import {
+  BACKEND_PROXY_PATH,
+  UPGRADE_PATH,
+  type ApiErrorEnvelope,
+} from "@asobeast/shared";
 import { isPublicRoute } from "@/lib/auth-routes";
 import { writeApiErrorDigest } from "./error-digest";
 
@@ -84,8 +88,8 @@ function handleAuthRedirect(path: string, status: number): void {
     window.location.assign(
       loginUrl(window.location.pathname, window.location.search),
     );
-  } else if (status === 402) {
-    window.location.assign("/upgrade");
+  } else if (status === 402 && window.location.pathname !== UPGRADE_PATH) {
+    window.location.assign(UPGRADE_PATH);
   }
 }
 

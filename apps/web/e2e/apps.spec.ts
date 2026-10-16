@@ -231,6 +231,7 @@ test.describe("importing by name", () => {
 
   const openDialog = async (page: Page) => {
     await page.goto("/");
+    await page.waitForLoadState("networkidle");
     await page.getByRole("button", { name: "Import app" }).click();
     return page.getByRole("dialog", { name: "Import an app" });
   };

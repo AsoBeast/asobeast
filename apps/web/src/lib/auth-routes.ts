@@ -1,4 +1,4 @@
-export const PUBLIC_ROUTES = ["/login", "/register", "/upgrade"] as const;
+export const PUBLIC_ROUTES = ["/login", "/register"] as const;
 
 const PLACEHOLDER_ORIGIN = "http://placeholder";
 
