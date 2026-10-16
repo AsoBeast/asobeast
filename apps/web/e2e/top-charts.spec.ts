@@ -276,6 +276,54 @@ test("keeps every filter in the url", async ({ page }) => {
   );
 });
 
+test("keeps focus on the country select after a pick", async ({ page }) => {
+  await page.goto("/charts?view=table");
+  const country = page.getByRole("combobox", { name: "Country" });
+
+  await pick(page, "Country", "DE · Germany");
+
+  await expect(page).toHaveURL(/country=de/);
+  await expect(country).toHaveText("DE · Germany");
+  await expect(country).toBeFocused();
+});
+
+test("keeps focus in the storefront code while a custom code is typed", async ({
+  page,
+}) => {
+  await page.goto("/charts?view=table");
+  await pick(page, "Country", "Other…");
+  const code = page.getByRole("textbox", { name: "Storefront country code" });
+
+  await code.click();
+  await code.pressSequentially("se");
+
+  await expect(page).toHaveURL(/country=se/);
+  await expect(code).toHaveValue("se");
+  await expect(code).toBeFocused();
+});
+
+test("drops an unfinished custom code when the store changes", async ({
+  page,
+}) => {
+  await page.goto("/charts?view=table");
+  await pick(page, "Country", "Other…");
+  await page
+    .getByRole("textbox", { name: "Storefront country code" })
+    .fill("x");
+
+  await page
+    .getByRole("tablist", { name: "Store" })
+    .getByRole("tab", { name: "Google Play" })
+    .click();
+
+  await expect(page.getByRole("combobox", { name: "Country" })).toHaveText(
+    "US · United States",
+  );
+  await expect(
+    page.getByRole("textbox", { name: "Storefront country code" }),
+  ).toHaveCount(0);
+});
+
 test("shows a device control only for a store with more than one device", async ({
   page,
 }) => {
@@ -603,6 +651,62 @@ test.describe.serial("chart follows", () => {
     await expect(
       page.getByRole("button", { name: "Follow category" }),
     ).toBeVisible();
+    expect(await follows(request)).toEqual([]);
+  });
+
+  const followAllKinds = async (request: APIRequestContext, genre: string) => {
+    for (const collection of ["free", "paid", "grossing"]) {
+      await followChart(request, {
+        store: "APP_STORE",
+        country: "us",
+        collection,
+        genre,
+        device: "iphone",
+      });
+    }
+  };
+
+  test("returns focus to Following when the unfollow dialog is dismissed", async ({
+    page,
+    request,
+  }) => {
+    await request.get(`${MOCK_API}/__reset-chart-follows`);
+    await followAllKinds(request, "7012");
+    await page.goto("/charts?view=table&genre=7012");
+    const following = page.getByRole("button", { name: "Following" });
+    const dialog = page.getByRole("alertdialog", {
+      name: "Stop following this category?",
+    });
+
+    await following.focus();
+    await page.keyboard.press("Enter");
+    await expect(dialog).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(following).toBeFocused();
+
+    await page.keyboard.press("Enter");
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+    await expect(dialog).toBeHidden();
+    await expect(following).toBeFocused();
+  });
+
+  test("moves focus to Follow category after the category is unfollowed", async ({
+    page,
+    request,
+  }) => {
+    await request.get(`${MOCK_API}/__reset-chart-follows`);
+    await followAllKinds(request, "7012");
+    await page.goto("/charts?view=table&genre=7012");
+
+    await page.getByRole("button", { name: "Following" }).focus();
+    await page.keyboard.press("Enter");
+    await page.getByRole("button", { name: "Stop following" }).click();
+
+    await expect(page.getByText("Stopped following")).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Follow category" }),
+    ).toBeFocused();
     expect(await follows(request)).toEqual([]);
   });
 
