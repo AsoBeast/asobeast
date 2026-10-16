@@ -309,6 +309,51 @@ test.describe("bulk tagging", () => {
     ).toBeFocused();
   });
 
+  test("returns focus to Remove when the removal is cancelled", async ({
+    page,
+  }) => {
+    await page.goto(KEYWORDS);
+    await page.getByRole("checkbox", { name: "Select focus timer" }).check();
+    const remove = page
+      .getByRole("group", { name: "Bulk keyword actions" })
+      .getByRole("button", { name: "Remove", exact: true });
+
+    await remove.click();
+    await page
+      .getByRole("alertdialog")
+      .getByRole("button", { name: "Cancel" })
+      .click();
+
+    await expect(page.getByRole("alertdialog")).toHaveCount(0);
+    await expect(remove).toBeFocused();
+  });
+
+  test("keeps focus in the table after a removal is confirmed", async ({
+    page,
+  }) => {
+    await page.route("**/api/backend/apps/app-tags/keywords/*", (route) =>
+      route.request().method() === "DELETE"
+        ? route.fulfill({ status: 204 })
+        : route.fallback(),
+    );
+    await page.goto(KEYWORDS);
+    await page.getByRole("checkbox", { name: "Select focus timer" }).check();
+
+    await page
+      .getByRole("group", { name: "Bulk keyword actions" })
+      .getByRole("button", { name: "Remove", exact: true })
+      .click();
+    await page
+      .getByRole("alertdialog")
+      .getByRole("button", { name: "Stop tracking" })
+      .click();
+
+    await expect(page.getByRole("alertdialog")).toHaveCount(0);
+    await expect(
+      page.getByRole("checkbox", { name: "Select all keywords" }),
+    ).toBeFocused();
+  });
+
   test("removes a tag only from the keywords carrying it", async ({
     page,
     request,

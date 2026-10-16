@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState, type RefObject } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Download, Pause, Play, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
@@ -14,6 +14,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { removeKeyword, updateKeyword } from "@/lib/api";
@@ -45,17 +46,31 @@ function ConfirmRemove({
   onOpenChange,
   count,
   pending,
+  disabled,
+  removed,
   onConfirm,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   count: number;
   pending: boolean;
+  disabled: boolean;
+  removed: RefObject<boolean>;
   onConfirm: () => void;
 }) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
+      <AlertDialogTrigger asChild>
+        <Button variant="outline" size="sm" disabled={disabled}>
+          <Trash2 />
+          Remove
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent
+        onCloseAutoFocus={(event) => {
+          if (removed.current) event.preventDefault();
+        }}
+      >
         <AlertDialogHeader>
           <AlertDialogTitle>
             Stop tracking {count} keyword
@@ -100,6 +115,7 @@ export function KeywordsBulkActions({
   const queryClient = useQueryClient();
   const selectedIds = selectedKeywords.map((keyword) => keyword.keywordId);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const removed = useRef(false);
 
   const setActive = useMutation({
     mutationFn: (active: boolean) =>
@@ -119,6 +135,7 @@ export function KeywordsBulkActions({
     onSuccess: (results) => {
       report("Removed", results);
       invalidateKeywordMutation(queryClient, appId);
+      removed.current = true;
       setConfirmOpen(false);
       onClear();
     },
@@ -179,15 +196,15 @@ export function KeywordsBulkActions({
           disabled={busy}
           onApply={(changes, mode) => tagSelected.mutate({ changes, mode })}
         />
-        <Button
-          variant="outline"
-          size="sm"
+        <ConfirmRemove
+          open={confirmOpen}
+          onOpenChange={setConfirmOpen}
+          count={selectedIds.length}
+          pending={remove.isPending}
           disabled={busy}
-          onClick={() => setConfirmOpen(true)}
-        >
-          <Trash2 />
-          Remove
-        </Button>
+          removed={removed}
+          onConfirm={() => remove.mutate()}
+        />
         <Button
           variant="outline"
           size="sm"
@@ -208,14 +225,6 @@ export function KeywordsBulkActions({
           Clear
         </Button>
       </div>
-
-      <ConfirmRemove
-        open={confirmOpen}
-        onOpenChange={setConfirmOpen}
-        count={selectedIds.length}
-        pending={remove.isPending}
-        onConfirm={() => remove.mutate()}
-      />
     </div>
   );
 }
