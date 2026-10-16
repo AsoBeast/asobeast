@@ -26,10 +26,14 @@ describe("signedInDestination", () => {
     expect(signedInDestination(next)).toBe("/");
   });
 
-  it.each(["/login", "/login?next=%2Flogin", "/register", "/upgrade"])(
+  it.each(["/login", "/login?next=%2Flogin", "/register"])(
     "refuses the public route %s so a signed in viewer cannot loop on it",
     (next) => {
       expect(signedInDestination(next)).toBe("/");
     },
   );
+
+  it("returns to the upgrade page after sign in", () => {
+    expect(signedInDestination("/upgrade")).toBe("/upgrade");
+  });
 });
