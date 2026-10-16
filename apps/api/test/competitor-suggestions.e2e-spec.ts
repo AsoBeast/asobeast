@@ -136,23 +136,30 @@ describe('Competitor suggestions (e2e)', () => {
     await app.close();
   });
 
-  const createPrimary = () =>
+  const createPrimary = (country = 'de') =>
     prisma.app.create({
       data: {
         workspaceId: DEFAULT_WORKSPACE_ID,
         store: Store.APP_STORE,
         storeAppId: PRIMARY_ID,
-        country: 'de',
+        country,
         name: 'Focus',
       },
     });
 
   const seedSerp = async (
     appId: string,
-    entries: { storeAppId: string; position: number; date: Date }[],
+    entries: {
+      storeAppId: string;
+      position: number;
+      date: Date;
+      title?: string;
+      iconUrl?: string | null;
+    }[],
+    market = 'de',
   ) => {
     const keyword = await prisma.keyword.create({
-      data: { text: 'focus timer', store: Store.APP_STORE, country: 'de' },
+      data: { text: 'focus timer', store: Store.APP_STORE, country: market },
     });
     await prisma.trackedKeyword.create({
       data: { appId, keywordId: keyword.id, source: 'MANUAL', active: true },
@@ -163,15 +170,155 @@ describe('Competitor suggestions (e2e)', () => {
         date: entry.date,
         position: entry.position,
         storeAppId: entry.storeAppId,
-        title: `Ranked ${entry.storeAppId}`,
+        title: entry.title ?? `Ranked ${entry.storeAppId}`,
         developer: 'Ranked Co',
-        iconUrl: rankedIcon(entry.storeAppId),
+        iconUrl:
+          entry.iconUrl === undefined
+            ? rankedIcon(entry.storeAppId)
+            : entry.iconUrl,
       })),
     });
   };
 
   const suggest = (appId: string) =>
     api.get(`/apps/${appId}/competitors/suggestions`);
+
+  const serpItem = (body: CompetitorSuggestions, storeAppId: string) =>
+    body.items.find(
+      (item) => item.source === 'serp' && item.storeAppId === storeAppId,
+    );
+
+  it('describes a keyword result from the home market, not the newest storefront', async () => {
+    const primary = await createPrimary('us');
+    await seedSerp(
+      primary.id,
+      [
+        {
+          storeAppId: '222000222',
+          position: 6,
+          date: D2,
+          title: 'Email by Google',
+        },
+      ],
+      'us',
+    );
+    await seedSerp(
+      primary.id,
+      [
+        {
+          storeAppId: '222000222',
+          position: 4,
+          date: D1,
+          title: 'E-Mail von Google',
+        },
+      ],
+      'de',
+    );
+
+    const res = await suggest(primary.id).expect(200);
+
+    expect(
+      serpItem(res.body as CompetitorSuggestions, '222000222'),
+    ).toMatchObject({
+      title: 'Email by Google',
+      appearances: 2,
+      bestPosition: 4,
+    });
+  });
+
+  it('answers the same title when the foreign rows are the same age', async () => {
+    const primary = await createPrimary('us');
+    await seedSerp(
+      primary.id,
+      [
+        {
+          storeAppId: '222000222',
+          position: 6,
+          date: D1,
+          title: 'Email by Google',
+        },
+      ],
+      'us',
+    );
+    await seedSerp(
+      primary.id,
+      [
+        {
+          storeAppId: '222000222',
+          position: 4,
+          date: D1,
+          title: 'E-Mail von Google',
+        },
+      ],
+      'de',
+    );
+
+    const first = await suggest(primary.id).expect(200);
+    const second = await suggest(primary.id).expect(200);
+
+    expect(
+      serpItem(first.body as CompetitorSuggestions, '222000222')?.title,
+    ).toBe('Email by Google');
+    expect(second.body).toEqual(first.body);
+  });
+
+  it('keeps a known icon when the home row predates icons', async () => {
+    const primary = await createPrimary('us');
+    await seedSerp(
+      primary.id,
+      [
+        {
+          storeAppId: '222000222',
+          position: 6,
+          date: D2,
+          title: 'Email by Google',
+          iconUrl: null,
+        },
+      ],
+      'us',
+    );
+    await seedSerp(
+      primary.id,
+      [
+        {
+          storeAppId: '222000222',
+          position: 4,
+          date: D1,
+          title: 'E-Mail von Google',
+        },
+      ],
+      'de',
+    );
+
+    const res = await suggest(primary.id).expect(200);
+
+    expect(
+      serpItem(res.body as CompetitorSuggestions, '222000222'),
+    ).toMatchObject({
+      title: 'Email by Google',
+      iconUrl: rankedIcon('222000222'),
+    });
+  });
+
+  it('falls back to the newest storefront when the app never ranked at home', async () => {
+    const primary = await createPrimary('us');
+    await seedSerp(
+      primary.id,
+      [{ storeAppId: '222000222', position: 4, date: D2, title: 'Older' }],
+      'de',
+    );
+    await seedSerp(
+      primary.id,
+      [{ storeAppId: '222000222', position: 5, date: D1, title: 'Newer' }],
+      'gb',
+    );
+
+    const res = await suggest(primary.id).expect(200);
+
+    expect(
+      serpItem(res.body as CompetitorSuggestions, '222000222')?.title,
+    ).toBe('Newer');
+  });
 
   it('lists the serp apps first and the similar apps after', async () => {
     const primary = await createPrimary();

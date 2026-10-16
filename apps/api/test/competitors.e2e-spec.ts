@@ -249,4 +249,52 @@ describe('CompetitorsController (e2e)', () => {
       bestPosition: 3,
     });
   });
+
+  it('describes a discovered app from the home market', async () => {
+    const primary = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: 'self',
+        country: 'us',
+        name: 'You',
+      },
+    });
+    for (const [country, title, ratingAvg] of [
+      ['de', 'Fremder', 3],
+      ['us', 'Stranger', 4.5],
+    ] as const) {
+      const keyword = await prisma.keyword.create({
+        data: { text: 'habit tracker', store: Store.APP_STORE, country },
+      });
+      await prisma.trackedKeyword.create({
+        data: {
+          appId: primary.id,
+          keywordId: keyword.id,
+          source: 'MANUAL',
+          active: true,
+        },
+      });
+      await prisma.serpEntry.create({
+        data: {
+          keywordId: keyword.id,
+          date: D0,
+          position: 3,
+          storeAppId: 'stranger',
+          title,
+          ratingAvg,
+        },
+      });
+    }
+
+    const response = await api
+      .get(`/apps/${primary.id}/competitors/discovery?days=90`)
+      .expect(200);
+
+    expect((response.body as CompetitorDiscovery).items[0]).toMatchObject({
+      title: 'Stranger',
+      ratingAvg: 4.5,
+      appearances: 2,
+    });
+  });
 });

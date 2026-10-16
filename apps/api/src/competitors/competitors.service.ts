@@ -164,6 +164,7 @@ export class CompetitorsService {
       where: { id: appId },
       select: {
         storeAppId: true,
+        country: true,
         competitors: { select: { storeAppId: true } },
         tracked: { where: { active: true }, select: { keywordId: true } },
       },
@@ -193,7 +194,7 @@ export class CompetitorsService {
         ratingCount: true,
         position: true,
         date: true,
-        keyword: { select: { text: true } },
+        keyword: { select: { text: true, country: true } },
       },
     });
 
@@ -209,8 +210,10 @@ export class CompetitorsService {
           ratingCount: row.ratingCount,
           position: row.position,
           date: row.date,
+          country: row.keyword.country,
           keywordText: row.keyword.text,
         })),
+        app.country,
       ),
     };
   }
