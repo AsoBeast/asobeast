@@ -6,7 +6,10 @@
   "testEnvironment": "node",
   "testRegex": ".e2e-spec.ts$",
   "setupFiles": ["<rootDir>/setup-e2e.ts"],
-  "setupFilesAfterEnv": ["<rootDir>/helpers/reset-tracked-data.ts"],
+  "setupFilesAfterEnv": [
+    "<rootDir>/helpers/reset-tracked-data.ts",
+    "<rootDir>/helpers/reset-test-redis.ts"
+  ],
   "transform": {
     "^.+\\.(t|j)sx?$": "ts-jest"
   }
