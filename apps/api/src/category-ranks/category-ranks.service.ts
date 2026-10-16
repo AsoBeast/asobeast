@@ -18,6 +18,7 @@ import { chartKeyOf } from '../charts/chart-key';
 import { CheckCategoryPayload } from '../jobs/jobs.types';
 import { CategoryRankHistoryQueryDto } from './dto/category-rank-history-query.dto';
 import { LATEST_HOME_LISTING } from '../apps/listing';
+import { isRankedIn } from './ranked-charts';
 
 const DEFAULT_HISTORY_DAYS = 90;
 const MAX_HISTORY_DAYS = 365;
@@ -113,10 +114,7 @@ export class CategoryRanksService {
     const rows = await this.loadAppBuckets({ store, country });
     const date = utcToday();
     for (const row of rows) {
-      const matches =
-        row.collections.includes(collection) &&
-        (genre === OVERALL_GENRE || row.genre === genre);
-      if (!matches) {
+      if (!isRankedIn(row, { collection, genre })) {
         continue;
       }
       const position = positionByStoreAppId.get(row.storeAppId) ?? null;
