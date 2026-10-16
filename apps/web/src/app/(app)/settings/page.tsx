@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { ApiTokensCard } from "@/components/settings/ApiTokensCard";
 import { McpServerCard } from "@/components/settings/McpServerCard";
+import { StoreConnectionsCard } from "@/components/settings/StoreConnectionsCard";
 import { PlanSection } from "@/components/settings/PlanSection";
 import { TeamCard } from "@/components/settings/TeamCard";
 import { SettingsSection } from "@/components/settings/SettingsSection";
@@ -14,6 +15,7 @@ import {
   BudgetCardSkeleton,
   DeliveryCardSkeleton,
   EmailAlertsCardSkeleton,
+  StoreConnectionsSkeleton,
   WebhooksCardSkeleton,
 } from "@/components/settings/skeletons";
 import { pageReturnedFromCheckout } from "@/lib/checkout-return";
@@ -24,6 +26,7 @@ import {
   alertsConfigOptions,
   budgetOptions,
   emailAlertsOptions,
+  storeConnectionsOptions,
   webhooksOptions,
 } from "@/lib/queries";
 import { viewerIsOperator } from "@/lib/viewer";
@@ -45,6 +48,7 @@ export default async function SettingsPage({
     queryClient.prefetchQuery(alertsConfigOptions),
     queryClient.prefetchQuery(alertDeliveryOptions),
     queryClient.prefetchQuery(budgetOptions),
+    queryClient.prefetchQuery(storeConnectionsOptions),
   ]);
 
   return (
@@ -106,6 +110,16 @@ export default async function SettingsPage({
         >
           <ApiTokensCard />
           <McpServerCard />
+        </SettingsSection>
+
+        <SettingsSection
+          id="store-connections"
+          title="Store connections"
+          description="Connect App Store Connect so impressions, page views and downloads appear beside your rankings."
+        >
+          <Suspense fallback={<StoreConnectionsSkeleton />}>
+            <StoreConnectionsCard />
+          </Suspense>
         </SettingsSection>
 
         <SettingsSection

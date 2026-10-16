@@ -24,6 +24,7 @@ import {
   type QueryKey,
 } from "@tanstack/react-query";
 import {
+  getStoreConnections,
   getChart,
   listChartFollows,
   getAction,
@@ -278,6 +279,10 @@ export const apiTokenKeys = {
 
 export const workspaceTeamKey = ["auth", "team"] as const;
 
+export const storeConnectionKeys = {
+  all: ["store-connections"] as const,
+};
+
 export const workspaceDeletionKey = ["account", "deletion"] as const;
 
 export const billingCatalogKey = ["billing", "catalog"] as const;
@@ -391,6 +396,19 @@ export function invalidateWorkspaceTeamMutation(client: QueryClient): void {
 
 export function invalidateWorkspaceDeletion(client: QueryClient): void {
   void client.invalidateQueries({ queryKey: workspaceDeletionKey });
+}
+
+export const storeConnectionsOptions = queryOptions({
+  queryKey: storeConnectionKeys.all,
+  queryFn: getStoreConnections,
+  staleTime: 30 * 1000,
+});
+
+export function invalidateStoreConnectionMutation(client: QueryClient): void {
+  void client.invalidateQueries({ queryKey: storeConnectionKeys.all });
+  void client.invalidateQueries({
+    predicate: (query) => query.queryKey.includes("funnel"),
+  });
 }
 
 export function invalidateApiTokenMutation(client: QueryClient): void {
