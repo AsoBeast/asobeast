@@ -646,6 +646,7 @@ function hasCookie(
 }
 
 const STALE_SESSION = "stale";
+const ANSWERED_WITHOUT_A_SESSION = /^\/(health|auth\/(status|login|register))$/;
 
 const signedIn = (req: IncomingMessage) =>
   hasCookie(req, SESSION_COOKIE) &&
@@ -4049,6 +4050,16 @@ const routes: Route[] = [
 const server = createServer(async (req, res) => {
   const pathname = new URL(req.url ?? "/", "http://localhost").pathname;
   await delayFromCookie(req, API_LATENCY_COOKIE);
+  if (
+    hasCookie(req, SESSION_COOKIE, STALE_SESSION) &&
+    !ANSWERED_WITHOUT_A_SESSION.test(pathname)
+  ) {
+    return json(
+      res,
+      401,
+      errorEnvelope(401, req.url ?? "/", "Not authenticated"),
+    );
+  }
   for (const route of routes) {
     if (route.method !== req.method) continue;
     const match = pathname.match(route.pattern);

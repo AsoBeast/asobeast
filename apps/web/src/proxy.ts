@@ -1,19 +1,17 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE } from "@asobeast/shared";
+import { loginUrl, REQUESTED_PATH_HEADER } from "@/lib/auth-routes";
 
 export function proxy(request: NextRequest) {
-  if (request.cookies.has(SESSION_COOKIE)) return NextResponse.next();
-
-  const url = request.nextUrl.clone();
-  url.pathname = "/login";
-  url.search = "";
-  if (request.nextUrl.pathname !== "/") {
-    url.searchParams.set(
-      "next",
-      `${request.nextUrl.pathname}${request.nextUrl.search}`,
-    );
+  const { pathname, search } = request.nextUrl;
+  if (request.cookies.has(SESSION_COOKIE)) {
+    const headers = new Headers(request.headers);
+    headers.set(REQUESTED_PATH_HEADER, `${pathname}${search}`);
+    return NextResponse.next({ request: { headers } });
   }
-  return NextResponse.redirect(url);
+  return NextResponse.redirect(
+    new URL(loginUrl(pathname, search), request.url),
+  );
 }
 
 export const config = {
