@@ -5,6 +5,7 @@ import {
   UNBROKEN_REVIEW_TEXT,
   UNBROKEN_REVIEW_TITLE,
 } from "./fixtures.mts";
+import { hydrated } from "./hydrated.mts";
 import { seedCookies } from "./routes.mts";
 import { expect, test } from "./session.mts";
 
@@ -540,6 +541,51 @@ test("retrying a failed themes request keeps focus on Retry", async ({
   });
   await expect(retry).toBeFocused();
   await expect(failure).toBeVisible();
+});
+
+const REVIEWS_LIST_PATH = "/api/backend/apps/app-1/reviews";
+
+const isScoredList = (url: URL) =>
+  url.pathname === REVIEWS_LIST_PATH && url.searchParams.has("score");
+
+test("try again refetches a reviews list that failed after the page was open", async ({
+  page,
+}) => {
+  let failing = false;
+  await page.route(isScoredList, (route) =>
+    failing
+      ? route.fulfill({ status: 500, json: { statusCode: 500 } })
+      : route.fallback(),
+  );
+  await page.goto("/apps/app-1/reviews");
+  await expect(page.getByRole("article")).toHaveCount(5);
+
+  failing = true;
+  const oneStar = page.getByRole("button", { name: "1", exact: true });
+  await hydrated(oneStar);
+  await oneStar.click();
+  const boundary = page
+    .getByRole("main")
+    .getByRole("alert")
+    .filter({ hasText: "Reviews could not be loaded" });
+  await expect(boundary).toBeVisible({ timeout: 20_000 });
+  await expect(page).toHaveURL(/score=1/);
+
+  failing = false;
+  const refetched = page.waitForRequest(
+    (request) =>
+      isScoredList(new URL(request.url())) &&
+      new URL(request.url()).searchParams.get("score") === "1",
+  );
+  await boundary.getByRole("button", { name: "Try again" }).click();
+  await refetched;
+
+  await expect(boundary).toBeHidden();
+  await expect(page.getByRole("article")).toHaveCount(1);
+  await expect(
+    page.getByRole("article").getByText("Please add dark mode."),
+  ).toBeVisible();
+  await expect(page).toHaveURL(/score=1/);
 });
 
 test("themes that fail on first load leave the page in place", async ({

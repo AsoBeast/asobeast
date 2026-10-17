@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryErrorResetBoundary } from "@tanstack/react-query";
 import { RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { recoveryFor, type RecoveryScope } from "@/lib/error-recovery";
@@ -22,6 +22,11 @@ export function ErrorState({
 }) {
   const recovery = recoveryFor(error, scope);
   const statusPage = useQuery(webHealthOptions).data?.statusPageUrl ?? null;
+  const queryErrors = useQueryErrorResetBoundary();
+  const tryAgain = () => {
+    queryErrors.reset();
+    retry();
+  };
 
   useEffect(() => {
     if (worthReporting(error)) void reportBrowserError(error);
@@ -39,7 +44,7 @@ export function ErrorState({
         </p>
       </div>
       {recovery.action.kind === "retry" ? (
-        <Button variant="outline" onClick={retry}>
+        <Button variant="outline" onClick={tryAgain}>
           <RotateCw />
           Try again
         </Button>
