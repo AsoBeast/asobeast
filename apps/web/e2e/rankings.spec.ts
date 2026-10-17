@@ -172,3 +172,44 @@ test("every rank band is named at the default chart size", async ({ page }) => {
     "Top 25",
   ]);
 });
+
+for (const width of [320, 1440] as const) {
+  test(`the rank axis reads 1, 10, 25, 50, 100 and 200 from the top at ${width} px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/apps/app-1/rankings");
+    const chart = page.getByRole("region", { name: "Keyword rank positions" });
+    await expect(chart.getByText(/^Top 10$/).first()).toBeVisible();
+
+    const ticks = await chart
+      .locator(".recharts-yAxis-tick-labels text")
+      .evaluateAll((nodes) =>
+        nodes
+          .map((node) => {
+            const box = node.getBoundingClientRect();
+            return {
+              text: node.textContent?.trim() ?? "",
+              top: box.top,
+              bottom: box.bottom,
+            };
+          })
+          .sort((a, b) => a.top - b.top),
+      );
+
+    expect(ticks.map((tick) => tick.text)).toEqual([
+      "1",
+      "10",
+      "25",
+      "50",
+      "100",
+      "200",
+    ]);
+    for (const [index, tick] of ticks.entries()) {
+      const next = ticks[index + 1];
+      if (next !== undefined) {
+        expect(next.top).toBeGreaterThanOrEqual(tick.bottom);
+      }
+    }
+  });
+}

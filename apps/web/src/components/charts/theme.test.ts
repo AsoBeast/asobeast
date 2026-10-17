@@ -40,6 +40,10 @@ describe("seriesDash", () => {
 
 describe("RANK_AXIS_PROPS", () => {
   it("puts position 1 on top and spreads the top ranks", () => {
-    expect(RANK_AXIS_PROPS).toMatchObject({ reversed: true, scale: "sqrt" });
+    expect(RANK_AXIS_PROPS).toMatchObject({
+      reversed: true,
+      scale: "sqrt",
+      interval: 0,
+    });
   });
 });
