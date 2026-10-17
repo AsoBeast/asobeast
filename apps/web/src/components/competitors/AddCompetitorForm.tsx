@@ -53,9 +53,18 @@ export function AddCompetitorForm({ id }: { id: string }) {
   });
   const addOnce = useSingleFlight(mutation);
 
-  function add(value: string) {
+  function clearOutcome() {
     setError(null);
     setNote(null);
+  }
+
+  function changeUrl(next: string) {
+    clearOutcome();
+    setUrl(next);
+  }
+
+  function add(value: string) {
+    clearOutcome();
     addOnce(value);
   }
 
@@ -65,8 +74,7 @@ export function AddCompetitorForm({ id }: { id: string }) {
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
-    setNote(null);
+    clearOutcome();
     const { input } = search;
     if (input.kind === "url") return add(url);
     if (input.kind === "invalid") return setError(input.message);
@@ -84,7 +92,7 @@ export function AddCompetitorForm({ id }: { id: string }) {
         store={detail.store}
         country={detail.country}
         value={url}
-        onChange={setUrl}
+        onChange={changeUrl}
         onPick={pick}
         search={search}
         error={error}

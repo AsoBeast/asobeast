@@ -158,6 +158,29 @@ test("a competitor url still adds without a search", async ({ page }) => {
   expect(searches).toEqual([]);
 });
 
+test("a competitor refusal goes away as soon as the value changes", async ({
+  page,
+}) => {
+  const developerPage = "https://apps.apple.com/de/developer/rival/id555000997";
+  await page.goto(`/apps/${APP_1_DE_DETAIL.id}/competitors`);
+  const field = page.getByRole("textbox", {
+    name: "Competitor name or App Store URL",
+  });
+
+  await field.fill(developerPage);
+  await page.getByRole("button", { name: "Add competitor" }).click();
+  await expect(
+    page.getByText(`Unrecognized store URL or id: ${developerPage}`),
+  ).toBeVisible();
+  await expect(field).toHaveAttribute("aria-invalid", "true");
+
+  await field.fill("https://apps.apple.com/de/app/rival/id555000997");
+
+  await expect(page.getByText(/^Unrecognized store URL or id/)).toHaveCount(0);
+  await expect(field).toHaveAttribute("aria-invalid", "false");
+  await expect(field).toBeFocused();
+});
+
 test("the discovery panel names the store its rows come from", async ({
   page,
 }) => {
