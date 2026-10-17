@@ -2,6 +2,7 @@ import { expect, test } from "./session.mts";
 import { seedCookies } from "./routes.mts";
 
 const WIDTHS = [375, 768, 1440] as const;
+const LONG_SEARCH = `q=${"a".repeat(400)}`;
 
 const ROUTES: ReadonlyArray<
   readonly [string, string, Readonly<Record<string, string>>?]
@@ -24,6 +25,9 @@ const ROUTES: ReadonlyArray<
   ["dashboard table", "/?view=table"],
   ["dashboard many apps", "/", { portfolio_many: "1" }],
   ["action center", "/actions"],
+  ["keyword search with a long term", `/apps/app-1/keywords?${LONG_SEARCH}`],
+  ["metadata search with a long term", `/apps/app-1/metadata?${LONG_SEARCH}`],
+  ["action center search with a long term", `/actions?${LONG_SEARCH}`],
   ["app action center", "/apps/app-1/actions"],
   ["action sheet", "/actions?action=act-push"],
   ["top charts", "/charts"],
