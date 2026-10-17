@@ -3893,8 +3893,18 @@
           }
         },
         "responses": {
+          "200": {
+            "description": "The workspace already follows the chart; the existing follow",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
           "201": {
-            "description": "",
+            "description": "The chart is now followed; the new follow",
             "content": {
               "application/json": {
                 "schema": {
