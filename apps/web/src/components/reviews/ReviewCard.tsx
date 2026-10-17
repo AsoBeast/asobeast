@@ -65,8 +65,9 @@ function ReviewText({ text, label }: { text: string; label: ActionLabel }) {
     <div className="flex flex-col items-start gap-1">
       <p
         ref={ref}
+        dir="auto"
         className={cn(
-          "text-body wrap-anywhere whitespace-pre-line",
+          "w-full text-body wrap-anywhere whitespace-pre-line",
           expanded ? null : "line-clamp-4",
         )}
       >
@@ -95,7 +96,7 @@ function DeveloperReply({ review }: { review: ReviewItem }) {
         Developer reply
         {review.repliedAt ? ` · ${formatDate(review.repliedAt)}` : null}
       </p>
-      <p className="text-body wrap-anywhere whitespace-pre-line">
+      <p dir="auto" className="text-body wrap-anywhere whitespace-pre-line">
         {review.replyText}
       </p>
     </div>
@@ -174,7 +175,9 @@ export function ReviewCard({
       <div className="flex flex-wrap items-center gap-2">
         <Stars score={review.score} />
         {title ? (
-          <span className="text-sm font-medium wrap-anywhere">{title}</span>
+          <span dir="auto" className="text-sm font-medium wrap-anywhere">
+            {title}
+          </span>
         ) : null}
         {review.version ? (
           <Badge variant="outline">v{review.version}</Badge>
@@ -200,7 +203,8 @@ export function ReviewCard({
       <DeveloperReply review={review} />
       <div className="flex flex-wrap items-center gap-2">
         <p className="text-xs text-muted-foreground wrap-anywhere">
-          {review.userName ?? "Anonymous"} · {formatDate(review.reviewedAt)}
+          <bdi>{review.userName ?? "Anonymous"}</bdi> ·{" "}
+          {formatDate(review.reviewedAt)}
         </p>
         <TranslateButton translation={translation} label={label} />
         {actions}

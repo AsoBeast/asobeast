@@ -185,6 +185,7 @@ export function ReplyComposer({
         <Textarea
           autoFocus
           aria-label="Reply text"
+          dir="auto"
           aria-describedby={counterId}
           aria-invalid={over || undefined}
           aria-busy={draft.drafting || undefined}
