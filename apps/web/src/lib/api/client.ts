@@ -3,8 +3,11 @@ import {
   UPGRADE_PATH,
   type ApiErrorEnvelope,
 } from "@asobeast/shared";
-import { isPublicRoute } from "@/lib/auth-routes";
+import { isPublicRoute, loginUrl } from "@/lib/auth-routes";
 import { writeApiErrorDigest } from "./error-digest";
+import { redirectRefusedRender } from "./server-session";
+
+export { loginUrl };
 
 const INTERNAL_BASE = process.env.API_INTERNAL_URL ?? "http://localhost:4000";
 
@@ -74,13 +77,6 @@ async function errorEnvelope(
   }
 }
 
-export function loginUrl(pathname: string, search: string): string {
-  const requested = `${pathname}${search}`;
-  const url = new URL("/login", "http://placeholder");
-  if (requested !== "/") url.searchParams.set("next", requested);
-  return `${url.pathname}${url.search}`;
-}
-
 function handleAuthRedirect(path: string, status: number): void {
   if (typeof window === "undefined" || path.startsWith("/auth")) return;
   if (isPublicRoute(window.location.pathname)) return;
@@ -118,6 +114,7 @@ export async function apiFetch<T>(
   });
   if (!res.ok) {
     handleAuthRedirect(path, res.status);
+    if (res.status === 401) await redirectRefusedRender();
     throw new ApiError(await errorEnvelope(res, path));
   }
   if (res.status === 204) return undefined as T;
