@@ -21,6 +21,10 @@ import {
 } from './keyword-gaps';
 import { sortTracked } from './keyword-sort';
 import { serpVolatilities } from './keyword-volatility';
+import {
+  retainedPositionFacts,
+  type RetainedPositionFacts,
+} from './keyword-position-facts';
 import { toTrackedKeywordItem } from './keywords.mapper';
 import { listingFacts } from './listing-facts';
 import { seedCandidates } from './listing-seed';
@@ -42,13 +46,15 @@ export class KeywordsService {
     appId: string,
     sort?: KeywordSort,
     country?: string,
+    options: { holdFacts?: boolean } = {},
   ): Promise<TrackedKeywordItem[]> {
     const app = await ensureApp(this.prisma, appId);
     const rows = await this.prisma.trackedKeyword.findMany({
       where: { appId, ...(country ? { keyword: { is: { country } } } : {}) },
       ...trackedArgs(appId),
     });
-    const [facts, volatility] = await Promise.all([
+    const NO_FACTS: Map<string, RetainedPositionFacts> = new Map();
+    const [facts, volatility, hold] = await Promise.all([
       listingFacts(this.prisma, app, [
         ...new Set(rows.map((row) => row.keyword.country)),
       ]),
@@ -56,6 +62,13 @@ export class KeywordsService {
         this.prisma,
         rows.map((row) => row.keywordId),
       ),
+      options.holdFacts
+        ? retainedPositionFacts(
+            this.prisma,
+            appId,
+            rows.map((row) => row.keywordId),
+          )
+        : Promise.resolve(NO_FACTS),
     ]);
     return sortTracked(
       classifyBuckets(
@@ -64,6 +77,7 @@ export class KeywordsService {
             row,
             facts,
             volatility.get(row.keywordId) ?? null,
+            hold.get(row.keywordId) ?? null,
           ),
         ),
       ),
