@@ -2,10 +2,9 @@
 
 import { Suspense } from "react";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
-import { Download } from "lucide-react";
 import { useQueryState } from "nuqs";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { ExportCsvButton } from "@/components/ExportCsvButton";
 import {
   Sheet,
   SheetContent,
@@ -107,9 +106,8 @@ function SerpExportButton({
   const { data } = useQuery(serpOptions(keywordId));
   const viewer = useSerpViewer(appId);
   return (
-    <Button
-      variant="outline"
-      size="sm"
+    <ExportCsvButton
+      subject="the top 10"
       className="self-start"
       disabled={
         data === undefined ||
@@ -119,11 +117,7 @@ function SerpExportButton({
       onClick={() => {
         if (data) exportSerp(viewer, data);
       }}
-      aria-label="Export top 10 to CSV"
-    >
-      <Download />
-      Export CSV
-    </Button>
+    />
   );
 }
 

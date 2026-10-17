@@ -16,7 +16,7 @@ test("exporting the top 10 downloads the snapshot the sheet shows", async ({
 
   const [download] = await Promise.all([
     page.waitForEvent("download"),
-    sheet.getByRole("button", { name: "Export top 10 to CSV" }).click(),
+    sheet.getByRole("button", { name: "Export CSV of the top 10" }).click(),
   ]);
 
   expect(download.suggestedFilename()).toMatch(
