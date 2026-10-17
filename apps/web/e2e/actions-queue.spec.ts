@@ -257,6 +257,21 @@ test.describe("keeping focus after a bulk action", () => {
     await expect(page.locator(`[id='${first}']`)).toBeFocused();
   });
 
+  test("moves focus to the first selected row when a click leaves focus on the page, as Safari does", async ({
+    page,
+  }) => {
+    await pickBoth(page);
+    const first = firstOf(await rowIds(page), CHOSEN_ROWS);
+
+    await page.locator("#main-content").focus();
+    await bulkBar(page)
+      .getByRole("button", { name: "Clear selection" })
+      .dispatchEvent("click");
+
+    await expect(bulkBar(page)).toHaveCount(0);
+    await expect(page.locator(`[id='${first}']`)).toBeFocused();
+  });
+
   test("moves focus to the next unselected row after a bulk Done", async ({
     page,
   }) => {
@@ -265,6 +280,22 @@ test.describe("keeping focus after a bulk action", () => {
 
     await bulkBar(page).getByRole("button", { name: "Done" }).focus();
     await page.keyboard.press("Enter");
+
+    for (const id of CHOSEN)
+      await expect(page.locator(card(id))).toHaveCount(0);
+    await expect(page.locator(`[id='${survivor}']`)).toBeFocused();
+  });
+
+  test("moves focus to the next unselected row when a click on Done leaves focus on the page, as Safari does", async ({
+    page,
+  }) => {
+    await pickBoth(page);
+    const survivor = survivorOf(await rowIds(page), CHOSEN_ROWS);
+
+    await page.locator("#main-content").focus();
+    await bulkBar(page)
+      .getByRole("button", { name: "Done" })
+      .dispatchEvent("click");
 
     for (const id of CHOSEN)
       await expect(page.locator(card(id))).toHaveCount(0);

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { focusIsLost, survivingNeighbour } from "./focus-handoff";
+import {
+  focusCanMoveTo,
+  focusIsLost,
+  survivingNeighbour,
+} from "./focus-handoff";
 
 const body = { tag: "body" };
 
@@ -11,6 +15,32 @@ describe("focusIsLost", () => {
 
   it("is false when a control has focus", () => {
     expect(focusIsLost({ activeElement: { tag: "button" }, body })).toBe(false);
+  });
+});
+
+describe("focusCanMoveTo", () => {
+  const target = { tag: "row" };
+  const holding = (...held: unknown[]) => ({
+    contains: (node: unknown) => held.includes(node),
+  });
+
+  it("is true when focus is lost", () => {
+    expect(focusCanMoveTo(target, { activeElement: body, body })).toBe(true);
+  });
+
+  it("is true when focus rests on a container of the target", () => {
+    expect(
+      focusCanMoveTo(target, { activeElement: holding(target), body }),
+    ).toBe(true);
+  });
+
+  it("is false when a control outside the target has focus", () => {
+    expect(focusCanMoveTo(target, { activeElement: holding(), body })).toBe(
+      false,
+    );
+    expect(
+      focusCanMoveTo(target, { activeElement: { tag: "button" }, body }),
+    ).toBe(false);
   });
 });
 
