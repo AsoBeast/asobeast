@@ -1,3 +1,4 @@
+import { hydrated } from "./hydrated.mts";
 import { expect, test } from "./session.mts";
 
 const LONG_TERM = "a".repeat(400);
@@ -55,10 +56,10 @@ test("the remove button of a wrapped search chip clears the term", async ({
   await page.setViewportSize({ width: 375, height: 900 });
   await page.goto(`/apps/app-1/keywords?q=${LONG_TERM}`);
 
-  await page
+  const remove = page
     .getByRole("list", { name: "Active filters" })
-    .getByRole("button", { name: /^Remove Search/ })
-    .click();
+    .getByRole("button", { name: /^Remove Search/ });
+  await (await hydrated(remove)).click();
 
   await expect(page).not.toHaveURL(/[?&]q=/);
   await expect(page.getByRole("list", { name: "Active filters" })).toHaveCount(
