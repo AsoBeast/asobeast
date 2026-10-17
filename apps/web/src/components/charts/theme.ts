@@ -46,6 +46,15 @@ export const VALUE_AXIS_PROPS = {
   width: 32,
 } as const;
 
+export const RANK_AXIS_PROPS = {
+  ...VALUE_AXIS_PROPS,
+  reversed: true,
+  scale: "sqrt",
+  interval: 0,
+  allowDataOverflow: true,
+  width: 36,
+} as const;
+
 export const LINE_PROPS = {
   type: "monotone",
   strokeWidth: 2,
