@@ -960,6 +960,74 @@ export const TWIN_REVIEWS: ReviewList = {
   ],
 };
 
+export const ARABIC_REVIEW_AUTHOR = "محمد";
+export const ARABIC_REVIEW_TITLE = "التطبيق غير أمن !";
+export const ARABIC_REVIEW_TEXT =
+  "بسهوله يمكنهم اختراق الحساب و عند اختراق و تسجيل خروج من جميع الاجهزه $1.19 😡😡 تطبيق نصاب";
+export const ARABIC_DEVELOPER_REPLY =
+  "شكرا لك على ملاحظاتك، نعمل على إصلاح ذلك.";
+export const HEBREW_REVIEW_TEXT = "עובד מצוין";
+export const MIXED_REVIEW_TEXT = "Telegram עובד טוב";
+
+export const RTL_REVIEWS: ReviewList = {
+  total: 4,
+  versions: ["3.4.1"],
+  reviews: [
+    {
+      id: "rtl-rev-1",
+      reviewId: "rtl-store-rev-1",
+      userName: ARABIC_REVIEW_AUTHOR,
+      score: 1,
+      title: ARABIC_REVIEW_TITLE,
+      text: ARABIC_REVIEW_TEXT,
+      version: "3.4.1",
+      reviewedAt: utcTimestampDaysAgo(1),
+      repliedAt: utcTimestampDaysAgo(1),
+      replyText: ARABIC_DEVELOPER_REPLY,
+      reply: null,
+    },
+    {
+      id: "rtl-rev-2",
+      reviewId: "rtl-store-rev-2",
+      userName: "דנה",
+      score: 5,
+      title: null,
+      text: HEBREW_REVIEW_TEXT,
+      version: "3.4.1",
+      reviewedAt: utcTimestampDaysAgo(2),
+      repliedAt: null,
+      replyText: null,
+      reply: null,
+    },
+    {
+      id: "rtl-rev-3",
+      reviewId: "rtl-store-rev-3",
+      userName: "Sam",
+      score: 4,
+      title: "Mostly fine",
+      text: MIXED_REVIEW_TEXT,
+      version: "3.4.1",
+      reviewedAt: utcTimestampDaysAgo(3),
+      repliedAt: null,
+      replyText: null,
+      reply: null,
+    },
+    {
+      id: "rtl-rev-4",
+      reviewId: "rtl-store-rev-4",
+      userName: "Casey",
+      score: 5,
+      title: "Great",
+      text: "Works well.",
+      version: "3.4.1",
+      reviewedAt: utcTimestampDaysAgo(4),
+      repliedAt: null,
+      replyText: null,
+      reply: null,
+    },
+  ],
+};
+
 export const UPDATE_REVIEW_THEMES: ReviewThemes = {
   themes: [{ phrase: "update", kind: "complaint", mentions: 2, negative: 2 }],
   reviews: 5,
