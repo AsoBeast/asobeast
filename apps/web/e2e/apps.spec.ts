@@ -77,6 +77,74 @@ test("the import dialog refuses an apple page that is not a listing", async ({
   expect(imports).toEqual([]);
 });
 
+const DEVELOPER_PAGE = "https://apps.apple.com/us/developer/focus/id123456789";
+const FOCUS_TIMER_URL = "https://apps.apple.com/us/app/focus-timer/id123456789";
+
+async function refuseDeveloperPage(page: Page) {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Import app" }).click();
+  const field = page.getByLabel("App name or store URL");
+  await field.fill(DEVELOPER_PAGE);
+  await page.getByRole("button", { name: "Import", exact: true }).click();
+  await expect(page.locator("#import-url-error")).toHaveText(
+    `Unrecognized store URL or id: ${DEVELOPER_PAGE}`,
+  );
+  await expect(field).toHaveAttribute("aria-invalid", "true");
+  return field;
+}
+
+test("the import dialog drops a refusal as soon as the value changes", async ({
+  page,
+}) => {
+  const field = await refuseDeveloperPage(page);
+
+  await field.fill("Duolingo");
+
+  await expect(page.locator("#import-url-error")).toHaveCount(0);
+  await expect(field).toHaveAttribute("aria-invalid", "false");
+  await expect(field).toBeFocused();
+
+  await field.fill(DEVELOPER_PAGE);
+  await page.getByRole("button", { name: "Import", exact: true }).click();
+  await expect(page.locator("#import-url-error")).toBeVisible();
+
+  await field.fill(FOCUS_TIMER_URL);
+
+  await expect(page.locator("#import-url-error")).toHaveCount(0);
+  await expect(field).toHaveAttribute("aria-invalid", "false");
+});
+
+test("the import dialog drops a refusal when the store changes", async ({
+  page,
+}) => {
+  await refuseDeveloperPage(page);
+
+  await page.getByRole("tab", { name: "Google Play" }).click();
+
+  await expect(page.locator("#import-url-error")).toHaveCount(0);
+});
+
+test("the import dialog drops a storefront refusal when the storefront changes", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Import app" }).click();
+  const field = page.getByLabel("App name or store URL");
+  await field.fill(FOCUS_TIMER_URL);
+  await page.getByRole("combobox", { name: "Home storefront" }).click();
+  await page.getByRole("option", { name: "Other…" }).click();
+  await page.getByLabel("Storefront country code").fill("zz");
+  await page.getByRole("button", { name: "Import", exact: true }).click();
+  await expect(page.locator("#import-url-error")).toHaveText(
+    "zz is not an App Store storefront",
+  );
+
+  await page.getByLabel("Storefront country code").fill("us");
+
+  await expect(page.locator("#import-url-error")).toHaveCount(0);
+  await expect(field).toHaveAttribute("aria-invalid", "false");
+});
+
 test.describe("a fast double click", () => {
   const countRequests = (page: Page, method: string, path: RegExp) => {
     const seen: string[] = [];

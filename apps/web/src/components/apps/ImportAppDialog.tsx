@@ -134,9 +134,13 @@ export function ImportAppDialog({
     setValue("");
     setStore(DEFAULT_STORE);
     setCountry(DEFAULT_COUNTRY);
+    clearOutcome();
+    mutation.reset();
+  }
+
+  function clearOutcome() {
     setError(null);
     setNote(null);
-    mutation.reset();
   }
 
   function onOpenChange(next: boolean) {
@@ -147,12 +151,23 @@ export function ImportAppDialog({
   }
 
   function onValueChange(next: string) {
+    clearOutcome();
     setValue(next);
     const input = classifyInput(next);
     if (input.kind === "url" && isStoreAddress(next)) {
       setStore(input.parsed.store);
       setCountry(input.parsed.country);
     }
+  }
+
+  function onStoreChange(next: Store) {
+    clearOutcome();
+    setStore(next);
+  }
+
+  function onCountryChange(next: string) {
+    clearOutcome();
+    setCountry(next);
   }
 
   function importFrom(target: Store, url: string) {
@@ -165,15 +180,13 @@ export function ImportAppDialog({
   }
 
   function pick(result: StoreSearchResult) {
-    setError(null);
-    setNote(null);
+    clearOutcome();
     importFrom(store, result.storeAppId);
   }
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
-    setNote(null);
+    clearOutcome();
     const { input } = search;
     if (input.kind === "url") return importFrom(input.parsed.store, value);
     if (input.kind === "invalid") return setError(input.message);
@@ -195,7 +208,7 @@ export function ImportAppDialog({
 
         <form onSubmit={submit} className="flex min-h-0 flex-col gap-4">
           <DialogBody>
-            <StoreTabs store={store} onChange={setStore} />
+            <StoreTabs store={store} onChange={onStoreChange} />
 
             <StoreSearchField
               id="import-url"
@@ -216,7 +229,7 @@ export function ImportAppDialog({
             <StorefrontField
               store={store}
               country={country}
-              onChange={setCountry}
+              onChange={onCountryChange}
             />
           </DialogBody>
 
