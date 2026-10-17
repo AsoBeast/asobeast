@@ -5,11 +5,12 @@ import {
   isScoringSource,
   ScoreProvenance,
   ScoreSignals,
+  tierOf,
   TrackedKeywordItem,
 } from '@asobeast/shared';
 import { appOpportunity } from '../scoring/keyword-opportunity';
 import { readScoreSignals } from '../scoring/score-signals';
-import { daysInTier } from '../rankings/rank-hold';
+import type { RetainedPositionFacts } from './keyword-position-facts';
 import { KeywordFieldIndex, reportedSource } from './keyword-field-index';
 
 const DELTA_WINDOW_DAYS = 7;
@@ -112,6 +113,15 @@ function previousDayPosition(
   return previous ? previous.position : null;
 }
 
+const HOLD_FRESH_DAYS = 1;
+
+function holdFreshCutoff(now: Date): string {
+  const cutoff = new Date(now);
+  cutoff.setUTCHours(0, 0, 0, 0);
+  cutoff.setUTCDate(cutoff.getUTCDate() - HOLD_FRESH_DAYS);
+  return cutoff.toISOString().slice(0, 10);
+}
+
 type PositionFacts = Pick<
   TrackedKeywordItem,
   | 'latestPosition'
@@ -122,15 +132,27 @@ type PositionFacts = Pick<
   | 'bestPosition'
   | 'positionDeltaFromBest'
   | 'daysInTier'
+  | 'heldTier'
 >;
 
 function positionFacts(
   rankings: TrackedKeywordRow['keyword']['rankings'],
-  bestPosition: number | null,
+  hold: RetainedPositionFacts | null,
+  active: boolean,
 ): PositionFacts {
   const latest = rankings[0] ?? null;
   const latestPosition = latest?.position ?? null;
   const previousPosition = previousDayPosition(rankings);
+  const bestPosition =
+    hold?.bestPosition != null && latestPosition !== null
+      ? Math.min(hold.bestPosition, latestPosition)
+      : (hold?.bestPosition ?? null);
+  const daysInTier =
+    hold?.daysInTier != null &&
+    active &&
+    hold.latestDate >= holdFreshCutoff(new Date())
+      ? hold.daysInTier
+      : null;
   return {
     bestPosition,
     latestPosition,
@@ -145,7 +167,8 @@ function positionFacts(
       latestPosition !== null && bestPosition !== null
         ? latestPosition - bestPosition
         : null,
-    daysInTier: daysInTier(rankings),
+    daysInTier,
+    heldTier: daysInTier === null ? null : tierOf(latestPosition),
   };
 }
 
@@ -161,10 +184,10 @@ export function toTrackedKeywordItem(
   row: TrackedKeywordRow,
   app: AppFacts = NO_APP_FACTS,
   serpVolatility7d: number | null = null,
-  bestPosition: number | null = null,
+  hold: RetainedPositionFacts | null = null,
 ): TrackedKeywordItem {
   const metric = row.keyword.metrics[0] ?? null;
-  const positions = positionFacts(row.keyword.rankings, bestPosition);
+  const positions = positionFacts(row.keyword.rankings, hold, row.active);
   const { latestPosition, latestDepth } = positions;
   const traffic = metric?.traffic ?? null;
   const difficulty = metric?.difficulty ?? null;
