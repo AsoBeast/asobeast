@@ -173,16 +173,22 @@ test("marking a review as replied and undoing it", async ({ page }) => {
   await expect(article.getByText("Draft saved")).toBeVisible();
 });
 
-const slowReplies = (page: Page) =>
-  page.route("**/api/backend/apps/*/reviews/*/reply", async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, 400));
+const holdReplies = async (page: Page) => {
+  let release = () => {};
+  const released = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/api/backend/apps/*/reviews/*/reply", async (route) => {
+    await released;
     await route.continue();
   });
+  return release;
+};
 
 test("Mark as replied keeps keyboard focus while the request runs and after", async ({
   page,
 }) => {
-  await slowReplies(page);
+  const release = await holdReplies(page);
   await page.goto(`${REPLIES_PAGE}?reply=rep-2`);
   const mark = composer(page).getByRole("button", { name: "Mark as replied" });
 
@@ -191,6 +197,7 @@ test("Mark as replied keeps keyboard focus while the request runs and after", as
 
   await expect(mark).toBeFocused();
   await expect(mark).toHaveAttribute("aria-disabled", "true");
+  release();
   const undo = composer(page).getByRole("button", { name: "Undo" });
   await expect(undo).toBeFocused();
   await expect(undo).not.toHaveAttribute("aria-disabled", "true");
@@ -203,12 +210,14 @@ test("Undo keeps keyboard focus while the request runs and after", async ({
   await composer(page).getByRole("button", { name: "Mark as replied" }).click();
   const undo = composer(page).getByRole("button", { name: "Undo" });
   await expect(undo).toBeVisible();
-  await slowReplies(page);
+  const release = await holdReplies(page);
 
   await undo.focus();
   await page.keyboard.press("Enter");
 
   await expect(undo).toBeFocused();
+  await expect(undo).toHaveAttribute("aria-disabled", "true");
+  release();
   await expect(
     composer(page).getByRole("button", { name: "Mark as replied" }),
   ).toBeFocused();
@@ -217,11 +226,15 @@ test("Undo keeps keyboard focus while the request runs and after", async ({
 test("a mouse click on Mark as replied keeps focus on the button", async ({
   page,
 }) => {
-  await slowReplies(page);
+  const release = await holdReplies(page);
   await page.goto(`${REPLIES_PAGE}?reply=rep-2`);
+  const mark = composer(page).getByRole("button", { name: "Mark as replied" });
 
-  await composer(page).getByRole("button", { name: "Mark as replied" }).click();
+  await mark.click();
 
+  await expect(mark).toBeFocused();
+  await expect(mark).toHaveAttribute("aria-disabled", "true");
+  release();
   await expect(
     composer(page).getByRole("button", { name: "Undo" }),
   ).toBeFocused();
@@ -252,7 +265,7 @@ test("a failed mark leaves focus on the button and enables it again", async ({
 test("pressing Mark as replied twice while it runs sends one request", async ({
   page,
 }) => {
-  await slowReplies(page);
+  const release = await holdReplies(page);
   await page.goto(`${REPLIES_PAGE}?reply=rep-2`);
   const patches: string[] = [];
   page.on("request", (request) => {
@@ -262,7 +275,9 @@ test("pressing Mark as replied twice while it runs sends one request", async ({
 
   await mark.focus();
   await page.keyboard.press("Enter");
+  await expect(mark).toHaveAttribute("aria-disabled", "true");
   await page.keyboard.press("Enter");
+  release();
   await expect(
     composer(page).getByRole("button", { name: "Undo" }),
   ).toBeVisible();
