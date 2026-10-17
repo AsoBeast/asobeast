@@ -2,10 +2,17 @@ import {
   type APIRequestContext,
   type BrowserContext,
   type Page,
+  type Route,
 } from "@playwright/test";
 import { hydrated } from "./hydrated.mts";
 import { expect, test } from "./session.mts";
-import { PLAN_LIMITS, UPGRADE_PATH, type AccountPlan } from "@asobeast/shared";
+import {
+  PLAN_LIMITS,
+  UPGRADE_PATH,
+  type AccountPlan,
+  type ChartAppLink,
+  type ChartPage,
+} from "@asobeast/shared";
 import { contrastViolations, THEMES } from "./contrast-check.mts";
 import {
   TOP_CHART_APPS,
@@ -1300,6 +1307,173 @@ test("shows the add in progress on the competitor menu", async ({
   await expect(menu.locator(".animate-spin")).toBeVisible();
   await expect(page.getByText(/^Now tracking/)).toBeVisible();
   await request.post(`${MOCK_API}/__reset/competitors/app-1`);
+});
+
+const trackWhenAdded = async (
+  page: Page,
+  appId: string,
+  link: ChartAppLink,
+  answer?: (route: Route) => Promise<void>,
+) => {
+  let added = false;
+  await page.route(`**/api/backend/apps/${appId}/competitors`, (route) => {
+    if (route.request().method() !== "POST") return route.fallback();
+    added = true;
+    return answer ? answer(route) : route.fallback();
+  });
+  await page.route(/\/api\/backend\/charts\?/, async (route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as ChartPage;
+    await route.fulfill({
+      response,
+      json: added ? { ...body, apps: [...body.apps, link] } : body,
+    });
+  });
+};
+
+const slowCreated = (route: Route) =>
+  new Promise<void>((resolve) => setTimeout(resolve, 800)).then(() =>
+    route.fulfill({
+      status: 201,
+      json: { id: "comp-new", name: "Puzzle Quest" },
+    }),
+  );
+
+test("moves focus to the badge after the plus button adds a competitor", async ({
+  page,
+}) => {
+  const [first] = TOP_CHART_APPS;
+  await trackWhenAdded(
+    page,
+    "app-gp",
+    {
+      storeAppId: first.storeAppId,
+      appId: "comp-new",
+      primaryAppId: "app-gp",
+      name: "Tomato Clock",
+      role: "competitor",
+    },
+    (route) =>
+      route.fulfill({
+        status: 201,
+        json: { id: "comp-new", name: first.title },
+      }),
+  );
+  await page.goto("/charts?view=table&store=GOOGLE_PLAY");
+  const plus = await hydrated(
+    page.getByRole("button", { name: `Add ${first.title} to Tomato Clock` }),
+  );
+
+  await plus.focus();
+  await page.keyboard.press("Enter");
+
+  await expect(page.getByText(/^Now tracking/)).toBeVisible();
+  await expect(
+    chartTable(page)
+      .locator("tbody tr")
+      .first()
+      .getByRole("link", { name: "Competitor of Tomato Clock" }),
+  ).toBeFocused();
+});
+
+test("moves focus to the badge after a menu item adds a competitor", async ({
+  page,
+  request,
+}) => {
+  const second = TOP_CHART_APPS[1];
+  await trackWhenAdded(page, "app-1", {
+    storeAppId: second.storeAppId,
+    appId: "comp-new",
+    primaryAppId: "app-1",
+    name: "Focus Timer",
+    role: "competitor",
+  });
+  await page.goto("/charts?view=table");
+  const trigger = await hydrated(
+    page.getByRole("button", { name: `Add ${second.title} as competitor` }),
+  );
+
+  await trigger.focus();
+  await page.keyboard.press("Enter");
+  await expect(
+    page.getByRole("menuitem", { name: "Focus Timer" }),
+  ).toBeFocused();
+  await page.keyboard.press("Enter");
+
+  await expect(page.getByText(/^Now tracking/)).toBeVisible();
+  await expect(
+    chartTable(page)
+      .locator("tbody tr")
+      .nth(1)
+      .getByRole("link", { name: "Competitor of Focus Timer" }),
+  ).toBeFocused();
+  await request.post(`${MOCK_API}/__reset/competitors/app-1`);
+});
+
+test("keeps focus on the plus button when the add fails", async ({ page }) => {
+  const [first] = TOP_CHART_APPS;
+  await page.route("**/api/backend/apps/app-gp/competitors", async (route) => {
+    if (route.request().method() !== "POST") return route.fallback();
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    return route.fulfill({
+      status: 500,
+      json: {
+        statusCode: 500,
+        error: "Internal Server Error",
+        message: "The server encountered an unexpected error.",
+        path: "/apps/app-gp/competitors",
+        timestamp: new Date().toISOString(),
+      },
+    });
+  });
+  await page.goto("/charts?view=table&store=GOOGLE_PLAY");
+  const plus = await hydrated(
+    page.getByRole("button", { name: `Add ${first.title} to Tomato Clock` }),
+  );
+
+  await plus.focus();
+  await page.keyboard.press("Enter");
+
+  await expect(
+    page.getByText("The server encountered an unexpected error."),
+  ).toBeVisible();
+  await expect(plus).toBeFocused();
+  await expect(plus).not.toHaveAttribute("aria-disabled", "true");
+});
+
+test("leaves focus where the user moved it while the add ran", async ({
+  page,
+}) => {
+  const [first] = TOP_CHART_APPS;
+  await trackWhenAdded(
+    page,
+    "app-gp",
+    {
+      storeAppId: first.storeAppId,
+      appId: "comp-new",
+      primaryAppId: "app-gp",
+      name: "Tomato Clock",
+      role: "competitor",
+    },
+    slowCreated,
+  );
+  await page.goto("/charts?view=table&store=GOOGLE_PLAY");
+  const plus = await hydrated(
+    page.getByRole("button", { name: `Add ${first.title} to Tomato Clock` }),
+  );
+
+  await plus.focus();
+  await page.keyboard.press("Enter");
+  const search = page.getByLabel("Search apps");
+  await search.focus();
+
+  await expect(
+    chartTable(page)
+      .locator("tbody tr")
+      .first()
+      .getByRole("link", { name: "Competitor of Tomato Clock" }),
+  ).toBeVisible();
+  await expect(search).toBeFocused();
 });
 
 test("hides the price column on a free chart", async ({ page }) => {
