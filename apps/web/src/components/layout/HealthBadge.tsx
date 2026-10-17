@@ -5,7 +5,6 @@ import { useQuery } from "@tanstack/react-query";
 import { CircleX, TriangleAlert, type LucideIcon } from "lucide-react";
 import type { HealthStatus } from "@asobeast/shared";
 import { useAuth } from "@/components/auth/use-auth";
-import { ApiError } from "@/lib/api";
 import { healthOptions } from "@/lib/queries";
 import {
   Tooltip,
@@ -13,6 +12,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { answeredDatabaseDown } from "./health-answer";
 
 function hoursAgo(iso: string): number {
   return Math.max(
@@ -70,7 +70,7 @@ function resolveState(
       detail: "Checking API status…",
     };
   }
-  if (error instanceof ApiError) {
+  if (answeredDatabaseDown(error)) {
     return {
       mark: glyphMark(TriangleAlert, "text-warning"),
       label: "degraded",
