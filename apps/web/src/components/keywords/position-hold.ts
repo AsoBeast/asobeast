@@ -1,10 +1,10 @@
-import { tierOf, type TrackedKeywordItem } from "@asobeast/shared";
+import type { TrackedKeywordItem } from "@asobeast/shared";
 
 export function positionHoldLines(keyword: TrackedKeywordItem): string[] {
   const best = keyword.bestPosition ?? null;
   const delta = keyword.positionDeltaFromBest ?? null;
   const held = keyword.daysInTier ?? null;
-  const tier = tierOf(keyword.latestPosition ?? null);
+  const tier = keyword.heldTier ?? null;
 
   const lines: string[] = [];
   if (best !== null) {
@@ -12,7 +12,9 @@ export function positionHoldLines(keyword: TrackedKeywordItem): string[] {
   }
   if (delta !== null) {
     lines.push(
-      delta === 0 ? "At its best position" : `${delta} below its best`,
+      delta === 0
+        ? "At its best position"
+        : `${delta} ${delta === 1 ? "place" : "places"} below its best`,
     );
   }
   if (held !== null && tier !== null) {
