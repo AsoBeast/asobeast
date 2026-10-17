@@ -11,6 +11,7 @@ import type {
 import { formatCheckedPosition } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
 import { PositionDeltaChip } from "@/components/ui/delta-chip";
+import { InfoTip } from "@/components/ui/info-tip";
 import { Meter } from "@/components/ui/meter";
 import { GradedNumber, gradeFill } from "@/components/ui/graded";
 import {
@@ -300,10 +301,14 @@ export function PositionCell({ keyword }: { keyword: TrackedKeywordItem }) {
     return position;
   }
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>{position}</TooltipTrigger>
-      <TooltipContent>{hold.join(" · ")}</TooltipContent>
-    </Tooltip>
+    <span className="inline-flex items-center gap-1">
+      {position}
+      <InfoTip
+        label={`Position facts: ${keyword.text}`}
+        title="Position facts"
+        summary={hold.join(" · ")}
+      />
+    </span>
   );
 }
 

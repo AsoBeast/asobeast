@@ -6,7 +6,11 @@ function keyword(
   hold: Partial<
     Pick<
       TrackedKeywordItem,
-      "latestPosition" | "bestPosition" | "positionDeltaFromBest" | "daysInTier"
+      | "latestPosition"
+      | "bestPosition"
+      | "positionDeltaFromBest"
+      | "daysInTier"
+      | "heldTier"
     >
   >,
 ): TrackedKeywordItem {
@@ -47,6 +51,7 @@ describe("positionHoldLines", () => {
           bestPosition: 1,
           positionDeltaFromBest: 0,
           daysInTier: 12,
+          heldTier: 1,
         }),
       ),
     ).toEqual([
@@ -64,16 +69,17 @@ describe("positionHoldLines", () => {
           bestPosition: 3,
           positionDeltaFromBest: 4,
           daysInTier: 5,
+          heldTier: 10,
         }),
       ),
     ).toEqual([
       "Best position: 3",
-      "4 below its best",
+      "4 places below its best",
       "Held in the top 10 for 5 days",
     ]);
   });
 
-  it("skips the held line when the latest position sits outside every tier", () => {
+  it("skips the held line when the keyword holds no tier", () => {
     expect(
       positionHoldLines(
         keyword({
@@ -82,12 +88,24 @@ describe("positionHoldLines", () => {
           positionDeltaFromBest: 22,
         }),
       ),
-    ).toEqual(["Best position: 3", "22 below its best"]);
+    ).toEqual(["Best position: 3", "22 places below its best"]);
   });
 
-  it("keeps the singular form for a single held day", () => {
+  it("keeps the singular forms for one place and one held day", () => {
     expect(
-      positionHoldLines(keyword({ latestPosition: 2, daysInTier: 1 })),
-    ).toEqual(["Held in the top 3 for 1 day"]);
+      positionHoldLines(
+        keyword({
+          latestPosition: 2,
+          bestPosition: 1,
+          positionDeltaFromBest: 1,
+          daysInTier: 1,
+          heldTier: 3,
+        }),
+      ),
+    ).toEqual([
+      "Best position: 1",
+      "1 place below its best",
+      "Held in the top 3 for 1 day",
+    ]);
   });
 });
