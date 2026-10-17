@@ -45,17 +45,34 @@ function scriptLanguage(text: string, letters: string[]): string | null {
   );
 }
 
-function wordLanguage(text: string): string | null {
+interface WordMatch {
+  hits: number;
+  languages: string[];
+}
+
+function bestWordMatch(text: string): WordMatch {
   const tokens = tokenize(text);
-  const [best, runnerUp] = Object.entries(LATIN_WORDS)
+  const ranked = Object.entries(LATIN_WORDS)
     .map(([language, words]) => ({
       language,
       hits: tokens.filter((token) => words.has(token)).length,
     }))
     .sort((a, b) => b.hits - a.hits);
-  return best.hits >= MIN_HITS && best.hits > runnerUp.hits
-    ? best.language
-    : null;
+  const hits = ranked[0].hits;
+  return {
+    hits,
+    languages:
+      hits === 0
+        ? []
+        : ranked
+            .filter((entry) => entry.hits === hits)
+            .map((entry) => entry.language),
+  };
+}
+
+function wordLanguage(text: string): string | null {
+  const { hits, languages } = bestWordMatch(text);
+  return hits >= MIN_HITS && languages.length === 1 ? languages[0] : null;
 }
 
 export function reviewLanguage(text: string): string | null {
