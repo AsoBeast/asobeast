@@ -282,6 +282,16 @@ describe('lintKeywordField', () => {
     ]);
   });
 
+  it('never calls a word of a tracked phrase a competitor brand', () => {
+    const context: LintContext = {
+      competitorNames: ['Habit Pro', 'Streaks'],
+      trackedKeywords: ['habit tracker'],
+    };
+    expect(competitorBrands('habit,tracker,streaks', context)).toEqual([
+      'streaks',
+    ]);
+  });
+
   it.each([
     [
       'English (U.K.)',

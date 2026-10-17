@@ -61,7 +61,7 @@ const competitorBrands = (context: LintContext): ReadonlySet<string> => {
   const ownWords = new Set([
     ...toSet(context.titleWords),
     ...toSet(context.subtitleWords),
-    ...(context.trackedKeywords ?? []).map(normalizeText),
+    ...toSet(context.trackedKeywords),
     ...GENERIC_WORDS,
   ]);
   const titles = new Map<string, number>();
