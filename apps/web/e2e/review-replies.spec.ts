@@ -4,6 +4,7 @@ import { expect, test } from "./session.mts";
 import {
   APP_GP_DETAIL,
   APP_REPLIES_ID,
+  errorEnvelope,
   REVIEW_REPLY_DRAFT,
 } from "./fixtures.mts";
 import { fulfillJson } from "./plan-helpers.mts";
@@ -170,6 +171,103 @@ test("marking a review as replied and undoing it", async ({ page }) => {
   await composer(page).getByRole("button", { name: "Undo" }).click();
 
   await expect(article.getByText("Draft saved")).toBeVisible();
+});
+
+const slowReplies = (page: Page) =>
+  page.route("**/api/backend/apps/*/reviews/*/reply", async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    await route.continue();
+  });
+
+test("Mark as replied keeps keyboard focus while the request runs and after", async ({
+  page,
+}) => {
+  await slowReplies(page);
+  await page.goto(`${REPLIES_PAGE}?reply=rep-2`);
+  const mark = composer(page).getByRole("button", { name: "Mark as replied" });
+
+  await mark.focus();
+  await page.keyboard.press("Enter");
+
+  await expect(mark).toBeFocused();
+  await expect(mark).toHaveAttribute("aria-disabled", "true");
+  const undo = composer(page).getByRole("button", { name: "Undo" });
+  await expect(undo).toBeFocused();
+  await expect(undo).not.toHaveAttribute("aria-disabled", "true");
+});
+
+test("Undo keeps keyboard focus while the request runs and after", async ({
+  page,
+}) => {
+  await page.goto(`${REPLIES_PAGE}?reply=rep-2`);
+  await composer(page).getByRole("button", { name: "Mark as replied" }).click();
+  const undo = composer(page).getByRole("button", { name: "Undo" });
+  await expect(undo).toBeVisible();
+  await slowReplies(page);
+
+  await undo.focus();
+  await page.keyboard.press("Enter");
+
+  await expect(undo).toBeFocused();
+  await expect(
+    composer(page).getByRole("button", { name: "Mark as replied" }),
+  ).toBeFocused();
+});
+
+test("a mouse click on Mark as replied keeps focus on the button", async ({
+  page,
+}) => {
+  await slowReplies(page);
+  await page.goto(`${REPLIES_PAGE}?reply=rep-2`);
+
+  await composer(page).getByRole("button", { name: "Mark as replied" }).click();
+
+  await expect(
+    composer(page).getByRole("button", { name: "Undo" }),
+  ).toBeFocused();
+});
+
+test("a failed mark leaves focus on the button and enables it again", async ({
+  page,
+}) => {
+  await page.route("**/api/backend/apps/*/reviews/*/reply", (route) =>
+    route.fulfill(
+      fulfillJson(
+        500,
+        errorEnvelope(500, "/reply", "Could not save the reply"),
+      ),
+    ),
+  );
+  await page.goto(`${REPLIES_PAGE}?reply=rep-2`);
+  const mark = composer(page).getByRole("button", { name: "Mark as replied" });
+
+  await mark.focus();
+  await page.keyboard.press("Enter");
+
+  await expect(page.getByText("Could not save the reply")).toBeVisible();
+  await expect(mark).toBeFocused();
+  await expect(mark).not.toHaveAttribute("aria-disabled", "true");
+});
+
+test("pressing Mark as replied twice while it runs sends one request", async ({
+  page,
+}) => {
+  await slowReplies(page);
+  await page.goto(`${REPLIES_PAGE}?reply=rep-2`);
+  const patches: string[] = [];
+  page.on("request", (request) => {
+    if (request.method() === "PATCH") patches.push(request.url());
+  });
+  const mark = composer(page).getByRole("button", { name: "Mark as replied" });
+
+  await mark.focus();
+  await page.keyboard.press("Enter");
+  await page.keyboard.press("Enter");
+  await expect(
+    composer(page).getByRole("button", { name: "Undo" }),
+  ).toBeVisible();
+
+  expect(patches).toHaveLength(1);
 });
 
 test("the first click after typing marks the review while the text saves", async ({
