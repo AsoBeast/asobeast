@@ -33,6 +33,15 @@ for (const width of WIDTHS) {
         (removeBox?.x ?? 0) + (removeBox?.width ?? Infinity),
       ).toBeLessThanOrEqual(width);
       expect(removeBox?.width ?? 0).toBeGreaterThanOrEqual(20);
+      const badge = chip.locator('[data-slot="badge"]');
+      expect((await badge.boundingBox())?.height ?? 0).toBeGreaterThan(24);
+      expect(
+        await badge.evaluate(
+          (element) =>
+            element.scrollWidth <= element.clientWidth &&
+            element.scrollHeight <= element.clientHeight,
+        ),
+      ).toBe(true);
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth),
       ).toBeLessThanOrEqual(width);
