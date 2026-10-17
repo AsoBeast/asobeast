@@ -16,6 +16,7 @@ import { parseFieldText } from './keyword-field-text';
 import { KeywordFieldTarget, keywordFieldTarget } from './keyword-field-target';
 import { KeywordFieldWriter } from './keyword-field-writer';
 import { serpVolatilities } from './keyword-volatility';
+import { bestPositions } from './keyword-best-position';
 import { toTrackedKeywordItem } from './keywords.mapper';
 import {
   ensureKeywordFieldApp,
@@ -63,15 +64,25 @@ export class KeywordFieldService {
         (order.get(left.keyword.text) ?? 0) -
         (order.get(right.keyword.text) ?? 0),
     );
-    const [facts, volatility] = await Promise.all([
+    const [facts, volatility, best] = await Promise.all([
       listingFacts(this.prisma, app, [target.country]),
       serpVolatilities(
         this.prisma,
         rows.map((row) => row.keywordId),
       ),
+      bestPositions(
+        this.prisma,
+        app.id,
+        rows.map((row) => row.keywordId),
+      ),
     ]);
     const tracked = rows.map((row) =>
-      toTrackedKeywordItem(row, facts, volatility.get(row.keywordId) ?? null),
+      toTrackedKeywordItem(
+        row,
+        facts,
+        volatility.get(row.keywordId) ?? null,
+        best.get(row.keywordId) ?? null,
+      ),
     );
 
     return {

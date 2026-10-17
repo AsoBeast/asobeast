@@ -336,4 +336,54 @@ describe('toTrackedKeywordItem', () => {
     expect(item.previousPosition).toBe(4);
     expect(item.positionDelta1d).toBeNull();
   });
+
+  it('reports the best position and the gap to it', () => {
+    const item = toTrackedKeywordItem(
+      withRankings([
+        { position: 5, date: '2026-07-04' },
+        { position: 5, date: '2026-07-03' },
+      ]),
+      undefined,
+      null,
+      2,
+    );
+    expect(item.bestPosition).toBe(2);
+    expect(item.positionDeltaFromBest).toBe(3);
+  });
+
+  it('reports zero off best at the historical best', () => {
+    const item = toTrackedKeywordItem(
+      withRankings([{ position: 2, date: '2026-07-04' }]),
+      undefined,
+      null,
+      2,
+    );
+    expect(item.positionDeltaFromBest).toBe(0);
+  });
+
+  it('yields null hold facts without a best position or a ranked day', () => {
+    const item = toTrackedKeywordItem(
+      withRankings([{ position: null, date: '2026-07-04' }]),
+    );
+    expect(item.bestPosition).toBeNull();
+    expect(item.positionDeltaFromBest).toBeNull();
+    expect(item.daysInTier).toBeNull();
+  });
+
+  it('counts the days held in the tier of the latest position', () => {
+    const item = toTrackedKeywordItem(
+      withRankings([
+        { position: 1, date: '2026-07-04' },
+        { position: 1, date: '2026-07-03' },
+        { position: 1, date: '2026-07-02' },
+        { position: 2, date: '2026-07-01' },
+      ]),
+      undefined,
+      null,
+      1,
+    );
+    expect(item.daysInTier).toBe(3);
+    expect(item.bestPosition).toBe(1);
+    expect(item.positionDeltaFromBest).toBe(0);
+  });
 });

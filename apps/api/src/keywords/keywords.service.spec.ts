@@ -551,6 +551,9 @@ describe('KeywordsService.listTracked serp volatility', () => {
         { keywordId: 'kwChurn', date: new Date('2026-07-08'), storeAppId: 'y' },
       ]),
     },
+    keywordRanking: {
+      groupBy: jest.fn().mockResolvedValue([]),
+    },
   });
 
   it('scores a stable keyword 0, a churning keyword above 0 and an unchecked keyword null', async () => {
