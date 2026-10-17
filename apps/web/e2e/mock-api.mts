@@ -119,6 +119,7 @@ import {
   EMPTY_REVIEW_THEMES,
   UPDATE_REVIEW_THEMES,
   UPDATE_THEME_REVIEWS,
+  TWIN_REVIEWS,
 } from "./fixtures.mts";
 import {
   EMPTY_PORTFOLIO_INSIGHTS,
@@ -714,6 +715,14 @@ function withScreenshotText(
 
 const updateReviews = (req: IncomingMessage) =>
   hasCookie(req, "e2e_reviews", "update");
+
+const REVIEW_SETS: Record<string, typeof UPDATE_THEME_REVIEWS> = {
+  update: UPDATE_THEME_REVIEWS,
+  twins: TWIN_REVIEWS,
+};
+
+const reviewSetOf = (req: IncomingMessage) =>
+  REVIEW_SETS[cookieValue(req, "e2e_reviews") ?? ""];
 
 function appRoute(
   pattern: RegExp,
@@ -3744,9 +3753,7 @@ const routes: Route[] = [
       const dataset = DATASETS[id];
       if (!dataset) return json(res, 404, errorEnvelope(404, path));
       const query = new URL(path, "http://localhost").searchParams;
-      const reviews = updateReviews(req)
-        ? UPDATE_THEME_REVIEWS
-        : dataset.reviews;
+      const reviews = reviewSetOf(req) ?? dataset.reviews;
       json(res, 200, listReviews(id, reviews, query));
     },
   },
