@@ -216,6 +216,8 @@ import {
   UPGRADE_PATH,
   parseStoreUrl,
   isStorefront,
+  countMaxLengthChars,
+  STORE_SEARCH_QUERY_MAX_LENGTH,
   UnknownStorefrontError,
   setupSummary,
   chartGenreName,
@@ -2500,6 +2502,17 @@ const routes: Route[] = [
         !q
       ) {
         return json(res, 400, errorEnvelope(400, path));
+      }
+      if (countMaxLengthChars(q) > STORE_SEARCH_QUERY_MAX_LENGTH) {
+        return json(
+          res,
+          400,
+          errorEnvelope(
+            400,
+            path,
+            `q must be shorter than or equal to ${STORE_SEARCH_QUERY_MAX_LENGTH} characters`,
+          ),
+        );
       }
       if (hasCookie(req, "e2e_store_search_spent", "1")) {
         return json(res, 429, storeLookupRefusedEnvelope(path), {

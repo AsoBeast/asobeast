@@ -1,5 +1,7 @@
 import {
+  countMaxLengthChars,
   parseStoreUrl,
+  STORE_SEARCH_QUERY_MAX_LENGTH,
   type ParsedStoreUrl,
   type StoreSearchResult,
 } from "@asobeast/shared";
@@ -42,11 +44,23 @@ export function classifyInput(value: string): StoreInput {
   }
 }
 
+export function nameTooLongText(input: StoreInput): string | null {
+  if (input.kind !== "name") return null;
+  const used = countMaxLengthChars(input.q);
+  return used > STORE_SEARCH_QUERY_MAX_LENGTH
+    ? `Search with up to ${STORE_SEARCH_QUERY_MAX_LENGTH} characters. This name has ${used}.`
+    : null;
+}
+
 export function isSearchable(input: StoreInput): input is {
   kind: "name";
   q: string;
 } {
-  return input.kind === "name" && input.q.length >= STORE_SEARCH_MIN_CHARS;
+  return (
+    input.kind === "name" &&
+    input.q.length >= STORE_SEARCH_MIN_CHARS &&
+    nameTooLongText(input) === null
+  );
 }
 
 export function enterAction(

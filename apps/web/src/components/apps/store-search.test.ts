@@ -1,4 +1,8 @@
-import type { ApiErrorEnvelope, StoreSearchResult } from "@asobeast/shared";
+import {
+  STORE_SEARCH_QUERY_MAX_LENGTH,
+  type ApiErrorEnvelope,
+  type StoreSearchResult,
+} from "@asobeast/shared";
 import { describe, expect, it } from "vitest";
 import { ApiError } from "@/lib/api";
 import {
@@ -6,6 +10,7 @@ import {
   enterAction,
   isSearchable,
   isStoreAddress,
+  nameTooLongText,
   searchErrorText,
 } from "./store-search";
 
@@ -126,5 +131,48 @@ describe("searchErrorText", () => {
     expect(searchErrorText(new Error("offline"))).toBe(
       "Could not search the store.",
     );
+  });
+});
+
+describe("nameTooLongText", () => {
+  const nameOf = (length: number, unit = "a") =>
+    classifyInput(unit.repeat(length));
+
+  it("accepts a name of exactly the limit", () => {
+    expect(nameTooLongText(nameOf(STORE_SEARCH_QUERY_MAX_LENGTH))).toBeNull();
+  });
+
+  it("names the limit and the length of a name one character over", () => {
+    expect(nameTooLongText(nameOf(STORE_SEARCH_QUERY_MAX_LENGTH + 1))).toBe(
+      "Search with up to 80 characters. This name has 81.",
+    );
+  });
+
+  it("measures the way the api does, one per emoji", () => {
+    expect(
+      nameTooLongText(nameOf(STORE_SEARCH_QUERY_MAX_LENGTH, "😀")),
+    ).toBeNull();
+    expect(
+      nameTooLongText(nameOf(STORE_SEARCH_QUERY_MAX_LENGTH + 1, "😀")),
+    ).toContain("This name has 81.");
+  });
+
+  it("measures the trimmed name", () => {
+    const padded = classifyInput(
+      `  ${"a".repeat(STORE_SEARCH_QUERY_MAX_LENGTH)}  `,
+    );
+
+    expect(nameTooLongText(padded)).toBeNull();
+  });
+
+  it("never judges a store address, however long", () => {
+    const address = `https://play.google.com/store/apps/details?id=com.example.app&referrer=${"x".repeat(200)}`;
+
+    expect(nameTooLongText(classifyInput(address))).toBeNull();
+  });
+
+  it("is not searchable once it is over the limit", () => {
+    expect(isSearchable(nameOf(STORE_SEARCH_QUERY_MAX_LENGTH))).toBe(true);
+    expect(isSearchable(nameOf(STORE_SEARCH_QUERY_MAX_LENGTH + 1))).toBe(false);
   });
 });

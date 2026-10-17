@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { STORE_SEARCH_QUERY_MAX_LENGTH } from "@asobeast/shared";
 import { expect, test } from "./session.mts";
 import { APP_1_SUMMARY, IMPORTED_APP, STORE_SEARCH } from "./fixtures.mts";
 import { startedSetup, storedSetup } from "./setup-session.mts";
@@ -507,6 +508,108 @@ test.describe("importing by name", () => {
       dialog.getByText("Type at least 2 characters to search."),
     ).toBeVisible();
     expect(imports).toEqual([]);
+  });
+
+  const TOO_LONG = "a".repeat(STORE_SEARCH_QUERY_MAX_LENGTH + 1);
+  const TOO_LONG_TEXT = `Search with up to ${STORE_SEARCH_QUERY_MAX_LENGTH} characters. This name has ${TOO_LONG.length}.`;
+
+  test("a name over the limit is explained and never searched", async ({
+    page,
+  }) => {
+    const searches = recordSearches(page);
+    const dialog = await openDialog(page);
+    const field = dialog.getByLabel("App name or store URL");
+
+    await field.fill(TOO_LONG);
+
+    await expect(dialog.locator("#import-url-error")).toHaveText(TOO_LONG_TEXT);
+    await expect(field).toHaveAttribute("aria-invalid", "true");
+    await expect(dialog.getByRole("button", { name: "Retry" })).toHaveCount(0);
+    await page.waitForTimeout(700);
+    expect(searches).toEqual([]);
+  });
+
+  test("a name of exactly the limit is searched", async ({ page }) => {
+    const searches = recordSearches(page);
+    const dialog = await openDialog(page);
+    const field = dialog.getByLabel("App name or store URL");
+
+    await field.fill("a".repeat(STORE_SEARCH_QUERY_MAX_LENGTH));
+
+    await expect(dialog.getByText(/^No listing named/)).toBeVisible();
+    await expect(field).toHaveAttribute("aria-invalid", "false");
+    expect(searches.map((url) => url.searchParams.get("q")?.length)).toEqual([
+      STORE_SEARCH_QUERY_MAX_LENGTH,
+    ]);
+  });
+
+  test("shortening a name that was too long drops the message and searches", async ({
+    page,
+  }) => {
+    const dialog = await openDialog(page);
+    const field = dialog.getByLabel("App name or store URL");
+    await field.fill(TOO_LONG);
+    await expect(dialog.locator("#import-url-error")).toBeVisible();
+
+    await field.fill("focus");
+
+    await expect(dialog.locator("#import-url-error")).toHaveCount(0);
+    await expect(field).toHaveAttribute("aria-invalid", "false");
+    await expect(
+      dialog.getByRole("button", { name: /Focus Timer/ }),
+    ).toBeVisible();
+  });
+
+  test("enter on a name over the limit explains and imports nothing", async ({
+    page,
+  }) => {
+    const imports = recordImports(page);
+    const dialog = await openDialog(page);
+    const field = dialog.getByLabel("App name or store URL");
+
+    await field.fill(`${TOO_LONG}a`);
+    await field.press("Enter");
+
+    await expect(dialog.locator("#import-url-error")).toHaveText(
+      `Search with up to ${STORE_SEARCH_QUERY_MAX_LENGTH} characters. This name has ${TOO_LONG.length + 1}.`,
+    );
+    expect(imports).toEqual([]);
+
+    await field.press("Backspace");
+
+    await expect(dialog.locator("#import-url-error")).toHaveText(TOO_LONG_TEXT);
+  });
+
+  test("emoji count once, as the api counts them", async ({ page }) => {
+    const searches = recordSearches(page);
+    const dialog = await openDialog(page);
+    const field = dialog.getByLabel("App name or store URL");
+
+    await field.fill("😀".repeat(STORE_SEARCH_QUERY_MAX_LENGTH));
+    await expect(dialog.getByText(/^No listing named/)).toBeVisible();
+    await field.fill("😀".repeat(STORE_SEARCH_QUERY_MAX_LENGTH + 1));
+
+    await expect(dialog.locator("#import-url-error")).toContainText(
+      "This name has 81.",
+    );
+    expect(searches).toHaveLength(1);
+  });
+
+  test("a long store url is not a name and still imports", async ({ page }) => {
+    const searches = recordSearches(page);
+    const imports = recordImports(page);
+    const dialog = await openDialog(page);
+
+    await dialog
+      .getByLabel("App name or store URL")
+      .fill(
+        `https://apps.apple.com/us/app/focus-timer/id123456789?utm_source=${"x".repeat(120)}`,
+      );
+    await dialog.getByRole("button", { name: "Import", exact: true }).click();
+
+    await expect(page.getByText(`Imported ${IMPORTED_APP.name}`)).toBeVisible();
+    expect(searches).toEqual([]);
+    expect(imports).toHaveLength(1);
   });
 
   test("enter moves to the results when there is a choice", async ({

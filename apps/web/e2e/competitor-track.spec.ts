@@ -241,3 +241,27 @@ test("the discovery table sorts by rating both ways and searches by name", async
   ).toBeVisible();
   await expect(page.getByText("1 of 2 apps")).toBeVisible();
 });
+
+test("a competitor name over the limit is explained and never searched", async ({
+  page,
+}) => {
+  const searches: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().includes("/api/backend/store/search")) {
+      searches.push(request.url());
+    }
+  });
+  await page.goto(`/apps/${APP_1_DE_DETAIL.id}/competitors`);
+  const field = page.getByRole("textbox", {
+    name: "Competitor name or App Store URL",
+  });
+
+  await field.fill("a".repeat(81));
+
+  await expect(
+    page.getByText("Search with up to 80 characters. This name has 81."),
+  ).toBeVisible();
+  await expect(field).toHaveAttribute("aria-invalid", "true");
+  await page.waitForTimeout(700);
+  expect(searches).toEqual([]);
+});

@@ -166,6 +166,7 @@ export function StoreSearchField({
   const listId = useId();
   const hintId = `${id}-hint`;
   const errorId = `${id}-error`;
+  const shownError = error ?? search.problem;
   const listed =
     !search.error && search.results !== undefined && search.results.length > 0;
 
@@ -184,8 +185,8 @@ export function StoreSearchField({
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
           autoFocus={autoFocus}
-          aria-invalid={error !== null}
-          aria-describedby={error ? `${errorId} ${hintId}` : hintId}
+          aria-invalid={shownError !== null}
+          aria-describedby={shownError ? `${errorId} ${hintId}` : hintId}
           aria-controls={listed ? listId : undefined}
         />
         {children}
@@ -193,9 +194,9 @@ export function StoreSearchField({
       <p id={hintId} className="text-xs text-muted-foreground">
         {hint}
       </p>
-      {error ? (
+      {shownError ? (
         <p id={errorId} className="text-body text-destructive">
-          {error}
+          {shownError}
         </p>
       ) : null}
       {note ? (
