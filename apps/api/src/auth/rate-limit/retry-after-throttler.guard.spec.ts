@@ -37,4 +37,16 @@ describe('RetryAfterThrottlerGuard', () => {
       message: 'Too many attempts from this address. Try again in 42 seconds.',
     });
   });
+
+  it('words an hourly block in minutes', async () => {
+    const refusal = guard['throwThrottlingException'](
+      new ExecutionContextHost([]),
+      { ...DETAIL, ttl: 3_600_000, timeToBlockExpire: 2_888 },
+    );
+
+    await expect(refusal).rejects.toMatchObject({
+      retryAfterSeconds: 2_888,
+      message: 'Too many attempts from this address. Try again in 49 minutes.',
+    });
+  });
 });

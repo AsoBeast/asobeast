@@ -23,7 +23,7 @@ export class AppSetupController {
   @ApiOperation({
     summary: 'Update the guided setup of an app',
     description:
-      'Changes the fields given and keeps the rest; an empty body changes nothing. Skipped steps are stored in step order. completed stamps completedAt once and keeps that time when completed again; any other status clears it. Answers 400 for an unknown status or step, a repeated step or market, a market that is not a lowercase two letter code, no market or more than 50, and 404 for a competitor or an unknown app.',
+      "Changes the fields given and keeps the rest; an empty body changes nothing. Skipped steps are stored in step order. completed stamps completedAt once and keeps that time when completed again; any other status clears it. Answers 400 for an unknown status or step, a repeated step or market, a market that is not a lowercase two letter code, a market that is not a storefront of the app's store unless the setup already holds it or it is the home market of the app, no market or more than 50, and 404 for a competitor or an unknown app.",
   })
   update(
     @Param('id') id: string,
