@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { STORE_SEARCH_QUERY_MAX_LENGTH } from "@asobeast/shared";
 import { expect, test } from "./session.mts";
 import { APP_1_SUMMARY, IMPORTED_APP, STORE_SEARCH } from "./fixtures.mts";
 import { startedSetup, storedSetup } from "./setup-session.mts";
@@ -75,6 +76,74 @@ test("the import dialog refuses an apple page that is not a listing", async ({
     page.getByText(`Unrecognized store URL or id: ${developerPage}`),
   ).toBeVisible();
   expect(imports).toEqual([]);
+});
+
+const DEVELOPER_PAGE = "https://apps.apple.com/us/developer/focus/id123456789";
+const FOCUS_TIMER_URL = "https://apps.apple.com/us/app/focus-timer/id123456789";
+
+async function refuseDeveloperPage(page: Page) {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Import app" }).click();
+  const field = page.getByLabel("App name or store URL");
+  await field.fill(DEVELOPER_PAGE);
+  await page.getByRole("button", { name: "Import", exact: true }).click();
+  await expect(page.locator("#import-url-error")).toHaveText(
+    `Unrecognized store URL or id: ${DEVELOPER_PAGE}`,
+  );
+  await expect(field).toHaveAttribute("aria-invalid", "true");
+  return field;
+}
+
+test("the import dialog drops a refusal as soon as the value changes", async ({
+  page,
+}) => {
+  const field = await refuseDeveloperPage(page);
+
+  await field.fill("Duolingo");
+
+  await expect(page.locator("#import-url-error")).toHaveCount(0);
+  await expect(field).toHaveAttribute("aria-invalid", "false");
+  await expect(field).toBeFocused();
+
+  await field.fill(DEVELOPER_PAGE);
+  await page.getByRole("button", { name: "Import", exact: true }).click();
+  await expect(page.locator("#import-url-error")).toBeVisible();
+
+  await field.fill(FOCUS_TIMER_URL);
+
+  await expect(page.locator("#import-url-error")).toHaveCount(0);
+  await expect(field).toHaveAttribute("aria-invalid", "false");
+});
+
+test("the import dialog drops a refusal when the store changes", async ({
+  page,
+}) => {
+  await refuseDeveloperPage(page);
+
+  await page.getByRole("tab", { name: "Google Play" }).click();
+
+  await expect(page.locator("#import-url-error")).toHaveCount(0);
+});
+
+test("the import dialog drops a storefront refusal when the storefront changes", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Import app" }).click();
+  const field = page.getByLabel("App name or store URL");
+  await field.fill(FOCUS_TIMER_URL);
+  await page.getByRole("combobox", { name: "Home storefront" }).click();
+  await page.getByRole("option", { name: "Other…" }).click();
+  await page.getByLabel("Storefront country code").fill("zz");
+  await page.getByRole("button", { name: "Import", exact: true }).click();
+  await expect(page.locator("#import-url-error")).toHaveText(
+    "zz is not an App Store storefront",
+  );
+
+  await page.getByLabel("Storefront country code").fill("us");
+
+  await expect(page.locator("#import-url-error")).toHaveCount(0);
+  await expect(field).toHaveAttribute("aria-invalid", "false");
 });
 
 test.describe("a fast double click", () => {
@@ -184,17 +253,17 @@ test.describe("importing by name", () => {
     return bodies;
   };
 
-  const failTerm = async (page: Page, failing: string) => {
+  const failTerm = async (page: Page, failing: string, status = 502) => {
     const terms: string[] = [];
     await page.route("**/api/backend/store/search*", (route) => {
       const q = new URL(route.request().url()).searchParams.get("q") ?? "";
       terms.push(q);
       return q === failing
         ? route.fulfill({
-            status: 502,
+            status,
             json: {
-              statusCode: 502,
-              error: "Bad Gateway",
+              statusCode: status,
+              error: "Error",
               message: "The store did not answer.",
               path: "/store/search",
               timestamp: new Date().toISOString(),
@@ -355,6 +424,23 @@ test.describe("importing by name", () => {
     await expect.poll(() => terms).toEqual(["focus", "focus"]);
   });
 
+  test("a search the api refuses with 400 says so and offers no Retry", async ({
+    page,
+  }) => {
+    const terms = await failTerm(page, "focus", 400);
+    const dialog = await openDialog(page);
+
+    await dialog
+      .getByLabel("App name or store URL")
+      .pressSequentially("focus", { delay: 20 });
+
+    await expect(dialog.getByRole("alert")).toHaveText(
+      "This name cannot be searched. Change it and try again.",
+    );
+    await expect(dialog.getByRole("button", { name: "Retry" })).toHaveCount(0);
+    expect(terms).toEqual(["focus"]);
+  });
+
   test("a name the store does not know says so", async ({ page }) => {
     const dialog = await openDialog(page);
 
@@ -439,6 +525,108 @@ test.describe("importing by name", () => {
       dialog.getByText("Type at least 2 characters to search."),
     ).toBeVisible();
     expect(imports).toEqual([]);
+  });
+
+  const TOO_LONG = "a".repeat(STORE_SEARCH_QUERY_MAX_LENGTH + 1);
+  const TOO_LONG_TEXT = `Search with up to ${STORE_SEARCH_QUERY_MAX_LENGTH} characters. This name has ${TOO_LONG.length}.`;
+
+  test("a name over the limit is explained and never searched", async ({
+    page,
+  }) => {
+    const searches = recordSearches(page);
+    const dialog = await openDialog(page);
+    const field = dialog.getByLabel("App name or store URL");
+
+    await field.fill(TOO_LONG);
+
+    await expect(dialog.locator("#import-url-error")).toHaveText(TOO_LONG_TEXT);
+    await expect(field).toHaveAttribute("aria-invalid", "true");
+    await expect(dialog.getByRole("button", { name: "Retry" })).toHaveCount(0);
+    await page.waitForTimeout(700);
+    expect(searches).toEqual([]);
+  });
+
+  test("a name of exactly the limit is searched", async ({ page }) => {
+    const searches = recordSearches(page);
+    const dialog = await openDialog(page);
+    const field = dialog.getByLabel("App name or store URL");
+
+    await field.fill("a".repeat(STORE_SEARCH_QUERY_MAX_LENGTH));
+
+    await expect(dialog.getByText(/^No listing named/)).toBeVisible();
+    await expect(field).toHaveAttribute("aria-invalid", "false");
+    expect(searches.map((url) => url.searchParams.get("q")?.length)).toEqual([
+      STORE_SEARCH_QUERY_MAX_LENGTH,
+    ]);
+  });
+
+  test("shortening a name that was too long drops the message and searches", async ({
+    page,
+  }) => {
+    const dialog = await openDialog(page);
+    const field = dialog.getByLabel("App name or store URL");
+    await field.fill(TOO_LONG);
+    await expect(dialog.locator("#import-url-error")).toBeVisible();
+
+    await field.fill("focus");
+
+    await expect(dialog.locator("#import-url-error")).toHaveCount(0);
+    await expect(field).toHaveAttribute("aria-invalid", "false");
+    await expect(
+      dialog.getByRole("button", { name: /Focus Timer/ }),
+    ).toBeVisible();
+  });
+
+  test("enter on a name over the limit explains and imports nothing", async ({
+    page,
+  }) => {
+    const imports = recordImports(page);
+    const dialog = await openDialog(page);
+    const field = dialog.getByLabel("App name or store URL");
+
+    await field.fill(`${TOO_LONG}a`);
+    await field.press("Enter");
+
+    await expect(dialog.locator("#import-url-error")).toHaveText(
+      `Search with up to ${STORE_SEARCH_QUERY_MAX_LENGTH} characters. This name has ${TOO_LONG.length + 1}.`,
+    );
+    expect(imports).toEqual([]);
+
+    await field.press("Backspace");
+
+    await expect(dialog.locator("#import-url-error")).toHaveText(TOO_LONG_TEXT);
+  });
+
+  test("emoji count once, as the api counts them", async ({ page }) => {
+    const searches = recordSearches(page);
+    const dialog = await openDialog(page);
+    const field = dialog.getByLabel("App name or store URL");
+
+    await field.fill("😀".repeat(STORE_SEARCH_QUERY_MAX_LENGTH));
+    await expect(dialog.getByText(/^No listing named/)).toBeVisible();
+    await field.fill("😀".repeat(STORE_SEARCH_QUERY_MAX_LENGTH + 1));
+
+    await expect(dialog.locator("#import-url-error")).toContainText(
+      "This name has 81.",
+    );
+    expect(searches).toHaveLength(1);
+  });
+
+  test("a long store url is not a name and still imports", async ({ page }) => {
+    const searches = recordSearches(page);
+    const imports = recordImports(page);
+    const dialog = await openDialog(page);
+
+    await dialog
+      .getByLabel("App name or store URL")
+      .fill(
+        `https://apps.apple.com/us/app/focus-timer/id123456789?utm_source=${"x".repeat(120)}`,
+      );
+    await dialog.getByRole("button", { name: "Import", exact: true }).click();
+
+    await expect(page.getByText(`Imported ${IMPORTED_APP.name}`)).toBeVisible();
+    expect(searches).toEqual([]);
+    expect(imports).toHaveLength(1);
   });
 
   test("enter moves to the results when there is a choice", async ({

@@ -63,7 +63,7 @@ export class RequestThrottledError extends Error {
     readonly retryAfterSeconds: number,
     reason = 'Too many attempts from this address.',
   ) {
-    super(`${reason} Try again in ${retryAfterSeconds} seconds.`);
+    super(`${reason} Try again in ${describeWait(retryAfterSeconds)}.`);
     this.name = 'RequestThrottledError';
   }
 }

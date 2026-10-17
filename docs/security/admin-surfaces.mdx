@@ -6,7 +6,7 @@ icon: shield
 keywords: ["admin","admin area","queue dashboard","Bull Board","API_DOCS","Swagger","404","platform operator"]
 ---
 
-Five administrative surfaces ship with asobeast: the admin area of the web app at `/admin`, the queue dashboard at `/admin/queues`, the OpenAPI surface at `/docs`, the metrics scrape at `/metrics` and the support tooling at `/admin/support`. All of them answer `404` to anyone who is not the platform operator. Two more operator endpoints answer the same way: `/admin/capacity` and `/admin/proxy-pool`.
+Five administrative surfaces ship with asobeast: the admin area of the web app at `/admin`, the queue dashboard at `/admin/queues`, the OpenAPI surface at `/docs`, the metrics scrape at `/metrics` and the support tooling at `/admin/support`. All of them answer `404` to anyone who is not the platform operator. Two more operator endpoints answer the same way: `/admin/capacity` and `/admin/proxy-pool`. "The same way" is literal: an anonymous caller, a caller with a refused credential, a customer and a read scoped token all get the identical `404` envelope, for every HTTP method, from a gate that runs before any other check, so no `401`, `402`, `403`, `405` or `429` can tell a scanner that the route exists.
 
 The last two matter to a hosted operator rather than a self hoster, and [Observability for a hosted instance](/operations/hosted-observability) describes what they serve.
 
@@ -68,7 +68,7 @@ The admin area reads `platformOperator`, `entitled` and `trialAwaitsConfirmation
 
 The **Admin** entry stays in the sidebar, the command palette and the account menu, so the explanation is always one click away. To open the area again, choose a plan on the upgrade page, or set `plan` on the bootstrap workspace to `indie` or `ultimate` in the database, as described in [Authentication and accounts](/security/authentication#entitlements-and-the-paid-plan-seam).
 
-`GET /admin/capacity` and `GET /admin/proxy-pool` check only that the caller is the operator, so they keep answering `200` for an operator without a plan. The web app closes the whole area in that state so it never half loads.
+The final gate on `/admin/capacity` and `/admin/proxy-pool` checks only that the caller is the operator, so they keep answering `200` to an operator session without a plan, and `402` to an operator token, exactly as before. Anyone who is not the operator gets `404`, plan or no plan. The web app closes the whole area in that state so it never half loads.
 
 An admin request can also be refused while the operator's workspace has a plan, for example on an instance an earlier release left with that workspace suspended. The tab then says that the admin endpoints answer not found unless the workspace has a plan in force and is not suspended, rather than saying a record was deleted.
 
@@ -109,6 +109,8 @@ You never reach either surface on the API port. The web app serves route handler
 Identical paths matter: both surfaces are single page applications that build their asset URLs from the path they are mounted on, so serving `/admin/queues` at any other path breaks its own assets.
 
 The gate itself runs before the application framework's guards, because both surfaces register their own routing outside them. It resolves the session cookie or the `asob_` token itself, and the queue dashboard re asserts the grant afterwards, so a deployment that forgot the wiring fails closed rather than open.
+
+The gate covers the whole `/admin` prefix on the API, not a list of routes. `/admin/queues` and `/admin/support` are checked first with their own rules; every other path below `/admin`, `/admin/capacity` and `/admin/proxy-pool` among them, is checked by a final gate that asks only whether the caller is the operator, so an operator endpoint added later is hidden from the moment it is mounted. The web app's `/docs`, `/docs-json`, `/docs-yaml` and `/metrics` handlers answer any method other than `GET` with the same `404` themselves, and so does `OPTIONS` on `/admin/queues`, so the web origin never answers `405` or an `Allow` header that confirms a route.
 
 A refused credential costs the same here as anywhere else in the API: it is counted against the per address budget described in [Rate limits](/api-reference/rate-limits), under the same rule about which credentials count, and an accepted credential that does not belong to the operator is never counted. Once an address has spent that budget these surfaces still answer `404` rather than `429`. Every other route answers that address with `429`, so a caller who spends the budget here can tell that a gate counted the refusals. That reveals nothing about the queue dashboard, the metrics scrape or the support tooling, which every instance mounts, and for the OpenAPI routes only whether `API_DOCS` is `owner` rather than `off`.
 

@@ -7,6 +7,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
 import cookieParser from 'cookie-parser';
 import { ApiErrorEnvelope, PASSWORD_RULE } from '@asobeast/shared';
+import { describeWait } from '../src/auth/rate-limit/describe-wait';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { MailerService } from '../src/alerts/mailer.service';
@@ -333,6 +334,24 @@ describe('Account recovery for a customer who forgot their password', () => {
 
   it('refuses a token it never issued', async () => {
     await reset('a'.repeat(48)).expect(404);
+  });
+
+  it('words the hourly refusal in minutes and hours, not in seconds', async () => {
+    let refused: request.Response | undefined;
+    for (let attempt = 0; attempt < 12 && !refused; attempt += 1) {
+      const response = await reset('0'.repeat(32));
+      if (response.status === 429) refused = response;
+    }
+
+    const envelope = refused?.body as ApiErrorEnvelope;
+    expect(envelope.retryAfterSeconds).toBeGreaterThan(60);
+    expect(envelope.message).toBe(
+      `Too many attempts from this address. Try again in ${describeWait(envelope.retryAfterSeconds ?? 0)}.`,
+    );
+    expect(envelope.message).not.toContain('seconds');
+    expect(refused?.headers['retry-after']).toBe(
+      String(envelope.retryAfterSeconds),
+    );
   });
 
   it('ends every session the account had open', async () => {

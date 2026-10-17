@@ -12,7 +12,12 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import type { Response } from 'express';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { ChartFollowItem, ChartGenre, ChartPage } from '@asobeast/shared';
 import { SpendsStoreCapacity } from '../auth/decorators/spends-store-capacity.decorator';
 import { OnDemandLimiter } from '../auth/on-demand.limiter';
@@ -71,6 +76,14 @@ export class ChartsController {
   }
 
   @Post('follows')
+  @ApiCreatedResponse({
+    type: Object,
+    description: 'The chart is now followed; the new follow',
+  })
+  @ApiOkResponse({
+    type: Object,
+    description: 'The workspace already follows the chart; the existing follow',
+  })
   @ApiOperation({
     summary: 'Follow a top chart',
     description:

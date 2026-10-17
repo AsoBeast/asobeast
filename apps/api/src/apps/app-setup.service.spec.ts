@@ -24,12 +24,22 @@ type UpsertArgs = {
   update: Partial<AppSetup>;
 };
 
-function harness(setup: AppSetup | null = null, found = true) {
-  const findFirst = jest
-    .fn()
-    .mockResolvedValue(
-      found ? { id: 'app_1', country: 'us', appSetup: setup } : null,
-    );
+function harness(
+  setup: AppSetup | null = null,
+  found = true,
+  app: { store?: string; country?: string } = {},
+) {
+  const findFirst = jest.fn().mockResolvedValue(
+    found
+      ? {
+          id: 'app_1',
+          store: 'APP_STORE',
+          country: 'us',
+          ...app,
+          appSetup: setup,
+        }
+      : null,
+  );
   const upsert = jest
     .fn<Promise<AppSetup>, [UpsertArgs]>()
     .mockImplementation(({ update }) =>
@@ -148,6 +158,67 @@ describe('AppSetupService', () => {
       workspaceId: 'ws_1',
       selectedMarkets: ['us'],
       skipped: ['keywords'],
+    });
+  });
+
+  describe('selected markets', () => {
+    it('refuses a market that is not a storefront of the app store', async () => {
+      const { service, upsert } = harness(row());
+
+      await expect(
+        service.update('app_1', {
+          status: 'completed',
+          selectedMarkets: ['us', 'zz'],
+        }),
+      ).rejects.toThrow('zz is not an App Store storefront');
+      expect(upsert).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['APP_STORE', 'ad', 'ad is not an App Store storefront'],
+      ['GOOGLE_PLAY', 'pw', 'pw is not a Google Play location'],
+    ])(
+      'judges a market against the store of a %s app',
+      async (store, market, message) => {
+        const { service, upsert } = harness(row(), true, { store });
+
+        await expect(
+          service.update('app_1', { selectedMarkets: ['us', market] }),
+        ).rejects.toThrow(message);
+        expect(upsert).not.toHaveBeenCalled();
+      },
+    );
+
+    it('stores markets that are storefronts of the app store', async () => {
+      const { service, upsertArgs } = harness(row(), true, {
+        store: 'GOOGLE_PLAY',
+      });
+
+      await service.update('app_1', { selectedMarkets: ['ad', 'us'] });
+
+      expect(upsertArgs().update).toMatchObject({
+        selectedMarkets: ['ad', 'us'],
+      });
+    });
+
+    it('keeps a market the setup already holds, so a client can send its list back', async () => {
+      const { service, upsertArgs } = harness(
+        row({ selectedMarkets: ['us', 'zz'] }),
+      );
+
+      await service.update('app_1', { selectedMarkets: ['de', 'us', 'zz'] });
+
+      expect(upsertArgs().update).toMatchObject({
+        selectedMarkets: ['de', 'us', 'zz'],
+      });
+    });
+
+    it('keeps the home market of the app whatever it is', async () => {
+      const { service, upsertArgs } = harness(null, true, { country: 'zz' });
+
+      await service.update('app_1', { selectedMarkets: ['zz'] });
+
+      expect(upsertArgs().create).toMatchObject({ selectedMarkets: ['zz'] });
     });
   });
 

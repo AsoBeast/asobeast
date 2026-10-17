@@ -9,6 +9,7 @@ import {
   classifyInput,
   enterAction,
   isSearchable,
+  nameTooLongText,
   STORE_SEARCH_DEBOUNCE_MS,
   STORE_SEARCH_MIN_CHARS,
   type StoreInput,
@@ -16,6 +17,7 @@ import {
 
 export interface StoreSearch {
   input: StoreInput;
+  problem: string | null;
   q: string;
   results: StoreSearchResult[] | undefined;
   pending: boolean;
@@ -34,6 +36,7 @@ export function useStoreSearch(
   value: string,
 ): StoreSearch {
   const input = classifyInput(value);
+  const problem = nameTooLongText(input);
   const q =
     isSearchable(input) && marketError(store, country) === null ? input.q : "";
   const [term, setTerm] = useState(q);
@@ -60,6 +63,7 @@ export function useStoreSearch(
 
   function enterName(pick: (result: StoreSearchResult) => void) {
     if (input.kind !== "name") return null;
+    if (problem) return problem;
     if (!isSearchable(input)) return SHORT_NAME;
     const enter = enterAction(results, settled);
     if (enter.kind === "pick") pick(enter.result);
@@ -70,6 +74,7 @@ export function useStoreSearch(
 
   return {
     input,
+    problem,
     q,
     results,
     pending: q !== "" && !settled && !(current && query.isError),

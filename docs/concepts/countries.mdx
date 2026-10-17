@@ -133,9 +133,11 @@ A home storefront and every keyword market must be a place where the app's store
 
 The two lists differ, so the check is made per store. `pw` is an App Store storefront that Google Play does not list, and 51 codes such as `ad`, `bd` and `li` are Google Play locations without an App Store storefront. Kosovo is `xk` in both stores.
 
-The refusal names the store, for example `zz is not an App Store storefront` or `pw is not a Google Play location`. It applies to importing an app, adding keywords, reactivating a paused keyword, deep search, keyword suggestions and the market availability check. A store URL whose country segment or `gl` parameter names no storefront is refused the same way.
+The refusal names the store, for example `zz is not an App Store storefront` or `pw is not a Google Play location`. It applies to importing an app, adding keywords, reactivating a paused keyword, deep search, keyword suggestions, the market availability check and saving the selected markets of the guided setup. A store URL whose country segment or `gl` parameter names no storefront is refused the same way.
 
 An upgrade pauses any keyword that was already tracked in a code that is not a storefront. Its history stays, and it stops producing failed jobs.
+
+The selected markets of the guided setup are checked against the store of the app when you save them (`PATCH /apps/{id}/setup` answers `400` for a code that is not a storefront). A code the setup already holds, and the home storefront of the app, are kept as they are, so saving a list you read back never fails; remove a code you do not want from the setup.
 
 ## Which localizations does a storefront read?
 

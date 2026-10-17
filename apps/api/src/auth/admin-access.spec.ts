@@ -3,8 +3,10 @@ import type { Request, RequestHandler, Response } from 'express';
 import type { ApiTokenScope } from '@asobeast/shared';
 import { DEFAULT_WORKSPACE_ID } from '../common/tenancy/default-workspace';
 import {
+  ADMIN_AREA_SURFACE,
   ADMIN_QUEUES_SURFACE,
   METRICS_SURFACE,
+  SUPPORT_SURFACE,
   configureAdminAccess,
   requireAdminAccess,
 } from './admin-access';
@@ -24,6 +26,27 @@ function fakeResponse() {
 }
 
 describe('requireAdminAccess', () => {
+  it('answers without the query string of the request', () => {
+    const req = {
+      method: 'GET',
+      baseUrl: '/docs-json',
+      path: '/',
+      originalUrl: '/docs-json?token=asob_0123456789abcdef',
+      headers: {},
+    };
+    const res = fakeResponse();
+
+    requireAdminAccess(
+      req as unknown as Request,
+      res as unknown as Response,
+      jest.fn(),
+    );
+
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ path: '/docs-json' }),
+    );
+  });
+
   it('denies a request the gate never granted', () => {
     const req = {
       method: 'GET',
@@ -68,10 +91,11 @@ function operatorToken(scope: ApiTokenScope): CredentialResolver['resolve'] {
 function gateFor(
   surface: Parameters<typeof configureAdminAccess>[1][number],
   resolve: CredentialResolver['resolve'],
+  entitled = true,
 ): RequestHandler {
   const handlers: RequestHandler[] = [];
   const providers = new Map<unknown, unknown>([
-    [AuthService, { entitled: () => true }],
+    [AuthService, { entitled: () => entitled }],
     [CredentialResolver, { resolve }],
   ]);
   const app = {
@@ -81,6 +105,16 @@ function gateFor(
 
   configureAdminAccess(app, [surface]);
   return handlers[0];
+}
+
+function requestAt(path: string, method: string) {
+  return {
+    method,
+    baseUrl: path,
+    path: '/',
+    originalUrl: path,
+    headers: { authorization: 'Bearer asob_x' },
+  } as unknown as Request;
 }
 
 function requestFor(method: string) {
@@ -169,5 +203,88 @@ describe('admin surface rejected credentials', () => {
 
     expect(next).not.toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(404);
+  });
+});
+
+describe('admin area gate', () => {
+  const anonymous: CredentialResolver['resolve'] = () => Promise.resolve(null);
+
+  it.each(['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'])(
+    'answers an anonymous %s with not found',
+    async (method) => {
+      const res = fakeResponse();
+      const next = jest.fn();
+
+      gateFor(ADMIN_AREA_SURFACE, anonymous)(
+        requestAt('/admin/capacity', method),
+        res as unknown as Response,
+        next,
+      );
+      await settle();
+
+      expect(next).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(404);
+    },
+  );
+
+  it('lets an operator without a plan into the area but not into the queue dashboard', async () => {
+    const resolve = operatorToken('read');
+    const area = fakeResponse();
+    const areaNext = jest.fn();
+    const queues = fakeResponse();
+    const queuesNext = jest.fn();
+
+    gateFor(ADMIN_AREA_SURFACE, resolve, false)(
+      requestAt('/admin/capacity', 'GET'),
+      area as unknown as Response,
+      areaNext,
+    );
+    gateFor(ADMIN_QUEUES_SURFACE, resolve, false)(
+      requestAt('/admin/queues', 'GET'),
+      queues as unknown as Response,
+      queuesNext,
+    );
+    await settle();
+
+    expect(areaNext).toHaveBeenCalled();
+    expect(queuesNext).not.toHaveBeenCalled();
+    expect(queues.status).toHaveBeenCalledWith(404);
+  });
+
+  it('denies a read token a method that changes state', async () => {
+    const res = fakeResponse();
+    const next = jest.fn();
+
+    gateFor(ADMIN_AREA_SURFACE, operatorToken('read'))(
+      requestAt('/admin/capacity', 'POST'),
+      res as unknown as Response,
+      next,
+    );
+    await settle();
+
+    expect(next).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(404);
+  });
+
+  it('resolves the credential once for a request an earlier surface granted', async () => {
+    const resolve = jest.fn(operatorToken('write'));
+    const req = requestAt('/admin/support/workspaces', 'GET');
+    const next = jest.fn();
+
+    gateFor(SUPPORT_SURFACE, resolve)(
+      req,
+      fakeResponse() as unknown as Response,
+      next,
+    );
+    await settle();
+    gateFor(ADMIN_AREA_SURFACE, resolve)(
+      req,
+      fakeResponse() as unknown as Response,
+      next,
+    );
+    await settle();
+
+    expect(resolve).toHaveBeenCalledTimes(1);
+    expect(next).toHaveBeenCalledTimes(2);
   });
 });
