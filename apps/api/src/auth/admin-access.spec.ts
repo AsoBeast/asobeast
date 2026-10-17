@@ -24,6 +24,27 @@ function fakeResponse() {
 }
 
 describe('requireAdminAccess', () => {
+  it('answers without the query string of the request', () => {
+    const req = {
+      method: 'GET',
+      baseUrl: '/docs-json',
+      path: '/',
+      originalUrl: '/docs-json?token=asob_0123456789abcdef',
+      headers: {},
+    };
+    const res = fakeResponse();
+
+    requireAdminAccess(
+      req as unknown as Request,
+      res as unknown as Response,
+      jest.fn(),
+    );
+
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ path: '/docs-json' }),
+    );
+  });
+
   it('denies a request the gate never granted', () => {
     const req = {
       method: 'GET',

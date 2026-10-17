@@ -24,7 +24,10 @@ import { AllExceptionsFilter } from './all-exceptions.filter';
 
 const FUTURE_STORE = 'AMAZON' as Store;
 
-function capture(exception: unknown): {
+function capture(
+  exception: unknown,
+  request: Record<string, string> = { method: 'POST', url: '/apps' },
+): {
   status: number;
   envelope: ApiErrorEnvelope;
   headers: Record<string, string>;
@@ -36,7 +39,7 @@ function capture(exception: unknown): {
   const response = { status, setHeader };
   const host = {
     switchToHttp: () => ({
-      getRequest: () => ({ method: 'POST', url: '/apps' }),
+      getRequest: () => request,
       getResponse: () => response,
     }),
   } as unknown as ArgumentsHost;
@@ -69,6 +72,44 @@ function bodyParserError(
 }
 
 describe('AllExceptionsFilter', () => {
+  it('reports the request path without its query string', () => {
+    const { envelope } = capture(
+      new UnauthorizedException('Not authenticated'),
+      {
+        method: 'POST',
+        url: '/mcp?token=asob_0123456789abcdef',
+        originalUrl: '/mcp?token=asob_0123456789abcdef',
+      },
+    );
+
+    expect(envelope.path).toBe('/mcp');
+    expect(JSON.stringify(envelope)).not.toContain('asob_');
+  });
+
+  it('does not echo the query string of an unknown route in the message', () => {
+    const url = '/no-such-route?api_key=secret-value';
+    const { envelope } = capture(new NotFoundException(`Cannot GET ${url}`), {
+      method: 'GET',
+      url,
+      originalUrl: url,
+    });
+
+    expect(envelope.message).toBe('Cannot GET /no-such-route');
+    expect(envelope.path).toBe('/no-such-route');
+    expect(JSON.stringify(envelope)).not.toContain('secret-value');
+  });
+
+  it('keeps a path that has no query string exactly as it was', () => {
+    const { envelope } = capture(new NotFoundException('Resource not found'), {
+      method: 'GET',
+      url: '/apps/cl123/keywords',
+      originalUrl: '/apps/cl123/keywords',
+    });
+
+    expect(envelope.path).toBe('/apps/cl123/keywords');
+    expect(envelope.message).toBe('Resource not found');
+  });
+
   afterEach(() => jest.restoreAllMocks());
 
   it('answers a rate refusal with the headers of the window that closed', () => {

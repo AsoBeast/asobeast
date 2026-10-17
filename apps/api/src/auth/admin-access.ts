@@ -6,6 +6,7 @@ import { isPlatformOperator } from './platform-operator';
 import { READ_METHODS } from './read-access';
 import { AuthService } from './auth.service';
 import { CredentialResolver } from './credential-resolver';
+import { pathWithoutQuery } from '../common/request-path';
 
 export const ADMIN_QUEUES_ROUTE = '/admin/queues';
 export const METRICS_ROUTE = '/metrics';
@@ -55,7 +56,7 @@ function deny(req: Request, res: Response): void {
     statusCode: HttpStatus.NOT_FOUND,
     error: 'Not Found',
     message: `Cannot ${req.method} ${req.baseUrl}${req.path}`,
-    path: req.originalUrl,
+    path: pathWithoutQuery(req.originalUrl),
     timestamp: new Date().toISOString(),
   };
   res.status(envelope.statusCode).json(envelope);
