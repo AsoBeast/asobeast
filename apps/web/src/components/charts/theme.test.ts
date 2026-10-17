@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { CHART_SERIES_COUNT, seriesColor, seriesDash } from "./theme";
+import {
+  CHART_SERIES_COUNT,
+  RANK_AXIS_PROPS,
+  seriesColor,
+  seriesDash,
+} from "./theme";
 
 describe("seriesColor", () => {
   it("gives every series slot its own token", () => {
@@ -30,5 +35,11 @@ describe("seriesDash", () => {
 
   it("wraps past the last slot", () => {
     expect(seriesDash(CHART_SERIES_COUNT)).toBe(seriesDash(0));
+  });
+});
+
+describe("RANK_AXIS_PROPS", () => {
+  it("puts position 1 on top and spreads the top ranks", () => {
+    expect(RANK_AXIS_PROPS).toMatchObject({ reversed: true, scale: "sqrt" });
   });
 });

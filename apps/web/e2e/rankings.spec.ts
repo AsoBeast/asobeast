@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import type { Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
 import { hoverForTooltip } from "./hover.mts";
 
@@ -115,4 +116,59 @@ test("ranking exports preserve historical captured-depth markers", async ({
   const csv = readFileSync(path, "utf8");
   expect(csv).toContain(">100");
   expect(csv).toContain(">200");
+});
+
+async function bandLabelBoxes(page: Page) {
+  return page.evaluate(() =>
+    [...document.querySelectorAll("svg text")]
+      .filter((node) => /^Top \d+$/.test(node.textContent?.trim() ?? ""))
+      .map((node) => {
+        const box = node.getBoundingClientRect();
+        return {
+          label: node.textContent?.trim() ?? "",
+          top: box.top,
+          bottom: box.bottom,
+          left: box.left,
+          right: box.right,
+        };
+      }),
+  );
+}
+
+for (const width of [320, 375, 768, 1440] as const) {
+  test(`the rank band labels do not overlap at ${width} px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/apps/app-1/rankings");
+    await expect(
+      page.getByRole("region", { name: "Keyword rank positions" }),
+    ).toBeVisible();
+    await expect(page.getByText(/^Top 10$/).first()).toBeVisible();
+
+    const boxes = await bandLabelBoxes(page);
+
+    for (const [index, box] of boxes.entries()) {
+      const next = boxes[index + 1];
+      if (next === undefined) continue;
+      expect(next.top, `${box.label} and ${next.label}`).toBeGreaterThanOrEqual(
+        box.bottom,
+      );
+    }
+  });
+}
+
+test("every rank band is named at the default chart size", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/apps/app-1/rankings");
+  await expect(
+    page.getByRole("region", { name: "Keyword rank positions" }),
+  ).toBeVisible();
+  await expect(page.getByText(/^Top 25$/).first()).toBeVisible();
+
+  expect((await bandLabelBoxes(page)).map((box) => box.label)).toEqual([
+    "Top 3",
+    "Top 10",
+    "Top 25",
+  ]);
 });
