@@ -23,14 +23,17 @@ export function FilterChips({
       className="flex flex-wrap items-center gap-2"
     >
       {chips.map((chip) => (
-        <li key={chip.key}>
-          <Badge variant="secondary" className="h-6 gap-1 pr-0.5">
+        <li key={chip.key} className="max-w-full min-w-0">
+          <Badge
+            variant="secondary"
+            className="h-auto min-h-6 max-w-full gap-1 py-px pr-0.5 text-left whitespace-normal wrap-anywhere"
+          >
             {chip.label}
             <button
               type="button"
               aria-label={`Remove ${chip.label}`}
               onClick={chip.onRemove}
-              className="inline-flex size-5 items-center justify-center rounded-full opacity-70 outline-none hover:opacity-100 focus-visible:ring-2 focus-visible:ring-ring"
+              className="inline-flex size-5 shrink-0 items-center justify-center rounded-full opacity-70 outline-none hover:opacity-100 focus-visible:ring-2 focus-visible:ring-ring"
             >
               <X className="size-3" aria-hidden />
             </button>

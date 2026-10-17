@@ -124,6 +124,33 @@ describe('secretLiterals', () => {
 });
 
 describe('loggerParams', () => {
+  it('logs a request without an api token held by any query parameter', async () => {
+    const token = 'asob_0123456789abcdef0123456789abcdef0123456789abcdef';
+    const workspace = new WorkspaceContext();
+    const sink = collect();
+    const { pinoHttp: options } = loggerParams(configOf(), workspace);
+    const logging = pinoHttp({
+      ...(options as object),
+      logger: pino(pinoOptions(configOf(), workspace), sink.stream),
+    });
+    const server = createServer((req, res) => {
+      logging(req, res);
+      res.statusCode = 401;
+      res.end();
+    });
+    await new Promise<void>((resolve) => server.listen(0, resolve));
+    const { port } = server.address() as AddressInfo;
+
+    await fetch(`http://127.0.0.1:${port}/mcp?key=${token}`, {
+      method: 'POST',
+    });
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+
+    const logged = JSON.stringify(sink.lines);
+    expect(logged).toContain('/mcp');
+    expect(logged).not.toContain(token);
+  });
+
   it('logs a request without the token in its address or query', async () => {
     const token = 'hUvkXqhz7DN47i7KZ5KzkF-cXu_Sh49XWB2Dyapx-r0';
     const workspace = new WorkspaceContext();
