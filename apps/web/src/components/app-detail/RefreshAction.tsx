@@ -48,7 +48,6 @@ export function RefreshAction({ appId }: { appId: string }) {
     <>
       <Button
         variant="outline"
-        className="aria-disabled:opacity-60"
         disabled={busy}
         aria-disabled={refreshable ? undefined : true}
         aria-describedby={refreshable ? undefined : reasonId}

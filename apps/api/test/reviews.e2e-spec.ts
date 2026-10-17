@@ -808,6 +808,36 @@ describe('ReviewsController (e2e)', () => {
     expect((await themesOf({ sort: 'lowest' })).themes).toEqual(all.themes);
   });
 
+  it('offers no spanish function word from short reviews the language guess cannot place', async () => {
+    const seeded = await seedApp();
+    await prisma.review.createMany({
+      data: [
+        ...Array.from({ length: 5 }, (_, index) => ({
+          appId: seeded.id,
+          reviewId: `es-${index}`,
+          score: 1,
+          text: 'La aplicación se cierra sola. Que mal servicio.',
+        })),
+        ...Array.from({ length: 12 }, (_, index) => ({
+          appId: seeded.id,
+          reviewId: `dark-${index}`,
+          score: 5,
+          text: 'Dark mode',
+        })),
+      ],
+    });
+
+    const { themes } = (
+      await api.get(`/apps/${seeded.id}/reviews/themes`).expect(200)
+    ).body as ReviewThemes;
+    const phrases = themes.map((theme) => theme.phrase);
+
+    expect(phrases).toContain('mal servicio');
+    for (const phrase of phrases) {
+      expect(phrase).not.toMatch(/^(la|que|se|muy|como) |( que| se| la)$/);
+    }
+  });
+
   it('counts the themes of the reviews in a reply state and judges them against the whole period', async () => {
     const seeded = await seedApp();
     await prisma.review.createMany({

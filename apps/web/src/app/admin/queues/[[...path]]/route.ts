@@ -16,3 +16,4 @@ export {
   forward as PATCH,
   forward as DELETE,
 };
+export { OPTIONS } from "@/lib/api/refused-methods";

@@ -141,6 +141,9 @@ const attemptSignal = (deadline?: AbortSignal): AbortSignal => {
   return deadline ? AbortSignal.any([deadline, timeout]) : timeout;
 };
 
+const requestFailed = (status: number): Error =>
+  new Error(`Request failed with status ${status}`);
+
 async function fetchText(
   url: string,
   userAgent: string,
@@ -151,7 +154,7 @@ async function fetchText(
     signal: attemptSignal(signal),
   });
   if (!response.ok) {
-    throw new Error(`Request failed with status ${response.status}`);
+    throw requestFailed(response.status);
   }
   return response.text();
 }
@@ -180,14 +183,43 @@ async function scrape<O extends Abortable, T>(
       requestOptions: { signal: AbortSignal; fetch: typeof fetch };
     },
   ) => Promise<T>,
+  fetchImpl: typeof fetch = pastEdgeCache,
 ): Promise<T> {
   const attempt = attemptSignal(signal);
   const result = await call({
     ...options,
-    requestOptions: { signal: attempt, fetch: pastEdgeCache },
+    requestOptions: { signal: attempt, fetch: fetchImpl },
   });
   attempt.throwIfAborted();
   return result;
+}
+
+function watchingFailures(inner: typeof fetch): {
+  fetch: typeof fetch;
+  failure: () => Error | null;
+} {
+  let failure: Error | null = null;
+  const watched: typeof fetch = async (input, init) => {
+    try {
+      const response = await inner(input, init);
+      if (!response.ok) failure ??= requestFailed(response.status);
+      return response;
+    } catch (error) {
+      failure ??= error instanceof Error ? error : new Error(String(error));
+      throw error;
+    }
+  };
+  return { fetch: watched, failure: () => failure };
+}
+
+async function similarApps(
+  options: Parameters<AppStoreLib['similar']>[0],
+): Promise<AppStoreSearchResult[]> {
+  const watch = watchingFailures(pastEdgeCache);
+  const found = await scrape(options, appStore.similar, watch.fetch);
+  const failure = watch.failure();
+  if (failure) throw failure;
+  return found;
 }
 
 export const appStoreLib: AppStoreLib = {
@@ -197,7 +229,7 @@ export const appStoreLib: AppStoreLib = {
   search: (options) =>
     scrape(options, appStore.search) as Promise<AppStoreSearchResult[]>,
   suggest: (options) => scrape(options, appStore.suggest),
-  similar: (options) => scrape(options, appStore.similar),
+  similar: similarApps,
   list: (options) =>
     scrape(options, (listOptions) =>
       appStore.list(listOptions as Parameters<typeof appStore.list>[0]),

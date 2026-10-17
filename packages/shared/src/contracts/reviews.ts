@@ -115,6 +115,8 @@ export interface ReviewThemes {
   negativeScoreMax: number;
 }
 
+export const REVIEW_THEMES_BASELINE = 500;
+
 const editedAfter = (
   reviewedAt: string | null | undefined,
   repliedAt: string,
