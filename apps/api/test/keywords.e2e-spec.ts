@@ -1786,6 +1786,9 @@ describe('KeywordsController (e2e)', () => {
       previousPosition: null,
       positionDelta1d: null,
       positionDelta7d: null,
+      bestPosition: null,
+      positionDeltaFromBest: null,
+      daysInTier: null,
       traffic: 5,
       difficulty: 4,
       volume: 50,
@@ -1800,6 +1803,69 @@ describe('KeywordsController (e2e)', () => {
         confidence: 'HIGH',
       },
       serpVolatility7d: null,
+    });
+  });
+
+  it('reports the best position, the gap to it and the days held in the tier', async () => {
+    const id = await importApp();
+    const { workspaceId } = await prisma.app.findUniqueOrThrow({
+      where: { id },
+      select: { workspaceId: true },
+    });
+    const { keywordId } = await prisma.trackedKeyword.findFirstOrThrow({
+      where: { appId: id, active: true },
+    });
+    const day = (offset: number) => {
+      const date = new Date();
+      date.setUTCHours(0, 0, 0, 0);
+      date.setUTCDate(date.getUTCDate() - offset);
+      return date;
+    };
+    await prisma.keywordRanking.createMany({
+      data: [
+        {
+          appId: id,
+          workspaceId,
+          keywordId,
+          date: day(3),
+          position: 5,
+          depth: 200,
+        },
+        {
+          appId: id,
+          workspaceId,
+          keywordId,
+          date: day(2),
+          position: 2,
+          depth: 200,
+        },
+        {
+          appId: id,
+          workspaceId,
+          keywordId,
+          date: day(1),
+          position: 1,
+          depth: 200,
+        },
+        {
+          appId: id,
+          workspaceId,
+          keywordId,
+          date: day(0),
+          position: 1,
+          depth: 200,
+        },
+      ],
+    });
+
+    const items = (await api.get(`/apps/${id}/keywords`).expect(200))
+      .body as TrackedKeywordItem[];
+    const item = items.find((entry) => entry.keywordId === keywordId);
+
+    expect(item).toMatchObject({
+      bestPosition: 1,
+      positionDeltaFromBest: 0,
+      daysInTier: 2,
     });
   });
   describe('tags and notes', () => {

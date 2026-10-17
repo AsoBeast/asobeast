@@ -89,6 +89,9 @@ function buildPrisma() {
       findFirst: () => Promise.resolve(null),
       findMany: () => Promise.resolve([]),
     },
+    keywordRanking: {
+      groupBy: () => Promise.resolve([]),
+    },
     keywordField: {
       findMany: () =>
         Promise.resolve(

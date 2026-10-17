@@ -9,6 +9,7 @@ import {
 } from '@asobeast/shared';
 import { appOpportunity } from '../scoring/keyword-opportunity';
 import { readScoreSignals } from '../scoring/score-signals';
+import { daysInTier } from '../rankings/rank-hold';
 import { KeywordFieldIndex, reportedSource } from './keyword-field-index';
 
 const DELTA_WINDOW_DAYS = 7;
@@ -118,15 +119,20 @@ type PositionFacts = Pick<
   | 'previousPosition'
   | 'positionDelta1d'
   | 'positionDelta7d'
+  | 'bestPosition'
+  | 'positionDeltaFromBest'
+  | 'daysInTier'
 >;
 
 function positionFacts(
   rankings: TrackedKeywordRow['keyword']['rankings'],
+  bestPosition: number | null,
 ): PositionFacts {
   const latest = rankings[0] ?? null;
   const latestPosition = latest?.position ?? null;
   const previousPosition = previousDayPosition(rankings);
   return {
+    bestPosition,
     latestPosition,
     latestDepth: latest?.depth ?? null,
     previousPosition,
@@ -135,6 +141,11 @@ function positionFacts(
         ? latestPosition - previousPosition
         : null,
     positionDelta7d: positionDelta7d(rankings),
+    positionDeltaFromBest:
+      latestPosition !== null && bestPosition !== null
+        ? latestPosition - bestPosition
+        : null,
+    daysInTier: daysInTier(rankings),
   };
 }
 
@@ -150,9 +161,10 @@ export function toTrackedKeywordItem(
   row: TrackedKeywordRow,
   app: AppFacts = NO_APP_FACTS,
   serpVolatility7d: number | null = null,
+  bestPosition: number | null = null,
 ): TrackedKeywordItem {
   const metric = row.keyword.metrics[0] ?? null;
-  const positions = positionFacts(row.keyword.rankings);
+  const positions = positionFacts(row.keyword.rankings, bestPosition);
   const { latestPosition, latestDepth } = positions;
   const traffic = metric?.traffic ?? null;
   const difficulty = metric?.difficulty ?? null;

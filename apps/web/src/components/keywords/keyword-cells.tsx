@@ -27,6 +27,7 @@ import { formatDateTime } from "@/lib/format";
 import { isChecking } from "@/lib/keyword-checks";
 import { tagsLabel, visibleTags } from "@/lib/keyword-tags";
 import { grade, gradeLabel, type GradeMetric } from "@/lib/grade";
+import { positionHoldLines } from "./position-hold";
 import { cn } from "@/lib/utils";
 
 const OUTDATED_SCORE_DETAIL =
@@ -280,7 +281,7 @@ export function PositionCell({ keyword }: { keyword: TrackedKeywordItem }) {
       </Tooltip>
     );
   }
-  return (
+  const position = (
     <span className="numeric font-mono inline-flex items-center gap-1.5">
       {keyword.latestPosition === null ? (
         <span className="text-muted-foreground">{label}</span>
@@ -293,6 +294,16 @@ export function PositionCell({ keyword }: { keyword: TrackedKeywordItem }) {
       )}
       <PositionDeltaChip value={keyword.positionDelta1d} />
     </span>
+  );
+  const hold = positionHoldLines(keyword);
+  if (hold.length === 0) {
+    return position;
+  }
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{position}</TooltipTrigger>
+      <TooltipContent>{hold.join(" · ")}</TooltipContent>
+    </Tooltip>
   );
 }
 

@@ -21,6 +21,7 @@ import {
 } from './keyword-gaps';
 import { sortTracked } from './keyword-sort';
 import { serpVolatilities } from './keyword-volatility';
+import { bestPositions } from './keyword-best-position';
 import { toTrackedKeywordItem } from './keywords.mapper';
 import { listingFacts } from './listing-facts';
 import { seedCandidates } from './listing-seed';
@@ -48,12 +49,17 @@ export class KeywordsService {
       where: { appId, ...(country ? { keyword: { is: { country } } } : {}) },
       ...trackedArgs(appId),
     });
-    const [facts, volatility] = await Promise.all([
+    const [facts, volatility, best] = await Promise.all([
       listingFacts(this.prisma, app, [
         ...new Set(rows.map((row) => row.keyword.country)),
       ]),
       serpVolatilities(
         this.prisma,
+        rows.map((row) => row.keywordId),
+      ),
+      bestPositions(
+        this.prisma,
+        appId,
         rows.map((row) => row.keywordId),
       ),
     ]);
@@ -64,6 +70,7 @@ export class KeywordsService {
             row,
             facts,
             volatility.get(row.keywordId) ?? null,
+            best.get(row.keywordId) ?? null,
           ),
         ),
       ),
