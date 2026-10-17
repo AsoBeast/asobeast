@@ -551,9 +551,6 @@ describe('KeywordsService.listTracked serp volatility', () => {
         { keywordId: 'kwChurn', date: new Date('2026-07-08'), storeAppId: 'y' },
       ]),
     },
-    keywordRanking: {
-      groupBy: jest.fn().mockResolvedValue([]),
-    },
   });
 
   it('scores a stable keyword 0, a churning keyword above 0 and an unchecked keyword null', async () => {
@@ -565,6 +562,53 @@ describe('KeywordsService.listTracked serp volatility', () => {
     expect(byId.get('kwStable')?.serpVolatility7d).toBe(0);
     expect(byId.get('kwChurn')?.serpVolatility7d).toBe(100);
     expect(byId.get('kwUnchecked')?.serpVolatility7d).toBeNull();
+  });
+
+  it('loads hold facts only when the list asks for them', async () => {
+    const withRanking = (row: ReturnType<typeof trackedRow>) => ({
+      ...row,
+      keyword: {
+        ...row.keyword,
+        rankings: [{ position: 5, date: new Date(), depth: 200 }],
+      },
+    });
+    const prisma = {
+      ...buildPrisma(),
+      trackedKeyword: {
+        findMany: jest
+          .fn()
+          .mockResolvedValue([
+            withRanking(trackedRow('kwStable', 'habit tracker')),
+            trackedRow('kwChurn', 'daily planner'),
+            trackedRow('kwUnchecked', 'sleep timer'),
+          ]),
+      },
+      $queryRaw: jest.fn().mockResolvedValue([
+        {
+          keywordId: 'kwStable',
+          bestPosition: 2,
+          daysInTier: 4,
+          latestDate: new Date().toISOString().slice(0, 10),
+        },
+      ]),
+    };
+    const service = buildService(prisma);
+
+    const plain = await service.listTracked('app1');
+    expect(prisma.$queryRaw).not.toHaveBeenCalled();
+    const plainRow = plain.find((item) => item.keywordId === 'kwStable');
+    expect(plainRow?.bestPosition).toBeNull();
+    expect(plainRow?.daysInTier).toBeNull();
+
+    const withFacts = await service.listTracked('app1', undefined, undefined, {
+      holdFacts: true,
+    });
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+    const factsRow = withFacts.find((item) => item.keywordId === 'kwStable');
+    expect(factsRow?.bestPosition).toBe(2);
+    expect(factsRow?.positionDeltaFromBest).toBe(3);
+    expect(factsRow?.daysInTier).toBe(4);
+    expect(factsRow?.heldTier).toBe(10);
   });
 });
 

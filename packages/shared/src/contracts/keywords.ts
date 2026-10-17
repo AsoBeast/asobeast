@@ -8,6 +8,7 @@ import {
   Store,
   SuggestReachStatus,
 } from '../index';
+import type { RankMilestoneTier } from '../rank';
 import type { AppStoreLocalization } from '../storefronts/app-store-localizations';
 import type { PaidPlanName, QuotaUsage } from './plans';
 
@@ -44,6 +45,7 @@ export interface TrackedKeywordItem {
   bestPosition?: number | null;
   positionDeltaFromBest?: number | null;
   daysInTier?: number | null;
+  heldTier?: RankMilestoneTier | null;
   traffic: number | null;
   difficulty: number | null;
   volume: number | null;
