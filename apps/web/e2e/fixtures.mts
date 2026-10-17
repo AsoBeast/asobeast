@@ -930,6 +930,36 @@ export const UPDATE_THEME_REVIEWS: ReviewList = {
   ],
 };
 
+const TWIN_DAY = utcTimestampDaysAgo(2);
+
+const twinReview = (index: number, text: string): ReviewItem => ({
+  id: `twin-rev-${index}`,
+  reviewId: `twin-store-rev-${index}`,
+  userName: "A Google user",
+  score: 1,
+  title: null,
+  text,
+  version: "3.4.1",
+  reviewedAt: TWIN_DAY,
+  repliedAt: null,
+  replyText: null,
+  reply: null,
+});
+
+export const TWIN_REVIEWS: ReviewList = {
+  total: 3,
+  versions: ["3.4.1"],
+  reviews: [
+    twinReview(1, "Broken one."),
+    twinReview(2, "Broken two."),
+    {
+      ...twinReview(3, "Works for me."),
+      userName: "Casey",
+      score: 5,
+    },
+  ],
+};
+
 export const UPDATE_REVIEW_THEMES: ReviewThemes = {
   themes: [{ phrase: "update", kind: "complaint", mentions: 2, negative: 2 }],
   reviews: 5,

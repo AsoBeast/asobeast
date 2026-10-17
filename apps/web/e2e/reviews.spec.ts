@@ -752,6 +752,50 @@ test("translate buttons name the review they translate", async ({
   expect(new Set(names).size).toBe(3);
 });
 
+test("reviews that share stars, author and day get names that tell them apart", async ({
+  context,
+  page,
+}) => {
+  await seedCookies(context, { e2e_reviews: "twins" });
+  await page.goto("/apps/app-1/reviews");
+  await expect(page.getByRole("article")).toHaveCount(3);
+
+  const first = page.getByRole("article").filter({ hasText: "Broken one." });
+  const second = page.getByRole("article").filter({ hasText: "Broken two." });
+  const other = page.getByRole("article").filter({ hasText: "Works for me." });
+  const twin = (rank: number) =>
+    `1 star review by A Google user on ${REVIEW_DAY.source} \\(${rank} of 2\\)`;
+
+  await expect(first).toHaveAccessibleName(new RegExp(`^${twin(1)}$`));
+  await expect(second).toHaveAccessibleName(new RegExp(`^${twin(2)}$`));
+  await expect(
+    first.getByRole("button", {
+      name: new RegExp(`^Reply to the ${twin(1)}$`),
+    }),
+  ).toBeVisible();
+  await expect(
+    second.getByRole("button", {
+      name: new RegExp(`^Reply to the ${twin(2)}$`),
+    }),
+  ).toBeVisible();
+  await expect(other).toHaveAccessibleName(
+    new RegExp(`^5 star review by Casey on ${REVIEW_DAY.source}$`),
+  );
+
+  const articleNames = await Promise.all(
+    (await page.getByRole("article").all()).map((card) =>
+      card.getAttribute("aria-label"),
+    ),
+  );
+  const buttonNames = await Promise.all(
+    (await page.getByRole("article").getByRole("button").all()).map((button) =>
+      button.getAttribute("aria-label"),
+    ),
+  );
+  expect(new Set(articleNames).size).toBe(3);
+  expect(new Set(buttonNames).size).toBe(buttonNames.length);
+});
+
 test("the needs reply tile opens the queue lowest score first", async ({
   page,
 }) => {
