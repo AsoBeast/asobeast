@@ -75,8 +75,17 @@ function wordLanguage(text: string): string | null {
   return hits >= MIN_HITS && languages.length === 1 ? languages[0] : null;
 }
 
+const lettersOf = (text: string): string[] => text.match(LETTER) ?? [];
+
 export function reviewLanguage(text: string): string | null {
-  const letters = text.match(LETTER) ?? [];
+  const letters = lettersOf(text);
   if (letters.length === 0) return null;
   return scriptLanguage(text, letters) ?? wordLanguage(text);
+}
+
+export function reviewLanguages(text: string): string[] {
+  const letters = lettersOf(text);
+  if (letters.length === 0) return [];
+  const script = scriptLanguage(text, letters);
+  return script ? [script] : bestWordMatch(text).languages;
 }

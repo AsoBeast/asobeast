@@ -6,7 +6,7 @@ import {
   tokenize,
 } from '@asobeast/shared';
 import { MinableReview, reviewPhrases } from '../keywords/review-mining';
-import { reviewLanguage } from './review-language';
+import { reviewLanguages } from './review-language';
 
 export const REVIEW_THEMES_CAP = QUERY_BOUNDS.reviewsLimit.max;
 export const REVIEW_THEMES_BASELINE = 500;
@@ -74,10 +74,8 @@ function phraseReader(options: ThemeOptions): PhraseReader {
   return (review) => {
     const known = read.get(review.id);
     if (known) return known;
-    const detected = reviewLanguage(`${review.title ?? ''} ${review.text}`);
-    const languages = detected
-      ? [...new Set([...options.languages, detected])]
-      : options.languages;
+    const detected = reviewLanguages(`${review.title ?? ''} ${review.text}`);
+    const languages = [...new Set([...options.languages, ...detected])];
     const phrases = reviewPhrases(review, languages, {
       maxWords: THEME_MAX_WORDS,
       ignored: options.ignored,
