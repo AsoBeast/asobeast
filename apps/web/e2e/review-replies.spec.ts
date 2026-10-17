@@ -316,6 +316,95 @@ test("discarding a reply asks first and clears the draft", async ({ page }) => {
   await expect(composer(page).getByRole("textbox")).toHaveValue("");
 });
 
+test("confirming Discard by keyboard puts focus on the reply text", async ({
+  page,
+}) => {
+  await page.goto(`${REPLIES_PAGE}?reply=rep-2`);
+  const textbox = composer(page).getByRole("textbox", { name: "Reply text" });
+  const dialog = page.getByRole("alertdialog");
+
+  await composer(page).getByRole("button", { name: "Discard" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press("Tab");
+  await expect(dialog.getByRole("button", { name: "Discard" })).toBeFocused();
+  await page.keyboard.press("Enter");
+
+  await expect(dialog).toHaveCount(0);
+  await expect(textbox).toHaveValue("");
+  await expect(textbox).toBeFocused();
+});
+
+test("a mouse click on the Discard action puts focus on the reply text", async ({
+  page,
+}) => {
+  await page.goto(`${REPLIES_PAGE}?reply=rep-2`);
+
+  await composer(page).getByRole("button", { name: "Discard" }).click();
+  await page
+    .getByRole("alertdialog")
+    .getByRole("button", { name: "Discard" })
+    .click();
+
+  await expect(
+    composer(page).getByRole("textbox", { name: "Reply text" }),
+  ).toBeFocused();
+});
+
+test("a failed discard still puts focus on the reply text", async ({
+  page,
+}) => {
+  await page.route("**/api/backend/apps/*/reviews/*/reply", (route) =>
+    route.request().method() === "DELETE"
+      ? route.fulfill(
+          fulfillJson(
+            500,
+            errorEnvelope(500, "/reply", "Could not discard the reply"),
+          ),
+        )
+      : route.fallback(),
+  );
+  await page.goto(`${REPLIES_PAGE}?reply=rep-2`);
+
+  await composer(page).getByRole("button", { name: "Discard" }).click();
+  await page
+    .getByRole("alertdialog")
+    .getByRole("button", { name: "Discard" })
+    .click();
+
+  await expect(page.getByText("Could not discard the reply")).toBeVisible();
+  await expect(
+    composer(page).getByRole("textbox", { name: "Reply text" }),
+  ).toBeFocused();
+});
+
+test("keeping the reply returns focus to the Discard button", async ({
+  page,
+}) => {
+  await page.goto(`${REPLIES_PAGE}?reply=rep-2`);
+  const discard = composer(page).getByRole("button", { name: "Discard" });
+
+  await discard.focus();
+  await page.keyboard.press("Enter");
+  await page.getByRole("button", { name: "Keep it" }).click();
+
+  await expect(page.getByRole("alertdialog")).toHaveCount(0);
+  await expect(discard).toBeFocused();
+});
+
+test("Escape on the Discard dialog returns focus to the Discard button", async ({
+  page,
+}) => {
+  await page.goto(`${REPLIES_PAGE}?reply=rep-2`);
+  const discard = composer(page).getByRole("button", { name: "Discard" });
+
+  await discard.focus();
+  await page.keyboard.press("Enter");
+  await page.keyboard.press("Escape");
+
+  await expect(discard).toBeFocused();
+});
+
 test("the console link names the store and opens in a new tab", async ({
   page,
 }) => {

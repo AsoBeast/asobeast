@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useRef, useState, type RefObject } from "react";
 import { Copy, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import type { ReviewItem, Store } from "@asobeast/shared";
@@ -97,12 +97,16 @@ function ClearedReplyHint({
 function DiscardReplyButton({
   consoleName,
   disabled,
+  textRef,
   onDiscard,
 }: {
   consoleName: string;
   disabled: boolean;
+  textRef: RefObject<HTMLTextAreaElement | null>;
   onDiscard: () => void;
 }) {
+  const confirmed = useRef(false);
+
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
@@ -110,7 +114,14 @@ function DiscardReplyButton({
           Discard
         </Button>
       </AlertDialogTrigger>
-      <AlertDialogContent>
+      <AlertDialogContent
+        onCloseAutoFocus={(event) => {
+          if (!confirmed.current) return;
+          confirmed.current = false;
+          event.preventDefault();
+          textRef.current?.focus();
+        }}
+      >
         <AlertDialogHeader>
           <AlertDialogTitle>Discard this reply?</AlertDialogTitle>
           <AlertDialogDescription>
@@ -120,7 +131,13 @@ function DiscardReplyButton({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Keep it</AlertDialogCancel>
-          <AlertDialogAction variant="destructive" onClick={onDiscard}>
+          <AlertDialogAction
+            variant="destructive"
+            onClick={() => {
+              confirmed.current = true;
+              onDiscard();
+            }}
+          >
             Discard
           </AlertDialogAction>
         </AlertDialogFooter>
@@ -143,6 +160,7 @@ export function ReplyComposer({
   const busy = pending || draft.drafting;
   const markOnce = useSharedFlight(mark);
   const counterId = useId();
+  const textRef = useRef<HTMLTextAreaElement>(null);
   const measure = measureReply(text, store);
   const { trimmed, over } = measure;
   const unsaved = trimmed !== "" && trimmed !== saved;
@@ -185,6 +203,7 @@ export function ReplyComposer({
       />
       <div className="flex flex-col gap-1">
         <Textarea
+          ref={textRef}
           autoFocus
           aria-label="Reply text"
           aria-describedby={counterId}
@@ -246,6 +265,7 @@ export function ReplyComposer({
         <DiscardReplyButton
           consoleName={consoleName}
           disabled={busy || (!review.reply && text === "")}
+          textRef={textRef}
           onDiscard={() =>
             void discard()
               .then(() => setText(""))
