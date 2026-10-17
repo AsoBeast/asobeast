@@ -197,7 +197,7 @@ export function StoreSearchField({
         {hint}
       </p>
       {shownError ? (
-        <p id={errorId} className="text-body text-destructive">
+        <p id={errorId} className="text-body text-destructive wrap-anywhere">
           {shownError}
         </p>
       ) : null}
