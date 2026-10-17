@@ -3,6 +3,7 @@
 import { Suspense, useDeferredValue } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { queueFilters } from "@/lib/action-filters";
+import { useFocusAfterCommit } from "@/lib/focus-handoff";
 import { actionsOptions } from "@/lib/queries";
 import { ActionBulkBar } from "./ActionBulkBar";
 import { ActionCenterHeader } from "./ActionCenterHeader";
@@ -17,8 +18,10 @@ import {
   filterQueue,
   isDefaultStatusSet,
   isFilteredView,
+  leavesDefaultQueue,
 } from "./queue-filters";
 import { groupQueue, sortQueue } from "./queue-groups";
+import { bulkFocusTarget } from "./row-focus";
 import {
   ACTIONS_GRID,
   ActionOverviewSkeleton,
@@ -53,6 +56,13 @@ export function ActionCenter({ appId }: { appId?: string }) {
   const sheet = useActionSheet(view);
   const selection = useQueueSelection(visible, isDefaultStatusSet(view.status));
   const bulk = useBulkUpdate(appId);
+  const handOffFocus = useFocusAfterCommit();
+  const settleSelection = (removesRows: boolean) => {
+    if (selection.selected.length === 0) return;
+    handOffFocus(bulkFocusTarget(selection.selected, removesRows));
+    selection.clear();
+  };
+  const clearSelection = () => settleSelection(false);
   const groups = groupQueue(
     visible,
     appId && view.group === "app" ? "priority" : view.group,
@@ -63,7 +73,7 @@ export function ActionCenter({ appId }: { appId?: string }) {
     onSelect: (id) => {
       if (selection.selectable.includes(id)) selection.toggle(id);
     },
-    onClear: selection.clear,
+    onClear: clearSelection,
   });
 
   const filtered = isFilteredView(view);
@@ -122,10 +132,10 @@ export function ActionCenter({ appId }: { appId?: string }) {
             busy={bulk.isPending}
             onUpdate={(body) => {
               bulk.update({ ...body, ids: selection.selected });
-              selection.clear();
+              settleSelection(leavesDefaultQueue(body.status));
             }}
             onSelectAll={() => selection.setMany(selection.selectable, true)}
-            onClear={selection.clear}
+            onClear={clearSelection}
           />
         </section>
         <ActionRail appId={appId} setView={setView} />

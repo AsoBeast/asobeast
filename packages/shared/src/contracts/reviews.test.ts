@@ -7,6 +7,7 @@ import {
   REVIEW_REPLY_STATES,
   REVIEW_REPLY_TONES,
   REVIEW_SORTS,
+  REVIEW_THEMES_BASELINE,
   type ReviewReplyItem,
 } from '../index';
 
@@ -95,5 +96,11 @@ describe('review reply constants', () => {
       'updated',
     ]);
     expect(REVIEW_SORTS).toEqual(['newest', 'lowest']);
+  });
+});
+
+describe('REVIEW_THEMES_BASELINE', () => {
+  it('compares a theme with the newest 500 reviews of the period', () => {
+    expect(REVIEW_THEMES_BASELINE).toBe(500);
   });
 });

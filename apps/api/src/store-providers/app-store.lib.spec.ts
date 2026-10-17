@@ -122,6 +122,84 @@ describe('appStoreLib.page', () => {
   });
 });
 
+const PRODUCT_PAGE = 'https://apps.apple.com/us/app/id570060128';
+
+const SIMILAR_APP = { id: 7, title: 'Similar' } as Awaited<
+  ReturnType<typeof appStore.similar>
+>[number];
+
+function scraperReadingTheProductPage(
+  found: Awaited<ReturnType<typeof appStore.similar>> = [],
+): void {
+  jest
+    .mocked(appStore.similar)
+    .mockImplementation(async ({ requestOptions }) => {
+      try {
+        const response = await requestOptions?.fetch?.(PRODUCT_PAGE);
+        if (!response?.ok) return [];
+      } catch {
+        return [];
+      }
+      return found;
+    });
+}
+
+describe('appStoreLib.similar', () => {
+  beforeEach(() => {
+    fetchMock.mockReset();
+    jest.mocked(appStore.similar).mockReset();
+  });
+
+  it('reports a product page the store refused instead of an empty list', async () => {
+    scraperReadingTheProductPage();
+    answer(403, 'blocked');
+
+    await expect(
+      appStoreLib.similar({ id: 570060128, country: 'us' }),
+    ).rejects.toThrow('Request failed with status 403');
+  });
+
+  it('reports a product page the store did not answer', async () => {
+    scraperReadingTheProductPage();
+    fetchMock.mockRejectedValueOnce(new Error('fetch failed'));
+
+    await expect(
+      appStoreLib.similar({ id: 570060128, country: 'us' }),
+    ).rejects.toThrow('fetch failed');
+  });
+
+  it('still answers an empty list for a page that lists no similar apps', async () => {
+    scraperReadingTheProductPage();
+    answer(200, '<h1>App</h1>');
+
+    await expect(
+      appStoreLib.similar({ id: 570060128, country: 'us' }),
+    ).resolves.toEqual([]);
+  });
+
+  it('answers the similar apps of a page it read', async () => {
+    scraperReadingTheProductPage([SIMILAR_APP]);
+    answer(200, '<h1>App</h1>');
+
+    await expect(
+      appStoreLib.similar({ id: 570060128, country: 'us' }),
+    ).resolves.toEqual([SIMILAR_APP]);
+  });
+
+  it('judges each call by its own requests', async () => {
+    scraperReadingTheProductPage();
+    answer(429, 'too many requests');
+    answer(200, '<h1>App</h1>');
+
+    await expect(
+      appStoreLib.similar({ id: 570060128, country: 'us' }),
+    ).rejects.toThrow('Request failed with status 429');
+    await expect(
+      appStoreLib.similar({ id: 570060128, country: 'us' }),
+    ).resolves.toEqual([]);
+  });
+});
+
 describe('appStoreLib deadline', () => {
   beforeEach(() => {
     fetchMock.mockReset();

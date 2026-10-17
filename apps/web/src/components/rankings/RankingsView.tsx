@@ -3,9 +3,9 @@
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
 import { keywordLabel } from "@asobeast/shared";
-import { Download, X } from "lucide-react";
+import { X } from "lucide-react";
 import { PrintReportButton } from "@/components/app-detail/PrintReportButton";
-import { Button } from "@/components/ui/button";
+import { ExportCsvButton } from "@/components/ExportCsvButton";
 import {
   Card,
   CardContent,
@@ -101,17 +101,12 @@ export function RankingsView({ id }: { id: string }) {
               <X className="size-3 opacity-60 print:hidden" aria-hidden />
             </button>
           ))}
-          <Button
-            variant="outline"
-            size="sm"
+          <ExportCsvButton
+            subject="rankings"
             className="ml-auto print:hidden"
             disabled={chart.rows.length === 0}
             onClick={() => exportRankings(id, bounds, chart)}
-            aria-label="Export rankings to CSV"
-          >
-            <Download />
-            Export CSV
-          </Button>
+          />
           <PrintReportButton />
         </div>
 
