@@ -3,6 +3,7 @@ import {
   type BrowserContext,
   type Page,
 } from "@playwright/test";
+import { hydrated } from "./hydrated.mts";
 import { expect, test } from "./session.mts";
 import { PLAN_LIMITS, UPGRADE_PATH, type AccountPlan } from "@asobeast/shared";
 import { contrastViolations, THEMES } from "./contrast-check.mts";
@@ -824,6 +825,104 @@ test.describe.serial("chart follows", () => {
       page.getByRole("button", { name: "Follow category" }),
     ).toBeFocused();
     expect(await follows(request)).toEqual([]);
+  });
+
+  test("moves focus to Following after Follow category is pressed", async ({
+    page,
+    request,
+  }) => {
+    await request.get(`${MOCK_API}/__reset-chart-follows`);
+    await page.goto("/charts?view=table&genre=7012");
+    const follow = await hydrated(
+      page.getByRole("button", { name: "Follow category" }),
+    );
+
+    await follow.focus();
+    await page.keyboard.press("Enter");
+
+    await expect(page.getByRole("button", { name: "Following" })).toBeFocused();
+    expect(await follows(request)).toHaveLength(3);
+  });
+
+  test("keeps focus on Follow category while it runs and when the quota refuses", async ({
+    page,
+    context,
+    request,
+  }) => {
+    await request.get(`${MOCK_API}/__reset-chart-follows`);
+    await context.addCookies([
+      {
+        name: "e2e_chart_follow_limit",
+        value: "1",
+        domain: "localhost",
+        path: "/",
+      },
+    ]);
+    await page.goto("/charts?view=table&genre=7012");
+    const follow = await hydrated(
+      page.getByRole("button", { name: "Follow category" }),
+    );
+
+    await follow.focus();
+    await page.keyboard.press("Enter");
+
+    await expect(page.getByText(/follow.* limit reached/i)).toBeVisible();
+    await expect(follow).toBeFocused();
+    await expect(follow).not.toHaveAttribute("aria-disabled", "true");
+    expect(await follows(request)).toEqual([]);
+  });
+
+  test("completing a category followed in part moves focus to Following", async ({
+    page,
+    request,
+  }) => {
+    await request.get(`${MOCK_API}/__reset-chart-follows`);
+    await followChart(request, {
+      store: "APP_STORE",
+      country: "us",
+      collection: "paid",
+      genre: "7012",
+      device: "iphone",
+    });
+    await page.goto("/charts?view=table&genre=7012");
+    const follow = await hydrated(
+      page.getByRole("button", { name: "Follow category" }),
+    );
+
+    await follow.focus();
+    await page.keyboard.press("Enter");
+
+    await expect(page.getByRole("button", { name: "Following" })).toBeFocused();
+  });
+
+  test("does not take focus back when the user moved on during the request", async ({
+    page,
+    context,
+    request,
+  }) => {
+    await request.get(`${MOCK_API}/__reset-chart-follows`);
+    await context.addCookies([
+      {
+        name: "e2e_api_latency",
+        value: "1500",
+        domain: "localhost",
+        path: "/",
+      },
+    ]);
+    await page.goto("/charts?view=table&genre=7012");
+    const follow = await hydrated(
+      page.getByRole("button", { name: "Follow category" }),
+    );
+
+    await follow.focus();
+    await page.keyboard.press("Enter");
+    const search = page.getByLabel("Search apps");
+    await search.focus();
+
+    await expect(page.getByRole("button", { name: "Following" })).toBeVisible({
+      timeout: 20_000,
+    });
+    await expect(search).toBeFocused();
   });
 
   test("completes a category followed in part", async ({ page, request }) => {
