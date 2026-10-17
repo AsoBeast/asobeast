@@ -6,6 +6,22 @@ export function isPublicRoute(pathname: string): boolean {
   return (PUBLIC_ROUTES as readonly string[]).includes(pathname);
 }
 
+export const REQUESTED_PATH_HEADER = "x-asobeast-requested-path";
+
+export function loginUrl(pathname: string, search: string): string {
+  const requested = `${pathname}${search}`;
+  const url = new URL("/login", PLACEHOLDER_ORIGIN);
+  if (requested !== "/") url.searchParams.set("next", requested);
+  return `${url.pathname}${url.search}`;
+}
+
+export function signInTarget(requested: string): string | null {
+  if (!requested.startsWith("/") || requested.startsWith("//")) return null;
+  const { origin, pathname, search } = new URL(requested, PLACEHOLDER_ORIGIN);
+  if (origin !== PLACEHOLDER_ORIGIN || isPublicRoute(pathname)) return null;
+  return loginUrl(pathname, search);
+}
+
 export function signedInDestination(next: string | null | undefined): string {
   if (!next) return "/";
   try {

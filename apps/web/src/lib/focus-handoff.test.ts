@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  CLAIM_WINDOW_MS,
   focusCanMoveTo,
   focusIsLost,
+  isClaimable,
   survivingNeighbour,
 } from "./focus-handoff";
 
@@ -81,5 +83,59 @@ describe("survivingNeighbour", () => {
 
   it("answers nothing when the first item is removed and none survives", () => {
     expect(survivingNeighbour(["a"], without("a"))).toBeUndefined();
+  });
+});
+
+describe("isClaimable", () => {
+  const body = { tag: "body" };
+  const follow = { tag: "follow" };
+  const search = { tag: "search" };
+  const armed = { key: "chart-follow", at: 1_000, from: follow };
+  const now = armed.at + 100;
+
+  it("accepts a claimant when focus fell to the body", () => {
+    expect(
+      isClaimable(armed, "chart-follow", now, { activeElement: body, body }),
+    ).toBe(true);
+  });
+
+  it("accepts a claimant when nothing has focus", () => {
+    expect(
+      isClaimable(armed, "chart-follow", now, { activeElement: null, body }),
+    ).toBe(true);
+  });
+
+  it("accepts a claimant while focus is still on the control that had it", () => {
+    expect(
+      isClaimable(armed, "chart-follow", now, { activeElement: follow, body }),
+    ).toBe(true);
+  });
+
+  it("refuses a claimant when focus moved to another control", () => {
+    expect(
+      isClaimable(armed, "chart-follow", now, { activeElement: search, body }),
+    ).toBe(false);
+  });
+
+  it("refuses another key", () => {
+    expect(
+      isClaimable(armed, "competitor:1", now, { activeElement: body, body }),
+    ).toBe(false);
+  });
+
+  it("refuses when nothing is armed", () => {
+    expect(
+      isClaimable(null, "chart-follow", now, { activeElement: body, body }),
+    ).toBe(false);
+  });
+
+  it("accepts at the edge of the window and refuses after it", () => {
+    const root = { activeElement: body, body };
+    expect(
+      isClaimable(armed, "chart-follow", armed.at + CLAIM_WINDOW_MS, root),
+    ).toBe(true);
+    expect(
+      isClaimable(armed, "chart-follow", armed.at + CLAIM_WINDOW_MS + 1, root),
+    ).toBe(false);
   });
 });

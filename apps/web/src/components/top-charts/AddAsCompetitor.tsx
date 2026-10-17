@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
@@ -13,11 +14,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { addCompetitor, ApiError } from "@/lib/api";
+import { armFocusHandoff } from "@/lib/focus-handoff";
 import {
   invalidateChartMutation,
   invalidateCompetitorMutation,
 } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
+import { competitorFocusKey } from "./chart-actions";
 
 export function AddAsCompetitor({
   storeAppId,
@@ -43,7 +46,12 @@ export function AddAsCompetitor({
           : `Could not track ${title}`,
       ),
   });
+  const [open, setOpen] = useState(false);
   const addOnce = useSingleFlight(mutation);
+  const add = (appId: string) => {
+    armFocusHandoff(competitorFocusKey(storeAppId));
+    addOnce(appId);
+  };
   const icon = mutation.isPending ? (
     <Loader2 className="animate-spin" aria-hidden />
   ) : (
@@ -59,22 +67,25 @@ export function AddAsCompetitor({
         size="icon-sm"
         aria-label={`Add ${title} to ${app.name ?? "your app"}`}
         aria-busy={mutation.isPending}
-        disabled={mutation.isPending}
-        onClick={() => addOnce(app.id)}
+        aria-disabled={mutation.isPending || undefined}
+        onClick={() => add(app.id)}
       >
         {icon}
       </Button>
     );
   }
   return (
-    <DropdownMenu>
+    <DropdownMenu
+      open={open}
+      onOpenChange={(next) => setOpen(next && !mutation.isPending)}
+    >
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
           size="icon-sm"
           aria-label={`Add ${title} as competitor`}
           aria-busy={mutation.isPending}
-          disabled={mutation.isPending}
+          aria-disabled={mutation.isPending || undefined}
         >
           {icon}
         </Button>
@@ -82,7 +93,7 @@ export function AddAsCompetitor({
       <DropdownMenuContent align="end">
         <DropdownMenuLabel>Add as competitor to</DropdownMenuLabel>
         {apps.map((app) => (
-          <DropdownMenuItem key={app.id} onSelect={() => addOnce(app.id)}>
+          <DropdownMenuItem key={app.id} onSelect={() => add(app.id)}>
             {app.name ?? app.id}
           </DropdownMenuItem>
         ))}

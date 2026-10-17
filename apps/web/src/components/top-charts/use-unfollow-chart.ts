@@ -5,7 +5,10 @@ import { toast } from "sonner";
 import { unfollowChart } from "@/lib/api";
 import { forgetChartFollow, invalidateChartMutation } from "@/lib/queries";
 
-export function useUnfollowChart(onStopped?: () => void) {
+export function useUnfollowChart(
+  onStopped?: () => void,
+  onFailed?: () => void,
+) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (ids: readonly string[]) => {
@@ -17,6 +20,7 @@ export function useUnfollowChart(onStopped?: () => void) {
       toast.success("Stopped following");
     },
     onError: () => {
+      onFailed?.();
       invalidateChartMutation(queryClient);
       toast.error("Could not stop following the category.");
     },
