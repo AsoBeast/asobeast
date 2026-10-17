@@ -3,6 +3,39 @@
 All notable changes to asobeast are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [1.11.1](https://github.com/AsoBeast/asobeast/compare/v1.11.0...v1.11.1) (2026-10-17)
+
+
+### Bug Fixes
+
+* **actions:** stop action center false positives and flapping ([#418](https://github.com/AsoBeast/asobeast/issues/418)) ([5aedf24](https://github.com/AsoBeast/asobeast/commit/5aedf244b9f080f9087b38b9948f85d34fa8aee1))
+* **api:** document the 200 answer of POST /charts/follows ([#457](https://github.com/AsoBeast/asobeast/issues/457)) ([95185c9](https://github.com/AsoBeast/asobeast/commit/95185c9ebad489fc46dcfdd5d4faa7668cbed4c1))
+* **api:** drop the query string from the error envelope path ([#468](https://github.com/AsoBeast/asobeast/issues/468)) ([1668326](https://github.com/AsoBeast/asobeast/commit/16683269a40d93148260f98c629edf799d668b89)), closes [#467](https://github.com/AsoBeast/asobeast/issues/467)
+* **apps:** refuse a setup market that is not a storefront ([#456](https://github.com/AsoBeast/asobeast/issues/456)) ([7ba8041](https://github.com/AsoBeast/asobeast/commit/7ba80410e9390917a419b883d055de306889d716)), closes [#428](https://github.com/AsoBeast/asobeast/issues/428)
+* **auth:** answer 404 on the whole admin area to non operators ([#466](https://github.com/AsoBeast/asobeast/issues/466)) ([1a13d7a](https://github.com/AsoBeast/asobeast/commit/1a13d7a9001ff38ebf4fd61a2206d9453faa480e)), closes [#465](https://github.com/AsoBeast/asobeast/issues/465)
+* **auth:** word a throttled attempt's wait in minutes and hours ([#460](https://github.com/AsoBeast/asobeast/issues/460)) ([e992055](https://github.com/AsoBeast/asobeast/commit/e992055e6bf06d7588f5e1e3b14c7f9facc6a060)), closes [#431](https://github.com/AsoBeast/asobeast/issues/431)
+* **jobs:** reconnect queue connections within two seconds ([#459](https://github.com/AsoBeast/asobeast/issues/459)) ([f8d2757](https://github.com/AsoBeast/asobeast/commit/f8d275770a461dd113d0a1b665bd007b21ca42d0)), closes [#421](https://github.com/AsoBeast/asobeast/issues/421)
+* **keywords:** skip function words of languages tied on a short review ([#453](https://github.com/AsoBeast/asobeast/issues/453)) ([b878654](https://github.com/AsoBeast/asobeast/commit/b8786544d5869f8ae469b9a47d3a335ab5b84e79)), closes [#429](https://github.com/AsoBeast/asobeast/issues/429)
+* **providers:** fail a similar apps lookup the app store refused ([#458](https://github.com/AsoBeast/asobeast/issues/458)) ([ff94a52](https://github.com/AsoBeast/asobeast/commit/ff94a5288d614838ef5664a1f3e80748de8f0b58)), closes [#422](https://github.com/AsoBeast/asobeast/issues/422)
+* **web:** clear the import dialog error when the field changes ([#455](https://github.com/AsoBeast/asobeast/issues/455)) ([6a29b71](https://github.com/AsoBeast/asobeast/commit/6a29b716b4c359c7ce8ab6b8c7f47db3bea77f78)), closes [#419](https://github.com/AsoBeast/asobeast/issues/419) [#420](https://github.com/AsoBeast/asobeast/issues/420)
+* **web:** format the numbers in the refresh dialog ([#464](https://github.com/AsoBeast/asobeast/issues/464)) ([c96aa99](https://github.com/AsoBeast/asobeast/commit/c96aa99064bed929681d9652242b8db829e9275a)), closes [#441](https://github.com/AsoBeast/asobeast/issues/441)
+* **web:** hand focus on when a click leaves it on the page container ([#472](https://github.com/AsoBeast/asobeast/issues/472)) ([7595064](https://github.com/AsoBeast/asobeast/commit/759506497cc85771bb9764b1e4fe0e7dd7d597b7))
+* **web:** keep focus in the action center after a bulk action ([#446](https://github.com/AsoBeast/asobeast/issues/446)) ([69cf33e](https://github.com/AsoBeast/asobeast/commit/69cf33e7816906e37afb8ae393d052a3739cad37)), closes [#435](https://github.com/AsoBeast/asobeast/issues/435)
+* **web:** keep focus on Mark as replied while the request runs ([#445](https://github.com/AsoBeast/asobeast/issues/445)) ([46686e1](https://github.com/AsoBeast/asobeast/commit/46686e1ef39e01427a49543d6b2173b5683712b6))
+* **web:** keep focus on the follow button after following a category ([#449](https://github.com/AsoBeast/asobeast/issues/449)) ([8ec3fe7](https://github.com/AsoBeast/asobeast/commit/8ec3fe7eb463297215b81ebacff70a9b123b442e)), closes [#432](https://github.com/AsoBeast/asobeast/issues/432)
+* **web:** keep the bulk selection when Escape closes a menu ([#447](https://github.com/AsoBeast/asobeast/issues/447)) ([ea1404f](https://github.com/AsoBeast/asobeast/commit/ea1404f74cde9e9378fcc27d72f235e3234d0c6f)), closes [#436](https://github.com/AsoBeast/asobeast/issues/436)
+* **web:** keep the visible Export CSV text in the button names ([#448](https://github.com/AsoBeast/asobeast/issues/448)) ([6edcc2d](https://github.com/AsoBeast/asobeast/commit/6edcc2d9740d4bce7fcae6b72996506c09f47a32)), closes [#437](https://github.com/AsoBeast/asobeast/issues/437)
+* **web:** lay out right to left review text from its own direction ([#451](https://github.com/AsoBeast/asobeast/issues/451)) ([ab32465](https://github.com/AsoBeast/asobeast/commit/ab32465eabdd64f09abba87ec86b3ca10dfcec98))
+* **web:** make try again refetch the query that failed ([#442](https://github.com/AsoBeast/asobeast/issues/442)) ([4d509e9](https://github.com/AsoBeast/asobeast/commit/4d509e963cb5ad141cd0270a9023338958a6b29e))
+* **web:** retry once when try again is pressed twice ([#473](https://github.com/AsoBeast/asobeast/issues/473)) ([ff2cb7c](https://github.com/AsoBeast/asobeast/commit/ff2cb7ce675a461504f6504dcc9617f90e39efb1))
+* **web:** send a refused server render to sign in before it fails ([#461](https://github.com/AsoBeast/asobeast/issues/461)) ([2a010de](https://github.com/AsoBeast/asobeast/commit/2a010de1661ce3a8cd4a0a93cf097fc2baae7c76)), closes [#434](https://github.com/AsoBeast/asobeast/issues/434)
+* **web:** show the api unreachable when the proxy answers 502 or 504 ([#443](https://github.com/AsoBeast/asobeast/issues/443)) ([fa4006d](https://github.com/AsoBeast/asobeast/commit/fa4006dc0ce6f38134d3cfd3fdc82d653a4359e9)), closes [#438](https://github.com/AsoBeast/asobeast/issues/438)
+* **web:** stop the ranking chart band labels overlapping ([#463](https://github.com/AsoBeast/asobeast/issues/463)) ([904040a](https://github.com/AsoBeast/asobeast/commit/904040a175bb438342140e767995d5db01673c7d))
+* **web:** tell review buttons apart when author, stars and day match ([#450](https://github.com/AsoBeast/asobeast/issues/450)) ([7d7c9b2](https://github.com/AsoBeast/asobeast/commit/7d7c9b2b49cbe890210f36671bbc73c187f6a1f0)), closes [#424](https://github.com/AsoBeast/asobeast/issues/424)
+* **web:** word the themes tip for the order and scope it counts ([#452](https://github.com/AsoBeast/asobeast/issues/452)) ([09f9d6d](https://github.com/AsoBeast/asobeast/commit/09f9d6d5eee395da513d4c508a3caaa07031d83d))
+* **web:** wrap a long refused store url in the import dialog ([#474](https://github.com/AsoBeast/asobeast/issues/474)) ([22f3adf](https://github.com/AsoBeast/asobeast/commit/22f3adf7a8557ec0e2533095a80ac1bd4065858b))
+* **web:** wrap a long search term in the filter chip ([#462](https://github.com/AsoBeast/asobeast/issues/462)) ([549a8d9](https://github.com/AsoBeast/asobeast/commit/549a8d93083a192850fb7ca598cf9027e5eb8f36))
+
 ## [1.11.0](https://github.com/AsoBeast/asobeast/compare/v1.10.0...v1.11.0) (2026-10-16)
 
 
