@@ -253,17 +253,17 @@ test.describe("importing by name", () => {
     return bodies;
   };
 
-  const failTerm = async (page: Page, failing: string) => {
+  const failTerm = async (page: Page, failing: string, status = 502) => {
     const terms: string[] = [];
     await page.route("**/api/backend/store/search*", (route) => {
       const q = new URL(route.request().url()).searchParams.get("q") ?? "";
       terms.push(q);
       return q === failing
         ? route.fulfill({
-            status: 502,
+            status,
             json: {
-              statusCode: 502,
-              error: "Bad Gateway",
+              statusCode: status,
+              error: "Error",
               message: "The store did not answer.",
               path: "/store/search",
               timestamp: new Date().toISOString(),
@@ -422,6 +422,23 @@ test.describe("importing by name", () => {
     await dialog.getByRole("button", { name: "Retry" }).click();
 
     await expect.poll(() => terms).toEqual(["focus", "focus"]);
+  });
+
+  test("a search the api refuses with 400 says so and offers no Retry", async ({
+    page,
+  }) => {
+    const terms = await failTerm(page, "focus", 400);
+    const dialog = await openDialog(page);
+
+    await dialog
+      .getByLabel("App name or store URL")
+      .pressSequentially("focus", { delay: 20 });
+
+    await expect(dialog.getByRole("alert")).toHaveText(
+      "This name cannot be searched. Change it and try again.",
+    );
+    await expect(dialog.getByRole("button", { name: "Retry" })).toHaveCount(0);
+    expect(terms).toEqual(["focus"]);
   });
 
   test("a name the store does not know says so", async ({ page }) => {

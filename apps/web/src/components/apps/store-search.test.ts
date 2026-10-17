@@ -12,6 +12,7 @@ import {
   isStoreAddress,
   nameTooLongText,
   searchErrorText,
+  searchRetryable,
 } from "./store-search";
 
 const result = (storeAppId: string): StoreSearchResult => ({
@@ -131,6 +132,26 @@ describe("searchErrorText", () => {
     expect(searchErrorText(new Error("offline"))).toBe(
       "Could not search the store.",
     );
+  });
+
+  it("says the name cannot be searched when the api refuses it", () => {
+    expect(searchErrorText(apiError(400))).toBe(
+      "This name cannot be searched. Change it and try again.",
+    );
+  });
+});
+
+describe("searchRetryable", () => {
+  it("never offers a refused request again", () => {
+    expect(searchRetryable(apiError(400))).toBe(false);
+  });
+
+  it.each([429, 502, 500])("offers a %s again", (status) => {
+    expect(searchRetryable(apiError(status))).toBe(true);
+  });
+
+  it("offers an offline failure again", () => {
+    expect(searchRetryable(new Error("offline"))).toBe(true);
   });
 });
 

@@ -15,7 +15,7 @@ import {
   formatRating,
   storeLabel,
 } from "@/lib/format";
-import { searchErrorText } from "./store-search";
+import { searchErrorText, searchRetryable } from "./store-search";
 import type { StoreSearch } from "./useStoreSearch";
 
 const SKELETON_ROWS = 4;
@@ -85,14 +85,16 @@ function StoreSearchResults({
         <p role="alert" className="text-body text-destructive">
           {searchErrorText(search.error)}
         </p>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={search.retry}
-        >
-          Retry
-        </Button>
+        {searchRetryable(search.error) ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={search.retry}
+          >
+            Retry
+          </Button>
+        ) : null}
       </div>
     );
   }

@@ -78,6 +78,13 @@ export function searchErrorText(error: unknown): string {
     if (error.envelope.statusCode === 502) {
       return "The store did not answer. Try again in a moment.";
     }
+    if (error.envelope.statusCode === 400) {
+      return "This name cannot be searched. Change it and try again.";
+    }
   }
   return "Could not search the store.";
+}
+
+export function searchRetryable(error: unknown): boolean {
+  return !(error instanceof ApiError && error.envelope.statusCode === 400);
 }
