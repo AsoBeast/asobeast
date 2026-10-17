@@ -195,7 +195,7 @@ test("exporting competitors downloads one row per tracked competitor", async ({
 
   const [download] = await Promise.all([
     page.waitForEvent("download"),
-    page.getByRole("button", { name: "Export competitors to CSV" }).click(),
+    page.getByRole("button", { name: "Export CSV of competitors" }).click(),
   ]);
 
   expect(download.suggestedFilename()).toMatch(
@@ -219,7 +219,7 @@ test("the comparison export writes the rows the matrix shows, in its order", asy
 
   const [download] = await Promise.all([
     page.waitForEvent("download"),
-    page.getByRole("button", { name: "Export comparison to CSV" }).click(),
+    page.getByRole("button", { name: "Export CSV of the comparison" }).click(),
   ]);
 
   expect(download.suggestedFilename()).toMatch(
@@ -240,7 +240,7 @@ test("with only gaps on, the export is named for the gaps and holds them alone",
 
   const [download] = await Promise.all([
     page.waitForEvent("download"),
-    page.getByRole("button", { name: "Export comparison to CSV" }).click(),
+    page.getByRole("button", { name: "Export CSV of the comparison" }).click(),
   ]);
 
   expect(download.suggestedFilename()).toMatch(

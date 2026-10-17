@@ -1,6 +1,5 @@
 "use client";
 
-import { Download } from "lucide-react";
 import type { SetValues } from "nuqs";
 import type { Table } from "@tanstack/react-table";
 import type { TrackedKeywordItem } from "@asobeast/shared";
@@ -8,7 +7,7 @@ import { ColumnMenu } from "@/components/data-table/ColumnMenu";
 import { FilterChips } from "@/components/data-table/FilterChips";
 import { RowCount } from "@/components/data-table/RowCount";
 import { SearchInput } from "@/components/data-table/SearchInput";
-import { Button } from "@/components/ui/button";
+import { ExportCsvButton } from "@/components/ExportCsvButton";
 import type { keywordFilterParsers } from "@/lib/search-params";
 import type { KeywordTableFeatures } from "./keyword-table-features";
 import { exportKeywords } from "./keyword-csv";
@@ -61,9 +60,8 @@ export function KeywordsFilterBar({
         />
         <div className="ml-auto flex items-center gap-2">
           <ColumnMenu columns={table.getAllLeafColumns()} />
-          <Button
-            variant="outline"
-            size="sm"
+          <ExportCsvButton
+            subject="keywords"
             disabled={shown.length === 0}
             onClick={() =>
               exportKeywords(
@@ -71,11 +69,7 @@ export function KeywordsFilterBar({
                 shown.map((row) => row.original),
               )
             }
-            aria-label="Export keywords to CSV"
-          >
-            <Download />
-            Export CSV
-          </Button>
+          />
         </div>
       </div>
       <FilterChips

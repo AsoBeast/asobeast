@@ -2,7 +2,7 @@
 
 import { useRef, useState, type RefObject } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Download, Pause, Play, Trash2, X } from "lucide-react";
+import { Pause, Play, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import type { TrackedKeywordItem } from "@asobeast/shared";
 import {
@@ -16,6 +16,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { ExportCsvButton } from "@/components/ExportCsvButton";
 import { Button } from "@/components/ui/button";
 import { removeKeyword, updateKeyword } from "@/lib/api";
 import type { BulkTagChange, BulkTagMode } from "@/lib/keyword-tags";
@@ -205,15 +206,7 @@ export function KeywordsBulkActions({
           removed={removed}
           onConfirm={() => remove.mutate()}
         />
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onExport}
-          aria-label="Export selected keywords to CSV"
-        >
-          <Download />
-          Export CSV
-        </Button>
+        <ExportCsvButton subject="selected keywords" onClick={onExport} />
         <Button
           variant="ghost"
           size="sm"

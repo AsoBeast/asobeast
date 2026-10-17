@@ -76,6 +76,24 @@ function errorResponse(
   return Response.json(envelope, { status: statusCode });
 }
 
+const HIDDEN_SURFACE_HEADERS = {
+  "x-robots-tag": "noindex, nofollow",
+  "cache-control": "no-store",
+} as const;
+
+export function notFoundRoute(request: NextRequest): Response {
+  const response = errorResponse(
+    request,
+    404,
+    "Not Found",
+    `Cannot ${request.method} ${request.nextUrl.pathname}`,
+  );
+  for (const [name, value] of Object.entries(HIDDEN_SURFACE_HEADERS)) {
+    response.headers.set(name, value);
+  }
+  return response;
+}
+
 function payloadTooLarge(request: NextRequest, error: Error): Response {
   const response = errorResponse(
     request,

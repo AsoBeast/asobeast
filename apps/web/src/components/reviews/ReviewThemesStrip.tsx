@@ -17,6 +17,7 @@ import { formatNumber, pluralize } from "@/lib/format";
 import { reviewThemesOptions } from "@/lib/queries";
 import { reviewFilters, type ReviewView } from "./review-filters";
 import { phraseQuery, quotedPhrase } from "./review-search";
+import { themesSummary } from "./review-themes-summary";
 
 const KIND_LABELS: Record<ReviewThemeKind, string> = {
   complaint: "Complaints",
@@ -97,7 +98,11 @@ export function ReviewThemesStrip({
         <InfoTip
           label="About what people mention"
           title="What people mention"
-          summary={`Complaints come up mostly in reviews at ${pluralize(data.negativeScoreMax, "star")} or less, praise mostly in the others, compared with every review of the version and period. Counts cover the newest ${pluralize(data.reviews, "review")} that match the filters. Pick one to list the reviews it counts.`}
+          summary={themesSummary({
+            negativeScoreMax: data.negativeScoreMax,
+            reviews: data.reviews,
+            sort: view.sort,
+          })}
         >
           <a
             href={THEMES_GUIDE}

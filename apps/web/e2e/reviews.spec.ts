@@ -63,7 +63,7 @@ test("exporting reviews asks for the newest 200 that match the filters", async (
 }) => {
   await page.goto("/apps/app-1/reviews?version=3.4.0");
   await page.waitForLoadState("networkidle");
-  const button = page.getByRole("button", { name: "Export reviews to CSV" });
+  const button = page.getByRole("button", { name: "Export CSV of reviews" });
   await expect(button).toHaveAccessibleDescription(
     "Exports the newest 200 reviews that match the filters",
   );
@@ -124,7 +124,7 @@ test("a searched export says what the file holds and where the search stopped", 
 
   const [download] = await Promise.all([
     page.waitForEvent("download"),
-    page.getByRole("button", { name: "Export reviews to CSV" }).click(),
+    page.getByRole("button", { name: "Export CSV of reviews" }).click(),
   ]);
 
   expect(
@@ -147,7 +147,7 @@ test("an export without a search keeps the unsearched notice", async ({
 
   await Promise.all([
     page.waitForEvent("download"),
-    page.getByRole("button", { name: "Export reviews to CSV" }).click(),
+    page.getByRole("button", { name: "Export CSV of reviews" }).click(),
   ]);
 
   await expect(
@@ -164,7 +164,7 @@ test("the reviews export is disabled when no review matches", async ({
 
   await expect(page.getByText("No reviews match these filters")).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Export reviews to CSV" }),
+    page.getByRole("button", { name: "Export CSV of reviews" }),
   ).toBeDisabled();
 });
 
@@ -603,6 +603,40 @@ test("themes that fail on first load leave the page in place", async ({
   ).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText("Reviews could not be loaded")).toHaveCount(0);
 });
+
+const openThemesTip = async (page: Page, path: string) => {
+  await page.goto(path);
+  await page
+    .getByRole("region", { name: "What people mention" })
+    .getByRole("button", { name: "About what people mention" })
+    .click();
+  const tip = page.getByRole("dialog", { name: "What people mention" });
+  await expect(tip).toBeVisible();
+  return tip;
+};
+
+for (const [name, path, counted] of [
+  ["the default order", "/apps/app-1/reviews", "5 newest reviews"],
+  ["lowest first", "/apps/app-1/reviews?sort=lowest", "5 lowest rated reviews"],
+  [
+    "the needs reply queue",
+    "/apps/app-1/reviews?replyState=needs_reply&sort=lowest",
+    "5 lowest rated reviews",
+  ],
+] as const) {
+  test(`the themes tip says what its counts cover for ${name}`, async ({
+    page,
+  }) => {
+    const tip = await openThemesTip(page, path);
+
+    await expect(tip).toHaveAccessibleDescription(
+      new RegExp(
+        `compared with the newest 500 reviews of the version and period\\. Counts cover the ${counted} matching the filters\\.`,
+      ),
+    );
+    await expect(tip).not.toHaveAccessibleDescription(/every review/);
+  });
+}
 
 test("a play review edited after the reply says so and has its own filter", async ({
   page,
