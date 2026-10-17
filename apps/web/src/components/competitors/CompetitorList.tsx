@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Download, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import type { CompetitorItem } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
@@ -17,6 +17,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
+import { ExportCsvButton } from "@/components/ExportCsvButton";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { removeCompetitor } from "@/lib/api";
@@ -135,15 +136,10 @@ export function CompetitorList({
         <p className="text-body text-muted-foreground">
           {`${count} tracked ${count === 1 ? "competitor" : "competitors"}`}
         </p>
-        <Button
-          variant="outline"
-          size="sm"
+        <ExportCsvButton
+          subject="competitors"
           onClick={() => exportCompetitors(id, competitors)}
-          aria-label="Export competitors to CSV"
-        >
-          <Download />
-          Export CSV
-        </Button>
+        />
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         {competitors.map((competitor) => (

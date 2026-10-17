@@ -526,7 +526,7 @@ test("exporting a search that matches nothing writes no file", async ({
     downloads.push(download.suggestedFilename()),
   );
 
-  await page.getByRole("button", { name: "Export reviews to CSV" }).click();
+  await page.getByRole("button", { name: "Export CSV of reviews" }).click();
 
   await expect(
     page.getByText("Nothing to export: no review matches this search"),
