@@ -1,4 +1,5 @@
 import { request as httpRequest, type IncomingHttpHeaders } from "node:http";
+import { SESSION_COOKIE } from "@asobeast/shared";
 import { expect, test } from "./session.mts";
 
 const PROBE = "trace-probe-7f3a91";
@@ -17,11 +18,17 @@ interface TraceAnswer {
   body: string;
 }
 
-function trace(baseURL: string, path: string): Promise<TraceAnswer> {
+function trace(
+  baseURL: string | undefined,
+  path: string,
+): Promise<TraceAnswer> {
   return new Promise((resolve, reject) => {
     const outgoing = httpRequest(
       new URL(path, baseURL),
-      { method: "TRACE", headers: { "x-probe": PROBE } },
+      {
+        method: "TRACE",
+        headers: { "x-probe": PROBE, cookie: `${SESSION_COOKIE}=e2e` },
+      },
       (incoming) => {
         const chunks: Buffer[] = [];
         incoming.on("data", (chunk: Buffer) => chunks.push(chunk));
@@ -44,11 +51,11 @@ test.describe("the TRACE method", () => {
     test(`${route} answers without echoing the request`, async ({
       baseURL,
     }) => {
-      const answer = await trace(baseURL!, route);
+      const answer = await trace(baseURL, route);
 
-      expect(answer.headers["content-type"] ?? "").not.toContain(
-        "message/http",
-      );
+      expect(
+        (answer.headers["content-type"] ?? "").toLowerCase(),
+      ).not.toContain("message/http");
       expect(answer.body).not.toContain(PROBE);
       expect(JSON.stringify(answer.headers)).not.toContain(PROBE);
     });
@@ -58,7 +65,7 @@ test.describe("the TRACE method", () => {
     baseURL,
     request,
   }) => {
-    await trace(baseURL!, "/");
+    await trace(baseURL, "/");
     const health = await request.get("/api/health");
 
     expect(health.status()).toBe(200);
