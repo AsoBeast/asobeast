@@ -1,4 +1,4 @@
-import { tierOf } from '@asobeast/shared';
+import { isRanked, tierOf } from '@asobeast/shared';
 
 export interface HeldRanking {
   position: number | null;
@@ -22,7 +22,7 @@ export function daysInTier(rankings: HeldRanking[]): number | null {
     if (dayKey(ranking.date) !== dayKey(expected)) {
       break;
     }
-    if (tierOf(ranking.position) !== tier) {
+    if (!isRanked(ranking.position) || ranking.position > tier) {
       break;
     }
     held += 1;

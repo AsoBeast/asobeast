@@ -25,6 +25,12 @@ describe('daysInTier', () => {
     );
   });
 
+  it('keeps counting days spent in a better tier', () => {
+    expect(daysInTier(held(day(0, 2), day(1, 1), day(2, 1), day(3, 5)))).toBe(
+      3,
+    );
+  });
+
   it('stops at a day without a ranking row', () => {
     expect(daysInTier(held(day(0, 1), day(2, 1), day(3, 1)))).toBe(1);
   });
