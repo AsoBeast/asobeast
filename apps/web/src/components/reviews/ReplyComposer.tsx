@@ -206,6 +206,7 @@ export function ReplyComposer({
           ref={textRef}
           autoFocus
           aria-label="Reply text"
+          dir="auto"
           aria-describedby={counterId}
           aria-invalid={over || undefined}
           aria-busy={draft.drafting || undefined}

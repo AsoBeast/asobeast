@@ -120,6 +120,7 @@ import {
   UPDATE_REVIEW_THEMES,
   UPDATE_THEME_REVIEWS,
   TWIN_REVIEWS,
+  RTL_REVIEWS,
 } from "./fixtures.mts";
 import {
   EMPTY_PORTFOLIO_INSIGHTS,
@@ -722,6 +723,7 @@ const updateReviews = (req: IncomingMessage) =>
 const REVIEW_SETS: Record<string, typeof UPDATE_THEME_REVIEWS> = {
   update: UPDATE_THEME_REVIEWS,
   twins: TWIN_REVIEWS,
+  rtl: RTL_REVIEWS,
 };
 
 const reviewSetOf = (req: IncomingMessage) =>
