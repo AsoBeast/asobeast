@@ -1202,6 +1202,32 @@ test.describe.serial("chart follows", () => {
     await expect(stopButtons(page)).toHaveCount(2);
   });
 
+  test("moves focus to the next Stop following when a failed stop removes the row", async ({
+    page,
+    request,
+  }) => {
+    await followTwo(request);
+    await openList(page);
+    for (const follow of await follows(request)) {
+      if (follow.genre === "7012") {
+        await request.delete(`${MOCK_API}/charts/follows/${follow.id}`);
+      }
+    }
+    const puzzle = page
+      .getByRole("dialog", { name: "Followed charts" })
+      .getByRole("button", { name: "Stop following Puzzle · United States" });
+
+    await puzzle.focus();
+    await page.keyboard.press("Enter");
+
+    await expect(
+      page.getByText("Could not stop following the category."),
+    ).toBeVisible();
+    await expect(puzzle).toHaveCount(0);
+    await expect(stopButtons(page)).toHaveCount(1);
+    await expect(stopButtons(page).first()).toBeFocused();
+  });
+
   test("drops an unfollowed chart before the lists load again", async ({
     page,
     context,

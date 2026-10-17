@@ -27,14 +27,15 @@ import { useUnfollowChart } from "./use-unfollow-chart";
 function FollowRow({
   category,
   onNavigate,
-  onStopped,
+  onSettled,
 }: {
   category: FollowedCategory;
   onNavigate: () => void;
-  onStopped: (stop: HTMLElement | null) => void;
+  onSettled: (stop: HTMLElement | null) => void;
 }) {
   const stop = useRef<HTMLButtonElement>(null);
-  const mutation = useUnfollowChart(() => onStopped(stop.current));
+  const handOff = () => onSettled(stop.current);
+  const mutation = useUnfollowChart(handOff, handOff);
   const unfollowOnce = useSingleFlight(mutation);
   const title = categoryTitle(category);
   const kinds = category.follows
@@ -98,7 +99,7 @@ function FollowList({ onNavigate }: { onNavigate: () => void }) {
               key={category.follows[0].id}
               category={category}
               onNavigate={onNavigate}
-              onStopped={(stop) => handOffFocus(stopFollowingSuccessor(stop))}
+              onSettled={(stop) => handOffFocus(stopFollowingSuccessor(stop))}
             />
           ))}
         </ul>
