@@ -1,0 +1,292 @@
+import {
+  ConflictException,
+  Inject,
+  Injectable,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
+import type {
+  Store,
+  StoreConnectionItem,
+  StoreConnectionRequest,
+  StoreConnectionState,
+  StoreConnectionStatus,
+  StoreConnectionSyncResult,
+  StoreReportAccess,
+} from '@asobeast/shared';
+import { type SecretBox, SecretBoxError } from '../common/crypto/secret-box';
+import { WorkspaceContext } from '../common/tenancy/workspace-context';
+import { PrismaService } from '../prisma/prisma.service';
+import type { AscAnalyticsApi } from './asc-analytics-api';
+import { AscApiFactory } from './asc-api.factory';
+import { AscRejectedKeyError } from './asc-errors';
+import { refusalOf, toHttpException } from './asc-http-errors';
+import {
+  keyFingerprintOf,
+  normalizePrivateKey,
+  type AscCredentials,
+} from './asc-token';
+import { SECRET_BOX } from './secret-box.provider';
+import { connectionItems } from './store-connection-items';
+import {
+  needsReseal,
+  openCredentials,
+  sealCredentials,
+} from './store-credentials';
+import { StoreReportQueue } from './store-report-queue';
+
+export const STORE_CONNECT_OFF =
+  'Store connections are off on this instance. Set STORE_CONNECT_ENCRYPTION_KEY to turn them on.';
+export const PLAY_ARRIVES_LATER =
+  'Google Play connections arrive in a later release';
+export const CREDENTIAL_UNREADABLE =
+  'The stored key can no longer be decrypted, usually because STORE_CONNECT_ENCRYPTION_KEY changed without STORE_CONNECT_ENCRYPTION_KEY_PREVIOUS. Connect the key again.';
+const NOT_CONNECTED = 'This workspace has not connected that store';
+
+class CredentialUnreadableError extends Error {}
+const REJECTED =
+  'The store refused the connected key. Verify it or connect a new one first.';
+const OPERATION = 'a store connection';
+
+export interface OpenedConnection {
+  id: string;
+  status: StoreConnectionStatus;
+  reportAccess: StoreReportAccess;
+  lastError: string | null;
+  api: AscAnalyticsApi;
+}
+
+@Injectable()
+export class StoreConnectionService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly workspace: WorkspaceContext,
+    @Inject(SECRET_BOX) private readonly box: SecretBox | null,
+    private readonly factory: AscApiFactory,
+    private readonly queue: StoreReportQueue,
+  ) {}
+
+  async state(): Promise<StoreConnectionState> {
+    if (!this.box) return { available: false, connections: [] };
+    return { available: true, connections: await this.items() };
+  }
+
+  async connect(
+    store: Store,
+    request: StoreConnectionRequest,
+    userId: string,
+  ): Promise<StoreConnectionItem> {
+    const box = this.requireBox();
+    if (store !== request.store) {
+      throw new NotFoundException(PLAY_ARRIVES_LATER);
+    }
+    const credentials: AscCredentials = {
+      issuerId: request.issuerId,
+      keyId: request.keyId,
+      privateKey: normalizePrivateKey(request.privateKey),
+    };
+    const keyFingerprint = fingerprintOf(credentials.privateKey);
+    const refusal = await this.refusal(this.factory.open(credentials));
+    if (refusal) throw new UnprocessableEntityException(refusal);
+    const workspaceId = this.workspace.require(OPERATION);
+    await this.prisma.withTransaction(async (tx) => {
+      await tx.storeConnection.deleteMany({ where: { store: store } });
+      await tx.storeConnection.create({
+        data: {
+          workspaceId,
+          store: store,
+          issuerId: credentials.issuerId,
+          keyId: credentials.keyId,
+          keyFingerprint,
+          credentialCiphertext: sealCredentials(
+            box,
+            workspaceId,
+            store,
+            credentials,
+          ),
+          createdByUserId: userId,
+          verifiedAt: new Date(),
+        },
+      });
+    });
+    await this.queue.enqueue(workspaceId, store);
+    return this.item(store);
+  }
+
+  async verify(store: Store): Promise<StoreConnectionItem> {
+    const connection = await this.requireConnection(store);
+    const refusal = await this.refusal(connection.api);
+    if (refusal) {
+      await this.markRejected(store, refusal);
+      return this.item(store);
+    }
+    await this.prisma.storeConnection.update({
+      where: { id: connection.id },
+      data: { status: 'active', verifiedAt: new Date(), lastError: null },
+    });
+    await this.queue.enqueue(this.workspace.require(OPERATION), store);
+    return this.item(store);
+  }
+
+  async sync(store: Store): Promise<StoreConnectionSyncResult> {
+    const connection = await this.requireConnection(store);
+    if (connection.status === 'rejected') throw new ConflictException(REJECTED);
+    return this.queue.enqueue(this.workspace.require(OPERATION), store);
+  }
+
+  async disconnect(store: Store): Promise<void> {
+    await this.prisma.storeConnection.deleteMany({ where: { store } });
+  }
+
+  async open(store: Store): Promise<OpenedConnection | null> {
+    try {
+      return await this.unsealed(store);
+    } catch (error) {
+      if (error instanceof CredentialUnreadableError) return null;
+      throw error;
+    }
+  }
+
+  private async unsealed(store: Store): Promise<OpenedConnection | null> {
+    if (!this.box) return null;
+    const row = await this.prisma.storeConnection.findFirst({
+      where: { store },
+    });
+    if (!row) return null;
+    const workspaceId = this.workspace.require(OPERATION);
+    const credentials = await this.credentialsOf(
+      this.box,
+      workspaceId,
+      store,
+      row.credentialCiphertext,
+    );
+    if (needsReseal(this.box, row.credentialCiphertext)) {
+      await this.prisma.storeConnection.update({
+        where: { id: row.id },
+        data: {
+          credentialCiphertext: sealCredentials(
+            this.box,
+            workspaceId,
+            store,
+            credentials,
+          ),
+        },
+      });
+    }
+    return {
+      id: row.id,
+      status: row.status as StoreConnectionStatus,
+      reportAccess: row.reportAccess as StoreReportAccess,
+      lastError: row.lastError,
+      api: this.factory.open(credentials),
+    };
+  }
+
+  async markRejected(store: Store, reason: string): Promise<void> {
+    await this.prisma.storeConnection.updateMany({
+      where: { store },
+      data: { status: 'rejected', lastError: reason },
+    });
+  }
+
+  async markSynced(
+    store: Store,
+    reportAccess: StoreReportAccess,
+    lastError: string | null,
+  ): Promise<void> {
+    await this.prisma.storeConnection.updateMany({
+      where: { store },
+      data: { reportAccess, lastError, lastSyncedAt: new Date() },
+    });
+  }
+
+  private async item(store: Store): Promise<StoreConnectionItem> {
+    const item = (await this.items()).find((each) => each.store === store);
+    if (!item) throw new NotFoundException(NOT_CONNECTED);
+    return item;
+  }
+
+  private async items(): Promise<StoreConnectionItem[]> {
+    const [rows, apps] = await Promise.all([
+      this.prisma.storeConnection.findMany({ orderBy: { store: 'asc' } }),
+      this.prisma.app.findMany({
+        where: { isCompetitor: false },
+        orderBy: { createdAt: 'asc' },
+        select: {
+          id: true,
+          name: true,
+          store: true,
+          storeReportRequests: {
+            where: { accessType: 'ONGOING' },
+            select: { state: true },
+          },
+        },
+      }),
+    ]);
+    const reported = apps.filter((app) =>
+      rows.some((row) => row.store === app.store),
+    );
+    const ranges = await Promise.all(
+      reported.map(async (app) => ({
+        appId: app.id,
+        ...(await this.prisma.storeFunnelDay.aggregate({
+          where: { appId: app.id },
+          _min: { date: true },
+          _max: { date: true },
+        })),
+      })),
+    );
+    return connectionItems(rows, apps, ranges);
+  }
+
+  private async requireConnection(store: Store): Promise<OpenedConnection> {
+    this.requireBox();
+    let connection: OpenedConnection | null;
+    try {
+      connection = await this.unsealed(store);
+    } catch (error) {
+      if (!(error instanceof CredentialUnreadableError)) throw error;
+      throw new ConflictException(CREDENTIAL_UNREADABLE);
+    }
+    if (!connection) throw new NotFoundException(NOT_CONNECTED);
+    return connection;
+  }
+
+  private async credentialsOf(
+    box: SecretBox,
+    workspaceId: string,
+    store: Store,
+    sealed: string,
+  ): Promise<AscCredentials> {
+    try {
+      return openCredentials(box, workspaceId, store, sealed);
+    } catch (error) {
+      if (!(error instanceof SecretBoxError)) throw error;
+      await this.markRejected(store, CREDENTIAL_UNREADABLE);
+      throw new CredentialUnreadableError();
+    }
+  }
+
+  private requireBox(): SecretBox {
+    if (!this.box) throw new ConflictException(STORE_CONNECT_OFF);
+    return this.box;
+  }
+
+  private async refusal(api: AscAnalyticsApi): Promise<string | null> {
+    try {
+      await api.verify();
+      return null;
+    } catch (error) {
+      if (error instanceof AscRejectedKeyError) return refusalOf(error);
+      throw toHttpException(error);
+    }
+  }
+}
+
+function fingerprintOf(privateKey: string): string {
+  try {
+    return keyFingerprintOf(privateKey);
+  } catch (error) {
+    throw toHttpException(error);
+  }
+}

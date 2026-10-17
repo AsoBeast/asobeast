@@ -90,9 +90,11 @@ export function PositionDeltaChip({
 export function TrendChip({
   label,
   value,
+  unit = "",
 }: {
   label: string;
   value: number | null;
+  unit?: string;
 }) {
   if (value === null) {
     return (
@@ -112,7 +114,8 @@ export function TrendChip({
       )}
     >
       <Icon className="size-3.5" aria-hidden />
-      {rounded > 0 ? `+${rounded}` : rounded} {label}
+      {rounded > 0 ? `+${rounded}` : rounded}
+      {unit} {label}
     </span>
   );
 }

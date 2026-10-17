@@ -56,6 +56,15 @@ describe('scrubSecrets', () => {
     });
   });
 
+  it('redacts a private key field even without its PEM header', () => {
+    expect(
+      scrubSecrets(
+        { privateKey: 'MIGHAgEAMBMGByqGSM49AgEGCCqG', private_key: 'MIIEv' },
+        [],
+      ),
+    ).toEqual({ privateKey: REDACTED, private_key: REDACTED });
+  });
+
   it('keeps the host of a credentialed url readable', () => {
     expect(scrubText('http://user:pass@proxy.example.com:80', [])).toBe(
       `http://${REDACTED}@proxy.example.com:80`,
@@ -148,5 +157,61 @@ describe('scrubSecrets', () => {
     node.self = node;
 
     expect(scrubSecrets(node, [])).toEqual({ name: 'root', self: CIRCULAR });
+  });
+});
+
+describe('scrubText and key material', () => {
+  const PEM = [
+    '-----BEGIN PRIVATE KEY-----',
+    'MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQg',
+    'abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGH',
+    '-----END PRIVATE KEY-----',
+  ].join('\n');
+
+  const JWT =
+    'eyJhbGciOiJFUzI1NiIsImtpZCI6IjJYOVI0SFhGMzQiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiI1NzI0NjU0MiIsImV4cCI6MTc5MTM3NTAwMH0.MEUCIQDabcdefghijklmnop';
+
+  it('scrubs a PEM private key block wherever it appears in a message', () => {
+    const scrubbed = scrubText(`key was ${PEM} and then it failed`, []);
+
+    expect(scrubbed).toBe(`key was ${REDACTED} and then it failed`);
+    expect(scrubbed).not.toContain('MIGHAgEAMBMG');
+  });
+
+  it('scrubs the other PEM flavours too', () => {
+    const rsa =
+      '-----BEGIN RSA PRIVATE KEY-----\nabc\n-----END RSA PRIVATE KEY-----';
+    const ec =
+      '-----BEGIN EC PRIVATE KEY-----\nabc\n-----END EC PRIVATE KEY-----';
+
+    expect(scrubText(`${rsa} ${ec}`, [])).toBe(`${REDACTED} ${REDACTED}`);
+  });
+
+  it('keeps a public key, which is not a secret', () => {
+    const publicKey =
+      '-----BEGIN PUBLIC KEY-----\nabc\n-----END PUBLIC KEY-----';
+
+    expect(scrubText(publicKey, [])).toBe(publicKey);
+  });
+
+  it('scrubs a signed JWT', () => {
+    expect(scrubText(`Bearer ${JWT} was refused`, [])).toBe(
+      `Bearer ${REDACTED} was refused`,
+    );
+  });
+
+  it('leaves a dotted version number alone', () => {
+    expect(scrubText('upgraded 1.8.0 to 1.9.0', [])).toBe(
+      'upgraded 1.8.0 to 1.9.0',
+    );
+  });
+
+  it('scrubs both from a logged object', () => {
+    const scrubbed = JSON.stringify(
+      scrubSecrets({ detail: PEM, trace: JWT }, []),
+    );
+
+    expect(scrubbed).not.toContain('MIGHAgEAMBMG');
+    expect(scrubbed).not.toContain('eyJhbGci');
   });
 });

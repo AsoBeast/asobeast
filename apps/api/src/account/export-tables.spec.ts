@@ -23,6 +23,12 @@ describe('withoutSecrets', () => {
     });
   });
 
+  it('drops the sealed credential from an exported connection row', () => {
+    expect(
+      withoutSecrets({ id: 'c1', credentialCiphertext: 'v1.x', issuerId: 'y' }),
+    ).toEqual({ id: 'c1', issuerId: 'y' });
+  });
+
   it('passes a non object through', () => {
     expect(withoutSecrets(null)).toBeNull();
     expect(withoutSecrets(7)).toBe(7);
@@ -42,6 +48,33 @@ describe('exportTables', () => {
     );
     expect(TENANT_TABLES.filter((table) => !covered.includes(table))).toEqual(
       [],
+    );
+  });
+
+  it('exports the store connect tables', () => {
+    expect(names).toEqual(
+      expect.arrayContaining([
+        'storeConnection',
+        'storeReportRequest',
+        'storeReportInstance',
+        'storeFunnelDay',
+      ]),
+    );
+  });
+
+  it('never exports the raw report files', async () => {
+    const findMany = jest.fn().mockResolvedValue([]);
+    const prisma = {
+      storeReportInstance: { findMany },
+    } as unknown as PrismaService;
+    const instances = exportTables(prisma).find(
+      (table) => table.name === 'storeReportInstance',
+    );
+
+    await instances?.read(0, 10);
+
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ omit: { raw: true } }),
     );
   });
 

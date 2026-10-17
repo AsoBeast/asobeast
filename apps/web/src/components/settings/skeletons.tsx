@@ -98,3 +98,20 @@ export function WebhooksCardSkeleton() {
 export function EmailAlertsCardSkeleton() {
   return <AlertsCardSkeleton />;
 }
+
+export function StoreConnectionsSkeleton() {
+  return (
+    <Card>
+      <CardHeader className="flex-row items-start justify-between gap-4">
+        <div className="flex flex-col gap-2">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-5 w-36" />
+        </div>
+        <Skeleton className="h-8 w-44" />
+      </CardHeader>
+      <CardContent>
+        <Skeleton className="h-4 w-full max-w-md" />
+      </CardContent>
+    </Card>
+  );
+}

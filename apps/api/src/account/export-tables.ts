@@ -13,6 +13,7 @@ const SECRET_FIELDS = [
   'verificationHash',
   'tokenHash',
   'secret',
+  'credentialCiphertext',
 ];
 
 export function withoutSecrets(row: unknown): unknown {
@@ -209,6 +210,43 @@ export function exportTables(prisma: PrismaService): ExportTable[] {
       () => prisma.aiCall.count(),
       (skip, take) =>
         prisma.aiCall.findMany({ skip, take, orderBy: { id: 'asc' } }),
+    ),
+    table(
+      'storeConnection',
+      () => prisma.storeConnection.count(),
+      (skip, take) =>
+        prisma.storeConnection.findMany({ skip, take, orderBy: { id: 'asc' } }),
+    ),
+    table(
+      'storeReportRequest',
+      () => prisma.storeReportRequest.count(),
+      (skip, take) =>
+        prisma.storeReportRequest.findMany({
+          skip,
+          take,
+          orderBy: { id: 'asc' },
+        }),
+    ),
+    table(
+      'storeReportInstance',
+      () => prisma.storeReportInstance.count(),
+      (skip, take) =>
+        prisma.storeReportInstance.findMany({
+          skip,
+          take,
+          orderBy: { id: 'asc' },
+          omit: { raw: true },
+        }),
+    ),
+    table(
+      'storeFunnelDay',
+      () => prisma.storeFunnelDay.count(),
+      (skip, take) =>
+        prisma.storeFunnelDay.findMany({
+          skip,
+          take,
+          orderBy: [{ appId: 'asc' }, { date: 'asc' }, { id: 'asc' }],
+        }),
     ),
     table(
       'webhook',

@@ -18,6 +18,11 @@ export const READ_SCREENSHOTS_JOB_OPTIONS = {
   backoff: { type: 'exponential', delay: 30_000 },
 } satisfies DefaultJobOptions;
 
+export const STORE_REPORT_JOB_OPTIONS = {
+  attempts: 3,
+  backoff: { type: 'exponential', delay: 60_000 },
+} satisfies DefaultJobOptions;
+
 export const DEFERRED_JOB_OPTIONS = {
   priority: 1,
 } satisfies DefaultJobOptions;

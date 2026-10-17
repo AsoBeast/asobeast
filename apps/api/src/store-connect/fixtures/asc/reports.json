@@ -1,0 +1,32 @@
+{
+  "data": [
+    {
+      "type": "analyticsReports",
+      "id": "r-engagement-detailed",
+      "attributes": {
+        "name": "App Store Discovery and Engagement Detailed",
+        "category": "APP_STORE_ENGAGEMENT"
+      }
+    },
+    {
+      "type": "analyticsReports",
+      "id": "r-engagement-standard",
+      "attributes": {
+        "name": "App Store Discovery and Engagement Standard",
+        "category": "APP_STORE_ENGAGEMENT"
+      }
+    },
+    {
+      "type": "analyticsReports",
+      "id": "r-web-preview",
+      "attributes": {
+        "name": "App Store Web Preview Engagement",
+        "category": "APP_STORE_ENGAGEMENT"
+      }
+    }
+  ],
+  "links": {
+    "self": "https://api.appstoreconnect.apple.com/v1/analyticsReportRequests/f3a1c2d4-0001/reports"
+  },
+  "meta": { "paging": { "total": 3, "limit": 200 } }
+}

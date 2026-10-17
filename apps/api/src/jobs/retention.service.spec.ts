@@ -21,6 +21,7 @@ const buildConfig = (days: Days): ConfigService<Env, true> => {
     RETENTION_ACTIONS_DAYS: 180,
     RETENTION_BILLING_EVENTS_DAYS: 90,
     RETENTION_AI_CALLS_DAYS: 400,
+    RETENTION_STORE_REPORTS_DAYS: 35,
     ...days,
   };
   return {
@@ -49,6 +50,9 @@ const buildPrisma = () => ({
   },
   screenshotText: { deleteMany: jest.fn().mockResolvedValue({ count: 14 }) },
   chartCapture: { deleteMany: jest.fn().mockResolvedValue({ count: 15 }) },
+  storeReportInstance: {
+    deleteMany: jest.fn().mockResolvedValue({ count: 16 }),
+  },
 });
 
 const crossTenant = new CrossTenantAccess(new WorkspaceContext());
@@ -105,6 +109,38 @@ describe('RetentionService', () => {
       { where: { id: { notIn: string[] } } },
     ];
     expect(where.id).toEqual({ notIn: ['a', 'b'] });
+  });
+
+  it('prunes store report instances older than the configured days', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-07-13T09:30:00.000Z'));
+    const prisma = buildPrisma();
+    const service = new RetentionService(
+      buildConfig({ RETENTION_STORE_REPORTS_DAYS: 35 }),
+      prisma as unknown as PrismaService,
+      crossTenant,
+    );
+
+    const deleted = await service.prune();
+
+    expect(deleted.storeReportInstance).toBe(16);
+    expect(prisma.storeReportInstance.deleteMany).toHaveBeenCalledWith({
+      where: { fetchedAt: { lt: new Date('2026-06-08T00:00:00.000Z') } },
+    });
+    jest.useRealTimers();
+  });
+
+  it('keeps every store report instance at zero', async () => {
+    const prisma = buildPrisma();
+    const service = new RetentionService(
+      buildConfig({ RETENTION_STORE_REPORTS_DAYS: 0 }),
+      prisma as unknown as PrismaService,
+      crossTenant,
+    );
+
+    const deleted = await service.prune();
+
+    expect(prisma.storeReportInstance.deleteMany).not.toHaveBeenCalled();
+    expect(deleted.storeReportInstance).toBe(0);
   });
 
   it('prunes the alert delivery log with its own knob', async () => {
@@ -260,6 +296,7 @@ describe('RetentionService', () => {
     prisma.aiCall.updateMany.mockImplementation(boom);
     prisma.screenshotText.deleteMany.mockImplementation(boom);
     prisma.chartCapture.deleteMany.mockImplementation(boom);
+    prisma.storeReportInstance.deleteMany.mockImplementation(boom);
     const service = new RetentionService(
       buildConfig({
         RETENTION_CHANGE_EVENTS_DAYS: 30,
@@ -352,6 +389,7 @@ describe('RetentionService action pruning', () => {
         RETENTION_ACTIONS_DAYS: 0,
         RETENTION_BILLING_EVENTS_DAYS: 0,
         RETENTION_AI_CALLS_DAYS: 0,
+        RETENTION_STORE_REPORTS_DAYS: 0,
       }),
       prisma as unknown as PrismaService,
       crossTenant,

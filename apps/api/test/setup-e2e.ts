@@ -9,3 +9,5 @@ process.env.AUTH_SECRET = TEST_AUTH_SECRET;
 process.env.BILLING_ENABLED = 'false';
 process.env.AI_CALLS_PER_MONTH = '';
 process.env.SCREENSHOT_OCR = 'false';
+process.env.STORE_CONNECT_ENCRYPTION_KEY = '';
+process.env.STORE_CONNECT_ENCRYPTION_KEY_PREVIOUS = '';

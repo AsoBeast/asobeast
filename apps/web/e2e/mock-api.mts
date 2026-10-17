@@ -6,6 +6,15 @@ import {
 import { setTimeout as delay } from "node:timers/promises";
 import { planMockImport } from "./keyword-import.mts";
 import { summarizeActions } from "./actions-summary.mts";
+import { funnelFor } from "./store-funnel.mts";
+import {
+  STORE_CONNECT_OFF_COOKIE,
+  STORE_CONNECTION_ACTIVE,
+  STORE_CONNECTION_COOKIE,
+  storeConnectionCookie,
+  storeConnectionOf,
+  storeConnectionState,
+} from "./store-connections.mts";
 import {
   discardReply,
   draftReply,
@@ -2417,6 +2426,79 @@ const routes: Route[] = [
   },
   {
     method: "GET",
+    pattern: /^\/store-connections$/,
+    handler: (_p, req, res) =>
+      json(
+        res,
+        200,
+        storeConnectionState(
+          cookieValue(req, STORE_CONNECTION_COOKIE),
+          hasCookie(req, STORE_CONNECT_OFF_COOKIE, "1"),
+        ),
+      ),
+  },
+  {
+    method: "PUT",
+    pattern: /^\/store-connections\/APP_STORE$/,
+    handler: (_p, req, res) =>
+      withBody<{ privateKey?: string }>(req, res, (body) => {
+        if (!body.privateKey?.includes("BEGIN PRIVATE KEY")) {
+          return json(
+            res,
+            400,
+            errorEnvelope(
+              400,
+              req.url ?? "/store-connections/APP_STORE",
+              "The private key is not a PEM encoded PKCS8 key. Paste the whole contents of the .p8 file.",
+            ),
+          );
+        }
+        json(res, 200, STORE_CONNECTION_ACTIVE, {
+          "set-cookie": storeConnectionCookie("active"),
+        });
+      }),
+  },
+  {
+    method: "POST",
+    pattern: /^\/store-connections\/APP_STORE\/verify$/,
+    handler: (_p, req, res) => {
+      const current = storeConnectionOf(
+        cookieValue(req, STORE_CONNECTION_COOKIE),
+      );
+      if (!current) {
+        return json(res, 404, errorEnvelope(404, req.url ?? "/"));
+      }
+      json(res, 200, STORE_CONNECTION_ACTIVE, {
+        "set-cookie": storeConnectionCookie("active"),
+      });
+    },
+  },
+  {
+    method: "POST",
+    pattern: /^\/store-connections\/APP_STORE\/sync$/,
+    handler: (_p, req, res) => {
+      const current = storeConnectionOf(
+        cookieValue(req, STORE_CONNECTION_COOKIE),
+      );
+      if (!current) {
+        return json(res, 404, errorEnvelope(404, req.url ?? "/"));
+      }
+      if (current.status === "rejected") {
+        return json(res, 409, errorEnvelope(409, req.url ?? "/"));
+      }
+      json(res, 202, { outcome: "queued" });
+    },
+  },
+  {
+    method: "DELETE",
+    pattern: /^\/store-connections\/APP_STORE$/,
+    handler: (_p, _req, res) => {
+      res.writeHead(204, { "set-cookie": storeConnectionCookie(null) });
+      res.end();
+    },
+  },
+  {
+    method: "GET",
     pattern: /^\/account\/deletion$/,
     handler: (_p, req, res) => json(res, 200, deletionStatusFor(req)),
   },
@@ -2828,6 +2910,9 @@ const routes: Route[] = [
       res.writeHead(204).end();
     },
   },
+  appRoute(/^\/apps\/([^/]+)\/funnel$/, (dataset, query) =>
+    funnelFor(dataset.detail.id, query.get("country")),
+  ),
   appRoute(/^\/apps\/([^/]+)\/summary$/, (dataset, query) =>
     dataset.detail.id === "app-1"
       ? (APP_1_MARKET_SUMMARIES[query.get("country") ?? ""] ?? dataset.summary)
