@@ -1,6 +1,6 @@
 import { isChangeField, type SnapshotChange } from "@asobeast/shared";
 import { CHANGE_FIELD_LABELS } from "@/lib/change-fields";
-import { formatNumber } from "@/lib/format";
+import { formatNumber, formatPrice, formatRating } from "@/lib/format";
 import { localizedLabel } from "@/lib/localizations";
 import { releaseNotesInline } from "@/components/changes/release-notes";
 
@@ -49,6 +49,26 @@ function notes(value: ChangeValue): string {
   return cell(typeof value === "string" ? releaseNotesInline(value) : value);
 }
 
+const NUMBER_FORMATTERS: Readonly<Record<string, (value: number) => string>> = {
+  ratingAvg: formatRating,
+  ratingCount: formatNumber,
+  installs: formatNumber,
+  price: formatPrice,
+  screenshots: formatNumber,
+};
+
+function formatted(value: ChangeValue, format: (value: number) => string) {
+  const number = Number(value);
+  return value === null || value === "" || !Number.isFinite(number)
+    ? cell(value)
+    : format(number);
+}
+
+function numberCells(field: string, before: ChangeValue, after: ChangeValue) {
+  const format = NUMBER_FORMATTERS[field];
+  return { before: formatted(before, format), after: formatted(after, format) };
+}
+
 export function snapshotChangeCells({ field, before, after }: SnapshotChange): {
   before: string;
   after: string;
@@ -58,6 +78,9 @@ export function snapshotChangeCells({ field, before, after }: SnapshotChange): {
     return { before: notes(before), after: notes(after) };
   if (TEXT_LENGTH_FIELDS.has(field)) {
     return { before: length(before), after: length(after) };
+  }
+  if (Object.hasOwn(NUMBER_FORMATTERS, field)) {
+    return numberCells(field, before, after);
   }
   return { before: cell(before), after: cell(after) };
 }
