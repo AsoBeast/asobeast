@@ -10,6 +10,7 @@ export function RankBandLabel({ value, viewBox }: LabelProps) {
   }
   return (
     <text
+      className="recharts-label"
       x={viewBox.x + viewBox.width - RIGHT_INSET}
       y={viewBox.y + BASELINE}
       textAnchor="end"
