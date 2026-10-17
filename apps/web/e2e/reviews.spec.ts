@@ -604,6 +604,40 @@ test("themes that fail on first load leave the page in place", async ({
   await expect(page.getByText("Reviews could not be loaded")).toHaveCount(0);
 });
 
+const openThemesTip = async (page: Page, path: string) => {
+  await page.goto(path);
+  await page
+    .getByRole("region", { name: "What people mention" })
+    .getByRole("button", { name: "About what people mention" })
+    .click();
+  const tip = page.getByRole("dialog", { name: "What people mention" });
+  await expect(tip).toBeVisible();
+  return tip;
+};
+
+for (const [name, path, counted] of [
+  ["the default order", "/apps/app-1/reviews", "5 newest reviews"],
+  ["lowest first", "/apps/app-1/reviews?sort=lowest", "5 lowest rated reviews"],
+  [
+    "the needs reply queue",
+    "/apps/app-1/reviews?replyState=needs_reply&sort=lowest",
+    "5 lowest rated reviews",
+  ],
+] as const) {
+  test(`the themes tip says what its counts cover for ${name}`, async ({
+    page,
+  }) => {
+    const tip = await openThemesTip(page, path);
+
+    await expect(tip).toHaveAccessibleDescription(
+      new RegExp(
+        `compared with the newest 500 reviews of the version and period\\. Counts cover the ${counted} matching the filters\\.`,
+      ),
+    );
+    await expect(tip).not.toHaveAccessibleDescription(/every review/);
+  });
+}
+
 test("a play review edited after the reply says so and has its own filter", async ({
   page,
 }) => {
