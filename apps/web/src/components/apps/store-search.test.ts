@@ -1,4 +1,8 @@
-import type { ApiErrorEnvelope, StoreSearchResult } from "@asobeast/shared";
+import {
+  STORE_SEARCH_QUERY_MAX_LENGTH,
+  type ApiErrorEnvelope,
+  type StoreSearchResult,
+} from "@asobeast/shared";
 import { describe, expect, it } from "vitest";
 import { ApiError } from "@/lib/api";
 import {
@@ -6,7 +10,9 @@ import {
   enterAction,
   isSearchable,
   isStoreAddress,
+  nameTooLongText,
   searchErrorText,
+  searchRetryable,
 } from "./store-search";
 
 const result = (storeAppId: string): StoreSearchResult => ({
@@ -126,5 +132,68 @@ describe("searchErrorText", () => {
     expect(searchErrorText(new Error("offline"))).toBe(
       "Could not search the store.",
     );
+  });
+
+  it("says the name cannot be searched when the api refuses it", () => {
+    expect(searchErrorText(apiError(400))).toBe(
+      "This name cannot be searched. Change it and try again.",
+    );
+  });
+});
+
+describe("searchRetryable", () => {
+  it("never offers a refused request again", () => {
+    expect(searchRetryable(apiError(400))).toBe(false);
+  });
+
+  it.each([429, 502, 500])("offers a %s again", (status) => {
+    expect(searchRetryable(apiError(status))).toBe(true);
+  });
+
+  it("offers an offline failure again", () => {
+    expect(searchRetryable(new Error("offline"))).toBe(true);
+  });
+});
+
+describe("nameTooLongText", () => {
+  const nameOf = (length: number, unit = "a") =>
+    classifyInput(unit.repeat(length));
+
+  it("accepts a name of exactly the limit", () => {
+    expect(nameTooLongText(nameOf(STORE_SEARCH_QUERY_MAX_LENGTH))).toBeNull();
+  });
+
+  it("names the limit and the length of a name one character over", () => {
+    expect(nameTooLongText(nameOf(STORE_SEARCH_QUERY_MAX_LENGTH + 1))).toBe(
+      "Search with up to 80 characters. This name has 81.",
+    );
+  });
+
+  it("measures the way the api does, one per emoji", () => {
+    expect(
+      nameTooLongText(nameOf(STORE_SEARCH_QUERY_MAX_LENGTH, "😀")),
+    ).toBeNull();
+    expect(
+      nameTooLongText(nameOf(STORE_SEARCH_QUERY_MAX_LENGTH + 1, "😀")),
+    ).toContain("This name has 81.");
+  });
+
+  it("measures the trimmed name", () => {
+    const padded = classifyInput(
+      `  ${"a".repeat(STORE_SEARCH_QUERY_MAX_LENGTH)}  `,
+    );
+
+    expect(nameTooLongText(padded)).toBeNull();
+  });
+
+  it("never judges a store address, however long", () => {
+    const address = `https://play.google.com/store/apps/details?id=com.example.app&referrer=${"x".repeat(200)}`;
+
+    expect(nameTooLongText(classifyInput(address))).toBeNull();
+  });
+
+  it("is not searchable once it is over the limit", () => {
+    expect(isSearchable(nameOf(STORE_SEARCH_QUERY_MAX_LENGTH))).toBe(true);
+    expect(isSearchable(nameOf(STORE_SEARCH_QUERY_MAX_LENGTH + 1))).toBe(false);
   });
 });
