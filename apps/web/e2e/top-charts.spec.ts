@@ -1068,6 +1068,133 @@ test.describe.serial("chart follows", () => {
     expect(await follows(request)).toEqual([]);
   });
 
+  const followTwo = async (request: APIRequestContext) => {
+    await request.get(`${MOCK_API}/__reset-chart-follows`);
+    for (const genre of ["7012", "6014"]) {
+      await followChart(request, {
+        store: "APP_STORE",
+        country: "us",
+        collection: "free",
+        genre,
+        device: "iphone",
+      });
+    }
+  };
+  const stopButtons = (page: Page) =>
+    page
+      .getByRole("dialog", { name: "Followed charts" })
+      .getByRole("button", { name: /^Stop following/ });
+  const openList = async (page: Page) => {
+    await page.goto("/charts?view=table&genre=7012");
+    await (
+      await hydrated(page.getByRole("button", { name: "Followed charts" }))
+    ).click();
+    await expect(stopButtons(page)).toHaveCount(2);
+  };
+
+  test("moves focus to the next Stop following when one is pressed", async ({
+    page,
+    request,
+  }) => {
+    await followTwo(request);
+    await openList(page);
+    const names = await stopButtons(page).evaluateAll((buttons) =>
+      buttons.map((button) => button.getAttribute("aria-label")),
+    );
+
+    await stopButtons(page).first().focus();
+    await page.keyboard.press("Enter");
+
+    await expect(stopButtons(page)).toHaveCount(1);
+    await expect(stopButtons(page).first()).toHaveAttribute(
+      "aria-label",
+      names[1] ?? "",
+    );
+    await expect(stopButtons(page).first()).toBeFocused();
+    await expect(
+      page.getByRole("dialog", { name: "Followed charts" }),
+    ).toBeVisible();
+  });
+
+  test("moves focus to the previous Stop following when the last one is pressed", async ({
+    page,
+    request,
+  }) => {
+    await followTwo(request);
+    await openList(page);
+    const names = await stopButtons(page).evaluateAll((buttons) =>
+      buttons.map((button) => button.getAttribute("aria-label")),
+    );
+
+    await stopButtons(page).last().focus();
+    await page.keyboard.press("Enter");
+
+    await expect(stopButtons(page)).toHaveCount(1);
+    await expect(stopButtons(page).first()).toHaveAttribute(
+      "aria-label",
+      names[0] ?? "",
+    );
+    await expect(stopButtons(page).first()).toBeFocused();
+  });
+
+  test("moves focus to the popover when the last followed chart is removed", async ({
+    page,
+    request,
+  }) => {
+    await request.get(`${MOCK_API}/__reset-chart-follows`);
+    await followChart(request, {
+      store: "APP_STORE",
+      country: "us",
+      collection: "free",
+      genre: "7012",
+      device: "iphone",
+    });
+    await page.goto("/charts?view=table&genre=7012");
+    await (
+      await hydrated(page.getByRole("button", { name: "Followed charts" }))
+    ).click();
+    const list = page.getByRole("dialog", { name: "Followed charts" });
+
+    await stopButtons(page).first().focus();
+    await page.keyboard.press("Enter");
+
+    await expect(list.getByText("No categories followed yet")).toBeVisible();
+    await expect(list).toBeFocused();
+  });
+
+  test("keeps focus on Stop following while it runs and when it fails", async ({
+    page,
+    request,
+  }) => {
+    await followTwo(request);
+    await openList(page);
+    await page.route("**/api/backend/charts/follows/*", (route) =>
+      route.request().method() === "DELETE"
+        ? route.fulfill({
+            status: 500,
+            json: {
+              statusCode: 500,
+              error: "Internal Server Error",
+              message: "The server encountered an unexpected error.",
+              path: "/charts/follows",
+              timestamp: new Date().toISOString(),
+            },
+          })
+        : route.fallback(),
+    );
+    const first = stopButtons(page).first();
+
+    await first.focus();
+    await page.keyboard.press("Enter");
+
+    await expect(
+      page.getByText("Could not stop following the category."),
+    ).toBeVisible();
+    await expect(first).toBeFocused();
+    await expect(first).not.toHaveAttribute("aria-disabled", "true");
+    await expect(stopButtons(page)).toHaveCount(2);
+  });
+
   test("drops an unfollowed chart before the lists load again", async ({
     page,
     context,
