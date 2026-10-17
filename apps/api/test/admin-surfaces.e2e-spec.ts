@@ -5,6 +5,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
 import {
   API_TOKEN_PREFIX,
+  ApiErrorEnvelope,
   CapacityReport,
   ProxyPoolHealth,
 } from '@asobeast/shared';
@@ -339,6 +340,16 @@ describe('Admin surfaces (e2e)', () => {
         await present('/apps', `Bearer ${REFUSED_TOKEN}`).expect(429);
       },
     );
+
+    it('does not echo the query string of a refused admin request', async () => {
+      const response = await present(
+        `${DOCS}-json?token=${REFUSED_TOKEN}`,
+        `Bearer ${REFUSED_TOKEN}`,
+      ).expect(404);
+
+      expect((response.body as ApiErrorEnvelope).path).toBe('/docs-json');
+      expect(JSON.stringify(response.body)).not.toContain(REFUSED_TOKEN);
+    });
 
     it.each(['/admin/capacity', '/admin/proxy-pool'])(
       'answers a spent budget at %s with the same not found',
