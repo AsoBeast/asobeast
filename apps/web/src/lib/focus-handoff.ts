@@ -9,6 +9,24 @@ export function focusIsLost(root: FocusRoot = document): boolean {
   return root.activeElement === null || root.activeElement === root.body;
 }
 
+interface Container {
+  contains(node: unknown): boolean;
+}
+
+const isContainer = (value: unknown): value is Container =>
+  typeof (value as Partial<Container> | null)?.contains === "function";
+
+export function focusCanMoveTo(
+  target: unknown,
+  root: FocusRoot = document,
+): boolean {
+  const active = root.activeElement;
+  return (
+    focusIsLost(root) ||
+    (active !== target && isContainer(active) && active.contains(target))
+  );
+}
+
 export function survivingNeighbour<T>(
   items: readonly T[],
   removed: (item: T) => boolean,
@@ -28,7 +46,7 @@ export function useFocusAfterCommit(): (
   useEffect(() => {
     const target = pending.current;
     pending.current = null;
-    if (target?.isConnected && focusIsLost()) target.focus();
+    if (target?.isConnected && focusCanMoveTo(target)) target.focus();
   });
 
   return useCallback((target) => {
