@@ -41,3 +41,43 @@ test("try again refetches a comparison that failed after the competitors page wa
     page.getByRole("row").filter({ hasText: "productivity app" }),
   ).toBeVisible();
 });
+
+test("a double press on try again refetches once and keeps the page", async ({
+  page,
+}) => {
+  let failing = false;
+  await page.route(isGapsRead, (route) =>
+    failing
+      ? route.fulfill({ status: 500, json: { statusCode: 500 } })
+      : route.fallback(),
+  );
+  await page.goto("/apps/app-1/competitors");
+  await page.waitForLoadState("networkidle");
+
+  failing = true;
+  const onlyGaps = page.getByRole("switch", { name: "only gaps" });
+  await hydrated(onlyGaps);
+  await onlyGaps.click();
+  const boundary = page
+    .getByRole("main")
+    .getByRole("alert")
+    .filter({ hasText: "Competitors could not be loaded" });
+  await expect(boundary).toBeVisible({ timeout: 20_000 });
+
+  failing = false;
+  await page.evaluate(() => {
+    document.documentElement.dataset.kept = "true";
+  });
+  const reads: string[] = [];
+  page.on("request", (request) => {
+    if (isGapsRead(new URL(request.url()))) reads.push(request.url());
+  });
+  await boundary.getByRole("button", { name: "Try again" }).dblclick();
+
+  await expect(boundary).toBeHidden();
+  await expect(
+    page.getByRole("row").filter({ hasText: "productivity app" }),
+  ).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("data-kept", "true");
+  expect(reads).toHaveLength(1);
+});
