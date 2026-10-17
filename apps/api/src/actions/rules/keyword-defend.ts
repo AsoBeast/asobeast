@@ -1,7 +1,9 @@
 import {
   ActionSerpEntrant,
+  isStopword,
   KeywordDefendEvidence,
   SERP_DEPTH,
+  tokenize,
   TrackedKeywordItem,
 } from '@asobeast/shared';
 import type { SerpSnapshotDay } from '../../rankings/serp-movers';
@@ -21,6 +23,9 @@ export const DEFEND_YOUR_POSITION_MAX = 20;
 export const DEFEND_NEUTRAL_VOLUME = 30;
 export const DEFEND_PRESSURE_WEIGHT = 0.4;
 export const DEFEND_ENTRANT_PRESSURE_CAP = 3;
+export const DEFEND_NICHE_MIN_KEYWORDS = 2;
+
+type SerpReach = ReadonlyMap<string, number>;
 
 interface DefendPosition {
   latest: number | null;
@@ -79,6 +84,44 @@ function entrantsFor(
     .sort((left, right) => left.position - right.position);
 }
 
+const contentWords = (text: string): string[] =>
+  tokenize(text).filter((word) => !isStopword(word));
+
+function serpReachByCountry(
+  app: ActionContextApp,
+  now: Date,
+): Map<string, Map<string, number>> {
+  const byCountry = new Map<string, Map<string, number>>();
+  for (const keyword of app.trackedKeywords) {
+    if (!keyword.active) continue;
+    const reach = byCountry.get(keyword.country) ?? new Map<string, number>();
+    byCountry.set(keyword.country, reach);
+    const seen = new Set(
+      withinWindow(
+        app.serpDaysByKeyword.get(keyword.keywordId) ?? [],
+        now,
+        DEFEND_WINDOW_DAYS,
+      ).flatMap((day) => day.entries.map((entry) => entry.storeAppId)),
+    );
+    for (const storeAppId of seen) {
+      reach.set(storeAppId, (reach.get(storeAppId) ?? 0) + 1);
+    }
+  }
+  return byCountry;
+}
+
+function inNiche(
+  entrant: ActionSerpEntrant,
+  keywordWords: ReadonlySet<string>,
+  reach: SerpReach,
+): boolean {
+  return (
+    entrant.isCompetitor ||
+    (reach.get(entrant.storeAppId) ?? 0) >= DEFEND_NICHE_MIN_KEYWORDS ||
+    contentWords(entrant.title).some((word) => keywordWords.has(word))
+  );
+}
+
 function positionPressure(yourPosition: number | null): number {
   if (yourPosition === null) return 1;
   return Math.min(
@@ -90,6 +133,7 @@ function positionPressure(yourPosition: number | null): number {
 function detectForKeyword(
   app: ActionContextApp,
   keyword: TrackedKeywordItem,
+  reach: SerpReach,
   now: Date,
 ): DetectedAction | null {
   const snapshots = withinWindow(
@@ -109,11 +153,12 @@ function detectForKeyword(
   );
   if (!defensible(position)) return null;
 
+  const keywordWords = new Set(contentWords(keyword.text));
   const entrants = entrantsFor(
     snapshots,
     app.storeAppId,
     app.competitorAppIdsByStoreAppId,
-  );
+  ).filter((entrant) => inNiche(entrant, keywordWords, reach));
   if (entrants.length < DEFEND_MIN_ENTRANTS) return null;
 
   const threshold = position.latest ?? Number.POSITIVE_INFINITY;
@@ -164,12 +209,20 @@ export function detectKeywordDefend(
   context: ActionContext,
   now: Date,
 ): DetectedAction[] {
-  return context.apps.flatMap((app) =>
-    app.trackedKeywords
+  return context.apps.flatMap((app) => {
+    const reach = serpReachByCountry(app, now);
+    return app.trackedKeywords
       .filter((keyword) => keyword.active)
-      .map((keyword) => detectForKeyword(app, keyword, now))
-      .filter((detection): detection is DetectedAction => detection !== null),
-  );
+      .map((keyword) =>
+        detectForKeyword(
+          app,
+          keyword,
+          reach.get(keyword.country) ?? new Map(),
+          now,
+        ),
+      )
+      .filter((detection): detection is DetectedAction => detection !== null);
+  });
 }
 
 export const keywordDefendDetector: ActionDetector = {
