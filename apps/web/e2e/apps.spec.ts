@@ -78,6 +78,30 @@ test("the import dialog refuses an apple page that is not a listing", async ({
   expect(imports).toEqual([]);
 });
 
+for (const width of [320, 375] as const) {
+  test(`the import refusal of a long url wraps inside the dialog at ${width} px`, async ({
+    page,
+  }) => {
+    const longPage = `https://apps.apple.com/us/developer/${"a".repeat(200)}`;
+    await page.setViewportSize({ width, height: 800 });
+    await page.goto("/");
+
+    await page.getByRole("button", { name: "Import app" }).click();
+    await page.getByLabel("App name or store URL").fill(longPage);
+    await page.getByRole("button", { name: "Import", exact: true }).click();
+
+    const refusal = page.getByText(`Unrecognized store URL or id: ${longPage}`);
+    await expect(refusal).toBeVisible();
+    expect(
+      await refusal.evaluate(
+        (node) =>
+          node.scrollWidth <= node.clientWidth &&
+          node.getBoundingClientRect().right <= window.innerWidth,
+      ),
+    ).toBe(true);
+  });
+}
+
 const DEVELOPER_PAGE = "https://apps.apple.com/us/developer/focus/id123456789";
 const FOCUS_TIMER_URL = "https://apps.apple.com/us/app/focus-timer/id123456789";
 
