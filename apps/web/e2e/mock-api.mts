@@ -3980,6 +3980,19 @@ const routes: Route[] = [
           country: "pl",
         });
       }
+      if (params[0] === "app-gp") {
+        return json(res, 200, {
+          snapshotId: "snap-gp",
+          changes: [
+            { field: "ratingAvg", before: 3.1, after: 4.31881 },
+            { field: "ratingCount", before: 100, after: 66487 },
+            { field: "installs", before: 1000, after: 1200000 },
+            { field: "version", before: "1.0.0", after: "9.1.0" },
+            { field: "price", before: "1.99", after: "0" },
+          ],
+          country: "us",
+        });
+      }
       if (params[0] === "app-2") {
         return json(res, 200, {
           snapshotId: "snap-2",
