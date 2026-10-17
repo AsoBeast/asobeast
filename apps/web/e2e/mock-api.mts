@@ -1773,6 +1773,8 @@ const BUDGET_HOLD_COOKIE = "e2e_budget_hold";
 const BUDGET_QUOTA_COOKIE = "e2e_budget_quota";
 const STALE_MARKET_COOKIE = "e2e_stale_market";
 const BUDGET_HOT_COOKIE = "e2e_budget_hot";
+const HEALTH_COOKIE = "e2e_health";
+const PROXY_DEADLINE_OVERRUN_MS = 3_000;
 const BUDGETS_BY_QUOTA = new Map<string | undefined, DailyBudget>([
   ["lapsed", LAPSED_BUDGET],
   ["over", OVER_LIMIT_BUDGET],
@@ -2325,7 +2327,25 @@ const routes: Route[] = [
   {
     method: "GET",
     pattern: /^\/health$/,
-    handler: (_p, _q, res) => json(res, 200, HEALTH),
+    handler: async (_p, req, res) => {
+      const outage = cookieValue(req, HEALTH_COOKIE);
+      if (outage === "refused") {
+        req.socket.destroy();
+        return;
+      }
+      if (outage === "silent") {
+        await delay(PROXY_DEADLINE_OVERRUN_MS);
+        return;
+      }
+      if (outage === "database") {
+        return json(
+          res,
+          503,
+          errorEnvelope(503, "/health", "Service Unavailable Exception"),
+        );
+      }
+      json(res, 200, HEALTH);
+    },
   },
   {
     method: "GET",
