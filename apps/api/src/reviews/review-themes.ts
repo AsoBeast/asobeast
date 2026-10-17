@@ -9,7 +9,6 @@ import { MinableReview, reviewPhrases } from '../keywords/review-mining';
 import { reviewLanguage } from './review-language';
 
 export const REVIEW_THEMES_CAP = QUERY_BOUNDS.reviewsLimit.max;
-export const REVIEW_THEMES_BASELINE = 500;
 export const REVIEW_THEME_MIN_REVIEWS = 2;
 export const REVIEW_THEME_LIMITS: Record<ReviewThemeKind, number> = {
   complaint: 6,
