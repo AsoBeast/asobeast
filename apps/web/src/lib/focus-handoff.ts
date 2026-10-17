@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, type RefCallback } from "react";
 
 interface FocusRoot {
   activeElement: unknown;
@@ -34,4 +34,40 @@ export function useFocusAfterCommit(): (
   return useCallback((target) => {
     pending.current = target ?? null;
   }, []);
+}
+
+export const CLAIM_WINDOW_MS = 30_000;
+
+interface ArmedHandoff {
+  key: string;
+  at: number;
+  from: unknown;
+}
+
+let armed: ArmedHandoff | null = null;
+
+export function isClaimable(
+  handoff: ArmedHandoff | null,
+  key: string,
+  now: number,
+  root: FocusRoot = document,
+): boolean {
+  if (handoff === null || handoff.key !== key) return false;
+  if (now - handoff.at > CLAIM_WINDOW_MS) return false;
+  return focusIsLost(root) || root.activeElement === handoff.from;
+}
+
+export function armFocusHandoff(key: string): void {
+  armed = { key, at: Date.now(), from: document.activeElement };
+}
+
+export function useFocusClaim(key: string): RefCallback<HTMLElement> {
+  return useCallback(
+    (node) => {
+      if (!node || !isClaimable(armed, key, Date.now())) return;
+      armed = null;
+      node.focus();
+    },
+    [key],
+  );
 }

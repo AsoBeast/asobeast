@@ -2,9 +2,17 @@ import {
   type APIRequestContext,
   type BrowserContext,
   type Page,
+  type Route,
 } from "@playwright/test";
+import { hydrated } from "./hydrated.mts";
 import { expect, test } from "./session.mts";
-import { PLAN_LIMITS, UPGRADE_PATH, type AccountPlan } from "@asobeast/shared";
+import {
+  PLAN_LIMITS,
+  UPGRADE_PATH,
+  type AccountPlan,
+  type ChartAppLink,
+  type ChartPage,
+} from "@asobeast/shared";
 import { contrastViolations, THEMES } from "./contrast-check.mts";
 import {
   TOP_CHART_APPS,
@@ -826,6 +834,104 @@ test.describe.serial("chart follows", () => {
     expect(await follows(request)).toEqual([]);
   });
 
+  test("moves focus to Following after Follow category is pressed", async ({
+    page,
+    request,
+  }) => {
+    await request.get(`${MOCK_API}/__reset-chart-follows`);
+    await page.goto("/charts?view=table&genre=7012");
+    const follow = await hydrated(
+      page.getByRole("button", { name: "Follow category" }),
+    );
+
+    await follow.focus();
+    await page.keyboard.press("Enter");
+
+    await expect(page.getByRole("button", { name: "Following" })).toBeFocused();
+    expect(await follows(request)).toHaveLength(3);
+  });
+
+  test("keeps focus on Follow category while it runs and when the quota refuses", async ({
+    page,
+    context,
+    request,
+  }) => {
+    await request.get(`${MOCK_API}/__reset-chart-follows`);
+    await context.addCookies([
+      {
+        name: "e2e_chart_follow_limit",
+        value: "1",
+        domain: "localhost",
+        path: "/",
+      },
+    ]);
+    await page.goto("/charts?view=table&genre=7012");
+    const follow = await hydrated(
+      page.getByRole("button", { name: "Follow category" }),
+    );
+
+    await follow.focus();
+    await page.keyboard.press("Enter");
+
+    await expect(page.getByText(/follow.* limit reached/i)).toBeVisible();
+    await expect(follow).toBeFocused();
+    await expect(follow).not.toHaveAttribute("aria-disabled", "true");
+    expect(await follows(request)).toEqual([]);
+  });
+
+  test("completing a category followed in part moves focus to Following", async ({
+    page,
+    request,
+  }) => {
+    await request.get(`${MOCK_API}/__reset-chart-follows`);
+    await followChart(request, {
+      store: "APP_STORE",
+      country: "us",
+      collection: "paid",
+      genre: "7012",
+      device: "iphone",
+    });
+    await page.goto("/charts?view=table&genre=7012");
+    const follow = await hydrated(
+      page.getByRole("button", { name: "Follow category" }),
+    );
+
+    await follow.focus();
+    await page.keyboard.press("Enter");
+
+    await expect(page.getByRole("button", { name: "Following" })).toBeFocused();
+  });
+
+  test("does not take focus back when the user moved on during the request", async ({
+    page,
+    context,
+    request,
+  }) => {
+    await request.get(`${MOCK_API}/__reset-chart-follows`);
+    await context.addCookies([
+      {
+        name: "e2e_api_latency",
+        value: "1500",
+        domain: "localhost",
+        path: "/",
+      },
+    ]);
+    await page.goto("/charts?view=table&genre=7012");
+    const follow = await hydrated(
+      page.getByRole("button", { name: "Follow category" }),
+    );
+
+    await follow.focus();
+    await page.keyboard.press("Enter");
+    const search = page.getByLabel("Search apps");
+    await search.focus();
+
+    await expect(page.getByRole("button", { name: "Following" })).toBeVisible({
+      timeout: 20_000,
+    });
+    await expect(search).toBeFocused();
+  });
+
   test("completes a category followed in part", async ({ page, request }) => {
     await request.get(`${MOCK_API}/__reset-chart-follows`);
     const seeded = (await (
@@ -969,6 +1075,159 @@ test.describe.serial("chart follows", () => {
     expect(await follows(request)).toEqual([]);
   });
 
+  const followTwo = async (request: APIRequestContext) => {
+    await request.get(`${MOCK_API}/__reset-chart-follows`);
+    for (const genre of ["7012", "6014"]) {
+      await followChart(request, {
+        store: "APP_STORE",
+        country: "us",
+        collection: "free",
+        genre,
+        device: "iphone",
+      });
+    }
+  };
+  const stopButtons = (page: Page) =>
+    page
+      .getByRole("dialog", { name: "Followed charts" })
+      .getByRole("button", { name: /^Stop following/ });
+  const openList = async (page: Page) => {
+    await page.goto("/charts?view=table&genre=7012");
+    await (
+      await hydrated(page.getByRole("button", { name: "Followed charts" }))
+    ).click();
+    await expect(stopButtons(page)).toHaveCount(2);
+  };
+
+  test("moves focus to the next Stop following when one is pressed", async ({
+    page,
+    request,
+  }) => {
+    await followTwo(request);
+    await openList(page);
+    const names = await stopButtons(page).evaluateAll((buttons) =>
+      buttons.map((button) => button.getAttribute("aria-label")),
+    );
+
+    await stopButtons(page).first().focus();
+    await page.keyboard.press("Enter");
+
+    await expect(stopButtons(page)).toHaveCount(1);
+    await expect(stopButtons(page).first()).toHaveAttribute(
+      "aria-label",
+      names[1] ?? "",
+    );
+    await expect(stopButtons(page).first()).toBeFocused();
+    await expect(
+      page.getByRole("dialog", { name: "Followed charts" }),
+    ).toBeVisible();
+  });
+
+  test("moves focus to the previous Stop following when the last one is pressed", async ({
+    page,
+    request,
+  }) => {
+    await followTwo(request);
+    await openList(page);
+    const names = await stopButtons(page).evaluateAll((buttons) =>
+      buttons.map((button) => button.getAttribute("aria-label")),
+    );
+
+    await stopButtons(page).last().focus();
+    await page.keyboard.press("Enter");
+
+    await expect(stopButtons(page)).toHaveCount(1);
+    await expect(stopButtons(page).first()).toHaveAttribute(
+      "aria-label",
+      names[0] ?? "",
+    );
+    await expect(stopButtons(page).first()).toBeFocused();
+  });
+
+  test("moves focus to the popover when the last followed chart is removed", async ({
+    page,
+    request,
+  }) => {
+    await request.get(`${MOCK_API}/__reset-chart-follows`);
+    await followChart(request, {
+      store: "APP_STORE",
+      country: "us",
+      collection: "free",
+      genre: "7012",
+      device: "iphone",
+    });
+    await page.goto("/charts?view=table&genre=7012");
+    await (
+      await hydrated(page.getByRole("button", { name: "Followed charts" }))
+    ).click();
+    const list = page.getByRole("dialog", { name: "Followed charts" });
+
+    await stopButtons(page).first().focus();
+    await page.keyboard.press("Enter");
+
+    await expect(list.getByText("No categories followed yet")).toBeVisible();
+    await expect(list).toBeFocused();
+  });
+
+  test("keeps focus on Stop following while it runs and when it fails", async ({
+    page,
+    request,
+  }) => {
+    await followTwo(request);
+    await openList(page);
+    await page.route("**/api/backend/charts/follows/*", (route) =>
+      route.request().method() === "DELETE"
+        ? route.fulfill({
+            status: 500,
+            json: {
+              statusCode: 500,
+              error: "Internal Server Error",
+              message: "The server encountered an unexpected error.",
+              path: "/charts/follows",
+              timestamp: new Date().toISOString(),
+            },
+          })
+        : route.fallback(),
+    );
+    const first = stopButtons(page).first();
+
+    await first.focus();
+    await page.keyboard.press("Enter");
+
+    await expect(
+      page.getByText("Could not stop following the category."),
+    ).toBeVisible();
+    await expect(first).toBeFocused();
+    await expect(first).not.toHaveAttribute("aria-disabled", "true");
+    await expect(stopButtons(page)).toHaveCount(2);
+  });
+
+  test("moves focus to the next Stop following when a failed stop removes the row", async ({
+    page,
+    request,
+  }) => {
+    await followTwo(request);
+    await openList(page);
+    for (const follow of await follows(request)) {
+      if (follow.genre === "7012") {
+        await request.delete(`${MOCK_API}/charts/follows/${follow.id}`);
+      }
+    }
+    const puzzle = page
+      .getByRole("dialog", { name: "Followed charts" })
+      .getByRole("button", { name: "Stop following Puzzle · United States" });
+
+    await puzzle.focus();
+    await page.keyboard.press("Enter");
+
+    await expect(
+      page.getByText("Could not stop following the category."),
+    ).toBeVisible();
+    await expect(puzzle).toHaveCount(0);
+    await expect(stopButtons(page)).toHaveCount(1);
+    await expect(stopButtons(page).first()).toBeFocused();
+  });
+
   test("drops an unfollowed chart before the lists load again", async ({
     page,
     context,
@@ -1074,6 +1333,173 @@ test("shows the add in progress on the competitor menu", async ({
   await expect(menu.locator(".animate-spin")).toBeVisible();
   await expect(page.getByText(/^Now tracking/)).toBeVisible();
   await request.post(`${MOCK_API}/__reset/competitors/app-1`);
+});
+
+const trackWhenAdded = async (
+  page: Page,
+  appId: string,
+  link: ChartAppLink,
+  answer?: (route: Route) => Promise<void>,
+) => {
+  let added = false;
+  await page.route(`**/api/backend/apps/${appId}/competitors`, (route) => {
+    if (route.request().method() !== "POST") return route.fallback();
+    added = true;
+    return answer ? answer(route) : route.fallback();
+  });
+  await page.route(/\/api\/backend\/charts\?/, async (route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as ChartPage;
+    await route.fulfill({
+      response,
+      json: added ? { ...body, apps: [...body.apps, link] } : body,
+    });
+  });
+};
+
+const slowCreated = (route: Route) =>
+  new Promise<void>((resolve) => setTimeout(resolve, 800)).then(() =>
+    route.fulfill({
+      status: 201,
+      json: { id: "comp-new", name: "Puzzle Quest" },
+    }),
+  );
+
+test("moves focus to the badge after the plus button adds a competitor", async ({
+  page,
+}) => {
+  const [first] = TOP_CHART_APPS;
+  await trackWhenAdded(
+    page,
+    "app-gp",
+    {
+      storeAppId: first.storeAppId,
+      appId: "comp-new",
+      primaryAppId: "app-gp",
+      name: "Tomato Clock",
+      role: "competitor",
+    },
+    (route) =>
+      route.fulfill({
+        status: 201,
+        json: { id: "comp-new", name: first.title },
+      }),
+  );
+  await page.goto("/charts?view=table&store=GOOGLE_PLAY");
+  const plus = await hydrated(
+    page.getByRole("button", { name: `Add ${first.title} to Tomato Clock` }),
+  );
+
+  await plus.focus();
+  await page.keyboard.press("Enter");
+
+  await expect(page.getByText(/^Now tracking/)).toBeVisible();
+  await expect(
+    chartTable(page)
+      .locator("tbody tr")
+      .first()
+      .getByRole("link", { name: "Competitor of Tomato Clock" }),
+  ).toBeFocused();
+});
+
+test("moves focus to the badge after a menu item adds a competitor", async ({
+  page,
+  request,
+}) => {
+  const second = TOP_CHART_APPS[1];
+  await trackWhenAdded(page, "app-1", {
+    storeAppId: second.storeAppId,
+    appId: "comp-new",
+    primaryAppId: "app-1",
+    name: "Focus Timer",
+    role: "competitor",
+  });
+  await page.goto("/charts?view=table");
+  const trigger = await hydrated(
+    page.getByRole("button", { name: `Add ${second.title} as competitor` }),
+  );
+
+  await trigger.focus();
+  await page.keyboard.press("Enter");
+  await expect(
+    page.getByRole("menuitem", { name: "Focus Timer" }),
+  ).toBeFocused();
+  await page.keyboard.press("Enter");
+
+  await expect(page.getByText(/^Now tracking/)).toBeVisible();
+  await expect(
+    chartTable(page)
+      .locator("tbody tr")
+      .nth(1)
+      .getByRole("link", { name: "Competitor of Focus Timer" }),
+  ).toBeFocused();
+  await request.post(`${MOCK_API}/__reset/competitors/app-1`);
+});
+
+test("keeps focus on the plus button when the add fails", async ({ page }) => {
+  const [first] = TOP_CHART_APPS;
+  await page.route("**/api/backend/apps/app-gp/competitors", async (route) => {
+    if (route.request().method() !== "POST") return route.fallback();
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    return route.fulfill({
+      status: 500,
+      json: {
+        statusCode: 500,
+        error: "Internal Server Error",
+        message: "The server encountered an unexpected error.",
+        path: "/apps/app-gp/competitors",
+        timestamp: new Date().toISOString(),
+      },
+    });
+  });
+  await page.goto("/charts?view=table&store=GOOGLE_PLAY");
+  const plus = await hydrated(
+    page.getByRole("button", { name: `Add ${first.title} to Tomato Clock` }),
+  );
+
+  await plus.focus();
+  await page.keyboard.press("Enter");
+
+  await expect(
+    page.getByText("The server encountered an unexpected error."),
+  ).toBeVisible();
+  await expect(plus).toBeFocused();
+  await expect(plus).not.toHaveAttribute("aria-disabled", "true");
+});
+
+test("leaves focus where the user moved it while the add ran", async ({
+  page,
+}) => {
+  const [first] = TOP_CHART_APPS;
+  await trackWhenAdded(
+    page,
+    "app-gp",
+    {
+      storeAppId: first.storeAppId,
+      appId: "comp-new",
+      primaryAppId: "app-gp",
+      name: "Tomato Clock",
+      role: "competitor",
+    },
+    slowCreated,
+  );
+  await page.goto("/charts?view=table&store=GOOGLE_PLAY");
+  const plus = await hydrated(
+    page.getByRole("button", { name: `Add ${first.title} to Tomato Clock` }),
+  );
+
+  await plus.focus();
+  await page.keyboard.press("Enter");
+  const search = page.getByLabel("Search apps");
+  await search.focus();
+
+  await expect(
+    chartTable(page)
+      .locator("tbody tr")
+      .first()
+      .getByRole("link", { name: "Competitor of Tomato Clock" }),
+  ).toBeVisible();
+  await expect(search).toBeFocused();
 });
 
 test("hides the price column on a free chart", async ({ page }) => {
