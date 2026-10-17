@@ -92,4 +92,28 @@ describe('RequestThrottledError', () => {
       'Too many mails today. Try again in 12 seconds.',
     );
   });
+
+  it.each([
+    [1, '1 second'],
+    [59, '59 seconds'],
+    [60, '1 minute'],
+    [2_888, '49 minutes'],
+    [3_600, '1 hour'],
+    [3_661, '1 hour 2 minutes'],
+    [86_400, '24 hours'],
+  ])('words a wait of %d seconds as %s', (seconds, words) => {
+    expect(new RequestThrottledError(seconds).message).toBe(
+      `Too many attempts from this address. Try again in ${words}.`,
+    );
+  });
+
+  it('words a long wait after the reason the caller gives', () => {
+    expect(
+      new RequestThrottledError(86_400, 'Too many mails today.').message,
+    ).toBe('Too many mails today. Try again in 24 hours.');
+  });
+
+  it('keeps the wait in seconds on the error', () => {
+    expect(new RequestThrottledError(2_888).retryAfterSeconds).toBe(2_888);
+  });
 });

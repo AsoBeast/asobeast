@@ -20,6 +20,9 @@ const ANSWER_DEADLINE_MS = 3_000;
 const REJECTED_TOKEN = `${API_TOKEN_PREFIX}${'3'.repeat(48)}`;
 const RECOVERY_DEADLINE_MS = 15_000;
 const RECONNECT_CYCLES_MS = 2_500;
+const LONG_OUTAGE_MS = 12_000;
+const QUEUED_WRITE_DEADLINE_MS = 3_500;
+const RECOVERY_POLL_MS = 250;
 const OUTAGE_WARNING = 'redis is unreachable';
 const NO_STORE = {
   get: () => {
@@ -39,6 +42,25 @@ async function refusedWithWait(test: request.Test): Promise<void> {
   const body = response.body as ApiErrorEnvelope;
   expect(body.retryAfterSeconds).toBeGreaterThan(0);
   expect(response.headers['retry-after']).toBe(String(body.retryAfterSeconds));
+}
+
+async function firstQueuedWriteAfterRestore(
+  agent: ReturnType<typeof request.agent>,
+  appId: string,
+): Promise<{ status: number; tookMs: number }> {
+  const deadline = Date.now() + RECOVERY_DEADLINE_MS;
+  for (let round = 0; Date.now() < deadline; round += 1) {
+    const startedAt = Date.now();
+    const response = await agent
+      .post(`/apps/${appId}/keywords`)
+      .send({ keywords: [`recovery write ${round}`] })
+      .timeout({ response: RECOVERY_DEADLINE_MS });
+    if (response.status !== 503) {
+      return { status: response.status, tookMs: Date.now() - startedAt };
+    }
+    await new Promise((resolve) => setTimeout(resolve, RECOVERY_POLL_MS));
+  }
+  throw new Error('the gate never let a queueing write through');
 }
 
 describe('Redis outage (e2e)', () => {
@@ -265,4 +287,22 @@ describe('Redis outage (e2e)', () => {
     expect(status).toBe(200);
     await within(agent.get('/auth/me')).expect(200);
   }, 30_000);
+
+  describe('after a long outage', () => {
+    beforeAll(async () => {
+      await outage.sever();
+      await new Promise((resolve) => setTimeout(resolve, LONG_OUTAGE_MS));
+      await outage.restore();
+    }, LONG_OUTAGE_MS + 10_000);
+
+    it('queues the first write within a few seconds of redis returning', async () => {
+      const { status, tookMs } = await firstQueuedWriteAfterRestore(
+        agent,
+        appId,
+      );
+
+      expect(status).toBe(201);
+      expect(tookMs).toBeLessThan(QUEUED_WRITE_DEADLINE_MS);
+    }, 30_000);
+  });
 });

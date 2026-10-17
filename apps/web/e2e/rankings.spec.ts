@@ -107,7 +107,7 @@ test("ranking exports preserve historical captured-depth markers", async ({
   await page.goto("/apps/app-1/rankings");
 
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Export rankings to CSV" }).click();
+  await page.getByRole("button", { name: "Export CSV of rankings" }).click();
   const download = await downloadPromise;
   const path = await download.path();
 

@@ -4,6 +4,7 @@ import {
   facetCounts,
   filterQueue,
   isFilteredView,
+  leavesDefaultQueue,
   type QueueView,
 } from "./queue-filters";
 
@@ -146,4 +147,20 @@ describe("facetCounts", () => {
     expect(counts.priority.get("critical")).toBeUndefined();
     expect(counts.rule.get("keyword.add_uncovered")).toBe(1);
   });
+});
+
+describe("leavesDefaultQueue", () => {
+  it.each(["DONE", "DISMISSED", "RESOLVED"] as const)(
+    "is true for %s, which takes the row out of the default queue",
+    (status) => {
+      expect(leavesDefaultQueue(status)).toBe(true);
+    },
+  );
+
+  it.each(["OPEN", "SNOOZED"] as const)(
+    "is false for %s, which keeps the row in the default queue",
+    (status) => {
+      expect(leavesDefaultQueue(status)).toBe(false);
+    },
+  );
 });

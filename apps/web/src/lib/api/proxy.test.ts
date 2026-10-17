@@ -866,3 +866,33 @@ describe("apiRoute", () => {
     await expect(response.json()).resolves.toEqual({ ok: true });
   });
 });
+
+describe("notFoundRoute", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it("answers the not found envelope the api gate answers and never calls the api", async () => {
+    stubFetch(async () => Response.json({}));
+    const { notFoundRoute } = await loadProxy();
+
+    const response = notFoundRoute(
+      request("/docs-json", { method: "POST", search: "?token=asob_x" }),
+    );
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(response.headers.get("x-robots-tag")).toBe("noindex, nofollow");
+    expect(response.headers.get("allow")).toBeNull();
+    const envelope = (await response.json()) as ApiErrorEnvelope;
+    expect(envelope).toMatchObject({
+      statusCode: 404,
+      error: "Not Found",
+      message: "Cannot POST /docs-json",
+      path: "/docs-json",
+    });
+    expect(fetchMock()).not.toHaveBeenCalled();
+  });
+});
