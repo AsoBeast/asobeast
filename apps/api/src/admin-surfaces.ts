@@ -2,6 +2,7 @@ import type { INestApplication } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import {
+  ADMIN_AREA_SURFACE,
   ADMIN_QUEUES_SURFACE,
   DOCS_ROUTE,
   DOCS_SURFACES,
@@ -34,6 +35,7 @@ export function configureAdminSurfaces(app: INestApplication): void {
     METRICS_SURFACE,
     SUPPORT_SURFACE,
     ...(docs === 'owner' ? DOCS_SURFACES : []),
+    ADMIN_AREA_SURFACE,
   ]);
 
   if (docs === 'off') return;
