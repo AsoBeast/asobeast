@@ -3,7 +3,12 @@ import { join } from 'path';
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient, Store } from '@prisma/client';
-import { AppDetail, AppSetupState, SETUP_MARKETS_MAX } from '@asobeast/shared';
+import {
+  ApiErrorEnvelope,
+  AppDetail,
+  AppSetupState,
+  SETUP_MARKETS_MAX,
+} from '@asobeast/shared';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
@@ -88,18 +93,28 @@ describe('App setup (e2e)', () => {
     await app.close();
   });
 
-  const createApp = (primaryAppId?: string) =>
-    prisma.app.create({
+  const STORE_APP_ID: Record<Store, string> = {
+    APP_STORE: '555000111',
+    GOOGLE_PLAY: 'com.example.setup',
+  };
+
+  const createApp = (
+    primaryAppId?: string,
+    overrides: { store?: Store; country?: string } = {},
+  ) => {
+    const store = overrides.store ?? Store.APP_STORE;
+    return prisma.app.create({
       data: {
         workspaceId: DEFAULT_WORKSPACE_ID,
-        store: Store.APP_STORE,
-        storeAppId: primaryAppId ? '555000999' : '555000111',
-        country: 'us',
+        store,
+        storeAppId: primaryAppId ? '555000999' : STORE_APP_ID[store],
+        country: overrides.country ?? 'us',
         name: primaryAppId ? 'Rival' : 'Setup Fixture',
         isCompetitor: primaryAppId !== undefined,
         primaryAppId,
       },
     });
+  };
 
   const readSetup = async (appId: string) =>
     (await api.get(`/apps/${appId}/setup`).expect(200)).body as AppSetupState;
@@ -203,6 +218,71 @@ describe('App setup (e2e)', () => {
       countriesReviewed: true,
       selectedMarkets: ['de', 'us'],
     });
+  });
+
+  it('refuses a selected market that is not a storefront and keeps the stored setup', async () => {
+    const { id } = await createApp();
+    const before = await patchSetup(id, { status: 'in_progress' });
+
+    const response = await api
+      .patch(`/apps/${id}/setup`)
+      .send({ status: 'completed', selectedMarkets: ['pl', 'zz', 'xx'] })
+      .expect(400);
+
+    expect((response.body as ApiErrorEnvelope).message).toBe(
+      'zz is not an App Store storefront',
+    );
+    await expect(readSetup(id)).resolves.toEqual(before);
+  });
+
+  it.each([
+    [Store.APP_STORE, 'ad', 'ad is not an App Store storefront'],
+    [Store.GOOGLE_PLAY, 'pw', 'pw is not a Google Play location'],
+  ])(
+    'judges the markets of a %s app against its own store',
+    async (store, market, message) => {
+      const { id } = await createApp(undefined, { store });
+
+      const response = await api
+        .patch(`/apps/${id}/setup`)
+        .send({ selectedMarkets: ['us', market] })
+        .expect(400);
+
+      expect((response.body as ApiErrorEnvelope).message).toBe(message);
+    },
+  );
+
+  it('accepts a storefront of the store the app is in', async () => {
+    const { id } = await createApp(undefined, { store: Store.GOOGLE_PLAY });
+
+    await expect(
+      patchSetup(id, { selectedMarkets: ['ad', 'us'] }),
+    ).resolves.toMatchObject({ selectedMarkets: ['ad', 'us'] });
+  });
+
+  it('lets a client send back a list that holds a code stored before the check', async () => {
+    const { id } = await createApp();
+    await patchSetup(id, { status: 'in_progress' });
+    await prisma.appSetup.update({
+      where: { appId: id },
+      data: { selectedMarkets: ['us', 'zz'] },
+    });
+
+    await expect(
+      patchSetup(id, { selectedMarkets: ['de', 'us', 'zz'] }),
+    ).resolves.toMatchObject({ selectedMarkets: ['de', 'us', 'zz'] });
+    await api
+      .patch(`/apps/${id}/setup`)
+      .send({ selectedMarkets: ['us', 'xx'] })
+      .expect(400);
+  });
+
+  it('always accepts the home market of the app', async () => {
+    const { id } = await createApp(undefined, { country: 'zz' });
+
+    await expect(
+      patchSetup(id, { selectedMarkets: ['zz'] }),
+    ).resolves.toMatchObject({ selectedMarkets: ['zz'] });
   });
 
   it('completes and restarts', async () => {
