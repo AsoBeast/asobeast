@@ -1,14 +1,24 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { hydrated } from "./hydrated.mts";
 import { MOCK_API_URL } from "./localizations.mts";
 import { expect, test } from "./session.mts";
 
-const openTab = async (page: Page, path: string) => {
+const openSuggestions = async (page: Page, path: string) => {
   await page.goto(path);
   await (
     await hydrated(page.getByRole("button", { name: /^Suggestions/ }))
   ).click();
+};
+
+const openTab = async (page: Page, path: string) => {
+  await openSuggestions(page, path);
   await page.getByRole("tab", { name: "Competitor searches" }).click();
+};
+
+const rightEdge = async (locator: Locator) => {
+  const box = await locator.boundingBox();
+  if (!box) throw new Error("element is not rendered");
+  return box.x + box.width;
 };
 
 const row = (page: Page, text: string) =>
@@ -88,4 +98,17 @@ test("the tab runs once per visit", async ({ page }) => {
   expect(
     strategies.filter((strategy) => strategy === "competitorSearch"),
   ).toHaveLength(1);
+});
+
+test("every strategy tab stays reachable on a phone", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await openSuggestions(page, "/apps/app-1/keywords");
+  const strip = page.getByRole("tablist");
+  const last = page.getByRole("tab", { name: "Reviews" });
+
+  await strip.evaluate((list) => list.scrollTo({ left: list.scrollWidth }));
+
+  const stripEdge = await rightEdge(strip);
+  expect(stripEdge).toBeLessThanOrEqual(375);
+  expect(await rightEdge(last)).toBeLessThanOrEqual(stripEdge + 1);
 });

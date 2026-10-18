@@ -101,7 +101,7 @@ export function SuggestionsPanel({
               setStrategy(value as KeywordSuggestionStrategy)
             }
           >
-            <TabsList>
+            <TabsList className="max-w-full justify-start overflow-x-auto">
               {STRATEGIES.map((item) => (
                 <TabsOption key={item.value} value={item.value}>
                   {item.label}
