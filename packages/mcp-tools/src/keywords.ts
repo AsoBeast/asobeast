@@ -66,7 +66,7 @@ export const KEYWORD_TOOLS: ReadTool[] = [
     name: "keyword_comparison",
     title: "Keyword comparison",
     description:
-      "One row per active tracked keyword of one app with its popularity (traffic) and difficulty, the app's latest position and the latest position of each competitor, keyed by competitor id. gap is true when the app is absent or ranks worse than 30 while a competitor ranks in the top 10. Rows are sorted gaps first, then by traffic. Position is 1-based; null means checked but not found within depth. Set onlyGaps to list only the gaps.",
+      "One row per active tracked keyword of one app, in every market it is tracked in, with country (the storefront), its popularity (traffic) and difficulty, the app's latest position and the latest position of each competitor, keyed by competitor id. The same phrase tracked in two markets is two rows with different keywordId and country. gap is true when the app is absent or ranks worse than 30 while a competitor ranks in the top 10. Rows are sorted gaps first, then by traffic. Position is 1-based; null means checked but not found within depth. Set onlyGaps to list only the gaps.",
     inputSchema: z.object({
       appId: z.string().describe("The app id from list_apps."),
       onlyGaps: z

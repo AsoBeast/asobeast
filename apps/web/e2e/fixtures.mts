@@ -1461,6 +1461,7 @@ const APP_1_COMPARISON: KeywordComparison = {
     {
       keywordId: "kw-1",
       text: "focus timer",
+      country: "us",
       traffic: 55,
       difficulty: 4,
       you: 3,
@@ -1470,6 +1471,7 @@ const APP_1_COMPARISON: KeywordComparison = {
     {
       keywordId: "kw-2",
       text: "pomodoro",
+      country: "us",
       traffic: 70,
       difficulty: 7,
       you: 12,
@@ -1479,6 +1481,7 @@ const APP_1_COMPARISON: KeywordComparison = {
     {
       keywordId: "kw-4",
       text: "productivity app",
+      country: "us",
       traffic: 65,
       difficulty: 6,
       you: null,
@@ -1488,10 +1491,21 @@ const APP_1_COMPARISON: KeywordComparison = {
     {
       keywordId: "kw-5",
       text: "time blocking",
+      country: "us",
       traffic: null,
       difficulty: null,
       you: 45,
       positions: { "comp-1": null },
+      gap: false,
+    },
+    {
+      keywordId: "kw-de-1",
+      text: "pomodoro",
+      country: "de",
+      traffic: 5,
+      difficulty: 3,
+      you: 7,
+      positions: { "comp-1": 2 },
       gap: false,
     },
   ],

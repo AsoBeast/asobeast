@@ -180,6 +180,14 @@ describe("the keyword_suggestions allowance", () => {
   });
 });
 
+describe("the keyword_comparison market", () => {
+  it("names the country of every row in its first sentence", () => {
+    const description = toolByName("keyword_comparison")?.description ?? "";
+
+    expect(description.split(". ")[0]).toContain("country");
+  });
+});
+
 describe("the competitor, comparison and chart tools", () => {
   it.each([
     "list_competitors",

@@ -106,6 +106,7 @@ export interface KeywordComparisonCompetitor {
 export interface KeywordComparisonRow {
   keywordId: string;
   text: string;
+  country: string;
   traffic: number | null;
   difficulty: number | null;
   you: number | null;
