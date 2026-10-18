@@ -18,26 +18,27 @@ export function pluralsOf(word: string): string[] {
   return forms;
 }
 
-// In a script where every word inflects, no list can name the forms of a
-// word, so two words count as the same word when they share a beginning at
-// least this long. Real case forms of one word clear it («тревожности» and
-// «тревожностью» share ten characters), while «тревога» and «тревожность»
-// share six and stay different words, the way the store's own search keeps
-// them apart.
 export const INFLECTION_STEM_CHARS = 7;
 
-function commonStemLength(a: string, b: string): number {
-  let shared = 0;
-  while (shared < a.length && shared < b.length && a[shared] === b[shared]) {
-    shared += 1;
+const commonStemOf = (a: string, b: string): string => {
+  const shared: string[] = [];
+  for (
+    let index = 0;
+    index < a.length && index < b.length && a[index] === b[index];
+    index += 1
+  ) {
+    shared.push(a[index]);
   }
-  return shared;
-}
+  return shared.join('');
+};
 
-export const sameStem = (a: string, b: string): boolean =>
-  hasInflectedStemScript(a) &&
-  hasInflectedStemScript(b) &&
-  commonStemLength(a, b) >= INFLECTION_STEM_CHARS;
+export const sameStem = (a: string, b: string): boolean => {
+  const stem = commonStemOf(a, b);
+  return (
+    stem.length >= INFLECTION_STEM_CHARS &&
+    Array.from(stem).every((character) => hasInflectedStemScript(character))
+  );
+};
 
 export const sameWord = (a: string, b: string): boolean =>
   pluralsOf(a).includes(b) || pluralsOf(b).includes(a) || sameStem(a, b);

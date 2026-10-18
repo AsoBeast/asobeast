@@ -22,6 +22,7 @@ describe('sameStem', () => {
     ['тревожности', 'тревожностью'],
     ['психолог', 'психология'],
     ['дневник', 'дневником'],
+    ['тревожностьapp', 'тревожностьюapp'],
   ])('treats two case forms of %s and %s as the same word', (a, b) => {
     expect(sameStem(a, b)).toBe(true);
   });
@@ -32,6 +33,8 @@ describe('sameStem', () => {
     ['география', 'геолог'],
     ['geo', 'география'],
     ['map', 'maps'],
+    ['sleepcycleтрекер', 'sleepcyclehabit'],
+    ['meditationнарусском', 'meditationдлясна'],
   ])('keeps %s and %s apart', (a, b) => {
     expect(sameStem(a, b)).toBe(false);
   });
