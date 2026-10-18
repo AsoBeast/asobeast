@@ -10,15 +10,14 @@ import { AppIcon } from "@/components/AppIcon";
 import { ReadRoleBadge } from "@/components/localizations/ReadRoleBadge";
 import { Badge } from "@/components/ui/badge";
 import { editLocalizationHref } from "@/lib/app-localizations";
-import {
-  formatCountry,
-  formatDate,
-  formatList,
-  formatNumber,
-  formatRating,
-} from "@/lib/format";
+import { formatCountry, formatDate, formatList } from "@/lib/format";
 import { localizationName } from "@/lib/localizations";
-import { insightText, rankingLabel, standingLines } from "./breakdown-text";
+import {
+  insightText,
+  rankingLabel,
+  ratingLine,
+  standingLines,
+} from "./breakdown-text";
 import { BreakdownField } from "./BreakdownField";
 import { PositionCell } from "./comparison-columns";
 import { UNNAMED_COMPETITOR } from "./comparison-scores";
@@ -36,20 +35,6 @@ function sourceLine(app: KeywordBreakdownApp, market: string): string | null {
     return "No listing captured for this app yet.";
   if (app.listingCountry === market) return null;
   return `No ${formatCountry(market)} listing captured for this app, so its ${formatCountry(app.listingCountry)} listing was read.`;
-}
-
-function ratingLine(app: KeywordBreakdownApp, market: string): string | null {
-  const { rating } = app;
-  if (rating === null) return null;
-  const parts = [
-    rating.average === null ? null : formatRating(rating.average),
-    rating.count === null ? null : `from ${formatNumber(rating.count)} ratings`,
-  ].filter((part) => part !== null);
-  const elsewhere =
-    rating.country === market
-      ? ""
-      : ` (${formatCountry(rating.country)} listing)`;
-  return `Rating ${parts.join(" ")}${elsewhere}`;
 }
 
 const isEmptyField = (field: KeywordBreakdownListing["fields"][number]) =>

@@ -1,4 +1,5 @@
 import type {
+  KeywordBreakdownApp,
   KeywordBreakdownField,
   KeywordBreakdownInsight,
   KeywordBreakdownRanking,
@@ -8,7 +9,13 @@ import type {
   Store,
 } from "@asobeast/shared";
 import { PRODUCT_NAME } from "@/lib/brand";
-import { formatDate, formatList, formatNumber } from "@/lib/format";
+import {
+  formatCountry,
+  formatDate,
+  formatList,
+  formatNumber,
+  formatRating,
+} from "@/lib/format";
 import { localizationName } from "@/lib/localizations";
 
 const FIELD_LABELS: Record<MetadataField, string> = {
@@ -146,4 +153,21 @@ export function standingLines(standing: KeywordBreakdownStanding): string[] {
       : null,
     changeLine(standing),
   ].filter((line): line is string => line !== null);
+}
+
+export function ratingLine(
+  app: KeywordBreakdownApp,
+  market: string,
+): string | null {
+  const { rating } = app;
+  if (rating === null) return null;
+  const parts = [
+    rating.average === null ? null : formatRating(rating.average),
+    rating.count === null ? null : `from ${formatNumber(rating.count)} ratings`,
+  ].filter((part) => part !== null);
+  const elsewhere =
+    rating.country === market
+      ? ""
+      : ` (${formatCountry(rating.country)} listing)`;
+  return `Rating ${parts.join(" ")}${elsewhere}`;
 }
