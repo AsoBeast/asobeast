@@ -44,6 +44,9 @@ export class ApiError extends Error {
   }
 }
 
+export const isNotFound = (error: unknown): boolean =>
+  error instanceof ApiError && error.envelope.statusCode === 404;
+
 function isEnvelope(body: unknown): body is ApiErrorEnvelope {
   if (typeof body !== "object" || body === null || Array.isArray(body)) {
     return false;

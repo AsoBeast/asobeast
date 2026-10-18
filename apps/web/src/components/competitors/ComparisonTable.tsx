@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { flexRender, useTable } from "@tanstack/react-table";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { useQueryStates } from "nuqs";
+import { useQueryState, useQueryStates } from "nuqs";
 import type { CompetitorItem, KeywordComparison } from "@asobeast/shared";
 import { FilteredEmpty } from "@/components/data-table/FilteredEmpty";
 import { dataTableFeatures } from "@/components/data-table/table-features";
@@ -19,6 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  breakdownParser,
   matrixFilterParsers,
   matrixSortParser,
   sortDirectionParser,
@@ -72,6 +73,7 @@ export function ComparisonTable({
     dir: sortDirectionParser,
   });
   const [filters, setFilters] = useQueryStates(matrixFilterParsers);
+  const [, setKeyword] = useQueryState("keyword", breakdownParser);
   const { data: app } = useSuspenseQuery(appDetailOptions(appId));
   const markets = useMemo(
     () => comparisonMarkets(data.rows, app.country, filters.country),
@@ -87,8 +89,9 @@ export function ComparisonTable({
         ...competitor,
         iconUrl: icons.get(competitor.id) ?? null,
       })),
+      (keywordId) => void setKeyword(keywordId),
     );
-  }, [competitors, data.competitors]);
+  }, [competitors, data.competitors, setKeyword]);
 
   const [visibility, setVisibility] = useStoredColumnVisibility(
     "comparison",

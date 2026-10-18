@@ -56,7 +56,7 @@ export function bestPosition(
   return found.length > 0 ? Math.min(...found) : null;
 }
 
-function PositionCell({
+export function PositionCell({
   value,
   best,
 }: {
@@ -117,16 +117,25 @@ const SCORE_ABBR: Record<ComparisonScore, string> = {
 function KeywordCell({
   row,
   scores,
+  onOpenBreakdown,
 }: {
   row: KeywordComparisonRow;
   scores: readonly ComparisonScore[];
+  onOpenBreakdown: (keywordId: string) => void;
 }) {
   return (
     <div className="flex flex-col gap-0.5">
       <span className="inline-flex items-center gap-2 font-medium">
-        <span title={row.text} className="max-w-32 truncate md:max-w-64">
+        <button
+          type="button"
+          title={row.text}
+          aria-label={`${row.text}, why apps rank`}
+          data-breakdown-keyword={row.keywordId}
+          onClick={() => onOpenBreakdown(row.keywordId)}
+          className="max-w-32 truncate rounded-sm text-left font-medium underline decoration-muted-foreground decoration-dotted underline-offset-4 hover:decoration-primary md:max-w-64"
+        >
           {row.text}
-        </span>
+        </button>
         {row.gap ? (
           <Badge variant="outline" className="border-warning/40 text-warning">
             Gap
@@ -159,7 +168,10 @@ function MarketCell({ country }: { country: string }) {
   );
 }
 
-export function comparisonColumns(competitors: readonly MatrixCompetitor[]) {
+export function comparisonColumns(
+  competitors: readonly MatrixCompetitor[],
+  onOpenBreakdown: (keywordId: string) => void,
+) {
   const competitorIds = competitors.map((competitor) => competitor.id);
   const isBest = (row: KeywordComparisonRow, value: number | null) =>
     value !== null && value === bestPosition(row, competitorIds);
@@ -186,6 +198,7 @@ export function comparisonColumns(competitors: readonly MatrixCompetitor[]) {
       cell: ({ row, table }) => (
         <KeywordCell
           row={row.original}
+          onOpenBreakdown={onOpenBreakdown}
           scores={SCORES.filter(
             (score) => !table.getColumn(score)?.getIsVisible(),
           )}
