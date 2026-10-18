@@ -65,7 +65,9 @@ export class KeywordsController {
     @Param('id') id: string,
     @Query() query: ListKeywordsQueryDto,
   ): Promise<TrackedKeywordItem[]> {
-    return this.keywords.listTracked(id, query.sort, query.country);
+    return this.keywords.listTracked(id, query.sort, query.country, {
+      holdFacts: true,
+    });
   }
 
   @Get('keyword-countries')

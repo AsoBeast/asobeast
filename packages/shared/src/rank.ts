@@ -18,5 +18,12 @@ export const formatCheckedPosition = (
 export const RANK_MILESTONE_TIERS = [1, 3, 10] as const;
 export type RankMilestoneTier = (typeof RANK_MILESTONE_TIERS)[number];
 
+export const tierOf = (
+  position: number | null | undefined,
+): RankMilestoneTier | null =>
+  isRanked(position)
+    ? (RANK_MILESTONE_TIERS.find((tier) => position <= tier) ?? null)
+    : null;
+
 export const RANK_MILESTONE_DIRECTIONS = ['entered', 'left'] as const;
 export type RankMilestoneDirection = (typeof RANK_MILESTONE_DIRECTIONS)[number];
