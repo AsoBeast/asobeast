@@ -2312,7 +2312,8 @@
                 "developer",
                 "competitors",
                 "seasonal",
-                "reviews"
+                "reviews",
+                "competitorSearch"
               ]
             }
           },
@@ -2357,7 +2358,7 @@
             }
           }
         },
-        "summary": "Suggest keywords via metadata, search or similar",
+        "summary": "Suggest keywords from metadata, the store, competitors, seasons or reviews",
         "tags": [
           "keywords"
         ]

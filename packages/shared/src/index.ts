@@ -21,6 +21,7 @@ export const KEYWORD_SUGGESTION_STRATEGIES = [
   'competitors',
   'seasonal',
   'reviews',
+  'competitorSearch',
 ] as const;
 export type KeywordSuggestionStrategy =
   (typeof KEYWORD_SUGGESTION_STRATEGIES)[number];
@@ -29,6 +30,7 @@ export const STORE_SUGGESTION_STRATEGIES = [
   'search',
   'similar',
   'developer',
+  'competitorSearch',
 ] as const satisfies readonly KeywordSuggestionStrategy[];
 export type StoreSuggestionStrategy =
   (typeof STORE_SUGGESTION_STRATEGIES)[number];

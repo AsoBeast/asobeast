@@ -102,7 +102,10 @@ export class KeywordsController {
   @Get('keywords/suggestions')
   @SpendsStoreCapacity()
   @UseInterceptors(StoreDeadlineInterceptor)
-  @ApiOperation({ summary: 'Suggest keywords via metadata, search or similar' })
+  @ApiOperation({
+    summary:
+      'Suggest keywords from metadata, the store, competitors, seasons or reviews',
+  })
   suggestions(
     @Param('id') id: string,
     @Query() query: SuggestionsQueryDto,

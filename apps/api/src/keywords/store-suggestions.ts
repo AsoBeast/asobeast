@@ -10,9 +10,11 @@ import { PrismaService } from '../prisma/prisma.service';
 import { developerId } from '../store-providers/raw-facts';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { SearchItem, StoreProvider } from '../store-providers/types';
+import { CompetitorSearchPlanner } from './competitor-search.planner';
 import { extractCandidates } from './extraction';
 import { loadKeywordFieldIndex, reportedSource } from './keyword-field-index';
-import { SuggestionRequest } from './suggestion-request';
+import { suggestAround } from './store-hints';
+import { StoreLookup, SuggestionRequest } from './suggestion-request';
 
 const SEARCH_SEED_LIMIT = 5;
 
@@ -26,8 +28,6 @@ const SOURCE_WEIGHT: Record<KeywordSource, number> = {
   COMPETITOR: 1,
 };
 
-export type StoreLookup = () => Promise<KeywordSuggestion[]>;
-
 interface TitleCount {
   limit: number;
   strategy: 'similar' | 'developer';
@@ -39,6 +39,7 @@ export class StoreSuggestions {
   constructor(
     private readonly prisma: PrismaService,
     private readonly registry: StoreProviderRegistry,
+    private readonly competitorSearch: CompetitorSearchPlanner,
   ) {}
 
   async plan(
@@ -52,6 +53,8 @@ export class StoreSuggestions {
         return this.planSimilar(request);
       case 'developer':
         return this.planDeveloper(request);
+      case 'competitorSearch':
+        return this.competitorSearch.plan(request);
     }
   }
 
@@ -142,18 +145,15 @@ async function suggestFromSearch(
   const seedSet = new Set(seeds);
   const merged = new Map<string, number | undefined>();
 
-  for (const seed of seeds) {
-    const items = await provider.suggest(seed, market.country);
-    for (const item of items) {
-      const text = normalizeText(item.term);
-      if (!text || tracked.has(text) || seedSet.has(text)) {
-        continue;
-      }
-      if (!merged.has(text)) {
-        merged.set(text, item.priority);
-      } else if ((item.priority ?? -1) > (merged.get(text) ?? -1)) {
-        merged.set(text, item.priority);
-      }
+  for (const item of await suggestAround(provider, seeds, market.country)) {
+    const text = normalizeText(item.term);
+    if (!text || tracked.has(text) || seedSet.has(text)) {
+      continue;
+    }
+    if (!merged.has(text)) {
+      merged.set(text, item.priority);
+    } else if ((item.priority ?? -1) > (merged.get(text) ?? -1)) {
+      merged.set(text, item.priority);
     }
   }
 

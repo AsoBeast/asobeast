@@ -1,4 +1,7 @@
-import type { KeywordSuggestionStrategy } from "@asobeast/shared";
+import {
+  isStoreSuggestionStrategy,
+  type KeywordSuggestionStrategy,
+} from "@asobeast/shared";
 
 export const STRATEGIES: {
   value: KeywordSuggestionStrategy;
@@ -31,6 +34,11 @@ export const STRATEGIES: {
     description: "Terms your competitors rank for",
   },
   {
+    value: "competitorSearch",
+    label: "Competitor searches",
+    description: "What people search around your competitors' phrases",
+  },
+  {
     value: "reviews",
     label: "Reviews",
     description: "Phrases from your users' reviews",
@@ -40,10 +48,18 @@ export const STRATEGIES: {
 export const USED_BY_NOUN: Partial<Record<KeywordSuggestionStrategy, string>> =
   {
     competitors: "competitor",
+    competitorSearch: "competitor",
     reviews: "review",
   };
 
 export const EMPTY_COPY: Partial<Record<KeywordSuggestionStrategy, string>> = {
+  competitorSearch:
+    "Your competitors' titles share no phrase to search from in this market yet.",
   developer:
     "No other apps found for this developer, or the latest snapshot carries no developer id.",
 };
+
+export const storeLookupLabels = (): string[] =>
+  STRATEGIES.filter((entry) => isStoreSuggestionStrategy(entry.value)).map(
+    (entry) => entry.label,
+  );

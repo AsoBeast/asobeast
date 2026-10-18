@@ -1,9 +1,13 @@
 import { Store } from '@prisma/client';
 import { StoreSuggestionStrategy } from '@asobeast/shared';
 import { PrismaService } from '../prisma/prisma.service';
-import { StoreNotSupportedError } from '../store-providers/errors';
+import {
+  StoreNotSupportedError,
+  StoreRequestError,
+} from '../store-providers/errors';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { listingLanguages } from './listing-languages';
+import { CompetitorSearchPlanner } from './competitor-search.planner';
 import { StoreSuggestions } from './store-suggestions';
 import { SuggestionRequest } from './suggestion-request';
 
@@ -28,6 +32,10 @@ const requestFor = ({
   },
 });
 
+const unusedPlanner = {
+  plan: jest.fn(),
+} as unknown as CompetitorSearchPlanner;
+
 const buildStore = (raw: unknown, registry: unknown, title = 'Habit Tracker') =>
   new StoreSuggestions(
     {
@@ -36,6 +44,7 @@ const buildStore = (raw: unknown, registry: unknown, title = 'Habit Tracker') =>
       },
     } as unknown as PrismaService,
     registry as StoreProviderRegistry,
+    unusedPlanner,
   );
 
 const lookUp = async (
@@ -188,6 +197,7 @@ describe('StoreSuggestions.plan', () => {
       store: new StoreSuggestions(
         prisma as unknown as PrismaService,
         registry as unknown as StoreProviderRegistry,
+        unusedPlanner,
       ),
     };
   };
@@ -229,6 +239,27 @@ describe('StoreSuggestions.plan', () => {
     expect(prisma.trackedKeyword.findMany).not.toHaveBeenCalled();
   });
 
+  it('search keeps the suggestions of the seeds that answered', async () => {
+    const suggest = jest
+      .fn()
+      .mockResolvedValueOnce([{ term: 'first answer' }])
+      .mockRejectedValueOnce(
+        new StoreRequestError(Store.APP_STORE, 'suggest', 'timeout'),
+      )
+      .mockResolvedValueOnce([{ term: 'third answer' }]);
+    const { store } = buildPlanner({
+      tracked: trackedRows(['MANUAL', 'MANUAL', 'MANUAL']),
+      provider: { suggest },
+    });
+
+    const lookup = await store.plan('search', requestFor());
+
+    expect((await lookup?.())?.map((item) => item.text).sort()).toEqual([
+      'first answer',
+      'third answer',
+    ]);
+  });
+
   it('plans no lookup for developer without a developer id', async () => {
     const developerApps = jest.fn();
     for (const snapshot of [
@@ -265,6 +296,20 @@ describe('StoreSuggestions.plan', () => {
     expect(similar).not.toHaveBeenCalled();
     await lookup?.();
     expect(similar).toHaveBeenCalledWith('store1', 'us');
+  });
+
+  it('delegates competitorSearch to its planner', async () => {
+    const lookup = jest.fn();
+    const plan = jest.fn().mockResolvedValue(lookup);
+    const store = new StoreSuggestions(
+      {} as PrismaService,
+      {} as StoreProviderRegistry,
+      { plan } as unknown as CompetitorSearchPlanner,
+    );
+    const request = requestFor();
+
+    await expect(store.plan('competitorSearch', request)).resolves.toBe(lookup);
+    expect(plan).toHaveBeenCalledWith(request);
   });
 
   it('refuses an unsupported store before any lookup', async () => {

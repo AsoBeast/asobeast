@@ -72,6 +72,7 @@ export interface KeywordSuggestion {
   priority?: number;
   usedByCount?: number;
   event?: string;
+  seed?: string;
 }
 
 export interface KeywordFieldResult {

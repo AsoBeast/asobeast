@@ -136,13 +136,18 @@ The keyword field is App Store only. Google Play has no keyword field, so the ca
 
 ## Get keyword suggestions
 
-Suggestions come from three places.
+Suggestions come from four places.
 
 | Source | Where it comes from |
 | --- | --- |
 | Store suggest | A live lookup against the store suggestion endpoint |
 | Competitor listings | Phrases that competitors index and you do not |
+| Competitor searches | A live lookup of what people type around the phrases your competitors share in the market |
 | Review mining | Language that appears repeatedly in your own reviews |
+
+When one of several store lookups fails, the suggestions that answered are kept.
+
+**Competitor searches** read the title and subtitle of each competitor's listing in the market shown (the title and short description on Google Play), keep the phrases of two words or more that competitors share, up to five, and ask the store's search suggestions what people type around each. A search must contain the words of its phrase, and asobeast leaves out phrases you already track in that market, competitor titles and app names. Each row names the phrase it came from. When a competitor has no listing in that market yet, its home listing is read. One lookup spends one keyword suggestion, and an app whose competitors share no phrase spends none.
 
 A suggestion lookup is the one user initiated exception to the rule that store requests only happen in the queue. It is bounded by a person clicking, so it stays small, but a lookup that reaches the store spends one request of the hourly suggestions allowance. The Search tab with no active tracked keyword and the More by developer tab with no developer id in the newest listing have nothing to ask the store, so they answer an empty list and cost nothing. See [Rate limits and quotas](/api-reference/rate-limits).
 

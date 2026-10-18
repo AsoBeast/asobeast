@@ -28,6 +28,7 @@ import {
   utcDateKey,
 } from '../src/jobs/jobs.types';
 import { asWorkspace } from './helpers/tenancy';
+import { StoreRequestError } from '../src/store-providers/errors';
 import { testDb } from './helpers/test-db';
 import { ownerAgent, useCookies } from './helpers/session';
 import { obliterateQueues, pauseQueues } from './obliterate-queues';
@@ -64,6 +65,8 @@ const PLAY_SERP = [
 
 class FakeRegistry {
   suggestCalls: Array<{ term: string; country: string | undefined }> = [];
+  failingTerms: (term: string) => boolean = () => false;
+  answers: Record<string, string[]> = {};
 
   get(store: Store): StoreProvider {
     return {
@@ -73,6 +76,15 @@ class FakeRegistry {
         Promise.resolve(store === Store.GOOGLE_PLAY ? PLAY_SERP : []),
       suggest: (term: string, country?: string) => {
         this.suggestCalls.push({ term, country });
+        if (this.failingTerms(term)) {
+          return Promise.reject(
+            new StoreRequestError(store, 'suggest', 'timeout'),
+          );
+        }
+        const answer = this.answers[term];
+        if (answer) {
+          return Promise.resolve(answer.map((hint) => ({ term: hint })));
+        }
         return Promise.resolve([
           { term: 'productivity', priority: 6000 },
           { term: 'habit tracker app', priority: 8000 },
@@ -1215,6 +1227,203 @@ describe('KeywordsController (e2e)', () => {
     expect(productivity?.strategy).toBe('search');
     expect(productivity?.priority).toBe(6000);
     expect(suggestions.some((item) => item.text === 'habit')).toBe(false);
+  });
+
+  it('answers the search suggestions of the seeds that answered', async () => {
+    const id = await importApp();
+    const tracked = await prisma.trackedKeyword.findMany({
+      where: { appId: id, active: true },
+      select: { keyword: { select: { text: true } } },
+    });
+    expect(tracked.length).toBeGreaterThan(1);
+    const failing = tracked[0].keyword.text;
+    registry.failingTerms = (term) => term === failing;
+    registry.suggestCalls = [];
+
+    try {
+      const response = await api
+        .get(`/apps/${id}/keywords/suggestions`)
+        .query({ strategy: 'search' })
+        .expect(200);
+
+      expect(registry.suggestCalls.map((call) => call.term)).toContain(failing);
+      expect(
+        (response.body as KeywordSuggestion[]).map((item) => item.text),
+      ).toContain('productivity');
+    } finally {
+      registry.failingTerms = () => false;
+    }
+  });
+
+  it("answers the store's failure when every search lookup failed", async () => {
+    const id = await importApp();
+    registry.failingTerms = () => true;
+
+    try {
+      const response = await api
+        .get(`/apps/${id}/keywords/suggestions`)
+        .query({ strategy: 'search' })
+        .expect(502);
+
+      expect((response.body as ApiErrorEnvelope).message).toBe(
+        'The App Store did not answer. Try again in a few minutes.',
+      );
+    } finally {
+      registry.failingTerms = () => false;
+    }
+  });
+
+  describe('competitorSearch', () => {
+    const competitorSearch = (id: string, country?: string) =>
+      api.get(`/apps/${id}/keywords/suggestions`).query({
+        strategy: 'competitorSearch',
+        ...(country ? { country } : {}),
+      });
+
+    const seedCompetitors = async (): Promise<string> => {
+      const primary = await prisma.app.create({
+        data: {
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          store: Store.APP_STORE,
+          storeAppId: '900100',
+          country: 'us',
+          name: 'Habit Pro',
+        },
+      });
+      const keyword = await prisma.keyword.create({
+        data: {
+          text: 'habit tracker app',
+          store: Store.APP_STORE,
+          country: 'us',
+        },
+      });
+      await prisma.trackedKeyword.create({
+        data: {
+          appId: primary.id,
+          keywordId: keyword.id,
+          source: 'MANUAL',
+          active: true,
+        },
+      });
+      for (const [storeAppId, name, title] of [
+        ['900101', 'Streaks', 'Streaks: Habit Tracker'],
+        ['900102', 'Goal Keeper', 'Goal Keeper: Habit Tracker & Goals'],
+      ]) {
+        const competitor = await prisma.app.create({
+          data: {
+            workspaceId: DEFAULT_WORKSPACE_ID,
+            store: Store.APP_STORE,
+            storeAppId,
+            country: 'us',
+            name,
+            isCompetitor: true,
+            primaryAppId: primary.id,
+          },
+        });
+        await prisma.appSnapshot.create({
+          data: { appId: competitor.id, title, description: 'x', raw: {} },
+        });
+        if (name === 'Streaks') {
+          await prisma.appSnapshot.create({
+            data: {
+              appId: competitor.id,
+              country: 'de',
+              title: 'Streaks: Gewohnheiten Tracker',
+              description: 'x',
+              raw: {},
+            },
+          });
+        }
+      }
+      return primary.id;
+    };
+
+    afterEach(() => {
+      registry.answers = {};
+      registry.failingTerms = () => false;
+    });
+
+    it('suggests the searches around the phrases competitors share', async () => {
+      const id = await seedCompetitors();
+      registry.answers = {
+        'habit tracker': ['habit tracker for adhd', 'daily habit tracker'],
+      };
+      registry.suggestCalls = [];
+
+      const response = await competitorSearch(id).expect(200);
+
+      expect(response.body).toEqual([
+        {
+          text: 'habit tracker for adhd',
+          strategy: 'competitorSearch',
+          seed: 'habit tracker',
+          usedByCount: 2,
+        },
+        {
+          text: 'daily habit tracker',
+          strategy: 'competitorSearch',
+          seed: 'habit tracker',
+          usedByCount: 2,
+        },
+      ]);
+      expect(registry.suggestCalls[0]).toEqual({
+        term: 'habit tracker',
+        country: 'us',
+      });
+      expect(registry.suggestCalls.length).toBeLessThanOrEqual(5);
+    });
+
+    it('leaves out what the app tracks, competitor titles and app names', async () => {
+      const id = await seedCompetitors();
+      registry.answers = {
+        'habit tracker': [
+          'habit tracker app',
+          'streaks habit tracker',
+          'Habit Tracker: Daily',
+          'habit planner',
+        ],
+      };
+
+      const response = await competitorSearch(id).expect(200);
+
+      expect(response.body).toEqual([]);
+    });
+
+    it("reads the competitors' listing of the requested market", async () => {
+      const id = await seedCompetitors();
+      registry.suggestCalls = [];
+
+      await competitorSearch(id, 'de').expect(200);
+
+      const terms = registry.suggestCalls.map((call) => call.term);
+      expect(terms).toContain('gewohnheiten tracker');
+      expect(terms).toContain('habit tracker');
+      expect(registry.suggestCalls.every((call) => call.country === 'de')).toBe(
+        true,
+      );
+    });
+
+    it('answers nothing for an app without competitors', async () => {
+      const id = await importApp();
+      registry.suggestCalls = [];
+
+      const response = await competitorSearch(id).expect(200);
+
+      expect(response.body).toEqual([]);
+      expect(registry.suggestCalls).toEqual([]);
+    });
+
+    it('answers the searches that answered when one seed fails', async () => {
+      const id = await seedCompetitors();
+      registry.answers = { 'habit tracker': ['habit tracker for adhd'] };
+      registry.failingTerms = (term) => term !== 'habit tracker';
+
+      const response = await competitorSearch(id).expect(200);
+
+      expect(
+        (response.body as KeywordSuggestion[]).map((item) => item.text),
+      ).toEqual(['habit tracker for adhd']);
+    });
   });
 
   it('suggests common terms from similar apps with usedByCount', async () => {

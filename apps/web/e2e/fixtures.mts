@@ -2418,6 +2418,20 @@ export const SUGGESTIONS: Record<
       { text: "focus music", strategy: "search", priority: 6100 },
       { text: "focus mode", strategy: "search", priority: 5400 },
     ],
+    competitorSearch: [
+      {
+        text: "focus timer for adhd",
+        strategy: "competitorSearch",
+        seed: "focus timer",
+        usedByCount: 1,
+      },
+      {
+        text: "deep work timer app",
+        strategy: "competitorSearch",
+        seed: "deep work",
+        usedByCount: 2,
+      },
+    ],
   },
   "app-2": {
     metadata: listingSuggestions(["habit streaks", "daily habits"]),
