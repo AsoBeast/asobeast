@@ -53,7 +53,7 @@ A column the store does not publish stays empty: `subtitle` on Google Play, `sum
 
 ## Export the keyword comparison to CSV
 
-The comparison matrix exports the rows it shows, in the order shown, after the search and the result filter. The file is named `keyword-comparison-<appId>-<date>.csv`, or `keyword-gaps-<appId>-<date>.csv` when **only gaps** is on, and then it holds the gap rows alone.
+The comparison matrix exports the rows it shows, in the order shown, after the search, the market filter and the result filter. The file is named `keyword-comparison-<appId>-<date>.csv`, or `keyword-gaps-<appId>-<date>.csv` when **only gaps** is on, and then it holds the gap rows alone.
 
 | Column | What it holds |
 | --- | --- |
@@ -63,6 +63,9 @@ The comparison matrix exports the rows it shows, in the order shown, after the s
 | One column per competitor | That competitor's position, headed by its name |
 | `result` | `winning`, `losing` or `tied`, empty when nobody ranks |
 | `gap` | `true` on the rows the matrix marks as a gap, otherwise `false` |
+| `country` | The two letter code of the market the keyword is tracked in |
+
+The file always ends with `country`, like the keyword export, whether the matrix shows one market or several.
 
 Positions are written the way the matrix shows them, so an app that does not rank exports as `>200`. Two competitors with the same name get `(2)`, `(3)` after the name so every column header stays unique, and a competitor without a name is headed `Competitor`. What winning, losing, tied and a gap mean is explained in [Read the comparison matrix](/guides/competitors#read-the-comparison-matrix).
 
