@@ -1,7 +1,10 @@
 import { Store } from '@prisma/client';
 import { StoreSuggestionStrategy } from '@asobeast/shared';
 import { PrismaService } from '../prisma/prisma.service';
-import { StoreNotSupportedError } from '../store-providers/errors';
+import {
+  StoreNotSupportedError,
+  StoreRequestError,
+} from '../store-providers/errors';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { listingLanguages } from './listing-languages';
 import { StoreSuggestions } from './store-suggestions';
@@ -227,6 +230,27 @@ describe('StoreSuggestions.plan', () => {
       'seed 0',
     ]);
     expect(prisma.trackedKeyword.findMany).not.toHaveBeenCalled();
+  });
+
+  it('search keeps the suggestions of the seeds that answered', async () => {
+    const suggest = jest
+      .fn()
+      .mockResolvedValueOnce([{ term: 'first answer' }])
+      .mockRejectedValueOnce(
+        new StoreRequestError(Store.APP_STORE, 'suggest', 'timeout'),
+      )
+      .mockResolvedValueOnce([{ term: 'third answer' }]);
+    const { store } = buildPlanner({
+      tracked: trackedRows(['MANUAL', 'MANUAL', 'MANUAL']),
+      provider: { suggest },
+    });
+
+    const lookup = await store.plan('search', requestFor());
+
+    expect((await lookup?.())?.map((item) => item.text).sort()).toEqual([
+      'first answer',
+      'third answer',
+    ]);
   });
 
   it('plans no lookup for developer without a developer id', async () => {

@@ -12,6 +12,7 @@ import { StoreProviderRegistry } from '../store-providers/store-provider.registr
 import { SearchItem, StoreProvider } from '../store-providers/types';
 import { extractCandidates } from './extraction';
 import { loadKeywordFieldIndex, reportedSource } from './keyword-field-index';
+import { suggestAround } from './store-hints';
 import { SuggestionRequest } from './suggestion-request';
 
 const SEARCH_SEED_LIMIT = 5;
@@ -142,18 +143,15 @@ async function suggestFromSearch(
   const seedSet = new Set(seeds);
   const merged = new Map<string, number | undefined>();
 
-  for (const seed of seeds) {
-    const items = await provider.suggest(seed, market.country);
-    for (const item of items) {
-      const text = normalizeText(item.term);
-      if (!text || tracked.has(text) || seedSet.has(text)) {
-        continue;
-      }
-      if (!merged.has(text)) {
-        merged.set(text, item.priority);
-      } else if ((item.priority ?? -1) > (merged.get(text) ?? -1)) {
-        merged.set(text, item.priority);
-      }
+  for (const item of await suggestAround(provider, seeds, market.country)) {
+    const text = normalizeText(item.term);
+    if (!text || tracked.has(text) || seedSet.has(text)) {
+      continue;
+    }
+    if (!merged.has(text)) {
+      merged.set(text, item.priority);
+    } else if ((item.priority ?? -1) > (merged.get(text) ?? -1)) {
+      merged.set(text, item.priority);
     }
   }
 

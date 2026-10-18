@@ -28,6 +28,7 @@ import {
   utcDateKey,
 } from '../src/jobs/jobs.types';
 import { asWorkspace } from './helpers/tenancy';
+import { StoreRequestError } from '../src/store-providers/errors';
 import { testDb } from './helpers/test-db';
 import { ownerAgent, useCookies } from './helpers/session';
 import { obliterateQueues, pauseQueues } from './obliterate-queues';
@@ -64,6 +65,7 @@ const PLAY_SERP = [
 
 class FakeRegistry {
   suggestCalls: Array<{ term: string; country: string | undefined }> = [];
+  failingTerms: (term: string) => boolean = () => false;
 
   get(store: Store): StoreProvider {
     return {
@@ -73,6 +75,11 @@ class FakeRegistry {
         Promise.resolve(store === Store.GOOGLE_PLAY ? PLAY_SERP : []),
       suggest: (term: string, country?: string) => {
         this.suggestCalls.push({ term, country });
+        if (this.failingTerms(term)) {
+          return Promise.reject(
+            new StoreRequestError(store, 'suggest', 'timeout'),
+          );
+        }
         return Promise.resolve([
           { term: 'productivity', priority: 6000 },
           { term: 'habit tracker app', priority: 8000 },
@@ -1215,6 +1222,50 @@ describe('KeywordsController (e2e)', () => {
     expect(productivity?.strategy).toBe('search');
     expect(productivity?.priority).toBe(6000);
     expect(suggestions.some((item) => item.text === 'habit')).toBe(false);
+  });
+
+  it('answers the search suggestions of the seeds that answered', async () => {
+    const id = await importApp();
+    const tracked = await prisma.trackedKeyword.findMany({
+      where: { appId: id, active: true },
+      select: { keyword: { select: { text: true } } },
+    });
+    expect(tracked.length).toBeGreaterThan(1);
+    const failing = tracked[0].keyword.text;
+    registry.failingTerms = (term) => term === failing;
+    registry.suggestCalls = [];
+
+    try {
+      const response = await api
+        .get(`/apps/${id}/keywords/suggestions`)
+        .query({ strategy: 'search' })
+        .expect(200);
+
+      expect(registry.suggestCalls.map((call) => call.term)).toContain(failing);
+      expect(
+        (response.body as KeywordSuggestion[]).map((item) => item.text),
+      ).toContain('productivity');
+    } finally {
+      registry.failingTerms = () => false;
+    }
+  });
+
+  it("answers the store's failure when every search lookup failed", async () => {
+    const id = await importApp();
+    registry.failingTerms = () => true;
+
+    try {
+      const response = await api
+        .get(`/apps/${id}/keywords/suggestions`)
+        .query({ strategy: 'search' })
+        .expect(502);
+
+      expect((response.body as ApiErrorEnvelope).message).toBe(
+        'The App Store did not answer. Try again in a few minutes.',
+      );
+    } finally {
+      registry.failingTerms = () => false;
+    }
   });
 
   it('suggests common terms from similar apps with usedByCount', async () => {
