@@ -22,6 +22,7 @@ import { formatCountry } from "@/lib/format";
 import { keywordBreakdownOptions } from "@/lib/queries";
 import { breakdownParser } from "@/lib/search-params";
 import { BreakdownAppCard } from "./BreakdownAppCard";
+import { COMPETITOR_SECTION } from "./competitor-sections";
 
 const DESCRIPTION_ID = "breakdown-description";
 
@@ -125,9 +126,13 @@ export function KeywordBreakdownSheet({ appId }: { appId: string }) {
         className="w-full sm:max-w-xl"
         aria-describedby={DESCRIPTION_ID}
         onCloseAutoFocus={(event) => {
-          const opener = document.querySelector<HTMLButtonElement>(
-            `[data-breakdown-keyword="${CSS.escape(shownId)}"]`,
-          );
+          const opener =
+            document.querySelector<HTMLButtonElement>(
+              `[data-breakdown-keyword="${CSS.escape(shownId)}"]`,
+            ) ??
+            document.querySelector<HTMLButtonElement>(
+              `[data-section="${COMPETITOR_SECTION.matrix}"]`,
+            );
           if (!opener) return;
           event.preventDefault();
           opener.focus();

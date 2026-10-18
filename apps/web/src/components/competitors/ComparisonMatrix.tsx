@@ -47,27 +47,32 @@ function ComparisonBody({ id, onlyGaps }: { id: string; onlyGaps: boolean }) {
 export function ComparisonMatrix({ id }: { id: string }) {
   const [onlyGaps, setOnlyGaps] = useQueryState("onlyGaps", onlyGapsParser);
   return (
-    <CollapsibleCard
-      section={COMPETITOR_SECTION.matrix}
-      eyebrow="Comparison matrix"
-      title="Your position against every competitor"
-      actions={
-        <div className="flex items-center gap-2">
-          <Switch
-            id="only-gaps"
-            checked={onlyGaps}
-            onCheckedChange={(next) => setOnlyGaps(next ? true : null)}
-          />
-          <Label htmlFor="only-gaps" className="text-sm text-muted-foreground">
-            only gaps
-          </Label>
-        </div>
-      }
-    >
-      <Suspense fallback={<Skeleton className="h-64 w-full" />}>
-        <ComparisonBody id={id} onlyGaps={onlyGaps} />
-      </Suspense>
+    <>
+      <CollapsibleCard
+        section={COMPETITOR_SECTION.matrix}
+        eyebrow="Comparison matrix"
+        title="Your position against every competitor"
+        actions={
+          <div className="flex items-center gap-2">
+            <Switch
+              id="only-gaps"
+              checked={onlyGaps}
+              onCheckedChange={(next) => setOnlyGaps(next ? true : null)}
+            />
+            <Label
+              htmlFor="only-gaps"
+              className="text-sm text-muted-foreground"
+            >
+              only gaps
+            </Label>
+          </div>
+        }
+      >
+        <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+          <ComparisonBody id={id} onlyGaps={onlyGaps} />
+        </Suspense>
+      </CollapsibleCard>
       <KeywordBreakdownSheet appId={id} />
-    </CollapsibleCard>
+    </>
   );
 }

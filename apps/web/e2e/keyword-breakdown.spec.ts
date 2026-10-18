@@ -114,6 +114,27 @@ test("a link opens the breakdown", async ({ page }) => {
   await expect(card(page, /Rival Focus/)).toBeVisible();
 });
 
+test("a link opens the breakdown while the matrix is collapsed", async ({
+  page,
+  context,
+}) => {
+  await seedCookies(context, {
+    asobeast_collapsed: encodeURIComponent("competitors.matrix"),
+  });
+  await page.goto(`${PAGE}?keyword=kw-2`);
+
+  await expect(sheet(page)).toBeVisible();
+  await expect(card(page, /Rival Focus/)).toBeVisible();
+  await sheet(page).getByRole("button", { name: "Close", exact: true }).click();
+
+  await expect(
+    page.getByRole("button", {
+      name: "Your position against every competitor",
+      exact: true,
+    }),
+  ).toBeFocused();
+});
+
 test("a keyword no longer tracked says so", async ({ page }) => {
   await page.goto(`${PAGE}?keyword=kw-nope`);
 
