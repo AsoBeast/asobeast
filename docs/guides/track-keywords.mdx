@@ -144,7 +144,7 @@ Suggestions come from three places.
 | Competitor listings | Phrases that competitors index and you do not |
 | Review mining | Language that appears repeatedly in your own reviews |
 
-A suggestion lookup is the one user initiated exception to the rule that store requests only happen in the queue. It is bounded by a person clicking, so it stays small, but it does consume request budget.
+A suggestion lookup is the one user initiated exception to the rule that store requests only happen in the queue. It is bounded by a person clicking, so it stays small, but a lookup that reaches the store spends one request of the hourly suggestions allowance. The Search tab with no active tracked keyword and the More by developer tab with no developer id in the newest listing have nothing to ask the store, so they answer an empty list and cost nothing. See [Rate limits and quotas](/api-reference/rate-limits).
 
 Deep search runs the store suggestion endpoint against a seed phrase and every one letter extension of it, queued as separate probes. It belongs to the market selected on the keyword monitor, so the same seed in two storefronts is two independent deep searches with their own results and their own budget. See [Countries and markets](/concepts/countries).
 
