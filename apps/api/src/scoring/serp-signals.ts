@@ -1,7 +1,7 @@
 import { searchKey } from '@asobeast/shared';
 import { clamp } from './curves';
 import { sameWord } from './plurals';
-import { isUnsegmented } from '../common/text/scripts';
+import { hasInflectedStemScript, isUnsegmented } from '../common/text/scripts';
 
 export const EVIDENCE_EXACT = 1;
 export const EVIDENCE_ALL_WORDS = 0.7;
@@ -66,9 +66,19 @@ export function titleTargets(title: string, keyword: string): boolean {
     return false;
   }
   const haystack = searchKey(title);
-  return isUnsegmented(phrase)
-    ? haystack.includes(phrase)
-    : ` ${haystack}`.includes(` ${phrase}`);
+  if (isUnsegmented(phrase)) {
+    return haystack.includes(phrase);
+  }
+  if (hasInflectedStemScript(phrase)) {
+    // A title written in a script where every word inflects almost never
+    // carries the phrase exactly as tracked, so each word may appear in any
+    // of its forms. Latin scripts keep the exact phrase: the targeting
+    // weights are fitted against exact matches.
+    const tokens = haystack.split(' ');
+    const words = phrase.split(' ');
+    return containsPhrase(haystack, tokens, phrase, words);
+  }
+  return ` ${haystack}`.includes(` ${phrase}`);
 }
 
 export interface TitleMatch {

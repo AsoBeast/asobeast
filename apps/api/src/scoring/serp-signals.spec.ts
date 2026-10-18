@@ -34,6 +34,10 @@ describe('titleEvidence', () => {
     ['Countries of the World', 'country', 1],
     ['墨迹天气预报', '天气', 1],
     ['地図ゲーム 世界', '地図 ゲーム', 0.7],
+    ['Снятие тревожности', 'снятие тревожность', 1],
+    ['Дневник настроения', 'настроение', 1],
+    ['Hex - Снятие тревожности', 'борьба с тревожностью', 0.4 / 3],
+    ['Тревога и паника', 'снятие тревожности', 0],
   ])('%s against %s is %s', (title, keyword, expected) => {
     expect(titleEvidence(title, keyword)).toBeCloseTo(expected, 6);
   });
@@ -51,6 +55,10 @@ describe('titleTargets', () => {
     ['ສະບາຍດີທຸກຄົນ', 'ທຸກຄົນ', true],
     ['សួស្តីពិភពលោក', 'ពិភពលោក', true],
     ['မြန်မာနိုင်ငံ', 'နိုင်ငံ', true],
+    ['Снятие тревожности', 'снятие тревожностью', true],
+    ['Тест на тревожность', 'тревожность', true],
+    ['Снятие тревоги', 'снятие тревожности', false],
+    ['Тревога и паника', 'снятие тревожности', false],
     ['Any title', '  ', false],
   ])('%s targets "%s": %s', (title, keyword, expected) => {
     expect(titleTargets(title, keyword)).toBe(expected);
@@ -106,5 +114,11 @@ describe('titleMatch proximity', () => {
       strong: true,
       evidence: MATCH_ALL_WORDS,
     });
+  });
+
+  it('matches each word of the keyword in any of its case forms', () => {
+    expect(
+      titleMatch('Снятие тревожности и тревоги', 'снятие тревожность'),
+    ).toEqual({ strong: true, evidence: 1 });
   });
 });
