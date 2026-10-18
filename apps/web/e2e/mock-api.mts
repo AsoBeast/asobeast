@@ -1049,6 +1049,15 @@ const shippedLocalizations = new Map<
 >();
 const seededMarkets = new Map<string, string[]>();
 const fieldRequests = new Map<string, string[]>();
+const loggedRequests = new Map<string, number>();
+const REQUEST_LOG_COOKIE = "e2e_request_log";
+
+function countLoggedRequest(kind: string, req: IncomingMessage): void {
+  const token = cookieValue(req, REQUEST_LOG_COOKIE);
+  if (token === undefined) return;
+  const key = `${kind}:${token}`;
+  loggedRequests.set(key, (loggedRequests.get(key) ?? 0) + 1);
+}
 
 function logFieldRequest(id: string, req: IncomingMessage): void {
   const url = new URL(req.url ?? "/", "http://localhost");
@@ -3326,8 +3335,17 @@ const routes: Route[] = [
   ),
   appRoute(
     /^\/apps\/([^/]+)\/competitors\/discovery$/,
-    (dataset) => dataset.discovery,
+    (dataset, _query, req) => {
+      countLoggedRequest("discovery", req);
+      return dataset.discovery;
+    },
   ),
+  {
+    method: "GET",
+    pattern: /^\/__log\/(discovery|compare)-requests\/([^/]+)$/,
+    handler: ([kind, token], _req, res) =>
+      json(res, 200, { count: loggedRequests.get(`${kind}:${token}`) ?? 0 }),
+  },
   {
     method: "GET",
     pattern: /^\/apps\/([^/]+)\/keywords\/suggestions$/,
@@ -3344,6 +3362,7 @@ const routes: Route[] = [
     },
   },
   appRoute(/^\/apps\/([^/]+)\/keywords\/compare$/, (dataset, query, req) => {
+    countLoggedRequest("compare", req);
     const market = cookieValue(req, COMPARISON_MARKET_COOKIE);
     return {
       ...dataset.comparison,

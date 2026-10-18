@@ -11,14 +11,8 @@ import { SearchInput } from "@/components/data-table/SearchInput";
 import { useStoredColumnVisibility } from "@/components/data-table/useStoredColumnVisibility";
 import { dataTableFeatures } from "@/components/data-table/table-features";
 import { useUrlSorting } from "@/components/data-table/useUrlSorting";
+import { CollapsibleCard } from "@/components/layout/CollapsibleCard";
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -41,6 +35,7 @@ import {
 } from "@/lib/search-params";
 import { ariaSort } from "@/lib/table/sorting";
 import { cn } from "@/lib/utils";
+import { COMPETITOR_SECTION } from "./competitor-sections";
 import { discoveryColumns } from "./discovery-columns";
 import { DiscoveryPanelSkeleton } from "./skeletons";
 
@@ -176,33 +171,31 @@ export function DiscoveryPanel({ id }: { id: string }) {
   const storeName = storeLabel(detail.store);
 
   return (
-    <Card>
-      <CardHeader className="flex-row items-start justify-between gap-4">
-        <div className="flex flex-col gap-1.5">
-          <CardDescription>Discovery</CardDescription>
-          <div className="flex flex-wrap items-center gap-2">
-            <CardTitle>Apps you don’t track yet</CardTitle>
-            <Badge variant="secondary">{storeName}</Badge>
-          </div>
-        </div>
-        <Tabs
-          value={String(days)}
-          onValueChange={(next) => void setDays(Number(next) as typeof days)}
-        >
-          <TabsList>
-            {DISCOVERY_WINDOWS.map((window) => (
-              <TabsOption key={window} value={String(window)}>
-                {window}d
-              </TabsOption>
-            ))}
-          </TabsList>
-        </Tabs>
-      </CardHeader>
-      <CardContent>
-        <Suspense fallback={<DiscoveryPanelSkeleton />}>
-          <DiscoveryTable id={id} days={days} storeName={storeName} />
-        </Suspense>
-      </CardContent>
-    </Card>
+    <CollapsibleCard
+      section={COMPETITOR_SECTION.discovery}
+      eyebrow="Discovery"
+      title="Apps you don’t track yet"
+      actions={
+        <>
+          <Badge variant="secondary">{storeName}</Badge>
+          <Tabs
+            value={String(days)}
+            onValueChange={(next) => void setDays(Number(next) as typeof days)}
+          >
+            <TabsList>
+              {DISCOVERY_WINDOWS.map((window) => (
+                <TabsOption key={window} value={String(window)}>
+                  {window}d
+                </TabsOption>
+              ))}
+            </TabsList>
+          </Tabs>
+        </>
+      }
+    >
+      <Suspense fallback={<DiscoveryPanelSkeleton />}>
+        <DiscoveryTable id={id} days={days} storeName={storeName} />
+      </Suspense>
+    </CollapsibleCard>
   );
 }
