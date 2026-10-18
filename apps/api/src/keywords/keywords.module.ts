@@ -5,6 +5,7 @@ import { StoreProvidersModule } from '../store-providers/store-providers.module'
 import { AppLocalizationsService } from './app-localizations.service';
 import { CompetitorSearchPlanner } from './competitor-search.planner';
 import { FirstPositionChecks } from './first-position-checks';
+import { KeywordBreakdownService } from './keyword-breakdown.service';
 import { KeywordFieldService } from './keyword-field.service';
 import { KeywordFieldWriter } from './keyword-field-writer';
 import { KeywordImportService } from './keyword-import.service';
@@ -34,6 +35,7 @@ import { TrackedKeywordAccess } from './tracked-keyword.access';
     AppLocalizationsService,
     CompetitorSearchPlanner,
     FirstPositionChecks,
+    KeywordBreakdownService,
     KeywordsService,
     KeywordFieldService,
     KeywordFieldWriter,

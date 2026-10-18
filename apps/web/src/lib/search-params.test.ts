@@ -80,6 +80,7 @@ import {
   reviewScoreParser,
   searchParser,
   serpParser,
+  breakdownParser,
   SORT_DIRECTIONS,
   sortDirectionParser,
   spiderTermParser,
@@ -143,6 +144,7 @@ const LIST_PARSERS = [
 const STRING_PARSERS = [
   ["market", marketParser],
   ["serp", serpParser],
+  ["breakdown", breakdownParser],
   ["spiderTerm", spiderTermParser],
   ["search", searchParser],
 ] as const;

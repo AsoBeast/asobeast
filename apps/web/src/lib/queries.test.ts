@@ -39,6 +39,7 @@ import {
   changesOptions,
   competitorsOptions,
   comparisonOptions,
+  keywordBreakdownOptions,
   discoveryOptions,
   competitorSuggestionsOptions,
   storeSearchKey,
@@ -149,6 +150,11 @@ const APP_SCOPED_OPTIONS = [
     appKeys.spider(APP, "fitness", "de"),
   ],
   ["comparison", comparisonOptions(APP, true), appKeys.compare(APP, true)],
+  [
+    "keyword breakdown",
+    keywordBreakdownOptions(APP, "kw-1"),
+    appKeys.keywordBreakdown(APP, "kw-1"),
+  ],
   ["rankings", rankingsOptions(APP, RANGE), appKeys.rankings(APP, RANGE)],
   ["serpMovers", serpMoversOptions(APP, 7), appKeys.serpMovers(APP, 7)],
   ["visibility", visibilityOptions(APP, RANGE), appKeys.visibility(APP, RANGE)],
@@ -262,6 +268,11 @@ const ROOT_TO_LEAF = [
     "suggestionsRoot",
     appKeys.suggestionsRoot(APP),
     appKeys.suggestions(APP, "search", "us"),
+  ],
+  [
+    "compare to breakdown",
+    appKeys.compareRoot(APP),
+    appKeys.keywordBreakdown(APP, "kw-1"),
   ],
   ["summary", appKeys.summary(APP), appKeys.summary(APP, "de")],
   [

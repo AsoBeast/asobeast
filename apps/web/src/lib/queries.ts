@@ -58,6 +58,7 @@ import {
   getChanges,
   getEmailAlerts,
   getComparison,
+  getKeywordBreakdown,
   getCompetitorDiscovery,
   getCompetitorSuggestions,
   getCompetitors,
@@ -153,6 +154,8 @@ export const appKeys = {
     [...appKeys.detail(id), "spider", { term, country }] as const,
   compare: (id: string, onlyGaps: boolean) =>
     [...appKeys.detail(id), "compare", { onlyGaps }] as const,
+  keywordBreakdown: (id: string, keywordId: string) =>
+    [...appKeys.compareRoot(id), "breakdown", keywordId] as const,
   rankings: (id: string, params: RankingParams) =>
     [...appKeys.detail(id), "rankings", params] as const,
   serpMoversRoot: (id: string) =>
@@ -657,6 +660,12 @@ export const comparisonOptions = (id: string, onlyGaps: boolean) =>
   queryOptions({
     queryKey: appKeys.compare(id, onlyGaps),
     queryFn: () => getComparison(id, onlyGaps),
+  });
+
+export const keywordBreakdownOptions = (id: string, keywordId: string) =>
+  queryOptions({
+    queryKey: appKeys.keywordBreakdown(id, keywordId),
+    queryFn: () => getKeywordBreakdown(id, keywordId),
   });
 
 export const rankingsOptions = (id: string, params: RankingParams) =>

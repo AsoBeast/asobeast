@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  annotationsOf,
   APP_TOOLS,
   KEYWORD_TOOLS,
   MCP_TOOLS,
+  MCP_WRITE_TOOLS,
   requestOf,
   toolByName,
 } from "./index";
@@ -176,6 +178,34 @@ describe("the keyword_suggestions strategies", () => {
     const description = toolByName("keyword_suggestions")?.description ?? "";
 
     expect(description.split(". ")[0]).toContain("competitorSearch");
+  });
+});
+
+describe("the keyword_breakdown tool", () => {
+  const tool = () => {
+    const found = toolByName("keyword_breakdown");
+    if (!found) throw new Error("keyword_breakdown is not in the catalog");
+    return found;
+  };
+
+  it("lists keyword_breakdown as a read tool", () => {
+    expect(MCP_TOOLS.map((each) => each.name)).toContain("keyword_breakdown");
+    expect(MCP_WRITE_TOOLS.map((each) => each.name)).not.toContain(
+      "keyword_breakdown",
+    );
+    expect(requestOf(tool(), { appId: "app-1", keywordId: "kw-1" })).toEqual({
+      method: "GET",
+      path: "/apps/app-1/keywords/kw-1/breakdown",
+      params: undefined,
+    });
+    expect(annotationsOf(tool()).readOnlyHint).toBe(true);
+  });
+
+  it("segments ids", () => {
+    expect(tool().request({ appId: "app-1", keywordId: "a/b" }).path).toBe(
+      "/apps/app-1/keywords/a%2Fb/breakdown",
+    );
+    expect(() => tool().request({ appId: "app-1", keywordId: ".." })).toThrow();
   });
 });
 

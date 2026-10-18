@@ -43,6 +43,7 @@ export function CollapsibleCard({
                 <CollapsibleTrigger asChild>
                   <button
                     type="button"
+                    data-section={section}
                     className="group/section inline-flex max-w-full items-center gap-2 rounded-sm text-left hover:underline hover:decoration-primary hover:underline-offset-4"
                   >
                     {title}

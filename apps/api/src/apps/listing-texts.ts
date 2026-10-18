@@ -11,7 +11,7 @@ export interface ListingTexts {
   description: string;
 }
 
-const TEXT_SELECT = {
+export const LISTING_TEXT_SELECT = {
   id: true,
   title: true,
   subtitle: true,
@@ -30,7 +30,7 @@ export async function latestListingTexts(
       const row = await prisma.appSnapshot.findFirst({
         where: { appId, ...listingIn(home, market) },
         orderBy: NEWEST_FIRST,
-        select: TEXT_SELECT,
+        select: LISTING_TEXT_SELECT,
       });
       return row ? ([market, row] as const) : null;
     }),
@@ -66,7 +66,7 @@ export async function latestLocalizedTexts(
           },
           orderBy: NEWEST_FIRST,
           distinct: ['localization'],
-          select: { ...TEXT_SELECT, localization: true },
+          select: { ...LISTING_TEXT_SELECT, localization: true },
         });
         return [
           market,

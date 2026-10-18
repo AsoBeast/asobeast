@@ -44,7 +44,7 @@ const GROUPS = [
   {
     title: "Competitors",
     tools: COMPETITOR_TOOLS,
-    note: "Competitors belong to one primary app, so pass the primary app's id. `keyword_comparison`, listed under Keywords, puts the positions of the app and each competitor side by side, and `onlyGaps` narrows it to the keywords where a competitor leads.",
+    note: "Competitors belong to one primary app, so pass the primary app's id. `keyword_comparison`, listed under Keywords, puts the positions of the app and each competitor side by side, and `onlyGaps` narrows it to the keywords where a competitor leads. `keyword_breakdown`, also under Keywords, explains one keyword app by app.",
   },
   {
     title: "Top charts",
