@@ -3,6 +3,7 @@ import {
   CURRENT_FORMULA_VERSIONS,
   isScoringConfidence,
   isScoringSource,
+  RankMilestoneTier,
   ScoreProvenance,
   ScoreSignals,
   tierOf,
@@ -122,6 +123,45 @@ function holdFreshCutoff(now: Date): string {
   return cutoff.toISOString().slice(0, 10);
 }
 
+export interface HeldFacts {
+  bestPosition: number | null;
+  positionDeltaFromBest: number | null;
+  daysInTier: number | null;
+  heldTier: RankMilestoneTier | null;
+}
+
+export function heldFacts(
+  hold: RetainedPositionFacts | null,
+  latestPosition: number | null,
+  active: boolean,
+  today: Date,
+): HeldFacts {
+  if (!hold) {
+    return {
+      bestPosition: null,
+      positionDeltaFromBest: null,
+      daysInTier: null,
+      heldTier: null,
+    };
+  }
+  const bestPosition =
+    hold.bestPosition != null && latestPosition !== null
+      ? Math.min(hold.bestPosition, latestPosition)
+      : (hold.bestPosition ?? null);
+  const fresh = hold.latestDate >= holdFreshCutoff(today);
+  const daysInTier =
+    hold.daysInTier != null && active && fresh ? hold.daysInTier : null;
+  return {
+    bestPosition,
+    positionDeltaFromBest:
+      latestPosition !== null && bestPosition !== null
+        ? latestPosition - bestPosition
+        : null,
+    daysInTier,
+    heldTier: daysInTier === null ? null : tierOf(latestPosition),
+  };
+}
+
 type PositionFacts = Pick<
   TrackedKeywordItem,
   | 'latestPosition'
@@ -129,11 +169,13 @@ type PositionFacts = Pick<
   | 'previousPosition'
   | 'positionDelta1d'
   | 'positionDelta7d'
-  | 'bestPosition'
-  | 'positionDeltaFromBest'
-  | 'daysInTier'
-  | 'heldTier'
->;
+> &
+  Partial<
+    Pick<
+      TrackedKeywordItem,
+      'bestPosition' | 'positionDeltaFromBest' | 'daysInTier' | 'heldTier'
+    >
+  >;
 
 function positionFacts(
   rankings: TrackedKeywordRow['keyword']['rankings'],
@@ -143,18 +185,7 @@ function positionFacts(
   const latest = rankings[0] ?? null;
   const latestPosition = latest?.position ?? null;
   const previousPosition = previousDayPosition(rankings);
-  const bestPosition =
-    hold?.bestPosition != null && latestPosition !== null
-      ? Math.min(hold.bestPosition, latestPosition)
-      : (hold?.bestPosition ?? null);
-  const daysInTier =
-    hold?.daysInTier != null &&
-    active &&
-    hold.latestDate >= holdFreshCutoff(new Date())
-      ? hold.daysInTier
-      : null;
   return {
-    bestPosition,
     latestPosition,
     latestDepth: latest?.depth ?? null,
     previousPosition,
@@ -163,12 +194,7 @@ function positionFacts(
         ? latestPosition - previousPosition
         : null,
     positionDelta7d: positionDelta7d(rankings),
-    positionDeltaFromBest:
-      latestPosition !== null && bestPosition !== null
-        ? latestPosition - bestPosition
-        : null,
-    daysInTier,
-    heldTier: daysInTier === null ? null : tierOf(latestPosition),
+    ...heldFacts(hold, latestPosition, active, new Date()),
   };
 }
 

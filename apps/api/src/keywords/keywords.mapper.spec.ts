@@ -1,4 +1,8 @@
-import { toTrackedKeywordItem, TrackedKeywordRow } from './keywords.mapper';
+import {
+  heldFacts,
+  toTrackedKeywordItem,
+  TrackedKeywordRow,
+} from './keywords.mapper';
 import type { RetainedPositionFacts } from './keyword-position-facts';
 
 const row = (
@@ -472,5 +476,40 @@ describe('toTrackedKeywordItem', () => {
     );
     expect(item.daysInTier).toBeNull();
     expect(item.heldTier).toBeNull();
+  });
+});
+
+describe('heldFacts', () => {
+  const today = new Date('2026-10-18T12:00:00.000Z');
+  const facts = (latestDate: string): RetainedPositionFacts => ({
+    bestPosition: 2,
+    daysInTier: 5,
+    latestDate,
+  });
+
+  it('keeps the streak when the newest check is from today', () => {
+    const held = heldFacts(facts('2026-10-18'), 2, true, today);
+    expect(held.daysInTier).toBe(5);
+    expect(held.heldTier).toBe(3);
+  });
+
+  it('keeps the streak through yesterday', () => {
+    const held = heldFacts(facts('2026-10-17'), 2, true, today);
+    expect(held.daysInTier).toBe(5);
+    expect(held.heldTier).toBe(3);
+  });
+
+  it('drops the streak when the newest check is two days old', () => {
+    const held = heldFacts(facts('2026-10-16'), 2, true, today);
+    expect(held.daysInTier).toBeNull();
+    expect(held.heldTier).toBeNull();
+    expect(held.bestPosition).toBe(2);
+    expect(held.positionDeltaFromBest).toBe(0);
+  });
+
+  it('drops the streak for a paused keyword', () => {
+    const held = heldFacts(facts('2026-10-18'), 2, false, today);
+    expect(held.daysInTier).toBeNull();
+    expect(held.heldTier).toBeNull();
   });
 });
