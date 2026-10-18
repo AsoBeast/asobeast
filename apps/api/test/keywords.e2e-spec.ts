@@ -2145,6 +2145,126 @@ describe('KeywordsController (e2e)', () => {
       heldTier: null,
     });
   });
+  it('counts only the current run when an out of tier day splits it', async () => {
+    const id = await importApp();
+    const { workspaceId } = await prisma.app.findUniqueOrThrow({
+      where: { id },
+      select: { workspaceId: true },
+    });
+    const { keywordId } = await prisma.trackedKeyword.findFirstOrThrow({
+      where: { appId: id, active: true },
+    });
+    const day = (offset: number) => {
+      const date = new Date();
+      date.setUTCHours(0, 0, 0, 0);
+      date.setUTCDate(date.getUTCDate() - offset);
+      return date;
+    };
+    await prisma.keywordRanking.createMany({
+      data: [
+        {
+          appId: id,
+          workspaceId,
+          keywordId,
+          date: day(4),
+          position: 3,
+          depth: 200,
+        },
+        {
+          appId: id,
+          workspaceId,
+          keywordId,
+          date: day(3),
+          position: 3,
+          depth: 200,
+        },
+        {
+          appId: id,
+          workspaceId,
+          keywordId,
+          date: day(2),
+          position: 40,
+          depth: 200,
+        },
+        {
+          appId: id,
+          workspaceId,
+          keywordId,
+          date: day(1),
+          position: 3,
+          depth: 200,
+        },
+        {
+          appId: id,
+          workspaceId,
+          keywordId,
+          date: day(0),
+          position: 3,
+          depth: 200,
+        },
+      ],
+    });
+
+    const items = (await api.get(`/apps/${id}/keywords`).expect(200))
+      .body as TrackedKeywordItem[];
+    const item = items.find((entry) => entry.keywordId === keywordId);
+
+    expect(item).toMatchObject({
+      bestPosition: 3,
+      positionDeltaFromBest: 0,
+      daysInTier: 2,
+      heldTier: 3,
+    });
+  });
+
+  it('ends the held count at a day without a check', async () => {
+    const id = await importApp();
+    const { workspaceId } = await prisma.app.findUniqueOrThrow({
+      where: { id },
+      select: { workspaceId: true },
+    });
+    const { keywordId } = await prisma.trackedKeyword.findFirstOrThrow({
+      where: { appId: id, active: true },
+    });
+    const day = (offset: number) => {
+      const date = new Date();
+      date.setUTCHours(0, 0, 0, 0);
+      date.setUTCDate(date.getUTCDate() - offset);
+      return date;
+    };
+    await prisma.keywordRanking.createMany({
+      data: [
+        {
+          appId: id,
+          workspaceId,
+          keywordId,
+          date: day(2),
+          position: 3,
+          depth: 200,
+        },
+        {
+          appId: id,
+          workspaceId,
+          keywordId,
+          date: day(0),
+          position: 3,
+          depth: 200,
+        },
+      ],
+    });
+
+    const items = (await api.get(`/apps/${id}/keywords`).expect(200))
+      .body as TrackedKeywordItem[];
+    const item = items.find((entry) => entry.keywordId === keywordId);
+
+    expect(item).toMatchObject({
+      bestPosition: 3,
+      positionDeltaFromBest: 0,
+      daysInTier: 1,
+      heldTier: 3,
+    });
+  });
+
   describe('tags and notes', () => {
     const tracked = async (): Promise<{ id: string; keywordId: string }> => {
       const id = await importApp();
