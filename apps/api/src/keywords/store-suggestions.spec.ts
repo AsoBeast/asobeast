@@ -7,6 +7,7 @@ import {
 } from '../store-providers/errors';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { listingLanguages } from './listing-languages';
+import { CompetitorSearchPlanner } from './competitor-search.planner';
 import { StoreSuggestions } from './store-suggestions';
 import { SuggestionRequest } from './suggestion-request';
 
@@ -31,6 +32,10 @@ const requestFor = ({
   },
 });
 
+const unusedPlanner = {
+  plan: jest.fn(),
+} as unknown as CompetitorSearchPlanner;
+
 const buildStore = (raw: unknown, registry: unknown, title = 'Habit Tracker') =>
   new StoreSuggestions(
     {
@@ -39,6 +44,7 @@ const buildStore = (raw: unknown, registry: unknown, title = 'Habit Tracker') =>
       },
     } as unknown as PrismaService,
     registry as StoreProviderRegistry,
+    unusedPlanner,
   );
 
 const lookUp = async (
@@ -191,6 +197,7 @@ describe('StoreSuggestions.plan', () => {
       store: new StoreSuggestions(
         prisma as unknown as PrismaService,
         registry as unknown as StoreProviderRegistry,
+        unusedPlanner,
       ),
     };
   };
@@ -289,6 +296,20 @@ describe('StoreSuggestions.plan', () => {
     expect(similar).not.toHaveBeenCalled();
     await lookup?.();
     expect(similar).toHaveBeenCalledWith('store1', 'us');
+  });
+
+  it('delegates competitorSearch to its planner', async () => {
+    const lookup = jest.fn();
+    const plan = jest.fn().mockResolvedValue(lookup);
+    const store = new StoreSuggestions(
+      {} as PrismaService,
+      {} as StoreProviderRegistry,
+      { plan } as unknown as CompetitorSearchPlanner,
+    );
+    const request = requestFor();
+
+    await expect(store.plan('competitorSearch', request)).resolves.toBe(lookup);
+    expect(plan).toHaveBeenCalledWith(request);
   });
 
   it('refuses an unsupported store before any lookup', async () => {

@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { FLOW_PRODUCERS, QUEUES } from '../jobs/jobs.types';
 import { StoreProvidersModule } from '../store-providers/store-providers.module';
 import { AppLocalizationsService } from './app-localizations.service';
+import { CompetitorSearchPlanner } from './competitor-search.planner';
 import { FirstPositionChecks } from './first-position-checks';
 import { KeywordFieldService } from './keyword-field.service';
 import { KeywordFieldWriter } from './keyword-field-writer';
@@ -31,6 +32,7 @@ import { TrackedKeywordAccess } from './tracked-keyword.access';
   controllers: [KeywordsController, LocalizationsController],
   providers: [
     AppLocalizationsService,
+    CompetitorSearchPlanner,
     FirstPositionChecks,
     KeywordsService,
     KeywordFieldService,

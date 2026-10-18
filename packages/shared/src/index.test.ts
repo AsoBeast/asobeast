@@ -64,6 +64,7 @@ describe('store suggestion strategies', () => {
       'search',
       'similar',
       'developer',
+      'competitorSearch',
     ]);
     for (const strategy of STORE_SUGGESTION_STRATEGIES) {
       expect(KEYWORD_SUGGESTION_STRATEGIES).toContain(strategy);
@@ -72,5 +73,24 @@ describe('store suggestion strategies', () => {
     for (const value of ['metadata', 'seasonal', 'nope']) {
       expect(isStoreSuggestionStrategy(value)).toBe(false);
     }
+  });
+});
+
+describe('keyword suggestion strategies', () => {
+  it('appends competitorSearch after every released strategy', () => {
+    expect(KEYWORD_SUGGESTION_STRATEGIES.slice(0, 7)).toEqual([
+      'metadata',
+      'search',
+      'similar',
+      'developer',
+      'competitors',
+      'seasonal',
+      'reviews',
+    ]);
+    expect(KEYWORD_SUGGESTION_STRATEGIES.at(-1)).toBe('competitorSearch');
+  });
+
+  it('competitorSearch reaches the store', () => {
+    expect(isStoreSuggestionStrategy('competitorSearch')).toBe(true);
   });
 });

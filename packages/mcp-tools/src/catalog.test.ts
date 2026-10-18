@@ -171,6 +171,14 @@ describe("the get_app market", () => {
   });
 });
 
+describe("the keyword_suggestions strategies", () => {
+  it("names competitorSearch among the store strategies", () => {
+    const description = toolByName("keyword_suggestions")?.description ?? "";
+
+    expect(description.split(". ")[0]).toContain("competitorSearch");
+  });
+});
+
 describe("the keyword_suggestions allowance", () => {
   it("says when a store suggestion spends the allowance", () => {
     const description = toolByName("keyword_suggestions")?.description ?? "";

@@ -10,10 +10,11 @@ import { PrismaService } from '../prisma/prisma.service';
 import { developerId } from '../store-providers/raw-facts';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { SearchItem, StoreProvider } from '../store-providers/types';
+import { CompetitorSearchPlanner } from './competitor-search.planner';
 import { extractCandidates } from './extraction';
 import { loadKeywordFieldIndex, reportedSource } from './keyword-field-index';
 import { suggestAround } from './store-hints';
-import { SuggestionRequest } from './suggestion-request';
+import { StoreLookup, SuggestionRequest } from './suggestion-request';
 
 const SEARCH_SEED_LIMIT = 5;
 
@@ -27,8 +28,6 @@ const SOURCE_WEIGHT: Record<KeywordSource, number> = {
   COMPETITOR: 1,
 };
 
-export type StoreLookup = () => Promise<KeywordSuggestion[]>;
-
 interface TitleCount {
   limit: number;
   strategy: 'similar' | 'developer';
@@ -40,6 +39,7 @@ export class StoreSuggestions {
   constructor(
     private readonly prisma: PrismaService,
     private readonly registry: StoreProviderRegistry,
+    private readonly competitorSearch: CompetitorSearchPlanner,
   ) {}
 
   async plan(
@@ -53,6 +53,8 @@ export class StoreSuggestions {
         return this.planSimilar(request);
       case 'developer':
         return this.planDeveloper(request);
+      case 'competitorSearch':
+        return this.competitorSearch.plan(request);
     }
   }
 

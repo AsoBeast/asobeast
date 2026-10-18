@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
 import { KeywordSuggestionService } from './keyword-suggestion.service';
+import { CompetitorSearchPlanner } from './competitor-search.planner';
 import { StoreSuggestions } from './store-suggestions';
 
 const buildSuggestionService = (
@@ -15,6 +16,10 @@ const buildSuggestionService = (
     new StoreSuggestions(
       prisma as PrismaService,
       registry as StoreProviderRegistry,
+      new CompetitorSearchPlanner(
+        prisma as PrismaService,
+        registry as StoreProviderRegistry,
+      ),
     ),
     egress,
   );
@@ -80,7 +85,14 @@ describe('KeywordSuggestionService.suggest egress', () => {
         raw: {},
         title: 'Habit Tracker',
       }),
-      findMany: jest.fn().mockResolvedValue([]),
+      findMany: jest.fn().mockResolvedValue(
+        seeded
+          ? [
+              { id: 'rival-a', name: 'Rival A', country: 'us' },
+              { id: 'rival-b', name: 'Rival B', country: 'us' },
+            ]
+          : [],
+      ),
     },
     appSnapshot: {
       findFirst: jest.fn().mockResolvedValue(
@@ -151,7 +163,7 @@ describe('KeywordSuggestionService.suggest egress', () => {
     },
   );
 
-  it.each(['search', 'similar', 'developer'] as const)(
+  it.each(['search', 'similar', 'developer', 'competitorSearch'] as const)(
     'leases a proxy endpoint for %s',
     async (strategy) => {
       const through = leasingThrough();
@@ -166,7 +178,7 @@ describe('KeywordSuggestionService.suggest egress', () => {
       );
     },
   );
-  it.each(['search', 'developer'] as const)(
+  it.each(['search', 'developer', 'competitorSearch'] as const)(
     'does not lease an endpoint for %s without anything to look up',
     async (strategy) => {
       const through = leasingThrough();
@@ -359,7 +371,7 @@ describe('KeywordSuggestionService.suggest allowance', () => {
     expect(order).toEqual(['spend', 'store']);
   });
 
-  it.each(['search', 'developer'] as const)(
+  it.each(['search', 'developer', 'competitorSearch'] as const)(
     'does not call spend or lease an endpoint when %s has nothing to look up',
     async (strategy) => {
       const { service, through } = buildService([]);
