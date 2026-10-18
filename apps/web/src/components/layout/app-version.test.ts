@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import nextConfig from "../../../next.config";
 import { version } from "../../../package.json";
-import { appVersionLabel } from "./app-version";
+import { appVersionLabel, releaseNotesUrl } from "./app-version";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -25,5 +25,13 @@ describe("appVersionLabel", () => {
 
   it("is inlined from the version Release Please bumps", () => {
     expect(nextConfig.env?.NEXT_PUBLIC_APP_VERSION).toBe(version);
+  });
+});
+
+describe("releaseNotesUrl", () => {
+  it("opens the release Release Please tagged with the label", () => {
+    expect(releaseNotesUrl("v1.11.0")).toBe(
+      "https://github.com/AsoBeast/asobeast/releases/tag/v1.11.0",
+    );
   });
 });

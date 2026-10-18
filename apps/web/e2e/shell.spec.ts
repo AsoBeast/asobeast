@@ -112,8 +112,13 @@ test("the sidebar footer names the version the build shipped", async ({
 
   const footer = page
     .getByRole("navigation", { name: "Main" })
-    .getByText(`v${version}`);
+    .getByRole("link", { name: `v${version} release notes` });
   await expect(footer).toBeVisible();
+  await expect(footer).toHaveAttribute(
+    "href",
+    `https://github.com/AsoBeast/asobeast/releases/tag/v${version}`,
+  );
+  await expect(footer).toHaveAttribute("target", "_blank");
 
   await page.keyboard.press("ControlOrMeta+b");
   await expect(footer).toBeHidden();
