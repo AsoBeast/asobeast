@@ -16,6 +16,8 @@ import { appVersionLabel } from "./app-version";
 import { AppSwitcher } from "./AppSwitcher";
 import { SidebarNav } from "./SidebarNav";
 
+const DOCUMENTATION_URL = "https://docs.asobeast.com";
+
 export function AppSidebar() {
   const version = appVersionLabel();
 
@@ -54,7 +56,7 @@ export function AppSidebar() {
             <SidebarMenuItem>
               <SidebarMenuButton asChild tooltip="Documentation">
                 <a
-                  href="https://github.com/AsoBeast/asobeast"
+                  href={DOCUMENTATION_URL}
                   rel="noreferrer noopener"
                   target="_blank"
                 >

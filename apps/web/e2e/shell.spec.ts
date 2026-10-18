@@ -18,6 +18,10 @@ test("the sidebar stays off canvas until the trigger opens it at 375", async ({
   await expect(trigger).toBeVisible();
   await trigger.click();
   await expect(documentation).toBeVisible();
+  await expect(documentation).toHaveAttribute(
+    "href",
+    "https://docs.asobeast.com",
+  );
 
   await page.keyboard.press("Escape");
   await expect(documentation).toBeHidden();
