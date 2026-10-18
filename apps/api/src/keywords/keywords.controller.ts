@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
+  KeywordBreakdown,
   KeywordComparison,
   KeywordCountrySummary,
   KeywordFieldResult,
@@ -36,6 +37,7 @@ import { ListKeywordsQueryDto } from './dto/list-keywords-query.dto';
 import { SpiderQueryDto, SpiderStartDto } from './dto/spider.dto';
 import { SuggestionsQueryDto } from './dto/suggestions-query.dto';
 import { UpdateKeywordDto } from './dto/update-keyword.dto';
+import { KeywordBreakdownService } from './keyword-breakdown.service';
 import { KeywordFieldService } from './keyword-field.service';
 import { KeywordImportService } from './keyword-import.service';
 import { KeywordSuggestionService } from './keyword-suggestion.service';
@@ -54,6 +56,7 @@ export class KeywordsController {
     private readonly spider: SpiderService,
     private readonly limiter: OnDemandLimiter,
     private readonly keywordImport: KeywordImportService,
+    private readonly breakdowns: KeywordBreakdownService,
   ) {}
 
   @Get('keywords')
@@ -78,6 +81,20 @@ export class KeywordsController {
     @Query() query: CompareQueryDto,
   ): Promise<KeywordComparison> {
     return this.keywords.compare(id, query.onlyGaps);
+  }
+
+  @Get('keywords/:keywordId/breakdown')
+  @ApiOperation({
+    summary:
+      'Show how the listing of an app and of each competitor matches one tracked keyword',
+    description:
+      'Reads stored data only and makes no store request. The app comes first, then every competitor. words are the distinct words of the keyword. Each listing is one localization the keyword market searches (localization and role are null on Google Play), judged field by field: phrase is the verdict of the metadata coverage table, a word match is exact, folded (found only with accents ignored, never counted) or none, and segments split the field text into matched and unmatched runs (null for a Google Play long description). placement is the strongest place the keyword reaches in one localization: a field holding the whole phrase, else split (every word across fields of that localization), else partial, else none; an app placement is the best of its listings, and words never combine across localizations. ranking null means never checked; position null means checked and not found within depth. listingCountry names the market whose listing was read, the home market when the keyword market has none. unread lists the localizations the market searches whose text has not been captured for that app. rating comes from the listing read and names its market. insight is a rule of thumb set only on a competitor that ranks above the app while the app has been checked; ignore a rule you do not know. standing.recentChange is the newest listing change of the market or keyword field save it reads, at most 28 days old.',
+  })
+  breakdown(
+    @Param('id') id: string,
+    @Param('keywordId') keywordId: string,
+  ): Promise<KeywordBreakdown> {
+    return this.breakdowns.breakdown(id, keywordId);
   }
 
   @Get('keywords/suggestions')
