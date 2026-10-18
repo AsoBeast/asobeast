@@ -17,9 +17,6 @@ export interface ProbedReach {
   requests: number;
 }
 
-// A store that autocompletes an inflected script offers the keyword in one
-// of its case forms rather than as tracked, so each word of the target may
-// appear in any of its forms and the suggestion may continue past it.
 const continuesInInflectedScript = (term: string, target: string): boolean => {
   if (!hasInflectedStemScript(target)) {
     return false;

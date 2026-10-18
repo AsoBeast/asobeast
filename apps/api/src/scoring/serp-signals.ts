@@ -60,6 +60,12 @@ export function titleEvidence(title: string, keyword: string): number {
     : (present / words.length) * EVIDENCE_PARTIAL;
 }
 
+const inflectedTitleTargets = (haystack: string, phrase: string): boolean => {
+  const tokens = haystack.split(' ');
+  const words = phrase.split(' ');
+  return containsPhrase(haystack, tokens, phrase, words);
+};
+
 export function titleTargets(title: string, keyword: string): boolean {
   const phrase = searchKey(keyword);
   if (phrase.length === 0) {
@@ -70,13 +76,7 @@ export function titleTargets(title: string, keyword: string): boolean {
     return haystack.includes(phrase);
   }
   if (hasInflectedStemScript(phrase)) {
-    // A title written in a script where every word inflects almost never
-    // carries the phrase exactly as tracked, so each word may appear in any
-    // of its forms. Latin scripts keep the exact phrase: the targeting
-    // weights are fitted against exact matches.
-    const tokens = haystack.split(' ');
-    const words = phrase.split(' ');
-    return containsPhrase(haystack, tokens, phrase, words);
+    return inflectedTitleTargets(haystack, phrase);
   }
   return ` ${haystack}`.includes(` ${phrase}`);
 }

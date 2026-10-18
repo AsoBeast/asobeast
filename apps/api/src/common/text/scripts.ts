@@ -1,8 +1,5 @@
 const WIDE_SCRIPTS = String.raw`\p{Script=Han}\p{scx=Hiragana}\p{scx=Katakana}`;
 const SPACELESS_SCRIPTS = String.raw`${WIDE_SCRIPTS}\p{Script=Thai}\p{Script=Lao}\p{Script=Khmer}\p{Script=Myanmar}`;
-// Scripts whose word forms share a long common stem because every word
-// inflects: a case ending changes the tail of both words being compared.
-// Word comparison falls back to matching that stem for these scripts only.
 const INFLECTED_STEM_SCRIPTS = String.raw`\p{Script=Cyrillic}`;
 
 export const WIDE_CHARACTER = new RegExp(`[${WIDE_SCRIPTS}]`, 'u');
