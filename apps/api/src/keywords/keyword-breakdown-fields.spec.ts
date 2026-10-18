@@ -163,6 +163,13 @@ describe('markWords', () => {
     ]);
   });
 
+  it('marks a mixed script word across its script parts', () => {
+    expect(markWords('AI日記アプリ', ['ai日記'])).toEqual([
+      { text: 'AI日記', match: 'exact' },
+      { text: 'アプリ', match: 'none' },
+    ]);
+  });
+
   it('marks a Latin word inside a mixed run', () => {
     expect(markWords('AI日記', ['ai'])).toEqual([
       { text: 'AI', match: 'exact' },

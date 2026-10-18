@@ -5,6 +5,7 @@ import {
   type KeywordPlacement,
   type KeywordWordMatch,
   type LocalizationReadRole,
+  lowerCase,
   normalizeText,
   searchKey,
   tokenize,
@@ -98,15 +99,20 @@ function wordRunMark(
     : [{ start: offset, end: offset + run.length, match }];
 }
 
+function searchable(run: string): string {
+  const lowered = lowerCase(run);
+  return lowered.length === run.length ? lowered : run;
+}
+
 function marksOf(text: string, words: readonly string[]): Mark[] {
-  return [...text.matchAll(WORD_RUN)].flatMap((run) =>
-    [...run[0].matchAll(SPACELESS_OR_NOT)].flatMap((part) => {
-      const offset = run.index + part.index;
-      return SPACELESS_CHARACTER.test(part[0])
-        ? spacelessMarks(part[0], offset, words)
-        : wordRunMark(part[0], offset, words);
-    }),
-  );
+  return [...text.matchAll(WORD_RUN)].flatMap((run) => [
+    ...spacelessMarks(searchable(run[0]), run.index, words),
+    ...[...run[0].matchAll(SPACELESS_OR_NOT)].flatMap((part) =>
+      SPACELESS_CHARACTER.test(part[0])
+        ? []
+        : wordRunMark(part[0], run.index + part.index, words),
+    ),
+  ]);
 }
 
 export function markWords(
