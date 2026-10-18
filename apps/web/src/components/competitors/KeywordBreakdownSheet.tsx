@@ -35,19 +35,26 @@ function BreakdownSkeleton() {
   );
 }
 
-function BreakdownBody({
-  appId,
-  keywordId,
-  onClose,
-}: {
-  appId: string;
-  keywordId: string;
-  onClose: () => void;
-}) {
-  const read = useQuery({
+type BreakdownRead = ReturnType<typeof useBreakdown>;
+
+const useBreakdown = (appId: string, keywordId: string) =>
+  useQuery({
     ...keywordBreakdownOptions(appId, keywordId),
     enabled: keywordId !== "",
   });
+
+const unavailable = (read: BreakdownRead) =>
+  isNotFound(read.error) || failedRead(read);
+
+function BreakdownBody({
+  appId,
+  read,
+  onClose,
+}: {
+  appId: string;
+  read: BreakdownRead;
+  onClose: () => void;
+}) {
   if (read.data) {
     return (
       <div className="flex flex-col gap-4">
@@ -90,30 +97,20 @@ function BreakdownBody({
   return <BreakdownSkeleton />;
 }
 
-function BreakdownDescription({
-  appId,
-  keywordId,
-}: {
-  appId: string;
-  keywordId: string;
-}) {
-  const { data } = useQuery({
-    ...keywordBreakdownOptions(appId, keywordId),
-    enabled: keywordId !== "",
-  });
-  return (
-    <SheetDescription id={DESCRIPTION_ID}>
-      {data
-        ? `“${data.text}” in ${formatCountry(data.country)}, from the latest daily check.`
-        : "Loading the breakdown."}
-    </SheetDescription>
-  );
+function descriptionOf(read: BreakdownRead): string {
+  if (read.data) {
+    return `“${read.data.text}” in ${formatCountry(read.data.country)}, from the latest daily check.`;
+  }
+  return unavailable(read)
+    ? "Each app's listing judged against one tracked keyword."
+    : "Loading the breakdown.";
 }
 
 export function KeywordBreakdownSheet({ appId }: { appId: string }) {
   const [keywordId, setKeywordId] = useQueryState("keyword", breakdownParser);
   const [shownId, setShownId] = useState(keywordId);
   if (keywordId !== "" && keywordId !== shownId) setShownId(keywordId);
+  const read = useBreakdown(appId, shownId);
   const close = () => void setKeywordId(null);
 
   return (
@@ -138,9 +135,11 @@ export function KeywordBreakdownSheet({ appId }: { appId: string }) {
       >
         <SheetHeader>
           <SheetTitle>Why apps rank for this keyword</SheetTitle>
-          <BreakdownDescription appId={appId} keywordId={shownId} />
+          <SheetDescription id={DESCRIPTION_ID}>
+            {descriptionOf(read)}
+          </SheetDescription>
         </SheetHeader>
-        <BreakdownBody appId={appId} keywordId={shownId} onClose={close} />
+        <BreakdownBody appId={appId} read={read} onClose={close} />
       </SheetContent>
     </Sheet>
   );

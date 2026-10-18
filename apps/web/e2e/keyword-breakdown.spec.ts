@@ -120,6 +120,7 @@ test("a keyword no longer tracked says so", async ({ page }) => {
   await expect(sheet(page)).toContainText(
     "This keyword is not tracked any more.",
   );
+  await expect(sheet(page)).not.toHaveAccessibleDescription(/Loading/);
   await sheet(page)
     .getByRole("button", { name: "Close", exact: true })
     .first()
@@ -135,6 +136,7 @@ test("a failed load offers a retry", async ({ page, context }) => {
     "The breakdown could not be loaded.",
     { timeout: 15_000 },
   );
+  await expect(sheet(page)).not.toHaveAccessibleDescription(/Loading/);
   await context.clearCookies({ name: "e2e-fail-breakdown" });
   await sheet(page).getByRole("button", { name: "Retry" }).click();
 
