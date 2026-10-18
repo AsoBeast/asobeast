@@ -165,6 +165,7 @@ export function ratingLine(
     rating.average === null ? null : formatRating(rating.average),
     rating.count === null ? null : `from ${formatNumber(rating.count)} ratings`,
   ].filter((part) => part !== null);
+  if (parts.length === 0) return null;
   const elsewhere =
     rating.country === market
       ? ""

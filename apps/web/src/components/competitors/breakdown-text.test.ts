@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type {
+  KeywordBreakdownApp,
   KeywordBreakdownField,
   KeywordBreakdownInsight,
   KeywordBreakdownStanding,
@@ -11,6 +12,7 @@ import {
   insightText,
   placementPhrase,
   rankingLabel,
+  ratingLine,
   standingLines,
 } from "./breakdown-text";
 
@@ -248,5 +250,25 @@ describe("standingLines", () => {
       "Your app has not been checked for this keyword yet.",
       "Your listings hold no “timer”, so you may not be eligible for this search.",
     ]);
+  });
+});
+
+describe("ratingLine", () => {
+  const app = (rating: KeywordBreakdownApp["rating"]): KeywordBreakdownApp =>
+    ({ rating }) as KeywordBreakdownApp;
+
+  it("says nothing when the rating has neither an average nor a count", () => {
+    expect(
+      ratingLine(app({ average: null, count: null, country: "us" }), "us"),
+    ).toBeNull();
+    expect(
+      ratingLine(app({ average: null, count: null, country: "gb" }), "us"),
+    ).toBeNull();
+  });
+
+  it("names the rating and where it was read", () => {
+    expect(
+      ratingLine(app({ average: 4.2, count: 300, country: "gb" }), "us"),
+    ).toBe("Rating 4.2 from 300 ratings (United Kingdom listing)");
   });
 });
