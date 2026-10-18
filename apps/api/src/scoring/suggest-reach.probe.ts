@@ -1,5 +1,6 @@
 import { searchKey, Store } from '@asobeast/shared';
-import { pluralsOf } from './plurals';
+import { pluralsOf, sameWord } from './plurals';
+import { hasInflectedStemScript } from '../common/text/scripts';
 import { PREFIX_PROBE_CAP, SuggestReach } from './suggest-reach';
 
 export type SuggestLookup = (term: string) => Promise<Array<{ term: string }>>;
@@ -16,10 +17,25 @@ export interface ProbedReach {
   requests: number;
 }
 
+// A store that autocompletes an inflected script offers the keyword in one
+// of its case forms rather than as tracked, so each word of the target may
+// appear in any of its forms and the suggestion may continue past it.
+const continuesInInflectedScript = (term: string, target: string): boolean => {
+  if (!hasInflectedStemScript(target)) {
+    return false;
+  }
+  const words = target.split(' ');
+  const offered = term.split(' ');
+  return (
+    offered.length >= words.length &&
+    words.every((word, index) => sameWord(offered[index], word))
+  );
+};
+
 const extendsKeyword = (term: string, target: string): boolean =>
   pluralsOf(target).some(
     (form) => term === form || term.startsWith(`${form} `),
-  );
+  ) || continuesInInflectedScript(term, target);
 
 const matches = (term: string, target: string, match: SuggestMatch) =>
   match === 'exact' || target.includes(' ')
@@ -49,7 +65,9 @@ export function countingLookup(lookup: SuggestLookup): CountingLookup {
 }
 
 const continues = (term: string, target: string): boolean =>
-  term === target || term.startsWith(`${target} `);
+  term === target ||
+  term.startsWith(`${target} `) ||
+  continuesInInflectedScript(term, target);
 
 export async function countContinuations(
   keyword: string,

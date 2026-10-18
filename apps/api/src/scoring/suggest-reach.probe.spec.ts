@@ -180,6 +180,29 @@ describe('probeSuggestReach', () => {
       });
     });
 
+    it('finds a keyword the store offers only in a case form', async () => {
+      const lookup = lookupFrom({
+        дневник: ['дневником'],
+        д: ['дневником'],
+      });
+      await expect(
+        probeSuggestReach('дневник', lookup, 'prefix'),
+      ).resolves.toEqual({
+        reach: { status: 'hit', prefixLength: 1, position: 1 },
+        requests: 2,
+      });
+    });
+
+    it('reports a keyword offered only as its full case form as listed', async () => {
+      const lookup = lookupFrom({ тревожность: ['тревожностью'] });
+      await expect(
+        probeSuggestReach('тревожность', lookup, 'prefix'),
+      ).resolves.toEqual({
+        reach: { status: 'listed', position: 1 },
+        requests: 9,
+      });
+    });
+
     it('keeps exact matching by default', async () => {
       await expect(
         probeSuggestReach('game', lookupFrom(playLists)),
@@ -209,6 +232,14 @@ describe('countContinuations', () => {
   it('compares on the search key', async () => {
     const lookup = lookupFrom({ 'Géo Quiz': ['geo quiz', 'GEO QUIZ Maps'] });
     await expect(countContinuations('Géo Quiz', lookup)).resolves.toBe(2);
+  });
+
+  it('counts a case form of the keyword as a continuation', async () => {
+    const lookup = lookupFrom({
+      дневник: ['дневником', 'дневник привычек'],
+      'дневник ': ['дневник привычек'],
+    });
+    await expect(countContinuations('дневник', lookup)).resolves.toBe(2);
   });
 
   it('returns null when a lookup throws', async () => {
