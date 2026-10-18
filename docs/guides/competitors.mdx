@@ -67,6 +67,33 @@ Each position is shaded by its grade and the best position in a row stays underl
 
 Discovery sorts the same way, by appearances, keywords, best position, average position or rating, and searches by app name.
 
+## Why does a competitor rank above you?
+
+Press a keyword in the matrix to open its breakdown. Your app comes first, then every competitor, each with its position on the latest daily check.
+
+For each app the panel reads every listing the keyword's market searches. On the App Store that is the title and subtitle of each localization the storefront reads, plus the keyword fields you saved for those localizations. A competitor's keyword field is private and is never shown. On Google Play it is the title, the short description and the long description, and the text of the long description is not shown. See [App Store and Google Play](/concepts/stores) and [Which localizations does a storefront read?](/concepts/countries#which-localizations-does-a-storefront-read).
+
+The keyword's words are marked where they appear. Each field says whether it holds the whole phrase, every word or some of them, which is the same verdict the coverage table uses. See [Check keyword coverage](/guides/metadata-workbench#check-keyword-coverage). Words of two localizations never combine into one phrase, so each localization is judged on its own. See [What does each store index?](/concepts/stores#what-does-each-store-index).
+
+A word that matches only when accents are ignored, such as `guidees` for `guidées`, has a dotted mark and does not count as a match. Stores usually treat the two spellings alike, but neither store documents it.
+
+**Not read** names the localizations the market searches whose listing has not been captured for that app. For a competitor only the native localizations of an English default storefront are captured, so the others stay unread rather than guessed. When the keyword's market has no stored listing of an app, the panel reads its home listing and says so.
+
+A competitor that ranks above you carries one note, from the first rule that applies:
+
+| Note | When it applies | What it suggests |
+| --- | --- | --- |
+| Placement | Its strongest placement beats yours. The order is the title, then the subtitle or short description, then your keyword field, then the long description, then every word spread over fields, then some of the words | Move the keyword to a stronger field |
+| Spelling | It spells a word exactly as searched where your listings match only with accents ignored | Consider the exact spelling |
+| Ratings | Both ratings come from the keyword's market, and it has at least three times your ratings and at least 100 more | Ratings may be the difference |
+| Not read | It shows no visible match and a localization the market searches was not captured | The missing listing may hold the keyword |
+| No visible match | App Store only, and it shows no visible match | It may rank through its private keyword field |
+| Similar | None of the above | Nothing visible explains the gap |
+
+These are rules of thumb. Installs and engagement, the strongest signals, are not visible for other apps, and neither store publishes how it weighs a field.
+
+Your own card says how many competitors rank above you, which words none of your listings holds, which match only with accents ignored, and whether your listing changed or you saved a keyword field this market reads in the last 28 days, because ranks usually take two to four weeks to settle. The panel reads stored data only and makes no store request.
+
 ## Watch competitor metadata changes
 
 Competitor listings are snapshotted on the same schedule as your own, and a field level change appears in the changes feed marked as a competitor change. Alerts can carry them in a separate competitor report. See [Watch listing changes](/guides/listing-changes).

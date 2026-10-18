@@ -10,12 +10,9 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { isNotFound } from "@/lib/api";
 import { actionDetailOptions, actionKeys } from "@/lib/queries";
-import {
-  ACTION_NOT_FOUND,
-  ActionDetailBody,
-  isNotFound,
-} from "./ActionDetailBody";
+import { ACTION_NOT_FOUND, ActionDetailBody } from "./ActionDetailBody";
 import { ActionDetailHeader } from "./ActionDetailHeader";
 
 function useListedItem(id: string): ActionItem | undefined {
