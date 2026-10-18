@@ -33,7 +33,7 @@ const lines = (
 describe("comparisonCsv", () => {
   it("heads the file with the fixed columns around one column per competitor", () => {
     expect(lines([RIVAL], [])[0]).toBe(
-      "﻿keyword,popularity,difficulty,you,Rival Focus,result,gap",
+      "﻿keyword,popularity,difficulty,you,Rival Focus,result,gap,country",
     );
   });
 
@@ -48,10 +48,10 @@ describe("comparisonCsv", () => {
 
   it("writes scores on the display scale and leaves an unscored one empty", () => {
     expect(lines([RIVAL], [row({ traffic: 4.1, difficulty: 48.2 })])[1]).toBe(
-      "focus timer,41,100,3,9,winning,false",
+      "focus timer,41,100,3,9,winning,false,us",
     );
     expect(lines([RIVAL], [row({ traffic: null, difficulty: null })])[1]).toBe(
-      "focus timer,,,3,9,winning,false",
+      "focus timer,,,3,9,winning,false,us",
     );
   });
 
@@ -61,26 +61,39 @@ describe("comparisonCsv", () => {
         [RIVAL],
         [row({ you: null, positions: { "comp-1": 8 }, gap: true })],
       )[1],
-    ).toBe(`focus timer,55,40,>${RANK_DEPTH},8,losing,true`);
+    ).toBe(`focus timer,55,40,>${RANK_DEPTH},8,losing,true,us`);
     expect(lines([RIVAL], [row({ positions: {} })])[1]).toBe(
-      `focus timer,55,40,3,>${RANK_DEPTH},winning,false`,
+      `focus timer,55,40,3,>${RANK_DEPTH},winning,false,us`,
     );
   });
 
   it("names the result and flags the gap", () => {
     expect(
       lines([RIVAL], [row({ you: 5, positions: { "comp-1": 5 } })])[1],
-    ).toBe("focus timer,55,40,5,5,tied,false");
+    ).toBe("focus timer,55,40,5,5,tied,false,us");
     expect(
       lines([RIVAL], [row({ you: null, positions: { "comp-1": null } })])[1],
-    ).toBe(`focus timer,55,40,>${RANK_DEPTH},>${RANK_DEPTH},,false`);
+    ).toBe(`focus timer,55,40,>${RANK_DEPTH},>${RANK_DEPTH},,false,us`);
+  });
+
+  it("a competitor named country gets a unique header", () => {
+    const header = lines([{ id: "comp-1", name: "country" }], [])[0];
+    expect(header).toBe(
+      "\uFEFFkeyword,popularity,difficulty,you,country (2),result,gap,country",
+    );
+  });
+
+  it("ends every row with the market of the keyword", () => {
+    expect(lines([RIVAL], [row({ country: "de" })])[1]).toBe(
+      "focus timer,55,40,3,9,winning,false,de",
+    );
   });
 
   it("keeps every header unique when competitor names repeat or are missing", () => {
     const named = (names: Array<string | null>) =>
       names.map((name, index) => ({ id: `comp-${index}`, name }));
     expect(lines(named(["Focus", "Focus", null, null, "you"]), [])[0]).toBe(
-      "﻿keyword,popularity,difficulty,you,Focus,Focus (2),Competitor,Competitor (2),you (2),result,gap",
+      "﻿keyword,popularity,difficulty,you,Focus,Focus (2),Competitor,Competitor (2),you (2),result,gap,country",
     );
     expect(lines(named(["Focus (2)", "Focus", "Focus"]), [])[0]).toContain(
       ",you,Focus (2),Focus,Focus (3),result,",

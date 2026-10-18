@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { flexRender, useTable } from "@tanstack/react-table";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryStates } from "nuqs";
 import type { CompetitorItem, KeywordComparison } from "@asobeast/shared";
 import { FilteredEmpty } from "@/components/data-table/FilteredEmpty";
@@ -22,6 +23,7 @@ import {
   matrixSortParser,
   sortDirectionParser,
 } from "@/lib/search-params";
+import { appDetailOptions } from "@/lib/queries";
 import { ariaSort } from "@/lib/table/sorting";
 import { cn } from "@/lib/utils";
 import {
@@ -29,17 +31,30 @@ import {
   HIDDEN_COMPARISON_COLUMNS,
 } from "./comparison-columns";
 import { exportComparison } from "./comparison-csv";
+import { comparisonMarkets } from "./comparison-markets";
 import { ComparisonFilterBar } from "./ComparisonFilterBar";
 
-const HEAD_CLASS: Record<string, string> = {
-  keyword: "sticky left-0 z-20 bg-inherit",
-  you: "border-x bg-secondary text-center",
-};
+const MARKET_PIN = "sticky left-0 w-14 min-w-14 max-w-14 bg-inherit";
 
-const CELL_CLASS: Record<string, string> = {
-  keyword: "sticky left-0 z-10 bg-inherit",
-  you: "border-x bg-secondary/40 text-center",
-};
+function pinClasses(
+  multiMarket: boolean,
+): Record<"head" | "cell", Record<string, string>> {
+  const keywordPin = multiMarket
+    ? "sticky left-14 bg-inherit"
+    : "sticky left-0 bg-inherit";
+  return {
+    head: {
+      market: `${MARKET_PIN} z-20`,
+      keyword: `${keywordPin} z-20`,
+      you: "border-x bg-secondary text-center",
+    },
+    cell: {
+      market: `${MARKET_PIN} z-10`,
+      keyword: `${keywordPin} z-10`,
+      you: "border-x bg-secondary/40 text-center",
+    },
+  };
+}
 
 export function ComparisonTable({
   data,
@@ -57,6 +72,13 @@ export function ComparisonTable({
     dir: sortDirectionParser,
   });
   const [filters, setFilters] = useQueryStates(matrixFilterParsers);
+  const { data: app } = useSuspenseQuery(appDetailOptions(appId));
+  const markets = useMemo(
+    () => comparisonMarkets(data.rows, app.country),
+    [data.rows, app.country],
+  );
+  const multiMarket = markets.length > 1;
+  const pins = pinClasses(multiMarket);
 
   const columns = useMemo(() => {
     const icons = new Map(competitors.map((item) => [item.id, item.iconUrl]));
@@ -88,9 +110,17 @@ export function ComparisonTable({
     state: {
       sorting,
       globalFilter: filters.q,
-      columnFilters:
-        filters.vs === "all" ? [] : [{ id: "versus", value: filters.vs }],
-      columnVisibility: { ...visibility, ...HIDDEN_COMPARISON_COLUMNS },
+      columnFilters: [
+        ...(filters.vs === "all" ? [] : [{ id: "versus", value: filters.vs }]),
+        ...(multiMarket && filters.country
+          ? [{ id: "market", value: filters.country }]
+          : []),
+      ],
+      columnVisibility: {
+        ...visibility,
+        ...HIDDEN_COMPARISON_COLUMNS,
+        market: multiMarket,
+      },
     },
     onSortingChange,
     onColumnVisibilityChange: setVisibility,
@@ -106,6 +136,7 @@ export function ComparisonTable({
       <ComparisonFilterBar
         filters={filters}
         setFilters={setFilters}
+        markets={markets}
         shown={rows.length}
         total={data.rows.length}
         columns={table.getAllLeafColumns()}
@@ -122,6 +153,9 @@ export function ComparisonTable({
         <TableCaption className="sr-only">
           Your keyword positions compared with each tracked competitor. Gap rows
           are keywords a competitor ranks for and you do not.
+          {multiMarket
+            ? " The market column names the storefront of each row."
+            : null}
         </TableCaption>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
@@ -130,7 +164,7 @@ export function ComparisonTable({
                 <TableHead
                   key={header.id}
                   aria-sort={ariaSort(header.column.getIsSorted())}
-                  className={HEAD_CLASS[header.column.id] ?? "text-center"}
+                  className={pins.head[header.column.id] ?? "text-center"}
                 >
                   {flexRender(
                     header.column.columnDef.header,
@@ -160,7 +194,7 @@ export function ComparisonTable({
               {row.getVisibleCells().map((cell) => (
                 <TableCell
                   key={cell.id}
-                  className={CELL_CLASS[cell.column.id] ?? "text-center"}
+                  className={pins.cell[cell.column.id] ?? "text-center"}
                 >
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </TableCell>

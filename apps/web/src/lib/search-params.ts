@@ -133,9 +133,20 @@ export const VERSUS_FILTERS = ["all", ...VERSUS] as const;
 export const versusParser =
   parseAsStringLiteral(VERSUS_FILTERS).withDefault("all");
 
+export const countryParser = createParser({
+  parse(value) {
+    const country = value.toLowerCase();
+    return COUNTRY_PATTERN.test(country) ? country : null;
+  },
+  serialize(value: string) {
+    return value;
+  },
+}).withDefault("");
+
 export const matrixFilterParsers = {
   q: searchParser,
   vs: versusParser,
+  country: countryParser,
 };
 
 export const DISCOVERY_SORTS = [
@@ -279,16 +290,6 @@ export const overviewRangeParsers = {
 };
 
 export const keywordIdsParser = parseAsArrayOf(parseAsString).withDefault([]);
-
-export const countryParser = createParser({
-  parse(value) {
-    const country = value.toLowerCase();
-    return COUNTRY_PATTERN.test(country) ? country : null;
-  },
-  serialize(value: string) {
-    return value;
-  },
-}).withDefault("");
 
 export const marketParser = parseAsString.withDefault("");
 

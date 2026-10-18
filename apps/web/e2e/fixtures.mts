@@ -1498,6 +1498,16 @@ const APP_1_COMPARISON: KeywordComparison = {
       positions: { "comp-1": null },
       gap: false,
     },
+    {
+      keywordId: "kw-de-1",
+      text: "pomodoro",
+      country: "de",
+      traffic: 5,
+      difficulty: 3,
+      you: 7,
+      positions: { "comp-1": 2 },
+      gap: false,
+    },
   ],
 };
 
