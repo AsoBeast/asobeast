@@ -74,8 +74,8 @@ export function ComparisonTable({
   const [filters, setFilters] = useQueryStates(matrixFilterParsers);
   const { data: app } = useSuspenseQuery(appDetailOptions(appId));
   const markets = useMemo(
-    () => comparisonMarkets(data.rows, app.country),
-    [data.rows, app.country],
+    () => comparisonMarkets(data.rows, app.country, filters.country),
+    [data.rows, app.country, filters.country],
   );
   const multiMarket = markets.length > 1;
   const pins = pinClasses(multiMarket);
@@ -112,9 +112,7 @@ export function ComparisonTable({
       globalFilter: filters.q,
       columnFilters: [
         ...(filters.vs === "all" ? [] : [{ id: "versus", value: filters.vs }]),
-        ...(multiMarket && filters.country
-          ? [{ id: "market", value: filters.country }]
-          : []),
+        ...(filters.country ? [{ id: "market", value: filters.country }] : []),
       ],
       columnVisibility: {
         ...visibility,

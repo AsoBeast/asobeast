@@ -24,6 +24,23 @@ describe("comparisonMarkets", () => {
   it("answers nothing for no rows", () => {
     expect(comparisonMarkets([], "us")).toEqual([]);
   });
+
+  it("keeps a selected market no row is in", () => {
+    expect(comparisonMarkets(rows("us", "us"), "us", "de")).toEqual([
+      "us",
+      "de",
+    ]);
+    expect(comparisonMarkets(rows("de", "fr"), "us", "it")).toEqual([
+      "fr",
+      "de",
+      "it",
+    ]);
+  });
+
+  it("adds nothing for a selected market the rows already hold", () => {
+    expect(comparisonMarkets(rows("us"), "us", "us")).toEqual(["us"]);
+    expect(comparisonMarkets(rows("us"), "us", "")).toEqual(["us"]);
+  });
 });
 
 describe("marketOptions", () => {

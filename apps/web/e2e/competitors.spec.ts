@@ -189,7 +189,7 @@ test("a single market matrix shows no market column", async ({ page }) => {
       path: "/",
     },
   ]);
-  await page.goto("/apps/app-1/competitors?country=de");
+  await page.goto("/apps/app-1/competitors");
   await page.waitForLoadState("networkidle");
 
   await expect(matrixRows(page)).toHaveCount(5);
@@ -207,6 +207,69 @@ test("a single market matrix shows no market column", async ({ page }) => {
   );
   expect(lines).toHaveLength(5);
   for (const line of lines.slice(1)) expect(line).toMatch(/,us$/);
+});
+
+test("a selected market no row is in stays on screen and clears", async ({
+  page,
+}) => {
+  await page.context().addCookies([
+    {
+      name: "e2e-comparison-market",
+      value: "us",
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
+  await page.goto("/apps/app-1/competitors?country=de");
+  await page.waitForLoadState("networkidle");
+
+  await expect(page.getByText("No keywords match these filters")).toBeVisible();
+  await expect(
+    page.getByRole("combobox", { name: "Filter by market" }),
+  ).toHaveText("Germany");
+  await expect(page.getByText("Market: Germany")).toBeVisible();
+
+  await page.getByRole("button", { name: "Clear filters" }).click();
+
+  await expect(page).not.toHaveURL(/country=/);
+  await expect(matrixRows(page)).toHaveCount(5);
+  await expect(
+    matrix(page).getByRole("columnheader", { name: "Market", exact: true }),
+  ).toHaveCount(0);
+});
+
+test("the only market selected filters nothing and shows no market chip", async ({
+  page,
+}) => {
+  await page.context().addCookies([
+    {
+      name: "e2e-comparison-market",
+      value: "us",
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
+  await page.goto("/apps/app-1/competitors?country=us");
+  await page.waitForLoadState("networkidle");
+
+  await expect(matrixRows(page)).toHaveCount(5);
+  await expect(page.getByText(/^Market:/)).toHaveCount(0);
+  await expect(
+    page.getByRole("combobox", { name: "Filter by market" }),
+  ).toHaveCount(0);
+});
+
+test("only gaps keeps the selected market when every gap is in another market", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/competitors?country=de&onlyGaps=true");
+  await page.waitForLoadState("networkidle");
+
+  await expect(page.getByText("No keywords match these filters")).toBeVisible();
+  await expect(page.getByText("Market: Germany")).toBeVisible();
+  await expect(
+    matrix(page).getByRole("row", { name: /productivity app/ }),
+  ).toHaveCount(0);
 });
 
 test("the market column stays beside the keyword when the matrix scrolls", async ({

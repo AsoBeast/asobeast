@@ -9,8 +9,11 @@ const byName = (a: string, b: string) =>
 export function comparisonMarkets(
   rows: readonly Pick<KeywordComparisonRow, "country">[],
   home: string,
+  selected = "",
 ): string[] {
-  const markets = [...new Set(rows.map((row) => row.country))];
+  const markets = [
+    ...new Set([...rows.map((row) => row.country), selected].filter(Boolean)),
+  ];
   return [
     ...markets.filter((market) => market === home),
     ...markets.filter((market) => market !== home).sort(byName),
