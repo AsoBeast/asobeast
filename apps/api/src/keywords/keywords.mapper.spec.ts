@@ -354,6 +354,7 @@ describe('toTrackedKeywordItem', () => {
   ): RetainedPositionFacts => ({
     bestPosition: null,
     daysInTier: null,
+    latestPosition: 1,
     latestDate: holdDay(0),
     ...facts,
   });
@@ -439,7 +440,7 @@ describe('toTrackedKeywordItem', () => {
       ]),
       undefined,
       null,
-      hold({ bestPosition: 1, daysInTier: 2 }),
+      hold({ bestPosition: 1, daysInTier: 2, latestPosition: 2 }),
     );
     expect(item.daysInTier).toBe(2);
     expect(item.heldTier).toBe(3);
@@ -484,6 +485,7 @@ describe('heldFacts', () => {
   const facts = (latestDate: string): RetainedPositionFacts => ({
     bestPosition: 2,
     daysInTier: 5,
+    latestPosition: 2,
     latestDate,
   });
 

@@ -158,7 +158,7 @@ export function heldFacts(
         ? latestPosition - bestPosition
         : null,
     daysInTier,
-    heldTier: daysInTier === null ? null : tierOf(latestPosition),
+    heldTier: daysInTier === null ? null : tierOf(hold.latestPosition),
   };
 }
 

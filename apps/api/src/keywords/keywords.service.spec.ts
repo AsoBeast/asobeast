@@ -588,6 +588,7 @@ describe('KeywordsService.listTracked serp volatility', () => {
           keywordId: 'kwStable',
           bestPosition: 2,
           daysInTier: 4,
+          latestPosition: 5,
           latestDate: new Date().toISOString().slice(0, 10),
         },
       ]),

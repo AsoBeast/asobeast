@@ -5,6 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 export interface RetainedPositionFacts {
   bestPosition: number | null;
   daysInTier: number | null;
+  latestPosition: number | null;
   latestDate: string;
 }
 
@@ -12,6 +13,7 @@ interface RetainedPositionRow {
   keywordId: string;
   bestPosition: number | null;
   daysInTier: number | null;
+  latestPosition: number | null;
   latestDate: string;
 }
 
@@ -70,6 +72,7 @@ export async function retainedPositionFacts(
     SELECT ordered.kw AS "keywordId",
            MIN(ordered."position") AS "bestPosition",
            MAX(streak.days) AS "daysInTier",
+           MAX(latest.latest_position) AS "latestPosition",
            MAX(to_char(latest.latest_date, 'YYYY-MM-DD')) AS "latestDate"
     FROM ordered
     JOIN latest ON latest.kw = ordered.kw
@@ -81,6 +84,7 @@ export async function retainedPositionFacts(
       {
         bestPosition: row.bestPosition,
         daysInTier: row.daysInTier,
+        latestPosition: row.latestPosition,
         latestDate: row.latestDate,
       },
     ]),
