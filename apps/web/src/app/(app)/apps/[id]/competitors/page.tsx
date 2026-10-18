@@ -1,6 +1,9 @@
 import { cookies } from "next/headers";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
-import { COMPETITOR_SECTIONS } from "@/components/competitors/competitor-sections";
+import {
+  COMPETITOR_SECTION,
+  COMPETITOR_SECTIONS,
+} from "@/components/competitors/competitor-sections";
 import { CompetitorsView } from "@/components/competitors/CompetitorsView";
 import {
   COLLAPSED_COOKIE_NAME,
@@ -30,7 +33,9 @@ export default async function CompetitorsPage({
   const queryClient = getQueryClient();
   await Promise.all([
     queryClient.prefetchQuery(competitorsOptions(id)),
-    queryClient.prefetchQuery(comparisonOptions(id, onlyGaps)),
+    collapsed.has(COMPETITOR_SECTION.matrix)
+      ? null
+      : queryClient.prefetchQuery(comparisonOptions(id, onlyGaps)),
   ]);
 
   return (

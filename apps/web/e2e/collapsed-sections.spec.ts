@@ -11,7 +11,7 @@ const TRACKED = "Track the apps you rank against";
 const DISCOVERY = "Apps you don’t track yet";
 const MATRIX = "Your position against every competitor";
 const COOKIE = "asobeast_collapsed";
-const LOG_COOKIE = "e2e_discovery_log";
+const LOG_COOKIE = "e2e_request_log";
 const SECTIONS = [TRACKED, DISCOVERY, MATRIX];
 
 const trigger = (page: Page, name: string) =>
@@ -34,18 +34,19 @@ async function storedCollapsed(
   return cookie ? decodeURIComponent(cookie.value) : null;
 }
 
-async function discoveryReads(
+async function reads(
   request: APIRequestContext,
+  kind: "discovery" | "compare",
   token: string,
 ): Promise<number> {
   const response = await request.get(
-    `${MOCK_API_URL}/__log/discovery-requests/${token}`,
+    `${MOCK_API_URL}/__log/${kind}-requests/${token}`,
     { failOnStatusCode: true },
   );
   return ((await response.json()) as { count: number }).count;
 }
 
-async function logDiscovery(context: BrowserContext): Promise<string> {
+async function logRequests(context: BrowserContext): Promise<string> {
   const token = randomUUID();
   await seedCookies(context, { [LOG_COOKIE]: token });
   return token;
@@ -79,7 +80,7 @@ test("a section collapses behind its title and stays collapsed on reload", async
   context,
   request,
 }) => {
-  const token = await logDiscovery(context);
+  const token = await logRequests(context);
   await open(page);
 
   const discovery = await hydrated(trigger(page, DISCOVERY));
@@ -95,7 +96,7 @@ test("a section collapses behind its title and stays collapsed on reload", async
   ).toBeVisible();
   expect(await storedCollapsed(context)).toBe("competitors.discovery");
 
-  const before = await discoveryReads(request, token);
+  const before = await reads(request, "discovery", token);
   await page.reload();
   await page.waitForLoadState("networkidle");
 
@@ -106,7 +107,7 @@ test("a section collapses behind its title and stays collapsed on reload", async
   await expect(discoveryTable(page)).toHaveCount(0);
   await expect(trigger(page, TRACKED)).toHaveAttribute("aria-expanded", "true");
   await expect(trigger(page, MATRIX)).toHaveAttribute("aria-expanded", "true");
-  expect(await discoveryReads(request, token)).toBe(before);
+  expect(await reads(request, "discovery", token)).toBe(before);
 });
 
 test("a collapsed section fetches nothing on its first render and loads when it opens", async ({
@@ -114,19 +115,19 @@ test("a collapsed section fetches nothing on its first render and loads when it 
   context,
   request,
 }) => {
-  const token = await logDiscovery(context);
+  const token = await logRequests(context);
   await seedCookies(context, collapsed("competitors.discovery"));
   await open(page);
 
   const discovery = trigger(page, DISCOVERY);
   await expect(discovery).toHaveAttribute("aria-expanded", "false");
   await expect(discoveryTable(page)).toHaveCount(0);
-  expect(await discoveryReads(request, token)).toBe(0);
+  expect(await reads(request, "discovery", token)).toBe(0);
 
   await (await hydrated(discovery)).click();
 
   await expect(discoveryTable(page)).toBeVisible();
-  await expect.poll(() => discoveryReads(request, token)).toBe(1);
+  await expect.poll(() => reads(request, "discovery", token)).toBe(1);
 });
 
 test("a collapsed section can be expanded with the keyboard and keeps focus", async ({
@@ -205,6 +206,28 @@ for (const [label, value] of [
     expect(errors).toEqual([]);
   });
 }
+
+test("a collapsed matrix fetches nothing until it opens", async ({
+  page,
+  context,
+  request,
+}) => {
+  const token = await logRequests(context);
+  await seedCookies(context, collapsed("competitors.matrix"));
+  await open(page);
+
+  expect(await reads(request, "compare", token)).toBe(0);
+  const gaps = await hydrated(page.getByRole("switch", { name: "only gaps" }));
+  await gaps.click();
+  await expect(page).toHaveURL(/onlyGaps=true/);
+  await page.waitForLoadState("networkidle");
+  expect(await reads(request, "compare", token)).toBe(0);
+
+  await trigger(page, MATRIX).click();
+
+  await expect(matrixTable(page).getByRole("row")).toHaveCount(2);
+  expect(await reads(request, "compare", token)).toBe(1);
+});
 
 test("the only gaps switch works while the matrix is collapsed", async ({
   page,
