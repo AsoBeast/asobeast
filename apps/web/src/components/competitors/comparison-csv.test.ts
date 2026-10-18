@@ -15,6 +15,7 @@ function row(over: Partial<KeywordComparisonRow> = {}): KeywordComparisonRow {
   return {
     keywordId: "kw-1",
     text: "focus timer",
+    country: "us",
     traffic: 5.5,
     difficulty: 4,
     you: 3,
