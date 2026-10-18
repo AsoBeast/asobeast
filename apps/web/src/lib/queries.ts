@@ -15,7 +15,7 @@ import type {
   Store,
   WebhookItem,
 } from "@asobeast/shared";
-import { QUERY_BOUNDS } from "@asobeast/shared";
+import { isStoreSuggestionStrategy, QUERY_BOUNDS } from "@asobeast/shared";
 import {
   hashKey,
   queryOptions,
@@ -144,11 +144,12 @@ export const appKeys = {
     [...appKeys.detail(id), "market-keyword-fields"] as const,
   marketKeywordFields: (id: string, country: string) =>
     [...appKeys.marketKeywordFieldsRoot(id), { country }] as const,
+  suggestionsRoot: (id: string) => ["suggestions", id] as const,
   suggestions: (
     id: string,
     strategy: KeywordSuggestionStrategy,
     country?: string,
-  ) => [...appKeys.detail(id), "suggestions", strategy, { country }] as const,
+  ) => [...appKeys.suggestionsRoot(id), strategy, { country }] as const,
   spider: (id: string, term: string, country?: string) =>
     [...appKeys.detail(id), "spider", { term, country }] as const,
   compare: (id: string, onlyGaps: boolean) =>
@@ -625,6 +626,8 @@ export const marketKeywordFieldsOptions = (id: string, country: string) =>
     queryFn: () => getMarketKeywordFields(id, country),
   });
 
+const STORE_LOOKUP_OPTIONS = { staleTime: ONE_DAY_MS, retry: false } as const;
+
 export const suggestionsOptions = (
   id: string,
   strategy: KeywordSuggestionStrategy,
@@ -633,6 +636,7 @@ export const suggestionsOptions = (
   queryOptions({
     queryKey: appKeys.suggestions(id, strategy, country),
     queryFn: () => getSuggestions(id, strategy, undefined, country),
+    ...(isStoreSuggestionStrategy(strategy) ? STORE_LOOKUP_OPTIONS : {}),
   });
 
 export const pickerSuggestionsOptions = (
@@ -993,17 +997,31 @@ export function invalidateKeywordImport(client: QueryClient, id: string): void {
   void client.invalidateQueries({ queryKey: appKeys.importPreviewRoot(id) });
 }
 
+function invalidateLocalSuggestions(client: QueryClient, id: string): void {
+  void client.invalidateQueries({
+    queryKey: appKeys.suggestionsRoot(id),
+    predicate: (query) => !isStoreSuggestionStrategy(String(query.queryKey[2])),
+  });
+}
+
 export function invalidateRunResults(client: QueryClient, id: string): void {
   const runStatus = JSON.stringify(appKeys.runStatus(id));
   void client.invalidateQueries({
     queryKey: appKeys.detail(id),
     predicate: (query) => JSON.stringify(query.queryKey) !== runStatus,
   });
+  invalidateLocalSuggestions(client, id);
+}
+
+export function removeAppQueries(client: QueryClient, id: string): void {
+  client.removeQueries({ queryKey: appKeys.detail(id) });
+  client.removeQueries({ queryKey: appKeys.suggestionsRoot(id) });
 }
 
 export function invalidateAppListing(client: QueryClient, id: string): void {
   void client.invalidateQueries({ queryKey: appKeys.detail(id) });
   void client.invalidateQueries({ queryKey: portfolioKey });
+  invalidateLocalSuggestions(client, id);
 }
 
 export function invalidateSetupMutation(
@@ -1080,6 +1098,7 @@ export function invalidateCompetitorMutation(
   void client.invalidateQueries({ queryKey: appKeys.serpMoversRoot(id) });
   void client.invalidateQueries({ queryKey: portfolioKey });
   void client.invalidateQueries({ queryKey: appKeys.firstRun(id) });
+  invalidateLocalSuggestions(client, id);
 }
 
 export function invalidateLinkMutation(
