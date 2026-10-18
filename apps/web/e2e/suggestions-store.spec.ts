@@ -2,7 +2,9 @@ import { expect, test } from "./session.mts";
 import { APP_1_DETAIL, APP_GP_DETAIL } from "./fixtures.mts";
 
 const suggestionsHint = (store: string) =>
-  new RegExp(`Search and Similar apps run a live ${store} lookup`);
+  new RegExp(
+    `Search, Similar apps, More by developer, and Competitor searches run a live ${store} lookup`,
+  );
 
 test("a google play keywords page names google play in the suggestions hint", async ({
   page,

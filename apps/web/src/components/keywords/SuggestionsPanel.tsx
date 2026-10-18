@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import { addKeywords, ApiError } from "@/lib/api";
-import { storeLabel } from "@/lib/format";
+import { formatList, storeLabel } from "@/lib/format";
 import {
   invalidateKeywordMutation,
   keywordsOptions,
@@ -26,7 +26,7 @@ import { suggestionStrategyParser } from "@/lib/search-params";
 import { cn } from "@/lib/utils";
 import { SpiderDialog } from "./SpiderDialog";
 import { SuggestionList, suggestionListState } from "./SuggestionList";
-import { STRATEGIES } from "./suggestion-strategies";
+import { STRATEGIES, storeLookupLabels } from "./suggestion-strategies";
 
 export function SuggestionsPanel({
   id,
@@ -80,8 +80,8 @@ export function SuggestionsPanel({
           <div className="flex flex-col gap-1">
             <CardTitle>Suggestions</CardTitle>
             <CardDescription>
-              Search and Similar apps run a live {storeLabel(store)} lookup, so
-              results can take a few seconds.
+              {formatList(storeLookupLabels())} run a live {storeLabel(store)}{" "}
+              lookup, so results can take a few seconds.
             </CardDescription>
           </div>
           <ChevronDown

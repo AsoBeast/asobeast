@@ -17,7 +17,10 @@ import { EMPTY_COPY, USED_BY_NOUN } from "./suggestion-strategies";
 function SuggestionMeta({ suggestion }: { suggestion: KeywordSuggestion }) {
   const noun = USED_BY_NOUN[suggestion.strategy] ?? "app";
   return (
-    <span className="flex items-center gap-2 text-caption text-muted-foreground">
+    <span className="flex flex-wrap items-center gap-2 text-caption text-muted-foreground">
+      {suggestion.seed ? (
+        <span className="wrap-anywhere">from “{suggestion.seed}”</span>
+      ) : null}
       {suggestion.usedByCount !== undefined ? (
         <span className="numeric font-mono">
           {suggestion.usedByCount} {noun}
