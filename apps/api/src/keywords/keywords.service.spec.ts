@@ -563,6 +563,55 @@ describe('KeywordsService.listTracked serp volatility', () => {
     expect(byId.get('kwChurn')?.serpVolatility7d).toBe(100);
     expect(byId.get('kwUnchecked')?.serpVolatility7d).toBeNull();
   });
+
+  it('loads hold facts only when the list asks for them', async () => {
+    const withRanking = (row: ReturnType<typeof trackedRow>) => ({
+      ...row,
+      keyword: {
+        ...row.keyword,
+        rankings: [{ position: 5, date: new Date(), depth: 200 }],
+      },
+    });
+    const prisma = {
+      ...buildPrisma(),
+      trackedKeyword: {
+        findMany: jest
+          .fn()
+          .mockResolvedValue([
+            withRanking(trackedRow('kwStable', 'habit tracker')),
+            trackedRow('kwChurn', 'daily planner'),
+            trackedRow('kwUnchecked', 'sleep timer'),
+          ]),
+      },
+      $queryRaw: jest.fn().mockResolvedValue([
+        {
+          keywordId: 'kwStable',
+          bestPosition: 2,
+          daysInTier: 4,
+          latestPosition: 5,
+          latestDate: new Date().toISOString().slice(0, 10),
+        },
+      ]),
+    };
+    const service = buildService(prisma);
+
+    const plain = await service.listTracked('app1');
+    expect(prisma.$queryRaw).not.toHaveBeenCalled();
+    const plainRow = plain.find((item) => item.keywordId === 'kwStable');
+    expect(plainRow).not.toHaveProperty('bestPosition');
+    expect(plainRow).not.toHaveProperty('daysInTier');
+    expect(plainRow).not.toHaveProperty('heldTier');
+
+    const withFacts = await service.listTracked('app1', undefined, undefined, {
+      holdFacts: true,
+    });
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+    const factsRow = withFacts.find((item) => item.keywordId === 'kwStable');
+    expect(factsRow?.bestPosition).toBe(2);
+    expect(factsRow?.positionDeltaFromBest).toBe(3);
+    expect(factsRow?.daysInTier).toBe(4);
+    expect(factsRow?.heldTier).toBe(10);
+  });
 });
 
 describe('KeywordsService country tracking', () => {
