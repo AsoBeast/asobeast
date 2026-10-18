@@ -16,6 +16,7 @@ import { KeywordsService } from './keywords.service';
 import { MarketKeywordFieldsService } from './market-keyword-fields.service';
 import { MarketListingRequests } from './market-listing.requests';
 import { SpiderService } from './spider.service';
+import { StoreSuggestions } from './store-suggestions';
 import { TrackedKeywordAccess } from './tracked-keyword.access';
 
 @Module({
@@ -41,6 +42,7 @@ import { TrackedKeywordAccess } from './tracked-keyword.access';
     MarketKeywordFieldsService,
     MarketListingRequests,
     SpiderService,
+    StoreSuggestions,
     TrackedKeywordAccess,
   ],
   exports: [
