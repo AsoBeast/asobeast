@@ -254,6 +254,7 @@ const MCP_STREAM_MS = 3_000;
 const apps = [...INITIAL_APPS];
 const PENDING_SERVED = new Map<string, number>();
 const KEYWORD_QUOTA_COOKIE = "e2e_keyword_quota";
+const COMPARISON_MARKET_COOKIE = "e2e-comparison-market";
 const initialKeywords = new Map(
   Object.entries(DATASETS).map(([id, dataset]) => [
     id,
@@ -3342,14 +3343,17 @@ const routes: Route[] = [
       json(res, 200, SUGGESTIONS[id]?.[strategy] ?? []);
     },
   },
-  appRoute(/^\/apps\/([^/]+)\/keywords\/compare$/, (dataset, query) =>
-    query.get("onlyGaps") === "true"
-      ? {
-          ...dataset.comparison,
-          rows: dataset.comparison.rows.filter((row) => row.gap),
-        }
-      : dataset.comparison,
-  ),
+  appRoute(/^\/apps\/([^/]+)\/keywords\/compare$/, (dataset, query, req) => {
+    const market = cookieValue(req, COMPARISON_MARKET_COOKIE);
+    return {
+      ...dataset.comparison,
+      rows: dataset.comparison.rows.filter(
+        (row) =>
+          (query.get("onlyGaps") !== "true" || row.gap) &&
+          (market === undefined || row.country === market),
+      ),
+    };
+  }),
   appRoute(/^\/apps\/([^/]+)\/rankings$/, (dataset) => dataset.rankings),
   appRoute(/^\/apps\/([^/]+)\/serp-movers$/, (dataset) => dataset.serpMovers),
   appRoute(

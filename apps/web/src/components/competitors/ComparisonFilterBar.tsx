@@ -8,7 +8,9 @@ import { RowCount } from "@/components/data-table/RowCount";
 import { SearchInput } from "@/components/data-table/SearchInput";
 import { SelectFilter } from "@/components/data-table/SelectFilter";
 import { ExportCsvButton } from "@/components/ExportCsvButton";
+import { formatCountry } from "@/lib/format";
 import { VERSUS_FILTERS, type matrixFilterParsers } from "@/lib/search-params";
+import { ALL_MARKETS, marketOptions } from "./comparison-markets";
 
 type MatrixFilters = inferParserType<typeof matrixFilterParsers>;
 
@@ -27,6 +29,7 @@ const RESULT_OPTIONS = VERSUS_FILTERS.map((value) => ({
 export function ComparisonFilterBar({
   filters,
   setFilters,
+  markets,
   shown,
   total,
   columns,
@@ -34,11 +37,13 @@ export function ComparisonFilterBar({
 }: {
   filters: MatrixFilters;
   setFilters: SetValues<typeof matrixFilterParsers>;
+  markets: readonly string[];
   shown: number;
   total: number;
   columns: ComponentProps<typeof ColumnMenu>["columns"];
   onExport: () => void;
 }) {
+  const multiMarket = markets.length > 1;
   const chips = [
     filters.q
       ? {
@@ -52,6 +57,13 @@ export function ComparisonFilterBar({
           key: "vs",
           label: `Result: ${RESULT_LABELS[filters.vs]}`,
           onRemove: () => void setFilters({ vs: null }),
+        }
+      : null,
+    multiMarket && filters.country
+      ? {
+          key: "country",
+          label: `Market: ${formatCountry(filters.country)}`,
+          onRemove: () => void setFilters({ country: null }),
         }
       : null,
   ].filter((chip) => chip !== null);
@@ -70,6 +82,18 @@ export function ComparisonFilterBar({
           options={RESULT_OPTIONS}
           onChange={(vs) => void setFilters({ vs })}
         />
+        {multiMarket ? (
+          <SelectFilter
+            title="Market"
+            value={filters.country || ALL_MARKETS}
+            options={marketOptions(markets)}
+            onChange={(country) =>
+              void setFilters({
+                country: country === ALL_MARKETS ? null : country,
+              })
+            }
+          />
+        ) : null}
         <RowCount shown={shown} total={total} noun="keyword" />
         <div className="ml-auto flex items-center gap-2">
           <ColumnMenu columns={columns} />
