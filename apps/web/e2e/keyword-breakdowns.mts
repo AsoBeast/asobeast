@@ -344,7 +344,7 @@ function germanPomodoro(): KeywordBreakdown {
         rating: { average: 4.7, count: 12000, country: "us" },
         insight: { rule: "similar" },
         listings: [
-          german([
+          english([
             breakdownField("title", "Rival Focus", words),
             breakdownField("subtitle", "Pomodoro and deep work", words, {
               Pomodoro: "exact",

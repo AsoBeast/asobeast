@@ -186,6 +186,10 @@ describe('breakdownApp', () => {
   it('falls back to the home listing', () => {
     const app = breakdownApp(subject(), context({ market: 'de' }));
     expect(app.listingCountry).toBe('us');
+    expect(app.listings[0]).toMatchObject({
+      localization: 'en-US',
+      role: 'default',
+    });
     expect(app.rating).toEqual({ average: 4.6, count: 120, country: 'us' });
   });
 

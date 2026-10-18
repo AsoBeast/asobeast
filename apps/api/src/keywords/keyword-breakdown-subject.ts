@@ -97,7 +97,9 @@ function listingsOf(
       ? []
       : [
           judgeListing(
-            appStore ? keywordFieldLocalizations(market)[0] : null,
+            appStore
+              ? keywordFieldLocalizations(subject.listing?.country ?? market)[0]
+              : null,
             appStore ? 'default' : null,
             judged(own, context),
           ),
