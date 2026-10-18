@@ -34,13 +34,13 @@ import { exportComparison } from "./comparison-csv";
 import { comparisonMarkets } from "./comparison-markets";
 import { ComparisonFilterBar } from "./ComparisonFilterBar";
 
-const MARKET_PIN = "sticky left-0 w-14 min-w-14 max-w-14 bg-inherit";
+const MARKET_PIN = "sticky left-0 w-24 min-w-24 max-w-24 bg-inherit";
 
 function pinClasses(
   multiMarket: boolean,
 ): Record<"head" | "cell", Record<string, string>> {
   const keywordPin = multiMarket
-    ? "sticky left-14 bg-inherit"
+    ? "sticky left-24 bg-inherit"
     : "sticky left-0 bg-inherit";
   return {
     head: {

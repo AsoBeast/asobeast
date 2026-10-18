@@ -124,9 +124,14 @@ test("the matrix shows the market of every row when it spans markets", async ({
   await page.goto("/apps/app-1/competitors");
   await page.waitForLoadState("networkidle");
 
-  await expect(
-    matrix(page).getByRole("columnheader", { name: "Market", exact: true }),
-  ).toBeVisible();
+  const header = matrix(page).getByRole("columnheader", {
+    name: "Market",
+    exact: true,
+  });
+  await expect(header).toBeVisible();
+  expect(
+    await header.evaluate((node) => node.scrollWidth <= node.clientWidth),
+  ).toBe(true);
   const pomodoroRows = matrix(page).getByRole("row", { name: /pomodoro/ });
   await expect(pomodoroRows).toHaveCount(2);
   for (const [code, name] of [
