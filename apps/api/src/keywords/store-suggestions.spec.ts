@@ -1,5 +1,7 @@
 import { Store } from '@prisma/client';
+import { StoreSuggestionStrategy } from '@asobeast/shared';
 import { PrismaService } from '../prisma/prisma.service';
+import { StoreNotSupportedError } from '../store-providers/errors';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { listingLanguages } from './listing-languages';
 import { StoreSuggestions } from './store-suggestions';
@@ -36,6 +38,12 @@ const buildStore = (raw: unknown, registry: unknown, title = 'Habit Tracker') =>
     registry as StoreProviderRegistry,
   );
 
+const lookUp = async (
+  store: StoreSuggestions,
+  strategy: StoreSuggestionStrategy,
+  request: SuggestionRequest,
+) => (await (await store.plan(strategy, request))?.()) ?? [];
+
 describe('StoreSuggestions.suggest developer', () => {
   it('counts title terms across the developer catalogue', async () => {
     const developerApps = jest.fn().mockResolvedValue([
@@ -47,7 +55,8 @@ describe('StoreSuggestions.suggest developer', () => {
     const registry = { get: jest.fn().mockReturnValue({ developerApps }) };
     const store = buildStore({ artistId: 284882218 }, registry);
 
-    const suggestions = await store.suggest(
+    const suggestions = await lookUp(
+      store,
       'developer',
       requestFor({ tracked: ['streak'] }),
     );
@@ -67,7 +76,7 @@ describe('StoreSuggestions.suggest developer', () => {
     const store = buildStore({ source: 'fixture' }, registry);
 
     await expect(
-      store.suggest('developer', requestFor({ tracked: ['streak'] })),
+      lookUp(store, 'developer', requestFor({ tracked: ['streak'] })),
     ).resolves.toEqual([]);
     expect(developerApps).not.toHaveBeenCalled();
   });
@@ -87,7 +96,8 @@ describe('StoreSuggestions.suggest in a spanish market', () => {
       { get: jest.fn().mockReturnValue({ similar }) },
     );
 
-    const suggestions = await store.suggest(
+    const suggestions = await lookUp(
+      store,
       'similar',
       requestFor({ home: 'mx' }),
     );
@@ -109,7 +119,8 @@ describe('StoreSuggestions.suggest in a spanish market', () => {
       { get: jest.fn().mockReturnValue({ similar }) },
     );
 
-    const suggestions = await store.suggest(
+    const suggestions = await lookUp(
+      store,
       'similar',
       requestFor({ home: 'mx', market: 'de' }),
     );
@@ -132,7 +143,8 @@ describe('StoreSuggestions.suggest in a spanish market', () => {
       'Preguntados: Juegos de Trivia',
     );
 
-    const suggestions = await store.suggest(
+    const suggestions = await lookUp(
+      store,
       'developer',
       requestFor({ home: 'mx', market: 'de' }),
     );
@@ -143,5 +155,127 @@ describe('StoreSuggestions.suggest in a spanish market', () => {
       'hard quiz',
       'quiz',
     ]);
+  });
+});
+
+describe('StoreSuggestions.plan', () => {
+  const trackedRows = (sources: string[]) =>
+    sources.map((source, index) => ({
+      source,
+      keyword: { text: `seed ${index}`, country: 'us' },
+    }));
+
+  const buildPlanner = ({
+    tracked = [],
+    snapshot = null,
+    provider = {},
+    get,
+  }: {
+    tracked?: ReturnType<typeof trackedRows>;
+    snapshot?: unknown;
+    provider?: Record<string, jest.Mock>;
+    get?: jest.Mock;
+  } = {}) => {
+    const prisma = {
+      keywordField: { findMany: jest.fn().mockResolvedValue([]) },
+      trackedKeyword: { findMany: jest.fn().mockResolvedValue(tracked) },
+      appSnapshot: { findFirst: jest.fn().mockResolvedValue(snapshot) },
+    };
+    const registry = { get: get ?? jest.fn().mockReturnValue(provider) };
+    return {
+      prisma,
+      registry,
+      store: new StoreSuggestions(
+        prisma as unknown as PrismaService,
+        registry as unknown as StoreProviderRegistry,
+      ),
+    };
+  };
+
+  it('plans no lookup for search without a tracked keyword', async () => {
+    const { store, registry } = buildPlanner();
+
+    await expect(store.plan('search', requestFor())).resolves.toBeNull();
+    expect(registry.get).not.toHaveBeenCalled();
+  });
+
+  it('plans a lookup for search over the strongest seeds without asking the store', async () => {
+    const suggest = jest.fn().mockResolvedValue([]);
+    const { store, prisma } = buildPlanner({
+      tracked: trackedRows([
+        'SUGGESTED',
+        'TITLE',
+        'MANUAL',
+        'COMPETITOR',
+        'KEYWORD_FIELD',
+        'SUBTITLE',
+      ]),
+      provider: { suggest },
+    });
+
+    const lookup = await store.plan('search', requestFor());
+
+    expect(lookup).toEqual(expect.any(Function));
+    expect(suggest).not.toHaveBeenCalled();
+    prisma.trackedKeyword.findMany.mockClear();
+    await lookup?.();
+    expect(suggest.mock.calls.map(([seed]: [string]) => seed)).toEqual([
+      'seed 4',
+      'seed 1',
+      'seed 2',
+      'seed 5',
+      'seed 0',
+    ]);
+    expect(prisma.trackedKeyword.findMany).not.toHaveBeenCalled();
+  });
+
+  it('plans no lookup for developer without a developer id', async () => {
+    const developerApps = jest.fn();
+    for (const snapshot of [
+      { raw: { source: 'fixture' }, title: 'Habit' },
+      null,
+    ]) {
+      const { store } = buildPlanner({ snapshot, provider: { developerApps } });
+      await expect(store.plan('developer', requestFor())).resolves.toBeNull();
+    }
+    expect(developerApps).not.toHaveBeenCalled();
+  });
+
+  it('plans a lookup for developer', async () => {
+    const developerApps = jest.fn().mockResolvedValue([]);
+    const { store, prisma } = buildPlanner({
+      snapshot: { raw: { artistId: 284882218 }, title: 'Habit Tracker' },
+      provider: { developerApps },
+    });
+
+    const lookup = await store.plan('developer', requestFor());
+
+    expect(developerApps).not.toHaveBeenCalled();
+    await lookup?.();
+    expect(developerApps).toHaveBeenCalledWith('284882218', 'us');
+    expect(prisma.appSnapshot.findFirst).toHaveBeenCalledTimes(1);
+  });
+
+  it('plans a lookup for similar', async () => {
+    const similar = jest.fn().mockResolvedValue([]);
+    const { store } = buildPlanner({ provider: { similar } });
+
+    const lookup = await store.plan('similar', requestFor());
+
+    expect(similar).not.toHaveBeenCalled();
+    await lookup?.();
+    expect(similar).toHaveBeenCalledWith('store1', 'us');
+  });
+
+  it('refuses an unsupported store before any lookup', async () => {
+    const { store } = buildPlanner({
+      get: jest.fn(() => {
+        throw new StoreNotSupportedError(Store.APP_STORE);
+      }),
+    });
+
+    await expect(store.plan('similar', requestFor())).rejects.toBeInstanceOf(
+      StoreNotSupportedError,
+    );
   });
 });

@@ -35,7 +35,7 @@ export const KEYWORD_TOOLS: ReadTool[] = [
     name: "keyword_suggestions",
     title: "Keyword suggestions",
     description:
-      "Suggested keywords for one app from a chosen strategy (metadata, search, similar, developer, competitors, seasonal or reviews); search, similar and developer ask the live store. Every call spends one request of the workspace's hourly keyword suggestions allowance on a hosted plan. The seasonal strategy offers English holiday keywords only in the English language storefronts that observe the event and is empty elsewhere. Read-only lookup; nothing is tracked.",
+      "Suggested keywords for one app from a chosen strategy (metadata, search, similar, developer, competitors, seasonal or reviews); search, similar and developer ask the live store. On a hosted plan each of those store lookups spends one request of the workspace's hourly keyword suggestions allowance, unless there is nothing to look up, such as search for an app that tracks no keyword; the other strategies spend nothing. The seasonal strategy offers English holiday keywords only in the English language storefronts that observe the event and is empty elsewhere. Read-only lookup; nothing is tracked.",
     inputSchema: z.object({
       appId: z.string().describe("The app id from list_apps."),
       strategy: z

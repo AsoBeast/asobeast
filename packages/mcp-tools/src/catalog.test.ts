@@ -171,6 +171,15 @@ describe("the get_app market", () => {
   });
 });
 
+describe("the keyword_suggestions allowance", () => {
+  it("says when a store suggestion spends the allowance", () => {
+    const description = toolByName("keyword_suggestions")?.description ?? "";
+
+    expect(description).toContain("unless there is nothing to look up");
+    expect(description).not.toContain("Every call spends");
+  });
+});
+
 describe("the competitor, comparison and chart tools", () => {
   it.each([
     "list_competitors",

@@ -9,7 +9,7 @@ import { HOME_LISTING, NEWEST_FIRST } from '../apps/listing';
 import { PrismaService } from '../prisma/prisma.service';
 import { developerId } from '../store-providers/raw-facts';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
-import { SearchItem } from '../store-providers/types';
+import { SearchItem, StoreProvider } from '../store-providers/types';
 import { extractCandidates } from './extraction';
 import { loadKeywordFieldIndex, reportedSource } from './keyword-field-index';
 import { SuggestionRequest } from './suggestion-request';
@@ -26,6 +26,8 @@ const SOURCE_WEIGHT: Record<KeywordSource, number> = {
   COMPETITOR: 1,
 };
 
+export type StoreLookup = () => Promise<KeywordSuggestion[]>;
+
 interface TitleCount {
   limit: number;
   strategy: 'similar' | 'developer';
@@ -39,87 +41,58 @@ export class StoreSuggestions {
     private readonly registry: StoreProviderRegistry,
   ) {}
 
-  suggest(
+  async plan(
     strategy: StoreSuggestionStrategy,
     request: SuggestionRequest,
-  ): Promise<KeywordSuggestion[]> {
+  ): Promise<StoreLookup | null> {
     switch (strategy) {
       case 'search':
-        return this.suggestFromSearch(request);
+        return this.planSearch(request);
       case 'similar':
-        return this.suggestFromSimilar(request);
+        return this.planSimilar(request);
       case 'developer':
-        return this.suggestFromDeveloper(request);
+        return this.planDeveloper(request);
     }
   }
 
-  private async suggestFromSearch({
-    appId,
-    market,
-    tracked,
-    limit,
-  }: SuggestionRequest): Promise<KeywordSuggestion[]> {
-    const provider = this.registry.get(market.store);
-    const seeds = await this.searchSeeds(appId);
-    const seedSet = new Set(seeds);
-    const merged = new Map<string, number | undefined>();
-
-    for (const seed of seeds) {
-      const items = await provider.suggest(seed, market.country);
-      for (const item of items) {
-        const text = normalizeText(item.term);
-        if (!text || tracked.has(text) || seedSet.has(text)) {
-          continue;
-        }
-        if (!merged.has(text)) {
-          merged.set(text, item.priority);
-        } else if ((item.priority ?? -1) > (merged.get(text) ?? -1)) {
-          merged.set(text, item.priority);
-        }
-      }
-    }
-
-    return [...merged.entries()]
-      .sort(([, a], [, b]) => (b ?? 0) - (a ?? 0))
-      .slice(0, limit)
-      .map(([text, priority]) => ({
-        text,
-        strategy: 'search' as const,
-        ...(priority === undefined ? {} : { priority }),
-      }));
+  private async planSearch(
+    request: SuggestionRequest,
+  ): Promise<StoreLookup | null> {
+    const seeds = await this.searchSeeds(request.appId);
+    if (seeds.length === 0) return null;
+    const provider = this.registry.get(request.market.store);
+    return () => suggestFromSearch(provider, seeds, request);
   }
 
-  private async suggestFromSimilar({
+  private planSimilar({
     market,
     tracked,
     limit,
     languages,
-  }: SuggestionRequest): Promise<KeywordSuggestion[]> {
+  }: SuggestionRequest): StoreLookup {
     const provider = this.registry.get(market.store);
-    const similar = await provider.similar(market.storeAppId, market.country);
-    return countTitleCandidates(similar, tracked, {
-      limit,
-      strategy: 'similar',
-      languages: languages.market,
-    });
+    return async () =>
+      countTitleCandidates(
+        await provider.similar(market.storeAppId, market.country),
+        tracked,
+        { limit, strategy: 'similar', languages: languages.market },
+      );
   }
 
-  private async suggestFromDeveloper({
+  private async planDeveloper({
     appId,
     market,
     tracked,
     limit,
     languages,
-  }: SuggestionRequest): Promise<KeywordSuggestion[]> {
+  }: SuggestionRequest): Promise<StoreLookup | null> {
     const snapshot = await this.prisma.appSnapshot.findFirst({
       where: { appId, ...HOME_LISTING },
       orderBy: NEWEST_FIRST,
       select: { raw: true, title: true },
     });
     const devId = snapshot && developerId(market.store, snapshot.raw);
-    if (!devId) {
-      return [];
-    }
+    if (!devId) return null;
 
     const excluded = new Set(tracked);
     for (const candidate of extractCandidates(
@@ -130,12 +103,12 @@ export class StoreSuggestions {
     }
 
     const provider = this.registry.get(market.store);
-    const apps = await provider.developerApps(devId, market.country);
-    return countTitleCandidates(apps, excluded, {
-      limit,
-      strategy: 'developer',
-      languages: languages.market,
-    });
+    return async () =>
+      countTitleCandidates(
+        await provider.developerApps(devId, market.country),
+        excluded,
+        { limit, strategy: 'developer', languages: languages.market },
+      );
   }
 
   private async searchSeeds(appId: string): Promise<string[]> {
@@ -159,6 +132,39 @@ export class StoreSuggestions {
       .slice(0, SEARCH_SEED_LIMIT)
       .map((row) => row.keyword.text);
   }
+}
+
+async function suggestFromSearch(
+  provider: StoreProvider,
+  seeds: readonly string[],
+  { market, tracked, limit }: SuggestionRequest,
+): Promise<KeywordSuggestion[]> {
+  const seedSet = new Set(seeds);
+  const merged = new Map<string, number | undefined>();
+
+  for (const seed of seeds) {
+    const items = await provider.suggest(seed, market.country);
+    for (const item of items) {
+      const text = normalizeText(item.term);
+      if (!text || tracked.has(text) || seedSet.has(text)) {
+        continue;
+      }
+      if (!merged.has(text)) {
+        merged.set(text, item.priority);
+      } else if ((item.priority ?? -1) > (merged.get(text) ?? -1)) {
+        merged.set(text, item.priority);
+      }
+    }
+  }
+
+  return [...merged.entries()]
+    .sort(([, a], [, b]) => (b ?? 0) - (a ?? 0))
+    .slice(0, limit)
+    .map(([text, priority]) => ({
+      text,
+      strategy: 'search' as const,
+      ...(priority === undefined ? {} : { priority }),
+    }));
 }
 
 function countTitleCandidates(

@@ -54,10 +54,10 @@ export class KeywordSuggestionService {
     if (!isStoreSuggestionStrategy(strategy)) {
       return this.dispatch(strategy, request);
     }
+    const lookup = await this.store.plan(strategy, request);
+    if (!lookup) return [];
     await spend?.();
-    return this.egress.through(market.store, market.country, () =>
-      this.store.suggest(strategy, request),
-    );
+    return this.egress.through(market.store, market.country, lookup);
   }
 
   private dispatch(

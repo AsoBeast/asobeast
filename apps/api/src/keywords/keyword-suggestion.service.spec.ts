@@ -69,7 +69,7 @@ describe('KeywordSuggestionService.suggest competitors', () => {
 });
 
 describe('KeywordSuggestionService.suggest egress', () => {
-  const buildPrisma = () => ({
+  const buildPrisma = ({ seeded }: { seeded: boolean }) => ({
     keywordField: { findMany: jest.fn().mockResolvedValue([]) },
     app: {
       findFirst: jest.fn().mockResolvedValue({
@@ -82,13 +82,56 @@ describe('KeywordSuggestionService.suggest egress', () => {
       }),
       findMany: jest.fn().mockResolvedValue([]),
     },
-    appSnapshot: { findFirst: jest.fn().mockResolvedValue(null) },
-    trackedKeyword: { findMany: jest.fn().mockResolvedValue([]) },
+    appSnapshot: {
+      findFirst: jest.fn().mockResolvedValue(
+        seeded
+          ? {
+              raw: { artistId: 1 },
+              title: 'Habit Tracker',
+              subtitle: null,
+              summary: null,
+            }
+          : null,
+      ),
+    },
+    trackedKeyword: {
+      findMany: jest.fn().mockResolvedValue(
+        seeded
+          ? [
+              {
+                source: 'MANUAL',
+                keyword: { text: 'habit tracker', country: 'us' },
+              },
+            ]
+          : [],
+      ),
+    },
     review: { findMany: jest.fn().mockResolvedValue([]) },
   });
 
-  const buildService = (through: jest.Mock, registry: unknown) =>
-    buildSuggestionService(buildPrisma(), registry, {
+  const storeRegistry = () => ({
+    get: jest.fn().mockReturnValue({
+      search: jest.fn().mockResolvedValue([]),
+      suggest: jest.fn().mockResolvedValue([]),
+      similar: jest.fn().mockResolvedValue([]),
+      developerApps: jest.fn().mockResolvedValue([]),
+    }),
+  });
+
+  const leasingThrough = () =>
+    jest
+      .fn()
+      .mockImplementation(
+        (_store: unknown, _country: unknown, work: () => Promise<unknown>) =>
+          work(),
+      );
+
+  const buildService = (
+    through: jest.Mock,
+    registry: unknown,
+    seeded = false,
+  ) =>
+    buildSuggestionService(buildPrisma({ seeded }), registry, {
       through,
     } as unknown as ProxyEgress);
 
@@ -111,20 +154,8 @@ describe('KeywordSuggestionService.suggest egress', () => {
   it.each(['search', 'similar', 'developer'] as const)(
     'leases a proxy endpoint for %s',
     async (strategy) => {
-      const through = jest
-        .fn()
-        .mockImplementation(
-          (_store: unknown, _country: unknown, work: () => Promise<unknown>) =>
-            work(),
-        );
-      const service = buildService(through, {
-        get: jest.fn().mockReturnValue({
-          search: jest.fn().mockResolvedValue([]),
-          suggest: jest.fn().mockResolvedValue([]),
-          similar: jest.fn().mockResolvedValue([]),
-          developerApps: jest.fn().mockResolvedValue([]),
-        }),
-      });
+      const through = leasingThrough();
+      const service = buildService(through, storeRegistry(), true);
 
       await service.suggest('app1', strategy, 30);
 
@@ -133,6 +164,17 @@ describe('KeywordSuggestionService.suggest egress', () => {
         'us',
         expect.any(Function),
       );
+    },
+  );
+  it.each(['search', 'developer'] as const)(
+    'does not lease an endpoint for %s without anything to look up',
+    async (strategy) => {
+      const through = leasingThrough();
+      const service = buildService(through, storeRegistry());
+
+      await expect(service.suggest('app1', strategy, 30)).resolves.toEqual([]);
+
+      expect(through).not.toHaveBeenCalled();
     },
   );
 });
@@ -315,6 +357,34 @@ describe('KeywordSuggestionService.suggest allowance', () => {
     await service.suggest('app1', 'similar', 30, undefined, spend);
 
     expect(order).toEqual(['spend', 'store']);
+  });
+
+  it.each(['search', 'developer'] as const)(
+    'does not call spend or lease an endpoint when %s has nothing to look up',
+    async (strategy) => {
+      const { service, through } = buildService([]);
+      const spend = jest.fn().mockResolvedValue(undefined);
+
+      await expect(
+        service.suggest('app1', strategy, 30, undefined, spend),
+      ).resolves.toEqual([]);
+
+      expect(spend).not.toHaveBeenCalled();
+      expect(through).not.toHaveBeenCalled();
+    },
+  );
+
+  it('refuses a spent allowance only when there is something to look up', async () => {
+    const { service } = buildService([]);
+    const spend = jest.fn().mockRejectedValue(new Error('spent'));
+
+    await expect(
+      service.suggest('app1', 'search', 30, undefined, spend),
+    ).resolves.toEqual([]);
+    expect(spend).not.toHaveBeenCalled();
+    await expect(
+      service.suggest('app1', 'similar', 30, undefined, spend),
+    ).rejects.toThrow('spent');
   });
 
   it('never calls spend for a database strategy', async () => {
