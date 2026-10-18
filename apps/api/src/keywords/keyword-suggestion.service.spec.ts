@@ -3,6 +3,21 @@ import { PrismaService } from '../prisma/prisma.service';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
 import { KeywordSuggestionService } from './keyword-suggestion.service';
+import { StoreSuggestions } from './store-suggestions';
+
+const buildSuggestionService = (
+  prisma: unknown,
+  registry: unknown,
+  egress: ProxyEgress,
+) =>
+  new KeywordSuggestionService(
+    prisma as PrismaService,
+    new StoreSuggestions(
+      prisma as PrismaService,
+      registry as StoreProviderRegistry,
+    ),
+    egress,
+  );
 
 const passThroughEgress = {
   through: <T>(_store: unknown, _country: unknown, work: () => Promise<T>) =>
@@ -11,11 +26,7 @@ const passThroughEgress = {
 
 describe('KeywordSuggestionService.suggest competitors', () => {
   const buildService = (prisma: unknown) =>
-    new KeywordSuggestionService(
-      prisma as PrismaService,
-      undefined as unknown as StoreProviderRegistry,
-      passThroughEgress,
-    );
+    buildSuggestionService(prisma, undefined, passThroughEgress);
 
   it('counts overlapping competitor terms and drops tracked ones', async () => {
     const prisma = {
@@ -57,68 +68,8 @@ describe('KeywordSuggestionService.suggest competitors', () => {
   });
 });
 
-describe('KeywordSuggestionService.suggest developer', () => {
-  const buildService = (prisma: unknown, registry: unknown) =>
-    new KeywordSuggestionService(
-      prisma as PrismaService,
-      registry as StoreProviderRegistry,
-      passThroughEgress,
-    );
-
-  const buildPrisma = (raw: unknown) => ({
-    keywordField: { findMany: jest.fn().mockResolvedValue([]) },
-    app: {
-      findFirst: jest.fn().mockResolvedValue({
-        id: 'app1',
-        store: Store.APP_STORE,
-        country: 'us',
-        storeAppId: 'store1',
-      }),
-    },
-    appSnapshot: {
-      findFirst: jest.fn().mockResolvedValue({ raw, title: 'Habit Tracker' }),
-    },
-    trackedKeyword: {
-      findMany: jest.fn().mockResolvedValue([{ keyword: { text: 'streak' } }]),
-    },
-  });
-
-  it('counts title terms across the developer catalogue', async () => {
-    const developerApps = jest.fn().mockResolvedValue([
-      { storeAppId: '2', title: 'Habit Tracker' },
-      { storeAppId: '3', title: 'Sleep Timer Pro' },
-      { storeAppId: '4', title: 'Sleep Sounds' },
-      { storeAppId: '5', title: 'Streak Counter' },
-    ]);
-    const registry = { get: jest.fn().mockReturnValue({ developerApps }) };
-    const service = buildService(
-      buildPrisma({ artistId: 284882218 }),
-      registry,
-    );
-
-    const suggestions = await service.suggest('app1', 'developer', 30);
-
-    expect(developerApps).toHaveBeenCalledWith('284882218', 'us');
-    const byText = new Map(suggestions.map((s) => [s.text, s.usedByCount]));
-    expect(byText.get('sleep')).toBe(2);
-    expect(byText.has('streak')).toBe(false);
-    expect(byText.has('habit')).toBe(false);
-    expect(byText.has('tracker')).toBe(false);
-    expect(suggestions.every((s) => s.strategy === 'developer')).toBe(true);
-  });
-
-  it('returns nothing when the snapshot carries no developer id', async () => {
-    const developerApps = jest.fn();
-    const registry = { get: jest.fn().mockReturnValue({ developerApps }) };
-    const service = buildService(buildPrisma({ source: 'fixture' }), registry);
-
-    await expect(service.suggest('app1', 'developer', 30)).resolves.toEqual([]);
-    expect(developerApps).not.toHaveBeenCalled();
-  });
-});
-
 describe('KeywordSuggestionService.suggest egress', () => {
-  const buildPrisma = () => ({
+  const buildPrisma = ({ seeded }: { seeded: boolean }) => ({
     keywordField: { findMany: jest.fn().mockResolvedValue([]) },
     app: {
       findFirst: jest.fn().mockResolvedValue({
@@ -131,17 +82,58 @@ describe('KeywordSuggestionService.suggest egress', () => {
       }),
       findMany: jest.fn().mockResolvedValue([]),
     },
-    appSnapshot: { findFirst: jest.fn().mockResolvedValue(null) },
-    trackedKeyword: { findMany: jest.fn().mockResolvedValue([]) },
+    appSnapshot: {
+      findFirst: jest.fn().mockResolvedValue(
+        seeded
+          ? {
+              raw: { artistId: 1 },
+              title: 'Habit Tracker',
+              subtitle: null,
+              summary: null,
+            }
+          : null,
+      ),
+    },
+    trackedKeyword: {
+      findMany: jest.fn().mockResolvedValue(
+        seeded
+          ? [
+              {
+                source: 'MANUAL',
+                keyword: { text: 'habit tracker', country: 'us' },
+              },
+            ]
+          : [],
+      ),
+    },
     review: { findMany: jest.fn().mockResolvedValue([]) },
   });
 
-  const buildService = (through: jest.Mock, registry: unknown) =>
-    new KeywordSuggestionService(
-      buildPrisma() as unknown as PrismaService,
-      registry as StoreProviderRegistry,
-      { through } as unknown as ProxyEgress,
-    );
+  const storeRegistry = () => ({
+    get: jest.fn().mockReturnValue({
+      search: jest.fn().mockResolvedValue([]),
+      suggest: jest.fn().mockResolvedValue([]),
+      similar: jest.fn().mockResolvedValue([]),
+      developerApps: jest.fn().mockResolvedValue([]),
+    }),
+  });
+
+  const leasingThrough = () =>
+    jest
+      .fn()
+      .mockImplementation(
+        (_store: unknown, _country: unknown, work: () => Promise<unknown>) =>
+          work(),
+      );
+
+  const buildService = (
+    through: jest.Mock,
+    registry: unknown,
+    seeded = false,
+  ) =>
+    buildSuggestionService(buildPrisma({ seeded }), registry, {
+      through,
+    } as unknown as ProxyEgress);
 
   it.each(['metadata', 'competitors', 'seasonal', 'reviews'] as const)(
     'answers %s without leasing a proxy endpoint',
@@ -162,20 +154,8 @@ describe('KeywordSuggestionService.suggest egress', () => {
   it.each(['search', 'similar', 'developer'] as const)(
     'leases a proxy endpoint for %s',
     async (strategy) => {
-      const through = jest
-        .fn()
-        .mockImplementation(
-          (_store: unknown, _country: unknown, work: () => Promise<unknown>) =>
-            work(),
-        );
-      const service = buildService(through, {
-        get: jest.fn().mockReturnValue({
-          search: jest.fn().mockResolvedValue([]),
-          suggest: jest.fn().mockResolvedValue([]),
-          similar: jest.fn().mockResolvedValue([]),
-          developerApps: jest.fn().mockResolvedValue([]),
-        }),
-      });
+      const through = leasingThrough();
+      const service = buildService(through, storeRegistry(), true);
 
       await service.suggest('app1', strategy, 30);
 
@@ -184,6 +164,17 @@ describe('KeywordSuggestionService.suggest egress', () => {
         'us',
         expect.any(Function),
       );
+    },
+  );
+  it.each(['search', 'developer'] as const)(
+    'does not lease an endpoint for %s without anything to look up',
+    async (strategy) => {
+      const through = leasingThrough();
+      const service = buildService(through, storeRegistry());
+
+      await expect(service.suggest('app1', strategy, 30)).resolves.toEqual([]);
+
+      expect(through).not.toHaveBeenCalled();
     },
   );
 });
@@ -223,11 +214,7 @@ describe('KeywordSuggestionService.suggest in a spanish market', () => {
   });
 
   const buildService = (prisma: unknown, registry: unknown = undefined) =>
-    new KeywordSuggestionService(
-      prisma as PrismaService,
-      registry as StoreProviderRegistry,
-      passThroughEgress,
-    );
+    buildSuggestionService(prisma, registry, passThroughEgress);
 
   const wordsOf = (suggestions: { text: string }[]): string[] =>
     suggestions.flatMap(({ text }) => text.split(' '));
@@ -259,66 +246,11 @@ describe('KeywordSuggestionService.suggest in a spanish market', () => {
       ),
     ).toEqual([]);
   });
-
-  it('counts the title terms of similar apps without their function words', async () => {
-    const similar = jest.fn().mockResolvedValue([
-      { storeAppId: '2', title: 'Juegos de Trivia' },
-      { storeAppId: '3', title: 'Trivia para Todos' },
-    ]);
-    const service = buildService(buildPrisma(Store.APP_STORE), {
-      get: jest.fn().mockReturnValue({ similar }),
-    });
-
-    const suggestions = await service.suggest('app1', 'similar', 30);
-
-    expect(similar).toHaveBeenCalledWith('store1', 'mx');
-    expect(suggestions.find(({ text }) => text === 'trivia')).toEqual(
-      expect.objectContaining({ usedByCount: 2 }),
-    );
-    expect(wordsOf(suggestions)).not.toContain('de');
-    expect(wordsOf(suggestions)).not.toContain('para');
-  });
-
-  it('reads the market asked for, not the home market, in a similar search', async () => {
-    const similar = jest
-      .fn()
-      .mockResolvedValue([{ storeAppId: '2', title: 'Die Hard Quiz' }]);
-    const service = buildService(buildPrisma(Store.APP_STORE), {
-      get: jest.fn().mockReturnValue({ similar }),
-    });
-
-    const suggestions = await service.suggest('app1', 'similar', 30, 'de');
-
-    expect(suggestions.map(({ text }) => text).sort()).toEqual([
-      'hard',
-      'hard quiz',
-      'quiz',
-    ]);
-  });
-
-  it('excludes the home title in its own language and reads developer titles in the market asked for', async () => {
-    const developerApps = jest.fn().mockResolvedValue([
-      { storeAppId: '2', title: 'Die Hard Quiz' },
-      { storeAppId: '3', title: 'Juegos Trivia' },
-    ]);
-    const service = buildService(buildPrisma(Store.APP_STORE), {
-      get: jest.fn().mockReturnValue({ developerApps }),
-    });
-
-    const suggestions = await service.suggest('app1', 'developer', 30, 'de');
-
-    expect(developerApps).toHaveBeenCalledWith('1', 'de');
-    expect(suggestions.map(({ text }) => text).sort()).toEqual([
-      'hard',
-      'hard quiz',
-      'quiz',
-    ]);
-  });
 });
 
 describe('KeywordSuggestionService.suggest seasonal', () => {
   const buildService = (country: string, store: Store) =>
-    new KeywordSuggestionService(
+    buildSuggestionService(
       {
         keywordField: { findMany: jest.fn().mockResolvedValue([]) },
         app: {
@@ -330,8 +262,8 @@ describe('KeywordSuggestionService.suggest seasonal', () => {
           }),
         },
         trackedKeyword: { findMany: jest.fn().mockResolvedValue([]) },
-      } as unknown as PrismaService,
-      undefined as unknown as StoreProviderRegistry,
+      },
+      undefined,
       passThroughEgress,
     );
 
@@ -406,11 +338,9 @@ describe('KeywordSuggestionService.suggest allowance', () => {
         return work();
       },
     );
-    const service = new KeywordSuggestionService(
-      buildPrisma() as unknown as PrismaService,
-      {
-        get: () => ({ similar: jest.fn().mockResolvedValue([]) }),
-      } as unknown as StoreProviderRegistry,
+    const service = buildSuggestionService(
+      buildPrisma(),
+      { get: () => ({ similar: jest.fn().mockResolvedValue([]) }) },
       { through } as unknown as ProxyEgress,
     );
     return { service, through };
@@ -427,6 +357,34 @@ describe('KeywordSuggestionService.suggest allowance', () => {
     await service.suggest('app1', 'similar', 30, undefined, spend);
 
     expect(order).toEqual(['spend', 'store']);
+  });
+
+  it.each(['search', 'developer'] as const)(
+    'does not call spend or lease an endpoint when %s has nothing to look up',
+    async (strategy) => {
+      const { service, through } = buildService([]);
+      const spend = jest.fn().mockResolvedValue(undefined);
+
+      await expect(
+        service.suggest('app1', strategy, 30, undefined, spend),
+      ).resolves.toEqual([]);
+
+      expect(spend).not.toHaveBeenCalled();
+      expect(through).not.toHaveBeenCalled();
+    },
+  );
+
+  it('refuses a spent allowance only when there is something to look up', async () => {
+    const { service } = buildService([]);
+    const spend = jest.fn().mockRejectedValue(new Error('spent'));
+
+    await expect(
+      service.suggest('app1', 'search', 30, undefined, spend),
+    ).resolves.toEqual([]);
+    expect(spend).not.toHaveBeenCalled();
+    await expect(
+      service.suggest('app1', 'similar', 30, undefined, spend),
+    ).rejects.toThrow('spent');
   });
 
   it('never calls spend for a database strategy', async () => {

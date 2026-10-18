@@ -25,6 +25,20 @@ export const KEYWORD_SUGGESTION_STRATEGIES = [
 export type KeywordSuggestionStrategy =
   (typeof KEYWORD_SUGGESTION_STRATEGIES)[number];
 
+export const STORE_SUGGESTION_STRATEGIES = [
+  'search',
+  'similar',
+  'developer',
+] as const satisfies readonly KeywordSuggestionStrategy[];
+export type StoreSuggestionStrategy =
+  (typeof STORE_SUGGESTION_STRATEGIES)[number];
+
+export function isStoreSuggestionStrategy(
+  value: string,
+): value is StoreSuggestionStrategy {
+  return (STORE_SUGGESTION_STRATEGIES as readonly string[]).includes(value);
+}
+
 export const KEYWORD_BUCKETS = [
   'primary',
   'secondary',

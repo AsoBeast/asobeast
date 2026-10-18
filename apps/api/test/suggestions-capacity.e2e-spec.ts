@@ -67,6 +67,21 @@ describe('Keyword suggestions capacity (e2e)', () => {
 
   afterAll(() => stopCapacityHarness(harness));
 
+  const trackKeyword = async (text: string): Promise<void> => {
+    const keyword = await harness.prisma.keyword.create({
+      data: { text, store: Store.APP_STORE, country: 'us' },
+    });
+    await harness.prisma.trackedKeyword.create({
+      data: { appId, keywordId: keyword.id, source: 'MANUAL', active: true },
+    });
+  };
+
+  const giveDeveloperId = () =>
+    harness.prisma.appSnapshot.updateMany({
+      where: { appId },
+      data: { raw: { artistId: 284882218 } },
+    });
+
   it('spends nothing for the metadata strategy', async () => {
     expect(await spendsDuring('metadata')).toBe(0);
   });
@@ -78,9 +93,30 @@ describe('Keyword suggestions capacity (e2e)', () => {
   });
 
   it('spends one lookup for each strategy that reaches the store', async () => {
+    await trackKeyword('focus timer');
+    await giveDeveloperId();
+
     for (const strategy of ['similar', 'search', 'developer'] as const) {
       expect(await spendsDuring(strategy)).toBe(1);
     }
+  });
+
+  it('spends nothing for the search strategy of an app that tracks no keyword', async () => {
+    const [response, calls] = await allowanceSpendsDuring(harness, () =>
+      suggest('search').expect(200),
+    );
+
+    expect(response.body).toEqual([]);
+    expect(calls).toBe(0);
+  });
+
+  it('spends nothing for the developer strategy without a developer id', async () => {
+    const [response, calls] = await allowanceSpendsDuring(harness, () =>
+      suggest('developer').expect(200),
+    );
+
+    expect(response.body).toEqual([]);
+    expect(calls).toBe(0);
   });
 
   it('spends nothing for an unknown app', async () => {
