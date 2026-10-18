@@ -56,7 +56,7 @@ Knowing that Apple left a term out of its list is evidence in itself, so the unl
 
 Apple does not suggest many short, common searches as themselves, so a phrase it never suggests can still be searched often, and the model weighs suggest reach together with the search results rather than on its own. Continuations read the suggestions differently: Apple still offers popular searches that begin with such a word, like "map my run" for "map", while a phrase few people search is continued by few, and a misspelling by none, because Apple offers the corrected spelling instead. When the suggestion lookup fails, the model reads 5 continuations, a typical count, and treats the phrase as suggested only once typed in full, so a failed lookup neither raises nor sinks a phrase.
 
-A title contains a word when it has it as a whole word, singular or plural. "map" is found in "Google Maps" but not in "Roadmap", and "geo" is not found in "Geography". Chinese, Japanese, Thai, Lao, Khmer and Burmese are written without spaces, and Korean attaches particles to the end of a word, so in these scripts a word counts wherever it appears in the title. A search with fewer than five results stays at or below 10 on the shown scale, and a search with no results scores 0.
+A title contains a word when it has it as a whole word, singular or plural. "map" is found in "Google Maps" but not in "Roadmap", and "geo" is not found in "Geography". Chinese, Japanese, Thai, Lao, Khmer and Burmese are written without spaces, and Korean attaches particles to the end of a word, so in these scripts a word counts wherever it appears in the title. In Cyrillic, where both words of a comparison change their endings by case, two words count as the same word when they share their first seven characters: "тревожности" in a title finds the word "тревожностью", while "тревога" and "тревожность" stay different words. Other scripts whose words inflect the same way join this rule as they are added. A search with fewer than five results stays at or below 10 on the shown scale, and a search with no results scores 0.
 
 ### Google Play
 
@@ -69,7 +69,7 @@ Google Play popularity starts from suggest reach: how early the store offers the
 | Suggests it only once the whole phrase is typed, however short the phrase is | 1 |
 | Never suggests it | 0.9 |
 
-The values are the typical published popularity, divided by 10, of the phrases in each row, measured on 502 US keywords across games, trivia, board game, meme and geography searches. Where the phrase sits in the suggestion list does not change its reach, because on that sample the typical popularity was the same at every position. A phrase of two or more words counts only when the store suggests it exactly as written: "geography games" or "geography game offline" does not count for "geography game", because a phrase people search is suggested as itself. A single word is different, because Google Play offers longer searches that begin with a word rather than the word alone, so for one word a suggestion counts when it is the word in the plural or continues it with more words. A search that only shares its first letters does not count.
+The values are the typical published popularity, divided by 10, of the phrases in each row, measured on 502 US keywords across games, trivia, board game, meme and geography searches. Where the phrase sits in the suggestion list does not change its reach, because on that sample the typical popularity was the same at every position. A phrase of two or more words counts only when the store suggests it exactly as written: "geography games" or "geography game offline" does not count for "geography game", because a phrase people search is suggested as itself. In a script whose words inflect, Cyrillic today, each word of the phrase may appear in any of its case forms instead. A single word is different, because Google Play offers longer searches that begin with a word rather than the word alone, so for one word a suggestion counts when it is the word in the plural, in any of its case forms in such a script, or continues it with more words. A search that only shares its first letters does not count.
 
 Three more inputs place a phrase within its row:
 
@@ -96,7 +96,7 @@ Difficulty measures how hard it is to reach the first ten results for the phrase
 | Input | What it reads |
 | --- | --- |
 | Strength | Each app's rating count on a log scale: 1,000 ratings or fewer rate 0, about 31,600 rate 0.5 and a million or more rate 1. The page's strength is the mean over the apps whose rating count is known |
-| Targeting | The share of the ten titles that carry the phrase as written, starting at the beginning of a word. "Geometry Dash" targets `geo`, while "BADLAND" does not target `bad land` and "Quiz Geo" does not target `geo quiz`. A Chinese, Japanese, Korean, Thai, Lao, Khmer or Burmese phrase matches anywhere in the title |
+| Targeting | The share of the ten titles that carry the phrase as written, starting at the beginning of a word. "Geometry Dash" targets `geo`, while "BADLAND" does not target `bad land` and "Quiz Geo" does not target `geo quiz`. A Chinese, Japanese, Korean, Thai, Lao, Khmer or Burmese phrase matches anywhere in the title, and in Cyrillic each word of the phrase may appear in any of its case forms |
 | Phrase length | The number of characters in the phrase |
 
 Each store weighs them differently:
@@ -138,7 +138,7 @@ Every persisted score is stored with the provenance needed to audit or recompute
 | Field | Example | Why it is stored |
 | --- | --- | --- |
 | Scoring source | `APPLE_SEARCH_SIGNALS`, `GOOGLE_PLAY_SUGGEST_REACH`, `APPLE_ADS_POPULARITY` | Which evidence produced the number. Rows scored before this formula keep `APPLE_SUGGEST_SEARCH`, `APPLE_SUGGEST_REACH` or `GOOGLE_PLAY_PREFIX_SEARCH` |
-| Formula version | `app-store-v4`, `google-play-v4` | Which calculation produced it, so old rows stay interpretable |
+| Formula version | `app-store-v5`, `google-play-v5` | Which calculation produced it, so old rows stay interpretable |
 | Captured at | A timestamp | When the evidence was collected |
 | Confidence | `HIGH`, `MEDIUM`, `LOW` | How complete the evidence was for that run |
 
