@@ -1,6 +1,6 @@
 import { QueryClient, type QueryKey } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
-import { QUERY_BOUNDS } from "@asobeast/shared";
+import { QUERY_BOUNDS, STORE_SUGGESTION_STRATEGIES } from "@asobeast/shared";
 import type {
   AppAuditResult,
   ChartPage,
@@ -50,6 +50,7 @@ import {
   invalidateAiUsage,
   invalidateAppListing,
   invalidateRunResults,
+  removeAppQueries,
   invalidateAuth,
   invalidatePasswordChange,
   invalidateCompetitorMutation,
@@ -143,16 +144,6 @@ const APP_SCOPED_OPTIONS = [
     appKeys.marketKeywordFields(APP, "de"),
   ],
   [
-    "suggestions",
-    suggestionsOptions(APP, "metadata", "us"),
-    appKeys.suggestions(APP, "metadata", "us"),
-  ],
-  [
-    "picker suggestions",
-    pickerSuggestionsOptions(APP, "search", "us"),
-    appKeys.suggestions(APP, "search", "us"),
-  ],
-  [
     "spider",
     spiderOptions(APP, "fitness", "de"),
     appKeys.spider(APP, "fitness", "de"),
@@ -239,9 +230,39 @@ const APP_SCOPED_OPTIONS = [
   ],
 ] as const;
 
+const SUGGESTION_OPTIONS = [
+  [
+    "search suggestions",
+    suggestionsOptions(APP, "search", "us"),
+    appKeys.suggestions(APP, "search", "us"),
+  ],
+  [
+    "metadata suggestions",
+    suggestionsOptions(APP, "metadata", "us"),
+    appKeys.suggestions(APP, "metadata", "us"),
+  ],
+  [
+    "picker suggestions",
+    pickerSuggestionsOptions(APP, "search", "us"),
+    appKeys.suggestions(APP, "search", "us"),
+  ],
+] as const;
+
+const LOCAL_SUGGESTION_STRATEGIES = [
+  "metadata",
+  "competitors",
+  "seasonal",
+  "reviews",
+] as const;
+
 const ROOT_TO_LEAF = [
   ["all", appKeys.all, appKeys.detail(APP)],
   ["detail", appKeys.detail(APP), appKeys.summary(APP)],
+  [
+    "suggestionsRoot",
+    appKeys.suggestionsRoot(APP),
+    appKeys.suggestions(APP, "search", "us"),
+  ],
   ["summary", appKeys.summary(APP), appKeys.summary(APP, "de")],
   [
     "visibility",
@@ -482,6 +503,29 @@ describe("appKeys", () => {
     expect(client.getQueryState(options.queryKey)?.isInvalidated).toBe(true);
   });
 
+  it.each(SUGGESTION_OPTIONS)(
+    "keys the %s query from the hierarchy",
+    (_name, options, key) => {
+      expect(options.queryKey).toEqual(key);
+    },
+  );
+
+  it.each(SUGGESTION_OPTIONS)(
+    "never collides the %s query across apps",
+    (_name, options, key) => {
+      expect(isPrefixOf(appKeys.suggestionsRoot(OTHER_APP), key)).toBe(false);
+      expect(options.queryKey).not.toEqual(
+        JSON.parse(JSON.stringify(key).replaceAll(APP, OTHER_APP)),
+      );
+    },
+  );
+
+  it.each(SUGGESTION_OPTIONS)("serializes the %s key", (_name, options) => {
+    expect(JSON.parse(JSON.stringify(options.queryKey))).toEqual(
+      options.queryKey,
+    );
+  });
+
   it("keys a serp by its keyword rather than by an app", () => {
     expect(serpOptions("kw-1").queryKey).toEqual(appKeys.serp("kw-1"));
     expect(isPrefixOf(appKeys.all, appKeys.serp("kw-1"))).toBe(false);
@@ -622,7 +666,11 @@ describe("invalidation sets", () => {
   it("invalidates every query of the app once its listing settles", () => {
     expect(
       invalidatedKeys((client) => invalidateAppListing(client, APP)),
-    ).toEqual([appKeys.detail(APP), portfolioKey]);
+    ).toEqual([
+      appKeys.detail(APP),
+      portfolioKey,
+      appKeys.suggestionsRoot(APP),
+    ]);
   });
 
   it("invalidates only the keyword list when keywords are refetched", () => {
@@ -761,6 +809,7 @@ describe("invalidation sets", () => {
       appKeys.serpMoversRoot(APP),
       portfolioKey,
       appKeys.firstRun(APP),
+      appKeys.suggestionsRoot(APP),
     ]);
   });
 
@@ -947,5 +996,101 @@ describe("auditOptions polling", () => {
     }) => number | false;
 
     expect(refetchInterval({ state: { data: withRun(state) } })).toBe(interval);
+  });
+});
+
+describe("keyword suggestion keys", () => {
+  it("keys keyword suggestions outside the app so app invalidations never refetch a store lookup", async () => {
+    const client = new QueryClient();
+    const keys = STORE_SUGGESTION_STRATEGIES.map(
+      (strategy) => suggestionsOptions(APP, strategy, "us").queryKey,
+    );
+    for (const key of keys) client.setQueryData(key, []);
+
+    for (const key of keys) {
+      expect(isPrefixOf(appKeys.detail(APP), key)).toBe(false);
+      expect(isPrefixOf(appKeys.suggestionsRoot(APP), key)).toBe(true);
+    }
+
+    await client.invalidateQueries({ queryKey: appKeys.detail(APP) });
+    invalidateCompetitorMutation(client, APP);
+    invalidateAppListing(client, APP);
+    invalidateRunResults(client, APP);
+
+    for (const key of keys) {
+      expect(client.getQueryState(key)?.isInvalidated).toBe(false);
+    }
+  });
+
+  it("keeps a store lookup for a day and never retries it", () => {
+    for (const strategy of STORE_SUGGESTION_STRATEGIES) {
+      const options = suggestionsOptions(APP, strategy, "us");
+      expect(options.staleTime).toBe(24 * 60 * 60 * 1000);
+      expect(options.retry).toBe(false);
+    }
+  });
+
+  it("leaves the local sources on the default freshness", () => {
+    for (const strategy of LOCAL_SUGGESTION_STRATEGIES) {
+      const options = suggestionsOptions(APP, strategy, "us");
+      expect(options.staleTime).toBeUndefined();
+      expect(options.retry).toBeUndefined();
+    }
+  });
+
+  it.each([
+    ["the listing settles", invalidateAppListing],
+    ["a competitor changes", invalidateCompetitorMutation],
+    ["a run stage lands", invalidateRunResults],
+  ] as const)(
+    "refreshes the local sources with the rest of the app when %s",
+    (_when, invalidate) => {
+      const client = new QueryClient();
+      const keys = LOCAL_SUGGESTION_STRATEGIES.map(
+        (strategy) => suggestionsOptions(APP, strategy, "us").queryKey,
+      );
+      for (const key of keys) client.setQueryData(key, []);
+
+      invalidate(client, APP);
+
+      for (const key of keys) {
+        expect(client.getQueryState(key)?.isInvalidated).toBe(true);
+      }
+    },
+  );
+
+  it("keeps the setup picker at a day for the listing source", () => {
+    expect(pickerSuggestionsOptions(APP, "metadata", "us").staleTime).toBe(
+      24 * 60 * 60 * 1000,
+    );
+    expect(pickerSuggestionsOptions(APP, "search", "us").queryKey).toEqual(
+      suggestionsOptions(APP, "search", "us").queryKey,
+    );
+  });
+
+  it("keys a lookup by its storefront and app", () => {
+    expect(appKeys.suggestions(APP, "search", "de")).not.toEqual(
+      appKeys.suggestions(APP, "search", "us"),
+    );
+    expect(appKeys.suggestions(APP, "search", "us")).not.toEqual(
+      appKeys.suggestions(OTHER_APP, "search", "us"),
+    );
+  });
+
+  it("drops every suggestion of a deleted app", () => {
+    const client = new QueryClient();
+    client.setQueryData(appKeys.summary(APP), {});
+    client.setQueryData(appKeys.suggestions(APP, "search", "us"), []);
+    client.setQueryData(appKeys.suggestions(OTHER_APP, "search", "us"), []);
+
+    removeAppQueries(client, APP);
+
+    expect(client.getQueryState(appKeys.summary(APP))).toBeUndefined();
+    expect(
+      client.getQueryState(appKeys.suggestions(APP, "search", "us")),
+    ).toBeUndefined();
+    expect(
+      client.getQueryState(appKeys.suggestions(OTHER_APP, "search", "us")),
+    ).toBeDefined();
   });
 });

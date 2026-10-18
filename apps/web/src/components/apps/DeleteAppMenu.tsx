@@ -22,7 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { deleteApp } from "@/lib/api";
-import { appKeys, portfolioKey } from "@/lib/queries";
+import { appKeys, portfolioKey, removeAppQueries } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
 
 export function DeleteAppMenu({ id, name }: { id: string; name: string }) {
@@ -34,7 +34,7 @@ export function DeleteAppMenu({ id, name }: { id: string; name: string }) {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: appKeys.all });
       void queryClient.invalidateQueries({ queryKey: portfolioKey });
-      queryClient.removeQueries({ queryKey: appKeys.detail(id) });
+      removeAppQueries(queryClient, id);
       setConfirmOpen(false);
       toast.success(`Deleted ${name}`);
     },
