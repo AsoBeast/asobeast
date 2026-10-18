@@ -84,6 +84,14 @@ Every fix must include a test that fails before the correction and passes afterw
 - Untested code is not blocked from merging as long as the percentage holds. The floor prevents erosion; it does not mandate coverage of every line.
 - Five paths in `apps/api` carry their own thresholds because a silent bug in them is expensive: the scoring formulas, the action rules, the alert flush, the entitlement check and data retention. Jest excludes a file with its own threshold from the global group, so the global floor covers everything else and is not subsidized by those modules.
 
+## Review and QA before merge
+
+A pull request is ready for review only after three passes, run in this order once the implementation and its tests are finished. They are written for Claude Code, which is how most of this repository is built. A contributor using other tools runs the equivalent and says so under **How it was verified**.
+
+1. **Agent code review.** After everything is done, run the code review skills from the `agent-skills` plugin (`agent-skills:review` and `agent-skills:code-review-and-quality`) over the branch. Make sure everything is correct, every edge case is handled, there are no errors or bugs, and the code quality is very good. Fix what it finds before moving on.
+2. **OpenCodeReview against `main`.** After all changes are in, run `/open-code-review:review` and ask it to review this pull request against `main`. Run it again after any fix it leads to, so the last review covers the final diff.
+3. **Manual QA by a subagent.** Have a subagent on Sonnet 5.5 test the functionality the plan or issue describes, and every edge case of it, on a running stack. Driving the browser with `agent-browser` costs far fewer tokens than screenshots and is preferred. Record what was tested and the outcome in the pull request description.
+
 ## Documentation
 
 The public documentation site lives in `/docs` and is built with Mintlify. It is not a pnpm workspace member and has no build step in this repository.
@@ -132,6 +140,13 @@ Use one branch and one pull request per change, with each commit a single logica
 Release Please owns package versions and `CHANGELOG.md`. Never bump a version or edit the changelog by hand. If the release pipeline ever wedges, `docs/operations/release-recovery.mdx` records how to recover it.
 
 A release ships when the generated release pull request is merged. Mark a breaking change with `feat!` in the pull request title or a `BREAKING CHANGE:` footer at the end of the description so Release Please includes it in the generated changelog and computes the correct version; reserve it for the three surfaces the compatibility promise covers. Only the pull request title and that footer reach the changelog, so anything an operator must read before upgrading belongs in one of those. A pull request that ships more than one notable change lists each extra `feat:` or `fix:` line as its own paragraph at the end of the description, and Release Please records each of them. Refactors, documentation, build, test and chore changes stay out of the changelog. To correct a line after the merge, add a `BEGIN_COMMIT_OVERRIDE` block to the merged pull request description as the Release Please README describes.
+
+### Before a release
+
+Two passes run before the release pull request is merged:
+
+1. **Full code review.** Run the same review a pull request gets, the `agent-skills` review and `/open-code-review:review`, over everything merged since the last tag.
+2. **Regression testing with manual QA.** Use the product as a real user across every area, on a disposable stack, with the `dogfood` and `playwright-cli` skills. File each verified failure as an issue and fix it before the release ships.
 
 Dependabot monitors the application Dockerfiles. It does not monitor the PostgreSQL and Redis base images in the Compose files, nor the `overrides` block in `pnpm-workspace.yaml`, so review those manually before each release. Patch and minor updates from Dependabot merge on their own once the required checks pass, through `.github/workflows/dependabot-auto-merge.yml`. Major updates arrive in their own pull request and wait for a person.
 
