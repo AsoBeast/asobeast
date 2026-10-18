@@ -4,6 +4,7 @@ import {
   type ServerResponse,
 } from "node:http";
 import { setTimeout as delay } from "node:timers/promises";
+import { BREAKDOWNS } from "./keyword-breakdowns.mts";
 import { planMockImport } from "./keyword-import.mts";
 import { summarizeActions } from "./actions-summary.mts";
 import {
@@ -3358,6 +3359,25 @@ const routes: Route[] = [
         "strategy",
       ) ?? "metadata") as KeywordSuggestionStrategy;
       json(res, 200, SUGGESTIONS[id]?.[strategy] ?? []);
+    },
+  },
+  {
+    method: "GET",
+    pattern: /^\/apps\/([^/]+)\/keywords\/([^/]+)\/breakdown$/,
+    handler: ([id, keywordId], req, res) => {
+      const path = req.url ?? "/";
+      if (hasCookie(req, "e2e-fail-breakdown", "1")) {
+        return json(res, 500, errorEnvelope(500, path));
+      }
+      const breakdown = BREAKDOWNS[id]?.[keywordId];
+      if (!breakdown) {
+        return json(
+          res,
+          404,
+          errorEnvelope(404, path, `Keyword ${keywordId} is not tracked`),
+        );
+      }
+      json(res, 200, breakdown);
     },
   },
   appRoute(/^\/apps\/([^/]+)\/keywords\/compare$/, (dataset, query, req) => {
