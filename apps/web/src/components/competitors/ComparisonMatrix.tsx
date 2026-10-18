@@ -9,6 +9,7 @@ import { comparisonOptions, competitorsOptions } from "@/lib/queries";
 import { onlyGapsParser } from "@/lib/search-params";
 import { ComparisonTable } from "./ComparisonTable";
 import { COMPETITOR_SECTION } from "./competitor-sections";
+import { KeywordBreakdownSheet } from "./KeywordBreakdownSheet";
 
 export function ComparisonMatrix({ id }: { id: string }) {
   const [onlyGaps, setOnlyGaps] = useQueryState("onlyGaps", onlyGapsParser);
@@ -52,6 +53,7 @@ export function ComparisonMatrix({ id }: { id: string }) {
           onlyGaps={onlyGaps}
         />
       )}
+      <KeywordBreakdownSheet appId={id} />
     </CollapsibleCard>
   );
 }

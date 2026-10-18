@@ -33,6 +33,17 @@ test("a collapsed competitors page hydrates without an uncaught error in this en
   );
 });
 
+test("an open keyword breakdown hydrates without an uncaught error in this engine", async ({
+  page,
+}) => {
+  const errors = await settled(page, "/apps/app-1/competitors?keyword=kw-2");
+
+  await expect(
+    page.getByRole("dialog", { name: "Why apps rank for this keyword" }),
+  ).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
 test("the settings budget sentence words the date and time the same on both sides", async ({
   page,
 }) => {
