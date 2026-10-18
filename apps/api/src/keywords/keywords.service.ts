@@ -21,10 +21,7 @@ import {
 } from './keyword-gaps';
 import { sortTracked } from './keyword-sort';
 import { serpVolatilities } from './keyword-volatility';
-import {
-  retainedPositionFacts,
-  type RetainedPositionFacts,
-} from './keyword-position-facts';
+import { retainedPositionFacts } from './keyword-position-facts';
 import { toTrackedKeywordItem } from './keywords.mapper';
 import { listingFacts } from './listing-facts';
 import { seedCandidates } from './listing-seed';
@@ -53,7 +50,6 @@ export class KeywordsService {
       where: { appId, ...(country ? { keyword: { is: { country } } } : {}) },
       ...trackedArgs(appId),
     });
-    const NO_FACTS: Map<string, RetainedPositionFacts> = new Map();
     const [facts, volatility, hold] = await Promise.all([
       listingFacts(this.prisma, app, [
         ...new Set(rows.map((row) => row.keyword.country)),
@@ -68,7 +64,7 @@ export class KeywordsService {
             appId,
             rows.map((row) => row.keywordId),
           )
-        : Promise.resolve(NO_FACTS),
+        : Promise.resolve(null),
     ]);
     return sortTracked(
       classifyBuckets(
@@ -77,7 +73,7 @@ export class KeywordsService {
             row,
             facts,
             volatility.get(row.keywordId) ?? null,
-            hold.get(row.keywordId) ?? null,
+            hold ? (hold.get(row.keywordId) ?? null) : undefined,
           ),
         ),
       ),

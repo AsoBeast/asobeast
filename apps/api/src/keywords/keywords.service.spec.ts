@@ -598,8 +598,9 @@ describe('KeywordsService.listTracked serp volatility', () => {
     const plain = await service.listTracked('app1');
     expect(prisma.$queryRaw).not.toHaveBeenCalled();
     const plainRow = plain.find((item) => item.keywordId === 'kwStable');
-    expect(plainRow?.bestPosition).toBeNull();
-    expect(plainRow?.daysInTier).toBeNull();
+    expect(plainRow).not.toHaveProperty('bestPosition');
+    expect(plainRow).not.toHaveProperty('daysInTier');
+    expect(plainRow).not.toHaveProperty('heldTier');
 
     const withFacts = await service.listTracked('app1', undefined, undefined, {
       holdFacts: true,

@@ -179,7 +179,7 @@ type PositionFacts = Pick<
 
 function positionFacts(
   rankings: TrackedKeywordRow['keyword']['rankings'],
-  hold: RetainedPositionFacts | null,
+  hold: RetainedPositionFacts | null | undefined,
   active: boolean,
 ): PositionFacts {
   const latest = rankings[0] ?? null;
@@ -194,7 +194,9 @@ function positionFacts(
         ? latestPosition - previousPosition
         : null,
     positionDelta7d: positionDelta7d(rankings),
-    ...heldFacts(hold, latestPosition, active, new Date()),
+    ...(hold === undefined
+      ? {}
+      : heldFacts(hold, latestPosition, active, new Date())),
   };
 }
 
@@ -210,7 +212,7 @@ export function toTrackedKeywordItem(
   row: TrackedKeywordRow,
   app: AppFacts = NO_APP_FACTS,
   serpVolatility7d: number | null = null,
-  hold: RetainedPositionFacts | null = null,
+  hold?: RetainedPositionFacts | null,
 ): TrackedKeywordItem {
   const metric = row.keyword.metrics[0] ?? null;
   const positions = positionFacts(row.keyword.rankings, hold, row.active);

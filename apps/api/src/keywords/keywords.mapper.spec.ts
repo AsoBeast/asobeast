@@ -404,9 +404,22 @@ describe('toTrackedKeywordItem', () => {
     expect(item.positionDeltaFromBest).toBe(0);
   });
 
-  it('yields null hold facts without a best position or a ranked day', () => {
+  it('leaves the hold facts out when the list did not ask for them', () => {
+    const item = toTrackedKeywordItem(
+      withRankings([{ position: 1, date: '2026-07-04' }]),
+    );
+    expect(item).not.toHaveProperty('bestPosition');
+    expect(item).not.toHaveProperty('positionDeltaFromBest');
+    expect(item).not.toHaveProperty('daysInTier');
+    expect(item).not.toHaveProperty('heldTier');
+  });
+
+  it('yields null hold facts when the facts were computed but none recorded', () => {
     const item = toTrackedKeywordItem(
       withRankings([{ position: null, date: '2026-07-04' }]),
+      undefined,
+      null,
+      null,
     );
     expect(item.bestPosition).toBeNull();
     expect(item.positionDeltaFromBest).toBeNull();

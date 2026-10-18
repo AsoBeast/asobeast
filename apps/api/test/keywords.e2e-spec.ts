@@ -2265,6 +2265,82 @@ describe('KeywordsController (e2e)', () => {
     });
   });
 
+  it('computes the hold facts on the list and leaves them out elsewhere', async () => {
+    const id = await importApp();
+    const { workspaceId } = await prisma.app.findUniqueOrThrow({
+      where: { id },
+      select: { workspaceId: true },
+    });
+    const { keywordId } = await prisma.trackedKeyword.findFirstOrThrow({
+      where: { appId: id, active: true, keyword: { is: { text: 'habit' } } },
+      select: { keywordId: true },
+    });
+    const day = (offset: number) => {
+      const date = new Date();
+      date.setUTCHours(0, 0, 0, 0);
+      date.setUTCDate(date.getUTCDate() - offset);
+      return date;
+    };
+    await prisma.keywordRanking.createMany({
+      data: [
+        {
+          appId: id,
+          workspaceId,
+          keywordId,
+          date: day(1),
+          position: 1,
+          depth: 200,
+        },
+        {
+          appId: id,
+          workspaceId,
+          keywordId,
+          date: day(0),
+          position: 1,
+          depth: 200,
+        },
+      ],
+    });
+
+    const patched = await api
+      .patch(`/apps/${id}/keywords/${keywordId}`)
+      .send({ relevance: 70 })
+      .expect(200);
+    expect(patched.body as TrackedKeywordItem).not.toHaveProperty(
+      'bestPosition',
+    );
+    expect(patched.body).not.toHaveProperty('positionDeltaFromBest');
+    expect(patched.body).not.toHaveProperty('daysInTier');
+    expect(patched.body).not.toHaveProperty('heldTier');
+
+    const added = await api
+      .post(`/apps/${id}/keywords`)
+      .send({ keywords: ['another habit'] })
+      .expect(201);
+    const addedRow = (added.body as TrackedKeywordItem[]).find(
+      (item) => item.keywordId === keywordId,
+    );
+    expect(addedRow).not.toHaveProperty('bestPosition');
+
+    const field = await api
+      .put(`/apps/${id}/keyword-field`)
+      .send({ text: 'habit' })
+      .expect(200);
+    const fieldRow = (field.body as KeywordFieldResult).tracked.find(
+      (item) => item.keywordId === keywordId,
+    );
+    expect(fieldRow).toBeTruthy();
+    expect(fieldRow).not.toHaveProperty('bestPosition');
+
+    const items = (await api.get(`/apps/${id}/keywords`).expect(200))
+      .body as TrackedKeywordItem[];
+    expect(items.find((entry) => entry.keywordId === keywordId)).toMatchObject({
+      bestPosition: 1,
+      positionDeltaFromBest: 0,
+      daysInTier: 2,
+      heldTier: 1,
+    });
+  });
   describe('tags and notes', () => {
     const tracked = async (): Promise<{ id: string; keywordId: string }> => {
       const id = await importApp();
