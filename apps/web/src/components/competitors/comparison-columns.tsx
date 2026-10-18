@@ -168,6 +168,21 @@ function MarketCell({ country }: { country: string }) {
   );
 }
 
+function CompetitorHeading({ competitor }: { competitor: MatrixCompetitor }) {
+  return (
+    <span className="flex flex-col items-center gap-1 md:w-24">
+      <span aria-hidden>
+        <AppIcon src={competitor.iconUrl} name={competitor.name} size={20} />
+      </span>
+      <span className="sr-only md:not-sr-only">
+        <span className="line-clamp-2 text-center break-words whitespace-normal">
+          {competitor.name ?? UNNAMED_COMPETITOR}
+        </span>
+      </span>
+    </span>
+  );
+}
+
 export function comparisonColumns(
   competitors: readonly MatrixCompetitor[],
   onOpenBreakdown: (keywordId: string) => void,
@@ -246,20 +261,7 @@ export function comparisonColumns(
             <SortableHeader
               column={column}
               title={competitor.name ?? UNNAMED_COMPETITOR}
-              label={
-                <span className="inline-flex items-center gap-1.5">
-                  <span aria-hidden>
-                    <AppIcon
-                      src={competitor.iconUrl}
-                      name={competitor.name}
-                      size={20}
-                    />
-                  </span>
-                  <span className="sr-only max-w-32 truncate md:not-sr-only">
-                    {competitor.name ?? UNNAMED_COMPETITOR}
-                  </span>
-                </span>
-              }
+              label={<CompetitorHeading competitor={competitor} />}
             />
           ),
           cell: ({ row }) => {
