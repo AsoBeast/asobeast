@@ -430,6 +430,7 @@ describe('KeywordsService.compare', () => {
           keywordId: 'kwGap',
           keyword: {
             text: 'habit tracker',
+            country: 'us',
             metrics: [{ traffic: 5, difficulty: 3 }],
           },
         },
@@ -437,6 +438,7 @@ describe('KeywordsService.compare', () => {
           keywordId: 'kwLead',
           keyword: {
             text: 'daily planner',
+            country: 'de',
             metrics: [{ traffic: 8, difficulty: 4 }],
           },
         },
@@ -474,6 +476,31 @@ describe('KeywordsService.compare', () => {
 
     expect(result.rows).toHaveLength(1);
     expect(result.rows[0].keywordId).toBe('kwGap');
+  });
+
+  it('names the market of each row', async () => {
+    const service = buildService(buildPrisma());
+
+    const result = await service.compare('app1', false);
+
+    expect(result.rows.find((row) => row.keywordId === 'kwGap')?.country).toBe(
+      'us',
+    );
+    expect(result.rows.find((row) => row.keywordId === 'kwLead')?.country).toBe(
+      'de',
+    );
+  });
+
+  it("asks for the keyword's country", async () => {
+    const prisma = buildPrisma();
+    const service = buildService(prisma);
+
+    await service.compare('app1', false);
+
+    const [query] = prisma.trackedKeyword.findMany.mock.calls[0] as [
+      { select: { keyword: { select: { country?: boolean } } } },
+    ];
+    expect(query.select.keyword.select.country).toBe(true);
   });
 });
 

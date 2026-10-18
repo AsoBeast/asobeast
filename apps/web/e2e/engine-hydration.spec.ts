@@ -1,6 +1,6 @@
 import { expectHydratesCleanly, settled } from "./page-errors.mts";
 import { expect, test } from "./session.mts";
-import { SIGNED_IN_ROUTES } from "./routes.mts";
+import { SIGNED_IN_ROUTES, seedCookies } from "./routes.mts";
 
 const AFFECTED_ROUTES = [
   ["settings", "/settings"],
@@ -18,6 +18,20 @@ for (const [name, path] of SIGNED_IN_ROUTES) {
     await expectHydratesCleanly(page, name, path);
   });
 }
+
+test("a collapsed competitors page hydrates without an uncaught error in this engine", async ({
+  page,
+  context,
+}) => {
+  await seedCookies(context, {
+    asobeast_collapsed: "competitors.discovery%2Ccompetitors.matrix",
+  });
+  await expectHydratesCleanly(
+    page,
+    "app-competitors-collapsed",
+    "/apps/app-1/competitors",
+  );
+});
 
 test("the settings budget sentence words the date and time the same on both sides", async ({
   page,

@@ -95,6 +95,7 @@ const perfectContext = (): AuditContext =>
         {
           keywordId: 'habit tracker',
           text: 'habit tracker',
+          country: 'us',
           traffic: 8,
           difficulty: 3,
           you: 1,
