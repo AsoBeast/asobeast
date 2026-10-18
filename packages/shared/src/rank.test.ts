@@ -7,6 +7,7 @@ import {
   RANK_DEPTH,
   RANK_MILESTONE_DIRECTIONS,
   RANK_MILESTONE_TIERS,
+  tierOf,
 } from './rank';
 
 describe('isRanked', () => {
@@ -65,5 +66,20 @@ describe('rank milestones', () => {
     expect(new Set(tiers).size).toBe(tiers.length);
     expect(Math.min(...tiers)).toBeGreaterThanOrEqual(1);
     expect(Math.max(...tiers)).toBeLessThanOrEqual(RANK_DEPTH);
+  });
+
+  it.each([
+    [1, 1],
+    [2, 3],
+    [3, 3],
+    [4, 10],
+    [10, 10],
+    [11, null],
+    [200, null],
+    [0, null],
+    [null, null],
+    [undefined, null],
+  ])('places position %s in tier %s', (position, expected) => {
+    expect(tierOf(position)).toBe(expected);
   });
 });

@@ -13,6 +13,8 @@ Commands run and their outcome.
 - [ ] Branch name follows the conventional branch spec (`feat/`, `fix/`, `chore/`, ...)
 - [ ] `pnpm lint`, `pnpm test` and `pnpm build` pass locally
 - [ ] `pnpm --filter api test:e2e` and `pnpm --filter web test:e2e` pass when the change touches the API or the web app
+- [ ] The `agent-skills` code review and `/open-code-review:review` against `main` ran on the final diff and their findings are fixed
+- [ ] Manual QA covered the planned functionality and its edge cases, and the outcome is under **How it was verified**
 - [ ] A `fix` includes a regression test observed failing for the reported symptom before the fix
 - [ ] Nothing on the HTTP contract, the `@asobeast/shared` contract types or the MCP tool surface is removed, renamed or narrowed; those are compatible for all of `1.x`
 - [ ] New behaviour is covered by unit tests; contract changes are covered by e2e tests

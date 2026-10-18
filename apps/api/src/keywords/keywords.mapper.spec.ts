@@ -1,4 +1,9 @@
-import { toTrackedKeywordItem, TrackedKeywordRow } from './keywords.mapper';
+import {
+  heldFacts,
+  toTrackedKeywordItem,
+  TrackedKeywordRow,
+} from './keywords.mapper';
+import type { RetainedPositionFacts } from './keyword-position-facts';
 
 const row = (
   overrides: Partial<TrackedKeywordRow> = {},
@@ -335,5 +340,191 @@ describe('toTrackedKeywordItem', () => {
     );
     expect(item.previousPosition).toBe(4);
     expect(item.positionDelta1d).toBeNull();
+  });
+
+  const holdDay = (offset: number): string => {
+    const date = new Date();
+    date.setUTCHours(0, 0, 0, 0);
+    date.setUTCDate(date.getUTCDate() - offset);
+    return date.toISOString();
+  };
+
+  const hold = (
+    facts: Partial<RetainedPositionFacts> = {},
+  ): RetainedPositionFacts => ({
+    bestPosition: null,
+    daysInTier: null,
+    latestPosition: 1,
+    latestDate: holdDay(0),
+    ...facts,
+  });
+
+  const heldRankings = (
+    rankings: { position: number | null; offset: number }[],
+  ): TrackedKeywordRow =>
+    withRankings(
+      rankings.map((ranking) => ({
+        position: ranking.position,
+        date: holdDay(ranking.offset),
+      })),
+    );
+
+  it('reports the best position and the gap to it', () => {
+    const item = toTrackedKeywordItem(
+      withRankings([
+        { position: 5, date: '2026-07-04' },
+        { position: 5, date: '2026-07-03' },
+      ]),
+      undefined,
+      null,
+      hold({ bestPosition: 2 }),
+    );
+    expect(item.bestPosition).toBe(2);
+    expect(item.positionDeltaFromBest).toBe(3);
+  });
+
+  it('reports zero off best at the historical best', () => {
+    const item = toTrackedKeywordItem(
+      withRankings([{ position: 2, date: '2026-07-04' }]),
+      undefined,
+      null,
+      hold({ bestPosition: 2 }),
+    );
+    expect(item.positionDeltaFromBest).toBe(0);
+  });
+
+  it('never reports a gap below best when a same day check improved on the aggregate', () => {
+    const item = toTrackedKeywordItem(
+      withRankings([{ position: 1, date: '2026-07-04' }]),
+      undefined,
+      null,
+      hold({ bestPosition: 5, daysInTier: 1 }),
+    );
+    expect(item.bestPosition).toBe(1);
+    expect(item.positionDeltaFromBest).toBe(0);
+  });
+
+  it('leaves the hold facts out when the list did not ask for them', () => {
+    const item = toTrackedKeywordItem(
+      withRankings([{ position: 1, date: '2026-07-04' }]),
+    );
+    expect(item).not.toHaveProperty('bestPosition');
+    expect(item).not.toHaveProperty('positionDeltaFromBest');
+    expect(item).not.toHaveProperty('daysInTier');
+    expect(item).not.toHaveProperty('heldTier');
+  });
+
+  it('yields null hold facts when the facts were computed but none recorded', () => {
+    const item = toTrackedKeywordItem(
+      withRankings([{ position: null, date: '2026-07-04' }]),
+      undefined,
+      null,
+      null,
+    );
+    expect(item.bestPosition).toBeNull();
+    expect(item.positionDeltaFromBest).toBeNull();
+    expect(item.daysInTier).toBeNull();
+    expect(item.heldTier).toBeNull();
+  });
+
+  it('counts the days held in the tier of the latest position and names the tier', () => {
+    const item = toTrackedKeywordItem(
+      heldRankings([
+        { position: 1, offset: 3 },
+        { position: 1, offset: 2 },
+        { position: 1, offset: 1 },
+        { position: 2, offset: 0 },
+      ]),
+      undefined,
+      null,
+      hold({ bestPosition: 1, daysInTier: 3 }),
+    );
+    expect(item.daysInTier).toBe(3);
+    expect(item.heldTier).toBe(1);
+    expect(item.bestPosition).toBe(1);
+    expect(item.positionDeltaFromBest).toBe(0);
+  });
+
+  it('names the wider tier when the keyword sits below its peak tier', () => {
+    const item = toTrackedKeywordItem(
+      heldRankings([
+        { position: 2, offset: 0 },
+        { position: 1, offset: 1 },
+      ]),
+      undefined,
+      null,
+      hold({ bestPosition: 1, daysInTier: 2, latestPosition: 2 }),
+    );
+    expect(item.daysInTier).toBe(2);
+    expect(item.heldTier).toBe(3);
+  });
+
+  it('yields the streak only while the keyword is checked through yesterday', () => {
+    const item = toTrackedKeywordItem(
+      heldRankings([
+        { position: 1, offset: 3 },
+        { position: 1, offset: 2 },
+        { position: 1, offset: 0 },
+      ]),
+      undefined,
+      null,
+      hold({ bestPosition: 1, daysInTier: 3, latestDate: holdDay(3) }),
+    );
+    expect(item.daysInTier).toBeNull();
+    expect(item.heldTier).toBeNull();
+    expect(item.bestPosition).toBe(1);
+  });
+
+  it('yields no streak for a paused keyword', () => {
+    const item = toTrackedKeywordItem(
+      {
+        ...heldRankings([
+          { position: 1, offset: 1 },
+          { position: 1, offset: 0 },
+        ]),
+        active: false,
+      },
+      undefined,
+      null,
+      hold({ bestPosition: 1, daysInTier: 2 }),
+    );
+    expect(item.daysInTier).toBeNull();
+    expect(item.heldTier).toBeNull();
+  });
+});
+
+describe('heldFacts', () => {
+  const today = new Date('2026-10-18T12:00:00.000Z');
+  const facts = (latestDate: string): RetainedPositionFacts => ({
+    bestPosition: 2,
+    daysInTier: 5,
+    latestPosition: 2,
+    latestDate,
+  });
+
+  it('keeps the streak when the newest check is from today', () => {
+    const held = heldFacts(facts('2026-10-18'), 2, true, today);
+    expect(held.daysInTier).toBe(5);
+    expect(held.heldTier).toBe(3);
+  });
+
+  it('keeps the streak through yesterday', () => {
+    const held = heldFacts(facts('2026-10-17'), 2, true, today);
+    expect(held.daysInTier).toBe(5);
+    expect(held.heldTier).toBe(3);
+  });
+
+  it('drops the streak when the newest check is two days old', () => {
+    const held = heldFacts(facts('2026-10-16'), 2, true, today);
+    expect(held.daysInTier).toBeNull();
+    expect(held.heldTier).toBeNull();
+    expect(held.bestPosition).toBe(2);
+    expect(held.positionDeltaFromBest).toBe(0);
+  });
+
+  it('drops the streak for a paused keyword', () => {
+    const held = heldFacts(facts('2026-10-18'), 2, false, today);
+    expect(held.daysInTier).toBeNull();
+    expect(held.heldTier).toBeNull();
   });
 });
