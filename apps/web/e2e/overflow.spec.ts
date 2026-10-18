@@ -13,6 +13,14 @@ const ROUTES: ReadonlyArray<
   ["app audit", "/apps/app-long/audit"],
   ["play audit", "/apps/app-gp/audit"],
   ["competitors", "/apps/app-1/competitors"],
+  [
+    "competitors with every section collapsed",
+    "/apps/app-1/competitors",
+    {
+      asobeast_collapsed:
+        "competitors.tracked%2Ccompetitors.discovery%2Ccompetitors.matrix",
+    },
+  ],
   ["metadata", "/apps/app-1/metadata"],
   [
     "metadata with a localization open",

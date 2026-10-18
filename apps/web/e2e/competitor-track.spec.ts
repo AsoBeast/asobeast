@@ -191,9 +191,8 @@ test("the discovery panel names the store its rows come from", async ({
   ).toBeVisible();
   await expect(
     page
-      .getByText("Apps you don’t track yet")
-      .locator("xpath=..")
-      .getByText("Google Play"),
+      .getByRole("region", { name: "Apps you don’t track yet" })
+      .getByText("Google Play", { exact: true }),
   ).toBeVisible();
 
   await page.goto(`/apps/${APP_1_DE_DETAIL.id}/competitors`);
@@ -203,9 +202,8 @@ test("the discovery panel names the store its rows come from", async ({
   ).toBeVisible();
   await expect(
     page
-      .getByText("Apps you don’t track yet")
-      .locator("xpath=..")
-      .getByText("App Store"),
+      .getByRole("region", { name: "Apps you don’t track yet" })
+      .getByText("App Store", { exact: true }),
   ).toBeVisible();
 });
 

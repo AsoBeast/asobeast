@@ -1049,6 +1049,14 @@ const shippedLocalizations = new Map<
 >();
 const seededMarkets = new Map<string, string[]>();
 const fieldRequests = new Map<string, string[]>();
+const discoveryRequests = new Map<string, number>();
+const DISCOVERY_LOG_COOKIE = "e2e_discovery_log";
+
+function countDiscoveryRequest(req: IncomingMessage): void {
+  const token = cookieValue(req, DISCOVERY_LOG_COOKIE);
+  if (token === undefined) return;
+  discoveryRequests.set(token, (discoveryRequests.get(token) ?? 0) + 1);
+}
 
 function logFieldRequest(id: string, req: IncomingMessage): void {
   const url = new URL(req.url ?? "/", "http://localhost");
@@ -3326,8 +3334,17 @@ const routes: Route[] = [
   ),
   appRoute(
     /^\/apps\/([^/]+)\/competitors\/discovery$/,
-    (dataset) => dataset.discovery,
+    (dataset, _query, req) => {
+      countDiscoveryRequest(req);
+      return dataset.discovery;
+    },
   ),
+  {
+    method: "GET",
+    pattern: /^\/__log\/discovery-requests\/([^/]+)$/,
+    handler: ([token], _req, res) =>
+      json(res, 200, { count: discoveryRequests.get(token) ?? 0 }),
+  },
   {
     method: "GET",
     pattern: /^\/apps\/([^/]+)\/keywords\/suggestions$/,
