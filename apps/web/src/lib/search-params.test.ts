@@ -52,6 +52,7 @@ import {
   changeDaysParser,
   changeOwnerParser,
   countryParser,
+  matrixFilterParsers,
   discoveryDaysParser,
   KEYWORD_STATUSES,
   KEYWORD_TABLE_SORTS,
@@ -252,6 +253,14 @@ describe("country parser", () => {
       expect(countryParser.parseServerSide(value)).toBe("");
     },
   );
+});
+
+describe("matrix filter parsers", () => {
+  it("the matrix filters carry the market", () => {
+    expect(matrixFilterParsers.country).toBe(countryParser);
+    expect(matrixFilterParsers.country.parseServerSide("DE")).toBe("de");
+    expect(matrixFilterParsers.country.parseServerSide("ZZZ")).toBe("");
+  });
 });
 
 describe("keywordIds parser", () => {

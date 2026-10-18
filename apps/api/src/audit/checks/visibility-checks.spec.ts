@@ -14,6 +14,7 @@ const row = (
 ): KeywordComparisonRow => ({
   keywordId,
   text: keywordId,
+  country: 'us',
   traffic: null,
   difficulty: null,
   you,

@@ -247,6 +247,7 @@ const poorShared = () => ({
       {
         keywordId: 'k1',
         text: 'geo quiz',
+        country: 'us',
         traffic: 9,
         difficulty: 5,
         you: null,
@@ -256,6 +257,7 @@ const poorShared = () => ({
       {
         keywordId: 'k2',
         text: 'geography game',
+        country: 'us',
         traffic: 5,
         difficulty: 4,
         you: 40,
