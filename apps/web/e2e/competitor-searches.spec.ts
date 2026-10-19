@@ -107,7 +107,7 @@ test("an empty competitor search explains why", async ({ page }) => {
 
   await expect(
     page.getByText(
-      "Your competitors' titles share no phrase to search from in this market yet.",
+      "No new searches found around your competitors' phrases in this market. Competitors need a listing here with a phrase of two or more words.",
     ),
   ).toBeVisible();
 });

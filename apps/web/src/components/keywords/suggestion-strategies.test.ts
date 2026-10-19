@@ -21,7 +21,7 @@ describe("suggestion strategies", () => {
     });
     expect(USED_BY_NOUN.competitorSearch).toBe("competitor");
     expect(EMPTY_COPY.competitorSearch).toBe(
-      "Your competitors' titles share no phrase to search from in this market yet.",
+      "No new searches found around your competitors' phrases in this market. Competitors need a listing here with a phrase of two or more words.",
     );
   });
 
