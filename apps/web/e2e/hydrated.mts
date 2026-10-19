@@ -10,3 +10,12 @@ export async function hydrated(control: Locator): Promise<Locator> {
     .toBe(true);
   return control;
 }
+
+export async function activateTwiceInOneTask(control: Locator): Promise<void> {
+  await (
+    await hydrated(control)
+  ).evaluate((element: HTMLElement) => {
+    element.click();
+    element.click();
+  });
+}
