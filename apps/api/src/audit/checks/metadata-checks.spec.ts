@@ -185,6 +185,22 @@ describe('titleChecks', () => {
     },
   );
 
+  it('names a repeated word of a partly matched keyword once', () => {
+    const result = titleCheck(
+      appStoreContext({
+        title: 'Quiz',
+        keywords: [keyword('quiz quiz map', 'primary', 90)],
+      }),
+      'title-keyword',
+    );
+
+    expect(result).toMatchObject({
+      detail:
+        'The title has “quiz” from “quiz quiz map”, but not the whole phrase.',
+      advice: { fix: expect.stringMatching(/^Add “map” to the words/) },
+    });
+  });
+
   it('advises completing the partly matched phrase, not a different keyword', () => {
     const result = titleCheck(
       appStoreContext({

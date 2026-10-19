@@ -28,7 +28,9 @@ const BRAND_FIRST = 'keeping your brand first if people already search for it.';
 const quoted = (text: string): string => quoteList([text]);
 
 const matchOf = (title: string, keyword: AuditKeyword): TitleMatch => {
-  const words = normalizeText(keyword.text).split(' ').filter(Boolean);
+  const words = [
+    ...new Set(normalizeText(keyword.text).split(' ').filter(Boolean)),
+  ];
   const inTitle = (word: string): boolean => coversPhrase(title, word);
   return {
     score: keywordMatchScore(title, [keyword.text]),
