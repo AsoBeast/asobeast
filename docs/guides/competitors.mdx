@@ -63,6 +63,8 @@ When you track keywords in more than one market, the first column names the mark
 
 Each position is shaded by its grade and the best position in a row stays underlined. Popularity and difficulty carry their grade too. See [How are scores graded?](/concepts/scoring#how-are-scores-graded).
 
+A dash in place of a position means no check has run yet for that app and keyword, which is how a competitor you just added looks until the next keyword check. `>200` means the check ran and did not find the app within the captured depth.
+
 **Export CSV** in the matrix writes the rows shown, in the order shown, and the competitor list above it exports as well. See [Export the keyword comparison to CSV](/guides/export-data#export-the-keyword-comparison-to-csv).
 
 Discovery sorts the same way, by appearances, keywords, best position, average position or rating, and searches by app name.
@@ -102,7 +104,7 @@ Competitor listings are snapshotted on the same schedule as your own, and a fiel
 
 ## Troubleshooting
 
-- **A competitor shows no positions.** It only gets positions on keywords you track, in the storefronts you track them in.
+- **A competitor shows no positions.** It only gets positions on keywords you track, in the storefronts you track them in. A dash means its first check has not run yet; it fills in on the next keyword check.
 - **A competitor's ratings column is empty on Google Play.** Google Play search results carry no rating counts.
 - **You added the wrong app.** Removing a competitor removes its position history with it, so confirm the store id before adding.
 
