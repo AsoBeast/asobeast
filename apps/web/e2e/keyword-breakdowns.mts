@@ -275,6 +275,45 @@ function productivityApp(): KeywordBreakdown {
   };
 }
 
+function partialRival(
+  keywordId: string,
+  insight: KeywordBreakdownApp["insight"],
+  unread: string[] = [],
+): KeywordBreakdown {
+  const words = ["focus", "tracker"];
+  return {
+    keywordId,
+    text: "focus tracker",
+    store: "APP_STORE",
+    country: "us",
+    words,
+    standing: standing({ above: 1, missingWords: ["tracker"] }),
+    apps: [
+      app({
+        ...YOU,
+        ...at(null),
+        listings: [
+          english([
+            breakdownField("title", "Focus Timer", words, { Focus: "exact" }),
+          ]),
+        ],
+      }),
+      app({
+        ...RIVAL,
+        ...at(6),
+        insight,
+        unread,
+        listings: [
+          english([
+            breakdownField("title", "Rival Focus", words, { Focus: "exact" }),
+            breakdownField("subtitle", "Deep work timer", words),
+          ]),
+        ],
+      }),
+    ],
+  };
+}
+
 function timeBlocking(): KeywordBreakdown {
   const words = ["time", "blocking"];
   return {
@@ -414,6 +453,10 @@ export const BREAKDOWNS: Record<string, Record<string, KeywordBreakdown>> = {
     productivityApp(),
     timeBlocking(),
     germanPomodoro(),
+    partialRival("kw-6", { rule: "hidden" }),
+    partialRival("kw-7", { rule: "unread", localizations: ["es-MX"] }, [
+      "es-MX",
+    ]),
   ]),
   "app-gp": byKeyword([playPomodoroTimer()]),
 };
