@@ -89,9 +89,9 @@ export function ComparisonTable({
         iconUrl: icons.get(competitor.id) ?? null,
       })),
       (keywordId) => void setKeyword(keywordId),
-      { multiMarket },
+      { appId, multiMarket },
     );
-  }, [competitors, data.competitors, setKeyword, multiMarket]);
+  }, [appId, competitors, data.competitors, setKeyword, multiMarket]);
 
   const [visibility, setVisibility] = useStoredColumnVisibility(
     "comparison",

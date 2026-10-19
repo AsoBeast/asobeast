@@ -13,6 +13,7 @@ import { versusOf, type Versus } from "@/lib/table/facets";
 import { nullsLast } from "@/lib/table/sorting";
 import { cn } from "@/lib/utils";
 import type { DataTableFeatures } from "@/components/data-table/table-features";
+import { isChecked } from "./comparison-checks";
 import {
   comparisonScore,
   UNNAMED_COMPETITOR,
@@ -28,6 +29,7 @@ interface MatrixCompetitor {
 export const HIDDEN_COMPARISON_COLUMNS = { versus: false };
 
 export interface MatrixScope {
+  appId: string;
   multiMarket: boolean;
 }
 
@@ -63,15 +65,28 @@ export function bestPosition(
 export function PositionCell({
   value,
   best,
+  checked = true,
 }: {
   value: number | null;
   best: boolean;
+  checked?: boolean;
 }) {
   const graded = grade("position", value);
   const pill = cn(
     "inline-flex min-w-10 justify-center rounded-md px-1.5 py-0.5",
     best && "font-semibold underline decoration-2 underline-offset-4",
   );
+  if (!checked) {
+    return (
+      <span
+        title="Not checked yet"
+        className={cn(pill, "text-muted-foreground")}
+      >
+        <span aria-hidden>—</span>
+        <span className="sr-only">Not checked yet</span>
+      </span>
+    );
+  }
   if (graded === null) {
     return (
       <span
@@ -260,6 +275,7 @@ export function comparisonColumns(
         <PositionCell
           value={row.original.you}
           best={isBest(row.original, row.original.you)}
+          checked={isChecked(row.original, scope.appId)}
         />
       ),
     }),
@@ -280,7 +296,11 @@ export function comparisonColumns(
           cell: ({ row }) => {
             const value = row.original.positions[competitor.id] ?? null;
             return (
-              <PositionCell value={value} best={isBest(row.original, value)} />
+              <PositionCell
+                value={value}
+                best={isBest(row.original, value)}
+                checked={isChecked(row.original, competitor.id)}
+              />
             );
           },
         },

@@ -2,7 +2,10 @@ import { readFileSync } from "node:fs";
 import type { Locator, Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
 import { hydrated } from "./hydrated.mts";
-import { CROWDED_COMPETITORS_COOKIE } from "./fixtures.mts";
+import {
+  CROWDED_COMPETITORS_COOKIE,
+  UNCHECKED_COMPARISON_COOKIE,
+} from "./fixtures.mts";
 
 const matrix = (page: Page) =>
   page.getByRole("table", { name: /compared with each tracked competitor/ });
@@ -34,6 +37,13 @@ const germanRow = (page: Page) =>
 
 const crowdedMatrix = {
   name: CROWDED_COMPETITORS_COOKIE,
+  value: "1",
+  domain: "localhost",
+  path: "/",
+};
+
+const uncheckedMatrix = {
+  name: UNCHECKED_COMPARISON_COOKIE,
   value: "1",
   domain: "localhost",
   path: "/",
@@ -383,6 +393,42 @@ test("matrix positions and scores carry their grade", async ({ page }) => {
   await expect(difficulty).toHaveCount(1);
   await expect(difficulty).toHaveAttribute("data-grade", "fair");
   await expect(keywordCell(focus)).not.toContainText("Popularity");
+});
+
+test("an app that was never checked reads as not checked, not as >200", async ({
+  page,
+  context,
+}) => {
+  await context.addCookies([uncheckedMatrix]);
+  await page.goto("/apps/app-1/competitors");
+  await page.waitForLoadState("networkidle");
+
+  const focus = matrix(page).getByRole("row", { name: /focus timer/ });
+  const productivity = matrix(page).getByRole("row", {
+    name: /productivity app/,
+  });
+  const blocking = matrix(page).getByRole("row", { name: /time blocking/ });
+
+  await expect(focus.getByTitle("Not checked yet")).toHaveCount(1);
+  await expect(focus.getByTitle("Not ranking")).toHaveCount(0);
+  await expect(productivity.getByTitle("Not checked yet")).toHaveCount(1);
+  await expect(blocking.getByTitle("Not checked yet")).toHaveCount(0);
+  await expect(blocking.getByTitle("Not ranking")).toHaveCount(1);
+});
+
+test("the comparison export leaves a never checked position empty", async ({
+  page,
+  context,
+}) => {
+  await context.addCookies([uncheckedMatrix]);
+  await page.goto("/apps/app-1/competitors");
+  await page.waitForLoadState("networkidle");
+
+  const { lines } = await comparisonExport(page);
+
+  expect(lines).toContain("focus timer,50,30,3,,winning,false,us");
+  expect(lines).toContain("productivity app,50,30,,8,losing,true,us");
+  expect(lines).toContain("time blocking,50,30,45,>200,winning,false,us");
 });
 
 test("on a phone the matrix names competitors by icon and hides the scores", async ({
