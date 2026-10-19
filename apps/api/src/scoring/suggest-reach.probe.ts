@@ -17,21 +17,10 @@ export interface ProbedReach {
   requests: number;
 }
 
-const continuesInInflectedScript = (term: string, target: string): boolean => {
-  if (!hasInflectedStemScript(target)) {
-    return false;
-  }
-  const words = target.split(' ');
-  const offered = term.split(' ');
-  return (
-    offered.length >= words.length &&
-    words.every((word, index) => sameWord(offered[index], word))
-  );
-};
-
-const continuesAfterInflectedForms = (
+const continuesInInflectedScript = (
   term: string,
   target: string,
+  minWords: number,
 ): boolean => {
   if (!hasInflectedStemScript(target)) {
     return false;
@@ -39,7 +28,7 @@ const continuesAfterInflectedForms = (
   const words = target.split(' ');
   const offered = term.split(' ');
   return (
-    offered.length > words.length &&
+    offered.length >= minWords &&
     words.every((word, index) => sameWord(offered[index], word))
   );
 };
@@ -47,7 +36,7 @@ const continuesAfterInflectedForms = (
 const extendsKeyword = (term: string, target: string): boolean =>
   pluralsOf(target).some(
     (form) => term === form || term.startsWith(`${form} `),
-  ) || continuesInInflectedScript(term, target);
+  ) || continuesInInflectedScript(term, target, target.split(' ').length);
 
 const matches = (term: string, target: string, match: SuggestMatch) =>
   match === 'exact' || target.includes(' ')
@@ -79,7 +68,7 @@ export function countingLookup(lookup: SuggestLookup): CountingLookup {
 const continues = (term: string, target: string): boolean =>
   term === target ||
   term.startsWith(`${target} `) ||
-  continuesAfterInflectedForms(term, target);
+  continuesInInflectedScript(term, target, target.split(' ').length + 1);
 
 export async function countContinuations(
   keyword: string,

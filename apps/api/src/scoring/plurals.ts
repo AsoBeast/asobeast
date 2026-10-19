@@ -19,6 +19,7 @@ export function pluralsOf(word: string): string[] {
 }
 
 export const INFLECTION_STEM_CHARS = 7;
+export const INFLECTION_ENDING_CHARS = 3;
 
 const commonStemOf = (a: string, b: string): string => {
   const shared: string[] = [];
@@ -36,6 +37,8 @@ export const sameStem = (a: string, b: string): boolean => {
   const stem = commonStemOf(a, b);
   return (
     stem.length >= INFLECTION_STEM_CHARS &&
+    a.length - stem.length <= INFLECTION_ENDING_CHARS &&
+    b.length - stem.length <= INFLECTION_ENDING_CHARS &&
     Array.from(stem).every((character) => hasInflectedStemScript(character))
   );
 };

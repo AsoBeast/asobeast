@@ -257,8 +257,8 @@ describe('countContinuations', () => {
 
   it('counts no continuation for a different word sharing the stem', async () => {
     const lookup = lookupFrom({
-      программа: ['программирование'],
-      'программа ': ['программирование'],
+      программа: ['программирование на python'],
+      'программа ': ['программирование на python'],
     });
     await expect(countContinuations('программа', lookup)).resolves.toBe(0);
   });
