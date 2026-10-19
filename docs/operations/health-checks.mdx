@@ -66,7 +66,7 @@ The same is true of Redis. The API keeps answering reads from PostgreSQL while R
 
 ## Egress proxy pool
 
-Only relevant when `PROXY_PROVIDER` is set. `GET /api/backend/admin/proxy-pool` answers with the pool's shape and is reserved for the [platform operator](/security/admin-surfaces#who-the-platform-operator-is): any other account gets `404`, the same answer the queue dashboard gives, so the surface never confirms it exists.
+Only relevant when `PROXY_PROVIDER` is set. `GET /api/backend/admin/proxy-pool` answers with the pool's shape and is reserved for the [platform operator](/security/admin-surfaces#who-the-platform-operator-is): anyone else gets `404`, an anonymous caller included, the same answer the queue dashboard gives, so the surface never confirms it exists.
 
 The response carries pool size, per store healthy and cooling down counts, per endpoint success rate over a rolling hour, the distribution of the last failure classification, residential fallback rate and month to date spend, and requests per hour against capacity.
 

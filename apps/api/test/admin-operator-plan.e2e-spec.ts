@@ -3,13 +3,18 @@ import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
 import { AuthUser } from '@asobeast/shared';
+import request from 'supertest';
 import { App } from 'supertest/types';
 import { configureAdminSurfaces } from '../src/admin-surfaces';
 import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { restoreAuthEnv } from './helpers/auth-env';
 import { ownerAgent, useCookies } from './helpers/session';
-import { truncateUsers } from './helpers/api-tokens';
+import {
+  seedApiToken,
+  seedWorkspace,
+  truncateUsers,
+} from './helpers/api-tokens';
 import { testDb } from './helpers/test-db';
 import { obliterateQueues, pauseQueues } from './obliterate-queues';
 
@@ -88,6 +93,25 @@ describe('Admin area for an operator without a plan (billing mode)', () => {
 
   describe('without a plan', () => {
     beforeAll(withoutPlan);
+
+    it.each(['/admin/capacity', '/admin/proxy-pool'])(
+      'answers 404, not 402, to a token of a tenant workspace without a plan at %s',
+      async (path) => {
+        await seedWorkspace(prisma, 'ws_unplanned_tenant', 'Unplanned');
+        const token = await seedApiToken(prisma, {
+          seed: 'unplannedtenant3333',
+          email: 'owner@unplanned.example.com',
+          workspaceId: 'ws_unplanned_tenant',
+          role: 'owner',
+          scope: 'write',
+        });
+
+        await request(app.getHttpServer())
+          .get(path)
+          .set('Authorization', `Bearer ${token}`)
+          .expect(404);
+      },
+    );
 
     it.each(SUPPORT_READS)('answers 404 to GET %s', async (path) => {
       await operator.get(path).expect(404);

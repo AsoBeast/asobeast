@@ -1,10 +1,10 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { TriangleAlert } from "lucide-react";
+import { CircleX, TriangleAlert, type LucideIcon } from "lucide-react";
 import type { HealthStatus } from "@asobeast/shared";
 import { useAuth } from "@/components/auth/use-auth";
-import { ApiError } from "@/lib/api";
 import { healthOptions } from "@/lib/queries";
 import {
   Tooltip,
@@ -12,6 +12,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { answeredDatabaseDown } from "./health-answer";
 
 function hoursAgo(iso: string): number {
   return Math.max(
@@ -44,11 +45,18 @@ function degradedDetail(data: HealthStatus): string | null {
 }
 
 interface BadgeState {
-  dot: string;
+  mark: ReactNode;
   label: string;
   detail: string;
-  degraded?: boolean;
 }
+
+const dotMark = (className: string) => (
+  <span className={cn("size-2 rounded-full", className)} />
+);
+
+const glyphMark = (Icon: LucideIcon, className: string) => (
+  <Icon className={cn("size-3.5", className)} />
+);
 
 function resolveState(
   data: HealthStatus | undefined,
@@ -57,34 +65,37 @@ function resolveState(
 ): BadgeState {
   if (isPending) {
     return {
-      dot: "bg-muted-foreground animate-pulse",
+      mark: dotMark("bg-muted-foreground animate-pulse"),
       label: "api",
       detail: "Checking API status…",
     };
   }
-  if (data?.status === "ok") {
-    const detail = degradedDetail(data);
-    if (detail) {
-      return { dot: "bg-warning", label: "degraded", detail, degraded: true };
-    }
+  if (answeredDatabaseDown(error)) {
     return {
-      dot: "bg-success",
-      label: "api",
-      detail: "API healthy · database up",
-    };
-  }
-  if (error instanceof ApiError) {
-    return {
-      dot: "bg-warning",
+      mark: glyphMark(TriangleAlert, "text-warning"),
       label: "degraded",
       detail: "API up · database unavailable",
-      degraded: true,
+    };
+  }
+  if (error || data?.status !== "ok") {
+    return {
+      mark: glyphMark(CircleX, "text-destructive"),
+      label: "unreachable",
+      detail: "API unreachable",
+    };
+  }
+  const detail = degradedDetail(data);
+  if (detail) {
+    return {
+      mark: glyphMark(TriangleAlert, "text-warning"),
+      label: "degraded",
+      detail,
     };
   }
   return {
-    dot: "bg-destructive",
-    label: "unreachable",
-    detail: "API unreachable",
+    mark: dotMark("bg-success"),
+    label: "api",
+    detail: "API healthy · database up",
   };
 }
 
@@ -101,12 +112,8 @@ function ApiStatus() {
     <Tooltip>
       <TooltipTrigger asChild>
         <span className="inline-flex items-center gap-1.5">
-          {state.degraded ? (
-            <TriangleAlert className="size-3.5 text-warning" />
-          ) : (
-            <span className={cn("size-2 rounded-full", state.dot)} />
-          )}
-          <span>{state.label}</span>
+          {state.mark}
+          <span className="sr-only sm:not-sr-only">{state.label}</span>
         </span>
       </TooltipTrigger>
       <TooltipContent>{state.detail}</TooltipContent>

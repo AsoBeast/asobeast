@@ -25,6 +25,7 @@ import {
   pauseQueues,
 } from './obliterate-queues';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
+import { describeWait } from '../src/auth/rate-limit/describe-wait';
 import { restoreAuthEnv } from './helpers/auth-env';
 
 const BLANK_PASSWORD = ' '.repeat(10);
@@ -728,7 +729,7 @@ describe('Auth (enabled, self-hosted)', () => {
     expect(envelope.retryAfterSeconds).toBeGreaterThan(0);
     expect(envelope.retryAfterSeconds).toBeLessThanOrEqual(60);
     expect(envelope.message).toBe(
-      `Too many attempts from this address. Try again in ${envelope.retryAfterSeconds} seconds.`,
+      `Too many attempts from this address. Try again in ${describeWait(envelope.retryAfterSeconds ?? 0)}.`,
     );
     expect(refused?.headers['retry-after']).toBe(
       String(envelope.retryAfterSeconds),

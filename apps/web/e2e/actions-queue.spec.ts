@@ -218,6 +218,209 @@ test.describe("closing several actions at once", () => {
   });
 });
 
+test.describe("keeping focus after a bulk action", () => {
+  const select = async (page: Page, id: string) =>
+    (await hydrated(page.locator(card(id)).getByRole("checkbox"))).click();
+  const bulkBar = (page: Page) =>
+    page.getByRole("toolbar", { name: "Bulk actions" });
+  const rowIds = (page: Page) =>
+    page.locator(ROWS).evaluateAll((rows) => rows.map((row) => row.id));
+  const firstOf = (ids: string[], chosen: string[]) =>
+    ids.find((id) => chosen.includes(id));
+  const survivorOf = (ids: string[], removed: string[]) => {
+    const first = ids.findIndex((id) => removed.includes(id));
+    return (
+      ids.slice(first + 1).find((id) => !removed.includes(id)) ?? ids[first - 1]
+    );
+  };
+  const CHOSEN = ["act-prune", "act-volatile"];
+  const CHOSEN_ROWS = CHOSEN.map((id) => `action-${id}`);
+
+  const pickBoth = async (page: Page) => {
+    await page.goto("/actions");
+    for (const id of CHOSEN) await select(page, id);
+    await expect(bulkBar(page)).toContainText("2 selected");
+  };
+
+  test("moves focus to the first selected row when the selection is cleared", async ({
+    page,
+  }) => {
+    await pickBoth(page);
+    const first = firstOf(await rowIds(page), CHOSEN_ROWS);
+
+    await bulkBar(page)
+      .getByRole("button", { name: "Clear selection" })
+      .focus();
+    await page.keyboard.press("Enter");
+
+    await expect(bulkBar(page)).toHaveCount(0);
+    await expect(page.locator(`[id='${first}']`)).toBeFocused();
+  });
+
+  test("moves focus to the first selected row when a click leaves focus on the page, as Safari does", async ({
+    page,
+  }) => {
+    await pickBoth(page);
+    const first = firstOf(await rowIds(page), CHOSEN_ROWS);
+
+    await page.locator("#main-content").focus();
+    await bulkBar(page)
+      .getByRole("button", { name: "Clear selection" })
+      .dispatchEvent("click");
+
+    await expect(bulkBar(page)).toHaveCount(0);
+    await expect(page.locator(`[id='${first}']`)).toBeFocused();
+  });
+
+  test("moves focus to the next unselected row after a bulk Done", async ({
+    page,
+  }) => {
+    await pickBoth(page);
+    const survivor = survivorOf(await rowIds(page), CHOSEN_ROWS);
+
+    await bulkBar(page).getByRole("button", { name: "Done" }).focus();
+    await page.keyboard.press("Enter");
+
+    for (const id of CHOSEN)
+      await expect(page.locator(card(id))).toHaveCount(0);
+    await expect(page.locator(`[id='${survivor}']`)).toBeFocused();
+  });
+
+  test("moves focus to the next unselected row when a click on Done leaves focus on the page, as Safari does", async ({
+    page,
+  }) => {
+    await pickBoth(page);
+    const survivor = survivorOf(await rowIds(page), CHOSEN_ROWS);
+
+    await page.locator("#main-content").focus();
+    await bulkBar(page)
+      .getByRole("button", { name: "Done" })
+      .dispatchEvent("click");
+
+    for (const id of CHOSEN)
+      await expect(page.locator(card(id))).toHaveCount(0);
+    await expect(page.locator(`[id='${survivor}']`)).toBeFocused();
+  });
+
+  test("keeps the snoozed rows and focuses the first of them", async ({
+    page,
+  }) => {
+    await pickBoth(page);
+    const first = firstOf(await rowIds(page), CHOSEN_ROWS);
+
+    await bulkBar(page).getByRole("button", { name: "Snooze" }).click();
+    await page.getByRole("menuitem", { name: "7 days" }).click();
+
+    await expect(bulkBar(page)).toHaveCount(0);
+    await expect(page.locator(`[id='${first}']`)).toBeFocused();
+  });
+
+  test("moves focus to the next unselected row after a bulk Dismiss", async ({
+    page,
+  }) => {
+    await pickBoth(page);
+    const survivor = survivorOf(await rowIds(page), CHOSEN_ROWS);
+
+    await bulkBar(page).getByRole("button", { name: "Dismiss" }).click();
+    await page
+      .getByRole("menuitem", { name: "Dismiss without a reason" })
+      .click();
+
+    for (const id of CHOSEN)
+      await expect(page.locator(card(id))).toHaveCount(0);
+    await expect(page.locator(`[id='${survivor}']`)).toBeFocused();
+  });
+
+  test("moves focus to the search field when the last row is closed", async ({
+    page,
+  }) => {
+    await page.goto("/actions");
+    await page.getByRole("button", { name: /^Critical/ }).click();
+    const rows = page.locator(ROWS);
+    await expect(rows).toHaveCount(1);
+    await (await hydrated(rows.getByRole("checkbox"))).click();
+
+    await bulkBar(page).getByRole("button", { name: "Done" }).focus();
+    await page.keyboard.press("Enter");
+
+    await expect(rows).toHaveCount(0);
+    await expect(
+      page.locator('input[aria-label="Search actions"]'),
+    ).toBeFocused();
+  });
+
+  test("keeps focus on a row when a failing request rolls the rows back", async ({
+    page,
+  }) => {
+    await page.goto("/actions");
+    await select(page, "act-prune");
+    await select(page, "act-degraded");
+
+    await bulkBar(page).getByRole("button", { name: "Done" }).focus();
+    await page.keyboard.press("Enter");
+
+    await expect(page.locator(card("act-degraded"))).toBeVisible();
+    expect(
+      await page.evaluate(() =>
+        document.activeElement?.id.startsWith("action-"),
+      ),
+    ).toBe(true);
+  });
+});
+
+test.describe("Escape in the bulk bar", () => {
+  const select = async (page: Page, id: string) =>
+    (await hydrated(page.locator(card(id)).getByRole("checkbox"))).click();
+  const bulkBar = (page: Page) =>
+    page.getByRole("toolbar", { name: "Bulk actions" });
+
+  for (const [menu, item] of [
+    ["Snooze", "7 days"],
+    ["Dismiss", "Dismiss without a reason"],
+  ] as const) {
+    test(`closes the ${menu} menu and keeps the selection`, async ({
+      page,
+    }) => {
+      await page.goto("/actions");
+      await select(page, "act-prune");
+      const trigger = bulkBar(page).getByRole("button", { name: menu });
+
+      await trigger.click();
+      await expect(page.getByRole("menuitem", { name: item })).toBeVisible();
+      await page.keyboard.press("Escape");
+
+      await expect(page.getByRole("menu")).toHaveCount(0);
+      await expect(bulkBar(page)).toContainText("1 selected");
+      await expect(trigger).toBeFocused();
+    });
+  }
+
+  test("a second Escape, with no menu open, clears the selection", async ({
+    page,
+  }) => {
+    await page.goto("/actions");
+    await select(page, "act-prune");
+    await bulkBar(page).getByRole("button", { name: "Snooze" }).click();
+    await page.keyboard.press("Escape");
+    await expect(bulkBar(page)).toContainText("1 selected");
+
+    await page.keyboard.press("Escape");
+
+    await expect(bulkBar(page)).toHaveCount(0);
+  });
+
+  test("Escape on a bar button clears the selection", async ({ page }) => {
+    await page.goto("/actions");
+    await select(page, "act-prune");
+    await bulkBar(page).getByRole("button", { name: "Done" }).focus();
+
+    await page.keyboard.press("Escape");
+
+    await expect(bulkBar(page)).toHaveCount(0);
+    await expect(page.locator(card("act-prune"))).toBeVisible();
+  });
+});
+
 const shortcuts = (page: Page) =>
   page.getByRole("dialog", { name: "Keyboard shortcuts" });
 

@@ -15,7 +15,7 @@ import {
   formatRating,
   storeLabel,
 } from "@/lib/format";
-import { searchErrorText } from "./store-search";
+import { searchErrorText, searchRetryable } from "./store-search";
 import type { StoreSearch } from "./useStoreSearch";
 
 const SKELETON_ROWS = 4;
@@ -85,14 +85,16 @@ function StoreSearchResults({
         <p role="alert" className="text-body text-destructive">
           {searchErrorText(search.error)}
         </p>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={search.retry}
-        >
-          Retry
-        </Button>
+        {searchRetryable(search.error) ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={search.retry}
+          >
+            Retry
+          </Button>
+        ) : null}
       </div>
     );
   }
@@ -166,6 +168,7 @@ export function StoreSearchField({
   const listId = useId();
   const hintId = `${id}-hint`;
   const errorId = `${id}-error`;
+  const shownError = error ?? search.problem;
   const listed =
     !search.error && search.results !== undefined && search.results.length > 0;
 
@@ -184,8 +187,8 @@ export function StoreSearchField({
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
           autoFocus={autoFocus}
-          aria-invalid={error !== null}
-          aria-describedby={error ? `${errorId} ${hintId}` : hintId}
+          aria-invalid={shownError !== null}
+          aria-describedby={shownError ? `${errorId} ${hintId}` : hintId}
           aria-controls={listed ? listId : undefined}
         />
         {children}
@@ -193,9 +196,9 @@ export function StoreSearchField({
       <p id={hintId} className="text-xs text-muted-foreground">
         {hint}
       </p>
-      {error ? (
-        <p id={errorId} className="text-body text-destructive">
-          {error}
+      {shownError ? (
+        <p id={errorId} className="text-body text-destructive wrap-anywhere">
+          {shownError}
         </p>
       ) : null}
       {note ? (

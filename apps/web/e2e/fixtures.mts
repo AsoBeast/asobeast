@@ -900,6 +900,140 @@ export const APP_1_REVIEW_THEMES: ReviewThemes = {
   negativeScoreMax: 2,
 };
 
+const updateReview = (
+  index: number,
+  text: string,
+  replyText: string | null = null,
+): ReviewItem => ({
+  id: `update-rev-${index}`,
+  reviewId: `update-store-rev-${index}`,
+  userName: null,
+  score: 1,
+  title: null,
+  text,
+  version: "3.4.1",
+  reviewedAt: utcTimestampDaysAgo(index),
+  repliedAt: null,
+  replyText,
+  reply: null,
+});
+
+export const UPDATE_THEME_REVIEWS: ReviewList = {
+  total: 5,
+  versions: ["3.4.1"],
+  reviews: [
+    updateReview(1, "Since the update it lags."),
+    updateReview(2, "The last update broke sync."),
+    updateReview(3, "Updated today and now it crashes."),
+    updateReview(4, "Updates keep failing."),
+    updateReview(5, "Sync is slow.", "Please update to 3.4.1."),
+  ],
+};
+
+const TWIN_DAY = utcTimestampDaysAgo(2);
+
+const twinReview = (index: number, text: string): ReviewItem => ({
+  id: `twin-rev-${index}`,
+  reviewId: `twin-store-rev-${index}`,
+  userName: "A Google user",
+  score: 1,
+  title: null,
+  text,
+  version: "3.4.1",
+  reviewedAt: TWIN_DAY,
+  repliedAt: null,
+  replyText: null,
+  reply: null,
+});
+
+export const TWIN_REVIEWS: ReviewList = {
+  total: 3,
+  versions: ["3.4.1"],
+  reviews: [
+    twinReview(1, "Broken one."),
+    twinReview(2, "Broken two."),
+    {
+      ...twinReview(3, "Works for me."),
+      userName: "Casey",
+      score: 5,
+    },
+  ],
+};
+
+export const ARABIC_REVIEW_AUTHOR = "محمد";
+export const ARABIC_REVIEW_TITLE = "التطبيق غير أمن !";
+export const ARABIC_REVIEW_TEXT =
+  "بسهوله يمكنهم اختراق الحساب و عند اختراق و تسجيل خروج من جميع الاجهزه $1.19 😡😡 تطبيق نصاب";
+export const ARABIC_DEVELOPER_REPLY =
+  "شكرا لك على ملاحظاتك، نعمل على إصلاح ذلك.";
+export const HEBREW_REVIEW_TEXT = "עובד מצוין";
+export const MIXED_REVIEW_TEXT = "Telegram עובד טוב";
+
+export const RTL_REVIEWS: ReviewList = {
+  total: 4,
+  versions: ["3.4.1"],
+  reviews: [
+    {
+      id: "rtl-rev-1",
+      reviewId: "rtl-store-rev-1",
+      userName: ARABIC_REVIEW_AUTHOR,
+      score: 1,
+      title: ARABIC_REVIEW_TITLE,
+      text: ARABIC_REVIEW_TEXT,
+      version: "3.4.1",
+      reviewedAt: utcTimestampDaysAgo(1),
+      repliedAt: utcTimestampDaysAgo(1),
+      replyText: ARABIC_DEVELOPER_REPLY,
+      reply: null,
+    },
+    {
+      id: "rtl-rev-2",
+      reviewId: "rtl-store-rev-2",
+      userName: "דנה",
+      score: 5,
+      title: null,
+      text: HEBREW_REVIEW_TEXT,
+      version: "3.4.1",
+      reviewedAt: utcTimestampDaysAgo(2),
+      repliedAt: null,
+      replyText: null,
+      reply: null,
+    },
+    {
+      id: "rtl-rev-3",
+      reviewId: "rtl-store-rev-3",
+      userName: "Sam",
+      score: 4,
+      title: "Mostly fine",
+      text: MIXED_REVIEW_TEXT,
+      version: "3.4.1",
+      reviewedAt: utcTimestampDaysAgo(3),
+      repliedAt: null,
+      replyText: null,
+      reply: null,
+    },
+    {
+      id: "rtl-rev-4",
+      reviewId: "rtl-store-rev-4",
+      userName: "Casey",
+      score: 5,
+      title: "Great",
+      text: "Works well.",
+      version: "3.4.1",
+      reviewedAt: utcTimestampDaysAgo(4),
+      repliedAt: null,
+      replyText: null,
+      reply: null,
+    },
+  ],
+};
+
+export const UPDATE_REVIEW_THEMES: ReviewThemes = {
+  themes: [{ phrase: "update", kind: "complaint", mentions: 2, negative: 2 }],
+  reviews: 5,
+  negativeScoreMax: 2,
+};
+
 export const REVIEW_TRANSLATION_EN = {
   title: "Crashes",
   text: "The app crashes on start.",
@@ -1327,6 +1461,7 @@ const APP_1_COMPARISON: KeywordComparison = {
     {
       keywordId: "kw-1",
       text: "focus timer",
+      country: "us",
       traffic: 55,
       difficulty: 4,
       you: 3,
@@ -1336,6 +1471,7 @@ const APP_1_COMPARISON: KeywordComparison = {
     {
       keywordId: "kw-2",
       text: "pomodoro",
+      country: "us",
       traffic: 70,
       difficulty: 7,
       you: 12,
@@ -1345,6 +1481,7 @@ const APP_1_COMPARISON: KeywordComparison = {
     {
       keywordId: "kw-4",
       text: "productivity app",
+      country: "us",
       traffic: 65,
       difficulty: 6,
       you: null,
@@ -1354,10 +1491,21 @@ const APP_1_COMPARISON: KeywordComparison = {
     {
       keywordId: "kw-5",
       text: "time blocking",
+      country: "us",
       traffic: null,
       difficulty: null,
       you: 45,
       positions: { "comp-1": null },
+      gap: false,
+    },
+    {
+      keywordId: "kw-de-1",
+      text: "pomodoro",
+      country: "de",
+      traffic: 5,
+      difficulty: 3,
+      you: 7,
+      positions: { "comp-1": 2 },
       gap: false,
     },
   ],
@@ -2269,6 +2417,20 @@ export const SUGGESTIONS: Record<
       { text: "focus timer app", strategy: "search", priority: 7200 },
       { text: "focus music", strategy: "search", priority: 6100 },
       { text: "focus mode", strategy: "search", priority: 5400 },
+    ],
+    competitorSearch: [
+      {
+        text: "focus timer for adhd",
+        strategy: "competitorSearch",
+        seed: "focus timer",
+        usedByCount: 1,
+      },
+      {
+        text: "deep work timer app",
+        strategy: "competitorSearch",
+        seed: "deep work",
+        usedByCount: 2,
+      },
     ],
   },
   "app-2": {

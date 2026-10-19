@@ -10,6 +10,7 @@ import {
   candidateApps,
   captureCostText,
   captureErrorText,
+  competitorFocusKey,
   emptyChartBody,
   followErrorText,
   noAppsBody,
@@ -219,5 +220,11 @@ describe("no apps wording", () => {
     expect(noAppsToast("APP_STORE")).toBe(
       "App Store lists no apps in this chart today",
     );
+  });
+});
+
+describe("competitorFocusKey", () => {
+  it("names the claim after the chart app", () => {
+    expect(competitorFocusKey("6400000001")).toBe("competitor:6400000001");
   });
 });

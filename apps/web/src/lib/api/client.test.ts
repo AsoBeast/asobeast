@@ -130,7 +130,33 @@ describe("apiFetch", () => {
     expect((error as ApiError).message).toBeTruthy();
   });
 
-  it.each(["/register", "/login", "/upgrade"])(
+  it("does not send the upgrade page to itself when a query is refused for payment", async () => {
+    const assign = vi.fn();
+    vi.stubGlobal("window", {
+      location: { pathname: "/upgrade", search: "", assign },
+    });
+    stubFetch(async () =>
+      Response.json({ ...ENVELOPE, statusCode: 402 }, { status: 402 }),
+    );
+
+    await apiFetch("/billing/catalog").catch(() => undefined);
+
+    expect(assign).not.toHaveBeenCalled();
+  });
+
+  it("sends a rejected session on the upgrade page to sign in", async () => {
+    const assign = vi.fn();
+    vi.stubGlobal("window", {
+      location: { pathname: "/upgrade", search: "", assign },
+    });
+    stubFetch(async () => Response.json(ENVELOPE, { status: 401 }));
+
+    await apiFetch("/billing/catalog").catch(() => undefined);
+
+    expect(assign).toHaveBeenCalledWith("/login?next=%2Fupgrade");
+  });
+
+  it.each(["/register", "/login"])(
     "does not navigate away from %s when a query is rejected",
     async (pathname) => {
       const assign = vi.fn();

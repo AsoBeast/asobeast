@@ -1,12 +1,13 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { paidPlanOf, type AuthStatus, type AuthUser } from "@asobeast/shared";
 import { authMeOptions, authStatusOptions } from "@/lib/queries";
+import { useHydrated } from "@/lib/use-hydrated";
 
 export interface AuthState {
   status: AuthStatus | undefined;
+  authenticated: boolean;
   user: AuthUser | undefined;
   userError: Error | null;
   retryUser: () => void;
@@ -19,20 +20,9 @@ export interface AuthState {
   isOperator: boolean;
 }
 
-function subscribeToNothing(): () => void {
-  return () => {};
-}
-
-function useHydrated(): boolean {
-  return useSyncExternalStore(
-    subscribeToNothing,
-    () => true,
-    () => false,
-  );
-}
-
 const SERVER_AUTH_STATE: AuthState = {
   status: undefined,
+  authenticated: false,
   user: undefined,
   userError: null,
   retryUser: () => {},
@@ -75,6 +65,7 @@ export function useAuth(): AuthState {
 
   return {
     status,
+    authenticated,
     user: signedIn,
     userError: authenticated ? userError : null,
     retryUser: () => void refetchUser(),

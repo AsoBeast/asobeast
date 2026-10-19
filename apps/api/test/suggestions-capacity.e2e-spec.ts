@@ -67,6 +67,42 @@ describe('Keyword suggestions capacity (e2e)', () => {
 
   afterAll(() => stopCapacityHarness(harness));
 
+  const trackKeyword = async (text: string): Promise<void> => {
+    const keyword = await harness.prisma.keyword.create({
+      data: { text, store: Store.APP_STORE, country: 'us' },
+    });
+    await harness.prisma.trackedKeyword.create({
+      data: { appId, keywordId: keyword.id, source: 'MANUAL', active: true },
+    });
+  };
+
+  const addCompetitors = async (): Promise<void> => {
+    for (const [storeAppId, title] of [
+      ['555000222', 'Streaks: Habit Tracker'],
+      ['555000333', 'Habit Tracker & Goals'],
+    ]) {
+      const competitor = await harness.prisma.app.create({
+        data: {
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          store: Store.APP_STORE,
+          storeAppId,
+          country: 'us',
+          isCompetitor: true,
+          primaryAppId: appId,
+        },
+      });
+      await harness.prisma.appSnapshot.create({
+        data: { appId: competitor.id, title, description: 'x', raw: {} },
+      });
+    }
+  };
+
+  const giveDeveloperId = () =>
+    harness.prisma.appSnapshot.updateMany({
+      where: { appId },
+      data: { raw: { artistId: 284882218 } },
+    });
+
   it('spends nothing for the metadata strategy', async () => {
     expect(await spendsDuring('metadata')).toBe(0);
   });
@@ -78,9 +114,51 @@ describe('Keyword suggestions capacity (e2e)', () => {
   });
 
   it('spends one lookup for each strategy that reaches the store', async () => {
-    for (const strategy of ['similar', 'search', 'developer'] as const) {
+    await trackKeyword('focus timer');
+    await giveDeveloperId();
+    await addCompetitors();
+
+    for (const strategy of [
+      'similar',
+      'search',
+      'developer',
+      'competitorSearch',
+    ] as const) {
       expect(await spendsDuring(strategy)).toBe(1);
     }
+  });
+
+  it('spends nothing for the search strategy of an app that tracks no keyword', async () => {
+    const [response, calls] = await allowanceSpendsDuring(harness, () =>
+      suggest('search').expect(200),
+    );
+
+    expect(response.body).toEqual([]);
+    expect(calls).toBe(0);
+  });
+
+  it('spends nothing for the developer strategy without a developer id', async () => {
+    const [response, calls] = await allowanceSpendsDuring(harness, () =>
+      suggest('developer').expect(200),
+    );
+
+    expect(response.body).toEqual([]);
+    expect(calls).toBe(0);
+  });
+
+  it('spends one lookup for competitorSearch', async () => {
+    await addCompetitors();
+
+    expect(await spendsDuring('competitorSearch')).toBe(1);
+  });
+
+  it('spends nothing for competitorSearch without a seed', async () => {
+    const [response, calls] = await allowanceSpendsDuring(harness, () =>
+      suggest('competitorSearch').expect(200),
+    );
+
+    expect(response.body).toEqual([]);
+    expect(calls).toBe(0);
   });
 
   it('spends nothing for an unknown app', async () => {

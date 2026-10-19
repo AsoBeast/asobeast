@@ -126,6 +126,39 @@ describe('reviewThemes', () => {
     }
   });
 
+  it('leaves out the function words of two languages a short review ties between', () => {
+    const reviews = [
+      ...times(4, 'La aplicación se cierra sola. Que mal servicio.', 1),
+      ...PRAISED,
+    ];
+
+    expect(complaintsOf(reviews, [])).toEqual([
+      'aplicación se cierra sola',
+      'mal servicio',
+    ]);
+  });
+
+  it('leaves out the spanish function words of a real short review the guess cannot place', () => {
+    const reviews = [
+      ...times(4, 'Basuea Como puede ser que no aregles sus bugs', 1),
+      ...PRAISED,
+    ];
+
+    expect(complaintsOf(reviews, [])).toEqual([
+      'aregles sus bugs',
+      'basuea como puede',
+    ]);
+  });
+
+  it('reads a short english review as before', () => {
+    const reviews = [
+      ...times(4, 'Great app but it crashes a lot', 1),
+      ...PRAISED,
+    ];
+
+    expect(complaintsOf(reviews, [])).toEqual(['crashes']);
+  });
+
   it('keeps a shorter phrase a filter leaves without its longer one', () => {
     const baseline = [
       ...times(10, 'Crashes on launch constantly', 1),

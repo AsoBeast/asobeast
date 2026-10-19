@@ -1,13 +1,17 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
-import { ReviewReplyState, ReviewSort, ReviewThemes } from '@asobeast/shared';
+import {
+  REVIEW_THEMES_BASELINE,
+  ReviewReplyState,
+  ReviewSort,
+  ReviewThemes,
+} from '@asobeast/shared';
 import { Env } from '../config/env';
 import { listingLanguages } from '../keywords/listing-languages';
 import { PrismaService } from '../prisma/prisma.service';
 import { reviewOrder, ReviewScope, reviewsWhere } from './review-list-query';
 import {
-  REVIEW_THEMES_BASELINE,
   REVIEW_THEMES_CAP,
   reviewThemes,
   themeIgnoredWords,

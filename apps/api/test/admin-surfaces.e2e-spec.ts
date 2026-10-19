@@ -5,6 +5,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
 import {
   API_TOKEN_PREFIX,
+  ApiErrorEnvelope,
   CapacityReport,
   ProxyPoolHealth,
 } from '@asobeast/shared';
@@ -132,6 +133,84 @@ describe('Admin surfaces (e2e)', () => {
     });
   });
 
+  describe('every method on every admin route', () => {
+    const AREA = [
+      '/admin/capacity',
+      '/admin/capacity/',
+      '/ADMIN/CAPACITY',
+      '/admin/proxy-pool',
+      '/admin/proxy-pool/',
+      '/admin/does-not-exist',
+    ];
+    const ROUTES = [
+      ...SURFACES,
+      `${QUEUES}/api/queues`,
+      `${SUPPORT}/workspaces`,
+      `${SUPPORT}/overview`,
+      ...AREA,
+    ];
+    const METHODS = [
+      'get',
+      'head',
+      'post',
+      'put',
+      'patch',
+      'delete',
+      'options',
+    ] as const;
+
+    describe.each(ROUTES)('%s', (route) => {
+      it.each(METHODS)(
+        'answers an anonymous %s with not found',
+        async (method) => {
+          const res = await request(app.getHttpServer())
+            [method](route)
+            .expect(404);
+
+          expect(res.headers['x-robots-tag']).toBe('noindex, nofollow');
+          expect(res.headers['cache-control']).toBe('no-store');
+        },
+      );
+
+      it.each(METHODS)(
+        'answers a member token %s with not found',
+        async (method) => {
+          await request(app.getHttpServer())
+            [method](route)
+            .set('Authorization', `Bearer ${await tokenFor('member')}`)
+            .expect(404);
+        },
+      );
+
+      it.each(['get', 'post'] as const)(
+        'answers the owner of another workspace %s with not found',
+        async (method) => {
+          await request(app.getHttpServer())
+            [method](route)
+            .set('Authorization', `Bearer ${await tenantOwnerToken()}`)
+            .expect(404);
+        },
+      );
+    });
+
+    it('serves the operator an admin route whatever its case, as the gate covers it', async () => {
+      await owner.get('/ADMIN/CAPACITY').expect(200);
+    });
+
+    it('answers a read token the methods that change state with not found, and still serves its reads', async () => {
+      const token = await tokenFor('owner', 'read');
+
+      await request(app.getHttpServer())
+        .post('/admin/capacity')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(404);
+      await request(app.getHttpServer())
+        .get('/admin/capacity')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+    });
+  });
+
   it('describes servers and bearer auth in the openapi document', async () => {
     const response = await owner.get('/docs-json').expect(200);
     const document = response.body as OpenApiSurface;
@@ -243,7 +322,14 @@ describe('Admin surfaces (e2e)', () => {
     });
     afterAll(() => clearRateLimitCounters(app));
 
-    it.each([...SURFACES, `${SUPPORT}/workspaces`])(
+    const COUNTED = [
+      ...SURFACES,
+      `${SUPPORT}/workspaces`,
+      '/admin/capacity',
+      '/admin/proxy-pool',
+    ];
+
+    it.each(COUNTED)(
       'counts a refused token presented to %s against its address',
       async (surface) => {
         await present(surface, `Bearer ${REFUSED_TOKEN}`).expect(404);
@@ -252,6 +338,41 @@ describe('Admin surfaces (e2e)', () => {
           await spendCredentialBudget(app, CREDENTIAL_FAILURES_PER_MINUTE),
         ).toBe(1);
         await present('/apps', `Bearer ${REFUSED_TOKEN}`).expect(429);
+      },
+    );
+
+    it('does not echo the query string of a refused admin request', async () => {
+      const response = await present(
+        `${DOCS}-json?token=${REFUSED_TOKEN}`,
+        `Bearer ${REFUSED_TOKEN}`,
+      ).expect(404);
+
+      expect((response.body as ApiErrorEnvelope).path).toBe('/docs-json');
+      expect(JSON.stringify(response.body)).not.toContain(REFUSED_TOKEN);
+    });
+
+    it.each(['/admin/capacity', '/admin/proxy-pool'])(
+      'answers a spent budget at %s with the same not found',
+      async (route) => {
+        await present(route, `Bearer ${REFUSED_TOKEN}`).expect(404);
+        expect(
+          await spendCredentialBudget(app, CREDENTIAL_FAILURES_PER_MINUTE),
+        ).toBe(1);
+
+        await present(route, `Bearer ${REFUSED_TOKEN}`).expect(404);
+        await owner.get(route).expect(200);
+      },
+    );
+
+    it.each(['/admin/capacity', '/admin/proxy-pool'])(
+      'never counts an accepted credential that is not the operator at %s',
+      async (route) => {
+        await present(route, `Bearer ${await tokenFor('member')}`).expect(404);
+        await present(route, `Bearer ${await tenantOwnerToken()}`).expect(404);
+
+        expect(
+          await spendCredentialBudget(app, CREDENTIAL_FAILURES_PER_MINUTE),
+        ).toBe(0);
       },
     );
 
@@ -321,8 +442,8 @@ describe('Admin surfaces (e2e)', () => {
         .expect(404);
     });
 
-    it('is unauthorized without credentials', async () => {
-      await request(app.getHttpServer()).get('/admin/proxy-pool').expect(401);
+    it('is not found without credentials', async () => {
+      await request(app.getHttpServer()).get('/admin/proxy-pool').expect(404);
     });
 
     it('is not found for the owner of another workspace', async () => {
@@ -334,6 +455,10 @@ describe('Admin surfaces (e2e)', () => {
   });
 
   describe('/admin/capacity', () => {
+    it('is not found without credentials', async () => {
+      await request(app.getHttpServer()).get('/admin/capacity').expect(404);
+    });
+
     it('reports demand against capacity to an owner', async () => {
       const response = await owner.get('/admin/capacity').expect(200);
       const body = response.body as CapacityReport;

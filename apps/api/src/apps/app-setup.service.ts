@@ -3,8 +3,10 @@ import { AppSetup } from '@prisma/client';
 import {
   AppSetupState,
   AppSetupUpdateRequest,
+  assertStorefront,
   SETUP_STEPS,
   SetupStatus,
+  Store,
 } from '@asobeast/shared';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
@@ -17,6 +19,17 @@ function completion(
   if (status === undefined) return {};
   if (status !== 'completed') return { completedAt: null };
   return { completedAt: current?.completedAt ?? new Date() };
+}
+
+function assertStorefronts(
+  store: Store,
+  requested: readonly string[] | undefined,
+  held: readonly string[],
+): void {
+  const accepted = new Set(held);
+  for (const market of requested ?? []) {
+    if (!accepted.has(market)) assertStorefront(store, market);
+  }
 }
 
 function changesOf(patch: AppSetupUpdateRequest, current: AppSetup | null) {
@@ -47,6 +60,10 @@ export class AppSetupService {
     patch: AppSetupUpdateRequest,
   ): Promise<AppSetupState> {
     const app = await this.primaryApp(appId);
+    assertStorefronts(app.store, patch.selectedMarkets, [
+      app.country,
+      ...(app.appSetup?.selectedMarkets ?? []),
+    ]);
     const changes = changesOf(patch, app.appSetup);
     if (Object.values(changes).every((value) => value === undefined)) {
       return setupStateOf(app);
@@ -81,7 +98,7 @@ export class AppSetupService {
   private async primaryApp(appId: string) {
     const app = await this.prisma.app.findFirst({
       where: { id: appId, isCompetitor: false },
-      select: { id: true, country: true, appSetup: true },
+      select: { id: true, store: true, country: true, appSetup: true },
     });
     if (!app) {
       throw new NotFoundException(`App ${appId} not found`);

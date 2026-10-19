@@ -6,7 +6,7 @@ icon: key
 keywords: ["authentication","bearer token","asob_","session cookie","401","402"]
 ---
 
-Send your personal API token as a bearer header on every request. There is no public endpoint and no anonymous mode.
+Send your personal API token as a bearer header on every request. There is no public endpoint and no anonymous mode. Send the token in the `Authorization` header only. A token in a query string is ignored, answers `401`, and is never repeated in the error body.
 
 <CodeGroup>
 

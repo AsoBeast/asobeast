@@ -7,7 +7,6 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query";
-import { Download } from "lucide-react";
 import type { Options } from "nuqs";
 import { toast } from "sonner";
 import {
@@ -17,6 +16,7 @@ import {
   type ReviewSort,
 } from "@asobeast/shared";
 import { SearchInput } from "@/components/data-table/SearchInput";
+import { ExportCsvButton } from "@/components/ExportCsvButton";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -198,18 +198,13 @@ function ExportReviewsButton({
   const exportOnce = useSingleFlight(exporting);
 
   return (
-    <Button
-      variant="outline"
-      size="sm"
+    <ExportCsvButton
+      subject="reviews"
       className="ml-auto"
       disabled={(data?.total ?? 0) === 0 || exporting.isPending}
       onClick={() => exportOnce()}
-      aria-label="Export reviews to CSV"
       title={`Exports the ${EXPORT_ORDER[view.sort]} ${REVIEWS_EXPORT_LIMIT} reviews that match the filters`}
-    >
-      <Download />
-      Export CSV
-    </Button>
+    />
   );
 }
 

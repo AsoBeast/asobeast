@@ -80,7 +80,7 @@ The authentication endpoints are rate limited per [client address](/api-referenc
 | Request a recovery link and redeem it | 10 per hour |
 | Resend a confirmation link | 3 per hour |
 
-A refused attempt answers `429` with a `Retry-After` header and a `retryAfterSeconds` field in the error body, and the message names the wait, for example `Too many attempts from this address. Try again in 42 seconds.` The sign in card shows that message as it is.
+A refused attempt answers `429` with a `Retry-After` header and a `retryAfterSeconds` field in the error body, both in whole seconds, and the message names the same wait in words. A wait under a minute is counted in seconds, for example `Too many attempts from this address. Try again in 42 seconds.` A longer wait is rounded up to whole minutes and counted in hours and minutes, so the hourly limits read `Try again in 49 minutes.` or `Try again in 1 hour.` rather than a count of thousands of seconds. The sign in card and the recovery pages show that message as it is.
 
 While Redis cannot be reached an attempt cannot be counted, so these endpoints answer `503` with a `Retry-After` header instead of admitting it. See [When Redis is unreachable](/api-reference/rate-limits#when-redis-is-unreachable).
 

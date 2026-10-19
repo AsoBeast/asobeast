@@ -4,6 +4,7 @@ import {
   type ServerResponse,
 } from "node:http";
 import { setTimeout as delay } from "node:timers/promises";
+import { BREAKDOWNS } from "./keyword-breakdowns.mts";
 import { planMockImport } from "./keyword-import.mts";
 import { summarizeActions } from "./actions-summary.mts";
 import { funnelFor } from "./store-funnel.mts";
@@ -126,6 +127,10 @@ import {
   SEED_TEXTS,
   SEED_UNLISTED_MARKET,
   EMPTY_REVIEW_THEMES,
+  UPDATE_REVIEW_THEMES,
+  UPDATE_THEME_REVIEWS,
+  TWIN_REVIEWS,
+  RTL_REVIEWS,
 } from "./fixtures.mts";
 import {
   EMPTY_PORTFOLIO_INSIGHTS,
@@ -223,6 +228,8 @@ import {
   UPGRADE_PATH,
   parseStoreUrl,
   isStorefront,
+  countMaxLengthChars,
+  STORE_SEARCH_QUERY_MAX_LENGTH,
   UnknownStorefrontError,
   setupSummary,
   chartGenreName,
@@ -257,6 +264,7 @@ const MCP_STREAM_MS = 3_000;
 const apps = [...INITIAL_APPS];
 const PENDING_SERVED = new Map<string, number>();
 const KEYWORD_QUOTA_COOKIE = "e2e_keyword_quota";
+const COMPARISON_MARKET_COOKIE = "e2e-comparison-market";
 const initialKeywords = new Map(
   Object.entries(DATASETS).map(([id, dataset]) => [
     id,
@@ -648,6 +656,13 @@ function hasCookie(
   return actual !== undefined && (value === undefined || actual === value);
 }
 
+const STALE_SESSION = "stale";
+const ANSWERED_WITHOUT_A_SESSION = /^\/(health|auth\/(status|login|register))$/;
+
+const signedIn = (req: IncomingMessage) =>
+  hasCookie(req, SESSION_COOKIE) &&
+  !hasCookie(req, SESSION_COOKIE, STALE_SESSION);
+
 function json(
   res: ServerResponse,
   status: number,
@@ -712,6 +727,18 @@ function withScreenshotText(
   }
   return result;
 }
+
+const updateReviews = (req: IncomingMessage) =>
+  hasCookie(req, "e2e_reviews", "update");
+
+const REVIEW_SETS: Record<string, typeof UPDATE_THEME_REVIEWS> = {
+  update: UPDATE_THEME_REVIEWS,
+  twins: TWIN_REVIEWS,
+  rtl: RTL_REVIEWS,
+};
+
+const reviewSetOf = (req: IncomingMessage) =>
+  REVIEW_SETS[cookieValue(req, "e2e_reviews") ?? ""];
 
 function appRoute(
   pattern: RegExp,
@@ -1032,6 +1059,15 @@ const shippedLocalizations = new Map<
 >();
 const seededMarkets = new Map<string, string[]>();
 const fieldRequests = new Map<string, string[]>();
+const loggedRequests = new Map<string, number>();
+const REQUEST_LOG_COOKIE = "e2e_request_log";
+
+function countLoggedRequest(kind: string, req: IncomingMessage): void {
+  const token = cookieValue(req, REQUEST_LOG_COOKIE);
+  if (token === undefined) return;
+  const key = `${kind}:${token}`;
+  loggedRequests.set(key, (loggedRequests.get(key) ?? 0) + 1);
+}
 
 function logFieldRequest(id: string, req: IncomingMessage): void {
   const url = new URL(req.url ?? "/", "http://localhost");
@@ -1771,6 +1807,8 @@ const BUDGET_HOLD_COOKIE = "e2e_budget_hold";
 const BUDGET_QUOTA_COOKIE = "e2e_budget_quota";
 const STALE_MARKET_COOKIE = "e2e_stale_market";
 const BUDGET_HOT_COOKIE = "e2e_budget_hot";
+const HEALTH_COOKIE = "e2e_health";
+const PROXY_DEADLINE_OVERRUN_MS = 3_000;
 const BUDGETS_BY_QUOTA = new Map<string | undefined, DailyBudget>([
   ["lapsed", LAPSED_BUDGET],
   ["over", OVER_LIMIT_BUDGET],
@@ -2323,7 +2361,25 @@ const routes: Route[] = [
   {
     method: "GET",
     pattern: /^\/health$/,
-    handler: (_p, _q, res) => json(res, 200, HEALTH),
+    handler: async (_p, req, res) => {
+      const outage = cookieValue(req, HEALTH_COOKIE);
+      if (outage === "refused") {
+        req.socket.destroy();
+        return;
+      }
+      if (outage === "silent") {
+        await delay(PROXY_DEADLINE_OVERRUN_MS);
+        return;
+      }
+      if (outage === "database") {
+        return json(
+          res,
+          503,
+          errorEnvelope(503, "/health", "Service Unavailable Exception"),
+        );
+      }
+      json(res, 200, HEALTH);
+    },
   },
   {
     method: "GET",
@@ -2356,7 +2412,7 @@ const routes: Route[] = [
     pattern: /^\/auth\/status$/,
     handler: (_p, req, res) => {
       const setupRequired = hasCookie(req, "e2e_setup_required", "1");
-      const authenticated = hasCookie(req, SESSION_COOKIE);
+      const authenticated = signedIn(req);
       json(res, 200, {
         billing: hasCookie(req, BILLING_COOKIE, "1"),
         registrationOpen: setupRequired,
@@ -2369,8 +2425,7 @@ const routes: Route[] = [
     method: "GET",
     pattern: /^\/auth\/me$/,
     handler: (_p, req, res) => {
-      const authenticated = hasCookie(req, SESSION_COOKIE);
-      if (!authenticated) {
+      if (!signedIn(req)) {
         return json(res, 401, errorEnvelope(401, req.url ?? "/auth/me"));
       }
       json(res, 200, viewerOf(req));
@@ -2393,7 +2448,16 @@ const routes: Route[] = [
   {
     method: "GET",
     pattern: /^\/billing\/catalog$/,
-    handler: (_p, _q, res) => json(res, 200, { enabled: false, prices: [] }),
+    handler: (_p, req, res) => {
+      if (!signedIn(req)) {
+        return json(
+          res,
+          401,
+          errorEnvelope(401, req.url ?? "/billing/catalog"),
+        );
+      }
+      json(res, 200, { enabled: false, prices: [] });
+    },
   },
   {
     method: "GET",
@@ -2517,7 +2581,7 @@ const routes: Route[] = [
     method: "GET",
     pattern: /^\/auth\/plan$/,
     handler: (_p, req, res) => {
-      if (!hasCookie(req, SESSION_COOKIE)) {
+      if (!signedIn(req)) {
         return json(res, 401, errorEnvelope(401, req.url ?? "/auth/plan"));
       }
       json(res, 200, accountPlanFor(req));
@@ -2543,6 +2607,17 @@ const routes: Route[] = [
         !q
       ) {
         return json(res, 400, errorEnvelope(400, path));
+      }
+      if (countMaxLengthChars(q) > STORE_SEARCH_QUERY_MAX_LENGTH) {
+        return json(
+          res,
+          400,
+          errorEnvelope(
+            400,
+            path,
+            `q must be shorter than or equal to ${STORE_SEARCH_QUERY_MAX_LENGTH} characters`,
+          ),
+        );
       }
       if (hasCookie(req, "e2e_store_search_spent", "1")) {
         return json(res, 429, storeLookupRefusedEnvelope(path), {
@@ -3346,8 +3421,17 @@ const routes: Route[] = [
   ),
   appRoute(
     /^\/apps\/([^/]+)\/competitors\/discovery$/,
-    (dataset) => dataset.discovery,
+    (dataset, _query, req) => {
+      countLoggedRequest("discovery", req);
+      return dataset.discovery;
+    },
   ),
+  {
+    method: "GET",
+    pattern: /^\/__log\/(discovery|compare)-requests\/([^/]+)$/,
+    handler: ([kind, token], _req, res) =>
+      json(res, 200, { count: loggedRequests.get(`${kind}:${token}`) ?? 0 }),
+  },
   {
     method: "GET",
     pattern: /^\/apps\/([^/]+)\/keywords\/suggestions$/,
@@ -3363,14 +3447,37 @@ const routes: Route[] = [
       json(res, 200, SUGGESTIONS[id]?.[strategy] ?? []);
     },
   },
-  appRoute(/^\/apps\/([^/]+)\/keywords\/compare$/, (dataset, query) =>
-    query.get("onlyGaps") === "true"
-      ? {
-          ...dataset.comparison,
-          rows: dataset.comparison.rows.filter((row) => row.gap),
-        }
-      : dataset.comparison,
-  ),
+  {
+    method: "GET",
+    pattern: /^\/apps\/([^/]+)\/keywords\/([^/]+)\/breakdown$/,
+    handler: ([id, keywordId], req, res) => {
+      const path = req.url ?? "/";
+      if (hasCookie(req, "e2e-fail-breakdown", "1")) {
+        return json(res, 500, errorEnvelope(500, path));
+      }
+      const breakdown = BREAKDOWNS[id]?.[keywordId];
+      if (!breakdown) {
+        return json(
+          res,
+          404,
+          errorEnvelope(404, path, `Keyword ${keywordId} is not tracked`),
+        );
+      }
+      json(res, 200, breakdown);
+    },
+  },
+  appRoute(/^\/apps\/([^/]+)\/keywords\/compare$/, (dataset, query, req) => {
+    countLoggedRequest("compare", req);
+    const market = cookieValue(req, COMPARISON_MARKET_COOKIE);
+    return {
+      ...dataset.comparison,
+      rows: dataset.comparison.rows.filter(
+        (row) =>
+          (query.get("onlyGaps") !== "true" || row.gap) &&
+          (market === undefined || row.country === market),
+      ),
+    };
+  }),
   appRoute(/^\/apps\/([^/]+)\/rankings$/, (dataset) => dataset.rankings),
   appRoute(/^\/apps\/([^/]+)\/serp-movers$/, (dataset) => dataset.serpMovers),
   appRoute(
@@ -3774,7 +3881,10 @@ const routes: Route[] = [
   ),
   appRoute(
     /^\/apps\/([^/]+)\/reviews\/themes$/,
-    (dataset) => dataset.reviewThemes ?? EMPTY_REVIEW_THEMES,
+    (dataset, _query, req) =>
+      updateReviews(req)
+        ? UPDATE_REVIEW_THEMES
+        : (dataset.reviewThemes ?? EMPTY_REVIEW_THEMES),
     (req) => hasCookie(req, "e2e_themes_failing", "1"),
   ),
   {
@@ -3787,7 +3897,8 @@ const routes: Route[] = [
       const dataset = DATASETS[id];
       if (!dataset) return json(res, 404, errorEnvelope(404, path));
       const query = new URL(path, "http://localhost").searchParams;
-      json(res, 200, listReviews(id, dataset.reviews, query));
+      const reviews = reviewSetOf(req) ?? dataset.reviews;
+      json(res, 200, listReviews(id, reviews, query));
     },
   },
   {
@@ -4020,6 +4131,19 @@ const routes: Route[] = [
           country: "pl",
         });
       }
+      if (params[0] === "app-gp") {
+        return json(res, 200, {
+          snapshotId: "snap-gp",
+          changes: [
+            { field: "ratingAvg", before: 3.1, after: 4.31881 },
+            { field: "ratingCount", before: 100, after: 66487 },
+            { field: "installs", before: 1000, after: 1200000 },
+            { field: "version", before: "1.0.0", after: "9.1.0" },
+            { field: "price", before: "1.99", after: "0" },
+          ],
+          country: "us",
+        });
+      }
       if (params[0] === "app-2") {
         return json(res, 200, {
           snapshotId: "snap-2",
@@ -4054,6 +4178,16 @@ const routes: Route[] = [
 const server = createServer(async (req, res) => {
   const pathname = new URL(req.url ?? "/", "http://localhost").pathname;
   await delayFromCookie(req, API_LATENCY_COOKIE);
+  if (
+    hasCookie(req, SESSION_COOKIE, STALE_SESSION) &&
+    !ANSWERED_WITHOUT_A_SESSION.test(pathname)
+  ) {
+    return json(
+      res,
+      401,
+      errorEnvelope(401, req.url ?? "/", "Not authenticated"),
+    );
+  }
   for (const route of routes) {
     if (route.method !== req.method) continue;
     const match = pathname.match(route.pattern);

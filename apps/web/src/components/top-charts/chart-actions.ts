@@ -119,3 +119,6 @@ export function noAppsBody(
 export function noAppsToast(store: Store): string {
   return `${storeLabel(store)} lists no apps in this chart today`;
 }
+
+export const competitorFocusKey = (storeAppId: string) =>
+  `competitor:${storeAppId}`;

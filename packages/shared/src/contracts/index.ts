@@ -3,6 +3,7 @@ export * from './common';
 export * from './apps';
 export * from './jobs';
 export * from './keywords';
+export * from './keyword-breakdown';
 export * from './localizations';
 export * from './markets';
 export * from './setup';

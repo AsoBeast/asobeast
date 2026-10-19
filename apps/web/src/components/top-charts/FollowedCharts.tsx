@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useId, useState } from "react";
+import { Suspense, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { BellOff, ListChecks, Loader2 } from "lucide-react";
@@ -14,22 +14,28 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useFocusAfterCommit } from "@/lib/focus-handoff";
 import { storeLabel } from "@/lib/format";
 import { accountPlanOptions, chartFollowsOptions } from "@/lib/queries";
 import { formatQuotaUsage } from "@/lib/quota-usage";
 import { useSingleFlight } from "@/lib/single-flight";
 import { followedCategories, type FollowedCategory } from "./chart-follows";
 import { categoryTitle, chartHref, COLLECTION_LABELS } from "./chart-params";
+import { stopFollowingSuccessor } from "./stop-following-focus";
 import { useUnfollowChart } from "./use-unfollow-chart";
 
 function FollowRow({
   category,
   onNavigate,
+  onSettled,
 }: {
   category: FollowedCategory;
   onNavigate: () => void;
+  onSettled: (stop: HTMLElement | null) => void;
 }) {
-  const mutation = useUnfollowChart();
+  const stop = useRef<HTMLButtonElement>(null);
+  const handOff = () => onSettled(stop.current);
+  const mutation = useUnfollowChart(handOff, handOff);
   const unfollowOnce = useSingleFlight(mutation);
   const title = categoryTitle(category);
   const kinds = category.follows
@@ -49,10 +55,11 @@ function FollowRow({
         </span>
       </Link>
       <Button
+        ref={stop}
         variant="ghost"
         size="icon-sm"
         aria-label={`Stop following ${title}`}
-        disabled={mutation.isPending}
+        aria-disabled={mutation.isPending || undefined}
         onClick={() =>
           unfollowOnce(category.follows.map((follow) => follow.id))
         }
@@ -69,6 +76,7 @@ function FollowRow({
 
 function FollowList({ onNavigate }: { onNavigate: () => void }) {
   const { data: follows } = useSuspenseQuery(chartFollowsOptions);
+  const handOffFocus = useFocusAfterCommit();
   const categories = followedCategories(follows);
   const limit = useQuery(accountPlanOptions).data?.limits.chartFollows;
 
@@ -91,6 +99,7 @@ function FollowList({ onNavigate }: { onNavigate: () => void }) {
               key={category.follows[0].id}
               category={category}
               onNavigate={onNavigate}
+              onSettled={(stop) => handOffFocus(stopFollowingSuccessor(stop))}
             />
           ))}
         </ul>

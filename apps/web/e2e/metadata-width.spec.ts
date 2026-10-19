@@ -95,12 +95,12 @@ test("a lint badge that fits on one line keeps the standard badge height", async
 }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/apps/app-he/metadata");
+  const badges = page.locator(`${FIELD_GRID} li [data-slot=badge]`);
+  await expect(badges).toHaveCount(6);
 
-  const heights = await page
-    .locator(`${FIELD_GRID} li [data-slot=badge]`)
-    .evaluateAll((badges) =>
-      badges.map((badge) => badge.getBoundingClientRect().height),
-    );
+  const heights = await badges.evaluateAll((badges) =>
+    badges.map((badge) => badge.getBoundingClientRect().height),
+  );
   expect(heights).toHaveLength(6);
   expect(new Set(heights)).toEqual(new Set([20]));
 });

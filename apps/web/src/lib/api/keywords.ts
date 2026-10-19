@@ -1,4 +1,5 @@
 import type {
+  KeywordBreakdown,
   KeywordAddRequest,
   KeywordComparison,
   KeywordCountrySummary,
@@ -137,6 +138,14 @@ export function getComparison(
     withQuery(`/apps/${appId}/keywords/compare`, params),
   );
 }
+
+export const getKeywordBreakdown = (
+  appId: string,
+  keywordId: string,
+): Promise<KeywordBreakdown> =>
+  apiFetch<KeywordBreakdown>(
+    `/apps/${appId}/keywords/${encodeURIComponent(keywordId)}/breakdown`,
+  );
 
 const keywordFieldPath = (appId: string, query: KeywordFieldQuery) =>
   withQuery(

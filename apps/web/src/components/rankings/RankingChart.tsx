@@ -22,13 +22,14 @@ import {
   CHART_MARGIN,
   GRID_PROPS,
   LINE_PROPS,
+  RANK_AXIS_PROPS,
   seriesDash,
   TIME_AXIS_PROPS,
-  VALUE_AXIS_PROPS,
 } from "@/components/charts/theme";
 import { formatDayMonth } from "@/lib/format";
 import { todayUtc } from "@/lib/ranges";
 import { notFoundKey, type RankingChartData } from "./pivot";
+import { RankBandLabel } from "./RankBandLabel";
 
 const Y_TICKS = [1, 10, 25, 50, 100, 200];
 
@@ -99,24 +100,12 @@ export function RankingChart({
             fill={band.fill}
             fillOpacity={0.08}
             ifOverflow="hidden"
-            label={{
-              value: band.label,
-              position: "insideTopRight",
-              fill: "var(--muted-foreground)",
-              fontSize: 10,
-            }}
+            label={{ value: band.label, content: RankBandLabel }}
           />
         ))}
         <CartesianGrid {...GRID_PROPS} />
         <XAxis {...TIME_AXIS_PROPS} />
-        <YAxis
-          {...VALUE_AXIS_PROPS}
-          reversed
-          domain={[1, RANK_DEPTH]}
-          ticks={Y_TICKS}
-          width={36}
-          allowDataOverflow
-        />
+        <YAxis {...RANK_AXIS_PROPS} domain={[1, RANK_DEPTH]} ticks={Y_TICKS} />
         {marked.map((date) => (
           <ReferenceLine
             key={date}
