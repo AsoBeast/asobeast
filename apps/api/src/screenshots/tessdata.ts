@@ -30,11 +30,18 @@ export function tessdataDirectory(
 async function link(languages: readonly OcrLanguage[]): Promise<string> {
   const target = await mkdtemp(join(tmpdir(), 'asobeast-tessdata-'));
   try {
-    await Promise.all(
-      languages.map((language) =>
-        symlink(modelOf(language), join(target, `${language}.traineddata.gz`)),
+    const models = languages.map((language) => modelOf(language));
+    const links = await Promise.allSettled(
+      models.map((model, index) =>
+        symlink(model, join(target, `${languages[index]}.traineddata.gz`)),
       ),
     );
+    const failure = links.find(
+      (result): result is PromiseRejectedResult => result.status === 'rejected',
+    );
+    if (failure) {
+      throw failure.reason;
+    }
   } catch (error) {
     await rm(target, { recursive: true, force: true });
     throw error;

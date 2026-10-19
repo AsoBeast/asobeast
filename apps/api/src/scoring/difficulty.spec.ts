@@ -59,6 +59,16 @@ describe('targetingShare', () => {
     expect(targetingShare(apps, 'geo')).toBe(0.75);
     expect(targetingShare(apps, 'quiz map')).toBe(0);
   });
+
+  it('counts a title that carries each word of the phrase in a case form', () => {
+    const apps = [
+      rated(1, 'Снятие тревожности и страха'),
+      rated(1, 'Hex - Снятие тревожности'),
+      rated(1, 'Тест на тревожность'),
+      rated(1, 'relif: Снятие тревоги и паники'),
+    ];
+    expect(targetingShare(apps, 'снятие тревожности')).toBe(0.5);
+  });
 });
 
 describe('computeDifficulty', () => {

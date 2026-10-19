@@ -1,5 +1,6 @@
 const WIDE_SCRIPTS = String.raw`\p{Script=Han}\p{scx=Hiragana}\p{scx=Katakana}`;
 const SPACELESS_SCRIPTS = String.raw`${WIDE_SCRIPTS}\p{Script=Thai}\p{Script=Lao}\p{Script=Khmer}\p{Script=Myanmar}`;
+const INFLECTED_STEM_SCRIPTS = String.raw`\p{Script=Cyrillic}`;
 
 export const WIDE_CHARACTER = new RegExp(`[${WIDE_SCRIPTS}]`, 'u');
 export const SPACELESS_CHARACTER = new RegExp(`[${SPACELESS_SCRIPTS}]`, 'u');
@@ -14,6 +15,11 @@ export const THAI_CHARACTER = /\p{Script=Thai}/u;
 
 export const isUnsegmented = (text: string): boolean =>
   SPACELESS_CHARACTER.test(text) || HANGUL_CHARACTER.test(text);
+
+const INFLECTED_STEM_CHARACTER = new RegExp(`[${INFLECTED_STEM_SCRIPTS}]`, 'u');
+
+export const hasInflectedStemScript = (word: string): boolean =>
+  INFLECTED_STEM_CHARACTER.test(word);
 
 const KOREAN_PARTICLES: ReadonlySet<string> = new Set([
   '을',

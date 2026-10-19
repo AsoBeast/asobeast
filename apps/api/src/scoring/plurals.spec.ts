@@ -1,4 +1,10 @@
-import { pluralsOf, sameWord } from './plurals';
+import {
+  INFLECTION_ENDING_CHARS,
+  INFLECTION_STEM_CHARS,
+  pluralsOf,
+  sameStem,
+  sameWord,
+} from './plurals';
 
 describe('pluralsOf', () => {
   it.each([
@@ -9,6 +15,45 @@ describe('pluralsOf', () => {
     ['day', ['day', 'days']],
   ])('%s', (word, forms) => {
     expect(pluralsOf(word)).toEqual(forms);
+  });
+});
+
+describe('sameStem', () => {
+  it.each([
+    ['тревожности', 'тревожностью'],
+    ['психолог', 'психология'],
+    ['дневник', 'дневником'],
+    ['голосовой', 'голосовые'],
+    ['депресія', 'депресію'],
+  ])('treats two case forms of %s and %s as the same word', (a, b) => {
+    expect(sameStem(a, b)).toBe(true);
+  });
+
+  it.each([
+    ['тревога', 'тревожность'],
+    ['дневник', 'дневной'],
+    ['география', 'геолог'],
+    ['geo', 'география'],
+    ['map', 'maps'],
+    ['sleepcycleтрекер', 'sleepcyclehabit'],
+    ['meditationнарусском', 'meditationдлясна'],
+    ['sleepтрекер', 'sleepтрекинг'],
+    ['тревожностьapp', 'тревожностьюapp'],
+    ['программа', 'программирование'],
+    ['видеоредактор', 'видеорегистратор'],
+    ['садовод', 'садоводство'],
+  ])('keeps %s and %s apart', (a, b) => {
+    expect(sameStem(a, b)).toBe(false);
+  });
+
+  it(`needs ${INFLECTION_STEM_CHARS} shared characters in both words`, () => {
+    expect(sameStem('тревог', 'тревогой')).toBe(false);
+    expect(sameStem('тревогам', 'тревогами')).toBe(true);
+  });
+
+  it(`allows at most ${INFLECTION_ENDING_CHARS} characters after the shared stem`, () => {
+    expect(sameStem('дневниками', 'дневников')).toBe(true);
+    expect(sameStem('дневниками', 'дневниковедение')).toBe(false);
   });
 });
 
@@ -23,6 +68,10 @@ describe('sameWord', () => {
     ['geo', 'geography', false],
     ['city', 'cities', true],
     ['cit', 'cities', false],
+    ['тревожности', 'тревожностью', true],
+    ['тревожностью', 'тревожности', true],
+    ['дневник', 'дневника', true],
+    ['тревога', 'тревожность', false],
   ])('%s and %s', (a, b, expected) => {
     expect(sameWord(a, b)).toBe(expected);
   });
