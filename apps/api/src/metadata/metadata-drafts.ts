@@ -15,6 +15,7 @@ import {
   STORE_FIELD_LIMITS,
   tokenize,
   TrackedKeywordItem,
+  truncateChars,
   APP_STORE_LOCALIZATIONS,
   AppStoreLocalization,
 } from '@asobeast/shared';
@@ -255,5 +256,5 @@ function withinLimit(store: Store, field: MetadataField, value: string) {
       .map((phrase) => phrase.trim().normalize('NFC'));
     return packKeywordField(phrases.filter(Boolean)).join(',');
   }
-  return value.slice(0, STORE_FIELD_LIMITS[store][field]!.limit);
+  return truncateChars(value, STORE_FIELD_LIMITS[store][field]!.limit);
 }
