@@ -194,11 +194,10 @@ describe('titleChecks', () => {
       'title-keyword',
     );
 
-    expect(result).toMatchObject({
-      detail:
-        'The title has “quiz” from “quiz quiz map”, but not the whole phrase.',
-      advice: { fix: expect.stringMatching(/^Add “map” to the words/) },
-    });
+    expect(result?.detail).toBe(
+      'The title has “quiz” from “quiz quiz map”, but not the whole phrase.',
+    );
+    expect(result?.advice?.fix).toMatch(/^Add “map” to the words/);
   });
 
   it('advises completing the partly matched phrase, not a different keyword', () => {
