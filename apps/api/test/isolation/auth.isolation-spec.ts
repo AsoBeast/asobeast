@@ -1,6 +1,7 @@
 import request from 'supertest';
 import { ADMIN_QUEUES_ROUTE } from '../../src/auth/admin-access';
-import { createIsolationFixture, IsolationFixture } from './fixture';
+import { sessionCookieOf } from '../helpers/session';
+import { createIsolationFixture, IsolationFixture, PASSWORD } from './fixture';
 
 describe('Auth boundaries between workspaces', () => {
   let fixture: IsolationFixture;
@@ -69,6 +70,43 @@ describe('Auth boundaries between workspaces', () => {
       .get('/apps')
       .set('Authorization', `Bearer ${token}`)
       .expect(401);
+  });
+
+  it("ends one session without touching the same user's other session or another workspace", async () => {
+    const signIn = (email: string) =>
+      anonymous()
+        .post('/auth/login')
+        .send({ email, password: PASSWORD })
+        .expect(200)
+        .then(sessionCookieOf);
+    const laptop = await signIn(fixture.a.email);
+    const phone = await signIn(fixture.a.email);
+    const neighbour = await signIn(fixture.b.email);
+
+    await anonymous().post('/auth/logout').set('Cookie', laptop).expect(204);
+
+    await anonymous().get('/auth/me').set('Cookie', laptop).expect(401);
+    await anonymous().get('/auth/me').set('Cookie', phone).expect(200);
+    await anonymous().get('/auth/me').set('Cookie', neighbour).expect(200);
+    await fixture.a.agent.get('/auth/me').expect(200);
+    await fixture.b.agent.get('/auth/me').expect(200);
+  });
+
+  it('never lets the cookie of one workspace read or end a session of another', async () => {
+    const theirs = await fixture.db.session.findFirstOrThrow({
+      where: { user: { workspaceId: fixture.b.id } },
+      select: { id: true },
+    });
+
+    await fixture.a.agent.post('/auth/logout').expect(204);
+
+    await expect(
+      fixture.db.session.count({ where: { id: theirs.id } }),
+    ).resolves.toBe(1);
+    await fixture.a.agent
+      .post('/auth/login')
+      .send({ email: fixture.a.email, password: PASSWORD })
+      .expect(200);
   });
 
   it('invalidates one user session without touching another workspace', async () => {

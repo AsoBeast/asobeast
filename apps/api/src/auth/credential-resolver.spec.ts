@@ -6,7 +6,7 @@ import { CredentialResolver } from './credential-resolver';
 import type { CredentialRateLimiter } from './rate-limit/credential-rate.limiter';
 
 const USER = { workspaceId: 'ws_acme' } as AccountUser;
-const CLAIMS: SessionClaims = { sub: 'user_1', sv: 0 };
+const CLAIMS: SessionClaims = { sub: 'user_1', sv: 0, jti: 'session_1' };
 const ADDRESS = '203.0.113.7';
 
 function requestWith(authorization?: string): Request {
@@ -66,7 +66,11 @@ describe('CredentialResolver', () => {
 
     await expect(
       resolver.resolve(requestWith('Bearer asob_valid')),
-    ).resolves.toEqual({ user: USER, credential: 'session' });
+    ).resolves.toEqual({
+      user: USER,
+      credential: 'session',
+      sessionId: 'session_1',
+    });
 
     expect(resolveToken).not.toHaveBeenCalled();
     expect(recordRejection).not.toHaveBeenCalled();

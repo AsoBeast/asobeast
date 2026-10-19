@@ -35,6 +35,7 @@ export class AuthGuard implements CanActivate {
     req.user = resolved.user;
     req.credential = resolved.credential;
     req.tokenScope = resolved.tokenScope;
+    req.sessionId = resolved.sessionId;
     this.workspace.bind(resolved.user.workspaceId);
     return true;
   }

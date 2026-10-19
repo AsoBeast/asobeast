@@ -370,6 +370,9 @@ describe('Account recovery for a customer who forgot their password', () => {
       .get('/auth/me')
       .set('Cookie', cookie)
       .expect(401);
+    await expect(
+      prisma.session.count({ where: { user: { email: KNOWN } } }),
+    ).resolves.toBe(0);
   });
 
   it('revokes every personal api token the account held and no one else', async () => {

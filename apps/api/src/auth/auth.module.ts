@@ -5,6 +5,7 @@ import type { Env } from '../config/env';
 import { AccountPlanService } from './account-plan.service';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { SessionStore } from './session-store';
 import { CredentialResolver } from './credential-resolver';
 import { WorkspaceTeamController } from './workspace-team.controller';
 import { WorkspaceTeamService } from './workspace-team.service';
@@ -46,6 +47,7 @@ import { TrialClaims } from './trial-claims';
     TrialClaims,
     TrialClaimBackfill,
     PasswordResetService,
+    SessionStore,
     PublicWebUrl,
     VerificationMailer,
     RecoveryMailer,

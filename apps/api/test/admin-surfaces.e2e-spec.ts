@@ -26,7 +26,12 @@ import {
   awaitBurnHeadroom,
   SHORT_BURN_HEADROOM_SECONDS,
 } from './helpers/burn-headroom';
-import { ownerAgent, useCookies } from './helpers/session';
+import {
+  OWNER,
+  ownerAgent,
+  sessionCookieOf,
+  useCookies,
+} from './helpers/session';
 import { CREDENTIAL_FAILURES_PER_MINUTE } from '../src/auth/rate-limit/credential-rate.limiter';
 import {
   clearRateLimitCounters,
@@ -116,6 +121,29 @@ describe('Admin surfaces (e2e)', () => {
 
     it('is served to an owner session', async () => {
       await owner.get(surface).expect(200);
+    });
+
+    it('is not found for an owner session that logged out', async () => {
+      await clearRateLimitCounters(app);
+      const response = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send(OWNER)
+        .expect(200);
+      const cookie = sessionCookieOf(response);
+      await request(app.getHttpServer())
+        .get(surface)
+        .set('Cookie', cookie)
+        .expect(200);
+
+      await request(app.getHttpServer())
+        .post('/auth/logout')
+        .set('Cookie', cookie)
+        .expect(204);
+
+      await request(app.getHttpServer())
+        .get(surface)
+        .set('Cookie', cookie)
+        .expect(404);
     });
 
     it('is served to an owner api token', async () => {

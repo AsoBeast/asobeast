@@ -83,6 +83,44 @@ describe('AccountExportService', () => {
     expect(written.join('')).not.toContain('argon2');
   });
 
+  it('writes no recovery, session or checkout state of any row', async () => {
+    const { service, workspace } = exporterFor({
+      user: [
+        {
+          id: 'u1',
+          email: 'owner@example.com',
+          resetHash: 'reset-hash-sentinel',
+          resetExpiresAt: 'reset-expiry-sentinel',
+          sessionVersion: 41,
+        },
+      ],
+      workspace: [
+        {
+          id: WORKSPACE,
+          plan: 'indie',
+          checkoutClaimToken: 'claim-sentinel',
+          checkoutSessionId: 'cs_sentinel',
+        },
+      ],
+    });
+    const { lines, sink } = collector();
+
+    await workspace.run(WORKSPACE, () => service.stream(sink));
+
+    const written = (await lines()).join('\n');
+    expect(written).toContain('owner@example.com');
+    expect(written).toContain('"plan":"indie"');
+    for (const sentinel of [
+      'reset-hash-sentinel',
+      'reset-expiry-sentinel',
+      'claim-sentinel',
+      'cs_sentinel',
+      'sessionVersion',
+    ]) {
+      expect(written).not.toContain(sentinel);
+    }
+  });
+
   it('pages past the first batch rather than stopping at it', async () => {
     const rows = Array.from({ length: EXPORT_PAGE_SIZE + 7 }, (_, index) => ({
       id: `kw${index}`,

@@ -172,6 +172,33 @@ describe('Auth (enabled, self-hosted)', () => {
       .expect(404);
   });
 
+  it('ends the sessions of a member the owner removes', async () => {
+    const cookie = await registerOwner();
+    const invite = await inviteMember(cookie, 'leaver@example.com');
+    const accepted = await request(app.getHttpServer())
+      .post('/workspace/invites/accept')
+      .send({ token: tokenOf(invite), password: 'anothersecret1' })
+      .expect(201);
+    const memberCookie = sessionCookie(accepted);
+    const memberId = (accepted.body as AuthUser).id;
+    await expect(
+      prisma.session.count({ where: { userId: memberId } }),
+    ).resolves.toBe(1);
+
+    await request(app.getHttpServer())
+      .delete(`/workspace/members/${memberId}`)
+      .set('Cookie', cookie)
+      .expect(204);
+
+    await request(app.getHttpServer())
+      .get('/auth/me')
+      .set('Cookie', memberCookie)
+      .expect(401);
+    await expect(
+      prisma.session.count({ where: { userId: memberId } }),
+    ).resolves.toBe(0);
+  });
+
   it('keeps invitations and member removal to the owner', async () => {
     const cookie = await registerOwner();
     const invite = await inviteMember(cookie, 'member@example.com');
@@ -350,13 +377,12 @@ describe('Auth (enabled, self-hosted)', () => {
       .expect(401);
   });
 
-  it('logout drops the session so me is unauthorized', async () => {
+  it('logout ends the session on the server, so the replayed cookie is unauthorized', async () => {
     const register = await request(app.getHttpServer())
       .post('/auth/register')
       .send({ email: 'logout@example.com', password: 'supersecret1' })
       .expect(201);
     const cookie = sessionCookie(register);
-
     await request(app.getHttpServer())
       .get('/auth/me')
       .set('Cookie', cookie)
@@ -367,7 +393,110 @@ describe('Auth (enabled, self-hosted)', () => {
       .set('Cookie', cookie)
       .expect(204);
 
-    await request(app.getHttpServer()).get('/auth/me').expect(401);
+    await request(app.getHttpServer())
+      .get('/auth/me')
+      .set('Cookie', cookie)
+      .expect(401);
+    await request(app.getHttpServer())
+      .get('/apps')
+      .set('Cookie', cookie)
+      .expect(401);
+    const status = await request(app.getHttpServer())
+      .get('/auth/status')
+      .set('Cookie', cookie)
+      .expect(200);
+    expect((status.body as { authenticated: boolean }).authenticated).toBe(
+      false,
+    );
+  });
+
+  it('logout ends only the session it was sent with', async () => {
+    await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({ email: 'devices@example.com', password: 'supersecret1' })
+      .expect(201);
+    const signIn = () =>
+      request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: 'devices@example.com', password: 'supersecret1' })
+        .expect(200)
+        .then(sessionCookie);
+    const laptop = await signIn();
+    const phone = await signIn();
+
+    await request(app.getHttpServer())
+      .post('/auth/logout')
+      .set('Cookie', laptop)
+      .expect(204);
+
+    await request(app.getHttpServer())
+      .get('/auth/me')
+      .set('Cookie', laptop)
+      .expect(401);
+    await request(app.getHttpServer())
+      .get('/auth/me')
+      .set('Cookie', phone)
+      .expect(200);
+    await expect(
+      prisma.session.count({
+        where: { user: { email: 'devices@example.com' } },
+      }),
+    ).resolves.toBe(2);
+  });
+
+  it('logout through a personal token ends no session', async () => {
+    const register = await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({ email: 'agent@example.com', password: 'supersecret1' })
+      .expect(201);
+    const cookie = sessionCookie(register);
+    const minted = await request(app.getHttpServer())
+      .post('/auth/tokens')
+      .set('Cookie', cookie)
+      .send({ name: 'agent', scope: 'write' })
+      .expect(201);
+    const { token } = minted.body as ApiTokenCreated;
+
+    await request(app.getHttpServer())
+      .post('/auth/logout')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(204);
+
+    await request(app.getHttpServer())
+      .get('/auth/me')
+      .set('Cookie', cookie)
+      .expect(200);
+  });
+
+  it('a password change leaves one session row, the one it just issued', async () => {
+    const register = await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({ email: 'sweep@example.com', password: 'supersecret1' })
+      .expect(201);
+    const first = sessionCookie(register);
+    const second = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email: 'sweep@example.com', password: 'supersecret1' })
+      .expect(200)
+      .then(sessionCookie);
+
+    const changed = await request(app.getHttpServer())
+      .post('/auth/password')
+      .set('Cookie', first)
+      .send({ current: 'supersecret1', next: 'brandnewsecret1' })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .get('/auth/me')
+      .set('Cookie', second)
+      .expect(401);
+    await request(app.getHttpServer())
+      .get('/auth/me')
+      .set('Cookie', sessionCookie(changed))
+      .expect(200);
+    await expect(
+      prisma.session.count({ where: { user: { email: 'sweep@example.com' } } }),
+    ).resolves.toBe(1);
   });
 
   it('changes the password and resets other sessions', async () => {

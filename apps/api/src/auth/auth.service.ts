@@ -28,6 +28,8 @@ import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { EmailVerificationService } from './email-verification.service';
 import { sha256 } from './password-hash';
 import { canStartTrial } from './trial-grant';
+import { sessionClaimsOf } from './session-claims';
+import { endSessions, SessionStore } from './session-store';
 import { DEFAULT_WORKSPACE_ID } from '../common/tenancy/default-workspace';
 import type { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
@@ -52,6 +54,7 @@ export class AuthService {
     private readonly crossTenant: CrossTenantAccess,
     private readonly signupCapacity: SignupCapacityGate,
     private readonly verification: EmailVerificationService,
+    private readonly sessions: SessionStore,
   ) {}
 
   private beforeSignIn<T>(work: () => Promise<T>): Promise<T> {
@@ -110,7 +113,7 @@ export class AuthService {
       });
     });
     await this.verification.invite(user);
-    return { user, token: await this.sign(user) };
+    return { user, token: await this.openSession(user) };
   }
 
   private async newWorkspace(
@@ -164,7 +167,7 @@ export class AuthService {
       if (!user || !valid) {
         throw new UnauthorizedException('Invalid email or password');
       }
-      return { user, token: await this.sign(user) };
+      return { user, token: await this.openSession(user) };
     });
   }
 
@@ -177,16 +180,23 @@ export class AuthService {
       throw new UnauthorizedException('Invalid current password');
     }
     const passwordHash = await argon2.hash(dto.next);
-    const updated = await this.prisma.withTransaction(async (tx) => {
-      const row = await tx.user.update({
-        where: { id: user.id },
-        data: { passwordHash, sessionVersion: { increment: 1 } },
-        include: { workspace: true },
-      });
-      await revokeApiTokens(tx, user.id);
-      return row;
-    });
-    return { user: updated, token: await this.sign(updated) };
+    return this.beforeSignIn(() =>
+      this.prisma.withTransaction(async (tx) => {
+        const updated = await tx.user.update({
+          where: { id: user.id },
+          data: { passwordHash, sessionVersion: { increment: 1 } },
+          include: { workspace: true },
+        });
+        await revokeApiTokens(tx, user.id);
+        await endSessions(tx, user.id);
+        return { user: updated, token: await this.signSession(tx, updated) };
+      }),
+    );
+  }
+
+  async endSession(sessionId: string | undefined): Promise<void> {
+    if (!sessionId) return;
+    await this.beforeSignIn(() => this.sessions.end(sessionId));
   }
 
   async requireSessionUser(token: string | undefined): Promise<AccountUser> {
@@ -207,7 +217,7 @@ export class AuthService {
   ): Promise<SessionClaims | null> {
     if (!token) return null;
     try {
-      return await this.jwt.verifyAsync<SessionClaims>(token);
+      return sessionClaimsOf(await this.jwt.verifyAsync<object>(token));
     } catch {
       return null;
     }
@@ -215,11 +225,10 @@ export class AuthService {
 
   userOfSession(claims: SessionClaims): Promise<AccountUser | null> {
     return this.beforeSignIn(async () => {
-      const user = await this.prisma.user.findUnique({
-        where: { id: claims.sub },
-        include: { workspace: true },
-      });
-      if (!user || user.sessionVersion !== claims.sv) return null;
+      const session = await this.sessions.find(claims.jti);
+      const user = session?.user;
+      if (!user || user.id !== claims.sub) return null;
+      if (user.sessionVersion !== claims.sv) return null;
       return user;
     });
   }
@@ -287,9 +296,32 @@ export class AuthService {
     };
   }
 
-  async sign(user: User): Promise<string> {
-    const claims: SessionClaims = { sub: user.id, sv: user.sessionVersion };
+  openSession(user: User): Promise<string> {
+    return this.beforeSignIn(() =>
+      this.prisma.withTransaction((tx) => this.signSession(tx, user)),
+    );
+  }
+
+  private async signSession(
+    tx: Prisma.TransactionClient,
+    user: User,
+    now = new Date(),
+  ): Promise<string> {
+    const jti = await this.sessions.open(
+      tx,
+      user.id,
+      new Date(now.getTime() + this.sessionLifetimeMs()),
+    );
+    const claims: SessionClaims = {
+      sub: user.id,
+      sv: user.sessionVersion,
+      jti,
+    };
     return this.jwt.signAsync(claims);
+  }
+
+  private sessionLifetimeMs(): number {
+    return this.config.get('AUTH_SESSION_DAYS', { infer: true }) * DAY_MS;
   }
 
   toAuthUser(user: AccountUser, tokenScope?: ApiTokenScope): AuthUser {
@@ -314,7 +346,7 @@ export class AuthService {
   cookieOptions(): CookieOptions {
     return {
       ...this.baseCookieOptions(),
-      maxAge: this.config.get('AUTH_SESSION_DAYS', { infer: true }) * DAY_MS,
+      maxAge: this.sessionLifetimeMs(),
     };
   }
 

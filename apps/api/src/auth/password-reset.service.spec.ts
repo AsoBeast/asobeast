@@ -29,10 +29,18 @@ describe('PasswordResetService', () => {
     Promise<{ count: number }>,
     [{ where: Record<string, unknown> }]
   >();
+  const endSessionRows = jest.fn<
+    Promise<{ count: number }>,
+    [{ where: Record<string, unknown> }]
+  >();
   const send = jest.fn<Promise<void>, [string, string]>();
   const claim = jest.fn<Promise<boolean>, [string, Date]>();
 
-  const transaction = { user: { updateMany }, apiToken: { deleteMany } };
+  const transaction = {
+    user: { updateMany },
+    apiToken: { deleteMany },
+    session: { deleteMany: endSessionRows },
+  };
   const prisma = {
     user: { findUnique, update },
     withTransaction: (run: (tx: typeof transaction) => Promise<unknown>) =>
@@ -64,6 +72,7 @@ describe('PasswordResetService', () => {
     update.mockReset().mockResolvedValue(ACCOUNT);
     updateMany.mockReset().mockResolvedValue({ count: 1 });
     deleteMany.mockReset().mockResolvedValue({ count: 0 });
+    endSessionRows.mockReset().mockResolvedValue({ count: 0 });
     send.mockReset().mockResolvedValue(undefined);
     claim.mockReset().mockResolvedValue(true);
   });
@@ -198,6 +207,32 @@ describe('PasswordResetService', () => {
     await build().redeem('a'.repeat(48), 'newpassword1', NOW);
 
     expect(deleteMany).toHaveBeenCalledWith({ where: { userId: ACCOUNT.id } });
+  });
+
+  it('ends every stored session of the account once the token is spent', async () => {
+    findUnique.mockResolvedValue({
+      id: ACCOUNT.id,
+      resetExpiresAt: new Date(NOW.getTime() + 1),
+    });
+
+    await build().redeem('a'.repeat(48), 'newpassword1', NOW);
+
+    expect(endSessionRows).toHaveBeenCalledWith({
+      where: { userId: ACCOUNT.id },
+    });
+  });
+
+  it('keeps the stored sessions when another request spent the token first', async () => {
+    findUnique.mockResolvedValue({
+      id: ACCOUNT.id,
+      resetExpiresAt: new Date(NOW.getTime() + 1),
+    });
+    updateMany.mockResolvedValue({ count: 0 });
+
+    await expect(
+      build().redeem('a'.repeat(48), 'newpassword1', NOW),
+    ).rejects.toThrow(NotFoundException);
+    expect(endSessionRows).not.toHaveBeenCalled();
   });
 
   it('keeps the api tokens when another request spent the token first', async () => {
