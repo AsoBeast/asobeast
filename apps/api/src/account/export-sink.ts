@@ -18,11 +18,12 @@ export class ExportStalledError extends Error {
   }
 }
 
-function closedTheConnection(sink: Writable, error: Error): boolean {
+function exportErrorOf(sink: Writable, error: Error): Error {
   const { code } = error as NodeJS.ErrnoException;
-  return (
-    sink.destroyed || (code !== undefined && CONNECTION_LOST_CODES.has(code))
-  );
+  const lost = code !== undefined && CONNECTION_LOST_CODES.has(code);
+  return sink.destroyed || lost
+    ? new ExportSinkClosedError({ cause: error })
+    : error;
 }
 
 function flush(
@@ -43,12 +44,7 @@ function flush(
       else resolve();
     };
     const onClose = (): void => finish(new ExportSinkClosedError());
-    const onError = (error: Error): void =>
-      finish(
-        closedTheConnection(sink, error)
-          ? new ExportSinkClosedError({ cause: error })
-          : error,
-      );
+    const onError = (error: Error): void => finish(exportErrorOf(sink, error));
     const timer = setTimeout(
       () => finish(new ExportStalledError(timeoutMs)),
       timeoutMs,
@@ -64,13 +60,26 @@ export async function writeBatched(
   lines: AsyncIterable<string> | Iterable<string>,
   timeoutMs = EXPORT_FLUSH_TIMEOUT_MS,
 ): Promise<void> {
-  let batch = '';
-  for await (const line of lines) {
-    batch += line;
-    if (batch.length >= EXPORT_BATCH_CHARS) {
-      await flush(sink, batch, timeoutMs);
-      batch = '';
+  let failure: Error | undefined;
+  const remember = (error: Error): void => {
+    failure ??= error;
+  };
+  const deliver = (batch: string): Promise<void> =>
+    failure === undefined
+      ? flush(sink, batch, timeoutMs)
+      : Promise.reject(exportErrorOf(sink, failure));
+  sink.on('error', remember);
+  try {
+    let batch = '';
+    for await (const line of lines) {
+      batch += line;
+      if (batch.length >= EXPORT_BATCH_CHARS) {
+        await deliver(batch);
+        batch = '';
+      }
     }
+    if (batch.length > 0) await deliver(batch);
+  } finally {
+    sink.off('error', remember);
   }
-  if (batch.length > 0) await flush(sink, batch, timeoutMs);
 }

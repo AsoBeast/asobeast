@@ -121,6 +121,20 @@ describe('writeBatched', () => {
     );
   });
 
+  it('handles an error the sink emits while the next lines are read', async () => {
+    const { sink } = collector();
+    async function* lines(): AsyncGenerator<string> {
+      yield `${'x'.repeat(EXPORT_BATCH_CHARS)}\n`;
+      sink.destroy(new Error('socket hang up'));
+      await new Promise((resolve) => setImmediate(resolve));
+      yield 'b\n';
+    }
+
+    await expect(writeBatched(sink, lines())).rejects.toBeInstanceOf(
+      ExportSinkClosedError,
+    );
+  });
+
   it('rejects with a stalled error when the sink accepts nothing', async () => {
     const sink = new Writable({ write: () => undefined });
 
