@@ -19,6 +19,7 @@ import { SessionOnly } from '../auth/decorators/session-only.decorator';
 import { OWNER_ROLE } from '../auth/workspace-roles';
 import { AccountDeletionService } from './account-deletion.service';
 import { AccountExportService } from './account-export.service';
+import { ExportSinkClosedError } from './export-sink';
 import { RequestDeletionDto } from './dto/request-deletion.dto';
 
 @ApiTags('account')
@@ -47,6 +48,12 @@ export class AccountController {
     try {
       await this.exporter.stream(res);
     } catch (error) {
+      if (error instanceof ExportSinkClosedError) {
+        this.logger.warn(
+          'workspace export stopped: the client closed the connection',
+        );
+        return;
+      }
       if (!res.headersSent) throw error;
       this.logger.error('workspace export failed part way through', error);
       res.destroy();
