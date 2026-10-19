@@ -151,7 +151,7 @@ export const titleChecks = (context: AuditContext): RubricCheck[] => {
   );
   const match = bestTitleMatch(context.title, primary);
   const tier = brandTier(context.ratingCount);
-  const chars = context.title.length;
+  const chars = countChars(context.title);
   const titleLint = policyIssues(
     lintTitle(context.title, TITLE_LIMIT, context.store),
   );
@@ -223,7 +223,7 @@ export const SUBTITLE_COVERAGE_SAMPLE = 5;
 export const subtitleChecks = (context: AuditContext): RubricCheck[] => {
   const subtitle = context.subtitle ?? '';
   const empty = subtitle.trim().length === 0;
-  const chars = subtitle.length;
+  const chars = countChars(subtitle);
   const outsideTitle = priorityKeywords(context.keywords)
     .filter((keyword) => !coversPhrase(context.title, keyword.text))
     .slice(0, SUBTITLE_COVERAGE_SAMPLE);
@@ -639,6 +639,7 @@ export const shortDescriptionChecks = (
 ): RubricCheck[] => {
   const summary = context.summary ?? '';
   const empty = summary.trim().length === 0;
+  const summaryChars = countChars(summary);
   const priority = priorityKeywords(context.keywords).slice(0, COVERAGE_SAMPLE);
   const missing = priority.filter(
     (keyword) => !coversPhrase(summary, keyword.text),
@@ -676,18 +677,18 @@ export const shortDescriptionChecks = (
       source: 'store',
       weight: 2,
       score: charUsageScore(
-        summary.length,
+        summaryChars,
         SHORT_DESCRIPTION_FULL_CHARS,
         SHORT_DESCRIPTION_PARTIAL_CHARS,
       ),
-      detail: `${summary.length} of ${SHORT_DESCRIPTION_LIMIT} characters used.`,
+      detail: `${summaryChars} of ${SHORT_DESCRIPTION_LIMIT} characters used.`,
       advice: empty
         ? {
             title: 'Write a short description',
             fix: 'It is the first line shoppers read under your title and an indexed field.',
           }
         : {
-            title: `Use the ${SHORT_DESCRIPTION_LIMIT - summary.length} unused short description characters`,
+            title: `Use the ${SHORT_DESCRIPTION_LIMIT - summaryChars} unused short description characters`,
             fix: 'Pair a benefit with a priority keyword; Google Play indexes every character.',
           },
     }),
