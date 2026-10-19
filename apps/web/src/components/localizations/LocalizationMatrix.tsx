@@ -42,7 +42,7 @@ export function LocalizationMatrix({
   return (
     <div className="flex min-w-0 flex-col gap-2">
       <div className="min-w-0 rounded-lg border border-border">
-        <Table>
+        <Table scrollLabel="Localization matrix" scrollFocus="overflow">
           <TableCaption className="sr-only">
             {grid.suggested.length > 0
               ? `Which of your markets read each localization, and up to ${formatNumber(SUGGESTED_COLUMNS)} suggested markets`
