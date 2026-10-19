@@ -28,10 +28,7 @@ function Tabbed({
       }}
       className="min-w-0 max-w-full"
     >
-      <TabsList
-        aria-label="Action status"
-        className="max-w-full justify-start overflow-x-auto overflow-y-hidden"
-      >
+      <TabsList aria-label="Action status" scrollable>
         {STATUS_PRESETS.map((preset) => {
           const count = byStatus ? presetCount(preset, byStatus) : null;
           return (
