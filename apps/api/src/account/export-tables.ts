@@ -11,8 +11,14 @@ export interface ExportTable {
 const SECRET_FIELDS = [
   'passwordHash',
   'verificationHash',
+  'verificationExpiresAt',
+  'resetHash',
+  'resetExpiresAt',
+  'sessionVersion',
   'tokenHash',
   'secret',
+  'checkoutClaimToken',
+  'checkoutSessionId',
 ];
 
 export function withoutSecrets(row: unknown): unknown {
