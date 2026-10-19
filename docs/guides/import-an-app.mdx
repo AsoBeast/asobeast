@@ -11,7 +11,7 @@ When you finish this guide you have one tracked app, its first metadata snapshot
 
 The import dialog takes either the name of the app or its store URL in one field.
 
-A name searches the store you pick, App Store or Google Play, in the storefront you pick, and lists up to ten listings with their icon, developer and rating. Picking one imports it by its store id, exactly as if you had pasted its URL. Each name search reaches the store while you wait and spends one store lookup of the hourly allowance, so a search is only sent once you stop typing. See [Rate limits and quotas](/api-reference/rate-limits#a-spent-on-demand-allowance-names-its-action).
+A name searches the store you pick, App Store or Google Play, in the storefront you pick, and lists up to ten listings with their icon, developer and rating. Picking one imports it by its store id, exactly as if you had pasted its URL. Each name search reaches the store while you wait and spends one store lookup of the hourly allowance, so a search is only sent once you stop typing. A name can be up to 80 characters. A longer name is not sent: the field marks itself invalid and says how many characters it has, and the same rule applies to the name search of the competitor form. See [Rate limits and quotas](/api-reference/rate-limits#a-spent-on-demand-allowance-names-its-action).
 
 A URL, a bare App Store id or a Google Play package name never searches. It imports as described below.
 

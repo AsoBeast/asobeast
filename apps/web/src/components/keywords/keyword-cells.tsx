@@ -12,6 +12,7 @@ import type {
 import { formatCheckedPosition } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
 import { PositionDeltaChip } from "@/components/ui/delta-chip";
+import { InfoTip } from "@/components/ui/info-tip";
 import { Meter } from "@/components/ui/meter";
 import { GradedNumber, gradeFill } from "@/components/ui/graded";
 import {
@@ -28,6 +29,7 @@ import { formatDateTime, formatMonth, formatNumber } from "@/lib/format";
 import { isChecking } from "@/lib/keyword-checks";
 import { tagsLabel, visibleTags } from "@/lib/keyword-tags";
 import { grade, gradeLabel, type GradeMetric } from "@/lib/grade";
+import { positionHoldLines } from "./position-hold";
 import { cn } from "@/lib/utils";
 
 const OUTDATED_SCORE_DETAIL =
@@ -281,7 +283,7 @@ export function PositionCell({ keyword }: { keyword: TrackedKeywordItem }) {
       </Tooltip>
     );
   }
-  return (
+  const position = (
     <span className="numeric font-mono inline-flex items-center gap-1.5">
       {keyword.latestPosition === null ? (
         <span className="text-muted-foreground">{label}</span>
@@ -293,6 +295,20 @@ export function PositionCell({ keyword }: { keyword: TrackedKeywordItem }) {
         />
       )}
       <PositionDeltaChip value={keyword.positionDelta1d} />
+    </span>
+  );
+  const hold = positionHoldLines(keyword);
+  if (hold.length === 0) {
+    return position;
+  }
+  return (
+    <span className="inline-flex items-center gap-1">
+      {position}
+      <InfoTip
+        label={`Position facts: ${keyword.text}`}
+        title="Position facts"
+        summary={hold.join(" · ")}
+      />
     </span>
   );
 }

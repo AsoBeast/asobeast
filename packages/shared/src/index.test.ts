@@ -3,6 +3,9 @@ import { describe, expect, it } from 'vitest';
 import type { ScoreProvenance } from './index';
 import {
   DEFAULT_COUNTRY,
+  isStoreSuggestionStrategy,
+  KEYWORD_SUGGESTION_STRATEGIES,
+  STORE_SUGGESTION_STRATEGIES,
   isScoringConfidence,
   isScoringSource,
   SCORING_CONFIDENCES,
@@ -52,5 +55,42 @@ describe('@asobeast/shared constants', () => {
     expect(new Date(provenance.capturedAt).toISOString()).toBe(
       provenance.capturedAt,
     );
+  });
+});
+
+describe('store suggestion strategies', () => {
+  it('names the strategies that reach the store', () => {
+    expect(STORE_SUGGESTION_STRATEGIES).toEqual([
+      'search',
+      'similar',
+      'developer',
+      'competitorSearch',
+    ]);
+    for (const strategy of STORE_SUGGESTION_STRATEGIES) {
+      expect(KEYWORD_SUGGESTION_STRATEGIES).toContain(strategy);
+    }
+    expect(isStoreSuggestionStrategy('similar')).toBe(true);
+    for (const value of ['metadata', 'seasonal', 'nope']) {
+      expect(isStoreSuggestionStrategy(value)).toBe(false);
+    }
+  });
+});
+
+describe('keyword suggestion strategies', () => {
+  it('appends competitorSearch after every released strategy', () => {
+    expect(KEYWORD_SUGGESTION_STRATEGIES.slice(0, 7)).toEqual([
+      'metadata',
+      'search',
+      'similar',
+      'developer',
+      'competitors',
+      'seasonal',
+      'reviews',
+    ]);
+    expect(KEYWORD_SUGGESTION_STRATEGIES.at(-1)).toBe('competitorSearch');
+  });
+
+  it('competitorSearch reaches the store', () => {
+    expect(isStoreSuggestionStrategy('competitorSearch')).toBe(true);
   });
 });

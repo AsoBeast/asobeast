@@ -22,6 +22,7 @@ import {
 } from './keyword-gaps';
 import { sortTracked } from './keyword-sort';
 import { serpVolatilities } from './keyword-volatility';
+import { retainedPositionFacts } from './keyword-position-facts';
 import { toTrackedKeywordItem } from './keywords.mapper';
 import { listingFacts } from './listing-facts';
 import { seedCandidates } from './listing-seed';
@@ -44,13 +45,14 @@ export class KeywordsService {
     appId: string,
     sort?: KeywordSort,
     country?: string,
+    options: { holdFacts?: boolean } = {},
   ): Promise<TrackedKeywordItem[]> {
     const app = await ensureApp(this.prisma, appId);
     const rows = await this.prisma.trackedKeyword.findMany({
       where: { appId, ...(country ? { keyword: { is: { country } } } : {}) },
       ...trackedArgs(appId),
     });
-    const [facts, volatility, acquisitions] = await Promise.all([
+    const [facts, volatility, hold, acquisitions] = await Promise.all([
       listingFacts(this.prisma, app, [
         ...new Set(rows.map((row) => row.keyword.country)),
       ]),
@@ -58,6 +60,13 @@ export class KeywordsService {
         this.prisma,
         rows.map((row) => row.keywordId),
       ),
+      options.holdFacts
+        ? retainedPositionFacts(
+            this.prisma,
+            appId,
+            rows.map((row) => row.keywordId),
+          )
+        : Promise.resolve(null),
       app.store === Store.GOOGLE_PLAY
         ? playAcquisitions(
             this.prisma,
@@ -73,6 +82,7 @@ export class KeywordsService {
             row,
             facts,
             volatility.get(row.keywordId) ?? null,
+            hold ? (hold.get(row.keywordId) ?? null) : undefined,
           ),
           ...(acquisitions
             ? {
@@ -125,6 +135,7 @@ export class KeywordsService {
         keyword: {
           select: {
             text: true,
+            country: true,
             metrics: {
               orderBy: { date: 'desc' },
               take: 1,
@@ -153,6 +164,7 @@ export class KeywordsService {
       return {
         keywordId: row.keywordId,
         text: row.keyword.text,
+        country: row.keyword.country,
         traffic: metric?.traffic ?? null,
         difficulty: metric?.difficulty ?? null,
         you,

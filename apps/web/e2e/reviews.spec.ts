@@ -5,6 +5,7 @@ import {
   UNBROKEN_REVIEW_TEXT,
   UNBROKEN_REVIEW_TITLE,
 } from "./fixtures.mts";
+import { hydrated } from "./hydrated.mts";
 import { seedCookies } from "./routes.mts";
 import { expect, test } from "./session.mts";
 
@@ -62,7 +63,7 @@ test("exporting reviews asks for the newest 200 that match the filters", async (
 }) => {
   await page.goto("/apps/app-1/reviews?version=3.4.0");
   await page.waitForLoadState("networkidle");
-  const button = page.getByRole("button", { name: "Export reviews to CSV" });
+  const button = page.getByRole("button", { name: "Export CSV of reviews" });
   await expect(button).toHaveAccessibleDescription(
     "Exports the newest 200 reviews that match the filters",
   );
@@ -123,7 +124,7 @@ test("a searched export says what the file holds and where the search stopped", 
 
   const [download] = await Promise.all([
     page.waitForEvent("download"),
-    page.getByRole("button", { name: "Export reviews to CSV" }).click(),
+    page.getByRole("button", { name: "Export CSV of reviews" }).click(),
   ]);
 
   expect(
@@ -146,7 +147,7 @@ test("an export without a search keeps the unsearched notice", async ({
 
   await Promise.all([
     page.waitForEvent("download"),
-    page.getByRole("button", { name: "Export reviews to CSV" }).click(),
+    page.getByRole("button", { name: "Export CSV of reviews" }).click(),
   ]);
 
   await expect(
@@ -163,7 +164,7 @@ test("the reviews export is disabled when no review matches", async ({
 
   await expect(page.getByText("No reviews match these filters")).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Export reviews to CSV" }),
+    page.getByRole("button", { name: "Export CSV of reviews" }),
   ).toBeDisabled();
 });
 
@@ -433,17 +434,38 @@ test("a theme searches for its phrase and a second press clears it", async ({
 
   await crashes.click();
 
-  await expect(page).toHaveURL(/q=crashes/);
+  await expect(page).toHaveURL(/q=%22crashes%22/);
   await expect(crashes).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("article")).toHaveCount(1);
   await expect(
     page.getByRole("textbox", { name: "Search reviews" }),
-  ).toHaveValue("crashes");
+  ).toHaveValue('"crashes"');
 
   await crashes.click();
 
   await expect(page).not.toHaveURL(/q=/);
   await expect(page.getByRole("article")).toHaveCount(5);
+});
+
+test("a pressed theme lists as many reviews as its number counts", async ({
+  context,
+  page,
+}) => {
+  await seedCookies(context, { e2e_reviews: "update" });
+  await page.goto("/apps/app-1/reviews");
+  const update = page
+    .getByRole("region", { name: "What people mention" })
+    .getByRole("button", { name: /^update in/ });
+  const counted = Number(
+    await update.locator("span[aria-hidden]").textContent(),
+  );
+
+  await update.click();
+
+  await expect(update).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByText("The last update broke sync.")).toBeVisible();
+  await expect(page.getByRole("article")).toHaveCount(counted);
+  expect(counted).toBe(2);
 });
 
 test("the themes strip stays hidden when nothing is repeated", async ({
@@ -521,6 +543,51 @@ test("retrying a failed themes request keeps focus on Retry", async ({
   await expect(failure).toBeVisible();
 });
 
+const REVIEWS_LIST_PATH = "/api/backend/apps/app-1/reviews";
+
+const isScoredList = (url: URL) =>
+  url.pathname === REVIEWS_LIST_PATH && url.searchParams.has("score");
+
+test("try again refetches a reviews list that failed after the page was open", async ({
+  page,
+}) => {
+  let failing = false;
+  await page.route(isScoredList, (route) =>
+    failing
+      ? route.fulfill({ status: 500, json: { statusCode: 500 } })
+      : route.fallback(),
+  );
+  await page.goto("/apps/app-1/reviews");
+  await expect(page.getByRole("article")).toHaveCount(5);
+
+  failing = true;
+  const oneStar = page.getByRole("button", { name: "1", exact: true });
+  await hydrated(oneStar);
+  await oneStar.click();
+  const boundary = page
+    .getByRole("main")
+    .getByRole("alert")
+    .filter({ hasText: "Reviews could not be loaded" });
+  await expect(boundary).toBeVisible({ timeout: 20_000 });
+  await expect(page).toHaveURL(/score=1/);
+
+  failing = false;
+  const refetched = page.waitForRequest(
+    (request) =>
+      isScoredList(new URL(request.url())) &&
+      new URL(request.url()).searchParams.get("score") === "1",
+  );
+  await boundary.getByRole("button", { name: "Try again" }).click();
+  await refetched;
+
+  await expect(boundary).toBeHidden();
+  await expect(page.getByRole("article")).toHaveCount(1);
+  await expect(
+    page.getByRole("article").getByText("Please add dark mode."),
+  ).toBeVisible();
+  await expect(page).toHaveURL(/score=1/);
+});
+
 test("themes that fail on first load leave the page in place", async ({
   context,
   page,
@@ -536,6 +603,40 @@ test("themes that fail on first load leave the page in place", async ({
   ).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText("Reviews could not be loaded")).toHaveCount(0);
 });
+
+const openThemesTip = async (page: Page, path: string) => {
+  await page.goto(path);
+  await page
+    .getByRole("region", { name: "What people mention" })
+    .getByRole("button", { name: "About what people mention" })
+    .click();
+  const tip = page.getByRole("dialog", { name: "What people mention" });
+  await expect(tip).toBeVisible();
+  return tip;
+};
+
+for (const [name, path, counted] of [
+  ["the default order", "/apps/app-1/reviews", "5 newest reviews"],
+  ["lowest first", "/apps/app-1/reviews?sort=lowest", "5 lowest rated reviews"],
+  [
+    "the needs reply queue",
+    "/apps/app-1/reviews?replyState=needs_reply&sort=lowest",
+    "5 lowest rated reviews",
+  ],
+] as const) {
+  test(`the themes tip says what its counts cover for ${name}`, async ({
+    page,
+  }) => {
+    const tip = await openThemesTip(page, path);
+
+    await expect(tip).toHaveAccessibleDescription(
+      new RegExp(
+        `compared with the newest 500 reviews of the version and period\\. Counts cover the ${counted} matching the filters\\.`,
+      ),
+    );
+    await expect(tip).not.toHaveAccessibleDescription(/every review/);
+  });
+}
 
 test("a play review edited after the reply says so and has its own filter", async ({
   page,
@@ -572,8 +673,8 @@ test("every review card is named and its buttons carry the review", async ({
   page,
 }) => {
   await page.goto("/apps/app-1/reviews");
+  await expect(page.getByRole("article")).toHaveCount(5);
   const articles = await page.getByRole("article").all();
-  expect(articles).toHaveLength(5);
   for (const article of articles) {
     await expect(article).toHaveAccessibleName(/^\d star review by .+ on /);
   }
@@ -649,6 +750,50 @@ test("translate buttons name the review they translate", async ({
   );
   expect(names).toHaveLength(3);
   expect(new Set(names).size).toBe(3);
+});
+
+test("reviews that share stars, author and day get names that tell them apart", async ({
+  context,
+  page,
+}) => {
+  await seedCookies(context, { e2e_reviews: "twins" });
+  await page.goto("/apps/app-1/reviews");
+  await expect(page.getByRole("article")).toHaveCount(3);
+
+  const first = page.getByRole("article").filter({ hasText: "Broken one." });
+  const second = page.getByRole("article").filter({ hasText: "Broken two." });
+  const other = page.getByRole("article").filter({ hasText: "Works for me." });
+  const twin = (rank: number) =>
+    `1 star review by A Google user on ${REVIEW_DAY.source} \\(${rank} of 2\\)`;
+
+  await expect(first).toHaveAccessibleName(new RegExp(`^${twin(1)}$`));
+  await expect(second).toHaveAccessibleName(new RegExp(`^${twin(2)}$`));
+  await expect(
+    first.getByRole("button", {
+      name: new RegExp(`^Reply to the ${twin(1)}$`),
+    }),
+  ).toBeVisible();
+  await expect(
+    second.getByRole("button", {
+      name: new RegExp(`^Reply to the ${twin(2)}$`),
+    }),
+  ).toBeVisible();
+  await expect(other).toHaveAccessibleName(
+    new RegExp(`^5 star review by Casey on ${REVIEW_DAY.source}$`),
+  );
+
+  const articleNames = await Promise.all(
+    (await page.getByRole("article").all()).map((card) =>
+      card.getAttribute("aria-label"),
+    ),
+  );
+  const buttonNames = await Promise.all(
+    (await page.getByRole("article").getByRole("button").all()).map((button) =>
+      button.getAttribute("aria-label"),
+    ),
+  );
+  expect(new Set(articleNames).size).toBe(3);
+  expect(new Set(buttonNames).size).toBe(buttonNames.length);
 });
 
 test("the needs reply tile opens the queue lowest score first", async ({

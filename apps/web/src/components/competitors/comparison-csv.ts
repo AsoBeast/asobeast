@@ -8,7 +8,7 @@ import { versusOf } from "@/lib/table/facets";
 import { comparisonScoreValue, UNNAMED_COMPETITOR } from "./comparison-scores";
 
 const LEADING_HEADERS = ["keyword", "popularity", "difficulty", "you"];
-const TRAILING_HEADERS = ["result", "gap"];
+const TRAILING_HEADERS = ["result", "gap", "country"];
 
 function competitorHeaders(
   competitors: readonly KeywordComparisonCompetitor[],
@@ -45,6 +45,7 @@ export function comparisonCsv(
         ...positions.map((position) => formatRankPosition(position)),
         versusOf(row.you, positions),
         row.gap ? "true" : "false",
+        row.country,
       ];
     }),
   );

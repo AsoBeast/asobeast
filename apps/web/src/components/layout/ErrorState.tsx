@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryErrorResetBoundary } from "@tanstack/react-query";
 import { RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { recoveryFor, type RecoveryScope } from "@/lib/error-recovery";
 import { reportBrowserError, worthReporting } from "@/lib/error-reporting";
+import { oncePerError } from "@/lib/once-per-error";
 import { webHealthOptions } from "@/lib/queries";
 
 export function ErrorState({
@@ -22,6 +23,13 @@ export function ErrorState({
 }) {
   const recovery = recoveryFor(error, scope);
   const statusPage = useQuery(webHealthOptions).data?.statusPageUrl ?? null;
+  const queryErrors = useQueryErrorResetBoundary();
+  const [once] = useState(oncePerError);
+  const tryAgain = () =>
+    once(error, () => {
+      queryErrors.reset();
+      retry();
+    });
 
   useEffect(() => {
     if (worthReporting(error)) void reportBrowserError(error);
@@ -39,7 +47,7 @@ export function ErrorState({
         </p>
       </div>
       {recovery.action.kind === "retry" ? (
-        <Button variant="outline" onClick={retry}>
+        <Button variant="outline" onClick={tryAgain}>
           <RotateCw />
           Try again
         </Button>

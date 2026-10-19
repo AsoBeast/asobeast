@@ -104,7 +104,10 @@ function TrendingLists({ page }: { page: ChartPage }) {
 
   return page.comparison ? (
     <Tabs defaultValue="climbers">
-      <TabsList aria-label="Trending list" className="h-auto w-full flex-wrap">
+      <TabsList
+        aria-label="Trending list"
+        className="w-full flex-wrap group-data-horizontal/tabs:h-auto"
+      >
         {LISTS.map(({ id, label }) => (
           <TabsTrigger key={id} value={id}>
             {label}

@@ -1847,7 +1847,7 @@
         ]
       },
       "patch": {
-        "description": "Changes the fields given and keeps the rest; an empty body changes nothing. Skipped steps are stored in step order. completed stamps completedAt once and keeps that time when completed again; any other status clears it. Answers 400 for an unknown status or step, a repeated step or market, a market that is not a lowercase two letter code, no market or more than 50, and 404 for a competitor or an unknown app.",
+        "description": "Changes the fields given and keeps the rest; an empty body changes nothing. Skipped steps are stored in step order. completed stamps completedAt once and keeps that time when completed again; any other status clears it. Answers 400 for an unknown status or step, a repeated step or market, a market that is not a lowercase two letter code, a market that is not a storefront of the app's store unless the setup already holds it or it is the home market of the app, no market or more than 50, and 404 for a competitor or an unknown app.",
         "operationId": "AppSetupController_update",
         "parameters": [
           {
@@ -2246,6 +2246,46 @@
         ]
       }
     },
+    "/apps/{id}/keywords/{keywordId}/breakdown": {
+      "get": {
+        "description": "Reads stored data only and makes no store request. The app comes first, then every competitor. words are the distinct words of the keyword. Each listing is one localization the keyword market searches (localization and role are null on Google Play), judged field by field: phrase is the verdict of the metadata coverage table, a word match is exact, folded (found only with accents ignored, never counted) or none, and segments split the field text into matched and unmatched runs (null for a Google Play long description). placement is the strongest place the keyword reaches in one localization: a field holding the whole phrase, else split (every word across fields of that localization), else partial, else none; an app placement is the best of its listings, and words never combine across localizations. ranking null means never checked; position null means checked and not found within depth. listingCountry names the market whose listing was read, the home market when the keyword market has none. unread lists the localizations the market searches whose text has not been captured for that app. rating comes from the listing read and names its market. insight is a rule of thumb set only on a competitor that ranks above the app while the app has been checked; ignore a rule you do not know. standing.recentChange is the newest listing change of the market or keyword field save it reads, at most 28 days old.",
+        "operationId": "KeywordsController_breakdown",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "keywordId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Show how the listing of an app and of each competitor matches one tracked keyword",
+        "tags": [
+          "keywords"
+        ]
+      }
+    },
     "/apps/{id}/keywords/suggestions": {
       "get": {
         "operationId": "KeywordsController_suggestions",
@@ -2272,7 +2312,8 @@
                 "developer",
                 "competitors",
                 "seasonal",
-                "reviews"
+                "reviews",
+                "competitorSearch"
               ]
             }
           },
@@ -2317,7 +2358,7 @@
             }
           }
         },
-        "summary": "Suggest keywords via metadata, search or similar",
+        "summary": "Suggest keywords from metadata, the store, competitors, seasons or reviews",
         "tags": [
           "keywords"
         ]
@@ -4126,8 +4167,18 @@
           }
         },
         "responses": {
+          "200": {
+            "description": "The workspace already follows the chart; the existing follow",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
           "201": {
-            "description": "",
+            "description": "The chart is now followed; the new follow",
             "content": {
               "application/json": {
                 "schema": {
@@ -6350,7 +6401,7 @@
   "info": {
     "title": "asobeast API",
     "description": "Self hosted ASO toolkit API.\n\nA metered instance carries RateLimit-Limit, RateLimit-Remaining and RateLimit-Reset on every response, for the tightest limit the request touched. A self hosted instance has no request rate limits and sends no such header. Limits are per workspace, so minting more tokens does not buy more capacity, and they are sized per plan across three classes: read for stored data, write for configuration changes and store for the endpoints that reach the App Store or Google Play.\n\nA 429 carries Retry-After and a rateLimit object naming the window that closed, or an aiAllowance object when the workspace has spent the AI calls its plan includes this month. A 403 with a quota object means a plan capacity limit such as apps or tracked keyword markets, which is a different problem from a rate limit. A 402 with an entitlement object means the workspace needs a plan.\n\nPositions are 1-based and null means checked but not found within the captured depth, never zero. Daily granularity uses UTC dates.",
-    "version": "1.10.0",
+    "version": "1.11.0",
     "contact": {}
   },
   "tags": [],

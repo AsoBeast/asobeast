@@ -25,7 +25,7 @@ Every failure returns the same JSON envelope, whatever produced it. A single exc
 | `statusCode` | number | The HTTP status, repeated in the body so a logged payload is self describing |
 | `error` | string | The status name, such as `Bad Request` |
 | `message` | string | A human readable explanation. Multiple validation messages are joined with commas |
-| `path` | string | The request path that failed |
+| `path` | string | The request path that failed, without its query string |
 | `timestamp` | string | UTC ISO 8601 timestamp of the failure |
 | `quota` | object | Present on `403` when a plan limit refused the write. Names the resource, the plan, the limit, the usage and the tier to upgrade to |
 | `entitlement` | object | Present on `402`. Names the plan in force, the trial and renewal dates, the tier to upgrade to and the path to reach it |
@@ -120,6 +120,10 @@ Every other character is accepted, including emoji and the other control charact
 ## Nesting depth
 
 No request this API accepts nests more than a few levels, so a body or query string nested more than 64 levels deep, counting every object and array, answers `400` with the message `body must not be nested more than 64 levels deep` (or `query`). The limit applies to every field, passwords included, and is checked before validation, so a deeply nested body is refused cheaply instead of exhausting the validator.
+
+## What an error never repeats
+
+The `path` and the `message` of an unknown route name the path only. The query string is left out on purpose: a client that puts a token in a URL by mistake would otherwise get it back in an error body that its logs, its error reporter or a proxy may keep. The API never reads a credential from a query string. Send a personal token in the `Authorization: Bearer` header, as described in [Authentication](/api-reference/authentication). Validation messages name the field that failed and the rule it broke, not the value you sent.
 
 ## Related
 

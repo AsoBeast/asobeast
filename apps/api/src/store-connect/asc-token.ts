@@ -18,12 +18,28 @@ export class InvalidPrivateKeyError extends Error {
   }
 }
 
-const PEM_BLOCK = /-----BEGIN ([A-Z ]+)-----([\s\S]*?)-----END \1-----/;
+const PEM_BEGIN = '-----BEGIN ';
+const PEM_DASHES = '-----';
+const PEM_LABEL = /^[A-Z ]+$/;
+
+function pemBlock(text: string): { label: string; body: string } | null {
+  const begin = text.indexOf(PEM_BEGIN);
+  if (begin < 0) return null;
+  const labelStart = begin + PEM_BEGIN.length;
+  const labelEnd = text.indexOf(PEM_DASHES, labelStart);
+  if (labelEnd < 0) return null;
+  const label = text.slice(labelStart, labelEnd);
+  if (!PEM_LABEL.test(label)) return null;
+  const bodyStart = labelEnd + PEM_DASHES.length;
+  const end = text.indexOf(`-----END ${label}-----`, bodyStart);
+  if (end < 0) return null;
+  return { label, body: text.slice(bodyStart, end) };
+}
 
 export function normalizePrivateKey(text: string): string {
-  const block = PEM_BLOCK.exec(text);
+  const block = pemBlock(text);
   if (!block) return text.trim();
-  const [, label, body] = block;
+  const { label, body } = block;
   const lines = body.replace(/\s+/g, '').match(/.{1,64}/g) ?? [];
   return `-----BEGIN ${label}-----\n${lines.join('\n')}\n-----END ${label}-----\n`;
 }

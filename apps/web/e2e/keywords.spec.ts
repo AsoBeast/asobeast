@@ -323,7 +323,7 @@ test("exporting keywords downloads a bom-prefixed csv", async ({ page }) => {
 
   const [download] = await Promise.all([
     page.waitForEvent("download"),
-    page.getByRole("button", { name: "Export keywords to CSV" }).click(),
+    page.getByRole("button", { name: "Export CSV of keywords" }).click(),
   ]);
 
   expect(download.suggestedFilename()).toMatch(
@@ -530,7 +530,7 @@ test("the export follows the search", async ({ page }) => {
 
   const [download] = await Promise.all([
     page.waitForEvent("download"),
-    page.getByRole("button", { name: "Export keywords to CSV" }).click(),
+    page.getByRole("button", { name: "Export CSV of keywords" }).click(),
   ]);
 
   const lines = readFileSync(await download.path(), "utf8")

@@ -1,6 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
+import { seedCookies } from "./routes.mts";
 import { startedSetup } from "./setup-session.mts";
 
 const STRUCTURAL_RULES = [
@@ -39,6 +40,20 @@ for (const path of [
     expect(await structuralViolations(page)).toEqual([]);
   });
 }
+
+test("the competitors page with every section collapsed names no missing control", async ({
+  page,
+  context,
+}) => {
+  await seedCookies(context, {
+    asobeast_collapsed:
+      "competitors.tracked%2Ccompetitors.discovery%2Ccompetitors.matrix",
+  });
+  await page.goto("/apps/app-1/competitors");
+  await page.waitForLoadState("networkidle");
+
+  expect(await structuralViolations(page)).toEqual([]);
+});
 
 test("/apps/app-1/setup names the panel of every picker tab", async ({
   page,

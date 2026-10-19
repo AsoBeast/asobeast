@@ -15,8 +15,9 @@ import { Button } from "@/components/ui/button";
 import { InfoTip } from "@/components/ui/info-tip";
 import { formatNumber, pluralize } from "@/lib/format";
 import { reviewThemesOptions } from "@/lib/queries";
-import { searchText } from "@/lib/search-text";
 import { reviewFilters, type ReviewView } from "./review-filters";
+import { phraseQuery, quotedPhrase } from "./review-search";
+import { themesSummary } from "./review-themes-summary";
 
 const KIND_LABELS: Record<ReviewThemeKind, string> = {
   complaint: "Complaints",
@@ -46,7 +47,7 @@ function ThemeChip({
       size="sm"
       variant={selected ? "default" : "outline"}
       aria-pressed={selected}
-      onClick={() => onSelect(selected ? "" : theme.phrase)}
+      onClick={() => onSelect(selected ? "" : phraseQuery(theme.phrase))}
     >
       {theme.phrase}
       <span
@@ -83,7 +84,7 @@ export function ReviewThemesStrip({
     );
   }
   if (!data || data.themes.length === 0) return null;
-  const active = searchText(query);
+  const active = quotedPhrase(query);
 
   return (
     <section aria-labelledby={headingId} className="flex flex-col gap-2">
@@ -97,7 +98,11 @@ export function ReviewThemesStrip({
         <InfoTip
           label="About what people mention"
           title="What people mention"
-          summary={`Complaints come up mostly in reviews at ${pluralize(data.negativeScoreMax, "star")} or less, praise mostly in the others, compared with every review of the version and period. Counts cover the newest ${pluralize(data.reviews, "review")} that match the filters. Pick one to search for it.`}
+          summary={themesSummary({
+            negativeScoreMax: data.negativeScoreMax,
+            reviews: data.reviews,
+            sort: view.sort,
+          })}
         >
           <a
             href={THEMES_GUIDE}
@@ -129,7 +134,7 @@ export function ReviewThemesStrip({
                   <ThemeChip
                     theme={theme}
                     negativeScoreMax={data.negativeScoreMax}
-                    selected={active === searchText(theme.phrase)}
+                    selected={active === theme.phrase}
                     onSelect={onSelect}
                   />
                 </li>

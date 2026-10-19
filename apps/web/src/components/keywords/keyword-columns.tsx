@@ -53,6 +53,8 @@ const columnHelper = createColumnHelper<
 
 const SORTABLE = { sortUndefined: "last", sortFn: "basic" } as const;
 
+export const SELECT_ALL_KEYWORDS = "Select all keywords";
+
 export const HIDDEN_KEYWORD_COLUMNS = { bucket: false, status: false };
 
 function gradeFilter(
@@ -102,7 +104,7 @@ function identityColumns() {
                 : false
           }
           onCheckedChange={(value) => table.toggleAllRowsSelected(!!value)}
-          aria-label="Select all keywords"
+          aria-label={SELECT_ALL_KEYWORDS}
         />
       ),
       cell: ({ row }) => (

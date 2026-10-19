@@ -35,3 +35,35 @@ test("the refresh dialog says when nothing changed", async ({ page }) => {
   const dialog = page.getByRole("dialog", { name: "Snapshot refreshed" });
   await expect(dialog).toContainText("No changes detected.");
 });
+
+test("the refresh dialog formats the rating, ratings, installs and price", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-gp/metadata");
+  await page
+    .getByRole("banner")
+    .getByRole("button", { name: "Refresh", exact: true })
+    .click();
+
+  const dialog = page.getByRole("dialog", { name: "Snapshot refreshed" });
+  await expect(dialog).toContainText(
+    "5 fields changed since the last snapshot.",
+  );
+  await expect(
+    dialog.getByRole("row", { name: "Rating 3.1 4.3" }),
+  ).toBeVisible();
+  await expect(
+    dialog.getByRole("row", { name: "Ratings 100 66,487" }),
+  ).toBeVisible();
+  await expect(
+    dialog.getByRole("row", { name: "Installs 1,000 1,200,000" }),
+  ).toBeVisible();
+  await expect(
+    dialog.getByRole("row", { name: "Price $1.99 Free" }),
+  ).toBeVisible();
+  await expect(
+    dialog.getByRole("row", { name: "Version 1.0.0 9.1.0" }),
+  ).toBeVisible();
+  await expect(dialog).not.toContainText("4.31881");
+  await expect(dialog).not.toContainText("66487");
+});

@@ -1,6 +1,7 @@
 "use client";
 
 import { Plus, Tags, Upload } from "lucide-react";
+import type { Ref } from "react";
 import type { Store } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -12,10 +13,12 @@ export function KeywordsEmptyState({
   appId,
   store,
   country,
+  addRef,
 }: {
   appId: string;
   store: Store;
   country: string;
+  addRef?: Ref<HTMLButtonElement>;
 }) {
   return (
     <EmptyState
@@ -31,7 +34,7 @@ export function KeywordsEmptyState({
             </Button>
           </ImportKeywordsDialog>
           <AddKeywordsDialog appId={appId} store={store} country={country}>
-            <Button>
+            <Button ref={addRef}>
               <Plus />
               Add keywords
             </Button>

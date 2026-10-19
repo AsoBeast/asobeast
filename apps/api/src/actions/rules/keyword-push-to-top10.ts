@@ -5,6 +5,7 @@ import {
   Store,
   TrackedKeywordItem,
 } from '@asobeast/shared';
+import { median } from '../../scoring/curves';
 import { OPPORTUNITY_MIN_RELEVANCE } from '../../scoring/opportunity';
 import type {
   ActionContext,
@@ -24,6 +25,8 @@ export const PUSH_MIN_DAYS_IN_BAND = 5;
 export const PUSH_MIN_VOLUME = 20;
 export const PUSH_MIN_RELEVANCE = OPPORTUNITY_MIN_RELEVANCE;
 export const PUSH_MAX_PER_APP = 5;
+export const PUSH_TREND_DAYS = 3;
+export const PUSH_WORSENING_POSITIONS = 2;
 export const PUSH_STRONG_FIELDS: Record<Store, readonly MetadataField[]> = {
   APP_STORE: ['title', 'subtitle'],
   GOOGLE_PLAY: ['title', 'shortDescription'],
@@ -37,7 +40,7 @@ const inBand = (position: number | null): position is number =>
 interface BandHistory {
   daysInBand: number;
   bestPosition: number;
-  firstRanked: number | null;
+  worsening: boolean;
 }
 
 function bandHistory(days: ActionRankingDay[], now: Date): BandHistory {
@@ -50,7 +53,10 @@ function bandHistory(days: ActionRankingDay[], now: Date): BandHistory {
   return {
     daysInBand: window.filter((day) => inBand(day.position)).length,
     bestPosition: Math.min(...ranked),
-    firstRanked: ranked[0] ?? null,
+    worsening:
+      median(ranked.slice(-PUSH_TREND_DAYS)) -
+        median(ranked.slice(0, PUSH_TREND_DAYS)) >=
+      PUSH_WORSENING_POSITIONS,
   };
 }
 
@@ -91,11 +97,7 @@ function candidate(
     app.rankingDaysByKeyword.get(keyword.keywordId) ?? [],
     now,
   );
-  if (history.daysInBand < PUSH_MIN_DAYS_IN_BAND) return null;
-  if (
-    history.firstRanked !== null &&
-    keyword.latestPosition > history.firstRanked
-  ) {
+  if (history.daysInBand < PUSH_MIN_DAYS_IN_BAND || history.worsening) {
     return null;
   }
   const coveredFields = weaklyCovered(

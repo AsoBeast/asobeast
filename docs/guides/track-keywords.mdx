@@ -140,15 +140,20 @@ The keyword field is App Store only. Google Play has no keyword field, so the ca
 
 ## Get keyword suggestions
 
-Suggestions come from three places.
+Suggestions come from four places.
 
 | Source | Where it comes from |
 | --- | --- |
 | Store suggest | A live lookup against the store suggestion endpoint |
 | Competitor listings | Phrases that competitors index and you do not |
+| Competitor searches | A live lookup of what people type around the phrases your competitors share in the market |
 | Review mining | Language that appears repeatedly in your own reviews |
 
-A suggestion lookup is the one user initiated exception to the rule that store requests only happen in the queue. It is bounded by a person clicking, so it stays small, but it does consume request budget.
+When one of several store lookups fails, the suggestions that answered are kept.
+
+**Competitor searches** read the title and subtitle of each competitor's listing in the market shown (the title and short description on Google Play), keep the phrases of two words or more that competitors share, up to five, and ask the store's search suggestions what people type around each. A search must contain the words of its phrase, and asobeast leaves out phrases you already track in that market, competitor titles and app names. Each row names the phrase it came from. When a competitor has no listing in that market yet, its home listing is read. One lookup spends one keyword suggestion, and an app whose competitors share no phrase spends none.
+
+A suggestion lookup is the one user initiated exception to the rule that store requests only happen in the queue. It is bounded by a person clicking, so it stays small, but a lookup that reaches the store spends one request of the hourly suggestions allowance. The Search tab with no active tracked keyword and the More by developer tab with no developer id in the newest listing have nothing to ask the store, so they answer an empty list and cost nothing. See [Rate limits and quotas](/api-reference/rate-limits).
 
 Deep search runs the store suggestion endpoint against a seed phrase and every one letter extension of it, queued as separate probes. It belongs to the market selected on the keyword monitor, so the same seed in two storefronts is two independent deep searches with their own results and their own budget. See [Countries and markets](/concepts/countries).
 
@@ -242,6 +247,8 @@ The controls above the table narrow the rows without reloading them.
 Every active filter shows as a chip under the controls. Remove one chip to drop that filter, or use **Clear all**. The count next to the controls reads how many keywords are shown out of how many are tracked in the market, and **Export CSV** exports exactly the rows shown, in the order shown. The grade words are defined in [How are scores graded?](/concepts/scoring#how-are-scores-graded).
 
 The **Tags** column shows up to three tags and how many more a keyword carries. A note icon next to the keyword shows its note when you point at it or focus it.
+
+The **Position** column carries an info button when the keyword has rank history. It opens the best recorded position, how far the keyword sits below it and how many days the keyword has held its current tier, which is one of first place, top 3 or top 10. Best means the best position kept within ranking retention (`RETENTION_RANKINGS_DAYS`, 365 days by default), not the all time best. The streak counts checked days only: a day without a check, a drop out of the tier or a paused keyword restarts it, and it shows only while the keyword is active and its newest check is from today or yesterday UTC.
 
 **Columns** hides and shows columns. The choice is remembered in this browser and is not part of the link. On a phone the table starts with the keyword, position and opportunity columns, and the filters move into a **Filters** panel.
 

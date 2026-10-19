@@ -8,6 +8,7 @@ import {
   Store,
   SuggestReachStatus,
 } from '../index';
+import type { RankMilestoneTier } from '../rank';
 import type { AppStoreLocalization } from '../storefronts/app-store-localizations';
 import type { PaidPlanName, QuotaUsage } from './plans';
 
@@ -41,6 +42,10 @@ export interface TrackedKeywordItem {
   previousPosition: number | null;
   positionDelta1d: number | null;
   positionDelta7d: number | null;
+  bestPosition?: number | null;
+  positionDeltaFromBest?: number | null;
+  daysInTier?: number | null;
+  heldTier?: RankMilestoneTier | null;
   traffic: number | null;
   difficulty: number | null;
   volume: number | null;
@@ -74,6 +79,7 @@ export interface KeywordSuggestion {
   priority?: number;
   usedByCount?: number;
   event?: string;
+  seed?: string;
 }
 
 export interface KeywordFieldResult {
@@ -108,6 +114,7 @@ export interface KeywordComparisonCompetitor {
 export interface KeywordComparisonRow {
   keywordId: string;
   text: string;
+  country: string;
   traffic: number | null;
   difficulty: number | null;
   you: number | null;

@@ -49,7 +49,7 @@ const snapshot = (
   entries: ids.map(([storeAppId, position]) => ({
     storeAppId,
     position,
-    title: `App ${storeAppId}`,
+    title: `Budget ${storeAppId}`,
   })),
 });
 

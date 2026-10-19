@@ -35,8 +35,8 @@ import {
   reviewFilters,
   type ReviewView,
 } from "./review-filters";
-import { matchesReviewQuery } from "./review-search";
-import { reviewActionLabel } from "./review-subject";
+import { matchesReviewQuery, quotedPhrase } from "./review-search";
+import { reviewActionLabel, reviewTwins } from "./review-subject";
 import { ReviewCountsSkeleton, ReviewsListSkeleton } from "./skeletons";
 
 function ShowAll({
@@ -138,13 +138,18 @@ function ReviewCards({
   const shown = data.reviews.filter((review) =>
     matchesReviewQuery(review, query),
   );
+  const twins = reviewTwins(shown);
 
   return (
     <div className="flex flex-col">
       {shown.length === 0 ? (
         <EmptyState
           title="No reviews match this search"
-          body="Search looks through the titles, texts, authors and replies of the reviews loaded here."
+          body={
+            quotedPhrase(query) === null
+              ? "Search looks through the titles, texts, authors and replies of the reviews loaded here."
+              : "A search in quotes matches whole words in the titles and texts of the reviews loaded here."
+          }
           action={
             <Button variant="outline" onClick={onResetSearch}>
               Reset search
@@ -153,47 +158,52 @@ function ReviewCards({
         />
       ) : (
         <div className="divide-y">
-          {shown.map((review) => (
-            <ReviewCard
-              key={review.id}
-              appId={id}
-              fallbackLanguage={storefrontLanguage(app.country)}
-              review={review}
-              actions={
-                reply === review.id ? null : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="ml-auto"
-                    autoFocus={closed === review.id}
-                    aria-label={reviewActionLabel(
-                      review.reply?.text ? "Edit reply to" : "Reply to",
-                      review,
-                    )}
-                    onClick={() => {
-                      setClosed(null);
-                      onReply(review.id);
+          {shown.map((review) => {
+            const twin = twins.get(review.id);
+            return (
+              <ReviewCard
+                key={review.id}
+                appId={id}
+                fallbackLanguage={storefrontLanguage(app.country)}
+                review={review}
+                twin={twin}
+                actions={
+                  reply === review.id ? null : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="ml-auto"
+                      autoFocus={closed === review.id}
+                      aria-label={reviewActionLabel(
+                        review.reply?.text ? "Edit reply to" : "Reply to",
+                        review,
+                        twin,
+                      )}
+                      onClick={() => {
+                        setClosed(null);
+                        onReply(review.id);
+                      }}
+                    >
+                      {review.reply?.text ? "Edit reply" : "Reply"}
+                    </Button>
+                  )
+                }
+              >
+                {reply === review.id ? (
+                  <ReplyComposer
+                    appId={id}
+                    review={review}
+                    store={app.store}
+                    storeAppId={app.storeAppId}
+                    onClose={() => {
+                      setClosed(review.id);
+                      onReply(null);
                     }}
-                  >
-                    {review.reply?.text ? "Edit reply" : "Reply"}
-                  </Button>
-                )
-              }
-            >
-              {reply === review.id ? (
-                <ReplyComposer
-                  appId={id}
-                  review={review}
-                  store={app.store}
-                  storeAppId={app.storeAppId}
-                  onClose={() => {
-                    setClosed(review.id);
-                    onReply(null);
-                  }}
-                />
-              ) : null}
-            </ReviewCard>
-          ))}
+                  />
+                ) : null}
+              </ReviewCard>
+            );
+          })}
         </div>
       )}
       <ShowAll

@@ -55,11 +55,23 @@ describe("notFoundText", () => {
   });
 });
 
+describe("keyword_breakdown", () => {
+  it("keeps the api message when the keyword is not tracked", () => {
+    expect(
+      notFoundText(
+        catalogTool("keyword_breakdown"),
+        "Keyword kw-9 is not tracked",
+      ),
+    ).toBe("Keyword kw-9 is not tracked");
+  });
+});
+
 describe.each([
   "app_localizations",
   "market_keyword_fields",
   "market_suggestions",
   "app_run_status",
+  "keyword_breakdown",
 ])("%s", (name) => {
   const tool = catalogTool(name);
 

@@ -54,7 +54,7 @@ The keyword field text may run to 1,000 characters, so spacing and duplicates in
 | Write | Configuration changes such as adding a keyword or a competitor | The tighter write budget |
 | Store | Refresh, finding localizations, run daily, score, keyword suggestions, deep search, importing an app, adding a competitor, name search and similar apps lookups, and capturing a top chart | The write budget, plus its own on demand allowance |
 
-Keyword suggestions reach the store only for the search, similar and developer strategies. The listing, competitor, seasonal and review strategies answer from stored data and spend no lookup.
+Keyword suggestions reach the store only for the search, similar, developer and competitorSearch strategies, and each of them spends one lookup only when it has something to ask the store. Search needs an active tracked keyword to expand, developer needs the developer id in the newest listing and competitorSearch needs a phrase the competitors share in the market; without one they answer an empty list and spend nothing, even when the hour's allowance is spent. The listing, competitor, seasonal and review strategies answer from stored data and spend no lookup.
 
 Reading a year of stored rankings is cheap. Triggering a refresh is not, which is why store endpoints carry a separate on demand allowance on top of the request rate.
 
