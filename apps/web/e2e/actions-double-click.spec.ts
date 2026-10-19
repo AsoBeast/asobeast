@@ -1,5 +1,5 @@
-import type { Locator, Page } from "@playwright/test";
-import { hydrated } from "./hydrated.mts";
+import type { Page } from "@playwright/test";
+import { activateTwiceInOneTask, hydrated } from "./hydrated.mts";
 import { expect, test } from "./session.mts";
 
 test.describe.configure({ mode: "serial" });
@@ -28,12 +28,6 @@ const countUpdates = (page: Page, path: string) => {
 
 const toast = (page: Page, text: string) =>
   page.getByRole("region", { name: /^Notifications/ }).getByText(text);
-
-const activateTwiceInOneTask = async (control: Locator) =>
-  (await hydrated(control)).evaluate((element: HTMLElement) => {
-    element.click();
-    element.click();
-  });
 
 test("a double click on Done sends one update and shows one confirmation", async ({
   page,
