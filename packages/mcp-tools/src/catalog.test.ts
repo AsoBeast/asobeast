@@ -186,6 +186,15 @@ describe("the keyword_suggestions strategies", () => {
     expect(description).not.toMatch(/competitors share|share a phrase/i);
     expect(description).toContain("only one competitor uses");
   });
+
+  it("says a competitor with no listing in the market is read at home", () => {
+    const description = toolByName("keyword_suggestions")?.description ?? "";
+
+    expect(description).toContain("home listing");
+    expect(description).not.toContain(
+      "looks nothing up when no competitor listing in that market holds",
+    );
+  });
 });
 
 describe("the keyword_breakdown tool", () => {
