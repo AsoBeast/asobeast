@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { AuditBenchmarkRow } from "@asobeast/shared";
-import { benchmarkRatio, comparison } from "./benchmark-comparison";
+import {
+  benchmarkRatio,
+  comparison,
+  formatBenchmarkValue,
+} from "./benchmark-comparison";
 
 const row = (
   you: number | null,
@@ -48,4 +52,28 @@ describe("benchmarkRatio", () => {
   ])("reads %j as %s", (entry, expected) => {
     expect(benchmarkRatio(entry)).toBe(expected);
   });
+});
+
+describe("formatBenchmarkValue", () => {
+  it.each([
+    ["rating-average", 4.68104, "4.7"],
+    ["rating-average", 4.65226, "4.7"],
+    ["rating-average", 4.76438, "4.8"],
+    ["rating-count", 30853, "30,853"],
+    ["rating-count", 17322322, "17,322,322"],
+    ["rating-count", 328427.5, "328,427.5"],
+    ["screenshots", 8, "8"],
+    ["days-since-update", 1234, "1,234"],
+    ["has-video", 1, "1"],
+    ["title-length", 12.5, "12.5"],
+  ] as const)("writes %s %s as %s", (metric, value, text) => {
+    expect(formatBenchmarkValue(metric, value)).toBe(text);
+  });
+
+  it.each(["rating-average", "rating-count", "screenshots"] as const)(
+    "writes a missing %s as a dash",
+    (metric) => {
+      expect(formatBenchmarkValue(metric, null)).toBe("—");
+    },
+  );
 });

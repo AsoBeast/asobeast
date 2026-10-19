@@ -1,4 +1,5 @@
-import type { AuditBenchmarkRow } from "@asobeast/shared";
+import type { AuditBenchmarkMetric, AuditBenchmarkRow } from "@asobeast/shared";
+import { formatMeasure, formatRating } from "@/lib/format";
 
 export type Comparison = "ahead" | "behind" | "even" | "unknown";
 
@@ -23,4 +24,14 @@ export function benchmarkRatio(row: AuditBenchmarkRow): number {
   const [value, target] = row.better === "higher" ? [you, best] : [best, you];
   if (target === 0) return 1;
   return Math.max(0, Math.min(1, value / target));
+}
+
+export function formatBenchmarkValue(
+  metric: AuditBenchmarkMetric,
+  value: number | null,
+): string {
+  if (value === null) return "—";
+  return metric === "rating-average"
+    ? formatRating(value)
+    : formatMeasure(value);
 }
