@@ -179,6 +179,13 @@ describe("the keyword_suggestions strategies", () => {
 
     expect(description.split(". ")[0]).toContain("competitorSearch");
   });
+
+  it("does not tell an agent that competitors must share the phrase", () => {
+    const description = toolByName("keyword_suggestions")?.description ?? "";
+
+    expect(description).not.toMatch(/competitors share|share a phrase/i);
+    expect(description).toContain("only one competitor uses");
+  });
 });
 
 describe("the keyword_breakdown tool", () => {
