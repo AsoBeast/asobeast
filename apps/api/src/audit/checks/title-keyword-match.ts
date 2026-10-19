@@ -93,6 +93,6 @@ export const titleKeywordAdvice = (
   }
   return {
     title: `Put the whole phrase ${quoted(keyword.text)} in your title`,
-    fix: `Add ${quoteList(missing, missing.length)} to the words already there so the title carries the whole phrase within ${limit} characters, ${BRAND_FIRST}`,
+    fix: `Add ${quoteList(missing, missing.length)} and put the words in that order so the title carries ${quoted(keyword.text)} as one phrase within ${limit} characters, ${BRAND_FIRST}`,
   };
 };

@@ -197,7 +197,9 @@ describe('titleChecks', () => {
     expect(result?.detail).toBe(
       'The title has “quiz” from “quiz quiz map”, but not the whole phrase.',
     );
-    expect(result?.advice?.fix).toMatch(/^Add “map” to the words/);
+    expect(result?.advice?.fix).toMatch(
+      /^Add “map” and put the words in that order/,
+    );
   });
 
   it('advises completing the partly matched phrase, not a different keyword', () => {
@@ -216,9 +218,23 @@ describe('titleChecks', () => {
       status: 'warn',
       advice: {
         title: 'Put the whole phrase “telegram messaging focus” in your title',
-        fix: 'Add “messaging”, “focus” to the words already there so the title carries the whole phrase within 30 characters, keeping your brand first if people already search for it.',
+        fix: 'Add “messaging”, “focus” and put the words in that order so the title carries “telegram messaging focus” as one phrase within 30 characters, keeping your brand first if people already search for it.',
       },
     });
+  });
+
+  it('asks to reorder the title when its words are out of the phrase order', () => {
+    const result = titleCheck(
+      appStoreContext({
+        title: 'Map Geo',
+        keywords: [keyword('geo quiz map', 'primary', 90)],
+      }),
+      'title-keyword',
+    );
+
+    expect(result?.advice?.fix).toBe(
+      'Add “quiz” and put the words in that order so the title carries “geo quiz map” as one phrase within 30 characters, keeping your brand first if people already search for it.',
+    );
   });
 
   it('gives no advice when every word is present, because that scores as a pass', () => {
