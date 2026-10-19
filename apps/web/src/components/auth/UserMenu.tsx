@@ -6,6 +6,7 @@ import { LogOut, Settings, User } from "lucide-react";
 import { toast } from "sonner";
 import { logout } from "@/lib/api";
 import { invalidateAuth } from "@/lib/queries";
+import { planInForceLabel } from "@/lib/plan-in-force";
 import { ADMIN_ENTRY, ADMIN_TOOLS } from "@/components/admin/admin-links";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -45,8 +46,8 @@ export function UserMenu() {
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel className="flex flex-col gap-1">
           <span className="truncate font-medium">{user.email}</span>
-          <Badge variant="secondary" className="w-fit capitalize">
-            {user.plan}
+          <Badge variant="secondary" className="w-fit">
+            {planInForceLabel(user, new Date())}
           </Badge>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />

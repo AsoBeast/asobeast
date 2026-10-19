@@ -247,6 +247,85 @@ test("the account menu hides the operator surfaces from a workspace owner", asyn
   await expect(page.getByRole("menuitem", { name: "API docs" })).toHaveCount(0);
 });
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+const daysFromNow = (days: number) =>
+  new Date(Date.now() + days * DAY_MS).toISOString();
+
+async function openAccountMenuAs(page: Page, user: AuthUser) {
+  await seedSession(page);
+  await routeMe(page, user);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Account menu" }).click();
+}
+
+const accountMenuPlan = (page: Page) =>
+  page.getByRole("menu").locator('[data-slot="badge"]');
+
+const PLAN_IN_FORCE_CASES: ReadonlyArray<
+  readonly [string, Partial<AuthUser>, string]
+> = [
+  [
+    "a trial that has ended",
+    { plan: "trial", trialEndsAt: daysFromNow(-1), entitled: false },
+    "Free",
+  ],
+  [
+    "a paid plan that lapsed while a trial still runs",
+    {
+      plan: "indie",
+      planExpiresAt: daysFromNow(-1),
+      trialEndsAt: daysFromNow(3),
+    },
+    "Trial",
+  ],
+  [
+    "a paid plan that lapsed with no trial",
+    {
+      plan: "indie",
+      planExpiresAt: daysFromNow(-1),
+      trialEndsAt: null,
+      entitled: false,
+    },
+    "Free",
+  ],
+  [
+    "a trial that is running",
+    { plan: "trial", trialEndsAt: daysFromNow(3) },
+    "Trial",
+  ],
+  [
+    "a paid plan that has not lapsed",
+    { plan: "ultimate", planExpiresAt: daysFromNow(20), trialEndsAt: null },
+    "Ultimate",
+  ],
+  [
+    "a paid plan with no expiry",
+    { plan: "indie", planExpiresAt: null, trialEndsAt: null },
+    "Indie",
+  ],
+  [
+    "the legacy premium spelling",
+    { plan: "premium", planExpiresAt: null, trialEndsAt: null },
+    "Indie",
+  ],
+  [
+    "a self hosted workspace on the free default",
+    { plan: "free", planExpiresAt: null, trialEndsAt: null },
+    "Free",
+  ],
+];
+
+for (const [name, terms, label] of PLAN_IN_FORCE_CASES) {
+  test(`the account menu names the plan in force for ${name}`, async ({
+    page,
+  }) => {
+    await openAccountMenuAs(page, { ...TRIAL_USER, ...terms });
+
+    await expect(accountMenuPlan(page)).toHaveText(label);
+  });
+}
+
 test("login rejects an encoded cross-origin destination", async ({ page }) => {
   let authenticated = false;
   await page.route("**/api/backend/auth/status", (route) =>
