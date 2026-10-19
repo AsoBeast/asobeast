@@ -48,6 +48,40 @@ describe('tessdataDirectory', () => {
     expect(readdirSync(directory)).toEqual(['eng.traineddata.gz']);
   });
 
+  it('issues no symlink when a model cannot be resolved', async () => {
+    const links = jest.spyOn(fsPromises, 'symlink');
+
+    await expect(
+      tessdataDirectory(['eng', 'klingon' as OcrLanguage]),
+    ).rejects.toThrow();
+
+    expect(links).not.toHaveBeenCalled();
+  });
+
+  it('waits for every symlink before cleaning up a failed link', async () => {
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    jest
+      .spyOn(fsPromises, 'symlink')
+      .mockImplementation(async (_target, path) => {
+        if (String(path).endsWith('rus.traineddata.gz')) {
+          throw new Error('link failed');
+        }
+        await gate;
+      });
+    const removals = jest.spyOn(fsPromises, 'rm');
+
+    const attempt = tessdataDirectory(['eng', 'rus']);
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(removals).not.toHaveBeenCalled();
+
+    release();
+    await expect(attempt).rejects.toThrow('link failed');
+    expect(removals).toHaveBeenCalledTimes(1);
+  });
+
   it('leaves no directory behind after a failed link', async () => {
     const created = jest.spyOn(fsPromises, 'mkdtemp');
 
