@@ -1,5 +1,6 @@
 import { searchKey, Store } from '@asobeast/shared';
-import { pluralsOf } from './plurals';
+import { pluralsOf, sameWord } from './plurals';
+import { hasInflectedStemScript } from '../common/text/scripts';
 import { PREFIX_PROBE_CAP, SuggestReach } from './suggest-reach';
 
 export type SuggestLookup = (term: string) => Promise<Array<{ term: string }>>;
@@ -16,10 +17,26 @@ export interface ProbedReach {
   requests: number;
 }
 
+const continuesInInflectedScript = (
+  term: string,
+  target: string,
+  minWords: number,
+): boolean => {
+  if (!hasInflectedStemScript(target)) {
+    return false;
+  }
+  const words = target.split(' ');
+  const offered = term.split(' ');
+  return (
+    offered.length >= minWords &&
+    words.every((word, index) => sameWord(offered[index], word))
+  );
+};
+
 const extendsKeyword = (term: string, target: string): boolean =>
   pluralsOf(target).some(
     (form) => term === form || term.startsWith(`${form} `),
-  );
+  ) || continuesInInflectedScript(term, target, target.split(' ').length);
 
 const matches = (term: string, target: string, match: SuggestMatch) =>
   match === 'exact' || target.includes(' ')
@@ -49,7 +66,9 @@ export function countingLookup(lookup: SuggestLookup): CountingLookup {
 }
 
 const continues = (term: string, target: string): boolean =>
-  term === target || term.startsWith(`${target} `);
+  term === target ||
+  term.startsWith(`${target} `) ||
+  continuesInInflectedScript(term, target, target.split(' ').length + 1);
 
 export async function countContinuations(
   keyword: string,

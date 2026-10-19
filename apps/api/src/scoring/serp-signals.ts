@@ -1,7 +1,7 @@
 import { searchKey } from '@asobeast/shared';
 import { clamp } from './curves';
 import { sameWord } from './plurals';
-import { isUnsegmented } from '../common/text/scripts';
+import { hasInflectedStemScript, isUnsegmented } from '../common/text/scripts';
 
 export const EVIDENCE_EXACT = 1;
 export const EVIDENCE_ALL_WORDS = 0.7;
@@ -60,15 +60,28 @@ export function titleEvidence(title: string, keyword: string): number {
     : (present / words.length) * EVIDENCE_PARTIAL;
 }
 
+const inflectedTitleTargets = (haystack: string, phrase: string): boolean => {
+  if (` ${haystack}`.includes(` ${phrase}`)) {
+    return true;
+  }
+  const tokens = haystack.split(' ');
+  const words = phrase.split(' ');
+  return containsPhrase(haystack, tokens, phrase, words);
+};
+
 export function titleTargets(title: string, keyword: string): boolean {
   const phrase = searchKey(keyword);
   if (phrase.length === 0) {
     return false;
   }
   const haystack = searchKey(title);
-  return isUnsegmented(phrase)
-    ? haystack.includes(phrase)
-    : ` ${haystack}`.includes(` ${phrase}`);
+  if (isUnsegmented(phrase)) {
+    return haystack.includes(phrase);
+  }
+  if (hasInflectedStemScript(phrase)) {
+    return inflectedTitleTargets(haystack, phrase);
+  }
+  return ` ${haystack}`.includes(` ${phrase}`);
 }
 
 export interface TitleMatch {

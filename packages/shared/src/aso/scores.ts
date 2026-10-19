@@ -1,8 +1,8 @@
 import { Store } from '../index';
 
 export const CURRENT_FORMULA_VERSIONS: Record<Store, string> = {
-  APP_STORE: 'app-store-v4',
-  GOOGLE_PLAY: 'google-play-v4',
+  APP_STORE: 'app-store-v5',
+  GOOGLE_PLAY: 'google-play-v5',
 };
 
 const SCORE_DISPLAY_MAX = 100;
