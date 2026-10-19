@@ -35,6 +35,7 @@ describe('sameStem', () => {
     ['map', 'maps'],
     ['sleepcycleтрекер', 'sleepcyclehabit'],
     ['meditationнарусском', 'meditationдлясна'],
+    ['sleepтрекер', 'sleepтрекинг'],
   ])('keeps %s and %s apart', (a, b) => {
     expect(sameStem(a, b)).toBe(false);
   });
