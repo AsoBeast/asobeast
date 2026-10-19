@@ -27,6 +27,10 @@ interface MatrixCompetitor {
 
 export const HIDDEN_COMPARISON_COLUMNS = { versus: false };
 
+export interface MatrixScope {
+  multiMarket: boolean;
+}
+
 const POSITION_SORT = {
   sortFn: "basic",
   sortUndefined: "last",
@@ -117,10 +121,12 @@ const SCORE_ABBR: Record<ComparisonScore, string> = {
 function KeywordCell({
   row,
   scores,
+  market,
   onOpenBreakdown,
 }: {
   row: KeywordComparisonRow;
   scores: readonly ComparisonScore[];
+  market: string | null;
   onOpenBreakdown: (keywordId: string) => void;
 }) {
   return (
@@ -142,8 +148,9 @@ function KeywordCell({
           </Badge>
         ) : null}
       </span>
-      {scores.length > 0 ? (
-        <span className="flex gap-2 text-xs text-muted-foreground">
+      {market !== null || scores.length > 0 ? (
+        <span className="flex items-center gap-2 text-xs text-muted-foreground">
+          {market === null ? null : <MarketCell country={market} />}
           {scores.map((score) => (
             <span key={score}>
               <abbr aria-hidden title={SCORE_LABEL[score]}>
@@ -186,6 +193,7 @@ function CompetitorHeading({ competitor }: { competitor: MatrixCompetitor }) {
 export function comparisonColumns(
   competitors: readonly MatrixCompetitor[],
   onOpenBreakdown: (keywordId: string) => void,
+  scope: MatrixScope,
 ) {
   const competitorIds = competitors.map((competitor) => competitor.id);
   const isBest = (row: KeywordComparisonRow, value: number | null) =>
@@ -196,7 +204,7 @@ export function comparisonColumns(
       id: "market",
       sortFn: "text",
       sortDescFirst: false,
-      enableHiding: false,
+      meta: { label: "Market" },
       header: ({ column }) => <SortableHeader column={column} label="Market" />,
       cell: ({ row }) => <MarketCell country={row.original.country} />,
       filterFn: (row, id, country: string) =>
@@ -214,6 +222,11 @@ export function comparisonColumns(
         <KeywordCell
           row={row.original}
           onOpenBreakdown={onOpenBreakdown}
+          market={
+            scope.multiMarket && !table.getColumn("market")?.getIsVisible()
+              ? row.original.country
+              : null
+          }
           scores={SCORES.filter(
             (score) => !table.getColumn(score)?.getIsVisible(),
           )}

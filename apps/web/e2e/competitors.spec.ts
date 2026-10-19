@@ -2,13 +2,15 @@ import { readFileSync } from "node:fs";
 import type { Locator, Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
 import { hydrated } from "./hydrated.mts";
+import { CROWDED_COMPETITORS_COOKIE } from "./fixtures.mts";
 
 const matrix = (page: Page) =>
   page.getByRole("table", { name: /compared with each tracked competitor/ });
 
 const matrixRows = (page: Page) => matrix(page).getByRole("row");
 
-const keywordCell = (row: Locator) => row.getByRole("cell").nth(1);
+const keywordCell = (row: Locator) =>
+  row.locator("td", { has: row.page().locator("[data-breakdown-keyword]") });
 
 const comparisonExport = async (page: Page) => {
   const [download] = await Promise.all([
@@ -20,6 +22,44 @@ const comparisonExport = async (page: Page) => {
     lines: readFileSync(await download.path(), "utf8").split("\r\n"),
   };
 };
+
+const columnsButton = (page: Page) =>
+  page.getByRole("button", { name: "Columns" }).last();
+
+const marketHeader = (page: Page) =>
+  matrix(page).getByRole("columnheader", { name: "Market", exact: true });
+
+const germanRow = (page: Page) =>
+  matrixRows(page).filter({ hasText: "Germany" }).first();
+
+const crowdedMatrix = {
+  name: CROWDED_COMPETITORS_COOKIE,
+  value: "1",
+  domain: "localhost",
+  path: "/",
+};
+
+const pinnedLayout = (page: Page) =>
+  matrix(page).evaluate((table) => {
+    const box = table.closest<HTMLElement>("[data-slot=table-container]");
+    if (box === null) throw new Error("the matrix has no scroll container");
+    box.scrollLeft = box.scrollWidth;
+    const heads = [...table.querySelectorAll<HTMLElement>("thead th")];
+    const pinned = heads.filter(
+      (head) => getComputedStyle(head).position === "sticky",
+    );
+    const left = box.getBoundingClientRect().left;
+    const pinnedRight = Math.max(
+      left,
+      ...pinned.map((head) => head.getBoundingClientRect().right),
+    );
+    const you = heads.find((head) => head.textContent?.trim() === "You");
+    return {
+      pinned: pinned.length,
+      uncovered: box.getBoundingClientRect().right - pinnedRight,
+      youWidth: you?.getBoundingClientRect().width ?? 0,
+    };
+  });
 
 test("the comparison matrix sorts by your position both ways", async ({
   page,
@@ -280,7 +320,7 @@ test("only gaps keeps the selected market when every gap is in another market", 
 test("the market column stays beside the keyword when the matrix scrolls", async ({
   page,
 }) => {
-  await page.setViewportSize({ width: 375, height: 800 });
+  await page.setViewportSize({ width: 768, height: 800 });
   await page.goto("/apps/app-1/competitors");
   await page.waitForLoadState("networkidle");
 
@@ -304,7 +344,7 @@ test("the market column stays beside the keyword when the matrix scrolls", async
   );
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth),
-  ).toBeLessThanOrEqual(375);
+  ).toBeLessThanOrEqual(768);
 });
 
 test("matrix positions and scores carry their grade", async ({ page }) => {
@@ -391,6 +431,98 @@ test("on a phone the matrix names competitors by icon and hides the scores", asy
       discovery.getByRole("columnheader", { name, exact: true }),
     ).toHaveCount(0);
   }
+});
+
+for (const width of [320, 375] as const) {
+  test(`on a phone at ${width} px the market sits in the keyword cell and the first position column stays readable`, async ({
+    page,
+    context,
+  }) => {
+    await context.addCookies([crowdedMatrix]);
+    await page.setViewportSize({ width, height: 800 });
+    await page.goto("/apps/app-1/competitors");
+    await page.waitForLoadState("networkidle");
+
+    await expect(marketHeader(page)).toHaveCount(0);
+    await expect(keywordCell(germanRow(page))).toContainText("Germany");
+    const layout = await pinnedLayout(page);
+    expect(layout.pinned).toBe(1);
+    expect(layout.uncovered).toBeGreaterThanOrEqual(layout.youWidth);
+    expect(
+      await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth <=
+          document.documentElement.clientWidth,
+      ),
+    ).toBe(true);
+  });
+}
+
+test("the columns menu brings the market column back on a phone without pinning it", async ({
+  page,
+  context,
+}) => {
+  await context.addCookies([crowdedMatrix]);
+  await page.setViewportSize({ width: 375, height: 800 });
+  await page.goto("/apps/app-1/competitors");
+  await page.waitForLoadState("networkidle");
+
+  await (await hydrated(columnsButton(page))).click();
+  await page.getByRole("menuitemcheckbox", { name: "Market" }).click();
+  await page.keyboard.press("Escape");
+
+  await expect(marketHeader(page)).toBeVisible();
+  expect(
+    await marketHeader(page).evaluate(
+      (head) => getComputedStyle(head).position,
+    ),
+  ).toBe("static");
+  await expect(keywordCell(germanRow(page))).not.toContainText("Germany");
+  expect((await pinnedLayout(page)).pinned).toBe(1);
+});
+
+test("hiding the market column on a wide screen moves the market into the keyword cell and stays hidden", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/competitors");
+  await page.waitForLoadState("networkidle");
+  await expect(marketHeader(page)).toBeVisible();
+
+  await (await hydrated(columnsButton(page))).click();
+  await page.getByRole("menuitemcheckbox", { name: "Market" }).click();
+  await page.keyboard.press("Escape");
+
+  await expect(marketHeader(page)).toHaveCount(0);
+  await expect(keywordCell(germanRow(page))).toContainText("Germany");
+
+  await page.reload();
+  await page.waitForLoadState("networkidle");
+  await expect(marketHeader(page)).toHaveCount(0);
+  await expect(keywordCell(germanRow(page))).toContainText("Germany");
+});
+
+test("a single market matrix does not offer a market column", async ({
+  page,
+}) => {
+  await page.context().addCookies([
+    {
+      name: "e2e-comparison-market",
+      value: "us",
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
+  await page.goto("/apps/app-1/competitors");
+  await page.waitForLoadState("networkidle");
+
+  await (await hydrated(columnsButton(page))).click();
+
+  await expect(
+    page.getByRole("menuitemcheckbox", { name: "Difficulty" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("menuitemcheckbox", { name: "Market" }),
+  ).toHaveCount(0);
 });
 
 test("exporting competitors downloads one row per tracked competitor", async ({
