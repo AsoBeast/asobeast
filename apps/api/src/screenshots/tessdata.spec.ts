@@ -4,6 +4,9 @@ import { join } from 'node:path';
 import { OCR_LANGUAGES, type OcrLanguage } from './ocr-languages';
 import { disposeTessdata, tessdataDirectory } from './tessdata';
 
+const nextMacrotask = () =>
+  new Promise<void>((resolve) => setImmediate(resolve));
+
 describe('tessdataDirectory', () => {
   afterEach(async () => {
     jest.restoreAllMocks();
@@ -81,15 +84,13 @@ describe('tessdataDirectory', () => {
     const removals = jest.spyOn(fsPromises, 'rm');
 
     const attempt = tessdataDirectory(['eng', 'rus']);
-    // attached before the waits, so an early rejection stays handled
-    const rejection = expect(attempt).rejects.toThrow('link failed');
+    const rejectionHandled = expect(attempt).rejects.toThrow('link failed');
     await bothLinkedPromise;
-    // one macrotask turn, so a cleanup racing the failure has happened
-    await new Promise((resolve) => setImmediate(resolve));
+    await nextMacrotask();
     expect(removals).not.toHaveBeenCalled();
 
     release();
-    await rejection;
+    await rejectionHandled;
     expect(removals).toHaveBeenCalledTimes(1);
   });
 
