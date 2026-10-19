@@ -326,6 +326,27 @@ for (const [name, terms, label] of PLAN_IN_FORCE_CASES) {
   });
 }
 
+test("the account menu reads the plan in force again when it opens after an expiry", async ({
+  page,
+}) => {
+  const start = new Date("2026-10-19T12:00:00.000Z");
+  await page.clock.install({ time: start });
+  await openAccountMenuAs(page, {
+    ...TRIAL_USER,
+    plan: "trial",
+    trialEndsAt: new Date(start.getTime() + 60_000).toISOString(),
+    planExpiresAt: null,
+  });
+  await expect(accountMenuPlan(page)).toHaveText("Trial");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("menu")).toHaveCount(0);
+
+  await page.clock.fastForward("02:00");
+  await page.getByRole("button", { name: "Account menu" }).click();
+
+  await expect(accountMenuPlan(page)).toHaveText("Free");
+});
+
 test("login rejects an encoded cross-origin destination", async ({ page }) => {
   let authenticated = false;
   await page.route("**/api/backend/auth/status", (route) =>
