@@ -44,7 +44,7 @@ A keyword is also capped at five words. Each tracked keyword market costs one re
 
 A keyword import is different from a bulk add: a problem with one row, such as a phrase over 100 characters or an unknown storefront, comes back as an invalid row in the `200` answer and the other rows are imported. Only a problem with the request itself, such as more than 500 rows, answers `400` and writes nothing.
 
-The keyword field text may run to 1,000 characters, so spacing and duplicates in a pasted field never cost a refusal. The 100 character limit applies to the field once it is normalized, counted the way App Store Connect counts it, so a letter such as ą or a Chinese, Japanese or Korean character counts once. See [App Store and Google Play](/concepts/stores) for how a save is measured.
+The keyword field text may run to 1,000 characters, so spacing and duplicates in a pasted field never cost a refusal. The 100 character limit applies to the field once it is normalized, counted in Unicode code points, so a letter such as ą or a Chinese, Japanese or Korean character counts once, whether or not it lies outside the Basic Multilingual Plane. See [App Store and Google Play](/concepts/stores) for how a save is measured.
 
 ## Three request classes
 
