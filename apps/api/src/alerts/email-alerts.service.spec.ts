@@ -1,10 +1,14 @@
-import { ServiceUnavailableException } from '@nestjs/common';
+import { Logger, ServiceUnavailableException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { describeWait } from '../auth/rate-limit/describe-wait';
 import { RequestThrottledError } from '../auth/rate-limit/rate-limit.errors';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
+import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import { AlertMail } from './alert-mail';
+import { ConfirmationMailLimiter } from './confirmation-mail.limiter';
 import { EmailAlertConfirmation } from './email-alert-confirmation.service';
+import { EmailAlertUnsubscribe } from './email-alert-unsubscribe.service';
 import {
   CONFIRMATION_RESEND_COOLDOWN_SECONDS,
   EmailAlertsService,
@@ -45,6 +49,7 @@ const build = () => {
     confirmationFor: jest.fn().mockResolvedValue(null),
     allowMailTo: jest.fn().mockResolvedValue(refund),
     issue: jest.fn().mockResolvedValue('sent'),
+    resend: jest.fn().mockResolvedValue('sent'),
   };
   const service = new EmailAlertsService(
     {
@@ -129,7 +134,7 @@ describe('EmailAlertsService', () => {
       findFirst.mockResolvedValueOnce(
         waiting(new Date(Date.now() - 2 * HOUR_MS)),
       );
-      confirmation.issue.mockResolvedValue('lost');
+      confirmation.resend.mockResolvedValue('lost');
 
       await expect(
         service.resendConfirmation('ea_1', 'owner@example.com'),
@@ -148,12 +153,59 @@ describe('EmailAlertsService', () => {
       );
     });
 
+    it('holds a resend that lost the race to the cooldown, not to the daily allowance the racers spent', async () => {
+      const warn = jest
+        .spyOn(Logger.prototype, 'warn')
+        .mockImplementation(() => undefined);
+      const findFirst = jest
+        .fn()
+        .mockResolvedValue(waiting(new Date(Date.now() - 2 * HOUR_MS)));
+      const updateMany = jest.fn().mockResolvedValue({ count: 0 });
+      const claim = jest
+        .fn()
+        .mockRejectedValue(
+          new RequestThrottledError(
+            50_000,
+            'Too many confirmation emails were requested for this recipient today.',
+          ),
+        );
+      const mailer = { enabled: true, origin: 'https://aso.example.com' };
+      const prisma = {
+        emailAlert: { findFirst, updateMany },
+      } as unknown as PrismaService;
+      const workspace = {
+        require: jest.fn(() => 'ws_1'),
+      } as unknown as WorkspaceContext;
+      const service = new EmailAlertsService(
+        prisma,
+        mailer as MailerService,
+        workspace,
+        {} as AlertMail,
+        new EmailAlertConfirmation(
+          {} as ConfigService<Env, true>,
+          mailer as MailerService,
+          prisma,
+          { claim } as unknown as ConfirmationMailLimiter,
+          workspace,
+          {} as EmailAlertUnsubscribe,
+        ),
+      );
+
+      await expect(
+        service.resendConfirmation('ea_1', 'owner@example.com'),
+      ).rejects.toThrow(
+        `less than ${describeWait(CONFIRMATION_RESEND_COOLDOWN_SECONDS)} ago`,
+      );
+      expect(claim).not.toHaveBeenCalled();
+      warn.mockRestore();
+    });
+
     it('answers a resend whose mail could not be sent as unavailable, whatever the row says now', async () => {
       const { service, findFirst, confirmation } = build();
       findFirst
         .mockResolvedValueOnce(waiting(new Date(Date.now() - 2 * HOUR_MS)))
         .mockResolvedValueOnce(waiting(new Date()));
-      confirmation.issue.mockResolvedValue('failed');
+      confirmation.resend.mockResolvedValue('failed');
 
       await expect(
         service.resendConfirmation('ea_1', 'owner@example.com'),
