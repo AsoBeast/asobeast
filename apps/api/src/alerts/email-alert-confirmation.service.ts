@@ -80,6 +80,41 @@ export class EmailAlertConfirmation {
       await refund();
       return reserved;
     }
+    return this.deliver(alert, requestedBy, sentAt, refund);
+  }
+
+  async resend(
+    alert: PendingRecipient,
+    requestedBy: string,
+  ): Promise<ConfirmationOutcome> {
+    const sentAt = new Date();
+    const reserved = await this.reserve(alert, sentAt);
+    if (reserved !== 'reserved') return reserved;
+    const refund = await this.claimReserved(alert, sentAt);
+    return this.deliver(alert, requestedBy, sentAt, refund);
+  }
+
+  private async claimReserved(
+    alert: PendingRecipient,
+    sentAt: Date,
+  ): Promise<ConfirmationRefund> {
+    try {
+      return await this.limiter.claim(
+        this.workspace.require('a confirmation email'),
+        alert.email,
+      );
+    } catch (error) {
+      await this.restore(alert, sentAt);
+      throw error;
+    }
+  }
+
+  private async deliver(
+    alert: PendingRecipient,
+    requestedBy: string,
+    sentAt: Date,
+    refund: ConfirmationRefund,
+  ): Promise<ConfirmationOutcome> {
     try {
       await this.send(alert, requestedBy, sentAt);
       return 'sent';
