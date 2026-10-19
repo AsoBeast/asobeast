@@ -49,6 +49,7 @@ import { MemberBilling } from "./MemberBilling";
 import { ResendConfirmationButton } from "./ResendConfirmationButton";
 import { SessionCheck } from "./SessionCheck";
 import { useAuth } from "./use-auth";
+import { useSignedOutRedirect } from "./use-signed-out-redirect";
 
 const INCLUDED = [
   "Daily keyword rank tracking across every storefront",
@@ -167,16 +168,21 @@ function PlanOption({
 }
 
 export function UpgradeContent() {
-  const { isLoading, isMember, awaitingConfirmation } = useAuth();
-  const { data: plan } = useQuery(accountPlanOptions);
+  const { isLoading, isMember, authenticated, awaitingConfirmation } =
+    useAuth();
+  const signedOut = useSignedOutRedirect(true);
+  const { data: plan } = useQuery({
+    ...accountPlanOptions,
+    enabled: authenticated,
+  });
   const { data: catalog } = useQuery({
     ...billingCatalogOptions,
-    enabled: !isLoading && !isMember,
+    enabled: authenticated && !isLoading && !isMember,
   });
   const [interval, setInterval] = useState<BillingInterval>("month");
 
   if (isMember) return <MemberBilling plan={plan} />;
-  if (isLoading) {
+  if (isLoading || signedOut) {
     return (
       <div className="flex justify-center py-12">
         <SessionCheck />

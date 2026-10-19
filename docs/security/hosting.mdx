@@ -63,6 +63,29 @@ aso.example.com {
 
 nginx and Traefik work the same way. Whatever you choose, host port 3001 is then reachable on the machine, so bind it to the loopback or firewall it. The tunnel overlay exists partly to remove that step.
 
+### Refuse TRACE at the proxy
+
+The web app does not process an HTTP `TRACE` request. The framework builds a standard `Request` object for each request it renders or forwards, and Node.js refuses to build one for `TRACE`, so a dynamic page, the API proxy under `/api/backend` and the other route handlers answer `500 Internal Server Error` with the body `Internal Server Error` before any asobeast code runs. A page prerendered at build time, such as the sign in page, is served from the build as for `GET` and answers `200` with the page, and a few other static pages answer `405` or a redirect. In every case nothing from the request is echoed back, which is what makes `TRACE` dangerous elsewhere, and the server answers the next request normally. The only effect of the `500` is one error entry in the web log per request.
+
+A deployment without a proxy keeps these answers, which are harmless. If your scanner or policy expects a `405 Method Not Allowed` on every path, refuse the method at the proxy, where you already terminate TLS.
+
+```caddyfile
+aso.example.com {
+  @trace method TRACE TRACK
+  respond @trace 405
+
+  reverse_proxy 127.0.0.1:3001
+}
+```
+
+```nginx
+if ($request_method ~ ^(TRACE|TRACK)$) {
+  return 405;
+}
+```
+
+Put the nginx rule inside the `server` block that proxies to host port 3001.
+
 ## Set TRUST\_PROXY correctly
 
 `TRUST_PROXY` is a hop count, and both apps read their own. The value is the number of proxies **you control** between the internet and that app. `true` still means 1 and `false` still means 0, so an existing setting keeps working.

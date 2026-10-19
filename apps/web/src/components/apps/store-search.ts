@@ -1,5 +1,7 @@
 import {
+  countMaxLengthChars,
   parseStoreUrl,
+  STORE_SEARCH_QUERY_MAX_LENGTH,
   type ParsedStoreUrl,
   type StoreSearchResult,
 } from "@asobeast/shared";
@@ -42,11 +44,23 @@ export function classifyInput(value: string): StoreInput {
   }
 }
 
+export function nameTooLongText(input: StoreInput): string | null {
+  if (input.kind !== "name") return null;
+  const used = countMaxLengthChars(input.q);
+  return used > STORE_SEARCH_QUERY_MAX_LENGTH
+    ? `Search with up to ${STORE_SEARCH_QUERY_MAX_LENGTH} characters. This name has ${used}.`
+    : null;
+}
+
 export function isSearchable(input: StoreInput): input is {
   kind: "name";
   q: string;
 } {
-  return input.kind === "name" && input.q.length >= STORE_SEARCH_MIN_CHARS;
+  return (
+    input.kind === "name" &&
+    input.q.length >= STORE_SEARCH_MIN_CHARS &&
+    nameTooLongText(input) === null
+  );
 }
 
 export function enterAction(
@@ -64,6 +78,13 @@ export function searchErrorText(error: unknown): string {
     if (error.envelope.statusCode === 502) {
       return "The store did not answer. Try again in a moment.";
     }
+    if (error.envelope.statusCode === 400) {
+      return "This name cannot be searched. Change it and try again.";
+    }
   }
   return "Could not search the store.";
+}
+
+export function searchRetryable(error: unknown): boolean {
+  return !(error instanceof ApiError && error.envelope.statusCode === 400);
 }

@@ -2,13 +2,12 @@ import { type OnApplicationShutdown } from '@nestjs/common';
 import { Redis, ReplyError, type RedisOptions } from 'ioredis';
 import { RedisOutageLog } from './redis-outage-log';
 import { RedisUnavailableError } from './redis.errors';
+import { MAX_RECONNECT_DELAY_MS, reconnectDelay } from './reconnect-delay';
 
 export const FAIL_FAST_COMMAND_TIMEOUT_MS = 500;
 export const FAIL_FAST_CONNECT_TIMEOUT_MS = 1_000;
 export const FAIL_FAST_RETRY_AFTER_SECONDS = 5;
-export const FAIL_FAST_MAX_RECONNECT_DELAY_MS = 2_000;
-
-const RECONNECT_STEP_MS = 50;
+export const FAIL_FAST_MAX_RECONNECT_DELAY_MS = MAX_RECONNECT_DELAY_MS;
 
 export class FailFastRedis implements OnApplicationShutdown {
   constructor(
@@ -27,11 +26,7 @@ export class FailFastRedis implements OnApplicationShutdown {
         autoResendUnfulfilledCommands: false,
         commandTimeout: FAIL_FAST_COMMAND_TIMEOUT_MS,
         connectTimeout: FAIL_FAST_CONNECT_TIMEOUT_MS,
-        retryStrategy: (attempt) =>
-          Math.min(
-            attempt * RECONNECT_STEP_MS,
-            FAIL_FAST_MAX_RECONNECT_DELAY_MS,
-          ),
+        retryStrategy: reconnectDelay,
       }),
       outage,
     );

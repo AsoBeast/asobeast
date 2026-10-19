@@ -181,6 +181,11 @@ const BY_ID = [
     path: (w: IsolationWorkspace) => `/apps/${w.appleAppId}/keywords/compare`,
   },
   {
+    name: 'GET /apps/:id/keywords/:keywordId/breakdown',
+    path: (w: IsolationWorkspace) =>
+      `/apps/${w.appleAppId}/keywords/${w.keywordId}/breakdown`,
+  },
+  {
     name: 'GET /apps/:id/competitors/analysis',
     path: (w: IsolationWorkspace) =>
       `/apps/${w.appleAppId}/competitors/analysis`,
@@ -250,6 +255,20 @@ describe('Read isolation', () => {
       expect(response.status).toBe(404);
     },
   );
+
+  it("refuses a breakdown of another workspace's private keyword", async () => {
+    await fixture.b.agent
+      .get(
+        `/apps/${fixture.b.appleAppId}/keywords/${fixture.b.privateKeywordId}/breakdown`,
+      )
+      .expect(200);
+
+    await fixture.a.agent
+      .get(
+        `/apps/${fixture.a.appleAppId}/keywords/${fixture.b.privateKeywordId}/breakdown`,
+      )
+      .expect(404);
+  });
 
   it('answers 404 for the localized listing of another workspace app', async () => {
     await fixture.db.appSnapshot.create({

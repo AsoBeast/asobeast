@@ -283,6 +283,29 @@ describe('keyword.prune', () => {
     expect(detections).toEqual([]);
   });
 
+  it('still prunes an uncovered keyword whose score is being recalculated', () => {
+    const detections = detectKeywordPrune(
+      context([
+        app({
+          trackedKeywords: [keyword({ scoreOutdated: true })],
+          coverage: [
+            {
+              keywordId: 'kw_1',
+              text: 'obscure phrase',
+              bucket: null,
+              fields: [{ field: 'title', covered: false }],
+              uncovered: true,
+            },
+          ],
+        }),
+      ]),
+    );
+
+    expect(detections.map((detection) => detection.keywordId)).toEqual([
+      'kw_1',
+    ]);
+  });
+
   it('records the best position a keyword ever reached', () => {
     const history = days(PRUNE_MIN_OBSERVED_DAYS, 1);
     history[0] = { date: '2026-07-01', position: 88 };

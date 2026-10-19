@@ -42,12 +42,7 @@ function keywordFieldCharsFree(fields: MetadataFieldAudit[]): number | null {
     : null;
 }
 
-function qualifyingOpportunity(
-  keyword: TrackedKeywordItem,
-  homeCountry: string,
-): number | null {
-  if (!keyword.active || keyword.country !== homeCountry) return null;
-  if (keyword.scoreOutdated) return null;
+function qualifyingOpportunity(keyword: TrackedKeywordItem): number | null {
   if (keyword.relevance === null || keyword.relevance < UNCOVERED_MIN_RELEVANCE)
     return null;
   if ((keyword.volume ?? 0) < UNCOVERED_MIN_VOLUME) return null;
@@ -65,7 +60,11 @@ function detectForApp(app: ActionContextApp): DetectedAction[] {
 
   const detections: DetectedAction[] = [];
   for (const keyword of app.trackedKeywords) {
-    const opportunity = qualifyingOpportunity(keyword, app.country);
+    if (!keyword.active || keyword.country !== app.country) continue;
+    const withheld = keyword.scoreOutdated === true;
+    const opportunity = withheld
+      ? (keyword.opportunity ?? 0)
+      : qualifyingOpportunity(keyword);
     if (opportunity === null) continue;
     const row = coverage.get(keyword.keywordId);
     if (!row || !row.uncovered) continue;
@@ -102,6 +101,7 @@ function detectForApp(app: ActionContextApp): DetectedAction[] {
           : UNCOVERED_UNSCORED_CONFIDENCE,
       },
       evidence,
+      ...(withheld ? { withheld: true as const } : {}),
     });
   }
   return detections;

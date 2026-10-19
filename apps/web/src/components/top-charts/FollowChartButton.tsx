@@ -16,6 +16,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { armFocusHandoff, useFocusClaim } from "@/lib/focus-handoff";
 import { chartFollowsOptions } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
 import {
@@ -26,26 +27,30 @@ import {
 import { useFollowCategory } from "./use-follow-category";
 import { useUnfollowChart } from "./use-unfollow-chart";
 
+const FOLLOW_FOCUS_KEY = "chart-follow";
+const armFollowFocus = () => armFocusHandoff(FOLLOW_FOCUS_KEY);
+
 function Following({
   follows,
-  onStopped,
+  claimRef,
+  onActivate,
 }: {
   follows: ChartFollowItem[];
-  onStopped: () => void;
+  claimRef: RefCallback<HTMLElement>;
+  onActivate: () => void;
 }) {
   const [confirming, setConfirming] = useState(false);
   const stopped = useRef(false);
   const mutation = useUnfollowChart(() => {
     stopped.current = true;
     setConfirming(false);
-    onStopped();
   });
   const unfollowOnce = useSingleFlight(mutation);
 
   return (
     <AlertDialog open={confirming} onOpenChange={setConfirming}>
       <AlertDialogTrigger asChild>
-        <Button variant="outline">
+        <Button ref={claimRef} variant="outline">
           <Check aria-hidden />
           Following
         </Button>
@@ -70,6 +75,7 @@ function Following({
             disabled={mutation.isPending}
             onClick={(event) => {
               event.preventDefault();
+              onActivate();
               unfollowOnce(follows.map((follow) => follow.id));
             }}
           >
@@ -86,11 +92,13 @@ function Follow({
   missing,
   primary,
   buttonRef,
+  onActivate,
 }: {
   category: ChartCategory;
   missing: CategoryCollection[];
   primary: boolean;
   buttonRef: RefCallback<HTMLButtonElement>;
+  onActivate: () => void;
 }) {
   const mutation = useFollowCategory(category);
   const followOnce = useSingleFlight(mutation);
@@ -99,8 +107,11 @@ function Follow({
     <Button
       ref={buttonRef}
       variant={primary ? "default" : "outline"}
-      disabled={mutation.isPending}
-      onClick={() => followOnce(missing)}
+      aria-disabled={mutation.isPending || undefined}
+      onClick={() => {
+        onActivate();
+        followOnce(missing);
+      }}
     >
       {mutation.isPending ? (
         <Loader2 className="animate-spin" aria-hidden />
@@ -121,19 +132,13 @@ export function FollowChartButton({
 }) {
   const { data: follows } = useSuspenseQuery(chartFollowsOptions);
   const missing = missingKinds(category, follows);
-  const focusFollow = useRef(false);
-  const claimFocus = (node: HTMLButtonElement | null) => {
-    if (!node || !focusFollow.current) return;
-    focusFollow.current = false;
-    node.focus();
-  };
+  const claimFocus = useFocusClaim(FOLLOW_FOCUS_KEY);
 
   return missing.length === 0 ? (
     <Following
       follows={categoryFollows(category, follows)}
-      onStopped={() => {
-        focusFollow.current = true;
-      }}
+      claimRef={claimFocus}
+      onActivate={armFollowFocus}
     />
   ) : (
     <Follow
@@ -141,6 +146,7 @@ export function FollowChartButton({
       missing={missing}
       primary={primary}
       buttonRef={claimFocus}
+      onActivate={armFollowFocus}
     />
   );
 }

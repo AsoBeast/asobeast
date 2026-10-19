@@ -4,6 +4,7 @@ import { expect, test } from "./session.mts";
 import {
   APP_GP_DETAIL,
   APP_REPLIES_ID,
+  errorEnvelope,
   REVIEW_REPLY_DRAFT,
 } from "./fixtures.mts";
 import { fulfillJson } from "./plan-helpers.mts";
@@ -172,6 +173,118 @@ test("marking a review as replied and undoing it", async ({ page }) => {
   await expect(article.getByText("Draft saved")).toBeVisible();
 });
 
+const holdReplies = async (page: Page) => {
+  let release = () => {};
+  const released = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/api/backend/apps/*/reviews/*/reply", async (route) => {
+    await released;
+    await route.continue();
+  });
+  return release;
+};
+
+test("Mark as replied keeps keyboard focus while the request runs and after", async ({
+  page,
+}) => {
+  const release = await holdReplies(page);
+  await page.goto(`${REPLIES_PAGE}?reply=rep-2`);
+  const mark = composer(page).getByRole("button", { name: "Mark as replied" });
+
+  await mark.focus();
+  await page.keyboard.press("Enter");
+
+  await expect(mark).toBeFocused();
+  await expect(mark).toHaveAttribute("aria-disabled", "true");
+  release();
+  const undo = composer(page).getByRole("button", { name: "Undo" });
+  await expect(undo).toBeFocused();
+  await expect(undo).not.toHaveAttribute("aria-disabled", "true");
+});
+
+test("Undo keeps keyboard focus while the request runs and after", async ({
+  page,
+}) => {
+  await page.goto(`${REPLIES_PAGE}?reply=rep-2`);
+  await composer(page).getByRole("button", { name: "Mark as replied" }).click();
+  const undo = composer(page).getByRole("button", { name: "Undo" });
+  await expect(undo).toBeVisible();
+  const release = await holdReplies(page);
+
+  await undo.focus();
+  await page.keyboard.press("Enter");
+
+  await expect(undo).toBeFocused();
+  await expect(undo).toHaveAttribute("aria-disabled", "true");
+  release();
+  await expect(
+    composer(page).getByRole("button", { name: "Mark as replied" }),
+  ).toBeFocused();
+});
+
+test("a mouse click on Mark as replied keeps focus on the button", async ({
+  page,
+}) => {
+  const release = await holdReplies(page);
+  await page.goto(`${REPLIES_PAGE}?reply=rep-2`);
+  const mark = composer(page).getByRole("button", { name: "Mark as replied" });
+
+  await mark.click();
+
+  await expect(mark).toBeFocused();
+  await expect(mark).toHaveAttribute("aria-disabled", "true");
+  release();
+  await expect(
+    composer(page).getByRole("button", { name: "Undo" }),
+  ).toBeFocused();
+});
+
+test("a failed mark leaves focus on the button and enables it again", async ({
+  page,
+}) => {
+  await page.route("**/api/backend/apps/*/reviews/*/reply", (route) =>
+    route.fulfill(
+      fulfillJson(
+        500,
+        errorEnvelope(500, "/reply", "Could not save the reply"),
+      ),
+    ),
+  );
+  await page.goto(`${REPLIES_PAGE}?reply=rep-2`);
+  const mark = composer(page).getByRole("button", { name: "Mark as replied" });
+
+  await mark.focus();
+  await page.keyboard.press("Enter");
+
+  await expect(page.getByText("Could not save the reply")).toBeVisible();
+  await expect(mark).toBeFocused();
+  await expect(mark).not.toHaveAttribute("aria-disabled", "true");
+});
+
+test("pressing Mark as replied twice while it runs sends one request", async ({
+  page,
+}) => {
+  const release = await holdReplies(page);
+  await page.goto(`${REPLIES_PAGE}?reply=rep-2`);
+  const patches: string[] = [];
+  page.on("request", (request) => {
+    if (request.method() === "PATCH") patches.push(request.url());
+  });
+  const mark = composer(page).getByRole("button", { name: "Mark as replied" });
+
+  await mark.focus();
+  await page.keyboard.press("Enter");
+  await expect(mark).toHaveAttribute("aria-disabled", "true");
+  await page.keyboard.press("Enter");
+  release();
+  await expect(
+    composer(page).getByRole("button", { name: "Undo" }),
+  ).toBeVisible();
+
+  expect(patches).toHaveLength(1);
+});
+
 test("the first click after typing marks the review while the text saves", async ({
   page,
 }) => {
@@ -216,6 +329,95 @@ test("discarding a reply asks first and clears the draft", async ({ page }) => {
   await expect(article.getByText("Needs reply")).toBeVisible();
   await expect(composer(page)).toBeVisible();
   await expect(composer(page).getByRole("textbox")).toHaveValue("");
+});
+
+test("confirming Discard by keyboard puts focus on the reply text", async ({
+  page,
+}) => {
+  await page.goto(`${REPLIES_PAGE}?reply=rep-2`);
+  const textbox = composer(page).getByRole("textbox", { name: "Reply text" });
+  const dialog = page.getByRole("alertdialog");
+
+  await composer(page).getByRole("button", { name: "Discard" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press("Tab");
+  await expect(dialog.getByRole("button", { name: "Discard" })).toBeFocused();
+  await page.keyboard.press("Enter");
+
+  await expect(dialog).toHaveCount(0);
+  await expect(textbox).toHaveValue("");
+  await expect(textbox).toBeFocused();
+});
+
+test("a mouse click on the Discard action puts focus on the reply text", async ({
+  page,
+}) => {
+  await page.goto(`${REPLIES_PAGE}?reply=rep-2`);
+
+  await composer(page).getByRole("button", { name: "Discard" }).click();
+  await page
+    .getByRole("alertdialog")
+    .getByRole("button", { name: "Discard" })
+    .click();
+
+  await expect(
+    composer(page).getByRole("textbox", { name: "Reply text" }),
+  ).toBeFocused();
+});
+
+test("a failed discard still puts focus on the reply text", async ({
+  page,
+}) => {
+  await page.route("**/api/backend/apps/*/reviews/*/reply", (route) =>
+    route.request().method() === "DELETE"
+      ? route.fulfill(
+          fulfillJson(
+            500,
+            errorEnvelope(500, "/reply", "Could not discard the reply"),
+          ),
+        )
+      : route.fallback(),
+  );
+  await page.goto(`${REPLIES_PAGE}?reply=rep-2`);
+
+  await composer(page).getByRole("button", { name: "Discard" }).click();
+  await page
+    .getByRole("alertdialog")
+    .getByRole("button", { name: "Discard" })
+    .click();
+
+  await expect(page.getByText("Could not discard the reply")).toBeVisible();
+  await expect(
+    composer(page).getByRole("textbox", { name: "Reply text" }),
+  ).toBeFocused();
+});
+
+test("keeping the reply returns focus to the Discard button", async ({
+  page,
+}) => {
+  await page.goto(`${REPLIES_PAGE}?reply=rep-2`);
+  const discard = composer(page).getByRole("button", { name: "Discard" });
+
+  await discard.focus();
+  await page.keyboard.press("Enter");
+  await page.getByRole("button", { name: "Keep it" }).click();
+
+  await expect(page.getByRole("alertdialog")).toHaveCount(0);
+  await expect(discard).toBeFocused();
+});
+
+test("Escape on the Discard dialog returns focus to the Discard button", async ({
+  page,
+}) => {
+  await page.goto(`${REPLIES_PAGE}?reply=rep-2`);
+  const discard = composer(page).getByRole("button", { name: "Discard" });
+
+  await discard.focus();
+  await page.keyboard.press("Enter");
+  await page.keyboard.press("Escape");
+
+  await expect(discard).toBeFocused();
 });
 
 test("the console link names the store and opens in a new tab", async ({
@@ -295,6 +497,7 @@ test("the hint goes once the reply is discarded and never shows without one", as
   page,
 }) => {
   await page.goto(`${REPLIES_PAGE}?reply=rep-3`);
+  await page.waitForLoadState("networkidle");
   const textbox = composer(page).getByRole("textbox", { name: "Reply text" });
   const hint = composer(page).getByText(
     /Emptying the field keeps the saved reply/,
@@ -304,6 +507,7 @@ test("the hint goes once the reply is discarded and never shows without one", as
   await expect(hint).toHaveCount(0);
 
   await page.goto(`${REPLIES_PAGE}?reply=rep-2`);
+  await page.waitForLoadState("networkidle");
   const saved = composer(page).getByRole("textbox", { name: "Reply text" });
   await saved.fill("");
   await expect(hint).toBeVisible();
@@ -524,7 +728,7 @@ test("exporting a search that matches nothing writes no file", async ({
     downloads.push(download.suggestedFilename()),
   );
 
-  await page.getByRole("button", { name: "Export reviews to CSV" }).click();
+  await page.getByRole("button", { name: "Export CSV of reviews" }).click();
 
   await expect(
     page.getByText("Nothing to export: no review matches this search"),

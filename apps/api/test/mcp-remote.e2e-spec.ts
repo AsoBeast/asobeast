@@ -596,6 +596,43 @@ describe('Remote MCP transport (e2e)', () => {
     expect(result?.content?.[0].text).not.toContain('2026-03-02');
   });
 
+  it('answers keyword_breakdown through the remote endpoint', async () => {
+    const appId = await fixtureAppId();
+    const keyword = await prisma.keyword.upsert({
+      where: {
+        text_store_country: {
+          text: 'breakdown fixture',
+          store: Store.APP_STORE,
+          country: 'us',
+        },
+      },
+      update: {},
+      create: {
+        text: 'breakdown fixture',
+        store: Store.APP_STORE,
+        country: 'us',
+      },
+    });
+    await prisma.trackedKeyword.upsert({
+      where: { appId_keywordId: { appId, keywordId: keyword.id } },
+      update: {},
+      create: { appId, keywordId: keyword.id, source: 'MANUAL' },
+    });
+
+    const result = await callTool('keyword_breakdown', {
+      appId,
+      keywordId: keyword.id,
+    });
+
+    expect(result?.isError).toBeUndefined();
+    const breakdown = JSON.parse(result?.content?.[0].text ?? '{}') as {
+      apps: Array<{ isYou: boolean }>;
+      text: string;
+    };
+    expect(breakdown.text).toBe('breakdown fixture');
+    expect(breakdown.apps[0].isYou).toBe(true);
+  });
+
   it('refuses a ranking history window that runs backwards', async () => {
     const fixture = await prisma.app.findFirstOrThrow({
       where: { storeAppId: '555000111' },

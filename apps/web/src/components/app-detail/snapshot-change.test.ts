@@ -67,6 +67,65 @@ describe("snapshotChangeCells", () => {
     ).toEqual({ before: "—", after: "1.1.0" });
   });
 
+  it("shows a rating with one decimal like the overview", () => {
+    expect(
+      snapshotChangeCells({ field: "ratingAvg", before: 3.1, after: 4.31881 }),
+    ).toEqual({ before: "3.1", after: "4.3" });
+    expect(
+      snapshotChangeCells({ field: "ratingAvg", before: null, after: 5 }),
+    ).toEqual({ before: "—", after: "5.0" });
+  });
+
+  it("separates the thousands of the rating count and the installs", () => {
+    expect(
+      snapshotChangeCells({ field: "ratingCount", before: 100, after: 66487 }),
+    ).toEqual({ before: "100", after: "66,487" });
+    expect(
+      snapshotChangeCells({
+        field: "installs",
+        before: 1000,
+        after: 1200000,
+      }),
+    ).toEqual({ before: "1,000", after: "1,200,000" });
+    expect(
+      snapshotChangeCells({ field: "ratingCount", before: 0, after: 1000 }),
+    ).toEqual({ before: "0", after: "1,000" });
+  });
+
+  it("words a recorded price as free or a dollar amount", () => {
+    expect(
+      snapshotChangeCells({ field: "price", before: "1.99", after: "0" }),
+    ).toEqual({ before: "$1.99", after: "Free" });
+    expect(
+      snapshotChangeCells({ field: "price", before: null, after: 2 }),
+    ).toEqual({ before: "—", after: "$2.00" });
+  });
+
+  it("counts recorded screenshots the way the changes timeline does", () => {
+    expect(
+      snapshotChangeCells({ field: "screenshots", before: "8", after: "1200" }),
+    ).toEqual({ before: "8", after: "1,200" });
+  });
+
+  it("keeps a value that is not a number as the store sent it", () => {
+    expect(
+      snapshotChangeCells({ field: "price", before: "free", after: "1,99" }),
+    ).toEqual({ before: "free", after: "1,99" });
+    expect(
+      snapshotChangeCells({ field: "ratingAvg", before: "n/a", after: 4 }),
+    ).toEqual({ before: "n/a", after: "4.0" });
+  });
+
+  it("leaves the version as written", () => {
+    expect(
+      snapshotChangeCells({
+        field: "version",
+        before: "1.0.0",
+        after: "9.1.0",
+      }),
+    ).toEqual({ before: "1.0.0", after: "9.1.0" });
+  });
+
   it("reports the length of a text field in characters", () => {
     expect(
       snapshotChangeCells({ field: "title", before: 3, after: 1200 }),

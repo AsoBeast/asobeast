@@ -13,6 +13,11 @@ export const AUDIT_MIN_WEIGHT = 10;
 export const AUDIT_MAX_SNAPSHOT_AGE_DAYS = 7;
 export const AUDIT_MAX_FACTOR_SCORE = 10;
 export const AUDIT_MIN_FACTOR_CONFIDENCE = 0.5;
+export const AUDIT_OUTCOME_FACTORS: ReadonlySet<string> = new Set([
+  'rankings',
+  'ratings',
+  'conversion',
+]);
 
 function isFresh(snapshot: ActionAuditSnapshot, now: Date): boolean {
   return snapshot.date >= dateDaysAgo(now, AUDIT_MAX_SNAPSHOT_AGE_DAYS);
@@ -22,6 +27,7 @@ function isWeak(factor: ActionAuditFactor): factor is ActionAuditFactor & {
   score: number;
 } {
   return (
+    !AUDIT_OUTCOME_FACTORS.has(factor.id) &&
     factor.weight >= AUDIT_MIN_WEIGHT &&
     factor.confidence >= AUDIT_MIN_FACTOR_CONFIDENCE &&
     factor.score !== null &&

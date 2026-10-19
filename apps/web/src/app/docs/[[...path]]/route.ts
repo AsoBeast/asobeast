@@ -10,3 +10,4 @@ async function forward(
 }
 
 export { forward as GET };
+export { POST, PUT, PATCH, DELETE, OPTIONS } from "@/lib/api/refused-methods";

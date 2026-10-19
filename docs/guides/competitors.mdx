@@ -51,15 +51,50 @@ The comparison view puts your listing beside each competitor field by field, wit
 
 The gap analysis is the useful half: it shows phrases competitors index that you do not, so you can decide whether they belong in your own title, subtitle, keyword field or short description. Adding one from there tracks it with the source `COMPETITOR`, which starts its relevance lower than a keyword drawn from your own listing. See [Popularity, difficulty and opportunity](/concepts/scoring).
 
+## Collapse a section
+
+The competitors tab has three sections: the add form together with the competitors you track, **Apps you don’t track yet**, and the comparison matrix. Each section collapses behind its title. The window tabs of the discovery section and the only gaps switch of the matrix stay beside their titles while the section is collapsed. The choice is remembered in this browser and is not part of the link. When you print the page, a collapsed section prints its title and nothing else.
+
 ## Read the comparison matrix
 
 The matrix lists every tracked keyword with your position and each competitor's. Click any header to sort by it, your own column and each competitor included, and click again to reverse. Search narrows the keywords by text, and the result filter keeps the rows where you are **winning** (you rank best, or alone), **losing** (a competitor ranks better, or ranks where you do not) or **tied**. The only gaps switch still asks the server for gap rows alone.
+
+When you track keywords in more than one market, the first column names the market of each row, so the same phrase tracked in two storefronts is two rows you can tell apart. The **Market** filter beside **Result** keeps the rows of one market, is part of the link, and clears with **Clear all**. See [Countries and markets](/concepts/countries).
 
 Each position is shaded by its grade and the best position in a row stays underlined. Popularity and difficulty carry their grade too. See [How are scores graded?](/concepts/scoring#how-are-scores-graded).
 
 **Export CSV** in the matrix writes the rows shown, in the order shown, and the competitor list above it exports as well. See [Export the keyword comparison to CSV](/guides/export-data#export-the-keyword-comparison-to-csv).
 
 Discovery sorts the same way, by appearances, keywords, best position, average position or rating, and searches by app name.
+
+To find searches around what competitors target, use **Competitor searches** in **Suggestions** on the keywords page. See [Get keyword suggestions](/guides/track-keywords#get-keyword-suggestions).
+
+## Why does a competitor rank above you?
+
+Press a keyword in the matrix to open its breakdown. Your app comes first, then every competitor, each with its position on the latest daily check.
+
+For each app the panel reads every listing the keyword's market searches. On the App Store that is the title and subtitle of each localization the storefront reads, plus the keyword fields you saved for those localizations. A competitor's keyword field is private and is never shown. On Google Play it is the title, the short description and the long description, and the text of the long description is not shown. See [App Store and Google Play](/concepts/stores) and [Which localizations does a storefront read?](/concepts/countries#which-localizations-does-a-storefront-read).
+
+The keyword's words are marked where they appear. Each field says whether it holds the whole phrase, every word or some of them, which is the same verdict the coverage table uses. See [Check keyword coverage](/guides/metadata-workbench#check-keyword-coverage). Words of two localizations never combine into one phrase, so each localization is judged on its own. See [What does each store index?](/concepts/stores#what-does-each-store-index).
+
+A word that matches only when accents are ignored, such as `guidees` for `guidées`, has a dotted mark and does not count as a match. Stores usually treat the two spellings alike, but neither store documents it.
+
+**Not read** names the localizations the market searches whose listing has not been captured for that app. For a competitor only the native localizations of an English default storefront are captured, so the others stay unread rather than guessed. When the keyword's market has no stored listing of an app, the panel reads its home listing and says so.
+
+A competitor that ranks above you carries one note, from the first rule that applies:
+
+| Note | When it applies | What it suggests |
+| --- | --- | --- |
+| Placement | Its strongest placement beats yours. The order is the title, then the subtitle or short description, then your keyword field, then the long description, then every word spread over fields, then some of the words | Move the keyword to a stronger field |
+| Spelling | It spells a word exactly as searched where your listings match only with accents ignored | Consider the exact spelling |
+| Ratings | Both ratings come from the keyword's market, and it has at least three times your ratings and at least 100 more | Ratings may be the difference |
+| Not read | It shows no visible match and a localization the market searches was not captured | The missing listing may hold the keyword |
+| No visible match | App Store only, and it shows no visible match | It may rank through its private keyword field |
+| Similar | None of the above | Nothing visible explains the gap |
+
+These are rules of thumb. Installs and engagement, the strongest signals, are not visible for other apps, and neither store publishes how it weighs a field.
+
+Your own card says how many competitors rank above you, which words none of your listings holds, which match only with accents ignored, and whether your listing changed or you saved a keyword field this market reads in the last 28 days, because ranks usually take two to four weeks to settle. The panel reads stored data only and makes no store request.
 
 ## Watch competitor metadata changes
 

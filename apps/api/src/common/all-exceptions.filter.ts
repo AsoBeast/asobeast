@@ -32,6 +32,7 @@ import { BillingConflictError } from '../billing/billing.errors';
 import { UnknownPriceError } from '../billing/price-catalog';
 import { ErrorTracking } from '../observability/error-tracking.service';
 import { UnknownChartKeyError } from '../charts/chart-key';
+import { pathWithoutQuery, withoutQueryEcho } from './request-path';
 import {
   StoreAppNotFoundError,
   StoreNotSupportedError,
@@ -92,8 +93,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
       this.tracking.capture(exception);
     }
     const envelope: ApiErrorEnvelope = {
-      ...resolved,
-      path: request.url,
+      ...withoutQueryEcho(resolved, request),
+      path: pathWithoutQuery(request.url),
       timestamp: new Date().toISOString(),
     };
     if (resolved.statusCode === UNAUTHORIZED_STATUS) {

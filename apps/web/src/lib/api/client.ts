@@ -1,6 +1,13 @@
-import { BACKEND_PROXY_PATH, type ApiErrorEnvelope } from "@asobeast/shared";
-import { isPublicRoute } from "@/lib/auth-routes";
+import {
+  BACKEND_PROXY_PATH,
+  UPGRADE_PATH,
+  type ApiErrorEnvelope,
+} from "@asobeast/shared";
+import { isPublicRoute, loginUrl } from "@/lib/auth-routes";
 import { writeApiErrorDigest } from "./error-digest";
+import { redirectRefusedRender } from "./server-session";
+
+export { loginUrl };
 
 const INTERNAL_BASE = process.env.API_INTERNAL_URL ?? "http://localhost:4000";
 
@@ -37,6 +44,9 @@ export class ApiError extends Error {
   }
 }
 
+export const isNotFound = (error: unknown): boolean =>
+  error instanceof ApiError && error.envelope.statusCode === 404;
+
 function isEnvelope(body: unknown): body is ApiErrorEnvelope {
   if (typeof body !== "object" || body === null || Array.isArray(body)) {
     return false;
@@ -70,13 +80,6 @@ async function errorEnvelope(
   }
 }
 
-export function loginUrl(pathname: string, search: string): string {
-  const requested = `${pathname}${search}`;
-  const url = new URL("/login", "http://placeholder");
-  if (requested !== "/") url.searchParams.set("next", requested);
-  return `${url.pathname}${url.search}`;
-}
-
 function handleAuthRedirect(path: string, status: number): void {
   if (typeof window === "undefined" || path.startsWith("/auth")) return;
   if (isPublicRoute(window.location.pathname)) return;
@@ -84,8 +87,8 @@ function handleAuthRedirect(path: string, status: number): void {
     window.location.assign(
       loginUrl(window.location.pathname, window.location.search),
     );
-  } else if (status === 402) {
-    window.location.assign("/upgrade");
+  } else if (status === 402 && window.location.pathname !== UPGRADE_PATH) {
+    window.location.assign(UPGRADE_PATH);
   }
 }
 
@@ -114,6 +117,7 @@ export async function apiFetch<T>(
   });
   if (!res.ok) {
     handleAuthRedirect(path, res.status);
+    if (res.status === 401) await redirectRefusedRender();
     throw new ApiError(await errorEnvelope(res, path));
   }
   if (res.status === 204) return undefined as T;

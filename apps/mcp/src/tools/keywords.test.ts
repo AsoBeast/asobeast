@@ -57,6 +57,21 @@ describe("keyword tools", () => {
     expect(url.searchParams.get("limit")).toBe("5");
   });
 
+  it("maps keyword_breakdown to its route", async () => {
+    const { server, tools } = createHarness();
+    const { calls, client } = stubFetch(() => ({ status: 200, body: {} }));
+    registerCatalogTools(server, client, KEYWORD_TOOLS);
+
+    await tools.get("keyword_breakdown")!.handler({
+      appId: "app-1",
+      keywordId: "kw-1",
+    });
+
+    const url = new URL(calls[0]!.url);
+    expect(url.pathname).toBe("/apps/app-1/keywords/kw-1/breakdown");
+    expect([...url.searchParams.keys()]).toEqual([]);
+  });
+
   it("describes an unranked position against the field the payload carries", () => {
     const { server, tools } = createHarness();
     const { client } = stubFetch(() => ({ status: 200, body: [] }));

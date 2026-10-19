@@ -4,7 +4,7 @@ import type { ActionDetail, ActionItem } from "@asobeast/shared";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ApiError } from "@/lib/api";
+import { isNotFound } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import { ActionEvidencePanel } from "./ActionEvidencePanel";
 import { ActionExplain } from "./ActionExplain";
@@ -14,9 +14,6 @@ import { ActionNote } from "./ActionNote";
 import { ActionOutcome } from "./ActionOutcome";
 import { ActionSteps } from "./ActionSteps";
 import { ActionTrendChart } from "./ActionTrendChart";
-
-export const isNotFound = (error: unknown): boolean =>
-  error instanceof ApiError && error.envelope.statusCode === 404;
 
 export const ACTION_NOT_FOUND =
   "This action no longer exists. It may have been pruned after 180 days.";

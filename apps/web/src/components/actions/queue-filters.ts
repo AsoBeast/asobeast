@@ -126,6 +126,10 @@ export function facetCounts(
   };
 }
 
+export function leavesDefaultQueue(status: ActionStatus): boolean {
+  return !ACTION_DEFAULT_STATUSES.some((value) => value === status);
+}
+
 export function isDefaultStatusSet(status: readonly ActionStatus[]): boolean {
   return (
     status.length === ACTION_DEFAULT_STATUSES.length &&

@@ -430,6 +430,7 @@ describe('KeywordsService.compare', () => {
           keywordId: 'kwGap',
           keyword: {
             text: 'habit tracker',
+            country: 'us',
             metrics: [{ traffic: 5, difficulty: 3 }],
           },
         },
@@ -437,6 +438,7 @@ describe('KeywordsService.compare', () => {
           keywordId: 'kwLead',
           keyword: {
             text: 'daily planner',
+            country: 'de',
             metrics: [{ traffic: 8, difficulty: 4 }],
           },
         },
@@ -474,6 +476,31 @@ describe('KeywordsService.compare', () => {
 
     expect(result.rows).toHaveLength(1);
     expect(result.rows[0].keywordId).toBe('kwGap');
+  });
+
+  it('names the market of each row', async () => {
+    const service = buildService(buildPrisma());
+
+    const result = await service.compare('app1', false);
+
+    expect(result.rows.find((row) => row.keywordId === 'kwGap')?.country).toBe(
+      'us',
+    );
+    expect(result.rows.find((row) => row.keywordId === 'kwLead')?.country).toBe(
+      'de',
+    );
+  });
+
+  it("asks for the keyword's country", async () => {
+    const prisma = buildPrisma();
+    const service = buildService(prisma);
+
+    await service.compare('app1', false);
+
+    const [query] = prisma.trackedKeyword.findMany.mock.calls[0] as [
+      { select: { keyword: { select: { country?: boolean } } } },
+    ];
+    expect(query.select.keyword.select.country).toBe(true);
   });
 });
 
@@ -562,6 +589,55 @@ describe('KeywordsService.listTracked serp volatility', () => {
     expect(byId.get('kwStable')?.serpVolatility7d).toBe(0);
     expect(byId.get('kwChurn')?.serpVolatility7d).toBe(100);
     expect(byId.get('kwUnchecked')?.serpVolatility7d).toBeNull();
+  });
+
+  it('loads hold facts only when the list asks for them', async () => {
+    const withRanking = (row: ReturnType<typeof trackedRow>) => ({
+      ...row,
+      keyword: {
+        ...row.keyword,
+        rankings: [{ position: 5, date: new Date(), depth: 200 }],
+      },
+    });
+    const prisma = {
+      ...buildPrisma(),
+      trackedKeyword: {
+        findMany: jest
+          .fn()
+          .mockResolvedValue([
+            withRanking(trackedRow('kwStable', 'habit tracker')),
+            trackedRow('kwChurn', 'daily planner'),
+            trackedRow('kwUnchecked', 'sleep timer'),
+          ]),
+      },
+      $queryRaw: jest.fn().mockResolvedValue([
+        {
+          keywordId: 'kwStable',
+          bestPosition: 2,
+          daysInTier: 4,
+          latestPosition: 5,
+          latestDate: new Date().toISOString().slice(0, 10),
+        },
+      ]),
+    };
+    const service = buildService(prisma);
+
+    const plain = await service.listTracked('app1');
+    expect(prisma.$queryRaw).not.toHaveBeenCalled();
+    const plainRow = plain.find((item) => item.keywordId === 'kwStable');
+    expect(plainRow).not.toHaveProperty('bestPosition');
+    expect(plainRow).not.toHaveProperty('daysInTier');
+    expect(plainRow).not.toHaveProperty('heldTier');
+
+    const withFacts = await service.listTracked('app1', undefined, undefined, {
+      holdFacts: true,
+    });
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+    const factsRow = withFacts.find((item) => item.keywordId === 'kwStable');
+    expect(factsRow?.bestPosition).toBe(2);
+    expect(factsRow?.positionDeltaFromBest).toBe(3);
+    expect(factsRow?.daysInTier).toBe(4);
+    expect(factsRow?.heldTier).toBe(10);
   });
 });
 

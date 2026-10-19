@@ -31,7 +31,6 @@ export function InlineQueryError({
         size="sm"
         variant="outline"
         aria-disabled={retrying || undefined}
-        className="aria-disabled:opacity-60"
         onClick={() => {
           if (!retrying) void read.refetch();
         }}

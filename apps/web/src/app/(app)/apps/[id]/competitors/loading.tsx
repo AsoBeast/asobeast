@@ -1,6 +1,7 @@
 import {
   ComparisonMatrixSkeleton,
   CompetitorListSkeleton,
+  DiscoveryCardSkeleton,
 } from "@/components/competitors/skeletons";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,11 +14,12 @@ export default function Loading() {
           <Skeleton className="h-4 w-28" />
           <Skeleton className="h-5 w-56" />
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex flex-col gap-6">
           <Skeleton className="h-9 w-full" />
+          <CompetitorListSkeleton />
         </CardContent>
       </Card>
-      <CompetitorListSkeleton />
+      <DiscoveryCardSkeleton />
       <ComparisonMatrixSkeleton />
     </div>
   );

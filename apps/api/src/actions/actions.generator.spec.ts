@@ -908,6 +908,42 @@ describe('ActionsGenerator', () => {
       }
     });
 
+    it('neither resolves nor verifies an uncovered keyword while its score is outdated', async () => {
+      const add = realDetectors.filter(
+        (detector) => detector.rule === 'keyword.add_uncovered',
+      );
+      mockDetectors.splice(0, mockDetectors.length, ...add);
+      const first = buildPrisma();
+      await generatorFor(ruleSampleContext(), first).generateForWorkspace(
+        budget,
+        NOW,
+      );
+      const sample = ruleSampleContext();
+      const rescoring: ActionContext = {
+        ...sample,
+        apps: sample.apps.map((app) => ({
+          ...app,
+          trackedKeywords: app.trackedKeywords.map((keyword) => ({
+            ...keyword,
+            scoreOutdated: true,
+          })),
+        })),
+      };
+
+      for (const status of ['OPEN', 'DONE'] as const) {
+        const prisma = buildPrisma(
+          storedRow(first.created[0].fingerprint, { status }),
+        );
+        const result = await generatorFor(
+          rescoring,
+          prisma,
+        ).generateForWorkspace(budget, NOW);
+
+        expect(result).toMatchObject({ resolved: 0, verified: 0, opened: 0 });
+        expect(prisma.updated).toEqual([]);
+      }
+    });
+
     it('keeps an open push action open once its results turn volatile', async () => {
       const push = realDetectors.filter(
         (detector) => detector.rule === 'keyword.push_to_top10',
