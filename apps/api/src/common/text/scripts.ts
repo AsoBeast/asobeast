@@ -16,10 +16,7 @@ export const THAI_CHARACTER = /\p{Script=Thai}/u;
 export const isUnsegmented = (text: string): boolean =>
   SPACELESS_CHARACTER.test(text) || HANGUL_CHARACTER.test(text);
 
-export const INFLECTED_STEM_CHARACTER = new RegExp(
-  `[${INFLECTED_STEM_SCRIPTS}]`,
-  'u',
-);
+const INFLECTED_STEM_CHARACTER = new RegExp(`[${INFLECTED_STEM_SCRIPTS}]`, 'u');
 
 export const hasInflectedStemScript = (word: string): boolean =>
   INFLECTED_STEM_CHARACTER.test(word);
