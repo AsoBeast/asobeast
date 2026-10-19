@@ -63,9 +63,16 @@ describe('tessdataDirectory', () => {
     const gate = new Promise<void>((resolve) => {
       release = resolve;
     });
+    let linked = 0;
+    let bothLinked: () => void = () => {};
+    const bothLinkedPromise = new Promise<void>((resolve) => {
+      bothLinked = resolve;
+    });
     jest
       .spyOn(fsPromises, 'symlink')
       .mockImplementation(async (_target, path) => {
+        linked += 1;
+        if (linked === 2) bothLinked();
         if (String(path).endsWith('rus.traineddata.gz')) {
           throw new Error('link failed');
         }
@@ -74,11 +81,15 @@ describe('tessdataDirectory', () => {
     const removals = jest.spyOn(fsPromises, 'rm');
 
     const attempt = tessdataDirectory(['eng', 'rus']);
+    // attached before the waits, so an early rejection stays handled
+    const rejection = expect(attempt).rejects.toThrow('link failed');
+    await bothLinkedPromise;
+    // one macrotask turn, so a cleanup racing the failure has happened
     await new Promise((resolve) => setImmediate(resolve));
     expect(removals).not.toHaveBeenCalled();
 
     release();
-    await expect(attempt).rejects.toThrow('link failed');
+    await rejection;
     expect(removals).toHaveBeenCalledTimes(1);
   });
 
