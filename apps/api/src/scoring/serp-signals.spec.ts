@@ -59,6 +59,10 @@ describe('titleTargets', () => {
     ['Тест на тревожность', 'тревожность', true],
     ['Снятие тревоги', 'снятие тревожности', false],
     ['Тревога и паника', 'снятие тревожности', false],
+    ['Фоторедактор', 'фото', true],
+    ['Тестирование', 'тест', true],
+    ['Снятие тревожности', 'снятие трев', true],
+    ['Проффото', 'фото', false],
     ['Any title', '  ', false],
   ])('%s targets "%s": %s', (title, keyword, expected) => {
     expect(titleTargets(title, keyword)).toBe(expected);

@@ -61,6 +61,9 @@ export function titleEvidence(title: string, keyword: string): number {
 }
 
 const inflectedTitleTargets = (haystack: string, phrase: string): boolean => {
+  if (` ${haystack}`.includes(` ${phrase}`)) {
+    return true;
+  }
   const tokens = haystack.split(' ');
   const words = phrase.split(' ');
   return containsPhrase(haystack, tokens, phrase, words);
