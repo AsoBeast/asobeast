@@ -139,6 +139,21 @@ describe('Row level security', () => {
     await expect(prisma.keywordMetric.count()).resolves.toBe(0);
   });
 
+  it('keeps sessions out of reach of a workspace scope and of no scope at all', async () => {
+    const everything =
+      await crossTenant.becauseThisWorkIsNotOwnedByOneWorkspace(
+        'the isolation suite counts every session on purpose',
+        () => prisma.session.count(),
+      );
+    const insideWorkspace = await workspace.run(fixture.a.id, () =>
+      prisma.session.count(),
+    );
+
+    expect(everything).toBeGreaterThanOrEqual(2);
+    expect(insideWorkspace).toBe(0);
+    await expect(prisma.session.count()).resolves.toBe(0);
+  });
+
   it('keeps a policy on every table the application calls tenant-owned', async () => {
     const rows = await prisma.$queryRaw<{ relname: string }[]>`
       SELECT c.relname

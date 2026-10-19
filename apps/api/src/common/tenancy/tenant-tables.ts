@@ -44,6 +44,7 @@ export const OPERATOR_TABLES = [
   'ProxyEndpoint',
   'ProxyHealth',
   'ProxySpend',
+  'Session',
   'SupportAccess',
   'TrialClaim',
 ] as const;

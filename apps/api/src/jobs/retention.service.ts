@@ -44,6 +44,7 @@ export class RetentionService {
       ['aiCall', () => this.pruneAiCalls(now)],
       ['aiCallReservation', () => this.releaseAbandonedAiCalls(now)],
       ['screenshotText', () => this.pruneScreenshotText(now)],
+      ['session', () => this.pruneSessions(now)],
     ];
 
     const settled = await Promise.allSettled(rules.map(([, run]) => run()));
@@ -258,6 +259,13 @@ export class RetentionService {
   private async pruneScreenshotText(now: Date): Promise<number> {
     const { count } = await this.prisma.screenshotText.deleteMany({
       where: { usedAt: { lt: this.cutoff(SCREENSHOT_TEXT_DAYS, now) } },
+    });
+    return count;
+  }
+
+  private async pruneSessions(now: Date): Promise<number> {
+    const { count } = await this.prisma.session.deleteMany({
+      where: { expiresAt: { lt: now } },
     });
     return count;
   }

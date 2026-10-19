@@ -105,12 +105,24 @@ model User {
   resetExpiresAt    DateTime?
   sessionVersion    Int        @default(0)
   tokens            ApiToken[]
+  sessions          Session[]
   actionEvents      ActionEvent[]
   aiCalls           AiCall[]
   createdAt         DateTime   @default(now())
   updatedAt         DateTime   @updatedAt
 
   @@index([workspaceId])
+}
+
+model Session {
+  id        String   @id
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model BillingEvent {
