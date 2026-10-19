@@ -193,6 +193,19 @@ describe('probeSuggestReach', () => {
       });
     });
 
+    it('finds a case form that continues with more words', async () => {
+      const lookup = lookupFrom({
+        дневник: ['дневником привычек'],
+        д: ['дневником привычек'],
+      });
+      await expect(
+        probeSuggestReach('дневник', lookup, 'prefix'),
+      ).resolves.toEqual({
+        reach: { status: 'hit', prefixLength: 1, position: 1 },
+        requests: 2,
+      });
+    });
+
     it('reports a keyword offered only as its full case form as listed', async () => {
       const lookup = lookupFrom({ тревожность: ['тревожностью'] });
       await expect(
@@ -234,12 +247,20 @@ describe('countContinuations', () => {
     await expect(countContinuations('Géo Quiz', lookup)).resolves.toBe(2);
   });
 
-  it('counts a case form of the keyword as a continuation', async () => {
+  it('counts a case form of the keyword only when more words follow', async () => {
     const lookup = lookupFrom({
-      дневник: ['дневником', 'дневник привычек'],
-      'дневник ': ['дневник привычек'],
+      дневник: ['дневником', 'дневником привычек'],
+      'дневник ': ['дневником привычек'],
     });
-    await expect(countContinuations('дневник', lookup)).resolves.toBe(2);
+    await expect(countContinuations('дневник', lookup)).resolves.toBe(1);
+  });
+
+  it('counts no continuation for a different word sharing the stem', async () => {
+    const lookup = lookupFrom({
+      программа: ['программирование'],
+      'программа ': ['программирование'],
+    });
+    await expect(countContinuations('программа', lookup)).resolves.toBe(0);
   });
 
   it('returns null when a lookup throws', async () => {

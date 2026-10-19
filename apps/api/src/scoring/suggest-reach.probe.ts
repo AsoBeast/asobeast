@@ -29,6 +29,21 @@ const continuesInInflectedScript = (term: string, target: string): boolean => {
   );
 };
 
+const continuesAfterInflectedForms = (
+  term: string,
+  target: string,
+): boolean => {
+  if (!hasInflectedStemScript(target)) {
+    return false;
+  }
+  const words = target.split(' ');
+  const offered = term.split(' ');
+  return (
+    offered.length > words.length &&
+    words.every((word, index) => sameWord(offered[index], word))
+  );
+};
+
 const extendsKeyword = (term: string, target: string): boolean =>
   pluralsOf(target).some(
     (form) => term === form || term.startsWith(`${form} `),
@@ -64,7 +79,7 @@ export function countingLookup(lookup: SuggestLookup): CountingLookup {
 const continues = (term: string, target: string): boolean =>
   term === target ||
   term.startsWith(`${target} `) ||
-  continuesInInflectedScript(term, target);
+  continuesAfterInflectedForms(term, target);
 
 export async function countContinuations(
   keyword: string,
