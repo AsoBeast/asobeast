@@ -35,6 +35,32 @@ describe('conversionChecks', () => {
       checkOf(conversionChecks(appStoreContext()), 'conversion-update-recency'),
     ).toBeUndefined();
   });
+  it('groups the digits of a long gap since the last update', () => {
+    const storeUpdatedAt = new Date(FIXTURE_NOW.getTime() - 1234 * DAY_MS);
+
+    expect(
+      checkOf(
+        conversionChecks(appStoreContext({ storeUpdatedAt })),
+        'conversion-update-recency',
+      ),
+    ).toMatchObject({
+      detail: 'The last update was 1,234 days ago.',
+      advice: {
+        fix: 'The last update was 1,234 days ago. Stores and shoppers read recency as maintenance.',
+      },
+    });
+  });
+
+  it('groups the digits of the release notes length', () => {
+    const releaseNotes = 'x'.repeat(1234);
+
+    expect(
+      checkOf(
+        conversionChecks(appStoreContext({ facts: { releaseNotes } })),
+        'conversion-release-notes',
+      )?.detail,
+    ).toBe('Release notes are 1,234 characters long.');
+  });
 
   it.each([
     [null, 0],

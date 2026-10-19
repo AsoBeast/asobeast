@@ -66,8 +66,48 @@ describe('ratings-volume', () => {
       score: 5,
       source: 'store',
       detail:
-        'You have 1000 ratings. Add competitors to compare against your category.',
+        'You have 1,000 ratings. Add competitors to compare against your category.',
     });
+  });
+  it('groups the digits of a large count and of its competitor median', () => {
+    const checks = ratingChecks(
+      appStoreContext({
+        ratingAvg: 4.68104,
+        ratingCount: 30853,
+        competitors: competitorsWith([250000, 406854]),
+      }),
+    );
+    const sentence =
+      'You have 30,853 ratings; the median competitor has 328,427.';
+
+    expect(checkOf(checks, 'ratings-volume')).toMatchObject({
+      detail: sentence,
+      advice: { fix: sentence },
+    });
+  });
+
+  it('keeps one decimal of a median that falls between two counts', () => {
+    const checks = ratingChecks(
+      appStoreContext({
+        ratingAvg: 4.5,
+        ratingCount: 100,
+        competitors: competitorsWith([1000, 2001]),
+      }),
+    );
+
+    expect(checkOf(checks, 'ratings-volume')?.detail).toBe(
+      'You have 100 ratings; the median competitor has 1,500.5.',
+    );
+  });
+
+  it('groups the digits of a large count without competitors', () => {
+    const checks = ratingChecks(
+      appStoreContext({ ratingAvg: 4.5, ratingCount: 30853 }),
+    );
+
+    expect(checkOf(checks, 'ratings-volume')?.detail).toBe(
+      'You have 30,853 ratings. Add competitors to compare against your category.',
+    );
   });
 
   it('leaves the volume unanswered without a rating count', () => {
@@ -141,6 +181,14 @@ describe('ratings-recent', () => {
         ?.detail,
     ).toContain('“ads” comes up in 3 of them');
   });
+  it('groups the digits of a large review count', () => {
+    const reviews = reviewsFrom(FIXTURE_NOW, Array<number>(1200).fill(5));
+
+    expect(
+      checkOf(ratingChecks(appStoreContext({ reviews })), 'ratings-recent')
+        ?.detail,
+    ).toBe('Reviews from the last 30 days average 5 across 1,200.');
+  });
 });
 
 describe('ratings-current-version', () => {
@@ -201,6 +249,21 @@ describe('ratings-current-version', () => {
     );
 
     expect(checkOf(checks, 'ratings-current-version')).toBeUndefined();
+  });
+  it('rounds both ratings of the current version sentence', () => {
+    const checks = ratingChecks(
+      appStoreContext({
+        ratingAvg: 4.68104,
+        ratingCount: 1000,
+        facts: { currentVersionScore: 4.45, currentVersionReviews: 20 },
+      }),
+    );
+    const sentence = 'This version averages 4.45 against 4.68 overall.';
+
+    expect(checkOf(checks, 'ratings-current-version')).toMatchObject({
+      detail: sentence,
+      advice: { fix: sentence },
+    });
   });
 });
 
