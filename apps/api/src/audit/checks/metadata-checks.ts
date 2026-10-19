@@ -109,7 +109,7 @@ const candidateKeyword = (
   priorityKeywords(context.keywords).find(
     (keyword) =>
       !coveredAnywhere(context, keyword.text) &&
-      keyword.text.length + 1 <= unused,
+      countChars(keyword.text) + 1 <= unused,
   ) ?? null;
 
 const lengthAdvice = (
@@ -123,7 +123,7 @@ const lengthAdvice = (
   return {
     title: `Use the ${unused} unused ${field} characters`,
     fix: candidate
-      ? `Add \u201c${candidate.text}\u201d (${candidate.text.length} characters), your best uncovered keyword that still fits.`
+      ? `Add \u201c${candidate.text}\u201d (${countChars(candidate.text)} characters), your best uncovered keyword that still fits.`
       : `${field === 'title' ? 'Titles' : 'Subtitles'} under ${TITLE_FULL_CHARS} characters leave indexed space unused.`,
   };
 };
