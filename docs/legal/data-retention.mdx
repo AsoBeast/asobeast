@@ -41,6 +41,8 @@ Credential material and the state that goes with it stays in the database. A mem
 
 Export stays available while a workspace is suspended, unentitled or scheduled for deletion. Losing access to capacity never means losing access to your data.
 
+The response is sent in chunks as the rows are read. A complete download ends normally and holds exactly the number of row lines the manifest announces for each table. If the server cannot finish, for example because the client stops reading for a minute, it closes the connection instead of ending the response, so a client reports a broken transfer rather than a short file that looks whole. Check the line count against the manifest when a script depends on a complete archive, and retry a failed download.
+
 <Note>
   A large workspace produces a large stream. Call the API directly with a personal API token rather than through the web origin proxy, which applies a per request timeout.
 </Note>
