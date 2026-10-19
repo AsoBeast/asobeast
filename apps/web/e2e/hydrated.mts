@@ -11,11 +11,20 @@ export async function hydrated(control: Locator): Promise<Locator> {
   return control;
 }
 
-export async function activateTwiceInOneTask(control: Locator): Promise<void> {
-  await (
-    await hydrated(control)
-  ).evaluate((element: HTMLElement) => {
-    element.click();
-    element.click();
-  });
+export async function activateInOneTask(
+  first: Locator,
+  ...others: Locator[]
+): Promise<void> {
+  const controls = await Promise.all(
+    [first, ...others].map((control) => hydrated(control)),
+  );
+  const handles = await Promise.all(
+    controls.map((control) => control.elementHandle()),
+  );
+  await first.page().evaluate((elements) => {
+    for (const element of elements) (element as HTMLElement).click();
+  }, handles);
 }
+
+export const activateTwiceInOneTask = (control: Locator): Promise<void> =>
+  activateInOneTask(control, control);
