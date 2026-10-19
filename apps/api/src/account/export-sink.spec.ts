@@ -92,6 +92,22 @@ describe('writeBatched', () => {
     );
   });
 
+  it.each(['ECONNRESET', 'EPIPE', 'ECONNABORTED'])(
+    'reports %s of a sink that is still open as a closed sink',
+    async (code) => {
+      const sink = new Writable({
+        write(_chunk, _encoding, callback) {
+          callback(Object.assign(new Error(`write ${code}`), { code }));
+        },
+      });
+      sink.on('error', () => undefined);
+
+      await expect(writeBatched(sink, linesOf('a\n'))).rejects.toBeInstanceOf(
+        ExportSinkClosedError,
+      );
+    },
+  );
+
   it('passes on the write error of a sink that is still open', async () => {
     const sink = new Writable({
       write(_chunk, _encoding, callback) {

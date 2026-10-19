@@ -2,6 +2,7 @@ import type { Writable } from 'node:stream';
 
 export const EXPORT_BATCH_CHARS = 64 * 1024;
 export const EXPORT_FLUSH_TIMEOUT_MS = 60_000;
+const CONNECTION_LOST_CODES = new Set(['ECONNABORTED', 'ECONNRESET', 'EPIPE']);
 
 export class ExportSinkClosedError extends Error {
   constructor(options?: ErrorOptions) {
@@ -15,6 +16,13 @@ export class ExportStalledError extends Error {
     super(`the export connection accepted no data for ${timeoutMs} ms`);
     this.name = 'ExportStalledError';
   }
+}
+
+function closedTheConnection(sink: Writable, error: Error): boolean {
+  const { code } = error as NodeJS.ErrnoException;
+  return (
+    sink.destroyed || (code !== undefined && CONNECTION_LOST_CODES.has(code))
+  );
 }
 
 function flush(
@@ -37,7 +45,9 @@ function flush(
     const onClose = (): void => finish(new ExportSinkClosedError());
     const onError = (error: Error): void =>
       finish(
-        sink.destroyed ? new ExportSinkClosedError({ cause: error }) : error,
+        closedTheConnection(sink, error)
+          ? new ExportSinkClosedError({ cause: error })
+          : error,
       );
     const timer = setTimeout(
       () => finish(new ExportStalledError(timeoutMs)),
