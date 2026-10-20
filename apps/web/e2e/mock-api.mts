@@ -125,6 +125,7 @@ import {
   UPDATE_THEME_REVIEWS,
   TWIN_REVIEWS,
   RTL_REVIEWS,
+  EMOJI_REVIEWS,
   CROWDED_COMPARISON,
   UNCHECKED_COMPARISON,
   UNCHECKED_COMPARISON_COOKIE,
@@ -749,6 +750,7 @@ const REVIEW_SETS: Record<string, typeof UPDATE_THEME_REVIEWS> = {
   update: UPDATE_THEME_REVIEWS,
   twins: TWIN_REVIEWS,
   rtl: RTL_REVIEWS,
+  emoji: EMOJI_REVIEWS,
 };
 
 const reviewSetOf = (req: IncomingMessage) =>
