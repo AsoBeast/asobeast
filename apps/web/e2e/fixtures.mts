@@ -1028,6 +1028,31 @@ export const RTL_REVIEWS: ReviewList = {
   ],
 };
 
+const emojiReview = (index: number, text: string): ReviewItem => ({
+  id: `emoji-rev-${index}`,
+  reviewId: `emoji-store-rev-${index}`,
+  userName: null,
+  score: 5,
+  title: null,
+  text,
+  version: "3.4.1",
+  reviewedAt: utcTimestampDaysAgo(index),
+  repliedAt: null,
+  replyText: null,
+  reply: null,
+});
+
+export const EMOJI_REVIEWS: ReviewList = {
+  total: 4,
+  versions: ["3.4.1"],
+  reviews: [
+    emojiReview(1, "Love it 🎉🎉 for the whole family 👨‍👩‍👧‍👦"),
+    emojiReview(2, "One 🎉 is enough"),
+    emojiReview(3, "Plain review without symbols"),
+    emojiReview(4, "Works well."),
+  ],
+};
+
 export const UPDATE_REVIEW_THEMES: ReviewThemes = {
   themes: [{ phrase: "update", kind: "complaint", mentions: 2, negative: 2 }],
   reviews: 5,
