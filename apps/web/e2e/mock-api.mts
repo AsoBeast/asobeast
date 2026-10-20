@@ -2337,6 +2337,16 @@ const routes: Route[] = [
   },
   {
     method: "POST",
+    pattern: /^\/auth\/logout$/,
+    handler: (_p, _req, res) => {
+      res.writeHead(204, {
+        "set-cookie": `${SESSION_COOKIE}=; Path=/; Max-Age=0`,
+      });
+      res.end();
+    },
+  },
+  {
+    method: "POST",
     pattern: /^\/mcp$/,
     handler: (_p, req, res) => {
       if (!req.headers.authorization) {
