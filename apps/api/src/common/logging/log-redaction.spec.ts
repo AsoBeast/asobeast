@@ -259,6 +259,15 @@ describe('query credentials', () => {
     );
   });
 
+  it.each([`ab'cd`, 'ab"cd', `it's-secret`])(
+    'does not leave the tail of a credential that holds a raw quote: %s',
+    (value) => {
+      expect(scrubText(`/x?password=${value}&q=1`, [])).toBe(
+        `/x?password=${REDACTED}&q=1`,
+      );
+    },
+  );
+
   it('redacts an empty value and leaves a name without a value alone', () => {
     expect(scrubText('/x?password=&q=1', [])).toBe(
       `/x?password=${REDACTED}&q=1`,

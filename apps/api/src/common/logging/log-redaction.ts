@@ -23,7 +23,7 @@ const SECRET_KEY =
 
 const BRACKETS = /[[\]]+/;
 const QUERY_PARAMETER_NAME = /([?&;])([^?&;=#\s"']+)=/g;
-const QUERY_VALUE_END = /[&#\s"']/g;
+const QUERY_VALUE_END = /[&#\s]/g;
 
 function isSecretKey(name: string): boolean {
   return name.split(BRACKETS).some((segment) => SECRET_KEY.test(segment));
