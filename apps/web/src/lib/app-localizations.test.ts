@@ -298,6 +298,12 @@ describe("keywordFieldDraft", () => {
     expect(cased.used).toBe(7);
     expect(cased.storedAs).toBe("fitness");
   });
+  it("W-LOC-10 counts a character outside the BMP once", () => {
+    const draft = keywordFieldDraft("𠮷野家,𪚥𪚥𪚥", []);
+
+    expect(draft.used).toBe(7);
+    expect(draft.over).toBe(0);
+  });
 
   it("W-LOC-10 says nothing about how it is stored when the text is already stored form", () => {
     expect(keywordFieldDraft("fitness,workout", []).storedAs).toBeNull();

@@ -23,6 +23,18 @@ describe('packKeywordField', () => {
     expect(packKeywordField(['ą'.repeat(100)])).toEqual(['ą'.repeat(100)]);
     expect(packKeywordField(['ą'.repeat(101)])).toEqual([]);
   });
+
+  it('packs phrases that hold characters outside the bmp by characters', () => {
+    const phrases = Array.from(
+      { length: 15 },
+      (_, index) => `𠮷野家${String.fromCodePoint(0x20000 + index)}𪚥𪚥`,
+    );
+
+    const packed = packKeywordField(phrases);
+
+    expect(packed).toHaveLength(14);
+    expect(keywordFieldChars(packed)).toBe(97);
+  });
 });
 
 describe('parseKeywordField', () => {
@@ -87,5 +99,9 @@ describe('keywordFieldChars', () => {
   it('counts an accented or cjk letter once, as App Store Connect does', () => {
     expect(keywordFieldChars(['zażółć', 'łódź'])).toBe(11);
     expect(keywordFieldChars(['番茄钟', '冥想'])).toBe(6);
+  });
+
+  it('counts a character outside the bmp once, as the documented rule says', () => {
+    expect(keywordFieldChars(['𠮷野家', '𪚥𪚥𪚥'])).toBe(7);
   });
 });

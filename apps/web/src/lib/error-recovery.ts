@@ -109,6 +109,15 @@ function digestOf(error: unknown): string | undefined {
   return typeof digest === "string" ? digest : undefined;
 }
 
+export function isExplainedRefusal(error: unknown): boolean {
+  const digest = readApiErrorDigest(digestOf(error));
+  return (
+    digest !== null &&
+    digest.statusCode < 500 &&
+    byStatus(digest, undefined) !== null
+  );
+}
+
 export function recoveryFor(error: unknown, scope?: RecoveryScope): Recovery {
   if (error instanceof ApiError) {
     const { statusCode, message } = error.envelope;

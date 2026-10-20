@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useDeferredValue } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
@@ -116,6 +116,7 @@ function RatingsChartBody({ id, range }: { id: string; range: RatingsRange }) {
 
 export function RatingsChart({ id }: { id: string }) {
   const [range, setRange] = useQueryState("range", ratingsRangeParser);
+  const shownRange = useDeferredValue(range);
 
   return (
     <Card>
@@ -132,7 +133,7 @@ export function RatingsChart({ id }: { id: string }) {
       </CardHeader>
       <CardContent>
         <Suspense fallback={<ChartSkeleton height={CHART_HEIGHT.compact} />}>
-          <RatingsChartBody id={id} range={range} />
+          <RatingsChartBody id={id} range={shownRange} />
         </Suspense>
       </CardContent>
     </Card>

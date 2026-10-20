@@ -255,6 +255,39 @@ test("searching narrows the list in the browser", async ({ page }) => {
   await expect(page.getByRole("article")).toHaveCount(5);
 });
 
+test("an emoji only search lists the reviews that hold the emoji", async ({
+  context,
+  page,
+}) => {
+  await seedCookies(context, { e2e_reviews: "emoji" });
+  await page.goto("/apps/app-1/reviews");
+  await expect(page.getByRole("article")).toHaveCount(4);
+  const search = page.getByRole("textbox", { name: "Search reviews" });
+
+  await search.fill("🎉");
+
+  await expect(page).toHaveURL((url) => url.searchParams.get("q") === "🎉");
+  await expect(page.getByRole("article")).toHaveCount(2);
+  await expect(page.getByText("Plain review without symbols")).toBeHidden();
+
+  await search.fill("🎉🎉");
+  await expect(page.getByRole("article")).toHaveCount(1);
+  await expect(page.getByRole("article")).toContainText("for the whole family");
+
+  await search.fill("👨‍👩‍👧‍👦");
+  await expect(page.getByRole("article")).toHaveCount(1);
+  await expect(page.getByRole("article")).toContainText("Love it");
+
+  await search.fill("family 🎉");
+  await expect(page.getByRole("article")).toHaveCount(1);
+
+  await search.fill("🔥");
+  await expect(page.getByText("No reviews match this search")).toBeVisible();
+
+  await search.fill("(*)");
+  await expect(page.getByRole("article")).toHaveCount(4);
+});
+
 test("show all loads up to two hundred reviews", async ({ page }) => {
   await page.goto("/apps/app-long/reviews");
 

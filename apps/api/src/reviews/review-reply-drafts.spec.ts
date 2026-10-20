@@ -113,12 +113,18 @@ describe('fitReply', () => {
       text: 'ก'.repeat(350),
       truncated: true,
     });
-    const emoji = fitReply('😀'.repeat(200), 351);
-    expect(emoji.text).toBe('😀'.repeat(175));
+    const emoji = fitReply('😀'.repeat(400), 351);
+    expect(emoji.text).toBe('😀'.repeat(351));
   });
 
   it("measures with the store's count", () => {
     const text = 'ą好'.repeat(175);
+
+    expect(fitReply(text, 350)).toEqual({ text, truncated: false });
+    expect(countChars(text)).toBe(350);
+  });
+  it('counts an emoji once against the limit', () => {
+    const text = '😀'.repeat(350);
 
     expect(fitReply(text, 350)).toEqual({ text, truncated: false });
     expect(countChars(text)).toBe(350);

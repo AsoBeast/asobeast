@@ -32,7 +32,7 @@ import {
 } from "@/lib/queries";
 import { literalOf } from "@/lib/literal";
 import { RATINGS_RANGES, rangeLabel, type RatingsRange } from "@/lib/ranges";
-import { searchText } from "@/lib/search-text";
+import { hasSearchTerms } from "@/lib/search-text";
 import { useSingleFlight } from "@/lib/single-flight";
 import {
   EXPORT_ORDER,
@@ -187,7 +187,7 @@ function ExportReviewsButton({
       const notice = truncatedExportNotice(
         list,
         view.sort,
-        searchText(query) === "" ? null : rows.length,
+        hasSearchTerms(query) ? rows.length : null,
       );
       if (notice) toast.info(notice);
     },

@@ -1,12 +1,24 @@
 ---
 title: The queue dashboard and the OpenAPI surface
 sidebarTitle: Admin surfaces
-description: "The queue dashboard, the OpenAPI routes and the admin area answer 404 to anyone who is not the platform operator, because the surface does not confirm it exists."
+description: "The queue dashboard, the OpenAPI routes, the metrics scrape and the operator endpoints answer 404 to anyone who is not the platform operator, and the admin pages show the app's not found view."
 icon: shield
 keywords: ["admin","admin area","queue dashboard","Bull Board","API_DOCS","Swagger","404","platform operator"]
 ---
 
-Five administrative surfaces ship with asobeast: the admin area of the web app at `/admin`, the queue dashboard at `/admin/queues`, the OpenAPI surface at `/docs`, the metrics scrape at `/metrics` and the support tooling at `/admin/support`. All of them answer `404` to anyone who is not the platform operator. Two more operator endpoints answer the same way: `/admin/capacity` and `/admin/proxy-pool`. "The same way" is literal: an anonymous caller, a caller with a refused credential, a customer and a read scoped token all get the identical `404` envelope, for every HTTP method, from a gate that runs before any other check, so no `401`, `402`, `403`, `405` or `429` can tell a scanner that the route exists.
+Five administrative surfaces ship with asobeast: the admin area of the web app at `/admin`, the queue dashboard at `/admin/queues`, the OpenAPI surface at `/docs`, the metrics scrape at `/metrics` and the support tooling at `/admin/support`. Two more operator endpoints sit beside the support tooling: `/admin/capacity` and `/admin/proxy-pool`. Anyone who is not the platform operator is refused all of them, and what the caller sees depends on the kind of address.
+
+| Address | What a caller who is not the operator gets |
+| --- | --- |
+| The admin pages of the web app: `/admin`, `/admin/capacity`, `/admin/workspaces`, `/admin/users` and `/admin/apps` | The not found view inside the app shell, with HTTP status `200` and a `noindex` robots tag. Nothing from the admin area loads |
+| `/admin/queues` and `/metrics` on the web origin | A real `404` with the not found envelope |
+| `/docs`, `/docs-json` and `/docs-yaml` on the web origin | A real `404` with the not found envelope under `API_DOCS=owner`, the default, and under `API_DOCS=off`. Under `API_DOCS=public` they are served to anyone |
+| The API endpoints below `/admin`: the support tooling, `/admin/capacity` and `/admin/proxy-pool`, reached through `/api/backend` on the web origin | A real `404` with the same envelope |
+| Any other address, an unknown one below `/admin` such as `/admin/whatever` included | The not found page of the framework, with HTTP status `404`, for every signed in visitor. An anonymous visitor is sent to the sign in page first |
+
+The second, third and fourth rows are literal: an anonymous caller, a caller with a refused credential, a customer and a read scoped token all get the identical `404` envelope, for every HTTP method but the `OPTIONS` preflight that every `/api/backend` path answers with `204`, from a gate that runs before any other check, so no `401`, `402`, `403`, `405` or `429` can tell a scanner that the route exists. An anonymous visitor to an admin page is sent to the sign in page, like every other page of the app.
+
+The admin pages answer `200` because the not found view is chosen by the admin layout, which runs inside the app shell after the response has started streaming, and a streamed response cannot change its status. The robots tag keeps search engines from indexing it. A signed in customer can therefore tell `/admin/users` from `/admin/whatever` by the status alone. That is accepted: the admin area is described on this page, the view carries no instance data and the page never requests any.
 
 The last two matter to a hosted operator rather than a self hoster, and [Observability for a hosted instance](/operations/hosted-observability) describes what they serve.
 
@@ -34,7 +46,7 @@ These views hide the figures rather than restrict them. `GET /jobs/budget` still
 
 ## The admin area
 
-The web app has an **Admin** area at `/admin` for the platform operator. It appears in the sidebar, the command palette and the account menu only for the operator, and any other account that opens the address sees the not found page.
+The web app has an **Admin** area at `/admin` for the platform operator. It appears in the sidebar, the command palette and the account menu only for the operator, and any other account that opens the address sees the not found view of the app, with the status described above.
 
 | Tab | What it shows | Endpoint |
 | --- | --- | --- |
@@ -76,7 +88,7 @@ An admin request can also be refused while the operator's workspace has a plan, 
 
 A `403` confirms that the thing you asked for exists. A `404` does not.
 
-Anonymous callers therefore get the same answer whether the surface is present, disabled or was never built. There is no login prompt to attack, and a scanner learns nothing from the response.
+Anonymous callers therefore get the same answer whether the surface is present, disabled or was never built. There is no login prompt to attack, and a scanner learns nothing from the response. This holds for the queue dashboard, the OpenAPI routes, the metrics scrape and the API endpoints. The admin pages are the exception described above, because they load nothing for a caller who is not the operator.
 
 If you expected a sign in page on `/admin/queues` and got a not found page, nothing is broken. Sign in as the operator in the same browser and reload.
 

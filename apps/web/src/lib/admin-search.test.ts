@@ -90,3 +90,16 @@ describe("appMatches", () => {
     expect(appMatches({ ...APP, name: null }, "com.ana.habits")).toBe(true);
   });
 });
+
+describe("admin search with an emoji", () => {
+  const named = { ...WORKSPACE, name: "Ana 🎉 Apps" };
+
+  it("finds a workspace by the emoji in its name", () => {
+    expect(workspaceMatches(named, "🎉")).toBe(true);
+    expect(workspaceMatches(WORKSPACE, "🎉")).toBe(false);
+  });
+
+  it("still lists everything for punctuation only", () => {
+    expect(workspaceMatches(WORKSPACE, "(*)")).toBe(true);
+  });
+});

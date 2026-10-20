@@ -12,13 +12,17 @@ export async function openSettledDialog(
 
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByRole("heading", { name: trigger })).toBeVisible();
-  await dialog.evaluate((node) =>
+  await settleAnimations(dialog);
+
+  return dialog;
+}
+
+export async function settleAnimations(element: Locator): Promise<void> {
+  await element.evaluate((node) =>
     Promise.all(
       node.getAnimations().map((animation) => animation.finished),
     ).then(() => undefined),
   );
-
-  return dialog;
 }
 
 export async function expectFitsViewport(page: Page, dialog: Locator) {

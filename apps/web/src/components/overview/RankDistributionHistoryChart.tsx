@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useDeferredValue } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
@@ -118,6 +118,7 @@ function RankDistributionHistoryBody({
 
 export function RankDistributionHistoryChart({ id }: { id: string }) {
   const [range, setRange] = useQueryState("distRange", visibilityRangeParser);
+  const shownRange = useDeferredValue(range);
 
   return (
     <Card>
@@ -134,7 +135,7 @@ export function RankDistributionHistoryChart({ id }: { id: string }) {
       </CardHeader>
       <CardContent>
         <Suspense fallback={<ChartSkeleton height={CHART_HEIGHT.compact} />}>
-          <RankDistributionHistoryBody id={id} range={range} />
+          <RankDistributionHistoryBody id={id} range={shownRange} />
         </Suspense>
       </CardContent>
     </Card>
