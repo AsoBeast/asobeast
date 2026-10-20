@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import {
   useMutation,
   useMutationState,
@@ -33,8 +33,6 @@ import { cn } from "@/lib/utils";
 import { SpiderDialog } from "./SpiderDialog";
 import { SuggestionList, suggestionListState } from "./SuggestionList";
 import { STRATEGIES, storeLookupLabels } from "./suggestion-strategies";
-
-const suggestionText = (text: string) => text;
 
 export function SuggestionsPanel({
   id,
@@ -77,7 +75,11 @@ export function SuggestionsPanel({
           : `Could not track ${text}`,
       ),
   });
-  const trackOnce = useKeyedSingleFlight(track, suggestionText);
+  const trackKeyOf = useCallback(
+    (text: string) => JSON.stringify([id, country, text]),
+    [id, country],
+  );
+  const trackOnce = useKeyedSingleFlight(track, trackKeyOf);
   const trackingTexts = useMutationState({
     filters: { mutationKey: trackKey, status: "pending" },
     select: (mutation) => mutation.state.variables as string,

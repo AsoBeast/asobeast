@@ -153,6 +153,26 @@ test.describe("tracking a competitor search twice", () => {
     expect(held.posts).toHaveLength(2);
   });
 
+  test("the same suggestion in another market sends its own request", async ({
+    page,
+  }) => {
+    const held = await holdKeywordPosts(page);
+    await openTab(page, "/apps/app-1/keywords");
+    await (await hydrated(trackButton(page, "focus timer for adhd"))).click();
+    await expect.poll(() => held.posts.length).toBe(1);
+
+    await page
+      .getByRole("group", { name: "Keyword markets" })
+      .getByRole("button", { pressed: false })
+      .first()
+      .click();
+    await expect(page).toHaveURL(/country=/);
+    await (await hydrated(trackButton(page, "focus timer for adhd"))).click();
+
+    await expect.poll(() => held.posts.length).toBe(2);
+    held.release();
+  });
+
   test("Track keeps focus and ignores the keyboard while it runs", async ({
     page,
   }) => {
