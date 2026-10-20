@@ -59,15 +59,15 @@ The comparison matrix exports the rows it shows, in the order shown, after the s
 | --- | --- |
 | `keyword` | The tracked phrase |
 | `popularity`, `difficulty` | The scores on the 0 to 100 scale the matrix shows, empty when unscored |
-| `you` | Your position |
-| One column per competitor | That competitor's position, headed by its name |
+| `you` | Your position, empty until your app has been checked for the keyword |
+| One column per competitor | That competitor's position, headed by its name and empty until its first check |
 | `result` | `winning`, `losing` or `tied`, empty when nobody ranks |
 | `gap` | `true` on the rows the matrix marks as a gap, otherwise `false` |
 | `country` | The two letter code of the market the keyword is tracked in |
 
 The file always ends with `country`, like the keyword export, whether the matrix shows one market or several.
 
-Positions are written the way the matrix shows them, so an app that does not rank exports as `>200`. Two competitors with the same name get `(2)`, `(3)` after the name so every column header stays unique, and a competitor without a name is headed `Competitor`. What winning, losing, tied and a gap mean is explained in [Read the comparison matrix](/guides/competitors#read-the-comparison-matrix).
+Positions are written the way the matrix shows them: an app that does not rank exports as `>200`, and an app with no check yet exports an empty cell. Two competitors with the same name get `(2)`, `(3)` after the name so every column header stays unique, and a competitor without a name is headed `Competitor`. What winning, losing, tied and a gap mean is explained in [Read the comparison matrix](/guides/competitors#read-the-comparison-matrix).
 
 ## Export reviews to CSV
 

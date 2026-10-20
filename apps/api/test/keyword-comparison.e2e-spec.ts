@@ -114,6 +114,53 @@ describe('KeywordsController compare (e2e)', () => {
     }
     return primary.id;
   };
+  const seedUnchecked = async () => {
+    const primary = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: '111',
+        country: 'us',
+        name: 'Focus Timer',
+      },
+    });
+    const rival = (storeAppId: string, name: string) =>
+      prisma.app.create({
+        data: {
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          store: Store.APP_STORE,
+          storeAppId,
+          country: 'us',
+          name,
+          isCompetitor: true,
+          primaryAppId: primary.id,
+        },
+      });
+    const checked = await rival('222', 'Checked Rival');
+    const fresh = await rival('333', 'Fresh Rival');
+    const keyword = await prisma.keyword.create({
+      data: { text: 'pomodoro', store: Store.APP_STORE, country: 'us' },
+    });
+    await prisma.trackedKeyword.create({
+      data: {
+        appId: primary.id,
+        keywordId: keyword.id,
+        source: 'MANUAL',
+        active: true,
+      },
+    });
+    await prisma.keywordRanking.create({
+      data: {
+        appId: checked.id,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        keywordId: keyword.id,
+        date: utcToday(),
+        position: null,
+        depth: 200,
+      },
+    });
+    return { primary, checked, fresh };
+  };
 
   it('answers the market of every row', async () => {
     const appId = await seed();
@@ -144,5 +191,18 @@ describe('KeywordsController compare (e2e)', () => {
       country: 'de',
       gap: true,
     });
+  });
+
+  it('lists the apps never checked and keeps the ones checked and not found out', async () => {
+    const { primary, checked, fresh } = await seedUnchecked();
+
+    const res = await api
+      .get(`/apps/${primary.id}/keywords/compare`)
+      .expect(200);
+    const [row] = (res.body as KeywordComparison).rows;
+
+    expect(row.you).toBeNull();
+    expect(row.positions).toEqual({ [checked.id]: null, [fresh.id]: null });
+    expect(row.unchecked).toEqual([primary.id, fresh.id]);
   });
 });

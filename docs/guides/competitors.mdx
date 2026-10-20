@@ -59,9 +59,11 @@ The competitors tab has three sections: the add form together with the competito
 
 The matrix lists every tracked keyword with your position and each competitor's. Click any header to sort by it, your own column and each competitor included, and click again to reverse. Search narrows the keywords by text, and the result filter keeps the rows where you are **winning** (you rank best, or alone), **losing** (a competitor ranks better, or ranks where you do not) or **tied**. The only gaps switch still asks the server for gap rows alone.
 
-When you track keywords in more than one market, the first column names the market of each row, so the same phrase tracked in two storefronts is two rows you can tell apart. The **Market** filter beside **Result** keeps the rows of one market, is part of the link, and clears with **Clear all**. See [Countries and markets](/concepts/countries).
+When you track keywords in more than one market, the first column names the market of each row, so the same phrase tracked in two storefronts is two rows you can tell apart. On a phone the column is hidden to leave room for the positions, and the market appears under the keyword instead. **Columns** shows or hides the column on any screen, and the choice is remembered in this browser. The **Market** filter beside **Result** keeps the rows of one market, is part of the link, and clears with **Clear all**. See [Countries and markets](/concepts/countries).
 
 Each position is shaded by its grade and the best position in a row stays underlined. Popularity and difficulty carry their grade too. See [How are scores graded?](/concepts/scoring#how-are-scores-graded).
+
+A dash in place of a position means no check has run yet for that app and keyword, which is how a competitor you just added looks until the next keyword check. `>200` means the check ran and did not find the app within the captured depth.
 
 **Export CSV** in the matrix writes the rows shown, in the order shown, and the competitor list above it exports as well. See [Export the keyword comparison to CSV](/guides/export-data#export-the-keyword-comparison-to-csv).
 
@@ -88,11 +90,13 @@ A competitor that ranks above you carries one note, from the first rule that app
 | Placement | Its strongest placement beats yours. The order is the title, then the subtitle or short description, then your keyword field, then the long description, then every word spread over fields, then some of the words | Move the keyword to a stronger field |
 | Spelling | It spells a word exactly as searched where your listings match only with accents ignored | Consider the exact spelling |
 | Ratings | Both ratings come from the keyword's market, and it has at least three times your ratings and at least 100 more | Ratings may be the difference |
-| Not read | It shows no visible match and a localization the market searches was not captured | The missing listing may hold the keyword |
-| No visible match | App Store only, and it shows no visible match | It may rank through its private keyword field |
+| Not read | No listing it was read in holds every word of the keyword, and a localization the market searches was not captured | The missing listing may hold the keyword |
+| Words not all visible | App Store only, and no listing it was read in holds every word of the keyword | It may rank through its private keyword field |
 | Similar | None of the above | Nothing visible explains the gap |
 
 These are rules of thumb. Installs and engagement, the strongest signals, are not visible for other apps, and neither store publishes how it weighs a field.
+
+For **Not read** and **Words not all visible** the card says whether none of the words show or only some of them, the same count the field badges give.
 
 Your own card says how many competitors rank above you, which words none of your listings holds, which match only with accents ignored, and whether your listing changed or you saved a keyword field this market reads in the last 28 days, because ranks usually take two to four weeks to settle. The panel reads stored data only and makes no store request.
 
@@ -102,7 +106,7 @@ Competitor listings are snapshotted on the same schedule as your own, and a fiel
 
 ## Troubleshooting
 
-- **A competitor shows no positions.** It only gets positions on keywords you track, in the storefronts you track them in.
+- **A competitor shows no positions.** It only gets positions on keywords you track, in the storefronts you track them in. A dash means its first check has not run yet; it fills in on the next keyword check.
 - **A competitor's ratings column is empty on Google Play.** Google Play search results carry no rating counts.
 - **You added the wrong app.** Removing a competitor removes its position history with it, so confirm the store id before adding.
 

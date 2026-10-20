@@ -1,10 +1,10 @@
-import type { Locator, Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 import type {
   ApiErrorEnvelope,
   SpiderEnqueueResult,
   SpiderStatus,
 } from "@asobeast/shared";
-import { hydrated } from "./hydrated.mts";
+import { activateTwiceInOneTask, hydrated } from "./hydrated.mts";
 import { fulfillJson } from "./plan-helpers.mts";
 import { expect, test } from "./session.mts";
 
@@ -39,12 +39,6 @@ const STATUS: SpiderStatus = {
 
 const toast = (page: Page, text: string | RegExp) =>
   page.getByRole("region", { name: /^Notifications/ }).getByText(text);
-
-const activateTwiceInOneTask = async (control: Locator) =>
-  (await hydrated(control)).evaluate((element: HTMLElement) => {
-    element.click();
-    element.click();
-  });
 
 async function routeSpider(
   page: Page,
