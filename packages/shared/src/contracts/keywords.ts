@@ -113,6 +113,7 @@ export interface KeywordComparisonRow {
   you: number | null;
   positions: Record<string, number | null>;
   gap: boolean;
+  unchecked?: string[];
 }
 
 export interface KeywordComparison {

@@ -35,22 +35,22 @@ import { exportComparison } from "./comparison-csv";
 import { comparisonMarkets } from "./comparison-markets";
 import { ComparisonFilterBar } from "./ComparisonFilterBar";
 
-const MARKET_PIN = "sticky left-0 w-24 min-w-24 max-w-24 bg-inherit";
+const MARKET_PIN = "w-24 min-w-24 max-w-24 bg-inherit md:sticky md:left-0";
 
 function pinClasses(
-  multiMarket: boolean,
+  marketShown: boolean,
 ): Record<"head" | "cell", Record<string, string>> {
-  const keywordPin = multiMarket
-    ? "sticky left-24 bg-inherit"
+  const keywordPin = marketShown
+    ? "sticky left-0 bg-inherit md:left-24"
     : "sticky left-0 bg-inherit";
   return {
     head: {
-      market: `${MARKET_PIN} z-20`,
+      market: `${MARKET_PIN} md:z-20`,
       keyword: `${keywordPin} z-20`,
       you: "border-x bg-secondary text-center",
     },
     cell: {
-      market: `${MARKET_PIN} z-10`,
+      market: `${MARKET_PIN} md:z-10`,
       keyword: `${keywordPin} z-10`,
       you: "border-x bg-secondary/40 text-center",
     },
@@ -80,7 +80,6 @@ export function ComparisonTable({
     [data.rows, app.country, filters.country],
   );
   const multiMarket = markets.length > 1;
-  const pins = pinClasses(multiMarket);
 
   const columns = useMemo(() => {
     const icons = new Map(competitors.map((item) => [item.id, item.iconUrl]));
@@ -90,8 +89,9 @@ export function ComparisonTable({
         iconUrl: icons.get(competitor.id) ?? null,
       })),
       (keywordId) => void setKeyword(keywordId),
+      { appId, multiMarket },
     );
-  }, [competitors, data.competitors, setKeyword]);
+  }, [appId, competitors, data.competitors, setKeyword, multiMarket]);
 
   const [visibility, setVisibility] = useStoredColumnVisibility(
     "comparison",
@@ -120,7 +120,7 @@ export function ComparisonTable({
       columnVisibility: {
         ...visibility,
         ...HIDDEN_COMPARISON_COLUMNS,
-        market: multiMarket,
+        market: multiMarket && (visibility.market ?? true),
       },
     },
     onSortingChange,
@@ -131,6 +131,7 @@ export function ComparisonTable({
     getColumnCanGlobalFilter: (column) => column.id === "keyword",
   });
   const rows = table.getRowModel().rows;
+  const pins = pinClasses(table.getColumn("market")?.getIsVisible() ?? false);
 
   return (
     <div className="flex flex-col gap-3">
@@ -140,7 +141,9 @@ export function ComparisonTable({
         markets={markets}
         shown={rows.length}
         total={data.rows.length}
-        columns={table.getAllLeafColumns()}
+        columns={table
+          .getAllLeafColumns()
+          .filter((column) => multiMarket || column.id !== "market")}
         onExport={() =>
           exportComparison(
             appId,

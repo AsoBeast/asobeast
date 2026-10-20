@@ -1543,6 +1543,46 @@ export const CROWDED_COMPARISON: KeywordComparison = {
   })),
 };
 
+export const UNCHECKED_COMPARISON_COOKIE = "e2e_unchecked_competitor";
+
+export const UNCHECKED_COMPARISON: KeywordComparison = {
+  competitors: [{ id: "comp-1", name: "Rival Focus" }],
+  rows: [
+    {
+      keywordId: "kw-1",
+      text: "focus timer",
+      country: "us",
+      traffic: 5,
+      difficulty: 3,
+      you: 3,
+      positions: { "comp-1": null },
+      gap: false,
+      unchecked: ["comp-1"],
+    },
+    {
+      keywordId: "kw-4",
+      text: "productivity app",
+      country: "us",
+      traffic: 5,
+      difficulty: 3,
+      you: null,
+      positions: { "comp-1": 8 },
+      gap: true,
+      unchecked: ["app-1"],
+    },
+    {
+      keywordId: "kw-5",
+      text: "time blocking",
+      country: "us",
+      traffic: 5,
+      difficulty: 3,
+      you: 45,
+      positions: { "comp-1": null },
+      gap: false,
+    },
+  ],
+};
+
 const e2eScreenshotUrl = (position: number): string =>
   `https://is1-ssl.mzstatic.com/image/thumb/e2e-focus/${position}.jpg/392x696bb.jpg`;
 export const APP_1_PL_CHANGES: ChangeTimeline = {
@@ -2801,6 +2841,111 @@ DATASETS[APP_FREE_AGAIN_ID] = categoryDataset(
   ],
 );
 
+export const APP_EUR_ID = "app-price-eur";
+export const APP_JPY_ID = "app-price-jpy";
+export const APP_UNKNOWN_CURRENCY_ID = "app-price-unknown";
+export const APP_HUF_ID = "app-price-huf";
+
+export const PRICED_REFRESHES = new Map<
+  string,
+  { price: string; currency: string | null }
+>([
+  [APP_EUR_ID, { price: "4.99", currency: "EUR" }],
+  [APP_JPY_ID, { price: "500", currency: "JPY" }],
+  [APP_UNKNOWN_CURRENCY_ID, { price: "3.5", currency: null }],
+]);
+
+const POLISH_RIVAL: CompetitorItem = {
+  id: "comp-pl",
+  store: "APP_STORE",
+  name: "Rival Polska",
+  iconUrl: null,
+  latestSnapshot: {
+    id: "snap-comp-pl",
+    title: "Rival Polska",
+    subtitle: null,
+    summary: null,
+    ratingAvg: 4.1,
+    ratingCount: 900,
+    installs: null,
+    price: 9.99,
+    currency: "PLN",
+    version: "1.0.0",
+    capturedAt: utcTimestampDaysAgo(0),
+  },
+};
+
+function pricedDataset(
+  id: string,
+  name: string,
+  price: number,
+  currency: string | null,
+  events: ChangeTimeline["events"],
+): AppDataset {
+  const base = DATASETS["app-1"];
+  const detail: AppDetail = {
+    ...base.detail,
+    id,
+    name,
+    competitors: [POLISH_RIVAL],
+    latestSnapshot: base.detail.latestSnapshot && {
+      ...base.detail.latestSnapshot,
+      id: `snap-${id}`,
+      title: name,
+      price,
+      currency,
+    },
+  };
+  return {
+    ...base,
+    detail,
+    competitors: [POLISH_RIVAL],
+    changes: { events },
+    changeImpact: emptyChangeImpact(detail),
+  };
+}
+
+const priceEvent = (
+  id: string,
+  appId: string,
+  appName: string,
+  after: string,
+  currency: string | null | undefined,
+  daysAgo: number,
+): ChangeTimeline["events"][number] => ({
+  id,
+  appId,
+  appName,
+  isCompetitor: appId === POLISH_RIVAL.id,
+  field: "price",
+  before: "0",
+  after,
+  ...(currency === undefined ? {} : { currency }),
+  capturedAt: utcTimestampDaysAgo(daysAgo),
+});
+
+DATASETS[APP_EUR_ID] = pricedDataset(
+  APP_EUR_ID,
+  "Euro Priced",
+  4.99,
+  "EUR",
+  [],
+);
+
+DATASETS[APP_JPY_ID] = pricedDataset(APP_JPY_ID, "Yen Priced", 500, "JPY", [
+  priceEvent("chg-jpy", APP_JPY_ID, "Yen Priced", "500", "JPY", 2),
+  priceEvent("chg-pln", POLISH_RIVAL.id, "Rival Polska", "9.99", "PLN", 3),
+  priceEvent("chg-old", POLISH_RIVAL.id, "Rival Polska", "2.5", undefined, 4),
+]);
+
+DATASETS[APP_UNKNOWN_CURRENCY_ID] = pricedDataset(
+  APP_UNKNOWN_CURRENCY_ID,
+  "Unknown Currency",
+  3.5,
+  null,
+  [],
+);
+
 export const APP_TAGS_ID = "app-tags";
 
 DATASETS[APP_TAGS_ID] = {
@@ -3257,6 +3402,7 @@ const ERROR_TITLES: Record<number, string> = {
   404: "Not Found",
   500: "Internal Server Error",
   501: "Not Implemented",
+  503: "Service Unavailable",
 };
 
 const ERROR_MESSAGES: Record<number, string> = {
@@ -3302,6 +3448,25 @@ export function errorEnvelope(
       "The server encountered an unexpected error.",
     path,
     timestamp: new Date().toISOString(),
+  };
+}
+
+export const DATABASE_DOWN_RETRY_SECONDS = 5;
+
+export function databaseDownAnswer(
+  path: string,
+): ApiErrorEnvelope & HealthStatus {
+  return {
+    ...errorEnvelope(
+      503,
+      path,
+      `The database cannot be reached. Try again in ${DATABASE_DOWN_RETRY_SECONDS} seconds.`,
+    ),
+    retryAfterSeconds: DATABASE_DOWN_RETRY_SECONDS,
+    status: "error",
+    db: "down",
+    redis: "up",
+    pipeline: null,
   };
 }
 
@@ -5394,3 +5559,11 @@ export function chartCaptureSpent(path: string): ApiErrorEnvelope {
     retryAfterSeconds: 10_800,
   };
 }
+
+DATASETS[APP_HUF_ID] = pricedDataset(
+  APP_HUF_ID,
+  "Forint Priced",
+  1490,
+  "HUF",
+  [],
+);

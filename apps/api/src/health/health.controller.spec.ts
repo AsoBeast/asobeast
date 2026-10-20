@@ -1,8 +1,8 @@
-import { ServiceUnavailableException } from '@nestjs/common';
 import { Queue } from 'bullmq';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { HealthController } from './health.controller';
+import { DatabaseUnavailableError } from './health.errors';
 import { PrismaService } from '../prisma/prisma.service';
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -15,6 +15,7 @@ interface Options {
   appStoreFailed?: number;
   gplayFailed?: number;
   alertsFailed?: number;
+  queueReadable?: boolean;
   actions?: { generatedAt: Date | null; open: number };
 }
 
@@ -27,6 +28,7 @@ function build(options: Options = {}) {
     appStoreFailed = 0,
     gplayFailed = 0,
     alertsFailed = 0,
+    queueReadable = true,
     actions = { generatedAt: null, open: 0 },
   } = options;
 
@@ -37,16 +39,17 @@ function build(options: Options = {}) {
     get: jest.fn().mockResolvedValue(lastRun),
   };
 
+  const databaseCall = <T>(value: T) =>
+    dbUp
+      ? jest.fn().mockResolvedValue(value)
+      : jest.fn().mockRejectedValue(new Error('unreachable'));
+
   const prisma = {
-    $queryRaw: dbUp
-      ? jest.fn().mockResolvedValue([{ '?column?': 1 }])
-      : jest.fn().mockRejectedValue(new Error('unreachable')),
-    app: { count: jest.fn().mockResolvedValue(appCount) },
+    $queryRaw: databaseCall([{ '?column?': 1 }]),
+    app: { count: databaseCall(appCount) },
     actionItem: {
-      aggregate: jest
-        .fn()
-        .mockResolvedValue({ _max: { lastSeenAt: actions.generatedAt } }),
-      count: jest.fn().mockResolvedValue(actions.open),
+      aggregate: databaseCall({ _max: { lastSeenAt: actions.generatedAt } }),
+      count: databaseCall(actions.open),
     },
   } as unknown as PrismaService;
 
@@ -54,7 +57,9 @@ function build(options: Options = {}) {
     getBackend: () => ({ client: Promise.resolve(client) }),
   } as unknown as Queue;
   const appStoreQueue = {
-    getFailedCount: jest.fn().mockResolvedValue(appStoreFailed),
+    getFailedCount: queueReadable
+      ? jest.fn().mockResolvedValue(appStoreFailed)
+      : jest.fn().mockRejectedValue(new Error('read failed')),
   } as unknown as Queue;
   const gplayQueue = {
     getFailedCount: jest.fn().mockResolvedValue(gplayFailed),
@@ -147,9 +152,42 @@ describe('HealthController', () => {
     expect(result.pipeline).toBeNull();
   });
 
-  it('throws 503 when the database is unreachable but still reports signals', async () => {
-    await expect(build({ dbUp: false }).check()).rejects.toBeInstanceOf(
-      ServiceUnavailableException,
-    );
+  it('reports redis up and no pipeline when a pipeline read fails after the ping', async () => {
+    const result = await build({ queueReadable: false }).check();
+
+    expect(result).toEqual({
+      status: 'ok',
+      db: 'up',
+      redis: 'up',
+      pipeline: null,
+    });
+  });
+
+  it('throws the database error carrying the health signals when the database is unreachable', async () => {
+    const error = await build({ dbUp: false, redisUp: false })
+      .check()
+      .catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(DatabaseUnavailableError);
+    expect((error as DatabaseUnavailableError).health).toEqual({
+      status: 'error',
+      db: 'down',
+      redis: 'down',
+      pipeline: null,
+    });
+    expect((error as DatabaseUnavailableError).retryAfterSeconds).toBe(5);
+  });
+
+  it('reports redis up and no pipeline when only the database is down', async () => {
+    const error = await build({ dbUp: false, redisUp: true })
+      .check()
+      .catch((caught: unknown) => caught);
+
+    expect((error as DatabaseUnavailableError).health).toEqual({
+      status: 'error',
+      db: 'down',
+      redis: 'up',
+      pipeline: null,
+    });
   });
 });

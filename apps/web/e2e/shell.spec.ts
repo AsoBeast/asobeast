@@ -104,6 +104,22 @@ test("an empty portfolio turns the switcher into an import affordance", async ({
   ).toHaveCount(0);
 });
 
+test("a failed apps read says so instead of counting zero", async ({
+  page,
+}) => {
+  await page.route("**/api/backend/apps", (route) =>
+    route.fulfill({ status: 500, json: { statusCode: 500 } }),
+  );
+
+  await page.goto("/");
+
+  const switcher = page.getByRole("button", { name: "Choose an app" });
+  await expect(switcher).toContainText("Could not load apps", {
+    timeout: 20_000,
+  });
+  await expect(switcher).not.toContainText("tracked");
+});
+
 test("the sidebar footer names the version the build shipped", async ({
   page,
 }) => {

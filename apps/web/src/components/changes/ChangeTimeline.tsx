@@ -52,8 +52,11 @@ function chars(value: string | null): string {
   return value === null ? "—" : `${formatNumber(Number(value))} chars`;
 }
 
-function price(value: string | null): string {
-  return value === null ? "—" : formatPrice(Number(value));
+function price(
+  value: string | null,
+  currency: string | null | undefined,
+): string {
+  return value === null ? "—" : formatPrice(Number(value), currency);
 }
 
 function inlineNotes(value: string | null): string {
@@ -110,8 +113,8 @@ function ChangeValue({
     from = chars(before);
     to = chars(after);
   } else if (field === "price") {
-    from = price(before);
-    to = price(after);
+    from = price(before, event.currency);
+    to = price(after, event.currency);
   } else if (field === "screenshots") {
     from = count(before);
     to = count(after);

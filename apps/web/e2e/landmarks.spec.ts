@@ -55,6 +55,22 @@ for (const [name, path, cookies] of SIGNED_OUT_ROUTES) {
   );
 }
 
+test("an unmatched route answers 404 with one main landmark and the branded card", async ({
+  page,
+}) => {
+  const response = await page.goto("/nonexistent-route");
+
+  expect(response?.status()).toBe(404);
+  await expect(page.getByRole("main")).toHaveCount(1);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Page not found" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Back to the dashboard" }),
+  ).toHaveAttribute("href", "/");
+  await expect(page.locator("#main-content")).toHaveRole("main");
+});
+
 test("a skip link is the first tabbable control and targets the main region", async ({
   page,
 }) => {

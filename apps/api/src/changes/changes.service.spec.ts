@@ -34,6 +34,7 @@ describe('ChangesService', () => {
   const findFirst = jest.fn();
   const findUnique = jest.fn();
   const appFindMany = jest.fn();
+  const snapshotFindFirst = jest.fn();
   const dispatch = jest.fn();
 
   beforeEach(async () => {
@@ -43,6 +44,7 @@ describe('ChangesService', () => {
     findFirst.mockReset();
     findUnique.mockReset();
     appFindMany.mockReset();
+    snapshotFindFirst.mockReset();
     dispatch.mockReset();
     findUnique.mockResolvedValue({ name: 'Mine', isCompetitor: false });
     const moduleRef = await Test.createTestingModule({
@@ -56,6 +58,7 @@ describe('ChangesService', () => {
               findMany,
               findFirst: changeEventFindFirst,
             },
+            appSnapshot: { findFirst: snapshotFindFirst },
             app: { findFirst, findUnique, findMany: appFindMany },
           },
         },
@@ -348,6 +351,124 @@ describe('ChangesService', () => {
           capturedAt: '2026-07-11T00:00:00.000Z',
         },
       ]);
+    });
+  });
+
+  describe('the currency of a price change', () => {
+    const primary = {
+      id: 'app_1',
+      country: 'us',
+      store: 'APP_STORE',
+      competitors: [{ id: 'comp_1' }],
+    };
+
+    const row = (
+      id: string,
+      appId: string,
+      field: string,
+      country: string | null,
+      appCountry = 'us',
+    ) => ({
+      id,
+      appId,
+      country,
+      localization: null,
+      field,
+      before: '0',
+      after: '500',
+      capturedAt: new Date('2026-07-09T00:00:00Z'),
+      app: {
+        name: 'App',
+        isCompetitor: appId !== 'app_1',
+        country: appCountry,
+      },
+    });
+
+    it('reads the currency from the newest default listing of the event market', async () => {
+      findFirst.mockResolvedValue(primary);
+      findMany.mockResolvedValue([row('ev_1', 'app_1', 'price', null)]);
+      snapshotFindFirst.mockResolvedValue({ raw: { currency: 'JPY' } });
+
+      const result = await service.timeline('app_1', 90);
+
+      expect(result.events[0].currency).toBe('JPY');
+      expect(snapshotFindFirst).toHaveBeenCalledTimes(1);
+      const [query] = snapshotFindFirst.mock.calls[0] as [unknown];
+      expect(query).toMatchObject({
+        where: { appId: 'app_1', country: null, localization: null },
+        orderBy: { capturedAt: 'desc' },
+      });
+    });
+
+    it('asks once for each app and market and reads a market listing for a market event', async () => {
+      findFirst.mockResolvedValue(primary);
+      findMany.mockResolvedValue([
+        row('ev_1', 'app_1', 'price', null),
+        row('ev_2', 'app_1', 'price', null),
+        row('ev_3', 'app_1', 'price', 'de'),
+        row('ev_4', 'comp_1', 'price', null, 'pl'),
+      ]);
+      snapshotFindFirst.mockImplementation(
+        ({ where }: { where: { appId: string; country: string | null } }) =>
+          Promise.resolve({
+            raw: {
+              currency:
+                where.appId === 'comp_1'
+                  ? 'PLN'
+                  : where.country === 'de'
+                    ? 'EUR'
+                    : 'USD',
+            },
+          }),
+      );
+
+      const result = await service.timeline('app_1', 90, 'de');
+
+      expect(snapshotFindFirst).toHaveBeenCalledTimes(3);
+      expect(result.events.map((event) => event.currency)).toEqual([
+        'USD',
+        'USD',
+        'EUR',
+        'PLN',
+      ]);
+    });
+
+    it('answers a null currency when there is no listing or it names none', async () => {
+      findFirst.mockResolvedValue(primary);
+      findMany.mockResolvedValue([
+        row('ev_1', 'app_1', 'price', null),
+        row('ev_2', 'comp_1', 'price', null),
+      ]);
+      snapshotFindFirst
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({ raw: {} });
+
+      const result = await service.timeline('app_1', 90);
+
+      expect(result.events.map((event) => event.currency)).toEqual([
+        null,
+        null,
+      ]);
+    });
+
+    it('leaves every other field without a currency and reads no listing for them', async () => {
+      findFirst.mockResolvedValue(primary);
+      findMany.mockResolvedValue([row('ev_1', 'app_1', 'title', null)]);
+
+      const result = await service.timeline('app_1', 90);
+
+      expect(result.events[0]).not.toHaveProperty('currency');
+      expect(snapshotFindFirst).not.toHaveBeenCalled();
+    });
+
+    it('names the currency of a recent price change too', async () => {
+      appFindMany.mockResolvedValue([{ id: 'app_1' }]);
+      findMany.mockResolvedValue([row('ev_1', 'app_1', 'price', null)]);
+      snapshotFindFirst.mockResolvedValue({ raw: { currency: 'EUR' } });
+
+      const result = await service.recent(20);
+
+      expect(result.events[0].currency).toBe('EUR');
     });
   });
 

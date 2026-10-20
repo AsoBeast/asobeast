@@ -77,7 +77,11 @@ export class KeywordsController {
   }
 
   @Get('keywords/compare')
-  @ApiOperation({ summary: 'Compare keyword positions against competitors' })
+  @ApiOperation({
+    summary: 'Compare keyword positions against competitors',
+    description:
+      'One row per active tracked keyword, in every market it is tracked in. you and each value of positions are the latest position, 1 based; null means the app was checked and not found within the captured depth. unchecked lists the ids of the apps, the app itself and its competitors, that have no recorded check for the keyword yet, so a null for such an id means not checked yet. It is empty when every app was checked.',
+  })
   compare(
     @Param('id') id: string,
     @Query() query: CompareQueryDto,

@@ -89,6 +89,7 @@ class FakeStoreProviderRegistry {
   availabilityStatus: MarketAvailability = 'available';
   searchable = true;
   subtitleUnavailable = false;
+  listing: { price: number; currency: string | null } | null = null;
 
   get(store: Store): StoreProvider {
     if (store === Store.GOOGLE_PLAY) {
@@ -112,6 +113,17 @@ class FakeStoreProviderRegistry {
             ...APP_STORE_FIXTURE,
             storeAppId,
             searchable: this.searchable,
+            ...(this.listing
+              ? {
+                  price: this.listing.price,
+                  raw: {
+                    source: 'fixture',
+                    ...(this.listing.currency
+                      ? { currency: this.listing.currency }
+                      : {}),
+                  },
+                }
+              : {}),
             ...(this.title ? { title: this.title } : {}),
             ...(this.subtitleUnavailable
               ? { subtitle: undefined, subtitleUnavailable: true }
@@ -186,6 +198,7 @@ describe('AppsController (e2e)', () => {
     registry.availabilityStatus = 'available';
     registry.searchable = true;
     registry.subtitleUnavailable = false;
+    registry.listing = null;
     await prisma.$executeRawUnsafe(
       'TRUNCATE TABLE "App", "Keyword", "AppGroup" RESTART IDENTITY CASCADE',
     );
@@ -702,6 +715,46 @@ describe('AppsController (e2e)', () => {
     });
   });
 
+  describe('the currency of a listing price', () => {
+    it('names the storefront currency on the detail and on a refresh', async () => {
+      registry.listing = { price: 4.99, currency: 'EUR' };
+      const created = await api
+        .post('/apps')
+        .send({ url: APP_STORE_URL })
+        .expect(201);
+      const appId = (created.body as AppDetail).id;
+      expect((created.body as AppDetail).latestSnapshot).toMatchObject({
+        price: 4.99,
+        currency: 'EUR',
+      });
+
+      registry.listing = { price: 5.99, currency: 'EUR' };
+      const refreshed = await api.post(`/apps/${appId}/refresh`).expect(200);
+      const diff = refreshed.body as SnapshotDiffResult;
+      expect(diff.currency).toBe('EUR');
+      expect(diff.changes).toContainEqual(
+        expect.objectContaining({
+          field: 'price',
+          before: '4.99',
+          after: '5.99',
+        }),
+      );
+
+      const detail = await api.get(`/apps/${appId}`).expect(200);
+      expect((detail.body as AppDetail).latestSnapshot?.currency).toBe('EUR');
+    });
+
+    it('answers null when the stored payload names no currency', async () => {
+      registry.listing = { price: 4.99, currency: null };
+
+      const created = await api
+        .post('/apps')
+        .send({ url: APP_STORE_URL })
+        .expect(201);
+
+      expect((created.body as AppDetail).latestSnapshot?.currency).toBeNull();
+    });
+  });
   it('imports the same app in a new country as a separate row', async () => {
     await api.post('/apps').send({ url: APP_STORE_URL }).expect(201);
     await api

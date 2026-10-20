@@ -1,5 +1,5 @@
-import type { Locator, Page } from "@playwright/test";
-import { hydrated } from "./hydrated.mts";
+import type { Page } from "@playwright/test";
+import { activateTwiceInOneTask, hydrated } from "./hydrated.mts";
 import { expect, test } from "./session.mts";
 
 const countPosts = (page: Page, path: RegExp) => {
@@ -14,12 +14,6 @@ const countPosts = (page: Page, path: RegExp) => {
 
 const toast = (page: Page, text: string | RegExp) =>
   page.getByRole("region", { name: /^Notifications/ }).getByText(text);
-
-const activateTwiceInOneTask = async (control: Locator) =>
-  (await hydrated(control)).evaluate((element: HTMLElement) => {
-    element.click();
-    element.click();
-  });
 
 const RUN_DAILY_URL = /\/api\/backend\/apps\/app-1\/run-daily$/;
 const SCORE_URL = /\/api\/backend\/keywords\/[^/]+\/score$/;

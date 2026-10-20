@@ -7,6 +7,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import { BREAKDOWNS } from "./keyword-breakdowns.mts";
 import { planMockImport } from "./keyword-import.mts";
 import { summarizeActions } from "./actions-summary.mts";
+import { echoRequest } from "./echo-request.mts";
 import {
   discardReply,
   draftReply,
@@ -101,6 +102,8 @@ import {
   SERP_SNAPSHOTS,
   WEBHOOKS,
   emptyScreenshots,
+  DATABASE_DOWN_RETRY_SECONDS,
+  databaseDownAnswer,
   errorEnvelope,
   rateLimitedEnvelope,
   SIMILAR_APPS,
@@ -123,8 +126,11 @@ import {
   TWIN_REVIEWS,
   RTL_REVIEWS,
   CROWDED_COMPARISON,
+  UNCHECKED_COMPARISON,
+  UNCHECKED_COMPARISON_COOKIE,
   CROWDED_COMPETITORS,
   CROWDED_COMPETITORS_COOKIE,
+  PRICED_REFRESHES,
 } from "./fixtures.mts";
 import {
   EMPTY_PORTFOLIO_INSIGHTS,
@@ -198,6 +204,7 @@ import type {
   WorkspaceDeletionStatus,
   AppSetupState,
   AppSetupUpdateRequest,
+  KeywordComparison,
 } from "@asobeast/shared";
 import {
   COUNTRY_PATTERN,
@@ -648,6 +655,19 @@ function hasCookie(
 ): boolean {
   const actual = cookieValue(req, name);
   return actual !== undefined && (value === undefined || actual === value);
+}
+
+function comparisonOf(
+  req: IncomingMessage,
+  fallback: KeywordComparison,
+): KeywordComparison {
+  if (hasCookie(req, UNCHECKED_COMPARISON_COOKIE, "1")) {
+    return UNCHECKED_COMPARISON;
+  }
+  if (hasCookie(req, CROWDED_COMPETITORS_COOKIE, "1")) {
+    return CROWDED_COMPARISON;
+  }
+  return fallback;
 }
 
 const STALE_SESSION = "stale";
@@ -2320,6 +2340,16 @@ const routes: Route[] = [
   },
   {
     method: "POST",
+    pattern: /^\/auth\/logout$/,
+    handler: (_p, _req, res) => {
+      res.writeHead(204, {
+        "set-cookie": `${SESSION_COOKIE}=; Path=/; Max-Age=0`,
+      });
+      res.end();
+    },
+  },
+  {
+    method: "POST",
     pattern: /^\/mcp$/,
     handler: (_p, req, res) => {
       if (!req.headers.authorization) {
@@ -2366,11 +2396,9 @@ const routes: Route[] = [
         return;
       }
       if (outage === "database") {
-        return json(
-          res,
-          503,
-          errorEnvelope(503, "/health", "Service Unavailable Exception"),
-        );
+        return json(res, 503, databaseDownAnswer("/health"), {
+          "retry-after": String(DATABASE_DOWN_RETRY_SECONDS),
+        });
       }
       json(res, 200, HEALTH);
     },
@@ -3387,9 +3415,7 @@ const routes: Route[] = [
   appRoute(/^\/apps\/([^/]+)\/keywords\/compare$/, (dataset, query, req) => {
     countLoggedRequest("compare", req);
     const market = cookieValue(req, COMPARISON_MARKET_COOKIE);
-    const comparison = hasCookie(req, CROWDED_COMPETITORS_COOKIE, "1")
-      ? CROWDED_COMPARISON
-      : dataset.comparison;
+    const comparison = comparisonOf(req, dataset.comparison);
     return {
       ...comparison,
       rows: comparison.rows.filter(
@@ -3399,6 +3425,7 @@ const routes: Route[] = [
       ),
     };
   }),
+
   appRoute(/^\/apps\/([^/]+)\/rankings$/, (dataset) => dataset.rankings),
   appRoute(/^\/apps\/([^/]+)\/serp-movers$/, (dataset) => dataset.serpMovers),
   appRoute(
@@ -4058,6 +4085,17 @@ const routes: Route[] = [
           country: "pl",
         });
       }
+      const pricedRefresh = PRICED_REFRESHES.get(params[0]);
+      if (pricedRefresh) {
+        return json(res, 200, {
+          snapshotId: `snap-${params[0]}`,
+          changes: [
+            { field: "price", before: "0", after: pricedRefresh.price },
+          ],
+          country: "us",
+          currency: pricedRefresh.currency,
+        });
+      }
       if (params[0] === "app-gp") {
         return json(res, 200, {
           snapshotId: "snap-gp",
@@ -4069,6 +4107,7 @@ const routes: Route[] = [
             { field: "price", before: "1.99", after: "0" },
           ],
           country: "us",
+          currency: "USD",
         });
       }
       if (params[0] === "app-2") {
@@ -4099,6 +4138,11 @@ const routes: Route[] = [
       json(res, 202, {
         enqueued: { apps: 1, keywords: 5, categories: 1, reviews: 1 },
       }),
+  },
+  {
+    method: "POST",
+    pattern: /^\/__echo\/request$/,
+    handler: (_p, req, res) => echoRequest(req, res),
   },
 ];
 

@@ -9,6 +9,7 @@ export interface AppSnapshotSummary {
   ratingCount: number | null;
   installs: number | null;
   price: number | null;
+  currency?: string | null;
   version: string | null;
   capturedAt: string;
   country?: string;
@@ -97,6 +98,7 @@ export interface SnapshotDiffResult {
   snapshotId: string;
   changes: SnapshotChange[];
   country?: string;
+  currency?: string | null;
 }
 
 export interface AppImportRequest {

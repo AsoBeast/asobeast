@@ -54,3 +54,11 @@ export function sortComparison(
     return (b.traffic ?? 0) - (a.traffic ?? 0);
   });
 }
+
+export function uncheckedApps(
+  latest: ReadonlyMap<string, number | null>,
+  appIds: readonly string[],
+  keywordId: string,
+): string[] {
+  return appIds.filter((appId) => !latest.has(positionKey(appId, keywordId)));
+}

@@ -69,7 +69,7 @@ export function AuditBenchmarks({
     <Card>
       <CardContent>
         <h2 className="mb-3 text-lg font-medium">Competitor comparison</h2>
-        <Table>
+        <Table scrollLabel="Competitor comparison" scrollFocus="overflow">
           <TableCaption>
             How your listing compares with{" "}
             {pluralize(benchmarks.competitors, "competitor")}

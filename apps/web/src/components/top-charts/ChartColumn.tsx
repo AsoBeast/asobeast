@@ -4,8 +4,9 @@ import { useId, useMemo, type ReactNode } from "react";
 import Link from "next/link";
 import type { AppListItem, ChartPage } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
+import { useFocusGroupClaim } from "@/lib/focus-handoff";
 import { CaptureTodayButton } from "./CaptureTodayButton";
-import { rowContextOf } from "./chart-actions";
+import { captureFocusKey, rowContextOf } from "./chart-actions";
 import {
   capturableToday,
   columnCaption,
@@ -41,7 +42,9 @@ export function ChartColumn({
   const chart = shownChartKey(page);
   const label = COLLECTION_LABELS[chart.collection];
   const period = compareLabel(page.compare, page.comparison);
-  const capture = capturableToday(page) ? (
+  const capturable = capturableToday(page);
+  const actions = useFocusGroupClaim(captureFocusKey(chart), capturable);
+  const capture = capturable ? (
     <CaptureTodayButton chart={chart} variant="outline" size="sm" />
   ) : null;
   let empty: ReactNode = null;
@@ -72,7 +75,7 @@ export function ChartColumn({
             {columnCaption(page, search.date)}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div ref={actions} className="flex flex-wrap items-center gap-2">
           {page.capture ? capture : null}
           <Link
             href={tableHref(chart, search)}

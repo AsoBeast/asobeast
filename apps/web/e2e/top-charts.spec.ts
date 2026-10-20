@@ -1,10 +1,11 @@
 import {
   type APIRequestContext,
   type BrowserContext,
+  type Locator,
   type Page,
   type Route,
 } from "@playwright/test";
-import { hydrated } from "./hydrated.mts";
+import { activateTwiceInOneTask, hydrated } from "./hydrated.mts";
 import { expect, test } from "./session.mts";
 import {
   PLAN_LIMITS,
@@ -538,17 +539,22 @@ test("says a first empty answer was not stored", async ({
   await context.addCookies([chartCookie("e2e_chart_capture_answers_no_apps")]);
 
   await page.goto(PLAY_SHOPPING);
-  await kindRegion(page, "Paid")
-    .getByRole("button", { name: "Capture today" })
-    .click();
+  const paidCapture = await hydrated(
+    kindRegion(page, "Paid").getByRole("button", { name: "Capture today" }),
+  );
+  await paidCapture.focus();
+  await page.keyboard.press("Enter");
 
   await expect(
     page.getByText("Google Play lists no apps in this chart today"),
   ).toBeVisible();
   await expect(page.getByText("Captured today's chart")).toHaveCount(0);
-  await expect(
-    kindRegion(page, "Paid").getByRole("button", { name: "Capture today" }),
-  ).toBeVisible();
+  const capture = kindRegion(page, "Paid").getByRole("button", {
+    name: "Capture today",
+  });
+  await expect(capture).toBeVisible();
+  await expect(capture).toBeFocused();
+  await expect(capture).not.toHaveAttribute("aria-disabled", "true");
   await expect(
     kindRegion(page, "Paid").getByText("No apps in this chart"),
   ).toHaveCount(0);
@@ -1758,4 +1764,189 @@ test("moves through captured days with the keyboard from a day without one", asy
   await page.keyboard.press("Enter");
 
   await expect(page).toHaveURL(new RegExp(`date=${TOP_CHART_DATES[4]}`));
+});
+
+test.describe("focus after Capture today", () => {
+  const forget = (request: APIRequestContext, genre: string) =>
+    request.get(`${MOCK_API}/__forget-chart-captures/${genre}`);
+  const captureIn = (scope: Page | Locator) =>
+    scope.getByRole("button", { name: "Capture today" });
+  const followButton = (page: Page) =>
+    page.getByRole("button", { name: /^(Follow category|Following)$/ });
+  const slowApi = (context: BrowserContext) =>
+    context.addCookies([
+      {
+        name: "e2e_api_latency",
+        value: "1500",
+        domain: "localhost",
+        path: "/",
+      },
+    ]);
+
+  test("a column with an earlier capture hands focus to Open table", async ({
+    page,
+    request,
+  }) => {
+    await forget(request, "6001");
+    await page.goto("/charts?genre=6001");
+    const paid = kindRegion(page, "Paid");
+    const capture = await hydrated(captureIn(paid));
+
+    await capture.focus();
+    await page.keyboard.press("Enter");
+
+    await expect(paid).toContainText(formatDayMonth(utcDaysAgo(0)));
+    await expect(capture).toHaveCount(0);
+    await expect(
+      paid.getByRole("link", { name: "Open table of Paid" }),
+    ).toBeFocused();
+  });
+
+  test("a mouse click on a column button hands focus to Open table", async ({
+    page,
+    request,
+  }) => {
+    await forget(request, "6001");
+    await page.goto("/charts?genre=6001");
+    const free = kindRegion(page, "Free");
+    const capture = await hydrated(captureIn(free));
+
+    await capture.click();
+
+    await expect(capture).toHaveCount(0);
+    await expect(
+      free.getByRole("link", { name: "Open table of Free" }),
+    ).toBeFocused();
+  });
+
+  test("a column with no capture hands focus to Open table", async ({
+    page,
+    request,
+  }) => {
+    await forget(request, "6002");
+    await uncaptured(page);
+    await page.goto("/charts?genre=6002");
+    const free = kindRegion(page, "Free");
+    await expect(
+      free.getByText("This chart has not been captured yet"),
+    ).toBeVisible();
+    const capture = await hydrated(captureIn(free));
+
+    await capture.focus();
+    await page.keyboard.press("Enter");
+
+    await expect(free.getByRole("listitem").first()).toBeVisible();
+    await expect(
+      free.getByRole("link", { name: "Open table of Free" }),
+    ).toBeFocused();
+  });
+
+  test("the table with an earlier capture hands focus to the follow button", async ({
+    page,
+    request,
+  }) => {
+    await forget(request, "6003");
+    await page.goto("/charts?view=table&genre=6003");
+    const capture = await hydrated(captureIn(page));
+
+    await capture.focus();
+    await page.keyboard.press("Enter");
+
+    await expect(capture).toHaveCount(0);
+    await expect(followButton(page)).toBeFocused();
+  });
+
+  test("the table with no capture hands focus to the follow button", async ({
+    page,
+    request,
+  }) => {
+    await forget(request, "6004");
+    await uncaptured(page);
+    await page.goto("/charts?view=table&genre=6004");
+    await expect(
+      page.getByText("This chart has not been captured yet"),
+    ).toBeVisible();
+    const capture = await hydrated(captureIn(page));
+
+    await capture.focus();
+    await page.keyboard.press("Enter");
+
+    await expect(chartTable(page)).toBeVisible();
+    await expect(followButton(page)).toBeFocused();
+  });
+
+  test("keeps focus on the button while the capture runs", async ({
+    page,
+    context,
+    request,
+  }) => {
+    await forget(request, "6010");
+    await slowApi(context);
+    await page.goto("/charts?view=table&genre=6010");
+    const capture = await hydrated(captureIn(page));
+
+    await capture.focus();
+    await page.keyboard.press("Enter");
+
+    await expect(capture).toHaveAttribute("aria-disabled", "true");
+    await expect(capture).toBeFocused();
+    await expect(followButton(page)).toBeFocused();
+  });
+
+  test("keeps focus on the button when the allowance is spent", async ({
+    page,
+    context,
+  }) => {
+    await context.addCookies([chartCookie("e2e_chart_capture_spent")]);
+    await page.goto("/charts?view=table");
+    const capture = await hydrated(captureIn(page));
+
+    await capture.focus();
+    await page.keyboard.press("Enter");
+
+    await expect(page.getByText(/Chart capture limit reached/)).toBeVisible();
+    await expect(capture).toBeFocused();
+    await expect(capture).not.toHaveAttribute("aria-disabled", "true");
+  });
+
+  test("does not take focus back when the user moved on during the capture", async ({
+    page,
+    context,
+    request,
+  }) => {
+    await forget(request, "6011");
+    await slowApi(context);
+    await page.goto("/charts?view=table&genre=6011");
+    const capture = await hydrated(captureIn(page));
+    const search = page.getByRole("textbox", { name: "Search apps" });
+
+    await capture.focus();
+    await page.keyboard.press("Enter");
+    await search.focus();
+
+    await expect(page.getByText("Captured today's chart")).toBeVisible();
+    await expect(capture).toHaveCount(0);
+    await expect(search).toBeFocused();
+  });
+
+  test("a double press captures once and still hands focus over", async ({
+    page,
+    context,
+    request,
+  }) => {
+    await forget(request, "6012");
+    await slowApi(context);
+    await page.goto("/charts?view=table&genre=6012");
+    const capture = captureIn(page);
+
+    await capture.focus();
+    await activateTwiceInOneTask(capture);
+
+    await expect(capture).toHaveAttribute("aria-disabled", "true");
+    await expect(followButton(page)).toBeFocused();
+    const captures = (await (
+      await request.get(`${MOCK_API}/__chart-captures`)
+    ).json()) as Array<Record<string, string>>;
+    expect(captures.filter((item) => item.genre === "6012")).toHaveLength(1);
+  });
 });
