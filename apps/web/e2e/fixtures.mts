@@ -2844,6 +2844,7 @@ DATASETS[APP_FREE_AGAIN_ID] = categoryDataset(
 export const APP_EUR_ID = "app-price-eur";
 export const APP_JPY_ID = "app-price-jpy";
 export const APP_UNKNOWN_CURRENCY_ID = "app-price-unknown";
+export const APP_HUF_ID = "app-price-huf";
 
 export const PRICED_REFRESHES = new Map<
   string,
@@ -5529,3 +5530,11 @@ export function chartCaptureSpent(path: string): ApiErrorEnvelope {
     retryAfterSeconds: 10_800,
   };
 }
+
+DATASETS[APP_HUF_ID] = pricedDataset(
+  APP_HUF_ID,
+  "Forint Priced",
+  1490,
+  "HUF",
+  [],
+);

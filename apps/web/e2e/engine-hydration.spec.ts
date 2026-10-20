@@ -1,7 +1,7 @@
 import { expectHydratesCleanly, settled } from "./page-errors.mts";
 import { expect, test } from "./session.mts";
 import { SIGNED_IN_ROUTES, seedCookies } from "./routes.mts";
-import { APP_EUR_ID, APP_JPY_ID } from "./fixtures.mts";
+import { APP_EUR_ID, APP_HUF_ID, APP_JPY_ID } from "./fixtures.mts";
 
 const AFFECTED_ROUTES = [
   ["settings", "/settings"],
@@ -74,6 +74,15 @@ test("a price in euros is worded the same on both sides", async ({ page }) => {
   const errors = await settled(page, `/apps/${APP_EUR_ID}`);
 
   await expect(page.getByText("€4.99", { exact: true })).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test("a price in forints is worded the same on both sides", async ({
+  page,
+}) => {
+  const errors = await settled(page, `/apps/${APP_HUF_ID}`);
+
+  await expect(page.getByText("HUF 1,490", { exact: true })).toBeVisible();
   expect(errors).toEqual([]);
 });
 

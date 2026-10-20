@@ -77,6 +77,10 @@ describe("formatPrice", () => {
     [4.99, "PLN", "PLN 4.99"],
     [4.99, "AED", "AED 4.99"],
     [1234.5, "USD", "$1,234.50"],
+    [1490, "HUF", "HUF\u00a01,490"],
+    [15000, "IDR", "IDR\u00a015,000"],
+    [1490, "RSD", "RSD\u00a01,490"],
+    [4.99, "KWD", "KWD\u00a04.990"],
   ])("renders %s in %s as %s", (value, currency, expected) => {
     expect(formatPrice(value, currency)).toBe(expected);
   });

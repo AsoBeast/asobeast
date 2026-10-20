@@ -30,6 +30,52 @@ const bareAmountFormatter = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
 });
 const currencyFormatters = new Map<string, Intl.NumberFormat>();
+const WHOLE_CURRENCIES = new Set([
+  "AFN",
+  "ALL",
+  "BIF",
+  "BYR",
+  "CLP",
+  "COP",
+  "DJF",
+  "GNF",
+  "HUF",
+  "IDR",
+  "IQD",
+  "IRR",
+  "ISK",
+  "JPY",
+  "KMF",
+  "KPW",
+  "KRW",
+  "LAK",
+  "LBP",
+  "MGA",
+  "MMK",
+  "PKR",
+  "PYG",
+  "RSD",
+  "RWF",
+  "SLL",
+  "SOS",
+  "SYP",
+  "UGX",
+  "UYI",
+  "VND",
+  "VUV",
+  "XAF",
+  "XOF",
+  "XPF",
+  "YER",
+]);
+const THOUSANDTHS_CURRENCIES = new Set([
+  "BHD",
+  "JOD",
+  "KWD",
+  "LYD",
+  "OMR",
+  "TND",
+]);
 const listFormatter = new Intl.ListFormat("en-US", { type: "conjunction" });
 const relativeTimeFormatter = new Intl.RelativeTimeFormat("en-US", {
   numeric: "auto",
@@ -83,12 +129,20 @@ export function formatRating(value: number): string {
   return value.toFixed(1);
 }
 
+function fractionDigits(currency: string): number {
+  if (WHOLE_CURRENCIES.has(currency)) return 0;
+  return THOUSANDTHS_CURRENCIES.has(currency) ? 3 : 2;
+}
+
 function currencyFormatter(currency: string): Intl.NumberFormat {
   const known = currencyFormatters.get(currency);
   if (known) return known;
+  const digits = fractionDigits(currency);
   const created = new Intl.NumberFormat("en-US", {
     style: "currency",
     currency,
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
   });
   currencyFormatters.set(currency, created);
   return created;
