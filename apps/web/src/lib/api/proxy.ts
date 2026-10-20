@@ -60,7 +60,7 @@ function responseHeaders(upstream: Response): Headers {
   return headers;
 }
 
-function errorResponse(
+export function errorResponse(
   request: NextRequest,
   statusCode: number,
   error: string,
