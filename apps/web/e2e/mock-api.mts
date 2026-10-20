@@ -7,6 +7,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import { BREAKDOWNS } from "./keyword-breakdowns.mts";
 import { planMockImport } from "./keyword-import.mts";
 import { summarizeActions } from "./actions-summary.mts";
+import { echoRequest } from "./echo-request.mts";
 import { funnelFor } from "./store-funnel.mts";
 import {
   STORE_CONNECT_OFF_COOKIE,
@@ -110,6 +111,8 @@ import {
   SERP_SNAPSHOTS,
   WEBHOOKS,
   emptyScreenshots,
+  DATABASE_DOWN_RETRY_SECONDS,
+  databaseDownAnswer,
   errorEnvelope,
   rateLimitedEnvelope,
   SIMILAR_APPS,
@@ -136,6 +139,7 @@ import {
   UNCHECKED_COMPARISON_COOKIE,
   CROWDED_COMPETITORS,
   CROWDED_COMPETITORS_COOKIE,
+  PRICED_REFRESHES,
 } from "./fixtures.mts";
 import {
   EMPTY_PORTFOLIO_INSIGHTS,
@@ -2345,6 +2349,16 @@ const routes: Route[] = [
   },
   {
     method: "POST",
+    pattern: /^\/auth\/logout$/,
+    handler: (_p, _req, res) => {
+      res.writeHead(204, {
+        "set-cookie": `${SESSION_COOKIE}=; Path=/; Max-Age=0`,
+      });
+      res.end();
+    },
+  },
+  {
+    method: "POST",
     pattern: /^\/mcp$/,
     handler: (_p, req, res) => {
       if (!req.headers.authorization) {
@@ -2391,11 +2405,9 @@ const routes: Route[] = [
         return;
       }
       if (outage === "database") {
-        return json(
-          res,
-          503,
-          errorEnvelope(503, "/health", "Service Unavailable Exception"),
-        );
+        return json(res, 503, databaseDownAnswer("/health"), {
+          "retry-after": String(DATABASE_DOWN_RETRY_SECONDS),
+        });
       }
       json(res, 200, HEALTH);
     },
@@ -4158,6 +4170,17 @@ const routes: Route[] = [
           country: "pl",
         });
       }
+      const pricedRefresh = PRICED_REFRESHES.get(params[0]);
+      if (pricedRefresh) {
+        return json(res, 200, {
+          snapshotId: `snap-${params[0]}`,
+          changes: [
+            { field: "price", before: "0", after: pricedRefresh.price },
+          ],
+          country: "us",
+          currency: pricedRefresh.currency,
+        });
+      }
       if (params[0] === "app-gp") {
         return json(res, 200, {
           snapshotId: "snap-gp",
@@ -4169,6 +4192,7 @@ const routes: Route[] = [
             { field: "price", before: "1.99", after: "0" },
           ],
           country: "us",
+          currency: "USD",
         });
       }
       if (params[0] === "app-2") {
@@ -4199,6 +4223,11 @@ const routes: Route[] = [
       json(res, 202, {
         enqueued: { apps: 1, keywords: 5, categories: 1, reviews: 1 },
       }),
+  },
+  {
+    method: "POST",
+    pattern: /^\/__echo\/request$/,
+    handler: (_p, req, res) => echoRequest(req, res),
   },
 ];
 

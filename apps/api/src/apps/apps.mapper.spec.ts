@@ -133,7 +133,7 @@ describe('toListingMarkets', () => {
 });
 
 describe('toSnapshotSummary', () => {
-  const snapshot = (country: string | null) =>
+  const snapshot = (country: string | null, raw: unknown = {}) =>
     ({
       id: 's1',
       country,
@@ -145,6 +145,7 @@ describe('toSnapshotSummary', () => {
       installs: null,
       price: null,
       version: null,
+      raw,
       capturedAt: new Date('2026-07-01T00:00:00.000Z'),
     }) as AppSnapshot;
 
@@ -154,6 +155,19 @@ describe('toSnapshotSummary', () => {
 
   it('names the market of a market snapshot', () => {
     expect(toSnapshotSummary(snapshot('de'), 'us').country).toBe('de');
+  });
+
+  it('names the currency the store sold the price in', () => {
+    expect(
+      toSnapshotSummary(snapshot(null, { currency: 'EUR' }), 'us').currency,
+    ).toBe('EUR');
+  });
+
+  it('answers a null currency when the payload names none', () => {
+    expect(toSnapshotSummary(snapshot(null), 'us').currency).toBeNull();
+    expect(
+      toSnapshotSummary(snapshot(null, { currency: 'euro' }), 'us').currency,
+    ).toBeNull();
   });
 });
 

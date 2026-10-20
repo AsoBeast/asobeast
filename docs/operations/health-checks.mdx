@@ -42,13 +42,35 @@ The API status badge in the web header reads `/api/backend/health` and is shown 
 | --- | --- |
 | `status` | `ok` when the database answers. The endpoint returns `503` when it does not |
 | `db` | `up` or `down`, from a real query rather than a connection count |
-| `redis` | `up` or `down`. A Redis read that exceeds one second reports `down` |
+| `redis` | `up` or `down`. A Redis ping that exceeds one second reports `down` |
+| `pipeline` | The object below, or `null` while Redis is unreachable and while the pipeline signals cannot be read, because they come from both Redis and the database |
 | `pipeline.lastDailyRunAt` | When the daily pipeline last started, or `null` |
 | `pipeline.stale` | `true` when the last run is more than 26 hours old and at least one app is tracked |
 | `pipeline.failedJobs` | Failed jobs across the App Store, Google Play and alert queues. A count that keeps climbing across daily runs points at [a broken store parser](/operations/scraper-breakage) |
 | `pipeline.actions` | When actions were last generated, and how many are open |
 
 The 26 hour window is deliberate. A daily schedule plus a slow night should not page you, so `stale` only fires once a run has genuinely been missed. A fresh instance with no apps never reports stale, because there is nothing to collect.
+
+## What does a database outage look like?
+
+When the database does not answer, the endpoint returns `503` with `Retry-After: 5`. The body is the [error envelope](/api-reference/errors#the-envelope) with the same fields as above added to it, so one parser reads both.
+
+```json
+{
+  "statusCode": 503,
+  "error": "Service Unavailable",
+  "message": "The database cannot be reached. Try again in 5 seconds.",
+  "retryAfterSeconds": 5,
+  "path": "/health",
+  "timestamp": "2026-10-19T09:12:44.118Z",
+  "status": "error",
+  "db": "down",
+  "redis": "up",
+  "pipeline": null
+}
+```
+
+`db` is `down` and `status` is `error`. `redis` still reports Redis on its own, and `pipeline` is `null` because the pipeline signals include a database read. The same applies to Redis: while it is unreachable `redis` is `down` and `pipeline` is `null`, and the endpoint still answers `200` as long as the database answers.
 
 ## Monitor it
 
@@ -58,7 +80,7 @@ One command is enough for an uptime check.
 curl --fail --silent --show-error https://your-host/api/backend/health
 ```
 
-`--fail` turns the `503` into a non zero exit status, which is what most monitoring agents key on.
+`--fail` turns the `503` into a non zero exit status, which is what most monitoring agents key on. Use `--fail-with-body` instead to see the body of the `503` and read `db`.
 
 To alert on a stalled pipeline rather than on a dead API, check the `stale` and `failedJobs` fields rather than the status code. A stale pipeline still answers `200`, because the API itself is healthy.
 
