@@ -74,7 +74,7 @@ test("a page with a malformed escape renders the not found page", async ({
 
   expect(response?.status()).toBe(404);
   await expect(
-    page.getByRole("heading", { name: "Page not found" }),
+    page.getByRole("heading", { level: 1, name: "Page not found" }),
   ).toBeVisible();
 });
 
