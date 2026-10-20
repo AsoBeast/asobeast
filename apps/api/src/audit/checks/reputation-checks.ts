@@ -15,6 +15,7 @@ import {
   ratingAverageScore,
   RubricCheck,
 } from '../audit-scoring';
+import { formatCount, formatStars } from '../audit-format';
 
 export const MIN_BENCHMARK_COMPETITORS = 2;
 export const RECENT_REVIEW_DAYS = 30;
@@ -113,16 +114,21 @@ const averageCheck = (context: AuditContext, theme: string): RubricCheck => {
     detail:
       average === null
         ? 'No ratings yet.'
-        : `Average rating is ${average.toFixed(2)}.`,
+        : `Average rating is ${formatStars(average)}.`,
     advice:
       average === null
         ? null
         : {
             title: `Raise your average rating above ${threshold}`,
-            fix: `At ${average.toFixed(2)} stars you convert fewer visitors than an app above ${threshold}. Prompt happy users after a success moment${theme}.`,
+            fix: `At ${formatStars(average)} stars you convert fewer visitors than an app above ${threshold}. Prompt happy users after a success moment${theme}.`,
           },
   });
 };
+
+const volumeSentence = (count: number, middle: number | null): string =>
+  middle === null
+    ? `You have ${formatCount(count)} ratings. Add competitors to compare against your category.`
+    : `You have ${formatCount(count)} ratings; the median competitor has ${formatCount(middle)}.`;
 
 const volumeCheck = (context: AuditContext): RubricCheck => {
   const count = context.ratingCount;
@@ -142,21 +148,13 @@ const volumeCheck = (context: AuditContext): RubricCheck => {
         : middle === null || middle === 0
           ? logScale(count, 10, 100_000)
           : volumeScore(count / middle),
-    detail:
-      count === null
-        ? 'No ratings yet.'
-        : middle === null
-          ? `You have ${count} ratings. Add competitors to compare against your category.`
-          : `You have ${count} ratings; the median competitor has ${middle}.`,
+    detail: count === null ? 'No ratings yet.' : volumeSentence(count, middle),
     advice:
       count === null
         ? null
         : {
             title: 'Grow your rating count',
-            fix:
-              middle === null
-                ? `You have ${count} ratings. Add competitors to compare against your category.`
-                : `You have ${count} ratings; the median competitor has ${middle}.`,
+            fix: volumeSentence(count, middle),
           },
   });
 };
@@ -169,9 +167,11 @@ const recentCheck = (context: AuditContext): RubricCheck => {
     : null;
   const average = mean === null ? null : round1(mean);
   const theme = complaintTheme(reviews, context);
+  const reviewCount = formatCount(reviews.length);
   const themeSentence = theme
-    ? ` “${theme.text}” comes up in ${theme.mentions} of them.`
+    ? ` “${theme.text}” comes up in ${formatCount(theme.mentions)} of them.`
     : '';
+  const summary = `Reviews from the last ${RECENT_REVIEW_DAYS} days average ${average} across ${reviewCount}.${themeSentence}`;
   return check({
     id: 'ratings-recent',
     label: 'Recent reviews',
@@ -179,12 +179,12 @@ const recentCheck = (context: AuditContext): RubricCheck => {
     weight: 2,
     score: mean === null ? null : recentScore(mean),
     detail: enough
-      ? `Reviews from the last ${RECENT_REVIEW_DAYS} days average ${average} across ${reviews.length}.${themeSentence}`
-      : `Only ${reviews.length} reviews in the last ${RECENT_REVIEW_DAYS} days.`,
+      ? summary
+      : `Only ${reviewCount} reviews in the last ${RECENT_REVIEW_DAYS} days.`,
     unlock: REVIEWS_UNLOCK,
     advice: {
       title: 'Address what recent reviewers report',
-      fix: `Reviews from the last ${RECENT_REVIEW_DAYS} days average ${average} across ${reviews.length}.${themeSentence}`,
+      fix: summary,
     },
   });
 };
@@ -201,16 +201,17 @@ const currentVersionCheck = (context: AuditContext): RubricCheck | null => {
     return null;
   }
   const delta = round2(current - context.ratingAvg);
+  const sentence = `This version averages ${formatStars(current)} against ${formatStars(context.ratingAvg)} overall.`;
   return check({
     id: 'ratings-current-version',
     label: 'Current version rating',
     source: 'store',
     weight: 1,
     score: currentVersionScore(delta),
-    detail: `This version averages ${current} against ${context.ratingAvg} overall.`,
+    detail: sentence,
     advice: {
       title: 'Find out why this version rates lower',
-      fix: `This version averages ${current} against ${context.ratingAvg} overall.`,
+      fix: sentence,
     },
   });
 };

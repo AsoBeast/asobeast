@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef, type RefCallback } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  type RefCallback,
+  type RefObject,
+} from "react";
 
 interface FocusRoot {
   activeElement: unknown;
@@ -88,4 +94,23 @@ export function useFocusClaim(key: string): RefCallback<HTMLElement> {
     },
     [key],
   );
+}
+
+const FOCUSABLE = "a[href], button:not(:disabled)";
+
+export function useFocusGroupClaim(
+  key: string,
+  controlPresent: boolean,
+): RefObject<HTMLDivElement | null> {
+  const group = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (controlPresent) return;
+    const target = group.current?.querySelector<HTMLElement>(FOCUSABLE);
+    if (!target || !isClaimable(armed, key, Date.now())) return;
+    armed = null;
+    target.focus();
+  }, [key, controlPresent]);
+
+  return group;
 }

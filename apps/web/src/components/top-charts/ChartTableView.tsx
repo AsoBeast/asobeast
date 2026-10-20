@@ -1,7 +1,9 @@
 "use client";
 
 import type { AppListItem, ChartPage } from "@asobeast/shared";
+import { useFocusGroupClaim } from "@/lib/focus-handoff";
 import { CaptureTodayButton } from "./CaptureTodayButton";
+import { captureFocusKey } from "./chart-actions";
 import { capturableToday, listsNoApps } from "./chart-column-rows";
 import { ChartEmpty } from "./ChartEmpty";
 import { ChartNoApps } from "./ChartNoApps";
@@ -15,8 +17,9 @@ import { TrendingPanel } from "./TrendingPanel";
 export function TableActions({ page }: { page: ChartPage }) {
   const chart = shownChartKey(page);
   const capturable = capturableToday(page);
+  const actions = useFocusGroupClaim(captureFocusKey(chart), capturable);
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div ref={actions} className="flex flex-wrap items-center gap-2">
       {capturable ? <CaptureTodayButton chart={chart} /> : null}
       <FollowChartButton
         category={chartCategoryOf(chart)}

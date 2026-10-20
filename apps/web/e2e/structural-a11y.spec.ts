@@ -10,15 +10,21 @@ const STRUCTURAL_RULES = [
   "empty-table-header",
 ];
 
-const structuralViolations = async (page: Page) => {
+const violationsOf = async (page: Page, rules: string[]) => {
   const { violations } = await new AxeBuilder({ page })
-    .withRules(STRUCTURAL_RULES)
+    .withRules(rules)
     .analyze();
   return violations.map(({ id, nodes }) => ({
     id,
     targets: nodes.map((node) => node.target.join(" ")),
   }));
 };
+
+const structuralViolations = (page: Page) =>
+  violationsOf(page, STRUCTURAL_RULES);
+
+const scrollViolations = (page: Page) =>
+  violationsOf(page, ["scrollable-region-focusable"]);
 
 for (const path of [
   "/",
@@ -79,3 +85,60 @@ test("the import dialog names the panel of every store tab", async ({
 
   expect(await structuralViolations(page)).toEqual([]);
 });
+
+const SCROLLING_TABLES = [
+  {
+    path: "/apps/app-1/audit",
+    table: "How your listing compares with 3 competitors",
+    region: "Competitor comparison",
+  },
+  {
+    path: "/apps/app-1/metadata",
+    table: "Which of your markets read each localization",
+    region: "Localization matrix",
+  },
+];
+
+const containerOf = (page: Page, table: string) =>
+  page
+    .locator('[data-slot="table-container"]')
+    .filter({ has: page.getByRole("table", { name: table }) });
+
+for (const { path, table, region } of SCROLLING_TABLES) {
+  test(`${path} lets a keyboard scroll its table at 375px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 800 });
+    await page.goto(path);
+    const container = containerOf(page, table);
+    await expect(container).toBeVisible();
+    expect(
+      await container.evaluate((node) => node.scrollWidth > node.clientWidth),
+    ).toBe(true);
+
+    await expect.poll(() => scrollViolations(page)).toEqual([]);
+
+    const scroller = page.getByRole("region", { name: region });
+    await scroller.focus();
+    await page.keyboard.press("ArrowRight");
+    await expect(scroller).toBeFocused();
+    await expect
+      .poll(() => scroller.evaluate((node) => node.scrollLeft))
+      .toBeGreaterThan(0);
+  });
+
+  test(`${path} adds no tab stop while its table fits at 1440px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(path);
+    const container = containerOf(page, table);
+    await expect(container).toBeVisible();
+    expect(
+      await container.evaluate((node) => node.scrollWidth <= node.clientWidth),
+    ).toBe(true);
+
+    await expect(page.getByRole("region", { name: region })).toHaveCount(0);
+    expect(await scrollViolations(page)).toEqual([]);
+  });
+}
