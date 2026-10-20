@@ -42,7 +42,7 @@ function SuggestionMeta({ suggestion }: { suggestion: KeywordSuggestion }) {
 export type SuggestionAction =
   | {
       kind: "track";
-      pendingText: string | undefined;
+      pending: ReadonlySet<string>;
       onTrack: (text: string) => void;
     }
   | {
@@ -70,32 +70,33 @@ export function suggestionListState(query: {
 function TrackAction({
   text,
   already,
-  pendingText,
+  pending,
   onTrack,
 }: {
   text: string;
   already: boolean;
-  pendingText: string | undefined;
+  pending: boolean;
   onTrack: (text: string) => void;
 }) {
-  const pending = pendingText === text;
+  const inert = already || pending;
   return (
     <Button
       variant={already ? "ghost" : "outline"}
       size="sm"
-      disabled={already || pending}
-      onClick={() => onTrack(text)}
+      aria-disabled={inert || undefined}
+      aria-busy={(pending && !already) || undefined}
+      onClick={() => {
+        if (!inert) onTrack(text);
+      }}
     >
       {already ? (
         <>
           <Check />
           Tracked
         </>
-      ) : pending ? (
-        <Loader2 className="animate-spin" />
       ) : (
         <>
-          <Plus />
+          {pending ? <Loader2 className="animate-spin" /> : <Plus />}
           Track
         </>
       )}
@@ -196,7 +197,7 @@ export function SuggestionList({
             <TrackAction
               text={suggestion.text}
               already={already}
-              pendingText={action.pendingText}
+              pending={action.pending.has(suggestion.text)}
               onTrack={action.onTrack}
             />
           </li>

@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { keyedFlight, sharedFlight, singleFlight } from "./single-flight";
+import {
+  keyedFlight,
+  keyedSingleFlight,
+  sharedFlight,
+  singleFlight,
+} from "./single-flight";
 
 function deferredRun() {
   const settle: Array<{ resolve: () => void; reject: (e: Error) => void }> = [];
@@ -110,6 +115,31 @@ describe("keyedFlight", () => {
     settle[0].resolve();
     await first;
     void save("draft");
+
+    expect(run).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("keyedSingleFlight", () => {
+  it("sends one request per key and lets another key through at once", () => {
+    const { run } = deferredRun();
+    const track = keyedSingleFlight(run, (text: string) => text);
+
+    track("sleep");
+    track("sleep");
+    track("focus");
+
+    expect(run.mock.calls).toEqual([["sleep"], ["focus"]]);
+  });
+
+  it("sends a key again once its request settled, failure included", async () => {
+    const { run, settle } = deferredRun();
+    const track = keyedSingleFlight(run, (text: string) => text);
+
+    track("sleep");
+    settle[0].reject(new Error("offline"));
+    await flush();
+    track("sleep");
 
     expect(run).toHaveBeenCalledTimes(2);
   });

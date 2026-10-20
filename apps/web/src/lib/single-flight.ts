@@ -25,13 +25,20 @@ export function sharedFlight<TVariables, TResult>(
   return keyedFlight(run, ONE_KEY);
 }
 
+export function keyedSingleFlight<TVariables>(
+  run: (variables: TVariables) => Promise<unknown>,
+  keyOf: (variables: TVariables) => string,
+): (variables: TVariables) => void {
+  const keyed = keyedFlight(run, keyOf);
+  return (variables) => {
+    keyed(variables).catch(() => undefined);
+  };
+}
+
 export function singleFlight<TVariables>(
   run: (variables: TVariables) => Promise<unknown>,
 ): (variables: TVariables) => void {
-  const shared = sharedFlight(run);
-  return (variables) => {
-    shared(variables).catch(() => undefined);
-  };
+  return keyedSingleFlight(run, ONE_KEY);
 }
 
 export function useKeyedFlight<TVariables, TResult>(
@@ -39,6 +46,19 @@ export function useKeyedFlight<TVariables, TResult>(
   keyOf: (variables: TVariables) => string,
 ): (variables: TVariables) => Promise<TResult> {
   return useMemo(() => keyedFlight(run, keyOf), [run, keyOf]);
+}
+
+export function useKeyedSingleFlight<TVariables>(
+  mutation: {
+    mutateAsync: (variables: TVariables) => Promise<unknown>;
+  },
+  keyOf: (variables: TVariables) => string,
+): (variables: TVariables) => void {
+  const { mutateAsync } = mutation;
+  return useMemo(
+    () => keyedSingleFlight(mutateAsync, keyOf),
+    [mutateAsync, keyOf],
+  );
 }
 
 export function useSharedFlight<TVariables, TResult>(
