@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs/config";
+import { REQUEST_BODY_LIMIT_BYTES } from "@asobeast/shared";
 import { version } from "./package.json";
 import { RSC_VARY_HEADER } from "./src/lib/rsc-vary";
 
@@ -19,6 +20,7 @@ const RSC_VARIANT_SOURCE = "/((?!_next/static|_next/image).*)";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  experimental: { proxyClientMaxBodySize: REQUEST_BODY_LIMIT_BYTES },
   env: { NEXT_PUBLIC_APP_VERSION: version },
   outputFileTracingRoot: join(__dirname, "../../"),
   outputFileTracingIncludes: {

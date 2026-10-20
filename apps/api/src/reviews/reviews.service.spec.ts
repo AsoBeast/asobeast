@@ -1,4 +1,3 @@
-import { NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Store } from '@prisma/client';
 import { AlertPayload, ReviewNegativePayload } from '@asobeast/shared';
@@ -315,20 +314,22 @@ describe('ReviewsService.syncReviews', () => {
     expect(updateMany).not.toHaveBeenCalled();
   });
 
-  it('rejects an unknown app', async () => {
+  it('finishes without asking the store once the app was deleted', async () => {
     const prisma = {
       app: { findFirst: jest.fn().mockResolvedValue(null) },
     };
+    const registry = { get: jest.fn() };
     const service = new ReviewsService(
       prisma as unknown as PrismaService,
-      { get: jest.fn() } as unknown as StoreProviderRegistry,
+      registry as unknown as StoreProviderRegistry,
       { get: jest.fn() } as unknown as ConfigService<Env, true>,
       { dispatch: jest.fn() } as unknown as AlertsDispatcher,
     );
 
     await expect(
-      service.syncReviews({ appId: 'missing', pages: 1, backfill: false }),
-    ).rejects.toBeInstanceOf(NotFoundException);
+      service.syncReviews({ appId: 'deleted', pages: 1, backfill: false }),
+    ).resolves.toEqual([]);
+    expect(registry.get).not.toHaveBeenCalled();
   });
 });
 

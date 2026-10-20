@@ -59,7 +59,7 @@ const build = (overrides: {
   recordRefresh?: jest.Mock;
   recordMarketRefresh?: jest.Mock;
   localized?: unknown[];
-  app?: typeof APP;
+  app?: typeof APP | null;
   previous?: typeof SNAPSHOT | null;
   detect?: jest.Mock;
   recordDefault?: jest.Mock;
@@ -74,7 +74,11 @@ const build = (overrides: {
     app: { update: jest.fn().mockResolvedValue(APP) },
   };
   const prisma = {
-    app: { findFirst: jest.fn().mockResolvedValue(overrides.app ?? APP) },
+    app: {
+      findFirst: jest
+        .fn()
+        .mockResolvedValue(overrides.app === undefined ? APP : overrides.app),
+    },
     appSnapshot: {
       findFirst: jest.fn().mockResolvedValue(overrides.previous ?? null),
     },
@@ -160,6 +164,30 @@ describe('ListingCaptureService.refresh', () => {
     await expect(service.refresh(APP.id)).rejects.toThrow('changes failed');
 
     expect(request).toHaveBeenCalledWith(APP.id, SNAPSHOT.id);
+  });
+});
+
+describe('ListingCaptureService.refreshListing', () => {
+  it('captures the home listing when no market is named', async () => {
+    const { service, record } = build({});
+
+    await service.refreshListing(APP.id);
+
+    expect(record).toHaveBeenCalledWith(
+      expect.anything(),
+      { store: Store.APP_STORE, country: APP.country },
+      SNAPSHOT,
+    );
+  });
+
+  it('captures nothing once the app was deleted', async () => {
+    const syncFromSnapshot = jest.fn();
+    const { service, record } = build({ app: null, syncFromSnapshot });
+
+    await expect(service.refreshListing(APP.id)).resolves.toBeNull();
+    await expect(service.refreshListing(APP.id, 'de')).resolves.toBeNull();
+    expect(record).not.toHaveBeenCalled();
+    expect(syncFromSnapshot).not.toHaveBeenCalled();
   });
 });
 

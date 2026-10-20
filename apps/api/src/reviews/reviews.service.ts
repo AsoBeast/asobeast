@@ -71,7 +71,7 @@ export class ReviewsService {
       },
     });
     if (!app) {
-      throw new NotFoundException(`App ${payload.appId} not found`);
+      return [];
     }
 
     const provider = this.registry.get(app.store);

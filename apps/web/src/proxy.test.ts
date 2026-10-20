@@ -129,3 +129,40 @@ describe("a path that can be decoded", () => {
     );
   });
 });
+
+describe("a server action request", () => {
+  const ACTION = { "next-action": "x", rsc: "1" };
+
+  it.each(["/nope", "/api/nope", "/login", "/_next/static/nope", "/docs"])(
+    "runs the proxy for %s",
+    (pathname) => {
+      expect(
+        unstable_doesMiddlewareMatch({
+          config,
+          url: `http://web.local${pathname}`,
+          headers: ACTION,
+        }),
+      ).toBe(true);
+    },
+  );
+
+  it.each([false, true])(
+    "answers the unknown action without rendering, session %s",
+    async (withSession) => {
+      const response = proxy(
+        new NextRequest("http://web.local/nope", {
+          method: "POST",
+          headers: {
+            ...ACTION,
+            ...(withSession ? { cookie: `${SESSION_COOKIE}=x` } : {}),
+          },
+        }),
+      );
+
+      expect(response.status).toBe(404);
+      expect(response.headers.get("x-nextjs-action-not-found")).toBe("1");
+      expect(response.headers.get("location")).toBeNull();
+      expect(await response.text()).toBe("Server action not found.");
+    },
+  );
+});
