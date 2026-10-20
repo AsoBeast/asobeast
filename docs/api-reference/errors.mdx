@@ -40,14 +40,14 @@ The shape is `ApiErrorEnvelope` in `@asobeast/shared`, so a TypeScript client ca
 
 | Status | What causes it in this API |
 | --- | --- |
-| `400` | A DTO failed validation, a store URL could not be parsed, a text value contained a NUL character or an unpaired surrogate, the body or query string was nested more than 64 levels deep, or the body was not valid JSON or could not be decoded |
+| `400` | A DTO failed validation, a store URL could not be parsed, a text value contained a NUL character or an unpaired surrogate, the body or query string was nested more than 64 levels deep, the path contained an invalid percent escape such as `%zz` (the web proxy at `/api/backend` answers it with the same envelope), or the body was not valid JSON or could not be decoded |
 | `401` | The session cookie or personal API token is missing, malformed or revoked. The response carries a `WWW-Authenticate: Bearer realm="asobeast"` challenge |
 | `402` | The workspace is not entitled. Only reachable when `BILLING_ENABLED` is `true`. Reads from a browser session stay open; see [Authentication and accounts](/security/authentication) |
 | `403` | A plan capacity limit refused the write, and the `quota` object names it. Also returned to a suspended workspace, and to a read only token that tried to change something |
 | `404` | The resource does not exist, a path id contains a NUL character, or an admin surface is refusing to confirm it exists |
 | `429` | A plan rate limit, an on demand allowance or the monthly AI allowance is spent. `Retry-After` says when it reopens; `rateLimit` or `aiAllowance` names which. See [Rate limits and quotas](/api-reference/rate-limits) |
 | `409` | A unique constraint was violated, an AI endpoint was called with `OPENAI_API_KEY` unset, or a billing route refused a request the `billing` object explains |
-| `413` | The request body is larger than the 100 KB (102400 bytes) the API reads, counted after any `Content-Encoding` is decoded, or a form body carries more than 1000 parameters. The body is read before authentication, so an oversized request is refused even without a valid credential. The web proxy at `/api/backend` applies the same 102400 bytes to the bytes it receives, whatever their content type, answers the same envelope as soon as a body passes the limit without reading the rest, and closes the connection |
+| `413` | The request body is larger than the 100 KB (102400 bytes) the API reads, counted after any `Content-Encoding` is decoded, or a form body carries more than 1000 parameters. The body is read before authentication, so an oversized request is refused even without a valid credential. The web proxy at `/api/backend` applies the same 102400 bytes to the bytes it receives, whatever their content type or `Content-Encoding`, forwards that header so the API decodes the body and counts the decoded size against its own limit, answers the same envelope as soon as a body passes the limit without reading the rest, and closes the connection |
 | `415` | The body names a charset the API cannot read, or a `Content-Encoding` other than `gzip`, `deflate` or `br` |
 | `500` | An unhandled exception. The message is generic and the stack is logged server side |
 | `501` | A store that asobeast does not support. Both live stores are supported, so this path stays wired for a future store |

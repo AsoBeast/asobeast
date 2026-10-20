@@ -10,6 +10,7 @@ const FORWARDED_HEADERS = [
   "cookie",
   "authorization",
   "accept",
+  "content-encoding",
   "x-correlation-id",
   "stripe-signature",
 ] as const;
@@ -60,7 +61,7 @@ function responseHeaders(upstream: Response): Headers {
   return headers;
 }
 
-function errorResponse(
+export function errorResponse(
   request: NextRequest,
   statusCode: number,
   error: string,
