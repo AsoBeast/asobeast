@@ -15,6 +15,7 @@ interface Options {
   appStoreFailed?: number;
   gplayFailed?: number;
   alertsFailed?: number;
+  queueReadable?: boolean;
   actions?: { generatedAt: Date | null; open: number };
 }
 
@@ -27,6 +28,7 @@ function build(options: Options = {}) {
     appStoreFailed = 0,
     gplayFailed = 0,
     alertsFailed = 0,
+    queueReadable = true,
     actions = { generatedAt: null, open: 0 },
   } = options;
 
@@ -55,7 +57,9 @@ function build(options: Options = {}) {
     getBackend: () => ({ client: Promise.resolve(client) }),
   } as unknown as Queue;
   const appStoreQueue = {
-    getFailedCount: jest.fn().mockResolvedValue(appStoreFailed),
+    getFailedCount: queueReadable
+      ? jest.fn().mockResolvedValue(appStoreFailed)
+      : jest.fn().mockRejectedValue(new Error('read failed')),
   } as unknown as Queue;
   const gplayQueue = {
     getFailedCount: jest.fn().mockResolvedValue(gplayFailed),
@@ -146,6 +150,17 @@ describe('HealthController', () => {
     expect(result.db).toBe('up');
     expect(result.redis).toBe('down');
     expect(result.pipeline).toBeNull();
+  });
+
+  it('reports redis up and no pipeline when a pipeline read fails after the ping', async () => {
+    const result = await build({ queueReadable: false }).check();
+
+    expect(result).toEqual({
+      status: 'ok',
+      db: 'up',
+      redis: 'up',
+      pipeline: null,
+    });
   });
 
   it('throws the database error carrying the health signals when the database is unreachable', async () => {
