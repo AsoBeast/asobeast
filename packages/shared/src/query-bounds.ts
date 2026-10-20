@@ -1,5 +1,7 @@
 export const COUNTRY_PATTERN = /^[a-z]{2}$/;
 
+export const CURRENCY_PATTERN = /^[A-Z]{3}$/;
+
 export const UTC_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 export function isUtcCalendarDate(value: string): boolean {

@@ -130,6 +130,7 @@ import {
   UNCHECKED_COMPARISON_COOKIE,
   CROWDED_COMPETITORS,
   CROWDED_COMPETITORS_COOKIE,
+  PRICED_REFRESHES,
 } from "./fixtures.mts";
 import {
   EMPTY_PORTFOLIO_INSIGHTS,
@@ -4084,6 +4085,17 @@ const routes: Route[] = [
           country: "pl",
         });
       }
+      const pricedRefresh = PRICED_REFRESHES.get(params[0]);
+      if (pricedRefresh) {
+        return json(res, 200, {
+          snapshotId: `snap-${params[0]}`,
+          changes: [
+            { field: "price", before: "0", after: pricedRefresh.price },
+          ],
+          country: "us",
+          currency: pricedRefresh.currency,
+        });
+      }
       if (params[0] === "app-gp") {
         return json(res, 200, {
           snapshotId: "snap-gp",
@@ -4095,6 +4107,7 @@ const routes: Route[] = [
             { field: "price", before: "1.99", after: "0" },
           ],
           country: "us",
+          currency: "USD",
         });
       }
       if (params[0] === "app-2") {

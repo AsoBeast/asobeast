@@ -1,4 +1,5 @@
 import {
+  CURRENCY_PATTERN,
   RatingCounts,
   RATING_STARS,
   releaseNotesLines,
@@ -177,6 +178,11 @@ export function ratingHistogram(
 export function isPaid(raw: unknown): boolean {
   const value = asRecord(raw)?.price;
   return typeof value === 'number' && value > 0;
+}
+
+export function currencyOf(raw: unknown): string | null {
+  const code = trimmedString(asRecord(raw)?.currency)?.toUpperCase();
+  return code !== undefined && CURRENCY_PATTERN.test(code) ? code : null;
 }
 
 const playReleaseNotes = (
