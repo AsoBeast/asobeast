@@ -584,3 +584,56 @@ describe('Google Play description keywords', () => {
     ).toBe(score);
   });
 });
+
+describe('character counts outside the bmp', () => {
+  const detailOf = (checks: { id: string; detail: string }[], id: string) =>
+    checks.find((item) => item.id === id)?.detail;
+
+  it('counts a title once per character', () => {
+    const checks = titleChecks(
+      appStoreContext({ title: '𠮷'.repeat(20), keywords: titleKeywords }),
+    );
+
+    expect(detailOf(checks, 'title-length')).toBe('20 of 30 characters used.');
+  });
+
+  it('counts a subtitle once per character', () => {
+    const checks = subtitleChecks(
+      appStoreContext({
+        title: 'Where Am I?',
+        subtitle: '𠮷'.repeat(20),
+        keywords: titleKeywords,
+      }),
+    );
+
+    expect(detailOf(checks, 'subtitle-length')).toBe(
+      '20 of 30 characters used.',
+    );
+  });
+
+  it('counts a short description once per character', () => {
+    const checks = shortDescriptionChecks(
+      playContext({ summary: '𠮷'.repeat(70), keywords: priority }),
+    );
+
+    expect(detailOf(checks, 'short-description-length')).toBe(
+      '70 of 80 characters used.',
+    );
+  });
+
+  it('fits an uncovered keyword into the unused title by characters', () => {
+    const checks = titleChecks(
+      appStoreContext({
+        title: '𠮷'.repeat(10),
+        keywords: [
+          keyword('𠮷'.repeat(10), 'primary', 90),
+          keyword('𪚥'.repeat(10), 'secondary', 80),
+        ],
+      }),
+    );
+
+    expect(checks.find((item) => item.id === 'title-length')?.advice?.fix).toBe(
+      `Add “${'𪚥'.repeat(10)}” (10 characters), your best uncovered keyword that still fits.`,
+    );
+  });
+});
