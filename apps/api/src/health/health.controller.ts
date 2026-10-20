@@ -87,21 +87,39 @@ export class HealthController {
 
   private async pipelineSignals(): Promise<PipelineSignals> {
     try {
-      return await withTimeout(
-        this.readSignals(),
+      const client = await withTimeout(
+        this.pingRedis(),
         REDIS_TIMEOUT_MS,
         'redis timeout',
       );
+      return { redis: 'up', pipeline: await this.pipelineOf(client) };
     } catch {
       return { redis: 'down', pipeline: null };
     }
   }
 
-  private async readSignals(): Promise<PipelineSignals> {
+  private async pingRedis(): Promise<RedisReader> {
     const client = (await this.pipelineQueue.getBackend()
       .client) as unknown as RedisReader;
     await client.ping();
+    return client;
+  }
 
+  private async pipelineOf(
+    client: RedisReader,
+  ): Promise<PipelineHealth | null> {
+    try {
+      return await withTimeout(
+        this.readPipeline(client),
+        REDIS_TIMEOUT_MS,
+        'pipeline timeout',
+      );
+    } catch {
+      return null;
+    }
+  }
+
+  private async readPipeline(client: RedisReader): Promise<PipelineHealth> {
     const [iso, appCount, appStoreFailed, gplayFailed, alertsFailed, actions] =
       await Promise.all([
         client.get(LAST_DAILY_RUN_KEY),
@@ -114,13 +132,10 @@ export class HealthController {
 
     const lastDailyRunAt = iso ?? null;
     return {
-      redis: 'up',
-      pipeline: {
-        lastDailyRunAt,
-        stale: isStale(lastDailyRunAt, appCount),
-        failedJobs: appStoreFailed + gplayFailed + alertsFailed,
-        actions,
-      },
+      lastDailyRunAt,
+      stale: isStale(lastDailyRunAt, appCount),
+      failedJobs: appStoreFailed + gplayFailed + alertsFailed,
+      actions,
     };
   }
 

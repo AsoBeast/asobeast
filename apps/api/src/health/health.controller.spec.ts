@@ -37,16 +37,17 @@ function build(options: Options = {}) {
     get: jest.fn().mockResolvedValue(lastRun),
   };
 
+  const databaseCall = <T>(value: T) =>
+    dbUp
+      ? jest.fn().mockResolvedValue(value)
+      : jest.fn().mockRejectedValue(new Error('unreachable'));
+
   const prisma = {
-    $queryRaw: dbUp
-      ? jest.fn().mockResolvedValue([{ '?column?': 1 }])
-      : jest.fn().mockRejectedValue(new Error('unreachable')),
-    app: { count: jest.fn().mockResolvedValue(appCount) },
+    $queryRaw: databaseCall([{ '?column?': 1 }]),
+    app: { count: databaseCall(appCount) },
     actionItem: {
-      aggregate: jest
-        .fn()
-        .mockResolvedValue({ _max: { lastSeenAt: actions.generatedAt } }),
-      count: jest.fn().mockResolvedValue(actions.open),
+      aggregate: databaseCall({ _max: { lastSeenAt: actions.generatedAt } }),
+      count: databaseCall(actions.open),
     },
   } as unknown as PrismaService;
 
@@ -160,5 +161,18 @@ describe('HealthController', () => {
       pipeline: null,
     });
     expect((error as DatabaseUnavailableError).retryAfterSeconds).toBe(5);
+  });
+
+  it('reports redis up and no pipeline when only the database is down', async () => {
+    const error = await build({ dbUp: false, redisUp: true })
+      .check()
+      .catch((caught: unknown) => caught);
+
+    expect((error as DatabaseUnavailableError).health).toEqual({
+      status: 'error',
+      db: 'down',
+      redis: 'up',
+      pipeline: null,
+    });
   });
 });

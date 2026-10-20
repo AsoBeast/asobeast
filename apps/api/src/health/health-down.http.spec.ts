@@ -99,4 +99,19 @@ describe('GET /health with the database unreachable', () => {
 
     expect(JSON.stringify(response.body)).not.toContain('postgres:5432');
   });
+
+  it('names the database, not redis, when only postgres is down', async () => {
+    app = await healthApp({ redisUp: true });
+
+    const response = await request(app.getHttpServer())
+      .get('/health')
+      .expect(503);
+
+    expect(response.body).toMatchObject({
+      status: 'error',
+      db: 'down',
+      redis: 'up',
+      pipeline: null,
+    });
+  });
 });
