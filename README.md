@@ -22,7 +22,7 @@
   </p>
 </div>
 
-<a href="https://docs.asobeast.com/guides/action-center"><img src="docs/images/action-center/queue-light.png" alt="The AsoBeast Action Center: a prioritized queue of ASO recommendations for a tracked app, with summary tiles, priority and impact filters and a chart of actions opened and closed over the last month" width="100%" /></a>
+<a href="https://docs.asobeast.com/quickstart"><img src="docs/images/overview/overview-dark.png" alt="The AsoBeast app overview in dark mode: search visibility up 47 points in 30 days, 14 of 24 tracked keywords in the top 10, the top open actions, a visibility chart climbing over the month and the rank distribution of every keyword" width="100%" /></a>
 
 ## What is AsoBeast?
 
