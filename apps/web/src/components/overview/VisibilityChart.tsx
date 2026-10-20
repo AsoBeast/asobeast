@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useDeferredValue } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
@@ -109,6 +109,7 @@ function VisibilityChartBody({
 
 export function VisibilityChart({ id }: { id: string }) {
   const [range, setRange] = useQueryState("range", visibilityRangeParser);
+  const shownRange = useDeferredValue(range);
 
   return (
     <Card>
@@ -125,7 +126,7 @@ export function VisibilityChart({ id }: { id: string }) {
       </CardHeader>
       <CardContent>
         <Suspense fallback={<ChartSkeleton height={CHART_HEIGHT.compact} />}>
-          <VisibilityChartBody id={id} range={range} />
+          <VisibilityChartBody id={id} range={shownRange} />
         </Suspense>
       </CardContent>
     </Card>
