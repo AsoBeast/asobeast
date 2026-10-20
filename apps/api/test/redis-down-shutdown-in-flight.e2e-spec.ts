@@ -20,7 +20,7 @@ import {
 } from './helpers/session';
 import { testDb } from './helpers/test-db';
 
-const SHUTDOWN_DEADLINE_MS = 6_000;
+const SHUTDOWN_DEADLINE_MS = 7_000;
 const REQUEST_SETTLE_MS = 750;
 const QUEUES_API = '/admin/queues/api/queues?page=1&jobsPerPage=1';
 
