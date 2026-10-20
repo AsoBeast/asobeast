@@ -19,6 +19,7 @@ import {
   latestPositions,
   positionKey,
   sortComparison,
+  uncheckedApps,
 } from './keyword-gaps';
 import { sortTracked } from './keyword-sort';
 import { serpVolatilities } from './keyword-volatility';
@@ -170,6 +171,7 @@ export class KeywordsService {
         you,
         positions,
         gap: isGap(you, positions),
+        unchecked: uncheckedApps(latest, appIds, row.keywordId),
       };
     });
 

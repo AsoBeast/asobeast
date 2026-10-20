@@ -12,9 +12,11 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { PRODUCT_NAME } from "@/lib/brand";
-import { appVersionLabel } from "./app-version";
+import { appVersionLabel, releaseNotesUrl } from "./app-version";
 import { AppSwitcher } from "./AppSwitcher";
 import { SidebarNav } from "./SidebarNav";
+
+const DOCUMENTATION_URL = "https://docs.asobeast.com";
 
 export function AppSidebar() {
   const version = appVersionLabel();
@@ -54,7 +56,7 @@ export function AppSidebar() {
             <SidebarMenuItem>
               <SidebarMenuButton asChild tooltip="Documentation">
                 <a
-                  href="https://github.com/AsoBeast/asobeast"
+                  href={DOCUMENTATION_URL}
                   rel="noreferrer noopener"
                   target="_blank"
                 >
@@ -66,7 +68,20 @@ export function AppSidebar() {
           </SidebarMenu>
           <div className="px-2 pb-1 text-caption text-muted-foreground group-data-[collapsible=icon]:hidden">
             <p>Open source ASO toolkit for the App Store and Google Play.</p>
-            {version ? <p translate="no">{version}</p> : null}
+            {version ? (
+              <p>
+                <a
+                  href={releaseNotesUrl(version)}
+                  rel="noreferrer noopener"
+                  target="_blank"
+                  title="Release notes"
+                  className="rounded-sm underline decoration-muted-foreground decoration-dotted underline-offset-4 hover:text-foreground hover:decoration-primary focus-visible:ring-3 focus-visible:ring-sidebar-ring/50 focus-visible:outline-none"
+                >
+                  <span translate="no">{version}</span>
+                  <span className="sr-only"> release notes</span>
+                </a>
+              </p>
+            ) : null}
           </div>
         </SidebarFooter>
       </nav>

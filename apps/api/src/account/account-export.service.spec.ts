@@ -3,6 +3,7 @@ import { Writable } from 'node:stream';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import type { PrismaService } from '../prisma/prisma.service';
 import { AccountExportService } from './account-export.service';
+import { ExportSinkClosedError } from './export-sink';
 import { EXPORT_PAGE_SIZE } from './export-tables';
 
 const WORKSPACE = 'ws_export';
@@ -47,6 +48,23 @@ function exporterFor(rows: Record<string, unknown[]>) {
   };
 }
 
+function swallowDrain(sink: Writable): void {
+  const emit = sink.emit.bind(sink);
+  sink.emit = ((event: string | symbol, ...args: unknown[]) =>
+    event === 'drain' ? false : emit(event, ...args)) as Writable['emit'];
+}
+
+function within<T>(work: Promise<T>, milliseconds: number): Promise<T> {
+  let timer: NodeJS.Timeout | undefined;
+  const expired = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(
+      () => reject(new Error(`did not finish within ${milliseconds} ms`)),
+      milliseconds,
+    );
+  });
+  return Promise.race([work, expired]).finally(() => clearTimeout(timer));
+}
+
 describe('AccountExportService', () => {
   it('opens with a manifest that counts every table', async () => {
     const { service, workspace } = exporterFor({
@@ -83,6 +101,44 @@ describe('AccountExportService', () => {
     expect(written.join('')).not.toContain('argon2');
   });
 
+  it('writes no recovery, session or checkout state of any row', async () => {
+    const { service, workspace } = exporterFor({
+      user: [
+        {
+          id: 'u1',
+          email: 'owner@example.com',
+          resetHash: 'reset-hash-sentinel',
+          resetExpiresAt: 'reset-expiry-sentinel',
+          sessionVersion: 41,
+        },
+      ],
+      workspace: [
+        {
+          id: WORKSPACE,
+          plan: 'indie',
+          checkoutClaimToken: 'claim-sentinel',
+          checkoutSessionId: 'cs_sentinel',
+        },
+      ],
+    });
+    const { lines, sink } = collector();
+
+    await workspace.run(WORKSPACE, () => service.stream(sink));
+
+    const written = (await lines()).join('\n');
+    expect(written).toContain('owner@example.com');
+    expect(written).toContain('"plan":"indie"');
+    for (const sentinel of [
+      'reset-hash-sentinel',
+      'reset-expiry-sentinel',
+      'claim-sentinel',
+      'cs_sentinel',
+      'sessionVersion',
+    ]) {
+      expect(written).not.toContain(sentinel);
+    }
+  });
+
   it('pages past the first batch rather than stopping at it', async () => {
     const rows = Array.from({ length: EXPORT_PAGE_SIZE + 7 }, (_, index) => ({
       id: `kw${index}`,
@@ -115,6 +171,52 @@ describe('AccountExportService', () => {
     expect(written.filter((line) => line.table === 'review')).toHaveLength(
       rows.length,
     );
+  });
+
+  it('finishes when the sink never emits drain', async () => {
+    const rows = Array.from({ length: 300 }, (_, index) => ({
+      id: `r${index}`,
+      blob: 'x'.repeat(400),
+    }));
+    const { service, workspace } = exporterFor({ review: rows });
+    const { lines, sink } = collector(1);
+    swallowDrain(sink);
+
+    await within(
+      workspace.run(WORKSPACE, () => service.stream(sink)),
+      2_000,
+    );
+
+    const written = (await lines())
+      .slice(1)
+      .map((line) => JSON.parse(line) as { table: string });
+    expect(written.filter((line) => line.table === 'review')).toHaveLength(
+      rows.length,
+    );
+  });
+
+  it('ends with a closed sink error when the client goes away mid stream', async () => {
+    const rows = Array.from({ length: EXPORT_PAGE_SIZE * 2 }, (_, index) => ({
+      id: `r${index}`,
+      blob: 'x'.repeat(200),
+    }));
+    const { service, workspace } = exporterFor({ review: rows });
+    let writes = 0;
+    const sink = new Writable({
+      write(_chunk, _encoding, callback) {
+        writes += 1;
+        if (writes === 2) this.destroy();
+        else setImmediate(callback);
+      },
+    });
+
+    await expect(
+      within(
+        workspace.run(WORKSPACE, () => service.stream(sink)),
+        2_000,
+      ),
+    ).rejects.toBeInstanceOf(ExportSinkClosedError);
+    expect(writes).toBe(2);
   });
 
   it('refuses to export with no workspace in scope', async () => {

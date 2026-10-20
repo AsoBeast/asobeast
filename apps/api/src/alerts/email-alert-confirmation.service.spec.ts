@@ -258,4 +258,103 @@ describe('EmailAlertConfirmation', () => {
       expect(updateMany).not.toHaveBeenCalled();
     });
   });
+
+  describe('resend', () => {
+    const PREVIOUS = new Date('2026-10-11T08:00:00.000Z');
+    const ALERT = {
+      id: 'ea_1',
+      email: 'ops@example.com',
+      confirmationSentAt: PREVIOUS,
+    };
+
+    const quietly = (level: 'warn' | 'error') =>
+      jest.spyOn(Logger.prototype, level).mockImplementation(() => undefined);
+
+    it('reserves the send time before it claims the allowance, then mails the link', async () => {
+      const { service, updateMany, claim, send } = build({
+        enabled: true,
+        origin: ORIGIN,
+      });
+      const refund = jest.fn().mockResolvedValue(true);
+      claim.mockResolvedValue(refund);
+
+      expect(await service.resend(ALERT, 'owner@example.com')).toBe('sent');
+      expect(claim).toHaveBeenCalledWith('ws_1', 'ops@example.com');
+      expect(updateMany.mock.invocationCallOrder[0]).toBeLessThan(
+        claim.mock.invocationCallOrder[0],
+      );
+      expect(send).toHaveBeenCalledTimes(1);
+      expect(refund).not.toHaveBeenCalled();
+    });
+
+    it('claims no allowance when another resend reserved the send time first', async () => {
+      const warn = quietly('warn');
+      const { service, updateMany, claim, send } = build({
+        enabled: true,
+        origin: ORIGIN,
+      });
+      updateMany.mockResolvedValue({ count: 0 });
+
+      expect(await service.resend(ALERT, 'owner@example.com')).toBe('lost');
+      expect(claim).not.toHaveBeenCalled();
+      expect(send).not.toHaveBeenCalled();
+      warn.mockRestore();
+    });
+
+    it('claims no allowance when the send time cannot be stored', async () => {
+      const error = quietly('error');
+      const { service, updateMany, claim } = build({
+        enabled: true,
+        origin: ORIGIN,
+      });
+      updateMany.mockRejectedValue(new Error('connection reset'));
+
+      expect(await service.resend(ALERT, 'owner@example.com')).toBe('failed');
+      expect(claim).not.toHaveBeenCalled();
+      error.mockRestore();
+    });
+
+    it('restores the earlier link and lets the refusal through when the allowance is spent', async () => {
+      const { service, updateMany, claim, send } = build({
+        enabled: true,
+        origin: ORIGIN,
+      });
+      claim.mockRejectedValue(new Error('too many'));
+
+      await expect(service.resend(ALERT, 'owner@example.com')).rejects.toThrow(
+        'too many',
+      );
+      const [reserved] = updateMany.mock.calls[0] as [
+        { data: { confirmationSentAt: Date } },
+      ];
+      expect(updateMany).toHaveBeenLastCalledWith({
+        where: {
+          id: 'ea_1',
+          confirmationSentAt: reserved.data.confirmationSentAt,
+        },
+        data: { confirmationSentAt: PREVIOUS },
+      });
+      expect(send).not.toHaveBeenCalled();
+    });
+
+    it('restores the earlier link and gives the allowance back when the mail is not sent', async () => {
+      const error = quietly('error');
+      const { service, updateMany, claim, send } = build({
+        enabled: true,
+        origin: ORIGIN,
+      });
+      const refund = jest.fn().mockResolvedValue(true);
+      claim.mockResolvedValue(refund);
+      send.mockRejectedValue(new Error('smtp down'));
+
+      expect(await service.resend(ALERT, 'owner@example.com')).toBe('failed');
+      expect(updateMany).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          data: { confirmationSentAt: PREVIOUS },
+        }),
+      );
+      expect(refund).toHaveBeenCalledTimes(1);
+      error.mockRestore();
+    });
+  });
 });

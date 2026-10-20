@@ -4,6 +4,7 @@ import type { User, Workspace } from '@prisma/client';
 export interface SessionClaims {
   sub: string;
   sv: number;
+  jti: string;
 }
 
 export type AccountUser = User & { workspace: Workspace };
@@ -19,4 +20,5 @@ export type AuthenticatedRequest = {
   user?: AccountUser;
   credential?: AuthCredential;
   tokenScope?: ApiTokenScope;
+  sessionId?: string;
 };

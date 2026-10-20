@@ -13,6 +13,7 @@ import { versusOf, type Versus } from "@/lib/table/facets";
 import { nullsLast } from "@/lib/table/sorting";
 import { cn } from "@/lib/utils";
 import type { DataTableFeatures } from "@/components/data-table/table-features";
+import { isChecked } from "./comparison-checks";
 import {
   comparisonScore,
   UNNAMED_COMPETITOR,
@@ -26,6 +27,11 @@ interface MatrixCompetitor {
 }
 
 export const HIDDEN_COMPARISON_COLUMNS = { versus: false };
+
+export interface MatrixScope {
+  appId: string;
+  multiMarket: boolean;
+}
 
 const POSITION_SORT = {
   sortFn: "basic",
@@ -59,15 +65,28 @@ export function bestPosition(
 export function PositionCell({
   value,
   best,
+  checked = true,
 }: {
   value: number | null;
   best: boolean;
+  checked?: boolean;
 }) {
   const graded = grade("position", value);
   const pill = cn(
     "inline-flex min-w-10 justify-center rounded-md px-1.5 py-0.5",
     best && "font-semibold underline decoration-2 underline-offset-4",
   );
+  if (!checked) {
+    return (
+      <span
+        title="Not checked yet"
+        className={cn(pill, "text-muted-foreground")}
+      >
+        <span aria-hidden>—</span>
+        <span className="sr-only">Not checked yet</span>
+      </span>
+    );
+  }
   if (graded === null) {
     return (
       <span
@@ -117,10 +136,12 @@ const SCORE_ABBR: Record<ComparisonScore, string> = {
 function KeywordCell({
   row,
   scores,
+  market,
   onOpenBreakdown,
 }: {
   row: KeywordComparisonRow;
   scores: readonly ComparisonScore[];
+  market: string | null;
   onOpenBreakdown: (keywordId: string) => void;
 }) {
   return (
@@ -142,8 +163,9 @@ function KeywordCell({
           </Badge>
         ) : null}
       </span>
-      {scores.length > 0 ? (
-        <span className="flex gap-2 text-xs text-muted-foreground">
+      {market !== null || scores.length > 0 ? (
+        <span className="flex items-center gap-2 text-xs text-muted-foreground">
+          {market === null ? null : <MarketCell country={market} />}
           {scores.map((score) => (
             <span key={score}>
               <abbr aria-hidden title={SCORE_LABEL[score]}>
@@ -168,9 +190,25 @@ function MarketCell({ country }: { country: string }) {
   );
 }
 
+function CompetitorHeading({ competitor }: { competitor: MatrixCompetitor }) {
+  return (
+    <span className="flex flex-col items-center gap-1 md:w-24">
+      <span aria-hidden>
+        <AppIcon src={competitor.iconUrl} name={competitor.name} size={20} />
+      </span>
+      <span className="sr-only md:not-sr-only">
+        <span className="line-clamp-2 text-center break-words whitespace-normal">
+          {competitor.name ?? UNNAMED_COMPETITOR}
+        </span>
+      </span>
+    </span>
+  );
+}
+
 export function comparisonColumns(
   competitors: readonly MatrixCompetitor[],
   onOpenBreakdown: (keywordId: string) => void,
+  scope: MatrixScope,
 ) {
   const competitorIds = competitors.map((competitor) => competitor.id);
   const isBest = (row: KeywordComparisonRow, value: number | null) =>
@@ -181,7 +219,7 @@ export function comparisonColumns(
       id: "market",
       sortFn: "text",
       sortDescFirst: false,
-      enableHiding: false,
+      meta: { label: "Market" },
       header: ({ column }) => <SortableHeader column={column} label="Market" />,
       cell: ({ row }) => <MarketCell country={row.original.country} />,
       filterFn: (row, id, country: string) =>
@@ -199,6 +237,11 @@ export function comparisonColumns(
         <KeywordCell
           row={row.original}
           onOpenBreakdown={onOpenBreakdown}
+          market={
+            scope.multiMarket && !table.getColumn("market")?.getIsVisible()
+              ? row.original.country
+              : null
+          }
           scores={SCORES.filter(
             (score) => !table.getColumn(score)?.getIsVisible(),
           )}
@@ -232,6 +275,7 @@ export function comparisonColumns(
         <PositionCell
           value={row.original.you}
           best={isBest(row.original, row.original.you)}
+          checked={isChecked(row.original, scope.appId)}
         />
       ),
     }),
@@ -246,26 +290,17 @@ export function comparisonColumns(
             <SortableHeader
               column={column}
               title={competitor.name ?? UNNAMED_COMPETITOR}
-              label={
-                <span className="inline-flex items-center gap-1.5">
-                  <span aria-hidden>
-                    <AppIcon
-                      src={competitor.iconUrl}
-                      name={competitor.name}
-                      size={20}
-                    />
-                  </span>
-                  <span className="sr-only max-w-32 truncate md:not-sr-only">
-                    {competitor.name ?? UNNAMED_COMPETITOR}
-                  </span>
-                </span>
-              }
+              label={<CompetitorHeading competitor={competitor} />}
             />
           ),
           cell: ({ row }) => {
             const value = row.original.positions[competitor.id] ?? null;
             return (
-              <PositionCell value={value} best={isBest(row.original, value)} />
+              <PositionCell
+                value={value}
+                best={isBest(row.original, value)}
+                checked={isChecked(row.original, competitor.id)}
+              />
             );
           },
         },

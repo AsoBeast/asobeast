@@ -53,6 +53,7 @@ const buildPrisma = () => ({
   storeReportInstance: {
     deleteMany: jest.fn().mockResolvedValue({ count: 16 }),
   },
+  session: { deleteMany: jest.fn().mockResolvedValue({ count: 16 }) },
 });
 
 const crossTenant = new CrossTenantAccess(new WorkspaceContext());
@@ -297,6 +298,7 @@ describe('RetentionService', () => {
     prisma.screenshotText.deleteMany.mockImplementation(boom);
     prisma.chartCapture.deleteMany.mockImplementation(boom);
     prisma.storeReportInstance.deleteMany.mockImplementation(boom);
+    prisma.session.deleteMany.mockImplementation(boom);
     const service = new RetentionService(
       buildConfig({
         RETENTION_CHANGE_EVENTS_DAYS: 30,
@@ -397,14 +399,20 @@ describe('RetentionService action pruning', () => {
 
     const deleted = await service.prune();
 
-    const { suggestProbe, aiCallReservation, screenshotText, ...configurable } =
-      deleted;
+    const {
+      suggestProbe,
+      aiCallReservation,
+      screenshotText,
+      session,
+      ...configurable
+    } = deleted;
     expect(Object.values(configurable).every((count) => count === 0)).toBe(
       true,
     );
     expect(suggestProbe).toBeGreaterThanOrEqual(0);
     expect(aiCallReservation).toBeGreaterThanOrEqual(0);
     expect(screenshotText).toBeGreaterThanOrEqual(0);
+    expect(session).toBeGreaterThanOrEqual(0);
     for (const table of [
       prisma.keywordRanking,
       prisma.serpEntry,
@@ -562,5 +570,39 @@ describe('RetentionService top charts', () => {
 
     expect(prisma.chartCapture.deleteMany).not.toHaveBeenCalled();
     expect(deleted.chartCapture).toBe(0);
+  });
+});
+
+describe('RetentionService session pruning', () => {
+  it('prunes every session that has expired and none that is still live', async () => {
+    const prisma = buildPrisma();
+    const service = new RetentionService(
+      buildConfig({}),
+      prisma as unknown as PrismaService,
+      crossTenant,
+    );
+
+    const before = Date.now();
+    const deleted = await service.prune();
+
+    expect(deleted.session).toBe(16);
+    const [{ where }] = prisma.session.deleteMany.mock.calls[0] as [
+      { where: { expiresAt: { lt: Date } } },
+    ];
+    expect(where.expiresAt.lt.getTime()).toBeGreaterThanOrEqual(before);
+    expect(where.expiresAt.lt.getTime()).toBeLessThanOrEqual(Date.now());
+  });
+
+  it('prunes sessions even when every configurable window retains forever', async () => {
+    const prisma = buildPrisma();
+    const service = new RetentionService(
+      buildConfig({ RETENTION_RANKINGS_DAYS: 0 }),
+      prisma as unknown as PrismaService,
+      crossTenant,
+    );
+
+    await service.prune();
+
+    expect(prisma.session.deleteMany).toHaveBeenCalledTimes(1);
   });
 });

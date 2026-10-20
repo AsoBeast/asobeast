@@ -5,6 +5,7 @@ import type {
 } from "@asobeast/shared";
 import { csvFilename, downloadCsv, toCsv } from "@/lib/csv";
 import { versusOf } from "@/lib/table/facets";
+import { isChecked } from "./comparison-checks";
 import { comparisonScoreValue, UNNAMED_COMPETITOR } from "./comparison-scores";
 
 const LEADING_HEADERS = ["keyword", "popularity", "difficulty", "you"];
@@ -25,9 +26,18 @@ function competitorHeaders(
   });
 }
 
+function positionCell(
+  row: KeywordComparisonRow,
+  appId: string,
+  position: number | null | undefined,
+): string {
+  return isChecked(row, appId) ? formatRankPosition(position) : "";
+}
+
 export function comparisonCsv(
   competitors: readonly KeywordComparisonCompetitor[],
   rows: readonly KeywordComparisonRow[],
+  appId: string,
 ): string {
   return toCsv(
     [
@@ -41,8 +51,10 @@ export function comparisonCsv(
         row.text,
         comparisonScoreValue(row, "traffic"),
         comparisonScoreValue(row, "difficulty"),
-        formatRankPosition(row.you),
-        ...positions.map((position) => formatRankPosition(position)),
+        positionCell(row, appId, row.you),
+        ...competitors.map(({ id }, index) =>
+          positionCell(row, id, positions[index]),
+        ),
         versusOf(row.you, positions),
         row.gap ? "true" : "false",
         row.country,
@@ -63,6 +75,6 @@ export function exportComparison(
 ): void {
   downloadCsv(
     comparisonFilename(appId, onlyGaps),
-    comparisonCsv(competitors, rows),
+    comparisonCsv(competitors, rows, appId),
   );
 }

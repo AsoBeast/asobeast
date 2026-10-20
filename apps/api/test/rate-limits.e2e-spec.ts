@@ -23,7 +23,7 @@ import { applyTrustedProxy } from '../src/config/trusted-proxy';
 import { sha256 } from '../src/auth/password-hash';
 import { CREDENTIAL_FAILURES_PER_MINUTE } from '../src/auth/rate-limit/credential-rate.limiter';
 import { RequestRateLimiter } from '../src/auth/rate-limit/request-rate.limiter';
-import { restoreAuthEnv } from './helpers/auth-env';
+import { restoreAuthEnv, TEST_AUTH_SECRET } from './helpers/auth-env';
 import {
   awaitBurnHeadroom,
   SHORT_BURN_HEADROOM_SECONDS,
@@ -553,6 +553,51 @@ describe('Rate limits (billing mode)', () => {
     expect(
       await spendCredentialBudget(app, CREDENTIAL_FAILURES_PER_MINUTE),
     ).toBe(0);
+  });
+
+  it('never counts a correctly signed session cookie that carries no session id', async () => {
+    await register('legacy@example.com');
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { email: 'legacy@example.com' },
+      select: { id: true, sessionVersion: true },
+    });
+    const legacy = await new JwtService({
+      secret: TEST_AUTH_SECRET,
+    }).signAsync(
+      { sub: user.id, sv: user.sessionVersion },
+      { expiresIn: '7d' },
+    );
+    const present = () =>
+      request(app.getHttpServer())
+        .get('/apps')
+        .set('Cookie', `asobeast_session=${legacy}`);
+
+    for (let sent = 0; sent < CREDENTIAL_FAILURES_PER_MINUTE; sent += 1) {
+      await present().expect(401);
+    }
+
+    await present().expect(401);
+    expect(
+      await spendCredentialBudget(app, CREDENTIAL_FAILURES_PER_MINUTE),
+    ).toBe(0);
+  });
+
+  it('counts a signed session cookie whose session was ended by logout', async () => {
+    const cookie = await register('loggedout@example.com');
+    await request(app.getHttpServer())
+      .post('/auth/logout')
+      .set('Cookie', cookie)
+      .expect(204);
+    const present = () =>
+      request(app.getHttpServer()).get('/apps').set('Cookie', cookie);
+
+    await awaitBurnHeadroom(SHORT_BURN_HEADROOM_SECONDS);
+    await present().expect(401);
+    expect(
+      await spendCredentialBudget(app, CREDENTIAL_FAILURES_PER_MINUTE),
+    ).toBe(1);
+
+    await present().expect(429);
   });
 
   it('counts a signed session cookie whose session was revoked', async () => {

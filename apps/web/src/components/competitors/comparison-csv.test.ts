@@ -25,10 +25,12 @@ function row(over: Partial<KeywordComparisonRow> = {}): KeywordComparisonRow {
   };
 }
 
+const APP_ID = "app-1";
+
 const lines = (
   competitors: readonly KeywordComparisonCompetitor[],
   rows: readonly KeywordComparisonRow[],
-) => comparisonCsv(competitors, rows).split("\r\n");
+) => comparisonCsv(competitors, rows, APP_ID).split("\r\n");
 
 describe("comparisonCsv", () => {
   it("heads the file with the fixed columns around one column per competitor", () => {
@@ -98,6 +100,30 @@ describe("comparisonCsv", () => {
     expect(lines(named(["Focus (2)", "Focus", "Focus"]), [])[0]).toContain(
       ",you,Focus (2),Focus,Focus (3),result,",
     );
+  });
+
+  it("leaves a position that was never checked empty", () => {
+    expect(
+      lines(
+        [RIVAL],
+        [
+          row({
+            you: null,
+            positions: { "comp-1": null },
+            unchecked: [APP_ID, "comp-1"],
+          }),
+        ],
+      )[1],
+    ).toBe("focus timer,55,40,,,,false,us");
+  });
+
+  it("still writes a position checked and not found as the depth", () => {
+    expect(
+      lines(
+        [RIVAL],
+        [row({ you: null, positions: { "comp-1": null }, unchecked: [] })],
+      )[1],
+    ).toBe(`focus timer,55,40,>${RANK_DEPTH},>${RANK_DEPTH},,false,us`);
   });
 });
 

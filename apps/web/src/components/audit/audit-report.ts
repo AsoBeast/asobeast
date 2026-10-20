@@ -17,7 +17,11 @@ import {
   STATUS_LABEL,
 } from "./audit-copy";
 import { pluralize, storeLabel } from "@/lib/format";
-import { comparison, COMPARISON_LABEL } from "./benchmark-comparison";
+import {
+  comparison,
+  COMPARISON_LABEL,
+  formatBenchmarkValue,
+} from "./benchmark-comparison";
 
 const DASH = "—";
 
@@ -121,9 +125,15 @@ const benchmarkLines = (audit: AppAuditResult): string[] =>
         "| --- | --- | --- | --- | --- |",
         ...audit.benchmarks.rows.map(
           (row) =>
-            `| ${escapeMarkdown(row.label)} | ${row.you ?? DASH} | ${
-              row.median ?? DASH
-            } | ${row.best ?? DASH} | ${COMPARISON_LABEL[comparison(row)]} |`,
+            `| ${escapeMarkdown(row.label)} | ${formatBenchmarkValue(
+              row.metric,
+              row.you,
+            )} | ${formatBenchmarkValue(
+              row.metric,
+              row.median,
+            )} | ${formatBenchmarkValue(row.metric, row.best)} | ${
+              COMPARISON_LABEL[comparison(row)]
+            } |`,
         ),
         "",
       ]

@@ -29,6 +29,7 @@ import type { AccountUser } from './auth.types';
 import { EmailVerificationService } from './email-verification.service';
 import { PasswordResetService } from './password-reset.service';
 import { AllowUnentitled } from './decorators/allow-unentitled.decorator';
+import { CurrentSessionId } from './decorators/current-session-id.decorator';
 import { CurrentTokenScope } from './decorators/current-token-scope.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { Public } from './decorators/public.decorator';
@@ -85,7 +86,11 @@ export class AuthController {
   @AllowUnentitled()
   @HttpCode(204)
   @ApiOperation({ summary: 'Log out' })
-  logout(@Res({ passthrough: true }) res: Response): void {
+  async logout(
+    @CurrentSessionId() sessionId: string | undefined,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<void> {
+    await this.auth.endSession(sessionId);
     res.clearCookie(SESSION_COOKIE, this.auth.clearCookieOptions());
   }
 
@@ -124,7 +129,7 @@ export class AuthController {
     const user = await this.verification.claim(dto.token, signedIn);
     res.cookie(
       SESSION_COOKIE,
-      await this.auth.sign(user),
+      await this.auth.openSession(user),
       this.auth.cookieOptions(),
     );
     return this.auth.toAuthUser(user);

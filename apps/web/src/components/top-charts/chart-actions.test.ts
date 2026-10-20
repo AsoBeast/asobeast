@@ -10,6 +10,7 @@ import {
   candidateApps,
   captureCostText,
   captureErrorText,
+  captureFocusKey,
   competitorFocusKey,
   emptyChartBody,
   followErrorText,
@@ -226,5 +227,19 @@ describe("no apps wording", () => {
 describe("competitorFocusKey", () => {
   it("names the claim after the chart app", () => {
     expect(competitorFocusKey("6400000001")).toBe("competitor:6400000001");
+  });
+});
+
+describe("captureFocusKey", () => {
+  it("names the claim after the chart kind", () => {
+    expect(
+      captureFocusKey({
+        store: "APP_STORE",
+        country: "us",
+        collection: "paid",
+        genre: "6001",
+        device: "iphone",
+      }),
+    ).toBe("chart-capture:paid");
   });
 });

@@ -11,6 +11,7 @@ export interface ResolvedCredential {
   user: AccountUser;
   credential: AuthCredential;
   tokenScope?: ApiTokenScope;
+  sessionId?: string;
 }
 
 @Injectable()
@@ -24,7 +25,9 @@ export class CredentialResolver {
     const cookies = req.cookies as Record<string, string> | undefined;
     const claims = await this.auth.verifySession(cookies?.[SESSION_COOKIE]);
     const session = claims && (await this.auth.userOfSession(claims));
-    if (session) return { user: session, credential: 'session' };
+    if (session) {
+      return { user: session, credential: 'session', sessionId: claims.jti };
+    }
 
     const token = await this.auth.resolveToken(req.headers.authorization);
     if (token) {

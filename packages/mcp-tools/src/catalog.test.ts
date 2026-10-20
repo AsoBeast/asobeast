@@ -183,6 +183,22 @@ describe("the keyword_suggestions strategies", () => {
 
     expect(description.split(". ")[0]).toContain("competitorSearch");
   });
+
+  it("does not tell an agent that competitors must share the phrase", () => {
+    const description = toolByName("keyword_suggestions")?.description ?? "";
+
+    expect(description).not.toMatch(/competitors share|share a phrase/i);
+    expect(description).toContain("only one competitor uses");
+  });
+
+  it("says a competitor with no listing in the market is read at home", () => {
+    const description = toolByName("keyword_suggestions")?.description ?? "";
+
+    expect(description).toContain("home listing");
+    expect(description).not.toContain(
+      "looks nothing up when no competitor listing in that market holds",
+    );
+  });
 });
 
 describe("the keyword_breakdown tool", () => {
@@ -227,6 +243,15 @@ describe("the keyword_comparison market", () => {
     const description = toolByName("keyword_comparison")?.description ?? "";
 
     expect(description.split(". ")[0]).toContain("country");
+  });
+});
+
+describe("the keyword_comparison unchecked ids", () => {
+  it("separates an app never checked from one checked and not found", () => {
+    const description = toolByName("keyword_comparison")?.description ?? "";
+
+    expect(description).toContain("unchecked");
+    expect(description).toContain("never been checked");
   });
 });
 

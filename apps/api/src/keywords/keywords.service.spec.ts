@@ -490,6 +490,23 @@ describe('KeywordsService.compare', () => {
       'de',
     );
   });
+  it('tells an app checked and not found from one that was never checked', async () => {
+    const prisma = buildPrisma();
+    prisma.keywordRanking.findMany.mockResolvedValue([
+      { appId: 'app1', keywordId: 'kwGap', position: null },
+      { appId: 'rival', keywordId: 'kwLead', position: null },
+    ]);
+    const service = buildService(prisma);
+
+    const result = await service.compare('app1', false);
+
+    const gapRow = result.rows.find((row) => row.keywordId === 'kwGap');
+    const leadRow = result.rows.find((row) => row.keywordId === 'kwLead');
+    expect(gapRow?.positions.rival).toBeNull();
+    expect(gapRow?.unchecked).toEqual(['rival']);
+    expect(leadRow?.you).toBeNull();
+    expect(leadRow?.unchecked).toEqual(['app1']);
+  });
 
   it("asks for the keyword's country", async () => {
     const prisma = buildPrisma();
