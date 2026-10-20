@@ -15,7 +15,7 @@ const SECURITY_HEADERS = [
   { key: "X-Frame-Options", value: "DENY" },
 ];
 
-const UNVERSIONED_ASSETS_SOURCE = "/((?!_next/static|_next/image).*)";
+const RSC_VARIANT_SOURCE = "/((?!_next/static|_next/image).*)";
 
 const nextConfig: NextConfig = {
   output: "standalone",
@@ -29,7 +29,7 @@ const nextConfig: NextConfig = {
   headers: async () => [
     { source: "/:path*", headers: SECURITY_HEADERS },
     {
-      source: UNVERSIONED_ASSETS_SOURCE,
+      source: RSC_VARIANT_SOURCE,
       headers: [{ key: "Vary", value: RSC_VARY_HEADER }],
     },
   ],
