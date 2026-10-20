@@ -101,7 +101,7 @@ export class WorkspaceTeamController {
     );
     res.cookie(
       SESSION_COOKIE,
-      await this.auth.sign(user),
+      await this.auth.openSession(user),
       this.auth.cookieOptions(),
     );
     return this.auth.toAuthUser(user);

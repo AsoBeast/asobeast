@@ -8,10 +8,15 @@ import type { ComponentProps } from "react";
 import type { ChartKey } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import { captureChart } from "@/lib/api";
+import { armFocusHandoff } from "@/lib/focus-handoff";
 import { seedChartCapture } from "@/lib/queries";
 import { chartParsers } from "@/lib/search-params";
 import { useSingleFlight } from "@/lib/single-flight";
-import { captureErrorText, noAppsToast } from "./chart-actions";
+import {
+  captureErrorText,
+  captureFocusKey,
+  noAppsToast,
+} from "./chart-actions";
 import { listsNoApps } from "./chart-column-rows";
 
 export function CaptureTodayButton({
@@ -46,8 +51,11 @@ export function CaptureTodayButton({
     <Button
       variant={variant}
       size={size}
-      disabled={mutation.isPending}
-      onClick={() => captureOnce()}
+      aria-disabled={mutation.isPending || undefined}
+      onClick={() => {
+        armFocusHandoff(captureFocusKey(chart));
+        captureOnce();
+      }}
     >
       {mutation.isPending ? (
         <Loader2 className="animate-spin" aria-hidden />

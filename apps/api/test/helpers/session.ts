@@ -21,3 +21,10 @@ export async function ownerAgent(app: INestApplication<App>) {
   await agent.post('/auth/register').send(OWNER).expect(201);
   return agent;
 }
+
+export function sessionCookieOf(response: request.Response): string {
+  const raw = response.headers['set-cookie'] as unknown as string[] | undefined;
+  const cookie = raw?.find((entry) => entry.startsWith('asobeast_session='));
+  if (!cookie) throw new Error('no session cookie set');
+  return cookie.split(';')[0];
+}

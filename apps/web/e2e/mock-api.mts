@@ -131,6 +131,11 @@ import {
   UPDATE_THEME_REVIEWS,
   TWIN_REVIEWS,
   RTL_REVIEWS,
+  CROWDED_COMPARISON,
+  UNCHECKED_COMPARISON,
+  UNCHECKED_COMPARISON_COOKIE,
+  CROWDED_COMPETITORS,
+  CROWDED_COMPETITORS_COOKIE,
 } from "./fixtures.mts";
 import {
   EMPTY_PORTFOLIO_INSIGHTS,
@@ -204,6 +209,7 @@ import type {
   WorkspaceDeletionStatus,
   AppSetupState,
   AppSetupUpdateRequest,
+  KeywordComparison,
 } from "@asobeast/shared";
 import {
   COUNTRY_PATTERN,
@@ -654,6 +660,19 @@ function hasCookie(
 ): boolean {
   const actual = cookieValue(req, name);
   return actual !== undefined && (value === undefined || actual === value);
+}
+
+function comparisonOf(
+  req: IncomingMessage,
+  fallback: KeywordComparison,
+): KeywordComparison {
+  if (hasCookie(req, UNCHECKED_COMPARISON_COOKIE, "1")) {
+    return UNCHECKED_COMPARISON;
+  }
+  if (hasCookie(req, CROWDED_COMPETITORS_COOKIE, "1")) {
+    return CROWDED_COMPARISON;
+  }
+  return fallback;
 }
 
 const STALE_SESSION = "stale";
@@ -3469,15 +3488,17 @@ const routes: Route[] = [
   appRoute(/^\/apps\/([^/]+)\/keywords\/compare$/, (dataset, query, req) => {
     countLoggedRequest("compare", req);
     const market = cookieValue(req, COMPARISON_MARKET_COOKIE);
+    const comparison = comparisonOf(req, dataset.comparison);
     return {
-      ...dataset.comparison,
-      rows: dataset.comparison.rows.filter(
+      ...comparison,
+      rows: comparison.rows.filter(
         (row) =>
           (query.get("onlyGaps") !== "true" || row.gap) &&
           (market === undefined || row.country === market),
       ),
     };
   }),
+
   appRoute(/^\/apps\/([^/]+)\/rankings$/, (dataset) => dataset.rankings),
   appRoute(/^\/apps\/([^/]+)\/serp-movers$/, (dataset) => dataset.serpMovers),
   appRoute(
@@ -3504,7 +3525,13 @@ const routes: Route[] = [
       if (id === ERROR_ID) return json(res, 500, errorEnvelope(500, path));
       const dataset = DATASETS[id];
       if (!dataset) return json(res, 404, errorEnvelope(404, path));
-      json(res, 200, dataset.competitors);
+      json(
+        res,
+        200,
+        hasCookie(req, CROWDED_COMPETITORS_COOKIE, "1")
+          ? CROWDED_COMPETITORS
+          : dataset.competitors,
+      );
     },
   },
   {

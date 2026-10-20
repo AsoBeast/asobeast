@@ -122,3 +122,6 @@ export function noAppsToast(store: Store): string {
 
 export const competitorFocusKey = (storeAppId: string) =>
   `competitor:${storeAppId}`;
+
+export const captureFocusKey = (chart: ChartKey) =>
+  `chart-capture:${chart.collection}`;

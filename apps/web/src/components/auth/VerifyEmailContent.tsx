@@ -14,6 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ApiError, resendVerification, verifyEmail } from "@/lib/api";
+import { useSingleFlight } from "@/lib/single-flight";
 import { SessionNotKeptAlert } from "./SessionNotKeptAlert";
 import { useSessionEntry } from "./use-session-entry";
 
@@ -23,8 +24,13 @@ export function VerifyEmailContent() {
   const { mutation, sessionDropped } = useSessionEntry({
     establish: () => verifyEmail(token),
   });
+  const confirmOnce = useSingleFlight(mutation);
+  const confirmLocked =
+    mutation.isPending || mutation.isSuccess || sessionDropped;
 
   const resend = useMutation({ mutationFn: resendVerification });
+  const resendOnce = useSingleFlight(resend);
+  const resendLocked = resend.isPending || resend.isSuccess;
 
   if (token === "") {
     return (
@@ -69,8 +75,10 @@ export function VerifyEmailContent() {
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         <Button
-          disabled={mutation.isPending || sessionDropped}
-          onClick={() => mutation.mutate()}
+          aria-disabled={confirmLocked || undefined}
+          onClick={() => {
+            if (!confirmLocked) confirmOnce();
+          }}
         >
           {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
           Confirm my email
@@ -83,8 +91,10 @@ export function VerifyEmailContent() {
             <p className="text-body text-destructive">{reason}</p>
             <Button
               variant="outline"
-              disabled={resend.isPending || resend.isSuccess}
-              onClick={() => resend.mutate()}
+              aria-disabled={resendLocked || undefined}
+              onClick={() => {
+                if (!resendLocked) resendOnce();
+              }}
             >
               {resend.isPending ? <Loader2 className="animate-spin" /> : null}
               {resend.isSuccess ? "New link sent" : "Send me a new link"}

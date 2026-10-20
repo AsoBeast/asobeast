@@ -10,7 +10,7 @@ import { CredentialRateLimitError } from '../rate-limit/rate-limit.errors';
 import { AuthGuard } from './auth.guard';
 
 const USER = { workspaceId: 'ws_acme' } as AccountUser;
-const CLAIMS: SessionClaims = { sub: 'user_1', sv: 0 };
+const CLAIMS: SessionClaims = { sub: 'user_1', sv: 0, jti: 'session_1' };
 
 interface FakeRequest {
   ip?: string;

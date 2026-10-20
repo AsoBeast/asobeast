@@ -1511,6 +1511,78 @@ const APP_1_COMPARISON: KeywordComparison = {
   ],
 };
 
+export const CROWDED_COMPETITORS_COOKIE = "e2e_crowded_competitors";
+export const CROWDED_ICON_URL =
+  "https://is1-ssl.mzstatic.com/image/thumb/e2e-rival/512x512bb.png";
+
+export const CROWDED_RIVALS = Array.from({ length: 12 }, (_, index) => ({
+  id: `rival-${index + 1}`,
+  name: `Rival Focus Timer Pro ${index + 1}`,
+}));
+
+export const CROWDED_COMPETITORS: CompetitorItem[] = CROWDED_RIVALS.map(
+  ({ id, name }) => ({
+    id,
+    store: "APP_STORE",
+    name,
+    iconUrl: CROWDED_ICON_URL,
+    latestSnapshot: null,
+  }),
+);
+
+export const CROWDED_COMPARISON: KeywordComparison = {
+  competitors: CROWDED_RIVALS,
+  rows: APP_1_COMPARISON.rows.map((row, rowIndex) => ({
+    ...row,
+    positions: Object.fromEntries(
+      CROWDED_RIVALS.map(({ id }, index) => [
+        id,
+        (index + rowIndex) % 4 === 0 ? null : index * 7 + rowIndex + 1,
+      ]),
+    ),
+  })),
+};
+
+export const UNCHECKED_COMPARISON_COOKIE = "e2e_unchecked_competitor";
+
+export const UNCHECKED_COMPARISON: KeywordComparison = {
+  competitors: [{ id: "comp-1", name: "Rival Focus" }],
+  rows: [
+    {
+      keywordId: "kw-1",
+      text: "focus timer",
+      country: "us",
+      traffic: 5,
+      difficulty: 3,
+      you: 3,
+      positions: { "comp-1": null },
+      gap: false,
+      unchecked: ["comp-1"],
+    },
+    {
+      keywordId: "kw-4",
+      text: "productivity app",
+      country: "us",
+      traffic: 5,
+      difficulty: 3,
+      you: null,
+      positions: { "comp-1": 8 },
+      gap: true,
+      unchecked: ["app-1"],
+    },
+    {
+      keywordId: "kw-5",
+      text: "time blocking",
+      country: "us",
+      traffic: 5,
+      difficulty: 3,
+      you: 45,
+      positions: { "comp-1": null },
+      gap: false,
+    },
+  ],
+};
+
 const e2eScreenshotUrl = (position: number): string =>
   `https://is1-ssl.mzstatic.com/image/thumb/e2e-focus/${position}.jpg/392x696bb.jpg`;
 export const APP_1_PL_CHANGES: ChangeTimeline = {
@@ -5047,12 +5119,21 @@ export const APP_AUDIT: AppAuditResult = {
     competitors: 3,
     rows: [
       {
+        metric: "rating-average",
+        label: "Average rating",
+        better: "higher",
+        you: 4.68104,
+        median: 4.65226,
+        best: 4.76438,
+        bestAppId: "c2",
+      },
+      {
         metric: "rating-count",
         label: "Ratings",
         better: "higher",
-        you: 341,
-        median: 900,
-        best: 5200,
+        you: 30853,
+        median: 328427,
+        best: 350099,
         bestAppId: "c1",
       },
       {

@@ -2,23 +2,42 @@
 
 import * as React from "react";
 
+import { useOverflowing } from "@/lib/scroll-overflow";
 import { cn } from "@/lib/utils";
+
+function assignRef<T>(ref: React.Ref<T> | undefined, node: T | null) {
+  if (typeof ref === "function") ref(node);
+  else if (ref) ref.current = node;
+}
 
 function Table({
   className,
   containerClassName,
   containerRef,
   scrollLabel,
+  scrollFocus = "always",
   ...props
 }: React.ComponentProps<"table"> & {
   containerClassName?: string;
   containerRef?: React.Ref<HTMLDivElement>;
   scrollLabel?: string;
+  scrollFocus?: "always" | "overflow";
 }) {
+  const [container, setContainer] = React.useState<HTMLDivElement | null>(null);
+  const overflowing = useOverflowing(container);
+  const attach = React.useCallback(
+    (node: HTMLDivElement | null) => {
+      if (scrollFocus === "overflow") setContainer(node);
+      assignRef(containerRef, node);
+    },
+    [containerRef, scrollFocus],
+  );
+  const keyboardScrolls = scrollFocus === "always" || overflowing;
+
   return (
     <div
-      ref={containerRef}
-      {...(scrollLabel
+      ref={attach}
+      {...(scrollLabel && keyboardScrolls
         ? { role: "region", "aria-label": scrollLabel, tabIndex: 0 }
         : {})}
       data-slot="table-container"

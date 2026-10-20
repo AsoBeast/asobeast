@@ -248,7 +248,7 @@ describe('AuditController (e2e)', () => {
 
     expect(volume).toMatchObject({ source: 'competitors', score: 10 });
     expect(volume?.detail).toBe(
-      'You have 5000 ratings; the median competitor has 2000.',
+      'You have 5,000 ratings; the median competitor has 2,000.',
     );
     expect(result.benchmarks?.competitors).toBe(2);
     expect(

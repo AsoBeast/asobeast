@@ -10,6 +10,7 @@ import * as argon2 from 'argon2';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { PrismaService } from '../prisma/prisma.service';
 import { revokeApiTokens } from './api-token-revocation';
+import { endSessions } from './session-store';
 import { sha256 } from './password-hash';
 import { RecoveryRateLimiter } from './rate-limit/recovery-rate.limiter';
 import { RecoveryMailer } from './recovery-mailer';
@@ -120,6 +121,7 @@ export class PasswordResetService {
       });
       if (count !== 1) return false;
       await revokeApiTokens(tx, user.id);
+      await endSessions(tx, user.id);
       return true;
     });
     if (!recovered) {

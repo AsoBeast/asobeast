@@ -33,10 +33,15 @@ What the archive contains:
 | Workspace, users, personal API tokens, invites | Password hashes |
 | Apps, groups, snapshots, tracked keywords with their phrases | Personal API token hashes |
 | Rankings, category ranks, followed top charts, reviews, listing changes | Webhook signing secrets |
-| Audits, audit scores, action items | Anything owned by another workspace |
-| Webhooks, email alerts, delivery log, alert events |  |
+| Audits, audit scores, action items | Password recovery and email confirmation state of every member |
+| Webhooks, email alerts, delivery log, alert events | Session versions and billing checkout identifiers |
+|  | Anything owned by another workspace |
+
+Credential material and the state that goes with it stays in the database. A member's pending recovery link, its expiry, the counter that signs their sessions out, and the identifiers of an open billing checkout are never written to the archive, whoever asks for it and whichever credential they use. The archive is the workspace's data; a parser should not expect those columns on the `user` and `workspace` rows.
 
 Export stays available while a workspace is suspended, unentitled or scheduled for deletion. Losing access to capacity never means losing access to your data.
+
+The response is sent in chunks as the rows are read. A complete download ends normally and holds exactly the number of row lines the manifest announces for each table. If the server cannot finish, for example because the client stops reading for a minute, it closes the connection instead of ending the response, so a client reports a broken transfer rather than a short file that looks whole. Check the line count against the manifest when a script depends on a complete archive, and retry a failed download.
 
 <Note>
   A large workspace produces a large stream. Call the API directly with a personal API token rather than through the web origin proxy, which applies a per request timeout.

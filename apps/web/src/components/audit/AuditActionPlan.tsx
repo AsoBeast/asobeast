@@ -86,7 +86,7 @@ export function AuditActionPlan({
         Action plan
       </h2>
       <Tabs defaultValue="quickWins">
-        <TabsList className="max-w-full overflow-x-auto">
+        <TabsList scrollable>
           {BUCKETS.map((bucket) => (
             <TabsTrigger key={bucket} value={bucket}>
               {BUCKET_TAB_LABEL[bucket]}, {audit.recommendations[bucket].length}

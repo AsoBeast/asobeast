@@ -22,6 +22,10 @@ const render = (initial: readonly string[]) =>
   );
 
 describe("CollapsibleCard", () => {
+  it("does not start an opening animation on first render", () => {
+    expect(render([])).not.toContain("animate-collapsible-down");
+  });
+
   it("renders an open section with its content", () => {
     const markup = render([]);
     expect(markup).toContain("Body text");
