@@ -4999,12 +4999,21 @@ export const APP_AUDIT: AppAuditResult = {
     competitors: 3,
     rows: [
       {
+        metric: "rating-average",
+        label: "Average rating",
+        better: "higher",
+        you: 4.68104,
+        median: 4.65226,
+        best: 4.76438,
+        bestAppId: "c2",
+      },
+      {
         metric: "rating-count",
         label: "Ratings",
         better: "higher",
-        you: 341,
-        median: 900,
-        best: 5200,
+        you: 30853,
+        median: 328427,
+        best: 350099,
         bestAppId: "c1",
       },
       {

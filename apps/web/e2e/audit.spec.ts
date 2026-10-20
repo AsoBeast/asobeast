@@ -381,6 +381,43 @@ test("compares the listing with its competitors in words and numbers", async ({
   ).toContainText("Ahead");
 });
 
+test("writes the competitor comparison numbers like the rest of the app", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/audit");
+  const table = page.getByRole("table", {
+    name: "How your listing compares with 3 competitors",
+  });
+
+  const rating = table
+    .getByRole("row", { name: /^Average rating/ })
+    .getByRole("cell");
+  await expect(rating.nth(1)).toContainText("4.7");
+  await expect(rating.nth(1)).not.toContainText("4.68");
+  await expect(rating.nth(2)).toHaveText("4.7");
+  await expect(rating.nth(3)).toHaveText("4.8");
+
+  const count = table.getByRole("row", { name: /^Ratings/ }).getByRole("cell");
+  await expect(count.nth(1)).toContainText("30,853");
+  await expect(count.nth(2)).toHaveText("328,427");
+  await expect(count.nth(3)).toHaveText("350,099");
+});
+
+test("copies the competitor comparison with formatted numbers", async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.goto("/apps/app-1/audit");
+
+  await page.getByRole("button", { name: "Copy report" }).click();
+  await expect(page.getByText("Report copied")).toBeVisible();
+
+  const report = await page.evaluate(() => navigator.clipboard.readText());
+  expect(report).toContain("| Average rating | 4.7 | 4.7 | 4.8 | Ahead |");
+  expect(report).toContain("| Ratings | 30,853 | 328,427 | 350,099 | Behind |");
+});
+
 test("invites adding competitors when there are none", async ({ page }) => {
   await page.goto("/apps/app-2/audit");
 

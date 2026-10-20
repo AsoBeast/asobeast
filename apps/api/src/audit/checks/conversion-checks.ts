@@ -1,4 +1,5 @@
 import { Store } from '@prisma/client';
+import { formatCount } from '../audit-format';
 import { AuditContext, check, DAY_MS, RubricCheck } from '../audit-scoring';
 
 export const RELEASE_NOTES_MIN_CHARS = 40;
@@ -37,16 +38,17 @@ const recencyCheck = (context: AuditContext): RubricCheck | null => {
   const days = Math.floor(
     (context.now.getTime() - context.storeUpdatedAt.getTime()) / DAY_MS,
   );
+  const gap = formatCount(days);
   return check({
     id: 'conversion-update-recency',
     label: 'Update recency',
     source: 'store',
     weight: 2,
     score: recencyScore(days),
-    detail: `The last update was ${days} days ago.`,
+    detail: `The last update was ${gap} days ago.`,
     advice: {
       title: 'Ship an update',
-      fix: `The last update was ${days} days ago. Stores and shoppers read recency as maintenance.`,
+      fix: `The last update was ${gap} days ago. Stores and shoppers read recency as maintenance.`,
     },
   });
 };
@@ -62,7 +64,7 @@ const releaseNotesCheck = (context: AuditContext): RubricCheck => {
     detail:
       notes === null
         ? 'The latest version has no notes.'
-        : `Release notes are ${notes.trim().length} characters long.`,
+        : `Release notes are ${formatCount(notes.trim().length)} characters long.`,
     advice: {
       title: 'Say what changed in your release notes',
       fix:

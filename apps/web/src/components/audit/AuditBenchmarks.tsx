@@ -21,16 +21,16 @@ import {
   benchmarkRatio,
   comparison,
   COMPARISON_LABEL,
+  formatBenchmarkValue,
 } from "./benchmark-comparison";
-
-const cell = (value: number | null): string =>
-  value === null ? "—" : String(value);
 
 function YouCell({ row }: { row: AuditBenchmarkRow }) {
   return (
     <TableCell>
       <span className="flex flex-col gap-1">
-        <span className="numeric font-mono">{cell(row.you)}</span>
+        <span className="numeric font-mono">
+          {formatBenchmarkValue(row.metric, row.you)}
+        </span>
         <Meter value={benchmarkRatio(row) * 100} tone="health" />
         <span className="text-caption text-muted-foreground">
           {COMPARISON_LABEL[comparison(row)]}
@@ -88,10 +88,10 @@ export function AuditBenchmarks({
                 <TableCell>{row.label}</TableCell>
                 <YouCell row={row} />
                 <TableCell className="numeric font-mono">
-                  {cell(row.median)}
+                  {formatBenchmarkValue(row.metric, row.median)}
                 </TableCell>
                 <TableCell className="numeric font-mono">
-                  {cell(row.best)}
+                  {formatBenchmarkValue(row.metric, row.best)}
                 </TableCell>
               </TableRow>
             ))}
