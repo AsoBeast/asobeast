@@ -7,6 +7,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import { BREAKDOWNS } from "./keyword-breakdowns.mts";
 import { planMockImport } from "./keyword-import.mts";
 import { summarizeActions } from "./actions-summary.mts";
+import { echoRequest } from "./echo-request.mts";
 import {
   discardReply,
   draftReply,
@@ -4114,6 +4115,11 @@ const routes: Route[] = [
       json(res, 202, {
         enqueued: { apps: 1, keywords: 5, categories: 1, reviews: 1 },
       }),
+  },
+  {
+    method: "POST",
+    pattern: /^\/__echo\/request$/,
+    handler: (_p, req, res) => echoRequest(req, res),
   },
 ];
 

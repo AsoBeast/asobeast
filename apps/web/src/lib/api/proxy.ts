@@ -10,6 +10,7 @@ const FORWARDED_HEADERS = [
   "cookie",
   "authorization",
   "accept",
+  "content-encoding",
   "x-correlation-id",
   "stripe-signature",
 ] as const;
