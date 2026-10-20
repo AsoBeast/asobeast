@@ -389,6 +389,12 @@ export function invalidateAuth(client: QueryClient): void {
   void client.invalidateQueries({ queryKey: accountPlanKey });
 }
 
+export function refetchFailedQueries(client: QueryClient): Promise<void> {
+  return client.refetchQueries({
+    predicate: (query) => query.state.status === "error",
+  });
+}
+
 export function invalidateWorkspaceTeamMutation(client: QueryClient): void {
   void client.invalidateQueries({ queryKey: workspaceTeamKey });
 }
