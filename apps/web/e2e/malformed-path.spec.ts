@@ -73,7 +73,9 @@ test("a page with a malformed escape renders the not found page", async ({
   const response = await page.goto("/apps/%zz");
 
   expect(response?.status()).toBe(404);
-  await expect(page.getByText("This page could not be found")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Page not found" }),
+  ).toBeVisible();
 });
 
 test("a path with a valid escape still reaches the api", async ({
