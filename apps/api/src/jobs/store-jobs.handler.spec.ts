@@ -17,7 +17,6 @@ import { JOBS, QUEUES } from './jobs.types';
 import { StoreJobsHandler } from './store-jobs.handler';
 
 describe('StoreJobsHandler', () => {
-  const refreshApp = jest.fn();
   const refreshListing = jest.fn();
   const resolveSubtitle = jest.fn();
   const runSpiderProbe = jest.fn();
@@ -40,13 +39,12 @@ describe('StoreJobsHandler', () => {
     runSpiderProbe.mockReset().mockResolvedValue(undefined);
     probeLocalization.mockReset().mockResolvedValue(undefined);
     forWorkspace.mockReset().mockResolvedValue(true);
-    refreshListing.mockReset().mockResolvedValue(null);
-    refreshApp.mockReset().mockImplementation(() => {
+    refreshListing.mockReset().mockImplementation(() => {
       seen = workspace.current;
-      return Promise.resolve();
+      return Promise.resolve(null);
     });
     handler = new StoreJobsHandler(
-      { refreshApp, refreshListing } as unknown as AppsService,
+      { refreshListing } as unknown as AppsService,
       {} as RankingsService,
       {} as ScoringService,
       { checkCategory } as unknown as CategoryRanksService,
@@ -91,7 +89,7 @@ describe('StoreJobsHandler', () => {
   it('runs the job inside the workspace its payload carries', async () => {
     await handler.handle(job({ appId: 'a1', workspaceId: 'ws_a' }));
 
-    expect(refreshApp).toHaveBeenCalledWith('a1');
+    expect(refreshListing).toHaveBeenCalledWith('a1', undefined);
     expect(seen).toBe('ws_a');
   });
 
@@ -101,14 +99,13 @@ describe('StoreJobsHandler', () => {
     );
 
     expect(refreshListing).toHaveBeenCalledWith('a1', 'de');
-    expect(refreshApp).not.toHaveBeenCalled();
   });
 
   it('fails the job instead of defaulting when the workspace is absent', async () => {
     await expect(handler.handle(job({ appId: 'a1' }))).rejects.toThrow(
       JobWorkspaceMissingError,
     );
-    expect(refreshApp).not.toHaveBeenCalled();
+    expect(refreshListing).not.toHaveBeenCalled();
   });
 
   it('leaves no workspace in scope once the job finishes', async () => {
@@ -228,7 +225,7 @@ describe('StoreJobsHandler', () => {
     await handler.handle(job({ appId: 'a1', workspaceId: 'ws_a' }));
 
     expect(forWorkspace).not.toHaveBeenCalled();
-    expect(refreshApp).toHaveBeenCalledWith('a1');
+    expect(refreshListing).toHaveBeenCalledWith('a1', undefined);
   });
 
   it.each([
