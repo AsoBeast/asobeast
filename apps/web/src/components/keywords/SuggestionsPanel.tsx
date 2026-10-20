@@ -82,8 +82,8 @@ export function SuggestionsPanel({
   const trackOnce = useKeyedSingleFlight(track, trackKeyOf);
   const trackingTexts = useMutationState({
     filters: { mutationKey: trackKey, status: "pending" },
-    select: (mutation) => mutation.state.variables as string,
-  });
+    select: (mutation) => mutation.state.variables,
+  }).filter((text): text is string => typeof text === "string");
 
   return (
     <Card>
