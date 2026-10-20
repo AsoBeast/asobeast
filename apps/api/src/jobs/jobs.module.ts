@@ -49,6 +49,7 @@ import { QueueErrorReporter } from './queue-error-reporter';
 import { RetentionService } from './retention.service';
 import { RunStatusService } from './run-status.service';
 import { QueueShutdown } from './queue-shutdown';
+import { HttpDrain } from './http-drain';
 import { ScoringController } from './scoring.controller';
 import { StoreHealthService } from './store-health.service';
 import { StoreJobsHandler } from './store-jobs.handler';
@@ -137,6 +138,7 @@ const bullBoardModules: DynamicModule[] =
     PipelineService,
     QueueErrorReporter,
     QueueShutdown,
+    HttpDrain,
     RetentionService,
     RunStatusService,
     StoreHealthService,
