@@ -52,3 +52,44 @@ for (const [name, path] of ROUTES) {
     expect(overlaps).toEqual([]);
   });
 }
+
+test("an unknown app offers no app actions and reads no run status", async ({
+  page,
+}) => {
+  const runStatusReads: string[] = [];
+  page.on("request", (request) => {
+    const { pathname } = new URL(request.url());
+    if (pathname === "/api/backend/apps/does-not-exist/run-status") {
+      runStatusReads.push(pathname);
+    }
+  });
+
+  await page.goto("/apps/does-not-exist/keywords");
+  await expect(
+    page.getByRole("main").getByText("Page not found"),
+  ).toBeVisible();
+  await page.waitForLoadState("networkidle");
+
+  const header = page.getByRole("banner");
+  await expect(header.getByRole("button", { name: "Run daily" })).toHaveCount(
+    0,
+  );
+  await expect(header.getByRole("button", { name: /^Refresh/ })).toHaveCount(0);
+  await expect(
+    header.getByRole("button", { name: /^Today's run/ }),
+  ).toHaveCount(0);
+  expect(runStatusReads).toEqual([]);
+});
+
+test("a known app shows its actions once its detail is loaded", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1");
+
+  const header = page.getByRole("banner");
+  await expect(header.getByRole("button", { name: /^Refresh/ })).toBeVisible();
+  await expect(header.getByRole("button", { name: "Run daily" })).toBeVisible();
+  await expect(
+    header.getByRole("button", { name: "Today's run complete" }),
+  ).toBeVisible();
+});
