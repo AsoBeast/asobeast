@@ -26,7 +26,9 @@ type Breakdown = Pick<KeywordBreakdown, "store" | "country" | "standing">;
 
 function noteOf(app: KeywordBreakdownApp, breakdown: Breakdown): string[] {
   if (app.isYou) return standingLines(breakdown.standing);
-  const text = app.insight ? insightText(app.insight, breakdown.store) : null;
+  const text = app.insight
+    ? insightText(app.insight, breakdown.store, app.placement)
+    : null;
   return text === null ? [] : [text];
 }
 

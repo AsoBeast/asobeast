@@ -117,6 +117,7 @@ describe("insightText", () => {
       insightText(
         { rule: "placement", theirs: "title", yours: "keywordField" },
         "APP_STORE",
+        "none",
       ),
     ).toBe(
       "May rank above you because it has the keyword in its title, while yours is in your keyword field.",
@@ -125,6 +126,7 @@ describe("insightText", () => {
       insightText(
         { rule: "placement", theirs: "subtitle", yours: "partial" },
         "APP_STORE",
+        "none",
       ),
     ).toBe(
       "May rank above you because it has the keyword in its subtitle, while your listings hold some of the words.",
@@ -133,7 +135,11 @@ describe("insightText", () => {
 
   it("explains an exact spelling", () => {
     expect(
-      insightText({ rule: "spelling", words: ["guidees"] }, "APP_STORE"),
+      insightText(
+        { rule: "spelling", words: ["guidees"] },
+        "APP_STORE",
+        "none",
+      ),
     ).toBe(
       "Spells “guidees” exactly as searched, where your listings match it only with accents ignored. Stores usually match both spellings, but the exact one can still help.",
     );
@@ -141,37 +147,62 @@ describe("insightText", () => {
 
   it("explains far more ratings", () => {
     expect(
-      insightText({ rule: "ratings", theirs: 12000, yours: 300 }, "APP_STORE"),
+      insightText(
+        { rule: "ratings", theirs: 12000, yours: 300 },
+        "APP_STORE",
+        "none",
+      ),
     ).toBe("Its listing here has 12,000 ratings to your 300.");
   });
 
   it("names the listings it could not read", () => {
     expect(
-      insightText({ rule: "unread", localizations: ["es-MX"] }, "APP_STORE"),
+      insightText(
+        { rule: "unread", localizations: ["es-MX"] },
+        "APP_STORE",
+        "none",
+      ),
     ).toBe(
-      "No visible match in what AsoBeast read, and its Spanish (Mexico) listing has not been captured.",
+      "None of the words show in what AsoBeast read, and its Spanish (Mexico) listing has not been captured.",
     );
     expect(
       insightText(
         { rule: "unread", localizations: ["es-MX", "fr"] },
         "APP_STORE",
+        "none",
       ),
     ).toBe(
-      "No visible match in what AsoBeast read, and its Spanish (Mexico) and French listings have not been captured.",
+      "None of the words show in what AsoBeast read, and its Spanish (Mexico) and French listings have not been captured.",
     );
   });
 
+  it("does not say a partial match shows nothing", () => {
+    const text = insightText(
+      { rule: "unread", localizations: ["ar"] },
+      "APP_STORE",
+      "partial",
+    );
+
+    expect(text).toBe(
+      "Only some of the words show in what AsoBeast read, and its Arabic listing has not been captured.",
+    );
+    expect(text).not.toContain("No visible match");
+  });
+
   it("points at the private keyword field", () => {
-    expect(insightText({ rule: "hidden" }, "APP_STORE")).toBe(
-      "No visible match in any listing this market searches, so it may rank through its private keyword field.",
+    expect(insightText({ rule: "hidden" }, "APP_STORE", "none")).toBe(
+      "None of the words show in any listing this market searches, so it may rank through its private keyword field.",
+    );
+    expect(insightText({ rule: "hidden" }, "APP_STORE", "partial")).toBe(
+      "Only some of the words show in any listing this market searches, so it may rank through its private keyword field.",
     );
   });
 
   it("says when nothing visible explains it", () => {
-    expect(insightText({ rule: "similar" }, "APP_STORE")).toBe(
+    expect(insightText({ rule: "similar" }, "APP_STORE", "none")).toBe(
       "Placement and ratings are close to yours; installs and its keyword field are not visible.",
     );
-    expect(insightText({ rule: "similar" }, "GOOGLE_PLAY")).toBe(
+    expect(insightText({ rule: "similar" }, "GOOGLE_PLAY", "none")).toBe(
       "Placement and ratings are close to yours; installs are not visible.",
     );
   });
@@ -181,6 +212,7 @@ describe("insightText", () => {
       insightText(
         { rule: "momentum" } as unknown as KeywordBreakdownInsight,
         "APP_STORE",
+        "none",
       ),
     ).toBeNull();
   });

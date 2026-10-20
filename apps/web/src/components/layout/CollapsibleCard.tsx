@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, type ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 import {
   Card,
@@ -15,6 +15,8 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { useSectionOpen } from "./CollapsedSections";
+
+const OPEN_ANIMATION = "data-[state=open]:animate-collapsible-down";
 
 export function CollapsibleCard({
   section,
@@ -31,9 +33,15 @@ export function CollapsibleCard({
 }) {
   const titleId = useId();
   const [open, setOpen] = useSectionOpen(section);
+  const [toggled, setToggled] = useState(false);
+
+  const change = (next: boolean) => {
+    setToggled(true);
+    setOpen(next);
+  };
 
   return (
-    <Collapsible open={open} onOpenChange={setOpen} asChild>
+    <Collapsible open={open} onOpenChange={change} asChild>
       <Card data-slot="card" role="region" aria-labelledby={titleId}>
         <CardHeader className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
           <div className="flex min-w-0 flex-col gap-1">
@@ -60,7 +68,7 @@ export function CollapsibleCard({
             <div className="flex flex-wrap items-center gap-2">{actions}</div>
           ) : null}
         </CardHeader>
-        <CollapsibleContent>
+        <CollapsibleContent className={toggled ? OPEN_ANIMATION : undefined}>
           <CardContent>{children}</CardContent>
         </CollapsibleContent>
       </Card>
