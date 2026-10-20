@@ -898,6 +898,7 @@ export const healthOptions = queryOptions({
   queryKey: healthKey,
   queryFn: getHealth,
   refetchInterval: 30_000,
+  retry: false,
 });
 
 export const webHealthOptions = queryOptions({

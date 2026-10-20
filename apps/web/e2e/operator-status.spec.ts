@@ -72,6 +72,48 @@ test.describe("api status badge", () => {
     await page.unroute("**/api/backend/health");
     await pollUntilShown(page, "api");
   });
+  test("reads unreachable after the first failed poll without retrying it", async ({
+    page,
+  }) => {
+    const header = page.getByRole("banner");
+    const healthReads: string[] = [];
+    page.on("request", (request) => {
+      if (new URL(request.url()).pathname === "/api/backend/health") {
+        healthReads.push(request.url());
+      }
+    });
+    await page.clock.install();
+    await seedSession(page);
+    await page.goto("/settings");
+    await expect(header.getByText("api", { exact: true })).toBeVisible();
+    await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1_000));
+    await page.route("**/api/backend/health", (route) =>
+      route.fulfill({
+        status: 504,
+        json: {
+          statusCode: 504,
+          error: "Gateway Timeout",
+          message: "The API did not respond in time.",
+          path: "/api/backend/health",
+          timestamp: new Date().toISOString(),
+        },
+      }),
+    );
+    const readsBefore = healthReads.length;
+
+    await expect(async () => {
+      await page.clock.runFor(30_000);
+      expect(healthReads.length - readsBefore).toBeGreaterThan(0);
+    }).toPass({ timeout: 10_000 });
+    await expect(async () => {
+      await page.clock.runFor(20);
+      await expect(
+        header.getByText("unreachable", { exact: true }),
+      ).toBeVisible({ timeout: 500 });
+    }).toPass({ timeout: 10_000 });
+
+    expect(healthReads.length - readsBefore).toBe(1);
+  });
 
   for (const [status, error, message] of GATEWAY_ANSWERS) {
     test(`reads unreachable when the proxy answers ${status} on a later poll`, async ({
