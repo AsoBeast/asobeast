@@ -46,6 +46,25 @@ describe("matchesSearch", () => {
     expect(matchesSearch(["Family 👨‍👩‍👧‍👦 plan"], "👨")).toBe(true);
   });
 
+  it("matches a keycap as an emoji", () => {
+    expect(
+      matchesSearch(["Rated #\u{FE0F}\u{20E3} one"], "#\u{FE0F}\u{20E3}"),
+    ).toBe(true);
+    expect(matchesSearch(["Plain review"], "#\u{FE0F}\u{20E3}")).toBe(false);
+    expect(matchesSearch(["Plain review"], "*\u{FE0F}\u{20E3}")).toBe(false);
+    expect(matchesSearch(["Version 1.2, 10/10"], "1\u{FE0F}\u{20E3}")).toBe(
+      false,
+    );
+    expect(
+      matchesSearch(["Step 1\u{FE0F}\u{20E3} done"], "1\u{FE0F}\u{20E3}"),
+    ).toBe(true);
+  });
+
+  it("matches a skin tone searched on its own", () => {
+    expect(matchesSearch(["Nice \u{1F44D}\u{1F3FD}"], "\u{1F3FD}")).toBe(true);
+    expect(matchesSearch(["Nice \u{1F44D}"], "\u{1F3FD}")).toBe(false);
+  });
+
   it("matches with or without the emoji presentation selector", () => {
     expect(matchesSearch(["I ❤️ it"], "❤")).toBe(true);
     expect(matchesSearch(["I ❤ it"], "❤️")).toBe(true);
@@ -73,8 +92,8 @@ describe("matchesSearch", () => {
   });
 
   it("does not read a zero width joiner between letters as an emoji", () => {
-    expect(matchesSearch(["a b"], "a‍b")).toBe(true);
-    expect(hasSearchTerms("‍")).toBe(false);
+    expect(matchesSearch(["a b"], "a\u{200D}b")).toBe(true);
+    expect(hasSearchTerms("\u{200D}")).toBe(false);
   });
 });
 

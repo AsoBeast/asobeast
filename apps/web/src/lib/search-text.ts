@@ -1,7 +1,7 @@
 import { normalizeText } from "@asobeast/shared";
 
 const EMOJI_RUN =
-  /[\p{Extended_Pictographic}\p{Regional_Indicator}][\p{Extended_Pictographic}\p{Regional_Indicator}\p{Emoji_Modifier}\u{E0020}-\u{E007F}\u{200D}\u{FE0F}]*/gu;
+  /(?:[#*0-9]\u{FE0F}?\u{20E3}|[\p{Extended_Pictographic}\p{Regional_Indicator}\p{Emoji_Modifier}])[\p{Extended_Pictographic}\p{Regional_Indicator}\p{Emoji_Modifier}\u{E0020}-\u{E007F}\u{200D}\u{FE0F}]*/gu;
 
 const withoutVariationSelectors = (value: string): string =>
   value.replaceAll("\u{FE0F}", "");
