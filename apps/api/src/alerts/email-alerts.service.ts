@@ -152,8 +152,7 @@ export class EmailAlertsService {
       throw new ServiceUnavailableException(NO_LINK_MESSAGE);
     }
     assertCooledDown(alert.confirmationSentAt);
-    const refund = await this.confirmation.allowMailTo(alert.email);
-    const outcome = await this.confirmation.issue(alert, requestedBy, refund);
+    const outcome = await this.confirmation.resend(alert, requestedBy);
     if (outcome === 'lost') {
       throw new RequestThrottledError(
         CONFIRMATION_RESEND_COOLDOWN_SECONDS,

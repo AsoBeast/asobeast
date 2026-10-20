@@ -82,6 +82,34 @@ test("never checked and not found read as such", async ({ page }) => {
   );
 });
 
+test("a competitor with only some of the words is not told it shows no match", async ({
+  page,
+}) => {
+  await page.goto(`${PAGE}?keyword=kw-6`);
+  const rival = card(page, /Rival Focus/);
+  const note = rival.getByRole("note", { name: "Why it may rank above you" });
+
+  await expect(rival).toContainText("1 of 2 words");
+  await expect(note).toContainText(
+    "Only some of the words show in any listing this market searches, so it may rank through its private keyword field.",
+  );
+  await expect(note).not.toContainText("No visible match");
+});
+
+test("the unread note of a partial match says only some of the words show", async ({
+  page,
+}) => {
+  await page.goto(`${PAGE}?keyword=kw-7`);
+  const note = card(page, /Rival Focus/).getByRole("note", {
+    name: "Why it may rank above you",
+  });
+
+  await expect(note).toContainText(
+    "Only some of the words show in what AsoBeast read, and its Spanish (Mexico) listing has not been captured.",
+  );
+  await expect(note).not.toContainText("No visible match");
+});
+
 test("a market without a listing says which listing was read", async ({
   page,
 }) => {

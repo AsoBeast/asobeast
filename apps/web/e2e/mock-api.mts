@@ -132,6 +132,8 @@ import {
   TWIN_REVIEWS,
   RTL_REVIEWS,
   CROWDED_COMPARISON,
+  UNCHECKED_COMPARISON,
+  UNCHECKED_COMPARISON_COOKIE,
   CROWDED_COMPETITORS,
   CROWDED_COMPETITORS_COOKIE,
 } from "./fixtures.mts";
@@ -207,6 +209,7 @@ import type {
   WorkspaceDeletionStatus,
   AppSetupState,
   AppSetupUpdateRequest,
+  KeywordComparison,
 } from "@asobeast/shared";
 import {
   COUNTRY_PATTERN,
@@ -657,6 +660,19 @@ function hasCookie(
 ): boolean {
   const actual = cookieValue(req, name);
   return actual !== undefined && (value === undefined || actual === value);
+}
+
+function comparisonOf(
+  req: IncomingMessage,
+  fallback: KeywordComparison,
+): KeywordComparison {
+  if (hasCookie(req, UNCHECKED_COMPARISON_COOKIE, "1")) {
+    return UNCHECKED_COMPARISON;
+  }
+  if (hasCookie(req, CROWDED_COMPETITORS_COOKIE, "1")) {
+    return CROWDED_COMPARISON;
+  }
+  return fallback;
 }
 
 const STALE_SESSION = "stale";
@@ -3472,9 +3488,7 @@ const routes: Route[] = [
   appRoute(/^\/apps\/([^/]+)\/keywords\/compare$/, (dataset, query, req) => {
     countLoggedRequest("compare", req);
     const market = cookieValue(req, COMPARISON_MARKET_COOKIE);
-    const comparison = hasCookie(req, CROWDED_COMPETITORS_COOKIE, "1")
-      ? CROWDED_COMPARISON
-      : dataset.comparison;
+    const comparison = comparisonOf(req, dataset.comparison);
     return {
       ...comparison,
       rows: comparison.rows.filter(
@@ -3484,6 +3498,7 @@ const routes: Route[] = [
       ),
     };
   }),
+
   appRoute(/^\/apps\/([^/]+)\/rankings$/, (dataset) => dataset.rankings),
   appRoute(/^\/apps\/([^/]+)\/serp-movers$/, (dataset) => dataset.serpMovers),
   appRoute(

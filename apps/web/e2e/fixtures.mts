@@ -1543,6 +1543,46 @@ export const CROWDED_COMPARISON: KeywordComparison = {
   })),
 };
 
+export const UNCHECKED_COMPARISON_COOKIE = "e2e_unchecked_competitor";
+
+export const UNCHECKED_COMPARISON: KeywordComparison = {
+  competitors: [{ id: "comp-1", name: "Rival Focus" }],
+  rows: [
+    {
+      keywordId: "kw-1",
+      text: "focus timer",
+      country: "us",
+      traffic: 5,
+      difficulty: 3,
+      you: 3,
+      positions: { "comp-1": null },
+      gap: false,
+      unchecked: ["comp-1"],
+    },
+    {
+      keywordId: "kw-4",
+      text: "productivity app",
+      country: "us",
+      traffic: 5,
+      difficulty: 3,
+      you: null,
+      positions: { "comp-1": 8 },
+      gap: true,
+      unchecked: ["app-1"],
+    },
+    {
+      keywordId: "kw-5",
+      text: "time blocking",
+      country: "us",
+      traffic: 5,
+      difficulty: 3,
+      you: 45,
+      positions: { "comp-1": null },
+      gap: false,
+    },
+  ],
+};
+
 const e2eScreenshotUrl = (position: number): string =>
   `https://is1-ssl.mzstatic.com/image/thumb/e2e-focus/${position}.jpg/392x696bb.jpg`;
 export const APP_1_PL_CHANGES: ChangeTimeline = {

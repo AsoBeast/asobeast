@@ -1,5 +1,7 @@
 import './helpers/enable-auth';
 import { execSync } from 'child_process';
+import { EventEmitter } from 'node:events';
+import { ServerResponse } from 'node:http';
 import { join } from 'path';
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
@@ -8,6 +10,7 @@ import cookieParser from 'cookie-parser';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
+import { sha256 } from '../src/auth/password-hash';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { restoreAuthEnv } from './helpers/auth-env';
 import { seedApiToken, truncateUsers } from './helpers/api-tokens';
@@ -52,8 +55,11 @@ describe('Account export credential state (e2e)', () => {
 
   const exportAs = async (
     auth: { cookie: string } | { bearer: string },
+    timeoutMs = 20_000,
   ): Promise<{ text: string; lines: ExportLine[] }> => {
-    const call = request(app.getHttpServer()).get('/account/export');
+    const call = request(app.getHttpServer())
+      .get('/account/export')
+      .timeout(timeoutMs);
     const response = await (
       'cookie' in auth
         ? call.set('Cookie', auth.cookie)
@@ -198,5 +204,50 @@ describe('Account export credential state (e2e)', () => {
 
     expect(text).not.toContain('passwordHash');
     expect(text).not.toContain('tokenHash');
+  });
+
+  it('finishes when the response never emits drain', async () => {
+    const owner = await prisma.user.findFirstOrThrow({
+      where: { email: 'owner@example.com' },
+    });
+    await prisma.apiToken.createMany({
+      data: Array.from({ length: 400 }, (_, index) => ({
+        userId: owner.id,
+        name: `bulk ${index} ${'x'.repeat(240)}`,
+        tokenHash: sha256(`bulk-export-${index}`),
+        prefix: `bulk${index}`,
+        scope: 'read',
+      })),
+    });
+    const swallowDrain = jest
+      .spyOn(ServerResponse.prototype, 'emit')
+      .mockImplementation(function (
+        this: ServerResponse,
+        event: string | symbol,
+        ...args: unknown[]
+      ) {
+        return event === 'drain'
+          ? false
+          : EventEmitter.prototype.emit.call(this, event, ...args);
+      } as never);
+
+    try {
+      const { lines } = await exportAs({ cookie: ownerCookie }, 5_000);
+
+      const manifest = lines[0] as unknown as {
+        manifest: { tables: { table: string; rows: number }[] };
+      };
+      const rows = (table: string) =>
+        lines.filter((line) => line.table === table).length;
+      expect(rows('apiToken')).toBeGreaterThanOrEqual(400);
+      for (const { table, rows: expected } of manifest.manifest.tables) {
+        expect(rows(table)).toBe(expected);
+      }
+    } finally {
+      swallowDrain.mockRestore();
+      await prisma.apiToken.deleteMany({
+        where: { name: { startsWith: 'bulk ' } },
+      });
+    }
   });
 });

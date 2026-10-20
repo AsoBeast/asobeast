@@ -226,6 +226,15 @@ describe("the keyword_comparison market", () => {
   });
 });
 
+describe("the keyword_comparison unchecked ids", () => {
+  it("separates an app never checked from one checked and not found", () => {
+    const description = toolByName("keyword_comparison")?.description ?? "";
+
+    expect(description).toContain("unchecked");
+    expect(description).toContain("never been checked");
+  });
+});
+
 describe("the competitor, comparison and chart tools", () => {
   it.each([
     "list_competitors",
