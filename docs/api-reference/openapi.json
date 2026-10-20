@@ -1035,6 +1035,9 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "The database cannot be reached. The body is the error envelope with status, db, redis and pipeline added, and Retry-After says when to try again"
           }
         },
         "summary": "Liveness, database and pipeline health check",

@@ -1,6 +1,10 @@
 import { InjectQueue } from '@nestjs/bullmq';
-import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Controller, Get } from '@nestjs/common';
+import {
+  ApiOperation,
+  ApiServiceUnavailableResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { HealthStatus, PipelineHealth } from '@asobeast/shared';
 import { Queue } from 'bullmq';
 import { Public } from '../auth/decorators/public.decorator';
@@ -8,6 +12,7 @@ import { withTimeout } from '../common/async/with-timeout';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { LAST_DAILY_RUN_KEY, QUEUES } from '../jobs/jobs.types';
 import { PrismaService } from '../prisma/prisma.service';
+import { DatabaseUnavailableError } from './health.errors';
 
 const STALE_MS = 26 * 60 * 60 * 1000;
 const REDIS_TIMEOUT_MS = 1000;
@@ -44,6 +49,10 @@ export class HealthController {
   @Get()
   @Public()
   @ApiOperation({ summary: 'Liveness, database and pipeline health check' })
+  @ApiServiceUnavailableResponse({
+    description:
+      'The database cannot be reached. The body is the error envelope with status, db, redis and pipeline added, and Retry-After says when to try again',
+  })
   async check(): Promise<HealthStatus> {
     const [db, signals] = await Promise.all([
       this.pingDb(),
@@ -51,12 +60,12 @@ export class HealthController {
     ]);
 
     if (db === 'down') {
-      throw new ServiceUnavailableException({
+      throw new DatabaseUnavailableError({
         status: 'error',
         db: 'down',
         redis: signals.redis,
         pipeline: signals.pipeline,
-      } satisfies HealthStatus);
+      });
     }
 
     return {

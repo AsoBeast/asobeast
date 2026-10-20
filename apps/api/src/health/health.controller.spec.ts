@@ -1,8 +1,8 @@
-import { ServiceUnavailableException } from '@nestjs/common';
 import { Queue } from 'bullmq';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { HealthController } from './health.controller';
+import { DatabaseUnavailableError } from './health.errors';
 import { PrismaService } from '../prisma/prisma.service';
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -147,9 +147,18 @@ describe('HealthController', () => {
     expect(result.pipeline).toBeNull();
   });
 
-  it('throws 503 when the database is unreachable but still reports signals', async () => {
-    await expect(build({ dbUp: false }).check()).rejects.toBeInstanceOf(
-      ServiceUnavailableException,
-    );
+  it('throws the database error carrying the health signals when the database is unreachable', async () => {
+    const error = await build({ dbUp: false, redisUp: false })
+      .check()
+      .catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(DatabaseUnavailableError);
+    expect((error as DatabaseUnavailableError).health).toEqual({
+      status: 'error',
+      db: 'down',
+      redis: 'down',
+      pipeline: null,
+    });
+    expect((error as DatabaseUnavailableError).retryAfterSeconds).toBe(5);
   });
 });

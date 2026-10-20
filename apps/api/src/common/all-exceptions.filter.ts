@@ -11,6 +11,7 @@ import { Prisma } from '@prisma/client';
 import { Request, Response } from 'express';
 import {
   ApiErrorEnvelope,
+  HealthStatus,
   InvalidStoreUrlError,
   UnknownStorefrontError,
 } from '@asobeast/shared';
@@ -28,6 +29,7 @@ import {
 } from '../auth/rate-limit/rate-headers';
 import { QuotaExceededError } from '../auth/quota.errors';
 import { RedisUnavailableError } from '../redis/redis.errors';
+import { DatabaseUnavailableError } from '../health/health.errors';
 import { BillingConflictError } from '../billing/billing.errors';
 import { UnknownPriceError } from '../billing/price-catalog';
 import { ErrorTracking } from '../observability/error-tracking.service';
@@ -56,7 +58,7 @@ type ResolvedError = Pick<
   | 'rateLimit'
   | 'aiAllowance'
   | 'retryAfterSeconds'
->;
+> & { health?: HealthStatus };
 
 interface ExposableError extends Error {
   status?: unknown;
@@ -92,8 +94,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
     if (resolved.statusCode >= SERVER_ERROR_STATUS) {
       this.tracking.capture(exception);
     }
+    const { health, ...error } = resolved;
     const envelope: ApiErrorEnvelope = {
-      ...withoutQueryEcho(resolved, request),
+      ...withoutQueryEcho(error, request),
       path: pathWithoutQuery(request.url),
       timestamp: new Date().toISOString(),
     };
@@ -106,7 +109,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     if (resolved.rateLimit) {
       applyRateHeaders(response, headersForRefusal(resolved.rateLimit));
     }
-    response.status(resolved.statusCode).json(envelope);
+    response.status(resolved.statusCode).json({ ...envelope, ...health });
   }
 
   private resolve(exception: unknown): ResolvedError {
@@ -191,6 +194,15 @@ export class AllExceptionsFilter implements ExceptionFilter {
         error: 'Service Unavailable',
         message: exception.message,
         retryAfterSeconds: exception.retryAfterSeconds,
+      };
+    }
+    if (exception instanceof DatabaseUnavailableError) {
+      return {
+        statusCode: HttpStatus.SERVICE_UNAVAILABLE,
+        error: 'Service Unavailable',
+        message: exception.message,
+        retryAfterSeconds: exception.retryAfterSeconds,
+        health: exception.health,
       };
     }
     if (exception instanceof AiAllowanceExceededError) {
