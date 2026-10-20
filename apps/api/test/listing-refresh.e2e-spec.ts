@@ -155,6 +155,7 @@ describe('market listing refresh (e2e)', () => {
       snapshotId: market[0].id,
       changes: [],
       country: 'de',
+      currency: null,
     });
     expect(registry.getAppCalls).toEqual([
       { storeAppId: '1234567890', country: 'de' },
@@ -295,6 +296,7 @@ describe('market listing refresh (e2e)', () => {
       snapshotId: home[1].id,
       changes: [],
       country: 'us',
+      currency: null,
     });
   });
 
