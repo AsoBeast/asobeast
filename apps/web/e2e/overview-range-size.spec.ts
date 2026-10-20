@@ -4,27 +4,38 @@ import { seedCookies } from "./routes.mts";
 import { expect, test } from "./session.mts";
 
 const OVERVIEW = "/apps/app-1";
+const REVIEWS = "/apps/app-1/reviews";
 const SLOW_API_MS = "800";
 const CHART_SIZE_WARNING = /width\(0\) and height\(0\) of chart/;
 
 const RANGE_CARDS = [
   {
+    path: OVERVIEW,
     label: "Visibility history",
     chart: "Search visibility over time",
     param: "range",
     endpoint: /\/apps\/app-1\/visibility-history\?/,
   },
   {
+    path: OVERVIEW,
     label: "Rank distribution history",
     chart: "Tracked keywords by rank band",
     param: "distRange",
     endpoint: /\/apps\/app-1\/rank-distribution-history\?/,
   },
   {
+    path: OVERVIEW,
     label: "Category ranks · Home market",
     chart: "Category chart position over time",
     param: "categoryRange",
     endpoint: /\/apps\/app-1\/category-ranks\?/,
+  },
+  {
+    path: REVIEWS,
+    label: "Ratings history",
+    chart: "Average rating and review volume",
+    param: "range",
+    endpoint: /\/apps\/app-1\/ratings-history\?/,
   },
 ] as const;
 
@@ -41,7 +52,7 @@ const nextPaint = (page: Page) =>
       ),
   );
 
-for (const { label, chart, param, endpoint } of RANGE_CARDS) {
+for (const { path, label, chart, param, endpoint } of RANGE_CARDS) {
   test(`${label} stays measurable while the 90d range loads`, async ({
     page,
     context,
@@ -55,7 +66,7 @@ for (const { label, chart, param, endpoint } of RANGE_CARDS) {
         warnings.push(message.text());
       }
     });
-    await page.goto(OVERVIEW);
+    await page.goto(path);
     const region = card(page, label).getByRole("region", { name: chart });
     await expect(region).toBeVisible();
     const tab = await hydrated(
