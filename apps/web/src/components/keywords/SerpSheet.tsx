@@ -1,10 +1,14 @@
 "use client";
 
-import { Suspense } from "react";
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
+import type { SerpSnapshot } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
 import { ExportCsvButton } from "@/components/ExportCsvButton";
+import {
+  failedRead,
+  InlineQueryError,
+} from "@/components/layout/InlineQueryError";
 import {
   Sheet,
   SheetContent,
@@ -23,8 +27,7 @@ function useSerpViewer(appId: string): SerpViewer {
   return { appId, storeAppId: data?.storeAppId };
 }
 
-function SerpRows({ appId, keywordId }: { appId: string; keywordId: string }) {
-  const { data } = useSuspenseQuery(serpOptions(keywordId));
+function SerpRows({ appId, data }: { appId: string; data: SerpSnapshot }) {
   const viewer = useSerpViewer(appId);
 
   if (data.entries.length === 0) {
@@ -96,6 +99,18 @@ function SerpSkeleton() {
   );
 }
 
+function SerpBody({ appId, keywordId }: { appId: string; keywordId: string }) {
+  const serp = useQuery(serpOptions(keywordId));
+
+  if (failedRead(serp)) {
+    return (
+      <InlineQueryError message="The top 10 could not be loaded." read={serp} />
+    );
+  }
+  if (!serp.data) return <SerpSkeleton />;
+  return <SerpRows appId={appId} data={serp.data} />;
+}
+
 function SerpExportButton({
   appId,
   keywordId,
@@ -144,9 +159,7 @@ export function SerpSheet({ appId }: { appId: string }) {
         </SheetHeader>
         {open ? (
           <div className="overflow-y-auto">
-            <Suspense fallback={<SerpSkeleton />}>
-              <SerpRows appId={appId} keywordId={keywordId} />
-            </Suspense>
+            <SerpBody appId={appId} keywordId={keywordId} />
           </div>
         ) : null}
       </SheetContent>

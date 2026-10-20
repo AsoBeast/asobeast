@@ -90,15 +90,24 @@ function placementText(
   return `May rank above you because it has ${it}, while ${you}.`;
 }
 
-function unreadText(localizations: readonly string[]): string {
+const lackOf = (placement: KeywordPlacement) =>
+  placement === "partial"
+    ? "Only some of the words show"
+    : "None of the words show";
+
+function unreadText(
+  localizations: readonly string[],
+  placement: KeywordPlacement,
+): string {
   const many = localizations.length > 1;
   const names = formatList(localizations.map(localizationName));
-  return `No visible match in what ${PRODUCT_NAME} read, and its ${names} ${many ? "listings have" : "listing has"} not been captured.`;
+  return `${lackOf(placement)} in what ${PRODUCT_NAME} read, and its ${names} ${many ? "listings have" : "listing has"} not been captured.`;
 }
 
 export function insightText(
   insight: KeywordBreakdownInsight,
   store: Store,
+  placement: KeywordPlacement,
 ): string | null {
   switch (insight.rule) {
     case "placement":
@@ -108,9 +117,9 @@ export function insightText(
     case "ratings":
       return `Its listing here has ${formatNumber(insight.theirs)} ratings to your ${formatNumber(insight.yours)}.`;
     case "unread":
-      return unreadText(insight.localizations);
+      return unreadText(insight.localizations, placement);
     case "hidden":
-      return "No visible match in any listing this market searches, so it may rank through its private keyword field.";
+      return `${lackOf(placement)} in any listing this market searches, so it may rank through its private keyword field.`;
     case "similar":
       return store === "APP_STORE"
         ? "Placement and ratings are close to yours; installs and its keyword field are not visible."

@@ -180,6 +180,42 @@ describe('probeSuggestReach', () => {
       });
     });
 
+    it('finds a keyword the store offers only in a case form', async () => {
+      const lookup = lookupFrom({
+        дневник: ['дневником'],
+        д: ['дневником'],
+      });
+      await expect(
+        probeSuggestReach('дневник', lookup, 'prefix'),
+      ).resolves.toEqual({
+        reach: { status: 'hit', prefixLength: 1, position: 1 },
+        requests: 2,
+      });
+    });
+
+    it('finds a case form that continues with more words', async () => {
+      const lookup = lookupFrom({
+        дневник: ['дневником привычек'],
+        д: ['дневником привычек'],
+      });
+      await expect(
+        probeSuggestReach('дневник', lookup, 'prefix'),
+      ).resolves.toEqual({
+        reach: { status: 'hit', prefixLength: 1, position: 1 },
+        requests: 2,
+      });
+    });
+
+    it('reports a keyword offered only as its full case form as listed', async () => {
+      const lookup = lookupFrom({ тревожность: ['тревожностью'] });
+      await expect(
+        probeSuggestReach('тревожность', lookup, 'prefix'),
+      ).resolves.toEqual({
+        reach: { status: 'listed', position: 1 },
+        requests: 9,
+      });
+    });
+
     it('keeps exact matching by default', async () => {
       await expect(
         probeSuggestReach('game', lookupFrom(playLists)),
@@ -209,6 +245,22 @@ describe('countContinuations', () => {
   it('compares on the search key', async () => {
     const lookup = lookupFrom({ 'Géo Quiz': ['geo quiz', 'GEO QUIZ Maps'] });
     await expect(countContinuations('Géo Quiz', lookup)).resolves.toBe(2);
+  });
+
+  it('counts a case form of the keyword only when more words follow', async () => {
+    const lookup = lookupFrom({
+      дневник: ['дневником', 'дневником привычек'],
+      'дневник ': ['дневником привычек'],
+    });
+    await expect(countContinuations('дневник', lookup)).resolves.toBe(1);
+  });
+
+  it('counts no continuation for a different word sharing the stem', async () => {
+    const lookup = lookupFrom({
+      программа: ['программирование на python'],
+      'программа ': ['программирование на python'],
+    });
+    await expect(countContinuations('программа', lookup)).resolves.toBe(0);
   });
 
   it('returns null when a lookup throws', async () => {
