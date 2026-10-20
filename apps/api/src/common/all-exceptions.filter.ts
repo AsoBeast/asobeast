@@ -109,7 +109,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     if (resolved.rateLimit) {
       applyRateHeaders(response, headersForRefusal(resolved.rateLimit));
     }
-    response.status(resolved.statusCode).json({ ...envelope, ...health });
+    response.status(resolved.statusCode).json({ ...health, ...envelope });
   }
 
   private resolve(exception: unknown): ResolvedError {
