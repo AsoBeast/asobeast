@@ -1,4 +1,5 @@
 import { ReplyError, type Redis } from 'ioredis';
+import { sha256 } from '../auth/password-hash';
 import { RequestThrottledError } from '../auth/rate-limit/rate-limit.errors';
 import { RedisUnavailableError } from '../redis/redis.errors';
 import { FailFastRedis } from '../redis/fail-fast-redis';
@@ -23,6 +24,12 @@ describe('ConfirmationMailLimiter', () => {
   const claimed = () => {
     const [, count, ...args] = evaluate.mock.calls[0];
     return { keys: args.slice(0, count), rest: args.slice(count) };
+  };
+
+  const recipientKeyOf = async (address: string): Promise<string> => {
+    evaluate.mockClear();
+    await limiter.claim('ws_1', address, NOW);
+    return claimed().keys[1];
   };
 
   beforeEach(() => {
@@ -109,6 +116,31 @@ describe('ConfirmationMailLimiter', () => {
       ([, , , recipient]) => recipient,
     );
     expect(recipients[0]).toBe(recipients[1]);
+  });
+  it.each([
+    ['a+news@example.net', 'a@example.net'],
+    ['a+news+more@example.net', 'a@example.net'],
+    ['"a"@example.net', 'a@example.net'],
+    ['person@bücher.de', 'person@xn--bcher-kva.de'],
+    ['person@BÜCHER.de.', 'person@xn--bcher-kva.de'],
+    ['First.Last+x@googlemail.com', 'firstlast@gmail.com'],
+  ])('counts %s as the mailbox of %s', async (spelling, mailbox) => {
+    expect(await recipientKeyOf(spelling)).toBe(await recipientKeyOf(mailbox));
+  });
+
+  it.each([
+    ['a@example.net', 'b@example.net'],
+    ['a@example.net', 'a@example.org'],
+    ['+a@example.net', '+b@example.net'],
+    ['first.last@outlook.com', 'firstlast@outlook.com'],
+  ])('keeps %s and %s apart', async (first, second) => {
+    expect(await recipientKeyOf(first)).not.toBe(await recipientKeyOf(second));
+  });
+
+  it('keeps the key of an address that is already a plain mailbox', async () => {
+    expect(await recipientKeyOf('a@example.net')).toContain(
+      `:${sha256('a@example.net')}:recipient:`,
+    );
   });
 
   it('refuses the confirmation after the workspace allowance', async () => {
