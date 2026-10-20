@@ -63,9 +63,14 @@ const build = (overrides: {
   previous?: typeof SNAPSHOT | null;
   detect?: jest.Mock;
   recordDefault?: jest.Mock;
+  raw?: Record<string, unknown>;
 }) => {
   const tx = {
-    appSnapshot: { create: jest.fn().mockResolvedValue(SNAPSHOT) },
+    appSnapshot: {
+      create: jest
+        .fn()
+        .mockResolvedValue({ ...SNAPSHOT, raw: overrides.raw ?? SNAPSHOT.raw }),
+    },
     app: { update: jest.fn().mockResolvedValue(APP) },
   };
   const prisma = {
@@ -159,6 +164,22 @@ describe('ListingCaptureService.refresh', () => {
 });
 
 describe('ListingCaptureService refresh answer', () => {
+  it('names the currency of the stored listing', async () => {
+    const { service } = build({ raw: { currency: 'JPY' } });
+
+    await expect(service.refresh(APP.id)).resolves.toMatchObject({
+      currency: 'JPY',
+    });
+  });
+
+  it('answers a null currency when the stored listing names none', async () => {
+    const { service } = build({});
+
+    await expect(service.refresh(APP.id)).resolves.toMatchObject({
+      currency: null,
+    });
+  });
+
   it('answers with the screenshot change the home refresh recorded', async () => {
     const { service } = build({
       recordRefresh: jest.fn().mockResolvedValue([REORDERED]),
@@ -174,6 +195,7 @@ describe('ListingCaptureService refresh answer', () => {
         },
       ],
       country: 'us',
+      currency: null,
     });
   });
 

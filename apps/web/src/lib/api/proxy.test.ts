@@ -1,3 +1,4 @@
+import { gzipSync } from "node:zlib";
 import {
   REQUEST_BODY_LIMIT_BYTES,
   type ApiErrorEnvelope,
@@ -374,6 +375,81 @@ describe("proxyToApi", () => {
     expect(new TextDecoder().decode(sentBody())).toBe(
       '{"url":"https://apps.apple.com/us/app/id1"}',
     );
+  });
+
+  it.each(["gzip", "deflate", "br", "zstd", "identity"])(
+    "forwards a %s content encoding so the api decodes the body itself",
+    async (encoding) => {
+      stubFetch(async () => Response.json({}));
+      const { proxyToApi } = await loadProxy();
+      const compressed = gzipSync(JSON.stringify({ email: "a@b.c" }));
+
+      await proxyToApi(
+        request("/api/backend/auth/login", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "content-encoding": encoding,
+          },
+          body: compressed,
+        }),
+        ["auth", "login"],
+      );
+
+      const headers = fetchMock().mock.calls[0][1].headers as Headers;
+      expect(headers.get("content-encoding")).toBe(encoding);
+      expect(Array.from(sentBody())).toEqual(Array.from(compressed));
+      expect(headers.get("content-length")).toBeNull();
+    },
+  );
+
+  it("sends no content encoding when the caller sent none", async () => {
+    stubFetch(async () => Response.json({}));
+    const { proxyToApi } = await loadProxy();
+
+    await proxyToApi(
+      request("/api/backend/auth/login", { method: "POST", body: "{}" }),
+      ["auth", "login"],
+    );
+
+    const headers = fetchMock().mock.calls[0][1].headers as Headers;
+    expect(headers.get("content-encoding")).toBeNull();
+  });
+
+  it("forwards a small compressed body that inflates past the limit and leaves the decoded count to the api", async () => {
+    stubFetch(async () => Response.json({}));
+    const { proxyToApi } = await loadProxy();
+    const inflating = gzipSync(Buffer.alloc(REQUEST_BODY_LIMIT_BYTES * 20));
+    expect(inflating.byteLength).toBeLessThan(REQUEST_BODY_LIMIT_BYTES);
+
+    const response = await proxyToApi(
+      request("/api/backend/apps", {
+        method: "POST",
+        headers: { "content-encoding": "gzip" },
+        body: inflating,
+      }),
+      ["apps"],
+    );
+
+    expect(response.status).toBe(200);
+    expect(sentBody().byteLength).toBe(inflating.byteLength);
+  });
+
+  it("counts the bytes it receives, whatever the content encoding says", async () => {
+    stubFetch(async () => Response.json({}));
+    const { proxyToApi } = await loadProxy();
+
+    const response = await proxyToApi(
+      request("/api/backend/apps", {
+        method: "POST",
+        headers: { "content-encoding": "gzip" },
+        body: new Uint8Array(REQUEST_BODY_LIMIT_BYTES + 1),
+      }),
+      ["apps"],
+    );
+
+    expect(response.status).toBe(413);
+    expect(fetchMock()).not.toHaveBeenCalled();
   });
 
   it("answers an upstream timeout with a 504 envelope", async () => {

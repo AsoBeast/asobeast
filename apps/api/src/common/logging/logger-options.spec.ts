@@ -35,6 +35,28 @@ function collect(): { lines: unknown[]; stream: Writable } {
   return { lines, stream };
 }
 
+async function loggedLinesFor(path: string): Promise<string> {
+  const workspace = new WorkspaceContext();
+  const sink = collect();
+  const { pinoHttp: options } = loggerParams(configOf(), workspace);
+  const logging = pinoHttp({
+    ...(options as object),
+    logger: pino(pinoOptions(configOf(), workspace), sink.stream),
+  });
+  const server = createServer((req, res) => {
+    logging(req, res);
+    res.statusCode = 404;
+    res.end();
+  });
+  await new Promise<void>((resolve) => server.listen(0, resolve));
+  const { port } = server.address() as AddressInfo;
+
+  await fetch(`http://127.0.0.1:${port}${path}`);
+  await new Promise<void>((resolve) => server.close(() => resolve()));
+
+  return JSON.stringify(sink.lines);
+}
+
 describe('pinoOptions', () => {
   let workspace: WorkspaceContext;
   let lines: Record<string, unknown>[];
@@ -176,5 +198,24 @@ describe('loggerParams', () => {
     const logged = JSON.stringify(sink.lines);
     expect(logged).toContain('/email-alerts/ea_1/unsubscribe');
     expect(logged).not.toContain(token);
+  });
+
+  it('logs a request url without the secret values of its query string', async () => {
+    const logged = await loggedLinesFor(
+      '/no-such-route?token=asob_EXAMPLE&password=hunter2hunter2&access_token=ACCTOKMARKER&api_key=APIKEYMARKER&secret=SECRETMARK2&country=us',
+    );
+
+    expect(logged).toContain(
+      '/no-such-route?token=[redacted]&password=[redacted]&access_token=[redacted]&api_key=[redacted]&secret=[redacted]&country=us',
+    );
+    for (const value of [
+      'asob_EXAMPLE',
+      'hunter2hunter2',
+      'ACCTOKMARKER',
+      'APIKEYMARKER',
+      'SECRETMARK2',
+    ]) {
+      expect(logged).not.toContain(value);
+    }
   });
 });

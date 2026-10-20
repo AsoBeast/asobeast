@@ -2,6 +2,7 @@ import { join } from "node:path";
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs/config";
 import { version } from "./package.json";
+import { RSC_VARY_HEADER } from "./src/lib/rsc-vary";
 
 const SECURITY_HEADERS = [
   {
@@ -14,6 +15,8 @@ const SECURITY_HEADERS = [
   { key: "X-Frame-Options", value: "DENY" },
 ];
 
+const RSC_VARIANT_SOURCE = "/((?!_next/static|_next/image).*)";
+
 const nextConfig: NextConfig = {
   output: "standalone",
   env: { NEXT_PUBLIC_APP_VERSION: version },
@@ -23,7 +26,13 @@ const nextConfig: NextConfig = {
       "../../node_modules/.pnpm/@swc+helpers@*/node_modules/@swc/helpers/esm/**",
     ],
   },
-  headers: async () => [{ source: "/:path*", headers: SECURITY_HEADERS }],
+  headers: async () => [
+    { source: "/:path*", headers: SECURITY_HEADERS },
+    {
+      source: RSC_VARIANT_SOURCE,
+      headers: [{ key: "Vary", value: RSC_VARY_HEADER }],
+    },
+  ],
   images: {
     remotePatterns: [
       {

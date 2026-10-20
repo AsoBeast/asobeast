@@ -35,6 +35,7 @@ import {
 } from "@/lib/app-sections";
 import { storeLabel } from "@/lib/format";
 import { appsOptions } from "@/lib/queries";
+import { switcherSubtitle } from "./app-switcher-label";
 
 function appLabel(app: AppListItem): string {
   return app.name ?? "Untitled app";
@@ -46,10 +47,10 @@ function appMarket(app: AppListItem): string {
 
 function TriggerLabel({
   current,
-  total,
+  subtitle,
 }: {
   current: AppListItem | undefined;
-  total: number;
+  subtitle: string;
 }) {
   return (
     <>
@@ -68,7 +69,7 @@ function TriggerLabel({
           {current ? appLabel(current) : "All apps"}
         </span>
         <span className="truncate text-caption text-muted-foreground">
-          {current ? appMarket(current) : `${total} tracked`}
+          {current ? appMarket(current) : subtitle}
         </span>
       </span>
       <ChevronsUpDown className="ml-auto" />
@@ -102,7 +103,7 @@ export function AppSwitcher() {
   const pathname = usePathname();
   const router = useRouter();
   const { isMobile, setOpenMobile } = useSidebar();
-  const { data: apps, isPending } = useQuery(appsOptions);
+  const { data: apps, isPending, isError } = useQuery(appsOptions);
 
   const route = appRouteFrom(pathname);
   const current = route ? apps?.find((app) => app.id === route.id) : undefined;
@@ -130,7 +131,10 @@ export function AppSwitcher() {
               tooltip={current ? appLabel(current) : "All apps"}
               className="data-[state=open]:bg-sidebar-accent"
             >
-              <TriggerLabel current={current} total={apps?.length ?? 0} />
+              <TriggerLabel
+                current={current}
+                subtitle={switcherSubtitle(apps, isError)}
+              />
             </SidebarMenuButton>
           </PopoverTrigger>
           <PopoverContent

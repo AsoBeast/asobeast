@@ -12,7 +12,7 @@ import {
   SetupStatus,
 } from '@asobeast/shared';
 import { rawListedInIphoneSearch } from '../store-providers/iphone-search';
-import { extractRawFacts } from '../store-providers/raw-facts';
+import { currencyOf, extractRawFacts } from '../store-providers/raw-facts';
 import { NormalizedApp } from '../store-providers/types';
 import { listingMarket } from './listing';
 import { capturedLocalizations } from './market-localizations';
@@ -35,6 +35,7 @@ export function toSnapshotSummary(
     ratingCount: snapshot.ratingCount,
     installs: snapshot.installs === null ? null : Number(snapshot.installs),
     price: snapshot.price,
+    currency: currencyOf(snapshot.raw),
     version: snapshot.version,
     capturedAt: snapshot.capturedAt.toISOString(),
     country: listingMarket(home, snapshot.country),
