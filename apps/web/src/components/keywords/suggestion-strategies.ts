@@ -54,7 +54,7 @@ export const USED_BY_NOUN: Partial<Record<KeywordSuggestionStrategy, string>> =
 
 export const EMPTY_COPY: Partial<Record<KeywordSuggestionStrategy, string>> = {
   competitorSearch:
-    "Your competitors' titles share no phrase to search from in this market yet.",
+    "No new searches found around your competitors' phrases in this market. Competitors need a phrase of two or more words in their listing here, or in their home listing when they have none here.",
   developer:
     "No other apps found for this developer, or the latest snapshot carries no developer id.",
 };

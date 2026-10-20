@@ -153,6 +153,101 @@ describe('titleChecks', () => {
       advice: { title: 'Put \u201cgeo quiz\u201d in your title' },
     });
   });
+  it.each([
+    [
+      'Telegram',
+      ['focus', 'telegram messaging focus'],
+      4,
+      'The title has “telegram” from “telegram messaging focus”, but not the whole phrase.',
+    ],
+    [
+      'Geo Map',
+      ['geo quiz map'],
+      4,
+      'The title has “geo”, “map” from “geo quiz map”, but not the whole phrase.',
+    ],
+    [
+      'Tracker for Habit',
+      ['habit tracker'],
+      7,
+      'The title has every word of “habit tracker”, but not the whole phrase.',
+    ],
+  ])(
+    'says the title %s holds only part of a primary keyword',
+    (title, texts, score, detail) => {
+      const keywords = texts.map((text, index) =>
+        keyword(text, 'primary', 90 - index * 20),
+      );
+
+      expect(
+        titleCheck(appStoreContext({ title, keywords }), 'title-keyword'),
+      ).toMatchObject({ score, detail });
+    },
+  );
+
+  it('names a repeated word of a partly matched keyword once', () => {
+    const result = titleCheck(
+      appStoreContext({
+        title: 'Quiz',
+        keywords: [keyword('quiz quiz map', 'primary', 90)],
+      }),
+      'title-keyword',
+    );
+
+    expect(result?.detail).toBe(
+      'The title has “quiz” from “quiz quiz map”, but not the whole phrase.',
+    );
+    expect(result?.advice?.fix).toMatch(
+      /^Add “map” and put the words in that order/,
+    );
+  });
+
+  it('advises completing the partly matched phrase, not a different keyword', () => {
+    const result = titleCheck(
+      appStoreContext({
+        title: 'Telegram',
+        keywords: [
+          keyword('focus', 'primary', 90),
+          keyword('telegram messaging focus', 'primary', 70),
+        ],
+      }),
+      'title-keyword',
+    );
+
+    expect(result).toMatchObject({
+      status: 'warn',
+      advice: {
+        title: 'Put the whole phrase “telegram messaging focus” in your title',
+        fix: 'Add “messaging”, “focus” and put the words in that order so the title carries “telegram messaging focus” as one phrase within 30 characters, keeping your brand first if people already search for it.',
+      },
+    });
+  });
+
+  it('asks to reorder the title when its words are out of the phrase order', () => {
+    const result = titleCheck(
+      appStoreContext({
+        title: 'Map Geo',
+        keywords: [keyword('geo quiz map', 'primary', 90)],
+      }),
+      'title-keyword',
+    );
+
+    expect(result?.advice?.fix).toBe(
+      'Add “quiz” and put the words in that order so the title carries “geo quiz map” as one phrase within 30 characters, keeping your brand first if people already search for it.',
+    );
+  });
+
+  it('gives no advice when every word is present, because that scores as a pass', () => {
+    const result = titleCheck(
+      appStoreContext({
+        title: 'Tracker for Habit',
+        keywords: [keyword('habit tracker', 'primary', 90)],
+      }),
+      'title-keyword',
+    );
+
+    expect(result).toMatchObject({ status: 'pass', advice: null });
+  });
 
   it.each([
     [99_999, 0],

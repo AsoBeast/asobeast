@@ -1,7 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useState } from "react";
+import {
+  useMutation,
+  useMutationState,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { ChevronDown, Search } from "lucide-react";
 import { useQueryState } from "nuqs";
 import { toast } from "sonner";
@@ -23,6 +28,7 @@ import {
   suggestionsOptions,
 } from "@/lib/queries";
 import { suggestionStrategyParser } from "@/lib/search-params";
+import { useKeyedSingleFlight } from "@/lib/single-flight";
 import { cn } from "@/lib/utils";
 import { SpiderDialog } from "./SpiderDialog";
 import { SuggestionList, suggestionListState } from "./SuggestionList";
@@ -54,7 +60,9 @@ export function SuggestionsPanel({
     enabled: open,
   });
 
+  const trackKey = ["track-suggestion", id, country] as const;
   const track = useMutation({
+    mutationKey: trackKey,
     mutationFn: (text: string) => addKeywords(id, [text], country),
     onSuccess: (_data, text) => {
       invalidateKeywordMutation(queryClient, id);
@@ -67,6 +75,15 @@ export function SuggestionsPanel({
           : `Could not track ${text}`,
       ),
   });
+  const trackKeyOf = useCallback(
+    (text: string) => JSON.stringify([id, country, text]),
+    [id, country],
+  );
+  const trackOnce = useKeyedSingleFlight(track, trackKeyOf);
+  const trackingTexts = useMutationState({
+    filters: { mutationKey: trackKey, status: "pending" },
+    select: (mutation) => mutation.state.variables,
+  }).filter((text): text is string => typeof text === "string");
 
   return (
     <Card>
@@ -128,8 +145,8 @@ export function SuggestionsPanel({
             trackedTexts={trackedTexts}
             action={{
               kind: "track",
-              pendingText: track.isPending ? track.variables : undefined,
-              onTrack: (text) => track.mutate(text),
+              pending: new Set(trackingTexts),
+              onTrack: trackOnce,
             }}
             onRetry={() => void suggestions.refetch()}
           />
