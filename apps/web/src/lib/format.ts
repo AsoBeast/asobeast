@@ -1,4 +1,5 @@
 import {
+  CURRENCY_PATTERN,
   formatRankPosition,
   type PlanLimit,
   type Store,
@@ -24,10 +25,11 @@ const dayMonthFormatter = new Intl.DateTimeFormat("en-US", {
   month: "short",
   day: "numeric",
 });
-const priceFormatter = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
+const bareAmountFormatter = new Intl.NumberFormat("en-US", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
 });
+const currencyFormatters = new Map<string, Intl.NumberFormat>();
 const listFormatter = new Intl.ListFormat("en-US", { type: "conjunction" });
 const relativeTimeFormatter = new Intl.RelativeTimeFormat("en-US", {
   numeric: "auto",
@@ -81,12 +83,26 @@ export function formatRating(value: number): string {
   return value.toFixed(1);
 }
 
-export function formatUsd(value: number): string {
-  return priceFormatter.format(value);
+function currencyFormatter(currency: string): Intl.NumberFormat {
+  const known = currencyFormatters.get(currency);
+  if (known) return known;
+  const created = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+  });
+  currencyFormatters.set(currency, created);
+  return created;
 }
 
-export function formatPrice(value: number): string {
-  return value === 0 ? "Free" : formatUsd(value);
+export function formatUsd(value: number): string {
+  return currencyFormatter("USD").format(value);
+}
+
+export function formatPrice(value: number, currency?: string | null): string {
+  if (value === 0) return "Free";
+  return currency != null && CURRENCY_PATTERN.test(currency)
+    ? currencyFormatter(currency).format(value)
+    : bareAmountFormatter.format(value);
 }
 
 export function formatDate(value: string | null): string {

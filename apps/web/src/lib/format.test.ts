@@ -9,6 +9,7 @@ import {
   formatMeasure,
   formatNumber,
   formatPrice,
+  formatUsd,
   formatRating,
   formatRelativeTime,
   formatList,
@@ -62,12 +63,36 @@ describe("formatRating", () => {
 });
 
 describe("formatPrice", () => {
-  it("renders a zero price as free", () => {
+  it("renders a zero price as free in any currency", () => {
     expect(formatPrice(0)).toBe("Free");
+    expect(formatPrice(0, "EUR")).toBe("Free");
   });
 
-  it("renders a paid price as currency", () => {
-    expect(formatPrice(4.99)).toBe("$4.99");
+  it.each([
+    [4.99, "USD", "$4.99"],
+    [4.99, "EUR", "€4.99"],
+    [4.99, "GBP", "£4.99"],
+    [500, "JPY", "¥500"],
+    [5000, "KRW", "₩5,000"],
+    [4.99, "PLN", "PLN 4.99"],
+    [4.99, "AED", "AED 4.99"],
+    [1234.5, "USD", "$1,234.50"],
+  ])("renders %s in %s as %s", (value, currency, expected) => {
+    expect(formatPrice(value, currency)).toBe(expected);
+  });
+
+  it.each([undefined, null, "", "euro", "eur", "E1R"])(
+    "prints the bare number when the currency is %j",
+    (currency) => {
+      expect(formatPrice(4.99, currency)).toBe("4.99");
+      expect(formatPrice(1234.5, currency)).toBe("1,234.50");
+    },
+  );
+});
+
+describe("formatUsd", () => {
+  it("always writes dollars", () => {
+    expect(formatUsd(12.5)).toBe("$12.50");
   });
 });
 

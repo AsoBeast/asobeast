@@ -49,7 +49,9 @@ function notes(value: ChangeValue): string {
   return cell(typeof value === "string" ? releaseNotesInline(value) : value);
 }
 
-const NUMBER_FORMATTERS: Readonly<Record<string, (value: number) => string>> = {
+type NumberFormatter = (value: number, currency?: string | null) => string;
+
+const NUMBER_FORMATTERS: Readonly<Record<string, NumberFormatter>> = {
   ratingAvg: formatRating,
   ratingCount: formatNumber,
   installs: formatNumber,
@@ -57,19 +59,34 @@ const NUMBER_FORMATTERS: Readonly<Record<string, (value: number) => string>> = {
   screenshots: formatNumber,
 };
 
-function formatted(value: ChangeValue, format: (value: number) => string) {
+function formatted(
+  value: ChangeValue,
+  format: NumberFormatter,
+  currency: string | null | undefined,
+) {
   const number = Number(value);
   return value === null || value === "" || !Number.isFinite(number)
     ? cell(value)
-    : format(number);
+    : format(number, currency);
 }
 
-function numberCells(field: string, before: ChangeValue, after: ChangeValue) {
+function numberCells(
+  field: string,
+  before: ChangeValue,
+  after: ChangeValue,
+  currency: string | null | undefined,
+) {
   const format = NUMBER_FORMATTERS[field];
-  return { before: formatted(before, format), after: formatted(after, format) };
+  return {
+    before: formatted(before, format, currency),
+    after: formatted(after, format, currency),
+  };
 }
 
-export function snapshotChangeCells({ field, before, after }: SnapshotChange): {
+export function snapshotChangeCells(
+  { field, before, after }: SnapshotChange,
+  currency?: string | null,
+): {
   before: string;
   after: string;
 } {
@@ -80,7 +97,7 @@ export function snapshotChangeCells({ field, before, after }: SnapshotChange): {
     return { before: length(before), after: length(after) };
   }
   if (Object.hasOwn(NUMBER_FORMATTERS, field)) {
-    return numberCells(field, before, after);
+    return numberCells(field, before, after, currency);
   }
   return { before: cell(before), after: cell(after) };
 }
