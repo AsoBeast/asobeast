@@ -3297,6 +3297,7 @@ const ERROR_TITLES: Record<number, string> = {
   404: "Not Found",
   500: "Internal Server Error",
   501: "Not Implemented",
+  503: "Service Unavailable",
 };
 
 const ERROR_MESSAGES: Record<number, string> = {
@@ -3342,6 +3343,25 @@ export function errorEnvelope(
       "The server encountered an unexpected error.",
     path,
     timestamp: new Date().toISOString(),
+  };
+}
+
+export const DATABASE_DOWN_RETRY_SECONDS = 5;
+
+export function databaseDownAnswer(
+  path: string,
+): ApiErrorEnvelope & HealthStatus {
+  return {
+    ...errorEnvelope(
+      503,
+      path,
+      `The database cannot be reached. Try again in ${DATABASE_DOWN_RETRY_SECONDS} seconds.`,
+    ),
+    retryAfterSeconds: DATABASE_DOWN_RETRY_SECONDS,
+    status: "error",
+    db: "down",
+    redis: "up",
+    pipeline: null,
   };
 }
 
