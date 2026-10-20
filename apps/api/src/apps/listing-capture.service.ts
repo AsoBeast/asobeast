@@ -14,6 +14,7 @@ import { ScreenshotRecorder } from '../screenshots/screenshot-recorder';
 import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
 import { StoreAppNotFoundError } from '../store-providers/errors';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
+import { currencyOf } from '../store-providers/raw-facts';
 import { snapshotIcon, toSnapshotData } from './apps.mapper';
 import { toChangeSnapshot } from './change-snapshot';
 import { withKnownSubtitle } from './known-subtitle';
@@ -174,6 +175,7 @@ export class ListingCaptureService {
         ...localized.changes,
       ],
       country: market,
+      currency: currencyOf(snapshot.raw),
     };
   }
 
