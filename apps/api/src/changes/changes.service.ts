@@ -19,9 +19,12 @@ import {
   eventsIn,
   eventsOfMarket,
   HOME_EVENTS,
+  listingIn,
   listingMarket,
+  NEWEST_FIRST,
   storedMarket,
 } from '../apps/listing';
+import { currencyOf } from '../store-providers/raw-facts';
 
 const MAX_EVENTS = 200;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -91,6 +94,9 @@ const toChangeEventItem = (event: EventRow): ChangeEventItem => {
   };
 };
 
+const listingKey = (event: EventRow): string =>
+  `${event.appId}:${event.country ?? ''}`;
+
 @Injectable()
 export class ChangesService {
   constructor(
@@ -138,7 +144,7 @@ export class ChangesService {
       select: EVENT_SELECT,
     });
 
-    return { events: events.map(toChangeEventItem) };
+    return { events: await this.toItems(events) };
   }
 
   async recent(limit: number): Promise<ChangeTimeline> {
@@ -153,7 +159,43 @@ export class ChangesService {
       select: EVENT_SELECT,
     });
 
-    return { events: events.map(toChangeEventItem) };
+    return { events: await this.toItems(events) };
+  }
+  private async currencies(
+    events: readonly EventRow[],
+  ): Promise<Map<string, string | null>> {
+    const priced = new Map(
+      events
+        .filter((event) => event.field === 'price')
+        .map((event) => [listingKey(event), event] as const),
+    );
+    const entries = await Promise.all(
+      [...priced].map(async ([key, event]) => {
+        const snapshot = await this.prisma.appSnapshot.findFirst({
+          where: {
+            appId: event.appId,
+            ...listingIn(
+              event.app.country,
+              listingMarket(event.app.country, event.country),
+            ),
+          },
+          orderBy: NEWEST_FIRST,
+          select: { raw: true },
+        });
+        return [key, snapshot ? currencyOf(snapshot.raw) : null] as const;
+      }),
+    );
+    return new Map(entries);
+  }
+
+  private async toItems(events: EventRow[]): Promise<ChangeEventItem[]> {
+    const currencies = await this.currencies(events);
+    return events.map((event) => {
+      const item = toChangeEventItem(event);
+      return event.field === 'price'
+        ? { ...item, currency: currencies.get(listingKey(event)) ?? null }
+        : item;
+    });
   }
 
   async recordMarketRefresh(

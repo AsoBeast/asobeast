@@ -92,13 +92,37 @@ describe("snapshotChangeCells", () => {
     ).toEqual({ before: "0", after: "1,000" });
   });
 
-  it("words a recorded price as free or a dollar amount", () => {
+  it("words a recorded price as free or an amount in the storefront currency", () => {
+    expect(
+      snapshotChangeCells(
+        { field: "price", before: "1.99", after: "0" },
+        "EUR",
+      ),
+    ).toEqual({ before: "€1.99", after: "Free" });
+    expect(
+      snapshotChangeCells({ field: "price", before: "0", after: "500" }, "JPY"),
+    ).toEqual({ before: "Free", after: "¥500" });
+    expect(
+      snapshotChangeCells({ field: "price", before: null, after: 2 }, "USD"),
+    ).toEqual({ before: "—", after: "$2.00" });
+  });
+
+  it("writes a price whose currency is unknown as a bare number", () => {
     expect(
       snapshotChangeCells({ field: "price", before: "1.99", after: "0" }),
-    ).toEqual({ before: "$1.99", after: "Free" });
+    ).toEqual({ before: "1.99", after: "Free" });
     expect(
-      snapshotChangeCells({ field: "price", before: null, after: 2 }),
-    ).toEqual({ before: "—", after: "$2.00" });
+      snapshotChangeCells({ field: "price", before: "1.99", after: "0" }, null),
+    ).toEqual({ before: "1.99", after: "Free" });
+  });
+
+  it("does not give the currency to a field that is not a price", () => {
+    expect(
+      snapshotChangeCells(
+        { field: "installs", before: 1000, after: 1200000 },
+        "EUR",
+      ),
+    ).toEqual({ before: "1,000", after: "1,200,000" });
   });
 
   it("counts recorded screenshots the way the changes timeline does", () => {
