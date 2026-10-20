@@ -20,6 +20,43 @@ const withCheckDetail = (
 });
 
 describe("auditMarkdown", () => {
+  it("formats the numbers of the competitor comparison like the page does", () => {
+    const report = auditMarkdown(
+      {
+        ...APP_AUDIT_EXAMPLE,
+        benchmarks: {
+          competitors: 3,
+          rows: [
+            {
+              metric: "rating-average",
+              label: "Average rating",
+              better: "higher",
+              you: 4.68104,
+              median: 4.65226,
+              best: 4.76438,
+              bestAppId: "c2",
+            },
+            {
+              metric: "rating-count",
+              label: "Ratings",
+              better: "higher",
+              you: 30853,
+              median: 328427,
+              best: 350099,
+              bestAppId: "c1",
+            },
+          ],
+        },
+      },
+      APP,
+    );
+
+    expect(report).toContain("| Average rating | 4.7 | 4.7 | 4.8 | Ahead |");
+    expect(report).toContain(
+      "| Ratings | 30,853 | 328,427 | 350,099 | Behind |",
+    );
+  });
+
   it("renders the score card, the three horizons, benchmarks and limitations", () => {
     const report = auditMarkdown(APP_AUDIT_EXAMPLE, APP);
 

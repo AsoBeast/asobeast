@@ -25,7 +25,6 @@ import {
   coversPhrase,
   KEYWORD_FIELD_UNLOCK,
   KEYWORDS_UNLOCK,
-  keywordMatchScore,
   lintContext,
   lintScore,
   priorityKeywords,
@@ -35,6 +34,11 @@ import {
   TITLE_PARTIAL_CHARS,
   uniquenessScore,
 } from '../audit-scoring';
+import {
+  bestTitleMatch,
+  titleKeywordAdvice,
+  titleKeywordDetail,
+} from './title-keyword-match';
 
 export const SHORT_DESCRIPTION_LIMIT =
   STORE_FIELD_LIMITS.GOOGLE_PLAY.shortDescription!.limit;
@@ -141,28 +145,11 @@ const policyAdvice = (
   return { title, fix: fixes[first.rule] ?? first.message };
 };
 
-const bestTitleMatch = (
-  title: string,
-  primary: AuditKeyword[],
-): { score: number; matched: AuditKeyword | null } => {
-  let best: { score: number; matched: AuditKeyword | null } = {
-    score: 0,
-    matched: null,
-  };
-  for (const keyword of primary) {
-    const score = keywordMatchScore(title, [keyword.text]);
-    if (score > best.score) {
-      best = { score, matched: keyword };
-    }
-  }
-  return best;
-};
-
 export const titleChecks = (context: AuditContext): RubricCheck[] => {
   const primary = priorityKeywords(context.keywords).filter(
     (keyword) => keyword.bucket === 'primary',
   );
-  const { score, matched } = bestTitleMatch(context.title, primary);
+  const match = bestTitleMatch(context.title, primary);
   const tier = brandTier(context.ratingCount);
   const chars = context.title.length;
   const titleLint = policyIssues(
@@ -180,24 +167,12 @@ export const titleChecks = (context: AuditContext): RubricCheck[] => {
       score:
         primary.length === 0
           ? null
-          : score === 0
+          : match.score === 0
             ? BRAND_TITLE_SCORE[tier]
-            : score,
-      detail:
-        primary.length === 0
-          ? 'No primary keywords tracked to match.'
-          : matched
-            ? `The title contains \u201c${matched.text}\u201d, a primary keyword.`
-            : `None of your primary keywords appear in the title: ${quoteList(
-                primary.map((keyword) => keyword.text),
-              )}.`,
+            : match.score,
+      detail: titleKeywordDetail(match, primary),
       unlock: KEYWORDS_UNLOCK,
-      advice: primary[0]
-        ? {
-            title: `Put \u201c${primary[0].text}\u201d in your title`,
-            fix: `Your strongest keyword is missing from the most heavily weighted field. Rewrite the title to include \u201c${primary[0].text}\u201d within ${TITLE_LIMIT} characters, keeping your brand first if people already search for it.`,
-          }
-        : null,
+      advice: titleKeywordAdvice(match, primary[0] ?? null, TITLE_LIMIT),
     }),
     check({
       id: 'title-length',
