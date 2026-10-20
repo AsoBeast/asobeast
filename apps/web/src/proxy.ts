@@ -25,6 +25,6 @@ export function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     "/((?!login|register|forgot-password|reset-password|invite|verify|unsubscribe|confirm-alert|api|\\.well-known|admin/queues|metrics|docs|_next|brand|icons|favicon.ico|icon.png|apple-icon.png|manifest.webmanifest).*)",
-    "/(api/backend|docs|admin/queues|\\.well-known)/(.*%.*)",
+    "/(api/backend|docs|admin/queues|\\.well-known)/(.*%(?![0-9A-Fa-f]{2}).*|.*%[89A-Fa-f][0-9A-Fa-f].*)",
   ],
 };

@@ -1,13 +1,15 @@
 import type { ApiErrorEnvelope } from "@asobeast/shared";
 import { SESSION_COOKIE } from "@asobeast/shared";
+import { unstable_doesMiddlewareMatch } from "next/experimental/testing/server";
 import { NextRequest } from "next/server";
 import { describe, expect, it } from "vitest";
 import { config, proxy } from "./proxy";
 
-const MATCHERS = config.matcher.map((source) => new RegExp(`^${source}$`));
-
 function matched(pathname: string): boolean {
-  return MATCHERS.some((matcher) => matcher.test(pathname));
+  return unstable_doesMiddlewareMatch({
+    config,
+    url: `http://web.local${pathname}`,
+  });
 }
 
 function request(path: string, withSession = false): NextRequest {
@@ -22,7 +24,10 @@ describe("the proxy matcher", () => {
     "/apps/%zz",
     "/settings",
     "/api/backend/x%zz",
-    "/api/backend/a%20b",
+    "/api/backend/%",
+    "/api/backend/%E0%A4%A",
+    "/api/backend/%C0%AF",
+    "/api/backend/%ed%a0%80",
     "/docs/%zz",
     "/admin/queues/%zz",
     "/.well-known/%zz",
@@ -33,6 +38,9 @@ describe("the proxy matcher", () => {
   it.each([
     "/api/backend/apps",
     "/api/backend/mcp",
+    "/api/backend/a%20b",
+    "/api/backend/apps/a%2Fb",
+    "/api/backend/%2e%2e/admin",
     "/docs",
     "/docs/swagger-ui.css",
     "/docs-json/%zz",
