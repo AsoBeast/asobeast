@@ -101,6 +101,8 @@ import {
   SERP_SNAPSHOTS,
   WEBHOOKS,
   emptyScreenshots,
+  DATABASE_DOWN_RETRY_SECONDS,
+  databaseDownAnswer,
   errorEnvelope,
   rateLimitedEnvelope,
   SIMILAR_APPS,
@@ -2382,11 +2384,9 @@ const routes: Route[] = [
         return;
       }
       if (outage === "database") {
-        return json(
-          res,
-          503,
-          errorEnvelope(503, "/health", "Service Unavailable Exception"),
-        );
+        return json(res, 503, databaseDownAnswer("/health"), {
+          "retry-after": String(DATABASE_DOWN_RETRY_SECONDS),
+        });
       }
       json(res, 200, HEALTH);
     },

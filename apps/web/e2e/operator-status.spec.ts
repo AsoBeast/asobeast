@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 import { hoverForTooltip } from "./hover.mts";
+import { databaseDownAnswer } from "./fixtures.mts";
 import { seedSession } from "./plan-helpers.mts";
 import { seedViewer } from "./viewer.mts";
 
@@ -105,18 +106,22 @@ test.describe("api status badge", () => {
     });
   }
 
-  for (const [status, error, message, detail, label] of [
+  for (const [status, body, detail, label] of [
     [
       502,
-      "Bad Gateway",
-      "The API is unreachable.",
+      {
+        statusCode: 502,
+        error: "Bad Gateway",
+        message: "The API is unreachable.",
+        path: "/api/backend/health",
+        timestamp: new Date().toISOString(),
+      },
       "API unreachable",
       "unreachable",
     ],
     [
       503,
-      "ServiceUnavailableException",
-      "Service Unavailable Exception",
+      databaseDownAnswer("/api/backend/health"),
       "API up · database unavailable",
       "degraded",
     ],
@@ -125,16 +130,7 @@ test.describe("api status badge", () => {
       page,
     }) => {
       await page.route("**/api/backend/health", (route) =>
-        route.fulfill({
-          status,
-          json: {
-            statusCode: status,
-            error,
-            message,
-            path: "/api/backend/health",
-            timestamp: new Date().toISOString(),
-          },
-        }),
+        route.fulfill({ status, json: body }),
       );
       await seedSession(page);
       await page.goto("/settings");
@@ -151,6 +147,20 @@ test.describe("api status badge", () => {
     context,
   }) => {
     const header = page.getByRole("banner");
+    const answers: {
+      status: number;
+      retryAfter: string | null;
+      db?: string;
+    }[] = [];
+    page.on("response", async (response) => {
+      if (!response.url().includes("/api/backend/health")) return;
+      const body: { db?: string } = response.ok() ? {} : await response.json();
+      answers.push({
+        status: response.status(),
+        retryAfter: response.headers()["retry-after"] ?? null,
+        db: body.db,
+      });
+    });
     await page.clock.install();
     await seedSession(page);
     await page.goto("/settings");
@@ -161,6 +171,11 @@ test.describe("api status badge", () => {
     ]);
     await pollUntilShown(page, "degraded");
     await expect(header.locator("svg.lucide-triangle-alert")).toHaveCount(1);
+    expect(answers).toContainEqual({
+      status: 503,
+      retryAfter: "5",
+      db: "down",
+    });
 
     await context.clearCookies({ name: "e2e_health" });
     await pollUntilShown(page, "api");
