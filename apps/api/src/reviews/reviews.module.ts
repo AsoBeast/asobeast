@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
 import { AiModule } from '../ai/ai.module';
 import { AlertsModule } from '../alerts/alerts.module';
+import { StoreConnectModule } from '../store-connect/store-connect.module';
 import { StoreProvidersModule } from '../store-providers/store-providers.module';
+import { AscReviewLocator } from './asc-review-locator.service';
 import { ReviewRepliesController } from './review-replies.controller';
 import { ReviewRepliesService } from './review-replies.service';
 import { ReviewReplyAssistant } from './review-reply-assistant.service';
@@ -13,7 +15,7 @@ import { ReviewsController } from './reviews.controller';
 import { ReviewsService } from './reviews.service';
 
 @Module({
-  imports: [StoreProvidersModule, AlertsModule, AiModule],
+  imports: [StoreProvidersModule, StoreConnectModule, AlertsModule, AiModule],
   controllers: [
     ReviewsController,
     ReviewRepliesController,
@@ -21,6 +23,7 @@ import { ReviewsService } from './reviews.service';
     ReviewTranslationController,
   ],
   providers: [
+    AscReviewLocator,
     ReviewsService,
     ReviewRepliesService,
     ReviewReplyAssistant,
