@@ -8,11 +8,61 @@ import { EXPORT_PAGE_SIZE } from './export-tables';
 
 const WORKSPACE = 'ws_export';
 
-function prismaWith(rows: Record<string, unknown[]>): PrismaService {
+type Row = Record<string, unknown>;
+
+interface Page {
+  skip?: number;
+  take: number;
+  where?: Row;
+  orderBy?: Row | Row[];
+}
+
+const compare = (left: unknown, right: unknown): number =>
+  String(left) < String(right) ? -1 : String(left) > String(right) ? 1 : 0;
+
+function matches(row: Row, where: Row = {}): boolean {
+  return Object.entries(where).every(([field, condition]) => {
+    if (field === 'OR')
+      return (condition as Row[]).some((term) => matches(row, term));
+    if (field === 'AND')
+      return (condition as Row[]).every((term) => matches(row, term));
+    if (condition !== null && typeof condition === 'object') {
+      const { gt, gte } = condition as { gt?: unknown; gte?: unknown };
+      if (gt !== undefined && compare(row[field], gt) <= 0) return false;
+      if (gte !== undefined && compare(row[field], gte) < 0) return false;
+      return true;
+    }
+    return compare(row[field], condition) === 0;
+  });
+}
+
+function sorted(rows: Row[], orderBy: Page['orderBy']): Row[] {
+  const fields = [orderBy ?? []].flat().flatMap((entry) => Object.keys(entry));
+  return [...rows].sort((left, right) => {
+    for (const field of fields) {
+      const order = compare(left[field], right[field]);
+      if (order !== 0) return order;
+    }
+    return 0;
+  });
+}
+
+function prismaWith(
+  rows: Record<string, Row[]>,
+  afterRead: (model: string, reads: number) => void = () => undefined,
+): PrismaService {
+  const reads = new Map<string, number>();
   const model = (name: string) => ({
     count: () => Promise.resolve((rows[name] ?? []).length),
-    findMany: ({ skip, take }: { skip: number; take: number }) =>
-      Promise.resolve((rows[name] ?? []).slice(skip, skip + take)),
+    findMany: ({ skip = 0, take, where, orderBy }: Page) => {
+      const page = sorted(rows[name] ?? [], orderBy)
+        .filter((row) => matches(row, where))
+        .slice(skip, skip + take);
+      const read = (reads.get(name) ?? 0) + 1;
+      reads.set(name, read);
+      afterRead(name, read);
+      return Promise.resolve(page);
+    },
     groupBy: () => Promise.resolve([]),
   });
   return new Proxy({} as PrismaService, {
@@ -40,13 +90,29 @@ function collector(highWaterMark?: number) {
   return { lines, sink };
 }
 
-function exporterFor(rows: Record<string, unknown[]>) {
+function exporterFor(
+  rows: Record<string, Row[]>,
+  afterRead?: (model: string, reads: number) => void,
+) {
   const workspace = new WorkspaceContext();
   return {
     workspace,
-    service: new AccountExportService(prismaWith(rows), workspace),
+    service: new AccountExportService(prismaWith(rows, afterRead), workspace),
   };
 }
+
+const ranking = (index: number): Row => ({
+  appId: 'app1',
+  keywordId: `kw${String(index).padStart(5, '0')}`,
+  date: '2023-01-01',
+});
+
+const exportedRows = (lines: string[], table: string): Row[] =>
+  lines
+    .slice(1)
+    .map((line) => JSON.parse(line) as { table: string; row: Row })
+    .filter((line) => line.table === table)
+    .map((line) => line.row);
 
 function swallowDrain(sink: Writable): void {
   const emit = sink.emit.bind(sink);
@@ -140,19 +206,64 @@ describe('AccountExportService', () => {
   });
 
   it('pages past the first batch rather than stopping at it', async () => {
-    const rows = Array.from({ length: EXPORT_PAGE_SIZE + 7 }, (_, index) => ({
-      id: `kw${index}`,
-    }));
+    const rows = Array.from({ length: EXPORT_PAGE_SIZE + 7 }, (_, index) =>
+      ranking(index),
+    );
     const { service, workspace } = exporterFor({ keywordRanking: rows });
     const { lines, sink } = collector();
 
     await workspace.run(WORKSPACE, () => service.stream(sink));
 
-    const exported = (await lines())
-      .slice(1)
-      .map((line) => JSON.parse(line) as { table: string })
-      .filter((line) => line.table === 'keywordRanking');
-    expect(exported).toHaveLength(rows.length);
+    expect(exportedRows(await lines(), 'keywordRanking')).toHaveLength(
+      rows.length,
+    );
+  });
+
+  it('writes every row that still exists when rows before the read position are deleted between pages', async () => {
+    const rows = Array.from(
+      { length: EXPORT_PAGE_SIZE * 2 + 500 },
+      (_, index) => ranking(index),
+    );
+    const table = { keywordRanking: [...rows] };
+    const { service, workspace } = exporterFor(table, (model, reads) => {
+      if (model === 'keywordRanking' && reads === 1) {
+        table.keywordRanking.splice(0, 1_000);
+      }
+    });
+    const { lines, sink } = collector();
+
+    await workspace.run(WORKSPACE, () => service.stream(sink));
+
+    const written = new Set(
+      exportedRows(await lines(), 'keywordRanking').map((row) => row.keywordId),
+    );
+    const missing = rows
+      .slice(1_000)
+      .filter((row) => !written.has(row.keywordId));
+    expect(missing).toEqual([]);
+  });
+
+  it('writes no row twice when rows that sort first are inserted between pages', async () => {
+    const rows = Array.from({ length: EXPORT_PAGE_SIZE * 2 }, (_, index) =>
+      ranking(index + 1_000),
+    );
+    const table = { keywordRanking: [...rows] };
+    const { service, workspace } = exporterFor(table, (model, reads) => {
+      if (model === 'keywordRanking' && reads === 1) {
+        table.keywordRanking.push(
+          ...Array.from({ length: 500 }, (_, index) => ranking(index)),
+        );
+      }
+    });
+    const { lines, sink } = collector();
+
+    await workspace.run(WORKSPACE, () => service.stream(sink));
+
+    const keys = exportedRows(await lines(), 'keywordRanking').map(
+      (row) => row.keywordId,
+    );
+    expect(keys).toHaveLength(new Set(keys).size);
+    for (const row of rows) expect(keys).toContain(row.keywordId);
   });
 
   it('waits for a slow reader instead of buffering the whole export', async () => {

@@ -2,10 +2,28 @@ import type { PrismaService } from '../prisma/prisma.service';
 
 export const EXPORT_PAGE_SIZE = 2_000;
 
+export type ExportRow = Record<string, unknown>;
+
 export interface ExportTable {
   name: string;
   count: () => Promise<number>;
-  read: (skip: number, take: number) => Promise<unknown[]>;
+  page: (after: ExportRow | undefined, take: number) => Promise<ExportRow[]>;
+}
+
+interface ExportTableKey {
+  name: string;
+  key: readonly string[];
+  include?: Record<string, true>;
+}
+
+interface ExportDelegate {
+  count: () => Promise<number>;
+  findMany: (args: {
+    where: ExportRow;
+    orderBy: Record<string, 'asc'>[];
+    take: number;
+    include?: Record<string, true>;
+  }) => Promise<ExportRow[]>;
 }
 
 const SECRET_FIELDS = [
@@ -28,232 +46,71 @@ export function withoutSecrets(row: unknown): unknown {
   );
 }
 
-export function exportTables(prisma: PrismaService): ExportTable[] {
-  const table = <T>(
-    name: string,
-    count: () => Promise<number>,
-    read: (skip: number, take: number) => Promise<T[]>,
-  ): ExportTable => ({ name, count, read: (skip, take) => read(skip, take) });
+const ID = ['id'];
+const BY_LOCALIZATION = ['appId', 'localization'];
 
-  return [
-    table(
-      'workspace',
-      () => prisma.workspace.count(),
-      (skip, take) =>
-        prisma.workspace.findMany({ skip, take, orderBy: { id: 'asc' } }),
+export const EXPORT_TABLE_KEYS: readonly ExportTableKey[] = [
+  { name: 'workspace', key: ID },
+  { name: 'user', key: ID },
+  { name: 'apiToken', key: ID },
+  { name: 'workspaceInvite', key: ID },
+  { name: 'appGroup', key: ID },
+  { name: 'app', key: ID },
+  { name: 'appSnapshot', key: ID },
+  {
+    name: 'trackedKeyword',
+    key: ['appId', 'keywordId'],
+    include: { keyword: true },
+  },
+  { name: 'keywordField', key: BY_LOCALIZATION },
+  { name: 'appSetup', key: ['appId'] },
+  { name: 'appLocalization', key: BY_LOCALIZATION },
+  { name: 'keywordRanking', key: ['appId', 'keywordId', 'date'] },
+  { name: 'categoryRank', key: ['appId', 'date', 'collection', 'genre'] },
+  { name: 'chartFollow', key: ID },
+  { name: 'review', key: ID },
+  { name: 'reviewReply', key: ['reviewId'] },
+  { name: 'changeEvent', key: ID },
+  { name: 'snapshotScreenshot', key: ['snapshotId', 'position'] },
+  { name: 'auditInsight', key: ['appId'] },
+  { name: 'auditScore', key: ['appId', 'date'] },
+  { name: 'actionItem', key: ID },
+  { name: 'actionEvent', key: ID },
+  { name: 'aiCall', key: ID },
+  { name: 'webhook', key: ID },
+  { name: 'emailAlert', key: ID },
+  { name: 'alertDelivery', key: ID },
+  { name: 'alertEvent', key: ID },
+  { name: 'suggestProbe', key: ['appId', 'term', 'country', 'day', 'probe'] },
+];
+
+export function keysetAfter(
+  key: readonly string[],
+  after: ExportRow | undefined,
+): ExportRow {
+  if (!after) return {};
+  const terms = key.map((column, index) => ({
+    ...Object.fromEntries(
+      key.slice(0, index).map((equal) => [equal, after[equal]]),
     ),
-    table(
-      'user',
-      () => prisma.user.count(),
-      (skip, take) =>
-        prisma.user.findMany({ skip, take, orderBy: { id: 'asc' } }),
-    ),
-    table(
-      'apiToken',
-      () => prisma.apiToken.count(),
-      (skip, take) =>
-        prisma.apiToken.findMany({ skip, take, orderBy: { id: 'asc' } }),
-    ),
-    table(
-      'workspaceInvite',
-      () => prisma.workspaceInvite.count(),
-      (skip, take) =>
-        prisma.workspaceInvite.findMany({
-          skip,
-          take,
-          orderBy: { id: 'asc' },
-        }),
-    ),
-    table(
-      'appGroup',
-      () => prisma.appGroup.count(),
-      (skip, take) =>
-        prisma.appGroup.findMany({ skip, take, orderBy: { id: 'asc' } }),
-    ),
-    table(
-      'app',
-      () => prisma.app.count(),
-      (skip, take) =>
-        prisma.app.findMany({ skip, take, orderBy: { id: 'asc' } }),
-    ),
-    table(
-      'appSnapshot',
-      () => prisma.appSnapshot.count(),
-      (skip, take) =>
-        prisma.appSnapshot.findMany({ skip, take, orderBy: { id: 'asc' } }),
-    ),
-    table(
-      'trackedKeyword',
-      () => prisma.trackedKeyword.count(),
-      (skip, take) =>
-        prisma.trackedKeyword.findMany({
-          skip,
-          take,
-          orderBy: [{ appId: 'asc' }, { keywordId: 'asc' }],
-          include: { keyword: true },
-        }),
-    ),
-    table(
-      'keywordField',
-      () => prisma.keywordField.count(),
-      (skip, take) =>
-        prisma.keywordField.findMany({
-          skip,
-          take,
-          orderBy: [{ appId: 'asc' }, { localization: 'asc' }],
-        }),
-    ),
-    table(
-      'appSetup',
-      () => prisma.appSetup.count(),
-      (skip, take) =>
-        prisma.appSetup.findMany({ skip, take, orderBy: { appId: 'asc' } }),
-    ),
-    table(
-      'appLocalization',
-      () => prisma.appLocalization.count(),
-      (skip, take) =>
-        prisma.appLocalization.findMany({
-          skip,
-          take,
-          orderBy: [{ appId: 'asc' }, { localization: 'asc' }],
-        }),
-    ),
-    table(
-      'keywordRanking',
-      () => prisma.keywordRanking.count(),
-      (skip, take) =>
-        prisma.keywordRanking.findMany({
-          skip,
-          take,
-          orderBy: [{ date: 'asc' }, { appId: 'asc' }, { keywordId: 'asc' }],
-        }),
-    ),
-    table(
-      'categoryRank',
-      () => prisma.categoryRank.count(),
-      (skip, take) =>
-        prisma.categoryRank.findMany({
-          skip,
-          take,
-          orderBy: [
-            { date: 'asc' },
-            { appId: 'asc' },
-            { collection: 'asc' },
-            { genre: 'asc' },
-          ],
-        }),
-    ),
-    table(
-      'chartFollow',
-      () => prisma.chartFollow.count(),
-      (skip, take) =>
-        prisma.chartFollow.findMany({ skip, take, orderBy: { id: 'asc' } }),
-    ),
-    table(
-      'review',
-      () => prisma.review.count(),
-      (skip, take) =>
-        prisma.review.findMany({ skip, take, orderBy: { id: 'asc' } }),
-    ),
-    table(
-      'reviewReply',
-      () => prisma.reviewReply.count(),
-      (skip, take) =>
-        prisma.reviewReply.findMany({
-          skip,
-          take,
-          orderBy: { reviewId: 'asc' },
-        }),
-    ),
-    table(
-      'changeEvent',
-      () => prisma.changeEvent.count(),
-      (skip, take) =>
-        prisma.changeEvent.findMany({ skip, take, orderBy: { id: 'asc' } }),
-    ),
-    table(
-      'snapshotScreenshot',
-      () => prisma.snapshotScreenshot.count(),
-      (skip, take) =>
-        prisma.snapshotScreenshot.findMany({
-          skip,
-          take,
-          orderBy: [{ snapshotId: 'asc' }, { position: 'asc' }],
-        }),
-    ),
-    table(
-      'auditInsight',
-      () => prisma.auditInsight.count(),
-      (skip, take) =>
-        prisma.auditInsight.findMany({ skip, take, orderBy: { appId: 'asc' } }),
-    ),
-    table(
-      'auditScore',
-      () => prisma.auditScore.count(),
-      (skip, take) =>
-        prisma.auditScore.findMany({
-          skip,
-          take,
-          orderBy: [{ appId: 'asc' }, { date: 'asc' }],
-        }),
-    ),
-    table(
-      'actionItem',
-      () => prisma.actionItem.count(),
-      (skip, take) =>
-        prisma.actionItem.findMany({ skip, take, orderBy: { id: 'asc' } }),
-    ),
-    table(
-      'actionEvent',
-      () => prisma.actionEvent.count(),
-      (skip, take) =>
-        prisma.actionEvent.findMany({ skip, take, orderBy: { id: 'asc' } }),
-    ),
-    table(
-      'aiCall',
-      () => prisma.aiCall.count(),
-      (skip, take) =>
-        prisma.aiCall.findMany({ skip, take, orderBy: { id: 'asc' } }),
-    ),
-    table(
-      'webhook',
-      () => prisma.webhook.count(),
-      (skip, take) =>
-        prisma.webhook.findMany({ skip, take, orderBy: { id: 'asc' } }),
-    ),
-    table(
-      'emailAlert',
-      () => prisma.emailAlert.count(),
-      (skip, take) =>
-        prisma.emailAlert.findMany({ skip, take, orderBy: { id: 'asc' } }),
-    ),
-    table(
-      'alertDelivery',
-      () => prisma.alertDelivery.count(),
-      (skip, take) =>
-        prisma.alertDelivery.findMany({ skip, take, orderBy: { id: 'asc' } }),
-    ),
-    table(
-      'alertEvent',
-      () => prisma.alertEvent.count(),
-      (skip, take) =>
-        prisma.alertEvent.findMany({ skip, take, orderBy: { id: 'asc' } }),
-    ),
-    table(
-      'suggestProbe',
-      () => prisma.suggestProbe.count(),
-      (skip, take) =>
-        prisma.suggestProbe.findMany({
-          skip,
-          take,
-          orderBy: [
-            { appId: 'asc' },
-            { term: 'asc' },
-            { day: 'asc' },
-            { probe: 'asc' },
-          ],
-        }),
-    ),
-  ];
+    [column]: { gt: after[column] },
+  }));
+  if (terms.length === 1) return terms[0];
+  const [first] = key;
+  return { [first]: { gte: after[first] }, OR: terms };
+}
+
+export function exportTables(prisma: PrismaService): ExportTable[] {
+  const delegates = prisma as unknown as Record<string, ExportDelegate>;
+  return EXPORT_TABLE_KEYS.map(({ name, key, include }) => ({
+    name,
+    count: () => delegates[name].count(),
+    page: (after, take) =>
+      delegates[name].findMany({
+        where: keysetAfter(key, after),
+        orderBy: key.map((column) => ({ [column]: 'asc' as const })),
+        take,
+        ...(include ? { include } : {}),
+      }),
+  }));
 }
