@@ -54,8 +54,13 @@ export const KEYWORD_TABLE_SORTS = [
   "delta7d",
 ] as const;
 
-export const keywordSortParser =
-  parseAsStringLiteral(KEYWORD_TABLE_SORTS).withDefault("opportunity");
+// The table's natural order; kept out of the url the way nuqs clears a
+// parameter that carries its default.
+export const KEYWORD_DEFAULT_SORT = "opportunity";
+
+// Nullable on purpose: `null` means the url names no sort, which lets the
+// keywords table fall back to the sort its viewer last chose.
+export const keywordSortParser = parseAsStringLiteral(KEYWORD_TABLE_SORTS);
 
 export const searchParser = parseAsString.withDefault("");
 
