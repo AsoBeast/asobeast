@@ -94,6 +94,7 @@ Screenshot records leave with their snapshot, so `RETENTION_SNAPSHOTS_DAYS` gove
 - **A caption is wrong or missing.** Open the screenshot in the store at full size. Thin, decorative or low contrast lettering is the usual cause. The reader never changes your store listing, so nothing needs repair.
 - **No caption change appeared after you edited captions.** Changes are recorded after the snapshot is fully read, one snapshot later than the first import. They are skipped when a screenshot of either snapshot could not be read, because a missing read would otherwise look like a removed caption.
 - **Captions changed right after an upgrade.** A new version of the reader reads each listing again on its next refresh. The first read with the new version becomes the baseline and records no caption change, so improved readings never appear as edits.
+- **Every read fails right after an upgrade or a rebuild.** A language pack in the image may be damaged. The reads fail with the reason in the `screenshots` queue at `/admin/queues` and the API keeps running. Rebuild or pull the image again, or set `SCREENSHOT_OCR=false` until you can.
 - **The API container restarts.** See [Capacity and limits](/operations/capacity) for the memory ceiling.
 
 ## Related
