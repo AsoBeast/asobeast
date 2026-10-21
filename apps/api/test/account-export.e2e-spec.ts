@@ -11,6 +11,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { sha256 } from '../src/auth/password-hash';
+import { EXPORT_PAGE_SIZE } from '../src/account/export-tables';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { restoreAuthEnv } from './helpers/auth-env';
 import { seedApiToken, truncateUsers } from './helpers/api-tokens';
@@ -247,6 +248,68 @@ describe('Account export credential state (e2e)', () => {
       swallowDrain.mockRestore();
       await prisma.apiToken.deleteMany({
         where: { name: { startsWith: 'bulk ' } },
+      });
+    }
+  });
+
+  it('writes every row of a compound key table once across page boundaries', async () => {
+    const app = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: 'APP_STORE',
+        storeAppId: '551000001',
+        name: 'Paged Export',
+      },
+    });
+    const keywords = await Promise.all(
+      ['paged one', 'paged two', 'paged three'].map((text) =>
+        prisma.keyword.create({ data: { text, store: 'APP_STORE' } }),
+      ),
+    );
+    const day = (offset: number) =>
+      new Date(Date.UTC(2023, 0, 1) + offset * 86_400_000);
+    const rankings = keywords.flatMap((keyword) =>
+      Array.from({ length: 900 }, (_, offset) => ({
+        appId: app.id,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        keywordId: keyword.id,
+        date: day(offset),
+        position: offset % 200,
+      })),
+    );
+    const probes = Array.from(
+      { length: EXPORT_PAGE_SIZE + 10 },
+      (_, index) => ({
+        appId: app.id,
+        term: 'habit',
+        country: ['us', 'gb', 'de'][index % 3],
+        day: day(Math.floor(index / 3)),
+        probe: 'h',
+        results: [],
+      }),
+    );
+    await prisma.keywordRanking.createMany({ data: rankings });
+    await prisma.suggestProbe.createMany({ data: probes });
+
+    try {
+      const { lines } = await exportAs({ cookie: ownerCookie }, 60_000);
+
+      const keysOf = (table: string, key: string[]) =>
+        lines
+          .filter((line) => line.table === table && line.row?.appId === app.id)
+          .map((line) =>
+            key.map((column) => String(line.row?.[column])).join('|'),
+          );
+      const rankingKeys = keysOf('keywordRanking', ['keywordId', 'date']);
+      const probeKeys = keysOf('suggestProbe', ['country', 'day']);
+      expect(rankingKeys).toHaveLength(rankings.length);
+      expect(new Set(rankingKeys).size).toBe(rankings.length);
+      expect(probeKeys).toHaveLength(probes.length);
+      expect(new Set(probeKeys).size).toBe(probes.length);
+    } finally {
+      await prisma.app.delete({ where: { id: app.id } });
+      await prisma.keyword.deleteMany({
+        where: { id: { in: keywords.map((keyword) => keyword.id) } },
       });
     }
   });

@@ -7,6 +7,7 @@ import {
   EXPORT_PAGE_SIZE,
   exportTables,
   withoutSecrets,
+  type ExportRow,
   type ExportTable,
 } from './export-tables';
 import { writeBatched } from './export-sink';
@@ -61,12 +62,14 @@ export class AccountExportService {
   }
 
   private async *tableLines(table: ExportTable): AsyncGenerator<string> {
-    for (let skip = 0; ; skip += EXPORT_PAGE_SIZE) {
-      const rows = await table.read(skip, EXPORT_PAGE_SIZE);
+    let after: ExportRow | undefined;
+    for (;;) {
+      const rows = await table.page(after, EXPORT_PAGE_SIZE);
       for (const row of rows) {
         yield ndjson({ table: table.name, row: withoutSecrets(row) });
       }
       if (rows.length < EXPORT_PAGE_SIZE) return;
+      after = rows[rows.length - 1];
     }
   }
 }
