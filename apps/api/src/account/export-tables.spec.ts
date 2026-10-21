@@ -4,7 +4,8 @@ import type { PrismaService } from '../prisma/prisma.service';
 import {
   EXPORT_TABLE_KEYS,
   exportTables,
-  keysetAfter,
+  keyRange,
+  keysAfter,
   withoutSecrets,
 } from './export-tables';
 import { TENANT_TABLES } from '../common/tenancy/tenant-tables';
@@ -110,12 +111,17 @@ const SCHEMA = readFileSync(
   'utf8',
 );
 
-function primaryKeyOf(table: string): string[] {
+function modelOf(table: string): string {
   const model = new RegExp(
     `^model ${table.charAt(0).toUpperCase()}${table.slice(1)} \\{([^}]*)\\}`,
     'm',
   ).exec(SCHEMA)?.[1];
   if (!model) throw new Error(`no model for ${table}`);
+  return model;
+}
+
+function primaryKeyOf(table: string): string[] {
+  const model = modelOf(table);
   const compound = /@@id\(\[([^\]]+)\]\)/.exec(model)?.[1];
   if (compound) return compound.split(',').map((column) => column.trim());
   return model
@@ -124,33 +130,105 @@ function primaryKeyOf(table: string): string[] {
     .map((line) => line.trim().split(/\s+/)[0]);
 }
 
-describe('keysetAfter', () => {
+describe('keysAfter', () => {
   const day = new Date('2023-01-01T00:00:00.000Z');
 
-  it('asks for every row on the first page', () => {
-    expect(keysetAfter(['id'], undefined)).toEqual({});
+  it('reads the keys of the first page in key order', () => {
+    const query = keysAfter(
+      'keywordRanking',
+      ['appId', 'keywordId', 'date'],
+      undefined,
+      10,
+    );
+
+    expect(query.sql).toBe(
+      'SELECT "appId","keywordId","date" FROM "KeywordRanking"  ORDER BY "appId","keywordId","date" LIMIT ?',
+    );
+    expect(query.values).toEqual([10]);
   });
 
-  it('continues after the last row of a one column key', () => {
-    expect(keysetAfter(['id'], { id: 'b', name: 'Focus' })).toEqual({
-      id: { gt: 'b' },
+  it('continues after the last key with one row value comparison', () => {
+    const query = keysAfter(
+      'keywordRanking',
+      ['appId', 'keywordId', 'date'],
+      { appId: 'a', keywordId: 'k', date: day, position: 3 },
+      10,
+    );
+
+    expect(query.sql).toBe(
+      'SELECT "appId","keywordId","date" FROM "KeywordRanking" WHERE ("appId","keywordId","date") > (?,?,?) ORDER BY "appId","keywordId","date" LIMIT ?',
+    );
+    expect(query.values).toEqual(['a', 'k', day, 10]);
+  });
+
+  it('continues after the last key of a one column key', () => {
+    const query = keysAfter('review', ['id'], { id: 'r9' }, 10);
+
+    expect(query.sql).toBe(
+      'SELECT "id" FROM "Review" WHERE ("id") > (?) ORDER BY "id" LIMIT ?',
+    );
+    expect(query.values).toEqual(['r9', 10]);
+  });
+});
+
+describe('keyRange', () => {
+  const day = (date: number) => new Date(Date.UTC(2023, 0, date));
+  const RANKING = ['appId', 'keywordId', 'date'];
+
+  it('reads one row when the page holds one key', () => {
+    const only = { appId: 'a', keywordId: 'k', date: day(1) };
+
+    expect(keyRange(RANKING, only, { ...only, date: day(1) })).toEqual(only);
+  });
+
+  it('reads between two keys of a one column key', () => {
+    expect(keyRange(['id'], { id: 'b' }, { id: 'f' })).toEqual({
+      OR: [{ id: { gte: 'b', lte: 'f' } }],
     });
   });
 
-  it('continues after the last row of a compound key in key order', () => {
+  it('reads between two keys that differ only in the last column', () => {
     expect(
-      keysetAfter(['appId', 'keywordId', 'date'], {
-        appId: 'a',
-        keywordId: 'k',
-        date: day,
-        position: 3,
-      }),
+      keyRange(
+        RANKING,
+        { appId: 'a', keywordId: 'k', date: day(1) },
+        { appId: 'a', keywordId: 'k', date: day(9) },
+      ),
     ).toEqual({
-      appId: { gte: 'a' },
+      OR: [{ appId: 'a', keywordId: 'k', date: { gte: day(1), lte: day(9) } }],
+    });
+  });
+
+  it('reads the tail of the first prefix, the prefixes between and the head of the last', () => {
+    expect(
+      keyRange(
+        RANKING,
+        { appId: 'a', keywordId: 'k1', date: day(5) },
+        { appId: 'a', keywordId: 'k4', date: day(2) },
+      ),
+    ).toEqual({
       OR: [
-        { appId: { gt: 'a' } },
-        { appId: 'a', keywordId: { gt: 'k' } },
-        { appId: 'a', keywordId: 'k', date: { gt: day } },
+        { appId: 'a', keywordId: 'k1', date: { gte: day(5) } },
+        { appId: 'a', keywordId: { gt: 'k1', lt: 'k4' } },
+        { appId: 'a', keywordId: 'k4', date: { lte: day(2) } },
+      ],
+    });
+  });
+
+  it('splits on the leading column when the page spans apps', () => {
+    expect(
+      keyRange(
+        RANKING,
+        { appId: 'a', keywordId: 'k8', date: day(5) },
+        { appId: 'c', keywordId: 'k2', date: day(3) },
+      ),
+    ).toEqual({
+      OR: [
+        { appId: 'a', keywordId: 'k8', date: { gte: day(5) } },
+        { appId: 'a', keywordId: { gt: 'k8' } },
+        { appId: { gt: 'a', lt: 'c' } },
+        { appId: 'c', keywordId: { lt: 'k2' } },
+        { appId: 'c', keywordId: 'k2', date: { lte: day(3) } },
       ],
     });
   });
@@ -164,35 +242,76 @@ describe('the export keys', () => {
     },
   );
 
-  it('read each page in key order after the last row', async () => {
-    const findMany = jest.fn().mockResolvedValue([]);
-    const [table] = exportTables({
-      workspace: { findMany },
-    } as unknown as PrismaService);
+  it.each(EXPORT_TABLE_KEYS.map((table) => [table.name]))(
+    '%s keeps the table and column names of its model',
+    (name) => {
+      expect(modelOf(name)).not.toMatch(/@@?map\(/);
+    },
+  );
 
-    await table.page({ id: 'ws1' }, 10);
+  const tableOf = (name: string, findMany: jest.Mock, keys: unknown[]) =>
+    exportTables({
+      [name]: { findMany },
+      $queryRaw: jest.fn().mockResolvedValue(keys),
+    } as unknown as PrismaService).find((table) => table.name === name);
+
+  it('reads the rows between the first and last key of the page', async () => {
+    const rows = [{ id: 'r2' }, { id: 'r3' }];
+    const findMany = jest.fn().mockResolvedValue(rows);
+
+    const page = await tableOf('review', findMany, [
+      { id: 'r2' },
+      { id: 'r3' },
+    ])?.page({ id: 'r1' }, 2);
 
     expect(findMany).toHaveBeenCalledWith({
-      where: { id: { gt: 'ws1' } },
+      where: { OR: [{ id: { gte: 'r2', lte: 'r3' } }] },
       orderBy: [{ id: 'asc' }],
-      take: 10,
     });
+    expect(page).toEqual({ rows, next: { id: 'r3' } });
   });
 
-  it('read the phrase of each tracked keyword with it', async () => {
-    const findMany = jest.fn().mockResolvedValue([]);
-    const tracked = exportTables({
-      trackedKeyword: { findMany },
-    } as unknown as PrismaService).find(
-      (table) => table.name === 'trackedKeyword',
+  it('continues after the last key when its row was deleted before it was read', async () => {
+    const findMany = jest.fn().mockResolvedValue([{ id: 'r2' }]);
+
+    const page = await tableOf('review', findMany, [
+      { id: 'r2' },
+      { id: 'r3' },
+    ])?.page(undefined, 2);
+
+    expect(page).toEqual({ rows: [{ id: 'r2' }], next: { id: 'r3' } });
+  });
+
+  it('ends the table when the page holds fewer keys than it asked for', async () => {
+    const findMany = jest.fn().mockResolvedValue([{ id: 'r2' }]);
+
+    const page = await tableOf('review', findMany, [{ id: 'r2' }])?.page(
+      undefined,
+      2,
     );
 
-    await tracked?.page(undefined, 10);
+    expect(page).toEqual({ rows: [{ id: 'r2' }], next: undefined });
+  });
+
+  it('reads no rows once no key is left', async () => {
+    const findMany = jest.fn();
+
+    const page = await tableOf('review', findMany, [])?.page(undefined, 2);
+
+    expect(page).toEqual({ rows: [] });
+    expect(findMany).not.toHaveBeenCalled();
+  });
+
+  it('reads the phrase of each tracked keyword with it', async () => {
+    const findMany = jest.fn().mockResolvedValue([]);
+
+    await tableOf('trackedKeyword', findMany, [
+      { appId: 'a', keywordId: 'k' },
+    ])?.page(undefined, 10);
 
     expect(findMany).toHaveBeenCalledWith({
-      where: {},
+      where: { appId: 'a', keywordId: 'k' },
       orderBy: [{ appId: 'asc' }, { keywordId: 'asc' }],
-      take: 10,
       include: { keyword: true },
     });
   });

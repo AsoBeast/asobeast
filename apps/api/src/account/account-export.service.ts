@@ -63,14 +63,13 @@ export class AccountExportService {
 
   private async *tableLines(table: ExportTable): AsyncGenerator<string> {
     let after: ExportRow | undefined;
-    for (;;) {
-      const rows = await table.page(after, EXPORT_PAGE_SIZE);
-      for (const row of rows) {
+    do {
+      const page = await table.page(after, EXPORT_PAGE_SIZE);
+      for (const row of page.rows) {
         yield ndjson({ table: table.name, row: withoutSecrets(row) });
       }
-      if (rows.length < EXPORT_PAGE_SIZE) return;
-      after = rows[rows.length - 1];
-    }
+      after = page.next;
+    } while (after);
   }
 }
 
