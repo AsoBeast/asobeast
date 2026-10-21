@@ -363,6 +363,40 @@ describe('ReviewsService silent block detection', () => {
     expect(createMany).not.toHaveBeenCalled();
   });
 
+  it('keeps the stored reviews when an expected feed is still empty on the last attempt', async () => {
+    const { service, reviews, createMany, dispatch } = buildDeps({
+      pages: [[]],
+      existing: [],
+      storedAlready: true,
+    });
+
+    await expect(
+      settled(
+        service.syncReviews({ appId: 'app1', pages: 1, backfill: false }, true),
+      ),
+    ).resolves.toEqual([]);
+
+    expect(reviews).toHaveBeenCalledTimes(1 + EMPTY_ANSWER_RETRIES.APP_STORE);
+    expect(createMany).not.toHaveBeenCalled();
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+
+  it('refuses an expected empty google play feed on the last attempt too', async () => {
+    const { service } = buildDeps({
+      pages: [[]],
+      existing: [],
+      storedAlready: true,
+      store: Store.GOOGLE_PLAY,
+    });
+
+    await expect(
+      service.syncReviews({ appId: 'app1', pages: 1, backfill: false }, true),
+    ).rejects.toMatchObject({
+      constructor: ImplausibleResultError,
+      retryable: false,
+    });
+  });
+
   it('asks again when an expected feed comes back empty', async () => {
     const { service, reviews } = buildDeps({
       pages: [[], [], [makeReview('a')]],
