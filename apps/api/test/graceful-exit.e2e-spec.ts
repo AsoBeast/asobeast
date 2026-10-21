@@ -12,17 +12,17 @@ describe('A signalled stop ends the process (e2e)', () => {
     });
     try {
       await once(child, 'message');
-      const exited = once(child, 'exit').then(() => true);
+      const exited = once(child, 'exit');
       child.kill('SIGTERM');
 
       const ended = await Promise.race([
         exited,
-        new Promise<boolean>((resolve) =>
-          setTimeout(() => resolve(false), EXIT_DEADLINE_MS).unref(),
+        new Promise<'still running'>((resolve) =>
+          setTimeout(() => resolve('still running'), EXIT_DEADLINE_MS).unref(),
         ),
       ]);
 
-      expect(ended).toBe(true);
+      expect(ended).toEqual([0, null]);
     } finally {
       child.kill('SIGKILL');
     }

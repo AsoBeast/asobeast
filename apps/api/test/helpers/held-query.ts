@@ -1,7 +1,7 @@
 import { request as httpRequest } from 'node:http';
 import type { PrismaClient } from '@prisma/client';
 
-export type Answer = number | 'cut';
+export type Answer = number | 'cut' | 'timeout';
 
 export interface TableLock {
   release: () => Promise<void>;
@@ -51,7 +51,10 @@ export function answerOf(port: number, path: string): Promise<Answer> {
         resolve(response.statusCode ?? 0);
       },
     );
-    sent.on('timeout', () => sent.destroy());
+    sent.on('timeout', () => {
+      resolve('timeout');
+      sent.destroy();
+    });
     sent.on('error', () => resolve('cut'));
     sent.end();
   });
