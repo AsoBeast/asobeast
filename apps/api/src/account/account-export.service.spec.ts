@@ -1,5 +1,6 @@
 import { once } from 'node:events';
 import { Writable } from 'node:stream';
+import type { Prisma } from '@prisma/client';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import type { PrismaService } from '../prisma/prisma.service';
 import { AccountExportService } from './account-export.service';
@@ -11,8 +12,6 @@ const WORKSPACE = 'ws_export';
 type Row = Record<string, unknown>;
 
 interface Page {
-  skip?: number;
-  take: number;
   where?: Row;
   orderBy?: Row | Row[];
 }
@@ -27,24 +26,47 @@ function matches(row: Row, where: Row = {}): boolean {
     if (field === 'AND')
       return (condition as Row[]).every((term) => matches(row, term));
     if (condition !== null && typeof condition === 'object') {
-      const { gt, gte } = condition as { gt?: unknown; gte?: unknown };
+      const { gt, gte, lt, lte } = condition as Record<string, unknown>;
       if (gt !== undefined && compare(row[field], gt) <= 0) return false;
       if (gte !== undefined && compare(row[field], gte) < 0) return false;
+      if (lt !== undefined && compare(row[field], lt) >= 0) return false;
+      if (lte !== undefined && compare(row[field], lte) > 0) return false;
       return true;
     }
     return compare(row[field], condition) === 0;
   });
 }
 
-function sorted(rows: Row[], orderBy: Page['orderBy']): Row[] {
-  const fields = [orderBy ?? []].flat().flatMap((entry) => Object.keys(entry));
-  return [...rows].sort((left, right) => {
-    for (const field of fields) {
+function byKey(key: string[]) {
+  return (left: Row, right: Row): number => {
+    for (const field of key) {
       const order = compare(left[field], right[field]);
       if (order !== 0) return order;
     }
     return 0;
-  });
+  };
+}
+
+function keysOf(rows: Record<string, Row[]>, query: Prisma.Sql): Row[] {
+  const [, columns, table] = /^SELECT (\S+) FROM "(\w+)"/.exec(query.sql) ?? [];
+  const key = columns.replaceAll('"', '').split(',');
+  const take = query.values[query.values.length - 1] as number;
+  const after = query.values.slice(0, -1);
+  const name = table.charAt(0).toLowerCase() + table.slice(1);
+  const position = Object.fromEntries(
+    key.map((field, index) => [field, after[index]]),
+  );
+  const order = byKey(key);
+  return [...(rows[name] ?? [])]
+    .sort(order)
+    .filter((row) => after.length === 0 || order(row, position) > 0)
+    .slice(0, take)
+    .map((row) => Object.fromEntries(key.map((field) => [field, row[field]])));
+}
+
+function sorted(rows: Row[], orderBy: Page['orderBy']): Row[] {
+  const fields = [orderBy ?? []].flat().flatMap((entry) => Object.keys(entry));
+  return [...rows].sort(byKey(fields));
 }
 
 function prismaWith(
@@ -54,10 +76,10 @@ function prismaWith(
   const reads = new Map<string, number>();
   const model = (name: string) => ({
     count: () => Promise.resolve((rows[name] ?? []).length),
-    findMany: ({ skip = 0, take, where, orderBy }: Page) => {
-      const page = sorted(rows[name] ?? [], orderBy)
-        .filter((row) => matches(row, where))
-        .slice(skip, skip + take);
+    findMany: ({ where, orderBy }: Page) => {
+      const page = sorted(rows[name] ?? [], orderBy).filter((row) =>
+        matches(row, where),
+      );
       const read = (reads.get(name) ?? 0) + 1;
       reads.set(name, read);
       afterRead(name, read);
@@ -66,7 +88,10 @@ function prismaWith(
     groupBy: () => Promise.resolve([]),
   });
   return new Proxy({} as PrismaService, {
-    get: (_target, property: string) => model(property),
+    get: (_target, property: string) =>
+      property === '$queryRaw'
+        ? (query: Prisma.Sql) => Promise.resolve(keysOf(rows, query))
+        : model(property),
   });
 }
 

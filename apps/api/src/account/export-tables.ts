@@ -1,13 +1,19 @@
+import { Prisma } from '@prisma/client';
 import type { PrismaService } from '../prisma/prisma.service';
 
 export const EXPORT_PAGE_SIZE = 2_000;
 
 export type ExportRow = Record<string, unknown>;
 
+export interface ExportPage {
+  rows: ExportRow[];
+  next?: ExportRow;
+}
+
 export interface ExportTable {
   name: string;
   count: () => Promise<number>;
-  page: (after: ExportRow | undefined, take: number) => Promise<ExportRow[]>;
+  page: (after: ExportRow | undefined, take: number) => Promise<ExportPage>;
 }
 
 interface ExportTableKey {
@@ -21,7 +27,6 @@ interface ExportDelegate {
   findMany: (args: {
     where: ExportRow;
     orderBy: Record<string, 'asc'>[];
-    take: number;
     include?: Record<string, true>;
   }) => Promise<ExportRow[]>;
 }
@@ -84,20 +89,69 @@ export const EXPORT_TABLE_KEYS: readonly ExportTableKey[] = [
   { name: 'suggestProbe', key: ['appId', 'term', 'country', 'day', 'probe'] },
 ];
 
-export function keysetAfter(
+const quoted = (identifier: string) => Prisma.raw(`"${identifier}"`);
+
+export function keysAfter(
+  table: string,
   key: readonly string[],
   after: ExportRow | undefined,
+  take: number,
+): Prisma.Sql {
+  const columns = Prisma.join(key.map(quoted));
+  const from = quoted(table.charAt(0).toUpperCase() + table.slice(1));
+  const where = after
+    ? Prisma.sql`WHERE (${columns}) > (${Prisma.join(key.map((column) => after[column]))})`
+    : Prisma.empty;
+  return Prisma.sql`SELECT ${columns} FROM ${from} ${where} ORDER BY ${columns} LIMIT ${take}`;
+}
+
+const sameValue = (left: unknown, right: unknown) =>
+  left instanceof Date && right instanceof Date
+    ? left.getTime() === right.getTime()
+    : left === right;
+
+const prefixOf = (key: readonly string[], length: number, row: ExportRow) =>
+  Object.fromEntries(
+    key.slice(0, length).map((column) => [column, row[column]]),
+  );
+
+export function keyRange(
+  key: readonly string[],
+  first: ExportRow,
+  last: ExportRow,
 ): ExportRow {
-  if (!after) return {};
-  const terms = key.map((column, index) => ({
-    ...Object.fromEntries(
-      key.slice(0, index).map((equal) => [equal, after[equal]]),
-    ),
-    [column]: { gt: after[column] },
-  }));
-  if (terms.length === 1) return terms[0];
-  const [first] = key;
-  return { [first]: { gte: after[first] }, OR: terms };
+  const split = key.findIndex(
+    (column) => !sameValue(first[column], last[column]),
+  );
+  if (split === -1) return prefixOf(key, key.length, first);
+  const end = key.length - 1;
+  const above = (index: number) => (index === end ? 'gte' : 'gt');
+  const below = (index: number) => (index === end ? 'lte' : 'lt');
+  const edge = (
+    index: number,
+    row: ExportRow,
+    operator: (index: number) => string,
+  ) => ({
+    ...prefixOf(key, index, row),
+    [key[index]]: { [operator(index)]: row[key[index]] },
+  });
+  const deeper = Array.from(
+    { length: end - split },
+    (_column, offset) => end - offset,
+  );
+  return {
+    OR: [
+      ...deeper.map((index) => edge(index, first, above)),
+      {
+        ...prefixOf(key, split, first),
+        [key[split]]: {
+          [above(split)]: first[key[split]],
+          [below(split)]: last[key[split]],
+        },
+      },
+      ...[...deeper].reverse().map((index) => edge(index, last, below)),
+    ],
+  };
 }
 
 export function exportTables(prisma: PrismaService): ExportTable[] {
@@ -105,12 +159,20 @@ export function exportTables(prisma: PrismaService): ExportTable[] {
   return EXPORT_TABLE_KEYS.map(({ name, key, include }) => ({
     name,
     count: () => delegates[name].count(),
-    page: (after, take) =>
-      delegates[name].findMany({
-        where: keysetAfter(key, after),
+    page: async (after, take) => {
+      const keys = await prisma.$queryRaw<ExportRow[]>(
+        keysAfter(name, key, after, take),
+      );
+      if (keys.length === 0) return { rows: [] };
+      const rows = await delegates[name].findMany({
+        where: keyRange(key, keys[0], keys[keys.length - 1]),
         orderBy: key.map((column) => ({ [column]: 'asc' as const })),
-        take,
         ...(include ? { include } : {}),
-      }),
+      });
+      return {
+        rows,
+        next: keys.length < take ? undefined : keys[keys.length - 1],
+      };
+    },
   }));
 }

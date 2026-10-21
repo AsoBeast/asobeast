@@ -320,4 +320,53 @@ describe('Account export credential state (e2e)', () => {
       });
     }
   });
+
+  it('writes every row once when a page ends inside the next app', async () => {
+    const apps = await Promise.all(
+      ['551000002', '551000003'].map((storeAppId) =>
+        prisma.app.create({
+          data: {
+            workspaceId: DEFAULT_WORKSPACE_ID,
+            store: 'APP_STORE',
+            storeAppId,
+            name: `Spanning ${storeAppId}`,
+          },
+        }),
+      ),
+    );
+    const ids = apps.map((app) => app.id);
+    try {
+      const keyword = await prisma.keyword.create({
+        data: { text: PAGED_KEYWORDS[0], store: 'APP_STORE' },
+      });
+      const perApp = (EXPORT_PAGE_SIZE * 3) / 4;
+      const rankings = ids.flatMap((appId) =>
+        Array.from({ length: perApp }, (_, offset) => ({
+          appId,
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          keywordId: keyword.id,
+          date: new Date(Date.UTC(2020, 0, 1) + offset * DAY_MS),
+        })),
+      );
+      await prisma.keywordRanking.createMany({ data: rankings });
+
+      const { lines } = await exportAs({ cookie: ownerCookie });
+
+      const written = lines
+        .filter(
+          (line) =>
+            line.table === 'keywordRanking' &&
+            ids.includes(String(line.row?.appId)),
+        )
+        .map((line) => `${String(line.row?.appId)}|${String(line.row?.date)}`);
+      expect(written).toHaveLength(rankings.length);
+      expect(new Set(written).size).toBe(rankings.length);
+      expect(written).toEqual([...written].sort());
+    } finally {
+      await prisma.app.deleteMany({ where: { id: { in: ids } } });
+      await prisma.keyword.deleteMany({
+        where: { store: 'APP_STORE', text: { in: PAGED_KEYWORDS } },
+      });
+    }
+  });
 });
