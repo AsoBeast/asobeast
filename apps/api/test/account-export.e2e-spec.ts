@@ -22,6 +22,7 @@ const RESET_HASH = 'f'.repeat(64);
 const DAY_MS = 86_400_000;
 const PAST_THE_PAGE = 700;
 const PROBE_COUNTRIES = ['us', 'gb', 'de'];
+const PAGED_KEYWORDS = ['paged one', 'paged two', 'paged three'];
 const CLAIM_TOKEN = 'claim-token-sentinel';
 const CHECKOUT_SESSION = 'cs_test_sentinel';
 const STRIPPED_KEYS = [
@@ -264,14 +265,12 @@ describe('Account export credential state (e2e)', () => {
         name: 'Paged Export',
       },
     });
-    const keywordIds: string[] = [];
     try {
       const keywords = await Promise.all(
-        ['paged one', 'paged two', 'paged three'].map((text) =>
+        PAGED_KEYWORDS.map((text) =>
           prisma.keyword.create({ data: { text, store: 'APP_STORE' } }),
         ),
       );
-      keywordIds.push(...keywords.map((keyword) => keyword.id));
       const day = (offset: number) =>
         new Date(Date.UTC(2023, 0, 1) + offset * DAY_MS);
       const datesPerKeyword = Math.ceil(
@@ -300,7 +299,7 @@ describe('Account export credential state (e2e)', () => {
       await prisma.keywordRanking.createMany({ data: rankings });
       await prisma.suggestProbe.createMany({ data: probes });
 
-      const { lines } = await exportAs({ cookie: ownerCookie }, 60_000);
+      const { lines } = await exportAs({ cookie: ownerCookie });
 
       const keysOf = (table: string, key: string[]) =>
         lines
@@ -316,7 +315,9 @@ describe('Account export credential state (e2e)', () => {
       expect(new Set(probeKeys).size).toBe(probes.length);
     } finally {
       await prisma.app.delete({ where: { id: app.id } });
-      await prisma.keyword.deleteMany({ where: { id: { in: keywordIds } } });
+      await prisma.keyword.deleteMany({
+        where: { store: 'APP_STORE', text: { in: PAGED_KEYWORDS } },
+      });
     }
   });
 });
