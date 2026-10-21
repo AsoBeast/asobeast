@@ -6,6 +6,73 @@ export interface SortDefaults {
   readonly descFirst: ReadonlySet<string>;
 }
 
+export interface StoredSort {
+  sort: string;
+  dir: SortDirection | null;
+}
+
+const SORT_PREFIX = "asobeast.sort.";
+
+export function readStoredSort(
+  storage: () => Pick<Storage, "getItem">,
+  table: string,
+): string | null {
+  try {
+    return storage().getItem(SORT_PREFIX + table);
+  } catch {
+    return null;
+  }
+}
+
+export function parseStoredSort(
+  raw: string | null,
+  known: ReadonlySet<string>,
+): StoredSort | null {
+  if (raw === null) return null;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      typeof parsed !== "object" ||
+      parsed === null ||
+      Array.isArray(parsed) ||
+      !("sort" in parsed)
+    ) {
+      return null;
+    }
+    const { sort } = parsed;
+    const dir: unknown = "dir" in parsed ? parsed.dir : undefined;
+    if (typeof sort !== "string" || !known.has(sort)) return null;
+    return { sort, dir: dir === "asc" || dir === "desc" ? dir : null };
+  } catch {
+    return null;
+  }
+}
+
+export function writeStoredSort(
+  storage: () => Pick<Storage, "setItem">,
+  table: string,
+  value: StoredSort,
+): boolean {
+  try {
+    storage().setItem(SORT_PREFIX + table, JSON.stringify(value));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function removeStoredSort(
+  storage: () => Pick<Storage, "removeItem">,
+  table: string,
+): boolean {
+  try {
+    storage().removeItem(SORT_PREFIX + table);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function sortingFromUrl(
   sort: string,
   dir: SortDirection | null,

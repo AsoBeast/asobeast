@@ -55,7 +55,6 @@ import {
   matrixFilterParsers,
   discoveryDaysParser,
   KEYWORD_STATUSES,
-  KEYWORD_TABLE_SORTS,
   COVERAGE_SORTS,
   coverageSortParser,
   DISCOVERY_SORTS,
@@ -103,7 +102,6 @@ type LiteralParserCase = readonly [
 ];
 
 const LITERAL_PARSERS: readonly LiteralParserCase[] = [
-  ["keywordSort", keywordSortParser, KEYWORD_TABLE_SORTS, "opportunity"],
   ["range", rangeParser, RANGE_PRESETS, "30d"],
   ["visibilityRange", visibilityRangeParser, VISIBILITY_RANGES, "30d"],
   ["ratingsRange", ratingsRangeParser, RATINGS_RANGES, "30d"],
@@ -416,6 +414,15 @@ describe("keywordSort parser", () => {
       expect(keywordSortParser.parseServerSide(sort)).toBe(sort);
     },
   );
+
+  it("answers null when the url names no sort", () => {
+    expect(keywordSortParser.parseServerSide(undefined)).toBeNull();
+  });
+
+  it("answers null for an unknown sort rather than a default", () => {
+    expect(keywordSortParser.parseServerSide("not-a-member")).toBeNull();
+    expect(keywordSortParser.parse("not-a-member")).toBeNull();
+  });
 });
 
 describe("search parser", () => {
