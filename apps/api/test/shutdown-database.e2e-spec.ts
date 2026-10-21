@@ -20,6 +20,7 @@ import {
   elapse,
   lockUserTable,
   pendingAfter,
+  type TableLock,
 } from './helpers/held-query';
 import { testDb } from './helpers/test-db';
 import { obliterateQueues } from './obliterate-queues';
@@ -34,6 +35,7 @@ describe('Shutdown keeps postgres until open work finishes (e2e)', () => {
   let prisma: PrismaClient;
   let inspector: Queue;
   let closed = false;
+  let lock: TableLock | undefined;
   let release = (): void => undefined;
   const released = new Promise<void>((resolve) => {
     release = resolve;
@@ -83,6 +85,7 @@ describe('Shutdown keeps postgres until open work finishes (e2e)', () => {
 
   afterAll(async () => {
     release();
+    await lock?.release();
     if (!closed) await app?.close();
     await inspector?.obliterate({ force: true });
     await inspector?.close();
@@ -102,11 +105,12 @@ describe('Shutdown keeps postgres until open work finishes (e2e)', () => {
 
     const port = ((app.getHttpServer() as Server).address() as AddressInfo)
       .port;
-    const lock = await lockUserTable(prisma);
+    lock = await lockUserTable(prisma);
     const answer = answerOf(port, '/auth/status');
     expect(await pendingAfter(answer, QUERY_SETTLE_MS)).toBe(true);
 
     const workers = discoveredWorkers(app.get(DiscoveryService));
+    expect(workers.length).toBeGreaterThan(0);
     const database = app.get(PrismaService);
     const disconnect = database.onApplicationShutdown.bind(database);
     let workersRunningAtDisconnect: boolean[] = [];
@@ -140,6 +144,5 @@ describe('Shutdown keeps postgres until open work finishes (e2e)', () => {
       reason: undefined,
       workersRunningAtDisconnect: workers.map(() => false),
     });
-    expect(workers.length).toBeGreaterThan(0);
   });
 });

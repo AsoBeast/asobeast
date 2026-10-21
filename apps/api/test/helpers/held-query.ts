@@ -24,7 +24,7 @@ export async function lockUserTable(prisma: PrismaClient): Promise<TableLock> {
     },
     { timeout: 60_000 },
   );
-  await acquired;
+  await Promise.race([acquired, holding]);
   return {
     release: async () => {
       release();

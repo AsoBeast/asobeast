@@ -6,7 +6,6 @@ import { join } from 'path';
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
-import { App } from 'supertest/types';
 import { restoreAuthEnv } from './helpers/auth-env';
 import {
   answerOf,
@@ -24,7 +23,7 @@ const QUERY_SETTLE_MS = 300;
 describe('Shutdown with redis lost and a query held on postgres (e2e)', () => {
   jest.setTimeout(60_000);
 
-  let app: INestApplication<App>;
+  let app: INestApplication;
   let outage: RedisOutage;
   let prisma: PrismaClient;
   let lock: TableLock | undefined;
@@ -43,21 +42,21 @@ describe('Shutdown with redis lost and a query held on postgres (e2e)', () => {
     const moduleFixture = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
-    app = moduleFixture.createNestApplication<App>();
+    app = moduleFixture.createNestApplication();
     await app.init();
     await app.listen(0);
     prisma = testDb();
   });
 
   afterAll(async () => {
+    process.env.REDIS_PORT = String(upstreamPort);
     try {
       await lock?.release();
-      await (closing ?? app.close());
+      await (closing ?? app?.close());
     } finally {
-      await outage.stop();
-      process.env.REDIS_PORT = String(upstreamPort);
+      await outage?.stop();
       restoreAuthEnv();
-      await prisma.$disconnect();
+      await prisma?.$disconnect();
     }
   });
 
