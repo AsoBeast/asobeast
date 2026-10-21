@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { AscAnalyticsApi } from './asc-analytics-api';
+import { AscRequester } from './asc-requester';
 import { type AscCredentials, AscTokenCache } from './asc-token';
 import { ASC_TRANSPORT, type AscTransport } from './asc-transport';
 
@@ -10,6 +11,8 @@ export class AscApiFactory {
   ) {}
 
   open(credentials: AscCredentials): AscAnalyticsApi {
-    return new AscAnalyticsApi(this.transport, new AscTokenCache(credentials));
+    return new AscAnalyticsApi(
+      new AscRequester(this.transport, new AscTokenCache(credentials)),
+    );
   }
 }

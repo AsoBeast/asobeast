@@ -1,27 +1,20 @@
-import { generateKeyPairSync } from 'node:crypto';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import {
-  ASC_RETRY_PAUSE_MS,
-  AscAnalyticsApi,
-  type AscSegment,
-} from './asc-analytics-api';
+import { AscAnalyticsApi, type AscSegment } from './asc-analytics-api';
 import {
   AscAgreementError,
   AscError,
   AscForbiddenError,
-  AscRateLimitedError,
   AscRejectedKeyError,
   AscSegmentSizeError,
 } from './asc-errors';
-import { AscTokenCache } from './asc-token';
 import { ResponseTooLargeError } from './bounded-body';
-import type { AscRequest, AscResponse, AscTransport } from './asc-transport';
-
-const fixture = (name: string): unknown =>
-  JSON.parse(
-    readFileSync(join(__dirname, 'fixtures', 'asc', `${name}.json`), 'utf8'),
-  ) as unknown;
+import type { AscResponse } from './asc-transport';
+import {
+  ascFixture as fixture,
+  failure,
+  ok,
+  recordedRequester,
+  requesterOn,
+} from './asc-transport.fixture';
 
 const apps = fixture('apps');
 const instancesPage1 = fixture('instances-page-1');
@@ -31,45 +24,9 @@ const reportRequests = fixture('report-requests');
 const reports = fixture('reports');
 const segments = fixture('segments');
 
-const PEM = generateKeyPairSync('ec', { namedCurve: 'prime256v1' })
-  .privateKey.export({ type: 'pkcs8', format: 'pem' })
-  .toString();
-
-const ok = (body: unknown, status = 200): AscResponse => ({
-  status,
-  body,
-  retryAfter: null,
-});
-
-const failure = (status: number, code: string): AscResponse => ({
-  status,
-  body: {
-    errors: [{ status: String(status), code, detail: `${code} detail` }],
-  },
-  retryAfter: null,
-});
-
 function recorded(...responses: AscResponse[]) {
-  const requests: AscRequest[] = [];
-  const queue = [...responses];
-  const transport: AscTransport = (request) => {
-    requests.push(request);
-    const next = queue.shift();
-    return next
-      ? Promise.resolve(next)
-      : Promise.reject(new Error('no response queued'));
-  };
-  const pause = jest.fn(() => Promise.resolve());
-  const api = new AscAnalyticsApi(
-    transport,
-    new AscTokenCache({
-      issuerId: 'issuer',
-      keyId: 'KEY1234567',
-      privateKey: PEM,
-    }),
-    pause,
-  );
-  return { api, requests, pause };
+  const { requester, requests, pause } = recordedRequester(...responses);
+  return { api: new AscAnalyticsApi(requester), requests, pause };
 }
 
 describe('AscAnalyticsApi.appsById', () => {
@@ -217,16 +174,6 @@ describe('AscAnalyticsApi.dailyInstances', () => {
     );
   });
 
-  it('paginates with the cursor Apple returns', async () => {
-    const { api, requests } = recorded(ok(instancesPage1), ok(instancesPage2));
-
-    await api.dailyInstances('r-engagement-standard', null);
-
-    expect(requests[1].path).toBe(
-      '/v1/analyticsReports/r-engagement-standard/instances?filter%5Bgranularity%5D=DAILY&cursor=Mg.AJ8&limit=200',
-    );
-  });
-
   it('refuses a next link on another host', async () => {
     const { api } = recorded(
       ok({ data: [], links: { next: 'https://elsewhere.test/v1/x' } }),
@@ -311,12 +258,9 @@ describe('AscAnalyticsApi segments', () => {
 
   it('answers a size error when the body outgrows the listed size', async () => {
     const api = new AscAnalyticsApi(
-      () => Promise.reject(new ResponseTooLargeError(segment.sizeInBytes)),
-      new AscTokenCache({
-        issuerId: 'issuer',
-        keyId: 'KEY1234567',
-        privateKey: PEM,
-      }),
+      requesterOn(() =>
+        Promise.reject(new ResponseTooLargeError(segment.sizeInBytes)),
+      ),
     );
 
     await expect(api.download(segment)).rejects.toBeInstanceOf(
@@ -335,20 +279,6 @@ describe('AscAnalyticsApi segments', () => {
 });
 
 describe('AscAnalyticsApi failures', () => {
-  it('retries a 500 once after the pause and then throws', async () => {
-    const { api, requests, pause } = recorded(
-      failure(500, 'UNEXPECTED_ERROR'),
-      failure(500, 'UNEXPECTED_ERROR'),
-    );
-
-    await expect(api.appsById(['111'])).rejects.toMatchObject({
-      status: 500,
-    });
-    expect(requests).toHaveLength(2);
-    expect(pause).toHaveBeenCalledWith(ASC_RETRY_PAUSE_MS);
-    expect(ASC_RETRY_PAUSE_MS).toBe(2_000);
-  });
-
   it('answers after a 500 that recovers', async () => {
     const { api } = recorded(failure(503, 'UNAVAILABLE'), ok(apps));
 
@@ -387,22 +317,6 @@ describe('AscAnalyticsApi failures', () => {
 
     await expect(api.verify()).rejects.toBeInstanceOf(AscAgreementError);
   });
-
-  it('throws a rate limit error on 429 without retrying', async () => {
-    const { api, requests } = recorded(failure(429, 'RATE_LIMIT_EXCEEDED'));
-
-    await expect(api.verify()).rejects.toBeInstanceOf(AscRateLimitedError);
-    expect(requests).toHaveLength(1);
-  });
-
-  it.each([401, 403])(
-    'throws a rejected key error on %i from a read',
-    async (status) => {
-      const { api } = recorded(failure(status, 'NOT_AUTHORIZED'));
-
-      await expect(api.verify()).rejects.toBeInstanceOf(AscRejectedKeyError);
-    },
-  );
 
   it('keeps a 404 as a plain error with its status and code', async () => {
     const { api } = recorded(failure(404, 'NOT_FOUND'));
