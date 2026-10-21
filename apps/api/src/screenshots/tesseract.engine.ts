@@ -75,14 +75,15 @@ export class TesseractOcrEngine implements OcrEngine, OnModuleDestroy {
     const thread = this.threadOrSpawn();
     const settled = new AbortController();
     const { signal } = settled;
+    const replied = Promise.race([
+      once(thread, 'message', { signal }),
+      once(thread, 'exit', { signal }).then(([code]: unknown[]) => {
+        throw new Error(`the ocr thread exited with code ${String(code)}`);
+      }),
+    ]);
     thread.postMessage(request);
     try {
-      const [reply] = (await Promise.race([
-        once(thread, 'message', { signal }),
-        once(thread, 'exit', { signal }).then(([code]: unknown[]) => {
-          throw new Error(`the ocr thread exited with code ${String(code)}`);
-        }),
-      ])) as [OcrReply];
+      const [reply] = (await replied) as [OcrReply];
       if ('error' in reply) throw new Error(reply.error);
       return reply.lines;
     } finally {
