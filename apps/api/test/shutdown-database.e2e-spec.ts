@@ -5,11 +5,13 @@ import type { AddressInfo } from 'net';
 import { join } from 'path';
 import { getQueueToken } from '@nestjs/bullmq';
 import { INestApplication } from '@nestjs/common';
+import { DiscoveryService } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
 import { Job, Queue } from 'bullmq';
 import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
+import { discoveredWorkers } from '../src/jobs/discovered-queues';
 import { JOBS, QUEUES } from '../src/jobs/jobs.types';
 import { StoreJobsHandler } from '../src/jobs/store-jobs.handler';
 import { PrismaService } from '../src/prisma/prisma.service';
@@ -104,6 +106,19 @@ describe('Shutdown keeps postgres until open work finishes (e2e)', () => {
     const answer = answerOf(port, '/auth/status');
     expect(await pendingAfter(answer, QUERY_SETTLE_MS)).toBe(true);
 
+    const workers = discoveredWorkers(app.get(DiscoveryService));
+    const database = app.get(PrismaService);
+    const disconnect = database.onApplicationShutdown.bind(database);
+    let workersRunningAtDisconnect: boolean[] = [];
+    jest
+      .spyOn(database, 'onApplicationShutdown')
+      .mockImplementation(async () => {
+        workersRunningAtDisconnect = workers.map((worker) =>
+          worker.isRunning(),
+        );
+        await disconnect();
+      });
+
     const closing = app.close().then(() => {
       closed = true;
     });
@@ -118,6 +133,13 @@ describe('Shutdown keeps postgres until open work finishes (e2e)', () => {
       request: await answer,
       job: await drained?.getState(),
       reason: drained?.failedReason,
-    }).toEqual({ request: 200, job: 'completed', reason: undefined });
+      workersRunningAtDisconnect,
+    }).toEqual({
+      request: 200,
+      job: 'completed',
+      reason: undefined,
+      workersRunningAtDisconnect: workers.map(() => false),
+    });
+    expect(workers.length).toBeGreaterThan(0);
   });
 });
