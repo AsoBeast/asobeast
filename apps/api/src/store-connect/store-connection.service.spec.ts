@@ -20,6 +20,7 @@ import {
   type GcsApi,
 } from './play/gcs-api';
 import type { GcsApiFactory } from './play/gcs-api.factory';
+import type { PlayPublisherApi } from './play/play-publisher-api';
 import { sealCredentials } from './store-credentials';
 import {
   CREDENTIAL_UNREADABLE,
@@ -140,7 +141,11 @@ function harness(box: SecretBox | null = new SecretBox(randomBytes(32))) {
   const api = { verify: jest.fn(() => Promise.resolve()) };
   const factory = { open: jest.fn(() => api as unknown as AscAnalyticsApi) };
   const gcs = { verify: jest.fn(() => Promise.resolve()) };
-  const gcsFactory = { open: jest.fn(() => gcs as unknown as GcsApi) };
+  const publisher = { reply: jest.fn() };
+  const gcsFactory = {
+    open: jest.fn(() => gcs as unknown as GcsApi),
+    publisher: jest.fn(() => publisher as unknown as PlayPublisherApi),
+  };
   const queue = {
     enqueue: jest.fn(() => Promise.resolve({ outcome: 'queued' as const })),
   };
@@ -161,6 +166,7 @@ function harness(box: SecretBox | null = new SecretBox(randomBytes(32))) {
     factory,
     gcs,
     gcsFactory,
+    publisher,
     queue,
     rows,
     box,
@@ -376,6 +382,28 @@ describe('StoreConnectionService', () => {
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(gcsFactory.open).not.toHaveBeenCalled();
+  });
+
+  it('opens the play publisher client of the connection', async () => {
+    const { service, gcsFactory, publisher } = harness();
+    await service.connect('GOOGLE_PLAY', PLAY_REQUEST, 'user_1');
+
+    await expect(service.openPlayPublisher()).resolves.toMatchObject({
+      id: 'conn_1',
+      status: 'active',
+      api: publisher,
+    });
+    expect(gcsFactory.publisher).toHaveBeenCalledWith(
+      expect.objectContaining({ bucket: PLAY_REQUEST.bucket }),
+    );
+  });
+
+  it('opens no play publisher client without a play connection', async () => {
+    const { service, gcsFactory } = harness();
+    await service.connect('APP_STORE', REQUEST, 'user_1');
+
+    await expect(service.openPlayPublisher()).resolves.toBeNull();
+    expect(gcsFactory.publisher).not.toHaveBeenCalled();
   });
 
   it('marks a play connection rejected on verify when google refuses', async () => {

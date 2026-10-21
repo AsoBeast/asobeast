@@ -3,6 +3,8 @@ import { createPrivateKey, sign, type KeyObject } from 'node:crypto';
 export const GOOGLE_TOKEN_AUDIENCE = 'https://oauth2.googleapis.com/token';
 export const GCS_READ_ONLY_SCOPE =
   'https://www.googleapis.com/auth/devstorage.read_only';
+export const ANDROID_PUBLISHER_SCOPE =
+  'https://www.googleapis.com/auth/androidpublisher';
 export const GOOGLE_ASSERTION_TTL_SECONDS = 3600;
 export const GOOGLE_TOKEN_REUSE_MARGIN_SECONDS = 60;
 
@@ -86,13 +88,14 @@ const encode = (value: unknown): string =>
 export function signAssertion(
   account: ServiceAccount,
   now: Date = new Date(),
+  scope: string = GCS_READ_ONLY_SCOPE,
 ): string {
   const issuedAt = Math.floor(now.getTime() / 1000);
   const input = [
     encode({ alg: 'RS256', typ: 'JWT', kid: account.privateKeyId }),
     encode({
       iss: account.clientEmail,
-      scope: GCS_READ_ONLY_SCOPE,
+      scope,
       aud: GOOGLE_TOKEN_AUDIENCE,
       iat: issuedAt,
       exp: issuedAt + GOOGLE_ASSERTION_TTL_SECONDS,
@@ -114,6 +117,7 @@ export class GoogleTokenCache {
     private readonly exchange: (
       assertion: string,
     ) => Promise<GoogleTokenAnswer>,
+    private readonly scope: string = GCS_READ_ONLY_SCOPE,
   ) {}
 
   async get(now: Date = new Date()): Promise<string> {
@@ -124,7 +128,9 @@ export class GoogleTokenCache {
     ) {
       return this.token.value;
     }
-    const answer = await this.exchange(signAssertion(this.account, now));
+    const answer = await this.exchange(
+      signAssertion(this.account, now, this.scope),
+    );
     this.token = {
       value: answer.access_token,
       expiresAt: seconds + answer.expires_in,

@@ -63,6 +63,23 @@ describe('createGcsTransport', () => {
     expect(seen[0].body).toBe('grant_type=jwt&assertion=a.b.c');
   });
 
+  it('posts a json body with its content type', async () => {
+    handler = (_, response) =>
+      response.writeHead(200).end('{"result":{"replyText":"x"}}');
+
+    const answer = await transport({
+      method: 'POST',
+      url: `${origin}/reply`,
+      bearer: 'ya29',
+      json: { replyText: 'x' },
+    });
+
+    expect(answer.body).toEqual({ result: { replyText: 'x' } });
+    expect(seen[0].headers['content-type']).toBe('application/json');
+    expect(seen[0].headers.authorization).toBe('Bearer ya29');
+    expect(seen[0].body).toBe('{"replyText":"x"}');
+  });
+
   it('lists with the bearer token', async () => {
     handler = (_, response) => response.writeHead(200).end('{"items":[]}');
 

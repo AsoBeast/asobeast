@@ -10,6 +10,7 @@ export interface GcsRequest {
   url: string;
   bearer?: string;
   form?: Record<string, string>;
+  json?: unknown;
   binary?: boolean;
   maxBytes?: number;
 }
@@ -45,7 +46,7 @@ export function createGcsTransport({
   timeoutMs: number;
   downloadTimeoutMs: number;
 }): GcsTransport {
-  return async ({ method, url, bearer, form, binary, maxBytes }) => {
+  return async ({ method, url, bearer, form, json, binary, maxBytes }) => {
     try {
       const response = await fetch(url, {
         method,
@@ -55,8 +56,13 @@ export function createGcsTransport({
           ...(form
             ? { 'content-type': 'application/x-www-form-urlencoded' }
             : {}),
+          ...(json === undefined ? {} : { 'content-type': 'application/json' }),
         },
-        body: form ? new URLSearchParams(form).toString() : undefined,
+        body: form
+          ? new URLSearchParams(form).toString()
+          : json === undefined
+            ? undefined
+            : JSON.stringify(json),
         signal: AbortSignal.timeout(binary ? downloadTimeoutMs : timeoutMs),
         redirect: 'error',
       });

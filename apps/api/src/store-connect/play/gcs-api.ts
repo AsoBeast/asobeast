@@ -71,8 +71,27 @@ interface ListPage {
   nextPageToken?: string;
 }
 
-const isSuccess = (response: GcsResponse): boolean =>
+export const isSuccess = (response: GcsResponse): boolean =>
   response.status >= 200 && response.status < 300;
+
+export const googleTokenExchange =
+  (transport: GcsTransport, url: string) =>
+  async (assertion: string): Promise<GoogleTokenAnswer> => {
+    const response = await transport({
+      method: 'POST',
+      url,
+      form: { grant_type: JWT_GRANT, assertion },
+    });
+    if (!isSuccess(response)) throw errorOf(response, 'the token request');
+    const answer = response.body as Partial<GoogleTokenAnswer> | null;
+    if (!answer?.access_token) {
+      throw new GcsRejectedError('Google answered no access token', 400);
+    }
+    return {
+      access_token: answer.access_token,
+      expires_in: answer.expires_in ?? 3600,
+    };
+  };
 
 const filePrefix = (packageName: string): string =>
   `${STORE_PERFORMANCE_PREFIX}store_performance_${packageName}_`;
@@ -86,8 +105,9 @@ export class GcsApi {
     readonly bucket: string,
     private readonly origins: GcsOrigins = GOOGLE_ORIGINS,
   ) {
-    this.tokens = new GoogleTokenCache(account, (assertion) =>
-      this.exchange(assertion),
+    this.tokens = new GoogleTokenCache(
+      account,
+      googleTokenExchange(transport, origins.token),
     );
   }
 
@@ -152,23 +172,6 @@ export class GcsApi {
     }
     if (!isSuccess(response)) throw errorOf(response, `the file ${name}`);
     return response.bytes ?? Buffer.alloc(0);
-  }
-
-  private async exchange(assertion: string): Promise<GoogleTokenAnswer> {
-    const response = await this.transport({
-      method: 'POST',
-      url: this.origins.token,
-      form: { grant_type: JWT_GRANT, assertion },
-    });
-    if (!isSuccess(response)) throw errorOf(response, 'the token request');
-    const answer = response.body as Partial<GoogleTokenAnswer> | null;
-    if (!answer?.access_token) {
-      throw new GcsRejectedError('Google answered no access token', 400);
-    }
-    return {
-      access_token: answer.access_token,
-      expires_in: answer.expires_in ?? 3600,
-    };
   }
 }
 

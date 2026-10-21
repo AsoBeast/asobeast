@@ -20,6 +20,7 @@ import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AscAnalyticsApi } from './asc-analytics-api';
 import type { GcsApi } from './play/gcs-api';
+import type { PlayPublisherApi } from './play/play-publisher-api';
 import { SECRET_BOX } from './secret-box.provider';
 import { connectionItems } from './store-connection-items';
 import {
@@ -167,16 +168,22 @@ export class StoreConnectionService {
     await this.prisma.storeConnection.deleteMany({ where: { store } });
   }
 
-  async openAppStore(): Promise<OpenedConnection | null> {
-    const connection = await this.unsealedOrNull('APP_STORE');
-    if (!connection || !isAscCredentials(connection.credentials)) return null;
-    return this.opened(connection, this.appStore.api(connection.credentials));
+  openAppStore(): Promise<OpenedConnection | null> {
+    return this.openWith('APP_STORE', isAscCredentials, (credentials) =>
+      this.appStore.api(credentials),
+    );
   }
 
-  async openPlay(): Promise<OpenedConnection<GcsApi> | null> {
-    const connection = await this.unsealedOrNull('GOOGLE_PLAY');
-    if (!connection || !isPlayCredentials(connection.credentials)) return null;
-    return this.opened(connection, this.play.api(connection.credentials));
+  openPlay(): Promise<OpenedConnection<GcsApi> | null> {
+    return this.openWith('GOOGLE_PLAY', isPlayCredentials, (credentials) =>
+      this.play.api(credentials),
+    );
+  }
+
+  openPlayPublisher(): Promise<OpenedConnection<PlayPublisherApi> | null> {
+    return this.openWith('GOOGLE_PLAY', isPlayCredentials, (credentials) =>
+      this.play.publisher(credentials),
+    );
   }
 
   async markRejected(store: Store, reason: string): Promise<void> {
@@ -197,13 +204,19 @@ export class StoreConnectionService {
     });
   }
 
-  private opened<A>(connection: Unsealed, api: A): OpenedConnection<A> {
+  private async openWith<C extends StoreCredentials, A>(
+    store: Store,
+    accepts: (credentials: StoreCredentials) => credentials is C,
+    build: (credentials: C) => A,
+  ): Promise<OpenedConnection<A> | null> {
+    const connection = await this.unsealedOrNull(store);
+    if (!connection || !accepts(connection.credentials)) return null;
     return {
       id: connection.id,
       status: connection.status,
       reportAccess: connection.reportAccess,
       lastError: connection.lastError,
-      api,
+      api: build(connection.credentials),
     };
   }
 

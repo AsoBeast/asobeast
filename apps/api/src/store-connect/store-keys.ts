@@ -31,6 +31,7 @@ import {
   GcsRejectedError,
 } from './play/gcs-api';
 import { GcsApiFactory } from './play/gcs-api.factory';
+import type { PlayPublisherApi } from './play/play-publisher-api';
 import { GcsUnreachableError } from './play/gcs-transport';
 import {
   parseServiceAccount,
@@ -134,6 +135,10 @@ export class PlayKeys implements StoreKeys<
 
   api(credentials: PlayCredentials): GcsApi {
     return this.factory.open(credentials);
+  }
+
+  publisher(credentials: PlayCredentials): PlayPublisherApi {
+    return this.factory.publisher(credentials);
   }
 
   async refusal(credentials: PlayCredentials): Promise<string | null> {
