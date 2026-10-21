@@ -90,7 +90,10 @@ export class StoreJobsHandler {
         );
         return;
       case JOBS.SYNC_REVIEWS:
-        await this.reviews.syncReviews(job.data as SyncReviewsPayload);
+        await this.reviews.syncReviews(
+          job.data as SyncReviewsPayload,
+          isFinalAttempt(job),
+        );
         return;
       case JOBS.SPIDER_PROBE:
         await this.spider.runSpiderProbe(job.data as SpiderProbePayload);
