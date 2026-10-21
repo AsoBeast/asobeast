@@ -6,6 +6,9 @@ export type StoreConnectionStatus = (typeof STORE_CONNECTION_STATUSES)[number];
 export const STORE_REPORT_ACCESS = ['unknown', 'admin', 'readOnly'] as const;
 export type StoreReportAccess = (typeof STORE_REPORT_ACCESS)[number];
 
+export const STORE_REPLY_ACCESS = ['unknown', 'allowed', 'forbidden'] as const;
+export type StoreReplyAccess = (typeof STORE_REPLY_ACCESS)[number];
+
 export const STORE_REPORT_STATES = [
   'requested',
   'unmatched',
@@ -35,6 +38,7 @@ export interface StoreConnectionItem {
   lastError: string | null;
   apps: StoreConnectionApp[];
   bucket?: string | null;
+  replyAccess?: StoreReplyAccess;
 }
 
 export interface StoreConnectionState {

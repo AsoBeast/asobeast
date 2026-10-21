@@ -3,11 +3,13 @@ import {
   STORE_CONNECTION_STATUSES,
   STORE_CONNECTION_SYNC_OUTCOMES,
   STORE_REPORT_ACCESS,
+  STORE_REPLY_ACCESS,
   STORE_REPORT_STATES,
   type AppStoreConnectionRequest,
   type PlayConnectionRequest,
   type StoreConnectionItem,
   type StoreConnectionRequest,
+  type StoreReplyAccess,
 } from './store-connect';
 
 describe('store connection contract', () => {
@@ -50,6 +52,16 @@ describe('store connection contract', () => {
   it('keeps the bucket optional on the item', () => {
     expectTypeOf<StoreConnectionItem['bucket']>().toEqualTypeOf<
       string | null | undefined
+    >();
+  });
+
+  it('names the three reply access values', () => {
+    expect(STORE_REPLY_ACCESS).toEqual(['unknown', 'allowed', 'forbidden']);
+  });
+
+  it('keeps replyAccess optional on the item', () => {
+    expectTypeOf<StoreConnectionItem['replyAccess']>().toEqualTypeOf<
+      StoreReplyAccess | undefined
     >();
   });
 
