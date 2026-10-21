@@ -7,27 +7,36 @@ export interface TableLock {
   release: () => Promise<void>;
 }
 
+export interface Deferred {
+  promise: Promise<void>;
+  resolve: () => void;
+}
+
+const ANSWER_TIMEOUT_MS = 20_000;
+
+export function deferred(): Deferred {
+  let resolve = (): void => undefined;
+  const promise = new Promise<void>((settle) => {
+    resolve = settle;
+  });
+  return { promise, resolve };
+}
+
 export async function lockUserTable(prisma: PrismaClient): Promise<TableLock> {
-  let release = (): void => undefined;
-  const released = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-  let locked = (): void => undefined;
-  const acquired = new Promise<void>((resolve) => {
-    locked = resolve;
-  });
+  const released = deferred();
+  const acquired = deferred();
   const holding = prisma.$transaction(
     async (tx) => {
       await tx.$executeRaw`LOCK TABLE "User" IN ACCESS EXCLUSIVE MODE`;
-      locked();
-      await released;
+      acquired.resolve();
+      await released.promise;
     },
     { timeout: 60_000 },
   );
-  await Promise.race([acquired, holding]);
+  await Promise.race([acquired.promise, holding]);
   return {
     release: async () => {
-      release();
+      released.resolve();
       await holding;
     },
   };
@@ -35,10 +44,14 @@ export async function lockUserTable(prisma: PrismaClient): Promise<TableLock> {
 
 export function answerOf(port: number, path: string): Promise<Answer> {
   return new Promise((resolve) => {
-    const sent = httpRequest({ port, path }, (response) => {
-      response.resume();
-      resolve(response.statusCode ?? 0);
-    });
+    const sent = httpRequest(
+      { port, path, timeout: ANSWER_TIMEOUT_MS },
+      (response) => {
+        response.resume();
+        resolve(response.statusCode ?? 0);
+      },
+    );
+    sent.on('timeout', () => sent.destroy());
     sent.on('error', () => resolve('cut'));
     sent.end();
   });
@@ -47,8 +60,15 @@ export function answerOf(port: number, path: string): Promise<Answer> {
 export const elapse = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms));
 
-export const pendingAfter = async <T>(
+export async function pendingAfter<T>(
   work: Promise<T>,
   ms: number,
-): Promise<boolean> =>
-  Promise.race([work.then(() => false), elapse(ms).then(() => true)]);
+): Promise<boolean> {
+  let timer: NodeJS.Timeout | undefined;
+  const waited = new Promise<boolean>((resolve) => {
+    timer = setTimeout(() => resolve(true), ms);
+  });
+  return Promise.race([work.then(() => false), waited]).finally(() =>
+    clearTimeout(timer),
+  );
+}

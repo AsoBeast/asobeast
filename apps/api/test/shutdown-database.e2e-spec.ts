@@ -17,6 +17,7 @@ import { StoreJobsHandler } from '../src/jobs/store-jobs.handler';
 import { PrismaService } from '../src/prisma/prisma.service';
 import {
   answerOf,
+  deferred,
   elapse,
   lockUserTable,
   pendingAfter,
@@ -36,18 +37,12 @@ describe('Shutdown keeps postgres until open work finishes (e2e)', () => {
   let inspector: Queue;
   let closed = false;
   let lock: TableLock | undefined;
-  let release = (): void => undefined;
-  const released = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-  let started = (): void => undefined;
-  const running = new Promise<void>((resolve) => {
-    started = resolve;
-  });
+  const release = deferred();
+  const running = deferred();
 
   const handle = jest.fn(async (): Promise<void> => {
-    started();
-    await released;
+    running.resolve();
+    await release.promise;
     await app.get(PrismaService).workspace.count();
   });
 
@@ -84,7 +79,7 @@ describe('Shutdown keeps postgres until open work finishes (e2e)', () => {
   });
 
   afterAll(async () => {
-    release();
+    release.resolve();
     await lock?.release();
     if (!closed) await app?.close();
     await inspector?.obliterate({ force: true });
@@ -101,7 +96,7 @@ describe('Shutdown keeps postgres until open work finishes (e2e)', () => {
       { workspaceId: DEFAULT_WORKSPACE_ID, keywordId: 'keyword-in-flight' },
       { attempts: 1, removeOnComplete: false, removeOnFail: false },
     );
-    await running;
+    await running.promise;
 
     const port = ((app.getHttpServer() as Server).address() as AddressInfo)
       .port;
@@ -129,7 +124,7 @@ describe('Shutdown keeps postgres until open work finishes (e2e)', () => {
     expect(await pendingAfter(closing, STILL_STOPPING_MS)).toBe(true);
     await lock.release();
     await elapse(QUERY_SETTLE_MS);
-    release();
+    release.resolve();
     await closing;
 
     const drained = await Job.fromId(inspector, String(queued.id));

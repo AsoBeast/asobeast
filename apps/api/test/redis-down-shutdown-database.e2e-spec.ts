@@ -52,8 +52,8 @@ describe('Shutdown with redis lost and a query held on postgres (e2e)', () => {
     process.env.REDIS_PORT = String(upstreamPort);
     try {
       await lock?.release();
-      await (closing ?? app?.close());
     } finally {
+      await (closing ?? app?.close());
       await outage?.stop();
       restoreAuthEnv();
       await prisma?.$disconnect();
