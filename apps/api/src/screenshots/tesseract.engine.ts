@@ -8,7 +8,7 @@ import type { Env } from '../config/env';
 import type { OcrLine } from './caption-text';
 import type { OcrEngine, OcrThresholding } from './ocr-engine';
 import type { OcrLanguage } from './ocr-languages';
-import { OCR_THREAD, type OcrReply, type OcrRequest } from './ocr-thread';
+import type { OcrReply, OcrRequest } from './ocr-thread';
 import { disposeTessdata, tessdataDirectory } from './tessdata';
 
 export const IDLE_TERMINATE_MS = 5 * 60 * 1000;
@@ -93,7 +93,7 @@ export class TesseractOcrEngine implements OcrEngine, OnModuleDestroy {
 
   private threadOrSpawn(): Worker {
     if (this.thread !== null) return this.thread;
-    const thread = new Worker(THREAD_FILE, { workerData: OCR_THREAD });
+    const thread = new Worker(THREAD_FILE);
     thread.on('error', (error: Error) =>
       this.logger.warn(`the ocr thread failed: ${error.message}`),
     );

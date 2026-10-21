@@ -2,7 +2,7 @@ import { EventEmitter } from 'node:events';
 import { ConfigService } from '@nestjs/config';
 import type { Env } from '../config/env';
 import { OCR_LANGUAGES } from './ocr-languages';
-import { OCR_THREAD, type OcrReply, type OcrRequest } from './ocr-thread';
+import type { OcrReply, OcrRequest } from './ocr-thread';
 import { disposeTessdata, tessdataDirectory } from './tessdata';
 import {
   IDLE_TERMINATE_MS,
@@ -22,10 +22,7 @@ class FakeThread extends EventEmitter {
     return Promise.resolve(1);
   });
 
-  constructor(
-    readonly file: string,
-    readonly options: { workerData: unknown },
-  ) {
+  constructor(readonly file: string) {
     super();
     threads.push(this);
   }
@@ -38,9 +35,7 @@ class FakeThread extends EventEmitter {
 }
 
 jest.mock('node:worker_threads', () => ({
-  Worker: jest.fn((file: string, options: { workerData: unknown }) => {
-    return new FakeThread(file, options);
-  }),
+  Worker: jest.fn((file: string) => new FakeThread(file)),
 }));
 jest.mock('./tessdata', () => ({
   tessdataDirectory: jest.fn().mockResolvedValue('/tmp/tessdata'),
@@ -93,7 +88,6 @@ describe('TesseractOcrEngine', () => {
     expect(tessdataDirectory).toHaveBeenCalledWith(OCR_LANGUAGES);
     expect(threads).toHaveLength(1);
     expect(threads[0].file).toMatch(/ocr-thread\.ts$/);
-    expect(threads[0].options).toEqual({ workerData: OCR_THREAD });
     expect(threads[0].requests[0]).toEqual({
       image: Buffer.from('x'),
       languages: ['eng', 'jpn'],

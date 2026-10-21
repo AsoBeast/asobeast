@@ -1,10 +1,8 @@
-import { parentPort, workerData, type MessagePort } from 'node:worker_threads';
+import { parentPort, type MessagePort } from 'node:worker_threads';
 import { createWorker, OEM, PSM, type Worker } from 'tesseract.js';
 import type { OcrLine } from './caption-text';
 import type { OcrThresholding } from './ocr-engine';
 import type { OcrLanguage } from './ocr-languages';
-
-export const OCR_THREAD = 'asobeast-ocr-thread';
 
 export interface OcrRequest {
   image: Uint8Array;
@@ -90,4 +88,4 @@ export function serve(port: OcrPort): void {
   });
 }
 
-if (parentPort !== null && workerData === OCR_THREAD) serve(parentPort);
+if (parentPort !== null) serve(parentPort);
