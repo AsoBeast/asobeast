@@ -1,0 +1,22 @@
+{
+  "data": {
+    "type": "customerReviewResponses",
+    "id": "f4a1c2d3-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+    "attributes": {
+      "responseBody": "Thank you",
+      "lastModifiedDate": "2026-10-21T09:00:00-07:00",
+      "state": "PENDING_PUBLISH"
+    },
+    "relationships": {
+      "review": {
+        "data": {
+          "type": "customerReviews",
+          "id": "00000028-b08c-0014-729e-fbd500000001"
+        }
+      }
+    }
+  },
+  "links": {
+    "self": "https://api.appstoreconnect.apple.com/v1/customerReviewResponses/f4a1c2d3-5e6f-4a7b-8c9d-0e1f2a3b4c5d"
+  }
+}

@@ -13,12 +13,14 @@ import type {
   StoreConnectionState,
   StoreConnectionStatus,
   StoreConnectionSyncResult,
+  StoreReplyAccess,
   StoreReportAccess,
 } from '@asobeast/shared';
 import { type SecretBox, SecretBoxError } from '../common/crypto/secret-box';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AscAnalyticsApi } from './asc-analytics-api';
+import type { AscReviewsApi } from './asc-reviews-api';
 import type { GcsApi } from './play/gcs-api';
 import type { PlayPublisherApi } from './play/play-publisher-api';
 import { SECRET_BOX } from './secret-box.provider';
@@ -56,6 +58,7 @@ export interface OpenedConnection<A = AscAnalyticsApi> {
   id: string;
   status: StoreConnectionStatus;
   reportAccess: StoreReportAccess;
+  replyAccess: StoreReplyAccess;
   lastError: string | null;
   api: A;
 }
@@ -68,6 +71,7 @@ interface Unsealed {
   id: string;
   status: StoreConnectionStatus;
   reportAccess: StoreReportAccess;
+  replyAccess: StoreReplyAccess;
   lastError: string | null;
   credentials: StoreCredentials;
 }
@@ -174,6 +178,12 @@ export class StoreConnectionService {
     );
   }
 
+  openAppStoreReviews(): Promise<OpenedConnection<AscReviewsApi> | null> {
+    return this.openWith('APP_STORE', isAscCredentials, (credentials) =>
+      this.appStore.reviews(credentials),
+    );
+  }
+
   openPlay(): Promise<OpenedConnection<GcsApi> | null> {
     return this.openWith('GOOGLE_PLAY', isPlayCredentials, (credentials) =>
       this.play.api(credentials),
@@ -215,6 +225,7 @@ export class StoreConnectionService {
       id: connection.id,
       status: connection.status,
       reportAccess: connection.reportAccess,
+      replyAccess: connection.replyAccess,
       lastError: connection.lastError,
       api: build(connection.credentials),
     };
@@ -289,6 +300,7 @@ export class StoreConnectionService {
       id: row.id,
       status: row.status as StoreConnectionStatus,
       reportAccess: row.reportAccess as StoreReportAccess,
+      replyAccess: row.replyAccess as StoreReplyAccess,
       lastError: row.lastError,
       credentials,
     };

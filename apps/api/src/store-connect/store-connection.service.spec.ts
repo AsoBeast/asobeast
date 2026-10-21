@@ -11,6 +11,7 @@ import type { WorkspaceContext } from '../common/tenancy/workspace-context';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { AscAnalyticsApi } from './asc-analytics-api';
 import type { AscApiFactory } from './asc-api.factory';
+import type { AscReviewsApi } from './asc-reviews-api';
 import { AscAgreementError, AscRejectedKeyError } from './asc-errors';
 import { AGREEMENT_MISSING } from './asc-http-errors';
 import {
@@ -139,7 +140,11 @@ function harness(box: SecretBox | null = new SecretBox(randomBytes(32))) {
     },
   };
   const api = { verify: jest.fn(() => Promise.resolve()) };
-  const factory = { open: jest.fn(() => api as unknown as AscAnalyticsApi) };
+  const reviews = { respond: jest.fn() };
+  const factory = {
+    open: jest.fn(() => api as unknown as AscAnalyticsApi),
+    reviews: jest.fn(() => reviews as unknown as AscReviewsApi),
+  };
   const gcs = { verify: jest.fn(() => Promise.resolve()) };
   const publisher = { reply: jest.fn() };
   const gcsFactory = {
@@ -164,6 +169,7 @@ function harness(box: SecretBox | null = new SecretBox(randomBytes(32))) {
     tx,
     api,
     factory,
+    reviews,
     gcs,
     gcsFactory,
     publisher,
@@ -382,6 +388,29 @@ describe('StoreConnectionService', () => {
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(gcsFactory.open).not.toHaveBeenCalled();
+  });
+
+  it('opens the app store reviews client of the connection', async () => {
+    const { service, factory, reviews, rows } = harness();
+    await service.connect('APP_STORE', REQUEST, 'user_1');
+    rows[0].replyAccess = 'forbidden';
+
+    await expect(service.openAppStoreReviews()).resolves.toMatchObject({
+      id: 'conn_1',
+      status: 'active',
+      replyAccess: 'forbidden',
+      api: reviews,
+    });
+    expect(factory.reviews).toHaveBeenCalledWith(
+      expect.objectContaining({ issuerId: REQUEST.issuerId }),
+    );
+  });
+
+  it('opens no app store reviews client without an app store connection', async () => {
+    const { service, factory } = harness();
+
+    await expect(service.openAppStoreReviews()).resolves.toBeNull();
+    expect(factory.reviews).not.toHaveBeenCalled();
   });
 
   it('opens the play publisher client of the connection', async () => {

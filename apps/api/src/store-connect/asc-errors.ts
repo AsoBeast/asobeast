@@ -38,6 +38,19 @@ export class AscSegmentSizeError extends Error {
 }
 
 const REQUEST_CREATION = '/v1/analyticsReportRequests';
+const FORBIDDEN_CODE_PREFIX = 'FORBIDDEN';
+const REVIEW_RESOURCE =
+  /^\/v1\/(customerReviewResponses|customerReviews|apps\/[^/]+\/customerReviews)(\/|\?|$)/;
+
+const isRoleRefusal = (
+  response: AscResponse,
+  request: AscRequest,
+  code: string | null,
+): boolean =>
+  response.status === 403 &&
+  ((request.method === 'POST' && request.path === REQUEST_CREATION) ||
+    (REVIEW_RESOURCE.test(request.path) &&
+      code?.startsWith(FORBIDDEN_CODE_PREFIX) === true));
 
 interface AppleErrorBody {
   errors?: { code?: unknown; detail?: unknown; title?: unknown }[];
@@ -62,11 +75,7 @@ export function errorOf(response: AscResponse, request: AscRequest): AscError {
   if (code === AGREEMENT_CODE) {
     return new AscAgreementError(message, response.status, code);
   }
-  if (
-    response.status === 403 &&
-    request.method === 'POST' &&
-    request.path === REQUEST_CREATION
-  ) {
+  if (isRoleRefusal(response, request, code)) {
     return new AscForbiddenError(message, response.status, code);
   }
   if (response.status === 401 || response.status === 403) {

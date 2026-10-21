@@ -48,14 +48,18 @@ export class AscRequester {
 
   async page<T>(path: string): Promise<Resource<T>[]> {
     const items: Resource<T>[] = [];
+    for await (const page of this.pages<T>(path)) items.push(...page);
+    return items;
+  }
+
+  async *pages<T>(path: string): AsyncGenerator<Resource<T>[]> {
     let next: string | null = path;
     while (next) {
       const response = await this.send({ method: 'GET', path: next });
       const page = (response.body ?? {}) as Page<T>;
-      items.push(...(page.data ?? []));
+      yield page.data ?? [];
       next = nextPath(page.links?.next);
     }
-    return items;
   }
 
   async send(request: AscRequest, retry = true): Promise<AscResponse> {

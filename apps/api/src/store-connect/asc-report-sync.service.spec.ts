@@ -45,6 +45,7 @@ function build(status: OpenedConnection['status'] = 'active') {
     id: 'conn_1',
     status,
     reportAccess: 'admin',
+    replyAccess: 'unknown',
     lastError: null,
     api: api as unknown as AscAnalyticsApi,
   };
