@@ -15,6 +15,7 @@ import {
   urlFromSorting,
   writeStoredSort,
   type SortDirection,
+  type StoredSort,
 } from "@/lib/table/sorting";
 
 export interface UrlSort {
@@ -23,9 +24,7 @@ export interface UrlSort {
 }
 
 export interface UrlSortingOptions {
-  /** Local storage key under which the last sort the viewer chose is remembered. */
   remember?: string;
-  /** Sort applied when the url carries none and nothing is remembered. */
   defaultSort?: string;
 }
 
@@ -34,6 +33,20 @@ const localStorage = () => window.localStorage;
 function subscribe(listener: () => void) {
   window.addEventListener("storage", listener);
   return () => window.removeEventListener("storage", listener);
+}
+
+function resolveChosenSort(
+  { sort, dir }: UrlSort,
+  remembered: StoredSort | null,
+  defaultSort: string | undefined,
+): StoredSort | null {
+  if (sort !== null) return { sort, dir };
+  if (dir !== null && defaultSort !== undefined)
+    return { sort: defaultSort, dir };
+  return (
+    remembered ??
+    (defaultSort === undefined ? null : { sort: defaultSort, dir: null })
+  );
 }
 
 export function useUrlSorting(
@@ -58,18 +71,10 @@ export function useUrlSorting(
     () => (remember === undefined ? null : parseStoredSort(raw, known)),
     [remember, raw, known],
   );
-  // An explicit sort param wins; otherwise the sort the viewer last chose on
-  // this table applies, and the declared default is the last resort. A dir
-  // without a sort names the default sort's direction, so it is explicit too.
-  const chosen = useMemo(() => {
-    if (sort !== null) return { sort, dir };
-    if (dir !== null && defaultSort !== undefined)
-      return { sort: defaultSort, dir };
-    return (
-      remembered ??
-      (defaultSort === undefined ? null : { sort: defaultSort, dir: null })
-    );
-  }, [sort, dir, remembered, defaultSort]);
+  const chosen = useMemo(
+    () => resolveChosenSort({ sort, dir }, remembered, defaultSort),
+    [sort, dir, remembered, defaultSort],
+  );
   const sorting = useMemo(
     () =>
       chosen === null ? [] : sortingFromUrl(chosen.sort, chosen.dir, defaults),

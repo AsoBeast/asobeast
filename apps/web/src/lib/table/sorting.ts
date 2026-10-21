@@ -34,11 +34,13 @@ export function parseStoredSort(
     if (
       typeof parsed !== "object" ||
       parsed === null ||
-      Array.isArray(parsed)
+      Array.isArray(parsed) ||
+      !("sort" in parsed)
     ) {
       return null;
     }
-    const { sort, dir } = parsed as { sort?: unknown; dir?: unknown };
+    const { sort } = parsed;
+    const dir: unknown = "dir" in parsed ? parsed.dir : undefined;
     if (typeof sort !== "string" || !known.has(sort)) return null;
     return { sort, dir: dir === "asc" || dir === "desc" ? dir : null };
   } catch {
@@ -62,11 +64,12 @@ export function writeStoredSort(
 export function removeStoredSort(
   storage: () => Pick<Storage, "removeItem">,
   table: string,
-): void {
+): boolean {
   try {
     storage().removeItem(SORT_PREFIX + table);
+    return true;
   } catch {
-    // Storage refused; the url keeps the choice for this session.
+    return false;
   }
 }
 
