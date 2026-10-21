@@ -33,6 +33,15 @@ test("the owner connects app store connect and sees the apps it reports", async 
     "Connect App Store Connect",
     section(page),
   );
+  await expect(dialog).toHaveAccessibleDescription(
+    /Create a team key with the Admin role/,
+  );
+  await expect(
+    dialog.getByRole("link", { name: "Why an Admin key" }),
+  ).toHaveAttribute(
+    "href",
+    "https://docs.asobeast.com/guides/store-funnel#create-the-key",
+  );
   const key = dialog.getByLabel("Private key", { exact: true });
   await expect(key).toHaveAttribute("type", "password");
   await expect(key).toHaveAttribute("autocomplete", "off");
@@ -152,6 +161,43 @@ test("a read only key names the admin key and still syncs", async ({
   await section(page).getByRole("button", { name: "Sync now" }).click();
 
   await expect(page.getByText("Sync queued")).toBeVisible();
+});
+
+test("a key that cannot request reports leads with replacing it", async ({
+  page,
+}) => {
+  await seed(page.context(), STORE_CONNECTION_COOKIE, "readOnly");
+  await page.goto("/settings#store-connections");
+
+  const replace = section(page).getByRole("button", { name: "Replace key" });
+  await expect(replace).toHaveAttribute("data-variant", "default");
+  await expect(
+    section(page).locator('button[data-variant="default"]'),
+  ).toHaveCount(1);
+
+  const dialog = await openSettledDialog(page, "Replace key", section(page));
+  await dialog
+    .getByLabel("Issuer ID")
+    .fill("57246542-96fe-1a63-e053-0824d011072a");
+  await dialog.getByLabel("Key ID").fill("2X9R4HXF34");
+  await dialog.getByLabel("Private key", { exact: true }).fill(PRIVATE_KEY);
+  await dialog.getByRole("button", { name: "Replace key" }).click();
+
+  await expect(dialog).toBeHidden();
+  await expect(section(page)).not.toContainText("Needs an Admin key");
+  await expect(replace).toHaveAttribute("data-variant", "outline");
+  await expect(replace).toBeFocused();
+});
+
+test("a key with every request in place keeps replace key quiet", async ({
+  page,
+}) => {
+  await seed(page.context(), STORE_CONNECTION_COOKIE, "active");
+  await page.goto("/settings#store-connections");
+
+  await expect(
+    section(page).getByRole("button", { name: "Replace key" }),
+  ).toHaveAttribute("data-variant", "outline");
 });
 
 test("disconnecting asks first and returns the card to its empty state", async ({

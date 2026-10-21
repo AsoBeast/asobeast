@@ -39,6 +39,10 @@ export function connectionStatusLine(item: StoreConnectionItem): StatusLine {
   };
 }
 
+export const needsAdminKey = (item: StoreConnectionItem): boolean =>
+  item.status !== "rejected" &&
+  item.apps.some((app) => app.state === "forbidden");
+
 export function appStateLabel(state: StoreReportState | null): string {
   return state ? APP_STATE_LABELS[state] : "Waiting";
 }
