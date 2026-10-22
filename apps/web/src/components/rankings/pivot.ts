@@ -95,24 +95,28 @@ export function buildRankingChart(
     seriesLabels[item.keywordId] = label;
   });
 
+  const byDate = shown.map((item) => ({
+    keywordId: item.keywordId,
+    points: new Map(item.points.map((point) => [point.date, point])),
+  }));
   const rows = days.map((date) => {
     const row: ChartRow = { date };
-    for (const item of shown) {
-      const point = item.points.find((candidate) => candidate.date === date);
-      row[item.keywordId] = point ? point.position : null;
-      row[notFoundKey(item.keywordId)] =
+    for (const { keywordId, points } of byDate) {
+      const point = points.get(date);
+      row[keywordId] = point ? point.position : null;
+      row[notFoundKey(keywordId)] =
         point && point.position === null ? point.depth : null;
     }
     return row;
   });
-  const depths = days.map((date) => {
-    const row: DayDepths = {};
-    for (const item of shown) {
-      const point = item.points.find((candidate) => candidate.date === date);
-      row[item.keywordId] = point ? point.depth : null;
-    }
-    return row;
-  });
+  const depths = days.map((date): DayDepths =>
+    Object.fromEntries(
+      byDate.map(({ keywordId, points }) => [
+        keywordId,
+        points.get(date)?.depth ?? null,
+      ]),
+    ),
+  );
 
   return {
     rows: withLonePoints(rows, keywordIds),
