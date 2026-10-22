@@ -108,7 +108,8 @@ A store can stop listing an app you or a competitor tracks: the developer remove
 While `delistedAt` is set:
 
 - Every page of the app opens with a **No longer listed** notice naming the store, the store id, the home storefront and the UTC day, with the next step: open the store page, import the app again from its new link if it moved, or delete it, or remove a competitor, if it is gone for good.
-- The dashboard card of the app and the competitor card on the competitors page carry a **Delisted** badge.
+- The app's dashboard card and table row, and the competitor card on the competitors page, carry a **Delisted** badge.
+- The guided setup stops waiting for a listing the store can no longer answer.
 - `GET /apps/{id}`, `GET /apps`, `GET /apps/{id}/competitors` and `GET /portfolio` answer `delistedAt` as a timestamp, and `null` for an app the store lists.
 - The run pill expects no listing of that app, in its home storefront or in any market, so today's run can reach **Run complete** on its position checks and chart reads.
 
