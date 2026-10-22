@@ -105,6 +105,14 @@ export class StripeService {
     return this.stripe.paymentMethods.retrieve(id);
   }
 
+  cancelAtPeriodEnd(id: string): Promise<Stripe.Subscription> {
+    return this.stripe.subscriptions.update(
+      id,
+      { cancel_at_period_end: true },
+      { idempotencyKey: `cancel-at-end:${id}` },
+    );
+  }
+
   retrieveInvoice(id: string): Promise<Stripe.Invoice> {
     return this.stripe.invoices.retrieve(id);
   }

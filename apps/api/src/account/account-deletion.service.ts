@@ -107,6 +107,7 @@ export class AccountDeletionService {
     if (operatorWouldBeLost) {
       throw new ConflictException(OPERATOR_WORKSPACE_DELETION_REFUSED);
     }
+    await this.cancelRunningTrial(workspaceId);
     const dueAt = new Date(now.getTime() + this.graceDays * DAY_MS);
     const workspace = await this.prisma.workspace.update({
       where: { id: workspaceId },
@@ -125,6 +126,23 @@ export class AccountDeletionService {
       `workspace ${workspaceId} deletion requested by ${actor.email}, due ${dueAt.toISOString()}`,
     );
     return this.toStatus(workspace);
+  }
+
+  private async cancelRunningTrial(workspaceId: string): Promise<void> {
+    const subscription = await this.prisma.workspace.findUniqueOrThrow({
+      where: { id: workspaceId },
+      select: { subscriptionId: true, subscriptionStatus: true },
+    });
+    if (
+      subscription.subscriptionStatus !== 'trialing' ||
+      !subscription.subscriptionId
+    ) {
+      return;
+    }
+    await this.stripe.cancelAtPeriodEnd(subscription.subscriptionId);
+    this.logger.warn(
+      `workspace ${workspaceId} scheduled its deletion during a trial, so subscription ${subscription.subscriptionId} now ends with the trial and charges nothing`,
+    );
   }
 
   async cancel(): Promise<WorkspaceDeletionStatus> {

@@ -36,7 +36,11 @@ describe('AccountDeletionService', () => {
     $executeRaw: jest.fn(),
     withTransaction: jest.fn(),
   };
-  const stripe = { enabled: true, deleteCustomer: jest.fn() };
+  const stripe = {
+    enabled: true,
+    deleteCustomer: jest.fn(),
+    cancelAtPeriodEnd: jest.fn(),
+  };
   const scope = { workspaceId: 'ws_due' };
 
   const service = new AccountDeletionService(
@@ -66,6 +70,10 @@ describe('AccountDeletionService', () => {
     stripe.deleteCustomer.mockResolvedValue(undefined);
     prisma.workspace.findMany.mockResolvedValue([{ id: 'ws_due' }]);
     prisma.workspace.update.mockResolvedValue({});
+    prisma.workspace.findUniqueOrThrow.mockResolvedValue({
+      subscriptionId: null,
+      subscriptionStatus: null,
+    });
     prisma.workspace.delete.mockResolvedValue({});
     prisma.billingEvent.updateMany.mockResolvedValue({ count: 0 });
     prisma.withTransaction.mockImplementation(
@@ -321,6 +329,65 @@ describe('AccountDeletionService', () => {
 
       expect(prisma.$executeRaw).not.toHaveBeenCalled();
       expect(prisma.user.count).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('a deletion scheduled during a trial', () => {
+    const holding = (subscriptionStatus: string | null) =>
+      prisma.workspace.findUniqueOrThrow.mockResolvedValue({
+        subscriptionId: subscriptionStatus ? 'sub_trial' : null,
+        subscriptionStatus,
+      });
+
+    beforeEach(() => {
+      scope.workspaceId = 'ws_tenant';
+      stripe.cancelAtPeriodEnd.mockResolvedValue({});
+    });
+
+    it('cancels the trial at its end before it writes the schedule', async () => {
+      holding('trialing');
+
+      await service.request(ACTOR, 'DELETE', NOW);
+
+      expect(stripe.cancelAtPeriodEnd).toHaveBeenCalledWith('sub_trial');
+      expect(stripe.cancelAtPeriodEnd.mock.invocationCallOrder[0]).toBeLessThan(
+        prisma.workspace.update.mock.invocationCallOrder[0],
+      );
+    });
+
+    it.each(['active', 'past_due', null])(
+      'leaves a %s subscription alone',
+      async (status) => {
+        holding(status);
+
+        await service.request(ACTOR, 'DELETE', NOW);
+
+        expect(stripe.cancelAtPeriodEnd).not.toHaveBeenCalled();
+        expect(prisma.workspace.update).toHaveBeenCalled();
+      },
+    );
+
+    it('writes no schedule when stripe cannot cancel the trial', async () => {
+      holding('trialing');
+      stripe.cancelAtPeriodEnd.mockRejectedValue(new Error('stripe is down'));
+
+      await expect(service.request(ACTOR, 'DELETE', NOW)).rejects.toThrow(
+        'stripe is down',
+      );
+      expect(prisma.workspace.update).not.toHaveBeenCalled();
+    });
+
+    it('asks stripe nothing when the schedule is cancelled', async () => {
+      prisma.workspace.updateMany.mockResolvedValue({ count: 1 });
+      prisma.workspace.findUniqueOrThrow.mockResolvedValue({
+        deletionRequestedAt: null,
+        deletionRequestedBy: null,
+        deletionDueAt: null,
+      });
+
+      await service.cancel();
+
+      expect(stripe.cancelAtPeriodEnd).not.toHaveBeenCalled();
     });
   });
 

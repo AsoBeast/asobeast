@@ -150,6 +150,21 @@ describe('StripeService', () => {
       expect(retrieve).toHaveBeenCalledWith('pm_1');
     });
 
+    it('cancels a subscription at its period end under an idempotency key', async () => {
+      const update = jest.fn().mockResolvedValue({ id: 'sub_1' });
+      const service = new StripeService({
+        subscriptions: { update },
+      } as unknown as Stripe);
+
+      await service.cancelAtPeriodEnd('sub_1');
+
+      expect(update).toHaveBeenCalledWith(
+        'sub_1',
+        { cancel_at_period_end: true },
+        { idempotencyKey: 'cancel-at-end:sub_1' },
+      );
+    });
+
     it('reads an invoice by its id', async () => {
       const retrieve = jest.fn().mockResolvedValue({ id: 'in_1' });
       const service = new StripeService({
