@@ -41,7 +41,7 @@ Reading the bound from the row rather than from a constant matters, because hist
 
 Every tracked keyword reports `latestCheckedOn`, the UTC day of its newest check, whatever that check found. It is `null` for a keyword that has never been checked.
 
-The daily run checks every active keyword, so a newest check from today or yesterday UTC is current. An older one means the checks since that day did not finish, for example because the store refused the search. A failed check never writes a row, so it can never show up as a drop. The keywords table then shows the day of the last check beside the position, and hides the change since yesterday, because that change compares the last check with the day before it. A paused keyword is not checked on purpose and shows no day.
+The daily run checks every active keyword, so a newest check from today or yesterday UTC is current. An older one means the checks since that day did not finish, for example because the store refused the search. A failed check never writes a row, so it can never show up as a drop. The keywords table then shows a clock in place of the info button beside the position, opens the day of the last check from it, and hides the change since yesterday, because that change compares the last check with the day before it. A paused keyword is not checked on purpose and shows no day.
 
 ## How are positions charted?
 
