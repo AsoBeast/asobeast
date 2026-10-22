@@ -5,6 +5,8 @@ const IMPLICIT_TLS_PORT = 465;
 
 const SANDBOX_KEY_PREFIXES = ['sk_test_', 'rk_test_'];
 
+const PUBLISHABLE_KEY_MODES = { pk_test_: 'test', pk_live_: 'live' } as const;
+
 const LOOPBACK_HOST =
   /^(?:localhost|.+\.localhost|127(?:\.\d{1,3}){3}|\[::1\])$/;
 
@@ -36,6 +38,7 @@ export function assertProductionSafety(env: Env): void {
   }
 
   assertOneTaxCollector(env);
+  assertOneStripeAccount(env);
 
   if (env.PROXY_PROVIDER !== 'none' && !env.PROXY_API_KEY) {
     throw new Error(
@@ -160,8 +163,31 @@ function assertOneTaxCollector(env: Env): void {
   }
 }
 
+function assertOneStripeAccount(env: Env): void {
+  if (!env.STRIPE_PUBLISHABLE_KEY || !env.STRIPE_SECRET_KEY) return;
+  const publishable = publishableModeOf(env.STRIPE_PUBLISHABLE_KEY);
+  const secret = isSandboxKey(env.STRIPE_SECRET_KEY) ? 'test' : 'live';
+  if (publishable === secret) return;
+  throw new Error(
+    `STRIPE_PUBLISHABLE_KEY is a ${publishable ?? 'unrecognised'} key but STRIPE_SECRET_KEY is a ${secret} key. The billing wall would mount Checkout against another account than the one that creates its sessions. Use the publishable key of the same Stripe account and mode, or clear STRIPE_PUBLISHABLE_KEY to keep the hosted Checkout redirect.`,
+  );
+}
+
+function publishableModeOf(key: string): 'test' | 'live' | null {
+  const prefix = Object.keys(PUBLISHABLE_KEY_MODES).find((candidate) =>
+    key.startsWith(candidate),
+  ) as keyof typeof PUBLISHABLE_KEY_MODES | undefined;
+  return prefix ? PUBLISHABLE_KEY_MODES[prefix] : null;
+}
+
 function stripeWarnings(env: Env): string[] {
   const warnings: string[] = [];
+
+  if (env.STRIPE_PUBLISHABLE_KEY && !env.STRIPE_SECRET_KEY) {
+    warnings.push(
+      'STRIPE_PUBLISHABLE_KEY is set but STRIPE_SECRET_KEY is not, so the wall cannot open a session. Set both, or clear STRIPE_PUBLISHABLE_KEY to keep the hosted Checkout redirect.',
+    );
+  }
 
   if (env.BILLING_ENABLED && !env.STRIPE_SECRET_KEY) {
     warnings.push(

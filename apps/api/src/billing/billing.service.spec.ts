@@ -58,10 +58,13 @@ describe('BillingService', () => {
     const values = { ...CONFIG, ...env };
     const createCustomer = jest.fn().mockResolvedValue({ id: 'cus_created' });
     const customerExists = jest.fn().mockResolvedValue(true);
-    const createCheckoutSession = jest.fn().mockResolvedValue({
-      id: 'cs_new',
-      url: 'https://checkout.stripe.test/session',
-    });
+    const createCheckoutSession = jest.fn((params: { ui_mode?: string }) =>
+      Promise.resolve(
+        params.ui_mode === 'embedded_page'
+          ? { id: 'cs_new', url: null, client_secret: 'cs_new_secret' }
+          : { id: 'cs_new', url: 'https://checkout.stripe.test/session' },
+      ),
+    );
     const createPortalSession = jest
       .fn()
       .mockResolvedValue({ url: 'https://portal.stripe.test/session' });
@@ -176,7 +179,7 @@ describe('BillingService', () => {
 
     await expect(
       service.checkout(owner('cus_existing'), 'price_indie_month'),
-    ).resolves.toBe('https://checkout.stripe.test/session');
+    ).resolves.toEqual({ url: 'https://checkout.stripe.test/session' });
 
     const [params, key] = createCheckoutSession.mock.calls[0] as [
       Record<string, unknown>,
@@ -359,7 +362,7 @@ describe('BillingService', () => {
 
       await expect(
         service.checkout(owner('cus_existing'), 'price_indie_month'),
-      ).resolves.toBe('https://checkout.stripe.test/session');
+      ).resolves.toEqual({ url: 'https://checkout.stripe.test/session' });
       expect(createCheckoutSession).toHaveBeenCalledTimes(1);
       expect(row.checkoutSessionId).toBe('cs_new');
     });
@@ -409,7 +412,7 @@ describe('BillingService', () => {
 
       await expect(
         service.checkout(owner('cus_existing'), 'price_indie_month'),
-      ).resolves.toBe('https://checkout.stripe.test/session');
+      ).resolves.toEqual({ url: 'https://checkout.stripe.test/session' });
       expect(createCheckoutSession).toHaveBeenCalledTimes(1);
       expect(row.checkoutSessionId).toBe('cs_new');
     });
@@ -470,7 +473,7 @@ describe('BillingService', () => {
 
       await expect(
         service.checkout(owner('cus_existing'), 'price_indie_month'),
-      ).resolves.toBe('https://checkout.stripe.test/session');
+      ).resolves.toEqual({ url: 'https://checkout.stripe.test/session' });
       expect(createCheckoutSession).toHaveBeenCalledTimes(1);
       expect(row.checkoutClaimToken).toBeNull();
       expect(row.checkoutSessionId).toBe('cs_new');
@@ -509,7 +512,9 @@ describe('BillingService', () => {
 
       await expect(second).rejects.toBeInstanceOf(BillingConflictError);
       release();
-      await expect(first).resolves.toBe('https://checkout.stripe.test/session');
+      await expect(first).resolves.toEqual({
+        url: 'https://checkout.stripe.test/session',
+      });
       expect(createCheckoutSession).toHaveBeenCalledTimes(1);
     });
 
@@ -528,7 +533,7 @@ describe('BillingService', () => {
       });
       await expect(
         service.checkout(owner('cus_existing'), 'price_indie_month'),
-      ).resolves.toBe('https://checkout.stripe.test/session');
+      ).resolves.toEqual({ url: 'https://checkout.stripe.test/session' });
     });
   });
 
@@ -872,7 +877,7 @@ describe('BillingService', () => {
 
       await expect(
         service.checkout(owner('cus_existing'), 'price_indie_month'),
-      ).resolves.toBe('https://checkout.stripe.test/session');
+      ).resolves.toEqual({ url: 'https://checkout.stripe.test/session' });
       expect(createCheckoutSession).toHaveBeenCalled();
     },
   );
@@ -938,6 +943,109 @@ describe('BillingService', () => {
 
     await expect(service.catalog()).resolves.toMatchObject({
       managedPayments: true,
+    });
+  });
+
+  describe('the embedded wall', () => {
+    const MARKER = '?checkout=complete&session_id={CHECKOUT_SESSION_ID}';
+
+    it('carries the publishable key only when both keys are set', async () => {
+      const keyed = build(
+        null,
+        { subscriptionId: null, subscriptionStatus: null },
+        { STRIPE_PUBLISHABLE_KEY: 'pk_test_wall' },
+      );
+      const keyless = build(
+        null,
+        { subscriptionId: null, subscriptionStatus: null },
+        {
+          STRIPE_PUBLISHABLE_KEY: 'pk_test_wall',
+          STRIPE_SECRET_KEY: undefined,
+        },
+      );
+
+      await expect(keyed.service.catalog()).resolves.toMatchObject({
+        publishableKey: 'pk_test_wall',
+      });
+      await expect(build(null).service.catalog()).resolves.not.toHaveProperty(
+        'publishableKey',
+      );
+      await expect(keyless.service.catalog()).resolves.not.toHaveProperty(
+        'publishableKey',
+      );
+    });
+
+    it('answers the return url and the client secret of an embedded trial session', async () => {
+      const { service, createCheckoutSession } = build(
+        'cus_existing',
+        { subscriptionId: null, subscriptionStatus: null },
+        {},
+        { days: 7 },
+      );
+
+      await expect(
+        service.checkout(
+          owner('cus_existing'),
+          'price_indie_month',
+          'embedded',
+        ),
+      ).resolves.toEqual({
+        url: `https://app.example.com/${MARKER}`,
+        clientSecret: 'cs_new_secret',
+      });
+      const [params] = createCheckoutSession.mock.calls[0] as [
+        Record<string, unknown>,
+      ];
+      expect(params).toMatchObject({
+        ui_mode: 'embedded_page',
+        return_url: `https://app.example.com/${MARKER}`,
+      });
+      expect(params).not.toHaveProperty('success_url');
+      expect(params).not.toHaveProperty('cancel_url');
+    });
+
+    it('returns an embedded purchase to the settings return url', async () => {
+      const { service } = build('cus_existing');
+
+      await expect(
+        service.checkout(
+          owner('cus_existing'),
+          'price_indie_month',
+          'embedded',
+        ),
+      ).resolves.toMatchObject({
+        url: `https://app.example.com/settings${MARKER}`,
+      });
+    });
+
+    it.each([undefined, 'hosted' as const])(
+      'keeps the hosted session for ui %s',
+      async (ui) => {
+        const { service } = build('cus_existing');
+
+        await expect(
+          service.checkout(owner('cus_existing'), 'price_indie_month', ui),
+        ).resolves.toEqual({ url: 'https://checkout.stripe.test/session' });
+      },
+    );
+
+    it('refuses an embedded session stripe answered without a client secret', async () => {
+      const { service, createCheckoutSession } = build('cus_existing');
+      createCheckoutSession.mockResolvedValueOnce({
+        id: 'cs_new',
+        url: null,
+        client_secret: null,
+      } as never);
+
+      await expect(
+        service.checkout(
+          owner('cus_existing'),
+          'price_indie_month',
+          'embedded',
+        ),
+      ).rejects.toThrow(
+        'Stripe returned an embedded checkout session with no client secret',
+      );
     });
   });
 });

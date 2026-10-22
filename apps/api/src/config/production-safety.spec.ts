@@ -227,6 +227,51 @@ describe('production safety', () => {
     });
   });
 
+  describe('the publishable key', () => {
+    it.each([
+      ['pk_live_asobeast', 'sk_test_asobeast'],
+      ['pk_test_asobeast', 'sk_live_asobeast'],
+      ['pk_live_asobeast', 'rk_test_asobeast'],
+    ])('refuses to boot with %s beside %s', (publishable, secret) => {
+      expect(() =>
+        validateEnv({
+          ...BASE,
+          STRIPE_PUBLISHABLE_KEY: publishable,
+          STRIPE_SECRET_KEY: secret,
+        }),
+      ).toThrow(
+        /STRIPE_PUBLISHABLE_KEY is a (live|test) key but STRIPE_SECRET_KEY is a (live|test) key/,
+      );
+    });
+
+    it.each([
+      ['pk_test_asobeast', 'sk_test_asobeast'],
+      ['pk_live_asobeast', 'sk_live_asobeast'],
+      ['pk_live_asobeast', 'rk_live_asobeast'],
+    ])('boots with %s beside %s', (publishable, secret) => {
+      expect(() =>
+        validateEnv({
+          ...BASE,
+          STRIPE_PUBLISHABLE_KEY: publishable,
+          STRIPE_SECRET_KEY: secret,
+        }),
+      ).not.toThrow();
+    });
+
+    it('warns in production when the key has no secret beside it', () => {
+      expect(
+        productionWarnings(
+          production({
+            AUTH_COOKIE_SECURE: 'true',
+            STRIPE_PUBLISHABLE_KEY: 'pk_test_asobeast',
+          }),
+        ),
+      ).toContain(
+        'STRIPE_PUBLISHABLE_KEY is set but STRIPE_SECRET_KEY is not, so the wall cannot open a session. Set both, or clear STRIPE_PUBLISHABLE_KEY to keep the hosted Checkout redirect.',
+      );
+    });
+  });
+
   describe('webhook targets', () => {
     const warningsFor = (overrides: Record<string, unknown>): string[] =>
       productionWarnings(

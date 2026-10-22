@@ -22,6 +22,7 @@ export interface FakeStripe extends StripeApi {
   schedules: Map<string, Stripe.SubscriptionSchedule>;
   failNext: Error | null;
   nextSessionUrl: string | null | undefined;
+  nextClientSecret: string | null | undefined;
   delayMs: number;
   reset(): void;
 }
@@ -168,6 +169,7 @@ export function fakeStripe(): FakeStripe {
     schedules: new Map(),
     failNext: null,
     nextSessionUrl: undefined,
+    nextClientSecret: undefined,
     delayMs: 0,
 
     customers: {
@@ -217,12 +219,20 @@ export function fakeStripe(): FakeStripe {
             idempotencyKey: options?.idempotencyKey,
           });
           const id = `cs_test_${next()}`;
+          const embedded = params.ui_mode === 'embedded_page';
           const session = checkoutSession({
             id,
-            url:
-              fake.nextSessionUrl === undefined
+            url: embedded
+              ? null
+              : fake.nextSessionUrl === undefined
                 ? `https://checkout.stripe.test/${id}`
                 : fake.nextSessionUrl,
+            client_secret: embedded
+              ? fake.nextClientSecret === undefined
+                ? `${id}_secret`
+                : fake.nextClientSecret
+              : null,
+            ui_mode: embedded ? 'embedded_page' : 'hosted_page',
             client_reference_id: params.client_reference_id ?? null,
           });
           fake.sessions.set(id, session);
@@ -306,6 +316,7 @@ export function fakeStripe(): FakeStripe {
       fake.schedules.clear();
       fake.failNext = null;
       fake.nextSessionUrl = undefined;
+      fake.nextClientSecret = undefined;
       fake.delayMs = 0;
       counter = 0;
     },

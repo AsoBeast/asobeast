@@ -6518,6 +6518,13 @@
             "type": "string",
             "minLength": 4,
             "maxLength": 255
+          },
+          "ui": {
+            "type": "string",
+            "enum": [
+              "hosted",
+              "embedded"
+            ]
           }
         },
         "required": [

@@ -49,6 +49,7 @@ describe('Billing on an instance with no stripe key (e2e)', () => {
     const catalog = await harness.owner.get('/billing/catalog').expect(200);
 
     expect((catalog.body as BillingCatalog).enabled).toBe(false);
+    expect(catalog.body as BillingCatalog).not.toHaveProperty('publishableKey');
   });
 
   it('reconciles a workspace with no billing state without stripe', async () => {

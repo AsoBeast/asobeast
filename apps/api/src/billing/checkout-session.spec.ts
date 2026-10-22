@@ -10,7 +10,7 @@ const INPUT: CheckoutSessionInput = {
   customerId: 'cus_1',
   priceId: 'price_indie_month',
   workspaceId: 'ws_1',
-  successUrl: 'https://app.example.com/settings?checkout=complete',
+  returnUrl: 'https://app.example.com/settings?checkout=complete',
   cancelUrl: 'https://app.example.com/upgrade',
   taxCollection: 'none',
 };
@@ -24,7 +24,7 @@ const COMMON = {
     metadata: { [WORKSPACE_METADATA_KEY]: 'ws_1' },
     billing_mode: { type: 'flexible' },
   },
-  success_url: INPUT.successUrl,
+  success_url: INPUT.returnUrl,
   cancel_url: INPUT.cancelUrl,
   allow_promotion_codes: true,
   billing_address_collection: 'required',
@@ -122,6 +122,30 @@ describe('a trial checkout', () => {
     expect(trialSubmitMessage(7)).toBe(
       '$0 today. Your 7 day trial ends on the date shown above, then the plan price is charged. Cancel any time from Settings, Billing.',
     );
+  });
+});
+
+describe('an embedded checkout', () => {
+  const embedded = (over: Partial<CheckoutSessionInput>) =>
+    checkoutSessionParams({ ...INPUT, ui: 'embedded', ...over });
+  const hosted = (over: Partial<CheckoutSessionInput>) =>
+    checkoutSessionParams({ ...INPUT, ...over });
+
+  it.each([
+    ['the seller', {}],
+    ['managed payments', { taxCollection: 'managed_payments' as const }],
+    ['a trial', { trial: { days: 7 } }],
+  ])('builds an embedded session with a return url for %s', (_label, over) => {
+    const params = embedded(over);
+    const { success_url, cancel_url, ...rest } = hosted(over);
+
+    expect(success_url).toBe(INPUT.returnUrl);
+    expect(cancel_url).toBe(INPUT.cancelUrl);
+    expect(params).toEqual({
+      ...rest,
+      ui_mode: 'embedded_page',
+      return_url: INPUT.returnUrl,
+    });
   });
 });
 

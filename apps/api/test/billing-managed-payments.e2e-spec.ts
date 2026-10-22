@@ -73,6 +73,26 @@ describe('Billing through managed payments (e2e)', () => {
     }
   });
 
+  it('opens an embedded managed session without a removed key', async () => {
+    await harness.owner
+      .post('/billing/checkout')
+      .send({ priceId: 'price_TestIndieMonthly', ui: 'embedded' })
+      .expect(200);
+
+    const [recorded] = harness.fake.checkoutSessions;
+    expect(recorded.params).toMatchObject({
+      ui_mode: 'embedded_page',
+      managed_payments: { enabled: true },
+    });
+    for (const key of [
+      'automatic_tax',
+      'tax_id_collection',
+      'customer_update',
+    ]) {
+      expect(recorded.params).not.toHaveProperty(key);
+    }
+  });
+
   it('tells the paywall that stripe sells the plan', async () => {
     const response = await harness.owner.get('/billing/catalog').expect(200);
 

@@ -11,6 +11,8 @@ import {
   CHECKOUT_SESSION_PARAM,
   UPGRADE_PATH,
   type BillingCatalog,
+  type BillingSession,
+  type CheckoutUi,
 } from '@asobeast/shared';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
@@ -70,10 +72,20 @@ export class BillingService {
       enabled: this.missingConfiguration().length === 0,
       prices: this.prices.prices,
       managedPayments: this.taxCollection() === 'managed_payments',
+      ...this.publishableKey(),
     };
   }
 
-  async checkout(user: AccountUser, priceId: string): Promise<string> {
+  private publishableKey(): Pick<BillingCatalog, 'publishableKey'> {
+    const key = this.config.get('STRIPE_PUBLISHABLE_KEY', { infer: true });
+    return key && this.stripe.enabled ? { publishableKey: key } : {};
+  }
+
+  async checkout(
+    user: AccountUser,
+    priceId: string,
+    ui: CheckoutUi = 'hosted',
+  ): Promise<BillingSession> {
     await this.prices.refreshIfStale();
     this.refuseUnprovisionableCheckout();
     const price = this.prices.require(priceId);
@@ -81,6 +93,9 @@ export class BillingService {
     const customerId = await this.customerFor(user);
     await this.refuseLiveSubscription(user.workspaceId, customerId);
     const trial = await this.trialOffers.offerFor(user);
+    const returnUrl = withCheckoutMarker(
+      trial ? this.webUrl('/') : this.returnUrl(),
+    );
 
     const workspaceId = user.workspaceId;
     const attempt = randomUUID();
@@ -92,21 +107,18 @@ export class BillingService {
           customerId,
           priceId: price.priceId,
           workspaceId,
-          successUrl: withCheckoutMarker(
-            trial ? this.webUrl('/') : this.returnUrl(),
-          ),
+          returnUrl,
           cancelUrl: this.webUrl(UPGRADE_PATH),
           taxCollection: this.taxCollection(),
           trial: trial ?? undefined,
+          ui,
         }),
         `checkout:${workspaceId}:${attempt}`,
       );
 
-      if (!session.url) {
-        throw new Error('Stripe returned a checkout session with no url');
-      }
+      const answer = billingSessionOf(session, ui, returnUrl);
       await this.recordCheckout(workspaceId, attempt, session.id);
-      return session.url;
+      return answer;
     } catch (error) {
       await this.releaseCheckout(workspaceId, attempt);
       throw error;
@@ -351,6 +363,25 @@ export class BillingService {
     const base = this.config.get('WEB_PUBLIC_URL', { infer: true }) ?? '';
     return `${base}${path}`;
   }
+}
+
+function billingSessionOf(
+  session: { url: string | null; client_secret: string | null },
+  ui: CheckoutUi,
+  returnUrl: string,
+): BillingSession {
+  if (ui === 'hosted') {
+    if (!session.url) {
+      throw new Error('Stripe returned a checkout session with no url');
+    }
+    return { url: session.url };
+  }
+  if (!session.client_secret) {
+    throw new Error(
+      'Stripe returned an embedded checkout session with no client secret',
+    );
+  }
+  return { url: returnUrl, clientSecret: session.client_secret };
 }
 
 function withCheckoutMarker(returnUrl: string): string {

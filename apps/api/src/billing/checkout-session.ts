@@ -1,5 +1,5 @@
 import type Stripe from 'stripe';
-import type { TrialOffer } from '@asobeast/shared';
+import type { CheckoutUi, TrialOffer } from '@asobeast/shared';
 import type { Env } from '../config/env';
 import { WORKSPACE_METADATA_KEY } from './workspace-link';
 
@@ -11,10 +11,11 @@ export interface CheckoutSessionInput {
   customerId: string;
   priceId: string;
   workspaceId: string;
-  successUrl: string;
+  returnUrl: string;
   cancelUrl: string;
   taxCollection: TaxCollection;
   trial?: TrialOffer;
+  ui?: CheckoutUi;
 }
 
 export function taxCollectionOf(switches: TaxSwitches): TaxCollection {
@@ -33,6 +34,15 @@ function taxParams(
     customer_update: { address: 'auto', name: 'auto' },
     automatic_tax: { enabled: taxCollection === 'stripe_tax' },
   };
+}
+
+function uiParams(
+  input: CheckoutSessionInput,
+): Partial<Stripe.Checkout.SessionCreateParams> {
+  if (input.ui === 'embedded') {
+    return { ui_mode: 'embedded_page', return_url: input.returnUrl };
+  }
+  return { success_url: input.returnUrl, cancel_url: input.cancelUrl };
 }
 
 export function trialSubmitMessage(days: number): string {
@@ -72,8 +82,7 @@ export function checkoutSessionParams(
       billing_mode: { type: 'flexible' },
       ...trialSubscriptionData(input.trial),
     },
-    success_url: input.successUrl,
-    cancel_url: input.cancelUrl,
+    ...uiParams(input),
     allow_promotion_codes: true,
     billing_address_collection: 'required',
     ...taxParams(input.taxCollection),

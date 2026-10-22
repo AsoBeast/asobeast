@@ -4,6 +4,7 @@ import type {
   AccountPlan,
   ApiErrorEnvelope,
   AuthUser,
+  BillingCatalog,
   BillingSession,
 } from '@asobeast/shared';
 import request from 'supertest';
@@ -106,6 +107,60 @@ describe('Billing checkout (e2e)', () => {
       checkoutSessionId: 'cs_test_2',
       checkoutClaimedAt: null,
       checkoutClaimToken: null,
+    });
+  });
+
+  describe('the embedded wall', () => {
+    const MARKER = 'checkout=complete&session_id={CHECKOUT_SESSION_ID}';
+
+    it('opens an embedded session for the wall', async () => {
+      await resetBillingState(harness, { trialEndsAt: null });
+      harness.fake.nextClientSecret = 'cs_test_wall_secret';
+
+      const response = await harness.owner
+        .post(CHECKOUT)
+        .send({ priceId: INDIE_MONTHLY, ui: 'embedded' })
+        .expect(200);
+
+      const [recorded] = harness.fake.checkoutSessions;
+      expect(recorded.params).toMatchObject({
+        ui_mode: 'embedded_page',
+        return_url: `${WEB}/?${MARKER}`,
+        subscription_data: { trial_period_days: 7 },
+      });
+      expect(recorded.params).not.toHaveProperty('success_url');
+      expect(recorded.params).not.toHaveProperty('cancel_url');
+      expect(response.body as BillingSession).toEqual({
+        url: `${WEB}/?${MARKER}`,
+        clientSecret: 'cs_test_wall_secret',
+      });
+    });
+
+    it('keeps the hosted session without ui', async () => {
+      const response = await checkout().expect(200);
+
+      expect(harness.fake.checkoutSessions[0].params).not.toHaveProperty(
+        'ui_mode',
+      );
+      expect(response.body as BillingSession).toEqual({
+        url: 'https://checkout.stripe.test/cs_test_2',
+      });
+    });
+
+    it('refuses an unknown ui with 400', async () => {
+      await harness.owner
+        .post(CHECKOUT)
+        .send({ priceId: INDIE_MONTHLY, ui: 'popup' })
+        .expect(400);
+      expect(harness.fake.checkoutSessions).toHaveLength(0);
+    });
+
+    it('names the publishable key on the catalog', async () => {
+      const catalog = await harness.owner.get('/billing/catalog').expect(200);
+
+      expect((catalog.body as BillingCatalog).publishableKey).toBe(
+        'pk_test_asobeast_e2e',
+      );
     });
   });
 
