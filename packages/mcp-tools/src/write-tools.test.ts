@@ -17,13 +17,15 @@ const ITEM = {
 };
 
 describe("the write tools", () => {
-  it("are exactly the five the catalog promises, in order", () => {
+  it("are exactly the seven the catalog promises, in order", () => {
     expect(MCP_WRITE_TOOLS.map((tool) => tool.name)).toEqual([
       "track_keywords",
       "untrack_keyword",
       "add_competitor",
       "remove_competitor",
       "set_action_status",
+      "add_annotation",
+      "delete_annotation",
     ]);
   });
 
@@ -85,6 +87,31 @@ describe("the write tools", () => {
         },
       },
     ],
+    [
+      "add_annotation",
+      {
+        appId: "app-1",
+        date: "2026-10-08",
+        label: "Release 5.21.0",
+        market: "de",
+        tag: "wave",
+      },
+      {
+        method: "POST",
+        path: "/apps/app-1/annotations",
+        body: {
+          date: "2026-10-08",
+          label: "Release 5.21.0",
+          market: "de",
+          tag: "wave",
+        },
+      },
+    ],
+    [
+      "delete_annotation",
+      { appId: "app-1", annotationId: "ann-1" },
+      { method: "DELETE", path: "/apps/app-1/annotations/ann-1" },
+    ],
   ])("request %s as the route the web app uses", (name, input, request) => {
     expect(JSON.parse(JSON.stringify(writeTool(name).request(input)))).toEqual(
       request,
@@ -100,7 +127,13 @@ describe("the write tools", () => {
     ).toBe("/apps/..%2Fjobs/keywords/kw%2F1%3Fx%3Dy");
   });
 
-  const ID_FIELDS = ["appId", "keywordId", "competitorId", "actionId"];
+  const ID_FIELDS = [
+    "appId",
+    "keywordId",
+    "competitorId",
+    "actionId",
+    "annotationId",
+  ];
 
   const idFields = MCP_WRITE_TOOLS.flatMap((tool) =>
     ID_FIELDS.filter((field) => field in tool.inputSchema.shape).map(
@@ -117,6 +150,9 @@ describe("the write tools", () => {
       "remove_competitor.appId",
       "remove_competitor.competitorId",
       "set_action_status.actionId",
+      "add_annotation.appId",
+      "delete_annotation.appId",
+      "delete_annotation.annotationId",
     ]);
   });
 
