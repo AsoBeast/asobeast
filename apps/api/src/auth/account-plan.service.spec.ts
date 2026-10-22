@@ -44,6 +44,7 @@ describe('AccountPlanService', () => {
       subscriptionStatus?: string | null;
       cancelAtPeriodEnd?: boolean;
       billingInterval?: string | null;
+      firstPaidAt?: Date | null;
     } = {},
   ) => ({
     plan: 'free',
@@ -54,6 +55,7 @@ describe('AccountPlanService', () => {
     subscriptionStatus: null,
     cancelAtPeriodEnd: false,
     billingInterval: null,
+    firstPaidAt: new Date('2026-08-01T00:00:00.000Z'),
     ...over,
   });
 
@@ -278,6 +280,31 @@ describe('AccountPlanService', () => {
         ),
       ).resolves.toMatchObject({
         subscribed: false,
+        subscriptionStalled: false,
+      });
+    });
+  });
+
+  describe('a declined first charge', () => {
+    const pastDue = (firstPaidAt: Date | null) =>
+      build(true, { plan: 'free', apps: 0, keywordMarkets: 0 }).describe(
+        workspace({
+          subscriptionId: 'sub_1',
+          subscriptionStatus: 'past_due',
+          firstPaidAt,
+        }),
+        NOW,
+        null,
+      );
+
+    it('reports a past_due subscription that never paid as stalled', async () => {
+      await expect(pastDue(null)).resolves.toMatchObject({
+        subscriptionStalled: true,
+      });
+    });
+
+    it('keeps a paying customer in dunning unstalled', async () => {
+      await expect(pastDue(new Date('2026-08-01'))).resolves.toMatchObject({
         subscriptionStalled: false,
       });
     });

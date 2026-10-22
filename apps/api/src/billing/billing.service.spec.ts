@@ -5,7 +5,11 @@ import { PrismaService } from '../prisma/prisma.service';
 import type { TrialOffer } from '@asobeast/shared';
 import type { AccountUser } from '../auth/auth.types';
 import type { TrialOffers } from '../auth/trial-offers';
-import { BillingService, PAYMENT_PENDING } from './billing.service';
+import {
+  BillingService,
+  PAYMENT_PENDING,
+  SUBSCRIPTION_NEEDS_ATTENTION,
+} from './billing.service';
 import { BillingConflictError } from './billing.errors';
 import { BillingReconciler } from './billing-reconciler.service';
 import { PriceCatalog, UnknownPriceError } from './price-catalog';
@@ -51,6 +55,7 @@ describe('BillingService', () => {
     subscription: {
       subscriptionId: string | null;
       subscriptionStatus: string | null;
+      firstPaidAt?: Date | null;
     } = { subscriptionId: null, subscriptionStatus: null },
     env: Record<string, string | boolean | undefined> = {},
     offer: TrialOffer | null = null,
@@ -828,6 +833,28 @@ describe('BillingService', () => {
       ).rejects.toThrow(/add a payment method/i);
     },
   );
+
+  it('sends a trial whose first charge was declined to the portal for a new card', async () => {
+    const { service, createCheckoutSession } = build('cus_existing', {
+      subscriptionId: 'sub_existing',
+      subscriptionStatus: 'past_due',
+      firstPaidAt: null,
+    });
+
+    const refusal = await service
+      .checkout(owner('cus_existing'), 'price_indie_month')
+      .catch((error: unknown) => error);
+
+    expect(refusal).toBeInstanceOf(BillingConflictError);
+    expect((refusal as BillingConflictError).message).toBe(
+      SUBSCRIPTION_NEEDS_ATTENTION,
+    );
+    expect((refusal as BillingConflictError).detail).toEqual({
+      reason: 'subscription_exists',
+      recovery: 'portal',
+    });
+    expect(createCheckoutSession).not.toHaveBeenCalled();
+  });
 
   it('sends a workspace that already pays to the portal to change plan', async () => {
     const { service } = build('cus_existing', {

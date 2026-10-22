@@ -59,7 +59,7 @@ describe('portalConfiguration', () => {
     expect(params.features.invoice_history).toEqual({ enabled: true });
   });
 
-  it('offers no pause, since paused is reserved for a trial without a card', () => {
+  it('offers no pause, which no trial needs because every trial holds a card', () => {
     expect(params.features).not.toHaveProperty('subscription_pause');
   });
 

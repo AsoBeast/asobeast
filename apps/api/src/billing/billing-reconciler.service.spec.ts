@@ -9,6 +9,7 @@ import { LAST_BILLING_RECONCILE_KEY } from '../jobs/jobs.types';
 import { PrismaService } from '../prisma/prisma.service';
 import { BillingReconciler } from './billing-reconciler.service';
 import { PriceCatalog } from './price-catalog';
+import type { FirstPayment } from './first-payment';
 import type { TrialStarts } from './trial-starts';
 import { StripeService } from './stripe.service';
 import { WORKSPACE_METADATA_KEY } from './workspace-link';
@@ -65,6 +66,7 @@ describe('BillingReconciler', () => {
     enabled?: boolean;
     session?: Partial<Stripe.Checkout.Session> | Error;
     prices?: PriceCatalog;
+    neverPaid?: boolean;
   }) => {
     const rows = over.workspaces ?? [];
     const update = jest.fn(
@@ -88,6 +90,9 @@ describe('BillingReconciler', () => {
     );
     const redisSet = jest.fn(() => Promise.resolve('OK'));
     const settle = jest.fn().mockResolvedValue('skipped');
+    const record = jest
+      .fn()
+      .mockResolvedValue(over.neverPaid ? null : new Date('2026-09-01'));
     const retrieveSubscription = jest.fn(() =>
       over.retrieveFails
         ? Promise.reject(over.retrieveFails)
@@ -130,10 +135,12 @@ describe('BillingReconciler', () => {
         getBackend: () => ({ client: Promise.resolve({ set: redisSet }) }),
       } as unknown as Queue,
       { settle } as unknown as TrialStarts,
+      { record } as unknown as FirstPayment,
     );
 
     return {
       settle,
+      record,
       reconciler,
       redisSet,
       update,
@@ -190,6 +197,38 @@ describe('BillingReconciler', () => {
     expect(update.mock.invocationCallOrder[0]).toBeLessThan(
       settle.mock.invocationCallOrder[0],
     );
+  });
+
+  it('records the first payment before it corrects the plan', async () => {
+    const { reconciler, record, update } = build({
+      workspaces: [workspaceOf({ plan: 'free' })],
+    });
+
+    await reconciler.reconcile();
+
+    expect(record).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'ws_1' }),
+      expect.objectContaining({ id: 'sub_1' }),
+    );
+    expect(record.mock.invocationCallOrder[0]).toBeLessThan(
+      update.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('drops a past_due subscription that never paid to free', async () => {
+    const { reconciler, update } = build({
+      workspaces: [workspaceOf({ subscriptionStatus: 'past_due' })],
+      subscription: subscriptionOf({ status: 'past_due' }),
+      neverPaid: true,
+    });
+
+    await reconciler.reconcile();
+
+    const [args] = update.mock.calls[0] as [{ data: Record<string, unknown> }];
+    expect(args.data).toMatchObject({
+      plan: 'free',
+      subscriptionStatus: 'past_due',
+    });
   });
 
   it('settles nothing when stripe holds no subscription', async () => {

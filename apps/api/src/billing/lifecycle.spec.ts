@@ -54,7 +54,12 @@ function applySubscription(
   plan: PlanName,
   cancelAtPeriodEnd = false,
 ): WorkspaceState {
-  const next = stateOf(subscription(status, cancelAtPeriodEnd), plan, 'month');
+  const next = stateOf(
+    subscription(status, cancelAtPeriodEnd),
+    plan,
+    'month',
+    true,
+  );
   return {
     ...state,
     plan: next.plan,
@@ -92,7 +97,7 @@ function projectTrial(
   } as unknown as Stripe.Subscription;
   return {
     ...state,
-    ...projectionOf(stateOf(trialing, 'indie', 'month'), state, now),
+    ...projectionOf(stateOf(trialing, 'indie', 'month', true), state, now),
   };
 }
 

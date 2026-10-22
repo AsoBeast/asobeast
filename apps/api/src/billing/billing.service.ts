@@ -231,7 +231,7 @@ export class BillingService {
         `stripe already holds a live subscription for ${customerId} that no webhook recorded; reconciling workspace ${workspaceId} before refusing the checkout`,
       );
       await this.recordWhatStripeHolds(workspaceId);
-      throw subscriptionExists(live.status);
+      throw subscriptionExists(live.status, true);
     }
 
     const foreign = heldSubscription(held);
@@ -240,7 +240,7 @@ export class BillingService {
     this.logger.error(
       `stripe subscription ${foreign.id} on customer ${customerId} names workspace ${workspaceNamedBy(foreign) ?? 'nobody'}, not ${workspaceId}; refusing the checkout rather than billing the customer twice`,
     );
-    throw subscriptionExists(null);
+    throw subscriptionExists(null, true);
   }
 
   private async recordWhatStripeHolds(workspaceId: string): Promise<void> {
@@ -305,12 +305,19 @@ export class BillingService {
     const confirmed = await this.storedSubscription();
     if (!confirmed) return;
 
-    throw subscriptionExists(confirmed.subscriptionStatus);
+    throw subscriptionExists(
+      confirmed.subscriptionStatus,
+      confirmed.firstPaidAt !== null,
+    );
   }
 
-  private async storedSubscription(): Promise<WorkspaceSubscription | null> {
+  private async storedSubscription(): Promise<StoredSubscription | null> {
     const workspace = await this.prisma.workspace.findFirst({
-      select: { subscriptionId: true, subscriptionStatus: true },
+      select: {
+        subscriptionId: true,
+        subscriptionStatus: true,
+        firstPaidAt: true,
+      },
     });
     if (!workspace || !holdsSubscription(workspace)) return null;
     return workspace;
@@ -401,12 +408,19 @@ function customerKeyOf(workspaceId: string, replaced: string | null): string {
     : `customer:${workspaceId}`;
 }
 
-function subscriptionExists(status: string | null): BillingConflictError {
+type StoredSubscription = WorkspaceSubscription & { firstPaidAt: Date | null };
+
+function subscriptionExists(
+  status: string | null,
+  everPaid: boolean,
+): BillingConflictError {
   if (pendingBy(status)) {
     return new BillingConflictError('checkout_in_flight', PAYMENT_PENDING);
   }
   return new BillingConflictError(
     'subscription_exists',
-    stalledBy(status) ? SUBSCRIPTION_NEEDS_ATTENTION : ALREADY_SUBSCRIBED,
+    stalledBy(status, everPaid)
+      ? SUBSCRIPTION_NEEDS_ATTENTION
+      : ALREADY_SUBSCRIBED,
   );
 }

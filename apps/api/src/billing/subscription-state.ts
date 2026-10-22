@@ -43,9 +43,10 @@ export function stateOf(
   subscription: Stripe.Subscription,
   plan: PlanName,
   interval: BillingInterval | null,
+  everPaid: boolean,
 ): SubscriptionState {
   const status = subscription.status;
-  const entitled = entitledBy(status);
+  const entitled = entitledBy(status, everPaid);
   return {
     subscriptionId: subscription.id,
     status,
@@ -68,14 +69,16 @@ export interface PlanResolver {
 export function stateFrom(
   subscription: Stripe.Subscription,
   prices: PlanResolver,
+  everPaid: boolean,
 ): SubscriptionState {
-  if (!entitledBy(subscription.status)) {
-    return stateOf(subscription, FREE_PLAN, null);
+  if (!entitledBy(subscription.status, everPaid)) {
+    return stateOf(subscription, FREE_PLAN, null, everPaid);
   }
   return stateOf(
     subscription,
     prices.planOf(subscription),
     prices.intervalOf(subscription),
+    everPaid,
   );
 }
 
@@ -117,23 +120,29 @@ function trialEndOf(
   held: TrialDates,
   now: Date,
 ): Pick<TrialDates, 'trialEndsAt'> | Record<string, never> {
-  if (effectOf(state.status) !== 'gone') {
+  if (effectOf(state.status, true) === 'gone') {
+    const ended = state.endedAt && state.endedAt < now ? state.endedAt : now;
+    return held.trialEndsAt && held.trialEndsAt > ended
+      ? { trialEndsAt: ended }
+      : {};
+  }
+  if (state.plan !== FREE_PLAN) {
     return state.trialEndsAt ? { trialEndsAt: state.trialEndsAt } : {};
   }
-  const ended = state.endedAt && state.endedAt < now ? state.endedAt : now;
-  return held.trialEndsAt && held.trialEndsAt > ended
-    ? { trialEndsAt: ended }
-    : {};
+  const ending = state.trialEndsAt ?? held.trialEndsAt;
+  if (!ending) return {};
+  return { trialEndsAt: ending < now ? ending : now };
 }
 
 export function heldSubscription(
   subscriptions: Stripe.Subscription[],
 ): Stripe.Subscription | undefined {
   const held = subscriptions.filter(
-    (subscription) => effectOf(subscription.status) !== 'gone',
+    (subscription) => effectOf(subscription.status, true) !== 'gone',
   );
   return (
-    held.find((subscription) => entitledBy(subscription.status)) ?? held.at(0)
+    held.find((subscription) => entitledBy(subscription.status, true)) ??
+    held.at(0)
   );
 }
 

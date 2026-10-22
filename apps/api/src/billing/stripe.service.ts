@@ -105,6 +105,10 @@ export class StripeService {
     return this.stripe.paymentMethods.retrieve(id);
   }
 
+  retrieveInvoice(id: string): Promise<Stripe.Invoice> {
+    return this.stripe.invoices.retrieve(id);
+  }
+
   listActiveSubscriptions(): AsyncIterable<Stripe.Subscription> {
     return this.stripe.subscriptions.list({ status: 'all', limit: 100 });
   }

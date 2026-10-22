@@ -29,6 +29,7 @@ import { QUEUES } from '../src/jobs/jobs.types';
 import { restoreAuthEnv } from './helpers/auth-env';
 import {
   fakeStripe,
+  fixtureInvoice,
   paymentMethod,
   type FakeStripe,
 } from './helpers/fake-stripe';
@@ -127,6 +128,7 @@ describe('Stripe webhooks', () => {
         name: 'Stripe fixture',
         plan: 'free',
         billingCustomerId: CUSTOMER,
+        firstPaidAt: new Date('2026-09-01T00:00:00.000Z'),
       },
     });
     fake.reset();
@@ -481,6 +483,11 @@ describe('Stripe webhooks', () => {
 
     beforeEach(async () => {
       await prisma.$executeRawUnsafe('TRUNCATE TABLE "TrialClaim"');
+      await prisma.workspace.update({
+        where: { id: WORKSPACE },
+        data: { firstPaidAt: null },
+      });
+      fake.invoiceStore.set('in_TestTrial', fixtureInvoice('invoice.trial'));
       fake.paymentMethodStore.set(
         'pm_TestCard',
         paymentMethod({
@@ -581,6 +588,94 @@ describe('Stripe webhooks', () => {
       await expect(claimKeys()).resolves.toEqual([OWNER_MAILBOX, CARD].sort());
       expect((await workspaceRow()).trialClaimedAt).not.toBeNull();
       expect(fake.subscriptionUpdates).toEqual([]);
+    });
+
+    it('records no payment for the zero trial invoice', async () => {
+      await project('customer.subscription.trialing');
+
+      expect((await workspaceRow()).firstPaidAt).toBeNull();
+    });
+
+    it('pauses a trial whose first charge failed until a charge goes through', async () => {
+      const declinedMail = () =>
+        prisma.alertDelivery.count({
+          where: { event: 'billing.trial_charge_failed' },
+        });
+      const mailedBefore = await declinedMail();
+      await project('customer.subscription.trialing');
+      fake.invoiceStore.set(
+        'in_TestDeclined',
+        fixtureInvoice('invoice.paid', {
+          id: 'in_TestDeclined',
+          status: 'open',
+          amount_paid: 0,
+        }),
+      );
+      subscriptions.set(SUBSCRIPTION, {
+        ...subscriptionOf('customer.subscription.past_due'),
+        latest_invoice: 'in_TestDeclined',
+      });
+      await deliver('customer.subscription.past_due');
+
+      await expect(workspaceRow()).resolves.toMatchObject({
+        plan: 'free',
+        subscriptionStatus: 'past_due',
+        firstPaidAt: null,
+      });
+      const plan = await request(app.getHttpServer())
+        .get('/auth/plan')
+        .set('Authorization', `Bearer ${OWNER_TOKEN}`)
+        .expect(200);
+      expect(plan.body).toMatchObject({
+        entitled: false,
+        subscriptionStalled: true,
+      });
+      await request(app.getHttpServer())
+        .post('/apps')
+        .set('Authorization', `Bearer ${OWNER_TOKEN}`)
+        .send({ url: 'https://apps.apple.com/us/app/new/id999' })
+        .expect(402);
+      await expect(declinedMail()).resolves.toBe(mailedBefore + 1);
+
+      fake.invoiceStore.set(
+        'in_TestDeclined',
+        fixtureInvoice('invoice.paid', {
+          id: 'in_TestDeclined',
+          status: 'paid',
+          amount_paid: 1000,
+        }),
+      );
+      subscriptions.set(SUBSCRIPTION, {
+        ...subscriptionOf('customer.subscription.created'),
+        latest_invoice: 'in_TestDeclined',
+      });
+      await deliver('invoice.paid');
+
+      const recovered = await workspaceRow();
+      expect(recovered.plan).toBe('indie');
+      expect(recovered.firstPaidAt).not.toBeNull();
+      expect(recovered.dunningNotifiedAt).toBeNull();
+    });
+
+    it('records a payment from an event older than the state', async () => {
+      await prisma.workspace.update({
+        where: { id: WORKSPACE },
+        data: { subscriptionEventAt: new Date(1_900_000_000 * 1000) },
+      });
+      fake.invoiceStore.set('in_Test1', fixtureInvoice('invoice.paid'));
+      subscriptions.set(
+        SUBSCRIPTION,
+        subscriptionOf('customer.subscription.created'),
+      );
+
+      const event = fixture('invoice.paid');
+      await send(event).expect(200);
+      await webhook.process(event.id);
+
+      await expect(
+        prisma.billingEvent.findUniqueOrThrow({ where: { id: event.id } }),
+      ).resolves.toMatchObject({ outcome: 'ignored' });
+      expect((await workspaceRow()).firstPaidAt).not.toBeNull();
     });
 
     it('keeps the trial dates when the trial converts', async () => {

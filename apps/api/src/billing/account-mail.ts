@@ -86,6 +86,19 @@ export function paymentFailed(): AccountMail {
   };
 }
 
+export function trialChargeFailed(): AccountMail {
+  return {
+    subject: 'Your asobeast trial ended, but the card was declined',
+    heading: 'Your trial ended, but the card was declined',
+    body: [
+      'The first charge of your plan was declined when the trial ended, so collection is paused.',
+      'Nothing has been deleted. Everything collected during the trial stays readable and exportable.',
+      'Update your card in the billing portal and the plan starts as soon as the charge goes through.',
+    ],
+    action: { label: 'Update payment method', path: SETTINGS_PATH },
+  };
+}
+
 export function downgradeWarning(
   plan: string,
   effectiveOn: string,

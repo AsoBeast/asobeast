@@ -23,6 +23,7 @@ export interface StripeApi {
   };
   subscriptions: Pick<Stripe['subscriptions'], 'list' | 'retrieve' | 'update'>;
   paymentMethods: Pick<Stripe['paymentMethods'], 'retrieve'>;
+  invoices: Pick<Stripe['invoices'], 'retrieve'>;
   prices: Pick<Stripe['prices'], 'list'>;
   subscriptionSchedules: Pick<Stripe['subscriptionSchedules'], 'retrieve'>;
   billingPortal: {

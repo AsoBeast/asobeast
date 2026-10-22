@@ -15,6 +15,7 @@ import { BillingWebhookService } from './billing-webhook.service';
 import { AccountNotifier } from './account-notifier.service';
 import { BillingEventQueue } from './billing-event-queue';
 import { PriceCatalog } from './price-catalog';
+import type { FirstPayment } from './first-payment';
 import type { TrialStarts } from './trial-starts';
 import { StripeService } from './stripe.service';
 import { WORKSPACE_METADATA_KEY } from './workspace-link';
@@ -74,6 +75,7 @@ describe('BillingWebhookService', () => {
       emptyCatalog?: boolean;
       catalog?: PriceCatalog;
       duplicate?: boolean;
+      neverPaid?: boolean;
     } = {},
   ) => {
     const create = jest.fn(() =>
@@ -92,6 +94,9 @@ describe('BillingWebhookService', () => {
     const notify = jest.fn().mockResolvedValue('delivered');
     const enqueue = jest.fn().mockResolvedValue(undefined);
     const settle = jest.fn().mockResolvedValue('skipped');
+    const record = jest
+      .fn()
+      .mockResolvedValue(over.neverPaid ? null : new Date('2026-09-01'));
     const notifier = {
       notify,
     } as unknown as AccountNotifier;
@@ -148,10 +153,12 @@ describe('BillingWebhookService', () => {
       config,
       { enqueue } as unknown as BillingEventQueue,
       { settle } as unknown as TrialStarts,
+      { record } as unknown as FirstPayment,
     );
 
     return {
       settle,
+      record,
       service,
       create,
       update,
@@ -191,6 +198,7 @@ describe('BillingWebhookService', () => {
       { get: () => undefined } as unknown as ConfigService<Env, true>,
       {} as unknown as BillingEventQueue,
       {} as unknown as TrialStarts,
+      {} as unknown as FirstPayment,
     );
 
     expect(() => service.verify(Buffer.from('{}'), 'sig')).toThrow(
@@ -311,6 +319,48 @@ describe('BillingWebhookService', () => {
     await service.process('evt_1');
 
     expect(settle).not.toHaveBeenCalled();
+  });
+
+  it('records the first payment before the ordering guard', async () => {
+    const { service, record, workspaceUpdate, update } = build({
+      stored: { id: 'evt_1', processedAt: null, payload: eventOf() },
+      workspace: {
+        id: WORKSPACE,
+        subscriptionEventAt: new Date(1_900_000_000 * 1000),
+      },
+    });
+
+    await service.process('evt_1');
+
+    expect(record).toHaveBeenCalledWith(
+      expect.objectContaining({ id: WORKSPACE }),
+      expect.objectContaining({ id: 'sub_1' }),
+    );
+    expect(workspaceUpdate).not.toHaveBeenCalled();
+    expect(lastOutcome(update)).toBe('ignored');
+  });
+
+  it('pauses a past_due trial that never paid and says the card was declined', async () => {
+    const { service, notify, workspaceUpdate } = build({
+      stored: { id: 'evt_1', processedAt: null, payload: eventOf() },
+      subscription: subscriptionOf({ status: 'past_due' }),
+      neverPaid: true,
+    });
+
+    await service.process('evt_1');
+
+    expect(notify).toHaveBeenCalledWith(
+      WORKSPACE,
+      'billing.trial_charge_failed',
+      expect.objectContaining({
+        subject: 'Your asobeast trial ended, but the card was declined',
+      }) as Record<string, unknown>,
+    );
+    const [args] = workspaceUpdate.mock.calls[0] as [
+      { data: Record<string, unknown> },
+    ];
+    expect(args.data.plan).toBe('free');
+    expect(args.data.dunningNotifiedAt).toBeInstanceOf(Date);
   });
 
   it('reopens truncated capacity when a paid plan takes effect', async () => {

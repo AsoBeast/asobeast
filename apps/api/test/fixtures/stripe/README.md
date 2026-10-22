@@ -14,8 +14,10 @@ card backed trial assembled by hand from `customer.subscription.created` in the
 same synthetic `1800000xxx` family: the trial starts at `1800000150` and ends
 seven days later at `1800604950`, which is also the period end, so the trialing
 event sorts before `customer.subscription.updated` at `1800000300` and the
-cancellation at `1800000400` after it. Being assembled, they never expire the way
-a captured trial would.
+cancellation at `1800000400` after it. `invoice.trial` is the zero trial invoice
+`in_TestTrial` those subscriptions name as their latest invoice, an `invoice.paid`
+envelope so the fake can serve its object. Being assembled, they never expire the
+way a captured trial would.
 
 The e2e suite signs each payload with `stripe.webhooks.generateTestHeaderString`
 and a known test secret, so signature verification is genuinely exercised rather

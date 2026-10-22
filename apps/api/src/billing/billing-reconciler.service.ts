@@ -28,6 +28,7 @@ import {
 } from './subscription-state';
 import { StripeService } from './stripe.service';
 import { effectOf } from './subscription-status';
+import { FirstPayment } from './first-payment';
 import { TrialStarts } from './trial-starts';
 import { belongsToWorkspace } from './workspace-link';
 
@@ -47,6 +48,7 @@ export class BillingReconciler {
     private readonly crossTenant: CrossTenantAccess,
     @InjectQueue(QUEUES.BILLING) private readonly queue: Queue,
     private readonly trialStarts: TrialStarts,
+    private readonly firstPayment: FirstPayment,
   ) {}
 
   reconcile(): Promise<BillingReconcileReport> {
@@ -146,11 +148,10 @@ export class BillingReconciler {
     sessionId?: string,
   ): Promise<Outcome> {
     try {
-      const desired = await this.desiredState(workspace, sessionId);
-      const corrected = await this.correct(workspace, desired?.state ?? null);
-      if (desired) {
-        await this.trialStarts.settle(workspace, desired.subscription);
-      }
+      const subscription = await this.desiredSubscription(workspace, sessionId);
+      const corrected = subscription
+        ? await this.correct(workspace, subscription)
+        : await this.revokeUnknownSubscription(workspace);
       return corrected ? 'corrected' : 'agreed';
     } catch (error) {
       this.logger.error(
@@ -162,12 +163,20 @@ export class BillingReconciler {
 
   private async correct(
     workspace: Workspace,
-    desired: SubscriptionState | null,
+    subscription: Stripe.Subscription,
   ): Promise<boolean> {
-    if (!desired) return this.revokeUnknownSubscription(workspace);
+    const firstPaidAt = await this.firstPayment.record(workspace, subscription);
+    const desired = stateFrom(subscription, this.prices, firstPaidAt !== null);
+    const drifted = !matches(workspace, desired);
+    if (drifted) await this.project(workspace, desired);
+    await this.trialStarts.settle(workspace, subscription);
+    return drifted;
+  }
 
-    if (matches(workspace, desired)) return false;
-
+  private async project(
+    workspace: Workspace,
+    desired: SubscriptionState,
+  ): Promise<void> {
     this.logger.error(
       `workspace ${workspace.id} drifted from Stripe: local ${workspace.plan}/${workspace.subscriptionStatus ?? 'none'}, Stripe ${desired.plan}/${desired.status}`,
     );
@@ -175,23 +184,18 @@ export class BillingReconciler {
       where: { id: workspace.id },
       data: projectionOf(desired, workspace, new Date()),
     });
-    return true;
   }
 
-  private async desiredState(
+  private async desiredSubscription(
     workspace: Workspace,
     sessionId?: string,
-  ): Promise<DesiredSubscription | null> {
+  ): Promise<Stripe.Subscription | null> {
     const completed = sessionId
       ? await this.completedSubscription(workspace, sessionId)
       : null;
     const stored = completed ?? (await this.storedSubscription(workspace));
-    const subscription = stillHeld(stored)
-      ? stored
-      : ((await this.adoptableSubscription(workspace)) ?? stored);
-    if (!subscription) return null;
-
-    return { subscription, state: stateFrom(subscription, this.prices) };
+    if (stillHeld(stored)) return stored;
+    return (await this.adoptableSubscription(workspace)) ?? stored;
   }
 
   private async completedSubscription(
@@ -327,11 +331,6 @@ export class BillingReconciler {
   }
 }
 
-interface DesiredSubscription {
-  subscription: Stripe.Subscription;
-  state: SubscriptionState;
-}
-
 const ACTIVE_ENOUGH = new Set<Stripe.Subscription.Status>([
   'trialing',
   'active',
@@ -339,7 +338,9 @@ const ACTIVE_ENOUGH = new Set<Stripe.Subscription.Status>([
 ]);
 
 function stillHeld(subscription: Stripe.Subscription | null): boolean {
-  return subscription !== null && effectOf(subscription.status) !== 'gone';
+  return (
+    subscription !== null && effectOf(subscription.status, true) !== 'gone'
+  );
 }
 
 function claimsSubscription(workspace: Workspace): boolean {

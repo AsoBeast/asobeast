@@ -150,6 +150,18 @@ describe('StripeService', () => {
       expect(retrieve).toHaveBeenCalledWith('pm_1');
     });
 
+    it('reads an invoice by its id', async () => {
+      const retrieve = jest.fn().mockResolvedValue({ id: 'in_1' });
+      const service = new StripeService({
+        invoices: { retrieve },
+      } as unknown as Stripe);
+
+      await expect(service.retrieveInvoice('in_1')).resolves.toEqual({
+        id: 'in_1',
+      });
+      expect(retrieve).toHaveBeenCalledWith('in_1');
+    });
+
     it('refuses both while billing is not configured', () => {
       const service = new StripeService(createStripeClient(undefined));
 

@@ -44,7 +44,7 @@ describe('periodEndOf', () => {
 
 describe('stateOf', () => {
   it('carries the plan through while the subscription is entitled', () => {
-    expect(stateOf(subscription(), 'ultimate', 'month')).toEqual({
+    expect(stateOf(subscription(), 'ultimate', 'month', true)).toEqual({
       subscriptionId: 'sub_1',
       status: 'active',
       plan: 'ultimate',
@@ -59,19 +59,25 @@ describe('stateOf', () => {
 
   it('keeps a past_due subscription on its plan through dunning', () => {
     expect(
-      stateOf(subscription({ status: 'past_due' }), 'indie', 'month').plan,
+      stateOf(subscription({ status: 'past_due' }), 'indie', 'month', true)
+        .plan,
     ).toBe('indie');
   });
 
   it('drops an unpaid subscription to free', () => {
     expect(
-      stateOf(subscription({ status: 'unpaid' }), 'indie', 'month').plan,
+      stateOf(subscription({ status: 'unpaid' }), 'indie', 'month', true).plan,
     ).toBe('free');
   });
 
   it('records a pending cancellation without revoking access', () => {
     expect(
-      stateOf(subscription({ cancel_at_period_end: true }), 'indie', 'month'),
+      stateOf(
+        subscription({ cancel_at_period_end: true }),
+        'indie',
+        'month',
+        true,
+      ),
     ).toMatchObject({ plan: 'indie', cancelAtPeriodEnd: true });
   });
 
@@ -117,7 +123,7 @@ const trialing = (over: Partial<Stripe.Subscription> = {}) =>
 
 describe('a trialing subscription', () => {
   it('carries the trial dates, the trial end as the period end and the interval', () => {
-    expect(stateOf(trialing(), 'indie', 'month')).toMatchObject({
+    expect(stateOf(trialing(), 'indie', 'month', true)).toMatchObject({
       status: 'trialing',
       plan: 'indie',
       trialStartedAt: at(TRIAL_START),
@@ -130,7 +136,7 @@ describe('a trialing subscription', () => {
 
   it('reads a cancel_at as cancelling and keeps the dates', () => {
     expect(
-      stateOf(trialing({ cancel_at: TRIAL_END }), 'indie', 'year'),
+      stateOf(trialing({ cancel_at: TRIAL_END }), 'indie', 'year', true),
     ).toMatchObject({
       cancelAtPeriodEnd: true,
       trialStartedAt: at(TRIAL_START),
@@ -165,7 +171,7 @@ describe('a trialing subscription', () => {
 describe('projectionOf', () => {
   const NOW = at(TRIAL_START + 3600);
   const state = (over: Partial<SubscriptionState> = {}): SubscriptionState => ({
-    ...stateOf(trialing(), 'indie', 'month'),
+    ...stateOf(trialing(), 'indie', 'month', true),
     ...over,
   });
   const untried = { trialStartedAt: null, trialEndsAt: null };
@@ -210,6 +216,21 @@ describe('projectionOf', () => {
     });
   });
 
+  it('never keeps a trial end ahead for a trial that stopped entitling', () => {
+    const stalled = state({
+      status: 'past_due',
+      plan: 'free',
+      trialEndsAt: at(TRIAL_END),
+    });
+
+    expect(projectionOf(stalled, untried, NOW)).toMatchObject({
+      trialEndsAt: NOW,
+    });
+    expect(projectionOf(stalled, untried, at(TRIAL_END + 60))).toMatchObject({
+      trialEndsAt: at(TRIAL_END),
+    });
+  });
+
   it('writes no trial end for a gone subscription without one ahead', () => {
     const gone = state({ status: 'canceled', plan: 'free', endedAt: NOW });
 
@@ -234,5 +255,30 @@ describe('projectionOf', () => {
 
     expect(projected).not.toHaveProperty('trialEndsAt');
     expect(projected).not.toHaveProperty('trialStartedAt');
+  });
+});
+
+describe('a past_due subscription', () => {
+  const prices = {
+    planOf: () => 'indie' as const,
+    intervalOf: () => 'month' as const,
+  };
+
+  it('drops to free with no interval when it never paid', () => {
+    expect(
+      stateFrom(subscription({ status: 'past_due' }), prices, false),
+    ).toMatchObject({ plan: 'free', billingInterval: null });
+  });
+
+  it('keeps the plan and the interval once it has paid', () => {
+    expect(
+      stateFrom(subscription({ status: 'past_due' }), prices, true),
+    ).toMatchObject({ plan: 'indie', billingInterval: 'month' });
+  });
+
+  it('is still held, whether it paid or not', () => {
+    expect(
+      heldSubscription([subscription({ status: 'past_due' })]),
+    ).toBeDefined();
   });
 });

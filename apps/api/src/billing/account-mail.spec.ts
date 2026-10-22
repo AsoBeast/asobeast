@@ -2,6 +2,7 @@ import { SETTINGS_PATH } from '@asobeast/shared';
 import {
   downgradeWarning,
   paymentFailed,
+  trialChargeFailed,
   trialNotice,
   type AccountMail,
 } from './account-mail';
@@ -12,6 +13,7 @@ const OVER = [{ resource: 'keywords', used: 40, limit: 20 }];
 const everyNotice = (): AccountMail[] => [
   ...TRIAL_NOTICE_DAYS.map((day) => trialNotice(day, '2026-10-17')),
   paymentFailed(),
+  trialChargeFailed(),
   downgradeWarning('Indie', '2026-11-01', OVER),
 ];
 
@@ -33,5 +35,22 @@ describe('account mail', () => {
 
   it('sends a failed payment to the billing settings', () => {
     expect(paymentFailed().action?.path).toBe(SETTINGS_PATH);
+  });
+
+  it('tells the owner of a declined first charge that the trial is paused', () => {
+    const mail = trialChargeFailed();
+
+    expect(mail.subject).toBe(
+      'Your asobeast trial ended, but the card was declined',
+    );
+    expect(mail.heading).toBe('Your trial ended, but the card was declined');
+    const body = mail.body.join(' ');
+    expect(body).toContain('paused');
+    expect(body).toContain('Nothing has been deleted');
+    expect(body).toContain('billing portal');
+    expect(mail.action).toEqual({
+      label: 'Update payment method',
+      path: SETTINGS_PATH,
+    });
   });
 });

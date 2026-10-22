@@ -24,6 +24,7 @@ type WorkspacePlan = WorkspaceEntitlement & {
   subscriptionStatus: string | null;
   cancelAtPeriodEnd: boolean;
   billingInterval: string | null;
+  firstPaidAt: Date | null;
 };
 
 @Injectable()
@@ -52,7 +53,8 @@ export class AccountPlanService {
       hasBillingAccount: workspace.billingCustomerId !== null,
       subscribed: holdsSubscription(workspace),
       subscriptionStalled:
-        holdsSubscription(workspace) && stalledBy(workspace.subscriptionStatus),
+        holdsSubscription(workspace) &&
+        stalledBy(workspace.subscriptionStatus, workspace.firstPaidAt !== null),
       subscriptionPending:
         holdsSubscription(workspace) && pendingBy(workspace.subscriptionStatus),
       trialing: workspace.subscriptionStatus === 'trialing',

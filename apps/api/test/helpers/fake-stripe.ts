@@ -22,6 +22,7 @@ export interface FakeStripe extends StripeApi {
     { id: string } & Stripe.SubscriptionUpdateParams
   >[];
   paymentMethodStore: Map<string, Stripe.PaymentMethod>;
+  invoiceStore: Map<string, Stripe.Invoice>;
   priceStore: Map<string, Stripe.Price>;
   schedules: Map<string, Stripe.SubscriptionSchedule>;
   failNext: Error | null;
@@ -102,19 +103,33 @@ function customerIdOf(subscription: Stripe.Subscription): string {
     : subscription.customer.id;
 }
 
-function fixtureSubscription(name: string): Stripe.Subscription {
+function fixtureObject(name: string): unknown {
   const event = JSON.parse(
     readFileSync(
       join(__dirname, '..', 'fixtures', 'stripe', `${name}.json`),
       'utf8',
     ),
   ) as Stripe.Event;
-  return event.data.object as Stripe.Subscription;
+  return event.data.object;
+}
+
+function fixtureSubscription(name: string): Stripe.Subscription {
+  return fixtureObject(name) as Stripe.Subscription;
 }
 
 const CREATED = fixtureSubscription('customer.subscription.created');
 
 const TRIALING = fixtureSubscription('customer.subscription.trialing');
+
+export function fixtureInvoice(
+  name: string,
+  overrides: Partial<Stripe.Invoice> = {},
+): Stripe.Invoice {
+  return {
+    ...(fixtureObject(name) as Stripe.Invoice),
+    ...overrides,
+  };
+}
 
 export function subscriptionFrom(
   overrides: Partial<Stripe.Subscription>,
@@ -215,6 +230,7 @@ export function fakeStripe(): FakeStripe {
     subscriptionStore: new Map(),
     subscriptionUpdates: [],
     paymentMethodStore: new Map(),
+    invoiceStore: new Map(),
     priceStore: new Map(),
     schedules: new Map(),
     failNext: null,
@@ -329,6 +345,10 @@ export function fakeStripe(): FakeStripe {
       retrieve: (id) => found(fake.paymentMethodStore, 'payment_method', id),
     },
 
+    invoices: {
+      retrieve: (id) => found(fake.invoiceStore, 'invoice', id),
+    },
+
     prices: {
       list: (params = {}) =>
         listOf(
@@ -378,6 +398,7 @@ export function fakeStripe(): FakeStripe {
       fake.subscriptionStore.clear();
       fake.subscriptionUpdates.length = 0;
       fake.paymentMethodStore.clear();
+      fake.invoiceStore.clear();
       fake.priceStore.clear();
       fake.schedules.clear();
       fake.failNext = null;
