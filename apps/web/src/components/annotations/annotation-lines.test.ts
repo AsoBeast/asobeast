@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AppAnnotationItem } from "@asobeast/shared";
-import {
-  ANNOTATION_LINE_LABEL_MAX,
-  annotationChartLabel,
-  annotationLines,
-  annotationsOn,
-} from "./annotation-lines";
+import { annotationLines, annotationsOn } from "./annotation-lines";
 
 const annotation = (
   overrides: Partial<AppAnnotationItem> = {},
@@ -58,18 +53,5 @@ describe("annotationsOn", () => {
 
   it("answers an empty day with no annotations", () => {
     expect(annotationsOn([day, other], "2026-10-07")).toEqual([]);
-  });
-});
-
-describe("annotationChartLabel", () => {
-  it("keeps a short label whole", () => {
-    expect(annotationChartLabel("Release 5.21.0")).toBe("Release 5.21.0");
-  });
-
-  it("truncates a label at the chart limit", () => {
-    const long = "a".repeat(ANNOTATION_LINE_LABEL_MAX + 5);
-
-    expect(annotationChartLabel(long)).toHaveLength(ANNOTATION_LINE_LABEL_MAX);
-    expect(annotationChartLabel(long).endsWith("…")).toBe(true);
   });
 });

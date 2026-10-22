@@ -1,13 +1,5 @@
 import type { AppAnnotationItem } from "@asobeast/shared";
 
-export const ANNOTATION_LINE_LABEL_MAX = 32;
-
-export function annotationChartLabel(label: string): string {
-  return label.length > ANNOTATION_LINE_LABEL_MAX
-    ? `${label.slice(0, ANNOTATION_LINE_LABEL_MAX - 1)}…`
-    : label;
-}
-
 export function annotationLines(
   annotations: readonly AppAnnotationItem[],
   plotted: readonly string[],

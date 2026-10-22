@@ -20,7 +20,6 @@ import {
 import { SeriesTooltip } from "@/components/charts/SeriesTooltip";
 import { AnnotationTooltipNotes } from "@/components/annotations/AnnotationTooltipNotes";
 import {
-  annotationChartLabel,
   annotationLines,
   annotationsOn,
 } from "@/components/annotations/annotation-lines";
@@ -157,14 +156,6 @@ function VisibilityChartBody({
             x={annotation.date}
             stroke="var(--info)"
             strokeDasharray="6 3"
-            label={{
-              value: annotationChartLabel(annotation.label),
-              position: "insideBottomLeft",
-              angle: -90,
-              textAnchor: "start",
-              fill: "var(--info)",
-              fontSize: 10,
-            }}
           />
         ))}
         <ChartTooltip
