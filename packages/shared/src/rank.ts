@@ -1,3 +1,5 @@
+import { addUtcDays } from './utc-days';
+
 export const RANK_DEPTH = 200;
 
 export const isRanked = (
@@ -14,6 +16,11 @@ export const formatCheckedPosition = (
   depth: number | null,
 ): string | null =>
   depth === null ? null : formatRankPosition(position, depth);
+
+export const CHECK_FRESH_DAYS = 1;
+
+export const isCheckFresh = (checkedOn: string, today: string): boolean =>
+  checkedOn >= addUtcDays(today, -CHECK_FRESH_DAYS);
 
 export const RANK_MILESTONE_TIERS = [1, 3, 10] as const;
 export type RankMilestoneTier = (typeof RANK_MILESTONE_TIERS)[number];

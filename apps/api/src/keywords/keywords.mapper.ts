@@ -1,6 +1,7 @@
 import { Keyword, KeywordMetric, KeywordRanking } from '@prisma/client';
 import {
   CURRENT_FORMULA_VERSIONS,
+  isCheckFresh,
   isScoringConfidence,
   isScoringSource,
   RankMilestoneTier,
@@ -8,6 +9,7 @@ import {
   ScoreSignals,
   tierOf,
   TrackedKeywordItem,
+  utcDayOf,
 } from '@asobeast/shared';
 import { appOpportunity } from '../scoring/keyword-opportunity';
 import { readScoreSignals } from '../scoring/score-signals';
@@ -114,15 +116,6 @@ function previousDayPosition(
   return previous ? previous.position : null;
 }
 
-const HOLD_FRESH_DAYS = 1;
-
-function holdFreshCutoff(now: Date): string {
-  const cutoff = new Date(now);
-  cutoff.setUTCHours(0, 0, 0, 0);
-  cutoff.setUTCDate(cutoff.getUTCDate() - HOLD_FRESH_DAYS);
-  return cutoff.toISOString().slice(0, 10);
-}
-
 export interface HeldFacts {
   bestPosition: number | null;
   positionDeltaFromBest: number | null;
@@ -148,7 +141,7 @@ export function heldFacts(
     hold.bestPosition != null && latestPosition !== null
       ? Math.min(hold.bestPosition, latestPosition)
       : (hold.bestPosition ?? null);
-  const fresh = hold.latestDate >= holdFreshCutoff(today);
+  const fresh = isCheckFresh(hold.latestDate, utcDayOf(today));
   const daysInTier =
     hold.daysInTier != null && active && fresh ? hold.daysInTier : null;
   return {
@@ -166,6 +159,7 @@ type PositionFacts = Pick<
   TrackedKeywordItem,
   | 'latestPosition'
   | 'latestDepth'
+  | 'latestCheckedOn'
   | 'previousPosition'
   | 'positionDelta1d'
   | 'positionDelta7d'
@@ -188,6 +182,7 @@ function positionFacts(
   return {
     latestPosition,
     latestDepth: latest?.depth ?? null,
+    latestCheckedOn: latest ? utcDayOf(latest.date) : null,
     previousPosition,
     positionDelta1d:
       latestPosition !== null && previousPosition !== null

@@ -309,6 +309,7 @@ function manualKeyword(
     active: true,
     latestPosition: null,
     latestDepth: null,
+    latestCheckedOn: null,
     previousPosition: null,
     positionDelta1d: null,
     positionDelta7d: null,
@@ -912,6 +913,7 @@ function trackedFromKeywordField(
     active: true,
     latestPosition: null,
     latestDepth: null,
+    latestCheckedOn: null,
     previousPosition: null,
     positionDelta1d: null,
     positionDelta7d: null,
@@ -1861,6 +1863,7 @@ function firstCheckRows(req: IncomingMessage): TrackedKeywordItem[] {
   const unchecked = {
     latestPosition: null,
     latestDepth: null,
+    latestCheckedOn: null,
     previousPosition: null,
     positionDelta1d: null,
     positionDelta7d: null,
@@ -1872,7 +1875,13 @@ function firstCheckRows(req: IncomingMessage): TrackedKeywordItem[] {
       ...unchecked,
       keywordId: "kw-fresh",
       text: "fresh phrase",
-      ...(checked ? { latestPosition: 7, latestDepth: RANK_DEPTH } : {}),
+      ...(checked
+        ? {
+            latestPosition: 7,
+            latestDepth: RANK_DEPTH,
+            latestCheckedOn: utcDaysAgo(0),
+          }
+        : {}),
     },
     {
       ...APP_1_KEYWORDS[0],

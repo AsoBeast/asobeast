@@ -67,14 +67,16 @@ function gradeFilter(
 
 export function keywordColumns({
   appId,
+  today,
   onOpenSerp,
 }: {
   appId: string;
+  today: string;
   onOpenSerp: (keywordId: string) => void;
 }) {
   return columnHelper.columns([
     ...identityColumns(),
-    positionColumn(),
+    positionColumn(today),
     ...scoreColumns(),
     deltaColumn(),
     volatilityColumn(),
@@ -176,7 +178,7 @@ function filterColumns() {
   ];
 }
 
-function positionColumn() {
+function positionColumn(today: string) {
   return columnHelper.accessor((row) => nullsLast(row.latestPosition), {
     id: "position",
     meta: { label: "Position", phone: true },
@@ -189,7 +191,7 @@ function positionColumn() {
         selected,
       ),
     header: ({ column }) => <SortableHeader column={column} label="Position" />,
-    cell: ({ row }) => <PositionCell keyword={row.original} />,
+    cell: ({ row }) => <PositionCell keyword={row.original} today={today} />,
   });
 }
 

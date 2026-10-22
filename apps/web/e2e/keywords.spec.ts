@@ -5,6 +5,8 @@ import { expect, test } from "./session.mts";
 import { hoverForTooltip } from "./hover.mts";
 import { hydrated } from "./hydrated.mts";
 import { seedCookies } from "./routes.mts";
+import { utcDaysAgo } from "./fixtures.mts";
+import { formatDayMonth } from "../src/lib/format";
 
 test("table renders fixture keywords and distinguishes a paused row", async ({
   page,
@@ -264,6 +266,33 @@ test("position deltas render arrows, a bare position and the captured-depth mark
 
   const unrankedRow = page.getByRole("row", { name: /productivity app/ });
   await expect(unrankedRow).toContainText(">200");
+});
+
+test("a stale position marks its facts button with the day of its last check", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/keywords");
+
+  const staleRow = page.getByRole("row", { name: /study timer/ });
+  const facts = staleRow.getByRole("button", {
+    name: `Position facts: study timer, last checked ${formatDayMonth(utcDaysAgo(3))}`,
+  });
+  await expect(facts).toBeVisible();
+  await expect(staleRow).not.toContainText(formatDayMonth(utcDaysAgo(3)));
+
+  await facts.click();
+  await expect(page.getByRole("dialog")).toContainText(
+    "the checks since then did not finish",
+  );
+  await page.keyboard.press("Escape");
+
+  for (const fresh of [/focus timer/, /time blocking/]) {
+    await expect(
+      page
+        .getByRole("row", { name: fresh })
+        .getByRole("button", { name: /last checked/ }),
+    ).toHaveCount(0);
+  }
 });
 
 test("the seven day delta announces its direction, not only its colour", async ({
