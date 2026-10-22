@@ -349,6 +349,9 @@ describe('trialingLimits', () => {
     expectTypeOf<AccountPlan['trialOffer']>().toEqualTypeOf<
       TrialOffer | null | undefined
     >();
+    expectTypeOf<AccountPlan['trialChargeFailed']>().toEqualTypeOf<
+      boolean | undefined
+    >();
     expectTypeOf<AccountPlan['billingInterval']>().toEqualTypeOf<
       BillingInterval | null | undefined
     >();

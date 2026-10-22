@@ -58,6 +58,10 @@ export class AccountPlanService {
       subscriptionPending:
         holdsSubscription(workspace) && pendingBy(workspace.subscriptionStatus),
       trialing: workspace.subscriptionStatus === 'trialing',
+      trialChargeFailed:
+        holdsSubscription(workspace) &&
+        workspace.subscriptionStatus === 'past_due' &&
+        workspace.firstPaidAt === null,
       ...(billing ? { trialOffer: offer } : {}),
       billingInterval: billingIntervalOf(workspace.billingInterval),
       cancelAtPeriodEnd: workspace.cancelAtPeriodEnd,

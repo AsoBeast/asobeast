@@ -297,15 +297,34 @@ describe('AccountPlanService', () => {
         null,
       );
 
-    it('reports a past_due subscription that never paid as stalled', async () => {
+    it('reports a past_due subscription that never paid as a declined trial charge', async () => {
       await expect(pastDue(null)).resolves.toMatchObject({
         subscriptionStalled: true,
+        trialChargeFailed: true,
       });
     });
 
     it('keeps a paying customer in dunning unstalled', async () => {
       await expect(pastDue(new Date('2026-08-01'))).resolves.toMatchObject({
         subscriptionStalled: false,
+        trialChargeFailed: false,
+      });
+    });
+
+    it('never calls a paying customer whose renewal stalled a declined trial', async () => {
+      await expect(
+        build(true, { plan: 'free', apps: 0, keywordMarkets: 0 }).describe(
+          workspace({
+            subscriptionId: 'sub_1',
+            subscriptionStatus: 'unpaid',
+            trialEndsAt: new Date('2026-01-08'),
+          }),
+          NOW,
+          null,
+        ),
+      ).resolves.toMatchObject({
+        subscriptionStalled: true,
+        trialChargeFailed: false,
       });
     });
   });
