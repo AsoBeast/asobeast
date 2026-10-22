@@ -13,11 +13,26 @@ const TWO_HOURS_LATER = new Date('2026-10-15T05:00:00.000Z');
 const tracked = (...countries: string[]) =>
   countries.map((country) => ({ keyword: { country } }));
 
+interface Member {
+  id: string;
+  store: Store;
+  country: string;
+  delistedAt: Date | null;
+}
+
+const rival = (id: string, country = 'us', delistedAt: Date | null = null) => ({
+  id,
+  store: Store.APP_STORE,
+  country,
+  delistedAt,
+});
+
 const APP = {
   id: 'app_1',
   store: Store.APP_STORE,
   country: 'us',
-  competitors: [] as { id: string; store: Store; country: string }[],
+  delistedAt: null as Date | null,
+  competitors: [] as Member[],
   tracked: tracked('us', 'us'),
 };
 
@@ -105,10 +120,7 @@ describe('AppRunStatusService', () => {
     const { service, snapshots } = build({
       app: {
         ...APP,
-        competitors: [
-          { id: 'rival_1', store: Store.APP_STORE, country: 'us' },
-          { id: 'rival_2', store: Store.APP_STORE, country: 'us' },
-        ],
+        competitors: [rival('rival_1'), rival('rival_2')],
         tracked: tracked('us', 'de'),
       },
       snapshots: [
@@ -138,11 +150,56 @@ describe('AppRunStatusService', () => {
     });
   });
 
+  it('expects no listing from an app or competitor the store no longer lists', async () => {
+    const delisted = new Date('2026-10-14T03:05:00.000Z');
+    const { service, snapshots } = build({
+      app: {
+        ...APP,
+        delistedAt: delisted,
+        competitors: [rival('rival_1'), rival('rival_2', 'us', delisted)],
+        tracked: tracked('us', 'de'),
+      },
+      snapshots: [
+        { appId: 'rival_1', country: null },
+        { appId: 'rival_1', country: 'de' },
+      ],
+      captures: { captured: 2, lastCaptureAt: TWO_HOURS_LATER },
+    });
+
+    const status = await service.forApp(APP.id, TWO_HOURS_LATER);
+
+    expect(stage(status, 'listings')).toEqual({
+      stage: 'listings',
+      ready: 2,
+      total: 2,
+      complete: true,
+    });
+    expect(status.state).toBe('complete');
+    expect(snapshots).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          appId: { in: ['rival_1'] },
+        }) as object,
+      }),
+    );
+  });
+
+  it('expects the listing again once the store lists the app', async () => {
+    const { service } = build({
+      app: { ...APP, competitors: [rival('rival_1')] },
+      snapshots: [{ appId: APP.id, country: null }],
+    });
+
+    const status = await service.forApp(APP.id, TWO_HOURS_LATER);
+
+    expect(stage(status, 'listings')).toMatchObject({ ready: 1, total: 2 });
+  });
+
   it("counts a competitor's home listing in a market that is its home once", async () => {
     const { service } = build({
       app: {
         ...APP,
-        competitors: [{ id: 'rival_1', store: Store.APP_STORE, country: 'de' }],
+        competitors: [rival('rival_1', 'de')],
         tracked: tracked('de'),
       },
       snapshots: [{ appId: 'rival_1', country: null }],

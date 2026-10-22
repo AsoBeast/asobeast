@@ -21,6 +21,7 @@ export interface PortfolioApp {
   competitors: number;
   lastCapturedAt: string | null;
   setup?: AppSetupSummary;
+  delistedAt?: string | null;
 }
 
 export interface PortfolioGroup {

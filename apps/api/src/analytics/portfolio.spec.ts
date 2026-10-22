@@ -48,6 +48,7 @@ describe('PortfolioService.portfolio', () => {
                 country: 'us',
                 name: 'Empty',
                 iconUrl: null,
+                delistedAt: null,
                 groupId: null,
                 group: null,
                 _count: { competitors: 0 },
@@ -76,6 +77,7 @@ describe('PortfolioService.portfolio', () => {
         trackedKeywords: 0,
         competitors: 0,
         lastCapturedAt: null,
+        delistedAt: null,
         setup: {
           status: 'not_started',
           updatedAt: null,
@@ -92,6 +94,30 @@ describe('PortfolioService.portfolio', () => {
       trackedKeywords: 0,
       changes7d: 0,
     });
+  });
+
+  it('answers when the store stopped listing an app', async () => {
+    appFindMany.mockResolvedValue([
+      {
+        id: 'app_1',
+        store: 'APP_STORE',
+        country: 'us',
+        name: 'Gone',
+        iconUrl: null,
+        delistedAt: new Date('2026-10-21T03:04:05.000Z'),
+        groupId: null,
+        group: null,
+        _count: { competitors: 0 },
+        snapshots: [],
+      },
+    ]);
+    rankingFindFirst.mockResolvedValue(null);
+    trackedFindMany.mockResolvedValue([]);
+    changeEventFindMany.mockResolvedValue([]);
+
+    const result = await service.portfolio();
+
+    expect(result.apps[0]?.delistedAt).toBe('2026-10-21T03:04:05.000Z');
   });
 
   it('orders apps by current visibility then name and totals across the workspace', async () => {

@@ -34,7 +34,7 @@ const READY: Record<FirstRunStage, string> = {
 };
 
 const NOTHING_EXPECTED: Record<FirstRunStage, string> = {
-  metadata: "No listing snapshot is expected.",
+  metadata: "The store no longer lists this app, so no listing is expected.",
   keywords: "No keywords are tracked for this app.",
   rankings: "No keywords are tracked, so there are no positions to collect.",
   scores: "No keywords are tracked, so there is nothing to score.",

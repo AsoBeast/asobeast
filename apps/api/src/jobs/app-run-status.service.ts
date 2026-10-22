@@ -22,6 +22,7 @@ interface FamilyMember {
   id: string;
   store: Store;
   country: string;
+  delistedAt: Date | null;
 }
 
 interface RunApp extends FamilyMember {
@@ -57,7 +58,10 @@ export class AppRunStatusService {
         id: true,
         store: true,
         country: true,
-        competitors: { select: { id: true, store: true, country: true } },
+        delistedAt: true,
+        competitors: {
+          select: { id: true, store: true, country: true, delistedAt: true },
+        },
         tracked: {
           where: { active: true },
           select: { keyword: { select: { country: true } } },
@@ -99,13 +103,15 @@ export class AppRunStatusService {
   }
 
   private async listings(app: RunApp, since: Date): Promise<StageCount> {
-    const family = [app, ...app.competitors];
+    const family = [app, ...app.competitors].filter(
+      (member) => member.delistedAt === null,
+    );
     const homes = new Map(family.map((member) => [member.id, member.country]));
     const expected = new Set([
       ...family.map((member) => listingKey(member.id, member.country)),
-      ...appFamilyMarketListings(app).map((target) =>
-        listingKey(target.id, target.country),
-      ),
+      ...appFamilyMarketListings(app)
+        .filter((target) => homes.has(target.id))
+        .map((target) => listingKey(target.id, target.country)),
     ]);
     const rows = await this.prisma.appSnapshot.findMany({
       where: {

@@ -6,6 +6,7 @@ import type { PrismaService } from '../prisma/prisma.service';
 import type { ScreenshotQueue } from '../screenshots/screenshot-queue';
 import type { ScreenshotRecorder } from '../screenshots/screenshot-recorder';
 import type { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
+import { StoreAppNotFoundError } from '../store-providers/errors';
 import type { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { ListingCaptureService } from './listing-capture.service';
 import type { LocalizationDetection } from './localization-detection.service';
@@ -64,6 +65,7 @@ const build = (overrides: {
   detect?: jest.Mock;
   recordDefault?: jest.Mock;
   raw?: Record<string, unknown>;
+  getApp?: jest.Mock;
 }) => {
   const tx = {
     appSnapshot: {
@@ -73,11 +75,13 @@ const build = (overrides: {
     },
     app: { update: jest.fn().mockResolvedValue(APP) },
   };
+  const updateMany = jest.fn().mockResolvedValue({ count: 1 });
   const prisma = {
     app: {
       findFirst: jest
         .fn()
         .mockResolvedValue(overrides.app === undefined ? APP : overrides.app),
+      updateMany,
     },
     appSnapshot: {
       findFirst: jest.fn().mockResolvedValue(overrides.previous ?? null),
@@ -88,15 +92,17 @@ const build = (overrides: {
   } as unknown as PrismaService;
   const registry = {
     get: () => ({
-      getApp: jest.fn().mockResolvedValue({
-        store: Store.APP_STORE,
-        storeAppId: APP.storeAppId,
-        title: 'Fixture',
-        description: 'An app',
-        raw: {},
-        searchable: true,
-        subtitleUnavailable: false,
-      }),
+      getApp:
+        overrides.getApp ??
+        jest.fn().mockResolvedValue({
+          store: Store.APP_STORE,
+          storeAppId: APP.storeAppId,
+          title: 'Fixture',
+          description: 'An app',
+          raw: {},
+          searchable: true,
+          subtitleUnavailable: false,
+        }),
     }),
   } as unknown as StoreProviderRegistry;
   const egress = {
@@ -134,7 +140,16 @@ const build = (overrides: {
     { request: detect } as unknown as LocalizationDetection,
     { record: recordDefault } as unknown as MarketLocalizationRecorder,
   );
-  return { service, request, record, capture, detect, recordDefault };
+  return {
+    service,
+    request,
+    record,
+    capture,
+    detect,
+    recordDefault,
+    tx,
+    updateMany,
+  };
 };
 
 describe('ListingCaptureService.refresh', () => {
@@ -188,6 +203,74 @@ describe('ListingCaptureService.refreshListing', () => {
     await expect(service.refreshListing(APP.id, 'de')).resolves.toBeNull();
     expect(record).not.toHaveBeenCalled();
     expect(syncFromSnapshot).not.toHaveBeenCalled();
+  });
+});
+
+describe('ListingCaptureService delisted apps', () => {
+  const missing = () =>
+    jest
+      .fn()
+      .mockRejectedValue(
+        new StoreAppNotFoundError(Store.APP_STORE, APP.storeAppId),
+      );
+
+  it('records when the store stopped listing the app in its home market', async () => {
+    const { service, updateMany, record } = build({ getApp: missing() });
+
+    await expect(service.refreshListing(APP.id)).resolves.toBeNull();
+
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { id: APP.id, delistedAt: null },
+      data: { delistedAt: expect.any(Date) as Date },
+    });
+    expect(record).not.toHaveBeenCalled();
+  });
+
+  it('records it on an on demand refresh and still answers the store error', async () => {
+    const { service, updateMany } = build({ getApp: missing() });
+
+    await expect(service.refresh(APP.id)).rejects.toThrow(
+      StoreAppNotFoundError,
+    );
+
+    expect(updateMany).toHaveBeenCalledTimes(1);
+  });
+
+  it('records nothing when only a market does not list the app', async () => {
+    const { service, updateMany } = build({ getApp: missing() });
+
+    await expect(service.refreshListing(APP.id, 'de')).resolves.toBeNull();
+
+    expect(updateMany).not.toHaveBeenCalled();
+  });
+
+  it('records nothing when the store fails for another reason', async () => {
+    const { service, updateMany } = build({
+      getApp: jest.fn().mockRejectedValue(new Error('timeout')),
+    });
+
+    await expect(service.refreshListing(APP.id)).rejects.toThrow('timeout');
+
+    expect(updateMany).not.toHaveBeenCalled();
+  });
+
+  it('clears the record on the next home capture', async () => {
+    const { service, tx } = build({});
+
+    await service.refreshListing(APP.id);
+
+    expect(tx.app.update).toHaveBeenCalledWith({
+      where: { id: APP.id },
+      data: expect.objectContaining({ delistedAt: null }) as object,
+    });
+  });
+
+  it('leaves the record alone on a market capture', async () => {
+    const { service, tx } = build({});
+
+    await service.refreshListing(APP.id, 'de');
+
+    expect(tx.app.update).not.toHaveBeenCalled();
   });
 });
 

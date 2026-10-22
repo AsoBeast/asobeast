@@ -81,6 +81,7 @@ export class AppCaptureService {
           update: {
             name: normalized.title,
             iconUrl: normalized.iconUrl,
+            delistedAt: null,
           },
         });
 

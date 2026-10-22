@@ -4,6 +4,7 @@ import Link from "next/link";
 import { createColumnHelper } from "@tanstack/react-table";
 import type { PortfolioApp, PortfolioAppInsight } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
+import { DelistedBadge } from "@/components/apps/DelistedBadge";
 import { SortableHeader } from "@/components/data-table/SortableHeader";
 import type { DataTableFeatures } from "@/components/data-table/table-features";
 import { TrendChip } from "@/components/ui/delta-chip";
@@ -52,6 +53,7 @@ function AppCell({ app }: { app: PortfolioApp }) {
           {storeLabel(app.store)} · {app.country.toUpperCase()}
           {app.groupName ? ` · ${app.groupName}` : null}
         </span>
+        {app.delistedAt ? <DelistedBadge since={app.delistedAt} /> : null}
       </div>
     </div>
   );
