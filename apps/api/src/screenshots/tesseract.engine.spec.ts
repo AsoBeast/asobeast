@@ -1,7 +1,8 @@
+import { EventEmitter } from 'node:events';
 import { ConfigService } from '@nestjs/config';
-import { createWorker } from 'tesseract.js';
 import type { Env } from '../config/env';
 import { OCR_LANGUAGES } from './ocr-languages';
+import type { OcrReply, OcrRequest } from './ocr-thread';
 import { disposeTessdata, tessdataDirectory } from './tessdata';
 import {
   IDLE_TERMINATE_MS,
@@ -9,236 +10,218 @@ import {
   TesseractOcrEngine,
 } from './tesseract.engine';
 
-jest.mock('tesseract.js', () => ({
-  createWorker: jest.fn(),
-  OEM: { LSTM_ONLY: 1 },
-  PSM: { SPARSE_TEXT: 11 },
+type Answer = (request: OcrRequest, thread: FakeThread) => void;
+
+const threads: FakeThread[] = [];
+const answers: Answer[] = [];
+
+class FakeThread extends EventEmitter {
+  readonly requests: OcrRequest[] = [];
+  readonly terminate = jest.fn(() => {
+    this.emit('exit', 1);
+    return Promise.resolve(1);
+  });
+
+  constructor(readonly file: string) {
+    super();
+    threads.push(this);
+  }
+
+  postMessage(request: OcrRequest): void {
+    this.requests.push(request);
+    const answer = answers.shift() ?? replyWith({ lines: LINES });
+    setImmediate(() => answer(request, this));
+  }
+}
+
+jest.mock('node:worker_threads', () => ({
+  Worker: jest.fn((file: string) => new FakeThread(file)),
 }));
 jest.mock('./tessdata', () => ({
   tessdataDirectory: jest.fn().mockResolvedValue('/tmp/tessdata'),
   disposeTessdata: jest.fn().mockResolvedValue(undefined),
 }));
 
-const createWorkerMock = createWorker as unknown as jest.Mock<
-  Promise<unknown>,
-  [string[], number, Record<string, unknown>, Record<string, unknown>]
->;
-
-const page = (text = 'Track every habit') => ({
-  data: {
-    blocks: [
-      {
-        paragraphs: [
-          {
-            lines: [
-              {
-                text,
-                confidence: 96,
-                bbox: { x0: 0, y0: 198, x1: 900, y1: 300 },
-              },
-            ],
-          },
-        ],
-      },
-    ],
+const LINES = [
+  {
+    text: 'Track every habit',
+    confidence: 96,
+    left: 0,
+    top: 198,
+    width: 900,
+    height: 102,
   },
-});
+];
 
-const fakeWorker = () => ({
-  recognize: jest.fn().mockResolvedValue(page()),
-  reinitialize: jest.fn().mockResolvedValue(undefined),
-  setParameters: jest.fn().mockResolvedValue(undefined),
-  terminate: jest.fn().mockResolvedValue(undefined),
-});
+const replyWith =
+  (reply: OcrReply): Answer =>
+  (_request, thread) =>
+    thread.emit('message', reply);
+
+const never: Answer = () => undefined;
 
 const config = {
   get: () => OCR_LANGUAGES,
 } as unknown as ConfigService<Env, true>;
 
 describe('TesseractOcrEngine', () => {
-  let worker: ReturnType<typeof fakeWorker>;
   let engine: TesseractOcrEngine;
 
   beforeEach(() => {
-    jest.useFakeTimers();
-    worker = fakeWorker();
-    createWorkerMock.mockReset().mockResolvedValue(worker);
+    threads.length = 0;
+    answers.length = 0;
+    jest.mocked(tessdataDirectory).mockClear();
     engine = new TesseractOcrEngine(config);
   });
 
   afterEach(() => jest.useRealTimers());
 
-  it('creates one worker on a local language path and never a remote one', async () => {
-    await engine.read(Buffer.from('x'), ['eng'], 'otsu');
-
-    expect(tessdataDirectory).toHaveBeenCalledWith(OCR_LANGUAGES);
-    expect(createWorkerMock).toHaveBeenCalledTimes(1);
-    const [languages, , options] = createWorkerMock.mock.calls[0];
-    expect(languages).toEqual(['eng']);
-    expect(options).toMatchObject({
-      langPath: '/tmp/tessdata',
-      gzip: true,
-      cacheMethod: 'none',
-    });
-  });
-
   it('names itself so cached text records which engine read it', () => {
     expect(engine.name).toBe('tesseract.js-7');
   });
 
-  it('maps lines to text, confidence and their box', async () => {
-    const lines = await engine.read(Buffer.from('x'), ['eng'], 'otsu');
+  it('reads in a thread of its own on the local language path', async () => {
+    await expect(
+      engine.read(Buffer.from('x'), ['eng', 'jpn'], 'sauvola'),
+    ).resolves.toEqual(LINES);
 
-    expect(lines).toEqual([
-      {
-        text: 'Track every habit',
-        confidence: 96,
-        left: 0,
-        top: 198,
-        width: 900,
-        height: 102,
-      },
-    ]);
-  });
-
-  it('reads with sparse text segmentation and the thresholding of the pass', async () => {
-    await engine.read(Buffer.from('x'), ['eng'], 'otsu');
-
-    expect(worker.setParameters).toHaveBeenCalledWith({
-      tessedit_pageseg_mode: 11,
-      thresholding_method: '0',
+    expect(tessdataDirectory).toHaveBeenCalledWith(OCR_LANGUAGES);
+    expect(threads).toHaveLength(1);
+    expect(threads[0].file).toMatch(/ocr-thread\.ts$/);
+    expect(threads[0].requests[0]).toEqual({
+      image: Buffer.from('x'),
+      languages: ['eng', 'jpn'],
+      thresholding: 'sauvola',
+      langPath: '/tmp/tessdata',
     });
   });
 
-  it('reuses the worker for the same languages and reinitialises for others', async () => {
+  it('keeps one thread across reads', async () => {
     await engine.read(Buffer.from('x'), ['eng'], 'otsu');
     await engine.read(Buffer.from('x'), ['eng'], 'otsu');
-    expect(worker.reinitialize).not.toHaveBeenCalled();
 
-    await engine.read(Buffer.from('x'), ['eng', 'jpn'], 'otsu');
-
-    expect(createWorkerMock).toHaveBeenCalledTimes(1);
-    expect(worker.reinitialize).toHaveBeenCalledWith('eng+jpn', 1);
-  });
-
-  it('switches to sauvola for the inverted pass and back to otsu without reloading the languages', async () => {
-    await engine.read(Buffer.from('x'), ['eng'], 'otsu');
-    await engine.read(Buffer.from('x'), ['eng'], 'sauvola');
-
-    expect(worker.setParameters).toHaveBeenLastCalledWith({
-      tessedit_pageseg_mode: 11,
-      thresholding_method: '2',
-    });
-
-    await engine.read(Buffer.from('x'), ['eng'], 'otsu');
-
-    expect(worker.setParameters).toHaveBeenLastCalledWith({
-      tessedit_pageseg_mode: 11,
-      thresholding_method: '0',
-    });
-    expect(createWorkerMock).toHaveBeenCalledTimes(1);
-    expect(worker.reinitialize).not.toHaveBeenCalled();
+    expect(threads).toHaveLength(1);
   });
 
   it('runs reads one at a time', async () => {
-    const order: string[] = [];
     let release: () => void = () => undefined;
-    worker.recognize
-      .mockImplementationOnce(
-        () =>
-          new Promise((resolve) => {
-            release = () => {
-              order.push('first done');
-              resolve(page('one'));
-            };
-          }),
-      )
-      .mockImplementationOnce(() => {
-        order.push('second started');
-        return Promise.resolve(page('two'));
-      });
+    answers.push((_request, thread) => {
+      release = () => thread.emit('message', { lines: [] });
+    });
 
     const first = engine.read(Buffer.from('1'), ['eng'], 'otsu');
     const second = engine.read(Buffer.from('2'), ['eng'], 'otsu');
-    for (
-      let turn = 0;
-      turn < 50 && worker.recognize.mock.calls.length === 0;
-      turn++
-    ) {
-      await Promise.resolve();
+    for (let turn = 0; turn < 50 && threads.length === 0; turn++) {
+      await new Promise((resolve) => setImmediate(resolve));
     }
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(threads[0].requests).toHaveLength(1);
+
     release();
     await Promise.all([first, second]);
-
-    expect(order).toEqual(['first done', 'second started']);
+    expect(threads[0].requests).toHaveLength(2);
   });
 
-  it('discards a worker that failed and builds a new one for the next read', async () => {
-    worker.recognize.mockRejectedValueOnce(new Error('wasm out of memory'));
+  it('fails a read the thread answered with an error and starts a new thread for the next one', async () => {
+    answers.push(replyWith({ error: 'wasm out of memory' }));
 
     await expect(
       engine.read(Buffer.from('x'), ['eng'], 'otsu'),
     ).rejects.toThrow('wasm out of memory');
-    expect(worker.terminate).toHaveBeenCalledTimes(1);
+    expect(threads[0].terminate).toHaveBeenCalledTimes(1);
 
     await engine.read(Buffer.from('x'), ['eng'], 'otsu');
-    expect(createWorkerMock).toHaveBeenCalledTimes(2);
+    expect(threads).toHaveLength(2);
   });
 
-  it('gives the memory back after the idle period and on shutdown', async () => {
-    await engine.read(Buffer.from('x'), ['eng'], 'otsu');
+  it('fails a read whose thread crashed and keeps serving the next one', async () => {
+    answers.push((_request, thread) => {
+      thread.emit('error', new Error('unexpected end of file'));
+      thread.emit('exit', 1);
+    });
 
-    await jest.advanceTimersByTimeAsync(IDLE_TERMINATE_MS);
-    expect(worker.terminate).toHaveBeenCalledTimes(1);
+    await expect(
+      engine.read(Buffer.from('x'), ['eng'], 'otsu'),
+    ).rejects.toThrow('unexpected end of file');
 
-    await engine.read(Buffer.from('x'), ['eng'], 'otsu');
-    await engine.onModuleDestroy();
-    expect(worker.terminate).toHaveBeenCalledTimes(2);
-    expect(disposeTessdata).toHaveBeenCalled();
+    await expect(
+      engine.read(Buffer.from('x'), ['eng'], 'otsu'),
+    ).resolves.toEqual(LINES);
+    expect(threads).toHaveLength(2);
   });
 
-  it('gives up on a read that hangs and builds a new worker for the next one', async () => {
-    worker.recognize.mockImplementationOnce(() => new Promise(() => undefined));
+  it('fails a read whose thread exited without an answer', async () => {
+    answers.push((_request, thread) => thread.emit('exit', 1));
+
+    await expect(
+      engine.read(Buffer.from('x'), ['eng'], 'otsu'),
+    ).rejects.toThrow('the ocr thread exited with code 1');
+  });
+
+  it('survives a thread that fails while it is idle', async () => {
+    await engine.read(Buffer.from('x'), ['eng'], 'otsu');
+
+    threads[0].emit('error', new Error('late failure'));
+    threads[0].emit('exit', 1);
+
+    await engine.read(Buffer.from('x'), ['eng'], 'otsu');
+    expect(threads).toHaveLength(2);
+  });
+
+  it('gives up on a read that hangs and starts a new thread for the next one', async () => {
+    jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+    answers.push(never);
 
     const hung = engine.read(Buffer.from('x'), ['eng'], 'otsu');
     const outcome = expect(hung).rejects.toThrow(`${RECOGNIZE_TIMEOUT_MS} ms`);
     await jest.advanceTimersByTimeAsync(RECOGNIZE_TIMEOUT_MS);
     await outcome;
-    expect(worker.terminate).toHaveBeenCalledTimes(1);
+    expect(threads[0].terminate).toHaveBeenCalledTimes(1);
 
     await expect(
       engine.read(Buffer.from('x'), ['eng'], 'otsu'),
-    ).resolves.toHaveLength(1);
-    expect(createWorkerMock).toHaveBeenCalledTimes(2);
+    ).resolves.toEqual(LINES);
+    expect(threads).toHaveLength(2);
   });
 
-  it('builds no worker once the module is shutting down', async () => {
+  it('gives the memory back after the idle period and on shutdown', async () => {
+    jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+    await engine.read(Buffer.from('x'), ['eng'], 'otsu');
+
+    await jest.advanceTimersByTimeAsync(IDLE_TERMINATE_MS);
+    expect(threads[0].terminate).toHaveBeenCalledTimes(1);
+
+    await engine.read(Buffer.from('x'), ['eng'], 'otsu');
     await engine.onModuleDestroy();
-    jest.mocked(tessdataDirectory).mockClear();
+    expect(threads[1].terminate).toHaveBeenCalledTimes(1);
+    expect(disposeTessdata).toHaveBeenCalled();
+  });
+
+  it('starts no thread once the module is shutting down', async () => {
+    await engine.onModuleDestroy();
 
     await expect(
       engine.read(Buffer.from('x'), ['eng'], 'otsu'),
     ).rejects.toThrow('shutting down');
-    expect(createWorkerMock).not.toHaveBeenCalled();
+    expect(threads).toHaveLength(0);
     expect(tessdataDirectory).not.toHaveBeenCalled();
   });
 
-  it('terminates a worker that finished starting after shutdown began', async () => {
-    let started: (value: unknown) => void = () => undefined;
-    createWorkerMock.mockReturnValueOnce(
+  it('starts no thread when shutdown began while the language path was prepared', async () => {
+    let prepared: (path: string) => void = () => undefined;
+    jest.mocked(tessdataDirectory).mockReturnValueOnce(
       new Promise((resolve) => {
-        started = resolve;
+        prepared = resolve;
       }),
     );
 
     const read = engine.read(Buffer.from('x'), ['eng'], 'otsu');
     const outcome = expect(read).rejects.toThrow('shutting down');
-    await jest.advanceTimersByTimeAsync(0);
+    await new Promise((resolve) => setImmediate(resolve));
     await engine.onModuleDestroy();
-    started(worker);
+    prepared('/tmp/tessdata');
 
     await outcome;
-    expect(worker.terminate).toHaveBeenCalledTimes(1);
-    expect(worker.recognize).not.toHaveBeenCalled();
+    expect(threads).toHaveLength(0);
   });
 });

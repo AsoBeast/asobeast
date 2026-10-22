@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { z } from "zod";
+import { z } from "zod";
 import { MCP_TOOLS, MCP_WRITE_TOOLS, type WriteTool } from "./index";
 import { TRACK_KEYWORDS_LIMIT } from "./write-tools";
 
@@ -152,6 +152,25 @@ describe("the write tools", () => {
     },
   );
 
+  it("counts a tracked phrase in characters, the way the api does", () => {
+    const schema = writeTool("track_keywords").inputSchema;
+
+    expect(
+      schema.safeParse({ appId: "a", keywords: ["\u{20BB7}".repeat(100)] })
+        .success,
+    ).toBe(true);
+  });
+
+  it("advertises the phrase limit in its json schema", () => {
+    expect(
+      z.toJSONSchema(writeTool("track_keywords").inputSchema),
+    ).toMatchObject({
+      properties: {
+        keywords: { items: { type: "string", minLength: 1, maxLength: 100 } },
+      },
+    });
+  });
+
   it.each([
     ["track_keywords", "no phrase", { appId: "a", keywords: [] }],
     [
@@ -170,6 +189,11 @@ describe("the write tools", () => {
       "track_keywords",
       "a phrase longer than the api accepts",
       { appId: "a", keywords: ["x".repeat(101)] },
+    ],
+    [
+      "track_keywords",
+      "a phrase of more than 100 characters outside the bmp",
+      { appId: "a", keywords: ["\u{20BB7}".repeat(101)] },
     ],
     [
       "track_keywords",

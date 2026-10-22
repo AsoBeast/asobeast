@@ -207,6 +207,22 @@ describe('Keyword import (e2e)', () => {
     });
   });
 
+  it('E-IMP-02B counts a phrase outside the bmp in characters', async () => {
+    const id = await importApp();
+
+    const result = await preview(id, [
+      { keyword: '\u{20BB7}'.repeat(51) },
+      { keyword: '\u{20BB7}'.repeat(101) },
+    ]);
+
+    expect(
+      result.results.map((row) => [row.status, row.reason ?? null]),
+    ).toEqual([
+      ['new', null],
+      ['invalid', 'tooLong'],
+    ]);
+  });
+
   it('E-IMP-03 skips a phrase the app already tracks', async () => {
     const id = await importApp();
 

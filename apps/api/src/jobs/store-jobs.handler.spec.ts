@@ -22,6 +22,7 @@ describe('StoreJobsHandler', () => {
   const runSpiderProbe = jest.fn();
   const probeLocalization = jest.fn();
   const checkCategory = jest.fn().mockResolvedValue(undefined);
+  const syncReviews = jest.fn().mockResolvedValue([]);
   const forWorkspace = jest.fn<Promise<boolean>, []>();
   const through = jest.fn(
     (_store: Store, _country: string | undefined, work: () => Promise<void>) =>
@@ -48,7 +49,7 @@ describe('StoreJobsHandler', () => {
       {} as RankingsService,
       {} as ScoringService,
       { checkCategory } as unknown as CategoryRanksService,
-      {} as ReviewsService,
+      { syncReviews } as unknown as ReviewsService,
       { runSpiderProbe } as unknown as SpiderService,
       workspace,
       { through } as unknown as ProxyEgress,
@@ -84,6 +85,28 @@ describe('StoreJobsHandler', () => {
 
     expect(checkCategory).toHaveBeenNthCalledWith(1, payload, false);
     expect(checkCategory).toHaveBeenNthCalledWith(2, payload, true);
+  });
+
+  it('passes the final attempt of the job to the review sync', async () => {
+    const payload = {
+      appId: 'a1',
+      pages: 1,
+      backfill: false,
+      workspaceId: 'ws_a',
+    };
+    const reviewsJob = (attemptsMade: number) =>
+      ({
+        ...job(payload),
+        name: JOBS.SYNC_REVIEWS,
+        attemptsMade,
+        opts: { attempts: 5 },
+      }) as Job;
+
+    await handler.handle(reviewsJob(0));
+    await handler.handle(reviewsJob(4));
+
+    expect(syncReviews).toHaveBeenNthCalledWith(1, payload, false);
+    expect(syncReviews).toHaveBeenNthCalledWith(2, payload, true);
   });
 
   it('runs the job inside the workspace its payload carries', async () => {

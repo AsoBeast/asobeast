@@ -1,4 +1,5 @@
 import {
+  countChars,
   isStopword,
   KEYWORD_BULK_ADD_LIMIT,
   tokenize,
@@ -174,7 +175,7 @@ export function buildCombinations({
     for (const indexes of indexTuples(words.length, wordCount)) {
       const parts = indexes.map((index) => words[index]);
       const phrase = parts.map((word) => word.text).join(" ");
-      if (phrase.length > TRACKED_KEYWORD_CHAR_LIMIT) continue;
+      if (countChars(phrase) > TRACKED_KEYWORD_CHAR_LIMIT) continue;
       total += 1;
       if (combinations.length === COMBINATION_LIMIT) continue;
       const key = combinationKey(phrase);
