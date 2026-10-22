@@ -71,6 +71,14 @@ describe("the tool catalog", () => {
     expect(summary).toContain("note");
   });
 
+  it("tells an agent how to read the latest check day", () => {
+    const description = toolByName("list_keywords")?.description ?? "";
+
+    expect(description).toContain("latestCheckedOn");
+    expect(description).toContain("older than yesterday");
+    expect(description).not.toMatch(/>\d+/);
+  });
+
   it("places the localization tools after keyword_fields in the keywords group", () => {
     const names = KEYWORD_TOOLS.map((tool) => tool.name);
 
