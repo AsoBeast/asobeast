@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { LoaderCircle, StickyNote } from "lucide-react";
+import { History, LoaderCircle, StickyNote } from "lucide-react";
 import type {
   ScoreProvenance,
   ScoringConfidence,
@@ -29,7 +29,7 @@ import { isChecking, staleCheckDay } from "@/lib/keyword-checks";
 import { tagsLabel, visibleTags } from "@/lib/keyword-tags";
 import { grade, gradeLabel, type GradeMetric } from "@/lib/grade";
 import { positionHoldLines } from "./position-hold";
-import { StaleCheck, staleCheckLine } from "./StaleCheck";
+import { staleCheckLabel, staleCheckLine } from "./stale-check";
 import { cn } from "@/lib/utils";
 
 const OUTDATED_SCORE_DETAIL =
@@ -313,14 +313,19 @@ export function PositionCell({
   if (facts.length === 0) {
     return position;
   }
+  const factsLabel = `Position facts: ${keyword.text}`;
   return (
-    <span className="inline-flex items-center gap-1 whitespace-nowrap">
+    <span className="inline-flex items-center gap-1">
       {position}
-      {staleOn === null ? null : <StaleCheck day={staleOn} />}
       <InfoTip
-        label={`Position facts: ${keyword.text}`}
+        label={
+          staleOn === null
+            ? factsLabel
+            : `${factsLabel}, ${staleCheckLabel(staleOn)}`
+        }
         title="Position facts"
         summary={facts.join(" · ")}
+        icon={staleOn === null ? undefined : History}
       />
     </span>
   );

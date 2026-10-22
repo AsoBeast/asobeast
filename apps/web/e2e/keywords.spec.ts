@@ -268,27 +268,31 @@ test("position deltas render arrows, a bare position and the captured-depth mark
   await expect(unrankedRow).toContainText(">200");
 });
 
-test("a stale position names the day of its last check", async ({ page }) => {
+test("a stale position marks its facts button with the day of its last check", async ({
+  page,
+}) => {
   await page.goto("/apps/app-1/keywords");
 
   const staleRow = page.getByRole("row", { name: /study timer/ });
-  await expect(staleRow).toContainText(
-    `Last checked ${formatDayMonth(utcDaysAgo(3))}`,
-  );
+  const facts = staleRow.getByRole("button", {
+    name: `Position facts: study timer, last checked ${formatDayMonth(utcDaysAgo(3))}`,
+  });
+  await expect(facts).toBeVisible();
+  await expect(staleRow).not.toContainText(formatDayMonth(utcDaysAgo(3)));
 
-  await staleRow
-    .getByRole("button", { name: "Position facts: study timer" })
-    .click();
+  await facts.click();
   await expect(page.getByRole("dialog")).toContainText(
     "the checks since then did not finish",
   );
+  await page.keyboard.press("Escape");
 
-  await expect(
-    page.getByRole("row", { name: /focus timer/ }),
-  ).not.toContainText("Last checked");
-  await expect(
-    page.getByRole("row", { name: /time blocking/ }),
-  ).not.toContainText("Last checked");
+  for (const fresh of [/focus timer/, /time blocking/]) {
+    await expect(
+      page
+        .getByRole("row", { name: fresh })
+        .getByRole("button", { name: /last checked/ }),
+    ).toHaveCount(0);
+  }
 });
 
 test("the seven day delta announces its direction, not only its colour", async ({

@@ -39,36 +39,40 @@ const render = (row: TrackedKeywordItem) =>
     </TooltipProvider>,
   );
 
+const CLOCK = "lucide-history";
+
 describe("PositionCell", () => {
-  it("W-POS-01 names the day of a stale check and hides the daily change", () => {
+  it("W-POS-01 marks a stale check with a clock that names its day", () => {
     const markup = render(keyword({ latestCheckedOn: "2026-10-19" }));
 
-    expect(markup).toContain("Last checked");
-    expect(markup).toContain("Oct 19");
-    expect(markup).toContain("Position facts");
+    expect(markup).toContain(
+      'aria-label="Position facts: focus timer, last checked Oct 19"',
+    );
+    expect(markup).toContain(CLOCK);
+    expect(markup).not.toContain("Last checked");
     expect(markup).not.toContain("since yesterday");
   });
 
-  it("W-POS-02 a fresh check keeps the daily change and no hint", () => {
+  it("W-POS-02 a fresh check keeps the daily change and no facts button", () => {
     const markup = render(keyword({ latestCheckedOn: "2026-10-21" }));
 
     expect(markup).toContain("since yesterday");
-    expect(markup).not.toContain("Last checked");
     expect(markup).not.toContain("Position facts");
+    expect(markup).not.toContain(CLOCK);
   });
 
-  it("W-POS-03 a paused row shows no hint", () => {
+  it("W-POS-03 a paused row shows no clock", () => {
     expect(
       render(keyword({ active: false, latestCheckedOn: "2026-10-01" })),
-    ).not.toContain("Last checked");
+    ).not.toContain(CLOCK);
   });
 
-  it("W-POS-04 a row without the field shows no hint", () => {
+  it("W-POS-04 a row without the field shows no clock", () => {
     const { latestCheckedOn, ...undated } = keyword({});
     const markup = render(undated);
 
     expect(latestCheckedOn).toBe(TODAY);
-    expect(markup).not.toContain("Last checked");
+    expect(markup).not.toContain(CLOCK);
     expect(markup).toContain("since yesterday");
   });
 
@@ -78,7 +82,7 @@ describe("PositionCell", () => {
     );
 
     expect(markup).toContain("&gt;200");
-    expect(markup).toContain("Last checked");
+    expect(markup).toContain(CLOCK);
   });
 
   it("W-POS-06 a keyword awaiting its first check still reads checking", () => {
@@ -91,6 +95,16 @@ describe("PositionCell", () => {
     );
 
     expect(markup).toContain("Checking…");
-    expect(markup).not.toContain("Last checked");
+    expect(markup).not.toContain(CLOCK);
+  });
+
+  it("W-POS-07 a fresh row with hold facts keeps the info icon", () => {
+    const markup = render(
+      keyword({ bestPosition: 5, positionDeltaFromBest: 2 }),
+    );
+
+    expect(markup).toContain('aria-label="Position facts: focus timer"');
+    expect(markup).toContain("lucide-info");
+    expect(markup).not.toContain(CLOCK);
   });
 });
