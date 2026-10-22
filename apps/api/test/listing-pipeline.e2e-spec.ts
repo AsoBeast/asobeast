@@ -45,19 +45,23 @@ const FIXTURE: NormalizedApp = {
 
 class MarketRegistry {
   failWith: Error | null = null;
+  unlisted = new Set<string>();
 
   get(store: Store): StoreProvider {
     return {
       store,
-      getApp: (storeAppId: string, country: string) =>
-        this.failWith
-          ? Promise.reject(this.failWith)
-          : Promise.resolve({
-              ...FIXTURE,
-              store,
-              storeAppId,
-              title: `Fixture ${country}`,
-            }),
+      getApp: (storeAppId: string, country: string) => {
+        if (this.failWith) return Promise.reject(this.failWith);
+        if (this.unlisted.has(`${storeAppId}~${country}`)) {
+          return Promise.reject(new StoreAppNotFoundError(store, storeAppId));
+        }
+        return Promise.resolve({
+          ...FIXTURE,
+          store,
+          storeAppId,
+          title: `Fixture ${country}`,
+        });
+      },
       search: () => Promise.resolve([]),
       suggest: () => Promise.resolve([]),
       similar: () => Promise.resolve([]),
@@ -109,6 +113,7 @@ describe('market listings in the daily pipeline (e2e)', () => {
 
   beforeEach(async () => {
     registry.failWith = null;
+    registry.unlisted.clear();
     await obliterateQueues(app);
     await pauseQueues(app);
     await prisma.$executeRawUnsafe(
@@ -254,6 +259,69 @@ describe('market listings in the daily pipeline (e2e)', () => {
     const relisted = (await api.get(`/apps/${primary.id}`).expect(200))
       .body as AppDetail;
     expect(relisted.delistedAt).toBeNull();
+  });
+
+  it('completes the run of an app a market does not list and expects that listing again once it is listed there', async () => {
+    const { primary, rival } = await seed();
+    registry.unlisted.add('111~de');
+    await runRefreshJob(primary.id);
+    await runRefreshJob(primary.id, 'de');
+    await runRefreshJob(primary.id, 'de');
+    await runRefreshJob(rival.id);
+    await runRefreshJob(rival.id, 'de');
+    const tracked = await prisma.trackedKeyword.findMany({
+      where: { appId: primary.id, active: true },
+    });
+    await prisma.keywordRanking.createMany({
+      data: tracked.map(({ keywordId }) => ({
+        appId: primary.id,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        keywordId,
+        date: new Date(new Date().toISOString().slice(0, 10)),
+        position: null,
+      })),
+    });
+
+    const unlisted = await prisma.app.findUniqueOrThrow({
+      where: { id: primary.id },
+    });
+    expect(unlisted.unlistedMarkets).toEqual(['de']);
+    expect(unlisted.delistedAt).toBeNull();
+    const runStatus = async () =>
+      (await api.get(`/apps/${primary.id}/run-status`).expect(200))
+        .body as AppRunStatus;
+    const listings = (status: AppRunStatus) =>
+      status.stages.find((row) => row.stage === 'listings');
+    const unlistedRun = await runStatus();
+    expect(listings(unlistedRun)).toEqual({
+      stage: 'listings',
+      ready: 3,
+      total: 3,
+      complete: true,
+    });
+    expect(unlistedRun.state).toBe('complete');
+
+    registry.unlisted.clear();
+    await runRefreshJob(primary.id, 'de');
+
+    const listed = await prisma.app.findUniqueOrThrow({
+      where: { id: primary.id },
+    });
+    expect(listed.unlistedMarkets).toEqual([]);
+    expect(listings(await runStatus())).toMatchObject({ ready: 4, total: 4 });
+  });
+
+  it('records the market when an on demand market refresh finds the app unlisted there', async () => {
+    const { primary } = await seed();
+    registry.unlisted.add('111~de');
+
+    await api.post(`/apps/${primary.id}/refresh?country=de`).expect(404);
+
+    const stored = await prisma.app.findUniqueOrThrow({
+      where: { id: primary.id },
+    });
+    expect(stored.unlistedMarkets).toEqual(['de']);
+    expect(stored.delistedAt).toBeNull();
   });
 
   it('flags the app when an on demand refresh finds it delisted', async () => {

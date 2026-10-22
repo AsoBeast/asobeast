@@ -23,6 +23,7 @@ interface FamilyMember {
   store: Store;
   country: string;
   delistedAt: Date | null;
+  unlistedMarkets: string[];
 }
 
 interface RunApp extends FamilyMember {
@@ -42,6 +43,9 @@ interface KeywordCount extends StageCount {
 const listingKey = (appId: string, country: string): string =>
   `${appId}~${country}`;
 
+const listedIn = (member: FamilyMember | undefined, country: string): boolean =>
+  member !== undefined && !member.unlistedMarkets.includes(country);
+
 @Injectable()
 export class AppRunStatusService {
   constructor(
@@ -59,8 +63,15 @@ export class AppRunStatusService {
         store: true,
         country: true,
         delistedAt: true,
+        unlistedMarkets: true,
         competitors: {
-          select: { id: true, store: true, country: true, delistedAt: true },
+          select: {
+            id: true,
+            store: true,
+            country: true,
+            delistedAt: true,
+            unlistedMarkets: true,
+          },
         },
         tracked: {
           where: { active: true },
@@ -106,16 +117,16 @@ export class AppRunStatusService {
     const family = [app, ...app.competitors].filter(
       (member) => member.delistedAt === null,
     );
-    const homes = new Map(family.map((member) => [member.id, member.country]));
+    const members = new Map(family.map((member) => [member.id, member]));
     const expected = new Set([
       ...family.map((member) => listingKey(member.id, member.country)),
       ...appFamilyMarketListings(app)
-        .filter((target) => homes.has(target.id))
+        .filter((target) => listedIn(members.get(target.id), target.country))
         .map((target) => listingKey(target.id, target.country)),
     ]);
     const rows = await this.prisma.appSnapshot.findMany({
       where: {
-        appId: { in: [...homes.keys()] },
+        appId: { in: [...members.keys()] },
         ...EVERY_LISTING,
         localization: null,
         capturedAt: { gte: since },
@@ -124,7 +135,7 @@ export class AppRunStatusService {
       distinct: ['appId', 'country'],
     });
     const captured = rows.filter(({ appId, country }) => {
-      const home = homes.get(appId);
+      const home = members.get(appId)?.country;
       return (
         home !== undefined &&
         expected.has(listingKey(appId, listingMarket(home, country)))

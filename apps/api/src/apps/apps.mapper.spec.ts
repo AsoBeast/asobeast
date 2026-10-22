@@ -259,6 +259,7 @@ describe('the delisted time', () => {
     name: 'Gone',
     iconUrl: null,
     delistedAt,
+    unlistedMarkets: [],
     isCompetitor: false,
     primaryAppId: null,
     groupId: null,

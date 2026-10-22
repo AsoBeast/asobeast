@@ -708,6 +708,56 @@ describe('PipelineService', () => {
       expect(appStoreQueue.add).toHaveBeenCalledTimes(1);
     });
 
+    it("reads an app's charts even when another app of the workspace read them today", async () => {
+      const bucket: CategoryBucket = {
+        collection: 'free',
+        genre: '6014',
+        country: 'us',
+        store: 'APP_STORE',
+      };
+      const app = (id: string) => ({
+        id,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: 'APP_STORE',
+        country: 'us',
+        isCompetitor: false,
+        competitors: [],
+        tracked: [],
+      });
+      const findFirst = jest
+        .fn()
+        .mockResolvedValueOnce(app('first'))
+        .mockResolvedValueOnce(app('second'));
+      const appStoreQueue = buildQueue();
+      const stored = new Map<string, unknown>();
+      appStoreQueue.add.mockImplementation((_name, data, opts) => {
+        stored.set(String(opts?.jobId), JSON.parse(JSON.stringify(data)));
+        return Promise.resolve();
+      });
+      appStoreQueue.getJob.mockImplementation((jobId: string) =>
+        Promise.resolve(
+          stored.has(jobId)
+            ? { data: stored.get(jobId), ...holding(false) }
+            : undefined,
+        ),
+      );
+      const { service } = buildService({
+        appStoreQueue,
+        prisma: { app: { findFirst } },
+        categoryRanks: buildCategoryRanks([bucket]),
+      });
+
+      await service.fanOutApp('first');
+      const second = await service.fanOutApp('second');
+
+      expect(second.categories).toBe(1);
+      expect(
+        appStoreQueue.add.mock.calls.filter(
+          ([name]) => name === JOBS.CHECK_CATEGORY,
+        ),
+      ).toHaveLength(2);
+    });
+
     it('queues the jobs that failed again and counts them', async () => {
       const appStoreQueue = queueHolding({
         refresh: holding(true),

@@ -200,6 +200,7 @@ model App {
   name         String?
   iconUrl      String?
   delistedAt   DateTime?
+  unlistedMarkets String[]       @default([])
   isCompetitor Boolean          @default(false)
   primaryAppId String?
   primaryApp   App?             @relation("AppCompetitors", fields: [primaryAppId, workspaceId], references: [id, workspaceId], onDelete: Cascade)
