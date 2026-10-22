@@ -20,6 +20,7 @@ const APP = {
   country: 'us',
   iconUrl: null,
   isCompetitor: false,
+  unlistedMarkets: [] as string[],
 };
 
 const SNAPSHOT = {
@@ -74,6 +75,7 @@ const build = (overrides: {
         .mockResolvedValue({ ...SNAPSHOT, raw: overrides.raw ?? SNAPSHOT.raw }),
     },
     app: { update: jest.fn().mockResolvedValue(APP) },
+    $executeRaw: jest.fn().mockResolvedValue(1),
   };
   const updateMany = jest.fn().mockResolvedValue({ count: 1 });
   const prisma = {
@@ -86,6 +88,7 @@ const build = (overrides: {
     appSnapshot: {
       findFirst: jest.fn().mockResolvedValue(overrides.previous ?? null),
     },
+    trackedKeyword: { count: jest.fn().mockResolvedValue(1) },
     withTransaction: jest.fn((work: (client: typeof tx) => unknown) =>
       work(tx),
     ),
@@ -236,12 +239,30 @@ describe('ListingCaptureService delisted apps', () => {
     expect(updateMany).toHaveBeenCalledTimes(1);
   });
 
-  it('records nothing when only a market does not list the app', async () => {
+  it('records the market, not the app, when only a market does not list it', async () => {
     const { service, updateMany } = build({ getApp: missing() });
 
-    await expect(service.refreshListing(APP.id, 'de')).resolves.toBeNull();
+    await expect(service.refreshListing(APP.id, 'cn')).resolves.toBeNull();
 
-    expect(updateMany).not.toHaveBeenCalled();
+    expect(updateMany).toHaveBeenCalledTimes(1);
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { id: APP.id, NOT: { unlistedMarkets: { has: 'cn' } } },
+      data: { unlistedMarkets: { push: 'cn' } },
+    });
+  });
+
+  it('records the market on an on demand market refresh and still answers the store error', async () => {
+    const { service, updateMany } = build({ getApp: missing() });
+
+    await expect(service.refresh(APP.id, 'cn')).rejects.toThrow(
+      StoreAppNotFoundError,
+    );
+
+    expect(updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { unlistedMarkets: { push: 'cn' } },
+      }),
+    );
   });
 
   it('records nothing when the store fails for another reason', async () => {
@@ -271,6 +292,27 @@ describe('ListingCaptureService delisted apps', () => {
     await service.refreshListing(APP.id, 'de');
 
     expect(tx.app.update).not.toHaveBeenCalled();
+  });
+
+  it('clears a market on its next capture', async () => {
+    const { service, tx } = build({
+      app: { ...APP, unlistedMarkets: ['cn', 'ru'] },
+    });
+
+    await service.refreshListing(APP.id, 'cn');
+
+    expect(tx.$executeRaw).toHaveBeenCalledTimes(1);
+    expect(tx.$executeRaw.mock.calls[0]).toEqual(
+      expect.arrayContaining(['cn', APP.id]),
+    );
+  });
+
+  it('touches no market on a home capture', async () => {
+    const { service, tx } = build({ app: { ...APP, unlistedMarkets: ['ru'] } });
+
+    await service.refreshListing(APP.id);
+
+    expect(tx.$executeRaw).not.toHaveBeenCalled();
   });
 });
 
