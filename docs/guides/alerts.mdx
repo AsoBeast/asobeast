@@ -202,12 +202,12 @@ Three limits keep confirmation emails from being used to mail strangers:
 | Limit | Value |
 | --- | --- |
 | Email alerts in a workspace | 25, of which at most 5 may be waiting for confirmation |
-| Confirmation emails to one recipient | 5 a day in total, whichever workspace asks |
+| Confirmation emails to one mailbox | 5 a day in total, whichever workspace asks |
 | Confirmation emails from one workspace | 20 a day |
 
 Adding an alert, changing its address, resending a confirmation and sending a test are each limited to 10 requests a minute per workspace. A refused request answers `429` with a `Retry-After` header, or `403` for the two alert counts.
 
-The recipient limit counts every workspace together on purpose: it protects the person receiving the email, however many workspaces ask. A workspace that spends it delays confirmations to that address from other workspaces until the next UTC day. A workspace past its own limit spends none of a recipient's.
+The recipient limit counts every workspace together on purpose: it protects the person receiving the email, however many workspaces ask. It counts one mailbox, not one spelling: addresses that reach the same mailbox share the allowance, whatever their capitalization, a `+tag` after the name, a domain written with accents or in its `xn--` form, and for Gmail dots and `googlemail.com`. The [One trial per mailbox](/security/authentication#one-trial-per-mailbox) section lists every rule. The plus tag is dropped on every domain, so on a provider that treats `+` as an ordinary character `name+a@example.com` and `name+b@example.com` also share one allowance. The email is still sent to the address you typed, and only the count is shared. A workspace that spends it delays confirmations to that mailbox from other workspaces until the next UTC day. A workspace past its own limit spends none of a recipient's.
 
 ### What an alert email looks like
 
@@ -244,7 +244,7 @@ Completed batch claims follow `RETENTION_ALERT_EVENTS_DAYS`, also 30 days by def
 - **Mail apps show no unsubscribe button.** The instance is not on `https`, or the relay does not sign with DKIM. See [Email deliverability](/operations/email-deliverability).
 - **A recipient stopped receiving alerts.** They unsubscribed, and the email alert shows **Unsubscribed** in Settings. That alert does not ask the address to confirm again, so a recipient who wants alerts back is added as a new email alert and confirms it.
 - **A new recipient receives nothing.** The alert shows **Awaiting confirmation**. Ask them to open the confirmation email, check the spam folder, or press **Resend confirmation**. Without `WEB_PUBLIC_URL` no confirmation email can be sent at all.
-- **Adding a recipient answers 429.** The recipient already had 5 confirmation emails today, or the workspace had 20. The message says which, and the limit resets at midnight UTC.
+- **Adding a recipient answers 429.** The recipient's mailbox already had 5 confirmation emails today under any spelling of its address, or the workspace had 20. The message says which, and the limit resets at midnight UTC.
 - **Resend confirmation answers 429.** A confirmation email went to that alert less than an hour ago. The message says how long to wait.
 - **Reports arrive at an unpredictable hour.** In batched mode the flush waits for every child job to settle, including retries. `CRON_DAILY` sets the start, not the delivery time.
 

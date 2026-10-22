@@ -107,6 +107,11 @@ export function connectionStatusLine(item: StoreConnectionItem): StatusLine {
   };
 }
 
+export const needsAdminKey = (item: StoreConnectionItem): boolean =>
+  item.store === "APP_STORE" &&
+  item.status !== "rejected" &&
+  item.apps.some((app) => app.state === "forbidden");
+
 export function appStateLabel(
   state: StoreReportState | null,
   store: Store = "APP_STORE",

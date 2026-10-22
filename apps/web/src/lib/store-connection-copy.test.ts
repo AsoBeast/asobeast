@@ -5,6 +5,7 @@ import {
   connectionStatusLine,
   historyLine,
   STORE_CONSOLES,
+  needsAdminKey,
 } from "./store-connection-copy";
 
 const APP: StoreConnectionApp = {
@@ -76,6 +77,46 @@ describe("connectionStatusLine", () => {
       tone: "muted",
       text: "Last synced Oct 15, 2026, 5:31 AM UTC",
     });
+  });
+});
+
+describe("needsAdminKey", () => {
+  it("asks for an admin key while an app could not be requested", () => {
+    expect(
+      needsAdminKey({
+        ...ITEM,
+        reportAccess: "readOnly",
+        apps: [{ ...APP, state: "forbidden" }],
+      }),
+    ).toBe(true);
+  });
+
+  it("leaves a read only key alone once every request exists", () => {
+    expect(needsAdminKey({ ...ITEM, reportAccess: "readOnly" })).toBe(false);
+  });
+
+  it("leaves a rejected key to verify first", () => {
+    expect(
+      needsAdminKey({
+        ...ITEM,
+        status: "rejected",
+        apps: [{ ...APP, state: "forbidden" }],
+      }),
+    ).toBe(false);
+  });
+
+  it("is quiet for a key without apps", () => {
+    expect(needsAdminKey({ ...ITEM, apps: [] })).toBe(false);
+  });
+
+  it("never asks a play service account for an admin key", () => {
+    expect(
+      needsAdminKey({
+        ...ITEM,
+        store: "GOOGLE_PLAY",
+        apps: [{ ...APP, state: "forbidden" }],
+      }),
+    ).toBe(false);
   });
 });
 

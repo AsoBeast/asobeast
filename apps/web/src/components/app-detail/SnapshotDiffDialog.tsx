@@ -66,7 +66,7 @@ export function SnapshotDiffDialog({
               </TableHeader>
               <TableBody>
                 {changes.map((change) => {
-                  const cells = snapshotChangeCells(change);
+                  const cells = snapshotChangeCells(change, diff?.currency);
                   return (
                     <TableRow
                       key={`${change.field}:${change.localization ?? ""}`}

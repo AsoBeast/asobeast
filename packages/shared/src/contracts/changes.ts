@@ -55,6 +55,7 @@ export interface ChangeEventItem {
   field: ChangeField;
   before: string | null;
   after: string | null;
+  currency?: string | null;
   capturedAt: string;
   detail?: ChangeDetail | null;
   country?: string;

@@ -44,6 +44,11 @@ describe('lintTitle', () => {
       'keyword-stuffing',
     );
   });
+
+  it('counts a character outside the bmp once against the limit', () => {
+    expect(rules(lintTitle('𠮷'.repeat(30)))).not.toContain('over-limit');
+    expect(rules(lintTitle('𠮷'.repeat(31)))).toContain('over-limit');
+  });
 });
 
 describe('lintSubtitle', () => {
@@ -333,6 +338,14 @@ describe('lintKeywordField', () => {
   it('flags keywords of two characters or fewer', () => {
     expect(rules(lintKeywordField('tv,habit'))).toContain('short-keyword');
     expect(rules(lintKeywordField('gym,habit'))).not.toContain('short-keyword');
+  });
+
+  it('counts a character outside the bmp once against the limit and the minimum', () => {
+    expect(rules(lintKeywordField('𠮷'.repeat(100)))).not.toContain(
+      'over-limit',
+    );
+    expect(rules(lintKeywordField('𠮷'.repeat(101)))).toContain('over-limit');
+    expect(rules(lintKeywordField('𠮷野'))).toContain('short-keyword');
   });
 });
 

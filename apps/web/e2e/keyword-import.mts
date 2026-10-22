@@ -1,4 +1,5 @@
 import {
+  countChars,
   countMaxLengthChars,
   isKeywordTag,
   isStorefront,
@@ -68,7 +69,7 @@ export function planMockImport(
       );
 
     if (!text) return bad("empty", "Keyword must not be empty");
-    if (text.length > TRACKED_KEYWORD_CHAR_LIMIT) {
+    if (countChars(text) > TRACKED_KEYWORD_CHAR_LIMIT) {
       return bad(
         "tooLong",
         `Keyword exceeds ${TRACKED_KEYWORD_CHAR_LIMIT} characters`,

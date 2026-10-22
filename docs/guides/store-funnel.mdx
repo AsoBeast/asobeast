@@ -27,13 +27,17 @@ An app the connection does not cover and a competitor show no numbers. A member 
   <Step title="Open the team keys">
     In App Store Connect, open **Users and Access**, then **Integrations**, then **Team Keys**. The issuer ID is shown above the list.
   </Step>
-  <Step title="Generate a key with the right role">
-    Use the **Admin** role the first time. Apple lets only an Admin key ask for reports. Once an Admin key has asked for them, a **Sales and Reports** key can read them from then on, and you can connect one instead.
+  <Step title="Generate a key with the Admin role">
+    Generate a key, name it and choose the **Admin** role. Apple lets only an Admin key ask for reports, so this one key does everything asobeast needs.
   </Step>
   <Step title="Download the key once">
     Apple offers the `.p8` file a single time. Keep it, and note the ten character key ID beside the key.
   </Step>
 </Steps>
+
+<Note>
+  For least privilege, a **Sales and Reports** key works too, but only once the report requests exist: after an Admin key has made them, or when another tool already asked Apple for the same reports. Connect the Admin key first and replace it later if you prefer. An App Store app imported after the switch needs the Admin key again, because its requests do not exist yet.
+</Note>
 
 ## Connect it
 
@@ -46,7 +50,7 @@ Open **Settings** and the **Store connections** section, press **Connect App Sto
 | **Replace key** | Connects another key in place of this one |
 | **Disconnect** | Deletes the stored key and stops the downloads. The numbers already stored are kept, hidden while no key reports them, and appear again once you connect a key |
 
-When the connected key cannot ask for reports, the section says that an Admin key is needed once. Connect one, press **Sync now**, and switch back to a Sales and Reports key afterwards if you prefer.
+When the connected key cannot ask for reports, the section says that an Admin key is needed and **Replace key** becomes the main button. Connect an Admin key there; connecting queues a sync, which asks Apple for the reports.
 
 What asobeast stores and how is on [Store console credentials](/security/store-credentials).
 

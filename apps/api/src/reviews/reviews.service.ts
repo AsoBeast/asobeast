@@ -59,7 +59,10 @@ export class ReviewsService {
     private readonly alerts: AlertsDispatcher,
   ) {}
 
-  async syncReviews(payload: SyncReviewsPayload): Promise<ReviewResult[]> {
+  async syncReviews(
+    payload: SyncReviewsPayload,
+    finalAttempt = false,
+  ): Promise<ReviewResult[]> {
     const app = await this.prisma.app.findFirst({
       where: { id: payload.appId },
       select: {
@@ -71,7 +74,7 @@ export class ReviewsService {
       },
     });
     if (!app) {
-      throw new NotFoundException(`App ${payload.appId} not found`);
+      return [];
     }
 
     const provider = this.registry.get(app.store);
@@ -85,11 +88,7 @@ export class ReviewsService {
       retries,
     );
     if (fetched.size === 0 && expected) {
-      throw new ImplausibleResultError(
-        app.store,
-        `the review feed for ${app.storeAppId} came back empty for an app that was receiving reviews within the last ${IMPLAUSIBLE_LOOKBACK_DAYS} days`,
-        { retryable: retries > 0 },
-      );
+      return this.settleEmptyFeed(app, retries, finalAttempt);
     }
 
     const existing = await this.prisma.review.findMany({
@@ -164,6 +163,23 @@ export class ReviewsService {
         data,
       });
     }
+  }
+
+  private settleEmptyFeed(
+    app: ReviewSource,
+    retries: number,
+    finalAttempt: boolean,
+  ): ReviewResult[] {
+    const empty = new ImplausibleResultError(
+      app.store,
+      `the review feed for ${app.storeAppId} came back empty for an app that was receiving reviews within the last ${IMPLAUSIBLE_LOOKBACK_DAYS} days`,
+      { retryable: retries > 0 },
+    );
+    if (!finalAttempt || !empty.retryable) throw empty;
+    this.logger.warn(
+      `last attempt: ${empty.message}, so nothing changes until the next sync`,
+    );
+    return [];
   }
 
   private async fetchPages(

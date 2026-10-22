@@ -1,12 +1,16 @@
 import { expect, test } from "./session.mts";
+import { settleAnimations } from "./dialog.mts";
 import { seedCookies } from "./routes.mts";
 
 const WIDTHS = [375, 768, 1440] as const;
 const LONG_SEARCH = `q=${"a".repeat(400)}`;
 
-const ROUTES: ReadonlyArray<
-  readonly [string, string, Readonly<Record<string, string>>?]
-> = [
+interface RouteSetup {
+  readonly cookies?: Readonly<Record<string, string>>;
+  readonly opensDialog?: boolean;
+}
+
+const ROUTES: ReadonlyArray<readonly [string, string, RouteSetup?]> = [
   ["app overview", "/apps/app-long"],
   ["keyword workspace", "/apps/app-long/keywords"],
   ["portfolio", "/"],
@@ -17,8 +21,10 @@ const ROUTES: ReadonlyArray<
     "competitors with every section collapsed",
     "/apps/app-1/competitors",
     {
-      asobeast_collapsed:
-        "competitors.tracked%2Ccompetitors.discovery%2Ccompetitors.matrix",
+      cookies: {
+        asobeast_collapsed:
+          "competitors.tracked%2Ccompetitors.discovery%2Ccompetitors.matrix",
+      },
     },
   ],
   ["metadata", "/apps/app-1/metadata"],
@@ -31,13 +37,13 @@ const ROUTES: ReadonlyArray<
   ["metadata of an arabic play listing", "/apps/app-ar/metadata"],
   ["changes", "/apps/app-1/changes"],
   ["dashboard table", "/?view=table"],
-  ["dashboard many apps", "/", { portfolio_many: "1" }],
+  ["dashboard many apps", "/", { cookies: { portfolio_many: "1" } }],
   ["action center", "/actions"],
   ["keyword search with a long term", `/apps/app-1/keywords?${LONG_SEARCH}`],
   ["metadata search with a long term", `/apps/app-1/metadata?${LONG_SEARCH}`],
   ["action center search with a long term", `/actions?${LONG_SEARCH}`],
   ["app action center", "/apps/app-1/actions"],
-  ["action sheet", "/actions?action=act-push"],
+  ["action sheet", "/actions?action=act-push", { opensDialog: true }],
   ["top charts", "/charts"],
   ["top charts table", "/charts?view=table"],
   ["top charts on google play", "/charts?store=GOOGLE_PLAY&genre=GAME_PUZZLE"],
@@ -69,15 +75,16 @@ async function overflowingElements(page: import("@playwright/test").Page) {
 }
 
 for (const width of WIDTHS) {
-  for (const [name, path, cookies] of ROUTES) {
+  for (const [name, path, setup] of ROUTES) {
     test(`${name} contains long user strings at ${width}`, async ({
       page,
       context,
     }) => {
-      if (cookies) await seedCookies(context, cookies);
+      if (setup?.cookies) await seedCookies(context, setup.cookies);
       await page.setViewportSize({ width, height: 900 });
       await page.goto(path);
       await page.waitForLoadState("networkidle");
+      if (setup?.opensDialog) await settleAnimations(page.getByRole("dialog"));
 
       expect(
         await page.evaluate(

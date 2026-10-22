@@ -161,4 +161,100 @@ describe('ChangesController (e2e)', () => {
       isCompetitor: false,
     });
   });
+
+  describe('the currency of a price change', () => {
+    const createApps = async () => {
+      const mine = await prisma.app.create({
+        data: {
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          store: Store.APP_STORE,
+          storeAppId: '111',
+          country: 'jp',
+          name: 'Mine',
+        },
+      });
+      const rival = await prisma.app.create({
+        data: {
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          store: Store.APP_STORE,
+          storeAppId: '222',
+          country: 'pl',
+          name: 'Rival',
+          isCompetitor: true,
+          primaryAppId: mine.id,
+        },
+      });
+      return { mine, rival };
+    };
+
+    const listing = (appId: string, raw: object, daysAgo: number) => ({
+      appId,
+      country: null,
+      title: 'Listing',
+      description: 'Listing description',
+      raw,
+      capturedAt: addDays(utcToday(), -daysAgo),
+    });
+
+    const priceEvent = (appId: string, after: string, daysAgo: number) => ({
+      appId,
+      field: 'price',
+      before: '0',
+      after,
+      capturedAt: addDays(utcToday(), -daysAgo),
+    });
+
+    it('names the storefront currency of each price change, newest listing first', async () => {
+      const { mine, rival } = await createApps();
+      await prisma.appSnapshot.createMany({
+        data: [
+          listing(mine.id, { currency: 'USD' }, 20),
+          listing(mine.id, { currency: 'JPY' }, 1),
+          listing(rival.id, { currency: 'PLN' }, 1),
+        ],
+      });
+      await prisma.changeEvent.createMany({
+        data: [
+          priceEvent(rival.id, '4.99', 2),
+          priceEvent(mine.id, '500', 3),
+          {
+            appId: mine.id,
+            field: 'title',
+            before: 'A',
+            after: 'B',
+            capturedAt: addDays(utcToday(), -4),
+          },
+        ],
+      });
+
+      const timeline = await api.get(`/apps/${mine.id}/changes`).expect(200);
+      const recent = await api.get('/changes/recent').expect(200);
+
+      for (const response of [timeline, recent]) {
+        const events = (response.body as ChangeTimeline).events;
+        expect(events.map((event) => [event.field, event.currency])).toEqual([
+          ['price', 'PLN'],
+          ['price', 'JPY'],
+          ['title', undefined],
+        ]);
+        expect(events[2]).not.toHaveProperty('currency');
+      }
+    });
+
+    it('answers a null currency for a listing without one and for no listing', async () => {
+      const { mine, rival } = await createApps();
+      await prisma.appSnapshot.createMany({
+        data: [listing(mine.id, {}, 1)],
+      });
+      await prisma.changeEvent.createMany({
+        data: [priceEvent(rival.id, '4.99', 2), priceEvent(mine.id, '500', 3)],
+      });
+
+      const response = await api.get(`/apps/${mine.id}/changes`).expect(200);
+
+      expect(
+        (response.body as ChangeTimeline).events.map((event) => event.currency),
+      ).toEqual([null, null]);
+    });
+  });
 });

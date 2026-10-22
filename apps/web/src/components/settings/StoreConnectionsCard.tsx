@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
   useMutation,
   useQueryClient,
@@ -40,6 +40,7 @@ import { useSingleFlight } from "@/lib/single-flight";
 import {
   connectionStatusLine,
   STORE_CONSOLES,
+  needsAdminKey,
 } from "@/lib/store-connection-copy";
 import { cn } from "@/lib/utils";
 import { ConnectAppStoreDialog } from "./ConnectAppStoreDialog";
@@ -50,9 +51,17 @@ const OWNER_ONLY = "Only the workspace owner can connect a store.";
 const STORE_CONNECT_OFF =
   "Store connections are off on this instance. Set STORE_CONNECT_ENCRYPTION_KEY to turn them on.";
 
-function ConnectDialog({ store, label }: { store: Store; label: string }) {
+function ConnectDialog({
+  store,
+  label,
+  variant,
+}: {
+  store: Store;
+  label: string;
+  variant?: "default" | "outline";
+}) {
   return store === "APP_STORE" ? (
-    <ConnectAppStoreDialog label={label} />
+    <ConnectAppStoreDialog label={label} variant={variant} />
   ) : (
     <ConnectPlayDialog label={label} />
   );
@@ -151,13 +160,23 @@ function ConnectionActions({ item }: { item: StoreConnectionItem }) {
           Sync now
         </Button>
       )}
-      <ConnectDialog store={item.store} label={copy.replaceLabel} />
+      <ConnectDialog
+        store={item.store}
+        label={copy.replaceLabel}
+        variant={needsAdminKey(item) ? "default" : "outline"}
+      />
       <DisconnectButton store={item.store} />
     </div>
   );
 }
 
-function ConnectionDetails({ item }: { item: StoreConnectionItem }) {
+function ConnectionDetails({
+  item,
+  actions,
+}: {
+  item: StoreConnectionItem;
+  actions: ReactNode;
+}) {
   const status = connectionStatusLine(item);
   const facts = STORE_CONSOLES[item.store].facts(item);
 
@@ -182,6 +201,7 @@ function ConnectionDetails({ item }: { item: StoreConnectionItem }) {
       >
         {status.text}
       </p>
+      {actions}
       <StoreConnectionApps store={item.store} apps={item.apps} />
     </div>
   );
@@ -211,11 +231,13 @@ function StoreConsoleCard({
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {connection ? (
-          <ConnectionDetails item={connection} />
+          <ConnectionDetails
+            item={connection}
+            actions={owner ? <ConnectionActions item={connection} /> : null}
+          />
         ) : (
           <p className="text-body text-muted-foreground">{copy.empty}</p>
         )}
-        {owner && connection ? <ConnectionActions item={connection} /> : null}
       </CardContent>
     </Card>
   );
