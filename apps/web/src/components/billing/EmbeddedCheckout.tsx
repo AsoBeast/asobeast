@@ -41,9 +41,12 @@ export function EmbeddedCheckout({
     let checkout: StripeEmbeddedCheckout | null = null;
     loadStripeOnce(publishableKey)
       .then((stripe) => {
-        if (!stripe) throw new Error(UNREACHABLE);
+        if (!stripe || !active) throw new Error(UNREACHABLE);
         return stripe.createEmbeddedCheckoutPage({
-          fetchClientSecret: () => clientSecretOf(priceId),
+          fetchClientSecret: () =>
+            active
+              ? clientSecretOf(priceId)
+              : Promise.reject(new Error(UNREACHABLE)),
         });
       })
       .then((instance) => {

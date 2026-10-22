@@ -235,6 +235,56 @@ test.describe("the billing wall", () => {
       ]);
     });
 
+    test("opens no checkout session for a plan left before stripe loaded", async ({
+      page,
+      context,
+    }) => {
+      await seedViewer(context, "checkout-pending");
+      await seedSession(page);
+      await openBilling(page);
+      await page.route("**/api/backend/billing/catalog", (route) =>
+        route.fulfill(
+          fulfillJson(200, { ...CATALOG, publishableKey: "pk_test_e2e" }),
+        ),
+      );
+      let releaseStripe: () => void = () => {};
+      const stripeHeld = new Promise<void>((resolve) => {
+        releaseStripe = resolve;
+      });
+      await page.route("https://js.stripe.com/**", async (route) => {
+        await stripeHeld;
+        await route.fulfill({
+          status: 200,
+          contentType: "application/javascript",
+          body: STRIPE_STUB,
+        });
+      });
+      const priceIds: string[] = [];
+      await page.route("**/api/backend/billing/checkout", async (route) => {
+        const { priceId } = route.request().postDataJSON() as {
+          priceId: string;
+        };
+        priceIds.push(priceId);
+        await route.fulfill(
+          fulfillJson(200, {
+            url: "http://localhost:3000/?checkout=complete",
+            clientSecret: `cs_test_secret_${priceId}`,
+          }),
+        );
+      });
+
+      await page.goto("/upgrade");
+      await page.getByRole("tab", { name: "Annual" }).click();
+      await page.getByRole("button", { name: "Select Ultimate" }).click();
+      await expect(page).toHaveURL(/\/upgrade\?plan=ultimate$/);
+      releaseStripe();
+
+      await expect(
+        page.locator('[data-mounted="cs_test_secret_price_ultimate_year"]'),
+      ).toHaveCount(1);
+      expect(priceIds).toEqual(["price_ultimate_year"]);
+    });
+
     test("keeps the hosted button without a key", async ({ page, context }) => {
       await seedViewer(context, "checkout-pending");
       await seedSession(page);
