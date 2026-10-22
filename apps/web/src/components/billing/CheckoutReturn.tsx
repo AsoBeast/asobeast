@@ -2,13 +2,15 @@
 
 import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { reconcileBilling } from "@/lib/api";
 import {
   checkoutReturned,
   checkoutSessionId,
+  trialStartedToast,
   urlWithoutCheckout,
 } from "@/lib/checkout-return";
-import { invalidateAuth } from "@/lib/queries";
+import { accountPlanOptions, invalidateAuth } from "@/lib/queries";
 
 export function CheckoutReturn() {
   const client = useQueryClient();
@@ -19,13 +21,20 @@ export function CheckoutReturn() {
     settled.current = true;
 
     void reconcileBilling(checkoutSessionId(window.location.search))
-      .then(() => {
+      .then(async () => {
         const { pathname, search } = window.location;
         window.history.replaceState(
           null,
           "",
           urlWithoutCheckout(pathname, search),
         );
+        invalidateAuth(client);
+        const plan = await client.fetchQuery({
+          ...accountPlanOptions,
+          staleTime: 0,
+        });
+        const welcome = trialStartedToast(plan);
+        if (welcome) toast.success(welcome);
       })
       .catch(() => undefined)
       .finally(() => {

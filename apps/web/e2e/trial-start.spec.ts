@@ -5,6 +5,7 @@ import { expect, test } from "./reporting.mts";
 import {
   CATALOG,
   DAY_MS,
+  OFFERED_PLAN,
   openBilling,
   openRegistration,
 } from "./trial-plans.mts";
@@ -244,5 +245,49 @@ test.describe("the billing wall", () => {
       ).toBeVisible();
       await expect(page.locator("[data-mounted]")).toHaveCount(0);
     });
+  });
+
+  test("returning from a trial checkout reconciles once and welcomes the trial", async ({
+    page,
+    context,
+  }) => {
+    const renewsAt = new Date(Date.now() + 7 * DAY_MS).toISOString();
+    await seedViewer(context, "trialing");
+    await seedSession(page);
+    await openBilling(page, {
+      ...OFFERED_PLAN,
+      plan: "indie",
+      displayName: "Indie",
+      entitled: true,
+      subscribed: true,
+      hasBillingAccount: true,
+      trialOffer: null,
+      trialing: true,
+      billingInterval: "month",
+      trialEndsAt: renewsAt,
+      renewsAt,
+    });
+    let reconciles = 0;
+    await page.route("**/api/backend/billing/reconcile", async (route) => {
+      reconciles += 1;
+      await route.fulfill(
+        fulfillJson(200, {
+          checked: 1,
+          corrected: 1,
+          orphanSubscriptions: [],
+          unreconciled: [],
+        }),
+      );
+    });
+
+    await page.goto("/?checkout=complete&session_id=cs_test_1");
+
+    await expect(
+      page.getByText(
+        `Your free trial has started. The first charge is on ${formatDate(renewsAt)}.`,
+      ),
+    ).toBeVisible();
+    await expect(page).toHaveURL("http://localhost:3000/");
+    expect(reconciles).toBe(1);
   });
 });

@@ -444,6 +444,7 @@ const VIEWER_USERS: Record<Viewer, Partial<AuthUser>> = {
     entitled: false,
     emailVerified: false,
     trialAwaitsConfirmation: true,
+    trialAwaitsCheckout: true,
   },
   "checkout-pending": {
     plan: "free",

@@ -34,8 +34,8 @@ const BY_STATUS: Record<number, Explanation> = {
     action: { kind: "link", href: "/login", label: "Sign in" },
   },
   402: {
-    title: "Your trial has ended",
-    body: "Choose a plan to keep tracking keywords and running the daily pipeline.",
+    title: "Collection is paused",
+    body: "Choose a plan, or start your free trial, to keep tracking keywords and running the daily pipeline.",
     action: { kind: "link", href: "/upgrade", label: "See plans" },
   },
   403: {

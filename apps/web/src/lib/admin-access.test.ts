@@ -18,22 +18,24 @@ describe("adminAccessOf", () => {
     expect(adminAccessOf({ ...OPERATOR, entitled: false })).toBe("needs-plan");
   });
 
-  it("asks an operator who has not confirmed their email to confirm it", () => {
+  it("sends an operator who may start the trial to the trial", () => {
     expect(
       adminAccessOf({
         ...OPERATOR,
         entitled: false,
         trialAwaitsConfirmation: true,
+        trialAwaitsCheckout: true,
       }),
-    ).toBe("awaits-confirmation");
+    ).toBe("awaits-checkout");
   });
 
-  it("does not ask a confirmed operator whose trial ended to confirm anything", () => {
+  it("needs a plan for an operator who is not offered the trial, confirmed or not", () => {
     expect(
       adminAccessOf({
         ...OPERATOR,
         entitled: false,
-        trialAwaitsConfirmation: false,
+        trialAwaitsConfirmation: true,
+        trialAwaitsCheckout: false,
       }),
     ).toBe("needs-plan");
   });
