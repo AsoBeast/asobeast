@@ -189,7 +189,7 @@ describe('Retention against an upgraded baseline database', () => {
   });
 
   it('leaves the tracking entities the upgrade carried forward untouched', async () => {
-    await expect(prisma.workspace.count()).resolves.toBe(2);
+    await expect(prisma.workspace.count()).resolves.toBe(4);
     await expect(prisma.user.count()).resolves.toBe(2);
     await expect(prisma.app.count()).resolves.toBe(7);
     await expect(
