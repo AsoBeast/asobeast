@@ -16,10 +16,12 @@ The chart covers every market the app tracks, so each series is named with its s
 | What you see | What it means |
 | --- | --- |
 | A line rising toward the top | Position improving |
-| A gap in the line | The app was checked and not found within the captured depth |
-| `>200` in the table | Same thing, expressed as a bound from that row's own depth |
+| A gap with a hollow marker on the depth line | The app was checked and not found within the captured depth |
+| A gap with no marker | No check finished that day, and the tooltip says **Not checked** |
+| A single dot | One checked day between two days without a position |
+| `>200` in the table | Checked and not found, expressed as a bound from that row's own depth |
 
-A gap is never zero. See [Positions and rank depth](/concepts/positions) for why treating it as zero inverts every trend.
+Neither gap is zero. See [Positions and rank depth](/concepts/positions) for why treating it as zero inverts every trend.
 
 Use the range picker to change the window. Dates are UTC, so a chart point labelled with a date is the observation for that UTC day.
 

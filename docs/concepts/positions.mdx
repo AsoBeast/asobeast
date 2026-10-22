@@ -37,9 +37,15 @@ As a bound derived from that row's own depth, never as `0`. A row captured at de
 
 Reading the bound from the row rather than from a constant matters, because historical rows may have been captured at a different depth than today's.
 
+## How do I know a position is current?
+
+Every tracked keyword reports `latestCheckedOn`, the UTC day of its newest check, whatever that check found. It is `null` for a keyword that has never been checked.
+
+The daily run checks every active keyword, so a newest check from today or yesterday UTC is current. An older one means the checks since that day did not finish, for example because the store refused the search. A failed check never writes a row, so it can never show up as a drop. The keywords table then shows the day of the last check beside the position, and hides the change since yesterday, because that change compares the last check with the day before it. A paused keyword is not checked on purpose and shows no day.
+
 ## How are positions charted?
 
-Ranking charts use a reversed Y axis, so position 1 sits at the top and an improving line rises. A `null` breaks the series rather than dropping it to the bottom of the chart.
+Ranking charts use a reversed Y axis, so position 1 sits at the top and an improving line rises. A `null` breaks the series rather than dropping it to the bottom of the chart. Every UTC day from the first check in the range to yesterday, or to today once today has a check, sits on the chart's axis. A day without a check therefore leaves a gap in the line with no marker, while a check that did not find the app leaves a gap with a hollow marker at the depth line. A ranked day between two gaps is drawn as a dot.
 
 <Warning>
   If you consume the API, treat `null` as absent rather than as `0`. Coercing `null` to zero makes every unranked keyword look like the best possible result and inverts every trend, average and delta you compute.
