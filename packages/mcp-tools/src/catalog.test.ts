@@ -76,6 +76,9 @@ describe("the tool catalog", () => {
 
     expect(description).toContain("latestCheckedOn");
     expect(description).toContain("older than yesterday");
+    expect(description).toContain(
+      "a paused keyword is not checked and keeps the day of its last check",
+    );
     expect(description).not.toMatch(/>\d+/);
   });
 
