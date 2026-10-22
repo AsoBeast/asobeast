@@ -5,6 +5,8 @@ import { expect, test } from "./session.mts";
 import { hoverForTooltip } from "./hover.mts";
 import { hydrated } from "./hydrated.mts";
 import { seedCookies } from "./routes.mts";
+import { utcDaysAgo } from "./fixtures.mts";
+import { formatDayMonth } from "../src/lib/format";
 
 test("table renders fixture keywords and distinguishes a paused row", async ({
   page,
@@ -264,6 +266,29 @@ test("position deltas render arrows, a bare position and the captured-depth mark
 
   const unrankedRow = page.getByRole("row", { name: /productivity app/ });
   await expect(unrankedRow).toContainText(">200");
+});
+
+test("a stale position names the day of its last check", async ({ page }) => {
+  await page.goto("/apps/app-1/keywords");
+
+  const staleRow = page.getByRole("row", { name: /study timer/ });
+  await expect(staleRow).toContainText(
+    `Last checked ${formatDayMonth(utcDaysAgo(3))}`,
+  );
+
+  await staleRow
+    .getByRole("button", { name: "Position facts: study timer" })
+    .click();
+  await expect(page.getByRole("dialog")).toContainText(
+    "the checks since then did not finish",
+  );
+
+  await expect(
+    page.getByRole("row", { name: /focus timer/ }),
+  ).not.toContainText("Last checked");
+  await expect(
+    page.getByRole("row", { name: /time blocking/ }),
+  ).not.toContainText("Last checked");
 });
 
 test("the seven day delta announces its direction, not only its colour", async ({

@@ -1,0 +1,96 @@
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, it } from "vitest";
+import type { TrackedKeywordItem } from "@asobeast/shared";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { PositionCell } from "./keyword-cells";
+
+const TODAY = "2026-10-22";
+
+const keyword = (over: Partial<TrackedKeywordItem>): TrackedKeywordItem => ({
+  keywordId: "kw-1",
+  text: "focus timer",
+  tags: [],
+  note: null,
+  country: "us",
+  serpVolatility7d: null,
+  source: "TITLE",
+  active: true,
+  latestPosition: 7,
+  latestDepth: 200,
+  latestCheckedOn: TODAY,
+  previousPosition: 5,
+  positionDelta1d: 2,
+  positionDelta7d: null,
+  traffic: 55,
+  difficulty: 4,
+  volume: 5000,
+  relevance: 90,
+  opportunity: 82,
+  bucket: "primary",
+  scoredAt: "2026-10-22",
+  scoreProvenance: null,
+  ...over,
+});
+
+const render = (row: TrackedKeywordItem) =>
+  renderToStaticMarkup(
+    <TooltipProvider>
+      <PositionCell keyword={row} today={TODAY} />
+    </TooltipProvider>,
+  );
+
+describe("PositionCell", () => {
+  it("W-POS-01 names the day of a stale check and hides the daily change", () => {
+    const markup = render(keyword({ latestCheckedOn: "2026-10-19" }));
+
+    expect(markup).toContain("Last checked");
+    expect(markup).toContain("Oct 19");
+    expect(markup).toContain("Position facts");
+    expect(markup).not.toContain("since yesterday");
+  });
+
+  it("W-POS-02 a fresh check keeps the daily change and no hint", () => {
+    const markup = render(keyword({ latestCheckedOn: "2026-10-21" }));
+
+    expect(markup).toContain("since yesterday");
+    expect(markup).not.toContain("Last checked");
+    expect(markup).not.toContain("Position facts");
+  });
+
+  it("W-POS-03 a paused row shows no hint", () => {
+    expect(
+      render(keyword({ active: false, latestCheckedOn: "2026-10-01" })),
+    ).not.toContain("Last checked");
+  });
+
+  it("W-POS-04 a row without the field shows no hint", () => {
+    const { latestCheckedOn, ...undated } = keyword({});
+    const markup = render(undated);
+
+    expect(latestCheckedOn).toBe(TODAY);
+    expect(markup).not.toContain("Last checked");
+    expect(markup).toContain("since yesterday");
+  });
+
+  it("W-POS-05 a stale check that did not find the app keeps its bound", () => {
+    const markup = render(
+      keyword({ latestPosition: null, latestCheckedOn: "2026-10-19" }),
+    );
+
+    expect(markup).toContain("&gt;200");
+    expect(markup).toContain("Last checked");
+  });
+
+  it("W-POS-06 a keyword awaiting its first check still reads checking", () => {
+    const markup = render(
+      keyword({
+        latestPosition: null,
+        latestDepth: null,
+        latestCheckedOn: null,
+      }),
+    );
+
+    expect(markup).toContain("Checking…");
+    expect(markup).not.toContain("Last checked");
+  });
+});

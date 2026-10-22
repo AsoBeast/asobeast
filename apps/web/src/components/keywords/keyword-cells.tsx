@@ -25,10 +25,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { formatDateTime } from "@/lib/format";
-import { isChecking } from "@/lib/keyword-checks";
+import { isChecking, staleCheckDay } from "@/lib/keyword-checks";
 import { tagsLabel, visibleTags } from "@/lib/keyword-tags";
 import { grade, gradeLabel, type GradeMetric } from "@/lib/grade";
 import { positionHoldLines } from "./position-hold";
+import { StaleCheck, staleCheckLine } from "./StaleCheck";
 import { cn } from "@/lib/utils";
 
 const OUTDATED_SCORE_DETAIL =
@@ -243,7 +244,13 @@ function volatilityBand(value: number): {
   };
 }
 
-export function PositionCell({ keyword }: { keyword: TrackedKeywordItem }) {
+export function PositionCell({
+  keyword,
+  today,
+}: {
+  keyword: TrackedKeywordItem;
+  today: string;
+}) {
   const label = formatCheckedPosition(
     keyword.latestPosition,
     keyword.latestDepth,
@@ -282,6 +289,7 @@ export function PositionCell({ keyword }: { keyword: TrackedKeywordItem }) {
       </Tooltip>
     );
   }
+  const staleOn = staleCheckDay(keyword, today);
   const position = (
     <span className="numeric font-mono inline-flex items-center gap-1.5">
       {keyword.latestPosition === null ? (
@@ -293,20 +301,26 @@ export function PositionCell({ keyword }: { keyword: TrackedKeywordItem }) {
           label="Position"
         />
       )}
-      <PositionDeltaChip value={keyword.positionDelta1d} />
+      <PositionDeltaChip
+        value={staleOn === null ? keyword.positionDelta1d : null}
+      />
     </span>
   );
-  const hold = positionHoldLines(keyword);
-  if (hold.length === 0) {
+  const facts = [
+    ...(staleOn === null ? [] : [staleCheckLine(staleOn)]),
+    ...positionHoldLines(keyword),
+  ];
+  if (facts.length === 0) {
     return position;
   }
   return (
-    <span className="inline-flex items-center gap-1">
+    <span className="inline-flex items-center gap-1 whitespace-nowrap">
       {position}
+      {staleOn === null ? null : <StaleCheck day={staleOn} />}
       <InfoTip
         label={`Position facts: ${keyword.text}`}
         title="Position facts"
-        summary={hold.join(" · ")}
+        summary={facts.join(" · ")}
       />
     </span>
   );
