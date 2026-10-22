@@ -377,6 +377,20 @@ describe('AccountDeletionService', () => {
       expect(prisma.workspace.update).not.toHaveBeenCalled();
     });
 
+    it('schedules the deletion when stripe no longer holds the trial', async () => {
+      holding('trialing');
+      stripe.cancelAtPeriodEnd.mockRejectedValue(
+        Object.assign(new Error('No such subscription'), {
+          code: 'resource_missing',
+          statusCode: 404,
+        }),
+      );
+
+      await service.request(ACTOR, 'DELETE', NOW);
+
+      expect(prisma.workspace.update).toHaveBeenCalled();
+    });
+
     it('asks stripe nothing when the schedule is cancelled', async () => {
       prisma.workspace.updateMany.mockResolvedValue({ count: 1 });
       prisma.workspace.findUniqueOrThrow.mockResolvedValue({

@@ -10,7 +10,7 @@ import {
   DELETION_CONFIRMATION,
   type WorkspaceDeletionStatus,
 } from '@asobeast/shared';
-import { reasonOf } from '../billing/stripe-errors';
+import { isMissingResource, reasonOf } from '../billing/stripe-errors';
 import { StripeService } from '../billing/stripe.service';
 import { lockRegistration } from '../auth/registration-lock';
 import {
@@ -139,7 +139,15 @@ export class AccountDeletionService {
     ) {
       return;
     }
-    await this.stripe.cancelAtPeriodEnd(subscription.subscriptionId);
+    try {
+      await this.stripe.cancelAtPeriodEnd(subscription.subscriptionId);
+    } catch (error) {
+      if (!isMissingResource(error)) throw error;
+      this.logger.warn(
+        `workspace ${workspaceId} records trial subscription ${subscription.subscriptionId}, which stripe no longer holds; scheduling the deletion without cancelling it`,
+      );
+      return;
+    }
     this.logger.warn(
       `workspace ${workspaceId} scheduled its deletion during a trial, so subscription ${subscription.subscriptionId} now ends with the trial and charges nothing`,
     );
