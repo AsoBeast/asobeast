@@ -3,6 +3,7 @@
 import { Suspense, useDeferredValue } from "react";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
+import type { AppAnnotationItem, VisibilityPoint } from "@asobeast/shared";
 import {
   Area,
   AreaChart,
@@ -15,11 +16,13 @@ import {
   type ChartConfig,
   ChartContainer,
   ChartTooltip,
-  ChartTooltipContent,
 } from "@/components/ui/chart";
+import { SeriesTooltip } from "@/components/charts/SeriesTooltip";
+import { AnnotationTooltipNotes } from "@/components/annotations/AnnotationTooltipNotes";
 import {
   annotationChartLabel,
   annotationLines,
+  annotationsOn,
 } from "@/components/annotations/annotation-lines";
 import {
   Card,
@@ -36,16 +39,16 @@ import {
   ChartStat,
   trendState,
 } from "@/components/charts/ChartStates";
+import { useKeywordScope } from "@/components/app-detail/use-market";
 import {
   CHART_HEIGHT,
   CHART_MARGIN,
   GRID_PROPS,
   seriesColor,
   TIME_AXIS_PROPS,
-  TIME_TOOLTIP_PROPS,
   VALUE_AXIS_PROPS,
 } from "@/components/charts/theme";
-import { useKeywordScope } from "@/components/app-detail/use-market";
+import { formatDayMonth, formatNumber } from "@/lib/format";
 import { annotationsOptions, visibilityOptions } from "@/lib/queries";
 import { todayUtc } from "@/lib/ranges";
 import {
@@ -58,6 +61,44 @@ import { visibilityRangeParser } from "@/lib/search-params";
 const chartConfig = {
   visibility: { label: "Visibility", color: seriesColor(0) },
 } satisfies ChartConfig;
+
+function VisibilityTooltip({
+  active,
+  label,
+  points,
+  annotations,
+}: {
+  active?: boolean;
+  label?: string | number;
+  points: VisibilityPoint[];
+  annotations: AppAnnotationItem[];
+}) {
+  if (!active || label === undefined) return null;
+
+  const point = points.find((candidate) => candidate.date === label);
+  if (!point) return null;
+
+  return (
+    <SeriesTooltip
+      title={formatDayMonth(String(label))}
+      items={[
+        {
+          key: "visibility",
+          index: 0,
+          color: "var(--color-visibility)",
+          label: "Visibility",
+          value: formatNumber(point.visibility),
+          sortBy: point.visibility,
+        },
+      ]}
+      footer={
+        <AnnotationTooltipNotes
+          annotations={annotationsOn(annotations, String(label))}
+        />
+      }
+    />
+  );
+}
 
 function VisibilityChartBody({
   id,
@@ -118,15 +159,21 @@ function VisibilityChartBody({
             strokeDasharray="6 3"
             label={{
               value: annotationChartLabel(annotation.label),
-              position: "insideTopLeft",
+              position: "insideBottomLeft",
               angle: -90,
+              textAnchor: "start",
               fill: "var(--info)",
               fontSize: 10,
             }}
           />
         ))}
         <ChartTooltip
-          content={<ChartTooltipContent {...TIME_TOOLTIP_PROPS} />}
+          content={
+            <VisibilityTooltip
+              points={data.points}
+              annotations={annotations?.annotations ?? []}
+            />
+          }
         />
         <Area
           dataKey="visibility"

@@ -18,9 +18,11 @@ import {
 } from "@/components/ui/chart";
 import { SeriesLegend } from "@/components/charts/SeriesLegend";
 import { SeriesTooltip } from "@/components/charts/SeriesTooltip";
+import { AnnotationTooltipNotes } from "@/components/annotations/AnnotationTooltipNotes";
 import {
   annotationChartLabel,
   annotationLines,
+  annotationsOn,
 } from "@/components/annotations/annotation-lines";
 import {
   CHART_HEIGHT,
@@ -64,10 +66,12 @@ function RankingTooltip({
   active,
   label,
   data,
+  annotations,
 }: {
   active?: boolean;
   label?: string | number;
   data: RankingChartData;
+  annotations: AppAnnotationItem[];
 }) {
   if (!active || label === undefined) return null;
 
@@ -91,7 +95,17 @@ function RankingTooltip({
     };
   });
 
-  return <SeriesTooltip title={formatDayMonth(String(label))} items={items} />;
+  return (
+    <SeriesTooltip
+      title={formatDayMonth(String(label))}
+      items={items}
+      footer={
+        <AnnotationTooltipNotes
+          annotations={annotationsOn(annotations, String(label))}
+        />
+      }
+    />
+  );
 }
 
 export function RankingChart({
@@ -155,8 +169,9 @@ export function RankingChart({
             strokeDasharray="6 3"
             label={{
               value: annotationChartLabel(annotation.label),
-              position: "insideTopLeft",
+              position: "insideBottomLeft",
               angle: -90,
+              textAnchor: "start",
               fill: "var(--info)",
               fontSize: 10,
             }}
@@ -177,7 +192,7 @@ export function RankingChart({
         ) : null}
         <ChartTooltip
           filterNull={false}
-          content={<RankingTooltip data={data} />}
+          content={<RankingTooltip data={data} annotations={annotations} />}
         />
         <ChartLegend
           content={

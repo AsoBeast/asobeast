@@ -4,6 +4,7 @@ import {
   ANNOTATION_LINE_LABEL_MAX,
   annotationChartLabel,
   annotationLines,
+  annotationsOn,
 } from "./annotation-lines";
 
 const annotation = (
@@ -44,6 +45,19 @@ describe("annotationLines", () => {
     );
 
     expect(lines).toEqual([]);
+  });
+});
+
+describe("annotationsOn", () => {
+  const day = annotation();
+  const other = annotation({ id: "ann-2", date: "2026-10-09" });
+
+  it("keeps every annotation pinned to the hovered day", () => {
+    expect(annotationsOn([day, other], "2026-10-08")).toEqual([day]);
+  });
+
+  it("answers an empty day with no annotations", () => {
+    expect(annotationsOn([day, other], "2026-10-07")).toEqual([]);
   });
 });
 
