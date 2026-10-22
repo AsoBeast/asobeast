@@ -27,6 +27,18 @@ Use the range picker to change the window. Dates are UTC, so a chart point label
 
 To share the chart with someone who has no account, print the rankings view or save it as PDF. See [Print a report or save it as PDF](/guides/export-data#print-a-report-or-save-it-as-pdf).
 
+## Mark events on the charts
+
+An annotation is a named event pinned to one UTC day: a release, a listing change you shipped, the start of a campaign. Every chart of the app draws its annotations as vertical dashed lines with the label beside them, so a move on the line reads against what you did that day.
+
+Add annotations on the rankings page of an app: pick a date, write a short label and save. A tag groups the markers of one campaign, and the list keeps every marker with its date for one click removal.
+
+The metadata change lines asobeast draws on its own show what the store reports; annotations show what you did. Both on one chart is usually the whole story.
+
+Agents write annotations too. A token with the write scope carries `add_annotation` and `delete_annotation`, so an agent that ships a listing change can leave the marker itself. See [MCP tool reference](/mcp/tools).
+
+Annotations are plain rows: they never change a position, a score or an alert, and deleting one removes only the line.
+
 ## Inspect a SERP snapshot
 
 For every tracked keyword and day, asobeast keeps the top 10 search results with the app, its position and the listing signals the store returned.
@@ -72,5 +84,9 @@ Any app in a stored SERP snapshot can be added as a competitor in one step, whic
 
   <Card title="Follow category ranks" icon="trophy" href="/guides/category-ranks">
     Free, paid and grossing chart positions.
+  </Card>
+
+  <Card title="MCP tool reference" icon="wrench" href="/mcp/tools">
+    Every tool, including the annotation writes.
   </Card>
 </CardGroup>
