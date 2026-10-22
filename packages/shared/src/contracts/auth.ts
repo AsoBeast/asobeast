@@ -5,6 +5,7 @@ import type {
   PlanName,
   QuotaUsage,
 } from './plans';
+import type { BillingInterval, TrialOffer } from './billing';
 
 export interface AuthStatus {
   billing: boolean;
@@ -24,6 +25,8 @@ export interface AuthUser {
   planExpiresAt: string | null;
   entitled: boolean;
   trialAwaitsConfirmation?: boolean;
+  trialAwaitsCheckout?: boolean;
+  trialing?: boolean;
   tokenScope?: ApiTokenScope;
   platformOperator: boolean;
   suspendedAt?: string | null;
@@ -91,6 +94,9 @@ export interface AccountPlan {
   subscribed: boolean;
   subscriptionStalled?: boolean;
   subscriptionPending?: boolean;
+  trialing?: boolean;
+  trialOffer?: TrialOffer | null;
+  billingInterval?: BillingInterval | null;
   cancelAtPeriodEnd: boolean;
   trialEndsAt: string | null;
   renewsAt: string | null;

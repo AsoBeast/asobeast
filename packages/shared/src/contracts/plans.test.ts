@@ -1,4 +1,14 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
+import type { AccountPlan, AuthUser } from './auth';
+import {
+  CHECKOUT_UIS,
+  type BillingCatalog,
+  type BillingInterval,
+  type BillingSession,
+  type CheckoutRequest,
+  type CheckoutUi,
+  type TrialOffer,
+} from './billing';
 import {
   ON_DEMAND_ACTIONS,
   PAID_PLAN_NAMES,
@@ -7,11 +17,13 @@ import {
   PLAN_NAMES,
   QUOTA_RESOURCES,
   SELF_HOSTED_LIMITS,
+  TRIAL_AI_CALLS_PER_MONTH,
   effectivePlan,
   isPaidPlan,
   nextPlan,
   paidPlanOf,
   planOf,
+  trialingLimits,
 } from './plans';
 
 describe('effectivePlan', () => {
@@ -309,5 +321,47 @@ describe('the monthly ai allowance', () => {
         (value, index) => index === 0 || value > allowances[index - 1],
       ),
     ).toBe(true);
+  });
+});
+
+describe('trialingLimits', () => {
+  it('caps only the ai allowance while trialing', () => {
+    expect(trialingLimits(PLAN_LIMITS.ultimate)).toEqual({
+      ...PLAN_LIMITS.ultimate,
+      aiCallsPerMonth: TRIAL_AI_CALLS_PER_MONTH,
+    });
+  });
+
+  it('keeps the legacy trial plan on the same allowance', () => {
+    expect(PLAN_LIMITS.trial.aiCallsPerMonth).toBe(TRIAL_AI_CALLS_PER_MONTH);
+  });
+
+  it('keeps the trial fields optional', () => {
+    expectTypeOf<AuthUser['trialAwaitsCheckout']>().toEqualTypeOf<
+      boolean | undefined
+    >();
+    expectTypeOf<AuthUser['trialing']>().toEqualTypeOf<boolean | undefined>();
+    expectTypeOf<AccountPlan['trialing']>().toEqualTypeOf<
+      boolean | undefined
+    >();
+    expectTypeOf<AccountPlan['trialOffer']>().toEqualTypeOf<
+      TrialOffer | null | undefined
+    >();
+    expectTypeOf<AccountPlan['billingInterval']>().toEqualTypeOf<
+      BillingInterval | null | undefined
+    >();
+    expectTypeOf<CheckoutRequest['ui']>().toEqualTypeOf<
+      CheckoutUi | undefined
+    >();
+    expectTypeOf<BillingSession['clientSecret']>().toEqualTypeOf<
+      string | undefined
+    >();
+    expectTypeOf<BillingCatalog['publishableKey']>().toEqualTypeOf<
+      string | undefined
+    >();
+  });
+
+  it('names the two checkout uis', () => {
+    expect(CHECKOUT_UIS).toEqual(['hosted', 'embedded']);
   });
 });

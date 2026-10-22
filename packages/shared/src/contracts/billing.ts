@@ -21,10 +21,16 @@ export interface BillingCatalog {
   enabled: boolean;
   prices: BillingPrice[];
   managedPayments?: boolean;
+  publishableKey?: string;
 }
+
+export const CHECKOUT_UIS = ['hosted', 'embedded'] as const;
+
+export type CheckoutUi = (typeof CHECKOUT_UIS)[number];
 
 export interface CheckoutRequest {
   priceId: string;
+  ui?: CheckoutUi;
 }
 
 export interface ReconcileRequest {
@@ -33,6 +39,11 @@ export interface ReconcileRequest {
 
 export interface BillingSession {
   url: string;
+  clientSecret?: string;
+}
+
+export interface TrialOffer {
+  days: number;
 }
 
 export interface BillingReconcileReport {
