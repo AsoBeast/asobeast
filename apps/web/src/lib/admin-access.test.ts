@@ -9,7 +9,7 @@ describe("adminAccessOf", () => {
   });
 
   it("is granted on an instance that does not meter plans", () => {
-    expect(adminAccessOf({ ...OPERATOR, trialAwaitsConfirmation: false })).toBe(
+    expect(adminAccessOf({ ...OPERATOR, trialAwaitsCheckout: false })).toBe(
       "granted",
     );
   });
@@ -23,18 +23,16 @@ describe("adminAccessOf", () => {
       adminAccessOf({
         ...OPERATOR,
         entitled: false,
-        trialAwaitsConfirmation: true,
         trialAwaitsCheckout: true,
       }),
     ).toBe("awaits-checkout");
   });
 
-  it("needs a plan for an operator who is not offered the trial, confirmed or not", () => {
+  it("needs a plan for an operator who is not offered the trial", () => {
     expect(
       adminAccessOf({
         ...OPERATOR,
         entitled: false,
-        trialAwaitsConfirmation: true,
         trialAwaitsCheckout: false,
       }),
     ).toBe("needs-plan");

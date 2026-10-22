@@ -7,10 +7,7 @@ export type ClosedAdminAccess = Exclude<AdminAccess, "granted" | "denied">;
 
 type AdminViewer = Pick<
   AuthUser,
-  | "platformOperator"
-  | "entitled"
-  | "trialAwaitsConfirmation"
-  | "trialAwaitsCheckout"
+  "platformOperator" | "entitled" | "trialAwaitsCheckout"
 >;
 
 export function adminAccessOf(viewer: AdminViewer | null): AdminAccess {
