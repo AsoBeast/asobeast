@@ -13,6 +13,7 @@ import {
   storeLabel,
 } from "@/lib/format";
 import { AppCardLink } from "@/components/apps/AppCardLink";
+import { DelistedBadge } from "@/components/apps/DelistedBadge";
 import { DeleteAppMenu } from "@/components/apps/DeleteAppMenu";
 import { AppFacts } from "./AppFacts";
 import { setupChipText } from "./setup-chip";
@@ -42,6 +43,7 @@ export function AppBadges({ app }: { app: PortfolioApp }) {
       >
         {app.country.toUpperCase()}
       </Badge>
+      {app.delistedAt ? <DelistedBadge since={app.delistedAt} /> : null}
       {setup ? (
         <Badge variant="info" asChild className="relative z-20 min-h-6 w-fit">
           <Link href={`/apps/${app.id}/setup`}>{setup}</Link>

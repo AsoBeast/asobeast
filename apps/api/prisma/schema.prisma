@@ -196,6 +196,7 @@ model App {
   country      String           @default("us")
   name         String?
   iconUrl      String?
+  delistedAt   DateTime?
   isCompetitor Boolean          @default(false)
   primaryAppId String?
   primaryApp   App?             @relation("AppCompetitors", fields: [primaryAppId, workspaceId], references: [id, workspaceId], onDelete: Cascade)

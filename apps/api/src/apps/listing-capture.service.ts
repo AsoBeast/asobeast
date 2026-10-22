@@ -15,6 +15,7 @@ import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
 import { StoreAppNotFoundError } from '../store-providers/errors';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { currencyOf } from '../store-providers/raw-facts';
+import { NormalizedApp } from '../store-providers/types';
 import { snapshotIcon, toSnapshotData } from './apps.mapper';
 import { toChangeSnapshot } from './change-snapshot';
 import { withKnownSubtitle } from './known-subtitle';
@@ -109,9 +110,7 @@ export class ListingCaptureService {
     market: string,
   ): Promise<SnapshotDiffResult> {
     const home = market === app.country;
-    const normalized = await this.egress.through(app.store, market, () =>
-      this.registry.get(app.store).getApp(app.storeAppId, market),
-    );
+    const normalized = await this.readListing(app, market);
     const previous = await this.prisma.appSnapshot.findFirst({
       where: { appId: app.id, ...listingIn(app.country, market) },
       orderBy: NEWEST_FIRST,
@@ -129,7 +128,11 @@ export class ListingCaptureService {
       if (home) {
         await tx.app.update({
           where: { id: app.id },
-          data: { name: normalized.title, iconUrl: normalized.iconUrl },
+          data: {
+            name: normalized.title,
+            iconUrl: normalized.iconUrl,
+            delistedAt: null,
+          },
         });
       }
       pending = await this.screenshots.record(
@@ -185,6 +188,22 @@ export class ListingCaptureService {
       country: market,
       currency: currencyOf(snapshot.raw),
     };
+  }
+
+  private async readListing(app: App, market: string): Promise<NormalizedApp> {
+    try {
+      return await this.egress.through(app.store, market, () =>
+        this.registry.get(app.store).getApp(app.storeAppId, market),
+      );
+    } catch (error: unknown) {
+      if (error instanceof StoreAppNotFoundError && market === app.country) {
+        await this.prisma.app.updateMany({
+          where: { id: app.id, delistedAt: null },
+          data: { delistedAt: new Date() },
+        });
+      }
+      throw error;
+    }
   }
 
   private async requestDetection(appId: string, market: string): Promise<void> {
