@@ -1,4 +1,4 @@
-import type { PaidPlanName } from './plans';
+import { PLANS, type PaidPlanName } from './plans';
 
 export const CHECKOUT_RETURN_PARAM = 'checkout';
 
@@ -14,6 +14,14 @@ export function billingIntervalOf(
   value: string | null | undefined,
 ): BillingInterval | null {
   return BILLING_INTERVALS.find((interval) => interval === value) ?? null;
+}
+
+export function planPriceLabel(
+  plan: PaidPlanName,
+  interval: BillingInterval,
+): string {
+  const { monthlyUsd, annualUsd } = PLANS[plan].prices;
+  return `$${(interval === 'month' ? monthlyUsd : annualUsd) ?? 0} per ${interval}`;
 }
 
 export interface BillingPrice {

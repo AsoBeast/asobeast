@@ -3,6 +3,7 @@ import type { AccountPlan, AuthUser } from './auth';
 import {
   CHECKOUT_UIS,
   billingIntervalOf,
+  planPriceLabel,
   type BillingCatalog,
   type BillingInterval,
   type BillingSession,
@@ -368,6 +369,12 @@ describe('trialingLimits', () => {
     expect(billingIntervalOf('day')).toBeNull();
     expect(billingIntervalOf(null)).toBeNull();
     expect(billingIntervalOf(undefined)).toBeNull();
+  });
+
+  it('names the price of a plan per interval', () => {
+    expect(planPriceLabel('indie', 'month')).toBe('$10 per month');
+    expect(planPriceLabel('indie', 'year')).toBe('$100 per year');
+    expect(planPriceLabel('ultimate', 'month')).toBe('$99 per month');
   });
 
   it('names the two checkout uis', () => {
