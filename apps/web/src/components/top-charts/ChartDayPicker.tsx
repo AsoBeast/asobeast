@@ -8,6 +8,7 @@ import {
   type KeyboardEvent,
 } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
+import { addUtcDays } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -17,7 +18,6 @@ import {
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import {
-  addUtcDays,
   monthLabel,
   monthOf,
   monthWeeks,
