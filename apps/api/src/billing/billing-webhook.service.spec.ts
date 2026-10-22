@@ -15,6 +15,7 @@ import { BillingWebhookService } from './billing-webhook.service';
 import { AccountNotifier } from './account-notifier.service';
 import { BillingEventQueue } from './billing-event-queue';
 import { PriceCatalog } from './price-catalog';
+import type { TrialStarts } from './trial-starts';
 import { StripeService } from './stripe.service';
 import { WORKSPACE_METADATA_KEY } from './workspace-link';
 
@@ -90,6 +91,7 @@ describe('BillingWebhookService', () => {
     const constructEvent = jest.fn().mockReturnValue(eventOf());
     const notify = jest.fn().mockResolvedValue('delivered');
     const enqueue = jest.fn().mockResolvedValue(undefined);
+    const settle = jest.fn().mockResolvedValue('skipped');
     const notifier = {
       notify,
     } as unknown as AccountNotifier;
@@ -145,9 +147,11 @@ describe('BillingWebhookService', () => {
       notifier,
       config,
       { enqueue } as unknown as BillingEventQueue,
+      { settle } as unknown as TrialStarts,
     );
 
     return {
+      settle,
       service,
       create,
       update,
@@ -186,6 +190,7 @@ describe('BillingWebhookService', () => {
       {} as unknown as AccountNotifier,
       { get: () => undefined } as unknown as ConfigService<Env, true>,
       {} as unknown as BillingEventQueue,
+      {} as unknown as TrialStarts,
     );
 
     expect(() => service.verify(Buffer.from('{}'), 'sig')).toThrow(
@@ -270,6 +275,42 @@ describe('BillingWebhookService', () => {
       billingCustomerId: 'cus_1',
       planExpiresAt: new Date(PERIOD_END * 1000),
     });
+  });
+
+  it('settles the trial claims after the projection it applied', async () => {
+    const { service, settle, workspaceUpdate } = build({
+      stored: { id: 'evt_1', processedAt: null, payload: eventOf() },
+    });
+
+    await service.process('evt_1');
+
+    expect(settle).toHaveBeenCalledWith(
+      expect.objectContaining({ id: WORKSPACE }),
+      expect.objectContaining({ id: 'sub_1' }),
+    );
+    expect(workspaceUpdate.mock.invocationCallOrder[0]).toBeLessThan(
+      settle.mock.invocationCallOrder[0],
+    );
+  });
+
+  it.each([
+    [
+      'an event older than the state',
+      {
+        id: WORKSPACE,
+        subscriptionEventAt: new Date(1_900_000_000 * 1000),
+      },
+    ],
+    ['a subscription it cannot place', null],
+  ])('settles no claim for %s', async (_label, workspace) => {
+    const { service, settle } = build({
+      stored: { id: 'evt_1', processedAt: null, payload: eventOf() },
+      workspace,
+    });
+
+    await service.process('evt_1');
+
+    expect(settle).not.toHaveBeenCalled();
   });
 
   it('reopens truncated capacity when a paid plan takes effect', async () => {

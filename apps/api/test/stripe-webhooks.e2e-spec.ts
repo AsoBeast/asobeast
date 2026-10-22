@@ -14,6 +14,7 @@ import Stripe from 'stripe';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
+import { BillingReconciler } from '../src/billing/billing-reconciler.service';
 import { BillingWebhookService } from '../src/billing/billing-webhook.service';
 import { HANDLED_EVENTS } from '../src/billing/webhook-events';
 import { WORKSPACE_METADATA_KEY } from '../src/billing/workspace-link';
@@ -26,7 +27,12 @@ import { isEntitled } from '../src/auth/entitlement';
 import { sha256 } from '../src/auth/password-hash';
 import { QUEUES } from '../src/jobs/jobs.types';
 import { restoreAuthEnv } from './helpers/auth-env';
-import { fakeStripe, type FakeStripe } from './helpers/fake-stripe';
+import {
+  fakeStripe,
+  paymentMethod,
+  type FakeStripe,
+} from './helpers/fake-stripe';
+import { cardClaimKey, trialClaimKey } from './helpers/trial-claim-key';
 import { testDb } from './helpers/test-db';
 import { obliterateQueues, pauseQueues } from './obliterate-queues';
 
@@ -465,7 +471,22 @@ describe('Stripe webhooks', () => {
       return response.body as AuthUser;
     };
 
+    const OWNER_MAILBOX = trialClaimKey('trial-owner@example.com');
+    const CARD = cardClaimKey('fp_TestCard');
+
+    const claimKeys = async () =>
+      (await prisma.trialClaim.findMany({ select: { key: true } }))
+        .map(({ key }) => key)
+        .sort();
+
     beforeEach(async () => {
+      await prisma.$executeRawUnsafe('TRUNCATE TABLE "TrialClaim"');
+      fake.paymentMethodStore.set(
+        'pm_TestCard',
+        paymentMethod({
+          card: { fingerprint: 'fp_TestCard' } as Stripe.PaymentMethod.Card,
+        }),
+      );
       const owner = await prisma.user.create({
         data: {
           workspaceId: WORKSPACE,
@@ -500,6 +521,66 @@ describe('Stripe webhooks', () => {
         trialing: true,
         trialAwaitsCheckout: false,
       });
+    });
+
+    it('claims the mailbox and the card of the first trial', async () => {
+      await project('customer.subscription.trialing');
+
+      await expect(claimKeys()).resolves.toEqual([OWNER_MAILBOX, CARD].sort());
+      expect((await workspaceRow()).trialClaimedAt).not.toBeNull();
+      expect(fake.subscriptionUpdates).toEqual([]);
+    });
+
+    it.each([
+      ['mailbox', OWNER_MAILBOX],
+      ['card', CARD],
+    ])('ends a second trial of the same %s at stripe', async (_claim, key) => {
+      await prisma.trialClaim.create({ data: { key } });
+
+      await project('customer.subscription.trialing');
+
+      expect(fake.subscriptionUpdates).toEqual([
+        {
+          params: { id: SUBSCRIPTION, trial_end: 'now' },
+          idempotencyKey: `trial-end:${SUBSCRIPTION}`,
+        },
+      ]);
+      expect((await workspaceRow()).trialClaimedAt).not.toBeNull();
+      expect(subscriptions.get(SUBSCRIPTION)?.status).toBe('active');
+    });
+
+    it('settles the claims once when the reconcile lands before the webhook', async () => {
+      subscriptions.set(
+        SUBSCRIPTION,
+        subscriptionOf('customer.subscription.trialing'),
+      );
+
+      await app.get(BillingReconciler).reconcileOne(WORKSPACE);
+      const settledAt = (await workspaceRow()).trialClaimedAt;
+      await deliver('customer.subscription.trialing');
+
+      expect(settledAt).not.toBeNull();
+      expect((await workspaceRow()).trialClaimedAt).toEqual(settledAt);
+      await expect(claimKeys()).resolves.toEqual([OWNER_MAILBOX, CARD].sort());
+      expect(fake.subscriptionUpdates).toEqual([]);
+    });
+
+    it('settles the claims once when the reconcile and the webhook race', async () => {
+      const event = fixture('customer.subscription.trialing');
+      subscriptions.set(
+        SUBSCRIPTION,
+        subscriptionOf('customer.subscription.trialing'),
+      );
+      await send(event).expect(200);
+
+      await Promise.all([
+        app.get(BillingReconciler).reconcileOne(WORKSPACE),
+        webhook.process(event.id),
+      ]);
+
+      await expect(claimKeys()).resolves.toEqual([OWNER_MAILBOX, CARD].sort());
+      expect((await workspaceRow()).trialClaimedAt).not.toBeNull();
+      expect(fake.subscriptionUpdates).toEqual([]);
     });
 
     it('keeps the trial dates when the trial converts', async () => {

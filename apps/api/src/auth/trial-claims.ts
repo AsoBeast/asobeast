@@ -6,6 +6,8 @@ import { mailboxOf } from './mailbox-key';
 
 const PURPOSE = 'trial-claim';
 
+const CARD_PURPOSE = `${PURPOSE}:card`;
+
 export interface TrialClaimStore {
   trialClaim: {
     findUnique(args: { where: { key: string } }): Promise<unknown>;
@@ -21,8 +23,16 @@ export class TrialClaims {
   constructor(private readonly config: ConfigService<Env, true>) {}
 
   keyOf(email: string): string {
+    return this.digest(`${PURPOSE}:${mailboxOf(email)}`);
+  }
+
+  cardKeyOf(fingerprint: string): string {
+    return this.digest(`${CARD_PURPOSE}:${fingerprint}`);
+  }
+
+  private digest(material: string): string {
     return createHmac('sha256', this.config.get('AUTH_SECRET', { infer: true }))
-      .update(`${PURPOSE}:${mailboxOf(email)}`)
+      .update(material)
       .digest('base64url');
   }
 
@@ -37,9 +47,20 @@ export class TrialClaims {
     return (await this.claimAll(db, [email])) === 1;
   }
 
-  async claimAll(db: TrialClaimStore, emails: string[]): Promise<number> {
+  async claimCard(db: TrialClaimStore, fingerprint: string): Promise<boolean> {
+    return (await this.insert(db, [this.cardKeyOf(fingerprint)])) === 1;
+  }
+
+  claimAll(db: TrialClaimStore, emails: string[]): Promise<number> {
+    return this.insert(
+      db,
+      emails.map((email) => this.keyOf(email)),
+    );
+  }
+
+  private async insert(db: TrialClaimStore, keys: string[]): Promise<number> {
     const { count } = await db.trialClaim.createMany({
-      data: emails.map((email) => ({ key: this.keyOf(email) })),
+      data: keys.map((key) => ({ key })),
       skipDuplicates: true,
     });
     return count;

@@ -28,6 +28,7 @@ import {
 } from './subscription-state';
 import { StripeService } from './stripe.service';
 import { effectOf } from './subscription-status';
+import { TrialStarts } from './trial-starts';
 import { belongsToWorkspace } from './workspace-link';
 
 const RECONCILE_JUSTIFICATION =
@@ -45,6 +46,7 @@ export class BillingReconciler {
     private readonly prisma: PrismaService,
     private readonly crossTenant: CrossTenantAccess,
     @InjectQueue(QUEUES.BILLING) private readonly queue: Queue,
+    private readonly trialStarts: TrialStarts,
   ) {}
 
   reconcile(): Promise<BillingReconcileReport> {
@@ -144,9 +146,12 @@ export class BillingReconciler {
     sessionId?: string,
   ): Promise<Outcome> {
     try {
-      return (await this.correct(workspace, sessionId))
-        ? 'corrected'
-        : 'agreed';
+      const desired = await this.desiredState(workspace, sessionId);
+      const corrected = await this.correct(workspace, desired?.state ?? null);
+      if (desired) {
+        await this.trialStarts.settle(workspace, desired.subscription);
+      }
+      return corrected ? 'corrected' : 'agreed';
     } catch (error) {
       this.logger.error(
         `workspace ${workspace.id} could not be reconciled against Stripe, so it keeps ${workspace.plan}: ${reasonOf(error)}`,
@@ -157,9 +162,8 @@ export class BillingReconciler {
 
   private async correct(
     workspace: Workspace,
-    sessionId?: string,
+    desired: SubscriptionState | null,
   ): Promise<boolean> {
-    const desired = await this.desiredState(workspace, sessionId);
     if (!desired) return this.revokeUnknownSubscription(workspace);
 
     if (matches(workspace, desired)) return false;
@@ -177,7 +181,7 @@ export class BillingReconciler {
   private async desiredState(
     workspace: Workspace,
     sessionId?: string,
-  ): Promise<SubscriptionState | null> {
+  ): Promise<DesiredSubscription | null> {
     const completed = sessionId
       ? await this.completedSubscription(workspace, sessionId)
       : null;
@@ -187,7 +191,7 @@ export class BillingReconciler {
       : ((await this.adoptableSubscription(workspace)) ?? stored);
     if (!subscription) return null;
 
-    return stateFrom(subscription, this.prices);
+    return { subscription, state: stateFrom(subscription, this.prices) };
   }
 
   private async completedSubscription(
@@ -321,6 +325,11 @@ export class BillingReconciler {
       rows.flatMap((row) => (row.subscriptionId ? [row.subscriptionId] : [])),
     );
   }
+}
+
+interface DesiredSubscription {
+  subscription: Stripe.Subscription;
+  state: SubscriptionState;
 }
 
 const ACTIVE_ENOUGH = new Set<Stripe.Subscription.Status>([

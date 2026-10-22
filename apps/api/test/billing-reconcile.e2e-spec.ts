@@ -89,7 +89,9 @@ describe('Billing reconcile (e2e)', () => {
       trialStartedAt: new Date(1_800_000_150 * 1000),
       trialEndsAt: new Date(1_800_604_950 * 1000),
       billingInterval: 'month',
+      trialClaimedAt: expect.any(Date) as Date,
     });
+    await expect(harness.prisma.trialClaim.count()).resolves.toBe(1);
   });
 
   it('revokes a plan stripe cannot back, ten times an hour', async () => {

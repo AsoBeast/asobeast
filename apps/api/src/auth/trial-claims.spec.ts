@@ -109,4 +109,26 @@ describe('TrialClaims', () => {
       ).resolves.toBe(2);
     });
   });
+
+  describe('the card', () => {
+    it('keys a fingerprint apart from a mailbox of the same text', () => {
+      const claims = claimsWith(SECRET);
+
+      expect(claims.cardKeyOf('fp_1')).toMatch(/^[A-Za-z0-9_-]{43}$/);
+      expect(claims.cardKeyOf('fp_1')).not.toBe(claims.keyOf('fp_1'));
+      expect(claims.cardKeyOf('fp_1')).not.toBe(claims.cardKeyOf('fp_2'));
+    });
+
+    it('claims a card once', async () => {
+      const claims = claimsWith(SECRET);
+
+      await expect(claims.claimCard(db, 'fp_1')).resolves.toBe(true);
+      createMany.mockResolvedValue({ count: 0 });
+      await expect(claims.claimCard(db, 'fp_1')).resolves.toBe(false);
+      expect(createMany).toHaveBeenCalledWith({
+        data: [{ key: claims.cardKeyOf('fp_1') }],
+        skipDuplicates: true,
+      });
+    });
+  });
 });

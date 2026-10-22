@@ -22,6 +22,7 @@ import { PriceCatalog, UnknownPriceError } from './price-catalog';
 import { nextPhasePlan, scheduleIdOf } from './scheduled-plan';
 import type { SubscriptionStatus } from './subscription-status';
 import { projectionOf, stateFrom } from './subscription-state';
+import { TrialStarts } from './trial-starts';
 import { StripeService } from './stripe.service';
 import {
   customerIdOfEvent,
@@ -51,6 +52,7 @@ export class BillingWebhookService {
     private readonly notifier: AccountNotifier,
     private readonly config: ConfigService<Env, true>,
     private readonly events: BillingEventQueue,
+    private readonly trialStarts: TrialStarts,
   ) {}
 
   verify(payload: Buffer, signature: string | undefined): Stripe.Event {
@@ -262,6 +264,7 @@ export class BillingWebhookService {
     this.logger.log(
       `workspace ${workspace.id} is now ${state.plan} (${state.status})`,
     );
+    await this.trialStarts.settle(workspace, subscription);
     return 'applied';
   }
 

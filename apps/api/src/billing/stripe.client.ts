@@ -21,7 +21,8 @@ export interface StripeApi {
       'create' | 'retrieve' | 'expire'
     >;
   };
-  subscriptions: Pick<Stripe['subscriptions'], 'list' | 'retrieve'>;
+  subscriptions: Pick<Stripe['subscriptions'], 'list' | 'retrieve' | 'update'>;
+  paymentMethods: Pick<Stripe['paymentMethods'], 'retrieve'>;
   prices: Pick<Stripe['prices'], 'list'>;
   subscriptionSchedules: Pick<Stripe['subscriptionSchedules'], 'retrieve'>;
   billingPortal: {

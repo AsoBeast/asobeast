@@ -93,6 +93,18 @@ export class StripeService {
     return this.stripe.subscriptions.retrieve(id);
   }
 
+  endTrialNow(id: string): Promise<Stripe.Subscription> {
+    return this.stripe.subscriptions.update(
+      id,
+      { trial_end: 'now' },
+      { idempotencyKey: `trial-end:${id}` },
+    );
+  }
+
+  retrievePaymentMethod(id: string): Promise<Stripe.PaymentMethod> {
+    return this.stripe.paymentMethods.retrieve(id);
+  }
+
   listActiveSubscriptions(): AsyncIterable<Stripe.Subscription> {
     return this.stripe.subscriptions.list({ status: 'all', limit: 100 });
   }

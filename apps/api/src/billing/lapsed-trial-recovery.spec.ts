@@ -13,6 +13,7 @@ import { BillingReconciler } from './billing-reconciler.service';
 import { BillingService } from './billing.service';
 import { PriceCatalog } from './price-catalog';
 import { StripeService } from './stripe.service';
+import type { TrialStarts } from './trial-starts';
 import { WORKSPACE_METADATA_KEY } from './workspace-link';
 
 const WORKSPACE = 'ws_lapsed';
@@ -113,6 +114,7 @@ function build(held: Stripe.Subscription[]) {
     {
       getBackend: () => ({ client: Promise.resolve({ set: jest.fn() }) }),
     } as unknown as Queue,
+    { settle: () => Promise.resolve('skipped') } as unknown as TrialStarts,
   );
 
   const service = new BillingService(

@@ -18,6 +18,7 @@ import { BillingWorker } from './billing.worker';
 import { PriceCatalog } from './price-catalog';
 import { STRIPE_CLIENT, createStripeClient } from './stripe.client';
 import { StripeService } from './stripe.service';
+import { TrialStarts } from './trial-starts';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { StripeService } from './stripe.service';
     BillingEventQueue,
     BillingWebhookService,
     BillingReconciler,
+    TrialStarts,
     AccountNotifier,
     TrialNotifier,
     DowngradeWarner,

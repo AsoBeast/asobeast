@@ -18,6 +18,10 @@ export interface FakeStripe extends StripeApi {
   expired: string[];
   sessions: Map<string, Stripe.Checkout.Session>;
   subscriptionStore: Map<string, Stripe.Subscription>;
+  subscriptionUpdates: Recorded<
+    { id: string } & Stripe.SubscriptionUpdateParams
+  >[];
+  paymentMethodStore: Map<string, Stripe.PaymentMethod>;
   priceStore: Map<string, Stripe.Price>;
   schedules: Map<string, Stripe.SubscriptionSchedule>;
   failNext: Error | null;
@@ -155,6 +159,46 @@ export function catalogPrice(
   } as Stripe.Price;
 }
 
+const MONTH_SECONDS = 30 * 24 * 60 * 60;
+
+function applySubscriptionUpdate(
+  subscription: Stripe.Subscription,
+  params: Stripe.SubscriptionUpdateParams,
+): Stripe.Subscription {
+  if (params.trial_end !== 'now') {
+    return {
+      ...subscription,
+      cancel_at_period_end:
+        params.cancel_at_period_end ?? subscription.cancel_at_period_end,
+    };
+  }
+  const now = Math.floor(Date.now() / 1000);
+  return {
+    ...subscription,
+    status: 'active',
+    trial_end: now,
+    items: {
+      ...subscription.items,
+      data: subscription.items.data.map((item) => ({
+        ...item,
+        current_period_start: now,
+        current_period_end: now + MONTH_SECONDS,
+      })),
+    },
+  };
+}
+
+export function paymentMethod(
+  overrides: Partial<Stripe.PaymentMethod>,
+): Stripe.PaymentMethod {
+  return {
+    id: 'pm_TestCard',
+    object: 'payment_method',
+    type: 'card',
+    ...overrides,
+  } as Stripe.PaymentMethod;
+}
+
 export function fakeStripe(): FakeStripe {
   const signer = new Stripe(TEST_STRIPE_SECRET_KEY);
   let counter = 0;
@@ -169,6 +213,8 @@ export function fakeStripe(): FakeStripe {
     expired: [],
     sessions: new Map(),
     subscriptionStore: new Map(),
+    subscriptionUpdates: [],
+    paymentMethodStore: new Map(),
     priceStore: new Map(),
     schedules: new Map(),
     failNext: null,
@@ -267,6 +313,20 @@ export function fakeStripe(): FakeStripe {
         );
       },
       retrieve: (id) => found(fake.subscriptionStore, 'subscription', id),
+      update: async (id, params = {}, options) => {
+        const stored = await found(fake.subscriptionStore, 'subscription', id);
+        fake.subscriptionUpdates.push({
+          params: { id, ...params },
+          idempotencyKey: options?.idempotencyKey,
+        });
+        const updated = applySubscriptionUpdate(stored, params);
+        fake.subscriptionStore.set(id, updated);
+        return respond(updated);
+      },
+    },
+
+    paymentMethods: {
+      retrieve: (id) => found(fake.paymentMethodStore, 'payment_method', id),
     },
 
     prices: {
@@ -316,6 +376,8 @@ export function fakeStripe(): FakeStripe {
       fake.expired.length = 0;
       fake.sessions.clear();
       fake.subscriptionStore.clear();
+      fake.subscriptionUpdates.length = 0;
+      fake.paymentMethodStore.clear();
       fake.priceStore.clear();
       fake.schedules.clear();
       fake.failNext = null;
