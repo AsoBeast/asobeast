@@ -5051,6 +5051,109 @@
         ]
       }
     },
+    "/apps/{id}/annotations": {
+      "post": {
+        "description": "Stores a named event for one app: a label pinned to one UTC day, drawn as a vertical line on the rank history and visibility charts. market scopes the line to one storefront of the app's store and tag groups a campaign; both are optional. Writes nothing to the store.",
+        "operationId": "AnnotationsController_create",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAnnotationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The created annotation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Mark an event on the app charts",
+        "tags": [
+          "annotations"
+        ]
+      },
+      "get": {
+        "operationId": "AnnotationsController_list",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The annotations of the app, oldest day first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "List the event markers of an app",
+        "tags": [
+          "annotations"
+        ]
+      }
+    },
+    "/apps/{id}/annotations/{annotationId}": {
+      "delete": {
+        "operationId": "AnnotationsController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "annotationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Remove an event marker",
+        "tags": [
+          "annotations"
+        ]
+      }
+    },
     "/actions": {
       "get": {
         "operationId": "ActionsController_list",
@@ -7094,6 +7197,33 @@
             "description": "An App Store localization to draft instead of the primary listing. Refused for a Google Play app"
           }
         }
+      },
+      "CreateAnnotationDto": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "example": "2026-10-08"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 80,
+            "example": "Release 5.21.0"
+          },
+          "market": {
+            "type": "string",
+            "example": "de",
+            "pattern": "^[a-z]{2}$"
+          },
+          "tag": {
+            "type": "string",
+            "example": "wave"
+          }
+        },
+        "required": [
+          "date",
+          "label"
+        ]
       },
       "BulkUpdateActionsDto": {
         "type": "object",
