@@ -3,3 +3,7 @@ export function addUtcDays(date: string, days: number): string {
   shifted.setUTCDate(shifted.getUTCDate() + days);
   return shifted.toISOString().slice(0, 10);
 }
+
+export function utcDayOf(instant: Date | number): string {
+  return new Date(instant).toISOString().slice(0, 10);
+}
