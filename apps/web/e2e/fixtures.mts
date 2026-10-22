@@ -88,12 +88,20 @@ export function utcTimestampDaysAgo(days: number): string {
 function pointsFrom(
   positions: Array<number | null>,
   depths?: number[],
+  unchecked: readonly number[] = [],
 ): RankingPoint[] {
-  return positions.map((position, index) => ({
-    date: utcDaysAgo(positions.length - 1 - index),
-    position,
-    depth: depths?.[index] ?? RANK_DEPTH,
-  }));
+  return positions.flatMap((position, index) => {
+    const daysAgo = positions.length - 1 - index;
+    return unchecked.includes(daysAgo)
+      ? []
+      : [
+          {
+            date: utcDaysAgo(daysAgo),
+            position,
+            depth: depths?.[index] ?? RANK_DEPTH,
+          },
+        ];
+  });
 }
 
 export const OPERATOR_TOKEN = "asob_operator";
@@ -475,21 +483,21 @@ export const APP_1_RANKINGS: RankingSeries = {
       text: "focus timer",
       store: "APP_STORE" as const,
       country: "us",
-      points: pointsFrom([10, 9, 8, 7, 6, 5, 5, 3]),
+      points: pointsFrom([10, 9, 8, 7, 6, 5, 5, 3], undefined, [5]),
     },
     {
       keywordId: "kw-2",
       text: "pomodoro",
       store: "APP_STORE" as const,
       country: "us",
-      points: pointsFrom([6, 7, 8, 8, 9, 9, 9, 12]),
+      points: pointsFrom([6, 7, 8, 8, 9, 9, 9, 12], undefined, [5]),
     },
     {
       keywordId: "kw-3",
       text: "study timer",
       store: "APP_STORE" as const,
       country: "us",
-      points: pointsFrom([7, 7, 7, 7, 7, 7, 7, 7]),
+      points: pointsFrom([7, 7, 7, 7, 7, 7, 7, 7], undefined, [5, 2, 1, 0]),
     },
     {
       keywordId: "kw-4",
@@ -499,6 +507,7 @@ export const APP_1_RANKINGS: RankingSeries = {
       points: pointsFrom(
         [null, null, null, null, null, null, null, null],
         [100, 100, 100, 100, 200, 200, 200, 200],
+        [5],
       ),
     },
     {
@@ -506,7 +515,7 @@ export const APP_1_RANKINGS: RankingSeries = {
       text: "time blocking",
       store: "APP_STORE" as const,
       country: "us",
-      points: pointsFrom([40, 42, 44, 45, 45, 46, 46, 45]),
+      points: pointsFrom([40, 42, 44, 45, 45, 46, 46, 45], undefined, [5]),
     },
   ],
 };
