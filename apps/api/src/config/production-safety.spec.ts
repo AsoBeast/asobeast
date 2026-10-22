@@ -132,7 +132,9 @@ describe('production safety', () => {
           BILLING_ENABLED: 'true',
           TRIAL_DAYS: '0',
         }),
-      ).toThrow('TRIAL_DAYS must be at least 1 when BILLING_ENABLED is true');
+      ).toThrow(
+        'TRIAL_DAYS must be at least 1 when BILLING_ENABLED is true. It is the length of the Stripe trial every new account is offered at checkout, and Stripe refuses a trial shorter than a day.',
+      );
     });
 
     it('accepts a trial of one day', () => {
@@ -490,7 +492,7 @@ describe('production safety', () => {
 
     it('warns when billing is on with no way to take payment', () => {
       expect(warningsFor({ BILLING_ENABLED: 'true' }).join(' ')).toContain(
-        'no STRIPE_SECRET_KEY',
+        'no STRIPE_SECRET_KEY. No account can start a trial or pay, because both need Checkout.',
       );
     });
 

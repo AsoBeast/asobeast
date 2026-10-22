@@ -116,7 +116,7 @@ export class AuthController {
   @HttpCode(200)
   @UseGuards(RetryAfterThrottlerGuard)
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
-  @ApiOperation({ summary: 'Confirm an email address and start the trial' })
+  @ApiOperation({ summary: 'Confirm an email address' })
   async verify(
     @Req() req: Request,
     @Body() dto: VerifyEmailDto,

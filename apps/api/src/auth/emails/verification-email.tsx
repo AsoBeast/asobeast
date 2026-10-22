@@ -12,7 +12,6 @@ export interface VerificationEmailProps {
   origin: string | null;
   address: string;
   link: string;
-  startsTrial: boolean;
   hours: number;
 }
 
@@ -20,12 +19,9 @@ export function VerificationEmail({
   origin,
   address,
   link,
-  startsTrial,
   hours,
 }: VerificationEmailProps) {
-  const purpose = startsTrial
-    ? 'to start your trial'
-    : 'to finish setting up your account';
+  const purpose = 'to finish setting up your account';
   return (
     <EmailLayout
       preview={`Confirm ${address} ${purpose}.`}

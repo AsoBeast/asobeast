@@ -2,12 +2,11 @@ import { verificationEmail } from './verification-email';
 
 const LINK = 'https://aso.example.com/verify?token=0123456789abcdef';
 
-const render = (startsTrial = true) =>
+const render = () =>
   verificationEmail({
     origin: 'https://aso.example.com',
     address: 'ada@example.com',
     link: LINK,
-    startsTrial,
     hours: 24,
   });
 
@@ -29,9 +28,8 @@ describe('verificationEmail', () => {
     expect(text).toContain('The link works for 24 hours.');
   });
 
-  it('starts the trial only when the account has one', async () => {
-    expect((await render(true)).text).toContain('to start your trial');
-    const { html, text } = await render(false);
+  it('asks to finish the account and promises no trial', async () => {
+    const { html, text } = await render();
     expect(text).toContain('to finish setting up your account');
     expect(html).not.toMatch(/trial/i);
   });
@@ -41,7 +39,6 @@ describe('verificationEmail', () => {
       origin: null,
       address: 'a&b<c>@example.com',
       link: LINK,
-      startsTrial: true,
       hours: 24,
     });
     expect(html).toContain('a&amp;b&lt;c&gt;@example.com');

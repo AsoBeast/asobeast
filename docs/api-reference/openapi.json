@@ -150,7 +150,7 @@
             }
           }
         },
-        "summary": "Confirm an email address and start the trial",
+        "summary": "Confirm an email address",
         "tags": [
           "auth"
         ]

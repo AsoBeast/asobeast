@@ -1,7 +1,7 @@
 import type Stripe from 'stripe';
 import { PLAN_LIMITS, effectivePlan, type PlanName } from '@asobeast/shared';
 import { isEntitled } from '../auth/entitlement';
-import { alreadyTrialed, grantTrial } from '../auth/trial-grant';
+import { alreadyTrialed } from '../auth/trial-grant';
 import { planAfterChange } from './downgrade';
 import { stateOf } from './subscription-state';
 
@@ -14,6 +14,8 @@ const CLOCK = {
 };
 
 const PERIOD_END = Math.floor(CLOCK.renewal.getTime() / 1000);
+
+const TRIAL_MS = 7 * 24 * 60 * 60 * 1000;
 
 interface WorkspaceState {
   plan: string;
@@ -61,8 +63,17 @@ function applySubscription(
   };
 }
 
-const startTrial = (state: WorkspaceState, now: Date): WorkspaceState =>
-  alreadyTrialed(state) ? state : { ...state, ...grantTrial(7, now) };
+const startTrial = (state: WorkspaceState, now: Date): WorkspaceState => {
+  if (alreadyTrialed(state)) return state;
+  const trialEndsAt = new Date(now.getTime() + TRIAL_MS);
+  return {
+    ...state,
+    plan: 'indie',
+    trialStartedAt: now,
+    trialEndsAt,
+    planExpiresAt: trialEndsAt,
+  };
+};
 
 const runsInFanOut = (state: WorkspaceState, now: Date) =>
   isEntitled(state, now);
@@ -71,14 +82,14 @@ const limitsOf = (state: WorkspaceState, now: Date) =>
   PLAN_LIMITS[effectivePlan(state, now)];
 
 describe('subscription lifecycle transitions', () => {
-  it('registration to trial opens capacity at the indie limits', () => {
+  it('a trialing projection opens capacity at the plan limits', () => {
     const before = fresh();
     expect(runsInFanOut(before, CLOCK.registered)).toBe(false);
 
     const after = startTrial(before, CLOCK.registered);
 
     expect(runsInFanOut(after, CLOCK.registered)).toBe(true);
-    expect(limitsOf(after, CLOCK.registered)).toEqual(PLAN_LIMITS.trial);
+    expect(limitsOf(after, CLOCK.registered)).toEqual(PLAN_LIMITS.indie);
   });
 
   it('trial to expired closes capacity and keeps nothing but the history', () => {

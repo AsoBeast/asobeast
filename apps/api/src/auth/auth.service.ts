@@ -150,7 +150,7 @@ export class AuthService {
     if (!canStartTrial(existing, new Date())) return DEFAULT_WORKSPACE_ID;
     const opening = await this.verification.openingTerms(tx, email);
     if (opening) {
-      await this.verification.writeTerms(tx, existing, email, opening);
+      await this.verification.writeTerms(tx, existing, opening);
     }
     return DEFAULT_WORKSPACE_ID;
   }

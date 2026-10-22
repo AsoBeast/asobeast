@@ -1,34 +1,11 @@
-import { TRIAL_PLAN } from '@asobeast/shared';
 import { isEntitled, type WorkspaceEntitlement } from './entitlement';
-
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-export interface TrialGrant {
-  plan: string;
-  trialStartedAt: Date;
-  trialEndsAt: Date;
-}
 
 export interface TrialDecline {
   trialDeclinedAt: Date;
 }
 
-export type TrialTerms = TrialGrant | TrialDecline;
-
 export interface TrialHistory {
   trialStartedAt: Date | null;
-}
-
-export function grantTrial(days: number, now = new Date()): TrialGrant {
-  return {
-    plan: TRIAL_PLAN,
-    trialStartedAt: now,
-    trialEndsAt: new Date(now.getTime() + days * DAY_MS),
-  };
-}
-
-export function isGrant(terms: TrialTerms): terms is TrialGrant {
-  return 'trialStartedAt' in terms;
 }
 
 export function declineTrial(now = new Date()): TrialDecline {

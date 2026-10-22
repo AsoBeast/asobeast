@@ -126,22 +126,33 @@ describe('Mailboxes that had a trial before one trial per mailbox existed', () =
     await expect(prisma.trialClaim.count()).resolves.toBe(1);
   });
 
+  const declinedAt = async (email: string) =>
+    (
+      await prisma.workspace.findFirstOrThrow({
+        where: { name: email },
+        select: { trialDeclinedAt: true },
+      })
+    ).trialDeclinedAt;
+
   it('refuses a second trial to a variant of the owner of a trialed workspace', async () => {
     const again = await register('grownup+again@googlemail.com');
 
     expect(again.entitled).toBe(false);
     expect(again.trialEndsAt).toBeNull();
+    await expect(
+      declinedAt('grownup+again@googlemail.com'),
+    ).resolves.not.toBeNull();
   });
 
   it('still offers a trial to a member of that workspace, who never started one', async () => {
-    const colleague = await register('colleague+new@example.com');
+    await register('colleague+new@example.com');
 
-    expect(colleague.entitled).toBe(true);
+    await expect(declinedAt('colleague+new@example.com')).resolves.toBeNull();
   });
 
   it('still offers a trial to the owner of a workspace that never had one', async () => {
-    const owner = await register('never.tried+new@example.com');
+    await register('never.tried+new@example.com');
 
-    expect(owner.entitled).toBe(true);
+    await expect(declinedAt('never.tried+new@example.com')).resolves.toBeNull();
   });
 });
