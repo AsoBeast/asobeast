@@ -176,6 +176,22 @@ describe('CompetitorsController (e2e)', () => {
     expect(you?.name).toBe('Habit Tracker');
     expect(analysis.positionMap).toHaveLength(2);
   });
+  it('counts the title and subtitle of the comparison in characters', async () => {
+    const id = await seed();
+    await prisma.appSnapshot.updateMany({
+      where: { appId: id },
+      data: { title: '𠮷野家', subtitle: '𪚥𪚥𪚥' },
+    });
+
+    const response = await api
+      .get(`/apps/${id}/competitors/analysis`)
+      .expect(200);
+    const you = (response.body as CompetitorAnalysis).metadataComparison.find(
+      (row) => row.isYou,
+    );
+
+    expect(you).toMatchObject({ titleChars: 3, subtitleChars: 3 });
+  });
 
   it('discovers untracked apps from serp entries, excluding known apps', async () => {
     const primary = await prisma.app.create({

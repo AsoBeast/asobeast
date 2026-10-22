@@ -217,6 +217,19 @@ describe("buildCombinations", () => {
     expect(result.total).toBe(2);
   });
 
+  it("counts a character outside the bmp once against the phrase cap", () => {
+    const words = ["\u{20BB7}".repeat(60), "\u{2A6A5}".repeat(39)];
+    const result = combine({
+      store: "APP_STORE",
+      snapshot: null,
+      keywordField: words,
+    });
+    expect(result.combinations.map((row) => row.phrase)).toEqual([
+      ...words,
+      words.join(" "),
+    ]);
+  });
+
   it("forms nothing from an empty listing", () => {
     const empty: CombinationListing = {
       store: "APP_STORE",

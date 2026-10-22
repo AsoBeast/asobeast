@@ -3,7 +3,7 @@ import {
   normalizeText,
   type ReviewItem,
 } from "@asobeast/shared";
-import { matchesSearch } from "@/lib/search-text";
+import { containsEmoji, matchesSearch } from "@/lib/search-text";
 
 const QUOTED = /^"(.*)"$/;
 
@@ -29,7 +29,12 @@ function mentionsPhrase(review: ReviewItem, phrase: string): boolean {
 
 export function matchesReviewQuery(review: ReviewItem, query: string): boolean {
   const phrase = quotedPhrase(query);
-  if (phrase !== null) return mentionsPhrase(review, phrase);
+  if (phrase !== null) {
+    return (
+      mentionsPhrase(review, phrase) &&
+      containsEmoji([review.title ?? "", review.text], query)
+    );
+  }
   return matchesSearch(
     [
       review.title ?? "",

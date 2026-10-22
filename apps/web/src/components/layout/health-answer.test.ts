@@ -12,7 +12,27 @@ function refusal(statusCode: number): ApiError {
   });
 }
 
+function databaseDownAnswer(): ApiError {
+  const answer = {
+    statusCode: 503,
+    error: "Service Unavailable",
+    message: "The database cannot be reached. Try again in 5 seconds.",
+    retryAfterSeconds: 5,
+    path: "/health",
+    timestamp: "2026-10-19T00:00:00.000Z",
+    status: "error",
+    db: "down",
+    redis: "up",
+    pipeline: null,
+  };
+  return new ApiError(answer);
+}
+
 describe("answeredDatabaseDown", () => {
+  it("is true for the 503 that carries the health fields beside the envelope", () => {
+    expect(answeredDatabaseDown(databaseDownAnswer())).toBe(true);
+  });
+
   it("is true for the 503 the api gives when its database is down", () => {
     expect(answeredDatabaseDown(refusal(503))).toBe(true);
   });

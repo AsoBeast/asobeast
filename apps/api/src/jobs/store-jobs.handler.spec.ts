@@ -17,12 +17,12 @@ import { JOBS, QUEUES } from './jobs.types';
 import { StoreJobsHandler } from './store-jobs.handler';
 
 describe('StoreJobsHandler', () => {
-  const refreshApp = jest.fn();
   const refreshListing = jest.fn();
   const resolveSubtitle = jest.fn();
   const runSpiderProbe = jest.fn();
   const probeLocalization = jest.fn();
   const checkCategory = jest.fn().mockResolvedValue(undefined);
+  const syncReviews = jest.fn().mockResolvedValue([]);
   const forWorkspace = jest.fn<Promise<boolean>, []>();
   const through = jest.fn(
     (_store: Store, _country: string | undefined, work: () => Promise<void>) =>
@@ -40,17 +40,16 @@ describe('StoreJobsHandler', () => {
     runSpiderProbe.mockReset().mockResolvedValue(undefined);
     probeLocalization.mockReset().mockResolvedValue(undefined);
     forWorkspace.mockReset().mockResolvedValue(true);
-    refreshListing.mockReset().mockResolvedValue(null);
-    refreshApp.mockReset().mockImplementation(() => {
+    refreshListing.mockReset().mockImplementation(() => {
       seen = workspace.current;
-      return Promise.resolve();
+      return Promise.resolve(null);
     });
     handler = new StoreJobsHandler(
-      { refreshApp, refreshListing } as unknown as AppsService,
+      { refreshListing } as unknown as AppsService,
       {} as RankingsService,
       {} as ScoringService,
       { checkCategory } as unknown as CategoryRanksService,
-      {} as ReviewsService,
+      { syncReviews } as unknown as ReviewsService,
       { runSpiderProbe } as unknown as SpiderService,
       workspace,
       { through } as unknown as ProxyEgress,
@@ -88,10 +87,32 @@ describe('StoreJobsHandler', () => {
     expect(checkCategory).toHaveBeenNthCalledWith(2, payload, true);
   });
 
+  it('passes the final attempt of the job to the review sync', async () => {
+    const payload = {
+      appId: 'a1',
+      pages: 1,
+      backfill: false,
+      workspaceId: 'ws_a',
+    };
+    const reviewsJob = (attemptsMade: number) =>
+      ({
+        ...job(payload),
+        name: JOBS.SYNC_REVIEWS,
+        attemptsMade,
+        opts: { attempts: 5 },
+      }) as Job;
+
+    await handler.handle(reviewsJob(0));
+    await handler.handle(reviewsJob(4));
+
+    expect(syncReviews).toHaveBeenNthCalledWith(1, payload, false);
+    expect(syncReviews).toHaveBeenNthCalledWith(2, payload, true);
+  });
+
   it('runs the job inside the workspace its payload carries', async () => {
     await handler.handle(job({ appId: 'a1', workspaceId: 'ws_a' }));
 
-    expect(refreshApp).toHaveBeenCalledWith('a1');
+    expect(refreshListing).toHaveBeenCalledWith('a1', undefined);
     expect(seen).toBe('ws_a');
   });
 
@@ -101,14 +122,13 @@ describe('StoreJobsHandler', () => {
     );
 
     expect(refreshListing).toHaveBeenCalledWith('a1', 'de');
-    expect(refreshApp).not.toHaveBeenCalled();
   });
 
   it('fails the job instead of defaulting when the workspace is absent', async () => {
     await expect(handler.handle(job({ appId: 'a1' }))).rejects.toThrow(
       JobWorkspaceMissingError,
     );
-    expect(refreshApp).not.toHaveBeenCalled();
+    expect(refreshListing).not.toHaveBeenCalled();
   });
 
   it('leaves no workspace in scope once the job finishes', async () => {
@@ -228,7 +248,7 @@ describe('StoreJobsHandler', () => {
     await handler.handle(job({ appId: 'a1', workspaceId: 'ws_a' }));
 
     expect(forWorkspace).not.toHaveBeenCalled();
-    expect(refreshApp).toHaveBeenCalledWith('a1');
+    expect(refreshListing).toHaveBeenCalledWith('a1', undefined);
   });
 
   it.each([

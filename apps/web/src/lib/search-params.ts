@@ -54,8 +54,9 @@ export const KEYWORD_TABLE_SORTS = [
   "delta7d",
 ] as const;
 
-export const keywordSortParser =
-  parseAsStringLiteral(KEYWORD_TABLE_SORTS).withDefault("opportunity");
+export const KEYWORD_DEFAULT_SORT = "opportunity";
+
+export const keywordSortParser = parseAsStringLiteral(KEYWORD_TABLE_SORTS);
 
 export const searchParser = parseAsString.withDefault("");
 

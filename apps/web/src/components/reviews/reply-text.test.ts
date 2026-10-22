@@ -35,4 +35,12 @@ describe("measureReply", () => {
       over: false,
     });
   });
+
+  it("counts an emoji once", () => {
+    expect(measureReply("😀".repeat(350), "GOOGLE_PLAY")).toMatchObject({
+      length: 350,
+      over: false,
+    });
+    expect(measureReply("😀".repeat(351), "GOOGLE_PLAY").over).toBe(true);
+  });
 });

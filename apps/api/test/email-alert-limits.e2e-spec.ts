@@ -54,6 +54,29 @@ describe('Email alert limits (e2e)', () => {
       })),
     });
 
+  const requestConfirmationAndDelete = async (email: string) => {
+    const created = await api
+      .post('/email-alerts')
+      .send({ email, events: EVENTS })
+      .expect(201);
+    await api
+      .delete(`/email-alerts/${(created.body as EmailAlertItem).id}`)
+      .expect(204);
+  };
+
+  const spendRecipientAllowance = async (
+    spelling: (attempt: number) => string,
+  ) => {
+    for (
+      let attempt = 0;
+      attempt < CONFIRMATIONS_PER_RECIPIENT_PER_DAY;
+      attempt += 1
+    ) {
+      await requestConfirmationAndDelete(spelling(attempt));
+    }
+    sendAccountMail.mockClear();
+  };
+
   it('throttles the test send like an invitation', async () => {
     const [alert] = await prisma.emailAlert.createManyAndReturn({
       data: [
@@ -167,20 +190,7 @@ describe('Email alert limits (e2e)', () => {
   });
 
   it('sends one recipient a bounded number of confirmation emails a day', async () => {
-    for (
-      let attempt = 0;
-      attempt < CONFIRMATIONS_PER_RECIPIENT_PER_DAY;
-      attempt += 1
-    ) {
-      const created = await api
-        .post('/email-alerts')
-        .send({ email: 'victim@example.net', events: EVENTS })
-        .expect(201);
-      await api
-        .delete(`/email-alerts/${(created.body as EmailAlertItem).id}`)
-        .expect(204);
-    }
-    sendAccountMail.mockClear();
+    await spendRecipientAllowance(() => 'victim@example.net');
 
     const refused = await api
       .post('/email-alerts')
@@ -191,6 +201,61 @@ describe('Email alert limits (e2e)', () => {
     expect(Number(refused.headers['retry-after'])).toBeGreaterThan(0);
     expect(sendAccountMail).not.toHaveBeenCalled();
     expect(await prisma.emailAlert.count()).toBe(0);
+  });
+
+  it('counts the plus tagged spellings of one mailbox against one allowance', async () => {
+    await spendRecipientAllowance(
+      (attempt) => `victim+tag${attempt}@example.net`,
+    );
+
+    const refused = await api
+      .post('/email-alerts')
+      .send({ email: 'victim@example.net', events: EVENTS })
+      .expect(429);
+
+    expect((refused.body as ApiErrorEnvelope).message).toContain('recipient');
+    expect(Number(refused.headers['retry-after'])).toBeGreaterThan(0);
+    expect(sendAccountMail).not.toHaveBeenCalled();
+    expect(await prisma.emailAlert.count()).toBe(0);
+    const redis = app.get(FailFastRedis).client;
+    expect(
+      Number(
+        await redis.get(
+          allowanceKey(sha256('victim@example.net'), 'recipient'),
+        ),
+      ),
+    ).toBe(CONFIRMATIONS_PER_RECIPIENT_PER_DAY);
+  });
+
+  it('counts a unicode and a punycode domain as one mailbox', async () => {
+    await spendRecipientAllowance((attempt) =>
+      attempt % 2 === 0 ? 'victim@bücher.de' : 'victim@xn--bcher-kva.de',
+    );
+
+    for (const email of ['victim@bücher.de', 'victim@xn--bcher-kva.de']) {
+      const refused = await api
+        .post('/email-alerts')
+        .send({ email, events: EVENTS })
+        .expect(429);
+      expect((refused.body as ApiErrorEnvelope).message).toContain('recipient');
+    }
+    expect(sendAccountMail).not.toHaveBeenCalled();
+    expect(await prisma.emailAlert.count()).toBe(0);
+  });
+
+  it('leaves other mailboxes their own allowance when one is spent', async () => {
+    await spendRecipientAllowance(
+      (attempt) => `victim+tag${attempt}@example.net`,
+    );
+
+    for (const email of ['other@example.net', 'victim@example.org']) {
+      await api
+        .post('/email-alerts')
+        .send({ email, events: EVENTS })
+        .expect(201);
+    }
+
+    expect(sendAccountMail).toHaveBeenCalledTimes(2);
   });
 
   it('leaves the recipient allowance alone once the workspace allowance is spent', async () => {

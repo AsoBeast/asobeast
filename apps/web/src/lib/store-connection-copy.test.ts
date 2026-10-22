@@ -4,6 +4,7 @@ import {
   appStateLabel,
   connectionStatusLine,
   historyLine,
+  needsAdminKey,
 } from "./store-connection-copy";
 
 const APP: StoreConnectionApp = {
@@ -75,6 +76,36 @@ describe("connectionStatusLine", () => {
       tone: "muted",
       text: "Last synced Oct 15, 2026, 5:31 AM UTC",
     });
+  });
+});
+
+describe("needsAdminKey", () => {
+  it("asks for an admin key while an app could not be requested", () => {
+    expect(
+      needsAdminKey({
+        ...ITEM,
+        reportAccess: "readOnly",
+        apps: [{ ...APP, state: "forbidden" }],
+      }),
+    ).toBe(true);
+  });
+
+  it("leaves a read only key alone once every request exists", () => {
+    expect(needsAdminKey({ ...ITEM, reportAccess: "readOnly" })).toBe(false);
+  });
+
+  it("leaves a rejected key to verify first", () => {
+    expect(
+      needsAdminKey({
+        ...ITEM,
+        status: "rejected",
+        apps: [{ ...APP, state: "forbidden" }],
+      }),
+    ).toBe(false);
+  });
+
+  it("is quiet for a key without apps", () => {
+    expect(needsAdminKey({ ...ITEM, apps: [] })).toBe(false);
   });
 });
 

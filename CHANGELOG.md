@@ -3,6 +3,45 @@
 All notable changes to asobeast are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [1.13.0](https://github.com/AsoBeast/asobeast/compare/v1.12.0...v1.13.0) (2026-10-21)
+
+
+### Features
+
+* **scoring:** recognize inflected word forms in cyrillic ([#484](https://github.com/AsoBeast/asobeast/issues/484)) ([bf2f1b1](https://github.com/AsoBeast/asobeast/commit/bf2f1b16206b75f690f4993850b9eee3af8a41fd))
+* **web:** remember the keywords table sort per viewer ([#559](https://github.com/AsoBeast/asobeast/issues/559)) ([1115de4](https://github.com/AsoBeast/asobeast/commit/1115de4f272ca7e6c7d5fc45662385a19f800adb))
+
+
+### Bug Fixes
+
+* **api:** disconnect postgres after open requests and jobs finish ([#558](https://github.com/AsoBeast/asobeast/issues/558)) ([3d98a97](https://github.com/AsoBeast/asobeast/commit/3d98a9707fb06be82b2b8bec4cf95d8b5465ed6b))
+* **api:** finish the workspace export when a drain event is lost ([#525](https://github.com/AsoBeast/asobeast/issues/525)) ([aee573d](https://github.com/AsoBeast/asobeast/commit/aee573d9815c9bacee0f5458d437b67c7fa1399b))
+* **api:** keep a tessdata failure from racing the cleanup ([#491](https://github.com/AsoBeast/asobeast/issues/491)) ([e44c873](https://github.com/AsoBeast/asobeast/commit/e44c8731e43dfe85f7aea631a735244235541b23))
+* **api:** page the workspace export by key so a delete skips no row ([#556](https://github.com/AsoBeast/asobeast/issues/556)) ([e3ec6b0](https://github.com/AsoBeast/asobeast/commit/e3ec6b087ff22311842636ff3785f7715f51f59c))
+* **api:** read screenshots in a worker thread so a bad pack fails the job ([#557](https://github.com/AsoBeast/asobeast/issues/557)) ([a1c814a](https://github.com/AsoBeast/asobeast/commit/a1c814a1261637bf97ecafe68f1114d6cbb56fa2))
+* **api:** redact secret query parameters in logged request urls ([#536](https://github.com/AsoBeast/asobeast/issues/536)) ([dec5fc9](https://github.com/AsoBeast/asobeast/commit/dec5fc921ab5da1228d0431ce949fef07c4d964c))
+* **audit:** say how much of a primary keyword the title holds ([#532](https://github.com/AsoBeast/asobeast/issues/532)) ([aab1635](https://github.com/AsoBeast/asobeast/commit/aab1635f49a9d91bc9775bd0cde60fc45b439458))
+* **jobs:** cut http connections still open when redis is down ([#543](https://github.com/AsoBeast/asobeast/issues/543)) ([a0336af](https://github.com/AsoBeast/asobeast/commit/a0336afaae0da6a2b7893a1dcf0410716a8f92e9))
+* **jobs:** end a review sync quietly when apple's feed stays empty ([#560](https://github.com/AsoBeast/asobeast/issues/560)) ([88da2aa](https://github.com/AsoBeast/asobeast/commit/88da2aae173ac03d25046bc049bc13621c3f279e))
+* **keywords:** count a phrase outside the bmp once against the 100 cap ([#555](https://github.com/AsoBeast/asobeast/issues/555)) ([faf4d0e](https://github.com/AsoBeast/asobeast/commit/faf4d0e4a68225ce8310e797c5a62f356ed7a033))
+* **repo:** stop five production error reports and a failing review sync job ([#547](https://github.com/AsoBeast/asobeast/issues/547)) ([9c0cf06](https://github.com/AsoBeast/asobeast/commit/9c0cf0657ec2fe58a0921adba648a44bd47a579f))
+* **shared:** count a character outside the bmp once ([#533](https://github.com/AsoBeast/asobeast/issues/533)) ([cea9596](https://github.com/AsoBeast/asobeast/commit/cea9596ba769e399f0193ef78d61710215843367))
+* **web:** answer a malformed percent escape in a path with a 4xx ([#537](https://github.com/AsoBeast/asobeast/issues/537)) ([244009f](https://github.com/AsoBeast/asobeast/commit/244009fa2264c996f67a5f636e6f7648875c23af))
+* **web:** keep matrix positions readable on a phone with a market column ([#527](https://github.com/AsoBeast/asobeast/issues/527)) ([46c2ff6](https://github.com/AsoBeast/asobeast/commit/46c2ff65699fee02acbced39d651af2637041fb2))
+* **web:** keep overview charts visible while a range loads ([#540](https://github.com/AsoBeast/asobeast/issues/540)) ([2fab7a4](https://github.com/AsoBeast/asobeast/commit/2fab7a403a4bc96acde656e5f703c65ac8c03d3d))
+* **web:** keep the keywords page when the top 10 sheet fails to load ([#526](https://github.com/AsoBeast/asobeast/issues/526)) ([e3224ad](https://github.com/AsoBeast/asobeast/commit/e3224ade85ce2b554b1e57a51428d3defd488f33))
+* **web:** make capture, scrolling tables and help reachable ([#531](https://github.com/AsoBeast/asobeast/issues/531)) ([c34c9f8](https://github.com/AsoBeast/asobeast/commit/c34c9f88f661ca484a372b6afb03824572422151))
+* **web:** refetch the failed shell queries when try again is pressed ([#534](https://github.com/AsoBeast/asobeast/issues/534)) ([e9f9400](https://github.com/AsoBeast/asobeast/commit/e9f9400d5a87806282087e19fb4ddb62f966b575))
+* **web:** search reviews for an emoji instead of listing every review ([#539](https://github.com/AsoBeast/asobeast/issues/539)) ([577243f](https://github.com/AsoBeast/asobeast/commit/577243fb51d19478bed15bc3ab56704e907805a0))
+* **web:** send one request when a suggestion is tracked twice ([#530](https://github.com/AsoBeast/asobeast/issues/530)) ([b39e4fa](https://github.com/AsoBeast/asobeast/commit/b39e4fa62caead102fe9399459b5832b7353417d))
+* **web:** show the plan in force in the account menu ([#528](https://github.com/AsoBeast/asobeast/issues/528)) ([ac6a8f5](https://github.com/AsoBeast/asobeast/commit/ac6a8f5725b297b60d6acc6cd31709c54e0b1205))
+* **web:** show the store currency instead of a dollar sign ([#538](https://github.com/AsoBeast/asobeast/issues/538)) ([b77de7b](https://github.com/AsoBeast/asobeast/commit/b77de7bf7360df45653281001ef46e700c13fb76))
+
+
+### Performance
+
+* **api:** read each export page by one row value range on its key ([#562](https://github.com/AsoBeast/asobeast/issues/562)) ([78d9e68](https://github.com/AsoBeast/asobeast/commit/78d9e68bf6ad0fdc4808b436b599df0ef16be2a5))
+
 ## [1.12.0](https://github.com/AsoBeast/asobeast/compare/v1.11.0...v1.12.0) (2026-10-19)
 
 

@@ -117,7 +117,7 @@ Each localization item has a **Draft with AI** button that picks it in the menu 
 
 - **A keyword you added to the title still shows as uncovered.** Coverage reads the latest snapshot. Refresh the listing after the store publishes the change.
 - **The subtitle card is missing.** You are looking at a Google Play app. It has no subtitle.
-- **Character counts differ from App Store Connect.** asobeast counts characters, so an emoji or an accented character counts as the store counts it in the stored value.
+- **Character counts differ from App Store Connect.** asobeast counts Unicode code points of the stored value, so a Chinese, Japanese or Korean character counts once even when it lies outside the Basic Multilingual Plane, and an emoji made of several parts, such as a flag or a family, counts once for each part. Apple does not document how App Store Connect counts those, so a field with emoji sequences can read differently there.
 - **The Localization menu is missing.** The app is on Google Play, none of your storefronts lists an additional language (the United Kingdom lists none), or asobeast could not read your keyword markets when the page loaded.
 - **Find localizations found nothing.** The store proves only a localization whose text differs from the default listing of the market it is asked in and from your home listing, and only for languages your home listing says the app supports. Add a localization with the default text by hand.
 - **I track a market and see its listing but no keyword field for its language.** The localization is added after the next capture of that market. Press **Refresh** with that market chosen, or add it from **Not listed yet**.

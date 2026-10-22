@@ -18,3 +18,19 @@ test("the metadata workbench counts the keyword field in characters", async ({
   await expect(page.getByText("101/100 · 1 over")).toBeVisible();
   await expect(field).toHaveAttribute("aria-invalid", "true");
 });
+
+test("the metadata workbench counts a character outside the BMP once", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/metadata");
+  const text = "𠮷野家,𪚥𪚥𪚥";
+
+  await typeInto(page.getByRole("textbox", { name: "Keyword field" }), text);
+  await expect(page.getByText("7/100", { exact: true })).toBeVisible();
+
+  await typeInto(
+    page.getByRole("textbox", { name: "Title", exact: true }),
+    text,
+  );
+  await expect(page.getByText("7/30", { exact: true })).toBeVisible();
+});

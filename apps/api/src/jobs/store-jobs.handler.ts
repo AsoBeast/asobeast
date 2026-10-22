@@ -67,9 +67,7 @@ export class StoreJobsHandler {
     switch (job.name) {
       case JOBS.REFRESH_APP: {
         const { appId, country } = job.data as RefreshAppPayload;
-        await (country === undefined
-          ? this.apps.refreshApp(appId)
-          : this.apps.refreshListing(appId, country));
+        await this.apps.refreshListing(appId, country);
         return;
       }
       case JOBS.RESOLVE_SUBTITLE:
@@ -92,7 +90,10 @@ export class StoreJobsHandler {
         );
         return;
       case JOBS.SYNC_REVIEWS:
-        await this.reviews.syncReviews(job.data as SyncReviewsPayload);
+        await this.reviews.syncReviews(
+          job.data as SyncReviewsPayload,
+          isFinalAttempt(job),
+        );
         return;
       case JOBS.SPIDER_PROBE:
         await this.spider.runSpiderProbe(job.data as SpiderProbePayload);

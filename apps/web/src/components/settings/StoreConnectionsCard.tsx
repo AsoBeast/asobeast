@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
   useMutation,
   useQueryClient,
@@ -34,7 +34,10 @@ import {
   storeConnectionsOptions,
 } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
-import { connectionStatusLine } from "@/lib/store-connection-copy";
+import {
+  connectionStatusLine,
+  needsAdminKey,
+} from "@/lib/store-connection-copy";
 import { cn } from "@/lib/utils";
 import { ConnectAppStoreDialog } from "./ConnectAppStoreDialog";
 import { StoreConnectionApps } from "./StoreConnectionApps";
@@ -137,13 +140,22 @@ function ConnectionActions({ item }: { item: StoreConnectionItem }) {
           Sync now
         </Button>
       )}
-      <ConnectAppStoreDialog label="Replace key" />
+      <ConnectAppStoreDialog
+        label="Replace key"
+        variant={needsAdminKey(item) ? "default" : "outline"}
+      />
       <DisconnectButton />
     </div>
   );
 }
 
-function ConnectionDetails({ item }: { item: StoreConnectionItem }) {
+function ConnectionDetails({
+  item,
+  actions,
+}: {
+  item: StoreConnectionItem;
+  actions: ReactNode;
+}) {
   const status = connectionStatusLine(item);
   const facts = [
     ["Issuer ID", item.issuerId],
@@ -173,6 +185,7 @@ function ConnectionDetails({ item }: { item: StoreConnectionItem }) {
       >
         {status.text}
       </p>
+      {actions}
       <StoreConnectionApps apps={item.apps} />
     </div>
   );
@@ -204,7 +217,10 @@ export function StoreConnectionsCard() {
             STORE_CONNECT_ENCRYPTION_KEY to turn them on.
           </p>
         ) : connection ? (
-          <ConnectionDetails item={connection} />
+          <ConnectionDetails
+            item={connection}
+            actions={owner ? <ConnectionActions item={connection} /> : null}
+          />
         ) : (
           <p className="text-body text-muted-foreground">
             No store connected. Connect App Store Connect to see impressions,
@@ -214,7 +230,6 @@ export function StoreConnectionsCard() {
         {data.available && user && !isOwner ? (
           <p className="text-body text-muted-foreground">{OWNER_ONLY}</p>
         ) : null}
-        {owner && connection ? <ConnectionActions item={connection} /> : null}
       </CardContent>
     </Card>
   );
