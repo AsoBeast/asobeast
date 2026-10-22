@@ -32,10 +32,17 @@ import {
   trialPaymentNote,
   type PlanAction,
 } from "@/lib/plan-choice";
+import { checkoutUiFor, sessionKeyOf } from "@/lib/embedded-checkout";
 import { invalidateAuth } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
+import { EmbeddedCheckout } from "./EmbeddedCheckout";
 
 const BUYS: readonly PlanAction[] = ["checkout", "trial"];
+
+const INTERVAL_WORD: Record<BillingInterval, string> = {
+  month: "monthly",
+  year: "annual",
+};
 
 function failureMessage(error: unknown, action: PlanAction): string {
   if (error instanceof ApiError) return error.envelope.message;
@@ -109,21 +116,37 @@ export function CheckoutColumn({
   );
   const label = planActionLabel(action, displayName);
   const offer = plan?.trialOffer;
+  const publishableKey = catalog?.publishableKey;
+  const embedded =
+    checkoutUiFor(catalog) === "embedded" &&
+    BUYS.includes(action) &&
+    price !== undefined &&
+    publishableKey !== undefined;
 
   return (
     <Card className="min-w-0 lg:sticky lg:top-6">
       <CardHeader>
         <CardTitle asChild>
-          <h2>{displayName}</h2>
+          <h2>{embedded ? label : displayName}</h2>
         </CardTitle>
         <CardDescription>
+          {embedded ? `${displayName}: ` : null}
           {action === "trial" && offer
             ? `${offer.days} days free, then ${planPriceLabel(name, interval)}.`
             : `${planPriceLabel(name, interval)}.`}
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <HostedAction action={action} label={label} price={price} />
+        {embedded ? (
+          <EmbeddedCheckout
+            key={sessionKeyOf(price.priceId)}
+            publishableKey={publishableKey}
+            priceId={price.priceId}
+            label={`Stripe checkout for ${displayName}, ${INTERVAL_WORD[interval]}`}
+          />
+        ) : (
+          <HostedAction action={action} label={label} price={price} />
+        )}
       </CardContent>
       <CardFooter>
         <p className="text-caption text-muted-foreground">

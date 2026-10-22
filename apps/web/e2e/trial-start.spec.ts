@@ -2,7 +2,12 @@ import { formatDate } from "../src/lib/format";
 import { type Page } from "@playwright/test";
 import { fulfillJson, seedSession } from "./plan-helpers.mts";
 import { expect, test } from "./reporting.mts";
-import { DAY_MS, openBilling, openRegistration } from "./trial-plans.mts";
+import {
+  CATALOG,
+  DAY_MS,
+  openBilling,
+  openRegistration,
+} from "./trial-plans.mts";
 import { seedViewer } from "./viewer.mts";
 
 async function register(page: Page, path = "/register") {
@@ -146,5 +151,98 @@ test.describe("the billing wall", () => {
     await page.getByRole("button", { name: "Confirm my email" }).click();
 
     await expect(page).toHaveURL("http://localhost:3000/");
+  });
+
+  test.describe("with a publishable key", () => {
+    const STRIPE_STUB = `
+      window.Stripe = function () {
+        return {
+          createEmbeddedCheckoutPage: async ({ fetchClientSecret }) => {
+            const secret = await fetchClientSecret();
+            return {
+              mount: (target) => target.setAttribute("data-mounted", secret),
+              unmount: () => {},
+              destroy: () => {},
+            };
+          },
+        };
+      };
+      window.Stripe.version = "endive";
+    `;
+
+    test("mounts the embedded checkout and remounts it per plan and interval", async ({
+      page,
+      context,
+    }) => {
+      await seedViewer(context, "checkout-pending");
+      await seedSession(page);
+      await openBilling(page);
+      await page.route("**/api/backend/billing/catalog", (route) =>
+        route.fulfill(
+          fulfillJson(200, { ...CATALOG, publishableKey: "pk_test_e2e" }),
+        ),
+      );
+      await page.route("https://js.stripe.com/**", (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: "application/javascript",
+          body: STRIPE_STUB,
+        }),
+      );
+      const bodies: { priceId: string; ui: string }[] = [];
+      await page.route("**/api/backend/billing/checkout", async (route) => {
+        const body = route.request().postDataJSON() as {
+          priceId: string;
+          ui: string;
+        };
+        bodies.push(body);
+        await route.fulfill(
+          fulfillJson(200, {
+            url: "http://localhost:3000/?checkout=complete",
+            clientSecret: `cs_test_secret_${body.priceId}`,
+          }),
+        );
+      });
+
+      await page.goto("/upgrade");
+
+      await expect(
+        page.getByRole("heading", { level: 2, name: "Start free trial" }),
+      ).toBeVisible();
+      await expect(
+        page.locator('[data-mounted="cs_test_secret_price_indie_month"]'),
+      ).toHaveAttribute("aria-label", "Stripe checkout for Indie, monthly");
+      await expect(
+        page.getByRole("button", { name: "Start free trial" }),
+      ).toHaveCount(0);
+
+      await page.getByRole("tab", { name: "Annual" }).click();
+      await expect(
+        page.locator('[data-mounted="cs_test_secret_price_indie_year"]'),
+      ).toHaveCount(1);
+      await page.getByRole("button", { name: "Select Ultimate" }).click();
+      await expect(
+        page.locator('[data-mounted="cs_test_secret_price_ultimate_year"]'),
+      ).toHaveCount(1);
+
+      expect(bodies).toEqual([
+        { priceId: "price_indie_month", ui: "embedded" },
+        { priceId: "price_indie_year", ui: "embedded" },
+        { priceId: "price_ultimate_year", ui: "embedded" },
+      ]);
+    });
+
+    test("keeps the hosted button without a key", async ({ page, context }) => {
+      await seedViewer(context, "checkout-pending");
+      await seedSession(page);
+      await openBilling(page);
+
+      await page.goto("/upgrade");
+
+      await expect(
+        page.getByRole("button", { name: "Start free trial" }),
+      ).toBeVisible();
+      await expect(page.locator("[data-mounted]")).toHaveCount(0);
+    });
   });
 });
