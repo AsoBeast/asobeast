@@ -169,7 +169,7 @@ export class BillingReconciler {
     );
     await this.prisma.workspace.update({
       where: { id: workspace.id },
-      data: projectionOf(desired),
+      data: projectionOf(desired, workspace, new Date()),
     });
     return true;
   }

@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import {
   PLANS,
   UPGRADE_PATH,
+  billingIntervalOf,
   nextPlan,
   type AccountPlan,
   type TrialOffer,
@@ -22,6 +23,7 @@ type WorkspacePlan = WorkspaceEntitlement & {
   subscriptionId: string | null;
   subscriptionStatus: string | null;
   cancelAtPeriodEnd: boolean;
+  billingInterval: string | null;
 };
 
 @Injectable()
@@ -53,7 +55,9 @@ export class AccountPlanService {
         holdsSubscription(workspace) && stalledBy(workspace.subscriptionStatus),
       subscriptionPending:
         holdsSubscription(workspace) && pendingBy(workspace.subscriptionStatus),
+      trialing: workspace.subscriptionStatus === 'trialing',
       ...(billing ? { trialOffer: offer } : {}),
+      billingInterval: billingIntervalOf(workspace.billingInterval),
       cancelAtPeriodEnd: workspace.cancelAtPeriodEnd,
       trialEndsAt: workspace.trialEndsAt?.toISOString() ?? null,
       renewsAt: workspace.planExpiresAt?.toISOString() ?? null,

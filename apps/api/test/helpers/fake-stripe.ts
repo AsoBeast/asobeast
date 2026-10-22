@@ -98,26 +98,30 @@ function customerIdOf(subscription: Stripe.Subscription): string {
     : subscription.customer.id;
 }
 
-const createdFixture = JSON.parse(
-  readFileSync(
-    join(
-      __dirname,
-      '..',
-      'fixtures',
-      'stripe',
-      'customer.subscription.created.json',
+function fixtureSubscription(name: string): Stripe.Subscription {
+  const event = JSON.parse(
+    readFileSync(
+      join(__dirname, '..', 'fixtures', 'stripe', `${name}.json`),
+      'utf8',
     ),
-    'utf8',
-  ),
-) as Stripe.Event;
+  ) as Stripe.Event;
+  return event.data.object as Stripe.Subscription;
+}
+
+const CREATED = fixtureSubscription('customer.subscription.created');
+
+const TRIALING = fixtureSubscription('customer.subscription.trialing');
 
 export function subscriptionFrom(
   overrides: Partial<Stripe.Subscription>,
 ): Stripe.Subscription {
-  return {
-    ...(createdFixture.data.object as Stripe.Subscription),
-    ...overrides,
-  };
+  return { ...CREATED, ...overrides };
+}
+
+export function trialingSubscription(
+  overrides: Partial<Stripe.Subscription> = {},
+): Stripe.Subscription {
+  return { ...TRIALING, ...overrides };
 }
 
 export function checkoutSession(

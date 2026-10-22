@@ -10,7 +10,11 @@ import {
   WORKSPACE,
   type BillingHarness,
 } from './helpers/billing-harness';
-import { checkoutSession, subscriptionFrom } from './helpers/fake-stripe';
+import {
+  checkoutSession,
+  subscriptionFrom,
+  trialingSubscription,
+} from './helpers/fake-stripe';
 
 const RECONCILE = '/billing/reconcile';
 const CUSTOMER = 'cus_test_stored';
@@ -59,6 +63,32 @@ describe('Billing reconcile (e2e)', () => {
       plan: 'indie',
       subscriptionId: 'sub_adopt',
       subscriptionStatus: 'active',
+    });
+  });
+
+  it('adopts a trialing subscription with its dates and interval', async () => {
+    await resetBillingState(harness, {
+      billingCustomerId: CUSTOMER,
+      trialEndsAt: null,
+    });
+    harness.fake.subscriptionStore.set(
+      'sub_trial',
+      trialingSubscription({
+        id: 'sub_trial',
+        customer: CUSTOMER,
+        metadata: { [WORKSPACE_METADATA_KEY]: WORKSPACE },
+      }),
+    );
+
+    await reconcile().expect(200);
+
+    await expect(workspaceRow(harness)).resolves.toMatchObject({
+      plan: 'indie',
+      subscriptionId: 'sub_trial',
+      subscriptionStatus: 'trialing',
+      trialStartedAt: new Date(1_800_000_150 * 1000),
+      trialEndsAt: new Date(1_800_604_950 * 1000),
+      billingInterval: 'month',
     });
   });
 

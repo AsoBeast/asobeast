@@ -246,7 +246,7 @@ export class BillingWebhookService {
         billingCustomerId: workspace.billingCustomerId,
       },
       data: {
-        ...projectionOf(state),
+        ...projectionOf(state, workspace, new Date()),
         subscriptionEventAt: eventAt,
         billingCustomerId: customerId,
         ...reopenedCapacity(state.plan),

@@ -10,6 +10,12 @@ export const BILLING_INTERVALS = ['month', 'year'] as const;
 
 export type BillingInterval = (typeof BILLING_INTERVALS)[number];
 
+export function billingIntervalOf(
+  value: string | null | undefined,
+): BillingInterval | null {
+  return BILLING_INTERVALS.find((interval) => interval === value) ?? null;
+}
+
 export interface BillingPrice {
   plan: PaidPlanName;
   interval: BillingInterval;

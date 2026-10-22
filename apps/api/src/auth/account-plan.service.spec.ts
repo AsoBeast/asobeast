@@ -43,6 +43,7 @@ describe('AccountPlanService', () => {
       subscriptionId?: string | null;
       subscriptionStatus?: string | null;
       cancelAtPeriodEnd?: boolean;
+      billingInterval?: string | null;
     } = {},
   ) => ({
     plan: 'free',
@@ -52,6 +53,7 @@ describe('AccountPlanService', () => {
     subscriptionId: null,
     subscriptionStatus: null,
     cancelAtPeriodEnd: false,
+    billingInterval: null,
     ...over,
   });
 
@@ -278,6 +280,40 @@ describe('AccountPlanService', () => {
         subscribed: false,
         subscriptionStalled: false,
       });
+    });
+  });
+
+  describe('a stripe trial', () => {
+    const service = () =>
+      build(true, { plan: 'indie', apps: 0, keywordMarkets: 0 });
+
+    it('reports a trialing subscription', async () => {
+      await expect(
+        service().describe(
+          workspace({
+            subscriptionId: 'sub_1',
+            subscriptionStatus: 'trialing',
+          }),
+          NOW,
+          null,
+        ),
+      ).resolves.toMatchObject({ trialing: true });
+      await expect(
+        service().describe(
+          workspace({ subscriptionId: 'sub_1', subscriptionStatus: 'active' }),
+          NOW,
+          null,
+        ),
+      ).resolves.toMatchObject({ trialing: false });
+    });
+
+    it('passes a known interval through and nothing else', async () => {
+      await expect(
+        service().describe(workspace({ billingInterval: 'month' }), NOW, null),
+      ).resolves.toMatchObject({ billingInterval: 'month' });
+      await expect(
+        service().describe(workspace({ billingInterval: 'week' }), NOW, null),
+      ).resolves.toMatchObject({ billingInterval: null });
     });
   });
 

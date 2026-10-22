@@ -342,6 +342,7 @@ export class AuthService {
       entitled: this.entitled(user),
       trialAwaitsConfirmation: this.verification.awaitsConfirmation(user),
       trialAwaitsCheckout: (await this.trialOffers.offerFor(user)) !== null,
+      trialing: user.workspace.subscriptionStatus === 'trialing',
       platformOperator: isPlatformOperator(user),
       suspendedAt: user.workspace.suspendedAt?.toISOString() ?? null,
       suspendedReason: user.workspace.suspendedReason,

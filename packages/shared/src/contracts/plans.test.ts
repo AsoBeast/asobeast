@@ -2,6 +2,7 @@ import { describe, expect, expectTypeOf, it } from 'vitest';
 import type { AccountPlan, AuthUser } from './auth';
 import {
   CHECKOUT_UIS,
+  billingIntervalOf,
   type BillingCatalog,
   type BillingInterval,
   type BillingSession,
@@ -359,6 +360,14 @@ describe('trialingLimits', () => {
     expectTypeOf<BillingCatalog['publishableKey']>().toEqualTypeOf<
       string | undefined
     >();
+  });
+
+  it('reads a billing interval and nothing else', () => {
+    expect(billingIntervalOf('month')).toBe('month');
+    expect(billingIntervalOf('year')).toBe('year');
+    expect(billingIntervalOf('day')).toBeNull();
+    expect(billingIntervalOf(null)).toBeNull();
+    expect(billingIntervalOf(undefined)).toBeNull();
   });
 
   it('names the two checkout uis', () => {
