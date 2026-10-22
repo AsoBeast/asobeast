@@ -4,7 +4,13 @@ import { getQueueToken } from '@nestjs/bullmq';
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient, Store } from '@prisma/client';
-import { DailyBudget, RunDailyResult } from '@asobeast/shared';
+import {
+  AppDetail,
+  AppRunStatus,
+  DailyBudget,
+  PortfolioSummary,
+  RunDailyResult,
+} from '@asobeast/shared';
 import { Job, Queue } from 'bullmq';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
@@ -206,6 +212,59 @@ describe('market listings in the daily pipeline (e2e)', () => {
     await expect(
       prisma.appSnapshot.count({ where: { appId: primary.id } }),
     ).resolves.toBe(0);
+  });
+
+  it('flags an app the store no longer lists, completes its run and clears the flag once it is listed again', async () => {
+    const { primary, rival } = await seed();
+    await prisma.keywordRanking.create({
+      data: {
+        appId: primary.id,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        keywordId: (await prisma.trackedKeyword.findFirstOrThrow()).keywordId,
+        date: new Date(new Date().toISOString().slice(0, 10)),
+        position: null,
+      },
+    });
+    registry.failWith = new StoreAppNotFoundError(Store.APP_STORE, '111');
+    await runRefreshJob(primary.id);
+    await runRefreshJob(primary.id, 'de');
+    registry.failWith = null;
+    await runRefreshJob(rival.id);
+    await runRefreshJob(rival.id, 'de');
+
+    const detail = (await api.get(`/apps/${primary.id}`).expect(200))
+      .body as AppDetail;
+    expect(detail.delistedAt).toEqual(expect.any(String));
+    expect(detail.competitors[0]?.delistedAt).toBeNull();
+    const portfolio = (await api.get('/portfolio').expect(200))
+      .body as PortfolioSummary;
+    expect(portfolio.apps[0]?.delistedAt).toBe(detail.delistedAt);
+    const status = (await api.get(`/apps/${primary.id}/run-status`).expect(200))
+      .body as AppRunStatus;
+    expect(status.stages.find((row) => row.stage === 'listings')).toEqual({
+      stage: 'listings',
+      ready: 2,
+      total: 2,
+      complete: true,
+    });
+    expect(status.state).toBe('complete');
+
+    await runRefreshJob(primary.id);
+
+    const relisted = (await api.get(`/apps/${primary.id}`).expect(200))
+      .body as AppDetail;
+    expect(relisted.delistedAt).toBeNull();
+  });
+
+  it('flags the app when an on demand refresh finds it delisted', async () => {
+    const { primary } = await seed();
+    registry.failWith = new StoreAppNotFoundError(Store.APP_STORE, '111');
+
+    await api.post(`/apps/${primary.id}/refresh`).expect(404);
+
+    const detail = (await api.get(`/apps/${primary.id}`).expect(200))
+      .body as AppDetail;
+    expect(detail.delistedAt).toEqual(expect.any(String));
   });
 
   it('still fails a refresh job when the store does not answer', async () => {

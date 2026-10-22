@@ -68,7 +68,7 @@ Three causes look identical from the outside. This tells them apart.
     | --- | --- | --- |
     | Failures across all apps, on both stores, with transport messages such as HTTP 429 or a connection reset | Rate limiting | Check `GET /jobs/budget` against recent market or keyword additions. See [The daily pipeline and rate limits](/concepts/pipeline) |
     | Failures across all apps of **one** store, with type or parse messages, while the other store keeps working | Parser breakage | Continue below |
-    | Failures for one app only | Not an incident. Usually a region restriction or a changed store id. A delisted app fails no listing refresh: the job finishes and the API log says the app is no longer listed | Check the app in the store, then remove or re-import it |
+    | Failures for one app only | Not an incident. Usually a region restriction or a changed store id. A delisted app fails no listing refresh: the job finishes, the API log says the app is no longer listed and the app pages show a notice. See [What happens when the store stops listing an app?](/concepts/pipeline#what-happens-when-the-store-stops-listing-an-app) | Check the app in the store, then remove or re-import it |
 
     The canary answers the same question earlier and without a human reading messages: `unreachable` is the first row, `broken` is the second, and a single failing app leaves the canary on `ok` because the canary probes its own fixture rather than yours.
 

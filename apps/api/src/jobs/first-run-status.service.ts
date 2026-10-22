@@ -56,6 +56,7 @@ export class FirstRunStatusService {
       select: {
         id: true,
         createdAt: true,
+        delistedAt: true,
         snapshots: {
           ...LATEST_HOME_LISTING,
           select: { ratingCount: true },
@@ -81,11 +82,11 @@ export class FirstRunStatusService {
     const backfillPending =
       (snapshot?.ratingCount ?? 0) > 0 && age < REVIEW_BACKFILL_GRACE_MS;
     const inputs: Record<FirstRunStage, StageInput> = {
-      metadata: {
-        ready: snapshot && !subtitlePending ? 1 : 0,
-        total: 1,
-        expectedBy: null,
-      },
+      metadata: listingStage(
+        snapshot !== undefined,
+        subtitlePending,
+        app.delistedAt !== null,
+      ),
       keywords: { ready: tracked, total: tracked, expectedBy: null },
       rankings: {
         ready: captures.keywords,
@@ -174,5 +175,21 @@ function stageStatus(
     total,
     complete,
     expectedBy: complete ? null : (input.expectedBy?.toISOString() ?? null),
+  };
+}
+
+function listingStage(
+  captured: boolean,
+  subtitlePending: boolean,
+  delisted: boolean,
+): StageInput {
+  if (delisted) {
+    const count = captured ? 1 : 0;
+    return { ready: count, total: count, expectedBy: null };
+  }
+  return {
+    ready: captured && !subtitlePending ? 1 : 0,
+    total: 1,
+    expectedBy: null,
   };
 }

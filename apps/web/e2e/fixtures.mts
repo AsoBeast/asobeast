@@ -1551,6 +1551,8 @@ const APP_1_COMPARISON: KeywordComparison = {
 };
 
 export const CROWDED_COMPETITORS_COOKIE = "e2e_crowded_competitors";
+export const DELISTED_COOKIE = "e2e_delisted";
+export const DELISTED_AT = "2026-10-20T03:04:05.000Z";
 export const CROWDED_ICON_URL =
   "https://is1-ssl.mzstatic.com/image/thumb/e2e-rival/512x512bb.png";
 

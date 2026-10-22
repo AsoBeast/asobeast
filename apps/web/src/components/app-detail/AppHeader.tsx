@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { appDetailOptions } from "@/lib/queries";
 import { formatCountry, storeLabel } from "@/lib/format";
 import { AppLink } from "./AppLink";
+import { DelistedNotice } from "./DelistedNotice";
 import { NotInSearchNotice } from "./NotInSearchNotice";
 
 function storeUrl(detail: AppDetail): string {
@@ -54,6 +55,9 @@ export function AppHeader({ id }: { id: string }) {
           <AppLink detail={detail} />
         </div>
       </header>
+      {detail.delistedAt ? (
+        <DelistedNotice detail={detail} since={detail.delistedAt} />
+      ) : null}
       {detail.searchable === false ? <NotInSearchNotice /> : null}
     </>
   );

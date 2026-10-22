@@ -18,7 +18,7 @@ import {
   windowVisibility,
 } from './analytics.support';
 import { countChangeDays } from './change-days';
-import { setupStateOf } from '../apps/apps.mapper';
+import { delistedAt, setupStateOf } from '../apps/apps.mapper';
 import { HOME_EVENTS, LATEST_HOME_LISTING } from '../apps/listing';
 
 const CHANGES_WINDOW_DAYS = 7;
@@ -37,6 +37,7 @@ export class PortfolioService {
         country: true,
         name: true,
         iconUrl: true,
+        delistedAt: true,
         groupId: true,
         group: { select: { name: true } },
         _count: { select: { competitors: true } },
@@ -90,6 +91,7 @@ export class PortfolioService {
       country: string;
       name: string | null;
       iconUrl: string | null;
+      delistedAt: Date | null;
       groupId: string | null;
       group: { name: string } | null;
       _count: { competitors: number };
@@ -125,6 +127,7 @@ export class PortfolioService {
         trackedKeywords: rows.length,
         competitors: app._count.competitors,
         lastCapturedAt: app.snapshots[0]?.capturedAt.toISOString() ?? null,
+        delistedAt: delistedAt(app),
         setup: setupSummary(setupStateOf(app), {
           competitors: app._count.competitors,
           keywords: keywords.get(app.id) ?? 0,
