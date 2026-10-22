@@ -611,8 +611,11 @@ describe('Stripe webhooks', () => {
           amount_paid: 0,
         }),
       );
+      const trial = subscriptionOf('customer.subscription.trialing');
       subscriptions.set(SUBSCRIPTION, {
         ...subscriptionOf('customer.subscription.past_due'),
+        trial_start: trial.trial_start,
+        trial_end: trial.trial_end,
         latest_invoice: 'in_TestDeclined',
       });
       await deliver('customer.subscription.past_due');

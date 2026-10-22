@@ -231,6 +231,23 @@ describe('projectionOf', () => {
     });
   });
 
+  it('keeps a legacy trial running while a purchase confirms', () => {
+    const confirming = state({
+      status: 'incomplete',
+      plan: 'free',
+      trialStartedAt: null,
+      trialEndsAt: null,
+    });
+    const held = {
+      trialStartedAt: at(TRIAL_START),
+      trialEndsAt: at(TRIAL_END),
+    };
+
+    expect(projectionOf(confirming, held, NOW)).not.toHaveProperty(
+      'trialEndsAt',
+    );
+  });
+
   it('writes no trial end for a gone subscription without one ahead', () => {
     const gone = state({ status: 'canceled', plan: 'free', endedAt: NOW });
 

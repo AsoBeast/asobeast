@@ -129,9 +129,8 @@ function trialEndOf(
   if (state.plan !== FREE_PLAN) {
     return state.trialEndsAt ? { trialEndsAt: state.trialEndsAt } : {};
   }
-  const ending = state.trialEndsAt ?? held.trialEndsAt;
-  if (!ending) return {};
-  return { trialEndsAt: ending < now ? ending : now };
+  if (!state.trialEndsAt) return {};
+  return { trialEndsAt: state.trialEndsAt < now ? state.trialEndsAt : now };
 }
 
 export function heldSubscription(
