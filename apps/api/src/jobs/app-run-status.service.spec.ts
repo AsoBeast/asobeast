@@ -18,13 +18,20 @@ interface Member {
   store: Store;
   country: string;
   delistedAt: Date | null;
+  unlistedMarkets: string[];
 }
 
-const rival = (id: string, country = 'us', delistedAt: Date | null = null) => ({
+const rival = (
+  id: string,
+  country = 'us',
+  delistedAt: Date | null = null,
+  unlistedMarkets: string[] = [],
+) => ({
   id,
   store: Store.APP_STORE,
   country,
   delistedAt,
+  unlistedMarkets,
 });
 
 const APP = {
@@ -32,6 +39,7 @@ const APP = {
   store: Store.APP_STORE,
   country: 'us',
   delistedAt: null as Date | null,
+  unlistedMarkets: [] as string[],
   competitors: [] as Member[],
   tracked: tracked('us', 'us'),
 };
@@ -193,6 +201,43 @@ describe('AppRunStatusService', () => {
     const status = await service.forApp(APP.id, TWO_HOURS_LATER);
 
     expect(stage(status, 'listings')).toMatchObject({ ready: 1, total: 2 });
+  });
+
+  it('expects no listing in a market the store does not list an app in', async () => {
+    const { service } = build({
+      app: {
+        ...APP,
+        unlistedMarkets: ['cn', 'ru'],
+        competitors: [rival('rival_1', 'us', null, ['ru'])],
+        tracked: tracked('us', 'cn', 'ru'),
+      },
+      snapshots: [
+        { appId: APP.id, country: null },
+        { appId: 'rival_1', country: null },
+        { appId: 'rival_1', country: 'cn' },
+      ],
+      captures: { captured: 3, lastCaptureAt: TWO_HOURS_LATER },
+    });
+
+    const status = await service.forApp(APP.id, TWO_HOURS_LATER);
+
+    expect(stage(status, 'listings')).toEqual({
+      stage: 'listings',
+      ready: 3,
+      total: 3,
+      complete: true,
+    });
+    expect(status.state).toBe('complete');
+  });
+
+  it('expects the home listing of an app whatever markets it is unlisted in', async () => {
+    const { service } = build({
+      app: { ...APP, unlistedMarkets: ['us'], tracked: tracked('us') },
+    });
+
+    const status = await service.forApp(APP.id, TWO_HOURS_LATER);
+
+    expect(stage(status, 'listings')).toMatchObject({ ready: 0, total: 1 });
   });
 
   it("counts a competitor's home listing in a market that is its home once", async () => {
