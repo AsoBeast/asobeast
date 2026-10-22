@@ -1,174 +1,15 @@
 "use client";
 
-import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Loader2 } from "lucide-react";
-import { toast } from "sonner";
-import {
-  BILLING_INTERVALS,
-  PAID_PLAN_NAMES,
-  PLANS,
-  type AccountPlan,
-  type BillingInterval,
-  type BillingPrice,
-  type PaidPlanName,
-} from "@asobeast/shared";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
-import {
-  ApiError,
-  openBillingPortal,
-  recoversInPortal,
-  startCheckout,
-} from "@/lib/api";
-import { formatNumber } from "@/lib/format";
-import {
-  billingNote,
-  paymentNote,
-  planAction,
-  planActionLabel,
-  paywallStatusLine,
-  type PlanAction,
-} from "@/lib/plan-choice";
-import {
-  accountPlanOptions,
-  billingCatalogOptions,
-  invalidateAuth,
-} from "@/lib/queries";
-import { useSingleFlight } from "@/lib/single-flight";
+import { useQuery } from "@tanstack/react-query";
+import { BillingWall } from "@/components/billing/BillingWall";
+import { accountPlanOptions, billingCatalogOptions } from "@/lib/queries";
 import { MemberBilling } from "./MemberBilling";
-import { ResendConfirmationButton } from "./ResendConfirmationButton";
 import { SessionCheck } from "./SessionCheck";
 import { useAuth } from "./use-auth";
 import { useSignedOutRedirect } from "./use-signed-out-redirect";
 
-const INCLUDED = [
-  "Daily keyword rank tracking across every storefront",
-  "Popularity, difficulty and opportunity scoring",
-  "Competitor discovery and metadata audits",
-  "AI audit and metadata drafts",
-  "Alerts by email and webhook",
-  "Personal API tokens and the MCP server",
-];
-
-const LIMIT_ROWS = [
-  { key: "apps", label: "Apps" },
-  { key: "keywordMarkets", label: "Keyword markets" },
-  { key: "competitorsPerApp", label: "Competitors per app" },
-  { key: "aiCallsPerMonth", label: "AI calls per month" },
-] as const;
-
-const INTERVAL_LABEL: Record<BillingInterval, string> = {
-  month: "Monthly",
-  year: "Annual",
-};
-
-function failureMessage(error: unknown, action: PlanAction): string {
-  if (error instanceof ApiError) return error.envelope.message;
-  return action === "checkout"
-    ? "Could not start checkout. Try again."
-    : "Could not open the billing portal. Try again.";
-}
-
-function PlanOption({
-  name,
-  interval,
-  price,
-  action,
-}: {
-  name: PaidPlanName;
-  interval: BillingInterval;
-  price: BillingPrice | undefined;
-  action: PlanAction;
-}) {
-  const { displayName, prices, limits } = PLANS[name];
-  const amountUsd =
-    (interval === "month" ? prices.monthlyUsd : prices.annualUsd) ?? 0;
-
-  const client = useQueryClient();
-  const change = useMutation({
-    mutationFn: () =>
-      action === "checkout"
-        ? startCheckout(price?.priceId ?? "")
-        : openBillingPortal(),
-    onSuccess: ({ url }) => {
-      window.location.assign(url);
-    },
-    onError: (error) => {
-      if (recoversInPortal(error)) invalidateAuth(client);
-      toast.error(failureMessage(error, action));
-    },
-  });
-  const changeOnce = useSingleFlight(change);
-
-  return (
-    <Card className="flex-1">
-      <CardHeader>
-        <CardDescription className="flex items-center gap-2">
-          {displayName}
-          {action === "current" ? (
-            <Badge variant="secondary">Current</Badge>
-          ) : null}
-        </CardDescription>
-        <CardTitle asChild>
-          <p>
-            <span className="text-display tabular-nums">${amountUsd}</span>
-            <span className="text-body text-muted-foreground">
-              {interval === "month" ? " /month" : " /year"}
-            </span>
-          </p>
-        </CardTitle>
-        <p className="text-body text-muted-foreground">
-          {billingNote(interval)}
-        </p>
-      </CardHeader>
-      <CardContent>
-        <dl className="flex flex-col gap-1.5 text-sm">
-          {LIMIT_ROWS.map(({ key, label }) => (
-            <div key={key} className="flex justify-between gap-4">
-              <dt className="text-muted-foreground">{label}</dt>
-              <dd className="font-medium tabular-nums">
-                {formatNumber(limits[key] ?? 0)}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      </CardContent>
-      <CardFooter>
-        <Button
-          className="w-full"
-          disabled={
-            action === "current" ||
-            action === "pending" ||
-            (action === "checkout" && !price) ||
-            change.isPending
-          }
-          title={
-            action !== "checkout" || price
-              ? undefined
-              : "Checkout is not configured yet"
-          }
-          onClick={() => changeOnce()}
-        >
-          {change.isPending ? <Loader2 className="animate-spin" /> : null}
-          {planActionLabel(action, displayName)}
-        </Button>
-      </CardFooter>
-    </Card>
-  );
-}
-
 export function UpgradeContent() {
-  const { isLoading, isMember, authenticated, awaitingConfirmation } =
+  const { isLoading, isMember, authenticated, awaitingConfirmation, user } =
     useAuth();
   const signedOut = useSignedOutRedirect(true);
   const { data: plan } = useQuery({
@@ -179,7 +20,6 @@ export function UpgradeContent() {
     ...billingCatalogOptions,
     enabled: authenticated && !isLoading && !isMember,
   });
-  const [interval, setInterval] = useState<BillingInterval>("month");
 
   if (isMember) return <MemberBilling plan={plan} />;
   if (isLoading || signedOut) {
@@ -190,85 +30,12 @@ export function UpgradeContent() {
     );
   }
 
-  const priceFor = (name: PaidPlanName) =>
-    catalog?.prices.find(
-      (price) => price.plan === name && price.interval === interval,
-    );
-
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
-      <div className="flex flex-col items-center gap-3 text-center">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-display tracking-tight text-balance">
-            Keep optimizing without limits
-          </h1>
-          <p className="text-body text-muted-foreground">
-            {paywallStatusLine(plan, awaitingConfirmation)}
-          </p>
-          {awaitingConfirmation ? (
-            <div className="mt-2 flex justify-center">
-              <ResendConfirmationButton />
-            </div>
-          ) : null}
-        </div>
-        <Tabs
-          value={interval}
-          onValueChange={(next) => setInterval(next as BillingInterval)}
-        >
-          <TabsList aria-label="Billing interval">
-            {BILLING_INTERVALS.map((value) => (
-              <TabsOption key={value} value={value}>
-                {INTERVAL_LABEL[value]}
-              </TabsOption>
-            ))}
-          </TabsList>
-        </Tabs>
-      </div>
-
-      <div className="flex flex-col gap-4 sm:flex-row">
-        {PAID_PLAN_NAMES.map((name) => (
-          <PlanOption
-            key={name}
-            name={name}
-            interval={interval}
-            price={priceFor(name)}
-            action={planAction(plan, name)}
-          />
-        ))}
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle asChild>
-            <h2>Every plan includes</h2>
-          </CardTitle>
-          <CardDescription>
-            The difference between the plans is volume, never features.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ul className="grid gap-2 text-sm sm:grid-cols-2">
-            {INCLUDED.map((feature) => (
-              <li key={feature} className="flex items-start gap-2">
-                <Check className="mt-0.5 size-4 shrink-0 text-success" />
-                <span>{feature}</span>
-              </li>
-            ))}
-          </ul>
-        </CardContent>
-        <CardFooter>
-          <p className="text-caption text-muted-foreground">
-            {paymentNote(catalog)} Need help?{" "}
-            <a
-              href="mailto:hello@asobeast.dev"
-              className="font-medium underline"
-            >
-              Contact support
-            </a>
-            .
-          </p>
-        </CardFooter>
-      </Card>
-    </div>
+    <BillingWall
+      plan={plan}
+      catalog={catalog}
+      email={user?.email}
+      awaitingConfirmation={awaitingConfirmation}
+    />
   );
 }

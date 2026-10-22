@@ -4,8 +4,11 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
+import { useQueryState } from "nuqs";
 import { PASSWORD_RULE } from "@asobeast/shared";
 import { register } from "@/lib/api";
+import { entryDestination } from "@/lib/auth-routes";
+import { planParam } from "@/lib/search-params";
 import { passwordError } from "@/lib/password";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,6 +35,7 @@ export function RegisterForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<AuthFieldError | null>(null);
+  const [plan] = useQueryState("plan", planParam);
 
   const { mutation, sessionDropped } = useSessionEntry({
     establish: () =>
@@ -40,6 +44,7 @@ export function RegisterForm() {
         password,
         name: name.trim() === "" ? undefined : name.trim(),
       }),
+    destination: (user) => entryDestination(user, plan),
     onFailure: (err) =>
       setError(authFieldError(err, "Could not create the account. Try again.")),
   });

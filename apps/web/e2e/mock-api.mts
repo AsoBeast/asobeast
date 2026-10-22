@@ -445,6 +445,29 @@ const VIEWER_USERS: Record<Viewer, Partial<AuthUser>> = {
     emailVerified: false,
     trialAwaitsConfirmation: true,
   },
+  "checkout-pending": {
+    plan: "free",
+    entitled: false,
+    platformOperator: false,
+    trialAwaitsConfirmation: false,
+    trialAwaitsCheckout: true,
+  },
+  "checkout-pending-unconfirmed": {
+    plan: "free",
+    entitled: false,
+    platformOperator: false,
+    emailVerified: false,
+    trialAwaitsConfirmation: true,
+    trialAwaitsCheckout: true,
+  },
+  trialing: {
+    plan: "indie",
+    entitled: true,
+    platformOperator: false,
+    trialing: true,
+    trialEndsAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
+    planExpiresAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
+  },
 };
 const ACCOUNT_PLAN: AccountPlan = {
   plan: "indie",
@@ -2348,6 +2371,16 @@ const routes: Route[] = [
       insightsHold(token).resolve();
       json(res, 200, { released: true });
     },
+  },
+  {
+    method: "POST",
+    pattern: /^\/auth\/(register|verify)$/,
+    handler: ([entry], req, res) =>
+      withBody<unknown>(req, res, () =>
+        json(res, entry === "register" ? 201 : 200, viewerOf(req), {
+          "set-cookie": `${SESSION_COOKIE}=e2e; Path=/`,
+        }),
+      ),
   },
   {
     method: "POST",

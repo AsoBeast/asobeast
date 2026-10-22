@@ -14,6 +14,7 @@ import {
   CHART_DEVICES,
   COUNTRY_PATTERN,
   OVERALL_GENRE,
+  PAID_PLAN_NAMES,
   REVIEW_REPLY_STATES,
   REVIEW_SORTS,
   STORES,
@@ -46,6 +47,8 @@ import {
 import { DEFAULT_MCP_CLIENT, MCP_CLIENTS } from "./mcp-snippets";
 import { GRADES } from "./grade";
 import { POSITION_BANDS, VERSUS, type ActivityStatus } from "./table/facets";
+
+export const planParam = parseAsStringLiteral(PAID_PLAN_NAMES);
 
 export const KEYWORD_TABLE_SORTS = [
   ...KEYWORD_SORTS,

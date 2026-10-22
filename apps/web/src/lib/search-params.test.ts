@@ -27,6 +27,7 @@ import { DEFAULT_MCP_CLIENT, MCP_CLIENTS } from "./mcp-snippets";
 import { GRADES } from "./grade";
 import { POSITION_BANDS } from "./table/facets";
 import {
+  planParam,
   chartParsers,
   chartTableParsers,
   COMBINATION_URL_KEYS,
@@ -506,5 +507,14 @@ describe("changeOwner parser", () => {
 
   it("writes a narrowed owner into the url", () => {
     expect(serialize({ changes: "competitors" })).toBe("?changes=competitors");
+  });
+});
+
+describe("planParam", () => {
+  it("reads either paid plan and nothing else", () => {
+    expect(planParam.parse("indie")).toBe("indie");
+    expect(planParam.parse("ultimate")).toBe("ultimate");
+    expect(planParam.parse("trial")).toBeNull();
+    expect(planParam.parse("free")).toBeNull();
   });
 });

@@ -6,15 +6,21 @@ import {
   PAYMENT_CONFIRMING,
   SOLD_THROUGH_LINK,
   billingNote,
+  confirmationLine,
   memberPlanLine,
   paymentNote,
   planAction,
   planActionLabel,
   planCallToAction,
   planStatusLine,
+  paywallHeading,
+  startTrialLine,
   paywallStatusLine,
   suspensionNotice,
+  trialEndsOn,
+  trialPaymentNote,
 } from "./plan-choice";
+import { formatDate } from "./format";
 
 const planOf = (over: Partial<AccountPlan> = {}): AccountPlan =>
   ({
@@ -206,8 +212,7 @@ describe("a first payment still being confirmed", () => {
 });
 
 describe("a trial that waits on the email confirmation", () => {
-  const CONFIRM_EMAIL_TO_START_TRIAL =
-    "Confirm your email to start your free trial.";
+  const CONFIRM_EMAIL_TO_START_TRIAL = "Confirm your email address.";
 
   const unconfirmed = planOf({
     plan: "free",
@@ -254,6 +259,90 @@ describe("a trial that waits on the email confirmation", () => {
 
   it("never replaces the account of a trial that already ended", () => {
     expect(paywallStatusLine(lapsedTrial, false)).toContain("trial ended");
+  });
+});
+
+describe("a trial offered on the wall", () => {
+  const NOW = new Date("2026-10-22T12:00:00.000Z");
+  const offered = planOf({
+    plan: "free",
+    entitled: false,
+    subscribed: false,
+    hasBillingAccount: false,
+    trialOffer: { days: 7 },
+  });
+  const ENDS_ON = formatDate("2026-10-29T12:00:00.000Z");
+
+  it("starts a free trial instead of a checkout", () => {
+    expect(planAction(offered, "indie")).toBe("trial");
+    expect(planAction(offered, "ultimate")).toBe("trial");
+    expect(planActionLabel("trial", "Indie")).toBe("Start free trial");
+  });
+
+  it("never offers the trial over a held or pending subscription", () => {
+    expect(planAction({ ...offered, subscribed: true }, "indie")).toBe(
+      "change",
+    );
+    expect(
+      planAction(
+        { ...offered, subscribed: true, subscriptionPending: true },
+        "indie",
+      ),
+    ).toBe("pending");
+  });
+
+  it("heads the wall with the trial length", () => {
+    expect(paywallHeading(offered)).toBe("Start your 7 day free trial");
+    expect(paywallHeading(planOf({ trialOffer: null }))).toBe(
+      "Keep optimizing without limits",
+    );
+    expect(paywallHeading(undefined)).toBe("Keep optimizing without limits");
+  });
+
+  it("ends the trial the offered number of days from now", () => {
+    expect(trialEndsOn({ days: 7 }, NOW).toISOString()).toBe(
+      "2026-10-29T12:00:00.000Z",
+    );
+  });
+
+  it("names the zero charge, the end date and how to cancel, confirmed or not", () => {
+    const line = `Pay $0 today. Your trial ends on ${ENDS_ON}, then the plan you choose is charged. Cancel any time from settings.`;
+
+    expect(paywallStatusLine(offered, false, NOW)).toBe(line);
+    expect(paywallStatusLine(offered, true, NOW)).toBe(line);
+  });
+
+  it("invites to the trial from every page, with its length once known", () => {
+    expect(startTrialLine({ days: 7 })).toBe(
+      "Start your 7 day free trial to begin tracking. $0 today, cancel any time.",
+    );
+    expect(startTrialLine(undefined)).toBe(
+      "Start your free trial to begin tracking. $0 today, cancel any time.",
+    );
+  });
+
+  it("asks for the confirmation without stopping the trial", () => {
+    expect(confirmationLine("owner@example.com")).toBe(
+      "We sent a confirmation link to owner@example.com. You can start the trial now and confirm later.",
+    );
+  });
+
+  it("says when the verified card is charged", () => {
+    const catalog: BillingCatalog = { enabled: true, prices: [] };
+
+    expect(trialPaymentNote(catalog, { days: 7 }, NOW)).toBe(
+      `${HANDLED_BY_STRIPE} Your card is verified now and charged on ${ENDS_ON}.`,
+    );
+    expect(trialPaymentNote(catalog, null, NOW)).toBe(HANDLED_BY_STRIPE);
+  });
+
+  it("points settings at the wall", () => {
+    expect(planStatusLine(offered)).toBe(
+      "Start your free trial from the plan page.",
+    );
+    expect(planStatusLine(offered, true)).toBe(
+      "Start your free trial from the plan page.",
+    );
   });
 });
 

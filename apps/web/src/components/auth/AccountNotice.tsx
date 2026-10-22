@@ -8,6 +8,7 @@ import {
   suspensionNotice,
 } from "@/lib/plan-choice";
 import { ConfirmEmailBanner } from "./ConfirmEmailBanner";
+import { StartTrialBanner } from "./StartTrialBanner";
 import { useAuth } from "./use-auth";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -66,8 +67,10 @@ function SuspendedBanner({ reason }: { reason: string | null }) {
 }
 
 function PlanNotice() {
-  const { user, trialOnly, awaitingConfirmation, isMember } = useAuth();
+  const { user, trialOnly, awaitingConfirmation, awaitingCheckout, isMember } =
+    useAuth();
 
+  if (user && awaitingCheckout) return <StartTrialBanner />;
   if (user && awaitingConfirmation) {
     return <ConfirmEmailBanner email={user.email} />;
   }

@@ -1,3 +1,9 @@
+import {
+  UPGRADE_PATH,
+  type AuthUser,
+  type PaidPlanName,
+} from "@asobeast/shared";
+
 export const PUBLIC_ROUTES = ["/login", "/register"] as const;
 
 const PLACEHOLDER_ORIGIN = "http://placeholder";
@@ -33,4 +39,12 @@ export function signedInDestination(next: string | null | undefined): string {
   } catch {
     return "/";
   }
+}
+
+export function entryDestination(
+  user: Pick<AuthUser, "entitled">,
+  plan: PaidPlanName | null,
+): string {
+  if (user.entitled) return "/";
+  return plan ? `${UPGRADE_PATH}?plan=${plan}` : UPGRADE_PATH;
 }
