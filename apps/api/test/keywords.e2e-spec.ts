@@ -17,6 +17,7 @@ import {
   SUGGEST_REACH_STATUSES,
   SpiderStatus,
   TrackedKeywordItem,
+  utcDayOf,
 } from '@asobeast/shared';
 import { Queue } from 'bullmq';
 import { App } from 'supertest/types';
@@ -1712,7 +1713,7 @@ describe('KeywordsController (e2e)', () => {
     const tracked = await api.get(`/apps/${you.id}/keywords`).expect(200);
     expect((tracked.body as TrackedKeywordItem[])[0].latestDepth).toBe(200);
     expect((tracked.body as TrackedKeywordItem[])[0].latestCheckedOn).toBe(
-      new Date().toISOString().slice(0, 10),
+      ranking && utcDayOf(ranking.date),
     );
 
     const serp = await prisma.serpEntry.findMany({
@@ -2321,7 +2322,7 @@ describe('KeywordsController (e2e)', () => {
 
     expect(item).toMatchObject({
       latestPosition: 5,
-      latestCheckedOn: day(3).toISOString().slice(0, 10),
+      latestCheckedOn: utcDayOf(day(3)),
     });
   });
 
