@@ -28,7 +28,6 @@ export function CheckoutReturn() {
           "",
           urlWithoutCheckout(pathname, search),
         );
-        invalidateAuth(client);
         const plan = await client.fetchQuery({
           ...accountPlanOptions,
           staleTime: 0,
