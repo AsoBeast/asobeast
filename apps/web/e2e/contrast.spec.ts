@@ -1,6 +1,11 @@
 import { contrastViolations, THEMES } from "./contrast-check.mts";
 import { test as signedOut } from "./reporting.mts";
-import { SIGNED_IN_ROUTES, SIGNED_OUT_ROUTES, seedCookies } from "./routes.mts";
+import {
+  SIGNED_IN_ROUTES,
+  SIGNED_OUT_ROUTES,
+  TRIAL_ROUTES,
+  seedCookies,
+} from "./routes.mts";
 import { expect, test } from "./session.mts";
 
 for (const theme of THEMES) {
@@ -8,6 +13,16 @@ for (const theme of THEMES) {
     test(`${name} has no contrast violation in the ${theme} theme`, async ({
       page,
     }) => {
+      expect(await contrastViolations(page, theme, path)).toEqual([]);
+    });
+  }
+
+  for (const [name, path, cookies] of TRIAL_ROUTES) {
+    test(`${name} has no contrast violation in the ${theme} theme`, async ({
+      page,
+      context,
+    }) => {
+      await seedCookies(context, cookies);
       expect(await contrastViolations(page, theme, path)).toEqual([]);
     });
   }

@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
-import { seedCookies } from "./routes.mts";
+import { TRIAL_ROUTES, seedCookies } from "./routes.mts";
 import { startedSetup } from "./setup-session.mts";
 
 const STRUCTURAL_RULES = [
@@ -40,6 +40,19 @@ for (const path of [
   test(`${path} names every range tab, star rating and table header`, async ({
     page,
   }) => {
+    await page.goto(path);
+    await page.waitForLoadState("networkidle");
+
+    expect(await structuralViolations(page)).toEqual([]);
+  });
+}
+
+for (const [name, path, cookies] of TRIAL_ROUTES) {
+  test(`${name} names every control on the trial path`, async ({
+    page,
+    context,
+  }) => {
+    await seedCookies(context, cookies);
     await page.goto(path);
     await page.waitForLoadState("networkidle");
 

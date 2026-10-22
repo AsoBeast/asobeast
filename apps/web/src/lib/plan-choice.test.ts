@@ -17,8 +17,10 @@ import {
   startTrialLine,
   paywallStatusLine,
   suspensionNotice,
+  trialBannerLine,
   trialEndsOn,
   trialPaymentNote,
+  trialPriceLabel,
 } from "./plan-choice";
 import { formatDate } from "./format";
 
@@ -342,6 +344,86 @@ describe("a trial offered on the wall", () => {
     );
     expect(planStatusLine(offered, true)).toBe(
       "Start your free trial from the plan page.",
+    );
+  });
+});
+
+describe("a card backed trial", () => {
+  const ENDS = "2026-10-27T00:00:00.000Z";
+  const TRIALING = planOf({
+    plan: "indie",
+    entitled: true,
+    trialing: true,
+    subscribed: true,
+    trialEndsAt: ENDS,
+    renewsAt: ENDS,
+    billingInterval: "month",
+    cancelAtPeriodEnd: false,
+  });
+  const DECLINED =
+    "Your trial ended, but the card was declined. Update it in the billing portal to start your plan.";
+
+  it("names the price of the plan it turns into", () => {
+    expect(trialPriceLabel(TRIALING)).toBe("$10 per month");
+    expect(trialPriceLabel({ ...TRIALING, billingInterval: "year" })).toBe(
+      "$100 per year",
+    );
+    expect(trialPriceLabel({ ...TRIALING, billingInterval: null })).toBeNull();
+  });
+
+  it("says when the trial ends and what it costs then", () => {
+    expect(planStatusLine(TRIALING)).toBe(
+      `Trial until ${formatDate(ENDS)}, then $10 per month.`,
+    );
+    expect(paywallStatusLine(TRIALING)).toBe(
+      `Your trial runs until ${formatDate(ENDS)}, then $10 per month. Change or cancel it in the billing portal.`,
+    );
+    expect(planAction(TRIALING, "ultimate")).toBe("change");
+  });
+
+  it("invents no price for an unknown interval", () => {
+    expect(planStatusLine({ ...TRIALING, billingInterval: null })).toBe(
+      `Trial until ${formatDate(ENDS)}.`,
+    );
+  });
+
+  it("says a cancelled trial charges nothing", () => {
+    const cancelled = { ...TRIALING, cancelAtPeriodEnd: true };
+    const line = `Cancelled. Your trial ends on ${formatDate(ENDS)} and nothing is charged.`;
+
+    expect(planStatusLine(cancelled)).toBe(line);
+    expect(paywallStatusLine(cancelled)).toBe(line);
+  });
+
+  it("sends a declined first charge to the portal for a new card", () => {
+    const declined = planOf({
+      plan: "free",
+      entitled: false,
+      subscribed: true,
+      subscriptionStalled: true,
+      trialChargeFailed: true,
+      trialEndsAt: ENDS,
+    });
+
+    expect(planStatusLine(declined)).toBe(DECLINED);
+    expect(paywallStatusLine(declined)).toBe(DECLINED);
+  });
+
+  it("keeps the stalled sentence for a paying customer that once trialed", () => {
+    expect(planStatusLine(stalled)).not.toBe(DECLINED);
+    expect(paywallStatusLine(stalled)).not.toBe(DECLINED);
+  });
+
+  it("counts down the banner and names the plan and its price", () => {
+    expect(trialBannerLine(5, TRIALING)).toBe(
+      "Trial ends in 5 days, then Indie at $10 per month.",
+    );
+    expect(trialBannerLine(1, TRIALING)).toBe(
+      "Trial ends in 1 day, then Indie at $10 per month.",
+    );
+    expect(trialBannerLine(5, undefined)).toBe("Trial ends in 5 days.");
+    expect(trialBannerLine(5, { ...TRIALING, cancelAtPeriodEnd: true })).toBe(
+      `Trial ends on ${formatDate(ENDS)}. Nothing will be charged.`,
     );
   });
 });

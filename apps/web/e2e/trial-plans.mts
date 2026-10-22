@@ -86,3 +86,40 @@ export async function openRegistration(page: Page) {
 }
 
 export const DAY_MS = 24 * 60 * 60 * 1000;
+
+const endsIn = (days: number) =>
+  new Date(Date.now() + days * DAY_MS).toISOString();
+
+export const TRIALING_PLAN: AccountPlan = {
+  ...OFFERED_PLAN,
+  plan: "indie",
+  displayName: "Indie",
+  entitled: true,
+  subscribed: true,
+  hasBillingAccount: true,
+  trialOffer: null,
+  trialing: true,
+  billingInterval: "month",
+  trialEndsAt: endsIn(5),
+  renewsAt: endsIn(5),
+  limits: { ...PLAN_LIMITS.indie, aiCallsPerMonth: 25 },
+  usage: {
+    apps: { used: 1, limit: PLAN_LIMITS.indie.apps },
+    keywordMarkets: { used: 12, limit: PLAN_LIMITS.indie.keywordMarkets },
+    aiCalls: { used: 3, limit: 25, resetsAt: endsIn(20) },
+  },
+};
+
+export const DECLINED_PLAN: AccountPlan = {
+  ...OFFERED_PLAN,
+  subscribed: true,
+  hasBillingAccount: true,
+  trialOffer: null,
+  subscriptionStalled: true,
+  trialChargeFailed: true,
+  trialEndsAt: endsIn(-1),
+};
+
+export function planCookie(plan: AccountPlan): string {
+  return Buffer.from(JSON.stringify(plan)).toString("base64url");
+}

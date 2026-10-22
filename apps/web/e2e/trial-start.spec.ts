@@ -5,7 +5,9 @@ import { expect, test } from "./reporting.mts";
 import {
   CATALOG,
   DAY_MS,
+  DECLINED_PLAN,
   OFFERED_PLAN,
+  TRIALING_PLAN,
   openBilling,
   openRegistration,
 } from "./trial-plans.mts";
@@ -289,5 +291,75 @@ test.describe("the billing wall", () => {
     ).toBeVisible();
     await expect(page).toHaveURL("http://localhost:3000/");
     expect(reconciles).toBe(1);
+  });
+});
+
+test.describe("a card backed trial", () => {
+  test.beforeEach(async ({ page, context }) => {
+    await seedViewer(context, "trialing");
+    await seedSession(page);
+  });
+
+  test("names its end and its price on every page", async ({ page }) => {
+    await openBilling(page, TRIALING_PLAN);
+
+    await page.goto("/");
+
+    await expect(
+      page.getByText("Trial ends in 5 days, then Indie at $10 per month."),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Manage billing" }),
+    ).toHaveAttribute("href", "/settings");
+  });
+
+  test("says a cancelled trial charges nothing", async ({ page }) => {
+    await openBilling(page, { ...TRIALING_PLAN, cancelAtPeriodEnd: true });
+
+    await page.goto("/");
+
+    await expect(
+      page.getByText(
+        `Trial ends on ${formatDate(TRIALING_PLAN.trialEndsAt)}. Nothing will be charged.`,
+      ),
+    ).toBeVisible();
+  });
+
+  test("tells settings the trial allowance and the charge", async ({
+    page,
+  }) => {
+    await openBilling(page, TRIALING_PLAN);
+
+    await page.goto("/settings");
+
+    await expect(
+      page.getByText(
+        `Trial until ${formatDate(TRIALING_PLAN.trialEndsAt)}, then $10 per month.`,
+      ),
+    ).toBeVisible();
+    await expect(
+      page.getByText("The trial allowance applies until the first charge.", {
+        exact: false,
+      }),
+    ).toBeVisible();
+  });
+
+  test("sends a declined first charge to the portal", async ({
+    page,
+    context,
+  }) => {
+    await seedViewer(context, "customer");
+    await openBilling(page, DECLINED_PLAN);
+
+    await page.goto("/settings");
+
+    await expect(
+      page.getByText(
+        "Your trial ended, but the card was declined. Update it in the billing portal to start your plan.",
+      ),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Manage billing" }),
+    ).toBeVisible();
   });
 });

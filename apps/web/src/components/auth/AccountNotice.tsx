@@ -2,11 +2,14 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import {
   ASK_THE_OWNER,
   COLLECTION_PAUSED,
   suspensionNotice,
+  trialBannerLine,
 } from "@/lib/plan-choice";
+import { accountPlanOptions } from "@/lib/queries";
 import { ConfirmEmailBanner } from "./ConfirmEmailBanner";
 import { StartTrialBanner } from "./StartTrialBanner";
 import { useAuth } from "./use-auth";
@@ -41,19 +44,29 @@ function PausedBanner({ isMember }: { isMember: boolean }) {
 }
 
 function TrialBanner({
-  remaining,
+  endsAt,
   isMember,
+  card,
 }: {
-  remaining: number;
+  endsAt: string;
   isMember: boolean;
+  card: boolean;
 }) {
+  const { data: plan } = useQuery({ ...accountPlanOptions, enabled: card });
+
   return (
     <div className="flex items-center justify-between gap-4 border-b border-warning/30 bg-warning-subtle px-4 py-2 text-body text-warning sm:px-6 print:hidden">
       <span>
-        Trial ends in {remaining} day{remaining === 1 ? "" : "s"}.
+        {trialBannerLine(daysLeft(endsAt), card ? plan : undefined)}
         {isMember ? ` ${ASK_THE_OWNER}` : null}
       </span>
-      {isMember ? null : <UpgradeLink>Upgrade</UpgradeLink>}
+      {isMember ? null : card ? (
+        <Link href="/settings" className="font-medium underline">
+          Manage billing
+        </Link>
+      ) : (
+        <UpgradeLink>Upgrade</UpgradeLink>
+      )}
     </div>
   );
 }
@@ -67,8 +80,14 @@ function SuspendedBanner({ reason }: { reason: string | null }) {
 }
 
 function PlanNotice() {
-  const { user, trialOnly, awaitingConfirmation, awaitingCheckout, isMember } =
-    useAuth();
+  const {
+    user,
+    trialOnly,
+    trialing,
+    awaitingConfirmation,
+    awaitingCheckout,
+    isMember,
+  } = useAuth();
 
   if (user && awaitingCheckout) return <StartTrialBanner />;
   if (user && awaitingConfirmation) {
@@ -77,7 +96,11 @@ function PlanNotice() {
   if (user && !user.entitled) return <PausedBanner isMember={isMember} />;
   if (trialOnly && user?.trialEndsAt) {
     return (
-      <TrialBanner remaining={daysLeft(user.trialEndsAt)} isMember={isMember} />
+      <TrialBanner
+        endsAt={user.trialEndsAt}
+        isMember={isMember}
+        card={trialing}
+      />
     );
   }
   return null;
