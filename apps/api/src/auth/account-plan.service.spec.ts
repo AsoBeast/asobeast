@@ -63,7 +63,7 @@ describe('AccountPlanService', () => {
     });
 
     await expect(
-      service.describe(workspace({ plan: 'indie' }), NOW),
+      service.describe(workspace({ plan: 'indie' }), NOW, null),
     ).resolves.toMatchObject({
       plan: 'indie',
       displayName: 'Indie',
@@ -87,7 +87,11 @@ describe('AccountPlanService', () => {
       keywordMarkets: 120,
     });
 
-    const described = await service.describe(workspace({ plan: 'indie' }), NOW);
+    const described = await service.describe(
+      workspace({ plan: 'indie' }),
+      NOW,
+      null,
+    );
 
     expect(described.usage.aiCalls).toEqual(AI_USAGE);
   });
@@ -98,7 +102,7 @@ describe('AccountPlanService', () => {
     const service = build(true, { plan: 'trial', apps: 0, keywordMarkets: 0 });
 
     await expect(
-      service.describe(workspace({ trialEndsAt, planExpiresAt }), NOW),
+      service.describe(workspace({ trialEndsAt, planExpiresAt }), NOW, null),
     ).resolves.toMatchObject({
       trialEndsAt: trialEndsAt.toISOString(),
       renewsAt: planExpiresAt.toISOString(),
@@ -109,12 +113,13 @@ describe('AccountPlanService', () => {
     const service = build(true, { plan: 'indie', apps: 1, keywordMarkets: 1 });
 
     await expect(
-      service.describe(workspace({ plan: 'indie' }), NOW),
+      service.describe(workspace({ plan: 'indie' }), NOW, null),
     ).resolves.toMatchObject({ hasBillingAccount: false });
     await expect(
       service.describe(
         workspace({ plan: 'indie', billingCustomerId: 'cus_1' }),
         NOW,
+        null,
       ),
     ).resolves.toMatchObject({ hasBillingAccount: true });
   });
@@ -155,7 +160,7 @@ describe('AccountPlanService', () => {
     const service = build(true, { plan: 'indie', apps: 1, keywordMarkets: 1 });
 
     await expect(
-      service.describe(workspace({ plan: 'indie', ...over }), NOW),
+      service.describe(workspace({ plan: 'indie', ...over }), NOW, null),
     ).resolves.toMatchObject({ subscribed });
   });
 
@@ -166,6 +171,7 @@ describe('AccountPlanService', () => {
       service.describe(
         workspace({ plan: 'indie', cancelAtPeriodEnd: true }),
         NOW,
+        null,
       ),
     ).resolves.toMatchObject({ cancelAtPeriodEnd: true });
   });
@@ -177,6 +183,7 @@ describe('AccountPlanService', () => {
       service.describe(
         workspace({ trialEndsAt: new Date(NOW.getTime() - DAY_MS) }),
         NOW,
+        null,
       ),
     ).resolves.toMatchObject({
       plan: 'free',
@@ -192,7 +199,9 @@ describe('AccountPlanService', () => {
       keywordMarkets: 900,
     });
 
-    await expect(service.describe(workspace(), NOW)).resolves.toMatchObject({
+    await expect(
+      service.describe(workspace(), NOW, null),
+    ).resolves.toMatchObject({
       billing: false,
       entitled: true,
       upgradeTo: null,
@@ -208,6 +217,7 @@ describe('AccountPlanService', () => {
       build(true, { plan: 'free', apps: 0, keywordMarkets: 0 }).describe(
         workspace({ subscriptionId: 'sub_1', subscriptionStatus }),
         NOW,
+        null,
       );
 
     it.each(['unpaid', 'paused'])(
@@ -252,6 +262,7 @@ describe('AccountPlanService', () => {
         build(true, { plan: 'free', apps: 0, keywordMarkets: 0 }).describe(
           workspace(),
           NOW,
+          null,
         ),
       ).resolves.toMatchObject({ subscriptionPending: false });
     });
@@ -261,11 +272,36 @@ describe('AccountPlanService', () => {
         build(true, { plan: 'free', apps: 0, keywordMarkets: 0 }).describe(
           workspace(),
           NOW,
+          null,
         ),
       ).resolves.toMatchObject({
         subscribed: false,
         subscriptionStalled: false,
       });
+    });
+  });
+
+  describe('the trial offer', () => {
+    const service = () =>
+      build(true, { plan: 'free', apps: 0, keywordMarkets: 0 });
+
+    it('passes the offer through', async () => {
+      await expect(
+        service().describe(workspace(), NOW, { days: 7 }),
+      ).resolves.toMatchObject({ trialOffer: { days: 7 } });
+      await expect(
+        service().describe(workspace(), NOW, null),
+      ).resolves.toMatchObject({ trialOffer: null });
+    });
+
+    it('omits the offer with billing off', async () => {
+      const described = await build(false, {
+        plan: 'free',
+        apps: 0,
+        keywordMarkets: 0,
+      }).describe(workspace(), NOW, null);
+
+      expect(described).not.toHaveProperty('trialOffer');
     });
   });
 });

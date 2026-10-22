@@ -1,4 +1,5 @@
 import type Stripe from 'stripe';
+import type { TrialOffer } from '@asobeast/shared';
 import type { Env } from '../config/env';
 import { WORKSPACE_METADATA_KEY } from './workspace-link';
 
@@ -13,6 +14,7 @@ export interface CheckoutSessionInput {
   successUrl: string;
   cancelUrl: string;
   taxCollection: TaxCollection;
+  trial?: TrialOffer;
 }
 
 export function taxCollectionOf(switches: TaxSwitches): TaxCollection {
@@ -33,6 +35,30 @@ function taxParams(
   };
 }
 
+export function trialSubmitMessage(days: number): string {
+  return `$0 today. Your ${days} day trial ends on the date shown above, then the plan price is charged. Cancel any time from Settings, Billing.`;
+}
+
+function trialParams(
+  trial: TrialOffer | undefined,
+): Partial<Stripe.Checkout.SessionCreateParams> {
+  if (!trial) return {};
+  return {
+    payment_method_collection: 'always',
+    custom_text: { submit: { message: trialSubmitMessage(trial.days) } },
+  };
+}
+
+function trialSubscriptionData(
+  trial: TrialOffer | undefined,
+): Partial<Stripe.Checkout.SessionCreateParams.SubscriptionData> {
+  if (!trial) return {};
+  return {
+    trial_period_days: trial.days,
+    trial_settings: { end_behavior: { missing_payment_method: 'cancel' } },
+  };
+}
+
 export function checkoutSessionParams(
   input: CheckoutSessionInput,
 ): Stripe.Checkout.SessionCreateParams {
@@ -44,11 +70,13 @@ export function checkoutSessionParams(
     subscription_data: {
       metadata: { [WORKSPACE_METADATA_KEY]: input.workspaceId },
       billing_mode: { type: 'flexible' },
+      ...trialSubscriptionData(input.trial),
     },
     success_url: input.successUrl,
     cancel_url: input.cancelUrl,
     allow_promotion_codes: true,
     billing_address_collection: 'required',
     ...taxParams(input.taxCollection),
+    ...trialParams(input.trial),
   };
 }

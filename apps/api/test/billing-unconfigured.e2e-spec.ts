@@ -1,5 +1,10 @@
 import './helpers/enable-billing';
-import type { BillingCatalog, BillingReconcileReport } from '@asobeast/shared';
+import type {
+  AccountPlan,
+  AuthUser,
+  BillingCatalog,
+  BillingReconcileReport,
+} from '@asobeast/shared';
 import {
   resetBillingState,
   startBillingHarness,
@@ -24,6 +29,20 @@ describe('Billing on an instance with no stripe key (e2e)', () => {
       .send({ priceId: 'price_TestIndieMonthly' })
       .expect(503);
     await harness.owner.post('/billing/portal').expect(503);
+  });
+
+  it('still offers the trial and refuses the checkout that would start it', async () => {
+    await resetBillingState(harness, { trialEndsAt: null });
+
+    const plan = await harness.owner.get('/auth/plan').expect(200);
+    const me = await harness.owner.get('/auth/me').expect(200);
+
+    expect((plan.body as AccountPlan).trialOffer).toEqual({ days: 7 });
+    expect((me.body as AuthUser).trialAwaitsCheckout).toBe(true);
+    await harness.owner
+      .post('/billing/checkout')
+      .send({ priceId: 'price_TestIndieMonthly' })
+      .expect(503);
   });
 
   it('reports the catalog as switched off', async () => {

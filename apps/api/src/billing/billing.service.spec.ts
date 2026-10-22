@@ -2,7 +2,9 @@ import { ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
+import type { TrialOffer } from '@asobeast/shared';
 import type { AccountUser } from '../auth/auth.types';
+import type { TrialOffers } from '../auth/trial-offers';
 import { BillingService, PAYMENT_PENDING } from './billing.service';
 import { BillingConflictError } from './billing.errors';
 import { BillingReconciler } from './billing-reconciler.service';
@@ -51,6 +53,7 @@ describe('BillingService', () => {
       subscriptionStatus: string | null;
     } = { subscriptionId: null, subscriptionStatus: null },
     env: Record<string, string | boolean | undefined> = {},
+    offer: TrialOffer | null = null,
   ) => {
     const values = { ...CONFIG, ...env };
     const createCustomer = jest.fn().mockResolvedValue({ id: 'cus_created' });
@@ -140,6 +143,9 @@ describe('BillingService', () => {
       { reconcileOne } as unknown as BillingReconciler,
       prisma,
       config,
+      {
+        offerFor: jest.fn().mockResolvedValue(offer),
+      } as unknown as TrialOffers,
     );
 
     return {
@@ -745,17 +751,48 @@ describe('BillingService', () => {
     );
   });
 
-  it('never asks Stripe for a trial, so a trialing workspace gets no second one', async () => {
+  it('sells at full price without an offer', async () => {
     const { service, createCheckoutSession } = build('cus_existing');
 
     await service.checkout(owner('cus_existing'), 'price_indie_month');
 
     const [params] = createCheckoutSession.mock.calls[0] as [
-      { subscription_data?: Record<string, unknown> },
+      {
+        subscription_data?: Record<string, unknown>;
+        success_url: string;
+      },
     ];
     expect(params.subscription_data).not.toHaveProperty('trial_period_days');
     expect(params.subscription_data).not.toHaveProperty('trial_end');
     expect(params.subscription_data).not.toHaveProperty('trial_settings');
+    expect(params).not.toHaveProperty('payment_method_collection');
+    expect(params.success_url).toBe(
+      'https://app.example.com/settings?checkout=complete&session_id={CHECKOUT_SESSION_ID}',
+    );
+  });
+
+  it('opens a trial checkout for an offered workspace', async () => {
+    const { service, createCheckoutSession } = build(
+      'cus_existing',
+      { subscriptionId: null, subscriptionStatus: null },
+      { STRIPE_PORTAL_RETURN_URL: 'https://app.example.com/account' },
+      { days: 7 },
+    );
+
+    await service.checkout(owner('cus_existing'), 'price_indie_month');
+
+    const [params] = createCheckoutSession.mock.calls[0] as [
+      {
+        subscription_data: Record<string, unknown>;
+        payment_method_collection: string;
+        success_url: string;
+      },
+    ];
+    expect(params.subscription_data).toMatchObject({ trial_period_days: 7 });
+    expect(params.payment_method_collection).toBe('always');
+    expect(params.success_url).toBe(
+      'https://app.example.com/?checkout=complete&session_id={CHECKOUT_SESSION_ID}',
+    );
   });
 
   it.each(['active', 'trialing', 'past_due', 'unpaid', 'paused'])(

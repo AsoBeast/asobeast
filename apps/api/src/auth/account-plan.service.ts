@@ -5,6 +5,7 @@ import {
   UPGRADE_PATH,
   nextPlan,
   type AccountPlan,
+  type TrialOffer,
 } from '@asobeast/shared';
 import {
   holdsSubscription,
@@ -33,7 +34,8 @@ export class AccountPlanService {
 
   async describe(
     workspace: WorkspacePlan,
-    now = new Date(),
+    now: Date,
+    offer: TrialOffer | null,
   ): Promise<AccountPlan> {
     const billing = this.config.get('BILLING_ENABLED', { infer: true });
     const [{ plan, limits, apps, keywordMarkets }, aiCalls] = await Promise.all(
@@ -51,6 +53,7 @@ export class AccountPlanService {
         holdsSubscription(workspace) && stalledBy(workspace.subscriptionStatus),
       subscriptionPending:
         holdsSubscription(workspace) && pendingBy(workspace.subscriptionStatus),
+      ...(billing ? { trialOffer: offer } : {}),
       cancelAtPeriodEnd: workspace.cancelAtPeriodEnd,
       trialEndsAt: workspace.trialEndsAt?.toISOString() ?? null,
       renewsAt: workspace.planExpiresAt?.toISOString() ?? null,

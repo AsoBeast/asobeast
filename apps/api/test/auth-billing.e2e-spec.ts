@@ -128,7 +128,26 @@ describe('Auth (billing mode)', () => {
       entitled: false,
       trialEndsAt: null,
       trialAwaitsConfirmation: false,
+      trialAwaitsCheckout: true,
     });
+  });
+
+  it('offers no trial to a throwaway address', async () => {
+    await registerOwner();
+    const throwaway = await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({ email: 'fresh@mailinator.com', password: 'supersecret1' })
+      .expect(201);
+
+    expect(throwaway.body as AuthUser).toMatchObject({
+      trialAwaitsCheckout: false,
+    });
+    await expect(
+      prisma.workspace.findFirstOrThrow({
+        where: { name: 'fresh@mailinator.com' },
+        select: { trialDeclinedAt: true },
+      }),
+    ).resolves.toEqual({ trialDeclinedAt: expect.any(Date) as Date });
   });
 
   it('opens no trial over a plan the default workspace already pays for', async () => {

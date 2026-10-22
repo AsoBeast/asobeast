@@ -1,6 +1,7 @@
 import {
   checkoutSessionParams,
   taxCollectionOf,
+  trialSubmitMessage,
   type CheckoutSessionInput,
 } from './checkout-session';
 import { WORKSPACE_METADATA_KEY } from './workspace-link';
@@ -74,6 +75,53 @@ describe('checkoutSessionParams', () => {
     }
     expect(params.subscription_data).not.toHaveProperty('invoice_settings');
     expect(params.subscription_data).not.toHaveProperty('default_tax_rates');
+  });
+});
+
+describe('a trial checkout', () => {
+  const TRIAL = {
+    payment_method_collection: 'always',
+    custom_text: { submit: { message: trialSubmitMessage(7) } },
+  };
+  const TRIAL_SUBSCRIPTION = {
+    ...COMMON.subscription_data,
+    trial_period_days: 7,
+    trial_settings: { end_behavior: { missing_payment_method: 'cancel' } },
+  };
+
+  it('asks stripe for a trial on a collected card', () => {
+    expect(checkoutSessionParams({ ...INPUT, trial: { days: 7 } })).toEqual({
+      ...COMMON,
+      ...TRIAL,
+      subscription_data: TRIAL_SUBSCRIPTION,
+      tax_id_collection: { enabled: true },
+      customer_update: { address: 'auto', name: 'auto' },
+      automatic_tax: { enabled: false },
+    });
+  });
+
+  it('keeps managed payments clean with a trial', () => {
+    const params = checkoutSessionParams({
+      ...INPUT,
+      taxCollection: 'managed_payments',
+      trial: { days: 7 },
+    });
+
+    expect(params).toEqual({
+      ...COMMON,
+      ...TRIAL,
+      subscription_data: TRIAL_SUBSCRIPTION,
+      managed_payments: { enabled: true },
+    });
+    for (const key of STRIPE_CONTROLS_UNDER_MANAGED_PAYMENTS) {
+      expect(params).not.toHaveProperty(key);
+    }
+  });
+
+  it('names the days in the submit message', () => {
+    expect(trialSubmitMessage(7)).toBe(
+      '$0 today. Your 7 day trial ends on the date shown above, then the plan price is charged. Cancel any time from Settings, Billing.',
+    );
   });
 });
 

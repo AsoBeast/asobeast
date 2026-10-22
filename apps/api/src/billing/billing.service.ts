@@ -15,6 +15,7 @@ import {
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AccountUser } from '../auth/auth.types';
+import { TrialOffers } from '../auth/trial-offers';
 import { BillingConflictError } from './billing.errors';
 import { BillingReconciler } from './billing-reconciler.service';
 import {
@@ -60,6 +61,7 @@ export class BillingService {
     private readonly reconciler: BillingReconciler,
     private readonly prisma: PrismaService,
     private readonly config: ConfigService<Env, true>,
+    private readonly trialOffers: TrialOffers,
   ) {}
 
   async catalog(): Promise<BillingCatalog> {
@@ -78,6 +80,7 @@ export class BillingService {
     await this.refuseSecondSubscription(user.workspaceId);
     const customerId = await this.customerFor(user);
     await this.refuseLiveSubscription(user.workspaceId, customerId);
+    const trial = await this.trialOffers.offerFor(user);
 
     const workspaceId = user.workspaceId;
     const attempt = randomUUID();
@@ -89,9 +92,12 @@ export class BillingService {
           customerId,
           priceId: price.priceId,
           workspaceId,
-          successUrl: this.checkoutReturnUrl(),
+          successUrl: withCheckoutMarker(
+            trial ? this.webUrl('/') : this.returnUrl(),
+          ),
           cancelUrl: this.webUrl(UPGRADE_PATH),
           taxCollection: this.taxCollection(),
+          trial: trial ?? undefined,
         }),
         `checkout:${workspaceId}:${attempt}`,
       );
@@ -341,17 +347,17 @@ export class BillingService {
     return configured ?? this.webUrl('/settings');
   }
 
-  private checkoutReturnUrl(): string {
-    const url = new URL(this.returnUrl());
-    url.searchParams.set(CHECKOUT_RETURN_PARAM, CHECKOUT_RETURN_COMPLETE);
-    url.search = `${url.search}&${CHECKOUT_SESSION_PARAM}=${STRIPE_SESSION_PLACEHOLDER}`;
-    return url.toString();
-  }
-
   private webUrl(path: string): string {
     const base = this.config.get('WEB_PUBLIC_URL', { infer: true }) ?? '';
     return `${base}${path}`;
   }
+}
+
+function withCheckoutMarker(returnUrl: string): string {
+  const url = new URL(returnUrl);
+  url.searchParams.set(CHECKOUT_RETURN_PARAM, CHECKOUT_RETURN_COMPLETE);
+  url.search = `${url.search}&${CHECKOUT_SESSION_PARAM}=${STRIPE_SESSION_PLACEHOLDER}`;
+  return url.toString();
 }
 
 function minuteBucket(): number {

@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { QUEUES } from '../jobs/jobs.types';
 import { AlertsModule } from '../alerts/alerts.module';
+import { AuthModule } from '../auth/auth.module';
 import { Env } from '../config/env';
 import { BillingController } from './billing.controller';
 import { BillingService } from './billing.service';
@@ -19,7 +20,11 @@ import { STRIPE_CLIENT, createStripeClient } from './stripe.client';
 import { StripeService } from './stripe.service';
 
 @Module({
-  imports: [AlertsModule, BullModule.registerQueue({ name: QUEUES.BILLING })],
+  imports: [
+    AlertsModule,
+    AuthModule,
+    BullModule.registerQueue({ name: QUEUES.BILLING }),
+  ],
   controllers: [BillingController, BillingWebhookController],
   providers: [
     {

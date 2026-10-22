@@ -7,6 +7,7 @@ import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AccountUser } from '../auth/auth.types';
+import type { TrialOffers } from '../auth/trial-offers';
 import { BillingConflictError } from './billing.errors';
 import { BillingReconciler } from './billing-reconciler.service';
 import { BillingService } from './billing.service';
@@ -120,6 +121,7 @@ function build(held: Stripe.Subscription[]) {
     reconciler,
     prisma,
     config,
+    { offerFor: () => Promise.resolve(null) } as unknown as TrialOffers,
   );
 
   return { service, reconciler, workspace, createCheckoutSession };

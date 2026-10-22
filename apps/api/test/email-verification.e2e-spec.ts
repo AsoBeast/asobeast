@@ -154,6 +154,7 @@ describe('Email verification', () => {
     expect(account.entitled).toBe(false);
     expect(account.trialEndsAt).toBeNull();
     expect(account.trialAwaitsConfirmation).toBe(true);
+    expect(account.trialAwaitsCheckout).toBe(true);
 
     const confirmed = await confirm(tokenFrom(sent[0])).expect(200);
     const after = confirmed.body as AuthUser;
@@ -162,6 +163,7 @@ describe('Email verification', () => {
     expect(after.entitled).toBe(false);
     expect(after.trialEndsAt).toBeNull();
     expect(after.trialAwaitsConfirmation).toBe(false);
+    expect(after.trialAwaitsCheckout).toBe(true);
     await expect(workspaceRow()).resolves.toMatchObject({
       plan: 'free',
       trialStartedAt: null,
@@ -238,6 +240,7 @@ describe('Email verification', () => {
     expect((member.body as AuthUser).emailVerified).toBe(false);
     expect((member.body as AuthUser).entitled).toBe(false);
     expect((member.body as AuthUser).trialAwaitsConfirmation).toBe(false);
+    expect((member.body as AuthUser).trialAwaitsCheckout).toBe(false);
   });
 
   it('emails a confirmation link to the address that registered', async () => {
