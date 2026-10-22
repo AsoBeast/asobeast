@@ -2,7 +2,6 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
   IsNotEmpty,
-  IsOptional,
   IsString,
   Matches,
   MaxLength,
@@ -62,12 +61,11 @@ export class CreateAnnotationDto implements AppAnnotationCreateRequest {
   label!: string;
 
   @ApiPropertyOptional({ example: 'de', pattern: COUNTRY_PATTERN.source })
-  @IsOptional()
+  @ValidateIf((_, value) => value !== undefined)
   @Matches(COUNTRY_PATTERN)
   market?: string;
 
   @ApiPropertyOptional({ example: 'wave' })
-  @IsOptional()
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? normalizeAnnotationTag(value) : value,
   )

@@ -21,6 +21,7 @@ import { SeriesTooltip } from "@/components/charts/SeriesTooltip";
 import { AnnotationTooltipNotes } from "@/components/annotations/AnnotationTooltipNotes";
 import {
   annotationLines,
+  annotationsInScope,
   annotationsOn,
 } from "@/components/annotations/annotation-lines";
 import {
@@ -111,8 +112,9 @@ function VisibilityChartBody({
     visibilityOptions(id, presetToRange(range), country),
   );
   const { data: annotations } = useQuery(annotationsOptions(id));
+  const inScope = annotationsInScope(annotations?.annotations ?? [], country);
   const marked = annotationLines(
-    annotations?.annotations ?? [],
+    inScope,
     data.points.map((point) => point.date),
     todayUtc(),
   );
@@ -160,10 +162,7 @@ function VisibilityChartBody({
         ))}
         <ChartTooltip
           content={
-            <VisibilityTooltip
-              points={data.points}
-              annotations={annotations?.annotations ?? []}
-            />
+            <VisibilityTooltip points={data.points} annotations={inScope} />
           }
         />
         <Area

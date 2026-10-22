@@ -4,6 +4,9 @@ import {
   ANNOTATION_TAG_MAX_LENGTH,
   ANNOTATION_TAG_RULE,
   COUNTRY_PATTERN,
+  isAnnotationTag,
+  normalizeAnnotationLabel,
+  normalizeAnnotationTag,
 } from "@asobeast/shared";
 import { utcDate } from "./calendar-date";
 import {
@@ -45,17 +48,22 @@ export const ANNOTATION_WRITE_TOOLS: WriteTool[] = [
   defineWriteTool({
     name: "add_annotation",
     title: "Add annotation",
-    description: `Pin a named event to one UTC day on the app's charts, for example a release, a listing change you shipped or the start of a campaign. The label shows beside a vertical line on the rank history and visibility charts; at most ${ANNOTATION_LABEL_MAX_LENGTH} characters. market scopes the line to one storefront of the app's store, tag names the campaign it belongs to; both optional. Nothing is written to the store and no capacity is spent. Agents that ship listing changes should add an annotation the day they ship, so the charts carry the attribution.`,
+    description: `Pin a named event to one UTC day on the app's charts, for example a release, a listing change you shipped or the start of a campaign. The charts draw the marker as a vertical dashed line and the hover tooltip of that day shows the label; nothing is written on the chart itself. The label is at most ${ANNOTATION_LABEL_MAX_LENGTH} characters. market scopes the line to one storefront of the app's store, tag names the campaign it belongs to; both optional. Nothing is written to the store and no capacity is spent. Agents that ship listing changes should add an annotation the day they ship, so the charts carry the attribution.`,
     inputSchema: z.object({
       appId,
       date: utcDate.describe("The UTC day (YYYY-MM-DD) to pin the marker to."),
       label: z
         .string()
-        .min(1)
-        .max(ANNOTATION_LABEL_MAX_LENGTH)
         .describe(
-          `A short label shown beside the marker, at most ${ANNOTATION_LABEL_MAX_LENGTH} characters.`,
-        ),
+          `A short label for the event, shown in the day tooltip on the charts, at most ${ANNOTATION_LABEL_MAX_LENGTH} characters.`,
+        )
+        .transform(normalizeAnnotationLabel)
+        .refine((value) => value.length >= 1, {
+          error: "The label is empty once surrounding whitespace is gone.",
+        })
+        .refine((value) => value.length <= ANNOTATION_LABEL_MAX_LENGTH, {
+          error: `The label runs past ${ANNOTATION_LABEL_MAX_LENGTH} characters.`,
+        }),
       market: z
         .string()
         .regex(COUNTRY_PATTERN)
@@ -65,11 +73,16 @@ export const ANNOTATION_WRITE_TOOLS: WriteTool[] = [
         ),
       tag: z
         .string()
-        .max(ANNOTATION_TAG_MAX_LENGTH)
+        .describe(`A campaign tag that groups markers, ${ANNOTATION_TAG_RULE}.`)
         .optional()
-        .describe(
-          `A campaign tag that groups markers, ${ANNOTATION_TAG_RULE}.`,
-        ),
+        .transform((value) =>
+          value === undefined || value.trim() === ""
+            ? undefined
+            : normalizeAnnotationTag(value),
+        )
+        .refine((value) => value === undefined || isAnnotationTag(value), {
+          error: `tag is ${ANNOTATION_TAG_RULE}.`,
+        }),
     }),
     hints: { destructive: false, idempotent: false, openWorld: false },
     request: ({ appId, date, label, market, tag }) => ({

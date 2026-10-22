@@ -68,6 +68,28 @@ describe('CreateAnnotationDto', () => {
     expect(errors[0].property).toBe('market');
   });
 
+  it('refuses a null market as a type error, not a storefront miss', async () => {
+    const { errors } = await validated({
+      date: '2026-10-08',
+      label: 'x',
+      market: null,
+    });
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0].property).toBe('market');
+  });
+
+  it('refuses a null tag as a type error', async () => {
+    const { errors } = await validated({
+      date: '2026-10-08',
+      label: 'x',
+      tag: null,
+    });
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0].property).toBe('tag');
+  });
+
   it('refuses a tag that is not a campaign tag', async () => {
     const { errors } = await validated({
       date: '2026-10-08',

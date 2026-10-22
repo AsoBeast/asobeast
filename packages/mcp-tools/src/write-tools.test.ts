@@ -127,6 +127,43 @@ describe("the write tools", () => {
     ).toBe("/apps/..%2Fjobs/keywords/kw%2F1%3Fx%3Dy");
   });
 
+  it("normalizes the annotation label and drops a blank tag before the request leaves", () => {
+    const tool = writeTool("add_annotation");
+    const input = tool.inputSchema.parse({
+      appId: "app-1",
+      date: "2026-10-08",
+      label: "  Release   5.21.0  ",
+      tag: "   ",
+    });
+
+    expect(JSON.parse(JSON.stringify(tool.request(input)))).toEqual({
+      method: "POST",
+      path: "/apps/app-1/annotations",
+      body: { date: "2026-10-08", label: "Release 5.21.0" },
+    });
+  });
+
+  it("refuse an annotation label that is empty once normalized", () => {
+    expect(
+      writeTool("add_annotation").inputSchema.safeParse({
+        appId: "app-1",
+        date: "2026-10-08",
+        label: "   ",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("refuse an annotation tag that is not a campaign tag", () => {
+    expect(
+      writeTool("add_annotation").inputSchema.safeParse({
+        appId: "app-1",
+        date: "2026-10-08",
+        label: "Release",
+        tag: "#hash",
+      }).success,
+    ).toBe(false);
+  });
+
   const ID_FIELDS = [
     "appId",
     "keywordId",

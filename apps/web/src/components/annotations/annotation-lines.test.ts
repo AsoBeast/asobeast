@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { AppAnnotationItem } from "@asobeast/shared";
-import { annotationLines, annotationsOn } from "./annotation-lines";
+import {
+  annotationLines,
+  annotationsInScope,
+  annotationsOn,
+} from "./annotation-lines";
 
 const annotation = (
   overrides: Partial<AppAnnotationItem> = {},
@@ -53,5 +57,25 @@ describe("annotationsOn", () => {
 
   it("answers an empty day with no annotations", () => {
     expect(annotationsOn([day, other], "2026-10-07")).toEqual([]);
+  });
+});
+
+describe("annotationsInScope", () => {
+  const global = annotation({ id: "ann-1", market: null });
+  const german = annotation({ id: "ann-2", market: "de" });
+  const american = annotation({ id: "ann-3", market: "us" });
+
+  it("keeps every annotation when no market is selected", () => {
+    expect(annotationsInScope([global, german], undefined)).toEqual([
+      global,
+      german,
+    ]);
+  });
+
+  it("keeps global annotations and the ones of the selected market", () => {
+    expect(annotationsInScope([global, german, american], "de")).toEqual([
+      global,
+      german,
+    ]);
   });
 });

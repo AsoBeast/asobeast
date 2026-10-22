@@ -18,3 +18,13 @@ export function annotationsOn(
 ): AppAnnotationItem[] {
   return annotations.filter((annotation) => annotation.date === date);
 }
+
+export function annotationsInScope(
+  annotations: readonly AppAnnotationItem[],
+  market: string | undefined,
+): AppAnnotationItem[] {
+  if (market === undefined) return [...annotations];
+  return annotations.filter(
+    (annotation) => !annotation.market || annotation.market === market,
+  );
+}
