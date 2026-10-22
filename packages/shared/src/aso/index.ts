@@ -1,4 +1,5 @@
 export * from './limits';
+export * from './annotations';
 export * from './lint';
 export * from './scores';
 export * from './seasonal';
