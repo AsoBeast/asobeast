@@ -1711,6 +1711,9 @@ describe('KeywordsController (e2e)', () => {
 
     const tracked = await api.get(`/apps/${you.id}/keywords`).expect(200);
     expect((tracked.body as TrackedKeywordItem[])[0].latestDepth).toBe(200);
+    expect((tracked.body as TrackedKeywordItem[])[0].latestCheckedOn).toBe(
+      new Date().toISOString().slice(0, 10),
+    );
 
     const serp = await prisma.serpEntry.findMany({
       where: { keywordId: keyword.id },
@@ -1992,6 +1995,7 @@ describe('KeywordsController (e2e)', () => {
       active: true,
       latestPosition: null,
       latestDepth: null,
+      latestCheckedOn: null,
       previousPosition: null,
       positionDelta1d: null,
       positionDelta7d: null,
@@ -2251,6 +2255,73 @@ describe('KeywordsController (e2e)', () => {
       positionDeltaFromBest: 0,
       daysInTier: 2,
       heldTier: 10,
+    });
+  });
+
+  it('reports the day of the newest check of the tracked app, not of a competitor', async () => {
+    const id = await importApp();
+    const { workspaceId } = await prisma.app.findUniqueOrThrow({
+      where: { id },
+      select: { workspaceId: true },
+    });
+    const { keywordId } = await prisma.trackedKeyword.findFirstOrThrow({
+      where: { appId: id, active: true },
+    });
+    const day = (offset: number) => {
+      const date = new Date();
+      date.setUTCHours(0, 0, 0, 0);
+      date.setUTCDate(date.getUTCDate() - offset);
+      return date;
+    };
+    await prisma.keywordRanking.createMany({
+      data: [
+        {
+          appId: id,
+          workspaceId,
+          keywordId,
+          date: day(5),
+          position: 6,
+          depth: 200,
+        },
+        {
+          appId: id,
+          workspaceId,
+          keywordId,
+          date: day(3),
+          position: 5,
+          depth: 200,
+        },
+      ],
+    });
+    const competitor = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: '9876543210',
+        country: 'us',
+        name: 'Rival',
+        isCompetitor: true,
+        primaryAppId: id,
+      },
+    });
+    await prisma.keywordRanking.create({
+      data: {
+        appId: competitor.id,
+        workspaceId,
+        keywordId,
+        date: day(0),
+        position: 1,
+        depth: 200,
+      },
+    });
+
+    const items = (await api.get(`/apps/${id}/keywords`).expect(200))
+      .body as TrackedKeywordItem[];
+    const item = items.find((entry) => entry.keywordId === keywordId);
+
+    expect(item).toMatchObject({
+      latestPosition: 5,
+      latestCheckedOn: day(3).toISOString().slice(0, 10),
     });
   });
 

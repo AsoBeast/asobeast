@@ -159,6 +159,7 @@ type PositionFacts = Pick<
   TrackedKeywordItem,
   | 'latestPosition'
   | 'latestDepth'
+  | 'latestCheckedOn'
   | 'previousPosition'
   | 'positionDelta1d'
   | 'positionDelta7d'
@@ -181,6 +182,7 @@ function positionFacts(
   return {
     latestPosition,
     latestDepth: latest?.depth ?? null,
+    latestCheckedOn: latest ? utcDayOf(latest.date) : null,
     previousPosition,
     positionDelta1d:
       latestPosition !== null && previousPosition !== null
