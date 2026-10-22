@@ -28,10 +28,26 @@ import {
 } from "@/components/charts/theme";
 import { formatDayMonth } from "@/lib/format";
 import { todayUtc } from "@/lib/ranges";
-import { notFoundKey, type RankingChartData } from "./pivot";
+import {
+  loneKey,
+  NOT_CHECKED,
+  notFoundKey,
+  type RankingChartData,
+} from "./pivot";
 import { RankBandLabel } from "./RankBandLabel";
 
 const Y_TICKS = [1, 10, 25, 50, 100, 200];
+
+const markerLineProps = (dataKey: string, keywordId: string, fill: string) => ({
+  dataKey,
+  type: "monotone" as const,
+  stroke: "transparent",
+  legendType: "none" as const,
+  connectNulls: false,
+  isAnimationActive: false,
+  activeDot: false as const,
+  dot: { r: 3, fill, stroke: `var(--color-${keywordId})`, strokeWidth: 1.5 },
+});
 
 const RANK_BANDS = [
   { from: 1, to: 3, fill: "var(--rank-band-1)", label: "Top 3" },
@@ -63,7 +79,9 @@ function RankingTooltip({
       index,
       color: data.config[keywordId]?.color,
       label: data.config[keywordId]?.label ?? keywordId,
-      value: formatCheckedPosition(position, depths[keywordId] ?? null) ?? "—",
+      value:
+        formatCheckedPosition(position, depths[keywordId] ?? null) ??
+        NOT_CHECKED,
       sortBy: position ?? Infinity,
     };
   });
@@ -134,7 +152,10 @@ export function RankingChart({
             }}
           />
         ) : null}
-        <ChartTooltip content={<RankingTooltip data={data} />} />
+        <ChartTooltip
+          filterNull={false}
+          content={<RankingTooltip data={data} />}
+        />
         <ChartLegend
           content={
             <SeriesLegend labels={data.seriesLabels} order={data.keywordIds} />
@@ -153,19 +174,21 @@ export function RankingChart({
         {data.keywordIds.map((keywordId) => (
           <Line
             key={notFoundKey(keywordId)}
-            dataKey={notFoundKey(keywordId)}
-            type="monotone"
-            stroke="transparent"
-            legendType="none"
-            connectNulls={false}
-            isAnimationActive={false}
-            activeDot={false}
-            dot={{
-              r: 3,
-              fill: "var(--background)",
-              stroke: `var(--color-${keywordId})`,
-              strokeWidth: 1.5,
-            }}
+            {...markerLineProps(
+              notFoundKey(keywordId),
+              keywordId,
+              "var(--background)",
+            )}
+          />
+        ))}
+        {data.keywordIds.map((keywordId) => (
+          <Line
+            key={loneKey(keywordId)}
+            {...markerLineProps(
+              loneKey(keywordId),
+              keywordId,
+              `var(--color-${keywordId})`,
+            )}
           />
         ))}
       </LineChart>

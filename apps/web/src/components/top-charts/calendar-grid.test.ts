@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  addUtcDays,
   monthGrid,
   monthLabel,
   monthOf,
@@ -57,10 +56,5 @@ describe("calendar grid", () => {
 
   it("names a month in words", () => {
     expect(monthLabel({ year: 2026, month: 10 })).toBe("October 2026");
-  });
-
-  it("adds days in utc", () => {
-    expect(addUtcDays("2026-10-31", 1)).toBe("2026-11-01");
-    expect(addUtcDays("2026-03-01", -1)).toBe("2026-02-28");
   });
 });

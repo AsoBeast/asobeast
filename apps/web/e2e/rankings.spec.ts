@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 import type { Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
 import { hoverForTooltip } from "./hover.mts";
+import { utcDaysAgo } from "./fixtures.mts";
+import { formatDayMonth } from "../src/lib/format";
 
 test("rankings page renders the chart and filters series through the url", async ({
   page,
@@ -99,6 +101,44 @@ test("the ranking chart takes keyboard focus and announces positions", async ({
 
   await expect.poll(async () => await tooltip.innerText()).not.toBe(before);
   await expect(tooltip).toContainText("focus timer");
+});
+
+async function tooltipOn(page: Page, day: string) {
+  const chart = page.getByRole("region", { name: "Keyword rank positions" });
+  const plot = chart.getByRole("application");
+  const tooltip = chart.getByRole("tooltip");
+  await plot.focus();
+  await expect(tooltip).toBeVisible();
+  const title = formatDayMonth(day);
+  for (
+    let step = 0;
+    step < 10 && !(await tooltip.innerText()).includes(title);
+    step += 1
+  ) {
+    await plot.press("ArrowRight");
+  }
+  await expect(tooltip).toContainText(title);
+  return tooltip;
+}
+
+test("a day where every check failed still opens the tooltip", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/rankings");
+
+  const tooltip = await tooltipOn(page, utcDaysAgo(5));
+  await expect(tooltip).toBeVisible();
+  await expect(tooltip.getByText("Not checked")).toHaveCount(5);
+});
+
+test("a keyword whose checks stopped reads not checked on the later days", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/rankings");
+
+  const tooltip = await tooltipOn(page, utcDaysAgo(0));
+  await expect(tooltip).toContainText("study timer");
+  await expect(tooltip.getByText("Not checked")).toHaveCount(1);
 });
 
 test("ranking exports preserve historical captured-depth markers", async ({

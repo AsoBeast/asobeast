@@ -269,6 +269,20 @@ describe('toTrackedKeywordItem', () => {
       },
     });
 
+  it('reports the day of the newest check', () => {
+    const item = toTrackedKeywordItem(
+      withRankings([
+        { position: null, date: '2026-07-02', depth: 200 },
+        { position: 4, date: '2026-07-01' },
+      ]),
+    );
+    expect(item.latestCheckedOn).toBe('2026-07-02');
+  });
+
+  it('reports no check day for a keyword never checked', () => {
+    expect(toTrackedKeywordItem(withRankings([])).latestCheckedOn).toBeNull();
+  });
+
   it('carries the latest captured depth through the response', () => {
     const item = toTrackedKeywordItem(
       withRankings([{ position: null, date: '2026-07-02', depth: 200 }]),

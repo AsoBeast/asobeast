@@ -132,6 +132,7 @@ export * from './input-length';
 export * from './release-notes';
 export * from './aso';
 export * from './rank';
+export * from './utc-days';
 export * from './auth';
 export * from './brand';
 export * from './trusted-proxy';
