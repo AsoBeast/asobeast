@@ -67,13 +67,17 @@ export class ListingCaptureService {
     try {
       return await this.captureListing(app, market);
     } catch (error: unknown) {
-      if (market !== app.country && error instanceof StoreAppNotFoundError) {
+      if (!(error instanceof StoreAppNotFoundError)) throw error;
+      if (market === app.country) {
+        this.logger.warn(
+          `${app.storeAppId} is no longer listed in ${market}, so its listing was not refreshed`,
+        );
+      } else {
         this.logger.log(
           `${app.storeAppId} is not listed in ${market}, so it has no listing there`,
         );
-        return null;
       }
-      throw error;
+      return null;
     }
   }
 

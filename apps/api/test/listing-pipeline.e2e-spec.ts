@@ -10,8 +10,12 @@ import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { AppsService } from '../src/apps/apps.service';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
-import { JOBS, QUEUES } from '../src/jobs/jobs.types';
-import { StoreAppNotFoundError } from '../src/store-providers/errors';
+import { JOBS, QUEUES, RefreshAppPayload } from '../src/jobs/jobs.types';
+import { StoreJobsHandler } from '../src/jobs/store-jobs.handler';
+import {
+  StoreAppNotFoundError,
+  StoreRequestError,
+} from '../src/store-providers/errors';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import { NormalizedApp, StoreProvider } from '../src/store-providers/types';
 import { asWorkspace } from './helpers/tenancy';
@@ -150,6 +154,18 @@ describe('market listings in the daily pipeline (e2e)', () => {
   const refreshListing = (appId: string, country: string) =>
     asWorkspace(app, () => app.get(AppsService).refreshListing(appId, country));
 
+  const runRefreshJob = (appId: string, country?: string) =>
+    app.get(StoreJobsHandler).handle({
+      name: JOBS.REFRESH_APP,
+      id: `refresh-${country ?? 'home'}`,
+      queueName: QUEUES.APP_STORE,
+      data: {
+        appId,
+        country,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+      } satisfies RefreshAppPayload,
+    } as Job);
+
   it('queues a listing refresh per market for the app and its competitors', async () => {
     const { primary, rival } = await seed();
 
@@ -181,17 +197,26 @@ describe('market listings in the daily pipeline (e2e)', () => {
     ).resolves.toBe(1);
   });
 
-  it('lets a market job finish quietly when the store has no such app', async () => {
+  it('lets a refresh job finish quietly in every market when the store no longer lists the app', async () => {
     const { primary } = await seed();
     registry.failWith = new StoreAppNotFoundError(Store.APP_STORE, '111');
 
-    await expect(refreshListing(primary.id, 'de')).resolves.toBeNull();
+    await expect(runRefreshJob(primary.id)).resolves.toBeUndefined();
+    await expect(runRefreshJob(primary.id, 'de')).resolves.toBeUndefined();
     await expect(
       prisma.appSnapshot.count({ where: { appId: primary.id } }),
     ).resolves.toBe(0);
-    await expect(refreshListing(primary.id, 'us')).rejects.toThrow(
-      StoreAppNotFoundError,
+  });
+
+  it('still fails a refresh job when the store does not answer', async () => {
+    const { primary } = await seed();
+    registry.failWith = new StoreRequestError(
+      Store.APP_STORE,
+      'getApp',
+      'socket hang up',
     );
+
+    await expect(runRefreshJob(primary.id)).rejects.toThrow(StoreRequestError);
   });
 
   it('counts market listings in the daily budget', async () => {
