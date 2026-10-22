@@ -4,6 +4,13 @@ import { PrismaService } from '../prisma/prisma.service';
 import { isMissingResource } from './stripe-errors';
 import { StripeService } from './stripe.service';
 
+const AFTER_A_CHARGE = new Set<Stripe.Subscription.Status>([
+  'active',
+  'past_due',
+  'unpaid',
+  'paused',
+]);
+
 export interface PaymentHistory {
   id: string;
   firstPaidAt: Date | null;
@@ -21,6 +28,7 @@ export class FirstPayment {
     subscription: Stripe.Subscription,
   ): Promise<Date | null> {
     if (workspace.firstPaidAt) return workspace.firstPaidAt;
+    if (!AFTER_A_CHARGE.has(subscription.status)) return null;
     const invoice = await this.latestInvoice(subscription);
     if (invoice?.status !== 'paid' || invoice.amount_paid <= 0) return null;
 

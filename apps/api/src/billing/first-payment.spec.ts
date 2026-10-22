@@ -16,7 +16,8 @@ const invoiceOf = (over: Partial<Stripe.Invoice> = {}) =>
 
 const subscriptionOf = (
   latest_invoice: Stripe.Subscription['latest_invoice'] = 'in_1',
-) => ({ id: 'sub_1', latest_invoice }) as Stripe.Subscription;
+  status: Stripe.Subscription.Status = 'active',
+) => ({ id: 'sub_1', latest_invoice, status }) as Stripe.Subscription;
 
 describe('FirstPayment', () => {
   const retrieveInvoice = jest.fn<Promise<Stripe.Invoice>, [string]>();
@@ -49,6 +50,21 @@ describe('FirstPayment', () => {
     );
     expect(retrieveInvoice).not.toHaveBeenCalled();
   });
+
+  it.each([
+    'trialing',
+    'canceled',
+    'incomplete',
+    'incomplete_expired',
+  ] as const)(
+    'reads nothing for a %s subscription, which cannot follow a real charge',
+    async (status) => {
+      await expect(
+        payment().record(unpaid, subscriptionOf('in_1', status)),
+      ).resolves.toBeNull();
+      expect(retrieveInvoice).not.toHaveBeenCalled();
+    },
+  );
 
   it('records when a paid invoice above zero was paid', async () => {
     await expect(payment().record(unpaid, subscriptionOf())).resolves.toEqual(
