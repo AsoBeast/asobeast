@@ -5,7 +5,7 @@ import { formatCheckedPosition } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import { CHART_HEIGHT } from "@/components/charts/theme";
 import { cn } from "@/lib/utils";
-import { lastCheckedIndex, type RankingChartData } from "./pivot";
+import { lastCheckedIndex, NOT_CHECKED, type RankingChartData } from "./pivot";
 
 function Frame({
   title,
@@ -99,7 +99,7 @@ export function InsufficientHistory({ data }: { data: RankingChartData }) {
                 {formatCheckedPosition(
                   typeof value === "number" ? value : null,
                   depths?.[keywordId] ?? null,
-                ) ?? "—"}
+                ) ?? NOT_CHECKED}
               </dd>
             </div>
           );

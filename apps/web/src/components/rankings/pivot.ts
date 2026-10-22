@@ -21,6 +21,8 @@ export function loneKey(keywordId: string): string {
   return `${keywordId}${LONE_SUFFIX}`;
 }
 
+export const NOT_CHECKED = "Not checked";
+
 type ChartRow = Record<string, string | number | null>;
 
 type DayDepths = Record<string, number | null>;
@@ -68,7 +70,7 @@ function withLonePoints(
         ranked(row, keywordId) &&
         !ranked(rows[index - 1], keywordId) &&
         !ranked(rows[index + 1], keywordId);
-      marked[loneKey(keywordId)] = lone ? (row[keywordId] ?? null) : null;
+      marked[loneKey(keywordId)] = lone ? row[keywordId] : null;
     }
     return marked;
   });

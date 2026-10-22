@@ -28,12 +28,15 @@ import {
 } from "@/components/charts/theme";
 import { formatDayMonth } from "@/lib/format";
 import { todayUtc } from "@/lib/ranges";
-import { loneKey, notFoundKey, type RankingChartData } from "./pivot";
+import {
+  loneKey,
+  NOT_CHECKED,
+  notFoundKey,
+  type RankingChartData,
+} from "./pivot";
 import { RankBandLabel } from "./RankBandLabel";
 
 const Y_TICKS = [1, 10, 25, 50, 100, 200];
-
-const NOT_CHECKED = "Not checked";
 
 const markerLineProps = (dataKey: string, keywordId: string, fill: string) => ({
   dataKey,
