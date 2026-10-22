@@ -10,6 +10,7 @@ import {
   YAxis,
 } from "recharts";
 import { formatCheckedPosition, RANK_DEPTH } from "@asobeast/shared";
+import type { AppAnnotationItem } from "@asobeast/shared";
 import {
   ChartContainer,
   ChartLegend,
@@ -17,6 +18,10 @@ import {
 } from "@/components/ui/chart";
 import { SeriesLegend } from "@/components/charts/SeriesLegend";
 import { SeriesTooltip } from "@/components/charts/SeriesTooltip";
+import {
+  annotationChartLabel,
+  annotationLines,
+} from "@/components/annotations/annotation-lines";
 import {
   CHART_HEIGHT,
   CHART_MARGIN,
@@ -92,15 +97,18 @@ function RankingTooltip({
 export function RankingChart({
   data,
   changeDates = [],
+  annotations = [],
 }: {
   data: RankingChartData;
   changeDates?: string[];
+  annotations?: AppAnnotationItem[];
 }) {
   const today = todayUtc();
   const plotted = new Set(data.rows.map((row) => String(row.date)));
   const marked = changeDates.filter(
     (date) => date !== today && plotted.has(date),
   );
+  const annotated = annotationLines(annotations, [...plotted], today);
 
   return (
     <ChartContainer
@@ -135,6 +143,21 @@ export function RankingChart({
               position: "insideBottomLeft",
               angle: -90,
               fill: "var(--warning)",
+              fontSize: 10,
+            }}
+          />
+        ))}
+        {annotated.map((annotation) => (
+          <ReferenceLine
+            key={annotation.id}
+            x={annotation.date}
+            stroke="var(--info)"
+            strokeDasharray="6 3"
+            label={{
+              value: annotationChartLabel(annotation.label),
+              position: "insideTopLeft",
+              angle: -90,
+              fill: "var(--info)",
               fontSize: 10,
             }}
           />

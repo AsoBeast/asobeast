@@ -14,6 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  annotationsOptions,
   changesOptions,
   keywordsOptions,
   rankingsOptions,
@@ -51,6 +52,7 @@ export function RankingsView({ id }: { id: string }) {
   const { data: changes } = useQuery(
     changesOptions(id, Number(range.replace("d", ""))),
   );
+  const { data: annotations } = useQuery(annotationsOptions(id));
   const changeDates = (changes?.events ?? [])
     .filter((event) => !event.isCompetitor)
     .map((event) => event.capturedAt.slice(0, 10));
@@ -126,7 +128,11 @@ export function RankingsView({ id }: { id: string }) {
           <InsufficientHistory data={chart} />
         ) : (
           <>
-            <RankingChart data={chart} changeDates={changeDates} />
+            <RankingChart
+              data={chart}
+              changeDates={changeDates}
+              annotations={annotations?.annotations ?? []}
+            />
             {chart.totalSeries > MAX_SERIES ? (
               <p className="text-caption text-muted-foreground">
                 Showing {MAX_SERIES} of {chart.totalSeries} keywords.

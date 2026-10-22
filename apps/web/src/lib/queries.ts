@@ -24,6 +24,7 @@ import {
   type QueryKey,
 } from "@tanstack/react-query";
 import {
+  getAnnotations,
   getChart,
   listChartFollows,
   getAction,
@@ -190,6 +191,7 @@ export const appKeys = {
   changesRoot: (id: string) => [...appKeys.detail(id), "changes"] as const,
   changes: (id: string, days: number, market?: string) =>
     [...appKeys.detail(id), "changes", { days, market }] as const,
+  annotations: (id: string) => [...appKeys.detail(id), "annotations"] as const,
   changeImpact: (id: string, days: number, country: string) =>
     [...appKeys.detail(id), "changes", "impact", { days, country }] as const,
   reviewsRoot: (id: string) => [...appKeys.detail(id), "reviews"] as const,
@@ -770,6 +772,12 @@ export const changesOptions = (id: string, days: number, market?: string) =>
   queryOptions({
     queryKey: appKeys.changes(id, days, market),
     queryFn: () => getChanges(id, days, market),
+  });
+
+export const annotationsOptions = (id: string) =>
+  queryOptions({
+    queryKey: appKeys.annotations(id),
+    queryFn: () => getAnnotations(id),
   });
 
 export const screenshotsOptions = (

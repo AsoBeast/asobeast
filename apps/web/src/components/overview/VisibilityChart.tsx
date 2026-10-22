@@ -1,15 +1,26 @@
 "use client";
 
 import { Suspense, useDeferredValue } from "react";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ReferenceLine,
+  XAxis,
+  YAxis,
+} from "recharts";
 import {
   type ChartConfig,
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
+import {
+  annotationChartLabel,
+  annotationLines,
+} from "@/components/annotations/annotation-lines";
 import {
   Card,
   CardAction,
@@ -35,7 +46,8 @@ import {
   VALUE_AXIS_PROPS,
 } from "@/components/charts/theme";
 import { useKeywordScope } from "@/components/app-detail/use-market";
-import { visibilityOptions } from "@/lib/queries";
+import { annotationsOptions, visibilityOptions } from "@/lib/queries";
+import { todayUtc } from "@/lib/ranges";
 import {
   presetToRange,
   VISIBILITY_RANGES,
@@ -57,6 +69,12 @@ function VisibilityChartBody({
   const { country } = useKeywordScope(id);
   const { data } = useSuspenseQuery(
     visibilityOptions(id, presetToRange(range), country),
+  );
+  const { data: annotations } = useQuery(annotationsOptions(id));
+  const marked = annotationLines(
+    annotations?.annotations ?? [],
+    data.points.map((point) => point.date),
+    todayUtc(),
   );
 
   const state = trendState(data.points.length);
@@ -92,6 +110,21 @@ function VisibilityChartBody({
         <CartesianGrid {...GRID_PROPS} />
         <XAxis {...TIME_AXIS_PROPS} />
         <YAxis {...VALUE_AXIS_PROPS} />
+        {marked.map((annotation) => (
+          <ReferenceLine
+            key={annotation.id}
+            x={annotation.date}
+            stroke="var(--info)"
+            strokeDasharray="6 3"
+            label={{
+              value: annotationChartLabel(annotation.label),
+              position: "insideTopLeft",
+              angle: -90,
+              fill: "var(--info)",
+              fontSize: 10,
+            }}
+          />
+        ))}
         <ChartTooltip
           content={<ChartTooltipContent {...TIME_TOOLTIP_PROPS} />}
         />

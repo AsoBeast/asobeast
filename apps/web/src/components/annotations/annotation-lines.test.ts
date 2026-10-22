@@ -1,0 +1,61 @@
+import { describe, expect, it } from "vitest";
+import type { AppAnnotationItem } from "@asobeast/shared";
+import {
+  ANNOTATION_LINE_LABEL_MAX,
+  annotationChartLabel,
+  annotationLines,
+} from "./annotation-lines";
+
+const annotation = (
+  overrides: Partial<AppAnnotationItem> = {},
+): AppAnnotationItem => ({
+  id: "ann-1",
+  appId: "app-1",
+  date: "2026-10-08",
+  label: "Release 5.21.0",
+  market: null,
+  tag: null,
+  createdAt: "2026-10-08T09:00:00.000Z",
+  ...overrides,
+});
+
+describe("annotationLines", () => {
+  const plotted = ["2026-10-06", "2026-10-08", "2026-10-10"];
+
+  it("keeps annotations that fall on a plotted day", () => {
+    const lines = annotationLines(
+      [
+        annotation(),
+        annotation({ id: "ann-2", date: "2026-10-09" }),
+        annotation({ id: "ann-3", date: "2026-10-10" }),
+      ],
+      plotted,
+      "2026-10-12",
+    );
+
+    expect(lines.map((line) => line.id)).toEqual(["ann-1", "ann-3"]);
+  });
+
+  it("drops the annotation pinned to today, which the axis cannot place", () => {
+    const lines = annotationLines(
+      [annotation({ date: "2026-10-12" })],
+      [...plotted, "2026-10-12"],
+      "2026-10-12",
+    );
+
+    expect(lines).toEqual([]);
+  });
+});
+
+describe("annotationChartLabel", () => {
+  it("keeps a short label whole", () => {
+    expect(annotationChartLabel("Release 5.21.0")).toBe("Release 5.21.0");
+  });
+
+  it("truncates a label at the chart limit", () => {
+    const long = "a".repeat(ANNOTATION_LINE_LABEL_MAX + 5);
+
+    expect(annotationChartLabel(long)).toHaveLength(ANNOTATION_LINE_LABEL_MAX);
+    expect(annotationChartLabel(long).endsWith("…")).toBe(true);
+  });
+});
