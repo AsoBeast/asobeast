@@ -86,6 +86,17 @@ test("the dashboard marks a delisted app", async ({ page }) => {
   await expect(page.getByText("Delisted", { exact: true })).toHaveCount(1);
 });
 
+test("the dashboard table marks a delisted app", async ({ page }) => {
+  await delist(page, APP_1_DETAIL.id);
+  await page.goto("/?view=table");
+
+  const row = page
+    .getByRole("row")
+    .filter({ has: page.getByRole("link", { name: APP_1_DETAIL.name ?? "" }) });
+  await expect(row.getByText("Delisted", { exact: true })).toBeVisible();
+  await expect(page.getByText("Delisted", { exact: true })).toHaveCount(1);
+});
+
 for (const theme of THEMES) {
   test(`the delisted notice and badges have no contrast violation in the ${theme} theme`, async ({
     page,
