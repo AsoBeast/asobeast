@@ -23,15 +23,15 @@ const detail = (over: Partial<AppDetail> = {}): AppDetail => ({
 });
 
 const text = (app: AppDetail) =>
-  renderToStaticMarkup(<DelistedNotice detail={app} since={SINCE} />).replace(
-    /<[^>]+>/g,
-    "",
-  );
+  renderToStaticMarkup(<DelistedNotice detail={app} since={SINCE} />);
 
 describe("DelistedNotice", () => {
   it("names the store, the store id, the storefront and the UTC day", () => {
-    expect(text(detail())).toContain(
-      "No longer listed on App StoreSince Oct 20, 2026, App Store answers that it has no app 471112395 in Germany.",
+    const markup = text(detail());
+
+    expect(markup).toContain("No longer listed on App Store");
+    expect(markup).toContain(
+      "Since Oct 20, 2026, App Store answers that it has no app 471112395 in Germany.",
     );
   });
 
@@ -42,9 +42,11 @@ describe("DelistedNotice", () => {
   });
 
   it("sends an app to the dashboard and a competitor to its app", () => {
-    expect(text(detail())).toContain("delete it from the dashboard.");
+    expect(text(detail())).toContain(
+      "If it is gone for good, delete it from the dashboard.",
+    );
     expect(text(detail({ isCompetitor: true }))).toContain(
-      "remove it from the competitors of the app that tracks it.",
+      "If it is gone for good, remove it from the competitors of the app that tracks it.",
     );
   });
 });
