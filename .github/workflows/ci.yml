@@ -13,6 +13,9 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  TURBO_CACHE: ${{ github.ref == 'refs/heads/main' && 'local:rw,remote:rw' || 'local:rw,remote:r' }}
+
 jobs:
   checks:
     runs-on: ubuntu-latest
