@@ -48,9 +48,14 @@ jobs:
           MODE: warn
         run: .github/scripts/verify-release-state.sh
 
-  e2e:
+  e2e-shard:
+    name: e2e shard ${{ matrix.shard }}
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     services:
       postgres:
         image: postgres:18-alpine
@@ -83,7 +88,21 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup
       - run: pnpm --filter api run db:deploy
-      - run: pnpm --filter api test:e2e
+      - run: pnpm --filter api test:e2e --shard=${{ matrix.shard }}/3
+
+  e2e:
+    needs: e2e-shard
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require every shard to pass
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          for result in $RESULTS; do
+            test "$result" = success
+          done
 
   isolation:
     runs-on: ubuntu-latest
