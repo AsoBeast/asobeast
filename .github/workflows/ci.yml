@@ -23,7 +23,7 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup
       - uses: rharkor/caching-for-turbo@760158c05c47e7a764f78e9a22ca3b5a6ed8c52e # v2.5.2
-      - run: pnpm turbo run lint test build
+      - run: pnpm turbo run lint build test:cov
       - run: pnpm check:rate-classes
       - run: pnpm check:compose-limits
       - run: pnpm check:compose-mounts
@@ -32,11 +32,10 @@ jobs:
       - run: pnpm check:image-defaults
       - run: pnpm check:release-versions
       - run: pnpm docs:mcp-tools:check
-      - run: pnpm turbo run test:cov
       - name: Summarize coverage
         if: always()
         run: |
-          for report in apps/api/coverage apps/web/coverage packages/shared/coverage; do
+          for report in apps/api/coverage apps/web/coverage apps/mcp/coverage packages/shared/coverage packages/mcp-tools/coverage; do
             summary="${report}/coverage-summary.json"
             test -f "${summary}" || continue
             echo "### ${report}" >> "$GITHUB_STEP_SUMMARY"
