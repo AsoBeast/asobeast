@@ -146,27 +146,25 @@ function AnnotationsList({ id }: { id: string }) {
       toast.success(`Removed ${annotation.label}`);
     },
     onError: (_error, annotation) => {
-      toast.error(`Could not remove ${annotation.label}`);
-    },
-    onSettled: (_data, _error, annotation) => {
       removing.current.delete(annotation.id);
+      toast.error(`Could not remove ${annotation.label}`);
     },
   });
   const removeOnce = useKeyedSingleFlight(remove, (row) => row.id);
 
-  // A removed row takes its focused remove button with it, so the moment the
-  // refetched list drops it, hand focus to the surviving row's button, or to
-  // the add form when the list is empty.
   useEffect(() => {
     const previous = seen.current;
     seen.current = list.data?.annotations ?? null;
     if (!previous) return;
-    const gone = previous.find(
-      (row) => !seen.current?.some((kept) => kept.id === row.id),
+    const gone = previous.filter(
+      (row) =>
+        !seen.current?.some((kept) => kept.id === row.id) &&
+        removing.current.has(row.id),
     );
-    if (!gone || !removing.current.has(gone.id)) return;
-    removing.current.delete(gone.id);
-    const survivor = survivingNeighbour(previous, (row) => row.id === gone.id);
+    if (gone.length === 0) return;
+    for (const row of gone) removing.current.delete(row.id);
+    const removed = new Set(gone.map((row) => row.id));
+    const survivor = survivingNeighbour(previous, (row) => removed.has(row.id));
     const target =
       (survivor ? buttons.current.get(survivor.id) : undefined) ??
       document.getElementById("annotation-add");
