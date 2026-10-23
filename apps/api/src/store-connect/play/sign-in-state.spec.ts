@@ -40,9 +40,11 @@ describe('sign in state', () => {
   it('refuses a value that is not a sealed state', () => {
     const other = new SecretBox(randomBytes(32));
     const shapeless = box.seal('{"bucket":1}', 'play-sign-in:ws_1:user_1');
+    const empty = box.seal('null', 'play-sign-in:ws_1:user_1');
 
     expect(openSignInState(box, OWNER, 'forged', NOW)).toBeNull();
     expect(openSignInState(other, OWNER, sealed, NOW)).toBeNull();
     expect(openSignInState(box, OWNER, shapeless, NOW)).toBeNull();
+    expect(openSignInState(box, OWNER, empty, NOW)).toBeNull();
   });
 });

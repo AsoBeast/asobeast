@@ -16,14 +16,15 @@ export interface SignInOwner {
 const contextOf = ({ workspaceId, userId }: SignInOwner): string =>
   `play-sign-in:${workspaceId}:${userId}`;
 
-const isSignInState = (value: unknown): value is SignInState => {
-  const record = (value ?? {}) as Record<string, unknown>;
-  return (
-    typeof record.bucket === 'string' &&
-    typeof record.verifier === 'string' &&
-    typeof record.expiresAt === 'number'
-  );
-};
+const isSignInState = (value: unknown): value is SignInState =>
+  typeof value === 'object' &&
+  value !== null &&
+  'bucket' in value &&
+  typeof value.bucket === 'string' &&
+  'verifier' in value &&
+  typeof value.verifier === 'string' &&
+  'expiresAt' in value &&
+  typeof value.expiresAt === 'number';
 
 export function sealSignInState(
   box: SecretBox,
