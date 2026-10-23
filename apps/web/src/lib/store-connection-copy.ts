@@ -1,10 +1,14 @@
-import type {
-  Store,
-  StoreConnectionApp,
-  StoreConnectionItem,
-  StoreReportState,
+import {
+  SETTINGS_PATH,
+  type Store,
+  type StoreConnectionApp,
+  type StoreConnectionItem,
+  type StoreReportState,
 } from "@asobeast/shared";
 import { formatDate, formatDateTime } from "./format";
+
+export const STORE_CONNECTIONS_SECTION_ID = "store-connections";
+export const STORE_CONNECTIONS_PATH = `${SETTINGS_PATH}#${STORE_CONNECTIONS_SECTION_ID}`;
 
 export interface StatusLine {
   tone: "warning" | "muted";

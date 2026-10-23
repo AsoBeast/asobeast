@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   useMutation,
   useQueryClient,
@@ -39,6 +39,7 @@ import {
 import { useSingleFlight } from "@/lib/single-flight";
 import {
   connectionStatusLine,
+  STORE_CONNECTIONS_SECTION_ID,
   STORE_CONSOLES,
   needsAdminKey,
 } from "@/lib/store-connection-copy";
@@ -247,9 +248,19 @@ function StoreConsoleCard({
   );
 }
 
+function useScrollIntoViewOnHash() {
+  useEffect(() => {
+    if (window.location.hash !== `#${STORE_CONNECTIONS_SECTION_ID}`) return;
+    document
+      .getElementById(STORE_CONNECTIONS_SECTION_ID)
+      ?.scrollIntoView({ block: "start" });
+  }, []);
+}
+
 export function StoreConnectionsCard() {
   const { user, isOwner } = useAuth();
   const { data } = useSuspenseQuery(storeConnectionsOptions);
+  useScrollIntoViewOnHash();
 
   if (!data.available) {
     return (

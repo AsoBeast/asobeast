@@ -246,8 +246,12 @@ test("the google return page explains a cancelled, incomplete or refused sign in
   await page.goto("/settings/google-play?code=4%2Fold&state=stale");
   await expect(heading).toHaveText("Google Play was not connected");
   await expect(page.getByText(PLAY_SIGN_IN_EXPIRED)).toBeVisible();
+  await expect(
+    page.getByRole("navigation", { name: "breadcrumb" }),
+  ).toContainText("Settings");
   await back.click();
   await expect(playCard(page)).toContainText("Not connected.");
+  await expect(section(page)).toBeInViewport();
 });
 
 test("disconnecting google play leaves app store connect alone", async ({

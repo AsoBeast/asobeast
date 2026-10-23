@@ -6,7 +6,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { SETTINGS_PATH } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -17,8 +16,7 @@ import {
 } from "@/components/ui/card";
 import { ApiError, completePlaySignIn } from "@/lib/api";
 import { invalidateStoreConnectionMutation } from "@/lib/queries";
-
-const STORE_CONNECTIONS_PATH = `${SETTINGS_PATH}#store-connections`;
+import { STORE_CONNECTIONS_PATH } from "@/lib/store-connection-copy";
 
 function ReturnCard({
   title,
