@@ -99,7 +99,14 @@ function AnnotationRow({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={removing}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel
+              aria-disabled={removing || undefined}
+              onClick={(event) => {
+                if (removing) event.preventDefault();
+              }}
+            >
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               aria-disabled={removing || undefined}
