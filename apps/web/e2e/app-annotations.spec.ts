@@ -86,17 +86,16 @@ test("counts the label the way the api does", async ({ page }) => {
   const labelBox = page.getByLabel("Label", { exact: true });
   const add = page.getByRole("button", { name: "Add annotation" });
 
-  // a heart with its presentation sequence is one counted character, not two
-  const hearts = "❤️".repeat(ANNOTATION_LABEL_MAX_LENGTH);
+  const heartsAtLimit = "❤️".repeat(ANNOTATION_LABEL_MAX_LENGTH);
   await expect(async () => {
     await dateBox.fill("2030-02-01");
-    await labelBox.fill(hearts);
+    await labelBox.fill(heartsAtLimit);
     await expect(dateBox).toHaveValue("2030-02-01");
-    await expect(labelBox).toHaveValue(hearts);
+    await expect(labelBox).toHaveValue(heartsAtLimit);
   }).toPass();
   await expect(add).not.toHaveAttribute("aria-disabled", "true");
 
-  await labelBox.fill(`${hearts}❤️`);
+  await labelBox.fill(`${heartsAtLimit}❤️`);
   await expect(
     page.getByText(
       `${ANNOTATION_LABEL_MAX_LENGTH + 1} / ${ANNOTATION_LABEL_MAX_LENGTH}`,
