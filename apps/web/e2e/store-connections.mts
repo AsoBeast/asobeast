@@ -6,6 +6,10 @@ import type {
 export const STORE_CONNECTION_COOKIE = "e2e_store_connection";
 export const PLAY_CONNECTION_COOKIE = "e2e_play_connection";
 export const STORE_CONNECT_OFF_COOKIE = "e2e_store_connect_off";
+export const GOOGLE_SIGN_IN_COOKIE = "e2e_google_sign_in";
+export const PLAY_SIGN_IN_STATE = "e2e-sealed-state";
+export const PLAY_SIGN_IN_EXPIRED =
+  "This Google sign in expired or was started by another account. Sign in with Google again.";
 
 export const ADMIN_KEY_NEEDED =
   "This key can download reports but not request them. Connect an Admin key once; a Sales and Reports key can take over afterwards.";
@@ -80,6 +84,20 @@ export const PLAY_CONNECTION_ACTIVE: StoreConnectionItem = {
   ],
 };
 
+export const PLAY_CONNECTION_GOOGLE: StoreConnectionItem = {
+  ...PLAY_CONNECTION_ACTIVE,
+  credential: "googleAccount",
+  issuerId: "owner@example.com",
+  keyId: "1098765",
+  keyFingerprint: "0d5e7a91c2f34b68",
+  bucket: "pubsite_prod_4855979533719537120",
+};
+
+const PLAY_CONNECTIONS: Record<string, StoreConnectionItem> = {
+  active: PLAY_CONNECTION_ACTIVE,
+  google: PLAY_CONNECTION_GOOGLE,
+};
+
 const CONNECTIONS: Record<string, StoreConnectionItem> = {
   active: STORE_CONNECTION_ACTIVE,
   rejected: STORE_CONNECTION_REJECTED,
@@ -95,23 +113,26 @@ export function storeConnectionOf(
 export function storeConnectionState(
   value: string | undefined,
   off: boolean,
-  play = false,
+  play: string | undefined,
+  googleSignIn: boolean,
 ): StoreConnectionState {
   if (off) return { available: false, connections: [] };
   const connection = storeConnectionOf(value);
+  const playConnection = play ? PLAY_CONNECTIONS[play] : undefined;
   return {
     available: true,
+    googleSignIn,
     connections: [
       ...(connection ? [connection] : []),
-      ...(play ? [PLAY_CONNECTION_ACTIVE] : []),
+      ...(playConnection ? [playConnection] : []),
     ],
   };
 }
 
-export const playConnectionCookie = (connected: boolean): string =>
-  connected
-    ? `${PLAY_CONNECTION_COOKIE}=active; Path=/`
-    : `${PLAY_CONNECTION_COOKIE}=; Path=/; Max-Age=0`;
+export const playConnectionCookie = (value: string | null): string =>
+  value === null
+    ? `${PLAY_CONNECTION_COOKIE}=; Path=/; Max-Age=0`
+    : `${PLAY_CONNECTION_COOKIE}=${value}; Path=/`;
 
 export const storeConnectionCookie = (value: string | null): string =>
   value === null

@@ -18,6 +18,7 @@ export function AlertChannelDialog({
   open,
   onOpenChange,
   label,
+  submitLabel = label,
   description,
   error,
   pending,
@@ -28,6 +29,7 @@ export function AlertChannelDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   label: string;
+  submitLabel?: string;
   description: ReactNode;
   error: string | null;
   pending: boolean;
@@ -65,7 +67,7 @@ export function AlertChannelDialog({
           <DialogFooter>
             <Button type="submit" disabled={pending}>
               {pending ? <Loader2 className="animate-spin" /> : null}
-              {label}
+              {submitLabel}
             </Button>
           </DialogFooter>
         </form>

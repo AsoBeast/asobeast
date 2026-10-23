@@ -60,10 +60,14 @@ function ConnectDialog({
   label: string;
   variant?: "default" | "outline";
 }) {
+  const { data } = useSuspenseQuery(storeConnectionsOptions);
   return store === "APP_STORE" ? (
     <ConnectAppStoreDialog label={label} variant={variant} />
   ) : (
-    <ConnectPlayDialog label={label} />
+    <ConnectPlayDialog
+      label={label}
+      googleSignIn={data.googleSignIn === true}
+    />
   );
 }
 

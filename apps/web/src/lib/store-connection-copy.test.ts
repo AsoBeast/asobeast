@@ -161,9 +161,25 @@ describe("google play copy", () => {
     ]);
   });
 
-  it("says google refused the service account and what to do", () => {
+  it("names the google account and bucket of a sign in, with no key facts", () => {
+    const facts = STORE_CONSOLES.GOOGLE_PLAY.facts({
+      ...PLAY,
+      credential: "googleAccount",
+      issuerId: "owner@example.com",
+      keyId: "1098765",
+    });
+
+    expect(facts.map(([term]) => term)).toEqual([
+      "Google account",
+      "Bucket",
+      "Connected",
+    ]);
+    expect(facts[0][1]).toBe("owner@example.com");
+  });
+
+  it("says google refused the connection and what to do", () => {
     expect(connectionStatusLine({ ...PLAY, status: "rejected" }).text).toBe(
-      "Google refused this service account. Check its access in Play Console, verify it again, or connect a new one.",
+      "Google refused this connection. Check its access in Play Console, verify it again, or reconnect.",
     );
   });
 

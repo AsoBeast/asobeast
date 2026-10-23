@@ -15,7 +15,11 @@ import {
   STORE_CONNECTION_COOKIE,
   PLAY_BUCKET,
   PLAY_CONNECTION_ACTIVE,
+  GOOGLE_SIGN_IN_COOKIE,
   PLAY_CONNECTION_COOKIE,
+  PLAY_CONNECTION_GOOGLE,
+  PLAY_SIGN_IN_EXPIRED,
+  PLAY_SIGN_IN_STATE,
   playConnectionCookie,
   storeConnectionCookie,
   storeConnectionOf,
@@ -2516,7 +2520,8 @@ const routes: Route[] = [
         storeConnectionState(
           cookieValue(req, STORE_CONNECTION_COOKIE),
           hasCookie(req, STORE_CONNECT_OFF_COOKIE, "1"),
-          hasCookie(req, PLAY_CONNECTION_COOKIE, "active"),
+          cookieValue(req, PLAY_CONNECTION_COOKIE),
+          hasCookie(req, GOOGLE_SIGN_IN_COOKIE, "1"),
         ),
       ),
   },
@@ -2552,16 +2557,48 @@ const routes: Route[] = [
             );
           }
           json(res, 200, PLAY_CONNECTION_ACTIVE, {
-            "set-cookie": playConnectionCookie(true),
+            "set-cookie": playConnectionCookie("active"),
           });
         },
       ),
   },
   {
+    method: "POST",
+    pattern: /^\/store-connections\/GOOGLE_PLAY\/sign-in$/,
+    handler: (_p, _req, res) =>
+      json(res, 200, {
+        url: `/settings/google-play?${new URLSearchParams({
+          code: "4/e2e-code",
+          state: PLAY_SIGN_IN_STATE,
+        }).toString()}`,
+      }),
+  },
+  {
+    method: "POST",
+    pattern: /^\/store-connections\/GOOGLE_PLAY\/sign-in\/complete$/,
+    handler: (_p, req, res) =>
+      withBody<{ code?: string; state?: string }>(req, res, (body) => {
+        if (body.state !== PLAY_SIGN_IN_STATE) {
+          return json(
+            res,
+            400,
+            errorEnvelope(
+              400,
+              "/store-connections/GOOGLE_PLAY/sign-in/complete",
+              PLAY_SIGN_IN_EXPIRED,
+            ),
+          );
+        }
+        json(res, 200, PLAY_CONNECTION_GOOGLE, {
+          "set-cookie": playConnectionCookie("google"),
+        });
+      }),
+  },
+  {
     method: "DELETE",
     pattern: /^\/store-connections\/GOOGLE_PLAY$/,
     handler: (_p, _req, res) => {
-      res.writeHead(204, { "set-cookie": playConnectionCookie(false) });
+      res.writeHead(204, { "set-cookie": playConnectionCookie(null) });
       res.end();
     },
   },
