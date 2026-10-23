@@ -16,6 +16,8 @@ import { CreateAnnotationDto } from './dto/create-annotation.dto';
 
 export const MAX_APP_ANNOTATIONS = 100;
 
+const ANNOTATION_LOCK = 9_105_367;
+
 const toAnnotationItem = (annotation: AppAnnotation): AppAnnotationItem => ({
   id: annotation.id,
   appId: annotation.appId,
@@ -44,25 +46,30 @@ export class AnnotationsService {
     if (dto.market !== undefined) {
       assertStorefront(app.store, dto.market);
     }
-    if (
-      (await this.prisma.appAnnotation.count({ where: { appId: app.id } })) >=
-      MAX_APP_ANNOTATIONS
-    ) {
-      throw new ForbiddenException(
-        `An app can have at most ${MAX_APP_ANNOTATIONS} annotations`,
-      );
-    }
 
-    const annotation = await this.prisma.appAnnotation.create({
-      data: {
-        appId: app.id,
-        date: new Date(`${dto.date}T00:00:00.000Z`),
-        label: dto.label,
-        market: dto.market,
-        tag: dto.tag,
-      },
+    return this.prisma.withTransaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${ANNOTATION_LOCK}, hashtext(${app.id}))`;
+      if (
+        (await tx.appAnnotation.count({ where: { appId: app.id } })) >=
+        MAX_APP_ANNOTATIONS
+      ) {
+        throw new ForbiddenException(
+          `An app can have at most ${MAX_APP_ANNOTATIONS} annotations`,
+        );
+      }
+
+      return toAnnotationItem(
+        await tx.appAnnotation.create({
+          data: {
+            appId: app.id,
+            date: new Date(`${dto.date}T00:00:00.000Z`),
+            label: dto.label,
+            market: dto.market,
+            tag: dto.tag,
+          },
+        }),
+      );
     });
-    return toAnnotationItem(annotation);
   }
 
   async list(appId: string): Promise<AppAnnotationList> {

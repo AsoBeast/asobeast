@@ -26,19 +26,29 @@ const build = (
     store: 'APP_STORE',
   },
 ) => {
+  const tx = {
+    $executeRaw: jest.fn().mockResolvedValue(0),
+    appAnnotation: {
+      count: jest.fn().mockResolvedValue(0),
+      create: jest.fn().mockResolvedValue(ROW),
+    },
+  };
   const prisma = {
     app: {
       findFirst: jest.fn().mockResolvedValue(app),
     },
     appAnnotation: {
-      create: jest.fn().mockResolvedValue(ROW),
+      create: tx.appAnnotation.create,
       findMany: jest.fn().mockResolvedValue([ROW]),
-      count: jest.fn().mockResolvedValue(0),
+      count: tx.appAnnotation.count,
       deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
+    withTransaction: jest.fn((run: (client: unknown) => Promise<unknown>) =>
+      run(tx),
+    ),
   };
   const service = new AnnotationsService(prisma as unknown as PrismaService);
-  return { service, prisma };
+  return { service, prisma, tx };
 };
 
 describe('AnnotationsService', () => {
@@ -91,13 +101,32 @@ describe('AnnotationsService', () => {
   );
 
   it('refuses another annotation once the app holds the cap', async () => {
-    const { service, prisma } = build();
-    prisma.appAnnotation.count.mockResolvedValue(MAX_APP_ANNOTATIONS);
+    const { service, prisma, tx } = build();
+    tx.appAnnotation.count.mockResolvedValue(MAX_APP_ANNOTATIONS);
 
     await expect(service.create('app_1', dto())).rejects.toBeInstanceOf(
       ForbiddenException,
     );
     expect(prisma.appAnnotation.create).not.toHaveBeenCalled();
+  });
+
+  it('counts and creates inside one transaction held under the app lock', async () => {
+    const { service, prisma, tx } = build();
+
+    await service.create('app_1', dto());
+
+    expect(prisma.withTransaction).toHaveBeenCalledTimes(1);
+    const lock = tx.$executeRaw.mock.calls[0] as unknown as [
+      TemplateStringsArray,
+      ...unknown[],
+    ];
+    expect(lock[0].join('?')).toContain('pg_advisory_xact_lock');
+    expect(lock[0].join('?')).toContain('hashtext');
+    expect(lock[1]).toEqual(expect.any(Number));
+    expect(lock[2]).toBe('app_1');
+    expect(prisma.withTransaction.mock.invocationCallOrder[0]).toBeLessThan(
+      tx.appAnnotation.create.mock.invocationCallOrder[0],
+    );
   });
 
   it('lists the annotations of one app, oldest day first', async () => {

@@ -9,9 +9,16 @@ import {
   AppAnnotationList,
 } from '@asobeast/shared';
 import { App } from 'supertest/types';
+import request from 'supertest';
 import { AppModule } from '../src/app.module';
+import { MAX_APP_ANNOTATIONS } from '../src/annotations/annotations.service';
 import { testDb } from './helpers/test-db';
-import { ownerAgent, useCookies } from './helpers/session';
+import {
+  ownerAgent,
+  sessionCookieOf,
+  useCookies,
+  OWNER,
+} from './helpers/session';
 import { obliterateQueues, settleBootRegistration } from './obliterate-queues';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 
@@ -66,6 +73,15 @@ describe('AnnotationsController (e2e)', () => {
         country: 'us',
         name: 'Mine',
       },
+    });
+
+  const seedAnnotations = (appId: string, count: number) =>
+    prisma.appAnnotation.createMany({
+      data: Array.from({ length: count }, (_, index) => ({
+        appId,
+        date: new Date('2026-01-01T00:00:00.000Z'),
+        label: `Seed ${index + 1}`,
+      })),
     });
 
   it('returns a 404 envelope for an unknown app id', async () => {
@@ -166,6 +182,51 @@ describe('AnnotationsController (e2e)', () => {
       .post(`/apps/${created.id}/annotations`)
       .send({ date: '2026-10-08', label: 'x', tag: '#hash' })
       .expect(400);
+  });
+
+  it('refuses the 101st annotation with 403 and writes nothing', async () => {
+    const created = await createApp('111');
+    await seedAnnotations(created.id, MAX_APP_ANNOTATIONS);
+
+    const response = await api
+      .post(`/apps/${created.id}/annotations`)
+      .send({ date: '2026-10-08', label: 'One too many' })
+      .expect(403);
+
+    expect((response.body as ApiErrorEnvelope).message).toContain(
+      `${MAX_APP_ANNOTATIONS} annotations`,
+    );
+    await expect(prisma.appAnnotation.count()).resolves.toBe(
+      MAX_APP_ANNOTATIONS,
+    );
+  });
+
+  it('lets only one of several simultaneous posts past the cap', async () => {
+    const created = await createApp('111');
+    await seedAnnotations(created.id, MAX_APP_ANNOTATIONS - 1);
+    const login = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send(OWNER);
+    const cookie = sessionCookieOf(login);
+
+    const responses = await Promise.all(
+      Array.from({ length: 10 }, (_, index) =>
+        request(app.getHttpServer())
+          .post(`/apps/${created.id}/annotations`)
+          .set('Cookie', cookie)
+          .send({ date: '2026-10-08', label: `Burst ${index + 1}` }),
+      ),
+    );
+
+    expect(
+      responses.filter((response) => response.status === 201),
+    ).toHaveLength(1);
+    expect(
+      responses.filter((response) => response.status === 403),
+    ).toHaveLength(9);
+    await expect(prisma.appAnnotation.count()).resolves.toBe(
+      MAX_APP_ANNOTATIONS,
+    );
   });
 
   it('lists the annotations of one app, oldest day first', async () => {
