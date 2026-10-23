@@ -3,7 +3,11 @@ import type { Provider } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PLAY_SIGN_IN_PATH } from '@asobeast/shared';
 import type { Env } from '../../config/env';
-import { GCS_READ_ONLY_SCOPE, type GoogleGrant } from './service-account';
+import {
+  ANDROID_PUBLISHER_SCOPE,
+  GCS_READ_ONLY_SCOPE,
+  type GoogleGrant,
+} from './service-account';
 
 export const GOOGLE_AUTHORIZATION_URL =
   'https://accounts.google.com/o/oauth2/v2/auth';
@@ -11,6 +15,7 @@ export const PLAY_SIGN_IN_SCOPES = [
   'openid',
   'email',
   GCS_READ_ONLY_SCOPE,
+  ANDROID_PUBLISHER_SCOPE,
 ] as const;
 export const GOOGLE_OAUTH_CLIENT = Symbol('GOOGLE_OAUTH_CLIENT');
 export const SIGN_IN_OFF =
@@ -45,6 +50,7 @@ export interface SignedInAccount {
   email: string;
   subject: string;
   refreshToken: string;
+  canReply: boolean;
 }
 
 export class SignInOffError extends Error {
@@ -177,5 +183,6 @@ export function signedInAccount(body: unknown): SignedInAccount {
     email: textOf(claims, 'email'),
     subject: textOf(claims, 'sub'),
     refreshToken: textOf(answer, 'refresh_token'),
+    canReply: scopes.includes(ANDROID_PUBLISHER_SCOPE),
   };
 }

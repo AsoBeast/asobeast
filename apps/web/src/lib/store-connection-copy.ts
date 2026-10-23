@@ -1,5 +1,5 @@
 import {
-  PLAY_REPLIES_NEED_KEY,
+  PLAY_REPLIES_NEED_CONSENT,
   SETTINGS_PATH,
   type Store,
   type StoreConnectionApp,
@@ -120,7 +120,9 @@ export function connectionStatusLine(item: StoreConnectionItem): StatusLine {
 }
 
 export const replyNote = (item: StoreConnectionItem): string | null =>
-  item.credential === "googleAccount" ? PLAY_REPLIES_NEED_KEY : null;
+  item.credential === "googleAccount" && item.replyAccess === "forbidden"
+    ? PLAY_REPLIES_NEED_CONSENT
+    : null;
 
 export const needsAdminKey = (item: StoreConnectionItem): boolean =>
   item.store === "APP_STORE" &&

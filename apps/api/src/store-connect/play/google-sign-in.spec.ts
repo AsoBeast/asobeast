@@ -15,7 +15,10 @@ import {
   signedInAccount,
   UnreadableSignInError,
 } from './google-sign-in';
-import { GCS_READ_ONLY_SCOPE } from './service-account';
+import {
+  ANDROID_PUBLISHER_SCOPE,
+  GCS_READ_ONLY_SCOPE,
+} from './service-account';
 
 const CLIENT: GoogleOAuthClient = {
   id: 'client.apps.googleusercontent.com',
@@ -69,7 +72,7 @@ describe('googleOAuthClientProvider', () => {
 });
 
 describe('authorizationUrl', () => {
-  it('asks for offline read only storage access with a PKCE challenge', () => {
+  it('asks for offline read only storage and play console access with a PKCE challenge', () => {
     const url = new URL(authorizationUrl(CLIENT, 'sealed.state', 'challenge'));
 
     expect(`${url.origin}${url.pathname}`).toBe(
@@ -79,7 +82,7 @@ describe('authorizationUrl', () => {
       client_id: CLIENT.id,
       redirect_uri: CLIENT.redirectUri,
       response_type: 'code',
-      scope: `openid email ${GCS_READ_ONLY_SCOPE}`,
+      scope: `openid email ${GCS_READ_ONLY_SCOPE} ${ANDROID_PUBLISHER_SCOPE}`,
       access_type: 'offline',
       prompt: 'consent',
       state: 'sealed.state',
@@ -163,7 +166,18 @@ describe('signedInAccount', () => {
       email: 'owner@example.com',
       subject: '1098765',
       refreshToken: '1//refresh',
+      canReply: false,
     });
+  });
+
+  it('says whether google granted the play console scope replies need', () => {
+    expect(
+      signedInAccount(
+        answer({
+          scope: `openid email ${GCS_READ_ONLY_SCOPE} ${ANDROID_PUBLISHER_SCOPE}`,
+        }),
+      ),
+    ).toMatchObject({ canReply: true });
   });
 
   it('refuses an answer whose granted scopes leave out storage', () => {

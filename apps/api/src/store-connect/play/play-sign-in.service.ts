@@ -91,6 +91,7 @@ export class PlaySignIn {
         email: account.email,
         refreshToken: account.refreshToken,
         bucket: opened.bucket,
+        canReply: account.canReply,
       },
       account.subject,
       userId,

@@ -7,11 +7,9 @@ import {
 } from './gcs-api';
 import type { GcsResponse, GcsTransport } from './gcs-transport';
 import {
-  ANDROID_PUBLISHER_SCOPE,
   GOOGLE_TOKEN_AUDIENCE,
+  type GoogleGrant,
   GoogleTokenCache,
-  type ServiceAccount,
-  serviceAccountGrant,
 } from './service-account';
 
 export const PLAY_PUBLISHER_ORIGIN = 'https://androidpublisher.googleapis.com';
@@ -74,11 +72,11 @@ export class PlayPublisherApi {
 
   constructor(
     private readonly transport: GcsTransport,
-    account: ServiceAccount,
+    grant: GoogleGrant,
     private readonly origins: PlayPublisherOrigins = PLAY_PUBLISHER_ORIGINS,
   ) {
     this.tokens = new GoogleTokenCache(
-      serviceAccountGrant(account, ANDROID_PUBLISHER_SCOPE),
+      grant,
       googleTokenExchange(transport, origins.token),
     );
   }

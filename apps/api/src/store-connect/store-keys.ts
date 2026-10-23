@@ -156,7 +156,7 @@ export class PlayKeys implements StoreKeys<
     return this.factory.open(credentials);
   }
 
-  publisher(credentials: ServiceAccountCredentials): PlayPublisherApi {
+  publisher(credentials: PlayCredentials): PlayPublisherApi {
     return this.factory.publisher(credentials);
   }
 

@@ -7,7 +7,7 @@ import {
   STORE_REPORT_STATES,
   type AppStoreConnectionRequest,
   type PlayConnectionRequest,
-  PLAY_REPLIES_NEED_KEY,
+  PLAY_REPLIES_NEED_CONSENT,
   PLAY_SIGN_IN_PATH,
   type PlaySignInCompletion,
   type StoreConnectionState,
@@ -81,9 +81,9 @@ describe('store connection contract', () => {
     >();
   });
 
-  it('names the key and permission a google play reply needs', () => {
-    expect(PLAY_REPLIES_NEED_KEY).toBe(
-      'Posting replies to Google Play needs a service account key with the Reply to reviews permission. A Google sign in can only read reports.',
+  it('tells a google sign in without play console access how to allow replies', () => {
+    expect(PLAY_REPLIES_NEED_CONSENT).toBe(
+      'This Google sign in was not allowed to manage Play Console, so it cannot post replies. Sign in with Google again and allow it, or connect a service account key with the Reply to reviews permission.',
     );
   });
 

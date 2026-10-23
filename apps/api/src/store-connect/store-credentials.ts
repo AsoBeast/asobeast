@@ -1,4 +1,4 @@
-import type { Store } from '@asobeast/shared';
+import type { Store, StoreReplyAccess } from '@asobeast/shared';
 import { SecretBox, SecretBoxError } from '../common/crypto/secret-box';
 import type { AscCredentials } from './asc-token';
 import type { ServiceAccount } from './play/service-account';
@@ -11,6 +11,7 @@ export interface GoogleAccountCredentials {
   email: string;
   refreshToken: string;
   bucket: string;
+  canReply?: boolean;
 }
 
 export type PlayCredentials =
@@ -43,6 +44,13 @@ export const isGoogleAccountCredentials = (
 
 export const isPlayCredentials = (value: unknown): value is PlayCredentials =>
   isServiceAccountCredentials(value) || isGoogleAccountCredentials(value);
+
+export const repliesRefused = (credentials: StoreCredentials): boolean =>
+  isGoogleAccountCredentials(credentials) && credentials.canReply !== true;
+
+export const replyAccessOf = (
+  credentials: StoreCredentials,
+): StoreReplyAccess => (repliesRefused(credentials) ? 'forbidden' : 'unknown');
 
 const SHAPES: Record<Store, (value: unknown) => boolean> = {
   APP_STORE: isAscCredentials,

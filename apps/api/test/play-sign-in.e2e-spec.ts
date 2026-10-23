@@ -5,7 +5,7 @@ import * as argon2 from 'argon2';
 import { Store } from '@prisma/client';
 import {
   type ApiErrorEnvelope,
-  PLAY_REPLIES_NEED_KEY,
+  PLAY_REPLIES_NEED_CONSENT,
   type PlaySignInStart,
   type StoreConnectionItem,
   type StoreConnectionState,
@@ -148,6 +148,7 @@ describe('Google Play sign in (e2e)', () => {
       `${TEST_GOOGLE_CLIENT.origin}/settings/google-play`,
     );
     expect(url.searchParams.get('scope')).toContain(GCS_READ_ONLY_SCOPE);
+    expect(url.searchParams.get('scope')).toContain(ANDROID_PUBLISHER_SCOPE);
     expect(url.searchParams.get('access_type')).toBe('offline');
     expect(url.searchParams.get('prompt')).toBe('consent');
     expect(url.searchParams.get('code_challenge_method')).toBe('S256');
@@ -318,9 +319,46 @@ describe('Google Play sign in (e2e)', () => {
     });
   });
 
-  it('refuses to post replies through a google sign in and keeps reading reports', async () => {
+  it('posts replies through a google sign in that allowed play console access', async () => {
+    grantWith({
+      refresh_token: '1//refresh',
+      id_token: ID_TOKEN,
+      scope: `openid email ${GCS_READ_ONLY_SCOPE} ${ANDROID_PUBLISHER_SCOPE}`,
+    });
+    const connected = await complete(await start()).expect(200);
+    expect(connected.body).toMatchObject({ replyAccess: 'unknown' });
+    harness.gcs.reset();
+    harness.gcs.on(
+      'POST',
+      /oauth2/,
+      gcsAnswer({ access_token: 'ya29.signed-in-publisher', expires_in: 3600 }),
+    );
+    harness.gcs.on(
+      'POST',
+      /androidpublisher/,
+      gcsAnswer({ result: { replyText: 'Thanks', lastEdited: {} } }),
+    );
+    const connections = harness.app.get(StoreConnectionService);
+
+    const opened = await asWorkspace(harness.app, () =>
+      connections.openPlayPublisher(),
+    );
+    if (!opened) throw new Error('the google sign in opened no publisher');
+    await opened.api.reply('com.focus', 'review-id', 'Thanks');
+
+    const [token, reply] = harness.gcs.requests;
+    expect(token.form).toMatchObject({
+      grant_type: 'refresh_token',
+      refresh_token: '1//refresh',
+    });
+    expect(reply.url).toContain('/reviews/review-id:reply');
+    expect(reply.bearer).toBe('ya29.signed-in-publisher');
+  });
+
+  it('refuses to post replies through a google sign in without play console access and keeps reading reports', async () => {
     granted();
-    await complete(await start()).expect(200);
+    const connected = await complete(await start()).expect(200);
+    expect(connected.body).toMatchObject({ replyAccess: 'forbidden' });
     harness.gcs.reset();
     const connections = harness.app.get(StoreConnectionService);
 
@@ -328,7 +366,7 @@ describe('Google Play sign in (e2e)', () => {
       connections.openPlayPublisher(),
     );
     await expect(refusal).rejects.toBeInstanceOf(ConflictException);
-    await expect(refusal).rejects.toThrow(PLAY_REPLIES_NEED_KEY);
+    await expect(refusal).rejects.toThrow(PLAY_REPLIES_NEED_CONSENT);
     await expect(
       asWorkspace(harness.app, () => connections.openPlay()),
     ).resolves.toMatchObject({

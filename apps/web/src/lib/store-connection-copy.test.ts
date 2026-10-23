@@ -1,5 +1,5 @@
 import {
-  PLAY_REPLIES_NEED_KEY,
+  PLAY_REPLIES_NEED_CONSENT,
   type StoreConnectionApp,
   type StoreConnectionItem,
 } from "@asobeast/shared";
@@ -197,10 +197,21 @@ describe("google play copy", () => {
     );
   });
 
-  it("says a google sign in cannot post replies, and a key or apple stays quiet", () => {
-    expect(replyNote({ ...PLAY, credential: "googleAccount" })).toBe(
-      PLAY_REPLIES_NEED_KEY,
-    );
+  it("says a google sign in without play console access cannot post replies, and others stay quiet", () => {
+    expect(
+      replyNote({
+        ...PLAY,
+        credential: "googleAccount",
+        replyAccess: "forbidden",
+      }),
+    ).toBe(PLAY_REPLIES_NEED_CONSENT);
+    expect(
+      replyNote({
+        ...PLAY,
+        credential: "googleAccount",
+        replyAccess: "unknown",
+      }),
+    ).toBeNull();
     expect(replyNote(PLAY)).toBeNull();
     expect(replyNote({ ...PLAY, credential: "key" })).toBeNull();
     expect(replyNote(ITEM)).toBeNull();

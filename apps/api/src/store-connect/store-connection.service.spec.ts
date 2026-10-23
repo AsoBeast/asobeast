@@ -6,7 +6,7 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { PLAY_REPLIES_NEED_KEY } from '@asobeast/shared';
+import { PLAY_REPLIES_NEED_CONSENT } from '@asobeast/shared';
 import { SecretBox } from '../common/crypto/secret-box';
 import type { WorkspaceContext } from '../common/tenancy/workspace-context';
 import type { PrismaService } from '../prisma/prisma.service';
@@ -553,14 +553,41 @@ describe('StoreConnectionService', () => {
     expect(gcsFactory.publisher).not.toHaveBeenCalled();
   });
 
-  it('refuses the play publisher client of a google sign in, naming the key replies need', async () => {
-    const { service, gcsFactory } = harness();
-    await service.connectGoogleAccount(GOOGLE_ACCOUNT, '1098765', 'user_1');
+  it('opens the play publisher client of a google sign in that allowed replies', async () => {
+    const { service, gcsFactory, publisher } = harness();
+    const item = await service.connectGoogleAccount(
+      { ...GOOGLE_ACCOUNT, canReply: true },
+      '1098765',
+      'user_1',
+    );
+
+    expect(item.replyAccess).toBe('unknown');
+    await expect(service.openPlayPublisher()).resolves.toMatchObject({
+      api: publisher,
+    });
+    expect(gcsFactory.publisher).toHaveBeenCalledWith(
+      expect.objectContaining({ refreshToken: GOOGLE_ACCOUNT.refreshToken }),
+    );
+  });
+
+  it('refuses the play publisher client of a google sign in without the play console scope', async () => {
+    const { service, gcsFactory, rows } = harness();
+    const item = await service.connectGoogleAccount(
+      GOOGLE_ACCOUNT,
+      '1098765',
+      'user_1',
+    );
+    expect(item.replyAccess).toBe('forbidden');
+    rows[0].replyAccess = 'unknown';
 
     const refusal = service.openPlayPublisher();
     await expect(refusal).rejects.toBeInstanceOf(ConflictException);
-    await expect(refusal).rejects.toThrow(PLAY_REPLIES_NEED_KEY);
+    await expect(refusal).rejects.toThrow(PLAY_REPLIES_NEED_CONSENT);
+    expect(rows[0].replyAccess).toBe('forbidden');
     expect(gcsFactory.publisher).not.toHaveBeenCalled();
+    await expect(service.verify('GOOGLE_PLAY')).resolves.toMatchObject({
+      replyAccess: 'forbidden',
+    });
     await expect(service.openPlay()).resolves.toMatchObject({
       api: { account: { kind: 'googleAccount', email: GOOGLE_ACCOUNT.email } },
     });

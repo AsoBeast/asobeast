@@ -106,6 +106,7 @@ describe('PlaySignIn', () => {
         email: 'owner@example.com',
         refreshToken: '1//refresh',
         bucket: BUCKET,
+        canReply: false,
       },
       '1098765',
       'user_1',

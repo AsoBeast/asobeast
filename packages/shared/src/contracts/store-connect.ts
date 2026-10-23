@@ -22,8 +22,8 @@ export type StoreCredentialKind = (typeof STORE_CREDENTIAL_KINDS)[number];
 
 export const PLAY_SIGN_IN_PATH = '/settings/google-play';
 
-export const PLAY_REPLIES_NEED_KEY =
-  'Posting replies to Google Play needs a service account key with the Reply to reviews permission. A Google sign in can only read reports.';
+export const PLAY_REPLIES_NEED_CONSENT =
+  'This Google sign in was not allowed to manage Play Console, so it cannot post replies. Sign in with Google again and allow it, or connect a service account key with the Reply to reviews permission.';
 
 export interface StoreConnectionApp {
   appId: string;

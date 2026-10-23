@@ -1,5 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
-import { PLAY_REPLIES_NEED_KEY } from "@asobeast/shared";
+import { PLAY_REPLIES_NEED_CONSENT } from "@asobeast/shared";
 import type { BrowserContext, Page } from "@playwright/test";
 import { THEMES } from "./contrast-check.mts";
 import { openSettledDialog } from "./dialog.mts";
@@ -174,7 +174,7 @@ test("the owner connects the google play console with its json key file", async 
   await expect(card).toContainText("reports@focus-123.iam.gserviceaccount.com");
   await expect(card).toContainText("a1b2c3d4e5f6");
   await expect(card).toContainText(PLAY_BUCKET);
-  await expect(card).not.toContainText(PLAY_REPLIES_NEED_KEY);
+  await expect(card).not.toContainText(PLAY_REPLIES_NEED_CONSENT);
   await expect(
     card
       .getByRole("list", { name: "Apps this connection reports" })
@@ -204,7 +204,7 @@ test("the owner signs in with google and lands back on store connections", async
   ).toHaveAttribute("aria-selected", "true");
   await expect(dialog.getByLabel("Service account key")).toHaveCount(0);
   await expect(dialog).toHaveAccessibleDescription(
-    /To post review replies, use a service account key with the Reply to reviews permission instead\.$/,
+    /for access to Play Console to post the review replies you send/,
   );
   const submit = dialog.getByRole("button", { name: "Sign in with Google" });
 
@@ -232,7 +232,7 @@ test("the owner signs in with google and lands back on store connections", async
   await expect(card).toContainText("owner@example.com");
   await expect(card).toContainText("pubsite_prod_4855979533719537120");
   await expect(card).not.toContainText("Fingerprint");
-  await expect(card).toContainText(PLAY_REPLIES_NEED_KEY);
+  await expect(card).not.toContainText(PLAY_REPLIES_NEED_CONSENT);
   await expect(card.getByRole("button", { name: "Reconnect" })).toBeVisible();
 });
 

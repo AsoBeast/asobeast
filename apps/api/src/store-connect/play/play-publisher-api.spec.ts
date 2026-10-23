@@ -15,6 +15,7 @@ import {
 import {
   ANDROID_PUBLISHER_SCOPE,
   parseServiceAccount,
+  serviceAccountGrant,
 } from './service-account';
 
 const ACCOUNT = parseServiceAccount(
@@ -53,7 +54,13 @@ function recorded(...responses: GcsResponse[]) {
       ? Promise.resolve(next)
       : Promise.reject(new Error('no response queued'));
   };
-  return { api: new PlayPublisherApi(transport, ACCOUNT), requests };
+  return {
+    api: new PlayPublisherApi(
+      transport,
+      serviceAccountGrant(ACCOUNT, ANDROID_PUBLISHER_SCOPE),
+    ),
+    requests,
+  };
 }
 
 const scopeOf = (request: GcsRequest): unknown =>
@@ -181,7 +188,10 @@ describe('PlayPublisherApi', () => {
       request.url.endsWith('/token')
         ? Promise.resolve(TOKEN)
         : Promise.reject(new GcsUnreachableError('timed out'));
-    const api = new PlayPublisherApi(transport, ACCOUNT);
+    const api = new PlayPublisherApi(
+      transport,
+      serviceAccountGrant(ACCOUNT, ANDROID_PUBLISHER_SCOPE),
+    );
 
     await expect(
       api.reply('com.example', 'gp:AOqp1', 'x'),

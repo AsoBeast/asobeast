@@ -7,7 +7,7 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import {
-  PLAY_REPLIES_NEED_KEY,
+  PLAY_REPLIES_NEED_CONSENT,
   type Store,
   type StoreConnectionItem,
   type StoreConnectionRequest,
@@ -33,11 +33,11 @@ import { connectionItems } from './store-connection-items';
 import {
   type GoogleAccountCredentials,
   isAscCredentials,
-  isGoogleAccountCredentials,
   isPlayCredentials,
-  isServiceAccountCredentials,
   needsReseal,
   openCredentials,
+  replyAccessOf,
+  repliesRefused,
   sealCredentials,
   type StoreCredentials,
 } from './store-credentials';
@@ -157,7 +157,7 @@ export class StoreConnectionService {
         status: 'active',
         verifiedAt: new Date(),
         lastError: null,
-        replyAccess: 'unknown',
+        replyAccess: replyAccessOf(connection.credentials),
       },
     });
     await this.queue.enqueue(this.workspace.require(OPERATION), store);
@@ -199,10 +199,11 @@ export class StoreConnectionService {
 
   async openPlayPublisher(): Promise<OpenedConnection<PlayPublisherApi> | null> {
     const connection = await this.unsealedOrNull('GOOGLE_PLAY');
-    if (connection && isGoogleAccountCredentials(connection.credentials)) {
-      throw new ConflictException(PLAY_REPLIES_NEED_KEY);
+    if (connection && repliesRefused(connection.credentials)) {
+      await this.markReplyAccess('GOOGLE_PLAY', 'forbidden');
+      throw new ConflictException(PLAY_REPLIES_NEED_CONSENT);
     }
-    return this.opened(connection, isServiceAccountCredentials, (credentials) =>
+    return this.opened(connection, isPlayCredentials, (credentials) =>
       this.play.publisher(credentials),
     );
   }
@@ -254,7 +255,7 @@ export class StoreConnectionService {
           bucket: key.bucket,
           credential: key.credential,
           reportAccess: key.reportAccess,
-          replyAccess: 'unknown',
+          replyAccess: replyAccessOf(key.credentials),
           credentialCiphertext: sealCredentials(
             box,
             workspaceId,

@@ -2,7 +2,6 @@ import { Inject, Injectable } from '@nestjs/common';
 import {
   isGoogleAccountCredentials,
   type PlayCredentials,
-  type ServiceAccountCredentials,
 } from '../store-credentials';
 import { GcsApi, type GcsSource } from './gcs-api';
 import { GCS_TRANSPORT, type GcsTransport } from './gcs-transport';
@@ -12,7 +11,11 @@ import {
   refreshTokenGrant,
 } from './google-sign-in';
 import { PlayPublisherApi } from './play-publisher-api';
-import { serviceAccountGrant } from './service-account';
+import {
+  ANDROID_PUBLISHER_SCOPE,
+  type GoogleGrant,
+  serviceAccountGrant,
+} from './service-account';
 
 @Injectable()
 export class GcsApiFactory {
@@ -41,7 +44,16 @@ export class GcsApiFactory {
     };
   }
 
-  publisher(credentials: ServiceAccountCredentials): PlayPublisherApi {
-    return new PlayPublisherApi(this.transport, credentials);
+  publisher(credentials: PlayCredentials): PlayPublisherApi {
+    return new PlayPublisherApi(
+      this.transport,
+      this.publisherGrant(credentials),
+    );
+  }
+
+  private publisherGrant(credentials: PlayCredentials): GoogleGrant {
+    return isGoogleAccountCredentials(credentials)
+      ? refreshTokenGrant(this.client, credentials.refreshToken)
+      : serviceAccountGrant(credentials, ANDROID_PUBLISHER_SCOPE);
   }
 }

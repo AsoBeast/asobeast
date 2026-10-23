@@ -27,7 +27,7 @@ const METHODS: Record<Method, { label: string; description: string }> = {
   google: {
     label: SIGN_IN_LABEL,
     description:
-      "Sign in with the Google account that owns your Play Console developer account. AsoBeast asks Google for read only access to Cloud Storage, checks the bucket and stores the sign in encrypted. To post review replies, use a service account key with the Reply to reviews permission instead.",
+      "Sign in with the Google account that owns your Play Console developer account. AsoBeast asks Google for read only access to Cloud Storage and for access to Play Console to post the review replies you send, checks the bucket and stores the sign in encrypted.",
   },
   key: {
     label: "Service account key",
