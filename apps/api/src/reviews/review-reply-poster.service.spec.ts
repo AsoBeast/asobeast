@@ -6,8 +6,10 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import type { Store } from '@asobeast/shared';
+import type { WorkspaceContext } from '../common/tenancy/workspace-context';
 import type { PrismaService } from '../prisma/prisma.service';
 import {
+  AscError,
   AscForbiddenError,
   AscRejectedKeyError,
 } from '../store-connect/asc-errors';
@@ -33,15 +35,21 @@ interface Options {
   text?: string | null;
   postedAt?: Date | null;
   storeResponseId?: string | null;
+  storeReviewId?: string | null;
   competitor?: boolean;
   connection?: 'active' | 'rejected' | null;
 }
 
 function harness(options: Options = {}) {
   const store = options.store ?? 'APP_STORE';
-  const writes: { reply?: unknown; review?: unknown } = {};
+  const writes: { reply?: unknown; created?: unknown; review?: unknown } = {};
   const tx = {
     reviewReply: {
+      upsert: jest.fn((args: { create: unknown; update: unknown }) => {
+        writes.reply = args.update;
+        writes.created = args.create;
+        return Promise.resolve({});
+      }),
       updateMany: jest.fn((args: { data: unknown }) => {
         writes.reply = args.data;
         return Promise.resolve({ count: 1 });
@@ -77,7 +85,7 @@ function harness(options: Options = {}) {
             ? null
             : {
                 text: options.text ?? '  Thanks, fixed in 3.5  ',
-                storeReviewId: null,
+                storeReviewId: options.storeReviewId ?? null,
                 storeResponseId: options.storeResponseId ?? null,
                 postedAt: options.postedAt ?? null,
               },
@@ -116,6 +124,7 @@ function harness(options: Options = {}) {
   const reviews = { item: jest.fn().mockResolvedValue({ id: 'rev-1' }) };
   const poster = new ReviewReplyPoster(
     prisma as unknown as PrismaService,
+    { require: () => 'ws_1' } as unknown as WorkspaceContext,
     connections as unknown as StoreConnectionService,
     locator as unknown as AscReviewLocator,
     reviews as unknown as ReviewsService,
@@ -218,6 +227,64 @@ describe('ReviewReplyPoster', () => {
     );
   });
 
+  it('keeps the post on a reply discarded while it was being posted', async () => {
+    const { poster, writes } = harness();
+
+    await poster.post('app-1', 'rev-1', 'user-1');
+
+    expect(writes.created).toMatchObject({
+      reviewId: 'rev-1',
+      appId: 'app-1',
+      workspaceId: 'ws_1',
+      text: 'Thanks, fixed in 3.5',
+      postedText: 'Thanks, fixed in 3.5',
+      storeResponseId: 'response-1',
+    });
+  });
+
+  it('locates the review again when the remembered app store id is gone', async () => {
+    const { poster, asc, locator, writes } = harness({
+      storeReviewId: 'asc-stale',
+    });
+    locator.locate
+      .mockResolvedValueOnce('asc-stale')
+      .mockResolvedValueOnce('asc-fresh');
+    asc.respond.mockRejectedValueOnce(new AscError('gone', 404, 'NOT_FOUND'));
+
+    await poster.post('app-1', 'rev-1', 'user-1');
+
+    const [, , relocated] = locator.locate.mock.lastCall as [
+      unknown,
+      unknown,
+      { reply: { storeReviewId: string | null } },
+    ];
+    expect(relocated.reply.storeReviewId).toBeNull();
+    expect(asc.respond).toHaveBeenLastCalledWith(
+      'asc-fresh',
+      'Thanks, fixed in 3.5',
+    );
+    expect(writes.reply).toMatchObject({ storeReviewId: 'asc-fresh' });
+  });
+
+  it('does not locate again after a 404 on a review it just located', async () => {
+    const { poster, asc, locator } = harness();
+    asc.respond.mockRejectedValueOnce(new AscError('gone', 404, 'NOT_FOUND'));
+
+    await expect(
+      poster.post('app-1', 'rev-1', 'user-1'),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(locator.locate).toHaveBeenCalledTimes(1);
+  });
+
+  it('answers the post even when recording the reply access fails', async () => {
+    const { poster, connections } = harness();
+    connections.markReplyAccess.mockRejectedValueOnce(new Error('db down'));
+
+    await expect(poster.post('app-1', 'rev-1', 'user-1')).resolves.toEqual({
+      review: { id: 'rev-1' },
+    });
+  });
+
   it('records a response apple already published as published', async () => {
     const { poster, asc, writes } = harness();
     asc.respond.mockResolvedValueOnce({
@@ -272,7 +339,7 @@ describe('ReviewReplyPoster', () => {
         'forbidden',
       );
       expect(connections.markRejected).not.toHaveBeenCalled();
-      expect(tx.reviewReply.updateMany).not.toHaveBeenCalled();
+      expect(tx.reviewReply.upsert).not.toHaveBeenCalled();
     },
   );
 
@@ -290,7 +357,7 @@ describe('ReviewReplyPoster', () => {
       expect.stringContaining('refused this key'),
     );
     expect(connections.markReplyAccess).not.toHaveBeenCalled();
-    expect(tx.reviewReply.updateMany).not.toHaveBeenCalled();
+    expect(tx.reviewReply.upsert).not.toHaveBeenCalled();
   });
 
   it('withdraws an app store response and clears both halves', async () => {

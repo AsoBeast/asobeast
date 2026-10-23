@@ -51,6 +51,20 @@ describe('matchCustomerReview', () => {
     ).toMatchObject({ id: 'asc-dated' });
   });
 
+  it('refuses to choose between two candidates it cannot tell apart', () => {
+    const undated = { ...REVIEW, reviewedAt: null };
+
+    expect(
+      matchCustomerReview(undated, [candidate('asc-1'), candidate('asc-2')]),
+    ).toBeNull();
+    expect(
+      matchCustomerReview(REVIEW, [
+        candidate('asc-1', { createdDate: '2026-09-05T15:12:00Z' }),
+        candidate('asc-2', { createdDate: '2026-09-05T15:12:00Z' }),
+      ]),
+    ).toBeNull();
+  });
+
   it('ignores a candidate whose body differs by one character', () => {
     expect(
       matchCustomerReview(REVIEW, [
@@ -87,15 +101,13 @@ describe('matchCustomerReview', () => {
     expect(matchCustomerReview(REVIEW, [weekAway, dayAway])).toBe(dayAway);
   });
 
-  it('takes the newest of several matches for a review without a date', () => {
-    const newest = candidate('asc-new');
-
+  it('refuses several equal matches for a review without a date', () => {
     expect(
       matchCustomerReview({ ...REVIEW, reviewedAt: null }, [
-        newest,
+        candidate('asc-new'),
         candidate('asc-old', { createdDate: '2026-08-01T00:00:00Z' }),
       ]),
-    ).toBe(newest);
+    ).toBeNull();
   });
 
   it('matches without a nickname when the stored review has none', () => {

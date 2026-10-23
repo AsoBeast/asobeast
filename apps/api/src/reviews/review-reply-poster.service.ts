@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import type {
@@ -9,7 +10,13 @@ import type {
   ReviewReplyPostResult,
   Store,
 } from '@asobeast/shared';
+import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
+import { AscError } from '../store-connect/asc-errors';
+import type {
+  AscReviewResponse,
+  AscReviewsApi,
+} from '../store-connect/asc-reviews-api';
 import {
   CONNECTION_REJECTED,
   type OpenedConnection,
@@ -59,10 +66,18 @@ const UNPOSTED = {
   repliedAt: null,
 };
 
+const MISSING = 404;
+
+const isMissing = (error: unknown): boolean =>
+  error instanceof AscError && error.status === MISSING;
+
 @Injectable()
 export class ReviewReplyPoster {
+  private readonly logger = new Logger(ReviewReplyPoster.name);
+
   constructor(
     private readonly prisma: PrismaService,
+    private readonly workspace: WorkspaceContext,
     private readonly connections: StoreConnectionService,
     private readonly locator: AscReviewLocator,
     private readonly reviews: ReviewsService,
@@ -82,25 +97,39 @@ export class ReviewReplyPoster {
         ? this.toAppStore(app, review, text)
         : this.toPlay(app, review.reviewId, text),
     );
+    const record = {
+      postedAt: posted.postedAt,
+      postedText: text,
+      postState: posted.state,
+      storeReviewId: posted.storeReviewId,
+      storeResponseId: posted.storeResponseId,
+      postedByUserId: userId,
+      repliedAt: posted.postedAt,
+    };
     await this.prisma.withTransaction(async (tx) => {
-      await tx.reviewReply.updateMany({
+      await tx.reviewReply.upsert({
         where: { reviewId },
-        data: {
-          postedAt: posted.postedAt,
-          postedText: text,
-          postState: posted.state,
-          storeReviewId: posted.storeReviewId,
-          storeResponseId: posted.storeResponseId,
-          postedByUserId: userId,
-          repliedAt: posted.postedAt,
+        create: {
+          reviewId,
+          appId,
+          workspaceId: this.workspace.require('a review reply post'),
+          text,
+          ...record,
         },
+        update: record,
       });
       await tx.review.updateMany({
         where: { id: reviewId, appId },
         data: { repliedAt: posted.postedAt, replyText: text },
       });
     });
-    await this.connections.markReplyAccess(app.store, 'allowed');
+    await this.connections
+      .markReplyAccess(app.store, 'allowed')
+      .catch((error: unknown) =>
+        this.logger.warn(
+          `reply access was not recorded: ${(error as Error).message}`,
+        ),
+      );
     return { review: await this.reviews.item(appId, reviewId) };
   }
 
@@ -142,14 +171,43 @@ export class ReviewReplyPoster {
       app.store,
       await this.connections.openAppStoreReviews(),
     );
-    const storeReviewId = await this.locator.locate(api, app, review);
-    const response = await api.respond(storeReviewId, text);
+    const { storeReviewId, response } = await this.respond(
+      api,
+      app,
+      review,
+      text,
+    );
     return {
       postedAt: new Date(),
       state: response.state === 'PUBLISHED' ? 'published' : 'pending',
       storeReviewId,
       storeResponseId: response.id,
     };
+  }
+
+  private async respond(
+    api: AscReviewsApi,
+    app: PostTarget['app'],
+    review: PostTarget['review'],
+    text: string,
+  ): Promise<{ storeReviewId: string; response: AscReviewResponse }> {
+    const storeReviewId = await this.locator.locate(api, app, review);
+    try {
+      return {
+        storeReviewId,
+        response: await api.respond(storeReviewId, text),
+      };
+    } catch (error) {
+      if (!review.reply?.storeReviewId || !isMissing(error)) throw error;
+      const located = await this.locator.locate(api, app, {
+        ...review,
+        reply: { ...review.reply, storeReviewId: null },
+      });
+      return {
+        storeReviewId: located,
+        response: await api.respond(located, text),
+      };
+    }
   }
 
   private async toPlay(
@@ -182,7 +240,7 @@ export class ReviewReplyPoster {
     try {
       return await run();
     } catch (error) {
-      const refusal = postRefusalOf(store, error);
+      const refusal = postRefusalOf(error);
       if (refusal.forbidden) {
         await this.connections.markReplyAccess(store, 'forbidden');
       }

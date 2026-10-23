@@ -46,7 +46,7 @@ describe('postRefusalOf', () => {
   it('passes an http answer through unchanged', () => {
     const conflict = new ConflictException('connect first');
 
-    expect(postRefusalOf('APP_STORE', conflict)).toEqual({
+    expect(postRefusalOf(conflict)).toEqual({
       exception: conflict,
     });
   });
@@ -59,7 +59,7 @@ describe('postRefusalOf', () => {
     ['APP_STORE' as const, new AscError('Too long', 422, 'ENTITY_ERROR')],
     ['GOOGLE_PLAY' as const, new PlayReplyRefusedError('Too long', 400)],
   ])('turns a refusal of %s into 422 with the store words', (store, error) => {
-    const { exception, forbidden, rejected } = postRefusalOf(store, error);
+    const { exception, forbidden, rejected } = postRefusalOf(error);
 
     expect(statusOf(exception)).toBe(422);
     expect(messageOf(exception)).toBe(
@@ -74,7 +74,7 @@ describe('postRefusalOf', () => {
     [new AscError('gone', 404, 'NOT_FOUND'), REVIEW_NOT_IN_APP_STORE_CONNECT],
     [new PlayReviewMissingError('gone', 404), PLAY_REVIEW_MISSING],
   ])('turns an unknown review into 404', (error, message) => {
-    const { exception } = postRefusalOf('APP_STORE', error);
+    const { exception } = postRefusalOf(error);
 
     expect(exception).toBeInstanceOf(NotFoundException);
     expect(messageOf(exception)).toBe(message);
@@ -83,7 +83,6 @@ describe('postRefusalOf', () => {
   it('marks the connection rejected for a missing agreement and a refused google credential', () => {
     expect(
       postRefusalOf(
-        'APP_STORE',
         new AscAgreementError(
           'agreement',
           403,
@@ -92,16 +91,12 @@ describe('postRefusalOf', () => {
       ),
     ).toMatchObject({ rejected: AGREEMENT_MISSING });
     expect(
-      postRefusalOf(
-        'GOOGLE_PLAY',
-        new GcsTokenRefusedError('refused', 400, 'invalid_grant'),
-      ),
+      postRefusalOf(new GcsTokenRefusedError('refused', 400, 'invalid_grant')),
     ).toMatchObject({ rejected: PLAY_KEY_REFUSED });
   });
 
   it('names the play permission and keeps the reason google gave', () => {
     const { exception, forbidden } = postRefusalOf(
-      'GOOGLE_PLAY',
       new PlayForbiddenError(
         'Google Play Android Developer API has not been used in project 42.',
         403,
@@ -119,7 +114,7 @@ describe('postRefusalOf', () => {
     new AscRateLimitedError('slow down', 429, null),
     new GcsRateLimitedError('slow down', 429),
   ])('turns a store rate limit into 429 with a retry after', (error) => {
-    const { exception } = postRefusalOf('APP_STORE', error);
+    const { exception } = postRefusalOf(error);
 
     expect(exception).toBeInstanceOf(RequestThrottledError);
     expect((exception as RequestThrottledError).retryAfterSeconds).toBe(60);
@@ -131,14 +126,12 @@ describe('postRefusalOf', () => {
     new GcsError('boom', 500),
     new AscError('boom', 500, null),
   ])('turns an unreachable or failing store into 502', (error) => {
-    expect(postRefusalOf('GOOGLE_PLAY', error).exception).toBeInstanceOf(
-      BadGatewayException,
-    );
+    expect(postRefusalOf(error).exception).toBeInstanceOf(BadGatewayException);
   });
 
   it('answers 409 when the google sign in client is off', () => {
-    expect(
-      postRefusalOf('GOOGLE_PLAY', new SignInOffError()).exception,
-    ).toBeInstanceOf(ConflictException);
+    expect(postRefusalOf(new SignInOffError()).exception).toBeInstanceOf(
+      ConflictException,
+    );
   });
 });

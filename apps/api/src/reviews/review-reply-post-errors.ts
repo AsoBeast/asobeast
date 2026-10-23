@@ -113,7 +113,7 @@ function googleRefusal(error: GcsError): PostRefusal {
   };
 }
 
-export function postRefusalOf(store: Store, error: unknown): PostRefusal {
+export function postRefusalOf(error: unknown): PostRefusal {
   if (error instanceof HttpException) return { exception: error };
   if (error instanceof AscForbiddenError) {
     return {
