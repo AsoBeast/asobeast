@@ -115,6 +115,31 @@ describe("funnel helpers", () => {
   });
 });
 
+describe("refused connection copy", () => {
+  it("names the key of an app store connection", () => {
+    expect(FUNNEL_COPY.APP_STORE.refusedTitle).toBe(
+      "App Store Connect refused the connected key.",
+    );
+  });
+
+  it("never assumes a google play connection holds a key", () => {
+    const copy = FUNNEL_COPY.GOOGLE_PLAY;
+    const lines = [
+      copy.refusedTitle,
+      copy.refusedBody,
+      copy.refusedAskOwner,
+      copy.notReporting,
+    ];
+
+    expect(copy.refusedTitle).toBe(
+      "Google Play Console refused the connection.",
+    );
+    for (const line of lines) {
+      expect(line).not.toMatch(/\bkey\b|service account/i);
+    }
+  });
+});
+
 describe("google play funnel", () => {
   const visitors = (total: number, search: number): StoreFunnelPoint => ({
     date: "2026-10-01",

@@ -47,7 +47,11 @@ export const KEYWORD_BULK_ADD_LIMIT = 200;
 export const KEYWORD_IMPORT_LIMIT = 500;
 
 export function countChars(text: string): number {
-  return text.length;
+  return [...text].length;
+}
+
+export function truncateChars(text: string, limit: number): string {
+  return [...text].slice(0, Math.max(0, limit)).join('');
 }
 
 export const KEYWORD_MIN_CHARS = 3;

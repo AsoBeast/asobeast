@@ -1,17 +1,18 @@
+import type { StoreCredentialKind } from '@asobeast/shared';
 import {
   GOOGLE_TOKEN_AUDIENCE,
+  type GoogleGrant,
   GoogleTokenCache,
   type GoogleTokenAnswer,
-  type ServiceAccount,
 } from './service-account';
 import { ResponseTooLargeError } from '../bounded-body';
+import { isCredentialRefusal, oauthErrorOf } from './google-sign-in';
 import type { GcsResponse, GcsTransport } from './gcs-transport';
 
 export const GCS_ORIGIN = 'https://storage.googleapis.com';
 export const STORE_PERFORMANCE_PREFIX = 'stats/store_performance/';
 export const PLAY_REPORT_MAX_BYTES = 20 * 1024 * 1024;
 export const MAX_LISTED_OBJECTS = 500;
-const JWT_GRANT = 'urn:ietf:params:oauth:grant-type:jwt-bearer';
 const LIST_FIELDS = 'nextPageToken,items(name,size,md5Hash,updated,generation)';
 
 export interface GcsOrigins {
@@ -44,19 +45,41 @@ export class GcsError extends Error {
 
 export class GcsRejectedError extends GcsError {}
 
+export class GcsTokenRefusedError extends GcsRejectedError {
+  constructor(
+    message: string,
+    status: number,
+    readonly code: string | null = null,
+  ) {
+    super(message, status);
+  }
+}
+
 export class GcsBucketError extends GcsError {}
 
 export class GcsRateLimitedError extends GcsError {}
 
 export class GcsTooLargeError extends GcsError {}
 
+const REFUSAL_STATUSES = new Set([400, 401, 403]);
+
 function errorOf(response: GcsResponse, what: string): GcsError {
   const message = `Google answered ${response.status} to ${what}`;
   if (response.status === 404) return new GcsBucketError(message, 404);
   if (response.status === 429) return new GcsRateLimitedError(message, 429);
-  if ([400, 401, 403].includes(response.status)) {
+  if (REFUSAL_STATUSES.has(response.status)) {
     return new GcsRejectedError(message, response.status);
   }
+  return new GcsError(message, response.status);
+}
+
+function tokenErrorOf(response: GcsResponse): GcsError {
+  const message = `Google answered ${response.status} to the token request`;
+  const code = oauthErrorOf(response.body);
+  if (isCredentialRefusal(code)) {
+    return new GcsTokenRefusedError(message, response.status, code);
+  }
+  if (response.status === 429) return new GcsRateLimitedError(message, 429);
   return new GcsError(message, response.status);
 }
 
@@ -76,16 +99,12 @@ export const isSuccess = (response: GcsResponse): boolean =>
 
 export const googleTokenExchange =
   (transport: GcsTransport, url: string) =>
-  async (assertion: string): Promise<GoogleTokenAnswer> => {
-    const response = await transport({
-      method: 'POST',
-      url,
-      form: { grant_type: JWT_GRANT, assertion },
-    });
-    if (!isSuccess(response)) throw errorOf(response, 'the token request');
+  async (form: Record<string, string>): Promise<GoogleTokenAnswer> => {
+    const response = await transport({ method: 'POST', url, form });
+    if (!isSuccess(response)) throw tokenErrorOf(response);
     const answer = response.body as Partial<GoogleTokenAnswer> | null;
     if (!answer?.access_token) {
-      throw new GcsRejectedError('Google answered no access token', 400);
+      throw new GcsError('Google answered no access token', 502);
     }
     return {
       access_token: answer.access_token,
@@ -96,17 +115,31 @@ export const googleTokenExchange =
 const filePrefix = (packageName: string): string =>
   `${STORE_PERFORMANCE_PREFIX}store_performance_${packageName}_`;
 
+export interface PlayAccount {
+  kind: StoreCredentialKind;
+  email: string;
+}
+
+export interface GcsSource {
+  grant: GoogleGrant;
+  bucket: string;
+  account: PlayAccount;
+}
+
 export class GcsApi {
+  readonly bucket: string;
+  readonly account: PlayAccount;
   private readonly tokens: GoogleTokenCache;
 
   constructor(
     private readonly transport: GcsTransport,
-    account: ServiceAccount,
-    readonly bucket: string,
+    source: GcsSource,
     private readonly origins: GcsOrigins = GOOGLE_ORIGINS,
   ) {
+    this.bucket = source.bucket;
+    this.account = source.account;
     this.tokens = new GoogleTokenCache(
-      account,
+      source.grant,
       googleTokenExchange(transport, origins.token),
     );
   }

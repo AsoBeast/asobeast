@@ -1,12 +1,18 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Prisma, PrismaClient } from '@prisma/client';
+import { withTimeout } from '../common/async/with-timeout';
 import { IsolationMonitor } from '../common/tenancy/isolation-monitor.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import type { Env } from '../config/env';
 
 type RawClient = Pick<PrismaClient, '$executeRaw'>;
+
+const SCOPED_QUERY_TIMEOUT_MS = 20_000;
+const DISCONNECT_DEADLINE_MS = 2_000;
+
+const logger = new Logger('PrismaService');
 
 function enterScope(client: RawClient, workspace: WorkspaceContext) {
   return workspace.crossTenant
@@ -28,8 +34,12 @@ function createPrismaClient(
       async onModuleInit(): Promise<void> {
         await base.$connect();
       },
-      async onModuleDestroy(): Promise<void> {
-        await base.$disconnect();
+      async onApplicationShutdown(): Promise<void> {
+        await withTimeout(
+          base.$disconnect(),
+          DISCONNECT_DEADLINE_MS,
+          `gave up waiting ${DISCONNECT_DEADLINE_MS} ms for open database connections`,
+        ).catch((error: unknown) => logger.warn(String(error)));
       },
       withTransaction<T>(
         run: (tx: Prisma.TransactionClient) => Promise<T>,
@@ -57,10 +67,10 @@ function createPrismaClient(
     args: A;
     query: (args: A) => Prisma.PrismaPromise<R>;
   }): Promise<R> {
-    const [, result] = await base.$transaction([
-      enterScope(base, workspace),
-      query(args),
-    ]);
+    const [, result] = await base.$transaction(
+      [enterScope(base, workspace), query(args)],
+      { timeout: SCOPED_QUERY_TIMEOUT_MS },
+    );
     return result;
   }
 

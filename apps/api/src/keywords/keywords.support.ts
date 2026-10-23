@@ -2,6 +2,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Store } from '@prisma/client';
 import { Queue } from 'bullmq';
 import {
+  countChars,
   KeywordImportReason,
   normalizeText,
   TRACKED_KEYWORD_CHAR_LIMIT,
@@ -34,7 +35,7 @@ export function checkKeywordText(raw: string): KeywordTextCheck {
   if (!text) {
     return { ok: false, reason: 'empty', message: 'Keyword must not be empty' };
   }
-  if (text.length > TRACKED_KEYWORD_CHAR_LIMIT) {
+  if (countChars(text) > TRACKED_KEYWORD_CHAR_LIMIT) {
     return {
       ok: false,
       reason: 'tooLong',

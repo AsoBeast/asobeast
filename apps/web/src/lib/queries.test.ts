@@ -1,4 +1,8 @@
-import { QueryClient, type QueryKey } from "@tanstack/react-query";
+import {
+  QueryClient,
+  QueryObserver,
+  type QueryKey,
+} from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 import { QUERY_BOUNDS, STORE_SUGGESTION_STRATEGIES } from "@asobeast/shared";
 import type {
@@ -99,6 +103,7 @@ import {
   suggestionsOptions,
   visibilityOptions,
   webhookKeys,
+  refetchFailedQueries,
 } from "./queries";
 
 const APP = "app-1";
@@ -1103,5 +1108,67 @@ describe("keyword suggestion keys", () => {
     expect(
       client.getQueryState(appKeys.suggestions(OTHER_APP, "search", "us")),
     ).toBeDefined();
+  });
+});
+
+describe("refetchFailedQueries", () => {
+  it("refetches the queries in error and nothing else", async () => {
+    const client = new QueryClient();
+    let apiUp = false;
+    const apps = vi.fn(async () => {
+      if (!apiUp) throw new Error("down");
+      return ["app"];
+    });
+    const health = vi.fn(async () => "ok");
+    const me = vi.fn(async () => "me");
+    const observers = [
+      new QueryObserver(client, {
+        queryKey: ["apps"],
+        queryFn: apps,
+        retry: false,
+      }),
+      new QueryObserver(client, {
+        queryKey: ["health"],
+        queryFn: health,
+        retry: false,
+      }),
+      new QueryObserver(client, {
+        queryKey: ["me"],
+        queryFn: me,
+        retry: false,
+        enabled: false,
+      }),
+    ];
+    const unsubscribe = observers.map((observer) =>
+      observer.subscribe(() => undefined),
+    );
+    await vi.waitFor(() =>
+      expect(observers[0].getCurrentResult().status).toBe("error"),
+    );
+
+    apiUp = true;
+    await refetchFailedQueries(client);
+
+    expect(observers[0].getCurrentResult().data).toEqual(["app"]);
+    expect(apps).toHaveBeenCalledTimes(2);
+    expect(health).toHaveBeenCalledTimes(1);
+    expect(me).not.toHaveBeenCalled();
+    unsubscribe.forEach((stop) => stop());
+  });
+
+  it("refetches a failed query nobody observes, so its next reader finds the fetch", async () => {
+    const client = new QueryClient();
+    const page = vi.fn(async () => {
+      throw new Error("down");
+    });
+    await client.prefetchQuery({
+      queryKey: ["page"],
+      queryFn: page,
+      retry: false,
+    });
+
+    await refetchFailedQueries(client);
+
+    expect(page).toHaveBeenCalledTimes(2);
   });
 });

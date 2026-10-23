@@ -5,6 +5,7 @@ import {
   GOOGLE_TOKEN_AUDIENCE,
   GoogleTokenCache,
   parseServiceAccount,
+  serviceAccountGrant,
   ServiceAccountError,
   signAssertion,
 } from './service-account';
@@ -127,20 +128,22 @@ describe('signAssertion scope', () => {
     expect(scopeOf(signAssertion(account, NOW))).toBe(GCS_READ_ONLY_SCOPE);
   });
 
-  it('signs the scope its token cache was built for', async () => {
-    const assertions: string[] = [];
+  it('signs the scope its grant was built for', async () => {
+    const forms: Record<string, string>[] = [];
     const cache = new GoogleTokenCache(
-      parseServiceAccount(JSON.stringify(KEY)),
-      (assertion) => {
-        assertions.push(assertion);
+      serviceAccountGrant(
+        parseServiceAccount(JSON.stringify(KEY)),
+        ANDROID_PUBLISHER_SCOPE,
+      ),
+      (form) => {
+        forms.push(form);
         return Promise.resolve({ access_token: 'ya29', expires_in: 3600 });
       },
-      ANDROID_PUBLISHER_SCOPE,
     );
 
     await cache.get(NOW);
 
-    expect(decode(assertions[0].split('.')[1]).scope).toBe(
+    expect(decode(forms[0].assertion.split('.')[1]).scope).toBe(
       ANDROID_PUBLISHER_SCOPE,
     );
   });
@@ -152,7 +155,7 @@ describe('GoogleTokenCache', () => {
       Promise.resolve({ access_token: 'ya29.token', expires_in: 3600 }),
     );
     const cache = new GoogleTokenCache(
-      parseServiceAccount(JSON.stringify(KEY)),
+      serviceAccountGrant(parseServiceAccount(JSON.stringify(KEY))),
       exchange,
     );
     const at = (seconds: number) => new Date(NOW.getTime() + seconds * 1000);
@@ -163,5 +166,27 @@ describe('GoogleTokenCache', () => {
 
     await cache.get(at(59 * 60 + 1));
     expect(exchange).toHaveBeenCalledTimes(2);
+  });
+
+  it('sends the grant built for the moment of the exchange', async () => {
+    const exchange = jest.fn((form: Record<string, string>) =>
+      Promise.resolve({ access_token: form.grant_type, expires_in: 3600 }),
+    );
+    const grant = jest.fn(() => ({ grant_type: 'refresh_token' }));
+
+    await expect(new GoogleTokenCache(grant, exchange).get(NOW)).resolves.toBe(
+      'refresh_token',
+    );
+    expect(grant).toHaveBeenCalledWith(NOW);
+  });
+});
+
+describe('serviceAccountGrant', () => {
+  it('sends a JWT bearer assertion signed at the given moment', () => {
+    const account = parseServiceAccount(JSON.stringify(KEY));
+    const form = serviceAccountGrant(account)(NOW);
+
+    expect(form.grant_type).toBe('urn:ietf:params:oauth:grant-type:jwt-bearer');
+    expect(form.assertion).toBe(signAssertion(account, NOW));
   });
 });

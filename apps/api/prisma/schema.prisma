@@ -831,6 +831,7 @@ model StoreConnection {
   lastSyncedAt         DateTime?
   lastError            String?
   bucket               String?
+  credential           String               @default("key")
   requests             StoreReportRequest[]
 
   @@unique([workspaceId, store])

@@ -5,6 +5,7 @@ import {
   connectionStatusLine,
   historyLine,
   STORE_CONSOLES,
+  needsAdminKey,
 } from "./store-connection-copy";
 
 const APP: StoreConnectionApp = {
@@ -79,6 +80,46 @@ describe("connectionStatusLine", () => {
   });
 });
 
+describe("needsAdminKey", () => {
+  it("asks for an admin key while an app could not be requested", () => {
+    expect(
+      needsAdminKey({
+        ...ITEM,
+        reportAccess: "readOnly",
+        apps: [{ ...APP, state: "forbidden" }],
+      }),
+    ).toBe(true);
+  });
+
+  it("leaves a read only key alone once every request exists", () => {
+    expect(needsAdminKey({ ...ITEM, reportAccess: "readOnly" })).toBe(false);
+  });
+
+  it("leaves a rejected key to verify first", () => {
+    expect(
+      needsAdminKey({
+        ...ITEM,
+        status: "rejected",
+        apps: [{ ...APP, state: "forbidden" }],
+      }),
+    ).toBe(false);
+  });
+
+  it("is quiet for a key without apps", () => {
+    expect(needsAdminKey({ ...ITEM, apps: [] })).toBe(false);
+  });
+
+  it("never asks a play service account for an admin key", () => {
+    expect(
+      needsAdminKey({
+        ...ITEM,
+        store: "GOOGLE_PLAY",
+        apps: [{ ...APP, state: "forbidden" }],
+      }),
+    ).toBe(false);
+  });
+});
+
 describe("appStateLabel", () => {
   it.each([
     ["requested", "Reporting"],
@@ -120,9 +161,25 @@ describe("google play copy", () => {
     ]);
   });
 
-  it("says google refused the service account and what to do", () => {
+  it("names the google account and bucket of a sign in, with no key facts", () => {
+    const facts = STORE_CONSOLES.GOOGLE_PLAY.facts({
+      ...PLAY,
+      credential: "googleAccount",
+      issuerId: "owner@example.com",
+      keyId: "1098765",
+    });
+
+    expect(facts.map(([term]) => term)).toEqual([
+      "Google account",
+      "Bucket",
+      "Connected",
+    ]);
+    expect(facts[0][1]).toBe("owner@example.com");
+  });
+
+  it("says google refused the connection and what to do", () => {
     expect(connectionStatusLine({ ...PLAY, status: "rejected" }).text).toBe(
-      "Google refused this service account. Check its access in Play Console, verify it again, or connect a new one.",
+      "Google refused this connection. Check its access in Play Console, verify it again, or reconnect.",
     );
   });
 

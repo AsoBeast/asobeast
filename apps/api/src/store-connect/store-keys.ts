@@ -1,11 +1,13 @@
 import {
   BadGatewayException,
   BadRequestException,
+  ConflictException,
   Injectable,
 } from '@nestjs/common';
 import type {
   AppStoreConnectionRequest,
   PlayConnectionRequest,
+  StoreCredentialKind,
   StoreReportAccess,
 } from '@asobeast/shared';
 import { RequestThrottledError } from '../auth/rate-limit/rate-limit.errors';
@@ -23,32 +25,28 @@ import {
   normalizePrivateKey,
   type AscCredentials,
 } from './asc-token';
-import { publicKeyFingerprint } from './key-fingerprint';
-import {
-  type GcsApi,
-  GcsBucketError,
-  GcsError,
-  GcsRateLimitedError,
-  GcsRejectedError,
-} from './play/gcs-api';
+import { identityFingerprint, publicKeyFingerprint } from './key-fingerprint';
+import { type GcsApi, GcsError, GcsRateLimitedError } from './play/gcs-api';
 import { GcsApiFactory } from './play/gcs-api.factory';
 import type { PlayPublisherApi } from './play/play-publisher-api';
 import { GcsUnreachableError } from './play/gcs-transport';
+import { SignInOffError } from './play/google-sign-in';
+import { playRefusal } from './play/play-refusal';
 import {
   parseServiceAccount,
   rsaKey,
   ServiceAccountError,
 } from './play/service-account';
-import type { PlayCredentials, StoreCredentials } from './store-credentials';
-
-export const PLAY_REFUSED =
-  'Google refused this service account. Invite its email in Play Console under Users and permissions with View app information and download bulk reports, and check the bucket id.';
-
-export const bucketMissing = (bucket: string): string =>
-  `Google Cloud Storage has no bucket ${bucket} this service account can read. Copy the bucket id from Download reports in Play Console.`;
+import type {
+  GoogleAccountCredentials,
+  PlayCredentials,
+  ServiceAccountCredentials,
+  StoreCredentials,
+} from './store-credentials';
 
 export interface ParsedKey<C extends StoreCredentials> {
   credentials: C;
+  credential: StoreCredentialKind;
   issuerId: string;
   keyId: string;
   keyFingerprint: string;
@@ -81,6 +79,7 @@ export class AppStoreKeys implements StoreKeys<
     try {
       return {
         credentials,
+        credential: 'key',
         issuerId: credentials.issuerId,
         keyId: credentials.keyId,
         keyFingerprint: keyFingerprintOf(credentials.privateKey),
@@ -120,11 +119,12 @@ export class PlayKeys implements StoreKeys<
 
   constructor(private readonly factory: GcsApiFactory) {}
 
-  parse(request: PlayConnectionRequest): ParsedKey<PlayCredentials> {
+  parse(request: PlayConnectionRequest): ParsedKey<ServiceAccountCredentials> {
     try {
       const account = parseServiceAccount(request.serviceAccountJson);
       return {
         credentials: { ...account, bucket: request.bucket },
+        credential: 'key',
         issuerId: account.clientEmail,
         keyId: account.privateKeyId,
         keyFingerprint: publicKeyFingerprint(rsaKey(account.privateKey)),
@@ -138,22 +138,38 @@ export class PlayKeys implements StoreKeys<
     }
   }
 
+  signedIn(
+    credentials: GoogleAccountCredentials,
+    subject: string,
+  ): ParsedKey<GoogleAccountCredentials> {
+    return {
+      credentials,
+      credential: 'googleAccount',
+      issuerId: credentials.email,
+      keyId: subject,
+      keyFingerprint: identityFingerprint(`${credentials.email}#${subject}`),
+      bucket: credentials.bucket,
+    };
+  }
+
   api(credentials: PlayCredentials): GcsApi {
     return this.factory.open(credentials);
   }
 
-  publisher(credentials: PlayCredentials): PlayPublisherApi {
+  publisher(credentials: ServiceAccountCredentials): PlayPublisherApi {
     return this.factory.publisher(credentials);
   }
 
   async refusal(credentials: PlayCredentials): Promise<string | null> {
+    const api = this.api(credentials);
     try {
-      await this.api(credentials).verify();
+      await api.verify();
       return null;
     } catch (error) {
-      if (error instanceof GcsRejectedError) return PLAY_REFUSED;
-      if (error instanceof GcsBucketError) {
-        return bucketMissing(credentials.bucket);
+      const refusal = playRefusal(error, api);
+      if (refusal) return refusal;
+      if (error instanceof SignInOffError) {
+        throw new ConflictException(error.message);
       }
       if (error instanceof GcsRateLimitedError) {
         throw new RequestThrottledError(

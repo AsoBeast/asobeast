@@ -31,7 +31,10 @@ import {
   windowOf,
 } from "@/lib/funnel";
 import { funnelOptions, storeConnectionsOptions } from "@/lib/queries";
-import { appStateLabel } from "@/lib/store-connection-copy";
+import {
+  appStateLabel,
+  STORE_CONNECTIONS_PATH,
+} from "@/lib/store-connection-copy";
 import { FunnelHelp } from "./FunnelHelp";
 import { FunnelTilesSkeleton } from "./skeletons";
 
@@ -48,16 +51,16 @@ function NotReporting({ store, reason }: { store: Store; reason: string }) {
   );
 }
 
-function KeyRefused({ store }: { store: Store }) {
+function ConnectionRefused({ store }: { store: Store }) {
   const { isOwner } = useAuth();
   const copy = FUNNEL_COPY[store];
   return (
     <EmptyState
-      title={`${copy.console} refused the connected key.`}
+      title={copy.refusedTitle}
       body={isOwner ? copy.refusedBody : copy.refusedAskOwner}
       action={
         isOwner ? (
-          <Link href="/settings#store-connections" className={SETTINGS_LINK}>
+          <Link href={STORE_CONNECTIONS_PATH} className={SETTINGS_LINK}>
             Verify in settings
           </Link>
         ) : null
@@ -73,7 +76,8 @@ function NotConnected({ id, store }: { id: string; store: Store }) {
   const connection = connections.connections.find(
     (item) => item.store === store,
   );
-  if (connection?.status === "rejected") return <KeyRefused store={store} />;
+  if (connection?.status === "rejected")
+    return <ConnectionRefused store={store} />;
   if (connection) {
     const app = connection.apps.find((item) => item.appId === id);
     return (
@@ -89,7 +93,7 @@ function NotConnected({ id, store }: { id: string; store: Store }) {
       body={isOwner ? copy.connectBody : copy.askOwner}
       action={
         isOwner ? (
-          <Link href="/settings#store-connections" className={SETTINGS_LINK}>
+          <Link href={STORE_CONNECTIONS_PATH} className={SETTINGS_LINK}>
             Connect in settings
           </Link>
         ) : null

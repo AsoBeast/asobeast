@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { UnrecoverableError } from 'bullmq';
+import { SignInOffError } from './google-sign-in';
 import type { WorkspaceContext } from '../../common/tenancy/workspace-context';
 import type { PrismaService } from '../../prisma/prisma.service';
 import type { StoreConnectionService } from '../store-connection.service';
@@ -8,6 +9,7 @@ import {
   GcsBucketError,
   GcsRateLimitedError,
   GcsRejectedError,
+  GcsTokenRefusedError,
   PLAY_REPORT_MAX_BYTES,
   type GcsObject,
 } from './gcs-api';
@@ -103,6 +105,7 @@ function harness(objects: GcsObject[]) {
   };
   const api = {
     bucket: 'pubsite_prod_rev_1',
+    account: { kind: 'key', email: 'reports@x.iam.gserviceaccount.com' },
     verify: jest.fn(() => Promise.resolve()),
     listStorePerformance: jest.fn((packageName: string) =>
       Promise.resolve(
@@ -294,7 +297,14 @@ describe('PlayReportSync', () => {
 
   it('marks the connection rejected on a refused account or a missing bucket', async () => {
     for (const [error, reason] of [
-      [new GcsRejectedError('no', 403), 'Google refused'],
+      [
+        new GcsRejectedError('no', 403),
+        'Google refused reports@x.iam.gserviceaccount.com access',
+      ],
+      [
+        new GcsTokenRefusedError('no', 400),
+        'Google refused the key of reports@x.iam.gserviceaccount.com',
+      ],
       [new GcsBucketError('no', 404), 'pubsite_prod_rev_1'],
     ] as const) {
       const { service, api, connections } = harness(twoMonths);
@@ -306,6 +316,14 @@ describe('PlayReportSync', () => {
         expect.stringContaining(reason),
       );
     }
+  });
+
+  it('fails the run without rejecting the connection while sign in is off', async () => {
+    const { service, api, connections } = harness(twoMonths);
+    api.verify.mockRejectedValueOnce(new SignInOffError());
+
+    await expect(service.run(NOW)).rejects.toBeInstanceOf(SignInOffError);
+    expect(connections.markRejected).not.toHaveBeenCalled();
   });
 
   it('keeps the connection active and reports a rate limit', async () => {
@@ -399,6 +417,29 @@ describe('PlayReportSync', () => {
     );
     expect(connections.markRejected).not.toHaveBeenCalled();
   });
+
+  it.each(['listing', 'download'] as const)(
+    'rejects the connection when google refuses the token during a %s',
+    async (step) => {
+      const { service, api, prisma, connections } = harness(twoMonths);
+      const refused = new GcsTokenRefusedError('no', 400, 'invalid_grant');
+      if (step === 'listing') {
+        api.listStorePerformance.mockRejectedValue(refused);
+      } else {
+        api.download.mockRejectedValue(refused);
+      }
+
+      await expect(service.run(NOW)).rejects.toBeInstanceOf(UnrecoverableError);
+
+      expect(connections.markRejected).toHaveBeenCalledWith(
+        'GOOGLE_PLAY',
+        expect.stringContaining('Google refused the key of'),
+      );
+      expect(prisma.storeReportRequest.update).not.toHaveBeenCalledWith(
+        expect.objectContaining({ data: { state: 'forbidden' } }),
+      );
+    },
+  );
 
   it('skips a file that vanished between listing and download', async () => {
     const { service, api, connections } = harness([

@@ -2,6 +2,7 @@ import { Store } from '@prisma/client';
 import {
   countChars,
   ReviewReplyTone,
+  truncateChars,
   UNKNOWN_LANGUAGE,
 } from '@asobeast/shared';
 import { storeLabel } from '../alerts/alert-summary';
@@ -194,15 +195,6 @@ export function parseReplyOutput(
   return { reply, language: languageTagOf(raw.language) };
 }
 
-const isHighSurrogate = (code: number) => code >= 0xd800 && code <= 0xdbff;
-
-function withinLimit(text: string, limit: number): string {
-  const head = text.slice(0, limit);
-  return isHighSurrogate(head.charCodeAt(head.length - 1))
-    ? head.slice(0, -1)
-    : head;
-}
-
 function endsSentence(text: string, end: number): boolean {
   const mark = text[end - 1];
   if (FULL_WIDTH_ENDS.has(mark)) return true;
@@ -235,7 +227,7 @@ export function fitReply(
   if (countChars(trimmed) <= limit) {
     return { text: trimmed, truncated: false };
   }
-  const head = withinLimit(trimmed, limit);
+  const head = truncateChars(trimmed, limit);
   const sentence = lastSentence(trimmed, head);
   const long =
     sentence && countChars(sentence) >= limit * MIN_KEPT_SHARE

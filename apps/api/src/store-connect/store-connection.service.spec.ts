@@ -18,11 +18,17 @@ import {
   GcsBucketError,
   GcsError,
   GcsRejectedError,
+  GcsTokenRefusedError,
   type GcsApi,
 } from './play/gcs-api';
 import type { GcsApiFactory } from './play/gcs-api.factory';
+import { type GoogleOAuthClient, SignInOffError } from './play/google-sign-in';
 import type { PlayPublisherApi } from './play/play-publisher-api';
-import { sealCredentials } from './store-credentials';
+import {
+  isGoogleAccountCredentials,
+  type PlayCredentials,
+  sealCredentials,
+} from './store-credentials';
 import {
   CREDENTIAL_UNREADABLE,
   StoreConnectionService,
@@ -56,9 +62,29 @@ const PLAY_REQUEST = {
   bucket: 'pubsite_prod_rev_01234567890987654321',
 };
 
+const GOOGLE_ACCOUNT = {
+  email: 'owner@example.com',
+  refreshToken: '1//refresh',
+  bucket: 'pubsite_prod_4855979533719537120',
+};
+
+const CLIENT: GoogleOAuthClient = {
+  id: 'client.apps.googleusercontent.com',
+  secret: 'test-oauth-client-secret',
+  redirectUri: 'https://aso.example.com/settings/google-play',
+};
+
 const CREATED_AT = new Date('2026-10-01T10:00:00.000Z');
 
-function harness(box: SecretBox | null = new SecretBox(randomBytes(32))) {
+const accountOf = (credentials: PlayCredentials) =>
+  isGoogleAccountCredentials(credentials)
+    ? { kind: 'googleAccount' as const, email: credentials.email }
+    : { kind: 'key' as const, email: credentials.clientEmail };
+
+function harness(
+  box: SecretBox | null = new SecretBox(randomBytes(32)),
+  client: GoogleOAuthClient | null = CLIENT,
+) {
   const rows: Record<string, unknown>[] = [];
   const tx = {
     storeConnection: {
@@ -148,7 +174,14 @@ function harness(box: SecretBox | null = new SecretBox(randomBytes(32))) {
   const gcs = { verify: jest.fn(() => Promise.resolve()) };
   const publisher = { reply: jest.fn() };
   const gcsFactory = {
-    open: jest.fn(() => gcs as unknown as GcsApi),
+    open: jest.fn(
+      (credentials: PlayCredentials) =>
+        ({
+          ...gcs,
+          bucket: credentials.bucket,
+          account: accountOf(credentials),
+        }) as unknown as GcsApi,
+    ),
     publisher: jest.fn(() => publisher as unknown as PlayPublisherApi),
   };
   const queue = {
@@ -162,6 +195,7 @@ function harness(box: SecretBox | null = new SecretBox(randomBytes(32))) {
     new AppStoreKeys(factory as unknown as AscApiFactory),
     new PlayKeys(gcsFactory as unknown as GcsApiFactory),
     queue as unknown as StoreReportQueue,
+    client,
   );
   return {
     service,
@@ -361,11 +395,94 @@ describe('StoreConnectionService', () => {
     const refused = service.connect('GOOGLE_PLAY', PLAY_REQUEST, 'user_1');
     await expect(refused).rejects.toBeInstanceOf(UnprocessableEntityException);
     await expect(refused).rejects.toThrow(
-      'Google refused this service account',
+      `Google refused reports@focus-123.iam.gserviceaccount.com access to ${PLAY_REQUEST.bucket}`,
     );
     const missing = service.connect('GOOGLE_PLAY', PLAY_REQUEST, 'user_1');
     await expect(missing).rejects.toThrow(PLAY_REQUEST.bucket);
     expect(tx.storeConnection.create).not.toHaveBeenCalled();
+  });
+
+  it('names a refused key apart from a refused bucket', async () => {
+    const { service, gcs } = harness();
+    gcs.verify.mockRejectedValueOnce(new GcsTokenRefusedError('no', 400));
+
+    await expect(
+      service.connect('GOOGLE_PLAY', PLAY_REQUEST, 'user_1'),
+    ).rejects.toThrow(
+      'Google refused the key of reports@focus-123.iam.gserviceaccount.com',
+    );
+  });
+
+  it('connects a google account after listing the bucket with it', async () => {
+    const { service, gcs, rows, box, queue } = harness();
+
+    const item = await service.connectGoogleAccount(
+      GOOGLE_ACCOUNT,
+      '1098765',
+      'user_1',
+    );
+
+    expect(gcs.verify).toHaveBeenCalledTimes(1);
+    expect(item).toMatchObject({
+      store: 'GOOGLE_PLAY',
+      credential: 'googleAccount',
+      issuerId: GOOGLE_ACCOUNT.email,
+      keyId: '1098765',
+      bucket: GOOGLE_ACCOUNT.bucket,
+    });
+    expect(rows[0].keyFingerprint).toMatch(/^[0-9a-f]{16}$/);
+    expect(rows[0].credentialCiphertext).not.toContain('1//refresh');
+    expect(
+      JSON.parse(
+        box!.open(
+          rows[0].credentialCiphertext as string,
+          'store-connection:ws_1:GOOGLE_PLAY',
+        ),
+      ),
+    ).toEqual(GOOGLE_ACCOUNT);
+    expect(queue.enqueue).toHaveBeenCalledWith('ws_1', 'GOOGLE_PLAY');
+  });
+
+  it('refuses a google account that cannot read the bucket and stores nothing', async () => {
+    const { service, gcs, tx } = harness();
+    gcs.verify.mockRejectedValueOnce(new GcsRejectedError('no', 403));
+
+    const refused = service.connectGoogleAccount(
+      GOOGLE_ACCOUNT,
+      '1098765',
+      'user_1',
+    );
+
+    await expect(refused).rejects.toBeInstanceOf(UnprocessableEntityException);
+    await expect(refused).rejects.toThrow(
+      `Your Google account owner@example.com cannot read ${GOOGLE_ACCOUNT.bucket}`,
+    );
+    expect(tx.storeConnection.create).not.toHaveBeenCalled();
+  });
+
+  it('marks a service account a key and says whether google sign in is on', async () => {
+    const { service } = harness();
+    await service.connect('GOOGLE_PLAY', PLAY_REQUEST, 'user_1');
+
+    const state = await service.state();
+
+    expect(state.googleSignIn).toBe(true);
+    expect(state.connections[0].credential).toBe('key');
+    await expect(
+      harness(undefined, null).service.state(),
+    ).resolves.toMatchObject({ available: true, googleSignIn: false });
+  });
+
+  it('answers 409 on verify and keeps a google account connection while sign in is off', async () => {
+    const { service, gcs, rows, prisma } = harness();
+    await service.connectGoogleAccount(GOOGLE_ACCOUNT, '1098765', 'user_1');
+    gcs.verify.mockRejectedValueOnce(new SignInOffError());
+
+    await expect(service.verify('GOOGLE_PLAY')).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+    expect(rows[0].status).toBe('active');
+    expect(prisma.storeConnection.updateMany).not.toHaveBeenCalled();
   });
 
   it('answers 502 when google fails while checking a service account', async () => {

@@ -269,7 +269,7 @@ export class AppsService {
 
   refreshListing(
     id: string,
-    country: string,
+    country?: string,
   ): Promise<SnapshotDiffResult | null> {
     return this.listingCapture.refreshListing(id, country);
   }

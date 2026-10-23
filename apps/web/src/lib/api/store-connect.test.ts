@@ -1,9 +1,11 @@
 import type { StoreConnectionState } from "@asobeast/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  completePlaySignIn,
   connectStore,
   disconnectStore,
   getStoreConnections,
+  startPlaySignIn,
   syncStore,
   verifyStore,
 } from "./store-connect";
@@ -93,5 +95,27 @@ describe("store connection calls", () => {
     await expect(disconnectStore("APP_STORE")).resolves.toBeUndefined();
     expect(sent[0].method).toBe("DELETE");
     expect(pathOf(sent[0])).toMatch(/\/store-connections\/APP_STORE$/);
+  });
+
+  it("starts and completes a google play sign in with posts", async () => {
+    const sent = stubFetch({ url: "https://accounts.google.com/o/oauth2" });
+
+    await startPlaySignIn({ bucket: "pubsite_prod_1" });
+    await completePlaySignIn({ code: "4/code", state: "v1.state" });
+
+    expect(sent.map((each) => [pathOf(each), each.method, each.body])).toEqual([
+      [
+        expect.stringMatching(/\/store-connections\/GOOGLE_PLAY\/sign-in$/),
+        "POST",
+        { bucket: "pubsite_prod_1" },
+      ],
+      [
+        expect.stringMatching(
+          /\/store-connections\/GOOGLE_PLAY\/sign-in\/complete$/,
+        ),
+        "POST",
+        { code: "4/code", state: "v1.state" },
+      ],
+    ]);
   });
 });

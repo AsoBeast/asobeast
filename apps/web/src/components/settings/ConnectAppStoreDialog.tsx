@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { STORE_FUNNEL_GUIDE } from "@/components/overview/FunnelHelp";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,7 +33,13 @@ function problemOf(
   return null;
 }
 
-export function ConnectAppStoreDialog({ label }: { label: string }) {
+export function ConnectAppStoreDialog({
+  label,
+  variant = "outline",
+}: {
+  label: string;
+  variant?: "default" | "outline";
+}) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [issuerId, setIssuerId] = useState("");
@@ -88,12 +95,12 @@ export function ConnectAppStoreDialog({ label }: { label: string }) {
       open={open}
       onOpenChange={reset}
       label={label}
-      description="Use a team key from Users and Access, Integrations. AsoBeast checks it with Apple, stores it encrypted and never shows it again."
+      description="Create a team key with the Admin role in Users and Access, Integrations, so AsoBeast can ask Apple for the reports. AsoBeast checks it with Apple, stores it encrypted and never shows it again."
       error={error}
       pending={mutation.isPending}
       onSubmit={submit}
       trigger={
-        <Button variant="outline" size="sm">
+        <Button variant={variant} size="sm">
           {label}
         </Button>
       }
@@ -147,9 +154,15 @@ export function ConnectAppStoreDialog({ label }: { label: string }) {
           onChange={(event) => void choose(event.target.files?.[0])}
         />
         <p className="text-xs text-muted-foreground">
-          Paste the key or choose the .p8 file you downloaded. Use an Admin key
-          the first time, so AsoBeast can ask Apple for the reports. A Sales and
-          Reports key can take over afterwards.
+          Paste the key or choose the .p8 file you downloaded.{" "}
+          <a
+            href={`${STORE_FUNNEL_GUIDE}#create-the-key`}
+            target="_blank"
+            rel="noreferrer"
+            className="font-medium text-foreground underline decoration-primary underline-offset-4 hover:decoration-2"
+          >
+            Why an Admin key
+          </a>
         </p>
       </div>
     </AlertChannelDialog>

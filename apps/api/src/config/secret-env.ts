@@ -13,6 +13,7 @@ export const SECRET_ENV_KEYS = [
   'APPLE_ADS_KEY_ID',
   'STORE_CONNECT_ENCRYPTION_KEY',
   'STORE_CONNECT_ENCRYPTION_KEY_PREVIOUS',
+  'GOOGLE_PLAY_OAUTH_CLIENT_SECRET',
 ] as const satisfies readonly (keyof Env)[];
 
 export type SecretEnvKey = (typeof SECRET_ENV_KEYS)[number];

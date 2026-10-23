@@ -221,3 +221,167 @@ describe('scrubText and key material', () => {
     expect(scrubbed).not.toContain('eyJhbGci');
   });
 });
+
+const ISSUE_URL =
+  '/no-such-route?token=asob_EXAMPLE&password=hunter2hunter2&access_token=ACCTOKMARKER&api_key=APIKEYMARKER&secret=SECRETMARK2';
+const ISSUE_VALUES = [
+  'asob_EXAMPLE',
+  'hunter2hunter2',
+  'ACCTOKMARKER',
+  'APIKEYMARKER',
+  'SECRETMARK2',
+];
+
+describe('query credentials', () => {
+  it('redacts every secret value of the url the issue reported', () => {
+    expect(scrubText(ISSUE_URL, [])).toBe(
+      `/no-such-route?token=${REDACTED}&password=${REDACTED}&access_token=${REDACTED}&api_key=${REDACTED}&secret=${REDACTED}`,
+    );
+  });
+
+  it('gives the url and the query object of one request the same answer', () => {
+    const logged = {
+      url: ISSUE_URL,
+      query: {
+        token: 'asob_EXAMPLE',
+        password: 'hunter2hunter2',
+        access_token: 'ACCTOKMARKER',
+        api_key: 'APIKEYMARKER',
+        secret: 'SECRETMARK2',
+        country: 'us',
+      },
+    };
+
+    const serialized = JSON.stringify(scrubSecrets(logged, []));
+
+    for (const value of ISSUE_VALUES) {
+      expect(serialized).not.toContain(value);
+    }
+    expect(scrubSecrets(logged, []).query).toEqual({
+      token: REDACTED,
+      password: REDACTED,
+      access_token: REDACTED,
+      api_key: REDACTED,
+      secret: REDACTED,
+      country: 'us',
+    });
+  });
+
+  it.each([
+    'access_token',
+    'refresh_token',
+    'id_token',
+    'auth_token',
+    'accessToken',
+    'client_secret',
+    'clientSecret',
+    'passwd',
+    'pwd',
+    'private_key',
+    'apiKey',
+    'API-KEY',
+  ])('redacts %s in a url and in an object', (name) => {
+    expect(scrubText(`/x?${name}=value123`, [])).toBe(`/x?${name}=${REDACTED}`);
+    expect(scrubSecrets({ [name]: 'value123' }, [])).toEqual({
+      [name]: REDACTED,
+    });
+  });
+
+  it('keeps every other byte of the url, ; and the fragment included', () => {
+    expect(scrubText('/search?q=a;b&Password=p&sort=asc&page=2#top', [])).toBe(
+      `/search?q=a;b&Password=${REDACTED}&sort=asc&page=2#top`,
+    );
+  });
+
+  it('redacts an encoded name and keeps it as it was written', () => {
+    expect(scrubText('/x?pass%77ord=abc&Q=1', [])).toBe(
+      `/x?pass%77ord=${REDACTED}&Q=1`,
+    );
+    expect(scrubText('/x?%61ccess_token=abc', [])).toBe(
+      `/x?%61ccess_token=${REDACTED}`,
+    );
+  });
+
+  it('redacts every occurrence of a repeated name', () => {
+    expect(scrubText('/x?password=a&password=b&q=c', [])).toBe(
+      `/x?password=${REDACTED}&password=${REDACTED}&q=c`,
+    );
+  });
+
+  it('redacts a bracketed name in the url and in the object', () => {
+    expect(scrubText('/x?password[]=a&filter[token]=b&other[]=c', [])).toBe(
+      `/x?password[]=${REDACTED}&filter[token]=${REDACTED}&other[]=c`,
+    );
+    expect(scrubSecrets({ 'password[]': 'a', 'other[]': 'c' }, [])).toEqual({
+      'password[]': REDACTED,
+      'other[]': 'c',
+    });
+  });
+
+  it('redacts a credential that follows a semicolon', () => {
+    expect(scrubText('/x?a=1;password=p&b=2', [])).toBe(
+      `/x?a=1;password=${REDACTED}&b=2`,
+    );
+  });
+
+  it('does not leave the tail of a credential that holds a raw semicolon', () => {
+    expect(scrubText('/x?password=ab;cd&q=1', [])).toBe(
+      `/x?password=${REDACTED}&q=1`,
+    );
+  });
+
+  it.each([`ab'cd`, 'ab"cd', `it's-secret`])(
+    'does not leave the tail of a credential that holds a raw quote: %s',
+    (value) => {
+      expect(scrubText(`/x?password=${value}&q=1`, [])).toBe(
+        `/x?password=${REDACTED}&q=1`,
+      );
+    },
+  );
+
+  it('redacts an empty value and leaves a name without a value alone', () => {
+    expect(scrubText('/x?password=&q=1', [])).toBe(
+      `/x?password=${REDACTED}&q=1`,
+    );
+    expect(scrubText('/x?password&q=1', [])).toBe('/x?password&q=1');
+  });
+
+  it('leaves names that only look like a secret name', () => {
+    const url =
+      '/x?passwords=1&tokens=2&keyword=password&key=v&monkey=1&code=9';
+
+    expect(scrubText(url, [])).toBe(url);
+  });
+
+  it('keeps a name with a malformed escape instead of throwing', () => {
+    expect(scrubText('/x?%zzpassword=1&password=2', [])).toBe(
+      `/x?%zzpassword=1&password=${REDACTED}`,
+    );
+  });
+
+  it('redacts a credential inside an error message', () => {
+    expect(scrubText('GET /apps?access_token=abc123 failed with 502', [])).toBe(
+      `GET /apps?access_token=${REDACTED} failed with 502`,
+    );
+  });
+
+  it('still redacts an api token held by a parameter of any name', () => {
+    const token = 'asob_0123456789abcdef0123456789abcdef';
+
+    expect(scrubText(`/mcp?key=${token}&q=1`, [])).toBe(
+      `/mcp?key=${REDACTED}&q=1`,
+    );
+  });
+
+  it.each(['&', '?', ';a', '&password=', '&a'])(
+    'scrubs a body-sized run of %s in linear time',
+    (unit) => {
+      const text = unit.repeat(REQUEST_BODY_LIMIT_BYTES / unit.length);
+
+      const started = performance.now();
+      scrubText(text, []);
+
+      expect(performance.now() - started).toBeLessThan(250);
+    },
+  );
+});

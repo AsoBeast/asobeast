@@ -145,4 +145,38 @@ describe("matchesReviewQuery", () => {
     expect(matchesReviewQuery(REVIEW, '"crash')).toBe(true);
     expect(matchesReviewQuery(REVIEW, '""')).toBe(true);
   });
+
+  it("matches an emoji only search in the text, the author and the replies", () => {
+    const said = (text: string) => ({ ...REVIEW, title: null, text });
+    expect(matchesReviewQuery(said("Love it 🎉🎉"), "🎉")).toBe(true);
+    expect(matchesReviewQuery(said("Love it"), "🎉")).toBe(false);
+    expect(matchesReviewQuery(said("One 🎉 only"), "🎉🎉")).toBe(false);
+    expect(matchesReviewQuery(said("Family 👨‍👩‍👧‍👦"), "👨‍👩‍👧‍👦")).toBe(true);
+    expect(matchesReviewQuery({ ...REVIEW, userName: "Sam 🎉" }, "🎉")).toBe(
+      true,
+    );
+    expect(
+      matchesReviewQuery({ ...REVIEW, replyText: "Thanks 🙏" }, "🙏"),
+    ).toBe(true);
+  });
+
+  it("searches a quoted emoji as an emoji", () => {
+    const said = (text: string) => ({ ...REVIEW, title: null, text });
+    expect(matchesReviewQuery(said("Love it 🎉"), '"🎉"')).toBe(true);
+    expect(matchesReviewQuery(said("Love it"), '"🎉"')).toBe(false);
+  });
+
+  it("requires the emoji of a quoted phrase as well as its words", () => {
+    const said = (text: string) => ({ ...REVIEW, title: null, text });
+    expect(matchesReviewQuery(said("A 🎉 party today"), '"🎉 party"')).toBe(
+      true,
+    );
+    expect(matchesReviewQuery(said("A party today"), '"🎉 party"')).toBe(false);
+    expect(matchesReviewQuery(said("A 🎉 today"), '"🎉 party"')).toBe(false);
+  });
+
+  it("lists every review for punctuation only", () => {
+    expect(matchesReviewQuery(REVIEW, "(*)")).toBe(true);
+    expect(matchesReviewQuery(REVIEW, "\\")).toBe(true);
+  });
 });

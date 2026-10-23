@@ -20,7 +20,39 @@ export const REDACTION_PATHS = [
 ];
 
 const SECRET_KEY =
-  /^(authorization|cookie|set-cookie|pass|password|passphrase|secret|token|api[-_]?key|credentials?|private[-_]?key)$/i;
+  /^(?:authorization|cookie|set-cookie|pass|passwd|pwd|password|passphrase|(?:client[-_]?)?secret|(?:(?:access|refresh|id|auth)[-_]?)?token|api[-_]?key|private[-_]?key|credentials?)$/i;
+
+const BRACKETS = /[[\]]+/;
+const QUERY_PARAMETER_NAME = /([?&;])([^?&;=#\s"']+)=/g;
+const QUERY_VALUE_END = /[&#\s]/g;
+
+function isSecretKey(name: string): boolean {
+  return name.split(BRACKETS).some((segment) => SECRET_KEY.test(segment));
+}
+
+function decodedName(name: string): string {
+  try {
+    return decodeURIComponent(name.replaceAll('+', ' '));
+  } catch {
+    return name;
+  }
+}
+
+function redactQueryCredentials(text: string): string {
+  let redacted = '';
+  let copiedUpTo = 0;
+  for (const match of text.matchAll(QUERY_PARAMETER_NAME)) {
+    if (match.index < copiedUpTo || !isSecretKey(decodedName(match[2]))) {
+      continue;
+    }
+    const valueStart = match.index + match[0].length;
+    QUERY_VALUE_END.lastIndex = valueStart;
+    const valueEnd = QUERY_VALUE_END.exec(text)?.index ?? text.length;
+    redacted += text.slice(copiedUpTo, valueStart) + REDACTED;
+    copiedUpTo = valueEnd;
+  }
+  return redacted + text.slice(copiedUpTo);
+}
 
 const SECRET_SHAPES: [RegExp, string][] = [
   [new RegExp(`${API_TOKEN_PREFIX}[A-Za-z0-9_-]{8,}`, 'g'), REDACTED],
@@ -37,7 +69,6 @@ const SECRET_SHAPES: [RegExp, string][] = [
     new RegExp(`${SESSION_COOKIE}=[^;\\s"']+`, 'g'),
     `${SESSION_COOKIE}=${REDACTED}`,
   ],
-  [/([?&]token=)[^&#\s"']+/g, `$1${REDACTED}`],
 ];
 
 const MAX_DEPTH = 8;
@@ -61,7 +92,7 @@ export function scrubText(text: string, literals: readonly string[]): string {
   for (const [shape, replacement] of SECRET_SHAPES) {
     scrubbed = scrubbed.replace(shape, replacement);
   }
-  return redactUrlCredentials(scrubbed, REDACTED);
+  return redactQueryCredentials(redactUrlCredentials(scrubbed, REDACTED));
 }
 
 function scrubError(
@@ -101,9 +132,7 @@ function walk(
     return Object.fromEntries(
       Object.entries(value).map(([key, entry]) => [
         key,
-        SECRET_KEY.test(key)
-          ? REDACTED
-          : walk(entry, literals, depth + 1, seen),
+        isSecretKey(key) ? REDACTED : walk(entry, literals, depth + 1, seen),
       ]),
     );
   } finally {

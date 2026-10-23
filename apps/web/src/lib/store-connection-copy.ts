@@ -1,10 +1,14 @@
-import type {
-  Store,
-  StoreConnectionApp,
-  StoreConnectionItem,
-  StoreReportState,
+import {
+  SETTINGS_PATH,
+  type Store,
+  type StoreConnectionApp,
+  type StoreConnectionItem,
+  type StoreReportState,
 } from "@asobeast/shared";
 import { formatDate, formatDateTime } from "./format";
+
+export const STORE_CONNECTIONS_SECTION_ID = "store-connections";
+export const STORE_CONNECTIONS_PATH = `${SETTINGS_PATH}#${STORE_CONNECTIONS_SECTION_ID}`;
 
 export interface StatusLine {
   tone: "warning" | "muted";
@@ -63,32 +67,39 @@ export const STORE_CONSOLES: Record<Store, StoreConsoleCopy> = {
   GOOGLE_PLAY: {
     name: "Google Play Console",
     connectLabel: "Connect Google Play",
-    replaceLabel: "Replace service account",
+    replaceLabel: "Reconnect",
     empty:
       "Not connected. Connect the Google Play Console to see store listing visitors, acquisitions and conversion by market, and installs per search term.",
     noApps:
-      "Import a Google Play app to read its numbers through this service account.",
-    appsLabel: "Apps this service account reports",
-    verified: "Service account checked with Google",
+      "Import a Google Play app to read its numbers through this connection.",
+    appsLabel: "Apps this connection reports",
+    verified: "Access checked with Google",
     refused:
-      "Google refused this service account. Check its access in Play Console, verify it again, or connect a new one.",
+      "Google refused this connection. Check its access in Play Console, verify it again, or reconnect.",
     waiting:
       "Waiting for the first store performance file, which Google writes to the bucket once a day.",
     disconnect:
-      "AsoBeast deletes the stored service account key and stops reading the bucket. The numbers already stored are kept and appear again once you connect a service account. Delete the key in Google Cloud too if you no longer need it.",
+      "AsoBeast deletes the stored service account key or Google sign in and stops reading the bucket. The numbers already stored are kept and appear again once you reconnect. Delete the key in Google Cloud, or remove AsoBeast under Third party connections in your Google account, if you no longer need it.",
     states: {
       requested: "Reporting",
       unmatched: "No files in this bucket",
       forbidden: "No access to this app",
       stopped: "Stopped, verify to read again",
     },
-    facts: (item) => [
-      ["Service account", item.issuerId],
-      ["Key ID", item.keyId],
-      ["Bucket", item.bucket ?? "—"],
-      ["Fingerprint", item.keyFingerprint],
-      connectedOn(item),
-    ],
+    facts: (item) =>
+      item.credential === "googleAccount"
+        ? [
+            ["Google account", item.issuerId],
+            ["Bucket", item.bucket ?? "—"],
+            connectedOn(item),
+          ]
+        : [
+            ["Service account", item.issuerId],
+            ["Key ID", item.keyId],
+            ["Bucket", item.bucket ?? "—"],
+            ["Fingerprint", item.keyFingerprint],
+            connectedOn(item),
+          ],
   },
 };
 
@@ -106,6 +117,11 @@ export function connectionStatusLine(item: StoreConnectionItem): StatusLine {
     text: `Last synced ${formatDateTime(item.lastSyncedAt)}`,
   };
 }
+
+export const needsAdminKey = (item: StoreConnectionItem): boolean =>
+  item.store === "APP_STORE" &&
+  item.status !== "rejected" &&
+  item.apps.some((app) => app.state === "forbidden");
 
 export function appStateLabel(
   state: StoreReportState | null,

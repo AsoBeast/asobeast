@@ -77,7 +77,7 @@ function CompetitorCard({
               </span>
             ) : null}
             {snapshot?.price !== null && snapshot !== null ? (
-              <span>{formatPrice(snapshot.price)}</span>
+              <span>{formatPrice(snapshot.price, snapshot.currency)}</span>
             ) : null}
             {snapshot?.version ? <span>v{snapshot.version}</span> : null}
           </div>

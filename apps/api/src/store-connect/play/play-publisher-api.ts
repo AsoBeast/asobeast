@@ -11,6 +11,7 @@ import {
   GOOGLE_TOKEN_AUDIENCE,
   GoogleTokenCache,
   type ServiceAccount,
+  serviceAccountGrant,
 } from './service-account';
 
 export const PLAY_PUBLISHER_ORIGIN = 'https://androidpublisher.googleapis.com';
@@ -77,9 +78,8 @@ export class PlayPublisherApi {
     private readonly origins: PlayPublisherOrigins = PLAY_PUBLISHER_ORIGINS,
   ) {
     this.tokens = new GoogleTokenCache(
-      account,
+      serviceAccountGrant(account, ANDROID_PUBLISHER_SCOPE),
       googleTokenExchange(transport, origins.token),
-      ANDROID_PUBLISHER_SCOPE,
     );
   }
 
