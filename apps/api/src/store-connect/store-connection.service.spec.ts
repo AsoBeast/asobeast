@@ -621,6 +621,31 @@ describe('StoreConnectionService', () => {
     expect(rows[0].verifiedAt).toBeInstanceOf(Date);
   });
 
+  it('marks and reports reply access', async () => {
+    const { service } = harness();
+    await service.connect('APP_STORE', REQUEST, 'user_1');
+
+    await service.markReplyAccess('APP_STORE', 'forbidden');
+
+    await expect(service.state()).resolves.toMatchObject({
+      connections: [{ store: 'APP_STORE', replyAccess: 'forbidden' }],
+    });
+  });
+
+  it('resets reply access to unknown on verify and on connect', async () => {
+    const { service, rows } = harness();
+    await service.connect('APP_STORE', REQUEST, 'user_1');
+    rows[0].replyAccess = 'allowed';
+
+    await expect(service.verify('APP_STORE')).resolves.toMatchObject({
+      replyAccess: 'unknown',
+    });
+    rows[0].replyAccess = 'forbidden';
+    await expect(
+      service.connect('APP_STORE', REQUEST, 'user_1'),
+    ).resolves.toMatchObject({ replyAccess: 'unknown' });
+  });
+
   it('enqueues a sync after connect and after a successful verify', async () => {
     const { service, queue } = harness();
     await service.connect('APP_STORE', REQUEST, 'user_1');

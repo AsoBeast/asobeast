@@ -4,6 +4,7 @@ import type {
   StoreCredentialKind,
   StoreConnectionItem,
   StoreConnectionStatus,
+  StoreReplyAccess,
   StoreReportAccess,
   StoreReportState,
 } from '@asobeast/shared';
@@ -13,6 +14,7 @@ export interface ConnectionRow {
   store: Store;
   status: string;
   reportAccess: string;
+  replyAccess: string;
   issuerId: string;
   keyId: string;
   keyFingerprint: string;
@@ -73,6 +75,7 @@ export function connectionItems(
     store: row.store,
     status: row.status as StoreConnectionStatus,
     reportAccess: row.reportAccess as StoreReportAccess,
+    replyAccess: row.replyAccess as StoreReplyAccess,
     issuerId: row.issuerId,
     keyId: row.keyId,
     keyFingerprint: row.keyFingerprint,

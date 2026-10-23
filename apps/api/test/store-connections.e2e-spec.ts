@@ -199,6 +199,21 @@ describe('Store connections (e2e)', () => {
     expect(restored.body).toMatchObject({ status: 'active', lastError: null });
   });
 
+  it('lists reply access on every connection and resets it on verify', async () => {
+    const connected = await connect().expect(200);
+    expect(connected.body).toMatchObject({ replyAccess: 'unknown' });
+
+    await harness.prisma.storeConnection.updateMany({
+      data: { replyAccess: 'forbidden' },
+    });
+    expect((await state()).connections[0]).toMatchObject({
+      replyAccess: 'forbidden',
+    });
+
+    const verified = await owner.post(`${PATH}/verify`).expect(200);
+    expect(verified.body).toMatchObject({ replyAccess: 'unknown' });
+  });
+
   it('queues a sync, and refuses one while the key is rejected', async () => {
     await connect().expect(200);
 

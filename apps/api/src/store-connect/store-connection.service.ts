@@ -153,7 +153,12 @@ export class StoreConnectionService {
     }
     await this.prisma.storeConnection.update({
       where: { id: connection.id },
-      data: { status: 'active', verifiedAt: new Date(), lastError: null },
+      data: {
+        status: 'active',
+        verifiedAt: new Date(),
+        lastError: null,
+        replyAccess: 'unknown',
+      },
     });
     await this.queue.enqueue(this.workspace.require(OPERATION), store);
     return this.item(store);
@@ -209,6 +214,16 @@ export class StoreConnectionService {
     });
   }
 
+  async markReplyAccess(
+    store: Store,
+    replyAccess: StoreReplyAccess,
+  ): Promise<void> {
+    await this.prisma.storeConnection.updateMany({
+      where: { store },
+      data: { replyAccess },
+    });
+  }
+
   async markSynced(
     store: Store,
     reportAccess: StoreReportAccess,
@@ -239,6 +254,7 @@ export class StoreConnectionService {
           bucket: key.bucket,
           credential: key.credential,
           reportAccess: key.reportAccess,
+          replyAccess: 'unknown',
           credentialCiphertext: sealCredentials(
             box,
             workspaceId,
