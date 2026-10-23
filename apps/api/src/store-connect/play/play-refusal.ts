@@ -4,12 +4,7 @@ import {
   GcsTokenRefusedError,
   type PlayAccount,
 } from './gcs-api';
-import {
-  CLIENT_REFUSED,
-  isClientRefusal,
-  SIGN_IN_OFF,
-  SignInOffError,
-} from './google-sign-in';
+import { CLIENT_REFUSED, isClientRefusal } from './google-sign-in';
 
 export const bucketMissing = (bucket: string): string =>
   `Google Cloud Storage has no bucket ${bucket}. Copy the Cloud Storage URI from Download reports in Play Console: the bucket id is the part after gs:// that starts with pubsite_prod.`;
@@ -34,7 +29,6 @@ export function playRefusal(
   error: unknown,
   api: { account: PlayAccount; bucket: string },
 ): string | null {
-  if (error instanceof SignInOffError) return SIGN_IN_OFF;
   if (error instanceof GcsTokenRefusedError) {
     return tokenRefused(api.account, error.code);
   }

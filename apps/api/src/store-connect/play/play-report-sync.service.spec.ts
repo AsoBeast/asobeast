@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { UnrecoverableError } from 'bullmq';
+import { SignInOffError } from './google-sign-in';
 import type { WorkspaceContext } from '../../common/tenancy/workspace-context';
 import type { PrismaService } from '../../prisma/prisma.service';
 import type { StoreConnectionService } from '../store-connection.service';
@@ -315,6 +316,14 @@ describe('PlayReportSync', () => {
         expect.stringContaining(reason),
       );
     }
+  });
+
+  it('fails the run without rejecting the connection while sign in is off', async () => {
+    const { service, api, connections } = harness(twoMonths);
+    api.verify.mockRejectedValueOnce(new SignInOffError());
+
+    await expect(service.run(NOW)).rejects.toBeInstanceOf(SignInOffError);
+    expect(connections.markRejected).not.toHaveBeenCalled();
   });
 
   it('keeps the connection active and reports a rate limit', async () => {

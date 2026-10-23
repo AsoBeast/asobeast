@@ -5,7 +5,7 @@ import {
   GcsRejectedError,
   GcsTokenRefusedError,
 } from './gcs-api';
-import { CLIENT_REFUSED, SIGN_IN_OFF, SignInOffError } from './google-sign-in';
+import { CLIENT_REFUSED, SignInOffError } from './google-sign-in';
 import { bucketMissing, playRefusal } from './play-refusal';
 
 const BUCKET = 'pubsite_prod_4855979533719537120';
@@ -70,14 +70,14 @@ describe('playRefusal', () => {
     ).toContain('Google refused the key of');
   });
 
-  it('names the missing bucket and the switched off sign in', () => {
+  it('names the missing bucket', () => {
     expect(playRefusal(new GcsBucketError('no', 404), GOOGLE_ACCOUNT)).toBe(
       bucketMissing(BUCKET),
     );
-    expect(playRefusal(new SignInOffError(), GOOGLE_ACCOUNT)).toBe(SIGN_IN_OFF);
   });
 
   it.each([
+    new SignInOffError(),
     new GcsRateLimitedError('slow', 429),
     new GcsError('busy', 503),
     new Error('boom'),

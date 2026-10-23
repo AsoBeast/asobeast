@@ -1,6 +1,7 @@
 import {
   BadGatewayException,
   BadRequestException,
+  ConflictException,
   Injectable,
 } from '@nestjs/common';
 import type {
@@ -27,6 +28,7 @@ import { identityFingerprint, publicKeyFingerprint } from './key-fingerprint';
 import { type GcsApi, GcsError, GcsRateLimitedError } from './play/gcs-api';
 import { GcsApiFactory } from './play/gcs-api.factory';
 import { GcsUnreachableError } from './play/gcs-transport';
+import { SignInOffError } from './play/google-sign-in';
 import { playRefusal } from './play/play-refusal';
 import {
   parseServiceAccount,
@@ -156,6 +158,9 @@ export class PlayKeys implements StoreKeys<
     } catch (error) {
       const refusal = playRefusal(error, api);
       if (refusal) return refusal;
+      if (error instanceof SignInOffError) {
+        throw new ConflictException(error.message);
+      }
       if (error instanceof GcsRateLimitedError) {
         throw new RequestThrottledError(
           RATE_LIMIT_RETRY_SECONDS,

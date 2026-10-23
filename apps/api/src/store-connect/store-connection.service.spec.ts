@@ -21,7 +21,7 @@ import {
   type GcsApi,
 } from './play/gcs-api';
 import type { GcsApiFactory } from './play/gcs-api.factory';
-import type { GoogleOAuthClient } from './play/google-sign-in';
+import { type GoogleOAuthClient, SignInOffError } from './play/google-sign-in';
 import {
   isGoogleAccountCredentials,
   type PlayCredentials,
@@ -461,6 +461,18 @@ describe('StoreConnectionService', () => {
     await expect(
       harness(undefined, null).service.state(),
     ).resolves.toMatchObject({ available: true, googleSignIn: false });
+  });
+
+  it('answers 409 on verify and keeps a google account connection while sign in is off', async () => {
+    const { service, gcs, rows, prisma } = harness();
+    await service.connectGoogleAccount(GOOGLE_ACCOUNT, '1098765', 'user_1');
+    gcs.verify.mockRejectedValueOnce(new SignInOffError());
+
+    await expect(service.verify('GOOGLE_PLAY')).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+    expect(rows[0].status).toBe('active');
+    expect(prisma.storeConnection.updateMany).not.toHaveBeenCalled();
   });
 
   it('answers 502 when google fails while checking a service account', async () => {
