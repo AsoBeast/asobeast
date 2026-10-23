@@ -6,15 +6,16 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import type {
-  Store,
-  StoreConnectionItem,
-  StoreConnectionRequest,
-  StoreConnectionState,
-  StoreConnectionStatus,
-  StoreConnectionSyncResult,
-  StoreReplyAccess,
-  StoreReportAccess,
+import {
+  PLAY_REPLIES_NEED_KEY,
+  type Store,
+  type StoreConnectionItem,
+  type StoreConnectionRequest,
+  type StoreConnectionState,
+  type StoreConnectionStatus,
+  type StoreConnectionSyncResult,
+  type StoreReplyAccess,
+  type StoreReportAccess,
 } from '@asobeast/shared';
 import { type SecretBox, SecretBoxError } from '../common/crypto/secret-box';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
@@ -32,6 +33,7 @@ import { connectionItems } from './store-connection-items';
 import {
   type GoogleAccountCredentials,
   isAscCredentials,
+  isGoogleAccountCredentials,
   isPlayCredentials,
   isServiceAccountCredentials,
   needsReseal,
@@ -190,11 +192,13 @@ export class StoreConnectionService {
     );
   }
 
-  openPlayPublisher(): Promise<OpenedConnection<PlayPublisherApi> | null> {
-    return this.openWith(
-      'GOOGLE_PLAY',
-      isServiceAccountCredentials,
-      (credentials) => this.play.publisher(credentials),
+  async openPlayPublisher(): Promise<OpenedConnection<PlayPublisherApi> | null> {
+    const connection = await this.unsealedOrNull('GOOGLE_PLAY');
+    if (connection && isGoogleAccountCredentials(connection.credentials)) {
+      throw new ConflictException(PLAY_REPLIES_NEED_KEY);
+    }
+    return this.opened(connection, isServiceAccountCredentials, (credentials) =>
+      this.play.publisher(credentials),
     );
   }
 
@@ -255,7 +259,14 @@ export class StoreConnectionService {
     accepts: (credentials: StoreCredentials) => credentials is C,
     build: (credentials: C) => A,
   ): Promise<OpenedConnection<A> | null> {
-    const connection = await this.unsealedOrNull(store);
+    return this.opened(await this.unsealedOrNull(store), accepts, build);
+  }
+
+  private opened<C extends StoreCredentials, A>(
+    connection: Unsealed | null,
+    accepts: (credentials: StoreCredentials) => credentials is C,
+    build: (credentials: C) => A,
+  ): OpenedConnection<A> | null {
     if (!connection || !accepts(connection.credentials)) return null;
     return {
       id: connection.id,

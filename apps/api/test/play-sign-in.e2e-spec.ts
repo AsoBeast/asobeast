@@ -2,20 +2,26 @@ import { TEST_GOOGLE_CLIENT } from './helpers/enable-google-sign-in';
 import { TEST_STORE_CONNECT_KEY } from './helpers/enable-store-connect';
 import * as argon2 from 'argon2';
 import { Store } from '@prisma/client';
-import type {
-  ApiErrorEnvelope,
-  PlaySignInStart,
-  StoreConnectionItem,
-  StoreConnectionState,
+import {
+  type ApiErrorEnvelope,
+  PLAY_REPLIES_NEED_KEY,
+  type PlaySignInStart,
+  type StoreConnectionItem,
+  type StoreConnectionState,
 } from '@asobeast/shared';
 import request from 'supertest';
 import { decodeSecretKey, SecretBox } from '../src/common/crypto/secret-box';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import type { GcsRequest } from '../src/store-connect/play/gcs-transport';
-import { GCS_READ_ONLY_SCOPE } from '../src/store-connect/play/service-account';
+import {
+  ANDROID_PUBLISHER_SCOPE,
+  GCS_READ_ONLY_SCOPE,
+} from '../src/store-connect/play/service-account';
 import { sealSignInState } from '../src/store-connect/play/sign-in-state';
+import { StoreConnectionService } from '../src/store-connect/store-connection.service';
 import { seedApiToken } from './helpers/api-tokens';
 import { OWNER, ownerAgent } from './helpers/session';
+import { asWorkspace } from './helpers/tenancy';
 import {
   gcsAnswer,
   pauseStoreReports,
@@ -309,6 +315,56 @@ describe('Google Play sign in (e2e)', () => {
       issuerId: 'owner@example.com',
       bucket: BUCKET,
     });
+  });
+
+  it('refuses to post replies through a google sign in and keeps reading reports', async () => {
+    granted();
+    await complete(await start()).expect(200);
+    harness.gcs.reset();
+    const connections = harness.app.get(StoreConnectionService);
+
+    await expect(
+      asWorkspace(harness.app, () => connections.openPlayPublisher()),
+    ).rejects.toThrow(PLAY_REPLIES_NEED_KEY);
+    await expect(
+      asWorkspace(harness.app, () => connections.openPlay()),
+    ).resolves.toMatchObject({
+      status: 'active',
+      api: { account: { kind: 'googleAccount', email: 'owner@example.com' } },
+    });
+    expect(harness.gcs.requests).toEqual([]);
+  });
+
+  it('posts replies through a service account key with its publisher scope', async () => {
+    await owner
+      .put('/store-connections/GOOGLE_PLAY')
+      .send(PLAY_CONNECTION_REQUEST)
+      .expect(200);
+    harness.gcs.reset();
+    harness.gcs.on(
+      'POST',
+      /oauth2/,
+      gcsAnswer({ access_token: 'ya29.publisher', expires_in: 3600 }),
+    );
+    harness.gcs.on(
+      'POST',
+      /androidpublisher/,
+      gcsAnswer({ result: { replyText: 'Thanks', lastEdited: {} } }),
+    );
+    const connections = harness.app.get(StoreConnectionService);
+
+    const opened = await asWorkspace(harness.app, () =>
+      connections.openPlayPublisher(),
+    );
+    await opened!.api.reply('com.focus', 'gp:review', 'Thanks');
+
+    const [token, reply] = harness.gcs.requests;
+    expect(grantOf(token)).toBe('urn:ietf:params:oauth:grant-type:jwt-bearer');
+    const claims = JSON.parse(
+      Buffer.from(token.form!.assertion.split('.')[1], 'base64url').toString(),
+    ) as { scope: string };
+    expect(claims.scope).toBe(ANDROID_PUBLISHER_SCOPE);
+    expect(reply.bearer).toBe('ya29.publisher');
   });
 
   it('refuses a bad bucket, a member and a write token', async () => {

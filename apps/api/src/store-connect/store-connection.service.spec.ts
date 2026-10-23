@@ -6,6 +6,7 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
+import { PLAY_REPLIES_NEED_KEY } from '@asobeast/shared';
 import { SecretBox } from '../common/crypto/secret-box';
 import type { WorkspaceContext } from '../common/tenancy/workspace-context';
 import type { PrismaService } from '../prisma/prisma.service';
@@ -550,6 +551,19 @@ describe('StoreConnectionService', () => {
 
     await expect(service.openPlayPublisher()).resolves.toBeNull();
     expect(gcsFactory.publisher).not.toHaveBeenCalled();
+  });
+
+  it('refuses the play publisher client of a google sign in, naming the key replies need', async () => {
+    const { service, gcsFactory } = harness();
+    await service.connectGoogleAccount(GOOGLE_ACCOUNT, '1098765', 'user_1');
+
+    await expect(service.openPlayPublisher()).rejects.toThrow(
+      new ConflictException(PLAY_REPLIES_NEED_KEY),
+    );
+    expect(gcsFactory.publisher).not.toHaveBeenCalled();
+    await expect(service.openPlay()).resolves.toMatchObject({
+      api: { account: { kind: 'googleAccount', email: GOOGLE_ACCOUNT.email } },
+    });
   });
 
   it('marks a play connection rejected on verify when google refuses', async () => {
