@@ -356,12 +356,19 @@ describe('Google Play sign in (e2e)', () => {
     const opened = await asWorkspace(harness.app, () =>
       connections.openPlayPublisher(),
     );
-    await opened!.api.reply('com.focus', 'gp:review', 'Thanks');
+    if (!opened) throw new Error('the key connection opened no publisher');
+    await opened.api.reply('com.focus', 'gp:review', 'Thanks');
 
-    const [token, reply] = harness.gcs.requests;
+    const sent = (pattern: RegExp) =>
+      harness.gcs.requests.filter((call) => pattern.test(call.url));
+    const [token] = sent(/oauth2/);
+    const [reply] = sent(/androidpublisher/);
     expect(grantOf(token)).toBe('urn:ietf:params:oauth:grant-type:jwt-bearer');
     const claims = JSON.parse(
-      Buffer.from(token.form!.assertion.split('.')[1], 'base64url').toString(),
+      Buffer.from(
+        token.form?.assertion.split('.')[1] ?? '',
+        'base64url',
+      ).toString(),
     ) as { scope: string };
     expect(claims.scope).toBe(ANDROID_PUBLISHER_SCOPE);
     expect(reply.bearer).toBe('ya29.publisher');
