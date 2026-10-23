@@ -209,6 +209,24 @@ describe('PlayPublisherApi', () => {
     expect((error as PlayApiDisabledError).project).toBeNull();
   });
 
+  it('reads a 403 with malformed error lists as a missing permission', async () => {
+    const { api } = recorded({
+      status: 403,
+      body: {
+        error: {
+          code: 403,
+          message: 'The caller has no role.',
+          errors: { reason: 'SERVICE_DISABLED' },
+          details: [null, 'text'],
+        },
+      },
+    });
+
+    await expect(
+      api.reply('com.example', 'gp:AOqp1', 'x'),
+    ).rejects.toBeInstanceOf(PlayForbiddenError);
+  });
+
   it('reads a 401 as a refused service account, not a missing permission', async () => {
     const { api } = recorded(googleError(401, 'Invalid credentials.'));
 

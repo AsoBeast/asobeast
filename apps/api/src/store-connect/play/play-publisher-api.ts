@@ -52,10 +52,15 @@ interface ReplyAnswer {
   };
 }
 
+interface GoogleErrorEntry {
+  reason?: unknown;
+  metadata?: { consumer?: unknown };
+}
+
 interface GoogleError {
   message?: unknown;
-  errors?: { reason?: unknown }[];
-  details?: { reason?: unknown; metadata?: { consumer?: unknown } }[];
+  errors?: unknown;
+  details?: unknown;
 }
 
 const DISABLED_REASONS = new Set(['SERVICE_DISABLED', 'accessNotConfigured']);
@@ -65,23 +70,30 @@ const CONSUMER_PROJECT = /^projects\/(\d+)$/;
 const googleErrorOf = (body: unknown): GoogleError | null =>
   (body as { error?: GoogleError } | null)?.error ?? null;
 
+const entriesOf = (value: unknown): GoogleErrorEntry[] =>
+  Array.isArray(value)
+    ? value.filter(
+        (entry): entry is GoogleErrorEntry =>
+          typeof entry === 'object' && entry !== null,
+      )
+    : [];
+
 const googleMessage = (error: GoogleError | null): string | null =>
   typeof error?.message === 'string' && error.message.length > 0
     ? error.message
     : null;
 
 const isServiceDisabled = (error: GoogleError | null, message: string) =>
-  [...(error?.errors ?? []), ...(error?.details ?? [])].some(
-    (entry) =>
-      typeof entry?.reason === 'string' && DISABLED_REASONS.has(entry.reason),
+  [...entriesOf(error?.errors), ...entriesOf(error?.details)].some(
+    ({ reason }) => typeof reason === 'string' && DISABLED_REASONS.has(reason),
   ) || UNUSED_IN_PROJECT.test(message);
 
 function disabledProject(
   error: GoogleError | null,
   message: string,
 ): string | null {
-  const consumer = error?.details
-    ?.map((entry) => entry?.metadata?.consumer)
+  const consumer = entriesOf(error?.details)
+    .map((entry) => entry.metadata?.consumer)
     .find((value): value is string => typeof value === 'string');
   return (
     consumer?.match(CONSUMER_PROJECT)?.[1] ??
@@ -90,10 +102,14 @@ function disabledProject(
   );
 }
 
-function forbiddenErrorOf(error: GoogleError | null, message: string) {
+function forbiddenErrorOf(
+  error: GoogleError | null,
+  message: string,
+  status: number,
+): GcsError {
   return isServiceDisabled(error, message)
-    ? new PlayApiDisabledError(message, 403, disabledProject(error, message))
-    : new PlayForbiddenError(message, 403);
+    ? new PlayApiDisabledError(message, status, disabledProject(error, message))
+    : new PlayForbiddenError(message, status);
 }
 
 function replyErrorOf(response: GcsResponse): GcsError {
@@ -103,7 +119,7 @@ function replyErrorOf(response: GcsResponse): GcsError {
     googleMessage(error) ?? `Google answered ${status} to the reply`;
   if (status === 400) return new PlayReplyRefusedError(message, status);
   if (status === 401) return new GcsRejectedError(message, status);
-  if (status === 403) return forbiddenErrorOf(error, message);
+  if (status === 403) return forbiddenErrorOf(error, message, status);
   if (status === 404) return new PlayReviewMissingError(message, status);
   if (status === 429) return new GcsRateLimitedError(message, status);
   return new GcsError(message, status);
