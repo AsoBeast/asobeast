@@ -1,5 +1,9 @@
 name: Set up the workspace
 description: pnpm, Node 24, the pnpm store restored from main, dependencies installed and the Prisma client generated
+inputs:
+  store-cache:
+    description: Restore the pnpm store written by main, and save it when this run is main
+    default: "true"
 runs:
   using: composite
   steps:
@@ -11,7 +15,8 @@ runs:
     - id: store
       shell: bash
       run: echo "path=$(pnpm store path)" >> "$GITHUB_OUTPUT"
-    - id: store-cache
+    - if: inputs.store-cache == 'true'
+      id: store-cache
       uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ steps.store.outputs.path }}
@@ -21,7 +26,7 @@ runs:
       run: pnpm install --frozen-lockfile
     - shell: bash
       run: pnpm --filter api exec prisma generate
-    - if: github.ref == 'refs/heads/main' && steps.store-cache.outputs.cache-hit != 'true'
+    - if: inputs.store-cache == 'true' && github.ref == 'refs/heads/main' && steps.store-cache.outputs.cache-hit != 'true'
       uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ steps.store.outputs.path }}
