@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import {
   AppAnnotationItem,
   AppAnnotationList,
@@ -9,6 +13,8 @@ import { ensureAppExists } from '../apps/ensure-app';
 import { PrismaService } from '../prisma/prisma.service';
 import { toDateKey } from '../rankings/rankings.support';
 import { CreateAnnotationDto } from './dto/create-annotation.dto';
+
+export const MAX_APP_ANNOTATIONS = 100;
 
 const toAnnotationItem = (annotation: AppAnnotation): AppAnnotationItem => ({
   id: annotation.id,
@@ -37,6 +43,14 @@ export class AnnotationsService {
     }
     if (dto.market !== undefined) {
       assertStorefront(app.store, dto.market);
+    }
+    if (
+      (await this.prisma.appAnnotation.count({ where: { appId: app.id } })) >=
+      MAX_APP_ANNOTATIONS
+    ) {
+      throw new ForbiddenException(
+        `An app can have at most ${MAX_APP_ANNOTATIONS} annotations`,
+      );
     }
 
     const annotation = await this.prisma.appAnnotation.create({

@@ -1,7 +1,7 @@
-import { NotFoundException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { UnknownStorefrontError } from '@asobeast/shared';
 import { PrismaService } from '../prisma/prisma.service';
-import { AnnotationsService } from './annotations.service';
+import { MAX_APP_ANNOTATIONS, AnnotationsService } from './annotations.service';
 import { CreateAnnotationDto } from './dto/create-annotation.dto';
 
 const ROW = {
@@ -33,6 +33,7 @@ const build = (
     appAnnotation: {
       create: jest.fn().mockResolvedValue(ROW),
       findMany: jest.fn().mockResolvedValue([ROW]),
+      count: jest.fn().mockResolvedValue(0),
       deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
   };
@@ -88,6 +89,16 @@ describe('AnnotationsService', () => {
       expect(prisma.appAnnotation.create).not.toHaveBeenCalled();
     },
   );
+
+  it('refuses another annotation once the app holds the cap', async () => {
+    const { service, prisma } = build();
+    prisma.appAnnotation.count.mockResolvedValue(MAX_APP_ANNOTATIONS);
+
+    await expect(service.create('app_1', dto())).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    expect(prisma.appAnnotation.create).not.toHaveBeenCalled();
+  });
 
   it('lists the annotations of one app, oldest day first', async () => {
     const { service, prisma } = build();
