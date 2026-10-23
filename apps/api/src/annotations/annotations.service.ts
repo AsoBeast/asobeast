@@ -48,7 +48,7 @@ export class AnnotationsService {
     }
 
     return this.prisma.withTransaction(async (tx) => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${ANNOTATION_LOCK}, hashtext(${app.id}))`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${ANNOTATION_LOCK}::int, hashtext(${app.id}))`;
       if (
         (await tx.appAnnotation.count({ where: { appId: app.id } })) >=
         MAX_APP_ANNOTATIONS
