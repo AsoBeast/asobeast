@@ -57,6 +57,25 @@ describe('CreateAnnotationDto', () => {
     ).toHaveLength(1);
   });
 
+  it('counts an emoji as one label character', async () => {
+    expect(
+      (
+        await validated({
+          date: '2026-10-08',
+          label: '🚀'.repeat(ANNOTATION_LABEL_MAX_LENGTH),
+        })
+      ).errors,
+    ).toEqual([]);
+    expect(
+      (
+        await validated({
+          date: '2026-10-08',
+          label: '🚀'.repeat(ANNOTATION_LABEL_MAX_LENGTH + 1),
+        })
+      ).errors,
+    ).toHaveLength(1);
+  });
+
   it('refuses a market that is not a two letter storefront code', async () => {
     const { errors } = await validated({
       date: '2026-10-08',

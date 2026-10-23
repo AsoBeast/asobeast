@@ -82,7 +82,7 @@ export const ANNOTATION_WRITE_TOOLS: WriteTool[] = [
         .refine((value) => value.length >= 1, {
           error: "The label is empty once surrounding whitespace is gone.",
         })
-        .refine((value) => value.length <= ANNOTATION_LABEL_MAX_LENGTH, {
+        .refine((value) => [...value].length <= ANNOTATION_LABEL_MAX_LENGTH, {
           error: `The label runs past ${ANNOTATION_LABEL_MAX_LENGTH} characters.`,
         }),
       market: z

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
+import { ANNOTATION_LABEL_MAX_LENGTH } from "@asobeast/shared";
 import { MCP_TOOLS, MCP_WRITE_TOOLS, type WriteTool } from "./index";
 import { TRACK_KEYWORDS_LIMIT } from "./write-tools";
 
@@ -149,6 +150,22 @@ describe("the write tools", () => {
         appId: "app-1",
         date: "2026-10-08",
         label: "   ",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("counts an emoji as one label character, as the api does", () => {
+    const schema = writeTool("add_annotation").inputSchema;
+    const label = "🚀".repeat(ANNOTATION_LABEL_MAX_LENGTH);
+
+    expect(
+      schema.safeParse({ appId: "app-1", date: "2026-10-08", label }).success,
+    ).toBe(true);
+    expect(
+      schema.safeParse({
+        appId: "app-1",
+        date: "2026-10-08",
+        label: `${label}🚀`,
       }).success,
     ).toBe(false);
   });
