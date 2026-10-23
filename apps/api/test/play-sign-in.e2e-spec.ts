@@ -1,4 +1,5 @@
 import { TEST_GOOGLE_CLIENT } from './helpers/enable-google-sign-in';
+import { TEST_STORE_CONNECT_KEY } from './helpers/enable-store-connect';
 import * as argon2 from 'argon2';
 import { Store } from '@prisma/client';
 import type {
@@ -8,14 +9,17 @@ import type {
   StoreConnectionState,
 } from '@asobeast/shared';
 import request from 'supertest';
+import { decodeSecretKey, SecretBox } from '../src/common/crypto/secret-box';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import type { GcsRequest } from '../src/store-connect/play/gcs-transport';
 import { GCS_READ_ONLY_SCOPE } from '../src/store-connect/play/service-account';
+import { sealSignInState } from '../src/store-connect/play/sign-in-state';
 import { seedApiToken } from './helpers/api-tokens';
-import { ownerAgent } from './helpers/session';
+import { OWNER, ownerAgent } from './helpers/session';
 import {
   gcsAnswer,
   pauseStoreReports,
+  PLAY_CONNECTION_REQUEST,
   startStoreConnectApp,
   type StoreConnectHarness,
 } from './helpers/store-connect-harness';
@@ -26,6 +30,11 @@ const BUCKET = 'pubsite_prod_4855979533719537120';
 const MEMBER = {
   email: 'member@play-sign-in.example.com',
   password: 'membersecret1',
+};
+const OTHER_WORKSPACE = 'ws_play_sign_in_other';
+const STRANGER = {
+  email: 'owner@play-sign-in-other.example.com',
+  password: 'strangersecret1',
 };
 const ID_TOKEN = `e30.${Buffer.from(
   JSON.stringify({ email: 'owner@example.com', sub: '1098765' }),
@@ -78,6 +87,22 @@ describe('Google Play sign in (e2e)', () => {
         emailVerifiedAt: new Date(),
       },
     });
+    await harness.prisma.workspace.upsert({
+      where: { id: OTHER_WORKSPACE },
+      update: {},
+      create: { id: OTHER_WORKSPACE, name: 'Other' },
+    });
+    await harness.prisma.user.upsert({
+      where: { email: STRANGER.email },
+      update: { passwordHash: await argon2.hash(STRANGER.password) },
+      create: {
+        workspaceId: OTHER_WORKSPACE,
+        email: STRANGER.email,
+        passwordHash: await argon2.hash(STRANGER.password),
+        role: 'owner',
+        emailVerifiedAt: new Date(),
+      },
+    });
   }, 60_000);
 
   beforeEach(async () => {
@@ -90,7 +115,12 @@ describe('Google Play sign in (e2e)', () => {
 
   afterAll(async () => {
     await harness.prisma.storeConnection.deleteMany({});
-    await harness.prisma.user.deleteMany({ where: { email: MEMBER.email } });
+    await harness.prisma.user.deleteMany({
+      where: { email: { in: [MEMBER.email, STRANGER.email] } },
+    });
+    await harness.prisma.workspace.deleteMany({
+      where: { id: OTHER_WORKSPACE },
+    });
     await harness.app.close();
   });
 
@@ -228,7 +258,60 @@ describe('Google Play sign in (e2e)', () => {
     );
   });
 
-  it('refuses a bad bucket, a member and every token', async () => {
+  it('refuses a state that expired or that another workspace completes', async () => {
+    granted();
+    const { id: userId } = await harness.prisma.user.findUniqueOrThrow({
+      where: { email: OWNER.email },
+    });
+    const expired = sealSignInState(
+      new SecretBox(decodeSecretKey(TEST_STORE_CONNECT_KEY)),
+      { workspaceId: DEFAULT_WORKSPACE_ID, userId },
+      { bucket: BUCKET, verifier: 'v'.repeat(43), expiresAt: Date.now() - 1 },
+    );
+    await complete(expired).expect(400);
+
+    const ownState = await start();
+    const stranger = request.agent(harness.app.getHttpServer());
+    await stranger.post('/auth/login').send(STRANGER).expect(200);
+    const foreign = await stranger
+      .post(`${SIGN_IN}/complete`)
+      .send({ code: '4/code', state: ownState })
+      .expect(400);
+
+    expect((foreign.body as ApiErrorEnvelope).message).toContain('expired');
+    expect(harness.gcs.requests).toEqual([]);
+    await expect(harness.prisma.storeConnection.count()).resolves.toBe(0);
+  });
+
+  it('answers 502 when Google rate limits the code exchange', async () => {
+    harness.gcs.on('POST', /oauth2/, gcsAnswer(null, 429));
+
+    await complete(await start()).expect(502);
+    await expect(harness.prisma.storeConnection.count()).resolves.toBe(0);
+  });
+
+  it('replaces a service account connection with the google account', async () => {
+    await owner
+      .put('/store-connections/GOOGLE_PLAY')
+      .send(PLAY_CONNECTION_REQUEST)
+      .expect(200);
+    harness.gcs.reset();
+    granted();
+
+    await complete(await start()).expect(200);
+
+    const rows = await harness.prisma.storeConnection.findMany({
+      where: { store: Store.GOOGLE_PLAY },
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      credential: 'googleAccount',
+      issuerId: 'owner@example.com',
+      bucket: BUCKET,
+    });
+  });
+
+  it('refuses a bad bucket, a member and a write token', async () => {
     await owner.post(SIGN_IN).send({ bucket: 'my-bucket' }).expect(400);
     await owner.post(`${SIGN_IN}/complete`).send({ code: '' }).expect(400);
 

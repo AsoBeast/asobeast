@@ -19,7 +19,7 @@ import { GCS_READ_ONLY_SCOPE } from './service-account';
 
 const CLIENT: GoogleOAuthClient = {
   id: 'client.apps.googleusercontent.com',
-  secret: 'GOCSPX-secret',
+  secret: 'test-oauth-client-secret',
   redirectUri: 'https://aso.example.com/settings/google-play',
 };
 

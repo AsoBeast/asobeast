@@ -2,7 +2,7 @@ import './enable-store-connect';
 
 export const TEST_GOOGLE_CLIENT = {
   id: 'asobeast-test.apps.googleusercontent.com',
-  secret: 'GOCSPX-test-secret',
+  secret: 'test-oauth-client-secret',
   origin: 'https://aso.example.com',
 };
 

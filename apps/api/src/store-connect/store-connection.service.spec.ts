@@ -68,7 +68,7 @@ const GOOGLE_ACCOUNT = {
 
 const CLIENT: GoogleOAuthClient = {
   id: 'client.apps.googleusercontent.com',
-  secret: 'GOCSPX-secret',
+  secret: 'test-oauth-client-secret',
   redirectUri: 'https://aso.example.com/settings/google-play',
 };
 

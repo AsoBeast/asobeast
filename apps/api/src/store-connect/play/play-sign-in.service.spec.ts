@@ -33,7 +33,7 @@ import { sealSignInState } from './sign-in-state';
 const BUCKET = 'pubsite_prod_4855979533719537120';
 const CLIENT: GoogleOAuthClient = {
   id: 'client.apps.googleusercontent.com',
-  secret: 'GOCSPX-secret',
+  secret: 'test-oauth-client-secret',
   redirectUri: 'https://aso.example.com/settings/google-play',
 };
 const ID_TOKEN = `e30.${Buffer.from(JSON.stringify({ email: 'owner@example.com', sub: '1098765' })).toString('base64url')}.sig`;

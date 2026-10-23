@@ -60,7 +60,7 @@ describe('store connect configuration', () => {
   it('accepts a Google OAuth client set whole or not at all', () => {
     const client = {
       GOOGLE_PLAY_OAUTH_CLIENT_ID: 'client.apps.googleusercontent.com',
-      GOOGLE_PLAY_OAUTH_CLIENT_SECRET: 'GOCSPX-secret',
+      GOOGLE_PLAY_OAUTH_CLIENT_SECRET: 'test-oauth-client-secret',
     };
 
     expect(() =>
@@ -75,7 +75,7 @@ describe('store connect configuration', () => {
       const env = {
         ...keys(key()),
         GOOGLE_PLAY_OAUTH_CLIENT_ID: 'client.apps.googleusercontent.com',
-        GOOGLE_PLAY_OAUTH_CLIENT_SECRET: 'GOCSPX-secret',
+        GOOGLE_PLAY_OAUTH_CLIENT_SECRET: 'test-oauth-client-secret',
         [name]: undefined,
       };
 
