@@ -26,6 +26,8 @@ interface Fixture {
   cronDaily: string;
   cronScoring: string;
   subtitleJob: JobState | 'unknown' | 'redis-down' | 'redis-hung' | null;
+  captured: boolean;
+  delistedAt: Date | null;
 }
 
 const DEFAULTS: Fixture = {
@@ -40,6 +42,8 @@ const DEFAULTS: Fixture = {
   cronDaily: '0 3 * * *',
   cronScoring: '0 4 * * 0',
   subtitleJob: null,
+  captured: true,
+  delistedAt: null,
 };
 
 function serviceWith(overrides: Partial<Fixture> = {}) {
@@ -51,7 +55,10 @@ function serviceWith(overrides: Partial<Fixture> = {}) {
           ? {
               id: APP_ID,
               createdAt: fixture.createdAt,
-              snapshots: [{ ratingCount: fixture.ratingCount }],
+              delistedAt: fixture.delistedAt,
+              snapshots: fixture.captured
+                ? [{ ratingCount: fixture.ratingCount }]
+                : [],
             }
           : null,
       ),
@@ -154,6 +161,39 @@ describe('FirstRunStatusService', () => {
       });
     },
   );
+
+  it('waits for the first listing of an app the store lists', async () => {
+    const status = await serviceWith({ captured: false }).forApp(APP_ID, NOW);
+
+    expect(stageOf(status.stages, 'metadata')).toMatchObject({
+      ready: 0,
+      total: 1,
+      complete: false,
+    });
+  });
+
+  it('expects no listing the store can no longer answer for a delisted app', async () => {
+    const delisted = new Date('2026-08-10T08:30:00Z');
+    const never = await serviceWith({
+      captured: false,
+      delistedAt: delisted,
+    }).forApp(APP_ID, NOW);
+    const backfilling = await serviceWith({
+      subtitleJob: 'waiting',
+      delistedAt: delisted,
+    }).forApp(APP_ID, NOW);
+
+    expect(stageOf(never.stages, 'metadata')).toMatchObject({
+      ready: 0,
+      total: 0,
+      complete: true,
+    });
+    expect(stageOf(backfilling.stages, 'metadata')).toMatchObject({
+      ready: 1,
+      total: 1,
+      complete: true,
+    });
+  });
 
   it('reports the listing ready when redis stops answering', async () => {
     jest.useFakeTimers();

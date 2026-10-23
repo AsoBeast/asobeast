@@ -77,6 +77,16 @@ describe("firstRunRows", () => {
     expect(rowFor(status, "reviews").progress).toBeNull();
   });
 
+  it("says why no listing is expected for an app the store no longer lists", () => {
+    const status = statusOf([
+      stage("metadata", { ready: 0, total: 0, complete: true }),
+    ]);
+
+    expect(rowFor(status, "metadata").detail).toBe(
+      "The store no longer lists this app, so no listing is expected.",
+    );
+  });
+
   it("names the expected time on a waiting rankings row", () => {
     const status = statusOf([
       stage("rankings", {

@@ -13,11 +13,34 @@ const TWO_HOURS_LATER = new Date('2026-10-15T05:00:00.000Z');
 const tracked = (...countries: string[]) =>
   countries.map((country) => ({ keyword: { country } }));
 
+interface Member {
+  id: string;
+  store: Store;
+  country: string;
+  delistedAt: Date | null;
+  unlistedMarkets: string[];
+}
+
+const rival = (
+  id: string,
+  country = 'us',
+  delistedAt: Date | null = null,
+  unlistedMarkets: string[] = [],
+) => ({
+  id,
+  store: Store.APP_STORE,
+  country,
+  delistedAt,
+  unlistedMarkets,
+});
+
 const APP = {
   id: 'app_1',
   store: Store.APP_STORE,
   country: 'us',
-  competitors: [] as { id: string; store: Store; country: string }[],
+  delistedAt: null as Date | null,
+  unlistedMarkets: [] as string[],
+  competitors: [] as Member[],
   tracked: tracked('us', 'us'),
 };
 
@@ -105,10 +128,7 @@ describe('AppRunStatusService', () => {
     const { service, snapshots } = build({
       app: {
         ...APP,
-        competitors: [
-          { id: 'rival_1', store: Store.APP_STORE, country: 'us' },
-          { id: 'rival_2', store: Store.APP_STORE, country: 'us' },
-        ],
+        competitors: [rival('rival_1'), rival('rival_2')],
         tracked: tracked('us', 'de'),
       },
       snapshots: [
@@ -138,11 +158,93 @@ describe('AppRunStatusService', () => {
     });
   });
 
+  it('expects no listing from an app or competitor the store no longer lists', async () => {
+    const delisted = new Date('2026-10-14T03:05:00.000Z');
+    const { service, snapshots } = build({
+      app: {
+        ...APP,
+        delistedAt: delisted,
+        competitors: [rival('rival_1'), rival('rival_2', 'us', delisted)],
+        tracked: tracked('us', 'de'),
+      },
+      snapshots: [
+        { appId: 'rival_1', country: null },
+        { appId: 'rival_1', country: 'de' },
+      ],
+      captures: { captured: 2, lastCaptureAt: TWO_HOURS_LATER },
+    });
+
+    const status = await service.forApp(APP.id, TWO_HOURS_LATER);
+
+    expect(stage(status, 'listings')).toEqual({
+      stage: 'listings',
+      ready: 2,
+      total: 2,
+      complete: true,
+    });
+    expect(status.state).toBe('complete');
+    expect(snapshots).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          appId: { in: ['rival_1'] },
+        }) as object,
+      }),
+    );
+  });
+
+  it('expects the listing again once the store lists the app', async () => {
+    const { service } = build({
+      app: { ...APP, competitors: [rival('rival_1')] },
+      snapshots: [{ appId: APP.id, country: null }],
+    });
+
+    const status = await service.forApp(APP.id, TWO_HOURS_LATER);
+
+    expect(stage(status, 'listings')).toMatchObject({ ready: 1, total: 2 });
+  });
+
+  it('expects no listing in a market the store does not list an app in', async () => {
+    const { service } = build({
+      app: {
+        ...APP,
+        unlistedMarkets: ['cn', 'ru'],
+        competitors: [rival('rival_1', 'us', null, ['ru'])],
+        tracked: tracked('us', 'cn', 'ru'),
+      },
+      snapshots: [
+        { appId: APP.id, country: null },
+        { appId: 'rival_1', country: null },
+        { appId: 'rival_1', country: 'cn' },
+      ],
+      captures: { captured: 3, lastCaptureAt: TWO_HOURS_LATER },
+    });
+
+    const status = await service.forApp(APP.id, TWO_HOURS_LATER);
+
+    expect(stage(status, 'listings')).toEqual({
+      stage: 'listings',
+      ready: 3,
+      total: 3,
+      complete: true,
+    });
+    expect(status.state).toBe('complete');
+  });
+
+  it('expects the home listing of an app whatever markets it is unlisted in', async () => {
+    const { service } = build({
+      app: { ...APP, unlistedMarkets: ['us'], tracked: tracked('us') },
+    });
+
+    const status = await service.forApp(APP.id, TWO_HOURS_LATER);
+
+    expect(stage(status, 'listings')).toMatchObject({ ready: 0, total: 1 });
+  });
+
   it("counts a competitor's home listing in a market that is its home once", async () => {
     const { service } = build({
       app: {
         ...APP,
-        competitors: [{ id: 'rival_1', store: Store.APP_STORE, country: 'de' }],
+        competitors: [rival('rival_1', 'de')],
         tracked: tracked('de'),
       },
       snapshots: [{ appId: 'rival_1', country: null }],

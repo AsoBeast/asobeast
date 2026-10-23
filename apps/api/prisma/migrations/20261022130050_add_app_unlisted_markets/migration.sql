@@ -1,0 +1,1 @@
+ALTER TABLE "App" ADD COLUMN "unlistedMarkets" TEXT[] DEFAULT ARRAY[]::TEXT[];
