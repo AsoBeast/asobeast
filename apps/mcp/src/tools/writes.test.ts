@@ -22,7 +22,7 @@ function textOf(result: { content: unknown[] }): string {
 }
 
 describe("write tools", () => {
-  it("register the five tools with the hints the catalog declares", () => {
+  it("register the seven tools with the hints the catalog declares", () => {
     const { tools } = setup(() => ({ status: 200, body: {} }));
 
     expect([...tools.keys()]).toEqual(MCP_WRITE_TOOLS.map((tool) => tool.name));
