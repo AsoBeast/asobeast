@@ -325,7 +325,7 @@ jobs:
 
   backup-drill:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -334,7 +334,20 @@ jobs:
       - uses: ./.github/actions/setup
       - run: pnpm run build:packages
       - name: Install the offsite backup tooling
-        run: sudo apt-get update && sudo apt-get install -y age rclone
+        env:
+          RCLONE_VERSION: 1.75.2
+          RCLONE_SHA256: 349ac8fba6ff65d6247043f1750cdcb518ec5d500ef91463a10d37c0ccdf3702
+          AGE_VERSION: 1.3.2
+          AGE_SHA256: cbe24006683f8eb669266162894b9a522a1af52f2665fbc63a4bb032ed26ac10
+        run: |
+          mkdir -p "$RUNNER_TEMP/bin"
+          curl -sSfL -o "$RUNNER_TEMP/rclone.zip" "https://github.com/rclone/rclone/releases/download/v${RCLONE_VERSION}/rclone-v${RCLONE_VERSION}-linux-amd64.zip"
+          echo "${RCLONE_SHA256}  $RUNNER_TEMP/rclone.zip" | sha256sum --check --status
+          unzip -q -j "$RUNNER_TEMP/rclone.zip" "rclone-v${RCLONE_VERSION}-linux-amd64/rclone" -d "$RUNNER_TEMP/bin"
+          curl -sSfL -o "$RUNNER_TEMP/age.tar.gz" "https://github.com/FiloSottile/age/releases/download/v${AGE_VERSION}/age-v${AGE_VERSION}-linux-amd64.tar.gz"
+          echo "${AGE_SHA256}  $RUNNER_TEMP/age.tar.gz" | sha256sum --check --status
+          tar -xzf "$RUNNER_TEMP/age.tar.gz" -C "$RUNNER_TEMP/bin" --strip-components=1 age/age age/age-keygen
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
       - name: Start the development services
         run: docker compose -f docker-compose.dev.yml up -d --wait
       - name: Start object storage off the host
