@@ -68,7 +68,7 @@ To run one shard the way CI does:
 | `pnpm --filter web test:e2e --project=actions-double-click` | the `actions` chain                                                 |
 | `pnpm --filter web test:e2e --project=webkit`               | the WebKit hydration sweep (needs `playwright install webkit` once) |
 
-Every job sets itself up through the composite action in `.github/actions/setup`. Caches are written from `main` only and read everywhere, so the first run after a lockfile change installs from the previous store and is a minute slower. The pnpm store, the Chromium headless shell and every turbo artifact live in the Actions cache; `gh api /repos/AsoBeast/asobeast/actions/cache/usage` shows the total, which stays under the 10 GB the free plan grants.
+Every job that installs dependencies does it through the composite action in `.github/actions/setup`. Caches are written from `main` only and read everywhere, so the first run after a lockfile change installs from the previous store and is a minute slower. The pnpm store, the Chromium headless shell and every turbo artifact live in the Actions cache; `gh api /repos/AsoBeast/asobeast/actions/cache/usage` shows the total, which stays under the 10 GB the free plan grants.
 
 Three pins in `ci.yml` are bumped by hand, because Dependabot sees neither a container image in a workflow nor a release binary fetched by a step: the `mcr.microsoft.com/playwright:v<version>-noble` image of the WebKit job, which must match the installed `@playwright/test` (`pnpm check:playwright-image` fails `checks` when it does not, so a Dependabot bump of Playwright needs the tag edited on the same pull request), and the `RCLONE_VERSION` and `AGE_VERSION` of the backup drill, each with the SHA-256 of its release archive beside it.
 
