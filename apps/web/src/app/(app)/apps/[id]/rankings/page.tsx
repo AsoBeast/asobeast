@@ -51,8 +51,6 @@ export default async function RankingsPage({
     rankingsOptions(id, { ...presetToRange(range), keywordIds: effective }),
   );
   void queryClient.prefetchQuery(serpMoversOptions(id, moverDays));
-  // The annotations card and the chart tooltip both read this entry, so the
-  // server render waits for it and hydrates the same rows.
   await queryClient.prefetchQuery(annotationsOptions(id));
 
   return (
