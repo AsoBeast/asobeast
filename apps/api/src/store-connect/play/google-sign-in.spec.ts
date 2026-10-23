@@ -6,6 +6,7 @@ import {
   type GoogleOAuthClient,
   googleOAuthClientProvider,
   isClientRefusal,
+  isCredentialRefusal,
   MissingStorageScopeError,
   oauthErrorOf,
   pkcePair,
@@ -145,6 +146,15 @@ describe('oauth errors', () => {
   ])('treats %s as a refusal of the client: %s', (code, refused) => {
     expect(isClientRefusal(code)).toBe(refused);
   });
+
+  it.each([
+    ['invalid_grant', true],
+    ['invalid_client', true],
+    ['rate_limit_exceeded', false],
+    [null, false],
+  ])('treats %s as a refused credential: %s', (code, refused) => {
+    expect(isCredentialRefusal(code)).toBe(refused);
+  });
 });
 
 describe('signedInAccount', () => {
@@ -176,4 +186,11 @@ describe('signedInAccount', () => {
       UnreadableSignInError,
     );
   });
+
+  it.each([['<html>'], [[answer()]], [null]])(
+    'refuses a body that is not a token answer: %p',
+    (body) => {
+      expect(() => signedInAccount(body)).toThrow(UnreadableSignInError);
+    },
+  );
 });

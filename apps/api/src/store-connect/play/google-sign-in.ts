@@ -22,9 +22,13 @@ const CLIENT_ERRORS = new Set([
   'unauthorized_client',
   'redirect_uri_mismatch',
 ]);
+const CREDENTIAL_ERRORS = new Set(['invalid_grant', ...CLIENT_ERRORS]);
 
 export const isClientRefusal = (code: string | null): boolean =>
   code !== null && CLIENT_ERRORS.has(code);
+
+export const isCredentialRefusal = (code: string | null): boolean =>
+  code !== null && CREDENTIAL_ERRORS.has(code);
 
 export function oauthErrorOf(body: unknown): string | null {
   const error = (body as { error?: unknown } | null)?.error;
@@ -159,7 +163,10 @@ function claimsOf(idToken: string): Record<string, unknown> {
 }
 
 export function signedInAccount(body: unknown): SignedInAccount {
-  const answer = (body ?? {}) as Record<string, unknown>;
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+    throw new UnreadableSignInError('a readable token answer');
+  }
+  const answer = body as Record<string, unknown>;
   const scopes =
     typeof answer.scope === 'string' ? answer.scope.split(' ') : [];
   if (!scopes.includes(GCS_READ_ONLY_SCOPE)) {

@@ -178,6 +178,24 @@ describe('GcsApi', () => {
     },
   );
 
+  it.each([
+    [400, null, GcsError],
+    [403, { error: 'rate_limit_exceeded' }, GcsError],
+    [429, null, GcsRateLimitedError],
+  ])(
+    'keeps a %i token answer without a credential error retryable',
+    async (status, body, type) => {
+      const transport: GcsTransport = () => Promise.resolve({ status, body });
+
+      const listing = new GcsApi(transport, SOURCE).listStorePerformance(
+        'com.x',
+      );
+
+      await expect(listing).rejects.toBeInstanceOf(type);
+      await expect(listing).rejects.not.toBeInstanceOf(GcsRejectedError);
+    },
+  );
+
   it('treats a token answer without a token as a Google failure, not a refusal', async () => {
     const transport: GcsTransport = () =>
       Promise.resolve({ status: 200, body: {} });

@@ -6,7 +6,7 @@ import {
   type GoogleTokenAnswer,
 } from './service-account';
 import { ResponseTooLargeError } from '../bounded-body';
-import { oauthErrorOf } from './google-sign-in';
+import { isCredentialRefusal, oauthErrorOf } from './google-sign-in';
 import type { GcsResponse, GcsTransport } from './gcs-transport';
 
 export const GCS_ORIGIN = 'https://storage.googleapis.com';
@@ -70,6 +70,16 @@ function errorOf(response: GcsResponse, what: string): GcsError {
   if (REFUSAL_STATUSES.has(response.status)) {
     return new GcsRejectedError(message, response.status);
   }
+  return new GcsError(message, response.status);
+}
+
+function tokenErrorOf(response: GcsResponse): GcsError {
+  const message = `Google answered ${response.status} to the token request`;
+  const code = oauthErrorOf(response.body);
+  if (isCredentialRefusal(code)) {
+    return new GcsTokenRefusedError(message, response.status, code);
+  }
+  if (response.status === 429) return new GcsRateLimitedError(message, 429);
   return new GcsError(message, response.status);
 }
 
@@ -189,14 +199,7 @@ export class GcsApi {
       url: this.origins.token,
       form,
     });
-    if (REFUSAL_STATUSES.has(response.status)) {
-      throw new GcsTokenRefusedError(
-        `Google answered ${response.status} to the token request`,
-        response.status,
-        oauthErrorOf(response.body),
-      );
-    }
-    if (!isSuccess(response)) throw errorOf(response, 'the token request');
+    if (!isSuccess(response)) throw tokenErrorOf(response);
     const answer = response.body as Partial<GoogleTokenAnswer> | null;
     if (!answer?.access_token) {
       throw new GcsError('Google answered no access token', 502);
