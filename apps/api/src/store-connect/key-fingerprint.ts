@@ -14,5 +14,5 @@ export function publicKeyFingerprint(privateKey: KeyObject): string {
   );
 }
 
-export const secretFingerprint = (secret: string): string =>
-  fingerprintOf(secret);
+export const identityFingerprint = (identity: string): string =>
+  fingerprintOf(identity);

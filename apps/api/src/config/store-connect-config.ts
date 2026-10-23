@@ -33,9 +33,12 @@ export function assertStoreConnectConfiguration(env: StoreConnectKeys): void {
     );
   }
   const missing = GOOGLE_PLAY_OAUTH_VARIABLES.filter((name) => !env[name]);
-  if (missing.length === 1) {
+  if (
+    missing.length > 0 &&
+    missing.length < GOOGLE_PLAY_OAUTH_VARIABLES.length
+  ) {
     throw new Error(
-      `Sign in with Google is partly configured. Set ${missing[0]} or remove every GOOGLE_PLAY_OAUTH_ variable.`,
+      `Sign in with Google is partly configured. Set ${missing.join(', ')} or remove every GOOGLE_PLAY_OAUTH_ variable.`,
     );
   }
   for (const name of STORE_CONNECT_KEY_VARIABLES) {

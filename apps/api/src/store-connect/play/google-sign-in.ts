@@ -16,8 +16,7 @@ export const GOOGLE_OAUTH_CLIENT = Symbol('GOOGLE_OAUTH_CLIENT');
 export const SIGN_IN_OFF =
   'Sign in with Google is off on this instance. Set GOOGLE_PLAY_OAUTH_CLIENT_ID, GOOGLE_PLAY_OAUTH_CLIENT_SECRET and WEB_PUBLIC_URL to turn it on, or connect a service account key.';
 
-export const CLIENT_REFUSED =
-  'Google refused the OAuth client of this instance. Check GOOGLE_PLAY_OAUTH_CLIENT_ID and GOOGLE_PLAY_OAUTH_CLIENT_SECRET, and that WEB_PUBLIC_URL followed by /settings/google-play is an authorized redirect URI of that client.';
+export const CLIENT_REFUSED = `Google refused the OAuth client of this instance. Check GOOGLE_PLAY_OAUTH_CLIENT_ID and GOOGLE_PLAY_OAUTH_CLIENT_SECRET, and that WEB_PUBLIC_URL followed by ${PLAY_SIGN_IN_PATH} is an authorized redirect URI of that client.`;
 const CLIENT_ERRORS = new Set([
   'invalid_client',
   'unauthorized_client',

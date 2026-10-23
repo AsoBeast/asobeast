@@ -23,7 +23,7 @@ import {
   normalizePrivateKey,
   type AscCredentials,
 } from './asc-token';
-import { publicKeyFingerprint, secretFingerprint } from './key-fingerprint';
+import { identityFingerprint, publicKeyFingerprint } from './key-fingerprint';
 import { type GcsApi, GcsError, GcsRateLimitedError } from './play/gcs-api';
 import { GcsApiFactory } from './play/gcs-api.factory';
 import { GcsUnreachableError } from './play/gcs-transport';
@@ -139,7 +139,7 @@ export class PlayKeys implements StoreKeys<
       credential: 'googleAccount',
       issuerId: credentials.email,
       keyId: subject,
-      keyFingerprint: secretFingerprint(credentials.refreshToken),
+      keyFingerprint: identityFingerprint(`${credentials.email}#${subject}`),
       bucket: credentials.bucket,
     };
   }
