@@ -88,6 +88,7 @@ export class ReviewReplyPoster {
     reviewId: string,
     userId: string,
   ): Promise<ReviewReplyPostResult> {
+    const workspaceId = this.workspace.require('a review reply post');
     const { app, review } = await this.target(appId, reviewId);
     const text = review.reply?.text.trim();
     if (!text) throw new BadRequestException(NO_KEPT_REPLY);
@@ -97,7 +98,7 @@ export class ReviewReplyPoster {
         ? this.toAppStore(app, review, text)
         : this.toPlay(app, review.reviewId, text),
     );
-    const record = {
+    const columns = {
       postedAt: posted.postedAt,
       postedText: text,
       postState: posted.state,
@@ -112,24 +113,20 @@ export class ReviewReplyPoster {
         create: {
           reviewId,
           appId,
-          workspaceId: this.workspace.require('a review reply post'),
+          workspaceId,
           text,
-          ...record,
+          ...columns,
         },
-        update: record,
+        update: columns,
       });
       await tx.review.updateMany({
         where: { id: reviewId, appId },
         data: { repliedAt: posted.postedAt, replyText: text },
       });
     });
-    await this.connections
-      .markReplyAccess(app.store, 'allowed')
-      .catch((error: unknown) =>
-        this.logger.warn(
-          `reply access was not recorded: ${(error as Error).message}`,
-        ),
-      );
+    await this.bestEffort(
+      this.connections.markReplyAccess(app.store, 'allowed'),
+    );
     return { review: await this.reviews.item(appId, reviewId) };
   }
 
@@ -242,12 +239,26 @@ export class ReviewReplyPoster {
     } catch (error) {
       const refusal = postRefusalOf(error);
       if (refusal.forbidden) {
-        await this.connections.markReplyAccess(store, 'forbidden');
+        await this.bestEffort(
+          this.connections.markReplyAccess(store, 'forbidden'),
+        );
       }
       if (refusal.rejected) {
-        await this.connections.markRejected(store, refusal.rejected);
+        await this.bestEffort(
+          this.connections.markRejected(store, refusal.rejected),
+        );
       }
       throw refusal.exception;
+    }
+  }
+
+  private async bestEffort(write: Promise<void>): Promise<void> {
+    try {
+      await write;
+    } catch (error) {
+      this.logger.warn(
+        `the store connection was not updated: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 

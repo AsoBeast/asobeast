@@ -66,12 +66,10 @@ export function matchCustomerReview(
     a.nickname - b.nickname || byDistance(a.distance, b.distance);
   ranked.sort(order);
   const [best, next] = ranked;
-  if (
-    next &&
+  if (!best) return null;
+  const tied =
+    next !== undefined &&
     next.candidate.id !== best.candidate.id &&
-    order(best, next) === 0
-  ) {
-    return null;
-  }
-  return best?.candidate ?? null;
+    order(best, next) === 0;
+  return tied ? null : best.candidate;
 }
