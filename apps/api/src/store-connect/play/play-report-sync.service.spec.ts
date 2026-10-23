@@ -409,6 +409,29 @@ describe('PlayReportSync', () => {
     expect(connections.markRejected).not.toHaveBeenCalled();
   });
 
+  it.each(['listing', 'download'] as const)(
+    'rejects the connection when google refuses the token during a %s',
+    async (step) => {
+      const { service, api, prisma, connections } = harness(twoMonths);
+      const refused = new GcsTokenRefusedError('no', 400, 'invalid_grant');
+      if (step === 'listing') {
+        api.listStorePerformance.mockRejectedValue(refused);
+      } else {
+        api.download.mockRejectedValue(refused);
+      }
+
+      await expect(service.run(NOW)).rejects.toBeInstanceOf(UnrecoverableError);
+
+      expect(connections.markRejected).toHaveBeenCalledWith(
+        'GOOGLE_PLAY',
+        expect.stringContaining('Google refused the key of'),
+      );
+      expect(prisma.storeReportRequest.update).not.toHaveBeenCalledWith(
+        expect.objectContaining({ data: { state: 'forbidden' } }),
+      );
+    },
+  );
+
   it('skips a file that vanished between listing and download', async () => {
     const { service, api, connections } = harness([
       object('202609', 'country'),

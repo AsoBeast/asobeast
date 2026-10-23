@@ -13,6 +13,7 @@ import {
   GcsError,
   GcsRateLimitedError,
   GcsRejectedError,
+  GcsTokenRefusedError,
   PLAY_REPORT_MAX_BYTES,
   storePerformanceObjects,
   type GcsApi,
@@ -104,6 +105,7 @@ function imported(
 type FileOutcome = 'forbidden' | 'vanished' | 'failed';
 
 function fileOutcome(error: unknown): FileOutcome | null {
+  if (error instanceof GcsTokenRefusedError) return null;
   if (error instanceof GcsRejectedError) return 'forbidden';
   if (error instanceof GcsBucketError) return 'vanished';
   if (error instanceof GcsRateLimitedError) return null;
@@ -245,7 +247,12 @@ export class PlayReportSync {
     try {
       return await api.listStorePerformance(packageName);
     } catch (error) {
-      if (!(error instanceof GcsRejectedError)) throw error;
+      if (
+        !(error instanceof GcsRejectedError) ||
+        error instanceof GcsTokenRefusedError
+      ) {
+        throw error;
+      }
       return null;
     }
   }
