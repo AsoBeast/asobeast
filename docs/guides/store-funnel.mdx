@@ -72,7 +72,7 @@ Apple names a market by its territory. asobeast matches each territory to an App
 
 ## Google Play
 
-Google publishes no daily analytics API for store listings. Play Console writes monthly report files to a Cloud Storage bucket instead, and asobeast reads them through a service account you invite.
+Google publishes no daily analytics API for store listings. Play Console writes monthly report files to a Cloud Storage bucket instead, and asobeast reads them either with your own Google account or with a service account you invite.
 
 | Number | What it counts |
 | --- | --- |
@@ -82,22 +82,72 @@ Google publishes no daily analytics API for store listings. Play Console writes 
 
 Google reports no impressions, so the card has three tiles.
 
+### Copy the bucket id
+
+Open **Download reports** in Play Console and copy the Cloud Storage URI. The bucket id is the part after `gs://` that starts with `pubsite_prod`. Both ways of connecting need it, and asobeast also accepts the whole URI.
+
+### Sign in with Google
+
+The quicker way, offered once the instance has a Google OAuth client (see [Set up Google sign in](#set-up-google-sign-in)).
+
+<Steps>
+  <Step title="Start the sign in">
+    In **Settings**, **Store connections**, press **Connect Google Play**, keep **Sign in with Google**, paste the bucket id and press **Sign in with Google**.
+  </Step>
+  <Step title="Allow read only Cloud Storage access">
+    Choose the Google account that owns the Play Console developer account, or one that has **View app information and download bulk reports** on the **Account permissions** tab of **Users and permissions**. Keep **View your data in Google Cloud Storage** ticked. asobeast asks for nothing else.
+  </Step>
+  <Step title="Return to asobeast">
+    Google sends you back to asobeast, which lists the bucket with your account before it stores anything. When your account can open the reports in Play Console, the connection works at once.
+  </Step>
+</Steps>
+
+asobeast keeps only the refresh token Google issues, sealed like every console key. To revoke it, remove asobeast under **Third party connections** in your Google account; the connection is then marked refused until you sign in again.
+
+### Use a service account key
+
 <Steps>
   <Step title="Create a service account">
     In the Google Cloud console, open **IAM and Admin**, then **Service accounts**, create an account in any project and add a key of type **JSON**. Google downloads the key file once.
   </Step>
   <Step title="Invite it in Play Console">
-    In Play Console, open **Users and permissions**, invite the service account's email address and grant **View app information and download bulk reports**, for all apps or for the apps you want measured. Google can take up to a day to apply the permission.
-  </Step>
-  <Step title="Copy the bucket id">
-    Open **Download reports** in Play Console and copy the Cloud Storage URI. The bucket id is the part after `gs://` that starts with `pubsite_prod`.
+    In Play Console, open **Users and permissions**, invite the service account's email address and grant **View app information and download bulk reports** on the **Account permissions** tab. Google applies the reports bucket permission only from that tab, not from the permissions of single apps, and can take up to two days to apply it.
   </Step>
   <Step title="Connect it">
-    In **Settings**, **Store connections**, press **Connect Google Play**, paste the bucket id and choose the JSON key file or paste its contents. asobeast lists the bucket with the key before it stores anything, so a refused account or a wrong bucket id is answered on the spot.
+    In **Settings**, **Store connections**, press **Connect Google Play**, choose **Service account key**, paste the bucket id and choose the JSON key file or paste its contents. asobeast lists the bucket with the key before it stores anything, so a refused account or a wrong bucket id is answered on the spot.
   </Step>
 </Steps>
 
-**Verify**, **Sync now**, **Replace service account** and **Disconnect** work as they do for App Store Connect.
+No Google Cloud IAM role, project link or extra API is needed: the bucket belongs to Google, and Play Console alone decides who may read it.
+
+**Verify**, **Sync now**, **Reconnect** and **Disconnect** work as they do for App Store Connect.
+
+### When Google refuses access
+
+| What asobeast says | What it means | What to do |
+| --- | --- | --- |
+| Google Cloud Storage has no bucket | The bucket id is wrong. Cloud Storage answers this even to an account without access | Copy the Cloud Storage URI again from **Download reports** |
+| Google refused an account access to the bucket | The bucket exists, and the account may not read it | Grant **View app information and download bulk reports** on the **Account permissions** tab, wait up to two days for a service account, or sign in with Google |
+| Your Google account cannot read the bucket | You signed in with an account without report access | Sign in with the account that owns the developer account |
+| Google refused the key | The key was deleted or disabled in Google Cloud | Create a new JSON key and connect it |
+| Google no longer accepts the sign in | You revoked it, or the OAuth app is still in testing | Sign in with Google again, and publish the consent screen to production |
+| Google refused the OAuth client of this instance | The client ID, the secret or the redirect URI the operator set does not match the OAuth client | Check the variables and the authorized redirect URI in [Set up Google sign in](#set-up-google-sign-in) |
+
+### Set up Google sign in
+
+An operator turns sign in with Google on once for the instance.
+
+<Steps>
+  <Step title="Create the OAuth client">
+    In the Google Cloud console, open **APIs and services**, then **Credentials**, and create an OAuth client ID of type **Web application**. Add the authorized redirect URI `WEB_PUBLIC_URL` followed by `/settings/google-play`, for example `https://aso.example.com/settings/google-play`.
+  </Step>
+  <Step title="Publish the consent screen">
+    Add the scope `https://www.googleapis.com/auth/devstorage.read_only` to the consent screen and publish the app to production. Google expires every sign in of an app left in testing after seven days. Until Google verifies the app, the consent screen warns that it is unverified, which is enough for a team that knows the instance.
+  </Step>
+  <Step title="Set the variables">
+    Set `GOOGLE_PLAY_OAUTH_CLIENT_ID`, `GOOGLE_PLAY_OAUTH_CLIENT_SECRET` and `WEB_PUBLIC_URL`, described in the [configuration reference](/configuration/reference#store-consoles), and restart the API.
+  </Step>
+</Steps>
 
 ### How the Play numbers are read
 
@@ -113,10 +163,10 @@ The traffic source file also names the Google Play search terms that brought vis
 
 ## Limits
 
-- One App Store Connect key and one Google Play service account per workspace.
+- One App Store Connect key and one Google Play connection, a service account key or a Google sign in, per workspace.
 - Apple allows each key 3,500 requests an hour. A sync downloads at most 200 daily files and leaves the rest for the next day, so a long history arrives over a few days.
 - When Apple answers an error for one app, or sends a report asobeast cannot read, the other apps and reports still sync and the section says that some were left for the next sync. A request Apple stopped for inactivity is asked for again on the next sync.
-- When Apple refuses the key during a sync, the connection is marked rejected and nothing is downloaded until you verify it or connect a new one. The numbers already stored are kept and the card shows them again once the key is accepted. A refused service account or a bucket that disappeared is handled the same way.
+- When Apple refuses the key during a sync, the connection is marked rejected and nothing is downloaded until you verify it or connect a new one. The numbers already stored are kept and the card shows them again once the key is accepted. A refused service account, a revoked Google sign in or a bucket that disappeared is handled the same way.
 - The downloaded files are kept for `RETENTION_STORE_REPORTS_DAYS` so a parser change can read them again. The funnel rows built from them are kept.
 
 The variables are on the [configuration reference](/configuration/reference#store-consoles).
