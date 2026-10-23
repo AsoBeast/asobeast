@@ -32,7 +32,6 @@ import {
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   failedRead,
   InlineQueryError,
@@ -45,6 +44,7 @@ import {
   invalidateAnnotationMutation,
 } from "@/lib/queries";
 import { useKeyedSingleFlight, useSingleFlight } from "@/lib/single-flight";
+import { AnnotationsSkeleton } from "./skeletons";
 
 function AnnotationRow({
   annotation,
@@ -117,20 +117,6 @@ function AnnotationRow({
   );
 }
 
-function AnnotationsSkeleton() {
-  return (
-    <div className="flex flex-col" aria-hidden>
-      {Array.from({ length: 3 }).map((_, index) => (
-        <div key={index} className="flex items-center gap-3 py-2">
-          <Skeleton className="h-4 w-20" />
-          <Skeleton className="h-4 flex-1" />
-          <Skeleton className="size-8" />
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function AnnotationsList({ id }: { id: string }) {
   const queryClient = useQueryClient();
   const list = useQuery(annotationsOptions(id));
@@ -170,6 +156,10 @@ function AnnotationsList({ id }: { id: string }) {
       document.getElementById("annotation-add");
     if (target?.isConnected && focusCanMoveTo(target)) target.focus();
   });
+
+  if (list.isPending) {
+    return <AnnotationsSkeleton />;
+  }
 
   if (failedRead(list)) {
     return (

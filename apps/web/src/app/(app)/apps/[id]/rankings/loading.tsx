@@ -1,3 +1,4 @@
+import { AnnotationsSkeleton } from "@/components/annotations/skeletons";
 import { RankingChartSkeleton } from "@/components/rankings/skeletons";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -21,15 +22,7 @@ export default function Loading() {
             <Skeleton className="h-5 w-32" />
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            <div className="flex flex-col" aria-hidden>
-              {Array.from({ length: 3 }).map((_, index) => (
-                <div key={index} className="flex items-center gap-3 py-2">
-                  <Skeleton className="h-4 w-20" />
-                  <Skeleton className="h-4 flex-1" />
-                  <Skeleton className="size-7" />
-                </div>
-              ))}
-            </div>
+            <AnnotationsSkeleton />
             <div className="flex flex-col gap-3" aria-hidden>
               <div className="grid gap-3 sm:grid-cols-[10rem_1fr]">
                 <Skeleton className="h-9" />
