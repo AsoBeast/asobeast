@@ -26,6 +26,7 @@ export interface FunnelCopy {
   connectBody: string;
   askOwner: string;
   notReporting: string;
+  refusedTitle: string;
   refusedBody: string;
   refusedAskOwner: string;
 }
@@ -56,6 +57,7 @@ export const FUNNEL_COPY: Record<Store, FunnelCopy> = {
     askOwner: "Ask the workspace owner to connect App Store Connect.",
     notReporting:
       "The connected key sees this app once it belongs to the key's team and Apple has published its first report.",
+    refusedTitle: "App Store Connect refused the connected key.",
     refusedBody:
       "The numbers already stored come back once the key is accepted again. Verify it, or connect a new key.",
     refusedAskOwner: "Ask the workspace owner to verify the key in settings.",
@@ -68,14 +70,15 @@ export const FUNNEL_COPY: Record<Store, FunnelCopy> = {
     connectTitle:
       "Connect the Google Play Console to see store listing visitors and conversion here.",
     connectBody:
-      "A service account invited in Play Console lets AsoBeast read Google's own numbers for this app from its monthly report files.",
+      "Signing in with Google, or a service account invited in Play Console, lets AsoBeast read Google's own numbers for this app from its monthly report files.",
     askOwner: "Ask the workspace owner to connect the Google Play Console.",
     notReporting:
-      "The service account reads this app once Play Console writes its store performance files to the bucket.",
+      "The connection reads this app once Play Console writes its store performance files to the bucket.",
+    refusedTitle: "Google Play Console refused the connection.",
     refusedBody:
-      "The numbers already stored come back once Google accepts the service account again. Verify it, or connect a new one.",
+      "The numbers already stored come back once Google accepts the connection again. Verify it, or reconnect.",
     refusedAskOwner:
-      "Ask the workspace owner to verify the service account in settings.",
+      "Ask the workspace owner to verify the Google Play connection in settings.",
   },
 };
 

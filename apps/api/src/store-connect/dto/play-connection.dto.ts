@@ -2,8 +2,10 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Equals, IsString, Matches, MaxLength } from 'class-validator';
 import type { PlayConnectionRequest } from '@asobeast/shared';
 
-const BUCKET = /^pubsite_prod(_rev)?_\d+$/;
+export const BUCKET = /^pubsite_prod(_rev)?_\d+$/;
 export const BUCKET_MAX_LENGTH = 63;
+export const BUCKET_MESSAGE =
+  'bucket must be the pubsite_prod bucket id shown under Download reports in Play Console';
 export const SERVICE_ACCOUNT_MAX_LENGTH = 16_384;
 
 export class PlayConnectionDto implements PlayConnectionRequest {
@@ -27,9 +29,6 @@ export class PlayConnectionDto implements PlayConnectionRequest {
     maxLength: BUCKET_MAX_LENGTH,
   })
   @MaxLength(BUCKET_MAX_LENGTH)
-  @Matches(BUCKET, {
-    message:
-      'bucket must be the pubsite_prod bucket id shown under Download reports in Play Console',
-  })
+  @Matches(BUCKET, { message: BUCKET_MESSAGE })
   bucket!: string;
 }

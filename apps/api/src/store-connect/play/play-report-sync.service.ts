@@ -7,13 +7,13 @@ import type { FunnelRow } from '../discovery-report';
 import { StoreConnectionService } from '../store-connection.service';
 import { PLAY_ALL_MARKETS } from '../store-funnel';
 import { funnelUpserts } from '../store-funnel-rows';
-import { bucketMissing, PLAY_REFUSED } from '../store-keys';
 import { emptySummary, type SyncSummary } from '../store-sync-summary';
 import {
   GcsBucketError,
   GcsError,
   GcsRateLimitedError,
   GcsRejectedError,
+  GcsTokenRefusedError,
   PLAY_REPORT_MAX_BYTES,
   storePerformanceObjects,
   type GcsApi,
@@ -29,6 +29,7 @@ import {
   type SearchTermRow,
 } from './play-store-performance';
 import { GcsUnreachableError } from './gcs-transport';
+import { playRefusal } from './play-refusal';
 
 const STORE = 'GOOGLE_PLAY';
 const ACCESS_TYPE = 'ONGOING';
@@ -104,6 +105,7 @@ function imported(
 type FileOutcome = 'forbidden' | 'vanished' | 'failed';
 
 function fileOutcome(error: unknown): FileOutcome | null {
+  if (error instanceof GcsTokenRefusedError) return null;
   if (error instanceof GcsRejectedError) return 'forbidden';
   if (error instanceof GcsBucketError) return 'vanished';
   if (error instanceof GcsRateLimitedError) return null;
@@ -228,12 +230,7 @@ export class PlayReportSync {
     summary: SyncSummary,
     lastError: string | null,
   ): Promise<void> {
-    const refusal =
-      error instanceof GcsRejectedError
-        ? PLAY_REFUSED
-        : error instanceof GcsBucketError
-          ? bucketMissing(api.bucket)
-          : null;
+    const refusal = playRefusal(error, api);
     if (refusal) {
       await this.connections.markRejected(STORE, refusal);
       throw new UnrecoverableError(refusal);
@@ -250,7 +247,12 @@ export class PlayReportSync {
     try {
       return await api.listStorePerformance(packageName);
     } catch (error) {
-      if (!(error instanceof GcsRejectedError)) throw error;
+      if (
+        !(error instanceof GcsRejectedError) ||
+        error instanceof GcsTokenRefusedError
+      ) {
+        throw error;
+      }
       return null;
     }
   }

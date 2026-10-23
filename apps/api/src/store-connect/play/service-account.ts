@@ -5,6 +5,7 @@ export const GCS_READ_ONLY_SCOPE =
   'https://www.googleapis.com/auth/devstorage.read_only';
 export const GOOGLE_ASSERTION_TTL_SECONDS = 3600;
 export const GOOGLE_TOKEN_REUSE_MARGIN_SECONDS = 60;
+const JWT_GRANT = 'urn:ietf:params:oauth:grant-type:jwt-bearer';
 
 export interface ServiceAccount {
   clientEmail: string;
@@ -106,13 +107,19 @@ export function signAssertion(
   return `${input}.${signature.toString('base64url')}`;
 }
 
+export type GoogleGrant = (now: Date) => Record<string, string>;
+
+export const serviceAccountGrant =
+  (account: ServiceAccount): GoogleGrant =>
+  (now) => ({ grant_type: JWT_GRANT, assertion: signAssertion(account, now) });
+
 export class GoogleTokenCache {
   private token: { value: string; expiresAt: number } | null = null;
 
   constructor(
-    private readonly account: ServiceAccount,
+    private readonly grant: GoogleGrant,
     private readonly exchange: (
-      assertion: string,
+      form: Record<string, string>,
     ) => Promise<GoogleTokenAnswer>,
   ) {}
 
@@ -124,7 +131,7 @@ export class GoogleTokenCache {
     ) {
       return this.token.value;
     }
-    const answer = await this.exchange(signAssertion(this.account, now));
+    const answer = await this.exchange(this.grant(now));
     this.token = {
       value: answer.access_token,
       expiresAt: seconds + answer.expires_in,

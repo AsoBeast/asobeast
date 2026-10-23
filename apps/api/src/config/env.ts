@@ -229,6 +229,8 @@ export const EnvSchema = z.object({
   CRON_APPLE_POPULARITY: cronPattern('0 9 * * 1'),
   STORE_CONNECT_ENCRYPTION_KEY: optionalText,
   STORE_CONNECT_ENCRYPTION_KEY_PREVIOUS: optionalText,
+  GOOGLE_PLAY_OAUTH_CLIENT_ID: optionalText,
+  GOOGLE_PLAY_OAUTH_CLIENT_SECRET: optionalText,
   CRON_STORE_REPORTS: cronPattern('30 5 * * *'),
   LOG_LEVEL: z
     .enum(['error', 'warn', 'log', 'debug', 'verbose'])

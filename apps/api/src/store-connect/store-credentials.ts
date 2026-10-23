@@ -3,9 +3,18 @@ import { SecretBox, SecretBoxError } from '../common/crypto/secret-box';
 import type { AscCredentials } from './asc-token';
 import type { ServiceAccount } from './play/service-account';
 
-export interface PlayCredentials extends ServiceAccount {
+export interface ServiceAccountCredentials extends ServiceAccount {
   bucket: string;
 }
+
+export interface GoogleAccountCredentials {
+  email: string;
+  refreshToken: string;
+  bucket: string;
+}
+
+export type PlayCredentials =
+  ServiceAccountCredentials | GoogleAccountCredentials;
 
 export type StoreCredentials = AscCredentials | PlayCredentials;
 
@@ -22,8 +31,18 @@ const hasStrings = (value: unknown, fields: readonly string[]): boolean =>
 export const isAscCredentials = (value: unknown): value is AscCredentials =>
   hasStrings(value, ['issuerId', 'keyId', 'privateKey']);
 
-export const isPlayCredentials = (value: unknown): value is PlayCredentials =>
+export const isServiceAccountCredentials = (
+  value: unknown,
+): value is ServiceAccountCredentials =>
   hasStrings(value, ['clientEmail', 'privateKeyId', 'privateKey', 'bucket']);
+
+export const isGoogleAccountCredentials = (
+  value: unknown,
+): value is GoogleAccountCredentials =>
+  hasStrings(value, ['email', 'refreshToken', 'bucket']);
+
+export const isPlayCredentials = (value: unknown): value is PlayCredentials =>
+  isServiceAccountCredentials(value) || isGoogleAccountCredentials(value);
 
 const SHAPES: Record<Store, (value: unknown) => boolean> = {
   APP_STORE: isAscCredentials,

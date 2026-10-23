@@ -3604,6 +3604,72 @@
         ]
       }
     },
+    "/store-connections/GOOGLE_PLAY/sign-in": {
+      "post": {
+        "description": "Answers the Google consent address to send the owner to, asking for read only Cloud Storage access, with a state sealed to this owner and workspace that expires in ten minutes. Google returns to the web page /settings/google-play. Owner only, through a signed in session. Answers 409 when the instance has store connections off or no Google OAuth client.",
+        "operationId": "PlaySignInController_start",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaySignInDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Start connecting Google Play with a Google account",
+        "tags": [
+          "store-connect"
+        ]
+      }
+    },
+    "/store-connections/GOOGLE_PLAY/sign-in/complete": {
+      "post": {
+        "description": "Redeems the code Google returned, lists the bucket with the account before anything is stored, seals the refresh token bound to this workspace, replaces any Google Play connection and queues a report sync. Answers 400 for a state of another owner, an expired state or a code Google refuses, 422 when the account was not granted Cloud Storage access or cannot read the bucket, and 409 when sign in is off or Google refuses the OAuth client of the instance.",
+        "operationId": "PlaySignInController_complete",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaySignInCompletionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Finish connecting Google Play with a Google account",
+        "tags": [
+          "store-connect"
+        ]
+      }
+    },
     "/apps/{id}/funnel": {
       "get": {
         "description": "Reads the rows the connected store console reported: a zero filled daily series of the requested days with the total and the search share, and the 7, 14 and 28 day windows of complete days against the period before. A day is complete once it is three days old and the store has delivered it. Answers connected false and empty series for a competitor, a store without an active connection, or an app the connected key does not report.",
@@ -7164,6 +7230,39 @@
           "store",
           "serviceAccountJson",
           "bucket"
+        ]
+      },
+      "PlaySignInDto": {
+        "type": "object",
+        "properties": {
+          "bucket": {
+            "type": "string",
+            "maxLength": 63,
+            "example": "pubsite_prod_rev_01234567890987654321",
+            "description": "The Cloud Storage bucket id shown under Download reports in Play Console. Carried through the Google sign in and stored with the connection."
+          }
+        },
+        "required": [
+          "bucket"
+        ]
+      },
+      "PlaySignInCompletionDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "maxLength": 2048,
+            "description": "The code Google added to the redirect. Redeemed once with Google and never stored."
+          },
+          "state": {
+            "type": "string",
+            "maxLength": 4096,
+            "description": "The state Google returned unchanged. Opens only for the signed in owner who started the sign in, within ten minutes."
+          }
+        },
+        "required": [
+          "code",
+          "state"
         ]
       },
       "ChartCaptureDto": {
