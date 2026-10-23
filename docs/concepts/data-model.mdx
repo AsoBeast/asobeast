@@ -29,8 +29,8 @@ An app is one row with a home storefront. Keywords are separate rows scoped by t
 | `ChartCapture` | One day of one top chart, captured once for every workspace | Shared store data with no workspace. Unique on store, country, collection, genre, device and date. Carries `depth`, the number of positions the store answered |
 | `ChartEntry` | One row of a top chart capture: a position and the app's title, developer, icon, genre and price class as that storefront showed them that day | Shared store data. Keyed on capture and position, deleted with its capture |
 | `ChartFollow` | One chart kind of a category a workspace wants captured every day; the plan's follow limit counts the categories the rows belong to | Tenant owned. Unique on workspace and chart key |
-| `Review` | A synced store review, with the text of the developer reply Google Play shows in `replyText` and the translation kept for one language | Unique on app and store review id |
-| `ReviewReply` | The reply kept for one review: its text, how it was made and the owner's replied mark | Keyed on review. Tenant owned, deleted with its review and its app |
+| `Review` | A synced store review, with the text of the developer reply the store shows or asobeast posted in `replyText` and the translation kept for one language | Unique on app and store review id |
+| `ReviewReply` | The reply kept for one review: its text, how it was made, the owner's replied mark and, once posted, when, what and by whom it was posted to the store | Keyed on review. Tenant owned, deleted with its review and its app |
 | `ChangeEvent` | A detected metadata change | Covers owned and competitor apps, in the home market or any other market you track |
 | `AuditScore` | A daily audit score snapshot | Keyed on app and date |
 | `ActionItem` | One Action Center recommendation | Unique on workspace and fingerprint |
