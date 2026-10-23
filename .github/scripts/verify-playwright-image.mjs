@@ -22,8 +22,8 @@ const tags = [...workflow.matchAll(IMAGE_TAG)].map((match) => match[1]);
 
 if (tags.length === 0) {
   console.error(`${WORKFLOW} runs no job in the Playwright image.`);
-  console.error("The webkit project runs there so that no apt package is");
-  console.error("installed; without that job its libraries come back via apt.");
+  console.error("The browser jobs run there so that no apt package is");
+  console.error("installed; without the image their libraries come from apt.");
   process.exit(1);
 }
 
@@ -35,7 +35,7 @@ if (stale.length > 0) {
   );
   console.error("");
   console.error("The image carries the browsers of exactly one Playwright");
-  console.error("version, so a mismatch fails the webkit job with a missing");
+  console.error("version, so a mismatch fails the browser jobs with a missing");
   console.error("browser. Set every mcr.microsoft.com/playwright image tag in");
   console.error(`${WORKFLOW} to v${installed}-noble.`);
   process.exit(1);

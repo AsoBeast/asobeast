@@ -386,57 +386,29 @@ jobs:
         if: always()
         run: docker compose -f docker-compose.dev.yml down -v
 
-  web-e2e-app:
-    name: web-e2e app ${{ matrix.shard }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3, 4]
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup
-        with:
-          chromium: "true"
-      - run: pnpm run build:packages
-      - run: pnpm --filter web test:e2e --project=app --shard=${{ matrix.shard }}/4
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: failure()
-        with:
-          name: playwright-report-app-${{ matrix.shard }}
-          path: apps/web/playwright-report
-          retention-days: 7
-
-  web-e2e-states:
-    name: web-e2e states
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup
-        with:
-          chromium: "true"
-      - run: pnpm run build:packages
-      - run: pnpm --filter web test:e2e --project=actions-double-click
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: failure()
-        with:
-          name: playwright-report-states
-          path: apps/web/playwright-report
-          retention-days: 7
-
-  web-e2e-webkit:
-    name: web-e2e webkit
+  web-e2e-suite:
+    name: web-e2e ${{ matrix.suite }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     container:
       image: mcr.microsoft.com/playwright:v1.63.0-noble
       options: --user 1001
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suite: app-1
+            projects: --project=app --shard=1/4
+          - suite: app-2
+            projects: --project=app --shard=2/4
+          - suite: app-3
+            projects: --project=app --shard=3/4
+          - suite: app-4
+            projects: --project=app --shard=4/4
+          - suite: states
+            projects: --project=actions-double-click
+          - suite: webkit
+            projects: --project=webkit
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -445,16 +417,16 @@ jobs:
         with:
           store-cache: "false"
       - run: pnpm run build:packages
-      - run: pnpm --filter web test:e2e --project=webkit
+      - run: pnpm --filter web test:e2e ${{ matrix.projects }}
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:
-          name: playwright-report-webkit
+          name: playwright-report-${{ matrix.suite }}
           path: apps/web/playwright-report
           retention-days: 7
 
   web-e2e:
-    needs: [web-e2e-app, web-e2e-states, web-e2e-webkit]
+    needs: web-e2e-suite
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 2

@@ -4,9 +4,6 @@ inputs:
   store-cache:
     description: Restore the pnpm store written by main, and save it when this run is main
     default: "true"
-  chromium:
-    description: Install the Chromium headless shell, restored from the main cache when the lockfile matches
-    default: "false"
 runs:
   using: composite
   steps:
@@ -34,17 +31,3 @@ runs:
       with:
         path: ${{ steps.store.outputs.path }}
         key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-    - if: inputs.chromium == 'true'
-      id: chromium-cache
-      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-      with:
-        path: ~/.cache/ms-playwright
-        key: playwright-${{ runner.os }}-chromium-shell-${{ hashFiles('pnpm-lock.yaml') }}
-    - if: inputs.chromium == 'true'
-      shell: bash
-      run: pnpm --filter web exec playwright install --with-deps --only-shell chromium
-    - if: inputs.chromium == 'true' && github.ref == 'refs/heads/main' && steps.chromium-cache.outputs.cache-hit != 'true'
-      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-      with:
-        path: ~/.cache/ms-playwright
-        key: playwright-${{ runner.os }}-chromium-shell-${{ hashFiles('pnpm-lock.yaml') }}
