@@ -14,6 +14,11 @@ export const STORE_REPORT_STATES = [
 ] as const;
 export type StoreReportState = (typeof STORE_REPORT_STATES)[number];
 
+export const STORE_CREDENTIAL_KINDS = ['key', 'googleAccount'] as const;
+export type StoreCredentialKind = (typeof STORE_CREDENTIAL_KINDS)[number];
+
+export const PLAY_SIGN_IN_PATH = '/settings/google-play';
+
 export interface StoreConnectionApp {
   appId: string;
   name: string | null;
@@ -35,11 +40,13 @@ export interface StoreConnectionItem {
   lastError: string | null;
   apps: StoreConnectionApp[];
   bucket?: string | null;
+  credential?: StoreCredentialKind;
 }
 
 export interface StoreConnectionState {
   available: boolean;
   connections: StoreConnectionItem[];
+  googleSignIn?: boolean;
 }
 
 export interface AppStoreConnectionRequest {
@@ -57,6 +64,19 @@ export interface PlayConnectionRequest {
 
 export type StoreConnectionRequest =
   AppStoreConnectionRequest | PlayConnectionRequest;
+
+export interface PlaySignInRequest {
+  bucket: string;
+}
+
+export interface PlaySignInStart {
+  url: string;
+}
+
+export interface PlaySignInCompletion {
+  code: string;
+  state: string;
+}
 
 export const STORE_CONNECTION_SYNC_OUTCOMES = ['queued', 'running'] as const;
 export type StoreConnectionSyncOutcome =
