@@ -1,15 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import {
-  useMutation,
-  useQueryClient,
-  useSuspenseQuery,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import type { AppAnnotationItem } from "@asobeast/shared";
+import {
+  ANNOTATION_LABEL_MAX_LENGTH,
+  ANNOTATION_TAG_MAX_LENGTH,
+  type AppAnnotationItem,
+} from "@asobeast/shared";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,33 +32,32 @@ import {
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  failedRead,
+  InlineQueryError,
+} from "@/components/layout/InlineQueryError";
 import { addAnnotation, ApiError, deleteAnnotation } from "@/lib/api";
+import { focusCanMoveTo, survivingNeighbour } from "@/lib/focus-handoff";
 import { formatCountry, formatDate } from "@/lib/format";
-import { annotationsOptions, appKeys } from "@/lib/queries";
-import { useSingleFlight } from "@/lib/single-flight";
+import {
+  annotationsOptions,
+  invalidateAnnotationMutation,
+} from "@/lib/queries";
+import { useKeyedSingleFlight, useSingleFlight } from "@/lib/single-flight";
 
 function AnnotationRow({
-  id,
   annotation,
+  removing,
+  onRemove,
+  registerButton,
 }: {
-  id: string;
   annotation: AppAnnotationItem;
+  removing: boolean;
+  onRemove: (annotation: AppAnnotationItem) => void;
+  registerButton: (annotationId: string, button: HTMLButtonElement) => void;
 }) {
-  const queryClient = useQueryClient();
   const [confirmOpen, setConfirmOpen] = useState(false);
-
-  const mutation = useMutation({
-    mutationFn: () => deleteAnnotation(id, annotation.id),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: appKeys.annotations(id) });
-      setConfirmOpen(false);
-      toast.success(`Removed ${annotation.label}`);
-    },
-    onError: () => {
-      toast.error(`Could not remove ${annotation.label}`);
-    },
-  });
-  const removeOnce = useSingleFlight(mutation);
 
   return (
     <div className="flex items-start gap-3 py-2">
@@ -84,6 +83,9 @@ function AnnotationRow({
         variant="ghost"
         size="icon-sm"
         aria-label={`Remove ${annotation.label}`}
+        ref={(button) => {
+          if (button) registerButton(annotation.id, button);
+        }}
         onClick={() => setConfirmOpen(true)}
       >
         <Trash2 />
@@ -97,18 +99,16 @@ function AnnotationRow({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={mutation.isPending}>
-              Cancel
-            </AlertDialogCancel>
+            <AlertDialogCancel disabled={removing}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
-              disabled={mutation.isPending}
+              aria-disabled={removing || undefined}
               onClick={(event) => {
                 event.preventDefault();
-                removeOnce();
+                onRemove(annotation);
               }}
             >
-              {mutation.isPending ? "Removing…" : "Remove"}
+              {removing ? "Removing…" : "Remove"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -117,10 +117,71 @@ function AnnotationRow({
   );
 }
 
-function AnnotationsList({ id }: { id: string }) {
-  const { data } = useSuspenseQuery(annotationsOptions(id));
+function AnnotationsSkeleton() {
+  return (
+    <div className="flex flex-col" aria-hidden>
+      {Array.from({ length: 3 }).map((_, index) => (
+        <div key={index} className="flex items-center gap-3 py-2">
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-4 flex-1" />
+          <Skeleton className="size-8" />
+        </div>
+      ))}
+    </div>
+  );
+}
 
-  if (data.annotations.length === 0) {
+function AnnotationsList({ id }: { id: string }) {
+  const queryClient = useQueryClient();
+  const list = useQuery(annotationsOptions(id));
+  const buttons = useRef(new Map<string, HTMLButtonElement>());
+  const removing = useRef(new Set<string>());
+  const seen = useRef<AppAnnotationItem[] | null>(null);
+
+  const remove = useMutation({
+    mutationFn: (annotation: AppAnnotationItem) =>
+      deleteAnnotation(id, annotation.id),
+    onSuccess: (_data, annotation) => {
+      invalidateAnnotationMutation(queryClient, id);
+      toast.success(`Removed ${annotation.label}`);
+    },
+    onError: (_error, annotation) => {
+      toast.error(`Could not remove ${annotation.label}`);
+    },
+    onSettled: (_data, _error, annotation) => {
+      removing.current.delete(annotation.id);
+    },
+  });
+  const removeOnce = useKeyedSingleFlight(remove, (row) => row.id);
+
+  // A removed row takes its focused remove button with it, so the moment the
+  // refetched list drops it, hand focus to the surviving row's button, or to
+  // the add form when the list is empty.
+  useEffect(() => {
+    const previous = seen.current;
+    seen.current = list.data?.annotations ?? null;
+    if (!previous) return;
+    const gone = previous.find(
+      (row) => !seen.current?.some((kept) => kept.id === row.id),
+    );
+    if (!gone || !removing.current.has(gone.id)) return;
+    removing.current.delete(gone.id);
+    const survivor = survivingNeighbour(previous, (row) => row.id === gone.id);
+    const target =
+      (survivor ? buttons.current.get(survivor.id) : undefined) ??
+      document.getElementById("annotation-add");
+    if (target?.isConnected && focusCanMoveTo(target)) target.focus();
+  });
+
+  if (failedRead(list)) {
+    return (
+      <InlineQueryError message="Could not load the annotations." read={list} />
+    );
+  }
+
+  const rows = list.data?.annotations ?? [];
+
+  if (rows.length === 0) {
     return (
       <EmptyState
         title="No annotations yet"
@@ -131,8 +192,19 @@ function AnnotationsList({ id }: { id: string }) {
 
   return (
     <div className="divide-y">
-      {data.annotations.map((annotation) => (
-        <AnnotationRow key={annotation.id} id={id} annotation={annotation} />
+      {rows.map((annotation) => (
+        <AnnotationRow
+          key={annotation.id}
+          annotation={annotation}
+          removing={remove.isPending && remove.variables?.id === annotation.id}
+          onRemove={(row) => {
+            removing.current.add(row.id);
+            removeOnce(row);
+          }}
+          registerButton={(annotationId, button) => {
+            buttons.current.set(annotationId, button);
+          }}
+        />
       ))}
     </div>
   );
@@ -153,7 +225,7 @@ function AddAnnotationForm({ id }: { id: string }) {
         ...(tag.trim() === "" ? {} : { tag: tag.trim() }),
       }),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: appKeys.annotations(id) });
+      invalidateAnnotationMutation(queryClient, id);
       setDate("");
       setLabel("");
       setTag("");
@@ -169,10 +241,12 @@ function AddAnnotationForm({ id }: { id: string }) {
     },
   });
   const addOnce = useSingleFlight(mutation);
+  const addable = date !== "" && label.trim() !== "";
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    if (mutation.isPending || !addable) return;
     addOnce();
   }
 
@@ -194,7 +268,7 @@ function AddAnnotationForm({ id }: { id: string }) {
           <Input
             id="annotation-label"
             required
-            maxLength={80}
+            maxLength={ANNOTATION_LABEL_MAX_LENGTH}
             placeholder="Release 5.21.0"
             value={label}
             onChange={(event) => setLabel(event.target.value)}
@@ -206,7 +280,7 @@ function AddAnnotationForm({ id }: { id: string }) {
           <Label htmlFor="annotation-tag">Tag (optional)</Label>
           <Input
             id="annotation-tag"
-            maxLength={24}
+            maxLength={ANNOTATION_TAG_MAX_LENGTH}
             placeholder="wave"
             value={tag}
             onChange={(event) => setTag(event.target.value)}
@@ -214,7 +288,8 @@ function AddAnnotationForm({ id }: { id: string }) {
         </div>
         <Button
           type="submit"
-          disabled={mutation.isPending || date === "" || label.trim() === ""}
+          id="annotation-add"
+          aria-disabled={mutation.isPending || !addable || undefined}
         >
           {mutation.isPending ? <Loader2 className="animate-spin" /> : <Plus />}
           {mutation.isPending ? "Adding…" : "Add annotation"}

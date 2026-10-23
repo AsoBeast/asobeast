@@ -51,7 +51,9 @@ export default async function RankingsPage({
     rankingsOptions(id, { ...presetToRange(range), keywordIds: effective }),
   );
   void queryClient.prefetchQuery(serpMoversOptions(id, moverDays));
-  void queryClient.prefetchQuery(annotationsOptions(id));
+  // The annotations card and the chart tooltip both read this entry, so the
+  // server render waits for it and hydrates the same rows.
+  await queryClient.prefetchQuery(annotationsOptions(id));
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
@@ -66,9 +68,7 @@ export default async function RankingsPage({
         </div>
         <div className="flex flex-col gap-6">
           <SerpMoversCard id={id} />
-          <Suspense fallback={null}>
-            <AnnotationsCard id={id} />
-          </Suspense>
+          <AnnotationsCard id={id} />
         </div>
       </div>
     </HydrationBoundary>

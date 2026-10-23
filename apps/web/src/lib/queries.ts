@@ -1135,6 +1135,13 @@ export function invalidateEmailAlertMutation(client: QueryClient): void {
   void client.invalidateQueries({ queryKey: emailAlertKeys.all });
 }
 
+export function invalidateAnnotationMutation(
+  client: QueryClient,
+  id: string,
+): void {
+  void client.invalidateQueries({ queryKey: appKeys.annotations(id) });
+}
+
 function replaceRow<T extends { id: string }>(
   rows: T[] | undefined,
   item: T,
