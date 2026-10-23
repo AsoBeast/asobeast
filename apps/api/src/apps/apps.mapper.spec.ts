@@ -1,9 +1,12 @@
-import { AppSetup, AppSnapshot, Store } from '@prisma/client';
+import { App, AppSetup, AppSnapshot, Store } from '@prisma/client';
 import { NormalizedApp } from '../store-providers/types';
 import {
   defaultSetup,
   setupStateOf,
   snapshotIcon,
+  toAppDetail,
+  toAppListItem,
+  toCompetitorItem,
   toListingMarkets,
   toSnapshotData,
   toSetupState,
@@ -243,5 +246,41 @@ describe('the setup state', () => {
     expect(
       toSetupState(row({ status: 'paused', skipped: ['alerts', 'keywords'] })),
     ).toMatchObject({ status: 'not_started', skipped: ['keywords'] });
+  });
+});
+
+describe('the delisted time', () => {
+  const app = (delistedAt: Date | null): App => ({
+    id: 'app_1',
+    workspaceId: 'ws_1',
+    store: Store.APP_STORE,
+    storeAppId: '471112395',
+    country: 'us',
+    name: 'Gone',
+    iconUrl: null,
+    delistedAt,
+    unlistedMarkets: [],
+    isCompetitor: false,
+    primaryAppId: null,
+    groupId: null,
+    replyGuidelines: null,
+    createdAt: new Date('2026-10-01T00:00:00.000Z'),
+  });
+  const delisted = app(new Date('2026-10-21T03:04:05.000Z'));
+
+  it('answers when the store stopped listing the app on every app shape', () => {
+    const expected = { delistedAt: '2026-10-21T03:04:05.000Z' };
+
+    expect(toAppDetail(delisted, null, [], null)).toMatchObject(expected);
+    expect(toCompetitorItem(delisted, null)).toMatchObject(expected);
+    expect(toAppListItem(delisted, null, 0, 0)).toMatchObject(expected);
+  });
+
+  it('answers null for an app the store lists', () => {
+    const listed = app(null);
+
+    expect(toAppDetail(listed, null, [], null).delistedAt).toBeNull();
+    expect(toCompetitorItem(listed, null).delistedAt).toBeNull();
+    expect(toAppListItem(listed, null, 0, 0).delistedAt).toBeNull();
   });
 });

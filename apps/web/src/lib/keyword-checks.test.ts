@@ -5,6 +5,7 @@ import {
   FIRST_CHECK_POLL_MS,
   isChecking,
   keywordsPollInterval,
+  staleCheckDay,
 } from "./keyword-checks";
 
 const row = (active: boolean, latestDepth: number | null): TrackedKeywordItem =>
@@ -31,5 +32,34 @@ describe("keywordsPollInterval", () => {
       false,
     );
     expect(keywordsPollInterval(undefined, 0)).toBe(false);
+  });
+});
+
+describe("staleCheckDay", () => {
+  const today = "2026-10-22";
+
+  it("W-CHK-03 names the day of an active row last checked before yesterday", () => {
+    expect(
+      staleCheckDay({ active: true, latestCheckedOn: "2026-10-20" }, today),
+    ).toBe("2026-10-20");
+  });
+
+  it("W-CHK-04 a check from today or yesterday is current", () => {
+    expect(
+      staleCheckDay({ active: true, latestCheckedOn: "2026-10-22" }, today),
+    ).toBeNull();
+    expect(
+      staleCheckDay({ active: true, latestCheckedOn: "2026-10-21" }, today),
+    ).toBeNull();
+  });
+
+  it("W-CHK-05 a paused, never checked or undated row is never stale", () => {
+    expect(
+      staleCheckDay({ active: false, latestCheckedOn: "2026-10-01" }, today),
+    ).toBeNull();
+    expect(
+      staleCheckDay({ active: true, latestCheckedOn: null }, today),
+    ).toBeNull();
+    expect(staleCheckDay({ active: true }, today)).toBeNull();
   });
 });

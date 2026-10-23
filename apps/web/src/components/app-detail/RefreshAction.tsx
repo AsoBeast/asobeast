@@ -37,6 +37,9 @@ export function RefreshAction({ appId }: { appId: string }) {
       setRefreshed({ diff, market: market ?? null });
     },
     onError: (error) => {
+      if (error instanceof ApiError && error.envelope.statusCode === 404) {
+        invalidateAppListing(queryClient, appId);
+      }
       toast.error(
         error instanceof ApiError ? error.envelope.message : "Refresh failed",
       );

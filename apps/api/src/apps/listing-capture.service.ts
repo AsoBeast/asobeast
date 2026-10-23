@@ -4,7 +4,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { App, Store } from '@prisma/client';
+import { App, Prisma, Store } from '@prisma/client';
 import { assertStorefront, SnapshotDiffResult } from '@asobeast/shared';
 import { ChangesService } from '../changes/changes.service';
 import { KeywordsService } from '../keywords/keywords.service';
@@ -15,6 +15,7 @@ import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
 import { StoreAppNotFoundError } from '../store-providers/errors';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { currencyOf } from '../store-providers/raw-facts';
+import { NormalizedApp } from '../store-providers/types';
 import { snapshotIcon, toSnapshotData } from './apps.mapper';
 import { toChangeSnapshot } from './change-snapshot';
 import { withKnownSubtitle } from './known-subtitle';
@@ -67,13 +68,17 @@ export class ListingCaptureService {
     try {
       return await this.captureListing(app, market);
     } catch (error: unknown) {
-      if (market !== app.country && error instanceof StoreAppNotFoundError) {
+      if (!(error instanceof StoreAppNotFoundError)) throw error;
+      if (market === app.country) {
+        this.logger.warn(
+          `${app.storeAppId} is no longer listed in ${market}, so its listing was not refreshed`,
+        );
+      } else {
         this.logger.log(
           `${app.storeAppId} is not listed in ${market}, so it has no listing there`,
         );
-        return null;
       }
-      throw error;
+      return null;
     }
   }
 
@@ -105,9 +110,7 @@ export class ListingCaptureService {
     market: string,
   ): Promise<SnapshotDiffResult> {
     const home = market === app.country;
-    const normalized = await this.egress.through(app.store, market, () =>
-      this.registry.get(app.store).getApp(app.storeAppId, market),
-    );
+    const normalized = await this.readListing(app, market);
     const previous = await this.prisma.appSnapshot.findFirst({
       where: { appId: app.id, ...listingIn(app.country, market) },
       orderBy: NEWEST_FIRST,
@@ -122,12 +125,7 @@ export class ListingCaptureService {
           storedMarket(app.country, market),
         ),
       });
-      if (home) {
-        await tx.app.update({
-          where: { id: app.id },
-          data: { name: normalized.title, iconUrl: normalized.iconUrl },
-        });
-      }
+      await this.recordListed(tx, app, market, normalized);
       pending = await this.screenshots.record(
         tx,
         { store: app.store, country: market },
@@ -181,6 +179,57 @@ export class ListingCaptureService {
       country: market,
       currency: currencyOf(snapshot.raw),
     };
+  }
+
+  private async readListing(app: App, market: string): Promise<NormalizedApp> {
+    try {
+      return await this.egress.through(app.store, market, () =>
+        this.registry.get(app.store).getApp(app.storeAppId, market),
+      );
+    } catch (error: unknown) {
+      if (error instanceof StoreAppNotFoundError) {
+        await this.recordUnlisted(app, market);
+      }
+      throw error;
+    }
+  }
+
+  private async recordListed(
+    tx: Prisma.TransactionClient,
+    app: App,
+    market: string,
+    normalized: NormalizedApp,
+  ): Promise<void> {
+    if (market === app.country) {
+      await tx.app.update({
+        where: { id: app.id },
+        data: {
+          name: normalized.title,
+          iconUrl: normalized.iconUrl,
+          delistedAt: null,
+        },
+      });
+    } else {
+      await tx.$executeRaw`
+        UPDATE "App"
+        SET "unlistedMarkets" = array_remove("unlistedMarkets", ${market})
+        WHERE "id" = ${app.id} AND ${market} = ANY("unlistedMarkets")
+      `;
+    }
+  }
+
+  private async recordUnlisted(app: App, market: string): Promise<void> {
+    await this.prisma.app.updateMany(
+      market === app.country
+        ? {
+            where: { id: app.id, delistedAt: null },
+            data: { delistedAt: new Date() },
+          }
+        : {
+            where: { id: app.id, NOT: { unlistedMarkets: { has: market } } },
+            data: { unlistedMarkets: { push: market } },
+          },
+    );
   }
 
   private async requestDetection(appId: string, market: string): Promise<void> {

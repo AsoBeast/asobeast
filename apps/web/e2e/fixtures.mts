@@ -88,12 +88,20 @@ export function utcTimestampDaysAgo(days: number): string {
 function pointsFrom(
   positions: Array<number | null>,
   depths?: number[],
+  unchecked: readonly number[] = [],
 ): RankingPoint[] {
-  return positions.map((position, index) => ({
-    date: utcDaysAgo(positions.length - 1 - index),
-    position,
-    depth: depths?.[index] ?? RANK_DEPTH,
-  }));
+  return positions.flatMap((position, index) => {
+    const daysAgo = positions.length - 1 - index;
+    return unchecked.includes(daysAgo)
+      ? []
+      : [
+          {
+            date: utcDaysAgo(daysAgo),
+            position,
+            depth: depths?.[index] ?? RANK_DEPTH,
+          },
+        ];
+  });
 }
 
 export const OPERATOR_TOKEN = "asob_operator";
@@ -321,6 +329,7 @@ export const APP_1_KEYWORDS: TrackedKeywordItem[] = [
     active: true,
     latestPosition: 3,
     latestDepth: RANK_DEPTH,
+    latestCheckedOn: utcDaysAgo(0),
     previousPosition: 5,
     positionDelta1d: -2,
     positionDelta7d: -7,
@@ -359,6 +368,7 @@ export const APP_1_KEYWORDS: TrackedKeywordItem[] = [
     active: true,
     latestPosition: 12,
     latestDepth: RANK_DEPTH,
+    latestCheckedOn: utcDaysAgo(0),
     previousPosition: 9,
     positionDelta1d: 3,
     positionDelta7d: 6,
@@ -396,6 +406,7 @@ export const APP_1_KEYWORDS: TrackedKeywordItem[] = [
     active: true,
     latestPosition: 7,
     latestDepth: RANK_DEPTH,
+    latestCheckedOn: utcDaysAgo(3),
     previousPosition: 7,
     positionDelta1d: 0,
     positionDelta7d: 0,
@@ -424,6 +435,7 @@ export const APP_1_KEYWORDS: TrackedKeywordItem[] = [
     active: true,
     latestPosition: null,
     latestDepth: RANK_DEPTH,
+    latestCheckedOn: utcDaysAgo(0),
     previousPosition: null,
     positionDelta1d: null,
     positionDelta7d: null,
@@ -449,6 +461,7 @@ export const APP_1_KEYWORDS: TrackedKeywordItem[] = [
     active: false,
     latestPosition: 45,
     latestDepth: RANK_DEPTH,
+    latestCheckedOn: utcDaysAgo(10),
     previousPosition: 44,
     positionDelta1d: 1,
     positionDelta7d: 5,
@@ -470,21 +483,21 @@ export const APP_1_RANKINGS: RankingSeries = {
       text: "focus timer",
       store: "APP_STORE" as const,
       country: "us",
-      points: pointsFrom([10, 9, 8, 7, 6, 5, 5, 3]),
+      points: pointsFrom([10, 9, 8, 7, 6, 5, 5, 3], undefined, [5]),
     },
     {
       keywordId: "kw-2",
       text: "pomodoro",
       store: "APP_STORE" as const,
       country: "us",
-      points: pointsFrom([6, 7, 8, 8, 9, 9, 9, 12]),
+      points: pointsFrom([6, 7, 8, 8, 9, 9, 9, 12], undefined, [5]),
     },
     {
       keywordId: "kw-3",
       text: "study timer",
       store: "APP_STORE" as const,
       country: "us",
-      points: pointsFrom([7, 7, 7, 7, 7, 7, 7, 7]),
+      points: pointsFrom([7, 7, 7, 7, 7, 7, 7, 7], undefined, [5, 2, 1, 0]),
     },
     {
       keywordId: "kw-4",
@@ -494,6 +507,7 @@ export const APP_1_RANKINGS: RankingSeries = {
       points: pointsFrom(
         [null, null, null, null, null, null, null, null],
         [100, 100, 100, 100, 200, 200, 200, 200],
+        [5],
       ),
     },
     {
@@ -501,7 +515,7 @@ export const APP_1_RANKINGS: RankingSeries = {
       text: "time blocking",
       store: "APP_STORE" as const,
       country: "us",
-      points: pointsFrom([40, 42, 44, 45, 45, 46, 46, 45]),
+      points: pointsFrom([40, 42, 44, 45, 45, 46, 46, 45], undefined, [5]),
     },
   ],
 };
@@ -1537,6 +1551,8 @@ const APP_1_COMPARISON: KeywordComparison = {
 };
 
 export const CROWDED_COMPETITORS_COOKIE = "e2e_crowded_competitors";
+export const DELISTED_COOKIE = "e2e_delisted";
+export const DELISTED_AT = "2026-10-20T03:04:05.000Z";
 export const CROWDED_ICON_URL =
   "https://is1-ssl.mzstatic.com/image/thumb/e2e-rival/512x512bb.png";
 
@@ -2089,6 +2105,7 @@ export const APP_BULK_KEYWORDS: TrackedKeywordItem[] = Array.from(
     active: index % 17 !== 0,
     latestPosition: index % 7 === 0 ? null : (index % 200) + 1,
     latestDepth: RANK_DEPTH,
+    latestCheckedOn: utcDaysAgo(0),
     previousPosition: index % 5 === 0 ? null : (index % 200) + 3,
     positionDelta1d: index % 3 === 0 ? null : (index % 11) - 5,
     positionDelta7d: index % 4 === 0 ? null : (index % 13) - 6,
@@ -2115,6 +2132,7 @@ export const APP_UNCHECKED_KEYWORDS: TrackedKeywordItem[] =
     active: true,
     latestPosition: null,
     latestDepth: null,
+    latestCheckedOn: null,
     previousPosition: null,
     positionDelta1d: null,
     positionDelta7d: null,
@@ -2556,6 +2574,7 @@ const newAppKeyword = (
   active: true,
   latestPosition: position,
   latestDepth: depth,
+  latestCheckedOn: depth === null ? null : utcDaysAgo(0),
   previousPosition: null,
   positionDelta1d: null,
   positionDelta7d: null,

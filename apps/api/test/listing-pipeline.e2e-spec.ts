@@ -4,14 +4,24 @@ import { getQueueToken } from '@nestjs/bullmq';
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient, Store } from '@prisma/client';
-import { DailyBudget, RunDailyResult } from '@asobeast/shared';
+import {
+  AppDetail,
+  AppRunStatus,
+  DailyBudget,
+  PortfolioSummary,
+  RunDailyResult,
+} from '@asobeast/shared';
 import { Job, Queue } from 'bullmq';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { AppsService } from '../src/apps/apps.service';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
-import { JOBS, QUEUES } from '../src/jobs/jobs.types';
-import { StoreAppNotFoundError } from '../src/store-providers/errors';
+import { JOBS, QUEUES, RefreshAppPayload } from '../src/jobs/jobs.types';
+import { StoreJobsHandler } from '../src/jobs/store-jobs.handler';
+import {
+  StoreAppNotFoundError,
+  StoreRequestError,
+} from '../src/store-providers/errors';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import { NormalizedApp, StoreProvider } from '../src/store-providers/types';
 import { asWorkspace } from './helpers/tenancy';
@@ -35,19 +45,23 @@ const FIXTURE: NormalizedApp = {
 
 class MarketRegistry {
   failWith: Error | null = null;
+  unlisted = new Set<string>();
 
   get(store: Store): StoreProvider {
     return {
       store,
-      getApp: (storeAppId: string, country: string) =>
-        this.failWith
-          ? Promise.reject(this.failWith)
-          : Promise.resolve({
-              ...FIXTURE,
-              store,
-              storeAppId,
-              title: `Fixture ${country}`,
-            }),
+      getApp: (storeAppId: string, country: string) => {
+        if (this.failWith) return Promise.reject(this.failWith);
+        if (this.unlisted.has(`${storeAppId}~${country}`)) {
+          return Promise.reject(new StoreAppNotFoundError(store, storeAppId));
+        }
+        return Promise.resolve({
+          ...FIXTURE,
+          store,
+          storeAppId,
+          title: `Fixture ${country}`,
+        });
+      },
       search: () => Promise.resolve([]),
       suggest: () => Promise.resolve([]),
       similar: () => Promise.resolve([]),
@@ -99,6 +113,7 @@ describe('market listings in the daily pipeline (e2e)', () => {
 
   beforeEach(async () => {
     registry.failWith = null;
+    registry.unlisted.clear();
     await obliterateQueues(app);
     await pauseQueues(app);
     await prisma.$executeRawUnsafe(
@@ -150,6 +165,18 @@ describe('market listings in the daily pipeline (e2e)', () => {
   const refreshListing = (appId: string, country: string) =>
     asWorkspace(app, () => app.get(AppsService).refreshListing(appId, country));
 
+  const runRefreshJob = (appId: string, country?: string) =>
+    app.get(StoreJobsHandler).handle({
+      name: JOBS.REFRESH_APP,
+      id: `refresh-${country ?? 'home'}`,
+      queueName: QUEUES.APP_STORE,
+      data: {
+        appId,
+        country,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+      } satisfies RefreshAppPayload,
+    } as Job);
+
   it('queues a listing refresh per market for the app and its competitors', async () => {
     const { primary, rival } = await seed();
 
@@ -181,17 +208,142 @@ describe('market listings in the daily pipeline (e2e)', () => {
     ).resolves.toBe(1);
   });
 
-  it('lets a market job finish quietly when the store has no such app', async () => {
+  it('lets a refresh job finish quietly in every market when the store no longer lists the app', async () => {
     const { primary } = await seed();
     registry.failWith = new StoreAppNotFoundError(Store.APP_STORE, '111');
 
-    await expect(refreshListing(primary.id, 'de')).resolves.toBeNull();
+    await expect(runRefreshJob(primary.id)).resolves.toBeUndefined();
+    await expect(runRefreshJob(primary.id, 'de')).resolves.toBeUndefined();
     await expect(
       prisma.appSnapshot.count({ where: { appId: primary.id } }),
     ).resolves.toBe(0);
-    await expect(refreshListing(primary.id, 'us')).rejects.toThrow(
-      StoreAppNotFoundError,
+  });
+
+  it('flags an app the store no longer lists, completes its run and clears the flag once it is listed again', async () => {
+    const { primary, rival } = await seed();
+    await prisma.keywordRanking.create({
+      data: {
+        appId: primary.id,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        keywordId: (await prisma.trackedKeyword.findFirstOrThrow()).keywordId,
+        date: new Date(new Date().toISOString().slice(0, 10)),
+        position: null,
+      },
+    });
+    registry.failWith = new StoreAppNotFoundError(Store.APP_STORE, '111');
+    await runRefreshJob(primary.id);
+    await runRefreshJob(primary.id, 'de');
+    registry.failWith = null;
+    await runRefreshJob(rival.id);
+    await runRefreshJob(rival.id, 'de');
+
+    const detail = (await api.get(`/apps/${primary.id}`).expect(200))
+      .body as AppDetail;
+    expect(detail.delistedAt).toEqual(expect.any(String));
+    expect(detail.competitors[0]?.delistedAt).toBeNull();
+    const portfolio = (await api.get('/portfolio').expect(200))
+      .body as PortfolioSummary;
+    expect(portfolio.apps[0]?.delistedAt).toBe(detail.delistedAt);
+    const status = (await api.get(`/apps/${primary.id}/run-status`).expect(200))
+      .body as AppRunStatus;
+    expect(status.stages.find((row) => row.stage === 'listings')).toEqual({
+      stage: 'listings',
+      ready: 2,
+      total: 2,
+      complete: true,
+    });
+    expect(status.state).toBe('complete');
+
+    await runRefreshJob(primary.id);
+
+    const relisted = (await api.get(`/apps/${primary.id}`).expect(200))
+      .body as AppDetail;
+    expect(relisted.delistedAt).toBeNull();
+  });
+
+  it('completes the run of an app a market does not list and expects that listing again once it is listed there', async () => {
+    const { primary, rival } = await seed();
+    registry.unlisted.add('111~de');
+    await runRefreshJob(primary.id);
+    await runRefreshJob(primary.id, 'de');
+    await runRefreshJob(primary.id, 'de');
+    await runRefreshJob(rival.id);
+    await runRefreshJob(rival.id, 'de');
+    const tracked = await prisma.trackedKeyword.findMany({
+      where: { appId: primary.id, active: true },
+    });
+    await prisma.keywordRanking.createMany({
+      data: tracked.map(({ keywordId }) => ({
+        appId: primary.id,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        keywordId,
+        date: new Date(new Date().toISOString().slice(0, 10)),
+        position: null,
+      })),
+    });
+
+    const unlisted = await prisma.app.findUniqueOrThrow({
+      where: { id: primary.id },
+    });
+    expect(unlisted.unlistedMarkets).toEqual(['de']);
+    expect(unlisted.delistedAt).toBeNull();
+    const runStatus = async () =>
+      (await api.get(`/apps/${primary.id}/run-status`).expect(200))
+        .body as AppRunStatus;
+    const listings = (status: AppRunStatus) =>
+      status.stages.find((row) => row.stage === 'listings');
+    const unlistedRun = await runStatus();
+    expect(listings(unlistedRun)).toEqual({
+      stage: 'listings',
+      ready: 3,
+      total: 3,
+      complete: true,
+    });
+    expect(unlistedRun.state).toBe('complete');
+
+    registry.unlisted.clear();
+    await runRefreshJob(primary.id, 'de');
+
+    const listed = await prisma.app.findUniqueOrThrow({
+      where: { id: primary.id },
+    });
+    expect(listed.unlistedMarkets).toEqual([]);
+    expect(listings(await runStatus())).toMatchObject({ ready: 4, total: 4 });
+  });
+
+  it('records the market when an on demand market refresh finds the app unlisted there', async () => {
+    const { primary } = await seed();
+    registry.unlisted.add('111~de');
+
+    await api.post(`/apps/${primary.id}/refresh?country=de`).expect(404);
+
+    const stored = await prisma.app.findUniqueOrThrow({
+      where: { id: primary.id },
+    });
+    expect(stored.unlistedMarkets).toEqual(['de']);
+    expect(stored.delistedAt).toBeNull();
+  });
+
+  it('flags the app when an on demand refresh finds it delisted', async () => {
+    const { primary } = await seed();
+    registry.failWith = new StoreAppNotFoundError(Store.APP_STORE, '111');
+
+    await api.post(`/apps/${primary.id}/refresh`).expect(404);
+
+    const detail = (await api.get(`/apps/${primary.id}`).expect(200))
+      .body as AppDetail;
+    expect(detail.delistedAt).toEqual(expect.any(String));
+  });
+
+  it('still fails a refresh job when the store does not answer', async () => {
+    const { primary } = await seed();
+    registry.failWith = new StoreRequestError(
+      Store.APP_STORE,
+      'getApp',
+      'socket hang up',
     );
+
+    await expect(runRefreshJob(primary.id)).rejects.toThrow(StoreRequestError);
   });
 
   it('counts market listings in the daily budget', async () => {
