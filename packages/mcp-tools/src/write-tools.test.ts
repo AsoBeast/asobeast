@@ -154,7 +154,7 @@ describe("the write tools", () => {
     ).toBe(false);
   });
 
-  it("counts an emoji as one label character, as the api does", () => {
+  it("counts label characters the way the api's MaxLength does", () => {
     const schema = writeTool("add_annotation").inputSchema;
     const label = "🚀".repeat(ANNOTATION_LABEL_MAX_LENGTH);
 
@@ -168,6 +168,13 @@ describe("the write tools", () => {
         label: `${label}🚀`,
       }).success,
     ).toBe(false);
+    expect(
+      schema.safeParse({
+        appId: "app-1",
+        date: "2026-10-08",
+        label: "❤️".repeat(ANNOTATION_LABEL_MAX_LENGTH),
+      }).success,
+    ).toBe(true);
   });
 
   it("refuse an annotation tag that is not a campaign tag", () => {

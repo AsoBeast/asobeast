@@ -3,6 +3,7 @@ import {
   ANNOTATION_LABEL_MAX_LENGTH,
   ANNOTATION_TAG_RULE,
   COUNTRY_PATTERN,
+  countMaxLengthChars,
   isAnnotationTag,
   normalizeAnnotationLabel,
   normalizeAnnotationTag,
@@ -79,12 +80,15 @@ export const ANNOTATION_WRITE_TOOLS: WriteTool[] = [
           `A short label for the event, shown in the day tooltip on the charts, at most ${ANNOTATION_LABEL_MAX_LENGTH} characters.`,
         )
         .transform(normalizeAnnotationLabel)
-        .refine((value) => value.length >= 1, {
+        .refine((value) => countMaxLengthChars(value) >= 1, {
           error: "The label is empty once surrounding whitespace is gone.",
         })
-        .refine((value) => [...value].length <= ANNOTATION_LABEL_MAX_LENGTH, {
-          error: `The label runs past ${ANNOTATION_LABEL_MAX_LENGTH} characters.`,
-        }),
+        .refine(
+          (value) => countMaxLengthChars(value) <= ANNOTATION_LABEL_MAX_LENGTH,
+          {
+            error: `The label runs past ${ANNOTATION_LABEL_MAX_LENGTH} characters.`,
+          },
+        ),
       market: z
         .string()
         .regex(COUNTRY_PATTERN)
