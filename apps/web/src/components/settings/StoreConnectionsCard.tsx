@@ -42,6 +42,7 @@ import {
   STORE_CONNECTIONS_SECTION_ID,
   STORE_CONSOLES,
   needsAdminKey,
+  replyNote,
 } from "@/lib/store-connection-copy";
 import { cn } from "@/lib/utils";
 import { ConnectAppStoreDialog } from "./ConnectAppStoreDialog";
@@ -184,6 +185,7 @@ function ConnectionDetails({
 }) {
   const status = connectionStatusLine(item);
   const facts = STORE_CONSOLES[item.store].facts(item);
+  const note = replyNote(item);
 
   return (
     <div className="flex flex-col gap-4">
@@ -206,6 +208,7 @@ function ConnectionDetails({
       >
         {status.text}
       </p>
+      {note ? <p className="text-body text-muted-foreground">{note}</p> : null}
       {actions}
       <StoreConnectionApps store={item.store} apps={item.apps} />
     </div>

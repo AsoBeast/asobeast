@@ -1,4 +1,5 @@
 import {
+  PLAY_REPLIES_NEED_KEY,
   SETTINGS_PATH,
   type Store,
   type StoreConnectionApp,
@@ -117,6 +118,9 @@ export function connectionStatusLine(item: StoreConnectionItem): StatusLine {
     text: `Last synced ${formatDateTime(item.lastSyncedAt)}`,
   };
 }
+
+export const replyNote = (item: StoreConnectionItem): string | null =>
+  item.credential === "googleAccount" ? PLAY_REPLIES_NEED_KEY : null;
 
 export const needsAdminKey = (item: StoreConnectionItem): boolean =>
   item.store === "APP_STORE" &&

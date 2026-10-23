@@ -1,4 +1,8 @@
-import type { StoreConnectionApp, StoreConnectionItem } from "@asobeast/shared";
+import {
+  PLAY_REPLIES_NEED_KEY,
+  type StoreConnectionApp,
+  type StoreConnectionItem,
+} from "@asobeast/shared";
 import { describe, expect, it } from "vitest";
 import {
   appStateLabel,
@@ -6,6 +10,7 @@ import {
   historyLine,
   STORE_CONSOLES,
   needsAdminKey,
+  replyNote,
 } from "./store-connection-copy";
 
 const APP: StoreConnectionApp = {
@@ -190,5 +195,14 @@ describe("google play copy", () => {
     expect(appStateLabel("unmatched", "GOOGLE_PLAY")).toBe(
       "No files in this bucket",
     );
+  });
+
+  it("says a google sign in cannot post replies, and a key or apple stays quiet", () => {
+    expect(replyNote({ ...PLAY, credential: "googleAccount" })).toBe(
+      PLAY_REPLIES_NEED_KEY,
+    );
+    expect(replyNote(PLAY)).toBeNull();
+    expect(replyNote({ ...PLAY, credential: "key" })).toBeNull();
+    expect(replyNote(ITEM)).toBeNull();
   });
 });
