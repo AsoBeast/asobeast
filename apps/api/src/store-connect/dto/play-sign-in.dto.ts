@@ -17,6 +17,7 @@ export class PlaySignInDto implements PlaySignInRequest {
       'The Cloud Storage bucket id shown under Download reports in Play Console. Carried through the Google sign in and stored with the connection.',
     maxLength: BUCKET_MAX_LENGTH,
   })
+  @IsString()
   @MaxLength(BUCKET_MAX_LENGTH)
   @Matches(BUCKET, { message: BUCKET_MESSAGE })
   bucket!: string;
