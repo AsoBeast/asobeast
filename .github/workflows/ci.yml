@@ -16,6 +16,7 @@ concurrency:
 jobs:
   checks:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -61,6 +62,7 @@ jobs:
 
   e2e:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     services:
       postgres:
         image: postgres:18-alpine
@@ -103,6 +105,7 @@ jobs:
 
   isolation:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     services:
       postgres:
         image: postgres:18-alpine
@@ -145,6 +148,7 @@ jobs:
 
   openapi-drift:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     services:
       postgres:
         image: postgres:18-alpine
@@ -208,6 +212,7 @@ jobs:
 
   upgrade-drill:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     services:
       postgres:
         image: postgres:18-alpine
@@ -271,6 +276,7 @@ jobs:
 
   shutdown-drill:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     services:
       postgres:
         image: postgres:18-alpine
@@ -313,6 +319,7 @@ jobs:
 
   pipeline-benchmark:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     env:
       DATABASE_URL: postgresql://asobeast:asobeast@localhost:5433/asobeast_bench
       AUTH_SECRET: test-secret-test-secret-test-secret-0123456789
@@ -346,6 +353,7 @@ jobs:
 
   backup-drill:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -401,6 +409,7 @@ jobs:
 
   web-e2e:
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -430,6 +439,7 @@ jobs:
   compose-smoke:
     needs: checks
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
