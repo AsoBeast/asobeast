@@ -1,5 +1,6 @@
 import { TEST_GOOGLE_CLIENT } from './helpers/enable-google-sign-in';
 import { TEST_STORE_CONNECT_KEY } from './helpers/enable-store-connect';
+import { ConflictException } from '@nestjs/common';
 import * as argon2 from 'argon2';
 import { Store } from '@prisma/client';
 import {
@@ -323,9 +324,11 @@ describe('Google Play sign in (e2e)', () => {
     harness.gcs.reset();
     const connections = harness.app.get(StoreConnectionService);
 
-    await expect(
-      asWorkspace(harness.app, () => connections.openPlayPublisher()),
-    ).rejects.toThrow(PLAY_REPLIES_NEED_KEY);
+    const refusal = asWorkspace(harness.app, () =>
+      connections.openPlayPublisher(),
+    );
+    await expect(refusal).rejects.toBeInstanceOf(ConflictException);
+    await expect(refusal).rejects.toThrow(PLAY_REPLIES_NEED_KEY);
     await expect(
       asWorkspace(harness.app, () => connections.openPlay()),
     ).resolves.toMatchObject({

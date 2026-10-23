@@ -557,9 +557,9 @@ describe('StoreConnectionService', () => {
     const { service, gcsFactory } = harness();
     await service.connectGoogleAccount(GOOGLE_ACCOUNT, '1098765', 'user_1');
 
-    await expect(service.openPlayPublisher()).rejects.toThrow(
-      new ConflictException(PLAY_REPLIES_NEED_KEY),
-    );
+    const refusal = service.openPlayPublisher();
+    await expect(refusal).rejects.toBeInstanceOf(ConflictException);
+    await expect(refusal).rejects.toThrow(PLAY_REPLIES_NEED_KEY);
     expect(gcsFactory.publisher).not.toHaveBeenCalled();
     await expect(service.openPlay()).resolves.toMatchObject({
       api: { account: { kind: 'googleAccount', email: GOOGLE_ACCOUNT.email } },
