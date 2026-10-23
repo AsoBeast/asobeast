@@ -51,12 +51,12 @@ function NotReporting({ store, reason }: { store: Store; reason: string }) {
   );
 }
 
-function KeyRefused({ store }: { store: Store }) {
+function ConnectionRefused({ store }: { store: Store }) {
   const { isOwner } = useAuth();
   const copy = FUNNEL_COPY[store];
   return (
     <EmptyState
-      title={`${copy.console} refused the connected key.`}
+      title={copy.refusedTitle}
       body={isOwner ? copy.refusedBody : copy.refusedAskOwner}
       action={
         isOwner ? (
@@ -76,7 +76,8 @@ function NotConnected({ id, store }: { id: string; store: Store }) {
   const connection = connections.connections.find(
     (item) => item.store === store,
   );
-  if (connection?.status === "rejected") return <KeyRefused store={store} />;
+  if (connection?.status === "rejected")
+    return <ConnectionRefused store={store} />;
   if (connection) {
     const app = connection.apps.find((item) => item.appId === id);
     return (

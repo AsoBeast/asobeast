@@ -2552,7 +2552,7 @@ const routes: Route[] = [
               errorEnvelope(
                 422,
                 path,
-                `Google Cloud Storage has no bucket ${body.bucket ?? ""} this service account can read. Copy the bucket id from Download reports in Play Console.`,
+                `Google Cloud Storage has no bucket ${body.bucket ?? ""}. Copy the Cloud Storage URI from Download reports in Play Console: the bucket id is the part after gs:// that starts with pubsite_prod.`,
               ),
             );
           }
