@@ -5,6 +5,7 @@ import {
   GcsBucketError,
   GcsRateLimitedError,
   GcsRejectedError,
+  GcsTokenRefusedError,
   GcsTooLargeError,
   MAX_LISTED_OBJECTS,
   PLAY_REPORT_MAX_BYTES,
@@ -12,9 +13,9 @@ import {
   storePerformanceObjects,
 } from './gcs-api';
 import type { GcsRequest, GcsResponse, GcsTransport } from './gcs-transport';
-import { parseServiceAccount } from './service-account';
+import { parseServiceAccount, serviceAccountGrant } from './service-account';
 
-const ACCOUNT = parseServiceAccount(
+const KEY = parseServiceAccount(
   JSON.stringify({
     client_email: 'reports@asobeast-play.iam.gserviceaccount.com',
     private_key_id: 'kid',
@@ -25,6 +26,11 @@ const ACCOUNT = parseServiceAccount(
 );
 
 const BUCKET = 'pubsite_prod_rev_01234567890987654321';
+const SOURCE = {
+  grant: serviceAccountGrant(KEY),
+  bucket: BUCKET,
+  account: { kind: 'key' as const, email: KEY.clientEmail },
+};
 const TOKEN = { status: 200, body: { access_token: 'ya29', expires_in: 3600 } };
 
 function recorded(...responses: GcsResponse[]) {
@@ -37,7 +43,7 @@ function recorded(...responses: GcsResponse[]) {
       ? Promise.resolve(next)
       : Promise.reject(new Error('no response queued'));
   };
-  return { api: new GcsApi(transport, ACCOUNT, BUCKET), requests };
+  return { api: new GcsApi(transport, SOURCE), requests };
 }
 
 const item = (name: string, generation: string) => ({
@@ -116,8 +122,7 @@ describe('GcsApi', () => {
         request.method === 'POST'
           ? Promise.resolve(TOKEN)
           : Promise.reject(new ResponseTooLargeError(PLAY_REPORT_MAX_BYTES)),
-      ACCOUNT,
-      BUCKET,
+      SOURCE,
     );
 
     await expect(api.download('stats/x.csv')).rejects.toBeInstanceOf(
@@ -156,13 +161,51 @@ describe('GcsApi', () => {
     );
   });
 
-  it('maps a refused token request to a rejected account', async () => {
-    const transport: GcsTransport = () =>
-      Promise.resolve({ status: 400, body: { error: 'invalid_grant' } });
+  it.each([400, 401, 403])(
+    'maps a %i to the token request to a refused token',
+    async (status) => {
+      const transport: GcsTransport = () =>
+        Promise.resolve({ status, body: { error: 'invalid_grant' } });
 
-    await expect(
-      new GcsApi(transport, ACCOUNT, BUCKET).listStorePerformance(),
-    ).rejects.toBeInstanceOf(GcsRejectedError);
+      const listing = new GcsApi(transport, SOURCE).listStorePerformance(
+        'com.x',
+      );
+
+      await expect(listing).rejects.toBeInstanceOf(GcsTokenRefusedError);
+      await expect(listing).rejects.toBeInstanceOf(GcsRejectedError);
+      await expect(listing).rejects.toMatchObject({ code: 'invalid_grant' });
+    },
+  );
+
+  it('keeps a refused bucket apart from a refused token', async () => {
+    const { api } = recorded({ status: 403, body: null });
+
+    const listing = api.listStorePerformance('com.x');
+
+    await expect(listing).rejects.toBeInstanceOf(GcsRejectedError);
+    await expect(listing).rejects.not.toBeInstanceOf(GcsTokenRefusedError);
+  });
+
+  it('sends the form of its grant to the token endpoint', async () => {
+    const requests: GcsRequest[] = [];
+    const transport: GcsTransport = (request) => {
+      requests.push(request);
+      return Promise.resolve(
+        request.method === 'POST' ? TOKEN : { status: 200, body: {} },
+      );
+    };
+    const api = new GcsApi(transport, {
+      ...SOURCE,
+      grant: () => ({ grant_type: 'refresh_token', refresh_token: '1//r' }),
+    });
+
+    await api.verify();
+
+    expect(requests[0].form).toEqual({
+      grant_type: 'refresh_token',
+      refresh_token: '1//r',
+    });
+    expect(api.account).toEqual(SOURCE.account);
   });
 });
 

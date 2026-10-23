@@ -7,7 +7,6 @@ import type { FunnelRow } from '../discovery-report';
 import { StoreConnectionService } from '../store-connection.service';
 import { PLAY_ALL_MARKETS } from '../store-funnel';
 import { funnelUpserts } from '../store-funnel-rows';
-import { bucketMissing, PLAY_REFUSED } from '../store-keys';
 import { emptySummary, type SyncSummary } from '../store-sync-summary';
 import {
   GcsBucketError,
@@ -29,6 +28,7 @@ import {
   type SearchTermRow,
 } from './play-store-performance';
 import { GcsUnreachableError } from './gcs-transport';
+import { playRefusal } from './play-refusal';
 
 const STORE = 'GOOGLE_PLAY';
 const ACCESS_TYPE = 'ONGOING';
@@ -228,12 +228,7 @@ export class PlayReportSync {
     summary: SyncSummary,
     lastError: string | null,
   ): Promise<void> {
-    const refusal =
-      error instanceof GcsRejectedError
-        ? PLAY_REFUSED
-        : error instanceof GcsBucketError
-          ? bucketMissing(api.bucket)
-          : null;
+    const refusal = playRefusal(error, api);
     if (refusal) {
       await this.connections.markRejected(STORE, refusal);
       throw new UnrecoverableError(refusal);

@@ -8,6 +8,7 @@ import {
   GcsBucketError,
   GcsRateLimitedError,
   GcsRejectedError,
+  GcsTokenRefusedError,
   PLAY_REPORT_MAX_BYTES,
   type GcsObject,
 } from './gcs-api';
@@ -103,6 +104,7 @@ function harness(objects: GcsObject[]) {
   };
   const api = {
     bucket: 'pubsite_prod_rev_1',
+    account: { kind: 'key', email: 'reports@x.iam.gserviceaccount.com' },
     verify: jest.fn(() => Promise.resolve()),
     listStorePerformance: jest.fn((packageName: string) =>
       Promise.resolve(
@@ -294,7 +296,14 @@ describe('PlayReportSync', () => {
 
   it('marks the connection rejected on a refused account or a missing bucket', async () => {
     for (const [error, reason] of [
-      [new GcsRejectedError('no', 403), 'Google refused'],
+      [
+        new GcsRejectedError('no', 403),
+        'Google refused reports@x.iam.gserviceaccount.com access',
+      ],
+      [
+        new GcsTokenRefusedError('no', 400),
+        'Google refused the key of reports@x.iam.gserviceaccount.com',
+      ],
       [new GcsBucketError('no', 404), 'pubsite_prod_rev_1'],
     ] as const) {
       const { service, api, connections } = harness(twoMonths);

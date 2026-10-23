@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import {
   assertStoreConnectConfiguration,
+  GOOGLE_PLAY_OAUTH_VARIABLES,
   STORE_CONNECT_KEY_VARIABLES,
   storeConnectEnabled,
 } from './store-connect-config';
@@ -55,6 +56,34 @@ describe('store connect configuration', () => {
       'STORE_CONNECT_ENCRYPTION_KEY_PREVIOUS is set without STORE_CONNECT_ENCRYPTION_KEY',
     );
   });
+
+  it('accepts a Google OAuth client set whole or not at all', () => {
+    const client = {
+      GOOGLE_PLAY_OAUTH_CLIENT_ID: 'client.apps.googleusercontent.com',
+      GOOGLE_PLAY_OAUTH_CLIENT_SECRET: 'GOCSPX-secret',
+    };
+
+    expect(() =>
+      assertStoreConnectConfiguration({ ...keys(key()), ...client }),
+    ).not.toThrow();
+    expect(() => assertStoreConnectConfiguration(keys(key()))).not.toThrow();
+  });
+
+  it.each(GOOGLE_PLAY_OAUTH_VARIABLES)(
+    'refuses to boot when only %s is missing',
+    (name) => {
+      const env = {
+        ...keys(key()),
+        GOOGLE_PLAY_OAUTH_CLIENT_ID: 'client.apps.googleusercontent.com',
+        GOOGLE_PLAY_OAUTH_CLIENT_SECRET: 'GOCSPX-secret',
+        [name]: undefined,
+      };
+
+      expect(() => assertStoreConnectConfiguration(env)).toThrow(
+        `Sign in with Google is partly configured. Set ${name} or remove every GOOGLE_PLAY_OAUTH_ variable.`,
+      );
+    },
+  );
 
   it('does not echo the key it refuses', () => {
     const bad = randomBytes(8).toString('base64');
