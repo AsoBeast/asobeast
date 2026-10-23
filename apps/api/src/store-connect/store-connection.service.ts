@@ -58,7 +58,7 @@ export const CREDENTIAL_UNREADABLE =
 const NOT_CONNECTED = 'This workspace has not connected that store';
 
 class CredentialUnreadableError extends Error {}
-const REJECTED =
+export const CONNECTION_REJECTED =
   'The store refused the connected key. Verify it or connect a new one first.';
 const OPERATION = 'a store connection';
 
@@ -171,7 +171,8 @@ export class StoreConnectionService {
       select: { status: true },
     });
     if (!row) throw new NotFoundException(NOT_CONNECTED);
-    if (row.status === 'rejected') throw new ConflictException(REJECTED);
+    if (row.status === 'rejected')
+      throw new ConflictException(CONNECTION_REJECTED);
     return this.queue.enqueue(this.workspace.require(OPERATION), store);
   }
 

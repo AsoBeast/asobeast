@@ -4888,6 +4888,84 @@
         ]
       }
     },
+    "/apps/{id}/reviews/{reviewId}/reply/post": {
+      "post": {
+        "description": "Sends the saved reply text to App Store Connect or Google Play with the key connected in Settings, records when and what was posted, and marks the review replied. Posting again after an edit replaces the reply on the store. Through a signed in session only. Answers 400 without saved text or over the store limit, 403 when the connected key may not reply, 404 when the store does not know the review, 409 without a usable connection, 422 when the store refuses the reply and 429 when the store asks to slow down.",
+        "operationId": "ReviewRepliesController_post",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "reviewId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Post the kept reply of a review to its store",
+        "tags": [
+          "reviews"
+        ]
+      },
+      "delete": {
+        "description": "Deletes the response posted to App Store Connect and clears the post, keeping the reply text. Through a signed in session only. Answers 404 when nothing was posted and 409 for a Google Play review, whose API offers no removal.",
+        "operationId": "ReviewRepliesController_withdraw",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "reviewId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Withdraw the reply posted to the App Store",
+        "tags": [
+          "reviews"
+        ]
+      }
+    },
     "/apps/{id}/reviews/reply-guidelines": {
       "get": {
         "operationId": "ReviewReplyGuidelinesController_read",

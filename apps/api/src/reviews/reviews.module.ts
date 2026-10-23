@@ -7,6 +7,7 @@ import { AscReviewLocator } from './asc-review-locator.service';
 import { ReviewRepliesController } from './review-replies.controller';
 import { ReviewRepliesService } from './review-replies.service';
 import { ReviewReplyAssistant } from './review-reply-assistant.service';
+import { ReviewReplyPoster } from './review-reply-poster.service';
 import { ReviewReplyGuidelinesController } from './review-reply-guidelines.controller';
 import { ReviewThemesService } from './review-themes.service';
 import { ReviewTranslationController } from './review-translation.controller';
@@ -27,6 +28,7 @@ import { ReviewsService } from './reviews.service';
     ReviewsService,
     ReviewRepliesService,
     ReviewReplyAssistant,
+    ReviewReplyPoster,
     ReviewThemesService,
     ReviewTranslator,
   ],

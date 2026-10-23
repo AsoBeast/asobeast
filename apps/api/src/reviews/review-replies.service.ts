@@ -14,7 +14,7 @@ import {
 import { storeLabel } from '../alerts/alert-summary';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
-import { toReviewReplyItem } from './review-reply.mapper';
+import { toReviewReplyItem, WITH_POSTER } from './review-reply.mapper';
 
 function repliedAtOf(replied: boolean | undefined): Date | null | undefined {
   if (replied === undefined) return undefined;
@@ -84,6 +84,7 @@ export class ReviewRepliesService {
         repliedAt: repliedAt ?? null,
       },
       update: { text, repliedAt },
+      include: WITH_POSTER,
     });
     return toReviewReplyItem(row);
   }
