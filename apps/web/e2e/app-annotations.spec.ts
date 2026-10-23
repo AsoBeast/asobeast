@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { ANNOTATION_LABEL_MAX_LENGTH } from "@asobeast/shared";
 import { expect, test } from "./session.mts";
 
 test.describe.configure({ mode: "serial" });
@@ -76,4 +77,31 @@ test("removes an added annotation by its own id", async ({ page }) => {
   await confirmRemoval(page);
   await expect(removeButton(page, "Fresh marker")).toHaveCount(0);
   await expect(removeButton(page, "Keyword field rewrite")).toBeVisible();
+});
+
+test("counts the label the way the api does", async ({ page }) => {
+  await page.goto("/apps/app-1/rankings");
+
+  const dateBox = page.getByLabel("Date", { exact: true });
+  const labelBox = page.getByLabel("Label", { exact: true });
+  const add = page.getByRole("button", { name: "Add annotation" });
+
+  // a heart with its presentation sequence is one counted character, not two
+  const hearts = "❤️".repeat(ANNOTATION_LABEL_MAX_LENGTH);
+  await expect(async () => {
+    await dateBox.fill("2030-02-01");
+    await labelBox.fill(hearts);
+    await expect(dateBox).toHaveValue("2030-02-01");
+    await expect(labelBox).toHaveValue(hearts);
+  }).toPass();
+  await expect(add).not.toHaveAttribute("aria-disabled", "true");
+
+  await labelBox.fill(`${hearts}❤️`);
+  await expect(
+    page.getByText(
+      `${ANNOTATION_LABEL_MAX_LENGTH + 1} / ${ANNOTATION_LABEL_MAX_LENGTH}`,
+      { exact: false },
+    ),
+  ).toBeVisible();
+  await expect(add).toHaveAttribute("aria-disabled", "true");
 });

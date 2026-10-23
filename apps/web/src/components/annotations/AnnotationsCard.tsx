@@ -44,6 +44,7 @@ import {
   invalidateAnnotationMutation,
 } from "@/lib/queries";
 import { useKeyedSingleFlight, useSingleFlight } from "@/lib/single-flight";
+import { limitCounterText, textLimit } from "@/lib/text-limit";
 import { AnnotationsSkeleton } from "./skeletons";
 
 function AnnotationRow({
@@ -211,6 +212,8 @@ function AddAnnotationForm({ id }: { id: string }) {
   const [label, setLabel] = useState("");
   const [tag, setTag] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const labelLimit = textLimit(label, ANNOTATION_LABEL_MAX_LENGTH);
+  const tagLimit = textLimit(tag, ANNOTATION_TAG_MAX_LENGTH);
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -236,7 +239,11 @@ function AddAnnotationForm({ id }: { id: string }) {
     },
   });
   const addOnce = useSingleFlight(mutation);
-  const addable = date !== "" && label.trim() !== "";
+  const addable =
+    date !== "" &&
+    label.trim() !== "" &&
+    labelLimit.over === 0 &&
+    tagLimit.over === 0;
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -263,11 +270,15 @@ function AddAnnotationForm({ id }: { id: string }) {
           <Input
             id="annotation-label"
             required
-            maxLength={ANNOTATION_LABEL_MAX_LENGTH}
             placeholder="Release 5.21.0"
             value={label}
             onChange={(event) => setLabel(event.target.value)}
           />
+          {labelLimit.over > 0 ? (
+            <p className="text-caption text-destructive">
+              {limitCounterText(labelLimit, ANNOTATION_LABEL_MAX_LENGTH)}
+            </p>
+          ) : null}
         </div>
       </div>
       <div className="flex flex-wrap items-end gap-3">
@@ -275,11 +286,15 @@ function AddAnnotationForm({ id }: { id: string }) {
           <Label htmlFor="annotation-tag">Tag (optional)</Label>
           <Input
             id="annotation-tag"
-            maxLength={ANNOTATION_TAG_MAX_LENGTH}
             placeholder="wave"
             value={tag}
             onChange={(event) => setTag(event.target.value)}
           />
+          {tagLimit.over > 0 ? (
+            <p className="text-caption text-destructive">
+              {limitCounterText(tagLimit, ANNOTATION_TAG_MAX_LENGTH)}
+            </p>
+          ) : null}
         </div>
         <Button
           type="submit"
