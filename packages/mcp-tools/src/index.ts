@@ -1,13 +1,13 @@
 import type { ApiTokenScope } from "@asobeast/shared";
 import { ACTION_TOOLS } from "./actions";
-import { ANNOTATION_TOOLS, ANNOTATION_WRITE_TOOLS } from "./annotations";
+import { ANNOTATION_TOOLS } from "./annotations";
 import { APP_TOOLS } from "./apps";
 import { CHART_TOOLS } from "./charts";
 import { COMPETITOR_TOOLS } from "./competitors";
 import { INSIGHT_TOOLS } from "./insights";
 import { KEYWORD_TOOLS } from "./keywords";
-import { MCP_WRITE_TOOLS as CORE_WRITE_TOOLS } from "./write-tools";
-import type { McpTool, ReadTool, WriteTool } from "./define";
+import { MCP_WRITE_TOOLS } from "./write-tools";
+import type { McpTool, ReadTool } from "./define";
 
 export * from "./define";
 export {
@@ -21,18 +21,13 @@ export {
 export { toolText } from "./tool-text";
 export { notFoundText } from "./not-found";
 export { ACTION_TOOLS } from "./actions";
-export { ANNOTATION_TOOLS, ANNOTATION_WRITE_TOOLS } from "./annotations";
+export { ANNOTATION_TOOLS } from "./annotations";
 export { APP_TOOLS } from "./apps";
 export { CHART_TOOLS } from "./charts";
 export { COMPETITOR_TOOLS } from "./competitors";
 export { INSIGHT_TOOLS } from "./insights";
 export { KEYWORD_TOOLS } from "./keywords";
-export { TRACK_KEYWORDS_LIMIT } from "./write-tools";
-
-export const MCP_WRITE_TOOLS: WriteTool[] = [
-  ...CORE_WRITE_TOOLS,
-  ...ANNOTATION_WRITE_TOOLS,
-];
+export { MCP_WRITE_TOOLS, TRACK_KEYWORDS_LIMIT } from "./write-tools";
 
 export const MCP_TOOLS: ReadTool[] = [
   ...APP_TOOLS,

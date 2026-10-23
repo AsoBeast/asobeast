@@ -1,7 +1,6 @@
 import { z } from "zod";
 import {
   ANNOTATION_LABEL_MAX_LENGTH,
-  ANNOTATION_TAG_MAX_LENGTH,
   ANNOTATION_TAG_RULE,
   COUNTRY_PATTERN,
   isAnnotationTag,
@@ -30,6 +29,28 @@ const annotationId = z
   .max(64)
   .regex(/^[A-Za-z0-9_-]+$/, "Not an id.")
   .describe("The annotation id from list_annotations.");
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const isText = (value: unknown): value is string => typeof value === "string";
+
+const isTextOrNull = (value: unknown): value is string | null =>
+  value === null || isText(value);
+
+function annotationOutcome(body: unknown) {
+  if (!isRecord(body)) return body;
+  const { id, date, label, market, tag } = body;
+  if (!isText(id) || !isText(date) || !isText(label)) return body;
+  return {
+    added: true,
+    id,
+    date,
+    label,
+    market: isTextOrNull(market) ? market : null,
+    tag: isTextOrNull(tag) ? tag : null,
+  };
+}
 
 export const ANNOTATION_TOOLS: ReadTool[] = [
   defineReadTool({
@@ -90,7 +111,7 @@ export const ANNOTATION_WRITE_TOOLS: WriteTool[] = [
       path: `/apps/${seg(appId)}/annotations`,
       body: { date, label, market, tag },
     }),
-    outcome: (body) => body,
+    outcome: (body) => annotationOutcome(body),
   }),
 
   defineWriteTool({

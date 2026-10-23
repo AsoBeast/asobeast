@@ -465,6 +465,47 @@ describe("the write tools", () => {
     ).toBe(body);
   });
 
+  it("returns the marker it added without the app and timestamp it echoes", () => {
+    const body = {
+      id: "ann-1",
+      appId: "app-1",
+      date: "2026-10-08",
+      label: "Release 5.21.0",
+      market: "de",
+      tag: "wave",
+      createdAt: "2026-10-08T09:00:00.000Z",
+    };
+
+    expect(
+      writeTool("add_annotation").outcome(body, {
+        appId: "app-1",
+        date: "2026-10-08",
+        label: "Release 5.21.0",
+      }),
+    ).toEqual({
+      added: true,
+      id: "ann-1",
+      date: "2026-10-08",
+      label: "Release 5.21.0",
+      market: "de",
+      tag: "wave",
+    });
+  });
+
+  it.each([
+    ["no body", null],
+    ["a body that is not an object", "accepted"],
+    ["a body missing its fields", { id: "ann-1", date: "2026-10-08" }],
+  ])("returns %s from add_annotation unchanged", (_case, body) => {
+    expect(
+      writeTool("add_annotation").outcome(body, {
+        appId: "app-1",
+        date: "2026-10-08",
+        label: "Release 5.21.0",
+      }),
+    ).toBe(body);
+  });
+
   it("returns a competitor as the api described it", () => {
     const body = { id: "app-2", name: "Rival", store: "APP_STORE" };
 
