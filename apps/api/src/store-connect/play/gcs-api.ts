@@ -199,7 +199,7 @@ export class GcsApi {
     if (!isSuccess(response)) throw errorOf(response, 'the token request');
     const answer = response.body as Partial<GoogleTokenAnswer> | null;
     if (!answer?.access_token) {
-      throw new GcsTokenRefusedError('Google answered no access token', 400);
+      throw new GcsError('Google answered no access token', 502);
     }
     return {
       access_token: answer.access_token,

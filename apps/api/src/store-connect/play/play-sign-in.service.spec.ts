@@ -170,6 +170,12 @@ describe('PlaySignIn', () => {
       STORAGE_SCOPE_MISSING,
     ],
     [
+      'a rate limit',
+      () => Promise.resolve({ status: 429, body: null }),
+      BadGatewayException,
+      'Google answered 429',
+    ],
+    [
       'a Google error',
       () => Promise.resolve({ status: 503, body: null }),
       BadGatewayException,

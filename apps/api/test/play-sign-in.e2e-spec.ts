@@ -111,6 +111,10 @@ describe('Google Play sign in (e2e)', () => {
       `${TEST_GOOGLE_CLIENT.origin}/settings/google-play`,
     );
     expect(url.searchParams.get('scope')).toContain(GCS_READ_ONLY_SCOPE);
+    expect(url.searchParams.get('access_type')).toBe('offline');
+    expect(url.searchParams.get('prompt')).toBe('consent');
+    expect(url.searchParams.get('code_challenge_method')).toBe('S256');
+    expect(url.searchParams.get('code_challenge')).toMatch(/^[\w-]{43}$/);
     expect(JSON.stringify(response.body)).not.toContain(
       TEST_GOOGLE_CLIENT.secret,
     );
@@ -135,6 +139,8 @@ describe('Google Play sign in (e2e)', () => {
       'refresh_token',
       undefined,
     ]);
+    expect(harness.gcs.requests[0].form?.code_verifier).toMatch(/^[\w-]{43}$/);
+    expect(JSON.stringify(response.body)).not.toContain('1//refresh');
     const listing = harness.gcs.requests[2];
     expect(listing.url).toContain(`/storage/v1/b/${BUCKET}/o?`);
     expect(listing.bearer).toBe('ya29.signed-in');
@@ -156,11 +162,24 @@ describe('Google Play sign in (e2e)', () => {
       /oauth2/,
       gcsAnswer({ error: 'invalid_grant' }, 400),
     );
-    await complete(await start()).expect(400);
+    const used = await complete(await start()).expect(400);
+    expect((used.body as ApiErrorEnvelope).message).toContain(
+      'Google did not accept this sign in',
+    );
+
+    harness.gcs.on(
+      'POST',
+      /oauth2/,
+      gcsAnswer({ error: 'invalid_client' }, 401),
+    );
+    const misconfigured = await complete(await start()).expect(409);
+    expect((misconfigured.body as ApiErrorEnvelope).message).toContain(
+      'GOOGLE_PLAY_OAUTH_CLIENT_ID',
+    );
     await expect(harness.prisma.storeConnection.count()).resolves.toBe(0);
   });
 
-  it('answers 422 when the account may not read the bucket or was not granted storage', async () => {
+  it('answers 422 when the account may not read the bucket, was not granted storage or names a missing bucket', async () => {
     granted();
     harness.gcs.on('GET', /\/o\?/, gcsAnswer({ error: 'forbidden' }, 403));
     const refused = await complete(await start()).expect(422);
@@ -177,6 +196,14 @@ describe('Google Play sign in (e2e)', () => {
     const narrowed = await complete(await start()).expect(422);
     expect((narrowed.body as ApiErrorEnvelope).message).toContain(
       'View your data in Google Cloud Storage',
+    );
+
+    harness.gcs.reset();
+    granted();
+    harness.gcs.on('GET', /\/o\?/, gcsAnswer({ error: 'not found' }, 404));
+    const missing = await complete(await start()).expect(422);
+    expect((missing.body as ApiErrorEnvelope).message).toContain(
+      `Google Cloud Storage has no bucket ${BUCKET}`,
     );
     await expect(harness.prisma.storeConnection.count()).resolves.toBe(0);
   });

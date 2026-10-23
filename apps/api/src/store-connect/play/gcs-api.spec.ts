@@ -3,6 +3,7 @@ import { ResponseTooLargeError } from '../bounded-body';
 import {
   GcsApi,
   GcsBucketError,
+  GcsError,
   GcsRateLimitedError,
   GcsRejectedError,
   GcsTokenRefusedError,
@@ -176,6 +177,16 @@ describe('GcsApi', () => {
       await expect(listing).rejects.toMatchObject({ code: 'invalid_grant' });
     },
   );
+
+  it('treats a token answer without a token as a Google failure, not a refusal', async () => {
+    const transport: GcsTransport = () =>
+      Promise.resolve({ status: 200, body: {} });
+
+    const listing = new GcsApi(transport, SOURCE).listStorePerformance('com.x');
+
+    await expect(listing).rejects.toBeInstanceOf(GcsError);
+    await expect(listing).rejects.not.toBeInstanceOf(GcsRejectedError);
+  });
 
   it('keeps a refused bucket apart from a refused token', async () => {
     const { api } = recorded({ status: 403, body: null });

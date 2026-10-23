@@ -54,6 +54,7 @@ export const SIGN_IN_REFUSED =
 export const STORAGE_SCOPE_MISSING =
   'Google did not grant access to Cloud Storage. Sign in with Google again and keep "View your data in Google Cloud Storage" ticked on the consent screen.';
 const OPERATION = 'a google play sign in';
+const TRANSIENT = new Set([408, 429]);
 
 @Injectable()
 export class PlaySignIn {
@@ -117,7 +118,11 @@ export class PlaySignIn {
     if (isClientRefusal(oauthErrorOf(response.body))) {
       throw new ConflictException(CLIENT_REFUSED);
     }
-    if (response.status >= 400 && response.status < 500) {
+    if (
+      response.status >= 400 &&
+      response.status < 500 &&
+      !TRANSIENT.has(response.status)
+    ) {
       throw new BadRequestException(SIGN_IN_REFUSED);
     }
     if (response.status < 200 || response.status >= 300) {
