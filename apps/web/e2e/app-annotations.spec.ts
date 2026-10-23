@@ -48,3 +48,32 @@ test("hands focus to the add form when the list empties", async ({ page }) => {
     page.getByRole("button", { name: "Add annotation" }),
   ).toBeFocused();
 });
+
+test("removes an added annotation by its own id", async ({ page }) => {
+  await page.goto("/apps/app-1/rankings");
+
+  await removeButton(page, "Release 5.20.0").click();
+  await confirmRemoval(page);
+  await expect(removeButton(page, "Release 5.20.0")).toHaveCount(0);
+
+  const dateBox = page.getByLabel("Date", { exact: true });
+  const labelBox = page.getByLabel("Label", { exact: true });
+  const add = page.getByRole("button", { name: "Add annotation" });
+
+  await expect(async () => {
+    await dateBox.fill("2030-02-01");
+    await labelBox.fill("Fresh marker");
+    await expect(dateBox).toHaveValue("2030-02-01");
+    await expect(labelBox).toHaveValue("Fresh marker");
+  }).toPass();
+  await expect(add).toBeEnabled();
+  await add.click();
+
+  const added = removeButton(page, "Fresh marker");
+  await expect(added).toBeVisible();
+
+  await added.click();
+  await confirmRemoval(page);
+  await expect(removeButton(page, "Fresh marker")).toHaveCount(0);
+  await expect(removeButton(page, "Keyword field rewrite")).toBeVisible();
+});

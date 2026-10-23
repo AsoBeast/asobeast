@@ -372,6 +372,7 @@ const APP_ANNOTATION_SEED: AppAnnotationItem[] = [
 ];
 
 let appAnnotations: AppAnnotationItem[] = structuredClone(APP_ANNOTATION_SEED);
+let appAnnotationIds = APP_ANNOTATION_SEED.length;
 
 const actions: ActionItem[] = ACTIONS.map((action) => structuredClone(action));
 const actionEvents: Record<string, ActionEventItem[]> =
@@ -3505,7 +3506,9 @@ const routes: Route[] = [
       const path = req.url ?? "/";
       if (id === ERROR_ID) return json(res, 500, errorEnvelope(500, path));
       if (!DATASETS[id]) return json(res, 404, errorEnvelope(404, path));
-      json(res, 200, { annotations: id === "app-1" ? appAnnotations : [] });
+      json(res, 200, {
+        annotations: appAnnotations.filter((row) => row.appId === id),
+      });
     },
   },
   {
@@ -3516,7 +3519,7 @@ const routes: Route[] = [
         const path = req.url ?? "/";
         if (!DATASETS[id]) return json(res, 404, errorEnvelope(404, path));
         const created: AppAnnotationItem = {
-          id: `annotation-${appAnnotations.length + 1}`,
+          id: `annotation-${++appAnnotationIds}`,
           appId: id,
           date: body.date,
           label: body.label,
@@ -3535,7 +3538,9 @@ const routes: Route[] = [
     handler: ([id, annotationId], req, res) => {
       const path = req.url ?? "/";
       if (!DATASETS[id]) return json(res, 404, errorEnvelope(404, path));
-      const index = appAnnotations.findIndex((row) => row.id === annotationId);
+      const index = appAnnotations.findIndex(
+        (row) => row.id === annotationId && row.appId === id,
+      );
       if (index < 0) return json(res, 404, errorEnvelope(404, path));
       appAnnotations.splice(index, 1);
       res.writeHead(204).end();
@@ -3546,6 +3551,7 @@ const routes: Route[] = [
     pattern: /^\/__reset\/app-annotations$/,
     handler: (_p, _req, res) => {
       appAnnotations = structuredClone(APP_ANNOTATION_SEED);
+      appAnnotationIds = APP_ANNOTATION_SEED.length;
       json(res, 200, { reset: true });
     },
   },
