@@ -92,4 +92,27 @@ describe('buildBenchmarks', () => {
       )?.rows.find((row) => row.metric === 'rating-average'),
     ).toMatchObject({ median: null, best: null, bestAppId: null });
   });
+
+  it('measures title and subtitle lengths in characters', () => {
+    const benchmarks = buildBenchmarks(
+      appStoreContext({
+        title: '𠮷'.repeat(20),
+        subtitle: '𪚥'.repeat(10),
+        competitors: [
+          competitor({
+            id: 'a',
+            title: '𠮷'.repeat(10),
+            subtitle: '𪚥'.repeat(5),
+          }),
+        ],
+      }),
+    );
+
+    expect(
+      benchmarks?.rows.find((row) => row.metric === 'title-length'),
+    ).toMatchObject({ you: 20, median: 10 });
+    expect(
+      benchmarks?.rows.find((row) => row.metric === 'subtitle-length'),
+    ).toMatchObject({ you: 10, median: 5 });
+  });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   useMutation,
   useQueryClient,
@@ -39,7 +39,10 @@ import {
 import { useSingleFlight } from "@/lib/single-flight";
 import {
   connectionStatusLine,
+  STORE_CONNECTIONS_SECTION_ID,
   STORE_CONSOLES,
+  needsAdminKey,
+  replyNote,
 } from "@/lib/store-connection-copy";
 import { cn } from "@/lib/utils";
 import { ConnectAppStoreDialog } from "./ConnectAppStoreDialog";
@@ -50,11 +53,23 @@ const OWNER_ONLY = "Only the workspace owner can connect a store.";
 const STORE_CONNECT_OFF =
   "Store connections are off on this instance. Set STORE_CONNECT_ENCRYPTION_KEY to turn them on.";
 
-function ConnectDialog({ store, label }: { store: Store; label: string }) {
+function ConnectDialog({
+  store,
+  label,
+  variant,
+}: {
+  store: Store;
+  label: string;
+  variant?: "default" | "outline";
+}) {
+  const { data } = useSuspenseQuery(storeConnectionsOptions);
   return store === "APP_STORE" ? (
-    <ConnectAppStoreDialog label={label} />
+    <ConnectAppStoreDialog label={label} variant={variant} />
   ) : (
-    <ConnectPlayDialog label={label} />
+    <ConnectPlayDialog
+      label={label}
+      googleSignIn={data.googleSignIn === true}
+    />
   );
 }
 
@@ -151,15 +166,26 @@ function ConnectionActions({ item }: { item: StoreConnectionItem }) {
           Sync now
         </Button>
       )}
-      <ConnectDialog store={item.store} label={copy.replaceLabel} />
+      <ConnectDialog
+        store={item.store}
+        label={copy.replaceLabel}
+        variant={needsAdminKey(item) ? "default" : "outline"}
+      />
       <DisconnectButton store={item.store} />
     </div>
   );
 }
 
-function ConnectionDetails({ item }: { item: StoreConnectionItem }) {
+function ConnectionDetails({
+  item,
+  actions,
+}: {
+  item: StoreConnectionItem;
+  actions: ReactNode;
+}) {
   const status = connectionStatusLine(item);
   const facts = STORE_CONSOLES[item.store].facts(item);
+  const note = replyNote(item);
 
   return (
     <div className="flex flex-col gap-4">
@@ -182,6 +208,8 @@ function ConnectionDetails({ item }: { item: StoreConnectionItem }) {
       >
         {status.text}
       </p>
+      {note ? <p className="text-body text-muted-foreground">{note}</p> : null}
+      {actions}
       <StoreConnectionApps store={item.store} apps={item.apps} />
     </div>
   );
@@ -211,19 +239,31 @@ function StoreConsoleCard({
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {connection ? (
-          <ConnectionDetails item={connection} />
+          <ConnectionDetails
+            item={connection}
+            actions={owner ? <ConnectionActions item={connection} /> : null}
+          />
         ) : (
           <p className="text-body text-muted-foreground">{copy.empty}</p>
         )}
-        {owner && connection ? <ConnectionActions item={connection} /> : null}
       </CardContent>
     </Card>
   );
 }
 
+function useScrollIntoViewOnHash() {
+  useEffect(() => {
+    if (window.location.hash !== `#${STORE_CONNECTIONS_SECTION_ID}`) return;
+    document
+      .getElementById(STORE_CONNECTIONS_SECTION_ID)
+      ?.scrollIntoView({ block: "start" });
+  }, []);
+}
+
 export function StoreConnectionsCard() {
   const { user, isOwner } = useAuth();
   const { data } = useSuspenseQuery(storeConnectionsOptions);
+  useScrollIntoViewOnHash();
 
   if (!data.available) {
     return (

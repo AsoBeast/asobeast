@@ -7,6 +7,12 @@ import {
   STORE_REPORT_STATES,
   type AppStoreConnectionRequest,
   type PlayConnectionRequest,
+  PLAY_REPLIES_NEED_KEY,
+  PLAY_SIGN_IN_PATH,
+  type PlaySignInCompletion,
+  type StoreConnectionState,
+  type StoreCredentialKind,
+  STORE_CREDENTIAL_KINDS,
   type StoreConnectionItem,
   type StoreConnectionRequest,
   type StoreReplyAccess,
@@ -63,6 +69,30 @@ describe('store connection contract', () => {
     expectTypeOf<StoreConnectionItem['replyAccess']>().toEqualTypeOf<
       StoreReplyAccess | undefined
     >();
+  });
+
+  it('marks how a connection signed in, absent meaning a key', () => {
+    expect(STORE_CREDENTIAL_KINDS).toEqual(['key', 'googleAccount']);
+    expectTypeOf<StoreConnectionItem['credential']>().toEqualTypeOf<
+      StoreCredentialKind | undefined
+    >();
+    expectTypeOf<StoreConnectionState['googleSignIn']>().toEqualTypeOf<
+      boolean | undefined
+    >();
+  });
+
+  it('names the key and permission a google play reply needs', () => {
+    expect(PLAY_REPLIES_NEED_KEY).toBe(
+      'Posting replies to Google Play needs a service account key with the Reply to reviews permission. A Google sign in can only read reports.',
+    );
+  });
+
+  it('returns Google to one settings page with the code and state', () => {
+    expect(PLAY_SIGN_IN_PATH).toBe('/settings/google-play');
+    expectTypeOf<PlaySignInCompletion>().toEqualTypeOf<{
+      code: string;
+      state: string;
+    }>();
   });
 
   it('never types the private key into the connection item', () => {

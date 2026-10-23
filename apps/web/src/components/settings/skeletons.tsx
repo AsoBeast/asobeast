@@ -115,3 +115,17 @@ export function StoreConnectionsSkeleton() {
     </Card>
   );
 }
+
+export function PlaySignInReturnSkeleton() {
+  return (
+    <Card>
+      <CardHeader className="flex flex-col gap-2">
+        <Skeleton className="h-5 w-48" />
+        <Skeleton className="h-4 w-full max-w-sm" />
+      </CardHeader>
+      <CardContent>
+        <Skeleton className="size-6 rounded-full" />
+      </CardContent>
+    </Card>
+  );
+}

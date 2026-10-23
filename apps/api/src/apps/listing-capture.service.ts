@@ -14,6 +14,7 @@ import { ScreenshotRecorder } from '../screenshots/screenshot-recorder';
 import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
 import { StoreAppNotFoundError } from '../store-providers/errors';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
+import { currencyOf } from '../store-providers/raw-facts';
 import { snapshotIcon, toSnapshotData } from './apps.mapper';
 import { toChangeSnapshot } from './change-snapshot';
 import { withKnownSubtitle } from './known-subtitle';
@@ -56,15 +57,19 @@ export class ListingCaptureService {
 
   async refreshListing(
     id: string,
-    country: string,
+    country?: string,
   ): Promise<SnapshotDiffResult | null> {
-    const app = await this.requireApp(id);
+    const app = await this.prisma.app.findFirst({ where: { id } });
+    if (!app) {
+      return null;
+    }
+    const market = country ?? app.country;
     try {
-      return await this.captureListing(app, country);
+      return await this.captureListing(app, market);
     } catch (error: unknown) {
-      if (country !== app.country && error instanceof StoreAppNotFoundError) {
+      if (market !== app.country && error instanceof StoreAppNotFoundError) {
         this.logger.log(
-          `${app.storeAppId} is not listed in ${country}, so it has no listing there`,
+          `${app.storeAppId} is not listed in ${market}, so it has no listing there`,
         );
         return null;
       }
@@ -174,6 +179,7 @@ export class ListingCaptureService {
         ...localized.changes,
       ],
       country: market,
+      currency: currencyOf(snapshot.raw),
     };
   }
 

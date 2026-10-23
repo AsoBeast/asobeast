@@ -8,10 +8,11 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Prisma, Store } from '@prisma/client';
-import { ApiErrorEnvelope } from '@asobeast/shared';
+import { ApiErrorEnvelope, HealthStatus } from '@asobeast/shared';
 import { AiAllowanceExceededError } from '../ai/ai-allowance.errors';
 import { RateLimitExceededError } from '../auth/rate-limit/rate-limit.errors';
 import { RedisUnavailableError } from '../redis/redis.errors';
+import { DatabaseUnavailableError } from '../health/health.errors';
 import { BillingConflictError } from '../billing/billing.errors';
 import { ErrorTracking } from '../observability/error-tracking.service';
 import {
@@ -355,6 +356,31 @@ describe('AllExceptionsFilter', () => {
       statusCode: 503,
       error: 'Service Unavailable',
       retryAfterSeconds: 5,
+    });
+    expect(headers['Retry-After']).toBe('5');
+  });
+  it('answers 503 with the wait and the health signals when the database is unreachable', () => {
+    const health: HealthStatus = {
+      status: 'error',
+      db: 'down',
+      redis: 'up',
+      pipeline: null,
+    };
+
+    const { status, envelope, headers } = capture(
+      new DatabaseUnavailableError(health),
+      { method: 'GET', url: '/health' },
+    );
+
+    expect(status).toBe(HttpStatus.SERVICE_UNAVAILABLE);
+    expect(envelope).toEqual({
+      statusCode: 503,
+      error: 'Service Unavailable',
+      message: expect.stringContaining('database') as string,
+      retryAfterSeconds: 5,
+      path: '/health',
+      timestamp: expect.any(String) as string,
+      ...health,
     });
     expect(headers['Retry-After']).toBe('5');
   });

@@ -2,7 +2,11 @@ import type { Page } from "@playwright/test";
 import type { AppLocalizationsResult } from "@asobeast/shared";
 import { contrastViolations, THEMES } from "./contrast-check.mts";
 import { APP_RIVAL_ID, type LocalizationSeed } from "./fixtures.mts";
-import { expectContains, expectFitsViewport } from "./dialog.mts";
+import {
+  expectContains,
+  expectFitsViewport,
+  settleAnimations,
+} from "./dialog.mts";
 import {
   fieldRequests,
   LOCALES_APP,
@@ -1009,11 +1013,7 @@ test.describe("on the locale lab", () => {
         await openSpanishDialog(page, "temporizador, enfoque");
 
         const modal = dialog(page);
-        await modal.evaluate((node) =>
-          Promise.all(
-            node.getAnimations().map((animation) => animation.finished),
-          ),
-        );
+        await settleAnimations(modal);
         await expectFitsViewport(page, modal);
         await expect(
           modal.getByRole("button", { name: "Save and track" }),
@@ -1342,11 +1342,7 @@ test.describe("on the locale lab", () => {
         await openAdd(page);
 
         const modal = dialog(page);
-        await modal.evaluate((node) =>
-          Promise.all(
-            node.getAnimations().map((animation) => animation.finished),
-          ),
-        );
+        await settleAnimations(modal);
         await expectFitsViewport(page, modal);
         await expect(
           modal.getByPlaceholder("Search languages"),

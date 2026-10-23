@@ -171,6 +171,59 @@ test("a pasted link with a direction loads in that order and announces it", asyn
   ).not.toHaveAttribute("aria-sort", /.+/);
 });
 
+test("a chosen sort is remembered on a visit without the url param", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/keywords");
+
+  await page.getByRole("button", { name: "Popularity", exact: true }).click();
+  await expect(page).toHaveURL(/sort=traffic/);
+  await expect(firstDataRow(page)).toContainText("pomodoro");
+
+  await page.goto("/apps/app-1/keywords");
+
+  await expect(
+    page.getByRole("columnheader", { name: "Popularity" }),
+  ).toHaveAttribute("aria-sort", "descending");
+  await expect(firstDataRow(page)).toContainText("pomodoro");
+});
+
+test("an explicit sort param wins over the remembered sort", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/keywords");
+
+  await page.getByRole("button", { name: "Popularity", exact: true }).click();
+  await expect(page).toHaveURL(/sort=traffic/);
+
+  await page.goto("/apps/app-1/keywords?sort=keyword");
+
+  await expect(
+    page.getByRole("columnheader", { name: "Keyword", exact: true }),
+  ).toHaveAttribute("aria-sort", "ascending");
+  await expect(
+    page.getByRole("columnheader", { name: "Popularity" }),
+  ).not.toHaveAttribute("aria-sort", /.+/);
+});
+
+test("a direction without a sort names the default sort, not the remembered one", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/keywords");
+
+  await page.getByRole("button", { name: "Popularity", exact: true }).click();
+  await expect(page).toHaveURL(/sort=traffic/);
+
+  await page.goto("/apps/app-1/keywords?dir=asc");
+
+  await expect(
+    page.getByRole("columnheader", { name: "Opportunity" }),
+  ).toHaveAttribute("aria-sort", "ascending");
+  await expect(
+    page.getByRole("columnheader", { name: "Popularity" }),
+  ).not.toHaveAttribute("aria-sort", /.+/);
+});
+
 test("the keyword, source and weekly change headers sort too", async ({
   page,
 }) => {

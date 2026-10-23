@@ -1,8 +1,10 @@
-import type { Contexts, ErrorEvent, init } from "@sentry/nextjs";
+import type { Contexts, ErrorEvent, EventHint, init } from "@sentry/nextjs";
+import { isExplainedRefusal } from "@/lib/error-recovery";
 
 type SentryOptions = Parameters<typeof init>[0];
 
 const PRODUCTION = "production";
+const CLIENT_DISCONNECT = "The destination stream closed early.";
 const IDENTIFIER = /^(c[a-z0-9]{20,}|[0-9a-f-]{16,}|\d+)$/i;
 
 const DATA_COLLECTION = {
@@ -57,12 +59,26 @@ export function scrubEvent(event: ErrorEvent): ErrorEvent {
   };
 }
 
+function unactionable(error: unknown): boolean {
+  return (
+    isExplainedRefusal(error) ||
+    (error instanceof Error && error.message === CLIENT_DISCONNECT)
+  );
+}
+
+export function filterEvent(
+  event: ErrorEvent,
+  hint: EventHint,
+): ErrorEvent | null {
+  return unactionable(hint.originalException) ? null : scrubEvent(event);
+}
+
 export function reportingOptions(dsn: string): SentryOptions {
   return {
     dsn,
     environment: PRODUCTION,
     dataCollection: DATA_COLLECTION,
     maxBreadcrumbs: 0,
-    beforeSend: scrubEvent,
+    beforeSend: filterEvent,
   };
 }

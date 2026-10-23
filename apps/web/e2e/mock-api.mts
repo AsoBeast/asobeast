@@ -7,6 +7,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import { BREAKDOWNS } from "./keyword-breakdowns.mts";
 import { planMockImport } from "./keyword-import.mts";
 import { summarizeActions } from "./actions-summary.mts";
+import { echoRequest } from "./echo-request.mts";
 import { funnelFor } from "./store-funnel.mts";
 import {
   STORE_CONNECT_OFF_COOKIE,
@@ -14,7 +15,11 @@ import {
   STORE_CONNECTION_COOKIE,
   PLAY_BUCKET,
   PLAY_CONNECTION_ACTIVE,
+  GOOGLE_SIGN_IN_COOKIE,
   PLAY_CONNECTION_COOKIE,
+  PLAY_CONNECTION_GOOGLE,
+  PLAY_SIGN_IN_EXPIRED,
+  PLAY_SIGN_IN_STATE,
   playConnectionCookie,
   storeConnectionCookie,
   storeConnectionOf,
@@ -114,6 +119,8 @@ import {
   SERP_SNAPSHOTS,
   WEBHOOKS,
   emptyScreenshots,
+  DATABASE_DOWN_RETRY_SECONDS,
+  databaseDownAnswer,
   errorEnvelope,
   rateLimitedEnvelope,
   SIMILAR_APPS,
@@ -135,11 +142,13 @@ import {
   UPDATE_THEME_REVIEWS,
   TWIN_REVIEWS,
   RTL_REVIEWS,
+  EMOJI_REVIEWS,
   CROWDED_COMPARISON,
   UNCHECKED_COMPARISON,
   UNCHECKED_COMPARISON_COOKIE,
   CROWDED_COMPETITORS,
   CROWDED_COMPETITORS_COOKIE,
+  PRICED_REFRESHES,
 } from "./fixtures.mts";
 import {
   EMPTY_PORTFOLIO_INSIGHTS,
@@ -758,6 +767,7 @@ const REVIEW_SETS: Record<string, typeof UPDATE_THEME_REVIEWS> = {
   update: UPDATE_THEME_REVIEWS,
   twins: TWIN_REVIEWS,
   rtl: RTL_REVIEWS,
+  emoji: EMOJI_REVIEWS,
 };
 
 const reviewSetOf = (req: IncomingMessage) =>
@@ -2349,6 +2359,16 @@ const routes: Route[] = [
   },
   {
     method: "POST",
+    pattern: /^\/auth\/logout$/,
+    handler: (_p, _req, res) => {
+      res.writeHead(204, {
+        "set-cookie": `${SESSION_COOKIE}=; Path=/; Max-Age=0`,
+      });
+      res.end();
+    },
+  },
+  {
+    method: "POST",
     pattern: /^\/mcp$/,
     handler: (_p, req, res) => {
       if (!req.headers.authorization) {
@@ -2395,11 +2415,9 @@ const routes: Route[] = [
         return;
       }
       if (outage === "database") {
-        return json(
-          res,
-          503,
-          errorEnvelope(503, "/health", "Service Unavailable Exception"),
-        );
+        return json(res, 503, databaseDownAnswer("/health"), {
+          "retry-after": String(DATABASE_DOWN_RETRY_SECONDS),
+        });
       }
       json(res, 200, HEALTH);
     },
@@ -2502,7 +2520,8 @@ const routes: Route[] = [
         storeConnectionState(
           cookieValue(req, STORE_CONNECTION_COOKIE),
           hasCookie(req, STORE_CONNECT_OFF_COOKIE, "1"),
-          hasCookie(req, PLAY_CONNECTION_COOKIE, "active"),
+          cookieValue(req, PLAY_CONNECTION_COOKIE),
+          hasCookie(req, GOOGLE_SIGN_IN_COOKIE, "1"),
         ),
       ),
   },
@@ -2533,21 +2552,53 @@ const routes: Route[] = [
               errorEnvelope(
                 422,
                 path,
-                `Google Cloud Storage has no bucket ${body.bucket ?? ""} this service account can read. Copy the bucket id from Download reports in Play Console.`,
+                `Google Cloud Storage has no bucket ${body.bucket ?? ""}. Copy the Cloud Storage URI from Download reports in Play Console: the bucket id is the part after gs:// that starts with pubsite_prod.`,
               ),
             );
           }
           json(res, 200, PLAY_CONNECTION_ACTIVE, {
-            "set-cookie": playConnectionCookie(true),
+            "set-cookie": playConnectionCookie("active"),
           });
         },
       ),
   },
   {
+    method: "POST",
+    pattern: /^\/store-connections\/GOOGLE_PLAY\/sign-in$/,
+    handler: (_p, _req, res) =>
+      json(res, 200, {
+        url: `/settings/google-play?${new URLSearchParams({
+          code: "4/e2e-code",
+          state: PLAY_SIGN_IN_STATE,
+        }).toString()}`,
+      }),
+  },
+  {
+    method: "POST",
+    pattern: /^\/store-connections\/GOOGLE_PLAY\/sign-in\/complete$/,
+    handler: (_p, req, res) =>
+      withBody<{ code?: string; state?: string }>(req, res, (body) => {
+        if (body.state !== PLAY_SIGN_IN_STATE) {
+          return json(
+            res,
+            400,
+            errorEnvelope(
+              400,
+              "/store-connections/GOOGLE_PLAY/sign-in/complete",
+              PLAY_SIGN_IN_EXPIRED,
+            ),
+          );
+        }
+        json(res, 200, PLAY_CONNECTION_GOOGLE, {
+          "set-cookie": playConnectionCookie("google"),
+        });
+      }),
+  },
+  {
     method: "DELETE",
     pattern: /^\/store-connections\/GOOGLE_PLAY$/,
     handler: (_p, _req, res) => {
-      res.writeHead(204, { "set-cookie": playConnectionCookie(false) });
+      res.writeHead(204, { "set-cookie": playConnectionCookie(null) });
       res.end();
     },
   },
@@ -4208,6 +4259,17 @@ const routes: Route[] = [
           country: "pl",
         });
       }
+      const pricedRefresh = PRICED_REFRESHES.get(params[0]);
+      if (pricedRefresh) {
+        return json(res, 200, {
+          snapshotId: `snap-${params[0]}`,
+          changes: [
+            { field: "price", before: "0", after: pricedRefresh.price },
+          ],
+          country: "us",
+          currency: pricedRefresh.currency,
+        });
+      }
       if (params[0] === "app-gp") {
         return json(res, 200, {
           snapshotId: "snap-gp",
@@ -4219,6 +4281,7 @@ const routes: Route[] = [
             { field: "price", before: "1.99", after: "0" },
           ],
           country: "us",
+          currency: "USD",
         });
       }
       if (params[0] === "app-2") {
@@ -4249,6 +4312,11 @@ const routes: Route[] = [
       json(res, 202, {
         enqueued: { apps: 1, keywords: 5, categories: 1, reviews: 1 },
       }),
+  },
+  {
+    method: "POST",
+    pattern: /^\/__echo\/request$/,
+    handler: (_p, req, res) => echoRequest(req, res),
   },
 ];
 

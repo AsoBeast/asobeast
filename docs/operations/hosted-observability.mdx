@@ -26,6 +26,8 @@ Send `X-Correlation-Id` on a request to choose the id yourself, which lets a cus
 
 <Warning>
   Secrets are redacted before a line is written, not by remembering to leave them out. Personal API tokens, session cookies, Stripe keys, proxy credentials, `AUTH_SECRET`, `OPENAI_API_KEY` and the SMTP password are replaced with `[redacted]` wherever they appear, including inside an error message or a stack.
+
+  The value of a query parameter named like a credential, for example `token`, `access_token`, `refresh_token`, `id_token`, `auth_token`, `password`, `passwd`, `pwd`, `secret`, `client_secret`, `api_key`, `private_key` or `credentials`, is replaced the same way in the logged request address and in the logged `query` object, whatever the letter case or percent encoding of the name. The rest of the address is logged as it arrived. The API ignores a credential sent this way, so send it in the `Authorization` header.
 </Warning>
 
 ## The metrics endpoint

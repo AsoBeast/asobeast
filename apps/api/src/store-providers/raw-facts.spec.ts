@@ -1,5 +1,6 @@
 import { Store } from '@prisma/client';
 import {
+  currencyOf,
   developerId,
   extractAppStoreRawFacts,
   extractGooglePlayRawFacts,
@@ -480,5 +481,31 @@ describe('primary genre on the payload the App Store scraper maps', () => {
     expect(
       extractAppStoreRawFacts({ primaryGenreId: stored }).genreKey,
     ).toBeNull();
+  });
+});
+
+describe('currencyOf', () => {
+  it('reads the currency both stores keep at the root of the raw payload', async () => {
+    expect(currencyOf(await scrapedAppStoreRaw())).toBe('USD');
+    expect(currencyOf({ price: 4.99, currency: 'EUR' })).toBe('EUR');
+  });
+
+  it('trims and upper cases a code', () => {
+    expect(currencyOf({ currency: ' pln ' })).toBe('PLN');
+  });
+
+  it.each([
+    null,
+    undefined,
+    42,
+    'EUR',
+    {},
+    { currency: 7 },
+    { currency: '' },
+    { currency: 'EURO' },
+    { currency: 'E1R' },
+    { currency: '€' },
+  ])('answers null for %j', (raw) => {
+    expect(currencyOf(raw)).toBeNull();
   });
 });

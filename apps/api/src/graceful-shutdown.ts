@@ -1,7 +1,7 @@
 import {
   Injectable,
   Logger,
-  type INestApplication,
+  type INestApplicationContext,
   type OnApplicationShutdown,
 } from '@nestjs/common';
 
@@ -17,6 +17,6 @@ export class ShutdownReporter implements OnApplicationShutdown {
   }
 }
 
-export function enableGracefulShutdown(app: INestApplication): void {
-  app.enableShutdownHooks(SHUTDOWN_SIGNALS);
+export function enableGracefulShutdown(app: INestApplicationContext): void {
+  app.enableShutdownHooks(SHUTDOWN_SIGNALS, { useProcessExit: true });
 }

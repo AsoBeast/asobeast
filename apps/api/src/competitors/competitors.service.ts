@@ -10,6 +10,7 @@ import {
   CompetitorGapKeyword,
   CompetitorItem,
   CompetitorMetadataRow,
+  countChars,
   KeywordComparison,
   parseStoreUrl,
   PositionMapPoint,
@@ -294,9 +295,9 @@ export class CompetitorsService {
       name: app.name,
       isYou,
       title: snapshot?.title ?? null,
-      titleChars: snapshot?.title.length ?? 0,
+      titleChars: countChars(snapshot?.title ?? ''),
       subtitle: snapshot?.subtitle ?? null,
-      subtitleChars: snapshot?.subtitle?.length ?? 0,
+      subtitleChars: countChars(snapshot?.subtitle ?? ''),
     };
   }
 

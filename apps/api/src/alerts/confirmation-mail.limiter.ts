@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { mailboxOf } from '../auth/mailbox-key';
 import { sha256 } from '../auth/password-hash';
 import { RequestThrottledError } from '../auth/rate-limit/rate-limit.errors';
 import { secondsUntilReset, windowKey } from '../auth/rate-limit/window';
@@ -62,7 +63,7 @@ export class ConfirmationMailLimiter {
       },
       {
         label: 'recipient',
-        scope: sha256(address.toLowerCase()),
+        scope: sha256(mailboxOf(address)),
         limit: CONFIRMATIONS_PER_RECIPIENT_PER_DAY,
         reason:
           'Too many confirmation emails were requested for this recipient today.',

@@ -6,15 +6,16 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import type {
-  Store,
-  StoreConnectionItem,
-  StoreConnectionRequest,
-  StoreConnectionState,
-  StoreConnectionStatus,
-  StoreConnectionSyncResult,
-  StoreReplyAccess,
-  StoreReportAccess,
+import {
+  PLAY_REPLIES_NEED_KEY,
+  type Store,
+  type StoreConnectionItem,
+  type StoreConnectionRequest,
+  type StoreConnectionState,
+  type StoreConnectionStatus,
+  type StoreConnectionSyncResult,
+  type StoreReplyAccess,
+  type StoreReportAccess,
 } from '@asobeast/shared';
 import { type SecretBox, SecretBoxError } from '../common/crypto/secret-box';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
@@ -22,12 +23,19 @@ import { PrismaService } from '../prisma/prisma.service';
 import type { AscAnalyticsApi } from './asc-analytics-api';
 import type { AscReviewsApi } from './asc-reviews-api';
 import type { GcsApi } from './play/gcs-api';
+import {
+  GOOGLE_OAUTH_CLIENT,
+  type GoogleOAuthClient,
+} from './play/google-sign-in';
 import type { PlayPublisherApi } from './play/play-publisher-api';
 import { SECRET_BOX } from './secret-box.provider';
 import { connectionItems } from './store-connection-items';
 import {
+  type GoogleAccountCredentials,
   isAscCredentials,
+  isGoogleAccountCredentials,
   isPlayCredentials,
+  isServiceAccountCredentials,
   needsReseal,
   openCredentials,
   sealCredentials,
@@ -78,9 +86,8 @@ interface Unsealed {
 
 async function admitted<R, C extends StoreCredentials, A>(
   keys: StoreKeys<R, C, A>,
-  request: R,
+  parsed: ParsedKey<C>,
 ): Promise<Admitted> {
-  const parsed = keys.parse(request);
   const refusal = await keys.refusal(parsed.credentials);
   if (refusal) throw new UnprocessableEntityException(refusal);
   return { ...parsed, reportAccess: keys.reportAccess };
@@ -95,11 +102,17 @@ export class StoreConnectionService {
     private readonly appStore: AppStoreKeys,
     private readonly play: PlayKeys,
     private readonly queue: StoreReportQueue,
+    @Inject(GOOGLE_OAUTH_CLIENT)
+    private readonly signInClient: GoogleOAuthClient | null,
   ) {}
 
   async state(): Promise<StoreConnectionState> {
     if (!this.box) return { available: false, connections: [] };
-    return { available: true, connections: await this.items() };
+    return {
+      available: true,
+      googleSignIn: this.signInClient !== null,
+      connections: await this.items(),
+    };
   }
 
   async connect(
@@ -111,33 +124,22 @@ export class StoreConnectionService {
     if (store !== request.store) throw new BadRequestException(STORE_MISMATCH);
     const key =
       request.store === 'APP_STORE'
-        ? await admitted(this.appStore, request)
-        : await admitted(this.play, request);
-    const workspaceId = this.workspace.require(OPERATION);
-    await this.prisma.withTransaction(async (tx) => {
-      await tx.storeConnection.deleteMany({ where: { store } });
-      await tx.storeConnection.create({
-        data: {
-          workspaceId,
-          store,
-          issuerId: key.issuerId,
-          keyId: key.keyId,
-          keyFingerprint: key.keyFingerprint,
-          bucket: key.bucket,
-          reportAccess: key.reportAccess,
-          credentialCiphertext: sealCredentials(
-            box,
-            workspaceId,
-            store,
-            key.credentials,
-          ),
-          createdByUserId: userId,
-          verifiedAt: new Date(),
-        },
-      });
-    });
-    await this.queue.enqueue(workspaceId, store);
-    return this.item(store);
+        ? await admitted(this.appStore, this.appStore.parse(request))
+        : await admitted(this.play, this.play.parse(request));
+    return this.save(box, store, key, userId);
+  }
+
+  async connectGoogleAccount(
+    credentials: GoogleAccountCredentials,
+    subject: string,
+    userId: string,
+  ): Promise<StoreConnectionItem> {
+    const box = this.requireBox();
+    const key = await admitted(
+      this.play,
+      this.play.signedIn(credentials, subject),
+    );
+    return this.save(box, 'GOOGLE_PLAY', key, userId);
   }
 
   async verify(store: Store): Promise<StoreConnectionItem> {
@@ -190,8 +192,12 @@ export class StoreConnectionService {
     );
   }
 
-  openPlayPublisher(): Promise<OpenedConnection<PlayPublisherApi> | null> {
-    return this.openWith('GOOGLE_PLAY', isPlayCredentials, (credentials) =>
+  async openPlayPublisher(): Promise<OpenedConnection<PlayPublisherApi> | null> {
+    const connection = await this.unsealedOrNull('GOOGLE_PLAY');
+    if (connection && isGoogleAccountCredentials(connection.credentials)) {
+      throw new ConflictException(PLAY_REPLIES_NEED_KEY);
+    }
+    return this.opened(connection, isServiceAccountCredentials, (credentials) =>
       this.play.publisher(credentials),
     );
   }
@@ -214,12 +220,53 @@ export class StoreConnectionService {
     });
   }
 
+  private async save(
+    box: SecretBox,
+    store: Store,
+    key: Admitted,
+    userId: string,
+  ): Promise<StoreConnectionItem> {
+    const workspaceId = this.workspace.require(OPERATION);
+    await this.prisma.withTransaction(async (tx) => {
+      await tx.storeConnection.deleteMany({ where: { store } });
+      await tx.storeConnection.create({
+        data: {
+          workspaceId,
+          store,
+          issuerId: key.issuerId,
+          keyId: key.keyId,
+          keyFingerprint: key.keyFingerprint,
+          bucket: key.bucket,
+          credential: key.credential,
+          reportAccess: key.reportAccess,
+          credentialCiphertext: sealCredentials(
+            box,
+            workspaceId,
+            store,
+            key.credentials,
+          ),
+          createdByUserId: userId,
+          verifiedAt: new Date(),
+        },
+      });
+    });
+    await this.queue.enqueue(workspaceId, store);
+    return this.item(store);
+  }
+
   private async openWith<C extends StoreCredentials, A>(
     store: Store,
     accepts: (credentials: StoreCredentials) => credentials is C,
     build: (credentials: C) => A,
   ): Promise<OpenedConnection<A> | null> {
-    const connection = await this.unsealedOrNull(store);
+    return this.opened(await this.unsealedOrNull(store), accepts, build);
+  }
+
+  private opened<C extends StoreCredentials, A>(
+    connection: Unsealed | null,
+    accepts: (credentials: StoreCredentials) => credentials is C,
+    build: (credentials: C) => A,
+  ): OpenedConnection<A> | null {
     if (!connection || !accepts(connection.credentials)) return null;
     return {
       id: connection.id,

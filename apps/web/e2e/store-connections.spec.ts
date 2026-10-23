@@ -1,12 +1,15 @@
 import AxeBuilder from "@axe-core/playwright";
+import { PLAY_REPLIES_NEED_KEY } from "@asobeast/shared";
 import type { BrowserContext, Page } from "@playwright/test";
 import { THEMES } from "./contrast-check.mts";
 import { openSettledDialog } from "./dialog.mts";
 import { expect, test } from "./session.mts";
 import {
   ADMIN_KEY_NEEDED,
+  GOOGLE_SIGN_IN_COOKIE,
   PLAY_BUCKET,
   PLAY_CONNECTION_COOKIE,
+  PLAY_SIGN_IN_EXPIRED,
   STORE_CONNECT_OFF_COOKIE,
   STORE_CONNECTION_COOKIE,
 } from "./store-connections.mts";
@@ -34,6 +37,15 @@ test("the owner connects app store connect and sees the apps it reports", async 
     page,
     "Connect App Store Connect",
     section(page),
+  );
+  await expect(dialog).toHaveAccessibleDescription(
+    /Create a team key with the Admin role/,
+  );
+  await expect(
+    dialog.getByRole("link", { name: "Why an Admin key" }),
+  ).toHaveAttribute(
+    "href",
+    "https://docs.asobeast.com/guides/store-funnel#create-the-key",
   );
   const key = dialog.getByLabel("Private key", { exact: true });
   await expect(key).toHaveAttribute("type", "password");
@@ -162,9 +174,10 @@ test("the owner connects the google play console with its json key file", async 
   await expect(card).toContainText("reports@focus-123.iam.gserviceaccount.com");
   await expect(card).toContainText("a1b2c3d4e5f6");
   await expect(card).toContainText(PLAY_BUCKET);
+  await expect(card).not.toContainText(PLAY_REPLIES_NEED_KEY);
   await expect(
     card
-      .getByRole("list", { name: "Apps this service account reports" })
+      .getByRole("list", { name: "Apps this connection reports" })
       .getByRole("listitem")
       .filter({ hasText: "Tomato Clock" }),
   ).toContainText("Reporting");
@@ -172,6 +185,79 @@ test("the owner connects the google play console with its json key file", async 
   await expect(
     section(page).getByRole("button", { name: "Connect App Store Connect" }),
   ).toBeVisible();
+});
+
+test("the owner signs in with google and lands back on store connections", async ({
+  page,
+}) => {
+  await seed(page.context(), GOOGLE_SIGN_IN_COOKIE, "1");
+  await page.goto("/settings#store-connections");
+
+  const dialog = await openSettledDialog(
+    page,
+    "Connect Google Play",
+    playCard(page),
+  );
+  const methods = dialog.getByRole("tablist", { name: "How to connect" });
+  await expect(
+    methods.getByRole("tab", { name: "Sign in with Google" }),
+  ).toHaveAttribute("aria-selected", "true");
+  await expect(dialog.getByLabel("Service account key")).toHaveCount(0);
+  await expect(dialog).toHaveAccessibleDescription(
+    /To post review replies, use a service account key with the Reply to reviews permission instead\.$/,
+  );
+  const submit = dialog.getByRole("button", { name: "Sign in with Google" });
+
+  await submit.click();
+  await expect(dialog).toContainText("starts with pubsite_prod");
+
+  await methods.getByRole("tab", { name: "Service account key" }).click();
+  await expect(
+    dialog.getByLabel("Service account key", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    dialog.getByRole("button", { name: "Connect Google Play" }),
+  ).toBeVisible();
+  await methods.getByRole("tab", { name: "Sign in with Google" }).click();
+
+  await dialog
+    .getByLabel("Bucket id")
+    .fill("gs://pubsite_prod_4855979533719537120/stats/store_performance/");
+  await submit.click();
+
+  await page.waitForURL(/\/settings(#store-connections)?$/);
+  await expect(page.getByText("Google Play Console connected")).toBeVisible();
+  const card = playCard(page);
+  await expect(card).toContainText("Google account");
+  await expect(card).toContainText("owner@example.com");
+  await expect(card).toContainText("pubsite_prod_4855979533719537120");
+  await expect(card).not.toContainText("Fingerprint");
+  await expect(card).toContainText(PLAY_REPLIES_NEED_KEY);
+  await expect(card.getByRole("button", { name: "Reconnect" })).toBeVisible();
+});
+
+test("the google return page explains a cancelled, incomplete or refused sign in", async ({
+  page,
+}) => {
+  const heading = page.getByRole("heading", { level: 1 });
+  const back = page.getByRole("link", { name: "Back to store connections" });
+
+  await page.goto("/settings/google-play?error=access_denied");
+  await expect(heading).toHaveText("Google sign in was cancelled");
+  await expect(back).toHaveAttribute("href", "/settings#store-connections");
+
+  await page.goto("/settings/google-play");
+  await expect(heading).toHaveText("This sign in is incomplete");
+
+  await page.goto("/settings/google-play?code=4%2Fold&state=stale");
+  await expect(heading).toHaveText("Google Play was not connected");
+  await expect(page.getByText(PLAY_SIGN_IN_EXPIRED)).toBeVisible();
+  await expect(
+    page.getByRole("navigation", { name: "breadcrumb" }),
+  ).toContainText("Settings");
+  await back.click();
+  await expect(playCard(page)).toContainText("Not connected.");
+  await expect(section(page)).toBeInViewport();
 });
 
 test("disconnecting google play leaves app store connect alone", async ({
@@ -242,6 +328,43 @@ test("a read only key names the admin key and still syncs", async ({
   await section(page).getByRole("button", { name: "Sync now" }).click();
 
   await expect(page.getByText("Sync queued")).toBeVisible();
+});
+
+test("a key that cannot request reports leads with replacing it", async ({
+  page,
+}) => {
+  await seed(page.context(), STORE_CONNECTION_COOKIE, "readOnly");
+  await page.goto("/settings#store-connections");
+
+  const replace = section(page).getByRole("button", { name: "Replace key" });
+  await expect(replace).toHaveAttribute("data-variant", "default");
+  await expect(
+    section(page).locator('button[data-variant="default"]'),
+  ).toHaveCount(1);
+
+  const dialog = await openSettledDialog(page, "Replace key", section(page));
+  await dialog
+    .getByLabel("Issuer ID")
+    .fill("57246542-96fe-1a63-e053-0824d011072a");
+  await dialog.getByLabel("Key ID").fill("2X9R4HXF34");
+  await dialog.getByLabel("Private key", { exact: true }).fill(PRIVATE_KEY);
+  await dialog.getByRole("button", { name: "Replace key" }).click();
+
+  await expect(dialog).toBeHidden();
+  await expect(section(page)).not.toContainText("Needs an Admin key");
+  await expect(replace).toHaveAttribute("data-variant", "outline");
+  await expect(replace).toBeFocused();
+});
+
+test("a key with every request in place keeps replace key quiet", async ({
+  page,
+}) => {
+  await seed(page.context(), STORE_CONNECTION_COOKIE, "active");
+  await page.goto("/settings#store-connections");
+
+  await expect(
+    section(page).getByRole("button", { name: "Replace key" }),
+  ).toHaveAttribute("data-variant", "outline");
 });
 
 test("disconnecting asks first and returns the card to its empty state", async ({

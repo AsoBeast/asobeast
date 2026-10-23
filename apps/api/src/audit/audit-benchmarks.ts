@@ -3,12 +3,16 @@ import {
   AuditBenchmarkMetric,
   AuditBenchmarkRow,
   AuditBenchmarks,
+  countChars,
 } from '@asobeast/shared';
 import { round1 } from './audit-engine';
 import { AuditCompetitor, AuditContext, DAY_MS } from './audit-scoring';
 import { visibleScreenshots } from './checks/creative-checks';
 
 type Direction = 'higher' | 'lower';
+
+const charsOf = (text: string | null | undefined): number | null =>
+  typeof text === 'string' ? countChars(text) : null;
 
 interface BenchmarkMetric {
   metric: AuditBenchmarkMetric;
@@ -64,16 +68,16 @@ export const BENCHMARK_METRICS: readonly BenchmarkMetric[] = [
     label: 'Title characters',
     better: 'higher',
     stores: BOTH_STORES,
-    you: (context) => context.title.length,
-    them: (competitor) => competitor.title?.length ?? null,
+    you: (context) => charsOf(context.title),
+    them: (competitor) => charsOf(competitor.title),
   },
   {
     metric: 'subtitle-length',
     label: 'Subtitle characters',
     better: 'higher',
     stores: [Store.APP_STORE],
-    you: (context) => context.subtitle?.length ?? null,
-    them: (competitor) => competitor.subtitle?.length ?? null,
+    you: (context) => charsOf(context.subtitle),
+    them: (competitor) => charsOf(competitor.subtitle),
   },
   {
     metric: 'days-since-update',

@@ -35,6 +35,17 @@ const OVERSIZED = Array.from(
   (_, index) => `phrase ${String(index).padStart(2, '0')}`,
 ).join(',');
 
+const STEM = [0x20bb7, 0x91ce, 0x5bb6];
+
+const astralPhrase = (index: number): string =>
+  String.fromCodePoint(...STEM, 0x20000 + index, 0x2a6a5, 0x2a6a5);
+
+const astralField = (lastPhraseCharacters: number): string =>
+  [
+    ...Array.from({ length: 14 }, (_, index) => astralPhrase(index)),
+    String.fromCodePoint(...STEM.slice(0, lastPhraseCharacters)),
+  ].join(',');
+
 describe('Localized keyword fields (e2e)', () => {
   let harness: BillingHarness;
 
@@ -278,6 +289,44 @@ describe('Localized keyword fields (e2e)', () => {
 
       expect(messageOf(response)).toBe('Keyword field exceeds 100 characters');
       expect(await written()).toEqual(before);
+    });
+    it('E-SAV-ASTRAL-01 accepts a field of exactly 100 characters that holds characters outside the bmp', async () => {
+      const appId = await seedApp();
+
+      const response = await save(appId, 'en-US', {
+        text: astralField(2),
+        trackIn: ['us'],
+      }).expect(200);
+
+      expect(
+        (response.body as LocalizedKeywordFieldResult).localization,
+      ).toMatchObject({
+        charactersUsed: KEYWORD_FIELD_CHAR_LIMIT,
+        charactersLimit: KEYWORD_FIELD_CHAR_LIMIT,
+      });
+      expect(await fieldTexts(appId, 'us')).toHaveLength(15);
+    });
+
+    it('E-SAV-ASTRAL-02 refuses 101 characters that include characters outside the bmp and stores nothing', async () => {
+      const appId = await seedApp();
+      const before = await written();
+
+      const response = await save(appId, 'en-US', {
+        text: astralField(3),
+        trackIn: ['us'],
+      }).expect(400);
+
+      expect(messageOf(response)).toBe('Keyword field exceeds 100 characters');
+      expect(await written()).toEqual(before);
+    });
+
+    it('E-SAV-ASTRAL-03 tracks a phrase of 51 characters outside the bmp', async () => {
+      const appId = await seedApp();
+      const phrase = String.fromCodePoint(STEM[0]).repeat(51);
+
+      await save(appId, 'en-US', { text: phrase, trackIn: ['us'] }).expect(200);
+
+      expect(await fieldTexts(appId, 'us')).toEqual([phrase]);
     });
 
     it('E-SAV-09 refuses a localization outside the 50', async () => {
@@ -575,6 +624,14 @@ describe('Localized keyword fields (e2e)', () => {
       tracked: await harness.prisma.trackedKeyword.count(),
       fields: await harness.prisma.keywordField.count(),
       localizations: await harness.prisma.appLocalization.count(),
+    });
+
+    it('E-PRV-ASTRAL-01 counts a phrase of 51 characters outside the bmp as 51', async () => {
+      const appId = await seedApp();
+
+      await expect(
+        previewed(appId, 'en-US', String.fromCodePoint(STEM[0]).repeat(51)),
+      ).resolves.toMatchObject({ charactersUsed: 51 });
     });
 
     it('E-PRV-01 writes nothing, not even a keyword row', async () => {

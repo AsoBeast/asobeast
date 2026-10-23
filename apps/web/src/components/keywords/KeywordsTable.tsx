@@ -9,6 +9,7 @@ import { useStoredColumnVisibility } from "@/components/data-table/useStoredColu
 import { useUrlSorting } from "@/components/data-table/useUrlSorting";
 import { keywordsOptions } from "@/lib/queries";
 import {
+  KEYWORD_DEFAULT_SORT,
   keywordFilterParsers,
   keywordSortParser,
   serpParser,
@@ -69,15 +70,19 @@ export function KeywordsTable({
   );
 
   const { sorting, onSortingChange } = useUrlSorting(
-    columns.some((column) => column.id === sort)
+    sort === null || columns.some((column) => column.id === sort)
       ? { sort, dir }
-      : { sort: keywordSortParser.defaultValue, dir: null },
+      : { sort: null, dir: null },
     columns,
     (next) =>
       void setSortParams({
-        sort: next.sort === null ? null : keywordSortParser.parse(next.sort),
+        sort:
+          next.sort === null || next.sort === KEYWORD_DEFAULT_SORT
+            ? null
+            : keywordSortParser.parse(next.sort),
         dir: next.dir,
       }),
+    { remember: "keywords", defaultSort: KEYWORD_DEFAULT_SORT },
   );
 
   const [visibility, setVisibility] = useStoredColumnVisibility(

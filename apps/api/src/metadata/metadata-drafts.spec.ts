@@ -198,6 +198,19 @@ describe('validateDrafts', () => {
     expect(draft.value).toBe(value);
     expect(draft.chars).toBe(49);
   });
+  it('cuts a title draft at 30 characters, not 30 UTF-16 units', () => {
+    const [draft] = validateDrafts(
+      {
+        drafts: [{ field: 'title', value: '𠮷'.repeat(40), rationale: 'r' }],
+      },
+      Store.APP_STORE,
+      ['title'],
+      EMPTY_CONTEXT,
+    );
+
+    expect(draft.value).toBe('𠮷'.repeat(30));
+    expect(draft.chars).toBe(30);
+  });
 });
 
 describe('buildAssistantContext', () => {

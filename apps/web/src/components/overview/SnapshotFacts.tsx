@@ -33,7 +33,9 @@ export function SnapshotFacts({ id }: { id: string }) {
       ? `${formatCompact(snapshot.installs)} installs`
       : null,
     snapshot?.version ? `v${snapshot.version}` : null,
-    snapshot?.price != null ? formatPrice(snapshot.price) : null,
+    snapshot?.price != null
+      ? formatPrice(snapshot.price, snapshot.currency)
+      : null,
     snapshot ? `Snapshot ${formatDate(snapshot.capturedAt)}${where}` : null,
   ].filter((fact): fact is string => fact !== null);
 

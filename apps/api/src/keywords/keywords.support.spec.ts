@@ -47,6 +47,21 @@ describe('checkKeywordText', () => {
     });
   });
 
+  it('counts a character outside the bmp once against the phrase cap', () => {
+    const phrase = '\u{20BB7}'.repeat(51);
+
+    expect(checkKeywordText(phrase)).toEqual({ ok: true, text: phrase });
+    expect(checkKeywordText('\u{20BB7}'.repeat(100)).ok).toBe(true);
+  });
+
+  it('reports a phrase of more than 100 characters outside the bmp', () => {
+    expect(checkKeywordText('\u{20BB7}'.repeat(101))).toEqual({
+      ok: false,
+      reason: 'tooLong',
+      message: 'Keyword exceeds 100 characters',
+    });
+  });
+
   it('reports a phrase of more than five words and names it', () => {
     expect(checkKeywordText('one two three four five six')).toEqual({
       ok: false,

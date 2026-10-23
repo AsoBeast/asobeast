@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useDeferredValue } from "react";
 import Link from "next/link";
 import type { AppDetail, CategoryRankSeriesItem } from "@asobeast/shared";
 import { useSuspenseQuery } from "@tanstack/react-query";
@@ -228,6 +228,7 @@ function CategoryRankBody({ id, range }: { id: string; range: RangePreset }) {
 
 export function CategoryRankCard({ id }: { id: string }) {
   const [range, setRange] = useQueryState("categoryRange", rangeParser);
+  const shownRange = useDeferredValue(range);
 
   return (
     <Card>
@@ -244,7 +245,7 @@ export function CategoryRankCard({ id }: { id: string }) {
       </CardHeader>
       <CardContent>
         <Suspense fallback={<ChartSkeleton height={CHART_HEIGHT.tall} />}>
-          <CategoryRankBody id={id} range={range} />
+          <CategoryRankBody id={id} range={shownRange} />
         </Suspense>
       </CardContent>
     </Card>

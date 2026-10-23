@@ -87,6 +87,7 @@ describe('Store connections (e2e)', () => {
   it('answers an empty state to the owner', async () => {
     await expect(state()).resolves.toEqual({
       available: true,
+      googleSignIn: false,
       connections: [],
     });
   });
@@ -252,6 +253,7 @@ describe('Store connections (e2e)', () => {
 
     await expect(state()).resolves.toEqual({
       available: true,
+      googleSignIn: false,
       connections: [],
     });
     await expect(harness.prisma.storeReportRequest.count()).resolves.toBe(0);
@@ -405,6 +407,20 @@ describe('Store connections (e2e)', () => {
     ).resolves.toBe(0);
   });
 
+  it('answers 409 to a google sign in while the instance has no OAuth client', async () => {
+    expect((await state()).googleSignIn).toBe(false);
+
+    const refused = await owner
+      .post(`${PLAY_PATH}/sign-in`)
+      .send({ bucket: PLAY_CONNECTION_REQUEST.bucket })
+      .expect(409);
+
+    expect((refused.body as ApiErrorEnvelope).message).toContain(
+      'GOOGLE_PLAY_OAUTH_CLIENT_ID',
+    );
+    expect(harness.gcs.requests).toEqual([]);
+  });
+
   it('lists both connections with the bucket on the play one', async () => {
     await connect().expect(200);
     await owner.put(PLAY_PATH).send(PLAY_CONNECTION_REQUEST).expect(200);
@@ -449,6 +465,7 @@ describe('Store connections (e2e)', () => {
 
     await expect(state()).resolves.toEqual({
       available: true,
+      googleSignIn: false,
       connections: [],
     });
     await owner.post(`${PATH}/sync`).expect(404);

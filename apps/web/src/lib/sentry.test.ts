@@ -1,6 +1,8 @@
 import type { ErrorEvent } from "@sentry/nextjs";
 import { describe, expect, it } from "vitest";
+import { ApiError } from "@/lib/api";
 import {
+  filterEvent,
   maskRoute,
   reportingDsn,
   reportingOptions,
@@ -108,7 +110,65 @@ describe("reportingOptions", () => {
         stackFrameVariables: false,
         genAI: { inputs: false, outputs: false },
       },
-      beforeSend: scrubEvent,
+      beforeSend: filterEvent,
     });
+  });
+});
+
+function apiError(statusCode: number): ApiError {
+  return new ApiError({
+    statusCode,
+    error: "Error",
+    message: "refused",
+    path: "/apps/a/keywords",
+    timestamp: new Date().toISOString(),
+    ...(statusCode === 429
+      ? {
+          retryAfterSeconds: 4,
+          rateLimit: {
+            window: "minute",
+            rateClass: "read",
+            plan: "trial",
+            limit: 300,
+            resetSeconds: 4,
+            upgradeTo: "indie",
+          },
+        }
+      : {}),
+  });
+}
+
+describe("filterEvent", () => {
+  const event = eventWith({
+    transaction: "/apps/clx8s9k2l0000abcdefghijkl/keywords",
+  });
+
+  it.each([
+    ["a spent plan budget", apiError(429)],
+    ["a deleted record", apiError(404)],
+    ["an ended trial", apiError(402)],
+    ["a closed session", apiError(401)],
+    [
+      "a refusal that crossed a bundle as its digest",
+      Object.assign(new Error("refused"), { digest: apiError(429).digest }),
+    ],
+    [
+      "a render the visitor left",
+      new Error("The destination stream closed early."),
+    ],
+  ])("drops %s", (_reason, error) => {
+    expect(filterEvent(event, { originalException: error })).toBeNull();
+  });
+
+  it.each([
+    ["a render failure", new Error("cannot read properties of undefined")],
+    ["an api failure", apiError(500)],
+    ["a gateway that gave up on the api", apiError(504)],
+    ["a refusal no page explains", apiError(400)],
+    ["no exception at all", undefined],
+  ])("keeps %s and scrubs it", (_reason, error) => {
+    expect(filterEvent(event, { originalException: error })).toEqual(
+      scrubEvent(event),
+    );
   });
 });

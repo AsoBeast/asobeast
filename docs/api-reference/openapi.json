@@ -1035,6 +1035,9 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "The database cannot be reached. The body is the error envelope with status, db, redis and pipeline added, and Retry-After says when to try again"
           }
         },
         "summary": "Liveness, database and pipeline health check",
@@ -3596,6 +3599,72 @@
           }
         },
         "summary": "Queue a report sync for the connected store console",
+        "tags": [
+          "store-connect"
+        ]
+      }
+    },
+    "/store-connections/GOOGLE_PLAY/sign-in": {
+      "post": {
+        "description": "Answers the Google consent address to send the owner to, asking for read only Cloud Storage access, with a state sealed to this owner and workspace that expires in ten minutes. Google returns to the web page /settings/google-play. Owner only, through a signed in session. Answers 409 when the instance has store connections off or no Google OAuth client.",
+        "operationId": "PlaySignInController_start",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaySignInDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Start connecting Google Play with a Google account",
+        "tags": [
+          "store-connect"
+        ]
+      }
+    },
+    "/store-connections/GOOGLE_PLAY/sign-in/complete": {
+      "post": {
+        "description": "Redeems the code Google returned, lists the bucket with the account before anything is stored, seals the refresh token bound to this workspace, replaces any Google Play connection and queues a report sync. Answers 400 for a state of another owner, an expired state or a code Google refuses, 422 when the account was not granted Cloud Storage access or cannot read the bucket, and 409 when sign in is off or Google refuses the OAuth client of the instance.",
+        "operationId": "PlaySignInController_complete",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaySignInCompletionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Finish connecting Google Play with a Google account",
         "tags": [
           "store-connect"
         ]
@@ -6402,7 +6471,7 @@
   "info": {
     "title": "asobeast API",
     "description": "Self hosted ASO toolkit API.\n\nA metered instance carries RateLimit-Limit, RateLimit-Remaining and RateLimit-Reset on every response, for the tightest limit the request touched. A self hosted instance has no request rate limits and sends no such header. Limits are per workspace, so minting more tokens does not buy more capacity, and they are sized per plan across three classes: read for stored data, write for configuration changes and store for the endpoints that reach the App Store or Google Play.\n\nA 429 carries Retry-After and a rateLimit object naming the window that closed, or an aiAllowance object when the workspace has spent the AI calls its plan includes this month. A 403 with a quota object means a plan capacity limit such as apps or tracked keyword markets, which is a different problem from a rate limit. A 402 with an entitlement object means the workspace needs a plan.\n\nPositions are 1-based and null means checked but not found within the captured depth, never zero. Daily granularity uses UTC dates.",
-    "version": "1.12.0",
+    "version": "1.13.0",
     "contact": {}
   },
   "tags": [],
@@ -7161,6 +7230,39 @@
           "store",
           "serviceAccountJson",
           "bucket"
+        ]
+      },
+      "PlaySignInDto": {
+        "type": "object",
+        "properties": {
+          "bucket": {
+            "type": "string",
+            "maxLength": 63,
+            "example": "pubsite_prod_rev_01234567890987654321",
+            "description": "The Cloud Storage bucket id shown under Download reports in Play Console. Carried through the Google sign in and stored with the connection."
+          }
+        },
+        "required": [
+          "bucket"
+        ]
+      },
+      "PlaySignInCompletionDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "maxLength": 2048,
+            "description": "The code Google added to the redirect. Redeemed once with Google and never stored."
+          },
+          "state": {
+            "type": "string",
+            "maxLength": 4096,
+            "description": "The state Google returned unchanged. Opens only for the signed in owner who started the sign in, within ten minutes."
+          }
+        },
+        "required": [
+          "code",
+          "state"
         ]
       },
       "ChartCaptureDto": {
