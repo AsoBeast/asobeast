@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  CHECK_FRESH_DAYS,
   formatCheckedPosition,
   formatRankPosition,
+  isCheckFresh,
   isRanked,
   RANK_DEPTH,
   RANK_MILESTONE_DIRECTIONS,
@@ -81,5 +83,25 @@ describe('rank milestones', () => {
     [undefined, null],
   ])('places position %s in tier %s', (position, expected) => {
     expect(tierOf(position)).toBe(expected);
+  });
+});
+
+describe('isCheckFresh', () => {
+  it('treats a check from today or yesterday as current', () => {
+    expect(isCheckFresh('2026-10-22', '2026-10-22')).toBe(true);
+    expect(isCheckFresh('2026-10-21', '2026-10-22')).toBe(true);
+  });
+
+  it('treats an older check as stale', () => {
+    expect(isCheckFresh('2026-10-20', '2026-10-22')).toBe(false);
+  });
+
+  it('crosses month and year boundaries', () => {
+    expect(isCheckFresh('2026-09-30', '2026-10-01')).toBe(true);
+    expect(isCheckFresh('2025-12-30', '2026-01-01')).toBe(false);
+  });
+
+  it('allows one day of slack for the daily run', () => {
+    expect(CHECK_FRESH_DAYS).toBe(1);
   });
 });

@@ -29,6 +29,7 @@ export interface CompetitorItem {
   name: string | null;
   iconUrl: string | null;
   latestSnapshot: AppSnapshotSummary | null;
+  delistedAt?: string | null;
 }
 
 export interface AppGroupMember {
@@ -59,6 +60,7 @@ export interface AppDetail {
   group: AppGroupSummary | null;
   localization?: string;
   isCompetitor?: boolean;
+  delistedAt?: string | null;
 }
 
 export interface AppListItem {
@@ -73,6 +75,7 @@ export interface AppListItem {
   trackedKeywordCount: number;
   competitorCount: number;
   groupId: string | null;
+  delistedAt?: string | null;
 }
 
 export const MARKET_AVAILABILITY = [

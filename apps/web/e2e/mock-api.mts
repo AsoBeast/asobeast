@@ -140,6 +140,8 @@ import {
   UNCHECKED_COMPARISON_COOKIE,
   CROWDED_COMPETITORS,
   CROWDED_COMPETITORS_COOKIE,
+  DELISTED_AT,
+  DELISTED_COOKIE,
   PRICED_REFRESHES,
 } from "./fixtures.mts";
 import {
@@ -152,6 +154,7 @@ import {
 } from "./portfolio-insights.mts";
 import type {
   AccountPlan,
+  AppDetail,
   ReviewReplyDraftRequest,
   ReviewTranslationRequest,
   ReviewReplyGuidelines,
@@ -318,6 +321,7 @@ function manualKeyword(
     active: true,
     latestPosition: null,
     latestDepth: null,
+    latestCheckedOn: null,
     previousPosition: null,
     positionDelta1d: null,
     positionDelta7d: null,
@@ -680,6 +684,22 @@ function comparisonOf(
   return fallback;
 }
 
+function withDelisted<T extends { id: string; delistedAt?: string | null }>(
+  req: IncomingMessage,
+  item: T,
+): T {
+  return hasCookie(req, DELISTED_COOKIE, item.id)
+    ? { ...item, delistedAt: DELISTED_AT }
+    : item;
+}
+
+function delistedDetail(req: IncomingMessage, detail: AppDetail): AppDetail {
+  return withDelisted(req, {
+    ...detail,
+    competitors: detail.competitors.map((rival) => withDelisted(req, rival)),
+  });
+}
+
 const STALE_SESSION = "stale";
 const ANSWERED_WITHOUT_A_SESSION = /^\/(health|auth\/(status|login|register))$/;
 
@@ -921,6 +941,7 @@ function trackedFromKeywordField(
     active: true,
     latestPosition: null,
     latestDepth: null,
+    latestCheckedOn: null,
     previousPosition: null,
     positionDelta1d: null,
     positionDelta7d: null,
@@ -1870,6 +1891,7 @@ function firstCheckRows(req: IncomingMessage): TrackedKeywordItem[] {
   const unchecked = {
     latestPosition: null,
     latestDepth: null,
+    latestCheckedOn: null,
     previousPosition: null,
     positionDelta1d: null,
     positionDelta7d: null,
@@ -1881,7 +1903,13 @@ function firstCheckRows(req: IncomingMessage): TrackedKeywordItem[] {
       ...unchecked,
       keywordId: "kw-fresh",
       text: "fresh phrase",
-      ...(checked ? { latestPosition: 7, latestDepth: RANK_DEPTH } : {}),
+      ...(checked
+        ? {
+            latestPosition: 7,
+            latestDepth: RANK_DEPTH,
+            latestCheckedOn: utcDaysAgo(0),
+          }
+        : {}),
     },
     {
       ...APP_1_KEYWORDS[0],
@@ -2686,7 +2714,9 @@ const routes: Route[] = [
         : portfolioApps;
       json(res, 200, {
         ...PORTFOLIO,
-        apps: empty ? [] : listed.map((app) => withSetup(req, app)),
+        apps: empty
+          ? []
+          : listed.map((app) => withDelisted(req, withSetup(req, app))),
         groups: empty ? [] : PORTFOLIO.groups,
         totals: {
           ...PORTFOLIO.totals,
@@ -2932,8 +2962,11 @@ const routes: Route[] = [
       json(res, 201, IMPORTED_APP_DETAIL);
     },
   },
-  appRoute(/^\/apps\/([^/]+)$/, (dataset, query) =>
-    isPolishListingOf(dataset, query) ? APP_1_PL_DETAIL : dataset.detail,
+  appRoute(/^\/apps\/([^/]+)$/, (dataset, query, req) =>
+    delistedDetail(
+      req,
+      isPolishListingOf(dataset, query) ? APP_1_PL_DETAIL : dataset.detail,
+    ),
   ),
   appRoute(/^\/apps\/([^/]+)\/setup$/, (dataset, _query, req) =>
     setupOf(req, dataset.detail),
@@ -3544,7 +3577,7 @@ const routes: Route[] = [
         200,
         hasCookie(req, CROWDED_COMPETITORS_COOKIE, "1")
           ? CROWDED_COMPETITORS
-          : dataset.competitors,
+          : dataset.competitors.map((rival) => withDelisted(req, rival)),
       );
     },
   },
@@ -4161,6 +4194,18 @@ const routes: Route[] = [
     method: "POST",
     pattern: /^\/apps\/([^/]+)\/refresh$/,
     handler: (params, req, res) => {
+      const detail = DATASETS[params[0]]?.detail;
+      if (detail && hasCookie(req, DELISTED_COOKIE, detail.id)) {
+        return json(
+          res,
+          404,
+          errorEnvelope(
+            404,
+            req.url ?? "/",
+            `The App Store has no app ${detail.storeAppId}.`,
+          ),
+        );
+      }
       const country = new URL(
         req.url ?? "/",
         "http://localhost",

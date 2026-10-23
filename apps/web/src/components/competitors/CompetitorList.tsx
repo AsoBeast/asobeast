@@ -6,6 +6,7 @@ import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import type { CompetitorItem } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
+import { DelistedBadge } from "@/components/apps/DelistedBadge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -63,9 +64,14 @@ function CompetitorCard({
         <div className="flex min-w-0 flex-1 flex-col gap-2">
           <div className="flex min-w-0 flex-col gap-1">
             <span className="truncate font-medium">{name}</span>
-            <Badge variant="secondary" className="w-fit">
-              {storeLabel(competitor.store)}
-            </Badge>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Badge variant="secondary" className="w-fit">
+                {storeLabel(competitor.store)}
+              </Badge>
+              {competitor.delistedAt ? (
+                <DelistedBadge since={competitor.delistedAt} />
+              ) : null}
+            </div>
           </div>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
             {snapshot?.ratingAvg !== null && snapshot !== null ? (

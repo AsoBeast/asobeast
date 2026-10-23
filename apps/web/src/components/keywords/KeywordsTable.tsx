@@ -2,7 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import type { Store, TrackedKeywordItem } from "@asobeast/shared";
+import {
+  utcDayOf,
+  type Store,
+  type TrackedKeywordItem,
+} from "@asobeast/shared";
 import { useTable, type RowSelectionState } from "@tanstack/react-table";
 import { useQueryState, useQueryStates } from "nuqs";
 import { useStoredColumnVisibility } from "@/components/data-table/useStoredColumnVisibility";
@@ -45,7 +49,10 @@ export function KeywordsTable({
   });
   const [, setSerp] = useQueryState("serp", serpParser);
   const [filters, setFilters] = useQueryStates(keywordFilterParsers);
-  const { data: keywords } = useSuspenseQuery(keywordsOptions(id, country));
+  const { data: keywords, dataUpdatedAt } = useSuspenseQuery(
+    keywordsOptions(id, country),
+  );
+  const today = utcDayOf(dataUpdatedAt);
   const [selection, setSelection] = useState<RowSelectionState>({});
   const tableArea = useRef<HTMLDivElement>(null);
   const refocusTable = useRef(false);
@@ -63,9 +70,10 @@ export function KeywordsTable({
     () =>
       keywordColumns({
         appId: id,
+        today,
         onOpenSerp: (keywordId) => void setSerp(keywordId),
       }),
-    [id, setSerp],
+    [id, setSerp, today],
   );
 
   const { sorting, onSortingChange } = useUrlSorting(

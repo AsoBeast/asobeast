@@ -121,6 +121,7 @@ export function toCompetitorItem(
     store: app.store,
     name: app.name,
     iconUrl: app.iconUrl,
+    delistedAt: delistedAt(app),
     latestSnapshot: snapshot ? toSnapshotSummary(snapshot, app.country) : null,
   };
 }
@@ -143,6 +144,7 @@ export function toAppListItem(
     trackedKeywordCount,
     competitorCount,
     groupId: app.groupId,
+    delistedAt: delistedAt(app),
   };
 }
 
@@ -181,6 +183,7 @@ export function toAppDetail(
     name: app.name,
     iconUrl: app.iconUrl,
     createdAt: app.createdAt.toISOString(),
+    delistedAt: delistedAt(app),
     searchable: snapshot
       ? rawListedInIphoneSearch(app.store, snapshot.raw)
       : true,
@@ -192,6 +195,10 @@ export function toAppDetail(
     ...(localization ? { localization } : {}),
     isCompetitor: app.isCompetitor,
   };
+}
+
+export function delistedAt(app: Pick<App, 'delistedAt'>): string | null {
+  return app.delistedAt?.toISOString() ?? null;
 }
 
 export function toSnapshotData(

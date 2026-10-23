@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, type ReactNode } from "react";
-import { InfoIcon } from "lucide-react";
+import { InfoIcon, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -16,11 +16,13 @@ function InfoTip({
   label,
   title,
   summary,
+  icon: Icon = InfoIcon,
   children,
 }: {
   label: string;
   title: string;
   summary: string;
+  icon?: LucideIcon;
   children?: ReactNode;
 }) {
   const titleId = useId();
@@ -34,7 +36,7 @@ function InfoTip({
           aria-label={label}
           className="-my-1 text-muted-foreground hover:text-foreground print:hidden"
         >
-          <InfoIcon aria-hidden />
+          <Icon aria-hidden />
         </Button>
       </PopoverTrigger>
       <PopoverContent

@@ -246,13 +246,13 @@ export function resolveSubtitleJobId(appId: string): string {
 }
 
 export function categoryJobId(
-  workspaceId: string,
+  owner: string,
   collection: CategoryCollection,
   genre: string,
   country: string,
   date: string,
 ): string {
-  return `category~${workspaceId}~${collection}~${genre}~${country}~${date}`;
+  return `category~${owner}~${collection}~${genre}~${country}~${date}`;
 }
 
 export function checkJobId(keywordId: string, date: string): string {
