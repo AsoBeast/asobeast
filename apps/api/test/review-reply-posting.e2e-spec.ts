@@ -303,6 +303,47 @@ describe('Posting review replies (e2e)', () => {
     expect(harness.gcs.requests).toEqual([]);
   });
 
+  it('names the cloud project of a disabled android publisher api and leaves reply access alone', async () => {
+    await connectBoth();
+    const disabled =
+      'Google Play Android Developer API has not been used in project 1076421972429 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/androidpublisher.googleapis.com/overview?project=1076421972429 then retry.';
+    harness.gcs.on(
+      'POST',
+      /androidpublisher/,
+      gcsAnswer(
+        {
+          error: {
+            code: 403,
+            message: disabled,
+            errors: [{ reason: 'accessNotConfigured', message: disabled }],
+            status: 'PERMISSION_DENIED',
+            details: [
+              {
+                '@type': 'type.googleapis.com/google.rpc.ErrorInfo',
+                reason: 'SERVICE_DISABLED',
+                metadata: { consumer: 'projects/1076421972429' },
+              },
+            ],
+          },
+        },
+        403,
+      ),
+    );
+
+    const refused = await owner.post(postPath(play)).expect(409);
+
+    expect((refused.body as ApiErrorEnvelope).message).toContain(
+      'Google Cloud project 1076421972429',
+    );
+    expect((refused.body as ApiErrorEnvelope).message).not.toContain(
+      'Reply to reviews permission',
+    );
+    await expect(replyAccess(Store.GOOGLE_PLAY)).resolves.toMatchObject({
+      status: 'active',
+      replyAccess: 'unknown',
+    });
+  });
+
   it('answers 403 with the role a key needs and remembers it, keeping the connection active', async () => {
     await connectBoth();
     scriptApple();

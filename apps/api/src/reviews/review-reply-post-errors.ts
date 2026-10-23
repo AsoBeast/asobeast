@@ -26,6 +26,7 @@ import {
 import { GcsUnreachableError } from '../store-connect/play/gcs-transport';
 import { SignInOffError } from '../store-connect/play/google-sign-in';
 import {
+  PlayApiDisabledError,
   PlayForbiddenError,
   PlayReplyRefusedError,
   PlayReviewMissingError,
@@ -53,6 +54,12 @@ export const CONNECT_FIRST: Record<Store, string> = {
   GOOGLE_PLAY:
     'Connect Google Play in Settings, Store connections, to post replies from here.',
 };
+
+export const PLAY_REPLY_SETUP_GUIDE =
+  'https://docs.asobeast.com/guides/store-funnel#use-a-service-account-key';
+
+export const playApiDisabled = (project: string | null): string =>
+  `The Google Play Android Developer API is not enabled in ${project ? `Google Cloud project ${project}` : 'the Google Cloud project'} behind this connection: the OAuth client's project for a Google sign in, the service account's project for a key. Enable it there, then post again. See ${PLAY_REPLY_SETUP_GUIDE}`;
 
 export const PLAY_REVIEW_MISSING =
   'Google Play does not know this review any more.';
@@ -120,6 +127,9 @@ export function postRefusalOf(error: unknown): PostRefusal {
       exception: new ForbiddenException(REPLY_ROLE_NEEDED.APP_STORE),
       forbidden: true,
     };
+  }
+  if (error instanceof PlayApiDisabledError) {
+    return { exception: new ConflictException(playApiDisabled(error.project)) };
   }
   if (error instanceof PlayForbiddenError) {
     return {

@@ -30,6 +30,16 @@ export class PlayReviewMissingError extends GcsError {}
 
 export class PlayForbiddenError extends GcsError {}
 
+export class PlayApiDisabledError extends GcsError {
+  constructor(
+    message: string,
+    status: number,
+    readonly project: string | null,
+  ) {
+    super(message, status);
+  }
+}
+
 export interface PlayReply {
   replyText: string;
   lastEdited: Date;
@@ -42,19 +52,58 @@ interface ReplyAnswer {
   };
 }
 
-const googleMessage = (body: unknown): string | null => {
-  const message = (body as { error?: { message?: unknown } } | null)?.error
-    ?.message;
-  return typeof message === 'string' && message.length > 0 ? message : null;
-};
+interface GoogleError {
+  message?: unknown;
+  errors?: { reason?: unknown }[];
+  details?: { reason?: unknown; metadata?: { consumer?: unknown } }[];
+}
+
+const DISABLED_REASONS = new Set(['SERVICE_DISABLED', 'accessNotConfigured']);
+const UNUSED_IN_PROJECT = /has not been used in project (\d+)/;
+const CONSUMER_PROJECT = /^projects\/(\d+)$/;
+
+const googleErrorOf = (body: unknown): GoogleError | null =>
+  (body as { error?: GoogleError } | null)?.error ?? null;
+
+const googleMessage = (error: GoogleError | null): string | null =>
+  typeof error?.message === 'string' && error.message.length > 0
+    ? error.message
+    : null;
+
+const isServiceDisabled = (error: GoogleError | null, message: string) =>
+  [...(error?.errors ?? []), ...(error?.details ?? [])].some(
+    (entry) =>
+      typeof entry?.reason === 'string' && DISABLED_REASONS.has(entry.reason),
+  ) || UNUSED_IN_PROJECT.test(message);
+
+function disabledProject(
+  error: GoogleError | null,
+  message: string,
+): string | null {
+  const consumer = error?.details
+    ?.map((entry) => entry?.metadata?.consumer)
+    .find((value): value is string => typeof value === 'string');
+  return (
+    consumer?.match(CONSUMER_PROJECT)?.[1] ??
+    message.match(UNUSED_IN_PROJECT)?.[1] ??
+    null
+  );
+}
+
+function forbiddenErrorOf(error: GoogleError | null, message: string) {
+  return isServiceDisabled(error, message)
+    ? new PlayApiDisabledError(message, 403, disabledProject(error, message))
+    : new PlayForbiddenError(message, 403);
+}
 
 function replyErrorOf(response: GcsResponse): GcsError {
   const { status } = response;
+  const error = googleErrorOf(response.body);
   const message =
-    googleMessage(response.body) ?? `Google answered ${status} to the reply`;
+    googleMessage(error) ?? `Google answered ${status} to the reply`;
   if (status === 400) return new PlayReplyRefusedError(message, status);
   if (status === 401) return new GcsRejectedError(message, status);
-  if (status === 403) return new PlayForbiddenError(message, status);
+  if (status === 403) return forbiddenErrorOf(error, message);
   if (status === 404) return new PlayReviewMissingError(message, status);
   if (status === 429) return new GcsRateLimitedError(message, status);
   return new GcsError(message, status);

@@ -20,6 +20,7 @@ import {
 import { GcsUnreachableError } from '../store-connect/play/gcs-transport';
 import { SignInOffError } from '../store-connect/play/google-sign-in';
 import {
+  PlayApiDisabledError,
   PlayForbiddenError,
   PlayReplyRefusedError,
   PlayReviewMissingError,
@@ -31,6 +32,7 @@ import {
 import {
   PLAY_KEY_REFUSED,
   PLAY_REVIEW_MISSING,
+  playApiDisabled,
   postRefusalOf,
   REPLY_ROLE_NEEDED,
 } from './review-reply-post-errors';
@@ -97,17 +99,37 @@ describe('postRefusalOf', () => {
 
   it('names the play permission and keeps the reason google gave', () => {
     const { exception, forbidden } = postRefusalOf(
-      new PlayForbiddenError(
-        'Google Play Android Developer API has not been used in project 42.',
-        403,
-      ),
+      new PlayForbiddenError('The caller does not have permission.', 403),
     );
 
     expect(forbidden).toBe(true);
     expect(statusOf(exception)).toBe(403);
     expect(messageOf(exception)).toBe(
-      `${REPLY_ROLE_NEEDED.GOOGLE_PLAY} Google said: Google Play Android Developer API has not been used in project 42.`,
+      `${REPLY_ROLE_NEEDED.GOOGLE_PLAY} Google said: The caller does not have permission.`,
     );
+  });
+
+  it('names the project whose android publisher api is disabled and leaves reply access alone', () => {
+    const { exception, forbidden, rejected } = postRefusalOf(
+      new PlayApiDisabledError('disabled', 403, '1076421972429'),
+    );
+
+    expect(forbidden).toBeUndefined();
+    expect(rejected).toBeUndefined();
+    expect(statusOf(exception)).toBe(409);
+    expect(messageOf(exception)).toBe(playApiDisabled('1076421972429'));
+    expect(messageOf(exception)).toContain(
+      'Google Cloud project 1076421972429',
+    );
+    expect(messageOf(exception)).toContain(
+      'https://docs.asobeast.com/guides/store-funnel#use-a-service-account-key',
+    );
+    expect(
+      messageOf(
+        postRefusalOf(new PlayApiDisabledError('disabled', 403, null))
+          .exception,
+      ),
+    ).toBe(playApiDisabled(null));
   });
 
   it.each([

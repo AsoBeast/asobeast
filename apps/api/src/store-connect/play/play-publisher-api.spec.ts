@@ -7,6 +7,7 @@ import {
   GcsUnreachableError,
 } from './gcs-transport';
 import {
+  PlayApiDisabledError,
   PlayForbiddenError,
   PlayPublisherApi,
   PlayReplyRefusedError,
@@ -133,6 +134,79 @@ describe('PlayPublisherApi', () => {
     await expect(
       api.reply('com.example', 'gp:AOqp1', 'x'),
     ).rejects.toBeInstanceOf(PlayForbiddenError);
+  });
+
+  const DISABLED =
+    'Google Play Android Developer API has not been used in project 1076421972429 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/androidpublisher.googleapis.com/overview?project=1076421972429 then retry.';
+
+  it('reads a disabled android publisher api as its own error with the project number', async () => {
+    const { api } = recorded({
+      status: 403,
+      body: {
+        error: {
+          code: 403,
+          message: DISABLED,
+          errors: [{ reason: 'accessNotConfigured', message: DISABLED }],
+          status: 'PERMISSION_DENIED',
+          details: [
+            {
+              '@type': 'type.googleapis.com/google.rpc.ErrorInfo',
+              reason: 'SERVICE_DISABLED',
+              domain: 'googleapis.com',
+              metadata: {
+                consumer: 'projects/1076421972429',
+                service: 'androidpublisher.googleapis.com',
+              },
+            },
+          ],
+        },
+      },
+    });
+
+    const error: unknown = await api
+      .reply('com.example', 'gp:AOqp1', 'x')
+      .catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(PlayApiDisabledError);
+    expect(error).not.toBeInstanceOf(PlayForbiddenError);
+    expect((error as PlayApiDisabledError).project).toBe('1076421972429');
+  });
+
+  it.each([
+    ['the legacy reason', { errors: [{ reason: 'accessNotConfigured' }] }],
+    ['the message alone', {}],
+  ])('reads a disabled api from %s', async (_, extra) => {
+    const { api } = recorded({
+      status: 403,
+      body: { error: { code: 403, message: DISABLED, ...extra } },
+    });
+
+    const error: unknown = await api
+      .reply('com.example', 'gp:AOqp1', 'x')
+      .catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(PlayApiDisabledError);
+    expect((error as PlayApiDisabledError).project).toBe('1076421972429');
+  });
+
+  it('reads a disabled api without a project number', async () => {
+    const { api } = recorded({
+      status: 403,
+      body: {
+        error: {
+          code: 403,
+          message: 'The API is disabled.',
+          details: [{ reason: 'SERVICE_DISABLED' }],
+        },
+      },
+    });
+
+    const error: unknown = await api
+      .reply('com.example', 'gp:AOqp1', 'x')
+      .catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(PlayApiDisabledError);
+    expect((error as PlayApiDisabledError).project).toBeNull();
   });
 
   it('reads a 401 as a refused service account, not a missing permission', async () => {
