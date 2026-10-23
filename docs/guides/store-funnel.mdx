@@ -104,6 +104,8 @@ The quicker way, offered once the instance has a Google OAuth client (see [Set u
 
 asobeast keeps only the refresh token Google issues, sealed like every console key. To revoke it, remove asobeast under **Third party connections** in your Google account; the connection is then marked refused until you sign in again.
 
+A Google sign in reads reports only. Google grants it no access to the Android Publisher API, so posting review replies to Google Play needs a service account key with the **Reply to reviews** permission. When you want to post replies from asobeast, connect with [a service account key](#use-a-service-account-key) instead.
+
 ### Use a service account key
 
 <Steps>
