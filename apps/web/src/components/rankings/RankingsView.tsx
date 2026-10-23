@@ -21,6 +21,7 @@ import {
 } from "@/lib/queries";
 import { presetToRange, RANGE_PRESETS } from "@/lib/ranges";
 import { keywordIdsParser, rangeParser } from "@/lib/search-params";
+import { annotationsInMarkets } from "@/components/annotations/annotation-lines";
 import { MIN_TREND_POINTS } from "@/components/charts/ChartStates";
 import { exportRankings } from "./ranking-csv";
 import { buildRankingChart, MAX_SERIES } from "./pivot";
@@ -53,6 +54,9 @@ export function RankingsView({ id }: { id: string }) {
     changesOptions(id, Number(range.replace("d", ""))),
   );
   const { data: annotations } = useQuery(annotationsOptions(id));
+  const inScope = annotationsInMarkets(annotations?.annotations ?? [], [
+    ...new Set(data.series.map((item) => item.country)),
+  ]);
   const changeDates = (changes?.events ?? [])
     .filter((event) => !event.isCompetitor)
     .map((event) => event.capturedAt.slice(0, 10));
@@ -131,7 +135,7 @@ export function RankingsView({ id }: { id: string }) {
             <RankingChart
               data={chart}
               changeDates={changeDates}
-              annotations={annotations?.annotations ?? []}
+              annotations={inScope}
             />
             {chart.totalSeries > MAX_SERIES ? (
               <p className="text-caption text-muted-foreground">

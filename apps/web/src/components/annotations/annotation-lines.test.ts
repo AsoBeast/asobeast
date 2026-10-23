@@ -3,6 +3,7 @@ import type { AppAnnotationItem } from "@asobeast/shared";
 import {
   annotationLines,
   annotationsInScope,
+  annotationsInMarkets,
   annotationsOn,
 } from "./annotation-lines";
 
@@ -77,5 +78,31 @@ describe("annotationsInScope", () => {
       global,
       german,
     ]);
+  });
+});
+
+describe("annotationsInMarkets", () => {
+  const global = annotation({ id: "ann-1", market: null });
+  const german = annotation({ id: "ann-2", market: "de" });
+  const american = annotation({ id: "ann-3", market: "us" });
+
+  it("keeps every annotation when the chart plots no market", () => {
+    expect(annotationsInMarkets([global, german], [])).toEqual([
+      global,
+      german,
+    ]);
+  });
+
+  it("keeps global annotations and the ones of the plotted markets", () => {
+    expect(annotationsInMarkets([global, german, american], ["us"])).toEqual([
+      global,
+      american,
+    ]);
+  });
+
+  it("keeps the annotations of every market the chart plots", () => {
+    expect(
+      annotationsInMarkets([global, german, american], ["us", "de"]),
+    ).toEqual([global, german, american]);
   });
 });

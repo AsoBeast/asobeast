@@ -28,3 +28,14 @@ export function annotationsInScope(
     (annotation) => !annotation.market || annotation.market === market,
   );
 }
+
+export function annotationsInMarkets(
+  annotations: readonly AppAnnotationItem[],
+  markets: readonly string[],
+): AppAnnotationItem[] {
+  if (markets.length === 0) return [...annotations];
+  const set = new Set(markets);
+  return annotations.filter(
+    (annotation) => !annotation.market || set.has(annotation.market),
+  );
+}
