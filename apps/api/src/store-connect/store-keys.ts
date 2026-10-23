@@ -28,9 +28,9 @@ import {
 import { identityFingerprint, publicKeyFingerprint } from './key-fingerprint';
 import { type GcsApi, GcsError, GcsRateLimitedError } from './play/gcs-api';
 import { GcsApiFactory } from './play/gcs-api.factory';
-import type { PlayPublisherApi } from './play/play-publisher-api';
 import { GcsUnreachableError } from './play/gcs-transport';
 import { SignInOffError } from './play/google-sign-in';
+import type { PlayPublisherApi } from './play/play-publisher-api';
 import { playRefusal } from './play/play-refusal';
 import {
   parseServiceAccount,

@@ -40,6 +40,17 @@ describe('matchCustomerReview', () => {
     ).toBe(match);
   });
 
+  it('prefers a dated candidate over any number without a readable date', () => {
+    expect(
+      matchCustomerReview(REVIEW, [
+        candidate('asc-undated-1', { createdDate: '' }),
+        candidate('asc-undated-2', { createdDate: 'soon' }),
+        candidate('asc-dated', { createdDate: '2026-09-01T00:00:00Z' }),
+        candidate('asc-undated-3', { createdDate: '' }),
+      ]),
+    ).toMatchObject({ id: 'asc-dated' });
+  });
+
   it('ignores a candidate whose body differs by one character', () => {
     expect(
       matchCustomerReview(REVIEW, [

@@ -48,6 +48,8 @@ function distanceFrom(
     : Math.abs(created - review.reviewedAt.getTime());
 }
 
+const byDistance = (a: number, b: number): number => (a === b ? 0 : a - b);
+
 export function matchCustomerReview(
   review: StoredReview,
   candidates: AscCustomerReview[],
@@ -60,6 +62,8 @@ export function matchCustomerReview(
       ? []
       : [{ candidate, nickname, distance: distanceFrom(review, candidate) }];
   });
-  ranked.sort((a, b) => a.nickname - b.nickname || a.distance - b.distance);
+  ranked.sort(
+    (a, b) => a.nickname - b.nickname || byDistance(a.distance, b.distance),
+  );
   return ranked[0]?.candidate ?? null;
 }
