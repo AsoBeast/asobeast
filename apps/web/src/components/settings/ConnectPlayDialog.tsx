@@ -71,7 +71,8 @@ export function ConnectPlayDialog({
   const queryClient = useQueryClient();
   const initial: Method = googleSignIn ? "google" : "key";
   const [open, setOpen] = useState(false);
-  const [method, setMethod] = useState<Method>(initial);
+  const [chosen, setChosen] = useState<Method>(initial);
+  const method: Method = googleSignIn ? chosen : "key";
   const [bucket, setBucket] = useState("");
   const [serviceAccountJson, setServiceAccountJson] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -79,7 +80,7 @@ export function ConnectPlayDialog({
   function reset(next: boolean) {
     setOpen(next);
     if (next) return;
-    setMethod(initial);
+    setChosen(initial);
     setBucket("");
     setServiceAccountJson("");
     setError(null);
@@ -124,11 +125,7 @@ export function ConnectPlayDialog({
       submitLabel={method === "google" ? SIGN_IN_LABEL : label}
       description={METHODS[method].description}
       error={error}
-      pending={
-        keyMutation.isPending ||
-        signInMutation.isPending ||
-        signInMutation.isSuccess
-      }
+      pending={keyMutation.isPending || signInMutation.isPending}
       onSubmit={submit}
       trigger={
         <Button variant="outline" size="sm">
@@ -140,7 +137,8 @@ export function ConnectPlayDialog({
         <Tabs
           value={method}
           onValueChange={(next) => {
-            setMethod(next as Method);
+            setChosen(next as Method);
+            setServiceAccountJson("");
             setError(null);
           }}
         >
