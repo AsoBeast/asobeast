@@ -142,6 +142,10 @@ test("posts a google play reply and says google offers no withdraw", async ({
   await expect(
     composer(page).getByRole("button", { name: /Withdraw/ }),
   ).toHaveCount(0);
+  await composer(page).getByRole("button", { name: "Discard" }).click();
+  await expect(
+    page.getByRole("alertdialog", { name: "Discard this reply?" }),
+  ).toContainText("The reply posted on Google Play stays there.");
 });
 
 test("without a connection the composer copies and points to settings", async ({
@@ -276,14 +280,9 @@ test("withdraws a posted app store response and keeps the text", async ({
   await postFromComposer(page);
   await expect(page.getByText("Pending publication")).toBeVisible();
 
-  await composer(page).getByRole("button", { name: "Discard" }).click();
-  const discard = page.getByRole("alertdialog", {
-    name: "Discard this reply?",
-  });
-  await expect(discard).toContainText(
-    "The reply posted to App Store Connect stays there unless you withdraw it.",
-  );
-  await discard.getByRole("button", { name: "Keep it" }).click();
+  await expect(
+    composer(page).getByRole("button", { name: "Discard" }),
+  ).toHaveCount(0);
 
   await composer(page)
     .getByRole("button", { name: "Withdraw from App Store" })

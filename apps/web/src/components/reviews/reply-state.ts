@@ -51,6 +51,17 @@ export function replyBadgeLabel(
     : "Marked replied";
 }
 
+export function replyBadgeVariant(
+  review: Parameters<typeof replyStateOf>[0],
+): ReturnType<typeof replyStateVariant> | "info" {
+  const { reply } = review;
+  if (reply?.post && replyStateOf(review) === "replied") {
+    if (isPostEdited(reply)) return "warning";
+    if (reply.post.state === "pending") return "info";
+  }
+  return replyStateVariant(replyStateOf(review));
+}
+
 export const REPLY_STATE_OPTIONS = REVIEW_REPLY_STATES.map((state) => ({
   value: state,
   label: replyStateLabel(state),

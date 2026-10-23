@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { ReviewReplyItem } from "@asobeast/shared";
 import {
   replyBadgeLabel,
+  replyBadgeVariant,
   replyStateLabel,
   replyStateVariant,
   shownReplyStates,
@@ -70,6 +71,12 @@ describe("replyBadgeLabel", () => {
       "Pending publication",
     );
     expect(replyBadgeLabel(posted("published"), "GOOGLE_PLAY")).toBe("Posted");
+    expect(replyBadgeVariant(posted("pending"))).toBe("info");
+    expect(replyBadgeVariant(posted("published"))).toBe("success");
+    expect(replyBadgeVariant(posted("published", "Thanks again"))).toBe(
+      "warning",
+    );
+    expect(replyBadgeVariant({ repliedAt: null, reply: null })).toBe("outline");
     expect(
       replyBadgeLabel(posted("published", "Thanks again"), "APP_STORE"),
     ).toBe("Edited since posting");

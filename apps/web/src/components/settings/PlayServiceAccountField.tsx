@@ -59,8 +59,9 @@ export function PlayServiceAccountField({
         onChange={(event) => void choose(event.target.files?.[0])}
       />
       <p className="text-xs text-muted-foreground">
-        Choose the JSON key file or paste its contents. AsoBeast only reads the
-        store performance files in the bucket.
+        Choose the JSON key file or paste its contents. AsoBeast reads only the
+        store performance files in the bucket, and posts only the review replies
+        you send.
       </p>
     </div>
   );

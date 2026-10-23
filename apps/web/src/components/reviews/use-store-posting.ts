@@ -3,7 +3,7 @@
 import { toast } from "sonner";
 import type { ReviewReplyPostResult, Store } from "@asobeast/shared";
 import { useSharedFlight } from "@/lib/single-flight";
-import { postedToast } from "./store-reply-access";
+import { postedToast, WITHDRAWN_TOAST } from "./store-reply-access";
 
 export function useStorePosting({
   store,
@@ -31,11 +31,7 @@ export function useStorePosting({
 
   const retract = () =>
     void withdrawOnce(undefined)
-      .then(() =>
-        toast.success(
-          "Withdrawn from App Store Connect. Apple removes it within a day.",
-        ),
-      )
+      .then(() => toast.success(WITHDRAWN_TOAST))
       .catch(() => null);
 
   return { publish, retract };

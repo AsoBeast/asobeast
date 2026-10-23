@@ -168,13 +168,19 @@ describe("composerActions", () => {
   it("offers a post, the mark and no withdraw before anything was posted", () => {
     expect(
       composerActions(ready, "APP_STORE", { ...REPLY, post: null }, "Thanks"),
-    ).toEqual({ post: "Post to App Store", withdraw: false, mark: true });
+    ).toEqual({
+      post: "Post to App Store",
+      withdraw: false,
+      discard: true,
+      mark: true,
+    });
   });
 
   it("offers no post without a usable connection", () => {
     expect(composerActions(none, "APP_STORE", null, "Thanks")).toEqual({
       post: null,
       withdraw: false,
+      discard: true,
       mark: true,
     });
   });
@@ -183,6 +189,7 @@ describe("composerActions", () => {
     expect(composerActions(ready, "APP_STORE", REPLY, "Thanks")).toEqual({
       post: null,
       withdraw: true,
+      discard: false,
       mark: false,
     });
     expect(

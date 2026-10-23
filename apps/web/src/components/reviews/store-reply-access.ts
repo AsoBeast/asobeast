@@ -76,6 +76,9 @@ export function postedToast(store: Store, post: ReviewReplyPost): string {
     : "Posted to App Store Connect.";
 }
 
+export const WITHDRAWN_TOAST =
+  "Withdrawn from App Store Connect. Apple removes it within a day.";
+
 export function discardNotice(
   store: Store,
   reply: Pick<ReviewReplyItem, "post"> | null | undefined,
@@ -101,6 +104,7 @@ export function markLabel(marked: boolean, ready: boolean): string {
 export interface ComposerActions {
   post: string | null;
   withdraw: boolean;
+  discard: boolean;
   mark: boolean;
 }
 
@@ -112,10 +116,12 @@ export function composerActions(
 ): ComposerActions {
   const ready = access.kind === "ready";
   const posted = Boolean(reply?.post);
+  const withdraw = ready && posted && store === "APP_STORE";
   return {
     post:
       ready && needsPosting(reply, text) ? postActionLabel(store, reply) : null,
-    withdraw: ready && posted && store === "APP_STORE",
+    withdraw,
+    discard: !withdraw,
     mark: !posted,
   };
 }

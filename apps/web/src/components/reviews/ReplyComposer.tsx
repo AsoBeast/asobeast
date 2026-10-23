@@ -315,16 +315,18 @@ export function ReplyComposer({
             onWithdraw={retract}
           />
         ) : null}
-        <DiscardReplyButton
-          notice={discardNotice(store, review.reply)}
-          disabled={busy || (!review.reply && text === "")}
-          textRef={textRef}
-          onDiscard={() =>
-            void discard()
-              .then(() => setText(""))
-              .catch(() => null)
-          }
-        />
+        {actions.discard ? (
+          <DiscardReplyButton
+            notice={discardNotice(store, review.reply)}
+            disabled={busy || (!review.reply && text === "")}
+            textRef={textRef}
+            onDiscard={() =>
+              void discard()
+                .then(() => setText(""))
+                .catch(() => null)
+            }
+          />
+        ) : null}
         <Button variant="ghost" size="sm" className="ml-auto" onClick={onClose}>
           Close
         </Button>

@@ -47,17 +47,17 @@ export function PostReplyDialog({
       textRef={textRef}
       onConfirm={onPost}
     >
+      <ul className="w-full list-disc space-y-1 pl-4 text-start text-body text-muted-foreground">
+        {postRules(store).map((rule) => (
+          <li key={rule}>{rule}</li>
+        ))}
+      </ul>
       <blockquote
         dir="auto"
         className="w-full rounded-md border bg-muted/40 p-3 text-start text-body wrap-anywhere whitespace-pre-line"
       >
         {text}
       </blockquote>
-      <ul className="w-full list-disc space-y-1 pl-4 text-start text-body text-muted-foreground">
-        {postRules(store).map((rule) => (
-          <li key={rule}>{rule}</li>
-        ))}
-      </ul>
     </ReplyConfirmDialog>
   );
 }
