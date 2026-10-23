@@ -354,9 +354,14 @@ jobs:
         if: always()
         run: docker compose -f docker-compose.dev.yml down -v
 
-  web-e2e:
+  web-e2e-app:
+    name: web-e2e app ${{ matrix.shard }}
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -365,11 +370,31 @@ jobs:
         with:
           chromium: "true"
       - run: pnpm run build:packages
-      - run: pnpm --filter web test:e2e --project=app --project=actions-double-click
+      - run: pnpm --filter web test:e2e --project=app --shard=${{ matrix.shard }}/4
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:
-          name: playwright-report
+          name: playwright-report-app-${{ matrix.shard }}
+          path: apps/web/playwright-report
+          retention-days: 7
+
+  web-e2e-states:
+    name: web-e2e states
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          chromium: "true"
+      - run: pnpm run build:packages
+      - run: pnpm --filter web test:e2e --project=actions-double-click
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: playwright-report-states
           path: apps/web/playwright-report
           retention-days: 7
 
@@ -395,6 +420,20 @@ jobs:
           name: playwright-report-webkit
           path: apps/web/playwright-report
           retention-days: 7
+
+  web-e2e:
+    needs: [web-e2e-app, web-e2e-states, web-e2e-webkit]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require every web job to pass
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          for result in $RESULTS; do
+            test "$result" = success
+          done
 
   compose-smoke:
     needs: checks
