@@ -71,15 +71,17 @@ function gradeFilter(
 export function keywordColumns({
   appId,
   store,
+  today,
   onOpenSerp,
 }: {
   appId: string;
   store: Store;
+  today: string;
   onOpenSerp: (keywordId: string) => void;
 }) {
   return columnHelper.columns([
     ...identityColumns(),
-    positionColumn(),
+    positionColumn(today),
     ...scoreColumns(),
     ...(store === "GOOGLE_PLAY" ? [acquisitionsColumn()] : []),
     deltaColumn(),
@@ -182,7 +184,7 @@ function filterColumns() {
   ];
 }
 
-function positionColumn() {
+function positionColumn(today: string) {
   return columnHelper.accessor((row) => nullsLast(row.latestPosition), {
     id: "position",
     meta: { label: "Position", phone: true },
@@ -195,7 +197,7 @@ function positionColumn() {
         selected,
       ),
     header: ({ column }) => <SortableHeader column={column} label="Position" />,
-    cell: ({ row }) => <PositionCell keyword={row.original} />,
+    cell: ({ row }) => <PositionCell keyword={row.original} today={today} />,
   });
 }
 

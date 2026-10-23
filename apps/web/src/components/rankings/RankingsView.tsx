@@ -60,7 +60,7 @@ export function RankingsView({ id }: { id: string }) {
     (item) => effective.includes(item.keywordId) && item.latestDepth !== null,
   );
 
-  const chart = buildRankingChart(data.series);
+  const chart = buildRankingChart(data.series, bounds.to);
   const labels = new Map(
     tracked.map((item) => [item.keywordId, keywordLabel(item)]),
   );
@@ -104,7 +104,7 @@ export function RankingsView({ id }: { id: string }) {
           <ExportCsvButton
             subject="rankings"
             className="ml-auto print:hidden"
-            disabled={chart.rows.length === 0}
+            disabled={chart.checkedDays === 0}
             onClick={() => exportRankings(id, bounds, chart)}
           />
           <PrintReportButton />
@@ -112,7 +112,7 @@ export function RankingsView({ id }: { id: string }) {
 
         {tracked.length === 0 ? (
           <NoKeywordsTracked id={id} />
-        ) : chart.rows.length === 0 ? (
+        ) : chart.checkedDays === 0 ? (
           everChecked ? (
             <NoDataInRange
               onWiden={
@@ -122,7 +122,7 @@ export function RankingsView({ id }: { id: string }) {
           ) : (
             <NoPositionsYet />
           )
-        ) : chart.rows.length < MIN_TREND_POINTS ? (
+        ) : chart.checkedDays < MIN_TREND_POINTS ? (
           <InsufficientHistory data={chart} />
         ) : (
           <>

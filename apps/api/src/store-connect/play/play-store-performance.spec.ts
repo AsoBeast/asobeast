@@ -106,6 +106,22 @@ describe('pivotCountryFile', () => {
     ]);
   });
 
+  it('reads the country / region heading Google writes, spaced around the slash', () => {
+    const csv = [
+      'Date,Package name,Country / region,Store listing acquisitions,Store listing visitors,Store listing conversion rate',
+      '2026-09-01,com.example.habits,PL,12,300,4%',
+    ].join('\n');
+
+    expect(pivotCountryFile(parseCsv(csv), '2026-10-23')).toEqual([
+      expect.objectContaining({
+        date: '2026-09-01',
+        country: 'pl',
+        pageViews: 300,
+        gets: 12,
+      }),
+    ]);
+  });
+
   it('refuses a header missing a required column by name and ignores extra columns', () => {
     expect(() =>
       pivotCountryFile(
@@ -147,6 +163,21 @@ describe('pivotTrafficFile', () => {
       '2026-09-01 referrer',
       '2026-09-01 search',
       '2026-09-02 search',
+    ]);
+  });
+
+  it('reads a heading with repeated spaces as its single spaced name', () => {
+    const csv = [
+      'Date,Traffic  source,Store listing   acquisitions,Store listing visitors',
+      '2026-09-01,Google Play search,7,90',
+    ].join('\n');
+
+    expect(pivotTrafficFile(parseCsv(csv), '2026-10-23')).toEqual([
+      expect.objectContaining({
+        sourceType: 'search',
+        pageViews: 90,
+        gets: 7,
+      }),
     ]);
   });
 

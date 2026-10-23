@@ -349,6 +349,7 @@ export class PipelineService {
       { apps, keywords, reviewApps, marketListings },
       await this.categoryRanks.buckets(apps.map((target) => target.id)),
       app.workspaceId,
+      app.id,
     );
   }
 
@@ -362,6 +363,7 @@ export class PipelineService {
         return this.enqueue(
           targets,
           await this.categoryBuckets.of(targets.apps.map((app) => app.id)),
+          workspaceId,
           workspaceId,
         );
       },
@@ -474,6 +476,7 @@ export class PipelineService {
     targets: DailyTargets,
     buckets: CategoryBucket[],
     workspaceId: string,
+    chartOwner: string,
   ): Promise<FanOutSummary> {
     const date = utcDateKey();
     const scope = { workspaceId, correlationId: this.workspace.correlationId };
@@ -511,7 +514,7 @@ export class PipelineService {
         data: { ...bucket, ...scope },
         opts: {
           jobId: categoryJobId(
-            workspaceId,
+            chartOwner,
             bucket.collection,
             bucket.genre,
             bucket.country,
