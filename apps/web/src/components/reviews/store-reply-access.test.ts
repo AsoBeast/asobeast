@@ -6,6 +6,7 @@ import type {
 } from "@asobeast/shared";
 import { describe, expect, it } from "vitest";
 import {
+  composerActions,
   discardNotice,
   markLabel,
   needsPosting,
@@ -157,5 +158,49 @@ describe("post copy", () => {
     expect(markLabel(true, true)).toBe("Undo");
     expect(markLabel(false, true)).toBe("Mark as replied without posting");
     expect(markLabel(false, false)).toBe("Mark as replied");
+  });
+});
+
+describe("composerActions", () => {
+  const ready = storeReplyAccess(stateWith(CONNECTION), "APP_STORE");
+  const none = storeReplyAccess(stateWith(), "APP_STORE");
+
+  it("offers a post, the mark and no withdraw before anything was posted", () => {
+    expect(
+      composerActions(ready, "APP_STORE", { ...REPLY, post: null }, "Thanks"),
+    ).toEqual({ post: "Post to App Store", withdraw: false, mark: true });
+  });
+
+  it("offers no post without a usable connection", () => {
+    expect(composerActions(none, "APP_STORE", null, "Thanks")).toEqual({
+      post: null,
+      withdraw: false,
+      mark: true,
+    });
+  });
+
+  it("offers the withdraw of a posted app store reply and an update once edited", () => {
+    expect(composerActions(ready, "APP_STORE", REPLY, "Thanks")).toEqual({
+      post: null,
+      withdraw: true,
+      mark: false,
+    });
+    expect(
+      composerActions(ready, "APP_STORE", REPLY, "Thanks a lot").post,
+    ).toBe("Update on App Store");
+  });
+
+  it("never offers a withdraw on google play", () => {
+    expect(
+      composerActions(
+        storeReplyAccess(
+          stateWith({ ...CONNECTION, store: "GOOGLE_PLAY" }),
+          "GOOGLE_PLAY",
+        ),
+        "GOOGLE_PLAY",
+        REPLY,
+        "Thanks",
+      ).withdraw,
+    ).toBe(false);
   });
 });

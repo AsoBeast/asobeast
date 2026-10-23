@@ -115,12 +115,17 @@ function googleRefusal(error: GcsError): PostRefusal {
 
 export function postRefusalOf(store: Store, error: unknown): PostRefusal {
   if (error instanceof HttpException) return { exception: error };
-  if (
-    error instanceof AscForbiddenError ||
-    error instanceof PlayForbiddenError
-  ) {
+  if (error instanceof AscForbiddenError) {
     return {
-      exception: new ForbiddenException(REPLY_ROLE_NEEDED[store]),
+      exception: new ForbiddenException(REPLY_ROLE_NEEDED.APP_STORE),
+      forbidden: true,
+    };
+  }
+  if (error instanceof PlayForbiddenError) {
+    return {
+      exception: new ForbiddenException(
+        `${REPLY_ROLE_NEEDED.GOOGLE_PLAY} Google said: ${error.message}`,
+      ),
       forbidden: true,
     };
   }

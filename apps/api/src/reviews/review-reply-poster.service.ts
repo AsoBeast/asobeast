@@ -83,7 +83,7 @@ export class ReviewReplyPoster {
         : this.toPlay(app, review.reviewId, text),
     );
     await this.prisma.withTransaction(async (tx) => {
-      await tx.reviewReply.update({
+      await tx.reviewReply.updateMany({
         where: { reviewId },
         data: {
           postedAt: posted.postedAt,
@@ -124,7 +124,7 @@ export class ReviewReplyPoster {
       await api.deleteResponse(responseId);
     });
     await this.prisma.withTransaction(async (tx) => {
-      await tx.reviewReply.update({ where: { reviewId }, data: UNPOSTED });
+      await tx.reviewReply.updateMany({ where: { reviewId }, data: UNPOSTED });
       await tx.review.updateMany({
         where: { id: reviewId, appId },
         data: { repliedAt: null, replyText: null },

@@ -20,6 +20,7 @@ import {
 import { GcsUnreachableError } from '../store-connect/play/gcs-transport';
 import { SignInOffError } from '../store-connect/play/google-sign-in';
 import {
+  PlayForbiddenError,
   PlayReplyRefusedError,
   PlayReviewMissingError,
 } from '../store-connect/play/play-publisher-api';
@@ -31,6 +32,7 @@ import {
   PLAY_KEY_REFUSED,
   PLAY_REVIEW_MISSING,
   postRefusalOf,
+  REPLY_ROLE_NEEDED,
 } from './review-reply-post-errors';
 
 const statusOf = (exception: unknown): number =>
@@ -95,6 +97,22 @@ describe('postRefusalOf', () => {
         new GcsTokenRefusedError('refused', 400, 'invalid_grant'),
       ),
     ).toMatchObject({ rejected: PLAY_KEY_REFUSED });
+  });
+
+  it('names the play permission and keeps the reason google gave', () => {
+    const { exception, forbidden } = postRefusalOf(
+      'GOOGLE_PLAY',
+      new PlayForbiddenError(
+        'Google Play Android Developer API has not been used in project 42.',
+        403,
+      ),
+    );
+
+    expect(forbidden).toBe(true);
+    expect(statusOf(exception)).toBe(403);
+    expect(messageOf(exception)).toBe(
+      `${REPLY_ROLE_NEEDED.GOOGLE_PLAY} Google said: Google Play Android Developer API has not been used in project 42.`,
+    );
   });
 
   it.each([

@@ -42,9 +42,9 @@ function harness(options: Options = {}) {
   const writes: { reply?: unknown; review?: unknown } = {};
   const tx = {
     reviewReply: {
-      update: jest.fn((args: { data: unknown }) => {
+      updateMany: jest.fn((args: { data: unknown }) => {
         writes.reply = args.data;
-        return Promise.resolve({});
+        return Promise.resolve({ count: 1 });
       }),
     },
     review: {
@@ -272,7 +272,7 @@ describe('ReviewReplyPoster', () => {
         'forbidden',
       );
       expect(connections.markRejected).not.toHaveBeenCalled();
-      expect(tx.reviewReply.update).not.toHaveBeenCalled();
+      expect(tx.reviewReply.updateMany).not.toHaveBeenCalled();
     },
   );
 
@@ -290,7 +290,7 @@ describe('ReviewReplyPoster', () => {
       expect.stringContaining('refused this key'),
     );
     expect(connections.markReplyAccess).not.toHaveBeenCalled();
-    expect(tx.reviewReply.update).not.toHaveBeenCalled();
+    expect(tx.reviewReply.updateMany).not.toHaveBeenCalled();
   });
 
   it('withdraws an app store response and clears both halves', async () => {
