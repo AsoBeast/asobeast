@@ -1,4 +1,4 @@
-Date,Package name,Country,Store listing acquisitions,Store listing visitors,Store listing conversion rate
+Date,Package name,Country / region,Store listing acquisitions,Store listing visitors,Store listing conversion rate
 2026-09-01,com.example.habits,US,40,800,5.00%
 2026-09-01,com.example.habits,DE,10,250,4.00%
 2026-09-02,com.example.habits,US,45,820,5.49%

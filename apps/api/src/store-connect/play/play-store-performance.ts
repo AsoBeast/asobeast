@@ -127,7 +127,11 @@ const HEADER_ALIASES: Record<string, string> = {
 };
 
 const headingOf = (name: string): string => {
-  const heading = name.trim().toLowerCase();
+  const heading = name
+    .trim()
+    .toLowerCase()
+    .replace(/\s*\/\s*/g, '/')
+    .replace(/\s+/g, ' ');
   return HEADER_ALIASES[heading] ?? heading;
 };
 
