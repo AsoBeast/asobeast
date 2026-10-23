@@ -3,28 +3,32 @@
 import { useId, useRef, useState, type RefObject } from "react";
 import { Copy, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
-import type { ReviewItem, Store } from "@asobeast/shared";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import type {
+  ReviewItem,
+  ReviewReplyPatchRequest,
+  Store,
+} from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { storeLabel } from "@/lib/format";
 import { useSharedFlight } from "@/lib/single-flight";
 import { cn } from "@/lib/utils";
+import { PostReplyDialog } from "./PostReplyDialog";
+import { ReplyConfirmDialog } from "./ReplyConfirmDialog";
 import { ReplyDraftControls } from "./ReplyDraftControls";
+import { ReplyFooter, StoreReplyNotice } from "./ReplyStoreNotes";
+import { WithdrawReplyButton } from "./WithdrawReplyButton";
 import { measureReply, type ReplyMeasure } from "./reply-text";
 import { consoleHref, consoleLabel } from "./store-console";
+import {
+  composerActions,
+  discardNotice,
+  markLabel,
+} from "./store-reply-access";
 import { useReplyDraft } from "./use-reply-draft";
 import { useReviewReply } from "./use-review-reply";
+import { useStorePosting } from "./use-store-posting";
+import { useStoreReplyAccess } from "./use-store-reply-access";
 
 export interface ReplyComposerProps {
   appId: string;
@@ -95,56 +99,93 @@ function ClearedReplyHint({
 }
 
 function DiscardReplyButton({
-  consoleName,
+  notice,
   disabled,
   textRef,
   onDiscard,
 }: {
-  consoleName: string;
+  notice: string;
   disabled: boolean;
   textRef: RefObject<HTMLTextAreaElement | null>;
   onDiscard: () => void;
 }) {
-  const confirmed = useRef(false);
-
   return (
-    <AlertDialog>
-      <AlertDialogTrigger asChild>
+    <ReplyConfirmDialog
+      trigger={
         <Button variant="outline" size="sm" disabled={disabled}>
           Discard
         </Button>
-      </AlertDialogTrigger>
-      <AlertDialogContent
-        onCloseAutoFocus={(event) => {
-          if (!confirmed.current) return;
-          confirmed.current = false;
-          event.preventDefault();
-          textRef.current?.focus();
-        }}
-      >
-        <AlertDialogHeader>
-          <AlertDialogTitle>Discard this reply?</AlertDialogTitle>
-          <AlertDialogDescription>
-            The text and the replied mark kept for this review are removed. A
-            reply already posted in {consoleName} stays there.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Keep it</AlertDialogCancel>
-          <AlertDialogAction
-            variant="destructive"
-            onClick={() => {
-              confirmed.current = true;
-              onDiscard();
-            }}
-          >
-            Discard
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+      }
+      title="Discard this reply?"
+      description={`The text and the replied mark kept for this review are removed. ${notice}`}
+      cancelLabel="Keep it"
+      actionLabel="Discard"
+      destructive
+      textRef={textRef}
+      onConfirm={onDiscard}
+    />
   );
 }
+
+function ReplyTextField({
+  textRef,
+  text,
+  saved,
+  measure,
+  store,
+  drafting,
+  onChange,
+  onBlur,
+}: {
+  textRef: RefObject<HTMLTextAreaElement | null>;
+  text: string;
+  saved: string;
+  measure: ReplyMeasure;
+  store: Store;
+  drafting: boolean;
+  onChange: (text: string) => void;
+  onBlur: () => void;
+}) {
+  const counterId = useId();
+  return (
+    <div className="flex flex-col gap-1">
+      <Textarea
+        ref={textRef}
+        autoFocus
+        aria-label="Reply text"
+        dir="auto"
+        aria-describedby={counterId}
+        aria-invalid={measure.over || undefined}
+        aria-busy={drafting || undefined}
+        readOnly={drafting}
+        value={text}
+        onChange={(event) => onChange(event.target.value)}
+        onBlur={onBlur}
+        placeholder={
+          drafting
+            ? "Drafting a reply…"
+            : "Write the reply the store will show under this review"
+        }
+        className="min-h-24 bg-card"
+      />
+      <ReplyCounter id={counterId} measure={measure} store={store} />
+      <ClearedReplyHint
+        text={measure.trimmed}
+        saved={saved}
+        drafting={drafting}
+      />
+    </div>
+  );
+}
+
+const markBody = (
+  marked: boolean,
+  unsaved: boolean,
+  trimmed: string,
+): ReviewReplyPatchRequest =>
+  marked
+    ? { replied: false }
+    : { ...(unsaved ? { text: trimmed } : {}), replied: true };
 
 export function ReplyComposer({
   appId,
@@ -155,17 +196,24 @@ export function ReplyComposer({
 }: ReplyComposerProps) {
   const saved = review.reply?.text ?? "";
   const [text, setText] = useReplyText(saved);
-  const { save, mark, discard, pending } = useReviewReply(appId, review);
+  const { save, mark, discard, post, withdraw, pending } = useReviewReply(
+    appId,
+    review,
+  );
   const draft = useReplyDraft(appId, review, setText);
+  const access = useStoreReplyAccess(store);
   const busy = pending || draft.drafting;
   const markOnce = useSharedFlight(mark);
-  const counterId = useId();
   const textRef = useRef<HTMLTextAreaElement>(null);
   const measure = measureReply(text, store);
   const { trimmed, over } = measure;
   const unsaved = trimmed !== "" && trimmed !== saved;
   const marked = Boolean(review.reply?.repliedAt);
   const consoleName = consoleLabel(store);
+  const posted = Boolean(review.reply?.post);
+  const ready = access.kind === "ready";
+  const actions = composerActions(access, store, review.reply, trimmed);
+  const unusable = over || trimmed === "" || draft.drafting;
 
   const saveIfChanged = () =>
     unsaved && !over && !draft.drafting ? save(trimmed) : Promise.resolve(null);
@@ -183,17 +231,19 @@ export function ReplyComposer({
     }
   };
 
+  const { publish, retract } = useStorePosting({
+    store,
+    saveIfChanged,
+    post,
+    withdraw,
+  });
+
   return (
     <section
       aria-label="Reply to review"
       className="flex flex-col gap-3 rounded-lg border bg-muted/40 p-3"
     >
-      {review.replyText ? (
-        <p className="text-caption text-muted-foreground">
-          Google Play already shows a reply; a new text here replaces it when
-          you post it in the console.
-        </p>
-      ) : null}
+      <StoreReplyNotice review={review} store={store} />
       <ReplyDraftControls
         review={review}
         store={store}
@@ -201,37 +251,32 @@ export function ReplyComposer({
         draft={draft}
         text={text}
       />
-      <div className="flex flex-col gap-1">
-        <Textarea
-          ref={textRef}
-          autoFocus
-          aria-label="Reply text"
-          dir="auto"
-          aria-describedby={counterId}
-          aria-invalid={over || undefined}
-          aria-busy={draft.drafting || undefined}
-          readOnly={draft.drafting}
-          value={text}
-          onChange={(event) => setText(event.target.value)}
-          onBlur={() => void saveIfChanged().catch(() => null)}
-          placeholder={
-            draft.drafting
-              ? "Drafting a reply…"
-              : "Write the reply the store will show under this review"
-          }
-          className="min-h-24 bg-card"
-        />
-        <ReplyCounter id={counterId} measure={measure} store={store} />
-        <ClearedReplyHint
-          text={trimmed}
-          saved={saved}
-          drafting={draft.drafting}
-        />
-      </div>
+      <ReplyTextField
+        textRef={textRef}
+        text={text}
+        saved={saved}
+        measure={measure}
+        store={store}
+        drafting={draft.drafting}
+        onChange={setText}
+        onBlur={() => void saveIfChanged().catch(() => null)}
+      />
       <div className="flex flex-wrap items-center gap-2">
+        {actions.post ? (
+          <PostReplyDialog
+            store={store}
+            text={trimmed}
+            label={actions.post}
+            disabled={unusable}
+            busy={busy}
+            textRef={textRef}
+            onPost={publish}
+          />
+        ) : null}
         <Button
           size="sm"
-          disabled={over || trimmed === "" || draft.drafting}
+          variant={ready ? "outline" : "default"}
+          disabled={unusable}
           onClick={() => void copy()}
         >
           <Copy />
@@ -247,24 +292,31 @@ export function ReplyComposer({
             Open {consoleName}
           </a>
         </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={over && !marked}
-          aria-disabled={busy || undefined}
-          onClick={() => {
-            if (busy) return;
-            void markOnce(
-              marked
-                ? { replied: false }
-                : { ...(unsaved ? { text: trimmed } : {}), replied: true },
-            ).catch(() => null);
-          }}
-        >
-          {marked ? "Undo" : "Mark as replied"}
-        </Button>
+        {actions.mark ? (
+          <Button
+            variant={ready ? "secondary" : "outline"}
+            size="sm"
+            disabled={over && !marked}
+            aria-disabled={busy || undefined}
+            onClick={() => {
+              if (busy) return;
+              void markOnce(markBody(marked, unsaved, trimmed)).catch(
+                () => null,
+              );
+            }}
+          >
+            {markLabel(marked, ready)}
+          </Button>
+        ) : null}
+        {actions.withdraw ? (
+          <WithdrawReplyButton
+            busy={busy}
+            textRef={textRef}
+            onWithdraw={retract}
+          />
+        ) : null}
         <DiscardReplyButton
-          consoleName={consoleName}
+          notice={discardNotice(store, review.reply)}
           disabled={busy || (!review.reply && text === "")}
           textRef={textRef}
           onDiscard={() =>
@@ -277,9 +329,7 @@ export function ReplyComposer({
           Close
         </Button>
       </div>
-      <p className="text-caption text-muted-foreground">
-        AsoBeast never writes to the store. Paste the reply in {consoleName}.
-      </p>
+      <ReplyFooter access={access} store={store} posted={posted} />
     </section>
   );
 }

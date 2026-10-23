@@ -154,7 +154,9 @@ export function ConnectAppStoreDialog({
           onChange={(event) => void choose(event.target.files?.[0])}
         />
         <p className="text-xs text-muted-foreground">
-          Paste the key or choose the .p8 file you downloaded.{" "}
+          Paste the key or choose the .p8 file you downloaded. A team key with
+          the Admin role covers reports and replies; Sales and Reports reads
+          reports only, Customer Support replies only.{" "}
           <a
             href={`${STORE_FUNNEL_GUIDE}#create-the-key`}
             target="_blank"

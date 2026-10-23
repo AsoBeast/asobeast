@@ -10,6 +10,7 @@ import {
   PLAY_BUCKET,
   PLAY_CONNECTION_COOKIE,
   PLAY_SIGN_IN_EXPIRED,
+  REPLY_ACCESS_COOKIE,
   STORE_CONNECT_OFF_COOKIE,
   STORE_CONNECTION_COOKIE,
 } from "./store-connections.mts";
@@ -276,6 +277,49 @@ test("disconnecting google play leaves app store connect alone", async ({
     playCard(page).getByRole("button", { name: "Connect Google Play" }),
   ).toBeVisible();
   await expect(section(page)).toContainText("2X9R4HXF34");
+});
+
+test("the card says whether the key may post review replies", async ({
+  page,
+  context,
+}) => {
+  await seed(context, STORE_CONNECTION_COOKIE, "active");
+  await seed(context, PLAY_CONNECTION_COOKIE, "active");
+  await page.goto("/settings#store-connections");
+  await expect(section(page).getByText("Not tried yet")).toHaveCount(2);
+
+  await seed(context, REPLY_ACCESS_COOKIE, "forbidden");
+  await page.reload();
+  await expect(section(page)).toContainText(
+    "This App Store Connect key cannot respond to reviews. Connect a key with the Admin or Customer Support role.",
+  );
+  await expect(playCard(page)).toContainText(
+    "This service account cannot reply to reviews. Give it the Reply to reviews permission in Play Console.",
+  );
+});
+
+test("the connect dialogs name the role a reply needs", async ({ page }) => {
+  await page.goto("/settings#store-connections");
+
+  const apple = await openSettledDialog(
+    page,
+    "Connect App Store Connect",
+    section(page),
+  );
+  await expect(apple).toContainText(
+    "Sales and Reports reads reports only, Customer Support replies only.",
+  );
+  await page.keyboard.press("Escape");
+  await expect(apple).toBeHidden();
+
+  const play = await openSettledDialog(
+    page,
+    "Connect Google Play",
+    playCard(page),
+  );
+  await expect(play).toHaveAccessibleDescription(
+    /and Reply to reviews to post replies\./,
+  );
 });
 
 test("a member sees the state without a single control", async ({ page }) => {

@@ -10,6 +10,7 @@ import {
   type ReviewReplyDraftResult,
   type ReviewReplyItem,
   type ReviewReplyPatchRequest,
+  type ReviewReplyPostResult,
   type ReviewReplyState,
   type ReviewTranslation,
   type Store,
@@ -21,19 +22,62 @@ const DEFAULT_LIMIT = 50;
 const replies = new Map<string, ReviewReplyItem | null>();
 const guidelines = new Map<string, string>();
 const translations = new Map<string, ReviewTranslation>();
+const storeSides = new Map<
+  string,
+  Pick<ReviewItem, "repliedAt" | "replyText">
+>();
+
+export const REPLY_POST_COOKIE = "e2e_reply_post";
+export const REPLY_POSTER = "owner@example.com";
+export const PLAY_NO_WITHDRAW =
+  "Google Play offers no way to remove a reply through its API. Edit or remove it in Play Console.";
+
+const POST_FAILURES: Record<string, { status: number; message: string }> = {
+  forbidden: {
+    status: 403,
+    message:
+      "This App Store Connect key cannot respond to reviews. Connect a key with the Admin or Customer Support role.",
+  },
+  refused: {
+    status: 422,
+    message:
+      "App Store Connect refused the reply: This review already has a response.",
+  },
+  missing: {
+    status: 404,
+    message:
+      "This review was not found in App Store Connect. Apple's feed and App Store Connect can disagree for a few days.",
+  },
+  unreachable: {
+    status: 502,
+    message: "App Store Connect did not answer: connection refused",
+  },
+  ratelimited: {
+    status: 429,
+    message: "App Store Connect asked to slow down. Try again in 1 minute.",
+  },
+};
 
 const keyOf = (appId: string, reviewId: string) => `${appId}:${reviewId}`;
 
 const storeLabel = (store: Store) =>
   store === "GOOGLE_PLAY" ? "Google Play" : "App Store";
 
-export class ReplyRefusal extends Error {}
+export class ReplyRefusal extends Error {
+  readonly status: number;
+
+  constructor(message: string, status = 400) {
+    super(message);
+    this.status = status;
+  }
+}
 
 function withReply(appId: string, review: ReviewItem): ReviewItem {
   const key = keyOf(appId, review.id);
   const translation = translations.get(key);
   return {
     ...review,
+    ...storeSides.get(key),
     ...(replies.has(key) ? { reply: replies.get(key) } : {}),
     ...(translation ? { translation } : {}),
   };
@@ -115,6 +159,7 @@ export function patchReply(
     model: current?.model ?? null,
     generatedAt: current?.generatedAt ?? null,
     updatedAt: now,
+    post: current?.post ?? null,
     repliedAt:
       body.replied === undefined
         ? (current?.repliedAt ?? null)
@@ -125,6 +170,50 @@ export function patchReply(
   const removed = body.replied === false && next.text === "";
   replies.set(keyOf(appId, review.id), removed ? null : next);
   return next;
+}
+
+export function postReply(
+  appId: string,
+  store: Store,
+  review: ReviewItem,
+  failure: string | undefined,
+): ReviewReplyPostResult {
+  const refused = failure ? POST_FAILURES[failure] : undefined;
+  if (refused) throw new ReplyRefusal(refused.message, refused.status);
+  const text = review.reply?.text.trim();
+  if (!review.reply || !text) {
+    throw new ReplyRefusal("Save a reply before posting it.");
+  }
+  const now = new Date().toISOString();
+  const key = keyOf(appId, review.id);
+  replies.set(key, {
+    ...review.reply,
+    repliedAt: now,
+    post: {
+      postedAt: now,
+      postedText: text,
+      state: store === "APP_STORE" ? "pending" : "published",
+      storeResponseId: store === "APP_STORE" ? "response-1" : null,
+      postedBy: REPLY_POSTER,
+    },
+  });
+  storeSides.set(key, { repliedAt: now, replyText: text });
+  return { review: withReply(appId, review) };
+}
+
+export function withdrawReply(
+  appId: string,
+  store: Store,
+  review: ReviewItem,
+): ReviewReplyPostResult {
+  if (store === "GOOGLE_PLAY") throw new ReplyRefusal(PLAY_NO_WITHDRAW, 409);
+  if (!review.reply?.post) {
+    throw new ReplyRefusal("This reply has not been posted to the store.", 404);
+  }
+  const key = keyOf(appId, review.id);
+  replies.set(key, { ...review.reply, repliedAt: null, post: null });
+  storeSides.set(key, { repliedAt: null, replyText: null });
+  return { review: withReply(appId, review) };
 }
 
 export function discardReply(appId: string, reviewId: string): void {
@@ -189,8 +278,10 @@ export function resetReviewReplies(appId: string): void {
   for (const key of replies.keys()) {
     if (key.startsWith(`${appId}:`)) replies.delete(key);
   }
-  for (const key of translations.keys()) {
-    if (key.startsWith(`${appId}:`)) translations.delete(key);
+  for (const map of [translations, storeSides]) {
+    for (const key of map.keys()) {
+      if (key.startsWith(`${appId}:`)) map.delete(key);
+    }
   }
   guidelines.delete(appId);
 }

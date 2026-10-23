@@ -7,10 +7,19 @@ import type {
   ReviewItem,
   ReviewReplyItem,
   ReviewReplyPatchRequest,
+  ReviewReplyPostResult,
 } from "@asobeast/shared";
-import { ApiError, deleteReviewReply, patchReviewReply } from "@/lib/api";
+import {
+  ApiError,
+  deleteReviewReply,
+  patchReviewReply,
+  postReviewReply,
+  withdrawReviewReply,
+} from "@/lib/api";
 import {
   invalidateReviewReplyMutation,
+  invalidateReviewReplyPost,
+  replaceReview,
   upsertReviewReply,
 } from "@/lib/queries";
 
@@ -48,6 +57,24 @@ export function useReviewReply(appId: string, review: ReviewItem) {
     onSettled,
     onError: failWith("Could not save the reply"),
   });
+  const replace = ({ review: next }: ReviewReplyPostResult) =>
+    replaceReview(queryClient, appId, next, review);
+  const onStoreSettled = () => invalidateReviewReplyPost(queryClient, appId);
+  const posting = useMutation({
+    mutationFn: async () => {
+      await lastSave.current;
+      return postReviewReply(appId, review.id);
+    },
+    onSuccess: replace,
+    onSettled: onStoreSettled,
+    onError: failWith("Could not post the reply"),
+  });
+  const withdrawing = useMutation({
+    mutationFn: () => withdrawReviewReply(appId, review.id),
+    onSuccess: replace,
+    onSettled: onStoreSettled,
+    onError: failWith("Could not withdraw the reply"),
+  });
   const discarding = useMutation({
     mutationFn: async () => {
       await lastSave.current;
@@ -77,6 +104,12 @@ export function useReviewReply(appId: string, review: ReviewItem) {
     save,
     mark: patching.mutateAsync,
     discard: discarding.mutateAsync,
-    pending: patching.isPending || discarding.isPending,
+    post: posting.mutateAsync,
+    withdraw: withdrawing.mutateAsync,
+    pending:
+      patching.isPending ||
+      discarding.isPending ||
+      posting.isPending ||
+      withdrawing.isPending,
   };
 }

@@ -22,8 +22,10 @@ import {
   PLAY_SIGN_IN_STATE,
   playConnectionCookie,
   storeConnectionCookie,
+  REPLY_ACCESS_COOKIE,
   storeConnectionOf,
   storeConnectionState,
+  withReplyAccess,
 } from "./store-connections.mts";
 import {
   discardReply,
@@ -33,9 +35,12 @@ import {
   guidelinesOf,
   listReviews,
   patchReply,
+  postReply,
+  REPLY_POST_COOKIE,
   ReplyRefusal,
   resetReviewReplies,
   setGuidelines,
+  withdrawReply,
 } from "./review-replies.mts";
 import {
   ACTION_ACTIVITY,
@@ -666,8 +671,19 @@ function replyAnswer(
     json(res, status, answer());
   } catch (error) {
     if (!(error instanceof ReplyRefusal)) throw error;
-    json(res, 400, errorEnvelope(400, path, error.message));
+    json(res, error.status, errorEnvelope(error.status, path, error.message));
   }
+}
+
+const REPLY_POST_DELAY_MS = 300;
+
+function storeConnectionFor(req: IncomingMessage, store: Store) {
+  return storeConnectionState(
+    cookieValue(req, STORE_CONNECTION_COOKIE),
+    hasCookie(req, STORE_CONNECT_OFF_COOKIE, "1"),
+    cookieValue(req, PLAY_CONNECTION_COOKIE),
+    false,
+  ).connections.find((item) => item.store === store);
 }
 
 function hasCookie(
@@ -2545,11 +2561,14 @@ const routes: Route[] = [
       json(
         res,
         200,
-        storeConnectionState(
-          cookieValue(req, STORE_CONNECTION_COOKIE),
-          hasCookie(req, STORE_CONNECT_OFF_COOKIE, "1"),
-          cookieValue(req, PLAY_CONNECTION_COOKIE),
-          hasCookie(req, GOOGLE_SIGN_IN_COOKIE, "1"),
+        withReplyAccess(
+          storeConnectionState(
+            cookieValue(req, STORE_CONNECTION_COOKIE),
+            hasCookie(req, STORE_CONNECT_OFF_COOKIE, "1"),
+            cookieValue(req, PLAY_CONNECTION_COOKIE),
+            hasCookie(req, GOOGLE_SIGN_IN_COOKIE, "1"),
+          ),
+          cookieValue(req, REPLY_ACCESS_COOKIE),
         ),
       ),
   },
@@ -4109,6 +4128,48 @@ const routes: Route[] = [
       }
       discardReply(id, reviewId);
       res.writeHead(204).end();
+    },
+  },
+  {
+    method: "POST",
+    pattern: /^\/apps\/([^/]+)\/reviews\/([^/]+)\/reply\/post$/,
+    handler: ([id, reviewId], req, res) => {
+      const path = req.url ?? "/";
+      const dataset = DATASETS[id];
+      const review = dataset && findReview(id, dataset.reviews, reviewId);
+      if (!review) return json(res, 404, errorEnvelope(404, path));
+      const store = dataset.detail.store;
+      if (!storeConnectionFor(req, store)) {
+        return json(
+          res,
+          409,
+          errorEnvelope(
+            409,
+            path,
+            `Connect ${store === "APP_STORE" ? "App Store Connect" : "Google Play"} in Settings, Store connections, to post replies from here.`,
+          ),
+        );
+      }
+      setTimeout(
+        () =>
+          replyAnswer(res, path, 200, () =>
+            postReply(id, store, review, cookieValue(req, REPLY_POST_COOKIE)),
+          ),
+        REPLY_POST_DELAY_MS,
+      );
+    },
+  },
+  {
+    method: "DELETE",
+    pattern: /^\/apps\/([^/]+)\/reviews\/([^/]+)\/reply\/post$/,
+    handler: ([id, reviewId], req, res) => {
+      const path = req.url ?? "/";
+      const dataset = DATASETS[id];
+      const review = dataset && findReview(id, dataset.reviews, reviewId);
+      if (!review) return json(res, 404, errorEnvelope(404, path));
+      replyAnswer(res, path, 200, () =>
+        withdrawReply(id, dataset.detail.store, review),
+      );
     },
   },
   {

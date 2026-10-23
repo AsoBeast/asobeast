@@ -535,7 +535,7 @@ test("the existing play reply is shown read only above the composer", async ({
   ).toHaveCount(1);
   await expect(
     composer(page).getByText(
-      "Google Play already shows a reply; a new text here replaces it when you post it in the console.",
+      "Google Play already shows a reply. A new text here replaces it once posted.",
     ),
   ).toBeVisible();
   await expect(composer(page).getByRole("textbox")).toHaveValue("");

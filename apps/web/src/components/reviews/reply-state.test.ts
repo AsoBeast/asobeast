@@ -18,29 +18,61 @@ const REPLY: ReviewReplyItem = {
 };
 
 describe("replyBadgeLabel", () => {
-  it("labels each state and names the source of a reply", () => {
-    expect(replyBadgeLabel({ repliedAt: null, reply: null })).toBe(
+  it("labels each state and names the store a reply comes from", () => {
+    expect(replyBadgeLabel({ repliedAt: null, reply: null }, "APP_STORE")).toBe(
       "Needs reply",
     );
-    expect(replyBadgeLabel({ repliedAt: null, reply: REPLY })).toBe(
-      "Draft saved",
-    );
-    expect(replyBadgeLabel({ repliedAt: ISO, reply: null })).toBe(
-      "Replied on Google Play",
+    expect(
+      replyBadgeLabel({ repliedAt: null, reply: REPLY }, "APP_STORE"),
+    ).toBe("Draft saved");
+    expect(
+      replyBadgeLabel({ repliedAt: ISO, reply: null }, "GOOGLE_PLAY"),
+    ).toBe("Replied on Google Play");
+    expect(replyBadgeLabel({ repliedAt: ISO, reply: null }, "APP_STORE")).toBe(
+      "Replied on App Store",
     );
     expect(
-      replyBadgeLabel({ repliedAt: null, reply: { ...REPLY, repliedAt: ISO } }),
+      replyBadgeLabel(
+        { repliedAt: null, reply: { ...REPLY, repliedAt: ISO } },
+        "APP_STORE",
+      ),
     ).toBe("Marked replied");
     expect(
-      replyBadgeLabel({ repliedAt: ISO, reply: { ...REPLY, repliedAt: ISO } }),
-    ).toBe("Replied on Google Play");
-    expect(
-      replyBadgeLabel({
-        reviewedAt: "2026-10-03T00:00:00.000Z",
-        repliedAt: ISO,
-        reply: null,
-      }),
+      replyBadgeLabel(
+        {
+          reviewedAt: "2026-10-03T00:00:00.000Z",
+          repliedAt: ISO,
+          reply: null,
+        },
+        "GOOGLE_PLAY",
+      ),
     ).toBe("Updated after reply");
+  });
+
+  it("reads a posted reply as pending, posted or edited since posting", () => {
+    const posted = (state: "pending" | "published", text = "Thanks") => ({
+      repliedAt: ISO,
+      reply: {
+        ...REPLY,
+        text,
+        repliedAt: ISO,
+        post: {
+          postedAt: ISO,
+          postedText: "Thanks",
+          state,
+          storeResponseId: null,
+          postedBy: null,
+        },
+      },
+    });
+
+    expect(replyBadgeLabel(posted("pending"), "APP_STORE")).toBe(
+      "Pending publication",
+    );
+    expect(replyBadgeLabel(posted("published"), "GOOGLE_PLAY")).toBe("Posted");
+    expect(
+      replyBadgeLabel(posted("published", "Thanks again"), "APP_STORE"),
+    ).toBe("Edited since posting");
   });
 });
 

@@ -32,7 +32,7 @@ const METHODS: Record<Method, { label: string; description: string }> = {
   key: {
     label: "Service account key",
     description:
-      "Use a Google Cloud service account invited in Play Console under Users and permissions, with View app information and download bulk reports on the Account permissions tab. AsoBeast checks it with Google, stores the key encrypted and never shows it again.",
+      "Use a Google Cloud service account invited in Play Console under Users and permissions, with View app information and download bulk reports on the Account permissions tab, and Reply to reviews to post replies. AsoBeast checks it with Google, stores the key encrypted and never shows it again.",
   },
 };
 

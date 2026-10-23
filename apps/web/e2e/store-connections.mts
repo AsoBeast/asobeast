@@ -7,6 +7,7 @@ export const STORE_CONNECTION_COOKIE = "e2e_store_connection";
 export const PLAY_CONNECTION_COOKIE = "e2e_play_connection";
 export const STORE_CONNECT_OFF_COOKIE = "e2e_store_connect_off";
 export const GOOGLE_SIGN_IN_COOKIE = "e2e_google_sign_in";
+export const REPLY_ACCESS_COOKIE = "e2e_reply_access";
 export const PLAY_SIGN_IN_STATE = "e2e-sealed-state";
 export const PLAY_SIGN_IN_EXPIRED =
   "This Google sign in expired or was started by another account. Sign in with Google again.";
@@ -128,6 +129,20 @@ export function storeConnectionState(
     ],
   };
 }
+
+export const withReplyAccess = (
+  state: StoreConnectionState,
+  replyAccess: string | undefined,
+): StoreConnectionState =>
+  replyAccess === "forbidden"
+    ? {
+        ...state,
+        connections: state.connections.map((item) => ({
+          ...item,
+          replyAccess,
+        })),
+      }
+    : state;
 
 export const playConnectionCookie = (value: string | null): string =>
   value === null

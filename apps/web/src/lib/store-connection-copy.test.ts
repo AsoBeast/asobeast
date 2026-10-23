@@ -10,7 +10,7 @@ import {
   historyLine,
   STORE_CONSOLES,
   needsAdminKey,
-  replyNote,
+  replyAccessLine,
 } from "./store-connection-copy";
 
 const APP: StoreConnectionApp = {
@@ -197,23 +197,31 @@ describe("google play copy", () => {
     );
   });
 
-  it("says a google sign in without play console access cannot post replies, and others stay quiet", () => {
-    expect(
-      replyNote({
-        ...PLAY,
-        credential: "googleAccount",
-        replyAccess: "forbidden",
-      }),
-    ).toBe(PLAY_REPLIES_NEED_CONSENT);
-    expect(
-      replyNote({
-        ...PLAY,
-        credential: "googleAccount",
-        replyAccess: "unknown",
-      }),
-    ).toBeNull();
-    expect(replyNote(PLAY)).toBeNull();
-    expect(replyNote({ ...PLAY, credential: "key" })).toBeNull();
-    expect(replyNote(ITEM)).toBeNull();
+  it("says whether the connection may post review replies", () => {
+    expect(replyAccessLine(ITEM)).toEqual({
+      tone: "muted",
+      text: "Not tried yet",
+    });
+    expect(replyAccessLine({ ...ITEM, replyAccess: "unknown" }).text).toBe(
+      "Not tried yet",
+    );
+    expect(replyAccessLine({ ...PLAY, replyAccess: "allowed" })).toEqual({
+      tone: "muted",
+      text: "Allowed",
+    });
+  });
+
+  it("names the role or the consent a forbidden connection lacks", () => {
+    const forbidden = (item: StoreConnectionItem) =>
+      replyAccessLine({ ...item, replyAccess: "forbidden" });
+
+    expect(forbidden(ITEM)).toMatchObject({ tone: "warning" });
+    expect(forbidden(ITEM).text).toContain("Admin or Customer Support");
+    expect(forbidden({ ...PLAY, credential: "key" }).text).toContain(
+      "Reply to reviews",
+    );
+    expect(forbidden({ ...PLAY, credential: "googleAccount" }).text).toContain(
+      PLAY_REPLIES_NEED_CONSENT,
+    );
   });
 });

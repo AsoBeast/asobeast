@@ -33,25 +33,32 @@ function moved(
   };
 }
 
+const cachedRow = (list: ReviewList, review: ReviewItem) =>
+  list.reviews.find((row) => row.id === review.id) ?? review;
+
+export function withReviewRow(
+  list: ReviewList,
+  filters: ReviewFilters,
+  next: ReviewItem,
+  previous: ReviewItem = next,
+): ReviewList {
+  const cached = cachedRow(list, previous);
+  if (!countedUnder(cached, filters)) return list;
+  return {
+    ...list,
+    reviews: list.reviews.map((row) => (row.id === next.id ? next : row)),
+    counts:
+      list.counts &&
+      moved(list.counts, replyStateOf(cached), replyStateOf(next)),
+  };
+}
+
 export function withReviewReply(
   list: ReviewList,
   filters: ReviewFilters,
   review: ReviewItem,
   reply: ReviewReplyItem | null,
 ): ReviewList {
-  const cached = list.reviews.find((row) => row.id === review.id) ?? review;
-  if (!countedUnder(cached, filters)) return list;
-  return {
-    ...list,
-    reviews: list.reviews.map((row) =>
-      row.id === review.id ? { ...row, reply } : row,
-    ),
-    counts:
-      list.counts &&
-      moved(
-        list.counts,
-        replyStateOf(cached),
-        replyStateOf({ ...cached, reply }),
-      ),
-  };
+  const cached = cachedRow(list, review);
+  return withReviewRow(list, filters, { ...cached, reply }, cached);
 }
