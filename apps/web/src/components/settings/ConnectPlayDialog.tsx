@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -76,6 +76,15 @@ export function ConnectPlayDialog({
   const [bucket, setBucket] = useState("");
   const [serviceAccountJson, setServiceAccountJson] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [redirecting, setRedirecting] = useState(false);
+
+  useEffect(() => {
+    const restored = (event: PageTransitionEvent) => {
+      if (event.persisted) setRedirecting(false);
+    };
+    window.addEventListener("pageshow", restored);
+    return () => window.removeEventListener("pageshow", restored);
+  }, []);
 
   function reset(next: boolean) {
     setOpen(next);
@@ -102,7 +111,10 @@ export function ConnectPlayDialog({
   });
   const signInMutation = useMutation({
     mutationFn: () => startPlaySignIn({ bucket: bucketOf(bucket) }),
-    onSuccess: ({ url }) => window.location.assign(url),
+    onSuccess: ({ url }) => {
+      setRedirecting(true);
+      window.location.assign(url);
+    },
     onError: (failure) => setError(messageOf(failure)),
   });
   const connectOnce = useSingleFlight(keyMutation);
@@ -113,6 +125,7 @@ export function ConnectPlayDialog({
     const problem = problemOf(method, bucketOf(bucket), serviceAccountJson);
     setError(problem);
     if (problem) return;
+    if (redirecting) return;
     if (method === "google") signInOnce();
     else connectOnce();
   }
@@ -125,7 +138,7 @@ export function ConnectPlayDialog({
       submitLabel={method === "google" ? SIGN_IN_LABEL : label}
       description={METHODS[method].description}
       error={error}
-      pending={keyMutation.isPending || signInMutation.isPending}
+      pending={keyMutation.isPending || signInMutation.isPending || redirecting}
       onSubmit={submit}
       trigger={
         <Button variant="outline" size="sm">
