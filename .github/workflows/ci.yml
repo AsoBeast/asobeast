@@ -22,13 +22,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: .turbo
-          key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
-          restore-keys: |
-            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
-            turbo-${{ runner.os }}-
+      - uses: rharkor/caching-for-turbo@760158c05c47e7a764f78e9a22ca3b5a6ed8c52e # v2.5.2
       - run: pnpm turbo run lint test build
       - run: pnpm check:rate-classes
       - run: pnpm check:compose-limits
@@ -164,6 +158,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
+      - uses: rharkor/caching-for-turbo@760158c05c47e7a764f78e9a22ca3b5a6ed8c52e # v2.5.2
       - run: pnpm --filter api run db:deploy
       - run: pnpm turbo run build --filter=api
       - name: Start the api
