@@ -93,6 +93,7 @@ export function ConnectPlayDialog({
     setBucket("");
     setServiceAccountJson("");
     setError(null);
+    setRedirecting(false);
   }
 
   const keyMutation = useMutation({
@@ -117,6 +118,8 @@ export function ConnectPlayDialog({
     },
     onError: (failure) => setError(messageOf(failure)),
   });
+  const pending =
+    keyMutation.isPending || signInMutation.isPending || redirecting;
   const connectOnce = useSingleFlight(keyMutation);
   const signInOnce = useSingleFlight(signInMutation);
 
@@ -125,7 +128,7 @@ export function ConnectPlayDialog({
     const problem = problemOf(method, bucketOf(bucket), serviceAccountJson);
     setError(problem);
     if (problem) return;
-    if (redirecting) return;
+    if (pending) return;
     if (method === "google") signInOnce();
     else connectOnce();
   }
@@ -138,7 +141,7 @@ export function ConnectPlayDialog({
       submitLabel={method === "google" ? SIGN_IN_LABEL : label}
       description={METHODS[method].description}
       error={error}
-      pending={keyMutation.isPending || signInMutation.isPending || redirecting}
+      pending={pending}
       onSubmit={submit}
       trigger={
         <Button variant="outline" size="sm">
@@ -150,7 +153,9 @@ export function ConnectPlayDialog({
         <Tabs
           value={method}
           onValueChange={(next) => {
-            setChosen(next as Method);
+            const picked = METHOD_ORDER.find((each) => each === next);
+            if (!picked || pending) return;
+            setChosen(picked);
             setServiceAccountJson("");
             setError(null);
           }}
