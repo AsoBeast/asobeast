@@ -12,6 +12,9 @@ BEGIN
   IF to_regclass('public."TrialClaim"') IS NOT NULL THEN
     TRUNCATE TABLE "TrialClaim";
   END IF;
+  IF to_regclass('public."User"') IS NOT NULL THEN
+    TRUNCATE TABLE "User" CASCADE;
+  END IF;
 END
 $$`;
 
