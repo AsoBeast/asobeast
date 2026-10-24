@@ -37,13 +37,9 @@ export function alertEmailElement(
   payload: GranularPayload,
   context: AlertEmailContext,
 ): ReactElement {
-  const report = buildAlert(payload, context.origin, false);
   return (
     <AlertEmail
-      summary={report.headline}
-      facts={report.facts.map((fact) => [fact.label, fact.value])}
-      action={report.link}
-      occurredAt={payload.occurredAt}
+      report={buildAlert(payload, context.origin, false)}
       context={context}
     />
   );
@@ -59,7 +55,7 @@ export async function formatEmail(
   const report = buildAlert(payload, context.origin, false);
   return renderEmail(
     `[asobeast] ${report.headline}`,
-    alertEmailElement(payload, context),
+    <AlertEmail report={report} context={context} />,
     withFooter(reportText(report), context),
   );
 }
