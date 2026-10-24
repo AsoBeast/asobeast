@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 import {
+  AlertBatchApp,
   AlertBatchPayload,
   AlertDeliveryStatus,
   AlertFlushResult,
@@ -7,6 +8,7 @@ import {
   ChangeDetail,
   ChangeEventItem,
   isChangeField,
+  RankDroppedPayload,
   WEBHOOK_EVENTS,
 } from './changes';
 
@@ -135,5 +137,32 @@ describe('the screenshot change fields', () => {
     };
     expect({ ...plain, detail }.detail).toBe(detail);
     expect(plain.detail).toBeUndefined();
+  });
+});
+
+describe('the alert app identity', () => {
+  it('lets every alert app carry an icon without requiring one', () => {
+    expectTypeOf<AlertBatchApp['iconUrl']>().toEqualTypeOf<
+      string | null | undefined
+    >();
+    const drop: RankDroppedPayload = {
+      event: 'rank.dropped',
+      occurredAt: '2026-10-24T03:10:00.000Z',
+      app: { id: 'a1', name: 'Habit' },
+      keyword: { id: 'k1', text: 'habit', store: 'APP_STORE', country: 'us' },
+      from: 3,
+      to: 12,
+      fromDepth: 200,
+      toDepth: 200,
+      threshold: 5,
+    };
+    expect(drop.app.iconUrl).toBeUndefined();
+  });
+
+  it('keeps the store and storefront of a batch app required', () => {
+    expectTypeOf<AlertBatchApp['store']>().toEqualTypeOf<
+      'APP_STORE' | 'GOOGLE_PLAY'
+    >();
+    expectTypeOf<AlertBatchApp['country']>().toEqualTypeOf<string>();
   });
 });

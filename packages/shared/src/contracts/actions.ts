@@ -596,7 +596,13 @@ export type ActionAiStatus = AiStatus;
 export interface ActionOpenedPayload {
   event: 'action.opened';
   occurredAt: string;
-  app: { id: string; name: string | null; store: Store; country: string };
+  app: {
+    id: string;
+    name: string | null;
+    store: Store;
+    country: string;
+    iconUrl?: string | null;
+  };
   action: {
     id: string;
     rule: ActionRule;
