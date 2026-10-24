@@ -1,9 +1,9 @@
 import type Stripe from 'stripe';
 import { PLAN_LIMITS, effectivePlan, type PlanName } from '@asobeast/shared';
 import { isEntitled } from '../auth/entitlement';
-import { alreadyTrialed, grantTrial } from '../auth/trial-grant';
+import { alreadyTrialed } from '../auth/trial-grant';
 import { planAfterChange } from './downgrade';
-import { stateOf } from './subscription-state';
+import { projectionOf, stateOf } from './subscription-state';
 
 const CLOCK = {
   registered: new Date('2026-08-01T00:00:00.000Z'),
@@ -14,6 +14,8 @@ const CLOCK = {
 };
 
 const PERIOD_END = Math.floor(CLOCK.renewal.getTime() / 1000);
+
+const TRIAL_MS = 7 * 24 * 60 * 60 * 1000;
 
 interface WorkspaceState {
   plan: string;
@@ -52,7 +54,12 @@ function applySubscription(
   plan: PlanName,
   cancelAtPeriodEnd = false,
 ): WorkspaceState {
-  const next = stateOf(subscription(status, cancelAtPeriodEnd), plan);
+  const next = stateOf(
+    subscription(status, cancelAtPeriodEnd),
+    plan,
+    'month',
+    true,
+  );
   return {
     ...state,
     plan: next.plan,
@@ -61,8 +68,38 @@ function applySubscription(
   };
 }
 
-const startTrial = (state: WorkspaceState, now: Date): WorkspaceState =>
-  alreadyTrialed(state) ? state : { ...state, ...grantTrial(7, now) };
+const startTrial = (state: WorkspaceState, now: Date): WorkspaceState => {
+  if (alreadyTrialed(state)) return state;
+  const trialEndsAt = new Date(now.getTime() + TRIAL_MS);
+  return {
+    ...state,
+    plan: 'indie',
+    trialStartedAt: now,
+    trialEndsAt,
+    planExpiresAt: trialEndsAt,
+  };
+};
+
+const TRIAL_START = Math.floor(CLOCK.midTrial.getTime() / 1000);
+const TRIAL_END = TRIAL_START + 7 * 24 * 60 * 60;
+
+function projectTrial(
+  state: WorkspaceState,
+  status: Stripe.Subscription.Status,
+  now: Date,
+): WorkspaceState {
+  const trialing = {
+    ...subscription(status),
+    trial_start: TRIAL_START,
+    trial_end: TRIAL_END,
+    ended_at: status === 'canceled' ? Math.floor(now.getTime() / 1000) : null,
+    items: { data: [{ current_period_end: TRIAL_END }] },
+  } as unknown as Stripe.Subscription;
+  return {
+    ...state,
+    ...projectionOf(stateOf(trialing, 'indie', 'month', true), state, now),
+  };
+}
 
 const runsInFanOut = (state: WorkspaceState, now: Date) =>
   isEntitled(state, now);
@@ -71,14 +108,14 @@ const limitsOf = (state: WorkspaceState, now: Date) =>
   PLAN_LIMITS[effectivePlan(state, now)];
 
 describe('subscription lifecycle transitions', () => {
-  it('registration to trial opens capacity at the indie limits', () => {
+  it('a trialing projection opens capacity at the plan limits', () => {
     const before = fresh();
     expect(runsInFanOut(before, CLOCK.registered)).toBe(false);
 
     const after = startTrial(before, CLOCK.registered);
 
     expect(runsInFanOut(after, CLOCK.registered)).toBe(true);
-    expect(limitsOf(after, CLOCK.registered)).toEqual(PLAN_LIMITS.trial);
+    expect(limitsOf(after, CLOCK.registered)).toEqual(PLAN_LIMITS.indie);
   });
 
   it('trial to expired closes capacity and keeps nothing but the history', () => {
@@ -184,6 +221,18 @@ describe('subscription lifecycle transitions', () => {
   });
 });
 
+describe('a card trial', () => {
+  it('a cancelled trial ends the legacy entitlement with it', () => {
+    const trialing = projectTrial(fresh(), 'trialing', CLOCK.midTrial);
+    expect(runsInFanOut(trialing, CLOCK.midTrial)).toBe(true);
+
+    const cancelled = projectTrial(trialing, 'canceled', CLOCK.midTrial);
+
+    expect(effectivePlan(cancelled, CLOCK.midTrial)).toBe('free');
+    expect(cancelled.trialEndsAt).toEqual(CLOCK.midTrial);
+  });
+});
+
 describe('invariants that hold across every state', () => {
   const journey: WorkspaceState[] = [];
   const trialing = startTrial(fresh(), CLOCK.registered);
@@ -204,7 +253,13 @@ describe('invariants that hold across every state', () => {
     expect(new Set(trials).size).toBe(1);
   });
 
-  it('never changes the trial start once it is set', () => {
+  it('never changes the trial start once it is set, even against a later trial', () => {
+    const restarted = projectTrial(trialing, 'trialing', CLOCK.midTrial);
+
+    expect(restarted.trialStartedAt).toEqual(trialing.trialStartedAt);
+  });
+
+  it('never changes the trial start of the journey once it is set', () => {
     const starts = journey
       .map((state) => state.trialStartedAt?.getTime())
       .filter((value): value is number => value !== undefined);

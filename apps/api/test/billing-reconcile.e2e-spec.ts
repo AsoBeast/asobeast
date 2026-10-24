@@ -10,7 +10,12 @@ import {
   WORKSPACE,
   type BillingHarness,
 } from './helpers/billing-harness';
-import { checkoutSession, subscriptionFrom } from './helpers/fake-stripe';
+import {
+  checkoutSession,
+  fixtureInvoice,
+  subscriptionFrom,
+  trialingSubscription,
+} from './helpers/fake-stripe';
 
 const RECONCILE = '/billing/reconcile';
 const CUSTOMER = 'cus_test_stored';
@@ -60,6 +65,64 @@ describe('Billing reconcile (e2e)', () => {
       subscriptionId: 'sub_adopt',
       subscriptionStatus: 'active',
     });
+  });
+
+  it('adopts a trialing subscription with its dates and interval', async () => {
+    await resetBillingState(harness, {
+      billingCustomerId: CUSTOMER,
+      trialEndsAt: null,
+    });
+    harness.fake.subscriptionStore.set(
+      'sub_trial',
+      trialingSubscription({
+        id: 'sub_trial',
+        customer: CUSTOMER,
+        metadata: { [WORKSPACE_METADATA_KEY]: WORKSPACE },
+      }),
+    );
+
+    await reconcile().expect(200);
+
+    await expect(workspaceRow(harness)).resolves.toMatchObject({
+      plan: 'indie',
+      subscriptionId: 'sub_trial',
+      subscriptionStatus: 'trialing',
+      trialStartedAt: new Date(1_800_000_150 * 1000),
+      trialEndsAt: new Date(1_800_604_950 * 1000),
+      billingInterval: 'month',
+      trialClaimedAt: expect.any(Date) as Date,
+    });
+    await expect(harness.prisma.trialClaim.count()).resolves.toBe(1);
+  });
+
+  it('records the first payment of a past_due subscription whose latest invoice is paid', async () => {
+    await resetBillingState(harness, {
+      billingCustomerId: CUSTOMER,
+      subscriptionId: 'sub_dunning',
+      subscriptionStatus: 'past_due',
+      plan: 'indie',
+      trialEndsAt: null,
+    });
+    harness.fake.invoiceStore.set(
+      'in_Paid',
+      fixtureInvoice('invoice.paid', { id: 'in_Paid' }),
+    );
+    harness.fake.subscriptionStore.set(
+      'sub_dunning',
+      subscriptionFrom({
+        id: 'sub_dunning',
+        status: 'past_due',
+        customer: CUSTOMER,
+        latest_invoice: 'in_Paid',
+        metadata: { [WORKSPACE_METADATA_KEY]: WORKSPACE },
+      }),
+    );
+
+    await reconcile().expect(200);
+
+    const row = await workspaceRow(harness);
+    expect(row.firstPaidAt).not.toBeNull();
+    expect(row.plan).toBe('indie');
   });
 
   it('revokes a plan stripe cannot back, ten times an hour', async () => {

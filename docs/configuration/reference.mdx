@@ -177,8 +177,9 @@ See [Authentication and accounts](/security/authentication).
 | `AUTH_ALLOW_REGISTRATION` | `false` | No | `true` keeps signups open. `false` closes registration once the first account exists. The first account always bootstraps as owner |
 | `AUTH_REGISTRATION_WORKSPACE` | `own` | No | Where a self registration lands. `own` gives every sign up a workspace of its own, so someone who registers never sees the apps, keywords and rankings already tracked on the instance. `shared` puts every sign up in the bootstrap workspace as a member, which suits an instance whose sign ups are all trusted with that data. Refuses to boot when `shared` and `BILLING_ENABLED` is `true`. Warns in production when `shared` and `AUTH_ALLOW_REGISTRATION` is `true`. See [Authentication and accounts](/security/authentication) |
 | `STRIPE_SECRET_KEY` | empty | No | Enables billing. Absent, every Stripe path is inert and the API boots normally. Never logged. Give every environment its own sandbox, because a sandbox shared with another stack posts that stack's events here. Warns in production when `BILLING_ENABLED=true` on a sandbox key (`sk_test_` or `rk_test_`) |
+| `STRIPE_PUBLISHABLE_KEY` | empty | No | The key the web app mounts Stripe's embedded Checkout with on the billing wall, answered on `GET /billing/catalog` while `STRIPE_SECRET_KEY` is set too. Empty keeps the hosted Checkout redirect. Refuses to boot when its mode (`pk_test_` or `pk_live_`) differs from the mode of `STRIPE_SECRET_KEY`, because the wall would open against another account |
 | `STRIPE_WEBHOOK_SECRET` | empty | No | Verifies [the webhook endpoint](/operations/billing#the-webhook-endpoint). Absent, the endpoint refuses every delivery, because an unverified endpoint hands out subscriptions, and checkout stays closed so nobody pays for access that could never be provisioned |
-| `STRIPE_PORTAL_RETURN_URL` | empty | No | Where the customer portal returns to. Falls back to `WEB_PUBLIC_URL` plus `/settings` |
+| `STRIPE_PORTAL_RETURN_URL` | empty | No | Where the customer portal and a purchase return to. Falls back to `WEB_PUBLIC_URL` plus `/settings`. A trial checkout returns to the web app's root instead, so the first thing a new customer sees is the portfolio |
 | `STRIPE_TAX_ENABLED` | `false` | No | Adds automatic tax to every checkout session. Needs Stripe Tax active with its registrations and prices that carry a tax behaviour, or Checkout refuses to open. Address and tax id are collected either way. Refuses to boot together with `STRIPE_MANAGED_PAYMENTS=true`. See [Billing](/operations/billing) |
 | `STRIPE_MANAGED_PAYMENTS` | `false` | No | Sells every checkout through Stripe Managed Payments, so Stripe is the merchant of record and calculates, collects and remits the tax. Needs Managed Payments activated in the Stripe dashboard. Refuses to boot together with `STRIPE_TAX_ENABLED=true`. Warns in production when `BILLING_ENABLED=true` runs on a live key with neither this nor `STRIPE_TAX_ENABLED`. See [Billing](/operations/billing) |
 | `STRIPE_PRICE_INDIE_MONTHLY` | empty | No | Price id for Indie monthly. Empty resolves it from the lookup key `asobeast_indie_month`, which `pnpm --filter api stripe:catalog` creates, at boot and before every reconciliation. Setting any of the four `STRIPE_PRICE_*` replaces the lookup key catalog with the ids they name, so set all four or none |
@@ -186,7 +187,7 @@ See [Authentication and accounts](/security/authentication).
 | `STRIPE_PRICE_ULTIMATE_MONTHLY` | empty | No | Price id for Ultimate monthly. Empty resolves it from `asobeast_ultimate_month` |
 | `STRIPE_PRICE_ULTIMATE_YEARLY` | empty | No | Price id for Ultimate annual. Empty resolves it from `asobeast_ultimate_year` |
 | `CRON_BILLING_RECONCILE` | `0 7 * * *` | No | Daily reconciliation of local subscription state against Stripe, UTC |
-| `CRON_TRIAL_NOTICES` | `0 9 * * *` | No | Daily sweep that sends the trial milestone emails, UTC |
+| `CRON_TRIAL_NOTICES` | `0 9 * * *` | No | Daily sweep that sends the trial milestone emails, which name the plan, the first charge and how to cancel, UTC |
 | `AUTH_COOKIE_SECURE` | `false` | No | Marks the session cookie `Secure`. **Refuses to boot** when `false` and `NODE_ENV` is `production`. The Docker image sets `NODE_ENV=production`, so the Compose stack defaults this to `true` |
 | `TRUST_PROXY` | `0`, and `1` pinned in the Compose stack | No | How many proxies you control sit between the internet and the API, counting the web app as one. Compose pins it to `1` because the web app is always exactly one hop in front of the API there. `true` means 1 and `false` means 0. The API reads that many entries back from the right of `X-Forwarded-For`, so auth throttling keys on the real client address. Both apps warn at startup in production when `0`. See [Hosting](/security/hosting) |
 
@@ -194,8 +195,8 @@ See [Authentication and accounts](/security/authentication).
 
 | Variable | Default | Required | Effect |
 | --- | --- | --- | --- |
-| `BILLING_ENABLED` | `false` | No | `true` starts every new account on a trial and answers `402` once it lapses, until the plan is `indie` or `ultimate` |
-| `TRIAL_DAYS` | `7` | No | Trial length in days when `BILLING_ENABLED=true`. **Refuses to boot** at `0` with billing enabled, because every new account would be locked out immediately |
+| `BILLING_ENABLED` | `false` | No | `true` offers every new account a trial at checkout on a verified card, and answers `402` until it starts the trial or buys `indie` or `ultimate` |
+| `TRIAL_DAYS` | `7` | No | Length of the Stripe trial Checkout offers a new account, in days, at least 1, when `BILLING_ENABLED=true`. **Refuses to boot** at `0` with billing enabled, because Stripe refuses a trial shorter than a day |
 
 ## Published store status
 

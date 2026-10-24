@@ -11,10 +11,13 @@ import {
   CHECKOUT_SESSION_PARAM,
   UPGRADE_PATH,
   type BillingCatalog,
+  type BillingSession,
+  type CheckoutUi,
 } from '@asobeast/shared';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AccountUser } from '../auth/auth.types';
+import { TrialOffers } from '../auth/trial-offers';
 import { BillingConflictError } from './billing.errors';
 import { BillingReconciler } from './billing-reconciler.service';
 import {
@@ -60,6 +63,7 @@ export class BillingService {
     private readonly reconciler: BillingReconciler,
     private readonly prisma: PrismaService,
     private readonly config: ConfigService<Env, true>,
+    private readonly trialOffers: TrialOffers,
   ) {}
 
   async catalog(): Promise<BillingCatalog> {
@@ -68,16 +72,30 @@ export class BillingService {
       enabled: this.missingConfiguration().length === 0,
       prices: this.prices.prices,
       managedPayments: this.taxCollection() === 'managed_payments',
+      ...this.publishableKey(),
     };
   }
 
-  async checkout(user: AccountUser, priceId: string): Promise<string> {
+  private publishableKey(): Pick<BillingCatalog, 'publishableKey'> {
+    const key = this.config.get('STRIPE_PUBLISHABLE_KEY', { infer: true });
+    return key && this.stripe.enabled ? { publishableKey: key } : {};
+  }
+
+  async checkout(
+    user: AccountUser,
+    priceId: string,
+    ui: CheckoutUi = 'hosted',
+  ): Promise<BillingSession> {
     await this.prices.refreshIfStale();
     this.refuseUnprovisionableCheckout();
     const price = this.prices.require(priceId);
     await this.refuseSecondSubscription(user.workspaceId);
     const customerId = await this.customerFor(user);
     await this.refuseLiveSubscription(user.workspaceId, customerId);
+    const trial = await this.trialOffers.offerFor(user);
+    const returnUrl = withCheckoutMarker(
+      trial ? this.webUrl('/') : this.returnUrl(),
+    );
 
     const workspaceId = user.workspaceId;
     const attempt = randomUUID();
@@ -89,18 +107,18 @@ export class BillingService {
           customerId,
           priceId: price.priceId,
           workspaceId,
-          successUrl: this.checkoutReturnUrl(),
+          returnUrl,
           cancelUrl: this.webUrl(UPGRADE_PATH),
           taxCollection: this.taxCollection(),
+          trial: trial ?? undefined,
+          ui,
         }),
         `checkout:${workspaceId}:${attempt}`,
       );
 
-      if (!session.url) {
-        throw new Error('Stripe returned a checkout session with no url');
-      }
+      const answer = billingSessionOf(session, ui, returnUrl);
       await this.recordCheckout(workspaceId, attempt, session.id);
-      return session.url;
+      return answer;
     } catch (error) {
       await this.releaseCheckout(workspaceId, attempt);
       throw error;
@@ -213,7 +231,7 @@ export class BillingService {
         `stripe already holds a live subscription for ${customerId} that no webhook recorded; reconciling workspace ${workspaceId} before refusing the checkout`,
       );
       await this.recordWhatStripeHolds(workspaceId);
-      throw subscriptionExists(live.status);
+      throw subscriptionExists(live.status, true);
     }
 
     const foreign = heldSubscription(held);
@@ -222,7 +240,7 @@ export class BillingService {
     this.logger.error(
       `stripe subscription ${foreign.id} on customer ${customerId} names workspace ${workspaceNamedBy(foreign) ?? 'nobody'}, not ${workspaceId}; refusing the checkout rather than billing the customer twice`,
     );
-    throw subscriptionExists(null);
+    throw subscriptionExists(null, true);
   }
 
   private async recordWhatStripeHolds(workspaceId: string): Promise<void> {
@@ -287,12 +305,19 @@ export class BillingService {
     const confirmed = await this.storedSubscription();
     if (!confirmed) return;
 
-    throw subscriptionExists(confirmed.subscriptionStatus);
+    throw subscriptionExists(
+      confirmed.subscriptionStatus,
+      confirmed.firstPaidAt !== null,
+    );
   }
 
-  private async storedSubscription(): Promise<WorkspaceSubscription | null> {
+  private async storedSubscription(): Promise<StoredSubscription | null> {
     const workspace = await this.prisma.workspace.findFirst({
-      select: { subscriptionId: true, subscriptionStatus: true },
+      select: {
+        subscriptionId: true,
+        subscriptionStatus: true,
+        firstPaidAt: true,
+      },
     });
     if (!workspace || !holdsSubscription(workspace)) return null;
     return workspace;
@@ -341,17 +366,36 @@ export class BillingService {
     return configured ?? this.webUrl('/settings');
   }
 
-  private checkoutReturnUrl(): string {
-    const url = new URL(this.returnUrl());
-    url.searchParams.set(CHECKOUT_RETURN_PARAM, CHECKOUT_RETURN_COMPLETE);
-    url.search = `${url.search}&${CHECKOUT_SESSION_PARAM}=${STRIPE_SESSION_PLACEHOLDER}`;
-    return url.toString();
-  }
-
   private webUrl(path: string): string {
     const base = this.config.get('WEB_PUBLIC_URL', { infer: true }) ?? '';
     return `${base}${path}`;
   }
+}
+
+function billingSessionOf(
+  session: { url: string | null; client_secret: string | null },
+  ui: CheckoutUi,
+  returnUrl: string,
+): BillingSession {
+  if (ui === 'hosted') {
+    if (!session.url) {
+      throw new Error('Stripe returned a checkout session with no url');
+    }
+    return { url: session.url };
+  }
+  if (!session.client_secret) {
+    throw new Error(
+      'Stripe returned an embedded checkout session with no client secret',
+    );
+  }
+  return { url: returnUrl, clientSecret: session.client_secret };
+}
+
+function withCheckoutMarker(returnUrl: string): string {
+  const url = new URL(returnUrl);
+  url.searchParams.set(CHECKOUT_RETURN_PARAM, CHECKOUT_RETURN_COMPLETE);
+  url.search = `${url.search}&${CHECKOUT_SESSION_PARAM}=${STRIPE_SESSION_PLACEHOLDER}`;
+  return url.toString();
 }
 
 function minuteBucket(): number {
@@ -364,12 +408,19 @@ function customerKeyOf(workspaceId: string, replaced: string | null): string {
     : `customer:${workspaceId}`;
 }
 
-function subscriptionExists(status: string | null): BillingConflictError {
+type StoredSubscription = WorkspaceSubscription & { firstPaidAt: Date | null };
+
+function subscriptionExists(
+  status: string | null,
+  everPaid: boolean,
+): BillingConflictError {
   if (pendingBy(status)) {
     return new BillingConflictError('checkout_in_flight', PAYMENT_PENDING);
   }
   return new BillingConflictError(
     'subscription_exists',
-    stalledBy(status) ? SUBSCRIPTION_NEEDS_ATTENTION : ALREADY_SUBSCRIBED,
+    stalledBy(status, everPaid)
+      ? SUBSCRIPTION_NEEDS_ATTENTION
+      : ALREADY_SUBSCRIBED,
   );
 }

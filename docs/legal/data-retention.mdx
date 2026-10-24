@@ -84,7 +84,7 @@ Five things survive, deliberately, and pretending otherwise would be dishonest.
 | Support access records | An audit trail of operator access that expired with the account would not be an audit trail | Indefinitely. It holds an operator email, an action and a reason, never your data |
 | Keyword rows | One search serves every workspace tracking that phrase and market. The row is shared and carries no owner | While anyone tracks it |
 | Top chart captures | One capture of a public store chart serves every workspace reading it. The rows are shared and carry no owner | `RETENTION_CHARTS_DAYS`, 365 days by default |
-| Trial claims | One free trial per mailbox is only enforceable if the record outlives the workspace that took it. The row is a keyed hash of the mailbox (an HMAC under the instance secret), not the address, and it holds no workspace or account reference | Until the instance secret is rotated. Hosted retention is stated in the privacy policy |
+| Trial claims | One free trial per mailbox and per card is only enforceable if the record outlives the workspace that took it. The row is a keyed hash of the mailbox or of the card fingerprint (an HMAC under the instance secret), not the address or any card data, and it holds no workspace or account reference | Until the instance secret is rotated. Hosted retention is stated in the privacy policy |
 
 Beyond the application:
 

@@ -3,8 +3,10 @@ import { ConfigService } from '@nestjs/config';
 import {
   PLANS,
   UPGRADE_PATH,
+  billingIntervalOf,
   nextPlan,
   type AccountPlan,
+  type TrialOffer,
 } from '@asobeast/shared';
 import {
   holdsSubscription,
@@ -21,6 +23,8 @@ type WorkspacePlan = WorkspaceEntitlement & {
   subscriptionId: string | null;
   subscriptionStatus: string | null;
   cancelAtPeriodEnd: boolean;
+  billingInterval: string | null;
+  firstPaidAt: Date | null;
 };
 
 @Injectable()
@@ -33,7 +37,8 @@ export class AccountPlanService {
 
   async describe(
     workspace: WorkspacePlan,
-    now = new Date(),
+    now: Date,
+    offer: TrialOffer | null,
   ): Promise<AccountPlan> {
     const billing = this.config.get('BILLING_ENABLED', { infer: true });
     const [{ plan, limits, apps, keywordMarkets }, aiCalls] = await Promise.all(
@@ -48,9 +53,17 @@ export class AccountPlanService {
       hasBillingAccount: workspace.billingCustomerId !== null,
       subscribed: holdsSubscription(workspace),
       subscriptionStalled:
-        holdsSubscription(workspace) && stalledBy(workspace.subscriptionStatus),
+        holdsSubscription(workspace) &&
+        stalledBy(workspace.subscriptionStatus, workspace.firstPaidAt !== null),
       subscriptionPending:
         holdsSubscription(workspace) && pendingBy(workspace.subscriptionStatus),
+      trialing: workspace.subscriptionStatus === 'trialing',
+      trialChargeFailed:
+        holdsSubscription(workspace) &&
+        workspace.subscriptionStatus === 'past_due' &&
+        workspace.firstPaidAt === null,
+      ...(billing ? { trialOffer: offer } : {}),
+      billingInterval: billingIntervalOf(workspace.billingInterval),
       cancelAtPeriodEnd: workspace.cancelAtPeriodEnd,
       trialEndsAt: workspace.trialEndsAt?.toISOString() ?? null,
       renewsAt: workspace.planExpiresAt?.toISOString() ?? null,

@@ -14,6 +14,7 @@ import Stripe from 'stripe';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
+import { BillingReconciler } from '../src/billing/billing-reconciler.service';
 import { BillingWebhookService } from '../src/billing/billing-webhook.service';
 import { HANDLED_EVENTS } from '../src/billing/webhook-events';
 import { WORKSPACE_METADATA_KEY } from '../src/billing/workspace-link';
@@ -21,9 +22,18 @@ import {
   STRIPE_API_VERSION,
   STRIPE_CLIENT,
 } from '../src/billing/stripe.client';
+import type { AuthUser } from '@asobeast/shared';
 import { isEntitled } from '../src/auth/entitlement';
+import { sha256 } from '../src/auth/password-hash';
 import { QUEUES } from '../src/jobs/jobs.types';
 import { restoreAuthEnv } from './helpers/auth-env';
+import {
+  fakeStripe,
+  fixtureInvoice,
+  paymentMethod,
+  type FakeStripe,
+} from './helpers/fake-stripe';
+import { cardClaimKey, trialClaimKey } from './helpers/trial-claim-key';
 import { testDb } from './helpers/test-db';
 import { obliterateQueues, pauseQueues } from './obliterate-queues';
 
@@ -52,6 +62,7 @@ describe('Stripe webhooks', () => {
   let prisma: PrismaClient;
   let signer: Stripe;
   let webhook: BillingWebhookService;
+  let fake: FakeStripe;
   let subscriptions: Map<string, Stripe.Subscription>;
 
   const send = (event: Stripe.Event, signature?: string) => {
@@ -90,21 +101,14 @@ describe('Stripe webhooks', () => {
     signer = new Stripe(TEST_STRIPE_SECRET_KEY, {
       apiVersion: STRIPE_API_VERSION,
     });
-    subscriptions = new Map();
-    const stub = new Stripe(TEST_STRIPE_SECRET_KEY, {
-      apiVersion: STRIPE_API_VERSION,
-    });
-    stub.subscriptions.retrieve = ((id: string) => {
-      const found = subscriptions.get(id);
-      if (!found) throw new Error(`No such subscription: ${id}`);
-      return Promise.resolve(found);
-    }) as unknown as typeof stub.subscriptions.retrieve;
+    fake = fakeStripe();
+    subscriptions = fake.subscriptionStore;
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })
       .overrideProvider(STRIPE_CLIENT)
-      .useValue(stub)
+      .useValue(fake)
       .compile();
     app = moduleFixture.createNestApplication<App>({ rawBody: true });
     await app.init();
@@ -116,6 +120,7 @@ describe('Stripe webhooks', () => {
 
   beforeEach(async () => {
     await prisma.billingEvent.deleteMany({});
+    await prisma.user.deleteMany({ where: { workspaceId: WORKSPACE } });
     await prisma.workspace.deleteMany({ where: { id: WORKSPACE } });
     await prisma.workspace.create({
       data: {
@@ -123,9 +128,10 @@ describe('Stripe webhooks', () => {
         name: 'Stripe fixture',
         plan: 'free',
         billingCustomerId: CUSTOMER,
+        firstPaidAt: new Date('2026-09-01T00:00:00.000Z'),
       },
     });
-    subscriptions.clear();
+    fake.reset();
     subscriptions.set(
       SUBSCRIPTION,
       fixture('customer.subscription.created').data
@@ -444,6 +450,263 @@ describe('Stripe webhooks', () => {
       new Date('2026-01-01T00:00:00.000Z'),
     );
     expect(restored.trialEndsAt).toEqual(new Date('2026-01-08T00:00:00.000Z'));
+  });
+
+  describe('a card trial', () => {
+    const TRIAL_START = new Date(1_800_000_150 * 1000);
+    const TRIAL_END = new Date(1_800_604_950 * 1000);
+    const OWNER_TOKEN = `asob_${'trialowner'.padEnd(48, '5')}`;
+
+    const subscriptionOf = (name: string) =>
+      fixture(name).data.object as Stripe.Subscription;
+
+    const project = async (name: string) => {
+      subscriptions.set(SUBSCRIPTION, subscriptionOf(name));
+      await deliver(name);
+    };
+
+    const me = async () => {
+      const response = await request(app.getHttpServer())
+        .get('/auth/me')
+        .set('Authorization', `Bearer ${OWNER_TOKEN}`)
+        .expect(200);
+      return response.body as AuthUser;
+    };
+
+    const OWNER_MAILBOX = trialClaimKey('trial-owner@example.com');
+    const CARD = cardClaimKey('fp_TestCard');
+
+    const claimKeys = async () =>
+      (await prisma.trialClaim.findMany({ select: { key: true } }))
+        .map(({ key }) => key)
+        .sort();
+
+    beforeEach(async () => {
+      await prisma.$executeRawUnsafe('TRUNCATE TABLE "TrialClaim"');
+      await prisma.workspace.update({
+        where: { id: WORKSPACE },
+        data: { firstPaidAt: null },
+      });
+      fake.invoiceStore.set('in_TestTrial', fixtureInvoice('invoice.trial'));
+      fake.paymentMethodStore.set(
+        'pm_TestCard',
+        paymentMethod({
+          card: { fingerprint: 'fp_TestCard' } as Stripe.PaymentMethod.Card,
+        }),
+      );
+      const owner = await prisma.user.create({
+        data: {
+          workspaceId: WORKSPACE,
+          email: 'trial-owner@example.com',
+          passwordHash: 'password-login-unused',
+          role: 'owner',
+        },
+      });
+      await prisma.apiToken.create({
+        data: {
+          userId: owner.id,
+          name: 'trial e2e',
+          tokenHash: sha256(OWNER_TOKEN),
+          prefix: OWNER_TOKEN.slice(0, 12),
+        },
+      });
+    });
+
+    it('projects the trial dates, the interval and the trialing state', async () => {
+      await project('customer.subscription.trialing');
+
+      await expect(workspaceRow()).resolves.toMatchObject({
+        plan: 'indie',
+        subscriptionStatus: 'trialing',
+        planExpiresAt: TRIAL_END,
+        trialStartedAt: TRIAL_START,
+        trialEndsAt: TRIAL_END,
+        billingInterval: 'month',
+      });
+      await expect(me()).resolves.toMatchObject({
+        entitled: true,
+        trialing: true,
+        trialAwaitsCheckout: false,
+      });
+    });
+
+    it('claims the mailbox and the card of the first trial', async () => {
+      await project('customer.subscription.trialing');
+
+      await expect(claimKeys()).resolves.toEqual([OWNER_MAILBOX, CARD].sort());
+      expect((await workspaceRow()).trialClaimedAt).not.toBeNull();
+      expect(fake.subscriptionUpdates).toEqual([]);
+    });
+
+    it.each([
+      ['mailbox', OWNER_MAILBOX],
+      ['card', CARD],
+    ])('ends a second trial of the same %s at stripe', async (_claim, key) => {
+      await prisma.trialClaim.create({ data: { key } });
+
+      await project('customer.subscription.trialing');
+
+      expect(fake.subscriptionUpdates).toEqual([
+        {
+          params: { id: SUBSCRIPTION, trial_end: 'now' },
+          idempotencyKey: `trial-end:${SUBSCRIPTION}`,
+        },
+      ]);
+      expect((await workspaceRow()).trialClaimedAt).not.toBeNull();
+      expect(subscriptions.get(SUBSCRIPTION)?.status).toBe('active');
+    });
+
+    it('settles the claims once when the reconcile lands before the webhook', async () => {
+      subscriptions.set(
+        SUBSCRIPTION,
+        subscriptionOf('customer.subscription.trialing'),
+      );
+
+      await app.get(BillingReconciler).reconcileOne(WORKSPACE);
+      const settledAt = (await workspaceRow()).trialClaimedAt;
+      await deliver('customer.subscription.trialing');
+
+      expect(settledAt).not.toBeNull();
+      expect((await workspaceRow()).trialClaimedAt).toEqual(settledAt);
+      await expect(claimKeys()).resolves.toEqual([OWNER_MAILBOX, CARD].sort());
+      expect(fake.subscriptionUpdates).toEqual([]);
+    });
+
+    it('settles the claims once when the reconcile and the webhook race', async () => {
+      const event = fixture('customer.subscription.trialing');
+      subscriptions.set(
+        SUBSCRIPTION,
+        subscriptionOf('customer.subscription.trialing'),
+      );
+      await send(event).expect(200);
+
+      await Promise.all([
+        app.get(BillingReconciler).reconcileOne(WORKSPACE),
+        webhook.process(event.id),
+      ]);
+
+      await expect(claimKeys()).resolves.toEqual([OWNER_MAILBOX, CARD].sort());
+      expect((await workspaceRow()).trialClaimedAt).not.toBeNull();
+      expect(fake.subscriptionUpdates).toEqual([]);
+    });
+
+    it('records no payment for the zero trial invoice', async () => {
+      await project('customer.subscription.trialing');
+
+      expect((await workspaceRow()).firstPaidAt).toBeNull();
+    });
+
+    it('pauses a trial whose first charge failed until a charge goes through', async () => {
+      const declinedMail = () =>
+        prisma.alertDelivery.count({
+          where: { event: 'billing.trial_charge_failed' },
+        });
+      const mailedBefore = await declinedMail();
+      await project('customer.subscription.trialing');
+      fake.invoiceStore.set(
+        'in_TestDeclined',
+        fixtureInvoice('invoice.paid', {
+          id: 'in_TestDeclined',
+          status: 'open',
+          amount_paid: 0,
+        }),
+      );
+      const trial = subscriptionOf('customer.subscription.trialing');
+      subscriptions.set(SUBSCRIPTION, {
+        ...subscriptionOf('customer.subscription.past_due'),
+        trial_start: trial.trial_start,
+        trial_end: trial.trial_end,
+        latest_invoice: 'in_TestDeclined',
+      });
+      await deliver('customer.subscription.past_due');
+
+      await expect(workspaceRow()).resolves.toMatchObject({
+        plan: 'free',
+        subscriptionStatus: 'past_due',
+        firstPaidAt: null,
+      });
+      const plan = await request(app.getHttpServer())
+        .get('/auth/plan')
+        .set('Authorization', `Bearer ${OWNER_TOKEN}`)
+        .expect(200);
+      expect(plan.body).toMatchObject({
+        entitled: false,
+        subscriptionStalled: true,
+      });
+      await request(app.getHttpServer())
+        .post('/apps')
+        .set('Authorization', `Bearer ${OWNER_TOKEN}`)
+        .send({ url: 'https://apps.apple.com/us/app/new/id999' })
+        .expect(402);
+      await expect(declinedMail()).resolves.toBe(mailedBefore + 1);
+
+      fake.invoiceStore.set(
+        'in_TestDeclined',
+        fixtureInvoice('invoice.paid', {
+          id: 'in_TestDeclined',
+          status: 'paid',
+          amount_paid: 1000,
+        }),
+      );
+      subscriptions.set(SUBSCRIPTION, {
+        ...subscriptionOf('customer.subscription.created'),
+        latest_invoice: 'in_TestDeclined',
+      });
+      await deliver('invoice.paid');
+
+      const recovered = await workspaceRow();
+      expect(recovered.plan).toBe('indie');
+      expect(recovered.firstPaidAt).not.toBeNull();
+      expect(recovered.dunningNotifiedAt).toBeNull();
+    });
+
+    it('records a payment from an event older than the state', async () => {
+      await prisma.workspace.update({
+        where: { id: WORKSPACE },
+        data: { subscriptionEventAt: new Date(1_900_000_000 * 1000) },
+      });
+      fake.invoiceStore.set('in_Test1', fixtureInvoice('invoice.paid'));
+      subscriptions.set(
+        SUBSCRIPTION,
+        subscriptionOf('customer.subscription.created'),
+      );
+
+      const event = fixture('invoice.paid');
+      await send(event).expect(200);
+      await webhook.process(event.id);
+
+      await expect(
+        prisma.billingEvent.findUniqueOrThrow({ where: { id: event.id } }),
+      ).resolves.toMatchObject({ outcome: 'ignored' });
+      expect((await workspaceRow()).firstPaidAt).not.toBeNull();
+    });
+
+    it('keeps the trial dates when the trial converts', async () => {
+      await project('customer.subscription.trialing');
+
+      await project('customer.subscription.updated');
+
+      const converted = await workspaceRow();
+      expect(converted).toMatchObject({
+        subscriptionStatus: 'active',
+        trialStartedAt: TRIAL_START,
+        trialEndsAt: TRIAL_END,
+      });
+      expect(converted.planExpiresAt).not.toEqual(TRIAL_END);
+      await expect(me()).resolves.toMatchObject({ trialing: false });
+    });
+
+    it('clamps a cancelled trial so the legacy trial never revives it', async () => {
+      await project('customer.subscription.trialing');
+
+      await project('customer.subscription.trial_canceled');
+
+      const cancelled = await workspaceRow();
+      expect(cancelled.plan).toBe('free');
+      expect(cancelled.trialEndsAt!.getTime()).toBeLessThanOrEqual(Date.now());
+      expect(cancelled.trialStartedAt).toEqual(TRIAL_START);
+      await expect(me()).resolves.toMatchObject({ entitled: false });
+    });
   });
 
   it('links a checkout session back to the workspace it references', async () => {
