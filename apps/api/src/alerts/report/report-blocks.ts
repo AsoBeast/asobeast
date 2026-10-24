@@ -60,18 +60,3 @@ export function groupLines(group: ReportGroup): string[] {
   const note = groupOmission(group);
   return [...groupRowLines(group), ...(note ? [note] : [])];
 }
-
-export function blocksOf(app: ReportApp): ReportBlock[] {
-  const note = competitorsOmission(app);
-  return [
-    ...app.groups.map((group) => ({
-      title: group.title,
-      lines: groupLines(group),
-    })),
-    ...app.competitors.map((competitor) => ({
-      title: `Competitor · ${competitor.identity.name}`,
-      lines: competitor.groups.flatMap(groupLines),
-    })),
-    ...(note ? [{ title: '', lines: [note] }] : []),
-  ];
-}
