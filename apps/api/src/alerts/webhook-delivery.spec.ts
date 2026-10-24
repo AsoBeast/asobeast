@@ -29,12 +29,13 @@ describe('WebhookDelivery', () => {
   let url: string;
   let status = 200;
   let headers: Record<string, string> = {};
+  let answer = BODY;
   let peakSockets = 0;
   let openSockets = 0;
 
   beforeAll(async () => {
     server = createServer((_req, res) =>
-      res.writeHead(status, headers).end(BODY),
+      res.writeHead(status, headers).end(answer),
     );
     server.on('connection', (socket) => {
       openSockets += 1;
@@ -58,6 +59,7 @@ describe('WebhookDelivery', () => {
   beforeEach(() => {
     status = 200;
     headers = {};
+    answer = BODY;
     peakSockets = 0;
     openSockets = 0;
   });
@@ -131,6 +133,23 @@ describe('WebhookDelivery', () => {
       expect((error as Error).message).toBe(
         `${new URL(url).host}/… asked to retry after 7 s`,
       );
+    });
+
+    it('prefers the delay telegram writes in its body', async () => {
+      headers = { 'retry-after': '3' };
+      answer = JSON.stringify({ ok: false, parameters: { retry_after: 12 } });
+
+      expect(
+        ((await rejection()) as WebhookRateLimitedError).retryAfterMs,
+      ).toBe(12_000);
+    });
+
+    it('reads the header when the body is not json', async () => {
+      headers = { 'retry-after': '3' };
+
+      expect(
+        ((await rejection()) as WebhookRateLimitedError).retryAfterMs,
+      ).toBe(3000);
     });
 
     it('waits five seconds when the service names no delay', async () => {
