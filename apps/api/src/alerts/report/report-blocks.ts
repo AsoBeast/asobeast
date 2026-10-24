@@ -18,13 +18,13 @@ export function rowText(row: ReportRow): string {
   }
 }
 
-export function rowLines(row: ReportRow): string[] {
+function rowLines(row: ReportRow): string[] {
   return row.kind === 'text' && row.detail
     ? [row.text, `  ${row.detail}`]
     : [rowText(row)];
 }
 
-export function omissionLine(group: ReportGroup): string | null {
+function omissionLine(group: ReportGroup): string | null {
   const hidden = group.total - group.rows.length;
   if (hidden <= 0) return null;
   return group.link

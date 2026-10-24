@@ -79,7 +79,7 @@ function ownedStats(payload: AlertBatchPayload): Stat[] {
   return stats.filter((stat) => stat.value > 0);
 }
 
-export function ownedSummary(payload: AlertBatchPayload): string {
+function ownedSummary(payload: AlertBatchPayload): string {
   const counts = reportCounts(payload);
   return [
     plural(counts.rankDrops, 'rank drop'),

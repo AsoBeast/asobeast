@@ -255,17 +255,13 @@ function groupTones(app: ReportApp): GroupTone[] {
   ];
 }
 
-export function toneOf(tones: readonly GroupTone[]): ReportTone {
+function toneOf(tones: readonly GroupTone[]): ReportTone {
   const up = tones.includes('up');
   const down = tones.includes('down');
   if (up && down) return 'mixed';
   if (up) return 'up';
   if (down) return 'down';
   return 'neutral';
-}
-
-export function appTone(app: ReportApp): ReportTone {
-  return toneOf(groupTones(app));
 }
 
 export function buildReport(
