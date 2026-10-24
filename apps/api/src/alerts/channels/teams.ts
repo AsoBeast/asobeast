@@ -128,27 +128,27 @@ function appHeader(app: ReportApp): ColumnSet {
   };
 }
 
-function factOf(row: ReportRow): { title: string; value: string } {
-  switch (row.kind) {
-    case 'move':
-      return {
+type FactRow = Extract<ReportRow, { kind: 'move' | 'change' }>;
+
+const isFactRow = (row: ReportRow): row is FactRow =>
+  row.kind === 'move' || row.kind === 'change';
+
+function factOf(row: FactRow): { title: string; value: string } {
+  return row.kind === 'move'
+    ? {
         title: escapeTeams(row.label),
         value: `${row.from} → ${row.to}${row.note ? ` · ${row.note}` : ''}`,
-      };
-    case 'change':
-      return {
+      }
+    : {
         title: escapeTeams(row.field),
         value: escapeTeams(`${row.before} → ${row.after}`),
       };
-    case 'image':
-      return { title: row.field, value: '' };
-    case 'text':
-      return {
-        title: escapeTeams(row.text),
-        value: escapeTeams(row.detail ?? ''),
-      };
-  }
 }
+
+const factSet = (facts: FactSet['facts']): FactSet => ({
+  type: 'FactSet',
+  facts,
+});
 
 const autoColumn = (items: CardElement[]): Column => ({
   type: 'Column',
@@ -156,31 +156,39 @@ const autoColumn = (items: CardElement[]): Column => ({
   items,
 });
 
-function imageChanges(rows: ReportRow[]): ColumnSet[] {
-  return rows.flatMap((row): ColumnSet[] =>
-    row.kind === 'image'
-      ? [
-          {
-            type: 'ColumnSet',
-            columns: [
-              autoColumn(icon(row.beforeUrl)),
-              autoColumn([text('→')]),
-              autoColumn(icon(row.afterUrl)),
-            ],
-          },
-        ]
-      : [],
-  );
+function rowElements(row: ReportRow): CardElement[] {
+  if (row.kind === 'text') {
+    return [
+      text(escapeTeams(row.text), { spacing: 'None' }),
+      ...(row.detail
+        ? [text(escapeTeams(row.detail), { isSubtle: true, spacing: 'None' })]
+        : []),
+    ];
+  }
+  if (row.kind === 'image') {
+    return [
+      text(row.field, { spacing: 'None' }),
+      {
+        type: 'ColumnSet',
+        columns: [
+          autoColumn(icon(row.beforeUrl)),
+          autoColumn([text('→')]),
+          autoColumn(icon(row.afterUrl)),
+        ],
+      },
+    ];
+  }
+  return [];
 }
 
 function groupElements(group: ReportGroup, maxRows: number): CardElement[] {
   const rows = group.rows.slice(0, maxRows);
-  const shown = { ...group, rows };
-  const note = groupOmission(shown, teamsLink);
+  const facts = rows.filter(isFactRow).map(factOf);
+  const note = groupOmission({ ...group, rows }, teamsLink);
   return [
     text(`**${escapeTeams(group.title)}**`, { spacing: 'Medium' }),
-    { type: 'FactSet', facts: rows.map(factOf) },
-    ...imageChanges(rows),
+    ...(facts.length > 0 ? [factSet(facts)] : []),
+    ...rows.flatMap(rowElements),
     ...(note ? [text(note)] : []),
   ];
 }
@@ -271,13 +279,12 @@ function singleBody(report: AlertReport): TeamsMessage {
   return message(report, [
     ...heading(report),
     ...(app ? [appHeader(app)] : []),
-    {
-      type: 'FactSet',
-      facts: report.facts.map((fact) => ({
+    factSet(
+      report.facts.map((fact) => ({
         title: escapeTeams(fact.label),
         value: escapeTeams(fact.value),
       })),
-    },
+    ),
   ]);
 }
 

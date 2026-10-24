@@ -8,6 +8,7 @@ import {
   metadata,
   worstCaseBatch,
 } from '../email-fixtures.fixture';
+import { firstRanking } from '../rank-events.fixture';
 import { buildAlert } from '../report/build-alert';
 import { buildReport } from '../report/build-report';
 import { escapeTeams, teamsBody } from './teams';
@@ -104,6 +105,24 @@ describe('teamsBody for a batch', () => {
     });
   });
 
+  it('writes a sentence row as text, never as a fact without a value', () => {
+    const body = cardOf({
+      ...batch,
+      apps: [{ ...emptySection(alpha.app), firstRankings: [firstRanking()] }],
+    }).body;
+    const facts = body.flatMap((element) =>
+      element.type === 'FactSet' ? element.facts : [],
+    );
+
+    expect(facts.every((fact) => fact.value !== '')).toBe(true);
+    expect(body).toContainEqual({
+      type: 'TextBlock',
+      text: 'habit tracker  #37',
+      wrap: true,
+      spacing: 'None',
+    });
+  });
+
   it('shows both icons of an icon change', () => {
     const body = cardOf({
       ...batch,
@@ -128,8 +147,10 @@ describe('teamsBody for a batch', () => {
     const images = JSON.stringify(body).match(/"type":"Image"/g);
 
     expect(body).toContainEqual({
-      type: 'FactSet',
-      facts: [{ title: 'Icon changed', value: '' }],
+      type: 'TextBlock',
+      text: 'Icon changed',
+      wrap: true,
+      spacing: 'None',
     });
     expect(images).toHaveLength(2);
   });
