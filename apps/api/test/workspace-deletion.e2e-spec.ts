@@ -202,6 +202,9 @@ describe('Workspace deletion (e2e)', () => {
     const change = await prisma.changeEvent.create({
       data: { appId: owned.id, field: 'title', before: 'a', after: 'b' },
     });
+    await prisma.appAnnotation.create({
+      data: { appId: owned.id, date: DAY, label: 'Release 5.21.0' },
+    });
     await prisma.auditInsight.create({
       data: { appId: owned.id, model: 'gpt-4o', checks: {} },
     });
@@ -408,6 +411,7 @@ describe('Workspace deletion (e2e)', () => {
       review,
       reviewReply,
       changeEvent,
+      appAnnotation,
       auditInsight,
       auditScore,
       suggestProbe,
@@ -445,6 +449,7 @@ describe('Workspace deletion (e2e)', () => {
       prisma.review.count({ where: { id: target.reviewId } }),
       prisma.reviewReply.count({ where: { reviewId: target.reviewId } }),
       prisma.changeEvent.count({ where: { id: target.changeId } }),
+      prisma.appAnnotation.count({ where: { appId: target.appId } }),
       prisma.auditInsight.count({ where: { appId: target.appId } }),
       prisma.auditScore.count({ where: { appId: target.appId } }),
       prisma.suggestProbe.count({ where: { appId: target.appId } }),
@@ -480,6 +485,7 @@ describe('Workspace deletion (e2e)', () => {
       Review: review,
       ReviewReply: reviewReply,
       ChangeEvent: changeEvent,
+      AppAnnotation: appAnnotation,
       AuditInsight: auditInsight,
       AuditScore: auditScore,
       SuggestProbe: suggestProbe,
