@@ -5,6 +5,7 @@ import type { KeywordScope } from './keywords';
 import type { SerpEntrantPayload } from './serp';
 import type { ActionOpenedPayload } from './actions';
 import type { RankMilestoneDirection, RankMilestoneTier } from '../rank';
+import type { WebhookChannel } from '../webhook-channel';
 
 export const CHANGE_FIELDS = [
   'title',
@@ -87,6 +88,7 @@ export interface WebhookItem {
   active: boolean;
   hasSecret: boolean;
   createdAt: string;
+  channel?: WebhookChannel;
 }
 
 export interface WebhookCreateRequest {
