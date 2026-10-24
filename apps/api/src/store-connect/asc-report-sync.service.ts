@@ -127,7 +127,7 @@ export class AscReportSync {
         blocked.add(lane);
         if (!(error instanceof AscSegmentSizeError)) summary.failed += 1;
         this.logger.warn(
-          `report instance ${item.instance.id} waits for the next sync: ${(error as Error).message}`,
+          `report instance ${item.instance.id} waits for the next sync: ${error instanceof Error ? error.message : String(error)}`,
         );
       }
     }
@@ -163,7 +163,7 @@ export class AscReportSync {
     } catch (error) {
       if (error instanceof AscRateLimitedError) throw error;
       this.logger.warn(
-        `the detailed report of request ${request.id} is skipped this run: ${(error as Error).message}`,
+        `the detailed report of request ${request.id} is skipped this run: ${error instanceof Error ? error.message : String(error)}`,
       );
       return [];
     }

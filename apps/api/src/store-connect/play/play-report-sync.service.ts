@@ -210,7 +210,7 @@ export class PlayReportSync {
         const outcome = fileOutcome(error);
         if (!outcome) throw error;
         this.logger.warn(
-          `${file.object.name} waits for the next sync: ${(error as Error).message}`,
+          `${file.object.name} waits for the next sync: ${error instanceof Error ? error.message : String(error)}`,
         );
         if (outcome === 'forbidden') {
           await this.prisma.storeReportRequest.update({

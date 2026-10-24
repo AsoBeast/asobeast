@@ -202,7 +202,14 @@ export class StoreReportRequester {
     accessType: AscAccessType,
     { state, remoteId }: Placement,
   ): Promise<void> {
-    const reset = { state, remoteId, reportId: null, lastProcessingDate: null };
+    const reset = {
+      state,
+      remoteId,
+      reportId: null,
+      lastProcessingDate: null,
+      detailedReportId: null,
+      detailedLastProcessingDate: null,
+    };
     await this.prisma.storeReportRequest.upsert({
       where: { appId_accessType: { appId, accessType } },
       create: {
