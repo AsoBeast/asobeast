@@ -113,7 +113,7 @@ function appHeader(app: ReportApp): ColumnSet {
   return {
     type: 'ColumnSet',
     columns: [
-      { type: 'Column', width: 'auto', items: icon(app.identity.iconUrl) },
+      autoColumn(icon(app.identity.iconUrl)),
       {
         type: 'Column',
         width: 'stretch',
@@ -150,28 +150,22 @@ function factOf(row: ReportRow): { title: string; value: string } {
   }
 }
 
+const autoColumn = (items: CardElement[]): Column => ({
+  type: 'Column',
+  width: 'auto',
+  items,
+});
+
 function imageChanges(rows: ReportRow[]): ColumnSet[] {
-  return rows.flatMap((row) =>
+  return rows.flatMap((row): ColumnSet[] =>
     row.kind === 'image'
       ? [
           {
-            type: 'ColumnSet' as const,
+            type: 'ColumnSet',
             columns: [
-              {
-                type: 'Column' as const,
-                width: 'auto' as const,
-                items: icon(row.beforeUrl),
-              },
-              {
-                type: 'Column' as const,
-                width: 'auto' as const,
-                items: [text('→')],
-              },
-              {
-                type: 'Column' as const,
-                width: 'auto' as const,
-                items: icon(row.afterUrl),
-              },
+              autoColumn(icon(row.beforeUrl)),
+              autoColumn([text('→')]),
+              autoColumn(icon(row.afterUrl)),
             ],
           },
         ]
@@ -203,6 +197,20 @@ function appElements(app: ReportApp, maxRows: number): CardElement[] {
   ];
 }
 
+function actionsOf(report: AlertReport): Pick<AdaptiveCard, 'actions'> {
+  return report.link
+    ? {
+        actions: [
+          {
+            type: 'Action.OpenUrl',
+            title: report.link.label,
+            url: report.link.href,
+          },
+        ],
+      }
+    : {};
+}
+
 function message(report: AlertReport, body: CardElement[]): TeamsMessage {
   return {
     type: 'message',
@@ -216,17 +224,7 @@ function message(report: AlertReport, body: CardElement[]): TeamsMessage {
           version: '1.5',
           msteams: { width: 'Full' },
           body,
-          ...(report.link
-            ? {
-                actions: [
-                  {
-                    type: 'Action.OpenUrl' as const,
-                    title: report.link.label,
-                    url: report.link.href,
-                  },
-                ],
-              }
-            : {}),
+          ...actionsOf(report),
         },
       },
     ],
