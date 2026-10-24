@@ -13,41 +13,33 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  TURBO_CACHE: ${{ github.ref == 'refs/heads/main' && 'local:rw,remote:rw' || 'local:rw,remote:r' }}
+
 jobs:
   checks:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter api exec prisma generate
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: .turbo
-          key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
-          restore-keys: |
-            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
-            turbo-${{ runner.os }}-
-      - run: pnpm turbo run lint test build
+      - uses: ./.github/actions/setup
+      - uses: rharkor/caching-for-turbo@760158c05c47e7a764f78e9a22ca3b5a6ed8c52e # v2.5.2
+      - run: pnpm turbo run lint build test:cov
       - run: pnpm check:rate-classes
       - run: pnpm check:compose-limits
       - run: pnpm check:compose-mounts
       - run: pnpm check:compose-web-origin
       - run: pnpm check:env-documented
       - run: pnpm check:image-defaults
+      - run: pnpm check:playwright-image
       - run: pnpm check:release-versions
       - run: pnpm docs:mcp-tools:check
-      - run: pnpm turbo run test:cov
       - name: Summarize coverage
         if: always()
         run: |
-          for report in apps/api/coverage apps/web/coverage packages/shared/coverage; do
+          for report in apps/api/coverage apps/web/coverage apps/mcp/coverage packages/shared/coverage packages/mcp-tools/coverage; do
             summary="${report}/coverage-summary.json"
             test -f "${summary}" || continue
             echo "### ${report}" >> "$GITHUB_STEP_SUMMARY"
@@ -59,8 +51,14 @@ jobs:
           MODE: warn
         run: .github/scripts/verify-release-state.sh
 
-  e2e:
+  e2e-shard:
+    name: e2e shard ${{ matrix.shard }}
     runs-on: ubuntu-latest
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     services:
       postgres:
         image: postgres:18-alpine
@@ -91,18 +89,27 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter api exec prisma generate
+      - uses: ./.github/actions/setup
       - run: pnpm --filter api run db:deploy
-      - run: pnpm --filter api test:e2e
+      - run: pnpm --filter api test:e2e --shard=${{ matrix.shard }}/3
+
+  e2e:
+    needs: e2e-shard
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require every shard to pass
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          for result in $RESULTS; do
+            test "$result" = success
+          done
 
   isolation:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     services:
       postgres:
         image: postgres:18-alpine
@@ -133,18 +140,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter api exec prisma generate
+      - uses: ./.github/actions/setup
       - run: pnpm --filter api run db:deploy
       - run: pnpm --filter api test:isolation
 
   openapi-drift:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     services:
       postgres:
         image: postgres:18-alpine
@@ -177,13 +179,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter api exec prisma generate
+      - uses: ./.github/actions/setup
+      - uses: rharkor/caching-for-turbo@760158c05c47e7a764f78e9a22ca3b5a6ed8c52e # v2.5.2
       - run: pnpm --filter api run db:deploy
       - run: pnpm turbo run build --filter=api
       - name: Start the api
@@ -208,6 +205,7 @@ jobs:
 
   upgrade-drill:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     services:
       postgres:
         image: postgres:18-alpine
@@ -239,13 +237,7 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter api exec prisma generate
+      - uses: ./.github/actions/setup
       - run: pnpm run build:packages
       - name: Resolve the upgrade baseline
         id: baseline
@@ -271,6 +263,7 @@ jobs:
 
   shutdown-drill:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     services:
       postgres:
         image: postgres:18-alpine
@@ -301,18 +294,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter api exec prisma generate
+      - uses: ./.github/actions/setup
       - run: pnpm --filter api run db:deploy
       - run: pnpm --filter api run test:shutdown
 
   pipeline-benchmark:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     env:
       DATABASE_URL: postgresql://asobeast:asobeast@localhost:5433/asobeast_bench
       AUTH_SECRET: test-secret-test-secret-test-secret-0123456789
@@ -322,13 +310,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter api exec prisma generate
+      - uses: ./.github/actions/setup
       - run: pnpm run build:packages
       - name: Start the stack under the limits it ships with
         run: pnpm run bench:stack
@@ -346,21 +328,29 @@ jobs:
 
   backup-drill:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           fetch-depth: 0
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter api exec prisma generate
+      - uses: ./.github/actions/setup
       - run: pnpm run build:packages
       - name: Install the offsite backup tooling
-        run: sudo apt-get update && sudo apt-get install -y age rclone
+        env:
+          RCLONE_VERSION: 1.75.2
+          RCLONE_SHA256: 349ac8fba6ff65d6247043f1750cdcb518ec5d500ef91463a10d37c0ccdf3702
+          AGE_VERSION: 1.3.2
+          AGE_SHA256: cbe24006683f8eb669266162894b9a522a1af52f2665fbc63a4bb032ed26ac10
+        run: |
+          mkdir -p "$RUNNER_TEMP/bin"
+          curl -sSfL -o "$RUNNER_TEMP/rclone.zip" "https://github.com/rclone/rclone/releases/download/v${RCLONE_VERSION}/rclone-v${RCLONE_VERSION}-linux-amd64.zip"
+          echo "${RCLONE_SHA256}  $RUNNER_TEMP/rclone.zip" | sha256sum --check --status
+          unzip -q -j "$RUNNER_TEMP/rclone.zip" "rclone-v${RCLONE_VERSION}-linux-amd64/rclone" -d "$RUNNER_TEMP/bin"
+          curl -sSfL -o "$RUNNER_TEMP/age.tar.gz" "https://github.com/FiloSottile/age/releases/download/v${AGE_VERSION}/age-v${AGE_VERSION}-linux-amd64.tar.gz"
+          echo "${AGE_SHA256}  $RUNNER_TEMP/age.tar.gz" | sha256sum --check --status
+          tar -xzf "$RUNNER_TEMP/age.tar.gz" -C "$RUNNER_TEMP/bin" --strip-components=1 age/age age/age-keygen
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
       - name: Start the development services
         run: docker compose -f docker-compose.dev.yml up -d --wait
       - name: Start object storage off the host
@@ -399,37 +389,62 @@ jobs:
         if: always()
         run: docker compose -f docker-compose.dev.yml down -v
 
-  web-e2e:
+  web-e2e-suite:
+    name: web-e2e ${{ matrix.suite }}
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      options: --user 1001
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suite: app-1
+            projects: --project=app --shard=1/4
+          - suite: app-2
+            projects: --project=app --shard=2/4
+          - suite: app-3
+            projects: --project=app --shard=3/4
+          - suite: app-4
+            projects: --project=app --shard=4/4
+          - suite: states
+            projects: --project=actions-double-click
+          - suite: webkit
+            projects: --project=webkit
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      - uses: ./.github/actions/setup
         with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-chromium-webkit-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: |
-            playwright-${{ runner.os }}-chromium-webkit-
-      - run: pnpm --filter web exec playwright install --with-deps chromium webkit
+          store-cache: "false"
       - run: pnpm run build:packages
-      - run: pnpm --filter web test:e2e
+      - run: pnpm --filter web test:e2e ${{ matrix.projects }}
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.suite }}
           path: apps/web/playwright-report
           retention-days: 7
 
-  compose-smoke:
-    needs: checks
+  web-e2e:
+    needs: web-e2e-suite
+    if: always()
     runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require every web job to pass
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          for result in $RESULTS; do
+            test "$result" = success
+          done
+
+  compose-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -470,12 +485,7 @@ jobs:
             uid="$(docker compose -p asobeast exec -T "$service" awk '/^Uid:/{print $2}' /proc/1/status)"
             test "$uid" -ne 0
           done
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup
       - run: pnpm build:packages
       - name: Mint a read-only token through the proxy
         run: |
