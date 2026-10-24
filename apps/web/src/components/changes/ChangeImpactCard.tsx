@@ -3,7 +3,11 @@
 import { Suspense, useId } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
-import type { ChangeImpactItem, KeywordCountrySummary } from "@asobeast/shared";
+import type {
+  ChangeImpactItem,
+  ChangeImpactWindow,
+  KeywordCountrySummary,
+} from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -25,9 +29,9 @@ import {
 import { formatCountry, formatDate } from "@/lib/format";
 import { changeImpactOptions, keywordCountriesOptions } from "@/lib/queries";
 import { changeDaysParser, countryParser } from "@/lib/search-params";
-import { ChangeImpactWindowTile } from "./ChangeImpactWindowTile";
+import { ChangeImpactWindowTile, FunnelFacts } from "./ChangeImpactWindowTile";
 import { CHANGE_FIELD_LABELS } from "@/lib/change-fields";
-import { impactScopeLine } from "./change-impact-copy";
+import { impactScopeLine, windowTitle } from "./change-impact-copy";
 import { ChangeImpactSkeleton } from "./skeletons";
 import { VisibilityHelp } from "@/components/visibility/VisibilityHelp";
 
@@ -49,10 +53,13 @@ function ChangeImpactRow({ item }: { item: ChangeImpactItem }) {
         ))}
       </div>
       {item.baselineDate === null ? (
-        <p className="text-body text-muted-foreground">
-          No rank check just before this change, so its effect cannot be
-          measured.
-        </p>
+        <>
+          <p className="text-body text-muted-foreground">
+            No rank check just before this change, so its effect on rankings
+            cannot be measured.
+          </p>
+          <FunnelOnlyTiles windows={item.windows} />
+        </>
       ) : (
         <>
           <p className="text-caption text-muted-foreground">
@@ -66,6 +73,24 @@ function ChangeImpactRow({ item }: { item: ChangeImpactItem }) {
         </>
       )}
     </li>
+  );
+}
+
+function FunnelOnlyTiles({ windows }: { windows: ChangeImpactWindow[] }) {
+  const funnels = windows.filter((impact) => impact.funnel);
+  if (funnels.length === 0) return null;
+  return (
+    <ul className="grid gap-3 sm:grid-cols-3">
+      {funnels.map((impact) => (
+        <li
+          key={impact.days}
+          className="flex flex-col gap-2 rounded-lg border p-3"
+        >
+          <h4 className="text-body font-medium">{windowTitle(impact.days)}</h4>
+          <FunnelFacts impact={impact} />
+        </li>
+      ))}
+    </ul>
   );
 }
 

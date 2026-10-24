@@ -1,3 +1,4 @@
+import './helpers/enable-store-connect';
 import { execSync } from 'child_process';
 import { join } from 'path';
 import { INestApplication } from '@nestjs/common';
@@ -861,5 +862,182 @@ describe('ActionsController (e2e)', () => {
     expect(status.body).toEqual({ configured: false, model: null });
 
     await api.post(`/actions/${id}/explain`).expect(409);
+  });
+
+  const seedConversionFunnel = async (recentGets: number) => {
+    const connection = await prisma.storeConnection.upsert({
+      where: {
+        workspaceId_store: {
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          store: Store.APP_STORE,
+        },
+      },
+      update: { status: 'active' },
+      create: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        issuerId: 'issuer',
+        keyId: 'KEY1234567',
+        keyFingerprint: '0123456789abcdef',
+        credentialCiphertext: 'v1.sealed',
+      },
+    });
+    await prisma.storeReportRequest.upsert({
+      where: { appId_accessType: { appId, accessType: 'ONGOING' } },
+      update: { connectionId: connection.id, state: 'requested' },
+      create: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        connectionId: connection.id,
+        appId,
+        accessType: 'ONGOING',
+        remoteId: 'remote',
+      },
+    });
+    await prisma.storeFunnelDay.deleteMany({ where: { appId } });
+    const today = new Date(new Date().toISOString().slice(0, 10));
+    await prisma.storeFunnelDay.createMany({
+      data: Array.from({ length: 21 }, (_, index) => {
+        const daysAgo = 3 + index;
+        const gets = index < 7 ? recentGets : 10;
+        return {
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          appId,
+          date: new Date(today.getTime() - daysAgo * DAY_MS),
+          territory: 'United States',
+          country: 'us',
+          sourceType: 'search',
+          pageType: 'productPage',
+          impressions: 500,
+          uniqueImpressions: 500,
+          pageViews: 100,
+          uniquePageViews: 100,
+          gets,
+          uniqueGets: gets,
+          processingDate: today,
+        };
+      }),
+    });
+  };
+
+  const runActions = async () => {
+    const queue = app.get<Queue>(getQueueToken(QUEUES.PIPELINE), {
+      strict: false,
+    });
+    const run = (await api.post('/actions/run').expect(202))
+      .body as ActionRunResult;
+    await waitForCompletion(queue, run.jobId);
+  };
+
+  it('opens a conversion action when Get taps fall while page views hold, and resolves it once they recover', async () => {
+    await seedConversionFunnel(5);
+
+    await runActions();
+
+    const opened = (
+      await api
+        .get('/actions')
+        .query({ rule: 'conversion.investigate_drop' })
+        .expect(200)
+    ).body as ActionListResult;
+    expect(opened.items).toHaveLength(1);
+    expect(opened.items[0]).toMatchObject({
+      status: 'OPEN',
+      category: 'conversion',
+      scope: { appId, country: 'us', keywordId: null },
+      evidence: {
+        rule: 'conversion.investigate_drop',
+        getsBefore: 10,
+        getsAfter: 5,
+        pageViewsBefore: 100,
+        pageViewsAfter: 100,
+      },
+    });
+    expect(opened.items[0].impact).toBeLessThanOrEqual(50);
+
+    await seedConversionFunnel(10);
+    await runActions();
+
+    const row = await prisma.actionItem.findFirstOrThrow({
+      where: { rule: 'conversion.investigate_drop' },
+    });
+    expect(row.status).toBe('RESOLVED');
+  });
+
+  it('opens no conversion action without a store connection', async () => {
+    await seedConversionFunnel(5);
+    await prisma.storeConnection.deleteMany({});
+
+    await runActions();
+
+    await expect(
+      prisma.actionItem.count({
+        where: { rule: 'conversion.investigate_drop' },
+      }),
+    ).resolves.toBe(0);
+  });
+
+  const seedPages = async (pageTitle: string) => {
+    await seedConversionFunnel(10);
+    await prisma.storeFunnelPageDay.deleteMany({ where: { appId } });
+    const today = new Date(new Date().toISOString().slice(0, 10));
+    await prisma.storeFunnelPageDay.createMany({
+      data: Array.from({ length: 14 }, (_, index) =>
+        [
+          ['default product page', 1000, 40],
+          [pageTitle, 500, 5],
+        ].map(([title, uniqueImpressions, gets]) => ({
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          appId,
+          date: new Date(today.getTime() - (3 + index) * DAY_MS),
+          territory: 'United States',
+          country: 'us',
+          pageTitle: title as string,
+          uniqueImpressions: uniqueImpressions as number,
+          gets: gets as number,
+          processingDate: today,
+        })),
+      ).flat(),
+    });
+  };
+
+  it('flags a custom product page converting below the default, and follows a renamed page', async () => {
+    await seedPages('Summer sale');
+
+    await runActions();
+
+    const first = (
+      await api
+        .get('/actions')
+        .query({ rule: 'listing.cpp_underperforms' })
+        .expect(200)
+    ).body as ActionListResult;
+    expect(first.items).toHaveLength(1);
+    expect(first.items[0].evidence).toEqual({
+      rule: 'listing.cpp_underperforms',
+      country: 'us',
+      pageTitle: 'Summer sale',
+      windowDays: 14,
+      pageUniqueImpressions: 7000,
+      pageConversion: 0.01,
+      defaultConversion: 0.04,
+      ratio: 0.25,
+    });
+
+    await seedPages('Summer deal');
+    await runActions();
+
+    const rows = await prisma.actionItem.findMany({
+      where: { rule: 'listing.cpp_underperforms' },
+      orderBy: { firstSeenAt: 'asc' },
+    });
+    expect(
+      rows.map((row) => [
+        (row.evidence as { pageTitle: string }).pageTitle,
+        row.status,
+      ]),
+    ).toEqual([
+      ['Summer sale', 'RESOLVED'],
+      ['Summer deal', 'OPEN'],
+    ]);
   });
 });

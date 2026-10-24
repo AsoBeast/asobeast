@@ -1,7 +1,8 @@
 import { NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { addDays, utcToday } from '../analytics/analytics.support';
+import { addDays, toDateKey, utcToday } from '../analytics/analytics.support';
 import { PrismaService } from '../prisma/prisma.service';
+import { StoreFunnelService } from '../store-connect/store-funnel.service';
 import { changeDays, impactReadPlan } from './change-impact';
 import { ChangeImpactService } from './change-impact.service';
 
@@ -9,6 +10,11 @@ describe('ChangeImpactService', () => {
   const appFindFirst = jest.fn();
   const eventFindMany = jest.fn();
   const trackedFindMany = jest.fn();
+  const funnel = {
+    connected: jest.fn(),
+    rows: jest.fn(),
+    range: jest.fn(),
+  };
   let service: ChangeImpactService;
 
   const today = utcToday();
@@ -19,6 +25,11 @@ describe('ChangeImpactService', () => {
     appFindFirst.mockReset().mockResolvedValue({ id: 'app_1', country: 'us' });
     eventFindMany.mockReset().mockResolvedValue([]);
     trackedFindMany.mockReset().mockResolvedValue([]);
+    funnel.connected.mockReset().mockResolvedValue(false);
+    funnel.rows.mockReset().mockResolvedValue([]);
+    funnel.range
+      .mockReset()
+      .mockResolvedValue({ firstDate: null, lastDate: null });
     const moduleRef = await Test.createTestingModule({
       providers: [
         ChangeImpactService,
@@ -30,6 +41,7 @@ describe('ChangeImpactService', () => {
             trackedKeyword: { findMany: trackedFindMany },
           },
         },
+        { provide: StoreFunnelService, useValue: funnel },
       ],
     }).compile();
     service = moduleRef.get(ChangeImpactService);
@@ -127,5 +139,53 @@ describe('ChangeImpactService', () => {
 
     expect(report.totalChanges).toBe(1);
     expect(report.items.map((item) => item.fields)).toEqual([['title']]);
+  });
+
+  it('leaves the funnel out of every window for a store without a connection', async () => {
+    eventFindMany.mockResolvedValue([titleEvent]);
+
+    const report = await service.report('app_1', 60);
+
+    expect(
+      report.items[0].windows.every((window) => !('funnel' in window)),
+    ).toBe(true);
+    expect(funnel.rows).not.toHaveBeenCalled();
+  });
+
+  it('reads the market rows once from four weeks before the oldest change and merges a funnel into every window', async () => {
+    eventFindMany.mockResolvedValue([titleEvent]);
+    funnel.connected.mockResolvedValue(true);
+    funnel.range.mockResolvedValue({
+      firstDate: '2024-01-01',
+      lastDate: toDateKey(today),
+    });
+
+    const report = await service.report('app_1', 60, 'gb');
+
+    expect(funnel.rows).toHaveBeenCalledTimes(1);
+    expect(funnel.rows).toHaveBeenCalledWith(
+      'app_1',
+      addDays(changedOn, -28),
+      'gb',
+    );
+    expect(
+      report.items[0].windows.map((window) => window.funnel?.status),
+    ).toEqual(['measured', 'pending', 'pending']);
+  });
+
+  it('never counts a day the console has not delivered as final', async () => {
+    eventFindMany.mockResolvedValue([titleEvent]);
+    funnel.connected.mockResolvedValue(true);
+    funnel.range.mockResolvedValue({
+      firstDate: '2024-01-01',
+      lastDate: toDateKey(addDays(changedOn, 2)),
+    });
+
+    const report = await service.report('app_1', 60, 'gb');
+
+    expect(report.items[0].windows[0].funnel).toMatchObject({
+      status: 'pending',
+      completeDays: 3,
+    });
   });
 });

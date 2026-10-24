@@ -1,8 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
+import type { StoreReportRequest } from '@prisma/client';
 import { UnrecoverableError } from 'bullmq';
 import type { Store } from '@asobeast/shared';
 import { toDateKey } from '../analytics/analytics.support';
 import { PrismaService } from '../prisma/prisma.service';
+import type { DiscoveryVariant } from './asc-analytics-api';
 import {
   AscError,
   AscRateLimitedError,
@@ -28,7 +30,8 @@ export const PARTIAL_SYNC =
 export const ADMIN_KEY_NEEDED =
   'This key can download reports but not request them. Connect an Admin key once; a Sales and Reports key can take over afterwards.';
 
-const isLaneFailure = (error: unknown): boolean =>
+const isLaneFailure = (error: unknown, variant: DiscoveryVariant): boolean =>
+  (variant === 'detailed' && !(error instanceof AscRateLimitedError)) ||
   error instanceof AscSegmentSizeError ||
   error instanceof AscUnreachableError ||
   error instanceof DiscoveryHeaderError ||
@@ -39,6 +42,25 @@ const isLaneFailure = (error: unknown): boolean =>
 
 const lastErrorOf = (forbidden: boolean, failed: number): string | null =>
   forbidden ? ADMIN_KEY_NEEDED : failed > 0 ? PARTIAL_SYNC : null;
+
+const VARIANT_COLUMNS = {
+  standard: { report: 'reportId', processed: 'lastProcessingDate' },
+  detailed: {
+    report: 'detailedReportId',
+    processed: 'detailedLastProcessingDate',
+  },
+} as const satisfies Record<DiscoveryVariant, object>;
+
+type RequestRow = Pick<
+  StoreReportRequest,
+  | 'id'
+  | 'appId'
+  | 'remoteId'
+  | 'reportId'
+  | 'lastProcessingDate'
+  | 'detailedReportId'
+  | 'detailedLastProcessingDate'
+>;
 
 export interface SyncSummary {
   apps: number;
@@ -108,18 +130,19 @@ export class StoreReportSyncService {
     const blocked = new Set<string>();
     const unresolved = new Set<string>();
     for (const item of pending.slice(0, this.maxInstancesPerRun)) {
-      if (blocked.has(item.requestId)) continue;
+      const lane = `${item.requestId}|${item.variant}`;
+      if (blocked.has(lane)) continue;
       try {
         const applied = await this.applier.apply(connection.api, item);
         summary.instances += 1;
         summary.rows += applied.rows;
         applied.unresolved.forEach((territory) => unresolved.add(territory));
       } catch (error) {
-        if (!isLaneFailure(error)) throw error;
-        blocked.add(item.requestId);
+        if (!isLaneFailure(error, item.variant)) throw error;
+        blocked.add(lane);
         if (!(error instanceof AscSegmentSizeError)) summary.failed += 1;
         this.logger.warn(
-          `report instance ${item.instance.id} waits for the next sync: ${(error as Error).message}`,
+          `report instance ${item.instance.id} waits for the next sync: ${error instanceof Error ? error.message : String(error)}`,
         );
       }
     }
@@ -136,20 +159,9 @@ export class StoreReportSyncService {
     const pending: PendingInstance[] = [];
     for (const request of requests) {
       if (!request.remoteId) continue;
-      const reportId =
-        request.reportId ??
-        (await this.findReport(connection, request.id, request.remoteId));
-      if (!reportId) continue;
-      const after = request.lastProcessingDate
-        ? toDateKey(request.lastProcessingDate)
-        : null;
-      const instances = await connection.api.dailyInstances(reportId, after);
       pending.push(
-        ...instances.map((instance) => ({
-          requestId: request.id,
-          appId: request.appId,
-          instance,
-        })),
+        ...(await this.instancesOf(connection, request, 'standard')),
+        ...(await this.detailedInstancesOf(connection, request)),
       );
     }
     return pending.sort((a, b) =>
@@ -157,18 +169,58 @@ export class StoreReportSyncService {
     );
   }
 
+  private async detailedInstancesOf(
+    connection: OpenedConnection,
+    request: RequestRow,
+  ): Promise<PendingInstance[]> {
+    try {
+      return await this.instancesOf(connection, request, 'detailed');
+    } catch (error) {
+      if (error instanceof AscRateLimitedError) throw error;
+      this.logger.warn(
+        `the detailed report of request ${request.id} is skipped this run: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      return [];
+    }
+  }
+
+  private async instancesOf(
+    connection: OpenedConnection,
+    request: RequestRow,
+    variant: DiscoveryVariant,
+  ): Promise<PendingInstance[]> {
+    const { report, processed } = VARIANT_COLUMNS[variant];
+    const reportId =
+      request[report] ?? (await this.findReport(connection, request, variant));
+    if (!reportId) return [];
+    const last = request[processed];
+    const instances = await connection.api.dailyInstances(
+      reportId,
+      last ? toDateKey(last) : null,
+    );
+    return instances.map((instance) => ({
+      requestId: request.id,
+      appId: request.appId,
+      variant,
+      instance,
+    }));
+  }
+
   private async findReport(
     connection: OpenedConnection,
-    requestId: string,
-    remoteId: string,
+    request: RequestRow,
+    variant: DiscoveryVariant,
   ): Promise<string | null> {
-    const report = await connection.api.discoveryReport(remoteId, 'standard');
-    if (!report) return null;
+    const found = await connection.api.discoveryReport(
+      request.remoteId ?? '',
+      variant,
+    );
+    if (!found) return null;
     await this.prisma.storeReportRequest.update({
-      where: { id: requestId },
-      data: { reportId: report.id },
+      where: { id: request.id },
+      data: { [VARIANT_COLUMNS[variant].report]: found.id },
     });
-    return report.id;
+    return found.id;
   }
 
   private report(store: Store, summary: SyncSummary): void {

@@ -1,3 +1,4 @@
+import './helpers/enable-store-connect';
 import { execSync } from 'child_process';
 import { join } from 'path';
 import { INestApplication } from '@nestjs/common';
@@ -384,5 +385,101 @@ describe('ChangeImpactController (e2e)', () => {
       'unmeasured',
       'unmeasured',
     ]);
+  });
+
+  it('leaves the funnel out of every window without a store connection', async () => {
+    const id = await seed();
+
+    const report = (await api.get(`/apps/${id}/changes/impact`).expect(200))
+      .body as ChangeImpactReport;
+
+    expect(
+      report.items
+        .flatMap((item) => item.windows)
+        .every((window) => !('funnel' in window)),
+    ).toBe(true);
+  });
+
+  it('measures store conversion before and after the change for a connected app', async () => {
+    const id = await seed();
+    await prisma.storeConnection.deleteMany({});
+    const connection = await prisma.storeConnection.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        issuerId: 'issuer',
+        keyId: 'KEY1234567',
+        keyFingerprint: '0123456789abcdef',
+        credentialCiphertext: 'v1.sealed',
+      },
+    });
+    await prisma.storeReportRequest.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        connectionId: connection.id,
+        appId: id,
+        accessType: 'ONGOING',
+        remoteId: 'remote',
+      },
+    });
+    await prisma.storeFunnelDay.createMany({
+      data: Array.from({ length: 55 }, (_, index) => {
+        const offset = index - 35;
+        const gets = offset < 0 ? 4 : 6;
+        return {
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          appId: id,
+          date: on(offset),
+          territory: 'United States',
+          country: 'us',
+          sourceType: 'search',
+          pageType: 'productPage',
+          impressions: 100,
+          uniqueImpressions: 100,
+          pageViews: 20,
+          uniquePageViews: 20,
+          gets,
+          uniqueGets: gets,
+          processingDate: on(offset),
+        };
+      }),
+    });
+
+    const report = (await api.get(`/apps/${id}/changes/impact`).expect(200))
+      .body as ChangeImpactReport;
+
+    const [week, fortnight, month] = report.items[0].windows;
+    expect(week.funnel).toEqual({
+      status: 'measured',
+      completeDays: 7,
+      before: {
+        impressions: 700,
+        uniqueImpressions: 700,
+        pageViews: 140,
+        gets: 28,
+        conversion: 0.04,
+      },
+      after: {
+        impressions: 700,
+        uniqueImpressions: 700,
+        pageViews: 140,
+        gets: 42,
+        conversion: 0.06,
+      },
+      change: { impressions: 0, pageViews: 0, gets: 0.5, conversion: 0.5 },
+      finalOn: toDateKey(on(9)),
+    });
+    expect(fortnight.funnel).toMatchObject({
+      status: 'measured',
+      completeDays: 14,
+      before: { gets: 56 },
+      after: { gets: 84 },
+    });
+    expect(month.funnel).toMatchObject({
+      status: 'pending',
+      completeDays: 18,
+      change: null,
+    });
+    expect(week).toMatchObject({ status: 'measured', visibilityChange: 8.5 });
   });
 });

@@ -40,7 +40,7 @@ AsoBeast is built for people who ship apps and want their ASO data to stay their
 - **Your keyword list stays yours.** It lives in your database and is never sent to an ASO vendor, so no competitor intelligence product assembles it from your searches. The stores only ever see one search at a time.
 - **Both stores as one tracking entity.** One app row tracks keywords across many storefronts, so `us` and `de` are markets on the same listing rather than two subscriptions.
 - **Every score shows its evidence.** Popularity and difficulty carry their source, calculation version, capture date and confidence, so you can argue with a number instead of trusting it.
-- **Deterministic recommendations.** Fifteen rules turn stored history into an explainable work queue. AI is optional garnish that can summarize an action, never invent or reorder one.
+- **Deterministic recommendations.** Seventeen rules turn stored history into an explainable work queue. AI is optional garnish that can summarize an action, never invent or reorder one.
 - **AGPL-3.0, no open core.** Every feature the hosted service runs is in this repository.
 
 ## Features
@@ -55,9 +55,9 @@ AsoBeast is built for people who ship apps and want their ASO data to stay their
 | SERP and category intelligence   | Retained SERP snapshots, volatility, entrants and movers, and top charts by country and category with movement, trending apps and chart follows                                                                                   |
 | Competitor discovery             | Find competitors from live search results, compare listings and find keyword gaps                                                                                                                                                 |
 | Reviews and change detection     | Sync reviews and rating history, draft and track replies to them, mine review language for keyword ideas, and detect owned and competitor metadata changes                                                                        |
-| Store funnel                     | Optionally connect an App Store Connect key and see impressions, product page views, Get taps and conversion by market beside your rankings, with history back to 2024                                                            |
+| Store funnel                     | Optionally connect an App Store Connect key and see impressions, product page views, Get taps and conversion by market beside your rankings and every listing change, with history back to 2024                                   |
 | ASO audit and metadata workbench | A deterministic audit rubric with history, store metadata lints and strategic keyword buckets                                                                                                                                     |
-| ASO Action Center                | Fifteen deterministic rules produce recommendations with a priority, an estimated impact, the evidence behind them, a deep link, a full lifecycle and a verified outcome                                                          |
+| ASO Action Center                | Seventeen deterministic rules produce recommendations with a priority, an estimated impact, the evidence behind them, a deep link, a full lifecycle and a verified outcome                                                        |
 | Portfolio analysis               | Group linked listings across stores and countries, compare group visibility and generate weekly digests                                                                                                                           |
 | Alerts                           | Signed webhooks or SMTP email for rank, SERP, metadata, review and new action events, with resumable batched delivery                                                                                                             |
 | MCP server                       | 37 read tools, plus 7 opt-in tools that change keywords, competitors, actions and annotations, over stdio or a remote endpoint, so Claude Code, Claude Desktop, Cursor, VS Code and other MCP clients can work with your instance |

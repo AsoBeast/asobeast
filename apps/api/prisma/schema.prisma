@@ -62,6 +62,7 @@ model Workspace {
   storeReportRequests StoreReportRequest[]
   storeReportInstances StoreReportInstance[]
   storeFunnelDays StoreFunnelDay[]
+  storeFunnelPageDays StoreFunnelPageDay[]
   rankings    KeywordRanking[]
   plan                String    @default("free")
   trialStartedAt      DateTime?
@@ -228,6 +229,7 @@ model App {
   actionEvents ActionEvent[]
   storeReportRequests StoreReportRequest[]
   storeFunnelDays StoreFunnelDay[]
+  storeFunnelPageDays StoreFunnelPageDay[]
   createdAt    DateTime         @default(now())
 
   @@unique([id, workspaceId])
@@ -850,6 +852,8 @@ model StoreReportRequest {
   remoteId           String?
   reportId           String?
   lastProcessingDate DateTime?             @db.Date
+  detailedReportId   String?
+  detailedLastProcessingDate DateTime?     @db.Date
   createdAt          DateTime              @default(now())
   updatedAt          DateTime              @updatedAt
   instances          StoreReportInstance[]
@@ -897,6 +901,28 @@ model StoreFunnelDay {
   processingDate    DateTime  @db.Date
 
   @@unique([appId, date, territory, sourceType, pageType])
+  @@index([appId, country, date])
+}
+
+model StoreFunnelPageDay {
+  id                String    @id @default(cuid())
+  workspaceId       String
+  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  appId             String
+  app               App       @relation(fields: [appId], references: [id], onDelete: Cascade)
+  date              DateTime  @db.Date
+  territory         String
+  country           String?
+  pageTitle         String
+  impressions       Int       @default(0)
+  uniqueImpressions Int       @default(0)
+  pageViews         Int       @default(0)
+  uniquePageViews   Int       @default(0)
+  gets              Int       @default(0)
+  uniqueGets        Int       @default(0)
+  processingDate    DateTime  @db.Date
+
+  @@unique([appId, date, territory, pageTitle])
   @@index([appId, country, date])
 }
 

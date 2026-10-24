@@ -1,4 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
+import {
+  ActionFunnelReader,
+  emptyFunnel,
+  type ActionFunnel,
+} from './action-funnel';
 import { ConfigService } from '@nestjs/config';
 import {
   AuditCheckStatus,
@@ -104,6 +109,7 @@ export interface ActionContextApp {
   previousVersion: string | null;
   latestStoreUpdatedAt: Date | null;
   competitorUpdatedAt: Date[];
+  funnel: ActionFunnel;
 }
 
 export interface ActionContext {
@@ -251,6 +257,7 @@ export class ActionContextLoader {
     private readonly keywords: KeywordsService,
     private readonly metadata: MetadataService,
     private readonly workspace: WorkspaceContext,
+    private readonly funnels: ActionFunnelReader,
   ) {}
 
   async load(budget: DailyBudget, now: Date): Promise<ActionContext> {
@@ -385,6 +392,11 @@ export class ActionContextLoader {
     ]);
 
     const serpByKeyword = groupBy(serpEntries, (row) => row.keywordId);
+    const funnels = await this.funnels.forApps(
+      live.map(({ app }) => app),
+      now,
+      CONTEXT_WINDOW_DAYS,
+    );
 
     return {
       ...base,
@@ -404,6 +416,7 @@ export class ActionContextLoader {
           },
           serpByKeyword,
           volatility,
+          funnels.get(app.id) ?? emptyFunnel(now),
         ),
       ),
     };
@@ -471,6 +484,7 @@ export class ActionContextLoader {
       }>
     >,
     volatility: Map<string, number | null>,
+    funnel: ActionFunnel,
   ): ActionContextApp {
     const keywordsByCountry = groupBy(
       trackedKeywords,
@@ -562,6 +576,7 @@ export class ActionContextLoader {
       latestStoreUpdatedAt:
         rows.versions.find((row) => row.storeUpdatedAt !== null)
           ?.storeUpdatedAt ?? null,
+      funnel,
     };
   }
 }

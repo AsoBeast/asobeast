@@ -16,6 +16,10 @@ const RULE_CONFIRMATION: Partial<Record<ActionRule, string>> = {
     "AsoBeast confirms the fix when the keyword reaches the top 10 or stops qualifying",
   "listing.ship_update":
     "AsoBeast confirms the fix when the store shows the new update",
+  "conversion.investigate_drop":
+    "AsoBeast confirms the fix when Get taps recover against page views",
+  "listing.cpp_underperforms":
+    "AsoBeast confirms the fix when the page converts within four fifths of the default",
 };
 
 const confirmationStep = (rule: ActionRule): string =>
@@ -149,6 +153,18 @@ function ruleSteps(
       return [
         "Plan a release, even a small one",
         "Write release notes that say what changed",
+      ];
+    case "conversion.investigate_drop":
+      return [
+        "Compare the store funnel on the overview with the listing changes of the same days",
+        "Check screenshots, the icon, ratings and the price people see on the product page",
+        "Change one thing at a time and watch conversion for a week",
+      ];
+    case "listing.cpp_underperforms":
+      return [
+        `Open "${evidence.pageTitle}" in App Store Connect`,
+        "Match its first screenshots to the promise of the keywords or ads that send traffic to it",
+        "Or point that traffic at the default product page instead",
       ];
     case "metadata.fix_lint":
       return [

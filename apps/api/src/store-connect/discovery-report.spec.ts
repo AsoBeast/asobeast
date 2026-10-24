@@ -6,6 +6,7 @@ import {
   DiscoveryLineError,
   MAX_LINE_CHARS,
   pageTypeOf,
+  pivotDetailedReport,
   pivotDiscoveryReport,
   sourceTypeOf,
 } from './discovery-report';
@@ -164,5 +165,55 @@ describe('funnel dimensions', () => {
     ['Media view', 'other'],
   ])('maps the page type %s', (raw, mapped) => {
     expect(pageTypeOf(raw)).toBe(mapped);
+  });
+});
+
+describe('pivotDetailedReport', () => {
+  const DETAILED = readFileSync(
+    join(__dirname, 'fixtures', 'asc', 'discovery-detailed.tsv'),
+    'utf8',
+  );
+
+  it('pivots the detailed report by page title and drops rows of no page', async () => {
+    const rows = await pivotDetailedReport(
+      gzipSync(Buffer.from(DETAILED)),
+      '2026-09-12',
+    );
+
+    expect(rows).toEqual([
+      {
+        date: '2026-09-10',
+        territory: 'United States',
+        pageTitle: 'default product page',
+        impressions: 1200,
+        uniqueImpressions: 950,
+        pageViews: 300,
+        uniquePageViews: 250,
+        gets: 40,
+        uniqueGets: 38,
+        processingDate: '2026-09-12',
+      },
+      {
+        date: '2026-09-10',
+        territory: 'United States',
+        pageTitle: 'Summer sale',
+        impressions: 400,
+        uniqueImpressions: 350,
+        pageViews: 0,
+        uniquePageViews: 0,
+        gets: 7,
+        uniqueGets: 7,
+        processingDate: '2026-09-12',
+      },
+    ]);
+  });
+
+  it('requires the page title column', async () => {
+    await expect(
+      pivotDetailedReport(
+        gzipSync(Buffer.from(DETAILED.replace('Page Title', 'Title'))),
+        '2026-09-12',
+      ),
+    ).rejects.toThrow('Page Title');
   });
 });

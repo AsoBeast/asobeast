@@ -241,6 +241,7 @@ export const INSIGHT_TOOLS: ReadTool[] = [
       "movement counts keywords that improved, declined, stayed unchanged, entered (not found before, ranked after) or exited, out of measured; medianPositionChange is negative when the typical keyword moved up; visibilityBefore and visibilityAfter share the baseline popularity weights, so only positions move them.",
       "overlappingChanges lists later changes inside a window, whose effect is mixed in.",
       "totalChanges counts every change in the window; only the newest are measured.",
+      "Each window also carries a store funnel block when a store console is connected: impressions, product page views, Get taps and conversion over the same number of complete days before and after the change, with the relative change; status measured, pending while the days after are not all final yet, or unmeasured when the console reports nothing for the days before; the block is absent without a connection.",
       "This describes what moved after a change, not proof that the change caused it: store algorithm updates, seasonality and competitors move rankings too.",
     ].join(" "),
     inputSchema: z.object({

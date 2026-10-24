@@ -24,6 +24,7 @@ export const TENANT_TABLES = [
   'SnapshotScreenshot',
   'StoreConnection',
   'StoreFunnelDay',
+  'StoreFunnelPageDay',
   'StoreReportInstance',
   'StoreReportRequest',
   'SuggestProbe',

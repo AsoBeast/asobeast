@@ -115,6 +115,8 @@ const TREND_METRIC: Record<ActionItem["rule"], ActionTrendMetric> = {
   "reviews.investigate_rating_decline": "rating",
   "reviews.reply_negative": "rating",
   "listing.ship_update": "updateAge",
+  "conversion.investigate_drop": "conversion",
+  "listing.cpp_underperforms": "conversion",
 };
 
 const PATHS: Record<string, (offset: number) => number | null> = {
@@ -133,6 +135,7 @@ const FALLBACK: Record<ActionTrendMetric, (offset: number) => number | null> = {
   audit: (offset) => (offset % 2 === 0 ? 55 : 56),
   rating: () => 4.2,
   updateAge: (offset) => 60 + (TREND_DAYS - offset),
+  conversion: (offset) => 3 + (offset % 3) / 10,
 };
 
 export function trendFor(item: ActionItem): ActionTrend | null {

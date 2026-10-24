@@ -56,6 +56,10 @@ const RULE_DESCRIPTION: Record<ActionRule, string> = {
     'Several recent low Google Play reviews were checked for a developer reply and none was found.',
   'listing.ship_update':
     'The store listing has not shown a new update for at least ninety days; competitors that updated recently add to the pressure.',
+  'conversion.investigate_drop':
+    'Over the last seven complete days in the home market, Get taps fell at least a fifth against the fourteen days before while product page views held within a tenth, read from the connected App Store Connect report.',
+  'listing.cpp_underperforms':
+    'Over the last fourteen complete days in the home market, a custom product page converted under four fifths of the default product page, read from the connected App Store Connect report.',
 };
 
 const SCHEMA = {

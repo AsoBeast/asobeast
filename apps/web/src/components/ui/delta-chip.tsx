@@ -27,11 +27,13 @@ export function DeltaChip({
   value,
   polarity = "lower-is-better",
   period,
+  unit = "",
   className,
 }: {
   value: number | null;
   polarity?: DeltaPolarity;
   period: string;
+  unit?: string;
   className?: string;
 }) {
   if (value === null) {
@@ -56,6 +58,7 @@ export function DeltaChip({
     >
       <Icon className="size-3.5" aria-hidden />
       {magnitude}
+      {unit}
     </span>
   );
 }

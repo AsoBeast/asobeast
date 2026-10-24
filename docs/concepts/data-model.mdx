@@ -40,6 +40,7 @@ An app is one row with a home storefront. Keywords are separate rows scoped by t
 | `StoreReportRequest` | One report request of one app at the store console, ongoing or the one time history | Tenant owned. Unique on app and access type. Deleted with its connection |
 | `StoreReportInstance` | One downloaded daily report file, kept so a parser change can read it again | Tenant owned. Pruned after `RETENTION_STORE_REPORTS_DAYS`. Exported without the file |
 | `StoreFunnelDay` | The impressions, page views and Get taps of one app on one day, by territory, source and page type | Tenant owned. Unique on app, date, territory, source and page type. The newest report wins, and the rows outlive a disconnect |
+| `StoreFunnelPageDay` | The same counters per custom product page, from the detailed report | Tenant owned. Unique on app, date, territory and page title |
 | `SnapshotScreenshot` | One screenshot of one snapshot: its position, address and the caption read from it | Tenant owned, deleted with its snapshot |
 | `ScreenshotText` | The text read from one public image under one reading recipe | Shared across workspaces like `Keyword`, no policy, pruned when unused for 90 days |
 | `Webhook`, `EmailAlert` | Alert subscriptions | Deliveries are logged per channel |

@@ -90,6 +90,7 @@ export const EXPORT_TABLE_KEYS: readonly ExportTableKey[] = [
   { name: 'storeReportRequest', key: ID },
   { name: 'storeReportInstance', key: ID, omit: { raw: true } },
   { name: 'storeFunnelDay', key: ID },
+  { name: 'storeFunnelPageDay', key: ID },
   { name: 'webhook', key: ID },
   { name: 'emailAlert', key: ID },
   { name: 'alertDelivery', key: ID },
