@@ -161,7 +161,13 @@ export class ActionSeriesReader {
   private async conversion(
     item: ActionItem,
     { from, to }: TrendWindow,
-  ): Promise<SeriesBody> {
+  ): Promise<SeriesBody | null> {
+    if (
+      item.rule === 'listing.cpp_underperforms' &&
+      item.evidence?.rule !== 'listing.cpp_underperforms'
+    ) {
+      return null;
+    }
     const where = {
       appId: item.scope.appId,
       country: item.scope.country,
