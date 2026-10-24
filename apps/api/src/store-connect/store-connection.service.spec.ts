@@ -72,7 +72,7 @@ const GOOGLE_ACCOUNT = {
 const CLIENT: GoogleOAuthClient = {
   id: 'client.apps.googleusercontent.com',
   secret: 'test-oauth-client-secret',
-  redirectUri: 'https://aso.example.com/settings/google-play',
+  redirectUri: 'https://aso.example.com/integrations/google-play',
 };
 
 const CREATED_AT = new Date('2026-10-01T10:00:00.000Z');

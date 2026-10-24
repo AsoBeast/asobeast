@@ -22,7 +22,7 @@
           "isSecret": true,
           "variables": {
             "token": {
-              "description": "AsoBeast API token (asob_...) from Settings, MCP server. A read-only token lists the read tools, and a token with the write scope also lists the opt-in tools that change things",
+              "description": "AsoBeast API token (asob_...) from Integrations, MCP server. A read-only token lists the read tools, and a token with the write scope also lists the opt-in tools that change things",
               "isRequired": true,
               "isSecret": true
             }

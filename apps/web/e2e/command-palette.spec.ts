@@ -39,6 +39,9 @@ test("the header button opens the palette and offers general destinations", asyn
   await expect(palette).toBeVisible();
   await expect(palette.getByRole("option", { name: "Settings" })).toBeVisible();
   await expect(
+    palette.getByRole("option", { name: "Integrations" }),
+  ).toBeVisible();
+  await expect(
     palette.getByRole("option", { name: "Dashboard" }),
   ).toBeVisible();
 });

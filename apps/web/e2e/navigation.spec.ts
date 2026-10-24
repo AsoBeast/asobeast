@@ -39,6 +39,47 @@ test("every sidebar destination is a real link", async ({ page }) => {
   }
 });
 
+test("the sidebar opens integrations and marks it current", async ({
+  page,
+}) => {
+  await page.goto("/settings");
+
+  await page
+    .getByRole("navigation", { name: "Main" })
+    .getByRole("link", { name: "Integrations", exact: true })
+    .click();
+
+  await expect(page).toHaveURL("/integrations");
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Integrations" }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("navigation", { name: "Main" })
+      .getByRole("link", { name: "Integrations", exact: true }),
+  ).toHaveAttribute("aria-current", "page");
+  await expect(
+    page.getByRole("heading", { level: 2, name: "Store connections" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 2, name: "API and MCP" }),
+  ).toBeVisible();
+});
+
+test("settings no longer holds the integration cards", async ({ page }) => {
+  await page.goto("/settings");
+
+  await expect(
+    page.getByRole("heading", { level: 2, name: "Team" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 2, name: "Store connections" }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { level: 2, name: "API and MCP" }),
+  ).toHaveCount(0);
+});
+
 test.describe("without client javascript", () => {
   test.use({ javaScriptEnabled: false });
 

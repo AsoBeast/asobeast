@@ -49,7 +49,7 @@ Track the three best uncovered keywords from the competitors strategy in the Ger
 
 A token with the default `read` scope lists the read tools, each a `GET` annotated `readOnlyHint: true`. Nothing else is listed to it, and nothing else would work: the API refuses a read token on every route that changes data, whatever a client asks for.
 
-A token with the `write` scope also lists seven tools that change things: `track_keywords`, `untrack_keyword`, `add_competitor`, `remove_competitor`, `set_action_status`, `add_annotation` and `delete_annotation`. You choose that when you connect an agent, with the Allow this agent to make changes option on the MCP server card in Settings. Nothing turns it on for you, and there is no instance setting that does.
+A token with the `write` scope also lists seven tools that change things: `track_keywords`, `untrack_keyword`, `add_competitor`, `remove_competitor`, `set_action_status`, `add_annotation` and `delete_annotation`. You choose that when you connect an agent, with the Allow this agent to make changes option on the MCP server card in Integrations. Nothing turns it on for you, and there is no instance setting that does.
 
 Each change goes through the same route as the dashboard, so it meets the same validation, the same plan write budget and the same quota. Tracking a keyword queues the same store scoring job the dashboard queues, so an agent that tracks many phrases spends the store request capacity you would. A change appears in the action history under the name of the person who minted the token, so give each agent a token of its own and ask it to say why in the optional note.
 

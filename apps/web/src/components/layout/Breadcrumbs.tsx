@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { PLAY_SIGN_IN_PATH } from "@asobeast/shared";
+import { INTEGRATIONS_PATH, PLAY_SIGN_IN_PATH } from "@asobeast/shared";
 import { useAuth } from "@/components/auth/use-auth";
 import {
   Breadcrumb,
@@ -22,8 +22,9 @@ const WORKSPACE_LABELS: Record<string, string> = {
   "/": "Dashboard",
   "/actions": "Action Center",
   "/charts": "Top charts",
+  [INTEGRATIONS_PATH]: "Integrations",
+  [PLAY_SIGN_IN_PATH]: "Integrations",
   "/settings": "Settings",
-  [PLAY_SIGN_IN_PATH]: "Settings",
 };
 
 function sectionLabel(segment: string): string {

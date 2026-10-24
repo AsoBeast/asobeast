@@ -6,7 +6,7 @@ icon: funnel
 keywords: ["App Store Connect","Google Play Console","impressions","conversion","product page views","store listing visitors","acquisitions","search terms","funnel","analytics reports"]
 ---
 
-Rankings say where your listing shows. The store funnel says whether people take it. Connect an App Store Connect key in settings and every App Store app the key covers gains a **Store funnel** card on its overview with four numbers Apple reports for it. Connect a Google Play service account and every Google Play app it can read gains the same card with three numbers Google reports. See [Google Play](#google-play).
+Rankings say where your listing shows. The store funnel says whether people take it. Connect an App Store Connect key in Integrations and every App Store app the key covers gains a **Store funnel** card on its overview with four numbers Apple reports for it. Connect a Google Play service account and every Google Play app it can read gains the same card with three numbers Google reports. See [Google Play](#google-play).
 
 ## What you get
 
@@ -49,7 +49,7 @@ The connection card's **Review replies** line says whether the connected key may
 
 ## Connect it
 
-Open **Settings** and the **Store connections** section, press **Connect App Store Connect**, then paste the issuer ID, the key ID and the contents of the `.p8` file, or choose the file. asobeast asks Apple whether the key works before it stores anything, so a mistyped ID or a revoked key is refused on the spot.
+Open **Integrations** in the sidebar and the **Store connections** section, press **Connect App Store Connect**, then paste the issuer ID, the key ID and the contents of the `.p8` file, or choose the file. asobeast asks Apple whether the key works before it stores anything, so a mistyped ID or a revoked key is refused on the spot.
 
 | Control | What it does |
 | --- | --- |
@@ -100,7 +100,7 @@ The quicker way, offered once the instance has a Google OAuth client (see [Set u
 
 <Steps>
   <Step title="Start the sign in">
-    In **Settings**, **Store connections**, press **Connect Google Play**, keep **Sign in with Google**, paste the bucket id and press **Sign in with Google**.
+    In **Integrations**, **Store connections**, press **Connect Google Play**, keep **Sign in with Google**, paste the bucket id and press **Sign in with Google**.
   </Step>
   <Step title="Allow read only Cloud Storage access">
     Choose the Google account that owns the Play Console developer account, or one that has **View app information and download bulk reports** on the **Account permissions** tab of **Users and permissions**. Keep **View your data in Google Cloud Storage** ticked. asobeast also asks to manage your Play Console, which it uses only to post the review replies you send from the reviews page. Leave that unticked and the connection still reads reports, but cannot post replies.
@@ -124,7 +124,7 @@ A sign in posts replies when it allowed Play Console access and the account has 
     In Play Console, open **Users and permissions**, invite the service account's email address and grant **View app information and download bulk reports** on the **Account permissions** tab. Google applies the reports bucket permission only from that tab, not from the permissions of single apps, and can take up to two days to apply it. Grant **Reply to reviews** as well to post review replies from asobeast.
   </Step>
   <Step title="Connect it">
-    In **Settings**, **Store connections**, press **Connect Google Play**, choose **Service account key**, paste the bucket id and choose the JSON key file or paste its contents. asobeast lists the bucket with the key before it stores anything, so a refused account or a wrong bucket id is answered on the spot.
+    In **Integrations**, **Store connections**, press **Connect Google Play**, choose **Service account key**, paste the bucket id and choose the JSON key file or paste its contents. asobeast lists the bucket with the key before it stores anything, so a refused account or a wrong bucket id is answered on the spot.
   </Step>
 </Steps>
 
@@ -149,7 +149,7 @@ An operator turns sign in with Google on once for the instance.
 
 <Steps>
   <Step title="Create the OAuth client">
-    In the Google Cloud console, open **APIs and services**, then **Credentials**, and create an OAuth client ID of type **Web application**. Add the authorized redirect URI `WEB_PUBLIC_URL` followed by `/settings/google-play`, for example `https://aso.example.com/settings/google-play`.
+    In the Google Cloud console, open **APIs and services**, then **Credentials**, and create an OAuth client ID of type **Web application**. Add the authorized redirect URI `WEB_PUBLIC_URL` followed by `/integrations/google-play`, for example `https://aso.example.com/integrations/google-play`.
   </Step>
   <Step title="Publish the consent screen">
     Add the scopes `https://www.googleapis.com/auth/devstorage.read_only` and `https://www.googleapis.com/auth/androidpublisher` to the consent screen, enable the Google Play Android Developer API in the same project, and publish the app to production. Google expires every sign in of an app left in testing after seven days. Until Google verifies the app, the consent screen warns that it is unverified, which is enough for a team that knows the instance.

@@ -234,13 +234,13 @@ Optional, off by default. With an Apple Ads API key, asobeast reads Apple's own 
 
 ## Store consoles
 
-Optional, off by default. Owners connect their store consoles in settings; these keys protect what they paste. See [Read impressions and conversion from your console](/guides/store-funnel).
+Optional, off by default. Owners connect their store consoles in Integrations; these keys protect what they paste. See [Read impressions and conversion from your console](/guides/store-funnel).
 
 | Variable | Default | Required | Effect |
 | --- | --- | --- | --- |
-| `STORE_CONNECT_ENCRYPTION_KEY` | Empty | No | Base64 of 32 random bytes, generated with `openssl rand -base64 32`. Seals the App Store Connect and Play Console keys owners connect in settings. Empty keeps every store connection off, and nothing contacts Apple or Google. A value that is not 32 bytes refuses to boot. Never logged |
+| `STORE_CONNECT_ENCRYPTION_KEY` | Empty | No | Base64 of 32 random bytes, generated with `openssl rand -base64 32`. Seals the App Store Connect and Play Console keys owners connect in Integrations. Empty keeps every store connection off, and nothing contacts Apple or Google. A value that is not 32 bytes refuses to boot. Never logged |
 | `STORE_CONNECT_ENCRYPTION_KEY_PREVIOUS` | Empty | No | The key being rotated away from. A stored credential sealed with it is opened and resealed with the current key on first use. Refuses to boot when set without `STORE_CONNECT_ENCRYPTION_KEY` |
-| `GOOGLE_PLAY_OAUTH_CLIENT_ID` | Empty | No | Client ID of a Google Cloud OAuth client of type Web application whose authorized redirect URI is `WEB_PUBLIC_URL` followed by `/settings/google-play`. With the secret and `WEB_PUBLIC_URL` it lets owners connect Google Play by signing in with Google instead of a service account key. Set both `GOOGLE_PLAY_OAUTH_` variables or neither; one alone refuses to boot |
+| `GOOGLE_PLAY_OAUTH_CLIENT_ID` | Empty | No | Client ID of a Google Cloud OAuth client of type Web application whose authorized redirect URI is `WEB_PUBLIC_URL` followed by `/integrations/google-play`. With the secret and `WEB_PUBLIC_URL` it lets owners connect Google Play by signing in with Google instead of a service account key. Set both `GOOGLE_PLAY_OAUTH_` variables or neither; one alone refuses to boot |
 | `GOOGLE_PLAY_OAUTH_CLIENT_SECRET` | Empty | No | Client secret of that OAuth client. Publish its consent screen to production, or Google expires every sign in after seven days. Never logged |
 | `CRON_STORE_REPORTS` | `30 5 * * *` | No | When the daily download of the reports each connected console published runs, UTC. Never scheduled while `STORE_CONNECT_ENCRYPTION_KEY` is empty |
 

@@ -68,7 +68,7 @@ export class ReviewRepliesController {
   @ApiOperation({
     summary: 'Post the kept reply of a review to its store',
     description:
-      'Sends the saved reply text to App Store Connect or Google Play with the key connected in Settings, records when and what was posted, and marks the review replied. Posting again after an edit replaces the reply on the store. Through a signed in session only. Answers 400 without saved text or over the store limit, 403 when the connected key may not reply, 404 when the store does not know the review, 409 without a usable connection, 422 when the store refuses the reply and 429 when the store asks to slow down.',
+      'Sends the saved reply text to App Store Connect or Google Play with the key connected in Integrations, records when and what was posted, and marks the review replied. Posting again after an edit replaces the reply on the store. Through a signed in session only. Answers 400 without saved text or over the store limit, 403 when the connected key may not reply, 404 when the store does not know the review, 409 without a usable connection, 422 when the store refuses the reply and 429 when the store asks to slow down.',
   })
   post(
     @Param('id') id: string,

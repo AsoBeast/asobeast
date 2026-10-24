@@ -38,7 +38,7 @@ import {
 import { FunnelHelp } from "./FunnelHelp";
 import { FunnelTilesSkeleton } from "./skeletons";
 
-const SETTINGS_LINK =
+const CONNECT_LINK =
   "text-body font-medium text-foreground underline decoration-primary underline-offset-4 hover:decoration-2";
 
 function NotReporting({ store, reason }: { store: Store; reason: string }) {
@@ -60,8 +60,8 @@ function ConnectionRefused({ store }: { store: Store }) {
       body={isOwner ? copy.refusedBody : copy.refusedAskOwner}
       action={
         isOwner ? (
-          <Link href={STORE_CONNECTIONS_PATH} className={SETTINGS_LINK}>
-            Verify in settings
+          <Link href={STORE_CONNECTIONS_PATH} className={CONNECT_LINK}>
+            Verify in Integrations
           </Link>
         ) : null
       }
@@ -93,8 +93,8 @@ function NotConnected({ id, store }: { id: string; store: Store }) {
       body={isOwner ? copy.connectBody : copy.askOwner}
       action={
         isOwner ? (
-          <Link href={STORE_CONNECTIONS_PATH} className={SETTINGS_LINK}>
-            Connect in settings
+          <Link href={STORE_CONNECTIONS_PATH} className={CONNECT_LINK}>
+            Connect in Integrations
           </Link>
         ) : null
       }

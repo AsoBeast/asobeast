@@ -6,6 +6,8 @@ export const UPGRADE_PATH = '/upgrade';
 
 export const SETTINGS_PATH = '/settings';
 
+export const INTEGRATIONS_PATH = '/integrations';
+
 export const UNSUBSCRIBE_PATH = '/unsubscribe';
 
 export const CONFIRM_ALERT_PATH = '/confirm-alert';

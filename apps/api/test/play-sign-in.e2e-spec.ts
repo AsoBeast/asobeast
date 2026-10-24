@@ -145,7 +145,7 @@ describe('Google Play sign in (e2e)', () => {
     expect(url.origin).toBe('https://accounts.google.com');
     expect(url.searchParams.get('client_id')).toBe(TEST_GOOGLE_CLIENT.id);
     expect(url.searchParams.get('redirect_uri')).toBe(
-      `${TEST_GOOGLE_CLIENT.origin}/settings/google-play`,
+      `${TEST_GOOGLE_CLIENT.origin}/integrations/google-play`,
     );
     expect(url.searchParams.get('scope')).toContain(GCS_READ_ONLY_SCOPE);
     expect(url.searchParams.get('scope')).toContain(ANDROID_PUBLISHER_SCOPE);

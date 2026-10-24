@@ -23,7 +23,7 @@ import {
 const CLIENT: GoogleOAuthClient = {
   id: 'client.apps.googleusercontent.com',
   secret: 'test-oauth-client-secret',
-  redirectUri: 'https://aso.example.com/settings/google-play',
+  redirectUri: 'https://aso.example.com/integrations/google-play',
 };
 
 const idToken = (claims: unknown): string =>
@@ -45,7 +45,7 @@ const providerWith = (env: Record<string, string | undefined>) =>
   ).useFactory({ get: (name: string) => env[name] } as ConfigService);
 
 describe('googleOAuthClientProvider', () => {
-  it('builds the client with the settings page as the redirect', () => {
+  it('builds the client with the integrations page as the redirect', () => {
     expect(
       providerWith({
         GOOGLE_PLAY_OAUTH_CLIENT_ID: CLIENT.id,

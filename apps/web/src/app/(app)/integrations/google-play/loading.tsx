@@ -1,4 +1,4 @@
-import { PlaySignInReturnSkeleton } from "@/components/settings/skeletons";
+import { PlaySignInReturnSkeleton } from "@/components/integrations/skeletons";
 
 export default function Loading() {
   return (

@@ -148,7 +148,7 @@ test("posts a google play reply and says google offers no withdraw", async ({
   ).toContainText("The reply posted on Google Play stays there.");
 });
 
-test("without a connection the composer copies and points to settings", async ({
+test("without a connection the composer copies and points to integrations", async ({
   page,
 }) => {
   await page.goto(DRAFTED);
@@ -160,11 +160,11 @@ test("without a connection the composer copies and points to settings", async ({
     composer(page).getByRole("button", { name: "Mark as replied" }),
   ).toBeVisible();
   await expect(composer(page)).toContainText(
-    "Connect App Store Connect in Settings to post replies from here.",
+    "Connect App Store Connect in Integrations to post replies from here.",
   );
   await expect(
     composer(page).getByRole("link", { name: "Open store connections" }),
-  ).toHaveAttribute("href", "/settings#store-connections");
+  ).toHaveAttribute("href", "/integrations#store-connections");
   await expect(
     composer(page).getByRole("button", { name: "Post to App Store" }),
   ).toHaveCount(0);

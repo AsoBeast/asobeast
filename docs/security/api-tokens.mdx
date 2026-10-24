@@ -1,7 +1,7 @@
 ---
 title: Personal API tokens
 sidebarTitle: API tokens
-description: Mint a revocable personal API token in Settings and send it as a bearer header. The plaintext value is shown once and stored only as a hash.
+description: Mint a revocable personal API token in Integrations and send it as a bearer header. The plaintext value is shown once and stored only as a hash.
 icon: key-round
 keywords: ["personal API token","asob_","bearer","revoke","automation","MCP"]
 ---
@@ -11,7 +11,7 @@ A personal API token authenticates a script, a scheduled job or the MCP server e
 ## Create a token
 
 <Steps>
-  <Step title="Open the API tokens card in Settings">
+  <Step title="Open the API tokens card in Integrations">
     Sign in first. A token belongs to your account.
   </Step>
   <Step title="Name it after what will use it">
@@ -65,7 +65,7 @@ A token, whatever its scope, cannot manage credentials or the workspace itself. 
 | Schedule or cancel the deletion of the workspace | `POST /account/deletion`, `DELETE /account/deletion` |
 | Invite a member, revoke an invitation or remove a member | `POST /workspace/invites`, `DELETE /workspace/invites/{id}`, `DELETE /workspace/members/{id}` |
 
-This is what stops a leaked token from minting its own successor. After revoking a leaked write token, also review the webhooks and email alerts it could have added. A token that could mint another token would survive its own revocation and its own expiry. To rotate a token, create the new one in Settings and then revoke the old one. Listing tokens and reading the team stay open to a token.
+This is what stops a leaked token from minting its own successor. After revoking a leaked write token, also review the webhooks and email alerts it could have added. A token that could mint another token would survive its own revocation and its own expiry. To rotate a token, create the new one in Integrations and then revoke the old one. Listing tokens and reading the team stay open to a token.
 
 ## Where tokens are used
 
