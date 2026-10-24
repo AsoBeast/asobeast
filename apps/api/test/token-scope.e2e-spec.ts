@@ -38,9 +38,12 @@ const WRITE_INPUT = {
   keywordId: 'kw_missing',
   competitorId: 'app_missing',
   actionId: 'act_missing',
+  annotationId: 'ann_missing',
   keywords: ['habit tracker'],
   url: 'https://apps.apple.com/us/app/rival/id1',
   status: 'DONE',
+  date: '2026-10-08',
+  label: 'Release',
 };
 
 describe('Read-only token scope (e2e)', () => {

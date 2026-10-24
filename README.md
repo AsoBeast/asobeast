@@ -60,7 +60,7 @@ AsoBeast is built for people who ship apps and want their ASO data to stay their
 | ASO Action Center                | Seventeen deterministic rules produce recommendations with a priority, an estimated impact, the evidence behind them, a deep link, a full lifecycle and a verified outcome                                                                                                                                                                                  |
 | Portfolio analysis               | Group linked listings across stores and countries, compare group visibility and generate weekly digests                                                                                                                                                                                                                                                     |
 | Alerts                           | Signed webhooks or SMTP email for rank, SERP, metadata, review and new action events, with resumable batched delivery                                                                                                                                                                                                                                       |
-| MCP server                       | 36 read tools, plus 5 opt-in tools that change keywords, competitors and actions, over stdio or a remote endpoint, so Claude Code, Claude Desktop, Cursor, VS Code and other MCP clients can work with your instance                                                                                                                                        |
+| MCP server                       | 37 read tools, plus 7 opt-in tools that change keywords, competitors, actions and annotations, over stdio or a remote endpoint, so Claude Code, Claude Desktop, Cursor, VS Code and other MCP clients can work with your instance                                                                                                                           |
 
 A guide for each of these lives in the [documentation](https://docs.asobeast.com).
 
@@ -160,7 +160,7 @@ Only the store requests themselves, which send each tracked phrase to the App St
 
 ### Can I connect AsoBeast to Claude or another AI agent?
 
-Yes. AsoBeast ships a Model Context Protocol server with 36 read tools, available as a local stdio process or as a remote endpoint on your instance. Every connection needs a personal API token and reads by default. Five more tools that change keywords, competitors and actions are listed only to a token you give the write scope. See [MCP](https://docs.asobeast.com/mcp/introduction).
+Yes. AsoBeast ships a Model Context Protocol server with 37 read tools, available as a local stdio process or as a remote endpoint on your instance. Every connection needs a personal API token and reads by default. Seven more tools that change keywords, competitors, actions and annotations are listed only to a token you give the write scope. See [MCP](https://docs.asobeast.com/mcp/introduction).
 
 ### Is AsoBeast really free?
 

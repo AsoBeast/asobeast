@@ -40,6 +40,7 @@ pnpm dev
 | `pnpm test:cov`                    | Run unit tests with coverage floors     |
 | `pnpm format:check`                | Check formatting without changing files |
 | `pnpm --filter mcp wire-check`     | Check a running instance's MCP endpoint |
+| `pnpm check:playwright-image`      | Match the browser image to Playwright   |
 
 ### Checking the MCP endpoint of a running instance
 
@@ -53,6 +54,23 @@ It reads two environment variables and never takes the token as an argument, so 
 | `ASOBEAST_API_TOKEN` | A read-only `asob_` token minted for the check                         |
 
 CI runs it against the Compose stack in `compose-smoke`. Before tagging a release, run it against a Compose build of the release candidate and against the hosted instance, then revoke the token.
+
+## Continuous integration
+
+`.github/workflows/ci.yml` runs on every pull request. The two end to end suites are sharded: the API suite runs as three `e2e shard N` jobs, each against its own database, and the browser suite as six jobs inside Playwright's container image: four `web-e2e app-N` jobs for the `app` project, one `web-e2e states` job for the `actions` chain, which shares mock state and runs serially, and one `web-e2e webkit` job. The `e2e` and `web-e2e` jobs are gates that need every shard and fail unless each one succeeded; they are the contexts `main` requires. Every job has a `timeout-minutes` set at about twice its expected duration, and ten minutes for the jobs that finish in one or two, so a stalled step fails the job instead of holding the pull request.
+
+To run one shard the way CI does:
+
+| Command                                                     | Runs                                                                |
+| ----------------------------------------------------------- | ------------------------------------------------------------------- |
+| `pnpm --filter api test:e2e --shard=1/3`                    | the first third of the API suites                                   |
+| `pnpm --filter web test:e2e --project=app --shard=1/4`      | the first quarter of the `app` project                              |
+| `pnpm --filter web test:e2e --project=actions-double-click` | the `actions` chain                                                 |
+| `pnpm --filter web test:e2e --project=webkit`               | the WebKit hydration sweep (needs `playwright install webkit` once) |
+
+Every job that installs dependencies does it through the composite action in `.github/actions/setup`. Caches are written from `main` only and read everywhere, so the first run after a lockfile change installs from the previous store and is a minute slower. The pnpm store and every turbo artifact live in the Actions cache, and the browser jobs take their browsers and system libraries from the image, so no job installs a browser through apt; `gh api /repos/AsoBeast/asobeast/actions/cache/usage` shows the total, which stays under the 10 GB the free plan grants.
+
+Three pins in `ci.yml` are bumped by hand, because Dependabot sees neither a container image in a workflow nor a release binary fetched by a step: the `mcr.microsoft.com/playwright:v<version>-noble` image of the browser jobs, which must match the installed `@playwright/test` (`pnpm check:playwright-image` fails `checks` when it does not, so a Dependabot bump of Playwright needs the tag edited on the same pull request), and the `RCLONE_VERSION` and `AGE_VERSION` of the backup drill, each with the SHA-256 of its release archive beside it.
 
 ## Cloud sessions
 
@@ -76,7 +94,7 @@ Every fix must include a test that fails before the correction and passes afterw
 
 ### Coverage floors
 
-`pnpm test:cov` measures coverage in `apps/api`, `apps/web` and `packages/shared`, and fails when it drops below the floor each package configures. Treat those numbers as a ratchet rather than a target.
+`pnpm test:cov` measures coverage in `apps/api`, `apps/web`, `apps/mcp`, `packages/shared` and `packages/mcp-tools`, and fails when it drops below the floor a package configures; `apps/mcp` and `packages/mcp-tools` report without a floor. Treat those numbers as a ratchet rather than a target.
 
 - A floor is the coverage that was measured when it was set, minus a point of tolerance, and two points for branches. It is not an aspiration, and writing tests to reach a round number is not the goal.
 - Raising a floor belongs in the pull request that raised the coverage. Do it in the same change, or the next contributor inherits the old number and the gain is given back.

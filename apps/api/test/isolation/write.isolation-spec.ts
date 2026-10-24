@@ -382,4 +382,23 @@ describe('Write isolation', () => {
       await clearRateLimitCounters(fixture.app);
     }
   });
+
+  it('answers 404 and leaves the row when reading or deleting another workspace annotation', async () => {
+    const created = await fixture.a.agent
+      .post(`/apps/${fixture.a.appleAppId}/annotations`)
+      .send({ date: '2026-10-20', label: 'Release 5.30.0' })
+      .expect(201);
+    const annotationId = (created.body as { id: string }).id;
+
+    await fixture.b.agent
+      .get(`/apps/${fixture.a.appleAppId}/annotations`)
+      .expect(404);
+    await fixture.b.agent
+      .delete(`/apps/${fixture.a.appleAppId}/annotations/${annotationId}`)
+      .expect(404);
+
+    await expect(
+      fixture.db.appAnnotation.count({ where: { id: annotationId } }),
+    ).resolves.toBe(1);
+  });
 });

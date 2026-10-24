@@ -47,6 +47,7 @@ export default defineConfig({
       timeout: 180_000,
       reuseExistingServer: !process.env.CI,
       env: {
+        HOSTNAME: "0.0.0.0",
         API_INTERNAL_URL: "http://localhost:4100",
         API_PROXY_TIMEOUT_MS: "2000",
         SENTRY_DSN: "",

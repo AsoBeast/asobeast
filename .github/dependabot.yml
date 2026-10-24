@@ -34,7 +34,9 @@ updates:
         dependency-type: development
         update-types: [major]
   - package-ecosystem: github-actions
-    directory: /
+    directories:
+      - /
+      - /.github/actions/setup
     schedule:
       interval: weekly
       day: monday
