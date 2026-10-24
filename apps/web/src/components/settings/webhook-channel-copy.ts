@@ -61,6 +61,11 @@ export function channelHint(raw: string): string | null {
   return channel === "generic" ? genericHint(url) : CHANNEL_HINTS[channel](url);
 }
 
+const isChatHost = (url: string): boolean => {
+  const parsed = parse(url);
+  return parsed !== null && SLACK_HOSTS.has(parsed.hostname);
+};
+
 export function webhookRowLabel(url: string, channel: WebhookChannel): string {
-  return channel === "generic" ? url : webhookLabel(url);
+  return channel === "generic" && !isChatHost(url) ? url : webhookLabel(url);
 }

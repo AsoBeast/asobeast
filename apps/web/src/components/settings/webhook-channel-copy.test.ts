@@ -69,4 +69,13 @@ describe("webhookRowLabel", () => {
       webhookRowLabel("https://hooks.example.com/asobeast", "generic"),
     ).toBe("https://hooks.example.com/asobeast");
   });
+
+  it("hides the secret path of a slack workflow url", () => {
+    expect(
+      webhookRowLabel(
+        "https://hooks.slack.com/workflows/T1/A2/3/SECRET",
+        "generic",
+      ),
+    ).toBe("hooks.slack.com/…");
+  });
 });
