@@ -89,13 +89,19 @@ export const finalAfterDays = (store: Store): number =>
 export const finalThrough = (today: Date, store: Store): string =>
   toDateKey(addDays(startOfUtcDay(today), -finalAfterDays(store)));
 
-export function reportedThrough(
+const cappedAt = (through: string, lastDate: string | null | undefined) =>
+  lastDate && lastDate < through ? lastDate : through;
+
+export const reportedThrough = (
   today: Date,
   lastDate: string | null | undefined,
-): string {
-  const through = completeThrough(today);
-  return lastDate && lastDate < through ? lastDate : through;
-}
+): string => cappedAt(completeThrough(today), lastDate);
+
+export const finalReportedThrough = (
+  today: Date,
+  lastDate: string | null | undefined,
+  store: Store,
+): string => cappedAt(finalThrough(today, store), lastDate);
 
 const sumOf = (
   rows: FunnelDayRow[],

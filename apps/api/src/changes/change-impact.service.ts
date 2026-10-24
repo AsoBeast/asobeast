@@ -17,8 +17,8 @@ import {
 } from './change-impact';
 import { HOME_EVENTS } from '../apps/listing';
 import {
+  finalReportedThrough,
   marketFunnelScope,
-  reportedThrough,
   type FunnelScope,
 } from '../store-connect/store-funnel';
 import { StoreFunnelService } from '../store-connect/store-funnel.service';
@@ -99,7 +99,7 @@ export class ChangeImpactService {
       this.funnel.rows(app.id, from, scope),
       this.funnel.range(app.id),
     ]);
-    const through = reportedThrough(today, lastDate);
+    const through = finalReportedThrough(today, lastDate, app.store);
     return items.map((item) => ({
       ...item,
       windows: item.windows.map((window) => ({

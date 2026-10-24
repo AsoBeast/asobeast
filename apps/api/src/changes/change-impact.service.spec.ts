@@ -200,4 +200,25 @@ describe('ChangeImpactService', () => {
       completeDays: 3,
     });
   });
+  it('keeps a google play window pending until google has finished posting its days', async () => {
+    appFindFirst.mockResolvedValue({
+      id: 'app_1',
+      country: 'us',
+      store: 'GOOGLE_PLAY',
+    });
+    eventFindMany.mockResolvedValue([titleEvent]);
+    funnel.connected.mockResolvedValue(true);
+    funnel.rows.mockResolvedValue(reportedDays);
+    funnel.range.mockResolvedValue({
+      firstDate: '2024-01-01',
+      lastDate: toDateKey(addDays(today, -4)),
+    });
+
+    const report = await service.report('app_1', 60);
+
+    expect(report.items[0].windows[0].funnel).toMatchObject({
+      status: 'pending',
+      completeDays: 4,
+    });
+  });
 });
