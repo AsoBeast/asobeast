@@ -63,12 +63,12 @@ function MeasuredFacts({ impact }: { impact: ChangeImpactWindow }) {
   );
 }
 
-interface FunnelFactsProps {
+interface WindowProps {
   impact: ChangeImpactWindow;
   store: Store;
 }
 
-export function FunnelFacts({ impact, store }: FunnelFactsProps) {
+export function FunnelFacts({ impact, store }: WindowProps) {
   const ranges = funnelRanges(impact.funnel);
   const note = funnelNote(impact.funnel, impact.days);
   if (!ranges && !note) return null;
@@ -103,7 +103,7 @@ export function FunnelFacts({ impact, store }: FunnelFactsProps) {
   );
 }
 
-export function ChangeImpactWindowTile({ impact, store }: FunnelFactsProps) {
+export function ChangeImpactWindowTile({ impact, store }: WindowProps) {
   const notice = overlapNotice(impact.overlappingChanges);
 
   return (
