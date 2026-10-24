@@ -32,22 +32,28 @@ export function selectEndpoint({
 }: SelectionInput): Selection {
   if (candidates.length === 0) return { kind: 'empty' };
 
-  const available = candidates.filter(
+  const local = country
+    ? candidates.filter(
+        (candidate) =>
+          candidate.country === country && !coolingDown(candidate, now),
+      )
+    : [];
+  const pool = local.length > 0 ? local : candidates;
+
+  const available = pool.filter(
     (candidate) => availableAt(candidate, minIntervalMs) <= now.getTime(),
   );
   if (available.length === 0) {
     const earliest = Math.min(
-      ...candidates.map((candidate) => availableAt(candidate, minIntervalMs)),
+      ...pool.map((candidate) => availableAt(candidate, minIntervalMs)),
     );
     return { kind: 'wait', waitMs: Math.max(earliest - now.getTime(), 0) };
   }
 
-  const local = country
-    ? available.filter((candidate) => candidate.country === country)
-    : [];
-  const pool = local.length > 0 ? local : available;
-
-  return { kind: 'endpoint', endpointId: pool.reduce(leastRecent).endpointId };
+  return {
+    kind: 'endpoint',
+    endpointId: available.reduce(leastRecent).endpointId,
+  };
 }
 
 export function availableAt(
@@ -60,6 +66,10 @@ export function availableAt(
     ? candidate.lastUsedAt.getTime() + minIntervalMs
     : 0;
   return Math.max(cooldown, paced, spacing);
+}
+
+function coolingDown(candidate: PoolCandidate, now: Date): boolean {
+  return (candidate.cooldownUntil?.getTime() ?? 0) > now.getTime();
 }
 
 function leastRecent(a: PoolCandidate, b: PoolCandidate): PoolCandidate {
