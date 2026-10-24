@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import type { AlertAppIdentity, AlertPayload } from '@asobeast/shared';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -14,14 +14,23 @@ export function withAppIdentity<T extends AlertPayload>(
 
 @Injectable()
 export class AlertAppIdentities {
+  private readonly logger = new Logger(AlertAppIdentities.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   async attach<T extends AlertPayload>(payload: T): Promise<T> {
     if (!('app' in payload)) return payload;
-    const identity = await this.prisma.app.findUnique({
-      where: { id: payload.app.id },
-      select: { iconUrl: true, store: true, country: true },
-    });
-    return withAppIdentity(payload, identity);
+    try {
+      const identity = await this.prisma.app.findUnique({
+        where: { id: payload.app.id },
+        select: { iconUrl: true, store: true, country: true },
+      });
+      return withAppIdentity(payload, identity);
+    } catch (error) {
+      this.logger.warn(
+        `alert app identity unavailable: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      return payload;
+    }
   }
 }

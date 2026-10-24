@@ -116,4 +116,13 @@ describe('AlertAppIdentities', () => {
 
     await expect(identities.attach(drop)).resolves.toBe(drop);
   });
+
+  it('delivers the payload as it was when the app cannot be read', async () => {
+    const findUnique = jest.fn().mockRejectedValue(new Error('db down'));
+    const identities = new AlertAppIdentities({
+      app: { findUnique },
+    } as unknown as PrismaService);
+
+    await expect(identities.attach(drop)).resolves.toBe(drop);
+  });
 });
