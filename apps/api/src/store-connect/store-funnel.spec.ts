@@ -4,6 +4,7 @@ import { gzipSync } from 'node:zlib';
 import { pivotDetailedReport } from './discovery-report';
 import {
   completeThrough,
+  finalThrough,
   funnelPages,
   funnelScope,
   marketFunnelScope,
@@ -349,6 +350,13 @@ describe('measureStoreFunnel windows', () => {
     expect(windows.find((window) => window.days === 28)?.status).toBe(
       'measured',
     );
+  });
+});
+
+describe('finalThrough', () => {
+  it('ends the app store on the third day back and google play on the seventh, the day each store has finished posting', () => {
+    expect(finalThrough(TODAY, 'APP_STORE')).toBe('2026-10-13');
+    expect(finalThrough(TODAY, 'GOOGLE_PLAY')).toBe('2026-10-09');
   });
 });
 
