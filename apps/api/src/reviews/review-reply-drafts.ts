@@ -5,7 +5,7 @@ import {
   truncateChars,
   UNKNOWN_LANGUAGE,
 } from '@asobeast/shared';
-import { storeLabel } from '../alerts/alert-summary';
+import { storeName } from '../alerts/report/storefront';
 
 export const DRAFT_MAX_OUTPUT_TOKENS = 2048;
 
@@ -111,7 +111,7 @@ const referenceOf = (input: ReplyContext) => ({
 
 export function buildReplyContext(input: ReplyContext): string {
   return [
-    `Store: ${storeLabel(input.store)}`,
+    `Store: ${storeName(input.store)}`,
     `App: ${JSON.stringify(input.appName ?? 'unknown')}`,
     `Reply limit: ${input.limit} characters`,
     TONE_LINES[input.tone],
