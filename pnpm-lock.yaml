@@ -184,7 +184,7 @@ importers:
         version: 10.1.4
       openai:
         specifier: ^7.28.0
-        version: 7.28.0(undici@8.11.2)(ws@8.21.3)(zod@4.6.5)
+        version: 7.28.0(undici@8.12.2)(ws@8.21.3)(zod@4.6.5)
       pg:
         specifier: ^8.23.1
         version: 8.23.1
@@ -222,8 +222,8 @@ importers:
         specifier: ^7.0.0
         version: 7.0.0
       undici:
-        specifier: 8.11.2
-        version: 8.11.2
+        specifier: 8.12.2
+        version: 8.12.2
       zod:
         specifier: ^4.6.5
         version: 4.6.5
@@ -8899,6 +8899,10 @@ packages:
     resolution: {integrity: sha512-u4UB2/IrKdU6lFxumHmmo1a3fCQO5tzQllRorfoRS63txhrB7xTpSn1PftwC4qEHkOaqP95fCWW4lJzwErwzhQ==}
     engines: {node: '>=22.19.0'}
 
+  undici@8.12.2:
+    resolution: {integrity: sha512-XtuDWVdqTLr3NAxm2ly9/hU6kUsJOgGh1RASzMBbsw6aWCOaQzHdW+QQDfdERjfJ2V5vL5pRPa4RetO9UfivDg==}
+    engines: {node: '>=22.19.0'}
+
   unicorn-magic@0.3.0:
     resolution: {integrity: sha512-+QBBXBCvifc56fsbuxZQ6Sic3wqqc3WWaqxs58gvJrcOuN83HGTCwz3oS5phzU9LthRNE9VrJCFCLUgHeeFnfA==}
     engines: {node: '>=18'}
@@ -16658,9 +16662,9 @@ snapshots:
       is-docker: 2.2.1
       is-wsl: 2.2.0
 
-  openai@7.28.0(undici@8.11.2)(ws@8.21.3)(zod@4.6.5):
+  openai@7.28.0(undici@8.12.2)(ws@8.21.3)(zod@4.6.5):
     optionalDependencies:
-      undici: 8.11.2
+      undici: 8.12.2
       ws: 8.21.3
       zod: 4.6.5
 
@@ -18327,6 +18331,8 @@ snapshots:
   undici@7.30.0: {}
 
   undici@8.11.2: {}
+
+  undici@8.12.2: {}
 
   unicorn-magic@0.3.0: {}
 
