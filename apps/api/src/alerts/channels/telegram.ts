@@ -8,6 +8,7 @@ import {
 } from '../report/report-blocks';
 import { identityLine } from '../report/storefront';
 import { clamp } from './bounded-text';
+import { escapeHtml } from './chat-escape';
 import { utcFallback } from './local-time';
 
 export interface TelegramMessage {
@@ -21,14 +22,6 @@ export interface TelegramMessage {
 const TEXT_MAX = 4096;
 const INDENT = '  ';
 const FACT_MAX = 1000;
-
-export function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
 
 const anchor = (href: string, label: string): string =>
   `<a href="${escapeHtml(href)}">${escapeHtml(label)}</a>`;

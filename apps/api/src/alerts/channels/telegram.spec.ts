@@ -8,7 +8,8 @@ import {
 } from '../email-fixtures.fixture';
 import { buildAlert } from '../report/build-alert';
 import { buildReport } from '../report/build-report';
-import { escapeHtml, telegramBody, visibleLength } from './telegram';
+import { escapeHtml } from './chat-escape';
+import { telegramBody, visibleLength } from './telegram';
 
 const ORIGIN = 'https://aso.example.com';
 
