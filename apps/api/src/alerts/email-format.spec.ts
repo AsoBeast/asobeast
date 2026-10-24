@@ -196,8 +196,11 @@ describe('formatBatchEmail', () => {
     );
     expect(email.text).toContain('Alpha\nYour app · App Store · US');
     expect(email.text).toContain('  Charlie\n  Competitor · App Store · US');
-    expect(email.html).toContain('Alpha · Your app · App Store · US');
-    expect(email.html).toContain('Charlie · Competitor · App Store · US');
+    expect(email.html).toContain('Your app · App Store · US');
+    expect(email.html).toContain('Competitor · App Store · US');
+    expect(email.html.indexOf('Alpha')).toBeLessThan(
+      email.html.indexOf('Charlie'),
+    );
   });
 
   it('renders queued legacy mixed batches without a scope', async () => {
@@ -619,8 +622,8 @@ describe('formatBatchEmail in the branded layout', () => {
     const lastRow = 'meditation and sleep tracker keyword 19  ';
     expect(worst.text).toContain(lastRow);
     expect(worst.html).not.toContain(lastRow);
-    expect(worst.html).toContain(
-      'See all 25: https://aso.example.com/apps/app_0/keywords',
+    expect(worst.html).toMatch(
+      /href="https:\/\/aso\.example\.com\/apps\/app_0\/keywords"[^>]*>See all 25 in AsoBeast<\/a>/,
     );
 
     const usual = await formatBatchEmail(batch, linked);
@@ -635,8 +638,8 @@ describe('formatBatchEmail in the branded layout', () => {
     expect(usual.html).not.toContain('See all');
     expect(full.html).toContain('game 19  ');
     expect(full.html).not.toContain('game 20  ');
-    expect(full.html).toContain(
-      'See all 25: https://aso.example.com/apps/a/keywords',
+    expect(full.html).toMatch(
+      /href="https:\/\/aso\.example\.com\/apps\/a\/keywords"[^>]*>See all 25 in AsoBeast<\/a>/,
     );
   });
 
@@ -645,7 +648,7 @@ describe('formatBatchEmail in the branded layout', () => {
     for (const id of ['a', 'b']) {
       expect(html).toMatch(
         new RegExp(
-          `· <a href="https://aso\\.example\\.com/apps/${id}"[^>]*>Open app</a>`,
+          `<a href="https://aso\\.example\\.com/apps/${id}"[^>]*>${id === 'a' ? 'Alpha' : 'Bravo'}</a>`,
         ),
       );
     }

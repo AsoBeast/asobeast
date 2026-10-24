@@ -1,9 +1,10 @@
 import { CallToAction } from '../../mail/call-to-action';
 import { EmailLayout } from '../../mail/email-layout';
-import { webLink } from '../../mail/email-links';
 import { EmailHeading, EmailParagraph } from '../../mail/email-text';
+import type { ReportApp, ReportLink } from '../report/report';
+import { moreApps } from '../report/report-blocks';
 import { AlertFooter, type AlertEmailContext } from './alert-footer';
-import { ReportCard, ReportNote, type ReportCardModel } from './report-card';
+import { ReportCard, ReportNote } from './report-card';
 import { StatGrid, type Stat } from './stat-grid';
 
 export interface ReportEmailProps {
@@ -11,8 +12,9 @@ export interface ReportEmailProps {
   preview: string;
   stats: Stat[];
   window: string;
-  cards: ReportCardModel[];
-  notes: string[];
+  apps: ReportApp[];
+  omittedApps: number;
+  link: ReportLink | null;
   context: AlertEmailContext;
 }
 
@@ -21,11 +23,11 @@ export function ReportEmail({
   preview,
   stats,
   window,
-  cards,
-  notes,
+  apps,
+  omittedApps,
+  link,
   context,
 }: ReportEmailProps) {
-  const home = webLink(context.origin, '/');
   return (
     <EmailLayout
       preview={preview}
@@ -35,13 +37,11 @@ export function ReportEmail({
       <EmailHeading>{headline}</EmailHeading>
       <StatGrid stats={stats} />
       <EmailParagraph>{window}</EmailParagraph>
-      {cards.map((card, index) => (
-        <ReportCard key={`${card.title}-${index}`} card={card} />
+      {apps.map((app) => (
+        <ReportCard key={app.id} app={app} />
       ))}
-      {notes.map((note) => (
-        <ReportNote key={note}>{note}</ReportNote>
-      ))}
-      {home && <CallToAction href={home} label="Open AsoBeast" />}
+      {omittedApps > 0 && <ReportNote>{moreApps(omittedApps)}</ReportNote>}
+      {link && <CallToAction href={link.href} label={link.label} />}
     </EmailLayout>
   );
 }
