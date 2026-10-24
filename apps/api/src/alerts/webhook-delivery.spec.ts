@@ -190,6 +190,18 @@ describe('WebhookDelivery', () => {
     expect(error.message).not.toContain('secret-token');
   });
 
+  it('never names the token a telegram url carries', async () => {
+    status = 500;
+    const delivery = new WebhookDelivery(configOf());
+    const target = `${url}/bot123:SECRET/sendMessage?chat_id=-100`;
+    const error = (await delivery
+      .send(target, null, PAYLOAD)
+      .catch((caught: unknown) => caught)) as Error;
+    await delivery.onModuleDestroy();
+
+    expect(error.message).not.toContain('SECRET');
+  });
+
   it('reports a rate limit to the test endpoint as undelivered', async () => {
     status = 429;
     const delivery = new WebhookDelivery(configOf());

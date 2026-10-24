@@ -346,6 +346,34 @@ describe('WebhooksController (e2e)', () => {
     expect(target.toString()).toBe('https://hooks.example.com/asobeast');
   });
 
+  it.each([
+    [
+      'https://prod-21.westeurope.logic.azure.com:443/workflows/abc/triggers/manual/paths/invoke?sig=SECRET',
+      'attachments',
+    ],
+    [
+      'https://api.telegram.org/bot123:SECRET/sendMessage?chat_id=-100',
+      'chat_id',
+    ],
+  ])(
+    'tests %s with its own body and keeps its token for delivery',
+    async (url, key) => {
+      const created = await api
+        .post('/webhooks')
+        .send({ url, events: ['metadata.changed'] })
+        .expect(201);
+      mockFetch.mockResolvedValue({ ok: true, status: 202 });
+
+      await api
+        .post(`/webhooks/${(created.body as WebhookItem).id}/test`)
+        .expect(201);
+
+      const [target, init] = mockFetch.mock.calls[0] as [URL, { body: string }];
+      expect(target.toString()).toContain('SECRET');
+      expect(JSON.parse(init.body)).toHaveProperty(key);
+    },
+  );
+
   it('reports a private target as undelivered without reaching the network', async () => {
     const webhook = await prisma.webhook.create({
       data: {

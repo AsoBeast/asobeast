@@ -30,6 +30,38 @@ const everyPayload: AlertPayload[] = [
 
 describe('formatWebhookBody', () => {
   it.each([
+    [
+      'https://prod-21.westeurope.logic.azure.com/workflows/a/triggers/manual/paths/invoke?sig=x',
+      'attachments',
+    ],
+    ['https://api.telegram.org/bot1:A/sendMessage?chat_id=-100', 'chat_id'],
+    [
+      'https://chat.googleapis.com/v1/spaces/S/messages?key=k&token=t',
+      'cardsV2',
+    ],
+  ])('sends %s its own body for every event', (url, key) => {
+    for (const payload of everyPayload) {
+      const body = JSON.parse(
+        formatWebhookBody(url, payload, ORIGIN),
+      ) as Record<string, unknown>;
+
+      expect(body).toHaveProperty(key);
+    }
+  });
+
+  it('posts a telegram report to the chat its url names', () => {
+    const body = JSON.parse(
+      formatWebhookBody(
+        'https://api.telegram.org/bot1:A/sendMessage?chat_id=-100',
+        batch,
+        ORIGIN,
+      ),
+    ) as { chat_id: string; parse_mode: string };
+
+    expect(body).toMatchObject({ chat_id: '-100', parse_mode: 'HTML' });
+  });
+
+  it.each([
     'https://hooks.example.com/x',
     'https://hooks.zapier.com/hooks/catch/1/2/',
     'https://hooks.slack.com/workflows/T1/A2/3/x',
