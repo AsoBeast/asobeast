@@ -148,20 +148,16 @@ export class ProxyPool {
 
     const contended = new Set<string>();
     for (;;) {
-      const available = rows.filter((row) => !contended.has(row.id));
-      if (available.length === 0) {
-        return {
-          kind: 'wait',
-          waitMs:
-            contended.size > 0
-              ? this.config.minIntervalMs
-              : this.config.emptyPollMs,
-        };
-      }
-
+      const now = new Date();
       const selection = selectEndpoint({
-        candidates: available.map(toCandidate),
-        now: new Date(),
+        candidates: rows
+          .map(toCandidate)
+          .map((candidate) =>
+            contended.has(candidate.endpointId)
+              ? { ...candidate, lastUsedAt: now }
+              : candidate,
+          ),
+        now,
         minIntervalMs: this.config.minIntervalMs,
         ...(country && isGeoSensitive(store) ? { country } : {}),
       });
@@ -173,7 +169,7 @@ export class ProxyPool {
         return { kind: 'wait', waitMs: Math.max(selection.waitMs, 1) };
       }
 
-      const chosen = available.find((row) => row.id === selection.endpointId);
+      const chosen = rows.find((row) => row.id === selection.endpointId);
       if (!chosen) return { kind: 'wait', waitMs: this.config.emptyPollMs };
 
       if (await this.claim(chosen.id, store)) {

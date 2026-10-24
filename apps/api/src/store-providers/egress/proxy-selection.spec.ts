@@ -11,6 +11,7 @@ const candidate = (over: Partial<PoolCandidate>): PoolCandidate => ({
   endpointId: 'e1',
   country: 'us',
   cooldownUntil: null,
+  pacedUntil: null,
   lastUsedAt: null,
   ...over,
 });
@@ -97,6 +98,109 @@ describe('proxy selection', () => {
     );
 
     expect(selection).toEqual({ kind: 'endpoint', endpointId: 'us-only' });
+  });
+
+  it('waits for a busy local endpoint instead of sending the search abroad', () => {
+    const selection = select(
+      [
+        candidate({
+          endpointId: 'de-busy',
+          country: 'de',
+          lastUsedAt: at(-1_000),
+        }),
+        candidate({ endpointId: 'us-free', country: 'us', lastUsedAt: null }),
+      ],
+      'de',
+    );
+
+    expect(selection).toEqual({ kind: 'wait', waitMs: 3_000 });
+  });
+
+  it('waits for a paced local endpoint while a foreign one is free', () => {
+    const selection = select(
+      [
+        candidate({
+          endpointId: 'de-paced',
+          country: 'de',
+          pacedUntil: at(8_000),
+        }),
+        candidate({ endpointId: 'us-free', country: 'us' }),
+      ],
+      'de',
+    );
+
+    expect(selection).toEqual({ kind: 'wait', waitMs: 8_000 });
+  });
+
+  it('waits only for the healthy local endpoints when another is cooling down', () => {
+    const selection = select(
+      [
+        candidate({
+          endpointId: 'de-burnt',
+          country: 'de',
+          cooldownUntil: at(60_000),
+        }),
+        candidate({
+          endpointId: 'de-busy',
+          country: 'de',
+          lastUsedAt: at(-2_000),
+        }),
+        candidate({ endpointId: 'us-free', country: 'us' }),
+      ],
+      'de',
+    );
+
+    expect(selection).toEqual({ kind: 'wait', waitMs: 2_000 });
+  });
+
+  it('falls back to a foreign endpoint once every local one is cooling down', () => {
+    const selection = select(
+      [
+        candidate({
+          endpointId: 'de-burnt',
+          country: 'de',
+          cooldownUntil: at(60_000),
+        }),
+        candidate({ endpointId: 'us-free', country: 'us' }),
+      ],
+      'de',
+    );
+
+    expect(selection).toEqual({ kind: 'endpoint', endpointId: 'us-free' });
+  });
+
+  it('spreads load across the free local endpoints', () => {
+    const selection = select(
+      [
+        candidate({
+          endpointId: 'de-recent',
+          country: 'de',
+          lastUsedAt: at(-5_000),
+        }),
+        candidate({
+          endpointId: 'de-stale',
+          country: 'de',
+          lastUsedAt: at(-60_000),
+        }),
+        candidate({ endpointId: 'us-fresh', country: 'us', lastUsedAt: null }),
+      ],
+      'de',
+    );
+
+    expect(selection).toEqual({ kind: 'endpoint', endpointId: 'de-stale' });
+  });
+
+  it('takes any free endpoint when no storefront is asked for', () => {
+    const selection = select([
+      candidate({
+        endpointId: 'de-busy',
+        country: 'de',
+        lastUsedAt: at(-1_000),
+      }),
+      candidate({ endpointId: 'us-free', country: 'us' }),
+    ]);
+
+    expect(selection).toEqual({ kind: 'endpoint', endpointId: 'us-free' });
   });
 
   it('resolves ties deterministically so a restart keeps the same order', () => {
