@@ -218,7 +218,7 @@ Every alert email uses the AsoBeast layout: a header with the logo, the details 
 
 The button, the logo, the settings link and the unsubscribe link are built from `WEB_PUBLIC_URL`. Without it the email shows text only and no link.
 
-A daily update lists up to 20 lines per section. When the report would grow past what Gmail shows before clipping, the HTML part shows fewer lines per section and fewer competitors per app, each with a note of how many more there are, while the plain text part keeps the full lists. Open the app from the card for everything.
+A daily update lists up to 20 rows per section. A longer section ends with a link to the page that lists every row, `See all 32`, or with the count of the rows left out when `WEB_PUBLIC_URL` is unset. When the report would grow past what Gmail shows before clipping, the HTML part shows fewer rows per section and fewer competitors per app, while the plain text part keeps 20. Listing changes name each field the way App Store Connect and the Play Console do, and an icon change reads `Icon changed` instead of printing the image address.
 
 ### Unsubscribe from an email
 
