@@ -7,6 +7,7 @@ export * from "./localizations";
 export * from "./setup";
 export * from "./rankings";
 export * from "./competitors";
+export * from "./annotations";
 export * from "./charts";
 export * from "./analytics";
 export * from "./reviews";

@@ -1,5 +1,6 @@
 import type { ApiTokenScope } from "@asobeast/shared";
 import { ACTION_TOOLS } from "./actions";
+import { ANNOTATION_TOOLS } from "./annotations";
 import { APP_TOOLS } from "./apps";
 import { CHART_TOOLS } from "./charts";
 import { COMPETITOR_TOOLS } from "./competitors";
@@ -20,6 +21,7 @@ export {
 export { toolText } from "./tool-text";
 export { notFoundText } from "./not-found";
 export { ACTION_TOOLS } from "./actions";
+export { ANNOTATION_TOOLS } from "./annotations";
 export { APP_TOOLS } from "./apps";
 export { CHART_TOOLS } from "./charts";
 export { COMPETITOR_TOOLS } from "./competitors";
@@ -32,6 +34,7 @@ export const MCP_TOOLS: ReadTool[] = [
   ...KEYWORD_TOOLS,
   ...COMPETITOR_TOOLS,
   ...CHART_TOOLS,
+  ...ANNOTATION_TOOLS,
   ...INSIGHT_TOOLS,
   ...ACTION_TOOLS,
 ];

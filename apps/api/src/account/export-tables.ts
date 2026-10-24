@@ -76,6 +76,7 @@ export const EXPORT_TABLE_KEYS: readonly ExportTableKey[] = [
   { name: 'keywordRanking', key: ['appId', 'keywordId', 'date'] },
   { name: 'categoryRank', key: ['appId', 'date', 'collection', 'genre'] },
   { name: 'chartFollow', key: ID },
+  { name: 'appAnnotation', key: ID },
   { name: 'review', key: ID },
   { name: 'reviewReply', key: ['reviewId'] },
   { name: 'changeEvent', key: ID },

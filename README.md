@@ -45,22 +45,22 @@ AsoBeast is built for people who ship apps and want their ASO data to stay their
 
 ## Features
 
-| Feature                          | What it does                                                                                                                                                                                                         |
-| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Two live stores                  | Import an Apple App Store or Google Play URL, snapshot the metadata, refresh on demand and diff every field                                                                                                          |
-| Keyword tracking                 | Track any validated storefront, see daily positions and history, bulk edit, and keep the private 100 character iOS keyword field by hand                                                                             |
-| Market suggestions               | Reads the languages your listing ships and suggests the storefronts that read them, with the daily request cost, then seeds a chosen market with the keywords of its own listing                                     |
-| Rank checks to depth 200         | One search per keyword and market serves your app and all of its competitors, so competitor tracking costs no extra requests                                                                                         |
-| Transparent scoring              | Popularity and difficulty with provenance and confidence, plus opportunity derived on read                                                                                                                           |
-| SERP and category intelligence   | Retained SERP snapshots, volatility, entrants and movers, and top charts by country and category with movement, trending apps and chart follows                                                                      |
-| Competitor discovery             | Find competitors from live search results, compare listings and find keyword gaps                                                                                                                                    |
-| Reviews and change detection     | Sync reviews and rating history, draft and track replies to them, mine review language for keyword ideas, and detect owned and competitor metadata changes                                                           |
-| Store funnel                     | Optionally connect an App Store Connect key and see impressions, product page views, Get taps and conversion by market beside your rankings and every listing change, with history back to 2024                      |
-| ASO audit and metadata workbench | A deterministic audit rubric with history, store metadata lints and strategic keyword buckets                                                                                                                        |
-| ASO Action Center                | Seventeen deterministic rules produce recommendations with a priority, an estimated impact, the evidence behind them, a deep link, a full lifecycle and a verified outcome                                           |
-| Portfolio analysis               | Group linked listings across stores and countries, compare group visibility and generate weekly digests                                                                                                              |
-| Alerts                           | Signed webhooks or SMTP email for rank, SERP, metadata, review and new action events, with resumable batched delivery                                                                                                |
-| MCP server                       | 36 read tools, plus 5 opt-in tools that change keywords, competitors and actions, over stdio or a remote endpoint, so Claude Code, Claude Desktop, Cursor, VS Code and other MCP clients can work with your instance |
+| Feature                          | What it does                                                                                                                                                                                                                      |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Two live stores                  | Import an Apple App Store or Google Play URL, snapshot the metadata, refresh on demand and diff every field                                                                                                                       |
+| Keyword tracking                 | Track any validated storefront, see daily positions and history, bulk edit, and keep the private 100 character iOS keyword field by hand                                                                                          |
+| Market suggestions               | Reads the languages your listing ships and suggests the storefronts that read them, with the daily request cost, then seeds a chosen market with the keywords of its own listing                                                  |
+| Rank checks to depth 200         | One search per keyword and market serves your app and all of its competitors, so competitor tracking costs no extra requests                                                                                                      |
+| Transparent scoring              | Popularity and difficulty with provenance and confidence, plus opportunity derived on read                                                                                                                                        |
+| SERP and category intelligence   | Retained SERP snapshots, volatility, entrants and movers, and top charts by country and category with movement, trending apps and chart follows                                                                                   |
+| Competitor discovery             | Find competitors from live search results, compare listings and find keyword gaps                                                                                                                                                 |
+| Reviews and change detection     | Sync reviews and rating history, draft and track replies to them, mine review language for keyword ideas, and detect owned and competitor metadata changes                                                                        |
+| Store funnel                     | Optionally connect an App Store Connect key and see impressions, product page views, Get taps and conversion by market beside your rankings and every listing change, with history back to 2024                                   |
+| ASO audit and metadata workbench | A deterministic audit rubric with history, store metadata lints and strategic keyword buckets                                                                                                                                     |
+| ASO Action Center                | Seventeen deterministic rules produce recommendations with a priority, an estimated impact, the evidence behind them, a deep link, a full lifecycle and a verified outcome                                                        |
+| Portfolio analysis               | Group linked listings across stores and countries, compare group visibility and generate weekly digests                                                                                                                           |
+| Alerts                           | Signed webhooks or SMTP email for rank, SERP, metadata, review and new action events, with resumable batched delivery                                                                                                             |
+| MCP server                       | 37 read tools, plus 7 opt-in tools that change keywords, competitors, actions and annotations, over stdio or a remote endpoint, so Claude Code, Claude Desktop, Cursor, VS Code and other MCP clients can work with your instance |
 
 A guide for each of these lives in the [documentation](https://docs.asobeast.com).
 
@@ -160,7 +160,7 @@ Only the store requests themselves, which send each tracked phrase to the App St
 
 ### Can I connect AsoBeast to Claude or another AI agent?
 
-Yes. AsoBeast ships a Model Context Protocol server with 36 read tools, available as a local stdio process or as a remote endpoint on your instance. Every connection needs a personal API token and reads by default. Five more tools that change keywords, competitors and actions are listed only to a token you give the write scope. See [MCP](https://docs.asobeast.com/mcp/introduction).
+Yes. AsoBeast ships a Model Context Protocol server with 37 read tools, available as a local stdio process or as a remote endpoint on your instance. Every connection needs a personal API token and reads by default. Seven more tools that change keywords, competitors, actions and annotations are listed only to a token you give the write scope. See [MCP](https://docs.asobeast.com/mcp/introduction).
 
 ### Is AsoBeast really free?
 

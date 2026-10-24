@@ -10,6 +10,7 @@ import {
   YAxis,
 } from "recharts";
 import { formatCheckedPosition, RANK_DEPTH } from "@asobeast/shared";
+import type { AppAnnotationItem } from "@asobeast/shared";
 import {
   ChartContainer,
   ChartLegend,
@@ -17,6 +18,11 @@ import {
 } from "@/components/ui/chart";
 import { SeriesLegend } from "@/components/charts/SeriesLegend";
 import { SeriesTooltip } from "@/components/charts/SeriesTooltip";
+import { AnnotationTooltipNotes } from "@/components/annotations/AnnotationTooltipNotes";
+import {
+  annotationLines,
+  annotationsOn,
+} from "@/components/annotations/annotation-lines";
 import {
   CHART_HEIGHT,
   CHART_MARGIN,
@@ -59,10 +65,12 @@ function RankingTooltip({
   active,
   label,
   data,
+  annotations,
 }: {
   active?: boolean;
   label?: string | number;
   data: RankingChartData;
+  annotations: AppAnnotationItem[];
 }) {
   if (!active || label === undefined) return null;
 
@@ -86,21 +94,34 @@ function RankingTooltip({
     };
   });
 
-  return <SeriesTooltip title={formatDayMonth(String(label))} items={items} />;
+  return (
+    <SeriesTooltip
+      title={formatDayMonth(String(label))}
+      items={items}
+      footer={
+        <AnnotationTooltipNotes
+          annotations={annotationsOn(annotations, String(label))}
+        />
+      }
+    />
+  );
 }
 
 export function RankingChart({
   data,
   changeDates = [],
+  annotations = [],
 }: {
   data: RankingChartData;
   changeDates?: string[];
+  annotations?: AppAnnotationItem[];
 }) {
   const today = todayUtc();
   const plotted = new Set(data.rows.map((row) => String(row.date)));
   const marked = changeDates.filter(
     (date) => date !== today && plotted.has(date),
   );
+  const annotated = annotationLines(annotations, [...plotted], today);
 
   return (
     <ChartContainer
@@ -139,6 +160,14 @@ export function RankingChart({
             }}
           />
         ))}
+        {annotated.map((annotation) => (
+          <ReferenceLine
+            key={annotation.id}
+            x={annotation.date}
+            stroke="var(--info)"
+            strokeDasharray="6 3"
+          />
+        ))}
         {plotted.has(today) ? (
           <ReferenceLine
             x={today}
@@ -154,7 +183,7 @@ export function RankingChart({
         ) : null}
         <ChartTooltip
           filterNull={false}
-          content={<RankingTooltip data={data} />}
+          content={<RankingTooltip data={data} annotations={annotations} />}
         />
         <ChartLegend
           content={
