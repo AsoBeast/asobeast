@@ -1,14 +1,17 @@
 import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { fetch, type Dispatcher, type Response } from 'undici';
-import { AlertPayload, WebhookTestResult } from '@asobeast/shared';
+import {
+  AlertPayload,
+  webhookLabel,
+  WebhookTestResult,
+} from '@asobeast/shared';
 import { Env } from '../config/env';
 import { formatWebhookBody } from './webhook-format';
 import { deliveryHeaders } from './webhook-signature';
 import { publicOnlyDispatcher } from './webhook-dispatcher';
 import {
   assertDeliverableUrl,
-  webhookLabel,
   type WebhookTargetOptions,
 } from './webhook-target';
 

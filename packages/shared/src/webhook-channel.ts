@@ -49,3 +49,31 @@ export function webhookChannelOf(url: string): WebhookChannel {
   }
   return 'generic';
 }
+
+const HIDDEN = '…';
+
+function channelPath(url: URL): string | null {
+  switch (webhookChannelOf(url.href)) {
+    case 'discord':
+      return `api/webhooks/${HIDDEN}`;
+    case 'slack':
+      return `services/${HIDDEN}`;
+    case 'telegram':
+      return `bot${HIDDEN}/sendMessage`;
+    case 'google_chat':
+      return url.pathname.slice(1);
+    default:
+      return url.pathname === '/' ? null : HIDDEN;
+  }
+}
+
+export function webhookLabel(raw: string): string {
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return 'an invalid url';
+  }
+  const path = channelPath(url);
+  return path ? `${url.host}/${path}` : url.host;
+}

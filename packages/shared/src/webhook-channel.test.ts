@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { webhookChannelOf } from './webhook-channel';
+import { webhookChannelOf, webhookLabel } from './webhook-channel';
 
 describe('webhookChannelOf', () => {
   it.each([
@@ -36,5 +36,34 @@ describe('webhookChannelOf', () => {
     ['not a url', 'generic'],
   ])('recognises %s as %s', (url, channel) => {
     expect(webhookChannelOf(url)).toBe(channel);
+  });
+});
+
+describe('webhookLabel', () => {
+  it.each([
+    ['https://discord.com/api/webhooks/123/abc', 'discord.com/api/webhooks/…'],
+    [
+      'https://hooks.slack.com/services/T0123/B0456/secret',
+      'hooks.slack.com/services/…',
+    ],
+    [
+      'https://prod-21.westeurope.logic.azure.com:443/workflows/abc/triggers/manual/paths/invoke?sig=secret',
+      'prod-21.westeurope.logic.azure.com/…',
+    ],
+    [
+      'https://api.telegram.org/bot123456:ABC-SECRETTOKEN/sendMessage?chat_id=-100',
+      'api.telegram.org/bot…/sendMessage',
+    ],
+    [
+      'https://chat.googleapis.com/v1/spaces/AAAAxyz/messages?key=k&token=t',
+      'chat.googleapis.com/v1/spaces/AAAAxyz/messages',
+    ],
+    ['https://webhook.site/6f1c2d3e-uuid/extra', 'webhook.site/…'],
+    ['https://hooks.example.com/x?token=secret', 'hooks.example.com/…'],
+    ['http://n8n:5678/webhook/asobeast', 'n8n:5678/…'],
+    ['https://hooks.example.com/', 'hooks.example.com'],
+    ['not a url', 'an invalid url'],
+  ])('prints %s as %s', (url, label) => {
+    expect(webhookLabel(url)).toBe(label);
   });
 });
