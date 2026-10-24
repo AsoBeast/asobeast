@@ -22,6 +22,7 @@ import {
   dropped,
   droppedOut,
   improved,
+  LONG_ICON_URL,
   metadata,
   negative,
   worstCaseBatch,
@@ -614,6 +615,22 @@ describe('formatBatchEmail in the branded layout', () => {
       const { html } = await formatBatchEmail(worstCaseBatch(scope), linked);
       expect(Buffer.byteLength(html)).toBeLessThan(HTML_BUDGET_BYTES);
       expect(html).toContain('subscribes to AsoBeast email alerts');
+    },
+  );
+
+  it.each([['owned_apps'], ['competitors'], [null]] as const)(
+    'draws one icon per card of the largest %s report and stays under budget',
+    async (scope) => {
+      const { html } = await formatBatchEmail(worstCaseBatch(scope), linked);
+      const icons = html.split(`src="${LONG_ICON_URL}"`).length - 1;
+      const cards =
+        html.match(
+          />(Mindful Sleep and Meditation Coach|Rival Sleep Studio) \d+<\/a>/g,
+        ) ?? [];
+
+      expect(Buffer.byteLength(html)).toBeLessThan(HTML_BUDGET_BYTES);
+      expect(icons).toBeGreaterThan(0);
+      expect(icons).toBe(cards.length);
     },
   );
 
