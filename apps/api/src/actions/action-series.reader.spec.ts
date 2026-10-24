@@ -242,13 +242,22 @@ describe('ActionSeriesReader conversion', () => {
     });
   });
 
-  it('reads google play conversion from store listing visitors', async () => {
-    const { reader } = conversionReader();
+  it('reads google play conversion from the store listing visitors of every market', async () => {
+    const { prisma, reader } = conversionReader();
     const base = item('conversion.investigate_drop', null);
 
     const trend = await reader.read(
       { ...base, scope: { ...base.scope, store: 'GOOGLE_PLAY' } },
       TODAY,
+    );
+
+    expect(prisma.storeFunnelDay.groupBy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          appId: 'app_1',
+          territory: 'all',
+        }) as unknown,
+      }),
     );
 
     expect(

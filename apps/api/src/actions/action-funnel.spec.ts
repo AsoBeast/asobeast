@@ -59,6 +59,11 @@ function build(connected: string[]) {
   return { reader, prisma, funnel };
 }
 
+const WINDOW = {
+  gte: new Date('2026-09-09T00:00:00.000Z'),
+  lte: new Date('2026-10-13T00:00:00.000Z'),
+};
+
 const APPS = [
   { id: 'app_1', store: 'APP_STORE' as const, country: 'us' },
   { id: 'app_2', store: 'APP_STORE' as const, country: 'de' },
@@ -90,13 +95,9 @@ describe('ActionFunnelReader', () => {
       expect.objectContaining({
         where: {
           OR: [
-            { appId: 'app_1', country: 'us' },
-            { appId: 'app_2', country: 'de' },
+            { appId: 'app_1', country: 'us', date: WINDOW },
+            { appId: 'app_2', country: 'de', date: WINDOW },
           ],
-          date: {
-            gte: new Date('2026-09-09T00:00:00.000Z'),
-            lte: new Date('2026-10-13T00:00:00.000Z'),
-          },
         },
       }),
     );
@@ -121,6 +122,36 @@ describe('ActionFunnelReader', () => {
       reporting: false,
       days: [],
       pages: [],
+    });
+  });
+  it('reads a google play app from the visitors of every market through the last day google has posted', async () => {
+    const { reader, prisma } = build(['app_play']);
+
+    const funnels = await reader.forApps(
+      [{ id: 'app_play', store: 'GOOGLE_PLAY', country: 'us' }],
+      NOW,
+      35,
+    );
+
+    expect(prisma.storeFunnelDay.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          OR: [
+            {
+              appId: 'app_play',
+              territory: 'all',
+              date: {
+                gte: new Date('2026-09-05T00:00:00.000Z'),
+                lte: new Date('2026-10-09T00:00:00.000Z'),
+              },
+            },
+          ],
+        },
+      }),
+    );
+    expect(funnels.get('app_play')).toMatchObject({
+      reporting: true,
+      completeThrough: '2026-10-09',
     });
   });
 });

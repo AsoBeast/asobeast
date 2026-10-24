@@ -18,7 +18,7 @@ import {
   conversionPercent,
 } from './action-trend';
 import { HOME_LISTING } from '../apps/listing';
-import { completeThrough } from '../store-connect/store-funnel';
+import { finalThrough, marketFunnelScope } from '../store-connect/store-funnel';
 
 interface SeriesBody {
   depth: number | null;
@@ -168,12 +168,13 @@ export class ActionSeriesReader {
     ) {
       return null;
     }
+    const { appId, store, country } = item.scope;
     const where = {
-      appId: item.scope.appId,
-      country: item.scope.country,
+      appId,
+      ...marketFunnelScope(store, country, country),
       date: {
         gte: from,
-        lte: new Date(`${completeThrough(new Date())}T00:00:00.000Z`),
+        lte: new Date(`${finalThrough(new Date(), store)}T00:00:00.000Z`),
       },
     };
     const pageTitle =

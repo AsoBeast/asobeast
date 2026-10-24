@@ -1,5 +1,4 @@
 import {
-  STORE_FUNNEL_COMPLETE_AFTER_DAYS,
   type ChangeImpactFunnel,
   type ChangeImpactWindowDays,
   type Store,
@@ -8,6 +7,7 @@ import {
   between,
   countsChange,
   countsOf,
+  finalAfterDays,
   shiftDate,
   type FunnelDayRow,
 } from '../store-connect/store-funnel';
@@ -20,13 +20,6 @@ export interface ChangeFunnelInput {
   firstDate: string | null;
   store: Store;
 }
-
-export const PLAY_FINAL_AFTER_DAYS = 7;
-
-const finalAfterDays = (store: Store): number =>
-  store === 'GOOGLE_PLAY'
-    ? PLAY_FINAL_AFTER_DAYS
-    : STORE_FUNNEL_COMPLETE_AFTER_DAYS;
 
 const UNMEASURED: ChangeImpactFunnel = {
   status: 'unmeasured',

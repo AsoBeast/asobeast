@@ -79,6 +79,16 @@ export const shiftDate = (date: string, days: number): string =>
 export const completeThrough = (today: Date): string =>
   toDateKey(addDays(startOfUtcDay(today), -STORE_FUNNEL_COMPLETE_AFTER_DAYS));
 
+export const PLAY_FINAL_AFTER_DAYS = 7;
+
+export const finalAfterDays = (store: Store): number =>
+  store === 'GOOGLE_PLAY'
+    ? PLAY_FINAL_AFTER_DAYS
+    : STORE_FUNNEL_COMPLETE_AFTER_DAYS;
+
+export const finalThrough = (today: Date, store: Store): string =>
+  toDateKey(addDays(startOfUtcDay(today), -finalAfterDays(store)));
+
 export function reportedThrough(
   today: Date,
   lastDate: string | null | undefined,
