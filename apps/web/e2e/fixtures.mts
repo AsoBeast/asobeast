@@ -2038,6 +2038,53 @@ export const APP_1_CHANGE_IMPACT: ChangeImpactReport = {
   ],
 };
 
+export const PLAY_CHANGE_IMPACT_COOKIE = "e2e-play-change-impact";
+
+export const APP_GP_CHANGE_IMPACT: ChangeImpactReport = {
+  appId: "app-gp",
+  country: "us",
+  days: 90,
+  totalChanges: 1,
+  items: [
+    {
+      changedOn: utcDaysAgo(30),
+      fields: ["title"],
+      baselineDate: null,
+      windows: [
+        {
+          ...openWindow("unmeasured", 30, 7),
+          funnel: {
+            status: "measured",
+            completeDays: 7,
+            before: {
+              impressions: null,
+              uniqueImpressions: null,
+              pageViews: 350,
+              gets: 35,
+              conversion: 0.1,
+            },
+            after: {
+              impressions: null,
+              uniqueImpressions: null,
+              pageViews: 350,
+              gets: 70,
+              conversion: 0.2,
+            },
+            change: {
+              impressions: null,
+              pageViews: 0,
+              gets: 1,
+              conversion: 1,
+            },
+          },
+        },
+        openWindow("unmeasured", 30, 14),
+        openWindow("unmeasured", 30, 28),
+      ],
+    },
+  ],
+};
+
 const LONG_NAME =
   "Deep Focus Pomodoro Timer and Habit Builder for Students and Remote Teams Pro";
 const LONG_KEYWORD = "best pomodoro focus timer for students and remote teams";

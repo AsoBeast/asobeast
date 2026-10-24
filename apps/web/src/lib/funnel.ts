@@ -31,16 +31,21 @@ export interface FunnelCopy {
   refusedAskOwner: string;
 }
 
+export const FUNNEL_GETS_LABEL: Record<Store, string> = {
+  APP_STORE: "Get taps",
+  GOOGLE_PLAY: "Acquisitions",
+};
+
 const APP_STORE_TILES: FunnelTile[] = [
   { label: "Impressions", metric: "impressions" },
   { label: "Product page views", metric: "pageViews" },
-  { label: "Get taps", metric: "gets" },
+  { label: FUNNEL_GETS_LABEL.APP_STORE, metric: "gets" },
   { label: "Conversion", metric: "conversion" },
 ];
 
 const PLAY_TILES: FunnelTile[] = [
   { label: "Store listing visitors", metric: "pageViews" },
-  { label: "Acquisitions", metric: "gets" },
+  { label: FUNNEL_GETS_LABEL.GOOGLE_PLAY, metric: "gets" },
   { label: "Conversion", metric: "conversion" },
 ];
 
