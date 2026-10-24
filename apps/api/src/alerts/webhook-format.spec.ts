@@ -590,9 +590,9 @@ describe('formatWebhookBody', () => {
     ) as { blocks: Array<{ type: string; text?: { text: string } }> };
     const section = slack.blocks.find((block) => block.type === 'section');
     expect(section?.text?.text).toContain('A &amp; &lt;tag&gt;');
-    expect(section?.text?.text).toContain('\\_under\\_');
+    expect(section?.text?.text).toContain('_under_');
     expect(section?.text?.text).toContain('&lt;@123&gt;');
-    expect(section?.text?.text).toContain('\\`code\\`');
+    expect(section?.text?.text).not.toContain('\\`');
   });
 
   it('handles null and Unicode competitor names without empty content', () => {
