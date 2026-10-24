@@ -14,6 +14,7 @@ import {
 } from '../report/report-blocks';
 import { identityLine } from '../report/storefront';
 import { boundedLines, clamp } from './bounded-text';
+import { isWebUrl } from './web-url';
 import { escapeDiscord } from './chat-escape';
 import { discordTime, utcFallback } from './local-time';
 
@@ -62,9 +63,6 @@ const COLOURS: Record<ReportTone, number> = {
 };
 
 const markdownLink: LinkFormat = (label, href) => `[${label}](${href})`;
-
-const isWebUrl = (url: string | null): url is string =>
-  url !== null && /^https?:\/\//.test(url);
 
 interface FieldSource {
   name: string;

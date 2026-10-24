@@ -8,6 +8,7 @@ import {
 } from '../report/report-blocks';
 import { identityLine } from '../report/storefront';
 import { boundedLines, clamp } from './bounded-text';
+import { isWebUrl } from './web-url';
 import { escapeSlack, slackName } from './chat-escape';
 import { slackDate, utcFallback } from './local-time';
 
@@ -51,9 +52,6 @@ const CLOSING_BLOCKS = 2;
 
 const slackLink: LinkFormat = (label, href) =>
   `<${href}|${escapeSlack(label)}>`;
-
-const isWebUrl = (url: string | null): url is string =>
-  url !== null && /^https?:\/\//.test(url);
 
 const mrkdwn = (text: string): SlackMrkdwn => ({ type: 'mrkdwn', text });
 
