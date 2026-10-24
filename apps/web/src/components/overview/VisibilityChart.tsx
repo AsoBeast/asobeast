@@ -1,15 +1,29 @@
 "use client";
 
 import { Suspense, useDeferredValue } from "react";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import type { AppAnnotationItem, VisibilityPoint } from "@asobeast/shared";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ReferenceLine,
+  XAxis,
+  YAxis,
+} from "recharts";
 import {
   type ChartConfig,
   ChartContainer,
   ChartTooltip,
-  ChartTooltipContent,
 } from "@/components/ui/chart";
+import { SeriesTooltip } from "@/components/charts/SeriesTooltip";
+import { AnnotationTooltipNotes } from "@/components/annotations/AnnotationTooltipNotes";
+import {
+  annotationLines,
+  annotationsInScope,
+  annotationsOn,
+} from "@/components/annotations/annotation-lines";
 import {
   Card,
   CardAction,
@@ -25,17 +39,18 @@ import {
   ChartStat,
   trendState,
 } from "@/components/charts/ChartStates";
+import { useKeywordScope } from "@/components/app-detail/use-market";
 import {
   CHART_HEIGHT,
   CHART_MARGIN,
   GRID_PROPS,
   seriesColor,
   TIME_AXIS_PROPS,
-  TIME_TOOLTIP_PROPS,
   VALUE_AXIS_PROPS,
 } from "@/components/charts/theme";
-import { useKeywordScope } from "@/components/app-detail/use-market";
-import { visibilityOptions } from "@/lib/queries";
+import { formatDayMonth, formatNumber } from "@/lib/format";
+import { annotationsOptions, visibilityOptions } from "@/lib/queries";
+import { todayUtc } from "@/lib/ranges";
 import {
   presetToRange,
   VISIBILITY_RANGES,
@@ -47,6 +62,44 @@ const chartConfig = {
   visibility: { label: "Visibility", color: seriesColor(0) },
 } satisfies ChartConfig;
 
+function VisibilityTooltip({
+  active,
+  label,
+  points,
+  annotations,
+}: {
+  active?: boolean;
+  label?: string | number;
+  points: VisibilityPoint[];
+  annotations: AppAnnotationItem[];
+}) {
+  if (!active || label === undefined) return null;
+
+  const point = points.find((candidate) => candidate.date === label);
+  if (!point) return null;
+
+  return (
+    <SeriesTooltip
+      title={formatDayMonth(String(label))}
+      items={[
+        {
+          key: "visibility",
+          index: 0,
+          color: "var(--color-visibility)",
+          label: "Visibility",
+          value: formatNumber(point.visibility),
+          sortBy: point.visibility,
+        },
+      ]}
+      footer={
+        <AnnotationTooltipNotes
+          annotations={annotationsOn(annotations, String(label))}
+        />
+      }
+    />
+  );
+}
+
 function VisibilityChartBody({
   id,
   range,
@@ -57,6 +110,13 @@ function VisibilityChartBody({
   const { country } = useKeywordScope(id);
   const { data } = useSuspenseQuery(
     visibilityOptions(id, presetToRange(range), country),
+  );
+  const { data: annotations } = useQuery(annotationsOptions(id));
+  const inScope = annotationsInScope(annotations?.annotations ?? [], country);
+  const marked = annotationLines(
+    inScope,
+    data.points.map((point) => point.date),
+    todayUtc(),
   );
 
   const state = trendState(data.points.length);
@@ -92,8 +152,18 @@ function VisibilityChartBody({
         <CartesianGrid {...GRID_PROPS} />
         <XAxis {...TIME_AXIS_PROPS} />
         <YAxis {...VALUE_AXIS_PROPS} />
+        {marked.map((annotation) => (
+          <ReferenceLine
+            key={annotation.id}
+            x={annotation.date}
+            stroke="var(--info)"
+            strokeDasharray="6 3"
+          />
+        ))}
         <ChartTooltip
-          content={<ChartTooltipContent {...TIME_TOOLTIP_PROPS} />}
+          content={
+            <VisibilityTooltip points={data.points} annotations={inScope} />
+          }
         />
         <Area
           dataKey="visibility"

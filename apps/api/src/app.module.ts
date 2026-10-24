@@ -20,6 +20,7 @@ import { ObservabilityModule } from './observability/observability.module';
 import { TenancyModule } from './common/tenancy/tenancy.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { ActionsModule } from './actions/actions.module';
+import { AnnotationsModule } from './annotations/annotations.module';
 import { AppsModule } from './apps/apps.module';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
@@ -53,6 +54,7 @@ import { envConfigModule } from './config/env-config.module';
     MetricsModule,
     AppsModule,
     AnalyticsModule,
+    AnnotationsModule,
     AuditModule,
     ActionsModule,
     McpModule,
