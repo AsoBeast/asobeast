@@ -218,6 +218,12 @@ for (const [failure, message] of [
     const post = composer(page).getByRole("button", {
       name: "Post to App Store",
     });
+    const { promise: answered, resolve: answer } =
+      Promise.withResolvers<void>();
+    await page.route("**/reply/post", async (route) => {
+      await answered;
+      await route.continue();
+    });
 
     await post.click();
     await page
@@ -226,6 +232,7 @@ for (const [failure, message] of [
       .click();
 
     await expect(post).toHaveAttribute("aria-disabled", "true");
+    answer();
     await expect(page.getByText(message)).toBeVisible();
     await expect(
       articleOf(page, "It crashes when I start a session.").getByText(
