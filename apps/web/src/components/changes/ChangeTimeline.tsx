@@ -90,7 +90,9 @@ function ChangeValue({
       <Tooltip>
         <TooltipTrigger asChild>
           <span className="break-words">
-            <span className="text-muted-foreground">What’s New updated: </span>
+            <span className="text-muted-foreground">
+              {CHANGE_FIELD_LABELS.whatsNew} updated:{" "}
+            </span>
             <span
               className={cn(
                 "font-medium",
