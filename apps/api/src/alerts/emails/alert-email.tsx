@@ -7,6 +7,7 @@ import { Notice } from '../../mail/notice';
 import type { AlertReport } from '../report/report';
 import { AlertFooter, type AlertEmailContext } from './alert-footer';
 import { CardHeader } from './report-card';
+import { ReportRowView } from './report-rows';
 
 export interface AlertEmailProps {
   report: AlertReport;
@@ -15,6 +16,9 @@ export interface AlertEmailProps {
 
 export function AlertEmail({ report, context }: AlertEmailProps) {
   const [app] = report.apps;
+  const iconChanges = (app?.groups ?? [])
+    .flatMap((group) => group.rows)
+    .filter((row) => row.kind === 'image');
   return (
     <EmailLayout
       preview={report.headline}
@@ -28,6 +32,9 @@ export function AlertEmail({ report, context }: AlertEmailProps) {
         </Section>
       )}
       <FactTable facts={report.facts.map((fact) => [fact.label, fact.value])} />
+      {iconChanges.map((row, index) => (
+        <ReportRowView key={index} row={row} />
+      ))}
       {report.link && (
         <CallToAction href={report.link.href} label={report.link.label} />
       )}

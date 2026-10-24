@@ -3,6 +3,7 @@ import {
   digest,
   dropped,
   everyFieldChanged,
+  metadata,
 } from '../email-fixtures.fixture';
 import { formatEmail } from '../email-format';
 import { buildAlert } from '../report/build-alert';
@@ -73,5 +74,36 @@ describe('AlertEmail', () => {
     });
 
     expect(html).toContain(label);
+  });
+
+  it('shows both icons of an instant icon change', async () => {
+    const { html, text } = await formatEmail({
+      ...metadata,
+      changes: [
+        {
+          field: 'icon',
+          before: 'https://x.test/old.png',
+          after: 'https://x.test/new.png',
+        },
+      ],
+    });
+
+    expect(html).toMatch(
+      /<img[^>]*alt="Previous icon"[^>]*src="https:\/\/x\.test\/old\.png"/,
+    );
+    expect(html).toMatch(
+      /<img[^>]*alt="New icon"[^>]*src="https:\/\/x\.test\/new\.png"/,
+    );
+    expect(text).toContain('Icon: Changed');
+    expect(text).not.toContain('x.test');
+  });
+
+  it('draws no icon pair for a change of other fields', async () => {
+    const { html } = await formatEmail({
+      ...metadata,
+      changes: [{ field: 'title', before: 'A', after: 'B' }],
+    });
+
+    expect(html).not.toContain('Previous icon');
   });
 });
