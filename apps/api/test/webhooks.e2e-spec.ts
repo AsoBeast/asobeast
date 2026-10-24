@@ -85,9 +85,11 @@ describe('WebhooksController (e2e)', () => {
     expect(webhook).not.toHaveProperty('secret');
     expect(webhook.active).toBe(true);
     expect(webhook.events).toEqual(['metadata.changed', 'rank.dropped']);
+    expect(webhook.channel).toBe('generic');
 
     const listed = await api.get('/webhooks').expect(200);
     expect(listed.body as WebhookItem[]).toHaveLength(1);
+    expect((listed.body as WebhookItem[])[0].channel).toBe('generic');
 
     const patched = await api
       .patch(`/webhooks/${webhook.id}`)
@@ -100,6 +102,26 @@ describe('WebhooksController (e2e)', () => {
     await api.delete(`/webhooks/${webhook.id}`).expect(204);
     const empty = await api.get('/webhooks').expect(200);
     expect(empty.body as WebhookItem[]).toHaveLength(0);
+  });
+
+  it('answers the chat tool a webhook url reaches', async () => {
+    const created = await api
+      .post('/webhooks')
+      .send({
+        url: 'https://hooks.slack.com/services/T1/B2/x',
+        events: ['rank.dropped'],
+      })
+      .expect(201);
+    expect((created.body as WebhookItem).channel).toBe('slack');
+
+    const listed = await api.get('/webhooks').expect(200);
+    expect((listed.body as WebhookItem[])[0].channel).toBe('slack');
+
+    const moved = await api
+      .patch(`/webhooks/${(created.body as WebhookItem).id}`)
+      .send({ url: 'https://discord.com/api/webhooks/123/abc' })
+      .expect(200);
+    expect((moved.body as WebhookItem).channel).toBe('discord');
   });
 
   it('accepts the milestone, first rank and overtake events', async () => {

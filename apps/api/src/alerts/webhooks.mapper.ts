@@ -1,5 +1,5 @@
 import { Webhook } from '@prisma/client';
-import { WebhookEvent, WebhookItem } from '@asobeast/shared';
+import { webhookChannelOf, WebhookEvent, WebhookItem } from '@asobeast/shared';
 
 export function toWebhookItem(webhook: Webhook): WebhookItem {
   return {
@@ -9,5 +9,6 @@ export function toWebhookItem(webhook: Webhook): WebhookItem {
     active: webhook.active,
     hasSecret: webhook.secret !== null,
     createdAt: webhook.createdAt.toISOString(),
+    channel: webhookChannelOf(webhook.url),
   };
 }
