@@ -268,4 +268,17 @@ describe('ActionSeriesReader conversion', () => {
     );
     expect(prisma.storeFunnelDay.groupBy).not.toHaveBeenCalled();
   });
+
+  it('has no trend for a page action whose evidence names no page', async () => {
+    const { prisma, reader } = conversionReader();
+
+    const trend = await reader.read(
+      { ...item('listing.cpp_underperforms', null), degraded: true },
+      TODAY,
+    );
+
+    expect(trend).toBeNull();
+    expect(prisma.storeFunnelDay.groupBy).not.toHaveBeenCalled();
+    expect(prisma.storeFunnelPageDay.groupBy).not.toHaveBeenCalled();
+  });
 });
