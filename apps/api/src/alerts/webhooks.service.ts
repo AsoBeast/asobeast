@@ -14,6 +14,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateWebhookDto } from './dto/create-webhook.dto';
 import { UpdateWebhookDto } from './dto/update-webhook.dto';
 import { WebhookDelivery } from './webhook-delivery';
+import { assertChannelUrl } from './webhook-channel-rules';
 import { WebhookTargetError } from './webhook-target';
 import { toWebhookItem } from './webhooks.mapper';
 
@@ -88,6 +89,7 @@ export class WebhooksService {
   private assertTarget(url: string): void {
     try {
       this.delivery.assertTarget(url);
+      assertChannelUrl(url);
     } catch (error) {
       if (error instanceof WebhookTargetError) {
         throw new BadRequestException(error.message);

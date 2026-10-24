@@ -124,6 +124,24 @@ describe('WebhooksController (e2e)', () => {
     expect((moved.body as WebhookItem).channel).toBe('discord');
   });
 
+  it.each([
+    [
+      'https://api.telegram.org/bot123:ABC/sendMessage',
+      'a telegram url needs the chat to post to: add ?chat_id=<id> after sendMessage',
+    ],
+    [
+      'https://contoso.webhook.office.com/webhookb2/abc',
+      'office 365 connector urls stopped delivering in may 2026; create a workflow with the "send webhook alerts to a channel" template and paste its url',
+    ],
+  ])('refuses %s with the fix in the message', async (url, message) => {
+    const response = await api
+      .post('/webhooks')
+      .send({ url, events: ['rank.dropped'] })
+      .expect(400);
+
+    expect((response.body as { message: string }).message).toBe(message);
+  });
+
   it('accepts the milestone, first rank and overtake events', async () => {
     const created = await api
       .post('/webhooks')
