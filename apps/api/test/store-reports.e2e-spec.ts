@@ -572,6 +572,7 @@ describe('Store report sync (e2e)', () => {
       harness.gcs.requests.filter((each) => each.url.endsWith('?alt=media')),
     ).toEqual([]);
   });
+
   it('drops the placeholder google writes for visits without a search term from the stored terms', async () => {
     const play = await harness.prisma.app.create({
       data: {

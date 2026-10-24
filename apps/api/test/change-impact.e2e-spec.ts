@@ -482,6 +482,7 @@ describe('ChangeImpactController (e2e)', () => {
     });
     expect(week).toMatchObject({ status: 'measured', visibilityChange: 8.5 });
   });
+
   const seedPlay = async (): Promise<string> => {
     const play = await prisma.app.create({
       data: {
