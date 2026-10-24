@@ -193,8 +193,7 @@ export class ActionSeriesReader {
             where,
             _sum: { gets: true, uniqueImpressions: true, pageViews: true },
           });
-    const byPageViews =
-      pageTitle !== null || item.scope.store === 'GOOGLE_PLAY';
+    const byPageViews = pageTitle !== null || store === 'GOOGLE_PLAY';
     const base = (sum: (typeof rows)[number]['_sum']): number =>
       (byPageViews ? sum.pageViews : sum.uniqueImpressions) ?? 0;
     return {
