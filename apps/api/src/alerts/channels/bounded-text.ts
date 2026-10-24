@@ -1,5 +1,8 @@
+const TRAILING_HIGH_SURROGATE = /[\uD800-\uDBFF]$/;
+
 export function clamp(text: string, max: number): string {
-  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+  if (text.length <= max) return text;
+  return `${text.slice(0, max - 1).replace(TRAILING_HIGH_SURROGATE, '')}…`;
 }
 
 export function shortenLine(text: string, max: number): string {
