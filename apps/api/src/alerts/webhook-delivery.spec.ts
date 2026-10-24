@@ -129,7 +129,7 @@ describe('WebhookDelivery', () => {
       expect(error).toBeInstanceOf(WebhookRateLimitedError);
       expect((error as WebhookRateLimitedError).retryAfterMs).toBe(7000);
       expect((error as Error).message).toBe(
-        `${new URL(url).host}/hook/… asked to retry after 7 s`,
+        `${new URL(url).host}/… asked to retry after 7 s`,
       );
     });
 
@@ -167,9 +167,7 @@ describe('WebhookDelivery', () => {
       .catch((caught: unknown) => caught)) as Error;
     await delivery.onModuleDestroy();
 
-    expect(error.message).toBe(
-      `Webhook ${new URL(url).host}/hook/… responded 500`,
-    );
+    expect(error.message).toBe(`Webhook ${new URL(url).host}/… responded 500`);
     expect(error.message).not.toContain('secret-token');
   });
 

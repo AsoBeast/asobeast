@@ -1,3 +1,4 @@
+import { webhookChannelOf } from '@asobeast/shared';
 import { BlockList, isIP } from 'node:net';
 
 export class WebhookTargetError extends Error {
@@ -115,7 +116,22 @@ export function assertDeliverableUrl(
   return url;
 }
 
-const LABEL_SEGMENTS = 2;
+const HIDDEN = '…';
+
+function channelPath(url: URL): string | null {
+  switch (webhookChannelOf(url.href)) {
+    case 'discord':
+      return `api/webhooks/${HIDDEN}`;
+    case 'slack':
+      return `services/${HIDDEN}`;
+    case 'telegram':
+      return `bot${HIDDEN}/sendMessage`;
+    case 'google_chat':
+      return url.pathname.slice(1);
+    default:
+      return url.pathname === '/' ? null : HIDDEN;
+  }
+}
 
 export function webhookLabel(raw: string): string {
   let url: URL;
@@ -124,8 +140,6 @@ export function webhookLabel(raw: string): string {
   } catch {
     return 'an invalid url';
   }
-  const segments = url.pathname.split('/').filter(Boolean);
-  const kept = segments.slice(0, Math.min(LABEL_SEGMENTS, segments.length - 1));
-  const hidden = segments.length > kept.length ? ['…'] : [];
-  return [url.host, ...kept, ...hidden].join('/');
+  const path = channelPath(url);
+  return path ? `${url.host}/${path}` : url.host;
 }
