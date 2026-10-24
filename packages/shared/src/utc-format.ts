@@ -19,15 +19,31 @@ interface UtcDay {
   day: number;
 }
 
-const DAY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})/;
-const CLOCK_PATTERN = /^\d{4}-\d{2}-\d{2}T(\d{2}):(\d{2})/;
+const UTC_PATTERN =
+  /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2})(?::\d{2}(?:\.\d+)?)?Z)?$/;
 
-function utcDay(value: string): UtcDay | null {
-  const match = DAY_PATTERN.exec(value);
+interface UtcValue {
+  date: UtcDay;
+  clock: string | null;
+}
+
+function utcValue(value: string): UtcValue | null {
+  const match = UTC_PATTERN.exec(value);
   if (!match) return null;
-  const [year, month, day] = match.slice(1).map(Number);
-  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
-  return { year, month, day };
+  const parts = match.slice(1, 6).map((part) => Number(part ?? 0));
+  const [year, month, day, hour, minute] = parts;
+  const instant = new Date(Date.UTC(year, month - 1, day, hour, minute));
+  const roundTrip = [
+    instant.getUTCMonth() + 1,
+    instant.getUTCDate(),
+    instant.getUTCHours(),
+    instant.getUTCMinutes(),
+  ];
+  if (roundTrip.some((part, index) => part !== parts[index + 1])) return null;
+  return {
+    date: { year, month, day },
+    clock: match[4] === undefined ? null : `${match[4]}:${match[5]}`,
+  };
 }
 
 const monthOf = (date: UtcDay): string => MONTHS[date.month - 1];
@@ -37,13 +53,13 @@ const dayMonth = (date: UtcDay): string => `${date.day} ${monthOf(date)}`;
 const fullDate = (date: UtcDay): string => `${dayMonth(date)} ${date.year}`;
 
 export function formatUtcDate(value: string): string {
-  const date = utcDay(value);
-  return date ? fullDate(date) : value;
+  const parsed = utcValue(value);
+  return parsed ? fullDate(parsed.date) : value;
 }
 
 export function formatUtcDateRange(from: string, to: string): string {
-  const start = utcDay(from);
-  const end = utcDay(to);
+  const start = utcValue(from)?.date;
+  const end = utcValue(to)?.date;
   if (!start || !end) return `${from} to ${to}`;
   if (start.year !== end.year) return `${fullDate(start)} to ${fullDate(end)}`;
   if (start.month !== end.month) {
@@ -54,8 +70,7 @@ export function formatUtcDateRange(from: string, to: string): string {
 }
 
 export function formatUtcInstant(iso: string): string {
-  const date = utcDay(iso);
-  const clock = CLOCK_PATTERN.exec(iso);
-  if (!date || !clock) return iso;
-  return `${fullDate(date)}, ${clock[1]}:${clock[2]} UTC`;
+  const parsed = utcValue(iso);
+  if (!parsed?.clock) return iso;
+  return `${fullDate(parsed.date)}, ${parsed.clock} UTC`;
 }
