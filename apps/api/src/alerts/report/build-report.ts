@@ -114,22 +114,14 @@ interface Build {
   caps: ReportCaps;
 }
 
+type GroupHead = Omit<ReportGroup, 'rows' | 'total'>;
+
 function capped(
-  kind: ReportGroupKind,
-  title: string,
-  tone: GroupTone,
+  head: GroupHead,
   rows: ReportRow[],
-  link: ReportGroup['link'],
   caps: ReportCaps,
 ): ReportGroup {
-  return {
-    kind,
-    title,
-    tone,
-    rows: rows.slice(0, caps.rows),
-    total: rows.length,
-    link,
-  };
+  return { ...head, rows: rows.slice(0, caps.rows), total: rows.length };
 }
 
 function ownedGroups(section: Section, build: Build): ReportGroup[] {
@@ -140,7 +132,11 @@ function ownedGroups(section: Section, build: Build): ReportGroup[] {
     if (rows.length === 0) return [];
     const link = build.links.group(section.app.id, kind, rows.length, scores);
     return [
-      capped(kind, source.title, source.tone(section), rows, link, build.caps),
+      capped(
+        { kind, title: source.title, tone: source.tone(section), link },
+        rows,
+        build.caps,
+      ),
     ];
   });
 }
@@ -181,11 +177,13 @@ function competitorApp(
 ): ReportApp {
   const rows = competitor.changes.flatMap(changeRows);
   const changes = capped(
-    'changes',
-    GROUP_SOURCES.changes.title,
-    'neutral',
+    {
+      kind: 'changes',
+      title: GROUP_SOURCES.changes.title,
+      tone: 'neutral',
+      link: build.links.group(primaryId, 'changes', rows.length),
+    },
     rows,
-    build.links.group(primaryId, 'changes', rows.length),
     build.caps,
   );
   return {
