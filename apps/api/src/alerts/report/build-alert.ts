@@ -8,7 +8,7 @@ import type {
 } from './report';
 import { factsOf } from './report-facts';
 import { reportLinks, type ReportLinks } from './report-links';
-import { sentenceOf, type GranularPayload } from './report-sentences';
+import { appName, sentenceOf, type GranularPayload } from './report-sentences';
 
 type AppPayload = Extract<GranularPayload, { app: unknown }>;
 
@@ -23,7 +23,7 @@ function alertApp(payload: AppPayload, links: ReportLinks): ReportApp {
   return {
     id: app.id,
     identity: {
-      name: app.name ?? 'An app',
+      name: appName(app.name),
       iconUrl: app.iconUrl ?? null,
       store: app.store ?? null,
       country: app.country ?? null,

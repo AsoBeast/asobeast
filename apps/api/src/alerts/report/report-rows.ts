@@ -22,7 +22,7 @@ import { actionScopeLine } from '../action-lines';
 import type { ReportRow } from './report';
 
 const VALUE_MAX = 80;
-const EMPTY_VALUE = '—';
+export const EMPTY_VALUE = '—';
 const NO_REVIEW_TEXT = 'no written review';
 
 const QUOTED_FIELDS: ReadonlySet<ChangeField> = new Set([

@@ -13,6 +13,7 @@ import {
 import { summarizeActionEvidence } from '../action-lines';
 import type { ReportFact, ReportRow } from './report';
 import {
+  EMPTY_VALUE,
   PRIORITY_WORDS,
   changeRows,
   milestonePhrase,
@@ -22,7 +23,6 @@ import {
 import { appName, plural, type GranularPayload } from './report-sentences';
 
 const DIGEST_APP_CAP = 10;
-const EMPTY_VALUE = '—';
 
 const fact = (label: string, value: string): ReportFact => ({ label, value });
 

@@ -25,7 +25,7 @@ import {
   rankRow,
   reviewRow,
 } from './report-rows';
-import { plural } from './report-sentences';
+import { appName, plural } from './report-sentences';
 
 export interface ReportCaps {
   apps: number;
@@ -150,7 +150,7 @@ function identityOf(
   role: ReportIdentity['role'],
 ): ReportIdentity {
   return {
-    name: app.name ?? 'An app',
+    name: appName(app.name),
     iconUrl: app.iconUrl ?? null,
     store: app.store,
     country: app.country,
