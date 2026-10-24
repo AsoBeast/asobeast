@@ -25,6 +25,8 @@ import {
 } from "@tanstack/react-query";
 import {
   getAnnotations,
+  getFunnel,
+  getStoreConnections,
   getChart,
   listChartFollows,
   getAction,
@@ -108,7 +110,7 @@ import {
   type ReviewFilters,
   type ReviewThemeFilters,
 } from "./api";
-import { withReviewReply } from "./review-reply-cache";
+import { withReviewReply, withReviewRow } from "./review-reply-cache";
 import { runProgressInterval } from "./run-progress";
 import { keywordsPollInterval } from "./keyword-checks";
 import {
@@ -125,6 +127,9 @@ export const appKeys = {
   detail: (id: string) => [...appKeys.all, id] as const,
   summary: (id: string, country?: string) =>
     [...appKeys.detail(id), "summary", ...marketKey(country)] as const,
+  funnelRoot: (id: string) => [...appKeys.detail(id), "funnel"] as const,
+  funnel: (id: string, days: number, country?: string) =>
+    [...appKeys.funnelRoot(id), days, ...marketKey(country)] as const,
   keywordsRoot: (id: string) => [...appKeys.detail(id), "keywords"] as const,
   compareRoot: (id: string) => [...appKeys.detail(id), "compare"] as const,
   keywords: (id: string, country?: string) =>
@@ -284,6 +289,10 @@ export const apiTokenKeys = {
 
 export const workspaceTeamKey = ["auth", "team"] as const;
 
+export const storeConnectionKeys = {
+  all: ["store-connections"] as const,
+};
+
 export const workspaceDeletionKey = ["account", "deletion"] as const;
 
 export const billingCatalogKey = ["billing", "catalog"] as const;
@@ -403,6 +412,19 @@ export function invalidateWorkspaceTeamMutation(client: QueryClient): void {
 
 export function invalidateWorkspaceDeletion(client: QueryClient): void {
   void client.invalidateQueries({ queryKey: workspaceDeletionKey });
+}
+
+export const storeConnectionsOptions = queryOptions({
+  queryKey: storeConnectionKeys.all,
+  queryFn: getStoreConnections,
+  staleTime: 30 * 1000,
+});
+
+export function invalidateStoreConnectionMutation(client: QueryClient): void {
+  void client.invalidateQueries({ queryKey: storeConnectionKeys.all });
+  void client.invalidateQueries({
+    predicate: (query) => query.queryKey.includes("funnel"),
+  });
 }
 
 export function invalidateApiTokenMutation(client: QueryClient): void {
@@ -585,6 +607,12 @@ export const appSummaryOptions = (id: string, country?: string) =>
   queryOptions({
     queryKey: appKeys.summary(id, country),
     queryFn: () => getSummary(id, country),
+  });
+
+export const funnelOptions = (id: string, days: number, country?: string) =>
+  queryOptions({
+    queryKey: appKeys.funnel(id, days, country),
+    queryFn: () => getFunnel(id, days, country),
   });
 
 export const keywordsOptions = (id: string, country?: string) =>
@@ -1071,6 +1099,23 @@ export function upsertReviewReply(
   }
 }
 
+export function replaceReview(
+  client: QueryClient,
+  id: string,
+  review: ReviewItem,
+  previous: ReviewItem,
+): void {
+  for (const [queryKey, list] of client.getQueriesData<ReviewList>({
+    queryKey: appKeys.reviewsRoot(id),
+  })) {
+    if (!list) continue;
+    client.setQueryData(
+      queryKey,
+      withReviewRow(list, filtersOf(queryKey), review, previous),
+    );
+  }
+}
+
 export function seedReviewTranslation(
   client: QueryClient,
   id: string,
@@ -1098,6 +1143,14 @@ export function invalidateReviewReplyMutation(
     refetchType: "none",
   });
   void client.invalidateQueries({ queryKey: appKeys.reviewThemesRoot(id) });
+}
+
+export function invalidateReviewReplyPost(
+  client: QueryClient,
+  id: string,
+): void {
+  invalidateReviewReplyMutation(client, id);
+  void client.invalidateQueries({ queryKey: storeConnectionKeys.all });
 }
 
 export function invalidateCompetitorMutation(

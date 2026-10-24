@@ -16,6 +16,7 @@ const DATA_PAGES = [
   "/actions",
   "/charts",
   "/settings",
+  "/integrations",
   "/apps/app-1",
 ] as const;
 

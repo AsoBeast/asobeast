@@ -11,6 +11,7 @@ import { QUEUES } from '../src/jobs/jobs.types';
 import { PipelineWorker } from '../src/jobs/pipeline.worker';
 import { ErrorTracking } from '../src/observability/error-tracking.service';
 import { PublishedStatusService } from '../src/store-providers/canary/published-status.service';
+import { SECRET_BOX } from '../src/store-connect/secret-box.provider';
 import { restoreAuthEnv } from './helpers/auth-env';
 import { obliterateQueues } from './obliterate-queues';
 
@@ -74,6 +75,10 @@ describe('A self hosted deployment reaches nothing outside itself', () => {
 
   it('keeps error tracking inert with no cloud configuration', () => {
     expect(app.get(ErrorTracking).enabled).toBe(false);
+  });
+
+  it('keeps store connections off without an encryption key', () => {
+    expect(app.get(SECRET_BOX, { strict: false })).toBeNull();
   });
 
   it('keeps the published store status poll off with no status url', () => {

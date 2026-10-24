@@ -1,7 +1,5 @@
 import { Suspense } from "react";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
-import { ApiTokensCard } from "@/components/settings/ApiTokensCard";
-import { McpServerCard } from "@/components/settings/McpServerCard";
 import { PlanSection } from "@/components/settings/PlanSection";
 import { TeamCard } from "@/components/settings/TeamCard";
 import { SettingsSection } from "@/components/settings/SettingsSection";
@@ -53,7 +51,7 @@ export default async function SettingsPage({
         <div className="flex flex-col gap-1">
           <h1 className="text-display tracking-tight text-balance">Settings</h1>
           <p className="text-body text-muted-foreground">
-            Your plan, alerts, team and integrations.
+            Your plan, alerts, team and workspace.
           </p>
         </div>
 
@@ -97,15 +95,6 @@ export default async function SettingsPage({
           description="Who can sign in to this workspace, and how to invite someone else."
         >
           <TeamCard />
-        </SettingsSection>
-
-        <SettingsSection
-          id="integrations"
-          title="Integrations"
-          description="Personal tokens and the MCP server for your editor or agent."
-        >
-          <ApiTokensCard />
-          <McpServerCard />
         </SettingsSection>
 
         <SettingsSection

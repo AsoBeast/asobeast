@@ -56,6 +56,9 @@ export function KeywordsDataTable({
     ? items.map((item) => ({ index: item.index, row: rows[item.index] }))
     : rows.map((row, index) => ({ index, row }));
   const columnCount = table.getVisibleFlatColumns().length;
+  const playInstalls = table
+    .getAllLeafColumns()
+    .some((column) => column.id === "acquisitions");
 
   return (
     <Table
@@ -65,7 +68,9 @@ export function KeywordsDataTable({
     >
       <TableCaption className="sr-only">
         Tracked keywords with source, position and its daily change, popularity,
-        difficulty, opportunity, 7 day change and top 10 volatility.
+        difficulty, opportunity,{" "}
+        {playInstalls ? "Play installs per search term, " : ""}7 day change and
+        top 10 volatility.
       </TableCaption>
       <TableHeader className="sticky top-0 z-20">
         {table.getHeaderGroups().map((headerGroup) => (

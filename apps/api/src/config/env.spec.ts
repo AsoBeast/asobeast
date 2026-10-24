@@ -161,3 +161,66 @@ describe('the cron variables', () => {
     expect(validateEnv({ ...safe, [name]: '' })[name]).toBe('');
   });
 });
+
+describe('STORE_CONNECT_ENCRYPTION_KEY', () => {
+  const base = { AUTH_SECRET: 'a'.repeat(32) };
+  const key = (bytes: number) => Buffer.alloc(bytes, 7).toString('base64');
+
+  it('is optional and unset by default', () => {
+    expect(validateEnv(base).STORE_CONNECT_ENCRYPTION_KEY).toBeUndefined();
+  });
+
+  it('accepts 32 bytes of base64 and trims it', () => {
+    expect(
+      validateEnv({ ...base, STORE_CONNECT_ENCRYPTION_KEY: ` ${key(32)} ` })
+        .STORE_CONNECT_ENCRYPTION_KEY,
+    ).toBe(key(32));
+  });
+
+  it('treats an empty value as unset', () => {
+    expect(
+      validateEnv({ ...base, STORE_CONNECT_ENCRYPTION_KEY: '' })
+        .STORE_CONNECT_ENCRYPTION_KEY,
+    ).toBeUndefined();
+  });
+
+  it('refuses to boot with a key of the wrong size', () => {
+    expect(() =>
+      validateEnv({ ...base, STORE_CONNECT_ENCRYPTION_KEY: key(16) }),
+    ).toThrow('STORE_CONNECT_ENCRYPTION_KEY must be 32 random bytes');
+  });
+
+  it('refuses to boot with a previous key and no current one', () => {
+    expect(() =>
+      validateEnv({ ...base, STORE_CONNECT_ENCRYPTION_KEY_PREVIOUS: key(32) }),
+    ).toThrow('STORE_CONNECT_ENCRYPTION_KEY_PREVIOUS is set without');
+  });
+});
+
+describe('CRON_STORE_REPORTS', () => {
+  const base = { AUTH_SECRET: 'a'.repeat(32) };
+
+  it('runs at 05:30 UTC by default', () => {
+    expect(validateEnv(base).CRON_STORE_REPORTS).toBe('30 5 * * *');
+  });
+
+  it('refuses a value that is not a cron pattern', () => {
+    expect(() =>
+      validateEnv({ ...base, CRON_STORE_REPORTS: 'every day' }),
+    ).toThrow();
+  });
+});
+
+describe('RETENTION_STORE_REPORTS_DAYS', () => {
+  const base = { AUTH_SECRET: 'a'.repeat(32) };
+
+  it('keeps downloaded report files for 35 days by default', () => {
+    expect(validateEnv(base).RETENTION_STORE_REPORTS_DAYS).toBe(35);
+  });
+
+  it('refuses a negative number of days', () => {
+    expect(() =>
+      validateEnv({ ...base, RETENTION_STORE_REPORTS_DAYS: '-1' }),
+    ).toThrow();
+  });
+});

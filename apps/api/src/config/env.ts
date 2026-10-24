@@ -5,6 +5,7 @@ import {
   OCR_LANGUAGES,
 } from '../screenshots/ocr-languages';
 import { assertAppleAdsConfiguration } from './apple-ads-config';
+import { assertStoreConnectConfiguration } from './store-connect-config';
 import { assertProductionSafety } from './production-safety';
 import { assertSmtpDkimConfiguration } from './smtp-dkim-config';
 import { TrustedProxyHops } from './trusted-proxy';
@@ -104,6 +105,7 @@ export const EnvSchema = z.object({
   RETENTION_AUDIT_SCORES_DAYS: z.coerce.number().int().min(0).default(0),
   RETENTION_ACTIONS_DAYS: z.coerce.number().int().min(0).default(180),
   RETENTION_AI_CALLS_DAYS: z.coerce.number().int().min(0).default(400),
+  RETENTION_STORE_REPORTS_DAYS: z.coerce.number().int().min(0).default(35),
   RETENTION_BILLING_EVENTS_DAYS: z.coerce.number().int().min(0).default(90),
   ACTIONS_MAX_OPEN_PER_APP: z.coerce.number().int().positive().default(20),
   ACTIONS_SNOOZE_MAX_DAYS: z.coerce.number().int().positive().default(90),
@@ -226,6 +228,11 @@ export const EnvSchema = z.object({
   APPLE_ADS_PRIVATE_KEY_PATH: optionalText,
   APPLE_ADS_AD_ACCOUNT_ID: optionalText,
   CRON_APPLE_POPULARITY: cronPattern('0 9 * * 1'),
+  STORE_CONNECT_ENCRYPTION_KEY: optionalText,
+  STORE_CONNECT_ENCRYPTION_KEY_PREVIOUS: optionalText,
+  GOOGLE_PLAY_OAUTH_CLIENT_ID: optionalText,
+  GOOGLE_PLAY_OAUTH_CLIENT_SECRET: optionalText,
+  CRON_STORE_REPORTS: cronPattern('30 5 * * *'),
   LOG_LEVEL: z
     .enum(['error', 'warn', 'log', 'debug', 'verbose'])
     .default('debug'),
@@ -244,5 +251,6 @@ export function validateEnv(config: Record<string, unknown>): Env {
   assertProductionSafety(env);
   assertAppleAdsConfiguration(env);
   assertSmtpDkimConfiguration(env);
+  assertStoreConnectConfiguration(env);
   return env;
 }

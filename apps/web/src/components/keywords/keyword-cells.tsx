@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { History, LoaderCircle, StickyNote } from "lucide-react";
 import type {
+  PlayAcquisitions,
   ScoreProvenance,
   ScoringConfidence,
   ScoringSource,
@@ -24,7 +25,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, formatMonth, formatNumber } from "@/lib/format";
 import { isChecking, staleCheckDay } from "@/lib/keyword-checks";
 import { tagsLabel, visibleTags } from "@/lib/keyword-tags";
 import { grade, gradeLabel, type GradeMetric } from "@/lib/grade";
@@ -357,6 +358,47 @@ export function VolatilityCell({ value }: { value: number | null }) {
         {value}
       </span>
     </span>
+  );
+}
+
+export function PlayAcquisitionsCell({
+  value,
+}: {
+  value: PlayAcquisitions | null;
+}) {
+  if (!value) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span
+            className="text-muted-foreground"
+            aria-label="No Play Console data"
+          >
+            —
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>No Play Console data</TooltipContent>
+      </Tooltip>
+    );
+  }
+  const month = formatMonth(value.month);
+  const acquisitions = formatNumber(value.acquisitions);
+  const visitors = formatNumber(value.visitors);
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span
+          className="numeric font-mono text-sm whitespace-nowrap"
+          aria-label={`${acquisitions} acquisitions from ${visitors} store listing visitors in ${month}`}
+        >
+          {acquisitions}
+          <span className="text-muted-foreground"> · {visitors}</span>
+        </span>
+      </TooltipTrigger>
+      <TooltipContent>
+        Store listing acquisitions and visitors from this search term in {month}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 

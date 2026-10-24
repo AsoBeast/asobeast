@@ -11,6 +11,9 @@ import { METADATA_FIELD_LABELS } from "@/lib/metadata-display";
 const measure = (value: number | null): string =>
   value === null ? "—" : formatMeasure(value);
 
+export const percent = (ratio: number | null): string =>
+  ratio === null ? "—" : `${(ratio * 100).toFixed(1)}%`;
+
 export const ACTION_RULE_TITLE: Record<ActionRule, string> = {
   "keyword.add_uncovered": "Add a high-opportunity keyword to your metadata",
   "keyword.defend": "Defend a keyword competitors just entered",
@@ -28,6 +31,10 @@ export const ACTION_RULE_TITLE: Record<ActionRule, string> = {
   "reviews.investigate_rating_decline": "Investigate falling review scores",
   "reviews.reply_negative": "Reply to unanswered low reviews",
   "listing.ship_update": "Ship an update to a stale listing",
+  "conversion.investigate_drop":
+    "Investigate fewer Get taps while page views held",
+  "listing.cpp_underperforms":
+    "Rework a custom product page that converts below the default",
 };
 
 export const ACTION_RULE_LABEL: Record<ActionRule, string> = {
@@ -46,6 +53,8 @@ export const ACTION_RULE_LABEL: Record<ActionRule, string> = {
   "reviews.investigate_rating_decline": "Rating declines",
   "reviews.reply_negative": "Unanswered reviews",
   "listing.ship_update": "Stale listings",
+  "conversion.investigate_drop": "Conversion drops",
+  "listing.cpp_underperforms": "Weak product pages",
 };
 
 export const ACTION_PRIORITY_LABEL: Record<ActionPriority, string> = {
@@ -103,6 +112,10 @@ export function summarizeEvidence(evidence: ActionEvidence): string {
       return `${measure(evidence.unanswered)} of ${measure(evidence.checked)} low reviews checked in the last ${evidence.windowDays} days have no reply yet.`;
     case "listing.ship_update":
       return `The store last showed an update ${measure(evidence.daysSinceUpdate)} days ago${evidence.competitorMedianDays === null ? "" : `, against a competitor median of ${measure(evidence.competitorMedianDays)} days`}.`;
+    case "conversion.investigate_drop":
+      return `Get taps averaged ${measure(evidence.getsAfter)} a day over the last ${evidence.windowDays} complete days against ${measure(evidence.getsBefore)} before, while product page views held at ${measure(evidence.pageViewsAfter)} against ${measure(evidence.pageViewsBefore)}.`;
+    case "listing.cpp_underperforms":
+      return `"${evidence.pageTitle}" turns ${percent(evidence.pageConversion)} of its product page views into Get taps against ${percent(evidence.defaultConversion)} on the default product page over ${evidence.windowDays} complete days.`;
     case "metadata.fix_lint":
       return `${METADATA_FIELD_LABELS[evidence.field]} has ${pluralize(evidence.issues.length, "store rule problem")} at ${measure(evidence.chars)} of ${measure(evidence.limit)} characters.`;
     default: {

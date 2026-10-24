@@ -468,7 +468,9 @@ test("an active trial shows the upgrade banner", async ({ page }) => {
   await expect(page.getByRole("link", { name: "Upgrade" })).toBeVisible();
 });
 
-test("settings creates, reveals and revokes an api token", async ({ page }) => {
+test("integrations creates, reveals and revokes an api token", async ({
+  page,
+}) => {
   await seedSession(page);
   await routeStatus(page, {
     billing: false,
@@ -506,7 +508,7 @@ test("settings creates, reveals and revokes an api token", async ({ page }) => {
     return route.fulfill({ status: 204, body: "" });
   });
 
-  await page.goto("/settings");
+  await page.goto("/integrations");
   await expect(page.getByText("API tokens")).toBeVisible();
 
   await page.getByRole("button", { name: "New token" }).click();
@@ -566,7 +568,7 @@ test("a double click on Create token creates one token", async ({ page }) => {
     );
   });
 
-  await page.goto("/settings");
+  await page.goto("/integrations");
   await page.getByRole("button", { name: "New token" }).click();
   await page.getByLabel("Name").fill("ci");
   await page

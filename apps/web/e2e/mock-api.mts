@@ -8,6 +8,25 @@ import { BREAKDOWNS } from "./keyword-breakdowns.mts";
 import { planMockImport } from "./keyword-import.mts";
 import { summarizeActions } from "./actions-summary.mts";
 import { echoRequest } from "./echo-request.mts";
+import { funnelFor } from "./store-funnel.mts";
+import {
+  STORE_CONNECT_OFF_COOKIE,
+  STORE_CONNECTION_ACTIVE,
+  STORE_CONNECTION_COOKIE,
+  PLAY_BUCKET,
+  PLAY_CONNECTION_ACTIVE,
+  GOOGLE_SIGN_IN_COOKIE,
+  PLAY_CONNECTION_COOKIE,
+  PLAY_CONNECTION_GOOGLE,
+  PLAY_SIGN_IN_EXPIRED,
+  PLAY_SIGN_IN_STATE,
+  playConnectionCookie,
+  storeConnectionCookie,
+  REPLY_ACCESS_COOKIE,
+  storeConnectionOf,
+  storeConnectionState,
+  withReplyAccess,
+} from "./store-connections.mts";
 import {
   discardReply,
   draftReply,
@@ -16,9 +35,12 @@ import {
   guidelinesOf,
   listReviews,
   patchReply,
+  postReply,
+  REPLY_POST_COOKIE,
   ReplyRefusal,
   resetReviewReplies,
   setGuidelines,
+  withdrawReply,
 } from "./review-replies.mts";
 import {
   ACTION_ACTIVITY,
@@ -35,7 +57,9 @@ import {
   APP_AUDIT,
   AUDIT_HISTORY_POINTS,
   LONG_AUDIT,
+  APP_GP_CHANGE_IMPACT,
   PLAY_AUDIT,
+  PLAY_CHANGE_IMPACT_COOKIE,
   PROVISIONAL_AUDIT,
   METADATA_AUDIT,
   APP_1_PL_SCREENSHOTS,
@@ -709,8 +733,19 @@ function replyAnswer(
     json(res, status, answer());
   } catch (error) {
     if (!(error instanceof ReplyRefusal)) throw error;
-    json(res, 400, errorEnvelope(400, path, error.message));
+    json(res, error.status, errorEnvelope(error.status, path, error.message));
   }
+}
+
+const REPLY_POST_DELAY_MS = 300;
+
+function storeConnectionFor(req: IncomingMessage, store: Store) {
+  return storeConnectionState(
+    cookieValue(req, STORE_CONNECTION_COOKIE),
+    hasCookie(req, STORE_CONNECT_OFF_COOKIE, "1"),
+    cookieValue(req, PLAY_CONNECTION_COOKIE),
+    false,
+  ).connections.find((item) => item.store === store);
 }
 
 function hasCookie(
@@ -2593,6 +2628,161 @@ const routes: Route[] = [
   },
   {
     method: "GET",
+    pattern: /^\/store-connections$/,
+    handler: (_p, req, res) =>
+      json(
+        res,
+        200,
+        withReplyAccess(
+          storeConnectionState(
+            cookieValue(req, STORE_CONNECTION_COOKIE),
+            hasCookie(req, STORE_CONNECT_OFF_COOKIE, "1"),
+            cookieValue(req, PLAY_CONNECTION_COOKIE),
+            hasCookie(req, GOOGLE_SIGN_IN_COOKIE, "1"),
+          ),
+          cookieValue(req, REPLY_ACCESS_COOKIE),
+        ),
+      ),
+  },
+  {
+    method: "PUT",
+    pattern: /^\/store-connections\/GOOGLE_PLAY$/,
+    handler: (_p, req, res) =>
+      withBody<{ bucket?: string; serviceAccountJson?: string }>(
+        req,
+        res,
+        (body) => {
+          const path = req.url ?? "/store-connections/GOOGLE_PLAY";
+          if (!body.serviceAccountJson?.includes("private_key")) {
+            return json(
+              res,
+              400,
+              errorEnvelope(
+                400,
+                path,
+                "The service account key has no private_key. Choose the JSON key file Google Cloud downloaded.",
+              ),
+            );
+          }
+          if (body.bucket !== PLAY_BUCKET) {
+            return json(
+              res,
+              422,
+              errorEnvelope(
+                422,
+                path,
+                `Google Cloud Storage has no bucket ${body.bucket ?? ""}. Copy the Cloud Storage URI from Download reports in Play Console: the bucket id is the part after gs:// that starts with pubsite_prod.`,
+              ),
+            );
+          }
+          json(res, 200, PLAY_CONNECTION_ACTIVE, {
+            "set-cookie": playConnectionCookie("active"),
+          });
+        },
+      ),
+  },
+  {
+    method: "POST",
+    pattern: /^\/store-connections\/GOOGLE_PLAY\/sign-in$/,
+    handler: (_p, _req, res) =>
+      json(res, 200, {
+        url: `/integrations/google-play?${new URLSearchParams({
+          code: "4/e2e-code",
+          state: PLAY_SIGN_IN_STATE,
+        }).toString()}`,
+      }),
+  },
+  {
+    method: "POST",
+    pattern: /^\/store-connections\/GOOGLE_PLAY\/sign-in\/complete$/,
+    handler: (_p, req, res) =>
+      withBody<{ code?: string; state?: string }>(req, res, (body) => {
+        if (body.state !== PLAY_SIGN_IN_STATE) {
+          return json(
+            res,
+            400,
+            errorEnvelope(
+              400,
+              "/store-connections/GOOGLE_PLAY/sign-in/complete",
+              PLAY_SIGN_IN_EXPIRED,
+            ),
+          );
+        }
+        json(res, 200, PLAY_CONNECTION_GOOGLE, {
+          "set-cookie": playConnectionCookie("google"),
+        });
+      }),
+  },
+  {
+    method: "DELETE",
+    pattern: /^\/store-connections\/GOOGLE_PLAY$/,
+    handler: (_p, _req, res) => {
+      res.writeHead(204, { "set-cookie": playConnectionCookie(null) });
+      res.end();
+    },
+  },
+  {
+    method: "PUT",
+    pattern: /^\/store-connections\/APP_STORE$/,
+    handler: (_p, req, res) =>
+      withBody<{ privateKey?: string }>(req, res, (body) => {
+        if (!body.privateKey?.includes("BEGIN PRIVATE KEY")) {
+          return json(
+            res,
+            400,
+            errorEnvelope(
+              400,
+              req.url ?? "/store-connections/APP_STORE",
+              "The private key is not a PEM encoded PKCS8 key. Paste the whole contents of the .p8 file.",
+            ),
+          );
+        }
+        json(res, 200, STORE_CONNECTION_ACTIVE, {
+          "set-cookie": storeConnectionCookie("active"),
+        });
+      }),
+  },
+  {
+    method: "POST",
+    pattern: /^\/store-connections\/APP_STORE\/verify$/,
+    handler: (_p, req, res) => {
+      const current = storeConnectionOf(
+        cookieValue(req, STORE_CONNECTION_COOKIE),
+      );
+      if (!current) {
+        return json(res, 404, errorEnvelope(404, req.url ?? "/"));
+      }
+      json(res, 200, STORE_CONNECTION_ACTIVE, {
+        "set-cookie": storeConnectionCookie("active"),
+      });
+    },
+  },
+  {
+    method: "POST",
+    pattern: /^\/store-connections\/APP_STORE\/sync$/,
+    handler: (_p, req, res) => {
+      const current = storeConnectionOf(
+        cookieValue(req, STORE_CONNECTION_COOKIE),
+      );
+      if (!current) {
+        return json(res, 404, errorEnvelope(404, req.url ?? "/"));
+      }
+      if (current.status === "rejected") {
+        return json(res, 409, errorEnvelope(409, req.url ?? "/"));
+      }
+      json(res, 202, { outcome: "queued" });
+    },
+  },
+  {
+    method: "DELETE",
+    pattern: /^\/store-connections\/APP_STORE$/,
+    handler: (_p, _req, res) => {
+      res.writeHead(204, { "set-cookie": storeConnectionCookie(null) });
+      res.end();
+    },
+  },
+  {
+    method: "GET",
     pattern: /^\/account\/deletion$/,
     handler: (_p, req, res) => json(res, 200, deletionStatusFor(req)),
   },
@@ -3020,6 +3210,9 @@ const routes: Route[] = [
       res.writeHead(204).end();
     },
   },
+  appRoute(/^\/apps\/([^/]+)\/funnel$/, (dataset, query) =>
+    funnelFor(dataset.detail.id, query.get("country")),
+  ),
   appRoute(/^\/apps\/([^/]+)\/summary$/, (dataset, query) =>
     dataset.detail.id === "app-1"
       ? (APP_1_MARKET_SUMMARIES[query.get("country") ?? ""] ?? dataset.summary)
@@ -3466,9 +3659,11 @@ const routes: Route[] = [
   appRoute(/^\/apps\/([^/]+)\/changes$/, (dataset, query) =>
     isPolishListingOf(dataset, query) ? APP_1_PL_CHANGES : dataset.changes,
   ),
-  appRoute(
-    /^\/apps\/([^/]+)\/changes\/impact$/,
-    (dataset) => dataset.changeImpact,
+  appRoute(/^\/apps\/([^/]+)\/changes\/impact$/, (dataset, _query, req) =>
+    dataset.detail.id === APP_GP_CHANGE_IMPACT.appId &&
+    hasCookie(req, PLAY_CHANGE_IMPACT_COOKIE, "1")
+      ? APP_GP_CHANGE_IMPACT
+      : dataset.changeImpact,
   ),
   appRoute(
     /^\/apps\/([^/]+)\/competitors\/discovery$/,
@@ -4063,6 +4258,48 @@ const routes: Route[] = [
       }
       discardReply(id, reviewId);
       res.writeHead(204).end();
+    },
+  },
+  {
+    method: "POST",
+    pattern: /^\/apps\/([^/]+)\/reviews\/([^/]+)\/reply\/post$/,
+    handler: ([id, reviewId], req, res) => {
+      const path = req.url ?? "/";
+      const dataset = DATASETS[id];
+      const review = dataset && findReview(id, dataset.reviews, reviewId);
+      if (!review) return json(res, 404, errorEnvelope(404, path));
+      const store = dataset.detail.store;
+      if (!storeConnectionFor(req, store)) {
+        return json(
+          res,
+          409,
+          errorEnvelope(
+            409,
+            path,
+            `Connect ${store === "APP_STORE" ? "App Store Connect" : "Google Play"} in Integrations, Store connections, to post replies from here.`,
+          ),
+        );
+      }
+      setTimeout(
+        () =>
+          replyAnswer(res, path, 200, () =>
+            postReply(id, store, review, cookieValue(req, REPLY_POST_COOKIE)),
+          ),
+        REPLY_POST_DELAY_MS,
+      );
+    },
+  },
+  {
+    method: "DELETE",
+    pattern: /^\/apps\/([^/]+)\/reviews\/([^/]+)\/reply\/post$/,
+    handler: ([id, reviewId], req, res) => {
+      const path = req.url ?? "/";
+      const dataset = DATASETS[id];
+      const review = dataset && findReview(id, dataset.reviews, reviewId);
+      if (!review) return json(res, 404, errorEnvelope(404, path));
+      replyAnswer(res, path, 200, () =>
+        withdrawReply(id, dataset.detail.store, review),
+      );
     },
   },
   {

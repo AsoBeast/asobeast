@@ -15,8 +15,10 @@ import {
   TrendWindow,
   trendWindow,
   updateAgePoints,
+  conversionPercent,
 } from './action-trend';
 import { HOME_LISTING } from '../apps/listing';
+import { finalThrough, marketFunnelScope } from '../store-connect/store-funnel';
 
 interface SeriesBody {
   depth: number | null;
@@ -61,6 +63,8 @@ export class ActionSeriesReader {
         return this.rating(item, window);
       case 'updateAge':
         return this.updateAge(item, window);
+      case 'conversion':
+        return this.conversion(item, window);
     }
   }
 
@@ -150,6 +154,57 @@ export class ActionSeriesReader {
         from,
         to,
         ACTION_TREND_RATING_DAYS,
+      ),
+    };
+  }
+
+  private async conversion(
+    item: ActionItem,
+    { from, to }: TrendWindow,
+  ): Promise<SeriesBody | null> {
+    if (
+      item.rule === 'listing.cpp_underperforms' &&
+      item.evidence?.rule !== 'listing.cpp_underperforms'
+    ) {
+      return null;
+    }
+    const { appId, store, country } = item.scope;
+    const where = {
+      appId,
+      ...marketFunnelScope(store, country, country),
+      date: {
+        gte: from,
+        lte: new Date(`${finalThrough(new Date(), store)}T00:00:00.000Z`),
+      },
+    };
+    const pageTitle =
+      item.evidence?.rule === 'listing.cpp_underperforms'
+        ? item.evidence.pageTitle
+        : null;
+    const rows =
+      pageTitle !== null
+        ? await this.prisma.storeFunnelPageDay.groupBy({
+            by: ['date'],
+            where: { ...where, pageTitle },
+            _sum: { gets: true, uniqueImpressions: true, pageViews: true },
+          })
+        : await this.prisma.storeFunnelDay.groupBy({
+            by: ['date'],
+            where,
+            _sum: { gets: true, uniqueImpressions: true, pageViews: true },
+          });
+    const byPageViews = pageTitle !== null || store === 'GOOGLE_PLAY';
+    const base = (sum: (typeof rows)[number]['_sum']): number =>
+      (byPageViews ? sum.pageViews : sum.uniqueImpressions) ?? 0;
+    return {
+      depth: null,
+      points: dailyPoints(
+        rows.map((row) => ({
+          date: row.date,
+          value: conversionPercent(row._sum.gets ?? 0, base(row._sum)),
+        })),
+        from,
+        to,
       ),
     };
   }

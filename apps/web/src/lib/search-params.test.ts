@@ -409,7 +409,7 @@ describe("sortDirection parser", () => {
 });
 
 describe("keywordSort parser", () => {
-  it.each(["keyword", "source", "delta7d", ...KEYWORD_SORTS])(
+  it.each(["keyword", "source", "delta7d", "acquisitions", ...KEYWORD_SORTS])(
     "accepts the table sort %s",
     (sort) => {
       expect(keywordSortParser.parseServerSide(sort)).toBe(sort);

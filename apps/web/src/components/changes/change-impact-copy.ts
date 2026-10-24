@@ -1,7 +1,9 @@
 import type {
+  ChangeImpactFunnel,
   ChangeImpactMovement,
   ChangeImpactWindow,
 } from "@asobeast/shared";
+import { formatConversion, formatCount } from "@/lib/funnel";
 import { formatDate, formatMeasure } from "@/lib/format";
 
 const dateList = new Intl.ListFormat("en-US", { type: "conjunction" });
@@ -71,4 +73,35 @@ export function impactScopeLine({
   return shown === totalChanges
     ? `${plural(shown, "change")} to your listing in the last ${days} days`
     : `The ${shown} newest of ${totalChanges} changes to your listing in the last ${days} days`;
+}
+
+export interface FunnelRanges {
+  gets: string;
+  conversion: string;
+}
+
+export function funnelRanges(
+  funnel: ChangeImpactFunnel | null | undefined,
+): FunnelRanges | null {
+  if (funnel?.status !== "measured" || !funnel.before || !funnel.after) {
+    return null;
+  }
+  return {
+    gets: `${formatCount(funnel.before.gets)} → ${formatCount(funnel.after.gets)}`,
+    conversion: `${formatConversion(funnel.before.conversion)} → ${formatConversion(funnel.after.conversion)}`,
+  };
+}
+
+export function funnelNote(
+  funnel: ChangeImpactFunnel | null | undefined,
+  days: number,
+): string | null {
+  if (!funnel || funnel.status === "measured") return null;
+  if (funnel.status === "unmeasured") {
+    return "No console data before this change";
+  }
+  if (funnel.finalOn) {
+    return `The console's numbers for this window are final by ${formatDate(funnel.finalOn)}`;
+  }
+  return `The console's numbers for this window are final in ${plural(days - funnel.completeDays, "day")}`;
 }

@@ -69,7 +69,7 @@ function tokenOf(raw: string): string {
     .replace(BEARER_SCHEME, "");
   if (!token.startsWith(API_TOKEN_PREFIX)) {
     throw new ConfigError(
-      `ASOBEAST_API_TOKEN must be a personal API token starting with ${API_TOKEN_PREFIX}. Mint one from the MCP server card in Settings.`,
+      `ASOBEAST_API_TOKEN must be a personal API token starting with ${API_TOKEN_PREFIX}. Mint one from the MCP server card in Integrations.`,
     );
   }
   return token;

@@ -1,6 +1,10 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
-import { APP_1_CHANGE_IMPACT } from "./fixtures.mts";
+import {
+  APP_1_CHANGE_IMPACT,
+  APP_GP_CHANGE_IMPACT,
+  PLAY_CHANGE_IMPACT_COOKIE,
+} from "./fixtures.mts";
 import { formatDate } from "../src/lib/format";
 
 const [RECENT, MEASURED, OLDER, UNANCHORED] = APP_1_CHANGE_IMPACT.items;
@@ -115,7 +119,10 @@ test("unmeasured windows and unanchored changes say why", async ({ page }) => {
   await expect(unanchored).toContainText(
     "No rank check just before this change",
   );
-  await expect(unanchored.getByRole("heading", { level: 4 })).toHaveCount(0);
+  await expect(unanchored.getByRole("heading", { level: 4 })).toHaveCount(1);
+  await expect(windowTile(page, UNANCHORED.changedOn, 7)).toContainText(
+    "Get taps300 → 270",
+  );
 });
 
 test("the timeline window drives the impact report", async ({ page }) => {
@@ -207,4 +214,85 @@ test("a single market app has no picker and measures its home market", async ({
   });
   await page.getByRole("tab", { name: "30d" }).click();
   await request;
+});
+
+test("a measured window reads Get taps and conversion from the console", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/changes");
+
+  const tile = windowTile(page, OLDER.changedOn, 7);
+  await expect(tile).toContainText("Get taps412 → 486");
+  await expect(tile).toContainText("Conversion3.1% → 3.6%");
+  await expect(tile.getByLabel("up 18 percent in Get taps")).toHaveText("18%");
+});
+
+test("a google play window names acquisitions, not Get taps", async ({
+  page,
+}) => {
+  await page.context().addCookies([
+    {
+      name: PLAY_CHANGE_IMPACT_COOKIE,
+      value: "1",
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
+  await page.goto("/apps/app-gp/changes");
+
+  const tile = windowTile(page, APP_GP_CHANGE_IMPACT.items[0].changedOn, 7);
+  await expect(tile).toContainText("Acquisitions35 → 70");
+  await expect(tile).not.toContainText("Get taps");
+  await expect(tile.getByLabel("up 100 percent in Acquisitions")).toHaveText(
+    "100%",
+  );
+});
+
+test("a window still filling says when the console's numbers are final", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/changes");
+
+  await expect(windowTile(page, MEASURED.changedOn, 14)).toContainText(
+    "The console's numbers for this window are final in 5 days",
+  );
+  await expect(windowTile(page, OLDER.changedOn, 28)).toContainText(
+    "No console data before this change",
+  );
+});
+
+test("the timeline marks the conversion change beside the day of a change", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/changes?days=90");
+
+  await expect(
+    timeline(page).getByRole("heading", { level: 2, name: /Conversion \+16%/ }),
+  ).toContainText(formatDate(OLDER.changedOn));
+  await expect(
+    timeline(page).getByRole("heading", { level: 2, name: /Conversion -11%/ }),
+  ).toContainText(formatDate(UNANCHORED.changedOn));
+  await expect(
+    timeline(page).getByRole("heading", { level: 2, name: /Conversion/ }),
+  ).toHaveCount(2);
+});
+
+test("the timeline of a market listing shows no home conversion beside its days", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/changes?days=90&market=pl");
+
+  await expect(timeline(page)).toBeVisible();
+  await expect(
+    timeline(page).getByRole("heading", { level: 2, name: /Conversion/ }),
+  ).toHaveCount(0);
+});
+
+test("an app without a console connection shows no store funnel", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-2/changes");
+
+  await expect(page.getByText("Store funnel")).toHaveCount(0);
+  await expect(page.getByText(/Conversion [+-]/)).toHaveCount(0);
 });

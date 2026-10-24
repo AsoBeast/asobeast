@@ -1652,6 +1652,17 @@ export const APP_1_PL_CHANGES: ChangeTimeline = {
       country: "pl",
     },
     {
+      id: "chg-pl-2",
+      appId: "app-1",
+      appName: "Focus Timer",
+      isCompetitor: false,
+      field: "subtitle",
+      before: "Minutnik",
+      after: "Minutnik i notatki",
+      capturedAt: utcTimestampDaysAgo(40),
+      country: "pl",
+    },
+    {
       id: "chg-pl-sc-1",
       appId: "app-1",
       appName: "Focus Timer",
@@ -1898,7 +1909,16 @@ export const APP_1_CHANGE_IMPACT: ChangeImpactReport = {
           visibilityChange: 3.7,
           overlappingChanges: [],
         },
-        openWindow("pending", 12, 14, [utcDaysAgo(1)]),
+        {
+          ...openWindow("pending", 12, 14, [utcDaysAgo(1)]),
+          funnel: {
+            status: "pending",
+            completeDays: 9,
+            before: null,
+            after: null,
+            change: null,
+          },
+        },
         openWindow("pending", 12, 28, [utcDaysAgo(1)]),
       ],
     },
@@ -1925,6 +1945,30 @@ export const APP_1_CHANGE_IMPACT: ChangeImpactReport = {
           visibilityAfter: 37.9,
           visibilityChange: -2.3,
           overlappingChanges: [],
+          funnel: {
+            status: "measured",
+            completeDays: 7,
+            before: {
+              impressions: 13_290,
+              uniqueImpressions: 13_290,
+              pageViews: 2_810,
+              gets: 412,
+              conversion: 0.031,
+            },
+            after: {
+              impressions: 13_500,
+              uniqueImpressions: 13_500,
+              pageViews: 2_905,
+              gets: 486,
+              conversion: 0.036,
+            },
+            change: {
+              impressions: 0.016,
+              pageViews: 0.034,
+              gets: 0.18,
+              conversion: 0.161,
+            },
+          },
         },
         openWindow("unmeasured", 40, 14),
         {
@@ -1945,6 +1989,13 @@ export const APP_1_CHANGE_IMPACT: ChangeImpactReport = {
           visibilityAfter: 41.5,
           visibilityChange: 1.3,
           overlappingChanges: [utcDaysAgo(12)],
+          funnel: {
+            status: "unmeasured",
+            completeDays: 0,
+            before: null,
+            after: null,
+            change: null,
+          },
         },
       ],
     },
@@ -1953,9 +2004,82 @@ export const APP_1_CHANGE_IMPACT: ChangeImpactReport = {
       fields: ["screenshots"],
       baselineDate: null,
       windows: [
-        openWindow("unmeasured", 70, 7),
+        {
+          ...openWindow("unmeasured", 70, 7),
+          funnel: {
+            status: "measured",
+            completeDays: 7,
+            before: {
+              impressions: 9000,
+              uniqueImpressions: 9000,
+              pageViews: 1500,
+              gets: 300,
+              conversion: 0.0333,
+            },
+            after: {
+              impressions: 9100,
+              uniqueImpressions: 9100,
+              pageViews: 1520,
+              gets: 270,
+              conversion: 0.0297,
+            },
+            change: {
+              impressions: 0.011,
+              pageViews: 0.013,
+              gets: -0.1,
+              conversion: -0.108,
+            },
+          },
+        },
         openWindow("unmeasured", 70, 14),
         openWindow("unmeasured", 70, 28),
+      ],
+    },
+  ],
+};
+
+export const PLAY_CHANGE_IMPACT_COOKIE = "e2e-play-change-impact";
+
+export const APP_GP_CHANGE_IMPACT: ChangeImpactReport = {
+  appId: "app-gp",
+  country: "us",
+  days: 90,
+  totalChanges: 1,
+  items: [
+    {
+      changedOn: utcDaysAgo(30),
+      fields: ["title"],
+      baselineDate: null,
+      windows: [
+        {
+          ...openWindow("unmeasured", 30, 7),
+          funnel: {
+            status: "measured",
+            completeDays: 7,
+            before: {
+              impressions: null,
+              uniqueImpressions: null,
+              pageViews: 350,
+              gets: 35,
+              conversion: 0.1,
+            },
+            after: {
+              impressions: null,
+              uniqueImpressions: null,
+              pageViews: 350,
+              gets: 70,
+              conversion: 0.2,
+            },
+            change: {
+              impressions: null,
+              pageViews: 0,
+              gets: 1,
+              conversion: 1,
+            },
+          },
+        },
+        openWindow("unmeasured", 30, 14),
+        openWindow("unmeasured", 30, 28),
       ],
     },
   ],
@@ -2212,6 +2336,7 @@ export const APP_GP_KEYWORDS: TrackedKeywordItem[] = [
       confidence: "HIGH",
       capturedAt: utcTimestampDaysAgo(0),
     },
+    playAcquisitions: { month: "2026-09-01", visitors: 1020, acquisitions: 65 },
   },
   {
     keywordId: "kw-gp-2",
@@ -2238,6 +2363,11 @@ export const APP_GP_KEYWORDS: TrackedKeywordItem[] = [
       confidence: "MEDIUM",
       capturedAt: utcTimestampDaysAgo(1),
     },
+    playAcquisitions: {
+      month: "2026-09-01",
+      visitors: 2400,
+      acquisitions: 180,
+    },
   },
   {
     keywordId: "kw-gp-3",
@@ -2259,6 +2389,7 @@ export const APP_GP_KEYWORDS: TrackedKeywordItem[] = [
     bucket: "aspirational",
     scoredAt: utcTimestampDaysAgo(0),
     scoreProvenance: null,
+    playAcquisitions: null,
   },
 ];
 
@@ -3014,6 +3145,20 @@ DATASETS[APP_REPLIES_ID] = {
       id: review.id.replace("rev-", "rep-"),
     })),
   },
+};
+
+export const APP_POSTING_ID = "app-posting";
+
+DATASETS[APP_POSTING_ID] = {
+  ...DATASETS[APP_REPLIES_ID],
+  detail: { ...APP_1_DETAIL, id: APP_POSTING_ID, name: "Posting Lab" },
+};
+
+export const APP_GP_POSTING_ID = "app-gp-posting";
+
+DATASETS[APP_GP_POSTING_ID] = {
+  ...DATASETS["app-gp"],
+  detail: { ...APP_GP_DETAIL, id: APP_GP_POSTING_ID, name: "Posting Lab" },
 };
 
 export const APP_IMPORT_ID = "app-import";
@@ -3886,6 +4031,49 @@ export const ACTIONS: ActionItem[] = [
       version: "3.1.0",
       competitorMedianDays: 25,
       competitorsCompared: 3,
+    },
+  },
+  {
+    ...ACTION_BASE,
+    id: "act-conversion",
+    rule: "conversion.investigate_drop",
+    category: "conversion",
+    status: "OPEN",
+    priority: "medium",
+    impact: 44,
+    scope: { ...APP_SCOPE, keywordId: null, keywordText: null },
+    evidence: {
+      rule: "conversion.investigate_drop",
+      country: "us",
+      windowDays: 7,
+      baselineDays: 14,
+      completeThrough: "2026-10-13",
+      pageViewsBefore: 410,
+      pageViewsAfter: 402,
+      getsBefore: 61,
+      getsAfter: 44,
+      conversionBefore: 0.031,
+      conversionAfter: 0.022,
+    },
+  },
+  {
+    ...ACTION_BASE,
+    id: "act-product-page",
+    rule: "listing.cpp_underperforms",
+    category: "conversion",
+    status: "OPEN",
+    priority: "low",
+    impact: 30,
+    scope: { ...APP_SCOPE, keywordId: null, keywordText: null },
+    evidence: {
+      rule: "listing.cpp_underperforms",
+      country: "us",
+      pageTitle: "Summer sale",
+      windowDays: 14,
+      pageUniqueImpressions: 1240,
+      pageConversion: 0.018,
+      defaultConversion: 0.031,
+      ratio: 0.58,
     },
   },
   {

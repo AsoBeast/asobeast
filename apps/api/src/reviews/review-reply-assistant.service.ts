@@ -25,7 +25,7 @@ import {
   ReplyContext,
   SYSTEM_PROMPT,
 } from './review-reply-drafts';
-import { toReviewReplyItem } from './review-reply.mapper';
+import { toReviewReplyItem, WITH_POSTER } from './review-reply.mapper';
 
 const VOICE_EXAMPLES = 3;
 
@@ -145,6 +145,7 @@ export class ReviewReplyAssistant {
         ...generated,
       },
       update: generated,
+      include: WITH_POSTER,
     });
     return toReviewReplyItem(row);
   }

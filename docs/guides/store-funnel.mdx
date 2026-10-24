@@ -1,0 +1,182 @@
+---
+title: Read impressions and conversion from your console
+sidebarTitle: Store funnel
+description: "Connect an App Store Connect key or a Google Play service account once and see the store's own funnel by market beside your rankings: impressions, page views, Get taps and conversion on the App Store, store listing visitors, acquisitions and installs per search term on Google Play."
+icon: funnel
+keywords: ["App Store Connect","Google Play Console","impressions","conversion","product page views","store listing visitors","acquisitions","search terms","funnel","analytics reports"]
+---
+
+Rankings say where your listing shows. The store funnel says whether people take it. Connect an App Store Connect key in Integrations and every App Store app the key covers gains a **Store funnel** card on its overview with four numbers Apple reports for it. Connect a Google Play service account and every Google Play app it can read gains the same card with three numbers Google reports. See [Google Play](#google-play).
+
+## What you get
+
+| Number | What it counts |
+| --- | --- |
+| Impressions | Times the app appeared in the App Store, on every page type |
+| Product page views | Times someone opened the product page |
+| Get taps | Taps on Get, the closest daily figure to a download Apple publishes in this report |
+| Conversion | Get taps divided by unique impressions |
+
+The card shows the last 28 complete days, with the change against the 28 days before and the change of the last 7 complete days against the 7 before, the same windows the [change impact](/guides/listing-changes) uses. It also says what share of the impressions came from App Store search. The card follows the market switcher like every other overview card, so **All markets** adds every storefront and a market reads that storefront alone.
+
+An app the connection does not cover and a competitor show no numbers. A member sees the card and the connection, and only the owner connects, verifies or disconnects.
+
+## Create the key
+
+<Steps>
+  <Step title="Open the team keys">
+    In App Store Connect, open **Users and Access**, then **Integrations**, then **Team Keys**. The issuer ID is shown above the list.
+  </Step>
+  <Step title="Generate a key with the Admin role">
+    Generate a key, name it and choose the **Admin** role. Apple lets only an Admin key ask for reports, so this one key does everything asobeast needs, including posting review replies.
+  </Step>
+  <Step title="Download the key once">
+    Apple offers the `.p8` file a single time. Keep it, and note the ten character key ID beside the key.
+  </Step>
+</Steps>
+
+<Note>
+  For least privilege, a **Sales and Reports** key works too, but only once the report requests exist: after an Admin key has made them, or when another tool already asked Apple for the same reports. Connect the Admin key first and replace it later if you prefer. An App Store app imported after the switch needs the Admin key again, because its requests do not exist yet.
+</Note>
+
+| Role | Reports | Review replies |
+| --- | --- | --- |
+| Admin | Asks for and reads them | Posts and withdraws them |
+| Sales and Reports | Reads them once an Admin key asked for them | No |
+| Customer Support | No | Posts and withdraws them |
+
+The connection card's **Review replies** line says whether the connected key may reply. It reads **Not tried yet** until the first post, then **Allowed**, or names the role to add when Apple refused one.
+
+## Connect it
+
+Open **Integrations** in the sidebar and the **Store connections** section, press **Connect App Store Connect**, then paste the issuer ID, the key ID and the contents of the `.p8` file, or choose the file. asobeast asks Apple whether the key works before it stores anything, so a mistyped ID or a revoked key is refused on the spot.
+
+| Control | What it does |
+| --- | --- |
+| **Verify** | Asks Apple again whether the stored key works. A key Apple refuses is marked rejected; a key it accepts again clears that and queues a sync |
+| **Sync now** | Queues the download of the reports Apple published since the last sync. A sync already waiting is not queued twice |
+| **Replace key** | Connects another key in place of this one |
+| **Disconnect** | Deletes the stored key and stops the downloads. The numbers already stored are kept, hidden while no key reports them, and appear again once you connect a key |
+
+When the connected key cannot ask for reports, the section says that an Admin key is needed and **Replace key** becomes the main button. Connect an Admin key there; connecting queues a sync, which asks Apple for the reports.
+
+What asobeast stores and how is on [Store console credentials](/security/store-credentials).
+
+## How the numbers are read
+
+asobeast asks Apple for the **App Store Discovery and Engagement** report of each app twice: once as a one time snapshot of the history Apple keeps, back to 1 January 2024, and once as an ongoing request for every new day. Apple produces the first files a day or two after the request, so the card waits for them before it shows numbers.
+
+Every day at 05:30 UTC, after the daily run has started, asobeast downloads the files Apple published since the last sync and adds their rows to the funnel. Apple finishes a day within three days and sometimes sends a corrected file for an earlier day; the newest file always wins, and the card counts a day as complete once it is three days old and Apple has delivered it, so a sync that falls behind never shows missing days as zeros.
+
+Apple drops rows under five users and adds a small amount of noise, so a number is close rather than exact. The card adds unique counts across markets and sources, which reads slightly high for the same person seen in two places.
+
+## Product pages
+
+When the key may read it, the sync also downloads the detailed version of the report, which names the custom product page behind each page view and Get tap. Apple files every impression under no page, so a page has no impressions of its own and its conversion is its Get taps divided by its product page views. The funnel endpoint then lists each page of the last 28 complete days with its counts, the default product page first and the others by page views, and its conversion against the default page as a ratio. A ratio under 1 converts below the default. The [Action Center](/guides/action-center) opens `listing.cpp_underperforms` for a page with at least 100 product page views that converts under 0.8 of the default.
+
+## Markets
+
+Apple names a market by its territory. asobeast matches each territory to an App Store storefront, so a market on the switcher reads the rows of that storefront. A territory it cannot match still counts in **All markets** and is named in the API log of the sync, so the list can grow.
+
+## Google Play
+
+Google publishes no daily analytics API for store listings. Play Console writes monthly report files to a Cloud Storage bucket instead, and asobeast reads them either with your own Google account or with a service account you invite.
+
+| Number | What it counts |
+| --- | --- |
+| Store listing visitors | People without the app who opened the store listing |
+| Acquisitions | People who installed the app after opening the store listing |
+| Conversion | Acquisitions divided by store listing visitors |
+
+Google reports no impressions, so the card has three tiles.
+
+### Copy the bucket id
+
+Open **Download reports** in Play Console and copy the Cloud Storage URI. The bucket id is the part after `gs://` that starts with `pubsite_prod`. Both ways of connecting need it, and asobeast also accepts the whole URI.
+
+### Sign in with Google
+
+The quicker way, offered once the instance has a Google OAuth client (see [Set up Google sign in](#set-up-google-sign-in)).
+
+<Steps>
+  <Step title="Start the sign in">
+    In **Integrations**, **Store connections**, press **Connect Google Play**, keep **Sign in with Google**, paste the bucket id and press **Sign in with Google**.
+  </Step>
+  <Step title="Allow read only Cloud Storage access">
+    Choose the Google account that owns the Play Console developer account, or one that has **View app information and download bulk reports** on the **Account permissions** tab of **Users and permissions**. Keep **View your data in Google Cloud Storage** ticked. asobeast also asks to manage your Play Console, which it uses only to post the review replies you send from the reviews page. Leave that unticked and the connection still reads reports, but cannot post replies.
+  </Step>
+  <Step title="Return to asobeast">
+    Google sends you back to asobeast, which lists the bucket with your account before it stores anything. When your account can open the reports in Play Console, the connection works at once.
+  </Step>
+</Steps>
+
+asobeast keeps only the refresh token Google issues, sealed like every console key. To revoke it, remove asobeast under **Third party connections** in your Google account; the connection is then marked refused until you sign in again.
+
+A sign in posts replies when it allowed Play Console access and the account has **Reply to reviews** in Play Console. A sign in made before asobeast asked for that access, or one that left it unticked, shows **Review replies** as refused on the connection card; sign in with Google again and allow it.
+
+### Use a service account key
+
+<Steps>
+  <Step title="Create a service account">
+    In the Google Cloud console, open **IAM and Admin**, then **Service accounts**, create an account in any project and add a key of type **JSON**. Google downloads the key file once.
+  </Step>
+  <Step title="Invite it in Play Console">
+    In Play Console, open **Users and permissions**, invite the service account's email address and grant **View app information and download bulk reports** on the **Account permissions** tab. Google applies the reports bucket permission only from that tab, not from the permissions of single apps, and can take up to two days to apply it. Grant **Reply to reviews** as well to post review replies from asobeast.
+  </Step>
+  <Step title="Connect it">
+    In **Integrations**, **Store connections**, press **Connect Google Play**, choose **Service account key**, paste the bucket id and choose the JSON key file or paste its contents. asobeast lists the bucket with the key before it stores anything, so a refused account or a wrong bucket id is answered on the spot.
+  </Step>
+</Steps>
+
+Reading reports needs no Google Cloud IAM role, project link or extra API: the bucket belongs to Google, and Play Console alone decides who may read it. Posting review replies goes through the Google Play Android Developer API, so enable that API in the Google Cloud project of the service account, or of the OAuth client for a sign in.
+
+**Verify**, **Sync now**, **Reconnect** and **Disconnect** work as they do for App Store Connect.
+
+### When Google refuses access
+
+| What asobeast says | What it means | What to do |
+| --- | --- | --- |
+| Google Cloud Storage has no bucket | The bucket id is wrong. Cloud Storage answers this even to an account without access | Copy the Cloud Storage URI again from **Download reports** |
+| Google refused an account access to the bucket | The bucket exists, and the account may not read it | Grant **View app information and download bulk reports** on the **Account permissions** tab, wait up to two days for a service account, or sign in with Google |
+| Your Google account cannot read the bucket | You signed in with an account without report access | Sign in with the account that owns the developer account |
+| Google refused the key | The key was deleted or disabled in Google Cloud | Create a new JSON key and connect it |
+| Google no longer accepts the sign in | You revoked it, or the OAuth app is still in testing | Sign in with Google again, and publish the consent screen to production |
+| Google refused the OAuth client of this instance | The client ID, the secret or the redirect URI the operator set does not match the OAuth client | Check the variables and the authorized redirect URI in [Set up Google sign in](#set-up-google-sign-in) |
+
+### Set up Google sign in
+
+An operator turns sign in with Google on once for the instance.
+
+<Steps>
+  <Step title="Create the OAuth client">
+    In the Google Cloud console, open **APIs and services**, then **Credentials**, and create an OAuth client ID of type **Web application**. Add the authorized redirect URI `WEB_PUBLIC_URL` followed by `/integrations/google-play`, for example `https://aso.example.com/integrations/google-play`.
+  </Step>
+  <Step title="Publish the consent screen">
+    Add the scopes `https://www.googleapis.com/auth/devstorage.read_only` and `https://www.googleapis.com/auth/androidpublisher` to the consent screen, enable the Google Play Android Developer API in the same project, and publish the app to production. Google expires every sign in of an app left in testing after seven days. Until Google verifies the app, the consent screen warns that it is unverified, which is enough for a team that knows the instance.
+  </Step>
+  <Step title="Set the variables">
+    Set `GOOGLE_PLAY_OAUTH_CLIENT_ID`, `GOOGLE_PLAY_OAUTH_CLIENT_SECRET` and `WEB_PUBLIC_URL`, described in the [configuration reference](/configuration/reference#store-consoles), and restart the API.
+  </Step>
+</Steps>
+
+### How the Play numbers are read
+
+The daily sync lists the files of every Google Play app of the workspace in the bucket and reads two files of the current and the previous month: the country file and the traffic source file under `stats/store_performance/`. A file is downloaded only when Google wrote a new version of it since the last sync, so a sync without news downloads nothing. A file over 20 MB is skipped and named in the section, since a real monthly file is a few kilobytes. An app with no file in the bucket is shown as **No files in this bucket**, and one whose files Google refuses to the service account as **No access to this app**. A file that cannot be read waits for the next sync without holding back the others, and the section says so.
+
+A market on the switcher reads the country file. **All markets** reads the traffic source file, which splits the visitors by Google Play search, explore and third party referrers, so the card states the search share there only. The two views never add rows of both files together.
+
+Google posts a day three to seven days after it ends, later than Apple, so the newest days of the card fill in over the following week. Google also changed how it counts store listing visitors and acquisitions on 10 July 2026, so compare periods that fall on the same side of that date.
+
+### Installs per search term
+
+The traffic source file also names the Google Play search terms that brought visitors. Only rows of Google Play search count, and the placeholder Google writes when it names no term is left out. The keywords page of a Google Play app gains a **Play installs** column that shows, for each tracked keyword, the acquisitions and visitors of the newest complete month in which Google reported that term (the month in progress only when it is the only one), with the month in its tooltip. A term matches a keyword when both read the same after asobeast normalizes them, so case, spacing and punctuation do not matter. Google reports the terms for all markets together, so the column is the same in every market, and a dash means Google reported no visitors for that term. See [Track keywords](/guides/track-keywords#see-play-installs-per-search-term).
+
+## Limits
+
+- One App Store Connect key and one Google Play connection, a service account key or a Google sign in, per workspace.
+- Apple allows each key 3,500 requests an hour. A sync downloads at most 200 daily files and leaves the rest for the next day, so a long history arrives over a few days.
+- When Apple answers an error for one app, or sends a report asobeast cannot read, the other apps and reports still sync and the section says that some were left for the next sync. A request Apple stopped for inactivity is asked for again on the next sync.
+- When Apple refuses the key during a sync, the connection is marked rejected and nothing is downloaded until you verify it or connect a new one. The numbers already stored are kept and the card shows them again once the key is accepted. A refused service account, a revoked Google sign in or a bucket that disappeared is handled the same way.
+- The downloaded files are kept for `RETENTION_STORE_REPORTS_DAYS` so a parser change can read them again. The funnel rows built from them are kept.
+
+The variables are on the [configuration reference](/configuration/reference#store-consoles).

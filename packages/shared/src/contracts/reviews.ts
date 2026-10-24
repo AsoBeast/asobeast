@@ -24,6 +24,17 @@ export const REVIEW_REPLY_MAX_CHARS = Math.max(
 export const REVIEW_REPLY_INSTRUCTIONS_MAX = 500;
 export const REVIEW_REPLY_GUIDELINES_MAX = 1000;
 
+export const REVIEW_POST_STATES = ['pending', 'published'] as const;
+export type ReviewPostState = (typeof REVIEW_POST_STATES)[number];
+
+export interface ReviewReplyPost {
+  postedAt: string;
+  postedText: string;
+  state: ReviewPostState;
+  storeResponseId: string | null;
+  postedBy: string | null;
+}
+
 export interface ReviewReplyItem {
   text: string;
   tone: ReviewReplyTone | null;
@@ -31,6 +42,7 @@ export interface ReviewReplyItem {
   generatedAt: string | null;
   updatedAt: string;
   repliedAt: string | null;
+  post?: ReviewReplyPost | null;
 }
 
 export interface ReviewReplyCounts {
@@ -92,6 +104,10 @@ export interface ReviewItem {
   translation?: ReviewTranslation | null;
 }
 
+export interface ReviewReplyPostResult {
+  review: ReviewItem;
+}
+
 export interface ReviewList {
   reviews: ReviewItem[];
   total: number;
@@ -137,6 +153,11 @@ export function replyStateOf(
   if (review.reply) return 'drafted';
   return 'needs_reply';
 }
+
+export const isPostEdited = (
+  reply: Pick<ReviewReplyItem, 'text' | 'post'>,
+): boolean =>
+  reply.post ? reply.text.trim() !== reply.post.postedText.trim() : false;
 
 export interface RatingsPoint {
   date: string;

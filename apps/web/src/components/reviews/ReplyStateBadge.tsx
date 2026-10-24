@@ -1,11 +1,17 @@
-import { replyStateOf, type ReviewItem } from "@asobeast/shared";
+import type { ReviewItem, Store } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
-import { replyBadgeLabel, replyStateVariant } from "./reply-state";
+import { replyBadgeLabel, replyBadgeVariant } from "./reply-state";
 
-export function ReplyStateBadge({ review }: { review: ReviewItem }) {
+export function ReplyStateBadge({
+  review,
+  store,
+}: {
+  review: ReviewItem;
+  store: Store;
+}) {
   return (
-    <Badge variant={replyStateVariant(replyStateOf(review))}>
-      {replyBadgeLabel(review)}
+    <Badge variant={replyBadgeVariant(review)}>
+      {replyBadgeLabel(review, store)}
     </Badge>
   );
 }

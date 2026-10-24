@@ -5,6 +5,7 @@ import { APP_EUR_ID, APP_HUF_ID, APP_JPY_ID } from "./fixtures.mts";
 
 const AFFECTED_ROUTES = [
   ["settings", "/settings"],
+  ["integrations", "/integrations"],
   ["action-center", "/actions"],
   ["app-actions", "/apps/app-1/actions"],
   ["admin-apps", "/admin/apps"],

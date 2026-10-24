@@ -7,6 +7,7 @@ import type {
   ReviewReplyGuidelines,
   ReviewReplyItem,
   ReviewReplyPatchRequest,
+  ReviewReplyPostResult,
   ReviewReplyState,
   ReviewSort,
   ReviewThemes,
@@ -80,6 +81,27 @@ export function deleteReviewReply(
   reviewId: string,
 ): Promise<void> {
   return apiFetch<void>(replyPath(appId, reviewId), { method: "DELETE" });
+}
+
+const replyPostPath = (appId: string, reviewId: string) =>
+  `${replyPath(appId, reviewId)}/post`;
+
+export function postReviewReply(
+  appId: string,
+  reviewId: string,
+): Promise<ReviewReplyPostResult> {
+  return apiFetch<ReviewReplyPostResult>(replyPostPath(appId, reviewId), {
+    method: "POST",
+  });
+}
+
+export function withdrawReviewReply(
+  appId: string,
+  reviewId: string,
+): Promise<ReviewReplyPostResult> {
+  return apiFetch<ReviewReplyPostResult>(replyPostPath(appId, reviewId), {
+    method: "DELETE",
+  });
 }
 
 export function draftReviewReply(

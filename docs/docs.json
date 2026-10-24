@@ -147,6 +147,7 @@
               "guides/screenshot-captions",
               "guides/reviews",
               "guides/listing-changes",
+              "guides/store-funnel",
               "guides/action-center",
               "guides/category-ranks",
               "guides/top-charts",
@@ -165,6 +166,7 @@
               "security/authentication",
               "security/account-recovery",
               "security/api-tokens",
+              "security/store-credentials",
               "security/hosting",
               "security/admin-surfaces"
             ]

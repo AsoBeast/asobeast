@@ -19,6 +19,7 @@ export * from "./changes";
 export * from "./jobs";
 export * from "./auth";
 export * from "./account";
+export * from "./store-connect";
 export * from "./billing";
 export * from "./actions";
 export * from "./admin";

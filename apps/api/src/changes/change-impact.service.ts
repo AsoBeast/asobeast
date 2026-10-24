@@ -1,5 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { ChangeImpactReport, isChangeField } from '@asobeast/shared';
+import { Store } from '@prisma/client';
+import {
+  CHANGE_IMPACT_WINDOWS,
+  ChangeImpactItem,
+  ChangeImpactReport,
+  isChangeField,
+} from '@asobeast/shared';
 import { addDays, utcToday } from '../analytics/analytics.support';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -10,10 +16,20 @@ import {
   measureChangeImpact,
 } from './change-impact';
 import { HOME_EVENTS } from '../apps/listing';
+import {
+  finalReportedThrough,
+  marketFunnelScope,
+  type FunnelScope,
+} from '../store-connect/store-funnel';
+import { StoreFunnelService } from '../store-connect/store-funnel.service';
+import { measureChangeFunnel } from './change-impact-funnel';
 
 @Injectable()
 export class ChangeImpactService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly funnel: StoreFunnelService,
+  ) {}
 
   async report(
     appId: string,
@@ -22,7 +38,7 @@ export class ChangeImpactService {
   ): Promise<ChangeImpactReport> {
     const app = await this.prisma.app.findFirst({
       where: { id: appId },
-      select: { id: true, country: true },
+      select: { id: true, country: true, store: true },
     });
     if (!app) {
       throw new NotFoundException(`App ${appId} not found`);
@@ -49,12 +65,55 @@ export class ChangeImpactService {
       impactReadPlan(changes, today),
     );
 
+    const measured = measureChangeImpact({ changes, keywords, today });
+
     return {
       appId: app.id,
       country: market,
       days,
-      ...measureChangeImpact({ changes, keywords, today }),
+      ...measured,
+      items: await this.withFunnel(
+        app,
+        marketFunnelScope(app.store, market, app.country),
+        measured.items,
+        today,
+      ),
     };
+  }
+
+  private async withFunnel(
+    app: { id: string; store: Store },
+    scope: FunnelScope,
+    items: ChangeImpactItem[],
+    today: Date,
+  ): Promise<ChangeImpactItem[]> {
+    const oldest = items.at(-1)?.changedOn;
+    if (!oldest || !(await this.funnel.connected(app.id, app.store))) {
+      return items;
+    }
+    const from = addDays(
+      new Date(`${oldest}T00:00:00.000Z`),
+      -Math.max(...CHANGE_IMPACT_WINDOWS),
+    );
+    const [rows, { firstDate, lastDate }] = await Promise.all([
+      this.funnel.rows(app.id, from, scope),
+      this.funnel.range(app.id),
+    ]);
+    const through = finalReportedThrough(today, lastDate, app.store);
+    return items.map((item) => ({
+      ...item,
+      windows: item.windows.map((window) => ({
+        ...window,
+        funnel: measureChangeFunnel({
+          rows,
+          changedOn: item.changedOn,
+          days: window.days,
+          completeThrough: through,
+          firstDate,
+          store: app.store,
+        }),
+      })),
+    }));
   }
 
   private async keywords(

@@ -33,7 +33,7 @@ export function ReviewCountsStrip({
         <InfoTip
           label="About reply status"
           title="Reply status"
-          summary="Needs reply: no reply anywhere. Draft saved: a reply is kept here and not marked. Replied: Google Play shows a developer reply, or you marked the review as replied. Updated after reply: the reviewer edited the review after the Google Play reply, so read it again."
+          summary="Needs reply: no reply anywhere. Draft saved: a reply is kept here and not marked. Replied: the store shows a reply, posted from here or in the console, or you marked the review as replied. Updated after reply: the reviewer edited the review after the Google Play reply, so read it again."
         >
           <a
             href={REPLY_STATES_GUIDE}

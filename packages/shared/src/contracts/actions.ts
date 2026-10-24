@@ -21,6 +21,8 @@ export const ACTION_RULES = [
   'reviews.investigate_rating_decline',
   'reviews.reply_negative',
   'listing.ship_update',
+  'conversion.investigate_drop',
+  'listing.cpp_underperforms',
 ] as const;
 export type ActionRule = (typeof ACTION_RULES)[number];
 
@@ -63,6 +65,8 @@ export const ACTION_RULE_CATEGORY: Record<ActionRule, ActionCategory> = {
   'reviews.investigate_rating_decline': 'reputation',
   'reviews.reply_negative': 'reputation',
   'listing.ship_update': 'conversion',
+  'conversion.investigate_drop': 'conversion',
+  'listing.cpp_underperforms': 'conversion',
 };
 
 export const isActionRule = (value: unknown): value is ActionRule =>
@@ -96,6 +100,8 @@ export const ACTION_ADVISORY_MAX_IMPACT = 50;
 export const ACTION_ADVISORY_RULES: readonly ActionRule[] = [
   'serp.hold_volatile',
   'keyword.prune',
+  'conversion.investigate_drop',
+  'listing.cpp_underperforms',
 ];
 
 export interface ActionScope {
@@ -325,6 +331,32 @@ export interface ListingShipUpdateEvidence {
   competitorsCompared: number;
 }
 
+export interface ConversionInvestigateDropEvidence {
+  rule: 'conversion.investigate_drop';
+  country: string;
+  windowDays: number;
+  baselineDays: number;
+  completeThrough: string;
+  pageViewsBefore: number;
+  pageViewsAfter: number;
+  getsBefore: number;
+  getsAfter: number;
+  conversionBefore: number | null;
+  conversionAfter: number | null;
+}
+
+export interface ListingCppUnderperformsEvidence {
+  rule: 'listing.cpp_underperforms';
+  country: string;
+  pageTitle: string;
+  windowDays: number;
+  pageUniqueImpressions: number;
+  pageViews?: number;
+  pageConversion: number;
+  defaultConversion: number;
+  ratio: number;
+}
+
 export type ActionEvidence =
   | KeywordAddUncoveredEvidence
   | KeywordDefendEvidence
@@ -340,7 +372,9 @@ export type ActionEvidence =
   | CompetitorInvestigateOvertakeEvidence
   | ReviewsInvestigateRatingDeclineEvidence
   | ReviewsReplyNegativeEvidence
-  | ListingShipUpdateEvidence;
+  | ListingShipUpdateEvidence
+  | ConversionInvestigateDropEvidence
+  | ListingCppUnderperformsEvidence;
 
 export interface ActionAi {
   explanation: string | null;
@@ -421,6 +455,7 @@ export const ACTION_TREND_METRICS = [
   'audit',
   'rating',
   'updateAge',
+  'conversion',
 ] as const;
 export type ActionTrendMetric = (typeof ACTION_TREND_METRICS)[number];
 

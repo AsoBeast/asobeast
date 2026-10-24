@@ -935,6 +935,75 @@ describe('KeywordsController (e2e)', () => {
     );
   });
 
+  it('carries the play acquisitions of a search term beside a play keyword', async () => {
+    const play = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.GOOGLE_PLAY,
+        storeAppId: 'com.example.habits',
+        country: 'us',
+        name: 'Habits',
+      },
+    });
+    await api
+      .post(`/apps/${play.id}/keywords`)
+      .send({ keywords: ['habit tracker', 'sleep timer'] })
+      .expect(201);
+    await prisma.storeConnection.deleteMany({});
+    const connection = await prisma.storeConnection.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.GOOGLE_PLAY,
+        issuerId: 'reports@focus-123.iam.gserviceaccount.com',
+        keyId: 'a1b2c3d4e5f6',
+        keyFingerprint: '0123456789abcdef',
+        credentialCiphertext: 'v1.sealed',
+        bucket: 'pubsite_prod_rev_1',
+      },
+    });
+    await prisma.storeReportRequest.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        connectionId: connection.id,
+        appId: play.id,
+        accessType: 'ONGOING',
+        remoteId: 'com.example.habits',
+      },
+    });
+    await prisma.storeFunnelSearchTerm.createMany({
+      data: [
+        ['2026-08-01', 'habit tracker', 900, 50],
+        ['2026-09-01', 'Habit Tracker', 520, 31],
+      ].map(([month, term, visitors, acquisitions]) => ({
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        appId: play.id,
+        month: new Date(`${month as string}T00:00:00.000Z`),
+        term: term as string,
+        normalized: 'habit tracker',
+        visitors: visitors as number,
+        acquisitions: acquisitions as number,
+        generation: '1',
+      })),
+    });
+    const native = await importApp();
+
+    const items = (await api.get(`/apps/${play.id}/keywords`).expect(200))
+      .body as TrackedKeywordItem[];
+    const byText = new Map(items.map((item) => [item.text, item]));
+
+    expect(byText.get('habit tracker')?.playAcquisitions).toEqual({
+      month: '2026-09-01',
+      visitors: 520,
+      acquisitions: 31,
+    });
+    expect(byText.get('sleep timer')?.playAcquisitions).toBeNull();
+    const apple = (await api.get(`/apps/${native}/keywords`).expect(200))
+      .body as TrackedKeywordItem[];
+    expect(apple.length).toBeGreaterThan(0);
+    expect(apple.every((item) => !('playAcquisitions' in item))).toBe(true);
+    await prisma.storeConnection.deleteMany({});
+  });
+
   it('answers 404 for the keyword field of a missing app', async () => {
     await api.get('/apps/missing-app/keyword-field').expect(404);
   });

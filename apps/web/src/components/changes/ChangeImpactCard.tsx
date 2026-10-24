@@ -3,7 +3,12 @@
 import { Suspense, useId } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
-import type { ChangeImpactItem, KeywordCountrySummary } from "@asobeast/shared";
+import type {
+  ChangeImpactItem,
+  ChangeImpactWindow,
+  KeywordCountrySummary,
+  Store,
+} from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -25,19 +30,26 @@ import {
 import { formatCountry, formatDate } from "@/lib/format";
 import { changeImpactOptions, keywordCountriesOptions } from "@/lib/queries";
 import { changeDaysParser, countryParser } from "@/lib/search-params";
-import { ChangeImpactWindowTile } from "./ChangeImpactWindowTile";
+import { ChangeImpactWindowTile, FunnelFacts } from "./ChangeImpactWindowTile";
 import { CHANGE_FIELD_LABELS } from "@/lib/change-fields";
-import { impactScopeLine } from "./change-impact-copy";
+import { impactScopeLine, windowTitle } from "./change-impact-copy";
 import { ChangeImpactSkeleton } from "./skeletons";
 import { VisibilityHelp } from "@/components/visibility/VisibilityHelp";
 
 interface ImpactScope {
   id: string;
+  store: Store;
   days: number;
   market: string;
 }
 
-function ChangeImpactRow({ item }: { item: ChangeImpactItem }) {
+function ChangeImpactRow({
+  item,
+  store,
+}: {
+  item: ChangeImpactItem;
+  store: Store;
+}) {
   return (
     <li className="flex flex-col gap-3 border-t pt-4 first:border-t-0 first:pt-0">
       <div className="flex flex-wrap items-center gap-2">
@@ -49,10 +61,13 @@ function ChangeImpactRow({ item }: { item: ChangeImpactItem }) {
         ))}
       </div>
       {item.baselineDate === null ? (
-        <p className="text-body text-muted-foreground">
-          No rank check just before this change, so its effect cannot be
-          measured.
-        </p>
+        <>
+          <p className="text-body text-muted-foreground">
+            No rank check just before this change, so its effect on rankings
+            cannot be measured.
+          </p>
+          <FunnelOnlyTiles windows={item.windows} store={store} />
+        </>
       ) : (
         <>
           <p className="text-caption text-muted-foreground">
@@ -60,7 +75,11 @@ function ChangeImpactRow({ item }: { item: ChangeImpactItem }) {
           </p>
           <ul className="grid gap-3 sm:grid-cols-3">
             {item.windows.map((impact) => (
-              <ChangeImpactWindowTile key={impact.days} impact={impact} />
+              <ChangeImpactWindowTile
+                key={impact.days}
+                impact={impact}
+                store={store}
+              />
             ))}
           </ul>
         </>
@@ -69,7 +88,31 @@ function ChangeImpactRow({ item }: { item: ChangeImpactItem }) {
   );
 }
 
-function ChangeImpactList({ id, days, market }: ImpactScope) {
+function FunnelOnlyTiles({
+  windows,
+  store,
+}: {
+  windows: ChangeImpactWindow[];
+  store: Store;
+}) {
+  const funnels = windows.filter((impact) => impact.funnel);
+  if (funnels.length === 0) return null;
+  return (
+    <ul className="grid gap-3 sm:grid-cols-3">
+      {funnels.map((impact) => (
+        <li
+          key={impact.days}
+          className="flex flex-col gap-2 rounded-lg border p-3"
+        >
+          <h4 className="text-body font-medium">{windowTitle(impact.days)}</h4>
+          <FunnelFacts impact={impact} store={store} />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function ChangeImpactList({ id, store, days, market }: ImpactScope) {
   const { data } = useSuspenseQuery(changeImpactOptions(id, days, market));
 
   if (data.items.length === 0) {
@@ -92,7 +135,7 @@ function ChangeImpactList({ id, days, market }: ImpactScope) {
       </p>
       <ul className="flex flex-col gap-4">
         {data.items.map((item) => (
-          <ChangeImpactRow key={item.changedOn} item={item} />
+          <ChangeImpactRow key={item.changedOn} item={item} store={store} />
         ))}
       </ul>
     </div>
@@ -131,6 +174,7 @@ function ImpactMarketSelect({
 
 function ChangeImpactBody({
   id,
+  store,
   days,
   market,
   onMarketChange,
@@ -155,7 +199,7 @@ function ChangeImpactBody({
         />
       ) : (
         <Suspense fallback={<ChangeImpactSkeleton />}>
-          <ChangeImpactList id={id} days={days} market={market} />
+          <ChangeImpactList id={id} store={store} days={days} market={market} />
         </Suspense>
       )}
     </div>
@@ -164,9 +208,11 @@ function ChangeImpactBody({
 
 export function ChangeImpactCard({
   id,
+  store,
   homeCountry,
 }: {
   id: string;
+  store: Store;
   homeCountry: string;
 }) {
   const titleId = useId();
@@ -189,6 +235,7 @@ export function ChangeImpactCard({
         <Suspense fallback={<ChangeImpactSkeleton />}>
           <ChangeImpactBody
             id={id}
+            store={store}
             days={days}
             market={market}
             onMarketChange={(next) =>

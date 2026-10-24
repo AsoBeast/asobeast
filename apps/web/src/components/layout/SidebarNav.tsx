@@ -11,6 +11,7 @@ import {
   LayoutGrid,
   Lightbulb,
   ListChecks,
+  Plug,
   Settings,
   Star,
   Swords,
@@ -20,6 +21,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { INTEGRATIONS_PATH } from "@asobeast/shared";
 import { ADMIN_ENTRY } from "@/components/admin/admin-links";
 import { useAuth } from "@/components/auth/use-auth";
 import {
@@ -58,6 +60,7 @@ const WORKSPACE = [
   { href: "/", label: "Dashboard", icon: LayoutGrid },
   { href: "/actions", label: "Action Center", icon: ListChecks },
   { href: "/charts", label: "Top charts", icon: Trophy },
+  { href: INTEGRATIONS_PATH, label: "Integrations", icon: Plug },
   { href: "/settings", label: "Settings", icon: Settings },
 ] as const;
 

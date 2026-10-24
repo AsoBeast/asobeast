@@ -27,11 +27,13 @@ export function DeltaChip({
   value,
   polarity = "lower-is-better",
   period,
+  unit = "",
   className,
 }: {
   value: number | null;
   polarity?: DeltaPolarity;
   period: string;
+  unit?: string;
   className?: string;
 }) {
   if (value === null) {
@@ -56,6 +58,7 @@ export function DeltaChip({
     >
       <Icon className="size-3.5" aria-hidden />
       {magnitude}
+      {unit}
     </span>
   );
 }
@@ -90,9 +93,11 @@ export function PositionDeltaChip({
 export function TrendChip({
   label,
   value,
+  unit = "",
 }: {
   label: string;
   value: number | null;
+  unit?: string;
 }) {
   if (value === null) {
     return (
@@ -112,7 +117,8 @@ export function TrendChip({
       )}
     >
       <Icon className="size-3.5" aria-hidden />
-      {rounded > 0 ? `+${rounded}` : rounded} {label}
+      {rounded > 0 ? `+${rounded}` : rounded}
+      {unit} {label}
     </span>
   );
 }

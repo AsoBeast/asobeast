@@ -1,0 +1,10 @@
+{
+  "data": {
+    "type": "analyticsReportRequests",
+    "id": "f3a1c2d4-0001",
+    "attributes": { "accessType": "ONGOING", "stoppedDueToInactivity": false }
+  },
+  "links": {
+    "self": "https://api.appstoreconnect.apple.com/v1/analyticsReportRequests/f3a1c2d4-0001"
+  }
+}

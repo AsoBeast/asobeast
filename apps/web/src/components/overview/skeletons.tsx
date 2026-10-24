@@ -47,3 +47,34 @@ export function PanelCardSkeleton() {
     </Card>
   );
 }
+
+export function FunnelTilesSkeleton() {
+  return (
+    <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,12rem),1fr))] gap-3">
+      {Array.from({ length: 4 }).map((_, index) => (
+        <div
+          key={index}
+          className="flex flex-col gap-2 rounded-xl border px-4 py-3"
+        >
+          <Skeleton className="h-3 w-24" />
+          <Skeleton className="h-8 w-20" />
+          <Skeleton className="h-3 w-28" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function FunnelCardSkeleton() {
+  return (
+    <Card>
+      <CardHeader className="gap-2">
+        <Skeleton className="h-4 w-28" />
+        <Skeleton className="h-5 w-48" />
+      </CardHeader>
+      <CardContent>
+        <FunnelTilesSkeleton />
+      </CardContent>
+    </Card>
+  );
+}

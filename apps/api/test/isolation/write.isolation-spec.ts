@@ -97,6 +97,39 @@ describe('Write isolation', () => {
     ).resolves.toBe(0);
   });
 
+  it('answers 404 when posting or withdrawing the reply of another workspace review', async () => {
+    const posted = {
+      reviewId: fixture.a.reviewId,
+      appId: fixture.a.appleAppId,
+      workspaceId: fixture.a.id,
+      text: 'Kept reply',
+      postedAt: new Date('2026-10-20T08:00:00Z'),
+      postedText: 'Kept reply',
+      postState: 'pending',
+      storeResponseId: 'response-a',
+    };
+    await fixture.db.reviewReply.create({ data: posted });
+    const path = `/apps/${fixture.a.appleAppId}/reviews/${fixture.a.reviewId}/reply/post`;
+
+    try {
+      await fixture.b.agent.post(path).expect(404);
+      await fixture.b.agent.delete(path).expect(404);
+
+      await expect(
+        fixture.db.reviewReply.findUniqueOrThrow({
+          where: { reviewId: fixture.a.reviewId },
+        }),
+      ).resolves.toMatchObject({
+        postedAt: posted.postedAt,
+        storeResponseId: 'response-a',
+      });
+    } finally {
+      await fixture.db.reviewReply.deleteMany({
+        where: { reviewId: fixture.a.reviewId },
+      });
+    }
+  });
+
   it('answers 404 and leaves the row when deleting another workspace app', async () => {
     await fixture.a.agent.delete(`/apps/${fixture.b.appleAppId}`).expect(404);
 

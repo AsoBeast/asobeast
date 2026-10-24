@@ -17,6 +17,7 @@ Every schedule is a cron expression evaluated in UTC. The defaults below come fr
 | `CRON_DAILY` | `0 3 * * *` | Daily 03:00 | Enqueues position checks, snapshots, reviews and category ranks, then generates actions and flushes batched alerts |
 | `CRON_SCORING` | `0 4 * * 0` | Sunday 04:00 | Recomputes popularity and difficulty for tracked keywords |
 | `CRON_RETENTION` | `0 5 * * *` | Daily 05:00 | Prunes rows past their retention window |
+| `CRON_STORE_REPORTS` | `30 5 * * *` | Daily 05:30 | Downloads the reports each connected store console published since the last sync. Never scheduled without `STORE_CONNECT_ENCRYPTION_KEY` |
 | `CRON_AUDIT` | `0 6 * * *` | Daily 06:00 | Writes the daily audit score snapshot |
 | `CRON_LOCALIZATION_SWEEP` | `0 7 * * 1` | Monday 07:00 | Queues the lookups that detect the App Store localizations every app ships. An empty value removes it |
 | `CRON_DIGEST` | `0 8 * * 1` | Monday 08:00 | Sends the weekly digest webhook |
@@ -35,6 +36,8 @@ The difference matters. The Apple limiter spaces requests, while the Google Play
 Work a person starts to explore rather than to collect, today the lookups of a deep search, is queued with a priority. A worker always takes every waiting job without a priority first, the daily run's jobs among them, so a deep search waits behind them. Such a lookup also checks, before it reaches the store, that its workspace still has a plan in force and is not suspended, and does nothing otherwise.
 
 Reading screenshot captions runs in a third queue, `screenshots`, with its own worker at concurrency 1. While reading is on, every snapshot that records App Store screenshots queues one read, a market listing refresh included. With `SCREENSHOT_OCR=false` the screenshots are recorded as skipped and nothing is queued. It spends no store request budget and no OpenAI call. See [Read screenshot captions](/guides/screenshot-captions).
+
+Downloading store console reports runs in a fourth queue, `store-connect`, with its own worker at concurrency 1. It talks to App Store Connect with the key an owner connected, not to the public store, so it spends no store request budget and no proxy. A sync job per workspace is queued by `CRON_STORE_REPORTS` and by the connect, verify and sync buttons, and one already waiting is not queued twice. See [Read impressions and conversion from your console](/guides/store-funnel).
 
 ## Why are the limits conservative?
 
@@ -82,6 +85,7 @@ The retention job prunes each table on its own window. `0` means keep forever. E
 | `RETENTION_AUDIT_SCORES_DAYS` | 0 | Audit score history |
 | `RETENTION_ACTIONS_DAYS` | 180 | Closed action items only |
 | `RETENTION_AI_CALLS_DAYS` | 400 | AI call ledger rows, never from the current month |
+| `RETENTION_STORE_REPORTS_DAYS` | 35 | Downloaded store console report files. The funnel rows built from them are kept |
 
 Three exceptions are worth remembering. The newest snapshot per app is always kept regardless of age, open or snoozed action items are never pruned by age, and AI calls from the current month are never pruned because the monthly AI allowance still counts them. The same job also gives back AI calls that were reserved more than an hour ago and never settled.
 

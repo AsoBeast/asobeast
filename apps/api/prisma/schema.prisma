@@ -58,6 +58,12 @@ model Workspace {
   appSetups   AppSetup[]
   reviewReplies ReviewReply[]
   chartFollows ChartFollow[]
+  storeConnections StoreConnection[]
+  storeReportRequests StoreReportRequest[]
+  storeReportInstances StoreReportInstance[]
+  storeFunnelDays StoreFunnelDay[]
+  storeFunnelPageDays StoreFunnelPageDay[]
+  storeFunnelSearchTerms StoreFunnelSearchTerm[]
   rankings    KeywordRanking[]
   plan                String    @default("free")
   trialStartedAt      DateTime?
@@ -111,6 +117,8 @@ model User {
   sessions          Session[]
   actionEvents      ActionEvent[]
   aiCalls           AiCall[]
+  storeConnections  StoreConnection[]
+  postedReviewReplies ReviewReply[] @relation("ReviewReplyPosts")
   createdAt         DateTime   @default(now())
   updatedAt         DateTime   @updatedAt
 
@@ -224,6 +232,10 @@ model App {
   auditScores  AuditScore[]
   actions      ActionItem[]
   actionEvents ActionEvent[]
+  storeReportRequests StoreReportRequest[]
+  storeFunnelDays StoreFunnelDay[]
+  storeFunnelPageDays StoreFunnelPageDay[]
+  storeFunnelSearchTerms StoreFunnelSearchTerm[]
   createdAt    DateTime         @default(now())
 
   @@unique([id, workspaceId])
@@ -559,22 +571,30 @@ model Review {
 }
 
 model ReviewReply {
-  reviewId    String    @id
-  review      Review    @relation(fields: [reviewId, appId], references: [id, appId], onDelete: Cascade)
-  appId       String
-  workspaceId String
-  app         App       @relation(fields: [appId, workspaceId], references: [id, workspaceId], onDelete: Cascade)
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  text        String
-  tone        String?
-  model       String?
-  generatedAt DateTime?
-  repliedAt   DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  reviewId        String    @id
+  review          Review    @relation(fields: [reviewId, appId], references: [id, appId], onDelete: Cascade)
+  appId           String
+  workspaceId     String
+  app             App       @relation(fields: [appId, workspaceId], references: [id, workspaceId], onDelete: Cascade)
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  text            String
+  tone            String?
+  model           String?
+  generatedAt     DateTime?
+  repliedAt       DateTime?
+  postedAt        DateTime?
+  postedText      String?
+  postState       String?
+  storeReviewId   String?
+  storeResponseId String?
+  postedByUserId  String?
+  postedBy        User?     @relation("ReviewReplyPosts", fields: [postedByUserId], references: [id], onDelete: SetNull)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   @@unique([reviewId, appId])
   @@index([appId, repliedAt])
+  @@index([appId, postedAt])
   @@index([workspaceId])
 }
 
@@ -809,6 +829,135 @@ model AiCall {
 
   @@index([workspaceId, createdAt])
   @@index([status, createdAt])
+}
+
+model StoreConnection {
+  id                   String               @id @default(cuid())
+  workspaceId          String
+  workspace            Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  store                Store
+  issuerId             String
+  keyId                String
+  keyFingerprint       String
+  credentialCiphertext String
+  status               String               @default("active")
+  reportAccess         String               @default("unknown")
+  replyAccess          String               @default("unknown")
+  createdByUserId      String?
+  createdBy            User?                @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+  createdAt            DateTime             @default(now())
+  verifiedAt           DateTime?
+  lastSyncedAt         DateTime?
+  lastError            String?
+  bucket               String?
+  credential           String               @default("key")
+  requests             StoreReportRequest[]
+
+  @@unique([workspaceId, store])
+}
+
+model StoreReportRequest {
+  id                 String                @id @default(cuid())
+  workspaceId        String
+  workspace          Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  connectionId       String
+  connection         StoreConnection       @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  appId              String
+  app                App                   @relation(fields: [appId], references: [id], onDelete: Cascade)
+  accessType         String
+  state              String                @default("requested")
+  remoteId           String?
+  reportId           String?
+  lastProcessingDate DateTime?             @db.Date
+  detailedReportId   String?
+  detailedLastProcessingDate DateTime?     @db.Date
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  instances          StoreReportInstance[]
+
+  @@unique([appId, accessType])
+}
+
+model StoreReportInstance {
+  id             String             @id @default(cuid())
+  workspaceId    String
+  workspace      Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  requestId      String
+  request        StoreReportRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  appId          String
+  remoteId       String
+  granularity    String
+  processingDate DateTime           @db.Date
+  raw            Bytes
+  sizeInBytes    Int
+  segments       Int
+  fetchedAt      DateTime           @default(now())
+  appliedAt      DateTime?
+
+  @@unique([requestId, remoteId])
+  @@index([workspaceId, fetchedAt])
+}
+
+model StoreFunnelDay {
+  id                String    @id @default(cuid())
+  workspaceId       String
+  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  appId             String
+  app               App       @relation(fields: [appId], references: [id], onDelete: Cascade)
+  date              DateTime  @db.Date
+  territory         String
+  country           String?
+  sourceType        String
+  pageType          String
+  impressions       Int       @default(0)
+  uniqueImpressions Int       @default(0)
+  pageViews         Int       @default(0)
+  uniquePageViews   Int       @default(0)
+  gets              Int       @default(0)
+  uniqueGets        Int       @default(0)
+  processingDate    DateTime  @db.Date
+
+  @@unique([appId, date, territory, sourceType, pageType])
+  @@index([appId, country, date])
+}
+
+model StoreFunnelPageDay {
+  id                String    @id @default(cuid())
+  workspaceId       String
+  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  appId             String
+  app               App       @relation(fields: [appId], references: [id], onDelete: Cascade)
+  date              DateTime  @db.Date
+  territory         String
+  country           String?
+  pageTitle         String
+  impressions       Int       @default(0)
+  uniqueImpressions Int       @default(0)
+  pageViews         Int       @default(0)
+  uniquePageViews   Int       @default(0)
+  gets              Int       @default(0)
+  uniqueGets        Int       @default(0)
+  processingDate    DateTime  @db.Date
+
+  @@unique([appId, date, territory, pageTitle])
+  @@index([appId, country, date])
+}
+
+model StoreFunnelSearchTerm {
+  id           String    @id @default(cuid())
+  workspaceId  String
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  appId        String
+  app          App       @relation(fields: [appId], references: [id], onDelete: Cascade)
+  month        DateTime  @db.Date
+  term         String
+  normalized   String
+  visitors     Int       @default(0)
+  acquisitions Int       @default(0)
+  generation   String
+
+  @@unique([appId, month, term])
+  @@index([appId, normalized])
 }
 
 model SupportAccess {

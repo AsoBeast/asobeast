@@ -17,6 +17,10 @@ describe("the tool catalog", () => {
     }
   });
 
+  it("describes the store funnel in the change impact tool", () => {
+    expect(toolByName("change_impact")?.description).toContain("store funnel");
+  });
+
   it("names every tool once", () => {
     const names = MCP_TOOLS.map((tool) => tool.name);
 

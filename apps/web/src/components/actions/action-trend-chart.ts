@@ -35,6 +35,7 @@ export const TREND_METRIC_LABEL: Record<ActionTrendMetric, string> = {
   audit: "Audit score",
   rating: "Average review score",
   updateAge: "Days since update",
+  conversion: "Conversion",
 };
 
 function domainFor(
@@ -56,6 +57,7 @@ function domainFor(
     case "rating":
       return [1, 5];
     case "updateAge":
+    case "conversion":
       return ["auto", "auto"];
   }
 }
@@ -66,7 +68,10 @@ export function trendValue(trend: ActionTrend, value: number | null): string {
       ? formatRankPosition(value, trend.depth ?? RANK_DEPTH)
       : `#${value}`;
   }
-  return value === null ? "—" : formatMeasure(value);
+  if (value === null) return "—";
+  return trend.metric === "conversion"
+    ? `${formatMeasure(value)}%`
+    : formatMeasure(value);
 }
 
 function summaryOf(trend: ActionTrend, days: number): string {

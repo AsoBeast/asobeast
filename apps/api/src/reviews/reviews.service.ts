@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ReviewReply, Store } from '@prisma/client';
+import { Store } from '@prisma/client';
 import {
   RatingsHistogram,
   RATING_STARS,
@@ -28,7 +28,11 @@ import { SyncReviewsPayload } from '../jobs/jobs.types';
 import { sortVersionsNewestFirst } from './version-order';
 import { HOME_LISTING, NEWEST_FIRST } from '../apps/listing';
 import { reviewOrder, ReviewScope, reviewsWhere } from './review-list-query';
-import { toReviewReplyItem } from './review-reply.mapper';
+import {
+  ReviewReplyRow,
+  toReviewReplyItem,
+  WITH_POSTER,
+} from './review-reply.mapper';
 import { reviewLanguage } from './review-language';
 import { toReviewTranslation, TranslationColumns } from './review-translation';
 import { StoredReview, storedReviewChanges } from './stored-review-changes';
@@ -265,7 +269,7 @@ export class ReviewsService {
             where: listed,
             orderBy: reviewOrder(filters.sort),
             take: filters.limit,
-            include: { reply: true },
+            include: { reply: { include: WITH_POSTER } },
           }),
           tx.review.count({ where: listed }),
           tx.review.findMany({
@@ -309,7 +313,7 @@ export class ReviewsService {
       reviewedAt: Date | null;
       repliedAt: Date | null;
       replyText: string | null;
-      reply: ReviewReply | null;
+      reply: ReviewReplyRow | null;
     },
   ): ReviewItem {
     return {
@@ -327,6 +331,17 @@ export class ReviewsService {
       language: reviewLanguage(`${review.title ?? ''} ${review.text}`),
       translation: toReviewTranslation(review),
     };
+  }
+
+  async item(appId: string, reviewId: string): Promise<ReviewItem> {
+    const review = await this.prisma.review.findFirst({
+      where: { id: reviewId, appId },
+      include: { reply: { include: WITH_POSTER } },
+    });
+    if (!review) {
+      throw new NotFoundException(`Review ${reviewId} not found`);
+    }
+    return this.toReviewItem(review);
   }
 
   async histogram(appId: string): Promise<RatingsHistogram> {

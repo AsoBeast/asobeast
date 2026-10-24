@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ReviewItem, ReviewList, ReviewReplyItem } from "@asobeast/shared";
-import { withReviewReply } from "./review-reply-cache";
+import { withReviewReply, withReviewRow } from "./review-reply-cache";
 
 const ISO = "2026-10-01T00:00:00.000Z";
 const REPLY: ReviewReplyItem = {
@@ -134,5 +134,55 @@ describe("withReviewReply", () => {
       replied: 2,
       updated: 0,
     });
+  });
+});
+
+describe("withReviewRow", () => {
+  const posted = review({
+    repliedAt: ISO,
+    replyText: "Thanks",
+    reply: {
+      ...REPLY,
+      repliedAt: ISO,
+      post: {
+        postedAt: ISO,
+        postedText: "Thanks",
+        state: "pending",
+        storeResponseId: "response-1",
+        postedBy: null,
+      },
+    },
+  });
+
+  it("replaces the row and moves a posted draft to replied", () => {
+    const drafted = review({ reply: REPLY });
+
+    const next = withReviewRow(list([drafted]), {}, posted, drafted);
+
+    expect(next.reviews[0]).toBe(posted);
+    expect(next.counts).toEqual({
+      needsReply: 4,
+      drafted: 0,
+      replied: 3,
+      updated: 0,
+    });
+  });
+
+  it("moves the count of a row the list does not hold from its previous state", () => {
+    const next = withReviewRow(
+      list([]),
+      { replyState: "drafted" },
+      posted,
+      review({ reply: REPLY }),
+    );
+
+    expect(next.reviews).toEqual([]);
+    expect(next.counts).toMatchObject({ drafted: 0, replied: 3 });
+  });
+
+  it("leaves a list whose filters do not count the review", () => {
+    const before = list([]);
+
+    expect(withReviewRow(before, { score: 5 }, posted)).toBe(before);
   });
 });

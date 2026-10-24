@@ -10,6 +10,8 @@ export const SIGNED_IN_ROUTES = [
   ["action-center", "/actions"],
   ["top-charts", "/charts"],
   ["settings", "/settings"],
+  ["integrations", "/integrations"],
+  ["integrations-google-play", "/integrations/google-play"],
   ["upgrade", "/upgrade"],
   ["admin-overview", "/admin"],
   ["admin-capacity", "/admin/capacity"],

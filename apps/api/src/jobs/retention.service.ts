@@ -43,6 +43,7 @@ export class RetentionService {
       ['billingEvent', () => this.pruneBillingEvents(now)],
       ['aiCall', () => this.pruneAiCalls(now)],
       ['aiCallReservation', () => this.releaseAbandonedAiCalls(now)],
+      ['storeReportInstance', () => this.pruneStoreReportInstances(now)],
       ['screenshotText', () => this.pruneScreenshotText(now)],
       ['session', () => this.pruneSessions(now)],
     ];
@@ -210,6 +211,19 @@ export class RetentionService {
           { closedAt: null, resolvedAt: { lt: cutoff } },
         ],
       },
+    });
+    return count;
+  }
+
+  private async pruneStoreReportInstances(now: Date): Promise<number> {
+    const days = this.config.get('RETENTION_STORE_REPORTS_DAYS', {
+      infer: true,
+    });
+    if (days === 0) {
+      return 0;
+    }
+    const { count } = await this.prisma.storeReportInstance.deleteMany({
+      where: { fetchedAt: { lt: this.cutoff(days, now) } },
     });
     return count;
   }
