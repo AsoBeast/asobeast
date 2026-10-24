@@ -208,6 +208,31 @@ describe('searchTermsOf', () => {
     ]);
   });
 
+  it('keeps only terms of Google Play search, never the placeholder Google writes on other sources', () => {
+    const real = Buffer.from(
+      [
+        '\ufeffDate,Package name,Traffic source,Search term,UTM source,UTM campaign,Store listing acquisitions,Store listing visitors,Store listing conversion rate',
+        '2026-09-01,com.adex77.WhereAmI,Other,Other,Other,Other,12,87,0.13790229885057473',
+        '2026-09-01,com.adex77.WhereAmI,Google Play explore,No search terms specified,No UTM source specified,No UTM campaign specified,6,101,0.0594',
+        '2026-09-02,com.adex77.WhereAmI,Google Play explore,No search terms specified,No UTM source specified,No UTM campaign specified,16,111,0.1441',
+        '2026-09-02,com.adex77.WhereAmI,Google Play explore,map quiz,Other,Other,1,9,0.11',
+        '2026-09-02,com.adex77.WhereAmI,Google Play search,No search terms specified,Other,Other,2,20,0.1',
+        '2026-09-02,com.adex77.WhereAmI,Google Play search,geoguess,Other,Other,3,25,0.12',
+      ].join('\n'),
+      'utf16le',
+    );
+
+    expect(searchTermsOf(parseCsv(decodeCsv(real)))).toEqual([
+      {
+        month: '2026-09-01',
+        term: 'geoguess',
+        normalized: 'geoguess',
+        visitors: 25,
+        acquisitions: 3,
+      },
+    ]);
+  });
+
   it('sums each search term across the month and skips Other', () => {
     const terms = searchTermsOf(parseCsv(decodeCsv(TRAFFIC)));
 

@@ -3,7 +3,7 @@ import type { FunnelRow } from '../discovery-report';
 import { countOf, dateOf } from '../report-cells';
 import { PLAY_ALL_MARKETS } from '../store-funnel';
 
-const OTHER_TERM = 'other';
+const UNNAMED_TERMS = new Set(['other', 'no search terms specified']);
 
 const COUNTRY_COLUMNS = [
   'Date',
@@ -262,9 +262,10 @@ export function searchTermsOf(rows: string[][]): SearchTermRow[] {
   const cell = reader(header, TRAFFIC_COLUMNS);
   const byTerm = new Map<string, SearchTermRow>();
   for (const cells of lines) {
+    if (playSourceOf(cell(cells, 'Traffic source')) !== 'search') continue;
     const term = storableTerm(cell(cells, SEARCH_TERM_COLUMN));
     const counts = countsOf(cells, cell);
-    if (!counts || !term || term.toLowerCase() === OTHER_TERM) continue;
+    if (!counts || !term || UNNAMED_TERMS.has(term.toLowerCase())) continue;
     const month = `${counts.date.slice(0, 7)}-01`;
     const id = `${month}|${term}`;
     const existing = byTerm.get(id);

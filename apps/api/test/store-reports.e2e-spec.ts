@@ -25,6 +25,7 @@ import {
   startStoreConnectApp,
   type StoreConnectHarness,
 } from './helpers/store-connect-harness';
+import { migrationSql } from './helpers/migration-sql';
 import { asWorkspace } from './helpers/tenancy';
 import { clearRateLimitCounters, obliterateQueues } from './obliterate-queues';
 
@@ -570,5 +571,38 @@ describe('Store report sync (e2e)', () => {
     expect(
       harness.gcs.requests.filter((each) => each.url.endsWith('?alt=media')),
     ).toEqual([]);
+  });
+  it('drops the placeholder google writes for visits without a search term from the stored terms', async () => {
+    const play = await harness.prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.GOOGLE_PLAY,
+        storeAppId: 'com.example.habits',
+        country: 'us',
+        name: 'Habits',
+      },
+    });
+    const term = (text: string) => ({
+      workspaceId: DEFAULT_WORKSPACE_ID,
+      appId: play.id,
+      month: new Date('2026-09-01T00:00:00.000Z'),
+      term: text,
+      normalized: text.toLowerCase(),
+      visitors: 212,
+      acquisitions: 22,
+      generation: '1791833155685486',
+    });
+    await harness.prisma.storeFunnelSearchTerm.createMany({
+      data: [term('No search terms specified'), term('geoguess')],
+    });
+
+    await harness.prisma.$executeRawUnsafe(
+      migrationSql('drop_play_placeholder_search_terms'),
+    );
+
+    const terms = await harness.prisma.storeFunnelSearchTerm.findMany({
+      where: { appId: play.id },
+    });
+    expect(terms.map((each) => each.term)).toEqual(['geoguess']);
   });
 });
