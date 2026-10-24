@@ -31,7 +31,7 @@ const section = (page: Page) =>
 test("the owner connects app store connect and sees the apps it reports", async ({
   page,
 }) => {
-  await page.goto("/settings#store-connections");
+  await page.goto("/integrations#store-connections");
   await expect(section(page)).toContainText("No store connected");
 
   const dialog = await openSettledDialog(
@@ -94,7 +94,7 @@ test("the owner connects app store connect and sees the apps it reports", async 
 });
 
 test("the owner reads a key from the .p8 file", async ({ page }) => {
-  await page.goto("/settings#store-connections");
+  await page.goto("/integrations#store-connections");
   const dialog = await openSettledDialog(
     page,
     "Connect App Store Connect",
@@ -132,7 +132,7 @@ const playCard = (page: Page) =>
 test("the owner connects the google play console with its json key file", async ({
   page,
 }) => {
-  await page.goto("/settings#store-connections");
+  await page.goto("/integrations#store-connections");
   await expect(playCard(page)).toContainText("Not connected.");
 
   const dialog = await openSettledDialog(
@@ -192,7 +192,7 @@ test("the owner signs in with google and lands back on store connections", async
   page,
 }) => {
   await seed(page.context(), GOOGLE_SIGN_IN_COOKIE, "1");
-  await page.goto("/settings#store-connections");
+  await page.goto("/integrations#store-connections");
 
   const dialog = await openSettledDialog(
     page,
@@ -226,7 +226,7 @@ test("the owner signs in with google and lands back on store connections", async
     .fill("gs://pubsite_prod_4855979533719537120/stats/store_performance/");
   await submit.click();
 
-  await page.waitForURL(/\/settings(#store-connections)?$/);
+  await page.waitForURL(/\/integrations(#store-connections)?$/);
   await expect(page.getByText("Google Play Console connected")).toBeVisible();
   const card = playCard(page);
   await expect(card).toContainText("Google account");
@@ -243,19 +243,19 @@ test("the google return page explains a cancelled, incomplete or refused sign in
   const heading = page.getByRole("heading", { level: 1 });
   const back = page.getByRole("link", { name: "Back to store connections" });
 
-  await page.goto("/settings/google-play?error=access_denied");
+  await page.goto("/integrations/google-play?error=access_denied");
   await expect(heading).toHaveText("Google sign in was cancelled");
-  await expect(back).toHaveAttribute("href", "/settings#store-connections");
+  await expect(back).toHaveAttribute("href", "/integrations#store-connections");
 
-  await page.goto("/settings/google-play");
+  await page.goto("/integrations/google-play");
   await expect(heading).toHaveText("This sign in is incomplete");
 
-  await page.goto("/settings/google-play?code=4%2Fold&state=stale");
+  await page.goto("/integrations/google-play?code=4%2Fold&state=stale");
   await expect(heading).toHaveText("Google Play was not connected");
   await expect(page.getByText(PLAY_SIGN_IN_EXPIRED)).toBeVisible();
   await expect(
     page.getByRole("navigation", { name: "breadcrumb" }),
-  ).toContainText("Settings");
+  ).toContainText("Integrations");
   await back.click();
   await expect(playCard(page)).toContainText("Not connected.");
   await expect(section(page)).toBeInViewport();
@@ -266,7 +266,7 @@ test("disconnecting google play leaves app store connect alone", async ({
 }) => {
   await seed(page.context(), STORE_CONNECTION_COOKIE, "active");
   await seed(page.context(), PLAY_CONNECTION_COOKIE, "active");
-  await page.goto("/settings#store-connections");
+  await page.goto("/integrations#store-connections");
 
   await playCard(page).getByRole("button", { name: "Disconnect" }).click();
   const confirm = page.getByRole("alertdialog");
@@ -285,7 +285,7 @@ test("the card says whether the key may post review replies", async ({
 }) => {
   await seed(context, STORE_CONNECTION_COOKIE, "active");
   await seed(context, PLAY_CONNECTION_COOKIE, "active");
-  await page.goto("/settings#store-connections");
+  await page.goto("/integrations#store-connections");
   await expect(section(page).getByText("Not tried yet")).toHaveCount(2);
 
   await seed(context, REPLY_ACCESS_COOKIE, "forbidden");
@@ -299,7 +299,7 @@ test("the card says whether the key may post review replies", async ({
 });
 
 test("the connect dialogs name the role a reply needs", async ({ page }) => {
-  await page.goto("/settings#store-connections");
+  await page.goto("/integrations#store-connections");
 
   const apple = await openSettledDialog(
     page,
@@ -326,7 +326,7 @@ test("a member sees the state without a single control", async ({ page }) => {
   await seedViewer(page.context(), "member");
   await seed(page.context(), STORE_CONNECTION_COOKIE, "active");
 
-  await page.goto("/settings#store-connections");
+  await page.goto("/integrations#store-connections");
 
   await expect(section(page)).toContainText("2X9R4HXF34");
   await expect(
@@ -337,7 +337,7 @@ test("a member sees the state without a single control", async ({ page }) => {
 
 test("a rejected key leads with verify, which clears it", async ({ page }) => {
   await seed(page.context(), STORE_CONNECTION_COOKIE, "rejected");
-  await page.goto("/settings#store-connections");
+  await page.goto("/integrations#store-connections");
 
   const status = section(page).getByRole("status");
   await expect(status).toHaveText(
@@ -364,7 +364,7 @@ test("a read only key names the admin key and still syncs", async ({
   page,
 }) => {
   await seed(page.context(), STORE_CONNECTION_COOKIE, "readOnly");
-  await page.goto("/settings#store-connections");
+  await page.goto("/integrations#store-connections");
 
   await expect(section(page).getByRole("status")).toHaveText(ADMIN_KEY_NEEDED);
   await expect(section(page)).toContainText("Needs an Admin key");
@@ -378,7 +378,7 @@ test("a key that cannot request reports leads with replacing it", async ({
   page,
 }) => {
   await seed(page.context(), STORE_CONNECTION_COOKIE, "readOnly");
-  await page.goto("/settings#store-connections");
+  await page.goto("/integrations#store-connections");
 
   const replace = section(page).getByRole("button", { name: "Replace key" });
   await expect(replace).toHaveAttribute("data-variant", "default");
@@ -404,7 +404,7 @@ test("a key with every request in place keeps replace key quiet", async ({
   page,
 }) => {
   await seed(page.context(), STORE_CONNECTION_COOKIE, "active");
-  await page.goto("/settings#store-connections");
+  await page.goto("/integrations#store-connections");
 
   await expect(
     section(page).getByRole("button", { name: "Replace key" }),
@@ -415,7 +415,7 @@ test("disconnecting asks first and returns the card to its empty state", async (
   page,
 }) => {
   await seed(page.context(), STORE_CONNECTION_COOKIE, "active");
-  await page.goto("/settings#store-connections");
+  await page.goto("/integrations#store-connections");
 
   await section(page).getByRole("button", { name: "Disconnect" }).click();
   const confirm = page.getByRole("alertdialog");
@@ -437,7 +437,7 @@ for (const viewer of ["owner", "member"] as const) {
     if (viewer === "member") await seedViewer(page.context(), "member");
     await seed(page.context(), STORE_CONNECT_OFF_COOKIE, "1");
 
-    await page.goto("/settings#store-connections");
+    await page.goto("/integrations#store-connections");
 
     await expect(section(page)).toContainText(
       "Store connections are off on this instance. Set STORE_CONNECT_ENCRYPTION_KEY to turn them on.",
@@ -456,7 +456,7 @@ for (const theme of THEMES) {
     );
     await page.emulateMedia({ colorScheme: theme });
     await seed(page.context(), STORE_CONNECTION_COOKIE, "readOnly");
-    await page.goto("/settings#store-connections");
+    await page.goto("/integrations#store-connections");
     await expect(section(page).getByRole("status")).toBeVisible();
 
     const { violations } = await new AxeBuilder({ page })

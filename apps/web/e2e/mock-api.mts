@@ -2650,7 +2650,7 @@ const routes: Route[] = [
     pattern: /^\/store-connections\/GOOGLE_PLAY\/sign-in$/,
     handler: (_p, _req, res) =>
       json(res, 200, {
-        url: `/settings/google-play?${new URLSearchParams({
+        url: `/integrations/google-play?${new URLSearchParams({
           code: "4/e2e-code",
           state: PLAY_SIGN_IN_STATE,
         }).toString()}`,
@@ -4238,7 +4238,7 @@ const routes: Route[] = [
           errorEnvelope(
             409,
             path,
-            `Connect ${store === "APP_STORE" ? "App Store Connect" : "Google Play"} in Settings, Store connections, to post replies from here.`,
+            `Connect ${store === "APP_STORE" ? "App Store Connect" : "Google Play"} in Integrations, Store connections, to post replies from here.`,
           ),
         );
       }

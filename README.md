@@ -99,7 +99,7 @@ Full walkthrough: [quickstart](https://docs.asobeast.com/quickstart). Image tags
 
 ### Connect an AI agent
 
-Every instance serves a Model Context Protocol endpoint. Create a personal API token on the settings page, then point Claude Code at it:
+Every instance serves a Model Context Protocol endpoint. Create a personal API token on the Integrations page, then point Claude Code at it:
 
 ```bash
 claude mcp add --transport http asobeast https://your-host/api/backend/mcp --header "Authorization: Bearer asob_…"

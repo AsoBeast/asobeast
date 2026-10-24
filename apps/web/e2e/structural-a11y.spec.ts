@@ -36,6 +36,7 @@ for (const path of [
   "/apps/app-1/keywords",
   "/apps/app-1/competitors",
   "/settings",
+  "/integrations",
 ]) {
   test(`${path} names every range tab, star rating and table header`, async ({
     page,

@@ -229,7 +229,9 @@ test("settings hydrates after the shell has already loaded the session", async (
     page.getByRole("button", { name: "Account menu" }),
   ).toBeVisible();
   await request.post(`${MOCK_API_URL}/__budget-holds/${hold}/release`);
-  await expect(page.getByText("API tokens", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Delete workspace", { exact: true }).first(),
+  ).toBeVisible();
   await page.waitForLoadState("networkidle");
 
   expect(errors, `the settings page threw: ${errors.join(", ")}`).toEqual([]);

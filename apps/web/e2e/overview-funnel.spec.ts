@@ -50,7 +50,9 @@ test("follows the market switcher", async ({ page }) => {
   await expect(tile(page, "PL", "Impressions")).toContainText("2,100");
 });
 
-test("sends an owner without a connection to settings", async ({ page }) => {
+test("sends an owner without a connection to integrations", async ({
+  page,
+}) => {
   await page.goto("/apps/app-2");
 
   const funnel = funnelCard(page);
@@ -58,11 +60,11 @@ test("sends an owner without a connection to settings", async ({ page }) => {
     "Connect App Store Connect to see impressions and conversion here.",
   );
   await expect(
-    funnel.getByRole("link", { name: "Connect in settings" }),
-  ).toHaveAttribute("href", "/settings#store-connections");
+    funnel.getByRole("link", { name: "Connect in Integrations" }),
+  ).toHaveAttribute("href", "/integrations#store-connections");
 });
 
-test("sends the owner to settings when the store refused the key", async ({
+test("sends the owner to integrations when the store refused the key", async ({
   page,
 }) => {
   await page.context().addCookies([
@@ -81,8 +83,8 @@ test("sends the owner to settings when the store refused the key", async ({
   );
   await expect(funnel).not.toContainText("belongs to the key's team");
   await expect(
-    funnel.getByRole("link", { name: "Verify in settings" }),
-  ).toHaveAttribute("href", "/settings#store-connections");
+    funnel.getByRole("link", { name: "Verify in Integrations" }),
+  ).toHaveAttribute("href", "/integrations#store-connections");
 });
 
 test("names why a connected key reports nothing for this app", async ({

@@ -65,7 +65,7 @@ describe("storeReplyAccess", () => {
   it("asks to connect the store a review belongs to", () => {
     expect(storeReplyAccess(stateWith(CONNECTION), "GOOGLE_PLAY")).toEqual({
       kind: "none",
-      note: "Connect Google Play Console in Settings to post replies from here.",
+      note: "Connect Google Play Console in Integrations to post replies from here.",
     });
   });
 
@@ -98,7 +98,7 @@ describe("storeReplyAccess", () => {
   it("is ready for a usable connection whose access is unknown or allowed", () => {
     expect(storeReplyAccess(stateWith(CONNECTION), "APP_STORE")).toEqual({
       kind: "ready",
-      note: "Posting sends this text to App Store Connect with the key connected in Settings.",
+      note: "Posting sends this text to App Store Connect with the key connected in Integrations.",
     });
     expect(
       storeReplyAccess(

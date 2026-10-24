@@ -7,7 +7,7 @@ import {
 import type { InProcessResponse } from './in-process.gateway';
 
 const UNAUTHENTICATED =
-  'The API token was rejected. It is missing, revoked or expired, so retrying will not help. Ask the account owner for a fresh token from Settings.';
+  'The API token was rejected. It is missing, revoked or expired, so retrying will not help. Ask the account owner for a fresh token from Integrations.';
 
 function envelopeOf(body: unknown): Partial<ApiErrorEnvelope> {
   return typeof body === 'object' && body !== null ? body : {};

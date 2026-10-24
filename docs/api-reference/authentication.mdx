@@ -1,7 +1,7 @@
 ---
 title: Authenticate API requests
 sidebarTitle: Authentication
-description: "Send a personal API token as a bearer header on every request. Create the token in Settings, where it is shown once and prefixed with asob_."
+description: "Send a personal API token as a bearer header on every request. Create the token in Integrations, where it is shown once and prefixed with asob_."
 icon: key
 keywords: ["authentication","bearer token","asob_","session cookie","401","402"]
 ---
@@ -39,7 +39,7 @@ health = response.json()
 | Credential | Used by | Obtained from |
 | --- | --- | --- |
 | Session cookie | The dashboard in a browser | Signing in. The proxy forwards it for you |
-| Personal API token | Scripts, the MCP server, continuous integration | The API tokens card in Settings |
+| Personal API token | Scripts, the MCP server, continuous integration | The API tokens card in Integrations |
 
 Both carry the same entitlement checks. A token can be narrower than a session: it carries a scope and an optional expiry, and a read only token is refused with `403` the moment it tries to change anything. Give each consumer its own token and revoke individually. A token cannot create or revoke tokens, change the password, schedule workspace deletion or manage the team; those routes need a session. See [Personal API tokens](/security/api-tokens).
 

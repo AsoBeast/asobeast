@@ -3606,7 +3606,7 @@
     },
     "/store-connections/GOOGLE_PLAY/sign-in": {
       "post": {
-        "description": "Answers the Google consent address to send the owner to, asking for read only Cloud Storage access, with a state sealed to this owner and workspace that expires in ten minutes. Google returns to the web page /settings/google-play. Owner only, through a signed in session. Answers 409 when the instance has store connections off or no Google OAuth client.",
+        "description": "Answers the Google consent address to send the owner to, asking for read only Cloud Storage access, with a state sealed to this owner and workspace that expires in ten minutes. Google returns to the web page /integrations/google-play. Owner only, through a signed in session. Answers 409 when the instance has store connections off or no Google OAuth client.",
         "operationId": "PlaySignInController_start",
         "parameters": [],
         "requestBody": {
@@ -4890,7 +4890,7 @@
     },
     "/apps/{id}/reviews/{reviewId}/reply/post": {
       "post": {
-        "description": "Sends the saved reply text to App Store Connect or Google Play with the key connected in Settings, records when and what was posted, and marks the review replied. Posting again after an edit replaces the reply on the store. Through a signed in session only. Answers 400 without saved text or over the store limit, 403 when the connected key may not reply, 404 when the store does not know the review, 409 without a usable connection, 422 when the store refuses the reply and 429 when the store asks to slow down.",
+        "description": "Sends the saved reply text to App Store Connect or Google Play with the key connected in Integrations, records when and what was posted, and marks the review replied. Posting again after an edit replaces the reply on the store. Through a signed in session only. Answers 400 without saved text or over the store limit, 403 when the connected key may not reply, 404 when the store does not know the review, 409 without a usable connection, 422 when the store refuses the reply and 429 when the store asks to slow down.",
         "operationId": "ReviewRepliesController_post",
         "parameters": [
           {

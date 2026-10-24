@@ -60,7 +60,8 @@ export const FUNNEL_COPY: Record<Store, FunnelCopy> = {
     refusedTitle: "App Store Connect refused the connected key.",
     refusedBody:
       "The numbers already stored come back once the key is accepted again. Verify it, or connect a new key.",
-    refusedAskOwner: "Ask the workspace owner to verify the key in settings.",
+    refusedAskOwner:
+      "Ask the workspace owner to verify the key in Integrations.",
   },
   GOOGLE_PLAY: {
     console: "Google Play Console",
@@ -78,7 +79,7 @@ export const FUNNEL_COPY: Record<Store, FunnelCopy> = {
     refusedBody:
       "The numbers already stored come back once Google accepts the connection again. Verify it, or reconnect.",
     refusedAskOwner:
-      "Ask the workspace owner to verify the Google Play connection in settings.",
+      "Ask the workspace owner to verify the Google Play connection in Integrations.",
   },
 };
 

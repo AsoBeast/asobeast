@@ -11,7 +11,7 @@ import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import { ApiError, connectStore, startPlaySignIn } from "@/lib/api";
 import { invalidateStoreConnectionMutation } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
-import { AlertChannelDialog } from "./alert-channel/AlertChannelDialog";
+import { AlertChannelDialog } from "@/components/settings/alert-channel/AlertChannelDialog";
 import {
   isServiceAccountKey,
   PlayServiceAccountField,

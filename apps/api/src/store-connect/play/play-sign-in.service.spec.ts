@@ -34,7 +34,7 @@ const BUCKET = 'pubsite_prod_4855979533719537120';
 const CLIENT: GoogleOAuthClient = {
   id: 'client.apps.googleusercontent.com',
   secret: 'test-oauth-client-secret',
-  redirectUri: 'https://aso.example.com/settings/google-play',
+  redirectUri: 'https://aso.example.com/integrations/google-play',
 };
 const ID_TOKEN = `e30.${Buffer.from(JSON.stringify({ email: 'owner@example.com', sub: '1098765' })).toString('base64url')}.sig`;
 const GRANTED: GcsResponse = {

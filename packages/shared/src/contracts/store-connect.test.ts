@@ -87,8 +87,8 @@ describe('store connection contract', () => {
     );
   });
 
-  it('returns Google to one settings page with the code and state', () => {
-    expect(PLAY_SIGN_IN_PATH).toBe('/settings/google-play');
+  it('returns Google to the integrations page with the code and state', () => {
+    expect(PLAY_SIGN_IN_PATH).toBe('/integrations/google-play');
     expectTypeOf<PlaySignInCompletion>().toEqualTypeOf<{
       code: string;
       state: string;

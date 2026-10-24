@@ -176,7 +176,7 @@ describe('ReviewReplyPoster', () => {
   });
 
   it.each([
-    ['without a connection', null, 'Connect App Store Connect in Settings'],
+    ['without a connection', null, 'Connect App Store Connect in Integrations'],
     [
       'for a rejected connection',
       'rejected' as const,

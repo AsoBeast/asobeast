@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { ApiError, connectStore } from "@/lib/api";
 import { invalidateStoreConnectionMutation } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
-import { AlertChannelDialog } from "./alert-channel/AlertChannelDialog";
+import { AlertChannelDialog } from "@/components/settings/alert-channel/AlertChannelDialog";
 
 const ISSUER_ID =
   /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;

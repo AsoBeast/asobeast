@@ -32,13 +32,13 @@ export function storeReplyAccess(
   if (!item) {
     return {
       kind: "none",
-      note: `Connect ${name} in Settings to post replies from here.`,
+      note: `Connect ${name} in Integrations to post replies from here.`,
     };
   }
   if (item.status === "rejected") {
     return {
       kind: "rejected",
-      note: `${name} refused the connected key. Verify it or connect a new one in Settings to post replies.`,
+      note: `${name} refused the connected key. Verify it or connect a new one in Integrations to post replies.`,
     };
   }
   if (item.replyAccess === "forbidden") {
@@ -46,7 +46,7 @@ export function storeReplyAccess(
   }
   return {
     kind: "ready",
-    note: `Posting sends this text to ${consoleLabel(store)} with the key connected in Settings.`,
+    note: `Posting sends this text to ${consoleLabel(store)} with the key connected in Integrations.`,
   };
 }
 

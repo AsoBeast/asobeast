@@ -50,9 +50,9 @@ export const REPLY_ROLE_NEEDED: Record<Store, string> = {
 
 export const CONNECT_FIRST: Record<Store, string> = {
   APP_STORE:
-    'Connect App Store Connect in Settings, Store connections, to post replies from here.',
+    'Connect App Store Connect in Integrations, Store connections, to post replies from here.',
   GOOGLE_PLAY:
-    'Connect Google Play in Settings, Store connections, to post replies from here.',
+    'Connect Google Play in Integrations, Store connections, to post replies from here.',
 };
 
 export const PLAY_REPLY_SETUP_GUIDE =
@@ -64,7 +64,7 @@ export const playApiDisabled = (project: string | null): string =>
 export const PLAY_REVIEW_MISSING =
   'Google Play does not know this review any more.';
 export const PLAY_KEY_REFUSED =
-  'Google refused the connected service account key or Google sign in. Verify it in Settings, Store connections, or reconnect.';
+  'Google refused the connected service account key or Google sign in. Verify it in Integrations, Store connections, or reconnect.';
 
 const STORE_REFUSAL_STATUSES = new Set([400, 409, 422]);
 const MISSING = 404;

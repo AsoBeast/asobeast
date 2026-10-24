@@ -1,9 +1,11 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { INTEGRATIONS_PATH } from "@asobeast/shared";
 import {
   LayoutDashboard,
   ListChecks,
+  Plug,
   Search,
   Settings,
   Trophy,
@@ -42,6 +44,7 @@ const GENERAL = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/actions", label: "Action Center", icon: ListChecks },
   { href: "/charts", label: "Top charts", icon: Trophy },
+  { href: INTEGRATIONS_PATH, label: "Integrations", icon: Plug },
   { href: "/settings", label: "Settings", icon: Settings },
 ] as const;
 
