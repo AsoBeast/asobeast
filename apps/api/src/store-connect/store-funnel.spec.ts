@@ -6,6 +6,7 @@ import {
   completeThrough,
   funnelPages,
   funnelScope,
+  marketFunnelScope,
   measureStoreFunnel,
   type FunnelDayRow,
   type PageDayRow,
@@ -348,6 +349,23 @@ describe('measureStoreFunnel windows', () => {
     expect(windows.find((window) => window.days === 28)?.status).toBe(
       'measured',
     );
+  });
+});
+
+describe('marketFunnelScope', () => {
+  it('reads every market for the home market of a google play app, since google files most countries under other', () => {
+    expect(marketFunnelScope('GOOGLE_PLAY', 'us', 'us')).toEqual({
+      territory: 'all',
+    });
+  });
+
+  it('reads the country for any other market and for the app store', () => {
+    expect(marketFunnelScope('GOOGLE_PLAY', 'de', 'us')).toEqual({
+      country: 'de',
+    });
+    expect(marketFunnelScope('APP_STORE', 'us', 'us')).toEqual({
+      country: 'us',
+    });
   });
 });
 

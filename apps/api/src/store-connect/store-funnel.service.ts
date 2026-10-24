@@ -16,6 +16,7 @@ import {
   funnelPages,
   funnelScope,
   measureStoreFunnel,
+  type FunnelScope,
   shiftDate,
   type FunnelDayRow,
   type PageDayRow,
@@ -83,7 +84,7 @@ export class StoreFunnelService {
     const today = startOfUtcDay(now);
     const from = addDays(today, 1 - Math.max(days, FUNNEL_LOOKBACK_DAYS));
     const [rows, range, pageRows] = await Promise.all([
-      this.rows(app, from, country),
+      this.rows(app.id, from, funnelScope(app.store, country)),
       this.range(appId),
       this.pageRows(appId, today, country),
     ]);
@@ -103,22 +104,18 @@ export class StoreFunnelService {
   }
 
   async rows(
-    app: { id: string; store: Store },
+    appId: string,
     from: Date,
-    country?: string,
+    scope: FunnelScope,
   ): Promise<FunnelDayRow[]> {
     const rows = await this.prisma.storeFunnelDay.groupBy({
       by: ['date', 'sourceType', 'pageType'],
-      where: {
-        appId: app.id,
-        date: { gte: from },
-        ...funnelScope(app.store, country),
-      },
+      where: { appId, date: { gte: from }, ...scope },
       _sum: COUNTERS,
     });
     return rows.map((row): FunnelDayRow => ({
       date: toDateKey(row.date),
-      country: country ?? null,
+      country: scope.country ?? null,
       sourceType: row.sourceType,
       pageType: row.pageType,
       impressions: row._sum.impressions ?? 0,

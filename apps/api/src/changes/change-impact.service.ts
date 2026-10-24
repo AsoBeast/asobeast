@@ -16,7 +16,11 @@ import {
   measureChangeImpact,
 } from './change-impact';
 import { HOME_EVENTS } from '../apps/listing';
-import { reportedThrough } from '../store-connect/store-funnel';
+import {
+  marketFunnelScope,
+  reportedThrough,
+  type FunnelScope,
+} from '../store-connect/store-funnel';
 import { StoreFunnelService } from '../store-connect/store-funnel.service';
 import { measureChangeFunnel } from './change-impact-funnel';
 
@@ -68,13 +72,18 @@ export class ChangeImpactService {
       country: market,
       days,
       ...measured,
-      items: await this.withFunnel(app, market, measured.items, today),
+      items: await this.withFunnel(
+        app,
+        marketFunnelScope(app.store, market, app.country),
+        measured.items,
+        today,
+      ),
     };
   }
 
   private async withFunnel(
     app: { id: string; store: Store },
-    market: string,
+    scope: FunnelScope,
     items: ChangeImpactItem[],
     today: Date,
   ): Promise<ChangeImpactItem[]> {
@@ -87,7 +96,7 @@ export class ChangeImpactService {
       -Math.max(...CHANGE_IMPACT_WINDOWS),
     );
     const [rows, { firstDate, lastDate }] = await Promise.all([
-      this.funnel.rows(app, from, market),
+      this.funnel.rows(app.id, from, scope),
       this.funnel.range(app.id),
     ]);
     const through = reportedThrough(today, lastDate);

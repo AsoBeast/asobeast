@@ -58,7 +58,9 @@ export function measureChangeFunnel({
   const afterEnd = shiftDate(changedOn, days - 1);
   const finalOn = shiftDate(afterEnd, finalAfterDays(store));
   if (beforeTo > completeThrough) return { ...WAITING, finalOn };
-  const before = countsOf(between(rows, beforeFrom, beforeTo), store);
+  const reportedBefore = between(rows, beforeFrom, beforeTo);
+  if (reportedBefore.length === 0) return UNMEASURED;
+  const before = countsOf(reportedBefore, store);
   const afterTo = [afterEnd, completeThrough].sort()[0];
   const completeDays = Math.max(0, daysBetween(changedOn, afterTo));
   if (completeDays === 0) return { ...WAITING, before, finalOn };

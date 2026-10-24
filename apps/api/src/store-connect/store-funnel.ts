@@ -63,6 +63,16 @@ export function funnelScope(store: Store, country?: string): FunnelScope {
   return store === 'GOOGLE_PLAY' ? { territory: PLAY_ALL_MARKETS } : {};
 }
 
+export const marketFunnelScope = (
+  store: Store,
+  market: string,
+  homeCountry: string,
+): FunnelScope =>
+  funnelScope(
+    store,
+    store === 'GOOGLE_PLAY' && market === homeCountry ? undefined : market,
+  );
+
 export const shiftDate = (date: string, days: number): string =>
   toDateKey(addDays(new Date(`${date}T00:00:00.000Z`), days));
 

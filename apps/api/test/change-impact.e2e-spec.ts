@@ -482,4 +482,116 @@ describe('ChangeImpactController (e2e)', () => {
     });
     expect(week).toMatchObject({ status: 'measured', visibilityChange: 8.5 });
   });
+  const seedPlay = async (): Promise<string> => {
+    const play = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.GOOGLE_PLAY,
+        storeAppId: 'com.example.focus',
+        country: 'us',
+        name: 'Focus',
+      },
+    });
+    await prisma.changeEvent.create({
+      data: {
+        appId: play.id,
+        field: 'title',
+        before: 'Focus',
+        after: 'Focus Timer',
+        capturedAt: at(0, 6),
+      },
+    });
+    await prisma.storeConnection.deleteMany({});
+    const connection = await prisma.storeConnection.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.GOOGLE_PLAY,
+        issuerId: 'reports@focus-123.iam.gserviceaccount.com',
+        keyId: 'a1b2c3d4e5f6',
+        keyFingerprint: '0123456789abcdef',
+        credentialCiphertext: 'v1.sealed',
+        reportAccess: 'admin',
+        bucket: 'pubsite_prod_rev_1',
+      },
+    });
+    await prisma.storeReportRequest.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        connectionId: connection.id,
+        appId: play.id,
+        accessType: 'ONGOING',
+        remoteId: 'pubsite_prod_rev_1',
+      },
+    });
+    const playDay = (
+      offset: number,
+      territory: string,
+      country: string | null,
+      sourceType: string,
+      gets: number,
+    ) => ({
+      workspaceId: DEFAULT_WORKSPACE_ID,
+      appId: play.id,
+      date: on(offset),
+      territory,
+      country,
+      sourceType,
+      pageType: 'productPage',
+      pageViews: 50,
+      uniquePageViews: 50,
+      gets,
+      uniqueGets: gets,
+      processingDate: on(13),
+    });
+    await prisma.storeFunnelDay.createMany({
+      data: [
+        ...Array.from({ length: 48 }, (_, index) => {
+          const offset = index - 35;
+          return playDay(offset, 'all', null, 'other', offset < 0 ? 5 : 10);
+        }),
+        ...[0, 1, 2].map((offset) => playDay(offset, 'ru', 'ru', 'all', 2)),
+      ],
+    });
+    return play.id;
+  };
+
+  it('measures a google play change in the home market against the visitors of every market, since google files most countries under other', async () => {
+    const id = await seedPlay();
+
+    const report = (await api.get(`/apps/${id}/changes/impact`).expect(200))
+      .body as ChangeImpactReport;
+
+    expect(report.items[0].windows[0].funnel).toEqual({
+      status: 'measured',
+      completeDays: 7,
+      before: {
+        impressions: null,
+        uniqueImpressions: null,
+        pageViews: 350,
+        gets: 35,
+        conversion: 0.1,
+      },
+      after: {
+        impressions: null,
+        uniqueImpressions: null,
+        pageViews: 350,
+        gets: 70,
+        conversion: 0.2,
+      },
+      change: { impressions: null, pageViews: 0, gets: 1, conversion: 1 },
+      finalOn: toDateKey(on(13)),
+    });
+  });
+
+  it('leaves a market unmeasured when the console reported nothing there before the change', async () => {
+    const id = await seedPlay();
+
+    const report = (
+      await api.get(`/apps/${id}/changes/impact?country=ru`).expect(200)
+    ).body as ChangeImpactReport;
+
+    expect(
+      report.items[0].windows.map((window) => window.funnel?.status),
+    ).toEqual(['unmeasured', 'unmeasured', 'unmeasured']);
+  });
 });
