@@ -3,6 +3,7 @@ import type {
   PortfolioInsights,
   PortfolioSummary,
   RankDistributionHistory,
+  StoreFunnelReport,
   VisibilityHistory,
 } from "@asobeast/shared";
 import { apiFetch, withQuery } from "./client";
@@ -50,5 +51,17 @@ export function getRankDistributionHistory(
   if (country) params.set("country", country);
   return apiFetch<RankDistributionHistory>(
     withQuery(`/apps/${appId}/rank-distribution-history`, params),
+  );
+}
+
+export function getFunnel(
+  appId: string,
+  days: number,
+  country?: string,
+): Promise<StoreFunnelReport> {
+  const params = new URLSearchParams({ days: String(days) });
+  if (country) params.set("country", country);
+  return apiFetch<StoreFunnelReport>(
+    withQuery(`/apps/${appId}/funnel`, params),
   );
 }

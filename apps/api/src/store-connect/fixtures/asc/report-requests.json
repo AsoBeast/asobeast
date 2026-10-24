@@ -1,0 +1,21 @@
+{
+  "data": [
+    {
+      "type": "analyticsReportRequests",
+      "id": "f3a1c2d4-0001",
+      "attributes": { "accessType": "ONGOING", "stoppedDueToInactivity": false }
+    },
+    {
+      "type": "analyticsReportRequests",
+      "id": "f3a1c2d4-0002",
+      "attributes": {
+        "accessType": "ONE_TIME_SNAPSHOT",
+        "stoppedDueToInactivity": false
+      }
+    }
+  ],
+  "links": {
+    "self": "https://api.appstoreconnect.apple.com/v1/apps/1476097583/analyticsReportRequests"
+  },
+  "meta": { "paging": { "total": 2, "limit": 200 } }
+}

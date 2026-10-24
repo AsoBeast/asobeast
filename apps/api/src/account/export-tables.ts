@@ -20,6 +20,7 @@ interface ExportTableKey {
   name: string;
   key: readonly string[];
   include?: Record<string, true>;
+  omit?: Record<string, true>;
 }
 
 interface ExportDelegate {
@@ -28,6 +29,7 @@ interface ExportDelegate {
     where: ExportRow;
     orderBy: Record<string, 'asc'>[];
     include?: Record<string, true>;
+    omit?: Record<string, true>;
   }) => Promise<ExportRow[]>;
 }
 
@@ -40,6 +42,7 @@ const SECRET_FIELDS = [
   'sessionVersion',
   'tokenHash',
   'secret',
+  'credentialCiphertext',
   'checkoutClaimToken',
   'checkoutSessionId',
 ];
@@ -83,6 +86,10 @@ export const EXPORT_TABLE_KEYS: readonly ExportTableKey[] = [
   { name: 'actionItem', key: ID },
   { name: 'actionEvent', key: ID },
   { name: 'aiCall', key: ID },
+  { name: 'storeConnection', key: ID },
+  { name: 'storeReportRequest', key: ID },
+  { name: 'storeReportInstance', key: ID, omit: { raw: true } },
+  { name: 'storeFunnelDay', key: ID },
   { name: 'webhook', key: ID },
   { name: 'emailAlert', key: ID },
   { name: 'alertDelivery', key: ID },
@@ -157,7 +164,7 @@ export function keyRange(
 
 export function exportTables(prisma: PrismaService): ExportTable[] {
   const delegates = prisma as unknown as Record<string, ExportDelegate>;
-  return EXPORT_TABLE_KEYS.map(({ name, key, include }) => ({
+  return EXPORT_TABLE_KEYS.map(({ name, key, include, omit }) => ({
     name,
     count: () => delegates[name].count(),
     page: async (after, take) => {
@@ -169,6 +176,7 @@ export function exportTables(prisma: PrismaService): ExportTable[] {
         where: keyRange(key, keys[0], keys[keys.length - 1]),
         orderBy: key.map((column) => ({ [column]: 'asc' as const })),
         ...(include ? { include } : {}),
+        ...(omit ? { omit } : {}),
       });
       return {
         rows,

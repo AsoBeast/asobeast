@@ -28,6 +28,8 @@ import { DigestDispatcher } from './digest.dispatcher';
 import { GplayWorker } from './gplay.worker';
 import { ActiveWorkspaces } from './active-workspaces';
 import { LocalizationSweep } from './localization-sweep.service';
+import { StoreReportFanOut } from './store-report-fanout';
+import { StoreConnectModule } from '../store-connect/store-connect.module';
 import { JobTargetCountry } from './job-target-country';
 import { OverLimitRegistry } from './over-limit.registry';
 import {
@@ -72,6 +74,7 @@ const bullBoardModules: DynamicModule[] =
           { name: QUEUES.BILLING, adapter: BullMQAdapter },
           { name: QUEUES.AI, adapter: BullMQAdapter },
           { name: QUEUES.SCREENSHOTS, adapter: BullMQAdapter },
+          { name: QUEUES.STORE_CONNECT, adapter: BullMQAdapter },
         ),
       ];
 
@@ -111,6 +114,7 @@ const bullBoardModules: DynamicModule[] =
     ActionsEngineModule,
     ProxyPoolModule,
     StoreProvidersModule,
+    StoreConnectModule,
     ...bullBoardModules,
   ],
   controllers: [
@@ -122,6 +126,7 @@ const bullBoardModules: DynamicModule[] =
   providers: [
     ActiveWorkspaces,
     LocalizationSweep,
+    StoreReportFanOut,
     CapacityService,
     DailyBudgetService,
     DailyCategoryBuckets,

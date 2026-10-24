@@ -55,6 +55,7 @@ AsoBeast is built for people who ship apps and want their ASO data to stay their
 | SERP and category intelligence   | Retained SERP snapshots, volatility, entrants and movers, and top charts by country and category with movement, trending apps and chart follows                                                                                   |
 | Competitor discovery             | Find competitors from live search results, compare listings and find keyword gaps                                                                                                                                                 |
 | Reviews and change detection     | Sync reviews and rating history, draft and track replies to them, mine review language for keyword ideas, and detect owned and competitor metadata changes                                                                        |
+| Store funnel                     | Optionally connect an App Store Connect key and see impressions, product page views, Get taps and conversion by market beside your rankings, with history back to 2024                                                            |
 | ASO audit and metadata workbench | A deterministic audit rubric with history, store metadata lints and strategic keyword buckets                                                                                                                                     |
 | ASO Action Center                | Fifteen deterministic rules produce recommendations with a priority, an estimated impact, the evidence behind them, a deep link, a full lifecycle and a verified outcome                                                          |
 | Portfolio analysis               | Group linked listings across stores and countries, compare group visibility and generate weekly digests                                                                                                                           |
@@ -139,7 +140,7 @@ App Store Optimization is the practice of improving how an app ranks and convert
 
 ### Does AsoBeast need an App Store Connect or Google Play Console account?
 
-No. AsoBeast reads public store data, so you can track any app including your competitors. It never asks for store credentials or an ASO vendor API key.
+No. AsoBeast reads public store data, so you can track any app including your competitors, and it never needs an ASO vendor API key. Connecting an App Store Connect key is optional: it adds Apple's own impressions and conversion for your apps, and the key is sealed at rest. See [the store funnel](https://docs.asobeast.com/guides/store-funnel).
 
 ### Which app stores does AsoBeast support?
 

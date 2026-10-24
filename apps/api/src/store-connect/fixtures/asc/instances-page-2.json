@@ -1,0 +1,18 @@
+{
+  "data": [
+    {
+      "type": "analyticsReportInstances",
+      "id": "i-0911",
+      "attributes": { "granularity": "DAILY", "processingDate": "2026-09-11" }
+    },
+    {
+      "type": "analyticsReportInstances",
+      "id": "i-0909",
+      "attributes": { "granularity": "DAILY", "processingDate": "2026-09-09" }
+    }
+  ],
+  "links": {
+    "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r-engagement-standard/instances?cursor=Mg.AJ8"
+  },
+  "meta": { "paging": { "total": 5, "limit": 200 } }
+}

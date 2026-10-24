@@ -157,6 +157,7 @@ See [Read screenshot captions](/guides/screenshot-captions).
 | `RETENTION_AUDIT_SCORES_DAYS` | `0` | No | Prunes audit score history older than N days |
 | `RETENTION_ACTIONS_DAYS` | `180` | No | Prunes closed action items only. Open and snoozed actions are never pruned by age |
 | `RETENTION_AI_CALLS_DAYS` | `400` | No | Days the AI call ledger is kept. Never prunes the current month, which the monthly AI allowance still counts. `0` keeps forever |
+| `RETENTION_STORE_REPORTS_DAYS` | `35` | No | Days a downloaded store console report file is kept so it can be read again after a parser change. The funnel rows built from it are never pruned by age. `0` keeps forever, which is not recommended because the files grow with every app and day |
 | `RETENTION_BILLING_EVENTS_DAYS` | `90` | No | Days to keep stored Stripe webhook payloads, which carry customer billing details. `0` keeps them forever |
 
 ## Runtime
@@ -230,6 +231,16 @@ Optional, off by default. With an Apple Ads API key, asobeast reads Apple's own 
 | `APPLE_ADS_PRIVATE_KEY_PATH` | Empty | No | Path to the `prime256v1` private key PEM. A relative path resolves against `apps/api`, and both Compose stacks mount `apps/api/keys` there read only, so `keys/apple-ads-private.pem` works with and without Docker. When the four credentials are set and the path is not a readable file, the API refuses to boot. Its contents are never logged |
 | `APPLE_ADS_AD_ACCOUNT_ID` | Empty | No | Ad account to read through. Empty uses the first one the credentials can read |
 | `CRON_APPLE_POPULARITY` | `0 9 * * 1` | No | When the weekly sync runs, UTC. Never scheduled while the credentials are unset |
+
+## Store consoles
+
+Optional, off by default. Owners connect their store consoles in settings; these keys protect what they paste. See [Read impressions and conversion from your console](/guides/store-funnel).
+
+| Variable | Default | Required | Effect |
+| --- | --- | --- | --- |
+| `STORE_CONNECT_ENCRYPTION_KEY` | Empty | No | Base64 of 32 random bytes, generated with `openssl rand -base64 32`. Seals the App Store Connect and Play Console keys owners connect in settings. Empty keeps every store connection off, and nothing contacts Apple or Google. A value that is not 32 bytes refuses to boot. Never logged |
+| `STORE_CONNECT_ENCRYPTION_KEY_PREVIOUS` | Empty | No | The key being rotated away from. A stored credential sealed with it is opened and resealed with the current key on first use. Refuses to boot when set without `STORE_CONNECT_ENCRYPTION_KEY` |
+| `CRON_STORE_REPORTS` | `30 5 * * *` | No | When the daily download of the reports each connected console published runs, UTC. Never scheduled while `STORE_CONNECT_ENCRYPTION_KEY` is empty |
 
 ## Admin surfaces
 
