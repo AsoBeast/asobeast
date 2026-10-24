@@ -265,9 +265,9 @@ describe('Store funnel (e2e)', () => {
   it('answers each product page with its ratio to the default page, default first', async () => {
     const connection = await connect();
     await reportOn(connection.id, appId);
-    for (const [pageTitle, uniqueImpressions, gets] of [
+    for (const [pageTitle, pageViews, gets] of [
       ['Summer sale', 400, 8],
-      ['default product page', 1000, 40],
+      ['Default product page', 1000, 40],
     ] as const) {
       await harness.prisma.storeFunnelPageDay.create({
         data: {
@@ -277,8 +277,8 @@ describe('Store funnel (e2e)', () => {
           territory: 'United States',
           country: 'us',
           pageTitle,
-          impressions: uniqueImpressions,
-          uniqueImpressions,
+          pageViews,
+          uniquePageViews: pageViews,
           gets,
           uniqueGets: gets,
           processingDate: utcDay(4),
@@ -289,7 +289,7 @@ describe('Store funnel (e2e)', () => {
     const report = await funnel(`/apps/${appId}/funnel`);
 
     expect(report.pages?.map((page) => [page.title, page.ratio])).toEqual([
-      ['default product page', 1],
+      ['Default product page', 1],
       ['Summer sale', 0.5],
     ]);
     expect(

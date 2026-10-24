@@ -53,7 +53,7 @@ export default async function ChangesPage({
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
       <div className="page-wide flex flex-col gap-6">
-        <ChangeImpactCard id={id} homeCountry={app.country} />
+        <ChangeImpactCard id={id} store={app.store} homeCountry={app.country} />
         <ChangeTimeline id={id} />
       </div>
     </HydrationBoundary>

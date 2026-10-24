@@ -20,6 +20,18 @@ describe('ChangeImpactService', () => {
   const today = utcToday();
   const changedOn = addDays(today, -10);
   const titleEvent = { field: 'title' as const, capturedAt: changedOn };
+  const reportedDays = Array.from({ length: 40 }, (_, index) => ({
+    date: toDateKey(addDays(changedOn, index - 30)),
+    country: 'gb',
+    sourceType: 'search',
+    pageType: 'productPage',
+    impressions: 100,
+    uniqueImpressions: 100,
+    pageViews: 20,
+    uniquePageViews: 20,
+    gets: 4,
+    uniqueGets: 4,
+  }));
 
   beforeEach(async () => {
     appFindFirst.mockReset().mockResolvedValue({ id: 'app_1', country: 'us' });
@@ -155,6 +167,7 @@ describe('ChangeImpactService', () => {
   it('reads the market rows once from four weeks before the oldest change and merges a funnel into every window', async () => {
     eventFindMany.mockResolvedValue([titleEvent]);
     funnel.connected.mockResolvedValue(true);
+    funnel.rows.mockResolvedValue(reportedDays);
     funnel.range.mockResolvedValue({
       firstDate: '2024-01-01',
       lastDate: toDateKey(today),
@@ -163,11 +176,9 @@ describe('ChangeImpactService', () => {
     const report = await service.report('app_1', 60, 'gb');
 
     expect(funnel.rows).toHaveBeenCalledTimes(1);
-    expect(funnel.rows).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'app_1' }),
-      addDays(changedOn, -28),
-      'gb',
-    );
+    expect(funnel.rows).toHaveBeenCalledWith('app_1', addDays(changedOn, -28), {
+      country: 'gb',
+    });
     expect(
       report.items[0].windows.map((window) => window.funnel?.status),
     ).toEqual(['measured', 'pending', 'pending']);
@@ -176,6 +187,7 @@ describe('ChangeImpactService', () => {
   it('never counts a day the console has not delivered as final', async () => {
     eventFindMany.mockResolvedValue([titleEvent]);
     funnel.connected.mockResolvedValue(true);
+    funnel.rows.mockResolvedValue(reportedDays);
     funnel.range.mockResolvedValue({
       firstDate: '2024-01-01',
       lastDate: toDateKey(addDays(changedOn, 2)),
@@ -186,6 +198,27 @@ describe('ChangeImpactService', () => {
     expect(report.items[0].windows[0].funnel).toMatchObject({
       status: 'pending',
       completeDays: 3,
+    });
+  });
+  it('keeps a google play window pending until google has finished posting its days', async () => {
+    appFindFirst.mockResolvedValue({
+      id: 'app_1',
+      country: 'us',
+      store: 'GOOGLE_PLAY',
+    });
+    eventFindMany.mockResolvedValue([titleEvent]);
+    funnel.connected.mockResolvedValue(true);
+    funnel.rows.mockResolvedValue(reportedDays);
+    funnel.range.mockResolvedValue({
+      firstDate: '2024-01-01',
+      lastDate: toDateKey(addDays(today, -4)),
+    });
+
+    const report = await service.report('app_1', 60);
+
+    expect(report.items[0].windows[0].funnel).toMatchObject({
+      status: 'pending',
+      completeDays: 4,
     });
   });
 });

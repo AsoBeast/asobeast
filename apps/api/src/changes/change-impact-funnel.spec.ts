@@ -114,6 +114,15 @@ describe('measureChangeFunnel', () => {
     });
   });
 
+  it('is unmeasured when the market reported nothing before the change', () => {
+    const funnel = measureChangeFunnel({
+      ...base,
+      rows: rows.filter((each) => each.date >= day(20)),
+    });
+
+    expect(funnel.status).toBe('unmeasured');
+  });
+
   it('names the day the window becomes final', () => {
     expect(
       measureChangeFunnel({ ...base, completeThrough: day(22) }),

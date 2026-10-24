@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import { TriangleAlert } from "lucide-react";
-import type { ChangeImpactWindow } from "@asobeast/shared";
+import type { ChangeImpactWindow, Store } from "@asobeast/shared";
 import { DeltaChip } from "@/components/ui/delta-chip";
+import { FUNNEL_GETS_LABEL } from "@/lib/funnel";
 import {
   funnelNote,
   funnelRanges,
@@ -62,11 +63,17 @@ function MeasuredFacts({ impact }: { impact: ChangeImpactWindow }) {
   );
 }
 
-export function FunnelFacts({ impact }: { impact: ChangeImpactWindow }) {
+interface WindowProps {
+  impact: ChangeImpactWindow;
+  store: Store;
+}
+
+export function FunnelFacts({ impact, store }: WindowProps) {
   const ranges = funnelRanges(impact.funnel);
   const note = funnelNote(impact.funnel, impact.days);
   if (!ranges && !note) return null;
   const gets = impact.funnel?.change?.gets ?? null;
+  const getsLabel = FUNNEL_GETS_LABEL[store];
 
   return (
     <dl className="flex flex-col gap-2 text-body">
@@ -74,12 +81,12 @@ export function FunnelFacts({ impact }: { impact: ChangeImpactWindow }) {
         {ranges ? (
           <>
             <dd className="flex flex-wrap items-center gap-2">
-              <span>Get taps</span>
+              <span>{getsLabel}</span>
               <span className="numeric font-mono">{ranges.gets}</span>
               <DeltaChip
                 value={gets === null ? null : Math.round(gets * 100)}
                 polarity="higher-is-better"
-                period="percent in Get taps"
+                period={`percent in ${getsLabel}`}
                 unit="%"
               />
             </dd>
@@ -96,11 +103,7 @@ export function FunnelFacts({ impact }: { impact: ChangeImpactWindow }) {
   );
 }
 
-export function ChangeImpactWindowTile({
-  impact,
-}: {
-  impact: ChangeImpactWindow;
-}) {
+export function ChangeImpactWindowTile({ impact, store }: WindowProps) {
   const notice = overlapNotice(impact.overlappingChanges);
 
   return (
@@ -110,7 +113,7 @@ export function ChangeImpactWindowTile({
         {windowStatusLine(impact)}
       </p>
       <MeasuredFacts impact={impact} />
-      <FunnelFacts impact={impact} />
+      <FunnelFacts impact={impact} store={store} />
       {notice ? (
         <p className="flex items-start gap-1.5 text-caption text-muted-foreground">
           <TriangleAlert

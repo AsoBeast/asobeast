@@ -4,6 +4,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import {
   completeThrough,
   countsOf,
+  finalThrough,
+  marketFunnelScope,
   shiftDate,
   type FunnelDayRow,
 } from '../store-connect/store-funnel';
@@ -19,6 +21,7 @@ export interface ActionFunnelDay {
 export interface ActionPageDay {
   date: string;
   pageTitle: string;
+  pageViews: number;
   uniqueImpressions: number;
   gets: number;
 }
@@ -92,18 +95,25 @@ export class ActionFunnelReader {
     );
     const funnels = new Map<string, ActionFunnel>();
     if (apps.length === 0) return funnels;
-    const through = completeThrough(now);
-    const date = {
-      gte: dateOf(shiftDate(through, 1 - windowDays)),
-      lte: dateOf(through),
-    };
-    const homes = apps.map((app) => ({
-      appId: app.id,
-      country: app.country,
-    }));
+    const windows = apps.map((app) => {
+      const through = finalThrough(now, app.store);
+      return {
+        app,
+        through,
+        where: {
+          appId: app.id,
+          ...marketFunnelScope(app.store, app.country, app.country),
+          date: {
+            gte: dateOf(shiftDate(through, 1 - windowDays)),
+            lte: dateOf(through),
+          },
+        },
+      };
+    });
+    const scopes = windows.map((window) => window.where);
     const [days, pages] = await Promise.all([
       this.prisma.storeFunnelDay.findMany({
-        where: { OR: homes, date },
+        where: { OR: scopes },
         select: {
           appId: true,
           date: true,
@@ -119,11 +129,12 @@ export class ActionFunnelReader {
         },
       }),
       this.prisma.storeFunnelPageDay.findMany({
-        where: { OR: homes, date },
+        where: { OR: scopes },
         select: {
           appId: true,
           date: true,
           pageTitle: true,
+          pageViews: true,
           uniqueImpressions: true,
           gets: true,
         },
@@ -132,7 +143,7 @@ export class ActionFunnelReader {
     ]);
     const daysOf = groupByApp(days);
     const pagesOf = groupByApp(pages);
-    for (const app of apps) {
+    for (const { app, through } of windows) {
       funnels.set(app.id, {
         reporting: connected.has(app.id),
         completeThrough: through,
@@ -146,6 +157,7 @@ export class ActionFunnelReader {
         pages: (pagesOf.get(app.id) ?? []).map((row) => ({
           date: toDateKey(row.date),
           pageTitle: row.pageTitle,
+          pageViews: row.pageViews,
           uniqueImpressions: row.uniqueImpressions,
           gets: row.gets,
         })),

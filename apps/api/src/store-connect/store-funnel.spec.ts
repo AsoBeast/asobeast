@@ -1,7 +1,13 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { gzipSync } from 'node:zlib';
+import { pivotDetailedReport } from './discovery-report';
 import {
   completeThrough,
+  finalThrough,
   funnelPages,
   funnelScope,
+  marketFunnelScope,
   measureStoreFunnel,
   type FunnelDayRow,
   type PageDayRow,
@@ -347,32 +353,90 @@ describe('measureStoreFunnel windows', () => {
   });
 });
 
+describe('finalThrough', () => {
+  it('ends the app store on the third day back and google play on the seventh, the day each store has finished posting', () => {
+    expect(finalThrough(TODAY, 'APP_STORE')).toBe('2026-10-13');
+    expect(finalThrough(TODAY, 'GOOGLE_PLAY')).toBe('2026-10-09');
+  });
+});
+
+describe('marketFunnelScope', () => {
+  it('reads every market for the home market of a google play app, since google files most countries under other', () => {
+    expect(marketFunnelScope('GOOGLE_PLAY', 'us', 'us')).toEqual({
+      territory: 'all',
+    });
+  });
+
+  it('reads the country for any other market and for the app store', () => {
+    expect(marketFunnelScope('GOOGLE_PLAY', 'de', 'us')).toEqual({
+      country: 'de',
+    });
+    expect(marketFunnelScope('APP_STORE', 'us', 'us')).toEqual({
+      country: 'us',
+    });
+  });
+});
+
 describe('funnelPages', () => {
+  const DETAILED = gzipSync(
+    readFileSync(join(__dirname, 'fixtures', 'asc', 'discovery-detailed.tsv')),
+  );
+
   const page = (
     pageTitle: string,
-    uniqueImpressions: number,
+    pageViews: number,
     gets: number,
   ): PageDayRow => ({
     date: '2026-10-10',
     pageTitle,
-    impressions: uniqueImpressions,
-    uniqueImpressions,
-    pageViews: 50,
-    uniquePageViews: 50,
+    impressions: 0,
+    uniqueImpressions: 0,
+    pageViews,
+    uniquePageViews: pageViews,
     gets,
     uniqueGets: gets,
   });
 
-  it('puts the default page first, then pages by unique impressions, with the ratio to the default', () => {
-    const pages = funnelPages(
-      [
-        page('Summer sale', 200, 4),
-        page('default product page', 1000, 40),
-        page('Winter deal', 500, 30),
-        page('Summer sale', 100, 2),
-      ],
-      'APP_STORE',
-    );
+  it('measures each page of the real detailed report by its Get taps over its product page views, since Apple counts no impression against a page', async () => {
+    const rows = await pivotDetailedReport(DETAILED, '2026-09-12');
+
+    const pages = funnelPages(rows);
+
+    expect(pages).toEqual([
+      {
+        title: 'Default product page',
+        counts: {
+          impressions: null,
+          uniqueImpressions: null,
+          pageViews: 312,
+          gets: 40,
+          conversion: 0.1282,
+        },
+        defaultConversion: 0.1282,
+        ratio: 1,
+      },
+      {
+        title: 'Summer sale',
+        counts: {
+          impressions: null,
+          uniqueImpressions: null,
+          pageViews: 100,
+          gets: 7,
+          conversion: 0.07,
+        },
+        defaultConversion: 0.1282,
+        ratio: 0.546,
+      },
+    ]);
+  });
+
+  it('puts the default page first, then pages by product page views, with the ratio to the default', () => {
+    const pages = funnelPages([
+      page('Summer sale', 200, 4),
+      page('default product page', 1000, 40),
+      page('Winter deal', 500, 30),
+      page('Summer sale', 100, 2),
+    ]);
 
     expect(pages.map((each) => each.title)).toEqual([
       'default product page',
@@ -382,18 +446,18 @@ describe('funnelPages', () => {
     expect(pages[0]).toMatchObject({ defaultConversion: 0.04, ratio: 1 });
     expect(pages[1]).toMatchObject({ ratio: 1.5 });
     expect(pages[2]).toMatchObject({
-      counts: { uniqueImpressions: 300, gets: 6, conversion: 0.02 },
+      counts: { pageViews: 300, gets: 6, conversion: 0.02 },
       ratio: 0.5,
     });
   });
 
   it('answers a null ratio without a default page conversion', () => {
-    const pages = funnelPages([page('Summer sale', 200, 4)], 'APP_STORE');
+    const pages = funnelPages([page('Summer sale', 200, 4)]);
 
     expect(pages[0]).toMatchObject({ defaultConversion: null, ratio: null });
   });
 
   it('answers no pages without rows', () => {
-    expect(funnelPages([], 'APP_STORE')).toEqual([]);
+    expect(funnelPages([])).toEqual([]);
   });
 });

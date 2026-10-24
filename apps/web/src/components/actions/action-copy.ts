@@ -115,7 +115,7 @@ export function summarizeEvidence(evidence: ActionEvidence): string {
     case "conversion.investigate_drop":
       return `Get taps averaged ${measure(evidence.getsAfter)} a day over the last ${evidence.windowDays} complete days against ${measure(evidence.getsBefore)} before, while product page views held at ${measure(evidence.pageViewsAfter)} against ${measure(evidence.pageViewsBefore)}.`;
     case "listing.cpp_underperforms":
-      return `"${evidence.pageTitle}" converts at ${percent(evidence.pageConversion)} against ${percent(evidence.defaultConversion)} on the default product page over ${evidence.windowDays} complete days.`;
+      return `"${evidence.pageTitle}" turns ${percent(evidence.pageConversion)} of its product page views into Get taps against ${percent(evidence.defaultConversion)} on the default product page over ${evidence.windowDays} complete days.`;
     case "metadata.fix_lint":
       return `${METADATA_FIELD_LABELS[evidence.field]} has ${pluralize(evidence.issues.length, "store rule problem")} at ${measure(evidence.chars)} of ${measure(evidence.limit)} characters.`;
     default: {

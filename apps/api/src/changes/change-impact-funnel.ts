@@ -1,5 +1,4 @@
 import {
-  STORE_FUNNEL_COMPLETE_AFTER_DAYS,
   type ChangeImpactFunnel,
   type ChangeImpactWindowDays,
   type Store,
@@ -8,6 +7,7 @@ import {
   between,
   countsChange,
   countsOf,
+  finalAfterDays,
   shiftDate,
   type FunnelDayRow,
 } from '../store-connect/store-funnel';
@@ -20,13 +20,6 @@ export interface ChangeFunnelInput {
   firstDate: string | null;
   store: Store;
 }
-
-export const PLAY_FINAL_AFTER_DAYS = 7;
-
-const finalAfterDays = (store: Store): number =>
-  store === 'GOOGLE_PLAY'
-    ? PLAY_FINAL_AFTER_DAYS
-    : STORE_FUNNEL_COMPLETE_AFTER_DAYS;
 
 const UNMEASURED: ChangeImpactFunnel = {
   status: 'unmeasured',
@@ -58,7 +51,9 @@ export function measureChangeFunnel({
   const afterEnd = shiftDate(changedOn, days - 1);
   const finalOn = shiftDate(afterEnd, finalAfterDays(store));
   if (beforeTo > completeThrough) return { ...WAITING, finalOn };
-  const before = countsOf(between(rows, beforeFrom, beforeTo), store);
+  const reportedBefore = between(rows, beforeFrom, beforeTo);
+  if (reportedBefore.length === 0) return UNMEASURED;
+  const before = countsOf(reportedBefore, store);
   const afterTo = [afterEnd, completeThrough].sort()[0];
   const completeDays = Math.max(0, daysBetween(changedOn, afterTo));
   if (completeDays === 0) return { ...WAITING, before, finalOn };

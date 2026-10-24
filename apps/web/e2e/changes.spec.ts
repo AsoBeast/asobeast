@@ -1,6 +1,10 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
-import { APP_1_CHANGE_IMPACT } from "./fixtures.mts";
+import {
+  APP_1_CHANGE_IMPACT,
+  APP_GP_CHANGE_IMPACT,
+  PLAY_CHANGE_IMPACT_COOKIE,
+} from "./fixtures.mts";
 import { formatDate } from "../src/lib/format";
 
 const [RECENT, MEASURED, OLDER, UNANCHORED] = APP_1_CHANGE_IMPACT.items;
@@ -221,6 +225,27 @@ test("a measured window reads Get taps and conversion from the console", async (
   await expect(tile).toContainText("Get taps412 → 486");
   await expect(tile).toContainText("Conversion3.1% → 3.6%");
   await expect(tile.getByLabel("up 18 percent in Get taps")).toHaveText("18%");
+});
+
+test("a google play window names acquisitions, not Get taps", async ({
+  page,
+}) => {
+  await page.context().addCookies([
+    {
+      name: PLAY_CHANGE_IMPACT_COOKIE,
+      value: "1",
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
+  await page.goto("/apps/app-gp/changes");
+
+  const tile = windowTile(page, APP_GP_CHANGE_IMPACT.items[0].changedOn, 7);
+  await expect(tile).toContainText("Acquisitions35 → 70");
+  await expect(tile).not.toContainText("Get taps");
+  await expect(tile.getByLabel("up 100 percent in Acquisitions")).toHaveText(
+    "100%",
+  );
 });
 
 test("a window still filling says when the console's numbers are final", async ({

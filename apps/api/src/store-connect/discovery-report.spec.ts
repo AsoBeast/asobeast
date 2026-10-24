@@ -174,7 +174,7 @@ describe('pivotDetailedReport', () => {
     'utf8',
   );
 
-  it('pivots the detailed report by page title and drops rows of no page', async () => {
+  it('pivots the detailed report by page title and drops rows of no page or no title', async () => {
     const rows = await pivotDetailedReport(
       gzipSync(Buffer.from(DETAILED)),
       '2026-09-12',
@@ -183,24 +183,24 @@ describe('pivotDetailedReport', () => {
     expect(rows).toEqual([
       {
         date: '2026-09-10',
-        territory: 'United States',
-        pageTitle: 'default product page',
-        impressions: 1200,
-        uniqueImpressions: 950,
-        pageViews: 300,
-        uniquePageViews: 250,
+        territory: 'US',
+        pageTitle: 'Default product page',
+        impressions: 0,
+        uniqueImpressions: 0,
+        pageViews: 312,
+        uniquePageViews: 261,
         gets: 40,
         uniqueGets: 38,
         processingDate: '2026-09-12',
       },
       {
         date: '2026-09-10',
-        territory: 'United States',
+        territory: 'US',
         pageTitle: 'Summer sale',
-        impressions: 400,
-        uniqueImpressions: 350,
-        pageViews: 0,
-        uniquePageViews: 0,
+        impressions: 0,
+        uniqueImpressions: 0,
+        pageViews: 100,
+        uniquePageViews: 90,
         gets: 7,
         uniqueGets: 7,
         processingDate: '2026-09-12',

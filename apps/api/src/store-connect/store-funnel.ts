@@ -63,46 +63,77 @@ export function funnelScope(store: Store, country?: string): FunnelScope {
   return store === 'GOOGLE_PLAY' ? { territory: PLAY_ALL_MARKETS } : {};
 }
 
+export const marketFunnelScope = (
+  store: Store,
+  market: string,
+  homeCountry: string,
+): FunnelScope =>
+  funnelScope(
+    store,
+    store === 'GOOGLE_PLAY' && market === homeCountry ? undefined : market,
+  );
+
 export const shiftDate = (date: string, days: number): string =>
   toDateKey(addDays(new Date(`${date}T00:00:00.000Z`), days));
 
 export const completeThrough = (today: Date): string =>
   toDateKey(addDays(startOfUtcDay(today), -STORE_FUNNEL_COMPLETE_AFTER_DAYS));
 
-export function reportedThrough(
+export const PLAY_FINAL_AFTER_DAYS = 7;
+
+export const finalAfterDays = (store: Store): number =>
+  store === 'GOOGLE_PLAY'
+    ? PLAY_FINAL_AFTER_DAYS
+    : STORE_FUNNEL_COMPLETE_AFTER_DAYS;
+
+export const finalThrough = (today: Date, store: Store): string =>
+  toDateKey(addDays(startOfUtcDay(today), -finalAfterDays(store)));
+
+const cappedAt = (through: string, lastDate: string | null | undefined) =>
+  lastDate && lastDate < through ? lastDate : through;
+
+export const reportedThrough = (
   today: Date,
   lastDate: string | null | undefined,
-): string {
-  const through = completeThrough(today);
-  return lastDate && lastDate < through ? lastDate : through;
+): string => cappedAt(completeThrough(today), lastDate);
+
+export const finalReportedThrough = (
+  today: Date,
+  lastDate: string | null | undefined,
+  store: Store,
+): string => cappedAt(finalThrough(today, store), lastDate);
+
+const sumOf = (
+  rows: FunnelDayRow[],
+  pick: (row: FunnelDayRow) => number,
+): number => rows.reduce((total, row) => total + pick(row), 0);
+
+function viewCounts(rows: FunnelDayRow[]): StoreFunnelCounts {
+  const pageViews = sumOf(rows, (row) =>
+    row.pageType === 'productPage' ? row.pageViews : 0,
+  );
+  const gets = sumOf(rows, (row) => row.gets);
+  return {
+    impressions: null,
+    uniqueImpressions: null,
+    pageViews,
+    gets,
+    conversion: funnelConversion(gets, pageViews),
+  };
 }
 
 export function countsOf(
   rows: FunnelDayRow[],
   store: Store,
 ): StoreFunnelCounts {
-  const sum = (pick: (row: FunnelDayRow) => number): number =>
-    rows.reduce((total, row) => total + pick(row), 0);
-  const pageViews = sum((row) =>
-    row.pageType === 'productPage' ? row.pageViews : 0,
-  );
-  const gets = sum((row) => row.gets);
-  if (store === 'GOOGLE_PLAY') {
-    return {
-      impressions: null,
-      uniqueImpressions: null,
-      pageViews,
-      gets,
-      conversion: funnelConversion(gets, pageViews),
-    };
-  }
-  const uniqueImpressions = sum((row) => row.uniqueImpressions);
+  const views = viewCounts(rows);
+  if (store === 'GOOGLE_PLAY') return views;
+  const uniqueImpressions = sumOf(rows, (row) => row.uniqueImpressions);
   return {
-    impressions: sum((row) => row.impressions),
+    ...views,
+    impressions: sumOf(rows, (row) => row.impressions),
     uniqueImpressions,
-    pageViews,
-    gets,
-    conversion: funnelConversion(gets, uniqueImpressions),
+    conversion: funnelConversion(views.gets, uniqueImpressions),
   };
 }
 
@@ -220,10 +251,7 @@ function ratioOf(page: number | null, base: number | null): number | null {
   return Math.round((page / base) * RATIO_PLACES) / RATIO_PLACES;
 }
 
-export function funnelPages(
-  rows: PageDayRow[],
-  store: Store,
-): StoreFunnelPage[] {
+export function funnelPages(rows: PageDayRow[]): StoreFunnelPage[] {
   const byTitle = new Map<string, FunnelDayRow[]>();
   for (const row of rows) {
     const asDay: FunnelDayRow = {
@@ -238,7 +266,7 @@ export function funnelPages(
   }
   const pages = [...byTitle.entries()].map(([title, days]) => ({
     title,
-    counts: countsOf(days, store),
+    counts: viewCounts(days),
   }));
   const defaultConversion =
     pages.find((page) => isDefaultPage(page.title))?.counts.conversion ?? null;
@@ -246,7 +274,7 @@ export function funnelPages(
     .sort(
       (a, b) =>
         Number(isDefaultPage(b.title)) - Number(isDefaultPage(a.title)) ||
-        (b.counts.uniqueImpressions ?? 0) - (a.counts.uniqueImpressions ?? 0),
+        b.counts.pageViews - a.counts.pageViews,
     )
     .map((page) => ({
       ...page,

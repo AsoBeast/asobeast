@@ -18,7 +18,7 @@ import {
   conversionPercent,
 } from './action-trend';
 import { HOME_LISTING } from '../apps/listing';
-import { completeThrough } from '../store-connect/store-funnel';
+import { finalThrough, marketFunnelScope } from '../store-connect/store-funnel';
 
 interface SeriesBody {
   depth: number | null;
@@ -168,19 +168,24 @@ export class ActionSeriesReader {
     ) {
       return null;
     }
+    const { appId, store, country } = item.scope;
     const where = {
-      appId: item.scope.appId,
-      country: item.scope.country,
+      appId,
+      ...marketFunnelScope(store, country, country),
       date: {
         gte: from,
-        lte: new Date(`${completeThrough(new Date())}T00:00:00.000Z`),
+        lte: new Date(`${finalThrough(new Date(), store)}T00:00:00.000Z`),
       },
     };
-    const rows =
+    const pageTitle =
       item.evidence?.rule === 'listing.cpp_underperforms'
+        ? item.evidence.pageTitle
+        : null;
+    const rows =
+      pageTitle !== null
         ? await this.prisma.storeFunnelPageDay.groupBy({
             by: ['date'],
-            where: { ...where, pageTitle: item.evidence.pageTitle },
+            where: { ...where, pageTitle },
             _sum: { gets: true, uniqueImpressions: true, pageViews: true },
           })
         : await this.prisma.storeFunnelDay.groupBy({
@@ -188,10 +193,9 @@ export class ActionSeriesReader {
             where,
             _sum: { gets: true, uniqueImpressions: true, pageViews: true },
           });
+    const byPageViews = pageTitle !== null || store === 'GOOGLE_PLAY';
     const base = (sum: (typeof rows)[number]['_sum']): number =>
-      (item.scope.store === 'GOOGLE_PLAY'
-        ? sum.pageViews
-        : sum.uniqueImpressions) ?? 0;
+      (byPageViews ? sum.pageViews : sum.uniqueImpressions) ?? 0;
     return {
       depth: null,
       points: dailyPoints(

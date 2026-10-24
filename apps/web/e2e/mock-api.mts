@@ -57,7 +57,9 @@ import {
   APP_AUDIT,
   AUDIT_HISTORY_POINTS,
   LONG_AUDIT,
+  APP_GP_CHANGE_IMPACT,
   PLAY_AUDIT,
+  PLAY_CHANGE_IMPACT_COOKIE,
   PROVISIONAL_AUDIT,
   METADATA_AUDIT,
   APP_1_PL_SCREENSHOTS,
@@ -3623,9 +3625,11 @@ const routes: Route[] = [
   appRoute(/^\/apps\/([^/]+)\/changes$/, (dataset, query) =>
     isPolishListingOf(dataset, query) ? APP_1_PL_CHANGES : dataset.changes,
   ),
-  appRoute(
-    /^\/apps\/([^/]+)\/changes\/impact$/,
-    (dataset) => dataset.changeImpact,
+  appRoute(/^\/apps\/([^/]+)\/changes\/impact$/, (dataset, _query, req) =>
+    dataset.detail.id === APP_GP_CHANGE_IMPACT.appId &&
+    hasCookie(req, PLAY_CHANGE_IMPACT_COOKIE, "1")
+      ? APP_GP_CHANGE_IMPACT
+      : dataset.changeImpact,
   ),
   appRoute(
     /^\/apps\/([^/]+)\/competitors\/discovery$/,

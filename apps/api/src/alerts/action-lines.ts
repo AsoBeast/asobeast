@@ -37,7 +37,7 @@ const RULE_SUMMARY = (evidence: ActionEvidence): string => {
     case 'conversion.investigate_drop':
       return `Get taps ${evidence.getsBefore} → ${evidence.getsAfter} while page views went ${evidence.pageViewsBefore} → ${evidence.pageViewsAfter}, daily means of the last ${evidence.windowDays} complete days against the ${evidence.baselineDays} before`;
     case 'listing.cpp_underperforms':
-      return `"${evidence.pageTitle}" converts at ${percent(evidence.pageConversion)} against ${percent(evidence.defaultConversion)} on the default page over ${evidence.windowDays} days`;
+      return `"${evidence.pageTitle}" turns ${percent(evidence.pageConversion)} of its page views into Get taps against ${percent(evidence.defaultConversion)} on the default page over ${evidence.windowDays} days`;
     case 'metadata.fix_lint':
       return `${evidence.issues.length} store rule ${evidence.issues.length === 1 ? 'problem' : 'problems'} in ${evidence.field}, ${evidence.chars}/${evidence.limit} characters`;
     default: {

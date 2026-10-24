@@ -976,6 +976,81 @@ describe('ActionsController (e2e)', () => {
     ).resolves.toBe(0);
   });
 
+  it('opens a conversion action for a google play app from the visitors of every market once google has posted the days', async () => {
+    const play = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.GOOGLE_PLAY,
+        storeAppId: 'com.example.habits',
+        country: 'us',
+        name: 'Habits',
+      },
+    });
+    const connection = await prisma.storeConnection.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.GOOGLE_PLAY,
+        issuerId: 'reports@focus-123.iam.gserviceaccount.com',
+        keyId: 'a1b2c3d4e5f6',
+        keyFingerprint: '0123456789abcdef',
+        credentialCiphertext: 'v1.sealed',
+        reportAccess: 'admin',
+        bucket: 'pubsite_prod_rev_1',
+      },
+    });
+    await prisma.storeReportRequest.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        connectionId: connection.id,
+        appId: play.id,
+        accessType: 'ONGOING',
+        remoteId: 'pubsite_prod_rev_1',
+      },
+    });
+    const today = new Date(new Date().toISOString().slice(0, 10));
+    await prisma.storeFunnelDay.createMany({
+      data: Array.from({ length: 21 }, (_, index) => {
+        const gets = index < 7 ? 5 : 10;
+        return {
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          appId: play.id,
+          date: new Date(today.getTime() - (7 + index) * DAY_MS),
+          territory: 'all',
+          country: null,
+          sourceType: 'other',
+          pageType: 'productPage',
+          pageViews: 100,
+          uniquePageViews: 100,
+          gets,
+          uniqueGets: gets,
+          processingDate: today,
+        };
+      }),
+    });
+
+    await runActions();
+
+    const opened = (
+      await api
+        .get('/actions')
+        .query({ rule: 'conversion.investigate_drop' })
+        .expect(200)
+    ).body as ActionListResult;
+    expect(opened.items).toHaveLength(1);
+    expect(opened.items[0]).toMatchObject({
+      status: 'OPEN',
+      scope: { appId: play.id, country: 'us' },
+      evidence: {
+        getsBefore: 10,
+        getsAfter: 5,
+        pageViewsBefore: 100,
+        pageViewsAfter: 100,
+        conversionBefore: 0.1,
+        conversionAfter: 0.05,
+      },
+    });
+  });
+
   const seedPages = async (pageTitle: string) => {
     await seedConversionFunnel(10);
     await prisma.storeFunnelPageDay.deleteMany({ where: { appId } });
@@ -983,16 +1058,16 @@ describe('ActionsController (e2e)', () => {
     await prisma.storeFunnelPageDay.createMany({
       data: Array.from({ length: 14 }, (_, index) =>
         [
-          ['default product page', 1000, 40],
+          ['Default product page', 1000, 40],
           [pageTitle, 500, 5],
-        ].map(([title, uniqueImpressions, gets]) => ({
+        ].map(([title, pageViews, gets]) => ({
           workspaceId: DEFAULT_WORKSPACE_ID,
           appId,
           date: new Date(today.getTime() - (3 + index) * DAY_MS),
           territory: 'United States',
           country: 'us',
           pageTitle: title as string,
-          uniqueImpressions: uniqueImpressions as number,
+          pageViews: pageViews as number,
           gets: gets as number,
           processingDate: today,
         })),
@@ -1017,7 +1092,8 @@ describe('ActionsController (e2e)', () => {
       country: 'us',
       pageTitle: 'Summer sale',
       windowDays: 14,
-      pageUniqueImpressions: 7000,
+      pageUniqueImpressions: 0,
+      pageViews: 7000,
       pageConversion: 0.01,
       defaultConversion: 0.04,
       ratio: 0.25,
