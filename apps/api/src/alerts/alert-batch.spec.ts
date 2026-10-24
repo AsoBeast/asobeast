@@ -24,6 +24,7 @@ import {
 const primaryA: ResolvedApp = {
   id: 'a',
   name: 'Alpha',
+  iconUrl: null,
   store: 'APP_STORE',
   country: 'us',
   isCompetitor: false,
@@ -32,6 +33,7 @@ const primaryA: ResolvedApp = {
 const primaryB: ResolvedApp = {
   id: 'b',
   name: 'Bravo',
+  iconUrl: null,
   store: 'GOOGLE_PLAY',
   country: 'gb',
   isCompetitor: false,
@@ -40,6 +42,7 @@ const primaryB: ResolvedApp = {
 const competitor: ResolvedApp = {
   id: 'c',
   name: 'Charlie',
+  iconUrl: null,
   store: 'APP_STORE',
   country: 'us',
   isCompetitor: true,
@@ -387,6 +390,39 @@ describe('assembleBatches', () => {
     expect(competitorSection.competitors[0].changes).toHaveLength(1);
   });
 
+  it('carries the current icon of a primary app and of a competitor', () => {
+    const alphaIcon =
+      'https://is1-ssl.mzstatic.com/image/thumb/alpha/512x512bb.jpg';
+    const charlieIcon =
+      'https://is1-ssl.mzstatic.com/image/thumb/charlie/512x512bb.jpg';
+    const batches = assembleBatches({
+      events: [event(review, 'a'), event(competitorChange, 'c')],
+      appById: new Map([
+        ['a', { ...primaryA, iconUrl: alphaIcon }],
+        ['c', { ...competitor, iconUrl: charlieIcon }],
+      ]),
+      serpPrimariesByKeyword: new Map(),
+      now: new Date('2026-07-22T11:00:00.000Z'),
+    });
+
+    expect(batches.owned.apps[0].app).toEqual({
+      id: 'a',
+      name: 'Alpha',
+      iconUrl: alphaIcon,
+      store: 'APP_STORE',
+      country: 'us',
+    });
+    const section = batches.competitors.apps[0];
+    expect(section.app.iconUrl).toBe(alphaIcon);
+    expect(section.competitors[0].app).toEqual({
+      id: 'c',
+      name: 'Charlie',
+      iconUrl: charlieIcon,
+      store: 'APP_STORE',
+      country: 'us',
+    });
+  });
+
   it('removes invalid events from grouped and flat payloads', () => {
     const batches = assembleBatches({
       events: [event(rank, 'b')],
@@ -421,6 +457,7 @@ describe('assembleBatches', () => {
             app: {
               id: 'b',
               name: 'Bravo',
+              iconUrl: null,
               store: 'GOOGLE_PLAY',
               country: 'gb',
             },
@@ -446,6 +483,7 @@ describe('assembleBatches', () => {
                 app: {
                   id: 'c',
                   name: 'Charlie',
+                  iconUrl: null,
                   store: 'APP_STORE',
                   country: 'us',
                 },

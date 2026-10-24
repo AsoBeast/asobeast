@@ -20,6 +20,7 @@ import {
 export interface ResolvedApp {
   id: string;
   name: string | null;
+  iconUrl: string | null;
   store: AlertBatchApp['store'];
   country: string;
   isCompetitor: boolean;
@@ -99,7 +100,13 @@ interface MutableSection {
 }
 
 function toBatchApp(app: ResolvedApp): AlertBatchApp {
-  return { id: app.id, name: app.name, store: app.store, country: app.country };
+  return {
+    id: app.id,
+    name: app.name,
+    iconUrl: app.iconUrl,
+    store: app.store,
+    country: app.country,
+  };
 }
 
 function compareNames(
