@@ -258,6 +258,25 @@ describe('ProxyPool', () => {
     expect(apple?.endpointId).toBe('us');
   });
 
+  it('waits for a local endpoint another worker claimed instead of leasing a foreign one', async () => {
+    findMany.mockResolvedValue([
+      endpoint({ id: 'de', country: 'de', host: '10.0.0.2' }),
+      endpoint({ id: 'us', country: 'us', host: '10.0.0.1' }),
+    ]);
+    queryRaw
+      .mockResolvedValueOnce([])
+      .mockResolvedValue([{ endpointId: 'claimed' }]);
+
+    const lease = await poolWith({
+      minIntervalMs: 5,
+      acquireTimeoutMs: 5_000,
+    }).acquire(Store.GOOGLE_PLAY, 'de');
+
+    expect(lease?.endpointId).toBe('de');
+    expect(queryRaw.mock.calls.map((call) => call[2])).toEqual(['de', 'de']);
+    expect(findMany).toHaveBeenCalledTimes(2);
+  });
+
   it('stops waiting for an endpoint once the on demand deadline passes', async () => {
     findMany.mockResolvedValue([]);
     const started = Date.now();
