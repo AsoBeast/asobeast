@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
 import { Column, Img, Link, Row, Section, Text } from 'react-email';
 import type { ReportApp, ReportGroup } from '../report/report';
-import { rowText } from '../report/report-blocks';
 import { identityLine } from '../report/storefront';
+import { ReportRowView } from './report-rows';
 
 const ICON_SIZE = 40;
 
@@ -75,14 +75,12 @@ function GroupNote({ group }: { group: ReportGroup }) {
 function ReportGroupBlock({ group }: { group: ReportGroup }) {
   return (
     <>
-      <Text className="m-0 mt-[12px] text-[13px] font-semibold leading-[20px] text-ink dark:text-night-ink">
+      <Text className="m-0 mt-[12px] mb-[4px] text-[13px] font-semibold leading-[20px] text-ink dark:text-night-ink">
         {group.title}
       </Text>
-      <ul className="m-0 mt-[4px] pl-[18px] text-[14px] leading-[22px] text-body dark:text-night-body">
-        {group.rows.map(rowText).map((line, index) => (
-          <li key={index}>{line}</li>
-        ))}
-      </ul>
+      {group.rows.map((row, index) => (
+        <ReportRowView key={index} row={row} />
+      ))}
       <GroupNote group={group} />
     </>
   );

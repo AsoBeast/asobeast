@@ -410,7 +410,7 @@ describe('formatBatchEmail', () => {
     expect(second).toEqual(first);
     expect(first.text).toContain('+980 more');
     expect(first.text.length).toBeLessThan(10_000);
-    expect(first.html.length).toBeLessThan(20_000);
+    expect(first.html.length).toBeLessThan(40_000);
     expect(first.text).toContain('22 Jul 2026');
     expect(first.html).toContain('22 Jul 2026');
   });
@@ -619,9 +619,10 @@ describe('formatBatchEmail in the branded layout', () => {
 
   it('shows fewer lines in html than in text only when the report would not fit', async () => {
     const worst = await formatBatchEmail(worstCaseBatch('owned_apps'), linked);
-    const lastRow = 'meditation and sleep tracker keyword 19  ';
-    expect(worst.text).toContain(lastRow);
-    expect(worst.html).not.toContain(lastRow);
+    const lastRow = 'meditation and sleep tracker keyword 19';
+    expect(worst.text).toContain(`${lastRow}  #4 → #12`);
+    expect(worst.html).not.toContain(`>${lastRow}<`);
+    expect(worst.html).toContain('>meditation and sleep tracker keyword 0<');
     expect(worst.html).toMatch(
       /href="https:\/\/aso\.example\.com\/apps\/app_0\/keywords"[^>]*>See all 25 in AsoBeast<\/a>/,
     );
@@ -636,8 +637,8 @@ describe('formatBatchEmail in the branded layout', () => {
       linked,
     );
     expect(usual.html).not.toContain('See all');
-    expect(full.html).toContain('game 19  ');
-    expect(full.html).not.toContain('game 20  ');
+    expect(full.html).toContain('>game 19<');
+    expect(full.html).not.toContain('>game 20<');
     expect(full.html).toMatch(
       /href="https:\/\/aso\.example\.com\/apps\/a\/keywords"[^>]*>See all 25 in AsoBeast<\/a>/,
     );
