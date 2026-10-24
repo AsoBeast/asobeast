@@ -4,6 +4,7 @@ describe('SECRET_ENV_KEYS', () => {
   it.each([
     'STORE_CONNECT_ENCRYPTION_KEY',
     'STORE_CONNECT_ENCRYPTION_KEY_PREVIOUS',
+    'GOOGLE_PLAY_OAUTH_CLIENT_SECRET',
   ])('scrubs %s from logs', (name) => {
     expect(SECRET_ENV_KEYS).toContain(name);
   });

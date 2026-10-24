@@ -495,6 +495,18 @@ async function seedWorkspace(
       processingDate: utcDay(0),
     },
   });
+  await db.storeFunnelSearchTerm.create({
+    data: {
+      workspaceId: id,
+      appId: play.id,
+      month: utcDay(0),
+      term: `${id} term`,
+      normalized: `${id} term`,
+      visitors: id === 'ws_iso_a' ? 10 : 90,
+      acquisitions: 1,
+      generation: '1',
+    },
+  });
 
   return {
     id,

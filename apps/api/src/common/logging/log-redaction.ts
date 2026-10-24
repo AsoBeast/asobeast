@@ -64,6 +64,7 @@ const SECRET_SHAPES: [RegExp, string][] = [
     REDACTED,
   ],
   [/\beyJ[\w-]{10,}\.[\w-]{10,}\.[\w-]{10,}/g, REDACTED],
+  [/\bya29\.[\w-]{10,}/g, REDACTED],
   [
     new RegExp(`${SESSION_COOKIE}=[^;\\s"']+`, 'g'),
     `${SESSION_COOKIE}=${REDACTED}`,

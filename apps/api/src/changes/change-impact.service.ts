@@ -87,7 +87,7 @@ export class ChangeImpactService {
       -Math.max(...CHANGE_IMPACT_WINDOWS),
     );
     const [rows, { firstDate, lastDate }] = await Promise.all([
-      this.funnel.rows(app.id, from, market),
+      this.funnel.rows(app, from, market),
       this.funnel.range(app.id),
     ]);
     const through = reportedThrough(today, lastDate);

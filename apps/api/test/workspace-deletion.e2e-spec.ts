@@ -322,6 +322,18 @@ describe('Workspace deletion (e2e)', () => {
         processingDate: new Date('2026-10-01T00:00:00.000Z'),
       },
     });
+    await prisma.storeFunnelSearchTerm.create({
+      data: {
+        workspaceId,
+        appId: owned.id,
+        month: new Date('2026-09-01T00:00:00.000Z'),
+        term: 'habit tracker',
+        normalized: 'habit tracker',
+        visitors: 10,
+        acquisitions: 2,
+        generation: '1',
+      },
+    });
     const webhook = await prisma.webhook.create({
       data: {
         workspaceId,
@@ -435,6 +447,7 @@ describe('Workspace deletion (e2e)', () => {
       storeReportInstance,
       storeFunnelDay,
       storeFunnelPageDay,
+      storeFunnelSearchTerm,
       webhook,
       emailAlert,
       alertDelivery,
@@ -474,6 +487,7 @@ describe('Workspace deletion (e2e)', () => {
       prisma.storeReportInstance.count({ where: { appId: target.appId } }),
       prisma.storeFunnelDay.count({ where: { appId: target.appId } }),
       prisma.storeFunnelPageDay.count({ where: { appId: target.appId } }),
+      prisma.storeFunnelSearchTerm.count({ where: { appId: target.appId } }),
       prisma.webhook.count({ where: { id: target.webhookId } }),
       prisma.emailAlert.count({ where: { id: target.emailAlertId } }),
       prisma.alertDelivery.count({ where: { id: target.deliveryId } }),
@@ -511,6 +525,7 @@ describe('Workspace deletion (e2e)', () => {
       StoreReportInstance: storeReportInstance,
       StoreFunnelDay: storeFunnelDay,
       StoreFunnelPageDay: storeFunnelPageDay,
+      StoreFunnelSearchTerm: storeFunnelSearchTerm,
       Webhook: webhook,
       EmailAlert: emailAlert,
       AlertDelivery: alertDelivery,

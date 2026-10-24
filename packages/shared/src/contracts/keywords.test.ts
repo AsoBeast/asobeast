@@ -1,10 +1,12 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 import { KEYWORD_BULK_ADD_LIMIT, KEYWORD_IMPORT_LIMIT } from '../aso';
 import {
   KEYWORD_IMPORT_REASONS,
   KEYWORD_IMPORT_STATUSES,
   keywordLabel,
   type KeywordImportSummary,
+  type PlayAcquisitions,
+  type TrackedKeywordItem,
 } from './keywords';
 
 describe('keywordLabel', () => {
@@ -64,5 +66,18 @@ describe('the keyword import contract', () => {
       0,
     );
     expect(counted).toBe(summary.rows);
+  });
+});
+
+describe('play acquisitions', () => {
+  it('keeps play acquisitions optional on a tracked keyword', () => {
+    expectTypeOf<TrackedKeywordItem['playAcquisitions']>().toEqualTypeOf<
+      PlayAcquisitions | null | undefined
+    >();
+    expectTypeOf<PlayAcquisitions>().toEqualTypeOf<{
+      month: string;
+      visitors: number;
+      acquisitions: number;
+    }>();
   });
 });

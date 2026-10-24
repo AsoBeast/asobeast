@@ -29,6 +29,7 @@ import {
   storeConnectionsOptions,
   webhooksOptions,
 } from "@/lib/queries";
+import { STORE_CONNECTIONS_SECTION_ID } from "@/lib/store-connection-copy";
 import { viewerIsOperator } from "@/lib/viewer";
 
 export default async function SettingsPage({
@@ -113,9 +114,9 @@ export default async function SettingsPage({
         </SettingsSection>
 
         <SettingsSection
-          id="store-connections"
+          id={STORE_CONNECTIONS_SECTION_ID}
           title="Store connections"
-          description="Connect App Store Connect so impressions, page views and downloads appear beside your rankings."
+          description="Connect App Store Connect or the Google Play Console so store listing visits, downloads and conversion appear beside your rankings."
         >
           <Suspense fallback={<StoreConnectionsSkeleton />}>
             <StoreConnectionsCard />

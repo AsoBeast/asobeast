@@ -223,13 +223,13 @@ test("a measured window reads Get taps and conversion from the console", async (
   await expect(tile.getByLabel("up 18 percent in Get taps")).toHaveText("18%");
 });
 
-test("a window still filling says when Apple's numbers are final", async ({
+test("a window still filling says when the console's numbers are final", async ({
   page,
 }) => {
   await page.goto("/apps/app-1/changes");
 
   await expect(windowTile(page, MEASURED.changedOn, 14)).toContainText(
-    "Apple's numbers for this window are final in 5 days",
+    "The console's numbers for this window are final in 5 days",
   );
   await expect(windowTile(page, OLDER.changedOn, 28)).toContainText(
     "No console data before this change",

@@ -252,6 +252,60 @@ test("the keyword, source and weekly change headers sort too", async ({
   await expect(rows.last()).toContainText("productivity app");
 });
 
+test("a play app shows play installs per search term and sorts by them", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-gp/keywords");
+  const table = page.getByRole("table", {
+    name: /Play installs per search term/,
+  });
+  const rows = table.getByRole("row");
+
+  await expect(
+    table.getByRole("button", { name: "Play installs", exact: true }),
+  ).toBeVisible();
+  await table.getByRole("button", { name: "About Play installs" }).click();
+  await expect(
+    page.getByRole("dialog", { name: "Play installs" }),
+  ).toContainText("acquisitions and store listing visitors");
+  await expect(
+    rows
+      .filter({ hasText: "lernphasen timer" })
+      .getByLabel(
+        "180 acquisitions from 2,400 store listing visitors in September 2026",
+      ),
+  ).toBeVisible();
+  await expect(
+    rows.filter({ hasText: "fokus app" }).getByLabel("No Play Console data"),
+  ).toBeVisible();
+
+  await table
+    .getByRole("button", { name: "Play installs", exact: true })
+    .click();
+  await expect(page).toHaveURL(/sort=acquisitions/);
+  await expect(rows.nth(1)).toContainText("lernphasen timer");
+  await expect(rows.nth(2)).toContainText("pomodoro timer");
+  await expect(rows.last()).toContainText("fokus app");
+});
+
+test("an app store app has no play installs column, even from a play sort link", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/keywords");
+  const table = page.getByRole("table", { name: /Tracked keywords/ });
+  const first = await table.getByRole("row").nth(1).textContent();
+  await page.goto("/apps/app-1/keywords?sort=acquisitions");
+
+  await expect(table.getByRole("row").nth(1)).toHaveText(first ?? "");
+  await expect(
+    table.getByRole("columnheader", { name: /Opportunity/ }),
+  ).toHaveAttribute("aria-sort", "descending");
+  await expect(
+    table.getByRole("button", { name: "Play installs", exact: true }),
+  ).toHaveCount(0);
+  await expect(table).not.toHaveAccessibleName(/Play installs/);
+});
+
 test("position deltas render arrows, a bare position and the captured-depth marker", async ({
   page,
 }) => {

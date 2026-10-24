@@ -5,6 +5,12 @@ import {
   STORE_REPORT_ACCESS,
   STORE_REPORT_STATES,
   type AppStoreConnectionRequest,
+  type PlayConnectionRequest,
+  PLAY_SIGN_IN_PATH,
+  type PlaySignInCompletion,
+  type StoreConnectionState,
+  type StoreCredentialKind,
+  STORE_CREDENTIAL_KINDS,
   type StoreConnectionItem,
   type StoreConnectionRequest,
 } from './store-connect';
@@ -29,7 +35,45 @@ describe('store connection contract', () => {
     expectTypeOf<
       AppStoreConnectionRequest['privateKey']
     >().toEqualTypeOf<string>();
-    expectTypeOf<StoreConnectionRequest>().toEqualTypeOf<AppStoreConnectionRequest>();
+  });
+
+  it('types a play connection request by its store', () => {
+    expectTypeOf<
+      PlayConnectionRequest['store']
+    >().toEqualTypeOf<'GOOGLE_PLAY'>();
+    expectTypeOf<StoreConnectionRequest>().toEqualTypeOf<
+      AppStoreConnectionRequest | PlayConnectionRequest
+    >();
+    const request: StoreConnectionRequest = {
+      store: 'GOOGLE_PLAY',
+      serviceAccountJson: '{}',
+      bucket: 'pubsite_prod_rev_01234567890987654321',
+    };
+    expect(request.store).toBe('GOOGLE_PLAY');
+  });
+
+  it('keeps the bucket optional on the item', () => {
+    expectTypeOf<StoreConnectionItem['bucket']>().toEqualTypeOf<
+      string | null | undefined
+    >();
+  });
+
+  it('marks how a connection signed in, absent meaning a key', () => {
+    expect(STORE_CREDENTIAL_KINDS).toEqual(['key', 'googleAccount']);
+    expectTypeOf<StoreConnectionItem['credential']>().toEqualTypeOf<
+      StoreCredentialKind | undefined
+    >();
+    expectTypeOf<StoreConnectionState['googleSignIn']>().toEqualTypeOf<
+      boolean | undefined
+    >();
+  });
+
+  it('returns Google to one settings page with the code and state', () => {
+    expect(PLAY_SIGN_IN_PATH).toBe('/settings/google-play');
+    expectTypeOf<PlaySignInCompletion>().toEqualTypeOf<{
+      code: string;
+      state: string;
+    }>();
   });
 
   it('never types the private key into the connection item', () => {

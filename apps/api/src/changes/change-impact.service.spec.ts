@@ -164,7 +164,7 @@ describe('ChangeImpactService', () => {
 
     expect(funnel.rows).toHaveBeenCalledTimes(1);
     expect(funnel.rows).toHaveBeenCalledWith(
-      'app_1',
+      expect.objectContaining({ id: 'app_1' }),
       addDays(changedOn, -28),
       'gb',
     );

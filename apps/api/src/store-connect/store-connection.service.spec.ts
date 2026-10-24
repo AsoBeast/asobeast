@@ -1,5 +1,6 @@
 import { randomBytes, generateKeyPairSync } from 'node:crypto';
 import {
+  BadGatewayException,
   BadRequestException,
   ConflictException,
   NotFoundException,
@@ -12,11 +13,25 @@ import type { AscAnalyticsApi } from './asc-analytics-api';
 import type { AscApiFactory } from './asc-api.factory';
 import { AscAgreementError, AscRejectedKeyError } from './asc-errors';
 import { AGREEMENT_MISSING } from './asc-http-errors';
-import { sealCredentials } from './store-credentials';
+import {
+  GcsBucketError,
+  GcsError,
+  GcsRejectedError,
+  GcsTokenRefusedError,
+  type GcsApi,
+} from './play/gcs-api';
+import type { GcsApiFactory } from './play/gcs-api.factory';
+import { type GoogleOAuthClient, SignInOffError } from './play/google-sign-in';
+import {
+  isGoogleAccountCredentials,
+  type PlayCredentials,
+  sealCredentials,
+} from './store-credentials';
 import {
   CREDENTIAL_UNREADABLE,
   StoreConnectionService,
 } from './store-connection.service';
+import { AppStoreKeys, PlayKeys } from './store-keys';
 import type { StoreReportQueue } from './store-report-queue';
 
 const PEM = generateKeyPairSync('ec', { namedCurve: 'prime256v1' })
@@ -30,22 +45,56 @@ const REQUEST = {
   privateKey: PEM,
 };
 
+const RSA_PEM = generateKeyPairSync('rsa', { modulusLength: 2048 })
+  .privateKey.export({ type: 'pkcs8', format: 'pem' })
+  .toString();
+
+const PLAY_REQUEST = {
+  store: 'GOOGLE_PLAY' as const,
+  serviceAccountJson: JSON.stringify({
+    type: 'service_account',
+    client_email: 'reports@focus-123.iam.gserviceaccount.com',
+    private_key_id: 'a1b2c3d4e5',
+    private_key: RSA_PEM,
+  }),
+  bucket: 'pubsite_prod_rev_01234567890987654321',
+};
+
+const GOOGLE_ACCOUNT = {
+  email: 'owner@example.com',
+  refreshToken: '1//refresh',
+  bucket: 'pubsite_prod_4855979533719537120',
+};
+
+const CLIENT: GoogleOAuthClient = {
+  id: 'client.apps.googleusercontent.com',
+  secret: 'test-oauth-client-secret',
+  redirectUri: 'https://aso.example.com/settings/google-play',
+};
+
 const CREATED_AT = new Date('2026-10-01T10:00:00.000Z');
 
-function harness(box: SecretBox | null = new SecretBox(randomBytes(32))) {
+const accountOf = (credentials: PlayCredentials) =>
+  isGoogleAccountCredentials(credentials)
+    ? { kind: 'googleAccount' as const, email: credentials.email }
+    : { kind: 'key' as const, email: credentials.clientEmail };
+
+function harness(
+  box: SecretBox | null = new SecretBox(randomBytes(32)),
+  client: GoogleOAuthClient | null = CLIENT,
+) {
   const rows: Record<string, unknown>[] = [];
-  const connectionRow = () => rows[0] ?? null;
   const tx = {
     storeConnection: {
-      deleteMany: jest.fn(() => {
-        rows.length = 0;
+      deleteMany: jest.fn(({ where }: { where: { store: string } }) => {
+        const kept = rows.filter((row) => row.store !== where.store);
+        rows.splice(0, rows.length, ...kept);
         return Promise.resolve({ count: 1 });
       }),
       create: jest.fn(({ data }: { data: Record<string, unknown> }) => {
         rows.push({
           id: 'conn_1',
           status: 'active',
-          reportAccess: 'unknown',
           createdAt: CREATED_AT,
           lastSyncedAt: null,
           lastError: null,
@@ -61,7 +110,9 @@ function harness(box: SecretBox | null = new SecretBox(randomBytes(32))) {
     ),
     storeConnection: {
       findMany: jest.fn(() => Promise.resolve([...rows])),
-      findFirst: jest.fn(() => Promise.resolve(connectionRow())),
+      findFirst: jest.fn(({ where }: { where: { store: string } }) =>
+        Promise.resolve(rows.find((row) => row.store === where.store) ?? null),
+      ),
       update: jest.fn(({ data }: { data: Record<string, unknown> }) => {
         Object.assign(rows[0], data);
         return Promise.resolve(rows[0]);
@@ -114,6 +165,17 @@ function harness(box: SecretBox | null = new SecretBox(randomBytes(32))) {
   };
   const api = { verify: jest.fn(() => Promise.resolve()) };
   const factory = { open: jest.fn(() => api as unknown as AscAnalyticsApi) };
+  const gcs = { verify: jest.fn(() => Promise.resolve()) };
+  const gcsFactory = {
+    open: jest.fn(
+      (credentials: PlayCredentials) =>
+        ({
+          ...gcs,
+          bucket: credentials.bucket,
+          account: accountOf(credentials),
+        }) as unknown as GcsApi,
+    ),
+  };
   const queue = {
     enqueue: jest.fn(() => Promise.resolve({ outcome: 'queued' as const })),
   };
@@ -122,10 +184,23 @@ function harness(box: SecretBox | null = new SecretBox(randomBytes(32))) {
     prisma as unknown as PrismaService,
     workspace as unknown as WorkspaceContext,
     box,
-    factory as unknown as AscApiFactory,
+    new AppStoreKeys(factory as unknown as AscApiFactory),
+    new PlayKeys(gcsFactory as unknown as GcsApiFactory),
     queue as unknown as StoreReportQueue,
+    client,
   );
-  return { service, prisma, tx, api, factory, queue, rows, box };
+  return {
+    service,
+    prisma,
+    tx,
+    api,
+    factory,
+    gcs,
+    gcsFactory,
+    queue,
+    rows,
+    box,
+  };
 }
 
 describe('StoreConnectionService', () => {
@@ -245,12 +320,196 @@ describe('StoreConnectionService', () => {
     expect(tx.storeConnection.create).toHaveBeenCalledTimes(2);
   });
 
-  it('refuses google play until it ships', async () => {
-    const { service } = harness();
+  it('refuses a body whose store differs from the path', async () => {
+    const { service, factory } = harness();
 
     await expect(
       service.connect('GOOGLE_PLAY', REQUEST, 'user_1'),
-    ).rejects.toBeInstanceOf(NotFoundException);
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(factory.open).not.toHaveBeenCalled();
+  });
+
+  it('verifies a play service account by listing the bucket', async () => {
+    const { service, gcs, gcsFactory, tx, queue } = harness();
+
+    const item = await service.connect('GOOGLE_PLAY', PLAY_REQUEST, 'user_1');
+
+    expect(gcsFactory.open).toHaveBeenCalledWith(
+      expect.objectContaining({ bucket: PLAY_REQUEST.bucket }),
+    );
+    expect(gcs.verify.mock.invocationCallOrder[0]).toBeLessThan(
+      tx.storeConnection.create.mock.invocationCallOrder[0],
+    );
+    expect(item).toMatchObject({
+      store: 'GOOGLE_PLAY',
+      status: 'active',
+      reportAccess: 'admin',
+      bucket: PLAY_REQUEST.bucket,
+    });
+    expect(queue.enqueue).toHaveBeenCalledWith('ws_1', 'GOOGLE_PLAY');
+  });
+
+  it('stores the email, key id and bucket in clear and the key sealed', async () => {
+    const { service, rows, box } = harness();
+
+    await service.connect('GOOGLE_PLAY', PLAY_REQUEST, 'user_1');
+
+    expect(rows[0]).toMatchObject({
+      issuerId: 'reports@focus-123.iam.gserviceaccount.com',
+      keyId: 'a1b2c3d4e5',
+      bucket: PLAY_REQUEST.bucket,
+    });
+    expect(rows[0].keyFingerprint).toMatch(/^[0-9a-f]{16}$/);
+    expect(rows[0].credentialCiphertext).not.toContain('PRIVATE');
+    expect(
+      JSON.parse(
+        box!.open(
+          rows[0].credentialCiphertext as string,
+          'store-connection:ws_1:GOOGLE_PLAY',
+        ),
+      ),
+    ).toEqual({
+      clientEmail: 'reports@focus-123.iam.gserviceaccount.com',
+      privateKeyId: 'a1b2c3d4e5',
+      privateKey: RSA_PEM,
+      bucket: PLAY_REQUEST.bucket,
+    });
+  });
+
+  it('maps a refused account and a missing bucket to 422', async () => {
+    const { service, gcs, tx } = harness();
+    gcs.verify
+      .mockRejectedValueOnce(new GcsRejectedError('no', 403))
+      .mockRejectedValueOnce(new GcsBucketError('no', 404));
+
+    const refused = service.connect('GOOGLE_PLAY', PLAY_REQUEST, 'user_1');
+    await expect(refused).rejects.toBeInstanceOf(UnprocessableEntityException);
+    await expect(refused).rejects.toThrow(
+      `Google refused reports@focus-123.iam.gserviceaccount.com access to ${PLAY_REQUEST.bucket}`,
+    );
+    const missing = service.connect('GOOGLE_PLAY', PLAY_REQUEST, 'user_1');
+    await expect(missing).rejects.toThrow(PLAY_REQUEST.bucket);
+    expect(tx.storeConnection.create).not.toHaveBeenCalled();
+  });
+
+  it('names a refused key apart from a refused bucket', async () => {
+    const { service, gcs } = harness();
+    gcs.verify.mockRejectedValueOnce(new GcsTokenRefusedError('no', 400));
+
+    await expect(
+      service.connect('GOOGLE_PLAY', PLAY_REQUEST, 'user_1'),
+    ).rejects.toThrow(
+      'Google refused the key of reports@focus-123.iam.gserviceaccount.com',
+    );
+  });
+
+  it('connects a google account after listing the bucket with it', async () => {
+    const { service, gcs, rows, box, queue } = harness();
+
+    const item = await service.connectGoogleAccount(
+      GOOGLE_ACCOUNT,
+      '1098765',
+      'user_1',
+    );
+
+    expect(gcs.verify).toHaveBeenCalledTimes(1);
+    expect(item).toMatchObject({
+      store: 'GOOGLE_PLAY',
+      credential: 'googleAccount',
+      issuerId: GOOGLE_ACCOUNT.email,
+      keyId: '1098765',
+      bucket: GOOGLE_ACCOUNT.bucket,
+    });
+    expect(rows[0].keyFingerprint).toMatch(/^[0-9a-f]{16}$/);
+    expect(rows[0].credentialCiphertext).not.toContain('1//refresh');
+    expect(
+      JSON.parse(
+        box!.open(
+          rows[0].credentialCiphertext as string,
+          'store-connection:ws_1:GOOGLE_PLAY',
+        ),
+      ),
+    ).toEqual(GOOGLE_ACCOUNT);
+    expect(queue.enqueue).toHaveBeenCalledWith('ws_1', 'GOOGLE_PLAY');
+  });
+
+  it('refuses a google account that cannot read the bucket and stores nothing', async () => {
+    const { service, gcs, tx } = harness();
+    gcs.verify.mockRejectedValueOnce(new GcsRejectedError('no', 403));
+
+    const refused = service.connectGoogleAccount(
+      GOOGLE_ACCOUNT,
+      '1098765',
+      'user_1',
+    );
+
+    await expect(refused).rejects.toBeInstanceOf(UnprocessableEntityException);
+    await expect(refused).rejects.toThrow(
+      `Your Google account owner@example.com cannot read ${GOOGLE_ACCOUNT.bucket}`,
+    );
+    expect(tx.storeConnection.create).not.toHaveBeenCalled();
+  });
+
+  it('marks a service account a key and says whether google sign in is on', async () => {
+    const { service } = harness();
+    await service.connect('GOOGLE_PLAY', PLAY_REQUEST, 'user_1');
+
+    const state = await service.state();
+
+    expect(state.googleSignIn).toBe(true);
+    expect(state.connections[0].credential).toBe('key');
+    await expect(
+      harness(undefined, null).service.state(),
+    ).resolves.toMatchObject({ available: true, googleSignIn: false });
+  });
+
+  it('answers 409 on verify and keeps a google account connection while sign in is off', async () => {
+    const { service, gcs, rows, prisma } = harness();
+    await service.connectGoogleAccount(GOOGLE_ACCOUNT, '1098765', 'user_1');
+    gcs.verify.mockRejectedValueOnce(new SignInOffError());
+
+    await expect(service.verify('GOOGLE_PLAY')).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+    expect(rows[0].status).toBe('active');
+    expect(prisma.storeConnection.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('answers 502 when google fails while checking a service account', async () => {
+    const { service, gcs } = harness();
+    gcs.verify.mockRejectedValueOnce(new GcsError('busy', 503));
+
+    await expect(
+      service.connect('GOOGLE_PLAY', PLAY_REQUEST, 'user_1'),
+    ).rejects.toBeInstanceOf(BadGatewayException);
+  });
+
+  it('refuses a service account that is not json before google is called', async () => {
+    const { service, gcsFactory } = harness();
+
+    await expect(
+      service.connect(
+        'GOOGLE_PLAY',
+        { ...PLAY_REQUEST, serviceAccountJson: 'nope' },
+        'user_1',
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(gcsFactory.open).not.toHaveBeenCalled();
+  });
+
+  it('marks a play connection rejected on verify when google refuses', async () => {
+    const { service, gcs } = harness();
+    await service.connect('GOOGLE_PLAY', PLAY_REQUEST, 'user_1');
+    gcs.verify.mockRejectedValueOnce(new GcsRejectedError('no', 401));
+
+    const rejected = await service.verify('GOOGLE_PLAY');
+
+    expect(rejected).toMatchObject({ status: 'rejected' });
+    expect(rejected.lastError).toContain('Google refused');
+    await expect(service.openPlay()).resolves.toMatchObject({
+      status: 'rejected',
+    });
+    await expect(service.openAppStore()).resolves.toBeNull();
   });
 
   it('reseals a credential sealed with the previous key when it opens it', async () => {
@@ -271,7 +530,7 @@ describe('StoreConnectionService', () => {
     });
     const before = rows[0].credentialCiphertext;
 
-    await expect(service.open('APP_STORE')).resolves.not.toBeNull();
+    await expect(service.openAppStore()).resolves.not.toBeNull();
 
     expect(prisma.storeConnection.update).toHaveBeenCalledTimes(1);
     expect(rows[0].credentialCiphertext).not.toBe(before);
@@ -310,7 +569,7 @@ describe('StoreConnectionService', () => {
     await expect(service.sync('APP_STORE')).rejects.toBeInstanceOf(
       NotFoundException,
     );
-    await expect(service.open('APP_STORE')).resolves.toBeNull();
+    await expect(service.openAppStore()).resolves.toBeNull();
   });
 
   it('refuses a sync while rejected', async () => {
@@ -359,7 +618,7 @@ describe('StoreConnectionService', () => {
     await expect(
       service.connect('APP_STORE', REQUEST, 'user_1'),
     ).rejects.toBeInstanceOf(ConflictException);
-    await expect(service.open('APP_STORE')).resolves.toBeNull();
+    await expect(service.openAppStore()).resolves.toBeNull();
   });
 
   it('answers 409 and marks the connection rejected when its credential no longer opens', async () => {
@@ -383,7 +642,7 @@ describe('StoreConnectionService', () => {
       where: { store: 'APP_STORE' },
       data: { status: 'rejected', lastError: CREDENTIAL_UNREADABLE },
     });
-    await expect(service.open('APP_STORE')).resolves.toBeNull();
+    await expect(service.openAppStore()).resolves.toBeNull();
   });
 
   it('disconnects even while store connections are off', async () => {

@@ -5,6 +5,10 @@ import { openSettledDialog } from "./dialog.mts";
 import { expect, test } from "./session.mts";
 import {
   ADMIN_KEY_NEEDED,
+  GOOGLE_SIGN_IN_COOKIE,
+  PLAY_BUCKET,
+  PLAY_CONNECTION_COOKIE,
+  PLAY_SIGN_IN_EXPIRED,
   STORE_CONNECT_OFF_COOKIE,
   STORE_CONNECTION_COOKIE,
 } from "./store-connections.mts";
@@ -111,6 +115,163 @@ test("the owner reads a key from the .p8 file", async ({ page }) => {
   await expect(page.getByText("App Store Connect connected")).toBeVisible();
 });
 
+const SERVICE_ACCOUNT = JSON.stringify({
+  type: "service_account",
+  client_email: "reports@focus-123.iam.gserviceaccount.com",
+  private_key_id: "a1b2c3d4e5f6",
+  private_key: PRIVATE_KEY,
+});
+
+const playCard = (page: Page) =>
+  section(page)
+    .locator('[data-slot="card"]')
+    .filter({ hasText: "Google Play Console" });
+
+test("the owner connects the google play console with its json key file", async ({
+  page,
+}) => {
+  await page.goto("/settings#store-connections");
+  await expect(playCard(page)).toContainText("Not connected.");
+
+  const dialog = await openSettledDialog(
+    page,
+    "Connect Google Play",
+    playCard(page),
+  );
+  const key = dialog.getByLabel("Service account key", { exact: true });
+  await expect(key).toHaveAttribute("type", "password");
+  await expect(key).toHaveAttribute("data-1p-ignore", "true");
+  await expect(key).toHaveAttribute("data-lpignore", "true");
+  const submit = dialog.getByRole("button", { name: "Connect Google Play" });
+
+  await dialog.getByLabel("Bucket id").fill("my-reports");
+  await submit.click();
+  await expect(dialog).toContainText("starts with pubsite_prod");
+
+  await dialog.getByLabel("Bucket id").fill("pubsite_prod_rev_42");
+  await submit.click();
+  await expect(dialog).toContainText("Choose the JSON key file");
+
+  await dialog.getByLabel("Service account key file").setInputFiles({
+    name: "focus-123-reports.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(SERVICE_ACCOUNT),
+  });
+  await submit.click();
+  await expect(dialog).toContainText(
+    "Google Cloud Storage has no bucket pubsite_prod_rev_42",
+  );
+
+  await dialog
+    .getByLabel("Bucket id")
+    .fill(`gs://${PLAY_BUCKET}/stats/store_performance/`);
+  await submit.click();
+
+  await expect(page.getByText("Google Play Console connected")).toBeVisible();
+  await expect(dialog).toBeHidden();
+  const card = playCard(page);
+  await expect(card).toContainText("reports@focus-123.iam.gserviceaccount.com");
+  await expect(card).toContainText("a1b2c3d4e5f6");
+  await expect(card).toContainText(PLAY_BUCKET);
+  await expect(
+    card
+      .getByRole("list", { name: "Apps this connection reports" })
+      .getByRole("listitem")
+      .filter({ hasText: "Tomato Clock" }),
+  ).toContainText("Reporting");
+  await expect(section(page)).not.toContainText("BEGIN PRIVATE KEY");
+  await expect(
+    section(page).getByRole("button", { name: "Connect App Store Connect" }),
+  ).toBeVisible();
+});
+
+test("the owner signs in with google and lands back on store connections", async ({
+  page,
+}) => {
+  await seed(page.context(), GOOGLE_SIGN_IN_COOKIE, "1");
+  await page.goto("/settings#store-connections");
+
+  const dialog = await openSettledDialog(
+    page,
+    "Connect Google Play",
+    playCard(page),
+  );
+  const methods = dialog.getByRole("tablist", { name: "How to connect" });
+  await expect(
+    methods.getByRole("tab", { name: "Sign in with Google" }),
+  ).toHaveAttribute("aria-selected", "true");
+  await expect(dialog.getByLabel("Service account key")).toHaveCount(0);
+  const submit = dialog.getByRole("button", { name: "Sign in with Google" });
+
+  await submit.click();
+  await expect(dialog).toContainText("starts with pubsite_prod");
+
+  await methods.getByRole("tab", { name: "Service account key" }).click();
+  await expect(
+    dialog.getByLabel("Service account key", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    dialog.getByRole("button", { name: "Connect Google Play" }),
+  ).toBeVisible();
+  await methods.getByRole("tab", { name: "Sign in with Google" }).click();
+
+  await dialog
+    .getByLabel("Bucket id")
+    .fill("gs://pubsite_prod_4855979533719537120/stats/store_performance/");
+  await submit.click();
+
+  await page.waitForURL(/\/settings(#store-connections)?$/);
+  await expect(page.getByText("Google Play Console connected")).toBeVisible();
+  const card = playCard(page);
+  await expect(card).toContainText("Google account");
+  await expect(card).toContainText("owner@example.com");
+  await expect(card).toContainText("pubsite_prod_4855979533719537120");
+  await expect(card).not.toContainText("Fingerprint");
+  await expect(card.getByRole("button", { name: "Reconnect" })).toBeVisible();
+});
+
+test("the google return page explains a cancelled, incomplete or refused sign in", async ({
+  page,
+}) => {
+  const heading = page.getByRole("heading", { level: 1 });
+  const back = page.getByRole("link", { name: "Back to store connections" });
+
+  await page.goto("/settings/google-play?error=access_denied");
+  await expect(heading).toHaveText("Google sign in was cancelled");
+  await expect(back).toHaveAttribute("href", "/settings#store-connections");
+
+  await page.goto("/settings/google-play");
+  await expect(heading).toHaveText("This sign in is incomplete");
+
+  await page.goto("/settings/google-play?code=4%2Fold&state=stale");
+  await expect(heading).toHaveText("Google Play was not connected");
+  await expect(page.getByText(PLAY_SIGN_IN_EXPIRED)).toBeVisible();
+  await expect(
+    page.getByRole("navigation", { name: "breadcrumb" }),
+  ).toContainText("Settings");
+  await back.click();
+  await expect(playCard(page)).toContainText("Not connected.");
+  await expect(section(page)).toBeInViewport();
+});
+
+test("disconnecting google play leaves app store connect alone", async ({
+  page,
+}) => {
+  await seed(page.context(), STORE_CONNECTION_COOKIE, "active");
+  await seed(page.context(), PLAY_CONNECTION_COOKIE, "active");
+  await page.goto("/settings#store-connections");
+
+  await playCard(page).getByRole("button", { name: "Disconnect" }).click();
+  const confirm = page.getByRole("alertdialog");
+  await expect(confirm).toContainText("Disconnect Google Play Console?");
+  await confirm.getByRole("button", { name: "Disconnect" }).click();
+
+  await expect(
+    playCard(page).getByRole("button", { name: "Connect Google Play" }),
+  ).toBeVisible();
+  await expect(section(page)).toContainText("2X9R4HXF34");
+});
+
 test("a member sees the state without a single control", async ({ page }) => {
   await seedViewer(page.context(), "member");
   await seed(page.context(), STORE_CONNECTION_COOKIE, "active");
@@ -118,9 +279,9 @@ test("a member sees the state without a single control", async ({ page }) => {
   await page.goto("/settings#store-connections");
 
   await expect(section(page)).toContainText("2X9R4HXF34");
-  await expect(section(page)).toContainText(
-    "Only the workspace owner can connect a store.",
-  );
+  await expect(
+    section(page).getByText("Only the workspace owner can connect a store."),
+  ).toHaveCount(1);
   await expect(section(page).getByRole("button")).toHaveCount(0);
 });
 

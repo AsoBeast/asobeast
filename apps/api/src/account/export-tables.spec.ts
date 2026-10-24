@@ -115,6 +115,7 @@ describe('exportTables', () => {
         'storeReportInstance',
         'storeFunnelDay',
         'storeFunnelPageDay',
+        'storeFunnelSearchTerm',
       ]),
     );
   });

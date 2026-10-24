@@ -63,6 +63,7 @@ model Workspace {
   storeReportInstances StoreReportInstance[]
   storeFunnelDays StoreFunnelDay[]
   storeFunnelPageDays StoreFunnelPageDay[]
+  storeFunnelSearchTerms StoreFunnelSearchTerm[]
   rankings    KeywordRanking[]
   plan                String    @default("free")
   trialStartedAt      DateTime?
@@ -230,6 +231,7 @@ model App {
   storeReportRequests StoreReportRequest[]
   storeFunnelDays StoreFunnelDay[]
   storeFunnelPageDays StoreFunnelPageDay[]
+  storeFunnelSearchTerms StoreFunnelSearchTerm[]
   createdAt    DateTime         @default(now())
 
   @@unique([id, workspaceId])
@@ -834,6 +836,8 @@ model StoreConnection {
   verifiedAt           DateTime?
   lastSyncedAt         DateTime?
   lastError            String?
+  bucket               String?
+  credential           String               @default("key")
   requests             StoreReportRequest[]
 
   @@unique([workspaceId, store])
@@ -924,6 +928,23 @@ model StoreFunnelPageDay {
 
   @@unique([appId, date, territory, pageTitle])
   @@index([appId, country, date])
+}
+
+model StoreFunnelSearchTerm {
+  id           String    @id @default(cuid())
+  workspaceId  String
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  appId        String
+  app          App       @relation(fields: [appId], references: [id], onDelete: Cascade)
+  month        DateTime  @db.Date
+  term         String
+  normalized   String
+  visitors     Int       @default(0)
+  acquisitions Int       @default(0)
+  generation   String
+
+  @@unique([appId, month, term])
+  @@index([appId, normalized])
 }
 
 model SupportAccess {

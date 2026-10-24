@@ -51,6 +51,18 @@ const LONGEST_WINDOW = Math.max(...STORE_FUNNEL_WINDOWS);
 export const FUNNEL_LOOKBACK_DAYS =
   2 * LONGEST_WINDOW + STORE_FUNNEL_COMPLETE_AFTER_DAYS;
 
+export const PLAY_ALL_MARKETS = 'all';
+
+export interface FunnelScope {
+  country?: string;
+  territory?: string;
+}
+
+export function funnelScope(store: Store, country?: string): FunnelScope {
+  if (country) return { country };
+  return store === 'GOOGLE_PLAY' ? { territory: PLAY_ALL_MARKETS } : {};
+}
+
 export const shiftDate = (date: string, days: number): string =>
   toDateKey(addDays(new Date(`${date}T00:00:00.000Z`), days));
 

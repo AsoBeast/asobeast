@@ -124,6 +124,16 @@ describe('measureChangeFunnel', () => {
     });
   });
 
+  it('gives google play the week it takes to post a day', () => {
+    expect(
+      measureChangeFunnel({
+        ...base,
+        completeThrough: day(22),
+        store: 'GOOGLE_PLAY',
+      }),
+    ).toMatchObject({ status: 'pending', finalOn: day(33) });
+  });
+
   it('is unmeasured without rows', () => {
     expect(
       measureChangeFunnel({ ...base, rows: [], firstDate: null })?.status,

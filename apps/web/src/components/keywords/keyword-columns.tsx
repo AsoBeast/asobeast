@@ -5,12 +5,14 @@ import { ListOrdered } from "lucide-react";
 import type {
   KeywordBucket,
   KeywordSource,
+  Store,
   TrackedKeywordItem,
 } from "@asobeast/shared";
 import type { KeywordTableFeatures } from "./keyword-table-features";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { InfoTip } from "@/components/ui/info-tip";
 import {
   Tooltip,
   TooltipContent,
@@ -23,6 +25,7 @@ import { KeywordRowActions } from "./KeywordRowActions";
 import {
   DerivedScoreCell,
   NoteButton,
+  PlayAcquisitionsCell,
   PositionCell,
   ScoreCell,
   TagBadges,
@@ -67,10 +70,12 @@ function gradeFilter(
 
 export function keywordColumns({
   appId,
+  store,
   today,
   onOpenSerp,
 }: {
   appId: string;
+  store: Store;
   today: string;
   onOpenSerp: (keywordId: string) => void;
 }) {
@@ -78,6 +83,7 @@ export function keywordColumns({
     ...identityColumns(),
     positionColumn(today),
     ...scoreColumns(),
+    ...(store === "GOOGLE_PLAY" ? [acquisitionsColumn()] : []),
     deltaColumn(),
     volatilityColumn(),
     actionsColumn({ appId, onOpenSerp }),
@@ -276,6 +282,31 @@ function scoreColumns() {
       ),
     }),
   ];
+}
+
+function acquisitionsColumn() {
+  return columnHelper.accessor(
+    (row) => nullsLast(row.playAcquisitions?.acquisitions ?? null),
+    {
+      id: "acquisitions",
+      meta: { label: "Play installs" },
+      ...SORTABLE,
+      sortDescFirst: true,
+      header: ({ column }) => (
+        <span className="inline-flex items-center gap-1">
+          <SortableHeader column={column} label="Play installs" />
+          <InfoTip
+            label="About Play installs"
+            title="Play installs"
+            summary="The acquisitions and store listing visitors this keyword brought as a Google Play search term, from the newest complete month Play Console reported. A dash means Google reported no visitors for it."
+          />
+        </span>
+      ),
+      cell: ({ row }) => (
+        <PlayAcquisitionsCell value={row.original.playAcquisitions ?? null} />
+      ),
+    },
+  );
 }
 
 function volatilityColumn() {

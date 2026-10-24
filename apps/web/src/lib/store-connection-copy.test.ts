@@ -4,6 +4,7 @@ import {
   appStateLabel,
   connectionStatusLine,
   historyLine,
+  STORE_CONSOLES,
   needsAdminKey,
 } from "./store-connection-copy";
 
@@ -107,6 +108,16 @@ describe("needsAdminKey", () => {
   it("is quiet for a key without apps", () => {
     expect(needsAdminKey({ ...ITEM, apps: [] })).toBe(false);
   });
+
+  it("never asks a play service account for an admin key", () => {
+    expect(
+      needsAdminKey({
+        ...ITEM,
+        store: "GOOGLE_PLAY",
+        apps: [{ ...APP, state: "forbidden" }],
+      }),
+    ).toBe(false);
+  });
 });
 
 describe("appStateLabel", () => {
@@ -129,6 +140,55 @@ describe("historyLine", () => {
   it("says when nothing is stored yet", () => {
     expect(historyLine({ ...APP, firstDate: null, lastDate: null })).toBe(
       "No data yet",
+    );
+  });
+});
+
+describe("google play copy", () => {
+  const PLAY: StoreConnectionItem = {
+    ...ITEM,
+    store: "GOOGLE_PLAY",
+    issuerId: "reports@focus-123.iam.gserviceaccount.com",
+    keyId: "a1b2c3d4e5f6",
+    bucket: "pubsite_prod_rev_01234567890987654321",
+  };
+
+  it("names the service account, key id and bucket", () => {
+    expect(STORE_CONSOLES.GOOGLE_PLAY.facts(PLAY).slice(0, 3)).toEqual([
+      ["Service account", "reports@focus-123.iam.gserviceaccount.com"],
+      ["Key ID", "a1b2c3d4e5f6"],
+      ["Bucket", "pubsite_prod_rev_01234567890987654321"],
+    ]);
+  });
+
+  it("names the google account and bucket of a sign in, with no key facts", () => {
+    const facts = STORE_CONSOLES.GOOGLE_PLAY.facts({
+      ...PLAY,
+      credential: "googleAccount",
+      issuerId: "owner@example.com",
+      keyId: "1098765",
+    });
+
+    expect(facts.map(([term]) => term)).toEqual([
+      "Google account",
+      "Bucket",
+      "Connected",
+    ]);
+    expect(facts[0][1]).toBe("owner@example.com");
+  });
+
+  it("says google refused the connection and what to do", () => {
+    expect(connectionStatusLine({ ...PLAY, status: "rejected" }).text).toBe(
+      "Google refused this connection. Check its access in Play Console, verify it again, or reconnect.",
+    );
+  });
+
+  it("waits for the first file and labels an app without files", () => {
+    expect(
+      connectionStatusLine({ ...PLAY, lastSyncedAt: null }).text,
+    ).toContain("first store performance file");
+    expect(appStateLabel("unmatched", "GOOGLE_PLAY")).toBe(
+      "No files in this bucket",
     );
   });
 });

@@ -70,14 +70,17 @@ export function KeywordsTable({
     () =>
       keywordColumns({
         appId: id,
+        store,
         today,
         onOpenSerp: (keywordId) => void setSerp(keywordId),
       }),
-    [id, setSerp, today],
+    [id, store, setSerp, today],
   );
 
   const { sorting, onSortingChange } = useUrlSorting(
-    { sort, dir },
+    sort === null || columns.some((column) => column.id === sort)
+      ? { sort, dir }
+      : { sort: null, dir: null },
     columns,
     (next) =>
       void setSortParams({

@@ -2289,6 +2289,7 @@ export const APP_GP_KEYWORDS: TrackedKeywordItem[] = [
       confidence: "HIGH",
       capturedAt: utcTimestampDaysAgo(0),
     },
+    playAcquisitions: { month: "2026-09-01", visitors: 1020, acquisitions: 65 },
   },
   {
     keywordId: "kw-gp-2",
@@ -2315,6 +2316,11 @@ export const APP_GP_KEYWORDS: TrackedKeywordItem[] = [
       confidence: "MEDIUM",
       capturedAt: utcTimestampDaysAgo(1),
     },
+    playAcquisitions: {
+      month: "2026-09-01",
+      visitors: 2400,
+      acquisitions: 180,
+    },
   },
   {
     keywordId: "kw-gp-3",
@@ -2336,6 +2342,7 @@ export const APP_GP_KEYWORDS: TrackedKeywordItem[] = [
     bucket: "aspirational",
     scoredAt: utcTimestampDaysAgo(0),
     scoreProvenance: null,
+    playAcquisitions: null,
   },
 ];
 

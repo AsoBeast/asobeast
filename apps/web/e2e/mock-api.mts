@@ -13,6 +13,14 @@ import {
   STORE_CONNECT_OFF_COOKIE,
   STORE_CONNECTION_ACTIVE,
   STORE_CONNECTION_COOKIE,
+  PLAY_BUCKET,
+  PLAY_CONNECTION_ACTIVE,
+  GOOGLE_SIGN_IN_COOKIE,
+  PLAY_CONNECTION_COOKIE,
+  PLAY_CONNECTION_GOOGLE,
+  PLAY_SIGN_IN_EXPIRED,
+  PLAY_SIGN_IN_STATE,
+  playConnectionCookie,
   storeConnectionCookie,
   storeConnectionOf,
   storeConnectionState,
@@ -2576,8 +2584,87 @@ const routes: Route[] = [
         storeConnectionState(
           cookieValue(req, STORE_CONNECTION_COOKIE),
           hasCookie(req, STORE_CONNECT_OFF_COOKIE, "1"),
+          cookieValue(req, PLAY_CONNECTION_COOKIE),
+          hasCookie(req, GOOGLE_SIGN_IN_COOKIE, "1"),
         ),
       ),
+  },
+  {
+    method: "PUT",
+    pattern: /^\/store-connections\/GOOGLE_PLAY$/,
+    handler: (_p, req, res) =>
+      withBody<{ bucket?: string; serviceAccountJson?: string }>(
+        req,
+        res,
+        (body) => {
+          const path = req.url ?? "/store-connections/GOOGLE_PLAY";
+          if (!body.serviceAccountJson?.includes("private_key")) {
+            return json(
+              res,
+              400,
+              errorEnvelope(
+                400,
+                path,
+                "The service account key has no private_key. Choose the JSON key file Google Cloud downloaded.",
+              ),
+            );
+          }
+          if (body.bucket !== PLAY_BUCKET) {
+            return json(
+              res,
+              422,
+              errorEnvelope(
+                422,
+                path,
+                `Google Cloud Storage has no bucket ${body.bucket ?? ""}. Copy the Cloud Storage URI from Download reports in Play Console: the bucket id is the part after gs:// that starts with pubsite_prod.`,
+              ),
+            );
+          }
+          json(res, 200, PLAY_CONNECTION_ACTIVE, {
+            "set-cookie": playConnectionCookie("active"),
+          });
+        },
+      ),
+  },
+  {
+    method: "POST",
+    pattern: /^\/store-connections\/GOOGLE_PLAY\/sign-in$/,
+    handler: (_p, _req, res) =>
+      json(res, 200, {
+        url: `/settings/google-play?${new URLSearchParams({
+          code: "4/e2e-code",
+          state: PLAY_SIGN_IN_STATE,
+        }).toString()}`,
+      }),
+  },
+  {
+    method: "POST",
+    pattern: /^\/store-connections\/GOOGLE_PLAY\/sign-in\/complete$/,
+    handler: (_p, req, res) =>
+      withBody<{ code?: string; state?: string }>(req, res, (body) => {
+        if (body.state !== PLAY_SIGN_IN_STATE) {
+          return json(
+            res,
+            400,
+            errorEnvelope(
+              400,
+              "/store-connections/GOOGLE_PLAY/sign-in/complete",
+              PLAY_SIGN_IN_EXPIRED,
+            ),
+          );
+        }
+        json(res, 200, PLAY_CONNECTION_GOOGLE, {
+          "set-cookie": playConnectionCookie("google"),
+        });
+      }),
+  },
+  {
+    method: "DELETE",
+    pattern: /^\/store-connections\/GOOGLE_PLAY$/,
+    handler: (_p, _req, res) => {
+      res.writeHead(204, { "set-cookie": playConnectionCookie(null) });
+      res.end();
+    },
   },
   {
     method: "PUT",

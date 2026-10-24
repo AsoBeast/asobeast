@@ -2,6 +2,7 @@ import { Readable } from 'node:stream';
 import { StringDecoder } from 'node:string_decoder';
 import { createGunzip } from 'node:zlib';
 import type { StoreFunnelPageType, StoreFunnelSource } from '@asobeast/shared';
+import { countOf, dateOf } from './report-cells';
 
 export const DISCOVERY_REQUIRED_COLUMNS = [
   'Date',
@@ -28,6 +29,7 @@ export interface FunnelKey {
   territory: string;
   sourceType: StoreFunnelSource;
   pageType: StoreFunnelPageType;
+  country?: string | null;
 }
 
 export interface FunnelCounters {
@@ -86,25 +88,6 @@ export const sourceTypeOf = (raw: string): StoreFunnelSource =>
 
 export const pageTypeOf = (raw: string): StoreFunnelPageType =>
   PAGE_TYPES[normalized(raw)] ?? 'other';
-
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-const MONTH_FIRST_DATE = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
-
-function dateOf(raw: string): string | null {
-  const value = raw.trim();
-  if (ISO_DATE.test(value)) return value;
-  const monthFirst = MONTH_FIRST_DATE.exec(value);
-  if (!monthFirst) return null;
-  const [, month, day, year] = monthFirst;
-  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-}
-
-function countOf(raw: string): number | null {
-  const value = raw.trim();
-  if (value.length === 0) return 0;
-  const count = Number(value);
-  return Number.isFinite(count) ? count : null;
-}
 
 const emptyCounters = (): FunnelCounters => ({
   impressions: 0,

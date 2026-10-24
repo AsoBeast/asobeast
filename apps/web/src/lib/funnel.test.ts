@@ -7,7 +7,9 @@ import { describe, expect, it } from "vitest";
 import {
   formatConversion,
   formatCount,
+  FUNNEL_COPY,
   funnelState,
+  funnelTiles,
   searchShare,
   trendValue,
   windowOf,
@@ -110,5 +112,79 @@ describe("funnel helpers", () => {
       }),
     ).toBe("waiting");
     expect(funnelState(REPORT)).toBe("ready");
+  });
+});
+
+describe("refused connection copy", () => {
+  it("names the key of an app store connection", () => {
+    expect(FUNNEL_COPY.APP_STORE.refusedTitle).toBe(
+      "App Store Connect refused the connected key.",
+    );
+  });
+
+  it("never assumes a google play connection holds a key", () => {
+    const copy = FUNNEL_COPY.GOOGLE_PLAY;
+    const lines = [
+      copy.refusedTitle,
+      copy.refusedBody,
+      copy.refusedAskOwner,
+      copy.notReporting,
+    ];
+
+    expect(copy.refusedTitle).toBe(
+      "Google Play Console refused the connection.",
+    );
+    for (const line of lines) {
+      expect(line).not.toMatch(/\bkey\b|service account/i);
+    }
+  });
+});
+
+describe("google play funnel", () => {
+  const visitors = (total: number, search: number): StoreFunnelPoint => ({
+    date: "2026-10-01",
+    complete: true,
+    total: {
+      impressions: null,
+      uniqueImpressions: null,
+      pageViews: total,
+      gets: 5,
+      conversion: 0.05,
+    },
+    search: {
+      impressions: null,
+      uniqueImpressions: null,
+      pageViews: search,
+      gets: 3,
+      conversion: 0.06,
+    },
+  });
+  const PLAY: StoreFunnelReport = {
+    ...REPORT,
+    store: "GOOGLE_PLAY",
+    source: "playConsole",
+    points: [visitors(200, 150)],
+  };
+
+  it("shows visitors, acquisitions and conversion, and no impressions", () => {
+    expect(funnelTiles(PLAY).map((tile) => tile.label)).toEqual([
+      "Store listing visitors",
+      "Acquisitions",
+      "Conversion",
+    ]);
+    expect(funnelTiles(REPORT)).toHaveLength(4);
+  });
+
+  it("reads the search share of visitors for all markets only", () => {
+    expect(searchShare(PLAY, windowOf(PLAY, 28))).toBe(75);
+    expect(
+      searchShare({ ...PLAY, country: "de" }, windowOf(PLAY, 28)),
+    ).toBeNull();
+  });
+
+  it("names google's lag and the counting change", () => {
+    expect(FUNNEL_COPY.GOOGLE_PLAY.freshness).toBe(
+      "Google posts a day three to seven days later; counting changed on July 10, 2026.",
+    );
   });
 });

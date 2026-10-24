@@ -26,6 +26,7 @@ const SCOPED_TABLES = [
   'storeReportInstance',
   'storeFunnelDay',
   'storeFunnelPageDay',
+  'storeFunnelSearchTerm',
   'webhook',
   'emailAlert',
   'user',

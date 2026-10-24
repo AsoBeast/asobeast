@@ -1,15 +1,9 @@
-import {
-  createHash,
-  createPrivateKey,
-  createPublicKey,
-  sign,
-  type KeyObject,
-} from 'node:crypto';
+import { createPrivateKey, sign, type KeyObject } from 'node:crypto';
+import { publicKeyFingerprint } from './key-fingerprint';
 
 export const ASC_AUDIENCE = 'appstoreconnect-v1';
 export const ASC_TOKEN_TTL_SECONDS = 10 * 60;
 export const ASC_TOKEN_REUSE_MARGIN_SECONDS = 2 * 60;
-const FINGERPRINT_CHARS = 16;
 
 export interface AscCredentials {
   issuerId: string;
@@ -96,14 +90,7 @@ export function signAscToken(
 }
 
 export function keyFingerprintOf(privateKey: string): string {
-  const publicKey = createPublicKey(parsePrivateKey(privateKey)).export({
-    type: 'spki',
-    format: 'der',
-  });
-  return createHash('sha256')
-    .update(publicKey)
-    .digest('hex')
-    .slice(0, FINGERPRINT_CHARS);
+  return publicKeyFingerprint(parsePrivateKey(privateKey));
 }
 
 export class AscTokenCache {

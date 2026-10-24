@@ -658,6 +658,115 @@ describe('KeywordsService.listTracked serp volatility', () => {
   });
 });
 
+describe('KeywordsService.listTracked play acquisitions', () => {
+  const buildService = (prisma: unknown) =>
+    new KeywordsService(
+      prisma as PrismaService,
+      new KeywordTracker(
+        prisma as PrismaService,
+        { add: jest.fn() } as unknown as Queue,
+        { add: jest.fn() } as unknown as Queue,
+        new WorkspaceContext(),
+      ),
+      quotaOff(prisma as PrismaService),
+      { request: jest.fn() } as unknown as MarketListingRequests,
+      { schedule: jest.fn() } as unknown as FirstPositionChecks,
+    );
+
+  const trackedRow = (keywordId: string, text: string) => ({
+    keywordId,
+    source: 'MANUAL',
+    active: true,
+    relevance: null,
+    keyword: { text, country: 'us', rankings: [], metrics: [] },
+  });
+
+  const buildPrisma = (store: Store) => ({
+    keywordField: { findMany: jest.fn().mockResolvedValue([]) },
+    app: {
+      findFirst: jest.fn().mockResolvedValue({
+        id: 'app1',
+        store,
+        country: 'us',
+        storeAppId: 'com.example.habits',
+      }),
+    },
+    appSnapshot: { findFirst: jest.fn().mockResolvedValue(null) },
+    trackedKeyword: {
+      findMany: jest
+        .fn()
+        .mockResolvedValue([
+          trackedRow('kwHabit', 'habit tracker'),
+          trackedRow('kwSleep', 'sleep timer'),
+        ]),
+    },
+    serpEntry: {
+      findFirst: jest.fn().mockResolvedValue(null),
+      findMany: jest.fn().mockResolvedValue([]),
+    },
+    storeReportRequest: {
+      findFirst: jest.fn().mockResolvedValue({ id: 'req_play' }),
+    },
+    storeFunnelSearchTerm: {
+      findMany: jest.fn().mockResolvedValue([
+        {
+          month: new Date('2026-08-01T00:00:00.000Z'),
+          normalized: 'habit tracker',
+          visitors: 900,
+          acquisitions: 50,
+        },
+        {
+          month: new Date('2026-09-01T00:00:00.000Z'),
+          normalized: 'habit tracker',
+          visitors: 520,
+          acquisitions: 31,
+        },
+      ]),
+    },
+  });
+
+  it("joins the newest month's acquisitions by normalized text", async () => {
+    const prisma = buildPrisma(Store.GOOGLE_PLAY);
+
+    const items = await buildService(prisma).listTracked('app1');
+    const byId = new Map(items.map((item) => [item.keywordId, item]));
+
+    expect(byId.get('kwHabit')?.playAcquisitions).toEqual({
+      month: '2026-09-01',
+      visitors: 520,
+      acquisitions: 31,
+    });
+    expect(byId.get('kwSleep')?.playAcquisitions).toBeNull();
+    expect(prisma.storeFunnelSearchTerm.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          appId: 'app1',
+          normalized: { in: ['habit tracker', 'sleep timer'] },
+        },
+      }),
+    );
+  });
+
+  it('answers no acquisitions while play is not connected', async () => {
+    const prisma = buildPrisma(Store.GOOGLE_PLAY);
+    prisma.storeReportRequest.findFirst.mockResolvedValue(null);
+
+    const items = await buildService(prisma).listTracked('app1');
+
+    expect(items.every((item) => item.playAcquisitions === null)).toBe(true);
+    expect(prisma.storeFunnelSearchTerm.findMany).not.toHaveBeenCalled();
+  });
+
+  it('leaves app store keywords without the field', async () => {
+    const prisma = buildPrisma(Store.APP_STORE);
+
+    const items = await buildService(prisma).listTracked('app1');
+
+    expect(items.every((item) => !('playAcquisitions' in item))).toBe(true);
+    expect(prisma.storeFunnelSearchTerm.findMany).not.toHaveBeenCalled();
+  });
+});
+
 describe('KeywordsService country tracking', () => {
   const buildService = (
     prisma: unknown,

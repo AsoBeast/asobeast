@@ -9,9 +9,16 @@ import {
   Put,
   UseGuards,
 } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBody,
+  ApiExtraModels,
+  ApiOperation,
+  ApiTags,
+  getSchemaPath,
+} from '@nestjs/swagger';
 import type {
   StoreConnectionItem,
+  StoreConnectionRequest,
   StoreConnectionState,
   StoreConnectionSyncResult,
 } from '@asobeast/shared';
@@ -19,11 +26,14 @@ import type { AccountUser } from '../auth/auth.types';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { SessionOnly } from '../auth/decorators/session-only.decorator';
 import { OwnerGuard } from '../auth/guards/owner.guard';
-import { StoreConnectionDto } from './dto/store-connection.dto';
+import { AppStoreConnectionDto } from './dto/app-store-connection.dto';
+import { PlayConnectionDto } from './dto/play-connection.dto';
+import { StoreConnectionBodyPipe } from './dto/store-connection-body.pipe';
 import { StoreParamDto } from './dto/store-param.dto';
 import { StoreConnectionService } from './store-connection.service';
 
 @ApiTags('store-connect')
+@ApiExtraModels(AppStoreConnectionDto, PlayConnectionDto)
 @Controller('store-connections')
 export class StoreConnectionsController {
   constructor(private readonly connections: StoreConnectionService) {}
@@ -44,11 +54,20 @@ export class StoreConnectionsController {
   @ApiOperation({
     summary: 'Connect a store console key',
     description:
-      'Verifies the key with the store, seals it at rest bound to this workspace and replaces any key connected before, then queues a report sync. Owner only, through a signed in session. Answers 422 when the store refuses the key and 409 when the instance has store connections off.',
+      'Verifies the key with the store, seals it at rest bound to this workspace and replaces any key connected before, then queues a report sync. App Store Connect takes an issuer ID, a key ID and a .p8 private key; Google Play takes a service account JSON key and the bucket id of its Play Console reports. The store in the body must match the path. Owner only, through a signed in session. Answers 422 when the store refuses the key and 409 when the instance has store connections off.',
+  })
+  @ApiBody({
+    schema: {
+      oneOf: [
+        { $ref: getSchemaPath(AppStoreConnectionDto) },
+        { $ref: getSchemaPath(PlayConnectionDto) },
+      ],
+      discriminator: { propertyName: 'store' },
+    },
   })
   connect(
     @Param() { store }: StoreParamDto,
-    @Body() dto: StoreConnectionDto,
+    @Body(StoreConnectionBodyPipe) dto: StoreConnectionRequest,
     @CurrentUser() user: AccountUser,
   ): Promise<StoreConnectionItem> {
     return this.connections.connect(store, dto, user.id);

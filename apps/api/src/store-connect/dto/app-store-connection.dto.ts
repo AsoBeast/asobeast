@@ -7,7 +7,7 @@ const ISSUER_ID =
 const KEY_ID = /^[A-Za-z0-9]{10}$/;
 export const PRIVATE_KEY_MAX_LENGTH = 4_096;
 
-export class StoreConnectionDto implements AppStoreConnectionRequest {
+export class AppStoreConnectionDto implements AppStoreConnectionRequest {
   @ApiProperty({ enum: ['APP_STORE'] })
   @Equals('APP_STORE')
   store!: 'APP_STORE';

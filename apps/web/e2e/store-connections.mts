@@ -4,7 +4,12 @@ import type {
 } from "@asobeast/shared";
 
 export const STORE_CONNECTION_COOKIE = "e2e_store_connection";
+export const PLAY_CONNECTION_COOKIE = "e2e_play_connection";
 export const STORE_CONNECT_OFF_COOKIE = "e2e_store_connect_off";
+export const GOOGLE_SIGN_IN_COOKIE = "e2e_google_sign_in";
+export const PLAY_SIGN_IN_STATE = "e2e-sealed-state";
+export const PLAY_SIGN_IN_EXPIRED =
+  "This Google sign in expired or was started by another account. Sign in with Google again.";
 
 export const ADMIN_KEY_NEEDED =
   "This key can download reports but not request them. Connect an Admin key once; a Sales and Reports key can take over afterwards.";
@@ -54,6 +59,45 @@ export const STORE_CONNECTION_READ_ONLY: StoreConnectionItem = {
   ),
 };
 
+export const PLAY_BUCKET = "pubsite_prod_rev_01234567890987654321";
+
+export const PLAY_CONNECTION_ACTIVE: StoreConnectionItem = {
+  store: "GOOGLE_PLAY",
+  status: "active",
+  reportAccess: "admin",
+  issuerId: "reports@focus-123.iam.gserviceaccount.com",
+  keyId: "a1b2c3d4e5f6",
+  keyFingerprint: "7c1e09ab53fd2468",
+  createdAt: "2026-10-02T10:00:00.000Z",
+  verifiedAt: "2026-10-02T10:00:00.000Z",
+  lastSyncedAt: "2026-10-15T05:40:00.000Z",
+  lastError: null,
+  bucket: PLAY_BUCKET,
+  apps: [
+    {
+      appId: "app-gp",
+      name: "Tomato Clock",
+      state: "requested",
+      firstDate: "2026-09-01",
+      lastDate: "2026-10-09",
+    },
+  ],
+};
+
+export const PLAY_CONNECTION_GOOGLE: StoreConnectionItem = {
+  ...PLAY_CONNECTION_ACTIVE,
+  credential: "googleAccount",
+  issuerId: "owner@example.com",
+  keyId: "1098765",
+  keyFingerprint: "0d5e7a91c2f34b68",
+  bucket: "pubsite_prod_4855979533719537120",
+};
+
+const PLAY_CONNECTIONS: Record<string, StoreConnectionItem> = {
+  active: PLAY_CONNECTION_ACTIVE,
+  google: PLAY_CONNECTION_GOOGLE,
+};
+
 const CONNECTIONS: Record<string, StoreConnectionItem> = {
   active: STORE_CONNECTION_ACTIVE,
   rejected: STORE_CONNECTION_REJECTED,
@@ -69,11 +113,26 @@ export function storeConnectionOf(
 export function storeConnectionState(
   value: string | undefined,
   off: boolean,
+  play: string | undefined,
+  googleSignIn: boolean,
 ): StoreConnectionState {
   if (off) return { available: false, connections: [] };
   const connection = storeConnectionOf(value);
-  return { available: true, connections: connection ? [connection] : [] };
+  const playConnection = play ? PLAY_CONNECTIONS[play] : undefined;
+  return {
+    available: true,
+    googleSignIn,
+    connections: [
+      ...(connection ? [connection] : []),
+      ...(playConnection ? [playConnection] : []),
+    ],
+  };
 }
+
+export const playConnectionCookie = (value: string | null): string =>
+  value === null
+    ? `${PLAY_CONNECTION_COOKIE}=; Path=/; Max-Age=0`
+    : `${PLAY_CONNECTION_COOKIE}=${value}; Path=/`;
 
 export const storeConnectionCookie = (value: string | null): string =>
   value === null

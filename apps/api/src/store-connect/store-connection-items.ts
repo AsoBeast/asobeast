@@ -1,6 +1,7 @@
 import type {
   Store,
   StoreConnectionApp,
+  StoreCredentialKind,
   StoreConnectionItem,
   StoreConnectionStatus,
   StoreReportAccess,
@@ -19,6 +20,8 @@ export interface ConnectionRow {
   verifiedAt: Date | null;
   lastSyncedAt: Date | null;
   lastError: string | null;
+  bucket: string | null;
+  credential: string;
 }
 
 export interface ConnectedAppRow {
@@ -78,5 +81,7 @@ export function connectionItems(
     lastSyncedAt: isoOf(row.lastSyncedAt),
     lastError: row.lastError,
     apps: appsOf(row.store, apps, byApp),
+    credential: row.credential as StoreCredentialKind,
+    ...(row.store === 'GOOGLE_PLAY' ? { bucket: row.bucket } : {}),
   }));
 }
