@@ -1,9 +1,12 @@
 import {
+  isPostEdited,
   REVIEW_REPLY_STATES,
   replyStateOf,
   type ReviewReplyCounts,
   type ReviewReplyState,
+  type Store,
 } from "@asobeast/shared";
+import { storeLabel } from "@/lib/format";
 
 const STATE_LABELS: Record<ReviewReplyState, string> = {
   needs_reply: "Needs reply",
@@ -34,10 +37,29 @@ export function replyStateVariant(
 
 export function replyBadgeLabel(
   review: Parameters<typeof replyStateOf>[0],
+  store: Store,
 ): string {
   const state = replyStateOf(review);
   if (state !== "replied") return replyStateLabel(state);
-  return review.repliedAt ? "Replied on Google Play" : "Marked replied";
+  const { reply } = review;
+  if (reply?.post) {
+    if (isPostEdited(reply)) return "Edited since posting";
+    return reply.post.state === "pending" ? "Pending publication" : "Posted";
+  }
+  return review.repliedAt
+    ? `Replied on ${storeLabel(store)}`
+    : "Marked replied";
+}
+
+export function replyBadgeVariant(
+  review: Parameters<typeof replyStateOf>[0],
+): ReturnType<typeof replyStateVariant> | "info" {
+  const { reply } = review;
+  if (reply?.post && replyStateOf(review) === "replied") {
+    if (isPostEdited(reply)) return "warning";
+    if (reply.post.state === "pending") return "info";
+  }
+  return replyStateVariant(replyStateOf(review));
 }
 
 export const REPLY_STATE_OPTIONS = REVIEW_REPLY_STATES.map((state) => ({

@@ -4,6 +4,7 @@ import type { ReviewReplyPatchRequest } from '@asobeast/shared';
 import type { WorkspaceContext } from '../common/tenancy/workspace-context';
 import type { PrismaService } from '../prisma/prisma.service';
 import { ReviewRepliesService } from './review-replies.service';
+import { WITH_POSTER } from './review-reply.mapper';
 
 const NOW = new Date('2026-10-15T12:00:00.000Z');
 
@@ -94,6 +95,7 @@ describe('ReviewRepliesService.patch', () => {
         repliedAt: null,
       },
       update: { text: 'Thanks!', repliedAt: undefined },
+      include: WITH_POSTER,
     });
   });
 

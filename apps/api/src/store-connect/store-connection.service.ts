@@ -6,24 +6,28 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import type {
-  Store,
-  StoreConnectionItem,
-  StoreConnectionRequest,
-  StoreConnectionState,
-  StoreConnectionStatus,
-  StoreConnectionSyncResult,
-  StoreReportAccess,
+import {
+  PLAY_REPLIES_NEED_CONSENT,
+  type Store,
+  type StoreConnectionItem,
+  type StoreConnectionRequest,
+  type StoreConnectionState,
+  type StoreConnectionStatus,
+  type StoreConnectionSyncResult,
+  type StoreReplyAccess,
+  type StoreReportAccess,
 } from '@asobeast/shared';
 import { type SecretBox, SecretBoxError } from '../common/crypto/secret-box';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AscAnalyticsApi } from './asc-analytics-api';
+import type { AscReviewsApi } from './asc-reviews-api';
 import type { GcsApi } from './play/gcs-api';
 import {
   GOOGLE_OAUTH_CLIENT,
   type GoogleOAuthClient,
 } from './play/google-sign-in';
+import type { PlayPublisherApi } from './play/play-publisher-api';
 import { SECRET_BOX } from './secret-box.provider';
 import { connectionItems } from './store-connection-items';
 import {
@@ -32,6 +36,8 @@ import {
   isPlayCredentials,
   needsReseal,
   openCredentials,
+  replyAccessOf,
+  repliesRefused,
   sealCredentials,
   type StoreCredentials,
 } from './store-credentials';
@@ -52,7 +58,7 @@ export const CREDENTIAL_UNREADABLE =
 const NOT_CONNECTED = 'This workspace has not connected that store';
 
 class CredentialUnreadableError extends Error {}
-const REJECTED =
+export const CONNECTION_REJECTED =
   'The store refused the connected key. Verify it or connect a new one first.';
 const OPERATION = 'a store connection';
 
@@ -60,6 +66,7 @@ export interface OpenedConnection<A = AscAnalyticsApi> {
   id: string;
   status: StoreConnectionStatus;
   reportAccess: StoreReportAccess;
+  replyAccess: StoreReplyAccess;
   lastError: string | null;
   api: A;
 }
@@ -72,6 +79,7 @@ interface Unsealed {
   id: string;
   status: StoreConnectionStatus;
   reportAccess: StoreReportAccess;
+  replyAccess: StoreReplyAccess;
   lastError: string | null;
   credentials: StoreCredentials;
 }
@@ -145,7 +153,12 @@ export class StoreConnectionService {
     }
     await this.prisma.storeConnection.update({
       where: { id: connection.id },
-      data: { status: 'active', verifiedAt: new Date(), lastError: null },
+      data: {
+        status: 'active',
+        verifiedAt: new Date(),
+        lastError: null,
+        replyAccess: replyAccessOf(connection.credentials),
+      },
     });
     await this.queue.enqueue(this.workspace.require(OPERATION), store);
     return this.item(store);
@@ -158,7 +171,8 @@ export class StoreConnectionService {
       select: { status: true },
     });
     if (!row) throw new NotFoundException(NOT_CONNECTED);
-    if (row.status === 'rejected') throw new ConflictException(REJECTED);
+    if (row.status === 'rejected')
+      throw new ConflictException(CONNECTION_REJECTED);
     return this.queue.enqueue(this.workspace.require(OPERATION), store);
   }
 
@@ -166,22 +180,49 @@ export class StoreConnectionService {
     await this.prisma.storeConnection.deleteMany({ where: { store } });
   }
 
-  async openAppStore(): Promise<OpenedConnection | null> {
-    const connection = await this.unsealedOrNull('APP_STORE');
-    if (!connection || !isAscCredentials(connection.credentials)) return null;
-    return this.opened(connection, this.appStore.api(connection.credentials));
+  openAppStore(): Promise<OpenedConnection | null> {
+    return this.openWith('APP_STORE', isAscCredentials, (credentials) =>
+      this.appStore.api(credentials),
+    );
   }
 
-  async openPlay(): Promise<OpenedConnection<GcsApi> | null> {
+  openAppStoreReviews(): Promise<OpenedConnection<AscReviewsApi> | null> {
+    return this.openWith('APP_STORE', isAscCredentials, (credentials) =>
+      this.appStore.reviews(credentials),
+    );
+  }
+
+  openPlay(): Promise<OpenedConnection<GcsApi> | null> {
+    return this.openWith('GOOGLE_PLAY', isPlayCredentials, (credentials) =>
+      this.play.api(credentials),
+    );
+  }
+
+  async openPlayPublisher(): Promise<OpenedConnection<PlayPublisherApi> | null> {
     const connection = await this.unsealedOrNull('GOOGLE_PLAY');
-    if (!connection || !isPlayCredentials(connection.credentials)) return null;
-    return this.opened(connection, this.play.api(connection.credentials));
+    if (connection && repliesRefused(connection.credentials)) {
+      await this.markReplyAccess('GOOGLE_PLAY', 'forbidden');
+      throw new ConflictException(PLAY_REPLIES_NEED_CONSENT);
+    }
+    return this.opened(connection, isPlayCredentials, (credentials) =>
+      this.play.publisher(credentials),
+    );
   }
 
   async markRejected(store: Store, reason: string): Promise<void> {
     await this.prisma.storeConnection.updateMany({
       where: { store },
       data: { status: 'rejected', lastError: reason },
+    });
+  }
+
+  async markReplyAccess(
+    store: Store,
+    replyAccess: StoreReplyAccess,
+  ): Promise<void> {
+    await this.prisma.storeConnection.updateMany({
+      where: { store },
+      data: { replyAccess },
     });
   }
 
@@ -215,6 +256,7 @@ export class StoreConnectionService {
           bucket: key.bucket,
           credential: key.credential,
           reportAccess: key.reportAccess,
+          replyAccess: replyAccessOf(key.credentials),
           credentialCiphertext: sealCredentials(
             box,
             workspaceId,
@@ -230,13 +272,27 @@ export class StoreConnectionService {
     return this.item(store);
   }
 
-  private opened<A>(connection: Unsealed, api: A): OpenedConnection<A> {
+  private async openWith<C extends StoreCredentials, A>(
+    store: Store,
+    accepts: (credentials: StoreCredentials) => credentials is C,
+    build: (credentials: C) => A,
+  ): Promise<OpenedConnection<A> | null> {
+    return this.opened(await this.unsealedOrNull(store), accepts, build);
+  }
+
+  private opened<C extends StoreCredentials, A>(
+    connection: Unsealed | null,
+    accepts: (credentials: StoreCredentials) => credentials is C,
+    build: (credentials: C) => A,
+  ): OpenedConnection<A> | null {
+    if (!connection || !accepts(connection.credentials)) return null;
     return {
       id: connection.id,
       status: connection.status,
       reportAccess: connection.reportAccess,
+      replyAccess: connection.replyAccess,
       lastError: connection.lastError,
-      api,
+      api: build(connection.credentials),
     };
   }
 
@@ -309,6 +365,7 @@ export class StoreConnectionService {
       id: row.id,
       status: row.status as StoreConnectionStatus,
       reportAccess: row.reportAccess as StoreReportAccess,
+      replyAccess: row.replyAccess as StoreReplyAccess,
       lastError: row.lastError,
       credentials,
     };

@@ -3,6 +3,8 @@ import { createPrivateKey, sign, type KeyObject } from 'node:crypto';
 export const GOOGLE_TOKEN_AUDIENCE = 'https://oauth2.googleapis.com/token';
 export const GCS_READ_ONLY_SCOPE =
   'https://www.googleapis.com/auth/devstorage.read_only';
+export const ANDROID_PUBLISHER_SCOPE =
+  'https://www.googleapis.com/auth/androidpublisher';
 export const GOOGLE_ASSERTION_TTL_SECONDS = 3600;
 export const GOOGLE_TOKEN_REUSE_MARGIN_SECONDS = 60;
 const JWT_GRANT = 'urn:ietf:params:oauth:grant-type:jwt-bearer';
@@ -87,13 +89,14 @@ const encode = (value: unknown): string =>
 export function signAssertion(
   account: ServiceAccount,
   now: Date = new Date(),
+  scope: string = GCS_READ_ONLY_SCOPE,
 ): string {
   const issuedAt = Math.floor(now.getTime() / 1000);
   const input = [
     encode({ alg: 'RS256', typ: 'JWT', kid: account.privateKeyId }),
     encode({
       iss: account.clientEmail,
-      scope: GCS_READ_ONLY_SCOPE,
+      scope,
       aud: GOOGLE_TOKEN_AUDIENCE,
       iat: issuedAt,
       exp: issuedAt + GOOGLE_ASSERTION_TTL_SECONDS,
@@ -110,8 +113,11 @@ export function signAssertion(
 export type GoogleGrant = (now: Date) => Record<string, string>;
 
 export const serviceAccountGrant =
-  (account: ServiceAccount): GoogleGrant =>
-  (now) => ({ grant_type: JWT_GRANT, assertion: signAssertion(account, now) });
+  (account: ServiceAccount, scope: string = GCS_READ_ONLY_SCOPE): GoogleGrant =>
+  (now) => ({
+    grant_type: JWT_GRANT,
+    assertion: signAssertion(account, now, scope),
+  });
 
 export class GoogleTokenCache {
   private token: { value: string; expiresAt: number } | null = null;

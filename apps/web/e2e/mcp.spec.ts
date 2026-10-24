@@ -80,7 +80,7 @@ test("mcp card mints a token and shows both connect snippets", async ({
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await routeConnectCard(page);
 
-  await page.goto("/settings");
+  await page.goto("/integrations");
   await expect(page.getByText("MCP server", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Connect an agent" }).click();
@@ -169,7 +169,7 @@ test("the connect dialog mints a read-only token unless changes are allowed", as
   page,
 }) => {
   const posted = await routeConnectCard(page);
-  await page.goto("/settings");
+  await page.goto("/integrations");
 
   await page.getByRole("button", { name: "Connect an agent" }).click();
   const dialog = page.getByRole("dialog");
@@ -188,7 +188,7 @@ test("the connect dialog mints a write token when changes are allowed", async ({
   page,
 }) => {
   const posted = await routeConnectCard(page);
-  await page.goto("/settings");
+  await page.goto("/integrations");
 
   await page.getByRole("button", { name: "Connect an agent" }).click();
   const dialog = page.getByRole("dialog");
@@ -212,7 +212,7 @@ test("the connect dialog mints a write token when changes are allowed", async ({
 
 test("the connect dialog says what allowing changes adds", async ({ page }) => {
   await routeConnectCard(page);
-  await page.goto("/settings");
+  await page.goto("/integrations");
 
   await page.getByRole("button", { name: "Connect an agent" }).click();
   const checkbox = page

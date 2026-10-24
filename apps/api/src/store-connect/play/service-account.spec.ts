@@ -1,5 +1,6 @@
 import { createPublicKey, generateKeyPairSync, verify } from 'node:crypto';
 import {
+  ANDROID_PUBLISHER_SCOPE,
   GCS_READ_ONLY_SCOPE,
   GOOGLE_TOKEN_AUDIENCE,
   GoogleTokenCache,
@@ -112,6 +113,39 @@ describe('signAssertion', () => {
         Buffer.from(signature, 'base64url'),
       ),
     ).toBe(true);
+  });
+});
+
+describe('signAssertion scope', () => {
+  it('signs the scope it is given and keeps the read only scope by default', () => {
+    const account = parseServiceAccount(JSON.stringify(KEY));
+    const scopeOf = (assertion: string) =>
+      decode(assertion.split('.')[1]).scope;
+
+    expect(scopeOf(signAssertion(account, NOW, ANDROID_PUBLISHER_SCOPE))).toBe(
+      'https://www.googleapis.com/auth/androidpublisher',
+    );
+    expect(scopeOf(signAssertion(account, NOW))).toBe(GCS_READ_ONLY_SCOPE);
+  });
+
+  it('signs the scope its grant was built for', async () => {
+    const forms: Record<string, string>[] = [];
+    const cache = new GoogleTokenCache(
+      serviceAccountGrant(
+        parseServiceAccount(JSON.stringify(KEY)),
+        ANDROID_PUBLISHER_SCOPE,
+      ),
+      (form) => {
+        forms.push(form);
+        return Promise.resolve({ access_token: 'ya29', expires_in: 3600 });
+      },
+    );
+
+    await cache.get(NOW);
+
+    expect(decode(forms[0].assertion.split('.')[1]).scope).toBe(
+      ANDROID_PUBLISHER_SCOPE,
+    );
   });
 });
 

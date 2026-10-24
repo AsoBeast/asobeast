@@ -1,4 +1,8 @@
-import type { StoreConnectionApp, StoreConnectionItem } from "@asobeast/shared";
+import {
+  PLAY_REPLIES_NEED_CONSENT,
+  type StoreConnectionApp,
+  type StoreConnectionItem,
+} from "@asobeast/shared";
 import { describe, expect, it } from "vitest";
 import {
   appStateLabel,
@@ -6,6 +10,7 @@ import {
   historyLine,
   STORE_CONSOLES,
   needsAdminKey,
+  replyAccessLine,
 } from "./store-connection-copy";
 
 const APP: StoreConnectionApp = {
@@ -189,6 +194,34 @@ describe("google play copy", () => {
     ).toContain("first store performance file");
     expect(appStateLabel("unmatched", "GOOGLE_PLAY")).toBe(
       "No files in this bucket",
+    );
+  });
+
+  it("says whether the connection may post review replies", () => {
+    expect(replyAccessLine(ITEM)).toEqual({
+      tone: "muted",
+      text: "Not tried yet",
+    });
+    expect(replyAccessLine({ ...ITEM, replyAccess: "unknown" }).text).toBe(
+      "Not tried yet",
+    );
+    expect(replyAccessLine({ ...PLAY, replyAccess: "allowed" })).toEqual({
+      tone: "muted",
+      text: "Allowed",
+    });
+  });
+
+  it("names the role or the consent a forbidden connection lacks", () => {
+    const forbidden = (item: StoreConnectionItem) =>
+      replyAccessLine({ ...item, replyAccess: "forbidden" });
+
+    expect(forbidden(ITEM)).toMatchObject({ tone: "warning" });
+    expect(forbidden(ITEM).text).toContain("Admin or Customer Support");
+    expect(forbidden({ ...PLAY, credential: "key" }).text).toContain(
+      "Reply to reviews",
+    );
+    expect(forbidden({ ...PLAY, credential: "googleAccount" }).text).toContain(
+      PLAY_REPLIES_NEED_CONSENT,
     );
   });
 });

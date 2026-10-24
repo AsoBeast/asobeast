@@ -1,6 +1,6 @@
 import { Suspense } from "react";
-import { PlaySignInReturn } from "@/components/settings/PlaySignInReturn";
-import { PlaySignInReturnSkeleton } from "@/components/settings/skeletons";
+import { PlaySignInReturn } from "@/components/integrations/PlaySignInReturn";
+import { PlaySignInReturnSkeleton } from "@/components/integrations/skeletons";
 
 export default function PlaySignInPage() {
   return (

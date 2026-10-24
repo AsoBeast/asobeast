@@ -1,0 +1,33 @@
+{
+  "data": [
+    {
+      "type": "customerReviews",
+      "id": "00000028-b08c-0014-729e-fbd500000004",
+      "attributes": {
+        "rating": 2,
+        "title": "Sync broken",
+        "body": "My data vanished after the update.",
+        "reviewerNickname": "lost",
+        "createdDate": "2026-09-02T07:30:00-07:00",
+        "territory": "USA"
+      }
+    },
+    {
+      "type": "customerReviews",
+      "id": "00000028-b08c-0014-729e-fbd500000005",
+      "attributes": {
+        "rating": 4,
+        "title": "Nearly there",
+        "body": "Add a widget please.",
+        "reviewerNickname": "widgeteer",
+        "createdDate": "2026-08-30T12:00:00-07:00",
+        "territory": "USA"
+      }
+    }
+  ],
+  "links": {
+    "self": "https://api.appstoreconnect.apple.com/v1/apps/123/customerReviews?cursor=Mw.AK1",
+    "next": "https://api.appstoreconnect.apple.com/v1/apps/123/customerReviews?filter%5Bterritory%5D=USA&sort=-createdDate&cursor=NQ.AK2&limit=200"
+  },
+  "meta": { "paging": { "total": 6, "limit": 200 } }
+}

@@ -115,6 +115,7 @@ model User {
   actionEvents      ActionEvent[]
   aiCalls           AiCall[]
   storeConnections  StoreConnection[]
+  postedReviewReplies ReviewReply[] @relation("ReviewReplyPosts")
   createdAt         DateTime   @default(now())
   updatedAt         DateTime   @updatedAt
 
@@ -567,22 +568,30 @@ model Review {
 }
 
 model ReviewReply {
-  reviewId    String    @id
-  review      Review    @relation(fields: [reviewId, appId], references: [id, appId], onDelete: Cascade)
-  appId       String
-  workspaceId String
-  app         App       @relation(fields: [appId, workspaceId], references: [id, workspaceId], onDelete: Cascade)
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  text        String
-  tone        String?
-  model       String?
-  generatedAt DateTime?
-  repliedAt   DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  reviewId        String    @id
+  review          Review    @relation(fields: [reviewId, appId], references: [id, appId], onDelete: Cascade)
+  appId           String
+  workspaceId     String
+  app             App       @relation(fields: [appId, workspaceId], references: [id, workspaceId], onDelete: Cascade)
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  text            String
+  tone            String?
+  model           String?
+  generatedAt     DateTime?
+  repliedAt       DateTime?
+  postedAt        DateTime?
+  postedText      String?
+  postState       String?
+  storeReviewId   String?
+  storeResponseId String?
+  postedByUserId  String?
+  postedBy        User?     @relation("ReviewReplyPosts", fields: [postedByUserId], references: [id], onDelete: SetNull)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   @@unique([reviewId, appId])
   @@index([appId, repliedAt])
+  @@index([appId, postedAt])
   @@index([workspaceId])
 }
 
@@ -830,6 +839,7 @@ model StoreConnection {
   credentialCiphertext String
   status               String               @default("active")
   reportAccess         String               @default("unknown")
+  replyAccess          String               @default("unknown")
   createdByUserId      String?
   createdBy            User?                @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
   createdAt            DateTime             @default(now())

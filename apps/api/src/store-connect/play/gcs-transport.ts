@@ -10,6 +10,7 @@ export interface GcsRequest {
   url: string;
   bearer?: string;
   form?: Record<string, string>;
+  json?: unknown;
   binary?: boolean;
   maxBytes?: number;
 }
@@ -38,6 +39,23 @@ const parseBody = (text: string): unknown => {
   }
 };
 
+function payloadOf(
+  form: Record<string, string> | undefined,
+  json: unknown,
+): { headers: Record<string, string>; body?: string } {
+  if (form) {
+    return {
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams(form).toString(),
+    };
+  }
+  if (json === undefined) return { headers: {} };
+  return {
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(json),
+  };
+}
+
 export function createGcsTransport({
   timeoutMs,
   downloadTimeoutMs,
@@ -45,18 +63,17 @@ export function createGcsTransport({
   timeoutMs: number;
   downloadTimeoutMs: number;
 }): GcsTransport {
-  return async ({ method, url, bearer, form, binary, maxBytes }) => {
+  return async ({ method, url, bearer, form, json, binary, maxBytes }) => {
+    const payload = payloadOf(form, json);
     try {
       const response = await fetch(url, {
         method,
         headers: {
           ...(bearer ? { authorization: `Bearer ${bearer}` } : {}),
           ...(binary ? { 'accept-encoding': 'identity' } : {}),
-          ...(form
-            ? { 'content-type': 'application/x-www-form-urlencoded' }
-            : {}),
+          ...payload.headers,
         },
-        body: form ? new URLSearchParams(form).toString() : undefined,
+        body: payload.body,
         signal: AbortSignal.timeout(binary ? downloadTimeoutMs : timeoutMs),
         redirect: 'error',
       });

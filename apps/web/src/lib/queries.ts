@@ -110,7 +110,7 @@ import {
   type ReviewFilters,
   type ReviewThemeFilters,
 } from "./api";
-import { withReviewReply } from "./review-reply-cache";
+import { withReviewReply, withReviewRow } from "./review-reply-cache";
 import { runProgressInterval } from "./run-progress";
 import { keywordsPollInterval } from "./keyword-checks";
 import {
@@ -1099,6 +1099,23 @@ export function upsertReviewReply(
   }
 }
 
+export function replaceReview(
+  client: QueryClient,
+  id: string,
+  review: ReviewItem,
+  previous: ReviewItem,
+): void {
+  for (const [queryKey, list] of client.getQueriesData<ReviewList>({
+    queryKey: appKeys.reviewsRoot(id),
+  })) {
+    if (!list) continue;
+    client.setQueryData(
+      queryKey,
+      withReviewRow(list, filtersOf(queryKey), review, previous),
+    );
+  }
+}
+
 export function seedReviewTranslation(
   client: QueryClient,
   id: string,
@@ -1126,6 +1143,14 @@ export function invalidateReviewReplyMutation(
     refetchType: "none",
   });
   void client.invalidateQueries({ queryKey: appKeys.reviewThemesRoot(id) });
+}
+
+export function invalidateReviewReplyPost(
+  client: QueryClient,
+  id: string,
+): void {
+  invalidateReviewReplyMutation(client, id);
+  void client.invalidateQueries({ queryKey: storeConnectionKeys.all });
 }
 
 export function invalidateCompetitorMutation(

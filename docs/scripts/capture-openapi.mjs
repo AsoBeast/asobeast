@@ -17,7 +17,7 @@ function explain(status) {
     return "the OpenAPI surface is owner gated by default, set ASOBEAST_API_TOKEN or start the API with API_DOCS=public";
   }
   if (status === 401 || status === 403) {
-    return "ASOBEAST_API_TOKEN was rejected, mint a fresh owner token in Settings";
+    return "ASOBEAST_API_TOKEN was rejected, mint a fresh owner token in Integrations";
   }
   return "the API answered unexpectedly";
 }

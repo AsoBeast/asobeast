@@ -1,8 +1,5 @@
 import { Suspense } from "react";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
-import { ApiTokensCard } from "@/components/settings/ApiTokensCard";
-import { McpServerCard } from "@/components/settings/McpServerCard";
-import { StoreConnectionsCard } from "@/components/settings/StoreConnectionsCard";
 import { PlanSection } from "@/components/settings/PlanSection";
 import { TeamCard } from "@/components/settings/TeamCard";
 import { SettingsSection } from "@/components/settings/SettingsSection";
@@ -15,7 +12,6 @@ import {
   BudgetCardSkeleton,
   DeliveryCardSkeleton,
   EmailAlertsCardSkeleton,
-  StoreConnectionsSkeleton,
   WebhooksCardSkeleton,
 } from "@/components/settings/skeletons";
 import { pageReturnedFromCheckout } from "@/lib/checkout-return";
@@ -26,10 +22,8 @@ import {
   alertsConfigOptions,
   budgetOptions,
   emailAlertsOptions,
-  storeConnectionsOptions,
   webhooksOptions,
 } from "@/lib/queries";
-import { STORE_CONNECTIONS_SECTION_ID } from "@/lib/store-connection-copy";
 import { viewerIsOperator } from "@/lib/viewer";
 
 export default async function SettingsPage({
@@ -49,7 +43,6 @@ export default async function SettingsPage({
     queryClient.prefetchQuery(alertsConfigOptions),
     queryClient.prefetchQuery(alertDeliveryOptions),
     queryClient.prefetchQuery(budgetOptions),
-    queryClient.prefetchQuery(storeConnectionsOptions),
   ]);
 
   return (
@@ -58,7 +51,7 @@ export default async function SettingsPage({
         <div className="flex flex-col gap-1">
           <h1 className="text-display tracking-tight text-balance">Settings</h1>
           <p className="text-body text-muted-foreground">
-            Your plan, alerts, team and integrations.
+            Your plan, alerts, team and workspace.
           </p>
         </div>
 
@@ -102,25 +95,6 @@ export default async function SettingsPage({
           description="Who can sign in to this workspace, and how to invite someone else."
         >
           <TeamCard />
-        </SettingsSection>
-
-        <SettingsSection
-          id="integrations"
-          title="Integrations"
-          description="Personal tokens and the MCP server for your editor or agent."
-        >
-          <ApiTokensCard />
-          <McpServerCard />
-        </SettingsSection>
-
-        <SettingsSection
-          id={STORE_CONNECTIONS_SECTION_ID}
-          title="Store connections"
-          description="Connect App Store Connect or the Google Play Console so store listing visits, downloads and conversion appear beside your rankings."
-        >
-          <Suspense fallback={<StoreConnectionsSkeleton />}>
-            <StoreConnectionsCard />
-          </Suspense>
         </SettingsSection>
 
         <SettingsSection

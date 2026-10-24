@@ -8,6 +8,7 @@ import { ImplausibleResultError } from '../store-providers/errors';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { ReviewResult } from '../store-providers/types';
 import { EMPTY_ANSWER_RETRIES } from '../store-providers/result-plausibility';
+import { WITH_POSTER } from './review-reply.mapper';
 import { ReviewsService } from './reviews.service';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -649,6 +650,7 @@ describe('ReviewsService.list', () => {
       generatedAt: null,
       updatedAt: updatedAt.toISOString(),
       repliedAt: null,
+      post: null,
     });
     expect(tx.review.findMany.mock.calls[0][0]).toMatchObject({
       where: {
@@ -657,7 +659,7 @@ describe('ReviewsService.list', () => {
           { repliedAt: null, reply: { is: { repliedAt: null } } },
         ],
       },
-      include: { reply: true },
+      include: { reply: { include: WITH_POSTER } },
     });
   });
 });

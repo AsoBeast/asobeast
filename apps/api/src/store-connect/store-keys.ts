@@ -14,6 +14,7 @@ import { RequestThrottledError } from '../auth/rate-limit/rate-limit.errors';
 import type { AscAnalyticsApi } from './asc-analytics-api';
 import { AscApiFactory } from './asc-api.factory';
 import { AscRejectedKeyError } from './asc-errors';
+import type { AscReviewsApi } from './asc-reviews-api';
 import {
   RATE_LIMIT_RETRY_SECONDS,
   refusalOf,
@@ -29,6 +30,7 @@ import { type GcsApi, GcsError, GcsRateLimitedError } from './play/gcs-api';
 import { GcsApiFactory } from './play/gcs-api.factory';
 import { GcsUnreachableError } from './play/gcs-transport';
 import { SignInOffError } from './play/google-sign-in';
+import type { PlayPublisherApi } from './play/play-publisher-api';
 import { playRefusal } from './play/play-refusal';
 import {
   parseServiceAccount,
@@ -92,6 +94,10 @@ export class AppStoreKeys implements StoreKeys<
     return this.factory.open(credentials);
   }
 
+  reviews(credentials: AscCredentials): AscReviewsApi {
+    return this.factory.reviews(credentials);
+  }
+
   async refusal(credentials: AscCredentials): Promise<string | null> {
     try {
       await this.api(credentials).verify();
@@ -148,6 +154,10 @@ export class PlayKeys implements StoreKeys<
 
   api(credentials: PlayCredentials): GcsApi {
     return this.factory.open(credentials);
+  }
+
+  publisher(credentials: PlayCredentials): PlayPublisherApi {
+    return this.factory.publisher(credentials);
   }
 
   async refusal(credentials: PlayCredentials): Promise<string | null> {

@@ -38,7 +38,7 @@ function fulfillJson(status: number, body: unknown) {
   };
 }
 
-async function routeAuthenticatedSettings(page: Page) {
+async function routeAuthenticatedIntegrations(page: Page) {
   await page.route("**/api/backend/auth/status", (route) =>
     route.fulfill(fulfillJson(200, STATUS)),
   );
@@ -72,8 +72,8 @@ for (const viewport of SHORT_VIEWPORTS) {
     page,
   }) => {
     await page.setViewportSize(viewport);
-    await routeAuthenticatedSettings(page);
-    await page.goto("/settings");
+    await routeAuthenticatedIntegrations(page);
+    await page.goto("/integrations");
 
     await page.getByRole("button", { name: "Connect an agent" }).click();
     await page.getByLabel("Token name").fill("Claude Desktop");
@@ -101,8 +101,8 @@ for (const viewport of SHORT_VIEWPORTS) {
     page,
   }) => {
     await page.setViewportSize(viewport);
-    await routeAuthenticatedSettings(page);
-    await page.goto("/settings");
+    await routeAuthenticatedIntegrations(page);
+    await page.goto("/integrations");
 
     await page.getByRole("button", { name: "New token" }).click();
 

@@ -5,13 +5,10 @@ import { test as signedIn } from "./session.mts";
 const LANDING_ORANGE: Rgb = [248, 152, 32];
 const LANDING_HOVER: Rgb = [232, 128, 16];
 const THEMES = ["light", "dark"] as const;
-const SETTINGS_TRIGGERS = [
-  "Flush now",
-  "Add webhook",
-  "Add email alert",
-  "New token",
-  "Connect an agent",
-];
+const DIALOG_TRIGGERS = [
+  ["/settings", ["Flush now", "Add webhook", "Add email alert"]],
+  ["/integrations", ["New token", "Connect an agent"]],
+] as const;
 
 function channelGap(actual: Rgb, expected: Rgb): number {
   return Math.max(
@@ -68,22 +65,24 @@ for (const theme of THEMES) {
   });
 }
 
-signedIn(
-  "settings outlines its dialog triggers and fills nothing else",
-  async ({ page }) => {
-    await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto("/settings");
-    for (const name of SETTINGS_TRIGGERS) {
-      await expect(
-        page.getByRole("button", { name, exact: true }),
-      ).toHaveAttribute("data-variant", "outline");
-    }
+for (const [path, triggers] of DIALOG_TRIGGERS) {
+  signedIn(
+    `${path} outlines its dialog triggers and fills nothing else`,
+    async ({ page }) => {
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await page.goto(path);
+      for (const name of triggers) {
+        await expect(
+          page.getByRole("button", { name, exact: true }),
+        ).toHaveAttribute("data-variant", "outline");
+      }
 
-    await expect(
-      page.locator('button[data-variant="default"]:visible'),
-    ).toHaveCount(0);
-  },
-);
+      await expect(
+        page.locator('button[data-variant="default"]:visible'),
+      ).toHaveCount(0);
+    },
+  );
+}
 
 signedIn("action rows mark done without a filled button", async ({ page }) => {
   await page.goto("/actions");

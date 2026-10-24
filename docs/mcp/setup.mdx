@@ -17,13 +17,13 @@ The tool catalog is one set of definitions consumed by both, so there is no host
 
 Both transports serve MCP `2026-07-28` and the 2025 revisions, and none of the commands below carry a protocol version, so none of them change with the revision your client picks. See [The asobeast MCP server](/mcp/introduction).
 
-Either way the Settings card writes the configuration for you. The manual path is the same thing typed by hand.
+Either way the MCP server card in Integrations writes the configuration for you. The manual path is the same thing typed by hand.
 
 ## Connect to the hosted endpoint
 
 <Steps>
   <Step title="Mint a token">
-    Open the MCP server card in Settings and click connect an agent. The token is read only, which is all any read tool needs. Tick Allow this agent to make changes only when you want the agent to track keywords, manage competitors and update actions, and mint a separate token for that agent.
+    Open the MCP server card in Integrations and click connect an agent. The token is read only, which is all any read tool needs. Tick Allow this agent to make changes only when you want the agent to track keywords, manage competitors and update actions, and mint a separate token for that agent.
   </Step>
   <Step title="Copy the hosted snippet">
     The card shows the endpoint and a ready to paste command, pre filled with the origin you are browsing.
@@ -189,7 +189,7 @@ A token is the only credential it takes. A browser session cookie is answered wi
 ## The quick path for the stdio server
 
 <Steps>
-  <Step title="Open the MCP server card in Settings">
+  <Step title="Open the MCP server card in Integrations">
     Sign in to your instance first.
   </Step>
   <Step title="Click connect an agent and name a token">
@@ -213,7 +213,7 @@ The token is shown once. Copy it before you leave the page.
     This produces `apps/mcp/dist/index.js`.
   </Step>
   <Step title="Mint a personal API token">
-    Use the API tokens card in Settings, and pick the read scope unless the agent has to make changes. See [Personal API tokens](/security/api-tokens).
+    Use the API tokens card in Integrations, and pick the read scope unless the agent has to make changes. See [Personal API tokens](/security/api-tokens).
   </Step>
   <Step title="Register the server with your client">
     Use the configuration below.
@@ -311,7 +311,7 @@ At startup the server checks its configuration and calls `/auth/me` on your inst
 | `ASOBEAST_API_URL` has a query string, a fragment or a user name and password | A message giving the value without them. The token goes in `ASOBEAST_API_TOKEN` |
 | `ASOBEAST_API_URL` is your web address without `/api/backend` | A message giving the value with `/api/backend` appended |
 | `ASOBEAST_API_URL` answers with a redirect | A message naming the address it redirected to. The token is never sent across a redirect |
-| The token was rejected | A `401` message telling you to mint a fresh token in Settings and to check that the URL is the instance the token was minted on |
+| The token was rejected | A `401` message telling you to mint a fresh token in Integrations and to check that the URL is the instance the token was minted on |
 | The account is not entitled | A message that the trial expired or a plan is required |
 | The workspace is suspended | A message that the workspace is suspended, with the reason the operator recorded |
 
@@ -327,7 +327,7 @@ Changes are opt in, and the token is the switch. Nothing else in this guide chan
 
 <Steps>
   <Step title="Mint a token of its own for the agent">
-    In Settings, click connect an agent, name the token after the agent, and tick Allow this agent to make changes. You can also pick the read and write scope on the API tokens card.
+    In Integrations, click connect an agent, name the token after the agent, and tick Allow this agent to make changes. You can also pick the read and write scope on the API tokens card.
   </Step>
   <Step title="Reconnect the client">
     The tool list is decided on every request, but most clients read it once when they connect. Restart the client or reconnect the server, and the seven tools that change things appear after the read tools.

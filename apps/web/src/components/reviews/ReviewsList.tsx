@@ -164,6 +164,7 @@ function ReviewCards({
               <ReviewCard
                 key={review.id}
                 appId={id}
+                store={app.store}
                 fallbackLanguage={storefrontLanguage(app.country)}
                 review={review}
                 twin={twin}

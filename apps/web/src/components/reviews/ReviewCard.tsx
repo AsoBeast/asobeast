@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import type { ReviewItem } from "@asobeast/shared";
+import type { ReviewItem, Store } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -143,6 +143,7 @@ function TranslateButton({
 
 export function ReviewCard({
   appId,
+  store,
   fallbackLanguage,
   review,
   twin,
@@ -150,6 +151,7 @@ export function ReviewCard({
   children,
 }: {
   appId: string;
+  store: Store;
   fallbackLanguage: string | null;
   review: ReviewItem;
   twin?: ReviewTwin;
@@ -183,7 +185,7 @@ export function ReviewCard({
           <Badge variant="outline">v{review.version}</Badge>
         ) : null}
         <span className="ml-auto">
-          <ReplyStateBadge review={review} />
+          <ReplyStateBadge review={review} store={store} />
         </span>
       </div>
       {text.trim() ? (

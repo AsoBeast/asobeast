@@ -1,0 +1,44 @@
+{
+  "data": [
+    {
+      "type": "customerReviews",
+      "id": "00000028-b08c-0014-729e-fbd500000001",
+      "attributes": {
+        "rating": 1,
+        "title": "Crashes on launch",
+        "body": "Every time I open it the app closes.",
+        "reviewerNickname": "sleepless",
+        "createdDate": "2026-09-05T08:12:00-07:00",
+        "territory": "USA"
+      }
+    },
+    {
+      "type": "customerReviews",
+      "id": "00000028-b08c-0014-729e-fbd500000002",
+      "attributes": {
+        "rating": 5,
+        "body": "Love it.",
+        "reviewerNickname": "fan",
+        "createdDate": "2026-09-04T10:00:00-07:00",
+        "territory": "USA"
+      }
+    },
+    {
+      "type": "customerReviews",
+      "id": "00000028-b08c-0014-729e-fbd500000003",
+      "attributes": {
+        "rating": 3,
+        "title": "Fine",
+        "body": "Does the job.",
+        "reviewerNickname": "neutral",
+        "createdDate": "2026-09-03T09:00:00-07:00",
+        "territory": "USA"
+      }
+    }
+  ],
+  "links": {
+    "self": "https://api.appstoreconnect.apple.com/v1/apps/123/customerReviews",
+    "next": "https://api.appstoreconnect.apple.com/v1/apps/123/customerReviews?filter%5Bterritory%5D=USA&sort=-createdDate&cursor=Mw.AK1&limit=200"
+  },
+  "meta": { "paging": { "total": 6, "limit": 200 } }
+}

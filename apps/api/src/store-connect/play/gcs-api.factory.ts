@@ -10,7 +10,12 @@ import {
   type GoogleOAuthClient,
   refreshTokenGrant,
 } from './google-sign-in';
-import { serviceAccountGrant } from './service-account';
+import { PlayPublisherApi } from './play-publisher-api';
+import {
+  ANDROID_PUBLISHER_SCOPE,
+  type GoogleGrant,
+  serviceAccountGrant,
+} from './service-account';
 
 @Injectable()
 export class GcsApiFactory {
@@ -37,5 +42,18 @@ export class GcsApiFactory {
       bucket: credentials.bucket,
       account: { kind: 'key', email: credentials.clientEmail },
     };
+  }
+
+  publisher(credentials: PlayCredentials): PlayPublisherApi {
+    return new PlayPublisherApi(
+      this.transport,
+      this.publisherGrant(credentials),
+    );
+  }
+
+  private publisherGrant(credentials: PlayCredentials): GoogleGrant {
+    return isGoogleAccountCredentials(credentials)
+      ? refreshTokenGrant(this.client, credentials.refreshToken)
+      : serviceAccountGrant(credentials, ANDROID_PUBLISHER_SCOPE);
   }
 }

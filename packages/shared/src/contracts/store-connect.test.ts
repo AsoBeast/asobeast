@@ -3,9 +3,11 @@ import {
   STORE_CONNECTION_STATUSES,
   STORE_CONNECTION_SYNC_OUTCOMES,
   STORE_REPORT_ACCESS,
+  STORE_REPLY_ACCESS,
   STORE_REPORT_STATES,
   type AppStoreConnectionRequest,
   type PlayConnectionRequest,
+  PLAY_REPLIES_NEED_CONSENT,
   PLAY_SIGN_IN_PATH,
   type PlaySignInCompletion,
   type StoreConnectionState,
@@ -13,6 +15,7 @@ import {
   STORE_CREDENTIAL_KINDS,
   type StoreConnectionItem,
   type StoreConnectionRequest,
+  type StoreReplyAccess,
 } from './store-connect';
 
 describe('store connection contract', () => {
@@ -58,6 +61,16 @@ describe('store connection contract', () => {
     >();
   });
 
+  it('names the three reply access values', () => {
+    expect(STORE_REPLY_ACCESS).toEqual(['unknown', 'allowed', 'forbidden']);
+  });
+
+  it('keeps replyAccess optional on the item', () => {
+    expectTypeOf<StoreConnectionItem['replyAccess']>().toEqualTypeOf<
+      StoreReplyAccess | undefined
+    >();
+  });
+
   it('marks how a connection signed in, absent meaning a key', () => {
     expect(STORE_CREDENTIAL_KINDS).toEqual(['key', 'googleAccount']);
     expectTypeOf<StoreConnectionItem['credential']>().toEqualTypeOf<
@@ -68,8 +81,14 @@ describe('store connection contract', () => {
     >();
   });
 
-  it('returns Google to one settings page with the code and state', () => {
-    expect(PLAY_SIGN_IN_PATH).toBe('/settings/google-play');
+  it('tells a google sign in without play console access how to allow replies', () => {
+    expect(PLAY_REPLIES_NEED_CONSENT).toBe(
+      'This Google sign in was not allowed to manage Play Console, so it cannot post replies. Sign in with Google again and allow it, or connect a service account key with the Reply to reviews permission.',
+    );
+  });
+
+  it('returns Google to the integrations page with the code and state', () => {
+    expect(PLAY_SIGN_IN_PATH).toBe('/integrations/google-play');
     expectTypeOf<PlaySignInCompletion>().toEqualTypeOf<{
       code: string;
       state: string;

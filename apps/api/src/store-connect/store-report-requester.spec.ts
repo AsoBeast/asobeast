@@ -36,6 +36,7 @@ function build(
     id: 'conn_1',
     status: 'active',
     reportAccess: 'unknown',
+    replyAccess: 'unknown',
     lastError: null,
     api: api as unknown as AscAnalyticsApi,
   };

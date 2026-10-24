@@ -1,5 +1,6 @@
 import {
-  SETTINGS_PATH,
+  INTEGRATIONS_PATH,
+  PLAY_REPLIES_NEED_CONSENT,
   type Store,
   type StoreConnectionApp,
   type StoreConnectionItem,
@@ -8,7 +9,7 @@ import {
 import { formatDate, formatDateTime } from "./format";
 
 export const STORE_CONNECTIONS_SECTION_ID = "store-connections";
-export const STORE_CONNECTIONS_PATH = `${SETTINGS_PATH}#${STORE_CONNECTIONS_SECTION_ID}`;
+export const STORE_CONNECTIONS_PATH = `${INTEGRATIONS_PATH}#${STORE_CONNECTIONS_SECTION_ID}`;
 
 export interface StatusLine {
   tone: "warning" | "muted";
@@ -41,7 +42,7 @@ export const STORE_CONSOLES: Record<Store, StoreConsoleCopy> = {
     connectLabel: "Connect App Store Connect",
     replaceLabel: "Replace key",
     empty:
-      "No store connected. Connect App Store Connect to see impressions, product page views, Get taps and conversion by market.",
+      "No store connected. Connect App Store Connect to see impressions, product page views, Get taps and conversion by market, and to post review replies from the reviews page.",
     noApps: "Import an App Store app to read its numbers through this key.",
     appsLabel: "Apps this key reports",
     verified: "Key checked with Apple",
@@ -69,7 +70,7 @@ export const STORE_CONSOLES: Record<Store, StoreConsoleCopy> = {
     connectLabel: "Connect Google Play",
     replaceLabel: "Reconnect",
     empty:
-      "Not connected. Connect the Google Play Console to see store listing visitors, acquisitions and conversion by market, and installs per search term.",
+      "Not connected. Connect the Google Play Console to see store listing visitors, acquisitions and conversion by market and installs per search term, and to post review replies from the reviews page.",
     noApps:
       "Import a Google Play app to read its numbers through this connection.",
     appsLabel: "Apps this connection reports",
@@ -115,6 +116,31 @@ export function connectionStatusLine(item: StoreConnectionItem): StatusLine {
   return {
     tone: "muted",
     text: `Last synced ${formatDateTime(item.lastSyncedAt)}`,
+  };
+}
+
+const REPLY_ROLE_NEEDED: Record<Store, string> = {
+  APP_STORE:
+    "This App Store Connect key cannot respond to reviews. Connect a key with the Admin or Customer Support role.",
+  GOOGLE_PLAY:
+    "This service account cannot reply to reviews. Give it the Reply to reviews permission in Play Console.",
+};
+
+const GOOGLE_SIGN_IN_CANNOT_REPLY = `${PLAY_REPLIES_NEED_CONSENT} If you already allowed it, give your Google account the Reply to reviews permission in Play Console.`;
+
+export function replyAccessLine(item: StoreConnectionItem): StatusLine {
+  if (item.replyAccess === "forbidden") {
+    return {
+      tone: "warning",
+      text:
+        item.credential === "googleAccount"
+          ? GOOGLE_SIGN_IN_CANNOT_REPLY
+          : REPLY_ROLE_NEEDED[item.store],
+    };
+  }
+  return {
+    tone: "muted",
+    text: item.replyAccess === "allowed" ? "Allowed" : "Not tried yet",
   };
 }
 

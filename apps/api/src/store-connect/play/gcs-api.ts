@@ -94,8 +94,23 @@ interface ListPage {
   nextPageToken?: string;
 }
 
-const isSuccess = (response: GcsResponse): boolean =>
+export const isSuccess = (response: GcsResponse): boolean =>
   response.status >= 200 && response.status < 300;
+
+export const googleTokenExchange =
+  (transport: GcsTransport, url: string) =>
+  async (form: Record<string, string>): Promise<GoogleTokenAnswer> => {
+    const response = await transport({ method: 'POST', url, form });
+    if (!isSuccess(response)) throw tokenErrorOf(response);
+    const answer = response.body as Partial<GoogleTokenAnswer> | null;
+    if (!answer?.access_token) {
+      throw new GcsError('Google answered no access token', 502);
+    }
+    return {
+      access_token: answer.access_token,
+      expires_in: answer.expires_in ?? 3600,
+    };
+  };
 
 const filePrefix = (packageName: string): string =>
   `${STORE_PERFORMANCE_PREFIX}store_performance_${packageName}_`;
@@ -123,8 +138,9 @@ export class GcsApi {
   ) {
     this.bucket = source.bucket;
     this.account = source.account;
-    this.tokens = new GoogleTokenCache(source.grant, (form) =>
-      this.exchange(form),
+    this.tokens = new GoogleTokenCache(
+      source.grant,
+      googleTokenExchange(transport, origins.token),
     );
   }
 
@@ -189,25 +205,6 @@ export class GcsApi {
     }
     if (!isSuccess(response)) throw errorOf(response, `the file ${name}`);
     return response.bytes ?? Buffer.alloc(0);
-  }
-
-  private async exchange(
-    form: Record<string, string>,
-  ): Promise<GoogleTokenAnswer> {
-    const response = await this.transport({
-      method: 'POST',
-      url: this.origins.token,
-      form,
-    });
-    if (!isSuccess(response)) throw tokenErrorOf(response);
-    const answer = response.body as Partial<GoogleTokenAnswer> | null;
-    if (!answer?.access_token) {
-      throw new GcsError('Google answered no access token', 502);
-    }
-    return {
-      access_token: answer.access_token,
-      expires_in: answer.expires_in ?? 3600,
-    };
   }
 }
 

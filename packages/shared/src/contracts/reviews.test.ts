@@ -1,7 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 
 import {
+  isPostEdited,
   replyStateOf,
+  REVIEW_POST_STATES,
   REVIEW_REPLY_LIMITS,
   REVIEW_REPLY_MAX_CHARS,
   REVIEW_REPLY_STATES,
@@ -9,6 +11,7 @@ import {
   REVIEW_SORTS,
   REVIEW_THEMES_BASELINE,
   type ReviewReplyItem,
+  type ReviewReplyPost,
 } from '../index';
 
 const REPLY: ReviewReplyItem = {
@@ -75,6 +78,43 @@ describe('replyStateOf', () => {
   it('answers needs reply with no reply at all', () => {
     expect(replyStateOf({ repliedAt: null, reply: null })).toBe('needs_reply');
     expect(replyStateOf({})).toBe('needs_reply');
+  });
+});
+
+const POST: ReviewReplyPost = {
+  postedAt: '2026-10-02T00:00:00.000Z',
+  postedText: 'Thanks!',
+  state: 'published',
+  storeResponseId: null,
+  postedBy: 'owner@example.com',
+};
+
+describe('the posted reply', () => {
+  it('keeps the reply item compatible and adds an optional post', () => {
+    expectTypeOf<ReviewReplyItem['post']>().toEqualTypeOf<
+      ReviewReplyPost | null | undefined
+    >();
+  });
+
+  it('names the two post states', () => {
+    expect(REVIEW_POST_STATES).toEqual(['pending', 'published']);
+  });
+
+  it('says a reply is edited when its text differs from the posted text', () => {
+    expect(isPostEdited({ text: 'Thanks!', post: POST })).toBe(false);
+    expect(isPostEdited({ text: 'Thanks! ', post: POST })).toBe(false);
+    expect(isPostEdited({ text: 'Thank you', post: POST })).toBe(true);
+    expect(isPostEdited({ text: 'Thank you', post: null })).toBe(false);
+    expect(isPostEdited({ text: 'Thank you' })).toBe(false);
+  });
+
+  it('keeps replyStateOf unchanged by a post', () => {
+    expect(
+      replyStateOf({
+        repliedAt: POST.postedAt,
+        reply: { ...REPLY, repliedAt: POST.postedAt, post: POST },
+      }),
+    ).toBe('replied');
   });
 });
 

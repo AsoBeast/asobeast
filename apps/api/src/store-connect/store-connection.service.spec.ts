@@ -6,11 +6,13 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
+import { PLAY_REPLIES_NEED_CONSENT } from '@asobeast/shared';
 import { SecretBox } from '../common/crypto/secret-box';
 import type { WorkspaceContext } from '../common/tenancy/workspace-context';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { AscAnalyticsApi } from './asc-analytics-api';
 import type { AscApiFactory } from './asc-api.factory';
+import type { AscReviewsApi } from './asc-reviews-api';
 import { AscAgreementError, AscRejectedKeyError } from './asc-errors';
 import { AGREEMENT_MISSING } from './asc-http-errors';
 import {
@@ -22,6 +24,7 @@ import {
 } from './play/gcs-api';
 import type { GcsApiFactory } from './play/gcs-api.factory';
 import { type GoogleOAuthClient, SignInOffError } from './play/google-sign-in';
+import type { PlayPublisherApi } from './play/play-publisher-api';
 import {
   isGoogleAccountCredentials,
   type PlayCredentials,
@@ -69,7 +72,7 @@ const GOOGLE_ACCOUNT = {
 const CLIENT: GoogleOAuthClient = {
   id: 'client.apps.googleusercontent.com',
   secret: 'test-oauth-client-secret',
-  redirectUri: 'https://aso.example.com/settings/google-play',
+  redirectUri: 'https://aso.example.com/integrations/google-play',
 };
 
 const CREATED_AT = new Date('2026-10-01T10:00:00.000Z');
@@ -164,8 +167,13 @@ function harness(
     },
   };
   const api = { verify: jest.fn(() => Promise.resolve()) };
-  const factory = { open: jest.fn(() => api as unknown as AscAnalyticsApi) };
+  const reviews = { respond: jest.fn() };
+  const factory = {
+    open: jest.fn(() => api as unknown as AscAnalyticsApi),
+    reviews: jest.fn(() => reviews as unknown as AscReviewsApi),
+  };
   const gcs = { verify: jest.fn(() => Promise.resolve()) };
+  const publisher = { reply: jest.fn() };
   const gcsFactory = {
     open: jest.fn(
       (credentials: PlayCredentials) =>
@@ -175,6 +183,7 @@ function harness(
           account: accountOf(credentials),
         }) as unknown as GcsApi,
     ),
+    publisher: jest.fn(() => publisher as unknown as PlayPublisherApi),
   };
   const queue = {
     enqueue: jest.fn(() => Promise.resolve({ outcome: 'queued' as const })),
@@ -195,8 +204,10 @@ function harness(
     tx,
     api,
     factory,
+    reviews,
     gcs,
     gcsFactory,
+    publisher,
     queue,
     rows,
     box,
@@ -497,6 +508,91 @@ describe('StoreConnectionService', () => {
     expect(gcsFactory.open).not.toHaveBeenCalled();
   });
 
+  it('opens the app store reviews client of the connection', async () => {
+    const { service, factory, reviews, rows } = harness();
+    await service.connect('APP_STORE', REQUEST, 'user_1');
+    rows[0].replyAccess = 'forbidden';
+
+    await expect(service.openAppStoreReviews()).resolves.toMatchObject({
+      id: 'conn_1',
+      status: 'active',
+      replyAccess: 'forbidden',
+      api: reviews,
+    });
+    expect(factory.reviews).toHaveBeenCalledWith(
+      expect.objectContaining({ issuerId: REQUEST.issuerId }),
+    );
+  });
+
+  it('opens no app store reviews client without an app store connection', async () => {
+    const { service, factory } = harness();
+
+    await expect(service.openAppStoreReviews()).resolves.toBeNull();
+    expect(factory.reviews).not.toHaveBeenCalled();
+  });
+
+  it('opens the play publisher client of the connection', async () => {
+    const { service, gcsFactory, publisher } = harness();
+    await service.connect('GOOGLE_PLAY', PLAY_REQUEST, 'user_1');
+
+    await expect(service.openPlayPublisher()).resolves.toMatchObject({
+      id: 'conn_1',
+      status: 'active',
+      api: publisher,
+    });
+    expect(gcsFactory.publisher).toHaveBeenCalledWith(
+      expect.objectContaining({ bucket: PLAY_REQUEST.bucket }),
+    );
+  });
+
+  it('opens no play publisher client without a play connection', async () => {
+    const { service, gcsFactory } = harness();
+    await service.connect('APP_STORE', REQUEST, 'user_1');
+
+    await expect(service.openPlayPublisher()).resolves.toBeNull();
+    expect(gcsFactory.publisher).not.toHaveBeenCalled();
+  });
+
+  it('opens the play publisher client of a google sign in that allowed replies', async () => {
+    const { service, gcsFactory, publisher } = harness();
+    const item = await service.connectGoogleAccount(
+      { ...GOOGLE_ACCOUNT, canReply: true },
+      '1098765',
+      'user_1',
+    );
+
+    expect(item.replyAccess).toBe('unknown');
+    await expect(service.openPlayPublisher()).resolves.toMatchObject({
+      api: publisher,
+    });
+    expect(gcsFactory.publisher).toHaveBeenCalledWith(
+      expect.objectContaining({ refreshToken: GOOGLE_ACCOUNT.refreshToken }),
+    );
+  });
+
+  it('refuses the play publisher client of a google sign in without the play console scope', async () => {
+    const { service, gcsFactory, rows } = harness();
+    const item = await service.connectGoogleAccount(
+      GOOGLE_ACCOUNT,
+      '1098765',
+      'user_1',
+    );
+    expect(item.replyAccess).toBe('forbidden');
+    rows[0].replyAccess = 'unknown';
+
+    const refusal = service.openPlayPublisher();
+    await expect(refusal).rejects.toBeInstanceOf(ConflictException);
+    await expect(refusal).rejects.toThrow(PLAY_REPLIES_NEED_CONSENT);
+    expect(rows[0].replyAccess).toBe('forbidden');
+    expect(gcsFactory.publisher).not.toHaveBeenCalled();
+    await expect(service.verify('GOOGLE_PLAY')).resolves.toMatchObject({
+      replyAccess: 'forbidden',
+    });
+    await expect(service.openPlay()).resolves.toMatchObject({
+      api: { account: { kind: 'googleAccount', email: GOOGLE_ACCOUNT.email } },
+    });
+  });
+
   it('marks a play connection rejected on verify when google refuses', async () => {
     const { service, gcs } = harness();
     await service.connect('GOOGLE_PLAY', PLAY_REQUEST, 'user_1');
@@ -550,6 +646,31 @@ describe('StoreConnectionService', () => {
     const restored = await service.verify('APP_STORE');
     expect(restored).toMatchObject({ status: 'active', lastError: null });
     expect(rows[0].verifiedAt).toBeInstanceOf(Date);
+  });
+
+  it('marks and reports reply access', async () => {
+    const { service } = harness();
+    await service.connect('APP_STORE', REQUEST, 'user_1');
+
+    await service.markReplyAccess('APP_STORE', 'forbidden');
+
+    await expect(service.state()).resolves.toMatchObject({
+      connections: [{ store: 'APP_STORE', replyAccess: 'forbidden' }],
+    });
+  });
+
+  it('resets reply access to unknown on verify and on connect', async () => {
+    const { service, rows } = harness();
+    await service.connect('APP_STORE', REQUEST, 'user_1');
+    rows[0].replyAccess = 'allowed';
+
+    await expect(service.verify('APP_STORE')).resolves.toMatchObject({
+      replyAccess: 'unknown',
+    });
+    rows[0].replyAccess = 'forbidden';
+    await expect(
+      service.connect('APP_STORE', REQUEST, 'user_1'),
+    ).resolves.toMatchObject({ replyAccess: 'unknown' });
   });
 
   it('enqueues a sync after connect and after a successful verify', async () => {

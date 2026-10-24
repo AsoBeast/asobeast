@@ -3100,6 +3100,20 @@ DATASETS[APP_REPLIES_ID] = {
   },
 };
 
+export const APP_POSTING_ID = "app-posting";
+
+DATASETS[APP_POSTING_ID] = {
+  ...DATASETS[APP_REPLIES_ID],
+  detail: { ...APP_1_DETAIL, id: APP_POSTING_ID, name: "Posting Lab" },
+};
+
+export const APP_GP_POSTING_ID = "app-gp-posting";
+
+DATASETS[APP_GP_POSTING_ID] = {
+  ...DATASETS["app-gp"],
+  detail: { ...APP_GP_DETAIL, id: APP_GP_POSTING_ID, name: "Posting Lab" },
+};
+
 export const APP_IMPORT_ID = "app-import";
 
 DATASETS[APP_IMPORT_ID] = {

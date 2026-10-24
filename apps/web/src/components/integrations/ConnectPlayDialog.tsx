@@ -11,7 +11,7 @@ import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import { ApiError, connectStore, startPlaySignIn } from "@/lib/api";
 import { invalidateStoreConnectionMutation } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
-import { AlertChannelDialog } from "./alert-channel/AlertChannelDialog";
+import { AlertChannelDialog } from "@/components/settings/alert-channel/AlertChannelDialog";
 import {
   isServiceAccountKey,
   PlayServiceAccountField,
@@ -27,12 +27,12 @@ const METHODS: Record<Method, { label: string; description: string }> = {
   google: {
     label: SIGN_IN_LABEL,
     description:
-      "Sign in with the Google account that owns your Play Console developer account. AsoBeast asks Google for read only access to Cloud Storage, checks the bucket and stores the sign in encrypted.",
+      "Sign in with the Google account that owns your Play Console developer account. AsoBeast asks Google for read only access to Cloud Storage and for access to Play Console to post the review replies you send, checks the bucket and stores the sign in encrypted.",
   },
   key: {
     label: "Service account key",
     description:
-      "Use a Google Cloud service account invited in Play Console under Users and permissions, with View app information and download bulk reports on the Account permissions tab. AsoBeast checks it with Google, stores the key encrypted and never shows it again.",
+      "Use a Google Cloud service account invited in Play Console under Users and permissions, with View app information and download bulk reports on the Account permissions tab, and Reply to reviews to post replies. AsoBeast checks it with Google, stores the key encrypted and never shows it again.",
   },
 };
 
