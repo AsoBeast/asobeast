@@ -258,7 +258,7 @@ export const competitorBatch: AlertBatchPayload = {
 };
 
 export const LONG_ICON_URL =
-  'https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/1d/55/dd/1d55dd0b-f890-e7a1-1c1e-2f6c2a1a7f3e/AppIcon-0-0-1x_U007emarketing-0-8-0-85-220.png/512x512bb.jpg';
+  'https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/97/4d/85/974d8537-a749-63ec-1a79-416270bf3c44/AppIcon-0-0-1x_U007epad-0-1-0-sRGB-85-220.png/512x512bb.jpg';
 
 const WORST_CASE_SECTIONS = 12;
 const WORST_CASE_ENTRIES = 25;
