@@ -6,20 +6,13 @@ import {
   SerpEntrantPayload,
 } from '@asobeast/shared';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  AlertAppIdentities,
-  appIdsOf,
-  IdentityLookup,
-  withAppIdentity,
-} from './alert-app-identities';
+import { AlertAppIdentities, withAppIdentity } from './alert-app-identities';
 
 const identity = {
   iconUrl: 'https://play-lh.googleusercontent.com/icon',
   store: 'GOOGLE_PLAY' as const,
   country: 'de',
 };
-
-const lookup: IdentityLookup = new Map([['app1', identity]]);
 
 const drop: RankDroppedPayload = {
   event: 'rank.dropped',
@@ -56,27 +49,16 @@ const digest: DigestWeeklyPayload = {
   groups: [],
 };
 
-describe('appIdsOf', () => {
-  it('names the app of an event that has one', () => {
-    expect(appIdsOf(drop)).toEqual(['app1']);
-  });
-
-  it('names nothing for an event without an app', () => {
-    expect(appIdsOf(entrant)).toEqual([]);
-    expect(appIdsOf(digest)).toEqual([]);
-  });
-});
-
 describe('withAppIdentity', () => {
   it('adds the icon, store and storefront to a rank payload', () => {
-    expect(withAppIdentity(drop, lookup)).toEqual({
+    expect(withAppIdentity(drop, identity)).toEqual({
       ...drop,
       app: { id: 'app1', name: 'App One', ...identity },
     });
   });
 
   it('keeps the competitor flag of a metadata payload', () => {
-    expect(withAppIdentity(change, lookup).app).toEqual({
+    expect(withAppIdentity(change, identity).app).toEqual({
       id: 'app1',
       name: 'Rival',
       isCompetitor: true,
@@ -85,53 +67,52 @@ describe('withAppIdentity', () => {
   });
 
   it('leaves events without an app untouched', () => {
-    expect(withAppIdentity(entrant, lookup)).toBe(entrant);
-    expect(withAppIdentity(digest, lookup)).toBe(digest);
+    expect(withAppIdentity(entrant, identity)).toBe(entrant);
+    expect(withAppIdentity(digest, identity)).toBe(digest);
   });
 
-  it('leaves a payload whose app the lookup does not hold untouched', () => {
-    expect(withAppIdentity(drop, new Map())).toBe(drop);
+  it('leaves a payload whose app could not be read untouched', () => {
+    expect(withAppIdentity(drop, null)).toBe(drop);
   });
 
   it('never changes the payload it was given', () => {
-    withAppIdentity(drop, lookup);
+    withAppIdentity(drop, identity);
     expect(drop.app).toEqual({ id: 'app1', name: 'App One' });
   });
 });
 
 describe('AlertAppIdentities', () => {
-  const build = (rows: object[]) => {
-    const findMany = jest.fn().mockResolvedValue(rows);
+  const build = (row: object | null) => {
+    const findUnique = jest.fn().mockResolvedValue(row);
     const identities = new AlertAppIdentities({
-      app: { findMany },
+      app: { findUnique },
     } as unknown as PrismaService);
-    return { findMany, identities };
+    return { findUnique, identities };
   };
 
-  it('reads no app when there is nothing to look up', async () => {
-    const { findMany, identities } = build([]);
-
-    await expect(identities.lookup([])).resolves.toEqual(new Map());
-    expect(findMany).not.toHaveBeenCalled();
-  });
-
-  it('keys each app it can read by its id', async () => {
-    const { identities } = build([{ id: 'app1', ...identity }]);
-
-    await expect(identities.lookup(['app1', 'app2'])).resolves.toEqual(lookup);
-  });
-
-  it('attaches the identity it reads', async () => {
-    const { identities } = build([{ id: 'app1', ...identity }]);
+  it('reads the icon, store and storefront of the payload app', async () => {
+    const { findUnique, identities } = build(identity);
 
     await expect(identities.attach(drop)).resolves.toEqual({
       ...drop,
       app: { ...drop.app, ...identity },
     });
+    expect(findUnique).toHaveBeenCalledWith({
+      where: { id: 'app1' },
+      select: { iconUrl: true, store: true, country: true },
+    });
+  });
+
+  it('reads no app for an event that names none', async () => {
+    const { findUnique, identities } = build(identity);
+
+    await expect(identities.attach(entrant)).resolves.toBe(entrant);
+    await expect(identities.attach(digest)).resolves.toBe(digest);
+    expect(findUnique).not.toHaveBeenCalled();
   });
 
   it('leaves the payload as it was when the app is out of scope', async () => {
-    const { identities } = build([]);
+    const { identities } = build(null);
 
     await expect(identities.attach(drop)).resolves.toBe(drop);
   });

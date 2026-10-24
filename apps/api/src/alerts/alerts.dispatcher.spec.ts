@@ -93,7 +93,7 @@ const buildPrisma = () => {
     },
     webhook: { findMany: jest.fn().mockResolvedValue([]) },
     emailAlert: { findMany: jest.fn().mockResolvedValue([]) },
-    app: { findMany: jest.fn().mockResolvedValue([]) },
+    app: { findUnique: jest.fn().mockResolvedValue(null) },
   };
 };
 
@@ -336,7 +336,7 @@ describe('AlertsDispatcher', () => {
 
     const identified = () => {
       const prisma = buildPrisma();
-      prisma.app.findMany.mockResolvedValue([{ id: 'app1', ...identity }]);
+      prisma.app.findUnique.mockResolvedValue(identity);
       return prisma;
     };
 
@@ -355,9 +355,9 @@ describe('AlertsDispatcher', () => {
 
       await inWorkspace(() => dispatcher.dispatch(rankPayload));
 
-      expect(prisma.app.findMany).toHaveBeenCalledWith({
-        where: { id: { in: ['app1'] } },
-        select: { id: true, iconUrl: true, store: true, country: true },
+      expect(prisma.app.findUnique).toHaveBeenCalledWith({
+        where: { id: 'app1' },
+        select: { iconUrl: true, store: true, country: true },
       });
       expect(add).toHaveBeenCalledWith(
         JOBS.DELIVER_ALERT,
@@ -411,7 +411,7 @@ describe('AlertsDispatcher', () => {
         }),
       );
 
-      expect(prisma.app.findMany).not.toHaveBeenCalled();
+      expect(prisma.app.findUnique).not.toHaveBeenCalled();
       expect(prisma.webhook.findMany).toHaveBeenCalledTimes(1);
     });
   });
