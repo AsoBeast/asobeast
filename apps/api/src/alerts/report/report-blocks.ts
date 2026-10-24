@@ -32,6 +32,9 @@ export function omissionLine(group: ReportGroup): string | null {
     : `+${hidden} more`;
 }
 
+export const moreApps = (count: number): string =>
+  `+${count} more app${count === 1 ? '' : 's'}`;
+
 export function competitorsOmission(app: ReportApp): string | null {
   if (app.omittedCompetitors <= 0) return null;
   return app.competitorsLink

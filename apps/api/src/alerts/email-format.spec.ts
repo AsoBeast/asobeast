@@ -3,6 +3,7 @@ import {
   AlertBatchPayload,
   RANK_DEPTH,
 } from '@asobeast/shared';
+import { ACTION_RULE_TITLES } from '@asobeast/shared';
 import {
   formatBatchEmail,
   formatEmail,
@@ -62,38 +63,42 @@ describe('the same phrase in two markets', () => {
 });
 
 describe('formatEmail', () => {
-  it('subjects a rank drop with bare positions', async () => {
+  it('subjects a rank drop with its positions and storefront', async () => {
     const email = await formatEmail(dropped);
     expect(email.subject).toBe(
-      '[asobeast] Rank drop: "fitness app (US)" 4 → 12',
+      '[asobeast] My App dropped from #4 to #12 for "fitness app" in US',
     );
-    expect(email.text).toContain('From: 4');
-    expect(email.text).toContain('To: 12');
+    expect(email.text).toContain('From: #4');
+    expect(email.text).toContain('To: #12');
     expect(email.html).toContain('<table');
   });
 
   it('renders a drop out using its captured depth', async () => {
     expect((await formatEmail(droppedOut)).subject).toBe(
-      '[asobeast] Rank drop: "fitness app (US)" 3 → >100',
+      '[asobeast] My App fell out of the top 100 for "fitness app" in US, from #3',
     );
   });
 
   it('subjects a rank improvement', async () => {
     expect((await formatEmail(improved)).subject).toBe(
-      '[asobeast] Rank up: "habit tracker (DE)" 20 → 7',
+      '[asobeast] My App climbed from #20 to #7 for "habit tracker" in DE',
     );
   });
 
   it('lists the changed fields for a metadata change', async () => {
     const email = await formatEmail(metadata);
-    expect(email.subject).toBe('[asobeast] My App changed title, icon');
-    expect(email.text).toContain('title: A → B');
-    expect(email.text).toContain('icon: — → y');
+    expect(email.subject).toBe('[asobeast] My App changed its title and icon');
+    expect(email.text).toContain('Title: "A" → "B"');
+    expect(email.text).toContain('Icon: Changed');
+    expect(email.text).not.toContain('→ y');
   });
 
   it('renders stars and version for a negative review', async () => {
     const email = await formatEmail(negative);
-    expect(email.subject).toBe('[asobeast] ★☆☆☆☆ review (v2.0.0) for My App');
+    expect(email.subject).toBe(
+      '[asobeast] A 1 star review of My App, v2.0.0: "Crashes on <launch>"',
+    );
+    expect(email.text).toContain('Rating: ★☆☆☆☆');
     expect(email.text).toContain('Crashes on <launch>');
   });
 
@@ -114,9 +119,11 @@ describe('formatEmail', () => {
 
   it('caps the weekly digest at ten apps with a more line', async () => {
     const email = await formatEmail(digest);
-    expect(email.subject).toBe('[asobeast] Weekly digest: 12 apps');
+    expect(email.subject).toBe(
+      '[asobeast] Weekly digest: 12 apps, 6 to 13 Jul 2026',
+    );
     expect(email.text).toContain('+2 more');
-    expect(email.text).toContain('Window: 2026-07-06 → 2026-07-13');
+    expect(email.text).toContain('Window: 6 to 13 Jul 2026');
   });
 
   it('omits the linked apps section when the digest has no groups', async () => {
@@ -139,16 +146,13 @@ describe('formatBatchEmail', () => {
   it.each([
     [
       { from: '2026-10-13T15:41:20.146Z', to: '2026-10-14T15:41:25.371Z' },
-      'Window (UTC): 2026-10-13 → 2026-10-14',
+      '13 to 14 Oct 2026',
     ],
     [
       { from: '2026-10-14T15:41:20.146Z', to: '2026-10-14T15:41:25.371Z' },
-      'Window (UTC): 2026-10-14',
+      '14 Oct 2026',
     ],
-    [
-      { from: '2026-07-21', to: '2026-07-22' },
-      'Window (UTC): 2026-07-21 → 2026-07-22',
-    ],
+    [{ from: '2026-07-21', to: '2026-07-22' }, '21 to 22 Jul 2026'],
   ])('prints the report window %j as dates', async (window, line) => {
     const email = await formatBatchEmail({ ...batch, window });
 
@@ -160,10 +164,10 @@ describe('formatBatchEmail', () => {
   it('counts each category in the subject with plurals', async () => {
     const email = await formatBatchEmail(batch);
     expect(email.subject).toBe(
-      '[asobeast] Daily app update — 3 changes across 2 apps',
+      '[asobeast] Daily app update: 3 changes across 2 apps',
     );
-    expect(email.text).toContain(
-      'Summary: 1 rank drop · 0 rank improvements · 1 SERP entrant · 1 metadata change · 0 negative reviews',
+    expect(email.html).toContain(
+      'Summary: 1 rank drop · 0 rank improvements · 1 top 10 entrant · 1 listing change · 0 negative reviews',
     );
   });
 
@@ -174,7 +178,7 @@ describe('formatBatchEmail', () => {
       totals: { events: 1, apps: 1 },
     });
     expect(single.subject).toBe(
-      '[asobeast] Daily app update — 1 change across 1 app',
+      '[asobeast] Daily app update: 1 change across 1 app',
     );
   });
 
@@ -182,17 +186,18 @@ describe('formatBatchEmail', () => {
     const email = await formatBatchEmail(batch);
     expect(email.text).toContain('Rank drops');
     expect(email.text).not.toContain('Rank improvements');
-    expect(email.text).toContain('New entrants');
+    expect(email.text).toContain('New in the top 10');
   });
 
   it('nests competitor activity under the primary app', async () => {
     const email = await formatBatchEmail(competitorBatch);
     expect(email.subject).toBe(
-      '[asobeast] Competitor watch — 1 change across 1 competitor',
+      '[asobeast] Competitor watch: 1 change across 1 competitor',
     );
-    expect(email.text).toContain('Primary app · Alpha · App Store · US');
-    expect(email.text).toContain('Competitor · Charlie · App Store · US');
-    expect(email.html).toContain('Competitor · Charlie · App Store · US');
+    expect(email.text).toContain('Alpha\nYour app · App Store · US');
+    expect(email.text).toContain('  Charlie\n  Competitor · App Store · US');
+    expect(email.html).toContain('Alpha · Your app · App Store · US');
+    expect(email.html).toContain('Charlie · Competitor · App Store · US');
   });
 
   it('renders queued legacy mixed batches without a scope', async () => {
@@ -206,11 +211,11 @@ describe('formatBatchEmail', () => {
     const email = await formatBatchEmail(legacy);
 
     expect(email.subject).toBe(
-      '[asobeast] Daily alert update — 4 changes across 2 apps',
+      '[asobeast] Daily update: 4 changes across 2 apps',
     );
     expect(email.text).toContain('Rank drops');
-    expect(email.text).toContain('Competitor · Charlie · App Store · US');
-    expect(email.html).toContain('Metadata changes');
+    expect(email.text).toContain('  Charlie\n  Competitor · App Store · US');
+    expect(email.html).toContain('Listing changes');
   });
 
   it('truncates long metadata values', async () => {
@@ -221,8 +226,8 @@ describe('formatBatchEmail', () => {
 
   it('labels each app with its store and country', async () => {
     const email = await formatBatchEmail(batch);
-    expect(email.text).toContain('Alpha · App Store · US');
-    expect(email.text).toContain('Bravo · Google Play · GB');
+    expect(email.text).toContain('Alpha\nApp Store · US');
+    expect(email.text).toContain('Bravo\nGoogle Play · GB');
   });
 
   it('renders zero totals and every owned section in severity order', async () => {
@@ -232,7 +237,7 @@ describe('formatBatchEmail', () => {
       apps: [],
     });
     expect(empty.subject).toBe(
-      '[asobeast] Daily app update — 0 changes across 0 apps',
+      '[asobeast] Daily app update: 0 changes across 0 apps',
     );
 
     const completeSection: AlertBatchAppSection = {
@@ -274,8 +279,8 @@ describe('formatBatchEmail', () => {
     const headings = [
       'Rank drops',
       'Rank improvements',
-      'New entrants',
-      'Metadata changes',
+      'New in the top 10',
+      'Listing changes',
       'Negative reviews',
     ];
     expect(headings.every((heading) => email.text.includes(heading))).toBe(
@@ -333,10 +338,10 @@ describe('formatBatchEmail', () => {
     });
 
     expect(email.subject).toBe(
-      '[asobeast] Competitor watch — 2 changes across 2 competitors',
+      '[asobeast] Competitor watch: 2 changes across 2 competitors',
     );
-    expect(email.text).toContain('An app · Google Play · DE');
-    expect(email.text).toContain('— → <b>新しい 🚀</b>');
+    expect(email.text).toContain('  An app\n  Competitor · Google Play · DE');
+    expect(email.text).toContain('Description: — → "<b>新しい 🚀</b>"');
     expect(email.html).toContain('&lt;Primary &amp; Co&gt;');
     expect(email.html).toContain('&lt;b&gt;新しい 🚀&lt;/b&gt;');
   });
@@ -351,8 +356,8 @@ describe('formatBatchEmail', () => {
       totals: { events: 11, apps: 11 },
       apps: sections,
     });
-    expect(groupLimited.text).toContain('+1 more app group');
-    expect(groupLimited.text).not.toContain('App 10 ·');
+    expect(groupLimited.text).toContain('+1 more app');
+    expect(groupLimited.text).not.toContain('App 10');
 
     const manyCompetitors = Array.from({ length: 11 }, (_, index) => ({
       ...competitorAlpha.competitors[0],
@@ -382,8 +387,8 @@ describe('formatBatchEmail', () => {
       apps: [{ ...competitorAlpha, competitors: manyCompetitors }],
     });
     expect(limited.text).toContain('+1 more competitor');
-    expect(limited.text).toContain('+1 more detail line');
-    expect(limited.text).not.toContain('Competitor 10 ·');
+    expect(limited.text).toContain('      +1 more\n');
+    expect(limited.text).not.toContain('Competitor 10');
   });
 
   it('is deterministic and bounds a 1,000-event report', async () => {
@@ -400,21 +405,25 @@ describe('formatBatchEmail', () => {
     const second = await formatBatchEmail(large);
 
     expect(second).toEqual(first);
-    expect(first.text).toContain('+980 more detail lines');
+    expect(first.text).toContain('+980 more');
     expect(first.text.length).toBeLessThan(10_000);
     expect(first.html.length).toBeLessThan(20_000);
-    expect(first.text).toContain('Window (UTC):');
-    expect(first.html).toContain('Window (UTC):');
+    expect(first.text).toContain('22 Jul 2026');
+    expect(first.html).toContain('22 Jul 2026');
   });
 });
 
 describe('formatEmail for action.opened', () => {
-  it('renders the rule, priority, estimated impact, evidence and link', async () => {
+  it('renders the rule, priority, impact, evidence and link', async () => {
     const email = await formatEmail(actionOpened);
+    const title = ACTION_RULE_TITLES['keyword.add_uncovered'];
 
-    expect(email.subject).toContain('keyword.add_uncovered');
-    expect(email.text).toContain('Priority: high');
-    expect(email.text).toContain('Estimated impact: 71');
+    expect(email.subject).toBe(
+      `[asobeast] High priority action for Alpha: ${title} (impact 71)`,
+    );
+    expect(email.text).toContain(`Rule: ${title}`);
+    expect(email.text).toContain('Priority: High');
+    expect(email.text).toContain('Impact: 71');
     expect(email.text).toContain('opportunity 66.5');
     expect(email.text).toContain('uncovered in title, subtitle, keywordField');
     expect(email.text).toContain(
@@ -425,7 +434,7 @@ describe('formatEmail for action.opened', () => {
   it('omits the link row entirely when no public url is configured', async () => {
     const email = await formatEmail({ ...actionOpened, link: null });
 
-    expect(email.text).not.toContain('Open:');
+    expect(email.text).not.toContain('Open the action:');
     expect(email.text).not.toContain('localhost');
   });
 
@@ -457,9 +466,9 @@ describe('formatEmail for action.opened', () => {
       apps: [{ ...emptySection(alpha.app), actions: [actionOpened] }],
     });
 
-    expect(email.text).toContain('1 new action');
-    expect(email.text).toContain('Actions');
-    expect(email.text).toContain('estimated impact 71');
+    expect(email.html).toContain('1 new action');
+    expect(email.text).toContain('New actions');
+    expect(email.text).toContain('impact 71');
   });
 });
 
@@ -468,19 +477,19 @@ describe('formatEmail for the new rank events', () => {
     const email = await formatEmail(milestone());
 
     expect(email.subject).toBe(
-      '[asobeast] My App entered the top 10 for "habit tracker (US)": #14 → #8',
+      '[asobeast] My App entered the top 10 for "habit tracker" in US: #14 → #8',
     );
     expect(email.text).toContain('Milestone: entered the top 10');
-    expect(email.text).toContain('From: 14');
-    expect(email.text).toContain('To: 8');
+    expect(email.text).toContain('From: #14');
+    expect(email.text).toContain('To: #8');
   });
 
   it('lists the position of a first ranking and both moves of an overtake', async () => {
-    expect((await formatEmail(firstRanking())).text).toContain('Position: 37');
+    expect((await formatEmail(firstRanking())).text).toContain('Position: #37');
     const email = await formatEmail(overtake());
     expect(email.text).toContain('Competitor: Rival Focus');
-    expect(email.text).toContain('Competitor position: 9 → 4');
-    expect(email.text).toContain('App position: 5 → 6');
+    expect(email.text).toContain('Competitor position: #9 → #4');
+    expect(email.text).toContain('Your position: #5 → #6');
   });
 });
 
@@ -504,7 +513,7 @@ describe('formatBatchEmail for the new rank events', () => {
       }),
     );
 
-    expect(email.text).toContain(
+    expect(email.html).toContain(
       '· 0 new actions · 1 milestone · 1 first ranking · 1 overtake',
     );
     for (const title of [
@@ -524,7 +533,7 @@ describe('formatBatchEmail for the new rank events', () => {
       rankBatch(withoutRankEvents(rankEventSection())),
     );
 
-    expect(email.text).toContain(
+    expect(email.html).toContain(
       '0 milestones · 0 first rankings · 0 overtakes',
     );
   });
@@ -536,7 +545,7 @@ describe('formatEmail in the branded layout', () => {
   it('links an app event back to its app and to the alert settings', async () => {
     const { html } = await formatEmail(dropped, linked);
     expect(html).toContain('href="https://aso.example.com/apps/app_1"');
-    expect(html).toContain('Open in AsoBeast');
+    expect(html).toContain('Open app');
     expect(html).toContain(
       'href="https://aso.example.com/settings#email-alerts"',
     );
@@ -557,11 +566,11 @@ describe('formatEmail in the branded layout', () => {
     expect(html).toContain('Open the action');
     expect(html).not.toMatch(/>Open<\/td>/);
     expect(text).toContain(
-      'Open: https://aso.example.com/actions?action=act_1',
+      'Open the action: https://aso.example.com/actions?action=act_1',
     );
   });
 
-  it('renders no button for an event that names no app', async () => {
+  it('opens AsoBeast from an event that names no app', async () => {
     const { html } = await formatEmail(
       {
         event: 'serp.entrant',
@@ -572,13 +581,14 @@ describe('formatEmail in the branded layout', () => {
       },
       linked,
     );
-    expect(html).not.toContain('Button not working?');
+    expect(html).toContain('href="https://aso.example.com/"');
+    expect(html).toContain('Open AsoBeast');
   });
 
-  it('opens the portfolio from the weekly digest', async () => {
+  it('opens AsoBeast from the weekly digest', async () => {
     const { html } = await formatEmail(digestWithGroups, linked);
     expect(html).toContain('href="https://aso.example.com/"');
-    expect(html).toContain('Open the portfolio');
+    expect(html).toContain('Open AsoBeast');
     expect(html.indexOf('Linked apps')).toBeLessThan(html.indexOf('App 0'));
   });
 
@@ -606,9 +616,12 @@ describe('formatBatchEmail in the branded layout', () => {
 
   it('shows fewer lines in html than in text only when the report would not fit', async () => {
     const worst = await formatBatchEmail(worstCaseBatch('owned_apps'), linked);
-    expect(worst.text).toContain('+5 more detail lines');
-    expect(worst.html).not.toContain('+5 more detail lines');
-    expect(worst.html).toMatch(/\+\d+ more detail lines/);
+    const lastRow = 'meditation and sleep tracker keyword 19  ';
+    expect(worst.text).toContain(lastRow);
+    expect(worst.html).not.toContain(lastRow);
+    expect(worst.html).toContain(
+      'See all 25: https://aso.example.com/apps/app_0/keywords',
+    );
 
     const usual = await formatBatchEmail(batch, linked);
     const rankDrops = Array.from({ length: 25 }, (_, index) => ({
@@ -619,8 +632,12 @@ describe('formatBatchEmail in the branded layout', () => {
       { ...batch, apps: [{ ...alpha, rankDrops }] },
       linked,
     );
-    expect(usual.html).not.toContain('more detail lines');
-    expect(full.html).toContain('+5 more detail lines');
+    expect(usual.html).not.toContain('See all');
+    expect(full.html).toContain('game 19  ');
+    expect(full.html).not.toContain('game 20  ');
+    expect(full.html).toContain(
+      'See all 25: https://aso.example.com/apps/a/keywords',
+    );
   });
 
   it('links every owned card to its app and the button to the web app', async () => {

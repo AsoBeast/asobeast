@@ -1,5 +1,5 @@
 import type { AlertReport, ReportApp, ReportGroup } from './report';
-import { competitorsOmission, groupLines } from './report-blocks';
+import { competitorsOmission, groupLines, moreApps } from './report-blocks';
 import { identityLine } from './storefront';
 
 const INDENT = '  ';
@@ -33,7 +33,7 @@ function appText(app: ReportApp, depth: number): string[] {
 
 function omittedAppsLine(report: AlertReport): string[] {
   if (report.omittedApps <= 0) return [];
-  const more = `+${report.omittedApps} more app${report.omittedApps === 1 ? '' : 's'}`;
+  const more = moreApps(report.omittedApps);
   return [
     report.link ? `${more} · ${report.link.label}: ${report.link.href}` : more,
   ];
