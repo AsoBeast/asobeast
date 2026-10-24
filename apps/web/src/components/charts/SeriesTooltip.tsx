@@ -13,9 +13,11 @@ export interface SeriesTooltipItem {
 export function SeriesTooltip({
   title,
   items,
+  footer,
 }: {
   title: string;
   items: SeriesTooltipItem[];
+  footer?: ReactNode;
 }) {
   const ordered = [...items].sort((a, b) => a.sortBy - b.sortBy);
 
@@ -51,6 +53,7 @@ export function SeriesTooltip({
           </div>
         ))}
       </div>
+      {footer}
     </div>
   );
 }

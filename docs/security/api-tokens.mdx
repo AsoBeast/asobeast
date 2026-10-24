@@ -72,7 +72,7 @@ This is what stops a leaked token from minting its own successor. After revoking
 | Use | Notes |
 | --- | --- |
 | Scripts and scheduled jobs | Anything that reads the API without a browser |
-| The MCP server | `ASOBEAST_API_TOKEN` is mandatory, and a boot preflight fails without a valid one. A read scoped token lists the read tools. A write scoped token also lists five tools that change keywords, competitors and actions, so give an agent a token of its own |
+| The MCP server | `ASOBEAST_API_TOKEN` is mandatory, and a boot preflight fails without a valid one. A read scoped token lists the read tools. A write scoped token also lists seven tools that change keywords, competitors, actions and annotations, so give an agent a token of its own |
 | Continuous integration | Store it as a secret, never in the repository |
 
 <Warning>

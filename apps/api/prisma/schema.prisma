@@ -218,6 +218,7 @@ model App {
   rankings     KeywordRanking[]
   categoryRanks CategoryRank[]
   changeEvents ChangeEvent[]
+  annotations  AppAnnotation[]
   reviews      Review[]
   reviewReplies ReviewReply[]
   replyGuidelines String?
@@ -522,6 +523,19 @@ model ChangeEvent {
   capturedAt DateTime @default(now())
 
   @@index([appId, country, localization, capturedAt])
+}
+
+model AppAnnotation {
+  id        String   @id @default(cuid())
+  appId     String
+  app       App      @relation(fields: [appId], references: [id], onDelete: Cascade)
+  date      DateTime @db.Date
+  label     String
+  market    String?
+  tag       String?
+  createdAt DateTime @default(now())
+
+  @@index([appId, date])
 }
 
 model Review {

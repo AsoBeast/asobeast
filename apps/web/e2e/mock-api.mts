@@ -162,6 +162,8 @@ import {
 } from "./portfolio-insights.mts";
 import type {
   AccountPlan,
+  AppAnnotationCreateRequest,
+  AppAnnotationItem,
   AppDetail,
   ReviewReplyDraftRequest,
   ReviewTranslationRequest,
@@ -355,6 +357,40 @@ function annotated(
 ): TrackedKeywordItem {
   return { ...keyword, ...annotations.get(appId)?.get(keyword.keywordId) };
 }
+
+const APP_ANNOTATION_SEED: AppAnnotationItem[] = [
+  {
+    id: "annotation-1",
+    appId: "app-1",
+    date: "2030-01-01",
+    label: "Release 5.20.0",
+    market: null,
+    tag: "release",
+    createdAt: "2026-10-01T09:00:00.000Z",
+  },
+  {
+    id: "annotation-2",
+    appId: "app-1",
+    date: "2030-01-05",
+    label: "Autumn campaign",
+    market: "de",
+    tag: null,
+    createdAt: "2026-10-05T09:00:00.000Z",
+  },
+  {
+    id: "annotation-3",
+    appId: "app-1",
+    date: "2030-01-10",
+    label: "Keyword field rewrite",
+    market: null,
+    tag: null,
+    createdAt: "2026-10-10T09:00:00.000Z",
+  },
+];
+
+let appAnnotations: AppAnnotationItem[] = structuredClone(APP_ANNOTATION_SEED);
+let appAnnotationIds = APP_ANNOTATION_SEED.length;
+
 const actions: ActionItem[] = ACTIONS.map((action) => structuredClone(action));
 const actionEvents: Record<string, ActionEventItem[]> =
   initialActionEvents(ACTIONS);
@@ -3635,6 +3671,62 @@ const routes: Route[] = [
 
   appRoute(/^\/apps\/([^/]+)\/rankings$/, (dataset) => dataset.rankings),
   appRoute(/^\/apps\/([^/]+)\/serp-movers$/, (dataset) => dataset.serpMovers),
+  {
+    method: "GET",
+    pattern: /^\/apps\/([^/]+)\/annotations$/,
+    handler: ([id], req, res) => {
+      const path = req.url ?? "/";
+      if (id === ERROR_ID) return json(res, 500, errorEnvelope(500, path));
+      if (!DATASETS[id]) return json(res, 404, errorEnvelope(404, path));
+      json(res, 200, {
+        annotations: appAnnotations.filter((row) => row.appId === id),
+      });
+    },
+  },
+  {
+    method: "POST",
+    pattern: /^\/apps\/([^/]+)\/annotations$/,
+    handler: ([id], req, res) => {
+      withBody<AppAnnotationCreateRequest>(req, res, (body) => {
+        const path = req.url ?? "/";
+        if (!DATASETS[id]) return json(res, 404, errorEnvelope(404, path));
+        const created: AppAnnotationItem = {
+          id: `annotation-${++appAnnotationIds}`,
+          appId: id,
+          date: body.date,
+          label: body.label,
+          market: body.market ?? null,
+          tag: body.tag ?? null,
+          createdAt: new Date().toISOString(),
+        };
+        appAnnotations.push(created);
+        json(res, 201, created);
+      });
+    },
+  },
+  {
+    method: "DELETE",
+    pattern: /^\/apps\/([^/]+)\/annotations\/([^/]+)$/,
+    handler: ([id, annotationId], req, res) => {
+      const path = req.url ?? "/";
+      if (!DATASETS[id]) return json(res, 404, errorEnvelope(404, path));
+      const index = appAnnotations.findIndex(
+        (row) => row.id === annotationId && row.appId === id,
+      );
+      if (index < 0) return json(res, 404, errorEnvelope(404, path));
+      appAnnotations.splice(index, 1);
+      res.writeHead(204).end();
+    },
+  },
+  {
+    method: "POST",
+    pattern: /^\/__reset\/app-annotations$/,
+    handler: (_p, _req, res) => {
+      appAnnotations = structuredClone(APP_ANNOTATION_SEED);
+      appAnnotationIds = APP_ANNOTATION_SEED.length;
+      json(res, 200, { reset: true });
+    },
+  },
   appRoute(
     /^\/apps\/([^/]+)\/visibility-history$/,
     (dataset) => dataset.visibility,

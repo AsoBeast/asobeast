@@ -14,6 +14,7 @@ import {
   type TrackedKeywordItem,
 } from "@asobeast/shared";
 import { actionIdFrom } from "./actions";
+import { ANNOTATION_WRITE_TOOLS } from "./annotations";
 import { utcDate } from "./calendar-date";
 import { defineWriteTool, seg, type WriteTool } from "./define";
 
@@ -103,7 +104,7 @@ function actionOutcome(body: unknown) {
   return { id, rule, status, priority, snoozedUntil, closedAt, note };
 }
 
-export const MCP_WRITE_TOOLS: WriteTool[] = [
+const CORE_WRITE_TOOLS: WriteTool[] = [
   defineWriteTool({
     name: "track_keywords",
     title: "Track keywords",
@@ -237,4 +238,9 @@ export const MCP_WRITE_TOOLS: WriteTool[] = [
     }),
     outcome: (body) => actionOutcome(body),
   }),
+];
+
+export const MCP_WRITE_TOOLS: WriteTool[] = [
+  ...CORE_WRITE_TOOLS,
+  ...ANNOTATION_WRITE_TOOLS,
 ];
