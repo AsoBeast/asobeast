@@ -252,6 +252,41 @@ describe('StoreReportRequester', () => {
     });
   });
 
+  it('forgets the report and the cutoff of both lanes when it places a request again', async () => {
+    const { requester, connection, upsert, api } = build([
+      { appId: 'app_1', accessType: 'ONGOING', remoteId: 'remote-ongoing' },
+      { appId: 'app_1', accessType: 'ONE_TIME_SNAPSHOT' },
+    ]);
+    api.reportRequests.mockResolvedValue([
+      {
+        id: 'remote-ongoing',
+        accessType: 'ONGOING',
+        stoppedDueToInactivity: true,
+      },
+    ]);
+
+    await requester.ensure(connection, 'APP_STORE');
+
+    const ongoing = upsert.mock.calls
+      .map(
+        ([args]: [{ where: unknown; update: Record<string, unknown> }]) => args,
+      )
+      .find(
+        (args) =>
+          JSON.stringify(args.where) ===
+          JSON.stringify({
+            appId_accessType: { appId: 'app_1', accessType: 'ONGOING' },
+          }),
+      );
+    expect(ongoing?.update).toMatchObject({
+      remoteId: 'remote-ONGOING',
+      reportId: null,
+      lastProcessingDate: null,
+      detailedReportId: null,
+      detailedLastProcessingDate: null,
+    });
+  });
+
   it('keeps placing the other apps when apple fails one', async () => {
     const { requester, connection, upsert, api } = build();
     api.appsById.mockResolvedValue([
