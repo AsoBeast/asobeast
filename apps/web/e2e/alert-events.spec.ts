@@ -319,3 +319,40 @@ for (const channel of CHANNELS) {
     });
   }
 }
+
+test("the webhook dialog names the chat tool a url reaches", async ({
+  page,
+}) => {
+  await page.goto("/settings");
+  const dialog = await openSettledDialog(page, "Add webhook");
+  const field = page.getByLabel("Endpoint URL");
+  const hint = dialog.locator("#webhook-channel-hint");
+
+  await field.fill("https://discord.com/api/webhooks/1/abc");
+  await expect(hint).toHaveText(
+    "Recognised as Discord. Reports arrive as embeds with the app icon.",
+  );
+  await expect(field).toHaveAttribute(
+    "aria-describedby",
+    "webhook-channel-hint",
+  );
+
+  await field.fill("https://api.telegram.org/bot1:SECRET/sendMessage");
+  await expect(hint).toHaveText(
+    "Recognised as Telegram. Add ?chat_id=<id> after sendMessage.",
+  );
+
+  const slack = `https://hooks.slack.com/services/T1/B2/${randomUUID()}`;
+  await field.fill(slack);
+  await dialog
+    .getByRole("button", { name: "Add webhook", exact: true })
+    .click();
+  await expect(dialog).toBeHidden();
+
+  const row = page
+    .getByRole("listitem")
+    .filter({ hasText: "hooks.slack.com/services/…" })
+    .first();
+  await expect(row.getByText("Slack", { exact: true })).toBeVisible();
+  await expect(page.getByText(slack)).toHaveCount(0);
+});

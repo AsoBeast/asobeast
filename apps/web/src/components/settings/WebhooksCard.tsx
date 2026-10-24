@@ -7,7 +7,11 @@ import {
 } from "@tanstack/react-query";
 import { KeyRound } from "lucide-react";
 import { toast } from "sonner";
-import type { WebhookEvent, WebhookItem } from "@asobeast/shared";
+import {
+  webhookChannelOf,
+  type WebhookEvent,
+  type WebhookItem,
+} from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
 import { deleteWebhook, testWebhook, updateWebhook } from "@/lib/api";
 import {
@@ -23,9 +27,12 @@ import {
 import { AddWebhookDialog } from "./AddWebhookDialog";
 import { AlertChannelRow } from "./alert-channel/AlertChannelRow";
 import { useSharedFlight } from "@/lib/single-flight";
+import { WEBHOOK_CHANNEL_NAMES, webhookRowLabel } from "./webhook-channel-copy";
 
 function WebhookRow({ webhook }: { webhook: WebhookItem }) {
   const queryClient = useQueryClient();
+  const channel = webhook.channel ?? webhookChannelOf(webhook.url);
+  const label = webhookRowLabel(webhook.url, channel);
 
   const toggle = useMutation({
     mutationFn: (active: boolean) => updateWebhook(webhook.id, { active }),
@@ -71,23 +78,28 @@ function WebhookRow({ webhook }: { webhook: WebhookItem }) {
 
   return (
     <AlertChannelRow
-      label={webhook.url}
+      label={label}
       channel="webhook"
       id={webhook.id}
       events={webhook.events}
       tag={
-        webhook.hasSecret ? (
-          <Badge variant="secondary">
-            <KeyRound />
-            Signed
-          </Badge>
-        ) : null
+        <>
+          {channel !== "generic" && (
+            <Badge variant="outline">{WEBHOOK_CHANNEL_NAMES[channel]}</Badge>
+          )}
+          {webhook.hasSecret && (
+            <Badge variant="secondary">
+              <KeyRound />
+              Signed
+            </Badge>
+          )}
+        </>
       }
       active={webhook.active}
       activePending={toggle.isPending}
       onActiveChange={(active) => toggle.mutate(active)}
       confirmTitle="Delete this webhook?"
-      confirmDescription={`AsoBeast will stop delivering alerts to ${webhook.url}. This cannot be undone.`}
+      confirmDescription={`AsoBeast will stop delivering alerts to ${label}. This cannot be undone.`}
       testPending={test.isPending}
       onTest={() => test.mutate()}
       deletePending={remove.isPending}
@@ -105,8 +117,9 @@ export function WebhooksCard() {
     <AlertChannelCard title="Webhooks" action={<AddWebhookDialog />}>
       {data.length === 0 ? (
         <AlertChannelEmpty>
-          No webhooks yet. Add one to receive metadata and rank alerts in Slack,
-          Discord, ntfy or your own endpoint.
+          No webhooks yet. Add one to receive metadata and rank alerts in
+          Discord, Slack, Microsoft Teams, Telegram, Google Chat or your own
+          endpoint.
         </AlertChannelEmpty>
       ) : (
         <AlertChannelList label="Configured alert webhooks and their subscribed events.">
