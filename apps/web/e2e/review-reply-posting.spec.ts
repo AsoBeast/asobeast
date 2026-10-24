@@ -247,7 +247,11 @@ test("marks a reply as replied without posting it", async ({
     .getByRole("button", { name: "Mark as replied without posting" })
     .click();
 
-  await expect(page.getByText("Marked replied")).toBeVisible();
+  await expect(
+    articleOf(page, "It crashes when I start a session.").getByText(
+      "Marked replied",
+    ),
+  ).toBeVisible();
   await expect(
     composer(page).getByRole("button", { name: "Undo" }),
   ).toBeVisible();
