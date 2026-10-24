@@ -1,36 +1,22 @@
-import {
-  AlertBatchAppSection,
+import type {
   AlertBatchPayload,
-  AlertBatchScope,
   AlertPayload,
   DigestWeeklyPayload,
-  SERP_DEPTH,
-  keywordLabel,
 } from '@asobeast/shared';
-import {
-  actionLine,
-  AlertBatchBlock,
-  appHeader,
-  appLabel,
-  changeLines,
-  isRankEvent,
-  position,
-  RankEventPayload,
-  rankEventSentence,
-  reviewQuote,
-  sectionBlocks,
-  stars,
-  storeLabel,
-  windowLine,
-} from './alert-summary';
+import type { AlertReport, ReportApp } from './report/report';
+import { buildAlert } from './report/build-alert';
+import { buildReport } from './report/build-report';
+import { blocksOf, moreApps, type ReportBlock } from './report/report-blocks';
+import type { GranularPayload } from './report/report-sentences';
+import { identityLine } from './report/storefront';
 
-const DIGEST_APP_CAP = 10;
-const BATCH_APP_CAP = 10;
 const DISCORD_FIELD_MAX = 1000;
 const DISCORD_TOTAL_MAX = 6000;
 const DISCORD_NAME_MAX = 256;
+const SLACK_HEADER_MAX = 150;
 const SLACK_SECTION_MAX = 2900;
 const SLACK_TOTAL_MAX = 30_000;
+const NO_MENTIONS = { parse: [] };
 
 function host(url: string): string {
   try {
@@ -49,124 +35,49 @@ function isSlack(url: string): boolean {
   return host(url) === 'hooks.slack.com';
 }
 
-function rankEventIcon(payload: RankEventPayload): string {
-  if (payload.event === 'rank.first') return '✨';
-  if (payload.event === 'rank.overtaken') return '⚔️';
-  if (payload.direction === 'left') return '🔻';
-  return payload.tier === 1 ? '🏆' : '🏅';
+const headlineOf = (report: AlertReport): string =>
+  `${report.emoji} ${report.headline}`;
+
+export function renderMessage(payload: GranularPayload): string {
+  return headlineOf(buildAlert(payload, null));
 }
 
-export function renderMessage(payload: AlertPayload): string {
-  if (payload.event === 'metadata.changed') {
-    const who = payload.app.name ?? 'An app';
-    const tag = payload.app.isCompetitor ? ' (competitor)' : '';
-    const fields = payload.changes.map((change) => change.field).join(', ');
-    return `📝 ${who}${tag} changed: ${fields}`;
-  }
-
-  if (payload.event === 'review.negative') {
-    const who = payload.app.name ?? 'An app';
-    const version = payload.review.version
-      ? ` (v${payload.review.version})`
-      : '';
-    return `⚠️ ${who} got a ${stars(payload.review.score)} review${version}: ${reviewQuote(payload.review.text)}`;
-  }
-
-  if (payload.event === 'digest.weekly') {
-    return `🗓️ Weekly digest: ${payload.apps.length} app${payload.apps.length === 1 ? '' : 's'}`;
-  }
-
-  if (payload.event === 'serp.entrant') {
-    const names = payload.entrants
-      .map((entrant) => `${position(entrant.position)} ${entrant.title}`)
-      .join(', ');
-    return `🆕 New in the top ${SERP_DEPTH} for "${keywordLabel(payload.keyword)}": ${names}`;
-  }
-
-  if (payload.event === 'alerts.batch') {
-    return batchFormatter(payload).headline(payload);
-  }
-
-  if (payload.event === 'action.opened') {
-    return `🎯 ${actionLine(payload)}`;
-  }
-
-  if (isRankEvent(payload)) {
-    return `${rankEventIcon(payload)} ${rankEventSentence(payload)}`;
-  }
-
-  const who = appLabel(payload.app.name);
-  const icon = payload.event === 'rank.dropped' ? '📉' : '📈';
-  const verb = payload.event === 'rank.dropped' ? 'dropped' : 'improved';
-  return `${icon} ${who} ${verb} for "${keywordLabel(payload.keyword)}": ${position(payload.from, payload.fromDepth)} → ${position(payload.to, payload.toDepth)}`;
-}
-
-function signedDelta(value: number | null): string {
-  if (value === null) {
-    return '—';
-  }
-  const rounded = Math.round(value * 10) / 10;
-  return rounded >= 0 ? `+${rounded}` : `${rounded}`;
-}
-
-function digestTitle(payload: DigestWeeklyPayload): string {
-  return `🗓️ Weekly digest · ${payload.window.from} → ${payload.window.to}`;
-}
-
-function digestAppLine(app: DigestWeeklyPayload['apps'][number]): string {
-  const parts = [
-    `${app.name ?? 'App'} — vis ${Math.round(app.visibility.current)} (${signedDelta(app.visibility.delta7d)})`,
-  ];
-  const up = app.moversUp[0];
-  if (up) {
-    parts.push(
-      `↑ ${up.text} ${position(up.from, up.fromDepth)}→${position(up.to, up.toDepth)}`,
-    );
-  }
-  const down = app.moversDown[0];
-  if (down) {
-    parts.push(
-      `↓ ${down.text} ${position(down.from, down.fromDepth)}→${position(down.to, down.toDepth)}`,
-    );
-  }
-  parts.push(`${app.changes} change${app.changes === 1 ? '' : 's'}`);
-  if (app.actions) {
-    parts.push(
-      `${app.actions.open} open action${app.actions.open === 1 ? '' : 's'}`,
-    );
-  }
-  return parts.join(' · ');
-}
-
-function digestLines(payload: DigestWeeklyPayload): string[] {
-  const lines = payload.apps.slice(0, DIGEST_APP_CAP).map(digestAppLine);
-  if (payload.apps.length > DIGEST_APP_CAP) {
-    lines.push(`+${payload.apps.length - DIGEST_APP_CAP} more`);
-  }
-  return lines;
+function factLines(report: AlertReport): string[] {
+  return report.facts.map(({ label, value }) =>
+    label ? `${label}: ${value}` : value,
+  );
 }
 
 function digestDiscordBody(payload: DigestWeeklyPayload): unknown {
+  const report = buildAlert(payload, null);
   return {
+    allowed_mentions: NO_MENTIONS,
     embeds: [
       {
-        title: digestTitle(payload),
-        description: digestLines(payload).join('\n'),
+        title: clamp(headlineOf(report), DISCORD_NAME_MAX),
+        description: factLines(report).map(escapeDiscord).join('\n'),
       },
     ],
   };
 }
 
 function digestSlackBody(payload: DigestWeeklyPayload): unknown {
+  const report = buildAlert(payload, null);
   return {
     blocks: [
       {
         type: 'header',
-        text: { type: 'plain_text', text: digestTitle(payload) },
+        text: {
+          type: 'plain_text',
+          text: clamp(headlineOf(report), SLACK_HEADER_MAX),
+        },
       },
       {
         type: 'section',
-        text: { type: 'mrkdwn', text: digestLines(payload).join('\n') },
+        text: {
+          type: 'mrkdwn',
+          text: factLines(report).map(escapeSlack).join('\n'),
+        },
       },
     ],
   };
@@ -176,63 +87,17 @@ function clamp(text: string, max: number): string {
   return text.length > max ? `${text.slice(0, max - 1)}…` : text;
 }
 
-function plural(count: number, singular: string): string {
-  return `${count} ${singular}${count === 1 ? '' : 's'}`;
-}
-
-interface BatchGroup {
+interface ChatGroup {
   name: string;
-  blocks: AlertBatchBlock[];
+  blocks: ReportBlock[];
 }
 
-interface BatchFormatter {
-  headline: (payload: AlertBatchPayload) => string;
-  group: (section: AlertBatchAppSection) => BatchGroup;
-  omittedNoun: string;
-}
-
-function competitorBlocks(section: AlertBatchAppSection): AlertBatchBlock[] {
-  return section.competitors.map((competitor) => ({
-    title: `Competitor · ${appLabel(competitor.app.name)} · ${storeLabel(competitor.app.store)} · ${competitor.app.country.toUpperCase()}`,
-    lines: competitor.changes.flatMap(changeLines),
-  }));
-}
-
-const BATCH_FORMATTERS: Record<AlertBatchScope, BatchFormatter> = {
-  owned_apps: {
-    headline: (payload) =>
-      `📊 Daily app update · ${plural(payload.totals.events, 'change')} across ${plural(payload.totals.apps, 'app')}`,
-    group: (section) => ({
-      name: appHeader(section),
-      blocks: sectionBlocks(section),
-    }),
-    omittedNoun: 'app group',
-  },
-  competitors: {
-    headline: (payload) =>
-      `🔭 Competitor watch · ${plural(payload.totals.events, 'change')} across ${plural(payload.totals.apps, 'competitor')}`,
-    group: (section) => ({
-      name: `Primary app · ${appHeader(section)}`,
-      blocks: competitorBlocks(section),
-    }),
-    omittedNoun: 'primary app group',
-  },
-};
-
-const LEGACY_BATCH_FORMATTER: BatchFormatter = {
-  headline: (payload) =>
-    `📊 Daily alert update · ${plural(payload.totals.events, 'change')} across ${plural(payload.totals.apps, 'app')}`,
-  group: (section) => ({
-    name: appHeader(section),
-    blocks: [...sectionBlocks(section), ...competitorBlocks(section)],
-  }),
-  omittedNoun: 'app group',
-};
-
-function batchFormatter(payload: AlertBatchPayload): BatchFormatter {
-  if (payload.scope === 'owned_apps') return BATCH_FORMATTERS.owned_apps;
-  if (payload.scope === 'competitors') return BATCH_FORMATTERS.competitors;
-  return LEGACY_BATCH_FORMATTER;
+function chatGroup(app: ReportApp): ChatGroup {
+  const subtitle = identityLine(app, true);
+  return {
+    name: subtitle ? `${app.identity.name} · ${subtitle}` : app.identity.name,
+    blocks: blocksOf(app),
+  };
 }
 
 function escapeSlack(text: string): string {
@@ -244,7 +109,7 @@ function escapeSlack(text: string): string {
 }
 
 function escapeDiscord(text: string): string {
-  return text.replace(/([\\`*_{}[\]()#+\-.!|<>~@])/g, '\\$1');
+  return text.replace(/([\\`*_~|>@])/g, '\\$1');
 }
 
 function shortenLine(text: string, max: number): string {
@@ -266,7 +131,7 @@ function boundedLines(lines: string[], max: number): string {
   for (let index = 0; index < lines.length; index += 1) {
     const line = shortenLine(lines[index], max);
     const remaining = lines.length - index - 1;
-    const note = remaining > 0 ? `+${remaining} more lines` : '';
+    const note = remaining > 0 ? `+${remaining} more` : '';
     const candidate = [...output, line, note].filter(Boolean).join('\n');
     if (candidate.length <= max) {
       output.push(line);
@@ -278,7 +143,7 @@ function boundedLines(lines: string[], max: number): string {
       if (note) output.push(note);
       break;
     }
-    const omission = `+${lines.length - index} more lines`;
+    const omission = `+${lines.length - index} more`;
     if ([...output, omission].join('\n').length <= max) output.push(omission);
     break;
   }
@@ -286,35 +151,31 @@ function boundedLines(lines: string[], max: number): string {
 }
 
 function renderGroup(
-  group: BatchGroup,
+  group: ChatGroup,
   escape: (text: string) => string,
   bold: (text: string) => string,
   max: number,
 ): string {
   const lines = group.blocks.flatMap((block) => [
-    bold(escape(block.title)),
+    ...(block.title ? [bold(escape(block.title))] : []),
     ...block.lines.map(escape),
   ]);
   return boundedLines(lines, max);
 }
 
-function omittedLine(
-  total: number,
-  shown: number,
-  noun: string,
-): string | null {
+function omittedLine(total: number, shown: number): string | null {
   const count = total - shown;
-  return count > 0 ? `+${count} more ${noun}${count === 1 ? '' : 's'}` : null;
+  return count > 0 ? moreApps(count) : null;
 }
 
 function batchDiscordBody(payload: AlertBatchPayload): unknown {
-  const formatter = batchFormatter(payload);
-  const title = clamp(formatter.headline(payload), DISCORD_NAME_MAX);
-  const description = escapeDiscord(windowLine(payload));
+  const report = buildReport(payload, null);
+  const title = clamp(headlineOf(report), DISCORD_NAME_MAX);
+  const description = escapeDiscord(report.dateLabel);
   const fields: { name: string; value: string }[] = [];
   let used = title.length + description.length;
-  for (const section of payload.apps.slice(0, BATCH_APP_CAP)) {
-    const group = formatter.group(section);
+  for (const app of report.apps) {
+    const group = chatGroup(app);
     const name = clamp(escapeDiscord(group.name), DISCORD_NAME_MAX);
     const value = renderGroup(
       group,
@@ -327,11 +188,7 @@ function batchDiscordBody(payload: AlertBatchPayload): unknown {
     fields.push({ name, value });
     used += name.length + value.length;
   }
-  let more = omittedLine(
-    payload.apps.length,
-    fields.length,
-    formatter.omittedNoun,
-  );
+  let more = omittedLine(payload.apps.length, fields.length);
   while (
     more &&
     used + 1 + more.length > DISCORD_TOTAL_MAX &&
@@ -339,42 +196,32 @@ function batchDiscordBody(payload: AlertBatchPayload): unknown {
   ) {
     const removed = fields.pop();
     if (removed) used -= removed.name.length + removed.value.length;
-    more = omittedLine(
-      payload.apps.length,
-      fields.length,
-      formatter.omittedNoun,
-    );
+    more = omittedLine(payload.apps.length, fields.length);
   }
   if (more) {
     fields.push({ name: '…', value: more });
   }
   return {
-    allowed_mentions: { parse: [] },
-    embeds: [
-      {
-        title,
-        description,
-        fields,
-      },
-    ],
+    allowed_mentions: NO_MENTIONS,
+    embeds: [{ title, description, fields }],
   };
 }
 
 function batchSlackBody(payload: AlertBatchPayload): unknown {
-  const formatter = batchFormatter(payload);
+  const report = buildReport(payload, null);
   const blocks: Array<Record<string, unknown>> = [
     {
       type: 'header',
       text: {
         type: 'plain_text',
-        text: clamp(formatter.headline(payload), 150),
+        text: clamp(headlineOf(report), SLACK_HEADER_MAX),
       },
     },
   ];
   let used = 0;
   let shown = 0;
-  for (const section of payload.apps.slice(0, BATCH_APP_CAP)) {
-    const group = formatter.group(section);
+  for (const app of report.apps) {
+    const group = chatGroup(app);
     const detail = renderGroup(
       group,
       escapeSlack,
@@ -391,16 +238,13 @@ function batchSlackBody(payload: AlertBatchPayload): unknown {
     used += text.length;
     shown += 1;
   }
-  const more = omittedLine(payload.apps.length, shown, formatter.omittedNoun);
+  const more = omittedLine(payload.apps.length, shown);
   if (more) {
-    blocks.push({
-      type: 'section',
-      text: { type: 'mrkdwn', text: more },
-    });
+    blocks.push({ type: 'section', text: { type: 'mrkdwn', text: more } });
   }
   blocks.push({
     type: 'context',
-    elements: [{ type: 'mrkdwn', text: escapeSlack(windowLine(payload)) }],
+    elements: [{ type: 'mrkdwn', text: escapeSlack(report.dateLabel) }],
   });
   return { blocks };
 }
@@ -425,7 +269,10 @@ export function formatWebhookBody(url: string, payload: AlertPayload): string {
     return JSON.stringify(payload);
   }
   if (isDiscord(url)) {
-    return JSON.stringify({ content: renderMessage(payload) });
+    return JSON.stringify({
+      content: renderMessage(payload),
+      allowed_mentions: NO_MENTIONS,
+    });
   }
   if (isSlack(url)) {
     return JSON.stringify({ text: renderMessage(payload) });

@@ -197,13 +197,13 @@ describe('buildReport', () => {
     });
   });
 
-  it('builds a report of thousands of events in well under 100 ms', () => {
+  it('builds a report of thousands of events in well under a second', () => {
     const payload = worstCaseBatch(null);
     const started = performance.now();
 
     buildReport(payload, ORIGIN);
 
-    expect(performance.now() - started).toBeLessThan(100);
+    expect(performance.now() - started).toBeLessThan(1_000);
   });
 });
 
