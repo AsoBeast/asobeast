@@ -20,7 +20,7 @@ interface UtcDay {
 }
 
 const UTC_PATTERN =
-  /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2})(?::\d{2}(?:\.\d+)?)?Z)?$/;
+  /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?Z)?$/;
 
 interface UtcValue {
   date: UtcDay;
@@ -30,14 +30,17 @@ interface UtcValue {
 function utcValue(value: string): UtcValue | null {
   const match = UTC_PATTERN.exec(value);
   if (!match) return null;
-  const parts = match.slice(1, 6).map((part) => Number(part ?? 0));
-  const [year, month, day, hour, minute] = parts;
-  const instant = new Date(Date.UTC(year, month - 1, day, hour, minute));
+  const parts = match.slice(1, 7).map((part) => Number(part ?? 0));
+  const [year, month, day, hour, minute, second] = parts;
+  const instant = new Date(
+    Date.UTC(year, month - 1, day, hour, minute, second),
+  );
   const roundTrip = [
     instant.getUTCMonth() + 1,
     instant.getUTCDate(),
     instant.getUTCHours(),
     instant.getUTCMinutes(),
+    instant.getUTCSeconds(),
   ];
   if (roundTrip.some((part, index) => part !== parts[index + 1])) return null;
   return {
