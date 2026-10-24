@@ -167,9 +167,7 @@ Branch on `event` and ignore values and fields you do not recognise. New events 
 
 `link` is present only when `WEB_PUBLIC_URL` is set. When it is unset the link is `null` rather than a broken `localhost` guess. The Compose stacks always set it, see [Hosting behind TLS and a reverse proxy](/security/hosting).
 
-A Discord webhook url receives one embed per app, with the app icon, a colour for the direction of its moves, one field per group and a link to the rest of a long group. A Slack incoming webhook receives Block Kit: the icon beside each app, one section per group and an Open AsoBeast button. Both show when the report was sent in the reader's own time zone. A Slack Workflow Builder url, and every other url, receives the JSON payload above, which ntfy, Zapier, Make and n8n read as it is.
-
-When Discord or Slack answers `429`, the next attempt waits as long as the service asked, up to 15 minutes, and the delivery history records the attempt as asked to retry. The history names a webhook by its host and the start of its path, never by the token it carries.
+Discord, Slack, Microsoft Teams, Telegram and Google Chat urls receive a report in their own format instead of the JSON payload, and every other url, a Slack Workflow Builder url included, receives the payload above; see [Connect a chat tool](/guides/alert-channels).
 
 ## Email delivery
 

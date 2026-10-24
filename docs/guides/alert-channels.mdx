@@ -1,0 +1,65 @@
+---
+title: Connect a chat tool
+description: "Send AsoBeast reports to Discord, Slack, Microsoft Teams, Telegram or Google Chat by pasting the webhook url the tool gives you."
+icon: send
+keywords: ["discord","slack","microsoft teams","telegram","google chat","webhook","alerts","adaptive card","block kit"]
+---
+
+A webhook url tells AsoBeast where to send alerts, and the url also says which tool it belongs to. When you paste one in **Settings**, under **Add webhook**, the dialog names the tool it recognised, and every report reaches that tool in its own format: the app icon, one group per kind of change and a link back to AsoBeast. Any other url receives the JSON payload described in [Send alerts](/guides/alerts#webhook-delivery).
+
+A long report is cut to what the tool accepts. A cut group ends with a **See all** link to the page in AsoBeast that lists every row, and apps that did not fit are counted at the end. The links need `WEB_PUBLIC_URL`; without it the report counts what it left out instead.
+
+When a tool answers `429`, the next attempt waits as long as the tool asked, up to 15 minutes, and the delivery history records the attempt as asked to retry. The history and the settings row name a chat webhook by its host and the start of its path, never by the token in its url.
+
+## Discord
+
+1. Open the server settings and choose **Integrations**.
+2. Choose **Webhooks**, then **New Webhook**.
+3. Pick the channel the reports should go to.
+4. Choose **Copy Webhook URL** and paste it into AsoBeast.
+
+A report arrives as one message with an embed per app: the app icon, its name linking to the app in AsoBeast, a colour for the direction of its moves and one field per group. The date shows in each reader's own time zone. Discord accepts 10 embeds and 6000 characters per message, so a busy day shows the first apps and counts the rest. No report ever mentions `@everyone` or a role, whatever an app name or a review says.
+
+## Slack
+
+1. Create a Slack app for your workspace at api.slack.com/apps.
+2. Turn on **Incoming Webhooks**.
+3. Choose **Add New Webhook to Workspace** and pick the channel.
+4. Copy the webhook url and paste it into AsoBeast.
+
+A report arrives as Block Kit: the app icon beside each app, one section per group, the date in each reader's own time zone and an **Open AsoBeast** button. Slack accepts 50 blocks per message. A Workflow Builder url, one that contains `/workflows/` or `/triggers/`, receives the JSON payload instead, so you can map its fields in the workflow.
+
+## Microsoft Teams
+
+1. In Teams, open the **Workflows** app.
+2. Create a flow from the template **Send webhook alerts to a channel**.
+3. Pick the team and the channel.
+4. Copy the url the trigger shows and paste it into AsoBeast.
+
+A report arrives as an Adaptive Card with the app icon and name, a fact list per group and an **Open AsoBeast** button. Teams accepts 28 KB per post. Teams answers that it accepted a card, not that the channel showed it, so a card Teams cannot render still counts as delivered.
+
+Office 365 connector urls, the ones on `webhook.office.com`, stopped delivering when Microsoft retired connectors in May 2026. AsoBeast refuses them with a message that points to the Workflows template.
+
+## Telegram
+
+1. Talk to `@BotFather` in Telegram, send `/newbot` and keep the token it gives you.
+2. Add the bot to the group that should receive reports, then send any message in that group.
+3. Open `https://api.telegram.org/bot<token>/getUpdates` in a browser and copy the `id` of the `chat` your message came from. A group id starts with a minus sign.
+4. Paste `https://api.telegram.org/bot<token>/sendMessage?chat_id=<id>` into AsoBeast.
+
+A report arrives as one message from your bot, with an **Open AsoBeast** button and the link preview turned off. Telegram accepts 4096 characters per message. A url without `chat_id` is refused, because Telegram would not know where to post. The url carries the bot token, so AsoBeast shows it as `api.telegram.org/bot…/sendMessage` once it is saved.
+
+## Google Chat
+
+Incoming webhooks in Google Chat need a Google Workspace account, and your admin may have turned them off.
+
+1. Open the space that should receive reports.
+2. Choose **Apps and integrations**, then **Webhooks**.
+3. Name the webhook, save it and copy its url.
+4. Paste the url into AsoBeast.
+
+A report arrives as a card with the first app icon in its header, a section per app and an **Open AsoBeast** button. Google Chat accepts 100 widgets and 32 KB per card. The url carries a key and a token, so AsoBeast never shows its query string again.
+
+## Zapier, Make, n8n and your own endpoint
+
+Any other url receives the JSON payload, exactly as described in [Send alerts](/guides/alerts#webhook-delivery). Zapier, Make and n8n read it as it is. An n8n url that contains `/webhook-test/` works only while the editor listens, so paste the production url instead.
