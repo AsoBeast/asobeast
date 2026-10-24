@@ -270,6 +270,7 @@ import {
   type ChartKey,
   type ChartPage,
   type Store,
+  webhookChannelOf,
 } from "@asobeast/shared";
 import { SETUP_SESSION_COOKIE } from "./setup-session.mts";
 import {
@@ -2914,6 +2915,7 @@ const routes: Route[] = [
           active: true,
           hasSecret: Boolean(body.secret),
           createdAt: new Date().toISOString(),
+          channel: webhookChannelOf(body.url),
         };
         webhooks.unshift(webhook);
         json(res, 201, webhook);
@@ -2935,7 +2937,10 @@ const routes: Route[] = [
             errorEnvelope(400, path, "events should not be empty"),
           );
         }
-        if (body.url !== undefined) webhook.url = body.url;
+        if (body.url !== undefined) {
+          webhook.url = body.url;
+          webhook.channel = webhookChannelOf(body.url);
+        }
         if (body.events !== undefined) webhook.events = body.events;
         if (body.active !== undefined) webhook.active = body.active;
         if (body.secret !== undefined) webhook.hasSecret = body.secret !== "";

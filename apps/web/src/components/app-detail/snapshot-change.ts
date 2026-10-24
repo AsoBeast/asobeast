@@ -1,5 +1,8 @@
-import { isChangeField, type SnapshotChange } from "@asobeast/shared";
-import { CHANGE_FIELD_LABELS } from "@/lib/change-fields";
+import {
+  CHANGE_FIELD_LABELS,
+  isChangeField,
+  type SnapshotChange,
+} from "@asobeast/shared";
 import { formatNumber, formatPrice, formatRating } from "@/lib/format";
 import { localizedLabel } from "@/lib/localizations";
 import { releaseNotesInline } from "@/components/changes/release-notes";

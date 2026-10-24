@@ -1,12 +1,15 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 import {
+  AlertBatchApp,
   AlertBatchPayload,
   AlertDeliveryStatus,
   AlertFlushResult,
+  CHANGE_FIELD_LABELS,
   CHANGE_FIELDS,
   ChangeDetail,
   ChangeEventItem,
   isChangeField,
+  RankDroppedPayload,
   WEBHOOK_EVENTS,
 } from './changes';
 
@@ -74,6 +77,17 @@ describe('alert contracts', () => {
   });
 });
 
+describe('CHANGE_FIELD_LABELS', () => {
+  it('names every change field in its order', () => {
+    expect(Object.keys(CHANGE_FIELD_LABELS)).toEqual([...CHANGE_FIELDS]);
+  });
+
+  it('names a field the way the store consoles do', () => {
+    expect(CHANGE_FIELD_LABELS.summary).toBe('Short description');
+    expect(CHANGE_FIELD_LABELS.whatsNew).toBe("What's new");
+  });
+});
+
 describe('isChangeField', () => {
   it('accepts every known change field', () => {
     expect(CHANGE_FIELDS.every((field) => isChangeField(field))).toBe(true);
@@ -135,5 +149,32 @@ describe('the screenshot change fields', () => {
     };
     expect({ ...plain, detail }.detail).toBe(detail);
     expect(plain.detail).toBeUndefined();
+  });
+});
+
+describe('the alert app identity', () => {
+  it('lets every alert app carry an icon without requiring one', () => {
+    expectTypeOf<AlertBatchApp['iconUrl']>().toEqualTypeOf<
+      string | null | undefined
+    >();
+    const drop: RankDroppedPayload = {
+      event: 'rank.dropped',
+      occurredAt: '2026-10-24T03:10:00.000Z',
+      app: { id: 'a1', name: 'Habit' },
+      keyword: { id: 'k1', text: 'habit', store: 'APP_STORE', country: 'us' },
+      from: 3,
+      to: 12,
+      fromDepth: 200,
+      toDepth: 200,
+      threshold: 5,
+    };
+    expect(drop.app.iconUrl).toBeUndefined();
+  });
+
+  it('keeps the store and storefront of a batch app required', () => {
+    expectTypeOf<AlertBatchApp['store']>().toEqualTypeOf<
+      'APP_STORE' | 'GOOGLE_PLAY'
+    >();
+    expectTypeOf<AlertBatchApp['country']>().toEqualTypeOf<string>();
   });
 });

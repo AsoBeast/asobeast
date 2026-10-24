@@ -13,6 +13,7 @@ import {
   QUEUES,
 } from '../jobs/jobs.types';
 import { PrismaService } from '../prisma/prisma.service';
+import { AlertAppIdentities } from './alert-app-identities';
 import { DELIVERABLE_EMAIL_ALERTS } from './deliverable-email-alerts';
 import { MailerService } from './mailer.service';
 import { OutboxRow, outboxRows } from './outbox-rows';
@@ -28,10 +29,12 @@ export class AlertsDispatcher {
     @InjectQueue(QUEUES.ALERTS)
     private readonly queue: Queue<DeliverAlertPayload | DeliverEmailPayload>,
     private readonly workspace: WorkspaceContext,
+    private readonly identities: AlertAppIdentities,
   ) {}
 
-  async dispatch(payload: AlertPayload): Promise<void> {
+  async dispatch(raw: AlertPayload): Promise<void> {
     try {
+      const payload = await this.identities.attach(raw);
       if (this.batched(payload)) {
         await this.collect(payload);
         return;

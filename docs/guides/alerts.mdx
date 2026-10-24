@@ -88,7 +88,8 @@ A granular event looks like this.
     "id": "cl…",
     "name": "Habit Tracker",
     "store": "APP_STORE",
-    "country": "us"
+    "country": "us",
+    "iconUrl": "https://is1-ssl.mzstatic.com/image/thumb/…/512x512bb.jpg"
   },
   "action": {
     "id": "cl…",
@@ -144,6 +145,8 @@ A milestone and an overtake look like this. `rank.first` carries `position` and 
 }
 ```
 
+Every `app` object of a granular event may also carry `iconUrl`, `store` and `country`, read from the app when the alert is sent. `store` and `country` name the app's store and home storefront, and `iconUrl` is the address of the icon the store shows today, or `null` when no listing capture has recorded one. A consumer that ignores unknown fields needs no change.
+
 A batched report wraps events in a scoped envelope. Branch on the top level `scope`, which is `owned_apps` or `competitors`. The flat `events` array stays granular and contains only events for that scope, so a consumer that already handles granular events needs one extra branch rather than a rewrite.
 
 ```json
@@ -158,7 +161,7 @@ A batched report wraps events in a scoped envelope. Branch on the top level `sco
 }
 ```
 
-Each entry of `apps` groups one owned app's facts in arrays: `rankDrops`, `rankImprovements`, `rankMilestones`, `firstRankings`, `overtakes`, `serpEntrants`, `changes`, `negativeReviews`, `actions` and `competitors`. An array is empty when nothing happened or when the channel does not list its event.
+Each entry of `apps` groups one owned app's facts in arrays: `rankDrops`, `rankImprovements`, `rankMilestones`, `firstRankings`, `overtakes`, `serpEntrants`, `changes`, `negativeReviews`, `actions` and `competitors`. An array is empty when nothing happened or when the channel does not list its event. The `app` of an entry, and of each entry of its `competitors`, carries `id`, `name`, `store`, `country` and `iconUrl`.
 
 Branch on `event` and ignore values and fields you do not recognise. New events and fields arrive as additive changes within a major version.
 

@@ -158,6 +158,7 @@ function buildHarness() {
         {
           id: 'app1',
           name: 'App One',
+          iconUrl: null,
           store: Store.APP_STORE,
           country: 'us',
           isCompetitor: false,
@@ -433,6 +434,7 @@ describe('AlertFlushService', () => {
       {
         id: 'app1',
         name: 'App One',
+        iconUrl: null,
         store: Store.APP_STORE,
         country: 'us',
         isCompetitor: false,
@@ -441,6 +443,7 @@ describe('AlertFlushService', () => {
       {
         id: 'competitor1',
         name: 'Rival',
+        iconUrl: null,
         store: Store.APP_STORE,
         country: 'us',
         isCompetitor: true,

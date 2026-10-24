@@ -21,7 +21,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { CHANGE_FIELD_LABELS } from "@/lib/change-fields";
+import { CHANGE_FIELD_LABELS } from "@asobeast/shared";
 import { localizedLabel } from "@/lib/localizations";
 import { changeImpactOptions, changesOptions } from "@/lib/queries";
 import {
@@ -90,7 +90,9 @@ function ChangeValue({
       <Tooltip>
         <TooltipTrigger asChild>
           <span className="break-words">
-            <span className="text-muted-foreground">What’s New updated: </span>
+            <span className="text-muted-foreground">
+              {CHANGE_FIELD_LABELS.whatsNew} updated:{" "}
+            </span>
             <span
               className={cn(
                 "font-medium",

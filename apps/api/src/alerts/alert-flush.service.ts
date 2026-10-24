@@ -32,6 +32,7 @@ import { MailerService } from './mailer.service';
 const APP_SELECT = {
   id: true,
   name: true,
+  iconUrl: true,
   store: true,
   country: true,
   isCompetitor: true,

@@ -1,4 +1,5 @@
 import type { Store } from '../index';
+import type { AlertAppIdentity } from './changes';
 
 export const REVIEW_REPLY_TONES = ['friendly', 'neutral', 'formal'] as const;
 export type ReviewReplyTone = (typeof REVIEW_REPLY_TONES)[number];
@@ -183,7 +184,7 @@ export interface RatingsHistogram {
 export interface ReviewNegativePayload {
   event: 'review.negative';
   occurredAt: string;
-  app: { id: string; name: string | null };
+  app: { id: string; name: string | null } & AlertAppIdentity;
   review: {
     score: number;
     title: string | null;

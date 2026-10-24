@@ -5,6 +5,7 @@ import type { KeywordScope } from './keywords';
 import type { SerpEntrantPayload } from './serp';
 import type { ActionOpenedPayload } from './actions';
 import type { RankMilestoneDirection, RankMilestoneTier } from '../rank';
+import type { WebhookChannel } from '../webhook-channel';
 
 export const CHANGE_FIELDS = [
   'title',
@@ -20,6 +21,20 @@ export const CHANGE_FIELDS = [
   'whatsNew',
 ] as const;
 export type ChangeField = (typeof CHANGE_FIELDS)[number];
+
+export const CHANGE_FIELD_LABELS: Record<ChangeField, string> = {
+  title: 'Title',
+  subtitle: 'Subtitle',
+  summary: 'Short description',
+  description: 'Description',
+  version: 'Version',
+  price: 'Price',
+  screenshots: 'Screenshots',
+  screenshotImages: 'Screenshot images',
+  screenshotCaptions: 'Screenshot captions',
+  icon: 'Icon',
+  whatsNew: "What's new",
+};
 
 export function isChangeField(value: string): value is ChangeField {
   return CHANGE_FIELDS.some((field) => field === value);
@@ -87,6 +102,7 @@ export interface WebhookItem {
   active: boolean;
   hasSecret: boolean;
   createdAt: string;
+  channel?: WebhookChannel;
 }
 
 export interface WebhookCreateRequest {
@@ -166,7 +182,11 @@ export interface AlertDeliveryStatus {
 export interface MetadataChangedPayload {
   event: 'metadata.changed';
   occurredAt: string;
-  app: { id: string; name: string | null; isCompetitor: boolean };
+  app: {
+    id: string;
+    name: string | null;
+    isCompetitor: boolean;
+  } & AlertAppIdentity;
   changes: Array<{
     field: ChangeField;
     before: string | null;
@@ -177,7 +197,7 @@ export interface MetadataChangedPayload {
 export interface RankDroppedPayload {
   event: 'rank.dropped';
   occurredAt: string;
-  app: { id: string; name: string | null };
+  app: { id: string; name: string | null } & AlertAppIdentity;
   keyword: KeywordScope;
   from: number;
   to: number | null;
@@ -189,7 +209,7 @@ export interface RankDroppedPayload {
 export interface RankImprovedPayload {
   event: 'rank.improved';
   occurredAt: string;
-  app: { id: string; name: string | null };
+  app: { id: string; name: string | null } & AlertAppIdentity;
   keyword: KeywordScope;
   from: number | null;
   to: number;
@@ -201,7 +221,7 @@ export interface RankImprovedPayload {
 export interface RankMilestonePayload {
   event: 'rank.milestone';
   occurredAt: string;
-  app: { id: string; name: string | null };
+  app: { id: string; name: string | null } & AlertAppIdentity;
   keyword: KeywordScope;
   tier: RankMilestoneTier;
   direction: RankMilestoneDirection;
@@ -214,7 +234,7 @@ export interface RankMilestonePayload {
 export interface RankFirstPayload {
   event: 'rank.first';
   occurredAt: string;
-  app: { id: string; name: string | null };
+  app: { id: string; name: string | null } & AlertAppIdentity;
   keyword: KeywordScope;
   position: number;
   depth: number;
@@ -223,7 +243,7 @@ export interface RankFirstPayload {
 export interface RankOvertakenPayload {
   event: 'rank.overtaken';
   occurredAt: string;
-  app: { id: string; name: string | null };
+  app: { id: string; name: string | null } & AlertAppIdentity;
   keyword: KeywordScope;
   competitor: {
     id: string;
@@ -237,7 +257,13 @@ export interface RankOvertakenPayload {
   toDepth: number;
 }
 
-export interface AlertBatchApp {
+export interface AlertAppIdentity {
+  iconUrl?: string | null;
+  store?: Store;
+  country?: string;
+}
+
+export interface AlertBatchApp extends AlertAppIdentity {
   id: string;
   name: string | null;
   store: Store;

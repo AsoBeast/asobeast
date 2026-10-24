@@ -3487,6 +3487,7 @@ export const WEBHOOKS: WebhookItem[] = [
     active: true,
     hasSecret: true,
     createdAt: utcTimestampDaysAgo(5),
+    channel: "generic",
   },
 ];
 

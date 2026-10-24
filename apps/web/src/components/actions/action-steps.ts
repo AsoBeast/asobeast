@@ -1,3 +1,4 @@
+import { ACTION_RULE_TITLES } from "@asobeast/shared";
 import type {
   ActionEvidence,
   ActionItem,
@@ -5,7 +6,6 @@ import type {
   Store,
 } from "@asobeast/shared";
 import { formatCountry, formatDate } from "@/lib/format";
-import { ACTION_RULE_TITLE } from "./action-copy";
 import { changedFields } from "./action-headline";
 
 export const CONFIRMATION_STEP =
@@ -180,7 +180,7 @@ function ruleSteps(
 
 export function actionSteps(item: ActionItem): string[] {
   if (item.evidence === null) {
-    return [ACTION_RULE_TITLE[item.rule], confirmationStep(item.rule)];
+    return [ACTION_RULE_TITLES[item.rule], confirmationStep(item.rule)];
   }
   const keyword = item.scope.keywordText
     ? `"${item.scope.keywordText}"`
