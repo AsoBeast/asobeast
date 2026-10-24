@@ -30,6 +30,7 @@
     "check:compose-web-origin": "node .github/scripts/verify-compose-web-origin.mjs",
     "check:env-documented": "node .github/scripts/verify-env-documented.mjs",
     "check:image-defaults": "node .github/scripts/verify-image-defaults.mjs",
+    "check:playwright-image": "node .github/scripts/verify-playwright-image.mjs",
     "check:release-versions": "node .github/scripts/verify-release-versions.mjs",
     "bench:stack": "POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-asobeast} docker compose -f docker-compose.bench.yml up -d --wait",
     "bench:stack:down": "POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-asobeast} docker compose -f docker-compose.bench.yml down -v",
