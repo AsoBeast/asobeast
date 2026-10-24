@@ -17,8 +17,10 @@ const TIMEOUT_MS = 10_000;
 export class WebhookDelivery implements OnModuleDestroy {
   private readonly target: WebhookTargetOptions;
   private readonly dispatcher: Dispatcher;
+  private readonly origin: string | null;
 
   constructor(config: ConfigService<Env, true>) {
+    this.origin = config.get('WEB_PUBLIC_URL', { infer: true }) ?? null;
     this.target = {
       allowPrivate: config.get('WEBHOOK_ALLOW_PRIVATE_TARGETS', {
         infer: true,
@@ -65,7 +67,7 @@ export class WebhookDelivery implements OnModuleDestroy {
     payload: AlertPayload,
   ): Promise<Response> {
     const target = assertDeliverableUrl(url, this.target);
-    const body = formatWebhookBody(url, payload);
+    const body = formatWebhookBody(url, payload, this.origin);
     const response = await fetch(target, {
       method: 'POST',
       headers: deliveryHeaders(payload.event, body, secret),
