@@ -6,6 +6,7 @@ export const TENANT_TABLES = [
   'AlertEvent',
   'ApiToken',
   'App',
+  'AppAnnotation',
   'AppGroup',
   'AppLocalization',
   'AppSetup',

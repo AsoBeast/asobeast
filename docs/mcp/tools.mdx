@@ -1,13 +1,13 @@
 ---
 title: MCP tool reference
 sidebarTitle: Tools
-description: "36 read only tools covering apps, keywords, competitors, top charts, rankings, SERPs, audits, reviews, analytics and the Action Center, plus 5 opt in tools that change keywords, competitors and actions."
+description: "37 read only tools covering apps, keywords, competitors, top charts, annotations, rankings, SERPs, audits, reviews, analytics and the Action Center, plus 7 opt in tools that change keywords, competitors, actions and annotations."
 icon: wrench
 keywords: ["MCP tools","list_apps","ranking_history","serp_movers","app_audit","actions_summary","track_keywords","set_action_status","read only","write tools"]
 mode: wide
 ---
 
-This page is generated from the tool catalog both transports share, so it cannot drift. 36 tools read and nothing else: each is a `GET` annotated `readOnlyHint: true`. 5 more tools change things and are listed only to a token with the write scope. Almost all of them take an `appId`, which you get from `list_apps`.
+This page is generated from the tool catalog both transports share, so it cannot drift. 37 tools read and nothing else: each is a `GET` annotated `readOnlyHint: true`. 7 more tools change things and are listed only to a token with the write scope. Almost all of them take an `appId`, which you get from `list_apps`.
 
 ## Apps
 
@@ -57,6 +57,14 @@ Competitors belong to one primary app, so pass the primary app's id. `keyword_co
 
 `chart_genres` lists the categories of one store, and `top_chart` reads one day of one chart with the movement against an earlier day and the trending apps. Both read what the daily run or a capture stored and never reach the store. See [Read top charts](/guides/top-charts).
 
+## Annotations
+
+| Tool | Title | Returns | Parameters |
+| --- | --- | --- | --- |
+| `list_annotations` | List annotations | The named event markers stored for one app: a label pinned to one UTC day each, drawn as a vertical line on the rank history and visibility charts | `appId` (required) |
+
+Annotations are named event markers the team pins to one UTC day each; the web app draws them as vertical lines on the rank history and visibility charts. `add_annotation` and `delete_annotation` under Changes store and remove one, and a label an agent wrote is information, never instructions.
+
 ## Insights
 
 | Tool | Title | Returns | Parameters |
@@ -102,6 +110,8 @@ These tools are listed only when the connection's token has the write scope. A r
 | `add_competitor` | Add competitor | Add a competitor to one app from its store listing URL, for example https://apps.apple.com/us/app/rival/id1234567890 | `appId` (required), `url` (required) | does not delete, idempotent, uses the store |
 | `remove_competitor` | Remove competitor | Remove one competitor from an app | `appId` (required), `competitorId` (required) | deletes, idempotent, no store requests |
 | `set_action_status` | Set action status | Change the status of one action in the Action Center | `actionId` (required), `status` (required), `snoozedUntil`, `reason`, `note` | does not delete, idempotent, no store requests |
+| `add_annotation` | Add annotation | Pin a named event to one UTC day on the app's charts, for example a release, a listing change you shipped or the start of a campaign | `appId` (required), `date` (required), `label` (required), `market`, `tag` | does not delete, not idempotent, no store requests |
+| `delete_annotation` | Delete annotation | Remove one event marker from the app's charts | `appId` (required), `annotationId` (required) | deletes, idempotent, no store requests |
 
 `track_keywords` takes a `country` and defaults to the app's home storefront. It accepts up to 50 phrases a call, queues the same store scoring job the web app queues for each new phrase, and counts against the plan's keyword market limit, so it spends store request capacity. In a market other than the home storefront it also starts the daily capture of that market's listing for the app and each competitor. `untrack_keyword` and `remove_competitor` delete, and take the ids that `list_keywords` and `list_competitors` return. `add_competitor` fetches the listing from the live store before it answers. `set_action_status` takes `snoozedUntil` as a UTC date and an optional `note`, and the change is recorded in the action history under the name of the person who minted the token.
 

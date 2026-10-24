@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
+import { AnnotationsCard } from "@/components/annotations/AnnotationsCard";
 import { RankingsReportHeader } from "@/components/rankings/RankingsReportHeader";
 import { RankingsView } from "@/components/rankings/RankingsView";
 import { SerpMoversCard } from "@/components/rankings/SerpMoversCard";
@@ -10,6 +11,7 @@ import {
 } from "@/components/rankings/selection";
 import { getQueryClient } from "@/lib/get-query-client";
 import {
+  annotationsOptions,
   keywordsOptions,
   rankingsOptions,
   serpMoversOptions,
@@ -49,6 +51,7 @@ export default async function RankingsPage({
     rankingsOptions(id, { ...presetToRange(range), keywordIds: effective }),
   );
   void queryClient.prefetchQuery(serpMoversOptions(id, moverDays));
+  await queryClient.prefetchQuery(annotationsOptions(id));
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
@@ -61,7 +64,10 @@ export default async function RankingsPage({
             <RankingsView id={id} />
           </Suspense>
         </div>
-        <SerpMoversCard id={id} />
+        <div className="flex flex-col gap-6">
+          <SerpMoversCard id={id} />
+          <AnnotationsCard id={id} />
+        </div>
       </div>
     </HydrationBoundary>
   );
