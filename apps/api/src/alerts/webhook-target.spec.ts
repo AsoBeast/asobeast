@@ -2,6 +2,7 @@ import {
   WebhookTargetError,
   assertDeliverableUrl,
   isBlockedAddress,
+  webhookLabel,
 } from './webhook-target';
 
 describe('isBlockedAddress', () => {
@@ -182,4 +183,21 @@ describe('assertDeliverableUrl', () => {
       );
     },
   );
+});
+
+describe('webhookLabel', () => {
+  it.each([
+    ['https://discord.com/api/webhooks/123/abc', 'discord.com/api/webhooks/…'],
+    [
+      'https://hooks.slack.com/services/T1/B2/x',
+      'hooks.slack.com/services/T1/…',
+    ],
+    ['https://hooks.example.com/x?token=secret', 'hooks.example.com/…'],
+    ['https://webhook.site/6f1c2d3e-uuid', 'webhook.site/…'],
+    ['http://n8n:5678/webhook/asobeast', 'n8n:5678/webhook/…'],
+    ['https://hooks.example.com/', 'hooks.example.com'],
+    ['not a url', 'an invalid url'],
+  ])('prints %s as %s', (url, label) => {
+    expect(webhookLabel(url)).toBe(label);
+  });
 });

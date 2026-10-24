@@ -114,3 +114,18 @@ export function assertDeliverableUrl(
   }
   return url;
 }
+
+const LABEL_SEGMENTS = 2;
+
+export function webhookLabel(raw: string): string {
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return 'an invalid url';
+  }
+  const segments = url.pathname.split('/').filter(Boolean);
+  const kept = segments.slice(0, Math.min(LABEL_SEGMENTS, segments.length - 1));
+  const hidden = segments.length > kept.length ? ['…'] : [];
+  return [url.host, ...kept, ...hidden].join('/');
+}
