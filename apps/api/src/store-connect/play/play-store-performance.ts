@@ -265,7 +265,7 @@ export function searchTermsOf(rows: string[][]): SearchTermRow[] {
     if (playSourceOf(cell(cells, 'Traffic source')) !== 'search') continue;
     const term = storableTerm(cell(cells, SEARCH_TERM_COLUMN));
     const counts = countsOf(cells, cell);
-    if (!counts || !term || UNNAMED_TERMS.has(term.toLowerCase())) continue;
+    if (!counts || !term || UNNAMED_TERMS.has(normalizeText(term))) continue;
     const month = `${counts.date.slice(0, 7)}-01`;
     const id = `${month}|${term}`;
     const existing = byTerm.get(id);

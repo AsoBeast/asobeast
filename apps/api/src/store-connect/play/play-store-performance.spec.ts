@@ -216,7 +216,7 @@ describe('searchTermsOf', () => {
         '2026-09-01,com.adex77.WhereAmI,Google Play explore,No search terms specified,No UTM source specified,No UTM campaign specified,6,101,0.0594',
         '2026-09-02,com.adex77.WhereAmI,Google Play explore,No search terms specified,No UTM source specified,No UTM campaign specified,16,111,0.1441',
         '2026-09-02,com.adex77.WhereAmI,Google Play explore,map quiz,Other,Other,1,9,0.11',
-        '2026-09-02,com.adex77.WhereAmI,Google Play search,No search terms specified,Other,Other,2,20,0.1',
+        '2026-09-02,com.adex77.WhereAmI,Google Play search,No  search terms specified,Other,Other,2,20,0.1',
         '2026-09-02,com.adex77.WhereAmI,Google Play search,geoguess,Other,Other,3,25,0.12',
       ].join('\n'),
       'utf16le',
