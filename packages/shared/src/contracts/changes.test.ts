@@ -4,6 +4,7 @@ import {
   AlertBatchPayload,
   AlertDeliveryStatus,
   AlertFlushResult,
+  CHANGE_FIELD_LABELS,
   CHANGE_FIELDS,
   ChangeDetail,
   ChangeEventItem,
@@ -73,6 +74,17 @@ describe('alert contracts', () => {
       pending: 4,
       claimed: 2,
     });
+  });
+});
+
+describe('CHANGE_FIELD_LABELS', () => {
+  it('names every change field in its order', () => {
+    expect(Object.keys(CHANGE_FIELD_LABELS)).toEqual([...CHANGE_FIELDS]);
+  });
+
+  it('names a field the way the store consoles do', () => {
+    expect(CHANGE_FIELD_LABELS.summary).toBe('Short description');
+    expect(CHANGE_FIELD_LABELS.whatsNew).toBe("What's new");
   });
 });
 

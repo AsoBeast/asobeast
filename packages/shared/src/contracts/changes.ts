@@ -22,6 +22,20 @@ export const CHANGE_FIELDS = [
 ] as const;
 export type ChangeField = (typeof CHANGE_FIELDS)[number];
 
+export const CHANGE_FIELD_LABELS: Record<ChangeField, string> = {
+  title: 'Title',
+  subtitle: 'Subtitle',
+  summary: 'Short description',
+  description: 'Description',
+  version: 'Version',
+  price: 'Price',
+  screenshots: 'Screenshots',
+  screenshotImages: 'Screenshot images',
+  screenshotCaptions: 'Screenshot captions',
+  icon: 'Icon',
+  whatsNew: "What's new",
+};
+
 export function isChangeField(value: string): value is ChangeField {
   return CHANGE_FIELDS.some((field) => field === value);
 }
