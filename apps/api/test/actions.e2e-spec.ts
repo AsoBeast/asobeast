@@ -983,16 +983,16 @@ describe('ActionsController (e2e)', () => {
     await prisma.storeFunnelPageDay.createMany({
       data: Array.from({ length: 14 }, (_, index) =>
         [
-          ['default product page', 1000, 40],
+          ['Default product page', 1000, 40],
           [pageTitle, 500, 5],
-        ].map(([title, uniqueImpressions, gets]) => ({
+        ].map(([title, pageViews, gets]) => ({
           workspaceId: DEFAULT_WORKSPACE_ID,
           appId,
           date: new Date(today.getTime() - (3 + index) * DAY_MS),
           territory: 'United States',
           country: 'us',
           pageTitle: title as string,
-          uniqueImpressions: uniqueImpressions as number,
+          pageViews: pageViews as number,
           gets: gets as number,
           processingDate: today,
         })),
@@ -1017,7 +1017,8 @@ describe('ActionsController (e2e)', () => {
       country: 'us',
       pageTitle: 'Summer sale',
       windowDays: 14,
-      pageUniqueImpressions: 7000,
+      pageUniqueImpressions: 0,
+      pageViews: 7000,
       pageConversion: 0.01,
       defaultConversion: 0.04,
       ratio: 0.25,

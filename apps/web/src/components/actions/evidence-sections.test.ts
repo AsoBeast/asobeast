@@ -25,6 +25,25 @@ const lists = (evidence: ActionEvidence) =>
   );
 
 describe("evidenceSections", () => {
+  it("shows the product page views a page action was judged on", () => {
+    const evidence: ActionEvidence = {
+      rule: "listing.cpp_underperforms",
+      country: "us",
+      pageTitle: "Summer sale",
+      windowDays: 14,
+      pageUniqueImpressions: 0,
+      pageViews: 200,
+      pageConversion: 0.05,
+      defaultConversion: 0.25,
+      ratio: 0.2,
+    };
+
+    expect(factValues(evidence)).toMatchObject({
+      "Product page views": "200",
+    });
+    expect(factValues(evidence)).not.toHaveProperty("Unique impressions");
+  });
+
   it("grades the opportunity of an uncovered keyword and lists its fields", () => {
     const evidence = evidenceOf("act-uncovered");
     const { facts } = evidenceSections(evidence);

@@ -42,6 +42,7 @@ function build(connected: string[]) {
           appId: 'app_1',
           date: new Date('2026-10-12T00:00:00.000Z'),
           pageTitle: 'Summer sale',
+          pageViews: 25,
           uniqueImpressions: 40,
           gets: 1,
         },
@@ -110,6 +111,7 @@ describe('ActionFunnelReader', () => {
         {
           date: '2026-10-12',
           pageTitle: 'Summer sale',
+          pageViews: 25,
           uniqueImpressions: 40,
           gets: 1,
         },

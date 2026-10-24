@@ -98,9 +98,7 @@ export class StoreFunnelService {
         store: app.store,
         ...range,
       }),
-      ...(pageRows.length > 0
-        ? { pages: funnelPages(pageRows, app.store) }
-        : {}),
+      ...(pageRows.length > 0 ? { pages: funnelPages(pageRows) } : {}),
     };
   }
 

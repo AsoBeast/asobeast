@@ -201,10 +201,12 @@ describe('ActionSeriesReader conversion', () => {
     },
   ];
 
-  const conversionReader = () => {
+  const conversionReader = (pageSums = sums) => {
     const prisma = {
       storeFunnelDay: { groupBy: jest.fn(() => Promise.resolve(sums)) },
-      storeFunnelPageDay: { groupBy: jest.fn(() => Promise.resolve(sums)) },
+      storeFunnelPageDay: {
+        groupBy: jest.fn(() => Promise.resolve(pageSums)),
+      },
     };
     return {
       prisma,
@@ -281,6 +283,38 @@ describe('ActionSeriesReader conversion', () => {
       }),
     );
     expect(prisma.storeFunnelDay.groupBy).not.toHaveBeenCalled();
+  });
+
+  it('reads a product page conversion from its page views, since Apple counts no impression against a page', async () => {
+    const { reader } = conversionReader([
+      {
+        date: new Date('2026-07-20T00:00:00.000Z'),
+        _sum: { gets: 30, uniqueImpressions: 0, pageViews: 600 },
+      },
+    ]);
+
+    const trend = await reader.read(
+      {
+        ...item('listing.cpp_underperforms', null),
+        degraded: false,
+        evidence: {
+          rule: 'listing.cpp_underperforms',
+          country: 'de',
+          pageTitle: 'Summer sale',
+          windowDays: 14,
+          pageUniqueImpressions: 0,
+          pageViews: 600,
+          pageConversion: 0.05,
+          defaultConversion: 0.1,
+          ratio: 0.5,
+        },
+      },
+      TODAY,
+    );
+
+    expect(
+      trend?.points.find((point) => point.date === '2026-07-20')?.value,
+    ).toBe(5);
   });
 
   it('has no trend for a page action whose evidence names no page', async () => {

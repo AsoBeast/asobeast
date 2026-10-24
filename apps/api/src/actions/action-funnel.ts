@@ -19,6 +19,7 @@ export interface ActionFunnelDay {
 export interface ActionPageDay {
   date: string;
   pageTitle: string;
+  pageViews: number;
   uniqueImpressions: number;
   gets: number;
 }
@@ -124,6 +125,7 @@ export class ActionFunnelReader {
           appId: true,
           date: true,
           pageTitle: true,
+          pageViews: true,
           uniqueImpressions: true,
           gets: true,
         },
@@ -146,6 +148,7 @@ export class ActionFunnelReader {
         pages: (pagesOf.get(app.id) ?? []).map((row) => ({
           date: toDateKey(row.date),
           pageTitle: row.pageTitle,
+          pageViews: row.pageViews,
           uniqueImpressions: row.uniqueImpressions,
           gets: row.gets,
         })),

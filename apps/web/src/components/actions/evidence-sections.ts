@@ -424,7 +424,12 @@ function productPageSections(
       fact("Page conversion", percent(evidence.pageConversion)),
       fact("Default page conversion", percent(evidence.defaultConversion)),
       fact("Ratio", formatMeasure(evidence.ratio)),
-      fact("Unique impressions", formatNumber(evidence.pageUniqueImpressions)),
+      evidence.pageViews === undefined
+        ? fact(
+            "Unique impressions",
+            formatNumber(evidence.pageUniqueImpressions),
+          )
+        : fact("Product page views", formatNumber(evidence.pageViews)),
       fact("Window", `${evidence.windowDays} days`),
     ],
     lists: [],

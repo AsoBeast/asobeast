@@ -435,10 +435,10 @@ describe('Store report sync (e2e)', () => {
       orderBy: { pageTitle: 'asc' },
     });
     expect(
-      pages.map((page) => [page.pageTitle, page.uniqueImpressions, page.gets]),
+      pages.map((page) => [page.pageTitle, page.pageViews, page.gets]),
     ).toEqual([
-      ['Summer sale', 350, 7],
-      ['default product page', 950, 40],
+      ['Default product page', 312, 40],
+      ['Summer sale', 100, 7],
     ]);
     const request = await harness.prisma.storeReportRequest.findFirstOrThrow({
       where: { accessType: 'ONGOING' },

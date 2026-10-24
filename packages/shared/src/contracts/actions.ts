@@ -351,6 +351,7 @@ export interface ListingCppUnderperformsEvidence {
   pageTitle: string;
   windowDays: number;
   pageUniqueImpressions: number;
+  pageViews?: number;
   pageConversion: number;
   defaultConversion: number;
   ratio: number;

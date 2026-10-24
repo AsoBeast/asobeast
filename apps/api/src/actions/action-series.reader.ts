@@ -176,11 +176,15 @@ export class ActionSeriesReader {
         lte: new Date(`${completeThrough(new Date())}T00:00:00.000Z`),
       },
     };
-    const rows =
+    const pageTitle =
       item.evidence?.rule === 'listing.cpp_underperforms'
+        ? item.evidence.pageTitle
+        : null;
+    const rows =
+      pageTitle !== null
         ? await this.prisma.storeFunnelPageDay.groupBy({
             by: ['date'],
-            where: { ...where, pageTitle: item.evidence.pageTitle },
+            where: { ...where, pageTitle },
             _sum: { gets: true, uniqueImpressions: true, pageViews: true },
           })
         : await this.prisma.storeFunnelDay.groupBy({
@@ -188,10 +192,10 @@ export class ActionSeriesReader {
             where,
             _sum: { gets: true, uniqueImpressions: true, pageViews: true },
           });
+    const byPageViews =
+      pageTitle !== null || item.scope.store === 'GOOGLE_PLAY';
     const base = (sum: (typeof rows)[number]['_sum']): number =>
-      (item.scope.store === 'GOOGLE_PLAY'
-        ? sum.pageViews
-        : sum.uniqueImpressions) ?? 0;
+      (byPageViews ? sum.pageViews : sum.uniqueImpressions) ?? 0;
     return {
       depth: null,
       points: dailyPoints(
