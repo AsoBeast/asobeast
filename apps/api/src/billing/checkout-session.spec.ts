@@ -40,6 +40,7 @@ const STRIPE_CONTROLS_UNDER_MANAGED_PAYMENTS = [
   'invoice_creation',
   'shipping_address_collection',
   'shipping_options',
+  'custom_text',
 ];
 
 describe('checkoutSessionParams', () => {
@@ -109,7 +110,7 @@ describe('a trial checkout', () => {
 
     expect(params).toEqual({
       ...COMMON,
-      ...TRIAL,
+      payment_method_collection: 'always',
       subscription_data: TRIAL_SUBSCRIPTION,
       managed_payments: { enabled: true },
     });

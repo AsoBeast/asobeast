@@ -2,7 +2,6 @@ import './helpers/enable-billing';
 import './helpers/enable-stripe';
 import './helpers/enable-managed-payments';
 import type { BillingCatalog, BillingSession } from '@asobeast/shared';
-import { trialSubmitMessage } from '../src/billing/checkout-session';
 import { WORKSPACE_METADATA_KEY } from '../src/billing/workspace-link';
 import {
   resetBillingState,
@@ -62,12 +61,12 @@ describe('Billing through managed payments (e2e)', () => {
         trial_period_days: 7,
         trial_settings: { end_behavior: { missing_payment_method: 'cancel' } },
       },
-      custom_text: { submit: { message: trialSubmitMessage(7) } },
     });
     for (const key of [
       'automatic_tax',
       'tax_id_collection',
       'customer_update',
+      'custom_text',
     ]) {
       expect(recorded.params).not.toHaveProperty(key);
     }

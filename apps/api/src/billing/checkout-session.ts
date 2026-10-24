@@ -51,8 +51,12 @@ export function trialSubmitMessage(days: number): string {
 
 function trialParams(
   trial: TrialOffer | undefined,
+  taxCollection: TaxCollection,
 ): Partial<Stripe.Checkout.SessionCreateParams> {
   if (!trial) return {};
+  if (taxCollection === 'managed_payments') {
+    return { payment_method_collection: 'always' };
+  }
   return {
     payment_method_collection: 'always',
     custom_text: { submit: { message: trialSubmitMessage(trial.days) } },
@@ -86,6 +90,6 @@ export function checkoutSessionParams(
     allow_promotion_codes: true,
     billing_address_collection: 'required',
     ...taxParams(input.taxCollection),
-    ...trialParams(input.trial),
+    ...trialParams(input.trial, input.taxCollection),
   };
 }

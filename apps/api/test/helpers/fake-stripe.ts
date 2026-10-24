@@ -41,6 +41,25 @@ class MissingResource extends Error {
   }
 }
 
+const REFUSED_UNDER_MANAGED_PAYMENTS = [
+  'automatic_tax',
+  'tax_id_collection',
+  'customer_update',
+  'custom_text',
+] as const;
+
+function refuseUnderManagedPayments(
+  params: Stripe.Checkout.SessionCreateParams,
+): void {
+  if (!params.managed_payments?.enabled) return;
+  const refused = REFUSED_UNDER_MANAGED_PAYMENTS.find((key) => key in params);
+  if (!refused) return;
+  throw new Stripe.errors.StripeInvalidRequestError({
+    type: 'invalid_request_error',
+    message: `You cannot use ${refused} with Managed Payments.`,
+  });
+}
+
 function respond<T>(value: T): Promise<Stripe.Response<T>> {
   return Promise.resolve(value as Stripe.Response<T>);
 }
@@ -280,6 +299,7 @@ export function fakeStripe(): FakeStripe {
             fake.failNext = null;
             throw failure;
           }
+          refuseUnderManagedPayments(params);
           fake.checkoutSessions.push({
             params,
             idempotencyKey: options?.idempotencyKey,
