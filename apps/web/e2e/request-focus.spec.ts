@@ -165,12 +165,14 @@ test.describe("alert rows keep focus", () => {
     const posts = countPosts(page, /\/webhooks\/[^/]+\/test$/);
     await page.goto("/settings");
 
-    await activateTwiceInOneTask(
-      webhookList(page).getByRole("button", { name: "Send test" }).first(),
-    );
+    const send = webhookList(page)
+      .getByRole("button", { name: "Send test" })
+      .first();
+
+    await activateTwiceInOneTask(send);
 
     await expect.poll(() => posts.length).toBe(1);
-    await page.waitForTimeout(300);
+    await expect(send).not.toHaveAttribute("aria-disabled", "true");
     expect(posts).toHaveLength(1);
   });
 
@@ -414,7 +416,7 @@ test.describe("generate now", () => {
     await activateTwiceInOneTask(generate(page));
 
     await expect.poll(() => posts.length).toBe(1);
-    await page.waitForTimeout(300);
+    await expect(generate(page)).toHaveText("Generate now");
     expect(posts).toHaveLength(1);
   });
 });
@@ -458,10 +460,24 @@ test.describe("add competitor", () => {
     const posts = countPosts(page, /\/apps\/app-1\/competitors$/);
     await page.goto("/apps/app-1/competitors");
 
+    const submitted = page.evaluate(
+      () =>
+        new Promise<void>((resolve) => {
+          document
+            .getElementById("competitor-search")
+            ?.closest("form")
+            ?.addEventListener("submit", () => resolve(), { once: true });
+        }),
+    );
+
     await pressFromKeyboard(addButton(page));
+    await submitted;
+    await page.evaluate(
+      () => new Promise((resolve) => requestAnimationFrame(resolve)),
+    );
 
     await expect(addButton(page)).toBeFocused();
-    await page.waitForTimeout(300);
+    await expect(addButton(page)).toHaveText("Add competitor");
     expect(posts).toHaveLength(0);
   });
 });
