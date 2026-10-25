@@ -77,6 +77,32 @@ describe('formatWebhookBody', () => {
     expect(formatWebhookBody(DISCORD, dropped, null)).not.toContain('"url"');
   });
 
+  it('keeps a link in a store name from rendering in a single alert', () => {
+    const linked = {
+      ...metadata,
+      app: {
+        ...metadata.app,
+        name: '[x](https://e.example) <https://e.example|y>',
+      },
+    };
+    const discord = formatWebhookBody(DISCORD, linked, ORIGIN);
+    const slack = JSON.parse(formatWebhookBody(SLACK, linked, ORIGIN)) as {
+      text: string;
+      blocks: Array<{ type: string; text?: { type: string; text: string } }>;
+    };
+    const mrkdwn = [
+      slack.text,
+      ...slack.blocks
+        .filter((block) => block.text?.type === 'mrkdwn')
+        .map((block) => block.text?.text ?? ''),
+    ];
+
+    expect(discord).not.toContain('[x](https://e.example)');
+    for (const text of mrkdwn) {
+      expect(text).not.toContain('<https://e.example|y>');
+    }
+  });
+
   it('serializes a body deterministically', () => {
     expect(formatWebhookBody(DISCORD, batch, ORIGIN)).toBe(
       formatWebhookBody(DISCORD, batch, ORIGIN),
