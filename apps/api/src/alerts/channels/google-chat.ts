@@ -1,6 +1,7 @@
 import type {
   AlertReport,
   ReportApp,
+  ReportFact,
   ReportGroup,
   ReportRow,
 } from '../report/report';
@@ -56,7 +57,7 @@ export interface GoogleChatMessage {
   cardsV2: [{ cardId: string; card: Card }];
 }
 
-const CARD_MAX_BYTES = 32 * 1024;
+const CARD_MAX_BYTES = 32_000;
 const WIDGETS_MAX = 100;
 const CLOSING_WIDGETS = 2;
 
@@ -142,6 +143,13 @@ function buttonSection(report: AlertReport): CardSection[] {
   ];
 }
 
+function closingSections(report: AlertReport, omitted: number): CardSection[] {
+  return [
+    ...(omitted > 0 ? [{ widgets: [paragraph(moreApps(omitted))] }] : []),
+    ...buttonSection(report),
+  ];
+}
+
 function headerOf(report: AlertReport): Card['header'] {
   const app = report.apps.find((candidate) =>
     isWebUrl(candidate.identity.iconUrl),
@@ -187,13 +195,17 @@ function fittingSections(
   report: AlertReport,
   maxRows: number,
 ): { sections: CardSection[]; shown: number } {
+  const closing = closingSections(
+    report,
+    report.omittedApps + report.apps.length,
+  );
   const sections: CardSection[] = [];
   let shown = 0;
   for (const app of report.apps) {
     const next = [...sections, ...appSections(app, maxRows)];
     if (
       widgetCount(next) > WIDGETS_MAX - CLOSING_WIDGETS ||
-      sizeOf(message(report, next)) > CARD_MAX_BYTES
+      sizeOf(message(report, [...next, ...closing])) > CARD_MAX_BYTES
     ) {
       break;
     }
@@ -210,23 +222,33 @@ function batchBody(report: AlertReport): GoogleChatMessage {
     fitted = fittingSections(report, maxRows);
   }
   const omitted = report.omittedApps + report.apps.length - fitted.shown;
-  const more = omitted > 0 ? [{ widgets: [paragraph(moreApps(omitted))] }] : [];
   return message(report, [
     ...fitted.sections,
-    ...more,
-    ...buttonSection(report),
+    ...closingSections(report, omitted),
   ]);
 }
 
+const factWidget = ({ label, value }: ReportFact): Widget => ({
+  decoratedText: {
+    ...(label ? { topLabel: escapeHtml(label) } : {}),
+    text: escapeHtml(value),
+    wrapText: true,
+  },
+});
+
 function singleBody(report: AlertReport): GoogleChatMessage {
-  const widgets = report.facts.map(({ label, value }): Widget => ({
-    decoratedText: {
-      ...(label ? { topLabel: escapeHtml(label) } : {}),
-      text: escapeHtml(value),
-      wrapText: true,
-    },
-  }));
-  return message(report, [{ widgets }, ...buttonSection(report)]);
+  const facts = report.facts.map(factWidget);
+  const bodyOf = (shown: number): GoogleChatMessage => {
+    const hidden = facts.length - shown;
+    const more = hidden > 0 ? [paragraph(`+${hidden} more`)] : [];
+    return message(report, [
+      { widgets: [...facts.slice(0, shown), ...more] },
+      ...buttonSection(report),
+    ]);
+  };
+  let shown = Math.min(facts.length, WIDGETS_MAX - CLOSING_WIDGETS);
+  while (shown > 0 && sizeOf(bodyOf(shown)) > CARD_MAX_BYTES) shown -= 1;
+  return bodyOf(shown);
 }
 
 export function googleChatBody(report: AlertReport): GoogleChatMessage {

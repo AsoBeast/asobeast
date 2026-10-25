@@ -2,6 +2,7 @@ import {
   alpha,
   batch,
   competitorBatch,
+  digestWithGroups,
   dropped,
   emptySection,
   metadata,
@@ -139,10 +140,33 @@ describe('googleChatBody for a batch', () => {
 
       expect(widgetsOf(message).length).toBeLessThanOrEqual(100);
       expect(Buffer.byteLength(JSON.stringify(message))).toBeLessThanOrEqual(
-        32 * 1024,
+        32_000,
       );
       expect(message.cardsV2[0].card.sections.length).toBeGreaterThan(2);
       expect(JSON.stringify(message)).toMatch(/\+\d+ more apps/);
+    }
+  });
+
+  it('keeps every cut of a large batch and its closing sections within 32,000 bytes', () => {
+    for (let length = 900; length < 3_000; length += 3) {
+      const apps = Array.from({ length: 60 }, (_, index) => ({
+        ...alpha,
+        app: {
+          ...alpha.app,
+          id: `a${index}`,
+          name: `${'n'.repeat(length)}${index}`,
+        },
+      }));
+      const message = googleChatBody(
+        buildReport(
+          { ...batch, totals: { events: 60, apps: 60 }, apps },
+          ORIGIN,
+        ),
+      );
+
+      expect(Buffer.byteLength(JSON.stringify(message))).toBeLessThanOrEqual(
+        32_000,
+      );
     }
   });
 
@@ -175,6 +199,24 @@ describe('googleChatBody for a single alert', () => {
         wrapText: true,
       },
     });
+  });
+
+  it('drops digest facts from the end to fit 100 widgets and 32,000 bytes', () => {
+    const groups = Array.from({ length: 200 }, (_, index) => ({
+      ...digestWithGroups.groups[0],
+      id: `grp_${index}`,
+      name: `Group ${index}`,
+    }));
+    const message = googleChatBody(
+      buildAlert({ ...digestWithGroups, groups }, ORIGIN),
+    );
+    const widgets = widgetsOf(message);
+
+    expect(widgets.length).toBeLessThanOrEqual(100);
+    expect(Buffer.byteLength(JSON.stringify(message))).toBeLessThanOrEqual(
+      32_000,
+    );
+    expect(JSON.stringify(widgets.at(-2))).toMatch(/\+\d+ more/);
   });
 
   it('keeps a mention out of the notification text', () => {
