@@ -31,6 +31,7 @@ export class WebhookRateLimitedError extends Error {
 }
 
 const RETRY_BODY_MAX_BYTES = 4096;
+const RETRY_BODY_READ_MS = 1_000;
 
 interface DeliveryAnswer {
   ok: boolean;
@@ -55,6 +56,10 @@ async function readBounded(response: Response, max: number): Promise<string> {
   const reader: ReadableStreamDefaultReader<Uint8Array> | undefined =
     response.body?.getReader();
   if (!reader) return '';
+  const deadline = setTimeout(
+    () => void reader.cancel().catch(() => undefined),
+    RETRY_BODY_READ_MS,
+  );
   const chunks: Uint8Array[] = [];
   let size = 0;
   try {
@@ -67,6 +72,7 @@ async function readBounded(response: Response, max: number): Promise<string> {
   } catch {
     return '';
   } finally {
+    clearTimeout(deadline);
     await reader.cancel().catch(() => undefined);
   }
   return Buffer.concat(chunks).subarray(0, max).toString('utf8');

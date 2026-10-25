@@ -1,4 +1,4 @@
-import { createServer, type Server } from 'node:http';
+import { createServer, type Server, type ServerResponse } from 'node:http';
 import { AddressInfo } from 'node:net';
 import { ConfigService } from '@nestjs/config';
 import { AlertPayload } from '@asobeast/shared';
@@ -30,15 +30,18 @@ describe('WebhookDelivery', () => {
   let status = 200;
   let headers: Record<string, string> = {};
   let answer = BODY;
-  let cutBody = false;
+  let body: 'whole' | 'cut' | 'stalled' = 'whole';
+  const stalled = new Set<ServerResponse>();
   let peakSockets = 0;
   let openSockets = 0;
 
   beforeAll(async () => {
     server = createServer((_req, res) => {
-      if (!cutBody) return res.writeHead(status, headers).end(answer);
+      if (body === 'whole') return res.writeHead(status, headers).end(answer);
       res.writeHead(status, { ...headers, 'content-length': '100' });
-      res.write('{"ok":', () => res.destroy());
+      if (body === 'cut') return res.write('{"ok":', () => res.destroy());
+      stalled.add(res);
+      res.write('{"ok":');
     });
     server.on('connection', (socket) => {
       openSockets += 1;
@@ -53,6 +56,11 @@ describe('WebhookDelivery', () => {
     url = `http://127.0.0.1:${(server.address() as AddressInfo).port}/hook`;
   });
 
+  afterEach(() => {
+    for (const res of stalled) res.destroy();
+    stalled.clear();
+  });
+
   afterAll(async () => {
     await new Promise<void>((resolve, reject) =>
       server.close((error) => (error ? reject(error) : resolve())),
@@ -63,7 +71,7 @@ describe('WebhookDelivery', () => {
     status = 200;
     headers = {};
     answer = BODY;
-    cutBody = false;
+    body = 'whole';
     peakSockets = 0;
     openSockets = 0;
   });
@@ -158,10 +166,20 @@ describe('WebhookDelivery', () => {
 
     it('reads the header when the body breaks off', async () => {
       headers = { 'retry-after': '7' };
-      cutBody = true;
+      body = 'cut';
       const error = await rejection();
 
       expect(error).toBeInstanceOf(WebhookRateLimitedError);
+      expect((error as WebhookRateLimitedError).retryAfterMs).toBe(7000);
+    });
+
+    it('stops waiting for a body that stalls and reads the header', async () => {
+      headers = { 'retry-after': '7' };
+      body = 'stalled';
+      const started = Date.now();
+      const error = await rejection();
+
+      expect(Date.now() - started).toBeLessThan(2_000);
       expect((error as WebhookRateLimitedError).retryAfterMs).toBe(7000);
     });
 
