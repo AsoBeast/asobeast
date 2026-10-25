@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -16,12 +16,14 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { ExportCsvButton } from "@/components/ExportCsvButton";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { removeCompetitor } from "@/lib/api";
+import { siblingControl, useCloseFocusHandoff } from "@/lib/focus-handoff";
 import { invalidateCompetitorMutation } from "@/lib/queries";
 import {
   formatNumber,
@@ -32,6 +34,13 @@ import {
 import { useSingleFlight } from "@/lib/single-flight";
 import { exportCompetitors } from "./competitor-csv";
 
+const REMOVE_CONTROL = 'button[aria-label^="Remove "]';
+const COMPETITOR_FIELD = "competitor-search";
+
+const removalSuccessor = (card: HTMLElement | null): HTMLElement | null =>
+  siblingControl(card, REMOVE_CONTROL) ??
+  document.getElementById(COMPETITOR_FIELD);
+
 function CompetitorCard({
   id,
   competitor,
@@ -41,6 +50,8 @@ function CompetitorCard({
 }) {
   const queryClient = useQueryClient();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const card = useRef<HTMLDivElement>(null);
+  const { handOff, onCloseAutoFocus } = useCloseFocusHandoff();
   const name = competitor.name ?? "Untitled app";
   const snapshot = competitor.latestSnapshot;
 
@@ -48,6 +59,7 @@ function CompetitorCard({
     mutationFn: () => removeCompetitor(id, competitor.id),
     onSuccess: () => {
       invalidateCompetitorMutation(queryClient, id);
+      handOff(removalSuccessor(card.current));
       setConfirmOpen(false);
       toast.success(`Removed ${name}`);
     },
@@ -58,7 +70,7 @@ function CompetitorCard({
   const removeOnce = useSingleFlight(mutation);
 
   return (
-    <Card className="gap-0 p-4">
+    <Card ref={card} className="gap-0 p-4">
       <div className="flex items-start gap-4">
         <AppIcon src={competitor.iconUrl} name={competitor.name} />
         <div className="flex min-w-0 flex-1 flex-col gap-2">
@@ -88,42 +100,42 @@ function CompetitorCard({
             {snapshot?.version ? <span>v{snapshot.version}</span> : null}
           </div>
         </div>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={`Remove ${name}`}
-          onClick={() => setConfirmOpen(true)}
-        >
-          <Trash2 />
-        </Button>
-      </div>
-
-      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove {name}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This removes {name} from the comparison. Its keyword positions are
-              recaptured only if you add it back.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={mutation.isPending}>
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              disabled={mutation.isPending}
-              onClick={(event) => {
-                event.preventDefault();
-                removeOnce();
-              }}
+        <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+          <AlertDialogTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={`Remove ${name}`}
             >
-              {mutation.isPending ? "Removing…" : "Remove"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+              <Trash2 />
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent onCloseAutoFocus={onCloseAutoFocus}>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Remove {name}?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This removes {name} from the comparison. Its keyword positions
+                are recaptured only if you add it back.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={mutation.isPending}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                variant="destructive"
+                disabled={mutation.isPending}
+                onClick={(event) => {
+                  event.preventDefault();
+                  removeOnce();
+                }}
+              >
+                {mutation.isPending ? "Removing…" : "Remove"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
     </Card>
   );
 }

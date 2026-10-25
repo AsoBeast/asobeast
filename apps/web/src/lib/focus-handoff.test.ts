@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  cardAction,
   CLAIM_WINDOW_MS,
   focusCanMoveTo,
   focusIsLost,
@@ -220,5 +221,22 @@ describe("returnFocusTo", () => {
     handlerFor(null)(event as unknown as Event);
 
     expect(event.preventDefault).not.toHaveBeenCalled();
+  });
+});
+
+describe("cardAction", () => {
+  const action = { name: "Add" };
+  const elementIn = (card: unknown) =>
+    ({ closest: () => card }) as unknown as Element;
+
+  it("takes the header button of the card holding the element", () => {
+    const card = { querySelector: () => action };
+    expect(cardAction(elementIn(card))).toBe(action);
+  });
+
+  it("answers nothing outside a card or without a header button", () => {
+    expect(cardAction(elementIn(null))).toBeNull();
+    expect(cardAction(elementIn({ querySelector: () => null }))).toBeNull();
+    expect(cardAction(null)).toBeNull();
   });
 });

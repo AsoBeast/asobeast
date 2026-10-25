@@ -53,6 +53,16 @@ export function siblingControl(
   return next?.querySelector<HTMLElement>(control) ?? null;
 }
 
+const CARD = '[data-slot="card"]';
+const CARD_HEADER_ACTION = '[data-slot="card-header"] button';
+
+export function cardAction(element: Element | null): HTMLElement | null {
+  return (
+    element?.closest(CARD)?.querySelector<HTMLElement>(CARD_HEADER_ACTION) ??
+    null
+  );
+}
+
 export function useCloseFocusHandoff(): {
   handOff: (target: HTMLElement | null) => void;
   onCloseAutoFocus: (event: Event) => void;

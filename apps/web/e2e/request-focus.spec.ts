@@ -1,7 +1,12 @@
 import type { BrowserContext, Page } from "@playwright/test";
-import type { WebhookItem } from "@asobeast/shared";
+import type {
+  ApiTokenItem,
+  CompetitorItem,
+  WebhookItem,
+} from "@asobeast/shared";
 import {
   AWAITING_ALERT_COOKIE,
+  CROWDED_COMPETITORS_COOKIE,
   WEBHOOK_PAIR,
   WEBHOOK_PAIR_COOKIE,
 } from "./fixtures.mts";
@@ -387,5 +392,154 @@ test.describe("add competitor", () => {
     await expect(addButton(page)).toBeFocused();
     await page.waitForTimeout(300);
     expect(posts).toHaveLength(0);
+  });
+});
+
+const confirmIn = (page: Page, name: string) =>
+  page
+    .getByRole("alertdialog")
+    .getByRole("button", { name, exact: true })
+    .press("Enter");
+
+async function removeCompetitorsInBrowser(page: Page) {
+  const removed = new Set<string>();
+  await page.route(
+    /\/api\/backend\/apps\/app-1\/competitors(\/[^/]+)?$/,
+    async (route) => {
+      const request = route.request();
+      const id = /\/competitors\/([^/]+)$/.exec(request.url())?.[1];
+      if (request.method() === "DELETE" && id) {
+        removed.add(id);
+        return route.fulfill({ status: 204 });
+      }
+      if (request.method() !== "GET" || id) return route.fallback();
+      const response = await route.fetch();
+      const rows = (await response.json()) as CompetitorItem[];
+      return route.fulfill({
+        response,
+        json: rows.filter((row) => !removed.has(row.id)),
+      });
+    },
+  );
+}
+
+const token = (id: string, name: string): ApiTokenItem => ({
+  id,
+  name,
+  prefix: `asob_${id}`,
+  scope: "read",
+  expiresAt: null,
+  expired: false,
+  lastUsedAt: null,
+  usageCount: 0,
+  createdAt: "2026-10-01T00:00:00.000Z",
+});
+
+async function serveTokens(page: Page, rows: ApiTokenItem[]) {
+  let listed = rows;
+  await page.route(/\/api\/backend\/auth\/tokens(\/[^/]+)?$/, (route) => {
+    const request = route.request();
+    const id = /\/tokens\/([^/]+)$/.exec(request.url())?.[1];
+    if (request.method() === "DELETE" && id) {
+      listed = listed.filter((row) => row.id !== id);
+      return route.fulfill({ status: 204 });
+    }
+    if (request.method() === "GET" && !id) {
+      return route.fulfill({ json: listed });
+    }
+    return route.fallback();
+  });
+}
+
+test.describe("removal dialogs return or hand on focus", () => {
+  const competitorRemoves = (page: Page) =>
+    page.getByRole("button", { name: /^Remove / });
+
+  test("cancelling a competitor removal returns focus to its button", async ({
+    page,
+  }) => {
+    await page.goto("/apps/app-1/competitors");
+    const remove = competitorRemoves(page).first();
+
+    await pressFromKeyboard(remove);
+    await expect(page.getByRole("alertdialog")).toBeVisible();
+    await page.keyboard.press("Escape");
+
+    await expect(page.getByRole("alertdialog")).toBeHidden();
+    await expect(remove).toBeFocused();
+  });
+
+  test("a confirmed competitor removal hands focus to the next card", async ({
+    page,
+  }) => {
+    await seedCookie(page.context(), CROWDED_COMPETITORS_COOKIE);
+    await removeCompetitorsInBrowser(page);
+    await page.goto("/apps/app-1/competitors");
+    const first = competitorRemoves(page).first();
+    const removedName = (await first.getAttribute("aria-label")) ?? "";
+    const nextName =
+      (await competitorRemoves(page).nth(1).getAttribute("aria-label")) ?? "";
+
+    await pressFromKeyboard(first);
+    await confirmIn(page, "Remove");
+
+    await expect(page.getByRole("button", { name: removedName })).toHaveCount(
+      0,
+    );
+    await expect(page.getByRole("button", { name: nextName })).toBeFocused();
+  });
+
+  test("removing the last competitor hands focus to the competitor field", async ({
+    page,
+  }) => {
+    await removeCompetitorsInBrowser(page);
+    await page.goto("/apps/app-1/competitors");
+    await expect(competitorRemoves(page)).toHaveCount(1);
+
+    await pressFromKeyboard(competitorRemoves(page));
+    await confirmIn(page, "Remove");
+
+    await expect(competitorRemoves(page)).toHaveCount(0);
+    await expect(
+      page.getByRole("textbox", { name: "Competitor name or App Store URL" }),
+    ).toBeFocused();
+  });
+
+  test("cancelling a token revoke returns focus to its button", async ({
+    page,
+  }) => {
+    await serveTokens(page, [token("t1", "ci")]);
+    await page.goto("/integrations");
+    const revoke = page.getByRole("button", { name: "Revoke ci" });
+
+    await pressFromKeyboard(revoke);
+    await expect(page.getByRole("alertdialog")).toBeVisible();
+    await page.keyboard.press("Escape");
+
+    await expect(page.getByRole("alertdialog")).toBeHidden();
+    await expect(revoke).toBeFocused();
+  });
+
+  test("a revoke hands focus to the next token, then to New token", async ({
+    page,
+  }) => {
+    await serveTokens(page, [token("t1", "ci"), token("t2", "deploy")]);
+    await page.goto("/integrations");
+
+    await pressFromKeyboard(page.getByRole("button", { name: "Revoke ci" }));
+    await confirmIn(page, "Revoke");
+    await expect(page.getByRole("button", { name: "Revoke ci" })).toHaveCount(
+      0,
+    );
+    await expect(
+      page.getByRole("button", { name: "Revoke deploy" }),
+    ).toBeFocused();
+
+    await pressFromKeyboard(
+      page.getByRole("button", { name: "Revoke deploy" }),
+    );
+    await confirmIn(page, "Revoke");
+
+    await expect(page.getByRole("button", { name: "New token" })).toBeFocused();
   });
 });

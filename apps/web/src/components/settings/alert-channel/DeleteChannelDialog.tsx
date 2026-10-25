@@ -14,19 +14,17 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { siblingControl, useCloseFocusHandoff } from "@/lib/focus-handoff";
+import {
+  cardAction,
+  siblingControl,
+  useCloseFocusHandoff,
+} from "@/lib/focus-handoff";
 
 const DELETE_CONTROL = 'button[aria-label^="Delete "]';
-const CARD = '[data-slot="card"]';
-const CARD_ACTION = '[data-slot="card-header"] button';
 
 function deleteSuccessor(trigger: HTMLElement | null): HTMLElement | null {
   const row = trigger?.closest("li") ?? null;
-  return (
-    siblingControl(row, DELETE_CONTROL) ??
-    row?.closest(CARD)?.querySelector<HTMLElement>(CARD_ACTION) ??
-    null
-  );
+  return siblingControl(row, DELETE_CONTROL) ?? cardAction(row);
 }
 
 export function DeleteChannelDialog({
