@@ -307,3 +307,38 @@ test.describe("app actions keep focus", () => {
     expect(refreshes).toHaveLength(0);
   });
 });
+
+test.describe("generate now", () => {
+  const generate = (page: Page) =>
+    page.getByRole("button", { name: /^(Generate now|Generating…)$/ });
+
+  test("keeps focus while it queues and while it follows the run", async ({
+    page,
+  }) => {
+    const held = await holdRequest(
+      page,
+      /\/api\/backend\/actions\/run$/,
+      "POST",
+    );
+    await page.goto("/actions");
+
+    await pressFromKeyboard(generate(page));
+    await expect(generate(page)).toHaveAttribute("aria-disabled", "true");
+    await expect(generate(page)).toBeFocused();
+    held.release();
+
+    await expect(generate(page)).toHaveText("Generate now");
+    await expect(generate(page)).toBeFocused();
+  });
+
+  test("two activations in one task send one request", async ({ page }) => {
+    const posts = countPosts(page, /\/actions\/run$/);
+    await page.goto("/actions");
+
+    await activateTwiceInOneTask(generate(page));
+
+    await expect.poll(() => posts.length).toBe(1);
+    await page.waitForTimeout(300);
+    expect(posts).toHaveLength(1);
+  });
+});
