@@ -1,4 +1,5 @@
 import { ActionEvidence, ActionOpenedPayload } from '@asobeast/shared';
+import { storeName } from './report/storefront';
 
 const percent = (ratio: number): string => `${(ratio * 100).toFixed(1)}%`;
 
@@ -52,7 +53,5 @@ export function summarizeActionEvidence(evidence: ActionEvidence): string {
 }
 
 export function actionScopeLine(payload: ActionOpenedPayload): string {
-  const store =
-    payload.app.store === 'GOOGLE_PLAY' ? 'Google Play' : 'App Store';
-  return `${payload.app.country.toUpperCase()} · ${store} · ${summarizeActionEvidence(payload.evidence)}`;
+  return `${payload.app.country.toUpperCase()} · ${storeName(payload.app.store)} · ${summarizeActionEvidence(payload.evidence)}`;
 }

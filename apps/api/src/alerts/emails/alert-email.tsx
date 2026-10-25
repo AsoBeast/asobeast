@@ -1,3 +1,4 @@
+import { formatUtcInstant } from '@asobeast/shared';
 import { CallToAction } from '../../mail/call-to-action';
 import { EmailLayout } from '../../mail/email-layout';
 import { EmailHeading } from '../../mail/email-text';
@@ -18,10 +19,6 @@ export interface AlertEmailProps {
   context: AlertEmailContext;
 }
 
-export function occurredAtLabel(occurredAt: string): string {
-  return `${occurredAt.slice(0, 16).replace('T', ' ')} UTC`;
-}
-
 export function AlertEmail({
   summary,
   facts,
@@ -38,7 +35,7 @@ export function AlertEmail({
       <EmailHeading>{summary}</EmailHeading>
       <FactTable facts={facts} />
       {action && <CallToAction href={action.href} label={action.label} />}
-      <Notice>{`Occurred at ${occurredAtLabel(occurredAt)}`}</Notice>
+      <Notice>{formatUtcInstant(occurredAt)}</Notice>
     </EmailLayout>
   );
 }

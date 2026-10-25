@@ -1,4 +1,4 @@
-import type { ActionOpenedPayload } from '@asobeast/shared';
+import { ACTION_RULE_TITLES, type ActionOpenedPayload } from '@asobeast/shared';
 import {
   AlertBatchAppSection,
   AlertBatchPayload,
@@ -115,7 +115,9 @@ const actionOpened: ActionOpenedPayload = {
 
 describe('renderMessage', () => {
   it('summarizes a metadata change with the changed fields', () => {
-    expect(renderMessage(metadata)).toBe('📝 My App changed: title, icon');
+    expect(renderMessage(metadata)).toBe(
+      '📝 My App changed its title and icon',
+    );
   });
 
   it('marks competitor metadata changes', () => {
@@ -124,31 +126,31 @@ describe('renderMessage', () => {
         ...metadata,
         app: { ...metadata.app, isCompetitor: true },
       }),
-    ).toBe('📝 My App (competitor) changed: title, icon');
+    ).toBe('📝 My App, a competitor, changed its title and icon');
   });
 
   it('describes a drop out against the depth the payload carries', () => {
     expect(renderMessage(dropped)).toBe(
-      '📉 My App dropped for "habit tracker": #3 → outside top 100',
+      '📉 My App fell out of the top 100 for "habit tracker", from #3',
     );
   });
 
   it('describes an improvement', () => {
     expect(renderMessage(improved)).toBe(
-      '📈 My App improved for "habit tracker": #20 → #7',
+      '📈 My App climbed from #20 to #7 for "habit tracker"',
     );
   });
 
   it('describes a negative review with stars and version', () => {
     expect(renderMessage(negative)).toBe(
-      '⚠️ My App got a ★☆☆☆☆ review (v2.0.0): "Crashes on launch"',
+      '⚠️ A 1 star review of My App, v2.0.0: "Crashes on launch"',
     );
   });
 
   it('names a rating only review instead of quoting nothing', () => {
     expect(
       renderMessage({ ...negative, review: { ...negative.review, text: '' } }),
-    ).toBe('⚠️ My App got a ★☆☆☆☆ review (v2.0.0): no written review');
+    ).toBe('⚠️ A 1 star review of My App, v2.0.0: no written review');
   });
 });
 
@@ -193,7 +195,10 @@ describe('formatWebhookBody', () => {
       'https://discord.com/api/webhooks/123/abc',
       metadata,
     );
-    expect(JSON.parse(body)).toEqual({ content: renderMessage(metadata) });
+    expect(JSON.parse(body)).toEqual({
+      content: renderMessage(metadata),
+      allowed_mentions: { parse: [] },
+    });
   });
 
   it('wraps the message in a text field for slack', () => {
@@ -202,6 +207,29 @@ describe('formatWebhookBody', () => {
       metadata,
     );
     expect(JSON.parse(body)).toEqual({ text: renderMessage(metadata) });
+  });
+
+  it('keeps a link in a store name from rendering in a single alert', () => {
+    const linked = {
+      ...metadata,
+      app: {
+        ...metadata.app,
+        name: '[x](https://e.example) <https://e.example|y>',
+      },
+    };
+    const discord = JSON.parse(
+      formatWebhookBody('https://discord.com/api/webhooks/123/abc', linked),
+    ) as { content: string };
+    const slack = JSON.parse(
+      formatWebhookBody('https://hooks.slack.com/services/T/B/x', linked),
+    ) as { text: string };
+
+    expect(discord.content).toContain(
+      '\\[x\\](https://e.example) \\<https://e.example\\|y\\>',
+    );
+    expect(slack.text).toContain(
+      '[x](https://e.example) &lt;https://e.example|y&gt;',
+    );
   });
 
   it('sends the raw payload for generic receivers', () => {
@@ -214,7 +242,10 @@ describe('formatWebhookBody', () => {
       'https://discord.com/api/webhooks/123/abc',
       negative,
     );
-    expect(JSON.parse(body)).toEqual({ content: renderMessage(negative) });
+    expect(JSON.parse(body)).toEqual({
+      content: renderMessage(negative),
+      allowed_mentions: { parse: [] },
+    });
   });
 
   it('formats a negative review for slack', () => {
@@ -236,11 +267,16 @@ describe('formatWebhookBody', () => {
     const lines = parsed.embeds[0].description.split('\n');
 
     expect(parsed.embeds).toHaveLength(1);
-    expect(parsed.embeds[0].title).toContain('2026-07-06 → 2026-07-13');
-    expect(lines).toHaveLength(11);
+    expect(parsed.embeds[0].title).toBe(
+      '🗓️ Weekly digest: 12 apps, 6 to 13 Jul 2026',
+    );
+    expect(lines).toHaveLength(12);
+    expect(lines[0]).toBe('Window: 6 to 13 Jul 2026');
     expect(lines[lines.length - 1]).toBe('+2 more');
-    expect(lines[0]).toContain('App 0 — vis 40 (+2.5)');
-    expect(lines[1]).toContain('App 1 — vis 41 (—)');
+    expect(lines[1]).toBe(
+      'App 0: vis 40 (+2.5) · ↑ up 0 #20 → #4 · ↓ down 0 #5 → #12 · 0 changes',
+    );
+    expect(lines[2]).toContain('App 1: vis 41 (—)');
     expect(discordEmbedSize(body)).toBeLessThanOrEqual(6000);
   });
 
@@ -256,8 +292,31 @@ describe('formatWebhookBody', () => {
     const lines = section.text.text.split('\n');
 
     expect(parsed.blocks[0].type).toBe('header');
-    expect(lines).toHaveLength(11);
+    expect(lines).toHaveLength(12);
     expect(lines[lines.length - 1]).toBe('+2 more');
+  });
+
+  it('keeps a digest of many linked groups within the discord and slack limits', () => {
+    const crowded: DigestWeeklyPayload = {
+      ...digest,
+      groups: Array.from({ length: 200 }, (_, index) => ({
+        id: `group_${index}`,
+        name: `Linked group with a fairly long name ${index}`,
+        visibility: { current: 50, delta7d: 1.5 },
+      })),
+    };
+    const discord = JSON.parse(
+      formatWebhookBody('https://discord.com/api/webhooks/1/x', crowded),
+    ) as { embeds: { description: string }[] };
+    const slack = JSON.parse(
+      formatWebhookBody('https://hooks.slack.com/services/T/B/x', crowded),
+    ) as { blocks: Array<{ type: string; text: { text: string } }> };
+    const section = slack.blocks.find((block) => block.type === 'section');
+
+    expect(discord.embeds[0].description.length).toBeLessThanOrEqual(4000);
+    expect(discord.embeds[0].description).toMatch(/\+\d+ more$/);
+    expect(section?.text.text.length).toBeLessThanOrEqual(2900);
+    expect(section?.text.text).toMatch(/\+\d+ more$/);
   });
 
   it('sends the raw digest payload for generic receivers', () => {
@@ -385,10 +444,8 @@ describe('formatWebhookBody', () => {
     ) as { blocks: Array<{ elements?: { text: string }[] }> };
     const context = slack.blocks.find((block) => block.elements)?.elements;
 
-    expect(discord.embeds[0].description).toBe(
-      'Window \\(UTC\\): 2026\\-07\\-22',
-    );
-    expect(context?.[0].text).toBe('Window (UTC): 2026-07-22');
+    expect(discord.embeds[0].description).toBe('22 Jul 2026');
+    expect(context?.[0].text).toBe('22 Jul 2026');
   });
 
   it('renders a discord embed with per-app detail fields', () => {
@@ -407,14 +464,15 @@ describe('formatWebhookBody', () => {
     const [embed] = parsed.embeds;
 
     expect(parsed.allowed_mentions).toEqual({ parse: [] });
-    expect(embed.title).toBe('📊 Daily app update · 3 changes across 2 apps');
-    expect(embed.description).toContain('2026\\-07\\-22');
+    expect(embed.title).toBe('📊 Daily app update: 3 changes across 2 apps');
+    expect(embed.description).toBe('22 Jul 2026');
     expect(embed.fields).toHaveLength(2);
-    expect(embed.fields[0].name).toBe('Alpha · App Store · US');
-    expect(embed.fields[0].value).toContain('habit tracker  3 → \\>200 ▼');
-    expect(embed.fields[0].value).toContain('title: Old → New');
-    expect(embed.fields[1].name).toBe('Bravo · Google Play · DE');
-    expect(embed.fields[1].value).toContain('fitness  20 → 7 ▲');
+    expect(embed.fields[0].name).toBe('Alpha · App Store · 🇺🇸 US');
+    expect(embed.fields[0].value).toContain('habit tracker  #3 → \\>200');
+    expect(embed.fields[0].value).toContain('Title: "Old" → "New"');
+    expect(embed.fields[0].value).not.toMatch(/[▲▼]/);
+    expect(embed.fields[1].name).toBe('Bravo · Google Play · 🇩🇪 DE');
+    expect(embed.fields[1].value).toContain('fitness  #20 → #7');
     expect(discordEmbedSize(body)).toBeLessThanOrEqual(6000);
   });
 
@@ -430,12 +488,12 @@ describe('formatWebhookBody', () => {
 
     expect(parsed.blocks[0].type).toBe('header');
     expect(parsed.blocks[0].text!.text).toBe(
-      '📊 Daily app update · 3 changes across 2 apps',
+      '📊 Daily app update: 3 changes across 2 apps',
     );
     expect(sections).toHaveLength(2);
-    expect(sections[0].text!.text).toContain('*Alpha · App Store · US*');
-    expect(sections[0].text!.text).toContain('habit tracker  3 → &gt;200 ▼');
-    expect(sections[1].text!.text).toContain('fitness  20 → 7 ▲');
+    expect(sections[0].text!.text).toContain('*Alpha · App Store · 🇺🇸 US*');
+    expect(sections[0].text!.text).toContain('habit tracker  #3 → &gt;200');
+    expect(sections[1].text!.text).toContain('fitness  #20 → #7');
   });
 
   it('renders competitor scope without owned signals', () => {
@@ -451,15 +509,15 @@ describe('formatWebhookBody', () => {
 
     expect(parsed.allowed_mentions).toEqual({ parse: [] });
     expect(parsed.embeds[0].title).toBe(
-      '🔭 Competitor watch · 1 change across 1 competitor',
+      '🔭 Competitor watch: 1 change across 1 competitor',
     );
     expect(parsed.embeds[0].fields[0].name).toBe(
-      'Primary app · Alpha · App Store · US',
+      'Alpha · Your app · App Store · 🇺🇸 US',
     );
     expect(parsed.embeds[0].fields[0].value).toContain(
-      'Competitor · Charlie · App Store · US',
+      '**Competitor · Charlie**',
     );
-    expect(body).toContain('subtitle: a → b');
+    expect(body).toContain('Subtitle: \\"a\\" → \\"b\\"');
     expect(body).not.toContain('habit tracker');
   });
 
@@ -482,15 +540,12 @@ describe('formatWebhookBody', () => {
       embeds: { title: string; fields: { value: string }[] }[];
     };
 
-    expect(renderMessage(legacy)).toBe(
-      '📊 Daily alert update · 4 changes across 2 apps',
-    );
     expect(parsed.embeds[0].title).toBe(
-      '📊 Daily alert update · 4 changes across 2 apps',
+      '📊 Daily update: 4 changes across 2 apps',
     );
     expect(parsed.embeds[0].fields[0].value).toContain('Rank drops');
     expect(parsed.embeds[0].fields[0].value).toContain(
-      'Competitor · Charlie · App Store · US',
+      '**Competitor · Charlie**',
     );
   });
 
@@ -517,7 +572,7 @@ describe('formatWebhookBody', () => {
     };
     const fields = parsed.embeds[0].fields;
 
-    expect(fields[fields.length - 1].value).toBe('+2 more app groups');
+    expect(fields[fields.length - 1].value).toBe('+2 more apps');
     expect(discordEmbedSize(body)).toBeLessThanOrEqual(6000);
   });
 
@@ -531,7 +586,7 @@ describe('formatWebhookBody', () => {
     };
 
     expect(parsed.embeds[0].title).toBe(
-      '📊 Daily app update · 0 changes across 0 apps',
+      '📊 Daily app update: 0 changes across 0 apps',
     );
     expect(parsed.embeds[0].fields).toHaveLength(0);
   });
@@ -570,10 +625,11 @@ describe('formatWebhookBody', () => {
     expect(discord.embeds[0].fields[0].name).toContain('\\_under\\_');
     expect(discord.embeds[0].fields[0].name).toContain('\\@here');
     expect(discord.embeds[0].fields[0].value).toContain(
-      '\\[link\\]\\(https://example\\.com\\)',
+      '\\[link\\](https://example.com)',
     );
     expect(discord.embeds[0].fields[0].value).toContain('\\<\\@123\\>');
     expect(discord.embeds[0].fields[0].value).toContain('\\@everyone');
+    expect(discord.embeds[0].fields[0].name).not.toContain('\\-');
 
     const slack = JSON.parse(
       formatWebhookBody('https://hooks.slack.com/services/T/B/x', unsafe),
@@ -652,10 +708,8 @@ describe('formatWebhookBody', () => {
     };
     const fields = parsed.embeds[0].fields;
 
-    expect(fields.some((field) => /\+\d+ more lines/.test(field.value))).toBe(
-      true,
-    );
-    expect(fields[fields.length - 1].value).toMatch(/^\+\d+ more app groups$/);
+    expect(fields.some((field) => /\+\d+ more$/m.test(field.value))).toBe(true);
+    expect(fields[fields.length - 1].value).toMatch(/^\+\d+ more apps$/);
     expect(
       fields.slice(0, -1).every((field) => field.value.length <= 1_000),
     ).toBe(true);
@@ -686,8 +740,10 @@ describe('formatWebhookBody', () => {
     ).toBe(discord);
     expect(discordEmbedSize(discord)).toBeLessThanOrEqual(6_000);
     expect(slack.length).toBeLessThan(40_000);
-    expect(discord).toContain('more lines');
-    expect(slack).toContain('more lines');
+    expect(discord).toMatch(/\+\d+ more/);
+    expect(slack).toMatch(/\+\d+ more/);
+    expect(discord).not.toContain('more lines');
+    expect(slack).not.toContain('more lines');
   });
 
   it('sends the raw batch payload for generic receivers', () => {
@@ -715,9 +771,10 @@ describe('formatWebhookBody for action.opened', () => {
       formatWebhookBody('https://hooks.slack.com/services/x', actionOpened),
     ) as { text: string };
 
-    expect(discord.content).toContain('keyword.add_uncovered');
-    expect(discord.content).toContain('estimated impact 71');
-    expect(slack.text).toContain('[high]');
+    expect(discord.content).toBe(
+      `🎯 High priority action for Alpha: ${ACTION_RULE_TITLES['keyword.add_uncovered']} (impact 71)`,
+    );
+    expect(slack.text).toBe(discord.content);
   });
 });
 
@@ -725,27 +782,27 @@ describe('the new rank events on webhooks', () => {
   it.each([
     [
       milestone(),
-      '🏅 My App entered the top 10 for "habit tracker (US)": #14 → #8',
+      '🏅 My App entered the top 10 for "habit tracker" in 🇺🇸 US: #14 → #8',
     ],
     [
       milestone({ tier: 1, from: 3, to: 1 }),
-      '🏆 My App reached first place for "habit tracker (US)": #3 → #1',
+      '🏆 My App reached first place for "habit tracker" in 🇺🇸 US: #3 → #1',
     ],
     [
       milestone({ tier: 3, direction: 'left', from: 2, to: 5 }),
-      '🔻 My App left the top 3 for "habit tracker (US)": #2 → #5',
+      '🔻 My App left the top 3 for "habit tracker" in 🇺🇸 US: #2 → #5',
     ],
     [
       milestone({ tier: 1, direction: 'left', from: 1, to: 2 }),
-      '🔻 My App lost first place for "habit tracker (US)": #1 → #2',
+      '🔻 My App lost first place for "habit tracker" in 🇺🇸 US: #1 → #2',
     ],
     [
       firstRanking(),
-      '✨ My App ranks for "habit tracker (US)" for the first time: #37',
+      '✨ My App ranks for "habit tracker" in 🇺🇸 US for the first time, at #37',
     ],
     [
       overtake(),
-      '⚔️ Rival Focus overtook My App for "habit tracker (US)": Rival Focus #9 → #4, My App #5 → #6',
+      '⚔️ Rival Focus overtook My App for "habit tracker" in 🇺🇸 US: Rival Focus #9 → #4, My App #5 → #6',
     ],
   ])('renders %p', (payload, expected) => {
     expect(renderMessage(payload)).toBe(expected);
@@ -764,7 +821,10 @@ describe('the new rank events on webhooks', () => {
             payload,
           ),
         ),
-      ).toEqual({ content: renderMessage(payload) });
+      ).toEqual({
+        content: renderMessage(payload),
+        allowed_mentions: { parse: [] },
+      });
       expect(
         JSON.parse(
           formatWebhookBody('https://hooks.slack.com/services/T/B/x', payload),
@@ -792,9 +852,7 @@ describe('the new rank events on webhooks', () => {
     ) as { embeds: { fields: { value: string }[] }[] };
     const value = discord.embeds[0].fields[0].value;
     expect(value).toContain('**Milestones**');
-    expect(value).toContain(
-      'habit tracker \\(US\\)  14 → 8  entered the top 10',
-    );
+    expect(value).toContain('habit tracker  #14 → #8 · entered the top 10');
 
     const slack = JSON.parse(
       formatWebhookBody('https://hooks.slack.com/services/T/B/x', rankBatch),

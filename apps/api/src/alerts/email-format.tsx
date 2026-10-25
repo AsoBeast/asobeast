@@ -1,72 +1,47 @@
-import type {
-  AlertBatchAppSection,
-  AlertBatchPayload,
-  AlertPayload,
-} from '@asobeast/shared';
+import type { AlertBatchPayload, AlertPayload } from '@asobeast/shared';
 import type { ReactElement } from 'react';
-import { appLink, webLink } from '../mail/email-links';
 import { renderEmail, type EmailContent } from '../mail/render-email';
-import { detailRows } from './alert-detail-rows';
-import {
-  appHeader,
-  batchHeadline,
-  changeLines,
-  sectionBlocks,
-  summarize,
-  windowLine,
-} from './alert-summary';
-import { AlertEmail, type AlertAction } from './emails/alert-email';
+import { AlertEmail } from './emails/alert-email';
 import { alertFooterText, type AlertEmailContext } from './emails/alert-footer';
 import type { ReportCardModel } from './emails/report-card';
 import { ReportEmail } from './emails/report-email';
 import type { Stat } from './emails/stat-grid';
+import type { AlertReport, ReportApp } from './report/report';
+import { buildAlert } from './report/build-alert';
 import {
-  BATCH_GROUP_CAP,
-  COMPETITOR_CAP,
-  competitorLabel,
-  competitorText,
-  countOwned,
-  DETAIL_LINE_CAP,
-  legacyBatchText,
-  legacyHeadline,
-  limitedLines,
-  more,
-  ownedSummary,
-  ownedText,
-} from './email-text-parts';
+  buildReport,
+  DEFAULT_CAPS,
+  reportCounts,
+  type ReportCaps,
+} from './report/build-report';
+import {
+  competitorsOmission,
+  groupLines,
+  moreApps,
+} from './report/report-blocks';
+import { plural, type GranularPayload } from './report/report-sentences';
+import { reportText } from './report/report-text';
+import { identityLine } from './report/storefront';
 
 const WITHOUT_LINKS: AlertEmailContext = { origin: null, unsubscribe: null };
 
 export const HTML_BUDGET_BYTES = 90_000;
 
-const HTML_DETAIL_CAPS = [DETAIL_LINE_CAP, 10, 5, 3, 1] as const;
+const HTML_ROW_CAPS = [DEFAULT_CAPS.rows, 10, 5, 3, 1] as const;
 
-function alertAction(
-  payload: Exclude<AlertPayload, AlertBatchPayload>,
-  origin: string | null,
-): AlertAction | null {
-  if (payload.event === 'action.opened') {
-    return payload.link
-      ? { href: payload.link, label: 'Open the action' }
-      : null;
-  }
-  if (payload.event === 'digest.weekly') {
-    const portfolio = webLink(origin, '/');
-    return portfolio ? { href: portfolio, label: 'Open the portfolio' } : null;
-  }
-  const href = 'app' in payload ? appLink(origin, payload.app.id) : null;
-  return href ? { href, label: 'Open in AsoBeast' } : null;
-}
+const withFooter = (text: string, context: AlertEmailContext): string =>
+  `${text}\n\n${alertFooterText(context)}`;
 
 export function alertEmailElement(
-  payload: Exclude<AlertPayload, AlertBatchPayload>,
+  payload: GranularPayload,
   context: AlertEmailContext,
 ): ReactElement {
+  const report = buildAlert(payload, context.origin, false);
   return (
     <AlertEmail
-      summary={summarize(payload)}
-      facts={detailRows(payload)}
-      action={alertAction(payload, context.origin)}
+      summary={report.headline}
+      facts={report.facts.map((fact) => [fact.label, fact.value])}
+      action={report.link}
       occurredAt={payload.occurredAt}
       context={context}
     />
@@ -80,194 +55,91 @@ export async function formatEmail(
   if (payload.event === 'alerts.batch') {
     return formatBatchEmail(payload, context);
   }
-  const summary = summarize(payload);
-  const text = [
-    summary,
-    '',
-    ...detailRows(payload).map(([label, cell]) =>
-      label ? `${label}: ${cell}` : cell,
-    ),
-    ...(payload.event === 'action.opened' && payload.link
-      ? [`Open: ${payload.link}`]
-      : []),
-    '',
-    `Occurred at ${payload.occurredAt}`,
-    '',
-    alertFooterText(context),
-  ].join('\n');
-
+  const report = buildAlert(payload, context.origin, false);
   return renderEmail(
-    `[asobeast] ${summary}`,
+    `[asobeast] ${report.headline}`,
     alertEmailElement(payload, context),
-    text,
+    withFooter(reportText(report), context),
   );
 }
 
-type CompetitorSection = AlertBatchAppSection['competitors'][number];
-
-interface BatchReport {
-  headline: string;
-  preview: string;
-  stats: Stat[];
-  cards: (detailCap: number) => ReportCardModel[];
-  notes: string[];
-  text: string;
-}
-
 function ownedStats(payload: AlertBatchPayload): Stat[] {
-  const counts = countOwned(payload);
+  const counts = reportCounts(payload);
   const stats: Stat[] = [
     { label: 'Rank drops', value: counts.rankDrops, tone: 'down' },
     { label: 'Rank improvements', value: counts.rankImprovements, tone: 'up' },
     { label: 'Overtaken', value: counts.overtakes, tone: 'down' },
-    { label: 'Milestones', value: counts.rankMilestones, tone: 'neutral' },
+    { label: 'Milestones', value: counts.milestones, tone: 'neutral' },
     { label: 'First rankings', value: counts.firstRankings, tone: 'up' },
-    { label: 'New entrants', value: counts.serpEntrants, tone: 'neutral' },
-    { label: 'Metadata changes', value: counts.changes, tone: 'neutral' },
+    { label: 'New in the top 10', value: counts.serpEntrants, tone: 'neutral' },
+    { label: 'Listing changes', value: counts.changes, tone: 'neutral' },
     { label: 'Negative reviews', value: counts.negativeReviews, tone: 'down' },
     { label: 'New actions', value: counts.actions, tone: 'neutral' },
   ];
   return stats.filter((stat) => stat.value > 0);
 }
 
-function overflow(count: number, singular: string): string[] {
-  return count > 0 ? [more(count, singular)] : [];
+function ownedSummary(payload: AlertBatchPayload): string {
+  const counts = reportCounts(payload);
+  return [
+    plural(counts.rankDrops, 'rank drop'),
+    plural(counts.rankImprovements, 'rank improvement'),
+    plural(counts.serpEntrants, 'top 10 entrant'),
+    plural(counts.changes, 'listing change'),
+    plural(counts.negativeReviews, 'negative review'),
+    plural(counts.actions, 'new action'),
+    plural(counts.milestones, 'milestone'),
+    plural(counts.firstRankings, 'first ranking'),
+    plural(counts.overtakes, 'overtake'),
+  ].join(' · ');
 }
 
-function competitorCard(
-  competitor: CompetitorSection,
-  detailCap: number,
-): ReportCardModel {
+function cardOf(app: ReportApp): ReportCardModel {
+  const subtitle = identityLine(app, false);
+  const note = competitorsOmission(app);
   return {
-    title: `Competitor · ${competitorLabel(competitor)}`,
-    href: null,
-    blocks: [
-      {
-        title: '',
-        lines: limitedLines(competitor.changes.flatMap(changeLines), detailCap),
-      },
-    ],
-    children: [],
-    notes: [],
-  };
-}
-
-function appCard(
-  title: string,
-  section: AlertBatchAppSection,
-  origin: string | null,
-): ReportCardModel {
-  return {
-    title,
-    href: appLink(origin, section.app.id),
-    blocks: [],
-    children: [],
-    notes: [],
-  };
-}
-
-function withOwnedBlocks(
-  card: ReportCardModel,
-  section: AlertBatchAppSection,
-  detailCap: number,
-): ReportCardModel {
-  return {
-    ...card,
-    blocks: sectionBlocks(section).map((block) => ({
-      title: block.title,
-      lines: limitedLines(block.lines, detailCap),
+    title: subtitle ? `${app.identity.name} · ${subtitle}` : app.identity.name,
+    href: app.link?.href ?? null,
+    blocks: app.groups.map((group) => ({
+      title: group.title,
+      lines: groupLines(group),
     })),
+    children: app.competitors.map(cardOf),
+    notes: note ? [note] : [],
   };
 }
 
-function withCompetitors(
-  card: ReportCardModel,
-  section: AlertBatchAppSection,
-  detailCap: number,
-): ReportCardModel {
-  const competitors = section.competitors.slice(
-    0,
-    Math.min(COMPETITOR_CAP, detailCap),
-  );
+function omittedApps(report: AlertReport): string[] {
+  return report.omittedApps > 0 ? [moreApps(report.omittedApps)] : [];
+}
+
+function capsFor(rows: number): ReportCaps {
   return {
-    ...card,
-    children: competitors.map((competitor) =>
-      competitorCard(competitor, detailCap),
-    ),
-    notes: overflow(
-      section.competitors.length - competitors.length,
-      'competitor',
-    ),
+    ...DEFAULT_CAPS,
+    rows,
+    competitors: Math.min(DEFAULT_CAPS.competitors, rows),
   };
 }
 
-function batchReport(
-  payload: AlertBatchPayload,
-  origin: string | null,
-): BatchReport {
-  const sections = payload.apps.slice(0, BATCH_GROUP_CAP);
-  const omitted = payload.apps.length - sections.length;
-  const ownedCard = (section: AlertBatchAppSection, detailCap: number) =>
-    withOwnedBlocks(
-      appCard(appHeader(section), section, origin),
-      section,
-      detailCap,
-    );
-  if (payload.scope === 'owned_apps') {
-    return {
-      headline: batchHeadline(payload),
-      preview: `Summary: ${ownedSummary(payload)}`,
-      stats: ownedStats(payload),
-      cards: (detailCap) =>
-        sections.map((section) => ownedCard(section, detailCap)),
-      notes: overflow(omitted, 'app group'),
-      text: ownedText(payload),
-    };
-  }
-  if (payload.scope === 'competitors') {
-    return {
-      headline: batchHeadline(payload),
-      preview: windowLine(payload),
-      stats: [],
-      cards: (detailCap) =>
-        sections.map((section) =>
-          withCompetitors(
-            appCard(`Primary app · ${appHeader(section)}`, section, origin),
-            section,
-            detailCap,
-          ),
-        ),
-      notes: overflow(omitted, 'primary app group'),
-      text: competitorText(payload),
-    };
-  }
-  return {
-    headline: legacyHeadline(payload),
-    preview: windowLine(payload),
-    stats: [],
-    cards: (detailCap) =>
-      sections.map((section) =>
-        withCompetitors(ownedCard(section, detailCap), section, detailCap),
-      ),
-    notes: overflow(omitted, 'app group'),
-    text: legacyBatchText(payload),
-  };
+function batchPreview(payload: AlertBatchPayload, report: AlertReport): string {
+  return payload.scope === 'owned_apps'
+    ? `Summary: ${ownedSummary(payload)}`
+    : report.dateLabel;
 }
 
 function reportElement(
   payload: AlertBatchPayload,
-  report: BatchReport,
-  detailCap: number,
+  report: AlertReport,
   context: AlertEmailContext,
 ): ReactElement {
   return (
     <ReportEmail
       headline={report.headline}
-      preview={report.preview}
-      stats={report.stats}
-      window={windowLine(payload)}
-      cards={report.cards(detailCap)}
-      notes={report.notes}
+      preview={batchPreview(payload, report)}
+      stats={payload.scope === 'owned_apps' ? ownedStats(payload) : []}
+      window={report.dateLabel}
+      cards={report.apps.map(cardOf)}
+      notes={omittedApps(report)}
       context={context}
     />
   );
@@ -277,28 +149,28 @@ export function batchEmailElement(
   payload: AlertBatchPayload,
   context: AlertEmailContext,
 ): ReactElement {
-  return reportElement(
-    payload,
-    batchReport(payload, context.origin),
-    DETAIL_LINE_CAP,
-    context,
-  );
+  return reportElement(payload, buildReport(payload, context.origin), context);
 }
 
 async function fittingReport(
   payload: AlertBatchPayload,
-  report: BatchReport,
   context: AlertEmailContext,
+  text: string,
   tier = 0,
 ): Promise<EmailContent> {
+  const report = buildReport(
+    payload,
+    context.origin,
+    capsFor(HTML_ROW_CAPS[tier]),
+  );
   const email = await renderEmail(
     `[asobeast] ${report.headline}`,
-    reportElement(payload, report, HTML_DETAIL_CAPS[tier], context),
-    `${report.text.trimEnd()}\n\n${alertFooterText(context)}`,
+    reportElement(payload, report, context),
+    text,
   );
-  const smallerTier = tier + 1 < HTML_DETAIL_CAPS.length;
+  const smallerTier = tier + 1 < HTML_ROW_CAPS.length;
   return smallerTier && Buffer.byteLength(email.html) > HTML_BUDGET_BYTES
-    ? fittingReport(payload, report, context, tier + 1)
+    ? fittingReport(payload, context, text, tier + 1)
     : email;
 }
 
@@ -306,5 +178,9 @@ export function formatBatchEmail(
   payload: AlertBatchPayload,
   context: AlertEmailContext = WITHOUT_LINKS,
 ): Promise<EmailContent> {
-  return fittingReport(payload, batchReport(payload, context.origin), context);
+  const text = withFooter(
+    reportText(buildReport(payload, context.origin)),
+    context,
+  );
+  return fittingReport(payload, context, text);
 }

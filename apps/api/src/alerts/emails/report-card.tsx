@@ -1,10 +1,10 @@
 import { Link, Section, Text } from 'react-email';
-import type { AlertBatchBlock } from '../alert-summary';
+import type { ReportBlock } from '../report/report-blocks';
 
 export interface ReportCardModel {
   title: string;
   href: string | null;
-  blocks: AlertBatchBlock[];
+  blocks: ReportBlock[];
   children: ReportCardModel[];
   notes: string[];
 }
@@ -55,7 +55,7 @@ function CardBody({ card }: { card: ReportCardModel }) {
   );
 }
 
-function ReportBlock({ block }: { block: AlertBatchBlock }) {
+function ReportBlock({ block }: { block: ReportBlock }) {
   return (
     <>
       {block.title && (
