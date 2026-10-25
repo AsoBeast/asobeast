@@ -1,4 +1,4 @@
-import { expect, type Locator, type Page } from "@playwright/test";
+import { expect, type Locator, type Page, type Route } from "@playwright/test";
 import { hydrated } from "./hydrated.mts";
 
 export interface HeldRequest {
@@ -9,12 +9,13 @@ export async function holdRequest(
   page: Page,
   url: RegExp,
   method: string,
+  answer: (route: Route) => Promise<void> = (route) => route.fallback(),
 ): Promise<HeldRequest> {
   const { promise, resolve } = Promise.withResolvers<void>();
   await page.route(url, async (route) => {
     if (route.request().method() !== method) return route.fallback();
     await promise;
-    return route.fallback();
+    return answer(route);
   });
   return { release: resolve };
 }

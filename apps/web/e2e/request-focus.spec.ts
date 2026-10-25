@@ -342,3 +342,50 @@ test.describe("generate now", () => {
     expect(posts).toHaveLength(1);
   });
 });
+
+test.describe("add competitor", () => {
+  const COMPETITOR_URL = "https://apps.apple.com/us/app/sample/id987654321";
+  const addButton = (page: Page) =>
+    page.getByRole("button", { name: /^(Add competitor|Adding…)$/ });
+
+  test("keeps focus while it adds and after the field clears", async ({
+    page,
+  }) => {
+    const held = await holdRequest(
+      page,
+      /\/api\/backend\/apps\/app-1\/competitors$/,
+      "POST",
+      (route) =>
+        route.fulfill({
+          status: 201,
+          json: { id: "comp-focus", name: "Sample" },
+        }),
+    );
+    await page.goto("/apps/app-1/competitors");
+    const field = page.getByRole("textbox", {
+      name: "Competitor name or App Store URL",
+    });
+    await field.fill(COMPETITOR_URL);
+
+    await pressFromKeyboard(addButton(page));
+    await expect(addButton(page)).toHaveAttribute("aria-disabled", "true");
+    await expect(addButton(page)).toBeFocused();
+    held.release();
+
+    await expect(field).toHaveValue("");
+    await expect(addButton(page)).toHaveText("Add competitor");
+    await expect(addButton(page)).toHaveAttribute("aria-disabled", "true");
+    await expect(addButton(page)).toBeFocused();
+  });
+
+  test("does nothing while the field is empty", async ({ page }) => {
+    const posts = countPosts(page, /\/apps\/app-1\/competitors$/);
+    await page.goto("/apps/app-1/competitors");
+
+    await pressFromKeyboard(addButton(page));
+
+    await expect(addButton(page)).toBeFocused();
+    await page.waitForTimeout(300);
+    expect(posts).toHaveLength(0);
+  });
+});
