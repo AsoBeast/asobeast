@@ -209,6 +209,29 @@ describe('formatWebhookBody', () => {
     expect(JSON.parse(body)).toEqual({ text: renderMessage(metadata) });
   });
 
+  it('keeps a link in a store name from rendering in a single alert', () => {
+    const linked = {
+      ...metadata,
+      app: {
+        ...metadata.app,
+        name: '[x](https://e.example) <https://e.example|y>',
+      },
+    };
+    const discord = JSON.parse(
+      formatWebhookBody('https://discord.com/api/webhooks/123/abc', linked),
+    ) as { content: string };
+    const slack = JSON.parse(
+      formatWebhookBody('https://hooks.slack.com/services/T/B/x', linked),
+    ) as { text: string };
+
+    expect(discord.content).toContain(
+      '\\[x\\](https://e.example) \\<https://e.example\\|y\\>',
+    );
+    expect(slack.text).toContain(
+      '[x](https://e.example) &lt;https://e.example|y&gt;',
+    );
+  });
+
   it('sends the raw payload for generic receivers', () => {
     const body = formatWebhookBody('https://hooks.example.com/x', metadata);
     expect(JSON.parse(body)).toEqual(metadata);
