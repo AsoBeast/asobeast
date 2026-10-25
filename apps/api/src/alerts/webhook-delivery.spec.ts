@@ -1,4 +1,4 @@
-import { createServer, type Server } from 'node:http';
+import { createServer, type Server, type ServerResponse } from 'node:http';
 import { AddressInfo } from 'node:net';
 import { ConfigService } from '@nestjs/config';
 import { AlertPayload } from '@asobeast/shared';
@@ -29,13 +29,20 @@ describe('WebhookDelivery', () => {
   let url: string;
   let status = 200;
   let headers: Record<string, string> = {};
+  let answer = BODY;
+  let body: 'whole' | 'cut' | 'stalled' = 'whole';
+  const stalled = new Set<ServerResponse>();
   let peakSockets = 0;
   let openSockets = 0;
 
   beforeAll(async () => {
-    server = createServer((_req, res) =>
-      res.writeHead(status, headers).end(BODY),
-    );
+    server = createServer((_req, res) => {
+      if (body === 'whole') return res.writeHead(status, headers).end(answer);
+      res.writeHead(status, { ...headers, 'content-length': '100' });
+      if (body === 'cut') return res.write('{"ok":', () => res.destroy());
+      stalled.add(res);
+      res.write('{"ok":');
+    });
     server.on('connection', (socket) => {
       openSockets += 1;
       peakSockets = Math.max(peakSockets, openSockets);
@@ -49,6 +56,11 @@ describe('WebhookDelivery', () => {
     url = `http://127.0.0.1:${(server.address() as AddressInfo).port}/hook`;
   });
 
+  afterEach(() => {
+    for (const res of stalled) res.destroy();
+    stalled.clear();
+  });
+
   afterAll(async () => {
     await new Promise<void>((resolve, reject) =>
       server.close((error) => (error ? reject(error) : resolve())),
@@ -58,6 +70,8 @@ describe('WebhookDelivery', () => {
   beforeEach(() => {
     status = 200;
     headers = {};
+    answer = BODY;
+    body = 'whole';
     peakSockets = 0;
     openSockets = 0;
   });
@@ -133,6 +147,51 @@ describe('WebhookDelivery', () => {
       );
     });
 
+    it('prefers the delay telegram writes in its body', async () => {
+      headers = { 'retry-after': '3' };
+      answer = JSON.stringify({ ok: false, parameters: { retry_after: 12 } });
+
+      expect(
+        ((await rejection()) as WebhookRateLimitedError).retryAfterMs,
+      ).toBe(12_000);
+    });
+
+    it('reads the header when the body is not json', async () => {
+      headers = { 'retry-after': '3' };
+
+      expect(
+        ((await rejection()) as WebhookRateLimitedError).retryAfterMs,
+      ).toBe(3000);
+    });
+
+    it('reads the header when the body breaks off', async () => {
+      headers = { 'retry-after': '7' };
+      body = 'cut';
+      const error = await rejection();
+
+      expect(error).toBeInstanceOf(WebhookRateLimitedError);
+      expect((error as WebhookRateLimitedError).retryAfterMs).toBe(7000);
+    });
+
+    it('stops waiting for a body that stalls and reads the header', async () => {
+      headers = { 'retry-after': '7' };
+      body = 'stalled';
+      const started = Date.now();
+      const error = await rejection();
+
+      expect(Date.now() - started).toBeLessThan(2_000);
+      expect((error as WebhookRateLimitedError).retryAfterMs).toBe(7000);
+    });
+
+    it('reads the header when the body names no positive delay', async () => {
+      headers = { 'retry-after': '60' };
+      answer = JSON.stringify({ ok: false, parameters: { retry_after: 0 } });
+
+      expect(
+        ((await rejection()) as WebhookRateLimitedError).retryAfterMs,
+      ).toBe(60_000);
+    });
+
     it('waits five seconds when the service names no delay', async () => {
       expect(
         ((await rejection()) as WebhookRateLimitedError).retryAfterMs,
@@ -169,6 +228,18 @@ describe('WebhookDelivery', () => {
 
     expect(error.message).toBe(`Webhook ${new URL(url).host}/… responded 500`);
     expect(error.message).not.toContain('secret-token');
+  });
+
+  it('never names the token a telegram url carries', async () => {
+    status = 500;
+    const delivery = new WebhookDelivery(configOf());
+    const target = `${url}/bot123:SECRET/sendMessage?chat_id=-100`;
+    const error = (await delivery
+      .send(target, null, PAYLOAD)
+      .catch((caught: unknown) => caught)) as Error;
+    await delivery.onModuleDestroy();
+
+    expect(error.message).not.toContain('SECRET');
   });
 
   it('reports a rate limit to the test endpoint as undelivered', async () => {

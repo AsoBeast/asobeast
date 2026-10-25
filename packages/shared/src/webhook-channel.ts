@@ -20,8 +20,12 @@ const TEAMS_SUFFIXES = [
   '.powerplatform.com',
   '.webhook.office.com',
 ];
+const LEGACY_TEAMS_SUFFIX = '.webhook.office.com';
+const LEGACY_OUTLOOK_HOST = 'outlook.office.com';
 
-const DISCORD_PATH = /^\/api(\/v\d+)?\/webhooks\/\d+\/[^/]+/;
+const DISCORD_PATH = /^\/(api(?:\/v\d+)?\/webhooks\/\d+)\/[^/]+/;
+const SLACK_IDS = /^\/services\/([^/]+\/[^/]+)\//;
+const TEAMS_WORKFLOW = /\/workflows\/([^/]+)\//;
 const TELEGRAM_PATH = /^\/bot[^/]+\/sendMessage$/;
 const GOOGLE_CHAT_PATH = /^\/v1\/spaces\/[^/]+\/messages$/;
 
@@ -48,4 +52,55 @@ export function webhookChannelOf(url: string): WebhookChannel {
     return 'google_chat';
   }
   return 'generic';
+}
+
+export function isRetiredTeamsConnector(url: string): boolean {
+  const parsed = parse(url);
+  if (!parsed) return false;
+  return (
+    parsed.hostname.endsWith(LEGACY_TEAMS_SUFFIX) ||
+    (parsed.hostname === LEGACY_OUTLOOK_HOST &&
+      parsed.pathname.startsWith('/webhook/'))
+  );
+}
+
+const HIDDEN = '…';
+
+const withHidden = (prefix: string | undefined): string =>
+  prefix ? `${prefix}/${HIDDEN}` : HIDDEN;
+
+function telegramPath(url: URL): string {
+  const chat = url.searchParams.get('chat_id');
+  return `bot${HIDDEN}/sendMessage${chat ? `?chat_id=${chat}` : ''}`;
+}
+
+function channelPath(url: URL): string | null {
+  const path = url.pathname;
+  switch (webhookChannelOf(url.href)) {
+    case 'discord':
+      return withHidden(DISCORD_PATH.exec(path)?.[1]);
+    case 'slack':
+      return `services/${withHidden(SLACK_IDS.exec(path)?.[1])}`;
+    case 'teams': {
+      const workflow = TEAMS_WORKFLOW.exec(path)?.[1];
+      return withHidden(workflow && `workflows/${workflow}`);
+    }
+    case 'telegram':
+      return telegramPath(url);
+    case 'google_chat':
+      return path.slice(1);
+    default:
+      return path === '/' ? null : HIDDEN;
+  }
+}
+
+export function webhookLabel(raw: string): string {
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return 'an invalid url';
+  }
+  const path = channelPath(url);
+  return path ? `${url.host}/${path}` : url.host;
 }

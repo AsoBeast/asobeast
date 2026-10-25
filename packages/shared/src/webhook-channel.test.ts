@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { webhookChannelOf } from './webhook-channel';
+import {
+  isRetiredTeamsConnector,
+  webhookChannelOf,
+  webhookLabel,
+} from './webhook-channel';
 
 describe('webhookChannelOf', () => {
   it.each([
@@ -36,5 +40,67 @@ describe('webhookChannelOf', () => {
     ['not a url', 'generic'],
   ])('recognises %s as %s', (url, channel) => {
     expect(webhookChannelOf(url)).toBe(channel);
+  });
+});
+
+describe('isRetiredTeamsConnector', () => {
+  it.each([
+    ['https://contoso.webhook.office.com/webhookb2/abc', true],
+    ['https://outlook.office.com/webhook/abc@def/IncomingWebhook/1/2', true],
+    ['https://outlook.office.com/mail/inbox', false],
+    [
+      'https://prod-21.westeurope.logic.azure.com/workflows/a/triggers/manual/paths/invoke?sig=x',
+      false,
+    ],
+    ['not a url', false],
+  ])('answers %s with %s', (url, retired) => {
+    expect(isRetiredTeamsConnector(url)).toBe(retired);
+  });
+});
+
+describe('webhookLabel', () => {
+  it.each([
+    [
+      'https://discord.com/api/webhooks/123/abc',
+      'discord.com/api/webhooks/123/…',
+    ],
+    [
+      'https://discord.com/api/v10/webhooks/123/abc/slack',
+      'discord.com/api/v10/webhooks/123/…',
+    ],
+    [
+      'https://hooks.slack.com/services/T0123/B0456/secret',
+      'hooks.slack.com/services/T0123/B0456/…',
+    ],
+    [
+      'https://prod-21.westeurope.logic.azure.com:443/workflows/abc/triggers/manual/paths/invoke?sig=secret',
+      'prod-21.westeurope.logic.azure.com/workflows/abc/…',
+    ],
+    [
+      'https://api.telegram.org/bot123456:ABC-SECRETTOKEN/sendMessage?chat_id=-100',
+      'api.telegram.org/bot…/sendMessage?chat_id=-100',
+    ],
+    [
+      'https://api.telegram.org/bot123456:ABC-SECRETTOKEN/sendMessage',
+      'api.telegram.org/bot…/sendMessage',
+    ],
+    [
+      'https://chat.googleapis.com/v1/spaces/AAAAxyz/messages?key=k&token=t',
+      'chat.googleapis.com/v1/spaces/AAAAxyz/messages',
+    ],
+    ['https://webhook.site/6f1c2d3e-uuid/extra', 'webhook.site/…'],
+    ['https://hooks.example.com/x?token=secret', 'hooks.example.com/…'],
+    ['http://n8n:5678/webhook/asobeast', 'n8n:5678/…'],
+    ['https://hooks.example.com/', 'hooks.example.com'],
+    ['not a url', 'an invalid url'],
+  ])('prints %s as %s', (url, label) => {
+    expect(webhookLabel(url)).toBe(label);
+  });
+
+  it('tells apart two telegram chats of one bot', () => {
+    const bot = 'https://api.telegram.org/bot123456:SECRET/sendMessage';
+    expect(webhookLabel(`${bot}?chat_id=1`)).not.toBe(
+      webhookLabel(`${bot}?chat_id=2`),
+    );
   });
 });

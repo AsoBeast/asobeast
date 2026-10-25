@@ -124,6 +124,24 @@ describe('WebhooksController (e2e)', () => {
     expect((moved.body as WebhookItem).channel).toBe('discord');
   });
 
+  it.each([
+    [
+      'https://api.telegram.org/bot123:ABC/sendMessage',
+      'a telegram url needs the chat to post to: add ?chat_id=<id> after sendMessage',
+    ],
+    [
+      'https://contoso.webhook.office.com/webhookb2/abc',
+      'office 365 connector urls stopped delivering in may 2026; create a workflow with the "send webhook alerts to a channel" template and paste its url',
+    ],
+  ])('refuses %s with the fix in the message', async (url, message) => {
+    const response = await api
+      .post('/webhooks')
+      .send({ url, events: ['rank.dropped'] })
+      .expect(400);
+
+    expect((response.body as { message: string }).message).toBe(message);
+  });
+
   it('accepts the milestone, first rank and overtake events', async () => {
     const created = await api
       .post('/webhooks')
@@ -327,6 +345,34 @@ describe('WebhooksController (e2e)', () => {
     const [target] = mockFetch.mock.calls[0] as [URL];
     expect(target.toString()).toBe('https://hooks.example.com/asobeast');
   });
+
+  it.each([
+    [
+      'https://prod-21.westeurope.logic.azure.com:443/workflows/abc/triggers/manual/paths/invoke?sig=SECRET',
+      'attachments',
+    ],
+    [
+      'https://api.telegram.org/bot123:SECRET/sendMessage?chat_id=-100',
+      'chat_id',
+    ],
+  ])(
+    'tests %s with its own body and keeps its token for delivery',
+    async (url, key) => {
+      const created = await api
+        .post('/webhooks')
+        .send({ url, events: ['metadata.changed'] })
+        .expect(201);
+      mockFetch.mockResolvedValue({ ok: true, status: 202 });
+
+      await api
+        .post(`/webhooks/${(created.body as WebhookItem).id}/test`)
+        .expect(201);
+
+      const [target, init] = mockFetch.mock.calls[0] as [URL, { body: string }];
+      expect(target.toString()).toContain('SECRET');
+      expect(JSON.parse(init.body)).toHaveProperty(key);
+    },
+  );
 
   it('reports a private target as undelivered without reaching the network', async () => {
     const webhook = await prisma.webhook.create({

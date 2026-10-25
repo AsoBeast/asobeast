@@ -12,6 +12,9 @@ import { invalidateWebhookMutation } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
 import { EventSelection } from "./alert-events";
 import { AlertChannelDialog } from "./alert-channel/AlertChannelDialog";
+import { channelHint } from "./webhook-channel-copy";
+
+const HINT_ID = "webhook-channel-hint";
 
 export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
   const queryClient = useQueryClient();
@@ -42,6 +45,7 @@ export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
     },
   });
   const createOnce = useSingleFlight(mutation);
+  const hint = channelHint(url);
 
   function onOpenChange(next: boolean) {
     setOpen(next);
@@ -96,7 +100,13 @@ export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
           onChange={(event) => setUrl(event.target.value)}
           placeholder="https://hooks.example.com/asobeast"
           aria-invalid={error !== null}
+          aria-describedby={hint ? HINT_ID : undefined}
         />
+        {hint && (
+          <p id={HINT_ID} className="text-sm text-muted-foreground">
+            {hint}
+          </p>
+        )}
       </div>
 
       <EventSelection value={events} onChange={setEvents} />
