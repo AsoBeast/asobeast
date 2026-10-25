@@ -26,7 +26,7 @@ import {
 } from "./alert-channel/AlertChannelCard";
 import { AddWebhookDialog } from "./AddWebhookDialog";
 import { AlertChannelRow } from "./alert-channel/AlertChannelRow";
-import { useSharedFlight } from "@/lib/single-flight";
+import { useSharedFlight, useSingleFlight } from "@/lib/single-flight";
 import { WEBHOOK_CHANNEL_NAMES, webhookRowLabel } from "./webhook-channel-copy";
 
 function WebhookRow({ webhook }: { webhook: WebhookItem }) {
@@ -66,6 +66,8 @@ function WebhookRow({ webhook }: { webhook: WebhookItem }) {
     onError: () => toast.error("Could not reach the webhook"),
   });
 
+  const testOnce = useSingleFlight(test);
+
   const remove = useMutation({
     mutationFn: () => deleteWebhook(webhook.id),
     onSuccess: () => {
@@ -101,7 +103,7 @@ function WebhookRow({ webhook }: { webhook: WebhookItem }) {
       confirmTitle="Delete this webhook?"
       confirmDescription={`AsoBeast will stop delivering alerts to ${label}. This cannot be undone.`}
       testPending={test.isPending}
-      onTest={() => test.mutate()}
+      onTest={testOnce}
       deletePending={remove.isPending}
       onDelete={removeOnce}
       eventsPending={editEvents.isPending}

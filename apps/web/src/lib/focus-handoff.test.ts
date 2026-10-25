@@ -4,6 +4,7 @@ import {
   focusCanMoveTo,
   focusIsLost,
   isClaimable,
+  siblingControl,
   survivingNeighbour,
 } from "./focus-handoff";
 
@@ -137,5 +138,50 @@ describe("isClaimable", () => {
     expect(
       isClaimable(armed, "chart-follow", armed.at + CLAIM_WINDOW_MS + 1, root),
     ).toBe(false);
+  });
+});
+
+describe("siblingControl", () => {
+  const control = (name: string) => ({ name });
+  const rowOf = (
+    name: string,
+    held: { name: string } | null = control(name),
+  ) => ({
+    name,
+    parentElement: null as unknown,
+    querySelector: () => held,
+  });
+  const listOf = (...rows: ReturnType<typeof rowOf>[]) => {
+    const parent = { children: rows };
+    for (const row of rows) row.parentElement = parent;
+    return rows;
+  };
+  const siblingOf = (row: unknown) =>
+    siblingControl(row as Element, "button") as unknown as {
+      name: string;
+    } | null;
+
+  it("takes the control of the next row", () => {
+    const [, middle] = listOf(rowOf("a"), rowOf("b"), rowOf("c"));
+    expect(siblingOf(middle)).toEqual(control("c"));
+  });
+
+  it("takes the control of the previous row when the last one leaves", () => {
+    const [, last] = listOf(rowOf("a"), rowOf("b"));
+    expect(siblingOf(last)).toEqual(control("a"));
+  });
+
+  it("answers nothing for an only row", () => {
+    const [only] = listOf(rowOf("a"));
+    expect(siblingOf(only)).toBeNull();
+  });
+
+  it("answers nothing without a row", () => {
+    expect(siblingControl(null, "button")).toBeNull();
+  });
+
+  it("answers nothing when the neighbour holds no such control", () => {
+    const [first] = listOf(rowOf("a"), rowOf("b", null));
+    expect(siblingOf(first)).toBeNull();
   });
 });

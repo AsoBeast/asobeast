@@ -44,6 +44,33 @@ export function survivingNeighbour<T>(
   );
 }
 
+export function siblingControl(
+  row: Element | null,
+  control: string,
+): HTMLElement | null {
+  const rows = row?.parentElement ? [...row.parentElement.children] : [];
+  const next = survivingNeighbour(rows, (each) => each === row);
+  return next?.querySelector<HTMLElement>(control) ?? null;
+}
+
+export function useCloseFocusHandoff(): {
+  handOff: (target: HTMLElement | null) => void;
+  onCloseAutoFocus: (event: Event) => void;
+} {
+  const target = useRef<HTMLElement | null>(null);
+  const handOff = useCallback((next: HTMLElement | null) => {
+    target.current = next;
+  }, []);
+  const onCloseAutoFocus = useCallback((event: Event) => {
+    const next = target.current;
+    target.current = null;
+    if (!next?.isConnected) return;
+    event.preventDefault();
+    next.focus();
+  }, []);
+  return { handOff, onCloseAutoFocus };
+}
+
 export function useFocusAfterCommit(): (
   target: HTMLElement | null | undefined,
 ) => void {

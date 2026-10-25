@@ -28,7 +28,7 @@ import {
 } from "./alert-channel/AlertChannelCard";
 import { AddEmailAlertDialog } from "./AddEmailAlertDialog";
 import { AlertChannelRow } from "./alert-channel/AlertChannelRow";
-import { useSharedFlight } from "@/lib/single-flight";
+import { useSharedFlight, useSingleFlight } from "@/lib/single-flight";
 
 const SMTP_VARS = [
   "SMTP_HOST",
@@ -89,6 +89,9 @@ function EmailAlertRow({ alert }: { alert: EmailAlertItem }) {
       ),
   });
 
+  const testOnce = useSingleFlight(test);
+  const resendOnce = useSingleFlight(resend);
+
   const remove = useMutation({
     mutationFn: () => deleteEmailAlert(alert.id),
     onSuccess: () => {
@@ -109,7 +112,7 @@ function EmailAlertRow({ alert }: { alert: EmailAlertItem }) {
         awaitsConfirmation(alert)
           ? {
               pending: resend.isPending,
-              onResend: () => resend.mutate(),
+              onResend: resendOnce,
               unsubscribed: alert.unsubscribed === true,
             }
           : undefined
@@ -120,7 +123,7 @@ function EmailAlertRow({ alert }: { alert: EmailAlertItem }) {
       confirmTitle="Delete this email alert?"
       confirmDescription={`AsoBeast will stop emailing ${alert.email}. This cannot be undone.`}
       testPending={test.isPending}
-      onTest={() => test.mutate()}
+      onTest={testOnce}
       deletePending={remove.isPending}
       onDelete={removeOnce}
       eventsPending={editEvents.isPending}

@@ -84,6 +84,8 @@ import {
   BUDGET,
   DATASETS,
   SUGGESTIONS,
+  AWAITING_ALERT,
+  AWAITING_ALERT_COOKIE,
   EMAIL_ALERTS,
   EMAIL_DELIVERIES,
   FIRST_RUN_COMPLETE,
@@ -124,6 +126,8 @@ import {
   RECENT_CHANGES,
   SCREENSHOTS,
   SERP_SNAPSHOTS,
+  WEBHOOK_PAIR,
+  WEBHOOK_PAIR_COOKIE,
   WEBHOOKS,
   emptyScreenshots,
   DATABASE_DOWN_RETRY_SECONDS,
@@ -2901,7 +2905,15 @@ const routes: Route[] = [
     method: "GET",
     pattern: /^\/webhooks$/,
     handler: (_p, req, res) =>
-      json(res, 200, hasCookie(req, "e2e-empty-alerts", "1") ? [] : webhooks),
+      json(
+        res,
+        200,
+        hasCookie(req, "e2e-empty-alerts", "1")
+          ? []
+          : hasCookie(req, WEBHOOK_PAIR_COOKIE, "1")
+            ? WEBHOOK_PAIR
+            : webhooks,
+      ),
   },
   {
     method: "POST",
@@ -2999,7 +3011,9 @@ const routes: Route[] = [
           ? []
           : hasCookie(req, "e2e-unsubscribed-alert", "1")
             ? [UNSUBSCRIBED_ALERT, ...emailAlerts]
-            : emailAlerts,
+            : hasCookie(req, AWAITING_ALERT_COOKIE, "1")
+              ? [AWAITING_ALERT]
+              : emailAlerts,
       ),
   },
   {
