@@ -411,7 +411,7 @@ describe('formatBatchEmail', () => {
     expect(second).toEqual(first);
     expect(first.text).toContain('+980 more');
     expect(first.text.length).toBeLessThan(10_000);
-    expect(first.html.length).toBeLessThan(40_000);
+    expect(first.html.length).toBeLessThan(28_000);
     expect(first.text).toContain('22 Jul 2026');
     expect(first.html).toContain('22 Jul 2026');
   });
