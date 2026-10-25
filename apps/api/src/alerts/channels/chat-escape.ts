@@ -10,5 +10,5 @@ export function slackName(name: string): string {
 }
 
 export function escapeDiscord(text: string): string {
-  return text.replace(/([\\`*_~|>@])/g, '\\$1');
+  return text.replace(/([\\`*_~|<>@[\]])/g, '\\$1');
 }

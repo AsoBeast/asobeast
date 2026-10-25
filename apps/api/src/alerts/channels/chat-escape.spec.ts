@@ -8,8 +8,17 @@ describe('escapeDiscord', () => {
   });
 
   it('leaves punctuation discord shows as written', () => {
-    expect(escapeDiscord('Where Am I? - GeoGuess Game (v1.2) #1 [beta]')).toBe(
-      'Where Am I? - GeoGuess Game (v1.2) #1 [beta]',
+    expect(escapeDiscord('Where Am I? - GeoGuess Game (v1.2) #1')).toBe(
+      'Where Am I? - GeoGuess Game (v1.2) #1',
+    );
+  });
+
+  it('keeps a masked link or an autolink in store text from rendering', () => {
+    expect(escapeDiscord('[Update your account](https://evil.example)')).toBe(
+      '\\[Update your account\\](https://evil.example)',
+    );
+    expect(escapeDiscord('<https://evil.example>')).toBe(
+      '\\<https://evil.example\\>',
     );
   });
 });
