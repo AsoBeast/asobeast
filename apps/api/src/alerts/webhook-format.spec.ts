@@ -273,6 +273,29 @@ describe('formatWebhookBody', () => {
     expect(lines[lines.length - 1]).toBe('+2 more');
   });
 
+  it('keeps a digest of many linked groups within the discord and slack limits', () => {
+    const crowded: DigestWeeklyPayload = {
+      ...digest,
+      groups: Array.from({ length: 200 }, (_, index) => ({
+        id: `group_${index}`,
+        name: `Linked group with a fairly long name ${index}`,
+        visibility: { current: 50, delta7d: 1.5 },
+      })),
+    };
+    const discord = JSON.parse(
+      formatWebhookBody('https://discord.com/api/webhooks/1/x', crowded),
+    ) as { embeds: { description: string }[] };
+    const slack = JSON.parse(
+      formatWebhookBody('https://hooks.slack.com/services/T/B/x', crowded),
+    ) as { blocks: Array<{ type: string; text: { text: string } }> };
+    const section = slack.blocks.find((block) => block.type === 'section');
+
+    expect(discord.embeds[0].description.length).toBeLessThanOrEqual(4000);
+    expect(discord.embeds[0].description).toMatch(/\+\d+ more$/);
+    expect(section?.text.text.length).toBeLessThanOrEqual(2900);
+    expect(section?.text.text).toMatch(/\+\d+ more$/);
+  });
+
   it('sends the raw digest payload for generic receivers', () => {
     const body = formatWebhookBody('https://hooks.example.com/x', digest);
     expect(JSON.parse(body)).toEqual(digest);
