@@ -634,6 +634,25 @@ describe('formatBatchEmail in the branded layout', () => {
     },
   );
 
+  it('keeps a report of apps with very long names under budget', async () => {
+    const apps = Array.from({ length: 3 }, (_, index) =>
+      emptySection({
+        id: `long_${index}`,
+        name: `${'Long name '.repeat(4_000)}${index}`,
+        store: 'APP_STORE',
+        country: 'us',
+      }),
+    );
+    const { html, text } = await formatBatchEmail(
+      { ...batch, totals: { events: 3, apps: 3 }, apps },
+      linked,
+    );
+
+    expect(Buffer.byteLength(html)).toBeLessThan(HTML_BUDGET_BYTES);
+    expect(html).toContain('+3 more apps');
+    expect(text).toContain('Long name Long name');
+  });
+
   it('shows fewer lines in html than in text only when the report would not fit', async () => {
     const worst = await formatBatchEmail(worstCaseBatch('owned_apps'), linked);
     const lastRow = 'meditation and sleep tracker keyword 19';

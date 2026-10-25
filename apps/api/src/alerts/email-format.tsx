@@ -28,6 +28,7 @@ const HTML_TIERS: readonly ReportCaps[] = [
   { apps: 10, competitors: 1, rows: 1 },
   { apps: 5, competitors: 1, rows: 1 },
   { apps: 3, competitors: 1, rows: 1 },
+  { apps: 0, competitors: 0, rows: 0 },
 ];
 
 const withFooter = (text: string, context: AlertEmailContext): string =>
