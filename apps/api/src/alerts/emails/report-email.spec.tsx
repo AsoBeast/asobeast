@@ -58,9 +58,12 @@ describe('report components', () => {
   it('opens a card with the app icon, its name and its storefront', async () => {
     const output = await html(<ReportCard app={card({ iconUrl: ICON })} />);
 
-    expect(output).toMatch(
-      new RegExp(`<img alt="" height="40" src="${ICON}"[^>]*width="40"`),
-    );
+    const icon = output.match(/<img [^>]*>/)?.[0] ?? '';
+
+    expect(icon).toContain(`src="${ICON}"`);
+    expect(icon).toContain('alt=""');
+    expect(icon).toContain('height="40"');
+    expect(icon).toContain('width="40"');
     expect(output).toContain('href="https://aso.example.com/apps/a"');
     expect(output).toContain('>Alpha</a>');
     expect(output).toContain('App Store · US');
