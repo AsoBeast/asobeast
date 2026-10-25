@@ -3,6 +3,7 @@ import { Test } from '@nestjs/testing';
 import { UnknownStorefrontError } from '@asobeast/shared';
 import { AlertsDispatcher } from '../alerts/alerts.dispatcher';
 import { PrismaService } from '../prisma/prisma.service';
+import { IconImageSource } from '../store-providers/icon-image';
 import { DiffableChangeSnapshot } from './change-detector';
 import { ChangesService } from './changes.service';
 
@@ -36,6 +37,10 @@ describe('ChangesService', () => {
   const appFindMany = jest.fn();
   const snapshotFindFirst = jest.fn();
   const dispatch = jest.fn();
+  const compare = jest.fn<
+    Promise<boolean | null>,
+    [string | null, string | null]
+  >();
 
   beforeEach(async () => {
     createMany.mockReset();
@@ -46,6 +51,7 @@ describe('ChangesService', () => {
     appFindMany.mockReset();
     snapshotFindFirst.mockReset();
     dispatch.mockReset();
+    compare.mockReset().mockResolvedValue(null);
     findUnique.mockResolvedValue({ name: 'Mine', isCompetitor: false });
     const moduleRef = await Test.createTestingModule({
       providers: [
@@ -63,6 +69,7 @@ describe('ChangesService', () => {
           },
         },
         { provide: AlertsDispatcher, useValue: { dispatch } },
+        { provide: IconImageSource, useValue: { compare } },
       ],
     }).compile();
     service = moduleRef.get(ChangesService);
@@ -171,6 +178,83 @@ describe('ChangesService', () => {
 
       expect(changes).toEqual([]);
       expect(createMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('an icon change', () => {
+    const iconA =
+      'https://is1-ssl.mzstatic.com/image/thumb/a/v4/1/AppIcon.png/512x512bb.jpg';
+    const iconB =
+      'https://is1-ssl.mzstatic.com/image/thumb/b/v4/2/AppIcon.png/512x512bb.jpg';
+
+    it('drops the event when both addresses draw the same picture', async () => {
+      compare.mockResolvedValue(true);
+      const prev = makeSnapshot({ title: 'Old', iconUrl: iconA });
+      const next = makeSnapshot({ title: 'New', iconUrl: iconB });
+
+      const changes = await service.recordRefresh('app_1', prev, next);
+
+      expect(changes).toEqual([
+        { field: 'title', before: 'Old', after: 'New' },
+      ]);
+      expect(createMany).toHaveBeenCalledWith({
+        data: [{ appId: 'app_1', field: 'title', before: 'Old', after: 'New' }],
+      });
+      const [payload] = dispatch.mock.calls[0] as [
+        { changes: Array<Record<string, unknown>> },
+      ];
+      expect(payload.changes).toEqual([
+        { field: 'title', before: 'Old', after: 'New' },
+      ]);
+    });
+
+    it('keeps the event when the pictures differ', async () => {
+      compare.mockResolvedValue(false);
+      const prev = makeSnapshot({ iconUrl: iconA });
+      const next = makeSnapshot({ iconUrl: iconB });
+
+      const changes = await service.recordRefresh('app_1', prev, next);
+
+      expect(changes).toEqual([{ field: 'icon', before: iconA, after: iconB }]);
+      expect(createMany).toHaveBeenCalledWith({
+        data: [{ appId: 'app_1', field: 'icon', before: iconA, after: iconB }],
+      });
+    });
+
+    it('keeps the event when the pixels could not be compared', async () => {
+      const prev = makeSnapshot({ iconUrl: iconA });
+      const next = makeSnapshot({ iconUrl: iconB });
+
+      const changes = await service.recordRefresh('app_1', prev, next);
+
+      expect(changes).toEqual([{ field: 'icon', before: iconA, after: iconB }]);
+      expect(createMany).toHaveBeenCalledTimes(1);
+    });
+
+    it('compares the icons of a market refresh too', async () => {
+      compare.mockResolvedValue(true);
+      const prev = makeSnapshot({ iconUrl: iconA });
+      const next = makeSnapshot({ iconUrl: iconB });
+
+      const changes = await service.recordMarketRefresh(
+        'app_1',
+        { home: 'us', market: 'de', localization: 'de' },
+        prev,
+        next,
+      );
+
+      expect(changes).toEqual([]);
+      expect(createMany).not.toHaveBeenCalled();
+      expect(compare).toHaveBeenCalledWith(iconA, iconB);
+    });
+
+    it('compares nothing when the icon address is unchanged', async () => {
+      const prev = makeSnapshot({ title: 'Old' });
+      const next = makeSnapshot({ title: 'New' });
+
+      await service.recordRefresh('app_1', prev, next);
+
+      expect(compare).not.toHaveBeenCalled();
     });
   });
 

@@ -5,6 +5,7 @@ import { PublishedStatusService } from './canary/published-status.service';
 import { StoreCanaryService } from './canary/store-canary.service';
 import { GOOGLE_PLAY_LIB, googlePlayLib } from './google-play.lib';
 import { GooglePlayProvider } from './google-play.provider';
+import { IconImageSource } from './icon-image';
 import { ScreenshotImageSource } from './screenshot-image.source';
 import { StoreProviderRegistry } from './store-provider.registry';
 
@@ -18,12 +19,14 @@ import { StoreProviderRegistry } from './store-provider.registry';
     StoreCanaryService,
     PublishedStatusService,
     ScreenshotImageSource,
+    IconImageSource,
   ],
   exports: [
     StoreProviderRegistry,
     StoreCanaryService,
     PublishedStatusService,
     ScreenshotImageSource,
+    IconImageSource,
   ],
 })
 export class StoreProvidersModule {}
