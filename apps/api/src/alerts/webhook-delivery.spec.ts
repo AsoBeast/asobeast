@@ -30,13 +30,16 @@ describe('WebhookDelivery', () => {
   let status = 200;
   let headers: Record<string, string> = {};
   let answer = BODY;
+  let cutBody = false;
   let peakSockets = 0;
   let openSockets = 0;
 
   beforeAll(async () => {
-    server = createServer((_req, res) =>
-      res.writeHead(status, headers).end(answer),
-    );
+    server = createServer((_req, res) => {
+      if (!cutBody) return res.writeHead(status, headers).end(answer);
+      res.writeHead(status, { ...headers, 'content-length': '100' });
+      res.write('{"ok":', () => res.destroy());
+    });
     server.on('connection', (socket) => {
       openSockets += 1;
       peakSockets = Math.max(peakSockets, openSockets);
@@ -60,6 +63,7 @@ describe('WebhookDelivery', () => {
     status = 200;
     headers = {};
     answer = BODY;
+    cutBody = false;
     peakSockets = 0;
     openSockets = 0;
   });
@@ -150,6 +154,15 @@ describe('WebhookDelivery', () => {
       expect(
         ((await rejection()) as WebhookRateLimitedError).retryAfterMs,
       ).toBe(3000);
+    });
+
+    it('reads the header when the body breaks off', async () => {
+      headers = { 'retry-after': '7' };
+      cutBody = true;
+      const error = await rejection();
+
+      expect(error).toBeInstanceOf(WebhookRateLimitedError);
+      expect((error as WebhookRateLimitedError).retryAfterMs).toBe(7000);
     });
 
     it('waits five seconds when the service names no delay', async () => {
