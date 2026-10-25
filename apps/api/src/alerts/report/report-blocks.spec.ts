@@ -6,11 +6,16 @@ import {
   emptySection,
   worstCaseBatch,
 } from '../email-fixtures.fixture';
-import { milestone } from '../rank-events.fixture';
 import { buildReport } from './build-report';
-import { blocksOf, rowText } from './report-blocks';
+import {
+  competitorsOmission,
+  groupLines,
+  groupOmission,
+  rowText,
+} from './report-blocks';
 
 const ORIGIN = 'https://aso.example.com';
+const markdown = (label: string, href: string) => `[${label}](${href})`;
 
 describe('rowText', () => {
   it('prints each kind of row', () => {
@@ -47,65 +52,68 @@ describe('rowText', () => {
   });
 });
 
-describe('blocksOf', () => {
-  it('gives each group of an app a block of lines', () => {
-    expect(blocksOf(buildReport(batch, null).apps[0])).toEqual([
-      { title: 'Rank drops', lines: ['game  #3 → #12'] },
-      {
-        title: 'Listing changes',
-        lines: [`Title: "${'x'.repeat(79)}…" → "short"`],
-      },
-    ]);
+describe('groupLines', () => {
+  it('prints the rows of a group', () => {
+    const [drops] = buildReport(batch, null).apps[0].groups;
+
+    expect(groupLines(drops)).toEqual(['game  #3 → #12']);
   });
 
   it('puts the scope of an action under it', () => {
-    const [block] = blocksOf(
-      buildReport(
-        {
-          ...batch,
-          apps: [{ ...emptySection(alpha.app), actions: [actionOpened] }],
-        },
-        null,
-      ).apps[0],
-    );
+    const [actions] = buildReport(
+      {
+        ...batch,
+        apps: [{ ...emptySection(alpha.app), actions: [actionOpened] }],
+      },
+      null,
+    ).apps[0].groups;
 
-    expect(block.lines).toHaveLength(2);
-    expect(block.lines[1]).toMatch(/^ {2}US · App Store · /);
+    expect(groupLines(actions)[1]).toMatch(/^ {2}US · App Store · /);
   });
 
   it('ends a cut group with its omission', () => {
-    const [drops] = blocksOf(
-      buildReport(worstCaseBatch('owned_apps'), ORIGIN).apps[0],
-    );
+    const [drops] = buildReport(worstCaseBatch('owned_apps'), ORIGIN).apps[0]
+      .groups;
 
-    expect(drops.lines.at(-1)).toBe(
+    expect(groupLines(drops).at(-1)).toBe(
       `See all 25: ${ORIGIN}/apps/app_0/keywords`,
     );
   });
+});
 
-  it('gives each competitor a block and notes the ones left out', () => {
-    expect(blocksOf(buildReport(competitorBatch, null).apps[0])).toEqual([
-      { title: 'Competitor · Charlie', lines: ['Subtitle: "a" → "b"'] },
-    ]);
-    expect(
-      blocksOf(buildReport(worstCaseBatch('competitors'), null).apps[0]).at(-1),
-    ).toEqual({ title: '', lines: ['+2 more competitors'] });
+describe('omissions', () => {
+  it('writes the link of a cut group in the format a channel asks for', () => {
+    const [drops] = buildReport(worstCaseBatch('owned_apps'), ORIGIN).apps[0]
+      .groups;
+    const [bare] = buildReport(worstCaseBatch('owned_apps'), null).apps[0]
+      .groups;
+
+    expect(groupOmission(drops, markdown)).toBe(
+      `[See all 25](${ORIGIN}/apps/app_0/keywords)`,
+    );
+    expect(groupOmission(bare, markdown)).toBe('+5 more');
   });
 
-  it('prints a milestone with its note', () => {
-    const [block] = blocksOf(
-      buildReport(
-        {
-          ...batch,
-          apps: [{ ...emptySection(alpha.app), rankMilestones: [milestone()] }],
-        },
-        null,
-      ).apps[0],
-    );
+  it('says nothing for a group that was not cut', () => {
+    const [drops] = buildReport(batch, ORIGIN).apps[0].groups;
 
-    expect(block).toEqual({
-      title: 'Milestones',
-      lines: ['habit tracker  #14 → #8 · entered the top 10'],
-    });
+    expect(groupOmission(drops)).toBeNull();
+  });
+
+  it('links or counts the competitors a report left out', () => {
+    expect(
+      competitorsOmission(
+        buildReport(worstCaseBatch('competitors'), ORIGIN).apps[0],
+        markdown,
+      ),
+    ).toBe(`[See all 12 competitors](${ORIGIN}/apps/app_0/competitors)`);
+    expect(
+      competitorsOmission(
+        buildReport(worstCaseBatch('competitors'), null).apps[0],
+      ),
+    ).toBe('+2 more competitors');
+    expect(
+      competitorsOmission(buildReport(competitorBatch, null).apps[0]),
+    ).toBeNull();
   });
 });

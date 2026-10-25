@@ -365,6 +365,7 @@ describe('AlertsDispatcher', () => {
           webhookId: 'wh1',
           payload: { ...rankPayload, app: { ...rankPayload.app, ...identity } },
         }),
+        { backoff: { type: 'custom' } },
       );
     });
 

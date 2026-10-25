@@ -14,6 +14,7 @@ import {
 } from '../jobs/jobs.types';
 import { PrismaService } from '../prisma/prisma.service';
 import { AlertAppIdentities } from './alert-app-identities';
+import { ALERT_BACKOFF } from './alert-delivery-flow';
 import { DELIVERABLE_EMAIL_ALERTS } from './deliverable-email-alerts';
 import { MailerService } from './mailer.service';
 import { OutboxRow, outboxRows } from './outbox-rows';
@@ -99,11 +100,15 @@ export class AlertsDispatcher {
     const scope = this.workspace.scopeFor('instant alert delivery');
     await Promise.all(
       webhooks.map((webhook) =>
-        this.queue.add(JOBS.DELIVER_ALERT, {
-          webhookId: webhook.id,
-          payload,
-          ...scope,
-        }),
+        this.queue.add(
+          JOBS.DELIVER_ALERT,
+          {
+            webhookId: webhook.id,
+            payload,
+            ...scope,
+          },
+          { backoff: ALERT_BACKOFF },
+        ),
       ),
     );
   }
@@ -120,11 +125,15 @@ export class AlertsDispatcher {
     const scope = this.workspace.scopeFor('instant alert delivery');
     await Promise.all(
       alerts.map((alert) =>
-        this.queue.add(JOBS.DELIVER_EMAIL, {
-          emailAlertId: alert.id,
-          payload,
-          ...scope,
-        }),
+        this.queue.add(
+          JOBS.DELIVER_EMAIL,
+          {
+            emailAlertId: alert.id,
+            payload,
+            ...scope,
+          },
+          { backoff: ALERT_BACKOFF },
+        ),
       ),
     );
   }

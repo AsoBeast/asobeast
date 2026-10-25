@@ -262,6 +262,10 @@ function toneOf(tones: readonly GroupTone[]): ReportTone {
   return 'neutral';
 }
 
+export function appTone(app: ReportApp): ReportTone {
+  return toneOf(groupTones(app));
+}
+
 export function buildReport(
   payload: AlertBatchPayload,
   origin: string | null,

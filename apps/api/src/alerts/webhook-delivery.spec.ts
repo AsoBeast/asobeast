@@ -3,7 +3,7 @@ import { AddressInfo } from 'node:net';
 import { ConfigService } from '@nestjs/config';
 import { AlertPayload } from '@asobeast/shared';
 import { Env } from '../config/env';
-import { WebhookDelivery } from './webhook-delivery';
+import { WebhookDelivery, WebhookRateLimitedError } from './webhook-delivery';
 
 const BODY = 'y'.repeat(1024 * 1024);
 
@@ -20,18 +20,22 @@ const PAYLOAD = {
 
 const configOf = (allowPrivate = true) =>
   ({
-    get: () => allowPrivate,
+    get: (key: string) =>
+      key === 'WEBHOOK_ALLOW_PRIVATE_TARGETS' ? allowPrivate : undefined,
   }) as unknown as ConfigService<Env, true>;
 
 describe('WebhookDelivery', () => {
   let server: Server;
   let url: string;
   let status = 200;
+  let headers: Record<string, string> = {};
   let peakSockets = 0;
   let openSockets = 0;
 
   beforeAll(async () => {
-    server = createServer((_req, res) => res.writeHead(status).end(BODY));
+    server = createServer((_req, res) =>
+      res.writeHead(status, headers).end(BODY),
+    );
     server.on('connection', (socket) => {
       openSockets += 1;
       peakSockets = Math.max(peakSockets, openSockets);
@@ -53,6 +57,7 @@ describe('WebhookDelivery', () => {
 
   beforeEach(() => {
     status = 200;
+    headers = {};
     peakSockets = 0;
     openSockets = 0;
   });
@@ -104,6 +109,77 @@ describe('WebhookDelivery', () => {
 
     expect(await drainedSockets()).toBe(0);
     expect(peakSockets).toBeLessThan(SENT);
+  });
+
+  describe('a rate limited delivery', () => {
+    const rejection = async () => {
+      status = 429;
+      const delivery = new WebhookDelivery(configOf());
+      const error = await delivery
+        .send(`${url}/secret-token`, null, PAYLOAD)
+        .catch((caught: unknown) => caught);
+      await delivery.onModuleDestroy();
+      return error;
+    };
+
+    it('waits as long as the service asks', async () => {
+      headers = { 'retry-after': '7' };
+      const error = await rejection();
+
+      expect(error).toBeInstanceOf(WebhookRateLimitedError);
+      expect((error as WebhookRateLimitedError).retryAfterMs).toBe(7000);
+      expect((error as Error).message).toBe(
+        `${new URL(url).host}/… asked to retry after 7 s`,
+      );
+    });
+
+    it('waits five seconds when the service names no delay', async () => {
+      expect(
+        ((await rejection()) as WebhookRateLimitedError).retryAfterMs,
+      ).toBe(5000);
+    });
+
+    it('waits at most fifteen minutes', async () => {
+      headers = { 'retry-after': '3600' };
+
+      expect(
+        ((await rejection()) as WebhookRateLimitedError).retryAfterMs,
+      ).toBe(15 * 60_000);
+    });
+
+    it('reads a delay given as a date', async () => {
+      headers = {
+        'retry-after': new Date(Date.now() + 30_000).toUTCString(),
+      };
+      const wait = ((await rejection()) as WebhookRateLimitedError)
+        .retryAfterMs;
+
+      expect(wait).toBeGreaterThan(20_000);
+      expect(wait).toBeLessThanOrEqual(30_000);
+    });
+  });
+
+  it('names a failed target without its token', async () => {
+    status = 500;
+    const delivery = new WebhookDelivery(configOf());
+    const error = (await delivery
+      .send(`${url}/secret-token`, null, PAYLOAD)
+      .catch((caught: unknown) => caught)) as Error;
+    await delivery.onModuleDestroy();
+
+    expect(error.message).toBe(`Webhook ${new URL(url).host}/… responded 500`);
+    expect(error.message).not.toContain('secret-token');
+  });
+
+  it('reports a rate limit to the test endpoint as undelivered', async () => {
+    status = 429;
+    const delivery = new WebhookDelivery(configOf());
+
+    await expect(delivery.attempt(url, null, PAYLOAD)).resolves.toEqual({
+      delivered: false,
+      status: 429,
+    });
+    await delivery.onModuleDestroy();
   });
 });
 
