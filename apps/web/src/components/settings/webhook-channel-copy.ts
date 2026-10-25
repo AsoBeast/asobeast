@@ -1,4 +1,5 @@
 import {
+  isRetiredTeamsConnector,
   webhookChannelOf,
   webhookLabel,
   type WebhookChannel,
@@ -14,7 +15,8 @@ export const WEBHOOK_CHANNEL_NAMES: Record<WebhookChannel, string> = {
 };
 
 const SLACK_HOSTS = new Set(["hooks.slack.com", "hooks.slack-gov.com"]);
-const LEGACY_TEAMS_SUFFIX = ".webhook.office.com";
+const RETIRED_CONNECTOR_HINT =
+  'Office 365 connector urls stopped delivering in May 2026. Create a workflow with the "Send webhook alerts to a channel" template and paste its url.';
 
 function parse(url: string): URL | null {
   try {
@@ -41,10 +43,8 @@ const CHANNEL_HINTS: Record<
   discord: () =>
     "Recognised as Discord. Reports arrive as embeds with the app icon.",
   slack: () => "Recognised as Slack. Reports arrive as Block Kit messages.",
-  teams: (url) =>
-    url.hostname.endsWith(LEGACY_TEAMS_SUFFIX)
-      ? 'Office 365 connector urls stopped delivering in May 2026. Create a workflow with the "Send webhook alerts to a channel" template and paste its url.'
-      : "Recognised as Microsoft Teams. Reports arrive as an Adaptive Card; Teams confirms acceptance, not delivery.",
+  teams: () =>
+    "Recognised as Microsoft Teams. Reports arrive as an Adaptive Card; Teams confirms acceptance, not delivery.",
   telegram: (url) =>
     url.searchParams.get("chat_id")
       ? "Recognised as Telegram. Reports arrive as a message from your bot."
@@ -57,6 +57,7 @@ export function channelHint(raw: string): string | null {
   if (!url || (url.protocol !== "http:" && url.protocol !== "https:")) {
     return null;
   }
+  if (isRetiredTeamsConnector(url.href)) return RETIRED_CONNECTOR_HINT;
   const channel = webhookChannelOf(url.href);
   return channel === "generic" ? genericHint(url) : CHANNEL_HINTS[channel](url);
 }

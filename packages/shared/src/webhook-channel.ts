@@ -20,6 +20,8 @@ const TEAMS_SUFFIXES = [
   '.powerplatform.com',
   '.webhook.office.com',
 ];
+const LEGACY_TEAMS_SUFFIX = '.webhook.office.com';
+const LEGACY_OUTLOOK_HOST = 'outlook.office.com';
 
 const DISCORD_PATH = /^\/(api(?:\/v\d+)?\/webhooks\/\d+)\/[^/]+/;
 const SLACK_IDS = /^\/services\/([^/]+\/[^/]+)\//;
@@ -50,6 +52,16 @@ export function webhookChannelOf(url: string): WebhookChannel {
     return 'google_chat';
   }
   return 'generic';
+}
+
+export function isRetiredTeamsConnector(url: string): boolean {
+  const parsed = parse(url);
+  if (!parsed) return false;
+  return (
+    parsed.hostname.endsWith(LEGACY_TEAMS_SUFFIX) ||
+    (parsed.hostname === LEGACY_OUTLOOK_HOST &&
+      parsed.pathname.startsWith('/webhook/'))
+  );
 }
 
 const HIDDEN = '…';

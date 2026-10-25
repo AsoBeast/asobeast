@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { webhookChannelOf, webhookLabel } from './webhook-channel';
+import {
+  isRetiredTeamsConnector,
+  webhookChannelOf,
+  webhookLabel,
+} from './webhook-channel';
 
 describe('webhookChannelOf', () => {
   it.each([
@@ -36,6 +40,21 @@ describe('webhookChannelOf', () => {
     ['not a url', 'generic'],
   ])('recognises %s as %s', (url, channel) => {
     expect(webhookChannelOf(url)).toBe(channel);
+  });
+});
+
+describe('isRetiredTeamsConnector', () => {
+  it.each([
+    ['https://contoso.webhook.office.com/webhookb2/abc', true],
+    ['https://outlook.office.com/webhook/abc@def/IncomingWebhook/1/2', true],
+    ['https://outlook.office.com/mail/inbox', false],
+    [
+      'https://prod-21.westeurope.logic.azure.com/workflows/a/triggers/manual/paths/invoke?sig=x',
+      false,
+    ],
+    ['not a url', false],
+  ])('answers %s with %s', (url, retired) => {
+    expect(isRetiredTeamsConnector(url)).toBe(retired);
   });
 });
 

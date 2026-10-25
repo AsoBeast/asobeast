@@ -25,10 +25,13 @@ describe('assertChannelUrl', () => {
     ).toThrow(WebhookTargetError);
   });
 
-  it('refuses a retired office 365 connector url', () => {
-    expect(() =>
-      assertChannelUrl('https://contoso.webhook.office.com/webhookb2/abc'),
-    ).toThrow(/stopped delivering in may 2026/);
+  it.each([
+    'https://contoso.webhook.office.com/webhookb2/abc',
+    'https://outlook.office.com/webhook/abc@def/IncomingWebhook/123/456',
+  ])('refuses the retired office 365 connector url %s', (url) => {
+    expect(() => assertChannelUrl(url)).toThrow(
+      /stopped delivering in may 2026/,
+    );
   });
 
   it('accepts a teams workflow url and any other url', () => {
@@ -36,6 +39,7 @@ describe('assertChannelUrl', () => {
       'https://prod-21.westeurope.logic.azure.com:443/workflows/abc/triggers/manual/paths/invoke?sig=x',
       'https://discord.com/api/webhooks/1/x',
       'https://hooks.example.com/x',
+      'https://outlook.office.com/mail/inbox',
     ]) {
       expect(() => assertChannelUrl(url)).not.toThrow();
     }

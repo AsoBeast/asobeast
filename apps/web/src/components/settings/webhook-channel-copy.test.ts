@@ -24,6 +24,10 @@ describe("channelHint", () => {
       'Office 365 connector urls stopped delivering in May 2026. Create a workflow with the "Send webhook alerts to a channel" template and paste its url.',
     ],
     [
+      "https://outlook.office.com/webhook/abc@def/IncomingWebhook/1/2",
+      'Office 365 connector urls stopped delivering in May 2026. Create a workflow with the "Send webhook alerts to a channel" template and paste its url.',
+    ],
+    [
       "https://api.telegram.org/bot1:A/sendMessage",
       "Recognised as Telegram. Add ?chat_id=<id> after sendMessage.",
     ],
