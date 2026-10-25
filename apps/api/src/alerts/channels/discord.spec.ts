@@ -3,6 +3,7 @@ import {
   alpha,
   batch,
   competitorBatch,
+  digest,
   dropped,
   emptySection,
   improved,
@@ -245,6 +246,27 @@ describe('discordBody for a single alert', () => {
     expect(message.embeds[0].description).toMatch(
       /^<t:\d+:f> · 11 Jul 2026, 00:00 UTC$/,
     );
+  });
+
+  it('says how many digest facts it left out instead of dropping them', () => {
+    const message = discordBody(
+      buildAlert(
+        {
+          ...digest,
+          groups: Array.from({ length: 40 }, (_, index) => ({
+            id: `group_${index}`,
+            name: `Linked group ${index}`,
+            visibility: { current: 50, delta7d: 1 },
+          })),
+        },
+        null,
+      ),
+    );
+    const [embed] = message.embeds;
+
+    expect(embed.fields.length).toBeLessThanOrEqual(25);
+    expect(embed.fields.at(-1)?.value).toMatch(/^\+\d+ more$/);
+    expect(totalSize(message)).toBeLessThanOrEqual(6000);
   });
 
   it('escapes a review that tries to mention everyone', () => {

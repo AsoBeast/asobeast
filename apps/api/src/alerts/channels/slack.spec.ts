@@ -3,6 +3,7 @@ import {
   alpha,
   batch,
   competitorBatch,
+  digest,
   dropped,
   negative,
   worstCaseBatch,
@@ -171,6 +172,26 @@ describe('slackBody for a single alert', () => {
       },
       accessory: { type: 'image', image_url: ICON, alt_text: 'My App' },
     });
+  });
+
+  it('says how many digest facts it left out instead of cutting a line', () => {
+    const message = slackBody(
+      buildAlert(
+        {
+          ...digest,
+          groups: Array.from({ length: 200 }, (_, index) => ({
+            id: `group_${index}`,
+            name: `Linked group with a fairly long name ${index}`,
+            visibility: { current: 50, delta7d: 1 },
+          })),
+        },
+        null,
+      ),
+    );
+    const text = textOf(message.blocks[2]);
+
+    expect(text.length).toBeLessThanOrEqual(3000);
+    expect(text).toMatch(/\n\+\d+ more$/);
   });
 
   it('escapes a review that tries to notify the channel', () => {

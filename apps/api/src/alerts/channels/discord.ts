@@ -223,6 +223,23 @@ function factField(label: string, value: string): DiscordField {
   };
 }
 
+function boundedFacts(
+  embed: DiscordEmbed,
+  facts: AlertReport['facts'],
+): DiscordField[] {
+  for (let shown = Math.min(facts.length, FIELDS_MAX); ; shown -= 1) {
+    const hidden = facts.length - shown;
+    const fields = [
+      ...facts.slice(0, shown).map((fact) => factField(fact.label, fact.value)),
+      ...(hidden > 0 ? [{ name: BLANK_NAME, value: `+${hidden} more` }] : []),
+    ];
+    const fits =
+      fields.length <= FIELDS_MAX &&
+      embedSize({ ...embed, fields }) <= TOTAL_MAX;
+    if (fits || shown === 0) return fields;
+  }
+}
+
 function singleBody(report: AlertReport): DiscordMessage {
   const [app] = report.apps;
   const embed: DiscordEmbed = {
@@ -235,14 +252,12 @@ function singleBody(report: AlertReport): DiscordMessage {
     timestamp: report.occurredAt,
     author: app ? authorOf(app, true) : undefined,
     thumbnail: app ? thumbnailOf(app) : undefined,
-    fields: report.facts
-      .slice(0, FIELDS_MAX)
-      .map((fact) => factField(fact.label, fact.value)),
+    fields: [],
     footer: footerOf(report),
   };
   return {
     content: contentOf(report, 0),
-    embeds: [embed],
+    embeds: [{ ...embed, fields: boundedFacts(embed, report.facts) }],
     allowed_mentions: { parse: [] },
   };
 }

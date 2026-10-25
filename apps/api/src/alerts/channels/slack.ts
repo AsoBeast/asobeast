@@ -171,10 +171,10 @@ function singleBody(report: AlertReport): SlackMessage {
       ? `*${escapeSlack(label)}*: ${escapeSlack(value)}`
       : escapeSlack(value),
   );
-  const body = [
-    ...(app ? [`*${slackName(app.identity.name)}*`] : []),
-    ...facts,
-  ].join('\n');
+  const body = boundedLines(
+    [...(app ? [`*${slackName(app.identity.name)}*`] : []), ...facts],
+    SECTION_MAX,
+  );
   return message(report, [
     ...heading(report, slackDate(report.occurredAt, report.dateLabel)),
     section(body, app ? iconOf(app) : undefined),
