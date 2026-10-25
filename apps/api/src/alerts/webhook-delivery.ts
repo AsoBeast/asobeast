@@ -90,7 +90,9 @@ function bodyRetryAfterSeconds(text: string): number | null {
   const { parameters } = parsed;
   if (typeof parameters !== 'object' || parameters === null) return null;
   return 'retry_after' in parameters &&
-    typeof parameters.retry_after === 'number'
+    typeof parameters.retry_after === 'number' &&
+    Number.isFinite(parameters.retry_after) &&
+    parameters.retry_after > 0
     ? parameters.retry_after
     : null;
 }

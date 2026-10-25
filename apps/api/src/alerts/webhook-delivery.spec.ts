@@ -183,6 +183,15 @@ describe('WebhookDelivery', () => {
       expect((error as WebhookRateLimitedError).retryAfterMs).toBe(7000);
     });
 
+    it('reads the header when the body names no positive delay', async () => {
+      headers = { 'retry-after': '60' };
+      answer = JSON.stringify({ ok: false, parameters: { retry_after: 0 } });
+
+      expect(
+        ((await rejection()) as WebhookRateLimitedError).retryAfterMs,
+      ).toBe(60_000);
+    });
+
     it('waits five seconds when the service names no delay', async () => {
       expect(
         ((await rejection()) as WebhookRateLimitedError).retryAfterMs,
