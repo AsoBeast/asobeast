@@ -37,6 +37,18 @@ export class AscSegmentSizeError extends Error {
   }
 }
 
+const NOT_FOUND = 404;
+const CONFLICT = 409;
+
+const answered = (error: unknown, status: number): boolean =>
+  error instanceof AscError && error.status === status;
+
+export const isNotFound = (error: unknown): boolean =>
+  answered(error, NOT_FOUND);
+
+export const isConflict = (error: unknown): boolean =>
+  answered(error, CONFLICT);
+
 const REQUEST_CREATION = '/v1/analyticsReportRequests';
 const FORBIDDEN_CODE_PREFIX = 'FORBIDDEN';
 const REVIEW_RESOURCE =

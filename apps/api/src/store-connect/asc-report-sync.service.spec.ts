@@ -56,6 +56,7 @@ function build(status: OpenedConnection['status'] = 'active') {
     markRejected: jest.fn().mockResolvedValue(undefined),
   };
   const requester = {
+    retire: jest.fn().mockResolvedValue(undefined),
     ensure: jest.fn().mockResolvedValue({
       apps: 1,
       reportAccess: 'admin',
@@ -393,6 +394,58 @@ describe('AscReportSync', () => {
 
     expect(appliedIds(applier)).toEqual(['s1', 's2']);
     expect(summary?.failed).toBe(1);
+  });
+
+  it('retires a request whose report apple no longer has and keeps syncing the others', async () => {
+    const { service, api, applier, requester, connections } = build();
+    api.dailyInstances.mockImplementation((reportId: string) =>
+      reportId === 'snapshot-report'
+        ? Promise.reject(
+            new AscError(
+              "There is no resource of type 'analyticsReports' with id 'snapshot-report'",
+              404,
+              'NOT_FOUND',
+            ),
+          )
+        : Promise.resolve([instance('o1', '2026-09-02')]),
+    );
+
+    const summary = await service.run();
+
+    expect(requester.retire).toHaveBeenCalledWith('req_snapshot');
+    expect(appliedIds(applier)).toEqual(['o1']);
+    expect(summary?.failed).toBe(1);
+    expect(connections.markSynced).toHaveBeenCalledWith(
+      'APP_STORE',
+      'admin',
+      PARTIAL_SYNC,
+    );
+  });
+
+  it('retires a request apple no longer has when finding its report answers 404', async () => {
+    const { service, api, requester } = build();
+    api.discoveryReport.mockImplementation((remoteId: string) =>
+      remoteId === 'remote-ongoing'
+        ? Promise.reject(new AscError('gone', 404, 'NOT_FOUND'))
+        : Promise.resolve(null),
+    );
+
+    await service.run();
+
+    expect(requester.retire).toHaveBeenCalledWith('req_ongoing');
+    expect(api.discoveryReport).not.toHaveBeenCalledWith(
+      'remote-ongoing',
+      'detailed',
+    );
+  });
+
+  it('keeps a request apple only failed to list', async () => {
+    const { service, api, requester } = build();
+    api.dailyInstances.mockRejectedValue(new AscError('down', 500, null));
+
+    await service.run();
+
+    expect(requester.retire).not.toHaveBeenCalled();
   });
 
   it('still rejects the key when apple refuses a standard listing', async () => {

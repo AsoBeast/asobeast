@@ -437,6 +437,69 @@ describe('Store report sync (e2e)', () => {
     expect(state.connections[0].lastSyncedAt).not.toBeNull();
   });
 
+  it('places a request again after apple deleted it, and keeps syncing meanwhile', async () => {
+    scriptApple();
+    await run();
+    harness.asc
+      .on('GET', /\/analyticsReportRequests\?/, answer({ data: [] }))
+      .on(
+        'GET',
+        /\/analyticsReports\/snapshot-standard\/instances/,
+        answer(
+          {
+            errors: [
+              {
+                code: 'NOT_FOUND',
+                detail:
+                  "There is no resource of type 'analyticsReports' with id 'snapshot-standard'",
+              },
+            ],
+          },
+          404,
+        ),
+      );
+    const snapshotRow = () =>
+      harness.prisma.storeReportRequest.findFirstOrThrow({
+        where: { appId, accessType: 'ONE_TIME_SNAPSHOT' },
+      });
+
+    const deleted = await run();
+
+    expect(deleted).toMatchObject({ failed: 1, rateLimited: false });
+    await expect(snapshotRow()).resolves.toMatchObject({
+      state: 'stopped',
+      remoteId: null,
+      reportId: null,
+    });
+
+    harness.asc.on('POST', /^\/v1\/analyticsReportRequests$/, (request) => {
+      const { accessType } = (
+        request.body as { data: { attributes: { accessType: string } } }
+      ).data.attributes;
+      return answer(
+        {
+          data: {
+            type: 'analyticsReportRequests',
+            id: `${accessType}-again`,
+            attributes: { accessType, stoppedDueToInactivity: false },
+          },
+        },
+        201,
+      );
+    });
+    harness.asc.requests.length = 0;
+    await expect(run()).resolves.not.toBeNull();
+
+    expect(paths('POST')).toContain('/v1/analyticsReportRequests');
+    await expect(snapshotRow()).resolves.toMatchObject({
+      state: 'requested',
+      remoteId: 'ONE_TIME_SNAPSHOT-again',
+    });
+    const connection = await harness.prisma.storeConnection.findFirstOrThrow();
+    expect(connection.status).toBe('active');
+    await expect(funnelRows()).resolves.toHaveLength(7);
+  });
+
   it('reports a key that may download but not request reports', async () => {
     scriptApple();
     harness.asc.on(

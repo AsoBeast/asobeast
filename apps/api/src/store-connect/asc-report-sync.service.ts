@@ -10,6 +10,7 @@ import {
   AscRejectedKeyError,
   AscSegmentSizeError,
   AscUnreachableError,
+  isNotFound,
 } from './asc-errors';
 import { DiscoveryHeaderError, DiscoveryLineError } from './discovery-report';
 import { refusalOf } from './asc-http-errors';
@@ -44,6 +45,11 @@ const isLaneFailure = (error: unknown, variant: DiscoveryVariant): boolean =>
 
 const messageOf = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
+
+const listingWait = (error: unknown): string =>
+  isNotFound(error)
+    ? 'is gone at Apple and is requested again on the next sync'
+    : 'waits for the next sync';
 
 const lastErrorOf = (forbidden: boolean, failed: number): string | null =>
   forbidden ? ADMIN_KEY_NEEDED : failed > 0 ? PARTIAL_SYNC : null;
@@ -168,8 +174,9 @@ export class AscReportSync {
     } catch (error) {
       if (!isLaneFailure(error, 'standard')) throw error;
       summary.failed += 1;
+      if (isNotFound(error)) await this.requester.retire(request.id);
       this.logger.warn(
-        `report request ${request.id} waits for the next sync: ${messageOf(error)}`,
+        `report request ${request.id} ${listingWait(error)}: ${messageOf(error)}`,
       );
       return [];
     }

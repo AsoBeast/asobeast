@@ -16,6 +16,8 @@ import {
   AscForbiddenError,
   AscRateLimitedError,
   AscRejectedKeyError,
+  isConflict,
+  isNotFound,
 } from './asc-errors';
 import type { OpenedConnection } from './store-connection.service';
 
@@ -23,7 +25,6 @@ export const ACCESS_TYPES: readonly AscAccessType[] = [
   'ONE_TIME_SNAPSHOT',
   'ONGOING',
 ];
-const NOT_FOUND = 404;
 
 export interface RequestOutcome {
   apps: number;
@@ -46,6 +47,15 @@ interface RequestedRow {
   accessType: string;
   remoteId: string | null;
 }
+
+const placementColumns = ({ state, remoteId }: Placement) => ({
+  state,
+  remoteId,
+  reportId: null,
+  lastProcessingDate: null,
+  detailedReportId: null,
+  detailedLastProcessingDate: null,
+});
 
 const isAppFailure = (error: unknown): boolean =>
   error instanceof AscError &&
@@ -114,6 +124,13 @@ export class StoreReportRequester {
     return outcome;
   }
 
+  async retire(requestId: string): Promise<void> {
+    await this.prisma.storeReportRequest.update({
+      where: { id: requestId },
+      data: placementColumns({ state: 'stopped', remoteId: null }),
+    });
+  }
+
   private async ensureApp(
     connection: OpenedConnection,
     app: PrimaryApp,
@@ -176,6 +193,7 @@ export class StoreReportRequester {
       outcome.reportAccess = 'admin';
       return { state: 'requested', remoteId: created.id };
     } catch (error) {
+      if (isConflict(error)) return { state: 'stopped', remoteId: null };
       if (!(error instanceof AscForbiddenError)) throw error;
       outcome.reportAccess = 'readOnly';
       outcome.forbidden = true;
@@ -191,7 +209,7 @@ export class StoreReportRequester {
     try {
       return await api.reportRequests(storeAppId);
     } catch (error) {
-      if (error instanceof AscError && error.status === NOT_FOUND) return null;
+      if (isNotFound(error)) return null;
       throw error;
     }
   }
@@ -200,16 +218,9 @@ export class StoreReportRequester {
     connectionId: string,
     appId: string,
     accessType: AscAccessType,
-    { state, remoteId }: Placement,
+    placement: Placement,
   ): Promise<void> {
-    const reset = {
-      state,
-      remoteId,
-      reportId: null,
-      lastProcessingDate: null,
-      detailedReportId: null,
-      detailedLastProcessingDate: null,
-    };
+    const reset = placementColumns(placement);
     await this.prisma.storeReportRequest.upsert({
       where: { appId_accessType: { appId, accessType } },
       create: {
