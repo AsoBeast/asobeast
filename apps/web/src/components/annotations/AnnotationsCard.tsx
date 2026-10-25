@@ -12,15 +12,13 @@ import {
 } from "@asobeast/shared";
 import {
   AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
-  AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { ConfirmActionFooter } from "@/components/ConfirmActionFooter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -101,26 +99,12 @@ function AnnotationRow({
               The marker disappears from the rank history and visibility charts.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              aria-disabled={removing || undefined}
-              onClick={(event) => {
-                if (removing) event.preventDefault();
-              }}
-            >
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              aria-disabled={removing || undefined}
-              onClick={(event) => {
-                event.preventDefault();
-                onRemove(annotation);
-              }}
-            >
-              {removing ? "Removing…" : "Remove"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
+          <ConfirmActionFooter
+            pending={removing}
+            label="Remove"
+            pendingLabel="Removing…"
+            onConfirm={() => onRemove(annotation)}
+          />
         </AlertDialogContent>
       </AlertDialog>
     </div>

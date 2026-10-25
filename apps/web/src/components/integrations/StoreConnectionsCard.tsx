@@ -15,15 +15,13 @@ import {
 import { useAuth } from "@/components/auth/use-auth";
 import {
   AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
-  AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { ConfirmActionFooter } from "@/components/ConfirmActionFooter";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -121,21 +119,12 @@ function DisconnectButton({ store }: { store: Store }) {
           <AlertDialogTitle>Disconnect {copy.name}?</AlertDialogTitle>
           <AlertDialogDescription>{copy.disconnect}</AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={disconnect.pending}>
-            Cancel
-          </AlertDialogCancel>
-          <AlertDialogAction
-            variant="destructive"
-            disabled={disconnect.pending}
-            onClick={(event) => {
-              event.preventDefault();
-              disconnect.run();
-            }}
-          >
-            {disconnect.pending ? "Disconnecting…" : "Disconnect"}
-          </AlertDialogAction>
-        </AlertDialogFooter>
+        <ConfirmActionFooter
+          pending={disconnect.pending}
+          label="Disconnect"
+          pendingLabel="Disconnecting…"
+          onConfirm={disconnect.run}
+        />
       </AlertDialogContent>
     </AlertDialog>
   );

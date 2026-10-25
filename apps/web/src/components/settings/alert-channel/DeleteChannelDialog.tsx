@@ -4,15 +4,13 @@ import { useRef, useState, type ReactNode } from "react";
 import { Trash2 } from "lucide-react";
 import {
   AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
-  AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { ConfirmActionFooter } from "@/components/ConfirmActionFooter";
 import { Button } from "@/components/ui/button";
 import {
   cardAction,
@@ -61,25 +59,21 @@ export function DeleteChannelDialog({
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            variant="destructive"
-            disabled={pending}
-            onClick={(event) => {
-              event.preventDefault();
-              void onDelete().then(
-                () => {
-                  handOff(deleteSuccessor(trigger.current));
-                  setOpen(false);
-                },
-                () => undefined,
-              );
-            }}
-          >
-            {pending ? "Removing…" : "Delete"}
-          </AlertDialogAction>
-        </AlertDialogFooter>
+        <ConfirmActionFooter
+          pending={pending}
+          label="Delete"
+          pendingLabel="Removing…"
+          onConfirm={() => {
+            const successor = deleteSuccessor(trigger.current);
+            void onDelete().then(
+              () => {
+                handOff(successor);
+                setOpen(false);
+              },
+              () => undefined,
+            );
+          }}
+        />
       </AlertDialogContent>
     </AlertDialog>
   );

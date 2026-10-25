@@ -9,15 +9,13 @@ import { AppIcon } from "@/components/AppIcon";
 import { DelistedBadge } from "@/components/apps/DelistedBadge";
 import {
   AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
-  AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { ConfirmActionFooter } from "@/components/ConfirmActionFooter";
 import { Badge } from "@/components/ui/badge";
 import { ExportCsvButton } from "@/components/ExportCsvButton";
 import { Button } from "@/components/ui/button";
@@ -118,21 +116,12 @@ function CompetitorCard({
                 are recaptured only if you add it back.
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={mutation.isPending}>
-                Cancel
-              </AlertDialogCancel>
-              <AlertDialogAction
-                variant="destructive"
-                disabled={mutation.isPending}
-                onClick={(event) => {
-                  event.preventDefault();
-                  removeOnce();
-                }}
-              >
-                {mutation.isPending ? "Removing…" : "Remove"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
+            <ConfirmActionFooter
+              pending={mutation.isPending}
+              label="Remove"
+              pendingLabel="Removing…"
+              onConfirm={removeOnce}
+            />
           </AlertDialogContent>
         </AlertDialog>
       </div>

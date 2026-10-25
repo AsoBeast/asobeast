@@ -199,6 +199,36 @@ test.describe("alert rows keep focus", () => {
     await expect(trash).toBeFocused();
   });
 
+  test("the confirm button keeps focus while the delete runs", async ({
+    page,
+  }) => {
+    const held = await holdRequest(
+      page,
+      /\/api\/backend\/webhooks\/[^/]+$/,
+      "DELETE",
+      (route) =>
+        route.fulfill({
+          status: 500,
+          json: { statusCode: 500, message: "down", error: "Server Error" },
+        }),
+    );
+    await page.goto("/settings");
+    await pressFromKeyboard(
+      webhookList(page)
+        .getByRole("button", { name: /^Delete / })
+        .first(),
+    );
+    const confirm = page
+      .getByRole("alertdialog")
+      .getByRole("button", { name: /^(Delete|Removing…)$/ });
+
+    await pressFromKeyboard(confirm);
+    await expect(confirm).toHaveText("Removing…");
+
+    await expectFocusKeptWhileHeld(confirm, held);
+    await expect(page.getByRole("alertdialog")).toBeVisible();
+  });
+
   test("a confirmed delete hands focus to the next row", async ({ page }) => {
     await deleteWebhooksInBrowser(page, WEBHOOK_PAIR);
     await page.goto("/settings");
