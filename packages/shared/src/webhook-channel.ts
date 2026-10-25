@@ -21,7 +21,9 @@ const TEAMS_SUFFIXES = [
   '.webhook.office.com',
 ];
 
-const DISCORD_PATH = /^\/api(\/v\d+)?\/webhooks\/\d+\/[^/]+/;
+const DISCORD_PATH = /^\/(api(?:\/v\d+)?\/webhooks\/\d+)\/[^/]+/;
+const SLACK_IDS = /^\/services\/([^/]+\/[^/]+)\//;
+const TEAMS_WORKFLOW = /\/workflows\/([^/]+)\//;
 const TELEGRAM_PATH = /^\/bot[^/]+\/sendMessage$/;
 const GOOGLE_CHAT_PATH = /^\/v1\/spaces\/[^/]+\/messages$/;
 
@@ -52,18 +54,31 @@ export function webhookChannelOf(url: string): WebhookChannel {
 
 const HIDDEN = '…';
 
+const withHidden = (prefix: string | undefined): string =>
+  prefix ? `${prefix}/${HIDDEN}` : HIDDEN;
+
+function telegramPath(url: URL): string {
+  const chat = url.searchParams.get('chat_id');
+  return `bot${HIDDEN}/sendMessage${chat ? `?chat_id=${chat}` : ''}`;
+}
+
 function channelPath(url: URL): string | null {
+  const path = url.pathname;
   switch (webhookChannelOf(url.href)) {
     case 'discord':
-      return `api/webhooks/${HIDDEN}`;
+      return withHidden(DISCORD_PATH.exec(path)?.[1]);
     case 'slack':
-      return `services/${HIDDEN}`;
+      return `services/${withHidden(SLACK_IDS.exec(path)?.[1])}`;
+    case 'teams': {
+      const workflow = TEAMS_WORKFLOW.exec(path)?.[1];
+      return withHidden(workflow && `workflows/${workflow}`);
+    }
     case 'telegram':
-      return `bot${HIDDEN}/sendMessage`;
+      return telegramPath(url);
     case 'google_chat':
-      return url.pathname.slice(1);
+      return path.slice(1);
     default:
-      return url.pathname === '/' ? null : HIDDEN;
+      return path === '/' ? null : HIDDEN;
   }
 }
 

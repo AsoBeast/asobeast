@@ -61,10 +61,10 @@ describe("webhookRowLabel", () => {
         "https://api.telegram.org/bot1:SECRET/sendMessage?chat_id=-1",
         "telegram",
       ),
-    ).toBe("api.telegram.org/bot…/sendMessage");
+    ).toBe("api.telegram.org/bot…/sendMessage?chat_id=-1");
     expect(
       webhookRowLabel("https://hooks.slack.com/services/T1/B2/x", "slack"),
-    ).toBe("hooks.slack.com/services/…");
+    ).toBe("hooks.slack.com/services/T1/B2/…");
     expect(
       webhookRowLabel("https://hooks.example.com/asobeast", "generic"),
     ).toBe("https://hooks.example.com/asobeast");

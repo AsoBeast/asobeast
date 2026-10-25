@@ -351,7 +351,7 @@ test("the webhook dialog names the chat tool a url reaches", async ({
 
   const row = page
     .getByRole("listitem")
-    .filter({ hasText: "hooks.slack.com/services/…" })
+    .filter({ hasText: "hooks.slack.com/services/T1/B2/…" })
     .first();
   await expect(row.getByText("Slack", { exact: true })).toBeVisible();
   await expect(page.getByText(slack)).toHaveCount(0);
