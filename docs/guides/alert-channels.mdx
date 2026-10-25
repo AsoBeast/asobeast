@@ -38,7 +38,7 @@ A report arrives as Block Kit: the app icon beside each app, one section per gro
 
 A report arrives as an Adaptive Card with the app icon and name, a fact list per group and an **Open AsoBeast** button. A single alert opens the app or the action instead. Teams accepts 28 KB per post. Teams answers that it accepted a card, not that the channel showed it, so a card Teams cannot render still counts as delivered.
 
-Office 365 connector urls, the ones on `webhook.office.com`, stopped delivering when Microsoft retired connectors in May 2026. AsoBeast refuses them with a message that points to the Workflows template.
+Office 365 connector urls, the ones on `webhook.office.com` and the older `outlook.office.com/webhook`, stopped delivering when Microsoft retired connectors in May 2026. AsoBeast refuses them with a message that points to the Workflows template.
 
 ## Telegram
 
@@ -47,7 +47,7 @@ Office 365 connector urls, the ones on `webhook.office.com`, stopped delivering 
 3. Open `https://api.telegram.org/bot<token>/getUpdates` in a browser and copy the `id` of the `chat` your message came from. A group id starts with a minus sign.
 4. Paste `https://api.telegram.org/bot<token>/sendMessage?chat_id=<id>` into AsoBeast.
 
-A report arrives as one message from your bot, with an **Open AsoBeast** button and the link preview turned off. Telegram accepts 4096 characters per message. A url without `chat_id` is refused, because Telegram would not know where to post. The url carries the bot token, so the settings row and the delivery history show it as `api.telegram.org/bot…/sendMessage` once it is saved.
+A report arrives as one message from your bot, with an **Open AsoBeast** button and the link preview turned off. Telegram accepts 4096 characters per message. A url without `chat_id` is refused, because Telegram would not know where to post. The url carries the bot token, so the settings row and the delivery history show it as `api.telegram.org/bot…/sendMessage?chat_id=<id>` once it is saved, so two chats of one bot stay apart.
 
 ## Google Chat
 
