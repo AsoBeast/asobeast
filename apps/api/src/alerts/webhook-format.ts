@@ -13,6 +13,7 @@ import { identityLine } from './report/storefront';
 const DISCORD_FIELD_MAX = 1000;
 const DISCORD_TOTAL_MAX = 6000;
 const DISCORD_NAME_MAX = 256;
+const DISCORD_DESCRIPTION_MAX = 4000;
 const SLACK_HEADER_MAX = 150;
 const SLACK_SECTION_MAX = 2900;
 const SLACK_TOTAL_MAX = 30_000;
@@ -55,7 +56,10 @@ function digestDiscordBody(payload: DigestWeeklyPayload): unknown {
     embeds: [
       {
         title: clamp(headlineOf(report), DISCORD_NAME_MAX),
-        description: factLines(report).map(escapeDiscord).join('\n'),
+        description: boundedLines(
+          factLines(report).map(escapeDiscord),
+          DISCORD_DESCRIPTION_MAX,
+        ),
       },
     ],
   };
@@ -76,7 +80,10 @@ function digestSlackBody(payload: DigestWeeklyPayload): unknown {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: factLines(report).map(escapeSlack).join('\n'),
+          text: boundedLines(
+            factLines(report).map(escapeSlack),
+            SLACK_SECTION_MAX,
+          ),
         },
       },
     ],
@@ -109,7 +116,7 @@ function escapeSlack(text: string): string {
 }
 
 function escapeDiscord(text: string): string {
-  return text.replace(/([\\`*_~|>@])/g, '\\$1');
+  return text.replace(/([\\`*_~|<>@[\]])/g, '\\$1');
 }
 
 function shortenLine(text: string, max: number): string {
