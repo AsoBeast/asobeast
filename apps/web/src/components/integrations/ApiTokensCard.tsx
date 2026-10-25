@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Copy, Loader2, Plus, Trash2 } from "lucide-react";
+import { Check, Copy, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import {
   API_TOKEN_SCOPES,
@@ -11,16 +11,6 @@ import {
   type ApiTokenCreated,
   type ApiTokenScope,
 } from "@asobeast/shared";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -58,11 +48,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ApiError, createApiToken, deleteApiToken } from "@/lib/api";
+import { ApiError, createApiToken } from "@/lib/api";
 import { formatDate, formatNumber } from "@/lib/format";
 import { apiTokensOptions, invalidateApiTokenMutation } from "@/lib/queries";
 import { useAuth } from "@/components/auth/use-auth";
 import { useSingleFlight } from "@/lib/single-flight";
+import { RevokeTokenButton } from "./RevokeTokenButton";
 
 const NEVER_EXPIRES = "never";
 
@@ -270,59 +261,6 @@ function CreateTokenDialog() {
         )}
       </DialogContent>
     </Dialog>
-  );
-}
-
-function RevokeTokenButton({ id, name }: { id: string; name: string }) {
-  const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
-
-  const revoke = useMutation({
-    mutationFn: () => deleteApiToken(id),
-    onSuccess: () => {
-      invalidateApiTokenMutation(queryClient);
-      setOpen(false);
-      toast.success("Token revoked");
-    },
-    onError: () => toast.error("Could not revoke the token"),
-  });
-  const revokeOnce = useSingleFlight(revoke);
-
-  return (
-    <AlertDialog open={open} onOpenChange={setOpen}>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        aria-label={`Revoke ${name}`}
-        onClick={() => setOpen(true)}
-      >
-        <Trash2 />
-      </Button>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Revoke this token?</AlertDialogTitle>
-          <AlertDialogDescription>
-            Anything using {name} will stop authenticating immediately. This
-            cannot be undone.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={revoke.isPending}>
-            Cancel
-          </AlertDialogCancel>
-          <AlertDialogAction
-            variant="destructive"
-            disabled={revoke.isPending}
-            onClick={(event) => {
-              event.preventDefault();
-              revokeOnce();
-            }}
-          >
-            {revoke.isPending ? "Revoking…" : "Revoke"}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
   );
 }
 

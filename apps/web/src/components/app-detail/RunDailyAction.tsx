@@ -50,8 +50,10 @@ export function RunDailyAction({ appId }: { appId: string }) {
   return (
     <Button
       variant="outline"
-      disabled={busy}
-      onClick={() => runOnce()}
+      aria-disabled={busy || undefined}
+      onClick={() => {
+        if (!busy) runOnce();
+      }}
       aria-label="Run daily"
     >
       {mutation.isPending ? (

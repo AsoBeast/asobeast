@@ -52,6 +52,7 @@ export function AddCompetitorForm({ id }: { id: string }) {
     },
   });
   const addOnce = useSingleFlight(mutation);
+  const inert = mutation.isPending || url.trim() === "";
 
   function clearOutcome() {
     setError(null);
@@ -74,6 +75,7 @@ export function AddCompetitorForm({ id }: { id: string }) {
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (inert) return;
     clearOutcome();
     const { input } = search;
     if (input.kind === "url") return add(url);
@@ -98,10 +100,7 @@ export function AddCompetitorForm({ id }: { id: string }) {
         error={error}
         note={note}
       >
-        <Button
-          type="submit"
-          disabled={mutation.isPending || url.trim() === ""}
-        >
+        <Button type="submit" aria-disabled={inert || undefined}>
           {mutation.isPending ? <Loader2 className="animate-spin" /> : <Plus />}
           {mutation.isPending ? "Adding…" : "Add competitor"}
         </Button>

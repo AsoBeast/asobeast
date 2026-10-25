@@ -3502,6 +3502,25 @@ export const EMAIL_ALERTS: EmailAlertItem[] = [
   },
 ];
 
+export const WEBHOOK_PAIR_COOKIE = "e2e-webhook-pair";
+
+export const WEBHOOK_PAIR: WebhookItem[] = ["first", "second"].map(
+  (path, index) => ({
+    ...WEBHOOKS[0],
+    id: `hook-pair-${index + 1}`,
+    url: `https://hooks.example.com/${path}`,
+  }),
+);
+
+export const AWAITING_ALERT_COOKIE = "e2e-awaiting-alert";
+
+export const AWAITING_ALERT: EmailAlertItem = {
+  ...EMAIL_ALERTS[0],
+  id: "email-awaiting",
+  email: "pending@example.com",
+  confirmed: false,
+};
+
 export const EMAIL_DELIVERIES: AlertDeliveryItem[] = [
   {
     id: "del-1",
