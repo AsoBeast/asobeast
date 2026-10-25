@@ -22,6 +22,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,6 +33,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ApiError, disconnectStore, syncStore, verifyStore } from "@/lib/api";
+import { armFocusHandoff, useFocusGroupClaim } from "@/lib/focus-handoff";
 import {
   invalidateStoreConnectionMutation,
   storeConnectionsOptions,
@@ -73,6 +75,8 @@ function ConnectDialog({
   );
 }
 
+const connectFocusKey = (store: Store) => `store-connect:${store}`;
+
 const failureOf = (error: unknown, fallback: string): string =>
   error instanceof ApiError ? error.envelope.message : fallback;
 
@@ -80,11 +84,13 @@ function useConnectionAction<T>(
   action: () => Promise<T>,
   success: string,
   failure: string,
+  onDone?: () => void,
 ) {
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: action,
     onSuccess: () => {
+      onDone?.();
       invalidateStoreConnectionMutation(queryClient);
       toast.success(success);
     },
@@ -100,13 +106,16 @@ function DisconnectButton({ store }: { store: Store }) {
     () => disconnectStore(store),
     `${copy.name} disconnected`,
     `Could not disconnect ${copy.name}`,
+    () => armFocusHandoff(connectFocusKey(store)),
   );
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
-      <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
-        Disconnect
-      </Button>
+      <AlertDialogTrigger asChild>
+        <Button variant="outline" size="sm">
+          Disconnect
+        </Button>
+      </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Disconnect {copy.name}?</AlertDialogTitle>
@@ -151,7 +160,7 @@ function ConnectionActions({ item }: { item: StoreConnectionItem }) {
       <Button
         variant={rejected ? "default" : "outline"}
         size="sm"
-        disabled={verify.pending}
+        aria-disabled={verify.pending || undefined}
         onClick={() => verify.run()}
       >
         Verify
@@ -160,7 +169,7 @@ function ConnectionActions({ item }: { item: StoreConnectionItem }) {
         <Button
           variant="outline"
           size="sm"
-          disabled={sync.pending}
+          aria-disabled={sync.pending || undefined}
           onClick={() => sync.run()}
         >
           Sync now
@@ -235,10 +244,17 @@ function StoreConsoleCard({
   const { user, isOwner } = useAuth();
   const copy = STORE_CONSOLES[store];
   const owner = Boolean(user) && isOwner;
+  const header = useFocusGroupClaim(
+    connectFocusKey(store),
+    Boolean(connection),
+  );
 
   return (
     <Card>
-      <CardHeader className="flex-row items-start justify-between gap-4">
+      <CardHeader
+        ref={header}
+        className="flex-row items-start justify-between gap-4"
+      >
         <div className="flex flex-col gap-1.5">
           <CardDescription>Store console</CardDescription>
           <CardTitle>{copy.name}</CardTitle>
