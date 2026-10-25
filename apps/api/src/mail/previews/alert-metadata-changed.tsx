@@ -11,11 +11,7 @@ const ICON_CHANGED = withPreviewIdentity({
   ...everyFieldChanged,
   changes: everyFieldChanged.changes.map((change) =>
     change.field === 'icon'
-      ? {
-          field: 'icon' as const,
-          before: PREVIEW_PREVIOUS_ICON,
-          after: PREVIEW_ICON,
-        }
+      ? { ...change, before: PREVIEW_PREVIOUS_ICON, after: PREVIEW_ICON }
       : change,
   ),
 });
