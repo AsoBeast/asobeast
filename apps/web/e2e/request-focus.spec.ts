@@ -543,3 +543,42 @@ test.describe("removal dialogs return or hand on focus", () => {
     await expect(page.getByRole("button", { name: "New token" })).toBeFocused();
   });
 });
+
+test.describe("import app openers get focus back", () => {
+  const importDialog = (page: Page) =>
+    page.getByRole("dialog", { name: "Import an app" });
+
+  test("the sidebar entry of a workspace with no app", async ({ page }) => {
+    await page.route(/\/api\/backend\/apps$/, (route) =>
+      route.request().method() === "GET"
+        ? route.fulfill({ json: [] })
+        : route.fallback(),
+    );
+    await page.goto("/settings");
+    const entry = page
+      .locator('[data-sidebar="sidebar"]')
+      .getByRole("button", { name: "Import app" });
+
+    await pressFromKeyboard(entry);
+    await expect(importDialog(page)).toBeVisible();
+    await page.keyboard.press("Escape");
+
+    await expect(importDialog(page)).toBeHidden();
+    await expect(entry).toBeFocused();
+  });
+
+  test("the switcher popover entry", async ({ page }) => {
+    await page.goto("/apps/app-1");
+    const switcher = page.getByRole("button", {
+      name: /^Switch app, currently/,
+    });
+
+    await pressFromKeyboard(switcher);
+    await page.getByRole("option", { name: "Import app", exact: true }).click();
+    await expect(importDialog(page)).toBeVisible();
+    await page.keyboard.press("Escape");
+
+    await expect(importDialog(page)).toBeHidden();
+    await expect(switcher).toBeFocused();
+  });
+});

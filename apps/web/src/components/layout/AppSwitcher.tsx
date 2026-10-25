@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { usePathname, useRouter } from "next/navigation";
 import { ChevronsUpDown, Plus } from "lucide-react";
@@ -78,20 +78,15 @@ function TriggerLabel({
 }
 
 function ImportEntry() {
-  const [importing, setImporting] = useState(false);
-
   return (
     <SidebarMenu>
       <SidebarMenuItem>
-        <SidebarMenuButton
-          size="lg"
-          tooltip="Import app"
-          onClick={() => setImporting(true)}
-        >
-          <Plus />
-          <span className="font-medium">Import app</span>
-        </SidebarMenuButton>
-        <ImportAppDialog open={importing} onOpenChange={setImporting} />
+        <ImportAppDialog>
+          <SidebarMenuButton size="lg" tooltip="Import app">
+            <Plus />
+            <span className="font-medium">Import app</span>
+          </SidebarMenuButton>
+        </ImportAppDialog>
       </SidebarMenuItem>
     </SidebarMenu>
   );
@@ -100,6 +95,7 @@ function ImportEntry() {
 export function AppSwitcher() {
   const [open, setOpen] = useState(false);
   const [importing, setImporting] = useState(false);
+  const trigger = useRef<HTMLButtonElement>(null);
   const pathname = usePathname();
   const router = useRouter();
   const { isMobile, setOpenMobile } = useSidebar();
@@ -122,6 +118,7 @@ export function AppSwitcher() {
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
             <SidebarMenuButton
+              ref={trigger}
               size="lg"
               aria-label={
                 current
@@ -182,7 +179,11 @@ export function AppSwitcher() {
             </Command>
           </PopoverContent>
         </Popover>
-        <ImportAppDialog open={importing} onOpenChange={setImporting} />
+        <ImportAppDialog
+          open={importing}
+          onOpenChange={setImporting}
+          returnFocus={trigger}
+        />
       </SidebarMenuItem>
     </SidebarMenu>
   );
