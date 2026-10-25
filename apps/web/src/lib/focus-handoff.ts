@@ -71,6 +71,15 @@ export function useCloseFocusHandoff(): {
   return { handOff, onCloseAutoFocus };
 }
 
+export const returnFocusTo =
+  (target: RefObject<HTMLElement | null> | undefined) =>
+  (event: Event): void => {
+    const element = target?.current;
+    if (!element?.isConnected) return;
+    event.preventDefault();
+    element.focus();
+  };
+
 export function useFocusAfterCommit(): (
   target: HTMLElement | null | undefined,
 ) => void {

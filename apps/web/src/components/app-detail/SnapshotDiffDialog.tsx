@@ -1,5 +1,6 @@
 "use client";
 
+import type { RefObject } from "react";
 import type { SnapshotDiffResult } from "@asobeast/shared";
 import {
   Dialog,
@@ -9,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { returnFocusTo } from "@/lib/focus-handoff";
 import { formatCountry } from "@/lib/format";
 import {
   Table,
@@ -26,17 +28,22 @@ export function SnapshotDiffDialog({
   market,
   open,
   onOpenChange,
+  returnFocus,
 }: {
   diff: SnapshotDiffResult | null;
   market: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  returnFocus?: RefObject<HTMLElement | null>;
 }) {
   const changes = diff?.changes ?? [];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size={changes.length > 0 ? "lg" : "default"}>
+      <DialogContent
+        size={changes.length > 0 ? "lg" : "default"}
+        onCloseAutoFocus={returnFocusTo(returnFocus)}
+      >
         <DialogHeader>
           <DialogTitle>
             {market === null

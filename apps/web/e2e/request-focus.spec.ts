@@ -235,3 +235,75 @@ test.describe("alert rows keep focus", () => {
     ).toBeFocused();
   });
 });
+
+const appHeader = (page: Page) => page.getByRole("banner");
+
+test.describe("app actions keep focus", () => {
+  test("Refresh keeps focus while it refreshes and gets it back from the diff", async ({
+    page,
+  }) => {
+    const held = await holdRequest(
+      page,
+      /\/api\/backend\/apps\/app-1\/refresh(\?|$)/,
+      "POST",
+    );
+    await page.goto("/apps/app-1/metadata");
+    const refresh = appHeader(page).getByRole("button", {
+      name: "Refresh",
+      exact: true,
+    });
+
+    await pressFromKeyboard(refresh);
+    await expect(refresh).toHaveAttribute("aria-disabled", "true");
+    await expect(refresh).toBeFocused();
+    held.release();
+    const diff = page.getByRole("dialog", { name: "Snapshot refreshed" });
+    await expect(diff).toBeVisible();
+    await page.keyboard.press("Escape");
+
+    await expect(diff).toBeHidden();
+    await expect(refresh).toBeFocused();
+  });
+
+  test("Run daily keeps focus while it queues", async ({ page }) => {
+    const held = await holdRequest(
+      page,
+      /\/api\/backend\/apps\/app-1\/run-daily$/,
+      "POST",
+    );
+    await page.goto("/apps/app-1");
+    const run = appHeader(page).getByRole("button", { name: "Run daily" });
+
+    await pressFromKeyboard(run);
+
+    await expectFocusKeptWhileHeld(run, held);
+  });
+
+  test("Refresh is inert and keeps focus while Run daily runs", async ({
+    page,
+  }) => {
+    const refreshes = countPosts(page, /\/apps\/app-1\/refresh(\?|$)/);
+    const held = await holdRequest(
+      page,
+      /\/api\/backend\/apps\/app-1\/run-daily$/,
+      "POST",
+    );
+    await page.goto("/apps/app-1/metadata");
+    await pressFromKeyboard(
+      appHeader(page).getByRole("button", { name: "Run daily" }),
+    );
+    const refresh = appHeader(page).getByRole("button", {
+      name: "Refresh",
+      exact: true,
+    });
+
+    await refresh.focus();
+    await expect(refresh).toHaveAttribute("aria-disabled", "true");
+    await page.keyboard.press("Enter");
+    held.release();
+
+    await expect(refresh).not.toHaveAttribute("aria-disabled", "true");
+    await expect(refresh).toBeFocused();
+    expect(refreshes).toHaveLength(0);
+  });
+});

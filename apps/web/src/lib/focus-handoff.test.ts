@@ -1,9 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   CLAIM_WINDOW_MS,
   focusCanMoveTo,
   focusIsLost,
   isClaimable,
+  returnFocusTo,
   siblingControl,
   survivingNeighbour,
 } from "./focus-handoff";
@@ -183,5 +184,41 @@ describe("siblingControl", () => {
   it("answers nothing when the neighbour holds no such control", () => {
     const [first] = listOf(rowOf("a"), rowOf("b", null));
     expect(siblingOf(first)).toBeNull();
+  });
+});
+
+describe("returnFocusTo", () => {
+  const closing = () => ({ preventDefault: vi.fn() });
+  const target = (isConnected: boolean) => ({ isConnected, focus: vi.fn() });
+  const handlerFor = (element: ReturnType<typeof target> | null) =>
+    returnFocusTo({ current: element as unknown as HTMLElement });
+
+  it("focuses a connected target instead of the default", () => {
+    const element = target(true);
+    const event = closing();
+
+    handlerFor(element)(event as unknown as Event);
+
+    expect(event.preventDefault).toHaveBeenCalled();
+    expect(element.focus).toHaveBeenCalled();
+  });
+
+  it("leaves the default to run for a target that left the document", () => {
+    const element = target(false);
+    const event = closing();
+
+    handlerFor(element)(event as unknown as Event);
+
+    expect(event.preventDefault).not.toHaveBeenCalled();
+    expect(element.focus).not.toHaveBeenCalled();
+  });
+
+  it("leaves the default to run without a target", () => {
+    const event = closing();
+
+    returnFocusTo(undefined)(event as unknown as Event);
+    handlerFor(null)(event as unknown as Event);
+
+    expect(event.preventDefault).not.toHaveBeenCalled();
   });
 });
