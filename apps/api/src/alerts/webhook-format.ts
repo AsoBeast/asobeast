@@ -277,12 +277,12 @@ export function formatWebhookBody(url: string, payload: AlertPayload): string {
   }
   if (isDiscord(url)) {
     return JSON.stringify({
-      content: renderMessage(payload),
+      content: escapeDiscord(renderMessage(payload)),
       allowed_mentions: NO_MENTIONS,
     });
   }
   if (isSlack(url)) {
-    return JSON.stringify({ text: renderMessage(payload) });
+    return JSON.stringify({ text: escapeSlack(renderMessage(payload)) });
   }
   return JSON.stringify(payload);
 }
