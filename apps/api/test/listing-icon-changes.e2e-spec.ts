@@ -23,7 +23,6 @@ import {
 import { testDb } from './helpers/test-db';
 import { obliterateQueues, pauseQueues } from './obliterate-queues';
 
-// A real pair the store served for one unchanged icon three days apart.
 const ICON_A =
   'https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/a2/c1/af/a2c1af65-9766-a31a-ba3c-b17f45b6c503/AppIcon-0-0-1x_U007emarketing-0-8-0-85-220.png/512x512bb.jpg';
 const ICON_B =

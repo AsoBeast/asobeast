@@ -28,9 +28,6 @@ const pngOf = (
     .png()
     .toBuffer();
 
-// A picture re-encoded from jpeg into png keeps its pixels while changing
-// every byte, the way the store CDN re-encodes an unchanged icon under a
-// fresh asset address.
 const samePictureDifferentBytes = async (): Promise<{
   jpeg: Buffer;
   png: Buffer;

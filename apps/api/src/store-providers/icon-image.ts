@@ -14,13 +14,6 @@ interface DecodedIcon {
   pixels: Buffer;
 }
 
-/**
- * The App Store CDN re-encodes an unchanged icon under a fresh asset address
- * every few days, so a raw URL comparison reports icon changes that never
- * happened. This source answers whether two icon addresses draw the same
- * picture: it downloads the canonical rendition of each, decodes the pixels
- * and compares them.
- */
 @Injectable()
 export class IconImageSource {
   async compare(
