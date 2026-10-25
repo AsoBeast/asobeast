@@ -12,7 +12,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ConfirmActionFooter } from "@/components/ConfirmActionFooter";
+import {
+  closeUnlessPending,
+  ConfirmActionFooter,
+} from "@/components/ConfirmActionFooter";
 import { Button } from "@/components/ui/button";
 import { deleteApiToken } from "@/lib/api";
 import {
@@ -49,7 +52,10 @@ export function RevokeTokenButton({ id, name }: { id: string; name: string }) {
   const revokeOnce = useSingleFlight(revoke);
 
   return (
-    <AlertDialog open={open} onOpenChange={setOpen}>
+    <AlertDialog
+      open={open}
+      onOpenChange={closeUnlessPending(revoke.isPending, setOpen)}
+    >
       <AlertDialogTrigger asChild>
         <Button
           ref={trigger}

@@ -21,7 +21,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ConfirmActionFooter } from "@/components/ConfirmActionFooter";
+import {
+  closeUnlessPending,
+  ConfirmActionFooter,
+} from "@/components/ConfirmActionFooter";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -108,7 +111,10 @@ function DisconnectButton({ store }: { store: Store }) {
   );
 
   return (
-    <AlertDialog open={open} onOpenChange={setOpen}>
+    <AlertDialog
+      open={open}
+      onOpenChange={closeUnlessPending(disconnect.pending, setOpen)}
+    >
       <AlertDialogTrigger asChild>
         <Button variant="outline" size="sm">
           Disconnect

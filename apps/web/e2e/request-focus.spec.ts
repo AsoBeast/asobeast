@@ -22,6 +22,12 @@ import { STORE_CONNECTION_COOKIE } from "./store-connections.mts";
 const seedCookie = (context: BrowserContext, name: string, value = "1") =>
   context.addCookies([{ name, value, domain: "localhost", path: "/" }]);
 
+const confirmIn = (page: Page, name: string) =>
+  page
+    .getByRole("alertdialog")
+    .getByRole("button", { name, exact: true })
+    .press("Enter");
+
 const storeConnections = (page: Page) =>
   page.getByRole("region", { name: "Store connections" });
 
@@ -249,6 +255,41 @@ test.describe("alert rows keep focus", () => {
     ).toBeFocused();
   });
 
+  test("Escape keeps the delete dialog open until the delete lands", async ({
+    page,
+  }) => {
+    await deleteWebhooksInBrowser(page, WEBHOOK_PAIR);
+    const held = await holdRequest(
+      page,
+      /\/api\/backend\/webhooks\/[^/]+$/,
+      "DELETE",
+    );
+    await page.goto("/settings");
+    const rows = webhookList(page).getByRole("listitem");
+
+    await pressFromKeyboard(
+      rows.first().getByRole("button", { name: /^Delete / }),
+    );
+    await confirmIn(page, "Delete");
+    await expect(page.getByRole("alertdialog")).toContainText("Removing…");
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("alertdialog")).toHaveAttribute(
+      "data-state",
+      "open",
+    );
+    await expect(page.getByRole("alertdialog")).not.toHaveAttribute(
+      "data-state",
+      "closed",
+      { timeout: 1000 },
+    );
+    held.release();
+
+    await expect(rows).toHaveCount(1);
+    await expect(
+      rows.first().getByRole("button", { name: /^Delete / }),
+    ).toBeFocused();
+  });
+
   test("deleting the last webhook hands focus to Add webhook", async ({
     page,
   }) => {
@@ -425,12 +466,6 @@ test.describe("add competitor", () => {
   });
 });
 
-const confirmIn = (page: Page, name: string) =>
-  page
-    .getByRole("alertdialog")
-    .getByRole("button", { name, exact: true })
-    .press("Enter");
-
 async function removeCompetitorsInBrowser(page: Page) {
   const removed = new Set<string>();
   await page.route(
@@ -548,6 +583,40 @@ test.describe("removal dialogs return or hand on focus", () => {
 
     await expect(page.getByRole("alertdialog")).toBeHidden();
     await expect(revoke).toBeFocused();
+  });
+
+  test("Escape keeps the revoke dialog open until the revoke lands", async ({
+    page,
+  }) => {
+    await serveTokens(page, [token("t1", "ci"), token("t2", "deploy")]);
+    const held = await holdRequest(
+      page,
+      /\/api\/backend\/auth\/tokens\/[^/]+$/,
+      "DELETE",
+    );
+    await page.goto("/integrations");
+
+    await pressFromKeyboard(page.getByRole("button", { name: "Revoke ci" }));
+    await confirmIn(page, "Revoke");
+    await expect(page.getByRole("alertdialog")).toContainText("Revoking…");
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("alertdialog")).toHaveAttribute(
+      "data-state",
+      "open",
+    );
+    await expect(page.getByRole("alertdialog")).not.toHaveAttribute(
+      "data-state",
+      "closed",
+      { timeout: 1000 },
+    );
+    held.release();
+
+    await expect(page.getByRole("button", { name: "Revoke ci" })).toHaveCount(
+      0,
+    );
+    await expect(
+      page.getByRole("button", { name: "Revoke deploy" }),
+    ).toBeFocused();
   });
 
   test("a revoke hands focus to the next token, then to New token", async ({

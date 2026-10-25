@@ -6,6 +6,12 @@ import {
   AlertDialogFooter,
 } from "@/components/ui/alert-dialog";
 
+export const closeUnlessPending =
+  (pending: boolean, setOpen: (open: boolean) => void) =>
+  (open: boolean): void => {
+    if (open || !pending) setOpen(open);
+  };
+
 export function ConfirmActionFooter({
   pending,
   label,

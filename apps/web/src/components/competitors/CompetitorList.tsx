@@ -15,7 +15,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ConfirmActionFooter } from "@/components/ConfirmActionFooter";
+import {
+  closeUnlessPending,
+  ConfirmActionFooter,
+} from "@/components/ConfirmActionFooter";
 import { Badge } from "@/components/ui/badge";
 import { ExportCsvButton } from "@/components/ExportCsvButton";
 import { Button } from "@/components/ui/button";
@@ -98,7 +101,10 @@ function CompetitorCard({
             {snapshot?.version ? <span>v{snapshot.version}</span> : null}
           </div>
         </div>
-        <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialog
+          open={confirmOpen}
+          onOpenChange={closeUnlessPending(mutation.isPending, setConfirmOpen)}
+        >
           <AlertDialogTrigger asChild>
             <Button
               variant="ghost"

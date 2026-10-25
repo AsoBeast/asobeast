@@ -18,7 +18,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ConfirmActionFooter } from "@/components/ConfirmActionFooter";
+import {
+  closeUnlessPending,
+  ConfirmActionFooter,
+} from "@/components/ConfirmActionFooter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -79,7 +82,10 @@ function AnnotationRow({
           </div>
         ) : null}
       </div>
-      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+      <AlertDialog
+        open={confirmOpen}
+        onOpenChange={closeUnlessPending(removing, setConfirmOpen)}
+      >
         <AlertDialogTrigger asChild>
           <Button
             variant="ghost"

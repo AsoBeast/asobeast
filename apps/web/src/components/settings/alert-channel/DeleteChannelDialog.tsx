@@ -10,7 +10,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ConfirmActionFooter } from "@/components/ConfirmActionFooter";
+import {
+  closeUnlessPending,
+  ConfirmActionFooter,
+} from "@/components/ConfirmActionFooter";
 import { Button } from "@/components/ui/button";
 import {
   cardAction,
@@ -43,7 +46,10 @@ export function DeleteChannelDialog({
   const { handOff, onCloseAutoFocus } = useCloseFocusHandoff();
 
   return (
-    <AlertDialog open={open} onOpenChange={setOpen}>
+    <AlertDialog
+      open={open}
+      onOpenChange={closeUnlessPending(pending, setOpen)}
+    >
       <AlertDialogTrigger asChild>
         <Button
           ref={trigger}
