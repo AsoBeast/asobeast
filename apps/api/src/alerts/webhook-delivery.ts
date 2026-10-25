@@ -52,8 +52,8 @@ function headerWaitMs(header: string | null, now = Date.now()): number {
 }
 
 async function readBounded(response: Response, max: number): Promise<string> {
-  const stream = response.body as ReadableStream<Uint8Array> | null;
-  const reader = stream?.getReader();
+  const reader: ReadableStreamDefaultReader<Uint8Array> | undefined =
+    response.body?.getReader();
   if (!reader) return '';
   const chunks: Uint8Array[] = [];
   let size = 0;
