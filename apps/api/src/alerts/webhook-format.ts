@@ -116,7 +116,7 @@ function escapeSlack(text: string): string {
 }
 
 function escapeDiscord(text: string): string {
-  return text.replace(/([\\`*_~|>@])/g, '\\$1');
+  return text.replace(/([\\`*_~|<>@[\]])/g, '\\$1');
 }
 
 function shortenLine(text: string, max: number): string {

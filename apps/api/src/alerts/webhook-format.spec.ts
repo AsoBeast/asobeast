@@ -602,9 +602,9 @@ describe('formatWebhookBody', () => {
     expect(discord.embeds[0].fields[0].name).toContain('\\_under\\_');
     expect(discord.embeds[0].fields[0].name).toContain('\\@here');
     expect(discord.embeds[0].fields[0].value).toContain(
-      '[link](https://example.com)',
+      '\\[link\\](https://example.com)',
     );
-    expect(discord.embeds[0].fields[0].value).toContain('<\\@123\\>');
+    expect(discord.embeds[0].fields[0].value).toContain('\\<\\@123\\>');
     expect(discord.embeds[0].fields[0].value).toContain('\\@everyone');
     expect(discord.embeds[0].fields[0].name).not.toContain('\\-');
 
