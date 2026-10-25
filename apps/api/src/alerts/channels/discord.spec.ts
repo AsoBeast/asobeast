@@ -108,6 +108,43 @@ describe('discordBody for a batch', () => {
     }
   });
 
+  it('keeps every field within its limit when the web origin is very long', () => {
+    const origin = `https://${'a'.repeat(1100)}.example`;
+    const message = discordBody(
+      buildReport(worstCaseBatch('owned_apps'), origin),
+    );
+
+    for (const embed of message.embeds) {
+      for (const field of embed.fields) {
+        expect(field.value.length).toBeLessThanOrEqual(1024);
+      }
+    }
+    expect(totalSize(message)).toBeLessThanOrEqual(6000);
+  });
+
+  it('counts escaped competitor names against the embed budget', () => {
+    const payload = worstCaseBatch('competitors');
+    const marked = {
+      ...payload,
+      apps: payload.apps.map((section) => ({
+        ...section,
+        competitors: section.competitors.map((competitor) => ({
+          ...competitor,
+          app: { ...competitor.app, name: '_'.repeat(128) },
+          changes: Array.from({ length: 25 }, (_, index) => ({
+            ...metadata,
+            app: { id: competitor.app.id, name: null, isCompetitor: true },
+            changes: [
+              { field: 'version' as const, before: `${index}`, after: 'b' },
+            ],
+          })),
+        })),
+      })),
+    };
+
+    expect(totalSize(batchMessage(marked))).toBeLessThanOrEqual(6000);
+  });
+
   it('lists each competitor under the primary app it watches', () => {
     const [embed] = batchMessage(competitorBatch).embeds;
 

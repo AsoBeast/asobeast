@@ -85,16 +85,26 @@ function fieldSources(app: ReportApp): FieldSource[] {
   ].slice(0, FIELDS_MAX);
 }
 
+function fittingOmission(group: ReportGroup, max: number): string | null {
+  const hidden = group.total - group.rows.length;
+  if (hidden <= 0) return null;
+  const linked = groupOmission(group, markdownLink);
+  return linked && linked.length < max / 2 ? linked : `+${hidden} more`;
+}
+
 function groupValue(group: ReportGroup, max: number): string {
-  const note = groupOmission(group, markdownLink);
+  const note = fittingOmission(group, max);
   const room = max - (note ? note.length + 1 : 0);
   const rows = boundedLines(groupRowLines(group).map(escapeDiscord), room);
-  return note ? `${rows}\n${note}` : rows;
+  return [rows, note].filter(Boolean).join('\n');
 }
+
+const fieldName = (source: FieldSource): string =>
+  clamp(escapeDiscord(source.name), FIELD_NAME_MAX);
 
 function fieldOf(source: FieldSource, max: number): DiscordField {
   return {
-    name: clamp(escapeDiscord(source.name), FIELD_NAME_MAX),
+    name: fieldName(source),
     value: source.group ? groupValue(source.group, max) : source.note,
   };
 }
@@ -157,7 +167,7 @@ function appEmbed(
     footer: footerOf(report),
   };
   const names = sources.reduce(
-    (total, source) => total + source.name.length,
+    (total, source) => total + fieldName(source).length,
     0,
   );
   const perField = Math.min(
