@@ -76,3 +76,23 @@ test.describe("store connection controls keep focus", () => {
     ).toBeFocused();
   });
 });
+
+test.describe("the annotation remove dialog returns focus", () => {
+  for (const close of ["Escape", "Cancel"] as const) {
+    test(`to its trash button after ${close}`, async ({ page }) => {
+      await page.goto("/apps/app-1/rankings");
+      const remove = page.getByRole("button", {
+        name: "Remove Autumn campaign",
+      });
+
+      await pressFromKeyboard(remove);
+      const dialog = page.getByRole("alertdialog");
+      await expect(dialog).toBeVisible();
+      if (close === "Escape") await page.keyboard.press("Escape");
+      else await dialog.getByRole("button", { name: "Cancel" }).press("Enter");
+
+      await expect(dialog).toBeHidden();
+      await expect(remove).toBeFocused();
+    });
+  }
+});

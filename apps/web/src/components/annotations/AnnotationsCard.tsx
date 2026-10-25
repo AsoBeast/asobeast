@@ -19,6 +19,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -80,18 +81,19 @@ function AnnotationRow({
           </div>
         ) : null}
       </div>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        aria-label={`Remove ${annotation.label}`}
-        ref={(button) => {
-          if (button) registerButton(annotation.id, button);
-        }}
-        onClick={() => setConfirmOpen(true)}
-      >
-        <Trash2 />
-      </Button>
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Remove ${annotation.label}`}
+            ref={(button) => {
+              if (button) registerButton(annotation.id, button);
+            }}
+          >
+            <Trash2 />
+          </Button>
+        </AlertDialogTrigger>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Remove {annotation.label}?</AlertDialogTitle>
