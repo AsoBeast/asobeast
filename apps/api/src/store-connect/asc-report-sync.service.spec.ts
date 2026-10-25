@@ -7,6 +7,7 @@ import {
   AscRateLimitedError,
   AscRejectedKeyError,
   AscSegmentSizeError,
+  AscUnreachableError,
 } from './asc-errors';
 import { AGREEMENT_MISSING } from './asc-http-errors';
 import type {
@@ -346,6 +347,76 @@ describe('AscReportSync', () => {
 
     expect(applier.apply).toHaveBeenCalled();
     expect(connections.markRejected).not.toHaveBeenCalled();
+  });
+
+  it('keeps syncing the other requests when apple fails one standard listing, and says so', async () => {
+    const { service, api, applier, connections } = build();
+    api.dailyInstances.mockImplementation((reportId: string) =>
+      reportId === 'snapshot-report'
+        ? Promise.reject(new AscError('down', 500, 'UNEXPECTED_ERROR'))
+        : Promise.resolve([instance('o1', '2026-09-02')]),
+    );
+
+    const summary = await service.run();
+
+    expect(appliedIds(applier)).toEqual(['o1']);
+    expect(summary).toMatchObject({ instances: 1, failed: 1 });
+    expect(connections.markSynced).toHaveBeenCalledWith(
+      'APP_STORE',
+      'admin',
+      PARTIAL_SYNC,
+    );
+  });
+
+  it('keeps syncing the other requests when apple cannot be reached for one standard listing', async () => {
+    const { service, api, applier } = build();
+    api.dailyInstances.mockImplementation((reportId: string) =>
+      reportId === 'snapshot-report'
+        ? Promise.reject(new AscUnreachableError('timeout'))
+        : Promise.resolve([instance('o1', '2026-09-02')]),
+    );
+
+    await expect(service.run()).resolves.toMatchObject({ failed: 1 });
+    expect(appliedIds(applier)).toEqual(['o1']);
+  });
+
+  it('keeps syncing the other requests when finding the report of one request fails', async () => {
+    const { service, api, applier } = build();
+    api.discoveryReport.mockImplementation(
+      (remoteId: string, variant: string) =>
+        remoteId === 'remote-ongoing' && variant === 'standard'
+          ? Promise.reject(new AscError('down', 503, null))
+          : Promise.resolve(null),
+    );
+
+    const summary = await service.run();
+
+    expect(appliedIds(applier)).toEqual(['s1', 's2']);
+    expect(summary?.failed).toBe(1);
+  });
+
+  it('still rejects the key when apple refuses a standard listing', async () => {
+    const { service, api, connections } = build();
+    api.dailyInstances.mockRejectedValue(
+      new AscRejectedKeyError('no', 403, 'FORBIDDEN_ERROR'),
+    );
+
+    await expect(service.run()).rejects.toBeInstanceOf(UnrecoverableError);
+    expect(connections.markRejected).toHaveBeenCalled();
+  });
+
+  it('still ends the run normally when a standard listing is rate limited', async () => {
+    const { service, api, connections } = build();
+    api.dailyInstances.mockRejectedValue(
+      new AscRateLimitedError('slow', 429, null),
+    );
+
+    await expect(service.run()).resolves.toMatchObject({ rateLimited: true });
+    expect(connections.markSynced).toHaveBeenCalledWith(
+      'APP_STORE',
+      'admin',
+      null,
+    );
   });
 
   it('never rejects the key over a detailed instance and keeps applying the standard ones', async () => {

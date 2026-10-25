@@ -10,7 +10,10 @@ import type { AscRequest } from '../src/store-connect/asc-transport';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { StoreConnectionService } from '../src/store-connect/store-connection.service';
 import { StoreReportApplier } from '../src/store-connect/store-report-applier';
-import { ADMIN_KEY_NEEDED } from '../src/store-connect/asc-report-sync.service';
+import {
+  ADMIN_KEY_NEEDED,
+  PARTIAL_SYNC,
+} from '../src/store-connect/asc-report-sync.service';
 import { importedMonths } from '../src/store-connect/play/play-report-sync.service';
 import { StoreReportSyncService } from '../src/store-connect/store-report-sync.service';
 import { ownerAgent } from './helpers/session';
@@ -30,6 +33,7 @@ import { asWorkspace } from './helpers/tenancy';
 import { clearRateLimitCounters, obliterateQueues } from './obliterate-queues';
 
 const STORE_APP_ID = '1476097583';
+const SECOND_STORE_APP_ID = '839333328';
 const OTHER_WORKSPACE = 'ws_store_reports_other';
 const FIXTURE = readFileSync(
   join(
@@ -140,6 +144,74 @@ describe('Store report sync (e2e)', () => {
         answer(segmentOf('i1', gz)),
       )
       .on('GET', /i1\.csv\.gz$/, bytes(gz));
+  };
+
+  const scriptTwoApps = () => {
+    const created: { type: string; id: string; attributes: object }[] = [];
+    const storeAppOf = (path: string) => /\/apps\/(\d+)\//.exec(path)?.[1];
+    const segmentPath = /\/analyticsReportInstances\/([^/]+)\/segments/;
+    harness.asc
+      .on('GET', /\/apps\/\d+\/analyticsReportRequests\?/, (request) =>
+        answer({
+          data: created.filter((each) =>
+            each.id.endsWith(`-${storeAppOf(request.path)}`),
+          ),
+        }),
+      )
+      .on(
+        'GET',
+        /^\/v1\/apps\?filter/,
+        answer({
+          data: [
+            { type: 'apps', id: STORE_APP_ID, attributes: { name: 'Focus' } },
+            {
+              type: 'apps',
+              id: SECOND_STORE_APP_ID,
+              attributes: { name: 'Drift' },
+            },
+          ],
+        }),
+      )
+      .on('POST', /^\/v1\/analyticsReportRequests$/, (request) => {
+        const { data } = request.body as {
+          data: {
+            attributes: { accessType: string };
+            relationships: { app: { data: { id: string } } };
+          };
+        };
+        const { accessType } = data.attributes;
+        const kind = accessType === 'ONGOING' ? 'ongoing' : 'snapshot';
+        const placed = {
+          type: 'analyticsReportRequests',
+          id: `${kind}-${data.relationships.app.data.id}`,
+          attributes: { accessType, stoppedDueToInactivity: false },
+        };
+        created.push(placed);
+        return answer({ data: placed }, 201);
+      })
+      .on('GET', /\/analyticsReportRequests\/[^/]+\/reports/, (request) =>
+        answer(
+          report(
+            /analyticsReportRequests\/([^/]+)\//.exec(request.path)?.[1] ?? '',
+          ),
+        ),
+      )
+      .on(
+        'GET',
+        /\/analyticsReports\/ongoing-\d+-standard\/instances/,
+        (request) =>
+          answer(
+            instances([
+              `i-${/ongoing-(\d+)-standard/.exec(request.path)?.[1]}`,
+              '2026-09-12',
+            ]),
+          ),
+      )
+      .on('GET', segmentPath, (request) => {
+        const id = segmentPath.exec(request.path)?.[1] ?? '';
+        return answer(segmentOf(id, gz));
+      })
+      .on('GET', /i-\d+\.csv\.gz$/, bytes(gz));
   };
 
   const funnelRows = () =>
@@ -327,6 +399,42 @@ describe('Store report sync (e2e)', () => {
     ).resolves.toMatchObject({
       lastProcessingDate: new Date('2026-09-13T00:00:00.000Z'),
     });
+  });
+
+  it('downloads the other apps when apple fails the standard listing of one app, and says so', async () => {
+    const second = await harness.prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: SECOND_STORE_APP_ID,
+        country: 'us',
+        name: 'Drift',
+      },
+    });
+    scriptTwoApps();
+    harness.asc.on(
+      'GET',
+      new RegExp(
+        `/analyticsReports/ongoing-${SECOND_STORE_APP_ID}-standard/instances`,
+      ),
+      answer({ errors: [{ code: 'UNEXPECTED_ERROR', detail: 'down' }] }, 500),
+    );
+
+    const summary = await run();
+
+    expect(summary).toMatchObject({
+      instances: 1,
+      failed: 1,
+      rateLimited: false,
+    });
+    await expect(funnelRows()).resolves.toHaveLength(7);
+    await expect(
+      harness.prisma.storeFunnelDay.count({ where: { appId: second.id } }),
+    ).resolves.toBe(0);
+    const state = (await owner.get('/store-connections').expect(200))
+      .body as StoreConnectionState;
+    expect(state.connections[0].lastError).toBe(PARTIAL_SYNC);
+    expect(state.connections[0].lastSyncedAt).not.toBeNull();
   });
 
   it('reports a key that may download but not request reports', async () => {
