@@ -104,6 +104,30 @@ describe('buildAlert', () => {
     expect(facts['Short description']).toBeDefined();
   });
 
+  it('carries the rows of a listing change on its app', () => {
+    const [app] = buildAlert(metadata, null).apps;
+
+    expect(app.groups).toEqual([
+      {
+        kind: 'changes',
+        title: 'Listing changes',
+        tone: 'neutral',
+        rows: [
+          { kind: 'change', field: 'Title', before: '"A"', after: '"B"' },
+          {
+            kind: 'image',
+            field: 'Icon changed',
+            beforeUrl: null,
+            afterUrl: 'y',
+          },
+        ],
+        total: 2,
+        link: null,
+      },
+    ]);
+    expect(buildAlert(dropped, null).apps[0].groups).toEqual([]);
+  });
+
   it('marks a competitor change as the competitor', () => {
     const report = buildAlert(
       { ...metadata, app: { ...metadata.app, isCompetitor: true } },

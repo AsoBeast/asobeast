@@ -1,6 +1,7 @@
 import { formatUtcInstant } from '@asobeast/shared';
 import type {
   AlertReport,
+  ReportGroup,
   ReportApp,
   ReportIdentity,
   ReportLink,
@@ -8,6 +9,7 @@ import type {
 } from './report';
 import { factsOf } from './report-facts';
 import { reportLinks, type ReportLinks } from './report-links';
+import { changeRows } from './report-rows';
 import { appName, sentenceOf, type GranularPayload } from './report-sentences';
 
 type AppPayload = Extract<GranularPayload, { app: unknown }>;
@@ -16,6 +18,21 @@ function roleOf(payload: AppPayload): ReportIdentity['role'] {
   return payload.event === 'metadata.changed' && payload.app.isCompetitor
     ? 'competitor'
     : 'primary';
+}
+
+function changeGroups(payload: AppPayload, links: ReportLinks): ReportGroup[] {
+  if (payload.event !== 'metadata.changed') return [];
+  const rows = changeRows(payload);
+  return [
+    {
+      kind: 'changes',
+      title: 'Listing changes',
+      tone: 'neutral',
+      rows,
+      total: rows.length,
+      link: links.group(payload.app.id, 'changes', rows.length),
+    },
+  ];
 }
 
 function alertApp(payload: AppPayload, links: ReportLinks): ReportApp {
@@ -30,7 +47,7 @@ function alertApp(payload: AppPayload, links: ReportLinks): ReportApp {
       role: roleOf(payload),
     },
     link: links.app(app.id),
-    groups: [],
+    groups: changeGroups(payload, links),
     competitors: [],
     omittedCompetitors: 0,
     competitorsLink: null,

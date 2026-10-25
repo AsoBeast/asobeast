@@ -1,41 +1,44 @@
-import { formatUtcInstant } from '@asobeast/shared';
+import { Section } from 'react-email';
 import { CallToAction } from '../../mail/call-to-action';
 import { EmailLayout } from '../../mail/email-layout';
 import { EmailHeading } from '../../mail/email-text';
-import { FactTable, type Fact } from '../../mail/fact-table';
+import { FactTable } from '../../mail/fact-table';
 import { Notice } from '../../mail/notice';
+import type { AlertReport } from '../report/report';
 import { AlertFooter, type AlertEmailContext } from './alert-footer';
-
-export interface AlertAction {
-  href: string;
-  label: string;
-}
+import { CardHeader } from './report-card';
+import { ReportRowView } from './report-rows';
 
 export interface AlertEmailProps {
-  summary: string;
-  facts: readonly Fact[];
-  action: AlertAction | null;
-  occurredAt: string;
+  report: AlertReport;
   context: AlertEmailContext;
 }
 
-export function AlertEmail({
-  summary,
-  facts,
-  action,
-  occurredAt,
-  context,
-}: AlertEmailProps) {
+export function AlertEmail({ report, context }: AlertEmailProps) {
+  const [app] = report.apps;
+  const iconChanges = (app?.groups ?? [])
+    .flatMap((group) => group.rows)
+    .filter((row) => row.kind === 'image');
   return (
     <EmailLayout
-      preview={summary}
+      preview={report.headline}
       origin={context.origin}
       footer={<AlertFooter context={context} />}
     >
-      <EmailHeading>{summary}</EmailHeading>
-      <FactTable facts={facts} />
-      {action && <CallToAction href={action.href} label={action.label} />}
-      <Notice>{formatUtcInstant(occurredAt)}</Notice>
+      <EmailHeading>{report.headline}</EmailHeading>
+      {app && (
+        <Section className="mb-[16px]">
+          <CardHeader app={app} />
+        </Section>
+      )}
+      <FactTable facts={report.facts.map((fact) => [fact.label, fact.value])} />
+      {iconChanges.map((row, index) => (
+        <ReportRowView key={index} row={row} />
+      ))}
+      {report.link && (
+        <CallToAction href={report.link.href} label={report.link.label} />
+      )}
+      <Notice>{report.dateLabel}</Notice>
     </EmailLayout>
   );
 }

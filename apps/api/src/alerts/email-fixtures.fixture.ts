@@ -257,6 +257,9 @@ export const competitorBatch: AlertBatchPayload = {
   apps: [competitorAlpha],
 };
 
+export const LONG_ICON_URL =
+  'https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/97/4d/85/974d8537-a749-63ec-1a79-416270bf3c44/AppIcon-0-0-1x_U007epad-0-1-0-sRGB-85-220.png/512x512bb.jpg';
+
 const WORST_CASE_SECTIONS = 12;
 const WORST_CASE_ENTRIES = 25;
 const LONG =
@@ -283,6 +286,7 @@ const worstCaseSection = (index: number): AlertBatchAppSection => {
     app: {
       id: `app_${index}`,
       name: `Mindful Sleep and Meditation Coach ${index}`,
+      iconUrl: LONG_ICON_URL,
       store: 'APP_STORE',
       country: 'us',
     },
@@ -326,6 +330,7 @@ const worstCaseSection = (index: number): AlertBatchAppSection => {
         app: {
           id: `rival_${competitor}`,
           name: `Rival Sleep Studio ${competitor}`,
+          iconUrl: LONG_ICON_URL,
           store: 'APP_STORE',
           country: 'us',
         },

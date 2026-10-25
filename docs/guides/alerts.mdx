@@ -222,6 +222,8 @@ The button, the logo, the settings link and the unsubscribe link are built from 
 
 A daily update lists up to 20 rows per section. A longer section ends with a link to the page that lists every row, `See all 32`, or with the count of the rows left out when `WEB_PUBLIC_URL` is unset. When the report would grow past what Gmail shows before clipping, the HTML part shows fewer rows per section and fewer competitors per app, while the plain text part keeps 20. Listing changes name each field the way App Store Connect and the Play Console do, and an icon change reads `Icon changed` instead of printing the image address.
 
+Each card opens with the app icon, the app name linking to its page in AsoBeast, and its store and storefront, so a competitor card reads `Competitor · App Store · US`. A rank move lines up as the keyword, the move and what it crossed. An icon change shows the previous and the new icon side by side, and the plain text part reads `Icon changed`. Dates read like `24 Oct 2026` in UTC, and an instant alert adds the minute, `24 Oct 2026, 03:10 UTC`.
+
 ### Unsubscribe from an email
 
 Every alert email carries a one click unsubscribe that mail apps show as their own button, and an **Unsubscribe** link in its footer. Either one pauses that email alert only, while webhooks and other email alerts keep running. It also withdraws the recipient's confirmation, so switching the alert back on under **Settings**, **Email alerts** sends nothing to that address until the address changes and the new one confirms. A link works for the address it was sent to, so changing an alert's address retires the links in earlier emails.

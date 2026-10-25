@@ -22,6 +22,7 @@ import {
   dropped,
   droppedOut,
   improved,
+  LONG_ICON_URL,
   metadata,
   negative,
   worstCaseBatch,
@@ -196,8 +197,11 @@ describe('formatBatchEmail', () => {
     );
     expect(email.text).toContain('Alpha\nYour app · App Store · US');
     expect(email.text).toContain('  Charlie\n  Competitor · App Store · US');
-    expect(email.html).toContain('Alpha · Your app · App Store · US');
-    expect(email.html).toContain('Charlie · Competitor · App Store · US');
+    expect(email.html).toContain('Your app · App Store · US');
+    expect(email.html).toContain('Competitor · App Store · US');
+    expect(email.html.indexOf('Alpha')).toBeLessThan(
+      email.html.indexOf('Charlie'),
+    );
   });
 
   it('renders queued legacy mixed batches without a scope', async () => {
@@ -407,7 +411,7 @@ describe('formatBatchEmail', () => {
     expect(second).toEqual(first);
     expect(first.text).toContain('+980 more');
     expect(first.text.length).toBeLessThan(10_000);
-    expect(first.html.length).toBeLessThan(20_000);
+    expect(first.html.length).toBeLessThan(28_000);
     expect(first.text).toContain('22 Jul 2026');
     expect(first.html).toContain('22 Jul 2026');
   });
@@ -614,13 +618,49 @@ describe('formatBatchEmail in the branded layout', () => {
     },
   );
 
+  it.each([['owned_apps'], ['competitors'], [null]] as const)(
+    'draws one icon per card of the largest %s report and stays under budget',
+    async (scope) => {
+      const { html } = await formatBatchEmail(worstCaseBatch(scope), linked);
+      const icons = html.split(`src="${LONG_ICON_URL}"`).length - 1;
+      const cards =
+        html.match(
+          />(Mindful Sleep and Meditation Coach|Rival Sleep Studio) \d+<\/a>/g,
+        ) ?? [];
+
+      expect(Buffer.byteLength(html)).toBeLessThan(HTML_BUDGET_BYTES);
+      expect(icons).toBeGreaterThan(0);
+      expect(icons).toBe(cards.length);
+    },
+  );
+
+  it('keeps a report of apps with very long names under budget', async () => {
+    const apps = Array.from({ length: 3 }, (_, index) =>
+      emptySection({
+        id: `long_${index}`,
+        name: `${'Long name '.repeat(4_000)}${index}`,
+        store: 'APP_STORE',
+        country: 'us',
+      }),
+    );
+    const { html, text } = await formatBatchEmail(
+      { ...batch, totals: { events: 3, apps: 3 }, apps },
+      linked,
+    );
+
+    expect(Buffer.byteLength(html)).toBeLessThan(HTML_BUDGET_BYTES);
+    expect(html).toContain('+3 more apps');
+    expect(text).toContain('Long name Long name');
+  });
+
   it('shows fewer lines in html than in text only when the report would not fit', async () => {
     const worst = await formatBatchEmail(worstCaseBatch('owned_apps'), linked);
-    const lastRow = 'meditation and sleep tracker keyword 19  ';
-    expect(worst.text).toContain(lastRow);
-    expect(worst.html).not.toContain(lastRow);
-    expect(worst.html).toContain(
-      'See all 25: https://aso.example.com/apps/app_0/keywords',
+    const lastRow = 'meditation and sleep tracker keyword 19';
+    expect(worst.text).toContain(`${lastRow}  #4 → #12`);
+    expect(worst.html).not.toContain(`>${lastRow}<`);
+    expect(worst.html).toContain('>meditation and sleep tracker keyword 0<');
+    expect(worst.html).toMatch(
+      /href="https:\/\/aso\.example\.com\/apps\/app_0\/keywords"[^>]*>See all 25 in AsoBeast<\/a>/,
     );
 
     const usual = await formatBatchEmail(batch, linked);
@@ -633,10 +673,10 @@ describe('formatBatchEmail in the branded layout', () => {
       linked,
     );
     expect(usual.html).not.toContain('See all');
-    expect(full.html).toContain('game 19  ');
-    expect(full.html).not.toContain('game 20  ');
-    expect(full.html).toContain(
-      'See all 25: https://aso.example.com/apps/a/keywords',
+    expect(full.html).toContain('>game 19<');
+    expect(full.html).not.toContain('>game 20<');
+    expect(full.html).toMatch(
+      /href="https:\/\/aso\.example\.com\/apps\/a\/keywords"[^>]*>See all 25 in AsoBeast<\/a>/,
     );
   });
 
@@ -645,7 +685,7 @@ describe('formatBatchEmail in the branded layout', () => {
     for (const id of ['a', 'b']) {
       expect(html).toMatch(
         new RegExp(
-          `· <a href="https://aso\\.example\\.com/apps/${id}"[^>]*>Open app</a>`,
+          `<a href="https://aso\\.example\\.com/apps/${id}"[^>]*>${id === 'a' ? 'Alpha' : 'Bravo'}</a>`,
         ),
       );
     }

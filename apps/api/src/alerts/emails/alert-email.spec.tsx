@@ -1,4 +1,10 @@
-import { everyFieldChanged } from '../email-fixtures.fixture';
+import {
+  actionOpened,
+  digest,
+  dropped,
+  everyFieldChanged,
+  metadata,
+} from '../email-fixtures.fixture';
 import { formatEmail } from '../email-format';
 import { buildAlert } from '../report/build-alert';
 
@@ -29,5 +35,75 @@ describe('AlertEmail', () => {
       unsubscribe: null,
     });
     expect(Buffer.byteLength(html)).toBeLessThan(25_000);
+  });
+
+  it('opens an instant alert with the app icon, name and storefront', async () => {
+    const icon = 'https://is1-ssl.mzstatic.com/image/thumb/app/512x512bb.jpg';
+    const { html } = await formatEmail(
+      {
+        ...dropped,
+        app: {
+          ...dropped.app,
+          iconUrl: icon,
+          store: 'APP_STORE',
+          country: 'us',
+        },
+      },
+      { origin: 'https://aso.example.com', unsubscribe: null },
+    );
+
+    expect(html).toContain(`src="${icon}"`);
+    expect(html).toContain('>My App</a>');
+    expect(html).toContain('App Store · US');
+  });
+
+  it('draws no header for an event without an app', async () => {
+    const { html } = await formatEmail(digest);
+
+    expect(html).not.toContain('<img alt=""');
+  });
+
+  it.each([
+    ['an app event', dropped, 'Open app'],
+    ['an action', actionOpened, 'Open the action'],
+    ['the weekly digest', digest, 'Open AsoBeast'],
+  ] as const)('labels the button of %s', async (_kind, payload, label) => {
+    const { html } = await formatEmail(payload, {
+      origin: 'https://aso.example.com',
+      unsubscribe: null,
+    });
+
+    expect(html).toContain(label);
+  });
+
+  it('shows both icons of an instant icon change', async () => {
+    const { html, text } = await formatEmail({
+      ...metadata,
+      changes: [
+        {
+          field: 'icon',
+          before: 'https://x.test/old.png',
+          after: 'https://x.test/new.png',
+        },
+      ],
+    });
+
+    expect(html).toMatch(
+      /<img[^>]*alt="Previous icon"[^>]*src="https:\/\/x\.test\/old\.png"/,
+    );
+    expect(html).toMatch(
+      /<img[^>]*alt="New icon"[^>]*src="https:\/\/x\.test\/new\.png"/,
+    );
+    expect(text).toContain('Icon: Changed');
+    expect(text).not.toContain('x.test');
+  });
+
+  it('draws no icon pair for a change of other fields', async () => {
+    const { html } = await formatEmail({
+      ...metadata,
+      changes: [{ field: 'title', before: 'A', after: 'B' }],
+    });
+
+    expect(html).not.toContain('Previous icon');
   });
 });
