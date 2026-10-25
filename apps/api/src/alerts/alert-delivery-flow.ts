@@ -6,7 +6,7 @@ import { filterBatch } from './alert-batch-filter';
 
 const ALERT_DELIVERY_DEDUPE_SECONDS = 7 * 24 * 60 * 60;
 
-export const ALERT_BACKOFF = { type: 'custom' } as const;
+export const ALERT_BACKOFF: { readonly type: 'custom' } = { type: 'custom' };
 
 export const ALERT_DELIVERY_JOB_OPTIONS = {
   ...JOB_OPTIONS,
