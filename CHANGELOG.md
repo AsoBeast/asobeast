@@ -3,6 +3,34 @@
 All notable changes to asobeast are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [1.14.0](https://github.com/AsoBeast/asobeast/compare/v1.13.0...v1.14.0) (2026-10-25)
+
+
+### Features
+
+* **alerts:** carry the app icon and storefront in every alert ([#594](https://github.com/AsoBeast/asobeast/issues/594)) ([3b99922](https://github.com/AsoBeast/asobeast/commit/3b999223b7cf330c6333c2a65416b2da7e13e3b8))
+* **alerts:** deliver reports to microsoft teams, telegram and google chat ([#598](https://github.com/AsoBeast/asobeast/issues/598)) ([a1f9f21](https://github.com/AsoBeast/asobeast/commit/a1f9f21be69cff2f4dc03bc5dcaf10dfa130a378))
+* **alerts:** draw discord and slack reports with icons, colour and local time ([#596](https://github.com/AsoBeast/asobeast/issues/596)) ([56ff7e0](https://github.com/AsoBeast/asobeast/commit/56ff7e07097f3098875cc99a106aa0bda8a46e07))
+* **alerts:** show app icons and icon changes as images in alert emails ([#597](https://github.com/AsoBeast/asobeast/issues/597)) ([a3a7ffc](https://github.com/AsoBeast/asobeast/commit/a3a7ffc8f36f6a5c29e765a1414eff2ecc83d6ab))
+* **alerts:** write alert wording once in a channel neutral report ([#595](https://github.com/AsoBeast/asobeast/issues/595)) ([98d09c2](https://github.com/AsoBeast/asobeast/commit/98d09c213ed2a07de846ee156c627bdde01ceb1b))
+* **analytics:** read app store conversion from app store connect ([#412](https://github.com/AsoBeast/asobeast/issues/412)) ([3a9ec2d](https://github.com/AsoBeast/asobeast/commit/3a9ec2d83c6eff734e8af838ac20ba6a13da4bb5))
+* **analytics:** read store listing acquisitions from the play console ([#414](https://github.com/AsoBeast/asobeast/issues/414)) ([7f45e86](https://github.com/AsoBeast/asobeast/commit/7f45e86c3dca67135250fd1558721ee3b56499b8))
+* **api:** post review replies to the app store and google play ([#550](https://github.com/AsoBeast/asobeast/issues/550)) ([769dec5](https://github.com/AsoBeast/asobeast/commit/769dec50536368e40d42abbad6c84c1c8430a2e5))
+* **apps:** annotate rank charts with named events ([#573](https://github.com/AsoBeast/asobeast/issues/573)) ([1d6364b](https://github.com/AsoBeast/asobeast/commit/1d6364ba7c6ec041ec6a6feb14d71a5fead44607))
+* **apps:** flag an app the store no longer lists ([#570](https://github.com/AsoBeast/asobeast/issues/570)) ([8a4ea6d](https://github.com/AsoBeast/asobeast/commit/8a4ea6d57aa16030df3d2726d0d9421715b092b2))
+* **changes:** measure every listing change by store conversion too ([#413](https://github.com/AsoBeast/asobeast/issues/413)) ([4cfdd39](https://github.com/AsoBeast/asobeast/commit/4cfdd39cf049b8c198f3cf1ff628163b3cab9d2c))
+* **keywords:** show when a keyword position was last checked ([#567](https://github.com/AsoBeast/asobeast/issues/567)) ([25b1345](https://github.com/AsoBeast/asobeast/commit/25b1345c169e0a91b791567b8cf42237756b6606))
+
+
+### Bug Fixes
+
+* **api:** keep the app store connect sync going when one report listing fails ([#604](https://github.com/AsoBeast/asobeast/issues/604)) ([6241b96](https://github.com/AsoBeast/asobeast/commit/6241b96b7a8296623965e3f574bb88d763ea1850))
+* **api:** read store console reports in the shape the stores send ([#592](https://github.com/AsoBeast/asobeast/issues/592)) ([f08a12b](https://github.com/AsoBeast/asobeast/commit/f08a12b216d3b327cc389aae86a9311c7663e634))
+* **apps:** finish a listing refresh quietly when the store delists the app ([#568](https://github.com/AsoBeast/asobeast/issues/568)) ([82ed242](https://github.com/AsoBeast/asobeast/commit/82ed2422fe2c975b1c60bb190fe6ea580531769c))
+* **jobs:** complete the run of an app a market does not sell ([#571](https://github.com/AsoBeast/asobeast/issues/571)) ([a5d185c](https://github.com/AsoBeast/asobeast/commit/a5d185c6991e50947f1ce7c0814054cab57ec575))
+* **providers:** keep google play requests on a local proxy endpoint ([#585](https://github.com/AsoBeast/asobeast/issues/585)) ([2156d89](https://github.com/AsoBeast/asobeast/commit/2156d89246b42cd91aa1cf7ccea87737394f992a))
+* **web:** keep focus on request buttons and dialog openers ([#605](https://github.com/AsoBeast/asobeast/issues/605)) ([91e7891](https://github.com/AsoBeast/asobeast/commit/91e7891e870970eefd3dbd5ebc0960cab4f504a0))
+
 ## [1.13.0](https://github.com/AsoBeast/asobeast/compare/v1.12.0...v1.13.0) (2026-10-21)
 
 
