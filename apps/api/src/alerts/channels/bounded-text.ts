@@ -1,11 +1,13 @@
 const TRAILING_HIGH_SURROGATE = /[\uD800-\uDBFF]$/;
 
 export function clamp(text: string, max: number): string {
+  if (max <= 0) return '';
   if (text.length <= max) return text;
   return `${text.slice(0, max - 1).replace(TRAILING_HIGH_SURROGATE, '')}…`;
 }
 
 export function shortenLine(text: string, max: number): string {
+  if (max <= 0) return '';
   if (text.length <= max) return text;
   let visible = Math.max(0, max - 24);
   let suffix = '';
@@ -15,7 +17,7 @@ export function shortenLine(text: string, max: number): string {
     if (next === visible) break;
     visible = next;
   }
-  return `${text.slice(0, visible)}${suffix}`;
+  return `${text.slice(0, visible).replace(TRAILING_HIGH_SURROGATE, '')}${suffix}`;
 }
 
 export function boundedLines(lines: string[], max: number): string {

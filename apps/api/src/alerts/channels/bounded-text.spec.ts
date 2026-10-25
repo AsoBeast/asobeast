@@ -15,6 +15,21 @@ describe('shortenLine', () => {
     expect(line).toMatch(/… \(\+\d+ chars omitted\)$/);
   });
 
+  it('never leaves half of a surrogate pair before its suffix', () => {
+    const text = `${'x'.repeat(7)}${'😀'.repeat(40)}`;
+
+    for (let max = 30; max <= 60; max += 1) {
+      expect(shortenLine(text, max)).not.toMatch(
+        /[\uD800-\uDBFF](?![\uDC00-\uDFFF])/,
+      );
+    }
+  });
+
+  it('prints nothing when no room is left', () => {
+    expect(shortenLine('abc', 0)).toBe('');
+    expect(clamp('abc', 0)).toBe('');
+  });
+
   it('keeps a line that fits', () => {
     expect(shortenLine('fits', 10)).toBe('fits');
   });
