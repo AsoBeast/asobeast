@@ -1,4 +1,9 @@
-import type { AlertReport, ReportApp, ReportGroup } from '../report/report';
+import type {
+  AlertReport,
+  ReportApp,
+  ReportFact,
+  ReportGroup,
+} from '../report/report';
 import {
   competitorsOmission,
   groupOmission,
@@ -22,6 +27,8 @@ export interface TelegramMessage {
 const TEXT_MAX = 4096;
 const INDENT = '  ';
 const FACT_MAX = 1000;
+const HEADLINE_MAX = 256;
+const MARKUP = /<[^>]*>|&(?:amp|lt|gt|quot);/g;
 
 const anchor = (href: string, label: string): string =>
   `<a href="${escapeHtml(href)}">${escapeHtml(label)}</a>`;
@@ -29,8 +36,11 @@ const anchor = (href: string, label: string): string =>
 const htmlLink: LinkFormat = (label, href) => anchor(href, label);
 
 export function visibleLength(html: string): number {
-  return html.replace(/<[^>]+>/g, '').replace(/&(amp|lt|gt|quot);/g, '_')
-    .length;
+  let hidden = 0;
+  for (const [token] of html.matchAll(MARKUP)) {
+    hidden += token.startsWith('&') ? token.length - 1 : token.length;
+  }
+  return html.length - hidden;
 }
 
 function groupLines(group: ReportGroup): string[] {
@@ -63,7 +73,7 @@ function headingLines(report: AlertReport): string[] {
   const date =
     report.kind === 'batch' ? utcFallback(report.dateLabel) : report.dateLabel;
   return [
-    `<b>${escapeHtml(`${report.emoji} ${report.headline}`)}</b>`,
+    `<b>${escapeHtml(clamp(`${report.emoji} ${report.headline}`, HEADLINE_MAX))}</b>`,
     escapeHtml(date),
     '',
   ];
@@ -99,26 +109,24 @@ function batchText(report: AlertReport): string {
   return joined(omitted > 0 ? [...lines, moreApps(omitted)] : lines).trimEnd();
 }
 
-function singleText(report: AlertReport): string {
-  return joined([
-    ...headingLines(report),
-    ...report.facts.map(({ label, value }) =>
-      label
-        ? `<b>${escapeHtml(label)}</b>: ${escapeHtml(clamp(value, FACT_MAX))}`
-        : escapeHtml(clamp(value, FACT_MAX)),
-    ),
-  ]);
-}
+const factLine = ({ label, value }: ReportFact): string =>
+  label
+    ? `<b>${escapeHtml(label)}</b>: ${escapeHtml(clamp(value, FACT_MAX))}`
+    : escapeHtml(clamp(value, FACT_MAX));
 
-function clampVisible(html: string): string {
-  if (visibleLength(html) <= TEXT_MAX) return html;
-  const plain = html
-    .replace(/<[^>]+>/g, '')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&amp;/g, '&');
-  return escapeHtml(clamp(plain, TEXT_MAX));
+function singleText(report: AlertReport): string {
+  const facts = report.facts.map(factLine);
+  const textOf = (shown: number): string => {
+    const hidden = facts.length - shown;
+    return joined([
+      ...headingLines(report),
+      ...facts.slice(0, shown),
+      ...(hidden > 0 ? [`+${hidden} more`] : []),
+    ]);
+  };
+  let shown = facts.length;
+  while (shown > 0 && visibleLength(textOf(shown)) > TEXT_MAX) shown -= 1;
+  return textOf(shown);
 }
 
 export function telegramBody(
@@ -128,7 +136,7 @@ export function telegramBody(
   const text = report.kind === 'batch' ? batchText(report) : singleText(report);
   return {
     chat_id: chatId,
-    text: clampVisible(text),
+    text,
     parse_mode: 'HTML',
     link_preview_options: { is_disabled: true },
     ...(report.link

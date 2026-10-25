@@ -2,6 +2,7 @@ import {
   alpha,
   batch,
   competitorBatch,
+  digestWithGroups,
   dropped,
   negative,
   worstCaseBatch,
@@ -125,6 +126,35 @@ describe('telegramBody for a single alert', () => {
 
     expect(visibleLength(text)).toBeLessThanOrEqual(4096);
     expect(text).toContain('<b>Review</b>: ');
+  });
+
+  it('keeps whole facts and their formatting when a digest overflows', () => {
+    const groups = Array.from({ length: 200 }, (_, index) => ({
+      ...digestWithGroups.groups[0],
+      id: `grp_${index}`,
+      name: `Group ${index}`,
+    }));
+    const { text } = telegramBody(
+      buildAlert({ ...digestWithGroups, groups }, ORIGIN),
+      '1',
+    );
+
+    expect(visibleLength(text)).toBeLessThanOrEqual(4096);
+    expect(text.startsWith('<b>')).toBe(true);
+    expect(text).toMatch(/\n\+\d+ more$/);
+  });
+
+  it('keeps a very long app name inside the limit', () => {
+    const { text } = telegramBody(
+      buildAlert(
+        { ...dropped, app: { ...dropped.app, name: 'n'.repeat(10_000) } },
+        null,
+      ),
+      '1',
+    );
+
+    expect(visibleLength(text)).toBeLessThanOrEqual(4096);
+    expect(text).toContain('<b>Keyword</b>: fitness app (US)');
   });
 });
 
