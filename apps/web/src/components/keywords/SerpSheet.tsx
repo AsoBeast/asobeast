@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
 import type { SerpSnapshot } from "@asobeast/shared";
@@ -138,6 +139,8 @@ function SerpExportButton({
 
 export function SerpSheet({ appId }: { appId: string }) {
   const [keywordId, setKeywordId] = useQueryState("serp", serpParser);
+  const [shownId, setShownId] = useState(keywordId);
+  if (keywordId !== "" && keywordId !== shownId) setShownId(keywordId);
   const open = keywordId.length > 0;
 
   return (
@@ -147,7 +150,17 @@ export function SerpSheet({ appId }: { appId: string }) {
         if (!next) void setKeywordId("");
       }}
     >
-      <SheetContent aria-describedby="serp-description">
+      <SheetContent
+        aria-describedby="serp-description"
+        onCloseAutoFocus={(event) => {
+          const opener = document.querySelector<HTMLButtonElement>(
+            `[data-serp-keyword="${CSS.escape(shownId)}"]`,
+          );
+          if (!opener) return;
+          event.preventDefault();
+          opener.focus();
+        }}
+      >
         <SheetHeader>
           <SheetTitle>Top 10 search results</SheetTitle>
           <SheetDescription id="serp-description">

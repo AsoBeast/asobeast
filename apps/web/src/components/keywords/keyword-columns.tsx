@@ -348,6 +348,7 @@ function actionsColumn({
           size="icon-sm"
           className="pointer-coarse:size-11"
           aria-label={`View top 10 for ${row.original.text}`}
+          data-serp-keyword={row.original.keywordId}
           onClick={() => onOpenSerp(row.original.keywordId)}
         >
           <ListOrdered />

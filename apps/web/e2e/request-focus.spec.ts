@@ -582,3 +582,21 @@ test.describe("import app openers get focus back", () => {
     await expect(switcher).toBeFocused();
   });
 });
+
+test("closing the top 10 sheet returns focus to the row that opened it", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/keywords");
+  const opener = page.getByRole("button", {
+    name: "View top 10 for focus timer",
+    exact: true,
+  });
+
+  await pressFromKeyboard(opener);
+  const sheet = page.getByRole("dialog", { name: "Top 10 search results" });
+  await expect(sheet).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  await expect(sheet).toBeHidden();
+  await expect(opener).toBeFocused();
+});
