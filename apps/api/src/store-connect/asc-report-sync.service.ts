@@ -10,6 +10,7 @@ import {
   AscRejectedKeyError,
   AscSegmentSizeError,
   AscUnreachableError,
+  isNotFound,
 } from './asc-errors';
 import { DiscoveryHeaderError, DiscoveryLineError } from './discovery-report';
 import { refusalOf } from './asc-http-errors';
@@ -41,6 +42,14 @@ const isLaneFailure = (error: unknown, variant: DiscoveryVariant): boolean =>
   (error instanceof AscError &&
     !(error instanceof AscRejectedKeyError) &&
     !(error instanceof AscRateLimitedError));
+
+const messageOf = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error);
+
+const listingWait = (error: unknown): string =>
+  isNotFound(error)
+    ? 'is gone at Apple and is requested again on the next sync'
+    : 'waits for the next sync';
 
 const lastErrorOf = (forbidden: boolean, failed: number): string | null =>
   forbidden ? ADMIN_KEY_NEEDED : failed > 0 ? PARTIAL_SYNC : null;
@@ -111,7 +120,7 @@ export class AscReportSync {
     connection: OpenedConnection,
     summary: SyncSummary,
   ): Promise<void> {
-    const pending = await this.pendingInstances(connection);
+    const pending = await this.pendingInstances(connection, summary);
     const blocked = new Set<string>();
     const unresolved = new Set<string>();
     for (const item of pending.slice(0, this.maxInstancesPerRun)) {
@@ -127,7 +136,7 @@ export class AscReportSync {
         blocked.add(lane);
         if (!(error instanceof AscSegmentSizeError)) summary.failed += 1;
         this.logger.warn(
-          `report instance ${item.instance.id} waits for the next sync: ${error instanceof Error ? error.message : String(error)}`,
+          `report instance ${item.instance.id} waits for the next sync: ${messageOf(error)}`,
         );
       }
     }
@@ -136,6 +145,7 @@ export class AscReportSync {
 
   private async pendingInstances(
     connection: OpenedConnection,
+    summary: SyncSummary,
   ): Promise<PendingInstance[]> {
     const requests = await this.prisma.storeReportRequest.findMany({
       where: { connectionId: connection.id, state: 'requested' },
@@ -145,13 +155,35 @@ export class AscReportSync {
     for (const request of requests) {
       if (!request.remoteId) continue;
       pending.push(
-        ...(await this.instancesOf(connection, request, 'standard')),
-        ...(await this.detailedInstancesOf(connection, request)),
+        ...(await this.requestInstances(connection, request, summary)),
       );
     }
     return pending.sort((a, b) =>
       a.instance.processingDate.localeCompare(b.instance.processingDate),
     );
+  }
+
+  private async requestInstances(
+    connection: OpenedConnection,
+    request: RequestRow,
+    summary: SyncSummary,
+  ): Promise<PendingInstance[]> {
+    let standard: PendingInstance[];
+    try {
+      standard = await this.instancesOf(connection, request, 'standard');
+    } catch (error) {
+      if (!isLaneFailure(error, 'standard')) throw error;
+      summary.failed += 1;
+      if (isNotFound(error)) await this.requester.retire(request.id);
+      this.logger.warn(
+        `report request ${request.id} ${listingWait(error)}: ${messageOf(error)}`,
+      );
+      return [];
+    }
+    return [
+      ...standard,
+      ...(await this.detailedInstancesOf(connection, request)),
+    ];
   }
 
   private async detailedInstancesOf(
@@ -163,7 +195,7 @@ export class AscReportSync {
     } catch (error) {
       if (error instanceof AscRateLimitedError) throw error;
       this.logger.warn(
-        `the detailed report of request ${request.id} is skipped this run: ${error instanceof Error ? error.message : String(error)}`,
+        `the detailed report of request ${request.id} is skipped this run: ${messageOf(error)}`,
       );
       return [];
     }
