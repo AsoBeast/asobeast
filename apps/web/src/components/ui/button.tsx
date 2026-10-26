@@ -42,23 +42,43 @@ const buttonVariants = cva(
   },
 );
 
-const isText = (node: React.ReactNode): node is string | number | bigint =>
-  ["string", "number", "bigint"].includes(typeof node);
+type ParentElement = React.ReactElement<{ children?: React.ReactNode }>;
 
-const isFragment = (
-  node: React.ReactNode,
-): node is React.ReactElement<{ children?: React.ReactNode }> =>
+const isText = (node: React.ReactNode): node is string | number | bigint =>
+  typeof node === "string" ||
+  typeof node === "number" ||
+  typeof node === "bigint";
+
+const rendersNothing = (node: React.ReactNode): boolean =>
+  node === null || node === undefined || typeof node === "boolean";
+
+const isFragment = (node: React.ReactNode): node is ParentElement =>
   React.isValidElement(node) && node.type === React.Fragment;
 
-function textRunFrom(nodes: readonly React.ReactNode[], start: number): string {
-  const rest = nodes.slice(start);
-  const end = rest.findIndex((node) => !isText(node));
-  return rest.slice(0, end === -1 ? undefined : end).join("");
+function textRuns(nodes: readonly React.ReactNode[]): Map<number, string> {
+  const runs = new Map<number, string>();
+  let start: number | null = null;
+  nodes.forEach((node, index) => {
+    if (isText(node)) {
+      start ??= index;
+      runs.set(start, `${runs.get(start) ?? ""}${node}`);
+    } else if (!rendersNothing(node)) {
+      start = null;
+    }
+  });
+  return runs;
 }
 
 function textInSpans(children: React.ReactNode): React.ReactNode[] {
   const nodes = Array.isArray(children) ? children : [children];
+  const runs = textRuns(nodes);
   return nodes.map((node, index) => {
+    const run = runs.get(index);
+    if (run !== undefined) {
+      return run.trim() ? <span key={`text-${index}`}>{run}</span> : run;
+    }
+    if (isText(node)) return null;
+    if (Array.isArray(node)) return textInSpans(node);
     if (isFragment(node)) {
       return (
         <React.Fragment key={node.key ?? `fragment-${index}`}>
@@ -66,11 +86,14 @@ function textInSpans(children: React.ReactNode): React.ReactNode[] {
         </React.Fragment>
       );
     }
-    if (!isText(node)) return node;
-    const text = isText(nodes[index - 1]) ? "" : textRunFrom(nodes, index);
-    return text ? <span key={`text-${index}`}>{text}</span> : null;
+    return node;
   });
 }
+
+const slottedTextInSpans = (child: React.ReactNode): React.ReactNode =>
+  React.isValidElement<ParentElement["props"]>(child)
+    ? React.cloneElement(child, undefined, textInSpans(child.props.children))
+    : child;
 
 function Button({
   className,
@@ -93,7 +116,7 @@ function Button({
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
     >
-      {asChild ? children : textInSpans(children)}
+      {asChild ? slottedTextInSpans(children) : textInSpans(children)}
     </Comp>
   );
 }

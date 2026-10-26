@@ -1,11 +1,13 @@
-import { renderToStaticMarkup } from "react-dom/server";
+import { renderToStaticMarkup, renderToString } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { Button } from "./button";
 
 const inner = (button: React.ReactElement) =>
-  renderToStaticMarkup(button).replace(/^<button[^>]*>|<\/button>$/g, "");
+  renderToString(button).replace(/^<button[^>]*>|<\/button>$/g, "");
 
 const Spinner = () => <svg data-testid="spinner" />;
+
+const SPINNER = '<svg data-testid="spinner"></svg>';
 
 const choose = (pending: boolean) => (
   <Button>
@@ -20,37 +22,39 @@ describe("Button", () => {
   });
 
   it("keeps the label in its own span beside a pending spinner", () => {
-    expect(inner(choose(true))).toBe(
-      '<svg data-testid="spinner"></svg><span>Choose Indie</span>',
-    );
+    expect(inner(choose(true))).toBe(`${SPINNER}<span>Choose Indie</span>`);
     expect(inner(choose(false))).toBe("<span>Choose Indie</span>");
   });
 
-  it("joins adjacent text and numbers into one string in one span", () => {
+  it("joins adjacent text and numbers into one text node", () => {
     const count = 3;
-    const label = (
-      Button({ children: ["Add ", count, " keywords"] }).props as {
-        children: React.ReactElement<{ children: unknown }>[];
-      }
-    ).children;
 
-    expect(label).toHaveLength(3);
-    expect(label[0]?.props.children).toBe("Add 3 keywords");
-    expect(label.slice(1)).toEqual([null, null]);
-  });
-
-  it("starts a new span after an empty slot", () => {
-    const suffix = (dirty: boolean) => (
-      <Button>Save{dirty ? <Spinner /> : null} changes</Button>
-    );
-
-    expect(inner(suffix(false))).toBe("<span>Save</span><span> changes</span>");
-    expect(inner(suffix(true))).toBe(
-      '<span>Save</span><svg data-testid="spinner"></svg><span> changes</span>',
+    expect(inner(<Button>Add {count} keywords</Button>)).toBe(
+      "<span>Add 3 keywords</span>",
     );
   });
 
-  it("wraps the text inside a fragment", () => {
+  it("reads across a slot that renders nothing", () => {
+    const label = (plural: boolean) => (
+      <Button>Add keyword{plural && "s"} now</Button>
+    );
+
+    expect(inner(label(false))).toBe("<span>Add keyword now</span>");
+    expect(inner(label(true))).toBe("<span>Add keywords now</span>");
+  });
+
+  it("starts a new span after an element", () => {
+    expect(
+      inner(
+        <Button>
+          Save
+          <Spinner /> changes
+        </Button>,
+      ),
+    ).toBe(`<span>Save</span>${SPINNER}<span> changes</span>`);
+  });
+
+  it("wraps the text inside fragments and nested arrays", () => {
     expect(
       inner(
         <Button>
@@ -60,38 +64,40 @@ describe("Button", () => {
           </>
         </Button>,
       ),
-    ).toBe('<svg data-testid="spinner"></svg><span>Track</span>');
+    ).toBe(`${SPINNER}<span>Track</span>`);
     expect(
       inner(
         <Button>
           <Spinner />
-          <>Track</>
+          {["Track ", 2, " more"]}
         </Button>,
       ),
-    ).toBe('<svg data-testid="spinner"></svg><span>Track</span>');
+    ).toBe(`${SPINNER}<span>Track 2 more</span>`);
   });
 
-  it("leaves elements and empty text as they are", () => {
+  it("leaves elements, empty text and spacing as they are", () => {
     expect(
       inner(
         <Button>
           <Spinner />
-          {""}
-          <span className="sr-only">Close</span>
+          {""} <span className="sr-only">Close</span>
         </Button>,
       ),
-    ).toBe(
-      '<svg data-testid="spinner"></svg><span class="sr-only">Close</span>',
-    );
+    ).toBe(`${SPINNER} <span class="sr-only">Close</span>`);
   });
 
-  it("hands the child of asChild to the slot untouched", () => {
+  it("puts the label of the slotted child of asChild in a span", () => {
     expect(
       renderToStaticMarkup(
         <Button asChild>
-          <a href="/upgrade">Upgrade</a>
+          <a href="/upgrade">
+            <Spinner />
+            Upgrade
+          </a>
         </Button>,
       ),
-    ).toMatch(/^<a [^>]*href="\/upgrade"[^>]*>Upgrade<\/a>$/);
+    ).toMatch(
+      /^<a [^>]*href="\/upgrade"[^>]*><svg data-testid="spinner"><\/svg><span>Upgrade<\/span><\/a>$/,
+    );
   });
 });

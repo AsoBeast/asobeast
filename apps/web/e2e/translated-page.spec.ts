@@ -7,8 +7,8 @@ import {
 } from "@asobeast/shared";
 import { holdRequest } from "./held-request.mts";
 import { hydrated } from "./hydrated.mts";
-import { fulfillJson, routePlan, seedSession } from "./plan-helpers.mts";
-import { expect, test } from "./reporting.mts";
+import { fulfillJson, routePlan } from "./plan-helpers.mts";
+import { expect, test } from "./session.mts";
 
 const TRIAL_PLAN: AccountPlan = {
   plan: "trial",
@@ -58,7 +58,6 @@ function collectDomErrors(page: Page): string[] {
 }
 
 async function openUpgrade(page: Page): Promise<void> {
-  await seedSession(page);
   await page.route("**/api/backend/auth/status", (route) =>
     route.fulfill(
       fulfillJson(200, {
@@ -153,6 +152,23 @@ test("a translated upgrade page shows the new label of a button it changed", asy
   resend.release();
   await expect(
     page.getByRole("button", { name: "New link sent" }),
+  ).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test("a translated settings page opens the delivery log", async ({ page }) => {
+  const errors = collectDomErrors(page);
+  await page.goto("/settings");
+  const toggle = await hydrated(
+    page.getByRole("button", { name: "Recent deliveries" }).last(),
+  );
+
+  await translateText(page);
+  await toggle.click();
+
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await expect(
+    page.getByText("Success", { exact: true }).first(),
   ).toBeVisible();
   expect(errors).toEqual([]);
 });
