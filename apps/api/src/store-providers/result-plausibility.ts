@@ -1,4 +1,6 @@
+import type { Logger } from '@nestjs/common';
 import { Store } from '@prisma/client';
+import type { ImplausibleResultError } from './errors';
 
 export const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -34,4 +36,22 @@ export async function askAgainWhileEmpty<T>(
     results = await ask();
   }
   return results;
+}
+
+interface LastAttempt<T> {
+  finalAttempt: boolean;
+  logger: Logger;
+  next: string;
+  settled: T;
+}
+
+export function settleOnLastAttempt<T>(
+  empty: ImplausibleResultError,
+  { finalAttempt, logger, next, settled }: LastAttempt<T>,
+): T {
+  if (!finalAttempt || !empty.retryable) throw empty;
+  logger.warn(
+    `last attempt: ${empty.message}, so nothing changes until the next ${next}`,
+  );
+  return settled;
 }

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import type {
   Store,
   StoreReportAccess,
@@ -12,12 +12,10 @@ import type {
   AscReportRequest,
 } from './asc-analytics-api';
 import {
-  AscError,
   AscForbiddenError,
-  AscRateLimitedError,
-  AscRejectedKeyError,
   isConflict,
   isNotFound,
+  isSkippableError,
 } from './asc-errors';
 import type { OpenedConnection } from './store-connection.service';
 
@@ -57,11 +55,6 @@ const placementColumns = ({ state, remoteId }: Placement) => ({
   detailedLastProcessingDate: null,
 });
 
-const isAppFailure = (error: unknown): boolean =>
-  error instanceof AscError &&
-  !(error instanceof AscRejectedKeyError) &&
-  !(error instanceof AscRateLimitedError);
-
 function inPlace(
   type: AscAccessType,
   requested: RequestedRow[],
@@ -77,6 +70,8 @@ function inPlace(
 
 @Injectable()
 export class StoreReportRequester {
+  private readonly logger = new Logger(StoreReportRequester.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly workspace: WorkspaceContext,
@@ -117,8 +112,11 @@ export class StoreReportRequester {
           outcome,
         );
       } catch (error) {
-        if (!isAppFailure(error)) throw error;
+        if (!isSkippableError(error)) throw error;
         outcome.failed += 1;
+        this.logger.warn(
+          `report requests of app ${app.id} wait for the next sync: ${error.message}`,
+        );
       }
     }
     return outcome;

@@ -28,6 +28,14 @@ export class AscUnreachableError extends Error {
   }
 }
 
+export const isSkippableError = (
+  error: unknown,
+): error is AscError | AscUnreachableError =>
+  error instanceof AscUnreachableError ||
+  (error instanceof AscError &&
+    !(error instanceof AscRejectedKeyError) &&
+    !(error instanceof AscRateLimitedError));
+
 export class AscSegmentSizeError extends Error {
   constructor(expected: number, received: number | null) {
     super(

@@ -5,6 +5,7 @@ import type { WorkspaceContext } from '../common/tenancy/workspace-context';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { AscAnalyticsApi, AscSegment } from './asc-analytics-api';
 import { StoreReportApplier } from './store-report-applier';
+import { FUNNEL_UPSERT_BATCH } from './store-funnel-rows';
 
 const HEADER =
   'Date\tApp Apple Identifier\tEvent\tPage Type\tSource Type\tEngagement Type\tTerritory\tCounts\tUnique Counts\n';
@@ -25,6 +26,20 @@ const segment = (id: string, bytes: Buffer, checksum: string): AscSegment => ({
   sizeInBytes: bytes.length,
   url: `https://example.test/${id}`,
 });
+
+const PRISMA_DEFAULT_TIMEOUT_MS = 5000;
+
+const reportOf = (rows: number) =>
+  gzipSync(
+    Buffer.from(
+      HEADER +
+        Array.from(
+          { length: rows },
+          (_, row) =>
+            `2026-09-10\t1\tImpression\tNo page\tApp Store search\t\tTerritory ${row}\t10\t8\n`,
+        ).join(''),
+    ),
+  );
 
 const md5 = (bytes: Buffer) => createHash('md5').update(bytes).digest('hex');
 
@@ -68,7 +83,7 @@ function build(checksums: [string, string]) {
       processingDate: '2026-09-12',
     },
   };
-  return { applier, api, tx, pending };
+  return { applier, api, tx, prisma, pending };
 }
 
 describe('StoreReportApplier', () => {
@@ -88,6 +103,33 @@ describe('StoreReportApplier', () => {
     expect(create.segments).toBe(2);
     expect(create.workspaceId).toBe('ws_1');
     expect(tx.$executeRaw).toHaveBeenCalledTimes(1);
+  });
+
+  it('gives the transaction time for every upsert batch instead of the default five seconds', async () => {
+    const timeoutFor = async (rows: number) => {
+      const report = reportOf(rows);
+      const { applier, api, tx, prisma, pending } = build([
+        md5(first),
+        md5(second),
+      ]);
+      api.segments.mockResolvedValue([segment('r', report, md5(report))]);
+      api.download.mockResolvedValue(report);
+
+      await applier.apply(api as unknown as AscAnalyticsApi, pending);
+
+      const [, options] = prisma.withTransaction.mock.calls[0] as unknown as [
+        unknown,
+        { timeout?: number } | undefined,
+      ];
+      return { timeout: options?.timeout ?? 0, statements: tx.$executeRaw };
+    };
+
+    const small = await timeoutFor(1);
+    const large = await timeoutFor(FUNNEL_UPSERT_BATCH * 4);
+
+    expect(large.statements).toHaveBeenCalledTimes(4);
+    expect(small.timeout).toBeGreaterThan(PRISMA_DEFAULT_TIMEOUT_MS);
+    expect(large.timeout).toBeGreaterThan(small.timeout);
   });
 
   it('restarts the retention of an instance downloaded again', async () => {

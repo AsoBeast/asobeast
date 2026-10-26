@@ -8,6 +8,13 @@ import { countryOfTerritory } from './territory-codes';
 
 export const FUNNEL_UPSERT_BATCH = 500;
 
+const TRANSACTION_MS_PER_BATCH = 10_000;
+
+export const reportTransaction = (rows: number) => ({
+  timeout:
+    (Math.ceil(rows / FUNNEL_UPSERT_BATCH) + 1) * TRANSACTION_MS_PER_BATCH,
+});
+
 type CounterRow = FunnelCounters & {
   date: string;
   territory: string;

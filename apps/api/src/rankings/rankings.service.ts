@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Store } from '@prisma/client';
 import {
   KeywordScope,
@@ -15,6 +15,7 @@ import {
   askAgainWhileEmpty,
   EMPTY_ANSWER_RETRIES,
   isImplausiblyEmpty,
+  settleOnLastAttempt,
 } from '../store-providers/result-plausibility';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { SearchItem } from '../store-providers/types';
@@ -53,6 +54,8 @@ interface RecordInput {
 
 @Injectable()
 export class RankingsService {
+  private readonly logger = new Logger(RankingsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly registry: StoreProviderRegistry,
@@ -62,7 +65,7 @@ export class RankingsService {
     private readonly eligibility: CollectionEligibility,
   ) {}
 
-  async checkKeyword(keywordId: string): Promise<void> {
+  async checkKeyword(keywordId: string, finalAttempt = false): Promise<void> {
     const keyword = await this.prisma.keyword.findUnique({
       where: { id: keywordId },
       select: { id: true, text: true, store: true, country: true },
@@ -84,7 +87,8 @@ export class RankingsService {
       return;
     }
 
-    const results = await this.search(keyword);
+    const results = await this.search(keyword, finalAttempt);
+    if (!results) return;
 
     const positionByStoreAppId = new Map<string, number>();
     results.forEach((item, index) => {
@@ -141,7 +145,10 @@ export class RankingsService {
     }
   }
 
-  private async search(keyword: KeywordScope): Promise<SearchItem[]> {
+  private async search(
+    keyword: KeywordScope,
+    finalAttempt: boolean,
+  ): Promise<SearchItem[] | null> {
     const provider = this.registry.get(keyword.store);
     const ask = () =>
       provider.search(keyword.text, keyword.country, RANK_DEPTH);
@@ -167,10 +174,13 @@ export class RankingsService {
     const retries = EMPTY_ANSWER_RETRIES[keyword.store];
     const again = await askAgainWhileEmpty(ask, retries, results);
     if (again.length > 0) return again;
-    throw new ImplausibleResultError(
-      keyword.store,
-      `"${keyword.text}" returned no results in ${keyword.country} but ranked apps on ${toDateKey(lastRanked.date)}`,
-      { retryable: retries > 0 },
+    return settleOnLastAttempt(
+      new ImplausibleResultError(
+        keyword.store,
+        `"${keyword.text}" returned no results in ${keyword.country} but ranked apps on ${toDateKey(lastRanked.date)}`,
+        { retryable: retries > 0 },
+      ),
+      { finalAttempt, logger: this.logger, next: 'check', settled: null },
     );
   }
 

@@ -23,6 +23,7 @@ describe('StoreJobsHandler', () => {
   const probeLocalization = jest.fn();
   const checkCategory = jest.fn().mockResolvedValue(undefined);
   const syncReviews = jest.fn().mockResolvedValue([]);
+  const checkKeyword = jest.fn().mockResolvedValue(undefined);
   const forWorkspace = jest.fn<Promise<boolean>, []>();
   const through = jest.fn(
     (_store: Store, _country: string | undefined, work: () => Promise<void>) =>
@@ -46,7 +47,7 @@ describe('StoreJobsHandler', () => {
     });
     handler = new StoreJobsHandler(
       { refreshListing } as unknown as AppsService,
-      {} as RankingsService,
+      { checkKeyword } as unknown as RankingsService,
       {} as ScoringService,
       { checkCategory } as unknown as CategoryRanksService,
       { syncReviews } as unknown as ReviewsService,
@@ -107,6 +108,22 @@ describe('StoreJobsHandler', () => {
 
     expect(syncReviews).toHaveBeenNthCalledWith(1, payload, false);
     expect(syncReviews).toHaveBeenNthCalledWith(2, payload, true);
+  });
+
+  it('passes the final attempt of the job to the keyword check', async () => {
+    const keywordJob = (attemptsMade: number) =>
+      ({
+        ...job({ keywordId: 'kw1', workspaceId: 'ws_a' }),
+        name: JOBS.CHECK_KEYWORD,
+        attemptsMade,
+        opts: { attempts: 3 },
+      }) as Job;
+
+    await handler.handle(keywordJob(0));
+    await handler.handle(keywordJob(2));
+
+    expect(checkKeyword).toHaveBeenNthCalledWith(1, 'kw1', false);
+    expect(checkKeyword).toHaveBeenNthCalledWith(2, 'kw1', true);
   });
 
   it('runs the job inside the workspace its payload carries', async () => {

@@ -1,7 +1,8 @@
+import { Logger } from '@nestjs/common';
 import type { WorkspaceContext } from '../common/tenancy/workspace-context';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { AscAnalyticsApi } from './asc-analytics-api';
-import { AscError, AscForbiddenError } from './asc-errors';
+import { AscError, AscForbiddenError, AscUnreachableError } from './asc-errors';
 import type { OpenedConnection } from './store-connection.service';
 import { StoreReportRequester } from './store-report-requester';
 
@@ -304,6 +305,33 @@ describe('StoreReportRequester', () => {
 
     expect(outcome.failed).toBe(1);
     expect(placed(upsert).map((row) => row.appId)).toEqual(['app_2', 'app_2']);
+  });
+
+  it('keeps placing the other apps when apple does not answer for one, and names it', async () => {
+    const warn = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
+    const { requester, connection, upsert, api } = build();
+    api.appsById.mockResolvedValue([
+      { id: '111', name: 'Focus' },
+      { id: '222', name: 'Habits' },
+    ]);
+    api.reportRequests.mockImplementation((storeAppId: string) =>
+      storeAppId === '111'
+        ? Promise.reject(
+            new AscUnreachableError('The operation was aborted due to timeout'),
+          )
+        : Promise.resolve([]),
+    );
+
+    const outcome = await requester.ensure(connection, 'APP_STORE');
+
+    expect(outcome.failed).toBe(1);
+    expect(placed(upsert).map((row) => row.appId)).toEqual(['app_2', 'app_2']);
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringMatching(/app_1 .*aborted due to timeout/),
+    );
+    warn.mockRestore();
   });
 
   it('asks nothing without primary apps', async () => {

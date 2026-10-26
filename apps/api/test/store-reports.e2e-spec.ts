@@ -10,6 +10,8 @@ import type { AscRequest } from '../src/store-connect/asc-transport';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { StoreConnectionService } from '../src/store-connect/store-connection.service';
 import { StoreReportApplier } from '../src/store-connect/store-report-applier';
+import { pivotDiscoveryReport } from '../src/store-connect/discovery-report';
+import { funnelUpserts } from '../src/store-connect/store-funnel-rows';
 import {
   ADMIN_KEY_NEEDED,
   PARTIAL_SYNC,
@@ -46,6 +48,10 @@ const FIXTURE = readFileSync(
     'discovery-standard.tsv',
   ),
 );
+
+const HELD_PAST_DEFAULT_TIMEOUT_MS = 5_500;
+const WAIT_ATTEMPTS = 250;
+const WAIT_INTERVAL_MS = 20;
 
 const report = (requestId: string) => ({
   data: [
@@ -400,6 +406,61 @@ describe('Store report sync (e2e)', () => {
       lastProcessingDate: new Date('2026-09-13T00:00:00.000Z'),
     });
   });
+
+  const waitForFunnelUpsertBlockedBy = async (holder: number) => {
+    for (let attempt = 0; attempt < WAIT_ATTEMPTS; attempt += 1) {
+      const [{ waiting }] = await harness.prisma.$queryRaw<
+        { waiting: bigint }[]
+      >`
+        SELECT COUNT(*) AS waiting
+        FROM pg_stat_activity
+        WHERE datname = current_database()
+          AND ${holder}::int = ANY(pg_blocking_pids(pid))
+          AND query LIKE '%INSERT INTO "StoreFunnelDay"%'
+      `;
+      if (waiting > 0n) return;
+      await new Promise((resolve) => setTimeout(resolve, WAIT_INTERVAL_MS));
+    }
+    throw new Error('The funnel upsert never waited on the held row');
+  };
+
+  it('applies a report whose transaction outlasts the default five seconds', async () => {
+    scriptApple();
+    const rows = await pivotDiscoveryReport(gz, '2026-09-12');
+    const [held] = funnelUpserts(DEFAULT_WORKSPACE_ID, appId, rows.slice(0, 1));
+
+    const { summary } = await harness.prisma.$transaction(
+      async (tx) => {
+        await tx.$executeRaw(held);
+        const [{ holder }] = await tx.$queryRaw<{ holder: number }[]>`
+          SELECT pg_backend_pid() AS holder
+        `;
+        const pending = run();
+        pending.catch(() => undefined);
+        await waitForFunnelUpsertBlockedBy(holder);
+        await new Promise((resolve) =>
+          setTimeout(resolve, HELD_PAST_DEFAULT_TIMEOUT_MS),
+        );
+        return { summary: pending };
+      },
+      { timeout: 30_000 },
+    );
+
+    await expect(summary).resolves.toMatchObject({
+      instances: 1,
+      rows: rows.length,
+    });
+    await expect(
+      harness.prisma.storeFunnelDay.count({ where: { appId } }),
+    ).resolves.toBe(rows.length);
+    await expect(
+      harness.prisma.storeReportRequest.findFirstOrThrow({
+        where: { accessType: 'ONGOING' },
+      }),
+    ).resolves.toMatchObject({
+      lastProcessingDate: new Date('2026-09-12T00:00:00.000Z'),
+    });
+  }, 60_000);
 
   it('downloads the other apps when apple fails the standard listing of one app, and says so', async () => {
     const second = await harness.prisma.app.create({

@@ -76,6 +76,7 @@ export class StoreJobsHandler {
       case JOBS.CHECK_KEYWORD:
         await this.rankings.checkKeyword(
           (job.data as CheckKeywordPayload).keywordId,
+          isFinalAttempt(job),
         );
         return;
       case JOBS.CHECK_CATEGORY:
