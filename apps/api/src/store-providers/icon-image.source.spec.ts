@@ -6,7 +6,12 @@ import {
   IconImageSource,
   MAX_ICON_BYTES,
 } from './icon-image.source';
+import { StoreRequestError } from './errors';
 import { ScreenshotImageSource } from './screenshot-image.source';
+import { withinStoreDeadline } from './store-deadline';
+
+const elapse = (ms: number) =>
+  new Promise((resolve) => setTimeout(resolve, ms));
 
 const ICON_IN =
   'https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/4c/94/fc/4c94fc14-695c-d7d4-d8cc-ea2a3d8d8c66/AppIcon-0-0-1x_U007emarketing-0-8-85-220.png/512x512bb.jpg';
@@ -192,6 +197,20 @@ describe('IconImageSource', () => {
     expect(warn).toHaveBeenCalledWith(
       `the icon pixel comparison of ${ICON_OUT} gave up and the change is recorded: the image request failed: fetch failed`,
     );
+  });
+
+  it('rethrows when the store deadline cut the read', async () => {
+    fetchMock.mockRejectedValue(
+      new DOMException('This operation was aborted', 'AbortError'),
+    );
+
+    await withinStoreDeadline(async () => {
+      await elapse(20);
+      await expect(source.compare(ICON_IN, ICON_IN)).rejects.toThrow(
+        StoreRequestError,
+      );
+    }, 5);
+    expect(warn).not.toHaveBeenCalled();
   });
 
   it('answers null for an error status', async () => {
