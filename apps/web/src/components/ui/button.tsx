@@ -58,17 +58,23 @@ const rendersNothing = (node: React.ReactNode): boolean =>
 const isFragment = (node: React.ReactNode): node is ParentElement =>
   React.isValidElement(node) && node.type === React.Fragment;
 
-function textRuns(nodes: readonly React.ReactNode[]): Map<number, string> {
-  const runs = new Map<number, string>();
-  let start: number | null = null;
-  nodes.forEach((node, index) => {
+type TextRun = { key: string; text: string };
+
+function textRuns(nodes: readonly React.ReactNode[]): Map<number, TextRun> {
+  const runs = new Map<number, TextRun>();
+  let current: TextRun | null = null;
+  for (const [index, node] of nodes.entries()) {
     if (isText(node)) {
-      start ??= index;
-      runs.set(start, `${runs.get(start) ?? ""}${node}`);
+      if (current) {
+        current.text += String(node);
+      } else {
+        current = { key: `text-${runs.size}`, text: String(node) };
+        runs.set(index, current);
+      }
     } else if (!rendersNothing(node)) {
-      start = null;
+      current = null;
     }
-  });
+  }
   return runs;
 }
 
@@ -82,7 +88,7 @@ function textInSpans(children: React.ReactNode): React.ReactNode {
   return nodes.map((node, index) => {
     const run = runs.get(index);
     if (run !== undefined) {
-      return run.trim() ? <span key={`text-${index}`}>{run}</span> : run;
+      return run.text.trim() ? <span key={run.key}>{run.text}</span> : run.text;
     }
     if (isText(node)) return null;
     if (Array.isArray(node)) return textInSpans(node);

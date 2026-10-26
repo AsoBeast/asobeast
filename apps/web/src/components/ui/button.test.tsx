@@ -140,6 +140,17 @@ describe("Button", () => {
     ).toMatch(/>Choose Indie<\/span>$/);
   });
 
+  it("keys a label span the same whether a prefix before it renders", () => {
+    const labelKey = (prefixed: boolean) => {
+      const children: React.ReactNode[] = Button({
+        children: [prefixed && "Track ", "selected"],
+      }).props.children;
+      return children.find((child) => React.isValidElement(child))?.key;
+    };
+
+    expect(labelKey(true)).toBe(labelKey(false));
+  });
+
   it("puts the label of the slotted child of asChild in a span", () => {
     expect(
       renderToStaticMarkup(
