@@ -49,8 +49,11 @@ const isText = (node: React.ReactNode): node is string | number | bigint =>
   typeof node === "number" ||
   typeof node === "bigint";
 
+const isAbsent = (node: React.ReactNode): node is null | undefined =>
+  node === null || node === undefined;
+
 const rendersNothing = (node: React.ReactNode): boolean =>
-  node === null || node === undefined || typeof node === "boolean";
+  isAbsent(node) || typeof node === "boolean";
 
 const isFragment = (node: React.ReactNode): node is ParentElement =>
   React.isValidElement(node) && node.type === React.Fragment;
@@ -69,7 +72,8 @@ function textRuns(nodes: readonly React.ReactNode[]): Map<number, string> {
   return runs;
 }
 
-function textInSpans(children: React.ReactNode): React.ReactNode[] {
+function textInSpans(children: React.ReactNode): React.ReactNode {
+  if (isAbsent(children)) return children;
   const nodes = Array.isArray(children) ? children : [children];
   const runs = textRuns(nodes);
   return nodes.map((node, index) => {
@@ -91,7 +95,8 @@ function textInSpans(children: React.ReactNode): React.ReactNode[] {
 }
 
 const slottedTextInSpans = (child: React.ReactNode): React.ReactNode =>
-  React.isValidElement<ParentElement["props"]>(child)
+  React.isValidElement<ParentElement["props"]>(child) &&
+  !isAbsent(child.props.children)
     ? React.cloneElement(child, undefined, textInSpans(child.props.children))
     : child;
 

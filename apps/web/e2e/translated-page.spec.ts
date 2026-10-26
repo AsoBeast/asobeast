@@ -88,8 +88,11 @@ async function openUpgrade(page: Page): Promise<void> {
 }
 
 async function translateText(page: Page): Promise<void> {
-  await page.locator("main").evaluate((main) => {
-    const walker = document.createTreeWalker(main, NodeFilter.SHOW_TEXT);
+  await page.evaluate(() => {
+    const walker = document.createTreeWalker(
+      document.body,
+      NodeFilter.SHOW_TEXT,
+    );
     const texts: Text[] = [];
     while (walker.nextNode()) texts.push(walker.currentNode as Text);
     for (const text of texts.filter((node) => node.data.trim())) {

@@ -86,6 +86,30 @@ describe("Button", () => {
     ).toBe(`${SPINNER} <span class="sr-only">Close</span>`);
   });
 
+  it("gives a button or slotted child without children none", () => {
+    const Fallback = ({ children }: { children?: React.ReactNode }) => (
+      <span>{children ?? "Fallback"}</span>
+    );
+
+    expect(renderToStaticMarkup(<Button aria-label="Close" />)).toMatch(
+      /^<button [^>]*><\/button>$/,
+    );
+    expect(
+      renderToStaticMarkup(
+        <Button asChild>
+          <input aria-label="Name" />
+        </Button>,
+      ),
+    ).toMatch(/^<input [^>]*aria-label="Name"[^>]*\/>$/);
+    expect(
+      renderToStaticMarkup(
+        <Button asChild>
+          <Fallback />
+        </Button>,
+      ),
+    ).toMatch(/>Fallback<\/span>$/);
+  });
+
   it("puts the label of the slotted child of asChild in a span", () => {
     expect(
       renderToStaticMarkup(
