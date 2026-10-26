@@ -804,6 +804,19 @@ describe('RankingsService.checkKeyword', () => {
       expect(withTransaction).not.toHaveBeenCalled();
     });
 
+    it('settles an app store search still empty on the last attempt without writing anything', async () => {
+      const { service, search, upsert, withTransaction } = setup({
+        searchResults: [],
+        previousSerp: [{ storeAppId: 'primary-store', title: 'Primary' }],
+      });
+
+      expect(await settled(service.checkKeyword('kw1', true))).toBeUndefined();
+
+      expect(search).toHaveBeenCalledTimes(1 + EMPTY_ANSWER_RETRIES.APP_STORE);
+      expect(upsert).not.toHaveBeenCalled();
+      expect(withTransaction).not.toHaveBeenCalled();
+    });
+
     it('refuses an empty google play search at once, as a soft block', async () => {
       const { service, search, upsert, keywordFindUnique } = setup({
         searchResults: [],
@@ -822,6 +835,26 @@ describe('RankingsService.checkKeyword', () => {
       });
 
       expect(search).toHaveBeenCalledTimes(1);
+      expect(upsert).not.toHaveBeenCalled();
+    });
+
+    it('still refuses an empty google play search on the last attempt', async () => {
+      const { service, upsert, keywordFindUnique } = setup({
+        searchResults: [],
+        previousSerp: [{ storeAppId: 'primary-store', title: 'Primary' }],
+      });
+      keywordFindUnique.mockResolvedValue({
+        id: 'kw1',
+        text: 'habit tracker',
+        store: Store.GOOGLE_PLAY,
+        country: 'us',
+      });
+
+      expect(await settled(service.checkKeyword('kw1', true))).toMatchObject({
+        constructor: ImplausibleResultError,
+        retryable: false,
+      });
+
       expect(upsert).not.toHaveBeenCalled();
     });
 
