@@ -6,7 +6,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import type { FunnelRow } from '../discovery-report';
 import { StoreConnectionService } from '../store-connection.service';
 import { PLAY_ALL_MARKETS } from '../store-funnel';
-import { funnelUpserts } from '../store-funnel-rows';
+import { funnelUpserts, reportTransaction } from '../store-funnel-rows';
 import { emptySummary, type SyncSummary } from '../store-sync-summary';
 import {
   GcsBucketError,
@@ -101,6 +101,24 @@ function imported(
     terms: searchTermsOf(table),
   };
 }
+
+interface TermOwner {
+  workspaceId: string;
+  appId: string;
+  generation: string;
+}
+
+const termRowsOf = (terms: SearchTermRow[], month: string, owner: TermOwner) =>
+  terms
+    .filter((term) => term.month === month)
+    .map((term) => ({
+      ...owner,
+      month: dateValue(term.month),
+      term: term.term,
+      normalized: term.normalized,
+      visitors: term.visitors,
+      acquisitions: term.acquisitions,
+    }));
 
 type FileOutcome = 'forbidden' | 'vanished' | 'failed';
 
@@ -297,6 +315,12 @@ export class PlayReportSync {
     const { rows, terms } = imported(breakdown, raw, processed);
     const workspaceId = this.workspace.require('a play report file');
     const processingDate = dateValue(processed);
+    const termRows = termRowsOf(terms, month, {
+      workspaceId,
+      appId,
+      generation: object.generation,
+    });
+    const transaction = reportTransaction(rows.length + termRows.length);
     await this.prisma.withTransaction(async (tx) => {
       const stored = await tx.storeReportInstance.upsert({
         where: { requestId_remoteId: { requestId, remoteId } },
@@ -323,20 +347,7 @@ export class PlayReportSync {
         await tx.storeFunnelSearchTerm.deleteMany({
           where: { appId, month: dateValue(month) },
         });
-        await tx.storeFunnelSearchTerm.createMany({
-          data: terms
-            .filter((term) => term.month === month)
-            .map((term) => ({
-              workspaceId,
-              appId,
-              month: dateValue(term.month),
-              term: term.term,
-              normalized: term.normalized,
-              visitors: term.visitors,
-              acquisitions: term.acquisitions,
-              generation: object.generation,
-            })),
-        });
+        await tx.storeFunnelSearchTerm.createMany({ data: termRows });
       }
       await tx.storeReportRequest.updateMany({
         where: {
@@ -352,7 +363,7 @@ export class PlayReportSync {
         where: { id: stored.id },
         data: { appliedAt: new Date() },
       });
-    });
+    }, transaction);
     summary.instances += 1;
     summary.rows += rows.length;
     this.logger.debug(

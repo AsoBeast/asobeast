@@ -47,6 +47,39 @@ const FIXTURE = readFileSync(
   ),
 );
 
+const LARGE_REPORT_DAYS = 10;
+const LARGE_REPORT_TERRITORIES = 175;
+const LARGE_REPORT_SOURCES = [
+  'App Store search',
+  'App Store browse',
+  'App referrer',
+  'Unavailable',
+];
+const LARGE_REPORT_PAGES = ['Product page', 'No page', 'In-App Event', 'Other'];
+const LARGE_REPORT_ROWS =
+  LARGE_REPORT_DAYS *
+  LARGE_REPORT_TERRITORIES *
+  LARGE_REPORT_SOURCES.length *
+  LARGE_REPORT_PAGES.length;
+
+function largeReport(): Buffer {
+  const header = FIXTURE.toString().split('\n')[0];
+  const lines = [header];
+  for (let day = 1; day <= LARGE_REPORT_DAYS; day++) {
+    const date = `2026-09-${String(day).padStart(2, '0')}`;
+    for (let territory = 0; territory < LARGE_REPORT_TERRITORIES; territory++) {
+      for (const source of LARGE_REPORT_SOURCES) {
+        for (const page of LARGE_REPORT_PAGES) {
+          lines.push(
+            `${date}\tFocus Timer\t${STORE_APP_ID}\tImpression\t${page}\t${source}\t\tiPhone\tiOS 18.0\tTerritory ${territory}\t10\t8`,
+          );
+        }
+      }
+    }
+  }
+  return gzipSync(Buffer.from(lines.join('\n')));
+}
+
 const report = (requestId: string) => ({
   data: [
     {
@@ -400,6 +433,32 @@ describe('Store report sync (e2e)', () => {
       lastProcessingDate: new Date('2026-09-13T00:00:00.000Z'),
     });
   });
+
+  it('applies a report too large to apply within the default five second transaction', async () => {
+    scriptApple();
+    const large = largeReport();
+    harness.asc
+      .on(
+        'GET',
+        /\/analyticsReportInstances\/i1\/segments/,
+        answer(segmentOf('i1', large)),
+      )
+      .on('GET', /i1\.csv\.gz$/, bytes(large));
+
+    const summary = await run();
+
+    expect(summary).toMatchObject({ instances: 1, rows: LARGE_REPORT_ROWS });
+    await expect(
+      harness.prisma.storeFunnelDay.count({ where: { appId } }),
+    ).resolves.toBe(LARGE_REPORT_ROWS);
+    await expect(
+      harness.prisma.storeReportRequest.findFirstOrThrow({
+        where: { accessType: 'ONGOING' },
+      }),
+    ).resolves.toMatchObject({
+      lastProcessingDate: new Date('2026-09-12T00:00:00.000Z'),
+    });
+  }, 120_000);
 
   it('downloads the other apps when apple fails the standard listing of one app, and says so', async () => {
     const second = await harness.prisma.app.create({

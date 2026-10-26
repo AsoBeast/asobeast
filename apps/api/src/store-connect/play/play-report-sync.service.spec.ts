@@ -210,6 +210,18 @@ describe('PlayReportSync', () => {
     );
   });
 
+  it('gives each file transaction more than the default five seconds', async () => {
+    const { service, prisma } = harness([object('202609', 'country')]);
+
+    await service.run(NOW);
+
+    const [, options] = prisma.withTransaction.mock.calls[0] as unknown as [
+      unknown,
+      { timeout?: number } | undefined,
+    ];
+    expect(options?.timeout).toBeGreaterThan(5000);
+  });
+
   it("replaces the month's rows of the breakdown a newer file brings", async () => {
     const { service, tx } = harness([
       object('202609', 'country'),
