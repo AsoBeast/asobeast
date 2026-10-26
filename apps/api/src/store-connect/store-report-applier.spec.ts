@@ -29,7 +29,7 @@ const segment = (id: string, bytes: Buffer, checksum: string): AscSegment => ({
 
 const PRISMA_DEFAULT_TIMEOUT_MS = 5000;
 
-const reportOf = (rows: number): Buffer =>
+const reportOf = (rows: number) =>
   gzipSync(
     Buffer.from(
       HEADER +
