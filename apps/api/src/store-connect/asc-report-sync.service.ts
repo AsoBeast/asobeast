@@ -5,12 +5,11 @@ import { toDateKey } from '../analytics/analytics.support';
 import { PrismaService } from '../prisma/prisma.service';
 import type { DiscoveryVariant } from './asc-analytics-api';
 import {
-  AscError,
   AscRateLimitedError,
   AscRejectedKeyError,
   AscSegmentSizeError,
-  AscUnreachableError,
   isNotFound,
+  isSkippableError,
 } from './asc-errors';
 import { DiscoveryHeaderError, DiscoveryLineError } from './discovery-report';
 import { refusalOf } from './asc-http-errors';
@@ -36,12 +35,9 @@ export const ADMIN_KEY_NEEDED =
 const isLaneFailure = (error: unknown, variant: DiscoveryVariant): boolean =>
   (variant === 'detailed' && !(error instanceof AscRateLimitedError)) ||
   error instanceof AscSegmentSizeError ||
-  error instanceof AscUnreachableError ||
   error instanceof DiscoveryHeaderError ||
   error instanceof DiscoveryLineError ||
-  (error instanceof AscError &&
-    !(error instanceof AscRejectedKeyError) &&
-    !(error instanceof AscRateLimitedError));
+  isSkippableError(error);
 
 const messageOf = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
