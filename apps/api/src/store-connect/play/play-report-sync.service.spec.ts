@@ -5,6 +5,7 @@ import { SignInOffError } from './google-sign-in';
 import type { WorkspaceContext } from '../../common/tenancy/workspace-context';
 import type { PrismaService } from '../../prisma/prisma.service';
 import type { StoreConnectionService } from '../store-connection.service';
+import { FUNNEL_UPSERT_BATCH } from '../store-funnel-rows';
 import {
   GcsBucketError,
   GcsRateLimitedError,
@@ -220,6 +221,36 @@ describe('PlayReportSync', () => {
       { timeout?: number } | undefined,
     ];
     expect(options?.timeout).toBeGreaterThan(5000);
+  });
+
+  it('gives a traffic file more time for every batch of search terms it carries', async () => {
+    const timeoutFor = async (file: Buffer) => {
+      const { service, prisma, api } = harness([
+        object('202609', 'traffic_source'),
+      ]);
+      api.download.mockResolvedValue(file);
+      await service.run(NOW);
+      const [, options] = prisma.withTransaction.mock.calls[0] as unknown as [
+        unknown,
+        { timeout?: number } | undefined,
+      ];
+      return options?.timeout ?? 0;
+    };
+    const manyTerms = Buffer.from(
+      [
+        'Date,Package name,Traffic source,Search term,UTM source,UTM campaign,Store listing acquisitions,Store listing visitors',
+        ...Array.from(
+          { length: FUNNEL_UPSERT_BATCH * 2 },
+          (_, term) =>
+            `2026-09-01,${PACKAGE},Google Play search,term ${term},,,1,10`,
+        ),
+      ].join('\n'),
+    );
+
+    const few = await timeoutFor(FILES.traffic_source);
+    const many = await timeoutFor(manyTerms);
+
+    expect(many).toBeGreaterThan(few);
   });
 
   it("replaces the month's rows of the breakdown a newer file brings", async () => {
