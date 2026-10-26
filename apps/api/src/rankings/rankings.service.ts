@@ -15,6 +15,7 @@ import {
   askAgainWhileEmpty,
   EMPTY_ANSWER_RETRIES,
   isImplausiblyEmpty,
+  settleOnLastAttempt,
 } from '../store-providers/result-plausibility';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { SearchItem } from '../store-providers/types';
@@ -173,16 +174,14 @@ export class RankingsService {
     const retries = EMPTY_ANSWER_RETRIES[keyword.store];
     const again = await askAgainWhileEmpty(ask, retries, results);
     if (again.length > 0) return again;
-    const empty = new ImplausibleResultError(
-      keyword.store,
-      `"${keyword.text}" returned no results in ${keyword.country} but ranked apps on ${toDateKey(lastRanked.date)}`,
-      { retryable: retries > 0 },
+    return settleOnLastAttempt(
+      new ImplausibleResultError(
+        keyword.store,
+        `"${keyword.text}" returned no results in ${keyword.country} but ranked apps on ${toDateKey(lastRanked.date)}`,
+        { retryable: retries > 0 },
+      ),
+      { finalAttempt, logger: this.logger, next: 'check', settled: null },
     );
-    if (!finalAttempt || !empty.retryable) throw empty;
-    this.logger.warn(
-      `last attempt: ${empty.message}, so nothing changes until the next check`,
-    );
-    return null;
   }
 
   private async collectableFor(

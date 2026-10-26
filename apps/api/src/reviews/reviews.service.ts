@@ -20,6 +20,7 @@ import {
   EMPTY_ANSWER_RETRIES,
   IMPLAUSIBLE_LOOKBACK_DAYS,
   isImplausiblyEmpty,
+  settleOnLastAttempt,
 } from '../store-providers/result-plausibility';
 import { ratingHistogram } from '../store-providers/raw-facts';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
@@ -174,16 +175,14 @@ export class ReviewsService {
     retries: number,
     finalAttempt: boolean,
   ): ReviewResult[] {
-    const empty = new ImplausibleResultError(
-      app.store,
-      `the review feed for ${app.storeAppId} came back empty for an app that was receiving reviews within the last ${IMPLAUSIBLE_LOOKBACK_DAYS} days`,
-      { retryable: retries > 0 },
+    return settleOnLastAttempt(
+      new ImplausibleResultError(
+        app.store,
+        `the review feed for ${app.storeAppId} came back empty for an app that was receiving reviews within the last ${IMPLAUSIBLE_LOOKBACK_DAYS} days`,
+        { retryable: retries > 0 },
+      ),
+      { finalAttempt, logger: this.logger, next: 'sync', settled: [] },
     );
-    if (!finalAttempt || !empty.retryable) throw empty;
-    this.logger.warn(
-      `last attempt: ${empty.message}, so nothing changes until the next sync`,
-    );
-    return [];
   }
 
   private async fetchPages(
