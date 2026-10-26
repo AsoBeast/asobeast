@@ -1,3 +1,5 @@
+import * as React from "react";
+import { Slot } from "radix-ui";
 import { renderToStaticMarkup, renderToString } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { Button } from "./button";
@@ -108,6 +110,34 @@ describe("Button", () => {
         </Button>,
       ),
     ).toMatch(/>Fallback<\/span>$/);
+  });
+
+  it("slots through a nested asChild whose child is one element", () => {
+    expect(
+      renderToStaticMarkup(
+        <Button asChild>
+          <Slot.Root data-nested="">
+            <a href="/upgrade">Upgrade</a>
+          </Slot.Root>
+        </Button>,
+      ),
+    ).toMatch(/^<a [^>]*data-nested=""[^>]*>Upgrade<\/a>$/);
+  });
+
+  it("hands a render prop child of the slotted child through unchanged", () => {
+    const Greeting = ({
+      children,
+    }: {
+      children: (name: string) => React.ReactNode;
+    }) => <span>{children("Indie")}</span>;
+
+    expect(
+      renderToStaticMarkup(
+        <Button asChild>
+          <Greeting>{(name) => `Choose ${name}`}</Greeting>
+        </Button>,
+      ),
+    ).toMatch(/>Choose Indie<\/span>$/);
   });
 
   it("puts the label of the slotted child of asChild in a span", () => {

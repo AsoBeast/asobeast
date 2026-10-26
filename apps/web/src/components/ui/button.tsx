@@ -72,8 +72,11 @@ function textRuns(nodes: readonly React.ReactNode[]): Map<number, string> {
   return runs;
 }
 
+const isOpaque = (children: React.ReactNode): boolean =>
+  !Array.isArray(children) && !isText(children) && !isFragment(children);
+
 function textInSpans(children: React.ReactNode): React.ReactNode {
-  if (isAbsent(children)) return children;
+  if (isOpaque(children)) return children;
   const nodes = Array.isArray(children) ? children : [children];
   const runs = textRuns(nodes);
   return nodes.map((node, index) => {
