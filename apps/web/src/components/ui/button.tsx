@@ -42,7 +42,10 @@ const buttonVariants = cva(
   },
 );
 
-type ParentElement = React.ReactElement<{ children?: React.ReactNode }>;
+type ParentElement = React.ReactElement<{
+  children?: React.ReactNode;
+  asChild?: boolean;
+}>;
 
 const isText = (node: React.ReactNode): node is string | number | bigint =>
   typeof node === "string" ||
@@ -103,11 +106,21 @@ function textInSpans(children: React.ReactNode): React.ReactNode {
   });
 }
 
-const slottedTextInSpans = (child: React.ReactNode): React.ReactNode =>
-  React.isValidElement<ParentElement["props"]>(child) &&
-  !isAbsent(child.props.children)
-    ? React.cloneElement(child, undefined, textInSpans(child.props.children))
-    : child;
+const slotsOntoItsChild = (element: ParentElement): boolean =>
+  element.type === Slot.Root || element.props.asChild === true;
+
+function slottedTextInSpans(child: React.ReactNode): React.ReactNode {
+  if (
+    !React.isValidElement<ParentElement["props"]>(child) ||
+    isAbsent(child.props.children)
+  ) {
+    return child;
+  }
+  const children = slotsOntoItsChild(child)
+    ? slottedTextInSpans(child.props.children)
+    : textInSpans(child.props.children);
+  return React.cloneElement(child, undefined, children);
+}
 
 function Button({
   className,

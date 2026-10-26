@@ -112,16 +112,39 @@ describe("Button", () => {
     ).toMatch(/>Fallback<\/span>$/);
   });
 
-  it("slots through a nested asChild whose child is one element", () => {
+  it("puts the label of a nested slot's element in a span", () => {
     expect(
       renderToStaticMarkup(
         <Button asChild>
           <Slot.Root data-nested="">
-            <a href="/upgrade">Upgrade</a>
+            <a href="/upgrade">
+              <Spinner />
+              Upgrade
+            </a>
           </Slot.Root>
         </Button>,
       ),
-    ).toMatch(/^<a [^>]*data-nested=""[^>]*>Upgrade<\/a>$/);
+    ).toMatch(
+      /^<a [^>]*data-nested=""[^>]*><svg data-testid="spinner"><\/svg><span>Upgrade<\/span><\/a>$/,
+    );
+  });
+
+  it("puts the label under a primitive that slots through asChild in a span", () => {
+    const Action = ({
+      asChild,
+      ...props
+    }: React.ComponentProps<"button"> & { asChild?: boolean }) =>
+      asChild ? <Slot.Root {...props} /> : <button {...props} />;
+
+    expect(
+      renderToStaticMarkup(
+        <Button asChild>
+          <Action asChild>
+            <a href="/upgrade">Upgrade</a>
+          </Action>
+        </Button>,
+      ),
+    ).toMatch(/^<a [^>]*href="\/upgrade"[^>]*><span>Upgrade<\/span><\/a>$/);
   });
 
   it("hands a render prop child of the slotted child through unchanged", () => {
