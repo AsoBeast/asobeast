@@ -3,6 +3,7 @@ import {
   MAX_SCREENSHOT_BYTES,
   ScreenshotImageSource,
 } from './screenshot-image.source';
+import { withinStoreDeadline } from './store-deadline';
 
 const URL_IN =
   'https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/50/e2/8b/50e28b44/1_iOS_5.5.jpg/392x696bb.jpg';
@@ -208,5 +209,39 @@ describe('ScreenshotImageSource', () => {
     );
 
     expect((await failure(source)).retryable).toBe(false);
+  });
+
+  it('honours the width and the byte cap the caller passes', async () => {
+    fetchMock.mockResolvedValue(
+      image(new Uint8Array(2048), {
+        'content-length': String(2048),
+      }),
+    );
+
+    await expect(
+      source.read(URL_IN, { width: 512, maxBytes: 1024 }),
+    ).rejects.toThrow('over the 1024 byte cap');
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      'https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/50/e2/8b/50e28b44/1_iOS_5.5.jpg/512x0w.jpg',
+    );
+  });
+
+  it('aborts when the on demand store deadline passes first', async () => {
+    fetchMock.mockImplementation(
+      (_address: string | URL, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () =>
+            reject(init.signal.reason),
+          );
+        }),
+    );
+
+    await withinStoreDeadline(
+      () =>
+        expect(source.read(URL_IN, { timeoutMs: 60_000 })).rejects.toThrow(
+          'the image request failed',
+        ),
+      20,
+    );
   });
 });
