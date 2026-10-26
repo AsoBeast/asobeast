@@ -8,7 +8,7 @@ import {
 } from '@asobeast/shared';
 import { AlertsDispatcher } from '../alerts/alerts.dispatcher';
 import { PrismaService } from '../prisma/prisma.service';
-import { IconImageSource } from '../store-providers/icon-image';
+import { IconImageSource } from '../store-providers/icon-image.source';
 import { readChangeDetail } from './change-detail';
 import {
   DetectedChange,

@@ -3,7 +3,7 @@ import { Test } from '@nestjs/testing';
 import { UnknownStorefrontError } from '@asobeast/shared';
 import { AlertsDispatcher } from '../alerts/alerts.dispatcher';
 import { PrismaService } from '../prisma/prisma.service';
-import { IconImageSource } from '../store-providers/icon-image';
+import { IconImageSource } from '../store-providers/icon-image.source';
 import { DiffableChangeSnapshot } from './change-detector';
 import { ChangesService } from './changes.service';
 

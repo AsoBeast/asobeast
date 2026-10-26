@@ -1,9 +1,12 @@
+import { Logger } from '@nestjs/common';
 import sharp from 'sharp';
 import {
+  ICON_PIXEL_TOLERANCE,
   ICON_RENDITION_WIDTH,
   IconImageSource,
   MAX_ICON_BYTES,
-} from './icon-image';
+} from './icon-image.source';
+import { ScreenshotImageSource } from './screenshot-image.source';
 
 const ICON_IN =
   'https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/4c/94/fc/4c94fc14-695c-d7d4-d8cc-ea2a3d8d8c66/AppIcon-0-0-1x_U007emarketing-0-8-85-220.png/512x512bb.jpg';
@@ -27,6 +30,19 @@ const pngOf = (
   })
     .png()
     .toBuffer();
+
+const pngOfPixels = (pixels: {
+  r: number;
+  g: number;
+  b: number;
+}): Promise<Buffer> => {
+  const pixel = [pixels.r, pixels.g, pixels.b];
+  return sharp(Buffer.from([...pixel, ...pixel, ...pixel, ...pixel]), {
+    raw: { width: 2, height: 2, channels: 3 },
+  })
+    .png()
+    .toBuffer();
+};
 
 const samePictureDifferentBytes = async (): Promise<{
   jpeg: Buffer;
@@ -57,10 +73,20 @@ const samePictureDifferentBytes = async (): Promise<{
 
 describe('IconImageSource', () => {
   const fetchMock = jest.spyOn(globalThis, 'fetch');
-  const source = new IconImageSource();
+  const warn = jest
+    .spyOn(Logger.prototype, 'warn')
+    .mockImplementation(() => {});
+  let source: IconImageSource;
 
-  beforeEach(() => fetchMock.mockReset());
-  afterAll(() => fetchMock.mockRestore());
+  beforeEach(() => {
+    fetchMock.mockReset();
+    warn.mockClear();
+    source = new IconImageSource(new ScreenshotImageSource());
+  });
+  afterAll(() => {
+    fetchMock.mockRestore();
+    warn.mockRestore();
+  });
 
   it('answers true for two addresses that draw the same picture', async () => {
     const { jpeg, png } = await samePictureDifferentBytes();
@@ -74,6 +100,48 @@ describe('IconImageSource', () => {
       ICON_OUT,
       ICON_OUT,
     ]);
+  });
+
+  it('answers true when every channel sits within the tolerance', async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        image(await pngOfPixels({ r: 255, g: 0, b: 0 }), {
+          'content-type': 'image/png',
+        }),
+      )
+      .mockResolvedValueOnce(
+        image(
+          await pngOfPixels({
+            r: 255 - ICON_PIXEL_TOLERANCE,
+            g: ICON_PIXEL_TOLERANCE,
+            b: 1,
+          }),
+          { 'content-type': 'image/png' },
+        ),
+      );
+
+    await expect(source.compare(ICON_IN, ICON_IN)).resolves.toBe(true);
+  });
+
+  it('answers false when a channel moves past the tolerance', async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        image(await pngOfPixels({ r: 255, g: 0, b: 0 }), {
+          'content-type': 'image/png',
+        }),
+      )
+      .mockResolvedValueOnce(
+        image(
+          await pngOfPixels({
+            r: 255 - ICON_PIXEL_TOLERANCE - 1,
+            g: 0,
+            b: 0,
+          }),
+          { 'content-type': 'image/png' },
+        ),
+      );
+
+    await expect(source.compare(ICON_IN, ICON_IN)).resolves.toBe(false);
   });
 
   it('answers false when the pictures differ', async () => {
@@ -113,13 +181,17 @@ describe('IconImageSource', () => {
     async (_label, before) => {
       await expect(source.compare(before, before)).resolves.toBeNull();
       expect(fetchMock).not.toHaveBeenCalled();
+      expect(warn).not.toHaveBeenCalled();
     },
   );
 
-  it('answers null when a download fails', async () => {
+  it('answers null when a download fails and says so', async () => {
     fetchMock.mockRejectedValue(new TypeError('fetch failed'));
 
     await expect(source.compare(ICON_IN, ICON_IN)).resolves.toBeNull();
+    expect(warn).toHaveBeenCalledWith(
+      `the icon pixel comparison of ${ICON_OUT} gave up and the change is recorded: the image request failed: fetch failed`,
+    );
   });
 
   it('answers null for an error status', async () => {
@@ -170,5 +242,14 @@ describe('IconImageSource', () => {
 
     await expect(source.compare(ICON_IN, ICON_IN)).resolves.toBeNull();
     expect(cancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('downloads a rendition once while the capture keeps comparing', async () => {
+    const { jpeg } = await samePictureDifferentBytes();
+    fetchMock.mockImplementation(async () => image(jpeg));
+
+    await expect(source.compare(ICON_IN, ICON_IN)).resolves.toBe(true);
+    await expect(source.compare(ICON_IN, ICON_IN)).resolves.toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });

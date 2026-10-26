@@ -12,7 +12,7 @@ import {
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
-import { IconImageSource } from '../src/store-providers/icon-image';
+import { IconImageSource } from '../src/store-providers/icon-image.source';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import { ownerAgent, useCookies } from './helpers/session';
 import {
