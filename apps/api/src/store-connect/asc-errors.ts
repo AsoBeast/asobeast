@@ -28,7 +28,9 @@ export class AscUnreachableError extends Error {
   }
 }
 
-export const isSkippableError = (error: unknown): boolean =>
+export const isSkippableError = (
+  error: unknown,
+): error is AscError | AscUnreachableError =>
   error instanceof AscUnreachableError ||
   (error instanceof AscError &&
     !(error instanceof AscRejectedKeyError) &&

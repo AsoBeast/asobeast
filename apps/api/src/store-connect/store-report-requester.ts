@@ -115,7 +115,7 @@ export class StoreReportRequester {
         if (!isSkippableError(error)) throw error;
         outcome.failed += 1;
         this.logger.warn(
-          `report requests of app ${app.id} wait for the next sync: ${(error as Error).message}`,
+          `report requests of app ${app.id} wait for the next sync: ${error.message}`,
         );
       }
     }
