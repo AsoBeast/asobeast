@@ -221,14 +221,22 @@ describe('ChangesService', () => {
       });
     });
 
-    it('keeps the event when the pixels could not be compared', async () => {
-      const prev = makeSnapshot({ iconUrl: iconA });
-      const next = makeSnapshot({ iconUrl: iconB });
+    it('persists every change of the refresh when the pixels could not be compared', async () => {
+      const prev = makeSnapshot({ title: 'Old', iconUrl: iconA });
+      const next = makeSnapshot({ title: 'New', iconUrl: iconB });
 
       const changes = await service.recordRefresh('app_1', prev, next);
 
-      expect(changes).toEqual([{ field: 'icon', before: iconA, after: iconB }]);
-      expect(createMany).toHaveBeenCalledTimes(1);
+      expect(changes).toEqual([
+        { field: 'title', before: 'Old', after: 'New' },
+        { field: 'icon', before: iconA, after: iconB },
+      ]);
+      expect(createMany).toHaveBeenCalledWith({
+        data: [
+          { appId: 'app_1', field: 'title', before: 'Old', after: 'New' },
+          { appId: 'app_1', field: 'icon', before: iconA, after: iconB },
+        ],
+      });
     });
 
     it('compares the icons of a market refresh too', async () => {

@@ -6,7 +6,6 @@ import {
   IconImageSource,
   MAX_ICON_BYTES,
 } from './icon-image.source';
-import { StoreRequestError } from './errors';
 import { ScreenshotImageSource } from './screenshot-image.source';
 import { withinStoreDeadline } from './store-deadline';
 
@@ -199,16 +198,14 @@ describe('IconImageSource', () => {
     );
   });
 
-  it('rethrows when the store deadline cut the read', async () => {
+  it('answers null when the store deadline cut the read', async () => {
     fetchMock.mockRejectedValue(
       new DOMException('This operation was aborted', 'AbortError'),
     );
 
     await withinStoreDeadline(async () => {
       await elapse(20);
-      await expect(source.compare(ICON_IN, ICON_IN)).rejects.toThrow(
-        StoreRequestError,
-      );
+      await expect(source.compare(ICON_IN, ICON_IN)).resolves.toBeNull();
     }, 5);
     expect(warn).not.toHaveBeenCalled();
   });

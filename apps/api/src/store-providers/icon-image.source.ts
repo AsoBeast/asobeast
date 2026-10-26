@@ -1,7 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Store } from '@prisma/client';
 import sharp from 'sharp';
-import { StoreRequestError } from './errors';
 import { ScreenshotImageSource } from './screenshot-image.source';
 import { appleRenditionUrl } from './screenshot-urls';
 import { storeDeadlinePassed } from './store-deadline';
@@ -68,9 +66,7 @@ export class IconImageSource {
       this.remember(address, icon);
       return icon;
     } catch (error) {
-      if (storeDeadlinePassed()) {
-        throw new StoreRequestError(Store.APP_STORE, 'read', reason(error));
-      }
+      if (storeDeadlinePassed()) return null;
       this.logger.warn(
         `the icon pixel comparison of ${address} gave up and the change is recorded: ${reason(error)}`,
       );
