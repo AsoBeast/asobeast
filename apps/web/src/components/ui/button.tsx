@@ -42,11 +42,42 @@ const buttonVariants = cva(
   },
 );
 
+const isText = (node: React.ReactNode): node is string | number | bigint =>
+  ["string", "number", "bigint"].includes(typeof node);
+
+const isFragment = (
+  node: React.ReactNode,
+): node is React.ReactElement<{ children?: React.ReactNode }> =>
+  React.isValidElement(node) && node.type === React.Fragment;
+
+function textRunFrom(nodes: readonly React.ReactNode[], start: number): string {
+  const rest = nodes.slice(start);
+  const end = rest.findIndex((node) => !isText(node));
+  return rest.slice(0, end === -1 ? undefined : end).join("");
+}
+
+function textInSpans(children: React.ReactNode): React.ReactNode[] {
+  const nodes = Array.isArray(children) ? children : [children];
+  return nodes.map((node, index) => {
+    if (isFragment(node)) {
+      return (
+        <React.Fragment key={node.key ?? `fragment-${index}`}>
+          {textInSpans(node.props.children)}
+        </React.Fragment>
+      );
+    }
+    if (!isText(node)) return node;
+    const text = isText(nodes[index - 1]) ? "" : textRunFrom(nodes, index);
+    return text ? <span key={`text-${index}`}>{text}</span> : null;
+  });
+}
+
 function Button({
   className,
   variant = "default",
   size = "default",
   asChild = false,
+  children,
   ...props
 }: React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
@@ -61,7 +92,9 @@ function Button({
       data-size={size}
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
-    />
+    >
+      {asChild ? children : textInSpans(children)}
+    </Comp>
   );
 }
 

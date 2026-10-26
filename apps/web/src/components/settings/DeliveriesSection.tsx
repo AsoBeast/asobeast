@@ -99,7 +99,7 @@ export function DeliveriesSection({
         ) : (
           <ChevronRight className="size-4" />
         )}
-        Recent deliveries
+        <span>Recent deliveries</span>
       </button>
 
       {open ? (
