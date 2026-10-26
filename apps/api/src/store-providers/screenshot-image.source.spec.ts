@@ -231,7 +231,7 @@ describe('ScreenshotImageSource', () => {
       (_address: string | URL, init?: RequestInit) =>
         new Promise<Response>((_resolve, reject) => {
           init?.signal?.addEventListener('abort', () =>
-            reject(init.signal.reason),
+            reject(new Error(`aborted: ${String(init.signal?.reason)}`)),
           );
         }),
     );

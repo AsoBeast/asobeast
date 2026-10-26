@@ -246,7 +246,7 @@ describe('IconImageSource', () => {
 
   it('downloads a rendition once while the capture keeps comparing', async () => {
     const { jpeg } = await samePictureDifferentBytes();
-    fetchMock.mockImplementation(async () => image(jpeg));
+    fetchMock.mockImplementation(() => Promise.resolve(image(jpeg)));
 
     await expect(source.compare(ICON_IN, ICON_IN)).resolves.toBe(true);
     await expect(source.compare(ICON_IN, ICON_IN)).resolves.toBe(true);
