@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   cardAction,
   CLAIM_WINDOW_MS,
+  focusAwaitsRemoval,
   focusCanMoveTo,
   focusIsLost,
   isClaimable,
@@ -45,6 +46,39 @@ describe("focusCanMoveTo", () => {
     );
     expect(
       focusCanMoveTo(target, { activeElement: { tag: "button" }, body }),
+    ).toBe(false);
+  });
+});
+
+describe("focusAwaitsRemoval", () => {
+  const target = { tag: "next" };
+  const stop = { tag: "stop" };
+
+  it("is true while focus still rests on the control that handed off", () => {
+    expect(
+      focusAwaitsRemoval(stop, target, { activeElement: stop, body }),
+    ).toBe(true);
+  });
+
+  it("is false once the control is gone and focus is lost", () => {
+    expect(
+      focusAwaitsRemoval(stop, target, { activeElement: body, body }),
+    ).toBe(false);
+  });
+
+  it("is false once the user moved focus elsewhere", () => {
+    expect(
+      focusAwaitsRemoval(stop, target, {
+        activeElement: { tag: "other" },
+        body,
+      }),
+    ).toBe(false);
+  });
+
+  it("is false when focus rests on a container of the target", () => {
+    const popover = { contains: (node: unknown) => node === target };
+    expect(
+      focusAwaitsRemoval(popover, target, { activeElement: popover, body }),
     ).toBe(false);
   });
 });

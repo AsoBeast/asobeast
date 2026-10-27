@@ -90,19 +90,35 @@ export const returnFocusTo =
     element.focus();
   };
 
+export function focusAwaitsRemoval(
+  from: unknown,
+  target: unknown,
+  root: FocusRoot = document,
+): boolean {
+  return root.activeElement === from && !focusCanMoveTo(target, root);
+}
+
+interface PendingFocus {
+  target: HTMLElement;
+  from: unknown;
+}
+
 export function useFocusAfterCommit(): (
   target: HTMLElement | null | undefined,
 ) => void {
-  const pending = useRef<HTMLElement | null>(null);
+  const pending = useRef<PendingFocus | null>(null);
 
   useEffect(() => {
-    const target = pending.current;
+    const handoff = pending.current;
+    if (handoff === null) return;
+    const { target, from } = handoff;
+    if (target.isConnected && focusAwaitsRemoval(from, target)) return;
     pending.current = null;
-    if (target?.isConnected && focusCanMoveTo(target)) target.focus();
+    if (target.isConnected && focusCanMoveTo(target)) target.focus();
   });
 
   return useCallback((target) => {
-    pending.current = target ?? null;
+    pending.current = target ? { target, from: document.activeElement } : null;
   }, []);
 }
 

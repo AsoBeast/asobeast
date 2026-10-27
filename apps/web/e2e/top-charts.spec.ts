@@ -22,6 +22,7 @@ import {
   TOP_PAID_CHART_APPS,
   utcDaysAgo,
 } from "./fixtures.mts";
+import { holdRequest } from "./held-request.mts";
 import { routePlan } from "./plan-helpers.mts";
 
 const formatDayMonth = (date: string) =>
@@ -1222,6 +1223,14 @@ test.describe.serial("chart follows", () => {
     const puzzle = page
       .getByRole("dialog", { name: "Followed charts" })
       .getByRole("button", { name: "Stop following Puzzle · United States" });
+    const listRefetch = await holdRequest(
+      page,
+      /\/api\/backend\/charts\/follows$/,
+      "GET",
+    );
+    const pageRefetch = page.waitForResponse(
+      (response) => new URL(response.url()).pathname === "/api/backend/charts",
+    );
 
     await puzzle.focus();
     await page.keyboard.press("Enter");
@@ -1229,6 +1238,8 @@ test.describe.serial("chart follows", () => {
     await expect(
       page.getByText("Could not stop following the category."),
     ).toBeVisible();
+    await pageRefetch;
+    listRefetch.release();
     await expect(puzzle).toHaveCount(0);
     await expect(stopButtons(page)).toHaveCount(1);
     await expect(stopButtons(page).first()).toBeFocused();
