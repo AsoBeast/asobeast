@@ -57,18 +57,17 @@ export function PaymentColumn({
       <h2 id="payment-title" className="text-title">
         {PAYMENT_TITLE}
       </h2>
-      {publishableKey && price ? (
-        theme ? (
-          <EmbeddedCheckout
-            key={sessionKeyOf(price.priceId, theme)}
-            publishableKey={publishableKey}
-            priceId={price.priceId}
-            theme={theme}
-            label={`Stripe checkout for ${PLANS[name].displayName}, ${INTERVAL_WORD[interval]}`}
-          />
-        ) : (
-          <Skeleton className="h-[28rem] w-full" />
-        )
+      {publishableKey && price && theme ? (
+        <EmbeddedCheckout
+          key={sessionKeyOf(price.priceId, theme)}
+          publishableKey={publishableKey}
+          priceId={price.priceId}
+          theme={theme}
+          label={`Stripe checkout for ${PLANS[name].displayName}, ${INTERVAL_WORD[interval]}`}
+        />
+      ) : null}
+      {publishableKey && price && !theme ? (
+        <Skeleton className="h-[28rem] w-full" />
       ) : null}
       {buysPlan(action) ? (
         <OrderSummary

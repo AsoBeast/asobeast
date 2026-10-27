@@ -4,8 +4,8 @@ import {
   type PaidPlanName,
   type TrialOffer,
 } from "@asobeast/shared";
-import { formatDate, formatUsd } from "@/lib/format";
-import { trialEndsOn } from "@/lib/plan-choice";
+import { formatUsd } from "@/lib/format";
+import { trialEndLabel } from "@/lib/plan-choice";
 
 export const INTERVAL_LABEL: Record<BillingInterval, string> = {
   month: "Monthly",
@@ -43,7 +43,7 @@ export function summaryFromCatalog(
     unitAmount,
     dueToday: offer ? formatUsd(0) : unitAmount,
     thenLine: offer
-      ? `Then ${unitAmount} on ${formatDate(trialEndsOn(offer, now).toISOString())}`
+      ? `Then ${unitAmount} on ${trialEndLabel(offer, now)}`
       : null,
     cancelLine: offer
       ? `${CANCEL_ANY_TIME} ${NOTHING_BEFORE_THE_DATE}`

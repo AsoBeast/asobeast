@@ -5,7 +5,6 @@ import {
   HANDLED_BY_STRIPE,
   PAYMENT_CONFIRMING,
   SOLD_THROUGH_LINK,
-  confirmEmailLine,
   confirmEmailParts,
   memberPlanLine,
   paymentNote,
@@ -435,25 +434,30 @@ describe("suspensionNotice", () => {
   });
 });
 
-describe("confirmEmailLine", () => {
+describe("confirmEmailParts", () => {
+  const sentence = (offered: boolean) => {
+    const { before, address, after } = confirmEmailParts(
+      "owner@example.com",
+      offered,
+    );
+    return `${before}${address}${after}`;
+  };
+
   it("names the address and the trial it leads to", () => {
-    expect(confirmEmailLine("owner@example.com", true)).toBe(
+    expect(sentence(true)).toBe(
       "Thank you for registering. We sent a link to owner@example.com. Open it to continue to your free trial.",
     );
   });
 
   it("names the address alone when no trial follows", () => {
-    expect(confirmEmailLine("owner@example.com", false)).toBe(
+    expect(sentence(false)).toBe(
       "Thank you for registering. We sent a link to owner@example.com. Open it to continue.",
     );
   });
 
-  it("splits the sentence around the address", () => {
-    const parts = confirmEmailParts("owner@example.com", true);
-
-    expect(parts.address).toBe("owner@example.com");
-    expect(`${parts.before}${parts.address}${parts.after}`).toBe(
-      confirmEmailLine("owner@example.com", true),
+  it("sets the address apart from the sentence around it", () => {
+    expect(confirmEmailParts("owner@example.com", true).address).toBe(
+      "owner@example.com",
     );
   });
 });

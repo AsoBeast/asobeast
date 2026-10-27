@@ -134,8 +134,12 @@ export function trialEndsOn(offer: TrialOffer, now: Date): Date {
   return new Date(now.getTime() + offer.days * DAY_MS);
 }
 
+export function trialEndLabel(offer: TrialOffer, now: Date): string {
+  return formatDate(trialEndsOn(offer, now).toISOString());
+}
+
 function trialLine(offer: TrialOffer, now: Date): string {
-  return `Pay $0 today. Your trial ends on ${formatDate(trialEndsOn(offer, now).toISOString())}, then the plan you choose is charged. Cancel any time from settings.`;
+  return `Pay $0 today. Your trial ends on ${trialEndLabel(offer, now)}, then the plan you choose is charged. Cancel any time from settings.`;
 }
 
 export const CONFIRM_EMAIL_TITLE = "Confirm your email";
@@ -162,11 +166,6 @@ export function confirmEmailParts(
     address: email,
     after: `. Open it to continue${offered ? " to your free trial" : ""}.`,
   };
-}
-
-export function confirmEmailLine(email: string, offered: boolean): string {
-  const { before, address, after } = confirmEmailParts(email, offered);
-  return `${before}${address}${after}`;
 }
 
 export const PAYMENT_TITLE = "Payment";
@@ -203,7 +202,7 @@ export function savingPercent(name: PaidPlanName): number {
 }
 
 export function trustLines(offer: TrialOffer, now: Date): readonly string[] {
-  const endsOn = formatDate(trialEndsOn(offer, now).toISOString());
+  const endsOn = trialEndLabel(offer, now);
   return [
     `No risk: cancel before ${endsOn} and nothing is charged`,
     `Pay nothing for the first ${offer.days} days`,
@@ -212,7 +211,7 @@ export function trustLines(offer: TrialOffer, now: Date): readonly string[] {
 }
 
 export function trialBarLine(offer: TrialOffer, now: Date): string {
-  const endsOn = formatDate(trialEndsOn(offer, now).toISOString());
+  const endsOn = trialEndLabel(offer, now);
   return `Your ${offer.days} day trial is 100% free, ending ${endsOn}. Cancel any time from settings.`;
 }
 
@@ -303,7 +302,7 @@ export function trialPaymentNote(
 ): string {
   const note = paymentNote(catalog);
   if (!offer || !catalog?.enabled) return note;
-  return `${note} Your card is verified now and charged on ${formatDate(trialEndsOn(offer, now).toISOString())}.`;
+  return `${note} Your card is verified now and charged on ${trialEndLabel(offer, now)}.`;
 }
 
 export function memberPlanLine(plan: AccountPlan | undefined): string {

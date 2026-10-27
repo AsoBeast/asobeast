@@ -43,7 +43,7 @@ export function signedInDestination(next: string | null | undefined): string {
 }
 
 export function entryDestination(
-  user: Pick<AuthUser, "entitled" | "entryStep">,
+  user: Pick<AuthUser, "entryStep">,
   plan: PaidPlanName | null,
 ): string {
   if (user.entryStep === "confirm-email") return CONFIRM_EMAIL_PATH;

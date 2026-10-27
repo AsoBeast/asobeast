@@ -1,6 +1,5 @@
 import type { TrialOffer } from "@asobeast/shared";
-import { formatDate } from "@/lib/format";
-import { trialEndsOn } from "@/lib/plan-choice";
+import { trialEndLabel } from "@/lib/plan-choice";
 
 export interface FaqItem {
   question: string;
@@ -63,7 +62,7 @@ function chargeItem(
       answer: "Today, for the first period. The plan renews until you cancel.",
     };
   }
-  const endsOn = formatDate(trialEndsOn(offer, now).toISOString());
+  const endsOn = trialEndLabel(offer, now);
   return {
     question: "Will I be charged today?",
     answer: `No. Your card is verified today and nothing is charged. ${priceLabel} is charged on ${endsOn} unless you cancel from settings before then.`,
