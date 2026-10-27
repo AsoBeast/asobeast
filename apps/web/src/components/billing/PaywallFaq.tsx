@@ -13,7 +13,7 @@ export function PaywallFaq({ items }: { items: readonly FaqItem[] }) {
   return (
     <section
       aria-labelledby="paywall-faq-title"
-      className="flex flex-col gap-2"
+      className="flex min-w-0 flex-col gap-2 lg:col-start-2"
     >
       <h2 id="paywall-faq-title" className="text-title">
         {FAQ_TITLE}

@@ -24,6 +24,7 @@ import {
 import { planParam } from "@/lib/search-params";
 import { HostedAction } from "./HostedAction";
 import { PaymentColumn } from "./PaymentColumn";
+import { PaywallFaq } from "./PaywallFaq";
 import { PlanPicker } from "./PlanPicker";
 import { TrialBar } from "./TrialBar";
 import { TrustRow } from "./TrustRow";
@@ -74,7 +75,6 @@ export function BillingWall({
           selected={selected}
           onSelect={(name) => void setSelected(name)}
           actionOf={(name) => planAction(plan, name)}
-          faq={paywallFaq(offer, planPriceLabel(selected, interval), now)}
         />
         <PaymentColumn
           plan={plan}
@@ -85,6 +85,9 @@ export function BillingWall({
           price={price}
           publishableKey={publishableKey}
           now={now}
+        />
+        <PaywallFaq
+          items={paywallFaq(offer, planPriceLabel(selected, interval), now)}
         />
       </div>
       <TrialBar line={trialLine} label={trialLine ? "Your trial" : "Checkout"}>

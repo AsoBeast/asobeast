@@ -169,6 +169,13 @@ test.describe("the billing wall", () => {
     expect(headings.indexOf("Choose a plan")).toBeLessThan(
       headings.indexOf("Payment"),
     );
+    expect(headings.indexOf("Payment")).toBeLessThan(
+      headings.indexOf("Questions"),
+    );
+    const questionsBox = await page
+      .getByRole("heading", { level: 2, name: "Questions" })
+      .boundingBox();
+    expect(questionsBox!.x).toBe(plansBox!.x);
   });
 
   test("puts the plans above the payment on a phone without scrolling sideways", async ({
@@ -193,6 +200,10 @@ test.describe("the billing wall", () => {
       payment.boundingBox(),
     ]);
     expect(plansBox!.y).toBeLessThan(paymentBox!.y);
+    const questionsBox = await page
+      .getByRole("heading", { level: 2, name: "Questions" })
+      .boundingBox();
+    expect(paymentBox!.y).toBeLessThan(questionsBox!.y);
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= window.innerWidth,

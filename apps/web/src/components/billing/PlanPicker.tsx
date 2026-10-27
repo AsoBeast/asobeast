@@ -12,7 +12,6 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import { formatNumber } from "@/lib/format";
 import { INTERVAL_LABEL, priceOf } from "@/lib/order-summary";
-import type { FaqItem } from "@/lib/paywall-faq";
 import {
   CHOOSE_A_PLAN_TITLE,
   EVERY_PLAN_INCLUDES,
@@ -22,7 +21,6 @@ import {
   type PlanAction,
 } from "@/lib/plan-choice";
 import { cn } from "@/lib/utils";
-import { PaywallFaq } from "./PaywallFaq";
 
 const INCLUDED = [
   "Daily keyword rank tracking across every storefront",
@@ -93,19 +91,17 @@ export function PlanPicker({
   selected,
   onSelect,
   actionOf,
-  faq,
 }: {
   interval: BillingInterval;
   onInterval: (interval: BillingInterval) => void;
   selected: PaidPlanName;
   onSelect: (name: PaidPlanName) => void;
   actionOf: (name: PaidPlanName) => PlanAction;
-  faq: readonly FaqItem[];
 }) {
   const { limits } = PLANS[selected];
 
   return (
-    <div className="flex min-w-0 flex-col gap-6 lg:sticky lg:top-6 lg:order-last">
+    <div className="flex min-w-0 flex-col gap-6 lg:col-start-2 lg:row-start-1">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-title">{CHOOSE_A_PLAN_TITLE}</h2>
         <Tabs
@@ -170,7 +166,6 @@ export function PlanPicker({
           ))}
         </ul>
       </section>
-      <PaywallFaq items={faq} />
     </div>
   );
 }
