@@ -1097,7 +1097,7 @@ test("a workspace whose first payment is confirming is asked to wait, not to pay
     name: "Confirming your payment",
   });
   await expect(waiting).toBeDisabled();
-  await page.getByRole("button", { name: "Select Ultimate" }).click();
+  await page.getByRole("button", { name: /^Ultimate,/ }).click();
   await expect(waiting).toBeDisabled();
 
   await page.goto("/settings");
@@ -1244,9 +1244,9 @@ test("the upgrade page lists both paid plans with their limits", async ({
   await expect(page.getByText("$99", { exact: true })).toBeVisible();
   await expect(page.getByText("Current", { exact: true })).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Current plan" }),
+    page.getByRole("button", { name: "Current plan", exact: true }),
   ).toBeDisabled();
-  await page.getByRole("button", { name: "Select Ultimate" }).click();
+  await page.getByRole("button", { name: /^Ultimate,/ }).click();
   await expect(
     page.getByRole("button", { name: "Choose Ultimate" }),
   ).toBeVisible();
@@ -1344,12 +1344,12 @@ test("the upgrade page sends a configured plan to stripe checkout", async ({
   });
 
   await page.goto("/upgrade");
-  await page.getByRole("button", { name: "Select Ultimate" }).click();
+  await page.getByRole("button", { name: /^Ultimate,/ }).click();
   await expect(
     page.getByRole("button", { name: "Choose Ultimate" }),
   ).toBeDisabled();
 
-  await page.getByRole("button", { name: "Select Indie" }).click();
+  await page.getByRole("button", { name: /^Indie,/ }).click();
   await page.getByRole("button", { name: "Choose Indie" }).click();
 
   await expect
@@ -1398,7 +1398,7 @@ test("an existing subscriber changes plan in the portal instead of buying a seco
   });
 
   await page.goto("/upgrade");
-  await page.getByRole("button", { name: "Select Ultimate" }).click();
+  await page.getByRole("button", { name: /^Ultimate,/ }).click();
   await expect(
     page.getByRole("button", { name: "Choose Ultimate" }),
   ).toHaveCount(0);
@@ -1669,16 +1669,13 @@ test("each plan card prints its price once", async ({ page }) => {
   await routePlan(page, { ...INDIE_PLAN, subscribed: false });
 
   await page.goto("/upgrade");
-  await expect(page.getByText("$10 /month")).toHaveCount(1);
-  await expect(page.getByText("$99 /month")).toHaveCount(1);
-  await expect(page.getByText("Billed monthly")).toHaveCount(2);
+  const plans = page.getByRole("group", { name: "Plans" });
+  await expect(plans.getByText("$10/month")).toHaveCount(1);
+  await expect(plans.getByText("$99/month")).toHaveCount(1);
 
-  await page.getByRole("tab", { name: "Annual" }).click();
-  await expect(page.getByText("$100 /year")).toHaveCount(1);
-  await expect(page.getByText("$990 /year")).toHaveCount(1);
-  await expect(page.getByText("two months free", { exact: false })).toHaveCount(
-    2,
-  );
+  await page.getByRole("tab", { name: "Annual Save 17%" }).click();
+  await expect(plans.getByText("$100/year")).toHaveCount(1);
+  await expect(plans.getByText("$990/year")).toHaveCount(1);
 });
 
 async function openSettingsWithPlan(

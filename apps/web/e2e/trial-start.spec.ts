@@ -12,6 +12,9 @@ import {
   openRegistration,
 } from "./trial-plans.mts";
 import { seedViewer } from "./viewer.mts";
+import { summaryFromCatalog } from "../src/lib/order-summary";
+import { paywallFaq } from "../src/lib/paywall-faq";
+import { trustLines } from "../src/lib/plan-choice";
 
 async function register(page: Page, path = "/register") {
   await page.goto(path);
@@ -44,12 +47,18 @@ test.describe("the billing wall", () => {
         `Pay $0 today. Your trial ends on ${endsOn}, then the plan you choose is charged. Cancel any time from settings.`,
       ),
     ).toBeVisible();
+    for (const line of trustLines({ days: 7 }, new Date())) {
+      await expect(page.getByText(line, { exact: true })).toBeVisible();
+    }
     await expect(page.getByRole("tab", { name: "Monthly" })).toBeVisible();
     await expect(
-      page.getByRole("button", { name: "Selected Indie" }),
+      page.getByRole("tab", { name: "Annual Save 17%" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Indie, $10 per month" }),
     ).toHaveAttribute("aria-pressed", "true");
     await expect(
-      page.getByRole("button", { name: "Select Ultimate" }),
+      page.getByRole("button", { name: "Ultimate, $99 per month" }),
     ).toHaveAttribute("aria-pressed", "false");
     await expect(
       page.getByRole("button", { name: "Start free trial" }),
@@ -68,18 +77,15 @@ test.describe("the billing wall", () => {
 
     await expect(page).toHaveURL(/\/upgrade\?plan=ultimate$/);
     await expect(
-      page.getByRole("button", { name: "Selected Ultimate" }),
+      page.getByRole("button", { name: "Ultimate, $99 per month" }),
     ).toHaveAttribute("aria-pressed", "true");
-    await expect(
-      page.getByRole("heading", { level: 2, name: "Ultimate" }),
-    ).toBeVisible();
 
-    await page.getByRole("button", { name: "Select Indie" }).click();
+    await page.getByRole("button", { name: "Indie, $10 per month" }).click();
 
     await expect(page).toHaveURL(/\/upgrade\?plan=indie$/);
     await expect(
-      page.getByRole("heading", { level: 2, name: "Indie" }),
-    ).toBeVisible();
+      page.getByRole("button", { name: "Indie, $10 per month" }),
+    ).toHaveAttribute("aria-pressed", "true");
   });
 
   test("starting the trial posts the selected price to hosted checkout", async ({
@@ -133,6 +139,133 @@ test.describe("the billing wall", () => {
     await page.getByRole("button", { name: "Confirm my email" }).click();
 
     await expect(page).toHaveURL("http://localhost:3000/");
+  });
+
+  test("lays the payment out left of the plans on a wide screen", async ({
+    page,
+    context,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await seedViewer(context, "checkout-pending");
+    await seedSession(page);
+    await openBilling(page);
+
+    await page.goto("/upgrade");
+
+    const plans = page.getByRole("heading", {
+      level: 2,
+      name: "Choose a plan",
+    });
+    const payment = page.getByRole("heading", { level: 2, name: "Payment" });
+    await expect(plans).toBeVisible();
+    const [plansBox, paymentBox] = await Promise.all([
+      plans.boundingBox(),
+      payment.boundingBox(),
+    ]);
+    expect(paymentBox!.x).toBeLessThan(plansBox!.x);
+    const headings = await page
+      .getByRole("heading", { level: 2 })
+      .allTextContents();
+    expect(headings.indexOf("Choose a plan")).toBeLessThan(
+      headings.indexOf("Payment"),
+    );
+  });
+
+  test("puts the plans above the payment on a phone without scrolling sideways", async ({
+    page,
+    context,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await seedViewer(context, "checkout-pending");
+    await seedSession(page);
+    await openBilling(page);
+
+    await page.goto("/upgrade");
+
+    const plans = page.getByRole("heading", {
+      level: 2,
+      name: "Choose a plan",
+    });
+    const payment = page.getByRole("heading", { level: 2, name: "Payment" });
+    await expect(plans).toBeVisible();
+    const [plansBox, paymentBox] = await Promise.all([
+      plans.boundingBox(),
+      payment.boundingBox(),
+    ]);
+    expect(plansBox!.y).toBeLessThan(paymentBox!.y);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+  });
+
+  test("never asks for the confirmation on the wall", async ({
+    page,
+    context,
+  }) => {
+    await seedViewer(context, "checkout-pending");
+    await seedSession(page);
+    await openBilling(page);
+
+    await page.goto("/upgrade");
+
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Send a new link" }),
+    ).toHaveCount(0);
+    await expect(page.getByText("confirmation link")).toHaveCount(0);
+  });
+
+  test("writes its own order summary and follows the interval", async ({
+    page,
+    context,
+  }) => {
+    await seedViewer(context, "checkout-pending");
+    await seedSession(page);
+    await openBilling(page);
+    const monthly = summaryFromCatalog(
+      "indie",
+      "month",
+      { days: 7 },
+      new Date(),
+    );
+
+    await page.goto("/upgrade");
+
+    const summary = page
+      .getByRole("heading", { name: "Order summary" })
+      .locator("../..");
+    await expect(summary).toContainText("Indie");
+    await expect(summary).toContainText("Due today");
+    await expect(summary).toContainText("$0.00");
+    await expect(summary).toContainText(monthly.thenLine!);
+
+    await page.getByRole("tab", { name: /^Annual/ }).click();
+
+    await expect(summary).toContainText("$100.00");
+    await expect(summary).toContainText("Annual");
+  });
+
+  test("answers the questions a new customer asks, each on a click", async ({
+    page,
+    context,
+  }) => {
+    await seedViewer(context, "checkout-pending");
+    await seedSession(page);
+    await openBilling(page);
+    const items = paywallFaq({ days: 7 }, "$10 per month", new Date());
+
+    await page.goto("/upgrade");
+
+    const questions = page
+      .getByRole("region", { name: "Questions" })
+      .getByRole("button");
+    await expect(questions).toHaveCount(7);
+    for (const [index, item] of items.entries()) {
+      await questions.nth(index).click();
+      await expect(page.getByText(item.answer)).toBeVisible();
+    }
   });
 
   test.describe("with a publishable key", () => {
@@ -189,8 +322,11 @@ test.describe("the billing wall", () => {
       await page.goto("/upgrade");
 
       await expect(
-        page.getByRole("heading", { level: 2, name: "Start free trial" }),
+        page.getByRole("heading", { level: 2, name: "Payment" }),
       ).toBeVisible();
+      await expect(
+        page.getByRole("region", { name: "Your trial" }),
+      ).toContainText("Your 7 day trial is 100% free");
       await expect(
         page.locator('[data-mounted="cs_test_secret_price_indie_month"]'),
       ).toHaveAttribute("aria-label", "Stripe checkout for Indie, monthly");
@@ -202,7 +338,7 @@ test.describe("the billing wall", () => {
       await expect(
         page.locator('[data-mounted="cs_test_secret_price_indie_year"]'),
       ).toHaveCount(1);
-      await page.getByRole("button", { name: "Select Ultimate" }).click();
+      await page.getByRole("button", { name: /^Ultimate,/ }).click();
       await expect(
         page.locator('[data-mounted="cs_test_secret_price_ultimate_year"]'),
       ).toHaveCount(1);
@@ -254,7 +390,7 @@ test.describe("the billing wall", () => {
 
       await page.goto("/upgrade");
       await page.getByRole("tab", { name: "Annual" }).click();
-      await page.getByRole("button", { name: "Select Ultimate" }).click();
+      await page.getByRole("button", { name: /^Ultimate,/ }).click();
       await expect(page).toHaveURL(/\/upgrade\?plan=ultimate$/);
       releaseStripe();
 

@@ -5,7 +5,6 @@ import {
   HANDLED_BY_STRIPE,
   PAYMENT_CONFIRMING,
   SOLD_THROUGH_LINK,
-  billingNote,
   confirmEmailLine,
   confirmEmailParts,
   memberPlanLine,
@@ -13,7 +12,11 @@ import {
   planAction,
   planActionLabel,
   planCallToAction,
+  planCardLabel,
   planStatusLine,
+  savingPercent,
+  trialBarLine,
+  trustLines,
   paywallHeading,
   paywallStatusLine,
   suspensionNotice,
@@ -409,21 +412,6 @@ describe("memberPlanLine", () => {
   });
 });
 
-describe("billingNote", () => {
-  it("says how a monthly plan bills without repeating its price", () => {
-    expect(billingNote("month")).toBe("Billed monthly");
-  });
-
-  it("says what a yearly plan saves without repeating its price", () => {
-    expect(billingNote("year")).toBe("Billed yearly, two months free");
-  });
-
-  it("never prints a price, which the card title already carries", () => {
-    expect(billingNote("month")).not.toMatch(/[$/]/);
-    expect(billingNote("year")).not.toMatch(/[$/]/);
-  });
-});
-
 describe("suspensionNotice", () => {
   it("names the reason the operator recorded and what stays open", () => {
     expect(suspensionNotice("scraping the service")).toBe(
@@ -467,5 +455,38 @@ describe("confirmEmailLine", () => {
     expect(`${parts.before}${parts.address}${parts.after}`).toBe(
       confirmEmailLine("owner@example.com", true),
     );
+  });
+});
+
+describe("the wall around the checkout", () => {
+  const NOW = new Date("2026-10-22T12:00:00.000Z");
+  const ENDS_ON = formatDate("2026-10-29T12:00:00.000Z");
+
+  it("names the trial end, the free days and how to cancel", () => {
+    expect(trustLines({ days: 7 }, NOW)).toEqual([
+      `No risk: cancel before ${ENDS_ON} and nothing is charged`,
+      "Pay nothing for the first 7 days",
+      "Cancel any time from settings",
+    ]);
+  });
+
+  it("names the trial end on the bar", () => {
+    expect(trialBarLine({ days: 7 }, NOW)).toBe(
+      `Your 7 day trial is 100% free, ending ${ENDS_ON}. Cancel any time from settings.`,
+    );
+  });
+
+  it("names a plan card by its plan and price", () => {
+    expect(planCardLabel("indie", "month", "trial")).toBe(
+      "Indie, $10 per month",
+    );
+    expect(planCardLabel("ultimate", "year", "current")).toBe(
+      "Ultimate, $990 per year, current plan",
+    );
+  });
+
+  it("reads the annual saving from the plan prices", () => {
+    expect(savingPercent("indie")).toBe(17);
+    expect(savingPercent("ultimate")).toBe(17);
   });
 });

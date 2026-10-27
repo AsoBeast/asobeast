@@ -47,11 +47,6 @@ export const ASK_THE_OWNER = "Ask your workspace owner to choose a plan.";
 
 const CHOOSE_A_PLAN = "Choose a plan to unlock AsoBeast.";
 
-const BILLED: Record<BillingInterval, string> = {
-  month: "Billed monthly",
-  year: "Billed yearly, two months free",
-};
-
 const START_ON_THE_PLAN_PAGE = "Start your free trial from the plan page.";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -174,6 +169,53 @@ export function confirmEmailLine(email: string, offered: boolean): string {
   return `${before}${address}${after}`;
 }
 
+export const PAYMENT_TITLE = "Payment";
+
+export const CHOOSE_A_PLAN_TITLE = "Choose a plan";
+
+export const FEATURES_TITLE = "Features";
+
+export const FAQ_TITLE = "Questions";
+
+export const EVERY_PLAN_INCLUDES = "Every plan includes";
+
+export const SECURE_BY_STRIPE = "Secure payments processed by Stripe.";
+
+const BUYS: readonly PlanAction[] = ["checkout", "trial"];
+
+export function buysPlan(action: PlanAction): boolean {
+  return BUYS.includes(action);
+}
+
+export function planCardLabel(
+  name: PaidPlanName,
+  interval: BillingInterval,
+  action: PlanAction,
+): string {
+  const label = `${PLANS[name].displayName}, ${planPriceLabel(name, interval)}`;
+  return action === "current" ? `${label}, current plan` : label;
+}
+
+export function savingPercent(name: PaidPlanName): number {
+  const { monthlyUsd, annualUsd } = PLANS[name].prices;
+  if (!monthlyUsd || !annualUsd) return 0;
+  return Math.round(((12 * monthlyUsd - annualUsd) / (12 * monthlyUsd)) * 100);
+}
+
+export function trustLines(offer: TrialOffer, now: Date): readonly string[] {
+  const endsOn = formatDate(trialEndsOn(offer, now).toISOString());
+  return [
+    `No risk: cancel before ${endsOn} and nothing is charged`,
+    `Pay nothing for the first ${offer.days} days`,
+    "Cancel any time from settings",
+  ];
+}
+
+export function trialBarLine(offer: TrialOffer, now: Date): string {
+  const endsOn = formatDate(trialEndsOn(offer, now).toISOString());
+  return `Your ${offer.days} day trial is 100% free, ending ${endsOn}. Cancel any time from settings.`;
+}
+
 export function planActionLabel(
   action: PlanAction,
   displayName: string,
@@ -267,8 +309,4 @@ export function trialPaymentNote(
 export function memberPlanLine(plan: AccountPlan | undefined): string {
   if (plan && !plan.entitled) return `${COLLECTION_PAUSED} ${ASK_THE_OWNER}`;
   return "Only the workspace owner can change the plan or the payment method.";
-}
-
-export function billingNote(interval: BillingInterval): string {
-  return BILLED[interval];
 }

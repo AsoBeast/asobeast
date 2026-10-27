@@ -90,7 +90,11 @@ test("lists the ai calls of each plan on the upgrade page", async ({
     .filter({ hasText: "AI calls per month" })
     .locator("xpath=..")
     .getByRole("definition");
-  await expect(rows).toHaveText(["200", "2,000"]);
+  await expect(rows).toHaveText(["200"]);
+
+  await page.getByRole("button", { name: /^Ultimate,/ }).click();
+
+  await expect(rows).toHaveText(["2,000"]);
 });
 
 const ACTION_TITLE = 'Add "habit tracker" to your metadata';
