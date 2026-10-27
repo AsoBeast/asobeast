@@ -8,9 +8,7 @@ import type {
   BillingInterval,
   PaidPlanName,
 } from "@asobeast/shared";
-import { ResendConfirmationButton } from "@/components/auth/ResendConfirmationButton";
 import {
-  confirmationLine,
   paywallHeading,
   paywallStatusLine,
   planAction,
@@ -24,13 +22,9 @@ const DEFAULT_PLAN: PaidPlanName = "indie";
 export function BillingWall({
   plan,
   catalog,
-  email,
-  awaitingConfirmation,
 }: {
   plan: AccountPlan | undefined;
   catalog: BillingCatalog | undefined;
-  email: string | undefined;
-  awaitingConfirmation: boolean;
 }) {
   const [selected, setSelected] = useQueryState(
     "plan",
@@ -38,7 +32,6 @@ export function BillingWall({
   );
   const [interval, setInterval] = useState<BillingInterval>("month");
   const [now] = useState(() => new Date());
-  const offered = Boolean(plan?.trialOffer);
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
@@ -47,18 +40,8 @@ export function BillingWall({
           {paywallHeading(plan)}
         </h1>
         <p className="text-body text-muted-foreground">
-          {paywallStatusLine(plan, awaitingConfirmation, now)}
+          {paywallStatusLine(plan, now)}
         </p>
-        {awaitingConfirmation && offered && email ? (
-          <p className="text-body text-muted-foreground">
-            {confirmationLine(email)}
-          </p>
-        ) : null}
-        {awaitingConfirmation ? (
-          <div className="mt-2 flex justify-center">
-            <ResendConfirmationButton />
-          </div>
-        ) : null}
       </div>
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)]">
         <PlanPicker

@@ -501,6 +501,15 @@ const VIEWER_USERS: Record<Viewer, Partial<AuthUser>> = {
     role: "member",
     platformOperator: false,
   },
+  "lapsed-member": {
+    id: "u4",
+    email: "lapsed-member@example.com",
+    name: "Lapsed member",
+    role: "member",
+    plan: "free",
+    entitled: false,
+    platformOperator: false,
+  },
   "lapsed-operator": { plan: "free", entitled: false },
   "unconfirmed-operator": {
     plan: "free",

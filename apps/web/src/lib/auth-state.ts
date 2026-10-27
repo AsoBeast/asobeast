@@ -1,12 +1,16 @@
-import { paidPlanOf, type AuthStatus, type AuthUser } from "@asobeast/shared";
+import {
+  paidPlanOf,
+  type AuthStatus,
+  type AuthUser,
+  type EntryStep,
+} from "@asobeast/shared";
 
 export interface DerivedAuthState {
   authenticated: boolean;
   user: AuthUser | undefined;
   trialOnly: boolean;
   trialing: boolean;
-  awaitingConfirmation: boolean;
-  awaitingCheckout: boolean;
+  entryStep: EntryStep | undefined;
   isMember: boolean;
   isOwner: boolean;
   isOperator: boolean;
@@ -29,8 +33,7 @@ export function authStateOf(
     user: signedIn,
     trialOnly: legacyTrial || trialing,
     trialing,
-    awaitingConfirmation: signedIn?.trialAwaitsConfirmation === true,
-    awaitingCheckout: signedIn?.trialAwaitsCheckout === true,
+    entryStep: signedIn?.entryStep,
     isMember: signedIn !== undefined && signedIn.role !== "owner",
     isOwner: signedIn?.role === "owner",
     isOperator: signedIn?.platformOperator === true,

@@ -3,11 +3,25 @@ import {
   checkoutReturned,
   pageReturnedFromCheckout,
   checkoutSessionId,
+  searchOf,
   trialStartedToast,
   urlWithoutCheckout,
 } from "./checkout-return";
 import type { AccountPlan } from "@asobeast/shared";
 import { formatDate } from "./format";
+
+describe("searchOf", () => {
+  it("reads the query of a requested path", () => {
+    expect(searchOf("/?checkout=complete&session_id=cs_1")).toBe(
+      "?checkout=complete&session_id=cs_1",
+    );
+  });
+
+  it("answers nothing for a path without a query or no path at all", () => {
+    expect(searchOf("/settings")).toBe("");
+    expect(searchOf(null)).toBe("");
+  });
+});
 
 describe("checkoutReturned", () => {
   it("recognises the return Stripe sends the customer back with", () => {

@@ -784,44 +784,11 @@ async function openAsUnconfirmed(page: Page) {
   await routePlan(page, UNCONFIRMED_PLAN);
 }
 
-test("a new account is asked to confirm its email, not to choose a plan", async ({
-  page,
-}) => {
-  await openAsUnconfirmed(page);
-
-  await page.goto("/");
-
-  await expect(page.getByText(CONFIRM_TO_START)).toBeVisible();
-  await expect(page.getByText("owner@example.com").first()).toBeVisible();
-  await expect(page.getByText("Collection is paused")).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "Choose a plan" })).toHaveCount(
-    0,
-  );
-});
-
-test("the confirmation request offers a new link and says when it was sent", async ({
-  page,
-}) => {
-  await openAsUnconfirmed(page);
-  let resends = 0;
-  await page.route("**/api/backend/auth/verify/resend", async (route) => {
-    resends += 1;
-    await route.fulfill({ status: 204, body: "" });
-  });
-
-  await page.goto("/");
-  await page.getByRole("button", { name: "Send a new link" }).click();
-
-  await expect.poll(() => resends).toBe(1);
-  await expect(
-    page.getByRole("button", { name: "New link sent" }),
-  ).toBeDisabled();
-});
-
 test("a throttled request for a new link says why it was refused", async ({
   page,
 }) => {
-  await openAsUnconfirmed(page);
+  await seedViewer(page.context(), "checkout-pending-unconfirmed");
+  await seedSession(page);
   await page.route("**/api/backend/auth/verify/resend", (route) =>
     route.fulfill(
       fulfillJson(429, {
@@ -836,7 +803,7 @@ test("a throttled request for a new link says why it was refused", async ({
     ),
   );
 
-  await page.goto("/");
+  await page.goto("/confirm-email");
   await page.getByRole("button", { name: "Send a new link" }).click();
 
   await expect(
@@ -890,49 +857,6 @@ async function openAsOffered(page: Page) {
   await routePlan(page, OFFERING_PLAN);
 }
 
-test("an account that may start a trial sees the trial banner", async ({
-  page,
-}) => {
-  await openAsOffered(page);
-
-  await page.goto("/");
-
-  await expect(
-    page.getByText(
-      "Start your 7 day free trial to begin tracking. $0 today, cancel any time.",
-    ),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("link", { name: "Start free trial" }),
-  ).toHaveAttribute("href", "/upgrade");
-  await expect(page.getByText("Collection is paused")).toHaveCount(0);
-});
-
-test("the wall offers the trial to an unconfirmed account and asks for the confirmation beside it", async ({
-  page,
-}) => {
-  await openAsOffered(page);
-  let resends = 0;
-  await page.route("**/api/backend/auth/verify/resend", async (route) => {
-    resends += 1;
-    await route.fulfill({ status: 204, body: "" });
-  });
-
-  await page.goto("/upgrade");
-
-  await expect(
-    page.getByText("We sent a confirmation link to owner@example.com.", {
-      exact: false,
-    }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Start free trial" }),
-  ).toBeVisible();
-
-  await page.getByRole("button", { name: "Send a new link" }).click();
-  await expect.poll(() => resends).toBe(1);
-});
-
 test("settings says the trial starts on the wall", async ({ page }) => {
   await openAsOffered(page);
 
@@ -944,44 +868,6 @@ test("settings says the trial starts on the wall", async ({ page }) => {
   await expect(
     page.getByText("tracking resumes when you choose a plan", { exact: false }),
   ).toHaveCount(0);
-});
-
-test("a refused import sends an unconfirmed account to a page that asks it to confirm", async ({
-  page,
-}) => {
-  await openAsUnconfirmed(page);
-  await page.route("**/api/backend/apps", async (route) => {
-    if (route.request().method() !== "POST") return route.fallback();
-    await route.fulfill(
-      fulfillJson(402, {
-        statusCode: 402,
-        error: "Payment Required",
-        message: "Choose a plan to start using asobeast",
-        path: "/apps",
-        timestamp: new Date().toISOString(),
-        entitlement: {
-          plan: "free",
-          trialEndsAt: null,
-          planExpiresAt: null,
-          upgradeTo: "indie",
-          upgradePath: UPGRADE_PATH,
-        },
-      }),
-    );
-  });
-
-  await page.goto("/");
-  await page.getByRole("button", { name: "Import app" }).click();
-  await page
-    .getByLabel("App name or store URL")
-    .fill("https://apps.apple.com/us/app/focus-timer/id123456789");
-  await page.getByRole("button", { name: "Import", exact: true }).click();
-
-  await expect(page).toHaveURL(/\/upgrade$/);
-  await expect(page.getByText(CONFIRM_TO_START)).toBeVisible();
-  await expect(page.getByText("Choose a plan to unlock asobeast.")).toHaveCount(
-    0,
-  );
 });
 
 test("an unconfirmed member of a workspace whose trial ended is not asked to confirm", async ({

@@ -109,7 +109,7 @@ function BillingActions({ plan }: { plan: AccountPlan }) {
 
 export function PlanCard() {
   const { data: plan } = useSuspenseQuery(accountPlanOptions);
-  const { isMember, isOwner, awaitingConfirmation } = useAuth();
+  const { isMember, isOwner } = useAuth();
 
   if (!plan.billing) return null;
 
@@ -124,7 +124,7 @@ export function PlanCard() {
           )}
         </CardTitle>
         <p className="text-body text-muted-foreground">
-          {planStatusLine(plan, awaitingConfirmation)}
+          {planStatusLine(plan)}
         </p>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">

@@ -52,10 +52,6 @@ const BILLED: Record<BillingInterval, string> = {
   year: "Billed yearly, two months free",
 };
 
-export const CONFIRM_YOUR_EMAIL = "Confirm your email address.";
-
-const CONFIRMATION_PENDING = `${CONFIRM_YOUR_EMAIL} Open the link we emailed you when you registered.`;
-
 const START_ON_THE_PLAN_PAGE = "Start your free trial from the plan page.";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -147,15 +143,6 @@ function trialLine(offer: TrialOffer, now: Date): string {
   return `Pay $0 today. Your trial ends on ${formatDate(trialEndsOn(offer, now).toISOString())}, then the plan you choose is charged. Cancel any time from settings.`;
 }
 
-export function startTrialLine(offer: TrialOffer | null | undefined): string {
-  const trial = offer ? `${offer.days} day free trial` : "free trial";
-  return `Start your ${trial} to begin tracking. $0 today, cancel any time.`;
-}
-
-export function confirmationLine(email: string): string {
-  return `We sent a confirmation link to ${email}. You can start the trial now and confirm later.`;
-}
-
 export const CONFIRM_EMAIL_TITLE = "Confirm your email";
 
 export const CONFIRM_EMAIL_CAPTION =
@@ -221,12 +208,9 @@ function settingsTrialLine(plan: AccountPlan): string | null {
 
 export function paywallStatusLine(
   plan: AccountPlan | undefined,
-  awaitingConfirmation = false,
   now = new Date(),
 ): string {
-  if (!plan) {
-    return awaitingConfirmation ? CONFIRMATION_PENDING : CHOOSE_A_PLAN;
-  }
+  if (!plan) return CHOOSE_A_PLAN;
   if (pending(plan)) return PAYMENT_CONFIRMING;
   if (plan.trialOffer && !plan.subscribed) {
     return trialLine(plan.trialOffer, now);
@@ -234,7 +218,6 @@ export function paywallStatusLine(
   const trial = paywallTrialLine(plan);
   if (trial) return trial;
   if (stalled(plan)) return STALLED_ON_THE_PAYWALL;
-  if (awaitingConfirmation) return CONFIRMATION_PENDING;
   if (plan.trialEndsAt && !plan.entitled) {
     return `Your trial ended on ${formatDate(plan.trialEndsAt)}. Your data is still here.`;
   }
@@ -244,15 +227,11 @@ export function paywallStatusLine(
   return CHOOSE_A_PLAN;
 }
 
-export function planStatusLine(
-  plan: AccountPlan,
-  awaitingConfirmation = false,
-): string {
+export function planStatusLine(plan: AccountPlan): string {
   if (pending(plan)) return PAYMENT_CONFIRMING;
   if (declined(plan)) return TRIAL_CHARGE_DECLINED;
   if (stalled(plan)) return STALLED_IN_SETTINGS;
   if (plan.trialOffer && !plan.subscribed) return START_ON_THE_PLAN_PAGE;
-  if (awaitingConfirmation) return CONFIRMATION_PENDING;
   if (!plan.entitled) {
     return "Your data stays readable and exportable; tracking resumes when you choose a plan.";
   }

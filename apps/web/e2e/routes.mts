@@ -67,15 +67,6 @@ export const SIGNED_OUT_ROUTES = [
 
 export const TRIAL_ROUTES = [
   [
-    "portfolio offering the trial",
-    "/",
-    {
-      e2e_viewer: "checkout-pending",
-      e2e_billing: "1",
-      e2e_plan: planCookie(OFFERED_PLAN),
-    },
-  ],
-  [
     "confirmation page",
     "/confirm-email",
     {

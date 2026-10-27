@@ -9,8 +9,7 @@ import { useAuth } from "./use-auth";
 import { useSignedOutRedirect } from "./use-signed-out-redirect";
 
 export function UpgradeContent() {
-  const { isLoading, isMember, authenticated, awaitingConfirmation, user } =
-    useAuth();
+  const { isLoading, isMember, authenticated } = useAuth();
   const signedOut = useSignedOutRedirect(true);
   const { data: plan } = useQuery({
     ...accountPlanOptions,
@@ -30,12 +29,5 @@ export function UpgradeContent() {
     );
   }
 
-  return (
-    <BillingWall
-      plan={plan}
-      catalog={catalog}
-      email={user?.email}
-      awaitingConfirmation={awaitingConfirmation}
-    />
-  );
+  return <BillingWall plan={plan} catalog={catalog} />;
 }

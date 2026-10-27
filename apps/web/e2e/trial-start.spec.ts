@@ -93,9 +93,12 @@ test.describe("the billing wall", () => {
     await page.route("**/api/backend/billing/checkout", async (route) => {
       requested = route.request().postDataJSON();
       await route.fulfill(
-        fulfillJson(200, { url: "http://localhost:3000/?checkout=hosted" }),
+        fulfillJson(200, { url: "https://checkout.stripe.test/session" }),
       );
     });
+    await page.route("https://checkout.stripe.test/**", (route) =>
+      route.fulfill({ status: 200, contentType: "text/html", body: "" }),
+    );
 
     await page.goto("/upgrade");
     await page.getByRole("tab", { name: "Annual" }).click();
@@ -104,7 +107,7 @@ test.describe("the billing wall", () => {
     await expect
       .poll(() => requested)
       .toEqual({ priceId: "price_indie_year", ui: "hosted" });
-    await expect(page).toHaveURL(/checkout=hosted/);
+    await expect(page).toHaveURL("https://checkout.stripe.test/session");
   });
 
   test("confirming lands an account without a plan on the wall", async ({

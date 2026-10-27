@@ -6,6 +6,12 @@ import {
 } from "@asobeast/shared";
 import { formatDate } from "./format";
 
+export function searchOf(requested: string | null): string {
+  if (requested === null) return "";
+  const start = requested.indexOf("?");
+  return start === -1 ? "" : requested.slice(start);
+}
+
 export function checkoutReturned(search: string): boolean {
   return (
     new URLSearchParams(search).get(CHECKOUT_RETURN_PARAM) ===
