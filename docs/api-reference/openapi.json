@@ -7082,11 +7082,11 @@
           "selectedMarkets": {
             "uniqueItems": true,
             "minItems": 1,
+            "maxItems": 50,
             "example": [
               "us",
               "de"
             ],
-            "maxItems": 50,
             "type": "array",
             "items": {
               "type": "string"
@@ -7131,11 +7131,11 @@
         "properties": {
           "keywords": {
             "minItems": 1,
+            "maxItems": 200,
             "example": [
               "habit tracker",
               "streak counter"
             ],
-            "maxItems": 200,
             "type": "array",
             "items": {
               "type": "string"
@@ -7219,11 +7219,11 @@
             "example": 80
           },
           "tags": {
+            "maxItems": 8,
             "example": [
               "core",
               "brand"
             ],
-            "maxItems": 8,
             "type": "array",
             "items": {
               "type": "string"
@@ -7324,11 +7324,11 @@
           },
           "trackIn": {
             "uniqueItems": true,
+            "maxItems": 200,
             "example": [
               "us",
               "mx"
             ],
-            "maxItems": 200,
             "description": "The markets of the app that track the phrases of this field. Every one must be a market of the app whose storefront reads the localization. An empty list stores the field and tracks nothing.",
             "type": "array",
             "items": {
