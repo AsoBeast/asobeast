@@ -16,6 +16,8 @@ import { invalidateAuth } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
 import { useCheckoutTheme } from "./use-checkout-theme";
 
+const CHECKOUT_NOT_CONFIGURED = "Checkout is not configured yet";
+
 function failureMessage(error: unknown, action: PlanAction): string {
   if (error instanceof ApiError) return error.envelope.message;
   return buysPlan(action)
@@ -36,10 +38,11 @@ export function HostedAction({
   const buys = buysPlan(action);
   const theme = useCheckoutTheme();
   const change = useMutation({
-    mutationFn: () =>
-      buys
-        ? startCheckout(price?.priceId ?? "", "hosted", theme)
-        : openBillingPortal(),
+    mutationFn: () => {
+      if (!buys) return openBillingPortal();
+      if (!price) return Promise.reject(new Error(CHECKOUT_NOT_CONFIGURED));
+      return startCheckout(price.priceId, "hosted", theme);
+    },
     onSuccess: ({ url }) => {
       window.location.assign(url);
     },
@@ -57,7 +60,7 @@ export function HostedAction({
         action === "current" || action === "pending" || (buys && !price)
       }
       aria-disabled={change.isPending || undefined}
-      title={!buys || price ? undefined : "Checkout is not configured yet"}
+      title={!buys || price ? undefined : CHECKOUT_NOT_CONFIGURED}
       onClick={() => {
         if (!change.isPending) changeOnce();
       }}

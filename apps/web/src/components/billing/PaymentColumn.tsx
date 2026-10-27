@@ -10,7 +10,7 @@ import {
 } from "@asobeast/shared";
 import { Skeleton } from "@/components/ui/skeleton";
 import { sessionKeyOf } from "@/lib/embedded-checkout";
-import { summaryFromCatalog } from "@/lib/order-summary";
+import { INTERVAL_LABEL, summaryFromCatalog } from "@/lib/order-summary";
 import {
   PAYMENT_TITLE,
   SECURE_BY_STRIPE,
@@ -21,11 +21,6 @@ import {
 import { EmbeddedCheckout } from "./EmbeddedCheckout";
 import { OrderSummary } from "./OrderSummary";
 import { useCheckoutTheme } from "./use-checkout-theme";
-
-const INTERVAL_WORD: Record<BillingInterval, string> = {
-  month: "monthly",
-  year: "annual",
-};
 
 export function PaymentColumn({
   plan,
@@ -63,7 +58,7 @@ export function PaymentColumn({
           publishableKey={publishableKey}
           priceId={price.priceId}
           theme={theme}
-          label={`Stripe checkout for ${PLANS[name].displayName}, ${INTERVAL_WORD[interval]}`}
+          label={`Stripe checkout for ${PLANS[name].displayName}, ${INTERVAL_LABEL[interval].toLowerCase()}`}
         />
       ) : null}
       {publishableKey && price && !theme ? (
