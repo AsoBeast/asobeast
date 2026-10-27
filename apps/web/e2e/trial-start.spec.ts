@@ -211,6 +211,29 @@ test.describe("the billing wall", () => {
     ).toBe(true);
   });
 
+  test("promises no secure payment when checkout is not configured", async ({
+    page,
+    context,
+  }) => {
+    await seedViewer(context, "checkout-pending");
+    await seedSession(page);
+    await openBilling(page);
+    await page.route("**/api/backend/billing/catalog", (route) =>
+      route.fulfill(fulfillJson(200, { enabled: false, prices: [] })),
+    );
+
+    await page.goto("/upgrade");
+
+    await expect(
+      page.getByText("Checkout is not configured on this instance.", {
+        exact: false,
+      }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Secure payments processed by Stripe."),
+    ).toHaveCount(0);
+  });
+
   test("never asks for the confirmation on the wall", async ({
     page,
     context,

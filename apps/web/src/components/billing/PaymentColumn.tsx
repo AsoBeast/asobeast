@@ -69,7 +69,9 @@ export function PaymentColumn({
           summary={summaryFromCatalog(name, interval, offer, now)}
         />
       ) : null}
-      <p className="text-caption text-muted-foreground">{SECURE_BY_STRIPE}</p>
+      {catalog?.enabled && buysPlan(action) ? (
+        <p className="text-caption text-muted-foreground">{SECURE_BY_STRIPE}</p>
+      ) : null}
       <p className="text-caption text-muted-foreground">
         {trialPaymentNote(catalog, offer, now)} Need help?{" "}
         <a href="mailto:hello@asobeast.dev" className="font-medium underline">
