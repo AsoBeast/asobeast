@@ -151,7 +151,6 @@ export function SerpSheet({ appId }: { appId: string }) {
       }}
     >
       <SheetContent
-        aria-describedby="serp-description"
         onCloseAutoFocus={(event) => {
           const opener = document.querySelector<HTMLButtonElement>(
             `[data-serp-keyword="${CSS.escape(shownId)}"]`,
@@ -163,7 +162,7 @@ export function SerpSheet({ appId }: { appId: string }) {
       >
         <SheetHeader>
           <SheetTitle>Top 10 search results</SheetTitle>
-          <SheetDescription id="serp-description">
+          <SheetDescription>
             The apps ranking for this keyword on the latest daily check.
           </SheetDescription>
           {open ? (

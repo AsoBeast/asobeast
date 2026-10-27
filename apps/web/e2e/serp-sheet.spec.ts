@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import type { Page } from "@playwright/test";
+import { missingDescriptionIds } from "./described-by.mts";
 import { hydrated } from "./hydrated.mts";
 import { expect, test } from "./session.mts";
 
@@ -119,4 +120,15 @@ test("a top 10 that failed loads when the sheet is opened again", async ({
 
   await expect(serpSheet(page).getByText("Rival Focus")).toBeVisible();
   await expect(failureIn(page)).toHaveCount(0);
+});
+
+test("the sheet is described only by elements it renders", async ({ page }) => {
+  await page.goto("/apps/app-1/keywords");
+  await page.waitForLoadState("networkidle");
+  await openTopTen(page);
+
+  await expect(serpSheet(page)).toHaveAccessibleDescription(
+    "The apps ranking for this keyword on the latest daily check.",
+  );
+  expect(await missingDescriptionIds(serpSheet(page))).toEqual([]);
 });
