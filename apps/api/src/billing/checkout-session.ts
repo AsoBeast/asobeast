@@ -1,6 +1,7 @@
 import type Stripe from 'stripe';
-import type { CheckoutUi, TrialOffer } from '@asobeast/shared';
+import type { CheckoutTheme, CheckoutUi, TrialOffer } from '@asobeast/shared';
 import type { Env } from '../config/env';
+import { brandingFor } from './checkout-branding';
 import { WORKSPACE_METADATA_KEY } from './workspace-link';
 
 export type TaxCollection = 'none' | 'stripe_tax' | 'managed_payments';
@@ -16,7 +17,10 @@ export interface CheckoutSessionInput {
   taxCollection: TaxCollection;
   trial?: TrialOffer;
   ui?: CheckoutUi;
+  theme?: CheckoutTheme;
 }
+
+export const CHECKOUT_LOCALE = 'en';
 
 export function taxCollectionOf(switches: TaxSwitches): TaxCollection {
   if (switches.STRIPE_MANAGED_PAYMENTS) return 'managed_payments';
@@ -88,6 +92,8 @@ export function checkoutSessionParams(
     },
     ...uiParams(input),
     allow_promotion_codes: true,
+    branding_settings: brandingFor(input.theme),
+    locale: CHECKOUT_LOCALE,
     billing_address_collection: 'required',
     ...taxParams(input.taxCollection),
     ...trialParams(input.trial, input.taxCollection),

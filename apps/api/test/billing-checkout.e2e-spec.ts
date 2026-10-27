@@ -1,5 +1,6 @@
 import './helpers/enable-billing';
 import './helpers/enable-stripe';
+import { CHECKOUT_BRAND } from '@asobeast/shared';
 import type {
   AccountPlan,
   ApiErrorEnvelope,
@@ -145,6 +146,42 @@ describe('Billing checkout (e2e)', () => {
       expect(response.body as BillingSession).toEqual({
         url: 'https://checkout.stripe.test/cs_test_2',
       });
+    });
+
+    it('brands an embedded session after the dark page in english', async () => {
+      await harness.owner
+        .post(CHECKOUT)
+        .send({ priceId: INDIE_MONTHLY, ui: 'embedded', theme: 'dark' })
+        .expect(200);
+
+      const { params } = harness.fake.checkoutSessions[0];
+      expect(params.branding_settings).toEqual({
+        background_color: CHECKOUT_BRAND.dark.backgroundColor,
+        button_color: CHECKOUT_BRAND.dark.buttonColor,
+        border_style: 'rounded',
+        font_family: 'inter',
+        display_name: 'AsoBeast',
+      });
+      expect(params.locale).toBe('en');
+    });
+
+    it('brands a hosted session after the light page when no theme is named', async () => {
+      await checkout().expect(200);
+
+      const { params } = harness.fake.checkoutSessions[0];
+      expect(params.branding_settings).toMatchObject({
+        background_color: CHECKOUT_BRAND.light.backgroundColor,
+        button_color: CHECKOUT_BRAND.light.buttonColor,
+      });
+      expect(params.locale).toBe('en');
+    });
+
+    it('refuses an unknown theme with 400', async () => {
+      await harness.owner
+        .post(CHECKOUT)
+        .send({ priceId: INDIE_MONTHLY, theme: 'blue' })
+        .expect(400);
+      expect(harness.fake.checkoutSessions).toHaveLength(0);
     });
 
     it('refuses an unknown ui with 400', async () => {

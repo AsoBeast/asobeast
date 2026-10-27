@@ -13,6 +13,7 @@ import {
   UPGRADE_PATH,
   type BillingCatalog,
   type BillingSession,
+  type CheckoutTheme,
   type CheckoutUi,
 } from '@asobeast/shared';
 import { Env } from '../config/env';
@@ -96,6 +97,7 @@ export class BillingService {
     user: AccountUser,
     priceId: string,
     ui: CheckoutUi = 'hosted',
+    theme?: CheckoutTheme,
   ): Promise<BillingSession> {
     await this.prices.refreshIfStale();
     this.refuseUnprovisionableCheckout();
@@ -124,6 +126,7 @@ export class BillingService {
           taxCollection: this.taxCollection(),
           trial: trial ?? undefined,
           ui,
+          theme,
         }),
         `checkout:${workspaceId}:${attempt}`,
       );

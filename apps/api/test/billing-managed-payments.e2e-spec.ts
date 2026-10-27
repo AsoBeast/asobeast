@@ -1,7 +1,11 @@
 import './helpers/enable-billing';
 import './helpers/enable-stripe';
 import './helpers/enable-managed-payments';
-import type { BillingCatalog, BillingSession } from '@asobeast/shared';
+import {
+  CHECKOUT_BRAND,
+  type BillingCatalog,
+  type BillingSession,
+} from '@asobeast/shared';
 import { WORKSPACE_METADATA_KEY } from '../src/billing/workspace-link';
 import {
   resetBillingState,
@@ -90,6 +94,31 @@ describe('Billing through managed payments (e2e)', () => {
     ]) {
       expect(recorded.params).not.toHaveProperty(key);
     }
+  });
+
+  it('brands a managed session after the page and still sends no submit text', async () => {
+    await harness.owner
+      .post('/billing/checkout')
+      .send({
+        priceId: 'price_TestIndieMonthly',
+        ui: 'embedded',
+        theme: 'dark',
+      })
+      .expect(200);
+
+    const [recorded] = harness.fake.checkoutSessions;
+    expect(recorded.params).toMatchObject({
+      managed_payments: { enabled: true },
+      locale: 'en',
+      branding_settings: {
+        background_color: CHECKOUT_BRAND.dark.backgroundColor,
+        button_color: CHECKOUT_BRAND.dark.buttonColor,
+        border_style: 'rounded',
+        font_family: 'inter',
+        display_name: 'AsoBeast',
+      },
+    });
+    expect(recorded.params).not.toHaveProperty('custom_text');
   });
 
   it('tells the paywall that stripe sells the plan', async () => {

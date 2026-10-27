@@ -16,6 +16,7 @@ import {
   SUBSCRIPTION_NEEDS_ATTENTION,
 } from './billing.service';
 import { BillingConflictError } from './billing.errors';
+import { brandingFor } from './checkout-branding';
 import { BillingReconciler } from './billing-reconciler.service';
 import { PriceCatalog, UnknownPriceError } from './price-catalog';
 import { StripeService } from './stripe.service';
@@ -841,6 +842,23 @@ describe('BillingService', () => {
     expect(params.success_url).toBe(
       'https://app.example.com/?checkout=complete&session_id={CHECKOUT_SESSION_ID}',
     );
+  });
+
+  it('brands the session for the theme the page asked for', async () => {
+    const { service, createCheckoutSession } = build('cus_existing');
+
+    await service.checkout(
+      owner('cus_existing'),
+      'price_indie_month',
+      'embedded',
+      'dark',
+    );
+
+    const [params] = createCheckoutSession.mock.calls[0] as unknown as [
+      { branding_settings: unknown; locale: string },
+    ];
+    expect(params.branding_settings).toEqual(brandingFor('dark'));
+    expect(params.locale).toBe('en');
   });
 
   it.each(['active', 'trialing', 'past_due', 'unpaid', 'paused'])(

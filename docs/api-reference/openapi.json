@@ -7009,6 +7009,13 @@
               "hosted",
               "embedded"
             ]
+          },
+          "theme": {
+            "type": "string",
+            "enum": [
+              "light",
+              "dark"
+            ]
           }
         },
         "required": [
