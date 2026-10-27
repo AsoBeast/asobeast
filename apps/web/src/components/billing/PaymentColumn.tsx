@@ -8,6 +8,7 @@ import {
   type BillingPrice,
   type PaidPlanName,
 } from "@asobeast/shared";
+import { Skeleton } from "@/components/ui/skeleton";
 import { sessionKeyOf } from "@/lib/embedded-checkout";
 import { summaryFromCatalog } from "@/lib/order-summary";
 import {
@@ -19,6 +20,7 @@ import {
 } from "@/lib/plan-choice";
 import { EmbeddedCheckout } from "./EmbeddedCheckout";
 import { OrderSummary } from "./OrderSummary";
+import { useCheckoutTheme } from "./use-checkout-theme";
 
 const INTERVAL_WORD: Record<BillingInterval, string> = {
   month: "monthly",
@@ -45,6 +47,7 @@ export function PaymentColumn({
   now: Date;
 }) {
   const offer = action === "trial" ? plan?.trialOffer : null;
+  const theme = useCheckoutTheme();
 
   return (
     <section
@@ -55,12 +58,17 @@ export function PaymentColumn({
         {PAYMENT_TITLE}
       </h2>
       {publishableKey && price ? (
-        <EmbeddedCheckout
-          key={sessionKeyOf(price.priceId)}
-          publishableKey={publishableKey}
-          priceId={price.priceId}
-          label={`Stripe checkout for ${PLANS[name].displayName}, ${INTERVAL_WORD[interval]}`}
-        />
+        theme ? (
+          <EmbeddedCheckout
+            key={sessionKeyOf(price.priceId, theme)}
+            publishableKey={publishableKey}
+            priceId={price.priceId}
+            theme={theme}
+            label={`Stripe checkout for ${PLANS[name].displayName}, ${INTERVAL_WORD[interval]}`}
+          />
+        ) : (
+          <Skeleton className="h-[28rem] w-full" />
+        )
       ) : null}
       {buysPlan(action) ? (
         <OrderSummary

@@ -1354,7 +1354,7 @@ test("the upgrade page sends a configured plan to stripe checkout", async ({
 
   await expect
     .poll(() => requested)
-    .toEqual({ priceId: "price_indie_month", ui: "hosted" });
+    .toEqual({ priceId: "price_indie_month", ui: "hosted", theme: "light" });
 });
 
 test("an existing subscriber changes plan in the portal instead of buying a second one", async ({

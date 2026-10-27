@@ -112,7 +112,7 @@ test.describe("the billing wall", () => {
 
     await expect
       .poll(() => requested)
-      .toEqual({ priceId: "price_indie_year", ui: "hosted" });
+      .toEqual({ priceId: "price_indie_year", ui: "hosted", theme: "light" });
     await expect(page).toHaveURL("https://checkout.stripe.test/session");
   });
 
@@ -344,9 +344,9 @@ test.describe("the billing wall", () => {
       ).toHaveCount(1);
 
       expect(bodies).toEqual([
-        { priceId: "price_indie_month", ui: "embedded" },
-        { priceId: "price_indie_year", ui: "embedded" },
-        { priceId: "price_ultimate_year", ui: "embedded" },
+        { priceId: "price_indie_month", ui: "embedded", theme: "light" },
+        { priceId: "price_indie_year", ui: "embedded", theme: "light" },
+        { priceId: "price_ultimate_year", ui: "embedded", theme: "light" },
       ]);
     });
 
@@ -398,6 +398,127 @@ test.describe("the billing wall", () => {
         page.locator('[data-mounted="cs_test_secret_price_ultimate_year"]'),
       ).toHaveCount(1);
       expect(priceIds).toEqual(["price_ultimate_year"]);
+    });
+
+    async function openEmbedded(page: Page) {
+      await seedViewer(page.context(), "checkout-pending");
+      await seedSession(page);
+      await openBilling(page);
+      await page.route("**/api/backend/billing/catalog", (route) =>
+        route.fulfill(
+          fulfillJson(200, { ...CATALOG, publishableKey: "pk_test_e2e" }),
+        ),
+      );
+      await page.route("https://js.stripe.com/**", (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: "application/javascript",
+          body: STRIPE_STUB,
+        }),
+      );
+      const bodies: { priceId: string; ui: string; theme: string }[] = [];
+      await page.route("**/api/backend/billing/checkout", async (route) => {
+        const body = route.request().postDataJSON() as {
+          priceId: string;
+          ui: string;
+          theme: string;
+        };
+        bodies.push(body);
+        await route.fulfill(
+          fulfillJson(200, {
+            url: "http://localhost:3000/?checkout=complete",
+            clientSecret: `cs_${body.priceId}_${body.theme}_${bodies.length}`,
+          }),
+        );
+      });
+      return bodies;
+    }
+
+    test.describe("in the light theme", () => {
+      test.use({ colorScheme: "light" });
+
+      test("brands the session light and remounts it dark on a toggle", async ({
+        page,
+      }) => {
+        const bodies = await openEmbedded(page);
+
+        await page.goto("/upgrade");
+        await expect(
+          page.locator('[data-mounted="cs_price_indie_month_light_1"]'),
+        ).toHaveCount(1);
+
+        const toggle = page.getByRole("button", { name: /Switch theme/ });
+        await toggle.click();
+        await expect(toggle).toHaveAccessibleName("Theme: light. Switch theme");
+        await toggle.click();
+
+        await expect(
+          page.locator('[data-mounted="cs_price_indie_month_dark_2"]'),
+        ).toHaveCount(1);
+        expect(bodies.map((body) => body.theme)).toEqual(["light", "dark"]);
+      });
+    });
+
+    test.describe("in the dark theme", () => {
+      test.use({ colorScheme: "dark" });
+
+      test("keeps the dark brand across a plan change", async ({ page }) => {
+        const bodies = await openEmbedded(page);
+
+        await page.goto("/upgrade");
+        await expect(
+          page.locator('[data-mounted="cs_price_indie_month_dark_1"]'),
+        ).toHaveCount(1);
+        await page.getByRole("button", { name: /^Ultimate,/ }).click();
+
+        await expect(
+          page.locator('[data-mounted="cs_price_ultimate_month_dark_2"]'),
+        ).toHaveCount(1);
+        expect(bodies.map((body) => body.theme)).toEqual(["dark", "dark"]);
+      });
+
+      test("retries a refused session with the same theme", async ({
+        page,
+      }) => {
+        const bodies: string[] = [];
+        await openEmbedded(page);
+        await page.unroute("**/api/backend/billing/checkout");
+        await page.route("**/api/backend/billing/checkout", async (route) => {
+          const { theme } = route.request().postDataJSON() as {
+            theme: string;
+          };
+          bodies.push(theme);
+          if (bodies.length === 1) {
+            await route.fulfill(
+              fulfillJson(409, {
+                statusCode: 409,
+                error: "Conflict",
+                message: "A checkout is already being opened. Try again.",
+                path: "/billing/checkout",
+                timestamp: new Date().toISOString(),
+              }),
+            );
+            return;
+          }
+          await route.fulfill(
+            fulfillJson(200, {
+              url: "http://localhost:3000/?checkout=complete",
+              clientSecret: "cs_retried",
+            }),
+          );
+        });
+
+        await page.goto("/upgrade");
+        await expect(
+          page.getByText("A checkout is already being opened. Try again."),
+        ).toBeVisible();
+        await page.getByRole("button", { name: "Try again" }).click();
+
+        await expect(page.locator('[data-mounted="cs_retried"]')).toHaveCount(
+          1,
+        );
+        expect(bodies).toEqual(["dark", "dark"]);
+      });
     });
 
     test("keeps the hosted button without a key", async ({ page, context }) => {

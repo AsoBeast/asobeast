@@ -14,6 +14,7 @@ import {
 import { buysPlan, type PlanAction } from "@/lib/plan-choice";
 import { invalidateAuth } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
+import { useCheckoutTheme } from "./use-checkout-theme";
 
 function failureMessage(error: unknown, action: PlanAction): string {
   if (error instanceof ApiError) return error.envelope.message;
@@ -33,10 +34,11 @@ export function HostedAction({
 }) {
   const client = useQueryClient();
   const buys = buysPlan(action);
+  const theme = useCheckoutTheme();
   const change = useMutation({
     mutationFn: () =>
       buys
-        ? startCheckout(price?.priceId ?? "", "hosted")
+        ? startCheckout(price?.priceId ?? "", "hosted", theme)
         : openBillingPortal(),
     onSuccess: ({ url }) => {
       window.location.assign(url);
