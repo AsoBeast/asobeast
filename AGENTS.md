@@ -298,7 +298,7 @@ Decompose by **responsibility**, not by syntactic kind. The target is fewer conc
 
 ## Environment variables
 
-`apps/api/.env.example`, `apps/web/.env.example` and the root `.env.example` are the authoritative list; the blocks below mirror them and must be updated in the same commit as any config change.
+`apps/api/.env.example`, `apps/web/.env.example` and the root `.env.example` are the authoritative list; the blocks below mirror them and must be updated in the same commit as any config change. In the example files a variable whose default is empty carries its comment on the line above it, never after it: Compose trims the whitespace after `=` and treats a `#` as a comment only when a space precedes it inside the value, so `KEY=   # note` reaches the container as the value `# note`. `pnpm check:compose-env` fails CI when any example value reads as a comment.
 
 `apps/api/.env`:
 

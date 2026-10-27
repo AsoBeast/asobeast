@@ -29,6 +29,7 @@ jobs:
       - run: pnpm turbo run lint build test:cov
       - run: pnpm check:rate-classes
       - run: pnpm check:compose-limits
+      - run: pnpm check:compose-env
       - run: pnpm check:compose-mounts
       - run: pnpm check:compose-web-origin
       - run: pnpm check:env-documented

@@ -26,6 +26,7 @@
     "format:check": "prettier --check .",
     "check:rate-classes": "node .github/scripts/verify-rate-classes.mjs",
     "check:compose-limits": "node .github/scripts/verify-compose-limits.mjs",
+    "check:compose-env": "node .github/scripts/verify-compose-env.mjs",
     "check:compose-mounts": "node .github/scripts/verify-compose-mounts.mjs",
     "check:compose-web-origin": "node .github/scripts/verify-compose-web-origin.mjs",
     "check:env-documented": "node .github/scripts/verify-env-documented.mjs",
