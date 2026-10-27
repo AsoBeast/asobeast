@@ -91,7 +91,10 @@ export const returnFocusTo =
   };
 
 const isConnected = (node: unknown): boolean =>
-  (node as Partial<Node> | null)?.isConnected === true;
+  typeof node === "object" &&
+  node !== null &&
+  "isConnected" in node &&
+  node.isConnected === true;
 
 export type PendingFocusStep = "wait" | "focus" | "drop";
 
