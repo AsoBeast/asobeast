@@ -8,6 +8,7 @@ import {
 } from '@asobeast/shared';
 import { AlertsDispatcher } from '../alerts/alerts.dispatcher';
 import { PrismaService } from '../prisma/prisma.service';
+import { IconImageSource } from '../store-providers/icon-image.source';
 import { readChangeDetail } from './change-detail';
 import {
   DetectedChange,
@@ -102,6 +103,7 @@ export class ChangesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly alerts: AlertsDispatcher,
+    private readonly icons: IconImageSource,
   ) {}
 
   async timeline(
@@ -204,7 +206,11 @@ export class ChangesService {
     prev: DiffableChangeSnapshot | null,
     next: DiffableChangeSnapshot,
   ): Promise<DetectedChange[]> {
-    const changes = detectChanges(prev, next);
+    const changes = await this.withVerifiedIcons(
+      prev,
+      next,
+      detectChanges(prev, next),
+    );
     const country = storedMarket(listing.home, listing.market);
     const localization = listing.localization ?? null;
     if (changes.length > 0) {
@@ -224,11 +230,29 @@ export class ChangesService {
     prev: DiffableChangeSnapshot | null,
     next: DiffableChangeSnapshot,
   ): Promise<DetectedChange[]> {
-    const changes = detectChanges(prev, next);
+    const changes = await this.withVerifiedIcons(
+      prev,
+      next,
+      detectChanges(prev, next),
+    );
     if (changes.length > 0) {
       await this.persist(appId, changes);
     }
     return changes;
+  }
+
+  private async withVerifiedIcons(
+    prev: DiffableChangeSnapshot | null,
+    next: DiffableChangeSnapshot,
+    changes: DetectedChange[],
+  ): Promise<DetectedChange[]> {
+    if (!prev || !changes.some((change) => change.field === 'icon')) {
+      return changes;
+    }
+    const same = await this.icons.compare(prev.iconUrl, next.iconUrl);
+    return same === true
+      ? changes.filter((change) => change.field !== 'icon')
+      : changes;
   }
 
   async recordCaptionChange(change: CaptionChange): Promise<void> {
