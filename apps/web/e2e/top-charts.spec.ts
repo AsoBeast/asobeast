@@ -1239,6 +1239,7 @@ test.describe.serial("chart follows", () => {
       page.getByText("Could not stop following the category."),
     ).toBeVisible();
     await pageRefetch;
+    await expect(puzzle).toBeFocused();
     listRefetch.release();
     await expect(puzzle).toHaveCount(0);
     await expect(stopButtons(page)).toHaveCount(1);

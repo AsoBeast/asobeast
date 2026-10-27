@@ -90,35 +90,46 @@ export const returnFocusTo =
     element.focus();
   };
 
-export function focusAwaitsRemoval(
-  from: unknown,
+const isConnected = (node: unknown): boolean =>
+  (node as Partial<Node> | null)?.isConnected === true;
+
+export type PendingFocusStep = "wait" | "focus" | "drop";
+
+export function pendingFocusStep(
   target: unknown,
+  leaving: unknown,
   root: FocusRoot = document,
-): boolean {
-  return root.activeElement === from && !focusCanMoveTo(target, root);
+): PendingFocusStep {
+  if (!isConnected(target)) return "drop";
+  if (focusIsLost(root)) return "focus";
+  if (isConnected(leaving)) {
+    return root.activeElement === leaving ? "wait" : "drop";
+  }
+  return focusCanMoveTo(target, root) ? "focus" : "drop";
 }
 
 interface PendingFocus {
   target: HTMLElement;
-  from: unknown;
+  leaving: HTMLElement | null;
 }
 
 export function useFocusAfterCommit(): (
   target: HTMLElement | null | undefined,
+  leaving?: HTMLElement | null,
 ) => void {
   const pending = useRef<PendingFocus | null>(null);
 
   useEffect(() => {
     const handoff = pending.current;
     if (handoff === null) return;
-    const { target, from } = handoff;
-    if (target.isConnected && focusAwaitsRemoval(from, target)) return;
+    const step = pendingFocusStep(handoff.target, handoff.leaving);
+    if (step === "wait") return;
     pending.current = null;
-    if (target.isConnected && focusCanMoveTo(target)) target.focus();
+    if (step === "focus") handoff.target.focus();
   });
 
-  return useCallback((target) => {
-    pending.current = target ? { target, from: document.activeElement } : null;
+  return useCallback((target, leaving = null) => {
+    pending.current = target ? { target, leaving } : null;
   }, []);
 }
 

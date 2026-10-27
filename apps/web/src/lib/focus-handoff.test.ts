@@ -2,10 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 import {
   cardAction,
   CLAIM_WINDOW_MS,
-  focusAwaitsRemoval,
   focusCanMoveTo,
   focusIsLost,
   isClaimable,
+  pendingFocusStep,
   returnFocusTo,
   siblingControl,
   survivingNeighbour,
@@ -50,36 +50,49 @@ describe("focusCanMoveTo", () => {
   });
 });
 
-describe("focusAwaitsRemoval", () => {
-  const target = { tag: "next" };
-  const stop = { tag: "stop" };
+describe("pendingFocusStep", () => {
+  const target = { isConnected: true };
+  const stop = { isConnected: true };
+  const removed = { isConnected: false };
 
-  it("is true while focus still rests on the control that handed off", () => {
-    expect(
-      focusAwaitsRemoval(stop, target, { activeElement: stop, body }),
-    ).toBe(true);
+  it("drops a target that left the page", () => {
+    expect(pendingFocusStep(removed, null, { activeElement: body, body })).toBe(
+      "drop",
+    );
   });
 
-  it("is false once the control is gone and focus is lost", () => {
+  it("focuses the target once the leaving control is gone and focus is lost", () => {
     expect(
-      focusAwaitsRemoval(stop, target, { activeElement: body, body }),
-    ).toBe(false);
+      pendingFocusStep(target, removed, { activeElement: body, body }),
+    ).toBe("focus");
   });
 
-  it("is false once the user moved focus elsewhere", () => {
-    expect(
-      focusAwaitsRemoval(stop, target, {
-        activeElement: { tag: "other" },
-        body,
-      }),
-    ).toBe(false);
+  it("waits while focus still rests on the leaving control", () => {
+    expect(pendingFocusStep(target, stop, { activeElement: stop, body })).toBe(
+      "wait",
+    );
   });
 
-  it("is false when focus rests on a container of the target", () => {
-    const popover = { contains: (node: unknown) => node === target };
+  it("drops the target once the user moves focus off a leaving control that stayed", () => {
     expect(
-      focusAwaitsRemoval(popover, target, { activeElement: popover, body }),
-    ).toBe(false);
+      pendingFocusStep(target, stop, { activeElement: { tag: "other" }, body }),
+    ).toBe("drop");
+  });
+
+  it("focuses the target when focus is lost while the leaving control stays", () => {
+    expect(pendingFocusStep(target, stop, { activeElement: body, body })).toBe(
+      "focus",
+    );
+  });
+
+  it("decides from focus alone when no leaving control is named", () => {
+    const container = { contains: (node: unknown) => node === target };
+    expect(
+      pendingFocusStep(target, null, { activeElement: container, body }),
+    ).toBe("focus");
+    expect(
+      pendingFocusStep(target, null, { activeElement: { tag: "other" }, body }),
+    ).toBe("drop");
   });
 });
 

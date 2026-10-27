@@ -99,7 +99,9 @@ function FollowList({ onNavigate }: { onNavigate: () => void }) {
               key={category.follows[0].id}
               category={category}
               onNavigate={onNavigate}
-              onSettled={(stop) => handOffFocus(stopFollowingSuccessor(stop))}
+              onSettled={(stop) =>
+                handOffFocus(stopFollowingSuccessor(stop), stop)
+              }
             />
           ))}
         </ul>
