@@ -1,3 +1,4 @@
+import { formatDate } from "../src/lib/format";
 import { COLLECTION_PAUSED } from "../src/lib/plan-choice";
 import { fulfillJson, seedSession } from "./plan-helpers.mts";
 import { expect, test } from "./reporting.mts";
@@ -62,6 +63,46 @@ test.describe("an account that owes a step", () => {
     await refetched;
     await expect(page).toHaveURL(/\/upgrade$/);
     expect(reconciles).toBe(1);
+  });
+});
+
+test.describe("a checkout that started the trial", () => {
+  test("stays on the dashboard and welcomes the trial", async ({
+    page,
+    context,
+  }) => {
+    await seedViewer(context, "checkout-pending");
+    await seedSession(page);
+    await openBilling(page, OFFERED_PLAN);
+    let reconciled = false;
+    const accountLoaded = page.waitForResponse("**/api/backend/auth/me");
+    await page.route("**/api/backend/billing/reconcile", async (route) => {
+      await accountLoaded;
+      await seedViewer(context, "trialing");
+      reconciled = true;
+      await route.fulfill(
+        fulfillJson(200, {
+          checked: 1,
+          corrected: 1,
+          orphanSubscriptions: [],
+          unreconciled: [],
+        }),
+      );
+    });
+    await page.route("**/api/backend/auth/plan", (route) =>
+      route.fulfill(
+        fulfillJson(200, reconciled ? TRIALING_PLAN : OFFERED_PLAN),
+      ),
+    );
+
+    await page.goto("/?checkout=complete&session_id=cs_e2e");
+
+    await expect(
+      page.getByText(
+        `Your free trial has started. The first charge is on ${formatDate(TRIALING_PLAN.renewsAt)}.`,
+      ),
+    ).toBeVisible();
+    await expect(page).toHaveURL("http://localhost:3000/");
   });
 });
 

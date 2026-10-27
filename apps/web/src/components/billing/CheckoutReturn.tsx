@@ -10,7 +10,7 @@ import {
   trialStartedToast,
   urlWithoutCheckout,
 } from "@/lib/checkout-return";
-import { accountPlanOptions, invalidateAuth } from "@/lib/queries";
+import { accountPlanOptions, refetchAuth } from "@/lib/queries";
 
 export function CheckoutReturn() {
   const client = useQueryClient();
@@ -22,12 +22,6 @@ export function CheckoutReturn() {
 
     void reconcileBilling(checkoutSessionId(window.location.search))
       .then(async () => {
-        const { pathname, search } = window.location;
-        window.history.replaceState(
-          null,
-          "",
-          urlWithoutCheckout(pathname, search),
-        );
         const plan = await client.fetchQuery({
           ...accountPlanOptions,
           staleTime: 0,
@@ -36,8 +30,15 @@ export function CheckoutReturn() {
         if (welcome) toast.success(welcome);
       })
       .catch(() => undefined)
+      .then(() => refetchAuth(client))
+      .catch(() => undefined)
       .finally(() => {
-        invalidateAuth(client);
+        const { pathname, search } = window.location;
+        window.history.replaceState(
+          null,
+          "",
+          urlWithoutCheckout(pathname, search),
+        );
       });
   }, [client]);
 
