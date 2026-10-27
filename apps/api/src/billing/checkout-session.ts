@@ -20,7 +20,7 @@ export interface CheckoutSessionInput {
   theme?: CheckoutTheme;
 }
 
-export const CHECKOUT_LOCALE = 'en';
+const CHECKOUT_LOCALE = 'en';
 
 export function taxCollectionOf(switches: TaxSwitches): TaxCollection {
   if (switches.STRIPE_MANAGED_PAYMENTS) return 'managed_payments';
