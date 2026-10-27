@@ -43,6 +43,7 @@ describe('Billing checkout before the email is confirmed (e2e)', () => {
   }, 60_000);
 
   beforeEach(async () => {
+    mailer.sent.length = 0;
     await resetBillingState(harness, NEVER_HELD);
     await harness.prisma.user.updateMany({ data: { emailVerifiedAt: null } });
   });
