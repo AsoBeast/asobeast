@@ -10,6 +10,8 @@ mode: wide
 
 Every variable below is read by the API from `apps/api/.env`, or from the environment of the API container. Everything except `DATABASE_URL` and `AUTH_SECRET` has a working default.
 
+Write a comment on its own line in these files. Compose reads `KEY=   # note` as the value `# note`, because it treats `#` as a comment only when a space precedes it inside the value, so an empty variable with a trailing comment reaches the container holding that comment.
+
 <Warning>
   Three settings stop a deployment cold. `AUTH_SECRET` must be at least 32 characters or the API refuses to boot, and changing it signs out every user. Compose refuses to start when `POSTGRES_PASSWORD` or `AUTH_SECRET` is missing or empty from the root `.env`.
 </Warning>

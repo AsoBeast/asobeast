@@ -4,41 +4,36 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { composeConfig, root } from "./compose-config.mjs";
 
-const STACKS = ["docker-compose.yml", "docker-compose.pull.yml"];
-const EXAMPLES = {
-  api: "apps/api/.env.example",
-  web: "apps/web/.env.example",
-};
+const EXAMPLES = ["apps/api/.env.example", "apps/web/.env.example"];
 
-function withExamples(read) {
-  const dir = mkdtempSync(join(tmpdir(), "asobeast-compose-env-"));
-  const override = join(dir, "examples.yml");
-  const services = Object.fromEntries(
-    Object.entries(EXAMPLES).map(([service, example]) => [
-      service,
-      { env_file: [{ path: resolve(root, example), required: true }] },
+function probeServices() {
+  return Object.fromEntries(
+    EXAMPLES.map((example, index) => [
+      `example-${index}`,
+      {
+        image: "scratch",
+        env_file: [{ path: resolve(root, example), required: true }],
+      },
     ]),
   );
-  writeFileSync(override, JSON.stringify({ services }));
+}
+
+function resolvedExamples() {
+  const dir = mkdtempSync(join(tmpdir(), "asobeast-compose-env-"));
+  const probe = join(dir, "examples.yml");
+  writeFileSync(probe, JSON.stringify({ services: probeServices() }));
   try {
-    return read(override);
+    return composeConfig([probe]).services;
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
 }
 
-const failures = STACKS.flatMap((file) =>
-  withExamples((override) => {
-    const { services } = composeConfig([file, override]);
-    return Object.keys(EXAMPLES).flatMap((service) =>
-      Object.entries(services[service]?.environment ?? {})
-        .filter(([, value]) => String(value ?? "").startsWith("#"))
-        .map(
-          ([name, value]) =>
-            `${file}: ${service} ${name} reads ${JSON.stringify(value)} from ${EXAMPLES[service]}`,
-        ),
-    );
-  }),
+const services = resolvedExamples();
+const failures = EXAMPLES.flatMap((example, index) =>
+  Object.entries(services[`example-${index}`]?.environment ?? {})
+    .filter(([, value]) => String(value ?? "").startsWith("#"))
+    .map(([name]) => `${example}: ${name} reads a comment as its value`),
 );
 
 if (failures.length > 0) {
@@ -57,5 +52,5 @@ if (failures.length > 0) {
 }
 
 console.log(
-  `${STACKS.join(", ")}: no variable from ${Object.values(EXAMPLES).join(" or ")} reads a comment as its value`,
+  `${EXAMPLES.join(", ")}: Compose reads no comment as a variable's value`,
 );
