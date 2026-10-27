@@ -1,3 +1,4 @@
+import { PRODUCT_NAME } from '../brand';
 import { PLANS, type PaidPlanName } from './plans';
 
 export const CHECKOUT_RETURN_PARAM = 'checkout';
@@ -42,9 +43,41 @@ export const CHECKOUT_UIS = ['hosted', 'embedded'] as const;
 
 export type CheckoutUi = (typeof CHECKOUT_UIS)[number];
 
+export const CHECKOUT_THEMES = ['light', 'dark'] as const;
+
+export type CheckoutTheme = (typeof CHECKOUT_THEMES)[number];
+
+export interface CheckoutBrand {
+  backgroundColor: string;
+  buttonColor: string;
+  borderStyle: 'rounded';
+  fontFamily: 'inter';
+  displayName: string;
+}
+
+const CHECKOUT_BUTTON_COLOR = '#f89820';
+
+export const CHECKOUT_BRAND: Record<CheckoutTheme, CheckoutBrand> = {
+  light: {
+    backgroundColor: '#fbfaf8',
+    buttonColor: CHECKOUT_BUTTON_COLOR,
+    borderStyle: 'rounded',
+    fontFamily: 'inter',
+    displayName: PRODUCT_NAME,
+  },
+  dark: {
+    backgroundColor: '#110f0c',
+    buttonColor: CHECKOUT_BUTTON_COLOR,
+    borderStyle: 'rounded',
+    fontFamily: 'inter',
+    displayName: PRODUCT_NAME,
+  },
+};
+
 export interface CheckoutRequest {
   priceId: string;
   ui?: CheckoutUi;
+  theme?: CheckoutTheme;
 }
 
 export interface ReconcileRequest {

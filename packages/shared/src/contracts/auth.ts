@@ -27,11 +27,16 @@ export interface AuthUser {
   trialAwaitsConfirmation?: boolean;
   trialAwaitsCheckout?: boolean;
   trialing?: boolean;
+  entryStep?: EntryStep;
   tokenScope?: ApiTokenScope;
   platformOperator: boolean;
   suspendedAt?: string | null;
   suspendedReason?: string | null;
 }
+
+export const ENTRY_STEPS = ['confirm-email', 'choose-plan'] as const;
+
+export type EntryStep = (typeof ENTRY_STEPS)[number];
 
 export const API_TOKEN_SCOPES = ['read', 'write'] as const;
 
