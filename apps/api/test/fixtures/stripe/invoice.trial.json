@@ -1,0 +1,55 @@
+{
+  "id": "evt_TestInvoiceTrial",
+  "object": "event",
+  "api_version": "2026-08-26.dahlia",
+  "created": 1800000150,
+  "data": {
+    "object": {
+      "id": "in_TestTrial",
+      "object": "invoice",
+      "amount_due": 0,
+      "amount_paid": 0,
+      "amount_remaining": 0,
+      "attempt_count": 1,
+      "attempted": true,
+      "auto_advance": false,
+      "billing_reason": "subscription_cycle",
+      "collection_method": "charge_automatically",
+      "created": 1800000150,
+      "currency": "usd",
+      "customer": "cus_TestWorkspace1",
+      "customer_email": "owner@example.com",
+      "hosted_invoice_url": "https://invoice.stripe.test/Test",
+      "livemode": false,
+      "metadata": {},
+      "parent": {
+        "quote_details": null,
+        "subscription_details": {
+          "metadata": {
+            "asobeast_workspace_id": "ws_stripe_fixture"
+          },
+          "subscription": "sub_TestIndieMonthly"
+        },
+        "type": "subscription_details"
+      },
+      "period_end": 1802678400,
+      "period_start": 1800000000,
+      "status": "paid",
+      "total": 0,
+      "subtotal": 0,
+      "status_transitions": {
+        "finalized_at": 1800000150,
+        "marked_uncollectible_at": null,
+        "paid_at": 1800000150,
+        "voided_at": null
+      }
+    }
+  },
+  "livemode": false,
+  "pending_webhooks": 1,
+  "request": {
+    "id": "req_TestRequest",
+    "idempotency_key": null
+  },
+  "type": "invoice.paid"
+}

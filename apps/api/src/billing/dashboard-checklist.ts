@@ -1,7 +1,7 @@
 const SHARED = [
   'Settings, Checkout and Payment Links, Subscriptions: limit customers to one subscription, on',
   'Settings, Billing, Subscriptions and emails: Smart Retries on, then mark the subscription unpaid',
-  'Settings, Billing, Subscriptions and emails: trial end behaviour stays irrelevant, Checkout never starts a Stripe trial',
+  'Settings, Billing, Subscriptions and emails: trial end behaviour, cancel if no payment method; Checkout always collects a card and sets the same in code',
   'Developers, Webhooks: one endpoint per environment with the ten handled events on the pinned api version',
 ];
 
@@ -11,10 +11,12 @@ const SELLER = [
   'Settings, Checkout: adaptive pricing off',
   'Settings, Public details: legal name, support email hello@asobeast.dev, terms and privacy urls',
   'Radar: default rules',
+  'Radar: free trial abuse control on, with Radar on payment methods saved for future use',
 ];
 
 const MANAGED_PAYMENTS = [
   'Settings, Managed Payments: activated, with the Managed Payments terms accepted',
+  'Settings, Managed Payments: ask Stripe whether the Radar free trial abuse control applies; Link sends the trial start email and no reminder for a 7 day trial, asobeast sends its own',
   'Settings, Business details: support email hello@asobeast.dev; Stripe escalates there and may refund on its own after 48 hours without an answer',
   'Settings, Public details: statement descriptor ASOBEAST, printed after LINK.COM* on every card statement',
   'Settings, Checkout: terms of service and privacy policy urls for the checkout footer',

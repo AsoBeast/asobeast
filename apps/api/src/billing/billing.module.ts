@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { QUEUES } from '../jobs/jobs.types';
 import { AlertsModule } from '../alerts/alerts.module';
+import { AuthModule } from '../auth/auth.module';
 import { Env } from '../config/env';
 import { BillingController } from './billing.controller';
 import { BillingService } from './billing.service';
@@ -17,9 +18,15 @@ import { BillingWorker } from './billing.worker';
 import { PriceCatalog } from './price-catalog';
 import { STRIPE_CLIENT, createStripeClient } from './stripe.client';
 import { StripeService } from './stripe.service';
+import { FirstPayment } from './first-payment';
+import { TrialStarts } from './trial-starts';
 
 @Module({
-  imports: [AlertsModule, BullModule.registerQueue({ name: QUEUES.BILLING })],
+  imports: [
+    AlertsModule,
+    AuthModule,
+    BullModule.registerQueue({ name: QUEUES.BILLING }),
+  ],
   controllers: [BillingController, BillingWebhookController],
   providers: [
     {
@@ -34,6 +41,8 @@ import { StripeService } from './stripe.service';
     BillingEventQueue,
     BillingWebhookService,
     BillingReconciler,
+    TrialStarts,
+    FirstPayment,
     AccountNotifier,
     TrialNotifier,
     DowngradeWarner,

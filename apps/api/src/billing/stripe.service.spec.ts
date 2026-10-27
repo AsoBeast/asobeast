@@ -121,4 +121,71 @@ describe('StripeService', () => {
       await expect(service.customerExists('cus_1')).rejects.toBe(down);
     });
   });
+
+  describe('trial calls', () => {
+    it('ends a trial now under an idempotency key named after the subscription', async () => {
+      const update = jest.fn().mockResolvedValue({ id: 'sub_1' });
+      const service = new StripeService({
+        subscriptions: { update },
+      } as unknown as Stripe);
+
+      await service.endTrialNow('sub_1');
+
+      expect(update).toHaveBeenCalledWith(
+        'sub_1',
+        { trial_end: 'now' },
+        { idempotencyKey: 'trial-end:sub_1' },
+      );
+    });
+
+    it('reads a payment method by its id', async () => {
+      const retrieve = jest.fn().mockResolvedValue({ id: 'pm_1' });
+      const service = new StripeService({
+        paymentMethods: { retrieve },
+      } as unknown as Stripe);
+
+      await expect(service.retrievePaymentMethod('pm_1')).resolves.toEqual({
+        id: 'pm_1',
+      });
+      expect(retrieve).toHaveBeenCalledWith('pm_1');
+    });
+
+    it('cancels a subscription at its period end under an idempotency key', async () => {
+      const update = jest.fn().mockResolvedValue({ id: 'sub_1' });
+      const service = new StripeService({
+        subscriptions: { update },
+      } as unknown as Stripe);
+
+      await service.cancelAtPeriodEnd('sub_1');
+
+      expect(update).toHaveBeenCalledWith(
+        'sub_1',
+        { cancel_at_period_end: true },
+        { idempotencyKey: 'cancel-at-end:sub_1' },
+      );
+    });
+
+    it('reads an invoice by its id', async () => {
+      const retrieve = jest.fn().mockResolvedValue({ id: 'in_1' });
+      const service = new StripeService({
+        invoices: { retrieve },
+      } as unknown as Stripe);
+
+      await expect(service.retrieveInvoice('in_1')).resolves.toEqual({
+        id: 'in_1',
+      });
+      expect(retrieve).toHaveBeenCalledWith('in_1');
+    });
+
+    it('refuses both while billing is not configured', () => {
+      const service = new StripeService(createStripeClient(undefined));
+
+      expect(() => service.endTrialNow('sub_1')).toThrow(
+        ServiceUnavailableException,
+      );
+      expect(() => service.retrievePaymentMethod('pm_1')).toThrow(
+        ServiceUnavailableException,
+      );
+    });
+  });
 });

@@ -293,4 +293,42 @@ describe('PriceCatalog naming the plan of a subscription', () => {
       UnknownPriceError,
     );
   });
+
+  it('names the interval of a catalogued price', () => {
+    const catalog = catalogWith(CONFIGURED);
+
+    expect(
+      catalog.intervalOf(subscribedTo({ id: 'price_ultimate_month' })),
+    ).toBe('month');
+    expect(
+      catalog.intervalOf(subscribedTo({ id: 'price_ultimate_year' })),
+    ).toBe('year');
+  });
+
+  it('names the interval of a retired price from its recurring interval', () => {
+    expect(
+      catalogWith(CONFIGURED).intervalOf(
+        subscribedTo({
+          id: 'price_old',
+          recurring: { interval: 'year' } as Stripe.Price.Recurring,
+        }),
+      ),
+    ).toBe('year');
+  });
+
+  it('refuses the interval of a price it cannot place', () => {
+    const catalog = catalogWith(CONFIGURED);
+
+    expect(() =>
+      catalog.intervalOf(subscribedTo({ id: 'price_bare' })),
+    ).toThrow(UnknownPriceError);
+    expect(() =>
+      catalog.intervalOf(
+        subscribedTo({
+          id: 'price_daily',
+          recurring: { interval: 'day' } as Stripe.Price.Recurring,
+        }),
+      ),
+    ).toThrow(UnknownPriceError);
+  });
 });

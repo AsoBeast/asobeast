@@ -262,7 +262,7 @@ export class InstanceMetricsCollector {
         where: { trialStartedAt: { not: null } },
       }),
       this.prisma.workspace.count({
-        where: { trialStartedAt: { not: null }, subscriptionId: { not: null } },
+        where: { trialStartedAt: { not: null }, firstPaidAt: { not: null } },
       }),
       this.prisma.workspace.count({ where: { suspendedAt: { not: null } } }),
       this.prisma.billingEvent.count({ where: { processedAt: null } }),

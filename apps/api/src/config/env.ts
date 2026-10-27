@@ -197,6 +197,7 @@ export const EnvSchema = z.object({
     .default('false')
     .transform((value) => value === 'true'),
   STRIPE_SECRET_KEY: optionalText,
+  STRIPE_PUBLISHABLE_KEY: optionalText,
   STRIPE_WEBHOOK_SECRET: optionalText,
   STRIPE_PORTAL_RETURN_URL: optionalText,
   STRIPE_TAX_ENABLED: z

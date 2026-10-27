@@ -33,4 +33,18 @@ describe('Entitlement against an upgraded baseline database', () => {
     expect(workspace.plan).toBe('free');
     expect(isEntitled(workspace, NOW)).toBe(false);
   });
+
+  it('marks a paying baseline subscription paid and leaves a trial unpaid', async () => {
+    const subscribed = await prisma.workspace.findUniqueOrThrow({
+      where: { id: 'ws_subscribed' },
+    });
+    const trialing = await prisma.workspace.findUniqueOrThrow({
+      where: { id: 'ws_trialing' },
+    });
+
+    expect(subscribed.firstPaidAt).toEqual(
+      new Date('2026-07-15T00:00:00.000Z'),
+    );
+    expect(trialing.firstPaidAt).toBeNull();
+  });
 });

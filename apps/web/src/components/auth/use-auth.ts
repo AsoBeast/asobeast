@@ -1,38 +1,26 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { paidPlanOf, type AuthStatus, type AuthUser } from "@asobeast/shared";
+import type { AuthStatus } from "@asobeast/shared";
+import { authStateOf, type DerivedAuthState } from "@/lib/auth-state";
 import { authMeOptions, authStatusOptions } from "@/lib/queries";
 import { useHydrated } from "@/lib/use-hydrated";
 
-export interface AuthState {
+export interface AuthState extends DerivedAuthState {
   status: AuthStatus | undefined;
-  authenticated: boolean;
-  user: AuthUser | undefined;
   userError: Error | null;
   retryUser: () => void;
   isLoading: boolean;
   isFetching: boolean;
-  trialOnly: boolean;
-  awaitingConfirmation: boolean;
-  isMember: boolean;
-  isOwner: boolean;
-  isOperator: boolean;
 }
 
 const SERVER_AUTH_STATE: AuthState = {
+  ...authStateOf(undefined, undefined),
   status: undefined,
-  authenticated: false,
-  user: undefined,
   userError: null,
   retryUser: () => {},
   isLoading: true,
   isFetching: true,
-  trialOnly: false,
-  awaitingConfirmation: false,
-  isMember: false,
-  isOwner: false,
-  isOperator: false,
 };
 
 export function useAuth(): AuthState {
@@ -55,26 +43,12 @@ export function useAuth(): AuthState {
 
   if (!hydrated) return SERVER_AUTH_STATE;
 
-  const trialOnly = Boolean(
-    user?.entitled &&
-    paidPlanOf(user.plan) === null &&
-    user.trialEndsAt !== null,
-  );
-
-  const signedIn = authenticated ? user : undefined;
-
   return {
+    ...authStateOf(status, user),
     status,
-    authenticated,
-    user: signedIn,
     userError: authenticated ? userError : null,
     retryUser: () => void refetchUser(),
     isLoading: statusLoading || (authenticated && userLoading),
     isFetching: statusFetching,
-    trialOnly,
-    awaitingConfirmation: signedIn?.trialAwaitsConfirmation === true,
-    isMember: signedIn !== undefined && signedIn.role !== "owner",
-    isOwner: signedIn?.role === "owner",
-    isOperator: signedIn?.platformOperator === true,
   };
 }

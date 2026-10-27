@@ -28,6 +28,7 @@ import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { EmailVerificationService } from './email-verification.service';
 import { sha256 } from './password-hash';
 import { canStartTrial } from './trial-grant';
+import { TrialOffers } from './trial-offers';
 import { sessionClaimsOf } from './session-claims';
 import { endSessions, SessionStore } from './session-store';
 import { DEFAULT_WORKSPACE_ID } from '../common/tenancy/default-workspace';
@@ -55,6 +56,7 @@ export class AuthService {
     private readonly signupCapacity: SignupCapacityGate,
     private readonly verification: EmailVerificationService,
     private readonly sessions: SessionStore,
+    private readonly trialOffers: TrialOffers,
   ) {}
 
   private beforeSignIn<T>(work: () => Promise<T>): Promise<T> {
@@ -150,7 +152,7 @@ export class AuthService {
     if (!canStartTrial(existing, new Date())) return DEFAULT_WORKSPACE_ID;
     const opening = await this.verification.openingTerms(tx, email);
     if (opening) {
-      await this.verification.writeTerms(tx, existing, email, opening);
+      await this.verification.writeTerms(tx, existing, opening);
     }
     return DEFAULT_WORKSPACE_ID;
   }
@@ -324,7 +326,10 @@ export class AuthService {
     return this.config.get('AUTH_SESSION_DAYS', { infer: true }) * DAY_MS;
   }
 
-  toAuthUser(user: AccountUser, tokenScope?: ApiTokenScope): AuthUser {
+  async toAuthUser(
+    user: AccountUser,
+    tokenScope?: ApiTokenScope,
+  ): Promise<AuthUser> {
     return {
       id: user.id,
       email: user.email,
@@ -336,6 +341,8 @@ export class AuthService {
       planExpiresAt: user.workspace.planExpiresAt?.toISOString() ?? null,
       entitled: this.entitled(user),
       trialAwaitsConfirmation: this.verification.awaitsConfirmation(user),
+      trialAwaitsCheckout: (await this.trialOffers.offerFor(user)) !== null,
+      trialing: user.workspace.subscriptionStatus === 'trialing',
       platformOperator: isPlatformOperator(user),
       suspendedAt: user.workspace.suspendedAt?.toISOString() ?? null,
       suspendedReason: user.workspace.suspendedReason,

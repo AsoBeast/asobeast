@@ -768,7 +768,7 @@ const UNCONFIRMED_USER: AuthUser = {
 
 const UNCONFIRMED_PLAN: AccountPlan = { ...LAPSED_PLAN, trialEndsAt: null };
 
-const CONFIRM_TO_START = "Confirm your email to start your free trial.";
+const CONFIRM_TO_START = "Confirm your email address.";
 
 async function openAsUnconfirmed(page: Page) {
   await seedSession(page);
@@ -886,15 +886,48 @@ test("registration lands on the request to confirm the email", async ({
   await page.getByLabel("Password").fill("supersecret1");
   await page.getByRole("button", { name: "Create account" }).click();
 
-  await expect(page).toHaveURL("/");
+  await expect(page).toHaveURL(/\/upgrade$/);
   await expect(page.getByText(CONFIRM_TO_START)).toBeVisible();
   await expect(page.getByText("Collection is paused")).toHaveCount(0);
 });
 
-test("the upgrade page asks an unconfirmed account to confirm before it pays", async ({
+const OFFERING_USER: AuthUser = {
+  ...UNCONFIRMED_USER,
+  trialAwaitsCheckout: true,
+};
+const OFFERING_PLAN: AccountPlan = {
+  ...UNCONFIRMED_PLAN,
+  trialOffer: { days: 7 },
+};
+
+async function openAsOffered(page: Page) {
+  await openAsUnconfirmed(page);
+  await routeMe(page, OFFERING_USER);
+  await routePlan(page, OFFERING_PLAN);
+}
+
+test("an account that may start a trial sees the trial banner", async ({
   page,
 }) => {
-  await openAsUnconfirmed(page);
+  await openAsOffered(page);
+
+  await page.goto("/");
+
+  await expect(
+    page.getByText(
+      "Start your 7 day free trial to begin tracking. $0 today, cancel any time.",
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Start free trial" }),
+  ).toHaveAttribute("href", "/upgrade");
+  await expect(page.getByText("Collection is paused")).toHaveCount(0);
+});
+
+test("the wall offers the trial to an unconfirmed account and asks for the confirmation beside it", async ({
+  page,
+}) => {
+  await openAsOffered(page);
   let resends = 0;
   await page.route("**/api/backend/auth/verify/resend", async (route) => {
     resends += 1;
@@ -903,29 +936,26 @@ test("the upgrade page asks an unconfirmed account to confirm before it pays", a
 
   await page.goto("/upgrade");
 
-  await expect(page.getByText(CONFIRM_TO_START)).toBeVisible();
-  await expect(page.getByText("Choose a plan to unlock asobeast.")).toHaveCount(
-    0,
-  );
   await expect(
-    page.getByRole("button", { name: "Choose Indie" }),
+    page.getByText("We sent a confirmation link to owner@example.com.", {
+      exact: false,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Start free trial" }),
   ).toBeVisible();
 
   await page.getByRole("button", { name: "Send a new link" }).click();
   await expect.poll(() => resends).toBe(1);
 });
 
-test("settings says the trial starts when the email is confirmed", async ({
-  page,
-}) => {
-  await openAsUnconfirmed(page);
+test("settings says the trial starts on the wall", async ({ page }) => {
+  await openAsOffered(page);
 
   await page.goto("/settings");
 
   await expect(
-    page.getByText("Open the link we emailed you when you registered", {
-      exact: false,
-    }),
+    page.getByText("Start your free trial from the plan page."),
   ).toBeVisible();
   await expect(
     page.getByText("tracking resumes when you choose a plan", { exact: false }),
@@ -1196,8 +1226,9 @@ test("a workspace whose first payment is confirming is asked to wait, not to pay
   const waiting = page.getByRole("button", {
     name: "Confirming your payment",
   });
-  await expect(waiting).toHaveCount(2);
-  for (const button of await waiting.all()) await expect(button).toBeDisabled();
+  await expect(waiting).toBeDisabled();
+  await page.getByRole("button", { name: "Select Ultimate" }).click();
+  await expect(waiting).toBeDisabled();
 
   await page.goto("/settings");
   await expect(
@@ -1343,6 +1374,10 @@ test("the upgrade page lists both paid plans with their limits", async ({
   await expect(page.getByText("$99", { exact: true })).toBeVisible();
   await expect(page.getByText("Current", { exact: true })).toBeVisible();
   await expect(
+    page.getByRole("button", { name: "Current plan" }),
+  ).toBeDisabled();
+  await page.getByRole("button", { name: "Select Ultimate" }).click();
+  await expect(
     page.getByRole("button", { name: "Choose Ultimate" }),
   ).toBeVisible();
 
@@ -1439,13 +1474,17 @@ test("the upgrade page sends a configured plan to stripe checkout", async ({
   });
 
   await page.goto("/upgrade");
+  await page.getByRole("button", { name: "Select Ultimate" }).click();
   await expect(
     page.getByRole("button", { name: "Choose Ultimate" }),
   ).toBeDisabled();
 
+  await page.getByRole("button", { name: "Select Indie" }).click();
   await page.getByRole("button", { name: "Choose Indie" }).click();
 
-  await expect.poll(() => requested).toEqual({ priceId: "price_indie_month" });
+  await expect
+    .poll(() => requested)
+    .toEqual({ priceId: "price_indie_month", ui: "hosted" });
 });
 
 test("an existing subscriber changes plan in the portal instead of buying a second one", async ({
@@ -1489,6 +1528,7 @@ test("an existing subscriber changes plan in the portal instead of buying a seco
   });
 
   await page.goto("/upgrade");
+  await page.getByRole("button", { name: "Select Ultimate" }).click();
   await expect(
     page.getByRole("button", { name: "Choose Ultimate" }),
   ).toHaveCount(0);

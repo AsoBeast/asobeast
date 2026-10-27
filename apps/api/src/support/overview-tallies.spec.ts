@@ -15,6 +15,7 @@ const workspace = (overrides: Partial<WorkspaceRow> = {}): WorkspaceRow => ({
   plan: 'free',
   trialEndsAt: null,
   planExpiresAt: null,
+  subscriptionStatus: null,
   suspendedAt: null,
   deletionDueAt: null,
   ...overrides,

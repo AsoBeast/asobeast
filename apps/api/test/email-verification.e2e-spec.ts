@@ -34,7 +34,7 @@ function sessionCookie(res: request.Response): string {
   return cookie.split(';')[0];
 }
 
-describe('Email verification before the trial starts', () => {
+describe('Email verification', () => {
   let app: INestApplication<App>;
   let prisma: PrismaClient;
   let sent: SentMail[];
@@ -146,18 +146,29 @@ describe('Email verification before the trial starts', () => {
     await prisma.$disconnect();
   });
 
-  it('withholds the trial until the address is confirmed', async () => {
+  it('marks the address and withholds the trial', async () => {
     const created = await register('owner@example.com').expect(201);
     const account = created.body as AuthUser;
 
     expect(account.emailVerified).toBe(false);
     expect(account.entitled).toBe(false);
     expect(account.trialEndsAt).toBeNull();
+    expect(account.trialAwaitsConfirmation).toBe(true);
+    expect(account.trialAwaitsCheckout).toBe(true);
 
-    const workspace = await prisma.workspace.findUniqueOrThrow({
-      where: { id: DEFAULT_WORKSPACE_ID },
+    const confirmed = await confirm(tokenFrom(sent[0])).expect(200);
+    const after = confirmed.body as AuthUser;
+
+    expect(after.emailVerified).toBe(true);
+    expect(after.entitled).toBe(false);
+    expect(after.trialEndsAt).toBeNull();
+    expect(after.trialAwaitsConfirmation).toBe(false);
+    expect(after.trialAwaitsCheckout).toBe(true);
+    await expect(workspaceRow()).resolves.toMatchObject({
+      plan: 'free',
+      trialStartedAt: null,
+      trialEndsAt: null,
     });
-    expect(workspace.trialStartedAt).toBeNull();
   });
 
   it('tells an account whose trial waits on its email that it does', async () => {
@@ -199,6 +210,14 @@ describe('Email verification before the trial starts', () => {
       .send({ token: tokenFrom(sent[0]) })
       .expect(200);
     const ownerCookie = sessionCookie(confirmed);
+    await prisma.workspace.update({
+      where: { id: DEFAULT_WORKSPACE_ID },
+      data: {
+        plan: 'indie',
+        trialStartedAt: new Date(),
+        planExpiresAt: new Date(Date.now() + 60_000),
+      },
+    });
     await request(app.getHttpServer())
       .post('/workspace/invites')
       .set('Cookie', ownerCookie)
@@ -213,7 +232,7 @@ describe('Email verification before the trial starts', () => {
       .expect(201);
     await prisma.workspace.update({
       where: { id: DEFAULT_WORKSPACE_ID },
-      data: { trialEndsAt: new Date(Date.now() - 1000) },
+      data: { planExpiresAt: new Date(Date.now() - 1000) },
     });
 
     const member = await me(sessionCookie(accepted)).expect(200);
@@ -221,6 +240,7 @@ describe('Email verification before the trial starts', () => {
     expect((member.body as AuthUser).emailVerified).toBe(false);
     expect((member.body as AuthUser).entitled).toBe(false);
     expect((member.body as AuthUser).trialAwaitsConfirmation).toBe(false);
+    expect((member.body as AuthUser).trialAwaitsCheckout).toBe(false);
   });
 
   it('emails a confirmation link to the address that registered', async () => {
@@ -242,25 +262,6 @@ describe('Email verification before the trial starts', () => {
     expect(user.verificationHash).toBe(
       createHash('sha256').update(token).digest('hex'),
     );
-  });
-
-  it('starts the trial the moment the address is confirmed', async () => {
-    await register('owner@example.com').expect(201);
-
-    const confirmed = await request(app.getHttpServer())
-      .post('/auth/verify')
-      .send({ token: tokenFrom(sent[0]) })
-      .expect(200);
-    const account = confirmed.body as AuthUser;
-
-    expect(account.emailVerified).toBe(true);
-    expect(account.entitled).toBe(true);
-    expect(account.plan).toBe('trial');
-
-    const workspace = await prisma.workspace.findUniqueOrThrow({
-      where: { id: DEFAULT_WORKSPACE_ID },
-    });
-    expect(workspace.trialStartedAt).not.toBeNull();
   });
 
   it('spends the confirmation token exactly once', async () => {
@@ -315,8 +316,11 @@ describe('Email verification before the trial starts', () => {
         String(message).includes('mailbox already had one'),
       ),
     ).toEqual([]);
-    await expect(workspaceRow()).resolves.toMatchObject({ plan: 'trial' });
-    await expect(prisma.trialClaim.count()).resolves.toBe(1);
+    await expect(workspaceRow()).resolves.toMatchObject({
+      plan: 'free',
+      trialStartedAt: null,
+    });
+    await expect(prisma.trialClaim.count()).resolves.toBe(0);
   });
 
   it('refuses a link past its expiry', async () => {
@@ -422,16 +426,14 @@ describe('Email verification before the trial starts', () => {
       .expect(404);
   });
 
-  it('never grants a second trial on a later confirmation', async () => {
+  it('never grants a trial on a later confirmation', async () => {
     await register('owner@example.com').expect(201);
-    await request(app.getHttpServer())
-      .post('/auth/verify')
-      .send({ token: tokenFrom(sent[0]) })
-      .expect(200);
-    const first = await prisma.workspace.findUniqueOrThrow({
+    const trialStartedAt = new Date('2026-08-01T00:00:00.000Z');
+    await prisma.workspace.update({
       where: { id: DEFAULT_WORKSPACE_ID },
-      select: { trialStartedAt: true },
+      data: { trialStartedAt },
     });
+    await confirm(tokenFrom(sent[0])).expect(200);
 
     sent.length = 0;
     const tenant = await register('tenant@example.com').expect(201);
@@ -439,29 +441,21 @@ describe('Email verification before the trial starts', () => {
       where: { id: (tenant.body as AuthUser).id },
       select: { workspaceId: true },
     });
-    await request(app.getHttpServer())
-      .post('/auth/verify')
-      .send({ token: tokenFrom(sent[0]) })
-      .expect(200);
+    await confirm(tokenFrom(sent[0])).expect(200);
 
-    await expect(
-      prisma.workspace.findUniqueOrThrow({
-        where: { id: DEFAULT_WORKSPACE_ID },
-        select: { trialStartedAt: true },
-      }),
-    ).resolves.toEqual(first);
+    await expect(workspaceRow()).resolves.toMatchObject({ trialStartedAt });
     await expect(
       prisma.workspace.findUniqueOrThrow({
         where: { id: tenantWorkspace.workspaceId },
-        select: { trialStartedAt: true },
+        select: { trialStartedAt: true, trialEndsAt: true },
       }),
-    ).resolves.not.toEqual({ trialStartedAt: null });
+    ).resolves.toEqual({ trialStartedAt: null, trialEndsAt: null });
   });
 
   describe('a workspace that already pays', () => {
-    it('offers no trial in a link sent after the workspace paid', async () => {
+    it('names no trial in a link sent before or after the workspace paid', async () => {
       const registered = await register('owner@example.com').expect(201);
-      expect(sent[0].text).toContain('to start your trial');
+      expect(sent[0].text).not.toMatch(/trial/i);
       await subscribed('indie');
 
       await request(app.getHttpServer())
@@ -549,43 +543,6 @@ describe('Email verification before the trial starts', () => {
       const current = await me(sessionCookie(created)).expect(200);
 
       expect((current.body as AuthUser).trialAwaitsConfirmation).toBe(false);
-    });
-
-    it('starts the trial for an account that only opened a checkout', async () => {
-      await register('owner@example.com').expect(201);
-      await prisma.workspace.update({
-        where: { id: DEFAULT_WORKSPACE_ID },
-        data: { billingCustomerId: 'cus_opened' },
-      });
-
-      const confirmed = await confirm(tokenFrom(sent[0])).expect(200);
-
-      expect((confirmed.body as AuthUser).plan).toBe('trial');
-      await expect(workspaceRow()).resolves.toMatchObject({
-        plan: 'trial',
-        billingCustomerId: 'cus_opened',
-      });
-    });
-
-    it('keeps a subscription that lands between reading the workspace and writing the trial', async () => {
-      await register('owner@example.com').expect(201);
-      const workspaces = app.get(PrismaService).workspace;
-      const read = workspaces.findUniqueOrThrow.bind(workspaces);
-      jest.spyOn(workspaces, 'findUniqueOrThrow').mockImplementationOnce(((
-        args: Parameters<typeof read>[0],
-      ) =>
-        read(args).then(async (stale) => {
-          await subscribed('ultimate');
-          return stale;
-        })) as typeof read);
-
-      await confirm(tokenFrom(sent[0])).expect(200);
-
-      await expect(workspaceRow()).resolves.toMatchObject({
-        plan: 'ultimate',
-        subscriptionId: 'sub_paid',
-        trialStartedAt: null,
-      });
     });
 
     it('keeps the plan when an invited member confirms into a paying workspace', async () => {

@@ -84,7 +84,7 @@ A class is also not a permission. A read only token may call any endpoint that d
 
 A chart category is one store, storefront, category and device, and its free, paid and grossing charts count once. See [Read top charts](/guides/top-charts#what-does-it-cost).
 
-A trial runs at Indie limits. A workspace whose plan has lapsed keeps the same read allowance, because its data stays readable and exportable while its capacity does not.
+A trialing workspace runs at the limits of the plan it chose, and reports that plan, with the AI allowance at 25 calls until the first charge. A workspace whose plan has lapsed keeps the same read allowance, because its data stays readable and exportable while its capacity does not.
 
 ## The hosted MCP endpoint has its own budget
 
@@ -138,16 +138,16 @@ Finding localizations (`POST /apps/{id}/localizations/detect`) is not an allowan
 {
   "statusCode": 429,
   "error": "Too Many Requests",
-  "message": "Run daily limit reached: the trial plan allows 5 requests per day. Try again in 12 hours 52 minutes.",
+  "message": "Run daily limit reached: the indie plan allows 5 requests per day. Try again in 12 hours 52 minutes.",
   "path": "/apps/cl123/run-daily",
   "timestamp": "2026-10-05T10:30:26.118Z",
   "rateLimit": {
     "window": "day",
     "rateClass": "store",
-    "plan": "trial",
+    "plan": "indie",
     "limit": 5,
     "resetSeconds": 46275,
-    "upgradeTo": "indie",
+    "upgradeTo": "ultimate",
     "action": "runDaily"
   },
   "retryAfterSeconds": 46275

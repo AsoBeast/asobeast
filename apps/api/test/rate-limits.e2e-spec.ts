@@ -385,6 +385,13 @@ describe('Rate limits (billing mode)', () => {
   it('counts each workspace against its own allowance', async () => {
     const busy = await register('busy@example.com');
     const quiet = await register('quiet@example.com');
+    await prisma.workspace.updateMany({
+      where: { name: 'quiet@example.com' },
+      data: {
+        plan: 'indie',
+        planExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      },
+    });
     await burnWrites(busy, WRITES_PER_MINUTE + 1);
 
     await write(quiet).expect(404);

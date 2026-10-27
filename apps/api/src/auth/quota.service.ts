@@ -196,7 +196,12 @@ export class QuotaService {
   private async entitlement(client: Tx | PrismaService): Promise<PlanScope> {
     const workspace = this.enforced
       ? await client.workspace.findFirst({
-          select: { plan: true, trialEndsAt: true, planExpiresAt: true },
+          select: {
+            plan: true,
+            trialEndsAt: true,
+            planExpiresAt: true,
+            subscriptionStatus: true,
+          },
         })
       : null;
     return planScopeOf(this.enforced, workspace, new Date(), this.selfHosted);

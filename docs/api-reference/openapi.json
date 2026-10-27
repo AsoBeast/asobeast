@@ -150,7 +150,7 @@
             }
           }
         },
-        "summary": "Confirm an email address and start the trial",
+        "summary": "Confirm an email address",
         "tags": [
           "auth"
         ]
@@ -7002,6 +7002,13 @@
             "type": "string",
             "minLength": 4,
             "maxLength": 255
+          },
+          "ui": {
+            "type": "string",
+            "enum": [
+              "hosted",
+              "embedded"
+            ]
           }
         },
         "required": [
