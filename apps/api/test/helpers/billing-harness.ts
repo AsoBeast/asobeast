@@ -32,21 +32,25 @@ export interface SentMail {
   text: string;
 }
 
-export interface RecordingMailer {
-  enabled: true;
+export interface RecordingMailer extends Pick<
+  MailerService,
+  'enabled' | 'origin' | 'send' | 'sendAccountMail'
+> {
   sent: SentMail[];
-  sendAccountMail: (mail: SentMail) => Promise<void>;
 }
 
 export function recordingMailer(): RecordingMailer {
   const sent: SentMail[] = [];
+  const record = ({ to, subject, text }: SentMail) => {
+    sent.push({ to, subject, text });
+    return Promise.resolve();
+  };
   return {
     enabled: true,
+    origin: process.env.WEB_PUBLIC_URL ?? null,
     sent,
-    sendAccountMail: ({ to, subject, text }) => {
-      sent.push({ to, subject, text });
-      return Promise.resolve();
-    },
+    send: record,
+    sendAccountMail: record,
   };
 }
 
