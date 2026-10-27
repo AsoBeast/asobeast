@@ -362,6 +362,12 @@ export const authMeOptions = queryOptions({
   refetchOnWindowFocus: true,
 });
 
+export const confirmEmailViewerOptions = queryOptions({
+  ...authMeOptions,
+  staleTime: 0,
+  refetchOnWindowFocus: "always",
+});
+
 export const accountPlanOptions = queryOptions({
   queryKey: accountPlanKey,
   queryFn: getAccountPlan,

@@ -852,7 +852,7 @@ test("a throttled request for a new link says why it was refused", async ({
 test("registration lands on the request to confirm the email", async ({
   page,
 }) => {
-  let authenticated = false;
+  await seedViewer(page.context(), "checkout-pending-unconfirmed");
   await page.context().addCookies([
     {
       name: "e2e_setup_required",
@@ -861,33 +861,17 @@ test("registration lands on the request to confirm the email", async ({
       path: "/",
     },
   ]);
-  await page.route("**/api/backend/auth/status", (route) =>
-    route.fulfill(
-      fulfillJson(200, {
-        billing: true,
-        registrationOpen: true,
-        setupRequired: !authenticated,
-        authenticated,
-      }),
-    ),
-  );
-  await page.route("**/api/backend/auth/me", (route) =>
-    route.fulfill(fulfillJson(200, UNCONFIRMED_USER)),
-  );
   await routePlan(page, UNCONFIRMED_PLAN);
-  await page.route("**/api/backend/auth/register", async (route) => {
-    authenticated = true;
-    await seedSession(page);
-    await route.fulfill(fulfillJson(201, UNCONFIRMED_USER));
-  });
 
   await page.goto("/register");
   await page.getByLabel("Email").fill("owner@example.com");
   await page.getByLabel("Password").fill("supersecret1");
   await page.getByRole("button", { name: "Create account" }).click();
 
-  await expect(page).toHaveURL(/\/upgrade$/);
-  await expect(page.getByText(CONFIRM_TO_START)).toBeVisible();
+  await expect(page).toHaveURL(/\/confirm-email$/);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Confirm your email" }),
+  ).toBeVisible();
   await expect(page.getByText("Collection is paused")).toHaveCount(0);
 });
 

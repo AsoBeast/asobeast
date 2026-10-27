@@ -4,7 +4,7 @@ import { adminAccessOf, type AdminAccess } from "@/lib/admin-access";
 
 const REFUSALS = new Set([401, 402, 403, 404]);
 
-async function signedInViewer(): Promise<AuthUser | null> {
+export async function viewer(): Promise<AuthUser | null> {
   try {
     return await getAuthMe();
   } catch (error) {
@@ -16,9 +16,9 @@ async function signedInViewer(): Promise<AuthUser | null> {
 }
 
 export async function viewerIsOperator(): Promise<boolean> {
-  return (await signedInViewer())?.platformOperator === true;
+  return (await viewer())?.platformOperator === true;
 }
 
 export async function viewerAdminAccess(): Promise<AdminAccess> {
-  return adminAccessOf(await signedInViewer());
+  return adminAccessOf(await viewer());
 }

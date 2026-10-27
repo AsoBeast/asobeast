@@ -508,6 +508,7 @@ const VIEWER_USERS: Record<Viewer, Partial<AuthUser>> = {
     emailVerified: false,
     trialAwaitsConfirmation: true,
     trialAwaitsCheckout: true,
+    entryStep: "confirm-email",
   },
   "checkout-pending": {
     plan: "free",
@@ -515,6 +516,7 @@ const VIEWER_USERS: Record<Viewer, Partial<AuthUser>> = {
     platformOperator: false,
     trialAwaitsConfirmation: false,
     trialAwaitsCheckout: true,
+    entryStep: "choose-plan",
   },
   "checkout-pending-unconfirmed": {
     plan: "free",
@@ -523,6 +525,7 @@ const VIEWER_USERS: Record<Viewer, Partial<AuthUser>> = {
     emailVerified: false,
     trialAwaitsConfirmation: true,
     trialAwaitsCheckout: true,
+    entryStep: "confirm-email",
   },
   trialing: {
     plan: "indie",

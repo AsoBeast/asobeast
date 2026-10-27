@@ -7,6 +7,8 @@ import {
   SOLD_THROUGH_LINK,
   billingNote,
   confirmationLine,
+  confirmEmailLine,
+  confirmEmailParts,
   memberPlanLine,
   paymentNote,
   planAction,
@@ -513,6 +515,29 @@ describe("suspensionNotice", () => {
   it("does not double the full stop a reason ends with", () => {
     expect(suspensionNotice("Sustained abuse.")).toMatch(
       /^This workspace is suspended: Sustained abuse\. Your data stays/,
+    );
+  });
+});
+
+describe("confirmEmailLine", () => {
+  it("names the address and the trial it leads to", () => {
+    expect(confirmEmailLine("owner@example.com", true)).toBe(
+      "Thank you for registering. We sent a link to owner@example.com. Open it to continue to your free trial.",
+    );
+  });
+
+  it("names the address alone when no trial follows", () => {
+    expect(confirmEmailLine("owner@example.com", false)).toBe(
+      "Thank you for registering. We sent a link to owner@example.com. Open it to continue.",
+    );
+  });
+
+  it("splits the sentence around the address", () => {
+    const parts = confirmEmailParts("owner@example.com", true);
+
+    expect(parts.address).toBe("owner@example.com");
+    expect(`${parts.before}${parts.address}${parts.after}`).toBe(
+      confirmEmailLine("owner@example.com", true),
     );
   });
 });

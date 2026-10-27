@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import {
   DEV_ONLY_ROUTES,
+  ENTRY_STEP_ROUTES,
   pageRoutes,
   SIGNED_IN_ROUTES,
   SIGNED_OUT_ROUTES,
@@ -11,6 +12,7 @@ test("the route lists cover every page in the app directory", () => {
     ...SIGNED_IN_ROUTES,
     ...SIGNED_OUT_ROUTES,
     ...DEV_ONLY_ROUTES,
+    ...ENTRY_STEP_ROUTES,
   ].map(([, path]) => path);
 
   expect(pageRoutes().sort()).toEqual([...listed].sort());

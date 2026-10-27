@@ -56,30 +56,6 @@ test.describe("the billing wall", () => {
     ).toBeEnabled();
   });
 
-  test("an unconfirmed account sees the confirmation line and is not stopped", async ({
-    page,
-    context,
-  }) => {
-    await seedViewer(context, "checkout-pending-unconfirmed");
-    await openRegistration(page);
-    await openBilling(page);
-
-    await register(page);
-
-    await expect(page).toHaveURL(/\/upgrade$/);
-    await expect(
-      page.getByText(
-        "We sent a confirmation link to owner@example.com. You can start the trial now and confirm later.",
-      ),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: "Send a new link" }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: "Start free trial" }),
-    ).toBeEnabled();
-  });
-
   test("a preselected plan is honoured and the picker keeps the url", async ({
     page,
     context,
@@ -135,7 +111,7 @@ test.describe("the billing wall", () => {
     page,
     context,
   }) => {
-    await seedViewer(context, "checkout-pending-unconfirmed");
+    await seedViewer(context, "checkout-pending");
     await openBilling(page);
 
     await page.goto("/verify?token=abc");

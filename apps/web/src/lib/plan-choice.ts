@@ -156,6 +156,37 @@ export function confirmationLine(email: string): string {
   return `We sent a confirmation link to ${email}. You can start the trial now and confirm later.`;
 }
 
+export const CONFIRM_EMAIL_TITLE = "Confirm your email";
+
+export const CONFIRM_EMAIL_CAPTION =
+  "Check your spam folder if it has not arrived. The link works for a day.";
+
+export const WRONG_ADDRESS = "Wrong address?";
+
+export const REGISTER_AGAIN = "and register again.";
+
+export interface ConfirmEmailParts {
+  before: string;
+  address: string;
+  after: string;
+}
+
+export function confirmEmailParts(
+  email: string,
+  offered: boolean,
+): ConfirmEmailParts {
+  return {
+    before: "Thank you for registering. We sent a link to ",
+    address: email,
+    after: `. Open it to continue${offered ? " to your free trial" : ""}.`,
+  };
+}
+
+export function confirmEmailLine(email: string, offered: boolean): string {
+  const { before, address, after } = confirmEmailParts(email, offered);
+  return `${before}${address}${after}`;
+}
+
 export function planActionLabel(
   action: PlanAction,
   displayName: string,
