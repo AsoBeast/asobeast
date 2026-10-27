@@ -1,6 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
 import { contrastViolations, THEMES } from "./contrast-check.mts";
+import { missingDescriptionIds } from "./described-by.mts";
 import { hydrated } from "./hydrated.mts";
 import { seedCookies } from "./routes.mts";
 import { expect, test } from "./session.mts";
@@ -33,6 +34,14 @@ test("pressing a keyword opens its breakdown", async ({ page }) => {
   await expect(sheet(page)).toHaveAccessibleDescription(
     /pomodoro.*United States/,
   );
+});
+
+test("the breakdown is described only by elements it renders", async ({
+  page,
+}) => {
+  await openPomodoro(page);
+
+  expect(await missingDescriptionIds(sheet(page))).toEqual([]);
 });
 
 test("you come first and a competitor above you carries a note", async ({

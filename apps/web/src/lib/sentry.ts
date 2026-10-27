@@ -17,6 +17,7 @@ const DATA_COLLECTION = {
   queues: false,
   stackFrameVariables: false,
   genAI: { inputs: false, outputs: false },
+  mcp: { inputs: false, outputs: false },
 } satisfies SentryOptions["dataCollection"];
 
 export function reportingDsn(

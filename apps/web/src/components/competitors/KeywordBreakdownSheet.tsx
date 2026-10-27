@@ -24,8 +24,6 @@ import { breakdownParser } from "@/lib/search-params";
 import { BreakdownAppCard } from "./BreakdownAppCard";
 import { COMPETITOR_SECTION } from "./competitor-sections";
 
-const DESCRIPTION_ID = "breakdown-description";
-
 function BreakdownSkeleton() {
   return (
     <div className="flex flex-col gap-3">
@@ -124,7 +122,6 @@ export function KeywordBreakdownSheet({ appId }: { appId: string }) {
       <SheetContent
         side="right"
         className="w-full sm:max-w-xl"
-        aria-describedby={DESCRIPTION_ID}
         onCloseAutoFocus={(event) => {
           const opener =
             document.querySelector<HTMLButtonElement>(
@@ -140,9 +137,7 @@ export function KeywordBreakdownSheet({ appId }: { appId: string }) {
       >
         <SheetHeader>
           <SheetTitle>Why apps rank for this keyword</SheetTitle>
-          <SheetDescription id={DESCRIPTION_ID}>
-            {descriptionOf(read)}
-          </SheetDescription>
+          <SheetDescription>{descriptionOf(read)}</SheetDescription>
         </SheetHeader>
         <BreakdownBody appId={appId} read={read} onClose={close} />
       </SheetContent>
