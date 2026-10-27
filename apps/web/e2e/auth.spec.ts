@@ -509,7 +509,7 @@ test("integrations creates, reveals and revokes an api token", async ({
   });
 
   await page.goto("/integrations");
-  await expect(page.getByText("API tokens")).toBeVisible();
+  await expect(page.getByText("API tokens", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "New token" }).click();
   await page.getByLabel("Name").fill("ci");
