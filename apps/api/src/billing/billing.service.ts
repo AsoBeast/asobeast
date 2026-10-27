@@ -1,4 +1,5 @@
 import {
+  ForbiddenException,
   Injectable,
   Logger,
   ServiceUnavailableException,
@@ -17,6 +18,7 @@ import {
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AccountUser } from '../auth/auth.types';
+import { EntrySteps } from '../auth/entry-steps';
 import { TrialOffers } from '../auth/trial-offers';
 import { BillingConflictError } from './billing.errors';
 import { BillingReconciler } from './billing-reconciler.service';
@@ -53,6 +55,9 @@ export const SUBSCRIPTION_NEEDS_ATTENTION =
 export const PAYMENT_PENDING =
   'Your last payment is still being confirmed. This usually takes a minute; if it has not completed within a day the attempt expires and you can try again.';
 
+export const CONFIRM_EMAIL_FIRST =
+  'Confirm your email address first. Open the link we sent you, then start the trial.';
+
 @Injectable()
 export class BillingService {
   private readonly logger = new Logger(BillingService.name);
@@ -64,6 +69,7 @@ export class BillingService {
     private readonly prisma: PrismaService,
     private readonly config: ConfigService<Env, true>,
     private readonly trialOffers: TrialOffers,
+    private readonly entrySteps: EntrySteps,
   ) {}
 
   async catalog(): Promise<BillingCatalog> {
@@ -74,6 +80,11 @@ export class BillingService {
       managedPayments: this.taxCollection() === 'managed_payments',
       ...this.publishableKey(),
     };
+  }
+
+  private refuseUnconfirmed(user: AccountUser): void {
+    if (this.entrySteps.stepFor(user) !== 'confirm-email') return;
+    throw new ForbiddenException(CONFIRM_EMAIL_FIRST);
   }
 
   private publishableKey(): Pick<BillingCatalog, 'publishableKey'> {
@@ -88,6 +99,7 @@ export class BillingService {
   ): Promise<BillingSession> {
     await this.prices.refreshIfStale();
     this.refuseUnprovisionableCheckout();
+    this.refuseUnconfirmed(user);
     const price = this.prices.require(priceId);
     await this.refuseSecondSubscription(user.workspaceId);
     const customerId = await this.customerFor(user);

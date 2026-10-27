@@ -189,6 +189,19 @@ describe('Billing checkout (e2e)', () => {
       );
     });
 
+    it('opens checkout for an unconfirmed owner when the instance sends no confirmation mail', async () => {
+      await resetBillingState(harness, { trialEndsAt: null });
+      const me = await harness.owner.get('/auth/me').expect(200);
+      expect(me.body as AuthUser).toMatchObject({
+        emailVerified: false,
+        entryStep: 'choose-plan',
+      });
+
+      await checkout().expect(200);
+
+      expect(harness.fake.checkoutSessions).toHaveLength(1);
+    });
+
     it('sells at full price and returns to settings without an offer', async () => {
       await checkout().expect(200);
 

@@ -5,6 +5,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { Prisma, PrismaClient } from '@prisma/client';
 import request from 'supertest';
 import { App } from 'supertest/types';
+import { MailerService } from '../../src/alerts/mailer.service';
 import { AppModule } from '../../src/app.module';
 import { sha256 } from '../../src/auth/password-hash';
 import { STRIPE_CLIENT } from '../../src/billing/stripe.client';
@@ -25,6 +26,30 @@ const MEMBER_TOKEN = `asob_${'billingmember'.padEnd(48, '7')}`;
 
 export const WORKSPACE = DEFAULT_WORKSPACE_ID;
 
+export interface SentMail {
+  to: string;
+  subject: string;
+  text: string;
+}
+
+export interface RecordingMailer {
+  enabled: true;
+  sent: SentMail[];
+  sendAccountMail: (mail: SentMail) => Promise<void>;
+}
+
+export function recordingMailer(): RecordingMailer {
+  const sent: SentMail[] = [];
+  return {
+    enabled: true,
+    sent,
+    sendAccountMail: ({ to, subject, text }) => {
+      sent.push({ to, subject, text });
+      return Promise.resolve();
+    },
+  };
+}
+
 export interface BillingHarness {
   app: INestApplication<App>;
   prisma: PrismaClient;
@@ -36,6 +61,7 @@ export interface BillingHarness {
 export async function startBillingHarness(
   configured = true,
   prepare: (fake: FakeStripe) => void = () => undefined,
+  mailer?: RecordingMailer,
 ): Promise<BillingHarness> {
   execSync('pnpm prisma migrate deploy', {
     cwd: join(__dirname, '..', '..'),
@@ -45,12 +71,14 @@ export async function startBillingHarness(
 
   const fake = fakeStripe();
   prepare(fake);
-  const moduleFixture: TestingModule = await Test.createTestingModule({
+  const builder = Test.createTestingModule({
     imports: [AppModule],
   })
     .overrideProvider(STRIPE_CLIENT)
-    .useValue(configured ? fake : null)
-    .compile();
+    .useValue(configured ? fake : null);
+  const moduleFixture: TestingModule = await (
+    mailer ? builder.overrideProvider(MailerService).useValue(mailer) : builder
+  ).compile();
   const app: INestApplication<App> = moduleFixture.createNestApplication();
   useCookies(app);
   await app.init();

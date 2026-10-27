@@ -1,12 +1,17 @@
-import { ServiceUnavailableException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
-import type { TrialOffer } from '@asobeast/shared';
+import type { EntryStep, TrialOffer } from '@asobeast/shared';
 import type { AccountUser } from '../auth/auth.types';
+import type { EntrySteps } from '../auth/entry-steps';
 import type { TrialOffers } from '../auth/trial-offers';
 import {
   BillingService,
+  CONFIRM_EMAIL_FIRST,
   PAYMENT_PENDING,
   SUBSCRIPTION_NEEDS_ATTENTION,
 } from './billing.service';
@@ -59,6 +64,7 @@ describe('BillingService', () => {
     } = { subscriptionId: null, subscriptionStatus: null },
     env: Record<string, string | boolean | undefined> = {},
     offer: TrialOffer | null = null,
+    entryStep?: EntryStep,
   ) => {
     const values = { ...CONFIG, ...env };
     const createCustomer = jest.fn().mockResolvedValue({ id: 'cus_created' });
@@ -154,10 +160,12 @@ describe('BillingService', () => {
       {
         offerFor: jest.fn().mockResolvedValue(offer),
       } as unknown as TrialOffers,
+      { stepFor: () => entryStep } as unknown as EntrySteps,
     );
 
     return {
       service,
+      updateMany,
       createCustomer,
       customerExists,
       createCheckoutSession,
@@ -178,6 +186,36 @@ describe('BillingService', () => {
     ).rejects.toBeInstanceOf(UnknownPriceError);
     expect(createCheckoutSession).not.toHaveBeenCalled();
   });
+
+  it('refuses an owner who has not confirmed the address before it touches anything', async () => {
+    const { service, createCheckoutSession, createCustomer, updateMany } =
+      build(null, undefined, {}, null, 'confirm-email');
+
+    const refusal = service.checkout(owner(null), 'price_indie_month');
+
+    await expect(refusal).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(refusal).rejects.toThrow(CONFIRM_EMAIL_FIRST);
+    expect(updateMany).not.toHaveBeenCalled();
+    expect(createCustomer).not.toHaveBeenCalled();
+    expect(createCheckoutSession).not.toHaveBeenCalled();
+  });
+
+  it.each([['choose-plan' as const], [undefined]])(
+    'opens checkout for an owner whose step is %s',
+    async (entryStep) => {
+      const { service, createCheckoutSession } = build(
+        null,
+        undefined,
+        {},
+        null,
+        entryStep,
+      );
+
+      await service.checkout(owner(null), 'price_indie_month');
+
+      expect(createCheckoutSession).toHaveBeenCalledTimes(1);
+    },
+  );
 
   it('links the session back to the workspace on both sides', async () => {
     const { service, createCheckoutSession } = build('cus_existing');
