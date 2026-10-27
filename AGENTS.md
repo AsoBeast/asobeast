@@ -298,7 +298,7 @@ Decompose by **responsibility**, not by syntactic kind. The target is fewer conc
 
 ## Environment variables
 
-`apps/api/.env.example`, `apps/web/.env.example` and the root `.env.example` are the authoritative list; the blocks below mirror them and must be updated in the same commit as any config change.
+`apps/api/.env.example`, `apps/web/.env.example` and the root `.env.example` are the authoritative list; the blocks below mirror them and must be updated in the same commit as any config change. In the example files a variable whose default is empty carries its comment on the line above it, never after it: Compose trims the whitespace after `=` and treats a `#` as a comment only when a space precedes it inside the value, so `KEY=   # note` reaches the container as the value `# note`. `pnpm check:compose-env` fails CI when any example value reads as a comment.
 
 `apps/api/.env`:
 
@@ -316,19 +316,26 @@ SCRAPE_ITUNES_RPM=15
 SCRAPE_GPLAY_RPM=10         # google play job-starts/minute; each Play score job fans out to 12-20 requests
 PROXY_PROVIDER=none                 # none keeps every store request on the host address; webshare reconciles the pool against that account's proxy list
 PROXY_API_URL=https://proxy.webshare.io/api/v2  # provider api base url
-PROXY_API_KEY=                      # provider api key. REFUSES TO BOOT when PROXY_PROVIDER is not none and this is empty
-PROXY_USERNAME=                     # credentials shared across the pool; empty for an ip-authorized account
-PROXY_PASSWORD=                     # password for PROXY_USERNAME
+# provider api key. REFUSES TO BOOT when PROXY_PROVIDER is not none and this is empty
+PROXY_API_KEY=
+# credentials shared across the pool; empty for an ip-authorized account
+PROXY_USERNAME=
+# password for PROXY_USERNAME
+PROXY_PASSWORD=
 PROXY_ENDPOINT_RPM=15               # requests per minute per pool endpoint; replaces the single host budget once the pool is on
 PROXY_ACQUIRE_TIMEOUT_MS=120000     # how long a job waits for a free endpoint before it fails and the queue retries it; a shutdown ends the wait at once
 PROXY_WORKER_MAX_CONCURRENCY=8      # ceiling for store worker concurrency once the pool is on; actual concurrency tracks the healthy endpoint count. Ignored while PROXY_PROVIDER=none
 CRON_PROXY_SYNC=0 2 * * *           # pool reconciliation against the provider, UTC. Never scheduled while PROXY_PROVIDER=none
 CRON_STORE_CANARY=0 2,8,14,20 * * * # parser canary, UTC, one hour before the daily run. Empty removes the schedule and switches the canary off
-STORE_STATUS_URL=                   # optional, opt-in outbound. Url of a published store status document polled for store breakage announcements. Empty means no request is ever made
+# optional, opt-in outbound. Url of a published store status document polled for store breakage announcements. Empty means no request is ever made
+STORE_STATUS_URL=
 CRON_STORE_STATUS=17 * * * *        # published status poll, UTC, on an odd minute so installations do not all arrive together. Never scheduled while STORE_STATUS_URL is empty. Empty removes the schedule
-PROXY_RESIDENTIAL_URL=              # emergency gateway used only after a datacenter endpoint is blocked. Empty disables the fallback
-PROXY_RESIDENTIAL_USERNAME=         # gateway credentials
-PROXY_RESIDENTIAL_PASSWORD=         # password for PROXY_RESIDENTIAL_USERNAME
+# emergency gateway used only after a datacenter endpoint is blocked. Empty disables the fallback
+PROXY_RESIDENTIAL_URL=
+# gateway credentials
+PROXY_RESIDENTIAL_USERNAME=
+# password for PROXY_RESIDENTIAL_USERNAME
+PROXY_RESIDENTIAL_PASSWORD=
 PROXY_RESIDENTIAL_MONTHLY_CAP_USD=0 # hard monthly ceiling. 0 refuses every fallback, so a broad block cannot become an unbounded bill
 PROXY_RESIDENTIAL_COST_PER_GB=3     # provider list price, used to price the cap
 PROXY_RESIDENTIAL_MB_PER_REQUEST=1.2 # measured average response size; with the price per gigabyte this estimates month to date spend
@@ -356,20 +363,30 @@ RETENTION_STORE_REPORTS_DAYS=35      # downloaded app store connect report files
 ACTIONS_MAX_OPEN_PER_APP=20         # new actions one generation run may open per app, highest impact first
 ACTIONS_SNOOZE_MAX_DAYS=90          # furthest a snooze may be set into the future
 ALERT_ACTIONS_MIN_PRIORITY=high     # lowest priority that fires action.opened: critical|high|medium|low
-WEB_PUBLIC_URL=                     # public web origin; builds every link in emails (confirmation, reset, invitation, deep links, logo, unsubscribe) and alert payloads. WARNS in production when empty with SMTP configured, because no email alert recipient can be asked to confirm, and when it names this machine with SMTP configured, because no recipient elsewhere can open its links
+# public web origin; builds every link in emails (confirmation, reset, invitation, deep links, logo, unsubscribe) and alert payloads. WARNS in production when empty with SMTP configured, because no email alert recipient can be asked to confirm, and when it names this machine with SMTP configured, because no recipient elsewhere can open its links
+WEB_PUBLIC_URL=
 RETENTION_ALERT_EVENTS_DAYS=30      # completed alert claims; unfinished claims are retained; 0 keeps forever
-SMTP_HOST=                          # email alerts stay disabled until SMTP_HOST and SMTP_FROM are both set
+# email alerts stay disabled until SMTP_HOST and SMTP_FROM are both set
+SMTP_HOST=
 SMTP_PORT=587                       # 465 with SMTP_SECURE=true, otherwise 587/25
 SMTP_SECURE=false                   # true wraps the connection in TLS (port 465). WARNS in production when true on any other port
-SMTP_USER=                          # optional; empty for unauthenticated relays
-SMTP_PASSWORD=                      # optional
-SMTP_FROM=                          # e.g. asobeast <alerts@example.com>
-SMTP_DKIM_DOMAIN=                   # optional. Sign every email with DKIM for this domain, the SMTP_FROM domain or its parent. The three SMTP_DKIM_ variables are all set or all unset. REFUSES TO BOOT when only some are set
-SMTP_DKIM_SELECTOR=                 # DKIM selector; publish the public key at <selector>._domainkey.<domain>
-SMTP_DKIM_PRIVATE_KEY_PATH=         # PEM private key, e.g. keys/dkim-private.pem. Relative paths resolve against apps/api, which the Compose stacks mount read only at apps/api/keys. REFUSES TO BOOT when the three are set and the path is not a readable file. Its contents are never logged
-OPENAI_API_KEY=                     # optional; enables the AI audit + metadata drafts + action explanations. Empty = AI actions disabled (endpoints 409), drafts card hidden, audit shows a setup hint
+# optional; empty for unauthenticated relays
+SMTP_USER=
+# optional
+SMTP_PASSWORD=
+# e.g. asobeast <alerts@example.com>
+SMTP_FROM=
+# optional. Sign every email with DKIM for this domain, the SMTP_FROM domain or its parent. The three SMTP_DKIM_ variables are all set or all unset. REFUSES TO BOOT when only some are set
+SMTP_DKIM_DOMAIN=
+# DKIM selector; publish the public key at <selector>._domainkey.<domain>
+SMTP_DKIM_SELECTOR=
+# PEM private key, e.g. keys/dkim-private.pem. Relative paths resolve against apps/api, which the Compose stacks mount read only at apps/api/keys. REFUSES TO BOOT when the three are set and the path is not a readable file. Its contents are never logged
+SMTP_DKIM_PRIVATE_KEY_PATH=
+# optional; enables the AI audit + metadata drafts + action explanations. Empty = AI actions disabled (endpoints 409), drafts card hidden, audit shows a setup hint
+OPENAI_API_KEY=
 AI_MODEL=gpt-5.6-luna               # OpenAI model with vision + structured outputs
-AI_CALLS_PER_MONTH=                 # optional; AI calls each workspace may make per UTC month when BILLING_ENABLED=false. Empty = unlimited, 0 turns AI calls off. Ignored with billing on, where each plan sets its own allowance. WARNS in production when empty with OPENAI_API_KEY set and AUTH_ALLOW_REGISTRATION=true
+# optional; AI calls each workspace may make per UTC month when BILLING_ENABLED=false. Empty = unlimited, 0 turns AI calls off. Ignored with billing on, where each plan sets its own allowance. WARNS in production when empty with OPENAI_API_KEY set and AUTH_ALLOW_REGISTRATION=true
+AI_CALLS_PER_MONTH=
 SCREENSHOT_OCR=true                 # read the caption text printed on app store screenshots on this machine; false records the screenshot list and detects image changes but downloads and reads nothing
 SCREENSHOT_OCR_LANGUAGES=eng,deu,fra,spa,por,ita,jpn,kor,chi_sim,chi_tra,rus,ara,tha,pol  # bundled language packs the reader may use; a storefront reads English plus its own language; REFUSES TO BOOT on a name that is not bundled
 BULL_BOARD_ENABLED=true             # queue dashboard at /admin/queues; platform-operator only, proxied through the web app
@@ -377,37 +394,55 @@ API_DOCS=owner                      # openapi surface: owner (platform-operator 
 METRICS_CACHE_SECONDS=30            # how long one /metrics scrape is reused before the collectors run again; 0 collects on every scrape
 BACKUP_MAX_AGE_HOURS=0              # hours a backup may go without reporting in before backup.stale fires; 0 expects no backup and never alerts
 DISK_BUDGET_BYTES=0                 # bytes the database may grow to before storage.headroom.low fires; 0 declares no budget and never alerts
-AUTH_SECRET=                        # required; >=32 chars or the app refuses to boot (openssl rand -hex 32); changing it signs everyone out
+# required; >=32 chars or the app refuses to boot (openssl rand -hex 32); changing it signs everyone out
+AUTH_SECRET=
 AUTH_SESSION_DAYS=7                 # session cookie lifetime in days
 AUTH_ALLOW_REGISTRATION=false       # true keeps signups open; false closes registration once the first (owner) account exists (self-hosted). The first account always bootstraps as owner regardless
 AUTH_REGISTRATION_WORKSPACE=own     # where a self registration lands. own gives every sign up its own workspace, so a stranger never sees the data already tracked here; shared puts them all in ws_default as members, an explicit opt-in for an instance whose sign ups are already trusted. REFUSES TO BOOT when shared and BILLING_ENABLED=true. WARNS in production when shared and AUTH_ALLOW_REGISTRATION=true
 AUTH_COOKIE_SECURE=false            # REFUSES TO BOOT when false and NODE_ENV=production. The Docker image sets NODE_ENV=production, so the Compose stack defaults this to true
-STRIPE_SECRET_KEY=                   # optional; billing is inert without it. Never logged. One sandbox per environment; a sandbox shared with another stack posts that stack's events here. WARNS in production when BILLING_ENABLED=true on a sandbox key
-STRIPE_WEBHOOK_SECRET=              # required to accept /billing/webhook; an unverified endpoint grants subscriptions to anyone
-STRIPE_PORTAL_RETURN_URL=           # where the customer portal returns to; defaults to WEB_PUBLIC_URL/settings
+# optional; billing is inert without it. Never logged. One sandbox per environment; a sandbox shared with another stack posts that stack's events here. WARNS in production when BILLING_ENABLED=true on a sandbox key
+STRIPE_SECRET_KEY=
+# required to accept /billing/webhook; an unverified endpoint grants subscriptions to anyone
+STRIPE_WEBHOOK_SECRET=
+# where the customer portal returns to; defaults to WEB_PUBLIC_URL/settings
+STRIPE_PORTAL_RETURN_URL=
 STRIPE_TAX_ENABLED=false            # true adds automatic tax to every checkout. Needs Stripe Tax active with registrations and prices that carry a tax behaviour, or checkout refuses to open. REFUSES TO BOOT together with STRIPE_MANAGED_PAYMENTS=true
 STRIPE_MANAGED_PAYMENTS=false       # true sells every checkout through Stripe Managed Payments, Stripe's merchant of record: Stripe calculates, collects and remits the tax. Needs Managed Payments activated in the dashboard. REFUSES TO BOOT when true and STRIPE_TAX_ENABLED=true. WARNS in production when BILLING_ENABLED=true on a live key with neither this nor STRIPE_TAX_ENABLED
-STRIPE_PRICE_INDIE_MONTHLY=         # optional; empty resolves the price by its lookup key, which pnpm --filter api stripe:catalog creates. Setting any of the four replaces the lookup key catalog with the ids they name
-STRIPE_PRICE_INDIE_YEARLY=          # optional override; empty resolves the price by its lookup key
-STRIPE_PRICE_ULTIMATE_MONTHLY=      # optional override; empty resolves the price by its lookup key
-STRIPE_PRICE_ULTIMATE_YEARLY=       # optional override; empty resolves the price by its lookup key
+# optional; empty resolves the price by its lookup key, which pnpm --filter api stripe:catalog creates. Setting any of the four replaces the lookup key catalog with the ids they name
+STRIPE_PRICE_INDIE_MONTHLY=
+# optional override; empty resolves the price by its lookup key
+STRIPE_PRICE_INDIE_YEARLY=
+# optional override; empty resolves the price by its lookup key
+STRIPE_PRICE_ULTIMATE_MONTHLY=
+# optional override; empty resolves the price by its lookup key
+STRIPE_PRICE_ULTIMATE_YEARLY=
 CRON_BILLING_RECONCILE=0 7 * * *    # daily reconciliation against Stripe, UTC
 CRON_TRIAL_NOTICES=0 9 * * *      # trial milestone emails, UTC
 BILLING_ENABLED=false               # entitlement seam: new accounts start a trial and lose access afterwards until plan=premium; registration stays open
 TRIAL_DAYS=7                        # trial length in days when BILLING_ENABLED=true. REFUSES TO BOOT at 0 with billing enabled
 TRUST_PROXY=false                   # true only behind a reverse proxy that sets a trustworthy X-Forwarded-For; lets auth throttling key on the real client IP instead of the proxy's. WARNS in production when false
 ACCOUNT_DELETION_GRACE_DAYS=7       # days a scheduled workspace deletion stays reversible before the retention job erases it
-ERROR_TRACKING_DSN=                 # optional, hosted only. Sentry dsn for scrubbed error reports. Ignored unless NODE_ENV=production and BILLING_ENABLED=true, so a self hosted deployment never reports errors outside itself
-APPLE_ADS_CLIENT_ID=              # optional. SEARCHADS client id from Apple Ads account settings, API. The four credentials are all set or all unset. REFUSES TO BOOT when only some are set
-APPLE_ADS_TEAM_ID=                # SEARCHADS team id
-APPLE_ADS_KEY_ID=                 # key id Apple returned when the public key was uploaded
-APPLE_ADS_PRIVATE_KEY_PATH=       # path to the prime256v1 private key PEM, e.g. keys/apple-ads-private.pem. Relative paths resolve against apps/api, which the Compose stacks mount read only at apps/api/keys. REFUSES TO BOOT when the four are set and the path is not a readable file. Its contents are never logged
-APPLE_ADS_AD_ACCOUNT_ID=          # optional; empty uses the first ad account the credentials can read
+# optional, hosted only. Sentry dsn for scrubbed error reports. Ignored unless NODE_ENV=production and BILLING_ENABLED=true, so a self hosted deployment never reports errors outside itself
+ERROR_TRACKING_DSN=
+# optional. SEARCHADS client id from Apple Ads account settings, API. The four credentials are all set or all unset. REFUSES TO BOOT when only some are set
+APPLE_ADS_CLIENT_ID=
+# SEARCHADS team id
+APPLE_ADS_TEAM_ID=
+# key id Apple returned when the public key was uploaded
+APPLE_ADS_KEY_ID=
+# path to the prime256v1 private key PEM, e.g. keys/apple-ads-private.pem. Relative paths resolve against apps/api, which the Compose stacks mount read only at apps/api/keys. REFUSES TO BOOT when the four are set and the path is not a readable file. Its contents are never logged
+APPLE_ADS_PRIVATE_KEY_PATH=
+# optional; empty uses the first ad account the credentials can read
+APPLE_ADS_AD_ACCOUNT_ID=
 CRON_APPLE_POPULARITY=0 9 * * 1   # weekly Apple search popularity sync, UTC. Never scheduled while the Apple Ads credentials are unset
-STORE_CONNECT_ENCRYPTION_KEY=       # optional. base64 of 32 random bytes (openssl rand -base64 32). Seals the App Store Connect and Play Console keys owners connect in Integrations; empty keeps every store connection off and nothing contacts Apple or Google. REFUSES TO BOOT when set and not 32 bytes. Never logged
-STORE_CONNECT_ENCRYPTION_KEY_PREVIOUS= # optional. The key being rotated away from; a stored credential sealed with it is opened and resealed with the current key on first use. REFUSES TO BOOT when set without STORE_CONNECT_ENCRYPTION_KEY
-GOOGLE_PLAY_OAUTH_CLIENT_ID=        # optional. Client ID of a Google Cloud OAuth client of type Web application whose authorized redirect URI is WEB_PUBLIC_URL/integrations/google-play. With the secret and WEB_PUBLIC_URL it lets owners connect Google Play by signing in with Google instead of a service account key. The two GOOGLE_PLAY_OAUTH_ variables are both set or both unset. REFUSES TO BOOT when only one is set
-GOOGLE_PLAY_OAUTH_CLIENT_SECRET=    # client secret of that OAuth client. Publish its consent screen to production, or Google expires every sign in after seven days. Never logged
+# optional. base64 of 32 random bytes (openssl rand -base64 32). Seals the App Store Connect and Play Console keys owners connect in Integrations; empty keeps every store connection off and nothing contacts Apple or Google. REFUSES TO BOOT when set and not 32 bytes. Never logged
+STORE_CONNECT_ENCRYPTION_KEY=
+# optional. The key being rotated away from; a stored credential sealed with it is opened and resealed with the current key on first use. REFUSES TO BOOT when set without STORE_CONNECT_ENCRYPTION_KEY
+STORE_CONNECT_ENCRYPTION_KEY_PREVIOUS=
+# optional. Client ID of a Google Cloud OAuth client of type Web application whose authorized redirect URI is WEB_PUBLIC_URL/integrations/google-play. With the secret and WEB_PUBLIC_URL it lets owners connect Google Play by signing in with Google instead of a service account key. The two GOOGLE_PLAY_OAUTH_ variables are both set or both unset. REFUSES TO BOOT when only one is set
+GOOGLE_PLAY_OAUTH_CLIENT_ID=
+# client secret of that OAuth client. Publish its consent screen to production, or Google expires every sign in after seven days. Never logged
+GOOGLE_PLAY_OAUTH_CLIENT_SECRET=
 CRON_STORE_REPORTS=30 5 * * *      # daily download of the reports each connected store console published, UTC. Never scheduled while STORE_CONNECT_ENCRYPTION_KEY is empty
 LOG_LEVEL=debug
 ```
@@ -417,7 +452,8 @@ LOG_LEVEL=debug
 ```bash
 API_INTERNAL_URL=http://localhost:4000   # read at runtime; the browser reaches it via /api/backend/*
 API_PROXY_TIMEOUT_MS=30000               # how long the proxy waits for the api to start answering; a timeout returns a 504 envelope
-SENTRY_DSN=                              # optional. Read at runtime and only used when NODE_ENV=production. No Compose file sets it, so a self hosted deployment reports nothing until its operator opts in with a dsn of their own. SENTRY_AUTH_TOKEN, SENTRY_ORG and SENTRY_PROJECT are release pipeline secrets for source map upload, never runtime configuration
+# optional. Read at runtime and only used when NODE_ENV=production. No Compose file sets it, so a self hosted deployment reports nothing until its operator opts in with a dsn of their own. SENTRY_AUTH_TOKEN, SENTRY_ORG and SENTRY_PROJECT are release pipeline secrets for source map upload, never runtime configuration
+SENTRY_DSN=
 ```
 
 Root `.env` (Compose only): `POSTGRES_PASSWORD` and `AUTH_SECRET`, both required and non-empty, plus settings Compose hands to one service each. The API receives `AUTH_COOKIE_SECURE`, `LOG_LEVEL` and `WEB_PUBLIC_URL`, the last in place of the value in `apps/api/.env` (that file also configures `pnpm dev` on port 3000) and defaulting to `http://localhost:3001`, the port both stacks publish. The web app receives `TRUST_PROXY` and `STATUS_PAGE_URL`; the API's own `TRUST_PROXY` stays pinned to `1`, the web app, so the root value never reconfigures it. `ASOBEAST_IMAGE_OWNER` and `ASOBEAST_IMAGE_TAG` are read only by `docker-compose.pull.yml` and pick which published images that stack runs; they default to the images this repository publishes at the current version, so pinning an older release is the only reason to set them. `TUNNEL_TOKEN` and `ASOBEAST_DOMAIN` are read only by `docker-compose.tunnel.yml`, the optional Cloudflare Tunnel overlay that terminates TLS at Cloudflare's edge and stops publishing host port 3001, so the machine listens for nothing.
