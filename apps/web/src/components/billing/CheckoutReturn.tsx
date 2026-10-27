@@ -10,7 +10,7 @@ import {
   trialStartedToast,
   urlWithoutCheckout,
 } from "@/lib/checkout-return";
-import { accountPlanOptions, refetchAuth } from "@/lib/queries";
+import { accountPlanOptions, invalidateAuth, refetchAuth } from "@/lib/queries";
 
 export function CheckoutReturn() {
   const client = useQueryClient();
@@ -28,18 +28,15 @@ export function CheckoutReturn() {
         });
         const welcome = trialStartedToast(plan);
         if (welcome) toast.success(welcome);
-      })
-      .catch(() => undefined)
-      .then(() => refetchAuth(client))
-      .catch(() => undefined)
-      .finally(() => {
+        await refetchAuth(client);
         const { pathname, search } = window.location;
         window.history.replaceState(
           null,
           "",
           urlWithoutCheckout(pathname, search),
         );
-      });
+      })
+      .catch(() => invalidateAuth(client));
   }, [client]);
 
   return null;
