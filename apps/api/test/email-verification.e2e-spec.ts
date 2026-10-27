@@ -179,6 +179,24 @@ describe('Email verification', () => {
     expect((current.body as AuthUser).trialAwaitsConfirmation).toBe(true);
   });
 
+  it('sends an unconfirmed owner to confirm the address first', async () => {
+    const created = await register('owner@example.com').expect(201);
+
+    expect((created.body as AuthUser).entryStep).toBe('confirm-email');
+    const current = await me(sessionCookie(created)).expect(200);
+    expect((current.body as AuthUser).entryStep).toBe('confirm-email');
+  });
+
+  it('sends a confirmed owner on to choose a plan', async () => {
+    await register('owner@example.com').expect(201);
+
+    const confirmed = await confirm(tokenFrom(sent[0])).expect(200);
+
+    expect((confirmed.body as AuthUser).entryStep).toBe('choose-plan');
+    const current = await me(sessionCookie(confirmed)).expect(200);
+    expect((current.body as AuthUser).entryStep).toBe('choose-plan');
+  });
+
   it('stops saying so once the address is confirmed', async () => {
     await register('owner@example.com').expect(201);
 
@@ -543,6 +561,7 @@ describe('Email verification', () => {
       const current = await me(sessionCookie(created)).expect(200);
 
       expect((current.body as AuthUser).trialAwaitsConfirmation).toBe(false);
+      expect(current.body).not.toHaveProperty('entryStep');
     });
 
     it('keeps the plan when an invited member confirms into a paying workspace', async () => {
