@@ -31,8 +31,11 @@ describe('Billing checkout before the email is confirmed (e2e)', () => {
   const checkout = () =>
     harness.owner.post(CHECKOUT).send({ priceId: INDIE_MONTHLY });
 
-  const tokenOf = (text: string): string =>
-    /token=([0-9a-f]+)/.exec(text)?.[1] ?? '';
+  const tokenOf = (text: string): string => {
+    const token = /token=([0-9a-f]+)/.exec(text)?.[1];
+    if (!token) throw new Error('no confirmation token in the mail');
+    return token;
+  };
 
   beforeAll(async () => {
     mailer = recordingMailer();

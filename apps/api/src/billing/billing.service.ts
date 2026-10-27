@@ -99,9 +99,9 @@ export class BillingService {
     ui: CheckoutUi = 'hosted',
     theme?: CheckoutTheme,
   ): Promise<BillingSession> {
+    this.refuseUnconfirmed(user);
     await this.prices.refreshIfStale();
     this.refuseUnprovisionableCheckout();
-    this.refuseUnconfirmed(user);
     const price = this.prices.require(priceId);
     await this.refuseSecondSubscription(user.workspaceId);
     const customerId = await this.customerFor(user);

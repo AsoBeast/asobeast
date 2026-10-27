@@ -192,6 +192,7 @@ describe('BillingService', () => {
     const { service, createCheckoutSession, createCustomer, updateMany } =
       build(null, undefined, {}, null, 'confirm-email');
 
+    const refresh = jest.spyOn(PriceCatalog.prototype, 'refreshIfStale');
     const refusal = service.checkout(owner(null), 'price_indie_month');
 
     await expect(refusal).rejects.toBeInstanceOf(ForbiddenException);
@@ -199,6 +200,8 @@ describe('BillingService', () => {
     expect(updateMany).not.toHaveBeenCalled();
     expect(createCustomer).not.toHaveBeenCalled();
     expect(createCheckoutSession).not.toHaveBeenCalled();
+    expect(refresh).not.toHaveBeenCalled();
+    refresh.mockRestore();
   });
 
   it.each([['choose-plan' as const], [undefined]])(
