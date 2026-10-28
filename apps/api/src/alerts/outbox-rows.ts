@@ -5,6 +5,7 @@ import {
   RankMilestonePayload,
   RankOvertakenPayload,
 } from '@asobeast/shared';
+import { reviewKey } from './review-fingerprint';
 
 export interface OutboxRow {
   event: string;
@@ -21,14 +22,6 @@ const actionOpenedKey = (payload: ActionOpenedPayload): string =>
   payload.action.reopened
     ? `action.opened~${payload.action.id}~${dayOf(payload.occurredAt)}`
     : `action.opened~${payload.action.id}`;
-
-function hash(input: string): string {
-  let value = 5381;
-  for (let i = 0; i < input.length; i += 1) {
-    value = (value * 33) ^ input.charCodeAt(i);
-  }
-  return (value >>> 0).toString(36);
-}
 
 function appRow(
   payload: RankMilestonePayload | RankFirstPayload | RankOvertakenPayload,
@@ -61,14 +54,11 @@ export function outboxRows(payload: AlertPayload): OutboxRow[] {
   }
 
   if (payload.event === 'review.negative') {
-    const fingerprint = hash(
-      `${payload.review.reviewedAt ?? ''}|${payload.review.title ?? ''}|${payload.review.text}`,
-    );
     return [
       {
         event: payload.event,
         appId: payload.app.id,
-        dedupeKey: `review:${payload.app.id}:${fingerprint}`,
+        dedupeKey: `review:${reviewKey(payload)}`,
         payload,
       },
     ];
