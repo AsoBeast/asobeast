@@ -14,7 +14,7 @@ Every hosted store request leaves through the egress pool. When the pool degrade
 - `asobeast_pool_endpoints_healthy` falls while `asobeast_pool_endpoints` holds steady.
 - `asobeast_workspace_rankings_unresolved` climbs across many workspaces at once, which is what a silent failure looks like from the customer side.
 - Worker concurrency drops on its own, because it tracks the healthy pool size.
-- Google Play jobs for one storefront wait or time out while endpoints in other countries sit idle. That storefront's own endpoints are saturated, because a Google Play request never leaves through another country while one of its own is healthy. See [Egress proxy pool](/configuration/reference#egress-proxy-pool).
+- Google Play jobs for one storefront wait or time out while endpoints in other countries sit idle. That storefront's own endpoints are saturated, because a queued Google Play job never leaves through another country while one of its own is healthy. Each endpoint carries one job at a time, so a storefront with one endpoint finishes roughly one Google Play scoring job a minute and a backlog beyond that waits, then retries. See [Egress proxy pool](/configuration/reference#egress-proxy-pool).
 
 ## Triage
 

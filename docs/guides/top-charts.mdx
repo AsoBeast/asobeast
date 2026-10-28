@@ -51,7 +51,7 @@ Some charts are empty by nature. Google Play lists no paid apps in the Shopping 
 
 **Capture today** has no second attempt to wait for. On a chart the daily run has not yet found empty, an empty answer is reported ("Google Play lists no apps in this chart today") but not stored, so the day stays open and the daily run settles it. On a chart that was already stored empty, the capture is stored at once.
 
-A chart that listed apps within the last seven days and suddenly answers empty is treated as a store that did not answer, because that is how a blocked request looks. The answer is not stored, the daily job fails and the queue retries it, and **Capture today** says the store did not answer. After a week without a listed app, the empty answer follows the rules above. See [What happens when a job fails?](/concepts/pipeline#what-happens-when-a-job-fails)
+A chart that listed at least ten apps within the last seven days and suddenly answers empty is treated as a store that did not answer, because that is how a blocked request looks. The answer is not stored, the daily job fails and the queue retries it, and **Capture today** says the store did not answer. After a week without a listed app, the empty answer follows the rules above. So does the empty answer of a chart that listed fewer apps, such as the paid chart of a small category, because such a chart can honestly empty overnight. See [What happens when a job fails?](/concepts/pipeline#what-happens-when-a-job-fails)
 
 ## How do you read movement?
 
