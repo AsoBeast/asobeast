@@ -145,6 +145,24 @@ test("E-PH-17 the fill under the line is revealed with the line, not ahead of it
   );
 });
 
+test("E-PH-18 the whole popover fits beside a row in the middle of a 1000 px window", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto(PAGE);
+  const popover = await openHistory(page, "focus timer");
+  await expect(chart(page, "focus timer")).toBeVisible();
+
+  expect(
+    await popover.evaluate(
+      (element) => element.scrollHeight <= element.clientHeight,
+    ),
+  ).toBe(true);
+  await expect(
+    popover.getByRole("link", { name: "Open in Rankings" }),
+  ).toBeInViewport();
+});
+
 test("E-PH-19 the loading placeholder shows on the popover in the dark theme", async ({
   page,
 }) => {

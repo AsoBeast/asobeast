@@ -45,7 +45,7 @@ function HoldFacts({ keyword }: { keyword: TrackedKeywordItem }) {
   return (
     <dl className="grid grid-cols-[repeat(auto-fit,minmax(6rem,1fr))] gap-2">
       {facts.map((fact) => (
-        <div key={fact.label} className="rounded-md border px-2 py-1.5">
+        <div key={fact.label} className="rounded-md border px-2 py-1">
           <dt className="text-caption text-muted-foreground">{fact.label}</dt>
           <dd className="text-body font-medium">{fact.value}</dd>
         </div>
@@ -70,14 +70,14 @@ function PositionHistoryContent({
     <>
       <div className="flex items-start justify-between gap-3">
         <PopoverHeader className="min-w-0">
-          <p id={ids.eyebrow} className="text-caption text-muted-foreground">
-            Position history
-          </p>
           <PopoverTitle id={ids.title} className="wrap-anywhere">
             {keyword.text}
           </PopoverTitle>
-          <PopoverDescription id={ids.market}>
-            {storeLabel(store)} · {formatCountry(keyword.country)}
+          <PopoverDescription>
+            <span id={ids.eyebrow}>Position history</span> ·{" "}
+            <span id={ids.market}>
+              {storeLabel(store)} · {formatCountry(keyword.country)}
+            </span>
           </PopoverDescription>
         </PopoverHeader>
         <PositionReadout
@@ -94,12 +94,19 @@ function PositionHistoryContent({
         </p>
       )}
       <HoldFacts keyword={keyword} />
-      <RangePicker
-        presets={RANGE_PRESETS}
-        value={range}
-        onChange={setRange}
-        label="Date range"
-      />
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <RangePicker
+          presets={RANGE_PRESETS}
+          value={range}
+          onChange={setRange}
+          label="Date range"
+        />
+        <Button asChild variant="link" size="sm" className="px-0">
+          <Link href={rankingsHistoryHref(appId, keyword.keywordId, range)}>
+            Open in Rankings
+          </Link>
+        </Button>
+      </div>
       <PositionHistoryPanel
         appId={appId}
         keyword={keyword}
@@ -107,11 +114,6 @@ function PositionHistoryContent({
         range={range}
         onRange={setRange}
       />
-      <Button asChild variant="link" size="sm" className="self-start px-0">
-        <Link href={rankingsHistoryHref(appId, keyword.keywordId, range)}>
-          Open in Rankings
-        </Link>
-      </Button>
     </>
   );
 }
@@ -140,7 +142,7 @@ export function PositionHistoryPopover(props: PositionHistoryProps) {
         collisionPadding={16}
         aria-labelledby={`${ids.eyebrow} ${ids.title}`}
         aria-describedby={ids.market}
-        className="max-h-(--radix-popover-content-available-height) w-md max-w-(--radix-popover-content-available-width) gap-3 overflow-y-auto p-3"
+        className="max-h-(--radix-popover-content-available-height) w-md max-w-(--radix-popover-content-available-width) gap-2.5 overflow-y-auto p-3"
       >
         <PositionHistoryContent {...props} ids={ids} />
       </PopoverContent>
