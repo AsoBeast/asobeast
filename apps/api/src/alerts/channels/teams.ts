@@ -271,7 +271,7 @@ function batchBody(report: AlertReport): TeamsMessage {
   }
   for (
     let rows = SHORT_GROUP_ROWS;
-    sizeOf(body) > PAYLOAD_MAX_BYTES && rows > 0;
+    sizeOf(body) > PAYLOAD_MAX_BYTES && rows >= 0;
     rows -= 1
   ) {
     body = batchMessage(report, apps, rows);

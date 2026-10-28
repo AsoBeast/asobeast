@@ -176,6 +176,33 @@ describe('teamsBody for a batch', () => {
     );
   });
 
+  it('keeps only the group links when one row per group still overflows', () => {
+    const icon = `https://is1-ssl.mzstatic.com/${'a'.repeat(1500)}.jpg`;
+    const worst = worstCaseBatch(null);
+    const withIcon = <T extends { app: object }>(section: T): T => ({
+      ...section,
+      app: { ...section.app, iconUrl: icon },
+    });
+    const text = JSON.stringify(
+      teamsBody(
+        buildReport(
+          {
+            ...worst,
+            apps: worst.apps.map((section) => ({
+              ...withIcon(section),
+              competitors: section.competitors.map(withIcon),
+            })),
+          },
+          ORIGIN,
+        ),
+      ),
+    );
+
+    expect(Buffer.byteLength(text)).toBeLessThanOrEqual(28 * 1024);
+    expect(text).toContain(`[See all 25](${ORIGIN}/apps/app_0/keywords)`);
+    expect(text).not.toContain('meditation and sleep tracker keyword 0');
+  });
+
   it('opens nothing without an origin', () => {
     const card = cardOf(batch, null);
 
