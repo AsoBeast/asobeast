@@ -139,5 +139,10 @@ export function PositionHistoryPanel({
       />
     );
   }
-  return <ChartSkeleton height={CHART_HEIGHT.compact} />;
+  return (
+    <ChartSkeleton
+      height={CHART_HEIGHT.compact}
+      className="border border-dashed"
+    />
+  );
 }

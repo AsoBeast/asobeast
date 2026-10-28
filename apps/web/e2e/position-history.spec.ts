@@ -145,6 +145,31 @@ test("E-PH-17 the fill under the line is revealed with the line, not ahead of it
   );
 });
 
+test("E-PH-19 the loading placeholder shows on the popover in the dark theme", async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.addInitScript(() => window.localStorage.setItem("theme", "dark"));
+  await page.goto(PAGE);
+  const held = await holdRequest(page, RANKINGS, "GET");
+  const popover = await openHistory(page, "focus timer");
+  const placeholder = popover.locator('[data-slot="skeleton"]');
+  await expect(placeholder).toBeVisible();
+
+  const { width, colour, surface } = await placeholder.evaluate((element) => {
+    const own = getComputedStyle(element);
+    const dialog = element.closest('[role="dialog"]');
+    return {
+      width: own.borderTopWidth,
+      colour: own.borderTopColor,
+      surface: dialog ? getComputedStyle(dialog).backgroundColor : "",
+    };
+  });
+  expect(width).not.toBe("0px");
+  expect(colour).not.toBe(surface);
+  held.release();
+});
+
 test("E-PH-02 Enter and Space open it and Escape returns focus", async ({
   page,
 }) => {

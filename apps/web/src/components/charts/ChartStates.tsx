@@ -12,8 +12,14 @@ export function trendState(points: number): ChartState {
   return "ready";
 }
 
-export function ChartSkeleton({ height }: { height: string }) {
-  return <Skeleton className={cn("w-full", height)} />;
+export function ChartSkeleton({
+  height,
+  className,
+}: {
+  height: string;
+  className?: string;
+}) {
+  return <Skeleton className={cn("w-full", height, className)} />;
 }
 
 export function ChartNotice({
