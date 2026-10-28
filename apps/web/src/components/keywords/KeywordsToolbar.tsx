@@ -5,11 +5,10 @@ import { ChartScatter, Plus, TableProperties, X } from "lucide-react";
 import { useQueryState } from "nuqs";
 import type { Store } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
+import { MarketPills } from "@/components/layout/MarketPills";
 import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
-import { formatCountry } from "@/lib/format";
 import { keywordCountriesOptions, keywordsOptions } from "@/lib/queries";
 import { countryParser, keywordViewParser } from "@/lib/search-params";
-import { cn } from "@/lib/utils";
 import { AddKeywordsDialog } from "./AddKeywordsDialog";
 
 export function KeywordsToolbar({
@@ -33,34 +32,18 @@ export function KeywordsToolbar({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <div
-        role="group"
-        aria-label="Keyword markets"
-        className="flex flex-wrap items-center gap-2"
-      >
-        {markets.map((entry) => {
-          const selected = entry.country === market;
-          return (
-            <button
-              key={entry.country}
-              type="button"
-              aria-pressed={selected}
-              title={formatCountry(entry.country)}
-              onClick={() => void setCountry(entry.country)}
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-body transition-colors",
-                selected
-                  ? "border-foreground bg-foreground text-background"
-                  : "hover:bg-muted",
-              )}
-            >
-              <span className="font-medium">{entry.country.toUpperCase()}</span>
-              <span className="numeric font-mono text-caption opacity-70">
-                {entry.keywordCount}
-              </span>
-            </button>
-          );
-        })}
+      <div className="flex flex-wrap items-center gap-2">
+        <MarketPills
+          markets={markets.map((entry) => ({
+            country: entry.country,
+            count: entry.keywordCount,
+          }))}
+          value={market}
+          onChange={(next) => {
+            if (next) void setCountry(next);
+          }}
+          ariaLabel="Keyword markets"
+        />
         <AddKeywordsDialog appId={id} store={store} country={market}>
           <Button variant="outline" size="sm" aria-label="Add a market">
             <Plus />
