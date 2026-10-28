@@ -6,7 +6,7 @@ import { ResidentialTariff } from './residential-spend';
 
 export const POOL_CREDENTIAL_REF = 'env:PROXY_USERNAME';
 
-const EMPTY_POOL_POLL_MS = 5_000;
+const POOL_POLL_MS = 5_000;
 
 @Injectable()
 export class ProxyPoolConfig {
@@ -44,8 +44,8 @@ export class ProxyPoolConfig {
     return this.config.get('PROXY_ACQUIRE_TIMEOUT_MS', { infer: true });
   }
 
-  get emptyPollMs(): number {
-    return EMPTY_POOL_POLL_MS;
+  get pollMs(): number {
+    return POOL_POLL_MS;
   }
 
   get maxWorkerConcurrency(): number {

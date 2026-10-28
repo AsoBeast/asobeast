@@ -47,7 +47,11 @@ const blocked = () =>
   );
 
 describe('residential monthly cap', () => {
-  const acquire = jest.fn<Promise<ProxyLease | null>, [Store, string?]>();
+  const acquire = jest.fn<
+    Promise<ProxyLease | null>,
+    [Store, string?, boolean?]
+  >();
+  const release = jest.fn().mockResolvedValue(undefined);
   const record = jest.fn().mockResolvedValue(undefined);
   const ensureInitialized = jest.fn().mockResolvedValue(undefined);
 
@@ -65,7 +69,7 @@ describe('residential monthly cap', () => {
 
   function egressWith(ledger: ProxyLedger) {
     return new ProxyEgress(
-      { acquire } as unknown as ProxyPool,
+      { acquire, release } as unknown as ProxyPool,
       config,
       { record } as unknown as ProxyHealthTracker,
       new ResidentialFallback(ledger, config),
@@ -93,6 +97,7 @@ describe('residential monthly cap', () => {
     acquire.mockReset().mockResolvedValue({
       endpointId: 'e1',
       dispatcher: {} as Dispatcher,
+      leasedAt: new Date(),
     });
     record.mockClear();
     ensureInitialized.mockClear();

@@ -413,10 +413,25 @@ describe('ChartsController (e2e)', () => {
     });
 
     it('refuses an empty answer for a chart that listed apps yesterday', async () => {
-      await playCapture(addDays(today, -1), ['a']);
+      await playCapture(
+        addDays(today, -1),
+        Array.from({ length: 10 }, (_, index) => `app-${index}`),
+      );
 
       await api.post('/charts/capture').send(PLAY_KEY).expect(502);
 
+      await expect(playCaptures()).resolves.toBe(0);
+    });
+
+    it('reports no apps for a sparse chart that listed apps yesterday', async () => {
+      await playCapture(addDays(today, -1), ['a', 'b']);
+
+      const response = await api
+        .post('/charts/capture')
+        .send(PLAY_KEY)
+        .expect(200);
+
+      expect((response.body as ChartPage).answeredNoApps).toBe(true);
       await expect(playCaptures()).resolves.toBe(0);
     });
 
