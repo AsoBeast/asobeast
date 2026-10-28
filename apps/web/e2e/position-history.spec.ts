@@ -127,6 +127,24 @@ test("E-PH-16 the newest point is ringed and the best position is drawn only whe
   ).toHaveCount(0);
 });
 
+test("E-PH-17 the fill under the line is revealed with the line, not ahead of it", async ({
+  page,
+}) => {
+  await page.goto(PAGE);
+  await (await hydrated(trigger(page, "focus timer"))).click();
+  const area = chart(page, "focus timer").locator(".recharts-area");
+  await area.waitFor();
+
+  const revealed = await area.evaluate((element) => {
+    const reveal = element.querySelector(".recharts-shape clipPath rect");
+    return reveal === null ? null : Number(reveal.getAttribute("width"));
+  });
+  expect(revealed).not.toBeNull();
+  expect(revealed).toBeLessThan(
+    await area.evaluate((element) => element.getBoundingClientRect().width),
+  );
+});
+
 test("E-PH-02 Enter and Space open it and Escape returns focus", async ({
   page,
 }) => {

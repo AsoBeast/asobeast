@@ -175,7 +175,6 @@ export function PositionHistoryChart({
             connectNulls={false}
             activeDot={false}
             legendType="none"
-            isAnimationActive={false}
           />
         ) : null}
         {line ? (
