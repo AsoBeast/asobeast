@@ -1266,6 +1266,28 @@ describe('RankingsService.checkKeyword', () => {
       expect(payloads[0]).not.toHaveProperty('undoesDrop');
     });
 
+    it('leaves a rise past where a pending drop began unmarked', async () => {
+      const { service, dispatch } = confirmedCheck({
+        earlier: [{ position: 20 }],
+        previous: 30,
+        today: 8,
+      });
+
+      await service.checkKeyword('kw1');
+
+      const payloads = dispatched(dispatch);
+      expect(payloads).toEqual([
+        expect.objectContaining({ event: 'rank.improved', from: 30, to: 8 }),
+        expect.objectContaining({
+          event: 'rank.milestone',
+          tier: 10,
+          direction: 'entered',
+        }),
+      ]);
+      expect(payloads[0]).not.toHaveProperty('undoesDrop');
+      expect(payloads[1]).not.toHaveProperty('undoesDrop');
+    });
+
     it('confirms an exit when the app is not found today', async () => {
       const { service, dispatch } = confirmedCheck({
         earlier: [{ position: 9 }],

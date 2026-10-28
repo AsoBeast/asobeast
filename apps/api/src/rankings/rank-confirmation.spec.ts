@@ -151,6 +151,8 @@ describe('undoesDrop', () => {
       false,
     ],
     ['nothing happened', [9, 9, 9], false],
+    ['a rise past where the pending drop began', [20, 30, 8], false],
+    ['a return from not found far above the start', [50, null, 8], false],
   ])('%s', (_, sequence, expected) => {
     expect(undoesDrop(windowOf(sequence))).toBe(expected);
   });

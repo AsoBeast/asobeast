@@ -30,6 +30,11 @@ const dropSlide =
   (from, to) =>
     from !== null && (to === null || to - from >= threshold);
 
+const riseSlide =
+  (threshold: number): Slide =>
+  (from, to) =>
+    to !== null && (from === null || from - to >= threshold);
+
 const exitSlide =
   (tier: RankMilestoneTier): Slide =>
   (from, to) =>
@@ -85,7 +90,8 @@ export function confirmedExit(
 }
 
 export const undoesDrop = (window: ConfirmationWindow): boolean =>
-  isPending(dropSlide(window.threshold), window);
+  isPending(dropSlide(window.threshold), window) &&
+  !holds(riseSlide(window.threshold), window);
 
 export const undoesExit = (
   window: ConfirmationWindow,
