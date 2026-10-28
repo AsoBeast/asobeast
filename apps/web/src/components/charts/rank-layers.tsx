@@ -4,7 +4,7 @@ import { RankBandLabel } from "./RankBandLabel";
 
 export const RANK_TICKS = [1, 10, 25, 50, 100, RANK_DEPTH];
 
-export const RANK_TIERS = [
+const RANK_TIERS = [
   { from: 1, to: 3, fill: "var(--rank-band-1)", label: "Top 3" },
   { from: 3, to: 10, fill: "var(--rank-band-2)", label: "Top 10" },
   { from: 10, to: 25, fill: "var(--rank-band-3)", label: "Top 25" },
