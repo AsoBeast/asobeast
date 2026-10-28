@@ -18,6 +18,7 @@ import {
   milestonePhrase,
   reviewAuthor,
   reviewQuote,
+  reviewTone,
   type ReviewAlert,
 } from './report-rows';
 import { storefrontLabel } from './storefront';
@@ -99,7 +100,8 @@ function reviewSentence(alert: ReviewAlert): string {
   return `A ${alert.review.score} star review of ${appName(alert.app.name)}${from}${version}: ${reviewQuote(alert.review.text)}`;
 }
 
-const reviewEmoji = (score: number): string => (score <= 2 ? '⚠️' : '⭐');
+const reviewEmoji = (score: number): string =>
+  reviewTone(score) === 'down' ? '⚠️' : '⭐';
 
 function entrantSentence(alert: SerpEntrantPayload, withFlag: boolean): string {
   const names = alert.entrants

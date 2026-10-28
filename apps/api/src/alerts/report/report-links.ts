@@ -63,6 +63,9 @@ export function reportLinks(origin: string | null): ReportLinks {
       page(`/apps/${appId}/competitors`, `See all ${total} competitors`),
     action: (href) => labelled(href, 'Open the action'),
     reviews: (appId, score) =>
-      page(`/apps/${appId}/reviews?score=${score}`, 'Open reviews'),
+      page(
+        `/apps/${appId}${GROUP_PATHS.newReviews}${groupQuery('newReviews', [score])}`,
+        'Open reviews',
+      ),
   };
 }

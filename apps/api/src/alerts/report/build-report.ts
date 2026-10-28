@@ -47,6 +47,8 @@ interface GroupSource {
 
 const always = (tone: GroupTone) => (): GroupTone => tone;
 
+const newReviewsOf = (section: Section) => section.newReviews ?? [];
+
 const GROUP_SOURCES: Record<ReportGroupKind, GroupSource> = {
   rankDrops: {
     title: 'Rank drops',
@@ -106,10 +108,8 @@ const GROUP_SOURCES: Record<ReportGroupKind, GroupSource> = {
   newReviews: {
     title: 'New reviews',
     tone: (section) =>
-      reviewsTone(
-        (section.newReviews ?? []).map((alert) => alert.review.score),
-      ),
-    rows: (section) => (section.newReviews ?? []).map(reviewRow),
+      reviewsTone(newReviewsOf(section).map((alert) => alert.review.score)),
+    rows: (section) => newReviewsOf(section).map(reviewRow),
   },
   actions: {
     title: 'New actions',
@@ -134,13 +134,14 @@ function capped(
 }
 
 function reviewScoresOf(section: Section, kind: ReportGroupKind): number[] {
-  const alerts =
-    kind === 'negativeReviews'
-      ? section.negativeReviews
-      : kind === 'newReviews'
-        ? (section.newReviews ?? [])
-        : [];
-  return alerts.map((alert) => alert.review.score);
+  switch (kind) {
+    case 'negativeReviews':
+      return section.negativeReviews.map((alert) => alert.review.score);
+    case 'newReviews':
+      return newReviewsOf(section).map((alert) => alert.review.score);
+    default:
+      return [];
+  }
 }
 
 function ownedGroups(section: Section, build: Build): ReportGroup[] {
