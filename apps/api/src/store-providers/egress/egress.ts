@@ -15,7 +15,7 @@ export type EgressAdmission = () => Promise<void>;
 
 export class EgressMeter {
   private observed = 0;
-  private lastObservedAt: number | null = null;
+  private lastSettledAt: number | null = null;
   private readonly refusals: unknown[] = [];
 
   constructor(
@@ -36,12 +36,15 @@ export class EgressMeter {
   }
 
   get lastRequestAt(): number | null {
-    return this.lastObservedAt;
+    return this.lastSettledAt;
   }
 
   observe(): void {
     this.observed++;
-    this.lastObservedAt = Date.now();
+  }
+
+  settle(): void {
+    this.lastSettledAt = Date.now();
   }
 
   refuse(reason: unknown): void {
@@ -83,6 +86,8 @@ export const egressFetch = async (input: FetchInput, init?: FetchInit) => {
   } catch (error) {
     meter?.refuse(error);
     throw error;
+  } finally {
+    meter?.settle();
   }
 };
 

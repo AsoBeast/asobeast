@@ -50,6 +50,7 @@ describe('ProxyEgress', () => {
     const meter = currentMeter();
     for (let n = 0; n < count; n++) {
       meter?.observe();
+      meter?.settle();
       meter?.refuse(new Error('HTTP 403'));
     }
     return Promise.resolve('partial');
@@ -58,6 +59,7 @@ describe('ProxyEgress', () => {
   const okSubrequests = (count: number) => () => {
     const meter = currentMeter();
     for (let n = 0; n < count; n++) meter?.observe();
+    meter?.settle();
     return Promise.resolve('ok');
   };
 
@@ -219,7 +221,9 @@ describe('ProxyEgress', () => {
       egress.through(Store.GOOGLE_PLAY, 'us', async () => {
         const meter = currentMeter();
         meter?.observe();
+        meter?.settle();
         meter?.observe();
+        meter?.settle();
         meter?.refuse(new Error('Request failed with status 403'));
         return Promise.resolve('partial');
       }),
@@ -354,6 +358,7 @@ describe('ProxyEgress', () => {
       egress.through(Store.GOOGLE_PLAY, 'us', () => {
         const meter = currentMeter();
         for (let n = 0; n < 5; n++) meter?.observe();
+        meter?.settle();
         return Promise.reject(parse);
       }),
     ).rejects.toBe(parse);
@@ -372,6 +377,7 @@ describe('ProxyEgress', () => {
         .through(Store.APP_STORE, 'us', () => {
           const meter = currentMeter();
           meter?.observe();
+          meter?.settle();
           meter?.refuse(storeDeadline().signal?.reason);
           return Promise.reject(
             new StoreRequestError(
