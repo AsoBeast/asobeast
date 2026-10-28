@@ -40,6 +40,7 @@ import {
   reviewNegativePayload,
   reviewNewPayload,
 } from './review-alert-payloads';
+import { newReviewRow } from './new-review-row';
 import { reviewLanguage } from './review-language';
 import { toReviewTranslation, TranslationColumns } from './review-translation';
 import { StoredReview, storedReviewChanges } from './stored-review-changes';
@@ -114,31 +115,22 @@ export class ReviewsService {
       },
     });
     const known = new Map(existing.map((row) => [row.reviewId, row]));
-    const inserted = [...fetched.values()].filter(
+    const absent = [...fetched.values()].filter(
       (review) => !known.has(review.reviewId),
     );
-
-    const tracksUpdates = app.store === Store.GOOGLE_PLAY;
-    const checkedAt = tracksUpdates ? new Date() : null;
-
-    if (inserted.length > 0) {
-      await this.prisma.review.createMany({
-        data: inserted.map((review) => ({
-          appId: app.id,
-          reviewId: review.reviewId,
-          userName: review.userName ?? null,
-          score: review.score,
-          title: review.title ?? null,
-          text: review.text,
-          version: review.version ?? null,
-          reviewedAt: review.updatedAt ?? null,
-          repliedAt: tracksUpdates ? (review.repliedAt ?? null) : null,
-          replyText: tracksUpdates ? (review.replyText ?? null) : null,
-          replyCheckedAt: checkedAt,
-        })),
-        skipDuplicates: true,
-      });
-    }
+    const checkedAt = app.store === Store.GOOGLE_PLAY ? new Date() : null;
+    const created =
+      absent.length === 0
+        ? []
+        : await this.prisma.review.createManyAndReturn({
+            data: absent.map((review) =>
+              newReviewRow(app.id, review, checkedAt),
+            ),
+            skipDuplicates: true,
+            select: { reviewId: true },
+          });
+    const createdIds = new Set(created.map((row) => row.reviewId));
+    const inserted = absent.filter((review) => createdIds.has(review.reviewId));
 
     if (checkedAt !== null && known.size > 0) {
       await this.recordUpdates(app.id, fetched, known, checkedAt);
