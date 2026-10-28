@@ -2955,6 +2955,7 @@ const routes: Route[] = [
           hasSecret: Boolean(body.secret),
           createdAt: new Date().toISOString(),
           channel: webhookChannelOf(body.url),
+          confirmDrops: body.confirmDrops === true,
         };
         webhooks.unshift(webhook);
         json(res, 201, webhook);
@@ -2983,6 +2984,9 @@ const routes: Route[] = [
         if (body.events !== undefined) webhook.events = body.events;
         if (body.active !== undefined) webhook.active = body.active;
         if (body.secret !== undefined) webhook.hasSecret = body.secret !== "";
+        if (body.confirmDrops !== undefined) {
+          webhook.confirmDrops = body.confirmDrops;
+        }
         json(res, 200, webhook);
       });
     },
@@ -3056,6 +3060,7 @@ const routes: Route[] = [
           active: true,
           confirmed: trusted,
           createdAt: new Date().toISOString(),
+          confirmDrops: body.confirmDrops === true,
         };
         emailAlerts.unshift(alert);
         json(
@@ -3091,6 +3096,9 @@ const routes: Route[] = [
         if (body.email !== undefined) alert.email = body.email;
         if (body.events !== undefined) alert.events = body.events;
         if (body.active !== undefined) alert.active = body.active;
+        if (body.confirmDrops !== undefined) {
+          alert.confirmDrops = body.confirmDrops;
+        }
         json(res, 200, alert);
       });
     },

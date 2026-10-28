@@ -11,6 +11,7 @@ import { ApiError, createEmailAlert } from "@/lib/api";
 import { invalidateEmailAlertMutation } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
 import { EventSelection } from "./alert-events";
+import { ConfirmDropsField } from "./ConfirmDropsField";
 import { AlertChannelDialog } from "./alert-channel/AlertChannelDialog";
 import { awaitsConfirmation, recipientToast } from "./email-alert-recipient";
 
@@ -19,10 +20,11 @@ export function AddEmailAlertDialog({ trigger }: { trigger?: ReactNode }) {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [events, setEvents] = useState<WebhookEvent[]>(["metadata.changed"]);
+  const [confirmDrops, setConfirmDrops] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const mutation = useMutation({
-    mutationFn: () => createEmailAlert({ email, events }),
+    mutationFn: () => createEmailAlert({ email, events, confirmDrops }),
     onSuccess: (saved) => {
       invalidateEmailAlertMutation(queryClient);
       if (saved.confirmationSent === false) {
@@ -55,6 +57,7 @@ export function AddEmailAlertDialog({ trigger }: { trigger?: ReactNode }) {
     if (next) return;
     setEmail("");
     setEvents(["metadata.changed"]);
+    setConfirmDrops(false);
     setError(null);
   }
 
@@ -98,6 +101,8 @@ export function AddEmailAlertDialog({ trigger }: { trigger?: ReactNode }) {
       </div>
 
       <EventSelection value={events} onChange={setEvents} />
+
+      <ConfirmDropsField checked={confirmDrops} onChange={setConfirmDrops} />
     </AlertChannelDialog>
   );
 }

@@ -1,15 +1,24 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Clock, Loader2, MailCheck, MailX, Send } from "lucide-react";
+import {
+  CheckIcon,
+  Clock,
+  Loader2,
+  MailCheck,
+  MailX,
+  Send,
+} from "lucide-react";
 import type { WebhookEvent } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { EVENT_LABELS } from "../alert-events";
+import { CONFIRM_DROPS_BADGE } from "../ConfirmDropsField";
 import { DeliveriesSection } from "../DeliveriesSection";
 import { DeleteChannelDialog } from "./DeleteChannelDialog";
 import { EditEventsDialog } from "./EditEventsDialog";
+import type { ChannelEdit } from "./EditEventsDialog";
 
 export interface AwaitingConfirmation {
   pending: boolean;
@@ -86,6 +95,7 @@ export function AlertChannelRow({
   channel,
   id,
   events,
+  confirmDrops,
   tag,
   awaiting,
   active,
@@ -104,6 +114,7 @@ export function AlertChannelRow({
   channel: "webhook" | "email";
   id: string;
   events: WebhookEvent[];
+  confirmDrops: boolean;
   tag?: ReactNode;
   awaiting?: AwaitingConfirmation;
   active: boolean;
@@ -116,7 +127,7 @@ export function AlertChannelRow({
   deletePending: boolean;
   onDelete: () => Promise<unknown>;
   eventsPending: boolean;
-  onEventsSave: (events: WebhookEvent[]) => Promise<unknown>;
+  onEventsSave: (edit: ChannelEdit) => Promise<unknown>;
 }) {
   return (
     <li className="flex flex-col gap-3 p-4">
@@ -150,6 +161,12 @@ export function AlertChannelRow({
 
       <div className="flex flex-wrap items-center gap-1">
         {tag}
+        {confirmDrops ? (
+          <Badge variant="secondary">
+            <CheckIcon />
+            {CONFIRM_DROPS_BADGE}
+          </Badge>
+        ) : null}
         {events.map((event) => (
           <Badge key={event} variant="outline">
             {EVENT_LABELS[event]}
@@ -158,6 +175,7 @@ export function AlertChannelRow({
         <EditEventsDialog
           label={label}
           events={events}
+          confirmDrops={confirmDrops}
           pending={eventsPending}
           onSave={onEventsSave}
         />

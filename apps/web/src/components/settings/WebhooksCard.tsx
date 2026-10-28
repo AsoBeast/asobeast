@@ -7,11 +7,7 @@ import {
 } from "@tanstack/react-query";
 import { KeyRound } from "lucide-react";
 import { toast } from "sonner";
-import {
-  webhookChannelOf,
-  type WebhookEvent,
-  type WebhookItem,
-} from "@asobeast/shared";
+import { webhookChannelOf, type WebhookItem } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
 import { deleteWebhook, testWebhook, updateWebhook } from "@/lib/api";
 import {
@@ -26,6 +22,7 @@ import {
 } from "./alert-channel/AlertChannelCard";
 import { AddWebhookDialog } from "./AddWebhookDialog";
 import { AlertChannelRow } from "./alert-channel/AlertChannelRow";
+import type { ChannelEdit } from "./alert-channel/EditEventsDialog";
 import { useSharedFlight, useSingleFlight } from "@/lib/single-flight";
 import { WEBHOOK_CHANNEL_NAMES, webhookRowLabel } from "./webhook-channel-copy";
 
@@ -41,8 +38,7 @@ function WebhookRow({ webhook }: { webhook: WebhookItem }) {
   });
 
   const editEvents = useMutation({
-    mutationFn: (events: WebhookEvent[]) =>
-      updateWebhook(webhook.id, { events }),
+    mutationFn: (edit: ChannelEdit) => updateWebhook(webhook.id, edit),
     onSuccess: (saved) => {
       seedWebhook(queryClient, saved);
       invalidateWebhookMutation(queryClient);
@@ -84,6 +80,7 @@ function WebhookRow({ webhook }: { webhook: WebhookItem }) {
       channel="webhook"
       id={webhook.id}
       events={webhook.events}
+      confirmDrops={webhook.confirmDrops === true}
       tag={
         <>
           {channel !== "generic" && (

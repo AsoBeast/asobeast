@@ -16,30 +16,46 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { EventSelection } from "../alert-events";
+import { ConfirmDropsField } from "../ConfirmDropsField";
+
+export interface ChannelEdit {
+  events: WebhookEvent[];
+  confirmDrops?: boolean;
+}
 
 export function EditEventsDialog({
   label,
   events,
+  confirmDrops,
   pending,
   onSave,
 }: {
   label: string;
   events: WebhookEvent[];
+  confirmDrops: boolean;
   pending: boolean;
-  onSave: (events: WebhookEvent[]) => Promise<unknown>;
+  onSave: (edit: ChannelEdit) => Promise<unknown>;
 }) {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<WebhookEvent[]>(events);
+  const [confirming, setConfirming] = useState(confirmDrops);
 
   function changeOpen(next: boolean) {
-    if (next) setSelected(events);
+    if (next) {
+      setSelected(events);
+      setConfirming(confirmDrops);
+    }
     setOpen(next);
   }
 
   function submit(formEvent: FormEvent<HTMLFormElement>) {
     formEvent.preventDefault();
     if (selected.length === 0) return;
-    void onSave(selected).then(
+    const edit: ChannelEdit =
+      confirming === confirmDrops
+        ? { events: selected }
+        : { events: selected, confirmDrops: confirming };
+    void onSave(edit).then(
       () => setOpen(false),
       () => undefined,
     );
@@ -64,6 +80,7 @@ export function EditEventsDialog({
           </DialogHeader>
           <DialogBody>
             <EventSelection value={selected} onChange={setSelected} />
+            <ConfirmDropsField checked={confirming} onChange={setConfirming} />
             {selected.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 Select at least one event to save.

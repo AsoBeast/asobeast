@@ -11,6 +11,7 @@ import { ApiError, createWebhook } from "@/lib/api";
 import { invalidateWebhookMutation } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
 import { EventSelection } from "./alert-events";
+import { ConfirmDropsField } from "./ConfirmDropsField";
 import { AlertChannelDialog } from "./alert-channel/AlertChannelDialog";
 import { channelHint } from "./webhook-channel-copy";
 
@@ -22,6 +23,7 @@ export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
   const [url, setUrl] = useState("");
   const [events, setEvents] = useState<WebhookEvent[]>(["metadata.changed"]);
   const [secret, setSecret] = useState("");
+  const [confirmDrops, setConfirmDrops] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const mutation = useMutation({
@@ -30,6 +32,7 @@ export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
         url,
         events,
         secret: secret.trim() === "" ? undefined : secret,
+        confirmDrops,
       }),
     onSuccess: () => {
       invalidateWebhookMutation(queryClient);
@@ -53,6 +56,7 @@ export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
     setUrl("");
     setEvents(["metadata.changed"]);
     setSecret("");
+    setConfirmDrops(false);
     setError(null);
   }
 
@@ -110,6 +114,8 @@ export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
       </div>
 
       <EventSelection value={events} onChange={setEvents} />
+
+      <ConfirmDropsField checked={confirmDrops} onChange={setConfirmDrops} />
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="webhook-secret">Secret (optional)</Label>
