@@ -80,6 +80,53 @@ test("E-PH-01 the popover shows the position, the facts, the chart and the home 
   await expect(popover).not.toContainText("Price");
 });
 
+async function tooltipOn(page: Page, keyword: string, daysAgo: number) {
+  const plot = chart(page, keyword).getByRole("application");
+  const tooltip = chart(page, keyword).getByRole("tooltip");
+  await plot.focus();
+  await expect(tooltip).toBeVisible();
+  for (
+    let step = 0;
+    step < 10 && !(await tooltip.innerText()).includes(day(daysAgo));
+    step += 1
+  ) {
+    await plot.press("ArrowRight");
+  }
+  await expect(tooltip).toContainText(day(daysAgo));
+  return tooltip;
+}
+
+test("E-PH-15 the tooltip reads the position, the movement and the listing change of a day", async ({
+  page,
+}) => {
+  await page.goto(PAGE);
+  await openHistory(page, "focus timer");
+
+  const tooltip = await tooltipOn(page, "focus timer", 1);
+  await expect(tooltip).toContainText(/Position\s*5/);
+  await expect(tooltip).toContainText(`No change since ${day(2)}`);
+  await expect(tooltip).toContainText("Title, Description changed");
+});
+
+test("E-PH-16 the newest point is ringed and the best position is drawn only when the keyword ranked", async ({
+  page,
+}) => {
+  await page.goto(PAGE);
+  await openHistory(page, "focus timer");
+  await expect(chart(page, "focus timer")).toContainText("Best 3");
+  await expect(
+    chart(page, "focus timer").locator(".recharts-reference-dot"),
+  ).toHaveCount(1);
+  await page.keyboard.press("Escape");
+
+  await openHistory(page, "productivity app");
+  await expect(chart(page, "productivity app")).toBeVisible();
+  await expect(chart(page, "productivity app")).not.toContainText("Best");
+  await expect(
+    chart(page, "productivity app").locator(".recharts-reference-dot"),
+  ).toHaveCount(0);
+});
+
 test("E-PH-02 Enter and Space open it and Escape returns focus", async ({
   page,
 }) => {
