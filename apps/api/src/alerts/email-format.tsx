@@ -73,6 +73,7 @@ function ownedStats(payload: AlertBatchPayload): Stat[] {
     { label: 'New in the top 10', value: counts.serpEntrants, tone: 'neutral' },
     { label: 'Listing changes', value: counts.changes, tone: 'neutral' },
     { label: 'Negative reviews', value: counts.negativeReviews, tone: 'down' },
+    { label: 'New reviews', value: counts.newReviews, tone: 'neutral' },
     { label: 'New actions', value: counts.actions, tone: 'neutral' },
   ];
   return stats.filter((stat) => stat.value > 0);
@@ -86,6 +87,7 @@ function ownedSummary(payload: AlertBatchPayload): string {
     plural(counts.serpEntrants, 'top 10 entrant'),
     plural(counts.changes, 'listing change'),
     plural(counts.negativeReviews, 'negative review'),
+    plural(counts.newReviews, 'new review'),
     plural(counts.actions, 'new action'),
     plural(counts.milestones, 'milestone'),
     plural(counts.firstRankings, 'first ranking'),

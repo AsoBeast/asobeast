@@ -24,7 +24,9 @@ import {
   improved,
   LONG_ICON_URL,
   metadata,
+  batchWithNewReviews,
   negative,
+  newReview,
   worstCaseBatch,
 } from './email-fixtures.fixture';
 import {
@@ -478,6 +480,29 @@ describe('formatEmail for action.opened', () => {
     expect(email.html).toContain('1 new action');
     expect(email.text).toContain('New actions');
     expect(email.text).toContain('impact 71');
+  });
+});
+
+describe('the new review alert', () => {
+  it('counts and lists new reviews with their authors in a batch', async () => {
+    const email = await formatBatchEmail(batchWithNewReviews);
+
+    expect(email.html).toContain('0 negative reviews · 2 new reviews');
+    for (const part of [email.html, email.text]) {
+      expect(part).toContain('New reviews');
+      expect(part).toContain('Best habit tracker I have used');
+      expect(part).toContain('Alex');
+      expect(part).toContain('Works well, wish it synced');
+    }
+  });
+
+  it('lists the author of a single new review', async () => {
+    const email = await formatEmail(newReview);
+
+    expect(email.subject).toBe(
+      '[asobeast] A 5 star review of My App from Alex, v2.0.0: "Best habit tracker I have used"',
+    );
+    expect(email.text).toContain('Author: Alex');
   });
 });
 

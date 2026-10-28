@@ -278,6 +278,7 @@ import {
   type ChartFollowItem,
   type ChartKey,
   type ChartPage,
+  normalizeReviewScores,
   type Store,
   webhookChannelOf,
 } from "@asobeast/shared";
@@ -2951,6 +2952,7 @@ const routes: Route[] = [
           id: `hook-${webhooks.length + 1}`,
           url: body.url,
           events: body.events,
+          reviewScores: normalizeReviewScores(body.reviewScores ?? []),
           active: true,
           hasSecret: Boolean(body.secret),
           createdAt: new Date().toISOString(),
@@ -2981,6 +2983,9 @@ const routes: Route[] = [
           webhook.channel = webhookChannelOf(body.url);
         }
         if (body.events !== undefined) webhook.events = body.events;
+        if (body.reviewScores !== undefined) {
+          webhook.reviewScores = normalizeReviewScores(body.reviewScores);
+        }
         if (body.active !== undefined) webhook.active = body.active;
         if (body.secret !== undefined) webhook.hasSecret = body.secret !== "";
         json(res, 200, webhook);
@@ -3053,6 +3058,7 @@ const routes: Route[] = [
           id: `email-${emailAlerts.length + 1}`,
           email: body.email,
           events: body.events,
+          reviewScores: normalizeReviewScores(body.reviewScores ?? []),
           active: true,
           confirmed: trusted,
           createdAt: new Date().toISOString(),
@@ -3090,6 +3096,9 @@ const routes: Route[] = [
         }
         if (body.email !== undefined) alert.email = body.email;
         if (body.events !== undefined) alert.events = body.events;
+        if (body.reviewScores !== undefined) {
+          alert.reviewScores = normalizeReviewScores(body.reviewScores);
+        }
         if (body.active !== undefined) alert.active = body.active;
         json(res, 200, alert);
       });

@@ -7,6 +7,11 @@ import {
   RankMilestonePayload,
   RankOvertakenPayload,
 } from '@asobeast/shared';
+import {
+  newReviewKey,
+  ReviewAlertPayload,
+  reviewKey,
+} from './review-fingerprint';
 
 export interface OutboxRow {
   event: string;
@@ -24,16 +29,12 @@ const actionOpenedKey = (payload: ActionOpenedPayload): string =>
     ? `action.opened~${payload.action.id}~${dayOf(payload.occurredAt)}`
     : `action.opened~${payload.action.id}`;
 
-function hash(input: string): string {
-  let value = 5381;
-  for (let i = 0; i < input.length; i += 1) {
-    value = (value * 33) ^ input.charCodeAt(i);
-  }
-  return (value >>> 0).toString(36);
-}
-
 function appRow(
-  payload: RankMilestonePayload | RankFirstPayload | RankOvertakenPayload,
+  payload:
+    | RankMilestonePayload
+    | RankFirstPayload
+    | RankOvertakenPayload
+    | ReviewAlertPayload,
   dedupeKey: string,
 ): OutboxRow {
   return { event: payload.event, appId: payload.app.id, dedupeKey, payload };
@@ -73,17 +74,11 @@ export function outboxRows(payload: AlertPayload): OutboxRow[] {
   }
 
   if (payload.event === 'review.negative') {
-    const fingerprint = hash(
-      `${payload.review.reviewedAt ?? ''}|${payload.review.title ?? ''}|${payload.review.text}`,
-    );
-    return [
-      {
-        event: payload.event,
-        appId: payload.app.id,
-        dedupeKey: `review:${payload.app.id}:${fingerprint}`,
-        payload,
-      },
-    ];
+    return [appRow(payload, `review:${reviewKey(payload)}`)];
+  }
+
+  if (payload.event === 'review.new') {
+    return [appRow(payload, `review.new:${newReviewKey(payload)}`)];
   }
 
   if (payload.event === 'serp.entrant') {

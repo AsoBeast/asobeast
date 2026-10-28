@@ -9,6 +9,7 @@ import {
   RankMilestonePayload,
   RankOvertakenPayload,
   ReviewNegativePayload,
+  ReviewNewPayload,
   SerpEntrantPayload,
 } from '@asobeast/shared';
 import {
@@ -618,6 +619,68 @@ describe('action.opened batching', () => {
     });
 
     expect(filterBatch(owned, new Set(['rank.dropped']))).toBeNull();
+  });
+});
+
+describe('review.new batching', () => {
+  const now = new Date('2026-07-22T11:00:00.000Z');
+  const fresh = (score: number, text: string): ReviewNewPayload => ({
+    event: 'review.new',
+    occurredAt: '2026-07-22T10:00:00.000Z',
+    app: { id: 'a', name: 'Alpha' },
+    review: {
+      score,
+      title: null,
+      text,
+      author: 'Sam',
+      version: null,
+      reviewedAt: null,
+    },
+  });
+  const low = fresh(2, 'slow');
+  const high = fresh(5, 'great');
+  const owned = () =>
+    assembleBatches({
+      events: [event(low, 'a', 'n1'), event(high, 'a', 'n2')],
+      appById,
+      serpPrimariesByKeyword: new Map(),
+      now,
+    }).owned;
+
+  it('puts a new review into the new reviews of its owned app', () => {
+    expect(owned().apps[0]).toMatchObject({
+      newReviews: [low, high],
+      negativeReviews: [],
+    });
+  });
+
+  it('skips a new review keyed on a competitor', () => {
+    const result = classifyBatch({
+      events: [event({ ...high, app: { id: 'c', name: 'Charlie' } }, 'c')],
+      appById,
+      serpPrimariesByKeyword: new Map(),
+    });
+
+    expect(result.skipped.competitor_owned_signal).toBe(1);
+    expect(result.owned).toHaveLength(0);
+  });
+
+  it('keeps the picked stars and counts only them', () => {
+    const filtered = filterBatch(owned(), new Set(['review.new']), [1, 2]);
+
+    expect(filtered?.apps[0].newReviews).toEqual([low]);
+    expect(filtered?.events).toEqual([low]);
+    expect(filtered?.totals).toEqual({ events: 1, apps: 1 });
+  });
+
+  it('drops a section left with no picked star', () => {
+    expect(filterBatch(owned(), new Set(['review.new']), [1])).toBeNull();
+  });
+
+  it('keeps every star without a filter', () => {
+    expect(
+      filterBatch(owned(), new Set(['review.new']))?.apps[0].newReviews,
+    ).toEqual([low, high]);
   });
 });
 

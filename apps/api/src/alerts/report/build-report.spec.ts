@@ -5,6 +5,8 @@ import {
   competitorBatch,
   emptySection,
   improved,
+  negative,
+  newReview,
   worstCaseBatch,
 } from '../email-fixtures.fixture';
 import {
@@ -105,6 +107,67 @@ describe('buildReport', () => {
       ['rankImprovements', 'Rank improvements', 'up'],
       ['milestones', 'Milestones', 'up'],
       ['changes', 'Listing changes', 'neutral'],
+    ]);
+  });
+
+  it('groups new reviews after negative reviews', () => {
+    const section = {
+      ...emptySection(alpha.app),
+      negativeReviews: [negative],
+      newReviews: [newReview],
+    };
+
+    expect(
+      buildReport(owned([section]), null).apps[0].groups.map((group) => [
+        group.kind,
+        group.title,
+      ]),
+    ).toEqual([
+      ['negativeReviews', 'Negative reviews'],
+      ['newReviews', 'New reviews'],
+    ]);
+  });
+
+  it('caps new reviews at the row cap and links the reviews page', () => {
+    const reviews = Array.from({ length: 25 }, () => newReview);
+    const [group] = buildReport(
+      owned([{ ...emptySection(alpha.app), newReviews: reviews }]),
+      ORIGIN,
+    ).apps[0].groups;
+
+    expect(group.rows).toHaveLength(DEFAULT_CAPS.rows);
+    expect(group.total).toBe(25);
+    expect(group.link).toEqual({
+      href: `${ORIGIN}/apps/a/reviews?score=5`,
+      label: 'See all 25 in AsoBeast',
+    });
+  });
+
+  it.each([
+    [[5, 4], 'up'],
+    [[1, 2], 'down'],
+    [[5, 1], 'neutral'],
+  ] as const)('tones new reviews of %j %s', (scores, tone) => {
+    const newReviews = scores.map((score) => ({
+      ...newReview,
+      review: { ...newReview.review, score },
+    }));
+    const [group] = buildReport(
+      owned([{ ...emptySection(alpha.app), newReviews }]),
+      null,
+    ).apps[0].groups;
+
+    expect(group.tone).toBe(tone);
+  });
+
+  it('builds no new review group for a section queued before it existed', () => {
+    const report = buildReport(
+      owned([{ ...emptySection(alpha.app), negativeReviews: [negative] }]),
+      null,
+    );
+
+    expect(report.apps[0].groups.map((group) => group.kind)).toEqual([
+      'negativeReviews',
     ]);
   });
 
@@ -225,8 +288,21 @@ describe('reportCounts', () => {
       serpEntrants: 1,
       changes: 1,
       negativeReviews: 0,
+      newReviews: 0,
       actions: 0,
     });
+  });
+
+  it('counts new reviews', () => {
+    expect(
+      reportCounts({
+        ...batch,
+        apps: [
+          { ...alpha, newReviews: [newReview, newReview] },
+          { ...emptySection(alpha.app), newReviews: [newReview] },
+        ],
+      }).newReviews,
+    ).toBe(3);
   });
 });
 

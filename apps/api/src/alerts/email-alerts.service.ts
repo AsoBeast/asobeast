@@ -88,6 +88,7 @@ export class EmailAlertsService {
           workspaceId,
           email: dto.email,
           events: dto.events,
+          reviewScores: dto.reviewScores ?? [],
           confirmedAt,
         },
       });
@@ -105,6 +106,7 @@ export class EmailAlertsService {
     const data: Prisma.EmailAlertUpdateInput = {
       email: dto.email,
       events: dto.events,
+      reviewScores: dto.reviewScores,
       active: dto.active,
     };
     const saved = await this.underLock(workspaceId, async (tx) => {

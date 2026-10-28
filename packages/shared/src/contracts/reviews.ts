@@ -181,15 +181,24 @@ export interface RatingsHistogram {
   capturedAt: string | null;
 }
 
+export interface AlertReviewBody {
+  score: number;
+  title: string | null;
+  text: string;
+  version: string | null;
+  reviewedAt: string | null;
+}
+
 export interface ReviewNegativePayload {
   event: 'review.negative';
   occurredAt: string;
   app: { id: string; name: string | null } & AlertAppIdentity;
-  review: {
-    score: number;
-    title: string | null;
-    text: string;
-    version: string | null;
-    reviewedAt: string | null;
-  };
+  review: AlertReviewBody;
+}
+
+export interface ReviewNewPayload {
+  event: 'review.new';
+  occurredAt: string;
+  app: { id: string; name: string | null } & AlertAppIdentity;
+  review: AlertReviewBody & { author: string | null };
 }

@@ -43,6 +43,7 @@ export const REPORT_GROUP_KINDS = [
   'serpEntrants',
   'changes',
   'negativeReviews',
+  'newReviews',
   'actions',
 ] as const;
 export type ReportGroupKind = (typeof REPORT_GROUP_KINDS)[number];

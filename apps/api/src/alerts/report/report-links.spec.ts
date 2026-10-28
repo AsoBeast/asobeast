@@ -53,6 +53,23 @@ describe('reportLinks', () => {
     );
   });
 
+  it('opens the reviews page at one score', () => {
+    expect(reportLinks(ORIGIN).reviews('a', 3)).toEqual({
+      href: `${ORIGIN}/apps/a/reviews?score=3`,
+      label: 'Open reviews',
+    });
+    expect(reportLinks(null).reviews('a', 3)).toBeNull();
+  });
+
+  it('filters new reviews to their one score and opens the page otherwise', () => {
+    expect(
+      reportLinks(ORIGIN).group('a', 'newReviews', 3, [5, 5, 5])?.href,
+    ).toBe(`${ORIGIN}/apps/a/reviews?score=5`);
+    expect(reportLinks(ORIGIN).group('a', 'newReviews', 2, [5, 1])?.href).toBe(
+      `${ORIGIN}/apps/a/reviews`,
+    );
+  });
+
   it('names the total of the competitors it links to', () => {
     expect(reportLinks(ORIGIN).competitors('a', 14)).toEqual({
       href: `${ORIGIN}/apps/a/competitors`,
