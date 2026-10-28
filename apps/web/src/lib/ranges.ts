@@ -1,6 +1,7 @@
 export const RANGE_PRESETS = ["7d", "30d", "90d"] as const;
 export type RangePreset = (typeof RANGE_PRESETS)[number];
-export const WIDEST_RANGE: RangePreset = "90d";
+export const WIDEST_RANGE: RangePreset =
+  RANGE_PRESETS[RANGE_PRESETS.length - 1];
 
 export const VISIBILITY_RANGES = ["30d", "90d"] as const;
 export type VisibilityRange = (typeof VISIBILITY_RANGES)[number];

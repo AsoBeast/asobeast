@@ -15,6 +15,7 @@ import {
 } from "@/components/rankings/pivot";
 import { changesOptions, rankingsOptions } from "@/lib/queries";
 import { formatDayMonth } from "@/lib/format";
+import { queryMarket } from "@/lib/market";
 import {
   presetDays,
   presetToRange,
@@ -74,7 +75,7 @@ export function PositionHistoryPanel({
     ...changesOptions(
       appId,
       presetDays(range),
-      keyword.country === homeCountry ? undefined : keyword.country,
+      queryMarket(keyword.country, homeCountry),
     ),
     placeholderData: keepPreviousData,
   });
