@@ -17,8 +17,7 @@ import { EVENT_LABELS } from "../alert-events";
 import { CONFIRM_DROPS_BADGE } from "../ConfirmDropsField";
 import { DeliveriesSection } from "../DeliveriesSection";
 import { DeleteChannelDialog } from "./DeleteChannelDialog";
-import { EditEventsDialog } from "./EditEventsDialog";
-import type { ChannelEdit } from "./EditEventsDialog";
+import { EditEventsDialog, type ChannelEdit } from "./EditEventsDialog";
 
 export interface AwaitingConfirmation {
   pending: boolean;
