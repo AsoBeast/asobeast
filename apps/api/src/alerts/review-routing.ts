@@ -10,10 +10,7 @@ export interface Subscription {
   reviewScores: readonly number[];
 }
 
-export function listsNewReview(
-  subscription: Subscription,
-  score: number,
-): boolean {
+function listsNewReview(subscription: Subscription, score: number): boolean {
   return (
     subscription.events.includes('review.new') &&
     listsReviewScore(subscription.reviewScores, score)
