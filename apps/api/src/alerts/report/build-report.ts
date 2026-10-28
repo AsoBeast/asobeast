@@ -24,6 +24,7 @@ import {
   overtakeRow,
   rankRow,
   reviewRow,
+  reviewsTone,
 } from './report-rows';
 import { appName, plural } from './report-sentences';
 
@@ -102,6 +103,14 @@ const GROUP_SOURCES: Record<ReportGroupKind, GroupSource> = {
     tone: always('down'),
     rows: (section) => section.negativeReviews.map(reviewRow),
   },
+  newReviews: {
+    title: 'New reviews',
+    tone: (section) =>
+      reviewsTone(
+        (section.newReviews ?? []).map((alert) => alert.review.score),
+      ),
+    rows: (section) => (section.newReviews ?? []).map(reviewRow),
+  },
   actions: {
     title: 'New actions',
     tone: always('neutral'),
@@ -124,13 +133,27 @@ function capped(
   return { ...head, rows: rows.slice(0, caps.rows), total: rows.length };
 }
 
+function reviewScoresOf(section: Section, kind: ReportGroupKind): number[] {
+  const alerts =
+    kind === 'negativeReviews'
+      ? section.negativeReviews
+      : kind === 'newReviews'
+        ? (section.newReviews ?? [])
+        : [];
+  return alerts.map((alert) => alert.review.score);
+}
+
 function ownedGroups(section: Section, build: Build): ReportGroup[] {
-  const scores = section.negativeReviews.map((alert) => alert.review.score);
   return REPORT_GROUP_KINDS.flatMap((kind) => {
     const source = GROUP_SOURCES[kind];
     const rows = source.rows(section, section.app.country);
     if (rows.length === 0) return [];
-    const link = build.links.group(section.app.id, kind, rows.length, scores);
+    const link = build.links.group(
+      section.app.id,
+      kind,
+      rows.length,
+      reviewScoresOf(section, kind),
+    );
     return [
       capped(
         { kind, title: source.title, tone: source.tone(section), link },
@@ -300,6 +323,7 @@ export interface ReportCounts {
   serpEntrants: number;
   changes: number;
   negativeReviews: number;
+  newReviews: number;
   actions: number;
 }
 
@@ -318,6 +342,7 @@ export function reportCounts(payload: AlertBatchPayload): ReportCounts {
     serpEntrants: count((section) => section.serpEntrants),
     changes: count((section) => section.changes),
     negativeReviews: count((section) => section.negativeReviews),
+    newReviews: count((section) => section.newReviews),
     actions: count((section) => section.actions),
   };
 }

@@ -265,6 +265,30 @@ export const batch: AlertBatchPayload = {
   events: [],
 };
 
+export const batchWithNewReviews: AlertBatchPayload = {
+  ...batch,
+  totals: { events: 5, apps: 2 },
+  apps: [
+    {
+      ...alpha,
+      newReviews: [
+        newReview,
+        {
+          ...newReview,
+          review: {
+            ...newReview.review,
+            score: 4,
+            author: null,
+            title: null,
+            text: 'Works well, wish it synced',
+          },
+        },
+      ],
+    },
+    bravo,
+  ],
+};
+
 export const competitorBatch: AlertBatchPayload = {
   ...batch,
   scope: 'competitors',
@@ -334,6 +358,10 @@ const worstCaseSection = (index: number): AlertBatchAppSection => {
     negativeReviews: entries(() => ({
       ...negative,
       review: { ...negative.review, text: LONG },
+    })),
+    newReviews: entries(() => ({
+      ...newReview,
+      review: { ...newReview.review, text: LONG },
     })),
     actions: entries((entry) => ({
       ...actionOpened,
