@@ -352,7 +352,7 @@ describe('CategoryRanksService chart alerts (e2e)', () => {
     await check();
     const second = await outbox();
 
-    expect(second.size).toBe(2);
+    expect(await prisma.alertEvent.count()).toBe(2);
     for (const [event, row] of first) {
       expect(second.get(event)?.createdAt).toEqual(row.createdAt);
     }
