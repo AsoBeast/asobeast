@@ -27,7 +27,7 @@ export class ChartAlertsService {
       await this.raise(check);
     } catch (error) {
       this.logger.warn(
-        `chart alert for app ${check.app.id} failed: ${(error as Error).message}`,
+        `chart alert for app ${check.app.id} failed: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }
