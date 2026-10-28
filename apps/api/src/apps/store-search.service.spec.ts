@@ -13,15 +13,17 @@ const ITEMS: SearchItem[] = [
   { storeAppId: '3', title: 'Three' },
 ];
 
+const through = jest.fn(
+  (_store: Store, _country: string, work: () => Promise<unknown>) => work(),
+);
+
 function serviceWith(search: jest.Mock) {
   const registry = {
     get: () => ({ search }) as unknown as StoreProvider,
   } as unknown as StoreProviderRegistry;
-  const egress = {
-    through: (_store: Store, _country: string, work: () => Promise<unknown>) =>
-      work(),
-  } as unknown as ProxyEgress;
-  return new StoreSearchService(registry, egress);
+  return new StoreSearchService(registry, {
+    through,
+  } as unknown as ProxyEgress);
 }
 
 const QUERY = {
@@ -82,6 +84,17 @@ describe('StoreSearchService', () => {
     expect(order).toEqual(['spend', 'search']);
     expect(search).toHaveBeenCalledWith('focus', 'us', 2);
     expect(results.map((result) => result.storeAppId)).toEqual(['1', '2']);
+  });
+
+  it('takes any free endpoint rather than wait for one in the storefront', async () => {
+    await serviceWith(jest.fn().mockResolvedValue(ITEMS)).search(QUERY);
+
+    expect(through).toHaveBeenCalledWith(
+      'APP_STORE',
+      'us',
+      expect.any(Function),
+      { waitForLocal: false },
+    );
   });
 
   it('refuses an unknown storefront before it spends', async () => {

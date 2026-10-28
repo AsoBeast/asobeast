@@ -97,8 +97,11 @@ export class CompetitorSuggestionsService {
   ): Promise<SearchItem[] | null> {
     try {
       await spend?.();
-      return await this.egress.through(app.store, app.country, () =>
-        this.registry.get(app.store).similar(app.storeAppId, app.country),
+      return await this.egress.through(
+        app.store,
+        app.country,
+        () => this.registry.get(app.store).similar(app.storeAppId, app.country),
+        { waitForLocal: false },
       );
     } catch (error) {
       if (

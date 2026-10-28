@@ -13,6 +13,7 @@ export interface SelectionInput {
   now: Date;
   minIntervalMs: number;
   country?: string;
+  waitForLocal?: boolean;
 }
 
 export type Selection =
@@ -29,20 +30,24 @@ export function selectEndpoint({
   now,
   minIntervalMs,
   country,
+  waitForLocal = true,
 }: SelectionInput): Selection {
   if (candidates.length === 0) return { kind: 'empty' };
 
+  const isAvailable = (candidate: PoolCandidate) =>
+    availableAt(candidate, minIntervalMs) <= now.getTime();
   const local = country
     ? candidates.filter(
         (candidate) =>
           candidate.country === country && !coolingDown(candidate, now),
       )
     : [];
-  const pool = local.length > 0 ? local : candidates;
+  const pool =
+    local.length > 0 && (waitForLocal || local.some(isAvailable))
+      ? local
+      : candidates;
 
-  const available = pool.filter(
-    (candidate) => availableAt(candidate, minIntervalMs) <= now.getTime(),
-  );
+  const available = pool.filter(isAvailable);
   if (available.length === 0) {
     const earliest = Math.min(
       ...pool.map((candidate) => availableAt(candidate, minIntervalMs)),

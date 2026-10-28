@@ -6,6 +6,7 @@ import { withinStoreDeadline } from '../store-deadline';
 import { PoolShutdown } from './pool-shutdown';
 import { ProxyPoolConfig } from './proxy-pool.config';
 import {
+  LEASE_HOLD_MS,
   ProxyPool,
   ProxyPoolStoppingError,
   ProxyPoolUnavailableError,
@@ -57,9 +58,11 @@ const health = (over: Partial<EndpointRow['health'][number]> = {}) => ({
 describe('ProxyPool', () => {
   const findMany = jest.fn<Promise<EndpointRow[]>, []>();
   const queryRaw = jest.fn<Promise<{ endpointId: string }[]>, unknown[]>();
+  const updateMany = jest.fn<Promise<{ count: number }>, [unknown]>();
 
   const prisma = {
     proxyEndpoint: { findMany },
+    proxyHealth: { updateMany },
     $queryRaw: queryRaw,
   } as unknown as PrismaService;
 
@@ -75,7 +78,7 @@ describe('ProxyPool', () => {
       enabled: true,
       minIntervalMs: 4_000,
       acquireTimeoutMs: 50,
-      emptyPollMs: 10,
+      pollMs: 10,
       credentialsFor: () => ({ username: 'pool', password: 'secret' }),
       ...over,
     }) as unknown as ProxyPoolConfig;
@@ -93,6 +96,7 @@ describe('ProxyPool', () => {
   beforeEach(() => {
     findMany.mockReset().mockResolvedValue([]);
     queryRaw.mockReset();
+    updateMany.mockReset().mockResolvedValue({ count: 1 });
     claimsEveryTime();
     dispatcherMock.mockClear();
   });
@@ -131,6 +135,55 @@ describe('ProxyPool', () => {
     expect(sql).toContain('RETURNING');
   });
 
+  it('holds the endpoint it leases until the job releases it', async () => {
+    findMany.mockResolvedValue([endpoint()]);
+    const before = Date.now();
+
+    const lease = await poolWith().acquire(Store.GOOGLE_PLAY);
+
+    const sql = (queryRaw.mock.calls[0][0] as TemplateStringsArray)
+      .join(' ')
+      .replace(/\s+/g, ' ');
+    expect(sql).toContain('"pacedUntil" =');
+    expect(queryRaw.mock.calls[0]).toContainEqual(
+      new Date((lease?.leasedAt.getTime() ?? 0) + LEASE_HOLD_MS),
+    );
+    expect(lease?.leasedAt.getTime()).toBeGreaterThanOrEqual(before);
+  });
+
+  it('paces a released endpoint from the time its job hands back', async () => {
+    const pacedUntil = new Date(Date.now() + 8_000);
+
+    await poolWith().release('e1', Store.GOOGLE_PLAY, pacedUntil);
+
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { endpointId: 'e1', store: Store.GOOGLE_PLAY },
+      data: { pacedUntil },
+    });
+  });
+
+  it('looks again at the poll interval while every endpoint is held', async () => {
+    findMany
+      .mockResolvedValueOnce([
+        endpoint({
+          health: [
+            health({ pacedUntil: new Date(Date.now() + LEASE_HOLD_MS) }),
+          ],
+        }),
+      ])
+      .mockResolvedValue([endpoint()]);
+    const started = Date.now();
+
+    const lease = await poolWith({
+      acquireTimeoutMs: 5_000,
+      pollMs: 10,
+    }).acquire(Store.GOOGLE_PLAY);
+
+    expect(lease?.endpointId).toBe('e1');
+    expect(findMany).toHaveBeenCalledTimes(2);
+    expect(Date.now() - started).toBeLessThan(1_000);
+  });
+
   it('moves to another endpoint when a concurrent worker claims the first', async () => {
     findMany.mockResolvedValue([
       endpoint({ id: 'a', host: '10.0.0.1' }),
@@ -167,10 +220,9 @@ describe('ProxyPool', () => {
 
     const started = Date.now();
     await expect(
-      poolWith(
-        { acquireTimeoutMs: 120_000, emptyPollMs: 5_000 },
-        shutdown,
-      ).acquire(Store.APP_STORE),
+      poolWith({ acquireTimeoutMs: 120_000, pollMs: 5_000 }, shutdown).acquire(
+        Store.APP_STORE,
+      ),
     ).rejects.toThrow(ProxyPoolStoppingError);
 
     expect(Date.now() - started).toBeLessThan(1_000);
@@ -273,8 +325,27 @@ describe('ProxyPool', () => {
     }).acquire(Store.GOOGLE_PLAY, 'de');
 
     expect(lease?.endpointId).toBe('de');
-    expect(queryRaw.mock.calls.map((call) => call[2])).toEqual(['de', 'de']);
+    expect(queryRaw.mock.calls.map((call) => call.includes('de'))).toEqual([
+      true,
+      true,
+    ]);
     expect(findMany).toHaveBeenCalledTimes(2);
+  });
+
+  it('takes a free foreign endpoint rather than wait for a busy local one when told to', async () => {
+    findMany.mockResolvedValue([
+      endpoint({
+        id: 'de',
+        country: 'de',
+        host: '10.0.0.2',
+        health: [health({ pacedUntil: new Date(Date.now() + LEASE_HOLD_MS) })],
+      }),
+      endpoint({ id: 'us', country: 'us', host: '10.0.0.1' }),
+    ]);
+
+    const lease = await poolWith().acquire(Store.GOOGLE_PLAY, 'de', false);
+
+    expect(lease?.endpointId).toBe('us');
   });
 
   it('stops waiting for an endpoint once the on demand deadline passes', async () => {
@@ -283,7 +354,7 @@ describe('ProxyPool', () => {
 
     const failure = await withinStoreDeadline(
       () =>
-        poolWith({ acquireTimeoutMs: 120_000, emptyPollMs: 5_000 })
+        poolWith({ acquireTimeoutMs: 120_000, pollMs: 5_000 })
           .acquire(Store.APP_STORE)
           .catch((error: unknown) => error),
       30,

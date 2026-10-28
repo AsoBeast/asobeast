@@ -18,8 +18,18 @@ const candidate = (over: Partial<PoolCandidate>): PoolCandidate => ({
 
 const at = (offsetMs: number) => new Date(NOW.getTime() + offsetMs);
 
-const select = (candidates: PoolCandidate[], country?: string) =>
-  selectEndpoint({ candidates, now: NOW, minIntervalMs: 4000, country });
+const select = (
+  candidates: PoolCandidate[],
+  country?: string,
+  waitForLocal?: boolean,
+) =>
+  selectEndpoint({
+    candidates,
+    now: NOW,
+    minIntervalMs: 4000,
+    country,
+    waitForLocal,
+  });
 
 describe('proxy selection', () => {
   it('reports an empty pool rather than inventing an endpoint', () => {
@@ -114,6 +124,40 @@ describe('proxy selection', () => {
     );
 
     expect(selection).toEqual({ kind: 'wait', waitMs: 3_000 });
+  });
+
+  it('takes a free foreign endpoint when told not to wait for a busy local one', () => {
+    const selection = select(
+      [
+        candidate({
+          endpointId: 'de-busy',
+          country: 'de',
+          pacedUntil: at(60_000),
+        }),
+        candidate({ endpointId: 'us-free', country: 'us' }),
+      ],
+      'de',
+      false,
+    );
+
+    expect(selection).toEqual({ kind: 'endpoint', endpointId: 'us-free' });
+  });
+
+  it('still prefers a free local endpoint when told not to wait', () => {
+    const selection = select(
+      [
+        candidate({ endpointId: 'us-free', country: 'us' }),
+        candidate({
+          endpointId: 'de-free',
+          country: 'de',
+          lastUsedAt: at(-60_000),
+        }),
+      ],
+      'de',
+      false,
+    );
+
+    expect(selection).toEqual({ kind: 'endpoint', endpointId: 'de-free' });
   });
 
   it('waits for a paced local endpoint while a foreign one is free', () => {

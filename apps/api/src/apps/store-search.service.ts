@@ -35,10 +35,14 @@ export class StoreSearchService {
   ): Promise<StoreSearchResult[]> {
     assertStorefront(query.store, query.country);
     await spend?.();
-    const items = await this.egress.through(query.store, query.country, () =>
-      this.registry
-        .get(query.store)
-        .search(query.q, query.country, query.limit),
+    const items = await this.egress.through(
+      query.store,
+      query.country,
+      () =>
+        this.registry
+          .get(query.store)
+          .search(query.q, query.country, query.limit),
+      { waitForLocal: false },
     );
     return items.slice(0, query.limit).map(toStoreSearchResult);
   }
