@@ -31,7 +31,11 @@ export interface LeasePacing {
 }
 
 export class ProxyPoolUnavailableError extends Error {
-  constructor(store: Store, waitedMs: number) {
+  constructor(
+    store: Store,
+    waitedMs: number,
+    readonly retryInMs: number,
+  ) {
     super(
       `No proxy endpoint became available for ${store} within ${waitedMs}ms`,
     );
@@ -106,6 +110,7 @@ export class ProxyPool {
         throw new ProxyPoolUnavailableError(
           store,
           this.config.acquireTimeoutMs,
+          this.config.pollMs,
         );
       }
       await pause(
