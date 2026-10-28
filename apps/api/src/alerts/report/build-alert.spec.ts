@@ -276,15 +276,16 @@ describe('buildAlert', () => {
     ).toBe('down');
   });
 
-  it('reports a chart move as a single alert on its app', () => {
+  it('reports a chart move on its app and opens the chart of that day', () => {
     const report = buildAlert(chartEntered(), ORIGIN);
 
     expect(report.kind).toBe('single');
     expect(report.apps).toHaveLength(1);
     expect(report.apps[0].groups).toEqual([]);
     expect(report.link).toEqual({
-      href: `${ORIGIN}/apps/a`,
-      label: 'Open app',
+      href: `${ORIGIN}/charts?store=APP_STORE&country=us&genre=6007&device=iphone&view=table&collection=free&date=2026-07-22`,
+      label: 'Open the chart',
     });
+    expect(buildAlert(chartEntered(), null).link).toBeNull();
   });
 });

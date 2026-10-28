@@ -34,6 +34,11 @@ import {
   rankEventSection,
   withoutRankEvents,
 } from './rank-events.fixture';
+import {
+  chartEntered,
+  chartMilestone,
+  chartMoveBatch,
+} from './chart-events.fixture';
 
 describe('the same phrase in two markets', () => {
   const inMarket = (country: string) => ({
@@ -540,6 +545,44 @@ describe('formatBatchEmail for the new rank events', () => {
     expect(email.html).toContain(
       '0 milestones · 0 first rankings · 0 overtakes',
     );
+  });
+});
+
+describe('formatBatchEmail for chart moves', () => {
+  const moves = chartMoveBatch(
+    chartEntered(),
+    chartMilestone({ from: null, to: 7 }),
+  );
+
+  it('counts the merged chart moves in a stat and the summary', async () => {
+    const email = await formatBatchEmail(moves);
+
+    expect(email.html).toMatch(/>1<\/p><p[^>]*>Chart moves<\/p>/);
+    expect(email.html).toContain('· 0 overtakes · 1 chart move');
+  });
+
+  it('lists the merged row in html and text', async () => {
+    const email = await formatBatchEmail(moves);
+
+    expect(email.text).toContain('Chart moves');
+    expect(email.text).toContain(
+      'Top free · Productivity  >100 → #7 · entered the chart · entered the top 10',
+    );
+    expect(email.html).toContain('Top free · Productivity');
+    expect(email.html).toContain('entered the chart · entered the top 10');
+  });
+
+  it('subjects a single chart entry and opens the chart', async () => {
+    const email = await formatEmail(chartEntered(), {
+      origin: 'https://aso.example.com',
+      unsubscribe: null,
+    });
+
+    expect(email.subject).toBe(
+      '[asobeast] My App entered Top free · Productivity (US), at #7',
+    );
+    expect(email.html).toContain('Open the chart');
+    expect(email.html).toContain('Top free · Productivity (US)');
   });
 });
 

@@ -1,4 +1,4 @@
-import { formatUtcInstant } from '@asobeast/shared';
+import { formatUtcInstant, isChartMovePayload } from '@asobeast/shared';
 import type {
   AlertReport,
   ReportGroup,
@@ -58,6 +58,9 @@ function linkOf(
   payload: GranularPayload,
   links: ReportLinks,
 ): ReportLink | null {
+  if (isChartMovePayload(payload)) {
+    return links.chart(payload.chart, payload.date);
+  }
   if (payload.event === 'action.opened') return links.action(payload.link);
   if ('app' in payload) return links.app(payload.app.id);
   return links.home;

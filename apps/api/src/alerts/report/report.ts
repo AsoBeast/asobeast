@@ -39,6 +39,7 @@ export const REPORT_GROUP_KINDS = [
   'milestones',
   'firstRankings',
   'overtakes',
+  'chartMoves',
   'serpEntrants',
   'changes',
   'negativeReviews',

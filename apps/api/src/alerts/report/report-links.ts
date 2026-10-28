@@ -1,20 +1,29 @@
+import {
+  chartColumnsPath,
+  chartTablePath,
+  type ChartMoveScope,
+} from '@asobeast/shared';
 import { appLink, webLink } from '../../mail/email-links';
 import type { ReportGroupKind, ReportLink } from './report';
+
+export type AppPageGroupKind = Exclude<ReportGroupKind, 'chartMoves'>;
 
 export interface ReportLinks {
   home: ReportLink | null;
   app: (appId: string) => ReportLink | null;
   group: (
     appId: string,
-    kind: ReportGroupKind,
+    kind: AppPageGroupKind,
     total: number,
     scores?: readonly number[],
   ) => ReportLink | null;
+  charts: (chart: ChartMoveScope | null, total: number) => ReportLink | null;
+  chart: (chart: ChartMoveScope, date: string) => ReportLink | null;
   competitors: (appId: string, total: number) => ReportLink | null;
   action: (href: string | null) => ReportLink | null;
 }
 
-const GROUP_PATHS: Record<ReportGroupKind, string> = {
+const GROUP_PATHS: Record<AppPageGroupKind, string> = {
   rankDrops: '/keywords',
   rankImprovements: '/keywords',
   milestones: '/keywords',
@@ -45,6 +54,12 @@ export function reportLinks(origin: string | null): ReportLinks {
         `/apps/${appId}${GROUP_PATHS[kind]}${kind === 'negativeReviews' ? reviewsQuery(scores) : ''}`,
         `See all ${total} in AsoBeast`,
       ),
+    charts: (chart, total) =>
+      chart
+        ? page(chartColumnsPath(chart), `See all ${total} in AsoBeast`)
+        : null,
+    chart: (chart, date) =>
+      page(chartTablePath(chart, { date }), 'Open the chart'),
     competitors: (appId, total) =>
       page(`/apps/${appId}/competitors`, `See all ${total} competitors`),
     action: (href) => labelled(href, 'Open the action'),
