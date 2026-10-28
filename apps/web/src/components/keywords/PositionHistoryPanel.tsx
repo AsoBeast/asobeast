@@ -71,7 +71,7 @@ export function PositionHistoryPanel({
     ...rankingsOptions(appId, { ...bounds, keywordIds: [keyword.keywordId] }),
     placeholderData: keepPreviousData,
   });
-  const { data: timeline } = useQuery({
+  const changesRead = useQuery({
     ...changesOptions(
       appId,
       presetDays(range),
@@ -106,7 +106,7 @@ export function PositionHistoryPanel({
       );
     }
     const changes = plottedChanges(
-      listingChangeDays(timeline?.events ?? [], {
+      listingChangeDays(changesRead.data?.events ?? [], {
         country: keyword.country,
         homeCountry,
       }),
@@ -128,6 +128,12 @@ export function PositionHistoryPanel({
           </p>
         ))}
         <ChangesLine changes={changes} />
+        {failedRead(changesRead) ? (
+          <InlineQueryError
+            message="Could not load the listing changes."
+            read={changesRead}
+          />
+        ) : null}
       </div>
     );
   }

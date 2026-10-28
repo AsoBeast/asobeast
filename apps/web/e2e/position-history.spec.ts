@@ -188,6 +188,29 @@ test("E-PH-19 the loading placeholder shows on the popover in the dark theme", a
   held.release();
 });
 
+test("E-PH-20 a failed listing changes read keeps the chart and offers a retry", async ({
+  page,
+}) => {
+  const CHANGES = /\/api\/backend\/apps\/app-1\/changes\?/;
+  await page.route(CHANGES, (route) =>
+    route.fulfill({ status: 500, json: { statusCode: 500, message: "boom" } }),
+  );
+  await page.goto(PAGE);
+  const popover = await openHistory(page, "focus timer");
+
+  await expect(chart(page, "focus timer")).toBeVisible();
+  await expect(popover.getByRole("alert")).toHaveText(
+    "Could not load the listing changes.",
+    { timeout: 15_000 },
+  );
+  await expect(popover).not.toContainText("Listing changes:");
+
+  await page.unroute(CHANGES);
+  await popover.getByRole("button", { name: "Retry" }).click();
+  await expect(popover).toContainText("Listing changes:");
+  await expect(popover.getByRole("alert")).toHaveCount(0);
+});
+
 test("E-PH-02 Enter and Space open it and Escape returns focus", async ({
   page,
 }) => {
