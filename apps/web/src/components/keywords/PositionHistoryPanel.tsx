@@ -18,8 +18,8 @@ import { formatDayMonth } from "@/lib/format";
 import {
   presetDays,
   presetToRange,
-  RANGE_PRESETS,
   type RangePreset,
+  WIDEST_RANGE,
 } from "@/lib/ranges";
 import { PositionHistoryChart } from "./PositionHistoryChart";
 import {
@@ -27,8 +27,6 @@ import {
   historyView,
   listingChangeDays,
 } from "./position-history";
-
-const WIDEST = RANGE_PRESETS[RANGE_PRESETS.length - 1];
 
 function plottedChanges(
   days: Map<string, ChangeField[]>,
@@ -93,13 +91,13 @@ export function PositionHistoryPanel({
           height={CHART_HEIGHT.compact}
           title={`No checks in the last ${presetDays(range)} days`}
           action={
-            range === WIDEST ? null : (
+            range === WIDEST_RANGE ? null : (
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => onRange(WIDEST)}
+                onClick={() => onRange(WIDEST_RANGE)}
               >
-                Show {presetDays(WIDEST)} days
+                Show {presetDays(WIDEST_RANGE)} days
               </Button>
             )
           }

@@ -7,11 +7,20 @@ import {
   presetDays,
   presetToRange,
   rangeLabel,
+  WIDEST_RANGE,
 } from "./ranges";
 
 const ALL_PRESETS = [
   ...new Set([...RANGE_PRESETS, ...VISIBILITY_RANGES, ...RATINGS_RANGES]),
 ];
+
+describe("WIDEST_RANGE", () => {
+  it("is the longest ranking preset", () => {
+    expect(presetDays(WIDEST_RANGE)).toBe(
+      Math.max(...RANGE_PRESETS.map(presetDays)),
+    );
+  });
+});
 
 describe("presetDays", () => {
   it.each([
