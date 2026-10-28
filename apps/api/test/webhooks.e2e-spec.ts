@@ -194,10 +194,11 @@ describe('WebhooksController (e2e)', () => {
       .expect(200);
     expect((everyStar.body as WebhookItem).reviewScores).toEqual([]);
 
-    await api
+    const narrowed = await api
       .patch(`/webhooks/${webhook.id}`)
       .send({ reviewScores: [3] })
       .expect(200);
+    expect((narrowed.body as WebhookItem).reviewScores).toEqual([3]);
     const cleared = await api
       .patch(`/webhooks/${webhook.id}`)
       .send({ reviewScores: [] })

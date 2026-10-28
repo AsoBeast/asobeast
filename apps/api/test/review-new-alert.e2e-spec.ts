@@ -220,12 +220,11 @@ describe('review.new alerts (e2e)', () => {
       events: ['review.new', 'review.new', 'review.new'],
       totals: 3,
     });
-    const otherNegatives = negatives.filter((score) => score !== 5);
     expect(delivered.get(praiseAndNegative)).toEqual({
       newReviews: [5],
-      negativeReviews: otherNegatives,
-      events: [...otherNegatives.map(() => 'review.negative'), 'review.new'],
-      totals: otherNegatives.length + 1,
+      negativeReviews: negatives,
+      events: [...negatives.map(() => 'review.negative'), 'review.new'],
+      totals: negatives.length + 1,
     });
     expect(delivered.get(email.id)).toMatchObject({
       newReviews: [5],
