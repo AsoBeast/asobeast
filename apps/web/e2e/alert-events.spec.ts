@@ -2,12 +2,14 @@ import { randomUUID } from "node:crypto";
 import type { Locator, Page } from "@playwright/test";
 import { WEBHOOK_EVENTS } from "@asobeast/shared";
 import { expect, test } from "./session.mts";
-import { openSettledDialog } from "./dialog.mts";
+import { expectFitsViewport, openSettledDialog } from "./dialog.mts";
 
 const SELECTED_ATTRIBUTE = "aria-checked";
 const SERP_ENTRANT = "SERP entrant";
 const EDIT_EVENTS = "Edit events";
 const RANK_MILESTONE = "Rank milestone";
+const NEW_REVIEW = "New review";
+const STAR_LABELS = ["1 star", "2 stars", "3 stars", "4 stars", "5 stars"];
 
 const VIEWPORTS = [
   { width: 1280, height: 720 },
@@ -64,6 +66,56 @@ async function createChannel(
   return row;
 }
 
+function starGroup(dialog: Locator): Locator {
+  return dialog.getByRole("group", { name: "New review stars" });
+}
+
+function starOption(dialog: Locator, name: string): Locator {
+  return starGroup(dialog).getByRole("checkbox", { name, exact: true });
+}
+
+async function pickStars(dialog: Locator, picked: string[]): Promise<void> {
+  for (const label of STAR_LABELS) {
+    await setSelected(starOption(dialog, label), picked.includes(label));
+  }
+}
+
+async function openWithEvents(
+  page: Page,
+  channel: (typeof CHANNELS)[number],
+  events: string[],
+): Promise<Locator> {
+  await page.goto("/settings");
+  const dialog = await openSettledDialog(page, channel.trigger);
+  for (const option of await eventOptions(dialog).all()) {
+    await setSelected(option, false);
+  }
+  for (const event of events) {
+    await setSelected(eventOption(dialog, event), true);
+  }
+  return dialog;
+}
+
+async function submitChannel(
+  page: Page,
+  channel: (typeof CHANNELS)[number],
+  dialog: Locator,
+): Promise<{ row: Locator; body: Record<string, unknown> }> {
+  const target = channel.target();
+  await page.getByLabel(channel.field).fill(target);
+  const post = page.waitForRequest(
+    (request) =>
+      request.method() === "POST" &&
+      new URL(request.url()).pathname === channel.list,
+  );
+  await dialog
+    .getByRole("button", { name: channel.trigger, exact: true })
+    .click();
+  const body = (await post).postDataJSON() as Record<string, unknown>;
+  await expect(dialog).toBeHidden();
+  return { row: page.getByRole("listitem").filter({ hasText: target }), body };
+}
+
 interface Box {
   x: number;
   y: number;
@@ -99,6 +151,7 @@ test("the rank events sit together among the event chips", async ({ page }) => {
     "Rank milestone",
     "First ranking",
     "Overtaken by competitor",
+    "New review",
     "Negative review",
     "Weekly digest",
     "SERP entrant",
@@ -280,6 +333,206 @@ for (const channel of CHANNELS) {
     );
   });
 
+  test(`${channel.trigger} shows the stars only while New review is ticked`, async ({
+    page,
+  }) => {
+    const dialog = await openWithEvents(page, channel, [SERP_ENTRANT]);
+    await expect(starGroup(dialog)).toHaveCount(0);
+
+    await setSelected(eventOption(dialog, NEW_REVIEW), true);
+    await expect(starGroup(dialog).getByRole("checkbox")).toHaveText(
+      STAR_LABELS,
+    );
+    for (const label of STAR_LABELS) {
+      await expect(starOption(dialog, label)).toHaveAttribute(
+        SELECTED_ATTRIBUTE,
+        "true",
+      );
+    }
+
+    await setSelected(eventOption(dialog, NEW_REVIEW), false);
+    await expect(starGroup(dialog)).toHaveCount(0);
+  });
+
+  test(`${channel.trigger} describes the star group`, async ({ page }) => {
+    const dialog = await openWithEvents(page, channel, [NEW_REVIEW]);
+    const group = starGroup(dialog);
+
+    await expect(group).toHaveAccessibleDescription(
+      "A review arrives once, as a new review, when the stars ticked cover it. Negative review still covers the rest.",
+    );
+    await pickStars(dialog, []);
+    await expect(group).toHaveAccessibleDescription("Pick at least one star.");
+  });
+
+  test(`${channel.trigger} refuses to save a new review without a star`, async ({
+    page,
+  }) => {
+    const dialog = await openWithEvents(page, channel, [NEW_REVIEW]);
+    await pickStars(dialog, []);
+    await page.getByLabel(channel.field).fill(channel.target());
+    let posted = false;
+    page.on("request", (request) => {
+      if (request.method() === "POST") posted = true;
+    });
+
+    await dialog
+      .getByRole("button", { name: channel.trigger, exact: true })
+      .click();
+
+    await expect(
+      dialog.getByText("Pick at least one star", { exact: true }),
+    ).toBeVisible();
+    await expect(dialog).toBeVisible();
+    expect(posted).toBe(false);
+  });
+
+  test(`${channel.trigger} sends and shows the picked stars`, async ({
+    page,
+  }) => {
+    const dialog = await openWithEvents(page, channel, [NEW_REVIEW]);
+    await pickStars(dialog, ["1 star", "2 stars"]);
+
+    const { row, body } = await submitChannel(page, channel, dialog);
+
+    expect(body).toMatchObject({
+      events: ["review.new"],
+      reviewScores: [1, 2],
+    });
+    await expect(row.locator('[data-slot="badge"]')).toHaveText([
+      "New review · 1 and 2 stars",
+    ]);
+  });
+
+  test(`${channel.trigger} sends every star as an empty filter`, async ({
+    page,
+  }) => {
+    const dialog = await openWithEvents(page, channel, [NEW_REVIEW]);
+
+    const { row, body } = await submitChannel(page, channel, dialog);
+
+    expect(body).toMatchObject({ events: ["review.new"], reviewScores: [] });
+    await expect(row.locator('[data-slot="badge"]')).toHaveText([NEW_REVIEW]);
+  });
+
+  test(`${channel.trigger} sends no star filter without New review`, async ({
+    page,
+  }) => {
+    const dialog = await openWithEvents(page, channel, [SERP_ENTRANT]);
+
+    const { body } = await submitChannel(page, channel, dialog);
+
+    expect(body).not.toHaveProperty("reviewScores");
+    expect(body).toMatchObject({ events: ["serp.entrant"] });
+  });
+
+  test(`${channel.trigger} edits the saved stars of a channel`, async ({
+    page,
+  }) => {
+    const created = await openWithEvents(page, channel, [NEW_REVIEW]);
+    await pickStars(created, ["1 star", "2 stars"]);
+    const { row } = await submitChannel(page, channel, created);
+
+    const dialog = await openSettledDialog(page, EDIT_EVENTS, row);
+    for (const label of STAR_LABELS) {
+      await expect(starOption(dialog, label)).toHaveAttribute(
+        SELECTED_ATTRIBUTE,
+        String(label === "1 star" || label === "2 stars"),
+      );
+    }
+    await pickStars(dialog, ["5 stars"]);
+    const patch = page.waitForRequest(
+      (request) => request.method() === "PATCH",
+    );
+    await dialog.getByRole("button", { name: "Save events" }).click();
+
+    expect((await patch).postDataJSON()).toEqual({
+      events: ["review.new"],
+      reviewScores: [5],
+    });
+    await expect(dialog).toBeHidden();
+    await expect(row.locator('[data-slot="badge"]')).toHaveText([
+      "New review · 5 stars",
+    ]);
+  });
+
+  test(`${channel.trigger} cannot save an edit without a star`, async ({
+    page,
+  }) => {
+    const created = await openWithEvents(page, channel, [NEW_REVIEW]);
+    const { row } = await submitChannel(page, channel, created);
+    const dialog = await openSettledDialog(page, EDIT_EVENTS, row);
+
+    await pickStars(dialog, []);
+
+    await expect(
+      dialog.getByRole("button", { name: "Save events" }),
+    ).toBeDisabled();
+    await expect(dialog.getByText("Pick at least one star.")).toBeVisible();
+  });
+
+  test(`${channel.trigger} discards a star change closed with Escape`, async ({
+    page,
+  }) => {
+    const created = await openWithEvents(page, channel, [NEW_REVIEW]);
+    await pickStars(created, ["4 stars", "5 stars"]);
+    const { row } = await submitChannel(page, channel, created);
+    const dialog = await openSettledDialog(page, EDIT_EVENTS, row);
+    await setSelected(starOption(dialog, "1 star"), true);
+
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+
+    const reopened = await openSettledDialog(page, EDIT_EVENTS, row);
+    await expect(starOption(reopened, "1 star")).toHaveAttribute(
+      SELECTED_ATTRIBUTE,
+      "false",
+    );
+    await expect(starOption(reopened, "5 stars")).toHaveAttribute(
+      SELECTED_ATTRIBUTE,
+      "true",
+    );
+  });
+
+  test(`${channel.trigger} toggles a star from the keyboard`, async ({
+    page,
+  }) => {
+    const created = await openWithEvents(page, channel, [NEW_REVIEW]);
+    const { row } = await submitChannel(page, channel, created);
+    const dialog = await openSettledDialog(page, EDIT_EVENTS, row);
+    const three = starOption(dialog, "3 stars");
+
+    await three.focus();
+    await page.keyboard.press("Space");
+    await expect(three).toHaveAttribute(SELECTED_ATTRIBUTE, "false");
+    await page.keyboard.press("Space");
+    await expect(three).toHaveAttribute(SELECTED_ATTRIBUTE, "true");
+
+    await eventOption(dialog, "New action").focus();
+    await page.keyboard.press("Tab");
+    await expect(starOption(dialog, "1 star")).toBeFocused();
+    await starOption(dialog, "5 stars").focus();
+    await page.keyboard.press("Tab");
+    await expect(
+      dialog.getByRole("button", { name: "Save events" }),
+    ).toBeFocused();
+  });
+
+  test(`${channel.trigger} fits a phone with the star group`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    const dialog = await openWithEvents(page, channel, [NEW_REVIEW]);
+
+    await expect(starGroup(dialog)).toBeVisible();
+    await expectFitsViewport(page, dialog);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+  });
+
   for (const viewport of VIEWPORTS) {
     test(`${channel.trigger} keeps the group still while ${SERP_ENTRANT} is pressed at ${viewport.width}x${viewport.height}`, async ({
       page,
@@ -315,6 +568,44 @@ for (const channel of CHANNELS) {
         await boxOf(group),
         groupBox,
         "the group must not reflow once selected",
+      );
+    });
+  }
+
+  for (const viewport of VIEWPORTS) {
+    test(`${channel.trigger} keeps the stars still while 2 stars is pressed at ${viewport.width}x${viewport.height}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(viewport);
+      const dialog = await openWithEvents(page, channel, [NEW_REVIEW]);
+      await pickStars(dialog, ["1 star"]);
+
+      const group = starGroup(dialog);
+      const option = starOption(dialog, "2 stars");
+      const optionBox = await boxOf(option);
+      const groupBox = await boxOf(group);
+      const center = centerOf(optionBox);
+
+      await page.mouse.move(center.x, center.y);
+      await page.mouse.down();
+      const pressedBox = await boxOf(option);
+      await page.mouse.up();
+
+      expectSameBox(
+        pressedBox,
+        optionBox,
+        "the star must not move when pressed",
+      );
+      await expect(option).toHaveAttribute(SELECTED_ATTRIBUTE, "true");
+      expectSameBox(
+        await boxOf(option),
+        optionBox,
+        "the star must not move once ticked",
+      );
+      expectSameBox(
+        await boxOf(group),
+        groupBox,
+        "the stars must not reflow once ticked",
       );
     });
   }
