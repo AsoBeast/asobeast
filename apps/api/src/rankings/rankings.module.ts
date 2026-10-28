@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { AlertsModule } from '../alerts/alerts.module';
 import { KeywordsModule } from '../keywords/keywords.module';
 import { StoreProvidersModule } from '../store-providers/store-providers.module';
+import { EarlierRankings } from './earlier-rankings';
 import { RankingAlertsService } from './ranking-alerts.service';
 import { RankingsController } from './rankings.controller';
 import { RankingsService } from './rankings.service';
@@ -11,7 +12,12 @@ import { SerpService } from './serp.service';
 @Module({
   imports: [StoreProvidersModule, AlertsModule, KeywordsModule],
   controllers: [RankingsController, SerpController],
-  providers: [RankingsService, RankingAlertsService, SerpService],
+  providers: [
+    RankingsService,
+    RankingAlertsService,
+    EarlierRankings,
+    SerpService,
+  ],
   exports: [RankingsService, SerpService],
 })
 export class RankingsModule {}
