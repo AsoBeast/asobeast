@@ -256,7 +256,7 @@ export class ReviewsService {
       this.logger.warn(
         `review alert subscribers unavailable: ${(error as Error).message}`,
       );
-      return false;
+      return true;
     }
   }
 

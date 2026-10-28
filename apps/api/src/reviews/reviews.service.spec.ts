@@ -713,7 +713,7 @@ describe('ReviewsService new review alerts', () => {
     expect(newAlerts(dispatch)[1].review.score).toBe(4);
   });
 
-  it('still sends the negative reviews when the subscribers cannot be read', async () => {
+  it('dispatches anyway when the subscribers cannot be read', async () => {
     const { service, dispatch, listensTo } = buildDeps({
       pages: [[makeReview('a', 1), makeReview('b', 5)]],
       existing: [],
@@ -725,6 +725,8 @@ describe('ReviewsService new review alerts', () => {
 
     expect(dispatch.mock.calls.map(([payload]) => payload.event)).toEqual([
       'review.negative',
+      'review.new',
+      'review.new',
     ]);
   });
 });
