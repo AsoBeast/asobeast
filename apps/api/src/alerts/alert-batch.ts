@@ -6,7 +6,9 @@ import {
   AlertBatchCompetitorSection,
   AlertBatchPayload,
   AlertBatchScope,
+  ChartMovePayload,
   GranularAlertPayload,
+  isChartMovePayload,
   MetadataChangedPayload,
   RankDroppedPayload,
   RankFirstPayload,
@@ -92,6 +94,7 @@ interface MutableSection {
   rankMilestones: RankMilestonePayload[];
   firstRankings: RankFirstPayload[];
   overtakes: RankOvertakenPayload[];
+  chartMoves: ChartMovePayload[];
   serpEntrants: SerpEntrantPayload[];
   changes: MetadataChangedPayload[];
   negativeReviews: ReviewNegativePayload[];
@@ -275,6 +278,7 @@ function createSection(app: ResolvedApp): MutableSection {
     rankMilestones: [],
     firstRankings: [],
     overtakes: [],
+    chartMoves: [],
     serpEntrants: [],
     changes: [],
     negativeReviews: [],
@@ -310,6 +314,8 @@ function addOwnedSignal(
       section.firstRankings.push(payload);
     } else if (payload.event === 'rank.overtaken') {
       section.overtakes.push(payload);
+    } else if (isChartMovePayload(payload)) {
+      section.chartMoves.push(payload);
     } else if (payload.event === 'serp.entrant') {
       section.serpEntrants.push(payload);
     } else if (payload.event === 'metadata.changed') {
@@ -366,6 +372,7 @@ function finalizeSections(
       rankMilestones: section.rankMilestones,
       firstRankings: section.firstRankings,
       overtakes: section.overtakes,
+      chartMoves: section.chartMoves,
       serpEntrants: section.serpEntrants,
       changes: section.changes,
       negativeReviews: section.negativeReviews,

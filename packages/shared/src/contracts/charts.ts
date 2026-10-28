@@ -1,4 +1,6 @@
 import type { Store } from '../index';
+import type { RankMilestoneDirection, RankMilestoneTier } from '../rank';
+import type { AlertAppIdentity } from './changes';
 import { OVERALL_GENRE, type CategoryCollection } from './category-ranks';
 
 export const CHART_DEVICES = ['iphone', 'android'] as const;
@@ -311,3 +313,55 @@ export interface ChartPage {
 
 export type ChartCaptureRequest = ChartKey;
 export type ChartFollowRequest = ChartKey;
+
+export interface ChartMoveScope {
+  store: Store;
+  country: string;
+  collection: CategoryCollection;
+  genre: string;
+  genreName: string;
+  device: ChartDevice;
+}
+
+export interface ChartMoveBase {
+  occurredAt: string;
+  app: { id: string; name: string | null } & AlertAppIdentity;
+  chart: ChartMoveScope;
+  date: string;
+  depth: number;
+}
+
+export interface ChartEnteredPayload extends ChartMoveBase {
+  event: 'chart.entered';
+  from: null;
+  to: number;
+}
+
+export interface ChartLeftPayload extends ChartMoveBase {
+  event: 'chart.left';
+  from: number;
+  to: null;
+}
+
+export interface ChartMilestonePayload extends ChartMoveBase {
+  event: 'chart.milestone';
+  tier: RankMilestoneTier;
+  direction: RankMilestoneDirection;
+  from: number | null;
+  to: number | null;
+}
+
+export type ChartMovePayload =
+  ChartEnteredPayload | ChartLeftPayload | ChartMilestonePayload;
+
+export const CHART_MOVE_EVENTS = [
+  'chart.entered',
+  'chart.left',
+  'chart.milestone',
+] as const;
+
+export function isChartMovePayload(payload: {
+  event: string;
+}): payload is ChartMovePayload {
+  return CHART_MOVE_EVENTS.some((event) => event === payload.event);
+}

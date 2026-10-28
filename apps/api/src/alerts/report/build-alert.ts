@@ -71,8 +71,12 @@ function toneOf(payload: GranularPayload): ReportTone {
       return 'down';
     case 'rank.improved':
     case 'rank.first':
+    case 'chart.entered':
       return 'up';
+    case 'chart.left':
+      return 'down';
     case 'rank.milestone':
+    case 'chart.milestone':
       return payload.direction === 'entered' ? 'up' : 'down';
     default:
       return 'neutral';

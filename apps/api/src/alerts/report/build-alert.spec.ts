@@ -9,6 +9,11 @@ import {
   metadata,
   negative,
 } from '../email-fixtures.fixture';
+import {
+  chartEntered,
+  chartLeft,
+  chartMilestone,
+} from '../chart-events.fixture';
 import { firstRanking, milestone, overtake } from '../rank-events.fixture';
 import { buildAlert } from './build-alert';
 import type { ReportFact } from './report';
@@ -243,5 +248,43 @@ describe('buildAlert', () => {
     expect(buildAlert(overtake(), null).tone).toBe('down');
     expect(buildAlert(negative, null).tone).toBe('down');
     expect(buildAlert(metadata, null).tone).toBe('neutral');
+  });
+
+  it('lists the facts of a chart move', () => {
+    expect(factMap(buildAlert(chartEntered(), null).facts)).toEqual({
+      Chart: 'Top free · Productivity (US)',
+      From: '>100',
+      To: '#7',
+      Date: '22 Jul 2026',
+    });
+    expect(buildAlert(chartMilestone(), null).facts).toEqual([
+      { label: 'Chart', value: 'Top free · Productivity (US)' },
+      { label: 'Milestone', value: 'entered the top 10' },
+      { label: 'From', value: '#14' },
+      { label: 'To', value: '#8' },
+      { label: 'Date', value: '22 Jul 2026' },
+    ]);
+  });
+
+  it('tones a chart move by its direction', () => {
+    expect(buildAlert(chartEntered(), null).tone).toBe('up');
+    expect(buildAlert(chartMilestone(), null).tone).toBe('up');
+    expect(buildAlert(chartLeft(), null).tone).toBe('down');
+    expect(
+      buildAlert(chartMilestone({ direction: 'left', from: 8, to: 12 }), null)
+        .tone,
+    ).toBe('down');
+  });
+
+  it('reports a chart move as a single alert on its app', () => {
+    const report = buildAlert(chartEntered(), ORIGIN);
+
+    expect(report.kind).toBe('single');
+    expect(report.apps).toHaveLength(1);
+    expect(report.apps[0].groups).toEqual([]);
+    expect(report.link).toEqual({
+      href: `${ORIGIN}/apps/a`,
+      label: 'Open app',
+    });
   });
 });

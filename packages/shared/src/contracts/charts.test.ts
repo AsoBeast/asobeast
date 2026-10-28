@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { OVERALL_GENRE } from './category-ranks';
+import { WEBHOOK_EVENTS } from './changes';
 import {
   CHART_COLLECTION_TITLES,
   CHART_COMPARE_WINDOWS,
   CHART_DEPTH,
+  CHART_MOVE_EVENTS,
   chartColumnsPath,
   chartDevicesOf,
   chartGenreName,
@@ -12,6 +14,7 @@ import {
   compareDays,
   defaultChartDevice,
   isChartGenre,
+  isChartMovePayload,
 } from './charts';
 
 describe('chart devices', () => {
@@ -135,5 +138,29 @@ describe('chart page paths', () => {
       paid: 'Top paid',
       grossing: 'Top grossing',
     });
+  });
+});
+
+describe('chart move events', () => {
+  it.each(['chart.entered', 'chart.left', 'chart.milestone'])(
+    'recognises %s as a chart move',
+    (event) => {
+      expect(isChartMovePayload({ event })).toBe(true);
+    },
+  );
+
+  it.each(['rank.milestone', 'alerts.batch'])(
+    'refuses %s as a chart move',
+    (event) => {
+      expect(isChartMovePayload({ event })).toBe(false);
+    },
+  );
+
+  it('names only webhook events', () => {
+    const events: readonly string[] = WEBHOOK_EVENTS;
+
+    expect(CHART_MOVE_EVENTS.every((event) => events.includes(event))).toBe(
+      true,
+    );
   });
 });

@@ -20,6 +20,13 @@ import {
   OutboxEvent,
   ResolvedApp,
 } from './alert-batch';
+import {
+  chartEntered,
+  chartLeft,
+  chartMilestone,
+  chartMoveBatch,
+  withoutChartMoves,
+} from './chart-events.fixture';
 
 const primaryA: ResolvedApp = {
   id: 'a',
@@ -736,5 +743,97 @@ describe('rank milestone batching', () => {
       actions: [],
       competitors: [],
     });
+  });
+});
+
+describe('chart move batching', () => {
+  const entered = chartEntered({ app: { id: 'a', name: 'Alpha' } });
+  const reachedTop10 = chartMilestone({
+    app: entered.app,
+    from: null,
+    to: 7,
+  });
+  const now = new Date('2026-07-22T11:00:00.000Z');
+  const ownedBatch = (...payloads: OutboxEvent['payload'][]) =>
+    assembleBatches({
+      events: payloads.map((payload, index) =>
+        event(payload, 'a', `e${index + 1}`),
+      ),
+      appById,
+      serpPrimariesByKeyword: new Map(),
+      now,
+    }).owned;
+
+  it('routes a chart move into its owned app section', () => {
+    const owned = ownedBatch(entered);
+
+    expect(owned.apps[0].chartMoves).toEqual([entered]);
+    expect(owned.events).toEqual([entered]);
+    expect(owned.totals).toEqual({ events: 1, apps: 1 });
+  });
+
+  it('keeps the entry and the milestone of one move in creation order', () => {
+    expect(ownedBatch(entered, reachedTop10).apps[0].chartMoves).toEqual([
+      entered,
+      reachedTop10,
+    ]);
+  });
+
+  it('skips a chart move keyed on a competitor', () => {
+    const result = classifyBatch({
+      events: [event({ ...entered, app: { id: 'c', name: 'Charlie' } }, 'c')],
+      appById,
+      serpPrimariesByKeyword: new Map(),
+    });
+
+    expect(result.skipped.competitor_owned_signal).toBe(1);
+    expect(result.owned).toHaveLength(0);
+  });
+
+  it('keeps only the chart moves a channel lists', () => {
+    const owned = ownedBatch(entered, reachedTop10);
+    const milestones = filterBatch(owned, new Set(['chart.milestone']));
+    const entries = filterBatch(owned, new Set(['chart.entered']));
+
+    expect(milestones?.apps[0].chartMoves).toEqual([reachedTop10]);
+    expect(milestones?.events).toEqual([reachedTop10]);
+    expect(entries?.apps[0].chartMoves).toEqual([entered]);
+    expect(entries?.events).toEqual([entered]);
+  });
+
+  it('drops a section that holds nothing a channel lists', () => {
+    expect(
+      filterBatch(ownedBatch(entered, chartLeft()), new Set(['rank.dropped'])),
+    ).toBeNull();
+  });
+
+  it('carries no chart moves in the competitor scope', () => {
+    const competitorScope = filterBatch(
+      { ...chartMoveBatch(entered), scope: 'competitors' },
+      new Set(['chart.entered']),
+    );
+
+    expect(competitorScope).toBeNull();
+    const competitors = assembleBatches({
+      events: [event(competitorChange, 'c')],
+      appById,
+      serpPrimariesByKeyword: new Map(),
+      now,
+    }).competitors;
+    expect(competitors.apps[0].chartMoves).toEqual([]);
+  });
+
+  it('reads a section queued before chart moves existed', () => {
+    const queued = chartMoveBatch(entered);
+    const legacy = {
+      ...queued,
+      apps: [withoutChartMoves({ ...queued.apps[0], rankDrops: [rank] })],
+      events: [rank],
+    };
+
+    const filtered = filterBatch(legacy, new Set(['rank.dropped']));
+
+    expect(filtered?.apps[0].chartMoves).toEqual([]);
+    expect(filtered?.apps[0].rankDrops).toEqual([rank]);
   });
 });

@@ -10,6 +10,12 @@ import {
   ReviewNegativePayload,
   SerpEntrantPayload,
 } from '@asobeast/shared';
+import {
+  chartEntered,
+  chartLeft,
+  chartMilestone,
+  productivityChart,
+} from './chart-events.fixture';
 import { outboxRows } from './outbox-rows';
 
 const milestone: RankMilestonePayload = {
@@ -255,5 +261,43 @@ describe('outboxRows for the rank milestone events', () => {
     const [improvedRow] = outboxRows(improved);
 
     expect(milestoneRow.dedupeKey).not.toBe(improvedRow.dedupeKey);
+  });
+});
+
+describe('outboxRows for the chart events', () => {
+  it('keys a chart entry on the app, chart and capture day', () => {
+    expect(outboxRows(chartEntered())).toEqual([
+      {
+        event: 'chart.entered',
+        appId: 'a',
+        dedupeKey: 'chart:a:free:6007:2026-07-22',
+        payload: chartEntered(),
+      },
+    ]);
+  });
+
+  it('gives an entry and an exit of one chart on one day the same slot', () => {
+    expect(outboxRows(chartLeft())[0].dedupeKey).toBe(
+      outboxRows(chartEntered())[0].dedupeKey,
+    );
+  });
+
+  it('keys a chart milestone apart from the entry of the same move', () => {
+    const milestone = chartMilestone({ from: null, to: 7 });
+    const rows = [...outboxRows(chartEntered()), ...outboxRows(milestone)];
+
+    expect(outboxRows(milestone)[0].dedupeKey).toBe(
+      'chart-milestone:a:free:6007:2026-07-22',
+    );
+    expect(new Set(rows.map((row) => row.dedupeKey)).size).toBe(2);
+  });
+
+  it.each([
+    ['another chart kind', { ...productivityChart, collection: 'grossing' }],
+    ['another category', { ...productivityChart, genre: 'overall' }],
+  ] as const)('keys %s apart', (_case, chart) => {
+    expect(outboxRows(chartEntered({ chart }))[0].dedupeKey).not.toBe(
+      outboxRows(chartEntered())[0].dedupeKey,
+    );
   });
 });

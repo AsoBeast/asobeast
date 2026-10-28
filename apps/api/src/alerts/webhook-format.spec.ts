@@ -8,6 +8,11 @@ import {
   metadata,
   negative,
 } from './email-fixtures.fixture';
+import {
+  chartEntered,
+  chartLeft,
+  chartMilestone,
+} from './chart-events.fixture';
 import { firstRanking, milestone, overtake } from './rank-events.fixture';
 import { formatWebhookBody } from './webhook-format';
 
@@ -24,6 +29,9 @@ const everyPayload: AlertPayload[] = [
   milestone(),
   firstRanking(),
   overtake(),
+  chartEntered(),
+  chartLeft(),
+  chartMilestone(),
   batch,
   competitorBatch,
 ];
