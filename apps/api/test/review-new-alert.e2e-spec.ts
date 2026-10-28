@@ -2,6 +2,7 @@ import { execSync } from 'child_process';
 import { join } from 'path';
 import { getQueueToken } from '@nestjs/bullmq';
 import { INestApplication } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient, Store } from '@prisma/client';
 import { AlertBatchPayload } from '@asobeast/shared';
@@ -10,6 +11,7 @@ import { App } from 'supertest/types';
 import { MailerService } from '../src/alerts/mailer.service';
 import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
+import { Env } from '../src/config/env';
 import {
   DeliverAlertPayload,
   DeliverEmailPayload,
@@ -23,7 +25,8 @@ import { ownerAgent, useCookies } from './helpers/session';
 import { asWorkspace } from './helpers/tenancy';
 import { obliterateQueues, pauseQueues } from './obliterate-queues';
 
-const REVIEWS: ReviewResult[] = [5, 3, 2].map((score) => ({
+const SCORES = [5, 3, 2];
+const REVIEWS: ReviewResult[] = SCORES.map((score) => ({
   reviewId: `r${score}`,
   userName: `Reviewer ${score}`,
   score,
@@ -52,6 +55,7 @@ describe('review.new alerts (e2e)', () => {
   let prisma: PrismaClient;
   let api: Awaited<ReturnType<typeof ownerAgent>>;
   let appId: string;
+  let negatives: number[];
 
   const pendingJobs = (): Promise<
     Job<DeliverAlertPayload | DeliverEmailPayload>[]
@@ -130,6 +134,10 @@ describe('review.new alerts (e2e)', () => {
       create: { id: DEFAULT_WORKSPACE_ID, name: 'Default' },
     });
     api = await ownerAgent(app);
+    const threshold = app
+      .get<ConfigService<Env, true>>(ConfigService)
+      .get('ALERT_REVIEW_SCORE_MAX', { infer: true });
+    negatives = SCORES.filter((score) => score <= threshold);
   });
 
   beforeEach(async () => {
@@ -202,9 +210,9 @@ describe('review.new alerts (e2e)', () => {
     });
     expect(delivered.get(negativeOnly)).toEqual({
       newReviews: [],
-      negativeReviews: [2],
-      events: ['review.negative'],
-      totals: 1,
+      negativeReviews: negatives,
+      events: negatives.map(() => 'review.negative'),
+      totals: negatives.length,
     });
     expect(delivered.get(both)).toEqual({
       newReviews: [5, 3, 2],
@@ -212,11 +220,12 @@ describe('review.new alerts (e2e)', () => {
       events: ['review.new', 'review.new', 'review.new'],
       totals: 3,
     });
+    const otherNegatives = negatives.filter((score) => score !== 5);
     expect(delivered.get(praiseAndNegative)).toEqual({
       newReviews: [5],
-      negativeReviews: [2],
-      events: ['review.negative', 'review.new'],
-      totals: 2,
+      negativeReviews: otherNegatives,
+      events: [...otherNegatives.map(() => 'review.negative'), 'review.new'],
+      totals: otherNegatives.length + 1,
     });
     expect(delivered.get(email.id)).toMatchObject({
       newReviews: [5],
@@ -269,6 +278,6 @@ describe('review.new alerts (e2e)', () => {
     await sync();
 
     expect(await reviewEvents('review.new')).toBe(0);
-    expect(await reviewEvents('review.negative')).toBe(1);
+    expect(await reviewEvents('review.negative')).toBe(negatives.length);
   });
 });

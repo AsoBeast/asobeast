@@ -162,6 +162,16 @@ describe('EmailAlertsController (e2e, smtp enabled)', () => {
       .expect(200);
     expect((replaced.body as EmailAlertItem).reviewScores).toEqual([5]);
 
+    const everyStar = await api
+      .patch(`/email-alerts/${alert.id}`)
+      .send({ reviewScores: [5, 4, 3, 2, 1] })
+      .expect(200);
+    expect((everyStar.body as EmailAlertItem).reviewScores).toEqual([]);
+
+    await api
+      .patch(`/email-alerts/${alert.id}`)
+      .send({ reviewScores: [3] })
+      .expect(200);
     const cleared = await api
       .patch(`/email-alerts/${alert.id}`)
       .send({ reviewScores: [] })
