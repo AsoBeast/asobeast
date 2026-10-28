@@ -19,7 +19,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { DEFAULT_SELECTION, topByOpportunity } from "./selection";
+import { DEFAULT_SELECTION, pickerLabel, topByOpportunity } from "./selection";
 
 export function KeywordPicker({
   tracked,
@@ -31,6 +31,7 @@ export function KeywordPicker({
   onChange: (next: string[]) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const label = pickerLabel(tracked);
 
   const toggle = (keywordId: string) => {
     onChange(
@@ -64,7 +65,7 @@ export function KeywordPicker({
               {tracked.map((keyword) => (
                 <CommandItem
                   key={keyword.keywordId}
-                  value={keyword.text}
+                  value={label(keyword)}
                   onSelect={() => toggle(keyword.keywordId)}
                 >
                   <Check
@@ -75,7 +76,7 @@ export function KeywordPicker({
                         : "opacity-0",
                     )}
                   />
-                  <span className="truncate">{keyword.text}</span>
+                  <span className="truncate">{label(keyword)}</span>
                 </CommandItem>
               ))}
             </CommandGroup>
