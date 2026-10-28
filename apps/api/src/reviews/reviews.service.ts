@@ -254,7 +254,7 @@ export class ReviewsService {
       return await this.alerts.listensTo('review.new');
     } catch (error) {
       this.logger.warn(
-        `review alert subscribers unavailable, sending new reviews anyway: ${(error as Error).message}`,
+        `review alert subscribers unavailable, sending new reviews anyway: ${error instanceof Error ? error.message : String(error)}`,
       );
       return true;
     }
@@ -265,7 +265,7 @@ export class ReviewsService {
       await this.alerts.dispatch(alert);
     } catch (error) {
       this.logger.warn(
-        `review alert dispatch failed: ${(error as Error).message}`,
+        `review alert dispatch failed: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }
