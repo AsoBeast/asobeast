@@ -7,6 +7,8 @@ keywords: ["discord","slack","microsoft teams","telegram","google chat","webhook
 
 A webhook url tells AsoBeast where to send alerts, and the url also says which tool it belongs to. When you paste one in **Settings**, under **Add webhook**, the dialog names the tool it recognised, and every report reaches that tool in its own format: the app icon, one group per kind of change and a link back to AsoBeast. Any other url receives the JSON payload described in [Send alerts](/guides/alerts#webhook-delivery).
 
+A Slack or Discord channel can carry a feed of new reviews: subscribe it to **New review** and pick the stars, as described in [Choose the stars of new reviews](/guides/alerts#choose-the-stars-of-new-reviews).
+
 A long report is cut to what the tool accepts. A cut group ends with a **See all** link to the page in AsoBeast that lists every row, and apps that did not fit are counted at the end. The links need `WEB_PUBLIC_URL`; without it the report counts what it left out instead.
 
 When a tool answers `429`, the next attempt waits as long as the tool asked, up to 15 minutes, and the delivery history records the attempt as asked to retry. The delivery history, the settings row and the delete dialog name a chat webhook by its host and the start of its path, never by the token in its url. A url you paste for your own endpoint stays whole in the settings row, so you can tell several apart. The webhooks API still answers every url in full to members of the workspace, so treat API tokens with read access as able to read them.

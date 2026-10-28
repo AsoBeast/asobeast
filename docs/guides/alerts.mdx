@@ -2,7 +2,7 @@
 title: Send alerts
 description: "asobeast delivers rank, SERP, metadata, review and action events by signed webhook or SMTP email. Batched delivery is resumable and deduplicated."
 icon: bell
-keywords: ["alerts","webhook","SMTP","email","batched delivery","signature","ALERT_DELIVERY","milestone","first ranking","overtake","unsubscribe","List-Unsubscribe","DKIM","confirm recipient","double opt in"]
+keywords: ["alerts","webhook","SMTP","email","batched delivery","signature","ALERT_DELIVERY","milestone","first ranking","overtake","unsubscribe","List-Unsubscribe","DKIM","confirm recipient","double opt in","new review","review stars"]
 ---
 
 Alerts fan out to two channel types, webhooks and email, and both carry the same events. Every attempt is recorded in a delivery log so a failing endpoint is visible instead of retrying silently.
@@ -36,12 +36,23 @@ Alerts are not part of the guided setup, because nothing can move before positio
 | `rank.first` | An owned app ranks for a keyword it has never ranked for | None |
 | `rank.overtaken` | A tracked competitor moves above an owned app | None |
 | `review.negative` | A review lands at or below the rating cutoff | `ALERT_REVIEW_SCORE_MAX`, default 2, range 1 to 4 |
+| `review.new` | A review the store returns for the first time | Optional star filter per channel |
 | `action.opened` | An action opens or reopens at or above the priority floor | `ALERT_ACTIONS_MIN_PRIORITY`, default `high` |
 | `metadata.changed` | A snapshot differs from the previous one | None |
 | `serp.entrant` | A new app enters a tracked keyword's top 10 | None |
 | `digest.weekly` | The weekly portfolio digest | `CRON_DIGEST` |
 
 A new event never joins an existing subscription. To opt in, open **Edit events** on the channel in Settings, tick the events and save. A webhook keeps its url and its secret.
+
+### Choose the stars of new reviews
+
+`review.negative` fires for reviews at or below `ALERT_REVIEW_SCORE_MAX`, one cutoff for the whole instance. `review.new` fires for every review AsoBeast stores for the first time, and each channel decides which stars it wants. In **Settings**, tick **New review** on a webhook or an email alert and a row of five stars appears. All five are ticked by default, which sends every review. Untick the stars you do not want, for example everything but 1 and 2 for a channel that only needs the complaints, or 4 and 5 for a channel that celebrates.
+
+The filter belongs to the channel and applies to `review.new` only. Over the API it is `reviewScores`, an optional array of the stars 1 to 5 on a webhook or an email alert. An empty or omitted array means every star, the values are sorted and deduplicated, and a value outside 1 to 5 answers `400`. A `PATCH` without `reviewScores` leaves it as it is.
+
+A channel can hold both events. A review that its stars list under `review.new` arrives once, as a new review, and not again as a negative review. Stars it does not list still arrive as negative reviews when they fall at or below the cutoff. So `review.new` with 4 and 5 stars next to `review.negative` sends praise and complaints and nothing twice.
+
+The same rules hold in both delivery modes. A new review never fires for a review that was only edited, and never for the reviews an import reads when it first adds an app. In instant delivery every matching review is one message, so a busy app on a channel that takes every star is noisy; batched delivery, the default, folds them into the daily report as a **New reviews** group.
 
 ## Milestones, first rankings and overtakes
 
@@ -145,6 +156,24 @@ A milestone and an overtake look like this. `rank.first` carries `position` and 
 }
 ```
 
+A new review carries the author as well.
+
+```json
+{
+  "event": "review.new",
+  "occurredAt": "2026-10-28T03:12:00.000Z",
+  "app": { "id": "cm1a", "name": "My App" },
+  "review": {
+    "score": 5,
+    "title": "Love it",
+    "text": "Best habit tracker I have used",
+    "author": "Alex",
+    "version": "3.1.0",
+    "reviewedAt": "2026-10-28T01:40:00.000Z"
+  }
+}
+```
+
 Every `app` object of a granular event may also carry `iconUrl`, `store` and `country`, read from the app when the alert is sent. `store` and `country` name the app's store and home storefront, and `iconUrl` is the address of the icon the store shows today, or `null` when no listing capture has recorded one. A consumer that ignores unknown fields needs no change.
 
 A batched report wraps events in a scoped envelope. Branch on the top level `scope`, which is `owned_apps` or `competitors`. The flat `events` array stays granular and contains only events for that scope, so a consumer that already handles granular events needs one extra branch rather than a rewrite.
@@ -161,7 +190,7 @@ A batched report wraps events in a scoped envelope. Branch on the top level `sco
 }
 ```
 
-Each entry of `apps` groups one owned app's facts in arrays: `rankDrops`, `rankImprovements`, `rankMilestones`, `firstRankings`, `overtakes`, `serpEntrants`, `changes`, `negativeReviews`, `actions` and `competitors`. An array is empty when nothing happened or when the channel does not list its event. The `app` of an entry, and of each entry of its `competitors`, carries `id`, `name`, `store`, `country` and `iconUrl`.
+Each entry of `apps` groups one owned app's facts in arrays: `rankDrops`, `rankImprovements`, `rankMilestones`, `firstRankings`, `overtakes`, `serpEntrants`, `changes`, `negativeReviews`, `newReviews`, `actions` and `competitors`. An array is empty when nothing happened or when the channel does not list its event. The `app` of an entry, and of each entry of its `competitors`, carries `id`, `name`, `store`, `country` and `iconUrl`.
 
 Branch on `event` and ignore values and fields you do not recognise. New events and fields arrive as additive changes within a major version.
 
