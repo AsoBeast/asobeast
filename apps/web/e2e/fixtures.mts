@@ -2040,6 +2040,8 @@ export const APP_1_CHANGE_IMPACT: ChangeImpactReport = {
 
 export const PLAY_CHANGE_IMPACT_COOKIE = "e2e-play-change-impact";
 
+export const RANKINGS_FAIL_COOKIE = "e2e-fail-rankings";
+
 export const APP_GP_CHANGE_IMPACT: ChangeImpactReport = {
   appId: "app-gp",
   country: "us",

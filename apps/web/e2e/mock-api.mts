@@ -60,6 +60,7 @@ import {
   APP_GP_CHANGE_IMPACT,
   PLAY_AUDIT,
   PLAY_CHANGE_IMPACT_COOKIE,
+  RANKINGS_FAIL_COOKIE,
   PROVISIONAL_AUDIT,
   METADATA_AUDIT,
   APP_1_PL_SCREENSHOTS,
@@ -230,6 +231,7 @@ import type {
   StoreHealthReport,
   WorkspaceRunStatus,
   PortfolioSummary,
+  RankingSeries,
   KeywordUpdateRequest,
   TrackedKeywordItem,
   WebhookCreateRequest,
@@ -848,6 +850,25 @@ const REVIEW_SETS: Record<string, typeof UPDATE_THEME_REVIEWS> = {
   rtl: RTL_REVIEWS,
   emoji: EMOJI_REVIEWS,
 };
+
+function rankingsIn(
+  rankings: RankingSeries,
+  query: URLSearchParams,
+): RankingSeries {
+  const ids = query.get("keywordIds")?.split(",").filter(Boolean) ?? [];
+  const from = query.get("from");
+  const to = query.get("to");
+  return {
+    series: rankings.series
+      .filter((item) => ids.length === 0 || ids.includes(item.keywordId))
+      .map((item) => ({
+        ...item,
+        points: item.points.filter(
+          (point) => (!from || point.date >= from) && (!to || point.date <= to),
+        ),
+      })),
+  };
+}
 
 const reviewSetOf = (req: IncomingMessage) =>
   REVIEW_SETS[cookieValue(req, "e2e_reviews") ?? ""];
@@ -3711,7 +3732,11 @@ const routes: Route[] = [
     };
   }),
 
-  appRoute(/^\/apps\/([^/]+)\/rankings$/, (dataset) => dataset.rankings),
+  appRoute(
+    /^\/apps\/([^/]+)\/rankings$/,
+    (dataset, query) => rankingsIn(dataset.rankings, query),
+    (req) => hasCookie(req, RANKINGS_FAIL_COOKIE, "1"),
+  ),
   appRoute(/^\/apps\/([^/]+)\/serp-movers$/, (dataset) => dataset.serpMovers),
   {
     method: "GET",
