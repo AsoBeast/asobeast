@@ -1,3 +1,4 @@
+import { countChars } from '@asobeast/shared';
 import type { ReviewResult } from '../store-providers/types';
 import {
   alertReviewBody,
@@ -46,6 +47,21 @@ describe('alertReviewBody', () => {
     expect(
       alertReviewBody({ ...review, text: 'x'.repeat(600) }).text,
     ).toHaveLength(REVIEW_ALERT_TEXT_MAX);
+  });
+});
+
+describe('alertReviewBody at a whole character', () => {
+  const LONE_SURROGATE =
+    /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
+
+  it('never cuts an emoji across the limit in half', () => {
+    const { text } = alertReviewBody({
+      ...review,
+      text: `${'x'.repeat(499)}😀 and more`,
+    });
+
+    expect(text).not.toMatch(LONE_SURROGATE);
+    expect(countChars(text)).toBeLessThanOrEqual(REVIEW_ALERT_TEXT_MAX);
   });
 });
 
