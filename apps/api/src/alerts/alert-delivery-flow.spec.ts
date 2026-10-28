@@ -26,6 +26,7 @@ describe('createDeliveryFlows', () => {
       subscription: {
         id: 'wh1',
         events: ['rank.dropped', 'metadata.changed', 'serp.entrant'],
+        reviewScores: [],
       },
       jobName: JOBS.DELIVER_ALERT,
     });

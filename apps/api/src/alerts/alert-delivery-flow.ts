@@ -24,7 +24,7 @@ interface CreateDeliveryFlowsInput {
   workspaceId: string;
   flushId: string;
   kind: 'webhook' | 'email';
-  subscription: { id: string; events: string[]; reviewScores?: number[] };
+  subscription: { id: string; events: string[]; reviewScores: number[] };
   jobName: typeof JOBS.DELIVER_ALERT | typeof JOBS.DELIVER_EMAIL;
 }
 
