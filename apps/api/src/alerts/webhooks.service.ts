@@ -40,6 +40,7 @@ export class WebhooksService {
         workspaceId: this.workspace.require('a webhook'),
         url: dto.url,
         events: dto.events,
+        reviewScores: dto.reviewScores ?? [],
         secret: dto.secret ?? null,
         confirmDrops: dto.confirmDrops,
       },
@@ -55,6 +56,9 @@ export class WebhooksService {
     }
     if (dto.events !== undefined) {
       data.events = dto.events;
+    }
+    if (dto.reviewScores !== undefined) {
+      data.reviewScores = dto.reviewScores;
     }
     if (dto.active !== undefined) {
       data.active = dto.active;

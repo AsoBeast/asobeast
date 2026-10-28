@@ -9,7 +9,7 @@ import type {
 } from './report';
 import { factsOf } from './report-facts';
 import { reportLinks, type ReportLinks } from './report-links';
-import { changeRows } from './report-rows';
+import { changeRows, reviewTone } from './report-rows';
 import { appName, sentenceOf, type GranularPayload } from './report-sentences';
 
 type AppPayload = Extract<GranularPayload, { app: unknown }>;
@@ -62,6 +62,9 @@ function linkOf(
     return links.chart(payload.chart, payload.date);
   }
   if (payload.event === 'action.opened') return links.action(payload.link);
+  if (payload.event === 'review.new') {
+    return links.reviews(payload.app.id, payload.review.score);
+  }
   if ('app' in payload) return links.app(payload.app.id);
   return links.home;
 }
@@ -81,6 +84,8 @@ function toneOf(payload: GranularPayload): ReportTone {
     case 'rank.milestone':
     case 'chart.milestone':
       return payload.direction === 'entered' ? 'up' : 'down';
+    case 'review.new':
+      return reviewTone(payload.review.score);
     default:
       return 'neutral';
   }

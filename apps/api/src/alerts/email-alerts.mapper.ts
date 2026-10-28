@@ -6,6 +6,7 @@ export function toEmailAlertItem(alert: EmailAlert): EmailAlertItem {
     id: alert.id,
     email: alert.email,
     events: alert.events as WebhookEvent[],
+    reviewScores: alert.reviewScores,
     active: alert.active,
     confirmDrops: alert.confirmDrops,
     confirmed: alert.confirmedAt !== null,

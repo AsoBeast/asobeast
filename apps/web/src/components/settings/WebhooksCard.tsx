@@ -21,8 +21,8 @@ import {
   AlertChannelList,
 } from "./alert-channel/AlertChannelCard";
 import { AddWebhookDialog } from "./AddWebhookDialog";
+import type { AlertSubscriptionChange } from "./alert-event-copy";
 import { AlertChannelRow } from "./alert-channel/AlertChannelRow";
-import type { ChannelEdit } from "./alert-channel/EditEventsDialog";
 import { useSharedFlight, useSingleFlight } from "@/lib/single-flight";
 import { WEBHOOK_CHANNEL_NAMES, webhookRowLabel } from "./webhook-channel-copy";
 
@@ -38,7 +38,8 @@ function WebhookRow({ webhook }: { webhook: WebhookItem }) {
   });
 
   const editEvents = useMutation({
-    mutationFn: (edit: ChannelEdit) => updateWebhook(webhook.id, edit),
+    mutationFn: (change: AlertSubscriptionChange) =>
+      updateWebhook(webhook.id, change),
     onSuccess: (saved) => {
       seedWebhook(queryClient, saved);
       invalidateWebhookMutation(queryClient);
@@ -81,6 +82,7 @@ function WebhookRow({ webhook }: { webhook: WebhookItem }) {
       id={webhook.id}
       events={webhook.events}
       confirmDrops={webhook.confirmDrops === true}
+      reviewScores={webhook.reviewScores}
       tag={
         <>
           {channel !== "generic" && (

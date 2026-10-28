@@ -4,13 +4,15 @@ import { useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { REVIEW_SCORES } from "@asobeast/shared";
 import type { WebhookEvent } from "@asobeast/shared";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ApiError, createEmailAlert } from "@/lib/api";
 import { invalidateEmailAlertMutation } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
-import { EventSelection } from "./alert-events";
+import { needsAStar, reviewScoresToSend } from "./alert-event-copy";
+import { AlertSubscriptionFields } from "./alert-events";
 import { ConfirmDropsField } from "./ConfirmDropsField";
 import { AlertChannelDialog } from "./alert-channel/AlertChannelDialog";
 import { awaitsConfirmation, recipientToast } from "./email-alert-recipient";
@@ -20,11 +22,18 @@ export function AddEmailAlertDialog({ trigger }: { trigger?: ReactNode }) {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [events, setEvents] = useState<WebhookEvent[]>(["metadata.changed"]);
+  const [stars, setStars] = useState<number[]>([...REVIEW_SCORES]);
   const [confirmDrops, setConfirmDrops] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const mutation = useMutation({
-    mutationFn: () => createEmailAlert({ email, events, confirmDrops }),
+    mutationFn: () =>
+      createEmailAlert({
+        email,
+        events,
+        reviewScores: reviewScoresToSend(events, stars),
+        confirmDrops,
+      }),
     onSuccess: (saved) => {
       invalidateEmailAlertMutation(queryClient);
       if (saved.confirmationSent === false) {
@@ -57,6 +66,7 @@ export function AddEmailAlertDialog({ trigger }: { trigger?: ReactNode }) {
     if (next) return;
     setEmail("");
     setEvents(["metadata.changed"]);
+    setStars([...REVIEW_SCORES]);
     setConfirmDrops(false);
     setError(null);
   }
@@ -71,6 +81,10 @@ export function AddEmailAlertDialog({ trigger }: { trigger?: ReactNode }) {
     }
     if (events.length === 0) {
       setError("Select at least one event");
+      return;
+    }
+    if (needsAStar(events, stars)) {
+      setError("Pick at least one star");
       return;
     }
 
@@ -100,7 +114,12 @@ export function AddEmailAlertDialog({ trigger }: { trigger?: ReactNode }) {
         />
       </div>
 
-      <EventSelection value={events} onChange={setEvents} />
+      <AlertSubscriptionFields
+        events={events}
+        stars={stars}
+        onEventsChange={setEvents}
+        onStarsChange={setStars}
+      />
 
       <ConfirmDropsField checked={confirmDrops} onChange={setConfirmDrops} />
     </AlertChannelDialog>

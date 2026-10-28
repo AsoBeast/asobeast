@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { Loader2, Pencil } from "lucide-react";
+import { selectedReviewScores } from "@asobeast/shared";
 import type { WebhookEvent } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,34 +16,41 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { EventSelection } from "../alert-events";
+import {
+  needsAStar,
+  reviewScoresToSend,
+  type AlertSubscriptionChange,
+} from "../alert-event-copy";
+import { AlertSubscriptionFields } from "../alert-events";
 import { ConfirmDropsField } from "../ConfirmDropsField";
-
-export interface ChannelEdit {
-  events: WebhookEvent[];
-  confirmDrops?: boolean;
-}
 
 export function EditEventsDialog({
   label,
   events,
   confirmDrops,
+  reviewScores,
   pending,
   onSave,
 }: {
   label: string;
   events: WebhookEvent[];
+  reviewScores?: number[];
   confirmDrops: boolean;
   pending: boolean;
-  onSave: (edit: ChannelEdit) => Promise<unknown>;
+  onSave: (change: AlertSubscriptionChange) => Promise<unknown>;
 }) {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<WebhookEvent[]>(events);
+  const [stars, setStars] = useState<number[]>(
+    selectedReviewScores(reviewScores),
+  );
   const [confirming, setConfirming] = useState(confirmDrops);
+  const blocked = selected.length === 0 || needsAStar(selected, stars);
 
   function changeOpen(next: boolean) {
     if (next) {
       setSelected(events);
+      setStars(selectedReviewScores(reviewScores));
       setConfirming(confirmDrops);
     }
     setOpen(next);
@@ -50,12 +58,16 @@ export function EditEventsDialog({
 
   function submit(formEvent: FormEvent<HTMLFormElement>) {
     formEvent.preventDefault();
-    if (selected.length === 0) return;
-    const edit: ChannelEdit =
+    if (blocked) return;
+    const change: AlertSubscriptionChange = {
+      events: selected,
+      reviewScores: reviewScoresToSend(selected, stars),
+    };
+    void onSave(
       confirming === confirmDrops
-        ? { events: selected }
-        : { events: selected, confirmDrops: confirming };
-    void onSave(edit).then(
+        ? change
+        : { ...change, confirmDrops: confirming },
+    ).then(
       () => setOpen(false),
       () => undefined,
     );
@@ -79,7 +91,12 @@ export function EditEventsDialog({
             </DialogDescription>
           </DialogHeader>
           <DialogBody>
-            <EventSelection value={selected} onChange={setSelected} />
+            <AlertSubscriptionFields
+              events={selected}
+              stars={stars}
+              onEventsChange={setSelected}
+              onStarsChange={setStars}
+            />
             <ConfirmDropsField checked={confirming} onChange={setConfirming} />
             {selected.length === 0 ? (
               <p className="text-sm text-muted-foreground">
@@ -88,7 +105,7 @@ export function EditEventsDialog({
             ) : null}
           </DialogBody>
           <DialogFooter>
-            <Button type="submit" disabled={pending || selected.length === 0}>
+            <Button type="submit" disabled={pending || blocked}>
               {pending ? <Loader2 className="animate-spin" /> : null}
               Save events
             </Button>

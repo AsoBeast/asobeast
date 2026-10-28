@@ -8,6 +8,7 @@ import {
   RankMilestonePayload,
   RankOvertakenPayload,
   ReviewNegativePayload,
+  ReviewNewPayload,
   SerpEntrantPayload,
 } from '@asobeast/shared';
 import {
@@ -159,6 +160,40 @@ describe('outboxRows', () => {
       outboxRows(other)[0].dedupeKey,
     );
     expect(outboxRows(base)[0].dedupeKey).toBe(outboxRows(base)[0].dedupeKey);
+  });
+});
+
+describe('outboxRows for review.new', () => {
+  const negative: ReviewNegativePayload = {
+    event: 'review.negative',
+    occurredAt: '2026-07-22T10:00:00.000Z',
+    app: { id: 'app1', name: 'App One' },
+    review: {
+      score: 1,
+      title: 'Bad',
+      text: 'crashes',
+      version: '1.0',
+      reviewedAt: '2026-07-22T09:00:00.000Z',
+    },
+  };
+  const fresh: ReviewNewPayload = {
+    ...negative,
+    event: 'review.new',
+    review: { ...negative.review, author: 'Sam' },
+  };
+
+  it('collects a new review under its own key beside the negative one', () => {
+    const rows = outboxRows(fresh);
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      event: 'review.new',
+      appId: 'app1',
+      payload: fresh,
+    });
+    expect(rows[0].dedupeKey).toMatch(/^review\.new:app1:/);
+    expect(rows[0].dedupeKey).not.toBe(outboxRows(negative)[0].dedupeKey);
+    expect(outboxRows(negative)[0].dedupeKey).toMatch(/^review:app1:/);
   });
 });
 

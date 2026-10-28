@@ -30,6 +30,7 @@ import {
   overtakeRow,
   rankRow,
   reviewRow,
+  reviewsTone,
 } from './report-rows';
 import { appName, plural } from './report-sentences';
 
@@ -51,6 +52,8 @@ interface GroupSource {
 }
 
 const always = (tone: GroupTone) => (): GroupTone => tone;
+
+const newReviewsOf = (section: Section) => section.newReviews ?? [];
 
 const GROUP_SOURCES: Record<ReportGroupKind, GroupSource> = {
   rankDrops: {
@@ -113,6 +116,12 @@ const GROUP_SOURCES: Record<ReportGroupKind, GroupSource> = {
     tone: always('down'),
     rows: (section) => section.negativeReviews.map(reviewRow),
   },
+  newReviews: {
+    title: 'New reviews',
+    tone: (section) =>
+      reviewsTone(newReviewsOf(section).map((alert) => alert.review.score)),
+    rows: (section) => newReviewsOf(section).map(reviewRow),
+  },
   actions: {
     title: 'New actions',
     tone: always('neutral'),
@@ -135,6 +144,17 @@ function capped(
   return { ...head, rows: rows.slice(0, caps.rows), total: rows.length };
 }
 
+function reviewScoresOf(section: Section, kind: ReportGroupKind): number[] {
+  switch (kind) {
+    case 'negativeReviews':
+      return section.negativeReviews.map((alert) => alert.review.score);
+    case 'newReviews':
+      return newReviewsOf(section).map((alert) => alert.review.score);
+    default:
+      return [];
+  }
+}
+
 function groupLink(
   kind: ReportGroupKind,
   section: Section,
@@ -144,8 +164,12 @@ function groupLink(
   if (kind === 'chartMoves') {
     return links.charts(section.chartMoves?.[0]?.chart ?? null, total);
   }
-  const scores = section.negativeReviews.map((alert) => alert.review.score);
-  return links.group(section.app.id, kind, total, scores);
+  return links.group(
+    section.app.id,
+    kind,
+    total,
+    reviewScoresOf(section, kind),
+  );
 }
 
 function ownedGroups(section: Section, build: Build): ReportGroup[] {
@@ -324,6 +348,7 @@ export interface ReportCounts {
   serpEntrants: number;
   changes: number;
   negativeReviews: number;
+  newReviews: number;
   actions: number;
 }
 
@@ -346,6 +371,7 @@ export function reportCounts(payload: AlertBatchPayload): ReportCounts {
     serpEntrants: count((section) => section.serpEntrants),
     changes: count((section) => section.changes),
     negativeReviews: count((section) => section.negativeReviews),
+    newReviews: count((section) => section.newReviews),
     actions: count((section) => section.actions),
   };
 }

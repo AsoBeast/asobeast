@@ -1,5 +1,5 @@
 import type { Store } from '../index';
-import type { ReviewNegativePayload } from './reviews';
+import type { ReviewNegativePayload, ReviewNewPayload } from './reviews';
 import type { DigestWeeklyPayload } from './portfolio';
 import type { KeywordScope } from './keywords';
 import type { SerpEntrantPayload } from './serp';
@@ -96,6 +96,7 @@ export const WEBHOOK_EVENTS = [
   'chart.entered',
   'chart.left',
   'chart.milestone',
+  'review.new',
 ] as const;
 export type WebhookEvent = (typeof WEBHOOK_EVENTS)[number];
 
@@ -103,6 +104,7 @@ export interface WebhookItem {
   id: string;
   url: string;
   events: WebhookEvent[];
+  reviewScores?: number[];
   active: boolean;
   hasSecret: boolean;
   createdAt: string;
@@ -113,6 +115,7 @@ export interface WebhookItem {
 export interface WebhookCreateRequest {
   url: string;
   events: WebhookEvent[];
+  reviewScores?: number[];
   secret?: string;
   confirmDrops?: boolean;
 }
@@ -120,6 +123,7 @@ export interface WebhookCreateRequest {
 export interface WebhookUpdateRequest {
   url?: string;
   events?: WebhookEvent[];
+  reviewScores?: number[];
   secret?: string;
   active?: boolean;
   confirmDrops?: boolean;
@@ -128,12 +132,14 @@ export interface WebhookUpdateRequest {
 export interface EmailAlertCreateRequest {
   email: string;
   events: WebhookEvent[];
+  reviewScores?: number[];
   confirmDrops?: boolean;
 }
 
 export interface EmailAlertUpdateRequest {
   email?: string;
   events?: WebhookEvent[];
+  reviewScores?: number[];
   active?: boolean;
   confirmDrops?: boolean;
 }
@@ -147,6 +153,7 @@ export interface EmailAlertItem {
   id: string;
   email: string;
   events: WebhookEvent[];
+  reviewScores?: number[];
   active: boolean;
   confirmed?: boolean;
   unsubscribed?: boolean;
@@ -300,6 +307,7 @@ export interface AlertBatchAppSection {
   serpEntrants: SerpEntrantPayload[];
   changes: MetadataChangedPayload[];
   negativeReviews: ReviewNegativePayload[];
+  newReviews?: ReviewNewPayload[];
   actions: ActionOpenedPayload[];
   competitors: AlertBatchCompetitorSection[];
 }
@@ -312,6 +320,7 @@ export type GranularAlertPayload =
   | RankFirstPayload
   | RankOvertakenPayload
   | ReviewNegativePayload
+  | ReviewNewPayload
   | DigestWeeklyPayload
   | SerpEntrantPayload
   | ActionOpenedPayload

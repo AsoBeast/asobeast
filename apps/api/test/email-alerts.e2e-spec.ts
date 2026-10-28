@@ -126,6 +126,76 @@ describe('EmailAlertsController (e2e, smtp enabled)', () => {
     ]);
   });
 
+  it('accepts, keeps and replaces the star filter of a new review alert', async () => {
+    await clearRateLimitCounters(app);
+    const created = await api
+      .post('/email-alerts')
+      .send({
+        email: 'ops@example.com',
+        events: ['review.new'],
+        reviewScores: [2, 1, 2],
+      })
+      .expect(201);
+    const alert = created.body as EmailAlertItem;
+    expect(alert).toMatchObject({
+      events: ['review.new'],
+      reviewScores: [1, 2],
+    });
+
+    const listed = await api.get('/email-alerts').expect(200);
+    expect((listed.body as EmailAlertItem[])[0].reviewScores).toEqual([1, 2]);
+
+    const kept = await api
+      .patch(`/email-alerts/${alert.id}`)
+      .send({ events: ['review.new', 'rank.dropped'] })
+      .expect(200);
+    expect((kept.body as EmailAlertItem).reviewScores).toEqual([1, 2]);
+
+    const moved = await api
+      .patch(`/email-alerts/${alert.id}`)
+      .send({ email: 'team@example.com' })
+      .expect(200);
+    expect((moved.body as EmailAlertItem).reviewScores).toEqual([1, 2]);
+
+    const replaced = await api
+      .patch(`/email-alerts/${alert.id}`)
+      .send({ email: 'crew@example.com', reviewScores: [5] })
+      .expect(200);
+    expect((replaced.body as EmailAlertItem).reviewScores).toEqual([5]);
+
+    const everyStar = await api
+      .patch(`/email-alerts/${alert.id}`)
+      .send({ reviewScores: [5, 4, 3, 2, 1] })
+      .expect(200);
+    expect((everyStar.body as EmailAlertItem).reviewScores).toEqual([]);
+
+    const narrowed = await api
+      .patch(`/email-alerts/${alert.id}`)
+      .send({ reviewScores: [3] })
+      .expect(200);
+    expect((narrowed.body as EmailAlertItem).reviewScores).toEqual([3]);
+    const cleared = await api
+      .patch(`/email-alerts/${alert.id}`)
+      .send({ reviewScores: [] })
+      .expect(200);
+    expect((cleared.body as EmailAlertItem).reviewScores).toEqual([]);
+
+    await api
+      .patch(`/email-alerts/${alert.id}`)
+      .send({ reviewScores: [9] })
+      .expect(400);
+  });
+
+  it('stores every star for an email alert created without a filter', async () => {
+    await clearRateLimitCounters(app);
+    const created = await api
+      .post('/email-alerts')
+      .send({ email: 'ops@example.com', events: ['review.new'] })
+      .expect(201);
+
+    expect((created.body as EmailAlertItem).reviewScores).toEqual([]);
+  });
+
   it('replaces only the events of an email alert', async () => {
     const created = await api
       .post('/email-alerts')

@@ -16,6 +16,7 @@ import {
   RankMilestonePayload,
   RankOvertakenPayload,
   ReviewNegativePayload,
+  ReviewNewPayload,
   SerpEntrantPayload,
 } from '@asobeast/shared';
 
@@ -98,6 +99,7 @@ interface MutableSection {
   serpEntrants: SerpEntrantPayload[];
   changes: MetadataChangedPayload[];
   negativeReviews: ReviewNegativePayload[];
+  newReviews: ReviewNewPayload[];
   actions: ActionOpenedPayload[];
   competitors: Map<string, AlertBatchCompetitorSection>;
 }
@@ -282,6 +284,7 @@ function createSection(app: ResolvedApp): MutableSection {
     serpEntrants: [],
     changes: [],
     negativeReviews: [],
+    newReviews: [],
     actions: [],
     competitors: new Map(),
   };
@@ -322,6 +325,8 @@ function addOwnedSignal(
       section.changes.push(payload);
     } else if (payload.event === 'review.negative') {
       section.negativeReviews.push(payload);
+    } else if (payload.event === 'review.new') {
+      section.newReviews.push(payload);
     } else if (payload.event === 'action.opened') {
       section.actions.push(payload);
     }
@@ -376,6 +381,7 @@ function finalizeSections(
       serpEntrants: section.serpEntrants,
       changes: section.changes,
       negativeReviews: section.negativeReviews,
+      newReviews: section.newReviews,
       actions: [...section.actions].sort(compareActions),
       competitors: [...section.competitors.values()].sort(compareSections),
     }))

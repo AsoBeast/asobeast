@@ -12,6 +12,7 @@ import {
   RankDroppedPayload,
   RankImprovedPayload,
   ReviewNegativePayload,
+  ReviewNewPayload,
 } from '@asobeast/shared';
 
 export const metadata: MetadataChangedPayload = {
@@ -74,6 +75,20 @@ export const negative: ReviewNegativePayload = {
     score: 1,
     title: 'Bad',
     text: 'Crashes on <launch>',
+    version: '2.0.0',
+    reviewedAt: '2026-07-10T00:00:00.000Z',
+  },
+};
+
+export const newReview: ReviewNewPayload = {
+  event: 'review.new',
+  occurredAt: '2026-07-11T00:00:00.000Z',
+  app: { id: 'app_1', name: 'My App' },
+  review: {
+    score: 5,
+    title: 'Love it',
+    text: 'Best habit tracker I have used',
+    author: 'Alex',
     version: '2.0.0',
     reviewedAt: '2026-07-10T00:00:00.000Z',
   },
@@ -251,6 +266,30 @@ export const batch: AlertBatchPayload = {
   events: [],
 };
 
+export const batchWithNewReviews: AlertBatchPayload = {
+  ...batch,
+  totals: { events: 5, apps: 2 },
+  apps: [
+    {
+      ...alpha,
+      newReviews: [
+        newReview,
+        {
+          ...newReview,
+          review: {
+            ...newReview.review,
+            score: 4,
+            author: null,
+            title: null,
+            text: 'Works well, wish it synced',
+          },
+        },
+      ],
+    },
+    bravo,
+  ],
+};
+
 export const competitorBatch: AlertBatchPayload = {
   ...batch,
   scope: 'competitors',
@@ -326,6 +365,10 @@ const worstCaseSection = (index: number): AlertBatchAppSection => {
     negativeReviews: entries(() => ({
       ...negative,
       review: { ...negative.review, text: LONG },
+    })),
+    newReviews: entries(() => ({
+      ...newReview,
+      review: { ...newReview.review, text: LONG },
     })),
     actions: entries((entry) => ({
       ...actionOpened,

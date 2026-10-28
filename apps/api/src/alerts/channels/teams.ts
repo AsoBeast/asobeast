@@ -269,9 +269,14 @@ function batchBody(report: AlertReport): TeamsMessage {
     apps.pop();
     body = batchMessage(report, apps, Number.POSITIVE_INFINITY);
   }
-  return sizeOf(body) > PAYLOAD_MAX_BYTES
-    ? batchMessage(report, apps, SHORT_GROUP_ROWS)
-    : body;
+  for (
+    let rows = SHORT_GROUP_ROWS;
+    sizeOf(body) > PAYLOAD_MAX_BYTES && rows >= 0;
+    rows -= 1
+  ) {
+    body = batchMessage(report, apps, rows);
+  }
+  return body;
 }
 
 function singleBody(report: AlertReport): TeamsMessage {

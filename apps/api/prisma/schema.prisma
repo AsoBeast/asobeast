@@ -601,6 +601,7 @@ model Webhook {
   workspace    Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   url          String
   events       String[]
+  reviewScores Int[]           @default([])
   secret       String?
   active       Boolean         @default(true)
   confirmDrops Boolean         @default(false)
@@ -616,6 +617,7 @@ model EmailAlert {
   workspace          Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   email              String
   events             String[]
+  reviewScores       Int[]           @default([])
   active             Boolean         @default(true)
   confirmDrops       Boolean         @default(false)
   confirmedAt        DateTime?

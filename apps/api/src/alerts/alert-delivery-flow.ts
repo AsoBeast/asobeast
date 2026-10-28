@@ -24,7 +24,12 @@ interface CreateDeliveryFlowsInput {
   workspaceId: string;
   flushId: string;
   kind: 'webhook' | 'email';
-  subscription: { id: string; events: string[]; confirmDrops?: boolean };
+  subscription: {
+    id: string;
+    events: string[];
+    reviewScores: number[];
+    confirmDrops?: boolean;
+  };
   jobName: typeof JOBS.DELIVER_ALERT | typeof JOBS.DELIVER_EMAIL;
 }
 
@@ -32,11 +37,18 @@ export function createDeliveryFlows(
   input: CreateDeliveryFlowsInput,
 ): DeliveryFlow[] {
   const allowed = new Set(input.subscription.events);
+  const { reviewScores } = input.subscription;
   const confirmDrops = input.subscription.confirmDrops === true;
-  const owned = filterBatch(input.batches.owned, allowed, confirmDrops);
+  const owned = filterBatch(
+    input.batches.owned,
+    allowed,
+    reviewScores,
+    confirmDrops,
+  );
   const competitors = filterBatch(
     input.batches.competitors,
     allowed,
+    reviewScores,
     confirmDrops,
   );
   if (!owned && !competitors) return [];

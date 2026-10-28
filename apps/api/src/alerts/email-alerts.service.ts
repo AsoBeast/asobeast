@@ -88,6 +88,7 @@ export class EmailAlertsService {
           workspaceId,
           email: dto.email,
           events: dto.events,
+          reviewScores: dto.reviewScores ?? [],
           confirmedAt,
           confirmDrops: dto.confirmDrops,
         },
@@ -106,6 +107,7 @@ export class EmailAlertsService {
     const data: Prisma.EmailAlertUpdateInput = {
       email: dto.email,
       events: dto.events,
+      reviewScores: dto.reviewScores,
       active: dto.active,
       confirmDrops: dto.confirmDrops,
     };

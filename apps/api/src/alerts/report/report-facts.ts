@@ -20,7 +20,9 @@ import {
   changeRows,
   milestonePhrase,
   rankCell,
+  reviewAuthor,
   stars,
+  type ReviewAlert,
 } from './report-rows';
 import { appName, plural, type GranularPayload } from './report-sentences';
 
@@ -107,6 +109,20 @@ function digestFacts(alert: DigestWeeklyPayload): ReportFact[] {
   return facts;
 }
 
+function reviewFacts(payload: ReviewAlert): ReportFact[] {
+  const author = reviewAuthor(payload);
+  return [
+    fact('Rating', stars(payload.review.score)),
+    ...(author ? [fact('Author', author)] : []),
+    fact('Version', payload.review.version ?? EMPTY_VALUE),
+    fact('Title', payload.review.title ?? EMPTY_VALUE),
+    fact(
+      'Review',
+      payload.review.text.trim() ? payload.review.text : 'no written review',
+    ),
+  ];
+}
+
 function chartMoveFacts(alert: ChartMovePayload): ReportFact[] {
   return [
     fact('Chart', chartLabel(alert.chart)),
@@ -161,17 +177,8 @@ export function factsOf(payload: GranularPayload): ReportFact[] {
         fact('Alert threshold', `${payload.threshold}`),
       ];
     case 'review.negative':
-      return [
-        fact('Rating', stars(payload.review.score)),
-        fact('Version', payload.review.version ?? EMPTY_VALUE),
-        fact('Title', payload.review.title ?? EMPTY_VALUE),
-        fact(
-          'Review',
-          payload.review.text.trim()
-            ? payload.review.text
-            : 'no written review',
-        ),
-      ];
+    case 'review.new':
+      return reviewFacts(payload);
     case 'serp.entrant':
       return [
         fact('Keyword', keywordLabel(payload.keyword)),

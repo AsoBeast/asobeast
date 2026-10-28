@@ -27,8 +27,8 @@ import {
   AlertChannelList,
 } from "./alert-channel/AlertChannelCard";
 import { AddEmailAlertDialog } from "./AddEmailAlertDialog";
+import type { AlertSubscriptionChange } from "./alert-event-copy";
 import { AlertChannelRow } from "./alert-channel/AlertChannelRow";
-import type { ChannelEdit } from "./alert-channel/EditEventsDialog";
 import { useSharedFlight, useSingleFlight } from "@/lib/single-flight";
 
 const SMTP_VARS = [
@@ -50,7 +50,8 @@ function EmailAlertRow({ alert }: { alert: EmailAlertItem }) {
   });
 
   const editEvents = useMutation({
-    mutationFn: (edit: ChannelEdit) => updateEmailAlert(alert.id, edit),
+    mutationFn: (change: AlertSubscriptionChange) =>
+      updateEmailAlert(alert.id, change),
     onSuccess: (saved) => {
       seedEmailAlert(queryClient, saved);
       invalidateEmailAlertMutation(queryClient);
@@ -109,6 +110,7 @@ function EmailAlertRow({ alert }: { alert: EmailAlertItem }) {
       id={alert.id}
       events={alert.events}
       confirmDrops={alert.confirmDrops === true}
+      reviewScores={alert.reviewScores}
       awaiting={
         awaitsConfirmation(alert)
           ? {

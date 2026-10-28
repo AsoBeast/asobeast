@@ -14,6 +14,7 @@ import {
   WebhookEvent,
   WebhookUpdateRequest,
 } from '@asobeast/shared';
+import { ReviewScoresFilter } from './review-scores.decorator';
 import { WEBHOOK_URL_OPTIONS } from './webhook-url-options';
 
 export class UpdateWebhookDto implements WebhookUpdateRequest {
@@ -26,6 +27,9 @@ export class UpdateWebhookDto implements WebhookUpdateRequest {
   @ArrayNotEmpty()
   @IsIn(WEBHOOK_EVENTS, { each: true })
   events?: WebhookEvent[];
+
+  @ReviewScoresFilter()
+  reviewScores?: number[];
 
   @IsOptional()
   @ValidateIf((dto: UpdateWebhookDto) => dto.secret !== '')

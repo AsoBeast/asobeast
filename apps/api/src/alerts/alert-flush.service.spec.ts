@@ -503,7 +503,12 @@ describe('AlertFlushService', () => {
 
     expect(harness.prisma.emailAlert.findMany).toHaveBeenCalledWith({
       where: { active: true, confirmedAt: { not: null } },
-      select: { id: true, events: true, confirmDrops: true },
+      select: {
+        id: true,
+        events: true,
+        reviewScores: true,
+        confirmDrops: true,
+      },
     });
   });
 
@@ -514,7 +519,12 @@ describe('AlertFlushService', () => {
 
     expect(harness.prisma.webhook.findMany).toHaveBeenCalledWith({
       where: { active: true },
-      select: { id: true, events: true, confirmDrops: true },
+      select: {
+        id: true,
+        events: true,
+        reviewScores: true,
+        confirmDrops: true,
+      },
     });
   });
 
