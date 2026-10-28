@@ -101,7 +101,11 @@ export function RankingsView({ id }: { id: string }) {
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center gap-2">
-          <KeywordPicker id={id} value={effective} onChange={setSelected} />
+          <KeywordPicker
+            tracked={tracked}
+            value={effective}
+            onChange={setSelected}
+          />
           <RangePicker
             presets={RANGE_PRESETS}
             value={range}
