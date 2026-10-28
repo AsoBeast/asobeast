@@ -374,6 +374,21 @@ describe('WebhooksController (e2e)', () => {
     },
   );
 
+  it('stores an empty star filter for a webhook created without one', async () => {
+    const webhook = await prisma.webhook.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        url: 'https://hooks.example.com/asobeast',
+        events: ['review.negative'],
+      },
+    });
+
+    const stored = await prisma.webhook.findUniqueOrThrow({
+      where: { id: webhook.id },
+    });
+    expect(stored.reviewScores).toEqual([]);
+  });
+
   it('reports a private target as undelivered without reaching the network', async () => {
     const webhook = await prisma.webhook.create({
       data: {

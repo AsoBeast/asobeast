@@ -596,15 +596,16 @@ model ReviewReply {
 }
 
 model Webhook {
-  id          String          @id @default(cuid())
-  workspaceId String
-  workspace   Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  url         String
-  events      String[]
-  secret      String?
-  active      Boolean         @default(true)
-  deliveries  AlertDelivery[]
-  createdAt   DateTime        @default(now())
+  id           String          @id @default(cuid())
+  workspaceId  String
+  workspace    Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  url          String
+  events       String[]
+  reviewScores Int[]           @default([])
+  secret       String?
+  active       Boolean         @default(true)
+  deliveries   AlertDelivery[]
+  createdAt    DateTime        @default(now())
 
   @@index([workspaceId])
 }
@@ -615,6 +616,7 @@ model EmailAlert {
   workspace          Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   email              String
   events             String[]
+  reviewScores       Int[]           @default([])
   active             Boolean         @default(true)
   confirmedAt        DateTime?
   confirmationSentAt DateTime?
