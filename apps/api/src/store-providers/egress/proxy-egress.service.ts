@@ -76,13 +76,7 @@ export class ProxyEgress implements OnModuleInit {
     thrown: unknown,
   ): Promise<ProxyOutcome | null> {
     const observation = observe(meter, thrown);
-    const pacing = {
-      leasedAt,
-      until: new Date(
-        leasedAt.getTime() +
-          Math.max(observation.requests - 1, 0) * this.config.minIntervalMs,
-      ),
-    };
+    const pacing = { leasedAt, until: this.pacedUntil(leasedAt, observation) };
     const unjudged =
       thrown !== null &&
       (observation.outcome === null || storeDeadlinePassed());
@@ -98,6 +92,17 @@ export class ProxyEgress implements OnModuleInit {
     }
     await this.ledger.record(ProxyTier.DATACENTER, observation.requests);
     return unjudged ? null : observation.outcome;
+  }
+
+  private pacedUntil(leasedAt: Date, { requests }: EgressObservation): Date {
+    const beyondClaim = Math.max(requests - 1, 0);
+    const interval = this.config.minIntervalMs;
+    return new Date(
+      Math.max(
+        leasedAt.getTime() + beyondClaim * interval,
+        Date.now() + Math.min(beyondClaim, 1) * interval,
+      ),
+    );
   }
 
   private async retryResidential<T>(

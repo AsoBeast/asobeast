@@ -170,7 +170,7 @@ describe('ProxyEgress', () => {
   });
 
   it('measures the pacing from the moment the lease began', async () => {
-    const leasedAt = new Date(Date.now() - 60_000);
+    const leasedAt = new Date(Date.now() - 10_000);
     acquire.mockResolvedValue(leaseFrom(leasedAt));
 
     await egress.through(Store.GOOGLE_PLAY, 'us', okSubrequests(8));
@@ -179,6 +179,29 @@ describe('ProxyEgress', () => {
       leasedAt,
       until: new Date(leasedAt.getTime() + 7 * MIN_INTERVAL_MS),
     });
+  });
+
+  it('spaces the next lease one interval after a slow job that outran its pacing', async () => {
+    acquire.mockResolvedValue(leaseFrom(new Date(Date.now() - 600_000)));
+    const before = Date.now();
+
+    await egress.through(Store.GOOGLE_PLAY, 'us', okSubrequests(8));
+
+    const until = observationOf().pacing?.until.getTime() ?? 0;
+    expect(until).toBeGreaterThanOrEqual(before + MIN_INTERVAL_MS);
+    expect(until).toBeLessThanOrEqual(Date.now() + MIN_INTERVAL_MS);
+  });
+
+  it('adds no spacing after a single request beyond the claim itself', async () => {
+    const leasedAt = new Date(Date.now() - 600_000);
+    acquire.mockResolvedValue(leaseFrom(leasedAt));
+    const before = Date.now();
+
+    await egress.through(Store.APP_STORE, 'us', okSubrequests(1));
+
+    const until = observationOf().pacing?.until.getTime() ?? 0;
+    expect(until).toBeGreaterThanOrEqual(before);
+    expect(until).toBeLessThanOrEqual(Date.now());
   });
 
   it('blames the endpoint for subrequests the job swallowed', async () => {
