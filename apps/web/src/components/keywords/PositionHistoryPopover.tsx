@@ -4,7 +4,6 @@ import { useId, useState } from "react";
 import Link from "next/link";
 import { ChartLine, History } from "lucide-react";
 import {
-  formatCheckedPosition,
   keywordLabel,
   type Store,
   type TrackedKeywordItem,
@@ -36,6 +35,7 @@ export interface PositionHistoryContext {
 
 interface PositionHistoryProps extends PositionHistoryContext {
   keyword: TrackedKeywordItem;
+  label: string;
   staleOn: string | null;
 }
 
@@ -56,6 +56,7 @@ function HoldFacts({ keyword }: { keyword: TrackedKeywordItem }) {
 
 function PositionHistoryContent({
   keyword,
+  label,
   staleOn,
   appId,
   store,
@@ -81,12 +82,7 @@ function PositionHistoryContent({
         </PopoverHeader>
         <PositionReadout
           keyword={keyword}
-          label={
-            formatCheckedPosition(
-              keyword.latestPosition,
-              keyword.latestDepth,
-            ) ?? ""
-          }
+          label={label}
           staleOn={staleOn}
           className="text-title"
         />

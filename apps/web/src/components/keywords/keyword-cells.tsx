@@ -299,6 +299,7 @@ export function PositionCell({
       <PositionReadout keyword={keyword} label={label} staleOn={staleOn} />
       <PositionHistoryPopover
         keyword={keyword}
+        label={label}
         staleOn={staleOn}
         {...history}
       />

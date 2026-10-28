@@ -21,7 +21,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export type DayPreset = `${number}d`;
 
 export function rangeLabel(preset: DayPreset): string {
-  return `Last ${preset.replace("d", "")} days`;
+  return `Last ${presetDays(preset)} days`;
 }
 
 export function todayUtc(): string {
