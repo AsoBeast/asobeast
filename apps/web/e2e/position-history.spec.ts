@@ -357,11 +357,11 @@ for (const viewport of [
     await expect(chart(page, "focus timer")).toBeVisible();
 
     const box = await popover.boundingBox();
-    expect(box).not.toBeNull();
-    expect(box!.x).toBeGreaterThanOrEqual(0);
-    expect(box!.y).toBeGreaterThanOrEqual(0);
-    expect(box!.x + box!.width).toBeLessThanOrEqual(viewport.width);
-    expect(box!.y + box!.height).toBeLessThanOrEqual(viewport.height);
+    if (box === null) throw new Error("The popover has no layout box");
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.y).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(viewport.width);
+    expect(box.y + box.height).toBeLessThanOrEqual(viewport.height);
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= window.innerWidth,
