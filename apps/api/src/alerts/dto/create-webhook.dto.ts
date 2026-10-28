@@ -12,6 +12,7 @@ import {
   WebhookCreateRequest,
   WebhookEvent,
 } from '@asobeast/shared';
+import { ReviewScoresFilter } from './review-scores.decorator';
 import { WEBHOOK_URL_OPTIONS } from './webhook-url-options';
 
 export class CreateWebhookDto implements WebhookCreateRequest {
@@ -22,6 +23,9 @@ export class CreateWebhookDto implements WebhookCreateRequest {
   @ArrayNotEmpty()
   @IsIn(WEBHOOK_EVENTS, { each: true })
   events!: WebhookEvent[];
+
+  @ReviewScoresFilter()
+  reviewScores?: number[];
 
   @IsOptional()
   @IsString()

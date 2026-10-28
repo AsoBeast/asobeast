@@ -6845,6 +6845,24 @@
       "CreateWebhookDto": {
         "type": "object",
         "properties": {
+          "reviewScores": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ]
+            },
+            "example": [
+              1,
+              2
+            ],
+            "description": "The stars a review.new alert is raised for. Empty or omitted means every star."
+          },
           "url": {
             "type": "string",
             "format": "uri"
@@ -6864,7 +6882,8 @@
                 "review.negative",
                 "digest.weekly",
                 "serp.entrant",
-                "action.opened"
+                "action.opened",
+                "review.new"
               ]
             }
           },
@@ -6881,6 +6900,24 @@
       "UpdateWebhookDto": {
         "type": "object",
         "properties": {
+          "reviewScores": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ]
+            },
+            "example": [
+              1,
+              2
+            ],
+            "description": "The stars a review.new alert is raised for. Empty or omitted means every star."
+          },
           "url": {
             "type": "string",
             "format": "uri"
@@ -6900,7 +6937,8 @@
                 "review.negative",
                 "digest.weekly",
                 "serp.entrant",
-                "action.opened"
+                "action.opened",
+                "review.new"
               ]
             }
           },
@@ -6916,6 +6954,24 @@
       "CreateEmailAlertDto": {
         "type": "object",
         "properties": {
+          "reviewScores": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ]
+            },
+            "example": [
+              1,
+              2
+            ],
+            "description": "The stars a review.new alert is raised for. Empty or omitted means every star."
+          },
           "email": {
             "type": "string",
             "format": "email"
@@ -6935,7 +6991,8 @@
                 "review.negative",
                 "digest.weekly",
                 "serp.entrant",
-                "action.opened"
+                "action.opened",
+                "review.new"
               ]
             }
           }
@@ -6948,6 +7005,24 @@
       "UpdateEmailAlertDto": {
         "type": "object",
         "properties": {
+          "reviewScores": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ]
+            },
+            "example": [
+              1,
+              2
+            ],
+            "description": "The stars a review.new alert is raised for. Empty or omitted means every star."
+          },
           "email": {
             "type": "string",
             "format": "email"
@@ -6967,7 +7042,8 @@
                 "review.negative",
                 "digest.weekly",
                 "serp.entrant",
-                "action.opened"
+                "action.opened",
+                "review.new"
               ]
             }
           },

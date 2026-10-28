@@ -158,6 +158,92 @@ describe('WebhooksController (e2e)', () => {
     ]);
   });
 
+  it('accepts, keeps and replaces the star filter of a new review webhook', async () => {
+    const created = await api
+      .post('/webhooks')
+      .send({
+        url: 'https://hooks.example.com/asobeast',
+        events: ['review.new'],
+        reviewScores: [2, 1],
+      })
+      .expect(201);
+    const webhook = created.body as WebhookItem;
+    expect(webhook).toMatchObject({
+      events: ['review.new'],
+      reviewScores: [1, 2],
+    });
+
+    const listed = await api.get('/webhooks').expect(200);
+    expect((listed.body as WebhookItem[])[0].reviewScores).toEqual([1, 2]);
+
+    const kept = await api
+      .patch(`/webhooks/${webhook.id}`)
+      .send({ events: ['review.new', 'rank.dropped'] })
+      .expect(200);
+    expect((kept.body as WebhookItem).reviewScores).toEqual([1, 2]);
+
+    const replaced = await api
+      .patch(`/webhooks/${webhook.id}`)
+      .send({ reviewScores: [5] })
+      .expect(200);
+    expect((replaced.body as WebhookItem).reviewScores).toEqual([5]);
+
+    const everyStar = await api
+      .patch(`/webhooks/${webhook.id}`)
+      .send({ reviewScores: [5, 4, 3, 2, 1] })
+      .expect(200);
+    expect((everyStar.body as WebhookItem).reviewScores).toEqual([]);
+
+    await api
+      .patch(`/webhooks/${webhook.id}`)
+      .send({ reviewScores: [3] })
+      .expect(200);
+    const cleared = await api
+      .patch(`/webhooks/${webhook.id}`)
+      .send({ reviewScores: [] })
+      .expect(200);
+    expect((cleared.body as WebhookItem).reviewScores).toEqual([]);
+  });
+
+  it('stores every star for a webhook created without a filter', async () => {
+    const created = await api
+      .post('/webhooks')
+      .send({
+        url: 'https://hooks.example.com/asobeast',
+        events: ['review.new'],
+      })
+      .expect(201);
+
+    expect((created.body as WebhookItem).reviewScores).toEqual([]);
+  });
+
+  it('refuses a star outside one to five with a 400 envelope', async () => {
+    const created = await api
+      .post('/webhooks')
+      .send({
+        url: 'https://hooks.example.com/asobeast',
+        events: ['review.new'],
+      })
+      .expect(201);
+    const webhook = created.body as WebhookItem;
+
+    const response = await api
+      .patch(`/webhooks/${webhook.id}?token=secret`)
+      .send({ reviewScores: [9] })
+      .expect(400);
+    const body = response.body as ApiErrorEnvelope;
+    expect(body.path).toBe(`/webhooks/${webhook.id}`);
+    expect(JSON.stringify(body.message)).toContain('reviewScores');
+    await api
+      .post('/webhooks')
+      .send({
+        url: 'https://hooks.example.com/asobeast',
+        events: ['review.new'],
+        reviewScores: '5',
+      })
+      .expect(400);
+  });
+
   it('replaces only the events of a signed webhook', async () => {
     const created = await api
       .post('/webhooks')

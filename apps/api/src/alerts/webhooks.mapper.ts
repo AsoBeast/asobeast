@@ -6,6 +6,7 @@ export function toWebhookItem(webhook: Webhook): WebhookItem {
     id: webhook.id,
     url: webhook.url,
     events: webhook.events as WebhookEvent[],
+    reviewScores: webhook.reviewScores,
     active: webhook.active,
     hasSecret: webhook.secret !== null,
     createdAt: webhook.createdAt.toISOString(),
