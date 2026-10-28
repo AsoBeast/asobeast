@@ -254,7 +254,7 @@ export class ReviewsService {
       return await this.alerts.listensTo('review.new');
     } catch (error) {
       this.logger.warn(
-        `review alert subscribers unavailable: ${(error as Error).message}`,
+        `review alert subscribers unavailable, sending new reviews anyway: ${(error as Error).message}`,
       );
       return true;
     }
