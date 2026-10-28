@@ -2,6 +2,7 @@ import {
   truncateChars,
   type AlertReviewBody,
   type ReviewNegativePayload,
+  type ReviewNewPayload,
 } from '@asobeast/shared';
 import type { ReviewResult } from '../store-providers/types';
 
@@ -32,5 +33,18 @@ export function reviewNegativePayload(
     occurredAt: occurredAt.toISOString(),
     app,
     review: alertReviewBody(review),
+  };
+}
+
+export function reviewNewPayload(
+  app: ReviewAlertApp,
+  review: ReviewResult,
+  occurredAt: Date,
+): ReviewNewPayload {
+  return {
+    event: 'review.new',
+    occurredAt: occurredAt.toISOString(),
+    app,
+    review: { ...alertReviewBody(review), author: review.userName ?? null },
   };
 }

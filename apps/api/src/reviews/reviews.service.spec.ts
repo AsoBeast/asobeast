@@ -1,6 +1,10 @@
 import { ConfigService } from '@nestjs/config';
 import { Store } from '@prisma/client';
-import { AlertPayload, ReviewNegativePayload } from '@asobeast/shared';
+import {
+  AlertPayload,
+  ReviewNegativePayload,
+  ReviewNewPayload,
+} from '@asobeast/shared';
 import { AlertsDispatcher } from '../alerts/alerts.dispatcher';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
@@ -32,6 +36,7 @@ const buildDeps = (options: {
   storedReviewedAt?: Date | null;
   store?: Store;
   stored?: Record<string, { repliedAt: Date | null; replyText: string | null }>;
+  listens?: boolean;
 }) => {
   const storedReviewedAt =
     options.storedReviewedAt === undefined
@@ -82,14 +87,17 @@ const buildDeps = (options: {
   const dispatch = jest
     .fn<Promise<void>, [AlertPayload]>()
     .mockResolvedValue(undefined);
-  const alerts = { dispatch };
+  const listensTo = jest
+    .fn<Promise<boolean>, [string]>()
+    .mockResolvedValue(options.listens ?? false);
+  const alerts = { dispatch, listensTo };
   const service = new ReviewsService(
     prisma as unknown as PrismaService,
     registry as unknown as StoreProviderRegistry,
     config as unknown as ConfigService<Env, true>,
     alerts as unknown as AlertsDispatcher,
   );
-  return { service, reviews, createMany, updateMany, dispatch };
+  return { service, reviews, createMany, updateMany, dispatch, listensTo };
 };
 
 describe('ReviewsService.syncReviews', () => {
@@ -382,6 +390,21 @@ describe('ReviewsService silent block detection', () => {
     expect(dispatch).not.toHaveBeenCalled();
   });
 
+  it('asks no new review subscriber when an empty feed settles on the last attempt', async () => {
+    const { service, listensTo } = buildDeps({
+      pages: [[]],
+      existing: [],
+      storedAlready: true,
+      listens: true,
+    });
+
+    await settled(
+      service.syncReviews({ appId: 'app1', pages: 1, backfill: false }, true),
+    );
+
+    expect(listensTo).not.toHaveBeenCalled();
+  });
+
   it('refuses an expected empty google play feed on the last attempt too', async () => {
     const { service } = buildDeps({
       pages: [[]],
@@ -562,6 +585,147 @@ describe('ReviewsService negative review alerts', () => {
 
     const payload = dispatch.mock.calls[0][0] as ReviewNegativePayload;
     expect(payload.review.text).toHaveLength(500);
+  });
+});
+
+describe('ReviewsService new review alerts', () => {
+  const sync = (service: ReviewsService, backfill = false) =>
+    service.syncReviews({ appId: 'app1', pages: 1, backfill });
+  const newAlerts = (dispatch: jest.Mock) =>
+    dispatch.mock.calls
+      .map(([payload]) => payload as AlertPayload)
+      .filter(
+        (payload): payload is ReviewNewPayload =>
+          payload.event === 'review.new',
+      );
+
+  it('raises a new review after the negative ones, in the order stored', async () => {
+    const { service, dispatch, listensTo } = buildDeps({
+      pages: [[makeReview('a', 5), makeReview('b', 3), makeReview('c', 2)]],
+      existing: [],
+      scoreMax: 2,
+      listens: true,
+    });
+
+    await sync(service);
+
+    expect(
+      dispatch.mock.calls.map(([payload]) => [
+        payload.event,
+        (payload as ReviewNewPayload).review.score,
+      ]),
+    ).toEqual([
+      ['review.negative', 2],
+      ['review.new', 5],
+      ['review.new', 3],
+      ['review.new', 2],
+    ]);
+    expect(listensTo).toHaveBeenCalledTimes(1);
+    expect(listensTo).toHaveBeenCalledWith('review.new');
+    expect(newAlerts(dispatch)[0]).toMatchObject({
+      app: { id: 'app1', name: 'Mine' },
+      review: {
+        score: 5,
+        title: 'Title',
+        text: 'Body',
+        version: '1.0.0',
+        reviewedAt: '2026-07-01T00:00:00.000Z',
+        author: 'User',
+      },
+    });
+  });
+
+  it('builds no new review when nobody listens', async () => {
+    const { service, dispatch, listensTo } = buildDeps({
+      pages: [[makeReview('a', 5), makeReview('b', 3), makeReview('c', 2)]],
+      existing: [],
+      scoreMax: 2,
+    });
+
+    await sync(service);
+
+    expect(dispatch).toHaveBeenCalledTimes(1);
+    expect(dispatch.mock.calls[0][0].event).toBe('review.negative');
+    expect(listensTo).toHaveBeenCalledTimes(1);
+  });
+
+  it('raises nothing for an edit of a stored review', async () => {
+    const { service, dispatch } = buildDeps({
+      store: Store.GOOGLE_PLAY,
+      pages: [[{ ...makeReview('known'), updatedAt: new Date() }]],
+      existing: ['known'],
+      listens: true,
+    });
+
+    await sync(service);
+
+    expect(newAlerts(dispatch)).toEqual([]);
+  });
+
+  it('stays silent and asks nobody during a backfill', async () => {
+    const { service, dispatch, listensTo } = buildDeps({
+      pages: [[makeReview('a', 5)]],
+      existing: [],
+      listens: true,
+    });
+
+    await sync(service, true);
+
+    expect(dispatch).not.toHaveBeenCalled();
+    expect(listensTo).not.toHaveBeenCalled();
+  });
+
+  it('names no author when the store gave none', async () => {
+    const { service, dispatch } = buildDeps({
+      pages: [[{ ...makeReview('a', 5), userName: undefined }]],
+      existing: [],
+      listens: true,
+    });
+
+    await sync(service);
+
+    expect(newAlerts(dispatch)[0].review.author).toBeNull();
+  });
+
+  it('cuts a long review to 500 characters', async () => {
+    const { service, dispatch } = buildDeps({
+      pages: [[{ ...makeReview('a', 5), text: 'x'.repeat(600) }]],
+      existing: [],
+      listens: true,
+    });
+
+    await sync(service);
+
+    expect(newAlerts(dispatch)[0].review.text).toHaveLength(500);
+  });
+
+  it('keeps dispatching after one dispatch fails', async () => {
+    const { service, dispatch } = buildDeps({
+      pages: [[makeReview('a', 5), makeReview('b', 4)]],
+      existing: [],
+      listens: true,
+    });
+    dispatch.mockRejectedValueOnce(new Error('outbox down'));
+
+    await expect(sync(service)).resolves.toHaveLength(2);
+
+    expect(dispatch).toHaveBeenCalledTimes(2);
+    expect(newAlerts(dispatch)[1].review.score).toBe(4);
+  });
+
+  it('still sends the negative reviews when the subscribers cannot be read', async () => {
+    const { service, dispatch, listensTo } = buildDeps({
+      pages: [[makeReview('a', 1), makeReview('b', 5)]],
+      existing: [],
+      scoreMax: 2,
+    });
+    listensTo.mockRejectedValueOnce(new Error('database down'));
+
+    await expect(sync(service)).resolves.toHaveLength(2);
+
+    expect(dispatch.mock.calls.map(([payload]) => payload.event)).toEqual([
+      'review.negative',
+    ]);
   });
 });
 

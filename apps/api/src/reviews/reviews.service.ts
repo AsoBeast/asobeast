@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Store } from '@prisma/client';
 import {
+  AlertPayload,
   RatingsHistogram,
   RATING_STARS,
   REVIEW_REPLY_STATES,
@@ -34,7 +35,11 @@ import {
   toReviewReplyItem,
   WITH_POSTER,
 } from './review-reply.mapper';
-import { ReviewAlertApp, reviewNegativePayload } from './review-alert-payloads';
+import {
+  ReviewAlertApp,
+  reviewNegativePayload,
+  reviewNewPayload,
+} from './review-alert-payloads';
 import { reviewLanguage } from './review-language';
 import { toReviewTranslation, TranslationColumns } from './review-translation';
 import { StoredReview, storedReviewChanges } from './stored-review-changes';
@@ -140,10 +145,9 @@ export class ReviewsService {
     }
 
     if (!payload.backfill) {
-      await this.dispatchNegativeAlerts(
-        { id: app.id, name: app.name },
-        inserted,
-      );
+      const alertApp = { id: app.id, name: app.name };
+      await this.dispatchNegativeAlerts(alertApp, inserted);
+      await this.dispatchNewReviewAlerts(alertApp, inserted);
     }
 
     return inserted;
@@ -229,15 +233,40 @@ export class ReviewsService {
       if (review.score > threshold) {
         continue;
       }
-      try {
-        await this.alerts.dispatch(
-          reviewNegativePayload(app, review, new Date()),
-        );
-      } catch (error) {
-        this.logger.warn(
-          `review alert dispatch failed: ${(error as Error).message}`,
-        );
-      }
+      await this.dispatchQuietly(
+        reviewNegativePayload(app, review, new Date()),
+      );
+    }
+  }
+
+  private async dispatchNewReviewAlerts(
+    app: ReviewAlertApp,
+    reviews: ReviewResult[],
+  ): Promise<void> {
+    if (reviews.length === 0 || !(await this.hasNewReviewListener())) return;
+    for (const review of reviews) {
+      await this.dispatchQuietly(reviewNewPayload(app, review, new Date()));
+    }
+  }
+
+  private async hasNewReviewListener(): Promise<boolean> {
+    try {
+      return await this.alerts.listensTo('review.new');
+    } catch (error) {
+      this.logger.warn(
+        `review alert subscribers unavailable: ${(error as Error).message}`,
+      );
+      return false;
+    }
+  }
+
+  private async dispatchQuietly(alert: AlertPayload): Promise<void> {
+    try {
+      await this.alerts.dispatch(alert);
+    } catch (error) {
+      this.logger.warn(
+        `review alert dispatch failed: ${(error as Error).message}`,
+      );
     }
   }
 
