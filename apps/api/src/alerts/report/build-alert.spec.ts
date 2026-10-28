@@ -8,6 +8,7 @@ import {
   improved,
   metadata,
   negative,
+  newReview,
 } from '../email-fixtures.fixture';
 import { firstRanking, milestone, overtake } from '../rank-events.fixture';
 import { buildAlert } from './build-alert';
@@ -153,6 +154,46 @@ describe('buildAlert', () => {
         ).facts,
       ).Review,
     ).toBe('no written review');
+  });
+
+  it('lists the facts of a new review with its author', () => {
+    expect(buildAlert(newReview, null).facts).toEqual([
+      { label: 'Rating', value: '★★★★★' },
+      { label: 'Author', value: 'Alex' },
+      { label: 'Version', value: '2.0.0' },
+      { label: 'Title', value: 'Love it' },
+      { label: 'Review', value: 'Best habit tracker I have used' },
+    ]);
+    expect(
+      factMap(
+        buildAlert(
+          { ...newReview, review: { ...newReview.review, author: null } },
+          null,
+        ).facts,
+      ),
+    ).not.toHaveProperty('Author');
+  });
+
+  it('opens the reviews page at the score of a new review', () => {
+    expect(buildAlert(newReview, ORIGIN).link).toEqual({
+      href: `${ORIGIN}/apps/app_1/reviews?score=5`,
+      label: 'Open reviews',
+    });
+    expect(buildAlert(newReview, null).link).toBeNull();
+    expect(buildAlert(negative, ORIGIN).link).toEqual({
+      href: `${ORIGIN}/apps/app_1`,
+      label: 'Open app',
+    });
+  });
+
+  it('tones a new review by its score', () => {
+    const scored = (score: number) =>
+      buildAlert({ ...newReview, review: { ...newReview.review, score } }, null)
+        .tone;
+
+    expect(scored(5)).toBe('up');
+    expect(scored(1)).toBe('down');
+    expect(scored(3)).toBe('neutral');
   });
 
   it('dates the entrants of a top 10 and opens the home page', () => {

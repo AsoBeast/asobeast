@@ -7,6 +7,7 @@ import {
   improved,
   metadata,
   negative,
+  newReview,
 } from '../email-fixtures.fixture';
 import { firstRanking, milestone, overtake } from '../rank-events.fixture';
 import { listPhrase, plural, sentenceOf } from './report-sentences';
@@ -14,7 +15,45 @@ import { listPhrase, plural, sentenceOf } from './report-sentences';
 const withFlags = (payload: Parameters<typeof sentenceOf>[0]) =>
   sentenceOf(payload, true);
 
+const reviewOf = (review: Partial<typeof newReview.review>) => ({
+  ...newReview,
+  review: { ...newReview.review, ...review },
+});
+
 describe('sentenceOf', () => {
+  it('says a new review with its author, version and words', () => {
+    expect(withFlags(newReview)).toEqual({
+      emoji: '⭐',
+      text: 'A 5 star review of My App from Alex, v2.0.0: "Best habit tracker I have used"',
+    });
+  });
+
+  it('warns about a low new review', () => {
+    expect(withFlags(reviewOf({ score: 2 })).emoji).toBe('⚠️');
+    expect(withFlags(reviewOf({ score: 3 })).emoji).toBe('⭐');
+  });
+
+  it('leaves the author out of a new review without one', () => {
+    expect(withFlags(reviewOf({ author: null })).text).toBe(
+      'A 5 star review of My App, v2.0.0: "Best habit tracker I have used"',
+    );
+    expect(withFlags(reviewOf({ author: '   ' })).text).toBe(
+      'A 5 star review of My App, v2.0.0: "Best habit tracker I have used"',
+    );
+  });
+
+  it('names a rating only new review', () => {
+    expect(withFlags(reviewOf({ text: ' ' })).text).toBe(
+      'A 5 star review of My App from Alex, v2.0.0: no written review',
+    );
+  });
+
+  it('clips a long author with one ellipsis', () => {
+    const text = withFlags(reviewOf({ author: 'a'.repeat(100) })).text;
+
+    expect(text).toContain(` from ${'a'.repeat(79)}…, v2.0.0`);
+  });
+
   it('says a drop with the storefront flag', () => {
     expect(withFlags(dropped)).toEqual({
       emoji: '📉',

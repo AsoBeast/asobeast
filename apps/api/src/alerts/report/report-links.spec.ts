@@ -50,6 +50,14 @@ describe('reportLinks', () => {
     );
   });
 
+  it('opens the reviews page at one score', () => {
+    expect(reportLinks(ORIGIN).reviews('a', 3)).toEqual({
+      href: `${ORIGIN}/apps/a/reviews?score=3`,
+      label: 'Open reviews',
+    });
+    expect(reportLinks(null).reviews('a', 3)).toBeNull();
+  });
+
   it('names the total of the competitors it links to', () => {
     expect(reportLinks(ORIGIN).competitors('a', 14)).toEqual({
       href: `${ORIGIN}/apps/a/competitors`,

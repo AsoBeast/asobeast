@@ -11,10 +11,15 @@ import {
   type RankDroppedPayload,
   type RankMilestonePayload,
   type RankOvertakenPayload,
-  type ReviewNegativePayload,
   type SerpEntrantPayload,
 } from '@asobeast/shared';
-import { PRIORITY_WORDS, milestonePhrase, reviewQuote } from './report-rows';
+import {
+  PRIORITY_WORDS,
+  milestonePhrase,
+  reviewAuthor,
+  reviewQuote,
+  type ReviewAlert,
+} from './report-rows';
 import { storefrontLabel } from './storefront';
 
 export type GranularPayload = Exclude<AlertPayload, AlertBatchPayload>;
@@ -87,10 +92,14 @@ function changeSentence(alert: MetadataChangedPayload): string {
   return `${who} changed its ${listPhrase(fields)}`;
 }
 
-function reviewSentence(alert: ReviewNegativePayload): string {
+function reviewSentence(alert: ReviewAlert): string {
+  const author = reviewAuthor(alert);
+  const from = author ? ` from ${author}` : '';
   const version = alert.review.version ? `, v${alert.review.version}` : '';
-  return `A ${alert.review.score} star review of ${appName(alert.app.name)}${version}: ${reviewQuote(alert.review.text)}`;
+  return `A ${alert.review.score} star review of ${appName(alert.app.name)}${from}${version}: ${reviewQuote(alert.review.text)}`;
 }
+
+const reviewEmoji = (score: number): string => (score <= 2 ? '⚠️' : '⭐');
 
 function entrantSentence(alert: SerpEntrantPayload, withFlag: boolean): string {
   const names = alert.entrants
@@ -133,6 +142,11 @@ export function sentenceOf(
       return { emoji: '📝', text: changeSentence(payload) };
     case 'review.negative':
       return { emoji: '⚠️', text: reviewSentence(payload) };
+    case 'review.new':
+      return {
+        emoji: reviewEmoji(payload.review.score),
+        text: reviewSentence(payload),
+      };
     case 'serp.entrant':
       return { emoji: '🆕', text: entrantSentence(payload, withFlag) };
     case 'action.opened':

@@ -12,6 +12,7 @@ export interface ReportLinks {
   ) => ReportLink | null;
   competitors: (appId: string, total: number) => ReportLink | null;
   action: (href: string | null) => ReportLink | null;
+  reviews: (appId: string, score: number) => ReportLink | null;
 }
 
 const GROUP_PATHS: Record<ReportGroupKind, string> = {
@@ -48,5 +49,7 @@ export function reportLinks(origin: string | null): ReportLinks {
     competitors: (appId, total) =>
       page(`/apps/${appId}/competitors`, `See all ${total} competitors`),
     action: (href) => labelled(href, 'Open the action'),
+    reviews: (appId, score) =>
+      page(`/apps/${appId}/reviews?score=${score}`, 'Open reviews'),
   };
 }

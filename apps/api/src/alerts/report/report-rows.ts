@@ -16,10 +16,13 @@ import {
   type RankMilestoneTier,
   type RankOvertakenPayload,
   type ReviewNegativePayload,
+  type ReviewNewPayload,
   type SerpEntrantPayload,
 } from '@asobeast/shared';
 import { actionScopeLine } from '../action-lines';
-import type { ReportRow } from './report';
+import type { GroupTone, ReportRow } from './report';
+
+export type ReviewAlert = ReviewNegativePayload | ReviewNewPayload;
 
 const VALUE_MAX = 80;
 export const EMPTY_VALUE = '—';
@@ -183,9 +186,28 @@ export function changeRows(alert: MetadataChangedPayload): ReportRow[] {
   });
 }
 
-export function reviewRow(alert: ReviewNegativePayload): ReportRow {
+export function reviewAuthor(alert: ReviewAlert): string | null {
+  const author =
+    alert.event === 'review.new' ? alert.review.author?.trim() : undefined;
+  return author ? clip(author) : null;
+}
+
+export function reviewTone(score: number): GroupTone {
+  if (score >= 4) return 'up';
+  if (score <= 2) return 'down';
+  return 'neutral';
+}
+
+export function reviewsTone(scores: readonly number[]): GroupTone {
+  const tones = new Set(scores.map(reviewTone));
+  return tones.size === 1 ? [...tones][0] : 'neutral';
+}
+
+export function reviewRow(alert: ReviewAlert): ReportRow {
   const { score, text, version } = alert.review;
+  const author = reviewAuthor(alert);
   const parts = [`${stars(score)} ${reviewQuote(text)}`];
+  if (author) parts.push(author);
   if (version) parts.push(`v${version}`);
   return textRow(parts.join(' · '));
 }

@@ -7,6 +7,7 @@ import {
   improved,
   metadata,
   negative,
+  newReview,
 } from '../email-fixtures.fixture';
 import { firstRanking, milestone, overtake } from '../rank-events.fixture';
 import {
@@ -21,6 +22,8 @@ import {
   rankCell,
   rankRow,
   reviewRow,
+  reviewsTone,
+  reviewTone,
 } from './report-rows';
 import type { ReportRow } from './report';
 
@@ -245,6 +248,42 @@ describe('reviewRow', () => {
         review: { ...negative.review, text: '  ', version: null },
       }),
     ).toMatchObject({ text: '★☆☆☆☆ no written review' });
+  });
+
+  it('names the author of a new review between the quote and the version', () => {
+    expect(reviewRow(newReview)).toMatchObject({
+      text: '★★★★★ "Best habit tracker I have used" · Alex · v2.0.0',
+    });
+  });
+
+  it('prints only the quote of a new review without author and version', () => {
+    expect(
+      reviewRow({
+        ...newReview,
+        review: { ...newReview.review, author: null, version: null },
+      }),
+    ).toMatchObject({ text: '★★★★★ "Best habit tracker I have used"' });
+  });
+});
+
+describe('review tones', () => {
+  it.each([
+    [1, 'down'],
+    [2, 'down'],
+    [3, 'neutral'],
+    [4, 'up'],
+    [5, 'up'],
+  ] as const)('tones a %i star review %s', (score, tone) => {
+    expect(reviewTone(score)).toBe(tone);
+  });
+
+  it.each([
+    [[5, 4], 'up'],
+    [[1, 2], 'down'],
+    [[5, 1], 'neutral'],
+    [[], 'neutral'],
+  ] as const)('tones the scores %j %s', (scores, tone) => {
+    expect(reviewsTone(scores)).toBe(tone);
   });
 });
 
