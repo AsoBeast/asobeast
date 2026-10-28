@@ -4,6 +4,7 @@ import {
   RANGE_PRESETS,
   RATINGS_RANGES,
   VISIBILITY_RANGES,
+  presetDays,
   presetToRange,
   rangeLabel,
 } from "./ranges";
@@ -11,6 +12,16 @@ import {
 const ALL_PRESETS = [
   ...new Set([...RANGE_PRESETS, ...VISIBILITY_RANGES, ...RATINGS_RANGES]),
 ];
+
+describe("presetDays", () => {
+  it.each([
+    ["7d", 7],
+    ["30d", 30],
+    ["90d", 90],
+  ] as const)("reads %s as %i days", (preset, days) => {
+    expect(presetDays(preset)).toBe(days);
+  });
+});
 
 describe("presetToRange", () => {
   afterEach(() => {

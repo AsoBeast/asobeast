@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
@@ -19,10 +20,12 @@ export function ChartNotice({
   height,
   title,
   body,
+  action,
 }: {
   height: string;
   title: string;
   body?: string;
+  action?: ReactNode;
 }) {
   return (
     <div
@@ -35,6 +38,7 @@ export function ChartNotice({
       {body ? (
         <p className="text-caption text-muted-foreground">{body}</p>
       ) : null}
+      {action}
     </div>
   );
 }

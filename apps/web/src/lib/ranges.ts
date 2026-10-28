@@ -28,11 +28,15 @@ export function todayUtc(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+export function presetDays(preset: DayPreset): number {
+  return Number(preset.replace("d", ""));
+}
+
 export function presetToRange(preset: DayPreset): {
   from: string;
   to: string;
 } {
-  const days = Number(preset.replace("d", ""));
+  const days = presetDays(preset);
   const now = Date.now();
   return {
     from: new Date(now - days * DAY_MS).toISOString().slice(0, 10),

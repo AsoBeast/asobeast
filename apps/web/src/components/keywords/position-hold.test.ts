@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { TrackedKeywordItem } from "@asobeast/shared";
-import { positionHoldLines } from "./position-hold";
+import { positionHoldFacts } from "./position-hold";
 
 function keyword(
   hold: Partial<
@@ -38,14 +38,14 @@ function keyword(
   };
 }
 
-describe("positionHoldLines", () => {
+describe("positionHoldFacts", () => {
   it("stays empty without hold facts", () => {
-    expect(positionHoldLines(keyword({}))).toEqual([]);
+    expect(positionHoldFacts(keyword({}))).toEqual([]);
   });
 
   it("describes a keyword at its best with a held streak", () => {
     expect(
-      positionHoldLines(
+      positionHoldFacts(
         keyword({
           latestPosition: 1,
           bestPosition: 1,
@@ -55,15 +55,15 @@ describe("positionHoldLines", () => {
         }),
       ),
     ).toEqual([
-      "Best position: 1",
-      "At its best position",
-      "Held in the top 1 for 12 days",
+      { label: "Best", value: "#1" },
+      { label: "From best", value: "At its best" },
+      { label: "Held", value: "Top 1 for 12 days" },
     ]);
   });
 
   it("describes a keyword below its best", () => {
     expect(
-      positionHoldLines(
+      positionHoldFacts(
         keyword({
           latestPosition: 7,
           bestPosition: 3,
@@ -73,27 +73,30 @@ describe("positionHoldLines", () => {
         }),
       ),
     ).toEqual([
-      "Best position: 3",
-      "4 places below its best",
-      "Held in the top 10 for 5 days",
+      { label: "Best", value: "#3" },
+      { label: "From best", value: "4 places below" },
+      { label: "Held", value: "Top 10 for 5 days" },
     ]);
   });
 
-  it("skips the held line when the keyword holds no tier", () => {
+  it("leaves the held fact out when the keyword holds no tier", () => {
     expect(
-      positionHoldLines(
+      positionHoldFacts(
         keyword({
           latestPosition: 25,
           bestPosition: 3,
           positionDeltaFromBest: 22,
         }),
       ),
-    ).toEqual(["Best position: 3", "22 places below its best"]);
+    ).toEqual([
+      { label: "Best", value: "#3" },
+      { label: "From best", value: "22 places below" },
+    ]);
   });
 
   it("keeps the singular forms for one place and one held day", () => {
     expect(
-      positionHoldLines(
+      positionHoldFacts(
         keyword({
           latestPosition: 2,
           bestPosition: 1,
@@ -103,9 +106,9 @@ describe("positionHoldLines", () => {
         }),
       ),
     ).toEqual([
-      "Best position: 1",
-      "1 place below its best",
-      "Held in the top 3 for 1 day",
+      { label: "Best", value: "#1" },
+      { label: "From best", value: "1 place below" },
+      { label: "Held", value: "Top 3 for 1 day" },
     ]);
   });
 });

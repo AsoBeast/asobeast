@@ -61,6 +61,9 @@ import {
   PLAY_AUDIT,
   PLAY_CHANGE_IMPACT_COOKIE,
   RANKINGS_FAIL_COOKIE,
+  PL_HISTORY_COOKIE,
+  PL_HISTORY_KEYWORD,
+  PL_HISTORY_SERIES,
   PROVISIONAL_AUDIT,
   METADATA_AUDIT,
   APP_1_PL_SCREENSHOTS,
@@ -850,6 +853,9 @@ const REVIEW_SETS: Record<string, typeof UPDATE_THEME_REVIEWS> = {
   rtl: RTL_REVIEWS,
   emoji: EMOJI_REVIEWS,
 };
+
+const hasPolishHistory = (req: IncomingMessage) =>
+  hasCookie(req, PL_HISTORY_COOKIE, "1");
 
 function rankingsIn(
   rankings: RankingSeries,
@@ -3390,12 +3396,18 @@ const routes: Route[] = [
       const scoped = country
         ? dataset.keywords.filter((keyword) => keyword.country === country)
         : dataset.keywords;
+      const polishHistory =
+        id === "app-1" && country === "pl" && hasPolishHistory(req)
+          ? [PL_HISTORY_KEYWORD]
+          : [];
       json(
         res,
         200,
         sortKeywords(
           [
-            ...scoped.map((keyword) => annotated(id, keyword)),
+            ...[...scoped, ...polishHistory].map((keyword) =>
+              annotated(id, keyword),
+            ),
             ...(id === "app-1" ? firstCheckRows(req) : []),
           ],
           query.get("sort"),
@@ -3734,7 +3746,13 @@ const routes: Route[] = [
 
   appRoute(
     /^\/apps\/([^/]+)\/rankings$/,
-    (dataset, query) => rankingsIn(dataset.rankings, query),
+    (dataset, query, req) =>
+      rankingsIn(
+        dataset.detail.id === "app-1" && hasPolishHistory(req)
+          ? { series: [...dataset.rankings.series, PL_HISTORY_SERIES] }
+          : dataset.rankings,
+        query,
+      ),
     (req) => hasCookie(req, RANKINGS_FAIL_COOKIE, "1"),
   ),
   appRoute(/^\/apps\/([^/]+)\/serp-movers$/, (dataset) => dataset.serpMovers),
