@@ -8,6 +8,8 @@ const SELECTED_ATTRIBUTE = "aria-checked";
 const SERP_ENTRANT = "SERP entrant";
 const EDIT_EVENTS = "Edit events";
 const RANK_MILESTONE = "Rank milestone";
+const CHART_ENTERED = "Chart entered";
+const CHART_MILESTONE = "Chart milestone";
 
 const VIEWPORTS = [
   { width: 1280, height: 720 },
@@ -88,7 +90,7 @@ function expectSameBox(actual: Box, expected: Box, message: string): void {
   expect(actual.height, message).toBeCloseTo(expected.height, 1);
 }
 
-test("the rank events sit together among the event chips", async ({ page }) => {
+test("the event chips follow the order of the contract", async ({ page }) => {
   await page.goto("/settings");
   const dialog = await openSettledDialog(page, "Add webhook");
 
@@ -103,6 +105,9 @@ test("the rank events sit together among the event chips", async ({ page }) => {
     "Weekly digest",
     "SERP entrant",
     "New action",
+    "Chart entered",
+    "Chart left",
+    "Chart milestone",
   ]);
 });
 
@@ -266,6 +271,37 @@ for (const channel of CHANNELS) {
 
     const row = page.getByRole("listitem").filter({ hasText: target });
     await expect(row.locator('[data-slot="badge"]')).toHaveText(labels);
+  });
+
+  test(`${channel.trigger} saves the chart events`, async ({ page }) => {
+    await page.goto("/settings");
+    const dialog = await openSettledDialog(page, channel.trigger);
+    for (const option of await eventOptions(dialog).all()) {
+      await setSelected(option, false);
+    }
+    await setSelected(eventOption(dialog, CHART_ENTERED), true);
+    await setSelected(eventOption(dialog, CHART_MILESTONE), true);
+
+    const target = channel.target();
+    await page.getByLabel(channel.field).fill(target);
+    const post = page.waitForRequest(
+      (request) =>
+        request.method() === "POST" &&
+        new URL(request.url()).pathname === channel.list,
+    );
+    await dialog
+      .getByRole("button", { name: channel.trigger, exact: true })
+      .click();
+
+    expect((await post).postDataJSON().events).toEqual([
+      "chart.entered",
+      "chart.milestone",
+    ]);
+    const row = page.getByRole("listitem").filter({ hasText: target });
+    await expect(row.locator('[data-slot="badge"]')).toHaveText([
+      CHART_ENTERED,
+      CHART_MILESTONE,
+    ]);
   });
 
   test(`${channel.trigger} exposes the events as a labelled group`, async ({

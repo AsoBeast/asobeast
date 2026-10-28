@@ -11,6 +11,7 @@ function sectionHasContent(section: AlertBatchAppSection): boolean {
     section.rankMilestones.length > 0 ||
     section.firstRankings.length > 0 ||
     section.overtakes.length > 0 ||
+    (section.chartMoves ?? []).length > 0 ||
     section.serpEntrants.length > 0 ||
     section.changes.length > 0 ||
     section.negativeReviews.length > 0 ||
@@ -40,6 +41,10 @@ export function filterBatch(
       rankMilestones: ownedOnly('rank.milestone', section.rankMilestones),
       firstRankings: ownedOnly('rank.first', section.firstRankings),
       overtakes: ownedOnly('rank.overtaken', section.overtakes),
+      chartMoves:
+        batch.scope === 'owned_apps'
+          ? (section.chartMoves ?? []).filter((move) => allowed.has(move.event))
+          : [],
       serpEntrants:
         batch.scope === 'owned_apps' && allowed.has('serp.entrant')
           ? section.serpEntrants

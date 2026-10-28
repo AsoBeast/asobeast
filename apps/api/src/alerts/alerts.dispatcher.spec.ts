@@ -18,6 +18,7 @@ import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
 import { AlertAppIdentities } from './alert-app-identities';
 import { AlertsDispatcher } from './alerts.dispatcher';
+import { chartEntered } from './chart-events.fixture';
 import { MailerService } from './mailer.service';
 
 const rankPayload: RankDroppedPayload = {
@@ -281,6 +282,57 @@ describe('AlertsDispatcher', () => {
       appId: 'app1',
       payload: milestone,
     });
+  });
+
+  it('collects a chart entry into the outbox under its chart key', async () => {
+    const prisma = buildPrisma();
+    const { queue } = buildQueue();
+    const dispatcher = new AlertsDispatcher(
+      prisma as unknown as PrismaService,
+      { enabled: true } as MailerService,
+      buildConfig('batched'),
+      queue,
+      workspace,
+      new AlertAppIdentities(prisma as unknown as PrismaService),
+    );
+
+    await inWorkspace(() => dispatcher.dispatch(chartEntered()));
+
+    expect(prisma.updates[0].where.dedupeKey).toBe(
+      'chart:a:free:6007:2026-07-22',
+    );
+    expect(prisma.updates[0].data).toEqual({
+      event: 'chart.entered',
+      appId: 'a',
+      payload: chartEntered(),
+    });
+  });
+
+  it('queues a chart entry per subscribed webhook in instant mode', async () => {
+    const prisma = buildPrisma();
+    prisma.webhook.findMany.mockResolvedValue([{ id: 'wh1' }]);
+    const { add, queue } = buildQueue();
+    const dispatcher = new AlertsDispatcher(
+      prisma as unknown as PrismaService,
+      { enabled: false } as MailerService,
+      buildConfig('instant'),
+      queue,
+      workspace,
+      new AlertAppIdentities(prisma as unknown as PrismaService),
+    );
+
+    await inWorkspace(() => dispatcher.dispatch(chartEntered()));
+
+    expect(prisma.alertEvent.create).not.toHaveBeenCalled();
+    expect(prisma.webhook.findMany).toHaveBeenCalledWith({
+      where: { active: true, events: { has: 'chart.entered' } },
+      select: { id: true },
+    });
+    expect(add).toHaveBeenCalledWith(
+      JOBS.DELIVER_ALERT,
+      expect.objectContaining({ webhookId: 'wh1', payload: chartEntered() }),
+      { backoff: { type: 'custom' } },
+    );
   });
 
   it('looks up the subscribers of an overtake in instant mode', async () => {

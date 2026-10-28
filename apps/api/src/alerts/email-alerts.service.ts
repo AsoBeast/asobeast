@@ -280,7 +280,7 @@ function samplePayload(): AlertBatchPayload {
     scope: 'owned_apps',
     occurredAt,
     window: { from: '2026-07-21', to: '2026-07-22' },
-    totals: { events: 5, apps: 2 },
+    totals: { events: 6, apps: 2 },
     apps: [
       {
         app: { id: 'a', name: 'Sample App', store: 'APP_STORE', country: 'us' },
@@ -306,6 +306,25 @@ function samplePayload(): AlertBatchPayload {
         rankMilestones: [],
         firstRankings: [],
         overtakes: [],
+        chartMoves: [
+          {
+            event: 'chart.entered',
+            occurredAt,
+            app: { id: 'a', name: 'Sample App' },
+            chart: {
+              store: 'APP_STORE',
+              country: 'us',
+              collection: 'free',
+              genre: '6007',
+              genreName: 'Productivity',
+              device: 'iphone',
+            },
+            date: '2026-07-22',
+            from: null,
+            to: 7,
+            depth: 100,
+          },
+        ],
         serpEntrants: [
           {
             event: 'serp.entrant',

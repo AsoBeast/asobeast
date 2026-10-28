@@ -1,8 +1,8 @@
 ---
 title: Send alerts
-description: "asobeast delivers rank, SERP, metadata, review and action events by signed webhook or SMTP email. Batched delivery is resumable and deduplicated."
+description: "asobeast delivers rank, chart, SERP, metadata, review and action events by signed webhook or SMTP email. Batched delivery is resumable and deduplicated."
 icon: bell
-keywords: ["alerts","webhook","SMTP","email","batched delivery","signature","ALERT_DELIVERY","milestone","first ranking","overtake","unsubscribe","List-Unsubscribe","DKIM","confirm recipient","double opt in"]
+keywords: ["alerts","webhook","SMTP","email","batched delivery","signature","ALERT_DELIVERY","milestone","first ranking","overtake","unsubscribe","List-Unsubscribe","DKIM","confirm recipient","double opt in","chart.entered","chart.left","chart.milestone","top charts"]
 ---
 
 Alerts fan out to two channel types, webhooks and email, and both carry the same events. Every attempt is recorded in a delivery log so a failing endpoint is visible instead of retrying silently.
@@ -39,6 +39,9 @@ Alerts are not part of the guided setup, because nothing can move before positio
 | `action.opened` | An action opens or reopens at or above the priority floor | `ALERT_ACTIONS_MIN_PRIORITY`, default `high` |
 | `metadata.changed` | A snapshot differs from the previous one | None |
 | `serp.entrant` | A new app enters a tracked keyword's top 10 | None |
+| `chart.entered` | An owned app enters a store chart it was not in at the previous check | None |
+| `chart.left` | An owned app leaves a store chart it was in at the previous check | None |
+| `chart.milestone` | An owned app enters or leaves first place, the top 3 or the top 10 of a chart | None |
 | `digest.weekly` | The weekly portfolio digest | `CRON_DIGEST` |
 
 A new event never joins an existing subscription. To opt in, open **Edit events** on the channel in Settings, tick the events and save. A webhook keeps its url and its secret.
@@ -58,6 +61,22 @@ A new event never joins an existing subscription. To opt in, open **Edit events*
 "Never ranked" looks back as far as position history is kept, `RETENTION_RANKINGS_DAYS`, 365 days by default. See [what is retained](/concepts/pipeline#what-is-retained).
 
 A keyword that moves between 10 and 11 fires each time it crosses. In batched delivery, the default, every fact is deduplicated per keyword and day and folded into the daily report, so a noisy boundary costs a line in that report rather than a message per check. Instant delivery sends each check that crosses a boundary as it happens.
+
+## Chart moves
+
+`chart.entered`, `chart.left` and `chart.milestone` report where your own app sits in the store charts, not in a search. Each compares today's chart check with the previous stored check of the same app, chart kind (free, paid or grossing) and category, whatever the gap between them. The first check ever recorded for a chart fires nothing, so importing an app never floods a channel.
+
+| Event | Rule |
+| --- | --- |
+| `chart.entered` | The app is in a chart today and was not in it at the previous check. |
+| `chart.left` | The app was in a chart at the previous check and is not in it today. |
+| `chart.milestone` | The app entered or left first place, the top 3 or the top 10 of a chart. One move reports one milestone, as `rank.milestone` does. |
+
+An app is in a chart when it sits within the depth the store answers: 100 on the App Store and 200 on Google Play. A move into a chart at position 7 fires `chart.entered` and `chart.milestone`, the second for entering the top 10, and the daily report shows both as one row. A move from 14 to 8 inside a chart fires `chart.milestone` alone.
+
+Three cases fire nothing. A chart for which the store listed no apps raises no event, because an empty answer does not show that the app left, and the next check compares with the check before that day. Competitor apps raise none, because the competitor report lists listing changes only and the chart page already marks them. An app that changes its price class or its category raises none either: the chart it leaves keeps its last check and the new chart starts with a first check.
+
+In batched delivery the facts are deduplicated per app, chart and day, and each app's card in the owned app report gets a **Chart moves** group with a link to the chart page. Instant delivery sends one notification per event, so one move can send two. See [Read top charts](/guides/top-charts) for the chart page and [Follow category ranks](/guides/category-ranks) for the charts an app is checked in.
 
 ## Webhook delivery
 
@@ -145,6 +164,21 @@ A milestone and an overtake look like this. `rank.first` carries `position` and 
 }
 ```
 
+A chart move carries the chart instead of a keyword. `date` is the UTC day of the chart check, `depth` the depth of that check, and `from` is `null` when the app was outside the chart.
+
+```json
+{
+  "event": "chart.entered",
+  "occurredAt": "2026-10-28T03:14:07.000Z",
+  "app": { "id": "cm1a", "name": "My App", "store": "APP_STORE", "country": "us" },
+  "chart": { "store": "APP_STORE", "country": "us", "collection": "free", "genre": "6007", "genreName": "Productivity", "device": "iphone" },
+  "date": "2026-10-28",
+  "from": null,
+  "to": 7,
+  "depth": 100
+}
+```
+
 Every `app` object of a granular event may also carry `iconUrl`, `store` and `country`, read from the app when the alert is sent. `store` and `country` name the app's store and home storefront, and `iconUrl` is the address of the icon the store shows today, or `null` when no listing capture has recorded one. A consumer that ignores unknown fields needs no change.
 
 A batched report wraps events in a scoped envelope. Branch on the top level `scope`, which is `owned_apps` or `competitors`. The flat `events` array stays granular and contains only events for that scope, so a consumer that already handles granular events needs one extra branch rather than a rewrite.
@@ -161,7 +195,7 @@ A batched report wraps events in a scoped envelope. Branch on the top level `sco
 }
 ```
 
-Each entry of `apps` groups one owned app's facts in arrays: `rankDrops`, `rankImprovements`, `rankMilestones`, `firstRankings`, `overtakes`, `serpEntrants`, `changes`, `negativeReviews`, `actions` and `competitors`. An array is empty when nothing happened or when the channel does not list its event. The `app` of an entry, and of each entry of its `competitors`, carries `id`, `name`, `store`, `country` and `iconUrl`.
+Each entry of `apps` groups one owned app's facts in arrays: `rankDrops`, `rankImprovements`, `rankMilestones`, `firstRankings`, `overtakes`, `chartMoves`, `serpEntrants`, `changes`, `negativeReviews`, `actions` and `competitors`. An array is empty when nothing happened or when the channel does not list its event. The `app` of an entry, and of each entry of its `competitors`, carries `id`, `name`, `store`, `country` and `iconUrl`.
 
 Branch on `event` and ignore values and fields you do not recognise. New events and fields arrive as additive changes within a major version.
 
