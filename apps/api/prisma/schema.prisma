@@ -596,16 +596,16 @@ model ReviewReply {
 }
 
 model Webhook {
-  id          String          @id @default(cuid())
-  workspaceId String
-  workspace   Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  url         String
-  events      String[]
+  id           String          @id @default(cuid())
+  workspaceId  String
+  workspace    Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  url          String
+  events       String[]
   secret       String?
   active       Boolean         @default(true)
   confirmDrops Boolean         @default(false)
-  deliveries  AlertDelivery[]
-  createdAt   DateTime        @default(now())
+  deliveries   AlertDelivery[]
+  createdAt    DateTime        @default(now())
 
   @@index([workspaceId])
 }
