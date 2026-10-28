@@ -76,7 +76,10 @@ export class ProxyEgress implements OnModuleInit {
     thrown: unknown,
   ): Promise<ProxyOutcome | null> {
     const observation = observe(meter, thrown);
-    const pacing = { leasedAt, until: this.pacedUntil(leasedAt, observation) };
+    const pacing = {
+      leasedAt,
+      until: this.pacedUntil(leasedAt, meter, observation),
+    };
     const unjudged =
       thrown !== null &&
       (observation.outcome === null || storeDeadlinePassed());
@@ -94,12 +97,17 @@ export class ProxyEgress implements OnModuleInit {
     return unjudged ? null : observation.outcome;
   }
 
-  private pacedUntil(leasedAt: Date, { requests }: EgressObservation): Date {
+  private pacedUntil(
+    leasedAt: Date,
+    meter: EgressMeter,
+    { requests }: EgressObservation,
+  ): Date {
     const interval = this.config.minIntervalMs;
+    const lastRequestAt = meter.lastRequestAt ?? leasedAt.getTime();
     return new Date(
       Math.max(
         leasedAt.getTime() + requests * interval,
-        Date.now() + (requests > 1 ? interval : 0),
+        lastRequestAt + interval,
       ),
     );
   }

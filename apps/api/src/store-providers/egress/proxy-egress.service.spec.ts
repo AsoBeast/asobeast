@@ -192,16 +192,26 @@ describe('ProxyEgress', () => {
     expect(until).toBeLessThanOrEqual(Date.now() + MIN_INTERVAL_MS);
   });
 
-  it('adds no spacing after a single request beyond the claim itself', async () => {
-    const leasedAt = new Date(Date.now() - 600_000);
-    acquire.mockResolvedValue(leaseFrom(leasedAt));
+  it('keeps the endpoint one interval after a single request that started late', async () => {
+    acquire.mockResolvedValue(leaseFrom(new Date(Date.now() - 600_000)));
     const before = Date.now();
 
     await egress.through(Store.APP_STORE, 'us', okSubrequests(1));
 
     const until = observationOf().pacing?.until.getTime() ?? 0;
-    expect(until).toBeGreaterThanOrEqual(before);
-    expect(until).toBeLessThanOrEqual(Date.now());
+    expect(until).toBeGreaterThanOrEqual(before + MIN_INTERVAL_MS);
+    expect(until).toBeLessThanOrEqual(Date.now() + MIN_INTERVAL_MS);
+  });
+
+  it('frees a job that made no request once its claim interval passed', async () => {
+    const leasedAt = new Date();
+    acquire.mockResolvedValue(leaseFrom(leasedAt));
+
+    await egress.through(Store.APP_STORE, 'us', () => Promise.resolve('none'));
+
+    expect(observationOf().pacing?.until).toEqual(
+      new Date(leasedAt.getTime() + MIN_INTERVAL_MS),
+    );
   });
 
   it('blames the endpoint for subrequests the job swallowed', async () => {

@@ -15,6 +15,7 @@ export type EgressAdmission = () => Promise<void>;
 
 export class EgressMeter {
   private observed = 0;
+  private lastObservedAt: number | null = null;
   private readonly refusals: unknown[] = [];
 
   constructor(
@@ -34,8 +35,13 @@ export class EgressMeter {
     return this.refusals;
   }
 
+  get lastRequestAt(): number | null {
+    return this.lastObservedAt;
+  }
+
   observe(): void {
     this.observed++;
+    this.lastObservedAt = Date.now();
   }
 
   refuse(reason: unknown): void {
