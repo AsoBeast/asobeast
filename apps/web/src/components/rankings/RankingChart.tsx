@@ -23,6 +23,7 @@ import {
   annotationsOn,
 } from "@/components/annotations/annotation-lines";
 import {
+  CHANGE_MARKER_PROPS,
   CHART_HEIGHT,
   CHART_MARGIN,
   GRID_PROPS,
@@ -127,8 +128,7 @@ export function RankingChart({
           <ReferenceLine
             key={date}
             x={date}
-            stroke="var(--warning)"
-            strokeDasharray="4 3"
+            {...CHANGE_MARKER_PROPS}
             label={{
               value: "Metadata change",
               position: "insideBottomLeft",

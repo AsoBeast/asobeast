@@ -1,7 +1,8 @@
 import { ReferenceArea } from "recharts";
+import { RANK_DEPTH } from "@asobeast/shared";
 import { RankBandLabel } from "./RankBandLabel";
 
-export const RANK_TICKS = [1, 10, 25, 50, 100, 200];
+export const RANK_TICKS = [1, 10, 25, 50, 100, RANK_DEPTH];
 
 export const RANK_TIERS = [
   { from: 1, to: 3, fill: "var(--rank-band-1)", label: "Top 3" },

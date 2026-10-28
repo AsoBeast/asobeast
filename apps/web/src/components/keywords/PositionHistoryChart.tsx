@@ -24,6 +24,7 @@ import {
   rankTierAreas,
 } from "@/components/charts/rank-layers";
 import {
+  CHANGE_MARKER_PROPS,
   CHART_HEIGHT,
   CHART_MARGIN,
   GRID_PROPS,
@@ -141,12 +142,7 @@ export function PositionHistoryChart({
           ticks={RANK_TICKS}
         />
         {[...changes.keys()].map((day) => (
-          <ReferenceLine
-            key={day}
-            x={day}
-            stroke="var(--warning)"
-            strokeDasharray="4 3"
-          />
+          <ReferenceLine key={day} x={day} {...CHANGE_MARKER_PROPS} />
         ))}
         {best !== null && ranked ? (
           <ReferenceLine

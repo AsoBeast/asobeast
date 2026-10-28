@@ -62,6 +62,11 @@ export const LINE_PROPS = {
   activeDot: { r: 4 },
 } as const;
 
+export const CHANGE_MARKER_PROPS = {
+  stroke: "var(--warning)",
+  strokeDasharray: "4 3",
+} as const;
+
 export const FADE_STOPS = [
   { offset: "5%", opacity: 0.28 },
   { offset: "95%", opacity: 0 },
