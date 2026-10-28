@@ -359,7 +359,7 @@ for (const channel of CHANNELS) {
     const group = starGroup(dialog);
 
     await expect(group).toHaveAccessibleDescription(
-      "A review arrives once, as a new review, when the stars ticked cover it. Negative review still covers the rest.",
+      "Reviews with these stars arrive as new reviews. When Negative review is ticked too, a low review outside these stars still arrives as a negative review.",
     );
     await pickStars(dialog, []);
     await expect(group).toHaveAccessibleDescription("Pick at least one star.");
