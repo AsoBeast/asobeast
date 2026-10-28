@@ -358,7 +358,7 @@ export const CHART_MOVE_EVENTS = [
   'chart.entered',
   'chart.left',
   'chart.milestone',
-] as const;
+] as const satisfies readonly ChartMovePayload['event'][];
 
 export function isChartMovePayload(payload: {
   event: string;
