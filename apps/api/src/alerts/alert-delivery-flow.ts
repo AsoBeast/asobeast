@@ -24,7 +24,7 @@ interface CreateDeliveryFlowsInput {
   workspaceId: string;
   flushId: string;
   kind: 'webhook' | 'email';
-  subscription: { id: string; events: string[] };
+  subscription: { id: string; events: string[]; confirmDrops?: boolean };
   jobName: typeof JOBS.DELIVER_ALERT | typeof JOBS.DELIVER_EMAIL;
 }
 
@@ -32,8 +32,13 @@ export function createDeliveryFlows(
   input: CreateDeliveryFlowsInput,
 ): DeliveryFlow[] {
   const allowed = new Set(input.subscription.events);
-  const owned = filterBatch(input.batches.owned, allowed);
-  const competitors = filterBatch(input.batches.competitors, allowed);
+  const confirmDrops = input.subscription.confirmDrops === true;
+  const owned = filterBatch(input.batches.owned, allowed, confirmDrops);
+  const competitors = filterBatch(
+    input.batches.competitors,
+    allowed,
+    confirmDrops,
+  );
   if (!owned && !competitors) return [];
   const node = (payload: AlertBatchPayload, child: boolean): FlowJob => ({
     name: input.jobName,

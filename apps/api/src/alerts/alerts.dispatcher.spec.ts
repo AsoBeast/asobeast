@@ -327,6 +327,98 @@ describe('AlertsDispatcher', () => {
     });
   });
 
+  describe('confirmed drops', () => {
+    const dispatcherFor = (delivery: 'batched' | 'instant') => {
+      const prisma = buildPrisma();
+      const { queue } = buildQueue();
+      const dispatcher = new AlertsDispatcher(
+        prisma as unknown as PrismaService,
+        { enabled: true } as MailerService,
+        buildConfig(delivery),
+        queue,
+        workspace,
+        new AlertAppIdentities(prisma as unknown as PrismaService),
+      );
+      return { prisma, dispatcher };
+    };
+    const confirmedLeave: RankMilestonePayload = {
+      ...milestone,
+      direction: 'left',
+      from: 9,
+      to: 12,
+      confirmed: true,
+    };
+
+    it('asks for channels without the setting for an unmarked drop', async () => {
+      const { prisma, dispatcher } = dispatcherFor('instant');
+
+      await inWorkspace(() => dispatcher.dispatch(rankPayload));
+
+      expect(prisma.webhook.findMany).toHaveBeenCalledWith({
+        where: {
+          active: true,
+          events: { has: 'rank.dropped' },
+          confirmDrops: false,
+        },
+        select: { id: true },
+      });
+    });
+
+    it('asks for channels with the setting for a confirmed drop', async () => {
+      const { prisma, dispatcher } = dispatcherFor('instant');
+
+      await inWorkspace(() =>
+        dispatcher.dispatch({ ...rankPayload, confirmed: true }),
+      );
+
+      expect(prisma.webhook.findMany).toHaveBeenCalledWith({
+        where: {
+          active: true,
+          events: { has: 'rank.dropped' },
+          confirmDrops: true,
+        },
+        select: { id: true },
+      });
+    });
+
+    it('asks the email alerts the same way for a confirmed milestone', async () => {
+      const { prisma, dispatcher } = dispatcherFor('instant');
+
+      await inWorkspace(() => dispatcher.dispatch(confirmedLeave));
+
+      expect(prisma.emailAlert.findMany).toHaveBeenCalledWith({
+        where: {
+          active: true,
+          confirmedAt: { not: null },
+          events: { has: 'rank.milestone' },
+          confirmDrops: true,
+        },
+        select: { id: true },
+      });
+    });
+
+    it('adds no setting condition for an unmarked entering milestone', async () => {
+      const { prisma, dispatcher } = dispatcherFor('instant');
+
+      await inWorkspace(() => dispatcher.dispatch(milestone));
+
+      expect(prisma.webhook.findMany).toHaveBeenCalledWith({
+        where: { active: true, events: { has: 'rank.milestone' } },
+        select: { id: true },
+      });
+    });
+
+    it('stores a confirmed milestone under its own key', async () => {
+      const { prisma, dispatcher } = dispatcherFor('batched');
+
+      await inWorkspace(() => dispatcher.dispatch(confirmedLeave));
+
+      expect(prisma.updates[0].where.dedupeKey).toBe(
+        'milestone.confirmed:app1:kw1:2026-07-22',
+      );
+    });
+  });
+
   describe('with the app identity', () => {
     const identity = {
       iconUrl: 'https://is1-ssl.mzstatic.com/image/thumb/icon/512x512bb.jpg',
