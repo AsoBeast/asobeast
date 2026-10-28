@@ -1,4 +1,5 @@
 import type { ActionOpenedPayload } from '@asobeast/shared';
+import { chartEntered, productivityChart } from './chart-events.fixture';
 import { firstRanking, milestone, overtake } from './rank-events.fixture';
 import {
   AlertBatchAppSection,
@@ -339,6 +340,12 @@ const worstCaseSection = (index: number): AlertBatchAppSection => {
       firstRanking({ keyword: keyword(entry) }),
     ),
     overtakes: entries((entry) => overtake({ keyword: keyword(entry) })),
+    chartMoves: entries((entry) =>
+      chartEntered({
+        app: { id: `app_${index}`, name: null },
+        chart: { ...productivityChart, genre: String(6000 + entry) },
+      }),
+    ),
     serpEntrants: entries((entry) => ({
       event: 'serp.entrant' as const,
       occurredAt: dropped.occurredAt,

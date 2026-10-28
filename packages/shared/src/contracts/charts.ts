@@ -1,4 +1,6 @@
 import type { Store } from '../index';
+import type { RankMilestoneDirection, RankMilestoneTier } from '../rank';
+import type { AlertAppIdentity } from './changes';
 import { OVERALL_GENRE, type CategoryCollection } from './category-ranks';
 
 export const CHART_DEVICES = ['iphone', 'android'] as const;
@@ -200,6 +202,46 @@ export interface ChartKey {
   device: ChartDevice;
 }
 
+export const CHARTS_PATH = '/charts';
+
+export const CHART_COLLECTION_TITLES: Record<CategoryCollection, string> = {
+  free: 'Top free',
+  paid: 'Top paid',
+  grossing: 'Top grossing',
+};
+
+export type ChartCategoryKey = Omit<ChartKey, 'collection'>;
+
+export interface ChartTableOptions {
+  compare?: ChartCompareWindow | null;
+  date?: string | null;
+}
+
+function categoryParams(category: ChartCategoryKey): URLSearchParams {
+  return new URLSearchParams({
+    store: category.store,
+    country: category.country,
+    genre: category.genre,
+    device: category.device,
+  });
+}
+
+export function chartColumnsPath(category: ChartCategoryKey): string {
+  return `${CHARTS_PATH}?${categoryParams(category).toString()}`;
+}
+
+export function chartTablePath(
+  key: ChartKey,
+  { compare, date }: ChartTableOptions = {},
+): string {
+  const params = categoryParams(key);
+  params.set('view', 'table');
+  params.set('collection', key.collection);
+  if (compare && compare !== '1d') params.set('compare', compare);
+  if (date) params.set('date', date);
+  return `${CHARTS_PATH}?${params.toString()}`;
+}
+
 export type ChartMovement = 'up' | 'down' | 'same' | 'new' | 'none';
 
 export interface ChartEntryItem {
@@ -271,3 +313,55 @@ export interface ChartPage {
 
 export type ChartCaptureRequest = ChartKey;
 export type ChartFollowRequest = ChartKey;
+
+export interface ChartMoveScope {
+  store: Store;
+  country: string;
+  collection: CategoryCollection;
+  genre: string;
+  genreName: string;
+  device: ChartDevice;
+}
+
+export interface ChartMoveBase {
+  occurredAt: string;
+  app: { id: string; name: string | null } & AlertAppIdentity;
+  chart: ChartMoveScope;
+  date: string;
+  depth: number;
+}
+
+export interface ChartEnteredPayload extends ChartMoveBase {
+  event: 'chart.entered';
+  from: null;
+  to: number;
+}
+
+export interface ChartLeftPayload extends ChartMoveBase {
+  event: 'chart.left';
+  from: number;
+  to: null;
+}
+
+export interface ChartMilestonePayload extends ChartMoveBase {
+  event: 'chart.milestone';
+  tier: RankMilestoneTier;
+  direction: RankMilestoneDirection;
+  from: number | null;
+  to: number | null;
+}
+
+export type ChartMovePayload =
+  ChartEnteredPayload | ChartLeftPayload | ChartMilestonePayload;
+
+export const CHART_MOVE_EVENTS = [
+  'chart.entered',
+  'chart.left',
+  'chart.milestone',
+] as const satisfies readonly ChartMovePayload['event'][];
+
+export function isChartMovePayload(payload: {
+  event: string;
+}): payload is ChartMovePayload {
+  return CHART_MOVE_EVENTS.some((event) => event === payload.event);
+}

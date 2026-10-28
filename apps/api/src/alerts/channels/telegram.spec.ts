@@ -11,6 +11,11 @@ import { buildAlert } from '../report/build-alert';
 import { buildReport } from '../report/build-report';
 import { escapeHtml } from './chat-escape';
 import { telegramBody, visibleLength } from './telegram';
+import {
+  chartEntered,
+  chartMilestone,
+  chartMoveBatch,
+} from '../chart-events.fixture';
 
 const ORIGIN = 'https://aso.example.com';
 
@@ -167,5 +172,27 @@ describe('escapeHtml and visibleLength', () => {
 
   it('counts the characters a reader sees', () => {
     expect(visibleLength('<b>a &amp; b</b>')).toBe(5);
+  });
+});
+
+describe('telegram chart moves', () => {
+  it('draws the chart moves group of an app', () => {
+    const body = JSON.stringify(
+      telegramBody(
+        buildReport(
+          chartMoveBatch(chartEntered(), chartMilestone({ from: null, to: 7 })),
+          ORIGIN,
+        ),
+        '-100',
+      ),
+    );
+
+    for (const text of [
+      'Chart moves',
+      'Top free · Productivity',
+      'entered the chart',
+    ]) {
+      expect(body).toContain(text);
+    }
   });
 });

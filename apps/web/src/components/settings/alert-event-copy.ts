@@ -16,6 +16,9 @@ export const EVENT_LABELS: Record<WebhookEvent, string> = {
   "digest.weekly": "Weekly digest",
   "serp.entrant": "SERP entrant",
   "action.opened": "New action",
+  "chart.entered": "Chart entered",
+  "chart.left": "Chart left",
+  "chart.milestone": "Chart milestone",
 };
 
 export const PICKER_EVENTS: readonly WebhookEvent[] = [
@@ -30,6 +33,9 @@ export const PICKER_EVENTS: readonly WebhookEvent[] = [
   "digest.weekly",
   "serp.entrant",
   "action.opened",
+  "chart.entered",
+  "chart.left",
+  "chart.milestone",
 ];
 
 export interface AlertSubscriptionChange {

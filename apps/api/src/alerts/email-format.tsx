@@ -68,6 +68,7 @@ function ownedStats(payload: AlertBatchPayload): Stat[] {
     { label: 'Rank improvements', value: counts.rankImprovements, tone: 'up' },
     { label: 'Overtaken', value: counts.overtakes, tone: 'down' },
     { label: 'Milestones', value: counts.milestones, tone: 'neutral' },
+    { label: 'Chart moves', value: counts.chartMoves, tone: 'neutral' },
     { label: 'First rankings', value: counts.firstRankings, tone: 'up' },
     { label: 'New in the top 10', value: counts.serpEntrants, tone: 'neutral' },
     { label: 'Listing changes', value: counts.changes, tone: 'neutral' },
@@ -91,6 +92,7 @@ function ownedSummary(payload: AlertBatchPayload): string {
     plural(counts.milestones, 'milestone'),
     plural(counts.firstRankings, 'first ranking'),
     plural(counts.overtakes, 'overtake'),
+    plural(counts.chartMoves, 'chart move'),
   ].join(' · ');
 }
 

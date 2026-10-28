@@ -9,11 +9,13 @@ import {
   CHANGE_FIELDS,
   ChangeDetail,
   ChangeEventItem,
+  GranularAlertPayload,
   isChangeField,
   RankDroppedPayload,
   WEBHOOK_EVENTS,
   WebhookCreateRequest,
 } from './changes';
+import type { ChartLeftPayload, ChartMovePayload } from './charts';
 import type { ReviewNegativePayload, ReviewNewPayload } from './reviews';
 
 const batch = (scope: AlertBatchPayload['scope']): AlertBatchPayload => ({
@@ -42,6 +44,9 @@ describe('alert contracts', () => {
       'digest.weekly',
       'serp.entrant',
       'action.opened',
+      'chart.entered',
+      'chart.left',
+      'chart.milestone',
       'review.new',
     ]);
   });
@@ -202,5 +207,20 @@ describe('the alert app identity', () => {
       'APP_STORE' | 'GOOGLE_PLAY'
     >();
     expectTypeOf<AlertBatchApp['country']>().toEqualTypeOf<string>();
+  });
+});
+
+describe('the chart alert events', () => {
+  it('carries chart moves on a section without requiring them', () => {
+    expectTypeOf<AlertBatchAppSection['chartMoves']>().toEqualTypeOf<
+      ChartMovePayload[] | undefined
+    >();
+  });
+
+  it('narrows a granular payload to a chart exit by its event', () => {
+    const narrow = (payload: GranularAlertPayload) =>
+      payload.event === 'chart.left' ? payload : null;
+
+    expectTypeOf(narrow).returns.toEqualTypeOf<ChartLeftPayload | null>();
   });
 });

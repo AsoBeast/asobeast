@@ -1,4 +1,4 @@
-import { formatUtcInstant } from '@asobeast/shared';
+import { formatUtcInstant, isChartMovePayload } from '@asobeast/shared';
 import type {
   AlertReport,
   ReportGroup,
@@ -58,6 +58,9 @@ function linkOf(
   payload: GranularPayload,
   links: ReportLinks,
 ): ReportLink | null {
+  if (isChartMovePayload(payload)) {
+    return links.chart(payload.chart, payload.date);
+  }
   if (payload.event === 'action.opened') return links.action(payload.link);
   if (payload.event === 'review.new') {
     return links.reviews(payload.app.id, payload.review.score);
@@ -74,8 +77,12 @@ function toneOf(payload: GranularPayload): ReportTone {
       return 'down';
     case 'rank.improved':
     case 'rank.first':
+    case 'chart.entered':
       return 'up';
+    case 'chart.left':
+      return 'down';
     case 'rank.milestone':
+    case 'chart.milestone':
       return payload.direction === 'entered' ? 'up' : 'down';
     case 'review.new':
       return reviewTone(payload.review.score);

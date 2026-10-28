@@ -7,6 +7,7 @@ import {
   type ActionOpenedPayload,
   type AlertBatchPayload,
   type AlertPayload,
+  type ChartMovePayload,
   type MetadataChangedPayload,
   type RankDroppedPayload,
   type RankMilestonePayload,
@@ -21,6 +22,7 @@ import {
   reviewTone,
   type ReviewAlert,
 } from './report-rows';
+import { chartName } from './report-chart-moves';
 import { storefrontLabel } from './storefront';
 
 export type GranularPayload = Exclude<AlertPayload, AlertBatchPayload>;
@@ -62,7 +64,9 @@ function dropSentence(alert: RankDroppedPayload, withFlag: boolean): string {
     : `${app} fell out of the top ${alert.toDepth} for ${keyword}, from ${rankWord(alert.from, alert.fromDepth)}`;
 }
 
-function milestoneEmoji(alert: RankMilestonePayload): string {
+function milestoneEmoji(
+  alert: Pick<RankMilestonePayload, 'tier' | 'direction'>,
+): string {
   if (alert.direction === 'left') return '🔻';
   return alert.tier === 1 ? '🏆' : '🏅';
 }
@@ -74,6 +78,29 @@ function overtakeSentence(
   const app = appName(alert.app.name);
   const rival = appName(alert.competitor.name);
   return `${rival} overtook ${app} for ${keywordIn(alert.keyword, withFlag)}: ${rival} ${rankWord(alert.competitor.from, alert.fromDepth)} → ${rankWord(alert.competitor.to, alert.toDepth)}, ${app} ${rankWord(alert.from, alert.fromDepth)} → ${rankWord(alert.to, alert.toDepth)}`;
+}
+
+function chartMoveSentence(
+  alert: ChartMovePayload,
+  withFlag: boolean,
+): Sentence {
+  const app = appName(alert.app.name);
+  const where = `${chartName(alert.chart)} (${storefrontLabel(alert.chart.country, withFlag)})`;
+  switch (alert.event) {
+    case 'chart.entered':
+      return { emoji: '📈', text: `${app} entered ${where}, at #${alert.to}` };
+    case 'chart.left':
+      return { emoji: '📉', text: `${app} left ${where}, from #${alert.from}` };
+    case 'chart.milestone':
+      return {
+        emoji: alert.direction === 'left' ? '📉' : milestoneEmoji(alert),
+        text: `${app} ${milestonePhrase(alert.tier, alert.direction)} in ${where}: ${rankWord(alert.from, alert.depth)} → ${rankWord(alert.to, alert.depth)}`,
+      };
+    default: {
+      const never: never = alert;
+      return never;
+    }
+  }
 }
 
 const lowerFirst = (text: string): string =>
@@ -153,6 +180,10 @@ export function sentenceOf(
       return { emoji: '🆕', text: entrantSentence(payload, withFlag) };
     case 'action.opened':
       return { emoji: '🎯', text: actionSentence(payload) };
+    case 'chart.entered':
+    case 'chart.left':
+    case 'chart.milestone':
+      return chartMoveSentence(payload, withFlag);
     case 'digest.weekly':
       return {
         emoji: '🗓️',

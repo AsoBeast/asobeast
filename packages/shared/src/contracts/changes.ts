@@ -4,6 +4,7 @@ import type { DigestWeeklyPayload } from './portfolio';
 import type { KeywordScope } from './keywords';
 import type { SerpEntrantPayload } from './serp';
 import type { ActionOpenedPayload } from './actions';
+import type { ChartMovePayload } from './charts';
 import type { RankMilestoneDirection, RankMilestoneTier } from '../rank';
 import type { WebhookChannel } from '../webhook-channel';
 
@@ -92,6 +93,9 @@ export const WEBHOOK_EVENTS = [
   'digest.weekly',
   'serp.entrant',
   'action.opened',
+  'chart.entered',
+  'chart.left',
+  'chart.milestone',
   'review.new',
 ] as const;
 export type WebhookEvent = (typeof WEBHOOK_EVENTS)[number];
@@ -289,6 +293,7 @@ export interface AlertBatchAppSection {
   rankMilestones: RankMilestonePayload[];
   firstRankings: RankFirstPayload[];
   overtakes: RankOvertakenPayload[];
+  chartMoves?: ChartMovePayload[];
   serpEntrants: SerpEntrantPayload[];
   changes: MetadataChangedPayload[];
   negativeReviews: ReviewNegativePayload[];
@@ -308,7 +313,8 @@ export type GranularAlertPayload =
   | ReviewNewPayload
   | DigestWeeklyPayload
   | SerpEntrantPayload
-  | ActionOpenedPayload;
+  | ActionOpenedPayload
+  | ChartMovePayload;
 
 export type AlertBatchScope = 'owned_apps' | 'competitors';
 

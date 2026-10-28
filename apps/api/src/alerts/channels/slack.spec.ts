@@ -11,6 +11,11 @@ import {
 import { buildAlert } from '../report/build-alert';
 import { buildReport } from '../report/build-report';
 import { slackBody, type SlackBlock } from './slack';
+import {
+  chartEntered,
+  chartMilestone,
+  chartMoveBatch,
+} from '../chart-events.fixture';
 
 const ORIGIN = 'https://aso.example.com';
 const ICON = 'https://is1-ssl.mzstatic.com/image/thumb/alpha/512x512bb.jpg';
@@ -207,5 +212,26 @@ describe('slackBody for a single alert', () => {
       '*Review*: &lt;!channel&gt; now',
     );
     expect(message.blocks[0].type).toBe('header');
+  });
+});
+
+describe('slack chart moves', () => {
+  it('draws the chart moves group of an app', () => {
+    const body = JSON.stringify(
+      slackBody(
+        buildReport(
+          chartMoveBatch(chartEntered(), chartMilestone({ from: null, to: 7 })),
+          ORIGIN,
+        ),
+      ),
+    );
+
+    for (const text of [
+      'Chart moves',
+      'Top free · Productivity',
+      'entered the chart',
+    ]) {
+      expect(body).toContain(text);
+    }
   });
 });

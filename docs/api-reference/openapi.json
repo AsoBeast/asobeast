@@ -6883,6 +6883,9 @@
                 "digest.weekly",
                 "serp.entrant",
                 "action.opened",
+                "chart.entered",
+                "chart.left",
+                "chart.milestone",
                 "review.new"
               ]
             }
@@ -6938,6 +6941,9 @@
                 "digest.weekly",
                 "serp.entrant",
                 "action.opened",
+                "chart.entered",
+                "chart.left",
+                "chart.milestone",
                 "review.new"
               ]
             }
@@ -6992,6 +6998,9 @@
                 "digest.weekly",
                 "serp.entrant",
                 "action.opened",
+                "chart.entered",
+                "chart.left",
+                "chart.milestone",
                 "review.new"
               ]
             }
@@ -7043,6 +7052,9 @@
                 "digest.weekly",
                 "serp.entrant",
                 "action.opened",
+                "chart.entered",
+                "chart.left",
+                "chart.milestone",
                 "review.new"
               ]
             }

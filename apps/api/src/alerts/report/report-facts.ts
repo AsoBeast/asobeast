@@ -4,6 +4,7 @@ import {
   formatUtcDate,
   formatUtcDateRange,
   keywordLabel,
+  type ChartMovePayload,
   type DigestWeeklyPayload,
   type MetadataChangedPayload,
   type RankMilestonePayload,
@@ -12,6 +13,7 @@ import {
 } from '@asobeast/shared';
 import { summarizeActionEvidence } from '../action-lines';
 import type { ReportFact, ReportRow } from './report';
+import { chartLabel } from './report-chart-moves';
 import {
   EMPTY_VALUE,
   PRIORITY_WORDS,
@@ -121,6 +123,18 @@ function reviewFacts(payload: ReviewAlert): ReportFact[] {
   ];
 }
 
+function chartMoveFacts(alert: ChartMovePayload): ReportFact[] {
+  return [
+    fact('Chart', chartLabel(alert.chart)),
+    ...(alert.event === 'chart.milestone'
+      ? [fact('Milestone', milestonePhrase(alert.tier, alert.direction))]
+      : []),
+    fact('From', rankCell(alert.from, alert.depth)),
+    fact('To', rankCell(alert.to, alert.depth)),
+    fact('Date', formatUtcDate(alert.date)),
+  ];
+}
+
 function rankEventFacts(
   alert: RankMilestonePayload | RankFirstPayload | RankOvertakenPayload,
 ): ReportFact[] {
@@ -198,6 +212,10 @@ export function factsOf(payload: GranularPayload): ReportFact[] {
       ];
     case 'digest.weekly':
       return digestFacts(payload);
+    case 'chart.entered':
+    case 'chart.left':
+    case 'chart.milestone':
+      return chartMoveFacts(payload);
     default:
       return rankEventFacts(payload);
   }

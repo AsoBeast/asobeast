@@ -9,6 +9,11 @@ import {
   negative,
   newReview,
 } from '../email-fixtures.fixture';
+import {
+  chartEntered,
+  chartLeft,
+  chartMilestone,
+} from '../chart-events.fixture';
 import { firstRanking, milestone, overtake } from '../rank-events.fixture';
 import { listPhrase, plural, sentenceOf } from './report-sentences';
 
@@ -195,6 +200,65 @@ describe('sentenceOf', () => {
     expect(
       withFlags({ ...dropped, app: { id: 'x', name: null } }).text,
     ).toMatch(/^An app dropped/);
+  });
+});
+
+describe('sentenceOf for the chart events', () => {
+  it('says a chart entry with and without the storefront flag', () => {
+    expect(withFlags(chartEntered())).toEqual({
+      emoji: '📈',
+      text: 'My App entered Top free · Productivity (🇺🇸 US), at #7',
+    });
+    expect(sentenceOf(chartEntered(), false).text).toBe(
+      'My App entered Top free · Productivity (US), at #7',
+    );
+  });
+
+  it('says a chart exit', () => {
+    expect(withFlags(chartLeft())).toEqual({
+      emoji: '📉',
+      text: 'My App left Top free · Productivity (🇺🇸 US), from #7',
+    });
+    expect(sentenceOf(chartLeft(), false).text).toBe(
+      'My App left Top free · Productivity (US), from #7',
+    );
+  });
+
+  it('says a chart milestone with the glyph of its tier', () => {
+    expect(withFlags(chartMilestone())).toEqual({
+      emoji: '🏅',
+      text: 'My App entered the top 10 in Top free · Productivity (🇺🇸 US): #14 → #8',
+    });
+    expect(sentenceOf(chartMilestone(), false).text).toBe(
+      'My App entered the top 10 in Top free · Productivity (US): #14 → #8',
+    );
+    expect(withFlags(chartMilestone({ tier: 1, from: 2, to: 1 }))).toEqual({
+      emoji: '🏆',
+      text: 'My App reached first place in Top free · Productivity (🇺🇸 US): #2 → #1',
+    });
+  });
+
+  it('says a lost chart milestone with the falling glyph', () => {
+    expect(
+      withFlags(chartMilestone({ direction: 'left', from: 8, to: 12 })),
+    ).toEqual({
+      emoji: '📉',
+      text: 'My App left the top 10 in Top free · Productivity (🇺🇸 US): #8 → #12',
+    });
+    expect(
+      withFlags(chartMilestone({ direction: 'left', from: 7, to: null })).text,
+    ).toBe(
+      'My App left the top 10 in Top free · Productivity (🇺🇸 US): #7 → outside the top 100',
+    );
+  });
+
+  it('names an app the chart event sent without a name', () => {
+    expect(
+      withFlags(chartEntered({ app: { id: 'a', name: null } })),
+    ).toMatchObject({
+      emoji: '📈',
+      text: 'An app entered Top free · Productivity (🇺🇸 US), at #7',
+    });
   });
 });
 

@@ -1,3 +1,4 @@
+import { productivityChart } from '../chart-events.fixture';
 import { reportLinks } from './report-links';
 
 const ORIGIN = 'https://aso.example.com';
@@ -10,6 +11,8 @@ describe('reportLinks', () => {
     expect(links.app('a')).toBeNull();
     expect(links.group('a', 'rankDrops', 3)).toBeNull();
     expect(links.competitors('a', 14)).toBeNull();
+    expect(links.charts(productivityChart, 3)).toBeNull();
+    expect(links.chart(productivityChart, '2026-07-22')).toBeNull();
   });
 
   it('opens the home page and the app page', () => {
@@ -82,5 +85,22 @@ describe('reportLinks', () => {
       label: 'Open the action',
     });
     expect(links.action(null)).toBeNull();
+  });
+
+  it('links the chart moves group to the columns of their category', () => {
+    const links = reportLinks(ORIGIN);
+
+    expect(links.charts(productivityChart, 3)).toEqual({
+      href: `${ORIGIN}/charts?store=APP_STORE&country=us&genre=6007&device=iphone`,
+      label: 'See all 3 in AsoBeast',
+    });
+    expect(links.charts(null, 3)).toBeNull();
+  });
+
+  it('opens the table of one chart on the day of the move', () => {
+    expect(reportLinks(ORIGIN).chart(productivityChart, '2026-07-22')).toEqual({
+      href: `${ORIGIN}/charts?store=APP_STORE&country=us&genre=6007&device=iphone&view=table&collection=free&date=2026-07-22`,
+      label: 'Open the chart',
+    });
   });
 });

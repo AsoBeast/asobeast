@@ -6,6 +6,11 @@ import {
   metadata,
   worstCaseBatch,
 } from '../email-fixtures.fixture';
+import {
+  chartEntered,
+  chartMilestone,
+  chartMoveBatch,
+} from '../chart-events.fixture';
 import { buildAlert } from './build-alert';
 import { buildReport } from './build-report';
 import { reportText } from './report-text';
@@ -115,5 +120,21 @@ describe('reportText', () => {
 
     expect(text).toContain('Icon: Changed');
     expect(text).not.toContain('http');
+  });
+
+  it('prints the chart moves of an app as one line per chart', () => {
+    const text = reportText(
+      buildReport(
+        chartMoveBatch(chartEntered(), chartMilestone({ from: null, to: 7 })),
+        ORIGIN,
+      ),
+    );
+
+    expect(text).toContain(
+      [
+        '  Chart moves',
+        '    Top free · Productivity  >100 → #7 · entered the chart · entered the top 10',
+      ].join('\n'),
+    );
   });
 });
