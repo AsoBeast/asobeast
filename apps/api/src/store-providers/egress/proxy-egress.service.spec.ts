@@ -160,13 +160,13 @@ describe('ProxyEgress', () => {
     expect(observationOf().successes).toBe(17);
   });
 
-  it('paces the endpoint for the requests beyond the one it was claimed for', async () => {
+  it('paces the endpoint for every request the job made', async () => {
     const before = Date.now();
 
     await egress.through(Store.GOOGLE_PLAY, 'us', okSubrequests(8));
 
     const until = observationOf().pacing?.until.getTime() ?? 0;
-    expect(until).toBeGreaterThanOrEqual(before + 7 * MIN_INTERVAL_MS);
+    expect(until).toBeGreaterThanOrEqual(before + 8 * MIN_INTERVAL_MS);
   });
 
   it('measures the pacing from the moment the lease began', async () => {
@@ -177,7 +177,7 @@ describe('ProxyEgress', () => {
 
     expect(observationOf().pacing).toEqual({
       leasedAt,
-      until: new Date(leasedAt.getTime() + 7 * MIN_INTERVAL_MS),
+      until: new Date(leasedAt.getTime() + 8 * MIN_INTERVAL_MS),
     });
   });
 
@@ -351,7 +351,7 @@ describe('ProxyEgress', () => {
     expect(record).not.toHaveBeenCalled();
     expect(release).toHaveBeenCalledWith('e1', Store.GOOGLE_PLAY, {
       leasedAt,
-      until: new Date(leasedAt.getTime() + 4 * MIN_INTERVAL_MS),
+      until: new Date(leasedAt.getTime() + 5 * MIN_INTERVAL_MS),
     });
   });
 

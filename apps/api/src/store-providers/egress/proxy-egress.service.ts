@@ -95,12 +95,11 @@ export class ProxyEgress implements OnModuleInit {
   }
 
   private pacedUntil(leasedAt: Date, { requests }: EgressObservation): Date {
-    const beyondClaim = Math.max(requests - 1, 0);
     const interval = this.config.minIntervalMs;
     return new Date(
       Math.max(
-        leasedAt.getTime() + beyondClaim * interval,
-        Date.now() + Math.min(beyondClaim, 1) * interval,
+        leasedAt.getTime() + requests * interval,
+        Date.now() + (requests > 1 ? interval : 0),
       ),
     );
   }
