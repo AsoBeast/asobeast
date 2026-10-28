@@ -18,6 +18,7 @@ export const EVENT_LABELS: Record<WebhookEvent, string> = {
   "digest.weekly": "Weekly digest",
   "serp.entrant": "SERP entrant",
   "action.opened": "New action",
+  "review.new": "New review",
 };
 
 export function EventSelection({

@@ -1,6 +1,7 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import {
   AlertBatchApp,
+  AlertBatchAppSection,
   AlertBatchPayload,
   AlertDeliveryStatus,
   AlertFlushResult,
@@ -11,7 +12,9 @@ import {
   isChangeField,
   RankDroppedPayload,
   WEBHOOK_EVENTS,
+  WebhookCreateRequest,
 } from './changes';
+import type { ReviewNegativePayload, ReviewNewPayload } from './reviews';
 
 const batch = (scope: AlertBatchPayload['scope']): AlertBatchPayload => ({
   event: 'alerts.batch',
@@ -39,7 +42,30 @@ describe('alert contracts', () => {
       'digest.weekly',
       'serp.entrant',
       'action.opened',
+      'review.new',
     ]);
+  });
+
+  it('carries the author on a new review and not on a negative one', () => {
+    expectTypeOf<ReviewNewPayload['review']['author']>().toEqualTypeOf<
+      string | null
+    >();
+    expectTypeOf<ReviewNegativePayload['review']>().not.toHaveProperty(
+      'author',
+    );
+  });
+
+  it('keeps the new review group and the star filter optional', () => {
+    expectTypeOf<AlertBatchAppSection['newReviews']>().toEqualTypeOf<
+      ReviewNewPayload[] | undefined
+    >();
+    expectTypeOf<WebhookCreateRequest['reviewScores']>().toEqualTypeOf<
+      number[] | undefined
+    >();
+    expectTypeOf<{
+      url: string;
+      events: ['review.new'];
+    }>().toExtend<WebhookCreateRequest>();
   });
 
   it('requires one of the two delivery scopes', () => {
