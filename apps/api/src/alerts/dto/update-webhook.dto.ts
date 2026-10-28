@@ -36,4 +36,8 @@ export class UpdateWebhookDto implements WebhookUpdateRequest {
   @ValidateIf((_, value) => value !== undefined)
   @IsBoolean()
   active?: boolean;
+
+  @ValidateIf((_, value) => value !== undefined)
+  @IsBoolean()
+  confirmDrops?: boolean;
 }

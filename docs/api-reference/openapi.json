@@ -6871,6 +6871,9 @@
           "secret": {
             "type": "string",
             "minLength": 8
+          },
+          "confirmDrops": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -6910,6 +6913,9 @@
           },
           "active": {
             "type": "boolean"
+          },
+          "confirmDrops": {
+            "type": "boolean"
           }
         }
       },
@@ -6938,6 +6944,9 @@
                 "action.opened"
               ]
             }
+          },
+          "confirmDrops": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -6972,6 +6981,9 @@
             }
           },
           "active": {
+            "type": "boolean"
+          },
+          "confirmDrops": {
             "type": "boolean"
           }
         }

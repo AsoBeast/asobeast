@@ -1,11 +1,13 @@
 import {
   ArrayNotEmpty,
   IsArray,
+  IsBoolean,
   IsIn,
   IsOptional,
   IsString,
   IsUrl,
   MinLength,
+  ValidateIf,
 } from 'class-validator';
 import {
   WEBHOOK_EVENTS,
@@ -27,4 +29,8 @@ export class CreateWebhookDto implements WebhookCreateRequest {
   @IsString()
   @MinLength(8)
   secret?: string;
+
+  @ValidateIf((_, value) => value !== undefined)
+  @IsBoolean()
+  confirmDrops?: boolean;
 }

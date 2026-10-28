@@ -89,6 +89,7 @@ export class EmailAlertsService {
           email: dto.email,
           events: dto.events,
           confirmedAt,
+          confirmDrops: dto.confirmDrops,
         },
       });
       return { alert, ask: !confirmedAt };
@@ -106,6 +107,7 @@ export class EmailAlertsService {
       email: dto.email,
       events: dto.events,
       active: dto.active,
+      confirmDrops: dto.confirmDrops,
     };
     const saved = await this.underLock(workspaceId, async (tx) => {
       const current = await tx.emailAlert.findFirst({ where: { id } });

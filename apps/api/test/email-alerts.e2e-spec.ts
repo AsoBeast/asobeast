@@ -16,7 +16,11 @@ import { AppModule } from '../src/app.module';
 import { testDb } from './helpers/test-db';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { ownerAgent, useCookies } from './helpers/session';
-import { obliterateQueues, settleBootRegistration } from './obliterate-queues';
+import {
+  clearRateLimitCounters,
+  obliterateQueues,
+  settleBootRegistration,
+} from './obliterate-queues';
 
 function migrate(): void {
   execSync('pnpm prisma migrate deploy', {
@@ -60,6 +64,7 @@ describe('EmailAlertsController (e2e, smtp enabled)', () => {
 
   beforeEach(async () => {
     send.mockClear();
+    await clearRateLimitCounters(app);
     await prisma.$executeRawUnsafe(
       'TRUNCATE TABLE "EmailAlert", "Webhook", "AlertDelivery" RESTART IDENTITY CASCADE',
     );
@@ -139,6 +144,104 @@ describe('EmailAlertsController (e2e, smtp enabled)', () => {
     });
   });
 
+  it('creates an email alert without confirmed drops by default', async () => {
+    const created = await api
+      .post('/email-alerts')
+      .send({ email: 'ops@example.com', events: ['rank.dropped'] })
+      .expect(201);
+    const alert = created.body as EmailAlertItem;
+
+    expect(alert.confirmDrops).toBe(false);
+    const stored = await prisma.emailAlert.findUniqueOrThrow({
+      where: { id: alert.id },
+    });
+    expect(stored.confirmDrops).toBe(false);
+  });
+
+  it('keeps confirmed drops through the list and an events patch', async () => {
+    const created = await api
+      .post('/email-alerts')
+      .send({
+        email: 'ops@example.com',
+        events: ['rank.dropped'],
+        confirmDrops: true,
+      })
+      .expect(201);
+    const alert = created.body as EmailAlertItem;
+    expect(alert.confirmDrops).toBe(true);
+
+    const listed = await api.get('/email-alerts').expect(200);
+    expect(listed.body as EmailAlertItem[]).toEqual([
+      expect.objectContaining({ id: alert.id, confirmDrops: true }),
+    ]);
+
+    const patched = await api
+      .patch(`/email-alerts/${alert.id}`)
+      .send({ events: ['rank.milestone'] })
+      .expect(200);
+    expect(patched.body as EmailAlertItem).toMatchObject({
+      events: ['rank.milestone'],
+      confirmDrops: true,
+    });
+  });
+
+  it('turns confirmed drops off and keeps the address and events', async () => {
+    const created = await api
+      .post('/email-alerts')
+      .send({
+        email: 'ops@example.com',
+        events: ['rank.dropped'],
+        confirmDrops: true,
+      })
+      .expect(201);
+    const alert = created.body as EmailAlertItem;
+
+    const patched = await api
+      .patch(`/email-alerts/${alert.id}`)
+      .send({ confirmDrops: false })
+      .expect(200);
+
+    expect(patched.body as EmailAlertItem).toMatchObject({
+      email: 'ops@example.com',
+      events: ['rank.dropped'],
+      active: true,
+      confirmDrops: false,
+    });
+  });
+
+  it.each([null, 'yes'])(
+    'refuses confirmDrops %p on create and on patch',
+    async (confirmDrops) => {
+      await api
+        .post('/email-alerts')
+        .send({
+          email: 'ops@example.com',
+          events: ['rank.dropped'],
+          confirmDrops,
+        })
+        .expect(400);
+      const created = await api
+        .post('/email-alerts')
+        .send({
+          email: 'ops@example.com',
+          events: ['rank.dropped'],
+          confirmDrops: true,
+        })
+        .expect(201);
+      const alert = created.body as EmailAlertItem;
+
+      await api
+        .patch(`/email-alerts/${alert.id}`)
+        .send({ confirmDrops })
+        .expect(400);
+
+      const stored = await prisma.emailAlert.findUniqueOrThrow({
+        where: { id: alert.id },
+      });
+      expect(stored.confirmDrops).toBe(true);
+    },
+  );
+
   it('rejects an invalid email', async () => {
     await api
       .post('/email-alerts')
@@ -146,29 +249,31 @@ describe('EmailAlertsController (e2e, smtp enabled)', () => {
       .expect(400);
   });
 
-  it.each([{ email: null }, { events: null }, { active: null }])(
-    'rejects a null field when updating an alert: %o',
-    async (patch) => {
-      const created = await api
-        .post('/email-alerts')
-        .send({ email: 'ops@example.com', events: ['metadata.changed'] })
-        .expect(201);
-      const alert = created.body as EmailAlertItem;
+  it.each([
+    { email: null },
+    { events: null },
+    { active: null },
+    { confirmDrops: null },
+  ])('rejects a null field when updating an alert: %o', async (patch) => {
+    const created = await api
+      .post('/email-alerts')
+      .send({ email: 'ops@example.com', events: ['metadata.changed'] })
+      .expect(201);
+    const alert = created.body as EmailAlertItem;
 
-      const response = await api
-        .patch(`/email-alerts/${alert.id}`)
-        .send(patch)
-        .expect(400);
-      expect((response.body as ApiErrorEnvelope).statusCode).toBe(400);
+    const response = await api
+      .patch(`/email-alerts/${alert.id}`)
+      .send(patch)
+      .expect(400);
+    expect((response.body as ApiErrorEnvelope).statusCode).toBe(400);
 
-      const stored = await prisma.emailAlert.findUniqueOrThrow({
-        where: { id: alert.id },
-      });
-      expect(stored.email).toBe('ops@example.com');
-      expect(stored.events).toEqual(['metadata.changed']);
-      expect(stored.active).toBe(true);
-    },
-  );
+    const stored = await prisma.emailAlert.findUniqueOrThrow({
+      where: { id: alert.id },
+    });
+    expect(stored.email).toBe('ops@example.com');
+    expect(stored.events).toEqual(['metadata.changed']);
+    expect(stored.active).toBe(true);
+  });
 
   it('mails nobody an address cannot confirm without a web origin to link to', async () => {
     const created = await api
