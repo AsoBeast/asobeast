@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { TrackedKeywordItem } from "@asobeast/shared";
-import { pickerLabel } from "./selection";
+import { pickerLabel, selectionForMarket } from "./selection";
 
 const keyword = (over: Partial<TrackedKeywordItem>): TrackedKeywordItem => ({
   keywordId: "kw-1",
@@ -49,5 +49,40 @@ describe("pickerLabel", () => {
 
   it("names an empty list as a single market", () => {
     expect(pickerLabel([])(keyword({ keywordId: "kw-1" }))).toBe("focus timer");
+  });
+});
+
+describe("selectionForMarket", () => {
+  const usTracked = [
+    keyword({ keywordId: "kw-1", opportunity: 80 }),
+    keyword({ keywordId: "kw-2", text: "pomodoro", opportunity: 60 }),
+  ];
+  const deKeyword = keyword({
+    keywordId: "kw-de",
+    text: "pomodoro",
+    country: "de",
+    opportunity: 90,
+  });
+
+  it("keeps the selected keywords the market tracks", () => {
+    expect(selectionForMarket(usTracked, ["kw-1", "kw-de"])).toEqual(["kw-1"]);
+  });
+
+  it("falls back to the top by opportunity when nothing survives", () => {
+    expect(selectionForMarket(usTracked, [deKeyword.keywordId])).toEqual([
+      "kw-1",
+      "kw-2",
+    ]);
+  });
+
+  it("falls back when the selection is empty", () => {
+    expect(selectionForMarket(usTracked, [])).toEqual(["kw-1", "kw-2"]);
+  });
+
+  it("keeps order with a partial selection", () => {
+    expect(selectionForMarket(usTracked, ["kw-2", "kw-1"])).toEqual([
+      "kw-2",
+      "kw-1",
+    ]);
   });
 });

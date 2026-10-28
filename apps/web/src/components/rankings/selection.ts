@@ -18,3 +18,14 @@ export function pickerLabel(
   const multiMarket = new Set(tracked.map((item) => item.country)).size > 1;
   return (item) => (multiMarket ? keywordLabel(item) : item.text);
 }
+
+export function selectionForMarket(
+  tracked: TrackedKeywordItem[],
+  selected: readonly string[],
+): string[] {
+  const known = new Set(tracked.map((item) => item.keywordId));
+  const surviving = selected.filter((id) => known.has(id));
+  return surviving.length > 0
+    ? surviving
+    : topByOpportunity(tracked, DEFAULT_SELECTION);
+}

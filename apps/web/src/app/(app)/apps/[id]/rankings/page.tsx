@@ -5,19 +5,18 @@ import { RankingsReportHeader } from "@/components/rankings/RankingsReportHeader
 import { RankingsView } from "@/components/rankings/RankingsView";
 import { SerpMoversCard } from "@/components/rankings/SerpMoversCard";
 import { RankingChartSkeleton } from "@/components/rankings/skeletons";
-import {
-  DEFAULT_SELECTION,
-  topByOpportunity,
-} from "@/components/rankings/selection";
+import { selectionForMarket } from "@/components/rankings/selection";
 import { getQueryClient } from "@/lib/get-query-client";
 import {
   annotationsOptions,
+  keywordCountriesOptions,
   keywordsOptions,
   rankingsOptions,
   serpMoversOptions,
 } from "@/lib/queries";
 import { presetToRange } from "@/lib/ranges";
 import {
+  countryParser,
   keywordIdsParser,
   moverDaysParser,
   rangeParser,
@@ -32,6 +31,7 @@ export default async function RankingsPage({
     range?: string | string[];
     keywords?: string | string[];
     movers?: string | string[];
+    country?: string | string[];
   }>;
 }) {
   const { id } = await params;
@@ -39,13 +39,17 @@ export default async function RankingsPage({
   const range = rangeParser.parseServerSide(sp.range);
   const selected = keywordIdsParser.parseServerSide(sp.keywords);
   const moverDays = moverDaysParser.parseServerSide(sp.movers);
+  const country = countryParser.parseServerSide(sp.country);
 
   const queryClient = getQueryClient();
-  const tracked = await queryClient.fetchQuery(keywordsOptions(id));
-  const effective =
-    selected.length > 0
-      ? selected
-      : topByOpportunity(tracked, DEFAULT_SELECTION);
+  const [tracked] = await Promise.all([
+    queryClient.fetchQuery(keywordsOptions(id)),
+    queryClient.fetchQuery(keywordCountriesOptions(id)),
+  ]);
+  const scoped = country
+    ? tracked.filter((item) => item.country === country)
+    : tracked;
+  const effective = selectionForMarket(scoped, selected);
 
   void queryClient.prefetchQuery(
     rankingsOptions(id, { ...presetToRange(range), keywordIds: effective }),
