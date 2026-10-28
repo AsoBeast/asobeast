@@ -25,6 +25,11 @@ export interface ProxyLease {
   leasedAt: Date;
 }
 
+export interface LeasePacing {
+  leasedAt: Date;
+  until: Date;
+}
+
 export class ProxyPoolUnavailableError extends Error {
   constructor(store: Store, waitedMs: number) {
     super(
@@ -110,13 +115,17 @@ export class ProxyPool {
     }
   }
 
-  release(endpointId: string, store: Store, pacedUntil: Date): Promise<void> {
+  release(
+    endpointId: string,
+    store: Store,
+    { leasedAt, until }: LeasePacing,
+  ): Promise<void> {
     return this.crossTenant.becauseThisWorkIsNotOwnedByOneWorkspace(
       POOL_JUSTIFICATION,
       async () => {
         await this.prisma.proxyHealth.updateMany({
-          where: { endpointId, store },
-          data: { pacedUntil },
+          where: { endpointId, store, lastUsedAt: leasedAt },
+          data: { pacedUntil: until },
         });
       },
     );

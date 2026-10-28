@@ -98,12 +98,28 @@ describe('Proxy endpoint leases (e2e)', () => {
   });
 
   it('leases the endpoint again once its job released it and the pacing ran out', async () => {
-    const lease = await leaseTheOnlyEndpoint();
-    await pool.release(lease.endpointId, Store.GOOGLE_PLAY, new Date());
+    const { endpointId, leasedAt } = await leaseTheOnlyEndpoint();
+    await pool.release(endpointId, Store.GOOGLE_PLAY, {
+      leasedAt,
+      until: new Date(),
+    });
     await elapse(MIN_INTERVAL_MS * 2);
 
     await expect(pool.acquire(Store.GOOGLE_PLAY, 'us')).resolves.toEqual(
       expect.objectContaining({ endpointId: 'only-us' }),
+    );
+  });
+
+  it('keeps the hold of a newer lease when an older one hands back late', async () => {
+    const newer = await leaseTheOnlyEndpoint();
+
+    await pool.release(newer.endpointId, Store.GOOGLE_PLAY, {
+      leasedAt: new Date(newer.leasedAt.getTime() - LEASE_HOLD_MS),
+      until: new Date(),
+    });
+
+    await expect(pool.acquire(Store.GOOGLE_PLAY, 'us')).rejects.toThrow(
+      ProxyPoolUnavailableError,
     );
   });
 });

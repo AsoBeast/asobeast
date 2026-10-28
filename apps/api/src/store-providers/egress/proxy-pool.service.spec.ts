@@ -151,14 +151,19 @@ describe('ProxyPool', () => {
     expect(lease?.leasedAt.getTime()).toBeGreaterThanOrEqual(before);
   });
 
-  it('paces a released endpoint from the time its job hands back', async () => {
-    const pacedUntil = new Date(Date.now() + 8_000);
+  it('paces a released endpoint only while its lease still owns it', async () => {
+    const leasedAt = new Date();
+    const until = new Date(Date.now() + 8_000);
 
-    await poolWith().release('e1', Store.GOOGLE_PLAY, pacedUntil);
+    await poolWith().release('e1', Store.GOOGLE_PLAY, { leasedAt, until });
 
     expect(updateMany).toHaveBeenCalledWith({
-      where: { endpointId: 'e1', store: Store.GOOGLE_PLAY },
-      data: { pacedUntil },
+      where: {
+        endpointId: 'e1',
+        store: Store.GOOGLE_PLAY,
+        lastUsedAt: leasedAt,
+      },
+      data: { pacedUntil: until },
     });
   });
 

@@ -76,21 +76,24 @@ export class ProxyEgress implements OnModuleInit {
     thrown: unknown,
   ): Promise<ProxyOutcome | null> {
     const observation = observe(meter, thrown);
-    const pacedUntil = new Date(
-      leasedAt.getTime() +
-        Math.max(observation.requests - 1, 0) * this.config.minIntervalMs,
-    );
+    const pacing = {
+      leasedAt,
+      until: new Date(
+        leasedAt.getTime() +
+          Math.max(observation.requests - 1, 0) * this.config.minIntervalMs,
+      ),
+    };
     const unjudged =
       thrown !== null &&
       (observation.outcome === null || storeDeadlinePassed());
     if (unjudged) {
-      await this.pool.release(endpointId, store, pacedUntil);
+      await this.pool.release(endpointId, store, pacing);
     } else {
       await this.health.record(endpointId, store, {
         successes: observation.successes,
         failures: observation.failures,
         outcome: observation.outcome ?? ProxyOutcome.SUCCESS,
-        pacedUntil,
+        pacing,
       });
     }
     await this.ledger.record(ProxyTier.DATACENTER, observation.requests);

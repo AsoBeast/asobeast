@@ -8,7 +8,7 @@ import { HealthObservation, ProxyHealthTracker } from './proxy-health.service';
 import { ProxyLedger } from './proxy-ledger.service';
 import { ProxyPoolMaintenance } from './proxy-pool.maintenance';
 import { ProxyPoolConfig } from './proxy-pool.config';
-import { ProxyLease, ProxyPool } from './proxy-pool.service';
+import { LeasePacing, ProxyLease, ProxyPool } from './proxy-pool.service';
 import { ResidentialFallback } from './residential-fallback.service';
 
 const MIN_INTERVAL_MS = 4_000;
@@ -18,7 +18,7 @@ describe('ProxyEgress', () => {
     Promise<ProxyLease | null>,
     [Store, string?, boolean?]
   >();
-  const release = jest.fn<Promise<void>, [string, Store, Date]>();
+  const release = jest.fn<Promise<void>, [string, Store, LeasePacing]>();
   const record = jest.fn<Promise<void>, [string, Store, HealthObservation]>();
   const charge = jest.fn<Promise<void>, [ProxyTier, number?]>();
   const leaseFrom = (leasedAt = new Date()): ProxyLease => ({
@@ -165,10 +165,8 @@ describe('ProxyEgress', () => {
 
     await egress.through(Store.GOOGLE_PLAY, 'us', okSubrequests(8));
 
-    const pacedUntil = observationOf().pacedUntil as Date;
-    expect(pacedUntil.getTime()).toBeGreaterThanOrEqual(
-      before + 7 * MIN_INTERVAL_MS,
-    );
+    const until = observationOf().pacing?.until.getTime() ?? 0;
+    expect(until).toBeGreaterThanOrEqual(before + 7 * MIN_INTERVAL_MS);
   });
 
   it('measures the pacing from the moment the lease began', async () => {
@@ -177,9 +175,10 @@ describe('ProxyEgress', () => {
 
     await egress.through(Store.GOOGLE_PLAY, 'us', okSubrequests(8));
 
-    expect(observationOf().pacedUntil).toEqual(
-      new Date(leasedAt.getTime() + 7 * MIN_INTERVAL_MS),
-    );
+    expect(observationOf().pacing).toEqual({
+      leasedAt,
+      until: new Date(leasedAt.getTime() + 7 * MIN_INTERVAL_MS),
+    });
   });
 
   it('blames the endpoint for subrequests the job swallowed', async () => {
@@ -327,11 +326,10 @@ describe('ProxyEgress', () => {
     ).rejects.toBe(parse);
 
     expect(record).not.toHaveBeenCalled();
-    expect(release).toHaveBeenCalledWith(
-      'e1',
-      Store.GOOGLE_PLAY,
-      new Date(leasedAt.getTime() + 4 * MIN_INTERVAL_MS),
-    );
+    expect(release).toHaveBeenCalledWith('e1', Store.GOOGLE_PLAY, {
+      leasedAt,
+      until: new Date(leasedAt.getTime() + 4 * MIN_INTERVAL_MS),
+    });
   });
 
   it('never holds a passed on demand deadline against the endpoint', async () => {
