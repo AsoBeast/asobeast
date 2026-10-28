@@ -497,7 +497,7 @@ describe('AlertFlushService', () => {
 
     expect(harness.prisma.emailAlert.findMany).toHaveBeenCalledWith({
       where: { active: true, confirmedAt: { not: null } },
-      select: { id: true, events: true },
+      select: { id: true, events: true, reviewScores: true },
     });
   });
 

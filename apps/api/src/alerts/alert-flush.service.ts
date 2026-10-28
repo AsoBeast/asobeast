@@ -381,12 +381,12 @@ export class AlertFlushService {
     const [webhooks, emails] = await Promise.all([
       this.prisma.webhook.findMany({
         where: { active: true },
-        select: { id: true, events: true },
+        select: { id: true, events: true, reviewScores: true },
       }),
       this.mailer.enabled
         ? this.prisma.emailAlert.findMany({
             where: DELIVERABLE_EMAIL_ALERTS,
-            select: { id: true, events: true },
+            select: { id: true, events: true, reviewScores: true },
           })
         : Promise.resolve([]),
     ]);

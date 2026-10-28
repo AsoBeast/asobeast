@@ -5,7 +5,7 @@ import {
   RankMilestonePayload,
   RankOvertakenPayload,
 } from '@asobeast/shared';
-import { reviewKey } from './review-fingerprint';
+import { ReviewAlertPayload, reviewKey } from './review-fingerprint';
 
 export interface OutboxRow {
   event: string;
@@ -24,7 +24,11 @@ const actionOpenedKey = (payload: ActionOpenedPayload): string =>
     : `action.opened~${payload.action.id}`;
 
 function appRow(
-  payload: RankMilestonePayload | RankFirstPayload | RankOvertakenPayload,
+  payload:
+    | RankMilestonePayload
+    | RankFirstPayload
+    | RankOvertakenPayload
+    | ReviewAlertPayload,
   dedupeKey: string,
 ): OutboxRow {
   return { event: payload.event, appId: payload.app.id, dedupeKey, payload };
@@ -54,14 +58,11 @@ export function outboxRows(payload: AlertPayload): OutboxRow[] {
   }
 
   if (payload.event === 'review.negative') {
-    return [
-      {
-        event: payload.event,
-        appId: payload.app.id,
-        dedupeKey: `review:${reviewKey(payload)}`,
-        payload,
-      },
-    ];
+    return [appRow(payload, `review:${reviewKey(payload)}`)];
+  }
+
+  if (payload.event === 'review.new') {
+    return [appRow(payload, `review.new:${reviewKey(payload)}`)];
   }
 
   if (payload.event === 'serp.entrant') {
