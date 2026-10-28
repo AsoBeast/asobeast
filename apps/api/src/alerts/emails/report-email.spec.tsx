@@ -1,6 +1,12 @@
 import type { ReactElement } from 'react';
 import { render } from 'react-email';
 import { EmailLayout } from '../../mail/email-layout';
+import {
+  chartEntered,
+  chartMilestone,
+  chartMoveBatch,
+} from '../chart-events.fixture';
+import { buildReport } from '../report/build-report';
 import type { ReportApp } from '../report/report';
 import { ReportCard } from './report-card';
 import { StatGrid } from './stat-grid';
@@ -67,6 +73,19 @@ describe('report components', () => {
     expect(output).toContain('href="https://aso.example.com/apps/a"');
     expect(output).toContain('>Alpha</a>');
     expect(output).toContain('App Store · US');
+  });
+
+  it('draws the chart moves group of a card with its merged row', async () => {
+    const [app] = buildReport(
+      chartMoveBatch(chartEntered(), chartMilestone({ from: null, to: 7 })),
+      'https://aso.example.com',
+    ).apps;
+
+    const output = await html(<ReportCard app={app} />);
+
+    expect(output).toContain('Chart moves');
+    expect(output).toContain('Top free · Productivity');
+    expect(output).toContain('entered the chart · entered the top 10');
   });
 
   it('keeps the name in place without an icon or a link', async () => {

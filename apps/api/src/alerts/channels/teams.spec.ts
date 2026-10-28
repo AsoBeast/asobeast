@@ -12,6 +12,11 @@ import { firstRanking } from '../rank-events.fixture';
 import { buildAlert } from '../report/build-alert';
 import { buildReport } from '../report/build-report';
 import { escapeTeams, teamsBody } from './teams';
+import {
+  chartEntered,
+  chartMilestone,
+  chartMoveBatch,
+} from '../chart-events.fixture';
 
 const ORIGIN = 'https://aso.example.com';
 const ICON = 'https://is1-ssl.mzstatic.com/image/thumb/alpha/512x512bb.jpg';
@@ -229,5 +234,26 @@ describe('escapeTeams', () => {
     expect(escapeTeams('*bold* _it_ [x](y)')).toBe(
       '\\*bold\\* \\_it\\_ \\[x\\](y)',
     );
+  });
+});
+
+describe('teams chart moves', () => {
+  it('draws the chart moves group of an app', () => {
+    const body = JSON.stringify(
+      teamsBody(
+        buildReport(
+          chartMoveBatch(chartEntered(), chartMilestone({ from: null, to: 7 })),
+          ORIGIN,
+        ),
+      ),
+    );
+
+    for (const text of [
+      'Chart moves',
+      'Top free · Productivity',
+      'entered the chart',
+    ]) {
+      expect(body).toContain(text);
+    }
   });
 });

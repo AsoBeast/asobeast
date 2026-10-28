@@ -7,6 +7,12 @@ import {
   improved,
   worstCaseBatch,
 } from '../email-fixtures.fixture';
+import {
+  chartEntered,
+  chartMilestone,
+  chartMoveBatch,
+  withoutChartMoves,
+} from '../chart-events.fixture';
 import { milestone } from '../rank-events.fixture';
 import { buildReport, DEFAULT_CAPS, reportCounts } from './build-report';
 
@@ -215,10 +221,81 @@ describe('reportCounts', () => {
       milestones: 0,
       firstRankings: 0,
       overtakes: 0,
+      chartMoves: 0,
       serpEntrants: 1,
       changes: 1,
       negativeReviews: 0,
       actions: 0,
     });
+  });
+});
+
+describe('buildReport with chart moves', () => {
+  const reachedTop10 = chartMilestone({ from: null, to: 7 });
+  const moves = chartMoveBatch(chartEntered(), reachedTop10);
+  const chartGroup = (payload: AlertBatchPayload, origin: string | null) =>
+    buildReport(payload, origin).apps[0]?.groups.find(
+      (group) => group.kind === 'chartMoves',
+    );
+
+  it('places the chart moves after the milestones and before the listing changes', () => {
+    const section = {
+      ...moves.apps[0],
+      rankMilestones: [milestone()],
+      changes: alpha.changes,
+    };
+
+    expect(
+      buildReport(owned([section]), null).apps[0].groups.map((group) => [
+        group.kind,
+        group.title,
+        group.tone,
+      ]),
+    ).toEqual([
+      ['milestones', 'Milestones', 'up'],
+      ['chartMoves', 'Chart moves', 'up'],
+      ['changes', 'Listing changes', 'neutral'],
+    ]);
+  });
+
+  it('lists one merged row per chart and day', () => {
+    expect(chartGroup(moves, null)).toMatchObject({
+      total: 1,
+      rows: [
+        {
+          kind: 'move',
+          label: 'Top free · Productivity',
+          from: '>100',
+          to: '#7',
+          note: 'entered the chart · entered the top 10',
+        },
+      ],
+    });
+  });
+
+  it('links the group to the chart page only with an origin', () => {
+    expect(chartGroup(moves, ORIGIN)?.link).toEqual({
+      href: `${ORIGIN}/charts?store=APP_STORE&country=us&genre=6007&device=iphone`,
+      label: 'See all 1 in AsoBeast',
+    });
+    expect(chartGroup(moves, null)?.link).toBeNull();
+  });
+
+  it('reads a section queued before chart moves existed', () => {
+    const queued = { ...moves, apps: [withoutChartMoves(moves.apps[0])] };
+
+    expect(() => buildReport(queued, ORIGIN)).not.toThrow();
+    expect(chartGroup(queued, ORIGIN)).toBeUndefined();
+    expect(reportCounts(queued).chartMoves).toBe(0);
+  });
+
+  it('shows no chart moves in the competitor watch', () => {
+    expect(
+      chartGroup({ ...moves, scope: 'competitors' }, ORIGIN),
+    ).toBeUndefined();
+  });
+
+  it('counts the merged moves, not the events', () => {
+    expect(reportCounts(moves).chartMoves).toBe(1);
   });
 });

@@ -6864,7 +6864,10 @@
                 "review.negative",
                 "digest.weekly",
                 "serp.entrant",
-                "action.opened"
+                "action.opened",
+                "chart.entered",
+                "chart.left",
+                "chart.milestone"
               ]
             }
           },
@@ -6903,7 +6906,10 @@
                 "review.negative",
                 "digest.weekly",
                 "serp.entrant",
-                "action.opened"
+                "action.opened",
+                "chart.entered",
+                "chart.left",
+                "chart.milestone"
               ]
             }
           },
@@ -6941,7 +6947,10 @@
                 "review.negative",
                 "digest.weekly",
                 "serp.entrant",
-                "action.opened"
+                "action.opened",
+                "chart.entered",
+                "chart.left",
+                "chart.milestone"
               ]
             }
           },
@@ -6976,7 +6985,10 @@
                 "review.negative",
                 "digest.weekly",
                 "serp.entrant",
-                "action.opened"
+                "action.opened",
+                "chart.entered",
+                "chart.left",
+                "chart.milestone"
               ]
             }
           },

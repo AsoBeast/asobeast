@@ -1,6 +1,7 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import {
   AlertBatchApp,
+  AlertBatchAppSection,
   AlertBatchPayload,
   AlertDeliveryStatus,
   AlertFlushResult,
@@ -11,6 +12,7 @@ import {
   EmailAlertCreateRequest,
   EmailAlertItem,
   EmailAlertUpdateRequest,
+  GranularAlertPayload,
   isChangeField,
   RankDroppedPayload,
   RankImprovedPayload,
@@ -20,6 +22,7 @@ import {
   WebhookItem,
   WebhookUpdateRequest,
 } from './changes';
+import type { ChartLeftPayload, ChartMovePayload } from './charts';
 
 const batch = (scope: AlertBatchPayload['scope']): AlertBatchPayload => ({
   event: 'alerts.batch',
@@ -47,6 +50,9 @@ describe('alert contracts', () => {
       'digest.weekly',
       'serp.entrant',
       'action.opened',
+      'chart.entered',
+      'chart.left',
+      'chart.milestone',
     ]);
   });
 
@@ -271,5 +277,20 @@ describe('the confirmed drop fields', () => {
     expectTypeOf<RankMilestonePayload['undoesDrop']>().toEqualTypeOf<
       boolean | undefined
     >();
+  });
+});
+
+describe('the chart alert events', () => {
+  it('carries chart moves on a section without requiring them', () => {
+    expectTypeOf<AlertBatchAppSection['chartMoves']>().toEqualTypeOf<
+      ChartMovePayload[] | undefined
+    >();
+  });
+
+  it('narrows a granular payload to a chart exit by its event', () => {
+    const narrow = (payload: GranularAlertPayload) =>
+      payload.event === 'chart.left' ? payload : null;
+
+    expectTypeOf(narrow).returns.toEqualTypeOf<ChartLeftPayload | null>();
   });
 });

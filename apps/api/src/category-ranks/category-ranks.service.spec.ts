@@ -5,6 +5,7 @@ import { CHART_DEPTH } from '@asobeast/shared';
 import { ChartCaptureService } from '../charts/chart-capture.service';
 import { scrapedAppStoreRaw } from '../store-providers/app-store-scraped.fixture';
 import { CategoryRanksService } from './category-ranks.service';
+import { ChartAlertsService } from './chart-alerts.service';
 
 interface AppRow {
   id: string;
@@ -12,6 +13,8 @@ interface AppRow {
   country: string;
   store: Store;
   snapshots: { raw: unknown }[];
+  name?: string | null;
+  isCompetitor?: boolean;
 }
 
 const app = (
@@ -28,9 +31,11 @@ const makeService = (
   store: Store = Store.APP_STORE,
 ) => {
   const upsert = jest.fn().mockResolvedValue(undefined);
+  const findUnique = jest.fn().mockResolvedValue(null);
+  const dispatch = jest.fn().mockResolvedValue(undefined);
   const prisma = {
     app: { findMany: jest.fn().mockResolvedValue(apps) },
-    categoryRank: { upsert },
+    categoryRank: { upsert, findUnique },
   };
   const captureToday = jest.fn().mockResolvedValue({
     depth: CHART_DEPTH[store],
@@ -43,8 +48,9 @@ const makeService = (
   const service = new CategoryRanksService(
     prisma as unknown as PrismaService,
     { captureToday } as unknown as ChartCaptureService,
+    { dispatch } as unknown as ChartAlertsService,
   );
-  return { service, upsert, captureToday, prisma };
+  return { service, upsert, findUnique, dispatch, captureToday, prisma };
 };
 
 const bucket = (collection: string, genre: string) => ({
@@ -499,6 +505,189 @@ describe('CategoryRanksService checkCategory', () => {
   });
 });
 
+describe('CategoryRanksService chart alerts', () => {
+  const productivityFree = {
+    collection: 'free' as const,
+    genre: '6007',
+    country: 'us',
+    store: Store.APP_STORE,
+    workspaceId: 'ws_default',
+  };
+  const owned = (storeAppId = '111') => ({
+    ...app('a1', storeAppId, { primaryGenreId: '6007', price: 0 }),
+    name: 'Mine',
+  });
+  const ranked = [{ storeAppId: '111', title: 'Mine' }];
+
+  it('hands each changed position of an owned app to the chart alerts', async () => {
+    const { service, dispatch } = makeService([owned()], ranked);
+
+    await service.checkCategory(productivityFree, true);
+
+    expect(dispatch).toHaveBeenCalledTimes(1);
+    expect(dispatch).toHaveBeenCalledWith({
+      app: { id: 'a1', name: 'Mine' },
+      chart: {
+        store: 'APP_STORE',
+        country: 'us',
+        collection: 'free',
+        genre: '6007',
+        genreName: 'Productivity',
+        device: 'iphone',
+      },
+      date: expect.any(Date) as Date,
+      position: 1,
+      depth: 100,
+    });
+  });
+
+  it('names the overall chart', async () => {
+    const { service, dispatch } = makeService([owned()], ranked);
+
+    await service.checkCategory(
+      { ...productivityFree, genre: 'overall' },
+      true,
+    );
+
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        chart: expect.objectContaining({
+          genre: 'overall',
+          genreName: 'Overall',
+        }) as object,
+      }),
+    );
+  });
+
+  it('describes a Google Play chart with its device, depth and category name', async () => {
+    const { service, dispatch } = makeService(
+      [
+        {
+          ...app(
+            'p1',
+            'com.puzzle',
+            { genreId: 'GAME_PUZZLE', price: 0 },
+            'de',
+            Store.GOOGLE_PLAY,
+          ),
+          name: 'Puzzle',
+        },
+      ],
+      [{ storeAppId: 'com.puzzle', title: 'Puzzle' }],
+      Store.GOOGLE_PLAY,
+    );
+
+    await service.checkCategory(
+      {
+        collection: 'free',
+        genre: 'GAME_PUZZLE',
+        country: 'de',
+        store: Store.GOOGLE_PLAY,
+        workspaceId: 'ws_default',
+      },
+      true,
+    );
+
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        chart: {
+          store: 'GOOGLE_PLAY',
+          country: 'de',
+          collection: 'free',
+          genre: 'GAME_PUZZLE',
+          genreName: 'Puzzle',
+          device: 'android',
+        },
+        position: 1,
+        depth: 200,
+      }),
+    );
+  });
+
+  it('hands an app missing from the chart over as not found', async () => {
+    const { service, dispatch } = makeService([owned('222')], ranked);
+
+    await service.checkCategory(productivityFree, true);
+
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({ position: null }),
+    );
+  });
+
+  it('raises nothing when the day already holds the same position', async () => {
+    const { service, upsert, findUnique, dispatch } = makeService(
+      [owned()],
+      ranked,
+    );
+    findUnique.mockResolvedValue({ position: 1 });
+
+    await service.checkCategory(productivityFree, true);
+
+    expect(upsert).toHaveBeenCalledTimes(1);
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+
+  it('raises again when the position changed the same day', async () => {
+    const { service, findUnique, dispatch } = makeService([owned()], ranked);
+    findUnique.mockResolvedValue({ position: 4 });
+
+    await service.checkCategory(productivityFree, true);
+
+    expect(dispatch).toHaveBeenCalledTimes(1);
+  });
+
+  it('records a competitor without raising an alert', async () => {
+    const { service, upsert, dispatch } = makeService(
+      [{ ...owned(), isCompetitor: true }],
+      ranked,
+    );
+
+    await service.checkCategory(productivityFree, true);
+
+    expect(upsert).toHaveBeenCalledTimes(1);
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+
+  it('records a chart the store listed no apps in without raising an alert', async () => {
+    const { service, upsert, dispatch } = makeService([owned()], []);
+
+    await service.checkCategory(productivityFree, true);
+
+    expect(upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({ position: null }) as object,
+      }),
+    );
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+
+  it('raises nothing and fails the job when the position cannot be stored', async () => {
+    const { service, upsert, dispatch } = makeService([owned()], ranked);
+    upsert.mockRejectedValue(new Error('db down'));
+
+    await expect(service.checkCategory(productivityFree, true)).rejects.toThrow(
+      'db down',
+    );
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+
+  it('stores each position before it raises the alert', async () => {
+    const { service, upsert, dispatch } = makeService(
+      [owned(), { ...owned('222'), id: 'a2' }],
+      ranked,
+    );
+
+    await service.checkCategory(productivityFree, true);
+
+    const upserts = upsert.mock.invocationCallOrder;
+    const dispatches = dispatch.mock.invocationCallOrder;
+    expect(dispatches).toHaveLength(2);
+    expect(upserts[0]).toBeLessThan(dispatches[0]);
+    expect(dispatches[0]).toBeLessThan(upserts[1]);
+    expect(upserts[1]).toBeLessThan(dispatches[1]);
+  });
+});
+
 describe('CategoryRanksService history', () => {
   const makeHistoryService = (
     appRow: unknown,
@@ -516,6 +705,7 @@ describe('CategoryRanksService history', () => {
     const service = new CategoryRanksService(
       prisma as unknown as PrismaService,
       {} as ChartCaptureService,
+      {} as ChartAlertsService,
     );
     return { service };
   };

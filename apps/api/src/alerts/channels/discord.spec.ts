@@ -14,6 +14,11 @@ import {
 import { buildAlert } from '../report/build-alert';
 import { buildReport } from '../report/build-report';
 import { discordBody, embedSize, type DiscordMessage } from './discord';
+import {
+  chartEntered,
+  chartMilestone,
+  chartMoveBatch,
+} from '../chart-events.fixture';
 
 const ORIGIN = 'https://aso.example.com';
 const ICON = 'https://is1-ssl.mzstatic.com/image/thumb/alpha/512x512bb.jpg';
@@ -283,5 +288,26 @@ describe('discordBody for a single alert', () => {
     expect(message.content).toContain('"\\@everyone \\*now\\*"');
     expect(message.allowed_mentions).toEqual({ parse: [] });
     expect(message.embeds[0].url).toBeUndefined();
+  });
+});
+
+describe('discord chart moves', () => {
+  it('draws the chart moves group of an app', () => {
+    const body = JSON.stringify(
+      discordBody(
+        buildReport(
+          chartMoveBatch(chartEntered(), chartMilestone({ from: null, to: 7 })),
+          ORIGIN,
+        ),
+      ),
+    );
+
+    for (const text of [
+      'Chart moves',
+      'Top free · Productivity',
+      'entered the chart',
+    ]) {
+      expect(body).toContain(text);
+    }
   });
 });

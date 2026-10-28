@@ -1,6 +1,8 @@
 import {
   ActionOpenedPayload,
   AlertPayload,
+  ChartMovePayload,
+  isChartMovePayload,
   RankDroppedPayload,
   RankFirstPayload,
   RankImprovedPayload,
@@ -51,6 +53,16 @@ function appRow(
   dedupeKey: string,
 ): OutboxRow {
   return { event: payload.event, appId: payload.app.id, dedupeKey, payload };
+}
+
+function chartRow(payload: ChartMovePayload, prefix: string): OutboxRow {
+  const { app, chart, date } = payload;
+  return {
+    event: payload.event,
+    appId: app.id,
+    dedupeKey: `${prefix}:${app.id}:${chart.collection}:${chart.genre}:${date}`,
+    payload,
+  };
 }
 
 export function outboxRows(payload: AlertPayload): OutboxRow[] {
@@ -128,6 +140,15 @@ export function outboxRows(payload: AlertPayload): OutboxRow[] {
       appRow(
         payload,
         `overtaken:${payload.app.id}:${payload.keyword.id}:${payload.competitor.id}:${day}`,
+      ),
+    ];
+  }
+
+  if (isChartMovePayload(payload)) {
+    return [
+      chartRow(
+        payload,
+        payload.event === 'chart.milestone' ? 'chart-milestone' : 'chart',
       ),
     ];
   }
