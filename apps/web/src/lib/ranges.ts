@@ -1,5 +1,7 @@
 export const RANGE_PRESETS = ["7d", "30d", "90d"] as const;
 export type RangePreset = (typeof RANGE_PRESETS)[number];
+export const WIDEST_RANGE: RangePreset =
+  RANGE_PRESETS[RANGE_PRESETS.length - 1];
 
 export const VISIBILITY_RANGES = ["30d", "90d"] as const;
 export type VisibilityRange = (typeof VISIBILITY_RANGES)[number];
@@ -21,18 +23,22 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export type DayPreset = `${number}d`;
 
 export function rangeLabel(preset: DayPreset): string {
-  return `Last ${preset.replace("d", "")} days`;
+  return `Last ${presetDays(preset)} days`;
 }
 
 export function todayUtc(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+export function presetDays(preset: DayPreset): number {
+  return Number(preset.replace("d", ""));
+}
+
 export function presetToRange(preset: DayPreset): {
   from: string;
   to: string;
 } {
-  const days = Number(preset.replace("d", ""));
+  const days = presetDays(preset);
   const now = Date.now();
   return {
     from: new Date(now - days * DAY_MS).toISOString().slice(0, 10),

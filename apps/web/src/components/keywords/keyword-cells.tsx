@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { History, LoaderCircle, StickyNote } from "lucide-react";
+import { LoaderCircle, StickyNote } from "lucide-react";
 import type {
   PlayAcquisitions,
   ScoreProvenance,
@@ -11,10 +11,8 @@ import type {
 } from "@asobeast/shared";
 import { formatCheckedPosition } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
-import { PositionDeltaChip } from "@/components/ui/delta-chip";
-import { InfoTip } from "@/components/ui/info-tip";
 import { Meter } from "@/components/ui/meter";
-import { GradedNumber, gradeFill } from "@/components/ui/graded";
+import { gradeFill } from "@/components/ui/graded";
 import {
   Popover,
   PopoverContent,
@@ -29,8 +27,11 @@ import { formatDateTime, formatMonth, formatNumber } from "@/lib/format";
 import { isChecking, staleCheckDay } from "@/lib/keyword-checks";
 import { tagsLabel, visibleTags } from "@/lib/keyword-tags";
 import { grade, gradeLabel, type GradeMetric } from "@/lib/grade";
-import { positionHoldLines } from "./position-hold";
-import { staleCheckLabel, staleCheckLine } from "./stale-check";
+import { PositionReadout } from "./PositionReadout";
+import {
+  PositionHistoryPopover,
+  type PositionHistoryContext,
+} from "./PositionHistoryPopover";
 import { cn } from "@/lib/utils";
 
 const OUTDATED_SCORE_DETAIL =
@@ -248,9 +249,11 @@ function volatilityBand(value: number): {
 export function PositionCell({
   keyword,
   today,
+  history,
 }: {
   keyword: TrackedKeywordItem;
   today: string;
+  history: PositionHistoryContext;
 }) {
   const label = formatCheckedPosition(
     keyword.latestPosition,
@@ -291,42 +294,14 @@ export function PositionCell({
     );
   }
   const staleOn = staleCheckDay(keyword, today);
-  const position = (
-    <span className="numeric font-mono inline-flex items-center gap-1.5">
-      {keyword.latestPosition === null ? (
-        <span className="text-muted-foreground">{label}</span>
-      ) : (
-        <GradedNumber
-          value={label}
-          grade={grade("position", keyword.latestPosition)}
-          label="Position"
-        />
-      )}
-      <PositionDeltaChip
-        value={staleOn === null ? keyword.positionDelta1d : null}
-      />
-    </span>
-  );
-  const facts = [
-    ...(staleOn === null ? [] : [staleCheckLine(staleOn)]),
-    ...positionHoldLines(keyword),
-  ];
-  if (facts.length === 0) {
-    return position;
-  }
-  const factsLabel = `Position facts: ${keyword.text}`;
   return (
     <span className="inline-flex items-center gap-1">
-      {position}
-      <InfoTip
-        label={
-          staleOn === null
-            ? factsLabel
-            : `${factsLabel}, ${staleCheckLabel(staleOn)}`
-        }
-        title="Position facts"
-        summary={facts.join(" · ")}
-        icon={staleOn === null ? undefined : History}
+      <PositionReadout keyword={keyword} label={label} staleOn={staleOn} />
+      <PositionHistoryPopover
+        keyword={keyword}
+        label={label}
+        staleOn={staleOn}
+        {...history}
       />
     </span>
   );

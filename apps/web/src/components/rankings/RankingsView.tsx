@@ -19,7 +19,12 @@ import {
   keywordsOptions,
   rankingsOptions,
 } from "@/lib/queries";
-import { presetToRange, RANGE_PRESETS } from "@/lib/ranges";
+import {
+  presetDays,
+  presetToRange,
+  RANGE_PRESETS,
+  WIDEST_RANGE,
+} from "@/lib/ranges";
 import { keywordIdsParser, rangeParser } from "@/lib/search-params";
 import { annotationsInMarkets } from "@/components/annotations/annotation-lines";
 import { MIN_TREND_POINTS } from "@/components/charts/ChartStates";
@@ -50,9 +55,7 @@ export function RankingsView({ id }: { id: string }) {
   const { data } = useSuspenseQuery(
     rankingsOptions(id, { ...bounds, keywordIds: effective }),
   );
-  const { data: changes } = useQuery(
-    changesOptions(id, Number(range.replace("d", ""))),
-  );
+  const { data: changes } = useQuery(changesOptions(id, presetDays(range)));
   const { data: annotations } = useQuery(annotationsOptions(id));
   const inScope = annotationsInMarkets(annotations?.annotations ?? [], [
     ...new Set(data.series.map((item) => item.country)),
@@ -61,7 +64,6 @@ export function RankingsView({ id }: { id: string }) {
     .filter((event) => !event.isCompetitor)
     .map((event) => event.capturedAt.slice(0, 10));
 
-  const widest = RANGE_PRESETS[RANGE_PRESETS.length - 1];
   const everChecked = tracked.some(
     (item) => effective.includes(item.keywordId) && item.latestDepth !== null,
   );
@@ -122,7 +124,9 @@ export function RankingsView({ id }: { id: string }) {
           everChecked ? (
             <NoDataInRange
               onWiden={
-                range === widest ? undefined : () => void setRange(widest)
+                range === WIDEST_RANGE
+                  ? undefined
+                  : () => void setRange(WIDEST_RANGE)
               }
             />
           ) : (

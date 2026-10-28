@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import {
   utcDayOf,
   type Store,
@@ -11,7 +11,7 @@ import { useTable, type RowSelectionState } from "@tanstack/react-table";
 import { useQueryState, useQueryStates } from "nuqs";
 import { useStoredColumnVisibility } from "@/components/data-table/useStoredColumnVisibility";
 import { useUrlSorting } from "@/components/data-table/useUrlSorting";
-import { keywordsOptions } from "@/lib/queries";
+import { keywordCountriesOptions, keywordsOptions } from "@/lib/queries";
 import {
   KEYWORD_DEFAULT_SORT,
   keywordFilterParsers,
@@ -38,10 +38,12 @@ export function KeywordsTable({
   id,
   store,
   country,
+  homeCountry,
 }: {
   id: string;
   store: Store;
   country: string;
+  homeCountry: string;
 }) {
   const [{ sort, dir }, setSortParams] = useQueryStates({
     sort: keywordSortParser,
@@ -53,6 +55,8 @@ export function KeywordsTable({
     keywordsOptions(id, country),
   );
   const today = utcDayOf(dataUpdatedAt);
+  const { data: markets } = useQuery(keywordCountriesOptions(id));
+  const multiMarket = (markets?.length ?? 0) > 1;
   const [selection, setSelection] = useState<RowSelectionState>({});
   const tableArea = useRef<HTMLDivElement>(null);
   const refocusTable = useRef(false);
@@ -71,10 +75,12 @@ export function KeywordsTable({
       keywordColumns({
         appId: id,
         store,
+        homeCountry,
+        multiMarket,
         today,
         onOpenSerp: (keywordId) => void setSerp(keywordId),
       }),
-    [id, store, setSerp, today],
+    [id, store, homeCountry, multiMarket, setSerp, today],
   );
 
   const { sorting, onSortingChange } = useUrlSorting(

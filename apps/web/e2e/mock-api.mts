@@ -60,6 +60,10 @@ import {
   APP_GP_CHANGE_IMPACT,
   PLAY_AUDIT,
   PLAY_CHANGE_IMPACT_COOKIE,
+  RANKINGS_FAIL_COOKIE,
+  PL_HISTORY_COOKIE,
+  PL_HISTORY_KEYWORD,
+  PL_HISTORY_SERIES,
   PROVISIONAL_AUDIT,
   METADATA_AUDIT,
   APP_1_PL_SCREENSHOTS,
@@ -230,6 +234,7 @@ import type {
   StoreHealthReport,
   WorkspaceRunStatus,
   PortfolioSummary,
+  RankingSeries,
   KeywordUpdateRequest,
   TrackedKeywordItem,
   WebhookCreateRequest,
@@ -848,6 +853,28 @@ const REVIEW_SETS: Record<string, typeof UPDATE_THEME_REVIEWS> = {
   rtl: RTL_REVIEWS,
   emoji: EMOJI_REVIEWS,
 };
+
+const hasPolishHistory = (req: IncomingMessage) =>
+  hasCookie(req, PL_HISTORY_COOKIE, "1");
+
+function rankingsIn(
+  rankings: RankingSeries,
+  query: URLSearchParams,
+): RankingSeries {
+  const ids = query.get("keywordIds")?.split(",").filter(Boolean) ?? [];
+  const from = query.get("from");
+  const to = query.get("to");
+  return {
+    series: rankings.series
+      .filter((item) => ids.length === 0 || ids.includes(item.keywordId))
+      .map((item) => ({
+        ...item,
+        points: item.points.filter(
+          (point) => (!from || point.date >= from) && (!to || point.date <= to),
+        ),
+      })),
+  };
+}
 
 const reviewSetOf = (req: IncomingMessage) =>
   REVIEW_SETS[cookieValue(req, "e2e_reviews") ?? ""];
@@ -3369,12 +3396,18 @@ const routes: Route[] = [
       const scoped = country
         ? dataset.keywords.filter((keyword) => keyword.country === country)
         : dataset.keywords;
+      const polishHistory =
+        id === "app-1" && country === "pl" && hasPolishHistory(req)
+          ? [PL_HISTORY_KEYWORD]
+          : [];
       json(
         res,
         200,
         sortKeywords(
           [
-            ...scoped.map((keyword) => annotated(id, keyword)),
+            ...[...scoped, ...polishHistory].map((keyword) =>
+              annotated(id, keyword),
+            ),
             ...(id === "app-1" ? firstCheckRows(req) : []),
           ],
           query.get("sort"),
@@ -3711,7 +3744,17 @@ const routes: Route[] = [
     };
   }),
 
-  appRoute(/^\/apps\/([^/]+)\/rankings$/, (dataset) => dataset.rankings),
+  appRoute(
+    /^\/apps\/([^/]+)\/rankings$/,
+    (dataset, query, req) =>
+      rankingsIn(
+        dataset.detail.id === "app-1" && hasPolishHistory(req)
+          ? { series: [...dataset.rankings.series, PL_HISTORY_SERIES] }
+          : dataset.rankings,
+        query,
+      ),
+    (req) => hasCookie(req, RANKINGS_FAIL_COOKIE, "1"),
+  ),
   appRoute(/^\/apps\/([^/]+)\/serp-movers$/, (dataset) => dataset.serpMovers),
   {
     method: "GET",

@@ -22,6 +22,7 @@ import { DeltaChip } from "@/components/ui/delta-chip";
 import { SortableHeader } from "@/components/data-table/SortableHeader";
 import { tagsIn } from "@/lib/keyword-tags";
 import { KeywordRowActions } from "./KeywordRowActions";
+import type { PositionHistoryContext } from "./PositionHistoryPopover";
 import {
   DerivedScoreCell,
   NoteButton,
@@ -71,17 +72,21 @@ function gradeFilter(
 export function keywordColumns({
   appId,
   store,
+  homeCountry,
+  multiMarket,
   today,
   onOpenSerp,
 }: {
   appId: string;
   store: Store;
+  homeCountry: string;
+  multiMarket: boolean;
   today: string;
   onOpenSerp: (keywordId: string) => void;
 }) {
   return columnHelper.columns([
     ...identityColumns(),
-    positionColumn(today),
+    positionColumn(today, { appId, store, homeCountry, multiMarket }),
     ...scoreColumns(),
     ...(store === "GOOGLE_PLAY" ? [acquisitionsColumn()] : []),
     deltaColumn(),
@@ -184,7 +189,7 @@ function filterColumns() {
   ];
 }
 
-function positionColumn(today: string) {
+function positionColumn(today: string, history: PositionHistoryContext) {
   return columnHelper.accessor((row) => nullsLast(row.latestPosition), {
     id: "position",
     meta: { label: "Position", phone: true },
@@ -197,7 +202,9 @@ function positionColumn(today: string) {
         selected,
       ),
     header: ({ column }) => <SortableHeader column={column} label="Position" />,
-    cell: ({ row }) => <PositionCell keyword={row.original} today={today} />,
+    cell: ({ row }) => (
+      <PositionCell keyword={row.original} today={today} history={history} />
+    ),
   });
 }
 

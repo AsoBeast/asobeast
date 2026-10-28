@@ -72,7 +72,12 @@ export function KeywordsWorkspace({
         </AlertDescription>
       </Alert>
       <Suspense fallback={<KeywordsTableSkeleton />}>
-        <KeywordsTable id={id} store={store} country={market} />
+        <KeywordsTable
+          id={id}
+          store={store}
+          country={market}
+          homeCountry={homeCountry}
+        />
       </Suspense>
       <SuggestionsPanel id={id} country={market} store={store} />
       <KeywordCombinations

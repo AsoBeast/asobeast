@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   CHART_SERIES_COUNT,
+  FADE_STOPS,
   RANK_AXIS_PROPS,
   seriesColor,
   seriesDash,
@@ -45,5 +46,15 @@ describe("RANK_AXIS_PROPS", () => {
       scale: "sqrt",
       interval: 0,
     });
+  });
+});
+
+describe("FADE_STOPS", () => {
+  it("fades from a soft tint to transparent toward the bottom", () => {
+    const first = FADE_STOPS[0];
+    const last = FADE_STOPS[FADE_STOPS.length - 1];
+    expect(first.opacity).toBeGreaterThan(last.opacity);
+    expect(last.opacity).toBe(0);
+    expect(parseFloat(first.offset)).toBeLessThan(parseFloat(last.offset));
   });
 });

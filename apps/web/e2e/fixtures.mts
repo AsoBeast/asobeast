@@ -42,6 +42,7 @@ import type {
   RankDistributionHistory,
   RankingPoint,
   RankingSeries,
+  RankingSeriesItem,
   RatingsHistogram,
   ReviewThemes,
   RatingsHistory,
@@ -330,6 +331,10 @@ export const APP_1_KEYWORDS: TrackedKeywordItem[] = [
     latestPosition: 3,
     latestDepth: RANK_DEPTH,
     latestCheckedOn: utcDaysAgo(0),
+    bestPosition: 3,
+    positionDeltaFromBest: 0,
+    daysInTier: 1,
+    heldTier: 3,
     previousPosition: 5,
     positionDelta1d: -2,
     positionDelta7d: -7,
@@ -518,6 +523,40 @@ export const APP_1_RANKINGS: RankingSeries = {
       points: pointsFrom([40, 42, 44, 45, 45, 46, 46, 45], undefined, [5]),
     },
   ],
+};
+
+export const PL_HISTORY_COOKIE = "e2e-pl-history";
+
+export const PL_HISTORY_KEYWORD: TrackedKeywordItem = {
+  keywordId: "kw-pl-history",
+  text: "minutnik skupienia",
+  tags: [],
+  country: "pl",
+  serpVolatility7d: null,
+  source: "MANUAL",
+  active: true,
+  latestPosition: 6,
+  latestDepth: RANK_DEPTH,
+  latestCheckedOn: utcDaysAgo(0),
+  previousPosition: 7,
+  positionDelta1d: -1,
+  positionDelta7d: -3,
+  traffic: 30,
+  difficulty: 20,
+  volume: 800,
+  relevance: 70,
+  opportunity: 40,
+  bucket: "secondary",
+  scoredAt: utcTimestampDaysAgo(0),
+  scoreProvenance: null,
+};
+
+export const PL_HISTORY_SERIES: RankingSeriesItem = {
+  keywordId: PL_HISTORY_KEYWORD.keywordId,
+  text: PL_HISTORY_KEYWORD.text,
+  store: "APP_STORE",
+  country: "pl",
+  points: pointsFrom([9, 9, 8, 8, 7, 7, 7, 6]),
 };
 
 export const APP_1_SERP_MOVERS: SerpMovers = {
@@ -2039,6 +2078,8 @@ export const APP_1_CHANGE_IMPACT: ChangeImpactReport = {
 };
 
 export const PLAY_CHANGE_IMPACT_COOKIE = "e2e-play-change-impact";
+
+export const RANKINGS_FAIL_COOKIE = "e2e-fail-rankings";
 
 export const APP_GP_CHANGE_IMPACT: ChangeImpactReport = {
   appId: "app-gp",

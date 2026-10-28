@@ -4,7 +4,6 @@ import {
   CartesianGrid,
   Line,
   LineChart,
-  ReferenceArea,
   ReferenceLine,
   XAxis,
   YAxis,
@@ -24,6 +23,7 @@ import {
   annotationsOn,
 } from "@/components/annotations/annotation-lines";
 import {
+  CHANGE_MARKER_PROPS,
   CHART_HEIGHT,
   CHART_MARGIN,
   GRID_PROPS,
@@ -32,6 +32,11 @@ import {
   seriesDash,
   TIME_AXIS_PROPS,
 } from "@/components/charts/theme";
+import {
+  markerLineProps,
+  RANK_TICKS,
+  rankTierAreas,
+} from "@/components/charts/rank-layers";
 import { formatDayMonth } from "@/lib/format";
 import { todayUtc } from "@/lib/ranges";
 import {
@@ -40,26 +45,6 @@ import {
   notFoundKey,
   type RankingChartData,
 } from "./pivot";
-import { RankBandLabel } from "./RankBandLabel";
-
-const Y_TICKS = [1, 10, 25, 50, 100, 200];
-
-const markerLineProps = (dataKey: string, keywordId: string, fill: string) => ({
-  dataKey,
-  type: "monotone" as const,
-  stroke: "transparent",
-  legendType: "none" as const,
-  connectNulls: false,
-  isAnimationActive: false,
-  activeDot: false as const,
-  dot: { r: 3, fill, stroke: `var(--color-${keywordId})`, strokeWidth: 1.5 },
-});
-
-const RANK_BANDS = [
-  { from: 1, to: 3, fill: "var(--rank-band-1)", label: "Top 3" },
-  { from: 3, to: 10, fill: "var(--rank-band-2)", label: "Top 10" },
-  { from: 10, to: 25, fill: "var(--rank-band-3)", label: "Top 25" },
-] as const;
 
 function RankingTooltip({
   active,
@@ -131,26 +116,19 @@ export function RankingChart({
       aria-label="Keyword rank positions"
     >
       <LineChart accessibilityLayer data={data.rows} margin={CHART_MARGIN}>
-        {RANK_BANDS.map((band) => (
-          <ReferenceArea
-            key={band.label}
-            y1={band.from}
-            y2={band.to}
-            fill={band.fill}
-            fillOpacity={0.08}
-            ifOverflow="hidden"
-            label={{ value: band.label, content: RankBandLabel }}
-          />
-        ))}
+        {rankTierAreas()}
         <CartesianGrid {...GRID_PROPS} />
         <XAxis {...TIME_AXIS_PROPS} />
-        <YAxis {...RANK_AXIS_PROPS} domain={[1, RANK_DEPTH]} ticks={Y_TICKS} />
+        <YAxis
+          {...RANK_AXIS_PROPS}
+          domain={[1, RANK_DEPTH]}
+          ticks={RANK_TICKS}
+        />
         {marked.map((date) => (
           <ReferenceLine
             key={date}
             x={date}
-            stroke="var(--warning)"
-            strokeDasharray="4 3"
+            {...CHANGE_MARKER_PROPS}
             label={{
               value: "Metadata change",
               position: "insideBottomLeft",

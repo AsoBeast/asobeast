@@ -20,6 +20,14 @@ const POPOVERS: NamedPopover[] = [
     open: (page) => page.getByRole("button", { name: /^Switch app/ }).click(),
   },
   {
+    name: "Position history focus timer",
+    path: "/apps/app-1/keywords",
+    open: (page) =>
+      page
+        .getByRole("button", { name: /^Position history: focus timer/ })
+        .click(),
+  },
+  {
     name: "Choose keywords",
     path: "/apps/app-1/rankings",
     open: (page) => page.getByRole("button", { name: /selected$/ }).click(),
