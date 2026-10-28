@@ -19,13 +19,16 @@ export function ResendConfirmationButton() {
     },
   });
   const resendOnce = useSingleFlight(resend);
+  const locked = resend.isPending || resend.isSuccess;
 
   return (
     <Button
       variant="outline"
       size="sm"
-      disabled={resend.isPending || resend.isSuccess}
-      onClick={() => resendOnce()}
+      aria-disabled={locked || undefined}
+      onClick={() => {
+        if (!locked) resendOnce();
+      }}
     >
       {resend.isPending ? <Loader2 className="animate-spin" /> : null}
       {resend.isSuccess ? "New link sent" : "Send a new link"}

@@ -6,8 +6,10 @@ import {
   MinLength,
 } from 'class-validator';
 import {
+  CHECKOUT_THEMES,
   CHECKOUT_UIS,
   type CheckoutRequest,
+  type CheckoutTheme,
   type CheckoutUi,
 } from '@asobeast/shared';
 
@@ -20,4 +22,8 @@ export class CheckoutDto implements CheckoutRequest {
   @IsOptional()
   @IsIn(CHECKOUT_UIS)
   ui?: CheckoutUi;
+
+  @IsOptional()
+  @IsIn(CHECKOUT_THEMES)
+  theme?: CheckoutTheme;
 }

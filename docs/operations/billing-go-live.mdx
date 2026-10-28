@@ -6,7 +6,7 @@ icon: rocket
 keywords: ["billing","stripe","go live","live mode","checklist","stripe tax","webhook"]
 ---
 
-Everything the API can set about Stripe is set by `pnpm --filter api stripe:catalog`: the products, the prices, their tax behaviour, the product tax code and the customer portal. What is left lives only in the Stripe dashboard. This page is the checklist for it and the order to switch from a sandbox to live mode. How billing behaves once it runs is on [Billing](/operations/billing). Choose the tax mode first: [selling through Stripe Managed Payments](/operations/billing#selling-through-stripe-managed-payments) removes every tax registration from the steps below.
+Everything the API can set about Stripe is set by `pnpm --filter api stripe:catalog`: the products, the prices, their tax behaviour, the product tax code and the customer portal. What is left lives only in the Stripe dashboard. This page is the checklist for it and the order to switch from a sandbox to live mode. How billing behaves once it runs is on [Billing](/operations/billing). Choose the tax mode first: [selling through Stripe Managed Payments](/operations/billing#selling-through-stripe-managed-payments) removes every tax registration from the steps below. Managed Payments also decides what the billing wall can draw, see [Checkout](/operations/billing#checkout).
 
 ## Dashboard settings
 
@@ -18,9 +18,12 @@ Set every row in every sandbox and again in live mode. The catalog script prints
 | Manage failed payments | Settings, Billing, Subscriptions and emails | Smart Retries on, then mark the subscription unpaid | `past_due` stays entitled while Stripe retries; `unpaid` stops collection without losing the subscription, and the customer resumes it from the portal |
 | Customer emails | Settings, Billing, Subscriptions and emails | Failed payments, expiring cards and payments requiring authentication on, with the hosted invoice link | asobeast sends one dunning email and nothing when a renewal needs authentication; Stripe's emails carry the link |
 | Trial end behaviour | Settings, Billing, Subscriptions and emails | Cancel if no payment method | Checkout collects a card for every trial and sets the same in code, so this only agrees with it |
-| Trial parameters | A sandbox Checkout session | Open the billing wall once and confirm the session shows \$0 today and the first charge date | Stripe's pages do not state that every trial parameter is accepted under Managed Payments, so check it in the sandbox before the first customer |
+| Trial parameters | A sandbox Checkout session | Open the billing wall once, inside Stripe's embedded Checkout, and confirm the session shows \$0 today and the first charge date in both themes | Stripe's pages do not state that every trial parameter is accepted under Managed Payments, so check it in the sandbox before the first customer |
 | Payment methods | Settings, Payment methods | Card, Link, Apple Pay and Google Pay on; SEPA Direct Debit and Cash App Pay off | A delayed method leaves a subscription pending for days |
 | Adaptive pricing | Settings, Checkout | Off | The catalog and the web app are in USD |
+| Checkout branding | Settings, Branding, Checkout | The icon, the dark background and the orange button | Every session sends its own background and button, and the dashboard values fill any field a session leaves out. Under Managed Payments only the background is applied; Link keeps its own payment panel and button |
+| Checkout links | Settings, Checkout and Payment Links | Terms of service and privacy policy links | Managed Payments prints them in the footer of the form |
+| Local payment methods | A request to Stripe Support | The configuration without local payment methods | Under Managed Payments the session cannot choose its payment methods, so the form offers card, Link, Apple Pay and Google Pay only once Support removes the local ones |
 | Public business details | Settings, Public details | Legal name, support email `hello@asobeast.dev`, terms and privacy URLs | Checkout and the portal print them |
 | Radar | Radar, Rules | The default rules, plus the free trial abuse control with Radar on payment methods saved for future use | A card fingerprint is only checked when Stripe exposes one; Radar sees cards across every merchant. Under Managed Payments ask Stripe whether the control applies |
 | Webhook endpoint | Developers, Webhooks | One endpoint per environment with the ten handled events on the pinned API version | See [Billing](/operations/billing#the-webhook-endpoint) |

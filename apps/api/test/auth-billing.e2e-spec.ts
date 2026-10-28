@@ -225,6 +225,64 @@ describe('Auth (billing mode)', () => {
     },
   ) => prisma.workspace.update({ where: { id: workspaceId }, data });
 
+  const me = (cookie: string) =>
+    request(app.getHttpServer()).get('/auth/me').set('Cookie', cookie);
+
+  it('sends a new owner straight to the plan when no confirmation mail is sent', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({ email: 'owner@example.com', password: 'supersecret1' })
+      .expect(201);
+
+    expect((res.body as AuthUser).entryStep).toBe('choose-plan');
+    const current = await me(sessionCookie(res)).expect(200);
+    expect((current.body as AuthUser).entryStep).toBe('choose-plan');
+  });
+
+  it('owes no step for an owner whose workspace pays', async () => {
+    const { cookie, workspaceId } = await registerOwner();
+    await entitle(workspaceId);
+
+    const current = await me(cookie).expect(200);
+
+    expect(current.body).not.toHaveProperty('entryStep');
+  });
+
+  it('owes no step for an owner whose subscription lapsed', async () => {
+    const { cookie, workspaceId } = await registerOwner();
+    await prisma.workspace.update({
+      where: { id: workspaceId },
+      data: {
+        plan: 'free',
+        subscriptionId: 'sub_lapsed',
+        subscriptionStatus: 'canceled',
+      },
+    });
+
+    const current = await me(cookie).expect(200);
+
+    expect((current.body as AuthUser).entitled).toBe(false);
+    expect(current.body).not.toHaveProperty('entryStep');
+  });
+
+  it('owes no step for a member of a workspace without a plan', async () => {
+    const owner = await registerOwner();
+    const joined = await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({ email: 'member@example.com', password: 'supersecret1' })
+      .expect(201);
+    await prisma.user.update({
+      where: { id: (joined.body as AuthUser).id },
+      data: { role: 'member', workspaceId: owner.workspaceId },
+    });
+
+    const current = await me(sessionCookie(joined)).expect(200);
+
+    expect((current.body as AuthUser).role).toBe('member');
+    expect((current.body as AuthUser).entitled).toBe(false);
+    expect(current.body).not.toHaveProperty('entryStep');
+  });
+
   it('bootstraps exactly one account into the default workspace when registrations race', async () => {
     const register = (email: string) =>
       request(app.getHttpServer())

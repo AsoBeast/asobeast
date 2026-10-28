@@ -12,6 +12,9 @@ import {
   openRegistration,
 } from "./trial-plans.mts";
 import { seedViewer } from "./viewer.mts";
+import { summaryFromCatalog } from "../src/lib/order-summary";
+import { paywallFaq } from "../src/lib/paywall-faq";
+import { trustLines } from "../src/lib/plan-choice";
 
 async function register(page: Page, path = "/register") {
   await page.goto(path);
@@ -44,37 +47,19 @@ test.describe("the billing wall", () => {
         `Pay $0 today. Your trial ends on ${endsOn}, then the plan you choose is charged. Cancel any time from settings.`,
       ),
     ).toBeVisible();
+    for (const line of trustLines({ days: 7 }, new Date())) {
+      await expect(page.getByText(line, { exact: true })).toBeVisible();
+    }
     await expect(page.getByRole("tab", { name: "Monthly" })).toBeVisible();
     await expect(
-      page.getByRole("button", { name: "Selected Indie" }),
+      page.getByRole("tab", { name: "Annual Save 17%" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Indie, $10 per month" }),
     ).toHaveAttribute("aria-pressed", "true");
     await expect(
-      page.getByRole("button", { name: "Select Ultimate" }),
+      page.getByRole("button", { name: "Ultimate, $99 per month" }),
     ).toHaveAttribute("aria-pressed", "false");
-    await expect(
-      page.getByRole("button", { name: "Start free trial" }),
-    ).toBeEnabled();
-  });
-
-  test("an unconfirmed account sees the confirmation line and is not stopped", async ({
-    page,
-    context,
-  }) => {
-    await seedViewer(context, "checkout-pending-unconfirmed");
-    await openRegistration(page);
-    await openBilling(page);
-
-    await register(page);
-
-    await expect(page).toHaveURL(/\/upgrade$/);
-    await expect(
-      page.getByText(
-        "We sent a confirmation link to owner@example.com. You can start the trial now and confirm later.",
-      ),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: "Send a new link" }),
-    ).toBeVisible();
     await expect(
       page.getByRole("button", { name: "Start free trial" }),
     ).toBeEnabled();
@@ -92,18 +77,15 @@ test.describe("the billing wall", () => {
 
     await expect(page).toHaveURL(/\/upgrade\?plan=ultimate$/);
     await expect(
-      page.getByRole("button", { name: "Selected Ultimate" }),
+      page.getByRole("button", { name: "Ultimate, $99 per month" }),
     ).toHaveAttribute("aria-pressed", "true");
-    await expect(
-      page.getByRole("heading", { level: 2, name: "Ultimate" }),
-    ).toBeVisible();
 
-    await page.getByRole("button", { name: "Select Indie" }).click();
+    await page.getByRole("button", { name: "Indie, $10 per month" }).click();
 
     await expect(page).toHaveURL(/\/upgrade\?plan=indie$/);
     await expect(
-      page.getByRole("heading", { level: 2, name: "Indie" }),
-    ).toBeVisible();
+      page.getByRole("button", { name: "Indie, $10 per month" }),
+    ).toHaveAttribute("aria-pressed", "true");
   });
 
   test("starting the trial posts the selected price to hosted checkout", async ({
@@ -117,9 +99,12 @@ test.describe("the billing wall", () => {
     await page.route("**/api/backend/billing/checkout", async (route) => {
       requested = route.request().postDataJSON();
       await route.fulfill(
-        fulfillJson(200, { url: "http://localhost:3000/?checkout=hosted" }),
+        fulfillJson(200, { url: "https://checkout.stripe.test/session" }),
       );
     });
+    await page.route("https://checkout.stripe.test/**", (route) =>
+      route.fulfill({ status: 200, contentType: "text/html", body: "" }),
+    );
 
     await page.goto("/upgrade");
     await page.getByRole("tab", { name: "Annual" }).click();
@@ -127,15 +112,15 @@ test.describe("the billing wall", () => {
 
     await expect
       .poll(() => requested)
-      .toEqual({ priceId: "price_indie_year", ui: "hosted" });
-    await expect(page).toHaveURL(/checkout=hosted/);
+      .toEqual({ priceId: "price_indie_year", ui: "hosted", theme: "light" });
+    await expect(page).toHaveURL("https://checkout.stripe.test/session");
   });
 
   test("confirming lands an account without a plan on the wall", async ({
     page,
     context,
   }) => {
-    await seedViewer(context, "checkout-pending-unconfirmed");
+    await seedViewer(context, "checkout-pending");
     await openBilling(page);
 
     await page.goto("/verify?token=abc");
@@ -154,6 +139,167 @@ test.describe("the billing wall", () => {
     await page.getByRole("button", { name: "Confirm my email" }).click();
 
     await expect(page).toHaveURL("http://localhost:3000/");
+  });
+
+  test("lays the payment out left of the plans on a wide screen", async ({
+    page,
+    context,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await seedViewer(context, "checkout-pending");
+    await seedSession(page);
+    await openBilling(page);
+
+    await page.goto("/upgrade");
+
+    const plans = page.getByRole("heading", {
+      level: 2,
+      name: "Choose a plan",
+    });
+    const payment = page.getByRole("heading", { level: 2, name: "Payment" });
+    await expect(plans).toBeVisible();
+    const [plansBox, paymentBox] = await Promise.all([
+      plans.boundingBox(),
+      payment.boundingBox(),
+    ]);
+    expect(paymentBox!.x).toBeLessThan(plansBox!.x);
+    const headings = await page
+      .getByRole("heading", { level: 2 })
+      .allTextContents();
+    expect(headings.indexOf("Choose a plan")).toBeLessThan(
+      headings.indexOf("Payment"),
+    );
+    expect(headings.indexOf("Payment")).toBeLessThan(
+      headings.indexOf("Questions"),
+    );
+    const questionsBox = await page
+      .getByRole("heading", { level: 2, name: "Questions" })
+      .boundingBox();
+    expect(questionsBox!.x).toBe(plansBox!.x);
+  });
+
+  test("puts the plans above the payment on a phone without scrolling sideways", async ({
+    page,
+    context,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await seedViewer(context, "checkout-pending");
+    await seedSession(page);
+    await openBilling(page);
+
+    await page.goto("/upgrade");
+
+    const plans = page.getByRole("heading", {
+      level: 2,
+      name: "Choose a plan",
+    });
+    const payment = page.getByRole("heading", { level: 2, name: "Payment" });
+    await expect(plans).toBeVisible();
+    const [plansBox, paymentBox] = await Promise.all([
+      plans.boundingBox(),
+      payment.boundingBox(),
+    ]);
+    expect(plansBox!.y).toBeLessThan(paymentBox!.y);
+    const questionsBox = await page
+      .getByRole("heading", { level: 2, name: "Questions" })
+      .boundingBox();
+    expect(paymentBox!.y).toBeLessThan(questionsBox!.y);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+  });
+
+  test("promises no secure payment when checkout is not configured", async ({
+    page,
+    context,
+  }) => {
+    await seedViewer(context, "checkout-pending");
+    await seedSession(page);
+    await openBilling(page);
+    await page.route("**/api/backend/billing/catalog", (route) =>
+      route.fulfill(fulfillJson(200, { enabled: false, prices: [] })),
+    );
+
+    await page.goto("/upgrade");
+
+    await expect(
+      page.getByText("Checkout is not configured on this instance.", {
+        exact: false,
+      }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Secure payments processed by Stripe."),
+    ).toHaveCount(0);
+  });
+
+  test("never asks for the confirmation on the wall", async ({
+    page,
+    context,
+  }) => {
+    await seedViewer(context, "checkout-pending");
+    await seedSession(page);
+    await openBilling(page);
+
+    await page.goto("/upgrade");
+
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Send a new link" }),
+    ).toHaveCount(0);
+    await expect(page.getByText("confirmation link")).toHaveCount(0);
+  });
+
+  test("writes its own order summary and follows the interval", async ({
+    page,
+    context,
+  }) => {
+    await seedViewer(context, "checkout-pending");
+    await seedSession(page);
+    await openBilling(page);
+    const monthly = summaryFromCatalog(
+      "indie",
+      "month",
+      { days: 7 },
+      new Date(),
+    );
+
+    await page.goto("/upgrade");
+
+    const summary = page
+      .getByRole("heading", { name: "Order summary" })
+      .locator("../..");
+    await expect(summary).toContainText("Indie");
+    await expect(summary).toContainText("Due today");
+    await expect(summary).toContainText("$0.00");
+    await expect(summary).toContainText(monthly.thenLine!);
+
+    await page.getByRole("tab", { name: /^Annual/ }).click();
+
+    await expect(summary).toContainText("$100.00");
+    await expect(summary).toContainText("Annual");
+  });
+
+  test("answers the questions a new customer asks, each on a click", async ({
+    page,
+    context,
+  }) => {
+    await seedViewer(context, "checkout-pending");
+    await seedSession(page);
+    await openBilling(page);
+    const items = paywallFaq({ days: 7 }, "$10 per month", new Date());
+
+    await page.goto("/upgrade");
+
+    const questions = page
+      .getByRole("region", { name: "Questions" })
+      .getByRole("button");
+    await expect(questions).toHaveCount(7);
+    for (const [index, item] of items.entries()) {
+      await questions.nth(index).click();
+      await expect(page.getByText(item.answer)).toBeVisible();
+    }
   });
 
   test.describe("with a publishable key", () => {
@@ -210,8 +356,11 @@ test.describe("the billing wall", () => {
       await page.goto("/upgrade");
 
       await expect(
-        page.getByRole("heading", { level: 2, name: "Start free trial" }),
+        page.getByRole("heading", { level: 2, name: "Payment" }),
       ).toBeVisible();
+      await expect(
+        page.getByRole("region", { name: "Your trial" }),
+      ).toContainText("Your 7 day trial is 100% free");
       await expect(
         page.locator('[data-mounted="cs_test_secret_price_indie_month"]'),
       ).toHaveAttribute("aria-label", "Stripe checkout for Indie, monthly");
@@ -223,15 +372,15 @@ test.describe("the billing wall", () => {
       await expect(
         page.locator('[data-mounted="cs_test_secret_price_indie_year"]'),
       ).toHaveCount(1);
-      await page.getByRole("button", { name: "Select Ultimate" }).click();
+      await page.getByRole("button", { name: /^Ultimate,/ }).click();
       await expect(
         page.locator('[data-mounted="cs_test_secret_price_ultimate_year"]'),
       ).toHaveCount(1);
 
       expect(bodies).toEqual([
-        { priceId: "price_indie_month", ui: "embedded" },
-        { priceId: "price_indie_year", ui: "embedded" },
-        { priceId: "price_ultimate_year", ui: "embedded" },
+        { priceId: "price_indie_month", ui: "embedded", theme: "light" },
+        { priceId: "price_indie_year", ui: "embedded", theme: "light" },
+        { priceId: "price_ultimate_year", ui: "embedded", theme: "light" },
       ]);
     });
 
@@ -275,7 +424,7 @@ test.describe("the billing wall", () => {
 
       await page.goto("/upgrade");
       await page.getByRole("tab", { name: "Annual" }).click();
-      await page.getByRole("button", { name: "Select Ultimate" }).click();
+      await page.getByRole("button", { name: /^Ultimate,/ }).click();
       await expect(page).toHaveURL(/\/upgrade\?plan=ultimate$/);
       releaseStripe();
 
@@ -283,6 +432,127 @@ test.describe("the billing wall", () => {
         page.locator('[data-mounted="cs_test_secret_price_ultimate_year"]'),
       ).toHaveCount(1);
       expect(priceIds).toEqual(["price_ultimate_year"]);
+    });
+
+    async function openEmbedded(page: Page) {
+      await seedViewer(page.context(), "checkout-pending");
+      await seedSession(page);
+      await openBilling(page);
+      await page.route("**/api/backend/billing/catalog", (route) =>
+        route.fulfill(
+          fulfillJson(200, { ...CATALOG, publishableKey: "pk_test_e2e" }),
+        ),
+      );
+      await page.route("https://js.stripe.com/**", (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: "application/javascript",
+          body: STRIPE_STUB,
+        }),
+      );
+      const bodies: { priceId: string; ui: string; theme: string }[] = [];
+      await page.route("**/api/backend/billing/checkout", async (route) => {
+        const body = route.request().postDataJSON() as {
+          priceId: string;
+          ui: string;
+          theme: string;
+        };
+        bodies.push(body);
+        await route.fulfill(
+          fulfillJson(200, {
+            url: "http://localhost:3000/?checkout=complete",
+            clientSecret: `cs_${body.priceId}_${body.theme}_${bodies.length}`,
+          }),
+        );
+      });
+      return bodies;
+    }
+
+    test.describe("in the light theme", () => {
+      test.use({ colorScheme: "light" });
+
+      test("brands the session light and remounts it dark on a toggle", async ({
+        page,
+      }) => {
+        const bodies = await openEmbedded(page);
+
+        await page.goto("/upgrade");
+        await expect(
+          page.locator('[data-mounted="cs_price_indie_month_light_1"]'),
+        ).toHaveCount(1);
+
+        const toggle = page.getByRole("button", { name: /Switch theme/ });
+        await toggle.click();
+        await expect(toggle).toHaveAccessibleName("Theme: light. Switch theme");
+        await toggle.click();
+
+        await expect(
+          page.locator('[data-mounted="cs_price_indie_month_dark_2"]'),
+        ).toHaveCount(1);
+        expect(bodies.map((body) => body.theme)).toEqual(["light", "dark"]);
+      });
+    });
+
+    test.describe("in the dark theme", () => {
+      test.use({ colorScheme: "dark" });
+
+      test("keeps the dark brand across a plan change", async ({ page }) => {
+        const bodies = await openEmbedded(page);
+
+        await page.goto("/upgrade");
+        await expect(
+          page.locator('[data-mounted="cs_price_indie_month_dark_1"]'),
+        ).toHaveCount(1);
+        await page.getByRole("button", { name: /^Ultimate,/ }).click();
+
+        await expect(
+          page.locator('[data-mounted="cs_price_ultimate_month_dark_2"]'),
+        ).toHaveCount(1);
+        expect(bodies.map((body) => body.theme)).toEqual(["dark", "dark"]);
+      });
+
+      test("retries a refused session with the same theme", async ({
+        page,
+      }) => {
+        const bodies: string[] = [];
+        await openEmbedded(page);
+        await page.unroute("**/api/backend/billing/checkout");
+        await page.route("**/api/backend/billing/checkout", async (route) => {
+          const { theme } = route.request().postDataJSON() as {
+            theme: string;
+          };
+          bodies.push(theme);
+          if (bodies.length === 1) {
+            await route.fulfill(
+              fulfillJson(409, {
+                statusCode: 409,
+                error: "Conflict",
+                message: "A checkout is already being opened. Try again.",
+                path: "/billing/checkout",
+                timestamp: new Date().toISOString(),
+              }),
+            );
+            return;
+          }
+          await route.fulfill(
+            fulfillJson(200, {
+              url: "http://localhost:3000/?checkout=complete",
+              clientSecret: "cs_retried",
+            }),
+          );
+        });
+
+        await page.goto("/upgrade");
+        await expect(
+          page.getByText("A checkout is already being opened. Try again."),
+        ).toBeVisible();
+        await page.getByRole("button", { name: "Try again" }).click();
+
+        await expect(page.locator('[data-mounted="cs_retried"]')).toHaveCount(
+          1,
+        );
+        expect(bodies).toEqual(["dark", "dark"]);
+      });
     });
 
     test("keeps the hosted button without a key", async ({ page, context }) => {

@@ -2,35 +2,41 @@
 
 import { useState } from "react";
 import { useQueryState } from "nuqs";
-import type {
-  AccountPlan,
-  BillingCatalog,
-  BillingInterval,
-  PaidPlanName,
-} from "@asobeast/shared";
-import { ResendConfirmationButton } from "@/components/auth/ResendConfirmationButton";
 import {
-  confirmationLine,
+  PLANS,
+  planPriceLabel,
+  type AccountPlan,
+  type BillingCatalog,
+  type BillingInterval,
+  type PaidPlanName,
+} from "@asobeast/shared";
+import { checkoutUiFor } from "@/lib/embedded-checkout";
+import { paywallFaq } from "@/lib/paywall-faq";
+import {
+  buysPlan,
   paywallHeading,
   paywallStatusLine,
   planAction,
+  planActionLabel,
+  trialBarLine,
+  trustLines,
 } from "@/lib/plan-choice";
 import { planParam } from "@/lib/search-params";
-import { CheckoutColumn } from "./CheckoutColumn";
+import { HostedAction } from "./HostedAction";
+import { PaymentColumn } from "./PaymentColumn";
+import { PaywallFaq } from "./PaywallFaq";
 import { PlanPicker } from "./PlanPicker";
+import { TrialBar } from "./TrialBar";
+import { TrustRow } from "./TrustRow";
 
 const DEFAULT_PLAN: PaidPlanName = "indie";
 
 export function BillingWall({
   plan,
   catalog,
-  email,
-  awaitingConfirmation,
 }: {
   plan: AccountPlan | undefined;
   catalog: BillingCatalog | undefined;
-  email: string | undefined;
-  awaitingConfirmation: boolean;
 }) {
   const [selected, setSelected] = useQueryState(
     "plan",
@@ -38,29 +44,31 @@ export function BillingWall({
   );
   const [interval, setInterval] = useState<BillingInterval>("month");
   const [now] = useState(() => new Date());
-  const offered = Boolean(plan?.trialOffer);
+  const offer = plan?.trialOffer ?? null;
+  const action = planAction(plan, selected);
+  const price = catalog?.prices.find(
+    (candidate) =>
+      candidate.plan === selected && candidate.interval === interval,
+  );
+  const publishableKey =
+    checkoutUiFor(catalog) === "embedded" && buysPlan(action) && price
+      ? (catalog?.publishableKey ?? null)
+      : null;
+  const trialLine =
+    action === "trial" && offer ? trialBarLine(offer, now) : null;
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
-      <div className="flex flex-col items-center gap-1 text-center">
+    <div className="page-wide flex flex-col gap-8 pb-40 sm:pb-24">
+      <header className="flex flex-col gap-3">
         <h1 className="text-display tracking-tight text-balance">
           {paywallHeading(plan)}
         </h1>
         <p className="text-body text-muted-foreground">
-          {paywallStatusLine(plan, awaitingConfirmation, now)}
+          {paywallStatusLine(plan, now)}
         </p>
-        {awaitingConfirmation && offered && email ? (
-          <p className="text-body text-muted-foreground">
-            {confirmationLine(email)}
-          </p>
-        ) : null}
-        {awaitingConfirmation ? (
-          <div className="mt-2 flex justify-center">
-            <ResendConfirmationButton />
-          </div>
-        ) : null}
-      </div>
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)]">
+        {offer ? <TrustRow lines={trustLines(offer, now)} /> : null}
+      </header>
+      <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,36rem)]">
         <PlanPicker
           interval={interval}
           onInterval={setInterval}
@@ -68,15 +76,29 @@ export function BillingWall({
           onSelect={(name) => void setSelected(name)}
           actionOf={(name) => planAction(plan, name)}
         />
-        <CheckoutColumn
+        <PaymentColumn
           plan={plan}
           catalog={catalog}
           name={selected}
           interval={interval}
-          action={planAction(plan, selected)}
+          action={action}
+          price={price}
+          publishableKey={publishableKey}
           now={now}
         />
+        <PaywallFaq
+          items={paywallFaq(offer, planPriceLabel(selected, interval), now)}
+        />
       </div>
+      <TrialBar line={trialLine} label={trialLine ? "Your trial" : "Checkout"}>
+        {publishableKey ? null : (
+          <HostedAction
+            action={action}
+            label={planActionLabel(action, PLANS[selected].displayName)}
+            price={price}
+          />
+        )}
+      </TrialBar>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import type { AuthUser } from "@asobeast/shared";
 import { ApiError, getAuthMe } from "@/lib/api";
 import { adminAccessOf, type AdminAccess } from "@/lib/admin-access";
@@ -15,10 +16,12 @@ async function signedInViewer(): Promise<AuthUser | null> {
   }
 }
 
+export const viewer = cache(signedInViewer);
+
 export async function viewerIsOperator(): Promise<boolean> {
-  return (await signedInViewer())?.platformOperator === true;
+  return (await viewer())?.platformOperator === true;
 }
 
 export async function viewerAdminAccess(): Promise<AdminAccess> {
-  return adminAccessOf(await signedInViewer());
+  return adminAccessOf(await viewer());
 }

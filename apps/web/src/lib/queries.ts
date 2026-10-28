@@ -362,6 +362,12 @@ export const authMeOptions = queryOptions({
   refetchOnWindowFocus: true,
 });
 
+export const confirmEmailViewerOptions = queryOptions({
+  ...authMeOptions,
+  staleTime: 0,
+  refetchOnWindowFocus: "always",
+});
+
 export const accountPlanOptions = queryOptions({
   queryKey: accountPlanKey,
   queryFn: getAccountPlan,
@@ -394,10 +400,16 @@ export const apiTokensOptions = queryOptions({
   queryFn: getApiTokens,
 });
 
+export async function refetchAuth(client: QueryClient): Promise<void> {
+  await Promise.all([
+    client.invalidateQueries({ queryKey: authStatusKey }),
+    client.invalidateQueries({ queryKey: authMeKey }),
+    client.invalidateQueries({ queryKey: accountPlanKey }),
+  ]);
+}
+
 export function invalidateAuth(client: QueryClient): void {
-  void client.invalidateQueries({ queryKey: authStatusKey });
-  void client.invalidateQueries({ queryKey: authMeKey });
-  void client.invalidateQueries({ queryKey: accountPlanKey });
+  void refetchAuth(client);
 }
 
 export function refetchFailedQueries(client: QueryClient): Promise<void> {

@@ -2,35 +2,10 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { pairContrast, TEXT_PAIRS } from "@/components/tokens/token-groups";
-
-type Scope = Record<string, string>;
+import { declarations, resolve, type Scope } from "./token-scope";
 
 function read(file: string): string {
   return readFileSync(join(import.meta.dirname, file), "utf8");
-}
-
-function declarations(css: string, selector: string): Scope {
-  const block = new RegExp(`${selector}\\s*\\{([\\s\\S]*?)\\n\\}`).exec(css);
-  if (!block) throw new Error(`no ${selector} block found`);
-  const scope: Scope = {};
-  for (const [, name, value] of block[1]!.matchAll(/(--[\w-]+):\s*([^;]+);/g)) {
-    scope[name!] = value!.replace(/\s+/g, " ").trim();
-  }
-  return scope;
-}
-
-function resolve(token: string, scope: Scope): string {
-  let value = scope[token];
-  for (let depth = 0; value?.includes("var(") && depth < 10; depth += 1) {
-    let missing = false;
-    value = value.replace(/var\((--[\w-]+)\)/g, (_reference, name: string) => {
-      const nested = scope[name];
-      if (nested === undefined) missing = true;
-      return nested ?? "";
-    });
-    if (missing) return "";
-  }
-  return value ?? "";
 }
 
 const primitives = read("primitives.css");

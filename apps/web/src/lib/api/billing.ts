@@ -3,6 +3,7 @@ import type {
   BillingReconcileReport,
   BillingSession,
   CheckoutRequest,
+  CheckoutTheme,
   CheckoutUi,
   ReconcileRequest,
 } from "@asobeast/shared";
@@ -15,10 +16,11 @@ export function getBillingCatalog(): Promise<BillingCatalog> {
 export function startCheckout(
   priceId: string,
   ui: CheckoutUi = "hosted",
+  theme?: CheckoutTheme,
 ): Promise<BillingSession> {
   return apiFetch<BillingSession>("/billing/checkout", {
     method: "POST",
-    body: JSON.stringify({ priceId, ui } satisfies CheckoutRequest),
+    body: JSON.stringify({ priceId, ui, theme } satisfies CheckoutRequest),
   });
 }
 

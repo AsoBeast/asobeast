@@ -1,6 +1,10 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import type { AccountPlan, AuthUser } from './auth';
+import { CONFIRM_EMAIL_PATH, UPGRADE_PATH } from '../auth';
+import { PRODUCT_NAME } from '../brand';
 import {
+  CHECKOUT_BRAND,
+  CHECKOUT_THEMES,
   CHECKOUT_UIS,
   billingIntervalOf,
   planPriceLabel,
@@ -8,6 +12,7 @@ import {
   type BillingInterval,
   type BillingSession,
   type CheckoutRequest,
+  type CheckoutTheme,
   type CheckoutUi,
   type TrialOffer,
 } from './billing';
@@ -358,6 +363,9 @@ describe('trialingLimits', () => {
     expectTypeOf<CheckoutRequest['ui']>().toEqualTypeOf<
       CheckoutUi | undefined
     >();
+    expectTypeOf<CheckoutRequest['theme']>().toEqualTypeOf<
+      CheckoutTheme | undefined
+    >();
     expectTypeOf<BillingSession['clientSecret']>().toEqualTypeOf<
       string | undefined
     >();
@@ -382,5 +390,28 @@ describe('trialingLimits', () => {
 
   it('names the two checkout uis', () => {
     expect(CHECKOUT_UIS).toEqual(['hosted', 'embedded']);
+  });
+
+  it('names the two checkout themes', () => {
+    expect(CHECKOUT_THEMES).toEqual(['light', 'dark']);
+  });
+
+  it('brands the checkout for each theme', () => {
+    expect(Object.keys(CHECKOUT_BRAND).sort()).toEqual(['dark', 'light']);
+    for (const theme of CHECKOUT_THEMES) {
+      const brand = CHECKOUT_BRAND[theme];
+      expect(brand.backgroundColor).toMatch(/^#[0-9a-f]{6}$/);
+      expect(brand.buttonColor).toMatch(/^#[0-9a-f]{6}$/);
+      expect(brand.borderStyle).toBe('rounded');
+      expect(brand.fontFamily).toBe('inter');
+      expect(brand.displayName).toBe(PRODUCT_NAME);
+    }
+  });
+
+  it('places the confirmation page beside the upgrade page', () => {
+    expect(CONFIRM_EMAIL_PATH).toBe('/confirm-email');
+    expect(CONFIRM_EMAIL_PATH.startsWith('/')).toBe(
+      UPGRADE_PATH.startsWith('/'),
+    );
   });
 });

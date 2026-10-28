@@ -1,3 +1,5 @@
+import { CHECKOUT_BRAND } from '@asobeast/shared';
+import { brandingOf } from './checkout-branding';
 import {
   checkoutSessionParams,
   taxCollectionOf,
@@ -27,6 +29,8 @@ const COMMON = {
   success_url: INPUT.returnUrl,
   cancel_url: INPUT.cancelUrl,
   allow_promotion_codes: true,
+  branding_settings: brandingOf(CHECKOUT_BRAND.light),
+  locale: 'en',
   billing_address_collection: 'required',
 };
 
@@ -147,6 +151,54 @@ describe('an embedded checkout', () => {
       ui_mode: 'embedded_page',
       return_url: INPUT.returnUrl,
     });
+  });
+});
+
+describe('a branded checkout', () => {
+  const DARK = brandingOf(CHECKOUT_BRAND.dark);
+  const embedded = (over: Partial<CheckoutSessionInput> = {}) =>
+    checkoutSessionParams({ ...INPUT, ui: 'embedded', ...over });
+  const hosted = (over: Partial<CheckoutSessionInput> = {}) =>
+    checkoutSessionParams({ ...INPUT, ...over });
+
+  it.each([
+    ['hosted', hosted],
+    ['embedded', embedded],
+  ])('brands a %s session after the dark page in english', (_label, build) => {
+    const params = build({ theme: 'dark' });
+
+    expect(params.branding_settings).toEqual(DARK);
+    expect(params.locale).toBe('en');
+  });
+
+  it('brands for the light page when the request names no theme', () => {
+    expect(hosted().branding_settings).toEqual(
+      brandingOf(CHECKOUT_BRAND.light),
+    );
+  });
+
+  it('keeps the branding under managed payments and still sends no submit text', () => {
+    const params = embedded({
+      theme: 'dark',
+      taxCollection: 'managed_payments',
+      trial: { days: 7 },
+    });
+
+    expect(params.branding_settings).toEqual(DARK);
+    expect(params.locale).toBe('en');
+    expect(params.managed_payments).toEqual({ enabled: true });
+    expect(params).not.toHaveProperty('custom_text');
+  });
+
+  it('changes nothing but the branding between the two themes', () => {
+    const { branding_settings: light, ...lightRest } = hosted({
+      theme: 'light',
+    });
+    const { branding_settings: dark, ...darkRest } = hosted({ theme: 'dark' });
+
+    expect(light).toEqual(brandingOf(CHECKOUT_BRAND.light));
+    expect(dark).toEqual(DARK);
+    expect(darkRest).toEqual(lightRest);
   });
 });
 

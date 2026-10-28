@@ -5,16 +5,18 @@ import {
   HANDLED_BY_STRIPE,
   PAYMENT_CONFIRMING,
   SOLD_THROUGH_LINK,
-  billingNote,
-  confirmationLine,
+  confirmEmailParts,
   memberPlanLine,
   paymentNote,
   planAction,
   planActionLabel,
   planCallToAction,
+  planCardLabel,
   planStatusLine,
+  savingPercent,
+  trialBarLine,
+  trustLines,
   paywallHeading,
-  startTrialLine,
   paywallStatusLine,
   suspensionNotice,
   trialBannerLine,
@@ -213,57 +215,6 @@ describe("a first payment still being confirmed", () => {
   });
 });
 
-describe("a trial that waits on the email confirmation", () => {
-  const CONFIRM_EMAIL_TO_START_TRIAL = "Confirm your email address.";
-
-  const unconfirmed = planOf({
-    plan: "free",
-    entitled: false,
-    subscribed: false,
-    trialEndsAt: null,
-  });
-
-  it("asks for the confirmation on the paywall instead of asking for a plan", () => {
-    const line = paywallStatusLine(unconfirmed, true);
-
-    expect(line).toContain(CONFIRM_EMAIL_TO_START_TRIAL);
-    expect(line).not.toContain("Choose a plan");
-  });
-
-  it("asks for it before the plan has loaded", () => {
-    expect(paywallStatusLine(undefined, true)).toContain(
-      CONFIRM_EMAIL_TO_START_TRIAL,
-    );
-  });
-
-  it("asks for it in settings without promising that a plan resumes tracking", () => {
-    const line = planStatusLine(unconfirmed, true);
-
-    expect(line).toContain(CONFIRM_EMAIL_TO_START_TRIAL);
-    expect(line).not.toContain("choose a plan");
-  });
-
-  it("keeps asking for a plan when nothing waits on a confirmation", () => {
-    expect(paywallStatusLine(unconfirmed, false)).toContain("Choose a plan");
-    expect(paywallStatusLine(unconfirmed)).toContain("Choose a plan");
-    expect(planStatusLine(unconfirmed)).toContain("readable and exportable");
-  });
-
-  it("still says the payment is confirming when one is in flight", () => {
-    expect(paywallStatusLine(pending, true)).toBe(PAYMENT_CONFIRMING);
-    expect(planStatusLine(pending, true)).toBe(PAYMENT_CONFIRMING);
-  });
-
-  it("still sends a stalled subscription to the billing portal", () => {
-    expect(paywallStatusLine(stalled, true)).toContain("stopped collecting");
-    expect(planStatusLine(stalled, true)).toContain("payment method");
-  });
-
-  it("never replaces the account of a trial that already ended", () => {
-    expect(paywallStatusLine(lapsedTrial, false)).toContain("trial ended");
-  });
-});
-
 describe("a trial offered on the wall", () => {
   const NOW = new Date("2026-10-22T12:00:00.000Z");
   const offered = planOf({
@@ -307,26 +258,10 @@ describe("a trial offered on the wall", () => {
     );
   });
 
-  it("names the zero charge, the end date and how to cancel, confirmed or not", () => {
+  it("names the zero charge, the end date and how to cancel", () => {
     const line = `Pay $0 today. Your trial ends on ${ENDS_ON}, then the plan you choose is charged. Cancel any time from settings.`;
 
-    expect(paywallStatusLine(offered, false, NOW)).toBe(line);
-    expect(paywallStatusLine(offered, true, NOW)).toBe(line);
-  });
-
-  it("invites to the trial from every page, with its length once known", () => {
-    expect(startTrialLine({ days: 7 })).toBe(
-      "Start your 7 day free trial to begin tracking. $0 today, cancel any time.",
-    );
-    expect(startTrialLine(undefined)).toBe(
-      "Start your free trial to begin tracking. $0 today, cancel any time.",
-    );
-  });
-
-  it("asks for the confirmation without stopping the trial", () => {
-    expect(confirmationLine("owner@example.com")).toBe(
-      "We sent a confirmation link to owner@example.com. You can start the trial now and confirm later.",
-    );
+    expect(paywallStatusLine(offered, NOW)).toBe(line);
   });
 
   it("says when the verified card is charged", () => {
@@ -340,9 +275,6 @@ describe("a trial offered on the wall", () => {
 
   it("points settings at the wall", () => {
     expect(planStatusLine(offered)).toBe(
-      "Start your free trial from the plan page.",
-    );
-    expect(planStatusLine(offered, true)).toBe(
       "Start your free trial from the plan page.",
     );
   });
@@ -479,21 +411,6 @@ describe("memberPlanLine", () => {
   });
 });
 
-describe("billingNote", () => {
-  it("says how a monthly plan bills without repeating its price", () => {
-    expect(billingNote("month")).toBe("Billed monthly");
-  });
-
-  it("says what a yearly plan saves without repeating its price", () => {
-    expect(billingNote("year")).toBe("Billed yearly, two months free");
-  });
-
-  it("never prints a price, which the card title already carries", () => {
-    expect(billingNote("month")).not.toMatch(/[$/]/);
-    expect(billingNote("year")).not.toMatch(/[$/]/);
-  });
-});
-
 describe("suspensionNotice", () => {
   it("names the reason the operator recorded and what stays open", () => {
     expect(suspensionNotice("scraping the service")).toBe(
@@ -514,5 +431,66 @@ describe("suspensionNotice", () => {
     expect(suspensionNotice("Sustained abuse.")).toMatch(
       /^This workspace is suspended: Sustained abuse\. Your data stays/,
     );
+  });
+});
+
+describe("confirmEmailParts", () => {
+  const sentence = (offered: boolean) => {
+    const { before, address, after } = confirmEmailParts(
+      "owner@example.com",
+      offered,
+    );
+    return `${before}${address}${after}`;
+  };
+
+  it("names the address and the trial it leads to", () => {
+    expect(sentence(true)).toBe(
+      "Thank you for registering. We sent a link to owner@example.com. Open it to continue to your free trial.",
+    );
+  });
+
+  it("names the address alone when no trial follows", () => {
+    expect(sentence(false)).toBe(
+      "Thank you for registering. We sent a link to owner@example.com. Open it to continue.",
+    );
+  });
+
+  it("sets the address apart from the sentence around it", () => {
+    expect(confirmEmailParts("owner@example.com", true).address).toBe(
+      "owner@example.com",
+    );
+  });
+});
+
+describe("the wall around the checkout", () => {
+  const NOW = new Date("2026-10-22T12:00:00.000Z");
+  const ENDS_ON = formatDate("2026-10-29T12:00:00.000Z");
+
+  it("names the trial end, the free days and how to cancel", () => {
+    expect(trustLines({ days: 7 }, NOW)).toEqual([
+      `No risk: cancel before ${ENDS_ON} and nothing is charged`,
+      "Pay nothing for the first 7 days",
+      "Cancel any time from settings",
+    ]);
+  });
+
+  it("names the trial end on the bar", () => {
+    expect(trialBarLine({ days: 7 }, NOW)).toBe(
+      `Your 7 day trial is 100% free, ending ${ENDS_ON}. Cancel any time from settings.`,
+    );
+  });
+
+  it("names a plan card by its plan and price", () => {
+    expect(planCardLabel("indie", "month", "trial")).toBe(
+      "Indie, $10 per month",
+    );
+    expect(planCardLabel("ultimate", "year", "current")).toBe(
+      "Ultimate, $990 per year, current plan",
+    );
+  });
+
+  it("reads the annual saving from the plan prices", () => {
+    expect(savingPercent("indie")).toBe(17);
+    expect(savingPercent("ultimate")).toBe(17);
   });
 });

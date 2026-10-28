@@ -9,18 +9,17 @@ import {
 } from "@asobeast/shared";
 import { Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import { formatNumber } from "@/lib/format";
-import { billingNote, type PlanAction } from "@/lib/plan-choice";
+import { INTERVAL_LABEL, priceOf } from "@/lib/order-summary";
+import {
+  CHOOSE_A_PLAN_TITLE,
+  EVERY_PLAN_INCLUDES,
+  FEATURES_TITLE,
+  planCardLabel,
+  savingPercent,
+  type PlanAction,
+} from "@/lib/plan-choice";
 import { cn } from "@/lib/utils";
 
 const INCLUDED = [
@@ -39,15 +38,10 @@ const LIMIT_ROWS = [
   { key: "aiCallsPerMonth", label: "AI calls per month" },
 ] as const;
 
-const INTERVAL_LABEL: Record<BillingInterval, string> = {
-  month: "Monthly",
-  year: "Annual",
+const PER_INTERVAL: Record<BillingInterval, string> = {
+  month: "/month",
+  year: "/year",
 };
-
-function amountOf(name: PaidPlanName, interval: BillingInterval) {
-  const { monthlyUsd, annualUsd } = PLANS[name].prices;
-  return (interval === "month" ? monthlyUsd : annualUsd) ?? 0;
-}
 
 function PlanOption({
   name,
@@ -62,61 +56,32 @@ function PlanOption({
   selected: boolean;
   onSelect: () => void;
 }) {
-  const { displayName, limits } = PLANS[name];
-
   return (
-    <Card
+    <button
+      type="button"
+      aria-pressed={selected}
+      aria-label={planCardLabel(name, interval, action)}
+      onClick={onSelect}
       className={cn(
-        "min-w-0 flex-1 transition-colors",
+        "flex min-w-0 flex-col items-start gap-1 rounded-xl border-[1.5px] bg-card p-4 text-left transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
         selected && "border-primary ring-1 ring-primary",
       )}
     >
-      <CardHeader>
-        <CardDescription className="flex items-center gap-2">
-          {displayName}
-          {action === "current" ? (
-            <Badge variant="secondary">Current</Badge>
-          ) : null}
-        </CardDescription>
-        <CardTitle asChild>
-          <p>
-            <span className="text-display tabular-nums">
-              ${amountOf(name, interval)}
-            </span>
-            <span className="text-body text-muted-foreground">
-              {interval === "month" ? " /month" : " /year"}
-            </span>
-          </p>
-        </CardTitle>
-        <p className="text-body text-muted-foreground">
-          {billingNote(interval)}
-        </p>
-      </CardHeader>
-      <CardContent>
-        <dl className="flex flex-col gap-1.5 text-sm">
-          {LIMIT_ROWS.map(({ key, label }) => (
-            <div key={key} className="flex justify-between gap-4">
-              <dt className="text-muted-foreground">{label}</dt>
-              <dd className="font-medium tabular-nums">
-                {formatNumber(limits[key] ?? 0)}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      </CardContent>
-      <CardFooter>
-        <Button
-          variant="outline"
-          className="w-full"
-          aria-pressed={selected}
-          onClick={onSelect}
-        >
-          {selected ? <Check aria-hidden="true" /> : null}
-          {selected ? "Selected" : "Select"}
-          <span className="sr-only"> {displayName}</span>
-        </Button>
-      </CardFooter>
-    </Card>
+      <span className="flex items-center gap-2 text-body">
+        <span>{PLANS[name].displayName}</span>
+        {action === "current" ? (
+          <Badge variant="secondary">Current</Badge>
+        ) : null}
+      </span>
+      <span>
+        <span className="text-display tabular-nums">
+          ${priceOf(name, interval)}
+        </span>
+        <span className="text-body text-muted-foreground">
+          {PER_INTERVAL[interval]}
+        </span>
+      </span>
+    </button>
   );
 }
 
@@ -133,25 +98,31 @@ export function PlanPicker({
   onSelect: (name: PaidPlanName) => void;
   actionOf: (name: PaidPlanName) => PlanAction;
 }) {
+  const { limits } = PLANS[selected];
+
   return (
-    <div className="flex min-w-0 flex-col gap-4">
-      <Tabs
-        value={interval}
-        onValueChange={(next) => onInterval(next as BillingInterval)}
-      >
-        <TabsList aria-label="Billing interval">
-          {BILLING_INTERVALS.map((value) => (
-            <TabsOption key={value} value={value}>
-              {INTERVAL_LABEL[value]}
-            </TabsOption>
-          ))}
-        </TabsList>
-      </Tabs>
-      <div
-        role="group"
-        aria-label="Plans"
-        className="flex flex-col gap-4 sm:flex-row"
-      >
+    <div className="flex min-w-0 flex-col gap-6 lg:col-start-2 lg:row-start-1">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-title">{CHOOSE_A_PLAN_TITLE}</h2>
+        <Tabs
+          value={interval}
+          onValueChange={(next) => onInterval(next as BillingInterval)}
+        >
+          <TabsList aria-label="Billing interval">
+            {BILLING_INTERVALS.map((value) => (
+              <TabsOption key={value} value={value}>
+                {INTERVAL_LABEL[value]}
+                {value === "year" ? (
+                  <Badge variant="secondary">
+                    Save {savingPercent(selected)}%
+                  </Badge>
+                ) : null}
+              </TabsOption>
+            ))}
+          </TabsList>
+        </Tabs>
+      </div>
+      <div role="group" aria-label="Plans" className="grid grid-cols-2 gap-3">
         {PAID_PLAN_NAMES.map((name) => (
           <PlanOption
             key={name}
@@ -163,26 +134,38 @@ export function PlanPicker({
           />
         ))}
       </div>
-      <Card>
-        <CardHeader>
-          <CardTitle asChild>
-            <h2>Every plan includes</h2>
-          </CardTitle>
-          <CardDescription>
-            The difference between the plans is volume, never features.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ul className="grid gap-2 text-sm sm:grid-cols-2">
-            {INCLUDED.map((feature) => (
-              <li key={feature} className="flex items-start gap-2">
-                <Check className="mt-0.5 size-4 shrink-0 text-success" />
-                <span>{feature}</span>
-              </li>
-            ))}
-          </ul>
-        </CardContent>
-      </Card>
+      <section
+        aria-labelledby="plan-features-title"
+        className="flex flex-col gap-3"
+      >
+        <h2 id="plan-features-title" className="text-title">
+          {FEATURES_TITLE}
+        </h2>
+        <dl className="grid gap-x-8 gap-y-2 text-body sm:grid-cols-2">
+          {LIMIT_ROWS.map(({ key, label }) => (
+            <div key={key} className="flex justify-between gap-4">
+              <dt className="text-muted-foreground">{label}</dt>
+              <dd className="font-medium tabular-nums">
+                {formatNumber(limits[key] ?? 0)}
+              </dd>
+            </div>
+          ))}
+        </dl>
+        <p className="text-caption text-muted-foreground">
+          {EVERY_PLAN_INCLUDES}
+        </p>
+        <ul className="grid gap-2 text-body sm:grid-cols-2">
+          {INCLUDED.map((feature) => (
+            <li key={feature} className="flex items-start gap-2">
+              <Check
+                aria-hidden="true"
+                className="mt-0.5 size-4 shrink-0 text-success"
+              />
+              <span>{feature}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
     </div>
   );
 }
