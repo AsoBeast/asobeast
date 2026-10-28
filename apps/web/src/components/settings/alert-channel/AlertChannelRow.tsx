@@ -6,7 +6,10 @@ import type { WebhookEvent } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { EVENT_LABELS } from "../alert-events";
+import {
+  eventBadgeLabel,
+  type AlertSubscriptionChange,
+} from "../alert-event-copy";
 import { DeliveriesSection } from "../DeliveriesSection";
 import { DeleteChannelDialog } from "./DeleteChannelDialog";
 import { EditEventsDialog } from "./EditEventsDialog";
@@ -86,6 +89,7 @@ export function AlertChannelRow({
   channel,
   id,
   events,
+  reviewScores,
   tag,
   awaiting,
   active,
@@ -104,6 +108,7 @@ export function AlertChannelRow({
   channel: "webhook" | "email";
   id: string;
   events: WebhookEvent[];
+  reviewScores?: number[];
   tag?: ReactNode;
   awaiting?: AwaitingConfirmation;
   active: boolean;
@@ -116,7 +121,7 @@ export function AlertChannelRow({
   deletePending: boolean;
   onDelete: () => Promise<unknown>;
   eventsPending: boolean;
-  onEventsSave: (events: WebhookEvent[]) => Promise<unknown>;
+  onEventsSave: (change: AlertSubscriptionChange) => Promise<unknown>;
 }) {
   return (
     <li className="flex flex-col gap-3 p-4">
@@ -152,12 +157,13 @@ export function AlertChannelRow({
         {tag}
         {events.map((event) => (
           <Badge key={event} variant="outline">
-            {EVENT_LABELS[event]}
+            {eventBadgeLabel(event, reviewScores)}
           </Badge>
         ))}
         <EditEventsDialog
           label={label}
           events={events}
+          reviewScores={reviewScores}
           pending={eventsPending}
           onSave={onEventsSave}
         />

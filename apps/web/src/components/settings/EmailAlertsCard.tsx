@@ -6,7 +6,7 @@ import {
   useSuspenseQuery,
 } from "@tanstack/react-query";
 import { toast } from "sonner";
-import type { EmailAlertItem, WebhookEvent } from "@asobeast/shared";
+import type { EmailAlertItem } from "@asobeast/shared";
 import {
   ApiError,
   deleteEmailAlert,
@@ -27,6 +27,7 @@ import {
   AlertChannelList,
 } from "./alert-channel/AlertChannelCard";
 import { AddEmailAlertDialog } from "./AddEmailAlertDialog";
+import type { AlertSubscriptionChange } from "./alert-event-copy";
 import { AlertChannelRow } from "./alert-channel/AlertChannelRow";
 import { useSharedFlight, useSingleFlight } from "@/lib/single-flight";
 
@@ -49,8 +50,8 @@ function EmailAlertRow({ alert }: { alert: EmailAlertItem }) {
   });
 
   const editEvents = useMutation({
-    mutationFn: (events: WebhookEvent[]) =>
-      updateEmailAlert(alert.id, { events }),
+    mutationFn: (change: AlertSubscriptionChange) =>
+      updateEmailAlert(alert.id, change),
     onSuccess: (saved) => {
       seedEmailAlert(queryClient, saved);
       invalidateEmailAlertMutation(queryClient);
@@ -108,6 +109,7 @@ function EmailAlertRow({ alert }: { alert: EmailAlertItem }) {
       channel="email"
       id={alert.id}
       events={alert.events}
+      reviewScores={alert.reviewScores}
       awaiting={
         awaitsConfirmation(alert)
           ? {

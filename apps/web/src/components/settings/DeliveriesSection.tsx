@@ -19,7 +19,7 @@ import {
 import { getDeliveries } from "@/lib/api";
 import { deliveryKeys } from "@/lib/queries";
 import { formatDateTime, formatRelativeTime } from "@/lib/format";
-import { EVENT_LABELS } from "./alert-events";
+import { EVENT_LABELS } from "./alert-event-copy";
 
 function StatusBadge({ status }: { status: AlertDeliveryItem["status"] }) {
   if (status === "success") {
