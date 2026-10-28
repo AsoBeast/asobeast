@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { OVERALL_GENRE } from './category-ranks';
 import {
+  CHART_COLLECTION_TITLES,
   CHART_COMPARE_WINDOWS,
   CHART_DEPTH,
+  chartColumnsPath,
   chartDevicesOf,
   chartGenreName,
   chartGenresOf,
+  chartTablePath,
   compareDays,
   defaultChartDevice,
   isChartGenre,
@@ -85,5 +88,52 @@ describe('chart compare windows', () => {
     expect(compareDays('1d')).toBe(1);
     expect(compareDays('7d')).toBe(7);
     expect(compareDays('30d')).toBe(30);
+  });
+});
+
+describe('chart page paths', () => {
+  const puzzle = {
+    store: 'GOOGLE_PLAY',
+    country: 'de',
+    collection: 'paid',
+    genre: 'GAME_PUZZLE',
+    device: 'android',
+  } as const;
+  const puzzleTable =
+    '/charts?store=GOOGLE_PLAY&country=de&genre=GAME_PUZZLE&device=android&view=table&collection=paid';
+
+  it('links the columns of a category', () => {
+    expect(
+      chartColumnsPath({
+        store: 'APP_STORE',
+        country: 'us',
+        genre: '6014',
+        device: 'iphone',
+      }),
+    ).toBe('/charts?store=APP_STORE&country=us&genre=6014&device=iphone');
+  });
+
+  it('links the table of one chart kind', () => {
+    expect(chartTablePath(puzzle)).toBe(puzzleTable);
+  });
+
+  it('adds a compare window and a day when given', () => {
+    expect(chartTablePath(puzzle, { compare: '7d', date: '2026-10-13' })).toBe(
+      `${puzzleTable}&compare=7d&date=2026-10-13`,
+    );
+  });
+
+  it('leaves out the default compare window and an empty day', () => {
+    expect(chartTablePath(puzzle, { compare: '1d', date: null })).toBe(
+      chartTablePath(puzzle),
+    );
+  });
+
+  it('titles every chart kind', () => {
+    expect(CHART_COLLECTION_TITLES).toEqual({
+      free: 'Top free',
+      paid: 'Top paid',
+      grossing: 'Top grossing',
+    });
   });
 });

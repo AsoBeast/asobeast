@@ -200,6 +200,46 @@ export interface ChartKey {
   device: ChartDevice;
 }
 
+export const CHARTS_PATH = '/charts';
+
+export const CHART_COLLECTION_TITLES: Record<CategoryCollection, string> = {
+  free: 'Top free',
+  paid: 'Top paid',
+  grossing: 'Top grossing',
+};
+
+export type ChartCategoryKey = Omit<ChartKey, 'collection'>;
+
+export interface ChartTableOptions {
+  compare?: ChartCompareWindow | null;
+  date?: string | null;
+}
+
+function categoryParams(category: ChartCategoryKey): URLSearchParams {
+  return new URLSearchParams({
+    store: category.store,
+    country: category.country,
+    genre: category.genre,
+    device: category.device,
+  });
+}
+
+export function chartColumnsPath(category: ChartCategoryKey): string {
+  return `${CHARTS_PATH}?${categoryParams(category).toString()}`;
+}
+
+export function chartTablePath(
+  key: ChartKey,
+  { compare, date }: ChartTableOptions = {},
+): string {
+  const params = categoryParams(key);
+  params.set('view', 'table');
+  params.set('collection', key.collection);
+  if (compare && compare !== '1d') params.set('compare', compare);
+  if (date) params.set('date', date);
+  return `${CHARTS_PATH}?${params.toString()}`;
+}
+
 export type ChartMovement = 'up' | 'down' | 'same' | 'new' | 'none';
 
 export interface ChartEntryItem {
