@@ -3,7 +3,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import { Queue } from 'bullmq';
-import { AlertPayload } from '@asobeast/shared';
+import { AlertPayload, WebhookEvent } from '@asobeast/shared';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { Env } from '../config/env';
 import {
@@ -18,6 +18,7 @@ import { ALERT_BACKOFF } from './alert-delivery-flow';
 import { DELIVERABLE_EMAIL_ALERTS } from './deliverable-email-alerts';
 import { MailerService } from './mailer.service';
 import { OutboxRow, outboxRows } from './outbox-rows';
+import { receivesInstant } from './review-routing';
 
 @Injectable()
 export class AlertsDispatcher {
@@ -47,6 +48,18 @@ export class AlertsDispatcher {
     } catch (error) {
       this.logger.warn(`alert dispatch failed: ${(error as Error).message}`);
     }
+  }
+
+  async listensTo(event: WebhookEvent): Promise<boolean> {
+    const webhooks = await this.prisma.webhook.count({
+      where: { active: true, events: { has: event } },
+    });
+    if (webhooks > 0) return true;
+    if (!this.mailer.enabled) return false;
+    const emails = await this.prisma.emailAlert.count({
+      where: { ...DELIVERABLE_EMAIL_ALERTS, events: { has: event } },
+    });
+    return emails > 0;
   }
 
   private batched(payload: AlertPayload): boolean {
@@ -95,11 +108,14 @@ export class AlertsDispatcher {
   private async dispatchWebhooks(payload: AlertPayload): Promise<void> {
     const webhooks = await this.prisma.webhook.findMany({
       where: { active: true, events: { has: payload.event } },
-      select: { id: true },
+      select: { id: true, events: true, reviewScores: true },
     });
+    const targets = webhooks.filter((webhook) =>
+      receivesInstant(webhook, payload),
+    );
     const scope = this.workspace.scopeFor('instant alert delivery');
     await Promise.all(
-      webhooks.map((webhook) =>
+      targets.map((webhook) =>
         this.queue.add(
           JOBS.DELIVER_ALERT,
           {
@@ -120,11 +136,12 @@ export class AlertsDispatcher {
     }
     const alerts = await this.prisma.emailAlert.findMany({
       where: { ...DELIVERABLE_EMAIL_ALERTS, events: { has: payload.event } },
-      select: { id: true },
+      select: { id: true, events: true, reviewScores: true },
     });
+    const targets = alerts.filter((alert) => receivesInstant(alert, payload));
     const scope = this.workspace.scopeFor('instant alert delivery');
     await Promise.all(
-      alerts.map((alert) =>
+      targets.map((alert) =>
         this.queue.add(
           JOBS.DELIVER_EMAIL,
           {
