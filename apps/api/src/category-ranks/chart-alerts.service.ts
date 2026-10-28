@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import type { ChartMoveScope } from '@asobeast/shared';
 import { toDateKey } from '../analytics/analytics.support';
 import { AlertsDispatcher } from '../alerts/alerts.dispatcher';
@@ -15,12 +15,24 @@ export interface ChartCheck {
 
 @Injectable()
 export class ChartAlertsService {
+  private readonly logger = new Logger(ChartAlertsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly alerts: AlertsDispatcher,
   ) {}
 
   async dispatch(check: ChartCheck): Promise<void> {
+    try {
+      await this.raise(check);
+    } catch (error) {
+      this.logger.warn(
+        `chart alert for app ${check.app.id} failed: ${(error as Error).message}`,
+      );
+    }
+  }
+
+  private async raise(check: ChartCheck): Promise<void> {
     const previous = await this.previousCheck(check);
     if (!previous) return;
     const payloads = chartMovePayloads({

@@ -137,4 +137,12 @@ describe('ChartAlertsService', () => {
 
     expect(sent()[0].app).toEqual({ id: 'a1', name: 'Mine' });
   });
+
+  it('raises nothing and never fails the chart job when the lookup fails', async () => {
+    const { service, findFirst, sent } = makeService(null);
+    findFirst.mockRejectedValue(new Error('db down'));
+
+    await expect(service.dispatch(checkAt(7))).resolves.toBeUndefined();
+    expect(sent()).toEqual([]);
+  });
 });

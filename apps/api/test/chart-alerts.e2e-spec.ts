@@ -342,7 +342,7 @@ describe('CategoryRanksService chart alerts (e2e)', () => {
     expect((await todayRank(you.id))?.position).toBe(7);
   });
 
-  it('collects the same move once when the check runs twice', async () => {
+  it('collects nothing more when the same check runs again', async () => {
     const you = await seedApp('you');
     await rankedYesterday(you.id, null);
     chartOf({ 'you-store': 7 });
@@ -404,14 +404,19 @@ describe('CategoryRanksService chart alerts (e2e)', () => {
       'delayed',
       'waiting-children',
     ]);
-    const batchOf = (webhookId: string) =>
-      jobs.find((job) => job.data.webhookId === webhookId)?.data
-        .payload as AlertBatchPayload;
+    const batchOf = (webhookId: string): AlertBatchPayload => {
+      const job = jobs.find(
+        (candidate) => candidate.data.webhookId === webhookId,
+      );
+      if (!job) throw new Error(`no delivery job for webhook ${webhookId}`);
+      return job.data.payload as AlertBatchPayload;
+    };
     expect(jobs).toHaveLength(2);
     expect(batchOf(entries.id).apps[0].chartMoves).toEqual([
       expect.objectContaining({ event: 'chart.entered' }),
     ]);
     expect(batchOf(entries.id).events).toHaveLength(1);
+    expect(batchOf(milestones.id).events).toHaveLength(1);
     expect(batchOf(milestones.id).apps[0].chartMoves).toEqual([
       expect.objectContaining<Partial<ChartMilestonePayload>>({
         event: 'chart.milestone',
