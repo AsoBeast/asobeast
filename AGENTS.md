@@ -323,7 +323,7 @@ PROXY_USERNAME=
 # password for PROXY_USERNAME
 PROXY_PASSWORD=
 PROXY_ENDPOINT_RPM=15               # requests per minute per pool endpoint; replaces the single host budget once the pool is on
-PROXY_ACQUIRE_TIMEOUT_MS=120000     # how long a job waits for a free endpoint before it fails and the queue retries it; a shutdown ends the wait at once
+PROXY_ACQUIRE_TIMEOUT_MS=120000     # how long a job waits for a free endpoint before it goes back to the queue, delayed, without spending an attempt; a shutdown ends the wait at once
 PROXY_WORKER_MAX_CONCURRENCY=8      # ceiling for store worker concurrency once the pool is on; actual concurrency tracks the healthy endpoint count. Ignored while PROXY_PROVIDER=none
 CRON_PROXY_SYNC=0 2 * * *           # pool reconciliation against the provider, UTC. Never scheduled while PROXY_PROVIDER=none
 CRON_STORE_CANARY=0 2,8,14,20 * * * # parser canary, UTC, one hour before the daily run. Empty removes the schedule and switches the canary off
