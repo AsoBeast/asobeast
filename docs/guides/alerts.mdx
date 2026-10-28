@@ -74,9 +74,9 @@ Turn on **Confirm drops before alerting** on a webhook or an email alert, in the
 What the setting changes:
 
 - It covers `rank.dropped`, and `rank.milestone` when the app leaves the top 10, the top 3 or first place. Entering a tier, `rank.first`, `rank.overtaken` and every other event arrive as before.
-- A drop counts as confirmed when the second check is still down against the check before the drop began: for `rank.dropped`, at least `ALERT_RANK_DROP_THRESHOLD` places lower or not found, and for a milestone, still outside the tier. The alert shows that earlier position as the start and the second check as the end, so a drop that deepens reports the final position.
+- A drop counts as confirmed when the check after it is still down against the check before the drop began: for `rank.dropped`, at least `ALERT_RANK_DROP_THRESHOLD` places lower or not found, and for a milestone, still outside the tier. The alert shows that earlier position as the start and the second check as the end, so a drop that deepens reports the final position.
 - If the keyword recovers, nothing is sent. The alerts that would have undone the drop are skipped too: the matching "back in the top 10" milestone and the `rank.improved` that follows it. A `rank.improved` that ends at least `ALERT_RANK_DROP_THRESHOLD` places above where the drop began is real news and is sent, and so is a recovery after a drop the channel was told about.
-- A keyword that keeps falling is reported once. The next report needs a new drop that begins after a check that did not confirm one.
+- A keyword that keeps falling is reported once. Checks of 9, 11 and 18 report leaving the top 10, from 9 to 18, and no separate `rank.dropped`, because the first step was smaller than the threshold. The next report needs a new drop that begins after a check that did not confirm one.
 - Only stored checks count. A day with no check neither confirms nor cancels a drop, so a keyword paused and resumed is judged on its first stored check after the pause.
 - A drop needs two checks, so with daily checks it arrives a day later than it would without the setting. In batched delivery it is in the report that follows the second check.
 
