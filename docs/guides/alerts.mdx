@@ -74,7 +74,7 @@ A keyword that moves between 10 and 11 fires each time it crosses. In batched de
 
 An app is in a chart when it sits within the depth the store answers: 100 on the App Store and 200 on Google Play. A move into a chart at position 7 fires `chart.entered` and `chart.milestone`, the second for entering the top 10, and the daily report shows both as one row. A move from 14 to 8 inside a chart fires `chart.milestone` alone.
 
-Three cases fire nothing. A chart for which the store listed no apps raises no event, because an empty answer does not show that the app left. Competitor apps raise none, because the competitor report lists listing changes only and the chart page already marks them. An app that changes its price class or its category raises none either: the chart it leaves keeps its last check and the new chart starts with a first check.
+Three cases fire nothing. A chart for which the store listed no apps raises no event, because an empty answer does not show that the app left, and the next check compares with the check before that day. Competitor apps raise none, because the competitor report lists listing changes only and the chart page already marks them. An app that changes its price class or its category raises none either: the chart it leaves keeps its last check and the new chart starts with a first check.
 
 In batched delivery the facts are deduplicated per app, chart and day, and each app's card in the owned app report gets a **Chart moves** group with a link to the chart page. Instant delivery sends one notification per event, so one move can send two. See [Read top charts](/guides/top-charts) for the chart page and [Follow category ranks](/guides/category-ranks) for the charts an app is checked in.
 

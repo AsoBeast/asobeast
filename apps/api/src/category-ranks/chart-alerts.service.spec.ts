@@ -22,16 +22,25 @@ const checkAt = (position: number | null): ChartCheck => ({
   depth: 100,
 });
 
-const makeService = (previous: { position: number | null } | null) => {
+const makeService = (
+  previous: { position: number | null } | null,
+  emptyCaptureDays: Date[] = [],
+) => {
   const findFirst = jest.fn().mockResolvedValue(previous);
+  const findMany = jest
+    .fn()
+    .mockResolvedValue(emptyCaptureDays.map((day) => ({ date: day })));
   const dispatch = jest.fn().mockResolvedValue(undefined);
   const service = new ChartAlertsService(
-    { categoryRank: { findFirst } } as unknown as PrismaService,
+    {
+      categoryRank: { findFirst },
+      chartCapture: { findMany },
+    } as unknown as PrismaService,
     { dispatch } as unknown as AlertsDispatcher,
   );
   const sent = () =>
     (dispatch.mock.calls as [ChartMovePayload][]).map(([payload]) => payload);
-  return { service, findFirst, sent };
+  return { service, findFirst, findMany, sent };
 };
 
 describe('ChartAlertsService', () => {
@@ -87,11 +96,38 @@ describe('ChartAlertsService', () => {
         appId: 'a1',
         collection: 'free',
         genre: '6007',
-        date: { lt: date },
+        date: { lt: date, notIn: [] },
       },
       orderBy: { date: 'desc' },
       select: { position: true },
     });
+  });
+
+  it('skips a day the store listed no apps in the chart', async () => {
+    const emptyDay = new Date('2026-10-27T00:00:00.000Z');
+    const { service, findFirst, findMany } = makeService(null, [emptyDay]);
+
+    await service.dispatch(checkAt(7));
+
+    expect(findMany).toHaveBeenCalledWith({
+      where: {
+        store: 'APP_STORE',
+        country: 'us',
+        collection: 'free',
+        genre: '6007',
+        device: 'iphone',
+        date: { lt: date },
+        entries: { none: {} },
+      },
+      select: { date: true },
+    });
+    expect(findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          date: { lt: date, notIn: [emptyDay] },
+        }) as object,
+      }),
+    );
   });
 
   it('names the app as the check gave it and leaves its identity to the dispatcher', async () => {

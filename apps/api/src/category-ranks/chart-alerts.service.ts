@@ -21,16 +21,7 @@ export class ChartAlertsService {
   ) {}
 
   async dispatch(check: ChartCheck): Promise<void> {
-    const previous = await this.prisma.categoryRank.findFirst({
-      where: {
-        appId: check.app.id,
-        collection: check.chart.collection,
-        genre: check.chart.genre,
-        date: { lt: check.date },
-      },
-      orderBy: { date: 'desc' },
-      select: { position: true },
-    });
+    const previous = await this.previousCheck(check);
     if (!previous) return;
     const payloads = chartMovePayloads({
       occurredAt: new Date().toISOString(),
@@ -44,5 +35,36 @@ export class ChartAlertsService {
     for (const payload of payloads) {
       await this.alerts.dispatch(payload);
     }
+  }
+
+  private async previousCheck(
+    check: ChartCheck,
+  ): Promise<{ position: number | null } | null> {
+    const { store, country, collection, genre, device } = check.chart;
+    const emptyCaptures = await this.prisma.chartCapture.findMany({
+      where: {
+        store,
+        country,
+        collection,
+        genre,
+        device,
+        date: { lt: check.date },
+        entries: { none: {} },
+      },
+      select: { date: true },
+    });
+    return this.prisma.categoryRank.findFirst({
+      where: {
+        appId: check.app.id,
+        collection,
+        genre,
+        date: {
+          lt: check.date,
+          notIn: emptyCaptures.map((capture) => capture.date),
+        },
+      },
+      orderBy: { date: 'desc' },
+      select: { position: true },
+    });
   }
 }

@@ -310,6 +310,38 @@ describe('CategoryRanksService chart alerts (e2e)', () => {
     expect((await outbox()).size).toBe(0);
   });
 
+  it('compares with the check before a day the store listed no apps', async () => {
+    const you = await seedApp('you');
+    await prisma.categoryRank.create({
+      data: {
+        appId: you.id,
+        date: addDays(utcToday(), -2),
+        collection: 'free',
+        genre: '6007',
+        position: 7,
+        depth: 100,
+      },
+    });
+    await rankedYesterday(you.id, null);
+    await prisma.chartCapture.create({
+      data: {
+        store: Store.APP_STORE,
+        country: 'us',
+        collection: 'free',
+        genre: '6007',
+        device: 'iphone',
+        date: addDays(utcToday(), -1),
+        depth: 100,
+      },
+    });
+    chartOf({ 'you-store': 7 });
+
+    await check();
+
+    expect((await outbox()).size).toBe(0);
+    expect((await todayRank(you.id))?.position).toBe(7);
+  });
+
   it('collects the same move once when the check runs twice', async () => {
     const you = await seedApp('you');
     await rankedYesterday(you.id, null);
