@@ -1,6 +1,10 @@
 import type { ReviewNegativePayload } from '@asobeast/shared';
 import { negative, newReview } from './email-fixtures.fixture';
-import { reviewFingerprint, reviewKey } from './review-fingerprint';
+import {
+  newReviewKey,
+  reviewFingerprint,
+  reviewKey,
+} from './review-fingerprint';
 
 const asNew = (payload: ReviewNegativePayload) => ({
   ...newReview,
@@ -39,5 +43,18 @@ describe('reviewKey', () => {
       reviewKey({ ...negative, app: { id: 'app_2', name: 'Other' } }),
     ).not.toBe(reviewKey(negative));
     expect(reviewKey(negative)).toBe('app_1:1vitjht');
+  });
+});
+
+describe('newReviewKey', () => {
+  it('tells apart two reviewers who wrote the same words at the same time', () => {
+    const fromAlex = asNew(negative);
+    const fromSam = {
+      ...fromAlex,
+      review: { ...fromAlex.review, author: 'Sam' },
+    };
+
+    expect(newReviewKey(fromAlex)).not.toBe(newReviewKey(fromSam));
+    expect(newReviewKey(fromAlex).startsWith(reviewKey(negative))).toBe(true);
   });
 });

@@ -19,3 +19,7 @@ export function reviewFingerprint(payload: ReviewAlertPayload): string {
 export function reviewKey(payload: ReviewAlertPayload): string {
   return `${payload.app.id}:${reviewFingerprint(payload)}`;
 }
+
+export function newReviewKey(payload: ReviewNewPayload): string {
+  return `${reviewKey(payload)}:${hash(payload.review.author ?? '')}`;
+}

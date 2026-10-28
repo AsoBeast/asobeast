@@ -5,7 +5,11 @@ import {
   RankMilestonePayload,
   RankOvertakenPayload,
 } from '@asobeast/shared';
-import { ReviewAlertPayload, reviewKey } from './review-fingerprint';
+import {
+  newReviewKey,
+  ReviewAlertPayload,
+  reviewKey,
+} from './review-fingerprint';
 
 export interface OutboxRow {
   event: string;
@@ -62,7 +66,7 @@ export function outboxRows(payload: AlertPayload): OutboxRow[] {
   }
 
   if (payload.event === 'review.new') {
-    return [appRow(payload, `review.new:${reviewKey(payload)}`)];
+    return [appRow(payload, `review.new:${newReviewKey(payload)}`)];
   }
 
   if (payload.event === 'serp.entrant') {
