@@ -34,6 +34,7 @@ import {
   toReviewReplyItem,
   WITH_POSTER,
 } from './review-reply.mapper';
+import { ReviewAlertApp, reviewNegativePayload } from './review-alert-payloads';
 import { reviewLanguage } from './review-language';
 import { toReviewTranslation, TranslationColumns } from './review-translation';
 import { StoredReview, storedReviewChanges } from './stored-review-changes';
@@ -43,8 +44,6 @@ export interface ReviewListFilters extends ReviewScope {
   replyState?: ReviewReplyState;
   sort: ReviewSort;
 }
-
-const REVIEW_TEXT_MAX = 500;
 
 interface ReviewSource {
   id: string;
@@ -220,7 +219,7 @@ export class ReviewsService {
   }
 
   private async dispatchNegativeAlerts(
-    app: { id: string; name: string | null },
+    app: ReviewAlertApp,
     reviews: ReviewResult[],
   ): Promise<void> {
     const threshold = this.config.get('ALERT_REVIEW_SCORE_MAX', {
@@ -231,20 +230,9 @@ export class ReviewsService {
         continue;
       }
       try {
-        await this.alerts.dispatch({
-          event: 'review.negative',
-          occurredAt: new Date().toISOString(),
-          app,
-          review: {
-            score: review.score,
-            title: review.title ?? null,
-            text: review.text.slice(0, REVIEW_TEXT_MAX),
-            version: review.version ?? null,
-            reviewedAt: review.updatedAt
-              ? review.updatedAt.toISOString()
-              : null,
-          },
-        });
+        await this.alerts.dispatch(
+          reviewNegativePayload(app, review, new Date()),
+        );
       } catch (error) {
         this.logger.warn(
           `review alert dispatch failed: ${(error as Error).message}`,
