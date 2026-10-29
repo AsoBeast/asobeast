@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
@@ -173,3 +174,63 @@ for (const theme of THEMES) {
     expect(violations.map(({ id }) => id)).toEqual([]);
   });
 }
+
+test("a phrase in quotes matches the whole keyword and says so in a chip", async ({
+  page,
+}) => {
+  await page.goto(KEYWORDS);
+
+  await page
+    .getByRole("textbox", { name: "Search keywords" })
+    .fill('"focus timer"');
+
+  await expect(page).toHaveURL(/q=%22focus\+timer%22/);
+  await expect(page.getByRole("row")).toHaveCount(2);
+  await expect(page.getByRole("row").nth(1)).toContainText("focus timer");
+  await expect(page.getByText("Exact phrase: focus timer")).toBeVisible();
+});
+
+test("a quoted phrase that is only part of a keyword finds nothing and offers the way out", async ({
+  page,
+}) => {
+  await page.goto(KEYWORDS);
+
+  await page.getByRole("textbox", { name: "Search keywords" }).fill('"timer"');
+
+  await expect(page.getByText("No keywords match these filters")).toBeVisible();
+  await expect(
+    page.getByText('No keyword is exactly "timer" with these filters.'),
+  ).toBeVisible();
+
+  await page.getByRole("textbox", { name: "Search keywords" }).fill("timer");
+
+  await expect(page.getByRole("row")).toHaveCount(3);
+});
+
+test("an unbalanced quote searches for the words while the closing quote is still to come", async ({
+  page,
+}) => {
+  await page.goto(KEYWORDS);
+
+  await page.getByRole("textbox", { name: "Search keywords" }).fill('"focus');
+
+  await expect(page.getByRole("row")).toHaveCount(2);
+  await expect(page.getByText('Search: "focus')).toBeVisible();
+});
+
+test("the exact search narrows the export to the rows shown", async ({
+  page,
+}) => {
+  await page.goto(`${KEYWORDS}?q=%22focus+timer%22`);
+
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: "Export CSV of keywords" }).click(),
+  ]);
+
+  const lines = readFileSync(await download.path(), "utf8")
+    .trim()
+    .split("\r\n");
+  expect(lines).toHaveLength(2);
+  expect(lines[1]).toMatch(/^focus timer,/);
+});

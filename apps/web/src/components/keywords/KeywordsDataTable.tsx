@@ -29,9 +29,11 @@ const VIRTUALIZE_ABOVE = 50;
 
 export function KeywordsDataTable({
   table,
+  emptyBody,
   onClearFilters,
 }: {
   table: TableInstance<KeywordTableFeatures, TrackedKeywordItem>;
+  emptyBody?: string;
   onClearFilters: () => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -104,6 +106,7 @@ export function KeywordsDataTable({
             <TableCell colSpan={columnCount}>
               <FilteredEmpty
                 title="No keywords match these filters"
+                body={emptyBody}
                 onClear={onClearFilters}
               />
             </TableCell>
