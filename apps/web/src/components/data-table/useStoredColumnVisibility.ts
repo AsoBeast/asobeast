@@ -8,8 +8,8 @@ import {
 } from "@tanstack/react-table";
 import {
   columnChoices,
+  defaultColumnVisibility,
   parseColumnVisibility,
-  phoneColumnVisibility,
   readStoredColumns,
   writeColumnVisibility,
 } from "@/lib/table/column-visibility";
@@ -32,13 +32,13 @@ const NO_HIDDEN_COLUMNS: ColumnVisibilityState = {};
 
 export function useStoredColumnVisibility(
   table: string,
-  columns: Parameters<typeof phoneColumnVisibility>[0],
+  columns: Parameters<typeof defaultColumnVisibility>[0],
 ) {
   const isMobile = useIsMobile();
-  const fallback = useMemo(
-    () => (isMobile ? phoneColumnVisibility(columns) : NO_HIDDEN_COLUMNS),
-    [isMobile, columns],
-  );
+  const fallback = useMemo(() => {
+    const defaults = defaultColumnVisibility(columns, isMobile);
+    return Object.keys(defaults).length === 0 ? NO_HIDDEN_COLUMNS : defaults;
+  }, [isMobile, columns]);
   const raw = useSyncExternalStore(
     subscribe,
     () => unsaved.get(table) ?? readStoredColumns(localStorage, table),
