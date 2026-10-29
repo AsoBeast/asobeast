@@ -10,15 +10,14 @@ export interface PngReading {
 }
 
 export async function clipboardPng(page: Page): Promise<Buffer> {
-  const base64 = await page.evaluate(async () => {
+  const bytes = await page.evaluate(async () => {
     const [item] = await navigator.clipboard.read();
     if (!item) throw new Error("The clipboard is empty");
-    const bytes = new Uint8Array(
-      await (await item.getType("image/png")).arrayBuffer(),
+    return Array.from(
+      new Uint8Array(await (await item.getType("image/png")).arrayBuffer()),
     );
-    return btoa(String.fromCharCode(...bytes));
   });
-  return Buffer.from(base64, "base64");
+  return Buffer.from(bytes);
 }
 
 export async function readPng(
