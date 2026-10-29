@@ -1,7 +1,9 @@
 "use client";
 
+import { useRef, type ReactNode, type RefObject } from "react";
+import Link from "next/link";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import type { ChangeField, TrackedKeywordItem } from "@asobeast/shared";
+import type { ChangeField, Store, TrackedKeywordItem } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import { ChartNotice, ChartSkeleton } from "@/components/charts/ChartStates";
 import { CHART_HEIGHT } from "@/components/charts/theme";
@@ -13,12 +15,14 @@ import {
   buildRankingChart,
   type RankingChartData,
 } from "@/components/rankings/pivot";
+import { RangePicker } from "@/components/rankings/RangePicker";
 import { changesOptions, rankingsOptions } from "@/lib/queries";
 import { formatDayMonth } from "@/lib/format";
 import { queryMarket } from "@/lib/market";
 import {
   presetDays,
   presetToRange,
+  RANGE_PRESETS,
   type RangePreset,
   WIDEST_RANGE,
 } from "@/lib/ranges";
@@ -27,7 +31,10 @@ import {
   changedFieldsLabel,
   historyView,
   listingChangeDays,
+  rankingsHistoryHref,
+  type HistoryView,
 } from "./position-history";
+import { PositionImageButton } from "./PositionImageButton";
 
 function plottedChanges(
   days: Map<string, ChangeField[]>,
@@ -53,25 +60,60 @@ function ChangesLine({ changes }: { changes: Map<string, ChangeField[]> }) {
   );
 }
 
-export function PositionHistoryPanel({
+type ChangesRead = ReturnType<typeof useChangesRead>;
+type RankingsRead = ReturnType<typeof useRankingsRead>;
+
+function PositionHistoryControls({
   appId,
-  keyword,
-  homeCountry,
+  keywordId,
   range,
   onRange,
+  image,
 }: {
   appId: string;
-  keyword: TrackedKeywordItem;
-  homeCountry: string;
+  keywordId: string;
   range: RangePreset;
   onRange: (next: RangePreset) => void;
+  image: ReactNode;
 }) {
-  const bounds = presetToRange(range);
-  const read = useQuery({
-    ...rankingsOptions(appId, { ...bounds, keywordIds: [keyword.keywordId] }),
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <RangePicker
+        presets={RANGE_PRESETS}
+        value={range}
+        onChange={onRange}
+        label="Date range"
+      />
+      <div className="flex items-center gap-1">
+        {image}
+        <Button asChild variant="link" size="sm" className="px-0">
+          <Link href={rankingsHistoryHref(appId, keywordId, range)}>
+            Open in Rankings
+          </Link>
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function useRankingsRead(
+  appId: string,
+  keywordId: string,
+  bounds: { from: string; to: string },
+) {
+  return useQuery({
+    ...rankingsOptions(appId, { ...bounds, keywordIds: [keywordId] }),
     placeholderData: keepPreviousData,
   });
-  const changesRead = useQuery({
+}
+
+function useChangesRead(
+  appId: string,
+  keyword: TrackedKeywordItem,
+  homeCountry: string,
+  range: RangePreset,
+) {
+  return useQuery({
     ...changesOptions(
       appId,
       presetDays(range),
@@ -79,13 +121,30 @@ export function PositionHistoryPanel({
     ),
     placeholderData: keepPreviousData,
   });
+}
 
-  if (read.data) {
-    const chart = buildRankingChart(
-      read.data.series.filter((item) => item.keywordId === keyword.keywordId),
-      bounds.to,
-    );
-    const view = historyView(chart, keyword);
+function PositionHistoryBody({
+  keyword,
+  homeCountry,
+  range,
+  onRange,
+  read,
+  changesRead,
+  chart,
+  view,
+  chartRef,
+}: {
+  keyword: TrackedKeywordItem;
+  homeCountry: string;
+  range: RangePreset;
+  onRange: (next: RangePreset) => void;
+  read: RankingsRead;
+  changesRead: ChangesRead;
+  chart: RankingChartData | null;
+  view: HistoryView | null;
+  chartRef: RefObject<HTMLDivElement | null>;
+}) {
+  if (chart && view) {
     if (view.kind === "empty") {
       return (
         <ChartNotice
@@ -121,6 +180,7 @@ export function PositionHistoryPanel({
           changes={changes}
           label={`Position history of ${keyword.text}`}
           busy={read.isPlaceholderData}
+          chartRef={chartRef}
         />
         {view.notes.map((note) => (
           <p key={note} className="text-caption text-muted-foreground">
@@ -150,5 +210,67 @@ export function PositionHistoryPanel({
       height={CHART_HEIGHT.compact}
       className="border border-dashed"
     />
+  );
+}
+
+export function PositionHistoryPanel({
+  appId,
+  store,
+  keyword,
+  homeCountry,
+  range,
+  onRange,
+}: {
+  appId: string;
+  store: Store;
+  keyword: TrackedKeywordItem;
+  homeCountry: string;
+  range: RangePreset;
+  onRange: (next: RangePreset) => void;
+}) {
+  const chartRef = useRef<HTMLDivElement>(null);
+  const bounds = presetToRange(range);
+  const read = useRankingsRead(appId, keyword.keywordId, bounds);
+  const changesRead = useChangesRead(appId, keyword, homeCountry, range);
+  const chart = read.data
+    ? buildRankingChart(
+        read.data.series.filter((item) => item.keywordId === keyword.keywordId),
+        bounds.to,
+      )
+    : null;
+  const view = chart ? historyView(chart, keyword) : null;
+  const copyable = chart !== null && view?.kind === "chart" && view.line;
+
+  return (
+    <>
+      <PositionHistoryControls
+        appId={appId}
+        keywordId={keyword.keywordId}
+        range={range}
+        onRange={onRange}
+        image={
+          copyable ? (
+            <PositionImageButton
+              appId={appId}
+              store={store}
+              keyword={keyword}
+              chart={chart}
+              chartRef={chartRef}
+            />
+          ) : null
+        }
+      />
+      <PositionHistoryBody
+        keyword={keyword}
+        homeCountry={homeCountry}
+        range={range}
+        onRange={onRange}
+        read={read}
+        changesRead={changesRead}
+        chart={chart}
+        view={view}
+        chartRef={chartRef}
+      />
+    </>
   );
 }

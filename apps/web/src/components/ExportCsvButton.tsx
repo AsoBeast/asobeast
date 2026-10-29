@@ -1,18 +1,18 @@
 import type { ComponentProps } from "react";
 import { Download } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { SubjectButton } from "@/components/SubjectButton";
 
 type ExportCsvButtonProps = Omit<
-  ComponentProps<typeof Button>,
-  "variant" | "size" | "asChild" | "children" | "aria-label"
-> & { subject: string };
+  ComponentProps<typeof SubjectButton>,
+  "icon" | "label"
+>;
 
-export function ExportCsvButton({ subject, ...props }: ExportCsvButtonProps) {
+export function ExportCsvButton(props: ExportCsvButtonProps) {
   return (
-    <Button variant="outline" size="sm" {...props}>
-      <Download aria-hidden />
-      Export CSV
-      <span className="sr-only">{` of ${subject}`}</span>
-    </Button>
+    <SubjectButton
+      icon={<Download aria-hidden />}
+      label="Export CSV"
+      {...props}
+    />
   );
 }

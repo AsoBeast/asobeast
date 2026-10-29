@@ -25,7 +25,7 @@ Neither gap is zero. See [Positions and rank depth](/concepts/positions) for why
 
 Use the range picker to change the window. Dates are UTC, so a chart point labelled with a date is the observation for that UTC day.
 
-To share the chart with someone who has no account, print the rankings view or save it as PDF. See [Print a report or save it as PDF](/guides/export-data#print-a-report-or-save-it-as-pdf).
+To share the chart with someone who has no account, send it as an image or print the rankings view. See [Share a chart as an image](#share-a-chart-as-an-image) and [Print a report or save it as PDF](/guides/export-data#print-a-report-or-save-it-as-pdf).
 
 ## Mark events on the charts
 
@@ -38,6 +38,18 @@ The metadata change lines asobeast draws on its own show what the store reports;
 Agents write annotations too. A token with the write scope carries `add_annotation` and `delete_annotation`, so an agent that ships a listing change can leave the marker itself. See [MCP tool reference](/mcp/tools).
 
 Annotations are plain rows: they never change a position, a score or an alert, and deleting one removes only the line.
+
+## Share a chart as an image
+
+The rankings chart and the position history of a keyword can leave AsoBeast as a PNG, for a chat message, a post or a client thread. The picture is drawn in your browser from the chart on screen. Nothing is sent to a server, and whoever receives it needs no account.
+
+On the rankings view, **Copy image** and **Download PNG** sit beside **Export CSV**. In the position history popover of the keyword monitor, the copy icon sits beside the range tabs. Both appear once the chart draws a line, which needs at least four daily checks. Before that the chart shows its short history message and there is nothing to copy.
+
+The picture carries its own context: the app name, the store and storefronts, the UTC days the chart covers, a legend that names every keyword with its stroke pattern, and the AsoBeast name. It follows the theme you are in, so the dark theme gives a dark picture, and it is twice the size of the chart on screen, so a narrow window gives a narrow picture. The hover tooltip is never part of it.
+
+If your browser cannot put an image on the clipboard, or refuses it, AsoBeast downloads the file instead and says so. The file is named `asobeast-rankings-<app>-<from>-<to>.png`, or `asobeast-position-history-<app>-<keyword>-<from>-<to>.png`, where `<from>` and `<to>` are the first and last UTC day the chart draws and `<app>` and `<keyword>` are lowercase words with no accents or symbols.
+
+Axis labels in the picture use your system's default font where the page uses IBM Plex, because a picture cannot load the page's fonts. The caption keeps IBM Plex.
 
 ## Inspect a SERP snapshot
 
@@ -74,6 +86,7 @@ Any app in a stored SERP snapshot can be added as a competitor in one step, whic
 - **The chart is empty for a new keyword.** No daily run has covered it yet.
 - **A line stops and restarts.** The app left and re entered the captured depth. The gap is real data.
 - **Volatility is missing.** It needs several observed days in the window. A keyword added yesterday has none.
+- **There is no Copy image button.** The chart needs at least four daily checks to draw a line. Widen the range or wait for more checks.
 
 ## Related
 

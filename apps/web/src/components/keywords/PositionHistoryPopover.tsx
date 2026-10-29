@@ -1,7 +1,6 @@
 "use client";
 
 import { useId, useState } from "react";
-import Link from "next/link";
 import { ChartLine, History } from "lucide-react";
 import {
   keywordLabel,
@@ -17,11 +16,9 @@ import {
   PopoverTitle,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { RangePicker } from "@/components/rankings/RangePicker";
 import { formatCountry, storeLabel } from "@/lib/format";
-import { RANGE_PRESETS, type RangePreset } from "@/lib/ranges";
+import type { RangePreset } from "@/lib/ranges";
 import { positionHoldFacts } from "./position-hold";
-import { rankingsHistoryHref } from "./position-history";
 import { PositionHistoryPanel } from "./PositionHistoryPanel";
 import { PositionReadout } from "./PositionReadout";
 import { staleCheckLabel, staleCheckLine } from "./stale-check";
@@ -94,21 +91,9 @@ function PositionHistoryContent({
         </p>
       )}
       <HoldFacts keyword={keyword} />
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <RangePicker
-          presets={RANGE_PRESETS}
-          value={range}
-          onChange={setRange}
-          label="Date range"
-        />
-        <Button asChild variant="link" size="sm" className="px-0">
-          <Link href={rankingsHistoryHref(appId, keyword.keywordId, range)}>
-            Open in Rankings
-          </Link>
-        </Button>
-      </div>
       <PositionHistoryPanel
         appId={appId}
+        store={store}
         keyword={keyword}
         homeCountry={homeCountry}
         range={range}
