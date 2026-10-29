@@ -15,8 +15,29 @@ export interface PopularityKeyword {
 }
 
 interface ListedTerm {
-  genre: string;
   popularity: number;
+  genres: string[];
+}
+
+interface FloorScope {
+  country: string;
+  week: Date;
+  genre?: string | { in: string[] };
+}
+
+function highestListing(
+  rows: { genre: string; popularity: number }[],
+): ListedTerm | null {
+  if (rows.length === 0) {
+    return null;
+  }
+  const popularity = Math.max(...rows.map((row) => row.popularity));
+  return {
+    popularity,
+    genres: rows
+      .filter((row) => row.popularity === popularity)
+      .map((row) => row.genre),
+  };
 }
 
 @Injectable()
@@ -44,15 +65,16 @@ export class OfficialPopularityLookup {
     if (!latest) {
       return undefined;
     }
-    const listed = await this.prisma.searchTermPopularity.findFirst({
-      where: {
-        country: keyword.country,
-        week: latest.week,
-        term: keyword.text,
-      },
-      orderBy: { popularity: 'desc' },
-      select: { genre: true, popularity: true },
-    });
+    const listed = highestListing(
+      await this.prisma.searchTermPopularity.findMany({
+        where: {
+          country: keyword.country,
+          week: latest.week,
+          term: keyword.text,
+        },
+        select: { genre: true, popularity: true },
+      }),
+    );
     return listed
       ? this.listedAnswer(keyword, latest.week, listed)
       : this.absentAnswer(keyword, latest.week, genre);
@@ -67,7 +89,7 @@ export class OfficialPopularityLookup {
       (await this.floor({
         country: keyword.country,
         week,
-        genre: listed.genre,
+        genre: { in: listed.genres },
       })) ?? listed.popularity;
     return {
       value: listed.popularity,
@@ -130,11 +152,7 @@ export class OfficialPopularityLookup {
     return row ? { value: row.popularity, week: utcDayOf(row.week) } : null;
   }
 
-  private async floor(where: {
-    country: string;
-    week: Date;
-    genre?: string;
-  }): Promise<number | null> {
+  private async floor(where: FloorScope): Promise<number | null> {
     const lowest = await this.prisma.searchTermPopularity.aggregate({
       where,
       _min: { popularity: true },

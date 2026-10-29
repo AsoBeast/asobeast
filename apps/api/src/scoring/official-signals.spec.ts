@@ -1,9 +1,5 @@
 import { OfficialPopularity } from './formulas';
-import {
-  officialEvidence,
-  officialPopularityState,
-  officialSignals,
-} from './official-signals';
+import { officialEvidence, officialSignals } from './official-signals';
 import {
   F10_ABSENT_CAP,
   F14_FLOOR_LISTED,
@@ -16,7 +12,6 @@ const WEEK = '2026-10-18';
 
 describe('official popularity state', () => {
   it('says nothing without an Apple answer', () => {
-    expect(officialPopularityState(undefined)).toBeNull();
     expect(officialSignals(undefined)).toEqual({});
     expect(officialEvidence(undefined)).toEqual({});
   });
@@ -24,9 +19,9 @@ describe('official popularity state', () => {
   it('names a term listed above the floor without a last listed value', () => {
     const signals = officialSignals(F16_LISTED_ABOVE_FLOOR.official);
 
-    expect(officialPopularityState(F16_LISTED_ABOVE_FLOOR.official)).toBe(
-      'listed',
-    );
+    expect(officialEvidence(F16_LISTED_ABOVE_FLOOR.official)).toEqual({
+      officialPopularityState: 'listed',
+    });
     expect(signals).toEqual({
       officialPopularityState: 'listed',
       officialPopularityFloor: 56,
@@ -53,7 +48,9 @@ describe('official popularity state', () => {
       context: { week: WEEK, floor: 41, lastAboveFloor: null },
     };
 
-    expect(officialPopularityState(official)).toBe('floor');
+    expect(officialEvidence(official)).toEqual({
+      officialPopularityState: 'floor',
+    });
   });
 
   it('names a term Apple left out with every fact', () => {

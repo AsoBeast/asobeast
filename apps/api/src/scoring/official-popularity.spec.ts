@@ -7,12 +7,12 @@ interface Dataset {
   latestWeek?: Date | null;
   floor?: number | null;
   genreFloors?: Record<string, number>;
-  rows?: Record<string, { genre: string; popularity: number }>;
+  rows?: Record<string, { genre: string; popularity: number }[]>;
   history?: { week: Date; popularity: number } | null;
 }
 
 interface FindFirstArgs {
-  where: { term?: string; week: Date | { gte?: Date; lt?: Date } };
+  where: { week: { gte?: Date; lt?: Date } };
 }
 
 const WEEK = new Date('2026-09-13T00:00:00Z');
@@ -22,31 +22,35 @@ const build = ({
   latestWeek = WEEK,
   floor = 41,
   genreFloors = { GAMES: 56 },
-  rows = { quiz: { genre: 'GAMES', popularity: 71 } },
+  rows = { quiz: [{ genre: 'GAMES', popularity: 71 }] },
   history = null,
 }: Dataset = {}) => {
+  const floorOf = (genre?: string | { in: string[] }): number | null => {
+    if (genre === undefined) {
+      return floor;
+    }
+    const floors = (typeof genre === 'string' ? [genre] : genre.in)
+      .map((name) => genreFloors[name])
+      .filter((value) => value !== undefined);
+    return floors.length === 0 ? null : Math.min(...floors);
+  };
   const prisma = {
     searchTermPopularity: {
       findFirst: jest.fn().mockImplementation(({ where }: FindFirstArgs) => {
-        if ('gte' in where.week) {
-          return Promise.resolve(latestWeek ? { week: latestWeek } : null);
-        }
-        if ('lt' in where.week) {
-          return Promise.resolve(history);
-        }
-        return Promise.resolve(where.term ? (rows[where.term] ?? null) : null);
+        return Promise.resolve(
+          'gte' in where.week ? latestWeek && { week: latestWeek } : history,
+        );
       }),
+      findMany: jest
+        .fn()
+        .mockImplementation(({ where }: { where: { term: string } }) =>
+          Promise.resolve(rows[where.term] ?? []),
+        ),
       aggregate: jest
         .fn()
-        .mockImplementation(({ where }: { where: { genre?: string } }) =>
-          Promise.resolve({
-            _min: {
-              popularity:
-                where.genre === undefined
-                  ? floor
-                  : (genreFloors[where.genre] ?? null),
-            },
-          }),
+        .mockImplementation(
+          ({ where }: { where: { genre?: string | { in: string[] } } }) =>
+            Promise.resolve({ _min: { popularity: floorOf(where.genre) } }),
         ),
     },
   };
@@ -73,9 +77,8 @@ describe('OfficialPopularityLookup', () => {
     await expect(lookup.for(keyword('quiz'))).resolves.toMatchObject({
       value: 71,
     });
-    expect(prisma.searchTermPopularity.findFirst).toHaveBeenCalledWith({
+    expect(prisma.searchTermPopularity.findMany).toHaveBeenCalledWith({
       where: { country: 'us', week: WEEK, term: 'quiz' },
-      orderBy: { popularity: 'desc' },
       select: { genre: true, popularity: true },
     });
   });
@@ -140,7 +143,7 @@ describe('OfficialPopularityLookup', () => {
       value: 71,
       context: { week: '2026-09-13', floor: 56, lastAboveFloor: null },
     });
-    expect(prisma.searchTermPopularity.findFirst).toHaveBeenCalledTimes(2);
+    expect(prisma.searchTermPopularity.findFirst).toHaveBeenCalledTimes(1);
   });
 
   it('judges a listed term against its own genre, not the guessed one', async () => {
@@ -151,14 +154,56 @@ describe('OfficialPopularityLookup', () => {
     expect(answer?.context?.floor).toBe(56);
     expect(prisma.searchTermPopularity.aggregate).toHaveBeenCalledTimes(1);
     expect(prisma.searchTermPopularity.aggregate).toHaveBeenCalledWith({
-      where: { country: 'us', week: WEEK, genre: 'GAMES' },
+      where: { country: 'us', week: WEEK, genre: { in: ['GAMES'] } },
+      _min: { popularity: true },
+    });
+  });
+
+  it('answers the highest value of a term listed in several genres', async () => {
+    const { lookup } = build({
+      rows: {
+        quiz: [
+          { genre: 'SPORTS', popularity: 48 },
+          { genre: 'GAMES', popularity: 71 },
+        ],
+      },
+      genreFloors: { GAMES: 56, SPORTS: 41 },
+    });
+
+    await expect(lookup.for(keyword('quiz'))).resolves.toEqual({
+      value: 71,
+      context: { week: '2026-09-13', floor: 56, lastAboveFloor: null },
+    });
+  });
+
+  it('judges a value several genres share against the lowest of their floors', async () => {
+    const { lookup, prisma } = build({
+      rows: {
+        quiz: [
+          { genre: 'GAMES', popularity: 56 },
+          { genre: 'TRIVIA', popularity: 56 },
+        ],
+      },
+      genreFloors: { GAMES: 56, TRIVIA: 44 },
+    });
+
+    await expect(lookup.for(keyword('quiz'))).resolves.toEqual({
+      value: 56,
+      context: { week: '2026-09-13', floor: 44, lastAboveFloor: null },
+    });
+    expect(prisma.searchTermPopularity.aggregate).toHaveBeenCalledWith({
+      where: {
+        country: 'us',
+        week: WEEK,
+        genre: { in: ['GAMES', 'TRIVIA'] },
+      },
       _min: { popularity: true },
     });
   });
 
   it('answers a term listed at the floor of its genre with its last listed value', async () => {
     const { lookup, prisma } = build({
-      rows: { quiz: { genre: 'GAMES', popularity: 56 } },
+      rows: { quiz: [{ genre: 'GAMES', popularity: 56 }] },
       history: { week: new Date('2026-09-06T00:00:00Z'), popularity: 63 },
     });
 

@@ -53,6 +53,8 @@ describe('official popularity lookup against the database (e2e)', () => {
         row('mid quiz', 0, 'GAMES', 70),
         row('edge quiz', 0, 'GAMES', 50),
         row('sports edge', 0, 'SPORTS', 44),
+        row('shared quiz', 0, 'GAMES', 50),
+        row('shared quiz', 0, 'SPORTS', 50),
         row('edge quiz', 2, 'GAMES', 66),
         row('edge quiz', 2, 'SPORTS', 48),
         row('filler', 2, 'GAMES', 52),
@@ -103,6 +105,13 @@ describe('official popularity lookup against the database (e2e)', () => {
   it('finds no last listed value for a term the kept weeks never list', async () => {
     await expect(lookup.for(keyword('never quiz'))).resolves.toEqual({
       absentBelow: 44,
+      context: { week: utcDayOf(newest), floor: 44, lastAboveFloor: null },
+    });
+  });
+
+  it('judges a value several genres share against the lowest of their floors', async () => {
+    await expect(lookup.for(keyword('shared quiz'))).resolves.toEqual({
+      value: 50,
       context: { week: utcDayOf(newest), floor: 44, lastAboveFloor: null },
     });
   });

@@ -167,7 +167,7 @@ Confidence says how complete the evidence was.
 | `entryDifficulty` | On a brand page, the 0 to 10 difficulty of the page without its leader, for reference; otherwise null |
 | `officialPopularity` | Apple's search popularity, 1 to 100, when it was used |
 | `officialPopularityState` | `listed`, `floor` or `absent`, when Apple's list answered for this term. Left out when no Apple week was available, and on Google Play. See [What is a floor answer?](#what-is-a-floor-answer) |
-| `officialPopularityFloor` | The lowest popularity Apple published that week in the genre the answer was judged against |
+| `officialPopularityFloor` | The lowest popularity Apple published that week in the genres the answer was judged against: the genres that list the term at its value, or for a term left out, the genre of its search results |
 | `officialPopularityWeek` | The UTC day the Apple week starts, a Sunday |
 | `officialPopularityLastAboveFloor` | For a `floor` or `absent` answer, the value and week of the last kept week in which Apple listed the term above that floor, when there is one |
 | `estimatedTraffic` | The estimate on the stored 0 to 10 scale, kept even when Apple's number replaced it |
@@ -250,7 +250,7 @@ Google Play has no equivalent, so its popularity stays an estimate. The instance
 
 Apple's weekly list ends somewhere: it holds the most searched terms of each genre and publishes nothing below its lowest value, the floor. A number read from the list is a measurement only above that edge. Two answers say little more than "at or below the edge", and asobeast calls both a floor answer:
 
-- **Floor.** Apple lists the term at the lowest value it publishes for the genre the term is listed in. The number is Apple's, and the source stays `APPLE_ADS_POPULARITY`, but it marks where the list ends, not a measurement of this term alone.
+- **Floor.** Apple lists the term at the lowest value it publishes in every genre that lists it at that value. A term that clears the floor of any one of those genres is a measurement. The number is Apple's, and the source stays `APPLE_ADS_POPULARITY`, but it marks where the list ends, not a measurement of this term alone.
 - **Absent.** Apple's list for the week does not hold the term, so its popularity is below the floor. The number shown is the estimate held under that floor, as described above, and the source stays `APPLE_SEARCH_SIGNALS`.
 
 The popularity cell shows a small arrow before the number and says in words which week the answer is from, what the floor was, and, when Apple's kept weeks list the term higher, the last value above the floor and its week. asobeast keeps eight weeks of Apple's lists, so the last value reaches back at most about two months and is missing for a term that has been below the floor longer. That value is compared with the floor of the newest week, not with the floor of its own week, so when the floor moved by a few points between weeks the last value can be one that sat at the floor of its own week.

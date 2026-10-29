@@ -1,5 +1,6 @@
 import { OfficialPopularityState, ScoreSignals } from '@asobeast/shared';
 import { OfficialPopularity } from './formulas';
+import { ScoringEvidence } from './provenance';
 
 type OfficialSignals = Pick<
   ScoreSignals,
@@ -16,10 +17,6 @@ function stateOf(official: OfficialPopularity): OfficialPopularityState {
   const floor = official.context?.floor;
   return floor !== undefined && official.value <= floor ? 'floor' : 'listed';
 }
-
-export const officialPopularityState = (
-  official: OfficialPopularity | undefined,
-): OfficialPopularityState | null => (official ? stateOf(official) : null);
 
 export function officialSignals(
   official: OfficialPopularity | undefined,
@@ -44,5 +41,5 @@ export function officialSignals(
 
 export const officialEvidence = (
   official: OfficialPopularity | undefined,
-): { officialPopularityState?: OfficialPopularityState } =>
+): Pick<ScoringEvidence, 'officialPopularityState'> =>
   official ? { officialPopularityState: stateOf(official) } : {};
