@@ -194,7 +194,7 @@ describe("fileNotices", () => {
 
   it("U-VIEW-08 asks the person to choose one of the apps of the file", () => {
     expect(fileNotices({ ...base, appsToChoose: 3 })).toEqual([
-      "This file holds rows for 3 apps and all of them are imported. Choose one under Columns to import only its keywords.",
+      "This file holds rows for 3 apps. Choose one under App to import, or All apps, before you import.",
     ]);
   });
 

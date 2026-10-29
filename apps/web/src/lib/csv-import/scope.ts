@@ -30,6 +30,8 @@ export interface ScopedRecords extends LeftOut {
   records: CsvRecord[];
 }
 
+export const ALL_APPS = "*";
+
 export const NO_SCOPE: FileScope = {
   appColumn: null,
   platformColumn: null,
@@ -179,7 +181,7 @@ export function applyScope(
   let otherStore = 0;
   for (const record of data) {
     const appKey =
-      app === undefined || scope.appColumn === null
+      app === undefined || app === ALL_APPS || scope.appColumn === null
         ? ""
         : headerKey(cellOf(record, scope.appColumn));
     const platform =

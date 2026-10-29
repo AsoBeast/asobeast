@@ -713,11 +713,47 @@ test("P-WEB-17 imports only the app it is on from a file that holds several apps
   await picker.click();
   await page.getByRole("option", { name: /All apps/ }).click();
 
-  await expect(
-    dialog.getByText(/holds rows for 2 apps and all of them are imported/),
-  ).toBeVisible();
+  await expect(dialog.getByText(/holds rows for 2 apps/)).toHaveCount(0);
   await expect(dialog.getByRole("status")).toHaveText("3 new, 1 duplicate");
   await expect(rowOf(dialog, /gamma three/)).toBeVisible();
+  await expect(
+    dialog.getByRole("button", { name: "Import 3 keywords" }),
+  ).toBeEnabled();
+});
+
+test("P-WEB-17 waits for an app to be chosen when no app of the file is the one it is on", async ({
+  page,
+}) => {
+  const dialog = await openDialog(page);
+
+  await choose(
+    dialog,
+    TWO_APP_FILE.replaceAll("Import Lab,123456789", "Third App,555000999"),
+    "two-other-apps.csv",
+  );
+
+  const picker = dialog.getByRole("combobox", { name: "App to import" });
+  await expect(picker).toContainText("Choose an app");
+  await expect(
+    dialog.getByText(
+      "This file holds rows for 2 apps. Choose one under App to import, or All apps, before you import.",
+    ),
+  ).toBeVisible();
+  await expect(dialog.getByRole("status")).toHaveText("3 new, 1 duplicate");
+  await expect(
+    dialog.getByRole("button", { name: "Import 3 keywords" }),
+  ).toBeDisabled();
+
+  await picker.click();
+  await page.getByRole("option", { name: "Other App (1 row)" }).click();
+
+  await expect(dialog.getByRole("status")).toHaveText("1 new");
+  await expect(
+    dialog.getByText("3 rows for other apps are left out."),
+  ).toBeVisible();
+  await expect(
+    dialog.getByRole("button", { name: "Import 1 keyword" }),
+  ).toBeEnabled();
 });
 
 test("P-WEB-17 has no accessibility violations with the app picker shown", async ({

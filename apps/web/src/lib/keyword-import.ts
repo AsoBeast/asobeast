@@ -154,7 +154,7 @@ export function fileNotices(file: FileNoticeFacts): string[] {
   }
   if (file.appsToChoose) {
     notices.push(
-      `This file holds rows for ${formatNumber(file.appsToChoose)} apps and all of them are imported. Choose one under Columns to import only its keywords.`,
+      `This file holds rows for ${formatNumber(file.appsToChoose)} apps. Choose one under App to import, or All apps, before you import.`,
     );
   }
   if (file.leftOut && file.leftOut.otherApps > 0) {

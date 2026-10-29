@@ -16,7 +16,7 @@ import type {
   ColumnOption,
   FileView,
 } from "@/lib/csv-import/parse-keyword-file";
-import type { FileScope } from "@/lib/csv-import/scope";
+import { ALL_APPS, type FileScope } from "@/lib/csv-import/scope";
 import { formatNumber } from "@/lib/format";
 
 const FIELD_LABELS: Record<ImportField, string> = {
@@ -27,7 +27,6 @@ const FIELD_LABELS: Record<ImportField, string> = {
 };
 
 const NONE = "none";
-const ALL_APPS = "*";
 
 const rowCount = (rows: number): string =>
   `${formatNumber(rows)} row${rows === 1 ? "" : "s"}`;
@@ -106,16 +105,11 @@ export function ImportMapping({
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="keyword-import-app">App to import</Label>
           <Select
-            value={view.app ?? ALL_APPS}
-            onValueChange={(next) =>
-              onViewChange({
-                ...view,
-                app: next === ALL_APPS ? undefined : next,
-              })
-            }
+            value={view.app ?? ""}
+            onValueChange={(app) => onViewChange({ ...view, app })}
           >
             <SelectTrigger id="keyword-import-app" aria-label="App to import">
-              <SelectValue />
+              <SelectValue placeholder="Choose an app" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL_APPS}>

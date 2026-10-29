@@ -9,6 +9,7 @@ import {
   skippedAboveHeader,
   type FileView,
 } from "./parse-keyword-file";
+import { ALL_APPS } from "./scope";
 
 const bufferOf = (text: string): ArrayBuffer =>
   new TextEncoder().encode(text).buffer as ArrayBuffer;
@@ -185,7 +186,7 @@ describe("a file that names the apps and stores of its rows", () => {
     });
   });
 
-  it("U-SCOPE-17 imports every app of the file until one is chosen", () => {
+  it("U-SCOPE-17 reviews every app of the file until one is chosen", () => {
     const file = readKeywordFile(bufferOf(FILE));
     const view = initialView(file, { ...TARGET, storeAppId: "5", name: null });
 
@@ -217,6 +218,7 @@ describe("a file that names the apps and stores of its rows", () => {
 
     expect(leftToChoose(unmatched)).toBe(2);
     expect(leftToChoose(initialView(file, TARGET))).toBe(0);
+    expect(leftToChoose({ ...unmatched, app: ALL_APPS })).toBe(0);
     expect(leftToChoose({ ...unmatched, hasHeader: false })).toBe(0);
   });
 

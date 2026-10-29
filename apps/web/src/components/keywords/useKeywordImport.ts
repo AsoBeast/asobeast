@@ -16,11 +16,13 @@ import {
 import { ApiError, importKeywords } from "@/lib/api";
 import type { ImportTarget } from "@/lib/csv-import/scope";
 import {
+  appsLeftToChoose,
   initialView,
   mapKeywordFile,
   readKeywordFile,
   type FileView,
   type KeywordFile,
+  type MappedFile,
 } from "@/lib/csv-import/parse-keyword-file";
 import { formatNumber } from "@/lib/format";
 import {
@@ -71,6 +73,16 @@ function submitMessage(error: Error | null): string | null {
   return error.message;
 }
 
+function appsStillToChoose(
+  loaded: Loaded | null,
+  view: FileView | null,
+  mapped: MappedFile | null,
+): number {
+  return loaded && view && mapped
+    ? appsLeftToChoose(loaded.file, view, mapped)
+    : 0;
+}
+
 export function useKeywordImport(
   appId: string,
   store: Store,
@@ -95,6 +107,7 @@ export function useKeywordImport(
     () => (loaded && view ? mapKeywordFile(loaded.file, view, store) : null),
     [loaded, view, store],
   );
+  const appsToChoose = appsStillToChoose(loaded, view, mapped);
   const refusal = useMemo(
     () => (mapped ? refuseImport(mapped.rows, market) : null),
     [mapped, market],
@@ -181,8 +194,10 @@ export function useKeywordImport(
     busy: preview.isFetching,
     importing: submit.isPending,
     error: blocking ?? submitMessage(submit.error),
+    appsToChoose,
     canImport:
       result !== null &&
+      appsToChoose === 0 &&
       importableCount(result.summary) > 0 &&
       blocking === null &&
       !preview.isFetching &&

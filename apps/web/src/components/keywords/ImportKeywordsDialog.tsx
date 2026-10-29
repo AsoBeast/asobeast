@@ -16,7 +16,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
-  appsLeftToChoose,
   columnOptions,
   skippedAboveHeader,
 } from "@/lib/csv-import/parse-keyword-file";
@@ -58,7 +57,7 @@ export function ImportKeywordsDialog({
           ignoredColumns: mapped.ignoredColumns,
           store,
           leftOut: mapped.leftOut,
-          appsToChoose: appsLeftToChoose(loaded.file, view, mapped),
+          appsToChoose: flow.appsToChoose,
         })
       : [];
 

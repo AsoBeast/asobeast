@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyScope, defaultApp, NO_SCOPE, scopeOf } from "./scope";
+import { ALL_APPS, applyScope, defaultApp, NO_SCOPE, scopeOf } from "./scope";
 import type { CsvRecord } from "./tokenize";
 
 const rowsOf = (...rows: string[][]): CsvRecord[] =>
@@ -195,6 +195,12 @@ describe("applyScope", () => {
       otherApps: 0,
       otherStore: 0,
     });
+  });
+
+  it("U-SCOPE-15 keeps the rows of every app once all apps are chosen", () => {
+    expect(
+      linesOf(applyScope(DATA, scope, ALL_APPS, undefined).records),
+    ).toEqual([2, 3, 4, 5]);
   });
 
   it("U-SCOPE-15 keeps every row without a scope", () => {
