@@ -15,7 +15,7 @@ const LEGEND_ROW_HEIGHT = 22;
 const BRAND_GAP = 16;
 
 export const LEGEND_SAMPLE_WIDTH = 22;
-const LEGEND_SAMPLE_GAP = 6;
+export const LEGEND_SAMPLE_GAP = 6;
 const LEGEND_ITEM_GAP = 16;
 const ELLIPSIS = "…";
 

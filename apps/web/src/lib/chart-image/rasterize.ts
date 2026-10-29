@@ -3,6 +3,7 @@ import type { ChartCaption } from "./caption";
 import {
   dashPattern,
   IMAGE_SCALE,
+  LEGEND_SAMPLE_GAP,
   LEGEND_SAMPLE_WIDTH,
   layoutImage,
   type Measure,
@@ -22,7 +23,6 @@ export interface ChartImageRequest {
 
 const MAX_SETTLE_CHECKS = 60;
 const SETTLE_INTERVAL_MS = 50;
-const LEGEND_SAMPLE_GAP = 6;
 
 const pause = () =>
   new Promise<void>((resolve) => setTimeout(resolve, SETTLE_INTERVAL_MS));
