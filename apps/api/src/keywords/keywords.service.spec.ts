@@ -541,6 +541,7 @@ describe('KeywordsService.listTracked serp volatility', () => {
     source: 'MANUAL',
     active: true,
     relevance: null,
+    createdAt: new Date('2026-10-01T00:00:00.000Z'),
     keyword: { text, country: 'us', rankings: [], metrics: [] },
   });
 
@@ -678,6 +679,7 @@ describe('KeywordsService.listTracked play acquisitions', () => {
     source: 'MANUAL',
     active: true,
     relevance: null,
+    createdAt: new Date('2026-10-01T00:00:00.000Z'),
     keyword: { text, country: 'us', rankings: [], metrics: [] },
   });
 

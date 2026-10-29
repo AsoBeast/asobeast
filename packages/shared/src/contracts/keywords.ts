@@ -70,6 +70,7 @@ export interface TrackedKeywordItem {
   scoreOutdated?: boolean;
   tags?: string[];
   note?: string | null;
+  trackedAt?: string;
   playAcquisitions?: PlayAcquisitions | null;
 }
 

@@ -25,6 +25,7 @@ export interface TrackedKeywordRow {
   relevance: number | null;
   tags: string[];
   note: string | null;
+  createdAt: Date;
   keyword: {
     text: string;
     country: string;
@@ -247,5 +248,6 @@ export function toTrackedKeywordItem(
     ...scoreEvidence(metric, row.keyword.store, signals),
     tags: row.tags,
     note: row.note,
+    trackedAt: row.createdAt.toISOString(),
   };
 }

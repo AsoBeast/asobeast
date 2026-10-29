@@ -163,6 +163,7 @@ export function trackedArgs(appId: string) {
       relevance: true,
       tags: true,
       note: true,
+      createdAt: true,
       keyword: {
         select: {
           text: true,

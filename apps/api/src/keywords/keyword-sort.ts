@@ -9,6 +9,7 @@ const SORT_VALUE: Record<
   difficulty: (item) => item.difficulty,
   position: (item) => item.latestPosition,
   volatility: (item) => item.serpVolatility7d,
+  added: (item) => (item.trackedAt ? Date.parse(item.trackedAt) : null),
 };
 
 export function sortTracked(

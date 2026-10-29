@@ -54,4 +54,18 @@ describe('sortTracked', () => {
       'unranked',
     ]);
   });
+
+  it('sorts added with the newest first and an undated keyword last', () => {
+    const items = [
+      item('undated', {}),
+      item('older', { trackedAt: '2026-09-01T00:00:00.000Z' }),
+      item('newer', { trackedAt: '2026-10-20T00:00:00.000Z' }),
+    ];
+
+    expect(sortTracked(items, 'added').map((row) => row.keywordId)).toEqual([
+      'newer',
+      'older',
+      'undated',
+    ]);
+  });
 });

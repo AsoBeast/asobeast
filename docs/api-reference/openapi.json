@@ -2093,7 +2093,8 @@
                 "traffic",
                 "difficulty",
                 "position",
-                "volatility"
+                "volatility",
+                "added"
               ]
             }
           },
