@@ -146,6 +146,32 @@ describe('KeywordsController table facts (e2e)', () => {
   });
 
   describe('competitorsInTop10', () => {
+    beforeEach(() => {
+      jest.useFakeTimers({
+        now: Date.now(),
+        doNotFake: [
+          'hrtime',
+          'nextTick',
+          'performance',
+          'queueMicrotask',
+          'requestAnimationFrame',
+          'cancelAnimationFrame',
+          'requestIdleCallback',
+          'cancelIdleCallback',
+          'setImmediate',
+          'clearImmediate',
+          'setInterval',
+          'clearInterval',
+          'setTimeout',
+          'clearTimeout',
+        ],
+      });
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
     const DAY_MS = 24 * 60 * 60 * 1000;
     const daysAgo = (days: number): Date =>
       new Date(utcToday().getTime() - days * DAY_MS);
