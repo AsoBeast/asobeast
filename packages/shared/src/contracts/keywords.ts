@@ -146,6 +146,22 @@ export interface KeywordUpdateRequest {
   note?: string | null;
 }
 
+export const KEYWORD_BULK_ACTIONS = ['pause', 'resume', 'untrack'] as const;
+export type KeywordBulkAction = (typeof KEYWORD_BULK_ACTIONS)[number];
+
+export interface KeywordBulkRequest {
+  action: KeywordBulkAction;
+  keywordIds: string[];
+}
+
+export interface KeywordBulkResult {
+  action: KeywordBulkAction;
+  requested: number;
+  changed: number;
+  unchanged: number;
+  missing: string[];
+}
+
 export interface KeywordAddRequest {
   keywords: string[];
   country?: string;

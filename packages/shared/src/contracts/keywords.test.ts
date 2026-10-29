@@ -1,7 +1,12 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import { KEYWORD_BULK_ADD_LIMIT, KEYWORD_IMPORT_LIMIT } from '../aso';
+import {
+  KEYWORD_BULK_ADD_LIMIT,
+  KEYWORD_BULK_CHANGE_LIMIT,
+  KEYWORD_IMPORT_LIMIT,
+} from '../aso';
 import type { OfficialPopularityState } from '../index';
 import {
+  KEYWORD_BULK_ACTIONS,
   KEYWORD_IMPORT_REASONS,
   KEYWORD_IMPORT_STATUSES,
   keywordLabel,
@@ -26,6 +31,20 @@ describe('keywordLabel', () => {
   it('treats an empty country as no market rather than an empty suffix', () => {
     expect(keywordLabel({ text: 'habit tracker', country: '' })).toBe(
       'habit tracker',
+    );
+  });
+});
+
+describe('the keyword bulk change contract', () => {
+  it('holds as many ids as an import holds rows', () => {
+    expect(KEYWORD_BULK_CHANGE_LIMIT).toBe(500);
+    expect(KEYWORD_BULK_CHANGE_LIMIT).toBe(KEYWORD_IMPORT_LIMIT);
+  });
+
+  it('names the three actions once each', () => {
+    expect(KEYWORD_BULK_ACTIONS).toEqual(['pause', 'resume', 'untrack']);
+    expect(new Set(KEYWORD_BULK_ACTIONS).size).toBe(
+      KEYWORD_BULK_ACTIONS.length,
     );
   });
 });

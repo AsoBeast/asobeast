@@ -2622,6 +2622,48 @@
         ]
       }
     },
+    "/apps/{id}/keywords/bulk": {
+      "post": {
+        "description": "Applies one action to up to 500 keyword ids of the app in one write request. pause and resume change the active flag, untrack stops tracking and keeps the ranking history rules of a single removal. changed counts the rows this request changed, unchanged the tracked rows already in the requested state, and missing the ids the app does not track. A resume is all or nothing: it answers 403 with the plan keyword limit and writes nothing when it would pass the limit, and a resumed keyword is checked for its first position within minutes like a new one.",
+        "operationId": "KeywordsController_bulk",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KeywordBulkDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Pause, resume or untrack many tracked keywords",
+        "tags": [
+          "keywords"
+        ]
+      }
+    },
     "/apps/{id}/keyword-field": {
       "get": {
         "description": "Returns the keyword field of one App Store localization: phrases is the field as saved, in order, and tracked is those of its phrases tracked and active in country. Without a query it reads the home storefront's default localization. duplicatesRemoved is always 0 because a read discards nothing.",
@@ -7336,6 +7378,32 @@
             "example": "Seasonal, push in May"
           }
         }
+      },
+      "KeywordBulkDto": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "enum": [
+              "pause",
+              "resume",
+              "untrack"
+            ],
+            "type": "string"
+          },
+          "keywordIds": {
+            "minItems": 1,
+            "maxItems": 500,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 64
+            }
+          }
+        },
+        "required": [
+          "action",
+          "keywordIds"
+        ]
       },
       "KeywordFieldDto": {
         "type": "object",

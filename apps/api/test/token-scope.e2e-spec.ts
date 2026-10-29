@@ -259,6 +259,22 @@ describe('Read-only token scope (e2e)', () => {
       },
     );
 
+    it('refuses a bulk keyword change to a read-only token', async () => {
+      await request(app.getHttpServer())
+        .post('/apps/app_missing/keywords/bulk')
+        .set('Authorization', `Bearer ${READ_TOKEN}`)
+        .send({ action: 'pause', keywordIds: ['k'] })
+        .expect(403);
+    });
+
+    it('lets a write token reach the bulk keyword change', async () => {
+      await request(app.getHttpServer())
+        .post('/apps/app_missing/keywords/bulk')
+        .set('Authorization', `Bearer ${writeToken}`)
+        .send({ action: 'pause', keywordIds: ['k'] })
+        .expect(404);
+    });
+
     it('lets a read-only token preview a keyword field save', async () => {
       const response = await request(app.getHttpServer())
         .post('/apps/app_missing/keyword-fields/es-MX/preview')

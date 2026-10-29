@@ -99,6 +99,36 @@ describe('Adversarial isolation attempts', () => {
     ).resolves.toBe(1);
   });
 
+  it('reports a bulk untrack of the other workspace keyword as missing and leaves it', async () => {
+    const response = await fixture.a.agent
+      .post(`/apps/${fixture.a.appleAppId}/keywords/bulk`)
+      .send({ action: 'untrack', keywordIds: [fixture.b.privateKeywordId] })
+      .expect(200);
+
+    expect(response.body).toMatchObject({
+      changed: 0,
+      missing: [fixture.b.privateKeywordId],
+    });
+    await expect(
+      fixture.db.trackedKeyword.count({
+        where: { keywordId: fixture.b.privateKeywordId },
+      }),
+    ).resolves.toBe(1);
+  });
+
+  it('refuses a bulk change through the other workspace app', async () => {
+    await fixture.a.agent
+      .post(`/apps/${fixture.b.appleAppId}/keywords/bulk`)
+      .send({ action: 'untrack', keywordIds: [fixture.b.keywordId] })
+      .expect(404);
+
+    await expect(
+      fixture.db.trackedKeyword.count({
+        where: { appId: fixture.b.appleAppId, keywordId: fixture.b.keywordId },
+      }),
+    ).resolves.toBe(1);
+  });
+
   it('keeps a shared keyword read from naming the other workspace apps', async () => {
     const response = await fixture.a.agent
       .get(`/keywords/${fixture.a.keywordId}/serp`)
