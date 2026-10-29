@@ -33,8 +33,13 @@ export async function loadSerpDays(
   for (const entry of entries) {
     const dateKey = entry.date.toISOString().slice(0, 10);
     const dates = byKeyword.get(entry.keywordId) ?? new Map<string, string[]>();
-    dates.set(dateKey, [...(dates.get(dateKey) ?? []), entry.storeAppId]);
     byKeyword.set(entry.keywordId, dates);
+    const storeAppIds = dates.get(dateKey);
+    if (storeAppIds) {
+      storeAppIds.push(entry.storeAppId);
+    } else {
+      dates.set(dateKey, [entry.storeAppId]);
+    }
   }
   return byKeyword;
 }
