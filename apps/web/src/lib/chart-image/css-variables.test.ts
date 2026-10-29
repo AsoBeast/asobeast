@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hasUnresolvedVariables, resolveCssVariables } from "./css-variables";
+import { resolveCssVariables } from "./css-variables";
 
 const TOKENS: Record<string, string> = {
   "--chart-1": "oklch(0.52 0.15 240)",
@@ -40,12 +40,5 @@ describe("resolveCssVariables", () => {
     ["var(--chart-1", "var(--chart-1"],
   ])("leaves %s readable when nothing resolves it", (input, expected) => {
     expect(resolveCssVariables(input, lookup)).toBe(expected);
-  });
-});
-
-describe("hasUnresolvedVariables", () => {
-  it("reports a surviving reference", () => {
-    expect(hasUnresolvedVariables("stroke:var(--missing)")).toBe(true);
-    expect(hasUnresolvedVariables("stroke:oklch(0.5 0.1 240)")).toBe(false);
   });
 });

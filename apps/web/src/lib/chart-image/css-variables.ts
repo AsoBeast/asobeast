@@ -71,6 +71,3 @@ export function resolveCssVariables(
 ): string {
   return substitute(text, lookup, 0);
 }
-
-export const hasUnresolvedVariables = (text: string): boolean =>
-  text.includes(OPENER);
