@@ -238,6 +238,30 @@ describe("files exported by other tools", () => {
       leftOut: { otherApps: 1, otherStore: 0 },
     });
   });
+
+  it("U-VENDOR-02 reads an AppTweak keyword export, which carries no country, in the market chosen in the dialog", () => {
+    const { view, mapped } = importedFrom(
+      [
+        "App Name,Keywords,Volume,App Daily Installs",
+        "Import Lab,focus timer,42,3",
+        "Import Lab,deep work,31,1",
+        "Rival App,pomodoro,55,9",
+      ].join("\n"),
+    );
+
+    expect(view).toEqual({
+      hasHeader: true,
+      mapping: { keyword: 1, country: null, tags: null, note: null },
+      app: "importlab",
+    });
+    expect(mapped).toEqual({
+      rows: [{ keyword: "focus timer" }, { keyword: "deep work" }],
+      lines: [2, 3],
+      columns: 4,
+      ignoredColumns: 2,
+      leftOut: { otherApps: 1, otherStore: 0 },
+    });
+  });
 });
 
 describe("columnOptions", () => {
