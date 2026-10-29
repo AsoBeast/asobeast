@@ -1,6 +1,8 @@
 import type {
   KeywordBreakdown,
   KeywordAddRequest,
+  KeywordBulkRequest,
+  KeywordBulkResult,
   KeywordComparison,
   KeywordCountrySummary,
   KeywordFieldQuery,
@@ -82,6 +84,16 @@ export function updateKeyword(
   return apiFetch<TrackedKeywordItem>(`/apps/${appId}/keywords/${keywordId}`, {
     method: "PATCH",
     body: JSON.stringify(body),
+  });
+}
+
+export function applyKeywordBulk(
+  appId: string,
+  request: KeywordBulkRequest,
+): Promise<KeywordBulkResult> {
+  return apiFetch<KeywordBulkResult>(`/apps/${appId}/keywords/bulk`, {
+    method: "POST",
+    body: JSON.stringify(request),
   });
 }
 

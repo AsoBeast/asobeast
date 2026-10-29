@@ -1,6 +1,11 @@
 import type { KeywordImportResult } from "@asobeast/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { importKeywords, previewKeywordImport, seedMarket } from "./keywords";
+import {
+  applyKeywordBulk,
+  importKeywords,
+  previewKeywordImport,
+  seedMarket,
+} from "./keywords";
 
 const RESULT: KeywordImportResult = {
   dryRun: true,
@@ -73,6 +78,25 @@ describe("keyword import calls", () => {
     expect(sent).toHaveLength(1);
     expect(sent[0].url).toMatch(/\/apps\/app-1\/keywords\/import$/);
     expect(sent[0]).toMatchObject({ method: "POST", body: REQUEST });
+  });
+});
+
+describe("keyword bulk change call", () => {
+  it("posts the action and the ids to the bulk route", async () => {
+    const sent = stubFetch();
+
+    await applyKeywordBulk("app-1", {
+      action: "pause",
+      keywordIds: ["kw-1", "kw-2"],
+    });
+
+    expect(sent).toEqual([
+      {
+        url: expect.stringMatching(/\/apps\/app-1\/keywords\/bulk$/) as string,
+        method: "POST",
+        body: { action: "pause", keywordIds: ["kw-1", "kw-2"] },
+      },
+    ]);
   });
 });
 
