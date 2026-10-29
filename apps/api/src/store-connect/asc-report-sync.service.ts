@@ -13,6 +13,7 @@ import {
 } from './asc-errors';
 import { DiscoveryHeaderError, DiscoveryLineError } from './discovery-report';
 import { refusalOf } from './asc-http-errors';
+import { AscKeywordFieldSync } from './asc-keyword-field-sync.service';
 import {
   StoreConnectionService,
   type OpenedConnection,
@@ -79,6 +80,7 @@ export class AscReportSync {
     private readonly connections: StoreConnectionService,
     private readonly requester: StoreReportRequester,
     private readonly applier: StoreReportApplier,
+    private readonly keywordFields: AscKeywordFieldSync,
   ) {}
 
   async run(): Promise<SyncSummary | null> {
@@ -90,6 +92,7 @@ export class AscReportSync {
       summary.apps = outcome.apps;
       summary.failed = outcome.failed;
       await this.download(connection, summary);
+      await this.importKeywordFields(summary);
       await this.connections.markSynced(
         STORE,
         outcome.reportAccess,
@@ -110,6 +113,18 @@ export class AscReportSync {
       );
     }
     return summary;
+  }
+
+  private async importKeywordFields(summary: SyncSummary): Promise<void> {
+    try {
+      const fields = await this.keywordFields.run();
+      summary.fields = fields.fields;
+      summary.fieldsChanged = fields.changed;
+    } catch (error) {
+      this.logger.warn(
+        `the keyword field import waits for the next sync: ${messageOf(error)}`,
+      );
+    }
   }
 
   private async download(

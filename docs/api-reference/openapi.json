@@ -2070,6 +2070,305 @@
         ]
       }
     },
+    "/store-connections": {
+      "get": {
+        "description": "Every connected store console key with its status, the access its report requests were granted, and each primary app of that store with its report state and the first and last day of stored funnel rows. Never returns key material. available is false when the instance has no STORE_CONNECT_ENCRYPTION_KEY.",
+        "operationId": "StoreConnectionsController_state",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "The store consoles this workspace has connected",
+        "tags": [
+          "store-connect"
+        ]
+      }
+    },
+    "/store-connections/{store}": {
+      "put": {
+        "description": "Verifies the key with the store, seals it at rest bound to this workspace and replaces any key connected before, then queues a report sync. App Store Connect takes an issuer ID, a key ID and a .p8 private key; Google Play takes a service account JSON key and the bucket id of its Play Console reports. The store in the body must match the path. Owner only, through a signed in session. Answers 422 when the store refuses the key and 409 when the instance has store connections off.",
+        "operationId": "StoreConnectionsController_connect",
+        "parameters": [
+          {
+            "name": "store",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "APP_STORE",
+                "GOOGLE_PLAY"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/AppStoreConnectionDto"
+                  },
+                  {
+                    "$ref": "#/components/schemas/PlayConnectionDto"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "store"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Connect a store console key",
+        "tags": [
+          "store-connect"
+        ]
+      },
+      "delete": {
+        "description": "Deletes the sealed key and its report requests, even while the instance has store connections off. The funnel rows already stored stay.",
+        "operationId": "StoreConnectionsController_disconnect",
+        "parameters": [
+          {
+            "name": "store",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "APP_STORE",
+                "GOOGLE_PLAY"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Disconnect a store console",
+        "tags": [
+          "store-connect"
+        ]
+      }
+    },
+    "/store-connections/{store}/verify": {
+      "post": {
+        "description": "Asks the store whether the stored key still works. A refused key marks the connection rejected; an accepted one clears that and queues a report sync. Answers 409 when the stored key can no longer be decrypted.",
+        "operationId": "StoreConnectionsController_verify",
+        "parameters": [
+          {
+            "name": "store",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "APP_STORE",
+                "GOOGLE_PLAY"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Verify the connected store console key again",
+        "tags": [
+          "store-connect"
+        ]
+      }
+    },
+    "/store-connections/{store}/sync": {
+      "post": {
+        "description": "Queues the download of the reports the store has published since the last sync. A sync already waiting is not queued twice. Answers 409 while the store refuses the key.",
+        "operationId": "StoreConnectionsController_sync",
+        "parameters": [
+          {
+            "name": "store",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "APP_STORE",
+                "GOOGLE_PLAY"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Queue a report sync for the connected store console",
+        "tags": [
+          "store-connect"
+        ]
+      }
+    },
+    "/store-connections/GOOGLE_PLAY/sign-in": {
+      "post": {
+        "description": "Answers the Google consent address to send the owner to, asking for read only Cloud Storage access, with a state sealed to this owner and workspace that expires in ten minutes. Google returns to the web page /integrations/google-play. Owner only, through a signed in session. Answers 409 when the instance has store connections off or no Google OAuth client.",
+        "operationId": "PlaySignInController_start",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaySignInDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Start connecting Google Play with a Google account",
+        "tags": [
+          "store-connect"
+        ]
+      }
+    },
+    "/store-connections/GOOGLE_PLAY/sign-in/complete": {
+      "post": {
+        "description": "Redeems the code Google returned, lists the bucket with the account before anything is stored, seals the refresh token bound to this workspace, replaces any Google Play connection and queues a report sync. Answers 400 for a state of another owner, an expired state or a code Google refuses, 422 when the account was not granted Cloud Storage access or cannot read the bucket, and 409 when sign in is off or Google refuses the OAuth client of the instance.",
+        "operationId": "PlaySignInController_complete",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaySignInCompletionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Finish connecting Google Play with a Google account",
+        "tags": [
+          "store-connect"
+        ]
+      }
+    },
+    "/apps/{id}/funnel": {
+      "get": {
+        "description": "Reads the rows the connected store console reported: a zero filled daily series of the requested days with the total and the search share, and the 7, 14 and 28 day windows of complete days against the period before. A day is complete once it is three days old and the store has delivered it. Answers connected false and empty series for a competitor, a store without an active connection, or an app the connected key does not report.",
+        "operationId": "StoreFunnelController_report",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "country",
+            "required": false,
+            "in": "query",
+            "description": "Count only the storefront of this market. Omitted means every market the console reports.",
+            "schema": {
+              "pattern": "^[a-z]{2}$",
+              "example": "de",
+              "type": "string"
+            }
+          },
+          {
+            "name": "days",
+            "required": false,
+            "in": "query",
+            "description": "Days of daily points, ending today",
+            "schema": {
+              "minimum": 7,
+              "maximum": 365,
+              "default": 90,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Store impressions, page views, downloads and conversion of an app by market and window",
+        "tags": [
+          "store-connect"
+        ]
+      }
+    },
     "/apps/{id}/keywords": {
       "get": {
         "description": "competitorsInTop10 is the number of distinct competitors of the app in the newest stored top 10 of the keyword, or null when the app has no competitor or the newest snapshot is older than yesterday UTC. trackedAt is when the app started tracking the keyword in that market.",
@@ -2772,7 +3071,7 @@
         ]
       },
       "put": {
-        "description": "Replaces the keyword field of one App Store localization with the normalized, deduplicated phrases of text, tracks them in country, and returns the stored field. Without a query it sets the home storefront's default localization. Answers 400 when the storefront does not read the localization, or when the phrases joined with commas run past 100 characters, the way App Store Connect counts the field. A phrase removed from the field stops being tracked as a keyword field phrase in every market that reads the localization. Saves to one app are written one at a time, so the last save wins.",
+        "description": "Replaces the keyword field of one App Store localization with the normalized, deduplicated phrases of text, tracks them in country, and returns the stored field. Without a query it sets the home storefront's default localization. Answers 400 when the storefront does not read the localization, or when the phrases joined with commas run past 100 characters, the way App Store Connect counts the field. A phrase removed from the field stops being tracked as a keyword field phrase in every market that reads the localization. Answers 409 when the field is imported from App Store Connect. Saves to one app are written one at a time, so the last save wins.",
         "operationId": "KeywordsController_setKeywordField",
         "parameters": [
           {
@@ -2922,7 +3221,7 @@
     },
     "/apps/{id}/localizations": {
       "get": {
-        "description": "Returns the default localization of the home storefront, every localization added by hand or detected, and every localization with a saved keyword field, the home localization first and the rest by display name. Each item carries its keyword field and the markets of the app that read it, with the role each market gives it, default or additional. markets lists the home market first and then every market in which the app tracks keywords. Answers 400 for a Google Play or competitor app and 404 for a missing app.",
+        "description": "Returns the default localization of the home storefront, every localization added by hand or detected, and every localization with a saved keyword field, the home localization first and the rest by display name. Each item carries its keyword field and the markets of the app that read it, with the role each market gives it, default or additional. markets lists the home market first and then every market in which the app tracks keywords. storeManaged answers whether App Store Connect imports the keyword fields of the app, and storeSync names the version of the last import, when it ran and the error that stopped it, if one did. Answers 400 for a Google Play or competitor app and 404 for a missing app.",
         "operationId": "LocalizationsController_list",
         "parameters": [
           {
@@ -2952,7 +3251,7 @@
         ]
       },
       "post": {
-        "description": "Marks one of the 50 App Store localizations as shipped by the app, with no keyword field yet, and answers 201 with the item. Answers 409 when the app already ships it, the default localization of the home storefront included, and 400 for a tag outside the 50 or a Google Play or competitor app.",
+        "description": "Marks one of the 50 App Store localizations as shipped by the app, with no keyword field yet, and answers 201 with the item. Answers 409 when the app already ships it, the default localization of the home storefront included, or when App Store Connect imports the keyword fields of the app, and 400 for a tag outside the 50 or a Google Play or competitor app.",
         "operationId": "LocalizationsController_add",
         "parameters": [
           {
@@ -2994,7 +3293,7 @@
     },
     "/apps/{id}/localizations/{localization}": {
       "delete": {
-        "description": "Removes a shipped localization and its keyword field in one transaction. Each phrase of the field stops being tracked as a keyword field phrase in every market that reads the localization, unless another saved field there holds it. Keywords tracked from another source stay tracked. Answers 204, 409 for the default localization of the home storefront, 404 when the app does not ship the localization, and 400 for an unknown tag or a Google Play or competitor app.",
+        "description": "Removes a shipped localization and its keyword field in one transaction. Each phrase of the field stops being tracked as a keyword field phrase in every market that reads the localization, unless another saved field there holds it. Keywords tracked from another source stay tracked. Answers 204, 409 for the default localization of the home storefront or when App Store Connect imports the keyword fields of the app, 404 when the app does not ship the localization, and 400 for an unknown tag or a Google Play or competitor app.",
         "operationId": "LocalizationsController_remove",
         "parameters": [
           {
@@ -3122,7 +3421,7 @@
     },
     "/apps/{id}/keyword-fields/{localization}": {
       "put": {
-        "description": "Replaces the keyword field of one App Store localization with the normalized, deduplicated phrases of text, ships the localization when it is not shipped yet, and tracks every phrase in each market of trackIn. trackIn may be empty and must name only markets of the app whose storefront reads the localization. A phrase removed from the field stops being tracked as a keyword field phrase in every market that reads the localization, unless another saved field read there holds it. Answers 400 when the text runs past 100 characters, when trackIn names a country that is not a market of the app or a storefront that does not read the localization, and for a Google Play or competitor app. Answers 403 with quota and writes nothing when the keyword markets would pass the plan limit. Answers 404 for a missing app, and for an empty save of a localization the app does not ship. Saves to one app are written one at a time, so the last save wins.",
+        "description": "Replaces the keyword field of one App Store localization with the normalized, deduplicated phrases of text, ships the localization when it is not shipped yet, and tracks every phrase in each market of trackIn. trackIn may be empty and must name only markets of the app whose storefront reads the localization. A phrase removed from the field stops being tracked as a keyword field phrase in every market that reads the localization, unless another saved field read there holds it. Answers 400 when the text runs past 100 characters, when trackIn names a country that is not a market of the app or a storefront that does not read the localization, and for a Google Play or competitor app. Answers 403 with quota and writes nothing when the keyword markets would pass the plan limit. Answers 404 for a missing app, and for an empty save of a localization the app does not ship. Answers 409 when App Store Connect imports the keyword fields of the app. Saves to one app are written one at a time, so the last save wins.",
         "operationId": "LocalizationsController_saveKeywordField",
         "parameters": [
           {
@@ -3468,305 +3767,6 @@
         "summary": "Recent metadata changes across the workspace",
         "tags": [
           "changes"
-        ]
-      }
-    },
-    "/store-connections": {
-      "get": {
-        "description": "Every connected store console key with its status, the access its report requests were granted, and each primary app of that store with its report state and the first and last day of stored funnel rows. Never returns key material. available is false when the instance has no STORE_CONNECT_ENCRYPTION_KEY.",
-        "operationId": "StoreConnectionsController_state",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            }
-          }
-        },
-        "summary": "The store consoles this workspace has connected",
-        "tags": [
-          "store-connect"
-        ]
-      }
-    },
-    "/store-connections/{store}": {
-      "put": {
-        "description": "Verifies the key with the store, seals it at rest bound to this workspace and replaces any key connected before, then queues a report sync. App Store Connect takes an issuer ID, a key ID and a .p8 private key; Google Play takes a service account JSON key and the bucket id of its Play Console reports. The store in the body must match the path. Owner only, through a signed in session. Answers 422 when the store refuses the key and 409 when the instance has store connections off.",
-        "operationId": "StoreConnectionsController_connect",
-        "parameters": [
-          {
-            "name": "store",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "APP_STORE",
-                "GOOGLE_PLAY"
-              ]
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "oneOf": [
-                  {
-                    "$ref": "#/components/schemas/AppStoreConnectionDto"
-                  },
-                  {
-                    "$ref": "#/components/schemas/PlayConnectionDto"
-                  }
-                ],
-                "discriminator": {
-                  "propertyName": "store"
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Connect a store console key",
-        "tags": [
-          "store-connect"
-        ]
-      },
-      "delete": {
-        "description": "Deletes the sealed key and its report requests, even while the instance has store connections off. The funnel rows already stored stay.",
-        "operationId": "StoreConnectionsController_disconnect",
-        "parameters": [
-          {
-            "name": "store",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "APP_STORE",
-                "GOOGLE_PLAY"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": ""
-          }
-        },
-        "summary": "Disconnect a store console",
-        "tags": [
-          "store-connect"
-        ]
-      }
-    },
-    "/store-connections/{store}/verify": {
-      "post": {
-        "description": "Asks the store whether the stored key still works. A refused key marks the connection rejected; an accepted one clears that and queues a report sync. Answers 409 when the stored key can no longer be decrypted.",
-        "operationId": "StoreConnectionsController_verify",
-        "parameters": [
-          {
-            "name": "store",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "APP_STORE",
-                "GOOGLE_PLAY"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Verify the connected store console key again",
-        "tags": [
-          "store-connect"
-        ]
-      }
-    },
-    "/store-connections/{store}/sync": {
-      "post": {
-        "description": "Queues the download of the reports the store has published since the last sync. A sync already waiting is not queued twice. Answers 409 while the store refuses the key.",
-        "operationId": "StoreConnectionsController_sync",
-        "parameters": [
-          {
-            "name": "store",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "APP_STORE",
-                "GOOGLE_PLAY"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "202": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Queue a report sync for the connected store console",
-        "tags": [
-          "store-connect"
-        ]
-      }
-    },
-    "/store-connections/GOOGLE_PLAY/sign-in": {
-      "post": {
-        "description": "Answers the Google consent address to send the owner to, asking for read only Cloud Storage access, with a state sealed to this owner and workspace that expires in ten minutes. Google returns to the web page /integrations/google-play. Owner only, through a signed in session. Answers 409 when the instance has store connections off or no Google OAuth client.",
-        "operationId": "PlaySignInController_start",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaySignInDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Start connecting Google Play with a Google account",
-        "tags": [
-          "store-connect"
-        ]
-      }
-    },
-    "/store-connections/GOOGLE_PLAY/sign-in/complete": {
-      "post": {
-        "description": "Redeems the code Google returned, lists the bucket with the account before anything is stored, seals the refresh token bound to this workspace, replaces any Google Play connection and queues a report sync. Answers 400 for a state of another owner, an expired state or a code Google refuses, 422 when the account was not granted Cloud Storage access or cannot read the bucket, and 409 when sign in is off or Google refuses the OAuth client of the instance.",
-        "operationId": "PlaySignInController_complete",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaySignInCompletionDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Finish connecting Google Play with a Google account",
-        "tags": [
-          "store-connect"
-        ]
-      }
-    },
-    "/apps/{id}/funnel": {
-      "get": {
-        "description": "Reads the rows the connected store console reported: a zero filled daily series of the requested days with the total and the search share, and the 7, 14 and 28 day windows of complete days against the period before. A day is complete once it is three days old and the store has delivered it. Answers connected false and empty series for a competitor, a store without an active connection, or an app the connected key does not report.",
-        "operationId": "StoreFunnelController_report",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "country",
-            "required": false,
-            "in": "query",
-            "description": "Count only the storefront of this market. Omitted means every market the console reports.",
-            "schema": {
-              "pattern": "^[a-z]{2}$",
-              "example": "de",
-              "type": "string"
-            }
-          },
-          {
-            "name": "days",
-            "required": false,
-            "in": "query",
-            "description": "Days of daily points, ending today",
-            "schema": {
-              "minimum": 7,
-              "maximum": 365,
-              "default": 90,
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Store impressions, page views, downloads and conversion of an app by market and window",
-        "tags": [
-          "store-connect"
         ]
       }
     },
@@ -7252,6 +7252,98 @@
           "country"
         ]
       },
+      "AppStoreConnectionDto": {
+        "type": "object",
+        "properties": {
+          "store": {
+            "enum": [
+              "APP_STORE"
+            ],
+            "type": "string"
+          },
+          "issuerId": {
+            "type": "string",
+            "example": "57246542-96fe-1a63-e053-0824d011072a",
+            "description": "Issuer ID from Users and Access, Integrations, Team Keys"
+          },
+          "keyId": {
+            "type": "string",
+            "example": "2X9R4HXF34",
+            "description": "Ten character key ID"
+          },
+          "privateKey": {
+            "type": "string",
+            "maxLength": 4096,
+            "description": "The whole contents of the downloaded .p8 file. Verified with Apple, sealed at rest and never returned."
+          }
+        },
+        "required": [
+          "store",
+          "issuerId",
+          "keyId",
+          "privateKey"
+        ]
+      },
+      "PlayConnectionDto": {
+        "type": "object",
+        "properties": {
+          "store": {
+            "enum": [
+              "GOOGLE_PLAY"
+            ],
+            "type": "string"
+          },
+          "serviceAccountJson": {
+            "type": "string",
+            "maxLength": 16384,
+            "description": "The whole contents of the JSON key file Google Cloud downloaded for the service account. Verified with Google, sealed at rest and never returned."
+          },
+          "bucket": {
+            "type": "string",
+            "maxLength": 63,
+            "example": "pubsite_prod_rev_01234567890987654321",
+            "description": "The Cloud Storage bucket id shown under Download reports in Play Console"
+          }
+        },
+        "required": [
+          "store",
+          "serviceAccountJson",
+          "bucket"
+        ]
+      },
+      "PlaySignInDto": {
+        "type": "object",
+        "properties": {
+          "bucket": {
+            "type": "string",
+            "maxLength": 63,
+            "example": "pubsite_prod_rev_01234567890987654321",
+            "description": "The Cloud Storage bucket id shown under Download reports in Play Console. Carried through the Google sign in and stored with the connection."
+          }
+        },
+        "required": [
+          "bucket"
+        ]
+      },
+      "PlaySignInCompletionDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "maxLength": 2048,
+            "description": "The code Google added to the redirect. Redeemed once with Google and never stored."
+          },
+          "state": {
+            "type": "string",
+            "maxLength": 4096,
+            "description": "The state Google returned unchanged. Opens only for the signed in owner who started the sign in, within ten minutes."
+          }
+        },
+        "required": [
+          "code",
+          "state"
+        ]
+      },
       "SpiderStartDto": {
         "type": "object",
         "properties": {
@@ -7523,98 +7615,6 @@
         },
         "required": [
           "text"
-        ]
-      },
-      "AppStoreConnectionDto": {
-        "type": "object",
-        "properties": {
-          "store": {
-            "enum": [
-              "APP_STORE"
-            ],
-            "type": "string"
-          },
-          "issuerId": {
-            "type": "string",
-            "example": "57246542-96fe-1a63-e053-0824d011072a",
-            "description": "Issuer ID from Users and Access, Integrations, Team Keys"
-          },
-          "keyId": {
-            "type": "string",
-            "example": "2X9R4HXF34",
-            "description": "Ten character key ID"
-          },
-          "privateKey": {
-            "type": "string",
-            "maxLength": 4096,
-            "description": "The whole contents of the downloaded .p8 file. Verified with Apple, sealed at rest and never returned."
-          }
-        },
-        "required": [
-          "store",
-          "issuerId",
-          "keyId",
-          "privateKey"
-        ]
-      },
-      "PlayConnectionDto": {
-        "type": "object",
-        "properties": {
-          "store": {
-            "enum": [
-              "GOOGLE_PLAY"
-            ],
-            "type": "string"
-          },
-          "serviceAccountJson": {
-            "type": "string",
-            "maxLength": 16384,
-            "description": "The whole contents of the JSON key file Google Cloud downloaded for the service account. Verified with Google, sealed at rest and never returned."
-          },
-          "bucket": {
-            "type": "string",
-            "maxLength": 63,
-            "example": "pubsite_prod_rev_01234567890987654321",
-            "description": "The Cloud Storage bucket id shown under Download reports in Play Console"
-          }
-        },
-        "required": [
-          "store",
-          "serviceAccountJson",
-          "bucket"
-        ]
-      },
-      "PlaySignInDto": {
-        "type": "object",
-        "properties": {
-          "bucket": {
-            "type": "string",
-            "maxLength": 63,
-            "example": "pubsite_prod_rev_01234567890987654321",
-            "description": "The Cloud Storage bucket id shown under Download reports in Play Console. Carried through the Google sign in and stored with the connection."
-          }
-        },
-        "required": [
-          "bucket"
-        ]
-      },
-      "PlaySignInCompletionDto": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string",
-            "maxLength": 2048,
-            "description": "The code Google added to the redirect. Redeemed once with Google and never stored."
-          },
-          "state": {
-            "type": "string",
-            "maxLength": 4096,
-            "description": "The state Google returned unchanged. Opens only for the signed in owner who started the sign in, within ten minutes."
-          }
-        },
-        "required": [
-          "code",
-          "state"
         ]
       },
       "ChartCaptureDto": {

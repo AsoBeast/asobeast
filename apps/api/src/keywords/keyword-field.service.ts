@@ -12,6 +12,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { loadAppMarkets } from './app-markets';
 import { storedPhrases } from './keyword-field-index';
+import { refuseManagedField } from './keyword-field-managed';
 import { parseFieldText } from './keyword-field-text';
 import { KeywordFieldTarget, keywordFieldTarget } from './keyword-field-target';
 import { KeywordFieldWriter } from './keyword-field-writer';
@@ -131,6 +132,7 @@ export class KeywordFieldService {
     query: KeywordFieldQuery = {},
   ): Promise<StoredKeywordFieldResult> {
     const app = await ensureKeywordFieldApp(this.prisma, appId);
+    await refuseManagedField(this.prisma, app.id);
     const target = keywordFieldTarget(app, query);
 
     const { phrases, duplicatesRemoved } = parseFieldText(text);

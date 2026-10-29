@@ -23,10 +23,18 @@ export interface AppLocalizationItem {
   updatedAt: string | null;
 }
 
+export interface AppLocalizationStoreSync {
+  at: string;
+  version: string | null;
+  error: string | null;
+}
+
 export interface AppLocalizationsResult {
   home: string;
   markets: string[];
   localizations: AppLocalizationItem[];
+  storeManaged: boolean;
+  storeSync: AppLocalizationStoreSync | null;
 }
 
 export interface AddAppLocalizationRequest {

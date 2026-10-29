@@ -17,6 +17,7 @@ import {
   QUEUES,
   utcDateKey,
 } from '../src/jobs/jobs.types';
+import { STORE_FIELD_MANAGED } from '../src/keywords/keyword-field-managed';
 import {
   resetBillingState,
   startBillingHarness,
@@ -822,6 +823,74 @@ describe('Localized keyword fields (e2e)', () => {
       );
 
       expect(messageOf(response)).toBe(COMPETITOR_REFUSAL);
+    });
+  });
+
+  describe('managed by App Store Connect', () => {
+    const seedSyncRow = (appId: string) =>
+      harness.prisma.keywordFieldSync.create({
+        data: { appId, workspaceId: WORKSPACE, version: '2.1' },
+      });
+
+    const localizationsOf = (appId: string) =>
+      harness.owner.get(`/apps/${appId}/localizations`);
+
+    it('E-SAV-MGD-01 refuses a manual save once App Store Connect imported the field', async () => {
+      const appId = await seedApp();
+      await seedSyncRow(appId);
+
+      const home = await harness.owner
+        .put(`/apps/${appId}/keyword-field`)
+        .send({ text: 'uno' })
+        .expect(409);
+      expect(messageOf(home)).toBe(STORE_FIELD_MANAGED);
+
+      const response = await save(appId, 'en-US', {
+        text: 'uno',
+        trackIn: ['us'],
+      }).expect(409);
+
+      expect(messageOf(response)).toBe(STORE_FIELD_MANAGED);
+      expect(await written()).toEqual({
+        fields: 0,
+        localizations: 0,
+        tracked: 0,
+      });
+    });
+
+    it('E-SAV-MGD-02 refuses adding and removing localizations', async () => {
+      const appId = await seedApp();
+      await seedSyncRow(appId);
+
+      const added = await harness.owner
+        .post(`/apps/${appId}/localizations`)
+        .send({ localization: 'es-MX' })
+        .expect(409);
+      expect(messageOf(added)).toBe(STORE_FIELD_MANAGED);
+
+      const removed = await harness.owner
+        .delete(`/apps/${appId}/localizations/es-MX`)
+        .expect(409);
+      expect(messageOf(removed)).toBe(STORE_FIELD_MANAGED);
+    });
+
+    it('E-SAV-MGD-03 marks the localizations read store managed while the import stands', async () => {
+      const appId = await seedApp();
+
+      const before = (await localizationsOf(appId).expect(200))
+        .body as AppLocalizationsResult;
+      expect(before.storeManaged).toBe(false);
+      expect(before.storeSync).toBeNull();
+
+      await seedSyncRow(appId);
+      const managed = (await localizationsOf(appId).expect(200))
+        .body as AppLocalizationsResult;
+      expect(managed.storeManaged).toBe(true);
+      expect(managed.storeSync).toMatchObject({
+        version: '2.1',
+        error: null,
+      });
+      expect(typeof managed.storeSync.at).toBe('string');
     });
   });
 });

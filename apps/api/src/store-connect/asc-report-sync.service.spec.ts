@@ -10,6 +10,7 @@ import {
   AscUnreachableError,
 } from './asc-errors';
 import { AGREEMENT_MISSING } from './asc-http-errors';
+import type { AscKeywordFieldSync } from './asc-keyword-field-sync.service';
 import type {
   OpenedConnection,
   StoreConnectionService,
@@ -67,6 +68,9 @@ function build(status: OpenedConnection['status'] = 'active') {
   const applier = {
     apply: jest.fn().mockResolvedValue({ rows: 4, unresolved: [] }),
   };
+  const keywordFields = {
+    run: jest.fn().mockResolvedValue({ fields: 0, changed: 0 }),
+  };
   const prisma = {
     storeReportRequest: {
       findMany: jest.fn().mockResolvedValue([
@@ -99,8 +103,17 @@ function build(status: OpenedConnection['status'] = 'active') {
     connections as unknown as StoreConnectionService,
     requester as unknown as StoreReportRequester,
     applier as unknown as StoreReportApplier,
+    keywordFields as unknown as AscKeywordFieldSync,
   );
-  return { service, api, connections, requester, applier, prisma };
+  return {
+    service,
+    api,
+    connections,
+    requester,
+    applier,
+    prisma,
+    keywordFields,
+  };
 }
 
 const appliedIds = (applier: { apply: jest.Mock }) =>

@@ -20,6 +20,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AppLocalizationsService } from './app-localizations.service';
 import { loadAppMarkets } from './app-markets';
 import { planFieldSave } from './keyword-field-save-plan';
+import { refuseManagedField } from './keyword-field-managed';
 import { parseFieldText } from './keyword-field-text';
 import { KeywordFieldWriter } from './keyword-field-writer';
 import { keywordQuotaOf } from './keyword-quota';
@@ -42,6 +43,7 @@ export class LocalizedKeywordFieldService {
     request: LocalizedKeywordFieldRequest,
   ): Promise<LocalizedKeywordFieldResult> {
     const app = await ensureLocalizedFieldApp(this.prisma, appId);
+    await refuseManagedField(this.prisma, app.id);
     const { phrases, duplicatesRemoved } = parseFieldText(request.text);
     const refusal = trackInError(
       localization,

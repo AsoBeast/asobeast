@@ -16,6 +16,7 @@ import {
   KeywordFieldWriter,
 } from './keyword-field-writer';
 import { loadTrackingStates } from './keyword-tracking-state';
+import { STORE_FIELD_MANAGED } from './keyword-field-managed';
 import { LocalizedKeywordFieldService } from './localized-keyword-field.service';
 
 jest.mock('./app-markets', () => ({ loadAppMarkets: jest.fn() }));
@@ -62,6 +63,7 @@ const build = (
   jest.mocked(loadTrackingStates).mockReset().mockResolvedValue(new Map());
   const prisma = {
     app: { findFirst: jest.fn().mockResolvedValue({ ...APP, store }) },
+    keywordFieldSync: { findFirst: jest.fn().mockResolvedValue(null) },
     keywordField: {
       findUnique: jest
         .fn()
@@ -180,6 +182,18 @@ describe('LocalizedKeywordFieldService.save', () => {
         'The keyword field is only available for App Store apps',
       ),
     );
+    expect(writer.save).not.toHaveBeenCalled();
+  });
+
+  it('refuses a manual save once App Store Connect imported the field', async () => {
+    const { service, prisma, writer } = build(['us'], [item('en-US', [])]);
+    prisma.keywordFieldSync.findFirst.mockResolvedValue({
+      syncedAt: new Date(),
+    });
+
+    await expect(
+      service.save(APP.id, 'en-US', { text: 'uno', trackIn: ['us'] }),
+    ).rejects.toThrow(STORE_FIELD_MANAGED);
     expect(writer.save).not.toHaveBeenCalled();
   });
 });

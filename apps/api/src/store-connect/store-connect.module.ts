@@ -1,7 +1,10 @@
 import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
+import { ActionRunModule } from '../actions/action-run.module';
+import { KeywordsModule } from '../keywords/keywords.module';
 import { QUEUES } from '../jobs/jobs.types';
 import { AscApiFactory } from './asc-api.factory';
+import { AscKeywordFieldSync } from './asc-keyword-field-sync.service';
 import { AscReportSync } from './asc-report-sync.service';
 import { ASC_TRANSPORT, undiciTransport } from './asc-transport';
 import { GcsApiFactory } from './play/gcs-api.factory';
@@ -23,7 +26,11 @@ import { StoreReportSyncService } from './store-report-sync.service';
 import { StoreReportsWorker } from './store-reports.worker';
 
 @Module({
-  imports: [BullModule.registerQueue({ name: QUEUES.STORE_CONNECT })],
+  imports: [
+    BullModule.registerQueue({ name: QUEUES.STORE_CONNECT }),
+    KeywordsModule,
+    ActionRunModule,
+  ],
   controllers: [
     StoreConnectionsController,
     PlaySignInController,
@@ -44,6 +51,7 @@ import { StoreReportsWorker } from './store-reports.worker';
     StoreReportRequester,
     StoreReportApplier,
     AscReportSync,
+    AscKeywordFieldSync,
     PlayReportSync,
     StoreReportSyncService,
     StoreReportsWorker,

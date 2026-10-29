@@ -18,6 +18,7 @@ export const TENANT_TABLES = [
   'ChartFollow',
   'EmailAlert',
   'KeywordField',
+  'KeywordFieldSync',
   'KeywordRanking',
   'Review',
   'ReviewReply',

@@ -5,6 +5,7 @@ import { ChangesModule } from '../changes/changes.module';
 import { FLOW_PRODUCERS, QUEUES } from '../jobs/jobs.types';
 import { KeywordsModule } from '../keywords/keywords.module';
 import { ScreenshotsModule } from '../screenshots/screenshots.module';
+import { StoreConnectModule } from '../store-connect/store-connect.module';
 import { StoreProvidersModule } from '../store-providers/store-providers.module';
 import { AppCaptureService } from './app-capture.service';
 import { AppGroupsService } from './app-groups.service';
@@ -31,6 +32,7 @@ import { SubtitleBackfill } from './subtitle-backfill.service';
   imports: [
     ActionRunModule,
     StoreProvidersModule,
+    StoreConnectModule,
     KeywordsModule,
     ChangesModule,
     ScreenshotsModule,

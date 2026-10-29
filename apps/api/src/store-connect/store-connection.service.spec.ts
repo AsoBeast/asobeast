@@ -165,6 +165,9 @@ function harness(
         ),
       ),
     },
+    keywordFieldSync: {
+      deleteMany: jest.fn(() => Promise.resolve({ count: 1 })),
+    },
   };
   const api = { verify: jest.fn(() => Promise.resolve()) };
   const reviews = { respond: jest.fn() };
@@ -785,5 +788,21 @@ describe('StoreConnectionService', () => {
     expect(prisma.storeConnection.deleteMany).toHaveBeenCalledWith({
       where: { store: 'APP_STORE' },
     });
+  });
+
+  it('releases the imported keyword fields when App Store Connect disconnects', async () => {
+    const { service, prisma } = harness();
+
+    await service.disconnect('APP_STORE');
+
+    expect(prisma.keywordFieldSync.deleteMany).toHaveBeenCalled();
+  });
+
+  it('keeps the imported keyword fields when Google Play disconnects', async () => {
+    const { service, prisma } = harness();
+
+    await service.disconnect('GOOGLE_PLAY');
+
+    expect(prisma.keywordFieldSync.deleteMany).not.toHaveBeenCalled();
   });
 });

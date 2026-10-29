@@ -7,6 +7,7 @@ import {
 import { App, Prisma, Store } from '@prisma/client';
 import { assertStorefront, SnapshotDiffResult } from '@asobeast/shared';
 import { ChangesService } from '../changes/changes.service';
+import type { DetectedChange } from '../changes/change-detector';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ScreenshotQueue } from '../screenshots/screenshot-queue';
@@ -16,6 +17,7 @@ import { StoreAppNotFoundError } from '../store-providers/errors';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { currencyOf } from '../store-providers/raw-facts';
 import { NormalizedApp } from '../store-providers/types';
+import { StoreReportQueue } from '../store-connect/store-report-queue';
 import { snapshotIcon, toSnapshotData } from './apps.mapper';
 import { toChangeSnapshot } from './change-snapshot';
 import { withKnownSubtitle } from './known-subtitle';
@@ -40,6 +42,7 @@ export class ListingCaptureService {
     private readonly localizations: LocalizedListingCapture,
     private readonly detection: LocalizationDetection,
     private readonly recorder: MarketLocalizationRecorder,
+    private readonly storeReports: StoreReportQueue,
   ) {}
 
   async refresh(
@@ -168,7 +171,12 @@ export class ListingCaptureService {
     ) {
       await this.requestDetection(app.id, market);
     }
-    if (home) await this.keywords.syncFromSnapshot(app.id);
+    if (home) {
+      await this.keywords.syncFromSnapshot(app.id);
+      if (await this.releaseChangedFields(app, recorded)) {
+        await this.storeReports.enqueue(app.workspaceId, app.store);
+      }
+    }
 
     return {
       snapshotId: snapshot.id,
@@ -179,6 +187,28 @@ export class ListingCaptureService {
       country: market,
       currency: currencyOf(snapshot.raw),
     };
+  }
+
+  private async releaseChangedFields(
+    app: App,
+    recorded: DetectedChange[],
+  ): Promise<boolean> {
+    if (app.store !== Store.APP_STORE || app.isCompetitor) return false;
+    if (!(await this.fieldSyncConnected())) return false;
+    if (recorded.some(({ field }) => field === 'version')) return true;
+    const synced = await this.prisma.keywordFieldSync.findFirst({
+      where: { appId: app.id },
+      select: { appId: true },
+    });
+    return synced === null;
+  }
+
+  private async fieldSyncConnected(): Promise<boolean> {
+    const connection = await this.prisma.storeConnection.findFirst({
+      where: { store: Store.APP_STORE, status: 'active' },
+      select: { store: true },
+    });
+    return connection !== null;
   }
 
   private async readListing(app: App, market: string): Promise<NormalizedApp> {

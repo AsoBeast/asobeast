@@ -6,6 +6,7 @@ import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import { KeywordFieldService } from './keyword-field.service';
+import { STORE_FIELD_MANAGED } from './keyword-field-managed';
 import { FirstPositionChecks } from './first-position-checks';
 import { KeywordFieldWriter } from './keyword-field-writer';
 import { KeywordTracker } from './keyword-tracker';
@@ -71,6 +72,7 @@ function buildPrisma() {
     filter.keyword.is.text.in.includes(textOf(keywordId));
 
   const field = { phrases: null as string[] | null };
+  const fieldSync = { row: null as { syncedAt: Date } | null };
   const insertedTexts: string[][] = [];
   const client = {
     rows,
@@ -89,6 +91,7 @@ function buildPrisma() {
       findFirst: () => Promise.resolve(null),
       findMany: () => Promise.resolve([]),
     },
+    keywordFieldSync: { findFirst: () => Promise.resolve(fieldSync.row) },
     keywordField: {
       findMany: () =>
         Promise.resolve(
@@ -191,6 +194,7 @@ function buildPrisma() {
 
   return {
     ...client,
+    fieldSync,
     tx,
     withTransaction: <T>(run: (scoped: typeof tx) => Promise<T>) => run(tx),
   };
@@ -329,5 +333,17 @@ describe('KeywordFieldService.setKeywordField writes', () => {
       'alpha',
       'charlie',
     ]);
+  });
+});
+
+describe('KeywordFieldService.setKeywordField managed by App Store Connect', () => {
+  it('refuses a manual save once the field was imported', async () => {
+    const prisma = buildPrisma();
+    prisma.fieldSync.row = { syncedAt: new Date() };
+    const service = buildService(prisma);
+
+    await expect(
+      service.setKeywordField(APP.id, 'delta,alpha'),
+    ).rejects.toThrow(STORE_FIELD_MANAGED);
   });
 });

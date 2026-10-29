@@ -6,6 +6,8 @@ export interface SyncSummary {
   rateLimited: boolean;
   failed: number;
   unresolved: string[];
+  fields: number;
+  fieldsChanged: number;
 }
 
 export const emptySummary = (): SyncSummary => ({
@@ -16,4 +18,6 @@ export const emptySummary = (): SyncSummary => ({
   rateLimited: false,
   failed: 0,
   unresolved: [],
+  fields: 0,
+  fieldsChanged: 0,
 });

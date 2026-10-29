@@ -14,6 +14,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { recordAppLocalizations } from './app-localization-records';
 import { toAppLocalizationItems } from './app-localizations';
 import { loadAppMarkets } from './app-markets';
+import { fieldSyncOf, refuseManagedField } from './keyword-field-managed';
 import { KeywordFieldWriter } from './keyword-field-writer';
 import { ensureLocalizedFieldApp, KeywordApp } from './keywords.support';
 import { homeLocalization } from './localization-markets';
@@ -56,6 +57,7 @@ export class AppLocalizationsService {
     localization: AppStoreLocalization,
   ): Promise<AppLocalizationItem> {
     const app = await ensureLocalizedFieldApp(this.prisma, appId);
+    await refuseManagedField(this.prisma, app.id);
     if (itemOf(await this.resultOf(app), localization)) {
       throw alreadyShipped(localization);
     }
@@ -78,6 +80,7 @@ export class AppLocalizationsService {
     localization: AppStoreLocalization,
   ): Promise<void> {
     const app = await ensureLocalizedFieldApp(this.prisma, appId);
+    await refuseManagedField(this.prisma, app.id);
     if (localization === homeLocalization(app.country)) {
       throw notRemovable(app, localization);
     }
@@ -88,7 +91,7 @@ export class AppLocalizationsService {
   }
 
   private async resultOf(app: KeywordApp): Promise<AppLocalizationsResult> {
-    const [stored, fields, markets] = await Promise.all([
+    const [stored, fields, markets, sync] = await Promise.all([
       this.prisma.appLocalization.findMany({
         where: { appId: app.id },
         select: { localization: true, origin: true },
@@ -98,6 +101,7 @@ export class AppLocalizationsService {
         select: { localization: true, phrases: true, updatedAt: true },
       }),
       loadAppMarkets(this.prisma, app),
+      fieldSyncOf(this.prisma, app.id),
     ]);
     return {
       home: app.country,
@@ -108,6 +112,15 @@ export class AppLocalizationsService {
         stored,
         fields,
       }),
+      storeManaged: sync !== null,
+      storeSync:
+        sync === null
+          ? null
+          : {
+              at: sync.syncedAt.toISOString(),
+              version: sync.version,
+              error: sync.lastError,
+            },
     };
   }
 }
