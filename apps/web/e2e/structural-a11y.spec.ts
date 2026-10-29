@@ -87,7 +87,12 @@ test("the import dialog names the panel of every store tab", async ({
   expect(await structuralViolations(page)).toEqual([]);
 });
 
-const SCROLLING_TABLES = [
+const SCROLLING_TABLES: Array<{
+  path: string;
+  table: string;
+  region: string;
+  cookies?: Record<string, string>;
+}> = [
   {
     path: "/apps/app-1/audit",
     table: "How your listing compares with 3 competitors",
@@ -98,6 +103,13 @@ const SCROLLING_TABLES = [
     table: "Which of your markets read each localization",
     region: "Localization matrix",
   },
+  {
+    path: "/apps/app-1",
+    table:
+      "Rating and number of ratings on the newest listing captured in each market",
+    region: "Market ratings table",
+    cookies: { e2e_ratings_markets: "wide" },
+  },
 ];
 
 const containerOf = (page: Page, table: string) =>
@@ -105,10 +117,12 @@ const containerOf = (page: Page, table: string) =>
     .locator('[data-slot="table-container"]')
     .filter({ has: page.getByRole("table", { name: table }) });
 
-for (const { path, table, region } of SCROLLING_TABLES) {
+for (const { path, table, region, cookies } of SCROLLING_TABLES) {
   test(`${path} lets a keyboard scroll its table at 375px`, async ({
     page,
+    context,
   }) => {
+    if (cookies) await seedCookies(context, cookies);
     await page.setViewportSize({ width: 375, height: 800 });
     await page.goto(path);
     const container = containerOf(page, table);
@@ -130,7 +144,9 @@ for (const { path, table, region } of SCROLLING_TABLES) {
 
   test(`${path} adds no tab stop while its table fits at 1440px`, async ({
     page,
+    context,
   }) => {
+    if (cookies) await seedCookies(context, cookies);
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(path);
     const container = containerOf(page, table);

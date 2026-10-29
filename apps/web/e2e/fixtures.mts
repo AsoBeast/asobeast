@@ -1194,6 +1194,8 @@ export const APP_1_LISTING_MARKETS: ListingMarket[] = [
     home: true,
     capturedAt: utcTimestampDaysAgo(0),
     tracked: true,
+    ratingAvg: 4.8,
+    ratingCount: 24000,
   },
   {
     country: "pl",
@@ -1201,6 +1203,78 @@ export const APP_1_LISTING_MARKETS: ListingMarket[] = [
     capturedAt: utcTimestampDaysAgo(0),
     tracked: true,
     localizations: ["pl"],
+    ratingAvg: 4.6,
+    ratingCount: 3100,
+  },
+];
+
+export const APP_1_WIDE_LISTING_MARKETS: ListingMarket[] = [
+  {
+    country: "us",
+    home: true,
+    capturedAt: "2026-10-26T12:00:00.000Z",
+    tracked: true,
+    ratingAvg: 4.8,
+    ratingCount: 24000,
+  },
+  {
+    country: "jp",
+    home: false,
+    capturedAt: "2026-10-25T12:00:00.000Z",
+    tracked: true,
+    ratingAvg: null,
+    ratingCount: null,
+  },
+  {
+    country: "ba",
+    home: false,
+    capturedAt: "2026-10-24T12:00:00.000Z",
+    tracked: true,
+    ratingAvg: 4.1,
+    ratingCount: 12,
+  },
+  {
+    country: "br",
+    home: false,
+    capturedAt: "2026-10-23T12:00:00.000Z",
+    tracked: true,
+    ratingAvg: 3.9,
+    ratingCount: 800,
+  },
+  {
+    country: "pl",
+    home: false,
+    capturedAt: "2026-10-22T12:00:00.000Z",
+    tracked: true,
+    ratingAvg: 4.6,
+    ratingCount: 3100,
+  },
+  {
+    country: "de",
+    home: false,
+    capturedAt: "2026-10-21T12:00:00.000Z",
+    tracked: true,
+    ratingAvg: 4.4,
+    ratingCount: 5200,
+  },
+];
+
+export const APP_1_UNCAPTURED_LISTING_MARKETS: ListingMarket[] = [
+  {
+    country: "us",
+    home: true,
+    capturedAt: null,
+    tracked: true,
+    ratingAvg: null,
+    ratingCount: null,
+  },
+  {
+    country: "pl",
+    home: false,
+    capturedAt: "2026-10-22T12:00:00.000Z",
+    tracked: true,
+    ratingAvg: 4.6,
+    ratingCount: 3100,
   },
 ];
 

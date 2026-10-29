@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { COMPETITOR_SECTIONS } from "@/components/competitors/competitor-sections";
+import { OVERVIEW_SECTIONS } from "@/components/overview/overview-sections";
 import {
   COLLAPSED_VALUE_MAX_CHARS,
   serializeCollapsed,
@@ -26,6 +27,12 @@ describe("KNOWN_SECTIONS", () => {
   it("knows every competitors section", () => {
     expect(KNOWN_SECTIONS).toEqual(
       expect.arrayContaining([...COMPETITOR_SECTIONS]),
+    );
+  });
+
+  it("knows every overview section", () => {
+    expect(KNOWN_SECTIONS).toEqual(
+      expect.arrayContaining([...OVERVIEW_SECTIONS]),
     );
   });
 });

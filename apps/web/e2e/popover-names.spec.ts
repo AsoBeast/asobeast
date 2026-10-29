@@ -58,6 +58,12 @@ const POPOVERS: NamedPopover[] = [
     open: (page) =>
       page.getByRole("button", { name: /how actions are generated/i }).click(),
   },
+  {
+    name: "How ratings by market are read",
+    path: "/apps/app-1",
+    open: (page) =>
+      page.getByRole("button", { name: "About ratings by market" }).click(),
+  },
 ];
 
 const dialogNameViolations = async (page: Page) => {
