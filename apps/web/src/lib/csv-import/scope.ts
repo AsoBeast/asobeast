@@ -3,7 +3,6 @@ import { headerKey } from "./columns";
 import type { CsvRecord } from "./tokenize";
 
 export interface ImportTarget {
-  store: Store;
   storeAppId: string;
   name: string | null;
 }

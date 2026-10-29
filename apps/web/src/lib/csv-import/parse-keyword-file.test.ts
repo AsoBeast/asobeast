@@ -120,12 +120,11 @@ describe("readKeywordFile", () => {
 });
 
 const TARGET = {
-  store: "APP_STORE" as const,
   storeAppId: "123456789",
   name: "Import Lab",
 };
 
-const importedFrom = (text: string, store: Store = TARGET.store) => {
+const importedFrom = (text: string, store: Store = "APP_STORE") => {
   const file = readKeywordFile(bufferOf(text));
   const view = initialView(file, TARGET);
   return { file, view, mapped: mapKeywordFile(file, view, store) };

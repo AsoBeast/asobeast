@@ -14,7 +14,6 @@ const DATA = rowsOf(
 );
 
 const TARGET = {
-  store: "APP_STORE" as const,
   storeAppId: "123456789",
   name: "Import Lab",
 };

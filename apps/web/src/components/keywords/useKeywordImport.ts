@@ -87,10 +87,8 @@ export function useKeywordImport(
   const detail = useCachedQueryData(appDetailOptions(appId).queryKey);
   const target = useMemo<ImportTarget | null>(
     () =>
-      detail
-        ? { store, storeAppId: detail.storeAppId, name: detail.name }
-        : null,
-    [detail, store],
+      detail ? { storeAppId: detail.storeAppId, name: detail.name } : null,
+    [detail],
   );
 
   const mapped = useMemo(
