@@ -1,11 +1,14 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import { KEYWORD_BULK_ADD_LIMIT, KEYWORD_IMPORT_LIMIT } from '../aso';
+import type { OfficialPopularityState } from '../index';
 import {
   KEYWORD_IMPORT_REASONS,
   KEYWORD_IMPORT_STATUSES,
   keywordLabel,
   type KeywordImportSummary,
+  type OfficialPopularityListing,
   type PlayAcquisitions,
+  type ScoreSignals,
   type TrackedKeywordItem,
 } from './keywords';
 
@@ -79,5 +82,35 @@ describe('play acquisitions', () => {
       visitors: number;
       acquisitions: number;
     }>();
+  });
+});
+
+describe('the score signals contract', () => {
+  it('keeps the floor answer members optional', () => {
+    const legacy: ScoreSignals = {
+      suggestReach: 'hit',
+      suggestPrefixLength: 3,
+      suggestPosition: 1,
+      serpRelevance: 0.8,
+      medianRatingCount: 1200,
+      flags: [],
+      officialPopularity: null,
+      estimatedTraffic: 40,
+      entryDifficulty: 30,
+    };
+
+    expect(legacy.officialPopularityState).toBeUndefined();
+  });
+
+  it('types the floor answer members', () => {
+    expectTypeOf<ScoreSignals['officialPopularityState']>().toEqualTypeOf<
+      OfficialPopularityState | null | undefined
+    >();
+    expectTypeOf<
+      ScoreSignals['officialPopularityLastAboveFloor']
+    >().toEqualTypeOf<OfficialPopularityListing | null | undefined>();
+    expectTypeOf<ScoreSignals['officialPopularity']>().toEqualTypeOf<
+      number | null
+    >();
   });
 });

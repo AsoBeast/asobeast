@@ -92,6 +92,14 @@ export type ScoringSource = (typeof SCORING_SOURCES)[number];
 export const SCORING_CONFIDENCES = ['LOW', 'MEDIUM', 'HIGH'] as const;
 export type ScoringConfidence = (typeof SCORING_CONFIDENCES)[number];
 
+export const OFFICIAL_POPULARITY_STATES = [
+  'listed',
+  'floor',
+  'absent',
+] as const;
+export type OfficialPopularityState =
+  (typeof OFFICIAL_POPULARITY_STATES)[number];
+
 export const SERP_FLAGS = [
   'brand',
   'weak_leader',
@@ -117,6 +125,16 @@ export const isScoringConfidence = (
 ): value is ScoringConfidence =>
   typeof value === 'string' &&
   SCORING_CONFIDENCES.some((confidence) => confidence === value);
+
+export const isOfficialPopularityState = (
+  value: unknown,
+): value is OfficialPopularityState =>
+  typeof value === 'string' &&
+  OFFICIAL_POPULARITY_STATES.some((state) => state === value);
+
+export const isFloorAnswer = (
+  state: OfficialPopularityState | null | undefined,
+): boolean => state === 'floor' || state === 'absent';
 
 export const DEFAULT_COUNTRY = 'us';
 
