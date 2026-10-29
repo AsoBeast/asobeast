@@ -109,7 +109,7 @@ export function AppLocalizationsSection({
         <h2 id={HEADING_ID} className="text-lg font-medium">
           App Store localizations
         </h2>
-        {data ? (
+        {data && !data.storeManaged ? (
           <div className="flex flex-wrap items-center gap-2">
             <FindLocalizationsButton appId={id} />
             <AddLocalizationDialog id={id} result={data} />

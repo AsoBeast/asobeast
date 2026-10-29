@@ -1,10 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { useId, useRef, useState, type ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 import {
   KEYWORD_FIELD_CHAR_LIMIT,
   type AppLocalizationItem,
+  type AppLocalizationStoreSync,
 } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import { Meter } from "@/components/ui/meter";
@@ -14,8 +16,9 @@ import {
   readingStorefrontNames,
   type KeywordFieldDraft,
 } from "@/lib/app-localizations";
-import { formatList } from "@/lib/format";
+import { formatDateTime, formatList } from "@/lib/format";
 import { localizationName } from "@/lib/localizations";
+import { STORE_CONNECTIONS_PATH } from "@/lib/store-connection-copy";
 import { cn } from "@/lib/utils";
 import { SaveKeywordFieldDialog } from "./SaveKeywordFieldDialog";
 import { useKeywordFieldSave } from "./useKeywordFieldSave";
@@ -62,13 +65,42 @@ function KeywordFieldUsage({
   );
 }
 
+function StoreFieldNotice({ sync }: { sync: AppLocalizationStoreSync | null }) {
+  return (
+    <>
+      <p className="text-caption text-muted-foreground">
+        Imported from App Store Connect
+        {sync ? <> · last read {formatDateTime(sync.at)}</> : null}. Edit the
+        keywords there, and this field imports them again with every release.
+        The connection lives in{" "}
+        <Link
+          href={STORE_CONNECTIONS_PATH}
+          className="font-medium text-foreground underline underline-offset-4"
+        >
+          Integrations
+        </Link>
+        .
+      </p>
+      {sync?.error ? (
+        <p role="alert" className="text-sm text-destructive">
+          The last import stopped: {sync.error}
+        </p>
+      ) : null}
+    </>
+  );
+}
+
 export function KeywordFieldEditor({
   id,
   item,
+  managed = false,
+  sync = null,
   leading,
 }: {
   id: string;
   item: AppLocalizationItem;
+  managed?: boolean;
+  sync?: AppLocalizationStoreSync | null;
   leading?: ReactNode;
 }) {
   const countId = useId();
@@ -93,6 +125,7 @@ export function KeywordFieldEditor({
 
   return (
     <div className="flex flex-col gap-3">
+      {managed ? <StoreFieldNotice sync={sync} /> : null}
       <Textarea
         ref={editor}
         value={text}
@@ -100,13 +133,13 @@ export function KeywordFieldEditor({
           setDraft(event.target.value);
           clearError();
         }}
-        readOnly={busy}
+        readOnly={managed || busy}
         rows={3}
         spellCheck={false}
         aria-label={`${name} keyword field`}
         aria-describedby={countId}
-        aria-invalid={over}
-        placeholder="fitness,workout,running,cardio"
+        aria-invalid={managed ? undefined : over}
+        placeholder={managed ? undefined : "fitness,workout,running,cardio"}
       />
       <KeywordFieldUsage field={field} countId={countId} />
       {item.readBy.length === 0 ? (
@@ -116,39 +149,43 @@ export function KeywordFieldEditor({
           them as a keyword market to track these phrases there.
         </p>
       ) : null}
-      {error && review === null ? (
-        <p role="alert" className="text-sm text-destructive">
-          {error}
-        </p>
-      ) : null}
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>{leading}</div>
-        <Button
-          ref={saveButton}
-          disabled={
-            busy || over || (!field.changed && field.phrases.length === 0)
-          }
-          onClick={() => request(text)}
-        >
-          {busy ? <Loader2 className="animate-spin" /> : null}
-          {busy ? "Saving…" : "Save keyword field"}
-        </Button>
-      </div>
-      {review ? (
-        <SaveKeywordFieldDialog
-          preview={review}
-          pending={saving}
-          error={error}
-          onConfirm={confirm}
-          onClose={dismiss}
-          returnFocus={() =>
-            (saveButton.current?.disabled
-              ? editor.current
-              : saveButton.current
-            )?.focus()
-          }
-        />
-      ) : null}
+      {managed ? null : (
+        <>
+          {error && review === null ? (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
+          ) : null}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>{leading}</div>
+            <Button
+              ref={saveButton}
+              disabled={
+                busy || over || (!field.changed && field.phrases.length === 0)
+              }
+              onClick={() => request(text)}
+            >
+              {busy ? <Loader2 className="animate-spin" /> : null}
+              {busy ? "Saving…" : "Save keyword field"}
+            </Button>
+          </div>
+          {review ? (
+            <SaveKeywordFieldDialog
+              preview={review}
+              pending={saving}
+              error={error}
+              onConfirm={confirm}
+              onClose={dismiss}
+              returnFocus={() =>
+                (saveButton.current?.disabled
+                  ? editor.current
+                  : saveButton.current
+                )?.focus()
+              }
+            />
+          ) : null}
+        </>
+      )}
     </div>
   );
 }

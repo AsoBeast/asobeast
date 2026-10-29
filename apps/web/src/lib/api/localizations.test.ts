@@ -53,6 +53,8 @@ afterEach(() => {
 const LIST: AppLocalizationsResult = {
   home: "us",
   markets: ["us"],
+  storeManaged: false,
+  storeSync: null,
   localizations: [],
 };
 

@@ -1237,6 +1237,7 @@ const shippedLocalizations = new Map<
   string,
   Map<AppStoreLocalization, ShippedOrigin>
 >();
+const storeManagedFields = new Map<string, string>();
 const seededMarkets = new Map<string, string[]>();
 const fieldRequests = new Map<string, string[]>();
 const loggedRequests = new Map<string, number>();
@@ -1276,6 +1277,11 @@ function seedLocalizations(id: string, seed: LocalizationSeed): void {
     id,
     new Map((seed.shipped ?? []).map((row) => [row.localization, row.origin])),
   );
+  if (seed.storeManaged === true) {
+    storeManagedFields.set(id, KEYWORD_FIELD_UPDATED_AT);
+  } else {
+    storeManagedFields.delete(id);
+  }
   seededMarkets.set(id, seed.markets ?? []);
   fieldRequests.delete(id);
 }
@@ -1415,9 +1421,15 @@ function localizationsOf(id: string, home: string): AppLocalizationsResult {
   const items = shippedTags(id, home).map((tag) =>
     localizationItemOf(id, home, tag, markets),
   );
+  const syncedAt = storeManagedFields.get(id);
   return {
     home,
     markets,
+    storeManaged: syncedAt !== undefined,
+    storeSync:
+      syncedAt === undefined
+        ? null
+        : { at: syncedAt, version: "2.4.1", error: null },
     localizations: items.sort(
       (left, right) =>
         Number(right.origin === "home") - Number(left.origin === "home") ||

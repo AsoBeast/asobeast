@@ -3173,6 +3173,7 @@ export const APP_REPRICED_PAID_ID = "app-repriced-paid";
 export const APP_FREE_AGAIN_ID = "app-free-again";
 export const APP_LOCALES_ID = "app-locales";
 export const APP_SUGGESTED_LOCALES_ID = "app-suggested-locales";
+export const APP_MANAGED_LOCALES_ID = "app-managed-locales";
 export const APP_RIVAL_ID = "app-rival";
 
 export interface LocalizationSeed {
@@ -3183,6 +3184,7 @@ export interface LocalizationSeed {
   }[];
   fields?: Partial<Record<AppStoreLocalization, string[]>>;
   tracked?: Record<string, string[]>;
+  storeManaged?: boolean;
 }
 
 function localesDataset(id: string, name: string): AppDataset {
@@ -3201,6 +3203,10 @@ DATASETS[APP_LOCALES_ID] = localesDataset(APP_LOCALES_ID, "Locale Lab");
 DATASETS[APP_SUGGESTED_LOCALES_ID] = localesDataset(
   APP_SUGGESTED_LOCALES_ID,
   "Market Lab",
+);
+DATASETS[APP_MANAGED_LOCALES_ID] = localesDataset(
+  APP_MANAGED_LOCALES_ID,
+  "Managed Lab",
 );
 const rivalDataset = localesDataset(APP_RIVAL_ID, "Rival Lab");
 DATASETS[APP_RIVAL_ID] = {
@@ -5277,6 +5283,16 @@ export const METADATA_AUDITS: Record<string, MetadataAuditResult> = {
 
 METADATA_AUDITS[APP_LOCALES_ID] = METADATA_AUDIT;
 METADATA_AUDITS[APP_SUGGESTED_LOCALES_ID] = METADATA_AUDIT;
+METADATA_AUDITS[APP_MANAGED_LOCALES_ID] = {
+  ...METADATA_AUDIT,
+  keywordFieldSuggestion: {
+    value: "focus,timer,habits",
+    charactersUsed: 18,
+    charactersLimit: 100,
+    addedTerms: ["habits"],
+    localization: "en-US",
+  },
+};
 METADATA_AUDITS[APP_RIVAL_ID] = METADATA_AUDIT;
 
 export const APP_READS_ID = "app-reads";
