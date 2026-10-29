@@ -185,6 +185,61 @@ describe("a file that names the apps and stores of its rows", () => {
   });
 });
 
+describe("files exported by other tools", () => {
+  const target = {
+    store: "APP_STORE" as const,
+    storeAppId: "123456789",
+    name: "Import Lab",
+  };
+
+  const importedFrom = (text: string, store = target.store) => {
+    const file = readKeywordFile(bufferOf(text));
+    const view = initialView(file, target);
+    return { file, view, mapped: mapKeywordFile(file, view, store) };
+  };
+
+  const ASTRO_EXPORT = [
+    "App Name,App Id,Platform,Keyword,Store Domain,Store,Note,Last Update,Ranking,Change,Popularity,Difficulty,Apps in Ranking,Tags",
+    "Import Lab,123456789,iphone,focus timer,us,United States,,2026-10-12 08:30:00,4,2,48,31,120,",
+    "Import Lab,123456789,ipad,focus timer,us,United States,,2026-10-12 08:30:00,6,0,48,31,120,",
+    'Import Lab,123456789,iphone,zegar pracy,pl,Poland,"Launch keyword\nsecond line",2026-10-12 08:30:00,2,-1,22,18,64,"core, brand"',
+    "Other App,987654321,iphone,habit tracker,us,United States,,2026-10-12 08:30:00,9,1,60,40,200,focus",
+    "Import Lab,123456789,mac,focus timer,gb,United Kingdom,,2026-10-12 08:30:00,,,,,,",
+  ].join("\r\n");
+
+  it("U-VENDOR-01 reads an Astro export of all apps as the rows of the app it is imported into", () => {
+    const { file, view, mapped } = importedFrom(ASTRO_EXPORT);
+
+    expect(file).toMatchObject({
+      encoding: "utf-8",
+      delimiter: ",",
+      fallback: false,
+    });
+    expect(view).toEqual({
+      hasHeader: true,
+      mapping: { keyword: 3, country: 4, tags: 13, note: 6 },
+      app: "123456789",
+    });
+    expect(mapped).toEqual({
+      rows: [
+        { keyword: "focus timer", country: "us" },
+        { keyword: "focus timer", country: "us" },
+        {
+          keyword: "zegar pracy",
+          country: "pl",
+          tags: ["core", "brand"],
+          note: "Launch keyword\nsecond line",
+        },
+        { keyword: "focus timer", country: "gb" },
+      ],
+      lines: [2, 3, 4, 7],
+      columns: 14,
+      ignoredColumns: 7,
+      leftOut: { otherApps: 1, otherStore: 0 },
+    });
+  });
+});
+
 describe("columnOptions", () => {
   it("names a column by its header and by its position when there is none, with a sample", () => {
     const withHeader = readKeywordFile(bufferOf("keyword,country\nhabit,us\n"));

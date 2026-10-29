@@ -59,6 +59,14 @@ const TWO_APP_FILE = [
   "Other App,987654321,iphone,gamma three,us,",
 ].join("\r\n");
 
+const ASTRO_FILE = [
+  "App Name,App Id,Platform,Keyword,Store Domain,Store,Note,Last Update,Ranking,Change,Popularity,Difficulty,Apps in Ranking,Tags",
+  "Import Lab,123456789,iphone,alpha one,us,United States,,2026-10-12 08:30:00,4,2,48,31,120,",
+  "Import Lab,123456789,ipad,alpha one,us,United States,,2026-10-12 08:30:00,6,0,48,31,120,",
+  'Import Lab,123456789,iphone,beta two,pl,Poland,"Launch keyword",2026-10-12 08:30:00,2,-1,22,18,64,"core, brand"',
+  "Other App,987654321,iphone,gamma three,us,United States,,2026-10-12 08:30:00,9,1,60,40,200,focus",
+].join("\r\n");
+
 const importRequests = (page: Page) => {
   const seen: Request[] = [];
   page.on("request", (request) => {
@@ -736,4 +744,28 @@ test("P-WEB-17 has no accessibility violations with the app picker shown", async
       targets: nodes.map((node) => node.target.join(" ")),
     })),
   ).toEqual([]);
+});
+
+test("P-WEB-18 reads an Astro export as it is", async ({ page }) => {
+  const dialog = await openDialog(page);
+
+  await choose(dialog, ASTRO_FILE, "astro-keywords.csv");
+
+  await expect(
+    dialog.getByRole("combobox", { name: "Country column" }),
+  ).toContainText("Store Domain");
+  await expect(
+    dialog.getByRole("combobox", { name: "App to import" }),
+  ).toContainText("Import Lab");
+  await expect(
+    dialog.getByText("1 row for other apps is left out."),
+  ).toBeVisible();
+  await expect(dialog.getByText("7 other columns are ignored.")).toBeVisible();
+  await expect(dialog.getByRole("status")).toHaveText("2 new, 1 duplicate");
+  await expect(rowOf(dialog, /beta two/).getByText("PL")).toBeVisible();
+  await expect(
+    rowOf(dialog, /alpha one/)
+      .first()
+      .getByText("US"),
+  ).toBeVisible();
 });
