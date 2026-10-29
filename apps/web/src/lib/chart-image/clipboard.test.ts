@@ -38,6 +38,19 @@ describe("copyOrDownload", () => {
     expect(download.mock.calls[0]?.[0]).toBeInstanceOf(Blob);
   });
 
+  it("downloads when the writer throws before it returns a promise", async () => {
+    const writer = vi.fn<PngWriter>().mockImplementation(() => {
+      throw new TypeError("ClipboardItem does not take a promise");
+    });
+    const download = vi.fn();
+
+    await expect(copyOrDownload(png(), writer, download)).resolves.toBe(
+      "downloaded",
+    );
+
+    expect(download).toHaveBeenCalledTimes(1);
+  });
+
   it("downloads when the browser has no image clipboard", async () => {
     const download = vi.fn();
 

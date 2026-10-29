@@ -14,18 +14,24 @@ export function browserPngWriter(): PngWriter | null {
     navigator.clipboard.write([new ClipboardItem({ "image/png": png })]);
 }
 
+async function written(
+  png: Promise<Blob>,
+  writer: PngWriter,
+): Promise<boolean> {
+  try {
+    await writer(png);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function copyOrDownload(
   png: Promise<Blob>,
   writer: PngWriter | null,
   download: (blob: Blob) => void,
 ): Promise<ShareOutcome> {
-  const copied = writer
-    ? await writer(png).then(
-        () => true,
-        () => false,
-      )
-    : false;
-  if (copied) return "copied";
+  if (writer && (await written(png, writer))) return "copied";
   download(await png);
   return "downloaded";
 }
