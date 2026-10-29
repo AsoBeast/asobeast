@@ -43,6 +43,8 @@ import type {
   RankingPoint,
   RankingSeries,
   RankingSeriesItem,
+  ScoreProvenance,
+  ScoreSignals,
   RatingsHistogram,
   ReviewThemes,
   RatingsHistory,
@@ -2331,6 +2333,118 @@ export const APP_COMBOS_DETAIL: AppDetail = {
   group: null,
 };
 
+export const APP_FLOOR_DETAIL: AppDetail = {
+  ...APP_LONG_DETAIL,
+  id: "app-floor",
+  name: "Floor Answers App",
+};
+
+const FLOOR_WEEK = "2026-10-18";
+
+interface FloorKeyword {
+  index: number;
+  text: string;
+  volume: number;
+  provenance: Pick<ScoreProvenance, "source" | "confidence">;
+  signals: Partial<ScoreSignals>;
+}
+
+const floorKeyword = ({
+  index,
+  text,
+  volume,
+  provenance,
+  signals,
+}: FloorKeyword): TrackedKeywordItem => ({
+  keywordId: `kw-floor-${index}`,
+  text,
+  country: "us",
+  serpVolatility7d: null,
+  source: "MANUAL",
+  active: true,
+  latestPosition: 12,
+  latestDepth: RANK_DEPTH,
+  latestCheckedOn: utcDaysAgo(0),
+  previousPosition: 12,
+  positionDelta1d: 0,
+  positionDelta7d: 0,
+  traffic: volume / 10,
+  difficulty: 4,
+  volume,
+  relevance: 60,
+  opportunity: 55,
+  bucket: "secondary",
+  scoredAt: utcTimestampDaysAgo(0),
+  scoreProvenance: {
+    ...provenance,
+    formulaVersion: "app-store-v5",
+    capturedAt: utcTimestampDaysAgo(0),
+  },
+  scoreSignals: {
+    suggestReach: "hit",
+    suggestPrefixLength: 3,
+    suggestPosition: 2,
+    serpRelevance: 0.8,
+    medianRatingCount: 12000,
+    flags: [],
+    officialPopularity: null,
+    estimatedTraffic: volume / 10,
+    ...signals,
+  },
+  scoreOutdated: false,
+});
+
+export const APP_FLOOR_KEYWORDS: TrackedKeywordItem[] = [
+  floorKeyword({
+    index: 1,
+    text: "geo quiz",
+    volume: 71,
+    provenance: { source: "APPLE_ADS_POPULARITY", confidence: "HIGH" },
+    signals: {
+      officialPopularity: 71,
+      officialPopularityState: "listed",
+      officialPopularityFloor: 56,
+      officialPopularityWeek: FLOOR_WEEK,
+    },
+  }),
+  floorKeyword({
+    index: 2,
+    text: "world flags",
+    volume: 41,
+    provenance: { source: "APPLE_ADS_POPULARITY", confidence: "MEDIUM" },
+    signals: {
+      officialPopularity: 41,
+      officialPopularityState: "floor",
+      officialPopularityFloor: 41,
+      officialPopularityWeek: FLOOR_WEEK,
+      officialPopularityLastAboveFloor: { value: 63, week: "2026-09-06" },
+    },
+  }),
+  floorKeyword({
+    index: 3,
+    text: "capital cities quiz",
+    volume: 38,
+    provenance: { source: "APPLE_SEARCH_SIGNALS", confidence: "MEDIUM" },
+    signals: {
+      officialPopularityState: "absent",
+      officialPopularityFloor: 41,
+      officialPopularityWeek: FLOOR_WEEK,
+      officialPopularityLastAboveFloor: { value: 58, week: "2026-09-27" },
+    },
+  }),
+  floorKeyword({
+    index: 4,
+    text: "flag trivia",
+    volume: 30,
+    provenance: { source: "APPLE_SEARCH_SIGNALS", confidence: "MEDIUM" },
+    signals: {
+      officialPopularityState: "absent",
+      officialPopularityFloor: 41,
+      officialPopularityWeek: FLOOR_WEEK,
+    },
+  }),
+];
+
 export const APP_LONG_ICON_URL =
   "https://is1-ssl.mzstatic.com/image/thumb/e2e-deep-focus/512x512bb.png";
 
@@ -2829,6 +2943,24 @@ export const DATASETS: Record<string, AppDataset> = {
     ratingsHistogram: EMPTY_RATINGS_HISTOGRAM,
     changes: EMPTY_CHANGES,
     changeImpact: emptyChangeImpact(APP_COMBOS_DETAIL),
+    discovery: EMPTY_DISCOVERY,
+    comparison: EMPTY_COMPARISON,
+  },
+  "app-floor": {
+    detail: APP_FLOOR_DETAIL,
+    summary: APP_2_SUMMARY,
+    keywords: APP_FLOOR_KEYWORDS,
+    rankings: EMPTY_RANKINGS,
+    serpMovers: EMPTY_SERP_MOVERS,
+    visibility: EMPTY_VISIBILITY,
+    rankDistributionHistory: EMPTY_RANK_DISTRIBUTION_HISTORY,
+    categoryRanks: EMPTY_CATEGORY_RANKS,
+    competitors: [],
+    reviews: EMPTY_REVIEWS,
+    ratingsHistory: EMPTY_RATINGS_HISTORY,
+    ratingsHistogram: EMPTY_RATINGS_HISTOGRAM,
+    changes: EMPTY_CHANGES,
+    changeImpact: emptyChangeImpact(APP_FLOOR_DETAIL),
     discovery: EMPTY_DISCOVERY,
     comparison: EMPTY_COMPARISON,
   },
