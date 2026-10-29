@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { channelHint, webhookRowLabel } from "./webhook-channel-copy";
+import {
+  channelHint,
+  deliversToChat,
+  webhookRowLabel,
+} from "./webhook-channel-copy";
 
 describe("channelHint", () => {
   it.each([
@@ -81,5 +85,26 @@ describe("webhookRowLabel", () => {
         "generic",
       ),
     ).toBe("hooks.slack.com/…");
+  });
+});
+
+describe("deliversToChat", () => {
+  it.each([
+    "https://discord.com/api/webhooks/1/x",
+    " https://hooks.slack.com/services/T1/B2/x ",
+    "https://prod-21.westeurope.logic.azure.com/workflows/a/triggers/manual/paths/invoke?sig=x",
+    "https://api.telegram.org/bot1:A/sendMessage?chat_id=-100",
+    "https://chat.googleapis.com/v1/spaces/S/messages?key=k&token=t",
+  ])("answers true for the chat url %s", (url) => {
+    expect(deliversToChat(url)).toBe(true);
+  });
+
+  it.each([
+    "https://hooks.example.com/asobeast",
+    "https://hooks.slack.com/workflows/T1/A2/3/x",
+    "not a url",
+    "",
+  ])("answers false for %j", (url) => {
+    expect(deliversToChat(url)).toBe(false);
   });
 });

@@ -23,7 +23,7 @@ export function AddEmailAlertDialog({ trigger }: { trigger?: ReactNode }) {
   const [email, setEmail] = useState("");
   const [events, setEvents] = useState<WebhookEvent[]>(["metadata.changed"]);
   const [stars, setStars] = useState<number[]>([...REVIEW_SCORES]);
-  const [confirmDrops, setConfirmDrops] = useState(false);
+  const [confirmDrops, setConfirmDrops] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const mutation = useMutation({
@@ -67,7 +67,7 @@ export function AddEmailAlertDialog({ trigger }: { trigger?: ReactNode }) {
     setEmail("");
     setEvents(["metadata.changed"]);
     setStars([...REVIEW_SCORES]);
-    setConfirmDrops(false);
+    setConfirmDrops(true);
     setError(null);
   }
 

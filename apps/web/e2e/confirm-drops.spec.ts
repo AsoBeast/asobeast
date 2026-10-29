@@ -17,12 +17,14 @@ const CHANNELS = [
     field: "Recipient email",
     target: () => `drops-${randomUUID()}@example.com`,
     list: "/api/backend/email-alerts",
+    startsTicked: true,
   },
   {
     trigger: "Add webhook",
     field: "Endpoint URL",
     target: () => `https://hooks.example.com/${randomUUID()}`,
     list: "/api/backend/webhooks",
+    startsTicked: false,
   },
 ] as const;
 
@@ -43,7 +45,7 @@ async function createChannel(
 ): Promise<{ row: Locator; body: unknown }> {
   await page.goto("/settings");
   const dialog = await openSettledDialog(page, channel.trigger);
-  if (confirming) await confirmDrops(dialog).click();
+  await confirmDrops(dialog).setChecked(confirming);
   const target = channel.target();
   await page.getByLabel(channel.field).fill(target);
   const post = page.waitForRequest(
@@ -66,14 +68,33 @@ async function savedPatch(page: Page, dialog: Locator): Promise<unknown> {
 }
 
 for (const channel of CHANNELS) {
-  test(`${channel.trigger} starts unticked and sends false`, async ({
+  test(`${channel.trigger} starts with its default and sends it`, async ({
     page,
   }) => {
     await page.goto("/settings");
     const dialog = await openSettledDialog(page, channel.trigger);
-    await expect(confirmDrops(dialog)).not.toBeChecked();
-    await page.keyboard.press("Escape");
+    await expect(confirmDrops(dialog)).toBeChecked({
+      checked: channel.startsTicked,
+    });
+    const target = channel.target();
+    await page.getByLabel(channel.field).fill(target);
+    const post = page.waitForRequest(
+      (request) =>
+        request.method() === "POST" &&
+        new URL(request.url()).pathname === channel.list,
+    );
+    await dialog
+      .getByRole("button", { name: channel.trigger, exact: true })
+      .click();
 
+    expect((await post).postDataJSON()).toMatchObject({
+      confirmDrops: channel.startsTicked,
+    });
+  });
+
+  test(`${channel.trigger} creates a channel that reports every drop when unticked`, async ({
+    page,
+  }) => {
     const { row, body } = await createChannel(page, channel, false);
 
     expect(body).toMatchObject({ confirmDrops: false });
@@ -112,9 +133,9 @@ for (const channel of CHANNELS) {
 
     await box.focus();
     await page.keyboard.press("Space");
-    await expect(box).toBeChecked();
+    await expect(box).toBeChecked({ checked: !channel.startsTicked });
     await page.keyboard.press("Space");
-    await expect(box).not.toBeChecked();
+    await expect(box).toBeChecked({ checked: channel.startsTicked });
   });
 
   test(`${channel.trigger} turns the setting on and off from Edit events`, async ({
@@ -278,4 +299,40 @@ test("the edit dialog marks the setting of a confirming row", async ({
     "Metadata changed",
     RANK_MILESTONE,
   ]);
+});
+
+test("Add webhook ticks the setting for a chat url and unticks it for a json endpoint", async ({
+  page,
+}) => {
+  await page.goto("/settings");
+  const dialog = await openSettledDialog(page, "Add webhook");
+  const field = page.getByLabel("Endpoint URL");
+
+  await field.fill("https://discord.com/api/webhooks/1/abc");
+  await expect(confirmDrops(dialog)).toBeChecked();
+  await field.fill("https://hooks.example.com/asobeast");
+  await expect(confirmDrops(dialog)).not.toBeChecked();
+  await field.fill("https://hooks.slack.com/services/T1/B2/x");
+  await expect(confirmDrops(dialog)).toBeChecked();
+});
+
+test("Add webhook keeps a choice made by hand when the url changes", async ({
+  page,
+}) => {
+  await page.goto("/settings");
+  const dialog = await openSettledDialog(page, "Add webhook");
+  const field = page.getByLabel("Endpoint URL");
+
+  await field.fill("https://discord.com/api/webhooks/1/abc");
+  await confirmDrops(dialog).click();
+  await field.fill("https://discord.com/api/webhooks/2/def");
+  await expect(confirmDrops(dialog)).not.toBeChecked();
+
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  const reopened = await openSettledDialog(page, "Add webhook");
+  await page
+    .getByLabel("Endpoint URL")
+    .fill("https://discord.com/api/webhooks/1/abc");
+  await expect(confirmDrops(reopened)).toBeChecked();
 });

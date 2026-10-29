@@ -15,7 +15,7 @@ import { needsAStar, reviewScoresToSend } from "./alert-event-copy";
 import { AlertSubscriptionFields } from "./alert-events";
 import { ConfirmDropsField } from "./ConfirmDropsField";
 import { AlertChannelDialog } from "./alert-channel/AlertChannelDialog";
-import { channelHint } from "./webhook-channel-copy";
+import { channelHint, deliversToChat } from "./webhook-channel-copy";
 
 const HINT_ID = "webhook-channel-hint";
 
@@ -26,7 +26,7 @@ export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
   const [events, setEvents] = useState<WebhookEvent[]>(["metadata.changed"]);
   const [stars, setStars] = useState<number[]>([...REVIEW_SCORES]);
   const [secret, setSecret] = useState("");
-  const [confirmDrops, setConfirmDrops] = useState(false);
+  const [confirmChoice, setConfirmChoice] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const mutation = useMutation({
@@ -53,6 +53,7 @@ export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
   });
   const createOnce = useSingleFlight(mutation);
   const hint = channelHint(url);
+  const confirmDrops = confirmChoice ?? deliversToChat(url);
 
   function onOpenChange(next: boolean) {
     setOpen(next);
@@ -61,7 +62,7 @@ export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
     setEvents(["metadata.changed"]);
     setStars([...REVIEW_SCORES]);
     setSecret("");
-    setConfirmDrops(false);
+    setConfirmChoice(null);
     setError(null);
   }
 
@@ -129,7 +130,7 @@ export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
         onStarsChange={setStars}
       />
 
-      <ConfirmDropsField checked={confirmDrops} onChange={setConfirmDrops} />
+      <ConfirmDropsField checked={confirmDrops} onChange={setConfirmChoice} />
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="webhook-secret">Secret (optional)</Label>

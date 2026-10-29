@@ -41,6 +41,12 @@ function eventOption(dialog: Locator, name: string): Locator {
   return dialog.getByRole("checkbox", { name, exact: true });
 }
 
+async function deliverEveryDrop(dialog: Locator): Promise<void> {
+  await dialog
+    .getByRole("checkbox", { name: "Confirm drops before alerting" })
+    .setChecked(false);
+}
+
 async function setSelected(option: Locator, selected: boolean): Promise<void> {
   if ((await option.getAttribute(SELECTED_ATTRIBUTE)) !== String(selected)) {
     await option.click();
@@ -54,6 +60,7 @@ async function createChannel(
 ): Promise<Locator> {
   await page.goto("/settings");
   const dialog = await openSettledDialog(page, channel.trigger);
+  await deliverEveryDrop(dialog);
   for (const option of await eventOptions(dialog).all()) {
     await setSelected(option, false);
   }
@@ -89,6 +96,7 @@ async function openWithEvents(
 ): Promise<Locator> {
   await page.goto("/settings");
   const dialog = await openSettledDialog(page, channel.trigger);
+  await deliverEveryDrop(dialog);
   for (const option of await eventOptions(dialog).all()) {
     await setSelected(option, false);
   }
@@ -301,6 +309,7 @@ for (const channel of CHANNELS) {
   }) => {
     await page.goto("/settings");
     const dialog = await openSettledDialog(page, channel.trigger);
+    await deliverEveryDrop(dialog);
 
     for (const option of await eventOptions(dialog).all()) {
       await setSelected(option, false);
@@ -329,6 +338,7 @@ for (const channel of CHANNELS) {
   test(`${channel.trigger} saves the chart events`, async ({ page }) => {
     await page.goto("/settings");
     const dialog = await openSettledDialog(page, channel.trigger);
+    await deliverEveryDrop(dialog);
     for (const option of await eventOptions(dialog).all()) {
       await setSelected(option, false);
     }

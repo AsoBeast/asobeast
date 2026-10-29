@@ -77,7 +77,7 @@ A keyword that moves between 10 and 11 fires each time it crosses. In batched de
 
 By default every check is compared with the one before it. A keyword that slips from 9 to 11 for a day and then comes back fires `rank.milestone` twice, once for leaving the top 10 and once for returning. Near a boundary those one day wobbles bury the drops that stay.
 
-Turn on **Confirm drops before alerting** on a webhook or an email alert, in the dialog that adds it or under **Edit events**, and that channel reports a drop only when the next check confirms it. The setting is off by default and belongs to one channel, so other channels keep their current behaviour.
+Turn on **Confirm drops before alerting** on a webhook or an email alert, in the dialog that adds it or under **Edit events**, and that channel reports a drop only when the next check confirms it. The setting belongs to one channel, so other channels keep their current behaviour. In Settings it starts ticked for a new email alert and for a new webhook whose url is a Discord, Slack, Microsoft Teams, Telegram or Google Chat channel, because a person reads those, and unticked for a JSON webhook, which usually feeds a script that wants every check. A channel created through the API without the field, and every channel that existed before the setting, report every drop.
 
 | Checks, oldest first | Without the setting | With the setting |
 | --- | --- | --- |
