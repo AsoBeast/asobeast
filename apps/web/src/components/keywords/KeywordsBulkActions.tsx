@@ -86,8 +86,7 @@ function ConfirmRemove({
       >
         <AlertDialogHeader>
           <AlertDialogTitle>
-            Stop tracking {count} keyword
-            {count === 1 ? "" : "s"}?
+            Stop tracking {pluralize(count, "keyword")}?
           </AlertDialogTitle>
           <AlertDialogDescription>
             Ranking history for the selected keywords stops accruing. You can
