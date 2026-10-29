@@ -23,6 +23,8 @@ describe("countryFromCell", () => {
     ["Czech Republic", "cz"],
     ["Myanmar", "mm"],
     ["USA", "us"],
+    ["UK", "gb"],
+    ["uk", "gb"],
   ])("U-CTRY-02 reads the name %j as %j", (cell, expected) => {
     expect(countryFromCell(cell)).toBe(expected);
   });

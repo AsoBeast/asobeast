@@ -54,6 +54,7 @@ function flagCode(cell: string): string | null {
 
 export function countryFromCell(cell: string): string {
   const text = cell.trim();
-  if (CODE_PATTERN.test(text)) return text;
-  return flagCode(text) ?? CODE_BY_NAME.get(nameKey(text)) ?? text;
+  const named = CODE_BY_NAME.get(nameKey(text));
+  if (CODE_PATTERN.test(text) && named === undefined) return text;
+  return flagCode(text) ?? named ?? text;
 }
