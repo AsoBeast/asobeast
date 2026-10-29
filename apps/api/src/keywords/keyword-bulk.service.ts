@@ -18,7 +18,7 @@ interface TrackedRow {
   keyword: { store: KeywordApp['store']; country: string };
 }
 
-const idsOf = (rows: readonly TrackedRow[]): string[] =>
+const idsOf = (rows: readonly Pick<TrackedRow, 'keywordId'>[]): string[] =>
   rows.map((row) => row.keywordId);
 
 @Injectable()
@@ -96,21 +96,34 @@ export class KeywordBulkService {
     for (const { keyword } of paused) {
       assertStorefront(keyword.store, keyword.country);
     }
-    const keywordIds = idsOf(paused);
-    const { count } = await this.quota.admitKeywordMarkets(async (tx) => {
-      const resumed = await tx.trackedKeyword.updateMany({
-        where: { appId: app.id, active: false, keywordId: { in: keywordIds } },
+    const resumedIds = await this.quota.admitKeywordMarkets(async (tx) => {
+      const stillPaused = idsOf(
+        await tx.trackedKeyword.findMany({
+          where: {
+            appId: app.id,
+            active: false,
+            keywordId: { in: idsOf(paused) },
+          },
+          select: { keywordId: true },
+        }),
+      );
+      await tx.trackedKeyword.updateMany({
+        where: { appId: app.id, keywordId: { in: stillPaused } },
         data: { active: true },
       });
-      await this.tracker.claimForManual(tx, app.id, keywordIds);
-      return resumed;
+      await this.tracker.claimForManual(tx, app.id, stillPaused);
+      return stillPaused;
     });
-    await this.checks.schedule(app.id, keywordIds);
+    if (resumedIds.length === 0) return 0;
+    const resumed = new Set(resumedIds);
+    await this.checks.schedule(app.id, resumedIds);
     for (const market of new Set(
-      paused.map(({ keyword }) => keyword.country),
+      paused
+        .filter((row) => resumed.has(row.keywordId))
+        .map(({ keyword }) => keyword.country),
     )) {
       await this.listings.request(app, market);
     }
-    return count;
+    return resumedIds.length;
   }
 }

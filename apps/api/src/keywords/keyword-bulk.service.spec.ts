@@ -28,9 +28,14 @@ const build = (
 ) => {
   const tx = {
     trackedKeyword: {
-      updateMany: jest
+      findMany: jest
         .fn()
-        .mockResolvedValue({ count: counts.changed ?? tracked.length }),
+        .mockResolvedValue(
+          tracked
+            .filter((entry) => !entry.active)
+            .map(({ keywordId }) => ({ keywordId })),
+        ),
+      updateMany: jest.fn().mockResolvedValue({ count: 0 }),
     },
   };
   const prisma = {
@@ -174,8 +179,12 @@ describe('KeywordBulkService', () => {
     });
 
     expect(quota.admitKeywordMarkets).toHaveBeenCalledTimes(1);
-    expect(tx.trackedKeyword.updateMany).toHaveBeenCalledWith({
+    expect(tx.trackedKeyword.findMany).toHaveBeenCalledWith({
       where: { appId: 'app1', active: false, keywordId: { in: ['a', 'b'] } },
+      select: { keywordId: true },
+    });
+    expect(tx.trackedKeyword.updateMany).toHaveBeenCalledWith({
+      where: { appId: 'app1', keywordId: { in: ['a', 'b'] } },
       data: { active: true },
     });
     expect(tracker.claimForManual).toHaveBeenCalledWith(tx, 'app1', ['a', 'b']);
@@ -212,6 +221,37 @@ describe('KeywordBulkService', () => {
       [app, 'us'],
       [app, 'pl'],
     ]);
+  });
+
+  it('neither counts nor queues a row another request resumed meanwhile', async () => {
+    const { service, tx, checks, listings } = build([
+      row('a', false, 'us'),
+      row('b', false, 'pl'),
+    ]);
+    tx.trackedKeyword.findMany.mockResolvedValueOnce([{ keywordId: 'a' }]);
+
+    const result = await service.apply('app1', {
+      action: 'resume',
+      keywordIds: ['a', 'b'],
+    });
+
+    expect(result).toMatchObject({ changed: 1, unchanged: 1 });
+    expect(checks.schedule).toHaveBeenCalledWith('app1', ['a']);
+    expect(listings.request.mock.calls).toEqual([[app, 'us']]);
+  });
+
+  it('queues nothing when another request resumed every row meanwhile', async () => {
+    const { service, tx, checks, listings } = build([row('a', false)]);
+    tx.trackedKeyword.findMany.mockResolvedValueOnce([]);
+
+    const result = await service.apply('app1', {
+      action: 'resume',
+      keywordIds: ['a'],
+    });
+
+    expect(result).toMatchObject({ changed: 0, unchanged: 1 });
+    expect(checks.schedule).not.toHaveBeenCalled();
+    expect(listings.request).not.toHaveBeenCalled();
   });
 
   it('writes and queues nothing when every row is already active', async () => {
