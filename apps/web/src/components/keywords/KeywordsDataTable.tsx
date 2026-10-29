@@ -5,6 +5,7 @@ import { flexRender, type Table as TableInstance } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import type { TrackedKeywordItem } from "@asobeast/shared";
 import { FilteredEmpty } from "@/components/data-table/FilteredEmpty";
+import { keywordTableCaption } from "./keyword-caption";
 import type { KeywordTableFeatures } from "./keyword-table-features";
 import {
   Table,
@@ -29,9 +30,11 @@ const VIRTUALIZE_ABOVE = 50;
 
 export function KeywordsDataTable({
   table,
+  emptyBody,
   onClearFilters,
 }: {
   table: TableInstance<KeywordTableFeatures, TrackedKeywordItem>;
+  emptyBody?: string;
   onClearFilters: () => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -59,6 +62,7 @@ export function KeywordsDataTable({
   const playInstalls = table
     .getAllLeafColumns()
     .some((column) => column.id === "acquisitions");
+  const shown = (id: string) => table.getColumn(id)?.getIsVisible() === true;
 
   return (
     <Table
@@ -67,10 +71,11 @@ export function KeywordsDataTable({
       aria-rowcount={rows.length + 1}
     >
       <TableCaption className="sr-only">
-        Tracked keywords with source, position and its daily change, popularity,
-        difficulty, opportunity,{" "}
-        {playInstalls ? "Play installs per search term, " : ""}7 day change and
-        top 10 volatility.
+        {keywordTableCaption({
+          added: shown("added"),
+          playInstalls,
+          competitors: shown("competitors"),
+        })}
       </TableCaption>
       <TableHeader className="sticky top-0 z-20">
         {table.getHeaderGroups().map((headerGroup) => (
@@ -102,6 +107,7 @@ export function KeywordsDataTable({
             <TableCell colSpan={columnCount}>
               <FilteredEmpty
                 title="No keywords match these filters"
+                body={emptyBody}
                 onClear={onClearFilters}
               />
             </TableCell>

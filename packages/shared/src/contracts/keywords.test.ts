@@ -4,7 +4,7 @@ import {
   KEYWORD_BULK_CHANGE_LIMIT,
   KEYWORD_IMPORT_LIMIT,
 } from '../aso';
-import type { OfficialPopularityState } from '../index';
+import { KEYWORD_SORTS, type OfficialPopularityState } from '../index';
 import {
   KEYWORD_BULK_ACTIONS,
   KEYWORD_IMPORT_REASONS,
@@ -46,6 +46,20 @@ describe('the keyword bulk change contract', () => {
     expect(new Set(KEYWORD_BULK_ACTIONS).size).toBe(
       KEYWORD_BULK_ACTIONS.length,
     );
+  });
+});
+
+describe('the keyword sorts', () => {
+  it('keeps the original sorts in place and appends the new ones', () => {
+    expect(KEYWORD_SORTS.slice(0, 5)).toEqual([
+      'opportunity',
+      'traffic',
+      'difficulty',
+      'position',
+      'volatility',
+    ]);
+    expect(KEYWORD_SORTS).toContain('added');
+    expect(KEYWORD_SORTS).toContain('competitors');
   });
 });
 

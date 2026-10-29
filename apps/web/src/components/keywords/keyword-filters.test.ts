@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  exactSearchEmptyBody,
   keywordColumnFilters,
   keywordFilterChips,
+  keywordSearchFilter,
   type KeywordFilters,
   tagOptions,
 } from "./keyword-filters";
@@ -97,5 +99,38 @@ describe("tag filters", () => {
       { value: "testing", label: "testing" },
     ]);
     expect(tagOptions([], [])).toEqual([]);
+  });
+});
+
+describe("the quoted search", () => {
+  it("names an exact phrase in its chip", () => {
+    expect(keywordFilterChips({ ...NONE, q: '"focus timer"' })).toEqual([
+      { key: "q", label: "Exact phrase: focus timer" },
+    ]);
+  });
+
+  it("names an unbalanced quote as a plain search", () => {
+    expect(keywordFilterChips({ ...NONE, q: '"focus' })).toEqual([
+      { key: "q", label: 'Search: "focus' },
+    ]);
+  });
+
+  it("explains an empty table only for an exact phrase", () => {
+    expect(exactSearchEmptyBody('"focus timer"')).toBe(
+      'No keyword is exactly "focus timer" with these filters. Remove the quotes to match keywords that contain it.',
+    );
+    expect(exactSearchEmptyBody("focus")).toBeUndefined();
+  });
+
+  it("filters a row by the whole keyword", () => {
+    const rowOf = (text: string) =>
+      ({ getValue: () => text }) as unknown as Parameters<
+        typeof keywordSearchFilter
+      >[0];
+    const filter = (text: string, q: string) =>
+      keywordSearchFilter(rowOf(text), "keyword", q, () => undefined);
+
+    expect(filter("focus timer", '"focus timer"')).toBe(true);
+    expect(filter("focus timer app", '"focus timer"')).toBe(false);
   });
 });

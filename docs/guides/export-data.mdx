@@ -13,14 +13,16 @@ The export writes one row per tracked keyword, named `keywords-<appId>-<date>.cs
 
 | Column group | Columns |
 | --- | --- |
-| Identity | `keyword`, `source`, `active`, `bucket`, `relevance` |
-| Position | `position`, `delta1d`, `delta7d`, `volatility` |
+| Identity | `keyword`, `source`, `active`, `bucket`, `relevance`, `added` |
+| Position | `position`, `delta1d`, `delta7d`, `volatility`, `competitorsInTop10` |
 | Scores | `popularity`, `difficulty`, `opportunity` |
 | Provenance | `scoredAt`, `scoringSource`, `formulaVersion`, `confidence`, `capturedAt` |
 | Evidence | `suggestReach`, `serpFlags` separated by spaces, `officialPopularity`, `officialPopularityState`, `officialPopularityFloor`, `officialPopularityWeek`, `lastAboveFloorValue`, `lastAboveFloorWeek`, `scoreOutdated` |
 | Caveat | `scoreComparability` |
 | Owner notes | `tags` separated by semicolons, `note` |
 | Market | `country`, the storefront of each keyword, as the last column |
+
+`added` is the UTC day the app started tracking the keyword, and `competitorsInTop10` is empty when the table shows a dash.
 
 The floor columns are explained in [What is a floor answer?](/concepts/scoring#what-is-a-floor-answer).
 

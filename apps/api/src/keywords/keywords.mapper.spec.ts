@@ -14,6 +14,7 @@ const row = (
   relevance: null,
   tags: [],
   note: null,
+  createdAt: new Date('2026-10-20T08:30:00.000Z'),
   keyword: {
     text: 'habit tracker',
     country: 'us',
@@ -44,6 +45,12 @@ describe('toTrackedKeywordItem', () => {
     );
     expect(item.tags).toEqual(['core', 'brand']);
     expect(item.note).toBe('Push in May');
+  });
+
+  it('carries the instant the app started tracking the keyword', () => {
+    expect(toTrackedKeywordItem(row()).trackedAt).toBe(
+      '2026-10-20T08:30:00.000Z',
+    );
   });
 
   it('derives volume, difficulty and a default relevance', () => {

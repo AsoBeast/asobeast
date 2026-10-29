@@ -157,6 +157,7 @@ function buildPrisma() {
             source: row.source,
             active: row.active,
             relevance: null,
+            createdAt: new Date('2026-10-01T00:00:00.000Z'),
             keyword: {
               text: textOf(row.keywordId),
               country: APP.country,
