@@ -5,6 +5,7 @@ import { flexRender, type Table as TableInstance } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import type { TrackedKeywordItem } from "@asobeast/shared";
 import { FilteredEmpty } from "@/components/data-table/FilteredEmpty";
+import { keywordTableCaption } from "./keyword-caption";
 import type { KeywordTableFeatures } from "./keyword-table-features";
 import {
   Table,
@@ -70,11 +71,11 @@ export function KeywordsDataTable({
       aria-rowcount={rows.length + 1}
     >
       <TableCaption className="sr-only">
-        Tracked keywords with source, {shown("added") ? "date added, " : ""}
-        position and its daily change, popularity, difficulty, opportunity,{" "}
-        {playInstalls ? "Play installs per search term, " : ""}7 day change
-        {shown("competitors") ? ", " : " and "}top 10 volatility
-        {shown("competitors") ? " and competitors in the top 10" : ""}.
+        {keywordTableCaption({
+          added: shown("added"),
+          playInstalls,
+          competitors: shown("competitors"),
+        })}
       </TableCaption>
       <TableHeader className="sticky top-0 z-20">
         {table.getHeaderGroups().map((headerGroup) => (
