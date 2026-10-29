@@ -131,7 +131,8 @@ export class AscKeywordFieldSync {
         [...field.phrases],
       ]),
     );
-    const adopted = (await fieldSyncOf(this.prisma, app.id)) !== null;
+    const sync = await fieldSyncOf(this.prisma, app.id);
+    const adopted = sync !== null && sync.lastError === null;
     const markets = await loadAppMarkets(this.prisma, app);
     const home = homeLocalization(app.country);
 

@@ -43,6 +43,7 @@ interface BuildOptions {
   abroad?: string[];
   saveFailure?: QuotaExceededError | null;
   priorSync?: boolean;
+  syncLastError?: string | null;
 }
 
 interface KeywordAppRow {
@@ -94,7 +95,9 @@ function build(options: BuildOptions = {}) {
       findFirst: jest
         .fn()
         .mockResolvedValue(
-          options.priorSync === true ? { appId: APP.id } : null,
+          options.priorSync === true
+            ? { appId: APP.id, lastError: options.syncLastError ?? null }
+            : null,
         ),
       upsert: jest
         .fn<Promise<unknown>, [Record<string, unknown>]>()
@@ -190,6 +193,20 @@ describe('AscKeywordFieldSync.run', () => {
     expect(writer.save).toHaveBeenCalledWith(
       expect.objectContaining({ localization: 'en-US', phrases: [] }),
     );
+  });
+
+  it('keeps a hand written field while the first import waits for quota', async () => {
+    const { service, writer, actions } = build({
+      stored: [{ localization: 'en-US', phrases: ['focus'] }],
+      served: [{ locale: 'en-US', keywords: '' }],
+      priorSync: true,
+      syncLastError: FIELD_SYNC_QUOTA_STOPPED('de'),
+    });
+
+    await service.run();
+
+    expect(writer.save).not.toHaveBeenCalled();
+    expect(actions.request).not.toHaveBeenCalled();
   });
 
   it('ignores a locale AsoBeast does not know', async () => {
