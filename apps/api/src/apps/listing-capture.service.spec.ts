@@ -70,7 +70,6 @@ const build = (overrides: {
   raw?: Record<string, unknown>;
   getApp?: jest.Mock;
   fieldSyncRow?: unknown;
-  connected?: boolean;
 }) => {
   const tx = {
     appSnapshot: {
@@ -95,13 +94,6 @@ const build = (overrides: {
     trackedKeyword: { count: jest.fn().mockResolvedValue(1) },
     keywordFieldSync: {
       findFirst: jest.fn().mockResolvedValue(overrides.fieldSyncRow ?? null),
-    },
-    storeConnection: {
-      findFirst: jest
-        .fn()
-        .mockResolvedValue(
-          overrides.connected === false ? null : { store: Store.APP_STORE },
-        ),
     },
     withTransaction: jest.fn((work: (client: typeof tx) => unknown) =>
       work(tx),
@@ -181,11 +173,12 @@ describe('ListingCaptureService.refresh', () => {
     expect(request).toHaveBeenCalledWith(APP.id, SNAPSHOT.id);
   });
 
-  it('enqueues the store sync when the home capture sees a new release', async () => {
+  it('enqueues the store sync when the home capture sees a new release of a following app', async () => {
     const { service, storeReports } = build({
       recordRefresh: jest
         .fn()
         .mockResolvedValue([{ field: 'version', before: '1.0', after: '2.0' }]),
+      fieldSyncRow: { syncedAt: new Date() },
     });
 
     await service.refresh(APP.id);
@@ -193,28 +186,15 @@ describe('ListingCaptureService.refresh', () => {
     expect(storeReports.enqueue).toHaveBeenCalledWith('ws_1', Store.APP_STORE);
   });
 
-  it('enqueues nothing for a home capture without an App Store connection', async () => {
-    const { service, storeReports } = build({
-      recordRefresh: jest
-        .fn()
-        .mockResolvedValue([{ field: 'version', before: '1.0', after: '2.0' }]),
-      connected: false,
-    });
+  it('enqueues nothing for a home capture without an import mark', async () => {
+    const { service, storeReports } = build({});
 
     await service.refresh(APP.id);
 
     expect(storeReports.enqueue).not.toHaveBeenCalled();
   });
 
-  it('enqueues the store sync once for a home capture with no import yet', async () => {
-    const { service, storeReports } = build({});
-
-    await service.refresh(APP.id);
-
-    expect(storeReports.enqueue).toHaveBeenCalledWith('ws_1', Store.APP_STORE);
-  });
-
-  it('leaves the store sync alone once the fields were imported', async () => {
+  it('leaves the store sync alone when no release was recorded', async () => {
     const { service, storeReports } = build({
       fieldSyncRow: { syncedAt: new Date() },
     });

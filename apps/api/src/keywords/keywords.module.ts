@@ -20,6 +20,7 @@ import { MarketKeywordFieldsService } from './market-keyword-fields.service';
 import { MarketListingRequests } from './market-listing.requests';
 import { SpiderService } from './spider.service';
 import { StoreSuggestions } from './store-suggestions';
+import { secretBoxProvider } from '../store-connect/secret-box.provider';
 import { TrackedKeywordAccess } from './tracked-keyword.access';
 
 @Module({
@@ -33,6 +34,7 @@ import { TrackedKeywordAccess } from './tracked-keyword.access';
   ],
   controllers: [KeywordsController, LocalizationsController],
   providers: [
+    secretBoxProvider,
     AppLocalizationsService,
     CompetitorSearchPlanner,
     FirstPositionChecks,

@@ -169,6 +169,7 @@ describe('App localizations (e2e)', () => {
         markets: ['us'],
         storeManaged: false,
         storeSync: null,
+        storeImport: 'unavailable',
         localizations: [
           {
             localization: 'en-US',

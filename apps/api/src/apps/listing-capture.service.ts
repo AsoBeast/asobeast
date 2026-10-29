@@ -194,21 +194,12 @@ export class ListingCaptureService {
     recorded: DetectedChange[],
   ): Promise<boolean> {
     if (app.store !== Store.APP_STORE || app.isCompetitor) return false;
-    if (!(await this.fieldSyncConnected())) return false;
-    if (recorded.some(({ field }) => field === 'version')) return true;
+    if (!recorded.some(({ field }) => field === 'version')) return false;
     const synced = await this.prisma.keywordFieldSync.findFirst({
       where: { appId: app.id },
       select: { appId: true },
     });
-    return synced === null;
-  }
-
-  private async fieldSyncConnected(): Promise<boolean> {
-    const connection = await this.prisma.storeConnection.findFirst({
-      where: { store: Store.APP_STORE, status: 'active' },
-      select: { store: true },
-    });
-    return connection !== null;
+    return synced !== null;
   }
 
   private async readListing(app: App, market: string): Promise<NormalizedApp> {

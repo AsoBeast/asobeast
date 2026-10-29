@@ -13,6 +13,7 @@ import { googleOAuthClientProvider } from './play/google-sign-in';
 import { PlayReportSync } from './play/play-report-sync.service';
 import { PlaySignIn } from './play/play-sign-in.service';
 import { PlaySignInController } from './play-sign-in.controller';
+import { KeywordFieldImportController } from './keyword-field-import.controller';
 import { SECRET_BOX, secretBoxProvider } from './secret-box.provider';
 import { StoreConnectionService } from './store-connection.service';
 import { StoreConnectionsController } from './store-connections.controller';
@@ -35,6 +36,7 @@ import { StoreReportsWorker } from './store-reports.worker';
     StoreConnectionsController,
     PlaySignInController,
     StoreFunnelController,
+    KeywordFieldImportController,
   ],
   providers: [
     secretBoxProvider,

@@ -485,6 +485,42 @@ describe('AscReportSync', () => {
     );
   });
 
+  it('sets rateLimited when the keyword field import answers 429', async () => {
+    const { service, keywordFields, connections } = build();
+    keywordFields.run.mockRejectedValue(
+      new AscRateLimitedError('slow', 429, null),
+    );
+
+    await expect(service.run()).resolves.toMatchObject({ rateLimited: true });
+    expect(connections.markSynced).toHaveBeenCalled();
+  });
+
+  it('imports the keyword fields even when the download fails', async () => {
+    const { service, applier, keywordFields } = build();
+    applier.apply.mockRejectedValue(new Error('down'));
+
+    await expect(service.run()).rejects.toThrow('down');
+    expect(keywordFields.run).toHaveBeenCalled();
+  });
+
+  it('skips the keyword field import when the download is rate limited', async () => {
+    const { service, applier, keywordFields } = build();
+    applier.apply.mockRejectedValue(new AscRateLimitedError('slow', 429, null));
+
+    await expect(service.run()).resolves.toMatchObject({ rateLimited: true });
+    expect(keywordFields.run).not.toHaveBeenCalled();
+  });
+
+  it('reports the keyword field counts of the import', async () => {
+    const { service, keywordFields } = build();
+    keywordFields.run.mockResolvedValue({ fields: 3, changed: 2 });
+
+    await expect(service.run()).resolves.toMatchObject({
+      fields: 3,
+      fieldsChanged: 2,
+    });
+  });
+
   it('never rejects the key over a detailed instance and keeps applying the standard ones', async () => {
     const { service, api, applier, connections } = build();
     api.discoveryReport.mockImplementation(

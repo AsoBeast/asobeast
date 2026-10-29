@@ -1,4 +1,5 @@
 import './helpers/enable-billing';
+import './helpers/enable-store-connect';
 import { getQueueToken } from '@nestjs/bullmq';
 import { Store } from '@prisma/client';
 import {
@@ -153,6 +154,8 @@ describe('Localized keyword fields (e2e)', () => {
     await harness.prisma.$executeRawUnsafe(
       'TRUNCATE TABLE "App", "Keyword" RESTART IDENTITY CASCADE',
     );
+    await harness.prisma.storeConnection.deleteMany({});
+    await harness.prisma.keywordFieldSync.deleteMany({});
   });
 
   afterAll(() => stopBillingHarness(harness));
@@ -828,9 +831,24 @@ describe('Localized keyword fields (e2e)', () => {
 
   describe('managed by App Store Connect', () => {
     const seedSyncRow = (appId: string) =>
-      harness.prisma.keywordFieldSync.create({
-        data: { appId, workspaceId: WORKSPACE, version: '2.1' },
-      });
+      harness.prisma.$transaction([
+        harness.prisma.storeConnection.create({
+          data: {
+            workspaceId: WORKSPACE,
+            store: Store.APP_STORE,
+            issuerId: 'issuer',
+            keyId: 'key',
+            keyFingerprint: 'fingerprint',
+            credentialCiphertext: 'v1.sealed',
+          },
+        }),
+        harness.prisma.keywordFieldSync.create({
+          data: { appId, workspaceId: WORKSPACE, version: '2.1' },
+        }),
+      ]);
+
+    const stopImport = (appId: string) =>
+      harness.prisma.keywordFieldSync.deleteMany({ where: { appId } });
 
     const localizationsOf = (appId: string) =>
       harness.owner.get(`/apps/${appId}/localizations`);
@@ -881,16 +899,40 @@ describe('Localized keyword fields (e2e)', () => {
         .body as AppLocalizationsResult;
       expect(before.storeManaged).toBe(false);
       expect(before.storeSync).toBeNull();
+      expect(before.storeImport).toBe('unavailable');
 
       await seedSyncRow(appId);
       const managed = (await localizationsOf(appId).expect(200))
         .body as AppLocalizationsResult;
       expect(managed.storeManaged).toBe(true);
+      expect(managed.storeImport).toBe('following');
       expect(managed.storeSync).toMatchObject({
         version: '2.1',
         error: null,
       });
       expect(typeof managed.storeSync.at).toBe('string');
+    });
+
+    it('E-SAV-MGD-04 hands the fields back while the connection is paused', async () => {
+      const appId = await seedApp();
+      await harness.prisma.keywordFieldSync.create({
+        data: { appId, workspaceId: WORKSPACE, version: '2.1' },
+      });
+
+      const paused = (await localizationsOf(appId).expect(200))
+        .body as AppLocalizationsResult;
+      expect(paused.storeManaged).toBe(false);
+      expect(paused.storeImport).toBe('paused');
+      await harness.owner
+        .put(`/apps/${appId}/keyword-field`)
+        .send({ text: 'uno' })
+        .expect(200);
+
+      await stopImport(appId);
+      const stopped = (await localizationsOf(appId).expect(200))
+        .body as AppLocalizationsResult;
+      expect(stopped.storeImport).toBe('unavailable');
+      expect(stopped.storeSync).toBeNull();
     });
   });
 });

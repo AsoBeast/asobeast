@@ -1,12 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { parseKeywordField, type AppStoreLocalization } from '@asobeast/shared';
+import { Store } from '@prisma/client';
+import {
+  isAppStoreLocalization,
+  parseKeywordField,
+  type AppStoreLocalization,
+} from '@asobeast/shared';
 import { ActionRunQueue } from '../actions/action-run.queue';
 import { QuotaExceededError } from '../auth/quota.errors';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
 import { loadAppMarkets } from '../keywords/app-markets';
 import { storedKeywordFields } from '../keywords/keyword-field-index';
-import { fieldSyncOf } from '../keywords/keyword-field-managed';
 import { checkKeywordText, KeywordApp } from '../keywords/keywords.support';
 import { homeLocalization, readersOf } from '../keywords/localization-markets';
 import { KeywordFieldWriter } from '../keywords/keyword-field-writer';
@@ -19,7 +23,7 @@ import type {
 } from './asc-listing-api';
 import { StoreConnectionService } from './store-connection.service';
 
-const STORE = 'APP_STORE';
+const STORE = Store.APP_STORE;
 
 export const FIELD_SYNC_QUOTA_STOPPED = (localization: string): string =>
   `The workspace keyword limit stopped this import at ${localization}. Free keyword markets or upgrade, and the next sync completes it.`;
@@ -39,12 +43,6 @@ const untouchedOutcome = { fields: 0, changed: 0, quotaStopped: false };
 const samePhrases = (before: readonly string[], phrases: string[]): boolean =>
   before.length === phrases.length &&
   before.every((phrase, index) => phrase === phrases[index]);
-
-const firstImportSpares = (
-  adopted: boolean,
-  before: readonly string[] | undefined,
-  phrases: string[],
-): boolean => !adopted && (before?.length ?? 0) > 0 && phrases.length === 0;
 
 const fieldPhrases = (text: string): string[] =>
   parseKeywordField(text).phrases.flatMap((phrase) => {
@@ -89,20 +87,25 @@ export class AscKeywordFieldSync {
     if (!connection || connection.status === 'rejected') {
       return { fields: 0, changed: 0 };
     }
-    const apps = await this.prisma.app.findMany({
-      where: { store: STORE, isCompetitor: false },
-      select: {
-        id: true,
-        workspaceId: true,
-        store: true,
-        country: true,
-        storeAppId: true,
-      },
-      orderBy: { createdAt: 'asc' },
+    const following = await this.prisma.keywordFieldSync.findMany({
+      select: { appId: true },
+      orderBy: { syncedAt: 'asc' },
     });
     let fields = 0;
     let changed = 0;
-    for (const app of apps) {
+    for (const { appId } of following) {
+      const app = await this.prisma.app.findUnique({
+        where: { id: appId },
+        select: {
+          id: true,
+          workspaceId: true,
+          store: true,
+          country: true,
+          storeAppId: true,
+          isCompetitor: true,
+        },
+      });
+      if (!app || app.store !== STORE || app.isCompetitor) continue;
       const outcome = await this.syncApp(connection.api, app);
       fields += outcome.fields;
       changed += outcome.changed;
@@ -125,35 +128,35 @@ export class AscKeywordFieldSync {
     const served = await this.versionLocalizations(api, app, live.id);
     if (served === null) return untouchedOutcome;
 
-    const stored = new Map(
-      (await storedKeywordFields(this.prisma, app.id)).map((field) => [
-        field.localization,
-        [...field.phrases],
-      ]),
+    const stored = new Map<AppStoreLocalization, string[]>(
+      (await storedKeywordFields(this.prisma, app.id)).flatMap((field) =>
+        isAppStoreLocalization(field.localization)
+          ? [[field.localization, [...field.phrases]] as const]
+          : [],
+      ),
     );
-    const sync = await fieldSyncOf(this.prisma, app.id);
-    const adopted = sync !== null && sync.lastError === null;
     const markets = await loadAppMarkets(this.prisma, app);
     const home = homeLocalization(app.country);
+    const imports = knownLocalizations(served, home);
+    const servedTags = new Set(imports.map(({ localization }) => localization));
 
     let fields = 0;
     let changed = 0;
     let stoppedAt: AppStoreLocalization | null = null;
-    for (const entry of knownLocalizations(served, home)) {
-      const before = stored.get(entry.localization);
-      if (before && samePhrases(before, entry.phrases)) {
+    for (const entry of imports) {
+      const before = stored.get(entry.localization) ?? [];
+      if (samePhrases(before, entry.phrases)) {
         fields += 1;
         continue;
       }
-      if (firstImportSpares(adopted, before, entry.phrases)) continue;
       try {
         await this.writer.save({
           app,
           localization: entry.localization,
           phrases: entry.phrases,
-          markets: readersOf(entry.localization, markets, home).map(
-            ({ country }) => country,
-          ),
+          markets: readersOf(entry.localization, markets, home)
+            .filter(({ role }) => role === 'default')
+            .map(({ country }) => country),
         });
       } catch (error) {
         if (!(error instanceof QuotaExceededError)) throw error;
@@ -161,6 +164,11 @@ export class AscKeywordFieldSync {
         break;
       }
       fields += 1;
+      changed += 1;
+    }
+    for (const localization of stored.keys()) {
+      if (servedTags.has(localization) || localization === home) continue;
+      await this.writer.remove(app, localization);
       changed += 1;
     }
     await this.recordSync(app, live.version, stoppedAt);

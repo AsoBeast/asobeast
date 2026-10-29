@@ -91,7 +91,13 @@ export class AscReportSync {
       const outcome = await this.requester.ensure(connection, STORE);
       summary.apps = outcome.apps;
       summary.failed = outcome.failed;
-      await this.download(connection, summary);
+      try {
+        await this.download(connection, summary);
+      } catch (error) {
+        if (error instanceof AscRateLimitedError) throw error;
+        await this.importKeywordFields(summary);
+        throw error;
+      }
       await this.importKeywordFields(summary);
       await this.connections.markSynced(
         STORE,
@@ -121,6 +127,10 @@ export class AscReportSync {
       summary.fields = fields.fields;
       summary.fieldsChanged = fields.changed;
     } catch (error) {
+      if (error instanceof AscRateLimitedError) {
+        summary.rateLimited = true;
+        return;
+      }
       this.logger.warn(
         `the keyword field import waits for the next sync: ${messageOf(error)}`,
       );

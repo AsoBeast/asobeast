@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -16,7 +17,9 @@ import {
 } from '@asobeast/shared';
 import { QuotaService } from '../auth/quota.service';
 import { requestsPerJob } from '../jobs/request-weights';
+import { type SecretBox } from '../common/crypto/secret-box';
 import { PrismaService } from '../prisma/prisma.service';
+import { SECRET_BOX } from '../store-connect/secret-box.provider';
 import { AppLocalizationsService } from './app-localizations.service';
 import { loadAppMarkets } from './app-markets';
 import { planFieldSave } from './keyword-field-save-plan';
@@ -35,6 +38,7 @@ export class LocalizedKeywordFieldService {
     private readonly writer: KeywordFieldWriter,
     private readonly localizations: AppLocalizationsService,
     private readonly quota: QuotaService,
+    @Inject(SECRET_BOX) private readonly box: SecretBox | null,
   ) {}
 
   async save(
@@ -43,7 +47,7 @@ export class LocalizedKeywordFieldService {
     request: LocalizedKeywordFieldRequest,
   ): Promise<LocalizedKeywordFieldResult> {
     const app = await ensureLocalizedFieldApp(this.prisma, appId);
-    await refuseManagedField(this.prisma, app.id);
+    await refuseManagedField(this.prisma, this.box, app.id);
     const { phrases, duplicatesRemoved } = parseFieldText(request.text);
     const refusal = trackInError(
       localization,

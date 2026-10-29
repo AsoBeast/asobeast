@@ -3,10 +3,15 @@ import * as argon2 from 'argon2';
 import { Store } from '@prisma/client';
 import type {
   ApiErrorEnvelope,
+  AppLocalizationsResult,
   StoreConnectionItem,
   StoreConnectionState,
 } from '@asobeast/shared';
+import { STORE_FIELD_MANAGED } from '../src/keywords/keyword-field-managed';
+import { JOBS, QUEUES } from '../src/jobs/jobs.types';
 import request from 'supertest';
+import { getQueueToken } from '@nestjs/bullmq';
+import type { Queue } from 'bullmq';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { seedApiToken } from './helpers/api-tokens';
 import { ownerAgent } from './helpers/session';
@@ -490,5 +495,133 @@ describe('Store connections (e2e)', () => {
         where: { workspaceId: OTHER_WORKSPACE },
       }),
     ).resolves.toBe(1);
+  });
+
+  describe('the keyword field import', () => {
+    const seedApp = async () =>
+      (
+        await harness.prisma.app.create({
+          data: {
+            workspaceId: DEFAULT_WORKSPACE_ID,
+            store: Store.APP_STORE,
+            storeAppId: '1476097583',
+            country: 'us',
+            name: 'Focus',
+          },
+          select: { id: true },
+        })
+      ).id;
+
+    const localizationsOf = (appId: string) =>
+      owner.get(`/apps/${appId}/localizations`).expect(200);
+
+    it('answers 409 to an import without an active connection', async () => {
+      const appId = await seedApp();
+
+      const response = await owner
+        .post(`/apps/${appId}/keyword-fields/import`)
+        .expect(409);
+
+      expect((response.body as ApiErrorEnvelope).message).toBe(
+        'Importing the keyword fields needs an active App Store Connect connection. Connect or verify the key in Integrations first.',
+      );
+      await expect(harness.prisma.keywordFieldSync.count()).resolves.toBe(0);
+    });
+
+    it('marks the app following, queues the sync and hands the fields back on stop', async () => {
+      await connect().expect(200);
+      const appId = await seedApp();
+
+      const started = await owner
+        .post(`/apps/${appId}/keyword-fields/import`)
+        .expect(200);
+      const result = started.body as AppLocalizationsResult;
+      expect(result.storeImport).toBe('following');
+      expect(result.storeManaged).toBe(true);
+      await expect(
+        harness.prisma.keywordFieldSync.count({ where: { appId } }),
+      ).resolves.toBe(1);
+      const storeConnect = harness.app.get<Queue>(
+        getQueueToken(QUEUES.STORE_CONNECT),
+        { strict: false },
+      );
+      const queued = await storeConnect.getJobs(['wait', 'paused', 'delayed']);
+      expect(queued.some((job) => job.name === JOBS.SYNC_STORE_REPORTS)).toBe(
+        true,
+      );
+
+      const saved = await owner
+        .put(`/apps/${appId}/keyword-field`)
+        .send({ text: 'focus' })
+        .expect(409);
+      expect((saved.body as ApiErrorEnvelope).message).toBe(
+        STORE_FIELD_MANAGED,
+      );
+
+      await owner.delete(`/apps/${appId}/keyword-fields/import`).expect(204);
+
+      const stopped = (await localizationsOf(appId))
+        .body as AppLocalizationsResult;
+      expect(stopped.storeImport).toBe('available');
+      expect(stopped.storeManaged).toBe(false);
+      await owner
+        .put(`/apps/${appId}/keyword-field`)
+        .send({ text: 'focus' })
+        .expect(200);
+    });
+
+    it('answers 409 to a second import and 404 to stopping without one', async () => {
+      await connect().expect(200);
+      const appId = await seedApp();
+      await owner.post(`/apps/${appId}/keyword-fields/import`).expect(200);
+
+      await owner.post(`/apps/${appId}/keyword-fields/import`).expect(409);
+      await owner.delete(`/apps/${appId}/keyword-fields/import`).expect(204);
+      await owner.delete(`/apps/${appId}/keyword-fields/import`).expect(404);
+    });
+
+    it('pauses the import while the key is rejected and keeps the fields editable', async () => {
+      await connect().expect(200);
+      const appId = await seedApp();
+      await owner.post(`/apps/${appId}/keyword-fields/import`).expect(200);
+
+      await harness.prisma.storeConnection.updateMany({
+        data: { status: 'rejected' },
+      });
+
+      const paused = (await localizationsOf(appId))
+        .body as AppLocalizationsResult;
+      expect(paused.storeImport).toBe('paused');
+      expect(paused.storeManaged).toBe(false);
+      await owner
+        .put(`/apps/${appId}/keyword-field`)
+        .send({ text: 'focus' })
+        .expect(200);
+    });
+
+    it('answers 400 for a competitor app', async () => {
+      await connect().expect(200);
+      const appId = await seedApp();
+      const rival = await harness.prisma.app.create({
+        data: {
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          store: Store.APP_STORE,
+          storeAppId: 'rival',
+          country: 'us',
+          name: 'Rival',
+          isCompetitor: true,
+          primaryAppId: appId,
+        },
+        select: { id: true },
+      });
+
+      const response = await owner
+        .post(`/apps/${rival.id}/keyword-fields/import`)
+        .expect(400);
+
+      expect((response.body as ApiErrorEnvelope).message).toBe(
+        'A competitor app has no localizations or keyword fields; use its primary app',
+      );
+    });
   });
 });

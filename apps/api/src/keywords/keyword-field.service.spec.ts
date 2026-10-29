@@ -2,6 +2,7 @@ import { ConfigService } from '@nestjs/config';
 import { Store } from '@prisma/client';
 import { Queue } from 'bullmq';
 import { QuotaService } from '../auth/quota.service';
+import { type SecretBox } from '../common/crypto/secret-box';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
@@ -73,6 +74,7 @@ function buildPrisma() {
 
   const field = { phrases: null as string[] | null };
   const fieldSync = { row: null as { syncedAt: Date } | null };
+  const storeConnectionState = { row: null as { id: string } | null };
   const insertedTexts: string[][] = [];
   const client = {
     rows,
@@ -92,6 +94,9 @@ function buildPrisma() {
       findMany: () => Promise.resolve([]),
     },
     keywordFieldSync: { findFirst: () => Promise.resolve(fieldSync.row) },
+    storeConnection: {
+      findFirst: () => Promise.resolve(storeConnectionState.row),
+    },
     keywordField: {
       findMany: () =>
         Promise.resolve(
@@ -195,12 +200,16 @@ function buildPrisma() {
   return {
     ...client,
     fieldSync,
+    storeConnectionState,
     tx,
     withTransaction: <T>(run: (scoped: typeof tx) => Promise<T>) => run(tx),
   };
 }
 
-function buildService(prisma: ReturnType<typeof buildPrisma>) {
+function buildService(
+  prisma: ReturnType<typeof buildPrisma>,
+  box: SecretBox | null = null,
+) {
   const queue = { add: jest.fn(), addBulk: jest.fn() } as unknown as Queue;
   const writer = new KeywordFieldWriter(
     new KeywordTracker(
@@ -220,7 +229,11 @@ function buildService(prisma: ReturnType<typeof buildPrisma>) {
     { request: jest.fn() } as unknown as MarketListingRequests,
     { schedule: jest.fn() } as unknown as FirstPositionChecks,
   );
-  return new KeywordFieldService(prisma as unknown as PrismaService, writer);
+  return new KeywordFieldService(
+    prisma as unknown as PrismaService,
+    writer,
+    box,
+  );
 }
 
 const deactivatedTexts = (prisma: ReturnType<typeof buildPrisma>) =>
@@ -340,7 +353,8 @@ describe('KeywordFieldService.setKeywordField managed by App Store Connect', () 
   it('refuses a manual save once the field was imported', async () => {
     const prisma = buildPrisma();
     prisma.fieldSync.row = { syncedAt: new Date() };
-    const service = buildService(prisma);
+    prisma.storeConnectionState.row = { id: 'con1' };
+    const service = buildService(prisma, {} as unknown as SecretBox);
 
     await expect(
       service.setKeywordField(APP.id, 'delta,alpha'),

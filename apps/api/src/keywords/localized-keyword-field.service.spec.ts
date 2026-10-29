@@ -7,6 +7,7 @@ import {
   keywordFieldChars,
 } from '@asobeast/shared';
 import { QuotaService, WorkspaceUsage } from '../auth/quota.service';
+import { type SecretBox } from '../common/crypto/secret-box';
 import { PrismaService } from '../prisma/prisma.service';
 import { AppLocalizationsService } from './app-localizations.service';
 import { loadAppMarkets } from './app-markets';
@@ -58,12 +59,14 @@ const build = (
   items: AppLocalizationItem[],
   store: Store = Store.APP_STORE,
   stored: string[] | null = null,
+  box: SecretBox | null = null,
 ) => {
   jest.mocked(loadAppMarkets).mockReset().mockResolvedValue(markets);
   jest.mocked(loadTrackingStates).mockReset().mockResolvedValue(new Map());
   const prisma = {
     app: { findFirst: jest.fn().mockResolvedValue({ ...APP, store }) },
     keywordFieldSync: { findFirst: jest.fn().mockResolvedValue(null) },
+    storeConnection: { findFirst: jest.fn().mockResolvedValue(null) },
     keywordField: {
       findUnique: jest
         .fn()
@@ -89,6 +92,7 @@ const build = (
     writer as unknown as KeywordFieldWriter,
     localizations as unknown as AppLocalizationsService,
     quota as unknown as QuotaService,
+    box,
   );
   return { prisma, writer, localizations, quota, service };
 };
@@ -186,10 +190,17 @@ describe('LocalizedKeywordFieldService.save', () => {
   });
 
   it('refuses a manual save once App Store Connect imported the field', async () => {
-    const { service, prisma, writer } = build(['us'], [item('en-US', [])]);
+    const { service, prisma, writer } = build(
+      ['us'],
+      [item('en-US', [])],
+      Store.APP_STORE,
+      null,
+      {} as unknown as SecretBox,
+    );
     prisma.keywordFieldSync.findFirst.mockResolvedValue({
       syncedAt: new Date(),
     });
+    prisma.storeConnection.findFirst.mockResolvedValue({ id: 'con1' });
 
     await expect(
       service.save(APP.id, 'en-US', { text: 'uno', trackIn: ['us'] }),
