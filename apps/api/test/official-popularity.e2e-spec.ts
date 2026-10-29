@@ -116,6 +116,13 @@ describe('official popularity lookup against the database (e2e)', () => {
     });
   });
 
+  it('falls back to the floor of the week when the guessed genre lists nothing', async () => {
+    await expect(lookup.for(keyword('never quiz'), 'MUSIC')).resolves.toEqual({
+      absentBelow: 44,
+      context: { week: utcDayOf(newest), floor: 44, lastAboveFloor: null },
+    });
+  });
+
   it('judges a sports term against the sports floor', async () => {
     await expect(lookup.for(keyword('sports edge'))).resolves.toEqual({
       value: 44,

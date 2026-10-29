@@ -26,6 +26,7 @@ import {
 
 const FLOOR_TERM = 'puzzle game';
 const ABSENT_TERM = 'geo trivia world';
+const LISTED_TERM = 'mid puzzle';
 const APP_STORE_URL = 'https://apps.apple.com/us/app/puzzle/id123456789';
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -159,7 +160,7 @@ describe('Apple floor popularity answers (e2e)', () => {
     const appId = (imported.body as AppDetail).id;
     const added = await api
       .post(`/apps/${appId}/keywords`)
-      .send({ keywords: [FLOOR_TERM, ABSENT_TERM] })
+      .send({ keywords: [FLOOR_TERM, ABSENT_TERM, LISTED_TERM] })
       .expect(201);
     for (const item of added.body as TrackedKeywordItem[]) {
       await asWorkspace(app, () => scoring.scoreKeyword(item.keywordId));
@@ -201,6 +202,24 @@ describe('Apple floor popularity answers (e2e)', () => {
     expect(absent?.scoreProvenance).toMatchObject({
       source: 'APPLE_SEARCH_SIGNALS',
       confidence: 'MEDIUM',
+    });
+  });
+
+  it('keeps high confidence for a term listed above the floor', async () => {
+    const listed = itemOf(await scoredKeywords(), LISTED_TERM);
+
+    expect(listed?.scoreSignals).toMatchObject({
+      officialPopularity: 70,
+      officialPopularityState: 'listed',
+      officialPopularityFloor: 41,
+      officialPopularityWeek: utcDayOf(newest),
+    });
+    expect(listed?.scoreSignals).not.toHaveProperty(
+      'officialPopularityLastAboveFloor',
+    );
+    expect(listed?.scoreProvenance).toMatchObject({
+      source: 'APPLE_ADS_POPULARITY',
+      confidence: 'HIGH',
     });
   });
 
