@@ -24,14 +24,13 @@ import { tagsIn } from "@/lib/keyword-tags";
 import { KeywordRowActions } from "./KeywordRowActions";
 import type { PositionHistoryContext } from "./PositionHistoryPopover";
 import {
-  DerivedScoreCell,
   NoteButton,
   PlayAcquisitionsCell,
   PositionCell,
-  ScoreCell,
   TagBadges,
   VolatilityCell,
 } from "./keyword-cells";
+import { DerivedScoreCell, ScoreCell } from "./score-cells";
 import { isScoreOutdated, scoreValue, shownScore } from "./keyword-scores";
 import { difficultySignalLines, popularitySignalLines } from "./score-signals";
 import { SOURCE_LABELS, SourceBadge } from "./SourceBadge";
