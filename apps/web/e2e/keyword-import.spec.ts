@@ -769,3 +769,28 @@ test("P-WEB-18 reads an Astro export as it is", async ({ page }) => {
       .getByText("US"),
   ).toBeVisible();
 });
+
+test("P-WEB-19 reads an AppFollow export from its header row", async ({
+  page,
+}) => {
+  const dialog = await openDialog(page);
+
+  await choose(
+    dialog,
+    [
+      "Keywords report",
+      "App,Import Lab",
+      "Keyword,Position,Keywords in Title,Total Apps,Popularity,Difficulty,Effectiveness",
+      "alpha one,4,1,120,48,31,57",
+      "beta two,,0,80,31,25,40",
+    ].join("\r\n"),
+    "keywords_iphone_1790496456.csv",
+  );
+
+  await expect(
+    dialog.getByText("2 rows above the header were skipped."),
+  ).toBeVisible();
+  await expect(dialog.getByText("6 other columns are ignored.")).toBeVisible();
+  await expect(dialog.getByRole("status")).toHaveText("2 new");
+  await expect(rowOf(dialog, /alpha one/).getByText("4")).toBeVisible();
+});

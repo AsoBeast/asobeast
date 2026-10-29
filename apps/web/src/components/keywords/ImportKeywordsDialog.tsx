@@ -18,6 +18,7 @@ import {
 import {
   appsLeftToChoose,
   columnOptions,
+  skippedAboveHeader,
 } from "@/lib/csv-import/parse-keyword-file";
 import { fileNotices, importButtonLabel } from "@/lib/keyword-import";
 import { ImportBudgetNotice } from "./ImportBudgetNotice";
@@ -53,6 +54,7 @@ export function ImportKeywordsDialog({
       ? fileNotices({
           fallback: loaded.file.fallback,
           hasHeader: view.hasHeader,
+          skippedRows: skippedAboveHeader(loaded.file, view),
           ignoredColumns: mapped.ignoredColumns,
           store,
           leftOut: mapped.leftOut,

@@ -6,6 +6,7 @@ import {
   initialView,
   mapKeywordFile,
   readKeywordFile,
+  skippedAboveHeader,
 } from "./parse-keyword-file";
 
 const bufferOf = (text: string): ArrayBuffer =>
@@ -118,12 +119,43 @@ describe("readKeywordFile", () => {
   });
 });
 
+const TARGET = {
+  store: "APP_STORE" as const,
+  storeAppId: "123456789",
+  name: "Import Lab",
+};
+
+const importedFrom = (text: string, store: Store = TARGET.store) => {
+  const file = readKeywordFile(bufferOf(text));
+  const view = initialView(file, TARGET);
+  return { file, view, mapped: mapKeywordFile(file, view, store) };
+};
+
+const ASTRO_EXPORT = [
+  "App Name,App Id,Platform,Keyword,Store Domain,Store,Note,Last Update,Ranking,Change,Popularity,Difficulty,Apps in Ranking,Tags",
+  "Import Lab,123456789,iphone,focus timer,us,United States,,2026-10-12 08:30:00,4,2,48,31,120,",
+  "Import Lab,123456789,ipad,focus timer,us,United States,,2026-10-12 08:30:00,6,0,48,31,120,",
+  'Import Lab,123456789,iphone,zegar pracy,pl,Poland,"Launch keyword\nsecond line",2026-10-12 08:30:00,2,-1,22,18,64,"core, brand"',
+  "Other App,987654321,iphone,habit tracker,us,United States,,2026-10-12 08:30:00,9,1,60,40,200,focus",
+  "Import Lab,123456789,mac,focus timer,gb,United Kingdom,,2026-10-12 08:30:00,,,,,,",
+].join("\r\n");
+
+const SONAR_EXPORT = [
+  "Keyword,Country,Store,Rank,Movement,Popularity,Difficulty,Est. downloads/day at current rank,Starred,Tags,Updated",
+  'focus timer,us,ios,4,+2,48,31,12,yes,"core, brand",2026-10-12',
+  "focus timer,us,android,9,-1,40,28,5,,,2026-10-12",
+  "zegar pracy,pl,ios,2,0,22,18,3,,core,2026-10-12",
+].join("\n");
+
+const APPFOLLOW_EXPORT = [
+  "\uFEFFKeywords report",
+  "App,Import Lab",
+  "Keyword,Position,Keywords in Title,Total Apps,Popularity,Difficulty,Effectiveness",
+  "focus timer,4,1,120,48,31,57",
+  "deep work,,0,80,31,25,40",
+].join("\r\n");
+
 describe("a file that names the apps and stores of its rows", () => {
-  const target = {
-    store: "APP_STORE" as const,
-    storeAppId: "123456789",
-    name: "Import Lab",
-  };
   const FILE = [
     "App Id,Platform,Keyword,Country,Position",
     "123456789,ios,focus timer,us,4",
@@ -134,7 +166,7 @@ describe("a file that names the apps and stores of its rows", () => {
 
   it("U-SCOPE-16 imports the rows of the app and store it is imported into and says what it left out", () => {
     const file = readKeywordFile(bufferOf(FILE));
-    const view = initialView(file, target);
+    const view = initialView(file, TARGET);
 
     expect(view).toEqual({
       hasHeader: true,
@@ -155,7 +187,7 @@ describe("a file that names the apps and stores of its rows", () => {
 
   it("U-SCOPE-17 imports every app of the file until one is chosen", () => {
     const file = readKeywordFile(bufferOf(FILE));
-    const view = initialView(file, { ...target, storeAppId: "5", name: null });
+    const view = initialView(file, { ...TARGET, storeAppId: "5", name: null });
 
     expect(view.app).toBeUndefined();
     expect(
@@ -165,7 +197,7 @@ describe("a file that names the apps and stores of its rows", () => {
 
   it("U-SCOPE-18 reads the file whole when the first row is not a header", () => {
     const file = readKeywordFile(bufferOf(FILE));
-    const view = { ...initialView(file, target), hasHeader: false };
+    const view = { ...initialView(file, TARGET), hasHeader: false };
     const mapped = mapKeywordFile(file, view, "APP_STORE");
 
     expect(mapped.rows).toHaveLength(5);
@@ -175,39 +207,18 @@ describe("a file that names the apps and stores of its rows", () => {
   it("U-SCOPE-19 counts the apps still to choose from only while every app of the file is imported", () => {
     const file = readKeywordFile(bufferOf(FILE));
     const unmatched = initialView(file, {
-      ...target,
+      ...TARGET,
       storeAppId: "5",
       name: null,
     });
 
     expect(appsLeftToChoose(file, unmatched)).toBe(2);
-    expect(appsLeftToChoose(file, initialView(file, target))).toBe(0);
+    expect(appsLeftToChoose(file, initialView(file, TARGET))).toBe(0);
     expect(appsLeftToChoose(file, { ...unmatched, hasHeader: false })).toBe(0);
   });
 });
 
 describe("files exported by other tools", () => {
-  const target = {
-    store: "APP_STORE" as const,
-    storeAppId: "123456789",
-    name: "Import Lab",
-  };
-
-  const importedFrom = (text: string, store: Store = target.store) => {
-    const file = readKeywordFile(bufferOf(text));
-    const view = initialView(file, target);
-    return { file, view, mapped: mapKeywordFile(file, view, store) };
-  };
-
-  const ASTRO_EXPORT = [
-    "App Name,App Id,Platform,Keyword,Store Domain,Store,Note,Last Update,Ranking,Change,Popularity,Difficulty,Apps in Ranking,Tags",
-    "Import Lab,123456789,iphone,focus timer,us,United States,,2026-10-12 08:30:00,4,2,48,31,120,",
-    "Import Lab,123456789,ipad,focus timer,us,United States,,2026-10-12 08:30:00,6,0,48,31,120,",
-    'Import Lab,123456789,iphone,zegar pracy,pl,Poland,"Launch keyword\nsecond line",2026-10-12 08:30:00,2,-1,22,18,64,"core, brand"',
-    "Other App,987654321,iphone,habit tracker,us,United States,,2026-10-12 08:30:00,9,1,60,40,200,focus",
-    "Import Lab,123456789,mac,focus timer,gb,United Kingdom,,2026-10-12 08:30:00,,,,,,",
-  ].join("\r\n");
-
   it("U-VENDOR-01 reads an Astro export of all apps as the rows of the app it is imported into", () => {
     const { file, view, mapped } = importedFrom(ASTRO_EXPORT);
 
@@ -264,13 +275,6 @@ describe("files exported by other tools", () => {
     });
   });
 
-  const SONAR_EXPORT = [
-    "Keyword,Country,Store,Rank,Movement,Popularity,Difficulty,Est. downloads/day at current rank,Starred,Tags,Updated",
-    'focus timer,us,ios,4,+2,48,31,12,yes,"core, brand",2026-10-12',
-    "focus timer,us,android,9,-1,40,28,5,,,2026-10-12",
-    "zegar pracy,pl,ios,2,0,22,18,3,,core,2026-10-12",
-  ].join("\n");
-
   it("U-VENDOR-03 reads a Sonar keyword export and leaves out the rows of the other store", () => {
     const { view, mapped } = importedFrom(SONAR_EXPORT);
 
@@ -315,6 +319,40 @@ describe("files exported by other tools", () => {
       rows: [{ keyword: "focus timer" }, { keyword: "focus timer" }],
       ignoredColumns: 2,
     });
+  });
+
+  it("U-VENDOR-05 reads an AppFollow keyword export from its header row, below the lines that describe the report", () => {
+    const { file, view, mapped } = importedFrom(APPFOLLOW_EXPORT);
+
+    expect(file).toMatchObject({ delimiter: ",", skippedRows: 2 });
+    expect(skippedAboveHeader(file, view)).toBe(2);
+    expect(view.mapping).toEqual({
+      keyword: 0,
+      country: null,
+      tags: null,
+      note: null,
+    });
+    expect(mapped).toEqual({
+      rows: [{ keyword: "focus timer" }, { keyword: "deep work" }],
+      lines: [4, 5],
+      columns: 7,
+      ignoredColumns: 6,
+    });
+    expect(columnOptions(file, view)[0]).toEqual({
+      index: 0,
+      label: "Keyword",
+      sample: "focus timer",
+    });
+  });
+
+  it("U-VENDOR-05 reads every line of an AppFollow export as data once the header is switched off", () => {
+    const { file, view } = importedFrom(APPFOLLOW_EXPORT);
+    const headerless = { ...view, hasHeader: false };
+
+    expect(skippedAboveHeader(file, headerless)).toBe(0);
+    expect(mapKeywordFile(file, headerless, "APP_STORE").lines).toEqual([
+      1, 2, 3, 4, 5,
+    ]);
   });
 });
 

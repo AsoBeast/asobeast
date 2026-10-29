@@ -16,7 +16,12 @@ import {
   type ImportTarget,
   type LeftOut,
 } from "./scope";
-import { parseCsv, type CsvRecord, type Delimiter } from "./tokenize";
+import {
+  headerIndex,
+  parseCsv,
+  type CsvRecord,
+  type Delimiter,
+} from "./tokenize";
 
 const SAMPLE_CHARS = 24;
 
@@ -25,6 +30,7 @@ export interface KeywordFile {
   fallback: boolean;
   delimiter: Delimiter | null;
   records: CsvRecord[];
+  skippedRows: number;
   detected: ColumnMapping | null;
   scope: FileScope;
 }
@@ -56,15 +62,19 @@ const widthOf = (file: KeywordFile): number =>
 export function readKeywordFile(buffer: ArrayBuffer): KeywordFile {
   const { text, encoding, fallback } = decodeCsvBytes(buffer);
   const { delimiter, records } = parseCsv(text);
-  const header = records[0]?.cells ?? [];
+  const skippedRows = headerIndex(records);
+  const header = records[skippedRows]?.cells ?? [];
   const detected = detectColumns(header);
   return {
     encoding,
     fallback,
     delimiter,
     records,
+    skippedRows,
     detected,
-    scope: detected ? scopeOf(header, records.slice(1)) : NO_SCOPE,
+    scope: detected
+      ? scopeOf(header, records.slice(skippedRows + 1))
+      : NO_SCOPE,
   };
 }
 
@@ -88,8 +98,13 @@ export const appsLeftToChoose = (file: KeywordFile, view: FileView): number =>
     ? file.scope.apps.length
     : 0;
 
+export const skippedAboveHeader = (
+  file: KeywordFile,
+  view: FileView,
+): number => (view.hasHeader ? file.skippedRows : 0);
+
 const dataRecords = (file: KeywordFile, view: FileView): CsvRecord[] =>
-  view.hasHeader ? file.records.slice(1) : file.records;
+  view.hasHeader ? file.records.slice(file.skippedRows + 1) : file.records;
 
 export function mapKeywordFile(
   file: KeywordFile,
@@ -120,7 +135,9 @@ export function columnOptions(
   file: KeywordFile,
   view: FileView,
 ): ColumnOption[] {
-  const header = view.hasHeader ? (file.records[0]?.cells ?? []) : [];
+  const header = view.hasHeader
+    ? (file.records[file.skippedRows]?.cells ?? [])
+    : [];
   const first = dataRecords(file, view)[0]?.cells ?? [];
   return Array.from({ length: widthOf(file) }, (_, index) => ({
     index,

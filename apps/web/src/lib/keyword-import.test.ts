@@ -197,6 +197,15 @@ describe("fileNotices", () => {
       "This file holds rows for 3 apps and all of them are imported. Choose one under Columns to import only its keywords.",
     ]);
   });
+
+  it("U-VIEW-09 says how many rows above the header were skipped", () => {
+    expect(fileNotices({ ...base, skippedRows: 2 })).toEqual([
+      "2 rows above the header were skipped.",
+    ]);
+    expect(fileNotices({ ...base, skippedRows: 1 })).toEqual([
+      "1 row above the header was skipped.",
+    ]);
+  });
 });
 
 describe("quotaNotice", () => {

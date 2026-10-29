@@ -129,6 +129,7 @@ export interface FileNoticeFacts {
   fallback: boolean;
   hasHeader: boolean;
   ignoredColumns: number;
+  skippedRows?: number;
   store?: Store;
   leftOut?: LeftOut;
   appsToChoose?: number;
@@ -144,6 +145,11 @@ export function fileNotices(file: FileNoticeFacts): string[] {
   if (!file.hasHeader) {
     notices.push(
       "No header row was found, so column 1 is read as the keyword.",
+    );
+  }
+  if (file.skippedRows) {
+    notices.push(
+      `${formatNumber(file.skippedRows)} row${file.skippedRows === 1 ? "" : "s"} above the header ${file.skippedRows === 1 ? "was" : "were"} skipped.`,
     );
   }
   if (file.appsToChoose) {
