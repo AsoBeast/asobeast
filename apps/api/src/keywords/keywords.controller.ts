@@ -60,13 +60,18 @@ export class KeywordsController {
   ) {}
 
   @Get('keywords')
-  @ApiOperation({ summary: 'List tracked keywords for an app' })
+  @ApiOperation({
+    summary: 'List tracked keywords for an app',
+    description:
+      'competitorsInTop10 is the number of distinct competitors of the app in the newest stored top 10 of the keyword, or null when the app has no competitor or the newest snapshot is older than yesterday UTC. trackedAt is when the app started tracking the keyword in that market.',
+  })
   list(
     @Param('id') id: string,
     @Query() query: ListKeywordsQueryDto,
   ): Promise<TrackedKeywordItem[]> {
     return this.keywords.listTracked(id, query.sort, query.country, {
       holdFacts: true,
+      competitorFacts: true,
     });
   }
 

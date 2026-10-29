@@ -82,14 +82,14 @@ describe("importing the keyword export", () => {
     ).toBe(note);
   });
 
-  it("U-RT-04 finds the four columns of the export among its thirty and ignores the rest", () => {
+  it("U-RT-04 finds the four columns of the export and ignores the rest", () => {
     const { file, view, mapped } = importedFrom([tracked("focus timer")]);
 
     expect(file).toMatchObject({ encoding: "utf-8", delimiter: "," });
     expect(view).toEqual({
       hasHeader: true,
-      mapping: { keyword: 0, country: 29, tags: 27, note: 28 },
+      mapping: { keyword: 0, country: 31, tags: 29, note: 30 },
     });
-    expect(mapped).toMatchObject({ columns: 30, ignoredColumns: 26 });
+    expect(mapped).toMatchObject({ columns: 32, ignoredColumns: 28 });
   });
 });

@@ -8,6 +8,7 @@ import {
   KeywordUpdateRequest,
   normalizeText,
   TrackedKeywordItem,
+  utcDayOf,
 } from '@asobeast/shared';
 import { QuotaService } from '../auth/quota.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -22,7 +23,9 @@ import {
   uncheckedApps,
 } from './keyword-gaps';
 import { sortTracked } from './keyword-sort';
-import { serpVolatilities } from './keyword-volatility';
+import { loadSerpDays } from './keyword-serp-days';
+import { competitorsInTop10 } from './keyword-rivals';
+import { volatilities } from './keyword-volatility';
 import { retainedPositionFacts } from './keyword-position-facts';
 import { toTrackedKeywordItem } from './keywords.mapper';
 import { listingFacts } from './listing-facts';
@@ -46,36 +49,36 @@ export class KeywordsService {
     appId: string,
     sort?: KeywordSort,
     country?: string,
-    options: { holdFacts?: boolean } = {},
+    options: { holdFacts?: boolean; competitorFacts?: boolean } = {},
   ): Promise<TrackedKeywordItem[]> {
     const app = await ensureApp(this.prisma, appId);
     const rows = await this.prisma.trackedKeyword.findMany({
       where: { appId, ...(country ? { keyword: { is: { country } } } : {}) },
       ...trackedArgs(appId),
     });
-    const [facts, volatility, hold, acquisitions] = await Promise.all([
-      listingFacts(this.prisma, app, [
-        ...new Set(rows.map((row) => row.keyword.country)),
-      ]),
-      serpVolatilities(
-        this.prisma,
-        rows.map((row) => row.keywordId),
-      ),
-      options.holdFacts
-        ? retainedPositionFacts(
-            this.prisma,
-            appId,
-            rows.map((row) => row.keywordId),
-          )
-        : Promise.resolve(null),
-      app.store === Store.GOOGLE_PLAY
-        ? playAcquisitions(
-            this.prisma,
-            appId,
-            rows.map((row) => row.keyword.text),
-          )
-        : null,
-    ]);
+    const keywordIds = rows.map((row) => row.keywordId);
+    const [facts, serpDays, hold, acquisitions, competitors] =
+      await Promise.all([
+        listingFacts(this.prisma, app, [
+          ...new Set(rows.map((row) => row.keyword.country)),
+        ]),
+        loadSerpDays(this.prisma, keywordIds),
+        options.holdFacts
+          ? retainedPositionFacts(this.prisma, appId, keywordIds)
+          : Promise.resolve(null),
+        app.store === Store.GOOGLE_PLAY
+          ? playAcquisitions(
+              this.prisma,
+              appId,
+              rows.map((row) => row.keyword.text),
+            )
+          : null,
+        options.competitorFacts ? this.competitorStoreAppIds(appId) : null,
+      ]);
+    const volatility = volatilities(serpDays);
+    const rivals = competitors
+      ? competitorsInTop10(serpDays, competitors, utcDayOf(new Date()))
+      : null;
     return sortTracked(
       classifyBuckets(
         rows.map((row) => ({
@@ -91,10 +94,21 @@ export class KeywordsService {
                   acquisitions.get(normalizeText(row.keyword.text)) ?? null,
               }
             : {}),
+          ...(rivals
+            ? { competitorsInTop10: rivals.get(row.keywordId) ?? null }
+            : {}),
         })),
       ),
       sort,
     );
+  }
+
+  private async competitorStoreAppIds(appId: string): Promise<Set<string>> {
+    const rows = await this.prisma.app.findMany({
+      where: { primaryAppId: appId, isCompetitor: true },
+      select: { storeAppId: true },
+    });
+    return new Set(rows.map((row) => row.storeAppId));
   }
 
   async keywordCountries(appId: string): Promise<KeywordCountrySummary[]> {

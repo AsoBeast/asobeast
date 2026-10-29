@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   columnChoices,
+  defaultColumnVisibility,
   parseColumnVisibility,
   phoneColumnVisibility,
   readStoredColumns,
@@ -77,6 +78,55 @@ describe("phoneColumnVisibility", () => {
   });
 });
 
+describe("defaultColumnVisibility", () => {
+  const added = {
+    id: "added",
+    meta: { label: "Added", hiddenByDefault: true },
+  };
+
+  it("hides nothing on a desktop without a hidden column", () => {
+    expect(
+      defaultColumnVisibility(
+        [{ id: "keyword" }, { id: "source", meta: { label: "Source" } }],
+        false,
+      ),
+    ).toEqual({});
+  });
+
+  it("hides a column marked hidden by default on a desktop", () => {
+    expect(defaultColumnVisibility([{ id: "keyword" }, added], false)).toEqual({
+      added: false,
+    });
+  });
+
+  it("ignores a marked column without an id", () => {
+    expect(
+      defaultColumnVisibility(
+        [{ meta: { label: "Added", hiddenByDefault: true } }],
+        false,
+      ),
+    ).toEqual({});
+  });
+
+  it("adds the hidden columns to the phone default", () => {
+    expect(
+      defaultColumnVisibility(
+        [{ id: "source", meta: { label: "Source" } }, added],
+        true,
+      ),
+    ).toEqual({ source: false, added: false });
+  });
+
+  it("keeps a phone column visible on the phone", () => {
+    expect(
+      defaultColumnVisibility(
+        [{ id: "position", meta: { label: "Position", phone: true } }, added],
+        true,
+      ),
+    ).toEqual({ added: false });
+  });
+});
+
 describe("columnChoices", () => {
   const phone = { source: false, traffic: false, difficulty: false };
 
@@ -112,6 +162,16 @@ describe("columnChoices", () => {
   it("drops a choice the user sets back to the screen default", () => {
     expect(
       columnChoices({ source: false }, { source: false }, { source: true }, {}),
+    ).toEqual({});
+  });
+
+  it("stores showing a hidden by default column and forgets hiding it again", () => {
+    const fallback = { added: false };
+    const shown = columnChoices({}, fallback, { added: true }, fallback);
+
+    expect(shown).toEqual({ added: true });
+    expect(
+      columnChoices(shown, { added: true }, { added: false }, fallback),
     ).toEqual({});
   });
 

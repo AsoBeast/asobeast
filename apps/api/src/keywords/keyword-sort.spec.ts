@@ -54,4 +54,32 @@ describe('sortTracked', () => {
       'unranked',
     ]);
   });
+
+  it('sorts added with the newest first and an undated keyword last', () => {
+    const items = [
+      item('undated', {}),
+      item('older', { trackedAt: '2026-09-01T00:00:00.000Z' }),
+      item('newer', { trackedAt: '2026-10-20T00:00:00.000Z' }),
+    ];
+
+    expect(sortTracked(items, 'added').map((row) => row.keywordId)).toEqual([
+      'newer',
+      'older',
+      'undated',
+    ]);
+  });
+
+  it('sorts competitors with the most first and null or absent last', () => {
+    const items = [
+      item('absent', {}),
+      item('none', { competitorsInTop10: null }),
+      item('one', { competitorsInTop10: 1 }),
+      item('three', { competitorsInTop10: 3 }),
+      item('zero', { competitorsInTop10: 0 }),
+    ];
+
+    expect(
+      sortTracked(items, 'competitors').map((row) => row.keywordId),
+    ).toEqual(['three', 'one', 'zero', 'absent', 'none']);
+  });
 });

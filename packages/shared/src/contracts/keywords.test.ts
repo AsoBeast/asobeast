@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import { KEYWORD_BULK_ADD_LIMIT, KEYWORD_IMPORT_LIMIT } from '../aso';
-import type { OfficialPopularityState } from '../index';
+import { KEYWORD_SORTS, type OfficialPopularityState } from '../index';
 import {
   KEYWORD_IMPORT_REASONS,
   KEYWORD_IMPORT_STATUSES,
@@ -27,6 +27,20 @@ describe('keywordLabel', () => {
     expect(keywordLabel({ text: 'habit tracker', country: '' })).toBe(
       'habit tracker',
     );
+  });
+});
+
+describe('the keyword sorts', () => {
+  it('keeps the original sorts in place and appends the new ones', () => {
+    expect(KEYWORD_SORTS.slice(0, 5)).toEqual([
+      'opportunity',
+      'traffic',
+      'difficulty',
+      'position',
+      'volatility',
+    ]);
+    expect(KEYWORD_SORTS).toContain('added');
+    expect(KEYWORD_SORTS).toContain('competitors');
   });
 });
 

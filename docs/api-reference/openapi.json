@@ -2072,6 +2072,7 @@
     },
     "/apps/{id}/keywords": {
       "get": {
+        "description": "competitorsInTop10 is the number of distinct competitors of the app in the newest stored top 10 of the keyword, or null when the app has no competitor or the newest snapshot is older than yesterday UTC. trackedAt is when the app started tracking the keyword in that market.",
         "operationId": "KeywordsController_list",
         "parameters": [
           {
@@ -2093,7 +2094,9 @@
                 "traffic",
                 "difficulty",
                 "position",
-                "volatility"
+                "volatility",
+                "added",
+                "competitors"
               ]
             }
           },

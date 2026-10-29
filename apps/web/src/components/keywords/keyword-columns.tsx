@@ -1,6 +1,6 @@
 "use client";
 
-import { createColumnHelper, type FilterFn } from "@tanstack/react-table";
+import type { FilterFn } from "@tanstack/react-table";
 import { ListOrdered } from "lucide-react";
 import type {
   KeywordBucket,
@@ -30,6 +30,11 @@ import {
   TagBadges,
   VolatilityCell,
 } from "./keyword-cells";
+import {
+  keywordColumnHelper as columnHelper,
+  SORTABLE,
+} from "./keyword-column-helper";
+import { addedColumn, competitorsColumn } from "./keyword-fact-columns";
 import { DerivedScoreCell, ScoreCell } from "./score-cells";
 import {
   hasFloorAnswer,
@@ -54,13 +59,6 @@ import {
   type PositionBand,
 } from "@/lib/table/facets";
 import { nullsLast } from "@/lib/table/sorting";
-
-const columnHelper = createColumnHelper<
-  KeywordTableFeatures,
-  TrackedKeywordItem
->();
-
-const SORTABLE = { sortUndefined: "last", sortFn: "basic" } as const;
 
 export const SELECT_ALL_KEYWORDS = "Select all keywords";
 
@@ -94,11 +92,13 @@ export function keywordColumns({
 }) {
   return columnHelper.columns([
     ...identityColumns(),
+    addedColumn(),
     positionColumn(today, { appId, store, homeCountry, multiMarket }),
     ...scoreColumns(),
     ...(store === "GOOGLE_PLAY" ? [acquisitionsColumn()] : []),
     deltaColumn(),
     volatilityColumn(),
+    competitorsColumn(),
     actionsColumn({ appId, onOpenSerp }),
     ...filterColumns(),
   ]);

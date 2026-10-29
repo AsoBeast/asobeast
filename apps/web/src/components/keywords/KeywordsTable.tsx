@@ -24,7 +24,11 @@ import {
   keywordColumns,
   SELECT_ALL_KEYWORDS,
 } from "./keyword-columns";
-import { keywordColumnFilters } from "./keyword-filters";
+import {
+  exactSearchEmptyBody,
+  keywordColumnFilters,
+  keywordSearchFilter,
+} from "./keyword-filters";
 import { keywordTableFeatures } from "./keyword-table-features";
 import { exportKeywords } from "./keyword-csv";
 import { tagsIn } from "@/lib/keyword-tags";
@@ -124,7 +128,7 @@ export function KeywordsTable({
     enableRowSelection: true,
     enableSortingRemoval: false,
     enableMultiSort: false,
-    globalFilterFn: "includesString",
+    globalFilterFn: keywordSearchFilter,
     getColumnCanGlobalFilter: (column) => column.id === "keyword",
   });
 
@@ -174,6 +178,7 @@ export function KeywordsTable({
         />
         <KeywordsDataTable
           table={table}
+          emptyBody={exactSearchEmptyBody(filters.q)}
           onClearFilters={() => void setFilters(null)}
         />
 

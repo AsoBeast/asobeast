@@ -43,6 +43,10 @@ Every tracked keyword reports `latestCheckedOn`, the UTC day of its newest check
 
 The daily run checks every active keyword, so a newest check from today or yesterday UTC is current. An older one means the checks since that day did not finish, for example because the store refused the search. A failed check never writes a row, so it can never show up as a drop. The keywords table then shows a clock in place of the info button beside the position, opens the day of the last check from it, and hides the change since yesterday, because that change compares the last check with the day before it. A paused keyword is not checked on purpose and shows no day.
 
+## How many competitors are in the top 10?
+
+The keyword monitor can count, for each keyword, the competitors of the app that appear in the newest stored top 10 for that keyword in its market. The count reads the same SERP snapshot as the top 10 sheet and the volatility column, so it never makes a store request. It is a number from 0 to 10 when the app tracks at least one competitor and the snapshot is from today or yesterday UTC, and a dash otherwise, because a paused keyword is not checked and an older snapshot would describe a day that has passed. A competitor counts once however many times it appears. Your own app is never counted. The comparison matrix on the competitors page reads positions beyond 10 as well, so it can show a competitor that this count leaves out.
+
 ## How are positions charted?
 
 Ranking charts use a reversed Y axis, so position 1 sits at the top and an improving line rises. A `null` breaks the series rather than dropping it to the bottom of the chart. Every UTC day from the first check in the range to yesterday, or to today once today has a check, sits on the chart's axis. A day without a check therefore leaves a gap in the line with no marker, while a check that did not find the app leaves a gap with a hollow marker at the depth line. A ranked day between two gaps is drawn as a dot.

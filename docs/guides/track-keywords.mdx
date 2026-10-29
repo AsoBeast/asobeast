@@ -238,7 +238,7 @@ The controls above the table narrow the rows without reloading them.
 
 | Control | What it keeps | Address key |
 | --- | --- | --- |
-| Search keywords | Phrases that contain the text you type | `q` |
+| Search keywords | Phrases that contain the text you type. A phrase in quotes, such as `"habit tracker"`, keeps only the keyword that is exactly that phrase | `q` |
 | Source | Keywords added from the chosen sources | `source` |
 | Bucket | Keywords in the chosen buckets | `bucket` |
 | Status | Active or paused keywords | `status` |
@@ -247,6 +247,8 @@ The controls above the table narrow the rows without reloading them.
 | Tags | Keywords carrying any of the chosen tags | `tag` |
 
 Every active filter shows as a chip under the controls. Remove one chip to drop that filter, or use **Clear all**. The count next to the controls reads how many keywords are shown out of how many are tracked in the market, and **Export CSV** exports exactly the rows shown, in the order shown. The grade words are defined in [How are scores graded?](/concepts/scoring#how-are-scores-graded).
+
+A search with quotes ignores case, punctuation and extra spaces, so `"Habit  Tracker"` finds `habit tracker` and not `habit tracker app`. Accents count, because the stores treat `café` and `cafe` as different phrases. A quote with no closing quote is dropped and the rest is searched as plain text, and the chip reads **Exact phrase** only when both quotes are there.
 
 The **Tags** column shows up to three tags and how many more a keyword carries. A note icon next to the keyword shows its note when you point at it or focus it.
 
@@ -260,7 +262,7 @@ Under the facts, a chart draws the keyword's position over the last 7, 30 or 90 
 
 When an active keyword's newest check is older than yesterday UTC, the chart button beside its position turns into a clock, the popover opens with the day of that check, and the change since yesterday is hidden. The position is the one from that day. See [How do I know a position is current?](/concepts/positions#how-do-i-know-a-position-is-current) for what stops a check.
 
-**Columns** hides and shows columns. The choice is remembered in this browser and is not part of the link. On a phone the table starts with the keyword, position and opportunity columns, and the filters move into a **Filters** panel.
+**Columns** hides and shows columns. Two columns start hidden: **Added**, the UTC day the app started tracking the keyword in that market, and **Competitors in top 10**, how many of your competitors are in the newest stored top 10 of the keyword. Both sort like the others, **Added** newest first and **Competitors in top 10** with the most first, and both are in the CSV. A dash in **Competitors in top 10** means you track no competitors or the keyword has no top 10 snapshot from today or yesterday. See [How many competitors are in the top 10?](/concepts/positions#how-many-competitors-are-in-the-top-10) The choice is remembered in this browser and is not part of the link. On a phone the table starts with the keyword, position and opportunity columns, and the filters move into a **Filters** panel.
 
 ## Watch your request budget
 
