@@ -29,9 +29,6 @@ const FIELD_LABELS: Record<ImportField, string> = {
 const NONE = "none";
 const ALL_APPS = "*";
 
-const rowsOfAllApps = (scope: FileScope): number =>
-  scope.apps.reduce((total, app) => total + app.rows, 0);
-
 const rowCount = (rows: number): string =>
   `${formatNumber(rows)} row${rows === 1 ? "" : "s"}`;
 
@@ -122,7 +119,7 @@ export function ImportMapping({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL_APPS}>
-                {`All apps (${rowCount(rowsOfAllApps(scope))})`}
+                {`All apps (${rowCount(scope.rows)})`}
               </SelectItem>
               {scope.apps.map((app) => (
                 <SelectItem key={app.value} value={app.value}>

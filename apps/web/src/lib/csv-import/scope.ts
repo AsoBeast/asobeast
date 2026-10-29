@@ -17,6 +17,7 @@ export interface FileScope {
   appColumn: number | null;
   platformColumn: number | null;
   apps: AppChoice[];
+  rows: number;
   usedColumns: number;
 }
 
@@ -33,6 +34,7 @@ export const NO_SCOPE: FileScope = {
   appColumn: null,
   platformColumn: null,
   apps: [],
+  rows: 0,
   usedColumns: 0,
 };
 
@@ -61,6 +63,12 @@ const STORE_OF_PLATFORM: ReadonlyMap<string, Store> = new Map([
   ["macos", "APP_STORE"],
   ["appstore", "APP_STORE"],
   ["apple", "APP_STORE"],
+  ["ipados", "APP_STORE"],
+  ["tvos", "APP_STORE"],
+  ["appletv", "APP_STORE"],
+  ["watchos", "APP_STORE"],
+  ["applewatch", "APP_STORE"],
+  ["visionos", "APP_STORE"],
   ["android", "GOOGLE_PLAY"],
   ["googleplay", "GOOGLE_PLAY"],
   ["googleplaystore", "GOOGLE_PLAY"],
@@ -82,10 +90,8 @@ function firstColumn(
   return index >= 0 ? index : null;
 }
 
-function namesPlatforms(data: readonly CsvRecord[], column: number): boolean {
-  const cells = data.map((record) => cellOf(record, column)).filter(Boolean);
-  return cells.length > 0 && cells.every((cell) => storeOfPlatform(cell));
-}
+const namesPlatforms = (data: readonly CsvRecord[], column: number): boolean =>
+  data.some((record) => storeOfPlatform(cellOf(record, column)) !== undefined);
 
 function platformColumnOf(
   keys: readonly string[],
@@ -139,7 +145,13 @@ export function scopeOf(
     }
   }
   if (platformColumn !== null) used.add(platformColumn);
-  return { appColumn, platformColumn, apps, usedColumns: used.size };
+  return {
+    appColumn,
+    platformColumn,
+    apps,
+    rows: data.length,
+    usedColumns: used.size,
+  };
 }
 
 export function defaultApp(

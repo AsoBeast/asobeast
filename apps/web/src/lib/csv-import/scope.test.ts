@@ -30,6 +30,7 @@ describe("scopeOf", () => {
         { value: "123456789", label: "Import Lab", rows: 3 },
         { value: "987654321", label: "Other App", rows: 1 },
       ],
+      rows: 4,
       usedColumns: 3,
     });
   });
@@ -69,11 +70,43 @@ describe("scopeOf", () => {
     ).toBe(0);
   });
 
+  it("U-SCOPE-03 still reads a platform column that holds a value it does not know", () => {
+    const data = rowsOf(["a", "ios"], ["b", "android"], ["c", "Amazon"]);
+    const scope = scopeOf(["Keyword", "Platform"], data);
+
+    expect(scope.platformColumn).toBe(1);
+    expect(
+      applyScope(data, scope, undefined, "APP_STORE").records.map(
+        (record) => record.cells[0],
+      ),
+    ).toEqual(["a", "c"]);
+  });
+
+  it("U-SCOPE-03 reads every Apple platform as the App Store", () => {
+    const data = rowsOf(["a", "tvOS"], ["b", "watchOS"], ["c", "visionOS"]);
+
+    expect(
+      applyScope(
+        data,
+        scopeOf(["Keyword", "Platform"], data),
+        undefined,
+        "GOOGLE_PLAY",
+      ),
+    ).toMatchObject({ records: [], otherStore: 3 });
+  });
+
   it("U-SCOPE-05 does not count a blank app cell as an app", () => {
     expect(
       scopeOf(["App Id", "Keyword"], rowsOf(["1", "a"], ["", "b"], ["1", "c"]))
         .apps,
     ).toEqual([{ value: "1", label: "1", rows: 2 }]);
+  });
+
+  it("U-SCOPE-05 counts a row with a blank app cell among the rows of the file", () => {
+    expect(
+      scopeOf(["App Id", "Keyword"], rowsOf(["1", "a"], ["", "b"], ["2", "c"]))
+        .rows,
+    ).toBe(3);
   });
 
   it("U-SCOPE-06 uses no app column when the file holds one app", () => {
@@ -90,6 +123,7 @@ describe("scopeOf", () => {
       appColumn: null,
       platformColumn: null,
       apps: [],
+      rows: 2,
       usedColumns: 0,
     });
   });
