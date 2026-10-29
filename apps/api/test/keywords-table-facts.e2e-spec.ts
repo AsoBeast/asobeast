@@ -220,6 +220,22 @@ describe('KeywordsController table facts (e2e)', () => {
       expect(byText.get('unchecked')?.competitorsInTop10).toBeNull();
     });
 
+    it('counts a snapshot from yesterday and not one from two days ago', async () => {
+      const primary = await seedApp();
+      await seedCompetitor(primary.id, '222');
+      const yesterday = await track(primary.id, 'yesterday');
+      const twoDaysAgo = await track(primary.id, 'two days ago');
+      await snapshot(yesterday, daysAgo(1), ['222']);
+      await snapshot(twoDaysAgo, daysAgo(2), ['222']);
+
+      const byText = new Map(
+        (await list(primary.id)).map((item) => [item.text, item]),
+      );
+
+      expect(byText.get('yesterday')?.competitorsInTop10).toBe(1);
+      expect(byText.get('two days ago')?.competitorsInTop10).toBeNull();
+    });
+
     it('answers null for every keyword of an app with no competitor', async () => {
       const primary = await seedApp();
       const keywordId = await track(primary.id, 'pomodoro');
