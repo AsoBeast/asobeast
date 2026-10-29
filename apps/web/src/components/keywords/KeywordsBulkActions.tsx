@@ -4,39 +4,44 @@ import { useRef, useState, type RefObject } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Pause, Play, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
-import type { TrackedKeywordItem } from "@asobeast/shared";
+import type { KeywordBulkAction, TrackedKeywordItem } from "@asobeast/shared";
 import {
   AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
-  AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  closeUnlessPending,
+  ConfirmActionFooter,
+} from "@/components/ConfirmActionFooter";
 import { ExportCsvButton } from "@/components/ExportCsvButton";
 import { Button } from "@/components/ui/button";
-import { removeKeyword, updateKeyword } from "@/lib/api";
+import { applyKeywordBulk, updateKeyword } from "@/lib/api";
+import { pluralize } from "@/lib/format";
+import { bulkInChunks, bulkReport } from "@/lib/keyword-bulk";
 import type { BulkTagChange, BulkTagMode } from "@/lib/keyword-tags";
 import { invalidateKeywordMutation } from "@/lib/queries";
+import { useSingleFlight } from "@/lib/single-flight";
 import { BulkTagPopover } from "./BulkTagPopover";
 
-function summarize(results: PromiseSettledResult<unknown>[]): {
-  ok: number;
-  failed: number;
-} {
+interface BulkChange {
+  action: KeywordBulkAction;
+  keywordIds: string[];
+}
+
+function reportTagging(
+  verb: string,
+  results: PromiseSettledResult<unknown>[],
+): void {
   const failed = results.filter(
     (result) => result.status === "rejected",
   ).length;
-  return { ok: results.length - failed, failed };
-}
-
-function report(verb: string, results: PromiseSettledResult<unknown>[]): void {
-  const { ok, failed } = summarize(results);
+  const ok = results.length - failed;
   if (failed === 0) {
-    toast.success(`${verb} ${ok} keyword${ok === 1 ? "" : "s"}`);
+    toast.success(`${verb} ${pluralize(ok, "keyword")}`);
     return;
   }
   toast.warning(`${verb} ${ok}, ${failed} failed`);
@@ -47,7 +52,7 @@ function ConfirmRemove({
   onOpenChange,
   count,
   pending,
-  disabled,
+  busy,
   removed,
   onConfirm,
 }: {
@@ -55,14 +60,21 @@ function ConfirmRemove({
   onOpenChange: (open: boolean) => void;
   count: number;
   pending: boolean;
-  disabled: boolean;
+  busy: boolean;
   removed: RefObject<boolean>;
   onConfirm: () => void;
 }) {
+  const settle = closeUnlessPending(pending, onOpenChange);
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
+    <AlertDialog
+      open={open}
+      onOpenChange={(next) => {
+        if (next && busy) return;
+        settle(next);
+      }}
+    >
       <AlertDialogTrigger asChild>
-        <Button variant="outline" size="sm" disabled={disabled}>
+        <Button variant="outline" size="sm" aria-disabled={busy || undefined}>
           <Trash2 />
           Remove
         </Button>
@@ -82,19 +94,12 @@ function ConfirmRemove({
             add them again later, but the gap in history will remain.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            variant="destructive"
-            disabled={pending}
-            onClick={(event) => {
-              event.preventDefault();
-              onConfirm();
-            }}
-          >
-            {pending ? "Removing…" : "Stop tracking"}
-          </AlertDialogAction>
-        </AlertDialogFooter>
+        <ConfirmActionFooter
+          pending={pending}
+          label="Stop tracking"
+          pendingLabel="Removing…"
+          onConfirm={onConfirm}
+        />
       </AlertDialogContent>
     </AlertDialog>
   );
@@ -118,29 +123,26 @@ export function KeywordsBulkActions({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const removed = useRef(false);
 
-  const setActive = useMutation({
-    mutationFn: (active: boolean) =>
-      Promise.allSettled(
-        selectedIds.map((id) => updateKeyword(appId, id, { active })),
+  const change = useMutation({
+    mutationFn: ({ action, keywordIds }: BulkChange) =>
+      bulkInChunks(keywordIds, (chunk) =>
+        applyKeywordBulk(appId, { action, keywordIds: chunk }),
       ),
-    onSuccess: (results, active) => {
-      report(active ? "Activated" : "Paused", results);
+    onSuccess: (outcome, { action, keywordIds }) => {
+      const { level, message, description } = bulkReport(
+        action,
+        outcome,
+        keywordIds.length,
+      );
+      toast[level](message, { description });
       invalidateKeywordMutation(queryClient, appId);
-      onClear();
-    },
-  });
-
-  const remove = useMutation({
-    mutationFn: () =>
-      Promise.allSettled(selectedIds.map((id) => removeKeyword(appId, id))),
-    onSuccess: (results) => {
-      report("Removed", results);
-      invalidateKeywordMutation(queryClient, appId);
-      removed.current = true;
+      if (outcome.error !== undefined) return;
+      removed.current = action === "untrack";
       setConfirmOpen(false);
       onClear();
     },
   });
+  const changeOnce = useSingleFlight(change);
 
   const tagSelected = useMutation({
     mutationFn: ({
@@ -150,18 +152,21 @@ export function KeywordsBulkActions({
       mode: BulkTagMode;
     }) =>
       Promise.allSettled(
-        changes.map((change) =>
-          updateKeyword(appId, change.keywordId, { tags: change.tags }),
+        changes.map((tagChange) =>
+          updateKeyword(appId, tagChange.keywordId, { tags: tagChange.tags }),
         ),
       ),
     onSuccess: (results, { mode }) => {
-      report(mode === "add" ? "Tagged" : "Untagged", results);
+      reportTagging(mode === "add" ? "Tagged" : "Untagged", results);
       invalidateKeywordMutation(queryClient, appId);
       onClear();
     },
   });
 
-  const busy = setActive.isPending || remove.isPending || tagSelected.isPending;
+  const busy = change.isPending || tagSelected.isPending;
+  const run = (action: KeywordBulkAction) => {
+    if (!busy) changeOnce({ action, keywordIds: selectedIds });
+  };
 
   return (
     <div
@@ -176,8 +181,8 @@ export function KeywordsBulkActions({
         <Button
           variant="outline"
           size="sm"
-          disabled={busy}
-          onClick={() => setActive.mutate(false)}
+          aria-disabled={busy || undefined}
+          onClick={() => run("pause")}
         >
           <Pause />
           Pause
@@ -185,8 +190,8 @@ export function KeywordsBulkActions({
         <Button
           variant="outline"
           size="sm"
-          disabled={busy}
-          onClick={() => setActive.mutate(true)}
+          aria-disabled={busy || undefined}
+          onClick={() => run("resume")}
         >
           <Play />
           Activate
@@ -201,17 +206,19 @@ export function KeywordsBulkActions({
           open={confirmOpen}
           onOpenChange={setConfirmOpen}
           count={selectedIds.length}
-          pending={remove.isPending}
-          disabled={busy}
+          pending={change.isPending}
+          busy={busy}
           removed={removed}
-          onConfirm={() => remove.mutate()}
+          onConfirm={() => run("untrack")}
         />
         <ExportCsvButton subject="selected keywords" onClick={onExport} />
         <Button
           variant="ghost"
           size="sm"
-          disabled={busy}
-          onClick={onClear}
+          aria-disabled={busy || undefined}
+          onClick={() => {
+            if (!busy) onClear();
+          }}
           aria-label="Clear selection"
         >
           <X />

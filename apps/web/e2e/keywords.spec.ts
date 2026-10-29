@@ -809,14 +809,22 @@ test("bulk actions only reach selected keywords the filters still show", async (
     page.getByRole("checkbox", { name: "Select all keywords" }),
   ).toBeChecked();
 
-  const updates: string[] = [];
-  page.on("request", (request) => {
-    if (request.method() === "PATCH" && request.url().includes("/keywords/"))
-      updates.push(new URL(request.url()).pathname);
+  const changes: unknown[] = [];
+  await page.route("**/api/backend/apps/app-1/keywords/bulk", (route) => {
+    changes.push(route.request().postDataJSON());
+    return route.fulfill({
+      json: {
+        action: "pause",
+        requested: 1,
+        changed: 1,
+        unchanged: 0,
+        missing: [],
+      },
+    });
   });
   await bulk.getByRole("button", { name: "Pause" }).click();
-  await expect.poll(() => updates.length).toBe(1);
-  expect(updates[0]).toContain("kw-2");
+  await expect.poll(() => changes.length).toBe(1);
+  expect(changes[0]).toEqual({ action: "pause", keywordIds: ["kw-2"] });
 });
 
 test("a column shown on a phone does not hide the rest on a wider screen", async ({

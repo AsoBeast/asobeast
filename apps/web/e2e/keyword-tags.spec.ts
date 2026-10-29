@@ -223,6 +223,14 @@ test("saved tags and a note survive a reload", async ({ page }) => {
 });
 
 test.describe("bulk tagging", () => {
+  const UNTRACKED_ONE = {
+    action: "untrack",
+    requested: 1,
+    changed: 1,
+    unchanged: 0,
+    missing: [],
+  };
+
   const seedTags = (
     request: import("@playwright/test").APIRequestContext,
     keywordId: string,
@@ -331,10 +339,8 @@ test.describe("bulk tagging", () => {
   test("keeps focus in the table after a removal is confirmed", async ({
     page,
   }) => {
-    await page.route("**/api/backend/apps/app-tags/keywords/*", (route) =>
-      route.request().method() === "DELETE"
-        ? route.fulfill({ status: 204 })
-        : route.fallback(),
+    await page.route("**/api/backend/apps/app-tags/keywords/bulk", (route) =>
+      route.fulfill({ json: UNTRACKED_ONE }),
     );
     await page.goto(KEYWORDS);
     await page.getByRole("checkbox", { name: "Select focus timer" }).check();
@@ -358,12 +364,13 @@ test.describe("bulk tagging", () => {
     page,
   }) => {
     let removed = false;
+    await page.route("**/api/backend/apps/app-tags/keywords/bulk", (route) => {
+      removed = true;
+      return route.fulfill({ json: UNTRACKED_ONE });
+    });
     await page.route("**/api/backend/apps/app-tags/keywords**", (route) => {
       const request = route.request();
-      if (request.method() === "DELETE") {
-        removed = true;
-        return route.fulfill({ status: 204 });
-      }
+      if (request.method() === "POST") return route.fallback();
       const listed = new URL(request.url()).pathname.endsWith("/keywords");
       return removed && listed ? route.fulfill({ json: [] }) : route.fallback();
     });

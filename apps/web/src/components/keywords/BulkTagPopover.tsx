@@ -52,9 +52,19 @@ export function BulkTagPopover({
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        if (next && disabled) return;
+        setOpen(next);
+      }}
+    >
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" disabled={disabled}>
+        <Button
+          variant="outline"
+          size="sm"
+          aria-disabled={disabled || undefined}
+        >
           <Tag />
           Tag
         </Button>

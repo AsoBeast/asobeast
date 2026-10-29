@@ -715,3 +715,145 @@ test("closing the top 10 sheet returns focus to the row that opened it", async (
   await expect(sheet).toBeHidden();
   await expect(opener).toBeFocused();
 });
+
+test.describe("keyword bulk actions keep focus", () => {
+  test.describe.configure({ mode: "serial" });
+
+  const BULK = /\/api\/backend\/apps\/app-bulk-focus\/keywords\/bulk$/;
+  const KEYWORDS = "/apps/app-bulk-focus/keywords";
+  const bar = (page: Page) =>
+    page.getByRole("group", { name: "Bulk keyword actions" });
+  const selectAll = (page: Page) =>
+    page.getByRole("checkbox", { name: "Select all keywords" });
+
+  test.beforeEach(async ({ request }) => {
+    await request.post(
+      `http://localhost:${process.env.MOCK_API_PORT ?? 4100}/__reset/keywords/app-bulk-focus`,
+      { failOnStatusCode: true },
+    );
+  });
+
+  test("Pause keeps focus while it runs and hands it to the table", async ({
+    page,
+  }) => {
+    const held = await holdRequest(page, BULK, "POST");
+    await page.goto(KEYWORDS);
+    await selectAll(page).check();
+    const pause = bar(page).getByRole("button", { name: "Pause" });
+
+    await pressFromKeyboard(pause);
+
+    await expect(pause).toHaveAttribute("aria-disabled", "true");
+    await expect(pause).not.toHaveAttribute("disabled");
+    await expect(pause).toBeFocused();
+    held.release();
+    await expect(bar(page)).toHaveCount(0);
+    await expect(selectAll(page)).toBeFocused();
+  });
+
+  test("a refused Activate keeps focus on its button", async ({
+    page,
+    context,
+  }) => {
+    await seedCookie(context, "e2e-bulk-over-quota");
+    const held = await holdRequest(page, BULK, "POST");
+    await page.goto(KEYWORDS);
+    await selectAll(page).check();
+    const activate = bar(page).getByRole("button", { name: "Activate" });
+
+    await pressFromKeyboard(activate);
+    await expect(activate).toHaveAttribute("aria-disabled", "true");
+    await expect(activate).toBeFocused();
+    held.release();
+
+    await expect(activate).not.toHaveAttribute("aria-disabled", "true");
+    await expect(activate).toBeFocused();
+    await expect(bar(page)).toContainText("3 selected");
+  });
+
+  test("two activations of Pause in one task send one request", async ({
+    page,
+  }) => {
+    let sent = 0;
+    await page.route(BULK, (route) => {
+      sent += 1;
+      return route.fallback();
+    });
+    await page.goto(KEYWORDS);
+    await selectAll(page).check();
+
+    await activateTwiceInOneTask(
+      bar(page).getByRole("button", { name: "Pause" }),
+    );
+
+    await expect(page.getByText("Paused 3 keywords")).toBeVisible();
+    expect(sent).toBe(1);
+  });
+
+  test("the confirm button keeps focus while the removal runs", async ({
+    page,
+  }) => {
+    const held = await holdRequest(page, BULK, "POST", (route) =>
+      route.fulfill({
+        status: 500,
+        json: { statusCode: 500, message: "down", error: "Server Error" },
+      }),
+    );
+    await page.goto(KEYWORDS);
+    await selectAll(page).check();
+    await pressFromKeyboard(
+      bar(page).getByRole("button", { name: "Remove", exact: true }),
+    );
+    const confirm = page
+      .getByRole("alertdialog")
+      .getByRole("button", { name: /^(Stop tracking|Removing…)$/ });
+
+    await pressFromKeyboard(confirm);
+    await expect(confirm).toHaveText("Removing…");
+
+    await expectFocusKeptWhileHeld(confirm, held);
+    await expect(page.getByRole("alertdialog")).toBeVisible();
+  });
+
+  test("Escape keeps the removal dialog open until the request lands", async ({
+    page,
+  }) => {
+    const held = await holdRequest(page, BULK, "POST");
+    await page.goto(KEYWORDS);
+    await page.getByRole("checkbox", { name: "Select focus timer" }).check();
+    await pressFromKeyboard(
+      bar(page).getByRole("button", { name: "Remove", exact: true }),
+    );
+    const confirm = page
+      .getByRole("alertdialog")
+      .getByRole("button", { name: /^(Stop tracking|Removing…)$/ });
+    await pressFromKeyboard(confirm);
+    await expect(confirm).toHaveText("Removing…");
+
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("alertdialog")).toBeVisible();
+
+    held.release();
+    await expect(page.getByRole("alertdialog")).toHaveCount(0);
+    await expect(selectAll(page)).toBeFocused();
+  });
+
+  test("Tag stays focusable and does not open while a bulk request runs", async ({
+    page,
+  }) => {
+    const held = await holdRequest(page, BULK, "POST");
+    await page.goto(KEYWORDS);
+    await selectAll(page).check();
+    await pressFromKeyboard(bar(page).getByRole("button", { name: "Pause" }));
+    const tag = bar(page).getByRole("button", { name: "Tag", exact: true });
+    await expect(tag).toHaveAttribute("aria-disabled", "true");
+
+    await pressFromKeyboard(tag);
+
+    await expect(tag).toBeFocused();
+    await expect(
+      page.getByRole("dialog", { name: "Tag keywords" }),
+    ).toHaveCount(0);
+    held.release();
+  });
+});
