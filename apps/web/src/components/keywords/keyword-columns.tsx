@@ -31,7 +31,12 @@ import {
   VolatilityCell,
 } from "./keyword-cells";
 import { DerivedScoreCell, ScoreCell } from "./score-cells";
-import { isScoreOutdated, scoreValue, shownScore } from "./keyword-scores";
+import {
+  hasFloorAnswer,
+  isScoreOutdated,
+  scoreValue,
+  shownScore,
+} from "./keyword-scores";
 import { difficultySignalLines, popularitySignalLines } from "./score-signals";
 import { SOURCE_LABELS, SourceBadge } from "./SourceBadge";
 import type { Grade, GradeMetric } from "@/lib/grade";
@@ -246,6 +251,7 @@ function scoreColumns() {
             scoreValue(row.original, "traffic"),
           )}
           outdated={isScoreOutdated(row.original)}
+          floorAnswer={hasFloorAnswer(row.original)}
         />
       ),
     }),

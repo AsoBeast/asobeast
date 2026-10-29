@@ -1,4 +1,4 @@
-import { SERP_FLAGS } from "@asobeast/shared";
+import { formatUtcDate, isFloorAnswer, SERP_FLAGS } from "@asobeast/shared";
 import type { ScoreSignals, ScoringSource, SerpFlag } from "@asobeast/shared";
 import { pluralize } from "@/lib/format";
 
@@ -44,6 +44,46 @@ function searchModelLines(
   return capped ? [SEARCH_MODEL_LINE, UNLISTED_CAP_LINE] : [SEARCH_MODEL_LINE];
 }
 
+interface FloorFacts {
+  floor: number;
+  week: string;
+}
+
+function floorFacts(signals: ScoreSignals): FloorFacts | null {
+  const floor = signals.officialPopularityFloor;
+  const week = signals.officialPopularityWeek;
+  return typeof floor === "number" && typeof week === "string"
+    ? { floor, week }
+    : null;
+}
+
+function lastAboveFloorLines(signals: ScoreSignals): string[] {
+  const last = signals.officialPopularityLastAboveFloor;
+  return last
+    ? [
+        `The last value above the floor was ${last.value} in the week of ${formatUtcDate(last.week)}.`,
+      ]
+    : [];
+}
+
+function floorAnswerLines(signals: ScoreSignals): string[] | null {
+  const facts = floorFacts(signals);
+  if (!isFloorAnswer(signals.officialPopularityState) || !facts) {
+    return null;
+  }
+  const week = formatUtcDate(facts.week);
+  return signals.officialPopularityState === "floor"
+    ? [
+        `Apple answered its floor value (${facts.floor}) for the week of ${week}.`,
+        ...lastAboveFloorLines(signals),
+      ]
+    : [
+        SEARCH_MODEL_LINE,
+        `Apple left this term out of its list for the week of ${week}, so its popularity is below the floor of ${facts.floor} and the number shown is held under it.`,
+        ...lastAboveFloorLines(signals),
+      ];
+}
+
 export function popularitySignalLines(
   signals: ScoreSignals | null,
   source?: ScoringSource,
@@ -51,6 +91,10 @@ export function popularitySignalLines(
 ): string[] {
   if (!signals) {
     return [];
+  }
+  const floorLines = floorAnswerLines(signals);
+  if (floorLines) {
+    return floorLines;
   }
   if (signals.officialPopularity !== null) {
     return [

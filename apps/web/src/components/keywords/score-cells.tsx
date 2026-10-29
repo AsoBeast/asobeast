@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { ArrowDownToLine } from "lucide-react";
 import type {
   ScoreProvenance,
   ScoringConfidence,
@@ -35,6 +36,7 @@ function ScoreButton({
   metric,
   summary,
   emphasize,
+  floorAnswer,
   children,
 }: {
   value: number | null;
@@ -42,6 +44,7 @@ function ScoreButton({
   metric: ScoreMetric;
   summary: string;
   emphasize?: boolean;
+  floorAnswer?: boolean;
   children: ReactNode;
 }) {
   if (value === null) {
@@ -76,7 +79,15 @@ function ScoreButton({
               : "text-muted-foreground",
           )}
         >
-          {valueLabel}
+          <span className="inline-flex items-center gap-1">
+            {floorAnswer ? (
+              <ArrowDownToLine
+                aria-hidden="true"
+                className="size-3 text-muted-foreground"
+              />
+            ) : null}
+            <span>{valueLabel}</span>
+          </span>
           {graded ? <Meter value={value} fill={gradeFill(graded)} /> : null}
         </button>
       </TooltipTrigger>
@@ -90,13 +101,25 @@ function ScoreButton({
 function scoreSummary(
   provenance: ScoreProvenance | null,
   outdated?: boolean,
+  floorAnswer?: boolean,
 ): string {
   if (outdated) {
     return "Older formula";
   }
-  return provenance
+  const confidence = provenance
     ? `${SCORING_CONFIDENCE_LABELS[provenance.confidence]} confidence`
     : "Legacy score";
+  return floorAnswer ? `Floor answer, ${confidence}` : confidence;
+}
+
+function DetailList({ lines }: { lines?: string[] }) {
+  return lines && lines.length > 0 ? (
+    <ul className="flex flex-col gap-1">
+      {lines.map((line) => (
+        <li key={line}>{line}</li>
+      ))}
+    </ul>
+  ) : null;
 }
 
 export function ScoreCell({
@@ -107,6 +130,7 @@ export function ScoreCell({
   details,
   outdated,
   emphasize,
+  floorAnswer,
 }: {
   value: number | null;
   label: string;
@@ -115,6 +139,7 @@ export function ScoreCell({
   details?: string[];
   outdated?: boolean;
   emphasize?: boolean;
+  floorAnswer?: boolean;
 }) {
   return (
     <ScoreButton
@@ -122,16 +147,11 @@ export function ScoreCell({
       label={label}
       metric={metric}
       emphasize={emphasize}
-      summary={scoreSummary(provenance, outdated)}
+      floorAnswer={floorAnswer}
+      summary={scoreSummary(provenance, outdated, floorAnswer)}
     >
       {outdated ? <span>{OUTDATED_SCORE_DETAIL}</span> : null}
-      {details && details.length > 0 ? (
-        <ul className="flex flex-col gap-1">
-          {details.map((line) => (
-            <li key={line}>{line}</li>
-          ))}
-        </ul>
-      ) : null}
+      <DetailList lines={details} />
       <ScoreProvenanceDetails provenance={provenance} />
     </ScoreButton>
   );
