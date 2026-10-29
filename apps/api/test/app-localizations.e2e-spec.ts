@@ -167,6 +167,8 @@ describe('App localizations (e2e)', () => {
       await expect(localizationsOf(id)).resolves.toEqual({
         home: 'us',
         markets: ['us'],
+        storeManaged: false,
+        storeSync: null,
         localizations: [
           {
             localization: 'en-US',
