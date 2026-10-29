@@ -88,6 +88,14 @@ Come back to the page and the field shows what asobeast tracks rather than the s
   Leaving the field empty is not neutral. Coverage reports every keyword as uncovered by the keyword field, because asobeast has no evidence about what it contains, and the audit scores keyword field hygiene as unset.
 </Warning>
 
+## When App Store Connect imports the field
+
+Connect App Store Connect as in [Store funnel reports](/guides/store-funnel) and every primary App Store app the key can see imports its keyword fields instead of waiting for you to type them. The import reads the private field of the live version through your key, once per localization, and tracks the phrases in every market that reads the localization, home first. The App Store changes keywords only with a new version, so asobeast imports again whenever it captures a new version of the listing, and once more the day you connect or press **Verify**.
+
+An imported field is read only. The editor shows what Apple serves and names the time of the last read, **Add localization**, **Find localizations** and **Remove localization** leave the section, and a manual save through the API answers 409. Disconnecting the key hands the fields back to you exactly as they were imported.
+
+Four limits are worth knowing. Until asobeast has synced an app with your key once, an empty field in App Store Connect never replaces a hand typed one, so connecting cannot wipe what you typed. From that first sync on the field follows App Store Connect, an emptied field included. A phrase asobeast cannot track, such as one with more than five words, is left out of the import. An import that would pass your plan's keyword market limit stops at the field it was writing, names that localization in the notice, and finishes on the next sync. And an app the key cannot see, for example one on another Apple account, keeps a hand typed field. Recommendations the import makes obsolete, such as adding an uncovered keyword, close on the re-run that follows every import.
+
 ## Group keywords into buckets
 
 Buckets classify scored keywords so a long list stays readable and so you can see whether your targeting is balanced.
