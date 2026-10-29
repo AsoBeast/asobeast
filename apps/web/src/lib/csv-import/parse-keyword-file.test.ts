@@ -1,3 +1,4 @@
+import type { Store } from "@asobeast/shared";
 import { describe, expect, it } from "vitest";
 import {
   appsLeftToChoose,
@@ -192,7 +193,7 @@ describe("files exported by other tools", () => {
     name: "Import Lab",
   };
 
-  const importedFrom = (text: string, store = target.store) => {
+  const importedFrom = (text: string, store: Store = target.store) => {
     const file = readKeywordFile(bufferOf(text));
     const view = initialView(file, target);
     return { file, view, mapped: mapKeywordFile(file, view, store) };
@@ -260,6 +261,59 @@ describe("files exported by other tools", () => {
       columns: 4,
       ignoredColumns: 2,
       leftOut: { otherApps: 1, otherStore: 0 },
+    });
+  });
+
+  const SONAR_EXPORT = [
+    "Keyword,Country,Store,Rank,Movement,Popularity,Difficulty,Est. downloads/day at current rank,Starred,Tags,Updated",
+    'focus timer,us,ios,4,+2,48,31,12,yes,"core, brand",2026-10-12',
+    "focus timer,us,android,9,-1,40,28,5,,,2026-10-12",
+    "zegar pracy,pl,ios,2,0,22,18,3,,core,2026-10-12",
+  ].join("\n");
+
+  it("U-VENDOR-03 reads a Sonar keyword export and leaves out the rows of the other store", () => {
+    const { view, mapped } = importedFrom(SONAR_EXPORT);
+
+    expect(view.mapping).toEqual({
+      keyword: 0,
+      country: 1,
+      tags: 9,
+      note: null,
+    });
+    expect(mapped).toEqual({
+      rows: [
+        { keyword: "focus timer", country: "us", tags: ["core", "brand"] },
+        { keyword: "zegar pracy", country: "pl", tags: ["core"] },
+      ],
+      lines: [2, 4],
+      columns: 11,
+      ignoredColumns: 7,
+      leftOut: { otherApps: 0, otherStore: 1 },
+    });
+  });
+
+  it("U-VENDOR-03 keeps the Google Play rows of a Sonar export imported into a Google Play app", () => {
+    const { mapped } = importedFrom(SONAR_EXPORT, "GOOGLE_PLAY");
+
+    expect(mapped).toMatchObject({
+      rows: [{ keyword: "focus timer", country: "us" }],
+      lines: [3],
+      leftOut: { otherApps: 0, otherStore: 2 },
+    });
+  });
+
+  it("U-VENDOR-04 reads the history that sonar export rankings writes as one row per keyword and day", () => {
+    const { mapped } = importedFrom(
+      [
+        "keyword,date,rank",
+        "focus timer,2026-10-11,5",
+        "focus timer,2026-10-12,4",
+      ].join("\n"),
+    );
+
+    expect(mapped).toMatchObject({
+      rows: [{ keyword: "focus timer" }, { keyword: "focus timer" }],
+      ignoredColumns: 2,
     });
   });
 });
