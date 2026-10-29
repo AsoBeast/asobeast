@@ -77,7 +77,8 @@ export class AppsController {
 
   @Get(':id/listing-markets')
   @ApiOperation({
-    summary: 'List the markets an app has a captured listing in',
+    summary:
+      'List the markets an app has a captured listing in, with the newest rating of each',
   })
   listingMarkets(@Param('id') id: string): Promise<ListingMarket[]> {
     return this.apps.listingMarkets(id);
