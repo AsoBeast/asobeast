@@ -8,6 +8,7 @@ import { FirstPositionChecks } from './first-position-checks';
 import { KeywordBreakdownService } from './keyword-breakdown.service';
 import { KeywordFieldService } from './keyword-field.service';
 import { KeywordFieldWriter } from './keyword-field-writer';
+import { KeywordBulkService } from './keyword-bulk.service';
 import { KeywordImportService } from './keyword-import.service';
 import { KeywordSuggestionService } from './keyword-suggestion.service';
 import { KeywordTracker } from './keyword-tracker';
@@ -39,6 +40,7 @@ import { TrackedKeywordAccess } from './tracked-keyword.access';
     KeywordsService,
     KeywordFieldService,
     KeywordFieldWriter,
+    KeywordBulkService,
     KeywordImportService,
     KeywordSuggestionService,
     KeywordTracker,

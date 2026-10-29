@@ -11,6 +11,7 @@ import { PrismaClient } from '@prisma/client';
 import cookieParser from 'cookie-parser';
 import {
   API_TOKEN_PREFIX,
+  KEYWORD_BULK_CHANGE_LIMIT,
   PLAN_LIMITS,
   type ApiErrorEnvelope,
 } from '@asobeast/shared';
@@ -240,6 +241,28 @@ describe('Rate limits (billing mode)', () => {
     );
     expect(refused.headers['ratelimit-remaining']).toBe('0');
     expect(refused.headers['ratelimit-limit']).toBe(String(WRITES_PER_MINUTE));
+  });
+
+  it('spends one write unit on a bulk keyword change of the most ids', async () => {
+    const cookie = await register('bulk@example.com');
+    await awaitBurnHeadroom();
+    const before = await write(cookie).expect(404);
+
+    const bulk = await request(app.getHttpServer())
+      .post('/apps/app_missing/keywords/bulk')
+      .set('Cookie', cookie)
+      .send({
+        action: 'pause',
+        keywordIds: Array.from(
+          { length: KEYWORD_BULK_CHANGE_LIMIT },
+          (_, index) => `kw-${index}`,
+        ),
+      })
+      .expect(404);
+
+    expect(Number(bulk.headers['ratelimit-remaining'])).toBe(
+      Number(before.headers['ratelimit-remaining']) - 1,
+    );
   });
 
   it('refuses a read burst past the plan allowance', async () => {

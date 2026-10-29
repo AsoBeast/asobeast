@@ -238,6 +238,8 @@ import type {
   WorkspaceRunStatus,
   PortfolioSummary,
   RankingSeries,
+  KeywordBulkRequest,
+  KeywordBulkResult,
   KeywordUpdateRequest,
   TrackedKeywordItem,
   WebhookCreateRequest,
@@ -335,6 +337,38 @@ function resetKeywords(only?: string): void {
       DATASETS[id].keywords = structuredClone(keywords);
     }
   }
+}
+
+function applyBulkChange(
+  dataset: (typeof DATASETS)[string],
+  request: KeywordBulkRequest,
+): KeywordBulkResult {
+  const ids = [...new Set(request.keywordIds)];
+  const tracked = dataset.keywords.filter((row) => ids.includes(row.keywordId));
+  const found = new Set(tracked.map((row) => row.keywordId));
+  const touched = tracked.filter((row) =>
+    request.action === "pause"
+      ? row.active
+      : request.action === "resume"
+        ? !row.active
+        : true,
+  );
+  if (request.action === "untrack") {
+    dataset.keywords = dataset.keywords.filter(
+      (row) => !found.has(row.keywordId),
+    );
+  } else {
+    touched.forEach((row) => {
+      row.active = request.action === "resume";
+    });
+  }
+  return {
+    action: request.action,
+    requested: ids.length,
+    changed: touched.length,
+    unchanged: tracked.length - touched.length,
+    missing: ids.filter((id) => !found.has(id)),
+  };
 }
 
 function manualKeyword(
@@ -3324,6 +3358,35 @@ const routes: Route[] = [
           201,
           dataset.keywords.filter((row) => row.country === country),
         );
+      });
+    },
+  },
+  {
+    method: "POST",
+    pattern: /^\/apps\/([^/]+)\/keywords\/bulk$/,
+    handler: ([id], req, res) => {
+      withBody<KeywordBulkRequest>(req, res, (body) => {
+        const path = req.url ?? "/";
+        const dataset = DATASETS[id];
+        if (!dataset) return json(res, 404, errorEnvelope(404, path));
+        if (hasCookie(req, "e2e-fail-keyword-bulk", "1")) {
+          return json(res, 500, errorEnvelope(500, path));
+        }
+        if (
+          body.action === "resume" &&
+          hasCookie(req, "e2e-bulk-over-quota", "1")
+        ) {
+          return json(
+            res,
+            403,
+            errorEnvelope(
+              403,
+              path,
+              "Keyword markets limit reached: 1,000 of 1,000 used on the indie plan, 3 more requested",
+            ),
+          );
+        }
+        json(res, 200, applyBulkChange(dataset, body));
       });
     },
   },

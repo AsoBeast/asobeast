@@ -18,6 +18,7 @@ import {
   KeywordCountrySummary,
   KeywordFieldResult,
   KeywordFieldSummary,
+  KeywordBulkResult,
   KeywordImportResult,
   KeywordSuggestion,
   SpiderEnqueueResult,
@@ -30,6 +31,7 @@ import { RateLimitClass } from '../auth/rate-limit/rate-class';
 import { ReadOnlyEndpoint } from '../auth/read-access';
 import { AddKeywordsDto } from './dto/add-keywords.dto';
 import { CompareQueryDto } from './dto/compare-query.dto';
+import { KeywordBulkDto } from './dto/keyword-bulk.dto';
 import { KeywordFieldDto } from './dto/keyword-field.dto';
 import { KeywordFieldQueryDto } from './dto/keyword-field-query.dto';
 import { KeywordImportDto } from './dto/keyword-import.dto';
@@ -38,6 +40,7 @@ import { SpiderQueryDto, SpiderStartDto } from './dto/spider.dto';
 import { SuggestionsQueryDto } from './dto/suggestions-query.dto';
 import { UpdateKeywordDto } from './dto/update-keyword.dto';
 import { KeywordBreakdownService } from './keyword-breakdown.service';
+import { KeywordBulkService } from './keyword-bulk.service';
 import { KeywordFieldService } from './keyword-field.service';
 import { KeywordImportService } from './keyword-import.service';
 import { KeywordSuggestionService } from './keyword-suggestion.service';
@@ -57,6 +60,7 @@ export class KeywordsController {
     private readonly limiter: OnDemandLimiter,
     private readonly keywordImport: KeywordImportService,
     private readonly breakdowns: KeywordBreakdownService,
+    private readonly bulkChanges: KeywordBulkService,
   ) {}
 
   @Get('keywords')
@@ -213,6 +217,21 @@ export class KeywordsController {
     @Param('keywordId') keywordId: string,
   ): Promise<void> {
     return this.keywords.remove(id, keywordId);
+  }
+
+  @Post('keywords/bulk')
+  @QueuesWork()
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Pause, resume or untrack many tracked keywords',
+    description:
+      'Applies one action to up to 500 keyword ids of the app in one write request. pause and resume change the active flag, untrack stops tracking and keeps the ranking history rules of a single removal. changed counts the rows this request changed, unchanged the tracked rows already in the requested state, and missing the ids the app does not track. A resume is all or nothing: it answers 403 with the plan keyword limit and writes nothing when it would pass the limit, and a resumed keyword is checked for its first position within minutes like a new one.',
+  })
+  bulk(
+    @Param('id') id: string,
+    @Body() dto: KeywordBulkDto,
+  ): Promise<KeywordBulkResult> {
+    return this.bulkChanges.apply(id, dto);
   }
 
   @Get('keyword-field')

@@ -35,6 +35,7 @@ These ceilings are resource safety rather than plan capacity, so they hold on a 
 | Keywords per bulk add | 200 | `POST /apps/{id}/keywords` |
 | Rows per keyword import | 500 | `POST /apps/{id}/keywords/import` and `POST /apps/{id}/keywords/import/preview` |
 | Bytes of one import request | 100 KB, as for every request | the same two endpoints |
+| Keyword ids per bulk change | 500 | `POST /apps/{id}/keywords/bulk` |
 | Characters per keyword phrase | 100 | `POST /apps/{id}/keywords` and the keyword field saves |
 | Characters of keyword field text | 1,000 | `PUT /apps/{id}/keyword-field`, `PUT /apps/{id}/keyword-fields/{localization}` and its preview |
 | Characters of the normalized keyword field | 100 | the same saves |

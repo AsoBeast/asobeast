@@ -3390,6 +3390,22 @@ DATASETS[APP_TAGS_ID] = {
   })),
 };
 
+export const APP_BULK_BAR_ID = "app-bulk-bar";
+
+DATASETS[APP_BULK_BAR_ID] = {
+  ...DATASETS[APP_TAGS_ID],
+  detail: { ...APP_1_DETAIL, id: APP_BULK_BAR_ID, name: "Bulk Bar Lab" },
+  keywords: structuredClone(DATASETS[APP_TAGS_ID].keywords),
+};
+
+export const APP_BULK_FOCUS_ID = "app-bulk-focus";
+
+DATASETS[APP_BULK_FOCUS_ID] = {
+  ...DATASETS[APP_TAGS_ID],
+  detail: { ...APP_1_DETAIL, id: APP_BULK_FOCUS_ID, name: "Bulk Focus Lab" },
+  keywords: structuredClone(DATASETS[APP_TAGS_ID].keywords),
+};
+
 export const APP_REPLIES_ID = "app-replies";
 
 DATASETS[APP_REPLIES_ID] = {
