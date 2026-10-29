@@ -44,17 +44,14 @@ function searchModelLines(
   return capped ? [SEARCH_MODEL_LINE, UNLISTED_CAP_LINE] : [SEARCH_MODEL_LINE];
 }
 
-interface FloorFacts {
-  floor: number;
-  week: string;
+function weekPhrase(signals: ScoreSignals): string {
+  const week = signals.officialPopularityWeek;
+  return week ? ` for the week of ${formatUtcDate(week)}` : "";
 }
 
-function floorFacts(signals: ScoreSignals): FloorFacts | null {
+function floorValue(signals: ScoreSignals): number | null {
   const floor = signals.officialPopularityFloor;
-  const week = signals.officialPopularityWeek;
-  return typeof floor === "number" && typeof week === "string"
-    ? { floor, week }
-    : null;
+  return typeof floor === "number" ? floor : null;
 }
 
 function lastAboveFloorLines(signals: ScoreSignals): string[] {
@@ -67,19 +64,20 @@ function lastAboveFloorLines(signals: ScoreSignals): string[] {
 }
 
 function floorAnswerLines(signals: ScoreSignals): string[] | null {
-  const facts = floorFacts(signals);
-  if (!isFloorAnswer(signals.officialPopularityState) || !facts) {
+  const state = signals.officialPopularityState;
+  if (!isFloorAnswer(state)) {
     return null;
   }
-  const week = formatUtcDate(facts.week);
-  return signals.officialPopularityState === "floor"
+  const week = weekPhrase(signals);
+  const floor = floorValue(signals);
+  return state === "floor"
     ? [
-        `Apple answered its floor value (${facts.floor}) for the week of ${week}.`,
+        `Apple answered its floor value${floor === null ? "" : ` (${floor})`}${week}.`,
         ...lastAboveFloorLines(signals),
       ]
     : [
         SEARCH_MODEL_LINE,
-        `Apple left this term out of its list for the week of ${week}, so its popularity is below the floor of ${facts.floor} and the number shown is held under it.`,
+        `Apple left this term out of its list${week}, so its popularity is below the floor${floor === null ? "" : ` of ${floor}`} and the number shown is held under it.`,
         ...lastAboveFloorLines(signals),
       ];
 }

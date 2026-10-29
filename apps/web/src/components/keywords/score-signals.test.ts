@@ -236,13 +236,22 @@ describe("floor answers", () => {
     ).toEqual(["Apple reports a search popularity of 71 for this term."]);
   });
 
-  it("falls back to the earlier lines without the floor or the week", () => {
+  it("still names a floor answer without the floor or the week", () => {
     expect(
       popularitySignalLines(
         signals({ officialPopularity: 41, officialPopularityState: "floor" }),
         "APPLE_ADS_POPULARITY",
       ),
-    ).toEqual(["Apple reports a search popularity of 41 for this term."]);
+    ).toEqual(["Apple answered its floor value."]);
+    expect(
+      popularitySignalLines(
+        signals({ officialPopularityState: "absent" }),
+        "APPLE_SEARCH_SIGNALS",
+      ),
+    ).toEqual([
+      SEARCH_MODEL,
+      "Apple left this term out of its list, so its popularity is below the floor and the number shown is held under it.",
+    ]);
   });
 
   it("writes the week with the shared UTC date formatter", () => {
