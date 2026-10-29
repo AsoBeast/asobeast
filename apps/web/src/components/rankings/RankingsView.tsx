@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
 import { keywordLabel } from "@asobeast/shared";
@@ -15,6 +16,7 @@ import {
 } from "@/components/ui/card";
 import {
   annotationsOptions,
+  appDetailOptions,
   changesOptions,
   keywordsOptions,
   rankingsOptions,
@@ -26,9 +28,11 @@ import {
   WIDEST_RANGE,
 } from "@/lib/ranges";
 import { keywordIdsParser, rangeParser } from "@/lib/search-params";
+import { ChartImageButtons } from "@/components/charts/ChartImageButtons";
 import { annotationsInMarkets } from "@/components/annotations/annotation-lines";
 import { MIN_TREND_POINTS } from "@/components/charts/ChartStates";
 import { exportRankings } from "./ranking-csv";
+import { rankingImageSpec } from "./ranking-image";
 import { buildRankingChart, MAX_SERIES } from "./pivot";
 import {
   InsufficientHistory,
@@ -45,6 +49,8 @@ export function RankingsView({ id }: { id: string }) {
   const [range, setRange] = useQueryState("range", rangeParser);
   const [selected, setSelected] = useQueryState("keywords", keywordIdsParser);
   const { data: tracked } = useSuspenseQuery(keywordsOptions(id));
+  const { data: detail } = useSuspenseQuery(appDetailOptions(id));
+  const chartRef = useRef<HTMLDivElement>(null);
 
   const effective =
     selected.length > 0
@@ -72,6 +78,20 @@ export function RankingsView({ id }: { id: string }) {
   const labels = new Map(
     tracked.map((item) => [item.keywordId, keywordLabel(item)]),
   );
+
+  const imageReady =
+    tracked.length > 0 && chart.checkedDays >= MIN_TREND_POINTS;
+  const makeImageJob = () => {
+    const container = chartRef.current;
+    const spec = rankingImageSpec({
+      chart,
+      kind: "rankings",
+      title: "Keyword rank positions",
+      app: detail,
+      countries: data.series.slice(0, MAX_SERIES).map((item) => item.country),
+    });
+    return container && spec ? { container, ...spec } : null;
+  };
 
   return (
     <Card>
@@ -115,6 +135,12 @@ export function RankingsView({ id }: { id: string }) {
             disabled={chart.checkedDays === 0}
             onClick={() => exportRankings(id, bounds, chart)}
           />
+          {imageReady ? (
+            <ChartImageButtons
+              subject="the rankings chart"
+              makeJob={makeImageJob}
+            />
+          ) : null}
           <PrintReportButton />
         </div>
 
@@ -137,6 +163,7 @@ export function RankingsView({ id }: { id: string }) {
         ) : (
           <>
             <RankingChart
+              chartRef={chartRef}
               data={chart}
               changeDates={changeDates}
               annotations={inScope}

@@ -331,7 +331,13 @@ test("prints the rankings controls as plain labels or not at all", async ({
 
   await printed(page);
 
-  for (const name of ["5 selected", "Export CSV of rankings", "Track"]) {
+  for (const name of [
+    "5 selected",
+    "Export CSV of rankings",
+    "Copy image of the rankings chart",
+    "Download PNG of the rankings chart",
+    "Track",
+  ]) {
     await expect(page.getByRole("button", { name })).toHaveCount(0);
   }
   await expect(chip).toBeVisible();

@@ -1,5 +1,6 @@
 "use client";
 
+import type { Ref } from "react";
 import {
   CartesianGrid,
   Line,
@@ -96,10 +97,12 @@ export function RankingChart({
   data,
   changeDates = [],
   annotations = [],
+  chartRef,
 }: {
   data: RankingChartData;
   changeDates?: string[];
   annotations?: AppAnnotationItem[];
+  chartRef?: Ref<HTMLDivElement>;
 }) {
   const today = todayUtc();
   const plotted = new Set(data.rows.map((row) => String(row.date)));
@@ -110,6 +113,7 @@ export function RankingChart({
 
   return (
     <ChartContainer
+      ref={chartRef}
       config={data.config}
       className={`${CHART_HEIGHT.hero} w-full`}
       role="region"

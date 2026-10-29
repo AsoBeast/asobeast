@@ -4,6 +4,7 @@ import type {
   CompetitorItem,
   WebhookItem,
 } from "@asobeast/shared";
+import { holdRender } from "./chart-image.mts";
 import {
   AWAITING_ALERT_COOKIE,
   CROWDED_COMPETITORS_COOKIE,
@@ -855,5 +856,44 @@ test.describe("keyword bulk actions keep focus", () => {
       page.getByRole("dialog", { name: "Tag keywords" }),
     ).toHaveCount(0);
     held.release();
+  });
+});
+
+test.describe("chart image controls keep focus", () => {
+  const rankingsChart = (page: Page) =>
+    page.getByRole("region", { name: "Keyword rank positions" });
+
+  for (const name of [
+    "Copy image of the rankings chart",
+    "Download PNG of the rankings chart",
+  ]) {
+    test(`${name} keeps focus while the picture is drawn`, async ({ page }) => {
+      const held = await holdRender(page);
+      await page.goto("/apps/app-1/rankings");
+      await expect(rankingsChart(page)).toBeVisible();
+      const control = page.getByRole("button", { name, exact: true });
+
+      await pressFromKeyboard(control);
+
+      await expectFocusKeptWhileHeld(control, held);
+    });
+  }
+
+  test("two activations of Download PNG in one task save one picture", async ({
+    page,
+  }) => {
+    const saved: string[] = [];
+    page.on("download", (file) => saved.push(file.suggestedFilename()));
+    await page.goto("/apps/app-1/rankings");
+    const control = page.getByRole("button", {
+      name: "Download PNG of the rankings chart",
+      exact: true,
+    });
+
+    await activateTwiceInOneTask(control);
+
+    await expect.poll(() => saved.length).toBe(1);
+    await expect(control).not.toHaveAttribute("aria-disabled", "true");
+    expect(saved).toHaveLength(1);
   });
 });
