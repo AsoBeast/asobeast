@@ -1,3 +1,4 @@
+import type { Store } from "@asobeast/shared";
 import {
   detectColumns,
   IMPORT_FIELDS,
@@ -6,6 +7,15 @@ import {
 } from "./columns";
 import { decodeCsvBytes, type CsvEncoding } from "./decode";
 import { toImportRows, type ParsedImportRows } from "./rows";
+import {
+  applyScope,
+  defaultApp,
+  NO_SCOPE,
+  scopeOf,
+  type FileScope,
+  type ImportTarget,
+  type LeftOut,
+} from "./scope";
 import { parseCsv, type CsvRecord, type Delimiter } from "./tokenize";
 
 const SAMPLE_CHARS = 24;
@@ -16,16 +26,19 @@ export interface KeywordFile {
   delimiter: Delimiter | null;
   records: CsvRecord[];
   detected: ColumnMapping | null;
+  scope: FileScope;
 }
 
 export interface FileView {
   hasHeader: boolean;
   mapping: ColumnMapping;
+  app?: string;
 }
 
 export interface MappedFile extends ParsedImportRows {
   columns: number;
   ignoredColumns: number;
+  leftOut?: LeftOut;
 }
 
 export interface ColumnOption {
@@ -43,33 +56,63 @@ const widthOf = (file: KeywordFile): number =>
 export function readKeywordFile(buffer: ArrayBuffer): KeywordFile {
   const { text, encoding, fallback } = decodeCsvBytes(buffer);
   const { delimiter, records } = parseCsv(text);
+  const header = records[0]?.cells ?? [];
+  const detected = detectColumns(header);
   return {
     encoding,
     fallback,
     delimiter,
     records,
-    detected: detectColumns(records[0]?.cells ?? []),
+    detected,
+    scope: detected ? scopeOf(header, records.slice(1)) : NO_SCOPE,
   };
 }
 
-export function initialView(file: KeywordFile): FileView {
-  return file.detected
-    ? { hasHeader: true, mapping: file.detected }
-    : { hasHeader: false, mapping: { ...NO_COLUMNS, keyword: 0 } };
+export function initialView(
+  file: KeywordFile,
+  target: ImportTarget | null = null,
+): FileView {
+  if (!file.detected) {
+    return { hasHeader: false, mapping: { ...NO_COLUMNS, keyword: 0 } };
+  }
+  const app = defaultApp(file.scope, target);
+  return {
+    hasHeader: true,
+    mapping: file.detected,
+    ...(app === undefined ? {} : { app }),
+  };
 }
+
+export const appsLeftToChoose = (file: KeywordFile, view: FileView): number =>
+  view.hasHeader && view.app === undefined && file.scope.apps.length > 1
+    ? file.scope.apps.length
+    : 0;
 
 const dataRecords = (file: KeywordFile, view: FileView): CsvRecord[] =>
   view.hasHeader ? file.records.slice(1) : file.records;
 
-export function mapKeywordFile(file: KeywordFile, view: FileView): MappedFile {
+export function mapKeywordFile(
+  file: KeywordFile,
+  view: FileView,
+  store?: Store,
+): MappedFile {
   const columns = widthOf(file);
   const mapped = IMPORT_FIELDS.filter(
     (field) => view.mapping[field] !== null,
   ).length;
+  const scope = view.hasHeader ? file.scope : NO_SCOPE;
+  const { records, ...leftOut } = applyScope(
+    dataRecords(file, view),
+    scope,
+    view.app,
+    store,
+  );
+  const anyLeftOut = leftOut.otherApps + leftOut.otherStore > 0;
   return {
-    ...toImportRows(dataRecords(file, view), view.mapping),
+    ...toImportRows(records, view.mapping),
     columns,
-    ignoredColumns: Math.max(0, columns - mapped),
+    ignoredColumns: Math.max(0, columns - mapped - scope.usedColumns),
+    ...(anyLeftOut ? { leftOut } : {}),
   };
 }
 

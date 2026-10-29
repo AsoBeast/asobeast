@@ -176,6 +176,27 @@ describe("fileNotices", () => {
       fileNotices({ ...base, hasHeader: false, ignoredColumns: 1 })[1],
     ).toBe("1 other column is ignored.");
   });
+
+  it("U-VIEW-07 says what was left out, in the order the person acts on it", () => {
+    expect(
+      fileNotices({
+        ...base,
+        ignoredColumns: 3,
+        store: "APP_STORE",
+        leftOut: { otherApps: 4, otherStore: 1 },
+      }),
+    ).toEqual([
+      "4 rows for other apps are left out.",
+      "1 row for Google Play is left out.",
+      "3 other columns are ignored.",
+    ]);
+  });
+
+  it("U-VIEW-08 asks the person to choose one of the apps of the file", () => {
+    expect(fileNotices({ ...base, appsToChoose: 3 })).toEqual([
+      "This file holds rows for 3 apps and all of them are imported. Choose one under Columns to import only its keywords.",
+    ]);
+  });
 });
 
 describe("quotaNotice", () => {

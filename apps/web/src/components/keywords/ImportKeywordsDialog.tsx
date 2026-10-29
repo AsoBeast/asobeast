@@ -15,7 +15,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { columnOptions } from "@/lib/csv-import/parse-keyword-file";
+import {
+  appsLeftToChoose,
+  columnOptions,
+} from "@/lib/csv-import/parse-keyword-file";
 import { fileNotices, importButtonLabel } from "@/lib/keyword-import";
 import { ImportBudgetNotice } from "./ImportBudgetNotice";
 import { ImportQuotaNotice } from "./ImportQuotaNotice";
@@ -51,6 +54,9 @@ export function ImportKeywordsDialog({
           fallback: loaded.file.fallback,
           hasHeader: view.hasHeader,
           ignoredColumns: mapped.ignoredColumns,
+          store,
+          leftOut: mapped.leftOut,
+          appsToChoose: appsLeftToChoose(loaded.file, view),
         })
       : [];
 
@@ -82,6 +88,7 @@ export function ImportKeywordsDialog({
               market={flow.market}
               onMarketChange={flow.setMarket}
               view={view}
+              scope={loaded.file.scope}
               options={columnOptions(loaded.file, view)}
               onViewChange={flow.setView}
             />

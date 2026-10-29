@@ -14,6 +14,7 @@ import {
   type Store,
 } from "@asobeast/shared";
 import { ApiError, importKeywords } from "@/lib/api";
+import type { ImportTarget } from "@/lib/csv-import/scope";
 import {
   initialView,
   mapKeywordFile,
@@ -30,11 +31,13 @@ import {
   refuseImport,
 } from "@/lib/keyword-import";
 import {
+  appDetailOptions,
   invalidateKeywordImport,
   invalidateKeywordMutation,
   keywordImportPreviewOptions,
 } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
+import { useCachedQueryData } from "@/lib/use-cached-query-data";
 
 const MAX_FILE_BYTES = 2_000_000;
 
@@ -81,9 +84,18 @@ export function useKeywordImport(
   const [readError, setReadError] = useState<string | null>(null);
   const latestChoice = useRef(0);
 
+  const detail = useCachedQueryData(appDetailOptions(appId).queryKey);
+  const target = useMemo<ImportTarget | null>(
+    () =>
+      detail
+        ? { store, storeAppId: detail.storeAppId, name: detail.name }
+        : null,
+    [detail, store],
+  );
+
   const mapped = useMemo(
-    () => (loaded && view ? mapKeywordFile(loaded.file, view) : null),
-    [loaded, view],
+    () => (loaded && view ? mapKeywordFile(loaded.file, view, store) : null),
+    [loaded, view, store],
   );
   const refusal = useMemo(
     () => (mapped ? refuseImport(mapped.rows, market) : null),
@@ -141,7 +153,7 @@ export function useKeywordImport(
       if (choice !== latestChoice.current) return;
       setReadError(null);
       setLoaded({ name: file.name, file: parsed });
-      setView(initialView(parsed));
+      setView(initialView(parsed, target));
     } catch {
       if (choice === latestChoice.current) forget(FILE_UNREADABLE);
     }

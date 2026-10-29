@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  appsLeftToChoose,
   columnOptions,
   initialView,
   mapKeywordFile,
@@ -113,6 +114,74 @@ describe("readKeywordFile", () => {
         (row) => row.keyword,
       ),
     ).toEqual(["us", "pl"]);
+  });
+});
+
+describe("a file that names the apps and stores of its rows", () => {
+  const target = {
+    store: "APP_STORE" as const,
+    storeAppId: "123456789",
+    name: "Import Lab",
+  };
+  const FILE = [
+    "App Id,Platform,Keyword,Country,Position",
+    "123456789,ios,focus timer,us,4",
+    "987654321,ios,habit tracker,us,9",
+    "123456789,android,deep work,us,7",
+    "123456789,ios,zegar,pl,2",
+  ].join("\n");
+
+  it("U-SCOPE-16 imports the rows of the app and store it is imported into and says what it left out", () => {
+    const file = readKeywordFile(bufferOf(FILE));
+    const view = initialView(file, target);
+
+    expect(view).toEqual({
+      hasHeader: true,
+      mapping: { keyword: 2, country: 3, tags: null, note: null },
+      app: "123456789",
+    });
+    expect(mapKeywordFile(file, view, "APP_STORE")).toEqual({
+      rows: [
+        { keyword: "focus timer", country: "us" },
+        { keyword: "zegar", country: "pl" },
+      ],
+      lines: [2, 5],
+      columns: 5,
+      ignoredColumns: 1,
+      leftOut: { otherApps: 1, otherStore: 1 },
+    });
+  });
+
+  it("U-SCOPE-17 imports every app of the file until one is chosen", () => {
+    const file = readKeywordFile(bufferOf(FILE));
+    const view = initialView(file, { ...target, storeAppId: "5", name: null });
+
+    expect(view.app).toBeUndefined();
+    expect(
+      mapKeywordFile(file, view, "APP_STORE").rows.map((row) => row.keyword),
+    ).toEqual(["focus timer", "habit tracker", "zegar"]);
+  });
+
+  it("U-SCOPE-18 reads the file whole when the first row is not a header", () => {
+    const file = readKeywordFile(bufferOf(FILE));
+    const view = { ...initialView(file, target), hasHeader: false };
+    const mapped = mapKeywordFile(file, view, "APP_STORE");
+
+    expect(mapped.rows).toHaveLength(5);
+    expect(mapped.leftOut).toBeUndefined();
+  });
+
+  it("U-SCOPE-19 counts the apps still to choose from only while every app of the file is imported", () => {
+    const file = readKeywordFile(bufferOf(FILE));
+    const unmatched = initialView(file, {
+      ...target,
+      storeAppId: "5",
+      name: null,
+    });
+
+    expect(appsLeftToChoose(file, unmatched)).toBe(2);
+    expect(appsLeftToChoose(file, initialView(file, target))).toBe(0);
+    expect(appsLeftToChoose(file, { ...unmatched, hasHeader: false })).toBe(0);
   });
 });
 

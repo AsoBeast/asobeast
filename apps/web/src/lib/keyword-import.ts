@@ -11,7 +11,8 @@ import {
   type KeywordImportSummary,
   type Store,
 } from "@asobeast/shared";
-import { formatNumber } from "@/lib/format";
+import type { LeftOut } from "@/lib/csv-import/scope";
+import { formatNumber, storeLabel } from "@/lib/format";
 import { formatQuotaUsage, hasNoCapacity } from "@/lib/quota-usage";
 
 export const IMPORT_BODY_BYTES = 96_000;
@@ -118,11 +119,22 @@ export function rowNote(
   }
 }
 
-export function fileNotices(file: {
+const otherStore = (store: Store): Store =>
+  store === "APP_STORE" ? "GOOGLE_PLAY" : "APP_STORE";
+
+const leftOutSentence = (rows: number, subject: string): string =>
+  `${formatNumber(rows)} row${rows === 1 ? "" : "s"} for ${subject} ${rows === 1 ? "is" : "are"} left out.`;
+
+export interface FileNoticeFacts {
   fallback: boolean;
   hasHeader: boolean;
   ignoredColumns: number;
-}): string[] {
+  store?: Store;
+  leftOut?: LeftOut;
+  appsToChoose?: number;
+}
+
+export function fileNotices(file: FileNoticeFacts): string[] {
   const notices: string[] = [];
   if (file.fallback) {
     notices.push(
@@ -132,6 +144,22 @@ export function fileNotices(file: {
   if (!file.hasHeader) {
     notices.push(
       "No header row was found, so column 1 is read as the keyword.",
+    );
+  }
+  if (file.appsToChoose) {
+    notices.push(
+      `This file holds rows for ${formatNumber(file.appsToChoose)} apps and all of them are imported. Choose one under Columns to import only its keywords.`,
+    );
+  }
+  if (file.leftOut && file.leftOut.otherApps > 0) {
+    notices.push(leftOutSentence(file.leftOut.otherApps, "other apps"));
+  }
+  if (file.leftOut && file.leftOut.otherStore > 0 && file.store) {
+    notices.push(
+      leftOutSentence(
+        file.leftOut.otherStore,
+        storeLabel(otherStore(file.store)),
+      ),
     );
   }
   if (file.ignoredColumns > 0) {
