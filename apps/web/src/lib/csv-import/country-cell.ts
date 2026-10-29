@@ -2,6 +2,7 @@ import { COUNTRY_NAMES } from "@/lib/country-names";
 
 const FIRST_REGIONAL_INDICATOR = 0x1f1e6;
 const LAST_REGIONAL_INDICATOR = 0x1f1ff;
+const LETTER_A = "a".charCodeAt(0);
 const CODE_PATTERN = /^[a-z]{2}$/i;
 
 const NAME_ALTERNATES: Readonly<Record<string, string>> = {
@@ -47,7 +48,7 @@ function flagCode(cell: string): string | null {
   if (!isRegionalIndicator(first) || !isRegionalIndicator(second)) return null;
   return [first, second]
     .map((point) =>
-      String.fromCharCode(0x61 + point - FIRST_REGIONAL_INDICATOR),
+      String.fromCharCode(LETTER_A + point - FIRST_REGIONAL_INDICATOR),
     )
     .join("");
 }
