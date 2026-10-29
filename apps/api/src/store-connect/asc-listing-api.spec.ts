@@ -3,12 +3,22 @@ import { AscError } from './asc-errors';
 import type { AscResponse } from './asc-transport';
 import { failure, ok, recordedRequester } from './asc-transport.fixture';
 
-const versions = (states: string[]): AscResponse =>
+interface VersionEntry {
+  state: string;
+  version: string;
+  createdDate: string;
+}
+
+const versions = (entries: VersionEntry[]): AscResponse =>
   ok({
-    data: states.map((state, index) => ({
+    data: entries.map((entry, index) => ({
       id: String(900 - index),
       type: 'appStoreVersions',
-      attributes: { appStoreState: state, version: `2.${index}` },
+      attributes: {
+        appStoreState: entry.state,
+        versionString: entry.version,
+        createdDate: entry.createdDate,
+      },
     })),
     links: {},
   });
@@ -29,8 +39,16 @@ function recorded(...responses: AscResponse[]) {
 }
 
 describe('AscListingApi.liveVersion', () => {
-  it('reads the live version for the app', async () => {
-    const { api, requests } = recorded(versions(['READY_FOR_SALE']));
+  it('reads the live ios version for the app', async () => {
+    const { api, requests } = recorded(
+      versions([
+        {
+          state: 'READY_FOR_SALE',
+          version: '2.0',
+          createdDate: '2026-01-15T10:00:00.000Z',
+        },
+      ]),
+    );
 
     await expect(api.liveVersion('1476097583')).resolves.toEqual({
       id: '900',
@@ -38,15 +56,28 @@ describe('AscListingApi.liveVersion', () => {
     });
     expect(requests[0]).toMatchObject({
       method: 'GET',
-      path: '/v1/apps/1476097583/appStoreVersions?filter[appStoreState]=READY_FOR_SALE&fields[appStoreVersions]=version&limit=200',
+      path: '/v1/apps/1476097583/appStoreVersions?filter[appStoreState]=READY_FOR_SALE&filter[platform]=IOS&fields[appStoreVersions]=versionString,createdDate&limit=200',
     });
   });
 
   it('takes the newest live version when Apple answers several', async () => {
-    const { api } = recorded(versions(['READY_FOR_SALE', 'READY_FOR_SALE']));
+    const { api } = recorded(
+      versions([
+        {
+          state: 'READY_FOR_SALE',
+          version: '1.9',
+          createdDate: '2025-06-01T10:00:00.000Z',
+        },
+        {
+          state: 'READY_FOR_SALE',
+          version: '2.0',
+          createdDate: '2026-01-15T10:00:00.000Z',
+        },
+      ]),
+    );
 
     await expect(api.liveVersion('1476097583')).resolves.toEqual({
-      id: '900',
+      id: '899',
       version: '2.0',
     });
   });
