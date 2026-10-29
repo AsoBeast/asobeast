@@ -168,6 +168,39 @@ describe('toTrackedKeywordItem', () => {
       expect(item.scoreOutdated).toBe(false);
     });
 
+    it('passes a floor answer through', () => {
+      const floor = {
+        ...signals,
+        officialPopularity: 41,
+        officialPopularityState: 'floor',
+        officialPopularityFloor: 41,
+        officialPopularityWeek: '2026-10-18',
+        officialPopularityLastAboveFloor: { value: 63, week: '2026-09-06' },
+      };
+      const item = toTrackedKeywordItem(
+        rowWith({ formulaVersion: 'app-store-v5', stats: { signals: floor } }),
+      );
+      expect(item.scoreSignals).toEqual(floor);
+    });
+
+    it('adds no floor answer to a row scored before it existed', () => {
+      const item = toTrackedKeywordItem(
+        rowWith({ formulaVersion: 'app-store-v5', stats: { signals } }),
+      );
+      expect(item.scoreSignals).not.toHaveProperty('officialPopularityState');
+      expect(item.scoreSignals).toEqual(signals);
+    });
+
+    it('keeps the signals of a row with a malformed floor field', () => {
+      const item = toTrackedKeywordItem(
+        rowWith({
+          formulaVersion: 'app-store-v5',
+          stats: { signals: { ...signals, officialPopularityFloor: '41' } },
+        }),
+      );
+      expect(item.scoreSignals).toEqual(signals);
+    });
+
     it('marks a row scored by an older formula', () => {
       const item = toTrackedKeywordItem(
         rowWith({ formulaVersion: 'app-store-v1', stats: {} }),
