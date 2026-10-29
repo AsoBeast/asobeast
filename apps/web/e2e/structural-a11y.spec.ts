@@ -34,6 +34,7 @@ for (const path of [
   "/apps/app-1/rankings",
   "/apps/app-1/reviews",
   "/apps/app-1/keywords",
+  "/apps/app-floor/keywords",
   "/apps/app-1/competitors",
   "/settings",
   "/integrations",

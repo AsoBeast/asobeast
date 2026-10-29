@@ -1,4 +1,4 @@
-import { toDifficulty100 } from "@asobeast/shared";
+import { isFloorAnswer, toDifficulty100 } from "@asobeast/shared";
 import type { KeywordSort, TrackedKeywordItem } from "@asobeast/shared";
 
 export function scoreValue(
@@ -18,6 +18,9 @@ export function scoreValue(
       return null;
   }
 }
+
+export const hasFloorAnswer = (keyword: TrackedKeywordItem): boolean =>
+  isFloorAnswer(keyword.scoreSignals?.officialPopularityState);
 
 export const isScoreOutdated = (keyword: TrackedKeywordItem): boolean =>
   keyword.scoreOutdated === true;

@@ -86,6 +86,15 @@ describe("the tool catalog", () => {
     expect(description).not.toMatch(/>\d+/);
   });
 
+  it.each([
+    "officialPopularityState",
+    "officialPopularityFloor",
+    "officialPopularityLastAboveFloor",
+    "MEDIUM",
+  ])("tells an agent how to read an Apple floor answer through %s", (word) => {
+    expect(toolByName("list_keywords")?.description).toContain(word);
+  });
+
   it("places the localization tools after keyword_fields in the keywords group", () => {
     const names = KEYWORD_TOOLS.map((tool) => tool.name);
 

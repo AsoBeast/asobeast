@@ -1,5 +1,5 @@
 import { formatCheckedPosition } from "@asobeast/shared";
-import type { TrackedKeywordItem } from "@asobeast/shared";
+import type { ScoreSignals, TrackedKeywordItem } from "@asobeast/shared";
 import { csvFilename, downloadCsv, toCsv } from "@/lib/csv";
 import { scoreValue } from "./keyword-scores";
 
@@ -27,6 +27,11 @@ const KEYWORD_CSV_HEADERS = [
   "suggestReach",
   "serpFlags",
   "officialPopularity",
+  "officialPopularityState",
+  "officialPopularityFloor",
+  "officialPopularityWeek",
+  "lastAboveFloorValue",
+  "lastAboveFloorWeek",
   "scoreOutdated",
   "scoreComparability",
   "tags",
@@ -38,6 +43,19 @@ function roundOrNull(value: number | null): number | null {
   return value === null ? null : Math.round(value);
 }
 
+function floorAnswerColumns(
+  signals: ScoreSignals | null,
+): Array<string | number | null> {
+  const last = signals?.officialPopularityLastAboveFloor;
+  return [
+    signals?.officialPopularityState ?? null,
+    signals?.officialPopularityFloor ?? null,
+    signals?.officialPopularityWeek ?? null,
+    last?.value ?? null,
+    last?.week ?? null,
+  ];
+}
+
 function evidenceColumns(
   keyword: TrackedKeywordItem,
 ): Array<string | number | null> {
@@ -46,6 +64,7 @@ function evidenceColumns(
     signals?.suggestReach ?? null,
     signals?.flags.join(" ") ?? null,
     signals?.officialPopularity ?? null,
+    ...floorAnswerColumns(signals),
     keyword.scoreOutdated === undefined ? null : String(keyword.scoreOutdated),
   ];
 }

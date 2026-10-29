@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { ScoreSignals } from "@asobeast/shared";
-import { difficultySignalLines, popularitySignalLines } from "./score-signals";
+import {
+  difficultySignalLines,
+  lowerConfidenceLines,
+  popularitySignalLines,
+} from "./score-signals";
 
 function signals(overrides: Partial<ScoreSignals> = {}): ScoreSignals {
   return {
@@ -156,5 +160,163 @@ describe("difficultySignalLines", () => {
       [],
     );
     expect(difficultySignalLines(null)).toEqual([]);
+  });
+});
+
+describe("floor answers", () => {
+  const SEARCH_MODEL =
+    "Estimated from the first 25 App Store results and search suggestions, on Apple's search popularity scale.";
+  const floor = (overrides: Partial<ScoreSignals> = {}): ScoreSignals =>
+    signals({
+      officialPopularity: 41,
+      officialPopularityState: "floor",
+      officialPopularityFloor: 41,
+      officialPopularityWeek: "2026-10-18",
+      ...overrides,
+    });
+  const absent = (overrides: Partial<ScoreSignals> = {}): ScoreSignals =>
+    floor({
+      officialPopularity: null,
+      officialPopularityState: "absent",
+      ...overrides,
+    });
+
+  it("names the floor value and the last value above it", () => {
+    expect(
+      popularitySignalLines(
+        floor({
+          officialPopularityLastAboveFloor: { value: 63, week: "2026-09-06" },
+        }),
+        "APPLE_ADS_POPULARITY",
+      ),
+    ).toEqual([
+      "Apple answered its floor value (41) for the week of 18 Oct 2026.",
+      "The last value above the floor was 63 in the week of 6 Sep 2026.",
+    ]);
+  });
+
+  it("names only the floor value when no kept week listed the term above it", () => {
+    expect(popularitySignalLines(floor(), "APPLE_ADS_POPULARITY")).toEqual([
+      "Apple answered its floor value (41) for the week of 18 Oct 2026.",
+    ]);
+  });
+
+  it("keeps the estimate line for a term Apple left out", () => {
+    expect(
+      popularitySignalLines(
+        absent({
+          officialPopularityLastAboveFloor: { value: 58, week: "2026-09-27" },
+        }),
+        "APPLE_SEARCH_SIGNALS",
+        38,
+      ),
+    ).toEqual([
+      SEARCH_MODEL,
+      "Apple left this term out of its list for the week of 18 Oct 2026, so its popularity is below the floor of 41 and the number shown is held under it.",
+      "The last value above the floor was 58 in the week of 27 Sep 2026.",
+    ]);
+  });
+
+  it("leaves out the last value of a term Apple never listed above the floor", () => {
+    expect(
+      popularitySignalLines(absent(), "APPLE_SEARCH_SIGNALS", 30),
+    ).toHaveLength(2);
+  });
+
+  it("reads a term listed above the floor as before", () => {
+    expect(
+      popularitySignalLines(
+        floor({
+          officialPopularity: 71,
+          officialPopularityState: "listed",
+          officialPopularityFloor: 56,
+        }),
+        "APPLE_ADS_POPULARITY",
+      ),
+    ).toEqual(["Apple reports a search popularity of 71 for this term."]);
+  });
+
+  it("still names a floor answer without the floor or the week", () => {
+    expect(
+      popularitySignalLines(
+        signals({ officialPopularity: 41, officialPopularityState: "floor" }),
+        "APPLE_ADS_POPULARITY",
+      ),
+    ).toEqual(["Apple answered its floor value."]);
+    expect(
+      popularitySignalLines(
+        signals({ officialPopularityState: "absent" }),
+        "APPLE_SEARCH_SIGNALS",
+      ),
+    ).toEqual([
+      SEARCH_MODEL,
+      "Apple left this term out of its list, so its popularity is below the floor and the number shown is held under it.",
+    ]);
+  });
+
+  it("writes the week with the shared UTC date formatter", () => {
+    expect(
+      popularitySignalLines(floor({ officialPopularityWeek: "2026-03-05" }))[0],
+    ).toContain("5 Mar 2026");
+  });
+
+  it("prefers the floor lines whatever the source says", () => {
+    expect(
+      popularitySignalLines(absent(), "GOOGLE_PLAY_SUGGEST_REACH")[1],
+    ).toContain("below the floor of 41");
+  });
+});
+
+describe("lower confidence on a floor answer", () => {
+  const DIFFICULTY =
+    "Popularity for this term is an Apple floor answer, so the confidence of this row is capped at Medium. Difficulty itself is read from the search results.";
+  const OPPORTUNITY =
+    "Opportunity is built from popularity, and popularity for this term is an Apple floor answer, so read it with lower confidence.";
+  const floor = (overrides: Partial<ScoreSignals> = {}): ScoreSignals =>
+    signals({ officialPopularityState: "floor", ...overrides });
+
+  it("adds the difficulty line after the typical page", () => {
+    expect(difficultySignalLines(floor())).toEqual([
+      "Typical top ten app: 45,000 ratings.",
+      DIFFICULTY,
+    ]);
+  });
+
+  it("adds the difficulty line after the page flags", () => {
+    expect(difficultySignalLines(floor({ flags: ["brand"] }))).toEqual([
+      "A brand search: one app dominates this page.",
+      DIFFICULTY,
+    ]);
+  });
+
+  it("says only the difficulty line without a median or flags", () => {
+    expect(difficultySignalLines(floor({ medianRatingCount: null }))).toEqual([
+      DIFFICULTY,
+    ]);
+  });
+
+  it("says the difficulty line for a term Apple left out", () => {
+    expect(
+      difficultySignalLines(
+        floor({ officialPopularityState: "absent", medianRatingCount: null }),
+      ),
+    ).toEqual([DIFFICULTY]);
+  });
+
+  it("leaves a listed term alone", () => {
+    expect(
+      difficultySignalLines(floor({ officialPopularityState: "listed" })),
+    ).toEqual(["Typical top ten app: 45,000 ratings."]);
+  });
+
+  it("names the opportunity line only for a floor answer", () => {
+    expect(lowerConfidenceLines("opportunity", floor())).toEqual([OPPORTUNITY]);
+    expect(
+      lowerConfidenceLines(
+        "opportunity",
+        floor({ officialPopularityState: "listed" }),
+      ),
+    ).toEqual([]);
+    expect(lowerConfidenceLines("opportunity", null)).toEqual([]);
   });
 });

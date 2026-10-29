@@ -24,16 +24,24 @@ import { tagsIn } from "@/lib/keyword-tags";
 import { KeywordRowActions } from "./KeywordRowActions";
 import type { PositionHistoryContext } from "./PositionHistoryPopover";
 import {
-  DerivedScoreCell,
   NoteButton,
   PlayAcquisitionsCell,
   PositionCell,
-  ScoreCell,
   TagBadges,
   VolatilityCell,
 } from "./keyword-cells";
-import { isScoreOutdated, scoreValue, shownScore } from "./keyword-scores";
-import { difficultySignalLines, popularitySignalLines } from "./score-signals";
+import { DerivedScoreCell, ScoreCell } from "./score-cells";
+import {
+  hasFloorAnswer,
+  isScoreOutdated,
+  scoreValue,
+  shownScore,
+} from "./keyword-scores";
+import {
+  difficultySignalLines,
+  lowerConfidenceLines,
+  popularitySignalLines,
+} from "./score-signals";
 import { SOURCE_LABELS, SourceBadge } from "./SourceBadge";
 import type { Grade, GradeMetric } from "@/lib/grade";
 import {
@@ -247,6 +255,7 @@ function scoreColumns() {
             scoreValue(row.original, "traffic"),
           )}
           outdated={isScoreOutdated(row.original)}
+          floorAnswer={hasFloorAnswer(row.original)}
         />
       ),
     }),
@@ -285,6 +294,11 @@ function scoreColumns() {
           label="Opportunity"
           metric="opportunity"
           emphasize
+          lowerConfidence={hasFloorAnswer(row.original)}
+          details={lowerConfidenceLines(
+            "opportunity",
+            row.original.scoreSignals ?? null,
+          )}
         />
       ),
     }),

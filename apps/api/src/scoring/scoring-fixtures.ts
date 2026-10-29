@@ -132,3 +132,35 @@ export const F13_DIACRITICS: KeywordStats = {
   keywordText: 'Géo  Quiz',
   resultCount: 30,
 };
+
+export const F14_FLOOR_LISTED: KeywordStats = {
+  ...F1_HEAD,
+  official: {
+    value: 41,
+    context: {
+      week: '2026-10-18',
+      floor: 41,
+      lastAboveFloor: { value: 63, week: '2026-09-06' },
+    },
+  },
+};
+
+export const F15_ABSENT_WITH_HISTORY: KeywordStats = {
+  ...F1_HEAD,
+  official: {
+    absentBelow: 41,
+    context: {
+      week: '2026-10-18',
+      floor: 41,
+      lastAboveFloor: { value: 58, week: '2026-09-27' },
+    },
+  },
+};
+
+export const F16_LISTED_ABOVE_FLOOR: KeywordStats = {
+  ...F1_HEAD,
+  official: {
+    value: 71,
+    context: { week: '2026-10-18', floor: 56, lastAboveFloor: null },
+  },
+};

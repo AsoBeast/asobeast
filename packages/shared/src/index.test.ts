@@ -3,8 +3,11 @@ import { describe, expect, it } from 'vitest';
 import type { ScoreProvenance } from './index';
 import {
   DEFAULT_COUNTRY,
+  isFloorAnswer,
+  isOfficialPopularityState,
   isStoreSuggestionStrategy,
   KEYWORD_SUGGESTION_STRATEGIES,
+  OFFICIAL_POPULARITY_STATES,
   STORE_SUGGESTION_STRATEGIES,
   isScoringConfidence,
   isScoringSource,
@@ -43,6 +46,38 @@ describe('@asobeast/shared constants', () => {
     expect(isScoringConfidence('HIGH')).toBe(true);
     expect(isScoringConfidence('UNKNOWN')).toBe(false);
   });
+
+  it('names the three answers Apple can give for a term', () => {
+    expect(OFFICIAL_POPULARITY_STATES).toEqual(['listed', 'floor', 'absent']);
+  });
+
+  it.each(['listed', 'floor', 'absent'])(
+    'recognises %s as an official popularity state',
+    (state) => {
+      expect(isOfficialPopularityState(state)).toBe(true);
+    },
+  );
+
+  it.each(['below', '', null, 5])(
+    'refuses %p as an official popularity state',
+    (value) => {
+      expect(isOfficialPopularityState(value)).toBe(false);
+    },
+  );
+
+  it.each(['floor', 'absent'] as const)(
+    'reads %s as a floor answer',
+    (state) => {
+      expect(isFloorAnswer(state)).toBe(true);
+    },
+  );
+
+  it.each(['listed', null, undefined] as const)(
+    'does not read %p as a floor answer',
+    (state) => {
+      expect(isFloorAnswer(state)).toBe(false);
+    },
+  );
 
   it('round-trips a UTC provenance timestamp', () => {
     const provenance: ScoreProvenance = {

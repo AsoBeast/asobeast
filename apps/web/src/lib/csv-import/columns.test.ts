@@ -22,6 +22,11 @@ const EXPORT_HEADER = [
   "suggestReach",
   "serpFlags",
   "officialPopularity",
+  "officialPopularityState",
+  "officialPopularityFloor",
+  "officialPopularityWeek",
+  "lastAboveFloorValue",
+  "lastAboveFloorWeek",
   "scoreOutdated",
   "scoreComparability",
   "tags",
@@ -45,9 +50,9 @@ describe("detectColumns", () => {
   it("finds the columns of asobeast's own export and ignores the rest", () => {
     expect(detectColumns(EXPORT_HEADER)).toEqual({
       keyword: 0,
-      country: 24,
-      tags: 22,
-      note: 23,
+      country: 29,
+      tags: 27,
+      note: 28,
     });
   });
 

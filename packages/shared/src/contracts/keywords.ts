@@ -2,6 +2,7 @@ import {
   KeywordBucket,
   KeywordSource,
   KeywordSuggestionStrategy,
+  OfficialPopularityState,
   ScoringConfidence,
   ScoringSource,
   SerpFlag,
@@ -11,6 +12,11 @@ import {
 import type { RankMilestoneTier } from '../rank';
 import type { AppStoreLocalization } from '../storefronts/app-store-localizations';
 import type { PaidPlanName, QuotaUsage } from './plans';
+
+export interface OfficialPopularityListing {
+  value: number;
+  week: string;
+}
 
 export interface ScoreSignals {
   suggestReach: SuggestReachStatus;
@@ -22,6 +28,10 @@ export interface ScoreSignals {
   officialPopularity: number | null;
   estimatedTraffic: number | null;
   entryDifficulty?: number | null;
+  officialPopularityState?: OfficialPopularityState | null;
+  officialPopularityFloor?: number | null;
+  officialPopularityWeek?: string | null;
+  officialPopularityLastAboveFloor?: OfficialPopularityListing | null;
 }
 
 export interface ScoreProvenance {

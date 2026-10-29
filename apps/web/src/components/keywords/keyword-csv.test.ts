@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { RANK_DEPTH, type TrackedKeywordItem } from "@asobeast/shared";
+import {
+  RANK_DEPTH,
+  type ScoreSignals,
+  type TrackedKeywordItem,
+} from "@asobeast/shared";
 import { keywordCsv } from "./keyword-csv";
 
 function keyword(
@@ -57,7 +61,7 @@ describe("keywordCsv", () => {
 
   it("adds the score evidence after the capture time", () => {
     expect(keywordCsv([keyword("focus timer")]).split("\r\n")[0]).toContain(
-      "capturedAt,suggestReach,serpFlags,officialPopularity,scoreOutdated,scoreComparability",
+      "capturedAt,suggestReach,serpFlags,officialPopularity,officialPopularityState,officialPopularityFloor,officialPopularityWeek,lastAboveFloorValue,lastAboveFloorWeek,scoreOutdated,scoreComparability",
     );
   });
 
@@ -78,22 +82,73 @@ describe("keywordCsv", () => {
         scoreOutdated: false,
       },
     ]);
-    expect(row).toContain(",hit,brand padded,71,false,");
+    expect(row).toContain(",hit,brand padded,71,,,,,,false,");
   });
 
   it("leaves the evidence empty for a row without signals", () => {
     const row = keywordCsv([
       { ...keyword("focus timer"), scoreSignals: null, scoreOutdated: true },
     ]);
-    expect(row).toContain(",,,,true,");
+    expect(row).toContain(",,,,,,,,,true,");
     expect(row).not.toMatch(/null|undefined/);
+  });
+
+  describe("the Apple floor answer", () => {
+    const signals = (overrides: Partial<ScoreSignals>): ScoreSignals => ({
+      suggestReach: "hit",
+      suggestPrefixLength: 3,
+      suggestPosition: 2,
+      serpRelevance: 0.8,
+      medianRatingCount: 12000,
+      flags: [],
+      officialPopularity: null,
+      estimatedTraffic: 4,
+      ...overrides,
+    });
+    const rowOf = (scoreSignals: ScoreSignals) =>
+      keywordCsv([
+        { ...keyword("world flags"), scoreSignals, scoreOutdated: false },
+      ]).split("\r\n")[1];
+
+    it("exports a term listed at the floor with its last value", () => {
+      expect(
+        rowOf(
+          signals({
+            officialPopularity: 41,
+            officialPopularityState: "floor",
+            officialPopularityFloor: 41,
+            officialPopularityWeek: "2026-10-18",
+            officialPopularityLastAboveFloor: { value: 63, week: "2026-09-06" },
+          }),
+        ),
+      ).toContain(",41,floor,41,2026-10-18,63,2026-09-06,false,");
+    });
+
+    it("exports a term Apple left out without a last value", () => {
+      const row = rowOf(
+        signals({
+          officialPopularityState: "absent",
+          officialPopularityFloor: 41,
+          officialPopularityWeek: "2026-10-18",
+        }),
+      );
+
+      expect(row).toContain(",hit,,,absent,41,2026-10-18,,,false,");
+      expect(row).not.toMatch(/null|undefined/);
+    });
+
+    it("leaves the floor cells empty for a row scored before them", () => {
+      expect(rowOf(signals({ officialPopularity: 71 }))).toContain(
+        ",hit,,71,,,,,,false,",
+      );
+    });
   });
 
   it("appends the tags and the note after the existing columns", () => {
     const header = keywordCsv([keyword("focus timer")]).split("\r\n")[0];
 
     expect(header.endsWith(",scoreComparability,tags,note,country")).toBe(true);
-    expect(header.split(",")).toHaveLength(25);
+    expect(header.split(",")).toHaveLength(30);
   });
 
   it("joins the tags and leaves a missing tag list and note empty", () => {
