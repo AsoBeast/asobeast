@@ -306,6 +306,7 @@ test.describe("on the locale lab", () => {
     await expect(
       page.getByRole("heading", { name: "Keyword coverage" }),
     ).toBeVisible();
+    await expect(page.getByRole("button", { name: "Refresh" })).toBeVisible();
     await expect(page.getByRole("region", { name: SECTION })).toHaveCount(0);
     await expect(
       page.getByText("Localizations could not be loaded"),
