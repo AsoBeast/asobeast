@@ -108,7 +108,8 @@ export function KeywordFieldEditor({
   const saveButton = useRef<HTMLButtonElement>(null);
   const name = localizationName(item.localization);
   const [draft, setDraft] = useState<string | null>(null);
-  const text = draft ?? item.phrases.join(",");
+  const stored = item.phrases.join(",");
+  const text = managed ? stored : (draft ?? stored);
   const field = keywordFieldDraft(text, item.phrases);
   const over = field.over > 0;
   const {
