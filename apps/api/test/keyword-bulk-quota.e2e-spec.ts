@@ -107,15 +107,53 @@ describe('Keyword bulk change quota (e2e)', () => {
     }).expect(200);
 
     expect((response.body as KeywordBulkResult).changed).toBe(3);
+    expect(
+      await harness.prisma.trackedKeyword.count({
+        where: { appId, keywordId: { in: shared }, active: true },
+      }),
+    ).toBe(3);
   });
 
   it('lets a pause and an untrack through at the limit', async () => {
     const active = await seedKeywords('active', limit);
     await trackAll(appId, active, true);
 
-    await bulk({ action: 'pause', keywordIds: active.slice(0, 2) }).expect(200);
-    await bulk({ action: 'untrack', keywordIds: active.slice(2, 4) }).expect(
-      200,
-    );
+    const paused = await bulk({
+      action: 'pause',
+      keywordIds: active.slice(0, 2),
+    }).expect(200);
+    const untracked = await bulk({
+      action: 'untrack',
+      keywordIds: active.slice(2, 4),
+    }).expect(200);
+
+    expect((paused.body as KeywordBulkResult).changed).toBe(2);
+    expect((untracked.body as KeywordBulkResult).changed).toBe(2);
+    expect(
+      await harness.prisma.trackedKeyword.count({
+        where: { appId, active: false },
+      }),
+    ).toBe(2);
+    expect(
+      await harness.prisma.trackedKeyword.count({ where: { appId } }),
+    ).toBe(limit - 2);
+  });
+
+  it('resumes up to exactly the limit', async () => {
+    await trackAll(appId, await seedKeywords('active', limit - 2), true);
+    const paused = await seedKeywords('paused', 2);
+    await trackAll(appId, paused, false);
+
+    const response = await bulk({
+      action: 'resume',
+      keywordIds: paused,
+    }).expect(200);
+
+    expect((response.body as KeywordBulkResult).changed).toBe(2);
+    expect(
+      await harness.prisma.trackedKeyword.count({
+        where: { appId, active: true },
+      }),
+    ).toBe(limit);
   });
 });

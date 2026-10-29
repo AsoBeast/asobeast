@@ -176,6 +176,49 @@ describe('KeywordsController bulk change (e2e)', () => {
     ]);
   });
 
+  it.each(['pause', 'untrack'] as const)(
+    'queues no first check for %s',
+    async (action) => {
+      const primary = await seedApp();
+      const keywordId = await track(primary.id, 'active');
+
+      await bulk(primary.id, { action, keywordIds: [keywordId] });
+
+      expect(await checkedJobIds()).toEqual([]);
+    },
+  );
+
+  it('queues no first check when resuming an active keyword', async () => {
+    const primary = await seedApp();
+    const keywordId = await track(primary.id, 'active');
+
+    const result = await resultOf(primary.id, {
+      action: 'resume',
+      keywordIds: [keywordId],
+    });
+
+    expect(result).toMatchObject({ changed: 0, unchanged: 1 });
+    expect(await checkedJobIds()).toEqual([]);
+  });
+
+  it('counts a repeated id once', async () => {
+    const primary = await seedApp();
+    const keywordId = await track(primary.id, 'twice');
+
+    const result = await resultOf(primary.id, {
+      action: 'pause',
+      keywordIds: [keywordId, keywordId, 'gone', 'gone'],
+    });
+
+    expect(result).toEqual({
+      action: 'pause',
+      requested: 2,
+      changed: 1,
+      unchanged: 0,
+      missing: ['gone'],
+    });
+  });
+
   it('moves a resumed keyword field row to manual', async () => {
     const primary = await seedApp();
     const keywordId = await track(primary.id, 'field phrase', {
