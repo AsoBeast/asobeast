@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { ScoreSignals } from "@asobeast/shared";
-import { difficultySignalLines, popularitySignalLines } from "./score-signals";
+import {
+  difficultySignalLines,
+  lowerConfidenceLines,
+  popularitySignalLines,
+} from "./score-signals";
 
 function signals(overrides: Partial<ScoreSignals> = {}): ScoreSignals {
   return {
@@ -251,5 +255,59 @@ describe("floor answers", () => {
     expect(
       popularitySignalLines(absent(), "GOOGLE_PLAY_SUGGEST_REACH")[1],
     ).toContain("below the floor of 41");
+  });
+});
+
+describe("lower confidence on a floor answer", () => {
+  const DIFFICULTY =
+    "Popularity for this term is an Apple floor answer, so the confidence of this row is capped at Medium. Difficulty itself is read from the search results.";
+  const OPPORTUNITY =
+    "Opportunity is built from popularity, and popularity for this term is an Apple floor answer, so read it with lower confidence.";
+  const floor = (overrides: Partial<ScoreSignals> = {}): ScoreSignals =>
+    signals({ officialPopularityState: "floor", ...overrides });
+
+  it("adds the difficulty line after the typical page", () => {
+    expect(difficultySignalLines(floor())).toEqual([
+      "Typical top ten app: 45,000 ratings.",
+      DIFFICULTY,
+    ]);
+  });
+
+  it("adds the difficulty line after the page flags", () => {
+    expect(difficultySignalLines(floor({ flags: ["brand"] }))).toEqual([
+      "A brand search: one app dominates this page.",
+      DIFFICULTY,
+    ]);
+  });
+
+  it("says only the difficulty line without a median or flags", () => {
+    expect(difficultySignalLines(floor({ medianRatingCount: null }))).toEqual([
+      DIFFICULTY,
+    ]);
+  });
+
+  it("says the difficulty line for a term Apple left out", () => {
+    expect(
+      difficultySignalLines(
+        floor({ officialPopularityState: "absent", medianRatingCount: null }),
+      ),
+    ).toEqual([DIFFICULTY]);
+  });
+
+  it("leaves a listed term alone", () => {
+    expect(
+      difficultySignalLines(floor({ officialPopularityState: "listed" })),
+    ).toEqual(["Typical top ten app: 45,000 ratings."]);
+  });
+
+  it("names the opportunity line only for a floor answer", () => {
+    expect(lowerConfidenceLines("opportunity", floor())).toEqual([OPPORTUNITY]);
+    expect(
+      lowerConfidenceLines(
+        "opportunity",
+        floor({ officialPopularityState: "listed" }),
+      ),
+    ).toEqual([]);
+    expect(lowerConfidenceLines("opportunity", null)).toEqual([]);
   });
 });

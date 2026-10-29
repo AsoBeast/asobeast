@@ -162,11 +162,15 @@ export function DerivedScoreCell({
   label,
   metric,
   emphasize,
+  details,
+  lowerConfidence,
 }: {
   value: number | null;
   label: string;
   metric: ScoreMetric;
   emphasize?: boolean;
+  details?: string[];
+  lowerConfidence?: boolean;
 }) {
   return (
     <ScoreButton
@@ -174,9 +178,12 @@ export function DerivedScoreCell({
       label={label}
       metric={metric}
       emphasize={emphasize}
-      summary="Derived score"
+      summary={
+        lowerConfidence ? "Derived score, lower confidence" : "Derived score"
+      }
     >
       <span>{DERIVED_SCORE_DETAIL}</span>
+      <DetailList lines={details} />
     </ScoreButton>
   );
 }

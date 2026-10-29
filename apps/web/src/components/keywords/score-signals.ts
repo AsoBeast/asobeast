@@ -106,10 +106,23 @@ export function popularitySignalLines(
     : [reachLine(signals)];
 }
 
-export function difficultySignalLines(signals: ScoreSignals | null): string[] {
-  if (!signals) {
-    return [];
-  }
+const LOWER_CONFIDENCE_LINES = {
+  difficulty:
+    "Popularity for this term is an Apple floor answer, so the confidence of this row is capped at Medium. Difficulty itself is read from the search results.",
+  opportunity:
+    "Opportunity is built from popularity, and popularity for this term is an Apple floor answer, so read it with lower confidence.",
+} as const;
+
+export function lowerConfidenceLines(
+  score: keyof typeof LOWER_CONFIDENCE_LINES,
+  signals: ScoreSignals | null,
+): string[] {
+  return isFloorAnswer(signals?.officialPopularityState)
+    ? [LOWER_CONFIDENCE_LINES[score]]
+    : [];
+}
+
+function serpLines(signals: ScoreSignals): string[] {
   if (signals.flags.length > 0) {
     return SERP_FLAGS.filter((flag) => signals.flags.includes(flag)).map(
       (flag) => FLAG_LINES[flag],
@@ -120,4 +133,14 @@ export function difficultySignalLines(signals: ScoreSignals | null): string[] {
     : [
         `Typical top ten app: ${pluralize(Math.round(signals.medianRatingCount), "rating")}.`,
       ];
+}
+
+export function difficultySignalLines(signals: ScoreSignals | null): string[] {
+  if (!signals) {
+    return [];
+  }
+  return [
+    ...serpLines(signals),
+    ...lowerConfidenceLines("difficulty", signals),
+  ];
 }

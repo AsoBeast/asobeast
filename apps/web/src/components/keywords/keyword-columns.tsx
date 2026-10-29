@@ -37,7 +37,11 @@ import {
   scoreValue,
   shownScore,
 } from "./keyword-scores";
-import { difficultySignalLines, popularitySignalLines } from "./score-signals";
+import {
+  difficultySignalLines,
+  lowerConfidenceLines,
+  popularitySignalLines,
+} from "./score-signals";
 import { SOURCE_LABELS, SourceBadge } from "./SourceBadge";
 import type { Grade, GradeMetric } from "@/lib/grade";
 import {
@@ -290,6 +294,11 @@ function scoreColumns() {
           label="Opportunity"
           metric="opportunity"
           emphasize
+          lowerConfidence={hasFloorAnswer(row.original)}
+          details={lowerConfidenceLines(
+            "opportunity",
+            row.original.scoreSignals ?? null,
+          )}
         />
       ),
     }),
