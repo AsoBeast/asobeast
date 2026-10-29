@@ -50,7 +50,7 @@ export function PositionImageButton({
       size="icon-xs"
       aria-label={`Copy image of the position history of ${keyword.text}`}
       aria-disabled={image.pending || undefined}
-      className="text-muted-foreground hover:text-foreground"
+      className="text-muted-foreground hover:text-foreground print:hidden"
       onClick={copy}
     >
       <Copy aria-hidden />

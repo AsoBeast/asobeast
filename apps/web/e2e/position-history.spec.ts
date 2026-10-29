@@ -479,3 +479,14 @@ test("E-PH-23 the range row keeps the range picker and the link to Rankings besi
     popover.getByRole("link", { name: "Open in Rankings" }),
   ).toBeVisible();
 });
+
+test("E-PH-24 the picture button is not printed", async ({ page }) => {
+  await page.goto(PAGE);
+  const popover = await openHistory(page, "focus timer");
+  await expect(copyImage(page, "focus timer")).toBeVisible();
+
+  await page.emulateMedia({ media: "print" });
+
+  await expect(popover).toBeVisible();
+  await expect(copyImage(page, "focus timer")).toBeHidden();
+});
