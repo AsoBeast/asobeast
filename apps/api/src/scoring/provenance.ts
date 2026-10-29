@@ -1,5 +1,6 @@
 import {
   CURRENT_FORMULA_VERSIONS,
+  isFloorAnswer,
   OfficialPopularityState,
   ScoringConfidence,
   ScoringSource,
@@ -37,7 +38,7 @@ export const scoringProfile = (
   formulaVersion: CURRENT_FORMULA_VERSIONS[store],
 });
 
-export function scoringConfidence(
+function evidenceConfidence(
   store: Store,
   evidence: ScoringEvidence,
 ): ScoringConfidence {
@@ -53,4 +54,17 @@ export function scoringConfidence(
     store !== 'GOOGLE_PLAY' ||
     evidence.detailSuccessCount >= MIN_COMPLETE_DETAILS;
   return serpComplete && detailsComplete ? 'HIGH' : 'MEDIUM';
+}
+
+const capAtMedium = (confidence: ScoringConfidence): ScoringConfidence =>
+  confidence === 'HIGH' ? 'MEDIUM' : confidence;
+
+export function scoringConfidence(
+  store: Store,
+  evidence: ScoringEvidence,
+): ScoringConfidence {
+  const confidence = evidenceConfidence(store, evidence);
+  return isFloorAnswer(evidence.officialPopularityState)
+    ? capAtMedium(confidence)
+    : confidence;
 }
