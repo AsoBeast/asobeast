@@ -364,6 +364,7 @@ function manualKeyword(
     bucket: null,
     scoredAt: null,
     scoreProvenance: null,
+    trackedAt: new Date().toISOString(),
   };
 }
 

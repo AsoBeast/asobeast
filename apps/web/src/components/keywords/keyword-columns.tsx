@@ -24,6 +24,7 @@ import { tagsIn } from "@/lib/keyword-tags";
 import { KeywordRowActions } from "./KeywordRowActions";
 import type { PositionHistoryContext } from "./PositionHistoryPopover";
 import {
+  AddedCell,
   NoteButton,
   PlayAcquisitionsCell,
   PositionCell,
@@ -94,6 +95,7 @@ export function keywordColumns({
 }) {
   return columnHelper.columns([
     ...identityColumns(),
+    addedColumn(),
     positionColumn(today, { appId, store, homeCountry, multiMarket }),
     ...scoreColumns(),
     ...(store === "GOOGLE_PLAY" ? [acquisitionsColumn()] : []),
@@ -213,6 +215,17 @@ function positionColumn(today: string, history: PositionHistoryContext) {
     cell: ({ row }) => (
       <PositionCell keyword={row.original} today={today} history={history} />
     ),
+  });
+}
+
+function addedColumn() {
+  return columnHelper.accessor((row) => nullsLast(row.trackedAt ?? null), {
+    id: "added",
+    meta: { label: "Added", hiddenByDefault: true },
+    ...SORTABLE,
+    sortDescFirst: true,
+    header: ({ column }) => <SortableHeader column={column} label="Added" />,
+    cell: ({ row }) => <AddedCell trackedAt={row.original.trackedAt ?? null} />,
   });
 }
 

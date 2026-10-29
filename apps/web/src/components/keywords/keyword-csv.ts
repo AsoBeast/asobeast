@@ -1,4 +1,4 @@
-import { formatCheckedPosition } from "@asobeast/shared";
+import { formatCheckedPosition, utcDayOf } from "@asobeast/shared";
 import type { ScoreSignals, TrackedKeywordItem } from "@asobeast/shared";
 import { csvFilename, downloadCsv, toCsv } from "@/lib/csv";
 import { scoreValue } from "./keyword-scores";
@@ -19,6 +19,7 @@ const KEYWORD_CSV_HEADERS = [
   "opportunity",
   "bucket",
   "relevance",
+  "added",
   "scoredAt",
   "scoringSource",
   "formulaVersion",
@@ -83,6 +84,7 @@ export function keywordCsv(rows: TrackedKeywordItem[]): string {
     roundOrNull(keyword.opportunity),
     keyword.bucket,
     keyword.relevance,
+    keyword.trackedAt ? utcDayOf(new Date(keyword.trackedAt)) : null,
     keyword.scoredAt,
     keyword.scoreProvenance?.source ?? null,
     keyword.scoreProvenance?.formulaVersion ?? null,

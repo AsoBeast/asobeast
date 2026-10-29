@@ -59,6 +59,7 @@ export function KeywordsDataTable({
   const playInstalls = table
     .getAllLeafColumns()
     .some((column) => column.id === "acquisitions");
+  const shown = (id: string) => table.getColumn(id)?.getIsVisible() === true;
 
   return (
     <Table
@@ -67,8 +68,8 @@ export function KeywordsDataTable({
       aria-rowcount={rows.length + 1}
     >
       <TableCaption className="sr-only">
-        Tracked keywords with source, position and its daily change, popularity,
-        difficulty, opportunity,{" "}
+        Tracked keywords with source, {shown("added") ? "date added, " : ""}
+        position and its daily change, popularity, difficulty, opportunity,{" "}
         {playInstalls ? "Play installs per search term, " : ""}7 day change and
         top 10 volatility.
       </TableCaption>

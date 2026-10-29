@@ -148,7 +148,7 @@ describe("keywordCsv", () => {
     const header = keywordCsv([keyword("focus timer")]).split("\r\n")[0];
 
     expect(header.endsWith(",scoreComparability,tags,note,country")).toBe(true);
-    expect(header.split(",")).toHaveLength(30);
+    expect(header.split(",")).toHaveLength(31);
   });
 
   it("joins the tags and leaves a missing tag list and note empty", () => {
@@ -177,5 +177,31 @@ describe("keywordCsv", () => {
 
     expect(us.endsWith(",us")).toBe(true);
     expect(pl.endsWith(",pl")).toBe(true);
+  });
+
+  describe("the added day", () => {
+    const cellOf = (row: TrackedKeywordItem) => {
+      const [header, line] = keywordCsv([row]).split("\r\n");
+      return line.split(",")[header.split(",").indexOf("added")];
+    };
+
+    it("sits after relevance and before the score time", () => {
+      expect(keywordCsv([keyword("focus timer")]).split("\r\n")[0]).toContain(
+        "bucket,relevance,added,scoredAt",
+      );
+    });
+
+    it("exports the UTC day the keyword was added", () => {
+      expect(
+        cellOf({
+          ...keyword("focus timer"),
+          trackedAt: "2026-10-26T23:59:59.000Z",
+        }),
+      ).toBe("2026-10-26");
+    });
+
+    it("leaves the cell empty for a row without the day", () => {
+      expect(cellOf(keyword("focus timer"))).toBe("");
+    });
   });
 });
