@@ -7,6 +7,7 @@ import {
   mapKeywordFile,
   readKeywordFile,
   skippedAboveHeader,
+  type FileView,
 } from "./parse-keyword-file";
 
 const bufferOf = (text: string): ArrayBuffer =>
@@ -211,9 +212,24 @@ describe("a file that names the apps and stores of its rows", () => {
       name: null,
     });
 
-    expect(appsLeftToChoose(file, unmatched)).toBe(2);
-    expect(appsLeftToChoose(file, initialView(file, TARGET))).toBe(0);
-    expect(appsLeftToChoose(file, { ...unmatched, hasHeader: false })).toBe(0);
+    const leftToChoose = (view: FileView) =>
+      appsLeftToChoose(file, view, mapKeywordFile(file, view, "APP_STORE"));
+
+    expect(leftToChoose(unmatched)).toBe(2);
+    expect(leftToChoose(initialView(file, TARGET))).toBe(0);
+    expect(leftToChoose({ ...unmatched, hasHeader: false })).toBe(0);
+  });
+
+  it("U-SCOPE-19 does not ask for an app when the store leaves no row of the file", () => {
+    const file = readKeywordFile(bufferOf(ASTRO_EXPORT));
+    const view = initialView(file, {
+      storeAppId: "com.example.timer",
+      name: null,
+    });
+    const mapped = mapKeywordFile(file, view, "GOOGLE_PLAY");
+
+    expect(mapped.rows).toEqual([]);
+    expect(appsLeftToChoose(file, view, mapped)).toBe(0);
   });
 });
 

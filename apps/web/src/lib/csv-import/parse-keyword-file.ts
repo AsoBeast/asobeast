@@ -93,8 +93,15 @@ export function initialView(
   };
 }
 
-export const appsLeftToChoose = (file: KeywordFile, view: FileView): number =>
-  view.hasHeader && view.app === undefined && file.scope.apps.length > 1
+export const appsLeftToChoose = (
+  file: KeywordFile,
+  view: FileView,
+  mapped: MappedFile,
+): number =>
+  view.hasHeader &&
+  view.app === undefined &&
+  file.scope.apps.length > 1 &&
+  mapped.rows.length > 0
     ? file.scope.apps.length
     : 0;
 

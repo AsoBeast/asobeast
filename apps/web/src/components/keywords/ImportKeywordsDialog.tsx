@@ -58,7 +58,7 @@ export function ImportKeywordsDialog({
           ignoredColumns: mapped.ignoredColumns,
           store,
           leftOut: mapped.leftOut,
-          appsToChoose: appsLeftToChoose(loaded.file, view),
+          appsToChoose: appsLeftToChoose(loaded.file, view, mapped),
         })
       : [];
 
