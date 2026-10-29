@@ -1,4 +1,11 @@
-import { ArrayNotEmpty, IsArray, IsEmail, IsIn } from 'class-validator';
+import {
+  ArrayNotEmpty,
+  IsArray,
+  IsBoolean,
+  IsEmail,
+  IsIn,
+  ValidateIf,
+} from 'class-validator';
 import {
   EmailAlertCreateRequest,
   WEBHOOK_EVENTS,
@@ -17,4 +24,7 @@ export class CreateEmailAlertDto implements EmailAlertCreateRequest {
 
   @ReviewScoresFilter()
   reviewScores?: number[];
+  @ValidateIf((_, value) => value !== undefined)
+  @IsBoolean()
+  confirmDrops?: boolean;
 }

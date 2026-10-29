@@ -13,8 +13,9 @@ import { invalidateWebhookMutation } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
 import { needsAStar, reviewScoresToSend } from "./alert-event-copy";
 import { AlertSubscriptionFields } from "./alert-events";
+import { ConfirmDropsField } from "./ConfirmDropsField";
 import { AlertChannelDialog } from "./alert-channel/AlertChannelDialog";
-import { channelHint } from "./webhook-channel-copy";
+import { channelHint, deliversToChat } from "./webhook-channel-copy";
 
 const HINT_ID = "webhook-channel-hint";
 
@@ -25,6 +26,7 @@ export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
   const [events, setEvents] = useState<WebhookEvent[]>(["metadata.changed"]);
   const [stars, setStars] = useState<number[]>([...REVIEW_SCORES]);
   const [secret, setSecret] = useState("");
+  const [confirmChoice, setConfirmChoice] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const mutation = useMutation({
@@ -34,6 +36,7 @@ export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
         events,
         reviewScores: reviewScoresToSend(events, stars),
         secret: secret.trim() === "" ? undefined : secret,
+        confirmDrops,
       }),
     onSuccess: () => {
       invalidateWebhookMutation(queryClient);
@@ -50,6 +53,7 @@ export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
   });
   const createOnce = useSingleFlight(mutation);
   const hint = channelHint(url);
+  const confirmDrops = confirmChoice ?? deliversToChat(url);
 
   function onOpenChange(next: boolean) {
     setOpen(next);
@@ -58,6 +62,7 @@ export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
     setEvents(["metadata.changed"]);
     setStars([...REVIEW_SCORES]);
     setSecret("");
+    setConfirmChoice(null);
     setError(null);
   }
 
@@ -124,6 +129,8 @@ export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
         onEventsChange={setEvents}
         onStarsChange={setStars}
       />
+
+      <ConfirmDropsField checked={confirmDrops} onChange={setConfirmChoice} />
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="webhook-secret">Secret (optional)</Label>

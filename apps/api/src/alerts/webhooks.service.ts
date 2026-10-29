@@ -42,6 +42,7 @@ export class WebhooksService {
         events: dto.events,
         reviewScores: dto.reviewScores ?? [],
         secret: dto.secret ?? null,
+        confirmDrops: dto.confirmDrops,
       },
     });
     return toWebhookItem(webhook);
@@ -61,6 +62,9 @@ export class WebhooksService {
     }
     if (dto.active !== undefined) {
       data.active = dto.active;
+    }
+    if (dto.confirmDrops !== undefined) {
+      data.confirmDrops = dto.confirmDrops;
     }
     if (dto.secret !== undefined) {
       data.secret = dto.secret === '' ? null : dto.secret;

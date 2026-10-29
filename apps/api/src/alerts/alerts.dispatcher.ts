@@ -15,6 +15,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { AlertAppIdentities } from './alert-app-identities';
 import { ALERT_BACKOFF } from './alert-delivery-flow';
+import { confirmDropsWhere } from './confirm-drops';
 import { DELIVERABLE_EMAIL_ALERTS } from './deliverable-email-alerts';
 import { MailerService } from './mailer.service';
 import { OutboxRow, outboxRows } from './outbox-rows';
@@ -107,7 +108,11 @@ export class AlertsDispatcher {
 
   private async dispatchWebhooks(payload: AlertPayload): Promise<void> {
     const webhooks = await this.prisma.webhook.findMany({
-      where: { active: true, events: { has: payload.event } },
+      where: {
+        active: true,
+        events: { has: payload.event },
+        ...confirmDropsWhere(payload),
+      },
       select: { id: true, events: true, reviewScores: true },
     });
     const targets = webhooks.filter((webhook) =>
@@ -135,7 +140,11 @@ export class AlertsDispatcher {
       return;
     }
     const alerts = await this.prisma.emailAlert.findMany({
-      where: { ...DELIVERABLE_EMAIL_ALERTS, events: { has: payload.event } },
+      where: {
+        ...DELIVERABLE_EMAIL_ALERTS,
+        events: { has: payload.event },
+        ...confirmDropsWhere(payload),
+      },
       select: { id: true, events: true, reviewScores: true },
     });
     const targets = alerts.filter((alert) => receivesInstant(alert, payload));

@@ -13,6 +13,7 @@ import { invalidateEmailAlertMutation } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
 import { needsAStar, reviewScoresToSend } from "./alert-event-copy";
 import { AlertSubscriptionFields } from "./alert-events";
+import { ConfirmDropsField } from "./ConfirmDropsField";
 import { AlertChannelDialog } from "./alert-channel/AlertChannelDialog";
 import { awaitsConfirmation, recipientToast } from "./email-alert-recipient";
 
@@ -22,6 +23,7 @@ export function AddEmailAlertDialog({ trigger }: { trigger?: ReactNode }) {
   const [email, setEmail] = useState("");
   const [events, setEvents] = useState<WebhookEvent[]>(["metadata.changed"]);
   const [stars, setStars] = useState<number[]>([...REVIEW_SCORES]);
+  const [confirmDrops, setConfirmDrops] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const mutation = useMutation({
@@ -30,6 +32,7 @@ export function AddEmailAlertDialog({ trigger }: { trigger?: ReactNode }) {
         email,
         events,
         reviewScores: reviewScoresToSend(events, stars),
+        confirmDrops,
       }),
     onSuccess: (saved) => {
       invalidateEmailAlertMutation(queryClient);
@@ -64,6 +67,7 @@ export function AddEmailAlertDialog({ trigger }: { trigger?: ReactNode }) {
     setEmail("");
     setEvents(["metadata.changed"]);
     setStars([...REVIEW_SCORES]);
+    setConfirmDrops(true);
     setError(null);
   }
 
@@ -116,6 +120,8 @@ export function AddEmailAlertDialog({ trigger }: { trigger?: ReactNode }) {
         onEventsChange={setEvents}
         onStarsChange={setStars}
       />
+
+      <ConfirmDropsField checked={confirmDrops} onChange={setConfirmDrops} />
     </AlertChannelDialog>
   );
 }

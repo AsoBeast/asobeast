@@ -41,6 +41,7 @@ export const PICKER_EVENTS: readonly WebhookEvent[] = [
 export interface AlertSubscriptionChange {
   events: WebhookEvent[];
   reviewScores?: number[];
+  confirmDrops?: boolean;
 }
 
 export function reviewScoresToSend(

@@ -299,6 +299,72 @@ describe('outboxRows for the rank milestone events', () => {
   });
 });
 
+describe('outboxRows for confirmed drops', () => {
+  const dropped: RankDroppedPayload = {
+    event: 'rank.dropped',
+    occurredAt: milestone.occurredAt,
+    app: milestone.app,
+    keyword: milestone.keyword,
+    from: 9,
+    to: 15,
+    fromDepth: RANK_DEPTH,
+    toDepth: RANK_DEPTH,
+    threshold: 5,
+  };
+  const improved: RankImprovedPayload = {
+    event: 'rank.improved',
+    occurredAt: milestone.occurredAt,
+    app: milestone.app,
+    keyword: milestone.keyword,
+    from: 15,
+    to: 9,
+    fromDepth: RANK_DEPTH,
+    toDepth: RANK_DEPTH,
+    threshold: 5,
+  };
+  const keyOf = (payload: Parameters<typeof outboxRows>[0]): string =>
+    outboxRows(payload)[0].dedupeKey;
+
+  it('gives a confirmed drop its own key', () => {
+    expect(keyOf({ ...dropped, confirmed: true })).toBe(
+      'rank.confirmed:app1:kw1:2026-07-22',
+    );
+  });
+
+  it('keeps the key of an unmarked drop and an undoing improvement', () => {
+    expect(keyOf(dropped)).toBe('rank:app1:kw1:2026-07-22');
+    expect(keyOf({ ...improved, undoesDrop: true })).toBe(
+      'rank:app1:kw1:2026-07-22',
+    );
+  });
+
+  it('gives a confirmed milestone its own key', () => {
+    expect(
+      keyOf({
+        ...milestone,
+        direction: 'left',
+        from: 9,
+        to: 12,
+        confirmed: true,
+      }),
+    ).toBe('milestone.confirmed:app1:kw1:2026-07-22');
+  });
+
+  it('keeps the key of an unmarked or undoing milestone', () => {
+    expect(keyOf(milestone)).toBe('milestone:app1:kw1:2026-07-22');
+    expect(keyOf({ ...milestone, undoesDrop: true })).toBe(
+      'milestone:app1:kw1:2026-07-22',
+    );
+  });
+
+  it('never merges the ordinary and the confirmed event of one check', () => {
+    expect(keyOf(dropped)).not.toBe(keyOf({ ...dropped, confirmed: true }));
+    expect(keyOf({ ...milestone, direction: 'left' })).not.toBe(
+      keyOf({ ...milestone, direction: 'left', confirmed: true }),
+    );
+  });
+});
+
 describe('outboxRows for the chart events', () => {
   it('keys a chart entry on the app, chart and capture day', () => {
     expect(outboxRows(chartEntered())).toEqual([

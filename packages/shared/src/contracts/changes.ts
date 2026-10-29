@@ -109,6 +109,7 @@ export interface WebhookItem {
   hasSecret: boolean;
   createdAt: string;
   channel?: WebhookChannel;
+  confirmDrops?: boolean;
 }
 
 export interface WebhookCreateRequest {
@@ -116,6 +117,7 @@ export interface WebhookCreateRequest {
   events: WebhookEvent[];
   reviewScores?: number[];
   secret?: string;
+  confirmDrops?: boolean;
 }
 
 export interface WebhookUpdateRequest {
@@ -124,12 +126,14 @@ export interface WebhookUpdateRequest {
   reviewScores?: number[];
   secret?: string;
   active?: boolean;
+  confirmDrops?: boolean;
 }
 
 export interface EmailAlertCreateRequest {
   email: string;
   events: WebhookEvent[];
   reviewScores?: number[];
+  confirmDrops?: boolean;
 }
 
 export interface EmailAlertUpdateRequest {
@@ -137,6 +141,7 @@ export interface EmailAlertUpdateRequest {
   events?: WebhookEvent[];
   reviewScores?: number[];
   active?: boolean;
+  confirmDrops?: boolean;
 }
 
 export interface WebhookTestResult {
@@ -154,6 +159,7 @@ export interface EmailAlertItem {
   unsubscribed?: boolean;
   confirmationSent?: boolean;
   createdAt: string;
+  confirmDrops?: boolean;
 }
 
 export type AlertChannel = 'webhook' | 'email';
@@ -215,6 +221,7 @@ export interface RankDroppedPayload {
   fromDepth: number;
   toDepth: number;
   threshold: number;
+  confirmed?: boolean;
 }
 
 export interface RankImprovedPayload {
@@ -227,6 +234,7 @@ export interface RankImprovedPayload {
   fromDepth: number;
   toDepth: number;
   threshold: number;
+  undoesDrop?: boolean;
 }
 
 export interface RankMilestonePayload {
@@ -240,6 +248,8 @@ export interface RankMilestonePayload {
   to: number | null;
   fromDepth: number;
   toDepth: number;
+  confirmed?: boolean;
+  undoesDrop?: boolean;
 }
 
 export interface RankFirstPayload {

@@ -234,3 +234,55 @@ test("creating a webhook answers with the item", async ({ page }) => {
     hasSecret: true,
   } satisfies Partial<WebhookItem>);
 });
+
+test("a webhook keeps the confirm drops setting like the api", async ({
+  page,
+}) => {
+  const created = await page.request.post(`${MOCK_API_URL}/webhooks`, {
+    data: {
+      url: "https://hooks.example.com/confirm-seam",
+      events: ["rank.dropped"],
+      confirmDrops: true,
+    },
+  });
+  const webhook = (await created.json()) as WebhookItem;
+  expect(webhook).toMatchObject({
+    confirmDrops: true,
+  } satisfies Partial<WebhookItem>);
+
+  const patched = await page.request.patch(
+    `${MOCK_API_URL}/webhooks/${webhook.id}`,
+    { data: { confirmDrops: false } },
+  );
+
+  await expect(patched.json()).resolves.toMatchObject({
+    events: ["rank.dropped"],
+    confirmDrops: false,
+  } satisfies Partial<WebhookItem>);
+});
+
+test("an email alert keeps the confirm drops setting like the api", async ({
+  page,
+}) => {
+  const created = await page.request.post(`${MOCK_API_URL}/email-alerts`, {
+    data: {
+      email: "confirm-seam@example.com",
+      events: ["rank.dropped"],
+      confirmDrops: true,
+    },
+  });
+  const alert = (await created.json()) as EmailAlertItem;
+  expect(alert).toMatchObject({
+    confirmDrops: true,
+  } satisfies Partial<EmailAlertItem>);
+
+  const patched = await page.request.patch(
+    `${MOCK_API_URL}/email-alerts/${alert.id}`,
+    { data: { confirmDrops: false } },
+  );
+
+  await expect(patched.json()).resolves.toMatchObject({
+    events: ["rank.dropped"],
+    confirmDrops: false,
+  } satisfies Partial<EmailAlertItem>);
+});

@@ -22,10 +22,12 @@ import {
   type AlertSubscriptionChange,
 } from "../alert-event-copy";
 import { AlertSubscriptionFields } from "../alert-events";
+import { ConfirmDropsField } from "../ConfirmDropsField";
 
 export function EditEventsDialog({
   label,
   events,
+  confirmDrops,
   reviewScores,
   pending,
   onSave,
@@ -33,6 +35,7 @@ export function EditEventsDialog({
   label: string;
   events: WebhookEvent[];
   reviewScores?: number[];
+  confirmDrops: boolean;
   pending: boolean;
   onSave: (change: AlertSubscriptionChange) => Promise<unknown>;
 }) {
@@ -41,12 +44,14 @@ export function EditEventsDialog({
   const [stars, setStars] = useState<number[]>(
     selectedReviewScores(reviewScores),
   );
+  const [confirming, setConfirming] = useState(confirmDrops);
   const blocked = selected.length === 0 || needsAStar(selected, stars);
 
   function changeOpen(next: boolean) {
     if (next) {
       setSelected(events);
       setStars(selectedReviewScores(reviewScores));
+      setConfirming(confirmDrops);
     }
     setOpen(next);
   }
@@ -54,10 +59,15 @@ export function EditEventsDialog({
   function submit(formEvent: FormEvent<HTMLFormElement>) {
     formEvent.preventDefault();
     if (blocked) return;
-    void onSave({
+    const change: AlertSubscriptionChange = {
       events: selected,
       reviewScores: reviewScoresToSend(selected, stars),
-    }).then(
+    };
+    void onSave(
+      confirming === confirmDrops
+        ? change
+        : { ...change, confirmDrops: confirming },
+    ).then(
       () => setOpen(false),
       () => undefined,
     );
@@ -87,6 +97,7 @@ export function EditEventsDialog({
               onEventsChange={setSelected}
               onStarsChange={setStars}
             />
+            <ConfirmDropsField checked={confirming} onChange={setConfirming} />
             {selected.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 Select at least one event to save.

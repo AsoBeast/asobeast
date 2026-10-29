@@ -1,8 +1,10 @@
 import {
   AlertBatchAppSection,
   AlertBatchPayload,
+  GranularAlertPayload,
   WebhookEvent,
 } from '@asobeast/shared';
+import { reachesChannel } from './confirm-drops';
 import { reviewGate } from './review-routing';
 
 function sectionHasContent(section: AlertBatchAppSection): boolean {
@@ -26,22 +28,24 @@ export function filterBatch(
   batch: AlertBatchPayload,
   allowed: Set<string>,
   reviewScores: readonly number[] = [],
+  confirmDrops = false,
 ): AlertBatchPayload | null {
   const keeps = reviewGate(batch.events, allowed, reviewScores);
-  const events = batch.events.filter(keeps);
-  const ownedOnly = <T>(event: WebhookEvent, list: T[]): T[] =>
-    batch.scope === 'owned_apps' && allowed.has(event) ? list : [];
+  const events = batch.events.filter(
+    (event) => keeps(event) && reachesChannel(event, confirmDrops),
+  );
+  const ownedOnly = <T extends GranularAlertPayload>(
+    event: WebhookEvent,
+    list: T[],
+  ): T[] =>
+    batch.scope === 'owned_apps' && allowed.has(event)
+      ? list.filter((payload) => reachesChannel(payload, confirmDrops))
+      : [];
   const apps = batch.apps
     .map((section): AlertBatchAppSection => ({
       app: section.app,
-      rankDrops:
-        batch.scope === 'owned_apps' && allowed.has('rank.dropped')
-          ? section.rankDrops
-          : [],
-      rankImprovements:
-        allowed.has('rank.improved') && batch.scope === 'owned_apps'
-          ? section.rankImprovements
-          : [],
+      rankDrops: ownedOnly('rank.dropped', section.rankDrops),
+      rankImprovements: ownedOnly('rank.improved', section.rankImprovements),
       rankMilestones: ownedOnly('rank.milestone', section.rankMilestones),
       firstRankings: ownedOnly('rank.first', section.firstRankings),
       overtakes: ownedOnly('rank.overtaken', section.overtakes),

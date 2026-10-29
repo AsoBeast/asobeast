@@ -3,7 +3,9 @@ import {
   AlertPayload,
   ChartMovePayload,
   isChartMovePayload,
+  RankDroppedPayload,
   RankFirstPayload,
+  RankImprovedPayload,
   RankMilestonePayload,
   RankOvertakenPayload,
 } from '@asobeast/shared';
@@ -28,6 +30,20 @@ const actionOpenedKey = (payload: ActionOpenedPayload): string =>
   payload.action.reopened
     ? `action.opened~${payload.action.id}~${dayOf(payload.occurredAt)}`
     : `action.opened~${payload.action.id}`;
+
+const rankKey = (payload: RankDroppedPayload | RankImprovedPayload): string => {
+  const prefix =
+    payload.event === 'rank.dropped' && payload.confirmed === true
+      ? 'rank.confirmed'
+      : 'rank';
+  return `${prefix}:${payload.app.id}:${payload.keyword.id}:${dayOf(payload.occurredAt)}`;
+};
+
+const milestoneKey = (payload: RankMilestonePayload): string => {
+  const prefix =
+    payload.confirmed === true ? 'milestone.confirmed' : 'milestone';
+  return `${prefix}:${payload.app.id}:${payload.keyword.id}:${dayOf(payload.occurredAt)}`;
+};
 
 function appRow(
   payload:
@@ -62,12 +78,11 @@ export function outboxRows(payload: AlertPayload): OutboxRow[] {
   }
 
   if (payload.event === 'rank.dropped' || payload.event === 'rank.improved') {
-    const day = dayOf(payload.occurredAt);
     return [
       {
         event: payload.event,
         appId: payload.app.id,
-        dedupeKey: `rank:${payload.app.id}:${payload.keyword.id}:${day}`,
+        dedupeKey: rankKey(payload),
         payload,
       },
     ];
@@ -104,13 +119,7 @@ export function outboxRows(payload: AlertPayload): OutboxRow[] {
   }
 
   if (payload.event === 'rank.milestone') {
-    const day = dayOf(payload.occurredAt);
-    return [
-      appRow(
-        payload,
-        `milestone:${payload.app.id}:${payload.keyword.id}:${day}`,
-      ),
-    ];
+    return [appRow(payload, milestoneKey(payload))];
   }
 
   if (payload.event === 'rank.first') {

@@ -28,6 +28,11 @@ import {
   chartMoveBatch,
   withoutChartMoves,
 } from './chart-events.fixture';
+import {
+  drop,
+  improvement as rankImprovement,
+  milestone as rankMilestone,
+} from './rank-events.fixture';
 
 const primaryA: ResolvedApp = {
   id: 'a',
@@ -563,6 +568,106 @@ describe('filterBatch', () => {
     expect(filtered.totals).toEqual({ events: 1, apps: 1 });
     expect(filtered.apps[0].rankDrops).toHaveLength(0);
     expect(filtered.apps[0].competitors).toHaveLength(1);
+  });
+});
+
+describe('filterBatch with confirmed drops', () => {
+  const ordinaryDrop = drop();
+  const confirmedDrop = drop({ confirmed: true, to: 16 });
+  const ordinaryLeave = rankMilestone({ direction: 'left', from: 9, to: 11 });
+  const confirmedLeave = rankMilestone({
+    direction: 'left',
+    from: 9,
+    to: 12,
+    confirmed: true,
+  });
+  const entry = rankMilestone();
+  const undoingEntry = rankMilestone({ from: 11, to: 9, undoesDrop: true });
+  const plainImprovement = rankImprovement();
+  const undoingImprovement = rankImprovement({ undoesDrop: true });
+  const batchOf = (payloads: OutboxEvent['payload'][]) =>
+    assembleBatches({
+      events: [
+        ...payloads.map((payload, index) => event(payload, 'a', `e${index}`)),
+        event(competitorChange, 'c', 'competitor'),
+      ],
+      appById,
+      serpPrimariesByKeyword: new Map(),
+      now: new Date('2026-07-22T11:00:00.000Z'),
+    });
+  const batches = batchOf([
+    ordinaryDrop,
+    confirmedDrop,
+    ordinaryLeave,
+    confirmedLeave,
+    entry,
+    undoingEntry,
+    plainImprovement,
+    undoingImprovement,
+  ]);
+  const rankEvents = new Set([
+    'rank.dropped',
+    'rank.improved',
+    'rank.milestone',
+  ]);
+  const filtered = (confirmDrops: boolean) => {
+    const result = filterBatch(batches.owned, rankEvents, [], confirmDrops);
+    if (!result) throw new Error('expected an owned batch');
+    return result;
+  };
+
+  it('gives a channel without the setting the ordinary events', () => {
+    const [section] = filtered(false).apps;
+
+    expect(section.rankDrops).toEqual([ordinaryDrop]);
+    expect(section.rankMilestones).toEqual(
+      expect.arrayContaining([ordinaryLeave, entry, undoingEntry]),
+    );
+    expect(section.rankMilestones).toHaveLength(3);
+    expect(section.rankImprovements).toEqual(
+      expect.arrayContaining([plainImprovement, undoingImprovement]),
+    );
+    expect(section.rankImprovements).toHaveLength(2);
+  });
+
+  it('gives a confirming channel the confirmed and the plain events', () => {
+    const [section] = filtered(true).apps;
+
+    expect(section.rankDrops).toEqual([confirmedDrop]);
+    expect(section.rankMilestones).toEqual(
+      expect.arrayContaining([confirmedLeave, entry]),
+    );
+    expect(section.rankMilestones).toHaveLength(2);
+    expect(section.rankImprovements).toEqual([plainImprovement]);
+  });
+
+  it.each([false, true])(
+    'counts the events it keeps when confirmDrops is %p',
+    (confirmDrops) => {
+      const batch = filtered(confirmDrops);
+
+      expect(batch.totals).toEqual({ events: batch.events.length, apps: 1 });
+      expect(batch.events).toHaveLength(confirmDrops ? 4 : 6);
+    },
+  );
+
+  it('sends a confirming channel no report when nothing reaches it', () => {
+    const { owned } = batchOf([ordinaryDrop]);
+
+    expect(filterBatch(owned, rankEvents, [], true)).toBeNull();
+  });
+
+  it('leaves the competitor scope alone', () => {
+    const competitors = filterBatch(
+      batches.competitors,
+      new Set(['metadata.changed']),
+      [],
+      true,
+    );
+    if (!competitors) throw new Error('expected a competitor batch');
+
+    expect(competitors.totals).toEqual({ events: 1, apps: 1 });
+    expect(competitors.apps[0].competitors).toHaveLength(1);
   });
 });
 

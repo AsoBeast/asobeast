@@ -272,6 +272,113 @@ describe('WebhooksController (e2e)', () => {
     expect(stored.url).toBe('https://hooks.example.com/asobeast');
   });
 
+  it('creates a webhook without confirmed drops by default', async () => {
+    const created = await api
+      .post('/webhooks')
+      .send({
+        url: 'https://hooks.example.com/asobeast',
+        events: ['rank.dropped'],
+      })
+      .expect(201);
+    const webhook = created.body as WebhookItem;
+
+    expect(webhook.confirmDrops).toBe(false);
+    const stored = await prisma.webhook.findUniqueOrThrow({
+      where: { id: webhook.id },
+    });
+    expect(stored.confirmDrops).toBe(false);
+  });
+
+  it('keeps confirmed drops through the list and an events patch', async () => {
+    const created = await api
+      .post('/webhooks')
+      .send({
+        url: 'https://hooks.example.com/asobeast',
+        events: ['rank.dropped'],
+        confirmDrops: true,
+      })
+      .expect(201);
+    const webhook = created.body as WebhookItem;
+    expect(webhook.confirmDrops).toBe(true);
+
+    const listed = await api.get('/webhooks').expect(200);
+    expect(listed.body as WebhookItem[]).toEqual([
+      expect.objectContaining({ id: webhook.id, confirmDrops: true }),
+    ]);
+
+    const patched = await api
+      .patch(`/webhooks/${webhook.id}`)
+      .send({ events: ['rank.milestone'] })
+      .expect(200);
+    expect(patched.body as WebhookItem).toMatchObject({
+      events: ['rank.milestone'],
+      confirmDrops: true,
+    });
+  });
+
+  it('turns confirmed drops off and keeps the url, events and secret', async () => {
+    const created = await api
+      .post('/webhooks')
+      .send({
+        url: 'https://hooks.example.com/asobeast',
+        events: ['rank.dropped'],
+        secret: 'supersecret',
+        confirmDrops: true,
+      })
+      .expect(201);
+    const webhook = created.body as WebhookItem;
+
+    const patched = await api
+      .patch(`/webhooks/${webhook.id}`)
+      .send({ confirmDrops: false })
+      .expect(200);
+
+    expect(patched.body as WebhookItem).toMatchObject({
+      url: 'https://hooks.example.com/asobeast',
+      events: ['rank.dropped'],
+      hasSecret: true,
+      confirmDrops: false,
+    });
+    const stored = await prisma.webhook.findUniqueOrThrow({
+      where: { id: webhook.id },
+    });
+    expect(stored.secret).toBe('supersecret');
+    expect(stored.confirmDrops).toBe(false);
+  });
+
+  it.each([null, 'yes'])(
+    'refuses confirmDrops %p on create and on patch',
+    async (confirmDrops) => {
+      await api
+        .post('/webhooks')
+        .send({
+          url: 'https://hooks.example.com/asobeast',
+          events: ['rank.dropped'],
+          confirmDrops,
+        })
+        .expect(400);
+      const created = await api
+        .post('/webhooks')
+        .send({
+          url: 'https://hooks.example.com/asobeast',
+          events: ['rank.dropped'],
+          confirmDrops: true,
+        })
+        .expect(201);
+      const webhook = created.body as WebhookItem;
+
+      await api
+        .patch(`/webhooks/${webhook.id}`)
+        .send({ confirmDrops })
+        .expect(400);
+
+      const stored = await prisma.webhook.findUniqueOrThrow({
+        where: { id: webhook.id },
+      });
+      expect(stored.confirmDrops).toBe(true);
+    },
+  );
+
   it('rejects an invalid url', async () => {
     await api
       .post('/webhooks')

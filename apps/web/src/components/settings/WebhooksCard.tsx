@@ -81,6 +81,7 @@ function WebhookRow({ webhook }: { webhook: WebhookItem }) {
       channel="webhook"
       id={webhook.id}
       events={webhook.events}
+      confirmDrops={webhook.confirmDrops === true}
       reviewScores={webhook.reviewScores}
       tag={
         <>

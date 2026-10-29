@@ -30,4 +30,8 @@ export class UpdateEmailAlertDto implements EmailAlertUpdateRequest {
   @ValidateIf((_, value) => value !== undefined)
   @IsBoolean()
   active?: boolean;
+
+  @ValidateIf((_, value) => value !== undefined)
+  @IsBoolean()
+  confirmDrops?: boolean;
 }

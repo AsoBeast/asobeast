@@ -1,7 +1,14 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Clock, Loader2, MailCheck, MailX, Send } from "lucide-react";
+import {
+  CheckIcon,
+  Clock,
+  Loader2,
+  MailCheck,
+  MailX,
+  Send,
+} from "lucide-react";
 import type { WebhookEvent } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,6 +17,7 @@ import {
   eventBadgeLabel,
   type AlertSubscriptionChange,
 } from "../alert-event-copy";
+import { CONFIRM_DROPS_BADGE } from "../ConfirmDropsField";
 import { DeliveriesSection } from "../DeliveriesSection";
 import { DeleteChannelDialog } from "./DeleteChannelDialog";
 import { EditEventsDialog } from "./EditEventsDialog";
@@ -89,6 +97,7 @@ export function AlertChannelRow({
   channel,
   id,
   events,
+  confirmDrops,
   reviewScores,
   tag,
   awaiting,
@@ -108,6 +117,7 @@ export function AlertChannelRow({
   channel: "webhook" | "email";
   id: string;
   events: WebhookEvent[];
+  confirmDrops: boolean;
   reviewScores?: number[];
   tag?: ReactNode;
   awaiting?: AwaitingConfirmation;
@@ -155,6 +165,12 @@ export function AlertChannelRow({
 
       <div className="flex flex-wrap items-center gap-1">
         {tag}
+        {confirmDrops ? (
+          <Badge variant="secondary">
+            <CheckIcon />
+            {CONFIRM_DROPS_BADGE}
+          </Badge>
+        ) : null}
         {events.map((event) => (
           <Badge key={event} variant="outline">
             {eventBadgeLabel(event, reviewScores)}
@@ -163,6 +179,7 @@ export function AlertChannelRow({
         <EditEventsDialog
           label={label}
           events={events}
+          confirmDrops={confirmDrops}
           reviewScores={reviewScores}
           pending={eventsPending}
           onSave={onEventsSave}

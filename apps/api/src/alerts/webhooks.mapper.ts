@@ -8,6 +8,7 @@ export function toWebhookItem(webhook: Webhook): WebhookItem {
     events: webhook.events as WebhookEvent[],
     reviewScores: webhook.reviewScores,
     active: webhook.active,
+    confirmDrops: webhook.confirmDrops,
     hasSecret: webhook.secret !== null,
     createdAt: webhook.createdAt.toISOString(),
     channel: webhookChannelOf(webhook.url),

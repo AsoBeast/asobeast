@@ -9,11 +9,18 @@ import {
   CHANGE_FIELDS,
   ChangeDetail,
   ChangeEventItem,
+  EmailAlertCreateRequest,
+  EmailAlertItem,
+  EmailAlertUpdateRequest,
   GranularAlertPayload,
   isChangeField,
   RankDroppedPayload,
+  RankImprovedPayload,
+  RankMilestonePayload,
   WEBHOOK_EVENTS,
   WebhookCreateRequest,
+  WebhookItem,
+  WebhookUpdateRequest,
 } from './changes';
 import type { ChartLeftPayload, ChartMovePayload } from './charts';
 import type { ReviewNegativePayload, ReviewNewPayload } from './reviews';
@@ -207,6 +214,93 @@ describe('the alert app identity', () => {
       'APP_STORE' | 'GOOGLE_PLAY'
     >();
     expectTypeOf<AlertBatchApp['country']>().toEqualTypeOf<string>();
+  });
+});
+
+describe('the confirmed drop fields', () => {
+  const app = { id: 'a1', name: 'Habit' };
+  const keyword = {
+    id: 'k1',
+    text: 'habit',
+    store: 'APP_STORE',
+    country: 'us',
+  } as const;
+
+  it('keeps the setting optional on every request and item', () => {
+    expectTypeOf<WebhookCreateRequest['confirmDrops']>().toEqualTypeOf<
+      boolean | undefined
+    >();
+    expectTypeOf<WebhookUpdateRequest['confirmDrops']>().toEqualTypeOf<
+      boolean | undefined
+    >();
+    expectTypeOf<WebhookItem['confirmDrops']>().toEqualTypeOf<
+      boolean | undefined
+    >();
+    expectTypeOf<EmailAlertCreateRequest['confirmDrops']>().toEqualTypeOf<
+      boolean | undefined
+    >();
+    expectTypeOf<EmailAlertUpdateRequest['confirmDrops']>().toEqualTypeOf<
+      boolean | undefined
+    >();
+    expectTypeOf<EmailAlertItem['confirmDrops']>().toEqualTypeOf<
+      boolean | undefined
+    >();
+  });
+
+  it('lets a plain drop, improvement and milestone omit the markers', () => {
+    const drop: RankDroppedPayload = {
+      event: 'rank.dropped',
+      occurredAt: '2026-10-28T03:10:00.000Z',
+      app,
+      keyword,
+      from: 9,
+      to: 15,
+      fromDepth: 200,
+      toDepth: 200,
+      threshold: 5,
+    };
+    const improvement: RankImprovedPayload = {
+      event: 'rank.improved',
+      occurredAt: '2026-10-28T03:10:00.000Z',
+      app,
+      keyword,
+      from: 15,
+      to: 9,
+      fromDepth: 200,
+      toDepth: 200,
+      threshold: 5,
+    };
+    const milestone: RankMilestonePayload = {
+      event: 'rank.milestone',
+      occurredAt: '2026-10-28T03:10:00.000Z',
+      app,
+      keyword,
+      tier: 10,
+      direction: 'left',
+      from: 9,
+      to: 11,
+      fromDepth: 200,
+      toDepth: 200,
+    };
+    expect(drop.confirmed).toBeUndefined();
+    expect(improvement.undoesDrop).toBeUndefined();
+    expect(milestone.confirmed).toBeUndefined();
+    expect(milestone.undoesDrop).toBeUndefined();
+  });
+
+  it('types the markers as booleans', () => {
+    expectTypeOf<RankDroppedPayload['confirmed']>().toEqualTypeOf<
+      boolean | undefined
+    >();
+    expectTypeOf<RankImprovedPayload['undoesDrop']>().toEqualTypeOf<
+      boolean | undefined
+    >();
+    expectTypeOf<RankMilestonePayload['confirmed']>().toEqualTypeOf<
+      boolean | undefined
+    >();
+    expectTypeOf<RankMilestonePayload['undoesDrop']>().toEqualTypeOf<
+      boolean | undefined
+    >();
   });
 });
 

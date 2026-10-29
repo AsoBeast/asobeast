@@ -109,6 +109,7 @@ function EmailAlertRow({ alert }: { alert: EmailAlertItem }) {
       channel="email"
       id={alert.id}
       events={alert.events}
+      confirmDrops={alert.confirmDrops === true}
       reviewScores={alert.reviewScores}
       awaiting={
         awaitsConfirmation(alert)
