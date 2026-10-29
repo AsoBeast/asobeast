@@ -4,6 +4,7 @@ import { OfficialPopularityListing, utcDayOf } from '@asobeast/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { ApplePopularityClient } from './apple-popularity';
 import { OfficialContext, OfficialPopularity } from './formulas';
+import { isAtFloor } from './official-signals';
 
 export const POPULARITY_MAX_AGE_DAYS = 28;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -97,7 +98,7 @@ export class OfficialPopularityLookup {
         keyword,
         week,
         floor,
-        listed.popularity <= floor,
+        isAtFloor(listed.popularity, floor),
       ),
     };
   }

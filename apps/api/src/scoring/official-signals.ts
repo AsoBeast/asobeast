@@ -10,12 +10,17 @@ type OfficialSignals = Pick<
   | 'officialPopularityLastAboveFloor'
 >;
 
+export const isAtFloor = (value: number, floor: number): boolean =>
+  value <= floor;
+
 function stateOf(official: OfficialPopularity): OfficialPopularityState {
   if ('absentBelow' in official) {
     return 'absent';
   }
   const floor = official.context?.floor;
-  return floor !== undefined && official.value <= floor ? 'floor' : 'listed';
+  return floor !== undefined && isAtFloor(official.value, floor)
+    ? 'floor'
+    : 'listed';
 }
 
 export function officialSignals(
