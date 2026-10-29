@@ -121,7 +121,9 @@ export function layoutImage(
 ): ImageLayout {
   const brandWidth = measures.meta(caption.brand);
   const titleRoom = chart.width - brandWidth - BRAND_GAP;
-  const metaLines = wrapWords(caption.subtitle, chart.width, measures.meta);
+  const metaLines = wrapWords(caption.subtitle, chart.width, measures.meta).map(
+    (line) => clipText(line, chart.width, measures.meta),
+  );
   const metaTop = PADDING + TITLE_HEIGHT;
   const chartY = metaTop + metaLines.length * META_HEIGHT + SECTION_GAP;
   const legendTop = chartY + chart.height + LEGEND_TOP_GAP;

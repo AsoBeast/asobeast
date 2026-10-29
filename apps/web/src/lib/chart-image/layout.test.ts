@@ -129,6 +129,22 @@ describe("layoutImage", () => {
     expect(narrow.height).toBeGreaterThan(wide.height);
   });
 
+  it("clips a meta word wider than the chart instead of running off the picture", () => {
+    const layout = layoutImage(
+      { width: 120, height: 100 },
+      { ...caption, subtitle: "専注計時器専注計時器専注計時器 · App Store" },
+      measures,
+    );
+
+    expect(layout.meta.map((line) => line.text)).toEqual([
+      "専注計時器専注計時器専…",
+      "· App Store",
+    ]);
+    for (const line of layout.meta) {
+      expect(tenPerCharacter(line.text)).toBeLessThanOrEqual(120);
+    }
+  });
+
   it("draws no legend rows for a chart without series", () => {
     const layout = layoutImage(
       { width: 600, height: 300 },
