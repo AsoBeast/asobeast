@@ -421,7 +421,7 @@ test("exporting keywords downloads a bom-prefixed csv", async ({ page }) => {
   );
   expect(content).toContain("APPLE_SEARCH_SIGNALS,app-store-v2,HIGH");
   expect(content.split("\r\n")[0]).toContain(
-    "suggestReach,serpFlags,officialPopularity,scoreOutdated",
+    "suggestReach,serpFlags,officialPopularity,officialPopularityState",
   );
   expect(content).toContain(
     "Apple App Store and Google Play popularity and volume scores use different public signals and are not directly comparable",
