@@ -1,6 +1,9 @@
 import { buildScoreSignals, readScoreSignals } from './score-signals';
 import {
   F10_ABSENT_CAP,
+  F14_FLOOR_LISTED,
+  F15_ABSENT_WITH_HISTORY,
+  F16_LISTED_ABOVE_FLOOR,
   F2_BRAND,
   F4_EMPTY,
   F5_TAIL,
@@ -53,6 +56,45 @@ describe('official popularity in the signals', () => {
       estimatedTraffic: expect.closeTo(estimate, 3) as number,
     });
   });
+
+  it.each([
+    [
+      'a term listed at the floor',
+      F14_FLOOR_LISTED,
+      {
+        officialPopularity: 41,
+        officialPopularityState: 'floor',
+        officialPopularityFloor: 41,
+        officialPopularityWeek: '2026-10-18',
+        officialPopularityLastAboveFloor: { value: 63, week: '2026-09-06' },
+      },
+    ],
+    [
+      'a term left out with history',
+      F15_ABSENT_WITH_HISTORY,
+      {
+        officialPopularity: null,
+        officialPopularityState: 'absent',
+        officialPopularityFloor: 41,
+        officialPopularityWeek: '2026-10-18',
+        officialPopularityLastAboveFloor: { value: 58, week: '2026-09-27' },
+      },
+    ],
+    [
+      'a term listed above the floor',
+      F16_LISTED_ABOVE_FLOOR,
+      {
+        officialPopularity: 71,
+        officialPopularityState: 'listed',
+        officialPopularityFloor: 56,
+        officialPopularityWeek: '2026-10-18',
+      },
+    ],
+  ])('records the floor answer of %s', (_name, stats, expected) => {
+    expect(buildScoreSignals(stats, estimateTraffic(stats))).toMatchObject(
+      expected,
+    );
+  });
 });
 
 describe('readScoreSignals', () => {
@@ -60,6 +102,43 @@ describe('readScoreSignals', () => {
 
   it('reads the stored signals back', () => {
     expect(readScoreSignals({ ...F2_BRAND, signals })).toEqual(signals);
+  });
+
+  it('reads a floor answer back', () => {
+    const floor = buildScoreSignals(
+      F14_FLOOR_LISTED,
+      estimateTraffic(F14_FLOOR_LISTED),
+    );
+
+    expect(readScoreSignals({ ...F14_FLOOR_LISTED, signals: floor })).toEqual(
+      floor,
+    );
+    expect(floor.officialPopularityLastAboveFloor).toEqual({
+      value: 63,
+      week: '2026-09-06',
+    });
+  });
+
+  it.each([
+    'officialPopularityState',
+    'officialPopularityFloor',
+    'officialPopularityWeek',
+    'officialPopularityLastAboveFloor',
+  ])('reads no %s from a row stored before it existed', (key) => {
+    expect(readScoreSignals({ signals })).not.toHaveProperty(key);
+  });
+
+  it('drops a malformed floor answer field without dropping the row', () => {
+    expect(
+      readScoreSignals({
+        signals: {
+          ...signals,
+          officialPopularityFloor: '41',
+          officialPopularityState: 'below',
+          officialPopularityLastAboveFloor: { value: '63' },
+        },
+      }),
+    ).toEqual(signals);
   });
 
   it.each([

@@ -1,5 +1,6 @@
 import {
   CURRENT_FORMULA_VERSIONS,
+  OfficialPopularityState,
   ScoringConfidence,
   ScoringSource,
   Store,
@@ -12,6 +13,7 @@ export interface ScoringEvidence {
   detailTargetCount: number;
   detailSuccessCount: number;
   officialPopularityUsed: boolean;
+  officialPopularityState?: OfficialPopularityState;
 }
 
 export interface ScoringProfile {
