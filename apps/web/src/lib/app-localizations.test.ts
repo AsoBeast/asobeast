@@ -101,6 +101,7 @@ const RESULT: AppLocalizationsResult = {
   markets: ["us", "mx"],
   storeManaged: false,
   storeSync: null,
+  storeImport: "unavailable",
   localizations: [
     item("en-US", "home", [reader("us", "default", true)]),
     item("es-MX", "manual", [
@@ -128,6 +129,7 @@ describe("localizationMatrix", () => {
         markets: ["us"],
         storeManaged: false,
         storeSync: null,
+        storeImport: "unavailable",
         localizations: [RESULT.localizations[0]],
       }),
     ).toBeNull();
@@ -244,6 +246,7 @@ describe("localizationMatrix", () => {
             markets: ["us"],
             storeManaged: false,
             storeSync: null,
+            storeImport: "unavailable",
             localizations: [RESULT.localizations[0]],
           },
           suggestions(suggestion("gb", "en-GB")),
@@ -383,6 +386,7 @@ describe("unlistedReads", () => {
     markets,
     storeManaged: false,
     storeSync: null,
+    storeImport: "unavailable",
     localizations: shipped.map((localization) =>
       item(localization, "manual", []),
     ),
