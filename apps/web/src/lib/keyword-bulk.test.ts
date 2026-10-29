@@ -190,6 +190,16 @@ describe("bulkReport", () => {
     });
   });
 
+  it("warns when earlier chunks were answered but changed nothing", () => {
+    expect(
+      bulkReport(
+        "pause",
+        outcome({ unchanged: 500, notSent: 700, error: refusal }),
+        1200,
+      ),
+    ).toMatchObject({ level: "warning", message: "Paused 0, 700 not changed" });
+  });
+
   it("gives no reason for a failure that is not an API answer", () => {
     expect(
       bulkReport(

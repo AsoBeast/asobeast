@@ -63,7 +63,7 @@ function failureReport(
     outcome.error instanceof ApiError
       ? outcome.error.envelope.message
       : undefined;
-  return outcome.changed === 0
+  return outcome.notSent === selected
     ? {
         level: "error",
         message: `Could not ${words.start} ${pluralize(selected, "keyword")}`,
