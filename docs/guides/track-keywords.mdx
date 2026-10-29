@@ -198,7 +198,9 @@ The list comes from your home listing. Coverage and relevance of a keyword read 
 
 ## Bulk manage keywords
 
-Select rows to untrack them, deactivate them or queue a rescore. Deactivating keeps the history and stops the daily check, which is the right move for a keyword you may want back. Untracking removes the link between the app and the keyword.
+Select rows with the checkboxes and the bar at the bottom of the table shows what you can do with them: **Pause**, **Activate**, **Tag** and **Remove**, and **Export CSV** for the selected rows only. Pausing keeps the history and stops the daily check, which is the right move for a keyword you may want back. **Remove** asks first and stops tracking: the ranking history stops accruing and a keyword you add again starts a new gap.
+
+**Pause**, **Activate** and **Remove** send one request for up to 500 keywords, so a large selection costs one write against your plan's request budget rather than one per keyword. A selection over 500 is sent in several requests, one after another. Activating keywords that your plan has no room for is refused as a whole, with the limit in the message, and nothing changes. A keyword the request cannot find any more, for example because it was removed in another tab, is skipped and counted in the message. When a request fails the selection stays, so you can try again. **Tag** still changes one keyword at a time.
 
 Buckets classify scored keywords automatically so a large list stays readable.
 
