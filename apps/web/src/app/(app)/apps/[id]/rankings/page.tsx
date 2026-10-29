@@ -54,7 +54,7 @@ export default async function RankingsPage({
   void queryClient.prefetchQuery(
     rankingsOptions(id, { ...presetToRange(range), keywordIds: effective }),
   );
-  void queryClient.prefetchQuery(serpMoversOptions(id, moverDays));
+  void queryClient.prefetchQuery(serpMoversOptions(id, moverDays, country));
   await queryClient.prefetchQuery(annotationsOptions(id));
 
   return (

@@ -106,6 +106,37 @@ test("the serp movers card lists entrants with badges and a track action", async
   await expect(page).toHaveURL(/movers=14/);
 });
 
+test("the serp movers card follows the market pills", async ({ page }) => {
+  await page.goto("/apps/app-1/rankings?country=us");
+
+  await expect(page.getByText("SERP movers (United States)")).toBeVisible();
+  await expect(
+    page.getByRole("listitem").filter({ hasText: "Rival Focus" }),
+  ).toBeVisible();
+
+  await page
+    .getByRole("group", { name: "Report markets" })
+    .getByRole("button", { name: "GB 0" })
+    .click();
+  await expect(page).toHaveURL(/country=gb/);
+  await expect(page.getByText("SERP movers (United Kingdom)")).toBeVisible();
+  await expect(
+    page.getByText(
+      "Nobody broke into the top 10 for your tracked keywords in United Kingdom",
+    ),
+  ).toBeVisible();
+
+  await page
+    .getByRole("group", { name: "Report markets" })
+    .getByRole("button", { name: "All markets 5" })
+    .click();
+  await expect(page).not.toHaveURL(/country=/);
+  await expect(page.getByText("SERP movers", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("listitem").filter({ hasText: "Rival Focus" }),
+  ).toBeVisible();
+});
+
 test("the ranking tooltip shows each captured-depth marker", async ({
   page,
 }) => {

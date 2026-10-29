@@ -34,9 +34,12 @@ export function getSerp(
 export function getSerpMovers(
   appId: string,
   days?: number,
+  country?: string,
 ): Promise<SerpMovers> {
-  const query = days !== undefined ? `?days=${days}` : "";
-  return apiFetch<SerpMovers>(`/apps/${appId}/serp-movers${query}`);
+  const params = new URLSearchParams();
+  if (days !== undefined) params.set("days", String(days));
+  if (country) params.set("country", country);
+  return apiFetch<SerpMovers>(withQuery(`/apps/${appId}/serp-movers`, params));
 }
 
 export function getCategoryRanks(
