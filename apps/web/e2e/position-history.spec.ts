@@ -1,6 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
 import type { RankingPoint } from "@asobeast/shared";
+import { clipboardPng, isPng, readPng } from "./chart-image.mts";
 import { contrastViolations, THEMES } from "./contrast-check.mts";
 import {
   PL_HISTORY_COOKIE,
@@ -416,4 +417,65 @@ test("E-PH-14 a stale keyword opens with the day of its last check", async ({
 
   await expect(popover).toContainText("the checks since then did not finish");
   await expect(popover.getByLabel(/since yesterday/)).toHaveCount(0);
+});
+
+const copyImage = (page: Page, keyword: string) =>
+  dialog(page, keyword).getByRole("button", {
+    name: `Copy image of the position history of ${keyword}`,
+    exact: true,
+  });
+
+test("E-PH-21 the popover copies its chart as a picture", async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.goto(PAGE);
+  await openHistory(page, "focus timer");
+  await expect(chart(page, "focus timer")).toBeVisible();
+
+  await copyImage(page, "focus timer").click();
+  await expect(page.getByText("Chart copied")).toBeVisible();
+
+  const png = await clipboardPng(page);
+  expect(isPng(png)).toBe(true);
+  const reading = await readPng(page, png, "--chart-1");
+  expect(reading.corner).toEqual(reading.background);
+  expect(reading.seriesPixels).toBeGreaterThan(200);
+});
+
+for (const [name, points, message] of [
+  [
+    "fewer than four checks",
+    [
+      { date: utcDaysAgo(2), position: 5, depth: 200 },
+      { date: utcDaysAgo(1), position: 4, depth: 200 },
+    ],
+    "2 checks so far",
+  ],
+  ["no checks", [], "No checks in the last"],
+] as const) {
+  test(`E-PH-22 the picture button is absent with ${name}`, async ({
+    page,
+  }) => {
+    await answerRankings(page, [...points]);
+    await page.goto(PAGE);
+    const popover = await openHistory(page, "focus timer");
+
+    await expect(popover).toContainText(message);
+    await expect(copyImage(page, "focus timer")).toHaveCount(0);
+  });
+}
+
+test("E-PH-23 the range row keeps the range picker and the link to Rankings beside the picture button", async ({
+  page,
+}) => {
+  await page.goto(PAGE);
+  const popover = await openHistory(page, "focus timer");
+  await expect(copyImage(page, "focus timer")).toBeVisible();
+
+  await expect(popover.getByRole("tab", { name: "30d" })).toBeVisible();
+  await expect(
+    popover.getByRole("link", { name: "Open in Rankings" }),
+  ).toBeVisible();
 });

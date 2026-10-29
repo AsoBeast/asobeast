@@ -1,5 +1,6 @@
 "use client";
 
+import type { Ref } from "react";
 import {
   Area,
   CartesianGrid,
@@ -108,6 +109,7 @@ export function PositionHistoryChart({
   changes,
   label,
   busy,
+  chartRef,
 }: {
   data: RankingChartData;
   line: boolean;
@@ -115,6 +117,7 @@ export function PositionHistoryChart({
   changes: Map<string, ChangeField[]>;
   label: string;
   busy: boolean;
+  chartRef?: Ref<HTMLDivElement>;
 }) {
   const fadeId = useFadeId();
   const keywordId = data.keywordIds[0] ?? "";
@@ -125,6 +128,7 @@ export function PositionHistoryChart({
 
   return (
     <ChartContainer
+      ref={chartRef}
       config={data.config}
       className={`${CHART_HEIGHT.compact} w-full`}
       role="region"

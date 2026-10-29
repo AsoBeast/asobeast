@@ -16,7 +16,7 @@ import {
   holdRequest,
   pressFromKeyboard,
 } from "./held-request.mts";
-import { activateTwiceInOneTask } from "./hydrated.mts";
+import { activateTwiceInOneTask, hydrated } from "./hydrated.mts";
 import { expect, test } from "./session.mts";
 import { STORE_CONNECTION_COOKIE } from "./store-connections.mts";
 
@@ -895,5 +895,25 @@ test.describe("chart image controls keep focus", () => {
     await expect.poll(() => saved.length).toBe(1);
     await expect(control).not.toHaveAttribute("aria-disabled", "true");
     expect(saved).toHaveLength(1);
+  });
+
+  test("the position history icon keeps focus while the picture is drawn", async ({
+    page,
+  }) => {
+    const held = await holdRender(page);
+    await page.goto("/apps/app-1/keywords");
+    await (
+      await hydrated(
+        page.getByRole("button", { name: /^Position history: focus timer/ }),
+      )
+    ).click();
+    const control = page.getByRole("button", {
+      name: "Copy image of the position history of focus timer",
+      exact: true,
+    });
+
+    await pressFromKeyboard(control);
+
+    await expectFocusKeptWhileHeld(control, held);
   });
 });

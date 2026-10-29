@@ -93,6 +93,7 @@ function PositionHistoryContent({
       <HoldFacts keyword={keyword} />
       <PositionHistoryPanel
         appId={appId}
+        store={store}
         keyword={keyword}
         homeCountry={homeCountry}
         range={range}
