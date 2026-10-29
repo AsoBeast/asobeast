@@ -68,4 +68,18 @@ describe('sortTracked', () => {
       'undated',
     ]);
   });
+
+  it('sorts competitors with the most first and null or absent last', () => {
+    const items = [
+      item('absent', {}),
+      item('none', { competitorsInTop10: null }),
+      item('one', { competitorsInTop10: 1 }),
+      item('three', { competitorsInTop10: 3 }),
+      item('zero', { competitorsInTop10: 0 }),
+    ];
+
+    expect(
+      sortTracked(items, 'competitors').map((row) => row.keywordId),
+    ).toEqual(['three', 'one', 'zero', 'absent', 'none']);
+  });
 });

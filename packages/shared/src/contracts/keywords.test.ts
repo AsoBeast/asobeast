@@ -40,6 +40,7 @@ describe('the keyword sorts', () => {
       'volatility',
     ]);
     expect(KEYWORD_SORTS).toContain('added');
+    expect(KEYWORD_SORTS).toContain('competitors');
   });
 });
 

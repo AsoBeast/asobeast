@@ -1,4 +1,5 @@
 import { Queue } from 'bullmq';
+import { utcDayOf } from '@asobeast/shared';
 import { Store } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 import { QuotaService } from '../auth/quota.service';
@@ -656,6 +657,131 @@ describe('KeywordsService.listTracked serp volatility', () => {
     expect(factsRow?.positionDeltaFromBest).toBe(3);
     expect(factsRow?.daysInTier).toBe(4);
     expect(factsRow?.heldTier).toBe(10);
+  });
+});
+
+describe('KeywordsService.listTracked competitors in the top 10', () => {
+  const today = () => new Date(`${utcDayOf(new Date())}T00:00:00.000Z`);
+  const daysAgo = (days: number) =>
+    new Date(today().getTime() - days * 24 * 60 * 60 * 1000);
+
+  const buildService = (prisma: unknown) =>
+    new KeywordsService(
+      prisma as PrismaService,
+      new KeywordTracker(
+        prisma as PrismaService,
+        { add: jest.fn() } as unknown as Queue,
+        { add: jest.fn() } as unknown as Queue,
+        new WorkspaceContext(),
+      ),
+      quotaOff(prisma as PrismaService),
+      { request: jest.fn() } as unknown as MarketListingRequests,
+      { schedule: jest.fn() } as unknown as FirstPositionChecks,
+    );
+
+  const trackedRow = (keywordId: string, text: string) => ({
+    keywordId,
+    source: 'MANUAL',
+    active: true,
+    relevance: null,
+    createdAt: new Date('2026-10-01T00:00:00.000Z'),
+    keyword: { text, country: 'us', rankings: [], metrics: [] },
+  });
+
+  const entry = (keywordId: string, date: Date, storeAppId: string) => ({
+    keywordId,
+    date,
+    storeAppId,
+  });
+
+  const buildPrisma = (competitors: string[]) => ({
+    keywordField: { findMany: jest.fn().mockResolvedValue([]) },
+    app: {
+      findFirst: jest.fn().mockResolvedValue({
+        id: 'app1',
+        store: Store.APP_STORE,
+        country: 'us',
+        storeAppId: 'store1',
+      }),
+      findMany: jest
+        .fn()
+        .mockResolvedValue(competitors.map((storeAppId) => ({ storeAppId }))),
+    },
+    appSnapshot: { findFirst: jest.fn().mockResolvedValue(null) },
+    trackedKeyword: {
+      findMany: jest
+        .fn()
+        .mockResolvedValue([
+          trackedRow('kwFresh', 'habit tracker'),
+          trackedRow('kwStale', 'daily planner'),
+          trackedRow('kwUnchecked', 'sleep timer'),
+        ]),
+    },
+    serpEntry: {
+      findFirst: jest.fn().mockResolvedValue({ date: today() }),
+      findMany: jest
+        .fn()
+        .mockResolvedValue([
+          entry('kwFresh', daysAgo(1), 'c1'),
+          entry('kwFresh', today(), 'c1'),
+          entry('kwFresh', today(), 'store1'),
+          entry('kwFresh', today(), 'c2'),
+          entry('kwFresh', today(), 'x'),
+          entry('kwStale', daysAgo(3), 'c1'),
+        ]),
+    },
+  });
+
+  const listWithFacts = (prisma: ReturnType<typeof buildPrisma>) =>
+    buildService(prisma).listTracked('app1', undefined, undefined, {
+      competitorFacts: true,
+    });
+
+  it('leaves the count off and reads no competitor when not asked', async () => {
+    const prisma = buildPrisma(['c1']);
+
+    const items = await buildService(prisma).listTracked('app1');
+
+    expect(prisma.app.findMany).not.toHaveBeenCalled();
+    for (const item of items) {
+      expect(item).not.toHaveProperty('competitorsInTop10');
+    }
+  });
+
+  it('counts the distinct competitors of the newest day', async () => {
+    const prisma = buildPrisma(['c1', 'c2']);
+
+    const items = await listWithFacts(prisma);
+
+    expect(prisma.app.findMany).toHaveBeenCalledWith({
+      where: { primaryAppId: 'app1', isCompetitor: true },
+      select: { storeAppId: true },
+    });
+    expect(
+      items.find((item) => item.keywordId === 'kwFresh')?.competitorsInTop10,
+    ).toBe(2);
+  });
+
+  it('answers null for a keyword with no snapshot or an old one', async () => {
+    const byId = new Map(
+      (await listWithFacts(buildPrisma(['c1']))).map((item) => [
+        item.keywordId,
+        item,
+      ]),
+    );
+
+    expect(byId.get('kwUnchecked')?.competitorsInTop10).toBeNull();
+    expect(byId.get('kwStale')?.competitorsInTop10).toBeNull();
+  });
+
+  it('answers null for every keyword of an app with no competitor', async () => {
+    const items = await listWithFacts(buildPrisma([]));
+
+    expect(items.map((item) => item.competitorsInTop10)).toEqual([
+      null,
+      null,
+      null,
+    ]);
   });
 });
 

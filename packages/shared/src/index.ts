@@ -66,6 +66,7 @@ export const KEYWORD_SORTS = [
   'position',
   'volatility',
   'added',
+  'competitors',
 ] as const;
 export type KeywordSort = (typeof KEYWORD_SORTS)[number];
 

@@ -10,6 +10,7 @@ const SORT_VALUE: Record<
   position: (item) => item.latestPosition,
   volatility: (item) => item.serpVolatility7d,
   added: (item) => (item.trackedAt ? Date.parse(item.trackedAt) : null),
+  competitors: (item) => item.competitorsInTop10 ?? null,
 };
 
 export function sortTracked(

@@ -10,6 +10,12 @@ import {
 } from "./index";
 
 describe("the tool catalog", () => {
+  it("describes the added date and the competitor count of list_keywords", () => {
+    const description = toolByName("list_keywords")?.description ?? "";
+    expect(description).toContain("trackedAt");
+    expect(description).toContain("competitorsInTop10");
+  });
+
   it("lists no write tool among the read tools", () => {
     for (const tool of MCP_TOOLS) {
       expect(tool.kind).toBe("read");

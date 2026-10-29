@@ -20,6 +20,7 @@ const DEFAULTS: SortDefaults = {
     "opportunity",
     "volatility",
     "added",
+    "competitors",
   ]),
 };
 
