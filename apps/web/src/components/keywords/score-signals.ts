@@ -49,9 +49,12 @@ function weekPhrase(signals: ScoreSignals): string {
   return week ? ` for the week of ${formatUtcDate(week)}` : "";
 }
 
-function floorValue(signals: ScoreSignals): number | null {
+function floorPhrase(
+  signals: ScoreSignals,
+  phrase: (floor: number) => string,
+): string {
   const floor = signals.officialPopularityFloor;
-  return typeof floor === "number" ? floor : null;
+  return typeof floor === "number" ? phrase(floor) : "";
 }
 
 function lastAboveFloorLines(signals: ScoreSignals): string[] {
@@ -69,17 +72,17 @@ function floorAnswerLines(signals: ScoreSignals): string[] | null {
     return null;
   }
   const week = weekPhrase(signals);
-  const floor = floorValue(signals);
-  return state === "floor"
-    ? [
-        `Apple answered its floor value${floor === null ? "" : ` (${floor})`}${week}.`,
-        ...lastAboveFloorLines(signals),
-      ]
-    : [
-        SEARCH_MODEL_LINE,
-        `Apple left this term out of its list${week}, so its popularity is below the floor${floor === null ? "" : ` of ${floor}`} and the number shown is held under it.`,
-        ...lastAboveFloorLines(signals),
-      ];
+  if (state === "floor") {
+    return [
+      `Apple answered its floor value${floorPhrase(signals, (floor) => ` (${floor})`)}${week}.`,
+      ...lastAboveFloorLines(signals),
+    ];
+  }
+  return [
+    SEARCH_MODEL_LINE,
+    `Apple left this term out of its list${week}, so its popularity is below the floor${floorPhrase(signals, (floor) => ` of ${floor}`)} and the number shown is held under it.`,
+    ...lastAboveFloorLines(signals),
+  ];
 }
 
 export function popularitySignalLines(
