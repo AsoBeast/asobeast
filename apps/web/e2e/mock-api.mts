@@ -75,6 +75,8 @@ import {
   UNREAD_MARKET_COOKIE,
   UNREAD_MARKET_COVERAGE_ROW,
   APP_1_LISTING_MARKETS,
+  APP_1_UNCAPTURED_LISTING_MARKETS,
+  APP_1_WIDE_LISTING_MARKETS,
   APP_1_PL_CHANGES,
   APP_1_PL_DETAIL,
   METADATA_DRAFTS,
@@ -191,6 +193,7 @@ import type {
   AppLocalizationsResult,
   KeywordFieldPreviewRequest,
   KeywordFieldSavePreview,
+  ListingMarket,
   LocalizationDetectionResult,
   LocalizedKeywordFieldRequest,
   LocalizedKeywordFieldResult,
@@ -1947,6 +1950,17 @@ const API_LATENCY_COOKIE = "e2e_api_latency";
 const BUDGET_HOLD_COOKIE = "e2e_budget_hold";
 const BUDGET_QUOTA_COOKIE = "e2e_budget_quota";
 const STALE_MARKET_COOKIE = "e2e_stale_market";
+const RATINGS_MARKETS_COOKIE = "e2e_ratings_markets";
+
+function listingMarketsOf(req: IncomingMessage): ListingMarket[] {
+  if (hasCookie(req, RATINGS_MARKETS_COOKIE, "wide")) {
+    return APP_1_WIDE_LISTING_MARKETS;
+  }
+  if (hasCookie(req, RATINGS_MARKETS_COOKIE, "uncaptured")) {
+    return APP_1_UNCAPTURED_LISTING_MARKETS;
+  }
+  return APP_1_LISTING_MARKETS;
+}
 const BUDGET_HOT_COOKIE = "e2e_budget_hot";
 const HEALTH_COOKIE = "e2e_health";
 const PROXY_DEADLINE_OVERRUN_MS = 3_000;
@@ -3215,7 +3229,7 @@ const routes: Route[] = [
   },
   appRoute(/^\/apps\/([^/]+)\/listing-markets$/, (dataset, _query, req) =>
     dataset.detail.id === "app-1"
-      ? APP_1_LISTING_MARKETS.map((market) => ({
+      ? listingMarketsOf(req).map((market) => ({
           ...market,
           tracked:
             market.home || !hasCookie(req, STALE_MARKET_COOKIE, market.country),
