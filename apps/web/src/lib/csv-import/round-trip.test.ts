@@ -88,8 +88,8 @@ describe("importing the keyword export", () => {
     expect(file).toMatchObject({ encoding: "utf-8", delimiter: "," });
     expect(view).toEqual({
       hasHeader: true,
-      mapping: { keyword: 0, country: 30, tags: 28, note: 29 },
+      mapping: { keyword: 0, country: 31, tags: 29, note: 30 },
     });
-    expect(mapped).toMatchObject({ columns: 31, ignoredColumns: 27 });
+    expect(mapped).toMatchObject({ columns: 32, ignoredColumns: 28 });
   });
 });

@@ -70,8 +70,9 @@ export function KeywordsDataTable({
       <TableCaption className="sr-only">
         Tracked keywords with source, {shown("added") ? "date added, " : ""}
         position and its daily change, popularity, difficulty, opportunity,{" "}
-        {playInstalls ? "Play installs per search term, " : ""}7 day change and
-        top 10 volatility.
+        {playInstalls ? "Play installs per search term, " : ""}7 day change
+        {shown("competitors") ? ", " : " and "}top 10 volatility
+        {shown("competitors") ? " and competitors in the top 10" : ""}.
       </TableCaption>
       <TableHeader className="sticky top-0 z-20">
         {table.getHeaderGroups().map((headerGroup) => (

@@ -416,7 +416,9 @@ test("exporting keywords downloads a bom-prefixed csv", async ({ page }) => {
   expect(content.split("\r\n")[0]).toContain(
     "volatility,popularity,difficulty,opportunity",
   );
-  expect(content.split("\r\n")[0]).toContain("relevance,added,");
+  expect(content.split("\r\n")[0]).toContain(
+    "relevance,added,competitorsInTop10,scoredAt",
+  );
   expect(content.split("\r\n")[0]).toContain(
     "scoredAt,scoringSource,formulaVersion,confidence,capturedAt",
   );
@@ -731,7 +733,7 @@ test("the columns menu hides a column and remembers it", async ({ page }) => {
   await expect(
     menu.getByRole("menuitemcheckbox", { name: "Keyword" }),
   ).toHaveCount(0);
-  await expect(menu.getByRole("menuitemcheckbox")).toHaveCount(9);
+  await expect(menu.getByRole("menuitemcheckbox")).toHaveCount(10);
   await menu.getByRole("menuitemcheckbox", { name: "Source" }).click();
   await page.keyboard.press("Escape");
 

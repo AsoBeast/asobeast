@@ -1,6 +1,6 @@
 "use client";
 
-import { createColumnHelper, type FilterFn } from "@tanstack/react-table";
+import type { FilterFn } from "@tanstack/react-table";
 import { ListOrdered } from "lucide-react";
 import type {
   KeywordBucket,
@@ -24,13 +24,17 @@ import { tagsIn } from "@/lib/keyword-tags";
 import { KeywordRowActions } from "./KeywordRowActions";
 import type { PositionHistoryContext } from "./PositionHistoryPopover";
 import {
-  AddedCell,
   NoteButton,
   PlayAcquisitionsCell,
   PositionCell,
   TagBadges,
   VolatilityCell,
 } from "./keyword-cells";
+import {
+  keywordColumnHelper as columnHelper,
+  SORTABLE,
+} from "./keyword-column-helper";
+import { addedColumn, competitorsColumn } from "./keyword-fact-columns";
 import { DerivedScoreCell, ScoreCell } from "./score-cells";
 import {
   hasFloorAnswer,
@@ -55,13 +59,6 @@ import {
   type PositionBand,
 } from "@/lib/table/facets";
 import { nullsLast } from "@/lib/table/sorting";
-
-const columnHelper = createColumnHelper<
-  KeywordTableFeatures,
-  TrackedKeywordItem
->();
-
-const SORTABLE = { sortUndefined: "last", sortFn: "basic" } as const;
 
 export const SELECT_ALL_KEYWORDS = "Select all keywords";
 
@@ -101,6 +98,7 @@ export function keywordColumns({
     ...(store === "GOOGLE_PLAY" ? [acquisitionsColumn()] : []),
     deltaColumn(),
     volatilityColumn(),
+    competitorsColumn(),
     actionsColumn({ appId, onOpenSerp }),
     ...filterColumns(),
   ]);
@@ -215,17 +213,6 @@ function positionColumn(today: string, history: PositionHistoryContext) {
     cell: ({ row }) => (
       <PositionCell keyword={row.original} today={today} history={history} />
     ),
-  });
-}
-
-function addedColumn() {
-  return columnHelper.accessor((row) => nullsLast(row.trackedAt ?? null), {
-    id: "added",
-    meta: { label: "Added", hiddenByDefault: true },
-    ...SORTABLE,
-    sortDescFirst: true,
-    header: ({ column }) => <SortableHeader column={column} label="Added" />,
-    cell: ({ row }) => <AddedCell trackedAt={row.original.trackedAt ?? null} />,
   });
 }
 

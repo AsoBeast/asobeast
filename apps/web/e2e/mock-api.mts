@@ -365,6 +365,7 @@ function manualKeyword(
     scoredAt: null,
     scoreProvenance: null,
     trackedAt: new Date().toISOString(),
+    competitorsInTop10: null,
   };
 }
 

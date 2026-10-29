@@ -14,7 +14,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { formatDate, formatMonth, formatNumber } from "@/lib/format";
+import { formatDate, formatMonth, formatNumber, pluralize } from "@/lib/format";
 import { isChecking, staleCheckDay } from "@/lib/keyword-checks";
 import { tagsLabel, visibleTags } from "@/lib/keyword-tags";
 import { PositionReadout } from "./PositionReadout";
@@ -241,5 +241,33 @@ export function AddedCell({ trackedAt }: { trackedAt: string | null }) {
     <time dateTime={trackedAt} className="numeric text-sm whitespace-nowrap">
       {formatDate(trackedAt)}
     </time>
+  );
+}
+
+export function CompetitorsInTop10Cell({ value }: { value: number | null }) {
+  if (value === null) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span
+            className="text-muted-foreground"
+            aria-label="Competitors in top 10: not available"
+          >
+            —
+          </span>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-xs">
+          No competitors tracked, or no top 10 snapshot from today or yesterday
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+  return (
+    <span
+      className="numeric font-mono text-sm"
+      aria-label={`${pluralize(value, "competitor")} in the top 10`}
+    >
+      {value}
+    </span>
   );
 }
