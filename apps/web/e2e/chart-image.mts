@@ -20,6 +20,27 @@ export async function clipboardPng(page: Page): Promise<Buffer> {
   return Buffer.from(bytes);
 }
 
+const WRITTEN_PNG = "__writtenPng";
+
+export async function recordClipboardPng(page: Page): Promise<void> {
+  await page.addInitScript((key) => {
+    const write = Clipboard.prototype.write;
+    Clipboard.prototype.write = function (items) {
+      Reflect.set(window, key, items[0]?.getType("image/png"));
+      return write.call(this, items);
+    };
+  }, WRITTEN_PNG);
+}
+
+export async function writtenPng(page: Page): Promise<Buffer> {
+  const bytes = await page.evaluate(async (key) => {
+    const png: unknown = await Reflect.get(window, key);
+    if (!(png instanceof Blob)) throw new Error("No image was written");
+    return Array.from(new Uint8Array(await png.arrayBuffer()));
+  }, WRITTEN_PNG);
+  return Buffer.from(bytes);
+}
+
 export async function readPng(
   page: Page,
   png: Buffer,

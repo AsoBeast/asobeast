@@ -1,11 +1,14 @@
 import type { Page } from "@playwright/test";
-import { clipboardPng, isPng, readPng } from "./chart-image.mts";
+import {
+  isPng,
+  readPng,
+  recordClipboardPng,
+  writtenPng,
+} from "./chart-image.mts";
 import { expect, test } from "./session.mts";
 
 const chart = (page: Page) =>
   page.getByRole("region", { name: "Keyword rank positions" });
-
-test.beforeEach(({ context }) => context.grantPermissions(["clipboard-read"]));
 
 for (const theme of ["light", "dark"] as const) {
   test(`Copy image draws the colours of the ${theme} theme in this engine`, async ({
@@ -16,6 +19,7 @@ for (const theme of ["light", "dark"] as const) {
       theme,
     );
     await page.emulateMedia({ colorScheme: theme });
+    await recordClipboardPng(page);
     await page.goto("/apps/app-1/rankings");
     await expect(chart(page)).toBeVisible();
 
@@ -24,7 +28,7 @@ for (const theme of ["light", "dark"] as const) {
       .click();
     await expect(page.getByText("Chart copied")).toBeVisible();
 
-    const png = await clipboardPng(page);
+    const png = await writtenPng(page);
     expect(isPng(png)).toBe(true);
     const reading = await readPng(page, png, "--chart-1");
     expect(reading.corner).toEqual(reading.background);
