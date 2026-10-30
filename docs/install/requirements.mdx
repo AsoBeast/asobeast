@@ -64,7 +64,7 @@ A host behind a strict egress policy needs the Apple iTunes endpoints and the Go
 
 Screenshot captions and icon comparisons download images from Apple's image CDN at `*.mzstatic.com`. The caption read runs only when `SCREENSHOT_OCR` is on, while the icon comparison runs whenever a refresh records a changed icon address, because comparing the pixels is how asobeast keeps a store-side address rotation out of the change timeline.
 
-Outbound connections to your own SMTP relay, your own webhook endpoints and the OpenAI API happen only when you configure those optional features.
+Outbound connections to your own SMTP relay, your own webhook endpoints and the OpenAI API, or the OpenAI compatible API `OPENAI_BASE_URL` names, happen only when you configure those optional features.
 
 ## Which ports does asobeast publish?
 

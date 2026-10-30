@@ -17,8 +17,8 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { aiCompletion } from '../src/ai/ai-completion.fixture';
+import { stubAiClient } from '../src/ai/ai-client.fixture';
 import {
-  AiClient,
   AiCompletion,
   AiStructuredRequest,
   OPENAI_CLIENT,
@@ -44,7 +44,7 @@ const DRAFT = {
 };
 
 const structured = jest.fn<Promise<AiCompletion>, [AiStructuredRequest]>();
-const fakeAiClient: AiClient = { model: 'gpt-test', structured };
+const fakeAiClient = stubAiClient(structured);
 
 describe('Review replies (e2e)', () => {
   let app: INestApplication<App>;

@@ -1,3 +1,4 @@
+import type { AiProvider } from '@asobeast/shared';
 import { ConfigService } from '@nestjs/config';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { Env } from '../config/env';
@@ -35,6 +36,7 @@ const trackedKeyword = (text: string, country: string, active: boolean) => ({
 
 interface LoaderOptions {
   model?: string | null;
+  provider?: AiProvider;
   insight?: Record<string, unknown> | null;
   store?: 'APP_STORE' | 'GOOGLE_PLAY';
   screenshots?: Array<{ status: string; caption: string | null }>;
@@ -112,6 +114,7 @@ const buildLoader = (options: LoaderOptions = {}) => {
   const auditAi = {
     configured: model !== null,
     model,
+    provider: model === null ? null : (options.provider ?? 'openai'),
   } as unknown as AuditAiService;
   const analytics = {
     history: jest.fn().mockResolvedValue({
@@ -140,6 +143,18 @@ const buildLoader = (options: LoaderOptions = {}) => {
 };
 
 describe('AuditContextLoader.load', () => {
+  it('reports the provider the next analysis would send image links to', async () => {
+    const context = await buildLoader({ provider: 'compatible' }).load('app-1');
+
+    expect(context.aiStatus.provider).toBe('compatible');
+  });
+
+  it('reports no provider when AI is not configured', async () => {
+    const context = await buildLoader({ model: null }).load('app-1');
+
+    expect(context.aiStatus.provider).toBeNull();
+  });
+
   it('keeps only the active keywords of the home storefront', async () => {
     const context = await buildLoader().load('app-1');
 

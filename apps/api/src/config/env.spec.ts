@@ -89,6 +89,67 @@ describe('AI_CALLS_PER_MONTH', () => {
   });
 });
 
+describe('OPENAI_BASE_URL', () => {
+  const withAddress = (value: string) =>
+    validateEnv({ AUTH_SECRET: 'a'.repeat(32), OPENAI_BASE_URL: value });
+
+  it('is unset by default', () => {
+    expect(
+      validateEnv({ AUTH_SECRET: 'a'.repeat(32) }).OPENAI_BASE_URL,
+    ).toBeUndefined();
+  });
+
+  it('treats a blank value as unset', () => {
+    expect(withAddress('   ').OPENAI_BASE_URL).toBeUndefined();
+  });
+
+  it('trims the address', () => {
+    expect(
+      withAddress('  https://openrouter.ai/api/v1  ').OPENAI_BASE_URL,
+    ).toBe('https://openrouter.ai/api/v1');
+  });
+
+  it.each([
+    'https://openrouter.ai/api/v1',
+    'http://localhost:11434/v1',
+    'http://host.docker.internal:11434/v1',
+    'https://my-resource.openai.azure.com/openai/v1/',
+    'https://eu.api.openai.com/v1',
+    'https://gateway.example.com/openai/v1?api-version=preview',
+  ])('accepts %s', (value) => {
+    expect(withAddress(value).OPENAI_BASE_URL).toBe(value);
+  });
+
+  it.each([
+    'openrouter.ai/api/v1',
+    'ftp://example.com/v1',
+    'file:///etc/hosts',
+    'not a url',
+  ])('refuses %s', (value) => {
+    expect(() => withAddress(value)).toThrow(
+      'OPENAI_BASE_URL must be the http or https address',
+    );
+  });
+
+  it.each([
+    'https://user:secret@gateway.example.com/v1',
+    'https://user@gateway.example.com/v1',
+  ])('refuses credentials in %s', (value) => {
+    expect(() => withAddress(value)).toThrow(
+      'OPENAI_BASE_URL must not carry a user name or password',
+    );
+  });
+
+  it.each([
+    'https://gateway.example.com/v1#note',
+    'https://gateway.example.com/v1?api-version=preview#',
+  ])('refuses a fragment in %s', (value) => {
+    expect(() => withAddress(value)).toThrow(
+      'OPENAI_BASE_URL must not carry a fragment',
+    );
+  });
+});
+
 describe('the screenshot ocr variables', () => {
   const secret = { AUTH_SECRET: 'a'.repeat(32) };
 

@@ -38,7 +38,7 @@ A self hosted installation uses **none** of the above by default.
 | SMTP provider | Only the server you configure, and email stays disabled until you do |
 | Object storage provider | Only the destination you configure, and archives stay on the host until you do |
 | Error tracking provider | **Never.** Error tracking is ignored unless billing is enabled, which a self hosted installation does not use |
-| OpenAI | Only when you supply your own key. AI features are otherwise hidden and the endpoints refuse |
+| OpenAI, or the provider you name | Only when you supply your own key. `OPENAI_BASE_URL` sends the same requests to an OpenAI compatible provider of your choice instead. AI features are otherwise hidden and the endpoints refuse |
 
 The end to end suite boots an installation with no cloud configuration and asserts it opens no connection beyond its own database and queue. That test is what keeps this table honest as the hosted code grows.
 
