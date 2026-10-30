@@ -1,4 +1,5 @@
 import { Store } from '../index';
+import type { AiProvider } from './ai';
 
 export type AuditCheckKind = 'auto' | 'heuristic' | 'ai';
 export type AuditCheckStatus = 'pass' | 'warn' | 'fail' | 'unanswered';
@@ -171,6 +172,7 @@ export interface AuditRecommendations {
 export interface AuditAiStatus {
   configured: boolean;
   model: string | null;
+  provider?: AiProvider | null;
   generatedAt: string | null;
   stale?: boolean;
   run?: AuditAiRun | null;

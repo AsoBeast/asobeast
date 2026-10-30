@@ -1,6 +1,11 @@
 import { ConflictException, Inject, Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { nextPlan, type AiCallUsage, type PlanName } from '@asobeast/shared';
+import {
+  nextPlan,
+  type AiCallUsage,
+  type AiProvider,
+  type PlanName,
+} from '@asobeast/shared';
 import { QuotaService } from '../auth/quota.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
@@ -61,6 +66,10 @@ export class AiGateway {
 
   get model(): string | null {
     return this.client?.model ?? null;
+  }
+
+  get provider(): AiProvider | null {
+    return this.client?.provider ?? null;
   }
 
   requireModel(): string {
