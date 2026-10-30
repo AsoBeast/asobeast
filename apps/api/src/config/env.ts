@@ -18,13 +18,12 @@ import { TrustedProxyHops } from './trusted-proxy';
  * (for example `PORT=abc`) throws a clear error at startup. Numbers are coerced
  * from their string env representation.
  */
-const optionalText = z.preprocess(
-  (value) =>
-    typeof value === 'string' && value.trim().length > 0
-      ? value.trim()
-      : undefined,
-  z.string().optional(),
-);
+const blankAsUndefined = (value: unknown): unknown =>
+  typeof value === 'string' && value.trim().length > 0
+    ? value.trim()
+    : undefined;
+
+const optionalText = z.preprocess(blankAsUndefined, z.string().optional());
 
 const isCronPattern = (value: string): boolean => {
   try {
@@ -113,10 +112,7 @@ export const EnvSchema = z.object({
     .enum(['critical', 'high', 'medium', 'low'])
     .default('high'),
   WEB_PUBLIC_URL: z.preprocess(
-    (value) =>
-      typeof value === 'string' && value.trim().length > 0
-        ? value.trim()
-        : undefined,
+    blankAsUndefined,
     z
       .url({
         protocol: /^https?$/,
@@ -141,18 +137,9 @@ export const EnvSchema = z.object({
   SMTP_DKIM_DOMAIN: optionalText,
   SMTP_DKIM_SELECTOR: optionalText,
   SMTP_DKIM_PRIVATE_KEY_PATH: optionalText,
-  OPENAI_API_KEY: z.preprocess(
-    (value) =>
-      typeof value === 'string' && value.trim().length > 0
-        ? value.trim()
-        : undefined,
-    z.string().optional(),
-  ),
+  OPENAI_API_KEY: optionalText,
   AI_MODEL: z.preprocess(
-    (value) =>
-      typeof value === 'string' && value.trim().length > 0
-        ? value.trim()
-        : undefined,
+    blankAsUndefined,
     z.string().min(1).default('gpt-5.6-luna'),
   ),
   AI_CALLS_PER_MONTH: z.preprocess(
