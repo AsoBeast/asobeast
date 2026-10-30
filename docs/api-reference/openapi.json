@@ -2371,7 +2371,7 @@
     },
     "/apps/{id}/keyword-fields/import": {
       "post": {
-        "description": "Marks the app as following App Store Connect, queues a store sync that imports the keyword field of every localization the live version serves, and answers 200 with the localizations of the app, storeImport following. The import replaces any field typed here and tracks its phrases in every market whose storefront reads the localization as its default localization. The fields stay imported while the App Store connection is active; stop importing hands them back editable, exactly as they were. Answers 409 when the app already follows App Store Connect or no active App Store Connect connection exists, and 400 for a Google Play or competitor app.",
+        "description": "Marks the app as following App Store Connect, queues a store sync that imports the keyword field of every localization the live version serves, and answers 200 with the localizations of the app, storeImport following. The import replaces any field typed here, deletes the field and the localization of every localization the live version does not serve, and tracks its phrases in every market whose storefront reads the localization as its default localization. Deleted fields and localizations do not come back when the import stops. The fields stay imported while the App Store connection is active; stop importing hands them back editable, exactly as they were. Owner only, through a signed in session. Answers 409 when the app already follows App Store Connect or no active App Store Connect connection exists, and 400 for a Google Play or competitor app.",
         "operationId": "KeywordFieldImportController_start",
         "parameters": [
           {
@@ -2401,7 +2401,7 @@
         ]
       },
       "delete": {
-        "description": "Removes the follow mark of the app. The stored keyword fields stay exactly as the last import left them and become editable again. Answers 204, 404 when the app does not follow App Store Connect, and 400 for a Google Play or competitor app.",
+        "description": "Removes the follow mark of the app. The stored keyword fields stay exactly as the last import left them and become editable again. Owner only, through a signed in session. Answers 204, 404 when the app does not follow App Store Connect, and 400 for a Google Play or competitor app.",
         "operationId": "KeywordFieldImportController_stop",
         "parameters": [
           {
