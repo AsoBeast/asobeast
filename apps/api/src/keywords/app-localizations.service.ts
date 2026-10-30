@@ -24,7 +24,10 @@ import {
   STORE_IMPORT_NEEDED,
 } from './keyword-field-managed';
 import { SECRET_BOX } from '../store-connect/secret-box.provider';
-import { KeywordFieldWriter } from './keyword-field-writer';
+import {
+  KeywordFieldWriter,
+  serializeKeywordField,
+} from './keyword-field-writer';
 import { ensureLocalizedFieldApp, KeywordApp } from './keywords.support';
 import { homeLocalization } from './localization-markets';
 
@@ -89,8 +92,9 @@ export class AppLocalizationsService {
 
   async stopImport(appId: string): Promise<void> {
     const app = await ensureLocalizedFieldApp(this.prisma, appId);
-    const removed = await this.prisma.keywordFieldSync.deleteMany({
-      where: { appId: app.id },
+    const removed = await this.prisma.withTransaction(async (tx) => {
+      await serializeKeywordField(tx, app.id);
+      return tx.keywordFieldSync.deleteMany({ where: { appId: app.id } });
     });
     if (removed.count === 0) {
       throw new NotFoundException('This app does not follow App Store Connect');

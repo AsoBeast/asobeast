@@ -13,7 +13,11 @@ import { loadAppMarkets } from '../keywords/app-markets';
 import { storedKeywordFields } from '../keywords/keyword-field-index';
 import { checkKeywordText, KeywordApp } from '../keywords/keywords.support';
 import { homeLocalization, readersOf } from '../keywords/localization-markets';
-import { KeywordFieldWriter } from '../keywords/keyword-field-writer';
+import {
+  FieldWriteGuard,
+  FieldWriteSupersededError,
+  KeywordFieldWriter,
+} from '../keywords/keyword-field-writer';
 import { AscError, AscRateLimitedError, isNotFound } from './asc-errors';
 import { localizationOfAscLocale } from './asc-locales';
 import type {
@@ -238,8 +242,11 @@ export class AscKeywordFieldSync {
           localization: entry.localization,
           phrases: entry.phrases,
           markets: defaultMarketsOf(entry.localization, markets, home),
+          guard: this.followsOf(app),
         });
       } catch (error) {
+        if (error instanceof FieldWriteSupersededError)
+          return { fields, changed, stoppedAt, stopped: true };
         if (!(error instanceof QuotaExceededError)) throw error;
         stoppedAt = entry.localization;
         break;
@@ -264,14 +271,25 @@ export class AscKeywordFieldSync {
       const before = stored.get(localization) ?? [];
       if (localization === home) {
         if (before.length === 0) continue;
-        await this.writer.save({
-          app,
-          localization,
-          phrases: [],
-          markets: defaultMarketsOf(localization, markets, home),
-        });
+        try {
+          await this.writer.save({
+            app,
+            localization,
+            phrases: [],
+            markets: defaultMarketsOf(localization, markets, home),
+            guard: this.followsOf(app),
+          });
+        } catch (error) {
+          if (error instanceof FieldWriteSupersededError) return null;
+          throw error;
+        }
       } else {
-        await this.writer.remove(app, localization);
+        try {
+          await this.writer.remove(app, localization, this.followsOf(app));
+        } catch (error) {
+          if (error instanceof FieldWriteSupersededError) return null;
+          throw error;
+        }
       }
       removed += 1;
     }
@@ -323,6 +341,14 @@ export class AscKeywordFieldSync {
         select: { appId: true },
       })
       .then((row) => row !== null);
+  }
+
+  private followsOf(app: KeywordApp): FieldWriteGuard {
+    return async (tx) =>
+      (await tx.keywordFieldSync.findFirst({
+        where: { appId: app.id },
+        select: { appId: true },
+      })) !== null;
   }
 
   private recordSkipped(app: KeywordApp, message: string): Promise<unknown> {

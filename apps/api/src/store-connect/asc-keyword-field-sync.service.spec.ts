@@ -6,6 +6,7 @@ import type {
   KeywordFieldWriter,
   KeywordFieldWrite,
 } from '../keywords/keyword-field-writer';
+import { FieldWriteSupersededError } from '../keywords/keyword-field-writer';
 import type { ActionRunQueue } from '../actions/action-run.queue';
 import type { WorkspaceContext } from '../common/tenancy/workspace-context';
 import type { StoreConnectionService } from './store-connection.service';
@@ -56,6 +57,11 @@ interface KeywordAppRow {
   isCompetitor: boolean;
 }
 
+interface SyncRecord {
+  where: { appId: string };
+  data: Record<string, unknown>;
+}
+
 function build(options: BuildOptions = {}) {
   const status =
     options.status !== undefined ? options.status : ('active' as const);
@@ -86,7 +92,7 @@ function build(options: BuildOptions = {}) {
         .mockResolvedValue(following.map((appId) => ({ appId }))),
       findFirst: jest.fn().mockResolvedValue({ appId: APP.id }),
       updateMany: jest
-        .fn<Promise<unknown>, [Record<string, unknown>]>()
+        .fn<Promise<{ count: number }>, [SyncRecord]>()
         .mockResolvedValue({ count: 1 }),
     },
     app: {
@@ -144,13 +150,17 @@ describe('AscKeywordFieldSync.run', () => {
     const { service, writer, actions, prisma } = build();
 
     await expect(service.run()).resolves.toEqual({ fields: 1, changed: 1 });
-    expect(writer.save).toHaveBeenCalledWith({
-      app: APP,
-      localization: 'en-US',
-      phrases: ['focus', 'timer'],
-      markets: ['us'],
-    });
-    const [recorded] = prisma.keywordFieldSync.updateMany.mock.calls;
+    expect(writer.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        app: APP,
+        localization: 'en-US',
+        phrases: ['focus', 'timer'],
+        markets: ['us'],
+      }),
+    );
+    const save = writer.save.mock.calls[0][0];
+    expect(save.guard).toBeInstanceOf(Function);
+    const recorded = prisma.keywordFieldSync.updateMany.mock.calls[0];
     expect(recorded[0]).toMatchObject({
       where: { appId: APP.id },
       data: { version: '2.0', lastError: null },
@@ -234,7 +244,7 @@ describe('AscKeywordFieldSync.run', () => {
 
     await expect(service.run()).resolves.toEqual({ fields: 1, changed: 1 });
     expect(writer.remove).toHaveBeenCalledTimes(1);
-    expect(writer.remove).toHaveBeenCalledWith(APP, 'de');
+    expect(writer.remove).toHaveBeenCalledWith(APP, 'de', expect.any(Function));
     expect(actions.request).toHaveBeenCalledWith({ workspaceId: 'ws_1' });
   });
 
@@ -301,6 +311,22 @@ describe('AscKeywordFieldSync.run', () => {
       .mockResolvedValueOnce(null);
 
     await expect(service.run()).resolves.toEqual({ fields: 1, changed: 1 });
+    expect(writer.save).toHaveBeenCalledTimes(1);
+    expect(writer.remove).not.toHaveBeenCalled();
+    expect(prisma.keywordFieldSync.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('stops the run when a stop supersedes a field write in the transaction', async () => {
+    const { service, writer, prisma } = build({
+      served: [
+        { locale: 'en-US', keywords: 'focus' },
+        { locale: 'de-DE', keywords: 'fokus' },
+      ],
+      abroad: ['de'],
+    });
+    writer.save.mockRejectedValueOnce(new FieldWriteSupersededError());
+
+    await expect(service.run()).resolves.toEqual({ fields: 0, changed: 0 });
     expect(writer.save).toHaveBeenCalledTimes(1);
     expect(writer.remove).not.toHaveBeenCalled();
     expect(prisma.keywordFieldSync.updateMany).not.toHaveBeenCalled();
@@ -425,7 +451,7 @@ describe('AscKeywordFieldSync.run', () => {
     await expect(service.run()).resolves.toEqual({ fields: 0, changed: 0 });
     expect(writer.save).toHaveBeenCalledTimes(1);
     expect(api.liveVersion).toHaveBeenCalledTimes(1);
-    const [refused] = prisma.keywordFieldSync.updateMany.mock.calls;
+    const refused = prisma.keywordFieldSync.updateMany.mock.calls[0];
     expect(refused[0]).toMatchObject({
       where: { appId: APP.id },
       data: { lastError: FIELD_SYNC_QUOTA_STOPPED('en-US') },

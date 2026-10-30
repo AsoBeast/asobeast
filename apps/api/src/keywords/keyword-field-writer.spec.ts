@@ -2,7 +2,10 @@ import { Store } from '@prisma/client';
 import { QuotaService } from '../auth/quota.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { FirstPositionChecks } from './first-position-checks';
-import { KeywordFieldWriter } from './keyword-field-writer';
+import {
+  FieldWriteSupersededError,
+  KeywordFieldWriter,
+} from './keyword-field-writer';
 import { pairKey } from './keyword-import';
 import { KeywordTracker } from './keyword-tracker';
 import { MarketListingRequests } from './market-listing.requests';
@@ -187,6 +190,45 @@ describe('KeywordFieldWriter', () => {
     ];
     expect(strings.join('')).toContain('pg_advisory_xact_lock');
     expect(values).toContain(APP.id);
+  });
+
+  it('runs the guard after the field lock and skips every write when it refuses', async () => {
+    const { writer, tx, events, checks } = build();
+
+    await expect(
+      writer.save({
+        app: APP,
+        localization: 'es-MX',
+        phrases: ['habito'],
+        markets: ['us'],
+        guard: () => {
+          events.push('guard');
+          return Promise.resolve(false);
+        },
+      }),
+    ).rejects.toBeInstanceOf(FieldWriteSupersededError);
+
+    expect(events).toEqual(['quota admission', 'field lock', 'guard']);
+    expect(tx.keywordField.upsert).not.toHaveBeenCalled();
+    expect(tx.trackedKeyword.createMany).not.toHaveBeenCalled();
+    expect(tx.trackedKeyword.updateMany).not.toHaveBeenCalled();
+    expect(tx.appLocalization.createMany).not.toHaveBeenCalled();
+    expect(checks.schedule).not.toHaveBeenCalled();
+  });
+
+  it('writes the field when the guard allows', async () => {
+    const { writer, tx } = build();
+
+    await writer.save({
+      app: APP,
+      localization: 'es-MX',
+      phrases: ['habito'],
+      markets: ['us'],
+      guard: () => Promise.resolve(true),
+    });
+
+    expect(tx.keywordField.upsert).toHaveBeenCalledTimes(1);
+    expect(tx.trackedKeyword.createMany).toHaveBeenCalledTimes(1);
   });
 
   it('answers the keyword ids and the markets it tracked in', async () => {
@@ -399,6 +441,17 @@ describe('KeywordFieldWriter', () => {
       await writer.remove(APP, 'es-MX');
 
       expect(events).toEqual(['quota admission', 'field lock']);
+    });
+
+    it('skips the removal when the guard refuses', async () => {
+      const { writer, tx } = build(['habito']);
+
+      await expect(
+        writer.remove(APP, 'es-MX', () => Promise.resolve(false)),
+      ).rejects.toBeInstanceOf(FieldWriteSupersededError);
+
+      expect(tx.keywordField.deleteMany).not.toHaveBeenCalled();
+      expect(tx.appLocalization.deleteMany).not.toHaveBeenCalled();
     });
 
     it('untracks every previous phrase in every market that reads the localization', async () => {
