@@ -2,7 +2,7 @@
 title: Track keywords
 description: "Add keywords per storefront on the keyword monitor, import a list from a CSV file, see which keyword fields each market reads, and know what every added market costs in daily store requests."
 icon: key
-keywords: ["keywords","keyword monitor","market","keyword field","suggestions","bulk","budget","import","CSV","spreadsheet","tags","Astro","AppTweak","AppFollow","Sonar","switch"]
+keywords: ["keywords","keyword monitor","market","keyword field","suggestions","bulk","budget","import","CSV","spreadsheet","tags","Astro","AppFollow","Sonar","switch"]
 ---
 
 The keyword monitor is where you decide what asobeast checks every day. Each keyword you add belongs to one storefront, and every keyword in every market adds one store search to the daily run.
@@ -88,9 +88,8 @@ The keyword export of another tool is read by its column headers, so you can usu
 | Tool | Kept | Ignored | Good to know |
 | --- | --- | --- | --- |
 | Astro | Keyword, the store domain as the country, tags and note | App name, store name, last update, ranking, change, popularity, difficulty, apps in ranking | Astro writes a row for each platform, so a keyword on iPhone and on iPad appears once as new and once as Duplicate. An export of all your apps names the app of every row: the dialog imports the app you are on and says how many rows it left out. |
-| AppTweak | Keyword | Volume, installs and every other metric | The file does not say which market it is for, so rows take the market chosen in the dialog. A file that includes competitors is narrowed to your app by its name. |
-| AppFollow | Keyword | Position, popularity, difficulty, effectiveness and every other metric | The lines above the header row are skipped. The file does not say its market or its store, so rows take the market chosen in the dialog, and its file name (`iphone` or `android`) is the only place that says which store it is for. |
-| Sonar | Keyword, country and tags | Rank, movement, popularity, difficulty, estimated downloads, starred and updated | Rows for the other store, in a `Store` column holding `ios` or `android`, are left out. The history file of `sonar export rankings` has a row for every keyword and day, so import a list of current keywords instead. |
+| AppFollow | Keyword | Position, changes, best rank, popularity, search downloads, the daily positions and every other metric | The lines above the header row are skipped. They name the device and the country the report covers, but the dialog does not read them, so rows take the market chosen in the dialog: choose that country before you import. |
+| Sonar | Keyword, country and tags | Starred, source, popularity, estimated downloads, difficulty, gap, rank, last seen and added | Rows for the other store, in a `Store` column holding `ios` or `android`, are left out. An export of more than 500 keywords is refused until you split it. The history file of `sonar export rankings` has a row for every keyword and day, so import a list of current keywords instead. |
 
 When a file names the app or the store of each row, in columns such as `App Id`, `App Name`, `Platform` or `Store`, the dialog imports only the rows of the app and store you are on and lists what it left out. If the file holds several apps and none is yours, choose one under **App to import**, or **All apps**, before you import. A file for a single app is imported whole whatever that app is called, so you can copy the keywords of one app to another this way.
 
