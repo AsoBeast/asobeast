@@ -11,6 +11,7 @@ import {
   analysisState,
   imageLinksLine,
   progressLine,
+  sendsImageLinks,
   type AnalysisState,
 } from "./analysis-state";
 
@@ -123,5 +124,29 @@ describe("imageLinksLine", () => {
       "Sends image links to llava on the AI provider this instance is configured with.",
     );
     expect(line).not.toMatch(/openai/i);
+  });
+
+  it.each([
+    ["openai" as const, "Sends image links to OpenAI."],
+    [
+      "compatible" as const,
+      "Sends image links to the AI provider this instance is configured with.",
+    ],
+  ])("leaves out a model it cannot vouch for (%s)", (provider, line) => {
+    expect(imageLinksLine(provider, null)).toBe(line);
+  });
+});
+
+describe("sendsImageLinks", () => {
+  it.each<[AnalysisState, boolean]>([
+    ["unconfigured", false],
+    ["never", true],
+    ["requesting", false],
+    ["active", false],
+    ["current", false],
+    ["stale", true],
+    ["failed", true],
+  ])("%s sends image links: %s", (state, sends) => {
+    expect(sendsImageLinks(state)).toBe(sends);
   });
 });
