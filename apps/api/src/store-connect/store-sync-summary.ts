@@ -26,7 +26,7 @@ export const retriesFailures = (
 export class PartialSyncRetryError extends Error {
   constructor(failed: number) {
     super(
-      `${failed} failed part${failed === 1 ? '' : 's'} of the sync ${failed === 1 ? 'is' : 'are'} tried again`,
+      `the sync tries again after ${failed} failure${failed === 1 ? '' : 's'}`,
     );
     this.name = 'PartialSyncRetryError';
   }

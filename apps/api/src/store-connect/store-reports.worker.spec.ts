@@ -64,7 +64,7 @@ describe('StoreReportsWorker', () => {
       } as unknown as Job<SyncStoreReportsPayload>;
 
       await expect(worker.process(firstAttempt)).rejects.toThrow(
-        '1 failed part of the sync is tried again',
+        'the sync tries again after 1 failure',
       );
       expect(appStore.run).toHaveBeenCalledWith(false);
     });
