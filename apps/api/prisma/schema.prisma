@@ -249,7 +249,7 @@ model KeywordFieldSync {
   workspaceId  String
   app          App      @relation(fields: [appId, workspaceId], references: [id, workspaceId], onDelete: Cascade)
   version      String?
-  syncedAt     DateTime @default(now())
+  syncedAt     DateTime?
   lastError    String?
 
   @@id([appId, workspaceId])
