@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   KEYWORD_IMPORT_LIMIT,
   KEYWORD_IMPORT_STATUSES,
+  type KeywordImportRow,
   type KeywordImportRowResult,
   type KeywordImportSummary,
 } from "@asobeast/shared";
@@ -10,8 +11,11 @@ import {
   IMPORT_BODY_BYTES,
   IMPORT_STATUS_LABELS,
   importButtonLabel,
+  importParts,
   importToast,
   marketRefusal,
+  partNotice,
+  partRows,
   quotaNotice,
   refuseImport,
   refusalMessage,
@@ -38,57 +42,120 @@ const summary = (
   ...parts,
 });
 
+const fileOf = (rows: KeywordImportRow[]) => ({
+  rows,
+  lines: rows.map((_, index) => index + 2),
+});
+
+const bodyBytes = (rows: KeywordImportRow[]) =>
+  new TextEncoder().encode(JSON.stringify({ rows, country: "us" })).length;
+
 describe("refuseImport", () => {
-  it("U-REQ-01 refuses a file with no rows and one with more than an import may carry", () => {
-    expect(refuseImport([], "us")).toEqual({ kind: "empty" });
-    expect(refuseImport(rowsOf(KEYWORD_IMPORT_LIMIT + 1), "us")).toEqual({
-      kind: "tooManyRows",
-      rows: KEYWORD_IMPORT_LIMIT + 1,
-      limit: KEYWORD_IMPORT_LIMIT,
-    });
+  it("U-REQ-01 refuses a file with no rows", () => {
+    expect(refuseImport(fileOf([]), "us")).toEqual({ kind: "empty" });
   });
 
-  it("U-REQ-02 lets the largest import of realistic rows through", () => {
+  it("U-REQ-02 lets a file of any length through when each row fits a request", () => {
     expect(
-      refuseImport(
-        rowsOf(KEYWORD_IMPORT_LIMIT, "Imported from the sheet"),
-        "us",
-      ),
+      refuseImport(fileOf(rowsOf(KEYWORD_IMPORT_LIMIT * 3, "note")), "us"),
     ).toBeNull();
   });
 
-  it("U-REQ-03 refuses rows too large for one request and says how many fit", () => {
-    const refusal = refuseImport(rowsOf(300, "x".repeat(500)), "us");
+  it("U-REQ-03 refuses a row too large to send on its own and names its line", () => {
+    const rows = rowsOf(3);
+    rows[1] = { keyword: "fitness", note: "x".repeat(IMPORT_BODY_BYTES) };
 
-    expect(refusal).toMatchObject({ kind: "tooLarge" });
-    const fits = refusal?.kind === "tooLarge" ? refusal.fits : 0;
-    expect(fits).toBeGreaterThan(100);
-    expect(fits).toBeLessThan(300);
-    const kept = JSON.stringify({
-      rows: rowsOf(fits, "x".repeat(500)),
-      country: "us",
+    expect(refuseImport(fileOf(rows), "us")).toEqual({
+      kind: "rowTooLarge",
+      line: 3,
     });
-    expect(new TextEncoder().encode(kept).length).toBeLessThanOrEqual(
-      IMPORT_BODY_BYTES,
+  });
+
+  it("U-REQ-04 counts bytes, not characters, so a CJK note is measured as sent", () => {
+    const rows = [{ keyword: "fitness", note: "习".repeat(32_000) }];
+
+    expect(refuseImport(fileOf(rows), "us")).toMatchObject({
+      kind: "rowTooLarge",
+    });
+  });
+});
+
+describe("importParts", () => {
+  it("U-REQ-05 keeps a file one import can carry in one part", () => {
+    expect(importParts(rowsOf(KEYWORD_IMPORT_LIMIT), "us")).toEqual([
+      { start: 0, end: KEYWORD_IMPORT_LIMIT },
+    ]);
+    expect(importParts([], "us")).toEqual([]);
+  });
+
+  it("U-REQ-06 splits a longer file into parts of the row limit", () => {
+    expect(importParts(rowsOf(1_240), "us")).toEqual([
+      { start: 0, end: 500 },
+      { start: 500, end: 1_000 },
+      { start: 1_000, end: 1_240 },
+    ]);
+  });
+
+  it("U-REQ-07 splits rows too large for one request so each part fits the body limit", () => {
+    const rows = rowsOf(300, "习".repeat(160));
+    const parts = importParts(rows, "us");
+
+    expect(parts.length).toBeGreaterThan(1);
+    expect(parts[0]?.start).toBe(0);
+    expect(parts.at(-1)?.end).toBe(rows.length);
+    for (const [index, part] of parts.entries()) {
+      expect(part.end).toBeGreaterThan(part.start);
+      expect(part.start).toBe(index === 0 ? 0 : parts[index - 1]?.end);
+      expect(bodyBytes(rows.slice(part.start, part.end))).toBeLessThanOrEqual(
+        IMPORT_BODY_BYTES,
+      );
+    }
+  });
+
+  it("U-REQ-08 gives a row that fills a request a part of its own", () => {
+    const big = { keyword: "fitness", note: "x".repeat(60_000) };
+    const rows = [rowsOf(1)[0]!, big, big, rowsOf(1)[0]!];
+
+    expect(importParts(rows, "us")).toEqual([
+      { start: 0, end: 2 },
+      { start: 2, end: 4 },
+    ]);
+  });
+});
+
+describe("partRows", () => {
+  it("U-REQ-09 cuts the rows and their file lines of one part", () => {
+    expect(partRows(fileOf(rowsOf(4)), { start: 1, end: 3 })).toEqual({
+      rows: rowsOf(4).slice(1, 3),
+      lines: [3, 4],
+    });
+  });
+});
+
+describe("partNotice", () => {
+  const lines = Array.from({ length: 677 }, (_, index) => index + 2);
+  const parts = [
+    { start: 0, end: 500 },
+    { start: 500, end: 677 },
+  ];
+
+  it("U-REQ-10 says which part is reviewed and which lines it holds", () => {
+    expect(partNotice(parts, { index: 1, count: 2 }, lines)).toBe(
+      "The 677 rows are imported in 2 parts, one after the other. Part 2 holds lines 502 to 678.",
     );
   });
 
-  it("U-REQ-04 counts bytes, not characters, so Thai and CJK notes are measured as sent", () => {
-    const refusal = refuseImport(rowsOf(300, "习".repeat(160)), "us");
-
-    expect(refusal).toMatchObject({ kind: "tooLarge" });
+  it("U-REQ-10 says nothing for a file of one part", () => {
+    expect(
+      partNotice([{ start: 0, end: 3 }], { index: 0, count: 1 }, [2, 3, 4]),
+    ).toBeNull();
   });
 });
 
 describe("refusalMessage", () => {
-  it("names the limit and how to split", () => {
-    expect(
-      refusalMessage({ kind: "tooManyRows", rows: 1240, limit: 500 }),
-    ).toBe(
-      "The file has 1,240 rows. One import takes up to 500 rows, so split the file and import the parts one after the other.",
-    );
-    expect(refusalMessage({ kind: "tooLarge", fits: 212 })).toBe(
-      "These rows are too large for one request. About 212 rows fit, so split the file at that size.",
+  it("says why a file is refused", () => {
+    expect(refusalMessage({ kind: "rowTooLarge", line: 1_204 })).toBe(
+      "Line 1,204 is too large to send. Shorten its note or tags, or remove the line, and choose the file again.",
     );
     expect(refusalMessage({ kind: "empty" })).toBe(
       "The file has no keyword rows.",
@@ -293,5 +360,21 @@ describe("importToast", () => {
       title: "Tracking 1 keyword",
       description: "Rankings capture on the next run.",
     });
+  });
+
+  it("U-VIEW-10 points to the next part until the last one is in", () => {
+    const result = {
+      imported: 498,
+      summary: summary({ rows: 500, new: 498, duplicate: 2 }),
+    };
+
+    expect(importToast(result, { index: 0, count: 2 })).toEqual({
+      title: "Tracking 498 keywords",
+      description:
+        "2 rows skipped. Part 1 of 2 is in. Review part 2 and import it next.",
+    });
+    expect(importToast(result, { index: 1, count: 2 }).description).toBe(
+      "2 rows skipped. Rankings capture on the next run.",
+    );
   });
 });

@@ -99,11 +99,16 @@ export function ImportKeywordsDialog({
               <AlertDescription>{flow.error}</AlertDescription>
             </Alert>
           ) : null}
-          {result && mapped ? (
+          {flow.partNotice ? (
+            <Alert role="note">
+              <AlertDescription>{flow.partNotice}</AlertDescription>
+            </Alert>
+          ) : null}
+          {result ? (
             <>
               <ImportPreview
                 result={result}
-                lines={mapped.lines}
+                lines={flow.lines}
                 busy={flow.busy}
               />
               <ImportQuotaNotice result={result} />
@@ -120,7 +125,12 @@ export function ImportKeywordsDialog({
           >
             Cancel
           </Button>
-          <Button disabled={!flow.canImport} onClick={flow.submit}>
+          <Button
+            aria-disabled={!flow.canImport}
+            onClick={() => {
+              if (flow.canImport) flow.submit();
+            }}
+          >
             {flow.importing ? <Loader2 className="animate-spin" /> : null}
             {flow.importing
               ? "Importing…"

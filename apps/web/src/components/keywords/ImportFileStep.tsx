@@ -16,6 +16,8 @@ const TEMPLATE = toCsv(
   ],
 );
 
+const PARTS_HINT = `A file over ${formatNumber(KEYWORD_IMPORT_LIMIT)} rows is imported in parts.`;
+
 export function ImportFileStep({
   fileName,
   onChoose,
@@ -45,8 +47,8 @@ export function ImportFileStep({
       </div>
       <p className="text-xs text-muted-foreground">
         {fileName
-          ? `Reading ${fileName}. Up to ${formatNumber(KEYWORD_IMPORT_LIMIT)} rows per import.`
-          : `Up to ${formatNumber(KEYWORD_IMPORT_LIMIT)} rows per import. UTF-8 or UTF-16, separated by commas, semicolons, tabs or pipes.`}
+          ? `Reading ${fileName}. ${PARTS_HINT}`
+          : `${PARTS_HINT} UTF-8 or UTF-16, separated by commas, semicolons, tabs or pipes.`}
       </p>
     </div>
   );

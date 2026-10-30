@@ -287,7 +287,7 @@ test("P-WEB-06 reads a semicolon file saved as UTF-16 and a Windows code page fi
   await expect(rowOf(dialog, /café/)).toBeVisible();
 });
 
-test("P-WEB-07 refuses more rows than one import may carry before sending anything", async ({
+test("P-WEB-07 imports a file longer than one import in parts, one after the other", async ({
   page,
 }) => {
   const sent = importRequests(page);
@@ -296,13 +296,53 @@ test("P-WEB-07 refuses more rows than one import may carry before sending anythi
 
   await choose(dialog, ["keyword", ...rows].join("\r\n"));
 
-  await expect(dialog.getByRole("alert")).toContainText(
-    "The file has 501 rows. One import takes up to 500 rows",
-  );
   await expect(
-    dialog.getByRole("button", { name: "Nothing to import" }),
-  ).toBeDisabled();
-  expect(sent).toEqual([]);
+    dialog.getByText(
+      "The 501 rows are imported in 2 parts, one after the other. Part 1 holds lines 2 to 501.",
+    ),
+  ).toBeVisible();
+  await expect(dialog.getByRole("status")).toHaveText("500 new");
+  const first = dialog.getByRole("button", { name: "Import 500 keywords" });
+  await first.focus();
+  await page.keyboard.press("Enter");
+
+  await expect(
+    page.getByText("Part 1 of 2 is in. Review part 2 and import it next."),
+  ).toBeVisible();
+  await expect(
+    dialog.getByText("Part 2 holds lines 502 to 502."),
+  ).toBeVisible();
+  await expect(dialog.getByRole("status")).toHaveText("1 new");
+  const second = dialog.getByRole("button", { name: "Import 1 keyword" });
+  await expect(second).toBeFocused();
+  await page.keyboard.press("Enter");
+
+  await expect(dialog).toBeHidden();
+  const imports = sent.filter((request) => !request.url().includes("/preview"));
+  expect(imports.map((request) => request.postDataJSON().rows.length)).toEqual([
+    500, 1,
+  ]);
+});
+
+test("P-WEB-07 starts again from the first part when the columns change", async ({
+  page,
+}) => {
+  const dialog = await openDialog(page);
+  const rows = Array.from({ length: 501 }, (_, index) => `phrase ${index}`);
+  await choose(
+    dialog,
+    ["keyword,note", ...rows.map((row) => `${row},`)].join("\r\n"),
+  );
+  await dialog.getByRole("button", { name: "Import 500 keywords" }).click();
+  await expect(
+    dialog.getByText("Part 2 holds lines 502 to 502."),
+  ).toBeVisible();
+
+  await dialog.getByRole("combobox", { name: "Note column" }).click();
+  await page.getByRole("option", { name: "Not in the file" }).click();
+
+  await expect(dialog.getByText("Part 1 holds lines 2 to 501.")).toBeVisible();
+  await expect(dialog.getByRole("status")).toHaveText("500 already tracked");
 });
 
 test("P-WEB-08 filters the review by status and counts the rows shown", async ({
