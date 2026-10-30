@@ -511,6 +511,16 @@ describe('AscReportSync', () => {
     expect(keywordFields.run).not.toHaveBeenCalled();
   });
 
+  it('skips the keyword field import when the download ends with a rejected key', async () => {
+    const { service, applier, keywordFields } = build();
+    applier.apply.mockRejectedValue(
+      new AscRejectedKeyError('refused', 403, null),
+    );
+
+    await expect(service.run()).rejects.toThrow(UnrecoverableError);
+    expect(keywordFields.run).not.toHaveBeenCalled();
+  });
+
   it('reports the keyword field counts of the import', async () => {
     const { service, keywordFields } = build();
     keywordFields.run.mockResolvedValue({ fields: 3, changed: 2 });

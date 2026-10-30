@@ -14,7 +14,7 @@ export const STORE_IMPORT_FOLLOWING =
   'App Store Connect already imports the keyword fields of this app. Stop importing to edit them here again.';
 
 export interface StoredFieldSync {
-  syncedAt: Date;
+  syncedAt: Date | null;
   version: string | null;
   lastError: string | null;
 }

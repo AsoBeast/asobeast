@@ -11,7 +11,9 @@ import type { WorkspaceContext } from '../common/tenancy/workspace-context';
 import type { StoreConnectionService } from './store-connection.service';
 import {
   AscKeywordFieldSync,
+  FIELD_SYNC_NO_LIVE_VERSION,
   FIELD_SYNC_QUOTA_STOPPED,
+  FIELD_SYNC_UNSERVED_APP,
 } from './asc-keyword-field-sync.service';
 import { AscError } from './asc-errors';
 
@@ -82,9 +84,10 @@ function build(options: BuildOptions = {}) {
       findMany: jest
         .fn()
         .mockResolvedValue(following.map((appId) => ({ appId }))),
-      upsert: jest
+      findFirst: jest.fn().mockResolvedValue({ appId: APP.id }),
+      updateMany: jest
         .fn<Promise<unknown>, [Record<string, unknown>]>()
-        .mockResolvedValue({}),
+        .mockResolvedValue({ count: 1 }),
     },
     app: {
       findUnique: jest
@@ -147,13 +150,12 @@ describe('AscKeywordFieldSync.run', () => {
       phrases: ['focus', 'timer'],
       markets: ['us'],
     });
-    const [recorded] = prisma.keywordFieldSync.upsert.mock.calls;
+    const [recorded] = prisma.keywordFieldSync.updateMany.mock.calls;
     expect(recorded[0]).toMatchObject({
-      where: {
-        appId_workspaceId: { appId: APP.id, workspaceId: APP.workspaceId },
-      },
-      update: { version: '2.0', lastError: null },
+      where: { appId: APP.id },
+      data: { version: '2.0', lastError: null },
     });
+    expect(recorded[0].data.syncedAt).toBeInstanceOf(Date);
     expect(actions.request).toHaveBeenCalledWith({ workspaceId: 'ws_1' });
   });
 
@@ -194,7 +196,7 @@ describe('AscKeywordFieldSync.run', () => {
 
     await expect(service.run()).resolves.toEqual({ fields: 1, changed: 0 });
     expect(writer.save).not.toHaveBeenCalled();
-    expect(prisma.keywordFieldSync.upsert).toHaveBeenCalled();
+    expect(prisma.keywordFieldSync.updateMany).toHaveBeenCalled();
     expect(actions.request).not.toHaveBeenCalled();
   });
 
@@ -236,28 +238,130 @@ describe('AscKeywordFieldSync.run', () => {
     expect(actions.request).toHaveBeenCalledWith({ workspaceId: 'ws_1' });
   });
 
-  it('keeps the home field when Apple stops serving it', async () => {
+  it('clears the home field when Apple stops serving it', async () => {
     const { service, writer, actions } = build({
       stored: [
         { localization: 'en-US', phrases: ['focus'] },
         { localization: 'de', phrases: ['fokus'] },
       ],
-      served: [{ locale: 'de', keywords: 'fokus' }],
+      served: [{ locale: 'de-DE', keywords: 'fokus' }],
+      abroad: ['de'],
+    });
+
+    await expect(service.run()).resolves.toEqual({ fields: 1, changed: 1 });
+    expect(writer.save).toHaveBeenCalledWith(
+      expect.objectContaining({ localization: 'en-US', phrases: [] }),
+    );
+    expect(writer.remove).not.toHaveBeenCalled();
+    expect(actions.request).toHaveBeenCalledWith({ workspaceId: 'ws_1' });
+  });
+
+  it('leaves an already empty home field untouched', async () => {
+    const { service, writer } = build({
+      stored: [
+        { localization: 'en-US', phrases: [] },
+        { localization: 'de', phrases: ['fokus'] },
+      ],
+      served: [{ locale: 'de-DE', keywords: 'fokus' }],
+      abroad: ['de'],
+    });
+
+    await expect(service.run()).resolves.toEqual({ fields: 1, changed: 0 });
+    expect(writer.save).not.toHaveBeenCalled();
+    expect(writer.remove).not.toHaveBeenCalled();
+  });
+
+  it('skips the removals while Apple serves a locale AsoBeast cannot map', async () => {
+    const { service, writer } = build({
+      stored: [
+        { localization: 'en-US', phrases: ['focus'] },
+        { localization: 'de', phrases: ['fokus'] },
+      ],
+      served: [
+        { locale: 'en-US', keywords: 'focus' },
+        { locale: 'xx-YY', keywords: 'unknown' },
+      ],
       abroad: ['de'],
     });
 
     await expect(service.run()).resolves.toEqual({ fields: 1, changed: 0 });
     expect(writer.remove).not.toHaveBeenCalled();
-    expect(actions.request).not.toHaveBeenCalled();
   });
 
-  it('ignores a locale AsoBeast does not know', async () => {
-    const { service, writer } = build({
-      served: [{ locale: 'xx-YY', keywords: 'focus' }],
+  it('stops writing and records nothing once the owner stops the import mid run', async () => {
+    const { service, writer, prisma } = build({
+      served: [
+        { locale: 'en-US', keywords: 'focus' },
+        { locale: 'de-DE', keywords: 'fokus' },
+      ],
+      abroad: ['de'],
     });
+    prisma.keywordFieldSync.findFirst
+      .mockResolvedValueOnce({ appId: APP.id })
+      .mockResolvedValueOnce(null);
+
+    await expect(service.run()).resolves.toEqual({ fields: 1, changed: 1 });
+    expect(writer.save).toHaveBeenCalledTimes(1);
+    expect(writer.remove).not.toHaveBeenCalled();
+    expect(prisma.keywordFieldSync.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('never recreates a removed sync row', async () => {
+    const { service, prisma } = build();
+    prisma.keywordFieldSync.findFirst.mockResolvedValue(null);
 
     await expect(service.run()).resolves.toEqual({ fields: 0, changed: 0 });
-    expect(writer.save).not.toHaveBeenCalled();
+    expect(prisma.keywordFieldSync.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('records why a read was skipped and imports the next app', async () => {
+    const gone = new AscError('gone', 404, 'NOT_FOUND');
+    const { service, api, writer, prisma } = build({
+      following: [APP.id, 'app_2'],
+      apps: { [APP.id]: APP, app_2: { ...APP, id: 'app_2' } },
+    });
+    api.liveVersion
+      .mockRejectedValueOnce(gone)
+      .mockResolvedValueOnce({ id: 'v1', version: '2.0' });
+
+    await expect(service.run()).resolves.toEqual({ fields: 1, changed: 1 });
+    expect(api.liveVersion).toHaveBeenCalledTimes(2);
+    expect(writer.save).toHaveBeenCalledTimes(1);
+    expect(prisma.keywordFieldSync.updateMany).toHaveBeenCalledTimes(2);
+    expect(prisma.keywordFieldSync.updateMany.mock.calls[0][0]).toMatchObject({
+      where: { appId: APP.id },
+      data: { lastError: FIELD_SYNC_UNSERVED_APP },
+    });
+    expect(
+      prisma.keywordFieldSync.updateMany.mock.calls[0][0].data.syncedAt,
+    ).toBeUndefined();
+    expect(prisma.keywordFieldSync.updateMany.mock.calls[1][0]).toMatchObject({
+      where: { appId: 'app_2' },
+      data: { version: '2.0', lastError: null },
+    });
+  });
+
+  it('records the missing live version', async () => {
+    const { service, api, prisma } = build();
+    api.liveVersion.mockResolvedValue(null);
+
+    await expect(service.run()).resolves.toEqual({ fields: 0, changed: 0 });
+    expect(prisma.keywordFieldSync.updateMany.mock.calls[0][0]).toMatchObject({
+      data: { lastError: FIELD_SYNC_NO_LIVE_VERSION },
+    });
+  });
+
+  it('keeps going when one app fails for a reason Apple does not report', async () => {
+    const { service, api, writer } = build({
+      following: [APP.id, 'app_2'],
+      apps: { [APP.id]: APP, app_2: { ...APP, id: 'app_2' } },
+    });
+    api.liveVersion
+      .mockRejectedValueOnce(new Error('transport exploded'))
+      .mockResolvedValueOnce({ id: 'v1', version: '2.0' });
+
+    await expect(service.run()).resolves.toEqual({ fields: 1, changed: 1 });
+    expect(writer.save).toHaveBeenCalledTimes(1);
   });
 
   it('imports the home localization before additional ones', async () => {
@@ -321,26 +425,12 @@ describe('AscKeywordFieldSync.run', () => {
     await expect(service.run()).resolves.toEqual({ fields: 0, changed: 0 });
     expect(writer.save).toHaveBeenCalledTimes(1);
     expect(api.liveVersion).toHaveBeenCalledTimes(1);
-    const [refused] = prisma.keywordFieldSync.upsert.mock.calls;
+    const [refused] = prisma.keywordFieldSync.updateMany.mock.calls;
     expect(refused[0]).toMatchObject({
-      update: { lastError: FIELD_SYNC_QUOTA_STOPPED('en-US') },
+      where: { appId: APP.id },
+      data: { lastError: FIELD_SYNC_QUOTA_STOPPED('en-US') },
     });
+    expect(refused[0].data.syncedAt).toBeInstanceOf(Date);
     expect(actions.request).not.toHaveBeenCalled();
-  });
-
-  it('skips an app Apple does not serve and imports the next one', async () => {
-    const gone = new AscError('gone', 404, 'NOT_FOUND');
-    const { service, api, writer, prisma } = build({
-      following: [APP.id, 'app_2'],
-      apps: { [APP.id]: APP, app_2: { ...APP, id: 'app_2' } },
-    });
-    api.liveVersion
-      .mockRejectedValueOnce(gone)
-      .mockResolvedValueOnce({ id: 'v1', version: '2.0' });
-
-    await expect(service.run()).resolves.toEqual({ fields: 1, changed: 1 });
-    expect(api.liveVersion).toHaveBeenCalledTimes(2);
-    expect(writer.save).toHaveBeenCalledTimes(1);
-    expect(prisma.keywordFieldSync.upsert).toHaveBeenCalledTimes(1);
   });
 });

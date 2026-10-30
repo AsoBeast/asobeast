@@ -94,7 +94,12 @@ export class AscReportSync {
       try {
         await this.download(connection, summary);
       } catch (error) {
-        if (error instanceof AscRateLimitedError) throw error;
+        if (
+          error instanceof AscRateLimitedError ||
+          error instanceof AscRejectedKeyError
+        ) {
+          throw error;
+        }
         await this.importKeywordFields(summary);
         throw error;
       }

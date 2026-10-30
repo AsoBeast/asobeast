@@ -3,7 +3,7 @@ import { localizationOfAscLocale } from './asc-locales';
 
 const APPLE_APP_STORE_LOCALIZATIONS: Record<string, string> = {
   'ar-SA': 'ar',
-  bn: 'bn',
+  'bn-BD': 'bn',
   ca: 'ca',
   'zh-Hans': 'zh-Hans',
   'zh-Hant': 'zh-Hant',
@@ -20,37 +20,37 @@ const APPLE_APP_STORE_LOCALIZATIONS: Record<string, string> = {
   'fr-FR': 'fr',
   'de-DE': 'de',
   el: 'el',
-  gu: 'gu',
+  'gu-IN': 'gu',
   he: 'he',
   hi: 'hi',
   hu: 'hu',
   id: 'id',
   it: 'it',
   ja: 'ja',
-  kn: 'kn',
+  'kn-IN': 'kn',
   ko: 'ko',
   ms: 'ms',
-  ml: 'ml',
-  mr: 'mr',
+  'ml-IN': 'ml',
+  'mr-IN': 'mr',
   no: 'no',
-  or: 'or',
+  'or-IN': 'or',
   pl: 'pl',
   'pt-BR': 'pt-BR',
   'pt-PT': 'pt-PT',
-  pa: 'pa',
+  'pa-IN': 'pa',
   ro: 'ro',
   ru: 'ru',
   sk: 'sk',
-  sl: 'sl',
+  'sl-SI': 'sl',
   'es-MX': 'es-MX',
   'es-ES': 'es-ES',
   sv: 'sv',
-  ta: 'ta',
-  te: 'te',
+  'ta-IN': 'ta',
+  'te-IN': 'te',
   th: 'th',
   tr: 'tr',
   uk: 'uk',
-  ur: 'ur',
+  'ur-PK': 'ur',
   vi: 'vi',
 };
 
@@ -63,7 +63,15 @@ describe('localizationOfAscLocale', () => {
     }
   });
 
+  it('maps the regional forms of the 2025 languages Apple added', () => {
+    expect(localizationOfAscLocale('bn-BD')).toBe('bn');
+    expect(localizationOfAscLocale('sl-SI')).toBe('sl');
+    expect(localizationOfAscLocale('ur-PK')).toBe('ur');
+  });
+
   it('maps the bare forms of the regional App Store locales too', () => {
+    expect(localizationOfAscLocale('bn')).toBe('bn');
+    expect(localizationOfAscLocale('sl')).toBe('sl');
     expect(localizationOfAscLocale('ar')).toBe('ar');
     expect(localizationOfAscLocale('de')).toBe('de');
     expect(localizationOfAscLocale('fr')).toBe('fr');
@@ -71,7 +79,7 @@ describe('localizationOfAscLocale', () => {
     expect(localizationOfAscLocale('es')).toBeNull();
   });
 
-  it('answers every AsoBeast localization from exactly one Apple locale', () => {
+  it('answers every AsoBeast localization from exactly one Apple localization', () => {
     const mapped = new Set(Object.values(APPLE_APP_STORE_LOCALIZATIONS));
     expect([...mapped].sort()).toEqual([...APP_STORE_LOCALIZATION_IDS].sort());
   });
@@ -79,5 +87,6 @@ describe('localizationOfAscLocale', () => {
   it('refuses a locale Apple does not serve', () => {
     expect(localizationOfAscLocale('xx-YY')).toBeNull();
     expect(localizationOfAscLocale('de-AT')).toBeNull();
+    expect(localizationOfAscLocale('bn-IN')).toBeNull();
   });
 });

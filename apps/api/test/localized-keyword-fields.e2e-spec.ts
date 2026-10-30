@@ -843,7 +843,12 @@ describe('Localized keyword fields (e2e)', () => {
           },
         }),
         harness.prisma.keywordFieldSync.create({
-          data: { appId, workspaceId: WORKSPACE, version: '2.1' },
+          data: {
+            appId,
+            workspaceId: WORKSPACE,
+            version: '2.1',
+            syncedAt: new Date(),
+          },
         }),
       ]);
 
@@ -910,7 +915,7 @@ describe('Localized keyword fields (e2e)', () => {
         version: '2.1',
         error: null,
       });
-      expect(typeof managed.storeSync.at).toBe('string');
+      expect(typeof managed.storeSync?.at).toBe('string');
     });
 
     it('E-SAV-MGD-04 hands the fields back while the connection is paused', async () => {

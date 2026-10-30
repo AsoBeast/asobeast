@@ -174,7 +174,15 @@ export class ListingCaptureService {
     if (home) {
       await this.keywords.syncFromSnapshot(app.id);
       if (await this.releaseChangedFields(app, recorded)) {
-        await this.storeReports.enqueue(app.workspaceId, app.store);
+        try {
+          await this.storeReports.enqueue(app.workspaceId, app.store);
+        } catch (error: unknown) {
+          this.logger.warn(
+            `the keyword field import of app ${app.id} waits for the next sync: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          );
+        }
       }
     }
 

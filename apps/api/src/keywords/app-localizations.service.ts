@@ -163,7 +163,7 @@ export class AppLocalizationsService {
         sync === null
           ? null
           : {
-              at: sync.syncedAt.toISOString(),
+              at: sync.syncedAt?.toISOString() ?? null,
               version: sync.version,
               error: sync.lastError,
             },

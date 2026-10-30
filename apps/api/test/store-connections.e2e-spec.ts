@@ -157,6 +157,18 @@ describe('Store connections (e2e)', () => {
     await connect().expect(200);
     const member = request.agent(harness.app.getHttpServer());
     await member.post('/auth/login').send(MEMBER).expect(200);
+    const appId = await harness.prisma.app
+      .create({
+        data: {
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          store: Store.APP_STORE,
+          storeAppId: '1476097583',
+          country: 'us',
+          name: 'Focus',
+        },
+        select: { id: true },
+      })
+      .then(({ id }) => id);
 
     const read = await member.get('/store-connections').expect(200);
     expect((read.body as StoreConnectionState).connections).toHaveLength(1);
@@ -164,7 +176,10 @@ describe('Store connections (e2e)', () => {
     await member.post(`${PATH}/verify`).expect(403);
     await member.post(`${PATH}/sync`).expect(403);
     await member.delete(PATH).expect(403);
+    await member.post(`/apps/${appId}/keyword-fields/import`).expect(403);
+    await member.delete(`/apps/${appId}/keyword-fields/import`).expect(403);
     await expect(harness.prisma.storeConnection.count()).resolves.toBe(1);
+    await expect(harness.prisma.keywordFieldSync.count()).resolves.toBe(0);
   });
 
   it('refuses a write token on every change and lets it read', async () => {
@@ -178,6 +193,18 @@ describe('Store connections (e2e)', () => {
     const bearer = (call: request.Test) =>
       call.set('Authorization', `Bearer ${token}`);
     const server = harness.app.getHttpServer();
+    const appId = await harness.prisma.app
+      .create({
+        data: {
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          store: Store.APP_STORE,
+          storeAppId: '1476097583',
+          country: 'us',
+          name: 'Focus',
+        },
+        select: { id: true },
+      })
+      .then(({ id }) => id);
 
     await bearer(request(server).get('/store-connections')).expect(200);
     await bearer(request(server).put(PATH).send(CONNECTION_REQUEST)).expect(
@@ -186,7 +213,14 @@ describe('Store connections (e2e)', () => {
     await bearer(request(server).post(`${PATH}/verify`)).expect(403);
     await bearer(request(server).post(`${PATH}/sync`)).expect(403);
     await bearer(request(server).delete(PATH)).expect(403);
+    await bearer(
+      request(server).post(`/apps/${appId}/keyword-fields/import`),
+    ).expect(403);
+    await bearer(
+      request(server).delete(`/apps/${appId}/keyword-fields/import`),
+    ).expect(403);
     expect(harness.asc.requests).toHaveLength(0);
+    await expect(harness.prisma.keywordFieldSync.count()).resolves.toBe(0);
   });
 
   it('marks a connection rejected when a verify is refused, and clears it later', async () => {

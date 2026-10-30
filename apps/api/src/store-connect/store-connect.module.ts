@@ -14,7 +14,7 @@ import { PlayReportSync } from './play/play-report-sync.service';
 import { PlaySignIn } from './play/play-sign-in.service';
 import { PlaySignInController } from './play-sign-in.controller';
 import { KeywordFieldImportController } from './keyword-field-import.controller';
-import { SECRET_BOX, secretBoxProvider } from './secret-box.provider';
+import { KeywordFieldImportService } from './keyword-field-import.service';
 import { StoreConnectionService } from './store-connection.service';
 import { StoreConnectionsController } from './store-connections.controller';
 import { AppStoreKeys, PlayKeys } from './store-keys';
@@ -39,7 +39,7 @@ import { StoreReportsWorker } from './store-reports.worker';
     KeywordFieldImportController,
   ],
   providers: [
-    secretBoxProvider,
+    KeywordFieldImportService,
     { provide: ASC_TRANSPORT, useValue: undiciTransport },
     AscApiFactory,
     { provide: GCS_TRANSPORT, useValue: undiciGcsTransport },
@@ -64,7 +64,6 @@ import { StoreReportsWorker } from './store-reports.worker';
     StoreReportQueue,
     StoreReportSyncService,
     StoreFunnelService,
-    SECRET_BOX,
   ],
 })
 export class StoreConnectModule {}
