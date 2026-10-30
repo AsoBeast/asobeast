@@ -98,9 +98,9 @@ describe('Store report sync (e2e)', () => {
   let appId: string;
   const gz = gzipSync(FIXTURE);
 
-  const run = () =>
+  const run = (finalAttempt = true) =>
     asWorkspace(harness.app, () =>
-      harness.app.get(StoreReportSyncService).run('APP_STORE'),
+      harness.app.get(StoreReportSyncService).run('APP_STORE', finalAttempt),
     );
 
   const paths = (method: AscRequest['method']) =>
@@ -511,11 +511,8 @@ describe('Store report sync (e2e)', () => {
     scriptTwoApps();
     failSecondListing();
 
-    await expect(
-      asWorkspace(harness.app, () =>
-        harness.app.get(StoreReportSyncService).run('APP_STORE', false),
-      ),
-    ).rejects.toBeInstanceOf(PartialSyncRetryError);
+    await expect(run(false)).rejects.toBeInstanceOf(PartialSyncRetryError);
+    await expect(funnelRows()).resolves.toHaveLength(7);
     const retrying = (await owner.get('/store-connections').expect(200))
       .body as StoreConnectionState;
     expect(retrying.connections[0].lastError).toBeNull();
