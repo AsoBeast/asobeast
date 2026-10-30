@@ -28,6 +28,7 @@ import {
 } from "@/lib/keyword-import";
 import {
   appDetailOptions,
+  importPreviewRequest,
   invalidateKeywordImport,
   invalidateKeywordMutation,
   keywordImportPreviewOptions,
@@ -156,7 +157,9 @@ export function useKeywordImport(
   const preview = useQuery({
     ...keywordImportPreviewOptions(appId, request),
     placeholderData: (previous, query) =>
-      query && sameRows(query.queryKey[3], request) ? previous : undefined,
+      query && sameRows(importPreviewRequest(query.queryKey), request)
+        ? previous
+        : undefined,
   });
 
   function changeView(next: FileView) {
