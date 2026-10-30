@@ -12,6 +12,7 @@ import OpenAI, {
   PermissionDeniedError,
   RateLimitError,
 } from 'openai';
+import { scrubText } from '../common/logging/log-redaction';
 import { Env } from '../config/env';
 import { AI_PROVIDER_WORDING, aiProviderOf } from './ai-provider';
 
@@ -150,6 +151,16 @@ export const classifyRequestError = (
   );
 };
 
+const withoutSecret = (
+  failure: AiRequestError,
+  secret: string,
+): AiRequestError => {
+  const message = scrubText(failure.message, [secret]);
+  return message === failure.message
+    ? failure
+    : new AiRequestError(message, failure.retryable);
+};
+
 const DEFAULT_MAX_OUTPUT_TOKENS = 2048;
 const REQUEST_TIMEOUT_MS = 60_000;
 const MAX_RETRIES = 2;
@@ -182,6 +193,7 @@ class OpenAiClient implements AiClient {
     private readonly openai: OpenAI,
     readonly model: string,
     private readonly provider: AiProvider,
+    private readonly secret: string,
   ) {}
 
   async structured(request: AiStructuredRequest): Promise<AiCompletion> {
@@ -207,7 +219,10 @@ class OpenAiClient implements AiClient {
         },
       });
     } catch (error) {
-      throw classifyRequestError(error, this.model, this.provider);
+      throw withoutSecret(
+        classifyRequestError(error, this.model, this.provider),
+        this.secret,
+      );
     }
 
     const { name } = AI_PROVIDER_WORDING[this.provider];
@@ -281,5 +296,6 @@ export function createOpenAiClient(
     }),
     model,
     provider,
+    apiKey,
   );
 }

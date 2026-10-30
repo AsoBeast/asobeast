@@ -389,6 +389,47 @@ describe('AiRequestError', () => {
     ]);
   });
 
+  it('scrubs the configured key whatever its format', async () => {
+    const key = 'gsk_live_0123456789abcdef';
+    const client = createOpenAiClient(
+      config(key, 'gpt-4o', 'https://api.groq.com/openai/v1'),
+    );
+    mockCreate.mockRejectedValue(
+      new BadRequestError(
+        400,
+        { message: `Key ${key} is not allowed to use vision` },
+        undefined,
+        headers,
+      ),
+    );
+
+    const failure = (await client
+      ?.structured(request)
+      .catch((caught: unknown) => caught)) as AiRequestError;
+
+    expect(failure.message).not.toContain(key);
+    expect(failure.message).toContain('[redacted]');
+    expect(failure.retryable).toBe(false);
+  });
+
+  it('leaves a message alone when a short local key would match ordinary words', async () => {
+    const client = createOpenAiClient(
+      config('ollama', 'llava', 'http://localhost:11434/v1'),
+    );
+    mockCreate.mockRejectedValue(
+      new BadRequestError(
+        400,
+        { message: 'ollama cannot load llava' },
+        undefined,
+        headers,
+      ),
+    );
+
+    await expect(client?.structured(request)).rejects.toMatchObject({
+      message: 'The AI provider refused the request: ollama cannot load llava',
+    });
+  });
+
   it('never puts the key in a message', async () => {
     mockCreate.mockRejectedValue(
       new AuthenticationError(

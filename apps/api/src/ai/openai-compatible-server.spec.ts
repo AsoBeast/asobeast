@@ -215,6 +215,22 @@ describe('an OpenAI compatible provider over http', () => {
     ).resolves.toEqual({ output: { explanation: 'Fine.' }, usage: null });
   });
 
+  it('never answers with the key a provider echoes back', async () => {
+    provider.answer = json(400, {
+      error: {
+        message: `model not allowed for key ${KEY}`,
+        type: 'invalid_request_error',
+      },
+    });
+
+    const failure = (await clientAt(`${provider.origin}/v1`)
+      .structured(REQUEST)
+      .catch((caught: unknown) => caught)) as AiRequestError;
+
+    expect(failure.message).not.toContain(KEY);
+    expect(failure.message).toMatch(/^The AI provider refused the request: /);
+  });
+
   it('reports a refused key once, as a request error that is not retried', async () => {
     provider.answer = json(401, {
       error: {
