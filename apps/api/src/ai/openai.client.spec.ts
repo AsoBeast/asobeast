@@ -527,6 +527,41 @@ describe('AiRequestError from a compatible provider', () => {
     });
   });
 
+  it('passes on the reason a provider gives for not serving the model', async () => {
+    mockCreate.mockRejectedValue(
+      new NotFoundError(
+        404,
+        { message: 'No endpoints found that support image URLs', code: 404 },
+        'missing',
+        headers,
+      ),
+    );
+
+    await expect(buildCompatible().structured(request)).rejects.toMatchObject({
+      message:
+        'The AI provider does not offer the model gpt-4o for this request: No endpoints found that support image URLs',
+      retryable: false,
+    });
+  });
+
+  it('scrubs the configured key from a reason for not serving the model', async () => {
+    mockCreate.mockRejectedValue(
+      new NotFoundError(
+        404,
+        { message: 'no route for sk-or-v1-test' },
+        'missing',
+        headers,
+      ),
+    );
+
+    const failure = (await buildCompatible()
+      .structured(request)
+      .catch((caught: unknown) => caught)) as AiRequestError;
+
+    expect(failure.message).not.toContain('sk-or-v1-test');
+    expect(failure.message).toContain('[redacted]');
+  });
+
   it.each([
     [stop(null, 'no'), 'The AI provider refused to analyze this listing.'],
     [stop('not json'), 'The AI provider returned an unreadable response.'],
@@ -613,6 +648,29 @@ describe('token usage', () => {
       );
     },
   );
+
+  it('reads a blank provider reason as no details', () => {
+    expect(
+      classifyRequestError(
+        new BadRequestError(400, { message: '   ' }, undefined, headers),
+        'gpt-4o',
+      ).message,
+    ).toBe('OpenAI refused the request: no details');
+  });
+
+  it('keeps the OpenAI wording when OpenAI explains a missing model', () => {
+    expect(
+      classifyRequestError(
+        new NotFoundError(
+          404,
+          { message: 'The model `gpt-4o` does not exist' },
+          'missing',
+          headers,
+        ),
+        'gpt-4o',
+      ).message,
+    ).toBe('OpenAI does not offer the model gpt-4o. Check AI_MODEL.');
+  });
 
   it('words a failure for OpenAI when no provider is given', () => {
     expect(

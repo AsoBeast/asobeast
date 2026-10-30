@@ -215,6 +215,25 @@ describe('an OpenAI compatible provider over http', () => {
     ).resolves.toEqual({ output: { explanation: 'Fine.' }, usage: null });
   });
 
+  it('says why a provider routes no endpoint to the model', async () => {
+    provider.answer = json(404, {
+      error: {
+        message: 'No endpoints found that support image URLs',
+        code: 404,
+        metadata: { failed_routing_step: 'Filter by Image Support' },
+      },
+    });
+
+    await expect(
+      clientAt(`${provider.origin}/v1`).structured(REQUEST),
+    ).rejects.toMatchObject({
+      message:
+        'The AI provider does not offer the model local-model for this request: No endpoints found that support image URLs',
+      retryable: false,
+    });
+    expect(provider.seen).toHaveLength(1);
+  });
+
   it('never answers with the key a provider echoes back', async () => {
     provider.answer = json(400, {
       error: {

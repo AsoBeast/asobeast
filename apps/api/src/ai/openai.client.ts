@@ -100,9 +100,24 @@ const apiField = (error: APIError, field: string): string | null => {
   return typeof value === 'string' ? value : null;
 };
 
-const apiMessage = (error: APIError): string => {
-  const detail = apiField(error, 'message');
-  return detail === null ? 'no details' : redact(detail);
+const providerReason = (error: APIError): string | null => {
+  const detail = apiField(error, 'message')?.trim();
+  return detail ? redact(detail) : null;
+};
+
+const apiMessage = (error: APIError): string =>
+  providerReason(error) ?? 'no details';
+
+const missingModelMessage = (
+  error: NotFoundError,
+  model: string,
+  provider: AiProvider,
+): string => {
+  const { name } = AI_PROVIDER_WORDING[provider];
+  const reason = provider === 'compatible' ? providerReason(error) : null;
+  return reason === null
+    ? `${name} does not offer the model ${model}. Check AI_MODEL.`
+    : `${name} does not offer the model ${model} for this request: ${reason}`;
 };
 
 export const classifyRequestError = (
@@ -122,7 +137,7 @@ export const classifyRequestError = (
   }
   if (error instanceof NotFoundError) {
     return new AiRequestError(
-      `${name} does not offer the model ${model}. Check AI_MODEL.`,
+      missingModelMessage(error, model, provider),
       false,
     );
   }
