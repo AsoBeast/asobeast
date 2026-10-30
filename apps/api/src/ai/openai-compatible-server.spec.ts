@@ -230,7 +230,7 @@ describe('an OpenAI compatible provider over http', () => {
 
     expect(failure).toBeInstanceOf(AiRequestError);
     expect(failure).toMatchObject({
-      message: 'OpenAI rejected the API key. Check OPENAI_API_KEY.',
+      message: 'The AI provider rejected the API key. Check OPENAI_API_KEY.',
       retryable: false,
     });
     expect(provider.seen).toHaveLength(1);

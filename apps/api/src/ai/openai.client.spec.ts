@@ -407,6 +407,86 @@ describe('AiRequestError', () => {
   });
 });
 
+const buildCompatible = (): AiClient => {
+  const client = createOpenAiClient(
+    config('sk-or-v1-test', 'gpt-4o', 'https://openrouter.ai/api/v1'),
+  );
+  if (!client) {
+    throw new Error('expected a configured client');
+  }
+  return client;
+};
+
+describe('AiRequestError from a compatible provider', () => {
+  beforeEach(() => {
+    mockCreate.mockReset();
+  });
+
+  it.each(REQUEST_FAILURES)(
+    'never names OpenAI for %s',
+    async (error, _message, retryable) => {
+      mockCreate.mockRejectedValue(error);
+
+      const failure = (await buildCompatible()
+        .structured(request)
+        .catch((caught: unknown) => caught)) as AiRequestError;
+
+      expect(failure).toBeInstanceOf(AiRequestError);
+      expect(failure.message).not.toMatch(/OpenAI/);
+      expect(failure.retryable).toBe(retryable);
+    },
+  );
+
+  it.each([
+    [
+      new AuthenticationError(401, {}, 'bad key', headers),
+      'The AI provider rejected the API key. Check OPENAI_API_KEY.',
+    ],
+    [
+      new PermissionDeniedError(403, {}, 'no access', headers),
+      'The API key cannot use gpt-4o.',
+    ],
+    [
+      new NotFoundError(404, {}, 'missing', headers),
+      'The AI provider does not offer the model gpt-4o. Check AI_MODEL.',
+    ],
+    [
+      new RateLimitError(429, { code: 'insufficient_quota' }, 'quota', headers),
+      'The AI provider account has no remaining quota.',
+    ],
+    [
+      new APIConnectionError({ message: 'down' }),
+      'Could not reach the AI provider.',
+    ],
+  ])('words %p for the provider', async (error, message) => {
+    mockCreate.mockRejectedValue(error);
+
+    await expect(buildCompatible().structured(request)).rejects.toMatchObject({
+      message,
+    });
+  });
+
+  it.each([
+    [stop(null, 'no'), 'The AI provider refused to analyze this listing.'],
+    [stop('not json'), 'The AI provider returned an unreadable response.'],
+    [stop(null), 'The AI provider returned an empty response.'],
+    [{ choices: [] }, 'The AI provider returned no choices.'],
+    [
+      completion({
+        finish_reason: 'content_filter',
+        message: { content: null, refusal: null },
+      }),
+      'The AI provider filtered the response.',
+    ],
+  ])('words an unusable answer for the provider', async (response, message) => {
+    mockCreate.mockResolvedValue(response);
+
+    await expect(buildCompatible().structured(request)).rejects.toMatchObject({
+      message,
+    });
+  });
+});
+
 describe('token usage', () => {
   beforeEach(() => {
     mockCreate.mockReset();
@@ -472,4 +552,13 @@ describe('token usage', () => {
       );
     },
   );
+
+  it('words a failure for OpenAI when no provider is given', () => {
+    expect(
+      classifyRequestError(
+        new APIConnectionError({ message: 'down' }),
+        'gpt-4o',
+      ).message,
+    ).toBe('Could not reach OpenAI.');
+  });
 });

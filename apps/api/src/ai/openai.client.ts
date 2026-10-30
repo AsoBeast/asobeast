@@ -1,3 +1,4 @@
+import type { AiProvider } from '@asobeast/shared';
 import { BadGatewayException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI, {
@@ -12,7 +13,7 @@ import OpenAI, {
   RateLimitError,
 } from 'openai';
 import { Env } from '../config/env';
-import { aiProviderOf } from './ai-provider';
+import { AI_PROVIDER_WORDING, aiProviderOf } from './ai-provider';
 
 export const OPENAI_CLIENT = Symbol('OPENAI_CLIENT');
 
@@ -105,44 +106,46 @@ const apiMessage = (error: APIError): string => {
 export const classifyRequestError = (
   error: unknown,
   model: string,
+  provider: AiProvider = 'openai',
 ): AiRequestError => {
+  const { name, inSentence, key, account } = AI_PROVIDER_WORDING[provider];
   if (error instanceof AuthenticationError) {
     return new AiRequestError(
-      'OpenAI rejected the API key. Check OPENAI_API_KEY.',
+      `${name} rejected the API key. Check OPENAI_API_KEY.`,
       false,
     );
   }
   if (error instanceof PermissionDeniedError) {
-    return new AiRequestError(`The OpenAI key cannot use ${model}.`, false);
+    return new AiRequestError(`${key} cannot use ${model}.`, false);
   }
   if (error instanceof NotFoundError) {
     return new AiRequestError(
-      `OpenAI does not offer the model ${model}. Check AI_MODEL.`,
+      `${name} does not offer the model ${model}. Check AI_MODEL.`,
       false,
     );
   }
   if (error instanceof BadRequestError) {
     return new AiRequestError(
-      `OpenAI refused the request: ${apiMessage(error)}`,
+      `${name} refused the request: ${apiMessage(error)}`,
       false,
     );
   }
   if (error instanceof RateLimitError) {
     return apiField(error, 'code') === QUOTA_CODE
-      ? new AiRequestError('The OpenAI account has no remaining quota.', false)
-      : new AiRequestError('OpenAI is rate limiting requests.', true);
+      ? new AiRequestError(`${account} has no remaining quota.`, false)
+      : new AiRequestError(`${name} is rate limiting requests.`, true);
   }
   if (error instanceof InternalServerError) {
-    return new AiRequestError('OpenAI had an internal error.', true);
+    return new AiRequestError(`${name} had an internal error.`, true);
   }
   if (error instanceof APIConnectionTimeoutError) {
-    return new AiRequestError('OpenAI did not answer in time.', true);
+    return new AiRequestError(`${name} did not answer in time.`, true);
   }
   if (error instanceof APIConnectionError) {
-    return new AiRequestError('Could not reach OpenAI.', true);
+    return new AiRequestError(`Could not reach ${inSentence}.`, true);
   }
   return new AiRequestError(
-    'OpenAI request failed.',
+    `${name} request failed.`,
     error instanceof APIError && retryableStatus(error.status),
   );
 };
@@ -178,6 +181,7 @@ class OpenAiClient implements AiClient {
   constructor(
     private readonly openai: OpenAI,
     readonly model: string,
+    private readonly provider: AiProvider,
   ) {}
 
   async structured(request: AiStructuredRequest): Promise<AiCompletion> {
@@ -203,17 +207,22 @@ class OpenAiClient implements AiClient {
         },
       });
     } catch (error) {
-      throw classifyRequestError(error, this.model);
+      throw classifyRequestError(error, this.model, this.provider);
     }
 
+    const { name } = AI_PROVIDER_WORDING[this.provider];
     const usage = usageOf(completion);
     const choice = completion.choices[0];
     if (!choice) {
-      throw new UnusableAnswerError('OpenAI returned no choices.', true, usage);
+      throw new UnusableAnswerError(
+        `${name} returned no choices.`,
+        true,
+        usage,
+      );
     }
     if (choice.message.refusal) {
       throw new UnusableAnswerError(
-        'OpenAI refused to analyze this listing.',
+        `${name} refused to analyze this listing.`,
         false,
         usage,
       );
@@ -227,7 +236,7 @@ class OpenAiClient implements AiClient {
     }
     if (choice.finish_reason === 'content_filter') {
       throw new UnusableAnswerError(
-        'OpenAI filtered the response.',
+        `${name} filtered the response.`,
         false,
         usage,
       );
@@ -235,7 +244,7 @@ class OpenAiClient implements AiClient {
     const content = choice.message.content;
     if (!content) {
       throw new UnusableAnswerError(
-        'OpenAI returned an empty response.',
+        `${name} returned an empty response.`,
         true,
         usage,
       );
@@ -244,7 +253,7 @@ class OpenAiClient implements AiClient {
       return { output: JSON.parse(content) as unknown, usage };
     } catch {
       throw new UnusableAnswerError(
-        'OpenAI returned an unreadable response.',
+        `${name} returned an unreadable response.`,
         true,
         usage,
       );
@@ -261,14 +270,16 @@ export function createOpenAiClient(
   }
   const model = config.get('AI_MODEL', { infer: true });
   const baseURL = config.get('OPENAI_BASE_URL', { infer: true });
+  const provider = aiProviderOf(baseURL);
   return new OpenAiClient(
     new OpenAI({
       apiKey,
       baseURL: baseURL ?? null,
-      ...(aiProviderOf(baseURL) === 'compatible' ? WITHOUT_OPENAI_ACCOUNT : {}),
+      ...(provider === 'compatible' ? WITHOUT_OPENAI_ACCOUNT : {}),
       timeout: REQUEST_TIMEOUT_MS,
       maxRetries: MAX_RETRIES,
     }),
     model,
+    provider,
   );
 }

@@ -1,4 +1,4 @@
-import { aiProviderOf } from './ai-provider';
+import { AI_PROVIDER_WORDING, aiProviderOf } from './ai-provider';
 
 describe('aiProviderOf', () => {
   it('names OpenAI when no address is configured', () => {
@@ -25,5 +25,13 @@ describe('aiProviderOf', () => {
     'https://generativelanguage.googleapis.com/v1beta/openai/',
   ])('names a compatible provider for %s', (address) => {
     expect(aiProviderOf(address)).toBe('compatible');
+  });
+});
+
+describe('AI_PROVIDER_WORDING', () => {
+  it('never names OpenAI for a compatible provider', () => {
+    expect(JSON.stringify(AI_PROVIDER_WORDING.compatible)).not.toMatch(
+      /openai/i,
+    );
   });
 });
