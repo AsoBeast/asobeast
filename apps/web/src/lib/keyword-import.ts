@@ -3,7 +3,6 @@ import {
   KEYWORD_IMPORT_LIMIT,
   KEYWORD_IMPORT_STATUSES,
   UnknownStorefrontError,
-  type KeywordImportRequest,
   type KeywordImportResult,
   type KeywordImportRow,
   type KeywordImportRowResult,
@@ -11,6 +10,7 @@ import {
   type KeywordImportSummary,
   type Store,
 } from "@asobeast/shared";
+import type { ParsedImportRows } from "@/lib/csv-import/rows";
 import type { LeftOut } from "@/lib/csv-import/scope";
 import { formatNumber, storeLabel } from "@/lib/format";
 import { formatQuotaUsage, hasNoCapacity } from "@/lib/quota-usage";
@@ -18,9 +18,17 @@ import { formatQuotaUsage, hasNoCapacity } from "@/lib/quota-usage";
 export const IMPORT_BODY_BYTES = 96_000;
 
 export type ImportRefusal =
-  | { kind: "empty" }
-  | { kind: "tooManyRows"; rows: number; limit: number }
-  | { kind: "tooLarge"; fits: number };
+  { kind: "empty" } | { kind: "rowTooLarge"; line: number };
+
+export interface ImportPart {
+  start: number;
+  end: number;
+}
+
+export interface ImportProgress {
+  index: number;
+  count: number;
+}
 
 export const IMPORT_STATUS_LABELS: Record<KeywordImportStatus, string> = {
   new: "New",
@@ -46,52 +54,91 @@ export const IMPORT_STATUS_VARIANT: Record<
 const bytesOf = (value: unknown): number =>
   new TextEncoder().encode(JSON.stringify(value)).length;
 
-function rowsThatFit(
-  rows: readonly KeywordImportRow[],
-  country: string,
-): number {
-  let bytes = bytesOf({ rows: [], country });
-  let fits = 0;
-  for (const row of rows) {
-    bytes += bytesOf(row) + 1;
-    if (bytes > IMPORT_BODY_BYTES) break;
-    fits += 1;
-  }
-  return fits;
-}
+const envelopeBytes = (country: string): number =>
+  bytesOf({ rows: [], country });
+
+const rowBytesWithComma = (row: KeywordImportRow): number => bytesOf(row) + 1;
 
 export function refuseImport(
-  rows: readonly KeywordImportRow[],
+  { rows, lines }: ParsedImportRows,
   country: string,
 ): ImportRefusal | null {
   if (rows.length === 0) return { kind: "empty" };
-  if (rows.length > KEYWORD_IMPORT_LIMIT) {
-    return {
-      kind: "tooManyRows",
-      rows: rows.length,
-      limit: KEYWORD_IMPORT_LIMIT,
-    };
-  }
-  const request: KeywordImportRequest = { rows: [...rows], country };
-  return bytesOf(request) > IMPORT_BODY_BYTES
-    ? { kind: "tooLarge", fits: rowsThatFit(rows, country) }
-    : null;
+  const room = IMPORT_BODY_BYTES - envelopeBytes(country);
+  const oversized = rows.findIndex((row) => rowBytesWithComma(row) > room);
+  return oversized < 0
+    ? null
+    : { kind: "rowTooLarge", line: lines[oversized] ?? oversized + 1 };
 }
+
+export function importParts(
+  rows: readonly KeywordImportRow[],
+  country: string,
+): ImportPart[] {
+  const envelope = envelopeBytes(country);
+  const parts: ImportPart[] = [];
+  let start = 0;
+  let bytes = envelope;
+  rows.forEach((row, index) => {
+    const size = rowBytesWithComma(row);
+    const full =
+      index - start === KEYWORD_IMPORT_LIMIT ||
+      bytes + size > IMPORT_BODY_BYTES;
+    if (index > start && full) {
+      parts.push({ start, end: index });
+      start = index;
+      bytes = envelope;
+    }
+    bytes += size;
+  });
+  if (rows.length > start) parts.push({ start, end: rows.length });
+  return parts;
+}
+
+export const partRows = (
+  { rows, lines }: ParsedImportRows,
+  { start, end }: ImportPart,
+): ParsedImportRows => ({
+  rows: rows.slice(start, end),
+  lines: lines.slice(start, end),
+});
 
 export function refusalMessage(refusal: ImportRefusal): string {
   switch (refusal.kind) {
     case "empty":
       return "The file has no keyword rows.";
-    case "tooManyRows":
-      return `The file has ${formatNumber(refusal.rows)} rows. One import takes up to ${formatNumber(refusal.limit)} rows, so split the file and import the parts one after the other.`;
-    case "tooLarge":
-      return `These rows are too large for one request. About ${formatNumber(refusal.fits)} rows fit, so split the file at that size.`;
+    case "rowTooLarge":
+      return `Line ${formatNumber(refusal.line)} is too large to send. Shorten its note or tags, or remove the line, and choose the file again.`;
   }
+}
+
+export function partNotice(
+  parts: readonly ImportPart[],
+  progress: ImportProgress,
+  lines: readonly number[],
+): string | null {
+  const part = parts[progress.index];
+  if (parts.length < 2 || !part) return null;
+  return `The ${formatNumber(lines.length)} rows are imported in ${formatNumber(parts.length)} parts, one after the other. Part ${formatNumber(progress.index + 1)} holds lines ${formatNumber(lines[part.start] ?? 0)} to ${formatNumber(lines[part.end - 1] ?? 0)}.`;
 }
 
 export function importableCount(summary: KeywordImportSummary): number {
   return summary.new + summary.resume;
 }
+
+export type ImportAction = "import" | "skip";
+
+export function importAction(
+  result: Pick<KeywordImportResult, "summary"> | null,
+  progress: ImportProgress,
+): ImportAction | null {
+  if (result === null) return null;
+  if (importableCount(result.summary) > 0) return "import";
+  return progress.index + 1 < progress.count ? "skip" : null;
+}
+
+export const skipButtonLabel = (progress: ImportProgress): string =>
+  `Skip to part ${formatNumber(progress.index + 2)}`;
 
 export function importButtonLabel(summary: KeywordImportSummary): string {
   const count = importableCount(summary);
@@ -213,15 +260,24 @@ export function summarySentence(summary: KeywordImportSummary): string {
   return parts.length > 0 ? parts.join(", ") : "No rows";
 }
 
+function nextStep(progress: ImportProgress | undefined): string {
+  if (!progress || progress.index + 1 >= progress.count) {
+    return "Rankings capture on the next run.";
+  }
+  return `Part ${formatNumber(progress.index + 1)} of ${formatNumber(progress.count)} is in. Review part ${formatNumber(progress.index + 2)} and import it next.`;
+}
+
 export function importToast(
   result: Pick<KeywordImportResult, "imported" | "summary">,
+  progress?: ImportProgress,
 ): { title: string; description: string } {
   const skipped = result.summary.rows - importableCount(result.summary);
+  const skippedSentence =
+    skipped > 0
+      ? `${formatNumber(skipped)} row${skipped === 1 ? "" : "s"} skipped. `
+      : "";
   return {
     title: `Tracking ${formatNumber(result.imported)} keyword${result.imported === 1 ? "" : "s"}`,
-    description:
-      skipped > 0
-        ? `${formatNumber(skipped)} row${skipped === 1 ? "" : "s"} skipped. Rankings capture on the next run.`
-        : "Rankings capture on the next run.",
+    description: `${skippedSentence}${nextStep(progress)}`,
   };
 }

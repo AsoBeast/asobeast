@@ -287,7 +287,7 @@ test("P-WEB-06 reads a semicolon file saved as UTF-16 and a Windows code page fi
   await expect(rowOf(dialog, /café/)).toBeVisible();
 });
 
-test("P-WEB-07 refuses more rows than one import may carry before sending anything", async ({
+test("P-WEB-07 imports a file longer than one import in parts, one after the other", async ({
   page,
 }) => {
   const sent = importRequests(page);
@@ -296,13 +296,142 @@ test("P-WEB-07 refuses more rows than one import may carry before sending anythi
 
   await choose(dialog, ["keyword", ...rows].join("\r\n"));
 
+  await expect(
+    dialog.getByText(
+      "Reading keywords.csv. A long file is imported in parts of up to 500 rows.",
+    ),
+  ).toBeVisible();
+  await expect(
+    dialog.getByText(
+      "The 501 rows are imported in 2 parts, one after the other. Part 1 holds lines 2 to 501.",
+    ),
+  ).toBeVisible();
+  await expect(dialog.getByRole("status")).toHaveText("500 new");
+  const first = dialog.getByRole("button", { name: "Import 500 keywords" });
+  await first.focus();
+  await page.keyboard.press("Enter");
+
+  await expect(
+    page.getByText("Part 1 of 2 is in. Review part 2 and import it next."),
+  ).toBeVisible();
+  await expect(
+    dialog.getByText("Part 2 holds lines 502 to 502."),
+  ).toBeVisible();
+  await expect(dialog.getByRole("status")).toHaveText("1 new");
+  const second = dialog.getByRole("button", { name: "Import 1 keyword" });
+  await expect(second).toBeFocused();
+  await page.keyboard.press("Enter");
+
+  await expect(dialog).toBeHidden();
+  const imports = sent.filter((request) => !request.url().includes("/preview"));
+  expect(imports.map((request) => request.postDataJSON().rows.length)).toEqual([
+    500, 1,
+  ]);
+});
+
+const LONG_FILE = [
+  "keyword,note",
+  ...Array.from({ length: 501 }, (_, index) => `phrase ${index},`),
+].join("\r\n");
+
+const importFirstPart = async (dialog: Locator) => {
+  await choose(dialog, LONG_FILE);
+  await dialog.getByRole("button", { name: "Import 500 keywords" }).click();
+  await expect(
+    dialog.getByText("Part 2 holds lines 502 to 502."),
+  ).toBeVisible();
+  await expect(dialog.getByRole("status")).toHaveText("1 new");
+};
+
+test("P-WEB-07 starts again from the first part when the columns change, and skips a part already imported", async ({
+  page,
+}) => {
+  const dialog = await openDialog(page);
+  await importFirstPart(dialog);
+
+  await dialog.getByRole("combobox", { name: "Note column" }).click();
+  await page.getByRole("option", { name: "Not in the file" }).click();
+
+  await expect(dialog.getByText("Part 1 holds lines 2 to 501.")).toBeVisible();
+  await expect(dialog.getByRole("status")).toHaveText("500 already tracked");
+  const skip = dialog.getByRole("button", { name: "Skip to part 2" });
+  await skip.focus();
+  await page.keyboard.press("Enter");
+
+  await expect(
+    dialog.getByText("Part 2 holds lines 502 to 502."),
+  ).toBeVisible();
+  await expect(dialog.getByRole("status")).toHaveText("1 new");
+  const last = dialog.getByRole("button", { name: "Import 1 keyword" });
+  await expect(last).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(dialog).toBeHidden();
+});
+
+test("P-WEB-07 starts again from the first part when the market changes", async ({
+  page,
+}) => {
+  const dialog = await openDialog(page);
+  await importFirstPart(dialog);
+  const market = dialog.getByRole("combobox", {
+    name: "Market for rows without a country",
+  });
+
+  await market.click();
+  await page.getByRole("option", { name: /PL/ }).click();
+
+  await expect(dialog.getByText("Part 1 holds lines 2 to 501.")).toBeVisible();
+  await expect(dialog.getByRole("status")).toHaveText("500 new");
+
+  await market.click();
+  await page.getByRole("option", { name: /US/ }).first().click();
+
+  await expect(dialog.getByRole("status")).toHaveText("500 already tracked");
+  await expect(
+    dialog.getByRole("button", { name: "Skip to part 2" }),
+  ).toBeEnabled();
+});
+
+test("P-WEB-07 stays on a part whose keyword slots were taken first", async ({
+  page,
+  context,
+}) => {
+  const dialog = await openDialog(page);
+  await importFirstPart(dialog);
+  await context.addCookies([
+    { name: "e2e_import_race", value: "1", domain: "localhost", path: "/" },
+  ]);
+
+  await dialog.getByRole("button", { name: "Import 1 keyword" }).click();
+
   await expect(dialog.getByRole("alert")).toContainText(
-    "The file has 501 rows. One import takes up to 500 rows",
+    "Your plan's keyword limit was reached by another change. Nothing was imported.",
   );
   await expect(
-    dialog.getByRole("button", { name: "Nothing to import" }),
-  ).toBeDisabled();
-  expect(sent).toEqual([]);
+    dialog.getByText("Part 2 holds lines 502 to 502."),
+  ).toBeVisible();
+});
+
+test("P-WEB-07 never shows the rows of the part before while the next one is reviewed", async ({
+  page,
+}) => {
+  const dialog = await openDialog(page);
+  await choose(dialog, LONG_FILE);
+  await expect(dialog.getByRole("status")).toHaveText("500 new");
+  const held = Promise.withResolvers<void>();
+  await page.route("**/keywords/import/preview", async (route) => {
+    await held.promise;
+    await route.continue();
+  });
+
+  await dialog.getByRole("button", { name: "Import 500 keywords" }).click();
+
+  await expect(
+    dialog.getByText("Part 2 holds lines 502 to 502."),
+  ).toBeVisible();
+  await expect(rowOf(dialog, /phrase 0/)).toHaveCount(0);
+  held.resolve();
+  await expect(rowOf(dialog, /phrase 500/)).toBeVisible();
 });
 
 test("P-WEB-08 filters the review by status and counts the rows shown", async ({

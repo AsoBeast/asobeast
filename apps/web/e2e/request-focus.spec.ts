@@ -717,6 +717,46 @@ test("closing the top 10 sheet returns focus to the row that opened it", async (
   await expect(opener).toBeFocused();
 });
 
+test("keyword import keeps focus on its button from one part to the next", async ({
+  page,
+}) => {
+  const held = await holdRequest(
+    page,
+    /\/api\/backend\/apps\/app-import\/keywords\/import$/,
+    "POST",
+    (route) => route.continue({ url: `${route.request().url()}/preview` }),
+  );
+  await page.goto("/apps/app-import/keywords");
+  await (
+    await hydrated(page.getByRole("button", { name: "Import CSV" }).first())
+  ).click();
+  const dialog = page.getByRole("dialog", { name: "Import keywords from CSV" });
+  const rows = Array.from({ length: 501 }, (_, index) => `focus part ${index}`);
+  await dialog.getByLabel("Keyword file").setInputFiles({
+    name: "parts.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(["keyword", ...rows].join("\n")),
+  });
+  const submit = dialog.getByRole("button", { name: /^Import(ing…| \d)/ });
+  await expect(submit).toHaveAttribute("aria-disabled", "false");
+
+  await pressFromKeyboard(submit);
+
+  await expect(dialog.getByLabel("Keyword file")).toBeDisabled();
+  await expect(
+    dialog.getByRole("combobox", { name: "Keyword column" }),
+  ).toBeDisabled();
+  await expect(
+    dialog.getByRole("switch", { name: "First row is a header" }),
+  ).toBeDisabled();
+  await expectFocusKeptWhileHeld(submit, held);
+  await expect(dialog.getByLabel("Keyword file")).toBeEnabled();
+  await expect(
+    dialog.getByText("Part 2 holds lines 502 to 502."),
+  ).toBeVisible();
+  await expect(submit).toBeFocused();
+});
+
 test.describe("keyword bulk actions keep focus", () => {
   test.describe.configure({ mode: "serial" });
 
