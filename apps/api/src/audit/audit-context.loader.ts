@@ -297,6 +297,7 @@ export class AuditContextLoader {
       aiStatus: {
         configured: this.auditAi.configured,
         model: insight?.model ?? this.auditAi.model,
+        provider: this.auditAi.provider,
         generatedAt: insight?.generatedAt?.toISOString() ?? null,
         stale: creative.stale,
       },

@@ -352,6 +352,7 @@ describe('AuditController (e2e)', () => {
     expect(factor(after, 'icon')?.score).toBe(10);
     expect((after.overall as number) > (before.overall as number)).toBe(true);
     expect(after.ai.model).toBe('gpt-4o');
+    expect(after.ai.provider).toBe('openai');
     expect(after.ai.generatedAt).not.toBeNull();
     expect(after.creative?.screenshots).toHaveLength(6);
     expect(after.creative?.screenshots[0].keywordHits).toContain(
@@ -694,6 +695,7 @@ describe('AuditController without an AI key (e2e)', () => {
       .body as AppAuditResult;
     expect(audit.ai.configured).toBe(false);
     expect(audit.ai.model).toBeNull();
+    expect(audit.ai.provider).toBeNull();
 
     await api.post(`/apps/${created.id}/audit/ai`).expect(409);
   });

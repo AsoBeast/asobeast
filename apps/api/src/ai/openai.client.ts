@@ -56,6 +56,7 @@ export interface AiCompletion {
 
 export interface AiClient {
   readonly model: string;
+  readonly provider: AiProvider;
   structured(request: AiStructuredRequest): Promise<AiCompletion>;
 }
 
@@ -192,7 +193,7 @@ class OpenAiClient implements AiClient {
   constructor(
     private readonly openai: OpenAI,
     readonly model: string,
-    private readonly provider: AiProvider,
+    readonly provider: AiProvider,
     private readonly secret: string,
   ) {}
 

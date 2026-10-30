@@ -153,6 +153,15 @@ describe('createOpenAiClient', () => {
     expect(sdkOptions()).not.toHaveProperty('organization');
   });
 
+  it('names its provider from the configured address', () => {
+    expect(build().provider).toBe('openai');
+    expect(
+      createOpenAiClient(
+        config('k-123456789', 'm', 'http://localhost:11434/v1'),
+      )?.provider,
+    ).toBe('compatible');
+  });
+
   it('returns null without an api key even when an address is set', () => {
     expect(
       createOpenAiClient(

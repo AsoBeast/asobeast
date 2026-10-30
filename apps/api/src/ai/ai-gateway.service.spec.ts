@@ -68,6 +68,21 @@ describe('AiGateway', () => {
 
   afterEach(() => jest.restoreAllMocks());
 
+  it('reports the provider of its client', () => {
+    expect(build().gateway.provider).toBe('openai');
+  });
+
+  it('reports no provider without a client', () => {
+    const gateway = new AiGateway(
+      null,
+      {} as unknown as PrismaService,
+      {} as unknown as WorkspaceContext,
+      {} as unknown as QuotaService,
+    );
+
+    expect(gateway.provider).toBeNull();
+  });
+
   it.each([200, null])(
     'counts the call and records its tokens when the model answers (limit %s)',
     async (limit) => {
