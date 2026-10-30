@@ -3187,6 +3187,7 @@ export interface LocalizationSeed {
   fields?: Partial<Record<AppStoreLocalization, string[]>>;
   tracked?: Record<string, string[]>;
   storeManaged?: boolean;
+  storeSyncAt?: string | null;
   storeImport?: "unavailable" | "available" | "following" | "paused";
 }
 

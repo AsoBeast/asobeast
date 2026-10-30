@@ -70,9 +70,13 @@ function StoreFieldNotice({ sync }: { sync: AppLocalizationStoreSync | null }) {
     <>
       <p className="text-caption text-muted-foreground">
         Imported from App Store Connect
-        {sync ? <> · last read {formatDateTime(sync.at)}</> : null}. Edit the
-        keywords there, and this field imports them again with every release.
-        The connection lives in{" "}
+        {sync?.at ? (
+          <> · last read {formatDateTime(sync.at)}</>
+        ) : (
+          " · waiting for its first read"
+        )}
+        . Edit the keywords there, and this field imports them again with every
+        release. The connection lives in{" "}
         <Link
           href={STORE_CONNECTIONS_PATH}
           className="font-medium text-foreground underline underline-offset-4"

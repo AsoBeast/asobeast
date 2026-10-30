@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 import type { AppLocalizationsResult } from "@asobeast/shared";
 import { ErrorState } from "@/components/layout/ErrorState";
+import { useAuth } from "@/components/auth/use-auth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -100,6 +101,7 @@ export function AppLocalizationsSection({
   id: string;
   canDraft: boolean;
 }) {
+  const { isOwner } = useAuth();
   const { data, error, isError, refetch } = useQuery({
     ...appLocalizationsOptions(id),
     retry: false,
@@ -107,7 +109,8 @@ export function AppLocalizationsSection({
   const sectionRef = useScrollIntoViewOnHash(data !== undefined);
   const controls = useFocusGroupClaim(
     STORE_IMPORT_FOCUS_KEY,
-    data?.storeImport === "following" || data?.storeImport === "paused",
+    isOwner &&
+      (data?.storeImport === "following" || data?.storeImport === "paused"),
   );
 
   return (
@@ -127,11 +130,12 @@ export function AppLocalizationsSection({
             {data.storeImport === "following" ? null : (
               <AddLocalizationDialog id={id} result={data} />
             )}
-            {data.storeImport === "available" ? (
+            {isOwner && data.storeImport === "available" ? (
               <ImportFromStoreButton id={id} result={data} />
             ) : null}
-            {data.storeImport === "following" ||
-            data.storeImport === "paused" ? (
+            {isOwner &&
+            (data.storeImport === "following" ||
+              data.storeImport === "paused") ? (
               <StopImportButton id={id} />
             ) : null}
           </div>

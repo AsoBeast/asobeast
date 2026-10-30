@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ApiError, stopAppStoreImport } from "@/lib/api";
 import { armFocusHandoff, useFocusClaim } from "@/lib/focus-handoff";
-import { appKeys } from "@/lib/queries";
+import { invalidateStoreImport } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
 import { STORE_IMPORT_FOCUS_KEY } from "./ImportFromStoreButton";
 
@@ -16,9 +16,7 @@ export function StopImportButton({ id }: { id: string }) {
   const stop = useMutation({
     mutationFn: () => stopAppStoreImport(id),
     onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: appKeys.localizations(id),
-      });
+      invalidateStoreImport(queryClient, id);
     },
     onError: (error) =>
       toast.error(

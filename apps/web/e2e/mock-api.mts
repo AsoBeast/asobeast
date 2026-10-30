@@ -1238,7 +1238,7 @@ const shippedLocalizations = new Map<
   string,
   Map<AppStoreLocalization, ShippedOrigin>
 >();
-const storeManagedFields = new Map<string, string>();
+const storeManagedFields = new Map<string, string | null>();
 const storeImportStates = new Map<string, StoreImportState>();
 const seededMarkets = new Map<string, string[]>();
 const fieldRequests = new Map<string, string[]>();
@@ -1284,7 +1284,7 @@ function seedLocalizations(id: string, seed: LocalizationSeed): void {
     seed.storeImport === "following" ||
     seed.storeImport === "paused";
   if (followsStore) {
-    storeManagedFields.set(id, KEYWORD_FIELD_UPDATED_AT);
+    storeManagedFields.set(id, seed.storeSyncAt ?? KEYWORD_FIELD_UPDATED_AT);
   } else {
     storeManagedFields.delete(id);
   }

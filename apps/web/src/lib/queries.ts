@@ -3,6 +3,7 @@ import type {
   ChartFollowItem,
   ChartPage,
   AppAuditResult,
+  AppLocalizationsResult,
   EmailAlertItem,
   FirstRunStatus,
   KeywordFieldQuery,
@@ -650,10 +651,17 @@ export const keywordFieldOptions = (
     queryFn: () => getKeywordField(id, query),
   });
 
+const FIRST_IMPORT_POLL_MS = 15_000;
+
 export const appLocalizationsOptions = (id: string) =>
   queryOptions({
     queryKey: appKeys.localizations(id),
     queryFn: () => getAppLocalizations(id),
+    refetchInterval: (query) =>
+      query.state.data?.storeImport === "following" &&
+      query.state.data.storeSync?.at === null
+        ? FIRST_IMPORT_POLL_MS
+        : false,
   });
 
 export const marketKeywordFieldsOptions = (id: string, country: string) =>
@@ -1038,6 +1046,18 @@ export function invalidateLocalizationMutation(
 export function invalidateKeywordImport(client: QueryClient, id: string): void {
   invalidateKeywordMutation(client, id);
   void client.invalidateQueries({ queryKey: appKeys.importPreviewRoot(id) });
+}
+
+export function seedStoreImport(
+  client: QueryClient,
+  id: string,
+  result: AppLocalizationsResult,
+): void {
+  client.setQueryData(appKeys.localizations(id), result);
+}
+
+export function invalidateStoreImport(client: QueryClient, id: string): void {
+  void client.invalidateQueries({ queryKey: appKeys.localizations(id) });
 }
 
 function invalidateLocalSuggestions(client: QueryClient, id: string): void {

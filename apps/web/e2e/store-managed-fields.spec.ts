@@ -93,6 +93,9 @@ test("starts the import from a confirmation dialog", async ({ page }) => {
       "Your English (U.S.) field will be replaced by what App Store Connect serves.",
     ),
   ).toBeVisible();
+  await expect(
+    dialog.getByText("Stopping does not bring them back."),
+  ).toBeVisible();
   await dialog.getByRole("button", { name: "Import" }).click();
 
   await expect(dialog).toHaveCount(0);
@@ -106,6 +109,23 @@ test("starts the import from a confirmation dialog", async ({ page }) => {
   await expect(
     section.getByRole("button", { name: "Add localization" }),
   ).toHaveCount(0);
+});
+
+test("says the import waits for its first read", async ({ page }) => {
+  await seedLocalizations(page.request, APP_MANAGED_LOCALES_ID, {
+    markets: ["us"],
+    fields: { "en-US": ["focus", "timer"] },
+    storeManaged: true,
+    storeSyncAt: null,
+  });
+  await page.goto(MANAGED_METADATA);
+
+  const panel = localizationItem(page, "English (U.S.)").panel;
+  await expect(
+    panel.getByText("Imported from App Store Connect"),
+  ).toBeVisible();
+  await expect(panel.getByText(/waiting for its first read/)).toBeVisible();
+  await expect(panel.getByText(/last read/)).toHaveCount(0);
 });
 
 test("keeps the fields editable again after stopping the import", async ({
