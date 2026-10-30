@@ -222,7 +222,7 @@ See [Enable the optional AI features](/guides/ai-features).
 | Variable | Default | Required | Effect |
 | --- | --- | --- | --- |
 | `OPENAI_API_KEY` | Empty | No | Empty disables every AI feature. With `OPENAI_BASE_URL` set, the key of that provider; any non empty value for a local server that checks none |
-| `OPENAI_BASE_URL` | Empty | No | Address of an OpenAI compatible API the AI features call instead of OpenAI, for example `https://openrouter.ai/api/v1`. Empty uses `https://api.openai.com/v1`. Refuses to boot when it is not an http or https URL or carries a user name or password. See [Use an OpenAI compatible provider](/guides/ai-features#use-an-openai-compatible-provider) |
+| `OPENAI_BASE_URL` | Empty | No | Address of an OpenAI compatible API the AI features call instead of OpenAI, for example `https://openrouter.ai/api/v1`. Empty uses `https://api.openai.com/v1`. Refuses to boot when it is not an http or https URL, carries a user name or password, or holds a `#` fragment. See [Use an OpenAI compatible provider](/guides/ai-features#use-an-openai-compatible-provider) |
 | `AI_MODEL` | `gpt-5.6-luna` | No | The model name as the provider spells it. Must support vision and structured outputs, because the audit reads screenshots |
 | `AI_CALLS_PER_MONTH` | Empty | No | AI calls each workspace may make per calendar month (UTC) on a self hosted instance. Empty means unlimited and `0` turns AI calls off. Ignored when `BILLING_ENABLED` is true, where each plan sets its own allowance. Warns in production when empty while `OPENAI_API_KEY` is set and registration is open |
 

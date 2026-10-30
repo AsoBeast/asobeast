@@ -155,6 +155,10 @@ export const EnvSchema = z.object({
         carriesNoCredentials,
         'OPENAI_BASE_URL must not carry a user name or password. Put the key in OPENAI_API_KEY.',
       )
+      .refine(
+        (value) => !value.includes('#'),
+        'OPENAI_BASE_URL must not carry a fragment, because the API path is appended to the address.',
+      )
       .optional(),
   ),
   AI_MODEL: z.preprocess(

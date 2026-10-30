@@ -79,7 +79,7 @@ OPENAI_API_KEY=sk-or-v1-your-key
 AI_MODEL=openai/gpt-5.6-luna
 ```
 
-The address must start with `http://` or `https://` and must not contain a user name or password. The API refuses to start otherwise and names the variable. Use `https` for any provider outside your own machine, because the key and every prompt travel in the request.
+The address must start with `http://` or `https://` and must not contain a user name, a password or a `#` fragment. The API refuses to start otherwise and names the variable. Use `https` for any provider outside your own machine, because the key and every prompt travel in the request.
 
 The same variable reaches OpenAI's own regional hosts. `https://eu.api.openai.com/v1` keeps processing in the European Union for a key from an EU project, and asobeast still treats it as OpenAI.
 
@@ -165,7 +165,7 @@ The review reply prompt receives the store, the app name, the one review being a
 - **The AI endpoints answer 409.** No key is configured, or the API was not restarted after setting it.
 - **The audit button is missing but the key is set.** Confirm the key reached the API container. `docker compose config` shows the resolved environment.
 - **The model rejects the request.** `AI_MODEL` must accept images and structured outputs. A text only model fails the creative analysis while drafts still work.
-- **The API refuses to start and names OPENAI_BASE_URL.** The address is not an http or https URL, or it contains a user name or password. Put the key in `OPENAI_API_KEY` instead.
+- **The API refuses to start and names OPENAI_BASE_URL.** The address is not an http or https URL, or it contains a user name, a password or a `#` fragment. Put the key in `OPENAI_API_KEY` instead.
 - **Every call reports that the provider does not offer the model.** `AI_MODEL` still holds an OpenAI model name. Set it to the name your provider uses.
 - **Could not reach the AI provider.** The API container cannot open the address. From the Compose stacks, `localhost` is the container; see [Reaching a model on the Docker host](#reaching-a-model-on-the-docker-host).
 

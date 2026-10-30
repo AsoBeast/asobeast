@@ -139,6 +139,15 @@ describe('OPENAI_BASE_URL', () => {
       'OPENAI_BASE_URL must not carry a user name or password',
     );
   });
+
+  it.each([
+    'https://gateway.example.com/v1#note',
+    'https://gateway.example.com/v1?api-version=preview#',
+  ])('refuses a fragment in %s', (value) => {
+    expect(() => withAddress(value)).toThrow(
+      'OPENAI_BASE_URL must not carry a fragment',
+    );
+  });
 });
 
 describe('the screenshot ocr variables', () => {

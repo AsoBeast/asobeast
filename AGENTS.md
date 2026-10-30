@@ -385,7 +385,7 @@ SMTP_DKIM_SELECTOR=
 SMTP_DKIM_PRIVATE_KEY_PATH=
 # optional; enables the AI audit + metadata drafts + action explanations. Empty = AI actions disabled (endpoints 409), drafts card hidden, audit shows a setup hint
 OPENAI_API_KEY=
-# optional; address of an OpenAI compatible API the AI features call instead of OpenAI, e.g. https://openrouter.ai/api/v1. Empty uses https://api.openai.com/v1. REFUSES TO BOOT when it is not an http or https url or carries a user name or password
+# optional; address of an OpenAI compatible API the AI features call instead of OpenAI, e.g. https://openrouter.ai/api/v1. Empty uses https://api.openai.com/v1. REFUSES TO BOOT when it is not an http or https url, carries a user name or password, or holds a # fragment
 OPENAI_BASE_URL=
 AI_MODEL=gpt-5.6-luna               # model with vision + structured outputs, as the provider spells it
 # optional; AI calls each workspace may make per UTC month when BILLING_ENABLED=false. Empty = unlimited, 0 turns AI calls off. Ignored with billing on, where each plan sets its own allowance. WARNS in production when empty with OPENAI_API_KEY set and AUTH_ALLOW_REGISTRATION=true
