@@ -77,6 +77,7 @@ export function ImportKeywordsDialog({
           <ImportFileStep
             fileName={loaded?.name ?? null}
             onChoose={flow.choose}
+            disabled={flow.importing}
           />
           {notices.map((notice) => (
             <Alert key={notice} role="note" variant="warning">
@@ -92,6 +93,7 @@ export function ImportKeywordsDialog({
               scope={loaded.file.scope}
               options={columnOptions(loaded.file, view)}
               onViewChange={flow.setView}
+              disabled={flow.importing}
             />
           ) : null}
           {flow.error ? (

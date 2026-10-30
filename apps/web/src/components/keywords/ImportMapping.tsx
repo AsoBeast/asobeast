@@ -39,6 +39,7 @@ export function ImportMapping({
   scope,
   options,
   onViewChange,
+  disabled,
 }: {
   store: Store;
   market: string;
@@ -47,6 +48,7 @@ export function ImportMapping({
   scope: FileScope;
   options: ColumnOption[];
   onViewChange: (view: FileView) => void;
+  disabled: boolean;
 }) {
   const pick = (field: ImportField, value: string) =>
     onViewChange({
@@ -58,7 +60,10 @@ export function ImportMapping({
     });
 
   return (
-    <fieldset className="flex flex-col gap-3 rounded-lg border p-3">
+    <fieldset
+      disabled={disabled}
+      className="flex flex-col gap-3 rounded-lg border p-3"
+    >
       <legend className="px-1 text-sm font-medium">Columns</legend>
       <div className="flex items-center gap-2">
         <Switch

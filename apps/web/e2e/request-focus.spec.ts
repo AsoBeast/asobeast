@@ -742,7 +742,15 @@ test("keyword import keeps focus on its button from one part to the next", async
 
   await pressFromKeyboard(submit);
 
+  await expect(dialog.getByLabel("Keyword file")).toBeDisabled();
+  await expect(
+    dialog.getByRole("combobox", { name: "Keyword column" }),
+  ).toBeDisabled();
+  await expect(
+    dialog.getByRole("switch", { name: "First row is a header" }),
+  ).toBeDisabled();
   await expectFocusKeptWhileHeld(submit, held);
+  await expect(dialog.getByLabel("Keyword file")).toBeEnabled();
   await expect(
     dialog.getByText("Part 2 holds lines 502 to 502."),
   ).toBeVisible();

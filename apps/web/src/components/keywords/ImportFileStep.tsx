@@ -21,9 +21,11 @@ const PARTS_HINT = `A file over ${formatNumber(KEYWORD_IMPORT_LIMIT)} rows is im
 export function ImportFileStep({
   fileName,
   onChoose,
+  disabled,
 }: {
   fileName: string | null;
   onChoose: (file: File | undefined) => void;
+  disabled: boolean;
 }) {
   return (
     <div className="flex flex-col gap-2">
@@ -34,6 +36,7 @@ export function ImportFileStep({
           type="file"
           accept=".csv,.tsv,.txt,text/csv,text/plain"
           className="max-w-xs"
+          disabled={disabled}
           onChange={(event) => onChoose(event.target.files?.[0])}
         />
         <Button
