@@ -98,7 +98,7 @@ These notes follow each provider's own documentation. Check it for the model you
 
 | Provider | `OPENAI_BASE_URL` | Notes |
 | --- | --- | --- |
-| OpenRouter | `https://openrouter.ai/api/v1` | Models are named `vendor/model`. Pick a model that lists structured outputs and image input |
+| OpenRouter | `https://openrouter.ai/api/v1` | Models are named `vendor/model`. Pick a model that lists structured outputs and image input. Some free endpoints take images only as embedded data and answer that no endpoint supports image URLs, which fails the creative analysis |
 | Ollama | `http://host.docker.internal:11434/v1` from the Compose stacks, `http://localhost:11434/v1` from `pnpm dev` | Any non empty `OPENAI_API_KEY`, such as `ollama`. Ollama accepts images only as embedded data, so the creative analysis does not run. Small models often fail the schema |
 | LM Studio | `http://host.docker.internal:1234/v1` from the Compose stacks | Any non empty `OPENAI_API_KEY`. Structured outputs are enforced by its grammar |
 | vLLM | `http://your-host:8000/v1` | The server downloads images itself. If it runs with `--allowed-media-domains`, allow the store image hosts |
@@ -167,9 +167,10 @@ The review reply prompt receives the store, the app name, the one review being a
 - **The model rejects the request.** `AI_MODEL` must accept images and structured outputs. A text only model fails the creative analysis while drafts still work.
 - **The API refuses to start and names OPENAI_BASE_URL.** The address is not an http or https URL, or it contains a user name, a password or a `#` fragment. Put the key in `OPENAI_API_KEY` instead.
 - **Every call reports that the provider does not offer the model.** `AI_MODEL` still holds an OpenAI model name. Set it to the name your provider uses.
+- **A call reports that the provider does not offer the model for this request.** The provider's own reason follows the colon. "No endpoints found that support image URLs" comes from the creative analysis, the one feature that sends images, and means the model takes images only as embedded data; pick one that downloads image links.
 - **Could not reach the AI provider.** The API container cannot open the address. From the Compose stacks, `localhost` is the container; see [Reaching a model on the Docker host](#reaching-a-model-on-the-docker-host).
 
-A failed creative analysis shows one of these messages. With `OPENAI_BASE_URL` naming a provider other than OpenAI, each message says "the AI provider" where it says "OpenAI" here, and "The OpenAI key" reads "The API key". Only transient failures are retried, once.
+A failed creative analysis shows one of these messages. With `OPENAI_BASE_URL` naming a provider other than OpenAI, each message says "the AI provider" where it says "OpenAI" here, and "The OpenAI key" reads "The API key". When such a provider explains why it does not offer the model, the message ends with that reason instead of "Check AI_MODEL." Only transient failures are retried, once.
 
 | Message | Fix |
 | --- | --- |
