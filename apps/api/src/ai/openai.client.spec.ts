@@ -1,6 +1,7 @@
 import { BadGatewayException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI, {
+  type ClientOptions,
   APIConnectionError,
   APIConnectionTimeoutError,
   APIError,
@@ -38,10 +39,17 @@ jest.mock('openai', () => {
 const config = (
   key: string | undefined,
   model = 'gpt-4o',
-): ConfigService<Env, true> =>
-  ({
-    get: (name: string) => (name === 'OPENAI_API_KEY' ? key : model),
-  }) as unknown as ConfigService<Env, true>;
+  baseUrl?: string,
+): ConfigService<Env, true> => {
+  const values: Partial<Record<keyof Env, unknown>> = {
+    OPENAI_API_KEY: key,
+    AI_MODEL: model,
+    OPENAI_BASE_URL: baseUrl,
+  };
+  return {
+    get: (name: keyof Env) => values[name],
+  } as unknown as ConfigService<Env, true>;
+};
 
 const completion = (
   choice: Record<string, unknown>,
@@ -83,6 +91,13 @@ const build = (): AiClient => {
   return client;
 };
 
+const sdkOptions = (): ClientOptions => {
+  const calls = (OpenAI as unknown as jest.Mock).mock.calls as Array<
+    [ClientOptions]
+  >;
+  return calls[calls.length - 1][0];
+};
+
 describe('createOpenAiClient', () => {
   beforeEach(() => {
     mockCreate.mockReset();
@@ -102,6 +117,48 @@ describe('createOpenAiClient', () => {
     expect(options.apiKey).toBe('sk-test');
     expect(options.timeout).toBeGreaterThan(0);
     expect(options.maxRetries).toBeGreaterThanOrEqual(0);
+  });
+
+  it('leaves the SDK on its default address when OPENAI_BASE_URL is unset', () => {
+    build();
+
+    expect(sdkOptions().baseURL).toBeNull();
+    expect(sdkOptions()).not.toHaveProperty('organization');
+    expect(sdkOptions()).not.toHaveProperty('project');
+  });
+
+  it('hands the SDK the address OPENAI_BASE_URL names', () => {
+    createOpenAiClient(
+      config(
+        'sk-or-v1-test',
+        'openai/gpt-5.6-luna',
+        'https://openrouter.ai/api/v1',
+      ),
+    );
+
+    expect(sdkOptions()).toMatchObject({
+      apiKey: 'sk-or-v1-test',
+      baseURL: 'https://openrouter.ai/api/v1',
+      organization: null,
+      project: null,
+    });
+  });
+
+  it('keeps the OpenAI account headers on an OpenAI residency host', () => {
+    createOpenAiClient(
+      config('sk-test', 'gpt-4o', 'https://eu.api.openai.com/v1'),
+    );
+
+    expect(sdkOptions().baseURL).toBe('https://eu.api.openai.com/v1');
+    expect(sdkOptions()).not.toHaveProperty('organization');
+  });
+
+  it('returns null without an api key even when an address is set', () => {
+    expect(
+      createOpenAiClient(
+        config(undefined, 'gpt-4o', 'http://localhost:11434/v1'),
+      ),
+    ).toBeNull();
   });
 
   it('parses JSON and maps text and image content parts', async () => {

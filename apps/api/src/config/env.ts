@@ -25,6 +25,11 @@ const blankAsUndefined = (value: unknown): unknown =>
 
 const optionalText = z.preprocess(blankAsUndefined, z.string().optional());
 
+const carriesNoCredentials = (value: string): boolean => {
+  const url = URL.parse(value);
+  return url === null || (url.username === '' && url.password === '');
+};
+
 const isCronPattern = (value: string): boolean => {
   try {
     CronExpressionParser.parse(value, { tz: 'UTC' });
@@ -138,6 +143,20 @@ export const EnvSchema = z.object({
   SMTP_DKIM_SELECTOR: optionalText,
   SMTP_DKIM_PRIVATE_KEY_PATH: optionalText,
   OPENAI_API_KEY: optionalText,
+  OPENAI_BASE_URL: z.preprocess(
+    blankAsUndefined,
+    z
+      .url({
+        protocol: /^https?$/,
+        error:
+          'OPENAI_BASE_URL must be the http or https address of an OpenAI compatible API, for example https://openrouter.ai/api/v1',
+      })
+      .refine(
+        carriesNoCredentials,
+        'OPENAI_BASE_URL must not carry a user name or password. Put the key in OPENAI_API_KEY.',
+      )
+      .optional(),
+  ),
   AI_MODEL: z.preprocess(
     blankAsUndefined,
     z.string().min(1).default('gpt-5.6-luna'),

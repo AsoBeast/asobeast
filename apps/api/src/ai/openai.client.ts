@@ -12,6 +12,7 @@ import OpenAI, {
   RateLimitError,
 } from 'openai';
 import { Env } from '../config/env';
+import { aiProviderOf } from './ai-provider';
 
 export const OPENAI_CLIENT = Symbol('OPENAI_CLIENT');
 
@@ -149,6 +150,7 @@ export const classifyRequestError = (
 const DEFAULT_MAX_OUTPUT_TOKENS = 2048;
 const REQUEST_TIMEOUT_MS = 60_000;
 const MAX_RETRIES = 2;
+const WITHOUT_OPENAI_ACCOUNT = { organization: null, project: null } as const;
 
 const toContentPart = (
   part: AiContentPart,
@@ -258,9 +260,12 @@ export function createOpenAiClient(
     return null;
   }
   const model = config.get('AI_MODEL', { infer: true });
+  const baseURL = config.get('OPENAI_BASE_URL', { infer: true });
   return new OpenAiClient(
     new OpenAI({
       apiKey,
+      baseURL: baseURL ?? null,
+      ...(aiProviderOf(baseURL) === 'compatible' ? WITHOUT_OPENAI_ACCOUNT : {}),
       timeout: REQUEST_TIMEOUT_MS,
       maxRetries: MAX_RETRIES,
     }),
