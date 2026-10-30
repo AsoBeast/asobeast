@@ -18,6 +18,7 @@ import {
 } from '../src/store-connect/asc-report-sync.service';
 import { importedMonths } from '../src/store-connect/play/play-report-sync.service';
 import { StoreReportSyncService } from '../src/store-connect/store-report-sync.service';
+import { PartialSyncRetryError } from '../src/store-connect/store-sync-summary';
 import { ownerAgent } from './helpers/session';
 import {
   answer,
@@ -36,6 +37,9 @@ import { clearRateLimitCounters, obliterateQueues } from './obliterate-queues';
 
 const STORE_APP_ID = '1476097583';
 const SECOND_STORE_APP_ID = '839333328';
+const SECOND_LISTING = new RegExp(
+  `/analyticsReports/ongoing-${SECOND_STORE_APP_ID}-standard/instances`,
+);
 const OTHER_WORKSPACE = 'ws_store_reports_other';
 const FIXTURE = readFileSync(
   join(
@@ -94,9 +98,9 @@ describe('Store report sync (e2e)', () => {
   let appId: string;
   const gz = gzipSync(FIXTURE);
 
-  const run = () =>
+  const run = (finalAttempt = true) =>
     asWorkspace(harness.app, () =>
-      harness.app.get(StoreReportSyncService).run('APP_STORE'),
+      harness.app.get(StoreReportSyncService).run('APP_STORE', finalAttempt),
     );
 
   const paths = (method: AscRequest['method']) =>
@@ -219,6 +223,24 @@ describe('Store report sync (e2e)', () => {
       })
       .on('GET', /i-\d+\.csv\.gz$/, bytes(gz));
   };
+
+  const createSecondApp = () =>
+    harness.prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: SECOND_STORE_APP_ID,
+        country: 'us',
+        name: 'Drift',
+      },
+    });
+
+  const failSecondListing = () =>
+    harness.asc.on(
+      'GET',
+      SECOND_LISTING,
+      answer({ errors: [{ code: 'UNEXPECTED_ERROR', detail: 'down' }] }, 500),
+    );
 
   const funnelRows = () =>
     harness.prisma.storeFunnelDay.findMany({
@@ -463,23 +485,9 @@ describe('Store report sync (e2e)', () => {
   }, 60_000);
 
   it('downloads the other apps when apple fails the standard listing of one app, and says so', async () => {
-    const second = await harness.prisma.app.create({
-      data: {
-        workspaceId: DEFAULT_WORKSPACE_ID,
-        store: Store.APP_STORE,
-        storeAppId: SECOND_STORE_APP_ID,
-        country: 'us',
-        name: 'Drift',
-      },
-    });
+    const second = await createSecondApp();
     scriptTwoApps();
-    harness.asc.on(
-      'GET',
-      new RegExp(
-        `/analyticsReports/ongoing-${SECOND_STORE_APP_ID}-standard/instances`,
-      ),
-      answer({ errors: [{ code: 'UNEXPECTED_ERROR', detail: 'down' }] }, 500),
-    );
+    failSecondListing();
 
     const summary = await run();
 
@@ -496,6 +504,32 @@ describe('Store report sync (e2e)', () => {
       .body as StoreConnectionState;
     expect(state.connections[0].lastError).toBe(PARTIAL_SYNC);
     expect(state.connections[0].lastSyncedAt).not.toBeNull();
+  });
+
+  it('tries a passing apple error again before it warns about it', async () => {
+    const second = await createSecondApp();
+    scriptTwoApps();
+    failSecondListing();
+
+    await expect(run(false)).rejects.toBeInstanceOf(PartialSyncRetryError);
+    await expect(funnelRows()).resolves.toHaveLength(7);
+    const retrying = (await owner.get('/store-connections').expect(200))
+      .body as StoreConnectionState;
+    expect(retrying.connections[0].lastError).toBeNull();
+
+    harness.asc.on(
+      'GET',
+      SECOND_LISTING,
+      answer(instances([`i-${SECOND_STORE_APP_ID}`, '2026-09-12'])),
+    );
+    await expect(run()).resolves.toMatchObject({ instances: 1, failed: 0 });
+
+    await expect(
+      harness.prisma.storeFunnelDay.count({ where: { appId: second.id } }),
+    ).resolves.toBe(7);
+    const settled = (await owner.get('/store-connections').expect(200))
+      .body as StoreConnectionState;
+    expect(settled.connections[0].lastError).toBeNull();
   });
 
   it('places a request again after apple deleted it, and keeps syncing meanwhile', async () => {

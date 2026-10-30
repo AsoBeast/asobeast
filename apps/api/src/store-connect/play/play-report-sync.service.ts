@@ -7,7 +7,11 @@ import type { FunnelRow } from '../discovery-report';
 import { StoreConnectionService } from '../store-connection.service';
 import { PLAY_ALL_MARKETS } from '../store-funnel';
 import { funnelUpserts, reportTransaction } from '../store-funnel-rows';
-import { emptySummary, type SyncSummary } from '../store-sync-summary';
+import {
+  emptySummary,
+  retriesFailures,
+  type SyncSummary,
+} from '../store-sync-summary';
 import {
   GcsBucketError,
   GcsError,
@@ -56,6 +60,9 @@ interface Imported {
   rows: FunnelRow[];
   terms: SearchTermRow[];
 }
+
+const lastErrorOf = ({ failed, skipped }: SyncSummary): string | null =>
+  failed + skipped > 0 ? PLAY_PARTIAL_SYNC : null;
 
 const dateValue = (key: string): Date => new Date(`${key}T00:00:00.000Z`);
 
@@ -168,7 +175,10 @@ export class PlayReportSync {
     private readonly connections: StoreConnectionService,
   ) {}
 
-  async run(now = new Date()): Promise<SyncSummary | null> {
+  async run(
+    now = new Date(),
+    finalAttempt = true,
+  ): Promise<SyncSummary | null> {
     const connection = await this.connections.openPlay();
     if (!connection || connection.status === 'rejected') return null;
     const summary = emptySummary();
@@ -201,7 +211,9 @@ export class PlayReportSync {
       await this.connections.markSynced(
         STORE,
         'admin',
-        summary.failed > 0 ? PLAY_PARTIAL_SYNC : null,
+        retriesFailures(summary, finalAttempt) && summary.skipped === 0
+          ? connection.lastError
+          : lastErrorOf(summary),
       );
     } catch (error) {
       await this.failed(error, connection.api, summary, connection.lastError);
@@ -216,7 +228,7 @@ export class PlayReportSync {
   ): Promise<void> {
     for (const file of files) {
       if (file.object.size > PLAY_REPORT_MAX_BYTES) {
-        summary.failed += 1;
+        summary.skipped += 1;
         this.logger.warn(
           `${file.object.name} is ${file.object.size} bytes, above the ${PLAY_REPORT_MAX_BYTES} byte ceiling, and is skipped`,
         );
@@ -228,7 +240,7 @@ export class PlayReportSync {
         const outcome = fileOutcome(error);
         if (!outcome) throw error;
         this.logger.warn(
-          `${file.object.name} waits for the next sync: ${error instanceof Error ? error.message : String(error)}`,
+          `${file.object.name} waits for the next try: ${error instanceof Error ? error.message : String(error)}`,
         );
         if (outcome === 'forbidden') {
           await this.prisma.storeReportRequest.update({
