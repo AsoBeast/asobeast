@@ -1,5 +1,6 @@
 import { aiCompletion } from '../../src/ai/ai-completion.fixture';
-import { AiClient, AiCompletion } from '../../src/ai/openai.client';
+import { stubAiClient } from '../../src/ai/ai-client.fixture';
+import { AiCompletion } from '../../src/ai/openai.client';
 import { createIsolationFixture, IsolationFixture } from './fixture';
 
 const DEFEND_EVIDENCE = {
@@ -25,7 +26,7 @@ describe('Action explanation isolation', () => {
         markWriting();
       }),
   );
-  const aiClient: AiClient = { model: 'gpt-test', structured };
+  const aiClient = stubAiClient(structured);
 
   beforeAll(async () => {
     fixture = await createIsolationFixture(aiClient);

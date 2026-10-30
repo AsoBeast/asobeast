@@ -7,6 +7,7 @@ import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
 import { AiAllowanceExceededError } from './ai-allowance.errors';
 import { aiCompletion } from './ai-completion.fixture';
+import { stubAiClient } from './ai-client.fixture';
 import { AiGateway, type AiCallRequest } from './ai-gateway.service';
 import {
   AiStructuredRequest,
@@ -57,7 +58,7 @@ describe('AiGateway', () => {
     };
     const structured = jest.fn();
     const gateway = new AiGateway(
-      { model: 'gpt-test', structured },
+      stubAiClient(structured),
       prisma as unknown as PrismaService,
       { require: () => 'ws_1' } as unknown as WorkspaceContext,
       quota as unknown as QuotaService,

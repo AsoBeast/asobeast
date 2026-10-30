@@ -8,8 +8,9 @@ import { AppAuditResult, AuditAiRunResult } from '@asobeast/shared';
 import { Queue } from 'bullmq';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
-import { AiClient, OPENAI_CLIENT } from '../src/ai/openai.client';
+import { OPENAI_CLIENT } from '../src/ai/openai.client';
 import { aiCompletion } from '../src/ai/ai-completion.fixture';
+import { stubAiClient } from '../src/ai/ai-client.fixture';
 import { AuditAiRunsService } from '../src/audit/audit-ai-runs.service';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { QUEUES } from '../src/jobs/jobs.types';
@@ -40,7 +41,7 @@ const OBSERVATIONS = {
 };
 
 const structured = jest.fn();
-const fakeAiClient: AiClient = { model: 'gpt-5.6-luna', structured };
+const fakeAiClient = stubAiClient(structured, 'gpt-5.6-luna');
 
 describe('Audit creative runs (e2e)', () => {
   let app: INestApplication<App>;
