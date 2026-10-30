@@ -207,6 +207,40 @@ describe('AscReportSync', () => {
     );
   });
 
+  it('keeps the earlier warning on an attempt that is not the last, so a retry decides', async () => {
+    const { service, applier, connections } = build();
+    connections.openAppStore.mockResolvedValueOnce({
+      ...(await connections.openAppStore()),
+      lastError: ADMIN_KEY_NEEDED,
+    });
+    applier.apply.mockRejectedValueOnce(new AscUnreachableError('timeout'));
+
+    const summary = await service.run(false);
+
+    expect(summary).toMatchObject({ instances: 1, failed: 1 });
+    expect(connections.markSynced).toHaveBeenCalledWith(
+      'APP_STORE',
+      'admin',
+      ADMIN_KEY_NEEDED,
+    );
+  });
+
+  it('clears the warning on an attempt that is not the last when nothing failed', async () => {
+    const { service, connections } = build();
+    connections.openAppStore.mockResolvedValueOnce({
+      ...(await connections.openAppStore()),
+      lastError: PARTIAL_SYNC,
+    });
+
+    await service.run(false);
+
+    expect(connections.markSynced).toHaveBeenCalledWith(
+      'APP_STORE',
+      'admin',
+      null,
+    );
+  });
+
   it('ends the run normally on a rate limit after recording what was applied', async () => {
     const { service, applier, connections } = build();
     applier.apply

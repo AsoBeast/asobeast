@@ -3,8 +3,11 @@ import type { Job } from 'bullmq';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import type { SyncStoreReportsPayload } from '../jobs/jobs.types';
 import type { ErrorTracking } from '../observability/error-tracking.service';
-import type { StoreReportSyncService } from './store-report-sync.service';
+import type { AscReportSync } from './asc-report-sync.service';
+import type { PlayReportSync } from './play/play-report-sync.service';
+import { StoreReportSyncService } from './store-report-sync.service';
 import { StoreReportsWorker } from './store-reports.worker';
+import { emptySummary } from './store-sync-summary';
 
 describe('StoreReportsWorker', () => {
   const job = {
@@ -34,8 +37,59 @@ describe('StoreReportsWorker', () => {
 
     await worker.process(job);
 
-    expect(sync.run).toHaveBeenCalledWith('APP_STORE');
+    expect(sync.run).toHaveBeenCalledWith('APP_STORE', true);
     expect(seen).toBe('ws_1');
+  });
+
+  describe('a sync that leaves apps or reports behind', () => {
+    const partial = { ...emptySummary(), instances: 4, failed: 1 };
+    const workerOver = () => {
+      const appStore = { run: jest.fn().mockResolvedValue(partial) };
+      const worker = new StoreReportsWorker(
+        new StoreReportSyncService(
+          appStore as unknown as AscReportSync,
+          {} as PlayReportSync,
+        ),
+        new WorkspaceContext(),
+        { capture: jest.fn() } as unknown as ErrorTracking,
+      );
+      return { worker, appStore };
+    };
+
+    it('fails an attempt that is not the last so the job tries the failures again', async () => {
+      const { worker, appStore } = workerOver();
+      const firstAttempt = {
+        ...job,
+        attemptsMade: 0,
+      } as unknown as Job<SyncStoreReportsPayload>;
+
+      await expect(worker.process(firstAttempt)).rejects.toThrow(
+        '1 failed part of the sync is tried again',
+      );
+      expect(appStore.run).toHaveBeenCalledWith(false);
+    });
+
+    it('completes an attempt a rate limit ended, since a retry would meet the same limit', async () => {
+      const { worker, appStore } = workerOver();
+      appStore.run.mockResolvedValue({ ...partial, rateLimited: true });
+      const firstAttempt = {
+        ...job,
+        attemptsMade: 0,
+      } as unknown as Job<SyncStoreReportsPayload>;
+
+      await expect(worker.process(firstAttempt)).resolves.toBeUndefined();
+    });
+
+    it('completes the last attempt and leaves the warning to the sync', async () => {
+      const { worker, appStore } = workerOver();
+      const lastAttempt = {
+        ...job,
+        attemptsMade: 2,
+      } as unknown as Job<SyncStoreReportsPayload>;
+
+      await expect(worker.process(lastAttempt)).resolves.toBeUndefined();
+      expect(appStore.run).toHaveBeenCalledWith(true);
+    });
   });
 
   it('reports a final failure', () => {
