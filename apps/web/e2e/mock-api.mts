@@ -1284,7 +1284,12 @@ function seedLocalizations(id: string, seed: LocalizationSeed): void {
     seed.storeImport === "following" ||
     seed.storeImport === "paused";
   if (followsStore) {
-    storeManagedFields.set(id, seed.storeSyncAt ?? KEYWORD_FIELD_UPDATED_AT);
+    storeManagedFields.set(
+      id,
+      seed.storeSyncAt === undefined
+        ? KEYWORD_FIELD_UPDATED_AT
+        : seed.storeSyncAt,
+    );
   } else {
     storeManagedFields.delete(id);
   }
