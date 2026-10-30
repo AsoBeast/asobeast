@@ -228,10 +228,26 @@ describe('an OpenAI compatible provider over http', () => {
       clientAt(`${provider.origin}/v1`).structured(REQUEST),
     ).rejects.toMatchObject({
       message:
-        'The AI provider does not offer the model local-model for this request: No endpoints found that support image URLs',
+        'The AI provider does not offer the model local-model for this request (No endpoints found that support image URLs). Check AI_MODEL and OPENAI_BASE_URL.',
       retryable: false,
     });
     expect(provider.seen).toHaveLength(1);
+  });
+
+  it('points at the address when it lacks the API path', async () => {
+    provider.answer = (_, response) =>
+      response
+        .writeHead(404, { 'content-type': 'text/html' })
+        .end('<pre>Cannot POST /api/chat/completions</pre>');
+
+    await expect(
+      clientAt(`${provider.origin}/api`).structured(REQUEST),
+    ).rejects.toMatchObject({
+      message:
+        'The AI provider does not offer the model local-model. Check AI_MODEL and OPENAI_BASE_URL.',
+      retryable: false,
+    });
+    expect(provider.seen[0].url).toBe('/api/chat/completions');
   });
 
   it('never answers with the key a provider echoes back', async () => {

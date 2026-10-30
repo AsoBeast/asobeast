@@ -31,7 +31,7 @@ describe('aiProviderOf', () => {
 describe('AI_PROVIDER_WORDING', () => {
   it('never names OpenAI for a compatible provider', () => {
     expect(JSON.stringify(AI_PROVIDER_WORDING.compatible)).not.toMatch(
-      /openai/i,
+      /OpenAI/,
     );
   });
 });

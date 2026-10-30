@@ -113,11 +113,10 @@ const missingModelMessage = (
   model: string,
   provider: AiProvider,
 ): string => {
-  const { name } = AI_PROVIDER_WORDING[provider];
+  const { name, modelHint } = AI_PROVIDER_WORDING[provider];
   const reason = provider === 'compatible' ? providerReason(error) : null;
-  return reason === null
-    ? `${name} does not offer the model ${model}. Check AI_MODEL.`
-    : `${name} does not offer the model ${model} for this request: ${reason}`;
+  const scope = reason === null ? '' : ` for this request (${reason})`;
+  return `${name} does not offer the model ${model}${scope}. ${modelHint}`;
 };
 
 export const classifyRequestError = (

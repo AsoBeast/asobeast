@@ -15,6 +15,7 @@ export interface AiProviderWording {
   inSentence: string;
   key: string;
   account: string;
+  modelHint: string;
 }
 
 export const AI_PROVIDER_WORDING: Record<AiProvider, AiProviderWording> = {
@@ -23,11 +24,13 @@ export const AI_PROVIDER_WORDING: Record<AiProvider, AiProviderWording> = {
     inSentence: 'OpenAI',
     key: 'The OpenAI key',
     account: 'The OpenAI account',
+    modelHint: 'Check AI_MODEL.',
   },
   compatible: {
     name: 'The AI provider',
     inSentence: 'the AI provider',
     key: 'The API key',
     account: 'The AI provider account',
+    modelHint: 'Check AI_MODEL and OPENAI_BASE_URL.',
   },
 };

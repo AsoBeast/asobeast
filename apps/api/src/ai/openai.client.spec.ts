@@ -509,7 +509,7 @@ describe('AiRequestError from a compatible provider', () => {
     ],
     [
       new NotFoundError(404, {}, 'missing', headers),
-      'The AI provider does not offer the model gpt-4o. Check AI_MODEL.',
+      'The AI provider does not offer the model gpt-4o. Check AI_MODEL and OPENAI_BASE_URL.',
     ],
     [
       new RateLimitError(429, { code: 'insufficient_quota' }, 'quota', headers),
@@ -539,7 +539,7 @@ describe('AiRequestError from a compatible provider', () => {
 
     await expect(buildCompatible().structured(request)).rejects.toMatchObject({
       message:
-        'The AI provider does not offer the model gpt-4o for this request: No endpoints found that support image URLs',
+        'The AI provider does not offer the model gpt-4o for this request (No endpoints found that support image URLs). Check AI_MODEL and OPENAI_BASE_URL.',
       retryable: false,
     });
   });
