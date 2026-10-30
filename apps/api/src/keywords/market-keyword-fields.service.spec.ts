@@ -12,6 +12,7 @@ const listed = (home: string): AppLocalizationsResult => ({
   markets: [home],
   storeManaged: false,
   storeSync: null,
+  storeImport: 'unavailable',
   localizations: [
     {
       localization: 'es-MX',
