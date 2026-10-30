@@ -93,6 +93,26 @@ function RankingTooltip({
   );
 }
 
+function ChangeMarker(props: {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  stroke?: string;
+}) {
+  const x = props.x1;
+  const bottom = Math.max(props.y1, props.y2);
+  return (
+    <g className="metadata-change-marker" pointerEvents="none">
+      <title>Metadata change</title>
+      <path
+        d={`M ${x - 4} ${bottom + 6} L ${x} ${bottom + 1} L ${x + 4} ${bottom + 6} Z`}
+        fill={props.stroke}
+      />
+    </g>
+  );
+}
+
 export function RankingChart({
   data,
   changeDates = [],
@@ -106,7 +126,7 @@ export function RankingChart({
 }) {
   const today = todayUtc();
   const plotted = new Set(data.rows.map((row) => String(row.date)));
-  const marked = changeDates.filter(
+  const marked = [...new Set(changeDates)].filter(
     (date) => date !== today && plotted.has(date),
   );
   const annotated = annotationLines(annotations, [...plotted], today);
@@ -133,13 +153,7 @@ export function RankingChart({
             key={date}
             x={date}
             {...CHANGE_MARKER_PROPS}
-            label={{
-              value: "Metadata change",
-              position: "insideBottomLeft",
-              angle: -90,
-              fill: "var(--warning)",
-              fontSize: 10,
-            }}
+            shape={ChangeMarker}
           />
         ))}
         {annotated.map((annotation) => (

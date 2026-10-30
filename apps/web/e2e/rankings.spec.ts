@@ -137,6 +137,26 @@ test("the serp movers card follows the market pills", async ({ page }) => {
   ).toBeVisible();
 });
 
+test("metadata change markers sit under the plot area", async ({ page }) => {
+  await page.goto("/apps/app-1/rankings");
+
+  const chart = page.getByRole("region", { name: "Keyword rank positions" });
+  const markers = chart.locator(".metadata-change-marker");
+  await expect(markers).toHaveCount(3);
+
+  const tops = await markers.evaluateAll((nodes) =>
+    nodes.map((node) => {
+      const surface = node.closest("svg")?.getBoundingClientRect();
+      const box = node.getBoundingClientRect();
+      if (!surface || surface.height === 0) return 0;
+      return (box.top - surface.top) / surface.height;
+    }),
+  );
+  for (const top of tops) {
+    expect(top).toBeGreaterThan(0.7);
+  }
+});
+
 test("the ranking tooltip shows each captured-depth marker", async ({
   page,
 }) => {
