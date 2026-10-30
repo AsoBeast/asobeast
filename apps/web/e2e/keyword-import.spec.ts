@@ -61,10 +61,10 @@ const TWO_APP_FILE = [
 
 const ASTRO_FILE = [
   "App Name,App Id,Platform,Keyword,Store Domain,Store,Note,Last Update,Ranking,Change,Popularity,Difficulty,Apps in Ranking,Tags",
-  "Import Lab,123456789,iphone,alpha one,us,United States,,2026-10-12 08:30:00,4,2,48,31,120,",
-  "Import Lab,123456789,ipad,alpha one,us,United States,,2026-10-12 08:30:00,6,0,48,31,120,",
-  'Import Lab,123456789,iphone,beta two,pl,Poland,"Launch keyword",2026-10-12 08:30:00,2,-1,22,18,64,"core, brand"',
-  "Other App,987654321,iphone,gamma three,us,United States,,2026-10-12 08:30:00,9,1,60,40,200,focus",
+  "Import Lab,123456789,iphone,alpha one,us,🇺🇸 US,,2026-10-29 22:23:37 +0000,4,2,48,31,120,",
+  "Import Lab,123456789,ipad,alpha one,us,🇺🇸 US,,2026-10-29 22:23:37 +0000,6,0,48,31,120,",
+  'Import Lab,123456789,iphone,beta two,pl,🇵🇱 Poland,"Launch keyword",2026-10-29 22:23:53 +0000,2,-1,22,18,64,"core, brand"',
+  "Other App,987654321,iphone,gamma three,us,🇺🇸 US,,2026-10-29 22:23:37 +0000,9,1,60,40,200,focus",
 ].join("\r\n");
 
 const importRequests = (page: Page) => {
@@ -814,19 +814,23 @@ test("P-WEB-19 reads an AppFollow export from its header row", async ({
   await choose(
     dialog,
     [
-      "Keywords report",
-      "App,Import Lab",
-      "Keyword,Position,Keywords in Title,Total Apps,Popularity,Difficulty,Effectiveness",
-      "alpha one,4,1,120,48,31,57",
-      "beta two,,0,80,31,25,40",
-    ].join("\r\n"),
-    "keywords_iphone_1790496456.csv",
+      "sep=,",
+      'App name "Import Lab"',
+      "To: 2026-10-29,Page: tracked,ItemId: 261827,From: 2026-10-29,Dt_start: 2026-10-23,Dt_last: 2026-10-29,Device: iphone,Country: us,Compare: 2026-10-23,App_id: 50703",
+      "",
+      '"Sort by: Device, Keyword"',
+      "",
+      "Keyword,Position,Changes,Best Rank,Keywords in Title,Keywords in Subtitle,Total Apps,Popularity,Search Downloads,% of Search Downloads,2026-10-23,2026-10-24,2026-10-25,2026-10-26,2026-10-27,2026-10-28,2026-10-29",
+      "alpha one,4,,3,1,0,120,48,Upgrade plan to see this data,Upgrade plan to see this data,-,-,-,-,-,-,4",
+      "beta two,,,,0,0,80,31,Upgrade plan to see this data,Upgrade plan to see this data,-,-,-,-,-,-,-",
+    ].join("\n"),
+    "keywords_iphone_1793312083.csv",
   );
 
   await expect(
-    dialog.getByText("2 rows above the header were skipped."),
+    dialog.getByText("4 rows above the header were skipped."),
   ).toBeVisible();
-  await expect(dialog.getByText("6 other columns are ignored.")).toBeVisible();
+  await expect(dialog.getByText("16 other columns are ignored.")).toBeVisible();
   await expect(dialog.getByRole("status")).toHaveText("2 new");
-  await expect(rowOf(dialog, /alpha one/).getByText("4")).toBeVisible();
+  await expect(rowOf(dialog, /alpha one/).getByText("8")).toBeVisible();
 });

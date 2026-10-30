@@ -134,27 +134,31 @@ const importedFrom = (text: string, store: Store = "APP_STORE") => {
 
 const ASTRO_EXPORT = [
   "App Name,App Id,Platform,Keyword,Store Domain,Store,Note,Last Update,Ranking,Change,Popularity,Difficulty,Apps in Ranking,Tags",
-  "Import Lab,123456789,iphone,focus timer,us,United States,,2026-10-12 08:30:00,4,2,48,31,120,",
-  "Import Lab,123456789,ipad,focus timer,us,United States,,2026-10-12 08:30:00,6,0,48,31,120,",
-  'Import Lab,123456789,iphone,zegar pracy,pl,Poland,"Launch keyword\nsecond line",2026-10-12 08:30:00,2,-1,22,18,64,"core, brand"',
-  "Other App,987654321,iphone,habit tracker,us,United States,,2026-10-12 08:30:00,9,1,60,40,200,focus",
-  "Import Lab,123456789,mac,focus timer,gb,United Kingdom,,2026-10-12 08:30:00,,,,,,",
+  "Import Lab,123456789,iphone,focus timer,us,🇺🇸 US,,2026-10-29 22:23:37 +0000,4,2,48,31,120,",
+  "Import Lab,123456789,ipad,focus timer,us,🇺🇸 US,,2026-10-29 22:23:37 +0000,6,0,48,31,120,",
+  'Import Lab,123456789,iphone,zegar pracy,pl,🇵🇱 Poland,"Launch keyword\nsecond line",2026-10-29 22:23:53 +0000,2,-1,22,18,64,"core, brand"',
+  "Other App,987654321,iphone,habit tracker,us,🇺🇸 US,,2026-10-29 22:23:37 +0000,9,1,60,40,200,focus",
+  "Import Lab,123456789,mac,focus timer,gb,🇬🇧 United Kingdom,,2026-10-29 22:24:05 +0000,,,,,,",
 ].join("\r\n");
 
 const SONAR_EXPORT = [
-  "Keyword,Country,Store,Rank,Movement,Popularity,Difficulty,Est. downloads/day at current rank,Starred,Tags,Updated",
-  'focus timer,us,ios,4,+2,48,31,12,yes,"core, brand",2026-10-12',
-  "focus timer,us,android,9,-1,40,28,5,,,2026-10-12",
-  "zegar pracy,pl,ios,2,0,22,18,3,,core,2026-10-12",
+  "Keyword,Starred,Tags,Store,Country,Source,Popularity,Est. #1 Downloads/day,Difficulty,Gap,Rank,Last Seen,Added",
+  'focus timer,,"core, brand",ios,us,manual,48,12,31,17,4,,2026-10-30T12:02:24.350Z',
+  "focus timer,,,android,us,suggest,40,,28,12,Not ranked,,2026-10-30T12:02:24.313Z",
+  "zegar pracy,,core,ios,pl,ai,22,,18,4,2,,2026-10-30T12:02:24.272Z",
 ].join("\n");
 
 const APPFOLLOW_EXPORT = [
-  "\uFEFFKeywords report",
-  "App,Import Lab",
-  "Keyword,Position,Keywords in Title,Total Apps,Popularity,Difficulty,Effectiveness",
-  "focus timer,4,1,120,48,31,57",
-  "deep work,,0,80,31,25,40",
-].join("\r\n");
+  "sep=,",
+  'App name "Import Lab"',
+  "To: 2026-10-29,Page: tracked,ItemId: 261827,From: 2026-10-29,Dt_start: 2026-10-23,Dt_last: 2026-10-29,Device: iphone,Country: us,Compare: 2026-10-23,App_id: 50703",
+  "",
+  '"Sort by: Device, Keyword"',
+  "",
+  "Keyword,Position,Changes,Best Rank,Keywords in Title,Keywords in Subtitle,Total Apps,Popularity,Search Downloads,% of Search Downloads,2026-10-23,2026-10-24,2026-10-25,2026-10-26,2026-10-27,2026-10-28,2026-10-29",
+  "focus timer,4,,3,1,0,120,48,Upgrade plan to see this data,Upgrade plan to see this data,-,-,-,-,-,-,4",
+  "deep work,,,,0,0,80,31,Upgrade plan to see this data,Upgrade plan to see this data,-,-,-,-,-,-,-",
+].join("\n");
 
 describe("a file that names the apps and stores of its rows", () => {
   const FILE = [
@@ -297,8 +301,8 @@ describe("files exported by other tools", () => {
 
     expect(view.mapping).toEqual({
       keyword: 0,
-      country: 1,
-      tags: 9,
+      country: 4,
+      tags: 2,
       note: null,
     });
     expect(mapped).toEqual({
@@ -307,8 +311,8 @@ describe("files exported by other tools", () => {
         { keyword: "zegar pracy", country: "pl", tags: ["core"] },
       ],
       lines: [2, 4],
-      columns: 11,
-      ignoredColumns: 7,
+      columns: 13,
+      ignoredColumns: 9,
       leftOut: { otherApps: 0, otherStore: 1 },
     });
   });
@@ -341,8 +345,8 @@ describe("files exported by other tools", () => {
   it("U-VENDOR-05 reads an AppFollow keyword export from its header row, below the lines that describe the report", () => {
     const { file, view, mapped } = importedFrom(APPFOLLOW_EXPORT);
 
-    expect(file).toMatchObject({ delimiter: ",", skippedRows: 2 });
-    expect(skippedAboveHeader(file, view)).toBe(2);
+    expect(file).toMatchObject({ delimiter: ",", skippedRows: 4 });
+    expect(skippedAboveHeader(file, view)).toBe(4);
     expect(view.mapping).toEqual({
       keyword: 0,
       country: null,
@@ -351,9 +355,9 @@ describe("files exported by other tools", () => {
     });
     expect(mapped).toEqual({
       rows: [{ keyword: "focus timer" }, { keyword: "deep work" }],
-      lines: [4, 5],
-      columns: 7,
-      ignoredColumns: 6,
+      lines: [8, 9],
+      columns: 17,
+      ignoredColumns: 16,
     });
     expect(columnOptions(file, view)[0]).toEqual({
       index: 0,
@@ -368,7 +372,7 @@ describe("files exported by other tools", () => {
 
     expect(skippedAboveHeader(file, headerless)).toBe(0);
     expect(mapKeywordFile(file, headerless, "APP_STORE").lines).toEqual([
-      1, 2, 3, 4, 5,
+      1, 2, 3, 5, 7, 8, 9,
     ]);
   });
 });
