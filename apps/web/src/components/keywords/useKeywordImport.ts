@@ -1,12 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import {
-  keepPreviousData,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { type KeywordImportRequest, type Store } from "@asobeast/shared";
 import { ApiError, importKeywords } from "@/lib/api";
@@ -21,7 +16,7 @@ import {
   type MappedFile,
 } from "@/lib/csv-import/parse-keyword-file";
 import {
-  importableCount,
+  importAction,
   importParts,
   importToast,
   marketRefusal,
@@ -82,6 +77,15 @@ function appsStillToChoose(
     : 0;
 }
 
+const sameRows = (
+  previous: KeywordImportRequest | null,
+  next: KeywordImportRequest | null,
+): boolean =>
+  previous !== null &&
+  next !== null &&
+  previous.rows.length === next.rows.length &&
+  previous.rows.every((row, index) => row === next.rows[index]);
+
 function useImportParts(mapped: MappedFile | null, market: string) {
   const [index, setIndex] = useState(0);
   const refusal = useMemo(
@@ -138,8 +142,8 @@ export function useKeywordImport(
     [loaded, view, store],
   );
   const appsToChoose = appsStillToChoose(loaded, view, mapped);
-  const parts = useImportParts(mapped, market);
-  const { refusal, current, progress } = parts;
+  const partFlow = useImportParts(mapped, market);
+  const { refusal, current, progress } = partFlow;
   const unknownMarket =
     mapped && !refusal ? marketRefusal(store, market) : null;
   const request = useMemo<KeywordImportRequest | null>(
@@ -151,24 +155,25 @@ export function useKeywordImport(
   );
   const preview = useQuery({
     ...keywordImportPreviewOptions(appId, request),
-    placeholderData: keepPreviousData,
+    placeholderData: (previous, query) =>
+      query && sameRows(query.queryKey[3], request) ? previous : undefined,
   });
 
   function changeView(next: FileView) {
     setView(next);
-    parts.setIndex(0);
+    partFlow.setIndex(0);
   }
 
   function changeMarket(next: string) {
     setMarket(next);
-    parts.setIndex(0);
+    partFlow.setIndex(0);
   }
 
   function forget(error: string | null) {
     latestChoice.current += 1;
     setLoaded(null);
     setView(null);
-    parts.setIndex(0);
+    partFlow.setIndex(0);
     setReadError(error);
   }
 
@@ -182,7 +187,7 @@ export function useKeywordImport(
       const { title, description } = importToast(outcome, progress);
       toast.success(title, { description });
       if (progress.index + 1 < progress.count) {
-        parts.setIndex(progress.index + 1);
+        partFlow.setIndex(progress.index + 1);
         return;
       }
       forget(null);
@@ -225,6 +230,16 @@ export function useKeywordImport(
     unknownMarket ??
     previewMessage(preview.error);
   const result = request === null ? null : (preview.data ?? null);
+  const ready =
+    appsToChoose === 0 &&
+    blocking === null &&
+    !preview.isFetching &&
+    !submit.isPending;
+
+  function skip() {
+    submit.reset();
+    partFlow.setIndex(progress.index + 1);
+  }
 
   return {
     loaded,
@@ -233,22 +248,18 @@ export function useKeywordImport(
     market,
     setMarket: changeMarket,
     mapped,
-    lines: parts.lines,
-    partNotice: parts.notice,
+    lines: partFlow.lines,
+    partNotice: partFlow.notice,
     result,
     busy: preview.isFetching,
     importing: submit.isPending,
     error: blocking ?? submitMessage(submit.error),
     appsToChoose,
-    canImport:
-      result !== null &&
-      appsToChoose === 0 &&
-      importableCount(result.summary) > 0 &&
-      blocking === null &&
-      !preview.isFetching &&
-      !submit.isPending,
+    progress,
+    action: ready ? importAction(result, progress) : null,
     choose,
     reset,
     submit: () => submitOnce(),
+    skip,
   };
 }

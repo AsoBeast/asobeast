@@ -19,13 +19,31 @@ import {
   columnOptions,
   skippedAboveHeader,
 } from "@/lib/csv-import/parse-keyword-file";
-import { fileNotices, importButtonLabel } from "@/lib/keyword-import";
+import {
+  fileNotices,
+  importButtonLabel,
+  skipButtonLabel,
+} from "@/lib/keyword-import";
 import { ImportBudgetNotice } from "./ImportBudgetNotice";
 import { ImportQuotaNotice } from "./ImportQuotaNotice";
 import { ImportFileStep } from "./ImportFileStep";
 import { ImportMapping } from "./ImportMapping";
 import { ImportPreview } from "./ImportPreview";
 import { useKeywordImport } from "./useKeywordImport";
+
+function primaryLabel({
+  importing,
+  action,
+  progress,
+  result,
+}: Pick<
+  ReturnType<typeof useKeywordImport>,
+  "importing" | "action" | "progress" | "result"
+>): string {
+  if (importing) return "Importing…";
+  if (action === "skip") return skipButtonLabel(progress);
+  return result ? importButtonLabel(result.summary) : "Nothing to import";
+}
 
 export function ImportKeywordsDialog({
   appId,
@@ -128,17 +146,14 @@ export function ImportKeywordsDialog({
             Cancel
           </Button>
           <Button
-            aria-disabled={!flow.canImport}
+            aria-disabled={flow.action === null}
             onClick={() => {
-              if (flow.canImport) flow.submit();
+              if (flow.action === "import") flow.submit();
+              if (flow.action === "skip") flow.skip();
             }}
           >
             {flow.importing ? <Loader2 className="animate-spin" /> : null}
-            {flow.importing
-              ? "Importing…"
-              : result
-                ? importButtonLabel(result.summary)
-                : "Nothing to import"}
+            {primaryLabel(flow)}
           </Button>
         </DialogFooter>
       </DialogContent>

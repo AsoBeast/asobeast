@@ -11,6 +11,7 @@ import {
   IMPORT_BODY_BYTES,
   IMPORT_STATUS_LABELS,
   importButtonLabel,
+  importAction,
   importParts,
   importToast,
   marketRefusal,
@@ -20,6 +21,7 @@ import {
   refuseImport,
   refusalMessage,
   rowNote,
+  skipButtonLabel,
   summarySentence,
 } from "./keyword-import";
 
@@ -149,6 +151,30 @@ describe("partNotice", () => {
     expect(
       partNotice([{ start: 0, end: 3 }], { index: 0, count: 1 }, [2, 3, 4]),
     ).toBeNull();
+  });
+});
+
+describe("importAction", () => {
+  const resultOf = (parts: Partial<KeywordImportSummary>) => ({
+    summary: summary(parts),
+  });
+
+  it("U-REQ-11 imports a part with rows to track", () => {
+    expect(
+      importAction(resultOf({ rows: 2, new: 1, tracked: 1 }), {
+        index: 0,
+        count: 1,
+      }),
+    ).toBe("import");
+  });
+
+  it("U-REQ-11 skips a part with nothing to track while a later part waits", () => {
+    const done = resultOf({ rows: 500, tracked: 500 });
+
+    expect(importAction(done, { index: 0, count: 2 })).toBe("skip");
+    expect(importAction(done, { index: 1, count: 2 })).toBeNull();
+    expect(importAction(null, { index: 0, count: 2 })).toBeNull();
+    expect(skipButtonLabel({ index: 0, count: 2 })).toBe("Skip to part 2");
   });
 });
 

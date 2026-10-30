@@ -57,7 +57,7 @@ const bytesOf = (value: unknown): number =>
 const envelopeBytes = (country: string): number =>
   bytesOf({ rows: [], country });
 
-const rowBytes = (row: KeywordImportRow): number => bytesOf(row) + 1;
+const rowBytesWithComma = (row: KeywordImportRow): number => bytesOf(row) + 1;
 
 export function refuseImport(
   { rows, lines }: ParsedImportRows,
@@ -65,7 +65,7 @@ export function refuseImport(
 ): ImportRefusal | null {
   if (rows.length === 0) return { kind: "empty" };
   const room = IMPORT_BODY_BYTES - envelopeBytes(country);
-  const oversized = rows.findIndex((row) => rowBytes(row) > room);
+  const oversized = rows.findIndex((row) => rowBytesWithComma(row) > room);
   return oversized < 0
     ? null
     : { kind: "rowTooLarge", line: lines[oversized] ?? oversized + 1 };
@@ -80,7 +80,7 @@ export function importParts(
   let start = 0;
   let bytes = envelope;
   rows.forEach((row, index) => {
-    const size = rowBytes(row);
+    const size = rowBytesWithComma(row);
     const full =
       index - start === KEYWORD_IMPORT_LIMIT ||
       bytes + size > IMPORT_BODY_BYTES;
@@ -125,6 +125,20 @@ export function partNotice(
 export function importableCount(summary: KeywordImportSummary): number {
   return summary.new + summary.resume;
 }
+
+export type ImportAction = "import" | "skip";
+
+export function importAction(
+  result: Pick<KeywordImportResult, "summary"> | null,
+  progress: ImportProgress,
+): ImportAction | null {
+  if (result === null) return null;
+  if (importableCount(result.summary) > 0) return "import";
+  return progress.index + 1 < progress.count ? "skip" : null;
+}
+
+export const skipButtonLabel = (progress: ImportProgress): string =>
+  `Skip to part ${formatNumber(progress.index + 2)}`;
 
 export function importButtonLabel(summary: KeywordImportSummary): string {
   const count = importableCount(summary);
