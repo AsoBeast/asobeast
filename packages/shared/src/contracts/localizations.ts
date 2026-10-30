@@ -24,7 +24,7 @@ export interface AppLocalizationItem {
 }
 
 export interface AppLocalizationStoreSync {
-  at: string;
+  at: string | null;
   version: string | null;
   error: string | null;
 }
