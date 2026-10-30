@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { AnnotationsCard } from "@/components/annotations/AnnotationsCard";
+import { RankingsMarketPills } from "@/components/rankings/RankingsMarketPills";
 import { RankingsReportHeader } from "@/components/rankings/RankingsReportHeader";
 import { RankingsView } from "@/components/rankings/RankingsView";
 import { SerpMoversCard } from "@/components/rankings/SerpMoversCard";
@@ -59,18 +60,23 @@ export default async function RankingsPage({
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <div className="page-full grid gap-6 lg:grid-cols-3 print:grid-cols-1 [&>*]:min-w-0">
+      <div className="page-full flex flex-col gap-6">
         <Suspense fallback={null}>
-          <RankingsReportHeader id={id} />
+          <RankingsMarketPills id={id} />
         </Suspense>
-        <div className="lg:col-span-2 print:col-span-1">
-          <Suspense fallback={<RankingChartSkeleton />}>
-            <RankingsView id={id} />
+        <div className="grid gap-6 lg:grid-cols-3 print:grid-cols-1 [&>*]:min-w-0">
+          <Suspense fallback={null}>
+            <RankingsReportHeader id={id} />
           </Suspense>
-        </div>
-        <div className="flex flex-col gap-6">
-          <SerpMoversCard id={id} />
-          <AnnotationsCard id={id} />
+          <div className="lg:col-span-2 print:col-span-1">
+            <Suspense fallback={<RankingChartSkeleton />}>
+              <RankingsView id={id} />
+            </Suspense>
+          </div>
+          <div className="flex flex-col gap-6">
+            <SerpMoversCard id={id} />
+            <AnnotationsCard id={id} />
+          </div>
         </div>
       </div>
     </HydrationBoundary>
