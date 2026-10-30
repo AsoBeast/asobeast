@@ -153,6 +153,17 @@ describe('createOpenAiClient', () => {
     expect(sdkOptions()).not.toHaveProperty('organization');
   });
 
+  it.each(['', '   '])(
+    'treats a blank OPENAI_BASE_URL the config service hands back as unset (%p)',
+    (blank) => {
+      const client = createOpenAiClient(config('sk-test', 'gpt-4o', blank));
+
+      expect(client?.provider).toBe('openai');
+      expect(sdkOptions().baseURL).toBeNull();
+      expect(sdkOptions()).not.toHaveProperty('organization');
+    },
+  );
+
   it('names its provider from the configured address', () => {
     expect(build().provider).toBe('openai');
     expect(

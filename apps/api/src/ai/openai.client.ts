@@ -277,6 +277,11 @@ class OpenAiClient implements AiClient {
   }
 }
 
+const configuredBaseUrl = (
+  config: ConfigService<Env, true>,
+): string | undefined =>
+  config.get('OPENAI_BASE_URL', { infer: true })?.trim() || undefined;
+
 export function createOpenAiClient(
   config: ConfigService<Env, true>,
 ): AiClient | null {
@@ -285,7 +290,7 @@ export function createOpenAiClient(
     return null;
   }
   const model = config.get('AI_MODEL', { infer: true });
-  const baseURL = config.get('OPENAI_BASE_URL', { infer: true });
+  const baseURL = configuredBaseUrl(config);
   const provider = aiProviderOf(baseURL);
   return new OpenAiClient(
     new OpenAI({
