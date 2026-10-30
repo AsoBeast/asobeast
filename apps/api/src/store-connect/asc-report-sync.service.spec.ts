@@ -225,6 +225,24 @@ describe('AscReportSync', () => {
     );
   });
 
+  it('names a key that cannot request reports at once, even on an attempt that is retried', async () => {
+    const { service, requester, connections } = build();
+    requester.ensure.mockResolvedValue({
+      apps: 2,
+      reportAccess: 'readOnly',
+      forbidden: true,
+      failed: 1,
+    });
+
+    await service.run(false);
+
+    expect(connections.markSynced).toHaveBeenCalledWith(
+      'APP_STORE',
+      'readOnly',
+      ADMIN_KEY_NEEDED,
+    );
+  });
+
   it('clears the warning on an attempt that is not the last when nothing failed', async () => {
     const { service, connections } = build();
     connections.openAppStore.mockResolvedValueOnce({

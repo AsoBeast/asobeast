@@ -97,7 +97,7 @@ export class AscReportSync {
       await this.connections.markSynced(
         STORE,
         outcome.reportAccess,
-        retriesFailures(summary, finalAttempt)
+        retriesFailures(summary, finalAttempt) && !outcome.forbidden
           ? connection.lastError
           : lastErrorOf(outcome.forbidden, summary.failed),
       );
