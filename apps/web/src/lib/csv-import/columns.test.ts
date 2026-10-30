@@ -61,6 +61,8 @@ describe("detectColumns", () => {
     ["Query", "keyword"],
     ["Storefront", "country"],
     ["Country Code", "country"],
+    ["Store Domain", "country"],
+    ["Country Name", "country"],
     ["Groups", "tags"],
     ["Labels", "tags"],
     ["Comments", "note"],

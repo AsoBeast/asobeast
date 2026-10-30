@@ -14,12 +14,15 @@ import {
   type Store,
 } from "@asobeast/shared";
 import { ApiError, importKeywords } from "@/lib/api";
+import type { ImportTarget } from "@/lib/csv-import/scope";
 import {
+  appsLeftToChoose,
   initialView,
   mapKeywordFile,
   readKeywordFile,
   type FileView,
   type KeywordFile,
+  type MappedFile,
 } from "@/lib/csv-import/parse-keyword-file";
 import { formatNumber } from "@/lib/format";
 import {
@@ -30,11 +33,13 @@ import {
   refuseImport,
 } from "@/lib/keyword-import";
 import {
+  appDetailOptions,
   invalidateKeywordImport,
   invalidateKeywordMutation,
   keywordImportPreviewOptions,
 } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
+import { useCachedQueryData } from "@/lib/use-cached-query-data";
 
 const MAX_FILE_BYTES = 2_000_000;
 
@@ -68,6 +73,16 @@ function submitMessage(error: Error | null): string | null {
   return error.message;
 }
 
+function appsStillToChoose(
+  loaded: Loaded | null,
+  view: FileView | null,
+  mapped: MappedFile | null,
+): number {
+  return loaded && view && mapped
+    ? appsLeftToChoose(loaded.file, view, mapped)
+    : 0;
+}
+
 export function useKeywordImport(
   appId: string,
   store: Store,
@@ -81,10 +96,18 @@ export function useKeywordImport(
   const [readError, setReadError] = useState<string | null>(null);
   const latestChoice = useRef(0);
 
-  const mapped = useMemo(
-    () => (loaded && view ? mapKeywordFile(loaded.file, view) : null),
-    [loaded, view],
+  const detail = useCachedQueryData(appDetailOptions(appId).queryKey);
+  const target = useMemo<ImportTarget | null>(
+    () =>
+      detail ? { storeAppId: detail.storeAppId, name: detail.name } : null,
+    [detail],
   );
+
+  const mapped = useMemo(
+    () => (loaded && view ? mapKeywordFile(loaded.file, view, store) : null),
+    [loaded, view, store],
+  );
+  const appsToChoose = appsStillToChoose(loaded, view, mapped);
   const refusal = useMemo(
     () => (mapped ? refuseImport(mapped.rows, market) : null),
     [mapped, market],
@@ -141,7 +164,7 @@ export function useKeywordImport(
       if (choice !== latestChoice.current) return;
       setReadError(null);
       setLoaded({ name: file.name, file: parsed });
-      setView(initialView(parsed));
+      setView(initialView(parsed, target));
     } catch {
       if (choice === latestChoice.current) forget(FILE_UNREADABLE);
     }
@@ -171,8 +194,10 @@ export function useKeywordImport(
     busy: preview.isFetching,
     importing: submit.isPending,
     error: blocking ?? submitMessage(submit.error),
+    appsToChoose,
     canImport:
       result !== null &&
+      appsToChoose === 0 &&
       importableCount(result.summary) > 0 &&
       blocking === null &&
       !preview.isFetching &&

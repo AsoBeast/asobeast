@@ -51,6 +51,22 @@ const FILE = [
   "tower,zz,,",
 ].join("\r\n");
 
+const TWO_APP_FILE = [
+  "App Name,App Id,Platform,Keyword,Country,Note",
+  "Import Lab,123456789,iphone,alpha one,us,",
+  "Import Lab,123456789,ipad,alpha one,us,",
+  "Import Lab,123456789,iphone,beta two,pl,Launch keyword",
+  "Other App,987654321,iphone,gamma three,us,",
+].join("\r\n");
+
+const ASTRO_FILE = [
+  "App Name,App Id,Platform,Keyword,Store Domain,Store,Note,Last Update,Ranking,Change,Popularity,Difficulty,Apps in Ranking,Tags",
+  "Import Lab,123456789,iphone,alpha one,us,🇺🇸 US,,2026-10-29 22:23:37 +0000,4,2,48,31,120,",
+  "Import Lab,123456789,ipad,alpha one,us,🇺🇸 US,,2026-10-29 22:23:37 +0000,6,0,48,31,120,",
+  'Import Lab,123456789,iphone,beta two,pl,🇵🇱 Poland,"Launch keyword",2026-10-29 22:23:53 +0000,2,-1,22,18,64,"core, brand"',
+  "Other App,987654321,iphone,gamma three,us,🇺🇸 US,,2026-10-29 22:23:37 +0000,9,1,60,40,200,focus",
+].join("\r\n");
+
 const importRequests = (page: Page) => {
   const seen: Request[] = [];
   page.on("request", (request) => {
@@ -676,4 +692,145 @@ test("P-WEB-16 says so when the review cannot reach the server", async ({
   await expect(
     dialog.getByRole("button", { name: "Nothing to import" }),
   ).toBeDisabled();
+});
+
+test("P-WEB-17 imports only the app it is on from a file that holds several apps", async ({
+  page,
+}) => {
+  const dialog = await openDialog(page);
+
+  await choose(dialog, TWO_APP_FILE, "two-apps.csv");
+
+  const picker = dialog.getByRole("combobox", { name: "App to import" });
+  await expect(picker).toContainText("Import Lab (3 rows)");
+  await expect(
+    dialog.getByText("1 row for other apps is left out."),
+  ).toBeVisible();
+  await expect(dialog.getByRole("status")).toHaveText("2 new, 1 duplicate");
+  await expect(rowOf(dialog, /beta two/).getByText("PL")).toBeVisible();
+  await expect(rowOf(dialog, /gamma three/)).toHaveCount(0);
+
+  await picker.click();
+  await page.getByRole("option", { name: /All apps/ }).click();
+
+  await expect(dialog.getByText(/holds rows for 2 apps/)).toHaveCount(0);
+  await expect(dialog.getByRole("status")).toHaveText("3 new, 1 duplicate");
+  await expect(rowOf(dialog, /gamma three/)).toBeVisible();
+  await expect(
+    dialog.getByRole("button", { name: "Import 3 keywords" }),
+  ).toBeEnabled();
+});
+
+test("P-WEB-17 waits for an app to be chosen when no app of the file is the one it is on", async ({
+  page,
+}) => {
+  const dialog = await openDialog(page);
+
+  await choose(
+    dialog,
+    TWO_APP_FILE.replaceAll("Import Lab,123456789", "Third App,555000999"),
+    "two-other-apps.csv",
+  );
+
+  const picker = dialog.getByRole("combobox", { name: "App to import" });
+  await expect(picker).toContainText("Choose an app");
+  await expect(
+    dialog.getByText(
+      "This file holds rows for 2 apps. Choose one under App to import, or All apps, before you import.",
+    ),
+  ).toBeVisible();
+  await expect(dialog.getByRole("status")).toHaveText("3 new, 1 duplicate");
+  await expect(
+    dialog.getByRole("button", { name: "Import 3 keywords" }),
+  ).toBeDisabled();
+
+  await picker.click();
+  await page.getByRole("option", { name: "Other App (1 row)" }).click();
+
+  await expect(dialog.getByRole("status")).toHaveText("1 new");
+  await expect(
+    dialog.getByText("3 rows for other apps are left out."),
+  ).toBeVisible();
+  await expect(
+    dialog.getByRole("button", { name: "Import 1 keyword" }),
+  ).toBeEnabled();
+});
+
+test("P-WEB-17 has no accessibility violations with the app picker shown", async ({
+  page,
+}) => {
+  const dialog = await openDialog(page);
+  await choose(dialog, TWO_APP_FILE, "two-apps.csv");
+  await expect(dialog.getByRole("status")).toBeVisible();
+  await dialog.evaluate((node) =>
+    Promise.all(
+      node
+        .getAnimations({ subtree: true })
+        .map((animation) => animation.finished),
+    ).then(() => undefined),
+  );
+
+  const { violations } = await new AxeBuilder({ page })
+    .include('[role="dialog"]')
+    .analyze();
+
+  expect(
+    violations.map(({ id, nodes }) => ({
+      id,
+      targets: nodes.map((node) => node.target.join(" ")),
+    })),
+  ).toEqual([]);
+});
+
+test("P-WEB-18 reads an Astro export as it is", async ({ page }) => {
+  const dialog = await openDialog(page);
+
+  await choose(dialog, ASTRO_FILE, "astro-keywords.csv");
+
+  await expect(
+    dialog.getByRole("combobox", { name: "Country column" }),
+  ).toContainText("Store Domain");
+  await expect(
+    dialog.getByRole("combobox", { name: "App to import" }),
+  ).toContainText("Import Lab");
+  await expect(
+    dialog.getByText("1 row for other apps is left out."),
+  ).toBeVisible();
+  await expect(dialog.getByText("7 other columns are ignored.")).toBeVisible();
+  await expect(dialog.getByRole("status")).toHaveText("2 new, 1 duplicate");
+  await expect(rowOf(dialog, /beta two/).getByText("PL")).toBeVisible();
+  await expect(
+    rowOf(dialog, /alpha one/)
+      .first()
+      .getByText("US"),
+  ).toBeVisible();
+});
+
+test("P-WEB-19 reads an AppFollow export from its header row", async ({
+  page,
+}) => {
+  const dialog = await openDialog(page);
+
+  await choose(
+    dialog,
+    [
+      "sep=,",
+      'App name "Import Lab"',
+      "To: 2026-10-29,Page: tracked,ItemId: 261827,From: 2026-10-29,Dt_start: 2026-10-23,Dt_last: 2026-10-29,Device: iphone,Country: us,Compare: 2026-10-23,App_id: 50703",
+      "",
+      '"Sort by: Device, Keyword"',
+      "",
+      "Keyword,Position,Changes,Best Rank,Keywords in Title,Keywords in Subtitle,Total Apps,Popularity,Search Downloads,% of Search Downloads,2026-10-23,2026-10-24,2026-10-25,2026-10-26,2026-10-27,2026-10-28,2026-10-29",
+      "alpha one,4,,3,1,0,120,48,Upgrade plan to see this data,Upgrade plan to see this data,-,-,-,-,-,-,4",
+      "beta two,,,,0,0,80,31,Upgrade plan to see this data,Upgrade plan to see this data,-,-,-,-,-,-,-",
+    ].join("\n"),
+    "keywords_iphone_1793312083.csv",
+  );
+
+  await expect(
+    dialog.getByText("4 rows above the header were skipped."),
+  ).toBeVisible();
+  await expect(dialog.getByText("16 other columns are ignored.")).toBeVisible();
+  await expect(dialog.getByRole("status")).toHaveText("2 new");
+  await expect(rowOf(dialog, /alpha one/).getByText("8")).toBeVisible();
 });
