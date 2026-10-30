@@ -8,8 +8,9 @@ import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { testDb } from './helpers/test-db';
 import { ownerAgent, useCookies } from './helpers/session';
-import { AiClient, OPENAI_CLIENT } from '../src/ai/openai.client';
+import { OPENAI_CLIENT } from '../src/ai/openai.client';
 import { aiCompletion } from '../src/ai/ai-completion.fixture';
+import { stubAiClient } from '../src/ai/ai-client.fixture';
 
 import { obliterateQueues, settleBootRegistration } from './obliterate-queues';
 import { asWorkspace } from './helpers/tenancy';
@@ -45,10 +46,10 @@ const AI_RESPONSE = {
   consistentStyle: true,
 };
 
-const fakeAiClient: AiClient = {
-  model: 'gpt-4o',
-  structured: jest.fn().mockResolvedValue(aiCompletion(AI_RESPONSE)),
-};
+const fakeAiClient = stubAiClient(
+  jest.fn().mockResolvedValue(aiCompletion(AI_RESPONSE)),
+  'gpt-4o',
+);
 
 describe('AuditController (e2e)', () => {
   let app: INestApplication<App>;
@@ -351,6 +352,7 @@ describe('AuditController (e2e)', () => {
     expect(factor(after, 'icon')?.score).toBe(10);
     expect((after.overall as number) > (before.overall as number)).toBe(true);
     expect(after.ai.model).toBe('gpt-4o');
+    expect(after.ai.provider).toBe('openai');
     expect(after.ai.generatedAt).not.toBeNull();
     expect(after.creative?.screenshots).toHaveLength(6);
     expect(after.creative?.screenshots[0].keywordHits).toContain(
@@ -693,6 +695,7 @@ describe('AuditController without an AI key (e2e)', () => {
       .body as AppAuditResult;
     expect(audit.ai.configured).toBe(false);
     expect(audit.ai.model).toBeNull();
+    expect(audit.ai.provider).toBeNull();
 
     await api.post(`/apps/${created.id}/audit/ai`).expect(409);
   });

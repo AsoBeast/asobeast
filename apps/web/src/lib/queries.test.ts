@@ -29,6 +29,7 @@ import {
   alertsConfigKey,
   apiTokenKeys,
   appKeys,
+  importPreviewRequest,
   appDetailOptions,
   appSummaryOptions,
   AUDIT_RUN_POLL_MS,
@@ -545,6 +546,17 @@ describe("appKeys", () => {
   it("keys a serp by its keyword rather than by an app", () => {
     expect(serpOptions("kw-1").queryKey).toEqual(appKeys.serp("kw-1"));
     expect(isPrefixOf(appKeys.all, appKeys.serp("kw-1"))).toBe(false);
+  });
+});
+
+describe("importPreviewRequest", () => {
+  it("reads the request back from a preview key", () => {
+    const request = { rows: [{ keyword: "habit" }], country: "us" };
+
+    expect(importPreviewRequest(appKeys.importPreview("a", request))).toBe(
+      request,
+    );
+    expect(importPreviewRequest(appKeys.importPreview("a", null))).toBeNull();
   });
 });
 

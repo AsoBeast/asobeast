@@ -1740,11 +1740,24 @@ function auditFor(id: string, req: IncomingMessage, res: ServerResponse): void {
     json(res, 200, {
       ...base,
       creative: null,
-      ai: { ...base.ai, configured: false, model: null, run: null },
+      ai: {
+        ...base.ai,
+        configured: false,
+        model: null,
+        provider: null,
+        run: null,
+      },
     });
     return;
   }
-  const configured = { ...base.ai, configured: true, model: "gpt-5.6-luna" };
+  const configured = {
+    ...base.ai,
+    configured: true,
+    model: "gpt-5.6-luna",
+    provider: hasCookie(req, "e2e_ai_provider", "compatible")
+      ? ("compatible" as const)
+      : ("openai" as const),
+  };
   if (hasCookie(req, "e2e_ai_stale", "1")) {
     json(res, 200, {
       ...base,

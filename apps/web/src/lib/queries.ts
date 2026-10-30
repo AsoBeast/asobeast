@@ -630,6 +630,10 @@ export const keywordCountriesOptions = (id: string) =>
     queryFn: () => getKeywordCountries(id),
   });
 
+export const importPreviewRequest = ([, , , request]: ReturnType<
+  typeof appKeys.importPreview
+>): KeywordImportRequest | null => request;
+
 export const keywordImportPreviewOptions = (
   id: string,
   request: KeywordImportRequest | null,

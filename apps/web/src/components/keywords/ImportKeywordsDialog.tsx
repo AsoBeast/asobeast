@@ -15,14 +15,35 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { columnOptions } from "@/lib/csv-import/parse-keyword-file";
-import { fileNotices, importButtonLabel } from "@/lib/keyword-import";
+import {
+  columnOptions,
+  skippedAboveHeader,
+} from "@/lib/csv-import/parse-keyword-file";
+import {
+  fileNotices,
+  importButtonLabel,
+  skipButtonLabel,
+} from "@/lib/keyword-import";
 import { ImportBudgetNotice } from "./ImportBudgetNotice";
 import { ImportQuotaNotice } from "./ImportQuotaNotice";
 import { ImportFileStep } from "./ImportFileStep";
 import { ImportMapping } from "./ImportMapping";
 import { ImportPreview } from "./ImportPreview";
 import { useKeywordImport } from "./useKeywordImport";
+
+function primaryLabel({
+  importing,
+  action,
+  progress,
+  result,
+}: Pick<
+  ReturnType<typeof useKeywordImport>,
+  "importing" | "action" | "progress" | "result"
+>): string {
+  if (importing) return "Importing…";
+  if (action === "skip") return skipButtonLabel(progress);
+  return result ? importButtonLabel(result.summary) : "Nothing to import";
+}
 
 export function ImportKeywordsDialog({
   appId,
@@ -50,7 +71,11 @@ export function ImportKeywordsDialog({
       ? fileNotices({
           fallback: loaded.file.fallback,
           hasHeader: view.hasHeader,
+          skippedRows: skippedAboveHeader(loaded.file, view),
           ignoredColumns: mapped.ignoredColumns,
+          store,
+          leftOut: mapped.leftOut,
+          appsToChoose: flow.appsToChoose,
         })
       : [];
 
@@ -70,6 +95,7 @@ export function ImportKeywordsDialog({
           <ImportFileStep
             fileName={loaded?.name ?? null}
             onChoose={flow.choose}
+            disabled={flow.importing}
           />
           {notices.map((notice) => (
             <Alert key={notice} role="note" variant="warning">
@@ -82,8 +108,10 @@ export function ImportKeywordsDialog({
               market={flow.market}
               onMarketChange={flow.setMarket}
               view={view}
+              scope={loaded.file.scope}
               options={columnOptions(loaded.file, view)}
               onViewChange={flow.setView}
+              disabled={flow.importing}
             />
           ) : null}
           {flow.error ? (
@@ -91,11 +119,16 @@ export function ImportKeywordsDialog({
               <AlertDescription>{flow.error}</AlertDescription>
             </Alert>
           ) : null}
-          {result && mapped ? (
+          {flow.partNotice ? (
+            <Alert role="note">
+              <AlertDescription>{flow.partNotice}</AlertDescription>
+            </Alert>
+          ) : null}
+          {result ? (
             <>
               <ImportPreview
                 result={result}
-                lines={mapped.lines}
+                lines={flow.lines}
                 busy={flow.busy}
               />
               <ImportQuotaNotice result={result} />
@@ -112,13 +145,15 @@ export function ImportKeywordsDialog({
           >
             Cancel
           </Button>
-          <Button disabled={!flow.canImport} onClick={flow.submit}>
+          <Button
+            aria-disabled={flow.action === null}
+            onClick={() => {
+              if (flow.action === "import") flow.submit();
+              if (flow.action === "skip") flow.skip();
+            }}
+          >
             {flow.importing ? <Loader2 className="animate-spin" /> : null}
-            {flow.importing
-              ? "Importing…"
-              : result
-                ? importButtonLabel(result.summary)
-                : "Nothing to import"}
+            {primaryLabel(flow)}
           </Button>
         </DialogFooter>
       </DialogContent>

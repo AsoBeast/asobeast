@@ -1,6 +1,7 @@
 import { BadGatewayException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI, {
+  type ClientOptions,
   APIConnectionError,
   APIConnectionTimeoutError,
   APIError,
@@ -38,10 +39,17 @@ jest.mock('openai', () => {
 const config = (
   key: string | undefined,
   model = 'gpt-4o',
-): ConfigService<Env, true> =>
-  ({
-    get: (name: string) => (name === 'OPENAI_API_KEY' ? key : model),
-  }) as unknown as ConfigService<Env, true>;
+  baseUrl?: string,
+): ConfigService<Env, true> => {
+  const values: Partial<Record<keyof Env, unknown>> = {
+    OPENAI_API_KEY: key,
+    AI_MODEL: model,
+    OPENAI_BASE_URL: baseUrl,
+  };
+  return {
+    get: (name: keyof Env) => values[name],
+  } as unknown as ConfigService<Env, true>;
+};
 
 const completion = (
   choice: Record<string, unknown>,
@@ -83,6 +91,13 @@ const build = (): AiClient => {
   return client;
 };
 
+const sdkOptions = (): ClientOptions => {
+  const calls = (OpenAI as unknown as jest.Mock).mock.calls as Array<
+    [ClientOptions]
+  >;
+  return calls[calls.length - 1][0];
+};
+
 describe('createOpenAiClient', () => {
   beforeEach(() => {
     mockCreate.mockReset();
@@ -102,6 +117,68 @@ describe('createOpenAiClient', () => {
     expect(options.apiKey).toBe('sk-test');
     expect(options.timeout).toBeGreaterThan(0);
     expect(options.maxRetries).toBeGreaterThanOrEqual(0);
+  });
+
+  it('leaves the SDK on its default address when OPENAI_BASE_URL is unset', () => {
+    build();
+
+    expect(sdkOptions().baseURL).toBeNull();
+    expect(sdkOptions()).not.toHaveProperty('organization');
+    expect(sdkOptions()).not.toHaveProperty('project');
+  });
+
+  it('hands the SDK the address OPENAI_BASE_URL names', () => {
+    createOpenAiClient(
+      config(
+        'sk-or-v1-test',
+        'openai/gpt-5.6-luna',
+        'https://openrouter.ai/api/v1',
+      ),
+    );
+
+    expect(sdkOptions()).toMatchObject({
+      apiKey: 'sk-or-v1-test',
+      baseURL: 'https://openrouter.ai/api/v1',
+      organization: null,
+      project: null,
+    });
+  });
+
+  it('keeps the OpenAI account headers on an OpenAI residency host', () => {
+    createOpenAiClient(
+      config('sk-test', 'gpt-4o', 'https://eu.api.openai.com/v1'),
+    );
+
+    expect(sdkOptions().baseURL).toBe('https://eu.api.openai.com/v1');
+    expect(sdkOptions()).not.toHaveProperty('organization');
+  });
+
+  it.each(['', '   '])(
+    'treats a blank OPENAI_BASE_URL the config service hands back as unset (%p)',
+    (blank) => {
+      const client = createOpenAiClient(config('sk-test', 'gpt-4o', blank));
+
+      expect(client?.provider).toBe('openai');
+      expect(sdkOptions().baseURL).toBeNull();
+      expect(sdkOptions()).not.toHaveProperty('organization');
+    },
+  );
+
+  it('names its provider from the configured address', () => {
+    expect(build().provider).toBe('openai');
+    expect(
+      createOpenAiClient(
+        config('k-123456789', 'm', 'http://localhost:11434/v1'),
+      )?.provider,
+    ).toBe('compatible');
+  });
+
+  it('returns null without an api key even when an address is set', () => {
+    expect(
+      createOpenAiClient(
+        config(undefined, 'gpt-4o', 'http://localhost:11434/v1'),
+      ),
+    ).toBeNull();
   });
 
   it('parses JSON and maps text and image content parts', async () => {
@@ -332,6 +409,47 @@ describe('AiRequestError', () => {
     ]);
   });
 
+  it('scrubs the configured key whatever its format', async () => {
+    const key = 'gsk_live_0123456789abcdef';
+    const client = createOpenAiClient(
+      config(key, 'gpt-4o', 'https://api.groq.com/openai/v1'),
+    );
+    mockCreate.mockRejectedValue(
+      new BadRequestError(
+        400,
+        { message: `Key ${key} is not allowed to use vision` },
+        undefined,
+        headers,
+      ),
+    );
+
+    const failure = (await client
+      ?.structured(request)
+      .catch((caught: unknown) => caught)) as AiRequestError;
+
+    expect(failure.message).not.toContain(key);
+    expect(failure.message).toContain('[redacted]');
+    expect(failure.retryable).toBe(false);
+  });
+
+  it('leaves a message alone when a short local key would match ordinary words', async () => {
+    const client = createOpenAiClient(
+      config('ollama', 'llava', 'http://localhost:11434/v1'),
+    );
+    mockCreate.mockRejectedValue(
+      new BadRequestError(
+        400,
+        { message: 'ollama cannot load llava' },
+        undefined,
+        headers,
+      ),
+    );
+
+    await expect(client?.structured(request)).rejects.toMatchObject({
+      message: 'The AI provider refused the request: ollama cannot load llava',
+    });
+  });
+
   it('never puts the key in a message', async () => {
     mockCreate.mockRejectedValue(
       new AuthenticationError(
@@ -347,6 +465,121 @@ describe('AiRequestError', () => {
       .catch((caught: unknown) => caught)) as Error;
 
     expect(failure.message).not.toContain('sk-test');
+  });
+});
+
+const buildCompatible = (): AiClient => {
+  const client = createOpenAiClient(
+    config('sk-or-v1-test', 'gpt-4o', 'https://openrouter.ai/api/v1'),
+  );
+  if (!client) {
+    throw new Error('expected a configured client');
+  }
+  return client;
+};
+
+describe('AiRequestError from a compatible provider', () => {
+  beforeEach(() => {
+    mockCreate.mockReset();
+  });
+
+  it.each(REQUEST_FAILURES)(
+    'never names OpenAI for %s',
+    async (error, _message, retryable) => {
+      mockCreate.mockRejectedValue(error);
+
+      const failure = (await buildCompatible()
+        .structured(request)
+        .catch((caught: unknown) => caught)) as AiRequestError;
+
+      expect(failure).toBeInstanceOf(AiRequestError);
+      expect(failure.message).not.toMatch(/OpenAI/);
+      expect(failure.retryable).toBe(retryable);
+    },
+  );
+
+  it.each([
+    [
+      new AuthenticationError(401, {}, 'bad key', headers),
+      'The AI provider rejected the API key. Check OPENAI_API_KEY.',
+    ],
+    [
+      new PermissionDeniedError(403, {}, 'no access', headers),
+      'The API key cannot use gpt-4o.',
+    ],
+    [
+      new NotFoundError(404, {}, 'missing', headers),
+      'The AI provider does not offer the model gpt-4o. Check AI_MODEL and OPENAI_BASE_URL.',
+    ],
+    [
+      new RateLimitError(429, { code: 'insufficient_quota' }, 'quota', headers),
+      'The AI provider account has no remaining quota.',
+    ],
+    [
+      new APIConnectionError({ message: 'down' }),
+      'Could not reach the AI provider.',
+    ],
+  ])('words %p for the provider', async (error, message) => {
+    mockCreate.mockRejectedValue(error);
+
+    await expect(buildCompatible().structured(request)).rejects.toMatchObject({
+      message,
+    });
+  });
+
+  it('passes on the reason a provider gives for not serving the model', async () => {
+    mockCreate.mockRejectedValue(
+      new NotFoundError(
+        404,
+        { message: 'No endpoints found that support image URLs', code: 404 },
+        'missing',
+        headers,
+      ),
+    );
+
+    await expect(buildCompatible().structured(request)).rejects.toMatchObject({
+      message:
+        'The AI provider does not offer the model gpt-4o for this request (No endpoints found that support image URLs). Check AI_MODEL and OPENAI_BASE_URL.',
+      retryable: false,
+    });
+  });
+
+  it('scrubs the configured key from a reason for not serving the model', async () => {
+    mockCreate.mockRejectedValue(
+      new NotFoundError(
+        404,
+        { message: 'no route for sk-or-v1-test' },
+        'missing',
+        headers,
+      ),
+    );
+
+    const failure = (await buildCompatible()
+      .structured(request)
+      .catch((caught: unknown) => caught)) as AiRequestError;
+
+    expect(failure.message).not.toContain('sk-or-v1-test');
+    expect(failure.message).toContain('[redacted]');
+  });
+
+  it.each([
+    [stop(null, 'no'), 'The AI provider refused to analyze this listing.'],
+    [stop('not json'), 'The AI provider returned an unreadable response.'],
+    [stop(null), 'The AI provider returned an empty response.'],
+    [{ choices: [] }, 'The AI provider returned no choices.'],
+    [
+      completion({
+        finish_reason: 'content_filter',
+        message: { content: null, refusal: null },
+      }),
+      'The AI provider filtered the response.',
+    ],
+  ])('words an unusable answer for the provider', async (response, message) => {
+    mockCreate.mockResolvedValue(response);
+
+    await expect(buildCompatible().structured(request)).rejects.toMatchObject({
+      message,
+    });
   });
 });
 
@@ -415,4 +648,36 @@ describe('token usage', () => {
       );
     },
   );
+
+  it('reads a blank provider reason as no details', () => {
+    expect(
+      classifyRequestError(
+        new BadRequestError(400, { message: '   ' }, undefined, headers),
+        'gpt-4o',
+      ).message,
+    ).toBe('OpenAI refused the request: no details');
+  });
+
+  it('keeps the OpenAI wording when OpenAI explains a missing model', () => {
+    expect(
+      classifyRequestError(
+        new NotFoundError(
+          404,
+          { message: 'The model `gpt-4o` does not exist' },
+          'missing',
+          headers,
+        ),
+        'gpt-4o',
+      ).message,
+    ).toBe('OpenAI does not offer the model gpt-4o. Check AI_MODEL.');
+  });
+
+  it('words a failure for OpenAI when no provider is given', () => {
+    expect(
+      classifyRequestError(
+        new APIConnectionError({ message: 'down' }),
+        'gpt-4o',
+      ).message,
+    ).toBe('Could not reach OpenAI.');
+  });
 });

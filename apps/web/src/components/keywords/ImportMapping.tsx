@@ -16,6 +16,8 @@ import type {
   ColumnOption,
   FileView,
 } from "@/lib/csv-import/parse-keyword-file";
+import { ALL_APPS, type FileScope } from "@/lib/csv-import/scope";
+import { formatNumber } from "@/lib/format";
 
 const FIELD_LABELS: Record<ImportField, string> = {
   keyword: "Keyword",
@@ -26,20 +28,27 @@ const FIELD_LABELS: Record<ImportField, string> = {
 
 const NONE = "none";
 
+const rowCount = (rows: number): string =>
+  `${formatNumber(rows)} row${rows === 1 ? "" : "s"}`;
+
 export function ImportMapping({
   store,
   market,
   onMarketChange,
   view,
+  scope,
   options,
   onViewChange,
+  disabled,
 }: {
   store: Store;
   market: string;
   onMarketChange: (market: string) => void;
   view: FileView;
+  scope: FileScope;
   options: ColumnOption[];
   onViewChange: (view: FileView) => void;
+  disabled: boolean;
 }) {
   const pick = (field: ImportField, value: string) =>
     onViewChange({
@@ -51,7 +60,10 @@ export function ImportMapping({
     });
 
   return (
-    <fieldset className="flex flex-col gap-3 rounded-lg border p-3">
+    <fieldset
+      disabled={disabled}
+      className="flex flex-col gap-3 rounded-lg border p-3"
+    >
       <legend className="px-1 text-sm font-medium">Columns</legend>
       <div className="flex items-center gap-2">
         <Switch
@@ -94,6 +106,29 @@ export function ImportMapping({
           );
         })}
       </div>
+      {view.hasHeader && scope.apps.length > 1 ? (
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="keyword-import-app">App to import</Label>
+          <Select
+            value={view.app ?? ""}
+            onValueChange={(app) => onViewChange({ ...view, app })}
+          >
+            <SelectTrigger id="keyword-import-app" aria-label="App to import">
+              <SelectValue placeholder="Choose an app" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_APPS}>
+                {`All apps (${rowCount(scope.rows)})`}
+              </SelectItem>
+              {scope.apps.map((app) => (
+                <SelectItem key={app.value} value={app.value}>
+                  {`${app.label} (${rowCount(app.rows)})`}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      ) : null}
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="keyword-import-market">
           Market for rows without a country

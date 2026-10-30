@@ -8,6 +8,7 @@ const notConfigured = () =>
 export const buildAi = (spend?: jest.Mock, configured = true) => ({
   configured,
   model: configured ? 'gpt-4o' : null,
+  provider: configured ? 'openai' : null,
   requireModel: jest.fn(() => {
     if (!configured) throw new ConflictException(AI_NOT_CONFIGURED);
     return 'gpt-4o';

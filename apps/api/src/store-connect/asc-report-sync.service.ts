@@ -23,7 +23,11 @@ import {
   type PendingInstance,
 } from './store-report-applier';
 import { StoreReportRequester } from './store-report-requester';
-import { emptySummary, type SyncSummary } from './store-sync-summary';
+import {
+  emptySummary,
+  retriesFailures,
+  type SyncSummary,
+} from './store-sync-summary';
 
 const STORE = 'APP_STORE';
 
@@ -45,8 +49,8 @@ const messageOf = (error: unknown): string =>
 
 const listingWait = (error: unknown): string =>
   isNotFound(error)
-    ? 'is gone at Apple and is requested again on the next sync'
-    : 'waits for the next sync';
+    ? 'is gone at Apple and is requested again on the next try'
+    : 'waits for the next try';
 
 const lastErrorOf = (forbidden: boolean, failed: number): string | null =>
   forbidden ? ADMIN_KEY_NEEDED : failed > 0 ? PARTIAL_SYNC : null;
@@ -83,7 +87,7 @@ export class AscReportSync {
     private readonly keywordFields: AscKeywordFieldSync,
   ) {}
 
-  async run(): Promise<SyncSummary | null> {
+  async run(finalAttempt = true): Promise<SyncSummary | null> {
     const connection = await this.connections.openAppStore();
     if (!connection || connection.status === 'rejected') return null;
     const summary = emptySummary();
@@ -107,7 +111,9 @@ export class AscReportSync {
       await this.connections.markSynced(
         STORE,
         outcome.reportAccess,
-        lastErrorOf(outcome.forbidden, summary.failed),
+        retriesFailures(summary, finalAttempt) && !outcome.forbidden
+          ? connection.lastError
+          : lastErrorOf(outcome.forbidden, summary.failed),
       );
     } catch (error) {
       if (error instanceof AscRejectedKeyError) {
@@ -162,7 +168,7 @@ export class AscReportSync {
         blocked.add(lane);
         if (!(error instanceof AscSegmentSizeError)) summary.failed += 1;
         this.logger.warn(
-          `report instance ${item.instance.id} waits for the next sync: ${messageOf(error)}`,
+          `report instance ${item.instance.id} waits for the next try: ${messageOf(error)}`,
         );
       }
     }

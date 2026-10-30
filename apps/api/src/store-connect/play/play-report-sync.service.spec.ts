@@ -14,6 +14,7 @@ import {
   PLAY_REPORT_MAX_BYTES,
   type GcsObject,
 } from './gcs-api';
+import { GcsUnreachableError } from './gcs-transport';
 import {
   importedMonths,
   PLAY_PARTIAL_SYNC,
@@ -125,7 +126,7 @@ function harness(objects: GcsObject[]) {
         id: 'conn_play',
         status: 'active',
         reportAccess: 'admin',
-        lastError: null,
+        lastError: null as string | null,
         api,
       }),
     ),
@@ -391,7 +392,22 @@ describe('PlayReportSync', () => {
     expect(api.download.mock.calls.map(([name]) => name)).toEqual([
       object('202609', 'traffic_source').name,
     ]);
-    expect(summary).toMatchObject({ instances: 1, failed: 1 });
+    expect(summary).toMatchObject({ instances: 1, failed: 0, skipped: 1 });
+    expect(connections.markSynced).toHaveBeenCalledWith(
+      'GOOGLE_PLAY',
+      'admin',
+      PLAY_PARTIAL_SYNC,
+    );
+  });
+
+  it('says so at once on an attempt that is not the last, since a retry cannot shrink a file', async () => {
+    const { service, connections } = harness([
+      { ...object('202609', 'country'), size: PLAY_REPORT_MAX_BYTES + 1 },
+    ]);
+
+    const summary = await service.run(NOW, false);
+
+    expect(summary).toMatchObject({ failed: 0, skipped: 1 });
     expect(connections.markSynced).toHaveBeenCalledWith(
       'GOOGLE_PLAY',
       'admin',
@@ -416,6 +432,26 @@ describe('PlayReportSync', () => {
 
     expect(summary).toMatchObject({ instances: 1, failed: 1 });
     expect(connections.markRejected).not.toHaveBeenCalled();
+    expect(connections.markSynced).toHaveBeenCalledWith(
+      'GOOGLE_PLAY',
+      'admin',
+      PLAY_PARTIAL_SYNC,
+    );
+  });
+
+  it('keeps the earlier warning on an attempt that is not the last, so a retry decides', async () => {
+    const { service, api, connections } = harness([
+      object('202609', 'country'),
+    ]);
+    connections.openPlay.mockResolvedValueOnce({
+      ...(await connections.openPlay()),
+      lastError: PLAY_PARTIAL_SYNC,
+    });
+    api.download.mockRejectedValueOnce(new GcsUnreachableError('timeout'));
+
+    const summary = await service.run(NOW, false);
+
+    expect(summary).toMatchObject({ failed: 1 });
     expect(connections.markSynced).toHaveBeenCalledWith(
       'GOOGLE_PLAY',
       'admin',

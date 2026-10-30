@@ -2,6 +2,7 @@ import { OnWorkerEvent, Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
+import { isFinalAttempt } from '../jobs/final-attempt';
 import { reportJobFailure } from '../jobs/job-failure';
 import { requireJobScope } from '../jobs/job-workspace';
 import { QUEUES, type SyncStoreReportsPayload } from '../jobs/jobs.types';
@@ -34,7 +35,7 @@ export class StoreReportsWorker extends WorkerHost {
 
   async process(job: Job<SyncStoreReportsPayload>): Promise<void> {
     await this.workspace.runScope(requireJobScope(job), () =>
-      this.sync.run(job.data.store),
+      this.sync.run(job.data.store, isFinalAttempt(job)),
     );
   }
 
