@@ -16,7 +16,7 @@ const TEMPLATE = toCsv(
   ],
 );
 
-const PARTS_HINT = `A file over ${formatNumber(KEYWORD_IMPORT_LIMIT)} rows is imported in parts.`;
+const PARTS_HINT = `A long file is imported in parts of up to ${formatNumber(KEYWORD_IMPORT_LIMIT)} rows.`;
 
 export function ImportFileStep({
   fileName,

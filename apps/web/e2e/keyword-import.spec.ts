@@ -298,6 +298,11 @@ test("P-WEB-07 imports a file longer than one import in parts, one after the oth
 
   await expect(
     dialog.getByText(
+      "Reading keywords.csv. A long file is imported in parts of up to 500 rows.",
+    ),
+  ).toBeVisible();
+  await expect(
+    dialog.getByText(
       "The 501 rows are imported in 2 parts, one after the other. Part 1 holds lines 2 to 501.",
     ),
   ).toBeVisible();
