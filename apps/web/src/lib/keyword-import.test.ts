@@ -116,7 +116,8 @@ describe("importParts", () => {
 
   it("U-REQ-08 gives a row that fills a request a part of its own", () => {
     const big = { keyword: "fitness", note: "x".repeat(60_000) };
-    const rows = [rowsOf(1)[0]!, big, big, rowsOf(1)[0]!];
+    const small = { keyword: "fitness workout plan" };
+    const rows = [small, big, big, small];
 
     expect(importParts(rows, "us")).toEqual([
       { start: 0, end: 2 },
