@@ -166,11 +166,11 @@ The review reply prompt receives the store, the app name, the one review being a
 - **The audit button is missing but the key is set.** Confirm the key reached the API container. `docker compose config` shows the resolved environment.
 - **The model rejects the request.** `AI_MODEL` must accept images and structured outputs. A text only model fails the creative analysis while drafts still work.
 - **The API refuses to start and names OPENAI_BASE_URL.** The address is not an http or https URL, or it contains a user name, a password or a `#` fragment. Put the key in `OPENAI_API_KEY` instead.
-- **Every call reports that the provider does not offer the model.** `AI_MODEL` still holds an OpenAI model name. Set it to the name your provider uses.
-- **A call reports that the provider does not offer the model for this request.** The provider's own reason follows the colon. "No endpoints found that support image URLs" comes from the creative analysis, the one feature that sends images, and means the model takes images only as embedded data; pick one that downloads image links.
+- **Every call reports that the provider does not offer the model.** `AI_MODEL` still holds an OpenAI model name, or `OPENAI_BASE_URL` is missing the API path, such as the `/v1` at its end. Set the model to the name your provider uses and the address to the one its documentation gives.
+- **A call reports that the provider does not offer the model for this request.** The provider's own reason is in the parentheses. "No endpoints found that support image URLs" comes from the creative analysis, the one feature that sends images, and means the model takes images only as embedded data; pick one that downloads image links.
 - **Could not reach the AI provider.** The API container cannot open the address. From the Compose stacks, `localhost` is the container; see [Reaching a model on the Docker host](#reaching-a-model-on-the-docker-host).
 
-A failed creative analysis shows one of these messages. With `OPENAI_BASE_URL` naming a provider other than OpenAI, each message says "the AI provider" where it says "OpenAI" here, and "The OpenAI key" reads "The API key". When such a provider explains why it does not offer the model, the message ends with that reason instead of "Check AI_MODEL." Only transient failures are retried, once.
+A failed creative analysis shows one of these messages. With `OPENAI_BASE_URL` naming a provider other than OpenAI, each message says "the AI provider" where it says "OpenAI" here, and "The OpenAI key" reads "The API key". When such a provider does not offer the model, the message asks to check both `AI_MODEL` and `OPENAI_BASE_URL`, and carries the provider's reason in parentheses when it gives one. Only transient failures are retried, once.
 
 | Message | Fix |
 | --- | --- |
