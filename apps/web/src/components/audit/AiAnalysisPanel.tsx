@@ -24,6 +24,7 @@ import {
   ANALYSIS_COPY,
   analysisState,
   type AnalysisState,
+  imageLinksLine,
   progressLine,
 } from "./analysis-state";
 
@@ -181,7 +182,7 @@ function AnalysisIntro({
       ) : null}
       {state === "never" && audit.ai.model ? (
         <p className="text-caption text-muted-foreground">
-          Sends image links to OpenAI with {audit.ai.model}.
+          {imageLinksLine(audit.ai.provider, audit.ai.model)}
         </p>
       ) : null}
     </div>

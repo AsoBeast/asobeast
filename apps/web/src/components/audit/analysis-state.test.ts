@@ -9,6 +9,7 @@ import {
   ANALYSIS_ACTION,
   ANALYSIS_COPY,
   analysisState,
+  imageLinksLine,
   progressLine,
   type AnalysisState,
 } from "./analysis-state";
@@ -99,5 +100,28 @@ describe("progressLine", () => {
     expect(progressLine(4)).toBe("Analyzing your icon and 4 screenshots");
     expect(progressLine(1)).toBe("Analyzing your icon and 1 screenshot");
     expect(progressLine(null)).toBe("Analyzing your icon and screenshots");
+  });
+});
+
+describe("imageLinksLine", () => {
+  it("names OpenAI when the API names it", () => {
+    expect(imageLinksLine("openai", "gpt-5.6-luna")).toBe(
+      "Sends image links to OpenAI with gpt-5.6-luna.",
+    );
+  });
+
+  it("names OpenAI when an older API reports no provider", () => {
+    expect(imageLinksLine(undefined, "gpt-5.6-luna")).toBe(
+      "Sends image links to OpenAI with gpt-5.6-luna.",
+    );
+  });
+
+  it("never names OpenAI or a host for a compatible provider", () => {
+    const line = imageLinksLine("compatible", "llava");
+
+    expect(line).toBe(
+      "Sends image links to llava on the AI provider this instance is configured with.",
+    );
+    expect(line).not.toMatch(/openai/i);
   });
 });
