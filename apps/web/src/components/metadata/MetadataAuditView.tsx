@@ -84,6 +84,8 @@ export function MetadataAuditView({
     retry: false,
   });
   const storeManaged = localizations.data?.storeManaged ?? false;
+  const localizationsSettled =
+    !keywordFields || localizations.isSuccess || localizations.isError;
 
   return (
     <>
@@ -138,7 +140,7 @@ export function MetadataAuditView({
         )}
       </section>
 
-      {result.store === "APP_STORE" && !storeManaged ? (
+      {result.store === "APP_STORE" && !storeManaged && localizationsSettled ? (
         <FieldSuggestion
           id={id}
           home={home}
