@@ -7,6 +7,7 @@ import {
   expectFitsViewport,
   settleAnimations,
 } from "./dialog.mts";
+import { hydrated } from "./hydrated.mts";
 import {
   fieldRequests,
   LOCALES_APP,
@@ -1065,7 +1066,11 @@ test.describe("on the locale lab", () => {
       await seedLocalizations(page.request, LOCALES_APP, { markets: ["de"] });
       await page.goto(LOCALES_METADATA);
 
-      await unlisted(page).getByRole("button", { name: "Add German" }).click();
+      await (
+        await hydrated(
+          unlisted(page).getByRole("button", { name: "Add German" }),
+        )
+      ).click();
 
       await expect(page.getByText("Added German")).toBeVisible();
       await expect(page).toHaveURL(/fieldLocale=de(&|$)/);
@@ -1100,7 +1105,7 @@ test.describe("on the locale lab", () => {
       await page.goto(LOCALES_METADATA);
       const add = unlisted(page).getByRole("button", { name: "Add German" });
 
-      await add.focus();
+      await (await hydrated(add)).focus();
       await expect(add).toBeFocused();
       await page.keyboard.press("Enter");
 
@@ -1113,7 +1118,9 @@ test.describe("on the locale lab", () => {
     const dialog = (page: Page) => page.getByRole("dialog");
 
     const openAdd = async (page: Page) => {
-      await page.getByRole("button", { name: "Add localization" }).click();
+      await (
+        await hydrated(page.getByRole("button", { name: "Add localization" }))
+      ).click();
       await expect(
         page.getByRole("dialog", { name: "Add a localization" }),
       ).toBeVisible();
@@ -1313,7 +1320,11 @@ test.describe("on the locale lab", () => {
       });
       await page.goto(`${LOCALES_METADATA}?fieldLocale=es-MX`);
 
-      await page.getByRole("button", { name: "Remove localization" }).click();
+      await (
+        await hydrated(
+          page.getByRole("button", { name: "Remove localization" }),
+        )
+      ).click();
       const confirm = page.getByRole("alertdialog", {
         name: "Remove Spanish (Mexico)?",
       });
@@ -1371,7 +1382,7 @@ test.describe("on the locale lab", () => {
     test("finds localizations the store proves", async ({ page }) => {
       await page.goto(LOCALES_METADATA);
 
-      await find(page).click();
+      await (await hydrated(find(page))).click();
 
       await expect(page.getByText("Queued · localizations")).toBeVisible();
       await expect(
@@ -1392,7 +1403,7 @@ test.describe("on the locale lab", () => {
     }) => {
       await page.goto(LOCALES_METADATA);
 
-      await find(page).click();
+      await (await hydrated(find(page))).click();
 
       const matrix = page.getByRole("table", {
         name: "Which of your markets read each localization",
@@ -1410,11 +1421,11 @@ test.describe("on the locale lab", () => {
       page,
     }) => {
       await page.goto(LOCALES_METADATA);
-      await find(page).click();
+      await (await hydrated(find(page))).click();
       await expect(page.getByText("Queued · localizations")).toBeVisible();
       await page.reload();
 
-      await find(page).click();
+      await (await hydrated(find(page))).click();
 
       await expect(
         page.getByText(
@@ -1430,7 +1441,7 @@ test.describe("on the locale lab", () => {
       await seedCookies(page.context(), { detect_refused: "1" });
       await page.goto(LOCALES_METADATA);
 
-      await find(page).click();
+      await (await hydrated(find(page))).click();
 
       await expect(page.getByText(/Refresh limit reached/)).toBeVisible();
     });
@@ -1449,7 +1460,7 @@ test.describe("on the locale lab", () => {
       );
       await page.goto(LOCALES_METADATA);
 
-      await find(page).click();
+      await (await hydrated(find(page))).click();
 
       await expect(find(page)).toBeDisabled();
       release();
