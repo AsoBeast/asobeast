@@ -61,8 +61,8 @@ interface Imported {
   terms: SearchTermRow[];
 }
 
-const lastErrorOf = (failed: number): string | null =>
-  failed > 0 ? PLAY_PARTIAL_SYNC : null;
+const lastErrorOf = ({ failed, skipped }: SyncSummary): string | null =>
+  failed + skipped > 0 ? PLAY_PARTIAL_SYNC : null;
 
 const dateValue = (key: string): Date => new Date(`${key}T00:00:00.000Z`);
 
@@ -211,9 +211,9 @@ export class PlayReportSync {
       await this.connections.markSynced(
         STORE,
         'admin',
-        retriesFailures(summary, finalAttempt)
+        retriesFailures(summary, finalAttempt) && summary.skipped === 0
           ? connection.lastError
-          : lastErrorOf(summary.failed),
+          : lastErrorOf(summary),
       );
     } catch (error) {
       await this.failed(error, connection.api, summary, connection.lastError);
@@ -228,7 +228,7 @@ export class PlayReportSync {
   ): Promise<void> {
     for (const file of files) {
       if (file.object.size > PLAY_REPORT_MAX_BYTES) {
-        summary.failed += 1;
+        summary.skipped += 1;
         this.logger.warn(
           `${file.object.name} is ${file.object.size} bytes, above the ${PLAY_REPORT_MAX_BYTES} byte ceiling, and is skipped`,
         );
