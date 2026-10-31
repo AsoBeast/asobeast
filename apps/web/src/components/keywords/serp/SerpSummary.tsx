@@ -103,12 +103,12 @@ function PositionValue({
     case "deeper":
       return (
         <>
-          <Value>#{position.position}</Value>
-          <Note>below the top {position.listed}</Note>
+          <Value>{`#${position.position}`}</Value>
+          <Note>{`below the top ${position.listed}`}</Note>
         </>
       );
     case "notFound":
-      return <Note>Not in the top {position.depth}</Note>;
+      return <Note>{`Not in the top ${position.depth}`}</Note>;
     default:
       return <Note>Not in this list</Note>;
   }
@@ -116,11 +116,7 @@ function PositionValue({
 
 function TitlesValue({ titles }: { titles: TitleSummary | null }) {
   if (!titles) return <Note>Not reported</Note>;
-  return (
-    <Value>
-      {titles.withKeyword} of {titles.of}
-    </Value>
-  );
+  return <Value>{`${titles.withKeyword} of ${titles.of}`}</Value>;
 }
 
 function RatingsValue({ ratings }: { ratings: RatingSummary }) {

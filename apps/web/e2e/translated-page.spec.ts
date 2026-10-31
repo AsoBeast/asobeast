@@ -13,6 +13,8 @@ import {
   resetImportKeywords,
 } from "./keyword-import-dialog.mts";
 import { fulfillJson, routePlan } from "./plan-helpers.mts";
+import { SERP_HISTORY_DAYS } from "./serp-history.mts";
+import type { SerpEntryItem, SerpSnapshot } from "@asobeast/shared";
 import { expect, test } from "./session.mts";
 
 const TRIAL_PLAN: AccountPlan = {
@@ -255,4 +257,63 @@ test.describe("a translated import dialog", () => {
     ).toBeVisible();
     expect(errors).toEqual([]);
   });
+});
+
+const flipped = (
+  entry: SerpEntryItem,
+  newest: readonly SerpEntryItem[],
+): SerpEntryItem => {
+  const rose = newest[entry.position - 1]?.movement === "up";
+  const delta = rose && entry.position > 1 ? 1 : -1;
+  return {
+    ...entry,
+    previous: entry.position - delta,
+    delta,
+    movement: delta < 0 ? "up" : "down",
+  };
+};
+
+async function flipEarlierMovement(page: Page): Promise<void> {
+  let newest: SerpEntryItem[] = [];
+  await page.route("**/api/backend/keywords/kw-3/serp*", async (route) => {
+    const response = await route.fetch();
+    const snapshot = (await response.json()) as SerpSnapshot;
+    if (!new URL(route.request().url()).searchParams.has("date")) {
+      newest = snapshot.entries;
+      return route.fulfill({ response, json: snapshot });
+    }
+    return route.fulfill({
+      response,
+      json: {
+        ...snapshot,
+        entries: snapshot.entries.map((entry) => flipped(entry, newest)),
+      },
+    });
+  });
+}
+
+test("a translated search results sheet steps through its captured days", async ({
+  page,
+}) => {
+  const [, YESTERDAY, DAY_BEFORE] = SERP_HISTORY_DAYS;
+  const errors = collectDomErrors(page);
+  await flipEarlierMovement(page);
+  await page.goto("/apps/app-1/keywords?serp=kw-3");
+  const sheet = page.getByRole("dialog", { name: "Search results" });
+  await expect(sheet.locator("li#serp-row-1")).toBeVisible();
+  const previous = await hydrated(
+    sheet.getByRole("button", { name: "Previous captured day" }),
+  );
+
+  await translateText(page);
+  await previous.click();
+  await expect(page).toHaveURL(new RegExp(`serpDate=${YESTERDAY}`));
+  await expect(sheet.locator("li#serp-row-1")).toBeVisible();
+  await previous.click();
+  await expect(page).toHaveURL(new RegExp(`serpDate=${DAY_BEFORE}`));
+  await sheet.getByRole("button", { name: "Next captured day" }).click();
+  await expect(page).toHaveURL(new RegExp(`serpDate=${YESTERDAY}`));
+
+  await expect(sheet.locator('[data-slot="serp-summary"]')).toBeVisible();
+  expect(errors).toEqual([]);
 });
