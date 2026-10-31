@@ -213,7 +213,9 @@ const STUDY_DEEP: Seed[] = [
   { ...SERP_TRACKABLE, developer: "Countdown Co" },
   ...filler(13, 14, "Study Notes"),
   { storeAppId: "777000015", title: "Stúdy Timer Lite" },
-  ...filler(16, 29, "Study Notes"),
+  ...filler(16, 19, "Study Notes"),
+  { storeAppId: "777000020", title: "مؤقت الدراسة", developer: "استوديو" },
+  ...filler(21, 29, "Study Notes"),
   {
     storeAppId: "777000030",
     title: "Late Study Timer",

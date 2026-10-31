@@ -275,6 +275,29 @@ test("marks the keyword's words in a title", async ({ page }) => {
   await expect(rowAt(sheet, 10).locator("mark")).toHaveCount(0);
 });
 
+test("lays out a right to left title from the right edge of its row", async ({
+  page,
+}) => {
+  const sheet = await openStudyTimer(page);
+  const title = rowAt(sheet, 20).locator('[translate="no"]').first();
+  const column = rowAt(sheet, 20).locator('[translate="no"]').last();
+
+  const [titleBox, columnBox] = await Promise.all([
+    title.boundingBox(),
+    column.boundingBox(),
+  ]);
+
+  expect(titleBox).not.toBeNull();
+  expect(columnBox).not.toBeNull();
+  expect(
+    Math.abs(
+      (titleBox?.x ?? 0) +
+        (titleBox?.width ?? 0) -
+        ((columnBox?.x ?? 0) + (columnBox?.width ?? 0)),
+    ),
+  ).toBeLessThan(1);
+});
+
 test("sums up titles and ratings of the top 10", async ({ page }) => {
   const sheet = await openStudyTimer(page);
 

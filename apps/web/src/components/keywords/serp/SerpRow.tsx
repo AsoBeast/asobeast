@@ -71,8 +71,8 @@ export function SerpAppText({
 }) {
   return (
     <div className="col-start-3 row-start-1 flex min-w-0 flex-col gap-0.5">
-      <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <span translate="no" dir="auto" className="font-medium wrap-anywhere">
+      <span dir="auto" className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <span translate="no" className="font-medium wrap-anywhere">
           <MatchedText segments={segments} fallback={title} />
         </span>
         <RoleBadge role={role} />
