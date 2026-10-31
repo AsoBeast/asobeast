@@ -13,6 +13,7 @@ const ANCIENT = new Date('2026-06-01T00:00:00.000Z');
 const RETENTION_WINDOWS = {
   RETENTION_RANKINGS_DAYS: '5',
   RETENTION_SERP_DAYS: '0',
+  RETENTION_SERP_DEEP_DAYS: '0',
   RETENTION_CATEGORY_RANKS_DAYS: '0',
   RETENTION_CHANGE_EVENTS_DAYS: '3',
   RETENTION_SNAPSHOTS_DAYS: '3',
@@ -20,6 +21,55 @@ const RETENTION_WINDOWS = {
   RETENTION_ALERT_EVENTS_DAYS: '3',
   RETENTION_AUDIT_SCORES_DAYS: '0',
   RETENTION_ACTIONS_DAYS: '3',
+};
+
+const SERP_WINDOWS = {
+  RETENTION_SERP_DAYS: '90',
+  RETENTION_SERP_DEEP_DAYS: '30',
+};
+
+const daysBefore = (days: number) =>
+  new Date(NOW.getTime() - days * 86_400_000);
+
+const retentionModule = () =>
+  Test.createTestingModule({
+    imports: [
+      ConfigModule.forRoot({
+        isGlobal: true,
+        ignoreEnvFile: true,
+        validate: validateEnv,
+      }),
+      PrismaModule,
+    ],
+    providers: [RetentionService],
+  }).compile();
+
+const withWindows = async <T>(
+  windows: Record<string, string>,
+  run: () => Promise<T>,
+): Promise<T> => {
+  const saved = new Map(
+    Object.keys(windows).map((key) => [key, process.env[key]]),
+  );
+  Object.assign(process.env, windows);
+  try {
+    return await run();
+  } finally {
+    for (const [key, value] of saved) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+};
+
+const pruneAtNow = async (retention: RetentionService) => {
+  jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] });
+  jest.setSystemTime(NOW);
+  try {
+    return await retention.prune();
+  } finally {
+    jest.useRealTimers();
+  }
 };
 
 const CLOSED_STATUSES = ['DONE', 'DISMISSED', 'RESOLVED'] as const;
@@ -56,25 +106,8 @@ describe('Retention against an upgraded baseline database', () => {
     updatedAt: ANCIENT,
   });
 
-  const savedWindows = new Map<string, string | undefined>();
-
   beforeAll(async () => {
-    for (const key of Object.keys(RETENTION_WINDOWS)) {
-      savedWindows.set(key, process.env[key]);
-    }
-    Object.assign(process.env, RETENTION_WINDOWS);
-
-    moduleRef = await Test.createTestingModule({
-      imports: [
-        ConfigModule.forRoot({
-          isGlobal: true,
-          ignoreEnvFile: true,
-          validate: validateEnv,
-        }),
-        PrismaModule,
-      ],
-      providers: [RetentionService],
-    }).compile();
+    moduleRef = await withWindows(RETENTION_WINDOWS, retentionModule);
 
     retention = moduleRef.get(RetentionService);
     prisma = testDb();
@@ -105,20 +138,13 @@ describe('Retention against an upgraded baseline database', () => {
       })),
     });
 
-    jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] });
-    jest.setSystemTime(NOW);
-    deleted = await retention.prune();
-    jest.useRealTimers();
+    deleted = await withWindows(RETENTION_WINDOWS, () => pruneAtNow(retention));
   });
 
   afterAll(async () => {
     await prisma.$disconnect();
     await prisma.$disconnect();
     await moduleRef.close();
-    for (const [key, value] of savedWindows) {
-      if (value === undefined) delete process.env[key];
-      else process.env[key] = value;
-    }
   });
 
   it('prunes only the rankings older than the window', async () => {
@@ -209,5 +235,67 @@ describe('Retention against an upgraded baseline database', () => {
       }),
     ).resolves.toBe(3);
     await expect(prisma.review.count()).resolves.toBe(3);
+  });
+});
+
+describe('Retention of search results below the top 10', () => {
+  const KEYWORD_ID = 'drill_serp_depth';
+  let prisma: PrismaClient;
+  let positions: (date: Date) => Promise<number[]>;
+
+  beforeAll(async () => {
+    prisma = testDb();
+    await prisma.keyword.create({
+      data: {
+        id: KEYWORD_ID,
+        text: 'drill serp depth',
+        store: 'APP_STORE',
+        country: 'us',
+      },
+    });
+    await prisma.serpEntry.createMany({
+      data: [daysBefore(40), daysBefore(10)].flatMap((date) =>
+        Array.from({ length: 12 }, (_, index) => ({
+          keywordId: KEYWORD_ID,
+          date,
+          position: index + 1,
+          storeAppId: `drill-${index + 1}`,
+          title: `Drill ${index + 1}`,
+        })),
+      ),
+    });
+    positions = async (date) =>
+      (
+        await prisma.serpEntry.findMany({
+          where: { keywordId: KEYWORD_ID, date },
+          orderBy: { position: 'asc' },
+          select: { position: true },
+        })
+      ).map((row) => row.position);
+
+    await withWindows(SERP_WINDOWS, async () => {
+      const moduleRef = await retentionModule();
+      try {
+        await pruneAtNow(moduleRef.get(RetentionService));
+      } finally {
+        await moduleRef.close();
+      }
+    });
+  });
+
+  afterAll(async () => {
+    await prisma.$disconnect();
+  });
+
+  it('keeps only the top 10 of a day older than the deep window', async () => {
+    await expect(positions(daysBefore(40))).resolves.toEqual(
+      Array.from({ length: 10 }, (_, index) => index + 1),
+    );
+  });
+
+  it('keeps every position of a day inside the deep window', async () => {
+    await expect(positions(daysBefore(10))).resolves.toEqual(
+      Array.from({ length: 12 }, (_, index) => index + 1),
+    );
   });
 });

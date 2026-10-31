@@ -29,7 +29,7 @@ Memory and disk are not what runs out first. The store rate limits are, and they
 | Even split | Roughly 3,600 | The same, for a quarter of the markets |
 | Play only | Roughly 1,800 | The same again |
 
-A workload of 75,000 keyword markets with 90 days of history measured 2 GB of database and took PostgreSQL to 94 percent of its 384 MB ceiling, so plan disk from your own market count rather than from the 5 GB above once you pass a few thousand markets.
+A workload of 75,000 keyword markets with 90 days of history measured 2 GB of database and took PostgreSQL to 94 percent of its 384 MB ceiling, so plan disk from your own market count rather than from the 5 GB above once you pass a few thousand markets. The measured sizes above leave out stored search results, which take about 0.9 MB per tracked keyword market with the default retention (the top 10 for 90 days, positions 11 to 50 for 30 days).
 
 ## What ships with the stack?
 

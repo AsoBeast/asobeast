@@ -101,6 +101,7 @@ export const EnvSchema = z.object({
   RETENTION_ALERT_EVENTS_DAYS: z.coerce.number().int().min(0).default(30),
   RETENTION_RANKINGS_DAYS: z.coerce.number().int().min(0).default(365),
   RETENTION_SERP_DAYS: z.coerce.number().int().min(0).default(90),
+  RETENTION_SERP_DEEP_DAYS: z.coerce.number().int().min(0).default(30),
   RETENTION_SNAPSHOTS_DAYS: z.coerce.number().int().min(0).default(180),
   RETENTION_CATEGORY_RANKS_DAYS: z.coerce.number().int().min(0).default(365),
   RETENTION_CHARTS_DAYS: z.coerce.number().int().min(0).default(365),

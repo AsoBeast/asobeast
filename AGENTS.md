@@ -351,6 +351,7 @@ CRON_AUDIT=0 6 * * *                # daily audit score snapshot, UTC (after the
 CRON_LOCALIZATION_SWEEP=0 7 * * 1   # weekly probe of the App Store localizations every app ships, UTC (Monday 07:00). Empty removes the schedule
 RETENTION_RANKINGS_DAYS=365         # keyword rankings; 0 keeps forever
 RETENTION_SERP_DAYS=90              # serp entries; 0 keeps forever
+RETENTION_SERP_DEEP_DAYS=30         # serp entries below the top 10; 0 keeps them as long as RETENTION_SERP_DAYS
 RETENTION_SNAPSHOTS_DAYS=180        # app snapshots; newest per app and market always kept; 0 keeps forever
 RETENTION_CATEGORY_RANKS_DAYS=365   # category ranks; 0 keeps forever
 RETENTION_CHARTS_DAYS=365           # top chart captures; 0 keeps forever

@@ -126,6 +126,8 @@ Under load the picture is tighter, and it was measured rather than assumed.
 | 8,000 keyword markets, 90 days of history | 227 MB | 306 MB, 80% of 384 MB | 60 MB, 31% | No |
 | 75,000 keyword markets, 90 days of history | 2,060 MB | 362 MB, 94% of 384 MB | 190 MB, 99% | No |
 
+The measured sizes above leave out stored search results, which take about 0.9 MB per tracked keyword market with the default retention (the top 10 for 90 days, positions 11 to 50 for 30 days).
+
 Nothing was OOM killed at any scale, and the largest workload leaves almost no headroom in either service. `storage.headroom.low` and `queue.memory.high` alert at 80 percent and page at 90, so both would have fired on the way to that last row rather than after it.
 
 ### Why Redis refuses instead of evicting
