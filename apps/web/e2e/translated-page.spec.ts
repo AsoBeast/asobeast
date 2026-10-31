@@ -7,7 +7,14 @@ import {
 } from "@asobeast/shared";
 import { holdRequest } from "./held-request.mts";
 import { hydrated } from "./hydrated.mts";
+import {
+  chooseImportFile,
+  openImportDialog,
+  resetImportKeywords,
+} from "./keyword-import-dialog.mts";
 import { fulfillJson, routePlan } from "./plan-helpers.mts";
+import { SERP_HISTORY_DAYS } from "./serp-history.mts";
+import type { SerpEntryItem, SerpSnapshot } from "@asobeast/shared";
 import { expect, test } from "./session.mts";
 
 const TRIAL_PLAN: AccountPlan = {
@@ -173,5 +180,162 @@ test("a translated settings page opens the delivery log", async ({ page }) => {
   await expect(
     page.getByText("Success", { exact: true }).first(),
   ).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+const REVIEW_FILTERS = [
+  "Filter by date",
+  "Filter by version",
+  "Filter by reply state",
+  "Sort reviews",
+] as const;
+
+test("a translated reviews page opens each of its filters", async ({
+  page,
+}) => {
+  const errors = collectDomErrors(page);
+  await page.goto("/apps/app-long/reviews");
+  await hydrated(page.getByRole("combobox", { name: "Filter by date" }));
+
+  await translateText(page);
+  for (const name of REVIEW_FILTERS) {
+    await page.getByRole("combobox", { name }).click();
+    await expect(page.getByRole("listbox")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("listbox")).toHaveCount(0);
+  }
+  await page.getByRole("combobox", { name: "Filter by date" }).click();
+  await page.getByRole("option", { name: /last 30 days/i }).click();
+
+  await expect(page).toHaveURL(/since=30d/);
+  await expect(
+    page.getByRole("combobox", { name: "Filter by date" }),
+  ).toHaveText(/last 30 days/i);
+  expect(errors).toEqual([]);
+});
+
+const PLAIN_LIST = "focus timer\ndeep work\n";
+
+test.describe("a translated import dialog", () => {
+  test.describe.configure({ mode: "serial" });
+
+  test.beforeEach(async ({ request }) => {
+    await resetImportKeywords(request);
+  });
+
+  test("closes with a file loaded", async ({ page }) => {
+    const errors = collectDomErrors(page);
+    const dialog = await openImportDialog(page);
+    await chooseImportFile(dialog, PLAIN_LIST, "plain-list.txt");
+    await expect(
+      dialog.getByRole("row", { name: /focus timer/ }),
+    ).toBeVisible();
+
+    await translateText(page);
+    await dialog.getByRole("button", { name: /cancel/i }).click();
+
+    await expect(dialog).toBeHidden();
+    await expect(
+      page.getByRole("button", { name: /import csv/i }).first(),
+    ).toBeVisible();
+    expect(errors).toEqual([]);
+  });
+
+  test("changes the market for rows without a country", async ({ page }) => {
+    const errors = collectDomErrors(page);
+    const dialog = await openImportDialog(page);
+    await chooseImportFile(dialog, PLAIN_LIST, "plain-list.txt");
+    const row = dialog.getByRole("row", { name: /focus timer/i });
+    await expect(row).toContainText("US");
+
+    await translateText(page);
+    await dialog
+      .getByRole("combobox", { name: "Market for rows without a country" })
+      .click();
+    await page.getByRole("option", { name: /PL/ }).click();
+
+    await expect(row).toContainText(/pl/i);
+    await expect(dialog).toBeVisible();
+    expect(errors).toEqual([]);
+  });
+
+  test("takes another file", async ({ page }) => {
+    const errors = collectDomErrors(page);
+    const dialog = await openImportDialog(page);
+    await chooseImportFile(dialog, PLAIN_LIST, "plain-list.txt");
+    await expect(
+      dialog.getByRole("row", { name: /focus timer/ }),
+    ).toBeVisible();
+
+    await translateText(page);
+    await chooseImportFile(dialog, "keyword,country\nzegar pracy,pl\n");
+
+    await expect(
+      dialog.getByRole("row", { name: /zegar pracy/ }),
+    ).toBeVisible();
+    expect(errors).toEqual([]);
+  });
+});
+
+const flipped = (
+  entry: SerpEntryItem,
+  newest: readonly SerpEntryItem[],
+): SerpEntryItem => {
+  const rose = newest[entry.position - 1]?.movement === "up";
+  const delta = rose && entry.position > 1 ? 1 : -1;
+  return {
+    ...entry,
+    previous: entry.position - delta,
+    delta,
+    movement: delta < 0 ? "up" : "down",
+    titleMatch: "none",
+  };
+};
+
+async function rewriteEarlierDays(page: Page): Promise<void> {
+  let newest: SerpEntryItem[] = [];
+  await page.route("**/api/backend/keywords/kw-3/serp*", async (route) => {
+    const response = await route.fetch();
+    const snapshot = (await response.json()) as SerpSnapshot;
+    if (!new URL(route.request().url()).searchParams.has("date")) {
+      newest = snapshot.entries;
+      return route.fulfill({ response, json: snapshot });
+    }
+    return route.fulfill({
+      response,
+      json: {
+        ...snapshot,
+        entries: snapshot.entries.map((entry) => flipped(entry, newest)),
+      },
+    });
+  });
+}
+
+test("a translated search results sheet steps through its captured days", async ({
+  page,
+}) => {
+  const [, YESTERDAY, DAY_BEFORE] = SERP_HISTORY_DAYS;
+  const errors = collectDomErrors(page);
+  await rewriteEarlierDays(page);
+  await page.goto("/apps/app-1/keywords?serp=kw-3");
+  const sheet = page.getByRole("dialog", { name: "Search results" });
+  const summary = sheet.locator('[data-slot="serp-summary"]');
+  await expect(sheet.locator("li#serp-row-1")).toBeVisible();
+  await expect(summary).toContainText("7 of 10");
+  const previous = await hydrated(
+    sheet.getByRole("button", { name: "Previous captured day" }),
+  );
+
+  await translateText(page);
+  await previous.click();
+  await expect(page).toHaveURL(new RegExp(`serpDate=${YESTERDAY}`));
+  await expect(sheet.locator("li#serp-row-1")).toBeVisible();
+  await expect(summary).toContainText("0 of 10");
+  await previous.click();
+  await expect(page).toHaveURL(new RegExp(`serpDate=${DAY_BEFORE}`));
+  await sheet.getByRole("button", { name: "Next captured day" }).click();
+  await expect(page).toHaveURL(new RegExp(`serpDate=${YESTERDAY}`));
+
+  await expect(summary).toBeVisible();
   expect(errors).toEqual([]);
 });

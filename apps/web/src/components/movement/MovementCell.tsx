@@ -20,7 +20,7 @@ function Shown({
       <DeltaChip value={entry.delta} period={period} />
       {compact ? null : (
         <span className="text-caption text-muted-foreground">
-          from #{entry.previous}
+          {`from #${entry.previous}`}
         </span>
       )}
     </span>

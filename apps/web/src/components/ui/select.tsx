@@ -5,6 +5,7 @@ import { Select as SelectPrimitive } from "radix-ui";
 
 import { cn } from "@/lib/utils";
 import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from "lucide-react";
+import { textInSpans } from "./text-spans";
 
 function Select({
   ...props
@@ -26,9 +27,19 @@ function SelectGroup({
 }
 
 function SelectValue({
+  children,
+  placeholder,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Value>) {
-  return <SelectPrimitive.Value data-slot="select-value" {...props} />;
+  return (
+    <SelectPrimitive.Value
+      data-slot="select-value"
+      placeholder={textInSpans(placeholder)}
+      {...props}
+    >
+      {textInSpans(children)}
+    </SelectPrimitive.Value>
+  );
 }
 
 function SelectTrigger({
@@ -127,7 +138,9 @@ function SelectItem({
           <CheckIcon className="pointer-events-none" />
         </SelectPrimitive.ItemIndicator>
       </span>
-      <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+      <SelectPrimitive.ItemText>
+        {textInSpans(children)}
+      </SelectPrimitive.ItemText>
     </SelectPrimitive.Item>
   );
 }

@@ -856,8 +856,12 @@ test("app overview renders summary numbers and a utc refresh date", async ({
 }) => {
   await page.goto("/apps/app-1");
 
-  await expect(page.getByText("+5 7d")).toHaveClass(/text-signal-up/);
-  await expect(page.getByText("-3 30d")).toHaveClass(/text-signal-down/);
+  await expect(page.getByText("+5 7d").locator("..")).toHaveClass(
+    /text-signal-up/,
+  );
+  await expect(page.getByText("-3 30d").locator("..")).toHaveClass(
+    /text-signal-down/,
+  );
   await expect(page.getByText("3 in top 10")).toBeVisible();
 
   await expect(page.getByText("Where your keywords rank")).toBeVisible();
