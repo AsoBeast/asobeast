@@ -7,6 +7,11 @@ import {
 } from "@asobeast/shared";
 import { holdRequest } from "./held-request.mts";
 import { hydrated } from "./hydrated.mts";
+import {
+  chooseImportFile,
+  openImportDialog,
+  resetImportKeywords,
+} from "./keyword-import-dialog.mts";
 import { fulfillJson, routePlan } from "./plan-helpers.mts";
 import { expect, test } from "./session.mts";
 
@@ -174,4 +179,80 @@ test("a translated settings page opens the delivery log", async ({ page }) => {
     page.getByText("Success", { exact: true }).first(),
   ).toBeVisible();
   expect(errors).toEqual([]);
+});
+
+const REVIEW_FILTERS = [
+  "Filter by date",
+  "Filter by version",
+  "Filter by reply state",
+  "Sort reviews",
+] as const;
+
+test("a translated reviews page opens each of its filters", async ({
+  page,
+}) => {
+  const errors = collectDomErrors(page);
+  await page.goto("/apps/app-long/reviews");
+  await hydrated(page.getByRole("combobox", { name: "Filter by date" }));
+
+  await translateText(page);
+  for (const name of REVIEW_FILTERS) {
+    await page.getByRole("combobox", { name }).click();
+    await expect(page.getByRole("listbox")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("listbox")).toHaveCount(0);
+  }
+  await page.getByRole("combobox", { name: "Filter by date" }).click();
+  await page.getByRole("option", { name: /last 30 days/i }).click();
+
+  await expect(page).toHaveURL(/since=30d/);
+  await expect(
+    page.getByRole("combobox", { name: "Filter by date" }),
+  ).toHaveText(/last 30 days/i);
+  expect(errors).toEqual([]);
+});
+
+const PLAIN_LIST = "focus timer\ndeep work\n";
+
+test.describe("a translated import dialog", () => {
+  test.describe.configure({ mode: "serial" });
+
+  test.beforeEach(async ({ request }) => {
+    await resetImportKeywords(request);
+  });
+
+  test("closes with a file loaded", async ({ page }) => {
+    const errors = collectDomErrors(page);
+    const dialog = await openImportDialog(page);
+    await chooseImportFile(dialog, PLAIN_LIST, "plain-list.txt");
+    await expect(
+      dialog.getByRole("row", { name: /focus timer/ }),
+    ).toBeVisible();
+
+    await translateText(page);
+    await dialog.getByRole("button", { name: /cancel/i }).click();
+
+    await expect(dialog).toBeHidden();
+    await expect(
+      page.getByRole("button", { name: /import csv/i }).first(),
+    ).toBeVisible();
+    expect(errors).toEqual([]);
+  });
+
+  test("takes another file", async ({ page }) => {
+    const errors = collectDomErrors(page);
+    const dialog = await openImportDialog(page);
+    await chooseImportFile(dialog, PLAIN_LIST, "plain-list.txt");
+    await expect(
+      dialog.getByRole("row", { name: /focus timer/ }),
+    ).toBeVisible();
+
+    await translateText(page);
+    await chooseImportFile(dialog, "keyword,country\nzegar pracy,pl\n");
+
+    await expect(
+      dialog.getByRole("row", { name: /zegar pracy/ }),
+    ).toBeVisible();
+    expect(errors).toEqual([]);
+  });
 });

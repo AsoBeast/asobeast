@@ -3,40 +3,19 @@ import AxeBuilder from "@axe-core/playwright";
 import type { Locator, Page, Request } from "@playwright/test";
 import { expect, test } from "./session.mts";
 import { APP_IMPORT_ID, BUDGET } from "./fixtures.mts";
-import { hydrated } from "./hydrated.mts";
+import {
+  chooseImportFile as choose,
+  IMPORT_KEYWORDS_PATH as KEYWORDS,
+  openImportDialog as openDialog,
+  resetImportKeywords,
+} from "./keyword-import-dialog.mts";
 import { seedViewer } from "./viewer.mts";
 
 test.describe.configure({ mode: "serial" });
 
-const MOCK_API_URL = `http://localhost:${process.env.MOCK_API_PORT ?? 4100}`;
-const KEYWORDS = `/apps/${APP_IMPORT_ID}/keywords`;
-
 test.beforeEach(async ({ request }) => {
-  await request.post(`${MOCK_API_URL}/__reset/keywords/${APP_IMPORT_ID}`, {
-    failOnStatusCode: true,
-  });
+  await resetImportKeywords(request);
 });
-
-async function openDialog(page: Page, path = KEYWORDS): Promise<Locator> {
-  await page.goto(path);
-  const trigger = page.getByRole("button", { name: "Import CSV" }).first();
-  await (await hydrated(trigger)).click();
-  const dialog = page.getByRole("dialog", { name: "Import keywords from CSV" });
-  await expect(dialog).toBeVisible();
-  return dialog;
-}
-
-async function choose(
-  dialog: Locator,
-  content: string | Buffer,
-  name = "keywords.csv",
-): Promise<void> {
-  await dialog.getByLabel("Keyword file").setInputFiles({
-    name,
-    mimeType: "text/csv",
-    buffer: typeof content === "string" ? Buffer.from(content) : content,
-  });
-}
 
 const rowOf = (dialog: Locator | Page, text: RegExp | string) =>
   dialog.getByRole("row", { name: text });
