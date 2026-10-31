@@ -36,7 +36,7 @@ import { KeywordsBulkActions } from "./KeywordsBulkActions";
 import { KeywordsEmptyState } from "./KeywordsEmptyState";
 import { KeywordsDataTable } from "./KeywordsDataTable";
 import { KeywordsFilterBar } from "./KeywordsFilterBar";
-import { SerpSheet } from "./SerpSheet";
+import { SerpSheet } from "./serp/SerpSheet";
 
 export function KeywordsTable({
   id,
@@ -53,12 +53,13 @@ export function KeywordsTable({
     sort: keywordSortParser,
     dir: sortDirectionParser,
   });
-  const [, setSerp] = useQueryState("serp", serpParser);
+  const [serpId, setSerp] = useQueryState("serp", serpParser);
   const [filters, setFilters] = useQueryStates(keywordFilterParsers);
   const { data: keywords, dataUpdatedAt } = useSuspenseQuery(
     keywordsOptions(id, country),
   );
   const today = utcDayOf(dataUpdatedAt);
+  const serpKeyword = keywords.find((row) => row.keywordId === serpId);
   const { data: markets } = useQuery(keywordCountriesOptions(id));
   const multiMarket = (markets?.length ?? 0) > 1;
   const [selection, setSelection] = useState<RowSelectionState>({});
@@ -194,7 +195,7 @@ export function KeywordsTable({
           </div>
         ) : null}
       </div>
-      <SerpSheet appId={id} />
+      <SerpSheet appId={id} store={store} keyword={serpKeyword} />
     </>
   );
 }

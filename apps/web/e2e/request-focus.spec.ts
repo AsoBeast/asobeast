@@ -752,17 +752,17 @@ test.describe("captured day buttons", () => {
   }
 });
 
-test("closing the top 10 sheet returns focus to the row that opened it", async ({
+test("closing the search results sheet returns focus to the row that opened it", async ({
   page,
 }) => {
   await page.goto("/apps/app-1/keywords");
   const opener = page.getByRole("button", {
-    name: "View top 10 for focus timer",
+    name: "View search results for focus timer",
     exact: true,
   });
 
   await pressFromKeyboard(opener);
-  const sheet = page.getByRole("dialog", { name: "Top 10 search results" });
+  const sheet = page.getByRole("dialog", { name: "Search results" });
   await expect(sheet).toBeVisible();
   await page.keyboard.press("Escape");
 

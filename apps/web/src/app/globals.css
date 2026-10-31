@@ -47,6 +47,7 @@
   --color-warning: var(--warning);
   --color-warning-subtle: var(--warning-subtle);
   --color-info: var(--info);
+  --color-info-subtle: var(--info-subtle);
   --color-priority-critical: var(--priority-critical);
   --color-priority-high: var(--priority-high);
   --color-priority-medium: var(--priority-medium);

@@ -32,7 +32,7 @@ const lines = (value: SerpSnapshot) => serpCsv(VIEWER, value).split("\r\n");
 describe("serpCsv", () => {
   it("heads the file with the snapshot columns in order", () => {
     expect(lines(snapshot([]))[0]).toBe(
-      "﻿keyword,capturedOn,position,app,developer,rating,ratings,role,storeAppId",
+      "﻿keyword,capturedOn,position,app,developer,rating,ratings,role,storeAppId,previousPosition",
     );
   });
 
@@ -44,7 +44,7 @@ describe("serpCsv", () => {
 
   it("repeats the keyword and the capture day and keeps numbers as numbers", () => {
     expect(lines(snapshot([entry()]))[1]).toBe(
-      `focus timer,${capturedOn},1,Deep Work Sessions,Nordlys Labs,4.7,8400,other,555000111`,
+      `focus timer,${capturedOn},1,Deep Work Sessions,Nordlys Labs,4.7,8400,other,555000111,`,
     );
   });
 
@@ -55,7 +55,22 @@ describe("serpCsv", () => {
           entry({ developer: null, ratingAvg: null, ratingCount: null }),
         ]),
       )[1],
-    ).toBe(`focus timer,${capturedOn},1,Deep Work Sessions,,,,other,555000111`);
+    ).toBe(
+      `focus timer,${capturedOn},1,Deep Work Sessions,,,,other,555000111,`,
+    );
+  });
+
+  it("writes the earlier position, or nothing when there was none", () => {
+    const [, moved, entered, older] = lines(
+      snapshot([
+        entry({ previous: 4, delta: -3, movement: "up" }),
+        entry({ previous: null, delta: null, movement: "new" }),
+        entry(),
+      ]),
+    );
+    expect(moved.endsWith(",555000111,4")).toBe(true);
+    expect(entered.endsWith(",555000111,")).toBe(true);
+    expect(older.endsWith(",555000111,")).toBe(true);
   });
 
   it("names each app's role against the app being viewed", () => {

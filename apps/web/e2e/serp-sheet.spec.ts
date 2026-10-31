@@ -1,7 +1,9 @@
 import { readFileSync } from "node:fs";
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
+import { contrastViolations, THEMES } from "./contrast-check.mts";
 import { missingDescriptionIds } from "./described-by.mts";
 import { hydrated } from "./hydrated.mts";
+import { SERP_HISTORY_DAYS, SERP_PLAY_AVERAGE } from "./serp-history.mts";
 import { expect, test } from "./session.mts";
 
 const SERP_PATH = "/api/backend/keywords/kw-1/serp";
@@ -9,14 +11,27 @@ const SERP_PATH = "/api/backend/keywords/kw-1/serp";
 const isSerpRead = (url: URL) => url.pathname === SERP_PATH;
 
 const serpSheet = (page: Page) =>
-  page.getByRole("dialog", { name: "Top 10 search results" });
+  page.getByRole("dialog", { name: "Search results" });
 
 const failureIn = (page: Page) =>
   serpSheet(page)
     .getByRole("alert")
-    .filter({ hasText: "The top 10 could not be loaded." });
+    .filter({ hasText: "The search results could not be loaded." });
 
-async function failTopTenReads(page: Page): Promise<() => void> {
+const formatDayMonth = (date: string) =>
+  new Intl.DateTimeFormat("en-US", {
+    timeZone: "UTC",
+    month: "short",
+    day: "numeric",
+  }).format(new Date(date));
+
+const listUnder = (sheet: Locator, heading: string) =>
+  sheet.getByRole("region", { name: heading, exact: true }).getByRole("list");
+
+const rowAt = (sheet: Locator, position: number) =>
+  sheet.locator(`li#serp-row-${position}`);
+
+async function failSerpReads(page: Page): Promise<() => void> {
   let failing = true;
   await page.route(isSerpRead, (route) =>
     failing
@@ -28,30 +43,47 @@ async function failTopTenReads(page: Page): Promise<() => void> {
   };
 }
 
-async function openTopTen(page: Page): Promise<void> {
+async function openSerp(page: Page, text = "focus timer"): Promise<void> {
   const opener = page.getByRole("button", {
-    name: "View top 10 for focus timer",
+    name: `View search results for ${text}`,
     exact: true,
   });
   await (await hydrated(opener)).click();
 }
 
-test("exporting the top 10 downloads the snapshot the sheet shows", async ({
+async function openStudyTimer(page: Page): Promise<Locator> {
+  await page.goto("/apps/app-1/keywords?serp=kw-3");
+  const sheet = serpSheet(page);
+  await expect(rowAt(sheet, 1)).toBeVisible();
+  return sheet;
+}
+
+test("opens from the row with the keyword large in the sheet", async ({
   page,
 }) => {
   await page.goto("/apps/app-1/keywords");
   await page.waitForLoadState("networkidle");
 
-  await page
-    .getByRole("button", { name: "View top 10 for focus timer", exact: true })
-    .click();
+  await openSerp(page);
+
   await expect(page).toHaveURL(/serp=kw-1/);
-  const sheet = page.getByRole("dialog", { name: "Top 10 search results" });
+  await expect(serpSheet(page)).toContainText("focus timer");
+  await expect(serpSheet(page)).toContainText("United States, App Store");
+});
+
+test("exporting downloads the snapshot the sheet shows", async ({ page }) => {
+  await page.goto("/apps/app-1/keywords");
+  await page.waitForLoadState("networkidle");
+
+  await openSerp(page);
+  const sheet = serpSheet(page);
   await expect(sheet.getByText("Rival Focus")).toBeVisible();
 
   const [download] = await Promise.all([
     page.waitForEvent("download"),
-    sheet.getByRole("button", { name: "Export CSV of the top 10" }).click(),
+    sheet
+      .getByRole("button", { name: "Export CSV of the search results" })
+      .click(),
   ]);
 
   expect(download.suggestedFilename()).toMatch(
@@ -59,26 +91,44 @@ test("exporting the top 10 downloads the snapshot the sheet shows", async ({
   );
   const lines = readFileSync(await download.path(), "utf8").split("\r\n");
   expect(lines[0]).toBe(
-    "﻿keyword,capturedOn,position,app,developer,rating,ratings,role,storeAppId",
+    "﻿keyword,capturedOn,position,app,developer,rating,ratings,role,storeAppId,previousPosition",
   );
   expect(lines).toHaveLength(6);
   expect(lines[3]).toMatch(
-    /^focus timer,\d{4}-\d{2}-\d{2},3,Focus Timer,Focus Labs,4\.8,24000,you,123456789$/,
+    /^focus timer,\d{4}-\d{2}-\d{2},3,Focus Timer,Focus Labs,4\.8,24000,you,123456789,$/,
   );
   expect(lines[4]).toMatch(
-    /,4,Rival Focus,Rival Labs,4\.5,12000,competitor,comp-store$/,
+    /,4,Rival Focus,Rival Labs,4\.5,12000,competitor,comp-store,$/,
   );
-  expect(lines[5]).toMatch(/,5,Newcomer Timer,,,,other,stranger-store$/);
+  expect(lines[5]).toMatch(/,5,Newcomer Timer,,,,other,stranger-store,$/);
 });
 
-test("a top 10 read that fails stays inside the sheet and retry loads it", async ({
+test("exports every position of a deep day with its earlier position", async ({
   page,
 }) => {
-  const recover = await failTopTenReads(page);
+  const sheet = await openStudyTimer(page);
+
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    sheet
+      .getByRole("button", { name: "Export CSV of the search results" })
+      .click(),
+  ]);
+
+  const lines = readFileSync(await download.path(), "utf8").split("\r\n");
+  expect(lines).toHaveLength(51);
+  expect(lines[2]).toMatch(/,2,Study Timer & Focus,.*,4$/);
+  expect(lines[3]).toMatch(/,3,Study Timer Plus,.*,$/);
+});
+
+test("a read that fails stays inside the sheet and retry loads it", async ({
+  page,
+}) => {
+  const recover = await failSerpReads(page);
   await page.goto("/apps/app-1/keywords");
   await page.waitForLoadState("networkidle");
 
-  await openTopTen(page);
+  await openSerp(page);
 
   await expect(failureIn(page)).toBeVisible({ timeout: 20_000 });
   await expect(page).toHaveURL(/serp=kw-1/);
@@ -103,20 +153,20 @@ test("a top 10 read that fails stays inside the sheet and retry loads it", async
   expect(reads).toHaveLength(1);
 });
 
-test("a top 10 that failed loads when the sheet is opened again", async ({
+test("a read that failed loads when the sheet is opened again", async ({
   page,
 }) => {
-  const recover = await failTopTenReads(page);
+  const recover = await failSerpReads(page);
   await page.goto("/apps/app-1/keywords");
   await page.waitForLoadState("networkidle");
-  await openTopTen(page);
+  await openSerp(page);
   await expect(failureIn(page)).toBeVisible({ timeout: 20_000 });
 
   recover();
   await page.keyboard.press("Escape");
   await expect(serpSheet(page)).toHaveCount(0);
   await expect(page).not.toHaveURL(/serp=/);
-  await openTopTen(page);
+  await openSerp(page);
 
   await expect(serpSheet(page).getByText("Rival Focus")).toBeVisible();
   await expect(failureIn(page)).toHaveCount(0);
@@ -125,10 +175,166 @@ test("a top 10 that failed loads when the sheet is opened again", async ({
 test("the sheet is described only by elements it renders", async ({ page }) => {
   await page.goto("/apps/app-1/keywords");
   await page.waitForLoadState("networkidle");
-  await openTopTen(page);
+  await openSerp(page);
 
   await expect(serpSheet(page)).toHaveAccessibleDescription(
-    "The apps ranking for this keyword on the latest daily check.",
+    "The apps the store showed for this keyword on a daily check.",
   );
   expect(await missingDescriptionIds(serpSheet(page))).toEqual([]);
 });
+
+test("splits the top 50 into the top 10 and the positions below", async ({
+  page,
+}) => {
+  const sheet = await openStudyTimer(page);
+
+  await expect(
+    sheet.getByRole("heading", { name: "Top 10", exact: true }),
+  ).toBeVisible();
+  await expect(listUnder(sheet, "Top 10").getByRole("listitem")).toHaveCount(
+    10,
+  );
+  const deeper = listUnder(sheet, "Positions 11 to 50");
+  await expect(deeper).toHaveAttribute("start", "11");
+  await expect(deeper.getByRole("listitem")).toHaveCount(40);
+});
+
+test("shows an icon on every row and the placeholder where there is none", async ({
+  page,
+}) => {
+  const sheet = await openStudyTimer(page);
+  const lists = sheet.getByRole("region", { name: /^(Top 10|Positions)/ });
+
+  await expect(lists.locator("img")).toHaveCount(49);
+  await expect(lists.locator('[data-slot="app-icon-placeholder"]')).toHaveCount(
+    1,
+  );
+});
+
+test("marks your row and jumps to it from the summary", async ({ page }) => {
+  const sheet = await openStudyTimer(page);
+  const yours = rowAt(sheet, 7);
+
+  await expect(yours).toContainText("You");
+  const jump = sheet.getByRole("button", {
+    name: "Jump to your row at #7",
+    exact: true,
+  });
+  await jump.click();
+
+  await expect(yours).toBeFocused();
+});
+
+test("says how each row moved since the earlier capture", async ({ page }) => {
+  const sheet = await openStudyTimer(page);
+
+  await expect(rowAt(sheet, 2)).toContainText("Up 2 from #4");
+  await expect(rowAt(sheet, 3)).toContainText("New entry");
+  await expect(rowAt(sheet, 30)).toContainText("No earlier position");
+  await expect(sheet).toContainText(
+    `vs ${formatDayMonth(SERP_HISTORY_DAYS[1])}`,
+  );
+});
+
+test("lists the apps that left since the earlier capture", async ({ page }) => {
+  const sheet = await openStudyTimer(page);
+  const left = sheet.getByRole("region", {
+    name: `Left since ${formatDayMonth(SERP_HISTORY_DAYS[1])}`,
+  });
+
+  await expect(left).toContainText("was 6");
+  await expect(left).toContainText("Old Study Timer");
+  await expect(left.getByRole("button")).toHaveCount(0);
+});
+
+test("marks the keyword's words in a title", async ({ page }) => {
+  const sheet = await openStudyTimer(page);
+
+  await expect(rowAt(sheet, 1).locator("mark")).toHaveText(["Study", "Timer"]);
+  await expect(rowAt(sheet, 15).locator("mark").first()).toContainText(
+    "accents differ",
+  );
+  await expect(rowAt(sheet, 10).locator("mark")).toHaveCount(0);
+});
+
+test("sums up titles and ratings of the top 10", async ({ page }) => {
+  const sheet = await openStudyTimer(page);
+
+  const summary = sheet.locator("dl");
+  await expect(summary.getByText("7 of 10")).toBeVisible();
+  await expect(summary.getByText("7K", { exact: true })).toBeVisible();
+  await expect(summary.getByText("median", { exact: true })).toBeVisible();
+});
+
+test("shows the average rating of a store that reports no counts", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-gp/keywords?serp=kw-gp-1");
+  const sheet = serpSheet(page);
+
+  const summary = sheet.locator("dl");
+  await expect(
+    summary.getByText(SERP_PLAY_AVERAGE.toFixed(1), { exact: true }),
+  ).toBeVisible();
+  await expect(summary.getByText("average", { exact: true })).toBeVisible();
+  await expect(sheet).toContainText("Germany, Google Play");
+});
+
+test("names a checked position deeper than the list", async ({ page }) => {
+  await page.goto("/apps/app-1/keywords?serp=kw-5");
+  const sheet = serpSheet(page);
+  await expect(sheet.getByText("below the top 30")).toBeVisible();
+  await expect(sheet.getByText("#45", { exact: true })).toBeVisible();
+});
+
+test("says a checked keyword was not found within its depth", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/keywords?serp=kw-4");
+
+  await expect(serpSheet(page).getByText("Not in the top 200")).toBeVisible();
+});
+
+test("says a keyword was never checked and exports nothing", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-unchecked/keywords?serp=kw-unchecked-1");
+  const sheet = serpSheet(page);
+
+  await expect(
+    sheet.getByText(
+      "Not checked yet. The search results appear after the next daily check.",
+    ),
+  ).toBeVisible();
+  await expect(
+    sheet.getByRole("button", { name: "Export CSV of the search results" }),
+  ).toBeDisabled();
+});
+
+for (const width of [320, 375]) {
+  test(`fits a ${width} px screen without sideways scrolling`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 800 });
+    const sheet = await openStudyTimer(page);
+
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+    expect(
+      await sheet.evaluate((node) => node.scrollWidth <= node.clientWidth),
+    ).toBe(true);
+  });
+}
+
+for (const theme of THEMES) {
+  test(`the open sheet has no contrast violation in the ${theme} theme`, async ({
+    page,
+  }) => {
+    expect(
+      await contrastViolations(page, theme, "/apps/app-1/keywords?serp=kw-3"),
+    ).toEqual([]);
+  });
+}

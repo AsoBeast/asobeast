@@ -368,7 +368,7 @@ function actionsColumn({
           variant="ghost"
           size="icon-sm"
           className="pointer-coarse:size-11"
-          aria-label={`View top 10 for ${row.original.text}`}
+          aria-label={`View search results for ${row.original.text}`}
           data-serp-keyword={row.original.keywordId}
           onClick={() => onOpenSerp(row.original.keywordId)}
         >
