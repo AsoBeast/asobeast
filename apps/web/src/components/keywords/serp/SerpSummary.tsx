@@ -183,7 +183,7 @@ function SummaryGrid({
         tip={tip(
           "About top 10 ratings",
           "Top 10 ratings",
-          "The median rating count of the top 10 apps, a rough measure of how established the apps above you are. Google Play reports no counts, so its average rating shows instead.",
+          "The median rating count of the top 10 apps, a rough measure of how established the top-ranked apps are. Google Play reports no counts, so its average rating shows instead.",
         )}
       >
         {ratings}

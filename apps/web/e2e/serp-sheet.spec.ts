@@ -346,6 +346,11 @@ test("sums up titles and ratings of the top 10", async ({ page }) => {
   await expect(summary.getByText("7 of 10")).toBeVisible();
   await expect(summary.getByText("7K", { exact: true })).toBeVisible();
   await expect(summary.getByText("median", { exact: true })).toBeVisible();
+
+  await summary.getByRole("button", { name: "About top 10 ratings" }).click();
+  await expect(
+    page.getByRole("dialog", { name: "Top 10 ratings" }),
+  ).toHaveAccessibleDescription(/how established the top-ranked apps are/);
 });
 
 test("shows the average rating of a store that reports no counts", async ({
