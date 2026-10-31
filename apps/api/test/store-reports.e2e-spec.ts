@@ -518,7 +518,7 @@ describe('Store report sync (e2e)', () => {
 
       const posted = paths('POST').length;
       harness.asc.on('GET', /\/analyticsReportRequests\?/, answer(null));
-      await run(false).catch(() => undefined);
+      await expect(run(false)).rejects.toBeInstanceOf(PartialSyncRetryError);
 
       expect(paths('POST')).toHaveLength(posted);
 
