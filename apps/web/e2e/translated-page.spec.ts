@@ -288,10 +288,11 @@ const flipped = (
     previous: entry.position - delta,
     delta,
     movement: delta < 0 ? "up" : "down",
+    titleMatch: "none",
   };
 };
 
-async function flipEarlierMovement(page: Page): Promise<void> {
+async function rewriteEarlierDays(page: Page): Promise<void> {
   let newest: SerpEntryItem[] = [];
   await page.route("**/api/backend/keywords/kw-3/serp*", async (route) => {
     const response = await route.fetch();
@@ -315,10 +316,12 @@ test("a translated search results sheet steps through its captured days", async 
 }) => {
   const [, YESTERDAY, DAY_BEFORE] = SERP_HISTORY_DAYS;
   const errors = collectDomErrors(page);
-  await flipEarlierMovement(page);
+  await rewriteEarlierDays(page);
   await page.goto("/apps/app-1/keywords?serp=kw-3");
   const sheet = page.getByRole("dialog", { name: "Search results" });
+  const summary = sheet.locator('[data-slot="serp-summary"]');
   await expect(sheet.locator("li#serp-row-1")).toBeVisible();
+  await expect(summary).toContainText("7 of 10");
   const previous = await hydrated(
     sheet.getByRole("button", { name: "Previous captured day" }),
   );
@@ -327,11 +330,12 @@ test("a translated search results sheet steps through its captured days", async 
   await previous.click();
   await expect(page).toHaveURL(new RegExp(`serpDate=${YESTERDAY}`));
   await expect(sheet.locator("li#serp-row-1")).toBeVisible();
+  await expect(summary).toContainText("0 of 10");
   await previous.click();
   await expect(page).toHaveURL(new RegExp(`serpDate=${DAY_BEFORE}`));
   await sheet.getByRole("button", { name: "Next captured day" }).click();
   await expect(page).toHaveURL(new RegExp(`serpDate=${YESTERDAY}`));
 
-  await expect(sheet.locator('[data-slot="serp-summary"]')).toBeVisible();
+  await expect(summary).toBeVisible();
   expect(errors).toEqual([]);
 });
