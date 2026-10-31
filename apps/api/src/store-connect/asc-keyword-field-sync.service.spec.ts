@@ -184,6 +184,21 @@ describe('AscKeywordFieldSync.run', () => {
     ]);
   });
 
+  it('reads the apps waiting for their first read before the ones already read', async () => {
+    const { service, prisma } = build({
+      following: ['app_2', APP.id],
+      apps: { [APP.id]: APP },
+    });
+
+    await service.run();
+
+    expect(prisma.keywordFieldSync.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: { syncedAt: { sort: 'asc', nulls: 'first' } },
+      }),
+    );
+  });
+
   it('skips a mark of an app that is gone, a competitor or on Google Play', async () => {
     const { service, api, writer } = build({
       following: ['app_gone', 'app_rival', 'app_play', APP.id],

@@ -134,7 +134,7 @@ export class AscKeywordFieldSync {
     }
     const following = await this.prisma.keywordFieldSync.findMany({
       select: { appId: true },
-      orderBy: { syncedAt: 'asc' },
+      orderBy: { syncedAt: { sort: 'asc', nulls: 'first' } },
     });
     let fields = 0;
     let changed = 0;
