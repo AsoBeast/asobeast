@@ -1,6 +1,7 @@
 import type { SerpSnapshot, Store } from "@asobeast/shared";
 import { CapturedDayPicker } from "@/components/day-picker/CapturedDayPicker";
 import { ExportCsvButton } from "@/components/ExportCsvButton";
+import { Skeleton } from "@/components/ui/skeleton";
 import { formatCountry, formatDayMonth, storeLabel } from "@/lib/format";
 import { exportSerp, type SerpViewer } from "./serp-csv";
 
@@ -22,6 +23,7 @@ function SerpToolbar({
   const dates = snapshot?.dates ?? [];
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+      {snapshot ? null : <Skeleton className="h-8 w-60 md:h-9" />}
       {snapshot?.date && dates.length > 0 ? (
         <>
           <CapturedDayPicker

@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import type { Locator, Page } from "@playwright/test";
 import { contrastViolations, THEMES } from "./contrast-check.mts";
 import { missingDescriptionIds } from "./described-by.mts";
-import { pressFromKeyboard } from "./held-request.mts";
+import { holdRequest, pressFromKeyboard } from "./held-request.mts";
 import { hydrated } from "./hydrated.mts";
 import {
   SERP_HISTORY_DAYS,
@@ -75,6 +75,40 @@ async function openStudyTimer(page: Page): Promise<Locator> {
   await expect(rowAt(sheet, 1)).toBeVisible();
   return sheet;
 }
+
+test("draws the loading state at the geometry of the loaded sheet", async ({
+  page,
+}) => {
+  const held = await holdRequest(
+    page,
+    /\/api\/backend\/keywords\/kw-3\/serp/,
+    "GET",
+  );
+  await page.goto("/apps/app-1/keywords?serp=kw-3");
+  const sheet = serpSheet(page);
+  const summary = sheet.locator('[data-slot="serp-summary"]');
+  const firstRow = sheet.locator('[data-slot="serp-row"]').first();
+  const geometry = async () => {
+    const [dialog, strip, row] = await Promise.all([
+      sheet.boundingBox(),
+      summary.boundingBox(),
+      firstRow.boundingBox(),
+    ]);
+    return {
+      summaryTop: (strip?.y ?? 0) - (dialog?.y ?? 0),
+      summaryHeight: strip?.height,
+      rowTop: (row?.y ?? 0) - (dialog?.y ?? 0),
+      rowHeight: row?.height,
+    };
+  };
+  await expect(summary).toBeVisible();
+  const loading = await geometry();
+
+  held.release();
+  await expect(rowAt(sheet, 1)).toBeVisible();
+
+  expect(await geometry()).toEqual(loading);
+});
 
 test("opens from the row with the keyword large in the sheet", async ({
   page,

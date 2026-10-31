@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { MovementCell } from "@/components/movement/MovementCell";
 import { Button } from "@/components/ui/button";
 import { InfoTip } from "@/components/ui/info-tip";
+import { Skeleton } from "@/components/ui/skeleton";
 import { formatCompact, formatDayMonth, formatRating } from "@/lib/format";
 import type {
   PositionSummary,
@@ -142,6 +143,55 @@ function RatingsValue({ ratings }: { ratings: RatingSummary }) {
   return <Note>No ratings</Note>;
 }
 
+function SummaryGrid({
+  position,
+  titles,
+  ratings,
+  tips,
+}: {
+  position: ReactNode;
+  titles: ReactNode;
+  ratings: ReactNode;
+  tips: boolean;
+}) {
+  const tip = (tipLabel: string, title: string, summary: string) =>
+    tips ? (
+      <InfoTip label={tipLabel} title={title} summary={summary}>
+        <GuideLink />
+      </InfoTip>
+    ) : (
+      <span className="-my-1 size-6" />
+    );
+  return (
+    <dl
+      data-slot="serp-summary"
+      className="mx-4 mt-4 grid grid-cols-3 gap-px overflow-hidden rounded-lg border bg-border"
+    >
+      <Item label="Your position">{position}</Item>
+      <Item
+        label="Titles with it"
+        tip={tip(
+          "About titles with the keyword",
+          "Titles with the keyword",
+          "How many of the top 10 titles hold the whole keyword, its words in order. Titles that hold only some of the words, or match only without accents, do not count.",
+        )}
+      >
+        {titles}
+      </Item>
+      <Item
+        label="Top 10 ratings"
+        tip={tip(
+          "About top 10 ratings",
+          "Top 10 ratings",
+          "The median rating count of the top 10 apps, a rough measure of how established the apps above you are. Google Play reports no counts, so its average rating shows instead.",
+        )}
+      >
+        {ratings}
+      </Item>
+    </dl>
+  );
+}
+
 export function SerpSummary({
   facts,
   comparedTo,
@@ -150,38 +200,24 @@ export function SerpSummary({
   comparedTo: string | null;
 }) {
   return (
-    <dl className="mx-4 mt-4 grid grid-cols-3 gap-px overflow-hidden rounded-lg border bg-border">
-      <Item label="Your position">
+    <SummaryGrid
+      tips
+      position={
         <PositionValue position={facts.position} comparedTo={comparedTo} />
-      </Item>
-      <Item
-        label="Titles with it"
-        tip={
-          <InfoTip
-            label="About titles with the keyword"
-            title="Titles with the keyword"
-            summary="How many of the top 10 titles hold the whole keyword, its words in order. Titles that hold only some of the words, or match only without accents, do not count."
-          >
-            <GuideLink />
-          </InfoTip>
-        }
-      >
-        <TitlesValue titles={facts.titles} />
-      </Item>
-      <Item
-        label="Top 10 ratings"
-        tip={
-          <InfoTip
-            label="About top 10 ratings"
-            title="Top 10 ratings"
-            summary="The median rating count of the top 10 apps, a rough measure of how established the apps above you are. Google Play reports no counts, so its average rating shows instead."
-          >
-            <GuideLink />
-          </InfoTip>
-        }
-      >
-        <RatingsValue ratings={facts.ratings} />
-      </Item>
-    </dl>
+      }
+      titles={<TitlesValue titles={facts.titles} />}
+      ratings={<RatingsValue ratings={facts.ratings} />}
+    />
+  );
+}
+
+export function SerpSummarySkeleton() {
+  const value = (
+    <Skeleton className="w-16 border border-transparent text-transparent">
+      <Value>0</Value> <Note>median</Note>
+    </Skeleton>
+  );
+  return (
+    <SummaryGrid tips={false} position={value} titles={value} ratings={value} />
   );
 }

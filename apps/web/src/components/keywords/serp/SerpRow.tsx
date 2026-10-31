@@ -104,6 +104,7 @@ export function SerpRow({
   return (
     <li
       id={serpRowId(entry.position)}
+      data-slot="serp-row"
       tabIndex={-1}
       className={cn(
         SERP_ROW_GRID,

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate } from "@/lib/format";
 import { SERP_ROW_GRID } from "./SerpRow";
+import { SerpSummarySkeleton } from "./SerpSummary";
 
 function Panel({ children }: { children: ReactNode }) {
   return (
@@ -46,17 +47,12 @@ export function SerpKeptShort() {
 export function SerpSkeleton() {
   return (
     <div aria-hidden className="flex flex-col">
-      <div className="mx-4 mt-4 grid grid-cols-3 gap-px overflow-hidden rounded-lg border bg-border">
-        {Array.from({ length: 3 }, (_, index) => (
-          <div key={index} className="flex flex-col gap-2 bg-card p-3">
-            <Skeleton className="h-3 w-20" />
-            <Skeleton className="h-5 w-14" />
-          </div>
-        ))}
+      <SerpSummarySkeleton />
+      <div className="px-4 pt-4 pb-1 text-label">
+        <Skeleton className="h-lh w-12" />
       </div>
-      <Skeleton className="mx-4 mt-6 mb-2 h-3 w-12" />
       {Array.from({ length: 10 }, (_, index) => (
-        <div key={index} className={SERP_ROW_GRID}>
+        <div key={index} data-slot="serp-row" className={SERP_ROW_GRID}>
           <Skeleton className="col-start-1 row-start-1 ml-auto h-5 w-5" />
           <Skeleton className="col-start-2 row-start-1 size-10 rounded-xl" />
           <div className="col-start-3 row-start-1 flex flex-col gap-1.5 pt-0.5">
