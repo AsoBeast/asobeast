@@ -5,7 +5,10 @@ import {
   SerpMovers,
   SerpSnapshot,
 } from '@asobeast/shared';
-import { TrackedKeywordAccess } from '../keywords/tracked-keyword.access';
+import {
+  AuthorizedKeyword,
+  TrackedKeywordAccess,
+} from '../keywords/tracked-keyword.access';
 import { PrismaService } from '../prisma/prisma.service';
 import { SerpMoversQueryDto } from './dto/serp-movers-query.dto';
 import { SerpQueryDto } from './dto/serp-query.dto';
@@ -19,6 +22,8 @@ import { serpExits, serpMovement } from './serp-history';
 import { detectEntrants, SerpSnapshotDay } from './serp-movers';
 import { titleJudge } from './serp-title-match';
 import { TOP_TEN_ROWS } from './top-ten';
+
+type SerpRole = Pick<SerpEntryItem, 'appId' | 'isCompetitor'>;
 
 const MOVERS_LIMIT = 50;
 const SERP_DATE_LIMIT = 365;
@@ -56,29 +61,13 @@ export class SerpService {
       };
     }
 
-    const [rows, previousDay] = await Promise.all([
-      this.serpDay(keywordId, shown),
-      this.capturedDayBefore(keywordId, shown),
-    ]);
-    const comparedTo = rows.length > 0 ? previousDay : null;
-    const earlier = comparedTo
-      ? await this.serpDay(keywordId, comparedTo)
-      : null;
+    const { rows, comparedTo, earlier } = await this.comparedDays(
+      keywordId,
+      shown,
+    );
     const entries = serpMovement(rows, earlier);
     const exits = serpExits(rows, earlier);
-    const known = await appsByStoreAppId(
-      this.prisma,
-      keyword.store,
-      keyword.country,
-      [...new Set([...rows, ...exits].map((row) => row.storeAppId))],
-    );
-    const roleOf = (storeAppId: string) => {
-      const app = known.get(storeAppId);
-      return {
-        appId: app?.id ?? null,
-        isCompetitor: app?.isCompetitor ?? false,
-      };
-    };
+    const roleOf = await this.rolesOf(keyword, [...rows, ...exits]);
     const judgeTitle = titleJudge(keyword.text);
 
     return {
@@ -109,6 +98,37 @@ export class SerpService {
         ...roleOf(exit.storeAppId),
       })),
       dates,
+    };
+  }
+
+  private async comparedDays(keywordId: string, shown: string) {
+    const [rows, previousDay] = await Promise.all([
+      this.serpDay(keywordId, shown),
+      this.capturedDayBefore(keywordId, shown),
+    ]);
+    const comparedTo = rows.length > 0 ? previousDay : null;
+    const earlier = comparedTo
+      ? await this.serpDay(keywordId, comparedTo)
+      : null;
+    return { rows, comparedTo, earlier };
+  }
+
+  private async rolesOf(
+    keyword: AuthorizedKeyword,
+    rows: { storeAppId: string }[],
+  ): Promise<(storeAppId: string) => SerpRole> {
+    const known = await appsByStoreAppId(
+      this.prisma,
+      keyword.store,
+      keyword.country,
+      [...new Set(rows.map((row) => row.storeAppId))],
+    );
+    return (storeAppId) => {
+      const app = known.get(storeAppId);
+      return {
+        appId: app?.id ?? null,
+        isCompetitor: app?.isCompetitor ?? false,
+      };
     };
   }
 
