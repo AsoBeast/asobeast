@@ -154,6 +154,13 @@ describe('Adversarial isolation attempts', () => {
 
     expect(response.status).toBe(404);
     expect(JSON.stringify(response.body)).not.toContain('secret-store-app');
+
+    const dated = await fixture.a.agent.get(
+      `/keywords/${fixture.b.privateKeywordId}/serp?date=2026-01-01`,
+    );
+
+    expect(dated.status).toBe(404);
+    expect(JSON.stringify(dated.body)).not.toContain('secret-store-app');
   });
 
   it('refuses an on-demand score for a keyword the caller does not track', async () => {
