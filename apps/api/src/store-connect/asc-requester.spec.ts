@@ -41,6 +41,9 @@ describe('AscRequester.page on an answer it cannot read', () => {
     ['data that is not a list', { data: {} }],
     ['data that is text', { data: 'x' }],
     ['a list instead of a document', []],
+    ['an entry that is not a resource', { data: [null] }],
+    ['an entry without an id', { data: [{ attributes: {} }] }],
+    ['an entry with an empty id', { data: [{ id: '' }] }],
   ])('refuses %s', async (_, body) => {
     const { requester } = recordedRequester(ok(body));
 

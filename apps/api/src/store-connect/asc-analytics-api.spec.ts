@@ -118,7 +118,7 @@ describe('AscAnalyticsApi report requests', () => {
     });
   });
 
-  it.each([null, {}, { data: [] }])(
+  it.each([null, {}, { data: [] }, { data: {} }, { data: { id: '' } }])(
     'refuses a created request it cannot read: %j',
     async (body) => {
       const { api } = recorded(ok(body, 201));

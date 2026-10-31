@@ -26,17 +26,26 @@ const UNREADABLE_ANSWER =
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
+const isResource = (value: unknown): boolean =>
+  isRecord(value) && typeof value.id === 'string' && value.id.length > 0;
+
 const unreadable = (): AscError => new AscError(UNREADABLE_ANSWER, 502, null);
 
 function readablePage<T>(body: unknown): Page<T> {
-  if (!isRecord(body) || !Array.isArray(body.data)) throw unreadable();
+  if (
+    !isRecord(body) ||
+    !Array.isArray(body.data) ||
+    !body.data.every(isResource)
+  ) {
+    throw unreadable();
+  }
   return body as unknown as Page<T>;
 }
 
 export function createdResource<T>(response: AscResponse): Resource<T> {
   const { body } = response;
-  if (!isRecord(body) || !isRecord(body.data)) throw unreadable();
-  return body.data as unknown as Resource<T>;
+  if (!isRecord(body) || !isResource(body.data)) throw unreadable();
+  return body.data as Resource<T>;
 }
 
 const isServerError = (response: AscResponse): boolean =>
