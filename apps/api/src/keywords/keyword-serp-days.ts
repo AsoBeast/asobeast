@@ -15,7 +15,7 @@ export async function loadSerpDays(
     return new Map();
   }
   const latest = await prisma.serpEntry.findFirst({
-    where: { keywordId: { in: keywordIds } },
+    where: { keywordId: { in: keywordIds }, position: 1 },
     orderBy: { date: 'desc' },
     select: { date: true },
   });

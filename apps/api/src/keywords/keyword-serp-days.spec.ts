@@ -75,7 +75,7 @@ describe('loadSerpDays', () => {
     ];
     expect(query.where.position).toEqual({ lte: 10 });
     expect(prisma.serpEntry.findFirst).toHaveBeenCalledWith({
-      where: { keywordId: { in: ['k1'] } },
+      where: { keywordId: { in: ['k1'] }, position: 1 },
       orderBy: { date: 'desc' },
       select: { date: true },
     });
