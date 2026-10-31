@@ -3,6 +3,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { Slot } from "radix-ui";
 
 import { cn } from "@/lib/utils";
+import { isAbsent, textInSpans, type ParentElement } from "./text-spans";
 
 const buttonVariants = cva(
   "group/button relative inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-[color,background-color,border-color,box-shadow,transform] outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:not-aria-[pressed]:not-aria-[checked]:translate-y-px disabled:opacity-60 aria-disabled:opacity-60 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
@@ -41,70 +42,6 @@ const buttonVariants = cva(
     },
   },
 );
-
-type ParentElement = React.ReactElement<{
-  children?: React.ReactNode;
-  asChild?: boolean;
-}>;
-
-const isText = (node: React.ReactNode): node is string | number | bigint =>
-  typeof node === "string" ||
-  typeof node === "number" ||
-  typeof node === "bigint";
-
-const isAbsent = (node: React.ReactNode): node is null | undefined =>
-  node === null || node === undefined;
-
-const rendersNothing = (node: React.ReactNode): boolean =>
-  isAbsent(node) || typeof node === "boolean";
-
-const isFragment = (node: React.ReactNode): node is ParentElement =>
-  React.isValidElement(node) && node.type === React.Fragment;
-
-type TextRun = { key: string; text: string };
-
-function textRuns(nodes: readonly React.ReactNode[]): Map<number, TextRun> {
-  const runs = new Map<number, TextRun>();
-  let current: TextRun | null = null;
-  for (const [index, node] of nodes.entries()) {
-    if (isText(node)) {
-      if (current) {
-        current.text += String(node);
-      } else {
-        current = { key: `text-${runs.size}`, text: String(node) };
-        runs.set(index, current);
-      }
-    } else if (!rendersNothing(node)) {
-      current = null;
-    }
-  }
-  return runs;
-}
-
-const isOpaque = (children: React.ReactNode): boolean =>
-  !Array.isArray(children) && !isText(children) && !isFragment(children);
-
-function textInSpans(children: React.ReactNode): React.ReactNode {
-  if (isOpaque(children)) return children;
-  const nodes = Array.isArray(children) ? children : [children];
-  const runs = textRuns(nodes);
-  return nodes.map((node, index) => {
-    const run = runs.get(index);
-    if (run !== undefined) {
-      return run.text.trim() ? <span key={run.key}>{run.text}</span> : run.text;
-    }
-    if (isText(node)) return null;
-    if (Array.isArray(node)) return textInSpans(node);
-    if (isFragment(node)) {
-      return (
-        <React.Fragment key={node.key ?? `fragment-${index}`}>
-          {textInSpans(node.props.children)}
-        </React.Fragment>
-      );
-    }
-    return node;
-  });
-}
 
 const slotsOntoItsChild = (element: ParentElement): boolean =>
   element.type === Slot.Root || element.props.asChild === true;
