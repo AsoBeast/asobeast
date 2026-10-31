@@ -24,7 +24,7 @@ import {
   shiftMonth,
   type Month,
 } from "./calendar-grid";
-import { stepDate } from "./chart-params";
+import { stepDate } from "./step-date";
 
 const WEEKDAYS = [
   ["Mon", "Monday"],
@@ -184,7 +184,7 @@ function DayGrid({
   );
 }
 
-export function ChartDayPicker({
+export function CapturedDayPicker({
   dates,
   value,
   onSelect,
