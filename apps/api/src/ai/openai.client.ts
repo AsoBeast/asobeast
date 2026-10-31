@@ -267,7 +267,9 @@ class OpenAiClient implements AiClient {
       });
     } catch (error) {
       throw withoutSecret(
-        classifyRequestError(error, this.model, this.provider),
+        error instanceof SyntaxError
+          ? notACompletion(undefined, this.provider)
+          : classifyRequestError(error, this.model, this.provider),
         this.secret,
       );
     }

@@ -322,6 +322,13 @@ describe('an OpenAI compatible provider over http', () => {
         'a gateway page',
         page(200, '<!doctype html><title>Bad gateway</title>'),
       ],
+      [
+        'json it cannot parse',
+        (_: IncomingMessage, response: ServerResponse) =>
+          response
+            .writeHead(200, { 'content-type': 'application/json' })
+            .end('{"choices":['),
+      ],
       ['a null body', json(200, null)],
       [
         'an object without choices',
