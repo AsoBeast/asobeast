@@ -416,6 +416,121 @@ describe('Store report sync (e2e)', () => {
     expect((read.body as AppLocalizationsResult).storeManaged).toBe(true);
   });
 
+  describe('an answer apple sends that cannot be read', () => {
+    const UNREADABLE =
+      'App Store Connect answered with something AsoBeast could not read';
+
+    const localization = (locale: string, keywords: string) => ({
+      type: 'appStoreVersionLocalizations',
+      id: `l-${locale}`,
+      attributes: { locale, keywords },
+    });
+
+    const importFields = async () => {
+      await harness.prisma.keywordFieldSync.create({
+        data: { appId, workspaceId: DEFAULT_WORKSPACE_ID },
+      });
+      harness.asc
+        .on('GET', /\/analyticsReportRequests\?/, () => answer({ data: [] }))
+        .on('GET', /\/appStoreVersions\?/, () =>
+          answer({
+            data: [
+              {
+                type: 'appStoreVersions',
+                id: 'v1',
+                attributes: {
+                  versionString: '2.0.0',
+                  createdDate: '2026-10-01T00:00:00.000Z',
+                },
+              },
+            ],
+          }),
+        )
+        .on('GET', /\/appStoreVersionLocalizations\?/, () =>
+          answer({
+            data: [
+              localization('en-US', 'camera,raw photo'),
+              localization('de-DE', 'kamera'),
+            ],
+          }),
+        );
+      await run();
+      return storedImport();
+    };
+
+    const storedImport = async () => ({
+      fields: await harness.prisma.keywordField.findMany({
+        where: { appId },
+        select: { localization: true, phrases: true },
+        orderBy: { localization: 'asc' },
+      }),
+      localizations: await harness.prisma.appLocalization.findMany({
+        where: { appId },
+        select: { localization: true, origin: true },
+        orderBy: { localization: 'asc' },
+      }),
+      keywords: await harness.prisma.trackedKeyword.findMany({
+        where: { appId },
+        select: { active: true, keyword: { select: { text: true } } },
+        orderBy: { keyword: { text: 'asc' } },
+      }),
+      sync: await harness.prisma.keywordFieldSync.findFirstOrThrow({
+        where: { appId },
+        select: { version: true, syncedAt: true, lastError: true },
+      }),
+    });
+
+    it('keeps the imported fields when the localizations cannot be read', async () => {
+      const before = await importFields();
+      expect(before.fields).toHaveLength(2);
+      expect(before.keywords.map(({ active }) => active)).not.toContain(false);
+
+      harness.asc.on('GET', /\/appStoreVersionLocalizations\?/, answer(null));
+      const summary = await run();
+
+      expect(summary).toMatchObject({ fieldsChanged: 0 });
+      const after = await storedImport();
+      expect(after.fields).toEqual(before.fields);
+      expect(after.localizations).toEqual(before.localizations);
+      expect(after.keywords).toEqual(before.keywords);
+      expect(after.sync).toEqual({ ...before.sync, lastError: UNREADABLE });
+    });
+
+    it('says the versions could not be read instead of naming no live version', async () => {
+      const before = await importFields();
+
+      harness.asc.on('GET', /\/appStoreVersions\?/, answer(null));
+      await run();
+
+      const after = await storedImport();
+      expect(after.fields).toEqual(before.fields);
+      expect(after.sync).toEqual({ ...before.sync, lastError: UNREADABLE });
+    });
+
+    it('keeps an ongoing report request when the request listing cannot be read', async () => {
+      scriptApple();
+      await run();
+      const requested = await harness.prisma.storeReportRequest.findMany({
+        select: { accessType: true, state: true, remoteId: true },
+        orderBy: { accessType: 'asc' },
+      });
+      expect(requested.length).toBeGreaterThan(0);
+
+      const posted = paths('POST').length;
+      harness.asc.on('GET', /\/analyticsReportRequests\?/, answer(null));
+      await run(false).catch(() => undefined);
+
+      expect(paths('POST')).toHaveLength(posted);
+
+      await expect(
+        harness.prisma.storeReportRequest.findMany({
+          select: { accessType: true, state: true, remoteId: true },
+          orderBy: { accessType: 'asc' },
+        }),
+      ).resolves.toEqual(requested);
+    });
+  });
+
   it('downloads nothing and changes no row on a run without a new instance', async () => {
     scriptApple();
     await run();
