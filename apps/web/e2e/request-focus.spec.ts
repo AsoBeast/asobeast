@@ -1,4 +1,4 @@
-import type { BrowserContext, Page } from "@playwright/test";
+import type { BrowserContext, Locator, Page } from "@playwright/test";
 import type {
   ApiTokenItem,
   CompetitorItem,
@@ -6,6 +6,8 @@ import type {
 } from "@asobeast/shared";
 import { holdRender } from "./chart-image.mts";
 import {
+  APP_GP_DETAIL,
+  APP_GP_SERP_MOVERS,
   AWAITING_ALERT_COOKIE,
   CROWDED_COMPETITORS_COOKIE,
   TOP_CHART_DATES,
@@ -29,6 +31,17 @@ const confirmIn = (page: Page, name: string) =>
     .getByRole("alertdialog")
     .getByRole("button", { name, exact: true })
     .press("Enter");
+
+const becameInert = (control: Locator) =>
+  expect
+    .poll(() =>
+      control.evaluate(
+        (element) =>
+          element.hasAttribute("disabled") ||
+          element.getAttribute("aria-disabled") === "true",
+      ),
+    )
+    .toBe(true);
 
 const storeConnections = (page: Page) =>
   page.getByRole("region", { name: "Store connections" });
@@ -700,6 +713,60 @@ test.describe("import app openers get focus back", () => {
   });
 });
 
+test.describe("Track keeps focus", () => {
+  const [, PLAY_MOVER] = APP_GP_SERP_MOVERS.items;
+  const competitorsPath = `/api/backend/apps/${APP_GP_DETAIL.id}/competitors`;
+  const moverTrack = (page: Page) =>
+    page
+      .getByRole("listitem")
+      .filter({ hasText: PLAY_MOVER.title })
+      .getByRole("button", { name: "Track" });
+
+  test.beforeEach(({ request }) =>
+    request.post(
+      `http://localhost:4100/__reset/competitors/${APP_GP_DETAIL.id}`,
+    ),
+  );
+
+  test("Track keeps focus while it adds a competitor", async ({ page }) => {
+    const held = await holdRequest(
+      page,
+      new RegExp(`${competitorsPath}$`),
+      "POST",
+    );
+    await page.goto(`/apps/${APP_GP_DETAIL.id}/rankings`);
+    const track = moverTrack(page);
+
+    await pressFromKeyboard(track);
+    await becameInert(track);
+
+    await expect(track).toBeFocused();
+    await expectFocusKeptWhileHeld(track, held);
+  });
+
+  test("two activations of Track in one task send one add", async ({
+    page,
+  }) => {
+    const adds: string[] = [];
+    page.on("request", (request) => {
+      if (
+        request.method() === "POST" &&
+        new URL(request.url()).pathname === competitorsPath
+      ) {
+        adds.push(request.url());
+      }
+    });
+    await page.goto(`/apps/${APP_GP_DETAIL.id}/rankings`);
+
+    await activateTwiceInOneTask(moverTrack(page));
+
+    await expect(
+      page.getByText(`Now tracking ${PLAY_MOVER.title}`).first(),
+    ).toBeVisible();
+    expect(adds).toHaveLength(1);
+  });
+});
+
 test.describe("captured day buttons", () => {
   const chartReads = (page: Page) => {
     const urls: string[] = [];
@@ -731,15 +798,7 @@ test.describe("captured day buttons", () => {
 
       await pressFromKeyboard(button);
       await expect(page).toHaveURL(new RegExp(`date=${to}`));
-      await expect
-        .poll(() =>
-          button.evaluate(
-            (element) =>
-              element.hasAttribute("disabled") ||
-              element.getAttribute("aria-disabled") === "true",
-          ),
-        )
-        .toBe(true);
+      await becameInert(button);
       await expect(button).toBeFocused();
       await expect(button).toHaveAttribute("aria-disabled", "true");
 
