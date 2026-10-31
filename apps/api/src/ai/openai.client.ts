@@ -95,7 +95,7 @@ const isObject = (value: unknown): value is object =>
   typeof value === 'object' && value !== null;
 
 const fieldOf = (body: unknown, field: string): unknown =>
-  isObject(body) ? (Reflect.get(body, field) as unknown) : undefined;
+  isObject(body) ? Reflect.get(body, field) : undefined;
 
 const stringField = (body: unknown, field: string): string | null => {
   const value = fieldOf(body, field);
