@@ -328,6 +328,8 @@ describe('an OpenAI compatible provider over http', () => {
         json(200, { id: 'x', object: 'chat.completion' }),
       ],
       ['choices that are not a list', json(200, { choices: {} })],
+      ['a choice without a message', json(200, { choices: [{}] })],
+      ['a choice that is null', json(200, { choices: [null] })],
       ['an error without a message', json(200, { error: { message: ' ' } })],
       ['an error that is only text', json(200, { error: 'down' })],
     ])('says %s is not a completion', async (_, answer) => {

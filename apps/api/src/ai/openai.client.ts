@@ -91,10 +91,11 @@ const retryableStatus = (status: unknown): boolean =>
 const redact = (text: string): string =>
   text.replace(KEY_PATTERN, '[redacted]');
 
+const isObject = (value: unknown): value is object =>
+  typeof value === 'object' && value !== null;
+
 const fieldOf = (body: unknown, field: string): unknown =>
-  typeof body === 'object' && body !== null
-    ? (Reflect.get(body, field) as unknown)
-    : undefined;
+  isObject(body) ? (Reflect.get(body, field) as unknown) : undefined;
 
 const stringField = (body: unknown, field: string): string | null => {
   const value = fieldOf(body, field);
@@ -175,8 +176,13 @@ export const classifyRequestError = (
 
 const isChatCompletion = (
   answer: unknown,
-): answer is OpenAI.Chat.Completions.ChatCompletion =>
-  Array.isArray(fieldOf(answer, 'choices'));
+): answer is OpenAI.Chat.Completions.ChatCompletion => {
+  const choices = fieldOf(answer, 'choices');
+  return (
+    Array.isArray(choices) &&
+    (choices.length === 0 || isObject(fieldOf(choices[0], 'message')))
+  );
+};
 
 const notACompletion = (
   answer: unknown,
