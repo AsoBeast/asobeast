@@ -23,6 +23,8 @@ import { TOP_TEN_ROWS } from './top-ten';
 const MOVERS_LIMIT = 50;
 const SERP_DATE_LIMIT = 365;
 
+const utcDay = (date: string) => new Date(`${date}T00:00:00.000Z`);
+
 interface SerpEntrant {
   date: string;
   keywordId: string;
@@ -54,13 +56,14 @@ export class SerpService {
       };
     }
 
-    const comparedTo = dates.includes(shown)
-      ? (dates.find((date) => date < shown) ?? null)
-      : null;
-    const [rows, earlier] = await Promise.all([
+    const [rows, previousDay] = await Promise.all([
       this.serpDay(keywordId, shown),
-      comparedTo ? this.serpDay(keywordId, comparedTo) : null,
+      this.capturedDayBefore(keywordId, shown),
     ]);
+    const comparedTo = rows.length > 0 ? previousDay : null;
+    const earlier = comparedTo
+      ? await this.serpDay(keywordId, comparedTo)
+      : null;
     const entries = serpMovement(rows, earlier);
     const exits = serpExits(rows, earlier);
     const known = await appsByStoreAppId(
@@ -119,9 +122,21 @@ export class SerpService {
     return days.map((day) => toDateKey(day.date));
   }
 
+  private async capturedDayBefore(
+    keywordId: string,
+    date: string,
+  ): Promise<string | null> {
+    const day = await this.prisma.serpEntry.findFirst({
+      where: { keywordId, position: 1, date: { lt: utcDay(date) } },
+      orderBy: { date: 'desc' },
+      select: { date: true },
+    });
+    return day ? toDateKey(day.date) : null;
+  }
+
   private serpDay(keywordId: string, date: string) {
     return this.prisma.serpEntry.findMany({
-      where: { keywordId, date: new Date(`${date}T00:00:00.000Z`) },
+      where: { keywordId, date: utcDay(date) },
       orderBy: { position: 'asc' },
       select: {
         position: true,

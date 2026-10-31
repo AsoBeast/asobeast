@@ -17,8 +17,10 @@ interface StoredRow {
 interface SerpWhere {
   keywordId: string;
   position?: number;
-  date?: Date;
+  date?: Date | { lt: Date };
 }
+
+const isDay = (date: SerpWhere['date']): date is Date => date instanceof Date;
 
 const LATEST = '2026-07-01';
 
@@ -60,25 +62,32 @@ describe('SerpService.serp', () => {
       require: requireKeyword,
     } as unknown as TrackedKeywordAccess;
     const days = options?.days ?? { [LATEST]: [] };
+    const captured = Object.keys(days)
+      .filter((day) => days[day].length > 0)
+      .sort()
+      .reverse()
+      .map((day) => ({ date: new Date(`${day}T00:00:00.000Z`) }));
     const findMany = jest
-      .fn<Promise<unknown[]>, [{ where: SerpWhere }]>()
-      .mockImplementation(({ where }) => {
+      .fn<Promise<unknown[]>, [{ where: SerpWhere; take?: number }]>()
+      .mockImplementation(({ where, take }) => {
         if (where.position === 1) {
-          return Promise.resolve(
-            Object.keys(days)
-              .filter((day) => days[day].length > 0)
-              .sort()
-              .reverse()
-              .map((day) => ({ date: new Date(`${day}T00:00:00.000Z`) })),
-          );
+          return Promise.resolve(captured.slice(0, take));
         }
         return Promise.resolve(
-          where.date ? (days[dayKey(where.date)] ?? []) : [],
+          isDay(where.date) ? (days[dayKey(where.date)] ?? []) : [],
+        );
+      });
+    const findFirst = jest
+      .fn<Promise<unknown>, [{ where: SerpWhere }]>()
+      .mockImplementation(({ where }) => {
+        const before = where.date && !isDay(where.date) ? where.date.lt : null;
+        return Promise.resolve(
+          captured.find((day) => before !== null && day.date < before) ?? null,
         );
       });
     const appFindMany = jest.fn().mockResolvedValue(options?.apps ?? []);
     const prisma = {
-      serpEntry: { findMany },
+      serpEntry: { findMany, findFirst },
       app: { findMany: appFindMany },
     };
     const service = new SerpService(
@@ -88,7 +97,7 @@ describe('SerpService.serp', () => {
     const daysRead = () =>
       findMany.mock.calls
         .map(([query]) => query.where)
-        .filter((where) => where.date !== undefined)
+        .filter((where) => isDay(where.date))
         .map((where) => dayKey(where.date as Date));
     return { service, findMany, appFindMany, requireKeyword, daysRead };
   };
@@ -196,6 +205,22 @@ describe('SerpService.serp', () => {
 
     expect(snapshot.date).toBe('2026-06-20');
     expect(snapshot.comparedTo).toBe('2026-06-10');
+  });
+
+  it('compares a day older than the captured day list with the day before it', async () => {
+    const days: Record<string, StoredRow[]> = {};
+    for (let back = 0; back < 400; back += 1) {
+      const day = new Date(Date.UTC(2026, 6, 1) - back * 86_400_000);
+      days[dayKey(day)] = [row(1, 'a')];
+    }
+    const { service } = setup({ days });
+
+    const snapshot = await service.serp('kw1', { date: '2025-06-01' });
+
+    expect(snapshot.dates).toHaveLength(365);
+    expect(snapshot.dates).not.toContain('2025-06-01');
+    expect(snapshot.comparedTo).toBe('2025-05-31');
+    expect(snapshot.entries[0]).toMatchObject({ movement: 'same' });
   });
 
   it('answers an empty day for an asked day that was not captured', async () => {
