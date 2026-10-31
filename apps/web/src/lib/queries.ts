@@ -114,6 +114,7 @@ import {
 import { withReviewReply, withReviewRow } from "./review-reply-cache";
 import { runProgressInterval } from "./run-progress";
 import { keywordsPollInterval } from "./keyword-checks";
+import { firstImportPollInterval } from "./app-localizations";
 import {
   hasPendingScreenshots,
   SCREENSHOT_POLL_MS,
@@ -655,17 +656,12 @@ export const keywordFieldOptions = (
     queryFn: () => getKeywordField(id, query),
   });
 
-const FIRST_IMPORT_POLL_MS = 15_000;
-
 export const appLocalizationsOptions = (id: string) =>
   queryOptions({
     queryKey: appKeys.localizations(id),
     queryFn: () => getAppLocalizations(id),
     refetchInterval: (query) =>
-      query.state.data?.storeImport === "following" &&
-      query.state.data.storeSync?.at === null
-        ? FIRST_IMPORT_POLL_MS
-        : false,
+      firstImportPollInterval(query.state.data, query.state.dataUpdateCount),
   });
 
 export const marketKeywordFieldsOptions = (id: string, country: string) =>

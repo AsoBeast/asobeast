@@ -32,6 +32,22 @@ import { hasNoCapacity } from "@/lib/quota-usage";
 
 export const LOCALIZATIONS_SECTION_ID = "app-localizations";
 
+export const FIRST_IMPORT_POLL_MS = 15_000;
+
+export const FIRST_IMPORT_POLL_LIMIT = 40;
+
+export function firstImportPollInterval(
+  result: Pick<AppLocalizationsResult, "storeImport" | "storeSync"> | undefined,
+  updates: number,
+): number | false {
+  if (!result || updates >= FIRST_IMPORT_POLL_LIMIT) return false;
+  return result.storeImport === "following" &&
+    result.storeSync?.at === null &&
+    result.storeSync.error === null
+    ? FIRST_IMPORT_POLL_MS
+    : false;
+}
+
 export const READ_ROLE_LABELS: Record<LocalizationReadRole, string> = {
   default: "Default",
   additional: "Also",
