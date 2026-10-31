@@ -241,6 +241,24 @@ test.describe("a translated import dialog", () => {
     expect(errors).toEqual([]);
   });
 
+  test("changes the market for rows without a country", async ({ page }) => {
+    const errors = collectDomErrors(page);
+    const dialog = await openImportDialog(page);
+    await chooseImportFile(dialog, PLAIN_LIST, "plain-list.txt");
+    const row = dialog.getByRole("row", { name: /focus timer/i });
+    await expect(row).toContainText("US");
+
+    await translateText(page);
+    await dialog
+      .getByRole("combobox", { name: "Market for rows without a country" })
+      .click();
+    await page.getByRole("option", { name: /PL/ }).click();
+
+    await expect(row).toContainText(/pl/i);
+    await expect(dialog).toBeVisible();
+    expect(errors).toEqual([]);
+  });
+
   test("takes another file", async ({ page }) => {
     const errors = collectDomErrors(page);
     const dialog = await openImportDialog(page);
