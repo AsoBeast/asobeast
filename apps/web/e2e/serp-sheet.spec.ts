@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import type { Locator, Page } from "@playwright/test";
 import { contrastViolations, THEMES } from "./contrast-check.mts";
 import { missingDescriptionIds } from "./described-by.mts";
+import { pressFromKeyboard } from "./held-request.mts";
 import { hydrated } from "./hydrated.mts";
 import { SERP_HISTORY_DAYS, SERP_PLAY_AVERAGE } from "./serp-history.mts";
 import { expect, test } from "./session.mts";
@@ -21,6 +22,14 @@ const failureIn = (page: Page) =>
 const formatDayMonth = (date: string) =>
   new Intl.DateTimeFormat("en-US", {
     timeZone: "UTC",
+    month: "short",
+    day: "numeric",
+  }).format(new Date(date));
+
+const formatDay = (date: string) =>
+  new Intl.DateTimeFormat("en-US", {
+    timeZone: "UTC",
+    year: "numeric",
     month: "short",
     day: "numeric",
   }).format(new Date(date));
@@ -328,6 +337,119 @@ for (const width of [320, 375]) {
     ).toBe(true);
   });
 }
+
+test.describe("captured day", () => {
+  const [TODAY, YESTERDAY, DAY_BEFORE] = SERP_HISTORY_DAYS;
+  const dayReads = (page: Page) => {
+    const days: (string | null)[] = [];
+    page.on("request", (request) => {
+      const url = new URL(request.url());
+      if (url.pathname === "/api/backend/keywords/kw-3/serp") {
+        days.push(url.searchParams.get("date"));
+      }
+    });
+    return days;
+  };
+
+  test("steps back through the captured days and forward to the newest", async ({
+    page,
+  }) => {
+    const sheet = await openStudyTimer(page);
+    const reads = dayReads(page);
+    const previous = sheet.getByRole("button", {
+      name: "Previous captured day",
+    });
+    const next = sheet.getByRole("button", { name: "Next captured day" });
+
+    await expect(
+      sheet.getByRole("button", { name: /^Captured day/ }),
+    ).toHaveAccessibleName(`Captured day, ${formatDay(TODAY)}`);
+    await pressFromKeyboard(previous);
+    await expect(page).toHaveURL(new RegExp(`serpDate=${YESTERDAY}`));
+    await expect(sheet).toContainText(`vs ${formatDayMonth(DAY_BEFORE)}`);
+    await expect(rowAt(sheet, 3)).not.toContainText("New entry");
+
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(new RegExp(`serpDate=${DAY_BEFORE}`));
+    await expect(
+      sheet.getByText("Positions below the top 10 are not kept for this day."),
+    ).toBeVisible();
+    await expect(
+      sheet.getByRole("heading", { name: /^Positions 11/ }),
+    ).toHaveCount(0);
+    await expect(sheet).toContainText("No earlier capture");
+    await expect(previous).toBeFocused();
+    await expect(previous).toHaveAttribute("aria-disabled", "true");
+
+    await pressFromKeyboard(next);
+    await expect(page).toHaveURL(new RegExp(`serpDate=${YESTERDAY}`));
+    await page.keyboard.press("Enter");
+    await expect(page).not.toHaveURL(/serpDate=/);
+    await expect(rowAt(sheet, 3)).toContainText("New entry");
+    expect(reads.filter((day) => day === YESTERDAY)).toHaveLength(1);
+    expect(reads.filter((day) => day === DAY_BEFORE)).toHaveLength(1);
+  });
+
+  test("picks a captured day from the popover with the keyboard", async ({
+    page,
+  }) => {
+    const sheet = await openStudyTimer(page);
+    const trigger = sheet.getByRole("button", { name: /^Captured day/ });
+
+    await pressFromKeyboard(trigger);
+    const grid = page.getByRole("dialog", { name: "Choose captured day" });
+    if (DAY_BEFORE.slice(0, 7) !== TODAY.slice(0, 7)) {
+      await grid.getByRole("button", { name: "Previous month" }).click();
+    }
+    await grid
+      .getByRole("button", { name: formatDay(DAY_BEFORE), exact: true })
+      .press("Enter");
+
+    await expect(page).toHaveURL(new RegExp(`serpDate=${DAY_BEFORE}`));
+    await expect(trigger).toBeFocused();
+  });
+
+  test("says a linked day was not captured and keeps the picker", async ({
+    page,
+  }) => {
+    const missing = "2020-01-15";
+    await page.goto(`/apps/app-1/keywords?serp=kw-3&serpDate=${missing}`);
+    const sheet = serpSheet(page);
+
+    await expect(
+      sheet.getByText(
+        `Nothing was captured on ${formatDay(missing)}. Pick a captured day.`,
+      ),
+    ).toBeVisible();
+    await expect(
+      sheet.getByRole("button", { name: "Next captured day" }),
+    ).toBeVisible();
+  });
+
+  test("closing clears the keyword and the day from the url", async ({
+    page,
+  }) => {
+    await page.goto(`/apps/app-1/keywords?serp=kw-3&serpDate=${YESTERDAY}`);
+    await expect(rowAt(serpSheet(page), 1)).toBeVisible();
+
+    await page.keyboard.press("Escape");
+
+    await expect(serpSheet(page)).toHaveCount(0);
+    await expect(page).not.toHaveURL(/serp=|serpDate=/);
+  });
+
+  test("opening another keyword forgets the day", async ({ page }) => {
+    await page.goto(`/apps/app-1/keywords?serp=kw-3&serpDate=${YESTERDAY}`);
+    await expect(rowAt(serpSheet(page), 1)).toBeVisible();
+    await page.keyboard.press("Escape");
+
+    await openSerp(page);
+
+    await expect(page).toHaveURL(/serp=kw-1/);
+    await expect(page).not.toHaveURL(/serpDate=/);
+    await expect(serpSheet(page).getByText("Rival Focus")).toBeVisible();
+  });
+});
 
 for (const theme of THEMES) {
   test(`the open sheet has no contrast violation in the ${theme} theme`, async ({

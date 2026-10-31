@@ -1,15 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery, type UseQueryResult } from "@tanstack/react-query";
-import { useQueryState } from "nuqs";
+import {
+  keepPreviousData,
+  useQuery,
+  type UseQueryResult,
+} from "@tanstack/react-query";
 import {
   SERP_DEPTH,
   type SerpSnapshot,
   type Store,
   type TrackedKeywordItem,
 } from "@asobeast/shared";
-import { ExportCsvButton } from "@/components/ExportCsvButton";
 import {
   failedRead,
   InlineQueryError,
@@ -21,13 +23,11 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { formatDate } from "@/lib/format";
 import { appDetailOptions, serpOptions } from "@/lib/queries";
-import { serpParser } from "@/lib/search-params";
-import { exportSerp, type SerpViewer } from "./serp-csv";
+import type { SerpViewer } from "./serp-csv";
 import { isNewestDay, serpSummary } from "./serp-summary";
 import { SerpExits } from "./SerpExits";
-import { comparisonCaption, SerpHeader } from "./SerpHeader";
+import { SerpHeader } from "./SerpHeader";
 import { SerpList } from "./SerpList";
 import {
   SerpKeptShort,
@@ -37,11 +37,18 @@ import {
   SerpSkeleton,
 } from "./SerpStates";
 import { SerpSummary } from "./SerpSummary";
+import { useSerpParams } from "./use-serp-params";
 
 function useSerpViewer(appId: string): SerpViewer {
   const { data } = useQuery(appDetailOptions(appId));
   return { appId, storeAppId: data?.storeAppId };
 }
+
+type CapturedSerp = SerpSnapshot & { date: string };
+
+const isCaptured = (
+  snapshot: SerpSnapshot | undefined,
+): snapshot is CapturedSerp => typeof snapshot?.date === "string";
 
 function SerpResults({
   snapshot,
@@ -96,61 +103,27 @@ function SerpResults({
   );
 }
 
-type CapturedSerp = SerpSnapshot & { date: string };
-
-const isCaptured = (
-  snapshot: SerpSnapshot | undefined,
-): snapshot is CapturedSerp => typeof snapshot?.date === "string";
-
-function SerpToolbar({
-  snapshot,
-  viewer,
-}: {
-  snapshot: SerpSnapshot | undefined;
-  viewer: SerpViewer;
-}) {
-  return (
-    <>
-      {isCaptured(snapshot) ? (
-        <>
-          <span className="text-sm font-medium">
-            {formatDate(snapshot.date)}
-          </span>
-          <span className="text-caption text-muted-foreground">
-            {comparisonCaption(snapshot.comparedTo)}
-          </span>
-        </>
-      ) : null}
-      <ExportCsvButton
-        subject="the search results"
-        className="ml-auto"
-        disabled={
-          !snapshot ||
-          snapshot.entries.length === 0 ||
-          viewer.storeAppId === undefined
-        }
-        onClick={() => {
-          if (snapshot) exportSerp(viewer, snapshot);
-        }}
-      />
-    </>
-  );
-}
-
 function SerpBody({
   appId,
   keywordId,
+  serpDate,
   store,
   keyword,
+  onSelectDay,
 }: {
   appId: string;
   keywordId: string;
+  serpDate: string | null;
   store: Store;
   keyword: TrackedKeywordItem | undefined;
+  onSelectDay: (date: string, newest: string | undefined) => void;
 }) {
-  const serp = useQuery(serpOptions(keywordId));
+  const serp = useQuery({
+    ...serpOptions(keywordId, serpDate),
+    placeholderData: keepPreviousData,
+  });
   const viewer = useSerpViewer(appId);
-  const snapshot = serp.data;
+  const snapshot = serp.data?.keywordId === keywordId ? serp.data : undefined;
 
   return (
     <>
@@ -158,19 +131,32 @@ function SerpBody({
         text={snapshot?.text ?? keyword?.text}
         country={keyword?.country}
         store={store}
-        toolbar={<SerpToolbar snapshot={snapshot} viewer={viewer} />}
+        snapshot={snapshot}
+        viewer={viewer}
+        exportable={!serp.isPlaceholderData}
+        onSelectDay={(date) => onSelectDay(date, snapshot?.dates?.[0])}
       />
-      <SerpContent read={serp} viewer={viewer} keyword={keyword} />
+      <SerpContent
+        read={serp}
+        snapshot={snapshot}
+        busy={serp.isPlaceholderData}
+        viewer={viewer}
+        keyword={keyword}
+      />
     </>
   );
 }
 
 function SerpContent({
   read,
+  snapshot,
+  busy,
   viewer,
   keyword,
 }: {
   read: UseQueryResult<SerpSnapshot>;
+  snapshot: SerpSnapshot | undefined;
+  busy: boolean;
   viewer: SerpViewer;
   keyword: TrackedKeywordItem | undefined;
 }) {
@@ -184,7 +170,7 @@ function SerpContent({
       </div>
     );
   }
-  if (!read.data) {
+  if (!snapshot) {
     return (
       <div role="status">
         <span className="sr-only">Loading search results</span>
@@ -192,8 +178,12 @@ function SerpContent({
       </div>
     );
   }
-  if (!isCaptured(read.data)) return <SerpNeverChecked />;
-  return <SerpResults snapshot={read.data} viewer={viewer} keyword={keyword} />;
+  if (!isCaptured(snapshot)) return <SerpNeverChecked />;
+  return (
+    <div aria-busy={busy || undefined}>
+      <SerpResults snapshot={snapshot} viewer={viewer} keyword={keyword} />
+    </div>
+  );
 }
 
 export function SerpSheet({
@@ -205,7 +195,7 @@ export function SerpSheet({
   store: Store;
   keyword?: TrackedKeywordItem;
 }) {
-  const [keywordId, setKeywordId] = useQueryState("serp", serpParser);
+  const [{ serp: keywordId, serpDate }, setSerpState] = useSerpParams();
   const [shownId, setShownId] = useState(keywordId);
   if (keywordId !== "" && keywordId !== shownId) setShownId(keywordId);
   const open = keywordId.length > 0;
@@ -214,7 +204,7 @@ export function SerpSheet({
     <Sheet
       open={open}
       onOpenChange={(next) => {
-        if (!next) void setKeywordId("");
+        if (!next) void setSerpState({ serp: "", serpDate: null });
       }}
     >
       <SheetContent
@@ -239,8 +229,12 @@ export function SerpSheet({
           <SerpBody
             appId={appId}
             keywordId={keywordId}
+            serpDate={serpDate}
             store={store}
             keyword={keyword}
+            onSelectDay={(date, newest) =>
+              void setSerpState({ serpDate: date === newest ? null : date })
+            }
           />
         ) : null}
       </SheetContent>

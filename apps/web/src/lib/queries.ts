@@ -235,7 +235,9 @@ export const appKeys = {
       ...appKeys.metadataAuditRoot(id),
       { market, ...(localization === undefined ? {} : { localization }) },
     ] as const,
-  serp: (keywordId: string) => ["serp", keywordId] as const,
+  serpRoot: () => ["serp"] as const,
+  serp: (keywordId: string, date: string | null = null) =>
+    [...appKeys.serpRoot(), keywordId, date] as const,
 };
 
 export const setupKey = (id: string) => ["setup", id] as const;
@@ -908,10 +910,10 @@ export const setupOptions = (id: string) =>
     refetchOnWindowFocus: true,
   });
 
-export const serpOptions = (keywordId: string) =>
+export const serpOptions = (keywordId: string, date: string | null = null) =>
   queryOptions({
-    queryKey: appKeys.serp(keywordId),
-    queryFn: () => getSerp(keywordId),
+    queryKey: appKeys.serp(keywordId, date),
+    queryFn: () => getSerp(keywordId, date ?? undefined),
   });
 
 export const webhooksOptions = queryOptions({

@@ -547,6 +547,37 @@ describe("appKeys", () => {
     expect(serpOptions("kw-1").queryKey).toEqual(appKeys.serp("kw-1"));
     expect(isPrefixOf(appKeys.all, appKeys.serp("kw-1"))).toBe(false);
   });
+
+  it("keys each captured day of a serp apart under one root", () => {
+    const newest = serpOptions("kw-1").queryKey;
+    const older = serpOptions("kw-1", "2026-10-30").queryKey;
+
+    expect(newest).not.toEqual(older);
+    for (const key of [newest, older]) {
+      expect(isPrefixOf(appKeys.serpRoot(), key)).toBe(true);
+      expect(isPrefixOf(appKeys.all, key)).toBe(false);
+    }
+  });
+
+  it("asks for the captured day a serp names", async () => {
+    const requested: string[] = [];
+    vi.stubGlobal("fetch", (input: RequestInfo | URL) => {
+      requested.push(String(input));
+      return Promise.resolve(
+        new Response("{}", {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      );
+    });
+
+    await new QueryClient().fetchQuery(serpOptions("kw-1", "2026-10-30"));
+    await new QueryClient().fetchQuery(serpOptions("kw-1"));
+    vi.unstubAllGlobals();
+
+    expect(requested[0]).toMatch(/\/keywords\/kw-1\/serp\?date=2026-10-30$/);
+    expect(requested[1]).toMatch(/\/keywords\/kw-1\/serp$/);
+  });
 });
 
 describe("importPreviewRequest", () => {
