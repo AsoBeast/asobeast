@@ -422,8 +422,8 @@ describe('Competitor suggestions (e2e)', () => {
       primary.id,
       Array.from({ length: 12 }, (_, index) => ({
         storeAppId: `9000000${String(index).padStart(2, '0')}`,
-        position: index + 2,
-        date: D1,
+        position: (index % 10) + 1,
+        date: index < 10 ? D1 : D2,
       })),
     );
 

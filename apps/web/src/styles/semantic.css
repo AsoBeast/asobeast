@@ -28,6 +28,7 @@
   --warning: var(--amber-600);
   --warning-subtle: color-mix(in srgb, var(--amber-600) 12%, var(--card));
   --info: var(--blue-700);
+  --info-subtle: color-mix(in srgb, var(--blue-700) 10%, var(--card));
   --priority-critical: var(--crimson-600);
   --priority-high: var(--amber-600);
   --priority-medium: var(--yellow-600);
@@ -105,6 +106,7 @@
     --warning: var(--amber-400);
     --warning-subtle: color-mix(in srgb, var(--amber-400) 16%, var(--card));
     --info: var(--blue-400);
+    --info-subtle: color-mix(in srgb, var(--blue-400) 16%, var(--card));
     --priority-critical: var(--crimson-400);
     --priority-high: var(--amber-400);
     --priority-medium: var(--yellow-400);

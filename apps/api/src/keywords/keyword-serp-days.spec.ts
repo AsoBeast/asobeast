@@ -64,4 +64,20 @@ describe('loadSerpDays', () => {
     ];
     expect(query.where.date.gte).toEqual(new Date('2026-10-20T00:00:00.000Z'));
   });
+
+  it('reads only the top 10 of each day', async () => {
+    const prisma = fakePrisma({ date: new Date('2026-10-28T00:00:00.000Z') });
+
+    await load(prisma, ['k1']);
+
+    const [query] = prisma.serpEntry.findMany.mock.calls[0] as [
+      { where: { position: unknown } },
+    ];
+    expect(query.where.position).toEqual({ lte: 10 });
+    expect(prisma.serpEntry.findFirst).toHaveBeenCalledWith({
+      where: { keywordId: { in: ['k1'] }, position: 1 },
+      orderBy: { date: 'desc' },
+      select: { date: true },
+    });
+  });
 });

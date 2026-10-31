@@ -22,7 +22,7 @@ import {
   type ChartSearch,
 } from "./chart-params";
 import { compareLabel } from "./movement";
-import { MovementCell } from "./MovementCell";
+import { MovementCell } from "@/components/movement/MovementCell";
 import { RowActions } from "./RowActions";
 
 export function ChartColumn({

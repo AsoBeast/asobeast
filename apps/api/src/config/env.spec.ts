@@ -272,6 +272,30 @@ describe('CRON_STORE_REPORTS', () => {
   });
 });
 
+describe('RETENTION_SERP_DEEP_DAYS', () => {
+  const base = { AUTH_SECRET: 'a'.repeat(32) };
+
+  it('keeps search results below the top 10 for 30 days by default', () => {
+    expect(validateEnv(base).RETENTION_SERP_DEEP_DAYS).toBe(30);
+  });
+
+  it.each([
+    ['0', 0],
+    ['7', 7],
+  ])('accepts %s days', (value, expected) => {
+    expect(
+      validateEnv({ ...base, RETENTION_SERP_DEEP_DAYS: value })
+        .RETENTION_SERP_DEEP_DAYS,
+    ).toBe(expected);
+  });
+
+  it.each(['-1', 'abc'])('refuses %s', (value) => {
+    expect(() =>
+      validateEnv({ ...base, RETENTION_SERP_DEEP_DAYS: value }),
+    ).toThrow();
+  });
+});
+
 describe('RETENTION_STORE_REPORTS_DAYS', () => {
   const base = { AUTH_SECRET: 'a'.repeat(32) };
 

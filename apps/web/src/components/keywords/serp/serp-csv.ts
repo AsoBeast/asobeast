@@ -1,7 +1,7 @@
 import type { SerpEntryItem, SerpSnapshot } from "@asobeast/shared";
 import { csvFilename, downloadCsv, toCsv } from "@/lib/csv";
 
-type SerpRole = "you" | "competitor" | "other";
+export type SerpRole = "you" | "competitor" | "other";
 
 export interface SerpViewer {
   appId: string;
@@ -18,9 +18,13 @@ const SERP_CSV_HEADERS = [
   "ratings",
   "role",
   "storeAppId",
+  "previousPosition",
 ];
 
-export function serpRole(entry: SerpEntryItem, viewer: SerpViewer): SerpRole {
+export function serpRole(
+  entry: Pick<SerpEntryItem, "appId" | "storeAppId" | "isCompetitor">,
+  viewer: SerpViewer,
+): SerpRole {
   if (entry.appId === viewer.appId || entry.storeAppId === viewer.storeAppId) {
     return "you";
   }
@@ -40,6 +44,7 @@ export function serpCsv(viewer: SerpViewer, snapshot: SerpSnapshot): string {
       entry.ratingCount,
       serpRole(entry, viewer),
       entry.storeAppId,
+      entry.previous ?? null,
     ]),
   );
 }

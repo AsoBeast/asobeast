@@ -4,6 +4,7 @@ import { expect, test } from "./session.mts";
 
 interface NamedPopover {
   name: string;
+  where?: string;
   path: string;
   open: (page: Page) => Promise<void>;
 }
@@ -13,6 +14,16 @@ const POPOVERS: NamedPopover[] = [
     name: "Choose captured day",
     path: "/charts?view=table",
     open: (page) => page.getByRole("button", { name: /^Captured day/ }).click(),
+  },
+  {
+    name: "Choose captured day",
+    where: "the search results sheet",
+    path: "/apps/app-1/keywords?serp=kw-3",
+    open: (page) =>
+      page
+        .getByRole("dialog", { name: "Search results" })
+        .getByRole("button", { name: /^Captured day/ })
+        .click(),
   },
   {
     name: "Switch app",
@@ -89,7 +100,8 @@ const dialogNameViolations = async (page: Page) => {
 };
 
 for (const popover of POPOVERS) {
-  test(`${popover.name} names its dialog`, async ({ page }) => {
+  const where = popover.where ? ` in ${popover.where}` : "";
+  test(`${popover.name}${where} names its dialog`, async ({ page }) => {
     await page.goto(popover.path);
     await popover.open(page);
 

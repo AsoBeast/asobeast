@@ -1,4 +1,9 @@
+import type { ChartMovement } from './charts';
+import type { KeywordBreakdownSegment } from './keyword-breakdown';
 import type { KeywordScope } from './keywords';
+
+export type SerpTitleMatch = 'phrase' | 'words' | 'partial' | 'none';
+
 export interface SerpEntryItem {
   position: number;
   storeAppId: string;
@@ -8,6 +13,22 @@ export interface SerpEntryItem {
   ratingCount: number | null;
   appId: string | null;
   isCompetitor: boolean;
+  iconUrl?: string | null;
+  titleMatch?: SerpTitleMatch;
+  titleSegments?: KeywordBreakdownSegment[];
+  previous?: number | null;
+  delta?: number | null;
+  movement?: ChartMovement;
+}
+
+export interface SerpExitItem {
+  previous: number;
+  storeAppId: string;
+  title: string;
+  developer: string | null;
+  iconUrl: string | null;
+  appId: string | null;
+  isCompetitor: boolean;
 }
 
 export interface SerpSnapshot {
@@ -15,6 +36,9 @@ export interface SerpSnapshot {
   text: string;
   date: string | null;
   entries: SerpEntryItem[];
+  comparedTo?: string | null;
+  exits?: SerpExitItem[];
+  dates?: string[];
 }
 
 export interface CompetitorDiscoveryItem {

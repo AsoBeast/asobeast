@@ -1,6 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { SerpMovers, SerpSnapshot } from '@asobeast/shared';
-import { TrackedKeywordAccess } from '../keywords/tracked-keyword.access';
+import {
+  SerpEntryItem,
+  SerpExitItem,
+  SerpMovers,
+  SerpSnapshot,
+} from '@asobeast/shared';
+import {
+  AuthorizedKeyword,
+  TrackedKeywordAccess,
+} from '../keywords/tracked-keyword.access';
 import { PrismaService } from '../prisma/prisma.service';
 import { SerpMoversQueryDto } from './dto/serp-movers-query.dto';
 import { SerpQueryDto } from './dto/serp-query.dto';
@@ -10,9 +18,17 @@ import {
   toDateKey,
   utcToday,
 } from './rankings.support';
+import { serpExits, serpMovement } from './serp-history';
 import { detectEntrants, SerpSnapshotDay } from './serp-movers';
+import { titleJudge } from './serp-title-match';
+import { TOP_TEN_ROWS } from './top-ten';
+
+type SerpRole = Pick<SerpEntryItem, 'appId' | 'isCompetitor'>;
 
 const MOVERS_LIMIT = 50;
+const SERP_DATE_LIMIT = 365;
+
+const utcDay = (date: string) => new Date(`${date}T00:00:00.000Z`);
 
 interface SerpEntrant {
   date: string;
@@ -31,59 +47,127 @@ export class SerpService {
 
   async serp(keywordId: string, query: SerpQueryDto): Promise<SerpSnapshot> {
     const keyword = await this.trackedKeywords.require(keywordId);
-
-    const date = query.date
-      ? new Date(`${query.date}T00:00:00.000Z`)
-      : ((
-          await this.prisma.serpEntry.findFirst({
-            where: { keywordId },
-            orderBy: { date: 'desc' },
-            select: { date: true },
-          })
-        )?.date ?? null);
-
-    if (!date) {
-      return { keywordId, text: keyword.text, date: null, entries: [] };
+    const dates = await this.capturedDates(keywordId);
+    const shown = query.date ?? dates[0] ?? null;
+    if (shown === null) {
+      return {
+        keywordId,
+        text: keyword.text,
+        date: null,
+        entries: [],
+        comparedTo: null,
+        exits: [],
+        dates,
+      };
     }
 
-    const entries = await this.prisma.serpEntry.findMany({
-      where: { keywordId, date },
+    const { rows, comparedTo, earlier } = await this.comparedDays(
+      keywordId,
+      shown,
+    );
+    const entries = serpMovement(rows, earlier);
+    const exits = serpExits(rows, earlier);
+    const roleOf = await this.rolesOf(keyword, [...rows, ...exits]);
+    const judgeTitle = titleJudge(keyword.text);
+
+    return {
+      keywordId,
+      text: keyword.text,
+      date: shown,
+      entries: entries.map((entry): SerpEntryItem => ({
+        position: entry.position,
+        storeAppId: entry.storeAppId,
+        title: entry.title,
+        developer: entry.developer,
+        ratingAvg: entry.ratingAvg,
+        ratingCount: entry.ratingCount,
+        ...roleOf(entry.storeAppId),
+        iconUrl: entry.iconUrl,
+        ...judgeTitle(entry.title),
+        previous: entry.previous,
+        delta: entry.delta,
+        movement: entry.movement,
+      })),
+      comparedTo,
+      exits: exits.map((exit): SerpExitItem => ({
+        previous: exit.previous,
+        storeAppId: exit.storeAppId,
+        title: exit.title,
+        developer: exit.developer,
+        iconUrl: exit.iconUrl,
+        ...roleOf(exit.storeAppId),
+      })),
+      dates,
+    };
+  }
+
+  private async comparedDays(keywordId: string, shown: string) {
+    const [rows, previousDay] = await Promise.all([
+      this.serpDay(keywordId, shown),
+      this.capturedDayBefore(keywordId, shown),
+    ]);
+    const comparedTo = rows.length > 0 ? previousDay : null;
+    const earlier = comparedTo
+      ? await this.serpDay(keywordId, comparedTo)
+      : null;
+    return { rows, comparedTo, earlier };
+  }
+
+  private async rolesOf(
+    keyword: AuthorizedKeyword,
+    rows: { storeAppId: string }[],
+  ): Promise<(storeAppId: string) => SerpRole> {
+    const known = await appsByStoreAppId(
+      this.prisma,
+      keyword.store,
+      keyword.country,
+      [...new Set(rows.map((row) => row.storeAppId))],
+    );
+    return (storeAppId) => {
+      const app = known.get(storeAppId);
+      return {
+        appId: app?.id ?? null,
+        isCompetitor: app?.isCompetitor ?? false,
+      };
+    };
+  }
+
+  private async capturedDates(keywordId: string): Promise<string[]> {
+    const days = await this.prisma.serpEntry.findMany({
+      where: { keywordId, position: 1 },
+      orderBy: { date: 'desc' },
+      take: SERP_DATE_LIMIT,
+      select: { date: true },
+    });
+    return days.map((day) => toDateKey(day.date));
+  }
+
+  private async capturedDayBefore(
+    keywordId: string,
+    date: string,
+  ): Promise<string | null> {
+    const day = await this.prisma.serpEntry.findFirst({
+      where: { keywordId, position: 1, date: { lt: utcDay(date) } },
+      orderBy: { date: 'desc' },
+      select: { date: true },
+    });
+    return day ? toDateKey(day.date) : null;
+  }
+
+  private serpDay(keywordId: string, date: string) {
+    return this.prisma.serpEntry.findMany({
+      where: { keywordId, date: utcDay(date) },
       orderBy: { position: 'asc' },
       select: {
         position: true,
         storeAppId: true,
         title: true,
         developer: true,
+        iconUrl: true,
         ratingAvg: true,
         ratingCount: true,
       },
     });
-
-    const byStoreAppId = await appsByStoreAppId(
-      this.prisma,
-      keyword.store,
-      keyword.country,
-      entries.map((entry) => entry.storeAppId),
-    );
-
-    return {
-      keywordId,
-      text: keyword.text,
-      date: toDateKey(date),
-      entries: entries.map((entry) => {
-        const app = byStoreAppId.get(entry.storeAppId);
-        return {
-          position: entry.position,
-          storeAppId: entry.storeAppId,
-          title: entry.title,
-          developer: entry.developer,
-          ratingAvg: entry.ratingAvg,
-          ratingCount: entry.ratingCount,
-          appId: app?.id ?? null,
-          isCompetitor: app?.isCompetitor ?? false,
-        };
-      }),
-    };
   }
 
   async serpMovers(
@@ -151,7 +235,11 @@ export class SerpService {
   ): Promise<SerpEntrant[]> {
     const from = new Date(utcToday().getTime() - days * DAY_MS);
     const rows = await this.prisma.serpEntry.findMany({
-      where: { keywordId: { in: keywordIds }, date: { gte: from } },
+      where: {
+        keywordId: { in: keywordIds },
+        date: { gte: from },
+        ...TOP_TEN_ROWS,
+      },
       select: {
         keywordId: true,
         date: true,

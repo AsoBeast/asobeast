@@ -898,7 +898,9 @@ test("row actions reveal on keyboard focus, not only on hover", async ({
 }) => {
   await page.goto("/apps/app-1/keywords");
 
-  const action = page.getByRole("button", { name: /^View top 10 for/ }).first();
+  const action = page
+    .getByRole("button", { name: /^View search results for/ })
+    .first();
   const opacity = () =>
     action.evaluate((node) => getComputedStyle(node.parentElement!).opacity);
 

@@ -1,11 +1,11 @@
 ---
 title: Export data
-description: The keyword monitor, rankings view, competitors page, reviews list and top 10 sheet export CSV, and the overview and the rankings view print as a report you can save as PDF. Each file follows the filters you applied.
+description: The keyword monitor, rankings view, competitors page, reviews list and search results sheet export CSV, and the overview and the rankings view print as a report you can save as PDF. Each file follows the filters you applied.
 icon: file-down
 keywords: ["export","CSV","keywords","rankings","competitors","keyword gaps","reviews","SERP","spreadsheet","provenance","print","PDF","PNG","image"]
 ---
 
-The keyword monitor, the rankings view, the competitor list and the comparison matrix on the competitors page, the reviews list and the top 10 sheet each export a CSV file that follows the filters you have applied. `<date>` in a file name is the UTC day of the export. The app overview and the rankings view also print as a report, which is the quickest way to share a view with someone who has no account.
+The keyword monitor, the rankings view, the competitor list and the comparison matrix on the competitors page, the reviews list and the search results sheet each export a CSV file that follows the filters you have applied. `<date>` in a file name is the UTC day of the export. The app overview and the rankings view also print as a report, which is the quickest way to share a view with someone who has no account.
 
 ## Export keywords to CSV
 
@@ -90,18 +90,19 @@ The reviews list exports up to 200 reviews that match the star, version, period 
 
 ## Export a SERP snapshot to CSV
 
-The top 10 sheet on the keyword monitor exports the snapshot it shows, one row per result, named `serp-<appId>-<keywordId>-<captured>-<date>.csv`, where `<captured>` is the day the snapshot was taken.
+The search results sheet on the keyword monitor exports the day it shows, one row per result, named `serp-<appId>-<keywordId>-<captured>-<date>.csv`, where `<captured>` is the day the snapshot was taken.
 
 | Column | What it holds |
 | --- | --- |
 | `keyword`, `capturedOn` | The phrase and the snapshot's day, repeated on every row |
-| `position` | 1 to 10 |
+| `position` | 1 to 50 |
 | `app`, `developer` | The result's title and developer |
 | `rating`, `ratings` | Its average rating and rating count |
 | `role` | `you`, `competitor` for an app tracked as a competitor in the workspace, as the sheet's badge shows, or `other` |
 | `storeAppId` | The store's id for the app |
+| `previousPosition` | The position on the earlier captured day the sheet compares with, empty when the app was not listed then or there is no earlier day |
 
-`ratings` stays empty for Google Play keywords, whose search results carry no rating counts. See [App Store and Google Play](/concepts/stores).
+`ratings` stays empty for Google Play keywords, whose search results carry no rating counts. See [Search results](/guides/read-rankings#search-results) for what the sheet shows. See [App Store and Google Play](/concepts/stores).
 
 ## Print a report or save it as PDF
 

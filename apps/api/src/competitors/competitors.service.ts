@@ -26,6 +26,7 @@ import { toDifficulty100 } from '../scoring/formulas';
 import { aggregateDiscovery } from './discovery';
 import { DiscoveryQueryDto } from './dto/discovery-query.dto';
 import { LATEST_HOME_LISTING } from '../apps/listing';
+import { TOP_TEN_ROWS } from '../rankings/top-ten';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -185,6 +186,7 @@ export class CompetitorsService {
         keywordId: { in: app.tracked.map((item) => item.keywordId) },
         date: { gte: since },
         storeAppId: { notIn: known },
+        ...TOP_TEN_ROWS,
       },
       select: {
         storeAppId: true,

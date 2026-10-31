@@ -213,6 +213,40 @@ describe('KeywordsController table facts (e2e)', () => {
       expect(item.competitorsInTop10).toBe(1);
     });
 
+    it('ignores a competitor below the top 10 and keeps volatility', async () => {
+      const primary = await seedApp();
+      await seedCompetitor(primary.id, '222');
+      await seedCompetitor(primary.id, '333');
+      const topTen = Array.from({ length: 10 }, (_, index) =>
+        index === 1 ? '222' : `top-${index}`,
+      );
+      const earlier = ['top-0', '222', 'gone', ...topTen.slice(3)];
+      const deepId = await track(primary.id, 'deep');
+      const plainId = await track(primary.id, 'plain');
+      for (const keywordId of [deepId, plainId]) {
+        await snapshot(keywordId, daysAgo(1), earlier);
+        await snapshot(keywordId, utcToday(), topTen);
+      }
+      await prisma.serpEntry.create({
+        data: {
+          keywordId: deepId,
+          date: utcToday(),
+          position: 11,
+          storeAppId: '333',
+          title: '333',
+        },
+      });
+
+      const byText = new Map(
+        (await list(primary.id)).map((item) => [item.text, item]),
+      );
+
+      expect(byText.get('deep')?.competitorsInTop10).toBe(1);
+      expect(byText.get('deep')?.serpVolatility7d).toBe(
+        byText.get('plain')?.serpVolatility7d,
+      );
+    });
+
     it('does not count the competitors of another app', async () => {
       const primary = await seedApp();
       const other = await seedApp('777');

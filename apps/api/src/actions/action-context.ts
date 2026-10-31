@@ -33,6 +33,7 @@ import {
   loadCompetitorRows,
 } from './action-competitors';
 import { HOME_EVENTS, HOME_LISTING } from '../apps/listing';
+import { TOP_TEN_ROWS } from '../rankings/top-ten';
 
 export interface ActionAuditCheck {
   id: string;
@@ -377,7 +378,11 @@ export class ActionContextLoader {
       keywordIds.length === 0
         ? Promise.resolve([])
         : this.prisma.serpEntry.findMany({
-            where: { keywordId: { in: keywordIds }, date: { gte: serpFrom } },
+            where: {
+              keywordId: { in: keywordIds },
+              date: { gte: serpFrom },
+              ...TOP_TEN_ROWS,
+            },
             select: {
               keywordId: true,
               date: true,

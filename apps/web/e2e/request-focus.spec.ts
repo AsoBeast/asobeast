@@ -1,4 +1,4 @@
-import type { BrowserContext, Page } from "@playwright/test";
+import type { BrowserContext, Locator, Page } from "@playwright/test";
 import type {
   ApiTokenItem,
   CompetitorItem,
@@ -6,9 +6,12 @@ import type {
 } from "@asobeast/shared";
 import { holdRender } from "./chart-image.mts";
 import {
+  APP_GP_DETAIL,
+  APP_GP_SERP_MOVERS,
   APP_IMPORT_FOCUS_ID,
   AWAITING_ALERT_COOKIE,
   CROWDED_COMPETITORS_COOKIE,
+  TOP_CHART_DATES,
   WEBHOOK_PAIR,
   WEBHOOK_PAIR_COOKIE,
 } from "./fixtures.mts";
@@ -19,6 +22,11 @@ import {
 } from "./held-request.mts";
 import { seedLocalizations } from "./localizations.mts";
 import { activateTwiceInOneTask, hydrated } from "./hydrated.mts";
+import {
+  answerTrack,
+  SERP_TRACK_PATH,
+  showTrackedAfterAdd,
+} from "./serp-track.mts";
 import { expect, test } from "./session.mts";
 import { STORE_CONNECTION_COOKIE } from "./store-connections.mts";
 
@@ -30,6 +38,17 @@ const confirmIn = (page: Page, name: string) =>
     .getByRole("alertdialog")
     .getByRole("button", { name, exact: true })
     .press("Enter");
+
+const becameInert = (control: Locator) =>
+  expect
+    .poll(() =>
+      control.evaluate(
+        (element) =>
+          element.hasAttribute("disabled") ||
+          element.getAttribute("aria-disabled") === "true",
+      ),
+    )
+    .toBe(true);
 
 const storeConnections = (page: Page) =>
   page.getByRole("region", { name: "Store connections" });
@@ -836,17 +855,134 @@ test.describe("import app openers get focus back", () => {
   });
 });
 
-test("closing the top 10 sheet returns focus to the row that opened it", async ({
+test.describe("Track keeps focus", () => {
+  const [, PLAY_MOVER] = APP_GP_SERP_MOVERS.items;
+  const competitorsPath = `/api/backend/apps/${APP_GP_DETAIL.id}/competitors`;
+  const moverTrack = (page: Page) =>
+    page
+      .getByRole("listitem")
+      .filter({ hasText: PLAY_MOVER.title })
+      .getByRole("button", { name: "Track" });
+
+  test.beforeEach(({ request }) =>
+    request.post(
+      `http://localhost:4100/__reset/competitors/${APP_GP_DETAIL.id}`,
+    ),
+  );
+
+  test("Track keeps focus while it adds a competitor", async ({ page }) => {
+    const held = await holdRequest(
+      page,
+      new RegExp(`${competitorsPath}$`),
+      "POST",
+    );
+    await page.goto(`/apps/${APP_GP_DETAIL.id}/rankings`);
+    const track = moverTrack(page);
+
+    await pressFromKeyboard(track);
+    await becameInert(track);
+
+    await expect(track).toBeFocused();
+    await expectFocusKeptWhileHeld(track, held);
+  });
+
+  test("two activations of Track in one task send one add", async ({
+    page,
+  }) => {
+    const adds: string[] = [];
+    page.on("request", (request) => {
+      if (
+        request.method() === "POST" &&
+        new URL(request.url()).pathname === competitorsPath
+      ) {
+        adds.push(request.url());
+      }
+    });
+    await page.goto(`/apps/${APP_GP_DETAIL.id}/rankings`);
+
+    await activateTwiceInOneTask(moverTrack(page));
+
+    await expect(
+      page.getByText(`Now tracking ${PLAY_MOVER.title}`).first(),
+    ).toBeVisible();
+    expect(adds).toHaveLength(1);
+  });
+});
+
+test("the search results Track keeps focus while it adds and hands it to the store link", async ({
+  page,
+}) => {
+  const held = await holdRequest(page, SERP_TRACK_PATH, "POST", answerTrack);
+  await showTrackedAfterAdd(page);
+  await page.goto("/apps/app-1/keywords?serp=kw-3");
+  const row = page.locator("li#serp-row-12");
+  const track = row.getByRole("button", { name: /^Track / });
+
+  await pressFromKeyboard(track);
+  await becameInert(track);
+  await expect(track).toBeFocused();
+  held.release();
+
+  await expect(
+    row.getByRole("link", { name: /^Open .* in the store$/ }),
+  ).toBeFocused();
+});
+
+test.describe("captured day buttons", () => {
+  const chartReads = (page: Page) => {
+    const urls: string[] = [];
+    page.on("request", (request) => {
+      if (/\/api\/backend\/charts\?/.test(request.url())) {
+        urls.push(request.url());
+      }
+    });
+    return urls;
+  };
+
+  for (const { name, from, to } of [
+    {
+      name: "Previous captured day",
+      from: TOP_CHART_DATES.at(-2) ?? "",
+      to: TOP_CHART_DATES.at(-1) ?? "",
+    },
+    {
+      name: "Next captured day",
+      from: TOP_CHART_DATES[1],
+      to: TOP_CHART_DATES[0],
+    },
+  ]) {
+    test(`${name} keeps focus once it reaches the last captured day`, async ({
+      page,
+    }) => {
+      await page.goto(`/charts?view=table&date=${from}`);
+      const button = page.getByRole("button", { name, exact: true });
+
+      await pressFromKeyboard(button);
+      await expect(page).toHaveURL(new RegExp(`date=${to}`));
+      await becameInert(button);
+      await expect(button).toBeFocused();
+      await expect(button).toHaveAttribute("aria-disabled", "true");
+
+      const reads = chartReads(page);
+      await page.keyboard.press("Enter");
+      await expect(button).toBeFocused();
+      await expect(page).toHaveURL(new RegExp(`date=${to}`));
+      expect(reads).toEqual([]);
+    });
+  }
+});
+
+test("closing the search results sheet returns focus to the row that opened it", async ({
   page,
 }) => {
   await page.goto("/apps/app-1/keywords");
   const opener = page.getByRole("button", {
-    name: "View top 10 for focus timer",
+    name: "View search results for focus timer",
     exact: true,
   });
 
   await pressFromKeyboard(opener);
-  const sheet = page.getByRole("dialog", { name: "Top 10 search results" });
+  const sheet = page.getByRole("dialog", { name: "Search results" });
   await expect(sheet).toBeVisible();
   await page.keyboard.press("Escape");
 

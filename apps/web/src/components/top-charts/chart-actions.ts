@@ -12,16 +12,6 @@ import { formatDate, storeLabel } from "@/lib/format";
 
 const STORE_DID_NOT_ANSWER = "The store did not answer. Try again in a moment.";
 
-export function storeUrl(
-  store: Store,
-  storeAppId: string,
-  country: string,
-): string {
-  return store === "APP_STORE"
-    ? `https://apps.apple.com/${country}/app/id${storeAppId}`
-    : `https://play.google.com/store/apps/details?id=${encodeURIComponent(storeAppId)}&gl=${country}`;
-}
-
 export interface RowLink {
   href: string;
   label: string;

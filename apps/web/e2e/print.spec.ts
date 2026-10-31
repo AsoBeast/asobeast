@@ -120,6 +120,19 @@ test("leaves toasts out of the printout", async ({ page }) => {
   await expect(toast).toBeHidden({ timeout: 1000 });
 });
 
+test("leaves an open sheet out of the printed page", async ({ page }) => {
+  await open(page, `/apps/${APP_1_DETAIL.id}/keywords?serp=kw-1`);
+  const sheet = page.getByRole("dialog", { name: "Search results" });
+  await expect(sheet).toBeVisible();
+
+  await printed(page);
+
+  await expect(sheet).toBeHidden({ timeout: 1000 });
+  await expect(
+    page.getByText("Tracked keywords", { exact: true }),
+  ).toBeVisible();
+});
+
 const OVERVIEW_WITH_RANGES = `${OVERVIEW}?range=90d&categoryRange=7d`;
 const PAPER_STAND_IN = "#main-content { width: 600px; }";
 

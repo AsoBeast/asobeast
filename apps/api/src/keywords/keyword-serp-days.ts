@@ -1,4 +1,5 @@
 import { PrismaService } from '../prisma/prisma.service';
+import { TOP_TEN_ROWS } from '../rankings/top-ten';
 
 const SERP_WINDOW_DAYS = 8;
 
@@ -14,7 +15,7 @@ export async function loadSerpDays(
     return new Map();
   }
   const latest = await prisma.serpEntry.findFirst({
-    where: { keywordId: { in: keywordIds } },
+    where: { keywordId: { in: keywordIds }, position: 1 },
     orderBy: { date: 'desc' },
     select: { date: true },
   });
@@ -24,7 +25,11 @@ export async function loadSerpDays(
   const from = new Date(latest.date);
   from.setUTCDate(from.getUTCDate() - SERP_WINDOW_DAYS);
   const entries = await prisma.serpEntry.findMany({
-    where: { keywordId: { in: keywordIds }, date: { gte: from } },
+    where: {
+      keywordId: { in: keywordIds },
+      date: { gte: from },
+      ...TOP_TEN_ROWS,
+    },
     orderBy: { date: 'asc' },
     select: { keywordId: true, date: true, storeAppId: true },
   });

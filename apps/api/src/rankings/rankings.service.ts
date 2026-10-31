@@ -4,7 +4,7 @@ import {
   KeywordScope,
   RANK_DEPTH,
   RankingSeries,
-  SERP_DEPTH,
+  SERP_CAPTURE_DEPTH,
 } from '@asobeast/shared';
 import { CollectionEligibility } from '../auth/collection-eligibility.service';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
@@ -24,6 +24,7 @@ import { CompetitorCapture, RankCapture } from './rank-milestones';
 import { RankingAlertsService } from './ranking-alerts.service';
 import { DAY_MS, toDateKey, utcToday } from './rankings.support';
 import { SerpSnapshotDay } from './serp-movers';
+import { topTenOf } from './top-ten';
 
 const HISTORY_DAYS = 30;
 
@@ -98,7 +99,7 @@ export class RankingsService {
     });
 
     const date = utcToday();
-    const entries = results.slice(0, SERP_DEPTH).map((item, index) => ({
+    const entries = results.slice(0, SERP_CAPTURE_DEPTH).map((item, index) => ({
       keywordId,
       date,
       position: index + 1,
@@ -118,7 +119,7 @@ export class RankingsService {
 
     const today: SerpSnapshotDay = {
       date: toDateKey(date),
-      entries: entries.map(({ position, storeAppId, title }) => ({
+      entries: topTenOf(entries).map(({ position, storeAppId, title }) => ({
         position,
         storeAppId,
         title,

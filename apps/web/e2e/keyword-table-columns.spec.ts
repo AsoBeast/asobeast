@@ -135,12 +135,14 @@ test("the information button explains the dash and the freshness rule", async ({
   ).toContainText("today or yesterday");
 });
 
-test("the top 10 sheet is unchanged by the new column", async ({ page }) => {
+test("the search results sheet is unchanged by the new column", async ({
+  page,
+}) => {
   await page.goto(KEYWORDS);
   await showColumn(page, "Competitors in top 10");
 
   await page
-    .getByRole("button", { name: "View top 10 for focus timer" })
+    .getByRole("button", { name: "View search results for focus timer" })
     .click();
 
   await expect(page).toHaveURL(/serp=kw-1/);

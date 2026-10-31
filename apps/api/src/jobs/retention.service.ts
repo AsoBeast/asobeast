@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { SERP_DEPTH } from '@asobeast/shared';
 import { aiCallCutoff } from '../ai/ai-period';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { Env } from '../config/env';
@@ -91,12 +92,32 @@ export class RetentionService {
   }
 
   private async pruneSerp(now: Date): Promise<number> {
+    const all = await this.pruneSerpDays(now);
+    const deep = await this.pruneSerpBelowTopTen(now);
+    return all + deep;
+  }
+
+  private async pruneSerpDays(now: Date): Promise<number> {
     const days = this.config.get('RETENTION_SERP_DAYS', { infer: true });
     if (days === 0) {
       return 0;
     }
     const { count } = await this.prisma.serpEntry.deleteMany({
       where: { date: { lt: this.cutoff(days, now) } },
+    });
+    return count;
+  }
+
+  private async pruneSerpBelowTopTen(now: Date): Promise<number> {
+    const days = this.config.get('RETENTION_SERP_DEEP_DAYS', { infer: true });
+    if (days === 0) {
+      return 0;
+    }
+    const { count } = await this.prisma.serpEntry.deleteMany({
+      where: {
+        position: { gt: SERP_DEPTH },
+        date: { lt: this.cutoff(days, now) },
+      },
     });
     return count;
   }
