@@ -1616,8 +1616,15 @@ function capturedCompetitor(
   const similar = Object.values(SIMILAR_APPS)
     .flatMap((entry) => entry.items)
     .find((item) => item.storeAppId === parsed.storeAppId);
+  const ranked = Object.values(SERP_HISTORY)
+    .flatMap((history) => history.flatMap((snapshot) => snapshot.entries))
+    .find((entry) => entry.storeAppId === parsed.storeAppId);
   const title =
-    discovered?.title ?? searched?.title ?? similar?.title ?? parsed.storeAppId;
+    discovered?.title ??
+    searched?.title ??
+    similar?.title ??
+    ranked?.title ??
+    parsed.storeAppId;
 
   return {
     id: `comp-${parsed.storeAppId}`,

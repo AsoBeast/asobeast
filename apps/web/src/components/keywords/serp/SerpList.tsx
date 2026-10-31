@@ -1,6 +1,6 @@
 import { useId, type ReactNode } from "react";
 import type { SerpEntryItem } from "@asobeast/shared";
-import { serpRole, type SerpViewer } from "./serp-csv";
+import { serpRole, type SerpRole, type SerpViewer } from "./serp-csv";
 import { SerpRow } from "./SerpRow";
 
 export function SerpSection({
@@ -35,20 +35,23 @@ export function SerpList({
   entries: readonly SerpEntryItem[];
   viewer: SerpViewer;
   comparedTo: string | null;
-  actionsFor?: (entry: SerpEntryItem) => ReactNode;
+  actionsFor?: (entry: SerpEntryItem, role: SerpRole) => ReactNode;
 }) {
   return (
     <SerpSection heading={heading}>
       <ol start={entries[0]?.position ?? 1} className="flex flex-col">
-        {entries.map((entry) => (
-          <SerpRow
-            key={entry.position}
-            entry={entry}
-            role={serpRole(entry, viewer)}
-            comparedTo={comparedTo}
-            actions={actionsFor?.(entry)}
-          />
-        ))}
+        {entries.map((entry) => {
+          const role = serpRole(entry, viewer);
+          return (
+            <SerpRow
+              key={entry.position}
+              entry={entry}
+              role={role}
+              comparedTo={comparedTo}
+              actions={actionsFor?.(entry, role)}
+            />
+          );
+        })}
       </ol>
     </SerpSection>
   );

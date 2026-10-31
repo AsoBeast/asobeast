@@ -1170,6 +1170,7 @@ export function invalidateCompetitorMutation(
     refetchType: "none",
   });
   void client.invalidateQueries({ queryKey: appKeys.serpMoversRoot(id) });
+  void client.invalidateQueries({ queryKey: appKeys.serpRoot() });
   void client.invalidateQueries({ queryKey: portfolioKey });
   void client.invalidateQueries({ queryKey: appKeys.firstRun(id) });
   invalidateLocalSuggestions(client, id);

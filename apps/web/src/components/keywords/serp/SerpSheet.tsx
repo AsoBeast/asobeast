@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
   keepPreviousData,
   useQuery,
@@ -8,6 +8,7 @@ import {
 } from "@tanstack/react-query";
 import {
   SERP_DEPTH,
+  type SerpEntryItem,
   type SerpSnapshot,
   type Store,
   type TrackedKeywordItem,
@@ -24,11 +25,12 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { appDetailOptions, serpOptions } from "@/lib/queries";
-import type { SerpViewer } from "./serp-csv";
+import type { SerpRole, SerpViewer } from "./serp-csv";
 import { isNewestDay, serpSummary } from "./serp-summary";
 import { SerpExits } from "./SerpExits";
 import { SerpHeader } from "./SerpHeader";
 import { SerpList } from "./SerpList";
+import { SerpRowActions } from "./SerpRowActions";
 import {
   SerpKeptShort,
   SerpNeverChecked,
@@ -39,9 +41,12 @@ import {
 import { SerpSummary } from "./SerpSummary";
 import { useSerpParams } from "./use-serp-params";
 
-function useSerpViewer(appId: string): SerpViewer {
+type ActionsFor = (entry: SerpEntryItem, role: SerpRole) => ReactNode;
+
+function useSerpApp(appId: string) {
   const { data } = useQuery(appDetailOptions(appId));
-  return { appId, storeAppId: data?.storeAppId };
+  const viewer: SerpViewer = { appId, storeAppId: data?.storeAppId };
+  return { viewer, homeCountry: data?.country };
 }
 
 type CapturedSerp = SerpSnapshot & { date: string };
@@ -54,10 +59,12 @@ function SerpResults({
   snapshot,
   viewer,
   keyword,
+  actionsFor,
 }: {
   snapshot: CapturedSerp;
   viewer: SerpViewer;
   keyword: TrackedKeywordItem | undefined;
+  actionsFor: ActionsFor | undefined;
 }) {
   const { entries, date } = snapshot;
   const comparedTo = snapshot.comparedTo ?? null;
@@ -85,6 +92,7 @@ function SerpResults({
           entries={topTen}
           viewer={viewer}
           comparedTo={comparedTo}
+          actionsFor={actionsFor}
         />
       ) : null}
       {deeper.length > 0 ? (
@@ -93,6 +101,7 @@ function SerpResults({
           entries={deeper}
           viewer={viewer}
           comparedTo={comparedTo}
+          actionsFor={actionsFor}
         />
       ) : null}
       {keptShort ? <SerpKeptShort /> : null}
@@ -122,8 +131,20 @@ function SerpBody({
     ...serpOptions(keywordId, serpDate),
     placeholderData: keepPreviousData,
   });
-  const viewer = useSerpViewer(appId);
+  const { viewer, homeCountry } = useSerpApp(appId);
   const snapshot = serp.data?.keywordId === keywordId ? serp.data : undefined;
+  const country = keyword?.country ?? homeCountry;
+  const actionsFor: ActionsFor | undefined = country
+    ? (entry, role) => (
+        <SerpRowActions
+          appId={appId}
+          store={store}
+          country={country}
+          entry={entry}
+          role={role}
+        />
+      )
+    : undefined;
 
   return (
     <>
@@ -142,6 +163,7 @@ function SerpBody({
         busy={serp.isPlaceholderData}
         viewer={viewer}
         keyword={keyword}
+        actionsFor={actionsFor}
       />
     </>
   );
@@ -153,12 +175,14 @@ function SerpContent({
   busy,
   viewer,
   keyword,
+  actionsFor,
 }: {
   read: UseQueryResult<SerpSnapshot>;
   snapshot: SerpSnapshot | undefined;
   busy: boolean;
   viewer: SerpViewer;
   keyword: TrackedKeywordItem | undefined;
+  actionsFor: ActionsFor | undefined;
 }) {
   if (failedRead(read)) {
     return (
@@ -181,7 +205,12 @@ function SerpContent({
   if (!isCaptured(snapshot)) return <SerpNeverChecked />;
   return (
     <div aria-busy={busy || undefined}>
-      <SerpResults snapshot={snapshot} viewer={viewer} keyword={keyword} />
+      <SerpResults
+        snapshot={snapshot}
+        viewer={viewer}
+        keyword={keyword}
+        actionsFor={actionsFor}
+      />
     </div>
   );
 }

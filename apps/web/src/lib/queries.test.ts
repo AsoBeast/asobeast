@@ -866,6 +866,7 @@ describe("invalidation sets", () => {
       appKeys.discoveryRoot(APP),
       appKeys.competitorSuggestions(APP),
       appKeys.serpMoversRoot(APP),
+      appKeys.serpRoot(),
       portfolioKey,
       appKeys.firstRun(APP),
       appKeys.suggestionsRoot(APP),

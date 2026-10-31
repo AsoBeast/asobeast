@@ -20,6 +20,11 @@ import {
   pressFromKeyboard,
 } from "./held-request.mts";
 import { activateTwiceInOneTask, hydrated } from "./hydrated.mts";
+import {
+  answerTrack,
+  SERP_TRACK_PATH,
+  showTrackedAfterAdd,
+} from "./serp-track.mts";
 import { expect, test } from "./session.mts";
 import { STORE_CONNECTION_COOKIE } from "./store-connections.mts";
 
@@ -765,6 +770,25 @@ test.describe("Track keeps focus", () => {
     ).toBeVisible();
     expect(adds).toHaveLength(1);
   });
+});
+
+test("the search results Track keeps focus while it adds and hands it to the store link", async ({
+  page,
+}) => {
+  const held = await holdRequest(page, SERP_TRACK_PATH, "POST", answerTrack);
+  await showTrackedAfterAdd(page);
+  await page.goto("/apps/app-1/keywords?serp=kw-3");
+  const row = page.locator("li#serp-row-12");
+  const track = row.getByRole("button", { name: /^Track / });
+
+  await pressFromKeyboard(track);
+  await becameInert(track);
+  await expect(track).toBeFocused();
+  held.release();
+
+  await expect(
+    row.getByRole("link", { name: /^Open .* in the store$/ }),
+  ).toBeFocused();
 });
 
 test.describe("captured day buttons", () => {

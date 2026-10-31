@@ -4,8 +4,17 @@ import { contrastViolations, THEMES } from "./contrast-check.mts";
 import { missingDescriptionIds } from "./described-by.mts";
 import { pressFromKeyboard } from "./held-request.mts";
 import { hydrated } from "./hydrated.mts";
-import { SERP_HISTORY_DAYS, SERP_PLAY_AVERAGE } from "./serp-history.mts";
+import {
+  SERP_HISTORY_DAYS,
+  SERP_PLAY_AVERAGE,
+  SERP_TRACKABLE,
+} from "./serp-history.mts";
 import { expect, test } from "./session.mts";
+import {
+  answerTrack,
+  SERP_TRACK_PATH,
+  showTrackedAfterAdd,
+} from "./serp-track.mts";
 
 const SERP_PATH = "/api/backend/keywords/kw-1/serp";
 
@@ -448,6 +457,114 @@ test.describe("captured day", () => {
     await expect(page).toHaveURL(/serp=kw-1/);
     await expect(page).not.toHaveURL(/serpDate=/);
     await expect(serpSheet(page).getByText("Rival Focus")).toBeVisible();
+  });
+});
+
+test.describe("row actions", () => {
+  const track = (sheet: Locator) =>
+    sheet.getByRole("button", {
+      name: `Track ${SERP_TRACKABLE.title} at #${SERP_TRACKABLE.position}`,
+      exact: true,
+    });
+
+  test("opens a row in the store of the keyword's country", async ({
+    page,
+  }) => {
+    const sheet = await openStudyTimer(page);
+    const link = sheet.getByRole("link", {
+      name: "Open Study Timer Pro in the store",
+      exact: true,
+    });
+
+    await expect(link).toHaveAttribute(
+      "href",
+      "https://apps.apple.com/us/app/id777000001",
+    );
+    await expect(link).toHaveAttribute("target", "_blank");
+    await expect(link).toHaveAttribute("rel", /noreferrer/);
+  });
+
+  test("offers Track only on rows that are neither yours nor a competitor", async ({
+    page,
+  }) => {
+    const sheet = await openStudyTimer(page);
+
+    await expect(
+      rowAt(sheet, 7).getByRole("button", { name: /^Track/ }),
+    ).toHaveCount(0);
+    await expect(
+      rowAt(sheet, 4).getByRole("button", { name: /^Track/ }),
+    ).toHaveCount(0);
+    await expect(track(sheet)).toBeVisible();
+  });
+
+  test("tracks a row from the keyboard and hands focus to its store link", async ({
+    page,
+  }) => {
+    const bodies: unknown[] = [];
+    await page.route(SERP_TRACK_PATH, (route) => {
+      if (route.request().method() !== "POST") return route.fallback();
+      bodies.push(route.request().postDataJSON());
+      return answerTrack(route);
+    });
+    await showTrackedAfterAdd(page);
+    const sheet = await openStudyTimer(page);
+
+    await pressFromKeyboard(track(sheet));
+
+    await expect(
+      page.getByText(`Now tracking ${SERP_TRACKABLE.title}`),
+    ).toBeVisible();
+    const row = rowAt(sheet, SERP_TRACKABLE.position);
+    await expect(row).toContainText("Competitor");
+    await expect(
+      row.getByRole("link", {
+        name: `Open ${SERP_TRACKABLE.title} in the store`,
+      }),
+    ).toBeFocused();
+    expect(bodies).toEqual([{ url: SERP_TRACKABLE.storeAppId }]);
+  });
+
+  test("a refused Track says why and keeps its button focused", async ({
+    page,
+  }) => {
+    const message = "You have used every competitor add your plan allows.";
+    await page.route(SERP_TRACK_PATH, (route) =>
+      route.request().method() === "POST"
+        ? route.fulfill({
+            status: 429,
+            json: {
+              statusCode: 429,
+              message,
+              error: "Too Many Requests",
+              path: "/apps/app-1/competitors",
+              timestamp: new Date().toISOString(),
+            },
+          })
+        : route.fallback(),
+    );
+    const sheet = await openStudyTimer(page);
+
+    await pressFromKeyboard(track(sheet));
+
+    await expect(page.getByText(message)).toBeVisible();
+    await expect(track(sheet)).toBeFocused();
+  });
+
+  test("opens a google play row with the storefront country", async ({
+    page,
+  }) => {
+    await page.goto("/apps/app-gp/keywords?serp=kw-gp-1");
+
+    await expect(
+      serpSheet(page).getByRole("link", {
+        name: "Open Pomodoro Timer 1 in the store",
+        exact: true,
+      }),
+    ).toHaveAttribute(
+      "href",
+      "https://play.google.com/store/apps/details?id=com.example.pomodoro1&gl=de",
+    );
   });
 });
 
