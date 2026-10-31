@@ -458,6 +458,7 @@ test("a translated overview keeps working when a trend gets its data", async ({
 
   await expect(page).toHaveURL(/market=us/);
   await expect(visibility).toContainText(/visibility · us/i);
+  await expect(visibility).toContainText("-1 30d");
   await expect(visibility).not.toContainText(/no 30d data/i);
   expect(errors).toEqual([]);
 });
