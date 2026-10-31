@@ -36,7 +36,11 @@ import {
 } from './helpers/store-connect-harness';
 import { migrationSql } from './helpers/migration-sql';
 import { asWorkspace } from './helpers/tenancy';
-import { clearRateLimitCounters, obliterateQueues } from './obliterate-queues';
+import {
+  clearRateLimitCounters,
+  obliterateQueues,
+  pauseQueues,
+} from './obliterate-queues';
 
 const STORE_APP_ID = '1476097583';
 const SECOND_STORE_APP_ID = '839333328';
@@ -253,6 +257,7 @@ describe('Store report sync (e2e)', () => {
 
   beforeAll(async () => {
     harness = await startStoreConnectApp();
+    await pauseQueues(harness.app);
     await harness.prisma.workspace.upsert({
       where: { id: OTHER_WORKSPACE },
       update: {},
