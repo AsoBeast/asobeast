@@ -334,6 +334,7 @@ test("a translated search results sheet steps through its captured days", async 
   await expect(summary).toContainText("0 of 10");
   await previous.click();
   await expect(page).toHaveURL(new RegExp(`serpDate=${DAY_BEFORE}`));
+  await expect(sheet.locator("[aria-busy]")).toHaveCount(0);
   await sheet.getByRole("button", { name: "Next captured day" }).click();
   await expect(page).toHaveURL(new RegExp(`serpDate=${YESTERDAY}`));
 
