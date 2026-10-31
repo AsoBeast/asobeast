@@ -100,7 +100,7 @@ export function TrendChip({
 }) {
   if (value === null) {
     return (
-      <span className="text-xs text-muted-foreground">no {label} data</span>
+      <span className="text-xs text-muted-foreground">{`no ${label} data`}</span>
     );
   }
 

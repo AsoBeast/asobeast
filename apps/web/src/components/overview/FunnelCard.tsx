@@ -139,10 +139,11 @@ function FunnelTiles({ report }: { report: StoreFunnelReport }) {
         ))}
       </StatTileGroup>
       <p className="text-caption text-muted-foreground">
-        {share === null ? null : `Search: ${share}% of ${copy.base}. `}
-        {headline && settled
-          ? `Last 28 complete days through ${formatDate(headline.to)}, against the 28 before.`
-          : copy.freshness}
+        {`${share === null ? "" : `Search: ${share}% of ${copy.base}. `}${
+          headline && settled
+            ? `Last 28 complete days through ${formatDate(headline.to)}, against the 28 before.`
+            : copy.freshness
+        }`}
       </p>
     </div>
   );

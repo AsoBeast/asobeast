@@ -182,7 +182,7 @@ export function MetadataAssistantPanel({
       </Card>
       {drafted ? (
         <p className="text-sm text-muted-foreground">
-          Drafted in {APP_STORE_LOCALIZATIONS[drafted]}
+          {`Drafted in ${APP_STORE_LOCALIZATIONS[drafted]}`}
         </p>
       ) : null}
       {drafts.length > 0 ? (

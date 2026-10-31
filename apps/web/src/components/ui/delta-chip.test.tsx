@@ -32,6 +32,13 @@ describe("delta chips", () => {
     );
   });
 
+  it("writes a trend without data as one text", () => {
+    const markup = renderToString(<TrendChip label="30d" value={null} />);
+
+    expect(markup).toContain(">no 30d data</span>");
+    expect(markup).not.toContain("<!-- -->");
+  });
+
   it("names the change for assistive technology as before", () => {
     expect(
       renderToString(<DeltaChip value={-3} period="over 7 days" />),

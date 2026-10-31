@@ -438,3 +438,64 @@ test("a translated overview names the market it switched to", async ({
   await expect(card).toContainText(/tracked keywords · pl/i);
   expect(errors).toEqual([]);
 });
+
+test("a translated overview keeps working when a trend gets its data", async ({
+  page,
+}) => {
+  const errors = collectDomErrors(page);
+  await page.goto("/apps/app-1?market=pl");
+  const visibility = page
+    .locator('[data-slot="card"]')
+    .filter({ has: page.getByText(/^visibility · (pl|us)$/i) });
+  await expect(visibility).toContainText("no 30d data");
+  const switcher = await hydrated(
+    page.getByRole("combobox", { name: "Market" }),
+  );
+
+  await translateText(page);
+  await switcher.click();
+  await page.getByRole("option", { name: /US · United States/i }).click();
+
+  await expect(page).toHaveURL(/market=us/);
+  await expect(visibility).toContainText(/visibility · us/i);
+  await expect(visibility).not.toContainText(/no 30d data/i);
+  expect(errors).toEqual([]);
+});
+
+test("a translated action sheet shows the status it changed to", async ({
+  page,
+}) => {
+  const errors = collectDomErrors(page);
+  let done = false;
+  await page.route("**/api/backend/actions/act-uncovered", async (route) => {
+    if (route.request().method() === "PATCH") {
+      done = true;
+      const current = await route.fetch({ method: "GET" });
+      return route.fulfill({
+        response: current,
+        json: { ...(await current.json()), status: "DONE" },
+      });
+    }
+    const response = await route.fetch();
+    const item = await response.json();
+    return route.fulfill({
+      response,
+      json: done ? { ...item, status: "DONE" } : item,
+    });
+  });
+  await page.goto("/actions?action=act-uncovered");
+  const sheet = page.getByRole("dialog");
+  const markDone = await hydrated(
+    sheet.getByRole("button", { name: /^done$/i }),
+  );
+  const status = sheet
+    .locator('[data-slot="badge"]')
+    .filter({ hasText: /^(open|done)$/i });
+  await expect(status).toHaveText("Open");
+
+  await translateText(page);
+  await markDone.click();
+
+  await expect(status).toHaveText("Done");
+  expect(errors).toEqual([]);
+});

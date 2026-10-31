@@ -45,13 +45,12 @@ function DraftNotice({
     <div aria-live="polite" className="flex flex-col gap-1">
       {result ? (
         <p className="text-caption text-muted-foreground">
-          Drafted in {replyLanguageName(result.language)}
+          {`Drafted in ${replyLanguageName(result.language)}`}
         </p>
       ) : null}
       {result?.truncated ? (
         <p className="text-caption text-warning">
-          Shortened to fit {storeLabel(store)}&apos;s{" "}
-          {REVIEW_REPLY_LIMITS[store]} characters; read it before you copy.
+          {`Shortened to fit ${storeLabel(store)}'s ${REVIEW_REPLY_LIMITS[store]} characters; read it before you copy.`}
         </p>
       ) : null}
     </div>

@@ -55,7 +55,7 @@ function ChangesLine({ changes }: { changes: Map<string, ChangeField[]> }) {
   );
   return (
     <p className="text-caption text-muted-foreground">
-      Listing changes: {days.join(" · ")}
+      {`Listing changes: ${days.join(" · ")}`}
     </p>
   );
 }
