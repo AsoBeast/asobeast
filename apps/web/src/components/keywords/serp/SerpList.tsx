@@ -29,7 +29,7 @@ export function serpRowKeys(
 ): string[] {
   const seen = new Set<string>();
   return entries.map(({ storeAppId }, index) => {
-    if (seen.has(storeAppId)) return `repeat:${index}`;
+    if (seen.has(storeAppId)) return `repeat:${storeAppId}:${index}`;
     seen.add(storeAppId);
     return `app:${storeAppId}`;
   });
