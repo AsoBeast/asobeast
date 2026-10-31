@@ -4,7 +4,7 @@ import { ExportCsvButton } from "@/components/ExportCsvButton";
 import { formatCountry, formatDayMonth, storeLabel } from "@/lib/format";
 import { exportSerp, type SerpViewer } from "./serp-csv";
 
-export function comparisonCaption(comparedTo: string | null | undefined) {
+function comparisonCaption(comparedTo: string | null | undefined) {
   return comparedTo ? `vs ${formatDayMonth(comparedTo)}` : "No earlier capture";
 }
 

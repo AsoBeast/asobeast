@@ -45,7 +45,7 @@ function Rating({
   );
 }
 
-export function RoleBadge({ role }: { role: SerpRole }) {
+function RoleBadge({ role }: { role: SerpRole }) {
   if (role === "you") {
     return (
       <Badge variant="outline" className="border-info text-info">

@@ -6,8 +6,7 @@ import { StoreLinkButton } from "@/components/StoreLinkButton";
 import { useFocusGroupClaim } from "@/lib/focus-handoff";
 import type { SerpRole } from "./serp-csv";
 
-export const serpTrackFocusKey = (storeAppId: string) =>
-  `serp-track:${storeAppId}`;
+const serpTrackFocusKey = (storeAppId: string) => `serp-track:${storeAppId}`;
 
 export function SerpRowActions({
   appId,

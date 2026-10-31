@@ -13,7 +13,7 @@ import type {
 } from "./serp-summary";
 import { serpRowId } from "./SerpRow";
 
-export const SEARCH_RESULTS_GUIDE =
+const SEARCH_RESULTS_GUIDE =
   "https://docs.asobeast.com/guides/read-rankings#search-results";
 
 function jumpToRow(position: number) {
