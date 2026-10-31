@@ -5,6 +5,7 @@ import {
 } from "node:http";
 import { setTimeout as delay } from "node:timers/promises";
 import { BREAKDOWNS } from "./keyword-breakdowns.mts";
+import { SERP_HISTORY, serpOnDay } from "./serp-history.mts";
 import { planMockImport } from "./keyword-import.mts";
 import { summarizeActions } from "./actions-summary.mts";
 import { echoRequest } from "./echo-request.mts";
@@ -249,6 +250,8 @@ import type {
   AppSetupState,
   AppSetupUpdateRequest,
   KeywordComparison,
+  SerpEntryItem,
+  SerpSnapshot,
 } from "@asobeast/shared";
 import {
   COUNTRY_PATTERN,
@@ -1634,6 +1637,34 @@ function capturedCompetitor(
       version: "1.0.0",
       capturedAt: new Date().toISOString(),
     },
+  };
+}
+
+function serpDatasetOf(keywordId: string) {
+  return Object.values(DATASETS).find((dataset) =>
+    dataset.keywords.some((keyword) => keyword.keywordId === keywordId),
+  );
+}
+
+function withTrackedCompetitors(
+  keywordId: string,
+  snapshot: SerpSnapshot,
+): SerpSnapshot {
+  const tracked = new Set(
+    serpDatasetOf(keywordId)?.competitors.map((row) => row.id) ?? [],
+  );
+  const annotate = <
+    T extends Pick<SerpEntryItem, "storeAppId" | "appId" | "isCompetitor">,
+  >(
+    row: T,
+  ): T =>
+    tracked.has(`comp-${row.storeAppId}`)
+      ? { ...row, appId: `comp-${row.storeAppId}`, isCompetitor: true }
+      : row;
+  return {
+    ...snapshot,
+    entries: snapshot.entries.map(annotate),
+    exits: snapshot.exits?.map(annotate),
   };
 }
 
@@ -3192,6 +3223,17 @@ const routes: Route[] = [
     method: "GET",
     pattern: /^\/keywords\/([^/]+)\/serp$/,
     handler: ([keywordId], req, res) => {
+      const history = SERP_HISTORY[keywordId];
+      if (history) {
+        const date = new URL(req.url ?? "/", "http://mock").searchParams.get(
+          "date",
+        );
+        return json(
+          res,
+          200,
+          withTrackedCompetitors(keywordId, serpOnDay(history, date)),
+        );
+      }
       const snapshot = SERP_SNAPSHOTS[keywordId];
       if (!snapshot) {
         return json(res, 404, errorEnvelope(404, req.url ?? "/"));
