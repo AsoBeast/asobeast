@@ -184,9 +184,12 @@ A failed creative analysis shows one of these messages. With `OPENAI_BASE_URL` n
 | OpenAI did not answer in time. | Retried automatically; try again |
 | Could not reach OpenAI. | Check the API container's outbound network |
 | OpenAI request failed. | Retried automatically when OpenAI reports a timeout, a conflict or a server error; otherwise check the API logs |
+| OpenAI answered with an error, followed by the reason it gave | The provider or a gateway in front of it answered an error where a completion belongs. Retried automatically; the reason says what failed |
+| OpenAI answered with something other than a chat completion. Check OPENAI_BASE_URL. | Retried automatically. Usually a gateway page or an address that names another service, so check `OPENAI_BASE_URL` |
 | OpenAI refused to analyze this listing. | The model declined the images; try again or another model |
 | The model ran out of output tokens. | Try again; a model with a larger output limit avoids it |
 | OpenAI filtered the response. | The images tripped OpenAI's content filter |
+| OpenAI returned no choices. | Retried automatically; try again |
 | OpenAI returned an unreadable response. | Retried automatically; try again |
 | The model returned observations that do not match the schema. | Retried automatically; a model with structured outputs avoids it |
 | The analysis did not finish. Try again. | The run took more than 10 minutes, usually because the API restarted; start it again |
