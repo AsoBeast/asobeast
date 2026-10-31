@@ -187,6 +187,9 @@ test("a read that fails stays inside the sheet and retry loads it", async ({
   await openSerp(page);
 
   await expect(failureIn(page)).toBeVisible({ timeout: 20_000 });
+  await expect(serpSheet(page).locator('[data-slot="skeleton"]')).toHaveCount(
+    0,
+  );
   await expect(page).toHaveURL(/serp=kw-1/);
   await expect(page.getByText("Keywords could not be loaded")).toHaveCount(0);
   await expect(

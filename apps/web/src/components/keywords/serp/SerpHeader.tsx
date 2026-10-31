@@ -11,11 +11,13 @@ function comparisonCaption(comparedTo: string | null | undefined) {
 
 function SerpToolbar({
   snapshot,
+  loading,
   viewer,
   exportable,
   onSelectDay,
 }: {
   snapshot: SerpSnapshot | undefined;
+  loading: boolean;
   viewer: SerpViewer;
   exportable: boolean;
   onSelectDay: (date: string) => void;
@@ -23,7 +25,7 @@ function SerpToolbar({
   const dates = snapshot?.dates ?? [];
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-      {snapshot ? null : <Skeleton className="h-8 w-60 md:h-9" />}
+      {loading ? <Skeleton aria-hidden className="h-8 w-60 md:h-9" /> : null}
       {snapshot?.date && dates.length > 0 ? (
         <>
           <CapturedDayPicker
@@ -58,6 +60,7 @@ export function SerpHeader({
   country,
   store,
   snapshot,
+  loading,
   viewer,
   exportable,
   onSelectDay,
@@ -66,6 +69,7 @@ export function SerpHeader({
   country: string | undefined;
   store: Store;
   snapshot: SerpSnapshot | undefined;
+  loading: boolean;
   viewer: SerpViewer;
   exportable: boolean;
   onSelectDay: (date: string) => void;
@@ -86,6 +90,7 @@ export function SerpHeader({
       </div>
       <SerpToolbar
         snapshot={snapshot}
+        loading={loading}
         viewer={viewer}
         exportable={exportable}
         onSelectDay={onSelectDay}

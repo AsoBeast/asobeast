@@ -153,6 +153,7 @@ function SerpBody({
         country={keyword?.country}
         store={store}
         snapshot={snapshot}
+        loading={!snapshot && !failedRead(serp)}
         viewer={viewer}
         exportable={!serp.isPlaceholderData}
         onSelectDay={(date) => onSelectDay(date, snapshot?.dates?.[0])}
