@@ -614,6 +614,7 @@ describe('Remote MCP transport (e2e)', () => {
     await prisma.trackedKeyword.create({
       data: { appId: fixture.id, keywordId: keyword.id, source: 'MANUAL' },
     });
+    await prisma.serpEntry.deleteMany({ where: { keywordId: keyword.id } });
     await prisma.serpEntry.create({
       data: {
         keywordId: keyword.id,
@@ -625,11 +626,7 @@ describe('Remote MCP transport (e2e)', () => {
       },
     });
 
-    const response = await rpc('tools/call', {
-      name: 'serp_snapshot',
-      arguments: { keywordId: keyword.id },
-    }).expect(200);
-    const result = sseEnvelope(response).result;
+    const result = await callTool('serp_snapshot', { keywordId: keyword.id });
     const snapshot = JSON.parse(
       result?.content?.[0].text ?? '{}',
     ) as SerpSnapshot;

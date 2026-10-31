@@ -138,7 +138,7 @@ describe('Retention against an upgraded baseline database', () => {
       })),
     });
 
-    deleted = await withWindows(RETENTION_WINDOWS, () => pruneAtNow(retention));
+    deleted = await pruneAtNow(retention);
   });
 
   afterAll(async () => {
