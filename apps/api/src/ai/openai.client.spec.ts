@@ -254,6 +254,34 @@ describe('createOpenAiClient', () => {
       BadGatewayException,
     );
   });
+
+  it.each([
+    [
+      { error: { message: 'upstream down' } },
+      'OpenAI answered with an error: upstream down',
+    ],
+    [
+      '<!doctype html><title>Bad gateway</title>',
+      'OpenAI answered with something other than a chat completion. Check OPENAI_BASE_URL.',
+    ],
+    [
+      null,
+      'OpenAI answered with something other than a chat completion. Check OPENAI_BASE_URL.',
+    ],
+  ])(
+    'reports %j as a retryable request failure, never as an answer',
+    async (response, message) => {
+      mockCreate.mockResolvedValue(response);
+
+      const failure = await build()
+        .structured(request)
+        .catch((caught: unknown) => caught);
+
+      expect(failure).toBeInstanceOf(AiRequestError);
+      expect(failure).not.toBeInstanceOf(UnusableAnswerError);
+      expect(failure).toMatchObject({ message, retryable: true });
+    },
+  );
 });
 
 const headers = new Headers();
