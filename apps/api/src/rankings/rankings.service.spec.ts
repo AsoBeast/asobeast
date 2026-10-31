@@ -1,6 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import { Store } from '@prisma/client';
-import { AlertPayload, RANK_DEPTH } from '@asobeast/shared';
+import { AlertPayload, RANK_DEPTH, SERP_CAPTURE_DEPTH } from '@asobeast/shared';
 import { AlertsDispatcher } from '../alerts/alerts.dispatcher';
 import { CollectionEligibility } from '../auth/collection-eligibility.service';
 import { Env } from '../config/env';
@@ -95,9 +95,9 @@ describe('RankingsService.checkKeyword', () => {
     jest.useRealTimers();
   });
 
-  const buildSearchResults = (): SearchItem[] => {
+  const buildSearchResults = (count = 40): SearchItem[] => {
     const items: SearchItem[] = [];
-    for (let i = 1; i <= 40; i += 1) {
+    for (let i = 1; i <= count; i += 1) {
       items.push({ storeAppId: `other-${i}`, title: `Other ${i}` });
     }
     items[6] = { storeAppId: 'primary-store', title: 'Primary' };
@@ -430,8 +430,19 @@ describe('RankingsService.checkKeyword', () => {
     expect(calls[0][0].where.app).not.toHaveProperty('country');
   });
 
-  it('persists the top ten entries with 1-based positions', async () => {
-    const { service, createMany, deleteMany, withTransaction } = setup();
+  it('persists the top fifty entries with 1-based positions', async () => {
+    const results = buildSearchResults(60);
+    results[49] = {
+      storeAppId: 'fiftieth',
+      title: 'Fiftieth',
+      developer: 'Deep Studio',
+      iconUrl: 'https://is1-ssl.mzstatic.com/image/thumb/b/512x512bb.jpg',
+      ratingAvg: 4.2,
+      ratingCount: 321,
+    };
+    const { service, createMany, deleteMany, withTransaction } = setup({
+      searchResults: results,
+    });
 
     await service.checkKeyword('kw1');
 
@@ -439,11 +450,29 @@ describe('RankingsService.checkKeyword', () => {
     expect(deleteMany.mock.calls[0][0].where.keywordId).toBe('kw1');
     expect(deleteMany.mock.calls[0][0].where.date).toBeInstanceOf(Date);
     const entries = createMany.mock.calls[0][0].data;
-    expect(entries).toHaveLength(10);
-    expect(entries[0].position).toBe(1);
-    expect(entries[9].position).toBe(10);
+    expect(entries).toHaveLength(SERP_CAPTURE_DEPTH);
+    expect(entries.map((entry) => entry.position)).toEqual(
+      Array.from({ length: 50 }, (_, index) => index + 1),
+    );
     expect(entries[6].storeAppId).toBe('primary-store');
+    expect(entries[49]).toMatchObject({
+      storeAppId: 'fiftieth',
+      developer: 'Deep Studio',
+      iconUrl: 'https://is1-ssl.mzstatic.com/image/thumb/b/512x512bb.jpg',
+      ratingAvg: 4.2,
+      ratingCount: 321,
+    });
     expect(entries.every((entry) => entry.keywordId === 'kw1')).toBe(true);
+  });
+
+  it('keeps every result when the store answers fewer than 50', async () => {
+    const { service, createMany } = setup({
+      searchResults: buildSearchResults().slice(0, 7),
+    });
+
+    await service.checkKeyword('kw1');
+
+    expect(createMany.mock.calls[0][0].data).toHaveLength(7);
   });
 
   it('persists the icon each serp entry was found with', async () => {
@@ -764,6 +793,19 @@ describe('RankingsService.checkKeyword', () => {
     expect(
       serpFindMany.mock.calls.map(([query]) => query.where.position),
     ).toEqual([{ lte: 10 }, { lte: 10 }]);
+  });
+
+  it('raises no entrant for results below the top 10 on the first deep day', async () => {
+    const { service, dispatch } = setup({
+      tracked: primaryOnly,
+      previous: null,
+      previousSerp: previousTopTen('other-9', 'other-10'),
+      searchResults: buildSearchResults(50),
+    });
+
+    await service.checkKeyword('kw1');
+
+    expect(dispatch).not.toHaveBeenCalled();
   });
 
   it('serves every workspace tracking the phrase from one search', async () => {

@@ -57,4 +57,4 @@ Ranking charts use a reversed Y axis, so position 1 sits at the top and an impro
 
 ## How deep does the SERP snapshot go?
 
-Position checks capture to depth 200. The stored SERP snapshot, which is what powers volatility, entrants and competitor discovery, keeps the top 10 results for each keyword and date.
+Position checks capture to depth 200. The stored SERP snapshot keeps the top 50 results for each keyword and date. The top 10 is kept for `RETENTION_SERP_DAYS`, positions 11 to 50 for `RETENTION_SERP_DEEP_DAYS`. Entrant alerts, SERP movers, volatility, competitors in the top 10 and competitor discovery read the top 10 only.

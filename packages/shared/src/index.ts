@@ -141,6 +141,7 @@ export const isFloorAnswer = (
 export const DEFAULT_COUNTRY = 'us';
 
 export const SERP_DEPTH = 10;
+export const SERP_CAPTURE_DEPTH = 50;
 
 export * from './query-bounds';
 export * from './storefronts';

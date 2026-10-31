@@ -4,7 +4,7 @@ import {
   KeywordScope,
   RANK_DEPTH,
   RankingSeries,
-  SERP_DEPTH,
+  SERP_CAPTURE_DEPTH,
 } from '@asobeast/shared';
 import { CollectionEligibility } from '../auth/collection-eligibility.service';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
@@ -99,7 +99,7 @@ export class RankingsService {
     });
 
     const date = utcToday();
-    const entries = results.slice(0, SERP_DEPTH).map((item, index) => ({
+    const entries = results.slice(0, SERP_CAPTURE_DEPTH).map((item, index) => ({
       keywordId,
       date,
       position: index + 1,

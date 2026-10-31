@@ -13,6 +13,8 @@ import {
   isScoringSource,
   SCORING_CONFIDENCES,
   SCORING_SOURCES,
+  SERP_CAPTURE_DEPTH,
+  SERP_DEPTH,
   STORES,
   SUPPORTED_STORES,
 } from './index';
@@ -29,6 +31,11 @@ describe('@asobeast/shared constants', () => {
 
   it('defaults to the US region', () => {
     expect(DEFAULT_COUNTRY).toBe('us');
+  });
+
+  it('captures the top 50 search results, never fewer than the top 10', () => {
+    expect(SERP_CAPTURE_DEPTH).toBe(50);
+    expect(SERP_CAPTURE_DEPTH).toBeGreaterThanOrEqual(SERP_DEPTH);
   });
 
   it('exposes a closed scoring provenance vocabulary', () => {
