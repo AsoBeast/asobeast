@@ -232,8 +232,10 @@ export function CapturedDayPicker({
         variant="outline"
         size="icon"
         aria-label="Previous captured day"
-        disabled={previous === null}
-        onClick={() => previous && onSelect(previous)}
+        aria-disabled={previous === null || undefined}
+        onClick={() => {
+          if (previous) onSelect(previous);
+        }}
       >
         <ChevronLeft aria-hidden />
       </Button>
@@ -241,8 +243,10 @@ export function CapturedDayPicker({
         variant="outline"
         size="icon"
         aria-label="Next captured day"
-        disabled={next === null}
-        onClick={() => next && onSelect(next)}
+        aria-disabled={next === null || undefined}
+        onClick={() => {
+          if (next) onSelect(next);
+        }}
       >
         <ChevronRight aria-hidden />
       </Button>

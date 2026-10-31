@@ -8,6 +8,7 @@ import { holdRender } from "./chart-image.mts";
 import {
   AWAITING_ALERT_COOKIE,
   CROWDED_COMPETITORS_COOKIE,
+  TOP_CHART_DATES,
   WEBHOOK_PAIR,
   WEBHOOK_PAIR_COOKIE,
 } from "./fixtures.mts";
@@ -697,6 +698,58 @@ test.describe("import app openers get focus back", () => {
     await expect(importDialog(page)).toBeHidden();
     await expect(switcher).toBeFocused();
   });
+});
+
+test.describe("captured day buttons", () => {
+  const chartReads = (page: Page) => {
+    const urls: string[] = [];
+    page.on("request", (request) => {
+      if (/\/api\/backend\/charts\?/.test(request.url())) {
+        urls.push(request.url());
+      }
+    });
+    return urls;
+  };
+
+  for (const { name, from, to } of [
+    {
+      name: "Previous captured day",
+      from: TOP_CHART_DATES.at(-2) ?? "",
+      to: TOP_CHART_DATES.at(-1) ?? "",
+    },
+    {
+      name: "Next captured day",
+      from: TOP_CHART_DATES[1],
+      to: TOP_CHART_DATES[0],
+    },
+  ]) {
+    test(`${name} keeps focus once it reaches the last captured day`, async ({
+      page,
+    }) => {
+      await page.goto(`/charts?view=table&date=${from}`);
+      const button = page.getByRole("button", { name, exact: true });
+
+      await pressFromKeyboard(button);
+      await expect(page).toHaveURL(new RegExp(`date=${to}`));
+      await expect
+        .poll(() =>
+          button.evaluate(
+            (element) =>
+              element.hasAttribute("disabled") ||
+              element.getAttribute("aria-disabled") === "true",
+          ),
+        )
+        .toBe(true);
+      await expect(button).toBeFocused();
+      await expect(button).toHaveAttribute("aria-disabled", "true");
+
+      const reads = chartReads(page);
+      await page.keyboard.press("Enter");
+      await expect(button).toBeFocused();
+      await expect(page).toHaveURL(new RegExp(`date=${to}`));
+      expect(reads).toEqual([]);
+    });
+  }
 });
 
 test("closing the top 10 sheet returns focus to the row that opened it", async ({
