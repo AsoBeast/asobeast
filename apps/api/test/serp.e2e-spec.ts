@@ -99,13 +99,14 @@ describe('SerpController (e2e)', () => {
           position: 1,
           storeAppId: 'self-store',
           title: 'You',
+          iconUrl: 'https://is1-ssl.mzstatic.com/image/thumb/a/100x100bb.jpg',
         },
         {
           keywordId: keyword.id,
           date: DATE,
           position: 2,
           storeAppId: 'rival-store',
-          title: 'Rival',
+          title: 'Rival Habit Tracker',
         },
         {
           keywordId: keyword.id,
@@ -128,6 +129,21 @@ describe('SerpController (e2e)', () => {
     });
     expect(body.entries[1].isCompetitor).toBe(true);
     expect(body.entries[2]).toMatchObject({ appId: null, isCompetitor: false });
+    expect(body.entries[0]).toMatchObject({
+      iconUrl: 'https://is1-ssl.mzstatic.com/image/thumb/a/100x100bb.jpg',
+      titleMatch: 'none',
+      titleSegments: [{ text: 'You', match: 'none' }],
+    });
+    expect(body.entries[1]).toMatchObject({
+      iconUrl: null,
+      titleMatch: 'phrase',
+      titleSegments: [
+        { text: 'Rival ', match: 'none' },
+        { text: 'Habit', match: 'exact' },
+        { text: ' ', match: 'none' },
+        { text: 'Tracker', match: 'exact' },
+      ],
+    });
   });
 
   async function appRow(

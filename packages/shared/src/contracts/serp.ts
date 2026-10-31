@@ -1,4 +1,8 @@
+import type { KeywordBreakdownSegment } from './keyword-breakdown';
 import type { KeywordScope } from './keywords';
+
+export type SerpTitleMatch = 'phrase' | 'words' | 'partial' | 'none';
+
 export interface SerpEntryItem {
   position: number;
   storeAppId: string;
@@ -8,6 +12,9 @@ export interface SerpEntryItem {
   ratingCount: number | null;
   appId: string | null;
   isCompetitor: boolean;
+  iconUrl?: string | null;
+  titleMatch?: SerpTitleMatch;
+  titleSegments?: KeywordBreakdownSegment[];
 }
 
 export interface SerpSnapshot {

@@ -11,6 +11,7 @@ import {
   utcToday,
 } from './rankings.support';
 import { detectEntrants, SerpSnapshotDay } from './serp-movers';
+import { titleJudge } from './serp-title-match';
 import { TOP_TEN_ROWS } from './top-ten';
 
 const MOVERS_LIMIT = 50;
@@ -55,10 +56,12 @@ export class SerpService {
         storeAppId: true,
         title: true,
         developer: true,
+        iconUrl: true,
         ratingAvg: true,
         ratingCount: true,
       },
     });
+    const judgeTitle = titleJudge(keyword.text);
 
     const byStoreAppId = await appsByStoreAppId(
       this.prisma,
@@ -82,6 +85,8 @@ export class SerpService {
           ratingCount: entry.ratingCount,
           appId: app?.id ?? null,
           isCompetitor: app?.isCompetitor ?? false,
+          iconUrl: entry.iconUrl,
+          ...judgeTitle(entry.title),
         };
       }),
     };

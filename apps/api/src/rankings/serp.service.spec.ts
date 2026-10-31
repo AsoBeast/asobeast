@@ -127,4 +127,52 @@ describe('SerpService.serp', () => {
       isCompetitor: false,
     });
   });
+
+  it('answers the icon and how the title holds the keyword', async () => {
+    const icon = 'https://is1-ssl.mzstatic.com/image/thumb/a/100x100bb.jpg';
+    const { service, prisma } = setup({
+      entries: [
+        {
+          position: 1,
+          storeAppId: 'a',
+          title: 'Habit Tracker Pro',
+          developer: null,
+          iconUrl: icon,
+          ratingAvg: null,
+          ratingCount: null,
+        },
+        {
+          position: 2,
+          storeAppId: 'b',
+          title: 'Streaks',
+          developer: null,
+          iconUrl: null,
+          ratingAvg: null,
+          ratingCount: null,
+        },
+      ],
+    });
+
+    const snapshot = await service.serp('kw1', {});
+
+    expect(snapshot.entries[0]).toMatchObject({
+      iconUrl: icon,
+      titleMatch: 'phrase',
+      titleSegments: [
+        { text: 'Habit', match: 'exact' },
+        { text: ' ', match: 'none' },
+        { text: 'Tracker', match: 'exact' },
+        { text: ' Pro', match: 'none' },
+      ],
+    });
+    expect(snapshot.entries[1]).toMatchObject({
+      iconUrl: null,
+      titleMatch: 'none',
+      titleSegments: [{ text: 'Streaks', match: 'none' }],
+    });
+    const [query] = prisma.serpEntry.findMany.mock.calls[0] as [
+      { select: Record<string, boolean> },
+    ];
+    expect(query.select.iconUrl).toBe(true);
+  });
 });
