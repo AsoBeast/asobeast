@@ -89,6 +89,20 @@ describe('AscListingApi.liveVersion', () => {
   });
 });
 
+describe('AscListingApi on an answer it cannot read', () => {
+  it('refuses unreadable versions instead of reading no live version', async () => {
+    const { api } = recorded(ok(null));
+
+    await expect(api.liveVersion('1476097583')).rejects.toThrow(AscError);
+  });
+
+  it('refuses unreadable localizations instead of reading none served', async () => {
+    const { api } = recorded(ok(null));
+
+    await expect(api.versionLocalizations('900')).rejects.toThrow(AscError);
+  });
+});
+
 describe('AscListingApi.versionLocalizations', () => {
   it('reads locale and keywords per localization', async () => {
     const { api, requests } = recorded(localizations(['en-US', 'de-DE']));

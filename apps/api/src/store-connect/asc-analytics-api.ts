@@ -1,5 +1,9 @@
 import { AscError, AscSegmentSizeError } from './asc-errors';
-import type { AscRequester, Resource } from './asc-requester';
+import {
+  createdResource,
+  type AscRequester,
+  type Resource,
+} from './asc-requester';
 import { isPublicHttps, ResponseTooLargeError } from './bounded-body';
 import type { AscResponse } from './asc-transport';
 
@@ -94,17 +98,9 @@ export class AscAnalyticsApi {
         },
       },
     });
-    const created = (
-      response.body as { data?: Resource<Omit<AscReportRequest, 'id'>> }
-    ).data;
-    if (!created) {
-      throw new AscError(
-        'App Store Connect created no report request',
-        502,
-        null,
-      );
-    }
-    return toReportRequest(created);
+    return toReportRequest(
+      createdResource<Omit<AscReportRequest, 'id'>>(response),
+    );
   }
 
   async discoveryReport(
