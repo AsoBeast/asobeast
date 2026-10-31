@@ -13,6 +13,7 @@ import {
 } from './asc-errors';
 import { DiscoveryHeaderError, DiscoveryLineError } from './discovery-report';
 import { refusalOf } from './asc-http-errors';
+import { AscKeywordFieldSync } from './asc-keyword-field-sync.service';
 import {
   StoreConnectionService,
   type OpenedConnection,
@@ -83,6 +84,7 @@ export class AscReportSync {
     private readonly connections: StoreConnectionService,
     private readonly requester: StoreReportRequester,
     private readonly applier: StoreReportApplier,
+    private readonly keywordFields: AscKeywordFieldSync,
   ) {}
 
   async run(finalAttempt = true): Promise<SyncSummary | null> {
@@ -93,7 +95,19 @@ export class AscReportSync {
       const outcome = await this.requester.ensure(connection, STORE);
       summary.apps = outcome.apps;
       summary.failed = outcome.failed;
-      await this.download(connection, summary);
+      try {
+        await this.download(connection, summary);
+      } catch (error) {
+        if (
+          error instanceof AscRateLimitedError ||
+          error instanceof AscRejectedKeyError
+        ) {
+          throw error;
+        }
+        await this.importKeywordFields(summary);
+        throw error;
+      }
+      await this.importKeywordFields(summary);
       await this.connections.markSynced(
         STORE,
         outcome.reportAccess,
@@ -116,6 +130,22 @@ export class AscReportSync {
       );
     }
     return summary;
+  }
+
+  private async importKeywordFields(summary: SyncSummary): Promise<void> {
+    try {
+      const fields = await this.keywordFields.run();
+      summary.fields = fields.fields;
+      summary.fieldsChanged = fields.changed;
+    } catch (error) {
+      if (error instanceof AscRateLimitedError) {
+        summary.rateLimited = true;
+        return;
+      }
+      this.logger.warn(
+        `the keyword field import waits for the next sync: ${messageOf(error)}`,
+      );
+    }
   }
 
   private async download(

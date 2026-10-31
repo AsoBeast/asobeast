@@ -14,11 +14,24 @@ import { MarketListingRequests } from './market-listing.requests';
 
 const KEYWORD_FIELD_LOCK = 3_958_261;
 
+export type FieldWriteGuard = (
+  tx: Prisma.TransactionClient,
+) => Promise<boolean>;
+
+export class FieldWriteSupersededError extends Error {}
+
+export const serializeKeywordField = (
+  tx: Prisma.TransactionClient,
+  appId: string,
+): Promise<number> =>
+  tx.$executeRaw`SELECT pg_advisory_xact_lock(${KEYWORD_FIELD_LOCK}, hashtext(${appId}))`;
+
 export interface KeywordFieldSave {
   app: KeywordApp;
   localization: AppStoreLocalization;
   phrases: string[];
   markets: readonly string[];
+  guard?: FieldWriteGuard;
 }
 
 export interface KeywordFieldWrite {
@@ -46,10 +59,12 @@ export class KeywordFieldWriter {
     localization,
     phrases,
     markets,
+    guard,
   }: KeywordFieldSave): Promise<KeywordFieldWrite> {
     const resolved = await this.resolveKeywords(app, phrases, markets);
     const started = await this.quota.admitKeywordMarkets(async (tx) => {
-      await this.serialize(tx, app.id);
+      await serializeKeywordField(tx, app.id);
+      await this.admit(tx, guard);
       const before = await storedPhrases(tx, app.id, localization);
       await this.storePhrases(tx, app.id, localization, phrases);
       await this.recordShipped(tx, app, localization, phrases);
@@ -72,9 +87,11 @@ export class KeywordFieldWriter {
   async remove(
     app: KeywordApp,
     localization: AppStoreLocalization,
+    guard?: FieldWriteGuard,
   ): Promise<void> {
     await this.quota.admitKeywordMarkets(async (tx) => {
-      await this.serialize(tx, app.id);
+      await serializeKeywordField(tx, app.id);
+      await this.admit(tx, guard);
       const before = await storedPhrases(tx, app.id, localization);
       await this.storePhrases(tx, app.id, localization, []);
       await tx.appLocalization.deleteMany({
@@ -82,6 +99,13 @@ export class KeywordFieldWriter {
       });
       await this.untrackDropped(tx, app.id, localization, before);
     });
+  }
+
+  private async admit(
+    tx: Prisma.TransactionClient,
+    guard: FieldWriteGuard | undefined,
+  ): Promise<void> {
+    if (guard && !(await guard(tx))) throw new FieldWriteSupersededError();
   }
 
   private async resolveKeywords(
@@ -148,13 +172,6 @@ export class KeywordFieldWriter {
       await this.listings.request(app, market);
     }
     return { keywordIds, trackedIn };
-  }
-
-  private serialize(
-    tx: Prisma.TransactionClient,
-    appId: string,
-  ): Promise<number> {
-    return tx.$executeRaw`SELECT pg_advisory_xact_lock(${KEYWORD_FIELD_LOCK}, hashtext(${appId}))`;
   }
 
   private async storePhrases(

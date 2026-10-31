@@ -3,6 +3,7 @@ import type {
   ChartFollowItem,
   ChartPage,
   AppAuditResult,
+  AppLocalizationsResult,
   EmailAlertItem,
   FirstRunStatus,
   KeywordFieldQuery,
@@ -113,6 +114,7 @@ import {
 import { withReviewReply, withReviewRow } from "./review-reply-cache";
 import { runProgressInterval } from "./run-progress";
 import { keywordsPollInterval } from "./keyword-checks";
+import { firstImportPollInterval } from "./app-localizations";
 import {
   hasPendingScreenshots,
   SCREENSHOT_POLL_MS,
@@ -660,6 +662,8 @@ export const appLocalizationsOptions = (id: string) =>
   queryOptions({
     queryKey: appKeys.localizations(id),
     queryFn: () => getAppLocalizations(id),
+    refetchInterval: (query) =>
+      firstImportPollInterval(query.state.data, query.state.dataUpdateCount),
   });
 
 export const marketKeywordFieldsOptions = (id: string, country: string) =>
@@ -1044,6 +1048,18 @@ export function invalidateLocalizationMutation(
 export function invalidateKeywordImport(client: QueryClient, id: string): void {
   invalidateKeywordMutation(client, id);
   void client.invalidateQueries({ queryKey: appKeys.importPreviewRoot(id) });
+}
+
+export function seedStoreImport(
+  client: QueryClient,
+  id: string,
+  result: AppLocalizationsResult,
+): void {
+  client.setQueryData(appKeys.localizations(id), result);
+}
+
+export function invalidateStoreImport(client: QueryClient, id: string): void {
+  void client.invalidateQueries({ queryKey: appKeys.localizations(id) });
 }
 
 function invalidateLocalSuggestions(client: QueryClient, id: string): void {

@@ -88,6 +88,11 @@ function harness(
 ) {
   const rows: Record<string, unknown>[] = [];
   const tx = {
+    $executeRaw: jest.fn(() => Promise.resolve(1)),
+    keywordFieldSync: {
+      findMany: jest.fn(() => Promise.resolve([{ appId: 'app_1' }])),
+      deleteMany: jest.fn(() => Promise.resolve({ count: 1 })),
+    },
     storeConnection: {
       deleteMany: jest.fn(({ where }: { where: { store: string } }) => {
         const kept = rows.filter((row) => row.store !== where.store);
@@ -785,5 +790,22 @@ describe('StoreConnectionService', () => {
     expect(prisma.storeConnection.deleteMany).toHaveBeenCalledWith({
       where: { store: 'APP_STORE' },
     });
+  });
+
+  it('releases the imported keyword fields when App Store Connect disconnects', async () => {
+    const { service, tx } = harness();
+
+    await service.disconnect('APP_STORE');
+
+    expect(tx.keywordFieldSync.findMany).toHaveBeenCalled();
+    expect(tx.keywordFieldSync.deleteMany).toHaveBeenCalled();
+  });
+
+  it('keeps the imported keyword fields when Google Play disconnects', async () => {
+    const { service, tx } = harness();
+
+    await service.disconnect('GOOGLE_PLAY');
+
+    expect(tx.keywordFieldSync.deleteMany).not.toHaveBeenCalled();
   });
 });

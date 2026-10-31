@@ -23,7 +23,10 @@ export class StoreReportQueue {
     const payload: SyncStoreReportsPayload = { workspaceId, store };
     const job = await this.queue.add(JOBS.SYNC_STORE_REPORTS, payload, {
       ...STORE_REPORT_JOB_OPTIONS,
-      deduplication: { id: storeReportsDeduplicationId(workspaceId, store) },
+      deduplication: {
+        id: storeReportsDeduplicationId(workspaceId, store),
+        keepLastIfActive: true,
+      },
     });
     const state = await job.getState();
     return { outcome: state === 'active' ? 'running' : 'queued' };

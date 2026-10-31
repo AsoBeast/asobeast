@@ -8,6 +8,7 @@ import { holdRender } from "./chart-image.mts";
 import {
   APP_GP_DETAIL,
   APP_GP_SERP_MOVERS,
+  APP_IMPORT_FOCUS_ID,
   AWAITING_ALERT_COOKIE,
   CROWDED_COMPETITORS_COOKIE,
   TOP_CHART_DATES,
@@ -19,6 +20,7 @@ import {
   holdRequest,
   pressFromKeyboard,
 } from "./held-request.mts";
+import { seedLocalizations } from "./localizations.mts";
 import { activateTwiceInOneTask, hydrated } from "./hydrated.mts";
 import {
   answerTrack,
@@ -106,6 +108,141 @@ test.describe("store connection controls keep focus", () => {
     await expect(
       storeConnections(page).getByRole("button", {
         name: "Connect App Store Connect",
+      }),
+    ).toBeFocused();
+  });
+});
+
+test.describe("the keyword field import controls keep focus", () => {
+  test.describe.configure({ mode: "serial" });
+  const localizations = (page: Page) =>
+    page.getByRole("region", { name: "App Store localizations" });
+  const metadata = `/apps/${APP_IMPORT_FOCUS_ID}/metadata`;
+
+  test("cancelling the import dialog returns focus to its opener", async ({
+    page,
+  }) => {
+    await page.goto(metadata);
+    const opener = localizations(page).getByRole("button", {
+      name: "Import from App Store Connect",
+    });
+
+    await pressFromKeyboard(opener);
+    await expect(page.getByRole("alertdialog")).toBeVisible();
+    await page.keyboard.press("Escape");
+
+    await expect(page.getByRole("alertdialog")).toBeHidden();
+    await expect(opener).toBeFocused();
+  });
+
+  test("the confirm button keeps focus while the import runs", async ({
+    page,
+  }) => {
+    const held = await holdRequest(
+      page,
+      /\/api\/backend\/apps\/[^/]+\/keyword-fields\/import$/,
+      "POST",
+      (route) =>
+        route.fulfill({
+          status: 500,
+          json: {
+            statusCode: 500,
+            error: "Server Error",
+            message: "down",
+            path: "/api/backend/apps/app-import-focus/keyword-fields/import",
+            timestamp: new Date().toISOString(),
+          },
+        }),
+    );
+    await page.goto(metadata);
+    await pressFromKeyboard(
+      localizations(page).getByRole("button", {
+        name: "Import from App Store Connect",
+      }),
+    );
+    const confirm = page
+      .getByRole("alertdialog")
+      .getByRole("button", { name: /^(Import|Importing…)$/ });
+
+    await pressFromKeyboard(confirm);
+
+    await expectFocusKeptWhileHeld(confirm, held);
+    await expect(page.getByRole("alertdialog")).toBeVisible();
+    held.release();
+    await expect(page.getByRole("alertdialog").getByText("down")).toBeVisible();
+  });
+
+  test("a confirmed import hands focus to Stop importing", async ({ page }) => {
+    await page.goto(metadata);
+
+    await pressFromKeyboard(
+      localizations(page).getByRole("button", {
+        name: "Import from App Store Connect",
+      }),
+    );
+    await page
+      .getByRole("alertdialog")
+      .getByRole("button", { name: "Import", exact: true })
+      .press("Enter");
+
+    await expect(
+      localizations(page).getByRole("button", { name: "Stop importing" }),
+    ).toBeFocused();
+  });
+
+  test("Stop importing keeps focus while the request runs", async ({
+    page,
+  }) => {
+    const held = await holdRequest(
+      page,
+      /\/api\/backend\/apps\/[^/]+\/keyword-fields\/import$/,
+      "DELETE",
+      (route) =>
+        route.fulfill({
+          status: 500,
+          json: {
+            statusCode: 500,
+            error: "Server Error",
+            message: "down",
+            path: "/api/backend/apps/app-import-focus/keyword-fields/import",
+            timestamp: new Date().toISOString(),
+          },
+        }),
+    );
+    await seedLocalizations(page.request, APP_IMPORT_FOCUS_ID, {
+      markets: ["us"],
+      fields: { "en-US": ["focus", "timer"] },
+      storeManaged: true,
+    });
+    await page.goto(metadata);
+    const stop = localizations(page).getByRole("button", {
+      name: "Stop importing",
+    });
+
+    await pressFromKeyboard(stop);
+
+    await expectFocusKeptWhileHeld(stop, held);
+    held.release();
+  });
+
+  test("a confirmed stop hands focus to Import from App Store Connect", async ({
+    page,
+  }) => {
+    await seedLocalizations(page.request, APP_IMPORT_FOCUS_ID, {
+      markets: ["us"],
+      fields: { "en-US": ["focus", "timer"] },
+      storeManaged: true,
+    });
+    await page.goto(metadata);
+    const stop = localizations(page).getByRole("button", {
+      name: "Stop importing",
+    });
+
+    await pressFromKeyboard(stop);
+
+    await expect(
+      localizations(page).getByRole("button", {
+        name: "Import from App Store Connect",
       }),
     ).toBeFocused();
   });
