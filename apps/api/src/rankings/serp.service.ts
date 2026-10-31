@@ -11,6 +11,7 @@ import {
   utcToday,
 } from './rankings.support';
 import { detectEntrants, SerpSnapshotDay } from './serp-movers';
+import { TOP_TEN_ROWS } from './top-ten';
 
 const MOVERS_LIMIT = 50;
 
@@ -151,7 +152,11 @@ export class SerpService {
   ): Promise<SerpEntrant[]> {
     const from = new Date(utcToday().getTime() - days * DAY_MS);
     const rows = await this.prisma.serpEntry.findMany({
-      where: { keywordId: { in: keywordIds }, date: { gte: from } },
+      where: {
+        keywordId: { in: keywordIds },
+        date: { gte: from },
+        ...TOP_TEN_ROWS,
+      },
       select: {
         keywordId: true,
         date: true,

@@ -24,6 +24,7 @@ import { CompetitorCapture, RankCapture } from './rank-milestones';
 import { RankingAlertsService } from './ranking-alerts.service';
 import { DAY_MS, toDateKey, utcToday } from './rankings.support';
 import { SerpSnapshotDay } from './serp-movers';
+import { topTenOf } from './top-ten';
 
 const HISTORY_DAYS = 30;
 
@@ -118,7 +119,7 @@ export class RankingsService {
 
     const today: SerpSnapshotDay = {
       date: toDateKey(date),
-      entries: entries.map(({ position, storeAppId, title }) => ({
+      entries: topTenOf(entries).map(({ position, storeAppId, title }) => ({
         position,
         storeAppId,
         title,

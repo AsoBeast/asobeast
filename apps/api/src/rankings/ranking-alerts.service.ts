@@ -20,6 +20,7 @@ import {
 } from './rank-milestones';
 import { appsByStoreAppId, toDateKey } from './rankings.support';
 import { detectEntrants, SerpSnapshotDay } from './serp-movers';
+import { TOP_TEN_ROWS } from './top-ten';
 
 interface PreviousRanking {
   date: Date;
@@ -369,7 +370,7 @@ export class RankingAlertsService {
     date: Date,
   ): Promise<SerpSnapshotDay | null> {
     const rows = await this.prisma.serpEntry.findMany({
-      where: { keywordId, date },
+      where: { keywordId, date, ...TOP_TEN_ROWS },
       orderBy: { position: 'asc' },
       select: { position: true, storeAppId: true, title: true },
     });

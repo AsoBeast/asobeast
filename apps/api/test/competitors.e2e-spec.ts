@@ -266,6 +266,58 @@ describe('CompetitorsController (e2e)', () => {
     });
   });
 
+  it('discovers only apps seen in the top 10', async () => {
+    const primary = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: 'self',
+        country: 'us',
+        name: 'You',
+      },
+    });
+    const keyword = await prisma.keyword.create({
+      data: { text: 'habit tracker', store: Store.APP_STORE, country: 'us' },
+    });
+    await prisma.trackedKeyword.create({
+      data: {
+        appId: primary.id,
+        keywordId: keyword.id,
+        source: 'MANUAL',
+        active: true,
+      },
+    });
+    const yesterday = new Date(D0.getTime() - 24 * 60 * 60 * 1000);
+    await prisma.serpEntry.createMany({
+      data: [D0, yesterday].flatMap((date) => [
+        {
+          keywordId: keyword.id,
+          date,
+          position: 3,
+          storeAppId: 'stranger',
+          title: 'Stranger',
+        },
+        {
+          keywordId: keyword.id,
+          date,
+          position: 11,
+          storeAppId: 'deep-app',
+          title: 'Deep',
+        },
+      ]),
+    });
+
+    const response = await api
+      .get(`/apps/${primary.id}/competitors/discovery?days=90`)
+      .expect(200);
+
+    expect(
+      (response.body as CompetitorDiscovery).items.map(
+        (item) => item.storeAppId,
+      ),
+    ).toEqual(['stranger']);
+  });
+
   it('describes a discovered app from the home market', async () => {
     const primary = await prisma.app.create({
       data: {

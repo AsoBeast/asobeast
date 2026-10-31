@@ -236,13 +236,20 @@ describe('RankingsService.checkKeyword', () => {
         createMany,
         findFirst: serpFindFirst,
         findMany: jest
-          .fn<Promise<SerpRow[]>, [{ where: { date: Date } }]>()
+          .fn<
+            Promise<SerpRow[]>,
+            [{ where: { date: Date; position?: { lte: number } } }]
+          >()
           .mockImplementation(({ where }) =>
             Promise.resolve(
               serpRows(
                 where.date.getTime() === PREVIOUS_DAY.getTime()
                   ? options?.previousSerp
                   : options?.sameDaySerp,
+              ).filter(
+                (row) =>
+                  where.position === undefined ||
+                  row.position <= where.position.lte,
               ),
             ),
           ),
@@ -297,6 +304,7 @@ describe('RankingsService.checkKeyword', () => {
       trackedFindMany,
       keywordFindUnique,
       serpFindFirst,
+      serpFindMany: prisma.serpEntry.findMany,
       rankingFindFirst,
       rankingFindMany,
       earlierBefore,
@@ -717,6 +725,45 @@ describe('RankingsService.checkKeyword', () => {
     await service.checkKeyword('kw1');
 
     expect(dispatch).not.toHaveBeenCalled();
+  });
+
+  it('compares against the top 10 of a baseline that holds deeper rows', async () => {
+    const today = [
+      'other-1',
+      'other-2',
+      'other-3',
+      'newcomer',
+      'other-4',
+      'other-5',
+      'other-6',
+      'primary-store',
+      'other-8',
+      'other-9',
+      'other-10',
+    ].map((storeAppId) => ({ storeAppId, title: storeAppId }));
+    const { service, dispatch, serpFindMany } = setup({
+      tracked: primaryOnly,
+      previous: null,
+      previousSerp: [
+        ...previousTopTen('other-9', 'other-10'),
+        { storeAppId: 'newcomer', title: 'newcomer' },
+      ],
+      searchResults: today,
+    });
+
+    await service.checkKeyword('kw1');
+
+    expect(dispatch).toHaveBeenCalledTimes(1);
+    expect(dispatch.mock.calls[0][0]).toMatchObject({
+      event: 'serp.entrant',
+      entrants: [{ position: 4, storeAppId: 'newcomer' }],
+    });
+    expect(
+      (dispatch.mock.calls[0][0] as { entrants: unknown[] }).entrants,
+    ).toHaveLength(1);
+    expect(
+      serpFindMany.mock.calls.map(([query]) => query.where.position),
+    ).toEqual([{ lte: 10 }, { lte: 10 }]);
   });
 
   it('serves every workspace tracking the phrase from one search', async () => {
