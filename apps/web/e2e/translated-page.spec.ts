@@ -339,3 +339,40 @@ test("a translated search results sheet steps through its captured days", async 
   await expect(summary).toBeVisible();
   expect(errors).toEqual([]);
 });
+
+const shownText = (text: string) =>
+  text.replace(/\s+/g, " ").trim().toLowerCase();
+
+test("a translated search results sheet shows the apps of the day it steps to", async ({
+  page,
+}) => {
+  const [, YESTERDAY] = SERP_HISTORY_DAYS;
+  await page.goto(`/apps/app-1/keywords?serp=kw-3&serpDate=${YESTERDAY}`);
+  const sheet = page.getByRole("dialog", { name: "Search results" });
+  const rows = sheet.locator('[data-slot="serp-row"]');
+  await expect(sheet.locator("li#serp-row-5")).toContainText(
+    "Timer for Study Sessions",
+  );
+  const untranslated = (await rows.allInnerTexts()).map(shownText);
+
+  const errors = collectDomErrors(page);
+  await page.goto("/apps/app-1/keywords?serp=kw-3");
+  await expect(sheet.locator("li#serp-row-5")).toContainText(
+    "Study Timer Daily",
+  );
+  const previous = await hydrated(
+    sheet.getByRole("button", { name: "Previous captured day" }),
+  );
+
+  await translateText(page);
+  await previous.click();
+  await expect(page).toHaveURL(new RegExp(`serpDate=${YESTERDAY}`));
+
+  await expect(sheet.locator("li#serp-row-5")).toContainText(
+    /timer for study sessions/i,
+  );
+  await expect
+    .poll(async () => (await rows.allInnerTexts()).map(shownText))
+    .toEqual(untranslated);
+  expect(errors).toEqual([]);
+});
