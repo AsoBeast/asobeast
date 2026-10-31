@@ -170,12 +170,12 @@ export function PlayAcquisitionsCell({
           className="numeric font-mono text-sm whitespace-nowrap"
           aria-label={`${acquisitions} acquisitions from ${visitors} store listing visitors in ${month}`}
         >
-          {acquisitions}
-          <span className="text-muted-foreground"> · {visitors}</span>
+          <span>{acquisitions}</span>
+          <span className="text-muted-foreground">{` · ${visitors}`}</span>
         </span>
       </TooltipTrigger>
       <TooltipContent>
-        Store listing acquisitions and visitors from this search term in {month}
+        {`Store listing acquisitions and visitors from this search term in ${month}`}
       </TooltipContent>
     </Tooltip>
   );
@@ -199,7 +199,7 @@ export function TagBadges({ tags }: { tags: readonly string[] }) {
       ))}
       {hidden > 0 ? (
         <span aria-hidden className="text-caption text-muted-foreground">
-          +{hidden}
+          {`+${hidden}`}
         </span>
       ) : null}
     </span>

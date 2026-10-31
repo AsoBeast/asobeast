@@ -279,8 +279,7 @@ export function ActionToolbar({
       </div>
       {loadedTotal > items.length ? (
         <p className="text-caption text-muted-foreground">
-          Only the {items.length} highest-impact actions are loaded; narrow the
-          status or scope to see the rest.
+          {`Only the ${items.length} highest-impact actions are loaded; narrow the status or scope to see the rest.`}
         </p>
       ) : null}
     </div>

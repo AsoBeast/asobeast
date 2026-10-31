@@ -27,7 +27,7 @@ export function StatCards({ id }: { id: string }) {
       <Card>
         <CardHeader>
           <CardDescription className="flex items-center gap-1">
-            Visibility{label}
+            <span>{`Visibility${label}`}</span>
             <VisibilityHelp />
           </CardDescription>
           <CardTitle className="numeric font-mono text-3xl">
@@ -42,13 +42,13 @@ export function StatCards({ id }: { id: string }) {
 
       <Card>
         <CardHeader>
-          <CardDescription>Tracked keywords{label}</CardDescription>
+          <CardDescription>{`Tracked keywords${label}`}</CardDescription>
           <CardTitle className="numeric font-mono text-3xl">
             {summary.trackedKeywords}
           </CardTitle>
         </CardHeader>
         <CardContent className="text-xs text-muted-foreground">
-          {summary.rankDistribution.top10} in top 10
+          {`${summary.rankDistribution.top10} in top 10`}
         </CardContent>
       </Card>
 

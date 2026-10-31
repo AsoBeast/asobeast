@@ -30,13 +30,14 @@ export function KeywordFieldSuggestionCard({
       <CardContent className="flex flex-col gap-0">
         <div className="flex items-center justify-between gap-3">
           <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Suggested keyword field
-            {suggestion.localization
-              ? ` · ${localizationName(suggestion.localization)}`
-              : ""}
+            {`Suggested keyword field${
+              suggestion.localization
+                ? ` · ${localizationName(suggestion.localization)}`
+                : ""
+            }`}
           </span>
           <span className="text-sm tabular-nums text-muted-foreground">
-            {suggestion.charactersUsed}/{suggestion.charactersLimit}
+            {`${suggestion.charactersUsed}/${suggestion.charactersLimit}`}
           </span>
         </div>
         {suggestion.value.length === 0 ? (

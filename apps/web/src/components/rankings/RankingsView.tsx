@@ -170,7 +170,7 @@ export function RankingsView({ id }: { id: string }) {
             />
             {chart.totalSeries > MAX_SERIES ? (
               <p className="text-caption text-muted-foreground">
-                Showing {MAX_SERIES} of {chart.totalSeries} keywords.
+                {`Showing ${MAX_SERIES} of ${chart.totalSeries} keywords.`}
               </p>
             ) : null}
           </>

@@ -66,7 +66,7 @@ function ReplyCounter({
         over ? "text-destructive" : "text-muted-foreground",
       )}
     >
-      {length} / {limit}
+      <span>{`${length} / ${limit}`}</span>
       <span aria-live="polite">
         {over
           ? ` · ${storeLabel(store)} allows at most ${limit} characters`

@@ -51,8 +51,7 @@ function KeywordFieldUsage({
             over ? "font-medium text-signal-down" : "text-muted-foreground",
           )}
         >
-          {field.used}/{KEYWORD_FIELD_CHAR_LIMIT}
-          {over ? ` · ${field.over} over the limit` : ""}
+          {`${field.used}/${KEYWORD_FIELD_CHAR_LIMIT}${over ? ` · ${field.over} over the limit` : ""}`}
         </span>
       </div>
       {field.storedAs === null ? null : (

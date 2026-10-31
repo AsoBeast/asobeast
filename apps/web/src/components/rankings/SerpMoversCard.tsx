@@ -70,8 +70,8 @@ function SerpMoversList({ id, days }: { id: string; days: number }) {
                   </span>
                   <span className="text-sm text-muted-foreground">
                     entered the top 10 for{" "}
-                    <span className="italic">{item.text}</span> at #
-                    {item.position}
+                    <span className="italic">{item.text}</span>
+                    <span>{` at #${item.position}`}</span>
                   </span>
                 </div>
                 {item.appId === null ? (

@@ -16,6 +16,7 @@ import { fulfillJson, routePlan } from "./plan-helpers.mts";
 import { SERP_HISTORY_DAYS } from "./serp-history.mts";
 import type { SerpEntryItem, SerpSnapshot } from "@asobeast/shared";
 import { expect, test } from "./session.mts";
+import { typeInto } from "./type.mts";
 
 const TRIAL_PLAN: AccountPlan = {
   plan: "trial",
@@ -333,9 +334,169 @@ test("a translated search results sheet steps through its captured days", async 
   await expect(summary).toContainText("0 of 10");
   await previous.click();
   await expect(page).toHaveURL(new RegExp(`serpDate=${DAY_BEFORE}`));
+  await expect(sheet.locator("[aria-busy]")).toHaveCount(0);
   await sheet.getByRole("button", { name: "Next captured day" }).click();
   await expect(page).toHaveURL(new RegExp(`serpDate=${YESTERDAY}`));
 
   await expect(summary).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+const shownText = (text: string) =>
+  text.replace(/\s+/g, " ").trim().toLowerCase();
+
+test("a translated search results sheet shows the apps of the day it steps to", async ({
+  page,
+}) => {
+  const [, YESTERDAY] = SERP_HISTORY_DAYS;
+  await page.goto(`/apps/app-1/keywords?serp=kw-3&serpDate=${YESTERDAY}`);
+  const sheet = page.getByRole("dialog", { name: "Search results" });
+  const rows = sheet.locator('[data-slot="serp-row"]');
+  await expect(sheet.locator("li#serp-row-5")).toContainText(
+    "Timer for Study Sessions",
+  );
+  const untranslated = (await rows.allInnerTexts()).map(shownText);
+
+  const errors = collectDomErrors(page);
+  await page.goto("/apps/app-1/keywords?serp=kw-3");
+  await expect(sheet.locator("li#serp-row-5")).toContainText(
+    "Study Timer Daily",
+  );
+  const previous = await hydrated(
+    sheet.getByRole("button", { name: "Previous captured day" }),
+  );
+
+  await translateText(page);
+  await previous.click();
+  await expect(page).toHaveURL(new RegExp(`serpDate=${YESTERDAY}`));
+
+  await expect(sheet.locator("li#serp-row-5")).toContainText(
+    /timer for study sessions/i,
+  );
+  await expect
+    .poll(async () => (await rows.allInnerTexts()).map(shownText))
+    .toEqual(untranslated);
+  expect(errors).toEqual([]);
+});
+
+test("a translated keywords page counts the keywords it selects", async ({
+  page,
+}) => {
+  const errors = collectDomErrors(page);
+  await page.goto("/apps/app-1/keywords");
+  await (
+    await hydrated(page.getByRole("checkbox", { name: "Select focus timer" }))
+  ).check();
+  const bar = page.getByRole("group", { name: "Bulk keyword actions" });
+  await expect(bar).toContainText("1 selected");
+
+  await translateText(page);
+  await page.getByRole("checkbox", { name: "Select study timer" }).check();
+
+  await expect(bar).toContainText(/2 selected/i);
+  expect(errors).toEqual([]);
+});
+
+test("a translated metadata page counts what is typed into a field", async ({
+  page,
+}) => {
+  const errors = collectDomErrors(page);
+  await page.goto("/apps/app-1/metadata");
+  const field = await hydrated(
+    page.getByRole("textbox", { name: "Keyword field" }),
+  );
+  await typeInto(field, "focus,timer");
+  const countId = await field.getAttribute("aria-describedby");
+  const count = page.locator(`[id="${countId}"]`);
+  await expect(count).toHaveText("11/100");
+
+  await translateText(page);
+  await typeInto(field, "ą".repeat(101));
+
+  await expect(count).toHaveText("101/100 · 1 over");
+  expect(errors).toEqual([]);
+});
+
+test("a translated overview names the market it switched to", async ({
+  page,
+}) => {
+  const errors = collectDomErrors(page);
+  await page.goto("/apps/app-1");
+  const card = page
+    .locator('[data-slot="card"]')
+    .filter({ hasText: /in top 10/i });
+  await expect(card).toContainText("Tracked keywords · All markets");
+  const switcher = await hydrated(
+    page.getByRole("combobox", { name: "Market" }),
+  );
+
+  await translateText(page);
+  await switcher.click();
+  await page.getByRole("option", { name: /PL · Poland/i }).click();
+
+  await expect(page).toHaveURL(/market=pl/);
+  await expect(card).toContainText(/tracked keywords · pl/i);
+  expect(errors).toEqual([]);
+});
+
+test("a translated overview keeps working when a trend gets its data", async ({
+  page,
+}) => {
+  const errors = collectDomErrors(page);
+  await page.goto("/apps/app-1?market=pl");
+  const visibility = page
+    .locator('[data-slot="card"]')
+    .filter({ has: page.getByText(/^visibility · (pl|us)$/i) });
+  await expect(visibility).toContainText("no 30d data");
+  const switcher = await hydrated(
+    page.getByRole("combobox", { name: "Market" }),
+  );
+
+  await translateText(page);
+  await switcher.click();
+  await page.getByRole("option", { name: /US · United States/i }).click();
+
+  await expect(page).toHaveURL(/market=us/);
+  await expect(visibility).toContainText(/visibility · us/i);
+  await expect(visibility).toContainText("-1 30d");
+  await expect(visibility).not.toContainText(/no 30d data/i);
+  expect(errors).toEqual([]);
+});
+
+test("a translated action sheet shows the status it changed to", async ({
+  page,
+}) => {
+  const errors = collectDomErrors(page);
+  let done = false;
+  await page.route("**/api/backend/actions/act-uncovered", async (route) => {
+    if (route.request().method() === "PATCH") {
+      done = true;
+      const current = await route.fetch({ method: "GET" });
+      return route.fulfill({
+        response: current,
+        json: { ...(await current.json()), status: "DONE" },
+      });
+    }
+    const response = await route.fetch();
+    const item = await response.json();
+    return route.fulfill({
+      response,
+      json: done ? { ...item, status: "DONE" } : item,
+    });
+  });
+  await page.goto("/actions?action=act-uncovered");
+  const sheet = page.getByRole("dialog");
+  const markDone = await hydrated(
+    sheet.getByRole("button", { name: /^done$/i }),
+  );
+  const status = sheet
+    .locator('[data-slot="badge"]')
+    .filter({ hasText: /^(open|done)$/i });
+  await expect(status).toHaveText("Open");
+
+  await translateText(page);
+  await markDone.click();
+
+  await expect(status).toHaveText("Done");
   expect(errors).toEqual([]);
 });

@@ -30,7 +30,25 @@ describe("MatchedText", () => {
         <MatchedText segments={segments} fallback="Focus Timer" />,
       );
 
-      expect(markup).toBe("Focus Timer");
+      expect(markup).toBe("<span>Focus Timer</span>");
     },
   );
+
+  it("gives each run of text an element of its own, so a new title rewrites it whole", () => {
+    const markup = renderToStaticMarkup(
+      <MatchedText
+        segments={[
+          { text: "Focus", match: "exact" },
+          { text: " Timer ", match: "none" },
+          { text: "Pró", match: "folded" },
+        ]}
+      />,
+    );
+
+    expect(markup).toContain(">Focus</mark>");
+    expect(markup).toContain("<span> Timer </span>");
+    expect(markup).toContain(
+      '<span>Pró</span><span class="sr-only"> (accents differ)</span></mark>',
+    );
+  });
 });

@@ -24,6 +24,17 @@ export function SerpSection({
   );
 }
 
+export function serpRowKeys(
+  entries: readonly Pick<SerpEntryItem, "storeAppId">[],
+): string[] {
+  const seen = new Set<string>();
+  return entries.map(({ storeAppId }, index) => {
+    if (seen.has(storeAppId)) return `repeat:${storeAppId}:${index}`;
+    seen.add(storeAppId);
+    return `app:${storeAppId}`;
+  });
+}
+
 export function SerpList({
   heading,
   entries,
@@ -37,14 +48,15 @@ export function SerpList({
   comparedTo: string | null;
   actionsFor?: (entry: SerpEntryItem, role: SerpRole) => ReactNode;
 }) {
+  const keys = serpRowKeys(entries);
   return (
     <SerpSection heading={heading}>
       <ol start={entries[0]?.position ?? 1} className="flex flex-col">
-        {entries.map((entry) => {
+        {entries.map((entry, index) => {
           const role = serpRole(entry, viewer);
           return (
             <SerpRow
-              key={entry.position}
+              key={keys[index]}
               entry={entry}
               role={role}
               comparedTo={comparedTo}

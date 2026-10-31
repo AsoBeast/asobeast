@@ -121,7 +121,7 @@ function PlanOption({
         </CardDescription>
         <CardTitle asChild>
           <p>
-            <span className="text-display tabular-nums">${amountUsd}</span>
+            <span className="text-display tabular-nums">{`$${amountUsd}`}</span>
             <span className="text-body text-muted-foreground">
               {interval === "month" ? " /month" : " /year"}
             </span>

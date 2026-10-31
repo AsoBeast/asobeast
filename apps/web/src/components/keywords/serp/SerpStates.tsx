@@ -23,7 +23,7 @@ export function SerpNeverChecked() {
 export function SerpNothingCaptured({ date }: { date: string }) {
   return (
     <Panel>
-      Nothing was captured on {formatDate(date)}. Pick a captured day.
+      {`Nothing was captured on ${formatDate(date)}. Pick a captured day.`}
     </Panel>
   );
 }
@@ -31,7 +31,7 @@ export function SerpNothingCaptured({ date }: { date: string }) {
 export function SerpNoApps({ date }: { date: string }) {
   return (
     <Panel>
-      The store showed no apps for this keyword on {formatDate(date)}.
+      {`The store showed no apps for this keyword on ${formatDate(date)}.`}
     </Panel>
   );
 }

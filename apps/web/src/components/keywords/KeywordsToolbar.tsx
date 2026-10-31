@@ -73,7 +73,7 @@ export function KeywordsToolbar({
           onClick={() => void setCountry(null)}
           className="inline-flex items-center gap-1.5 rounded-full border border-dashed px-2.5 py-1 text-caption hover:bg-muted"
         >
-          Market: {market.toUpperCase()}
+          <span>{`Market: ${market.toUpperCase()}`}</span>
           <X className="size-3 opacity-60" aria-hidden />
           <span className="sr-only">Clear the market filter</span>
         </button>
@@ -85,14 +85,14 @@ export function KeywordsToolbar({
           {keywords.length}
         </span>
         {partial ? (
-          <>
+          <span>
             {" of "}
             <span className="numeric font-mono font-medium text-foreground">
               {total}
             </span>
-          </>
-        ) : null}{" "}
-        keyword{keywords.length === 1 ? "" : "s"} ·{" "}
+          </span>
+        ) : null}
+        <span>{` keyword${keywords.length === 1 ? "" : "s"} · `}</span>
         <span className="numeric font-mono font-medium text-foreground">
           {active}
         </span>{" "}

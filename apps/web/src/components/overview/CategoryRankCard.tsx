@@ -151,15 +151,15 @@ function HeaderStat({
         ) : (
           <>
             <span className="font-mono text-lg font-semibold numeric font-mono">
-              #{headline.current}
+              {`#${headline.current}`}
             </span>{" "}
             <span className="text-muted-foreground">
-              in {headline.genreName}
+              {`in ${headline.genreName}`}
             </span>
           </>
         )}{" "}
         <span className="text-muted-foreground">
-          · {headline.collection} chart
+          {`· ${headline.collection} chart`}
         </span>
       </Link>
     </p>

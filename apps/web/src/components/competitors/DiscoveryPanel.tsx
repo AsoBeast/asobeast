@@ -118,8 +118,7 @@ function DiscoveryTable({
       </div>
       <Table containerClassName="rounded-xl border">
         <TableCaption className="sr-only">
-          Untracked {storeName} apps appearing in your keyword search results
-          over the last {days} days.
+          {`Untracked ${storeName} apps appearing in your keyword search results over the last ${days} days.`}
         </TableCaption>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (

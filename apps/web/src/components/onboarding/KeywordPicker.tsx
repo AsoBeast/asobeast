@@ -113,7 +113,7 @@ export function KeywordPicker({
         </Button>
         {remaining > 0 ? (
           <span className="text-caption text-muted-foreground">
-            {remaining} more to reach {SETUP_KEYWORD_TARGET}
+            {`${remaining} more to reach ${SETUP_KEYWORD_TARGET}`}
           </span>
         ) : null}
       </div>

@@ -133,8 +133,10 @@ function RunProgress({
             <span className="block h-full w-1/3 animate-pulse rounded-full bg-primary" />
           </span>
           <span className="text-sm text-muted-foreground">
-            {progressLine(analyzed)}
-            {elapsed === null ? null : <span aria-hidden> · {elapsed}s</span>}
+            <span>{progressLine(analyzed)}</span>
+            {elapsed === null ? null : (
+              <span aria-hidden>{` · ${elapsed}s`}</span>
+            )}
           </span>
           <span className="text-sm text-muted-foreground">
             {ANALYSIS_COPY.active}

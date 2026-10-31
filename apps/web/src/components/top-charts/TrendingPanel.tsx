@@ -46,16 +46,16 @@ function Place({
   period: string;
 }) {
   if (list === "entries") {
-    return <span>New at #{mover.position}</span>;
+    return <span>{`New at #${mover.position}`}</span>;
   }
   if (list === "exits") {
-    return <span>Was #{mover.previous}</span>;
+    return <span>{`Was #${mover.previous}`}</span>;
   }
   return (
     <span className="inline-flex items-baseline gap-1.5 whitespace-nowrap">
       <DeltaChip value={mover.delta} period={period} />
       <span className="text-caption text-muted-foreground">
-        from #{mover.previous}
+        {`from #${mover.previous}`}
       </span>
     </span>
   );
@@ -74,9 +74,7 @@ function MoverList({
 }) {
   if (movers.length === 0) {
     return (
-      <p className="text-body text-muted-foreground">
-        {empty} {period}.
-      </p>
+      <p className="text-body text-muted-foreground">{`${empty} ${period}.`}</p>
     );
   }
   return (
