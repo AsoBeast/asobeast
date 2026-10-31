@@ -1,14 +1,13 @@
-import type { ChartEntryItem } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
 import { DeltaChip } from "@/components/ui/delta-chip";
-import { movementText } from "./movement";
+import { movementText, type Moved } from "./movement-text";
 
 function Shown({
   entry,
   period,
   compact,
 }: {
-  entry: ChartEntryItem;
+  entry: Moved;
   period: string;
   compact: boolean;
 }) {
@@ -31,10 +30,12 @@ function Shown({
 export function MovementCell({
   entry,
   period,
+  noneText,
   compact = false,
 }: {
-  entry: ChartEntryItem;
+  entry: Moved;
   period: string;
+  noneText?: string;
   compact?: boolean;
 }) {
   return (
@@ -42,7 +43,7 @@ export function MovementCell({
       <span aria-hidden>
         <Shown entry={entry} period={period} compact={compact} />
       </span>
-      <span className="sr-only">{movementText(entry)}</span>
+      <span className="sr-only">{movementText(entry, noneText)}</span>
     </>
   );
 }
