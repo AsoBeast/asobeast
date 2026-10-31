@@ -91,19 +91,26 @@ const retryableStatus = (status: unknown): boolean =>
 const redact = (text: string): string =>
   text.replace(KEY_PATTERN, '[redacted]');
 
-const apiField = (error: APIError, field: string): string | null => {
-  const body: unknown = error.error;
-  if (typeof body !== 'object' || body === null) {
-    return null;
-  }
-  const value: unknown = Reflect.get(body, field);
+const fieldOf = (body: unknown, field: string): unknown =>
+  typeof body === 'object' && body !== null
+    ? (Reflect.get(body, field) as unknown)
+    : undefined;
+
+const stringField = (body: unknown, field: string): string | null => {
+  const value = fieldOf(body, field);
   return typeof value === 'string' ? value : null;
 };
 
-const providerReason = (error: APIError): string | null => {
-  const detail = apiField(error, 'message')?.trim();
-  return detail ? redact(detail) : null;
+const apiField = (error: APIError, field: string): string | null =>
+  stringField(error.error, field);
+
+const readableReason = (detail: string | null): string | null => {
+  const trimmed = detail?.trim();
+  return trimmed ? redact(trimmed) : null;
 };
+
+const providerReason = (error: APIError): string | null =>
+  readableReason(apiField(error, 'message'));
 
 const apiMessage = (error: APIError): string =>
   providerReason(error) ?? 'no details';
@@ -166,6 +173,27 @@ export const classifyRequestError = (
   );
 };
 
+const isChatCompletion = (
+  answer: unknown,
+): answer is OpenAI.Chat.Completions.ChatCompletion =>
+  Array.isArray(fieldOf(answer, 'choices'));
+
+const notACompletion = (
+  answer: unknown,
+  provider: AiProvider,
+): AiRequestError => {
+  const { name } = AI_PROVIDER_WORDING[provider];
+  const reason = readableReason(
+    stringField(fieldOf(answer, 'error'), 'message'),
+  );
+  return new AiRequestError(
+    reason
+      ? `${name} answered with an error: ${reason}`
+      : `${name} answered with something other than a chat completion. Check OPENAI_BASE_URL.`,
+    true,
+  );
+};
+
 const withoutSecret = (
   failure: AiRequestError,
   secret: string,
@@ -211,15 +239,13 @@ class OpenAiClient implements AiClient {
     private readonly secret: string,
   ) {}
 
-  async structured(request: AiStructuredRequest): Promise<AiCompletion> {
+  private async complete(request: AiStructuredRequest): Promise<unknown> {
     const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
       { role: 'system', content: request.system },
       { role: 'user', content: request.content.map(toContentPart) },
     ];
-
-    let completion: OpenAI.Chat.Completions.ChatCompletion;
     try {
-      completion = await this.openai.chat.completions.create({
+      return await this.openai.chat.completions.create({
         model: this.model,
         messages,
         max_completion_tokens:
@@ -239,7 +265,16 @@ class OpenAiClient implements AiClient {
         this.secret,
       );
     }
+  }
 
+  async structured(request: AiStructuredRequest): Promise<AiCompletion> {
+    const completion = await this.complete(request);
+    if (!isChatCompletion(completion)) {
+      throw withoutSecret(
+        notACompletion(completion, this.provider),
+        this.secret,
+      );
+    }
     const { name } = AI_PROVIDER_WORDING[this.provider];
     const usage = usageOf(completion);
     const choice = completion.choices[0];

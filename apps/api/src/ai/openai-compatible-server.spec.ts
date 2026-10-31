@@ -11,6 +11,7 @@ import {
   AiRequestError,
   AiStructuredRequest,
   createOpenAiClient,
+  UnusableAnswerError,
 } from './openai.client';
 
 type Handler = (request: IncomingMessage, response: ServerResponse) => void;
@@ -75,6 +76,14 @@ const json =
     response
       .writeHead(status, { 'content-type': 'application/json' })
       .end(JSON.stringify(body));
+
+const page =
+  (status: number, body: string): Handler =>
+  (_, response) =>
+    response.writeHead(status, { 'content-type': 'text/html' }).end(body);
+
+const NOT_A_COMPLETION =
+  'The AI provider answered with something other than a chat completion. Check OPENAI_BASE_URL.';
 
 const startProvider = async (): Promise<FakeProvider> => {
   const seen: SeenRequest[] = [];
@@ -285,5 +294,66 @@ describe('an OpenAI compatible provider over http', () => {
       retryable: false,
     });
     expect(provider.seen).toHaveLength(1);
+  });
+  describe('an answer with a success status that is not a chat completion', () => {
+    const failureOf = async () =>
+      clientAt(`${provider.origin}/v1`)
+        .structured(REQUEST)
+        .catch((caught: unknown) => caught);
+
+    it('names the error a provider answers in place of a completion', async () => {
+      provider.answer = json(200, {
+        error: { message: 'provider down', code: 502 },
+      });
+
+      const failure = await failureOf();
+
+      expect(failure).toBeInstanceOf(AiRequestError);
+      expect(failure).not.toBeInstanceOf(UnusableAnswerError);
+      expect(failure).toMatchObject({
+        message: 'The AI provider answered with an error: provider down',
+        retryable: true,
+      });
+      expect(provider.seen).toHaveLength(1);
+    });
+
+    it.each([
+      [
+        'a gateway page',
+        page(200, '<!doctype html><title>Bad gateway</title>'),
+      ],
+      ['a null body', json(200, null)],
+      [
+        'an object without choices',
+        json(200, { id: 'x', object: 'chat.completion' }),
+      ],
+      ['choices that are not a list', json(200, { choices: {} })],
+      ['an error without a message', json(200, { error: { message: ' ' } })],
+      ['an error that is only text', json(200, { error: 'down' })],
+    ])('says %s is not a completion', async (_, answer) => {
+      provider.answer = answer;
+
+      const failure = await failureOf();
+
+      expect(failure).toBeInstanceOf(AiRequestError);
+      expect(failure).not.toBeInstanceOf(UnusableAnswerError);
+      expect(failure).toMatchObject({
+        message: NOT_A_COMPLETION,
+        retryable: true,
+      });
+    });
+
+    it('never answers with the key a provider echoes in its error', async () => {
+      provider.answer = json(200, {
+        error: { message: `provider down for ${KEY}` },
+      });
+
+      const failure = (await failureOf()) as AiRequestError;
+
+      expect(failure.message).not.toContain(KEY);
+      expect(failure.message).toMatch(
+        /^The AI provider answered with an error: /,
+      );
+    });
   });
 });
