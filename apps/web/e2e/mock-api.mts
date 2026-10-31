@@ -249,6 +249,7 @@ import type {
   AppSetupState,
   AppSetupUpdateRequest,
   KeywordComparison,
+  StoreImportState,
 } from "@asobeast/shared";
 import {
   COUNTRY_PATTERN,
@@ -1237,6 +1238,8 @@ const shippedLocalizations = new Map<
   string,
   Map<AppStoreLocalization, ShippedOrigin>
 >();
+const storeManagedFields = new Map<string, string | null>();
+const storeImportStates = new Map<string, StoreImportState>();
 const seededMarkets = new Map<string, string[]>();
 const fieldRequests = new Map<string, string[]>();
 const loggedRequests = new Map<string, number>();
@@ -1275,6 +1278,24 @@ function seedLocalizations(id: string, seed: LocalizationSeed): void {
   shippedLocalizations.set(
     id,
     new Map((seed.shipped ?? []).map((row) => [row.localization, row.origin])),
+  );
+  const followsStore =
+    seed.storeManaged === true ||
+    seed.storeImport === "following" ||
+    seed.storeImport === "paused";
+  if (followsStore) {
+    storeManagedFields.set(
+      id,
+      seed.storeSyncAt === undefined
+        ? KEYWORD_FIELD_UPDATED_AT
+        : seed.storeSyncAt,
+    );
+  } else {
+    storeManagedFields.delete(id);
+  }
+  storeImportStates.set(
+    id,
+    seed.storeImport ?? (followsStore ? "following" : "available"),
   );
   seededMarkets.set(id, seed.markets ?? []);
   fieldRequests.delete(id);
@@ -1415,9 +1436,17 @@ function localizationsOf(id: string, home: string): AppLocalizationsResult {
   const items = shippedTags(id, home).map((tag) =>
     localizationItemOf(id, home, tag, markets),
   );
+  const syncedAt = storeManagedFields.get(id);
+  const storeImport = storeImportStates.get(id) ?? "available";
   return {
     home,
     markets,
+    storeManaged: storeImport === "following",
+    storeSync:
+      syncedAt === undefined
+        ? null
+        : { at: syncedAt, version: "2.4.1", error: null },
+    storeImport,
     localizations: items.sort(
       (left, right) =>
         Number(right.origin === "home") - Number(left.origin === "home") ||
@@ -4150,6 +4179,66 @@ const routes: Route[] = [
       }
       storeKeywordField(id, app.tag, [], []);
       shippedLocalizations.get(id)?.delete(app.tag);
+      res.writeHead(204).end();
+    },
+  },
+  {
+    method: "POST",
+    pattern: /^\/apps\/([^/]+)\/keyword-fields\/import$/,
+    handler: ([id], req, res) => {
+      const app = fieldAppFor(id, undefined, req, res);
+      if (!app) return;
+      const path = req.url ?? "/";
+      const home = app.dataset.detail.country;
+      const state = storeImportStates.get(id) ?? "available";
+      if (state === "following") {
+        return json(
+          res,
+          409,
+          errorEnvelope(
+            409,
+            path,
+            "App Store Connect already imports the keyword fields of this app. Stop importing to edit them here again.",
+          ),
+        );
+      }
+      if (state !== "available") {
+        return json(
+          res,
+          409,
+          errorEnvelope(
+            409,
+            path,
+            "Importing the keyword fields needs an active App Store Connect connection. Connect or verify the key in Integrations first.",
+          ),
+        );
+      }
+      storeManagedFields.set(id, KEYWORD_FIELD_UPDATED_AT);
+      storeImportStates.set(id, "following");
+      json(res, 200, localizationsOf(id, home));
+    },
+  },
+  {
+    method: "DELETE",
+    pattern: /^\/apps\/([^/]+)\/keyword-fields\/import$/,
+    handler: ([id], req, res) => {
+      const app = fieldAppFor(id, undefined, req, res);
+      if (!app) return;
+      const path = req.url ?? "/";
+      const state = storeImportStates.get(id) ?? "available";
+      if (state !== "following" && state !== "paused") {
+        return json(
+          res,
+          404,
+          errorEnvelope(
+            404,
+            path,
+            "This app does not follow App Store Connect",
+          ),
+        );
+      }
+      storeManagedFields.delete(id);
+      storeImportStates.set(id, "available");
       res.writeHead(204).end();
     },
   },

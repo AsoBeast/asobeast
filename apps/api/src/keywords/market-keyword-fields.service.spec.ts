@@ -10,6 +10,9 @@ import { MarketKeywordFieldsService } from './market-keyword-fields.service';
 const listed = (home: string): AppLocalizationsResult => ({
   home,
   markets: [home],
+  storeManaged: false,
+  storeSync: null,
+  storeImport: 'unavailable',
   localizations: [
     {
       localization: 'es-MX',

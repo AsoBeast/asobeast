@@ -12,9 +12,11 @@ import { ListingCaptureService } from './listing-capture.service';
 import type { LocalizationDetection } from './localization-detection.service';
 import type { LocalizedListingCapture } from './localized-listing-capture.service';
 import type { MarketLocalizationRecorder } from './market-localization-recorder';
+import type { StoreReportQueue } from '../store-connect/store-report-queue';
 
 const APP = {
   id: 'app_1',
+  workspaceId: 'ws_1',
   store: Store.APP_STORE,
   storeAppId: '1234567890',
   country: 'us',
@@ -67,6 +69,7 @@ const build = (overrides: {
   recordDefault?: jest.Mock;
   raw?: Record<string, unknown>;
   getApp?: jest.Mock;
+  fieldSyncRow?: unknown;
 }) => {
   const tx = {
     appSnapshot: {
@@ -89,6 +92,9 @@ const build = (overrides: {
       findFirst: jest.fn().mockResolvedValue(overrides.previous ?? null),
     },
     trackedKeyword: { count: jest.fn().mockResolvedValue(1) },
+    keywordFieldSync: {
+      findFirst: jest.fn().mockResolvedValue(overrides.fieldSyncRow ?? null),
+    },
     withTransaction: jest.fn((work: (client: typeof tx) => unknown) =>
       work(tx),
     ),
@@ -131,6 +137,7 @@ const build = (overrides: {
     jest.fn().mockResolvedValue({ queued: 0, candidates: [] });
   const recordDefault =
     overrides.recordDefault ?? jest.fn().mockResolvedValue(undefined);
+  const storeReports = { enqueue: jest.fn().mockResolvedValue({}) };
   const service = new ListingCaptureService(
     prisma,
     registry,
@@ -142,6 +149,7 @@ const build = (overrides: {
     { capture } as unknown as LocalizedListingCapture,
     { request: detect } as unknown as LocalizationDetection,
     { record: recordDefault } as unknown as MarketLocalizationRecorder,
+    storeReports as unknown as StoreReportQueue,
   );
   return {
     service,
@@ -150,6 +158,7 @@ const build = (overrides: {
     capture,
     detect,
     recordDefault,
+    storeReports,
     tx,
     updateMany,
   };
@@ -162,6 +171,37 @@ describe('ListingCaptureService.refresh', () => {
     await service.refresh(APP.id);
 
     expect(request).toHaveBeenCalledWith(APP.id, SNAPSHOT.id);
+  });
+
+  it('enqueues the store sync when the home capture sees a new release of a following app', async () => {
+    const { service, storeReports } = build({
+      recordRefresh: jest
+        .fn()
+        .mockResolvedValue([{ field: 'version', before: '1.0', after: '2.0' }]),
+      fieldSyncRow: { syncedAt: new Date() },
+    });
+
+    await service.refresh(APP.id);
+
+    expect(storeReports.enqueue).toHaveBeenCalledWith('ws_1', Store.APP_STORE);
+  });
+
+  it('enqueues nothing for a home capture without an import mark', async () => {
+    const { service, storeReports } = build({});
+
+    await service.refresh(APP.id);
+
+    expect(storeReports.enqueue).not.toHaveBeenCalled();
+  });
+
+  it('leaves the store sync alone when no release was recorded', async () => {
+    const { service, storeReports } = build({
+      fieldSyncRow: { syncedAt: new Date() },
+    });
+
+    await service.refresh(APP.id);
+
+    expect(storeReports.enqueue).not.toHaveBeenCalled();
   });
 
   it('queues the screenshot read even when the keyword sync fails', async () => {

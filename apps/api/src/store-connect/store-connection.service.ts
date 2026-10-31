@@ -20,7 +20,9 @@ import {
 import { type SecretBox, SecretBoxError } from '../common/crypto/secret-box';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
+import { serializeKeywordField } from '../keywords/keyword-field-writer';
 import type { AscAnalyticsApi } from './asc-analytics-api';
+import type { AscListingApi } from './asc-listing-api';
 import type { AscReviewsApi } from './asc-reviews-api';
 import type { GcsApi } from './play/gcs-api';
 import {
@@ -177,12 +179,30 @@ export class StoreConnectionService {
   }
 
   async disconnect(store: Store): Promise<void> {
+    if (store === 'APP_STORE') {
+      await this.prisma.withTransaction(async (tx) => {
+        const following = await tx.keywordFieldSync.findMany({
+          select: { appId: true },
+          orderBy: { appId: 'asc' },
+        });
+        for (const { appId } of following) {
+          await serializeKeywordField(tx, appId);
+        }
+        await tx.keywordFieldSync.deleteMany({});
+      });
+    }
     await this.prisma.storeConnection.deleteMany({ where: { store } });
   }
 
   openAppStore(): Promise<OpenedConnection | null> {
     return this.openWith('APP_STORE', isAscCredentials, (credentials) =>
       this.appStore.api(credentials),
+    );
+  }
+
+  openAppStoreListing(): Promise<OpenedConnection<AscListingApi> | null> {
+    return this.openWith('APP_STORE', isAscCredentials, (credentials) =>
+      this.appStore.listing(credentials),
     );
   }
 

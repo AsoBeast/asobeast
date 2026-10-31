@@ -10,6 +10,7 @@ import {
   AscUnreachableError,
 } from './asc-errors';
 import { AGREEMENT_MISSING } from './asc-http-errors';
+import type { AscKeywordFieldSync } from './asc-keyword-field-sync.service';
 import type {
   OpenedConnection,
   StoreConnectionService,
@@ -67,6 +68,9 @@ function build(status: OpenedConnection['status'] = 'active') {
   const applier = {
     apply: jest.fn().mockResolvedValue({ rows: 4, unresolved: [] }),
   };
+  const keywordFields = {
+    run: jest.fn().mockResolvedValue({ fields: 0, changed: 0 }),
+  };
   const prisma = {
     storeReportRequest: {
       findMany: jest.fn().mockResolvedValue([
@@ -99,8 +103,17 @@ function build(status: OpenedConnection['status'] = 'active') {
     connections as unknown as StoreConnectionService,
     requester as unknown as StoreReportRequester,
     applier as unknown as StoreReportApplier,
+    keywordFields as unknown as AscKeywordFieldSync,
   );
-  return { service, api, connections, requester, applier, prisma };
+  return {
+    service,
+    api,
+    connections,
+    requester,
+    applier,
+    prisma,
+    keywordFields,
+  };
 }
 
 const appliedIds = (applier: { apply: jest.Mock }) =>
@@ -522,6 +535,52 @@ describe('AscReportSync', () => {
       'admin',
       null,
     );
+  });
+
+  it('sets rateLimited when the keyword field import answers 429', async () => {
+    const { service, keywordFields, connections } = build();
+    keywordFields.run.mockRejectedValue(
+      new AscRateLimitedError('slow', 429, null),
+    );
+
+    await expect(service.run()).resolves.toMatchObject({ rateLimited: true });
+    expect(connections.markSynced).toHaveBeenCalled();
+  });
+
+  it('imports the keyword fields even when the download fails', async () => {
+    const { service, applier, keywordFields } = build();
+    applier.apply.mockRejectedValue(new Error('down'));
+
+    await expect(service.run()).rejects.toThrow('down');
+    expect(keywordFields.run).toHaveBeenCalled();
+  });
+
+  it('skips the keyword field import when the download is rate limited', async () => {
+    const { service, applier, keywordFields } = build();
+    applier.apply.mockRejectedValue(new AscRateLimitedError('slow', 429, null));
+
+    await expect(service.run()).resolves.toMatchObject({ rateLimited: true });
+    expect(keywordFields.run).not.toHaveBeenCalled();
+  });
+
+  it('skips the keyword field import when the download ends with a rejected key', async () => {
+    const { service, applier, keywordFields } = build();
+    applier.apply.mockRejectedValue(
+      new AscRejectedKeyError('refused', 403, null),
+    );
+
+    await expect(service.run()).rejects.toThrow(UnrecoverableError);
+    expect(keywordFields.run).not.toHaveBeenCalled();
+  });
+
+  it('reports the keyword field counts of the import', async () => {
+    const { service, keywordFields } = build();
+    keywordFields.run.mockResolvedValue({ fields: 3, changed: 2 });
+
+    await expect(service.run()).resolves.toMatchObject({
+      fields: 3,
+      fieldsChanged: 2,
+    });
   });
 
   it('never rejects the key over a detailed instance and keeps applying the standard ones', async () => {

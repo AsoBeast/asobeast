@@ -262,7 +262,7 @@ export class KeywordsController {
   @ApiOperation({
     summary: 'Set an iOS keyword field',
     description:
-      "Replaces the keyword field of one App Store localization with the normalized, deduplicated phrases of text, tracks them in country, and returns the stored field. Without a query it sets the home storefront's default localization. Answers 400 when the storefront does not read the localization, or when the phrases joined with commas run past 100 characters, the way App Store Connect counts the field. A phrase removed from the field stops being tracked as a keyword field phrase in every market that reads the localization. Saves to one app are written one at a time, so the last save wins.",
+      "Replaces the keyword field of one App Store localization with the normalized, deduplicated phrases of text, tracks them in country, and returns the stored field. Without a query it sets the home storefront's default localization. Answers 400 when the storefront does not read the localization, or when the phrases joined with commas run past 100 characters, the way App Store Connect counts the field. A phrase removed from the field stops being tracked as a keyword field phrase in every market that reads the localization. Answers 409 when the field is imported from App Store Connect. Saves to one app are written one at a time, so the last save wins.",
   })
   setKeywordField(
     @Param('id') id: string,

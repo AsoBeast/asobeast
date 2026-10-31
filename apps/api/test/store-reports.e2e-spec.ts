@@ -3,7 +3,10 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import { Store } from '@prisma/client';
-import type { StoreConnectionState } from '@asobeast/shared';
+import type {
+  AppLocalizationsResult,
+  StoreConnectionState,
+} from '@asobeast/shared';
 import { UnrecoverableError } from 'bullmq';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import type { AscRequest } from '../src/store-connect/asc-transport';
@@ -343,6 +346,74 @@ describe('Store report sync (e2e)', () => {
         lastDate: '2026-09-11',
       },
     ]);
+  });
+
+  it('imports the keyword fields of a following app and hands dropped localizations back', async () => {
+    await harness.prisma.keywordFieldSync.create({
+      data: { appId, workspaceId: DEFAULT_WORKSPACE_ID },
+    });
+    await harness.prisma.appLocalization.create({
+      data: {
+        appId,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        localization: 'de',
+        origin: 'manual',
+      },
+    });
+    await harness.prisma.keywordField.create({
+      data: {
+        appId,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        localization: 'de',
+        phrases: ['fokus'],
+      },
+    });
+    harness.asc
+      .on('GET', /\/analyticsReportRequests\?/, () => answer({ data: [] }))
+      .on('GET', /\/appStoreVersions\?/, () =>
+        answer({
+          data: [
+            {
+              type: 'appStoreVersions',
+              id: 'v1',
+              attributes: {
+                versionString: '2.1',
+                createdDate: '2026-10-01T00:00:00.000Z',
+              },
+            },
+          ],
+        }),
+      )
+      .on('GET', /\/appStoreVersionLocalizations\?/, () =>
+        answer({
+          data: [
+            {
+              type: 'appStoreVersionLocalizations',
+              id: 'l1',
+              attributes: { locale: 'en-US', keywords: 'focus,timer' },
+            },
+          ],
+        }),
+      );
+
+    const summary = await run();
+
+    expect(summary).toMatchObject({ fields: 1, fieldsChanged: 2 });
+    const field = await harness.prisma.keywordField.findFirstOrThrow({
+      where: { localization: 'en-US' },
+    });
+    expect(field.phrases).toEqual(['focus', 'timer']);
+    const [sync] = await harness.prisma.keywordFieldSync.findMany();
+    expect(sync).toMatchObject({ version: '2.1', lastError: null });
+    await expect(
+      harness.prisma.keywordField.count({ where: { localization: 'de' } }),
+    ).resolves.toBe(0);
+    await expect(
+      harness.prisma.appLocalization.count({ where: { localization: 'de' } }),
+    ).resolves.toBe(0);
+    const read = await owner.get(`/apps/${appId}/localizations`).expect(200);
+    expect((read.body as AppLocalizationsResult).storeImport).toBe('following');
+    expect((read.body as AppLocalizationsResult).storeManaged).toBe(true);
   });
 
   it('downloads nothing and changes no row on a run without a new instance', async () => {

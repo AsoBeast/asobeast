@@ -7,6 +7,8 @@ export interface SyncSummary {
   failed: number;
   skipped: number;
   unresolved: string[];
+  fields: number;
+  fieldsChanged: number;
 }
 
 export const emptySummary = (): SyncSummary => ({
@@ -18,6 +20,8 @@ export const emptySummary = (): SyncSummary => ({
   failed: 0,
   skipped: 0,
   unresolved: [],
+  fields: 0,
+  fieldsChanged: 0,
 });
 
 export const retriesFailures = (

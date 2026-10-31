@@ -56,6 +56,7 @@ import { TrackedKeywordAccess } from './tracked-keyword.access';
     FirstPositionChecks,
     KeywordsService,
     KeywordFieldService,
+    KeywordFieldWriter,
     KeywordSuggestionService,
     KeywordTracker,
     MarketListingRequests,

@@ -10,6 +10,8 @@ import {
   previewLocalizedKeywordField,
   removeAppLocalization,
   saveLocalizedKeywordField,
+  startAppStoreImport,
+  stopAppStoreImport,
 } from "./localizations";
 
 interface Sent {
@@ -53,6 +55,9 @@ afterEach(() => {
 const LIST: AppLocalizationsResult = {
   home: "us",
   markets: ["us"],
+  storeManaged: false,
+  storeSync: null,
+  storeImport: "unavailable",
   localizations: [],
 };
 
@@ -122,6 +127,25 @@ describe("localization calls", () => {
     ).resolves.toBeUndefined();
 
     expect(sent[0].url).toMatch(/\/apps\/app-1\/localizations\/es-MX$/);
+    expect(sent[0].method).toBe("DELETE");
+  });
+
+  it("W-ADD-09 posts to the import mark and reads the localizations back", async () => {
+    const sent = stubFetch(LIST);
+
+    await expect(startAppStoreImport("app-1")).resolves.toEqual(LIST);
+
+    expect(sent[0].url).toMatch(/\/apps\/app-1\/keyword-fields\/import$/);
+    expect(sent[0].method).toBe("POST");
+    expect(sent[0].body).toBeUndefined();
+  });
+
+  it("W-ADD-10 deletes the import mark and reads no body back", async () => {
+    const sent = stubNoContent();
+
+    await expect(stopAppStoreImport("app-1")).resolves.toBeUndefined();
+
+    expect(sent[0].url).toMatch(/\/apps\/app-1\/keyword-fields\/import$/);
     expect(sent[0].method).toBe("DELETE");
   });
 

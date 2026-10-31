@@ -3,6 +3,7 @@
 import { Sparkles } from "lucide-react";
 import type {
   AppLocalizationItem,
+  AppLocalizationStoreSync,
   AppStoreLocalization,
 } from "@asobeast/shared";
 import {
@@ -20,10 +21,14 @@ import { RemoveLocalizationDialog } from "./RemoveLocalizationDialog";
 export function LocalizationItem({
   id,
   item,
+  managed = false,
+  sync = null,
   onDraft,
 }: {
   id: string;
   item: AppLocalizationItem;
+  managed?: boolean;
+  sync?: AppLocalizationStoreSync | null;
   onDraft: ((localization: AppStoreLocalization) => void) | null;
 }) {
   const name = localizationName(item.localization);
@@ -46,7 +51,7 @@ export function LocalizationItem({
       </AccordionTrigger>
       <AccordionContent forceMount>
         <div className="flex flex-col gap-3">
-          {onDraft ? (
+          {onDraft && !managed ? (
             <div>
               <Button
                 variant="outline"
@@ -62,8 +67,10 @@ export function LocalizationItem({
           <KeywordFieldEditor
             id={id}
             item={item}
+            managed={managed}
+            sync={sync}
             leading={
-              item.origin === "home" ? null : (
+              managed || item.origin === "home" ? null : (
                 <RemoveLocalizationDialog id={id} item={item} />
               )
             }

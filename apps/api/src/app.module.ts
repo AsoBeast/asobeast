@@ -35,6 +35,7 @@ import { MetricsModule } from './metrics/metrics.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { FailFastRedisModule } from './redis/fail-fast-redis.module';
 import { ReviewsModule } from './reviews/reviews.module';
+import { SecretBoxModule } from './store-connect/secret-box.module';
 import { StoreConnectModule } from './store-connect/store-connect.module';
 import { SupportModule } from './support/support.module';
 import { envConfigModule } from './config/env-config.module';
@@ -48,6 +49,7 @@ import { envConfigModule } from './config/env-config.module';
     ObservabilityModule,
     PrismaModule,
     FailFastRedisModule,
+    SecretBoxModule,
     AuthModule,
     QuotaModule,
     HealthModule,
