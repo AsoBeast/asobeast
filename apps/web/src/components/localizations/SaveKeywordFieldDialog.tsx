@@ -111,7 +111,7 @@ export function SaveKeywordFieldDialog({
                   <ReadRoleBadge role={market.role} />
                   {market.newPhrases.length > 0 ? (
                     <span className="text-caption text-muted-foreground">
-                      {market.newPhrases.length} new
+                      {`${market.newPhrases.length} new`}
                     </span>
                   ) : null}
                 </div>
@@ -126,7 +126,7 @@ export function SaveKeywordFieldDialog({
             <Alert role="note" variant={quota.over ? "warning" : "default"}>
               {quota.over ? <TriangleAlert aria-hidden /> : null}
               <AlertDescription>
-                {quota.text}
+                <span>{quota.text}</span>
                 {quota.upgrade ? (
                   <>
                     {" "}

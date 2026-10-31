@@ -36,7 +36,7 @@ export function KeywordFieldSuggestionCard({
               : ""}
           </span>
           <span className="text-sm tabular-nums text-muted-foreground">
-            {suggestion.charactersUsed}/{suggestion.charactersLimit}
+            {`${suggestion.charactersUsed}/${suggestion.charactersLimit}`}
           </span>
         </div>
         {suggestion.value.length === 0 ? (

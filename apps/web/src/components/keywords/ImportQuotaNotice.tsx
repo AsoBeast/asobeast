@@ -18,7 +18,7 @@ export function ImportQuotaNotice({
     <Alert role="note" variant="warning">
       <TriangleAlert aria-hidden />
       <AlertDescription>
-        {notice.text}
+        <span>{notice.text}</span>
         {notice.upgrade ? (
           <>
             {" "}

@@ -172,7 +172,7 @@ export function FunnelCard({ id, store }: { id: string; store: Store }) {
     <Card>
       <CardHeader>
         <CardDescription>{FUNNEL_COPY[store].console}</CardDescription>
-        <CardTitle>Store funnel{market}</CardTitle>
+        <CardTitle>{`Store funnel${market}`}</CardTitle>
         <CardAction>
           <FunnelHelp store={store} />
         </CardAction>

@@ -85,7 +85,7 @@ export function CombinationRows({
       {rows.length > COMBINATION_PAGE_SIZE ? (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-caption text-muted-foreground" aria-live="polite">
-            Showing {formatNumber(shown.length)} of {formatNumber(rows.length)}
+            {`Showing ${formatNumber(shown.length)} of ${formatNumber(rows.length)}`}
           </p>
           {next > 0 ? (
             <Button

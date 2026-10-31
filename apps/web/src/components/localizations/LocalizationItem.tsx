@@ -43,7 +43,7 @@ export function LocalizationItem({
           </span>
           <span className="ml-auto flex flex-wrap items-center justify-end gap-2">
             <span className="numeric font-mono text-caption text-muted-foreground">
-              {item.charactersUsed}/{item.charactersLimit}
+              {`${item.charactersUsed}/${item.charactersLimit}`}
             </span>
             <ReaderChips readers={item.readBy} />
           </span>

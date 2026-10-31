@@ -20,9 +20,9 @@ export function SerpExits({
         {exits.map((exit) => (
           <li key={exit.storeAppId} className={SERP_ROW_GRID}>
             <span className="col-start-1 row-span-2 row-start-1 text-right text-caption">
-              <span aria-hidden>was {exit.previous}</span>
+              <span aria-hidden>{`was ${exit.previous}`}</span>
               <span className="sr-only">
-                was number {exit.previous}, not in this list
+                {`was number ${exit.previous}, not in this list`}
               </span>
             </span>
             <span className="col-start-2 row-span-2 row-start-1">

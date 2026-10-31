@@ -16,6 +16,7 @@ import { fulfillJson, routePlan } from "./plan-helpers.mts";
 import { SERP_HISTORY_DAYS } from "./serp-history.mts";
 import type { SerpEntryItem, SerpSnapshot } from "@asobeast/shared";
 import { expect, test } from "./session.mts";
+import { typeInto } from "./type.mts";
 
 const TRIAL_PLAN: AccountPlan = {
   plan: "trial",
@@ -374,5 +375,65 @@ test("a translated search results sheet shows the apps of the day it steps to", 
   await expect
     .poll(async () => (await rows.allInnerTexts()).map(shownText))
     .toEqual(untranslated);
+  expect(errors).toEqual([]);
+});
+
+test("a translated keywords page counts the keywords it selects", async ({
+  page,
+}) => {
+  const errors = collectDomErrors(page);
+  await page.goto("/apps/app-1/keywords");
+  await (
+    await hydrated(page.getByRole("checkbox", { name: "Select focus timer" }))
+  ).check();
+  const bar = page.getByRole("group", { name: "Bulk keyword actions" });
+  await expect(bar).toContainText("1 selected");
+
+  await translateText(page);
+  await page.getByRole("checkbox", { name: "Select study timer" }).check();
+
+  await expect(bar).toContainText(/2 selected/i);
+  expect(errors).toEqual([]);
+});
+
+test("a translated metadata page counts what is typed into a field", async ({
+  page,
+}) => {
+  const errors = collectDomErrors(page);
+  await page.goto("/apps/app-1/metadata");
+  const field = await hydrated(
+    page.getByRole("textbox", { name: "Keyword field" }),
+  );
+  await typeInto(field, "focus,timer");
+  const countId = await field.getAttribute("aria-describedby");
+  const count = page.locator(`[id="${countId}"]`);
+  await expect(count).toHaveText("11/100");
+
+  await translateText(page);
+  await typeInto(field, "ą".repeat(101));
+
+  await expect(count).toHaveText("101/100 · 1 over");
+  expect(errors).toEqual([]);
+});
+
+test("a translated overview names the market it switched to", async ({
+  page,
+}) => {
+  const errors = collectDomErrors(page);
+  await page.goto("/apps/app-1");
+  const card = page
+    .locator('[data-slot="card"]')
+    .filter({ hasText: /in top 10/i });
+  await expect(card).toContainText("Tracked keywords · All markets");
+  const switcher = await hydrated(
+    page.getByRole("combobox", { name: "Market" }),
+  );
+
+  await translateText(page);
+  await switcher.click();
+  await page.getByRole("option", { name: /PL · Poland/i }).click();
+
+  await expect(page).toHaveURL(/market=pl/);
+  await expect(card).toContainText(/tracked keywords · pl/i);
   expect(errors).toEqual([]);
 });

@@ -84,7 +84,7 @@ export function SerpHeader({
         ) : null}
         {country ? (
           <p className="text-caption text-muted-foreground">
-            {formatCountry(country)}, {storeLabel(store)}
+            {`${formatCountry(country)}, ${storeLabel(store)}`}
           </p>
         ) : null}
       </div>

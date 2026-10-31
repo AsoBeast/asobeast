@@ -50,7 +50,7 @@ function DraftCard({ draft }: { draft: MetadataDraft }) {
           {METADATA_FIELD_LABELS[draft.field]}
         </span>
         <span className="text-sm tabular-nums text-muted-foreground">
-          {draft.chars}/{draft.limit}
+          {`${draft.chars}/${draft.limit}`}
         </span>
       </div>
       <pre className="mt-2 overflow-x-auto whitespace-pre-wrap rounded-lg border border-border bg-muted p-2 font-mono text-sm text-foreground">

@@ -150,9 +150,7 @@ export function SpiderDialog({
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between text-xs text-muted-foreground tabular-nums">
                   <span>{complete ? "Complete" : "Searching…"}</span>
-                  <span>
-                    {probesDone}/{PROBES_TOTAL}
-                  </span>
+                  <span>{`${probesDone}/${PROBES_TOTAL}`}</span>
                 </div>
                 <div
                   role="progressbar"

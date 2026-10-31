@@ -78,7 +78,7 @@ function OpenActionBadge() {
   return (
     <>
       <span className="sr-only">
-        , {open} open action{open === 1 ? "" : "s"}
+        {`, ${open} open action${open === 1 ? "" : "s"}`}
       </span>
       <SidebarMenuBadge aria-hidden className="numeric">
         {open > DISPLAY_MAX ? `${DISPLAY_MAX}+` : open}

@@ -13,7 +13,7 @@ function statusParts(summary: ActionSummary): ReactNode[] {
     `${formatNumber(summary.open)} open`,
     critical > 0 ? (
       <span className="text-priority-critical">
-        {formatNumber(critical)} critical
+        {`${formatNumber(critical)} critical`}
       </span>
     ) : null,
     high > 0 ? `${formatNumber(high)} high` : null,
@@ -39,7 +39,9 @@ export function ActionStatusLine({ appId }: { appId?: string }) {
       {appId === undefined && summary.suppressedByCap > 0 ? (
         <span className="hidden @md/actions:inline">
           <span aria-hidden> · </span>
-          {formatNumber(summary.suppressedByCap)} withheld by the per app cap
+          <span>
+            {`${formatNumber(summary.suppressedByCap)} withheld by the per app cap`}
+          </span>
         </span>
       ) : null}
     </p>

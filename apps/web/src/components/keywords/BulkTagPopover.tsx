@@ -97,8 +97,7 @@ export function BulkTagPopover({
         </div>
         {valid && add.atLimit.length > 0 ? (
           <p className="text-caption text-muted-foreground">
-            Skips {keywordsCount(add.atLimit.length)} at the {KEYWORD_TAGS_MAX}{" "}
-            tag limit: {add.atLimit.join(", ")}
+            {`Skips ${keywordsCount(add.atLimit.length)} at the ${KEYWORD_TAGS_MAX} tag limit: ${add.atLimit.join(", ")}`}
           </p>
         ) : null}
         <div className="flex flex-wrap gap-2">

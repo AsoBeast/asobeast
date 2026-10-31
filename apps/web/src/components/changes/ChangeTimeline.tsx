@@ -209,8 +209,7 @@ function ConversionChip({ value }: { value: number }) {
         : "text-muted-foreground";
   return (
     <span className={cn("numeric font-mono normal-case", tone)}>
-      Conversion {value > 0 ? "+" : ""}
-      {value}%
+      {`Conversion ${value > 0 ? "+" : ""}${value}%`}
     </span>
   );
 }
