@@ -102,6 +102,10 @@ test("draws the loading state at the geometry of the loaded sheet", async ({
     };
   };
   await expect(summary).toBeVisible();
+  await expect(summary.getByText("median").first()).toHaveCSS(
+    "color",
+    "rgba(0, 0, 0, 0)",
+  );
   const loading = await geometry();
 
   held.release();

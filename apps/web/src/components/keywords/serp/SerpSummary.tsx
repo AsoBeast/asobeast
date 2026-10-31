@@ -213,7 +213,7 @@ export function SerpSummary({
 
 export function SerpSummarySkeleton() {
   const value = (
-    <Skeleton className="w-16 border border-transparent text-transparent">
+    <Skeleton className="w-16 border border-transparent text-transparent *:text-transparent">
       <Value>0</Value> <Note>median</Note>
     </Skeleton>
   );
