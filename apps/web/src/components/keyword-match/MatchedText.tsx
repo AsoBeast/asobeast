@@ -16,7 +16,9 @@ export function MatchedText({
   segments: readonly KeywordBreakdownSegment[] | null | undefined;
   fallback?: string;
 }) {
-  if (!segments || segments.length === 0) return fallback ?? null;
+  if (!segments || segments.length === 0) {
+    return fallback === undefined ? null : <span>{fallback}</span>;
+  }
   return segments.map((segment, index) =>
     segment.match === "none" ? (
       <span key={index}>{segment.text}</span>
@@ -28,10 +30,14 @@ export function MatchedText({
           MARK_CLASS[segment.match],
         )}
       >
-        {segment.text}
         {segment.match === "folded" ? (
-          <span className="sr-only"> (accents differ)</span>
-        ) : null}
+          <>
+            <span>{segment.text}</span>
+            <span className="sr-only"> (accents differ)</span>
+          </>
+        ) : (
+          segment.text
+        )}
       </mark>
     ),
   );
