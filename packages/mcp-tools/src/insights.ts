@@ -46,7 +46,7 @@ export const INSIGHT_TOOLS: ReadTool[] = [
     name: "serp_snapshot",
     title: "SERP snapshot",
     description:
-      "The stored search-results snapshot for one tracked keyword: the ranked apps captured on a given day, up to 50 positions. Each entry names its icon, whether the keyword is in its title (titleMatch: phrase, words, partial or none, with titleSegments marking the matched words), and whether the app is yours (appId) or a competitor. Omit date for the most recent snapshot. Dates are UTC date strings (YYYY-MM-DD).",
+      "The stored search-results snapshot for one tracked keyword: the ranked apps captured on a given day, up to 50 positions. Each entry names its icon, whether the keyword is in its title (titleMatch: phrase, words, partial or none, with titleSegments marking the matched words), and whether the app is yours (appId) or a competitor. previous, delta and movement compare each entry with comparedTo, the newest earlier captured day; exits are apps of that day no longer listed; dates lists the captured days, newest first. Omit date for the most recent snapshot. Dates are UTC date strings (YYYY-MM-DD).",
     inputSchema: z.object({
       keywordId: z.string().describe("The tracked keyword id."),
       date: utcDate

@@ -3977,6 +3977,7 @@
     },
     "/keywords/{keywordId}/serp": {
       "get": {
+        "description": "Answers up to 50 entries of the day asked for, or of the newest captured day. Each entry carries its iconUrl, titleMatch and titleSegments, and previous, delta and movement against comparedTo, the newest captured day before date. Movement is none when there is no earlier capture or the earlier capture did not reach that position. exits lists the apps of that earlier capture no longer listed, and dates lists up to 365 captured days, newest first.",
         "operationId": "SerpController_serp",
         "parameters": [
           {

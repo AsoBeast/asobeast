@@ -1,5 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { SerpMovers, SerpSnapshot } from '@asobeast/shared';
+import {
+  SerpEntryItem,
+  SerpExitItem,
+  SerpMovers,
+  SerpSnapshot,
+} from '@asobeast/shared';
 import { TrackedKeywordAccess } from '../keywords/tracked-keyword.access';
 import { PrismaService } from '../prisma/prisma.service';
 import { SerpMoversQueryDto } from './dto/serp-movers-query.dto';
@@ -10,11 +15,13 @@ import {
   toDateKey,
   utcToday,
 } from './rankings.support';
+import { serpExits, serpMovement } from './serp-history';
 import { detectEntrants, SerpSnapshotDay } from './serp-movers';
 import { titleJudge } from './serp-title-match';
 import { TOP_TEN_ROWS } from './top-ten';
 
 const MOVERS_LIMIT = 50;
+const SERP_DATE_LIMIT = 365;
 
 interface SerpEntrant {
   date: string;
@@ -33,23 +40,88 @@ export class SerpService {
 
   async serp(keywordId: string, query: SerpQueryDto): Promise<SerpSnapshot> {
     const keyword = await this.trackedKeywords.require(keywordId);
-
-    const date = query.date
-      ? new Date(`${query.date}T00:00:00.000Z`)
-      : ((
-          await this.prisma.serpEntry.findFirst({
-            where: { keywordId },
-            orderBy: { date: 'desc' },
-            select: { date: true },
-          })
-        )?.date ?? null);
-
-    if (!date) {
-      return { keywordId, text: keyword.text, date: null, entries: [] };
+    const dates = await this.capturedDates(keywordId);
+    const shown = query.date ?? dates[0] ?? null;
+    if (shown === null) {
+      return {
+        keywordId,
+        text: keyword.text,
+        date: null,
+        entries: [],
+        comparedTo: null,
+        exits: [],
+        dates,
+      };
     }
 
-    const entries = await this.prisma.serpEntry.findMany({
-      where: { keywordId, date },
+    const comparedTo = dates.includes(shown)
+      ? (dates.find((date) => date < shown) ?? null)
+      : null;
+    const [rows, earlier] = await Promise.all([
+      this.serpDay(keywordId, shown),
+      comparedTo ? this.serpDay(keywordId, comparedTo) : null,
+    ]);
+    const entries = serpMovement(rows, earlier);
+    const exits = serpExits(rows, earlier);
+    const known = await appsByStoreAppId(
+      this.prisma,
+      keyword.store,
+      keyword.country,
+      [...new Set([...rows, ...exits].map((row) => row.storeAppId))],
+    );
+    const roleOf = (storeAppId: string) => {
+      const app = known.get(storeAppId);
+      return {
+        appId: app?.id ?? null,
+        isCompetitor: app?.isCompetitor ?? false,
+      };
+    };
+    const judgeTitle = titleJudge(keyword.text);
+
+    return {
+      keywordId,
+      text: keyword.text,
+      date: shown,
+      entries: entries.map((entry): SerpEntryItem => ({
+        position: entry.position,
+        storeAppId: entry.storeAppId,
+        title: entry.title,
+        developer: entry.developer,
+        ratingAvg: entry.ratingAvg,
+        ratingCount: entry.ratingCount,
+        ...roleOf(entry.storeAppId),
+        iconUrl: entry.iconUrl,
+        ...judgeTitle(entry.title),
+        previous: entry.previous,
+        delta: entry.delta,
+        movement: entry.movement,
+      })),
+      comparedTo,
+      exits: exits.map((exit): SerpExitItem => ({
+        previous: exit.previous,
+        storeAppId: exit.storeAppId,
+        title: exit.title,
+        developer: exit.developer,
+        iconUrl: exit.iconUrl,
+        ...roleOf(exit.storeAppId),
+      })),
+      dates,
+    };
+  }
+
+  private async capturedDates(keywordId: string): Promise<string[]> {
+    const days = await this.prisma.serpEntry.findMany({
+      where: { keywordId, position: 1 },
+      orderBy: { date: 'desc' },
+      take: SERP_DATE_LIMIT,
+      select: { date: true },
+    });
+    return days.map((day) => toDateKey(day.date));
+  }
+
+  private serpDay(keywordId: string, date: string) {
+    return this.prisma.serpEntry.findMany({
+      where: { keywordId, date: new Date(`${date}T00:00:00.000Z`) },
       orderBy: { position: 'asc' },
       select: {
         position: true,
@@ -61,35 +133,6 @@ export class SerpService {
         ratingCount: true,
       },
     });
-    const judgeTitle = titleJudge(keyword.text);
-
-    const byStoreAppId = await appsByStoreAppId(
-      this.prisma,
-      keyword.store,
-      keyword.country,
-      entries.map((entry) => entry.storeAppId),
-    );
-
-    return {
-      keywordId,
-      text: keyword.text,
-      date: toDateKey(date),
-      entries: entries.map((entry) => {
-        const app = byStoreAppId.get(entry.storeAppId);
-        return {
-          position: entry.position,
-          storeAppId: entry.storeAppId,
-          title: entry.title,
-          developer: entry.developer,
-          ratingAvg: entry.ratingAvg,
-          ratingCount: entry.ratingCount,
-          appId: app?.id ?? null,
-          isCompetitor: app?.isCompetitor ?? false,
-          iconUrl: entry.iconUrl,
-          ...judgeTitle(entry.title),
-        };
-      }),
-    };
   }
 
   async serpMovers(

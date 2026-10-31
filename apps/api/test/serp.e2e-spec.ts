@@ -237,6 +237,81 @@ describe('SerpController (e2e)', () => {
     });
   });
 
+  describe('movement and captured days', () => {
+    const DAYS = ['2026-06-29', '2026-06-30', '2026-07-01'];
+
+    async function threeCapturedDays() {
+      const you = await appRow('self-store', 'us');
+      const keyword = await prisma.keyword.create({
+        data: { text: 'focus timer', store: Store.APP_STORE, country: 'us' },
+      });
+      await prisma.trackedKeyword.create({
+        data: { appId: you.id, keywordId: keyword.id, source: 'MANUAL' },
+      });
+      const day = (date: string, storeAppIds: string[]) =>
+        storeAppIds.map((storeAppId, index) => ({
+          keywordId: keyword.id,
+          date: new Date(`${date}T00:00:00.000Z`),
+          position: index + 1,
+          storeAppId,
+          title: storeAppId,
+        }));
+      const deep = Array.from({ length: 9 }, (_, index) => `deep-${index + 1}`);
+      await prisma.serpEntry.createMany({
+        data: [
+          ...day(DAYS[0], ['a', 'b', 'c']),
+          ...day(DAYS[1], ['b', 'a', 'newcomer', ...deep]),
+          ...day(DAYS[2], ['a', 'b', 'newcomer', ...deep]),
+        ],
+      });
+      return keyword.id;
+    }
+
+    it('compares the newest day with the captured day before it', async () => {
+      const keywordId = await threeCapturedDays();
+
+      const response = await api.get(`/keywords/${keywordId}/serp`).expect(200);
+      const body = response.body as SerpSnapshot;
+
+      expect(body.date).toBe(DAYS[2]);
+      expect(body.comparedTo).toBe(DAYS[1]);
+      expect(body.dates).toEqual([...DAYS].reverse());
+      expect(body.entries).toHaveLength(12);
+      expect(body.entries[0]).toMatchObject({
+        storeAppId: 'a',
+        previous: 2,
+        delta: -1,
+        movement: 'up',
+      });
+      expect(body.entries[11]).toMatchObject({ movement: 'same', delta: 0 });
+      expect(body.exits).toEqual([]);
+    });
+
+    it('answers the middle day by date with its exits and newcomers', async () => {
+      const keywordId = await threeCapturedDays();
+
+      const response = await api
+        .get(`/keywords/${keywordId}/serp?date=${DAYS[1]}`)
+        .expect(200);
+      const body = response.body as SerpSnapshot;
+
+      expect(body.date).toBe(DAYS[1]);
+      expect(body.comparedTo).toBe(DAYS[0]);
+      expect(body.entries[2]).toMatchObject({
+        storeAppId: 'newcomer',
+        previous: null,
+        movement: 'new',
+      });
+      expect(body.entries[3]).toMatchObject({
+        storeAppId: 'deep-1',
+        movement: 'none',
+      });
+      expect(body.exits).toEqual([
+        expect.objectContaining({ storeAppId: 'c', previous: 3 }),
+      ]);
+    });
+  });
+
   describe('the snapshot date', () => {
     async function trackedKeywordWithSnapshotOn(date: string) {
       const you = await prisma.app.create({
