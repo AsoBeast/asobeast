@@ -3,6 +3,13 @@
 All notable changes to asobeast are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [1.15.1](https://github.com/AsoBeast/asobeast/compare/v1.15.0...v1.15.1) (2026-11-01)
+
+
+### Bug Fixes
+
+* **jobs:** score keywords only for workspaces that may collect ([#658](https://github.com/AsoBeast/asobeast/issues/658)) ([c49f547](https://github.com/AsoBeast/asobeast/commit/c49f547b75b8899d27aeeda45b6bea7191c0acaa))
+
 ## [1.15.0](https://github.com/AsoBeast/asobeast/compare/v1.14.0...v1.15.0) (2026-10-31)
 
 
