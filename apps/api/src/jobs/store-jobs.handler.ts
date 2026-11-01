@@ -50,17 +50,24 @@ export class StoreJobsHandler {
 
   async handle(job: Job): Promise<void> {
     await this.workspace.runScope(requireJobScope(job), async () => {
-      if (
-        ELIGIBILITY_GATED_JOBS.has(job.name) &&
-        !(await this.eligibility.forWorkspace())
-      ) {
-        return;
-      }
+      if (!(await this.mayCollect(job))) return;
       const country = await this.targetCountry.of(job);
       await this.egress.through(jobStore(job), country, () =>
         this.dispatch(job),
       );
     });
+  }
+
+  private mayCollect(job: Job): Promise<boolean> {
+    if (job.name === JOBS.SCORE_KEYWORD) {
+      return this.eligibility.scoresKeyword(
+        (job.data as ScoreKeywordPayload).keywordId,
+      );
+    }
+    if (ELIGIBILITY_GATED_JOBS.has(job.name)) {
+      return this.eligibility.forWorkspace();
+    }
+    return Promise.resolve(true);
   }
 
   private async dispatch(job: Job): Promise<void> {
