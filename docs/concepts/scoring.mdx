@@ -270,3 +270,5 @@ They are also not a substitute for first party acquisition or conversion data. a
 ## When are scores recalculated?
 
 Weekly, on the `CRON_SCORING` schedule, which defaults to `0 4 * * 0`, meaning 04:00 UTC on Sunday. Scoring is the most expensive job per keyword on Google Play, which is why it is weekly rather than daily. See [The daily pipeline and rate limits](/concepts/pipeline).
+
+The weekly run and the formula rescore cover the same workspaces as the daily run. A workspace that is suspended or whose plan is no longer in force gets no score jobs, and a workspace past the grace period of its keyword limit gets scores for the keywords the plan covers only. A score job already queued checks again before it reaches the store and does nothing once no workspace that tracks its keyword may still collect, so a keyword another workspace shares is still scored.
