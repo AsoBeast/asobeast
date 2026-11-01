@@ -1047,6 +1047,89 @@ describe('PipelineService', () => {
       expect(appStoreQueue.add).not.toHaveBeenCalled();
     });
 
+    describe('a workspace the daily run does not collect for', () => {
+      const keywordsOf: Record<string, string> = {
+        ws_paid: 'paid-keyword',
+        ws_free: 'free-keyword',
+      };
+      const visitsEvery = {
+        each: async <T>(_justification: string, work: () => Promise<T>) => ({
+          results: [
+            await workspace.run('ws_paid', work),
+            await workspace.run('ws_free', work),
+          ],
+          failures: [],
+        }),
+        eachOf: async <T>(ids: string[], work: () => Promise<T>) => {
+          const results: T[] = [];
+          for (const id of ids) results.push(await workspace.run(id, work));
+          return { results, failures: [] };
+        },
+      } as unknown as WorkspaceFanOut;
+      const prismaPerWorkspace = (formulaVersion: string) => ({
+        ...emptyPrisma(),
+        trackedKeyword: {
+          findMany: jest.fn(() =>
+            Promise.resolve([
+              tracked(keywordsOf[workspace.current ?? ''], formulaVersion),
+            ]),
+          ),
+        },
+      });
+      const queuedKeywords = (queue: ReturnType<typeof buildQueue>) =>
+        queue.add.mock.calls.map(
+          ([, data]) => (data as { keywordId: string }).keywordId,
+        );
+
+      beforeEach(() => {
+        (activeWorkspaces.forDailyRun as jest.Mock).mockResolvedValueOnce([
+          'ws_paid',
+        ]);
+      });
+
+      it('gets no weekly score jobs', async () => {
+        const { service, appStoreQueue } = buildService({
+          prisma: prismaPerWorkspace('app-store-v5'),
+          workspaces: visitsEvery,
+        });
+
+        await expect(service.fanOutScoring()).resolves.toBe(1);
+        expect(queuedKeywords(appStoreQueue)).toEqual(['paid-keyword']);
+      });
+
+      it('gets no formula rescore jobs', async () => {
+        const { service, appStoreQueue } = buildService({
+          prisma: prismaPerWorkspace('app-store-v1'),
+          workspaces: visitsEvery,
+        });
+
+        await expect(service.fanOutOutdatedScores()).resolves.toBe(1);
+        expect(queuedKeywords(appStoreQueue)).toEqual(['paid-keyword']);
+      });
+    });
+
+    it('scores only the keywords the plan covers once the grace period is over', async () => {
+      const { service, appStoreQueue } = buildService({
+        prisma: prismaWith(
+          ['k3', 'k1', 'k2'].map((id) => tracked(id, 'app-store-v5')),
+        ),
+        quota: {
+          limitFor: jest.fn().mockResolvedValue(2),
+        } as unknown as QuotaService,
+      });
+      (overLimit.state as jest.Mock).mockResolvedValueOnce({
+        since: new Date('2026-07-01T00:00:00Z'),
+        notifiedAt: new Date('2026-07-01T00:00:00Z'),
+      });
+
+      await expect(service.fanOutScoring()).resolves.toBe(2);
+      expect(
+        appStoreQueue.add.mock.calls.map(
+          ([, data]) => (data as { keywordId: string }).keywordId,
+        ),
+      ).toEqual(['k1', 'k2']);
+    });
+
     it('keeps the weekly scoring bucket for the weekly run', async () => {
       const { service, appStoreQueue } = buildService({
         prisma: prismaWith([tracked('old', 'app-store-v1')]),

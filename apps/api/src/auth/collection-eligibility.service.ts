@@ -11,6 +11,9 @@ import { QuotaService } from './quota.service';
 const ROSTER_JUSTIFICATION =
   'one shared search serves many workspaces, and each must be judged before its own rows are written';
 
+const TRACKERS_JUSTIFICATION =
+  'a keyword score is shared by every workspace that tracks the phrase';
+
 const COVERAGE_CONCURRENCY = 4;
 
 interface MeteredWorkspace {
@@ -71,6 +74,24 @@ export class CollectionEligibility {
       );
     }
     return eligible;
+  }
+
+  async scoresKeyword(keywordId: string, now = new Date()): Promise<boolean> {
+    const trackers =
+      await this.crossTenant.becauseThisWorkIsNotOwnedByOneWorkspace(
+        TRACKERS_JUSTIFICATION,
+        () =>
+          this.prisma.trackedKeyword.findMany({
+            where: { keywordId },
+            select: { app: { select: { workspaceId: true } } },
+          }),
+      );
+    const eligible = await this.forKeyword(
+      trackers.map(({ app }) => app.workspaceId),
+      keywordId,
+      now,
+    );
+    return eligible.size > 0;
   }
 
   async forWorkspace(now = new Date()): Promise<boolean> {

@@ -225,6 +225,47 @@ describe('CollectionEligibility', () => {
     });
   });
 
+  describe('for a keyword score', () => {
+    const trackedBy = (...workspaceIds: string[]) =>
+      trackedFindMany.mockResolvedValueOnce(
+        workspaceIds.map((workspaceId) => ({ app: { workspaceId } })),
+      );
+
+    it('scores a keyword a paying workspace tracks', async () => {
+      const service = build([workspace()]);
+      trackedBy('ws_a');
+
+      expect(await service.scoresKeyword('kw', NOW)).toBe(true);
+    });
+
+    it('skips a keyword only lapsed workspaces track', async () => {
+      const service = build([
+        workspace({ plan: 'free' }),
+        workspace({ id: 'ws_b', suspendedAt: new Date() }),
+      ]);
+      trackedBy('ws_a', 'ws_b');
+
+      expect(await service.scoresKeyword('kw', NOW)).toBe(false);
+    });
+
+    it('scores a keyword a lapsed and a paying workspace share', async () => {
+      const service = build([
+        workspace({ plan: 'free' }),
+        workspace({ id: 'ws_b' }),
+      ]);
+      trackedBy('ws_a', 'ws_b');
+
+      expect(await service.scoresKeyword('kw', NOW)).toBe(true);
+    });
+
+    it('skips a keyword nobody tracks any more', async () => {
+      const service = build([workspace()]);
+
+      expect(await service.scoresKeyword('kw', NOW)).toBe(false);
+      expect(findMany).not.toHaveBeenCalled();
+    });
+  });
+
   describe('for a single workspace', () => {
     it('admits an entitled workspace', async () => {
       expect(await build([workspace()]).forWorkspace(NOW)).toBe(true);
