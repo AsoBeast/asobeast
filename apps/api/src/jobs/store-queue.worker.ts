@@ -1,9 +1,10 @@
 import { OnWorkerEvent, WorkerHost } from '@nestjs/bullmq';
 import { Logger, OnModuleInit } from '@nestjs/common';
 import { Store } from '@prisma/client';
-import { Job } from 'bullmq';
+import { DelayedError, Job } from 'bullmq';
 import { ErrorTracking } from '../observability/error-tracking.service';
 import { PoolCapacity } from '../store-providers/egress/pool-capacity.service';
+import { busyPoolRetryAt } from './busy-pool';
 import { reportJobFailure } from './job-failure';
 import { StoreJobsHandler } from './store-jobs.handler';
 import { withoutRetry } from './unrecoverable';
@@ -26,7 +27,7 @@ export abstract class StoreQueueWorker
     await this.matchPoolCapacity();
   }
 
-  async process(job: Job): Promise<void> {
+  async process(job: Job, token?: string): Promise<void> {
     const startedAt = Date.now();
     this.logger.debug(`start ${job.name} #${job.id}`);
     await this.matchPoolCapacity();
@@ -36,6 +37,14 @@ export abstract class StoreQueueWorker
         `done ${job.name} #${job.id} in ${Date.now() - startedAt}ms`,
       );
     } catch (error) {
+      const retryAt = busyPoolRetryAt(job, error);
+      if (retryAt !== null) {
+        this.logger.warn(
+          `delayed ${job.name} #${job.id}: ${(error as Error).message}`,
+        );
+        await job.moveToDelayed(retryAt, token);
+        throw new DelayedError();
+      }
       this.logger.warn(
         `failed ${job.name} #${job.id}: ${(error as Error).message}`,
       );

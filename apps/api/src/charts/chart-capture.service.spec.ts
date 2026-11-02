@@ -30,7 +30,7 @@ const uniqueViolation = () =>
   });
 
 interface History {
-  lastListed?: { date: Date } | null;
+  lastListed?: { date: Date; _count: { entries: number } } | null;
   latestEntries?: number | null;
 }
 
@@ -331,8 +331,11 @@ describe('ChartCaptureService.captureToday', () => {
     'refuses an empty answer on every attempt when the chart listed apps within a week (final %s, listed %s)',
     async (finalAttempt, listed) => {
       const { service, prisma } = build([], null, {
-        lastListed: { date: new Date(`${listed}T00:00:00.000Z`) },
-        latestEntries: 3,
+        lastListed: {
+          date: new Date(`${listed}T00:00:00.000Z`),
+          _count: { entries: 10 },
+        },
+        latestEntries: 10,
       });
 
       await expect(
@@ -346,15 +349,40 @@ describe('ChartCaptureService.captureToday', () => {
           entries: { some: {} },
         },
         orderBy: { date: 'desc' },
-        select: { date: true },
+        select: { date: true, _count: { select: { entries: true } } },
       });
+    },
+  );
+
+  it.each([2, 9])(
+    'stores an empty answer on the last attempt for a sparse chart that listed %i apps yesterday',
+    async (listed) => {
+      const history = {
+        lastListed: {
+          date: new Date('2026-10-14T00:00:00.000Z'),
+          _count: { entries: listed },
+        },
+        latestEntries: listed,
+      };
+      const early = build([], null, history);
+      const last = build([], null, history);
+
+      await expect(
+        early.service.captureToday(KEY, { finalAttempt: false }),
+      ).rejects.toBeInstanceOf(StoreRequestError);
+      await expect(
+        last.service.captureToday(KEY, { finalAttempt: true }),
+      ).resolves.toBe(STORED);
     },
   );
 
   it('treats a last listing older than a week as no history', async () => {
     const history = {
-      lastListed: { date: new Date('2026-10-07T00:00:00.000Z') },
-      latestEntries: 3,
+      lastListed: {
+        date: new Date('2026-10-07T00:00:00.000Z'),
+        _count: { entries: 10 },
+      },
+      latestEntries: 10,
     };
     const early = build([], null, history);
     const last = build([], null, history);

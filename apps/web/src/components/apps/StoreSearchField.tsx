@@ -110,7 +110,7 @@ function StoreSearchResults({
   if (search.settled && search.results.length === 0) {
     return (
       <p role="status" className="text-body text-muted-foreground">
-        No listing named “{search.q}” in {formatCountry(country)}.
+        {`No listing named “${search.q}” in ${formatCountry(country)}.`}
       </p>
     );
   }

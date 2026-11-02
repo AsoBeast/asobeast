@@ -48,7 +48,7 @@ function PriorityCounts({ summary }: { summary: ActionSummary }) {
     <div className="flex flex-wrap gap-2">
       {ACTION_PRIORITIES.map((priority) => (
         <Badge key={priority} variant="outline">
-          {summary.openByPriority[priority]} {ACTION_PRIORITY_LABEL[priority]}
+          {`${summary.openByPriority[priority]} ${ACTION_PRIORITY_LABEL[priority]}`}
         </Badge>
       ))}
     </div>

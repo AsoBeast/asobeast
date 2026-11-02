@@ -1,14 +1,29 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 import {
+  AlertBatchApp,
+  AlertBatchAppSection,
   AlertBatchPayload,
   AlertDeliveryStatus,
   AlertFlushResult,
+  CHANGE_FIELD_LABELS,
   CHANGE_FIELDS,
   ChangeDetail,
   ChangeEventItem,
+  EmailAlertCreateRequest,
+  EmailAlertItem,
+  EmailAlertUpdateRequest,
+  GranularAlertPayload,
   isChangeField,
+  RankDroppedPayload,
+  RankImprovedPayload,
+  RankMilestonePayload,
   WEBHOOK_EVENTS,
+  WebhookCreateRequest,
+  WebhookItem,
+  WebhookUpdateRequest,
 } from './changes';
+import type { ChartLeftPayload, ChartMovePayload } from './charts';
+import type { ReviewNegativePayload, ReviewNewPayload } from './reviews';
 
 const batch = (scope: AlertBatchPayload['scope']): AlertBatchPayload => ({
   event: 'alerts.batch',
@@ -36,7 +51,33 @@ describe('alert contracts', () => {
       'digest.weekly',
       'serp.entrant',
       'action.opened',
+      'chart.entered',
+      'chart.left',
+      'chart.milestone',
+      'review.new',
     ]);
+  });
+
+  it('carries the author on a new review and not on a negative one', () => {
+    expectTypeOf<ReviewNewPayload['review']['author']>().toEqualTypeOf<
+      string | null
+    >();
+    expectTypeOf<ReviewNegativePayload['review']>().not.toHaveProperty(
+      'author',
+    );
+  });
+
+  it('keeps the new review group and the star filter optional', () => {
+    expectTypeOf<AlertBatchAppSection['newReviews']>().toEqualTypeOf<
+      ReviewNewPayload[] | undefined
+    >();
+    expectTypeOf<WebhookCreateRequest['reviewScores']>().toEqualTypeOf<
+      number[] | undefined
+    >();
+    expectTypeOf<{
+      url: string;
+      events: ['review.new'];
+    }>().toExtend<WebhookCreateRequest>();
   });
 
   it('requires one of the two delivery scopes', () => {
@@ -71,6 +112,17 @@ describe('alert contracts', () => {
       pending: 4,
       claimed: 2,
     });
+  });
+});
+
+describe('CHANGE_FIELD_LABELS', () => {
+  it('names every change field in its order', () => {
+    expect(Object.keys(CHANGE_FIELD_LABELS)).toEqual([...CHANGE_FIELDS]);
+  });
+
+  it('names a field the way the store consoles do', () => {
+    expect(CHANGE_FIELD_LABELS.summary).toBe('Short description');
+    expect(CHANGE_FIELD_LABELS.whatsNew).toBe("What's new");
   });
 });
 
@@ -135,5 +187,134 @@ describe('the screenshot change fields', () => {
     };
     expect({ ...plain, detail }.detail).toBe(detail);
     expect(plain.detail).toBeUndefined();
+  });
+});
+
+describe('the alert app identity', () => {
+  it('lets every alert app carry an icon without requiring one', () => {
+    expectTypeOf<AlertBatchApp['iconUrl']>().toEqualTypeOf<
+      string | null | undefined
+    >();
+    const drop: RankDroppedPayload = {
+      event: 'rank.dropped',
+      occurredAt: '2026-10-24T03:10:00.000Z',
+      app: { id: 'a1', name: 'Habit' },
+      keyword: { id: 'k1', text: 'habit', store: 'APP_STORE', country: 'us' },
+      from: 3,
+      to: 12,
+      fromDepth: 200,
+      toDepth: 200,
+      threshold: 5,
+    };
+    expect(drop.app.iconUrl).toBeUndefined();
+  });
+
+  it('keeps the store and storefront of a batch app required', () => {
+    expectTypeOf<AlertBatchApp['store']>().toEqualTypeOf<
+      'APP_STORE' | 'GOOGLE_PLAY'
+    >();
+    expectTypeOf<AlertBatchApp['country']>().toEqualTypeOf<string>();
+  });
+});
+
+describe('the confirmed drop fields', () => {
+  const app = { id: 'a1', name: 'Habit' };
+  const keyword = {
+    id: 'k1',
+    text: 'habit',
+    store: 'APP_STORE',
+    country: 'us',
+  } as const;
+
+  it('keeps the setting optional on every request and item', () => {
+    expectTypeOf<WebhookCreateRequest['confirmDrops']>().toEqualTypeOf<
+      boolean | undefined
+    >();
+    expectTypeOf<WebhookUpdateRequest['confirmDrops']>().toEqualTypeOf<
+      boolean | undefined
+    >();
+    expectTypeOf<WebhookItem['confirmDrops']>().toEqualTypeOf<
+      boolean | undefined
+    >();
+    expectTypeOf<EmailAlertCreateRequest['confirmDrops']>().toEqualTypeOf<
+      boolean | undefined
+    >();
+    expectTypeOf<EmailAlertUpdateRequest['confirmDrops']>().toEqualTypeOf<
+      boolean | undefined
+    >();
+    expectTypeOf<EmailAlertItem['confirmDrops']>().toEqualTypeOf<
+      boolean | undefined
+    >();
+  });
+
+  it('lets a plain drop, improvement and milestone omit the markers', () => {
+    const drop: RankDroppedPayload = {
+      event: 'rank.dropped',
+      occurredAt: '2026-10-28T03:10:00.000Z',
+      app,
+      keyword,
+      from: 9,
+      to: 15,
+      fromDepth: 200,
+      toDepth: 200,
+      threshold: 5,
+    };
+    const improvement: RankImprovedPayload = {
+      event: 'rank.improved',
+      occurredAt: '2026-10-28T03:10:00.000Z',
+      app,
+      keyword,
+      from: 15,
+      to: 9,
+      fromDepth: 200,
+      toDepth: 200,
+      threshold: 5,
+    };
+    const milestone: RankMilestonePayload = {
+      event: 'rank.milestone',
+      occurredAt: '2026-10-28T03:10:00.000Z',
+      app,
+      keyword,
+      tier: 10,
+      direction: 'left',
+      from: 9,
+      to: 11,
+      fromDepth: 200,
+      toDepth: 200,
+    };
+    expect(drop.confirmed).toBeUndefined();
+    expect(improvement.undoesDrop).toBeUndefined();
+    expect(milestone.confirmed).toBeUndefined();
+    expect(milestone.undoesDrop).toBeUndefined();
+  });
+
+  it('types the markers as booleans', () => {
+    expectTypeOf<RankDroppedPayload['confirmed']>().toEqualTypeOf<
+      boolean | undefined
+    >();
+    expectTypeOf<RankImprovedPayload['undoesDrop']>().toEqualTypeOf<
+      boolean | undefined
+    >();
+    expectTypeOf<RankMilestonePayload['confirmed']>().toEqualTypeOf<
+      boolean | undefined
+    >();
+    expectTypeOf<RankMilestonePayload['undoesDrop']>().toEqualTypeOf<
+      boolean | undefined
+    >();
+  });
+});
+
+describe('the chart alert events', () => {
+  it('carries chart moves on a section without requiring them', () => {
+    expectTypeOf<AlertBatchAppSection['chartMoves']>().toEqualTypeOf<
+      ChartMovePayload[] | undefined
+    >();
+  });
+
+  it('narrows a granular payload to a chart exit by its event', () => {
+    const narrow = (payload: GranularAlertPayload) =>
+      payload.event === 'chart.left' ? payload : null;
+
+    expectTypeOf(narrow).returns.toEqualTypeOf<ChartLeftPayload | null>();
   });
 });

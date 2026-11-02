@@ -29,6 +29,7 @@ jobs:
       - run: pnpm turbo run lint build test:cov
       - run: pnpm check:rate-classes
       - run: pnpm check:compose-limits
+      - run: pnpm check:compose-env
       - run: pnpm check:compose-mounts
       - run: pnpm check:compose-web-origin
       - run: pnpm check:env-documented
@@ -394,7 +395,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     container:
-      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
       options: --user 1001
     strategy:
       fail-fast: false

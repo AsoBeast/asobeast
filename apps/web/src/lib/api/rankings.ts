@@ -24,8 +24,11 @@ export function getSerp(
   keywordId: string,
   date?: string,
 ): Promise<SerpSnapshot> {
-  const query = date ? `?date=${date}` : "";
-  return apiFetch<SerpSnapshot>(`/keywords/${keywordId}/serp${query}`);
+  const params = new URLSearchParams();
+  if (date) params.set("date", date);
+  return apiFetch<SerpSnapshot>(
+    withQuery(`/keywords/${keywordId}/serp`, params),
+  );
 }
 
 export function getSerpMovers(

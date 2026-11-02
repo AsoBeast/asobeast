@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import type { ActionItem } from "@asobeast/shared";
+import { ACTION_RULE_TITLES, type ActionItem } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,11 +9,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { formatCountry, storeLabel } from "@/lib/format";
-import {
-  ACTION_CATEGORY_LABEL,
-  ACTION_RULE_TITLE,
-  ACTION_STATUS_LABEL,
-} from "./action-copy";
+import { ACTION_CATEGORY_LABEL, ACTION_STATUS_LABEL } from "./action-copy";
 import { actionHeadline } from "./action-headline";
 import { actionHref, actionSection } from "./action-links";
 import { ActionPriorityBadge } from "./ActionPriorityBadge";
@@ -32,14 +28,14 @@ export function ActionDetailHeader({ item }: { item: ActionItem }) {
         </Badge>
         <Badge variant="outline">
           <StatusIcon status={item.status} />
-          {ACTION_STATUS_LABEL[item.status]}
+          <span>{ACTION_STATUS_LABEL[item.status]}</span>
         </Badge>
       </div>
       <SheetTitle className="text-title text-balance">
         {actionHeadline(item)}
       </SheetTitle>
       <SheetDescription>
-        {ACTION_RULE_TITLE[item.rule]} · {item.scope.appName ?? "An app"} ·{" "}
+        {ACTION_RULE_TITLES[item.rule]} · {item.scope.appName ?? "An app"} ·{" "}
         {storeLabel(item.scope.store)} · {formatCountry(item.scope.country)}
       </SheetDescription>
       <div className="flex flex-wrap items-center gap-2">

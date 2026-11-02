@@ -23,10 +23,27 @@ export interface AppLocalizationItem {
   updatedAt: string | null;
 }
 
+export interface AppLocalizationStoreSync {
+  at: string | null;
+  version: string | null;
+  error: string | null;
+}
+
+export const STORE_IMPORT_STATES = [
+  'unavailable',
+  'available',
+  'following',
+  'paused',
+] as const;
+export type StoreImportState = (typeof STORE_IMPORT_STATES)[number];
+
 export interface AppLocalizationsResult {
   home: string;
   markets: string[];
   localizations: AppLocalizationItem[];
+  storeManaged: boolean;
+  storeSync: AppLocalizationStoreSync | null;
+  storeImport: StoreImportState;
 }
 
 export interface AddAppLocalizationRequest {

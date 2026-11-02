@@ -1,4 +1,4 @@
-import { SERP_FLAGS } from "@asobeast/shared";
+import { formatUtcDate, isFloorAnswer, SERP_FLAGS } from "@asobeast/shared";
 import type { ScoreSignals, ScoringSource, SerpFlag } from "@asobeast/shared";
 import { pluralize } from "@/lib/format";
 
@@ -44,6 +44,47 @@ function searchModelLines(
   return capped ? [SEARCH_MODEL_LINE, UNLISTED_CAP_LINE] : [SEARCH_MODEL_LINE];
 }
 
+function weekPhrase(signals: ScoreSignals): string {
+  const week = signals.officialPopularityWeek;
+  return week ? ` for the week of ${formatUtcDate(week)}` : "";
+}
+
+function floorPhrase(
+  signals: ScoreSignals,
+  phrase: (floor: number) => string,
+): string {
+  const floor = signals.officialPopularityFloor;
+  return typeof floor === "number" ? phrase(floor) : "";
+}
+
+function lastAboveFloorLines(signals: ScoreSignals): string[] {
+  const last = signals.officialPopularityLastAboveFloor;
+  return last
+    ? [
+        `The last value above the floor was ${last.value} in the week of ${formatUtcDate(last.week)}.`,
+      ]
+    : [];
+}
+
+function floorAnswerLines(signals: ScoreSignals): string[] | null {
+  const state = signals.officialPopularityState;
+  if (!isFloorAnswer(state)) {
+    return null;
+  }
+  const week = weekPhrase(signals);
+  if (state === "floor") {
+    return [
+      `Apple answered its floor value${floorPhrase(signals, (floor) => ` (${floor})`)}${week}.`,
+      ...lastAboveFloorLines(signals),
+    ];
+  }
+  return [
+    SEARCH_MODEL_LINE,
+    `Apple left this term out of its list${week}, so its popularity is below the floor${floorPhrase(signals, (floor) => ` of ${floor}`)} and the number shown is held under it.`,
+    ...lastAboveFloorLines(signals),
+  ];
+}
+
 export function popularitySignalLines(
   signals: ScoreSignals | null,
   source?: ScoringSource,
@@ -51,6 +92,10 @@ export function popularitySignalLines(
 ): string[] {
   if (!signals) {
     return [];
+  }
+  const floorLines = floorAnswerLines(signals);
+  if (floorLines) {
+    return floorLines;
   }
   if (signals.officialPopularity !== null) {
     return [
@@ -62,10 +107,23 @@ export function popularitySignalLines(
     : [reachLine(signals)];
 }
 
-export function difficultySignalLines(signals: ScoreSignals | null): string[] {
-  if (!signals) {
-    return [];
-  }
+const LOWER_CONFIDENCE_LINES = {
+  difficulty:
+    "Popularity for this term is an Apple floor answer, so the confidence of this row is capped at Medium. Difficulty itself is read from the search results.",
+  opportunity:
+    "Opportunity is built from popularity, and popularity for this term is an Apple floor answer, so read it with lower confidence.",
+} as const;
+
+export function lowerConfidenceLines(
+  score: keyof typeof LOWER_CONFIDENCE_LINES,
+  signals: ScoreSignals | null,
+): string[] {
+  return isFloorAnswer(signals?.officialPopularityState)
+    ? [LOWER_CONFIDENCE_LINES[score]]
+    : [];
+}
+
+function serpLines(signals: ScoreSignals): string[] {
   if (signals.flags.length > 0) {
     return SERP_FLAGS.filter((flag) => signals.flags.includes(flag)).map(
       (flag) => FLAG_LINES[flag],
@@ -76,4 +134,14 @@ export function difficultySignalLines(signals: ScoreSignals | null): string[] {
     : [
         `Typical top ten app: ${pluralize(Math.round(signals.medianRatingCount), "rating")}.`,
       ];
+}
+
+export function difficultySignalLines(signals: ScoreSignals | null): string[] {
+  if (!signals) {
+    return [];
+  }
+  return [
+    ...serpLines(signals),
+    ...lowerConfidenceLines("difficulty", signals),
+  ];
 }

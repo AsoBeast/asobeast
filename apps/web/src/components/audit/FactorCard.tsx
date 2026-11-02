@@ -67,10 +67,11 @@ export function FactorCard({
           ) : (
             <>
               <span className="text-sm text-muted-foreground">
-                {scored} of {factor.checks.length} checks scored
-                {factor.confidence !== undefined && factor.confidence < 1
-                  ? ` · ${percent(factor.confidence)}% measured`
-                  : ""}
+                {`${scored} of ${factor.checks.length} checks scored${
+                  factor.confidence !== undefined && factor.confidence < 1
+                    ? ` · ${percent(factor.confidence)}% measured`
+                    : ""
+                }`}
               </span>
               {availabilityLabel(factor.availability, store) ? (
                 <span className="text-sm text-muted-foreground">

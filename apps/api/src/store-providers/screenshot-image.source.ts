@@ -1,9 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { ScreenshotFetchError } from './errors';
 import { appleRenditionUrl } from './screenshot-urls';
+import { storeDeadline } from './store-deadline';
 
 export const MAX_SCREENSHOT_BYTES = 6 * 1024 * 1024;
 export const SCREENSHOT_FETCH_TIMEOUT_MS = 20_000;
+
+export interface ImageReadOptions {
+  width?: number;
+  maxBytes?: number;
+  timeoutMs?: number;
+}
 
 const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
@@ -13,32 +20,40 @@ const isRetryableStatus = (status: number): boolean =>
 const reason = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
-const overCap = (bytes: number, verb: string): ScreenshotFetchError =>
+const overCap = (
+  bytes: number,
+  verb: string,
+  maxBytes: number,
+): ScreenshotFetchError =>
   new ScreenshotFetchError(
-    `the image ${verb} ${bytes} bytes, over the ${MAX_SCREENSHOT_BYTES} byte cap`,
+    `the image ${verb} ${bytes} bytes, over the ${maxBytes} byte cap`,
     false,
   );
 
 @Injectable()
 export class ScreenshotImageSource {
-  async read(url: string): Promise<Buffer> {
-    const rendition = appleRenditionUrl(url);
+  async read(url: string, options: ImageReadOptions = {}): Promise<Buffer> {
+    const maxBytes = options.maxBytes ?? MAX_SCREENSHOT_BYTES;
+    const rendition = appleRenditionUrl(url, options.width);
     if (rendition === null) {
       throw new ScreenshotFetchError(
         `${url} is not an app store image address`,
         false,
       );
     }
-    const response = await this.request(rendition);
-    this.assertImage(response);
-    return this.body(response);
+    const response = await this.request(rendition, options.timeoutMs);
+    this.assertImage(response, maxBytes);
+    return this.body(response, maxBytes);
   }
 
-  private async request(rendition: string): Promise<Response> {
+  private async request(
+    rendition: string,
+    timeoutMs = SCREENSHOT_FETCH_TIMEOUT_MS,
+  ): Promise<Response> {
     let response: Response;
     try {
       response = await fetch(rendition, {
-        signal: AbortSignal.timeout(SCREENSHOT_FETCH_TIMEOUT_MS),
+        signal: this.signal(timeoutMs),
         redirect: 'manual',
         headers: { accept: IMAGE_TYPES.join(',') },
       });
@@ -57,7 +72,13 @@ export class ScreenshotImageSource {
     return response;
   }
 
-  private assertImage(response: Response): void {
+  private signal(timeoutMs: number): AbortSignal {
+    const timeout = AbortSignal.timeout(timeoutMs);
+    const deadline = storeDeadline().signal;
+    return deadline ? AbortSignal.any([timeout, deadline]) : timeout;
+  }
+
+  private assertImage(response: Response, maxBytes: number): void {
     const type = response.headers.get('content-type') ?? '';
     const mediaType = type.split(';')[0].trim().toLowerCase();
     if (!IMAGE_TYPES.includes(mediaType)) {
@@ -67,12 +88,12 @@ export class ScreenshotImageSource {
       );
     }
     const declared = Number(response.headers.get('content-length') ?? 0);
-    if (declared > MAX_SCREENSHOT_BYTES) {
-      throw overCap(declared, 'declares');
+    if (declared > maxBytes) {
+      throw overCap(declared, 'declares', maxBytes);
     }
   }
 
-  private async body(response: Response): Promise<Buffer> {
+  private async body(response: Response, maxBytes: number): Promise<Buffer> {
     if (response.body === null) return Buffer.alloc(0);
     const reader: ReadableStreamDefaultReader<Uint8Array> =
       response.body.getReader();
@@ -82,9 +103,9 @@ export class ScreenshotImageSource {
       const { done, value } = await this.nextChunk(() => reader.read());
       if (done) return Buffer.concat(chunks, total);
       total += value.byteLength;
-      if (total > MAX_SCREENSHOT_BYTES) {
+      if (total > maxBytes) {
         await reader.cancel().catch(() => undefined);
-        throw overCap(total, 'sent more than');
+        throw overCap(total, 'sent more than', maxBytes);
       }
       chunks.push(value);
     }

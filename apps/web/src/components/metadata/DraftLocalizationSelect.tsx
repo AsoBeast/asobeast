@@ -72,9 +72,7 @@ export function DraftLocalizationSelect({ appId }: { appId: string }) {
       </Select>
       {draftLocale ? (
         <p id={hintId} className="text-xs text-muted-foreground">
-          Drafts are written in {APP_STORE_LOCALIZATIONS[draftLocale]}. To fill
-          its keyword field with keywords in another language instead, say so in
-          the instructions.
+          {`Drafts are written in ${APP_STORE_LOCALIZATIONS[draftLocale]}. To fill its keyword field with keywords in another language instead, say so in the instructions.`}
         </p>
       ) : null}
     </div>

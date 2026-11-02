@@ -93,7 +93,7 @@ describe('outcomeOf', () => {
 
   it('blames no endpoint when the pool never handed one out', () => {
     expect(
-      outcomeOf(new ProxyPoolUnavailableError(Store.APP_STORE, 1)),
+      outcomeOf(new ProxyPoolUnavailableError(Store.APP_STORE, 1, 1)),
     ).toBeNull();
   });
 

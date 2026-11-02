@@ -49,20 +49,23 @@ test("the keywords bulk bar adds Export CSV of selected keywords", async ({
   ]);
 });
 
-test("the top 10 sheet names its export from the visible words", async ({
+test("the search results sheet names its export from the visible words", async ({
   page,
 }) => {
   await page.goto("/apps/app-1/keywords");
   await page.waitForLoadState("networkidle");
 
   await page
-    .getByRole("button", { name: "View top 10 for focus timer", exact: true })
+    .getByRole("button", {
+      name: "View search results for focus timer",
+      exact: true,
+    })
     .click();
-  const sheet = page.getByRole("dialog", { name: "Top 10 search results" });
+  const sheet = page.getByRole("dialog", { name: "Search results" });
 
   await expect(
     sheet.getByRole("button", {
-      name: "Export CSV of the top 10",
+      name: "Export CSV of the search results",
       exact: true,
     }),
   ).toHaveCount(1);

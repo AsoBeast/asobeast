@@ -1,0 +1,286 @@
+import type { AlertBatchPayload } from '@asobeast/shared';
+import {
+  alpha,
+  batch,
+  competitorBatch,
+  dropped,
+  emptySection,
+  metadata,
+  worstCaseBatch,
+} from '../email-fixtures.fixture';
+import { firstRanking } from '../rank-events.fixture';
+import { buildAlert } from '../report/build-alert';
+import { buildReport } from '../report/build-report';
+import { escapeTeams, teamsBody } from './teams';
+import {
+  chartEntered,
+  chartMilestone,
+  chartMoveBatch,
+} from '../chart-events.fixture';
+
+const ORIGIN = 'https://aso.example.com';
+const ICON = 'https://is1-ssl.mzstatic.com/image/thumb/alpha/512x512bb.jpg';
+
+const cardOf = (payload: AlertBatchPayload, origin: string | null = ORIGIN) =>
+  teamsBody(buildReport(payload, origin)).attachments[0].content;
+
+describe('teamsBody for a batch', () => {
+  it('wraps an adaptive card 1.5 in a message', () => {
+    const message = teamsBody(buildReport(batch, ORIGIN));
+
+    expect(message.type).toBe('message');
+    expect(message.attachments[0]).toMatchObject({
+      contentType: 'application/vnd.microsoft.card.adaptive',
+      contentUrl: null,
+      content: {
+        type: 'AdaptiveCard',
+        version: '1.5',
+        msteams: { width: 'Full' },
+        actions: [
+          { type: 'Action.OpenUrl', title: 'Open AsoBeast', url: `${ORIGIN}/` },
+        ],
+      },
+    });
+  });
+
+  it('heads the card and dates it in the reader zone with a utc fallback', () => {
+    const [headline, date] = cardOf(batch).body;
+
+    expect(headline).toEqual({
+      type: 'TextBlock',
+      text: 'Daily app update: 3 changes across 2 apps',
+      wrap: true,
+      size: 'Large',
+      weight: 'Bolder',
+    });
+    expect(date).toMatchObject({
+      text: '22 Jul 2026 (UTC) · {{DATE(2026-07-22T11:00:00Z,SHORT)}} {{TIME(2026-07-22T11:00:00Z)}}',
+      isSubtle: true,
+    });
+  });
+
+  it('opens each app with its icon, linked name and storefront', () => {
+    const [, , header] = cardOf({
+      ...batch,
+      apps: [{ ...alpha, app: { ...alpha.app, iconUrl: ICON } }],
+    }).body;
+
+    expect(header).toEqual({
+      type: 'ColumnSet',
+      columns: [
+        {
+          type: 'Column',
+          width: 'auto',
+          items: [{ type: 'Image', url: ICON, size: 'Small', altText: '' }],
+        },
+        {
+          type: 'Column',
+          width: 'stretch',
+          items: [
+            {
+              type: 'TextBlock',
+              text: `**[Alpha](${ORIGIN}/apps/a)**`,
+              wrap: true,
+            },
+            {
+              type: 'TextBlock',
+              text: 'App Store · US',
+              wrap: true,
+              isSubtle: true,
+              spacing: 'None',
+            },
+          ],
+        },
+      ],
+    });
+  });
+
+  it('lists each group as a fact set', () => {
+    const body = cardOf(batch).body;
+
+    expect(body).toContainEqual({
+      type: 'FactSet',
+      facts: [{ title: 'game', value: '#3 → #12' }],
+    });
+    expect(body).toContainEqual({
+      type: 'TextBlock',
+      text: '**Rank drops**',
+      wrap: true,
+      spacing: 'Medium',
+    });
+  });
+
+  it('writes a sentence row as text, never as a fact without a value', () => {
+    const body = cardOf({
+      ...batch,
+      apps: [{ ...emptySection(alpha.app), firstRankings: [firstRanking()] }],
+    }).body;
+    const facts = body.flatMap((element) =>
+      element.type === 'FactSet' ? element.facts : [],
+    );
+
+    expect(facts.every((fact) => fact.value !== '')).toBe(true);
+    expect(body).toContainEqual({
+      type: 'TextBlock',
+      text: 'habit tracker  #37',
+      wrap: true,
+      spacing: 'None',
+    });
+  });
+
+  it('shows both icons of an icon change', () => {
+    const body = cardOf({
+      ...batch,
+      apps: [
+        {
+          ...emptySection(alpha.app),
+          changes: [
+            {
+              ...metadata,
+              changes: [
+                {
+                  field: 'icon',
+                  before: 'https://x.test/old.png',
+                  after: 'https://x.test/new.png',
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }).body;
+    const images = JSON.stringify(body).match(/"type":"Image"/g);
+
+    expect(body).toContainEqual({
+      type: 'TextBlock',
+      text: 'Icon changed',
+      wrap: true,
+      spacing: 'None',
+    });
+    expect(images).toHaveLength(2);
+  });
+
+  it('nests competitors under the primary app', () => {
+    const text = JSON.stringify(cardOf(competitorBatch).body);
+
+    expect(text).toContain('Your app · App Store · US');
+    expect(text).toContain('Competitor · App Store · US');
+    expect(text).toContain('Subtitle');
+  });
+
+  it('links the rest of a cut group and stays under 28 kb', () => {
+    for (const scope of ['owned_apps', 'competitors', null] as const) {
+      const message = teamsBody(buildReport(worstCaseBatch(scope), ORIGIN));
+      const text = JSON.stringify(message);
+
+      expect(Buffer.byteLength(text)).toBeLessThanOrEqual(28 * 1024);
+      expect(text).toMatch(/\+\d+ more apps/);
+    }
+    expect(JSON.stringify(cardOf(worstCaseBatch('owned_apps')))).toContain(
+      `[See all 25](${ORIGIN}/apps/app_0/keywords)`,
+    );
+  });
+
+  it('keeps only the group links when one row per group still overflows', () => {
+    const icon = `https://is1-ssl.mzstatic.com/${'a'.repeat(1500)}.jpg`;
+    const worst = worstCaseBatch(null);
+    const withIcon = <T extends { app: object }>(section: T): T => ({
+      ...section,
+      app: { ...section.app, iconUrl: icon },
+    });
+    const text = JSON.stringify(
+      teamsBody(
+        buildReport(
+          {
+            ...worst,
+            apps: worst.apps.map((section) => ({
+              ...withIcon(section),
+              competitors: section.competitors.map(withIcon),
+            })),
+          },
+          ORIGIN,
+        ),
+      ),
+    );
+
+    expect(Buffer.byteLength(text)).toBeLessThanOrEqual(28 * 1024);
+    expect(text).toContain(`[See all 25](${ORIGIN}/apps/app_0/keywords)`);
+    expect(text).not.toContain('meditation and sleep tracker keyword 0');
+  });
+
+  it('opens nothing without an origin', () => {
+    const card = cardOf(batch, null);
+
+    expect(card.actions).toBeUndefined();
+    expect(JSON.stringify(card.body)).not.toContain('http');
+  });
+});
+
+describe('teamsBody for a single alert', () => {
+  it('heads the sentence and lists the facts', () => {
+    const card = teamsBody(
+      buildAlert(
+        {
+          ...dropped,
+          app: {
+            ...dropped.app,
+            iconUrl: ICON,
+            store: 'APP_STORE',
+            country: 'us',
+          },
+        },
+        ORIGIN,
+        false,
+      ),
+    ).attachments[0].content;
+
+    expect(card.body[0]).toMatchObject({
+      text: 'My App dropped from #4 to #12 for "fitness app" in US',
+    });
+    expect(card.body).toContainEqual({
+      type: 'FactSet',
+      facts: [
+        { title: 'Keyword', value: 'fitness app (US)' },
+        { title: 'From', value: '#4' },
+        { title: 'To', value: '#12' },
+        { title: 'Alert threshold', value: '5' },
+      ],
+    });
+    expect(card.actions).toEqual([
+      {
+        type: 'Action.OpenUrl',
+        title: 'Open app',
+        url: `${ORIGIN}/apps/app_1`,
+      },
+    ]);
+  });
+});
+
+describe('escapeTeams', () => {
+  it('escapes the markdown teams renders', () => {
+    expect(escapeTeams('*bold* _it_ [x](y)')).toBe(
+      '\\*bold\\* \\_it\\_ \\[x\\](y)',
+    );
+  });
+});
+
+describe('teams chart moves', () => {
+  it('draws the chart moves group of an app', () => {
+    const body = JSON.stringify(
+      teamsBody(
+        buildReport(
+          chartMoveBatch(chartEntered(), chartMilestone({ from: null, to: 7 })),
+          ORIGIN,
+        ),
+      ),
+    );
+
+    for (const text of [
+      'Chart moves',
+      'Top free · Productivity',
+      'entered the chart',
+    ]) {
+      expect(body).toContain(text);
+    }
+  });
+});

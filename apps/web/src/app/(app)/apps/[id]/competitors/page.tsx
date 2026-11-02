@@ -1,10 +1,8 @@
 import { cookies } from "next/headers";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
-import {
-  COMPETITOR_SECTION,
-  COMPETITOR_SECTIONS,
-} from "@/components/competitors/competitor-sections";
+import { COMPETITOR_SECTION } from "@/components/competitors/competitor-sections";
 import { CompetitorsView } from "@/components/competitors/CompetitorsView";
+import { KNOWN_SECTIONS } from "@/components/layout/known-sections";
 import {
   COLLAPSED_COOKIE_NAME,
   parseCollapsed,
@@ -27,7 +25,7 @@ export default async function CompetitorsPage({
 
   const collapsed = parseCollapsed(
     (await cookies()).get(COLLAPSED_COOKIE_NAME)?.value,
-    COMPETITOR_SECTIONS,
+    KNOWN_SECTIONS,
   );
 
   const queryClient = getQueryClient();

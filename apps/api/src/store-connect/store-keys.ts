@@ -14,6 +14,7 @@ import { RequestThrottledError } from '../auth/rate-limit/rate-limit.errors';
 import type { AscAnalyticsApi } from './asc-analytics-api';
 import { AscApiFactory } from './asc-api.factory';
 import { AscRejectedKeyError } from './asc-errors';
+import type { AscListingApi } from './asc-listing-api';
 import type { AscReviewsApi } from './asc-reviews-api';
 import {
   RATE_LIMIT_RETRY_SECONDS,
@@ -96,6 +97,10 @@ export class AppStoreKeys implements StoreKeys<
 
   reviews(credentials: AscCredentials): AscReviewsApi {
     return this.factory.reviews(credentials);
+  }
+
+  listing(credentials: AscCredentials): AscListingApi {
+    return this.factory.listing(credentials);
   }
 
   async refusal(credentials: AscCredentials): Promise<string | null> {

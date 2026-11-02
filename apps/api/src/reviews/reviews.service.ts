@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Store } from '@prisma/client';
 import {
+  AlertPayload,
   RatingsHistogram,
   RATING_STARS,
   REVIEW_REPLY_STATES,
@@ -20,6 +21,7 @@ import {
   EMPTY_ANSWER_RETRIES,
   IMPLAUSIBLE_LOOKBACK_DAYS,
   isImplausiblyEmpty,
+  settleOnLastAttempt,
 } from '../store-providers/result-plausibility';
 import { ratingHistogram } from '../store-providers/raw-facts';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
@@ -33,6 +35,12 @@ import {
   toReviewReplyItem,
   WITH_POSTER,
 } from './review-reply.mapper';
+import {
+  ReviewAlertApp,
+  reviewNegativePayload,
+  reviewNewPayload,
+} from './review-alert-payloads';
+import { newReviewRow } from './new-review-row';
 import { reviewLanguage } from './review-language';
 import { toReviewTranslation, TranslationColumns } from './review-translation';
 import { StoredReview, storedReviewChanges } from './stored-review-changes';
@@ -42,8 +50,6 @@ export interface ReviewListFilters extends ReviewScope {
   replyState?: ReviewReplyState;
   sort: ReviewSort;
 }
-
-const REVIEW_TEXT_MAX = 500;
 
 interface ReviewSource {
   id: string;
@@ -109,41 +115,31 @@ export class ReviewsService {
       },
     });
     const known = new Map(existing.map((row) => [row.reviewId, row]));
-    const inserted = [...fetched.values()].filter(
+    const absent = [...fetched.values()].filter(
       (review) => !known.has(review.reviewId),
     );
-
-    const tracksUpdates = app.store === Store.GOOGLE_PLAY;
-    const checkedAt = tracksUpdates ? new Date() : null;
-
-    if (inserted.length > 0) {
-      await this.prisma.review.createMany({
-        data: inserted.map((review) => ({
-          appId: app.id,
-          reviewId: review.reviewId,
-          userName: review.userName ?? null,
-          score: review.score,
-          title: review.title ?? null,
-          text: review.text,
-          version: review.version ?? null,
-          reviewedAt: review.updatedAt ?? null,
-          repliedAt: tracksUpdates ? (review.repliedAt ?? null) : null,
-          replyText: tracksUpdates ? (review.replyText ?? null) : null,
-          replyCheckedAt: checkedAt,
-        })),
-        skipDuplicates: true,
-      });
-    }
+    const checkedAt = app.store === Store.GOOGLE_PLAY ? new Date() : null;
+    const created =
+      absent.length === 0
+        ? []
+        : await this.prisma.review.createManyAndReturn({
+            data: absent.map((review) =>
+              newReviewRow(app.id, review, checkedAt),
+            ),
+            skipDuplicates: true,
+            select: { reviewId: true },
+          });
+    const createdIds = new Set(created.map((row) => row.reviewId));
+    const inserted = absent.filter((review) => createdIds.has(review.reviewId));
 
     if (checkedAt !== null && known.size > 0) {
       await this.recordUpdates(app.id, fetched, known, checkedAt);
     }
 
     if (!payload.backfill) {
-      await this.dispatchNegativeAlerts(
-        { id: app.id, name: app.name },
-        inserted,
-      );
+      const alertApp = { id: app.id, name: app.name };
+      await this.dispatchNegativeAlerts(alertApp, inserted);
+      await this.dispatchNewReviewAlerts(alertApp, inserted);
     }
 
     return inserted;
@@ -174,16 +170,14 @@ export class ReviewsService {
     retries: number,
     finalAttempt: boolean,
   ): ReviewResult[] {
-    const empty = new ImplausibleResultError(
-      app.store,
-      `the review feed for ${app.storeAppId} came back empty for an app that was receiving reviews within the last ${IMPLAUSIBLE_LOOKBACK_DAYS} days`,
-      { retryable: retries > 0 },
+    return settleOnLastAttempt(
+      new ImplausibleResultError(
+        app.store,
+        `the review feed for ${app.storeAppId} came back empty for an app that was receiving reviews within the last ${IMPLAUSIBLE_LOOKBACK_DAYS} days`,
+        { retryable: retries > 0 },
+      ),
+      { finalAttempt, logger: this.logger, next: 'sync', settled: [] },
     );
-    if (!finalAttempt || !empty.retryable) throw empty;
-    this.logger.warn(
-      `last attempt: ${empty.message}, so nothing changes until the next sync`,
-    );
-    return [];
   }
 
   private async fetchPages(
@@ -221,7 +215,7 @@ export class ReviewsService {
   }
 
   private async dispatchNegativeAlerts(
-    app: { id: string; name: string | null },
+    app: ReviewAlertApp,
     reviews: ReviewResult[],
   ): Promise<void> {
     const threshold = this.config.get('ALERT_REVIEW_SCORE_MAX', {
@@ -231,26 +225,40 @@ export class ReviewsService {
       if (review.score > threshold) {
         continue;
       }
-      try {
-        await this.alerts.dispatch({
-          event: 'review.negative',
-          occurredAt: new Date().toISOString(),
-          app,
-          review: {
-            score: review.score,
-            title: review.title ?? null,
-            text: review.text.slice(0, REVIEW_TEXT_MAX),
-            version: review.version ?? null,
-            reviewedAt: review.updatedAt
-              ? review.updatedAt.toISOString()
-              : null,
-          },
-        });
-      } catch (error) {
-        this.logger.warn(
-          `review alert dispatch failed: ${(error as Error).message}`,
-        );
-      }
+      await this.dispatchQuietly(
+        reviewNegativePayload(app, review, new Date()),
+      );
+    }
+  }
+
+  private async dispatchNewReviewAlerts(
+    app: ReviewAlertApp,
+    reviews: ReviewResult[],
+  ): Promise<void> {
+    if (reviews.length === 0 || !(await this.hasNewReviewListener())) return;
+    for (const review of reviews) {
+      await this.dispatchQuietly(reviewNewPayload(app, review, new Date()));
+    }
+  }
+
+  private async hasNewReviewListener(): Promise<boolean> {
+    try {
+      return await this.alerts.listensTo('review.new');
+    } catch (error) {
+      this.logger.warn(
+        `review alert subscribers unavailable, sending new reviews anyway: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      return true;
+    }
+  }
+
+  private async dispatchQuietly(alert: AlertPayload): Promise<void> {
+    try {
+      await this.alerts.dispatch(alert);
+    } catch (error) {
+      this.logger.warn(
+        `review alert dispatch failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 

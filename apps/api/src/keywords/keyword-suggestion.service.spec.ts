@@ -175,6 +175,7 @@ describe('KeywordSuggestionService.suggest egress', () => {
         Store.APP_STORE,
         'us',
         expect.any(Function),
+        { waitForLocal: false },
       );
     },
   );

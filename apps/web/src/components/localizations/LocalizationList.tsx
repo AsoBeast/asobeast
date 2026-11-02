@@ -51,6 +51,8 @@ export function LocalizationList({
           key={item.localization}
           id={id}
           item={item}
+          managed={result.storeManaged}
+          sync={result.storeSync}
           onDraft={canDraft && draftable.has(item.localization) ? draft : null}
         />
       ))}

@@ -1,5 +1,6 @@
 import type { KeywordImportRow } from "@asobeast/shared";
 import type { ColumnMapping } from "./columns";
+import { countryFromCell } from "./country-cell";
 import type { CsvRecord } from "./tokenize";
 
 export interface ParsedImportRows {
@@ -29,7 +30,7 @@ export function toImportRows(
   const rows: KeywordImportRow[] = [];
   const lines: number[] = [];
   for (const { line, cells } of records) {
-    const country = cellAt(cells, mapping.country);
+    const country = countryFromCell(cellAt(cells, mapping.country));
     const tags = splitTags(cellAt(cells, mapping.tags));
     const note = cellAt(cells, mapping.note);
     rows.push({

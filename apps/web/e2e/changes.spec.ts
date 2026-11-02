@@ -43,6 +43,15 @@ test("what's new notes read as lines, exactly as stored, in the timeline", async
   );
 });
 
+test("a what's new change names the field as its heading does", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/changes");
+
+  await expect(timeline(page)).toContainText("What's new updated:");
+  await expect(timeline(page)).not.toContainText("What’s New");
+});
+
 test("the impact card lists every change newest first above the timeline", async ({
   page,
 }) => {

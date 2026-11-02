@@ -8,7 +8,8 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { toAppDetail, toListingMarkets, withTracking } from './apps.mapper';
 import { shippedLocalizations } from './shipped-localizations';
-import { EVERY_LISTING, latestListingIn } from './listing';
+import { EVERY_LISTING, latestListingIn, listingIn } from './listing';
+import { NewestRating, withRatings } from './market-ratings';
 import { missingListing } from './missing-listing';
 
 export type AppWithListings = Prisma.AppGetPayload<{
@@ -40,10 +41,37 @@ export class ListingReadService {
       }),
       shippedLocalizations(this.prisma, { id, country: app.country }),
     ]);
-    return withTracking(
+    const listed = withTracking(
       toListingMarkets(app.country, rows, shipped),
       new Set(keywords.map((keyword) => keyword.country)),
     );
+    return withRatings(
+      listed,
+      await this.newestRatings(id, app.country, listed),
+      app.country,
+    );
+  }
+
+  private newestRatings(
+    appId: string,
+    home: string,
+    markets: readonly ListingMarket[],
+  ): Promise<NewestRating[]> {
+    const captured = markets.flatMap(({ country, capturedAt }) =>
+      capturedAt === null
+        ? []
+        : [{ country, capturedAt: new Date(capturedAt) }],
+    );
+    return this.prisma.appSnapshot.findMany({
+      where: {
+        appId,
+        OR: captured.map(({ country, capturedAt }) => ({
+          ...listingIn(home, country),
+          capturedAt,
+        })),
+      },
+      select: { country: true, ratingAvg: true, ratingCount: true },
+    });
   }
 
   async marketDetail(

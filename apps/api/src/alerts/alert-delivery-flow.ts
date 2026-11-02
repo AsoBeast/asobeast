@@ -6,8 +6,11 @@ import { filterBatch } from './alert-batch-filter';
 
 const ALERT_DELIVERY_DEDUPE_SECONDS = 7 * 24 * 60 * 60;
 
+export const ALERT_BACKOFF: { readonly type: 'custom' } = { type: 'custom' };
+
 export const ALERT_DELIVERY_JOB_OPTIONS = {
   ...JOB_OPTIONS,
+  backoff: ALERT_BACKOFF,
   removeOnComplete: { age: ALERT_DELIVERY_DEDUPE_SECONDS },
 } satisfies DefaultJobOptions;
 
@@ -21,7 +24,12 @@ interface CreateDeliveryFlowsInput {
   workspaceId: string;
   flushId: string;
   kind: 'webhook' | 'email';
-  subscription: { id: string; events: string[] };
+  subscription: {
+    id: string;
+    events: string[];
+    reviewScores: number[];
+    confirmDrops?: boolean;
+  };
   jobName: typeof JOBS.DELIVER_ALERT | typeof JOBS.DELIVER_EMAIL;
 }
 
@@ -29,8 +37,20 @@ export function createDeliveryFlows(
   input: CreateDeliveryFlowsInput,
 ): DeliveryFlow[] {
   const allowed = new Set(input.subscription.events);
-  const owned = filterBatch(input.batches.owned, allowed);
-  const competitors = filterBatch(input.batches.competitors, allowed);
+  const { reviewScores } = input.subscription;
+  const confirmDrops = input.subscription.confirmDrops === true;
+  const owned = filterBatch(
+    input.batches.owned,
+    allowed,
+    reviewScores,
+    confirmDrops,
+  );
+  const competitors = filterBatch(
+    input.batches.competitors,
+    allowed,
+    reviewScores,
+    confirmDrops,
+  );
   if (!owned && !competitors) return [];
   const node = (payload: AlertBatchPayload, child: boolean): FlowJob => ({
     name: input.jobName,

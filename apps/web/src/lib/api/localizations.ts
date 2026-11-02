@@ -18,6 +18,21 @@ export function getAppLocalizations(
   return apiFetch<AppLocalizationsResult>(`/apps/${appId}/localizations`);
 }
 
+export function startAppStoreImport(
+  appId: string,
+): Promise<AppLocalizationsResult> {
+  return apiFetch<AppLocalizationsResult>(
+    `/apps/${appId}/keyword-fields/import`,
+    { method: "POST" },
+  );
+}
+
+export function stopAppStoreImport(appId: string): Promise<void> {
+  return apiFetch<void>(`/apps/${appId}/keyword-fields/import`, {
+    method: "DELETE",
+  });
+}
+
 export function detectAppLocalizations(
   appId: string,
 ): Promise<LocalizationDetectionResult> {

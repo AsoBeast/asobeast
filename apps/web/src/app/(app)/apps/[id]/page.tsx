@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { cookies } from "next/headers";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { ActionsSummaryCard } from "@/components/actions/ActionsSummaryCard";
 import { MarketSwitcher } from "@/components/app-detail/MarketSwitcher";
@@ -12,6 +13,8 @@ import { CategoryRankCard } from "@/components/overview/CategoryRankCard";
 import { CoverageCard } from "@/components/overview/CoverageCard";
 import { FunnelCard } from "@/components/overview/FunnelCard";
 import { MoversCard } from "@/components/overview/MoversCard";
+import { RatingsByMarketCard } from "@/components/overview/RatingsByMarketCard";
+import { KNOWN_SECTIONS } from "@/components/layout/known-sections";
 import { OverviewReportHeader } from "@/components/overview/OverviewReportHeader";
 import { RankDistributionChart } from "@/components/overview/RankDistributionChart";
 import { RankDistributionHistoryChart } from "@/components/overview/RankDistributionHistoryChart";
@@ -25,6 +28,10 @@ import { SnapshotFacts } from "@/components/overview/SnapshotFacts";
 import { StatCards } from "@/components/overview/StatCards";
 import { VisibilityChart } from "@/components/overview/VisibilityChart";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  COLLAPSED_COOKIE_NAME,
+  parseCollapsed,
+} from "@/lib/collapsed-sections";
 import { getQueryClient } from "@/lib/get-query-client";
 import {
   actionsOptions,
@@ -43,6 +50,7 @@ import {
 import { FUNNEL_SERIES_DAYS } from "@/lib/funnel";
 import { keywordScope, queryMarket, resolveMarket } from "@/lib/market";
 import { presetToRange } from "@/lib/ranges";
+import { ratesByMarket } from "@/lib/ratings-by-market";
 import { marketParser, rangeParser } from "@/lib/search-params";
 
 export default async function AppOverviewPage({
@@ -58,6 +66,10 @@ export default async function AppOverviewPage({
   const { id } = await params;
   const sp = await searchParams;
   const categoryRange = rangeParser.parseServerSide(sp.categoryRange);
+  const collapsed = parseCollapsed(
+    (await cookies()).get(COLLAPSED_COOKIE_NAME)?.value,
+    KNOWN_SECTIONS,
+  );
 
   const queryClient = getQueryClient();
   void queryClient.prefetchQuery(
@@ -148,6 +160,14 @@ export default async function AppOverviewPage({
         <RankDistributionHistoryChart id={id} />
 
         <CategoryRankCard id={id} />
+
+        {ratesByMarket(app.store) ? (
+          <RatingsByMarketCard
+            id={id}
+            canTrack={!app.isCompetitor}
+            collapsed={[...collapsed]}
+          />
+        ) : null}
 
         <div className="grid gap-6 lg:grid-cols-2 print:grid-cols-1">
           <Suspense fallback={<PanelCardSkeleton />}>

@@ -1,44 +1,44 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import {
-  keepPreviousData,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import {
-  KEYWORD_IMPORT_LIMIT,
-  type KeywordImportRequest,
-  type Store,
-} from "@asobeast/shared";
+import { type KeywordImportRequest, type Store } from "@asobeast/shared";
 import { ApiError, importKeywords } from "@/lib/api";
+import type { ImportTarget } from "@/lib/csv-import/scope";
 import {
+  appsLeftToChoose,
   initialView,
   mapKeywordFile,
   readKeywordFile,
   type FileView,
   type KeywordFile,
+  type MappedFile,
 } from "@/lib/csv-import/parse-keyword-file";
-import { formatNumber } from "@/lib/format";
 import {
-  importableCount,
+  importAction,
+  importParts,
   importToast,
   marketRefusal,
+  partNotice,
+  partRows,
   refusalMessage,
   refuseImport,
+  type ImportProgress,
 } from "@/lib/keyword-import";
 import {
+  appDetailOptions,
+  importPreviewRequest,
   invalidateKeywordImport,
   invalidateKeywordMutation,
   keywordImportPreviewOptions,
 } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
+import { useCachedQueryData } from "@/lib/use-cached-query-data";
 
 const MAX_FILE_BYTES = 2_000_000;
 
-const FILE_TOO_LARGE = `That file is too large to be a keyword list. One import takes up to ${formatNumber(KEYWORD_IMPORT_LIMIT)} rows.`;
+const FILE_TOO_LARGE = "That file is too large to be a keyword list.";
 
 const FILE_UNREADABLE =
   "That file could not be read. Choose it again, or save a copy of it and choose the copy.";
@@ -68,6 +68,56 @@ function submitMessage(error: Error | null): string | null {
   return error.message;
 }
 
+function appsStillToChoose(
+  loaded: Loaded | null,
+  view: FileView | null,
+  mapped: MappedFile | null,
+): number {
+  return loaded && view && mapped
+    ? appsLeftToChoose(loaded.file, view, mapped)
+    : 0;
+}
+
+const sameRows = (
+  previous: KeywordImportRequest | null,
+  next: KeywordImportRequest | null,
+): boolean =>
+  previous !== null &&
+  next !== null &&
+  previous.rows.length === next.rows.length &&
+  previous.rows.every((row, index) => row === next.rows[index]);
+
+function useImportParts(mapped: MappedFile | null, market: string) {
+  const [index, setIndex] = useState(0);
+  const refusal = useMemo(
+    () => (mapped ? refuseImport(mapped, market) : null),
+    [mapped, market],
+  );
+  const parts = useMemo(
+    () => (mapped && !refusal ? importParts(mapped.rows, market) : []),
+    [mapped, refusal, market],
+  );
+  const progress = useMemo<ImportProgress>(
+    () => ({
+      index: Math.min(index, Math.max(parts.length - 1, 0)),
+      count: parts.length,
+    }),
+    [index, parts.length],
+  );
+  const current = useMemo(() => {
+    const part = parts[progress.index];
+    return mapped && part ? partRows(mapped, part) : null;
+  }, [mapped, parts, progress.index]);
+  return {
+    refusal,
+    progress,
+    current,
+    lines: current?.lines ?? [],
+    notice: mapped ? partNotice(parts, progress, mapped.lines) : null,
+    setIndex,
+  };
+}
+
 export function useKeywordImport(
   appId: string,
   store: Store,
@@ -81,32 +131,52 @@ export function useKeywordImport(
   const [readError, setReadError] = useState<string | null>(null);
   const latestChoice = useRef(0);
 
+  const detail = useCachedQueryData(appDetailOptions(appId).queryKey);
+  const target = useMemo<ImportTarget | null>(
+    () =>
+      detail ? { storeAppId: detail.storeAppId, name: detail.name } : null,
+    [detail],
+  );
+
   const mapped = useMemo(
-    () => (loaded && view ? mapKeywordFile(loaded.file, view) : null),
-    [loaded, view],
+    () => (loaded && view ? mapKeywordFile(loaded.file, view, store) : null),
+    [loaded, view, store],
   );
-  const refusal = useMemo(
-    () => (mapped ? refuseImport(mapped.rows, market) : null),
-    [mapped, market],
-  );
+  const appsToChoose = appsStillToChoose(loaded, view, mapped);
+  const partFlow = useImportParts(mapped, market);
+  const { refusal, current, progress } = partFlow;
   const unknownMarket =
     mapped && !refusal ? marketRefusal(store, market) : null;
   const request = useMemo<KeywordImportRequest | null>(
     () =>
-      mapped && !refusal && !unknownMarket
-        ? { rows: mapped.rows, country: market }
+      current && !unknownMarket
+        ? { rows: current.rows, country: market }
         : null,
-    [mapped, refusal, unknownMarket, market],
+    [current, unknownMarket, market],
   );
   const preview = useQuery({
     ...keywordImportPreviewOptions(appId, request),
-    placeholderData: keepPreviousData,
+    placeholderData: (previous, query) =>
+      query && sameRows(importPreviewRequest(query.queryKey), request)
+        ? previous
+        : undefined,
   });
+
+  function changeView(next: FileView) {
+    setView(next);
+    partFlow.setIndex(0);
+  }
+
+  function changeMarket(next: string) {
+    setMarket(next);
+    partFlow.setIndex(0);
+  }
 
   function forget(error: string | null) {
     latestChoice.current += 1;
     setLoaded(null);
     setView(null);
+    partFlow.setIndex(0);
     setReadError(error);
   }
 
@@ -116,11 +186,15 @@ export function useKeywordImport(
       return importKeywords(appId, request);
     },
     onSuccess: (outcome) => {
+      invalidateKeywordMutation(queryClient, appId);
+      const { title, description } = importToast(outcome, progress);
+      toast.success(title, { description });
+      if (progress.index + 1 < progress.count) {
+        partFlow.setIndex(progress.index + 1);
+        return;
+      }
       forget(null);
       setMarket(homeMarket);
-      invalidateKeywordMutation(queryClient, appId);
-      const { title, description } = importToast(outcome);
-      toast.success(title, { description });
       onImported();
     },
     onError: () => invalidateKeywordImport(queryClient, appId),
@@ -141,7 +215,7 @@ export function useKeywordImport(
       if (choice !== latestChoice.current) return;
       setReadError(null);
       setLoaded({ name: file.name, file: parsed });
-      setView(initialView(parsed));
+      changeView(initialView(parsed, target));
     } catch {
       if (choice === latestChoice.current) forget(FILE_UNREADABLE);
     }
@@ -159,26 +233,36 @@ export function useKeywordImport(
     unknownMarket ??
     previewMessage(preview.error);
   const result = request === null ? null : (preview.data ?? null);
+  const ready =
+    appsToChoose === 0 &&
+    blocking === null &&
+    !preview.isFetching &&
+    !submit.isPending;
+
+  function skip() {
+    submit.reset();
+    partFlow.setIndex(progress.index + 1);
+  }
 
   return {
     loaded,
     view,
-    setView,
+    setView: changeView,
     market,
-    setMarket,
+    setMarket: changeMarket,
     mapped,
+    lines: partFlow.lines,
+    partNotice: partFlow.notice,
     result,
     busy: preview.isFetching,
     importing: submit.isPending,
     error: blocking ?? submitMessage(submit.error),
-    canImport:
-      result !== null &&
-      importableCount(result.summary) > 0 &&
-      blocking === null &&
-      !preview.isFetching &&
-      !submit.isPending,
+    appsToChoose,
+    progress,
+    action: ready ? importAction(result, progress) : null,
     choose,
     reset,
     submit: () => submitOnce(),
+    skip,
   };
 }

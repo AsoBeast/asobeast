@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
@@ -11,18 +12,26 @@ export function trendState(points: number): ChartState {
   return "ready";
 }
 
-export function ChartSkeleton({ height }: { height: string }) {
-  return <Skeleton className={cn("w-full", height)} />;
+export function ChartSkeleton({
+  height,
+  className,
+}: {
+  height: string;
+  className?: string;
+}) {
+  return <Skeleton className={cn("w-full", height, className)} />;
 }
 
 export function ChartNotice({
   height,
   title,
   body,
+  action,
 }: {
   height: string;
   title: string;
   body?: string;
+  action?: ReactNode;
 }) {
   return (
     <div
@@ -35,6 +44,7 @@ export function ChartNotice({
       {body ? (
         <p className="text-caption text-muted-foreground">{body}</p>
       ) : null}
+      {action}
     </div>
   );
 }

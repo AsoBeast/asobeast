@@ -18,6 +18,7 @@ import {
   KeywordCountrySummary,
   KeywordFieldResult,
   KeywordFieldSummary,
+  KeywordBulkResult,
   KeywordImportResult,
   KeywordSuggestion,
   SpiderEnqueueResult,
@@ -30,6 +31,7 @@ import { RateLimitClass } from '../auth/rate-limit/rate-class';
 import { ReadOnlyEndpoint } from '../auth/read-access';
 import { AddKeywordsDto } from './dto/add-keywords.dto';
 import { CompareQueryDto } from './dto/compare-query.dto';
+import { KeywordBulkDto } from './dto/keyword-bulk.dto';
 import { KeywordFieldDto } from './dto/keyword-field.dto';
 import { KeywordFieldQueryDto } from './dto/keyword-field-query.dto';
 import { KeywordImportDto } from './dto/keyword-import.dto';
@@ -38,6 +40,7 @@ import { SpiderQueryDto, SpiderStartDto } from './dto/spider.dto';
 import { SuggestionsQueryDto } from './dto/suggestions-query.dto';
 import { UpdateKeywordDto } from './dto/update-keyword.dto';
 import { KeywordBreakdownService } from './keyword-breakdown.service';
+import { KeywordBulkService } from './keyword-bulk.service';
 import { KeywordFieldService } from './keyword-field.service';
 import { KeywordImportService } from './keyword-import.service';
 import { KeywordSuggestionService } from './keyword-suggestion.service';
@@ -57,16 +60,22 @@ export class KeywordsController {
     private readonly limiter: OnDemandLimiter,
     private readonly keywordImport: KeywordImportService,
     private readonly breakdowns: KeywordBreakdownService,
+    private readonly bulkChanges: KeywordBulkService,
   ) {}
 
   @Get('keywords')
-  @ApiOperation({ summary: 'List tracked keywords for an app' })
+  @ApiOperation({
+    summary: 'List tracked keywords for an app',
+    description:
+      'competitorsInTop10 is the number of distinct competitors of the app in the newest stored top 10 of the keyword, or null when the app has no competitor or the newest snapshot is older than yesterday UTC. trackedAt is when the app started tracking the keyword in that market.',
+  })
   list(
     @Param('id') id: string,
     @Query() query: ListKeywordsQueryDto,
   ): Promise<TrackedKeywordItem[]> {
     return this.keywords.listTracked(id, query.sort, query.country, {
       holdFacts: true,
+      competitorFacts: true,
     });
   }
 
@@ -210,6 +219,21 @@ export class KeywordsController {
     return this.keywords.remove(id, keywordId);
   }
 
+  @Post('keywords/bulk')
+  @QueuesWork()
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Pause, resume or untrack many tracked keywords',
+    description:
+      'Applies one action to up to 500 keyword ids of the app in one write request. pause and resume change the active flag, untrack stops tracking and keeps the ranking history rules of a single removal. changed counts the rows this request changed, unchanged the tracked rows already in the requested state, and missing the ids the app does not track. A resume is all or nothing: it answers 403 with the plan keyword limit and writes nothing when it would pass the limit, and a resumed keyword is checked for its first position within minutes like a new one.',
+  })
+  bulk(
+    @Param('id') id: string,
+    @Body() dto: KeywordBulkDto,
+  ): Promise<KeywordBulkResult> {
+    return this.bulkChanges.apply(id, dto);
+  }
+
   @Get('keyword-field')
   @ApiOperation({
     summary: 'Read a stored iOS keyword field',
@@ -238,7 +262,7 @@ export class KeywordsController {
   @ApiOperation({
     summary: 'Set an iOS keyword field',
     description:
-      "Replaces the keyword field of one App Store localization with the normalized, deduplicated phrases of text, tracks them in country, and returns the stored field. Without a query it sets the home storefront's default localization. Answers 400 when the storefront does not read the localization, or when the phrases joined with commas run past 100 characters, the way App Store Connect counts the field. A phrase removed from the field stops being tracked as a keyword field phrase in every market that reads the localization. Saves to one app are written one at a time, so the last save wins.",
+      "Replaces the keyword field of one App Store localization with the normalized, deduplicated phrases of text, tracks them in country, and returns the stored field. Without a query it sets the home storefront's default localization. Answers 400 when the storefront does not read the localization, or when the phrases joined with commas run past 100 characters, the way App Store Connect counts the field. A phrase removed from the field stops being tracked as a keyword field phrase in every market that reads the localization. Answers 409 when the field is imported from App Store Connect. Saves to one app are written one at a time, so the last save wins.",
   })
   setKeywordField(
     @Param('id') id: string,

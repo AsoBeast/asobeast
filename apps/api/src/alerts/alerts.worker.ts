@@ -3,6 +3,7 @@ import { Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { Job } from 'bullmq';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
+import { JOB_OPTIONS } from '../jobs/job-options';
 import { requireJobScope } from '../jobs/job-workspace';
 import {
   DeliverAlertPayload,
@@ -14,13 +15,25 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AlertMail } from './alert-mail';
 import { isDeliverable } from './deliverable-email-alerts';
 import { MailerService } from './mailer.service';
-import { WebhookDelivery } from './webhook-delivery';
+import { WebhookDelivery, WebhookRateLimitedError } from './webhook-delivery';
+
+export function alertBackoff(
+  attemptsMade: number,
+  _type?: string,
+  error?: Error,
+): number {
+  if (error instanceof WebhookRateLimitedError) return error.retryAfterMs;
+  return JOB_OPTIONS.backoff.delay * 2 ** (attemptsMade - 1);
+}
 
 type AlertJob = Job<DeliverAlertPayload | DeliverEmailPayload>;
 
 const DETAIL_MAX = 500;
 
-@Processor(QUEUES.ALERTS, { concurrency: 5 })
+@Processor(QUEUES.ALERTS, {
+  concurrency: 5,
+  settings: { backoffStrategy: alertBackoff },
+})
 export class AlertsWorker extends WorkerHost {
   private readonly logger = new Logger(AlertsWorker.name);
 

@@ -14,6 +14,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateWebhookDto } from './dto/create-webhook.dto';
 import { UpdateWebhookDto } from './dto/update-webhook.dto';
 import { WebhookDelivery } from './webhook-delivery';
+import { assertChannelUrl } from './webhook-channel-rules';
 import { WebhookTargetError } from './webhook-target';
 import { toWebhookItem } from './webhooks.mapper';
 
@@ -39,7 +40,9 @@ export class WebhooksService {
         workspaceId: this.workspace.require('a webhook'),
         url: dto.url,
         events: dto.events,
+        reviewScores: dto.reviewScores ?? [],
         secret: dto.secret ?? null,
+        confirmDrops: dto.confirmDrops,
       },
     });
     return toWebhookItem(webhook);
@@ -54,8 +57,14 @@ export class WebhooksService {
     if (dto.events !== undefined) {
       data.events = dto.events;
     }
+    if (dto.reviewScores !== undefined) {
+      data.reviewScores = dto.reviewScores;
+    }
     if (dto.active !== undefined) {
       data.active = dto.active;
+    }
+    if (dto.confirmDrops !== undefined) {
+      data.confirmDrops = dto.confirmDrops;
     }
     if (dto.secret !== undefined) {
       data.secret = dto.secret === '' ? null : dto.secret;
@@ -88,6 +97,7 @@ export class WebhooksService {
   private assertTarget(url: string): void {
     try {
       this.delivery.assertTarget(url);
+      assertChannelUrl(url);
     } catch (error) {
       if (error instanceof WebhookTargetError) {
         throw new BadRequestException(error.message);

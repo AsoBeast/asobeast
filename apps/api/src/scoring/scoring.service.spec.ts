@@ -1,5 +1,6 @@
 import { PrismaService } from '../prisma/prisma.service';
 import { KeywordStats } from './formulas';
+import { F14_FLOOR_LISTED, F15_ABSENT_WITH_HISTORY } from './scoring-fixtures';
 import { ScoringEvidence } from './provenance';
 import { ScoringService } from './scoring.service';
 import {
@@ -156,6 +157,64 @@ describe('ScoringService', () => {
     expect(args.create.stats).toMatchObject({
       signals: { officialPopularity: 71, estimatedTraffic: 8.5 },
     });
+  });
+
+  it('names the floor answer in the stored signals', async () => {
+    const upsert = jest.fn<Promise<void>, [UpsertArgs]>();
+    const collect = jest.fn<Promise<CollectedKeywordStats>, [string]>();
+    collect.mockResolvedValue({
+      stats: { ...storedStats, official: F14_FLOOR_LISTED.official },
+      evidence: {
+        ...evidence,
+        officialPopularityUsed: true,
+        officialPopularityState: 'floor',
+      },
+    });
+    const service = new ScoringService(
+      { keywordMetric: { upsert } } as unknown as PrismaService,
+      { collect } as unknown as StatsCollectorService,
+    );
+
+    await service.scoreKeyword('kw1');
+
+    const [args] = upsert.mock.calls[0];
+    expect(args.create.confidence).toBe('MEDIUM');
+    expect(args.create.scoringSource).toBe('APPLE_ADS_POPULARITY');
+    expect(args.create.stats).not.toHaveProperty('official');
+    expect(args.create.stats).toMatchObject({
+      signals: {
+        officialPopularity: 41,
+        officialPopularityState: 'floor',
+        officialPopularityFloor: 41,
+        officialPopularityWeek: '2026-10-18',
+        officialPopularityLastAboveFloor: { value: 63, week: '2026-09-06' },
+      },
+      evidence: { officialPopularityState: 'floor' },
+    });
+  });
+
+  it('an absent term keeps the estimate source and caps its confidence', async () => {
+    const upsert = jest.fn<Promise<void>, [UpsertArgs]>();
+    const collect = jest.fn<Promise<CollectedKeywordStats>, [string]>();
+    collect.mockResolvedValue({
+      stats: { ...storedStats, official: F15_ABSENT_WITH_HISTORY.official },
+      evidence: {
+        ...evidence,
+        searchResultCount: 100,
+        officialPopularityUsed: false,
+        officialPopularityState: 'absent',
+      },
+    });
+    const service = new ScoringService(
+      { keywordMetric: { upsert } } as unknown as PrismaService,
+      { collect } as unknown as StatsCollectorService,
+    );
+
+    await service.scoreKeyword('kw1');
+
+    const [args] = upsert.mock.calls[0];
+    expect(args.create.scoringSource).toBe('APPLE_SEARCH_SIGNALS');
+    expect(args.create.confidence).toBe('MEDIUM');
   });
 
   it('skips the upsert when the keyword is gone', async () => {

@@ -28,7 +28,7 @@ export type PositionAlert =
   | { event: 'rank.first'; position: number }
   | { event: 'rank.milestone'; milestone: RankMilestone };
 
-const inTier = (position: number | null, tier: number): boolean =>
+export const inTier = (position: number | null, tier: number): boolean =>
   position !== null && position <= tier;
 
 export function rankMilestone(

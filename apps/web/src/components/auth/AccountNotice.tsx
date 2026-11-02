@@ -55,8 +55,7 @@ function TrialBanner({
   return (
     <div className="flex items-center justify-between gap-4 border-b border-warning/30 bg-warning-subtle px-4 py-2 text-body text-warning sm:px-6 print:hidden">
       <span>
-        {trialBannerLine(daysLeft(endsAt), card ? plan : undefined)}
-        {isMember ? ` ${ASK_THE_OWNER}` : null}
+        {`${trialBannerLine(daysLeft(endsAt), card ? plan : undefined)}${isMember ? ` ${ASK_THE_OWNER}` : ""}`}
       </span>
       {isMember ? null : card ? (
         <Link href="/settings" className="font-medium underline">

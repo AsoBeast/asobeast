@@ -18,13 +18,17 @@ import { TrustedProxyHops } from './trusted-proxy';
  * (for example `PORT=abc`) throws a clear error at startup. Numbers are coerced
  * from their string env representation.
  */
-const optionalText = z.preprocess(
-  (value) =>
-    typeof value === 'string' && value.trim().length > 0
-      ? value.trim()
-      : undefined,
-  z.string().optional(),
-);
+const blankAsUndefined = (value: unknown): unknown =>
+  typeof value === 'string' && value.trim().length > 0
+    ? value.trim()
+    : undefined;
+
+const optionalText = z.preprocess(blankAsUndefined, z.string().optional());
+
+const carriesNoCredentials = (value: string): boolean => {
+  const url = URL.parse(value);
+  return url === null || (url.username === '' && url.password === '');
+};
 
 const isCronPattern = (value: string): boolean => {
   try {
@@ -97,6 +101,7 @@ export const EnvSchema = z.object({
   RETENTION_ALERT_EVENTS_DAYS: z.coerce.number().int().min(0).default(30),
   RETENTION_RANKINGS_DAYS: z.coerce.number().int().min(0).default(365),
   RETENTION_SERP_DAYS: z.coerce.number().int().min(0).default(90),
+  RETENTION_SERP_DEEP_DAYS: z.coerce.number().int().min(0).default(30),
   RETENTION_SNAPSHOTS_DAYS: z.coerce.number().int().min(0).default(180),
   RETENTION_CATEGORY_RANKS_DAYS: z.coerce.number().int().min(0).default(365),
   RETENTION_CHARTS_DAYS: z.coerce.number().int().min(0).default(365),
@@ -113,10 +118,7 @@ export const EnvSchema = z.object({
     .enum(['critical', 'high', 'medium', 'low'])
     .default('high'),
   WEB_PUBLIC_URL: z.preprocess(
-    (value) =>
-      typeof value === 'string' && value.trim().length > 0
-        ? value.trim()
-        : undefined,
+    blankAsUndefined,
     z
       .url({
         protocol: /^https?$/,
@@ -141,18 +143,27 @@ export const EnvSchema = z.object({
   SMTP_DKIM_DOMAIN: optionalText,
   SMTP_DKIM_SELECTOR: optionalText,
   SMTP_DKIM_PRIVATE_KEY_PATH: optionalText,
-  OPENAI_API_KEY: z.preprocess(
-    (value) =>
-      typeof value === 'string' && value.trim().length > 0
-        ? value.trim()
-        : undefined,
-    z.string().optional(),
+  OPENAI_API_KEY: optionalText,
+  OPENAI_BASE_URL: z.preprocess(
+    blankAsUndefined,
+    z
+      .url({
+        protocol: /^https?$/,
+        error:
+          'OPENAI_BASE_URL must be the http or https address of an OpenAI compatible API, for example https://openrouter.ai/api/v1',
+      })
+      .refine(
+        carriesNoCredentials,
+        'OPENAI_BASE_URL must not carry a user name or password. Put the key in OPENAI_API_KEY.',
+      )
+      .refine(
+        (value) => !value.includes('#'),
+        'OPENAI_BASE_URL must not carry a fragment, because the API path is appended to the address.',
+      )
+      .optional(),
   ),
   AI_MODEL: z.preprocess(
-    (value) =>
-      typeof value === 'string' && value.trim().length > 0
-        ? value.trim()
-        : undefined,
+    blankAsUndefined,
     z.string().min(1).default('gpt-5.6-luna'),
   ),
   AI_CALLS_PER_MONTH: z.preprocess(

@@ -1,9 +1,12 @@
+import { Logger } from '@nestjs/common';
+import { ImplausibleResultError } from './errors';
 import {
   askAgainWhileEmpty,
   DAY_MS,
   EMPTY_ANSWER_RETRY_DELAY_MS,
   IMPLAUSIBLE_LOOKBACK_DAYS,
   isImplausiblyEmpty,
+  settleOnLastAttempt,
 } from './result-plausibility';
 
 const TODAY = new Date('2026-08-08T00:00:00.000Z');
@@ -118,5 +121,41 @@ describe('askAgainWhileEmpty', () => {
 
     await expect(askAgainWhileEmpty(ask, 0)).resolves.toEqual([]);
     expect(ask).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('settleOnLastAttempt', () => {
+  const logger = new Logger('test');
+  const warn = jest.spyOn(logger, 'warn').mockImplementation(() => undefined);
+  const empty = (retryable: boolean) =>
+    new ImplausibleResultError('APP_STORE', 'empty', { retryable });
+  const attempt = (finalAttempt: boolean) => ({
+    finalAttempt,
+    logger,
+    next: 'check',
+    settled: null,
+  });
+
+  beforeEach(() => warn.mockClear());
+
+  it('throws a retryable empty answer before the last attempt', () => {
+    const error = empty(true);
+
+    expect(() => settleOnLastAttempt(error, attempt(false))).toThrow(error);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('throws an empty answer that is never retried, even on the last attempt', () => {
+    const error = empty(false);
+
+    expect(() => settleOnLastAttempt(error, attempt(true))).toThrow(error);
+  });
+
+  it('settles a retryable empty answer on the last attempt with a warning', () => {
+    expect(settleOnLastAttempt(empty(true), attempt(true))).toBeNull();
+
+    expect(warn).toHaveBeenCalledWith(
+      'last attempt: APP_STORE returned an implausible result: empty, so nothing changes until the next check',
+    );
   });
 });

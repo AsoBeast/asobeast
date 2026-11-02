@@ -39,7 +39,7 @@ export function ActionBulkBar({
       className="sticky bottom-4 z-20 flex flex-wrap items-center gap-2 rounded-lg border bg-popover px-3 py-2 shadow-overlay"
     >
       <span className="text-body font-medium">
-        {formatNumber(count)} selected
+        {`${formatNumber(count)} selected`}
       </span>
       <Button
         size="sm"

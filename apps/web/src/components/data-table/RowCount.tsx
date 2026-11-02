@@ -15,8 +15,8 @@ export function RowCount({
       {" of "}
       <span className="numeric font-mono font-medium text-foreground">
         {total}
-      </span>{" "}
-      {total === 1 ? noun : `${noun}s`}
+      </span>
+      <span>{` ${total === 1 ? noun : `${noun}s`}`}</span>
     </p>
   );
 }

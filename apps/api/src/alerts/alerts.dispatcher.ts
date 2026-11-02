@@ -3,7 +3,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import { Queue } from 'bullmq';
-import { AlertPayload } from '@asobeast/shared';
+import { AlertPayload, WebhookEvent } from '@asobeast/shared';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { Env } from '../config/env';
 import {
@@ -13,9 +13,13 @@ import {
   QUEUES,
 } from '../jobs/jobs.types';
 import { PrismaService } from '../prisma/prisma.service';
+import { AlertAppIdentities } from './alert-app-identities';
+import { ALERT_BACKOFF } from './alert-delivery-flow';
+import { confirmDropsWhere } from './confirm-drops';
 import { DELIVERABLE_EMAIL_ALERTS } from './deliverable-email-alerts';
 import { MailerService } from './mailer.service';
 import { OutboxRow, outboxRows } from './outbox-rows';
+import { receivesInstant } from './review-routing';
 
 @Injectable()
 export class AlertsDispatcher {
@@ -28,10 +32,12 @@ export class AlertsDispatcher {
     @InjectQueue(QUEUES.ALERTS)
     private readonly queue: Queue<DeliverAlertPayload | DeliverEmailPayload>,
     private readonly workspace: WorkspaceContext,
+    private readonly identities: AlertAppIdentities,
   ) {}
 
-  async dispatch(payload: AlertPayload): Promise<void> {
+  async dispatch(raw: AlertPayload): Promise<void> {
     try {
+      const payload = await this.identities.attach(raw);
       if (this.batched(payload)) {
         await this.collect(payload);
         return;
@@ -43,6 +49,18 @@ export class AlertsDispatcher {
     } catch (error) {
       this.logger.warn(`alert dispatch failed: ${(error as Error).message}`);
     }
+  }
+
+  async listensTo(event: WebhookEvent): Promise<boolean> {
+    const webhooks = await this.prisma.webhook.count({
+      where: { active: true, events: { has: event } },
+    });
+    if (webhooks > 0) return true;
+    if (!this.mailer.enabled) return false;
+    const emails = await this.prisma.emailAlert.count({
+      where: { ...DELIVERABLE_EMAIL_ALERTS, events: { has: event } },
+    });
+    return emails > 0;
   }
 
   private batched(payload: AlertPayload): boolean {
@@ -90,17 +108,28 @@ export class AlertsDispatcher {
 
   private async dispatchWebhooks(payload: AlertPayload): Promise<void> {
     const webhooks = await this.prisma.webhook.findMany({
-      where: { active: true, events: { has: payload.event } },
-      select: { id: true },
+      where: {
+        active: true,
+        events: { has: payload.event },
+        ...confirmDropsWhere(payload),
+      },
+      select: { id: true, events: true, reviewScores: true },
     });
+    const targets = webhooks.filter((webhook) =>
+      receivesInstant(webhook, payload),
+    );
     const scope = this.workspace.scopeFor('instant alert delivery');
     await Promise.all(
-      webhooks.map((webhook) =>
-        this.queue.add(JOBS.DELIVER_ALERT, {
-          webhookId: webhook.id,
-          payload,
-          ...scope,
-        }),
+      targets.map((webhook) =>
+        this.queue.add(
+          JOBS.DELIVER_ALERT,
+          {
+            webhookId: webhook.id,
+            payload,
+            ...scope,
+          },
+          { backoff: ALERT_BACKOFF },
+        ),
       ),
     );
   }
@@ -111,17 +140,26 @@ export class AlertsDispatcher {
       return;
     }
     const alerts = await this.prisma.emailAlert.findMany({
-      where: { ...DELIVERABLE_EMAIL_ALERTS, events: { has: payload.event } },
-      select: { id: true },
+      where: {
+        ...DELIVERABLE_EMAIL_ALERTS,
+        events: { has: payload.event },
+        ...confirmDropsWhere(payload),
+      },
+      select: { id: true, events: true, reviewScores: true },
     });
+    const targets = alerts.filter((alert) => receivesInstant(alert, payload));
     const scope = this.workspace.scopeFor('instant alert delivery');
     await Promise.all(
-      alerts.map((alert) =>
-        this.queue.add(JOBS.DELIVER_EMAIL, {
-          emailAlertId: alert.id,
-          payload,
-          ...scope,
-        }),
+      targets.map((alert) =>
+        this.queue.add(
+          JOBS.DELIVER_EMAIL,
+          {
+            emailAlertId: alert.id,
+            payload,
+            ...scope,
+          },
+          { backoff: ALERT_BACKOFF },
+        ),
       ),
     );
   }

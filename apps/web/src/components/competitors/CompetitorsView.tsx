@@ -4,11 +4,12 @@ import { Suspense } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { CollapsedSectionsProvider } from "@/components/layout/CollapsedSections";
 import { CollapsibleCard } from "@/components/layout/CollapsibleCard";
+import { KNOWN_SECTIONS } from "@/components/layout/known-sections";
 import { Skeleton } from "@/components/ui/skeleton";
 import { competitorsOptions } from "@/lib/queries";
 import { AddCompetitorForm } from "./AddCompetitorForm";
 import { ComparisonMatrix } from "./ComparisonMatrix";
-import { COMPETITOR_SECTION, COMPETITOR_SECTIONS } from "./competitor-sections";
+import { COMPETITOR_SECTION } from "./competitor-sections";
 import { CompetitorList } from "./CompetitorList";
 import { DiscoveryPanel } from "./DiscoveryPanel";
 import {
@@ -31,7 +32,7 @@ export function CompetitorsView({
   collapsed: readonly string[];
 }) {
   return (
-    <CollapsedSectionsProvider initial={collapsed} known={COMPETITOR_SECTIONS}>
+    <CollapsedSectionsProvider initial={collapsed} known={KNOWN_SECTIONS}>
       <div className="flex flex-col gap-6">
         <CollapsibleCard
           section={COMPETITOR_SECTION.tracked}

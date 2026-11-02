@@ -28,6 +28,14 @@ export class AscUnreachableError extends Error {
   }
 }
 
+export const isSkippableError = (
+  error: unknown,
+): error is AscError | AscUnreachableError =>
+  error instanceof AscUnreachableError ||
+  (error instanceof AscError &&
+    !(error instanceof AscRejectedKeyError) &&
+    !(error instanceof AscRateLimitedError));
+
 export class AscSegmentSizeError extends Error {
   constructor(expected: number, received: number | null) {
     super(
@@ -36,6 +44,18 @@ export class AscSegmentSizeError extends Error {
     this.name = 'AscSegmentSizeError';
   }
 }
+
+const NOT_FOUND = 404;
+const CONFLICT = 409;
+
+const answered = (error: unknown, status: number): boolean =>
+  error instanceof AscError && error.status === status;
+
+export const isNotFound = (error: unknown): boolean =>
+  answered(error, NOT_FOUND);
+
+export const isConflict = (error: unknown): boolean =>
+  answered(error, CONFLICT);
 
 const REQUEST_CREATION = '/v1/analyticsReportRequests';
 const FORBIDDEN_CODE_PREFIX = 'FORBIDDEN';

@@ -21,6 +21,8 @@ export interface ListingMarket {
   capturedAt: string | null;
   tracked?: boolean;
   localizations?: string[];
+  ratingAvg?: number | null;
+  ratingCount?: number | null;
 }
 
 export interface CompetitorItem {

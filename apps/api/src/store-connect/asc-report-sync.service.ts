@@ -5,14 +5,15 @@ import { toDateKey } from '../analytics/analytics.support';
 import { PrismaService } from '../prisma/prisma.service';
 import type { DiscoveryVariant } from './asc-analytics-api';
 import {
-  AscError,
   AscRateLimitedError,
   AscRejectedKeyError,
   AscSegmentSizeError,
-  AscUnreachableError,
+  isNotFound,
+  isSkippableError,
 } from './asc-errors';
 import { DiscoveryHeaderError, DiscoveryLineError } from './discovery-report';
 import { refusalOf } from './asc-http-errors';
+import { AscKeywordFieldSync } from './asc-keyword-field-sync.service';
 import {
   StoreConnectionService,
   type OpenedConnection,
@@ -22,7 +23,11 @@ import {
   type PendingInstance,
 } from './store-report-applier';
 import { StoreReportRequester } from './store-report-requester';
-import { emptySummary, type SyncSummary } from './store-sync-summary';
+import {
+  emptySummary,
+  retriesFailures,
+  type SyncSummary,
+} from './store-sync-summary';
 
 const STORE = 'APP_STORE';
 
@@ -35,12 +40,17 @@ export const ADMIN_KEY_NEEDED =
 const isLaneFailure = (error: unknown, variant: DiscoveryVariant): boolean =>
   (variant === 'detailed' && !(error instanceof AscRateLimitedError)) ||
   error instanceof AscSegmentSizeError ||
-  error instanceof AscUnreachableError ||
   error instanceof DiscoveryHeaderError ||
   error instanceof DiscoveryLineError ||
-  (error instanceof AscError &&
-    !(error instanceof AscRejectedKeyError) &&
-    !(error instanceof AscRateLimitedError));
+  isSkippableError(error);
+
+const messageOf = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error);
+
+const listingWait = (error: unknown): string =>
+  isNotFound(error)
+    ? 'is gone at Apple and is requested again on the next try'
+    : 'waits for the next try';
 
 const lastErrorOf = (forbidden: boolean, failed: number): string | null =>
   forbidden ? ADMIN_KEY_NEEDED : failed > 0 ? PARTIAL_SYNC : null;
@@ -74,9 +84,10 @@ export class AscReportSync {
     private readonly connections: StoreConnectionService,
     private readonly requester: StoreReportRequester,
     private readonly applier: StoreReportApplier,
+    private readonly keywordFields: AscKeywordFieldSync,
   ) {}
 
-  async run(): Promise<SyncSummary | null> {
+  async run(finalAttempt = true): Promise<SyncSummary | null> {
     const connection = await this.connections.openAppStore();
     if (!connection || connection.status === 'rejected') return null;
     const summary = emptySummary();
@@ -84,11 +95,25 @@ export class AscReportSync {
       const outcome = await this.requester.ensure(connection, STORE);
       summary.apps = outcome.apps;
       summary.failed = outcome.failed;
-      await this.download(connection, summary);
+      try {
+        await this.download(connection, summary);
+      } catch (error) {
+        if (
+          error instanceof AscRateLimitedError ||
+          error instanceof AscRejectedKeyError
+        ) {
+          throw error;
+        }
+        await this.importKeywordFields(summary);
+        throw error;
+      }
+      await this.importKeywordFields(summary);
       await this.connections.markSynced(
         STORE,
         outcome.reportAccess,
-        lastErrorOf(outcome.forbidden, summary.failed),
+        retriesFailures(summary, finalAttempt) && !outcome.forbidden
+          ? connection.lastError
+          : lastErrorOf(outcome.forbidden, summary.failed),
       );
     } catch (error) {
       if (error instanceof AscRejectedKeyError) {
@@ -107,11 +132,27 @@ export class AscReportSync {
     return summary;
   }
 
+  private async importKeywordFields(summary: SyncSummary): Promise<void> {
+    try {
+      const fields = await this.keywordFields.run();
+      summary.fields = fields.fields;
+      summary.fieldsChanged = fields.changed;
+    } catch (error) {
+      if (error instanceof AscRateLimitedError) {
+        summary.rateLimited = true;
+        return;
+      }
+      this.logger.warn(
+        `the keyword field import waits for the next sync: ${messageOf(error)}`,
+      );
+    }
+  }
+
   private async download(
     connection: OpenedConnection,
     summary: SyncSummary,
   ): Promise<void> {
-    const pending = await this.pendingInstances(connection);
+    const pending = await this.pendingInstances(connection, summary);
     const blocked = new Set<string>();
     const unresolved = new Set<string>();
     for (const item of pending.slice(0, this.maxInstancesPerRun)) {
@@ -127,7 +168,7 @@ export class AscReportSync {
         blocked.add(lane);
         if (!(error instanceof AscSegmentSizeError)) summary.failed += 1;
         this.logger.warn(
-          `report instance ${item.instance.id} waits for the next sync: ${error instanceof Error ? error.message : String(error)}`,
+          `report instance ${item.instance.id} waits for the next try: ${messageOf(error)}`,
         );
       }
     }
@@ -136,6 +177,7 @@ export class AscReportSync {
 
   private async pendingInstances(
     connection: OpenedConnection,
+    summary: SyncSummary,
   ): Promise<PendingInstance[]> {
     const requests = await this.prisma.storeReportRequest.findMany({
       where: { connectionId: connection.id, state: 'requested' },
@@ -145,13 +187,35 @@ export class AscReportSync {
     for (const request of requests) {
       if (!request.remoteId) continue;
       pending.push(
-        ...(await this.instancesOf(connection, request, 'standard')),
-        ...(await this.detailedInstancesOf(connection, request)),
+        ...(await this.requestInstances(connection, request, summary)),
       );
     }
     return pending.sort((a, b) =>
       a.instance.processingDate.localeCompare(b.instance.processingDate),
     );
+  }
+
+  private async requestInstances(
+    connection: OpenedConnection,
+    request: RequestRow,
+    summary: SyncSummary,
+  ): Promise<PendingInstance[]> {
+    let standard: PendingInstance[];
+    try {
+      standard = await this.instancesOf(connection, request, 'standard');
+    } catch (error) {
+      if (!isLaneFailure(error, 'standard')) throw error;
+      summary.failed += 1;
+      if (isNotFound(error)) await this.requester.retire(request.id);
+      this.logger.warn(
+        `report request ${request.id} ${listingWait(error)}: ${messageOf(error)}`,
+      );
+      return [];
+    }
+    return [
+      ...standard,
+      ...(await this.detailedInstancesOf(connection, request)),
+    ];
   }
 
   private async detailedInstancesOf(
@@ -163,7 +227,7 @@ export class AscReportSync {
     } catch (error) {
       if (error instanceof AscRateLimitedError) throw error;
       this.logger.warn(
-        `the detailed report of request ${request.id} is skipped this run: ${error instanceof Error ? error.message : String(error)}`,
+        `the detailed report of request ${request.id} is skipped this run: ${messageOf(error)}`,
       );
       return [];
     }

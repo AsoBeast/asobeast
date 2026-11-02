@@ -55,6 +55,11 @@ describe('listing reads per market (e2e)', () => {
     country: string | null,
     title: string,
     capturedAt: string,
+    extra: {
+      ratingAvg?: number;
+      ratingCount?: number;
+      localization?: string;
+    } = {},
   ) => ({
     appId,
     country,
@@ -62,6 +67,7 @@ describe('listing reads per market (e2e)', () => {
     description: `${title} description`,
     raw: {},
     capturedAt: new Date(capturedAt),
+    ...extra,
   });
 
   const createApp = (storeAppId: string, primaryAppId?: string) =>
@@ -146,12 +152,16 @@ describe('listing reads per market (e2e)', () => {
         home: true,
         capturedAt: '2026-07-01T00:00:00.000Z',
         tracked: true,
+        ratingAvg: null,
+        ratingCount: null,
       },
       {
         country: 'de',
         home: false,
         capturedAt: '2026-07-02T00:00:00.000Z',
         tracked: false,
+        ratingAvg: null,
+        ratingCount: null,
       },
     ]);
   });
@@ -211,6 +221,134 @@ describe('listing reads per market (e2e)', () => {
         home: true,
         capturedAt: '2026-07-01T00:00:00.000Z',
         tracked: true,
+        ratingAvg: null,
+        ratingCount: null,
+      },
+    ]);
+  });
+
+  const ratings = async (appId: string) =>
+    (
+      (await api.get(`/apps/${appId}/listing-markets`).expect(200))
+        .body as ListingMarket[]
+    ).map(({ country, capturedAt, ratingAvg, ratingCount }) => ({
+      country,
+      capturedAt,
+      ratingAvg,
+      ratingCount,
+    }));
+
+  const seedRated = async () => {
+    const mine = await createApp('111');
+    await prisma.appSnapshot.createMany({
+      data: [
+        listing(mine.id, null, 'Old', '2026-06-01T00:00:00.000Z', {
+          ratingAvg: 4.0,
+          ratingCount: 100,
+        }),
+        listing(mine.id, null, 'New', '2026-07-01T00:00:00.000Z', {
+          ratingAvg: 4.8,
+          ratingCount: 24000,
+        }),
+        listing(mine.id, 'de', 'Deutsch', '2026-07-02T00:00:00.000Z', {
+          ratingAvg: 4.4,
+          ratingCount: 5200,
+        }),
+      ],
+    });
+    return mine;
+  };
+
+  it('answers the newest rating of each market', async () => {
+    const mine = await seedRated();
+
+    await expect(ratings(mine.id)).resolves.toEqual([
+      {
+        country: 'us',
+        capturedAt: '2026-07-01T00:00:00.000Z',
+        ratingAvg: 4.8,
+        ratingCount: 24000,
+      },
+      {
+        country: 'de',
+        capturedAt: '2026-07-02T00:00:00.000Z',
+        ratingAvg: 4.4,
+        ratingCount: 5200,
+      },
+    ]);
+  });
+
+  it('never answers the rating of a localized listing', async () => {
+    const mine = await seedRated();
+    await prisma.appSnapshot.create({
+      data: listing(mine.id, 'de', 'Lokal', '2026-07-03T00:00:00.000Z', {
+        ratingAvg: 1.0,
+        ratingCount: 1,
+        localization: 'de',
+      }),
+    });
+
+    const markets = await ratings(mine.id);
+
+    expect(markets[1]).toEqual({
+      country: 'de',
+      capturedAt: '2026-07-02T00:00:00.000Z',
+      ratingAvg: 4.4,
+      ratingCount: 5200,
+    });
+  });
+
+  it('keeps the ratings of another app out', async () => {
+    const mine = await seedRated();
+    const rival = await createApp('222', mine.id);
+    await prisma.appSnapshot.createMany({
+      data: [
+        listing(rival.id, null, 'Rival', '2026-07-01T00:00:00.000Z'),
+        listing(rival.id, 'de', 'Rivale', '2026-07-02T00:00:00.000Z', {
+          ratingAvg: 3.0,
+          ratingCount: 10,
+        }),
+      ],
+    });
+
+    const own = await ratings(mine.id);
+    const theirs = await ratings(rival.id);
+
+    expect(own[1]).toMatchObject({ ratingAvg: 4.4, ratingCount: 5200 });
+    expect(theirs[1]).toMatchObject({ ratingAvg: 3.0, ratingCount: 10 });
+  });
+
+  it('answers no rating for a market the store gave none for', async () => {
+    const mine = await seedRated();
+    await prisma.appSnapshot.create({
+      data: listing(mine.id, 'fr', 'Suivi', '2026-07-03T00:00:00.000Z'),
+    });
+
+    const markets = await ratings(mine.id);
+
+    expect(markets[2]).toEqual({
+      country: 'fr',
+      capturedAt: '2026-07-03T00:00:00.000Z',
+      ratingAvg: null,
+      ratingCount: null,
+    });
+  });
+
+  it('answers the home market of an app with no listing without a rating', async () => {
+    const mine = await createApp('111');
+
+    const response = await api
+      .get(`/apps/${mine.id}/listing-markets`)
+      .expect(200);
+
+    expect(response.body as ListingMarket[]).toEqual([
+      {
+        country: 'us',
+        home: true,
+        capturedAt: null,
+        tracked: true,
+        ratingAvg: null,
+        ratingCount: null,
       },
     ]);
   });

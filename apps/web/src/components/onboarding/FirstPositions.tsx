@@ -48,7 +48,7 @@ function FirstPositionsBody({
                 key={row.keywordId}
                 className="numeric font-mono text-sm text-muted-foreground"
               >
-                “{row.text}” · {positionLabel(row)}
+                {`“${row.text}” · ${positionLabel(row)}`}
               </li>
             ))}
           </ul>

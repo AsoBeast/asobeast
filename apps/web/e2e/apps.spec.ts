@@ -856,8 +856,12 @@ test("app overview renders summary numbers and a utc refresh date", async ({
 }) => {
   await page.goto("/apps/app-1");
 
-  await expect(page.getByText("+5 7d")).toHaveClass(/text-signal-up/);
-  await expect(page.getByText("-3 30d")).toHaveClass(/text-signal-down/);
+  await expect(page.getByText("+5 7d").locator("..")).toHaveClass(
+    /text-signal-up/,
+  );
+  await expect(page.getByText("-3 30d").locator("..")).toHaveClass(
+    /text-signal-down/,
+  );
   await expect(page.getByText("3 in top 10")).toBeVisible();
 
   await expect(page.getByText("Where your keywords rank")).toBeVisible();
@@ -881,8 +885,13 @@ test("app overview renders summary numbers and a utc refresh date", async ({
   const refreshDate = utcDateFormatter.format(
     new Date(APP_1_SUMMARY.lastRefreshAt ?? ""),
   );
-  await expect(page.getByText("Last refresh")).toBeVisible();
-  await expect(page.getByText(refreshDate, { exact: true })).toBeVisible();
+  const lastRefresh = page
+    .locator("[data-slot=card]")
+    .filter({ has: page.getByText("Last refresh", { exact: true }) });
+  await expect(lastRefresh).toBeVisible();
+  await expect(
+    lastRefresh.getByText(refreshDate, { exact: true }),
+  ).toBeVisible();
 });
 
 test("an app that iPhone search never lists carries a notice on every page", async ({

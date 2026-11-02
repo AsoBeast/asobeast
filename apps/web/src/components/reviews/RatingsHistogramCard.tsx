@@ -46,7 +46,7 @@ function HistogramBars({
               />
             </span>
             <span className="min-w-28 shrink-0 text-right numeric font-mono whitespace-nowrap text-muted-foreground">
-              {formatNumber(count)} · {percent.toFixed(1)}%
+              {`${formatNumber(count)} · ${percent.toFixed(1)}%`}
             </span>
           </li>
         );
@@ -67,8 +67,7 @@ export function RatingsHistogramCard({ id }: { id: string }) {
       <CardHeader>
         <CardDescription>Ratings distribution</CardDescription>
         <CardTitle>
-          {pluralize(data.total, "rating")}
-          {data.capturedAt ? ` as of ${formatDate(data.capturedAt)}` : ""}
+          {`${pluralize(data.total, "rating")}${data.capturedAt ? ` as of ${formatDate(data.capturedAt)}` : ""}`}
         </CardTitle>
       </CardHeader>
       <CardContent>

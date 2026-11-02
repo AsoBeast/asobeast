@@ -89,7 +89,7 @@ export function AuditActionPlan({
         <TabsList scrollable>
           {BUCKETS.map((bucket) => (
             <TabsTrigger key={bucket} value={bucket}>
-              {BUCKET_TAB_LABEL[bucket]}, {audit.recommendations[bucket].length}
+              {`${BUCKET_TAB_LABEL[bucket]}, ${audit.recommendations[bucket].length}`}
             </TabsTrigger>
           ))}
         </TabsList>

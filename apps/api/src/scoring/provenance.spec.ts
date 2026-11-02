@@ -45,6 +45,56 @@ describe('scoringConfidence', () => {
     expect(scoringConfidence('APP_STORE', input)).toBe(expected);
   });
 
+  it.each([
+    [
+      'listed above the floor',
+      evidence({
+        officialPopularityUsed: true,
+        officialPopularityState: 'listed',
+      }),
+      'HIGH',
+    ],
+    [
+      'listed at the floor',
+      evidence({
+        officialPopularityUsed: true,
+        officialPopularityState: 'floor',
+      }),
+      'MEDIUM',
+    ],
+    ['left out', evidence({ officialPopularityState: 'absent' }), 'MEDIUM'],
+    [
+      'left out with nine results',
+      evidence({ officialPopularityState: 'absent', searchResultCount: 9 }),
+      'MEDIUM',
+    ],
+    [
+      'left out with no results',
+      evidence({ officialPopularityState: 'absent', searchResultCount: 0 }),
+      'LOW',
+    ],
+    [
+      'listed by a caller that predates the state',
+      evidence({ officialPopularityUsed: true }),
+      'HIGH',
+    ],
+  ] as const)('a term %s is %s on the app store', (_name, input, expected) => {
+    expect(scoringConfidence('APP_STORE', input)).toBe(expected);
+  });
+
+  it('leaves google play confidence alone', () => {
+    expect(
+      scoringConfidence(
+        'GOOGLE_PLAY',
+        evidence({
+          officialPopularityState: undefined,
+          detailTargetCount: 10,
+          detailSuccessCount: 8,
+        }),
+      ),
+    ).toBe('HIGH');
+  });
+
   it('wants eight enriched details on google play', () => {
     expect(
       scoringConfidence(

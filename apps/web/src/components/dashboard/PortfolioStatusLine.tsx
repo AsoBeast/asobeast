@@ -54,7 +54,7 @@ function freshness(
     state,
     budget && budget.utilization > 0 ? (
       <Link href="/settings" className="underline-offset-4 hover:underline">
-        {budgetShare(budget.utilization)} of the daily request budget
+        {`${budgetShare(budget.utilization)} of the daily request budget`}
       </Link>
     ) : null,
   ].filter((part) => part !== null);

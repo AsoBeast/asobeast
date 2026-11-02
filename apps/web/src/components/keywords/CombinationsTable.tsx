@@ -116,8 +116,7 @@ function ListingCombinations({
     <div className="flex flex-col gap-3">
       {result.truncated ? (
         <p role="note" className="text-caption text-muted-foreground">
-          Your listing forms {formatNumber(result.total)} combinations. The
-          first {formatNumber(COMBINATION_LIMIT)}, shortest first, are listed.
+          {`Your listing forms ${formatNumber(result.total)} combinations. The first ${formatNumber(COMBINATION_LIMIT)}, shortest first, are listed.`}
         </p>
       ) : null}
       <CombinationFilters

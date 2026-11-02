@@ -444,6 +444,8 @@ export const utcDateParser = createParser({
   },
 });
 
+export const serpDateParser = utcDateParser;
+
 export const CHART_VIEWS = ["columns", "table"] as const;
 
 export type ChartView = (typeof CHART_VIEWS)[number];

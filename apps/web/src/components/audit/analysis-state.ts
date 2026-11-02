@@ -1,4 +1,4 @@
-import type { AppAuditResult } from "@asobeast/shared";
+import type { AiProvider, AppAuditResult } from "@asobeast/shared";
 
 export type AnalysisState =
   | "unconfigured"
@@ -49,5 +49,30 @@ export const progressLine = (screenshots: number | null): string =>
   screenshots === null
     ? "Analyzing your icon and screenshots"
     : `Analyzing your icon and ${screenshots} screenshot${screenshots === 1 ? "" : "s"}`;
+
+const SENDS_IMAGE_LINKS: ReadonlySet<AnalysisState> = new Set([
+  "never",
+  "stale",
+  "failed",
+]);
+
+export const sendsImageLinks = (state: AnalysisState): boolean =>
+  SENDS_IMAGE_LINKS.has(state);
+
+const CONFIGURED_PROVIDER = "the AI provider this instance is configured with";
+
+export const imageLinksLine = (
+  provider: AiProvider | null | undefined,
+  model: string | null,
+): string => {
+  if (provider === "compatible") {
+    return model === null
+      ? `Sends image links to ${CONFIGURED_PROVIDER}.`
+      : `Sends image links to ${model} on ${CONFIGURED_PROVIDER}.`;
+  }
+  return model === null
+    ? "Sends image links to OpenAI."
+    : `Sends image links to OpenAI with ${model}.`;
+};
 
 export const AI_FEATURES_GUIDE = "https://docs.asobeast.com/guides/ai-features";

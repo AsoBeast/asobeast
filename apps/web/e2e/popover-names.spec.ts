@@ -4,6 +4,7 @@ import { expect, test } from "./session.mts";
 
 interface NamedPopover {
   name: string;
+  where?: string;
   path: string;
   open: (page: Page) => Promise<void>;
 }
@@ -15,9 +16,27 @@ const POPOVERS: NamedPopover[] = [
     open: (page) => page.getByRole("button", { name: /^Captured day/ }).click(),
   },
   {
+    name: "Choose captured day",
+    where: "the search results sheet",
+    path: "/apps/app-1/keywords?serp=kw-3",
+    open: (page) =>
+      page
+        .getByRole("dialog", { name: "Search results" })
+        .getByRole("button", { name: /^Captured day/ })
+        .click(),
+  },
+  {
     name: "Switch app",
     path: "/apps/app-1/keywords",
     open: (page) => page.getByRole("button", { name: /^Switch app/ }).click(),
+  },
+  {
+    name: "Position history focus timer",
+    path: "/apps/app-1/keywords",
+    open: (page) =>
+      page
+        .getByRole("button", { name: /^Position history: focus timer/ })
+        .click(),
   },
   {
     name: "Choose keywords",
@@ -50,6 +69,26 @@ const POPOVERS: NamedPopover[] = [
     open: (page) =>
       page.getByRole("button", { name: /how actions are generated/i }).click(),
   },
+  {
+    name: "How ratings by market are read",
+    path: "/apps/app-1",
+    open: (page) =>
+      page.getByRole("button", { name: "About ratings by market" }).click(),
+  },
+  {
+    name: "Competitors in the top 10",
+    path: "/apps/app-1/keywords",
+    open: async (page) => {
+      await page.getByRole("button", { name: "Columns" }).click();
+      await page
+        .getByRole("menuitemcheckbox", { name: "Competitors in top 10" })
+        .click();
+      await page.keyboard.press("Escape");
+      await page
+        .getByRole("button", { name: "About competitors in the top 10" })
+        .click();
+    },
+  },
 ];
 
 const dialogNameViolations = async (page: Page) => {
@@ -61,7 +100,8 @@ const dialogNameViolations = async (page: Page) => {
 };
 
 for (const popover of POPOVERS) {
-  test(`${popover.name} names its dialog`, async ({ page }) => {
+  const where = popover.where ? ` in ${popover.where}` : "";
+  test(`${popover.name}${where} names its dialog`, async ({ page }) => {
     await page.goto(popover.path);
     await popover.open(page);
 

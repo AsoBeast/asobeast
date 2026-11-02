@@ -6,11 +6,12 @@ export function MovementValue({ movement }: { movement: PortfolioMovement }) {
     <>
       <span aria-hidden>
         <span className="text-signal-up">↑</span>
-        {formatNumber(movement.up)} <span className="text-signal-down">↓</span>
-        {formatNumber(movement.down)}
+        <span>{`${formatNumber(movement.up)} `}</span>
+        <span className="text-signal-down">↓</span>
+        <span>{formatNumber(movement.down)}</span>
       </span>
       <span className="sr-only">
-        {movement.up} climbing, {movement.down} falling
+        {`${movement.up} climbing, ${movement.down} falling`}
       </span>
     </>
   );

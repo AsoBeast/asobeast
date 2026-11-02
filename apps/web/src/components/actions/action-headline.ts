@@ -1,3 +1,4 @@
+import { ACTION_RULE_TITLES } from "@asobeast/shared";
 import type {
   ActionItem,
   ActionRule,
@@ -12,7 +13,6 @@ import {
   pluralize,
 } from "@/lib/format";
 import { METADATA_FIELD_LABELS } from "@/lib/metadata-display";
-import { ACTION_RULE_TITLE } from "./action-copy";
 
 export const CHANGE_FIELD_WORD: Record<ChangeField, string> = {
   title: "title",
@@ -38,7 +38,7 @@ export function changedFields(fields: readonly ChangeField[]): string {
 }
 
 function degradedHeadline(item: ActionItem): string {
-  const title = ACTION_RULE_TITLE[item.rule];
+  const title = ACTION_RULE_TITLES[item.rule];
   const keyword = item.scope.keywordText;
   return keyword ? `${title}: ${quoted(keyword)}` : title;
 }
@@ -72,7 +72,7 @@ export function actionHeadline(item: ActionItem): string {
   if (evidence === null) return degradedHeadline(item);
   const keyword = item.scope.keywordText;
   if (keyword === null && KEYWORD_RULES.includes(evidence.rule)) {
-    return ACTION_RULE_TITLE[evidence.rule];
+    return ACTION_RULE_TITLES[evidence.rule];
   }
   const subject = quoted(keyword ?? "");
 

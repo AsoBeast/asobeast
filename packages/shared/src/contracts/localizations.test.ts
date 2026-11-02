@@ -67,6 +67,9 @@ describe('the app localization contract', () => {
     const result: AppLocalizationsResult = {
       home: 'us',
       markets: ['us', 'mx'],
+      storeManaged: false,
+      storeSync: null,
+      storeImport: 'unavailable',
       localizations: [],
     };
 

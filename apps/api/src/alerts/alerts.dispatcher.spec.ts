@@ -7,12 +7,19 @@ import {
   RankMilestonePayload,
   RankOvertakenPayload,
 } from '@asobeast/shared';
+import { negative, newReview } from './email-fixtures.fixture';
 import { DEFAULT_WORKSPACE_ID } from '../common/tenancy/default-workspace';
 import { Env } from '../config/env';
-import { DeliverAlertPayload, DeliverEmailPayload } from '../jobs/jobs.types';
+import {
+  DeliverAlertPayload,
+  DeliverEmailPayload,
+  JOBS,
+} from '../jobs/jobs.types';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
+import { AlertAppIdentities } from './alert-app-identities';
 import { AlertsDispatcher } from './alerts.dispatcher';
+import { chartEntered } from './chart-events.fixture';
 import { MailerService } from './mailer.service';
 
 const rankPayload: RankDroppedPayload = {
@@ -86,8 +93,15 @@ const buildPrisma = () => {
         .fn<(args: CreateArgs) => Promise<object>>()
         .mockResolvedValue({}),
     },
-    webhook: { findMany: jest.fn().mockResolvedValue([]) },
-    emailAlert: { findMany: jest.fn().mockResolvedValue([]) },
+    webhook: {
+      findMany: jest.fn().mockResolvedValue([]),
+      count: jest.fn().mockResolvedValue(0),
+    },
+    emailAlert: {
+      findMany: jest.fn().mockResolvedValue([]),
+      count: jest.fn().mockResolvedValue(0),
+    },
+    app: { findUnique: jest.fn().mockResolvedValue(null) },
   };
 };
 
@@ -117,6 +131,7 @@ describe('AlertsDispatcher', () => {
       buildConfig('batched'),
       queue,
       workspace,
+      new AlertAppIdentities(prisma as unknown as PrismaService),
     );
 
     await inWorkspace(() => dispatcher.dispatch(rankPayload));
@@ -147,6 +162,7 @@ describe('AlertsDispatcher', () => {
       buildConfig('batched'),
       queue,
       workspace,
+      new AlertAppIdentities(prisma as unknown as PrismaService),
     );
 
     await inWorkspace(() => dispatcher.dispatch(rankPayload));
@@ -170,6 +186,7 @@ describe('AlertsDispatcher', () => {
       buildConfig('batched'),
       queue,
       workspace,
+      new AlertAppIdentities(prisma as unknown as PrismaService),
     );
 
     await inWorkspace(() => dispatcher.dispatch(rankPayload));
@@ -199,6 +216,7 @@ describe('AlertsDispatcher', () => {
       buildConfig('batched'),
       queue,
       workspace,
+      new AlertAppIdentities(prisma as unknown as PrismaService),
     );
 
     await inWorkspace(() => dispatcher.dispatch(rankPayload));
@@ -216,6 +234,7 @@ describe('AlertsDispatcher', () => {
       buildConfig('batched'),
       queue,
       workspace,
+      new AlertAppIdentities(prisma as unknown as PrismaService),
     );
 
     await dispatcher.dispatch({
@@ -239,6 +258,7 @@ describe('AlertsDispatcher', () => {
       buildConfig('instant'),
       queue,
       workspace,
+      new AlertAppIdentities(prisma as unknown as PrismaService),
     );
 
     await inWorkspace(() => dispatcher.dispatch(rankPayload));
@@ -256,6 +276,7 @@ describe('AlertsDispatcher', () => {
       buildConfig('batched'),
       queue,
       workspace,
+      new AlertAppIdentities(prisma as unknown as PrismaService),
     );
 
     await inWorkspace(() => dispatcher.dispatch(milestone));
@@ -270,6 +291,59 @@ describe('AlertsDispatcher', () => {
     });
   });
 
+  it('collects a chart entry into the outbox under its chart key', async () => {
+    const prisma = buildPrisma();
+    const { queue } = buildQueue();
+    const dispatcher = new AlertsDispatcher(
+      prisma as unknown as PrismaService,
+      { enabled: true } as MailerService,
+      buildConfig('batched'),
+      queue,
+      workspace,
+      new AlertAppIdentities(prisma as unknown as PrismaService),
+    );
+
+    await inWorkspace(() => dispatcher.dispatch(chartEntered()));
+
+    expect(prisma.updates[0].where.dedupeKey).toBe(
+      'chart:a:free:6007:2026-07-22',
+    );
+    expect(prisma.updates[0].data).toEqual({
+      event: 'chart.entered',
+      appId: 'a',
+      payload: chartEntered(),
+    });
+  });
+
+  it('queues a chart entry per subscribed webhook in instant mode', async () => {
+    const prisma = buildPrisma();
+    prisma.webhook.findMany.mockResolvedValue([
+      { id: 'wh1', events: ['chart.entered'], reviewScores: [] },
+    ]);
+    const { add, queue } = buildQueue();
+    const dispatcher = new AlertsDispatcher(
+      prisma as unknown as PrismaService,
+      { enabled: false } as MailerService,
+      buildConfig('instant'),
+      queue,
+      workspace,
+      new AlertAppIdentities(prisma as unknown as PrismaService),
+    );
+
+    await inWorkspace(() => dispatcher.dispatch(chartEntered()));
+
+    expect(prisma.alertEvent.create).not.toHaveBeenCalled();
+    expect(prisma.webhook.findMany).toHaveBeenCalledWith({
+      where: { active: true, events: { has: 'chart.entered' } },
+      select: { id: true, events: true, reviewScores: true },
+    });
+    expect(add).toHaveBeenCalledWith(
+      JOBS.DELIVER_ALERT,
+      expect.objectContaining({ webhookId: 'wh1', payload: chartEntered() }),
+      { backoff: { type: 'custom' } },
+    );
+  });
+
   it('looks up the subscribers of an overtake in instant mode', async () => {
     const prisma = buildPrisma();
     const { queue } = buildQueue();
@@ -279,13 +353,14 @@ describe('AlertsDispatcher', () => {
       buildConfig('instant'),
       queue,
       workspace,
+      new AlertAppIdentities(prisma as unknown as PrismaService),
     );
 
     await inWorkspace(() => dispatcher.dispatch(overtake));
 
     expect(prisma.webhook.findMany).toHaveBeenCalledWith({
       where: { active: true, events: { has: 'rank.overtaken' } },
-      select: { id: true },
+      select: { id: true, events: true, reviewScores: true },
     });
   });
 
@@ -298,6 +373,7 @@ describe('AlertsDispatcher', () => {
       buildConfig('instant'),
       queue,
       workspace,
+      new AlertAppIdentities(prisma as unknown as PrismaService),
     );
 
     await inWorkspace(() => dispatcher.dispatch(overtake));
@@ -308,7 +384,313 @@ describe('AlertsDispatcher', () => {
         confirmedAt: { not: null },
         events: { has: 'rank.overtaken' },
       },
-      select: { id: true },
+      select: { id: true, events: true, reviewScores: true },
+    });
+  });
+
+  describe('review alerts in instant mode', () => {
+    const instant = (prisma: ReturnType<typeof buildPrisma>, mail = true) => {
+      const { add, queue } = buildQueue();
+      const dispatcher = new AlertsDispatcher(
+        prisma as unknown as PrismaService,
+        { enabled: mail } as MailerService,
+        buildConfig('instant'),
+        queue,
+        workspace,
+        new AlertAppIdentities(prisma as unknown as PrismaService),
+      );
+      return { add, dispatcher };
+    };
+    const queued = (add: jest.Mock, key: 'webhookId' | 'emailAlertId') =>
+      add.mock.calls.map(
+        ([, data]: [string, Record<string, unknown>]) => data[key],
+      );
+
+    it('queues a new review only for the webhooks whose stars cover it', async () => {
+      const prisma = buildPrisma();
+      prisma.webhook.findMany.mockResolvedValue([
+        { id: 'every', events: ['review.new'], reviewScores: [] },
+        { id: 'low', events: ['review.new'], reviewScores: [1, 2] },
+        { id: 'top', events: ['review.new'], reviewScores: [5] },
+      ]);
+      const { add, dispatcher } = instant(prisma, false);
+
+      await inWorkspace(() => dispatcher.dispatch(newReview));
+
+      expect(queued(add, 'webhookId')).toEqual(['every', 'top']);
+    });
+
+    it('skips a negative review a webhook already lists as new', async () => {
+      const prisma = buildPrisma();
+      prisma.webhook.findMany.mockResolvedValue([
+        {
+          id: 'both',
+          events: ['review.new', 'review.negative'],
+          reviewScores: [],
+        },
+        {
+          id: 'praise',
+          events: ['review.new', 'review.negative'],
+          reviewScores: [4, 5],
+        },
+        { id: 'negative', events: ['review.negative'], reviewScores: [] },
+      ]);
+      const { add, dispatcher } = instant(prisma, false);
+
+      await inWorkspace(() => dispatcher.dispatch(negative));
+
+      expect(queued(add, 'webhookId')).toEqual(['praise', 'negative']);
+    });
+
+    it('routes email alerts by the same rule', async () => {
+      const prisma = buildPrisma();
+      prisma.emailAlert.findMany.mockResolvedValue([
+        {
+          id: 'both',
+          events: ['review.new', 'review.negative'],
+          reviewScores: [],
+        },
+        { id: 'negative', events: ['review.negative'], reviewScores: [] },
+      ]);
+      const { add, dispatcher } = instant(prisma);
+
+      await inWorkspace(() => dispatcher.dispatch(negative));
+
+      expect(queued(add, 'emailAlertId')).toEqual(['negative']);
+    });
+  });
+
+  describe('listensTo', () => {
+    const listener = (prisma: ReturnType<typeof buildPrisma>, mail: boolean) =>
+      new AlertsDispatcher(
+        prisma as unknown as PrismaService,
+        { enabled: mail } as MailerService,
+        buildConfig('batched'),
+        buildQueue().queue,
+        workspace,
+        new AlertAppIdentities(prisma as unknown as PrismaService),
+      );
+
+    it('listens while an active webhook holds the event', async () => {
+      const prisma = buildPrisma();
+      prisma.webhook.count.mockResolvedValue(1);
+
+      await expect(
+        listener(prisma, true).listensTo('review.new'),
+      ).resolves.toBe(true);
+      expect(prisma.webhook.count).toHaveBeenCalledWith({
+        where: { active: true, events: { has: 'review.new' } },
+      });
+      expect(prisma.emailAlert.count).not.toHaveBeenCalled();
+    });
+
+    it('listens to a deliverable email alert only while mail is on', async () => {
+      const prisma = buildPrisma();
+      prisma.emailAlert.count.mockResolvedValue(1);
+
+      await expect(
+        listener(prisma, true).listensTo('review.new'),
+      ).resolves.toBe(true);
+      expect(prisma.emailAlert.count).toHaveBeenCalledWith({
+        where: {
+          active: true,
+          confirmedAt: { not: null },
+          events: { has: 'review.new' },
+        },
+      });
+      await expect(
+        listener(prisma, false).listensTo('review.new'),
+      ).resolves.toBe(false);
+    });
+
+    it('does not listen without a subscriber', async () => {
+      await expect(
+        listener(buildPrisma(), true).listensTo('review.new'),
+      ).resolves.toBe(false);
+    });
+  });
+
+  describe('confirmed drops', () => {
+    const dispatcherFor = (delivery: 'batched' | 'instant') => {
+      const prisma = buildPrisma();
+      const { queue } = buildQueue();
+      const dispatcher = new AlertsDispatcher(
+        prisma as unknown as PrismaService,
+        { enabled: true } as MailerService,
+        buildConfig(delivery),
+        queue,
+        workspace,
+        new AlertAppIdentities(prisma as unknown as PrismaService),
+      );
+      return { prisma, dispatcher };
+    };
+    const confirmedLeave: RankMilestonePayload = {
+      ...milestone,
+      direction: 'left',
+      from: 9,
+      to: 12,
+      confirmed: true,
+    };
+
+    it('asks for channels without the setting for an unmarked drop', async () => {
+      const { prisma, dispatcher } = dispatcherFor('instant');
+
+      await inWorkspace(() => dispatcher.dispatch(rankPayload));
+
+      expect(prisma.webhook.findMany).toHaveBeenCalledWith({
+        where: {
+          active: true,
+          events: { has: 'rank.dropped' },
+          confirmDrops: false,
+        },
+        select: { id: true, events: true, reviewScores: true },
+      });
+    });
+
+    it('asks for channels with the setting for a confirmed drop', async () => {
+      const { prisma, dispatcher } = dispatcherFor('instant');
+
+      await inWorkspace(() =>
+        dispatcher.dispatch({ ...rankPayload, confirmed: true }),
+      );
+
+      expect(prisma.webhook.findMany).toHaveBeenCalledWith({
+        where: {
+          active: true,
+          events: { has: 'rank.dropped' },
+          confirmDrops: true,
+        },
+        select: { id: true, events: true, reviewScores: true },
+      });
+    });
+
+    it('asks the email alerts the same way for a confirmed milestone', async () => {
+      const { prisma, dispatcher } = dispatcherFor('instant');
+
+      await inWorkspace(() => dispatcher.dispatch(confirmedLeave));
+
+      expect(prisma.emailAlert.findMany).toHaveBeenCalledWith({
+        where: {
+          active: true,
+          confirmedAt: { not: null },
+          events: { has: 'rank.milestone' },
+          confirmDrops: true,
+        },
+        select: { id: true, events: true, reviewScores: true },
+      });
+    });
+
+    it('adds no setting condition for an unmarked entering milestone', async () => {
+      const { prisma, dispatcher } = dispatcherFor('instant');
+
+      await inWorkspace(() => dispatcher.dispatch(milestone));
+
+      expect(prisma.webhook.findMany).toHaveBeenCalledWith({
+        where: { active: true, events: { has: 'rank.milestone' } },
+        select: { id: true, events: true, reviewScores: true },
+      });
+    });
+
+    it('stores a confirmed milestone under its own key', async () => {
+      const { prisma, dispatcher } = dispatcherFor('batched');
+
+      await inWorkspace(() => dispatcher.dispatch(confirmedLeave));
+
+      expect(prisma.updates[0].where.dedupeKey).toBe(
+        'milestone.confirmed:app1:kw1:2026-07-22',
+      );
+    });
+  });
+
+  describe('with the app identity', () => {
+    const identity = {
+      iconUrl: 'https://is1-ssl.mzstatic.com/image/thumb/icon/512x512bb.jpg',
+      store: 'APP_STORE',
+      country: 'gb',
+    };
+
+    const identified = () => {
+      const prisma = buildPrisma();
+      prisma.app.findUnique.mockResolvedValue(identity);
+      return prisma;
+    };
+
+    it('adds the icon and storefront to the queued instant job', async () => {
+      const prisma = identified();
+      prisma.webhook.findMany.mockResolvedValue([
+        { id: 'wh1', events: ['rank.dropped'], reviewScores: [] },
+      ]);
+      const { add, queue } = buildQueue();
+      const dispatcher = new AlertsDispatcher(
+        prisma as unknown as PrismaService,
+        { enabled: false } as MailerService,
+        buildConfig('instant'),
+        queue,
+        workspace,
+        new AlertAppIdentities(prisma as unknown as PrismaService),
+      );
+
+      await inWorkspace(() => dispatcher.dispatch(rankPayload));
+
+      expect(prisma.app.findUnique).toHaveBeenCalledWith({
+        where: { id: 'app1' },
+        select: { iconUrl: true, store: true, country: true },
+      });
+      expect(add).toHaveBeenCalledWith(
+        JOBS.DELIVER_ALERT,
+        expect.objectContaining({
+          webhookId: 'wh1',
+          payload: { ...rankPayload, app: { ...rankPayload.app, ...identity } },
+        }),
+        { backoff: { type: 'custom' } },
+      );
+    });
+
+    it('stores the icon and storefront in the outbox row', async () => {
+      const prisma = identified();
+      const { queue } = buildQueue();
+      const dispatcher = new AlertsDispatcher(
+        prisma as unknown as PrismaService,
+        { enabled: true } as MailerService,
+        buildConfig('batched'),
+        queue,
+        workspace,
+        new AlertAppIdentities(prisma as unknown as PrismaService),
+      );
+
+      await inWorkspace(() => dispatcher.dispatch(rankPayload));
+
+      expect(prisma.updates[0].data.payload.app).toEqual({
+        id: 'app1',
+        name: 'App One',
+        ...identity,
+      });
+    });
+
+    it('reads no app for an event that names none', async () => {
+      const prisma = identified();
+      const { queue } = buildQueue();
+      const dispatcher = new AlertsDispatcher(
+        prisma as unknown as PrismaService,
+        { enabled: false } as MailerService,
+        buildConfig('instant'),
+        queue,
+        workspace,
+        new AlertAppIdentities(prisma as unknown as PrismaService),
+      );
+
+      await inWorkspace(() =>
+        dispatcher.dispatch({
+          event: 'serp.entrant',
+          occurredAt: '2026-07-22T10:00:00.000Z',
+          keyword: milestone.keyword,
+          date: '2026-07-22',
+          entrants: [],
+        }),
+      );
+
+      expect(prisma.app.findUnique).not.toHaveBeenCalled();
+      expect(prisma.webhook.findMany).toHaveBeenCalledTimes(1);
     });
   });
 });

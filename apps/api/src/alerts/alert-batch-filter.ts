@@ -1,8 +1,11 @@
 import {
   AlertBatchAppSection,
   AlertBatchPayload,
+  GranularAlertPayload,
   WebhookEvent,
 } from '@asobeast/shared';
+import { reachesChannel } from './confirm-drops';
+import { reviewGate } from './review-routing';
 
 function sectionHasContent(section: AlertBatchAppSection): boolean {
   return (
@@ -11,9 +14,11 @@ function sectionHasContent(section: AlertBatchAppSection): boolean {
     section.rankMilestones.length > 0 ||
     section.firstRankings.length > 0 ||
     section.overtakes.length > 0 ||
+    (section.chartMoves ?? []).length > 0 ||
     section.serpEntrants.length > 0 ||
     section.changes.length > 0 ||
     section.negativeReviews.length > 0 ||
+    (section.newReviews ?? []).length > 0 ||
     section.actions.length > 0 ||
     section.competitors.length > 0
   );
@@ -22,24 +27,32 @@ function sectionHasContent(section: AlertBatchAppSection): boolean {
 export function filterBatch(
   batch: AlertBatchPayload,
   allowed: Set<string>,
+  reviewScores: readonly number[] = [],
+  confirmDrops = false,
 ): AlertBatchPayload | null {
-  const events = batch.events.filter((event) => allowed.has(event.event));
-  const ownedOnly = <T>(event: WebhookEvent, list: T[]): T[] =>
-    batch.scope === 'owned_apps' && allowed.has(event) ? list : [];
+  const keeps = reviewGate(batch.events, allowed, reviewScores);
+  const events = batch.events.filter(
+    (event) => keeps(event) && reachesChannel(event, confirmDrops),
+  );
+  const ownedOnly = <T extends GranularAlertPayload>(
+    event: WebhookEvent,
+    list: T[],
+  ): T[] =>
+    batch.scope === 'owned_apps' && allowed.has(event)
+      ? list.filter((payload) => reachesChannel(payload, confirmDrops))
+      : [];
   const apps = batch.apps
     .map((section): AlertBatchAppSection => ({
       app: section.app,
-      rankDrops:
-        batch.scope === 'owned_apps' && allowed.has('rank.dropped')
-          ? section.rankDrops
-          : [],
-      rankImprovements:
-        allowed.has('rank.improved') && batch.scope === 'owned_apps'
-          ? section.rankImprovements
-          : [],
+      rankDrops: ownedOnly('rank.dropped', section.rankDrops),
+      rankImprovements: ownedOnly('rank.improved', section.rankImprovements),
       rankMilestones: ownedOnly('rank.milestone', section.rankMilestones),
       firstRankings: ownedOnly('rank.first', section.firstRankings),
       overtakes: ownedOnly('rank.overtaken', section.overtakes),
+      chartMoves:
+        batch.scope === 'owned_apps'
+          ? (section.chartMoves ?? []).filter((move) => allowed.has(move.event))
+          : [],
       serpEntrants:
         batch.scope === 'owned_apps' && allowed.has('serp.entrant')
           ? section.serpEntrants
@@ -48,10 +61,13 @@ export function filterBatch(
         batch.scope === 'owned_apps' && allowed.has('metadata.changed')
           ? section.changes
           : [],
-      negativeReviews:
-        batch.scope === 'owned_apps' && allowed.has('review.negative')
-          ? section.negativeReviews
-          : [],
+      negativeReviews: ownedOnly(
+        'review.negative',
+        section.negativeReviews,
+      ).filter(keeps),
+      newReviews: ownedOnly('review.new', section.newReviews ?? []).filter(
+        keeps,
+      ),
       actions:
         batch.scope === 'owned_apps' && allowed.has('action.opened')
           ? section.actions

@@ -1,10 +1,12 @@
 import type { Store } from '../index';
-import type { ReviewNegativePayload } from './reviews';
+import type { ReviewNegativePayload, ReviewNewPayload } from './reviews';
 import type { DigestWeeklyPayload } from './portfolio';
 import type { KeywordScope } from './keywords';
 import type { SerpEntrantPayload } from './serp';
 import type { ActionOpenedPayload } from './actions';
+import type { ChartMovePayload } from './charts';
 import type { RankMilestoneDirection, RankMilestoneTier } from '../rank';
+import type { WebhookChannel } from '../webhook-channel';
 
 export const CHANGE_FIELDS = [
   'title',
@@ -20,6 +22,20 @@ export const CHANGE_FIELDS = [
   'whatsNew',
 ] as const;
 export type ChangeField = (typeof CHANGE_FIELDS)[number];
+
+export const CHANGE_FIELD_LABELS: Record<ChangeField, string> = {
+  title: 'Title',
+  subtitle: 'Subtitle',
+  summary: 'Short description',
+  description: 'Description',
+  version: 'Version',
+  price: 'Price',
+  screenshots: 'Screenshots',
+  screenshotImages: 'Screenshot images',
+  screenshotCaptions: 'Screenshot captions',
+  icon: 'Icon',
+  whatsNew: "What's new",
+};
 
 export function isChangeField(value: string): value is ChangeField {
   return CHANGE_FIELDS.some((field) => field === value);
@@ -77,6 +93,10 @@ export const WEBHOOK_EVENTS = [
   'digest.weekly',
   'serp.entrant',
   'action.opened',
+  'chart.entered',
+  'chart.left',
+  'chart.milestone',
+  'review.new',
 ] as const;
 export type WebhookEvent = (typeof WEBHOOK_EVENTS)[number];
 
@@ -84,33 +104,44 @@ export interface WebhookItem {
   id: string;
   url: string;
   events: WebhookEvent[];
+  reviewScores?: number[];
   active: boolean;
   hasSecret: boolean;
   createdAt: string;
+  channel?: WebhookChannel;
+  confirmDrops?: boolean;
 }
 
 export interface WebhookCreateRequest {
   url: string;
   events: WebhookEvent[];
+  reviewScores?: number[];
   secret?: string;
+  confirmDrops?: boolean;
 }
 
 export interface WebhookUpdateRequest {
   url?: string;
   events?: WebhookEvent[];
+  reviewScores?: number[];
   secret?: string;
   active?: boolean;
+  confirmDrops?: boolean;
 }
 
 export interface EmailAlertCreateRequest {
   email: string;
   events: WebhookEvent[];
+  reviewScores?: number[];
+  confirmDrops?: boolean;
 }
 
 export interface EmailAlertUpdateRequest {
   email?: string;
   events?: WebhookEvent[];
+  reviewScores?: number[];
   active?: boolean;
+  confirmDrops?: boolean;
 }
 
 export interface WebhookTestResult {
@@ -122,11 +153,13 @@ export interface EmailAlertItem {
   id: string;
   email: string;
   events: WebhookEvent[];
+  reviewScores?: number[];
   active: boolean;
   confirmed?: boolean;
   unsubscribed?: boolean;
   confirmationSent?: boolean;
   createdAt: string;
+  confirmDrops?: boolean;
 }
 
 export type AlertChannel = 'webhook' | 'email';
@@ -166,7 +199,11 @@ export interface AlertDeliveryStatus {
 export interface MetadataChangedPayload {
   event: 'metadata.changed';
   occurredAt: string;
-  app: { id: string; name: string | null; isCompetitor: boolean };
+  app: {
+    id: string;
+    name: string | null;
+    isCompetitor: boolean;
+  } & AlertAppIdentity;
   changes: Array<{
     field: ChangeField;
     before: string | null;
@@ -177,31 +214,33 @@ export interface MetadataChangedPayload {
 export interface RankDroppedPayload {
   event: 'rank.dropped';
   occurredAt: string;
-  app: { id: string; name: string | null };
+  app: { id: string; name: string | null } & AlertAppIdentity;
   keyword: KeywordScope;
   from: number;
   to: number | null;
   fromDepth: number;
   toDepth: number;
   threshold: number;
+  confirmed?: boolean;
 }
 
 export interface RankImprovedPayload {
   event: 'rank.improved';
   occurredAt: string;
-  app: { id: string; name: string | null };
+  app: { id: string; name: string | null } & AlertAppIdentity;
   keyword: KeywordScope;
   from: number | null;
   to: number;
   fromDepth: number;
   toDepth: number;
   threshold: number;
+  undoesDrop?: boolean;
 }
 
 export interface RankMilestonePayload {
   event: 'rank.milestone';
   occurredAt: string;
-  app: { id: string; name: string | null };
+  app: { id: string; name: string | null } & AlertAppIdentity;
   keyword: KeywordScope;
   tier: RankMilestoneTier;
   direction: RankMilestoneDirection;
@@ -209,12 +248,14 @@ export interface RankMilestonePayload {
   to: number | null;
   fromDepth: number;
   toDepth: number;
+  confirmed?: boolean;
+  undoesDrop?: boolean;
 }
 
 export interface RankFirstPayload {
   event: 'rank.first';
   occurredAt: string;
-  app: { id: string; name: string | null };
+  app: { id: string; name: string | null } & AlertAppIdentity;
   keyword: KeywordScope;
   position: number;
   depth: number;
@@ -223,7 +264,7 @@ export interface RankFirstPayload {
 export interface RankOvertakenPayload {
   event: 'rank.overtaken';
   occurredAt: string;
-  app: { id: string; name: string | null };
+  app: { id: string; name: string | null } & AlertAppIdentity;
   keyword: KeywordScope;
   competitor: {
     id: string;
@@ -237,7 +278,13 @@ export interface RankOvertakenPayload {
   toDepth: number;
 }
 
-export interface AlertBatchApp {
+export interface AlertAppIdentity {
+  iconUrl?: string | null;
+  store?: Store;
+  country?: string;
+}
+
+export interface AlertBatchApp extends AlertAppIdentity {
   id: string;
   name: string | null;
   store: Store;
@@ -256,9 +303,11 @@ export interface AlertBatchAppSection {
   rankMilestones: RankMilestonePayload[];
   firstRankings: RankFirstPayload[];
   overtakes: RankOvertakenPayload[];
+  chartMoves?: ChartMovePayload[];
   serpEntrants: SerpEntrantPayload[];
   changes: MetadataChangedPayload[];
   negativeReviews: ReviewNegativePayload[];
+  newReviews?: ReviewNewPayload[];
   actions: ActionOpenedPayload[];
   competitors: AlertBatchCompetitorSection[];
 }
@@ -271,9 +320,11 @@ export type GranularAlertPayload =
   | RankFirstPayload
   | RankOvertakenPayload
   | ReviewNegativePayload
+  | ReviewNewPayload
   | DigestWeeklyPayload
   | SerpEntrantPayload
-  | ActionOpenedPayload;
+  | ActionOpenedPayload
+  | ChartMovePayload;
 
 export type AlertBatchScope = 'owned_apps' | 'competitors';
 

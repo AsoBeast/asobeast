@@ -5,6 +5,7 @@ import {
 } from "node:http";
 import { setTimeout as delay } from "node:timers/promises";
 import { BREAKDOWNS } from "./keyword-breakdowns.mts";
+import { SERP_HISTORY, serpOnDay } from "./serp-history.mts";
 import { planMockImport } from "./keyword-import.mts";
 import { summarizeActions } from "./actions-summary.mts";
 import { echoRequest } from "./echo-request.mts";
@@ -60,6 +61,10 @@ import {
   APP_GP_CHANGE_IMPACT,
   PLAY_AUDIT,
   PLAY_CHANGE_IMPACT_COOKIE,
+  RANKINGS_FAIL_COOKIE,
+  PL_HISTORY_COOKIE,
+  PL_HISTORY_KEYWORD,
+  PL_HISTORY_SERIES,
   PROVISIONAL_AUDIT,
   METADATA_AUDIT,
   APP_1_PL_SCREENSHOTS,
@@ -71,6 +76,8 @@ import {
   UNREAD_MARKET_COOKIE,
   UNREAD_MARKET_COVERAGE_ROW,
   APP_1_LISTING_MARKETS,
+  APP_1_UNCAPTURED_LISTING_MARKETS,
+  APP_1_WIDE_LISTING_MARKETS,
   APP_1_PL_CHANGES,
   APP_1_PL_DETAIL,
   METADATA_DRAFTS,
@@ -84,6 +91,8 @@ import {
   BUDGET,
   DATASETS,
   SUGGESTIONS,
+  AWAITING_ALERT,
+  AWAITING_ALERT_COOKIE,
   EMAIL_ALERTS,
   EMAIL_DELIVERIES,
   FIRST_RUN_COMPLETE,
@@ -124,6 +133,8 @@ import {
   RECENT_CHANGES,
   SCREENSHOTS,
   SERP_SNAPSHOTS,
+  WEBHOOK_PAIR,
+  WEBHOOK_PAIR_COOKIE,
   WEBHOOKS,
   emptyScreenshots,
   DATABASE_DOWN_RETRY_SECONDS,
@@ -183,6 +194,7 @@ import type {
   AppLocalizationsResult,
   KeywordFieldPreviewRequest,
   KeywordFieldSavePreview,
+  ListingMarket,
   LocalizationDetectionResult,
   LocalizedKeywordFieldRequest,
   LocalizedKeywordFieldResult,
@@ -226,6 +238,9 @@ import type {
   StoreHealthReport,
   WorkspaceRunStatus,
   PortfolioSummary,
+  RankingSeries,
+  KeywordBulkRequest,
+  KeywordBulkResult,
   KeywordUpdateRequest,
   TrackedKeywordItem,
   WebhookCreateRequest,
@@ -235,6 +250,9 @@ import type {
   AppSetupState,
   AppSetupUpdateRequest,
   KeywordComparison,
+  SerpEntryItem,
+  SerpSnapshot,
+  StoreImportState,
 } from "@asobeast/shared";
 import {
   COUNTRY_PATTERN,
@@ -269,7 +287,9 @@ import {
   type ChartFollowItem,
   type ChartKey,
   type ChartPage,
+  normalizeReviewScores,
   type Store,
+  webhookChannelOf,
 } from "@asobeast/shared";
 import { SETUP_SESSION_COOKIE } from "./setup-session.mts";
 import {
@@ -323,6 +343,38 @@ function resetKeywords(only?: string): void {
   }
 }
 
+function applyBulkChange(
+  dataset: (typeof DATASETS)[string],
+  request: KeywordBulkRequest,
+): KeywordBulkResult {
+  const ids = [...new Set(request.keywordIds)];
+  const tracked = dataset.keywords.filter((row) => ids.includes(row.keywordId));
+  const found = new Set(tracked.map((row) => row.keywordId));
+  const touched = tracked.filter((row) =>
+    request.action === "pause"
+      ? row.active
+      : request.action === "resume"
+        ? !row.active
+        : true,
+  );
+  if (request.action === "untrack") {
+    dataset.keywords = dataset.keywords.filter(
+      (row) => !found.has(row.keywordId),
+    );
+  } else {
+    touched.forEach((row) => {
+      row.active = request.action === "resume";
+    });
+  }
+  return {
+    action: request.action,
+    requested: ids.length,
+    changed: touched.length,
+    unchanged: tracked.length - touched.length,
+    missing: ids.filter((id) => !found.has(id)),
+  };
+}
+
 function manualKeyword(
   appId: string,
   text: string,
@@ -350,6 +402,8 @@ function manualKeyword(
     bucket: null,
     scoredAt: null,
     scoreProvenance: null,
+    trackedAt: new Date().toISOString(),
+    competitorsInTop10: null,
   };
 }
 
@@ -880,6 +934,28 @@ const REVIEW_SETS: Record<string, typeof UPDATE_THEME_REVIEWS> = {
   emoji: EMOJI_REVIEWS,
 };
 
+const hasPolishHistory = (req: IncomingMessage) =>
+  hasCookie(req, PL_HISTORY_COOKIE, "1");
+
+function rankingsIn(
+  rankings: RankingSeries,
+  query: URLSearchParams,
+): RankingSeries {
+  const ids = query.get("keywordIds")?.split(",").filter(Boolean) ?? [];
+  const from = query.get("from");
+  const to = query.get("to");
+  return {
+    series: rankings.series
+      .filter((item) => ids.length === 0 || ids.includes(item.keywordId))
+      .map((item) => ({
+        ...item,
+        points: item.points.filter(
+          (point) => (!from || point.date >= from) && (!to || point.date <= to),
+        ),
+      })),
+  };
+}
+
 const reviewSetOf = (req: IncomingMessage) =>
   REVIEW_SETS[cookieValue(req, "e2e_reviews") ?? ""];
 
@@ -1201,6 +1277,8 @@ const shippedLocalizations = new Map<
   string,
   Map<AppStoreLocalization, ShippedOrigin>
 >();
+const storeManagedFields = new Map<string, string | null>();
+const storeImportStates = new Map<string, StoreImportState>();
 const seededMarkets = new Map<string, string[]>();
 const fieldRequests = new Map<string, string[]>();
 const loggedRequests = new Map<string, number>();
@@ -1239,6 +1317,24 @@ function seedLocalizations(id: string, seed: LocalizationSeed): void {
   shippedLocalizations.set(
     id,
     new Map((seed.shipped ?? []).map((row) => [row.localization, row.origin])),
+  );
+  const followsStore =
+    seed.storeManaged === true ||
+    seed.storeImport === "following" ||
+    seed.storeImport === "paused";
+  if (followsStore) {
+    storeManagedFields.set(
+      id,
+      seed.storeSyncAt === undefined
+        ? KEYWORD_FIELD_UPDATED_AT
+        : seed.storeSyncAt,
+    );
+  } else {
+    storeManagedFields.delete(id);
+  }
+  storeImportStates.set(
+    id,
+    seed.storeImport ?? (followsStore ? "following" : "available"),
   );
   seededMarkets.set(id, seed.markets ?? []);
   fieldRequests.delete(id);
@@ -1379,9 +1475,17 @@ function localizationsOf(id: string, home: string): AppLocalizationsResult {
   const items = shippedTags(id, home).map((tag) =>
     localizationItemOf(id, home, tag, markets),
   );
+  const syncedAt = storeManagedFields.get(id);
+  const storeImport = storeImportStates.get(id) ?? "available";
   return {
     home,
     markets,
+    storeManaged: storeImport === "following",
+    storeSync:
+      syncedAt === undefined
+        ? null
+        : { at: syncedAt, version: "2.4.1", error: null },
+    storeImport,
     localizations: items.sort(
       (left, right) =>
         Number(right.origin === "home") - Number(left.origin === "home") ||
@@ -1577,8 +1681,15 @@ function capturedCompetitor(
   const similar = Object.values(SIMILAR_APPS)
     .flatMap((entry) => entry.items)
     .find((item) => item.storeAppId === parsed.storeAppId);
+  const ranked = Object.values(SERP_HISTORY)
+    .flatMap((history) => history.flatMap((snapshot) => snapshot.entries))
+    .find((entry) => entry.storeAppId === parsed.storeAppId);
   const title =
-    discovered?.title ?? searched?.title ?? similar?.title ?? parsed.storeAppId;
+    discovered?.title ??
+    searched?.title ??
+    similar?.title ??
+    ranked?.title ??
+    parsed.storeAppId;
 
   return {
     id: `comp-${parsed.storeAppId}`,
@@ -1598,6 +1709,34 @@ function capturedCompetitor(
       version: "1.0.0",
       capturedAt: new Date().toISOString(),
     },
+  };
+}
+
+function serpDatasetOf(keywordId: string) {
+  return Object.values(DATASETS).find((dataset) =>
+    dataset.keywords.some((keyword) => keyword.keywordId === keywordId),
+  );
+}
+
+function withTrackedCompetitors(
+  keywordId: string,
+  snapshot: SerpSnapshot,
+): SerpSnapshot {
+  const tracked = new Set(
+    serpDatasetOf(keywordId)?.competitors.map((row) => row.id) ?? [],
+  );
+  const annotate = <
+    T extends Pick<SerpEntryItem, "storeAppId" | "appId" | "isCompetitor">,
+  >(
+    row: T,
+  ): T =>
+    tracked.has(`comp-${row.storeAppId}`)
+      ? { ...row, appId: `comp-${row.storeAppId}`, isCompetitor: true }
+      : row;
+  return {
+    ...snapshot,
+    entries: snapshot.entries.map(annotate),
+    exits: snapshot.exits?.map(annotate),
   };
 }
 
@@ -1675,11 +1814,24 @@ function auditFor(id: string, req: IncomingMessage, res: ServerResponse): void {
     json(res, 200, {
       ...base,
       creative: null,
-      ai: { ...base.ai, configured: false, model: null, run: null },
+      ai: {
+        ...base.ai,
+        configured: false,
+        model: null,
+        provider: null,
+        run: null,
+      },
     });
     return;
   }
-  const configured = { ...base.ai, configured: true, model: "gpt-5.6-luna" };
+  const configured = {
+    ...base.ai,
+    configured: true,
+    model: "gpt-5.6-luna",
+    provider: hasCookie(req, "e2e_ai_provider", "compatible")
+      ? ("compatible" as const)
+      : ("openai" as const),
+  };
   if (hasCookie(req, "e2e_ai_stale", "1")) {
     json(res, 200, {
       ...base,
@@ -1950,6 +2102,17 @@ const API_LATENCY_COOKIE = "e2e_api_latency";
 const BUDGET_HOLD_COOKIE = "e2e_budget_hold";
 const BUDGET_QUOTA_COOKIE = "e2e_budget_quota";
 const STALE_MARKET_COOKIE = "e2e_stale_market";
+const RATINGS_MARKETS_COOKIE = "e2e_ratings_markets";
+
+function listingMarketsOf(req: IncomingMessage): ListingMarket[] {
+  if (hasCookie(req, RATINGS_MARKETS_COOKIE, "wide")) {
+    return APP_1_WIDE_LISTING_MARKETS;
+  }
+  if (hasCookie(req, RATINGS_MARKETS_COOKIE, "uncaptured")) {
+    return APP_1_UNCAPTURED_LISTING_MARKETS;
+  }
+  return APP_1_LISTING_MARKETS;
+}
 const BUDGET_HOT_COOKIE = "e2e_budget_hot";
 const HEALTH_COOKIE = "e2e_health";
 const PROXY_DEADLINE_OVERRUN_MS = 3_000;
@@ -2946,7 +3109,15 @@ const routes: Route[] = [
     method: "GET",
     pattern: /^\/webhooks$/,
     handler: (_p, req, res) =>
-      json(res, 200, hasCookie(req, "e2e-empty-alerts", "1") ? [] : webhooks),
+      json(
+        res,
+        200,
+        hasCookie(req, "e2e-empty-alerts", "1")
+          ? []
+          : hasCookie(req, WEBHOOK_PAIR_COOKIE, "1")
+            ? WEBHOOK_PAIR
+            : webhooks,
+      ),
   },
   {
     method: "POST",
@@ -2957,9 +3128,12 @@ const routes: Route[] = [
           id: `hook-${webhooks.length + 1}`,
           url: body.url,
           events: body.events,
+          reviewScores: normalizeReviewScores(body.reviewScores ?? []),
           active: true,
           hasSecret: Boolean(body.secret),
           createdAt: new Date().toISOString(),
+          channel: webhookChannelOf(body.url),
+          confirmDrops: body.confirmDrops === true,
         };
         webhooks.unshift(webhook);
         json(res, 201, webhook);
@@ -2981,10 +3155,19 @@ const routes: Route[] = [
             errorEnvelope(400, path, "events should not be empty"),
           );
         }
-        if (body.url !== undefined) webhook.url = body.url;
+        if (body.url !== undefined) {
+          webhook.url = body.url;
+          webhook.channel = webhookChannelOf(body.url);
+        }
         if (body.events !== undefined) webhook.events = body.events;
+        if (body.reviewScores !== undefined) {
+          webhook.reviewScores = normalizeReviewScores(body.reviewScores);
+        }
         if (body.active !== undefined) webhook.active = body.active;
         if (body.secret !== undefined) webhook.hasSecret = body.secret !== "";
+        if (body.confirmDrops !== undefined) {
+          webhook.confirmDrops = body.confirmDrops;
+        }
         json(res, 200, webhook);
       });
     },
@@ -3040,7 +3223,9 @@ const routes: Route[] = [
           ? []
           : hasCookie(req, "e2e-unsubscribed-alert", "1")
             ? [UNSUBSCRIBED_ALERT, ...emailAlerts]
-            : emailAlerts,
+            : hasCookie(req, AWAITING_ALERT_COOKIE, "1")
+              ? [AWAITING_ALERT]
+              : emailAlerts,
       ),
   },
   {
@@ -3053,9 +3238,11 @@ const routes: Route[] = [
           id: `email-${emailAlerts.length + 1}`,
           email: body.email,
           events: body.events,
+          reviewScores: normalizeReviewScores(body.reviewScores ?? []),
           active: true,
           confirmed: trusted,
           createdAt: new Date().toISOString(),
+          confirmDrops: body.confirmDrops === true,
         };
         emailAlerts.unshift(alert);
         json(
@@ -3090,7 +3277,13 @@ const routes: Route[] = [
         }
         if (body.email !== undefined) alert.email = body.email;
         if (body.events !== undefined) alert.events = body.events;
+        if (body.reviewScores !== undefined) {
+          alert.reviewScores = normalizeReviewScores(body.reviewScores);
+        }
         if (body.active !== undefined) alert.active = body.active;
+        if (body.confirmDrops !== undefined) {
+          alert.confirmDrops = body.confirmDrops;
+        }
         json(res, 200, alert);
       });
     },
@@ -3112,6 +3305,17 @@ const routes: Route[] = [
     method: "GET",
     pattern: /^\/keywords\/([^/]+)\/serp$/,
     handler: ([keywordId], req, res) => {
+      const history = SERP_HISTORY[keywordId];
+      if (history) {
+        const date = new URL(req.url ?? "/", "http://mock").searchParams.get(
+          "date",
+        );
+        return json(
+          res,
+          200,
+          withTrackedCompetitors(keywordId, serpOnDay(history, date)),
+        );
+      }
       const snapshot = SERP_SNAPSHOTS[keywordId];
       if (!snapshot) {
         return json(res, 404, errorEnvelope(404, req.url ?? "/"));
@@ -3198,7 +3402,7 @@ const routes: Route[] = [
   },
   appRoute(/^\/apps\/([^/]+)\/listing-markets$/, (dataset, _query, req) =>
     dataset.detail.id === "app-1"
-      ? APP_1_LISTING_MARKETS.map((market) => ({
+      ? listingMarketsOf(req).map((market) => ({
           ...market,
           tracked:
             market.home || !hasCookie(req, STALE_MARKET_COOKIE, market.country),
@@ -3291,6 +3495,35 @@ const routes: Route[] = [
           201,
           dataset.keywords.filter((row) => row.country === country),
         );
+      });
+    },
+  },
+  {
+    method: "POST",
+    pattern: /^\/apps\/([^/]+)\/keywords\/bulk$/,
+    handler: ([id], req, res) => {
+      withBody<KeywordBulkRequest>(req, res, (body) => {
+        const path = req.url ?? "/";
+        const dataset = DATASETS[id];
+        if (!dataset) return json(res, 404, errorEnvelope(404, path));
+        if (hasCookie(req, "e2e-fail-keyword-bulk", "1")) {
+          return json(res, 500, errorEnvelope(500, path));
+        }
+        if (
+          body.action === "resume" &&
+          hasCookie(req, "e2e-bulk-over-quota", "1")
+        ) {
+          return json(
+            res,
+            403,
+            errorEnvelope(
+              403,
+              path,
+              "Keyword markets limit reached: 1,000 of 1,000 used on the indie plan, 3 more requested",
+            ),
+          );
+        }
+        json(res, 200, applyBulkChange(dataset, body));
       });
     },
   },
@@ -3396,12 +3629,18 @@ const routes: Route[] = [
       const scoped = country
         ? dataset.keywords.filter((keyword) => keyword.country === country)
         : dataset.keywords;
+      const polishHistory =
+        id === "app-1" && country === "pl" && hasPolishHistory(req)
+          ? [PL_HISTORY_KEYWORD]
+          : [];
       json(
         res,
         200,
         sortKeywords(
           [
-            ...scoped.map((keyword) => annotated(id, keyword)),
+            ...[...scoped, ...polishHistory].map((keyword) =>
+              annotated(id, keyword),
+            ),
             ...(id === "app-1" ? firstCheckRows(req) : []),
           ],
           query.get("sort"),
@@ -3738,7 +3977,17 @@ const routes: Route[] = [
     };
   }),
 
-  appRoute(/^\/apps\/([^/]+)\/rankings$/, (dataset) => dataset.rankings),
+  appRoute(
+    /^\/apps\/([^/]+)\/rankings$/,
+    (dataset, query, req) =>
+      rankingsIn(
+        dataset.detail.id === "app-1" && hasPolishHistory(req)
+          ? { series: [...dataset.rankings.series, PL_HISTORY_SERIES] }
+          : dataset.rankings,
+        query,
+      ),
+    (req) => hasCookie(req, RANKINGS_FAIL_COOKIE, "1"),
+  ),
   appRoute(/^\/apps\/([^/]+)\/serp-movers$/, (dataset) => dataset.serpMovers),
   {
     method: "GET",
@@ -4025,6 +4274,66 @@ const routes: Route[] = [
       }
       storeKeywordField(id, app.tag, [], []);
       shippedLocalizations.get(id)?.delete(app.tag);
+      res.writeHead(204).end();
+    },
+  },
+  {
+    method: "POST",
+    pattern: /^\/apps\/([^/]+)\/keyword-fields\/import$/,
+    handler: ([id], req, res) => {
+      const app = fieldAppFor(id, undefined, req, res);
+      if (!app) return;
+      const path = req.url ?? "/";
+      const home = app.dataset.detail.country;
+      const state = storeImportStates.get(id) ?? "available";
+      if (state === "following") {
+        return json(
+          res,
+          409,
+          errorEnvelope(
+            409,
+            path,
+            "App Store Connect already imports the keyword fields of this app. Stop importing to edit them here again.",
+          ),
+        );
+      }
+      if (state !== "available") {
+        return json(
+          res,
+          409,
+          errorEnvelope(
+            409,
+            path,
+            "Importing the keyword fields needs an active App Store Connect connection. Connect or verify the key in Integrations first.",
+          ),
+        );
+      }
+      storeManagedFields.set(id, KEYWORD_FIELD_UPDATED_AT);
+      storeImportStates.set(id, "following");
+      json(res, 200, localizationsOf(id, home));
+    },
+  },
+  {
+    method: "DELETE",
+    pattern: /^\/apps\/([^/]+)\/keyword-fields\/import$/,
+    handler: ([id], req, res) => {
+      const app = fieldAppFor(id, undefined, req, res);
+      if (!app) return;
+      const path = req.url ?? "/";
+      const state = storeImportStates.get(id) ?? "available";
+      if (state !== "following" && state !== "paused") {
+        return json(
+          res,
+          404,
+          errorEnvelope(
+            404,
+            path,
+            "This app does not follow App Store Connect",
+          ),
+        );
+      }
+      storeManagedFields.delete(id);
+      storeImportStates.set(id, "available");
       res.writeHead(204).end();
     },
   },

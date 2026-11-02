@@ -1,22 +1,21 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import {
   utcDayOf,
   type Store,
   type TrackedKeywordItem,
 } from "@asobeast/shared";
 import { useTable, type RowSelectionState } from "@tanstack/react-table";
-import { useQueryState, useQueryStates } from "nuqs";
+import { useQueryStates } from "nuqs";
 import { useStoredColumnVisibility } from "@/components/data-table/useStoredColumnVisibility";
 import { useUrlSorting } from "@/components/data-table/useUrlSorting";
-import { keywordsOptions } from "@/lib/queries";
+import { keywordCountriesOptions, keywordsOptions } from "@/lib/queries";
 import {
   KEYWORD_DEFAULT_SORT,
   keywordFilterParsers,
   keywordSortParser,
-  serpParser,
   sortDirectionParser,
 } from "@/lib/search-params";
 import {
@@ -24,7 +23,11 @@ import {
   keywordColumns,
   SELECT_ALL_KEYWORDS,
 } from "./keyword-columns";
-import { keywordColumnFilters } from "./keyword-filters";
+import {
+  exactSearchEmptyBody,
+  keywordColumnFilters,
+  keywordSearchFilter,
+} from "./keyword-filters";
 import { keywordTableFeatures } from "./keyword-table-features";
 import { exportKeywords } from "./keyword-csv";
 import { tagsIn } from "@/lib/keyword-tags";
@@ -32,27 +35,33 @@ import { KeywordsBulkActions } from "./KeywordsBulkActions";
 import { KeywordsEmptyState } from "./KeywordsEmptyState";
 import { KeywordsDataTable } from "./KeywordsDataTable";
 import { KeywordsFilterBar } from "./KeywordsFilterBar";
-import { SerpSheet } from "./SerpSheet";
+import { SerpSheet } from "./serp/SerpSheet";
+import { useSerpParams } from "./serp/use-serp-params";
 
 export function KeywordsTable({
   id,
   store,
   country,
+  homeCountry,
 }: {
   id: string;
   store: Store;
   country: string;
+  homeCountry: string;
 }) {
   const [{ sort, dir }, setSortParams] = useQueryStates({
     sort: keywordSortParser,
     dir: sortDirectionParser,
   });
-  const [, setSerp] = useQueryState("serp", serpParser);
+  const [{ serp: serpId }, setSerpState] = useSerpParams();
   const [filters, setFilters] = useQueryStates(keywordFilterParsers);
   const { data: keywords, dataUpdatedAt } = useSuspenseQuery(
     keywordsOptions(id, country),
   );
   const today = utcDayOf(dataUpdatedAt);
+  const serpKeyword = keywords.find((row) => row.keywordId === serpId);
+  const { data: markets } = useQuery(keywordCountriesOptions(id));
+  const multiMarket = (markets?.length ?? 0) > 1;
   const [selection, setSelection] = useState<RowSelectionState>({});
   const tableArea = useRef<HTMLDivElement>(null);
   const refocusTable = useRef(false);
@@ -71,10 +80,13 @@ export function KeywordsTable({
       keywordColumns({
         appId: id,
         store,
+        homeCountry,
+        multiMarket,
         today,
-        onOpenSerp: (keywordId) => void setSerp(keywordId),
+        onOpenSerp: (keywordId) =>
+          void setSerpState({ serp: keywordId, serpDate: null }),
       }),
-    [id, store, setSerp, today],
+    [id, store, homeCountry, multiMarket, setSerpState, today],
   );
 
   const { sorting, onSortingChange } = useUrlSorting(
@@ -118,7 +130,7 @@ export function KeywordsTable({
     enableRowSelection: true,
     enableSortingRemoval: false,
     enableMultiSort: false,
-    globalFilterFn: "includesString",
+    globalFilterFn: keywordSearchFilter,
     getColumnCanGlobalFilter: (column) => column.id === "keyword",
   });
 
@@ -168,6 +180,7 @@ export function KeywordsTable({
         />
         <KeywordsDataTable
           table={table}
+          emptyBody={exactSearchEmptyBody(filters.q)}
           onClearFilters={() => void setFilters(null)}
         />
 
@@ -183,7 +196,7 @@ export function KeywordsTable({
           </div>
         ) : null}
       </div>
-      <SerpSheet appId={id} />
+      <SerpSheet appId={id} store={store} keyword={serpKeyword} />
     </>
   );
 }

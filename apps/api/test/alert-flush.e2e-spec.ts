@@ -28,6 +28,7 @@ import {
 } from '../src/jobs/jobs.types';
 import { AlertFlushService } from '../src/alerts/alert-flush.service';
 import { AlertsDispatcher } from '../src/alerts/alerts.dispatcher';
+import { alertBackoff } from '../src/alerts/alerts.worker';
 import { ownerAgent, useCookies } from './helpers/session';
 import { obliterateQueues, pauseQueues } from './obliterate-queues';
 import { asWorkspace } from './helpers/tenancy';
@@ -213,7 +214,12 @@ describe('Alert flush (e2e)', () => {
         const payload = job.data.payload;
         if (payload.event === 'alerts.batch') processPayload(payload);
       },
-      { connection, prefix, concurrency: 4 },
+      {
+        connection,
+        prefix,
+        concurrency: 4,
+        settings: { backoffStrategy: alertBackoff },
+      },
     );
     try {
       await worker.waitUntilReady();
@@ -502,7 +508,7 @@ describe('Alert flush (e2e)', () => {
     for (const job of jobs) {
       expect(job.opts).toMatchObject({
         attempts: 3,
-        backoff: { type: 'exponential', delay: 5000 },
+        backoff: { type: 'custom' },
         removeOnComplete: { age: 604800 },
         removeOnFail: 5000,
       });

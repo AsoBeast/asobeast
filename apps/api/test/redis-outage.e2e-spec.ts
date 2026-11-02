@@ -202,6 +202,12 @@ describe('Redis outage (e2e)', () => {
         { url: 'https://apps.apple.com/us/app/x/id1' },
       ],
       ['a market seed', 'post', 'market-seed', { country: 'de' }],
+      [
+        'a bulk keyword change',
+        'post',
+        'keywords/bulk',
+        { action: 'pause', keywordIds: ['k'] },
+      ],
     ] as const)(
       'refuses %s with 503 and a wait instead of waiting on the queue',
       async (_label, method, path, body) => {

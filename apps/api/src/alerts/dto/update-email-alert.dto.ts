@@ -11,6 +11,7 @@ import {
   WEBHOOK_EVENTS,
   WebhookEvent,
 } from '@asobeast/shared';
+import { ReviewScoresFilter } from './review-scores.decorator';
 
 export class UpdateEmailAlertDto implements EmailAlertUpdateRequest {
   @ValidateIf((_, value) => value !== undefined)
@@ -23,7 +24,14 @@ export class UpdateEmailAlertDto implements EmailAlertUpdateRequest {
   @IsIn(WEBHOOK_EVENTS, { each: true })
   events?: WebhookEvent[];
 
+  @ReviewScoresFilter()
+  reviewScores?: number[];
+
   @ValidateIf((_, value) => value !== undefined)
   @IsBoolean()
   active?: boolean;
+
+  @ValidateIf((_, value) => value !== undefined)
+  @IsBoolean()
+  confirmDrops?: boolean;
 }

@@ -11,9 +11,9 @@ import type { AccountPlan, ApiErrorEnvelope } from '@asobeast/shared';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { aiCompletion } from '../src/ai/ai-completion.fixture';
+import { stubAiClient } from '../src/ai/ai-client.fixture';
 import { aiPeriodOf, secondsUntil } from '../src/ai/ai-period';
 import {
-  AiClient,
   AiCompletion,
   AiStructuredRequest,
   OPENAI_CLIENT,
@@ -83,7 +83,7 @@ const DRAFTS = {
 };
 
 const structured = jest.fn<Promise<AiCompletion>, [AiStructuredRequest]>();
-const fakeAiClient: AiClient = { model: 'gpt-test', structured };
+const fakeAiClient = stubAiClient(structured);
 
 describe('Monthly AI allowance (e2e)', () => {
   let app: INestApplication<App>;

@@ -17,6 +17,7 @@ const DATA_COLLECTION: NodeOptions['dataCollection'] = {
   queues: false,
   stackFrameVariables: false,
   genAI: { inputs: false, outputs: false },
+  mcp: { inputs: false, outputs: false },
 };
 
 export interface ReportingGate {

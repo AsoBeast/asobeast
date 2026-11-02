@@ -2,6 +2,7 @@ import {
   KeywordBucket,
   KeywordSource,
   KeywordSuggestionStrategy,
+  OfficialPopularityState,
   ScoringConfidence,
   ScoringSource,
   SerpFlag,
@@ -11,6 +12,11 @@ import {
 import type { RankMilestoneTier } from '../rank';
 import type { AppStoreLocalization } from '../storefronts/app-store-localizations';
 import type { PaidPlanName, QuotaUsage } from './plans';
+
+export interface OfficialPopularityListing {
+  value: number;
+  week: string;
+}
 
 export interface ScoreSignals {
   suggestReach: SuggestReachStatus;
@@ -22,6 +28,10 @@ export interface ScoreSignals {
   officialPopularity: number | null;
   estimatedTraffic: number | null;
   entryDifficulty?: number | null;
+  officialPopularityState?: OfficialPopularityState | null;
+  officialPopularityFloor?: number | null;
+  officialPopularityWeek?: string | null;
+  officialPopularityLastAboveFloor?: OfficialPopularityListing | null;
 }
 
 export interface ScoreProvenance {
@@ -60,6 +70,8 @@ export interface TrackedKeywordItem {
   scoreOutdated?: boolean;
   tags?: string[];
   note?: string | null;
+  trackedAt?: string;
+  competitorsInTop10?: number | null;
   playAcquisitions?: PlayAcquisitions | null;
 }
 
@@ -134,6 +146,22 @@ export interface KeywordUpdateRequest {
   relevance?: number | null;
   tags?: string[];
   note?: string | null;
+}
+
+export const KEYWORD_BULK_ACTIONS = ['pause', 'resume', 'untrack'] as const;
+export type KeywordBulkAction = (typeof KEYWORD_BULK_ACTIONS)[number];
+
+export interface KeywordBulkRequest {
+  action: KeywordBulkAction;
+  keywordIds: string[];
+}
+
+export interface KeywordBulkResult {
+  action: KeywordBulkAction;
+  requested: number;
+  changed: number;
+  unchanged: number;
+  missing: string[];
 }
 
 export interface KeywordAddRequest {

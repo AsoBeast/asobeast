@@ -52,9 +52,19 @@ export function BulkTagPopover({
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        if (next && disabled) return;
+        setOpen(next);
+      }}
+    >
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" disabled={disabled}>
+        <Button
+          variant="outline"
+          size="sm"
+          aria-disabled={disabled || undefined}
+        >
           <Tag />
           Tag
         </Button>
@@ -87,8 +97,7 @@ export function BulkTagPopover({
         </div>
         {valid && add.atLimit.length > 0 ? (
           <p className="text-caption text-muted-foreground">
-            Skips {keywordsCount(add.atLimit.length)} at the {KEYWORD_TAGS_MAX}{" "}
-            tag limit: {add.atLimit.join(", ")}
+            {`Skips ${keywordsCount(add.atLimit.length)} at the ${KEYWORD_TAGS_MAX} tag limit: ${add.atLimit.join(", ")}`}
           </p>
         ) : null}
         <div className="flex flex-wrap gap-2">

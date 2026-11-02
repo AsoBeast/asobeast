@@ -1,6 +1,6 @@
 "use client";
 
-import { createColumnHelper, type FilterFn } from "@tanstack/react-table";
+import type { FilterFn } from "@tanstack/react-table";
 import { ListOrdered } from "lucide-react";
 import type {
   KeywordBucket,
@@ -22,17 +22,31 @@ import { DeltaChip } from "@/components/ui/delta-chip";
 import { SortableHeader } from "@/components/data-table/SortableHeader";
 import { tagsIn } from "@/lib/keyword-tags";
 import { KeywordRowActions } from "./KeywordRowActions";
+import type { PositionHistoryContext } from "./PositionHistoryPopover";
 import {
-  DerivedScoreCell,
   NoteButton,
   PlayAcquisitionsCell,
   PositionCell,
-  ScoreCell,
   TagBadges,
   VolatilityCell,
 } from "./keyword-cells";
-import { isScoreOutdated, scoreValue, shownScore } from "./keyword-scores";
-import { difficultySignalLines, popularitySignalLines } from "./score-signals";
+import {
+  keywordColumnHelper as columnHelper,
+  SORTABLE,
+} from "./keyword-column-helper";
+import { addedColumn, competitorsColumn } from "./keyword-fact-columns";
+import { DerivedScoreCell, ScoreCell } from "./score-cells";
+import {
+  hasFloorAnswer,
+  isScoreOutdated,
+  scoreValue,
+  shownScore,
+} from "./keyword-scores";
+import {
+  difficultySignalLines,
+  lowerConfidenceLines,
+  popularitySignalLines,
+} from "./score-signals";
 import { SOURCE_LABELS, SourceBadge } from "./SourceBadge";
 import type { Grade, GradeMetric } from "@/lib/grade";
 import {
@@ -45,13 +59,6 @@ import {
   type PositionBand,
 } from "@/lib/table/facets";
 import { nullsLast } from "@/lib/table/sorting";
-
-const columnHelper = createColumnHelper<
-  KeywordTableFeatures,
-  TrackedKeywordItem
->();
-
-const SORTABLE = { sortUndefined: "last", sortFn: "basic" } as const;
 
 export const SELECT_ALL_KEYWORDS = "Select all keywords";
 
@@ -71,21 +78,27 @@ function gradeFilter(
 export function keywordColumns({
   appId,
   store,
+  homeCountry,
+  multiMarket,
   today,
   onOpenSerp,
 }: {
   appId: string;
   store: Store;
+  homeCountry: string;
+  multiMarket: boolean;
   today: string;
   onOpenSerp: (keywordId: string) => void;
 }) {
   return columnHelper.columns([
     ...identityColumns(),
-    positionColumn(today),
+    addedColumn(),
+    positionColumn(today, { appId, store, homeCountry, multiMarket }),
     ...scoreColumns(),
     ...(store === "GOOGLE_PLAY" ? [acquisitionsColumn()] : []),
     deltaColumn(),
     volatilityColumn(),
+    competitorsColumn(),
     actionsColumn({ appId, onOpenSerp }),
     ...filterColumns(),
   ]);
@@ -184,7 +197,7 @@ function filterColumns() {
   ];
 }
 
-function positionColumn(today: string) {
+function positionColumn(today: string, history: PositionHistoryContext) {
   return columnHelper.accessor((row) => nullsLast(row.latestPosition), {
     id: "position",
     meta: { label: "Position", phone: true },
@@ -197,7 +210,9 @@ function positionColumn(today: string) {
         selected,
       ),
     header: ({ column }) => <SortableHeader column={column} label="Position" />,
-    cell: ({ row }) => <PositionCell keyword={row.original} today={today} />,
+    cell: ({ row }) => (
+      <PositionCell keyword={row.original} today={today} history={history} />
+    ),
   });
 }
 
@@ -240,6 +255,7 @@ function scoreColumns() {
             scoreValue(row.original, "traffic"),
           )}
           outdated={isScoreOutdated(row.original)}
+          floorAnswer={hasFloorAnswer(row.original)}
         />
       ),
     }),
@@ -278,6 +294,11 @@ function scoreColumns() {
           label="Opportunity"
           metric="opportunity"
           emphasize
+          lowerConfidence={hasFloorAnswer(row.original)}
+          details={lowerConfidenceLines(
+            "opportunity",
+            row.original.scoreSignals ?? null,
+          )}
         />
       ),
     }),
@@ -347,7 +368,8 @@ function actionsColumn({
           variant="ghost"
           size="icon-sm"
           className="pointer-coarse:size-11"
-          aria-label={`View top 10 for ${row.original.text}`}
+          aria-label={`View search results for ${row.original.text}`}
+          data-serp-keyword={row.original.keywordId}
           onClick={() => onOpenSerp(row.original.keywordId)}
         >
           <ListOrdered />

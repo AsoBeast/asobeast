@@ -42,6 +42,9 @@ import type {
   RankDistributionHistory,
   RankingPoint,
   RankingSeries,
+  RankingSeriesItem,
+  ScoreProvenance,
+  ScoreSignals,
   RatingsHistogram,
   ReviewThemes,
   RatingsHistory,
@@ -322,6 +325,8 @@ export const APP_1_KEYWORDS: TrackedKeywordItem[] = [
   {
     keywordId: "kw-1",
     text: "focus timer",
+    trackedAt: utcTimestampDaysAgo(30),
+    competitorsInTop10: 2,
     tags: ["core", "testing", "students", "exam season", "brand"],
     country: "us",
     serpVolatility7d: 8,
@@ -330,6 +335,10 @@ export const APP_1_KEYWORDS: TrackedKeywordItem[] = [
     latestPosition: 3,
     latestDepth: RANK_DEPTH,
     latestCheckedOn: utcDaysAgo(0),
+    bestPosition: 3,
+    positionDeltaFromBest: 0,
+    daysInTier: 1,
+    heldTier: 3,
     previousPosition: 5,
     positionDelta1d: -2,
     positionDelta7d: -7,
@@ -361,6 +370,8 @@ export const APP_1_KEYWORDS: TrackedKeywordItem[] = [
   {
     keywordId: "kw-2",
     text: "pomodoro",
+    trackedAt: utcTimestampDaysAgo(20),
+    competitorsInTop10: 0,
     tags: ["core", "brand"],
     country: "us",
     serpVolatility7d: 72,
@@ -400,6 +411,8 @@ export const APP_1_KEYWORDS: TrackedKeywordItem[] = [
   {
     keywordId: "kw-3",
     text: "study timer",
+    trackedAt: utcTimestampDaysAgo(10),
+    competitorsInTop10: null,
     country: "us",
     serpVolatility7d: 35,
     source: "DESCRIPTION",
@@ -429,6 +442,8 @@ export const APP_1_KEYWORDS: TrackedKeywordItem[] = [
   {
     keywordId: "kw-4",
     text: "productivity app",
+    trackedAt: utcTimestampDaysAgo(5),
+    competitorsInTop10: 1,
     country: "us",
     serpVolatility7d: null,
     source: "MANUAL",
@@ -453,6 +468,8 @@ export const APP_1_KEYWORDS: TrackedKeywordItem[] = [
   {
     keywordId: "kw-5",
     text: "time blocking",
+    trackedAt: utcTimestampDaysAgo(2),
+    competitorsInTop10: null,
     tags: ["testing"],
     note: "Seasonal <push> in May\nKeep for exam season",
     country: "us",
@@ -518,6 +535,40 @@ export const APP_1_RANKINGS: RankingSeries = {
       points: pointsFrom([40, 42, 44, 45, 45, 46, 46, 45], undefined, [5]),
     },
   ],
+};
+
+export const PL_HISTORY_COOKIE = "e2e-pl-history";
+
+export const PL_HISTORY_KEYWORD: TrackedKeywordItem = {
+  keywordId: "kw-pl-history",
+  text: "minutnik skupienia",
+  tags: [],
+  country: "pl",
+  serpVolatility7d: null,
+  source: "MANUAL",
+  active: true,
+  latestPosition: 6,
+  latestDepth: RANK_DEPTH,
+  latestCheckedOn: utcDaysAgo(0),
+  previousPosition: 7,
+  positionDelta1d: -1,
+  positionDelta7d: -3,
+  traffic: 30,
+  difficulty: 20,
+  volume: 800,
+  relevance: 70,
+  opportunity: 40,
+  bucket: "secondary",
+  scoredAt: utcTimestampDaysAgo(0),
+  scoreProvenance: null,
+};
+
+export const PL_HISTORY_SERIES: RankingSeriesItem = {
+  keywordId: PL_HISTORY_KEYWORD.keywordId,
+  text: PL_HISTORY_KEYWORD.text,
+  store: "APP_STORE",
+  country: "pl",
+  points: pointsFrom([9, 9, 8, 8, 7, 7, 7, 6]),
 };
 
 export const APP_1_SERP_MOVERS: SerpMovers = {
@@ -1155,6 +1206,8 @@ export const APP_1_LISTING_MARKETS: ListingMarket[] = [
     home: true,
     capturedAt: utcTimestampDaysAgo(0),
     tracked: true,
+    ratingAvg: 4.8,
+    ratingCount: 24000,
   },
   {
     country: "pl",
@@ -1162,6 +1215,78 @@ export const APP_1_LISTING_MARKETS: ListingMarket[] = [
     capturedAt: utcTimestampDaysAgo(0),
     tracked: true,
     localizations: ["pl"],
+    ratingAvg: 4.6,
+    ratingCount: 3100,
+  },
+];
+
+export const APP_1_WIDE_LISTING_MARKETS: ListingMarket[] = [
+  {
+    country: "us",
+    home: true,
+    capturedAt: "2026-10-26T12:00:00.000Z",
+    tracked: true,
+    ratingAvg: 4.8,
+    ratingCount: 24000,
+  },
+  {
+    country: "jp",
+    home: false,
+    capturedAt: "2026-10-25T12:00:00.000Z",
+    tracked: true,
+    ratingAvg: null,
+    ratingCount: null,
+  },
+  {
+    country: "ba",
+    home: false,
+    capturedAt: "2026-10-24T12:00:00.000Z",
+    tracked: true,
+    ratingAvg: 4.1,
+    ratingCount: 12,
+  },
+  {
+    country: "br",
+    home: false,
+    capturedAt: "2026-10-23T12:00:00.000Z",
+    tracked: true,
+    ratingAvg: 3.9,
+    ratingCount: 800,
+  },
+  {
+    country: "pl",
+    home: false,
+    capturedAt: "2026-10-22T12:00:00.000Z",
+    tracked: true,
+    ratingAvg: 4.6,
+    ratingCount: 3100,
+  },
+  {
+    country: "de",
+    home: false,
+    capturedAt: "2026-10-21T12:00:00.000Z",
+    tracked: true,
+    ratingAvg: 4.4,
+    ratingCount: 5200,
+  },
+];
+
+export const APP_1_UNCAPTURED_LISTING_MARKETS: ListingMarket[] = [
+  {
+    country: "us",
+    home: true,
+    capturedAt: null,
+    tracked: true,
+    ratingAvg: null,
+    ratingCount: null,
+  },
+  {
+    country: "pl",
+    home: false,
+    capturedAt: "2026-10-22T12:00:00.000Z",
+    tracked: true,
+    ratingAvg: 4.6,
+    ratingCount: 3100,
   },
 ];
 
@@ -2040,6 +2165,8 @@ export const APP_1_CHANGE_IMPACT: ChangeImpactReport = {
 
 export const PLAY_CHANGE_IMPACT_COOKIE = "e2e-play-change-impact";
 
+export const RANKINGS_FAIL_COOKIE = "e2e-fail-rankings";
+
 export const APP_GP_CHANGE_IMPACT: ChangeImpactReport = {
   appId: "app-gp",
   country: "us",
@@ -2289,6 +2416,118 @@ export const APP_COMBOS_DETAIL: AppDetail = {
   competitors: [],
   group: null,
 };
+
+export const APP_FLOOR_DETAIL: AppDetail = {
+  ...APP_LONG_DETAIL,
+  id: "app-floor",
+  name: "Floor Answers App",
+};
+
+const FLOOR_WEEK = "2026-10-18";
+
+interface FloorKeyword {
+  index: number;
+  text: string;
+  volume: number;
+  provenance: Pick<ScoreProvenance, "source" | "confidence">;
+  signals: Partial<ScoreSignals>;
+}
+
+const floorKeyword = ({
+  index,
+  text,
+  volume,
+  provenance,
+  signals,
+}: FloorKeyword): TrackedKeywordItem => ({
+  keywordId: `kw-floor-${index}`,
+  text,
+  country: "us",
+  serpVolatility7d: null,
+  source: "MANUAL",
+  active: true,
+  latestPosition: 12,
+  latestDepth: RANK_DEPTH,
+  latestCheckedOn: utcDaysAgo(0),
+  previousPosition: 12,
+  positionDelta1d: 0,
+  positionDelta7d: 0,
+  traffic: volume / 10,
+  difficulty: 4,
+  volume,
+  relevance: 60,
+  opportunity: 55,
+  bucket: "secondary",
+  scoredAt: utcTimestampDaysAgo(0),
+  scoreProvenance: {
+    ...provenance,
+    formulaVersion: "app-store-v5",
+    capturedAt: utcTimestampDaysAgo(0),
+  },
+  scoreSignals: {
+    suggestReach: "hit",
+    suggestPrefixLength: 3,
+    suggestPosition: 2,
+    serpRelevance: 0.8,
+    medianRatingCount: 12000,
+    flags: [],
+    officialPopularity: null,
+    estimatedTraffic: volume / 10,
+    ...signals,
+  },
+  scoreOutdated: false,
+});
+
+export const APP_FLOOR_KEYWORDS: TrackedKeywordItem[] = [
+  floorKeyword({
+    index: 1,
+    text: "geo quiz",
+    volume: 71,
+    provenance: { source: "APPLE_ADS_POPULARITY", confidence: "HIGH" },
+    signals: {
+      officialPopularity: 71,
+      officialPopularityState: "listed",
+      officialPopularityFloor: 56,
+      officialPopularityWeek: FLOOR_WEEK,
+    },
+  }),
+  floorKeyword({
+    index: 2,
+    text: "world flags",
+    volume: 41,
+    provenance: { source: "APPLE_ADS_POPULARITY", confidence: "MEDIUM" },
+    signals: {
+      officialPopularity: 41,
+      officialPopularityState: "floor",
+      officialPopularityFloor: 41,
+      officialPopularityWeek: FLOOR_WEEK,
+      officialPopularityLastAboveFloor: { value: 63, week: "2026-09-06" },
+    },
+  }),
+  floorKeyword({
+    index: 3,
+    text: "capital cities quiz",
+    volume: 38,
+    provenance: { source: "APPLE_SEARCH_SIGNALS", confidence: "MEDIUM" },
+    signals: {
+      officialPopularityState: "absent",
+      officialPopularityFloor: 41,
+      officialPopularityWeek: FLOOR_WEEK,
+      officialPopularityLastAboveFloor: { value: 58, week: "2026-09-27" },
+    },
+  }),
+  floorKeyword({
+    index: 4,
+    text: "flag trivia",
+    volume: 30,
+    provenance: { source: "APPLE_SEARCH_SIGNALS", confidence: "MEDIUM" },
+    signals: {
+      officialPopularityState: "absent",
+      officialPopularityFloor: 41,
+      officialPopularityWeek: FLOOR_WEEK,
+    },
+  }),
+];
 
 export const APP_LONG_ICON_URL =
   "https://is1-ssl.mzstatic.com/image/thumb/e2e-deep-focus/512x512bb.png";
@@ -2791,6 +3030,24 @@ export const DATASETS: Record<string, AppDataset> = {
     discovery: EMPTY_DISCOVERY,
     comparison: EMPTY_COMPARISON,
   },
+  "app-floor": {
+    detail: APP_FLOOR_DETAIL,
+    summary: APP_2_SUMMARY,
+    keywords: APP_FLOOR_KEYWORDS,
+    rankings: EMPTY_RANKINGS,
+    serpMovers: EMPTY_SERP_MOVERS,
+    visibility: EMPTY_VISIBILITY,
+    rankDistributionHistory: EMPTY_RANK_DISTRIBUTION_HISTORY,
+    categoryRanks: EMPTY_CATEGORY_RANKS,
+    competitors: [],
+    reviews: EMPTY_REVIEWS,
+    ratingsHistory: EMPTY_RATINGS_HISTORY,
+    ratingsHistogram: EMPTY_RATINGS_HISTOGRAM,
+    changes: EMPTY_CHANGES,
+    changeImpact: emptyChangeImpact(APP_FLOOR_DETAIL),
+    discovery: EMPTY_DISCOVERY,
+    comparison: EMPTY_COMPARISON,
+  },
   "app-unchecked": {
     detail: APP_UNCHECKED_DETAIL,
     summary: APP_UNCHECKED_SUMMARY,
@@ -2916,6 +3173,9 @@ export const APP_REPRICED_PAID_ID = "app-repriced-paid";
 export const APP_FREE_AGAIN_ID = "app-free-again";
 export const APP_LOCALES_ID = "app-locales";
 export const APP_SUGGESTED_LOCALES_ID = "app-suggested-locales";
+export const APP_MANAGED_LOCALES_ID = "app-managed-locales";
+export const APP_UNLISTED_MANAGED_ID = "app-unlisted-managed";
+export const APP_IMPORT_FOCUS_ID = "app-import-focus";
 export const APP_RIVAL_ID = "app-rival";
 
 export interface LocalizationSeed {
@@ -2926,6 +3186,9 @@ export interface LocalizationSeed {
   }[];
   fields?: Partial<Record<AppStoreLocalization, string[]>>;
   tracked?: Record<string, string[]>;
+  storeManaged?: boolean;
+  storeSyncAt?: string | null;
+  storeImport?: "unavailable" | "available" | "following" | "paused";
 }
 
 function localesDataset(id: string, name: string): AppDataset {
@@ -2944,6 +3207,18 @@ DATASETS[APP_LOCALES_ID] = localesDataset(APP_LOCALES_ID, "Locale Lab");
 DATASETS[APP_SUGGESTED_LOCALES_ID] = localesDataset(
   APP_SUGGESTED_LOCALES_ID,
   "Market Lab",
+);
+DATASETS[APP_MANAGED_LOCALES_ID] = localesDataset(
+  APP_MANAGED_LOCALES_ID,
+  "Managed Lab",
+);
+DATASETS[APP_UNLISTED_MANAGED_ID] = localesDataset(
+  APP_UNLISTED_MANAGED_ID,
+  "Unlisted Lab",
+);
+DATASETS[APP_IMPORT_FOCUS_ID] = localesDataset(
+  APP_IMPORT_FOCUS_ID,
+  "Import Lab",
 );
 const rivalDataset = localesDataset(APP_RIVAL_ID, "Rival Lab");
 DATASETS[APP_RIVAL_ID] = {
@@ -3131,6 +3406,22 @@ DATASETS[APP_TAGS_ID] = {
     tags: [],
     note: null,
   })),
+};
+
+export const APP_BULK_BAR_ID = "app-bulk-bar";
+
+DATASETS[APP_BULK_BAR_ID] = {
+  ...DATASETS[APP_TAGS_ID],
+  detail: { ...APP_1_DETAIL, id: APP_BULK_BAR_ID, name: "Bulk Bar Lab" },
+  keywords: structuredClone(DATASETS[APP_TAGS_ID].keywords),
+};
+
+export const APP_BULK_FOCUS_ID = "app-bulk-focus";
+
+DATASETS[APP_BULK_FOCUS_ID] = {
+  ...DATASETS[APP_TAGS_ID],
+  detail: { ...APP_1_DETAIL, id: APP_BULK_FOCUS_ID, name: "Bulk Focus Lab" },
+  keywords: structuredClone(DATASETS[APP_TAGS_ID].keywords),
 };
 
 export const APP_REPLIES_ID = "app-replies";
@@ -3484,9 +3775,11 @@ export const WEBHOOKS: WebhookItem[] = [
     id: "hook-1",
     url: "https://hooks.example.com/services/T0000000/B0000000/asobeast-alerts",
     events: ["metadata.changed", "rank.dropped", "review.negative"],
+    reviewScores: [],
     active: true,
     hasSecret: true,
     createdAt: utcTimestampDaysAgo(5),
+    channel: "generic",
   },
 ];
 
@@ -3495,11 +3788,31 @@ export const EMAIL_ALERTS: EmailAlertItem[] = [
     id: "email-1",
     email: "ops@example.com",
     events: ["metadata.changed", "rank.dropped"],
+    reviewScores: [],
     active: true,
     confirmed: true,
     createdAt: utcTimestampDaysAgo(3),
   },
 ];
+
+export const WEBHOOK_PAIR_COOKIE = "e2e-webhook-pair";
+
+export const WEBHOOK_PAIR: WebhookItem[] = ["first", "second"].map(
+  (path, index) => ({
+    ...WEBHOOKS[0],
+    id: `hook-pair-${index + 1}`,
+    url: `https://hooks.example.com/${path}`,
+  }),
+);
+
+export const AWAITING_ALERT_COOKIE = "e2e-awaiting-alert";
+
+export const AWAITING_ALERT: EmailAlertItem = {
+  ...EMAIL_ALERTS[0],
+  id: "email-awaiting",
+  email: "pending@example.com",
+  confirmed: false,
+};
 
 export const EMAIL_DELIVERIES: AlertDeliveryItem[] = [
   {
@@ -4982,7 +5295,19 @@ export const METADATA_AUDITS: Record<string, MetadataAuditResult> = {
 
 METADATA_AUDITS[APP_LOCALES_ID] = METADATA_AUDIT;
 METADATA_AUDITS[APP_SUGGESTED_LOCALES_ID] = METADATA_AUDIT;
+METADATA_AUDITS[APP_MANAGED_LOCALES_ID] = {
+  ...METADATA_AUDIT,
+  keywordFieldSuggestion: {
+    value: "focus,timer,habits",
+    charactersUsed: 18,
+    charactersLimit: 100,
+    addedTerms: ["habits"],
+    localization: "en-US",
+  },
+};
 METADATA_AUDITS[APP_RIVAL_ID] = METADATA_AUDIT;
+METADATA_AUDITS[APP_UNLISTED_MANAGED_ID] = METADATA_AUDIT;
+METADATA_AUDITS[APP_IMPORT_FOCUS_ID] = METADATA_AUDIT;
 
 export const APP_READS_ID = "app-reads";
 

@@ -65,7 +65,7 @@ export function ActionQueue({
           <div className="flex items-center gap-3">
             <GroupSelect group={group} selection={selection} />
             <h3 className="text-label text-muted-foreground uppercase">
-              {group.label} · {formatNumber(group.items.length)}
+              {`${group.label} · ${formatNumber(group.items.length)}`}
             </h3>
           </div>
           <ul className="flex list-none flex-col gap-2 p-0">

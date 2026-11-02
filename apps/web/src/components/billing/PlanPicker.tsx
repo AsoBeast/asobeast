@@ -74,9 +74,7 @@ function PlanOption({
         ) : null}
       </span>
       <span>
-        <span className="text-display tabular-nums">
-          ${priceOf(name, interval)}
-        </span>
+        <span className="text-display tabular-nums">{`$${priceOf(name, interval)}`}</span>
         <span className="text-body text-muted-foreground">
           {PER_INTERVAL[interval]}
         </span>

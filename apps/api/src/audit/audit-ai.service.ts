@@ -1,3 +1,4 @@
+import type { AiProvider } from '@asobeast/shared';
 import { Injectable } from '@nestjs/common';
 import { AiCallRequest, AiGateway } from '../ai/ai-gateway.service';
 import { AiCompletion, AiStructuredRequest } from '../ai/openai.client';
@@ -31,6 +32,10 @@ export class AuditAiService {
 
   get model(): string | null {
     return this.ai.model;
+  }
+
+  get provider(): AiProvider | null {
+    return this.ai.provider;
   }
 
   reserve(appId: string, userId: string | null): Promise<string> {

@@ -26,6 +26,29 @@ export const ACTION_RULES = [
 ] as const;
 export type ActionRule = (typeof ACTION_RULES)[number];
 
+export const ACTION_RULE_TITLES: Record<ActionRule, string> = {
+  'keyword.add_uncovered': 'Add a high-opportunity keyword to your metadata',
+  'keyword.defend': 'Defend a keyword competitors just entered',
+  'keyword.prune': 'Retire a keyword that never ranks',
+  'rank.investigate_drop': 'Investigate a drop after your metadata change',
+  'serp.hold_volatile': 'Hold: these results are unusually volatile',
+  'audit.fix_factor': 'Fix a weak audit factor',
+  'reviews.investigate_theme': 'Investigate a new negative review theme',
+  'market.improve_country': 'Investigate an underperforming market',
+  'keyword.push_to_top10': 'Push a keyword that sits just outside the top 10',
+  'metadata.fix_lint': 'Fix listing text that breaks a store rule',
+  'rank.investigate_unexplained_drop':
+    'Investigate a drop that followed no change of yours',
+  'competitor.investigate_overtake': 'Respond to a competitor that moved ahead',
+  'reviews.investigate_rating_decline': 'Investigate falling review scores',
+  'reviews.reply_negative': 'Reply to unanswered low reviews',
+  'listing.ship_update': 'Ship an update to a stale listing',
+  'conversion.investigate_drop':
+    'Investigate fewer Get taps while page views held',
+  'listing.cpp_underperforms':
+    'Rework a custom product page that converts below the default',
+};
+
 export const ACTION_CATEGORIES = [
   'metadata',
   'competition',
@@ -596,7 +619,13 @@ export type ActionAiStatus = AiStatus;
 export interface ActionOpenedPayload {
   event: 'action.opened';
   occurredAt: string;
-  app: { id: string; name: string | null; store: Store; country: string };
+  app: {
+    id: string;
+    name: string | null;
+    store: Store;
+    country: string;
+    iconUrl?: string | null;
+  };
   action: {
     id: string;
     rule: ActionRule;

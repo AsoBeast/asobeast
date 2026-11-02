@@ -32,6 +32,7 @@ import { MailerService } from './mailer.service';
 const APP_SELECT = {
   id: true,
   name: true,
+  iconUrl: true,
   store: true,
   country: true,
   isCompetitor: true,
@@ -380,12 +381,22 @@ export class AlertFlushService {
     const [webhooks, emails] = await Promise.all([
       this.prisma.webhook.findMany({
         where: { active: true },
-        select: { id: true, events: true },
+        select: {
+          id: true,
+          events: true,
+          reviewScores: true,
+          confirmDrops: true,
+        },
       }),
       this.mailer.enabled
         ? this.prisma.emailAlert.findMany({
             where: DELIVERABLE_EMAIL_ALERTS,
-            select: { id: true, events: true },
+            select: {
+              id: true,
+              events: true,
+              reviewScores: true,
+              confirmDrops: true,
+            },
           })
         : Promise.resolve([]),
     ]);

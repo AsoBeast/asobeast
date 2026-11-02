@@ -25,7 +25,7 @@ Neither gap is zero. See [Positions and rank depth](/concepts/positions) for why
 
 Use the range picker to change the window. Dates are UTC, so a chart point labelled with a date is the observation for that UTC day.
 
-To share the chart with someone who has no account, print the rankings view or save it as PDF. See [Print a report or save it as PDF](/guides/export-data#print-a-report-or-save-it-as-pdf).
+To share the chart with someone who has no account, send it as an image or print the rankings view. See [Share a chart as an image](#share-a-chart-as-an-image) and [Print a report or save it as PDF](/guides/export-data#print-a-report-or-save-it-as-pdf).
 
 ## Mark events on the charts
 
@@ -39,11 +39,21 @@ Agents write annotations too. A token with the write scope carries `add_annotati
 
 Annotations are plain rows: they never change a position, a score or an alert, and deleting one removes only the line.
 
-## Inspect a SERP snapshot
+## Share a chart as an image
 
-For every tracked keyword and day, asobeast keeps the top 10 search results with the app, its position and the listing signals the store returned.
+The rankings chart and the position history of a keyword can leave AsoBeast as a PNG, for a chat message, a post or a client thread. The picture is drawn in your browser from the chart on screen. Nothing is sent to a server, and whoever receives it needs no account.
 
-That snapshot is what makes the rest of the page possible.
+On the rankings view, **Copy image** and **Download PNG** sit beside **Export CSV**. In the position history popover of the keyword monitor, the copy icon sits beside the range tabs. Both appear once the chart draws a line, which needs at least four daily checks. Before that the chart shows its short history message and there is nothing to copy.
+
+The picture carries its own context: the app name, the store and storefronts, the UTC days the chart covers, a legend that names every keyword with its stroke pattern, and the AsoBeast name. It follows the theme you are in, so the dark theme gives a dark picture, and it is twice the size of the chart on screen, so a narrow window gives a narrow picture. The hover tooltip is never part of it.
+
+If your browser cannot put an image on the clipboard, or refuses it, AsoBeast downloads the file instead and says so. The file is named `asobeast-rankings-<app>-<from>-<to>.png`, or `asobeast-position-history-<app>-<keyword>-<from>-<to>.png`, where `<from>` and `<to>` are the first and last UTC day the chart draws and `<app>` and `<keyword>` are lowercase words with no accents or symbols.
+
+Axis labels in the picture use your system's default font where the page uses IBM Plex, because a picture cannot load the page's fonts. The caption keeps IBM Plex.
+
+## Search results
+
+For every tracked keyword and day, asobeast keeps the top 50 search results with the app, its position and the listing signals the store returned. That snapshot is what makes the rest of the page possible.
 
 | Derived signal | What it measures |
 | --- | --- |
@@ -51,11 +61,41 @@ That snapshot is what makes the rest of the page possible.
 | Movers | Apps whose position changed materially between snapshots |
 | Volatility | How much of the top 10 changed hands over the recent window |
 
-Google Play search results carry no rating counts, so the rating columns stay empty for Google Play keywords. That is a store limitation rather than a missing sync.
+### Open the search results
 
-Open a keyword's snapshot from the keyword monitor with its top 10 button. **Export CSV** in that sheet saves the snapshot. See [Export a SERP snapshot to CSV](/guides/export-data#export-a-serp-snapshot-to-csv).
+Select the list button at the end of a keyword row on the Keywords page. The sheet shows the keyword, its storefront and the newest captured day.
 
-SERP entries are pruned on `RETENTION_SERP_DAYS`, which defaults to 90 days.
+### What a row shows
+
+Each row shows the position and, under it, how the app moved since the earlier capture: up or down by a number of places, **New** for an app that was not listed before, or a dash when there is no earlier position to compare with. Then come the app icon, the title with the keyword's words underlined, the developer, and the rating with the rating count. A dotted underline marks a word that matches only when accents are ignored. Google Play search results carry no rating counts, so a Google Play row shows the rating alone. That is a store limitation rather than a missing sync.
+
+Your own app carries a **You** badge and a tinted row, and an app you track as a competitor carries a **Competitor** badge.
+
+### The summary
+
+Three figures sit above the list.
+
+| Figure | What it says |
+| --- | --- |
+| Your position | Your place in the list, as a link that jumps to your row. When you rank below the stored list it shows your checked position, and when the check did not find you it says so with the check's depth |
+| Titles with it | How many of the top 10 titles hold the whole keyword, its words in order |
+| Top 10 ratings | The median rating count of the top 10, or the average rating on Google Play |
+
+### Depth and retention
+
+Each daily check keeps the top 50. Positions below the top 10 are kept for a shorter time than the top 10, so an older day can show the top 10 only, and the sheet says so on such a day. See [Positions](/concepts/positions#how-deep-does-the-serp-snapshot-go) for how long each is kept.
+
+### Pick a day
+
+The day picker and its previous and next buttons step through every captured day, and the link keeps the day you picked. The caption next to it names the earlier captured day each movement is measured against, and **Left since** lists the apps of that earlier day that are no longer listed, with the position they held.
+
+### Track an app or open it in the store
+
+The store button on a row opens the app's page in the keyword's storefront. **Track** adds the app as a competitor of the app you are viewing. On hosted plans each Track spends one competitor add from the plan's on demand allowance. See [Rate limits](/api-reference/rate-limits#what-each-plan-allows).
+
+### Export the search results
+
+**Export CSV** saves the day the sheet shows. The columns are listed in [Export a SERP snapshot to CSV](/guides/export-data#export-a-serp-snapshot-to-csv).
 
 ## Understand volatility
 
@@ -74,6 +114,7 @@ Any app in a stored SERP snapshot can be added as a competitor in one step, whic
 - **The chart is empty for a new keyword.** No daily run has covered it yet.
 - **A line stops and restarts.** The app left and re entered the captured depth. The gap is real data.
 - **Volatility is missing.** It needs several observed days in the window. A keyword added yesterday has none.
+- **There is no Copy image button.** The chart needs at least four daily checks to draw a line. Widen the range or wait for more checks.
 
 ## Related
 

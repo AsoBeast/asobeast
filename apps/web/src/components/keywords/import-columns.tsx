@@ -43,7 +43,7 @@ export function importColumns(lines: readonly number[]) {
     columnHelper.accessor("country", {
       id: "country",
       header: "Market",
-      cell: ({ row }) => row.original.country.toUpperCase(),
+      cell: ({ row }) => <span>{row.original.country.toUpperCase()}</span>,
     }),
     columnHelper.accessor("status", {
       id: "status",

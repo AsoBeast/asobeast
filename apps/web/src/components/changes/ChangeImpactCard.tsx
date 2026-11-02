@@ -31,7 +31,7 @@ import { formatCountry, formatDate } from "@/lib/format";
 import { changeImpactOptions, keywordCountriesOptions } from "@/lib/queries";
 import { changeDaysParser, countryParser } from "@/lib/search-params";
 import { ChangeImpactWindowTile, FunnelFacts } from "./ChangeImpactWindowTile";
-import { CHANGE_FIELD_LABELS } from "@/lib/change-fields";
+import { CHANGE_FIELD_LABELS } from "@asobeast/shared";
 import { impactScopeLine, windowTitle } from "./change-impact-copy";
 import { ChangeImpactSkeleton } from "./skeletons";
 import { VisibilityHelp } from "@/components/visibility/VisibilityHelp";

@@ -21,6 +21,7 @@ describe('ProxyHealthTracker', () => {
       failures: number;
       consecutiveFailures: number;
       windowStartedAt: Date;
+      lastUsedAt?: Date | null;
     } | null>,
     []
   >();
@@ -162,14 +163,29 @@ describe('ProxyHealthTracker', () => {
   });
 
   it('holds the endpoint back for the requests it has already spent', async () => {
-    const pacedUntil = new Date(Date.now() + 30_000);
+    const leasedAt = new Date();
+    const until = new Date(Date.now() + 30_000);
+    findUnique.mockResolvedValue({ ...stored(), lastUsedAt: leasedAt });
 
     await tracker.record('e1', Store.APP_STORE, {
       ...observed(ProxyOutcome.SUCCESS),
-      pacedUntil,
+      pacing: { leasedAt, until },
     });
 
-    expect(lastUpdate()).toMatchObject({ pacedUntil });
+    expect(lastUpdate()).toMatchObject({ pacedUntil: until });
+  });
+
+  it('leaves the pacing of a newer lease alone while still counting the outcome', async () => {
+    const leasedAt = new Date(Date.now() - 600_000);
+    findUnique.mockResolvedValue({ ...stored(), lastUsedAt: new Date() });
+
+    await tracker.record('e1', Store.APP_STORE, {
+      ...observed(ProxyOutcome.SUCCESS),
+      pacing: { leasedAt, until: new Date() },
+    });
+
+    expect(lastUpdate()).not.toHaveProperty('pacedUntil');
+    expect(lastUpdate()).toMatchObject({ successes: 1 });
   });
 
   it('leaves pacing untouched when the caller does not set it', async () => {

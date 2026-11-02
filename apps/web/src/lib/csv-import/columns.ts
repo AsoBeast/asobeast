@@ -27,6 +27,8 @@ const ALIASES: Record<ImportField, ReadonlySet<string>> = {
   country: new Set([
     "country",
     "countrycode",
+    "countryname",
+    "storedomain",
     "storefront",
     "market",
     "region",

@@ -4,21 +4,29 @@ import { useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { REVIEW_SCORES } from "@asobeast/shared";
 import type { WebhookEvent } from "@asobeast/shared";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ApiError, createWebhook } from "@/lib/api";
 import { invalidateWebhookMutation } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
-import { EventSelection } from "./alert-events";
+import { needsAStar, reviewScoresToSend } from "./alert-event-copy";
+import { AlertSubscriptionFields } from "./alert-events";
+import { ConfirmDropsField } from "./ConfirmDropsField";
 import { AlertChannelDialog } from "./alert-channel/AlertChannelDialog";
+import { channelHint, deliversToChat } from "./webhook-channel-copy";
+
+const HINT_ID = "webhook-channel-hint";
 
 export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [url, setUrl] = useState("");
   const [events, setEvents] = useState<WebhookEvent[]>(["metadata.changed"]);
+  const [stars, setStars] = useState<number[]>([...REVIEW_SCORES]);
   const [secret, setSecret] = useState("");
+  const [confirmChoice, setConfirmChoice] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const mutation = useMutation({
@@ -26,7 +34,9 @@ export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
       createWebhook({
         url,
         events,
+        reviewScores: reviewScoresToSend(events, stars),
         secret: secret.trim() === "" ? undefined : secret,
+        confirmDrops,
       }),
     onSuccess: () => {
       invalidateWebhookMutation(queryClient);
@@ -42,13 +52,17 @@ export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
     },
   });
   const createOnce = useSingleFlight(mutation);
+  const hint = channelHint(url);
+  const confirmDrops = confirmChoice ?? deliversToChat(url);
 
   function onOpenChange(next: boolean) {
     setOpen(next);
     if (next) return;
     setUrl("");
     setEvents(["metadata.changed"]);
+    setStars([...REVIEW_SCORES]);
     setSecret("");
+    setConfirmChoice(null);
     setError(null);
   }
 
@@ -67,6 +81,10 @@ export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
     }
     if (events.length === 0) {
       setError("Select at least one event");
+      return;
+    }
+    if (needsAStar(events, stars)) {
+      setError("Pick at least one star");
       return;
     }
     if (secret.trim() !== "" && secret.length < 8) {
@@ -96,10 +114,23 @@ export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
           onChange={(event) => setUrl(event.target.value)}
           placeholder="https://hooks.example.com/asobeast"
           aria-invalid={error !== null}
+          aria-describedby={hint ? HINT_ID : undefined}
         />
+        {hint && (
+          <p id={HINT_ID} className="text-sm text-muted-foreground">
+            {hint}
+          </p>
+        )}
       </div>
 
-      <EventSelection value={events} onChange={setEvents} />
+      <AlertSubscriptionFields
+        events={events}
+        stars={stars}
+        onEventsChange={setEvents}
+        onStarsChange={setStars}
+      />
+
+      <ConfirmDropsField checked={confirmDrops} onChange={setConfirmChoice} />
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="webhook-secret">Secret (optional)</Label>

@@ -1,6 +1,9 @@
 import {
+  CHART_COLLECTION_TITLES,
+  chartColumnsPath,
   chartDevicesOf,
   chartGenreName,
+  chartTablePath,
   DEFAULT_COUNTRY,
   defaultChartDevice,
   isChartGenre,
@@ -39,11 +42,8 @@ export const COLLECTION_LABELS: Record<CategoryCollection, string> = {
   grossing: "Grossing",
 };
 
-const COLLECTION_TITLES: Record<CategoryCollection, string> = {
-  free: "Top free",
-  paid: "Top paid",
-  grossing: "Top grossing",
-};
+export const chartHref = chartColumnsPath;
+export const tableHref = chartTablePath;
 
 export function chartKeyFrom(search: Omit<ChartSearch, "view">): ChartKey {
   const { store, collection } = search;
@@ -84,45 +84,9 @@ export function categoryTitle(category: ChartCategory): string {
 }
 
 export function chartTitle(key: ChartKey): string {
-  return [COLLECTION_TITLES[key.collection], categoryTitle(key)].join(" · ");
-}
-
-function categoryParams(category: ChartCategory): URLSearchParams {
-  return new URLSearchParams({
-    store: category.store,
-    country: category.country,
-    genre: category.genre,
-    device: category.device,
-  });
-}
-
-export function chartHref(category: ChartCategory): string {
-  return `/charts?${categoryParams(category).toString()}`;
-}
-
-export function tableHref(
-  key: ChartKey,
-  { compare, date }: Partial<Pick<ChartSearch, "compare" | "date">> = {},
-): string {
-  const params = categoryParams(key);
-  params.set("view", "table");
-  params.set("collection", key.collection);
-  if (compare && compare !== "1d") params.set("compare", compare);
-  if (date) params.set("date", date);
-  return `/charts?${params.toString()}`;
-}
-
-export function stepDate(
-  dates: readonly string[],
-  current: string,
-  direction: -1 | 1,
-): string | null {
-  const sorted = [...dates].sort();
-  const found =
-    direction === 1
-      ? sorted.find((date) => date > current)
-      : sorted.findLast((date) => date < current);
-  return found ?? null;
+  return [CHART_COLLECTION_TITLES[key.collection], categoryTitle(key)].join(
+    " · ",
+  );
 }
 
 export function storeChanged(

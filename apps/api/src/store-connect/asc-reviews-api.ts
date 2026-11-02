@@ -1,5 +1,9 @@
 import { AscError } from './asc-errors';
-import type { AscRequester, Resource } from './asc-requester';
+import {
+  createdResource,
+  type AscRequester,
+  type Resource,
+} from './asc-requester';
 
 export const ASC_REVIEW_FIELDS =
   'rating,title,body,reviewerNickname,createdDate,territory';
@@ -106,12 +110,7 @@ export class AscReviewsApi {
       },
       false,
     );
-    const created = (
-      response.body as { data?: Resource<ResponseAttributes> } | null
-    )?.data;
-    if (!created) {
-      throw new AscError('App Store Connect created no response', 502, null);
-    }
+    const created = createdResource<ResponseAttributes>(response);
     return {
       id: created.id,
       state: created.attributes?.state ?? 'PENDING_PUBLISH',

@@ -3,6 +3,7 @@ import type {
   ChartFollowItem,
   ChartPage,
   AppAuditResult,
+  AppLocalizationsResult,
   EmailAlertItem,
   FirstRunStatus,
   KeywordFieldQuery,
@@ -113,6 +114,7 @@ import {
 import { withReviewReply, withReviewRow } from "./review-reply-cache";
 import { runProgressInterval } from "./run-progress";
 import { keywordsPollInterval } from "./keyword-checks";
+import { firstImportPollInterval } from "./app-localizations";
 import {
   hasPendingScreenshots,
   SCREENSHOT_POLL_MS,
@@ -235,7 +237,9 @@ export const appKeys = {
       ...appKeys.metadataAuditRoot(id),
       { market, ...(localization === undefined ? {} : { localization }) },
     ] as const,
-  serp: (keywordId: string) => ["serp", keywordId] as const,
+  serpRoot: () => ["serp"] as const,
+  serp: (keywordId: string, date: string | null = null) =>
+    [...appKeys.serpRoot(), keywordId, date] as const,
 };
 
 export const setupKey = (id: string) => ["setup", id] as const;
@@ -641,6 +645,10 @@ export const keywordCountriesOptions = (id: string) =>
     queryFn: () => getKeywordCountries(id),
   });
 
+export const importPreviewRequest = ([, , , request]: ReturnType<
+  typeof appKeys.importPreview
+>): KeywordImportRequest | null => request;
+
 export const keywordImportPreviewOptions = (
   id: string,
   request: KeywordImportRequest | null,
@@ -666,6 +674,8 @@ export const appLocalizationsOptions = (id: string) =>
   queryOptions({
     queryKey: appKeys.localizations(id),
     queryFn: () => getAppLocalizations(id),
+    refetchInterval: (query) =>
+      firstImportPollInterval(query.state.data, query.state.dataUpdateCount),
   });
 
 export const marketKeywordFieldsOptions = (id: string, country: string) =>
@@ -916,10 +926,10 @@ export const setupOptions = (id: string) =>
     refetchOnWindowFocus: true,
   });
 
-export const serpOptions = (keywordId: string) =>
+export const serpOptions = (keywordId: string, date: string | null = null) =>
   queryOptions({
-    queryKey: appKeys.serp(keywordId),
-    queryFn: () => getSerp(keywordId),
+    queryKey: appKeys.serp(keywordId, date),
+    queryFn: () => getSerp(keywordId, date ?? undefined),
   });
 
 export const webhooksOptions = queryOptions({
@@ -1052,6 +1062,18 @@ export function invalidateKeywordImport(client: QueryClient, id: string): void {
   void client.invalidateQueries({ queryKey: appKeys.importPreviewRoot(id) });
 }
 
+export function seedStoreImport(
+  client: QueryClient,
+  id: string,
+  result: AppLocalizationsResult,
+): void {
+  client.setQueryData(appKeys.localizations(id), result);
+}
+
+export function invalidateStoreImport(client: QueryClient, id: string): void {
+  void client.invalidateQueries({ queryKey: appKeys.localizations(id) });
+}
+
 function invalidateLocalSuggestions(client: QueryClient, id: string): void {
   void client.invalidateQueries({
     queryKey: appKeys.suggestionsRoot(id),
@@ -1176,6 +1198,7 @@ export function invalidateCompetitorMutation(
     refetchType: "none",
   });
   void client.invalidateQueries({ queryKey: appKeys.serpMoversRoot(id) });
+  void client.invalidateQueries({ queryKey: appKeys.serpRoot() });
   void client.invalidateQueries({ queryKey: portfolioKey });
   void client.invalidateQueries({ queryKey: appKeys.firstRun(id) });
   invalidateLocalSuggestions(client, id);

@@ -13,12 +13,16 @@ import {
   type MarketSuggestion,
   type MarketSuggestionsResult,
   type LocalizedKeywordFieldResult,
+  type StoreImportState,
 } from "@asobeast/shared";
 import {
   addableGroups,
   addedSentence,
   droppedSentence,
   editLocalizationHref,
+  FIRST_IMPORT_POLL_LIMIT,
+  FIRST_IMPORT_POLL_MS,
+  firstImportPollInterval,
   hasMarketReads,
   keywordFieldDraft,
   localizationMatrix,
@@ -99,6 +103,9 @@ const MX = market("mx", "default", []);
 const RESULT: AppLocalizationsResult = {
   home: "us",
   markets: ["us", "mx"],
+  storeManaged: false,
+  storeSync: null,
+  storeImport: "unavailable",
   localizations: [
     item("en-US", "home", [reader("us", "default", true)]),
     item("es-MX", "manual", [
@@ -124,6 +131,9 @@ describe("localizationMatrix", () => {
       localizationMatrix({
         home: "us",
         markets: ["us"],
+        storeManaged: false,
+        storeSync: null,
+        storeImport: "unavailable",
         localizations: [RESULT.localizations[0]],
       }),
     ).toBeNull();
@@ -238,6 +248,9 @@ describe("localizationMatrix", () => {
           {
             home: "us",
             markets: ["us"],
+            storeManaged: false,
+            storeSync: null,
+            storeImport: "unavailable",
             localizations: [RESULT.localizations[0]],
           },
           suggestions(suggestion("gb", "en-GB")),
@@ -375,6 +388,9 @@ describe("unlistedReads", () => {
   ): AppLocalizationsResult => ({
     home: "us",
     markets,
+    storeManaged: false,
+    storeSync: null,
+    storeImport: "unavailable",
     localizations: shipped.map((localization) =>
       item(localization, "manual", []),
     ),
@@ -746,5 +762,53 @@ describe("what a market reads", () => {
     expect(localizationsSectionHref("app-1")).toBe(
       "/apps/app-1/metadata#app-localizations",
     );
+  });
+});
+
+describe("firstImportPollInterval", () => {
+  const result = (
+    storeImport: StoreImportState,
+    at: string | null,
+    error: string | null = null,
+  ): Pick<AppLocalizationsResult, "storeImport" | "storeSync"> => ({
+    storeImport,
+    storeSync: { at, version: null, error },
+  });
+
+  it("W-IMP-01 polls a following app until its first read lands, within the budget", () => {
+    expect(firstImportPollInterval(result("following", null), 0)).toBe(
+      FIRST_IMPORT_POLL_MS,
+    );
+    expect(
+      firstImportPollInterval(
+        result("following", null),
+        FIRST_IMPORT_POLL_LIMIT - 1,
+      ),
+    ).toBe(FIRST_IMPORT_POLL_MS);
+    expect(
+      firstImportPollInterval(
+        result("following", null),
+        FIRST_IMPORT_POLL_LIMIT,
+      ),
+    ).toBe(false);
+  });
+
+  it("W-IMP-02 stops once the first read is stored or an error explains its absence", () => {
+    expect(
+      firstImportPollInterval(result("following", "2026-10-31T12:00:00Z"), 0),
+    ).toBe(false);
+    expect(
+      firstImportPollInterval(
+        result(
+          "following",
+          null,
+          "App Store Connect has no released iOS version for this app yet",
+        ),
+        0,
+      ),
+    ).toBe(false);
+    expect(firstImportPollInterval(result("available", null), 0)).toBe(false);
+    expect(firstImportPollInterval(result("paused", null), 0)).toBe(false);
+    expect(firstImportPollInterval(undefined, 0)).toBe(false);
   });
 });

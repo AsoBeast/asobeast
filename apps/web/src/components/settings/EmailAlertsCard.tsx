@@ -6,7 +6,7 @@ import {
   useSuspenseQuery,
 } from "@tanstack/react-query";
 import { toast } from "sonner";
-import type { EmailAlertItem, WebhookEvent } from "@asobeast/shared";
+import type { EmailAlertItem } from "@asobeast/shared";
 import {
   ApiError,
   deleteEmailAlert,
@@ -27,8 +27,9 @@ import {
   AlertChannelList,
 } from "./alert-channel/AlertChannelCard";
 import { AddEmailAlertDialog } from "./AddEmailAlertDialog";
+import type { AlertSubscriptionChange } from "./alert-event-copy";
 import { AlertChannelRow } from "./alert-channel/AlertChannelRow";
-import { useSharedFlight } from "@/lib/single-flight";
+import { useSharedFlight, useSingleFlight } from "@/lib/single-flight";
 
 const SMTP_VARS = [
   "SMTP_HOST",
@@ -49,8 +50,8 @@ function EmailAlertRow({ alert }: { alert: EmailAlertItem }) {
   });
 
   const editEvents = useMutation({
-    mutationFn: (events: WebhookEvent[]) =>
-      updateEmailAlert(alert.id, { events }),
+    mutationFn: (change: AlertSubscriptionChange) =>
+      updateEmailAlert(alert.id, change),
     onSuccess: (saved) => {
       seedEmailAlert(queryClient, saved);
       invalidateEmailAlertMutation(queryClient);
@@ -89,6 +90,9 @@ function EmailAlertRow({ alert }: { alert: EmailAlertItem }) {
       ),
   });
 
+  const testOnce = useSingleFlight(test);
+  const resendOnce = useSingleFlight(resend);
+
   const remove = useMutation({
     mutationFn: () => deleteEmailAlert(alert.id),
     onSuccess: () => {
@@ -105,11 +109,13 @@ function EmailAlertRow({ alert }: { alert: EmailAlertItem }) {
       channel="email"
       id={alert.id}
       events={alert.events}
+      confirmDrops={alert.confirmDrops === true}
+      reviewScores={alert.reviewScores}
       awaiting={
         awaitsConfirmation(alert)
           ? {
               pending: resend.isPending,
-              onResend: () => resend.mutate(),
+              onResend: resendOnce,
               unsubscribed: alert.unsubscribed === true,
             }
           : undefined
@@ -120,7 +126,7 @@ function EmailAlertRow({ alert }: { alert: EmailAlertItem }) {
       confirmTitle="Delete this email alert?"
       confirmDescription={`AsoBeast will stop emailing ${alert.email}. This cannot be undone.`}
       testPending={test.isPending}
-      onTest={() => test.mutate()}
+      onTest={testOnce}
       deletePending={remove.isPending}
       onDelete={removeOnce}
       eventsPending={editEvents.isPending}

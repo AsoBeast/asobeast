@@ -6,8 +6,12 @@ import { PrismaService } from '../../prisma/prisma.service';
 import type { FunnelRow } from '../discovery-report';
 import { StoreConnectionService } from '../store-connection.service';
 import { PLAY_ALL_MARKETS } from '../store-funnel';
-import { funnelUpserts } from '../store-funnel-rows';
-import { emptySummary, type SyncSummary } from '../store-sync-summary';
+import { funnelUpserts, reportTransaction } from '../store-funnel-rows';
+import {
+  emptySummary,
+  retriesFailures,
+  type SyncSummary,
+} from '../store-sync-summary';
 import {
   GcsBucketError,
   GcsError,
@@ -57,6 +61,9 @@ interface Imported {
   terms: SearchTermRow[];
 }
 
+const lastErrorOf = ({ failed, skipped }: SyncSummary): string | null =>
+  failed + skipped > 0 ? PLAY_PARTIAL_SYNC : null;
+
 const dateValue = (key: string): Date => new Date(`${key}T00:00:00.000Z`);
 
 export function importedMonths(now: Date, count = PLAY_MONTHS_IMPORTED) {
@@ -101,6 +108,24 @@ function imported(
     terms: searchTermsOf(table),
   };
 }
+
+interface TermOwner {
+  workspaceId: string;
+  appId: string;
+  generation: string;
+}
+
+const termRowsOf = (terms: SearchTermRow[], month: string, owner: TermOwner) =>
+  terms
+    .filter((term) => term.month === month)
+    .map((term) => ({
+      ...owner,
+      month: dateValue(term.month),
+      term: term.term,
+      normalized: term.normalized,
+      visitors: term.visitors,
+      acquisitions: term.acquisitions,
+    }));
 
 type FileOutcome = 'forbidden' | 'vanished' | 'failed';
 
@@ -150,7 +175,10 @@ export class PlayReportSync {
     private readonly connections: StoreConnectionService,
   ) {}
 
-  async run(now = new Date()): Promise<SyncSummary | null> {
+  async run(
+    now = new Date(),
+    finalAttempt = true,
+  ): Promise<SyncSummary | null> {
     const connection = await this.connections.openPlay();
     if (!connection || connection.status === 'rejected') return null;
     const summary = emptySummary();
@@ -183,7 +211,9 @@ export class PlayReportSync {
       await this.connections.markSynced(
         STORE,
         'admin',
-        summary.failed > 0 ? PLAY_PARTIAL_SYNC : null,
+        retriesFailures(summary, finalAttempt) && summary.skipped === 0
+          ? connection.lastError
+          : lastErrorOf(summary),
       );
     } catch (error) {
       await this.failed(error, connection.api, summary, connection.lastError);
@@ -198,7 +228,7 @@ export class PlayReportSync {
   ): Promise<void> {
     for (const file of files) {
       if (file.object.size > PLAY_REPORT_MAX_BYTES) {
-        summary.failed += 1;
+        summary.skipped += 1;
         this.logger.warn(
           `${file.object.name} is ${file.object.size} bytes, above the ${PLAY_REPORT_MAX_BYTES} byte ceiling, and is skipped`,
         );
@@ -210,7 +240,7 @@ export class PlayReportSync {
         const outcome = fileOutcome(error);
         if (!outcome) throw error;
         this.logger.warn(
-          `${file.object.name} waits for the next sync: ${error instanceof Error ? error.message : String(error)}`,
+          `${file.object.name} waits for the next try: ${error instanceof Error ? error.message : String(error)}`,
         );
         if (outcome === 'forbidden') {
           await this.prisma.storeReportRequest.update({
@@ -297,6 +327,12 @@ export class PlayReportSync {
     const { rows, terms } = imported(breakdown, raw, processed);
     const workspaceId = this.workspace.require('a play report file');
     const processingDate = dateValue(processed);
+    const termRows = termRowsOf(terms, month, {
+      workspaceId,
+      appId,
+      generation: object.generation,
+    });
+    const transaction = reportTransaction(rows.length + termRows.length);
     await this.prisma.withTransaction(async (tx) => {
       const stored = await tx.storeReportInstance.upsert({
         where: { requestId_remoteId: { requestId, remoteId } },
@@ -323,20 +359,7 @@ export class PlayReportSync {
         await tx.storeFunnelSearchTerm.deleteMany({
           where: { appId, month: dateValue(month) },
         });
-        await tx.storeFunnelSearchTerm.createMany({
-          data: terms
-            .filter((term) => term.month === month)
-            .map((term) => ({
-              workspaceId,
-              appId,
-              month: dateValue(term.month),
-              term: term.term,
-              normalized: term.normalized,
-              visitors: term.visitors,
-              acquisitions: term.acquisitions,
-              generation: object.generation,
-            })),
-        });
+        await tx.storeFunnelSearchTerm.createMany({ data: termRows });
       }
       await tx.storeReportRequest.updateMany({
         where: {
@@ -352,7 +375,7 @@ export class PlayReportSync {
         where: { id: stored.id },
         data: { appliedAt: new Date() },
       });
-    });
+    }, transaction);
     summary.instances += 1;
     summary.rows += rows.length;
     this.logger.debug(

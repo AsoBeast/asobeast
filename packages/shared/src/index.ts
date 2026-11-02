@@ -65,6 +65,8 @@ export const KEYWORD_SORTS = [
   'difficulty',
   'position',
   'volatility',
+  'added',
+  'competitors',
 ] as const;
 export type KeywordSort = (typeof KEYWORD_SORTS)[number];
 
@@ -92,6 +94,14 @@ export type ScoringSource = (typeof SCORING_SOURCES)[number];
 export const SCORING_CONFIDENCES = ['LOW', 'MEDIUM', 'HIGH'] as const;
 export type ScoringConfidence = (typeof SCORING_CONFIDENCES)[number];
 
+export const OFFICIAL_POPULARITY_STATES = [
+  'listed',
+  'floor',
+  'absent',
+] as const;
+export type OfficialPopularityState =
+  (typeof OFFICIAL_POPULARITY_STATES)[number];
+
 export const SERP_FLAGS = [
   'brand',
   'weak_leader',
@@ -118,9 +128,20 @@ export const isScoringConfidence = (
   typeof value === 'string' &&
   SCORING_CONFIDENCES.some((confidence) => confidence === value);
 
+export const isOfficialPopularityState = (
+  value: unknown,
+): value is OfficialPopularityState =>
+  typeof value === 'string' &&
+  OFFICIAL_POPULARITY_STATES.some((state) => state === value);
+
+export const isFloorAnswer = (
+  state: OfficialPopularityState | null | undefined,
+): boolean => state === 'floor' || state === 'absent';
+
 export const DEFAULT_COUNTRY = 'us';
 
 export const SERP_DEPTH = 10;
+export const SERP_CAPTURE_DEPTH = 50;
 
 export * from './query-bounds';
 export * from './storefronts';
@@ -133,6 +154,9 @@ export * from './release-notes';
 export * from './aso';
 export * from './rank';
 export * from './utc-days';
+export * from './utc-format';
+export * from './review-scores';
+export * from './webhook-channel';
 export * from './auth';
 export * from './brand';
 export * from './trusted-proxy';

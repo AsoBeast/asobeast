@@ -52,6 +52,7 @@ export const RESERVED_SIGNALS = [
   "--warning",
   "--warning-subtle",
   "--info",
+  "--info-subtle",
   "--priority-critical",
   "--priority-high",
   "--priority-medium",
@@ -236,6 +237,9 @@ export const TEXT_PAIRS: TextPair[] = [
   ...GAP_ROW_TEXT.map((token) => textOn(token, "--warning-subtle")),
   ...GRADE_TEXT.map((token) => textOn("--foreground", `${token}-subtle`)),
   textOn("--muted-foreground", "--success-subtle"),
+  ...["--foreground", "--muted-foreground", "--info"].map((token) =>
+    textOn(token, "--info-subtle"),
+  ),
   ...TINTED_TEXT.flatMap(({ token, tint }) =>
     ["--card", "--background", "--popover"].map((background) => ({
       ...textOn(token, background),

@@ -1,4 +1,6 @@
 import {
+  isOfficialPopularityState,
+  OfficialPopularityListing,
   ScoreSignals,
   SERP_FLAGS,
   SerpFlag,
@@ -8,6 +10,7 @@ import {
 import { finiteNumbers, median } from './curves';
 import { entryDifficulty } from './difficulty';
 import { KeywordStats } from './formulas';
+import { officialSignals } from './official-signals';
 import { serpFlags } from './serp-flags';
 import { serpRelevance } from './serp-signals';
 
@@ -31,6 +34,7 @@ export function buildScoreSignals(
       stats.official && 'value' in stats.official ? stats.official.value : null,
     estimatedTraffic,
     entryDifficulty: entryDifficulty(stats),
+    ...officialSignals(stats.official),
   };
 }
 
@@ -49,6 +53,33 @@ const isReachStatus = (value: unknown): value is SuggestReachStatus =>
 const isFlagList = (value: unknown): value is SerpFlag[] =>
   Array.isArray(value) &&
   value.every((flag) => SERP_FLAGS.some((known) => known === flag));
+
+const isListing = (value: unknown): value is OfficialPopularityListing =>
+  isRecord(value) && isNumber(value.value) && typeof value.week === 'string';
+
+function readOfficialSignals(
+  signals: Record<string, unknown>,
+): Partial<ScoreSignals> {
+  const state = signals.officialPopularityState;
+  const floor = signals.officialPopularityFloor;
+  const week = signals.officialPopularityWeek;
+  const last = signals.officialPopularityLastAboveFloor;
+  return {
+    ...(isOfficialPopularityState(state)
+      ? { officialPopularityState: state }
+      : {}),
+    ...(isNumber(floor) ? { officialPopularityFloor: floor } : {}),
+    ...(typeof week === 'string' ? { officialPopularityWeek: week } : {}),
+    ...(isListing(last)
+      ? {
+          officialPopularityLastAboveFloor: {
+            value: last.value,
+            week: last.week,
+          },
+        }
+      : {}),
+  };
+}
 
 export function readScoreSignals(stats: unknown): ScoreSignals | null {
   const signals = isRecord(stats) ? stats.signals : undefined;
@@ -79,5 +110,6 @@ export function readScoreSignals(stats: unknown): ScoreSignals | null {
     officialPopularity: signals.officialPopularity,
     estimatedTraffic: signals.estimatedTraffic,
     entryDifficulty,
+    ...readOfficialSignals(signals),
   };
 }

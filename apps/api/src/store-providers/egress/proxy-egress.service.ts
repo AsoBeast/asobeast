@@ -16,10 +16,14 @@ import { ProxyLedger } from './proxy-ledger.service';
 import { worstOutcome } from './proxy-outcome';
 import { ProxyPoolConfig } from './proxy-pool.config';
 import { ProxyPoolMaintenance } from './proxy-pool.maintenance';
-import { ProxyPool } from './proxy-pool.service';
+import { ProxyLease, ProxyPool } from './proxy-pool.service';
 import { ResidentialFallback } from './residential-fallback.service';
 
 const BURNT: ProxyOutcome[] = [ProxyOutcome.BLOCKED, ProxyOutcome.SILENT];
+
+export interface EgressRoute {
+  waitForLocal?: boolean;
+}
 
 @Injectable()
 export class ProxyEgress implements OnModuleInit {
@@ -42,52 +46,70 @@ export class ProxyEgress implements OnModuleInit {
     store: Store,
     country: string | undefined,
     work: () => Promise<T>,
+    { waitForLocal = true }: EgressRoute = {},
   ): Promise<T> {
     if (currentEgress()) return work();
 
     await this.maintenance.ensureInitialized();
-    const lease = await this.pool.acquire(store, country);
+    const lease = await this.pool.acquire(store, country, waitForLocal);
     if (!lease) return work();
 
     const meter = new EgressMeter(lease.dispatcher);
+    let result: T;
     try {
-      const result = await throughEgress(meter, work);
-      await this.settle(lease.endpointId, store, meter, null);
-      return result;
+      result = await throughEgress(meter, work);
     } catch (error) {
-      const outcome = await this.settle(lease.endpointId, store, meter, error);
+      const outcome = await this.settle(lease, store, meter, error);
       if (outcome && BURNT.includes(outcome)) {
         return this.retryResidential(store, work, { outcome, error });
       }
       throw error;
     }
+    await this.settle(lease, store, meter, null);
+    return result;
   }
 
   private async settle(
-    endpointId: string,
+    { endpointId, leasedAt }: ProxyLease,
     store: Store,
     meter: EgressMeter,
     thrown: unknown,
   ): Promise<ProxyOutcome | null> {
     const observation = observe(meter, thrown);
-    await this.ledger.record(ProxyTier.DATACENTER, observation.requests);
-    if (
+    const pacing = {
+      leasedAt,
+      until: this.pacedUntil(leasedAt, meter, observation),
+    };
+    const unjudged =
       thrown !== null &&
-      (observation.outcome === null || storeDeadlinePassed())
-    ) {
-      return null;
+      (observation.outcome === null || storeDeadlinePassed());
+    if (unjudged) {
+      await this.pool.release(endpointId, store, pacing);
+    } else {
+      await this.health.record(endpointId, store, {
+        successes: observation.successes,
+        failures: observation.failures,
+        outcome: observation.outcome ?? ProxyOutcome.SUCCESS,
+        pacing,
+      });
     }
+    await this.ledger.record(ProxyTier.DATACENTER, observation.requests);
+    return unjudged ? null : observation.outcome;
+  }
 
-    await this.health.record(endpointId, store, {
-      successes: observation.successes,
-      failures: observation.failures,
-      outcome: observation.outcome ?? ProxyOutcome.SUCCESS,
-      pacedUntil: new Date(
-        Date.now() +
-          Math.max(observation.requests - 1, 0) * this.config.minIntervalMs,
+  private pacedUntil(
+    leasedAt: Date,
+    meter: EgressMeter,
+    { requests }: EgressObservation,
+  ): Date {
+    const interval = this.config.minIntervalMs;
+    const lastRequestAt = meter.lastRequestAt ?? leasedAt.getTime();
+    return new Date(
+      Math.max(
+        leasedAt.getTime() + requests * interval,
+        lastRequestAt + interval,
       ),
-    });
-    return observation.outcome;
+    );
   }
 
   private async retryResidential<T>(
