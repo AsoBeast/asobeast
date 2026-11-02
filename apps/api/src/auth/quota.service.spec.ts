@@ -8,6 +8,7 @@ import { QuotaExceededError } from './quota.errors';
 import { QuotaService } from './quota.service';
 
 const WORKSPACE = 'ws_quota';
+const HOSTED_COMPETITOR_CAP = PLAN_LIMITS.indie.competitorsPerApp as number;
 
 const DAY_MS = 24 * 60 * 60_000;
 const past = new Date(Date.now() - DAY_MS);
@@ -260,7 +261,7 @@ describe('QuotaService', () => {
 
   it('admits a competitor past the hosted cap on a self hosted instance', async () => {
     const { quota, stored, tx, appCount, scoped } = build(false, {
-      competitors: 25,
+      competitors: HOSTED_COMPETITOR_CAP,
     });
 
     await expect(
@@ -314,7 +315,7 @@ describe('QuotaService', () => {
   it('skips the pre-check on a self hosted instance', async () => {
     const { quota, appCount, scoped } = build(false, {
       apps: 500,
-      competitors: 25,
+      competitors: HOSTED_COMPETITOR_CAP,
     });
 
     await expect(

@@ -1,5 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { Store } from '@prisma/client';
+import { PLAN_LIMITS } from '@asobeast/shared';
 import { AppCaptureService } from '../apps/app-capture.service';
 import { SubtitleBackfill } from '../apps/subtitle-backfill.service';
 import { KeywordsService } from '../keywords/keywords.service';
@@ -192,7 +193,9 @@ describe('CompetitorsService.add', () => {
   });
 
   it('adds a competitor past the hosted cap on a self hosted instance', async () => {
-    const { service, upsert, workspace } = buildDeps(25);
+    const { service, upsert, workspace } = buildDeps(
+      PLAN_LIMITS.indie.competitorsPerApp as number,
+    );
 
     await workspace.run(DEFAULT_WORKSPACE_ID, () =>
       service.add('primary', 'https://apps.apple.com/us/app/rival/id999'),
