@@ -3,6 +3,69 @@
 All notable changes to asobeast are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [1.15.0](https://github.com/AsoBeast/asobeast/compare/v1.14.0...v1.15.0) (2026-10-31)
+
+
+### Features
+
+* **alerts:** add a new review alert with a star filter ([#631](https://github.com/AsoBeast/asobeast/issues/631)) ([78ab6e3](https://github.com/AsoBeast/asobeast/commit/78ab6e34d5571abf158e949e459a539a15b90abe))
+* **alerts:** alert when an owned app enters or leaves a top chart ([#630](https://github.com/AsoBeast/asobeast/issues/630)) ([0e5b758](https://github.com/AsoBeast/asobeast/commit/0e5b758826df578f98d1c5e1f174ad39b01c48a7))
+* **alerts:** report a rank drop only after the next check confirms it ([#629](https://github.com/AsoBeast/asobeast/issues/629)) ([00eb4a7](https://github.com/AsoBeast/asobeast/commit/00eb4a742cdce6d28c6b11ca7982ebb761c01fcd))
+* **api:** import the app store connect keyword field ([#636](https://github.com/AsoBeast/asobeast/issues/636)) ([494c10e](https://github.com/AsoBeast/asobeast/commit/494c10e257b6e597f9622194918c9738c195147a))
+* **api:** send ai requests to a configurable openai compatible address ([#641](https://github.com/AsoBeast/asobeast/issues/641)) ([a2ac800](https://github.com/AsoBeast/asobeast/commit/a2ac80094aa8b8f607999ac60435009ee46c7e18))
+* **apps:** compare the rating of an app across its markets ([#633](https://github.com/AsoBeast/asobeast/issues/633)) ([d95d458](https://github.com/AsoBeast/asobeast/commit/d95d4583ed73583b0b387fdc2d3eaed290cba272))
+* **keywords:** add the added date and top 10 competitors to the keyword table ([#634](https://github.com/AsoBeast/asobeast/issues/634)) ([15dc65e](https://github.com/AsoBeast/asobeast/commit/15dc65e15e20dffe96e7ef7eb40edec33495a860))
+* **keywords:** change many tracked keywords in one request ([#635](https://github.com/AsoBeast/asobeast/issues/635)) ([09152ad](https://github.com/AsoBeast/asobeast/commit/09152ad189feb2052c6bc6698a71faa3803c423b))
+* **scoring:** label when Apple answered its floor popularity value ([#632](https://github.com/AsoBeast/asobeast/issues/632)) ([9f42d35](https://github.com/AsoBeast/asobeast/commit/9f42d35cb4828bdbe319fbff778d671d6dacff98))
+* **web:** import a long keyword file in parts ([#642](https://github.com/AsoBeast/asobeast/issues/642)) ([d65e7da](https://github.com/AsoBeast/asobeast/commit/d65e7da6f4a632ba3567841febcaed7fcf506e69))
+* **web:** import keyword files from Astro, Sonar and AppFollow ([#638](https://github.com/AsoBeast/asobeast/issues/638)) ([7296dd2](https://github.com/AsoBeast/asobeast/commit/7296dd2558fc268a658b2e5f125c92287790e0c4))
+* **web:** share a rank chart as a PNG ([#637](https://github.com/AsoBeast/asobeast/issues/637)) ([b8ee76a](https://github.com/AsoBeast/asobeast/commit/b8ee76a3bcd7d9b2e4b56872d958ba41c171e31f))
+* **web:** show a keyword's position history from the position cell ([#620](https://github.com/AsoBeast/asobeast/issues/620)) ([38760e5](https://github.com/AsoBeast/asobeast/commit/38760e572f8c3ae00c0e4c5e666198249fc7683e))
+* **web:** show the top 50 search results with icons and movement ([#645](https://github.com/AsoBeast/asobeast/issues/645)) ([e593762](https://github.com/AsoBeast/asobeast/commit/e5937625d88147fb591ca650634463318feb94ac))
+
+
+### Bug Fixes
+
+* **api:** apply large store reports and settle empty keyword searches ([#611](https://github.com/AsoBeast/asobeast/issues/611)) ([32e4723](https://github.com/AsoBeast/asobeast/commit/32e4723ea55314b0fc3baa86c4788f54a37571bf))
+* **api:** fix google play proxy waits and sparse empty charts ([#621](https://github.com/AsoBeast/asobeast/issues/621)) ([c677fc8](https://github.com/AsoBeast/asobeast/commit/c677fc86539b23b5bb5cf6d4330f5b250c29634b))
+* **api:** keep imported keyword fields on an unreadable apple answer ([#650](https://github.com/AsoBeast/asobeast/issues/650)) ([7fb5e3f](https://github.com/AsoBeast/asobeast/commit/7fb5e3fed3313110ac4397da1b48cfb70d891247))
+* **api:** name the ai provider failure when an answer has no choices ([#651](https://github.com/AsoBeast/asobeast/issues/651)) ([1ec6ea8](https://github.com/AsoBeast/asobeast/commit/1ec6ea892a4218585a654decb3be25591686880c))
+* **api:** retry a store report sync before it warns about failed reports ([#643](https://github.com/AsoBeast/asobeast/issues/643)) ([5bf216f](https://github.com/AsoBeast/asobeast/commit/5bf216f7c6b91fd04dcd4213b7837ffcfac8a0ba))
+* **changes:** record an icon change only when its pixels change ([#600](https://github.com/AsoBeast/asobeast/issues/600)) ([e874c30](https://github.com/AsoBeast/asobeast/commit/e874c30cf58c9a697dd7c3c0e7365a55a3ac2c05))
+* **docker:** keep env example comments out of compose values ([#616](https://github.com/AsoBeast/asobeast/issues/616)) ([961b401](https://github.com/AsoBeast/asobeast/commit/961b40155feaf90668e211b1d266cee41be8332a))
+* **web:** keep a focus hand off until the stopped row is removed ([#618](https://github.com/AsoBeast/asobeast/issues/618)) ([1b552e6](https://github.com/AsoBeast/asobeast/commit/1b552e6a26dbeffa40ff754c81eb905c2c4795e6))
+* **web:** keep translated pages current when text changes in place ([#653](https://github.com/AsoBeast/asobeast/issues/653)) ([d0eeada](https://github.com/AsoBeast/asobeast/commit/d0eeadaba86694a048f025e1fd93825f9b69aa7c))
+* **web:** stop translated pages crashing in selects, import and results ([#649](https://github.com/AsoBeast/asobeast/issues/649)) ([30249fc](https://github.com/AsoBeast/asobeast/commit/30249fc9bc7159145203f2f2b7fbad992b01cc1e))
+* **web:** stop translated pages crashing when a button shows a spinner ([#613](https://github.com/AsoBeast/asobeast/issues/613)) ([2e89001](https://github.com/AsoBeast/asobeast/commit/2e89001db5fac34ac6fbf147fa53e1c89aa34d2e))
+
+## [1.14.0](https://github.com/AsoBeast/asobeast/compare/v1.13.0...v1.14.0) (2026-10-25)
+
+
+### Features
+
+* **alerts:** carry the app icon and storefront in every alert ([#594](https://github.com/AsoBeast/asobeast/issues/594)) ([3b99922](https://github.com/AsoBeast/asobeast/commit/3b999223b7cf330c6333c2a65416b2da7e13e3b8))
+* **alerts:** deliver reports to microsoft teams, telegram and google chat ([#598](https://github.com/AsoBeast/asobeast/issues/598)) ([a1f9f21](https://github.com/AsoBeast/asobeast/commit/a1f9f21be69cff2f4dc03bc5dcaf10dfa130a378))
+* **alerts:** draw discord and slack reports with icons, colour and local time ([#596](https://github.com/AsoBeast/asobeast/issues/596)) ([56ff7e0](https://github.com/AsoBeast/asobeast/commit/56ff7e07097f3098875cc99a106aa0bda8a46e07))
+* **alerts:** show app icons and icon changes as images in alert emails ([#597](https://github.com/AsoBeast/asobeast/issues/597)) ([a3a7ffc](https://github.com/AsoBeast/asobeast/commit/a3a7ffc8f36f6a5c29e765a1414eff2ecc83d6ab))
+* **alerts:** write alert wording once in a channel neutral report ([#595](https://github.com/AsoBeast/asobeast/issues/595)) ([98d09c2](https://github.com/AsoBeast/asobeast/commit/98d09c213ed2a07de846ee156c627bdde01ceb1b))
+* **analytics:** read app store conversion from app store connect ([#412](https://github.com/AsoBeast/asobeast/issues/412)) ([3a9ec2d](https://github.com/AsoBeast/asobeast/commit/3a9ec2d83c6eff734e8af838ac20ba6a13da4bb5))
+* **analytics:** read store listing acquisitions from the play console ([#414](https://github.com/AsoBeast/asobeast/issues/414)) ([7f45e86](https://github.com/AsoBeast/asobeast/commit/7f45e86c3dca67135250fd1558721ee3b56499b8))
+* **api:** post review replies to the app store and google play ([#550](https://github.com/AsoBeast/asobeast/issues/550)) ([769dec5](https://github.com/AsoBeast/asobeast/commit/769dec50536368e40d42abbad6c84c1c8430a2e5))
+* **apps:** annotate rank charts with named events ([#573](https://github.com/AsoBeast/asobeast/issues/573)) ([1d6364b](https://github.com/AsoBeast/asobeast/commit/1d6364ba7c6ec041ec6a6feb14d71a5fead44607))
+* **apps:** flag an app the store no longer lists ([#570](https://github.com/AsoBeast/asobeast/issues/570)) ([8a4ea6d](https://github.com/AsoBeast/asobeast/commit/8a4ea6d57aa16030df3d2726d0d9421715b092b2))
+* **changes:** measure every listing change by store conversion too ([#413](https://github.com/AsoBeast/asobeast/issues/413)) ([4cfdd39](https://github.com/AsoBeast/asobeast/commit/4cfdd39cf049b8c198f3cf1ff628163b3cab9d2c))
+* **keywords:** show when a keyword position was last checked ([#567](https://github.com/AsoBeast/asobeast/issues/567)) ([25b1345](https://github.com/AsoBeast/asobeast/commit/25b1345c169e0a91b791567b8cf42237756b6606))
+
+
+### Bug Fixes
+
+* **api:** keep the app store connect sync going when one report listing fails ([#604](https://github.com/AsoBeast/asobeast/issues/604)) ([6241b96](https://github.com/AsoBeast/asobeast/commit/6241b96b7a8296623965e3f574bb88d763ea1850))
+* **api:** read store console reports in the shape the stores send ([#592](https://github.com/AsoBeast/asobeast/issues/592)) ([f08a12b](https://github.com/AsoBeast/asobeast/commit/f08a12b216d3b327cc389aae86a9311c7663e634))
+* **apps:** finish a listing refresh quietly when the store delists the app ([#568](https://github.com/AsoBeast/asobeast/issues/568)) ([82ed242](https://github.com/AsoBeast/asobeast/commit/82ed2422fe2c975b1c60bb190fe6ea580531769c))
+* **jobs:** complete the run of an app a market does not sell ([#571](https://github.com/AsoBeast/asobeast/issues/571)) ([a5d185c](https://github.com/AsoBeast/asobeast/commit/a5d185c6991e50947f1ce7c0814054cab57ec575))
+* **providers:** keep google play requests on a local proxy endpoint ([#585](https://github.com/AsoBeast/asobeast/issues/585)) ([2156d89](https://github.com/AsoBeast/asobeast/commit/2156d89246b42cd91aa1cf7ccea87737394f992a))
+* **web:** keep focus on request buttons and dialog openers ([#605](https://github.com/AsoBeast/asobeast/issues/605)) ([91e7891](https://github.com/AsoBeast/asobeast/commit/91e7891e870970eefd3dbd5ebc0960cab4f504a0))
+
 ## [1.13.0](https://github.com/AsoBeast/asobeast/compare/v1.12.0...v1.13.0) (2026-10-21)
 
 

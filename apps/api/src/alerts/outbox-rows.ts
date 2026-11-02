@@ -1,10 +1,19 @@
 import {
   ActionOpenedPayload,
   AlertPayload,
+  ChartMovePayload,
+  isChartMovePayload,
+  RankDroppedPayload,
   RankFirstPayload,
+  RankImprovedPayload,
   RankMilestonePayload,
   RankOvertakenPayload,
 } from '@asobeast/shared';
+import {
+  newReviewKey,
+  ReviewAlertPayload,
+  reviewKey,
+} from './review-fingerprint';
 
 export interface OutboxRow {
   event: string;
@@ -22,19 +31,39 @@ const actionOpenedKey = (payload: ActionOpenedPayload): string =>
     ? `action.opened~${payload.action.id}~${dayOf(payload.occurredAt)}`
     : `action.opened~${payload.action.id}`;
 
-function hash(input: string): string {
-  let value = 5381;
-  for (let i = 0; i < input.length; i += 1) {
-    value = (value * 33) ^ input.charCodeAt(i);
-  }
-  return (value >>> 0).toString(36);
-}
+const rankKey = (payload: RankDroppedPayload | RankImprovedPayload): string => {
+  const prefix =
+    payload.event === 'rank.dropped' && payload.confirmed === true
+      ? 'rank.confirmed'
+      : 'rank';
+  return `${prefix}:${payload.app.id}:${payload.keyword.id}:${dayOf(payload.occurredAt)}`;
+};
+
+const milestoneKey = (payload: RankMilestonePayload): string => {
+  const prefix =
+    payload.confirmed === true ? 'milestone.confirmed' : 'milestone';
+  return `${prefix}:${payload.app.id}:${payload.keyword.id}:${dayOf(payload.occurredAt)}`;
+};
 
 function appRow(
-  payload: RankMilestonePayload | RankFirstPayload | RankOvertakenPayload,
+  payload:
+    | RankMilestonePayload
+    | RankFirstPayload
+    | RankOvertakenPayload
+    | ReviewAlertPayload,
   dedupeKey: string,
 ): OutboxRow {
   return { event: payload.event, appId: payload.app.id, dedupeKey, payload };
+}
+
+function chartRow(payload: ChartMovePayload, prefix: string): OutboxRow {
+  const { app, chart, date } = payload;
+  return {
+    event: payload.event,
+    appId: app.id,
+    dedupeKey: `${prefix}:${app.id}:${chart.collection}:${chart.genre}:${date}`,
+    payload,
+  };
 }
 
 export function outboxRows(payload: AlertPayload): OutboxRow[] {
@@ -49,29 +78,22 @@ export function outboxRows(payload: AlertPayload): OutboxRow[] {
   }
 
   if (payload.event === 'rank.dropped' || payload.event === 'rank.improved') {
-    const day = dayOf(payload.occurredAt);
     return [
       {
         event: payload.event,
         appId: payload.app.id,
-        dedupeKey: `rank:${payload.app.id}:${payload.keyword.id}:${day}`,
+        dedupeKey: rankKey(payload),
         payload,
       },
     ];
   }
 
   if (payload.event === 'review.negative') {
-    const fingerprint = hash(
-      `${payload.review.reviewedAt ?? ''}|${payload.review.title ?? ''}|${payload.review.text}`,
-    );
-    return [
-      {
-        event: payload.event,
-        appId: payload.app.id,
-        dedupeKey: `review:${payload.app.id}:${fingerprint}`,
-        payload,
-      },
-    ];
+    return [appRow(payload, `review:${reviewKey(payload)}`)];
+  }
+
+  if (payload.event === 'review.new') {
+    return [appRow(payload, `review.new:${newReviewKey(payload)}`)];
   }
 
   if (payload.event === 'serp.entrant') {
@@ -97,13 +119,7 @@ export function outboxRows(payload: AlertPayload): OutboxRow[] {
   }
 
   if (payload.event === 'rank.milestone') {
-    const day = dayOf(payload.occurredAt);
-    return [
-      appRow(
-        payload,
-        `milestone:${payload.app.id}:${payload.keyword.id}:${day}`,
-      ),
-    ];
+    return [appRow(payload, milestoneKey(payload))];
   }
 
   if (payload.event === 'rank.first') {
@@ -119,6 +135,15 @@ export function outboxRows(payload: AlertPayload): OutboxRow[] {
       appRow(
         payload,
         `overtaken:${payload.app.id}:${payload.keyword.id}:${payload.competitor.id}:${day}`,
+      ),
+    ];
+  }
+
+  if (isChartMovePayload(payload)) {
+    return [
+      chartRow(
+        payload,
+        payload.event === 'chart.milestone' ? 'chart-milestone' : 'chart',
       ),
     ];
   }

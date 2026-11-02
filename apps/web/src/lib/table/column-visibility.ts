@@ -5,6 +5,7 @@ const PREFIX = "asobeast.columns.";
 export interface TableColumnMeta {
   label?: string;
   phone?: boolean;
+  hiddenByDefault?: boolean;
 }
 
 function isVisibilityState(value: unknown): value is ColumnVisibilityState {
@@ -60,6 +61,21 @@ export function phoneColumnVisibility(
       .filter((column) => column.id && column.meta?.label && !column.meta.phone)
       .map((column) => [column.id, false]),
   );
+}
+
+export function defaultColumnVisibility(
+  columns: ReadonlyArray<{ id?: string; meta?: TableColumnMeta }>,
+  isMobile: boolean,
+): ColumnVisibilityState {
+  const hiddenByDefault = Object.fromEntries(
+    columns
+      .filter((column) => column.id && column.meta?.hiddenByDefault)
+      .map((column) => [column.id, false]),
+  );
+  return {
+    ...(isMobile ? phoneColumnVisibility(columns) : {}),
+    ...hiddenByDefault,
+  };
 }
 
 export function columnChoices(

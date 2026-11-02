@@ -50,11 +50,11 @@ function ScreenshotTextNote({ rows }: { rows: KeywordCoverageRow[] }) {
   );
   return (
     <p className="text-body text-muted-foreground">
-      Screenshot text is a weak signal that Apple has not confirmed. It never
-      changes whether a keyword counts as covered.
-      {withUnreadListing
-        ? " A dashed circle means the screenshots of that keyword's listing have not been read yet."
-        : null}
+      {`Screenshot text is a weak signal that Apple has not confirmed. It never changes whether a keyword counts as covered.${
+        withUnreadListing
+          ? " A dashed circle means the screenshots of that keyword's listing have not been read yet."
+          : ""
+      }`}
     </p>
   );
 }
@@ -149,10 +149,7 @@ export function CoverageTable({
       <FilterChips chips={chips} onClearAll={clearFilters} />
       <Table containerClassName="rounded-xl border bg-card">
         <TableCaption className="sr-only">
-          Keyword coverage across{" "}
-          {fields.map((field) => METADATA_FIELD_LABELS[field]).join(", ")}
-          {withScreenshotText ? ", screenshot text" : ""}, with uncovered
-          keywords highlighted.
+          {`Keyword coverage across ${fields.map((field) => METADATA_FIELD_LABELS[field]).join(", ")}${withScreenshotText ? ", screenshot text" : ""}, with uncovered keywords highlighted.`}
         </TableCaption>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (

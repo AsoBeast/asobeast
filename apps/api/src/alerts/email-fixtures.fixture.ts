@@ -1,4 +1,5 @@
 import type { ActionOpenedPayload } from '@asobeast/shared';
+import { chartEntered, productivityChart } from './chart-events.fixture';
 import { firstRanking, milestone, overtake } from './rank-events.fixture';
 import {
   AlertBatchAppSection,
@@ -11,6 +12,7 @@ import {
   RankDroppedPayload,
   RankImprovedPayload,
   ReviewNegativePayload,
+  ReviewNewPayload,
 } from '@asobeast/shared';
 
 export const metadata: MetadataChangedPayload = {
@@ -73,6 +75,20 @@ export const negative: ReviewNegativePayload = {
     score: 1,
     title: 'Bad',
     text: 'Crashes on <launch>',
+    version: '2.0.0',
+    reviewedAt: '2026-07-10T00:00:00.000Z',
+  },
+};
+
+export const newReview: ReviewNewPayload = {
+  event: 'review.new',
+  occurredAt: '2026-07-11T00:00:00.000Z',
+  app: { id: 'app_1', name: 'My App' },
+  review: {
+    score: 5,
+    title: 'Love it',
+    text: 'Best habit tracker I have used',
+    author: 'Alex',
     version: '2.0.0',
     reviewedAt: '2026-07-10T00:00:00.000Z',
   },
@@ -250,12 +266,39 @@ export const batch: AlertBatchPayload = {
   events: [],
 };
 
+export const batchWithNewReviews: AlertBatchPayload = {
+  ...batch,
+  totals: { events: 5, apps: 2 },
+  apps: [
+    {
+      ...alpha,
+      newReviews: [
+        newReview,
+        {
+          ...newReview,
+          review: {
+            ...newReview.review,
+            score: 4,
+            author: null,
+            title: null,
+            text: 'Works well, wish it synced',
+          },
+        },
+      ],
+    },
+    bravo,
+  ],
+};
+
 export const competitorBatch: AlertBatchPayload = {
   ...batch,
   scope: 'competitors',
   totals: { events: 1, apps: 1 },
   apps: [competitorAlpha],
 };
+
+export const LONG_ICON_URL =
+  'https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/97/4d/85/974d8537-a749-63ec-1a79-416270bf3c44/AppIcon-0-0-1x_U007epad-0-1-0-sRGB-85-220.png/512x512bb.jpg';
 
 const WORST_CASE_SECTIONS = 12;
 const WORST_CASE_ENTRIES = 25;
@@ -283,6 +326,7 @@ const worstCaseSection = (index: number): AlertBatchAppSection => {
     app: {
       id: `app_${index}`,
       name: `Mindful Sleep and Meditation Coach ${index}`,
+      iconUrl: LONG_ICON_URL,
       store: 'APP_STORE',
       country: 'us',
     },
@@ -296,6 +340,12 @@ const worstCaseSection = (index: number): AlertBatchAppSection => {
       firstRanking({ keyword: keyword(entry) }),
     ),
     overtakes: entries((entry) => overtake({ keyword: keyword(entry) })),
+    chartMoves: entries((entry) =>
+      chartEntered({
+        app: { id: `app_${index}`, name: null },
+        chart: { ...productivityChart, genre: String(6000 + entry) },
+      }),
+    ),
     serpEntrants: entries((entry) => ({
       event: 'serp.entrant' as const,
       occurredAt: dropped.occurredAt,
@@ -316,6 +366,10 @@ const worstCaseSection = (index: number): AlertBatchAppSection => {
       ...negative,
       review: { ...negative.review, text: LONG },
     })),
+    newReviews: entries(() => ({
+      ...newReview,
+      review: { ...newReview.review, text: LONG },
+    })),
     actions: entries((entry) => ({
       ...actionOpened,
       keyword: { id: `k_${entry}`, text: `sleep sounds ${entry}` },
@@ -326,6 +380,7 @@ const worstCaseSection = (index: number): AlertBatchAppSection => {
         app: {
           id: `rival_${competitor}`,
           name: `Rival Sleep Studio ${competitor}`,
+          iconUrl: LONG_ICON_URL,
           store: 'APP_STORE',
           country: 'us',
         },

@@ -96,9 +96,25 @@ function sampleOf(text: string, delimiter: Delimiter): CsvRecord[] {
   return (truncated ? sampled.slice(0, -1) : sampled).slice(0, SAMPLE_RECORDS);
 }
 
+const namesHeader = (record: CsvRecord): boolean =>
+  record.cells.length >= 2 && record.cells.some(namesKeyword);
+
+export function headerIndex(records: readonly CsvRecord[]): number {
+  const index = records
+    .slice(0, SAMPLE_RECORDS)
+    .findIndex(
+      (record, position) =>
+        namesHeader(record) &&
+        records
+          .slice(0, position)
+          .every((above) => above.cells.length < record.cells.length),
+    );
+  return Math.max(index, 0);
+}
+
 function headerWidth(records: readonly CsvRecord[]): number {
-  const cells = records[0]?.cells ?? [];
-  return cells.length >= 2 && cells.some(namesKeyword) ? cells.length : 0;
+  const record = records[headerIndex(records)];
+  return record && namesHeader(record) ? record.cells.length : 0;
 }
 
 function consistentWidth(records: readonly CsvRecord[]): number {

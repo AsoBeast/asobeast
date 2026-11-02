@@ -6,6 +6,7 @@ import { SearchItem, StoreProvider } from '../store-providers/types';
 import { inferPopularityGenre } from './apple-genres';
 import { KeywordStats } from './formulas';
 import { OfficialPopularityLookup } from './official-popularity';
+import { officialEvidence } from './official-signals';
 import { ScoringEvidence } from './provenance';
 import { EVIDENCE_ALL_WORDS, titleEvidence } from './serp-signals';
 import { SuggestReach } from './suggest-reach';
@@ -104,6 +105,7 @@ export class StatsCollectorService {
         detailTargetCount: topTen.targetCount,
         detailSuccessCount: topTen.successCount,
         officialPopularityUsed: official !== undefined && 'value' in official,
+        ...officialEvidence(official),
       },
     };
   }

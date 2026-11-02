@@ -70,7 +70,7 @@ Annotations are named event markers the team pins to one UTC day each; the web a
 | Tool | Title | Returns | Parameters |
 | --- | --- | --- | --- |
 | `ranking_history` | Ranking history | Daily position history for one app's tracked keywords over a date window | `appId` (required), `keywordIds`, `from`, `to` |
-| `serp_snapshot` | SERP snapshot | The stored search-results snapshot for one tracked keyword: the ranked apps captured on a given day | `keywordId` (required), `date` |
+| `serp_snapshot` | SERP snapshot | The stored search-results snapshot for one tracked keyword: the ranked apps captured on a given day, up to 50 positions | `keywordId` (required), `date` |
 | `serp_movers` | SERP movers | Keywords whose search-results order shifted most for one app over the last N days | `appId` (required), `days` |
 | `visibility_history` | Visibility history | Daily visibility score (0-100) history for one app over a date window | `appId` (required), `from`, `to`, `country` |
 | `rank_distribution_history` | Rank distribution history | Daily counts of tracked keywords by rank band (top 1-3, 4-10, 11-50, etc.) for one app over a date window | `appId` (required), `from`, `to`, `country` |

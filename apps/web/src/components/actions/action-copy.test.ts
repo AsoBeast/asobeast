@@ -1,10 +1,6 @@
-import { ACTION_RULES } from "@asobeast/shared";
+import { ACTION_RULE_TITLES, ACTION_RULES } from "@asobeast/shared";
 import { describe, expect, it } from "vitest";
-import {
-  ACTION_RULE_LABEL,
-  ACTION_RULE_TITLE,
-  summarizeEvidence,
-} from "./action-copy";
+import { ACTION_RULE_LABEL, summarizeEvidence } from "./action-copy";
 
 describe("summarizeEvidence", () => {
   it("rounds a stored score to one decimal", () => {
@@ -56,7 +52,7 @@ describe("ACTION_RULE_LABEL", () => {
   it("reads as prose rather than as a rule identifier", () => {
     for (const rule of ACTION_RULES) {
       expect(ACTION_RULE_LABEL[rule]).not.toMatch(/[._]/);
-      expect(ACTION_RULE_LABEL[rule]).not.toBe(ACTION_RULE_TITLE[rule]);
+      expect(ACTION_RULE_LABEL[rule]).not.toBe(ACTION_RULE_TITLES[rule]);
     }
   });
 });

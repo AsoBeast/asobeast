@@ -8,8 +8,15 @@ import {
   RankMilestonePayload,
   RankOvertakenPayload,
   ReviewNegativePayload,
+  ReviewNewPayload,
   SerpEntrantPayload,
 } from '@asobeast/shared';
+import {
+  chartEntered,
+  chartLeft,
+  chartMilestone,
+  productivityChart,
+} from './chart-events.fixture';
 import { outboxRows } from './outbox-rows';
 
 const milestone: RankMilestonePayload = {
@@ -156,6 +163,40 @@ describe('outboxRows', () => {
   });
 });
 
+describe('outboxRows for review.new', () => {
+  const negative: ReviewNegativePayload = {
+    event: 'review.negative',
+    occurredAt: '2026-07-22T10:00:00.000Z',
+    app: { id: 'app1', name: 'App One' },
+    review: {
+      score: 1,
+      title: 'Bad',
+      text: 'crashes',
+      version: '1.0',
+      reviewedAt: '2026-07-22T09:00:00.000Z',
+    },
+  };
+  const fresh: ReviewNewPayload = {
+    ...negative,
+    event: 'review.new',
+    review: { ...negative.review, author: 'Sam' },
+  };
+
+  it('collects a new review under its own key beside the negative one', () => {
+    const rows = outboxRows(fresh);
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      event: 'review.new',
+      appId: 'app1',
+      payload: fresh,
+    });
+    expect(rows[0].dedupeKey).toMatch(/^review\.new:app1:/);
+    expect(rows[0].dedupeKey).not.toBe(outboxRows(negative)[0].dedupeKey);
+    expect(outboxRows(negative)[0].dedupeKey).toMatch(/^review:app1:/);
+  });
+});
+
 describe('outboxRows for action.opened', () => {
   it('dedupes on the action identity, not on its magnitudes', () => {
     const rows = outboxRows(actionOpened);
@@ -255,5 +296,109 @@ describe('outboxRows for the rank milestone events', () => {
     const [improvedRow] = outboxRows(improved);
 
     expect(milestoneRow.dedupeKey).not.toBe(improvedRow.dedupeKey);
+  });
+});
+
+describe('outboxRows for confirmed drops', () => {
+  const dropped: RankDroppedPayload = {
+    event: 'rank.dropped',
+    occurredAt: milestone.occurredAt,
+    app: milestone.app,
+    keyword: milestone.keyword,
+    from: 9,
+    to: 15,
+    fromDepth: RANK_DEPTH,
+    toDepth: RANK_DEPTH,
+    threshold: 5,
+  };
+  const improved: RankImprovedPayload = {
+    event: 'rank.improved',
+    occurredAt: milestone.occurredAt,
+    app: milestone.app,
+    keyword: milestone.keyword,
+    from: 15,
+    to: 9,
+    fromDepth: RANK_DEPTH,
+    toDepth: RANK_DEPTH,
+    threshold: 5,
+  };
+  const keyOf = (payload: Parameters<typeof outboxRows>[0]): string =>
+    outboxRows(payload)[0].dedupeKey;
+
+  it('gives a confirmed drop its own key', () => {
+    expect(keyOf({ ...dropped, confirmed: true })).toBe(
+      'rank.confirmed:app1:kw1:2026-07-22',
+    );
+  });
+
+  it('keeps the key of an unmarked drop and an undoing improvement', () => {
+    expect(keyOf(dropped)).toBe('rank:app1:kw1:2026-07-22');
+    expect(keyOf({ ...improved, undoesDrop: true })).toBe(
+      'rank:app1:kw1:2026-07-22',
+    );
+  });
+
+  it('gives a confirmed milestone its own key', () => {
+    expect(
+      keyOf({
+        ...milestone,
+        direction: 'left',
+        from: 9,
+        to: 12,
+        confirmed: true,
+      }),
+    ).toBe('milestone.confirmed:app1:kw1:2026-07-22');
+  });
+
+  it('keeps the key of an unmarked or undoing milestone', () => {
+    expect(keyOf(milestone)).toBe('milestone:app1:kw1:2026-07-22');
+    expect(keyOf({ ...milestone, undoesDrop: true })).toBe(
+      'milestone:app1:kw1:2026-07-22',
+    );
+  });
+
+  it('never merges the ordinary and the confirmed event of one check', () => {
+    expect(keyOf(dropped)).not.toBe(keyOf({ ...dropped, confirmed: true }));
+    expect(keyOf({ ...milestone, direction: 'left' })).not.toBe(
+      keyOf({ ...milestone, direction: 'left', confirmed: true }),
+    );
+  });
+});
+
+describe('outboxRows for the chart events', () => {
+  it('keys a chart entry on the app, chart and capture day', () => {
+    expect(outboxRows(chartEntered())).toEqual([
+      {
+        event: 'chart.entered',
+        appId: 'a',
+        dedupeKey: 'chart:a:free:6007:2026-07-22',
+        payload: chartEntered(),
+      },
+    ]);
+  });
+
+  it('gives an entry and an exit of one chart on one day the same slot', () => {
+    expect(outboxRows(chartLeft())[0].dedupeKey).toBe(
+      outboxRows(chartEntered())[0].dedupeKey,
+    );
+  });
+
+  it('keys a chart milestone apart from the entry of the same move', () => {
+    const milestone = chartMilestone({ from: null, to: 7 });
+    const rows = [...outboxRows(chartEntered()), ...outboxRows(milestone)];
+
+    expect(outboxRows(milestone)[0].dedupeKey).toBe(
+      'chart-milestone:a:free:6007:2026-07-22',
+    );
+    expect(new Set(rows.map((row) => row.dedupeKey)).size).toBe(2);
+  });
+
+  it.each([
+    ['another chart kind', { ...productivityChart, collection: 'grossing' }],
+    ['another category', { ...productivityChart, genre: 'overall' }],
+  ] as const)('keys %s apart', (_case, chart) => {
+    expect(outboxRows(chartEntered({ chart }))[0].dedupeKey).not.toBe(
+      outboxRows(chartEntered())[0].dedupeKey,
+    );
   });
 });

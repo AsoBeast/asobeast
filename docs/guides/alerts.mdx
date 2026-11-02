@@ -1,8 +1,8 @@
 ---
 title: Send alerts
-description: "asobeast delivers rank, SERP, metadata, review and action events by signed webhook or SMTP email. Batched delivery is resumable and deduplicated."
+description: "asobeast delivers rank, chart, SERP, metadata, review and action events by signed webhook or SMTP email. Batched delivery is resumable and deduplicated."
 icon: bell
-keywords: ["alerts","webhook","SMTP","email","batched delivery","signature","ALERT_DELIVERY","milestone","first ranking","overtake","unsubscribe","List-Unsubscribe","DKIM","confirm recipient","double opt in"]
+keywords: ["alerts","webhook","SMTP","email","batched delivery","signature","ALERT_DELIVERY","milestone","first ranking","overtake","unsubscribe","List-Unsubscribe","DKIM","confirm recipient","double opt in","chart.entered","chart.left","chart.milestone","top charts","new review","review stars"]
 ---
 
 Alerts fan out to two channel types, webhooks and email, and both carry the same events. Every attempt is recorded in a delivery log so a failing endpoint is visible instead of retrying silently.
@@ -36,12 +36,26 @@ Alerts are not part of the guided setup, because nothing can move before positio
 | `rank.first` | An owned app ranks for a keyword it has never ranked for | None |
 | `rank.overtaken` | A tracked competitor moves above an owned app | None |
 | `review.negative` | A review lands at or below the rating cutoff | `ALERT_REVIEW_SCORE_MAX`, default 2, range 1 to 4 |
+| `review.new` | A review the store returns for the first time | Optional star filter per channel |
 | `action.opened` | An action opens or reopens at or above the priority floor | `ALERT_ACTIONS_MIN_PRIORITY`, default `high` |
 | `metadata.changed` | A snapshot differs from the previous one | None |
 | `serp.entrant` | A new app enters a tracked keyword's top 10 | None |
+| `chart.entered` | An owned app enters a store chart it was not in at the previous check | None |
+| `chart.left` | An owned app leaves a store chart it was in at the previous check | None |
+| `chart.milestone` | An owned app enters or leaves first place, the top 3 or the top 10 of a chart | None |
 | `digest.weekly` | The weekly portfolio digest | `CRON_DIGEST` |
 
-A new event never joins an existing subscription. To opt in, open **Edit events** on the channel in Settings, tick the events and save. A webhook keeps its url and its secret.
+A new event never joins an existing subscription. To opt in, open **Edit events** on the channel in Settings, tick the events and save. A webhook keeps its url and its secret. The same dialog holds the [confirm drops](#report-drops-only-when-they-hold) setting.
+
+### Choose the stars of new reviews
+
+`review.negative` fires for reviews at or below `ALERT_REVIEW_SCORE_MAX`, one cutoff for the whole instance. `review.new` fires for every review AsoBeast stores for the first time, and each channel decides which stars it wants. In **Settings**, tick **New review** on a webhook or an email alert and a row of five stars appears. All five are ticked by default, which sends every review. Untick the stars you do not want, for example everything but 1 and 2 for a channel that only needs the complaints, or 4 and 5 for a channel that celebrates.
+
+The filter belongs to the channel and applies to `review.new` only. Over the API it is `reviewScores`, an optional array of the stars 1 to 5 on a webhook or an email alert. An empty or omitted array means every star, the values are sorted and deduplicated, and a value outside 1 to 5 answers `400`. A `PATCH` without `reviewScores` leaves it as it is.
+
+A channel can hold both events. A review that its stars list under `review.new` arrives once, as a new review, and not again as a negative review. Stars it does not list still arrive as negative reviews when they fall at or below the cutoff. So `review.new` with 4 and 5 stars next to `review.negative` sends praise and complaints and nothing twice.
+
+The same rules hold in both delivery modes. A new review never fires for a review that was only edited, and never for the reviews an import reads when it first adds an app. In instant delivery every matching review is one message, so a busy app on a channel that takes every star is noisy; batched delivery, the default, folds them into the daily report as a **New reviews** group.
 
 ## Milestones, first rankings and overtakes
 
@@ -57,7 +71,46 @@ A new event never joins an existing subscription. To opt in, open **Edit events*
 
 "Never ranked" looks back as far as position history is kept, `RETENTION_RANKINGS_DAYS`, 365 days by default. See [what is retained](/concepts/pipeline#what-is-retained).
 
-A keyword that moves between 10 and 11 fires each time it crosses. In batched delivery, the default, every fact is deduplicated per keyword and day and folded into the daily report, so a noisy boundary costs a line in that report rather than a message per check. Instant delivery sends each check that crosses a boundary as it happens.
+A keyword that moves between 10 and 11 fires each time it crosses. In batched delivery, the default, every fact is deduplicated per keyword and day and folded into the daily report, so a noisy boundary costs a line in that report rather than a message per check. Instant delivery sends each check that crosses a boundary as it happens. To hear only about the drops that hold, see [Report drops only when they hold](#report-drops-only-when-they-hold).
+
+## Report drops only when they hold
+
+By default every check is compared with the one before it. A keyword that slips from 9 to 11 for a day and then comes back fires `rank.milestone` twice, once for leaving the top 10 and once for returning. Near a boundary those one day wobbles bury the drops that stay.
+
+Turn on **Confirm drops before alerting** on a webhook or an email alert, in the dialog that adds it or under **Edit events**, and that channel reports a drop only when the next check confirms it. The setting belongs to one channel, so other channels keep their current behaviour. In Settings it starts ticked for a new email alert and for a new webhook whose url is a Discord, Slack, Microsoft Teams, Telegram or Google Chat channel, because a person reads those, and unticked for a JSON webhook, which usually feeds a script that wants every check. A channel created through the API without the field, and every channel that existed before the setting, report every drop.
+
+| Checks, oldest first | Without the setting | With the setting |
+| --- | --- | --- |
+| 9, 11, 9 | `rank.milestone` left the top 10, then `rank.milestone` entered the top 10 | Nothing |
+| 9, 11, 12 | `rank.milestone` left the top 10 on the second check | `rank.milestone` left the top 10, from 9 to 12, on the third check |
+| 9, 15, 15 | `rank.dropped` and `rank.milestone` on the second check | `rank.dropped` and `rank.milestone`, from 9 to 15, on the third check |
+
+What the setting changes:
+
+- It covers `rank.dropped`, and `rank.milestone` when the app leaves the top 10, the top 3 or first place. Entering a tier, `rank.first`, `rank.overtaken` and every other event arrive as before.
+- A drop counts as confirmed when the check after it is still down against the check before the drop began: for `rank.dropped`, at least `ALERT_RANK_DROP_THRESHOLD` places lower or not found, and for a milestone, still outside the tier. The alert shows that earlier position as the start and the second check as the end, so a drop that deepens reports the final position.
+- If the keyword recovers, nothing is sent. The alerts that would have undone the drop are skipped too: the matching "back in the top 10" milestone and the `rank.improved` that follows it. A `rank.improved` that ends at least `ALERT_RANK_DROP_THRESHOLD` places above where the drop began is real news and is sent, and so is a recovery after a drop the channel was told about.
+- A keyword that keeps falling is reported once. Checks of 9, 11 and 18 report leaving the top 10, from 9 to 18, and no separate `rank.dropped`, because the first step was smaller than the threshold. The next report needs a new drop that begins after a check that did not confirm one.
+- Only stored checks count. A day with no check neither confirms nor cancels a drop, so a keyword paused and resumed is judged on its first stored check after the pause.
+- A drop needs two checks, so with daily checks it arrives a day later than it would without the setting. In batched delivery it is in the report that follows the second check.
+
+A confirmed alert carries `"confirmed": true`. A `rank.improved` or an entering `rank.milestone` that undoes a drop a confirming channel never heard about carries `"undoesDrop": true`; channels without the setting still receive it. Both fields are absent otherwise.
+
+## Chart moves
+
+`chart.entered`, `chart.left` and `chart.milestone` report where your own app sits in the store charts, not in a search. Each compares today's chart check with the previous stored check of the same app, chart kind (free, paid or grossing) and category, whatever the gap between them. The first check ever recorded for a chart fires nothing, so importing an app never floods a channel.
+
+| Event | Rule |
+| --- | --- |
+| `chart.entered` | The app is in a chart today and was not in it at the previous check. |
+| `chart.left` | The app was in a chart at the previous check and is not in it today. |
+| `chart.milestone` | The app entered or left first place, the top 3 or the top 10 of a chart. One move reports one milestone, as `rank.milestone` does. |
+
+An app is in a chart when it sits within the depth the store answers: 100 on the App Store and 200 on Google Play. A move into a chart at position 7 fires `chart.entered` and `chart.milestone`, the second for entering the top 10, and the daily report shows both as one row. A move from 14 to 8 inside a chart fires `chart.milestone` alone.
+
+Three cases fire nothing. A chart for which the store listed no apps raises no event, because an empty answer does not show that the app left, and the next check compares with the check before that day. Competitor apps raise none, because the competitor report lists listing changes only and the chart page already marks them. An app that changes its price class or its category raises none either: the chart it leaves keeps its last check and the new chart starts with a first check.
+
+In batched delivery the facts are deduplicated per app, chart and day, and each app's card in the owned app report gets a **Chart moves** group with a link to the chart page. Instant delivery sends one notification per event, so one move can send two. See [Read top charts](/guides/top-charts) for the chart page and [Follow category ranks](/guides/category-ranks) for the charts an app is checked in.
 
 ## Webhook delivery
 
@@ -88,7 +141,8 @@ A granular event looks like this.
     "id": "cl…",
     "name": "Habit Tracker",
     "store": "APP_STORE",
-    "country": "us"
+    "country": "us",
+    "iconUrl": "https://is1-ssl.mzstatic.com/image/thumb/…/512x512bb.jpg"
   },
   "action": {
     "id": "cl…",
@@ -144,6 +198,41 @@ A milestone and an overtake look like this. `rank.first` carries `position` and 
 }
 ```
 
+A new review carries the author as well.
+
+```json
+{
+  "event": "review.new",
+  "occurredAt": "2026-10-28T03:12:00.000Z",
+  "app": { "id": "cm1a", "name": "My App" },
+  "review": {
+    "score": 5,
+    "title": "Love it",
+    "text": "Best habit tracker I have used",
+    "author": "Alex",
+    "version": "3.1.0",
+    "reviewedAt": "2026-10-28T01:40:00.000Z"
+  }
+}
+```
+
+A chart move carries the chart instead of a keyword. `date` is the UTC day of the chart check, `depth` the depth of that check, and `from` is `null` when the app was outside the chart.
+
+```json
+{
+  "event": "chart.entered",
+  "occurredAt": "2026-10-28T03:14:07.000Z",
+  "app": { "id": "cm1a", "name": "My App", "store": "APP_STORE", "country": "us" },
+  "chart": { "store": "APP_STORE", "country": "us", "collection": "free", "genre": "6007", "genreName": "Productivity", "device": "iphone" },
+  "date": "2026-10-28",
+  "from": null,
+  "to": 7,
+  "depth": 100
+}
+```
+
+Every `app` object of a granular event may also carry `iconUrl`, `store` and `country`, read from the app when the alert is sent. `store` and `country` name the app's store and home storefront, and `iconUrl` is the address of the icon the store shows today, or `null` when no listing capture has recorded one. A consumer that ignores unknown fields needs no change.
+
 A batched report wraps events in a scoped envelope. Branch on the top level `scope`, which is `owned_apps` or `competitors`. The flat `events` array stays granular and contains only events for that scope, so a consumer that already handles granular events needs one extra branch rather than a rewrite.
 
 ```json
@@ -158,13 +247,13 @@ A batched report wraps events in a scoped envelope. Branch on the top level `sco
 }
 ```
 
-Each entry of `apps` groups one owned app's facts in arrays: `rankDrops`, `rankImprovements`, `rankMilestones`, `firstRankings`, `overtakes`, `serpEntrants`, `changes`, `negativeReviews`, `actions` and `competitors`. An array is empty when nothing happened or when the channel does not list its event.
+Each entry of `apps` groups one owned app's facts in arrays: `rankDrops`, `rankImprovements`, `rankMilestones`, `firstRankings`, `overtakes`, `chartMoves`, `serpEntrants`, `changes`, `negativeReviews`, `newReviews`, `actions` and `competitors`. An array is empty when nothing happened or when the channel does not list its event. The `app` of an entry, and of each entry of its `competitors`, carries `id`, `name`, `store`, `country` and `iconUrl`.
 
 Branch on `event` and ignore values and fields you do not recognise. New events and fields arrive as additive changes within a major version.
 
 `link` is present only when `WEB_PUBLIC_URL` is set. When it is unset the link is `null` rather than a broken `localhost` guess. The Compose stacks always set it, see [Hosting behind TLS and a reverse proxy](/security/hosting).
 
-Slack, Discord and ntfy all accept a plain webhook endpoint, and asobeast formats for the first two.
+Discord, Slack, Microsoft Teams, Telegram and Google Chat urls receive a report in their own format instead of the JSON payload, and every other url, a Slack Workflow Builder url included, receives the payload above; see [Connect a chat tool](/guides/alert-channels).
 
 ## Email delivery
 
@@ -215,7 +304,9 @@ Every alert email uses the AsoBeast layout: a header with the logo, the details 
 
 The button, the logo, the settings link and the unsubscribe link are built from `WEB_PUBLIC_URL`. Without it the email shows text only and no link.
 
-A daily update lists up to 20 lines per section. When the report would grow past what Gmail shows before clipping, the HTML part shows fewer lines per section and fewer competitors per app, each with a note of how many more there are, while the plain text part keeps the full lists. Open the app from the card for everything.
+A daily update lists up to 20 rows per section. A longer section ends with a link to the page that lists every row, `See all 32`, or with the count of the rows left out when `WEB_PUBLIC_URL` is unset. When the report would grow past what Gmail shows before clipping, the HTML part shows fewer rows per section and fewer competitors per app, while the plain text part keeps 20. Listing changes name each field the way App Store Connect and the Play Console do, and an icon change reads `Icon changed` instead of printing the image address.
+
+Each card opens with the app icon, the app name linking to its page in AsoBeast, and its store and storefront, so a competitor card reads `Competitor · App Store · US`. A rank move lines up as the keyword, the move and what it crossed. An icon change shows the previous and the new icon side by side, and the plain text part reads `Icon changed`. Dates read like `24 Oct 2026` in UTC, and an instant alert adds the minute, `24 Oct 2026, 03:10 UTC`.
 
 ### Unsubscribe from an email
 

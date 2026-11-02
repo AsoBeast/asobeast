@@ -362,6 +362,54 @@ describe('StatsCollectorService', () => {
     expect(collected?.evidence.officialPopularityUsed).toBe(false);
   });
 
+  it.each([
+    [
+      'a term listed at the floor',
+      {
+        value: 41,
+        context: { week: '2026-10-18', floor: 41, lastAboveFloor: null },
+      },
+      true,
+      'floor',
+    ],
+    [
+      'a term left out',
+      {
+        absentBelow: 41,
+        context: { week: '2026-10-18', floor: 41, lastAboveFloor: null },
+      },
+      false,
+      'absent',
+    ],
+    [
+      'a term listed above the floor',
+      {
+        value: 71,
+        context: { week: '2026-10-18', floor: 56, lastAboveFloor: null },
+      },
+      true,
+      'listed',
+    ],
+  ])(
+    'names the Apple answer for %s in the evidence',
+    async (_name, answer, used, state) => {
+      const service = new StatsCollectorService(
+        buildPrisma(),
+        buildProvider([]).registry,
+        {
+          for: jest.fn().mockResolvedValue(answer),
+        } as unknown as OfficialPopularityLookup,
+      );
+
+      const collected = await service.collect('kw1');
+
+      expect(collected?.evidence).toMatchObject({
+        officialPopularityUsed: used,
+        officialPopularityState: state,
+      });
+    },
+  );
+
   it('reads only the exact google play phrase as reach', async () => {
     const suggest = jest.fn((term: string) =>
       Promise.resolve(

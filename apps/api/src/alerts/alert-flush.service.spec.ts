@@ -103,6 +103,12 @@ function batchPayload(flow: FlowJob): AlertBatchPayload {
   return payload as AlertBatchPayload;
 }
 
+interface Subscription {
+  id: string;
+  events: string[];
+  confirmDrops?: boolean;
+}
+
 function buildHarness() {
   const claimUpdates: ClaimUpdateArgs[] = [];
   const loadedClaims: string[] = [];
@@ -123,7 +129,7 @@ function buildHarness() {
     },
   };
   let workspaceIds = [DEFAULT_WORKSPACE_ID];
-  let subscribedWebhooks: { id: string; events: string[] }[] = [];
+  let subscribedWebhooks: Subscription[] = [];
   const flushedWorkspaces: (string | undefined)[] = [];
   let claimLoader: ClaimLoader = (args) => {
     loadedClaims.push(args.where.flushId);
@@ -158,6 +164,7 @@ function buildHarness() {
         {
           id: 'app1',
           name: 'App One',
+          iconUrl: null,
           store: Store.APP_STORE,
           country: 'us',
           isCompetitor: false,
@@ -202,7 +209,7 @@ function buildHarness() {
     setWorkspaces: (ids: string[]) => {
       workspaceIds = ids;
     },
-    setWebhooks: (rows: { id: string; events: string[] }[]) => {
+    setWebhooks: (rows: Subscription[]) => {
       subscribedWebhooks = rows;
     },
     flushedWorkspaces,
@@ -433,6 +440,7 @@ describe('AlertFlushService', () => {
       {
         id: 'app1',
         name: 'App One',
+        iconUrl: null,
         store: Store.APP_STORE,
         country: 'us',
         isCompetitor: false,
@@ -441,6 +449,7 @@ describe('AlertFlushService', () => {
       {
         id: 'competitor1',
         name: 'Rival',
+        iconUrl: null,
         store: Store.APP_STORE,
         country: 'us',
         isCompetitor: true,
@@ -494,8 +503,44 @@ describe('AlertFlushService', () => {
 
     expect(harness.prisma.emailAlert.findMany).toHaveBeenCalledWith({
       where: { active: true, confirmedAt: { not: null } },
-      select: { id: true, events: true },
+      select: {
+        id: true,
+        events: true,
+        reviewScores: true,
+        confirmDrops: true,
+      },
     });
+  });
+
+  it('reads the confirm drops setting of every active webhook', async () => {
+    const harness = buildHarness();
+
+    await harness.service.flushEveryWorkspace();
+
+    expect(harness.prisma.webhook.findMany).toHaveBeenCalledWith({
+      where: { active: true },
+      select: {
+        id: true,
+        events: true,
+        reviewScores: true,
+        confirmDrops: true,
+      },
+    });
+  });
+
+  it('completes a claim that holds nothing for a confirming webhook', async () => {
+    const harness = buildHarness();
+    harness.setWebhooks([
+      { id: 'webhook-1', events: ['rank.dropped'], confirmDrops: true },
+    ]);
+
+    await expect(harness.service.flushEveryWorkspace()).resolves.toEqual({
+      flushed: 1,
+      channels: 0,
+      notifications: 0,
+    });
+    expect(harness.addBulk).not.toHaveBeenCalled();
+    expect(harness.completionUpdates[0].where.flushId).toBe('claim-1');
   });
 
   it('does not query email subscriptions when mail is disabled', async () => {

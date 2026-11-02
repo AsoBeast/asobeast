@@ -6,7 +6,9 @@ import {
   AlertBatchCompetitorSection,
   AlertBatchPayload,
   AlertBatchScope,
+  ChartMovePayload,
   GranularAlertPayload,
+  isChartMovePayload,
   MetadataChangedPayload,
   RankDroppedPayload,
   RankFirstPayload,
@@ -14,12 +16,14 @@ import {
   RankMilestonePayload,
   RankOvertakenPayload,
   ReviewNegativePayload,
+  ReviewNewPayload,
   SerpEntrantPayload,
 } from '@asobeast/shared';
 
 export interface ResolvedApp {
   id: string;
   name: string | null;
+  iconUrl: string | null;
   store: AlertBatchApp['store'];
   country: string;
   isCompetitor: boolean;
@@ -91,15 +95,23 @@ interface MutableSection {
   rankMilestones: RankMilestonePayload[];
   firstRankings: RankFirstPayload[];
   overtakes: RankOvertakenPayload[];
+  chartMoves: ChartMovePayload[];
   serpEntrants: SerpEntrantPayload[];
   changes: MetadataChangedPayload[];
   negativeReviews: ReviewNegativePayload[];
+  newReviews: ReviewNewPayload[];
   actions: ActionOpenedPayload[];
   competitors: Map<string, AlertBatchCompetitorSection>;
 }
 
 function toBatchApp(app: ResolvedApp): AlertBatchApp {
-  return { id: app.id, name: app.name, store: app.store, country: app.country };
+  return {
+    id: app.id,
+    name: app.name,
+    iconUrl: app.iconUrl,
+    store: app.store,
+    country: app.country,
+  };
 }
 
 function compareNames(
@@ -268,9 +280,11 @@ function createSection(app: ResolvedApp): MutableSection {
     rankMilestones: [],
     firstRankings: [],
     overtakes: [],
+    chartMoves: [],
     serpEntrants: [],
     changes: [],
     negativeReviews: [],
+    newReviews: [],
     actions: [],
     competitors: new Map(),
   };
@@ -303,12 +317,16 @@ function addOwnedSignal(
       section.firstRankings.push(payload);
     } else if (payload.event === 'rank.overtaken') {
       section.overtakes.push(payload);
+    } else if (isChartMovePayload(payload)) {
+      section.chartMoves.push(payload);
     } else if (payload.event === 'serp.entrant') {
       section.serpEntrants.push(payload);
     } else if (payload.event === 'metadata.changed') {
       section.changes.push(payload);
     } else if (payload.event === 'review.negative') {
       section.negativeReviews.push(payload);
+    } else if (payload.event === 'review.new') {
+      section.newReviews.push(payload);
     } else if (payload.event === 'action.opened') {
       section.actions.push(payload);
     }
@@ -359,9 +377,11 @@ function finalizeSections(
       rankMilestones: section.rankMilestones,
       firstRankings: section.firstRankings,
       overtakes: section.overtakes,
+      chartMoves: section.chartMoves,
       serpEntrants: section.serpEntrants,
       changes: section.changes,
       negativeReviews: section.negativeReviews,
+      newReviews: section.newReviews,
       actions: [...section.actions].sort(compareActions),
       competitors: [...section.competitors.values()].sort(compareSections),
     }))

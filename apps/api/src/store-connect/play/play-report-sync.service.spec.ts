@@ -5,6 +5,7 @@ import { SignInOffError } from './google-sign-in';
 import type { WorkspaceContext } from '../../common/tenancy/workspace-context';
 import type { PrismaService } from '../../prisma/prisma.service';
 import type { StoreConnectionService } from '../store-connection.service';
+import { FUNNEL_UPSERT_BATCH } from '../store-funnel-rows';
 import {
   GcsBucketError,
   GcsRateLimitedError,
@@ -13,6 +14,7 @@ import {
   PLAY_REPORT_MAX_BYTES,
   type GcsObject,
 } from './gcs-api';
+import { GcsUnreachableError } from './gcs-transport';
 import {
   importedMonths,
   PLAY_PARTIAL_SYNC,
@@ -124,7 +126,7 @@ function harness(objects: GcsObject[]) {
         id: 'conn_play',
         status: 'active',
         reportAccess: 'admin',
-        lastError: null,
+        lastError: null as string | null,
         api,
       }),
     ),
@@ -208,6 +210,48 @@ describe('PlayReportSync', () => {
     expect(trafficValues).toEqual(
       expect.arrayContaining(['all', null, 'search', 'browse', 'referrer']),
     );
+  });
+
+  it('gives each file transaction more than the default five seconds', async () => {
+    const { service, prisma } = harness([object('202609', 'country')]);
+
+    await service.run(NOW);
+
+    const [, options] = prisma.withTransaction.mock.calls[0] as unknown as [
+      unknown,
+      { timeout?: number } | undefined,
+    ];
+    expect(options?.timeout).toBeGreaterThan(5000);
+  });
+
+  it('gives a traffic file more time for every batch of search terms it carries', async () => {
+    const timeoutFor = async (file: Buffer) => {
+      const { service, prisma, api } = harness([
+        object('202609', 'traffic_source'),
+      ]);
+      api.download.mockResolvedValue(file);
+      await service.run(NOW);
+      const [, options] = prisma.withTransaction.mock.calls[0] as unknown as [
+        unknown,
+        { timeout?: number } | undefined,
+      ];
+      return options?.timeout ?? 0;
+    };
+    const manyTerms = Buffer.from(
+      [
+        'Date,Package name,Traffic source,Search term,UTM source,UTM campaign,Store listing acquisitions,Store listing visitors',
+        ...Array.from(
+          { length: FUNNEL_UPSERT_BATCH * 2 },
+          (_, term) =>
+            `2026-09-01,${PACKAGE},Google Play search,term ${term},,,1,10`,
+        ),
+      ].join('\n'),
+    );
+
+    const few = await timeoutFor(FILES.traffic_source);
+    const many = await timeoutFor(manyTerms);
+
+    expect(many).toBeGreaterThan(few);
   });
 
   it("replaces the month's rows of the breakdown a newer file brings", async () => {
@@ -348,7 +392,22 @@ describe('PlayReportSync', () => {
     expect(api.download.mock.calls.map(([name]) => name)).toEqual([
       object('202609', 'traffic_source').name,
     ]);
-    expect(summary).toMatchObject({ instances: 1, failed: 1 });
+    expect(summary).toMatchObject({ instances: 1, failed: 0, skipped: 1 });
+    expect(connections.markSynced).toHaveBeenCalledWith(
+      'GOOGLE_PLAY',
+      'admin',
+      PLAY_PARTIAL_SYNC,
+    );
+  });
+
+  it('says so at once on an attempt that is not the last, since a retry cannot shrink a file', async () => {
+    const { service, connections } = harness([
+      { ...object('202609', 'country'), size: PLAY_REPORT_MAX_BYTES + 1 },
+    ]);
+
+    const summary = await service.run(NOW, false);
+
+    expect(summary).toMatchObject({ failed: 0, skipped: 1 });
     expect(connections.markSynced).toHaveBeenCalledWith(
       'GOOGLE_PLAY',
       'admin',
@@ -373,6 +432,26 @@ describe('PlayReportSync', () => {
 
     expect(summary).toMatchObject({ instances: 1, failed: 1 });
     expect(connections.markRejected).not.toHaveBeenCalled();
+    expect(connections.markSynced).toHaveBeenCalledWith(
+      'GOOGLE_PLAY',
+      'admin',
+      PLAY_PARTIAL_SYNC,
+    );
+  });
+
+  it('keeps the earlier warning on an attempt that is not the last, so a retry decides', async () => {
+    const { service, api, connections } = harness([
+      object('202609', 'country'),
+    ]);
+    connections.openPlay.mockResolvedValueOnce({
+      ...(await connections.openPlay()),
+      lastError: PLAY_PARTIAL_SYNC,
+    });
+    api.download.mockRejectedValueOnce(new GcsUnreachableError('timeout'));
+
+    const summary = await service.run(NOW, false);
+
+    expect(summary).toMatchObject({ failed: 1 });
     expect(connections.markSynced).toHaveBeenCalledWith(
       'GOOGLE_PLAY',
       'admin',

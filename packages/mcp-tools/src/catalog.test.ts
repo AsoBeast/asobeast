@@ -10,6 +10,12 @@ import {
 } from "./index";
 
 describe("the tool catalog", () => {
+  it("describes the added date and the competitor count of list_keywords", () => {
+    const description = toolByName("list_keywords")?.description ?? "";
+    expect(description).toContain("trackedAt");
+    expect(description).toContain("competitorsInTop10");
+  });
+
   it("lists no write tool among the read tools", () => {
     for (const tool of MCP_TOOLS) {
       expect(tool.kind).toBe("read");
@@ -84,6 +90,15 @@ describe("the tool catalog", () => {
       "a paused keyword is not checked and keeps the day of its last check",
     );
     expect(description).not.toMatch(/>\d+/);
+  });
+
+  it.each([
+    "officialPopularityState",
+    "officialPopularityFloor",
+    "officialPopularityLastAboveFloor",
+    "MEDIUM",
+  ])("tells an agent how to read an Apple floor answer through %s", (word) => {
+    expect(toolByName("list_keywords")?.description).toContain(word);
   });
 
   it("places the localization tools after keyword_fields in the keywords group", () => {

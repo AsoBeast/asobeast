@@ -136,6 +136,42 @@ describe('proxy egress', () => {
     expect(meter.failures).toHaveLength(0);
   });
 
+  it('times the last request by when it settled, not when it was queued', async () => {
+    const meter = new EgressMeter(dispatcherNamed('slow'));
+    undiciFetchMock.mockImplementation(
+      () =>
+        new Promise((resolve) =>
+          setTimeout(() => resolve({ status: 200 }), 60),
+        ),
+    );
+    const before = Date.now();
+
+    await throughEgress(meter, () =>
+      egressFetch('https://play.google.com/store/search'),
+    );
+
+    expect(meter.lastRequestAt ?? 0).toBeGreaterThanOrEqual(before + 50);
+  });
+
+  it('times a request that failed by when it failed', async () => {
+    const meter = new EgressMeter(dispatcherNamed('dropped'));
+    undiciFetchMock.mockImplementation(
+      () =>
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('socket hang up')), 60),
+        ),
+    );
+    const before = Date.now();
+
+    await expect(
+      throughEgress(meter, () =>
+        egressFetch('https://play.google.com/store/search'),
+      ),
+    ).rejects.toThrow('socket hang up');
+
+    expect(meter.lastRequestAt ?? 0).toBeGreaterThanOrEqual(before + 50);
+  });
+
   it('marks the request the path refused so a swallowed block still counts', async () => {
     undiciFetchMock
       .mockResolvedValueOnce({ status: 200 })

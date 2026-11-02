@@ -39,7 +39,11 @@ import { SpiderService } from '../src/keywords/spider.service';
 import { RankingsService } from '../src/rankings/rankings.service';
 import { ScoringService } from '../src/scoring/scoring.service';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
-import { NormalizedApp, StoreProvider } from '../src/store-providers/types';
+import {
+  NormalizedApp,
+  SearchItem,
+  StoreProvider,
+} from '../src/store-providers/types';
 
 const FIXTURE: NormalizedApp = {
   store: Store.APP_STORE,
@@ -68,13 +72,16 @@ class FakeRegistry {
   suggestCalls: Array<{ term: string; country: string | undefined }> = [];
   failingTerms: (term: string) => boolean = () => false;
   answers: Record<string, string[]> = {};
+  appStoreSearch: SearchItem[] = [];
 
   get(store: Store): StoreProvider {
     return {
       store,
       getApp: () => Promise.resolve(FIXTURE),
       search: () =>
-        Promise.resolve(store === Store.GOOGLE_PLAY ? PLAY_SERP : []),
+        Promise.resolve(
+          store === Store.GOOGLE_PLAY ? PLAY_SERP : this.appStoreSearch,
+        ),
       suggest: (term: string, country?: string) => {
         this.suggestCalls.push({ term, country });
         if (this.failingTerms(term)) {
@@ -1792,6 +1799,50 @@ describe('KeywordsController (e2e)', () => {
     expect(serp).toHaveLength(2);
     expect(serp[0].storeAppId).toBe('com.example.game');
     expect(serp[0].ratingCount).toBeNull();
+  });
+
+  it('keeps the top 50 results of an app store check', async () => {
+    const you = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: 'deep-1',
+        country: 'us',
+        name: 'Deep One',
+      },
+    });
+    const keyword = await prisma.keyword.create({
+      data: { text: 'deep results', store: Store.APP_STORE, country: 'us' },
+    });
+    await prisma.trackedKeyword.create({
+      data: {
+        appId: you.id,
+        keywordId: keyword.id,
+        source: 'MANUAL',
+        active: true,
+      },
+    });
+    registry.appStoreSearch = Array.from({ length: 60 }, (_, index) => ({
+      storeAppId: `deep-${index + 1}`,
+      title: `Deep ${index + 1}`,
+    }));
+
+    try {
+      await asWorkspace(app, () =>
+        app.get(RankingsService).checkKeyword(keyword.id),
+      );
+    } finally {
+      registry.appStoreSearch = [];
+    }
+
+    const serp = await prisma.serpEntry.findMany({
+      where: { keywordId: keyword.id },
+      orderBy: { position: 'asc' },
+      select: { position: true },
+    });
+    expect(serp.map((row) => row.position)).toEqual(
+      Array.from({ length: 50 }, (_, index) => index + 1),
+    );
   });
 
   it('rejects empty and overly long keyword phrases', async () => {

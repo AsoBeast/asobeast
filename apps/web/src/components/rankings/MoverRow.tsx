@@ -20,10 +20,10 @@ export function MoverRow({
 }) {
   const positions = (
     <span className="flex shrink-0 items-center gap-1 numeric font-mono text-muted-foreground">
-      {formatRankPosition(mover.from, mover.fromDepth)}
+      <span>{formatRankPosition(mover.from, mover.fromDepth)}</span>
       <ArrowRight className="size-3" />
       {mover.to === null ? (
-        formatRankPosition(mover.to, mover.toDepth)
+        <span>{formatRankPosition(mover.to, mover.toDepth)}</span>
       ) : (
         <GradedNumber
           value={formatRankPosition(mover.to, mover.toDepth)}

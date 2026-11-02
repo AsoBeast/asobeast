@@ -17,10 +17,12 @@ const DEFAULT_SHOTS = [1, 2, 3].map(appleShot);
 
 export class FakeScreenshotRegistry {
   screenshots: string[] = DEFAULT_SHOTS;
+  icon: string | null = null;
   readonly markets = new Map<string, string[]>();
 
   reset(): void {
     this.screenshots = DEFAULT_SHOTS;
+    this.icon = null;
     this.markets.clear();
   }
 
@@ -35,6 +37,7 @@ export class FakeScreenshotRegistry {
           description: 'Fixture description',
           version: '1.0.0',
           price: 0,
+          ...(this.icon ? { iconUrl: this.icon } : {}),
           raw: {
             screenshots:
               store === Store.GOOGLE_PLAY

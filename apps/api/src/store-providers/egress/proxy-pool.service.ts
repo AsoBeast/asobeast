@@ -17,13 +17,25 @@ import {
 const POOL_JUSTIFICATION =
   'the proxy pool is operator infrastructure shared by every workspace';
 
+export const LEASE_HOLD_MS = 5 * 60_000;
+
 export interface ProxyLease {
   endpointId: string;
   dispatcher: Dispatcher;
+  leasedAt: Date;
+}
+
+export interface LeasePacing {
+  leasedAt: Date;
+  until: Date;
 }
 
 export class ProxyPoolUnavailableError extends Error {
-  constructor(store: Store, waitedMs: number) {
+  constructor(
+    store: Store,
+    waitedMs: number,
+    readonly retryInMs: number,
+  ) {
     super(
       `No proxy endpoint became available for ${store} within ${waitedMs}ms`,
     );
@@ -71,7 +83,11 @@ export class ProxyPool {
     private readonly shutdown: PoolShutdown,
   ) {}
 
-  async acquire(store: Store, country?: string): Promise<ProxyLease | null> {
+  async acquire(
+    store: Store,
+    country?: string,
+    waitForLocal = true,
+  ): Promise<ProxyLease | null> {
     if (!this.config.enabled) return null;
 
     const deadline = Date.now() + this.config.acquireTimeoutMs;
@@ -83,7 +99,7 @@ export class ProxyPool {
       const lease =
         await this.crossTenant.becauseThisWorkIsNotOwnedByOneWorkspace(
           POOL_JUSTIFICATION,
-          () => this.tryAcquire(store, country),
+          () => this.tryAcquire(store, country, waitForLocal),
         );
       if (lease.kind === 'endpoint') return lease.lease;
 
@@ -94,10 +110,30 @@ export class ProxyPool {
         throw new ProxyPoolUnavailableError(
           store,
           this.config.acquireTimeoutMs,
+          this.config.pollMs,
         );
       }
-      await pause(Math.min(lease.waitMs, remaining), signal);
+      await pause(
+        Math.min(lease.waitMs, this.config.pollMs, remaining),
+        signal,
+      );
     }
+  }
+
+  release(
+    endpointId: string,
+    store: Store,
+    { leasedAt, until }: LeasePacing,
+  ): Promise<void> {
+    return this.crossTenant.becauseThisWorkIsNotOwnedByOneWorkspace(
+      POOL_JUSTIFICATION,
+      async () => {
+        await this.prisma.proxyHealth.updateMany({
+          where: { endpointId, store, lastUsedAt: leasedAt },
+          data: { pacedUntil: until },
+        });
+      },
+    );
   }
 
   async leaseEndpoint(endpointId: string): Promise<ProxyLease | null> {
@@ -117,12 +153,17 @@ export class ProxyPool {
           }),
       );
     if (!endpoint) return null;
-    return { endpointId, dispatcher: this.dispatcherFor(endpoint) };
+    return {
+      endpointId,
+      dispatcher: this.dispatcherFor(endpoint),
+      leasedAt: new Date(),
+    };
   }
 
   private async tryAcquire(
     store: Store,
     country: string | undefined,
+    waitForLocal: boolean,
   ): Promise<
     { kind: 'endpoint'; lease: ProxyLease } | { kind: 'wait'; waitMs: number }
   > {
@@ -159,25 +200,27 @@ export class ProxyPool {
           ),
         now,
         minIntervalMs: this.config.minIntervalMs,
-        ...(country && isGeoSensitive(store) ? { country } : {}),
+        ...(country && isGeoSensitive(store) ? { country, waitForLocal } : {}),
       });
 
       if (selection.kind === 'empty') {
-        return { kind: 'wait', waitMs: this.config.emptyPollMs };
+        return { kind: 'wait', waitMs: this.config.pollMs };
       }
       if (selection.kind === 'wait') {
         return { kind: 'wait', waitMs: Math.max(selection.waitMs, 1) };
       }
 
       const chosen = rows.find((row) => row.id === selection.endpointId);
-      if (!chosen) return { kind: 'wait', waitMs: this.config.emptyPollMs };
+      if (!chosen) return { kind: 'wait', waitMs: this.config.pollMs };
 
-      if (await this.claim(chosen.id, store)) {
+      const leasedAt = await this.claim(chosen.id, store);
+      if (leasedAt) {
         return {
           kind: 'endpoint',
           lease: {
             endpointId: chosen.id,
             dispatcher: this.dispatcherFor(chosen),
+            leasedAt,
           },
         };
       }
@@ -185,23 +228,25 @@ export class ProxyPool {
     }
   }
 
-  private async claim(endpointId: string, store: Store): Promise<boolean> {
-    const notBefore = new Date(Date.now() - this.config.minIntervalMs);
+  private async claim(endpointId: string, store: Store): Promise<Date | null> {
+    const leasedAt = new Date();
+    const notBefore = new Date(leasedAt.getTime() - this.config.minIntervalMs);
+    const heldUntil = new Date(leasedAt.getTime() + LEASE_HOLD_MS);
     const claimed = await this.prisma.$queryRaw<{ endpointId: string }[]>`
-      INSERT INTO "ProxyHealth" ("endpointId", "store", "lastUsedAt", "windowStartedAt", "updatedAt")
-      SELECT e."id", ${store}::"Store", now(), now(), now()
+      INSERT INTO "ProxyHealth" ("endpointId", "store", "lastUsedAt", "pacedUntil", "windowStartedAt", "updatedAt")
+      SELECT e."id", ${store}::"Store", ${leasedAt}, ${heldUntil}, ${leasedAt}, ${leasedAt}
       FROM "ProxyEndpoint" e
       WHERE e."id" = ${endpointId}
         AND e."enabled" = true
         AND e."retiredAt" IS NULL
       ON CONFLICT ("endpointId", "store") DO UPDATE
-        SET "lastUsedAt" = now(), "updatedAt" = now()
+        SET "lastUsedAt" = ${leasedAt}, "pacedUntil" = ${heldUntil}, "updatedAt" = ${leasedAt}
         WHERE ("ProxyHealth"."lastUsedAt" IS NULL OR "ProxyHealth"."lastUsedAt" <= ${notBefore})
-          AND ("ProxyHealth"."cooldownUntil" IS NULL OR "ProxyHealth"."cooldownUntil" <= now())
-          AND ("ProxyHealth"."pacedUntil" IS NULL OR "ProxyHealth"."pacedUntil" <= now())
+          AND ("ProxyHealth"."cooldownUntil" IS NULL OR "ProxyHealth"."cooldownUntil" <= ${leasedAt})
+          AND ("ProxyHealth"."pacedUntil" IS NULL OR "ProxyHealth"."pacedUntil" <= ${leasedAt})
       RETURNING "endpointId"
     `;
-    return claimed.length > 0;
+    return claimed.length > 0 ? leasedAt : null;
   }
 
   private dispatcherFor(endpoint: {

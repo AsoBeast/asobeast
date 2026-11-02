@@ -59,13 +59,12 @@ export function ActionWorkByScope({
       )}
       {hidden > 0 ? (
         <p className="text-caption text-muted-foreground">
-          and {formatNumber(hidden)} more
+          {`and ${formatNumber(hidden)} more`}
         </p>
       ) : null}
       {data.total > data.items.length ? (
         <p className="text-caption text-muted-foreground">
-          Counts cover the {formatNumber(data.items.length)} highest-impact
-          actions.
+          {`Counts cover the ${formatNumber(data.items.length)} highest-impact actions.`}
         </p>
       ) : null}
     </section>

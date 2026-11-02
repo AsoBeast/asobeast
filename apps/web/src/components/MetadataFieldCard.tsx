@@ -41,8 +41,7 @@ export function MetadataFieldCard({
             over ? "font-semibold text-signal-down" : "text-muted-foreground",
           )}
         >
-          {used}/{limit}
-          {over ? ` · ${used - limit} over` : ""}
+          {`${used}/${limit}${over ? ` · ${used - limit} over` : ""}`}
         </span>
       </div>
 

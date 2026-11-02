@@ -2,7 +2,7 @@
 title: Track keywords
 description: "Add keywords per storefront on the keyword monitor, import a list from a CSV file, see which keyword fields each market reads, and know what every added market costs in daily store requests."
 icon: key
-keywords: ["keywords","keyword monitor","market","keyword field","suggestions","bulk","budget","import","CSV","spreadsheet","tags"]
+keywords: ["keywords","keyword monitor","market","keyword field","suggestions","bulk","budget","import","CSV","spreadsheet","tags","Astro","AppFollow","Sonar","switch"]
 ---
 
 The keyword monitor is where you decide what asobeast checks every day. Each keyword you add belongs to one storefront, and every keyword in every market adds one store search to the daily run.
@@ -53,7 +53,7 @@ The two rows are genuinely independent: positions, popularity and difficulty all
 
 <Steps>
   <Step title="Choose a file">
-    Pick a file of up to 500 rows, one keyword per row. CSV, TSV and plain text files are read, saved as UTF-8 or UTF-16, separated by commas, semicolons, tabs or pipes, so the file Excel writes on any regional setting works. **Download template** gives you a file with the right header. The file is read in your browser; only the rows are sent.
+    Pick a file with one keyword per row. CSV, TSV and plain text files are read, saved as UTF-8 or UTF-16, separated by commas, semicolons, tabs or pipes, so the file Excel writes on any regional setting works. **Download template** gives you a file with the right header. The file is read in your browser; only the rows are sent.
   </Step>
   <Step title="Check the columns">
     The dialog shows which column it read as the keyword, the country, the tags and the note, and whether it treated the first row as a header. Correct any of them in place. Rows without a country use the market selected in the dialog, which starts as the market you were looking at.
@@ -73,13 +73,27 @@ A file needs a keyword column and nothing else. Headers are matched ignoring cas
 | Column | Required | Headers that are recognised |
 | --- | --- | --- |
 | Keyword | Yes | `keyword`, `keywords`, `keyphrase`, `keyword phrase`, `phrase`, `term`, `search term`, `search query`, `query`, `text` |
-| Country | No | `country`, `country code`, `cc`, `storefront`, `market`, `region`, `location` |
+| Country | No | `country`, `country code`, `country name`, `cc`, `storefront`, `store domain`, `market`, `region`, `location` |
 | Tags | No | `tags`, `tag`, `labels`, `label`, `groups`, `group`, `keyword group`, `list`, separated by semicolons, pipes or commas |
 | Note | No | `note`, `notes`, `comment`, `comments`, `remark`, `remarks` |
 
-The separator is read from the header row, so a file typed by hand whose later rows leave trailing cells empty, or carry an extra one, still splits into the same columns. Without a recognised header, the separator is used only when every row has the same number of cells. A file with no header row is read with its first column as the keyword. If a header is not recognised, switch **First row is a header** on and choose the column yourself. A country is the two letter storefront code, such as `us`, `gb` or `pl`; it must be a storefront of the app's store. Upper case is fine.
+The separator is read from the header row, so a file typed by hand whose later rows leave trailing cells empty, or carry an extra one, still splits into the same columns. Without a recognised header, the separator is used only when every row has the same number of cells. A file with no header row is read with its first column as the keyword. If a header is not recognised, switch **First row is a header** on and choose the column yourself. A country is the two letter storefront code, such as `us`, `gb` or `pl`; it must be a storefront of the app's store. Upper case is fine. A country written as a name, such as `Poland`, or as a flag, such as 🇵🇱, is read as that storefront too.
 
 The keyword export is a valid import file. It ends with a `country` column, so a file exported from the `pl` market tracks in `pl` whatever market the dialog starts on. Export from one app and import into another app of the same store to copy a keyword set, tags and notes included.
+
+### Files from other tools
+
+The keyword export of another tool is read by its column headers, so you can usually choose it as it is. The dialog shows which columns it recognised. If a header is not recognised, switch **First row is a header** on and pick the column yourself.
+
+| Tool | Kept | Ignored | Good to know |
+| --- | --- | --- | --- |
+| Astro | Keyword, the store domain as the country, tags and note | App name, store name, last update, ranking, change, popularity, difficulty, apps in ranking | Astro writes a row for each platform, so a keyword on iPhone and on iPad appears once as new and once as Duplicate. An export of all your apps names the app of every row: the dialog imports the app you are on and says how many rows it left out. |
+| AppFollow | Keyword | Position, changes, best rank, popularity, search downloads, the daily positions and every other metric | The lines above the header row are skipped. They name the device and the country the report covers, but the dialog does not read them, so rows take the market chosen in the dialog: choose that country before you import. |
+| Sonar | Keyword, country and tags | Starred, source, popularity, estimated downloads, difficulty, gap, rank, last seen and added | Rows for the other store, in a `Store` column holding `ios` or `android`, are left out. An export of more than 500 keywords is imported in parts. The history file of `sonar export rankings` has a row for every keyword and day, so import a list of current keywords instead. |
+
+When a file names the app or the store of each row, in columns such as `App Id`, `App Name`, `Platform` or `Store`, the dialog imports only the rows of the app and store you are on and lists what it left out. If the file holds several apps and none is yours, choose one under **App to import**, or **All apps**, before you import. A file for a single app is imported whole whatever that app is called, so you can copy the keywords of one app to another this way.
+
+Imported keywords start tracking today. Positions, popularity and difficulty in the file are never imported, because asobeast measures them for each market itself, so no rank history comes across.
 
 ### What each status means
 
@@ -102,7 +116,7 @@ A phrase that another app of your workspace already tracks in the same market co
 
 Every keyword market an import opens adds the same daily store requests as adding it by hand, one a day on the App Store and eight a day on Google Play, and each new keyword is scored once. A market the app tracks no keywords in yet also adds the daily refresh of its listing, one request a day for the app and one for each competitor. See [What is a market listing?](/concepts/countries#what-is-a-market-listing) The dialog states the requests a day the import adds, listing refreshes included. The [platform operator](/security/admin-surfaces#who-the-platform-operator-is) also sees what share of the store's daily capacity that brings it to, and a warning from 85 percent. See [Watch your request budget](#watch-your-request-budget).
 
-An import takes up to 500 rows. For a longer list, split the file and import the parts one after the other, previewing each. On a hosted plan, rows beyond your keyword limit are listed as over limit and skipped, so you can see what fits before you confirm.
+One import takes up to 500 rows, and fewer when long notes make the request large. A longer file is imported in parts: the dialog says which lines the part holds, you review and import it, and the next part is reviewed once the one before it is tracked, so its statuses and your keyword limit already count what you imported. A change to the columns, the app or the market starts again from the first part, where what you imported already shows as already tracked. When a part has nothing left to import, **Skip to part 2** (and so on) moves on to the next one, so choosing the same file again, or a longer export of it, continues where you left off. Closing the dialog keeps the parts you imported. On a hosted plan, rows beyond your keyword limit are listed as over limit and skipped, so you can see what fits before you confirm. Rows the dialog leaves out because the file names another app or store are never sent. A single line too large to send, such as one with an enormous note, is refused with its line number.
 
 ### Import through the API
 
@@ -198,7 +212,9 @@ The list comes from your home listing. Coverage and relevance of a keyword read 
 
 ## Bulk manage keywords
 
-Select rows to untrack them, deactivate them or queue a rescore. Deactivating keeps the history and stops the daily check, which is the right move for a keyword you may want back. Untracking removes the link between the app and the keyword.
+Select rows with the checkboxes and the bar at the bottom of the table shows what you can do with them: **Pause**, **Activate**, **Tag** and **Remove**, and **Export CSV** for the selected rows only. Pausing keeps the history and stops the daily check, which is the right move for a keyword you may want back. **Remove** asks first and stops tracking: the ranking history stops accruing and a keyword you add again starts a new gap.
+
+**Pause**, **Activate** and **Remove** send one request for up to 500 keywords, so a large selection costs one write against your plan's request budget rather than one per keyword. A selection over 500 is sent in several requests, one after another. Activating keywords that your plan has no room for is refused as a whole, with the limit in the message, and nothing changes. A keyword the request cannot find any more, for example because it was removed in another tab, is skipped and counted in the message. When a request fails the selection stays, so you can try again. **Tag** still changes one keyword at a time.
 
 Buckets classify scored keywords automatically so a large list stays readable.
 
@@ -238,7 +254,7 @@ The controls above the table narrow the rows without reloading them.
 
 | Control | What it keeps | Address key |
 | --- | --- | --- |
-| Search keywords | Phrases that contain the text you type | `q` |
+| Search keywords | Phrases that contain the text you type. A phrase in quotes, such as `"habit tracker"`, keeps only the keyword that is exactly that phrase | `q` |
 | Source | Keywords added from the chosen sources | `source` |
 | Bucket | Keywords in the chosen buckets | `bucket` |
 | Status | Active or paused keywords | `status` |
@@ -248,13 +264,21 @@ The controls above the table narrow the rows without reloading them.
 
 Every active filter shows as a chip under the controls. Remove one chip to drop that filter, or use **Clear all**. The count next to the controls reads how many keywords are shown out of how many are tracked in the market, and **Export CSV** exports exactly the rows shown, in the order shown. The grade words are defined in [How are scores graded?](/concepts/scoring#how-are-scores-graded).
 
+A search with quotes ignores case, punctuation and extra spaces, so `"Habit  Tracker"` finds `habit tracker` and not `habit tracker app`. Accents count, because the stores treat `café` and `cafe` as different phrases. A quote with no closing quote is dropped and the rest is searched as plain text, and the chip reads **Exact phrase** only when both quotes are there.
+
 The **Tags** column shows up to three tags and how many more a keyword carries. A note icon next to the keyword shows its note when you point at it or focus it.
 
-The **Position** column carries an info button when the keyword has rank history. It opens the best recorded position, how far the keyword sits below it and how many days the keyword has held its current tier, which is one of first place, top 3 or top 10. Best means the best position kept within ranking retention (`RETENTION_RANKINGS_DAYS`, 365 days by default), not the all time best. The streak counts checked days only: a day without a check, a drop out of the tier or a paused keyword restarts it, and it shows only while the keyword is active and its newest check is from today or yesterday UTC.
+The **Position** column carries a chart button after the position of every keyword checked at least once, including one that is not ranking. It is always visible and opens with a click, a tap, Enter or Space, and Escape closes it. The popover shows the keyword with its store and market, the current position and its change since yesterday, and up to three facts: the best recorded position, how far the keyword sits below it and how many days the keyword has held its current tier, which is one of first place, top 3 or top 10. Best means the best position kept within ranking retention (`RETENTION_RANKINGS_DAYS`, 365 days by default), not the all time best. The streak counts checked days only: a day without a check, a drop out of the tier or a paused keyword restarts it, and it shows only while the keyword is active and its newest check is from today or yesterday UTC.
 
-When an active keyword's newest check is older than yesterday UTC, the info button beside its position turns into a clock, which opens the day of that check, and the change since yesterday is hidden. The position is the one from that day. See [How do I know a position is current?](/concepts/positions#how-do-i-know-a-position-is-current) for what stops a check.
+Under the facts, a chart draws the keyword's position over the last 7, 30 or 90 days, 30 by default. Position 1 is at the top and the Top 3, Top 10 and Top 25 bands are shaded. A day the keyword was checked and not found is a gap in the line with a hollow dot at the bottom, at that day's depth. A dashed line marks the best position, the newest check carries a ringed dot, and a dashed orange marker stands on each day the app's listing changed in the keyword's own market, so a change in another storefront never marks a keyword it cannot move. The changed fields are written under the chart and in the tooltip, which also reads the position of the day and how far it moved since the previous check. With fewer than four checks in the range the chart shows the checks as dots without a line, a range with no check offers the 90 day range, and a paused keyword shows its history up to its last check. **Open in Rankings** opens the [Rankings](/guides/read-rankings) page with that keyword and the chosen range selected.
 
-**Columns** hides and shows columns. The choice is remembered in this browser and is not part of the link. On a phone the table starts with the keyword, position and opportunity columns, and the filters move into a **Filters** panel.
+<Frame>
+  ![The position history popover of a keyword in the light theme: the keyword, its store and market, the position 3, three facts, the 7d, 30d and 90d tabs, a chart of the position with rank bands, a dashed best line and three listing change markers, and the Open in Rankings link](/images/keywords/position-history-light.png)
+</Frame>
+
+When an active keyword's newest check is older than yesterday UTC, the chart button beside its position turns into a clock, the popover opens with the day of that check, and the change since yesterday is hidden. The position is the one from that day. See [How do I know a position is current?](/concepts/positions#how-do-i-know-a-position-is-current) for what stops a check.
+
+**Columns** hides and shows columns. Two columns start hidden: **Added**, the UTC day the app started tracking the keyword in that market, and **Competitors in top 10**, how many of your competitors are in the newest stored top 10 of the keyword. Both sort like the others, **Added** newest first and **Competitors in top 10** with the most first, and both are in the CSV. A dash in **Competitors in top 10** means you track no competitors or the keyword has no top 10 snapshot from today or yesterday. See [How many competitors are in the top 10?](/concepts/positions#how-many-competitors-are-in-the-top-10) The choice is remembered in this browser and is not part of the link. On a phone the table starts with the keyword, position and opportunity columns, and the filters move into a **Filters** panel.
 
 ## Watch your request budget
 
@@ -269,6 +293,7 @@ A customer of a hosted instance watches their keyword markets on the plan card i
 - **A new keyword says Checking for long.** Its check waits in the store queue behind the other work of the day, at the store rate limit. The row updates on its own for ten minutes and after a reload. If it stays, look for a failed `check-keyword` job on `/admin/queues`.
 - **A keyword shows `>200` every day.** It was checked and the app was not in the top 200. See [Positions and rank depth](/concepts/positions).
 - **Popularity and difficulty are empty.** Scoring runs weekly on `CRON_SCORING`, which defaults to Sunday 04:00 UTC.
+- **A popularity has an arrow before it.** Apple listed the term at the lowest value it publishes for its genre, or left it out of its list, so the number says little more than that the term sits at or below the edge of Apple's list. See [What is a floor answer?](/concepts/scoring#what-is-a-floor-answer).
 - **The budget card warns the operator the instance is over capacity.** Remove keywords or markets, or raise the per store rate limit and accept the risk of the store throttling your IP address.
 - **The whole file shows as one column.** The separator is read from a header row that names a keyword column, else only when every row has the same number of cells. Add a header such as `keyword,country`, or save the file again from the spreadsheet so each row has the same columns.
 - **The dialog says the file could not be read.** The browser could not open it, often because it moved or is still syncing. Choose it again, or save a copy and choose that.

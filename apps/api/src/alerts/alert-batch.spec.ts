@@ -9,6 +9,7 @@ import {
   RankMilestonePayload,
   RankOvertakenPayload,
   ReviewNegativePayload,
+  ReviewNewPayload,
   SerpEntrantPayload,
 } from '@asobeast/shared';
 import {
@@ -20,10 +21,23 @@ import {
   OutboxEvent,
   ResolvedApp,
 } from './alert-batch';
+import {
+  chartEntered,
+  chartLeft,
+  chartMilestone,
+  chartMoveBatch,
+  withoutChartMoves,
+} from './chart-events.fixture';
+import {
+  drop,
+  improvement as rankImprovement,
+  milestone as rankMilestone,
+} from './rank-events.fixture';
 
 const primaryA: ResolvedApp = {
   id: 'a',
   name: 'Alpha',
+  iconUrl: null,
   store: 'APP_STORE',
   country: 'us',
   isCompetitor: false,
@@ -32,6 +46,7 @@ const primaryA: ResolvedApp = {
 const primaryB: ResolvedApp = {
   id: 'b',
   name: 'Bravo',
+  iconUrl: null,
   store: 'GOOGLE_PLAY',
   country: 'gb',
   isCompetitor: false,
@@ -40,6 +55,7 @@ const primaryB: ResolvedApp = {
 const competitor: ResolvedApp = {
   id: 'c',
   name: 'Charlie',
+  iconUrl: null,
   store: 'APP_STORE',
   country: 'us',
   isCompetitor: true,
@@ -387,6 +403,39 @@ describe('assembleBatches', () => {
     expect(competitorSection.competitors[0].changes).toHaveLength(1);
   });
 
+  it('carries the current icon of a primary app and of a competitor', () => {
+    const alphaIcon =
+      'https://is1-ssl.mzstatic.com/image/thumb/alpha/512x512bb.jpg';
+    const charlieIcon =
+      'https://is1-ssl.mzstatic.com/image/thumb/charlie/512x512bb.jpg';
+    const batches = assembleBatches({
+      events: [event(review, 'a'), event(competitorChange, 'c')],
+      appById: new Map([
+        ['a', { ...primaryA, iconUrl: alphaIcon }],
+        ['c', { ...competitor, iconUrl: charlieIcon }],
+      ]),
+      serpPrimariesByKeyword: new Map(),
+      now: new Date('2026-07-22T11:00:00.000Z'),
+    });
+
+    expect(batches.owned.apps[0].app).toEqual({
+      id: 'a',
+      name: 'Alpha',
+      iconUrl: alphaIcon,
+      store: 'APP_STORE',
+      country: 'us',
+    });
+    const section = batches.competitors.apps[0];
+    expect(section.app.iconUrl).toBe(alphaIcon);
+    expect(section.competitors[0].app).toEqual({
+      id: 'c',
+      name: 'Charlie',
+      iconUrl: charlieIcon,
+      store: 'APP_STORE',
+      country: 'us',
+    });
+  });
+
   it('removes invalid events from grouped and flat payloads', () => {
     const batches = assembleBatches({
       events: [event(rank, 'b')],
@@ -421,6 +470,7 @@ describe('assembleBatches', () => {
             app: {
               id: 'b',
               name: 'Bravo',
+              iconUrl: null,
               store: 'GOOGLE_PLAY',
               country: 'gb',
             },
@@ -446,6 +496,7 @@ describe('assembleBatches', () => {
                 app: {
                   id: 'c',
                   name: 'Charlie',
+                  iconUrl: null,
                   store: 'APP_STORE',
                   country: 'us',
                 },
@@ -520,6 +571,106 @@ describe('filterBatch', () => {
   });
 });
 
+describe('filterBatch with confirmed drops', () => {
+  const ordinaryDrop = drop();
+  const confirmedDrop = drop({ confirmed: true, to: 16 });
+  const ordinaryLeave = rankMilestone({ direction: 'left', from: 9, to: 11 });
+  const confirmedLeave = rankMilestone({
+    direction: 'left',
+    from: 9,
+    to: 12,
+    confirmed: true,
+  });
+  const entry = rankMilestone();
+  const undoingEntry = rankMilestone({ from: 11, to: 9, undoesDrop: true });
+  const plainImprovement = rankImprovement();
+  const undoingImprovement = rankImprovement({ undoesDrop: true });
+  const batchOf = (payloads: OutboxEvent['payload'][]) =>
+    assembleBatches({
+      events: [
+        ...payloads.map((payload, index) => event(payload, 'a', `e${index}`)),
+        event(competitorChange, 'c', 'competitor'),
+      ],
+      appById,
+      serpPrimariesByKeyword: new Map(),
+      now: new Date('2026-07-22T11:00:00.000Z'),
+    });
+  const batches = batchOf([
+    ordinaryDrop,
+    confirmedDrop,
+    ordinaryLeave,
+    confirmedLeave,
+    entry,
+    undoingEntry,
+    plainImprovement,
+    undoingImprovement,
+  ]);
+  const rankEvents = new Set([
+    'rank.dropped',
+    'rank.improved',
+    'rank.milestone',
+  ]);
+  const filtered = (confirmDrops: boolean) => {
+    const result = filterBatch(batches.owned, rankEvents, [], confirmDrops);
+    if (!result) throw new Error('expected an owned batch');
+    return result;
+  };
+
+  it('gives a channel without the setting the ordinary events', () => {
+    const [section] = filtered(false).apps;
+
+    expect(section.rankDrops).toEqual([ordinaryDrop]);
+    expect(section.rankMilestones).toEqual(
+      expect.arrayContaining([ordinaryLeave, entry, undoingEntry]),
+    );
+    expect(section.rankMilestones).toHaveLength(3);
+    expect(section.rankImprovements).toEqual(
+      expect.arrayContaining([plainImprovement, undoingImprovement]),
+    );
+    expect(section.rankImprovements).toHaveLength(2);
+  });
+
+  it('gives a confirming channel the confirmed and the plain events', () => {
+    const [section] = filtered(true).apps;
+
+    expect(section.rankDrops).toEqual([confirmedDrop]);
+    expect(section.rankMilestones).toEqual(
+      expect.arrayContaining([confirmedLeave, entry]),
+    );
+    expect(section.rankMilestones).toHaveLength(2);
+    expect(section.rankImprovements).toEqual([plainImprovement]);
+  });
+
+  it.each([false, true])(
+    'counts the events it keeps when confirmDrops is %p',
+    (confirmDrops) => {
+      const batch = filtered(confirmDrops);
+
+      expect(batch.totals).toEqual({ events: batch.events.length, apps: 1 });
+      expect(batch.events).toHaveLength(confirmDrops ? 4 : 6);
+    },
+  );
+
+  it('sends a confirming channel no report when nothing reaches it', () => {
+    const { owned } = batchOf([ordinaryDrop]);
+
+    expect(filterBatch(owned, rankEvents, [], true)).toBeNull();
+  });
+
+  it('leaves the competitor scope alone', () => {
+    const competitors = filterBatch(
+      batches.competitors,
+      new Set(['metadata.changed']),
+      [],
+      true,
+    );
+    if (!competitors) throw new Error('expected a competitor batch');
+
+    expect(competitors.totals).toEqual({ events: 1, apps: 1 });
+    expect(competitors.apps[0].competitors).toHaveLength(1);
+  });
+});
+
 describe('action.opened batching', () => {
   it('classifies a new action into the owned-apps scope', () => {
     const result = classifyBatch({
@@ -573,6 +724,68 @@ describe('action.opened batching', () => {
     });
 
     expect(filterBatch(owned, new Set(['rank.dropped']))).toBeNull();
+  });
+});
+
+describe('review.new batching', () => {
+  const now = new Date('2026-07-22T11:00:00.000Z');
+  const fresh = (score: number, text: string): ReviewNewPayload => ({
+    event: 'review.new',
+    occurredAt: '2026-07-22T10:00:00.000Z',
+    app: { id: 'a', name: 'Alpha' },
+    review: {
+      score,
+      title: null,
+      text,
+      author: 'Sam',
+      version: null,
+      reviewedAt: null,
+    },
+  });
+  const low = fresh(2, 'slow');
+  const high = fresh(5, 'great');
+  const owned = () =>
+    assembleBatches({
+      events: [event(low, 'a', 'n1'), event(high, 'a', 'n2')],
+      appById,
+      serpPrimariesByKeyword: new Map(),
+      now,
+    }).owned;
+
+  it('puts a new review into the new reviews of its owned app', () => {
+    expect(owned().apps[0]).toMatchObject({
+      newReviews: [low, high],
+      negativeReviews: [],
+    });
+  });
+
+  it('skips a new review keyed on a competitor', () => {
+    const result = classifyBatch({
+      events: [event({ ...high, app: { id: 'c', name: 'Charlie' } }, 'c')],
+      appById,
+      serpPrimariesByKeyword: new Map(),
+    });
+
+    expect(result.skipped.competitor_owned_signal).toBe(1);
+    expect(result.owned).toHaveLength(0);
+  });
+
+  it('keeps the picked stars and counts only them', () => {
+    const filtered = filterBatch(owned(), new Set(['review.new']), [1, 2]);
+
+    expect(filtered?.apps[0].newReviews).toEqual([low]);
+    expect(filtered?.events).toEqual([low]);
+    expect(filtered?.totals).toEqual({ events: 1, apps: 1 });
+  });
+
+  it('drops a section left with no picked star', () => {
+    expect(filterBatch(owned(), new Set(['review.new']), [1])).toBeNull();
+  });
+
+  it('keeps every star without a filter', () => {
+    expect(
+      filterBatch(owned(), new Set(['review.new']))?.apps[0].newReviews,
+    ).toEqual([low, high]);
   });
 });
 
@@ -698,5 +911,97 @@ describe('rank milestone batching', () => {
       actions: [],
       competitors: [],
     });
+  });
+});
+
+describe('chart move batching', () => {
+  const entered = chartEntered({ app: { id: 'a', name: 'Alpha' } });
+  const reachedTop10 = chartMilestone({
+    app: entered.app,
+    from: null,
+    to: 7,
+  });
+  const now = new Date('2026-07-22T11:00:00.000Z');
+  const ownedBatch = (...payloads: OutboxEvent['payload'][]) =>
+    assembleBatches({
+      events: payloads.map((payload, index) =>
+        event(payload, 'a', `e${index + 1}`),
+      ),
+      appById,
+      serpPrimariesByKeyword: new Map(),
+      now,
+    }).owned;
+
+  it('routes a chart move into its owned app section', () => {
+    const owned = ownedBatch(entered);
+
+    expect(owned.apps[0].chartMoves).toEqual([entered]);
+    expect(owned.events).toEqual([entered]);
+    expect(owned.totals).toEqual({ events: 1, apps: 1 });
+  });
+
+  it('keeps the entry and the milestone of one move in creation order', () => {
+    expect(ownedBatch(entered, reachedTop10).apps[0].chartMoves).toEqual([
+      entered,
+      reachedTop10,
+    ]);
+  });
+
+  it('skips a chart move keyed on a competitor', () => {
+    const result = classifyBatch({
+      events: [event({ ...entered, app: { id: 'c', name: 'Charlie' } }, 'c')],
+      appById,
+      serpPrimariesByKeyword: new Map(),
+    });
+
+    expect(result.skipped.competitor_owned_signal).toBe(1);
+    expect(result.owned).toHaveLength(0);
+  });
+
+  it('keeps only the chart moves a channel lists', () => {
+    const owned = ownedBatch(entered, reachedTop10);
+    const milestones = filterBatch(owned, new Set(['chart.milestone']));
+    const entries = filterBatch(owned, new Set(['chart.entered']));
+
+    expect(milestones?.apps[0].chartMoves).toEqual([reachedTop10]);
+    expect(milestones?.events).toEqual([reachedTop10]);
+    expect(entries?.apps[0].chartMoves).toEqual([entered]);
+    expect(entries?.events).toEqual([entered]);
+  });
+
+  it('drops a section that holds nothing a channel lists', () => {
+    expect(
+      filterBatch(ownedBatch(entered, chartLeft()), new Set(['rank.dropped'])),
+    ).toBeNull();
+  });
+
+  it('carries no chart moves in the competitor scope', () => {
+    const competitorScope = filterBatch(
+      { ...chartMoveBatch(entered), scope: 'competitors' },
+      new Set(['chart.entered']),
+    );
+
+    expect(competitorScope).toBeNull();
+    const competitors = assembleBatches({
+      events: [event(competitorChange, 'c')],
+      appById,
+      serpPrimariesByKeyword: new Map(),
+      now,
+    }).competitors;
+    expect(competitors.apps[0].chartMoves).toEqual([]);
+  });
+
+  it('reads a section queued before chart moves existed', () => {
+    const queued = chartMoveBatch(entered);
+    const legacy = {
+      ...queued,
+      apps: [withoutChartMoves({ ...queued.apps[0], rankDrops: [rank] })],
+      events: [rank],
+    };
+
+    const filtered = filterBatch(legacy, new Set(['rank.dropped']));
+
+    expect(filtered?.apps[0].chartMoves).toEqual([]);
+    expect(filtered?.apps[0].rankDrops).toEqual([rank]);
   });
 });

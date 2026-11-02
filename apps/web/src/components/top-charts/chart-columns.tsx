@@ -7,7 +7,7 @@ import { SortableHeader } from "@/components/data-table/SortableHeader";
 import type { DataTableFeatures } from "@/components/data-table/table-features";
 import { Badge } from "@/components/ui/badge";
 import { movementSortValue } from "./movement";
-import { MovementCell } from "./MovementCell";
+import { MovementCell } from "@/components/movement/MovementCell";
 import type { ChartRowContext } from "./chart-actions";
 import { RowActions } from "./RowActions";
 

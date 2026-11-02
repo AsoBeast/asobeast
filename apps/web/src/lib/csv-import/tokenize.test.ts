@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseCsv } from "./tokenize";
+import { headerIndex, parseCsv } from "./tokenize";
 
 const cellsOf = (text: string) =>
   parseCsv(text).records.map((record) => record.cells);
@@ -149,5 +149,49 @@ describe("parseCsv", () => {
 
   it("goes in the order comma, semicolon, tab, pipe when two delimiters fit equally", () => {
     expect(parseCsv("a,b;c\nd,e;f\n").delimiter).toBe(",");
+  });
+});
+
+describe("headerIndex", () => {
+  const recordsOf = (text: string) => parseCsv(text).records;
+
+  it("U-HEAD-01 is the first record when it is the header", () => {
+    expect(headerIndex(recordsOf("keyword,country\nhabit,us\n"))).toBe(0);
+  });
+
+  it("U-HEAD-02 skips the narrower lines above a header", () => {
+    expect(
+      headerIndex(
+        recordsOf("Report\nApp,Import Lab\nKeyword,Position,Total\nhabit,4,9"),
+      ),
+    ).toBe(2);
+  });
+
+  it("U-HEAD-03 does not read a data row as a header below rows as wide as itself", () => {
+    expect(headerIndex(recordsOf("habit,us\nquery,pl\nfocus,gb"))).toBe(0);
+  });
+
+  it("U-HEAD-04 is the first record when no record names a keyword column", () => {
+    expect(headerIndex(recordsOf("name,country\nhabit,us"))).toBe(0);
+    expect(headerIndex([])).toBe(0);
+  });
+
+  it("U-HEAD-05 looks no further than the sample of ten records", () => {
+    const lines = Array.from({ length: 12 }, (_, index) => `note ${index}`);
+
+    expect(
+      headerIndex(recordsOf([...lines, "Keyword,Position", "a,1"].join("\n"))),
+    ).toBe(0);
+  });
+});
+
+describe("parseCsv with lines above the header", () => {
+  it("U-HEAD-06 finds the delimiter of the header, not of the lines above it", () => {
+    const table = parseCsv(
+      "Keywords report; made by hand\nKeyword,Position\nhabit,4\nfocus,9\n",
+    );
+
+    expect(table.delimiter).toBe(",");
+    expect(table.records[0].cells).toEqual(["Keywords report; made by hand"]);
   });
 });

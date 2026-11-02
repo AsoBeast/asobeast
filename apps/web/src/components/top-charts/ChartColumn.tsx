@@ -22,7 +22,7 @@ import {
   type ChartSearch,
 } from "./chart-params";
 import { compareLabel } from "./movement";
-import { MovementCell } from "./MovementCell";
+import { MovementCell } from "@/components/movement/MovementCell";
 import { RowActions } from "./RowActions";
 
 export function ChartColumn({
@@ -81,7 +81,7 @@ export function ChartColumn({
             href={tableHref(chart, search)}
             className="text-sm underline decoration-primary underline-offset-4"
           >
-            Open table<span className="sr-only"> of {label}</span>
+            Open table<span className="sr-only">{` of ${label}`}</span>
           </Link>
         </div>
       </div>

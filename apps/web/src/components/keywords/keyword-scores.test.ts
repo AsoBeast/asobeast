@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { TrackedKeywordItem } from "@asobeast/shared";
-import { isScoreOutdated, scoreValue } from "./keyword-scores";
+import { hasFloorAnswer, isScoreOutdated, scoreValue } from "./keyword-scores";
 
 function keyword(scores: Partial<TrackedKeywordItem>): TrackedKeywordItem {
   return {
@@ -71,5 +71,37 @@ describe("isScoreOutdated", () => {
     [{ scoreOutdated: undefined, volume: null }, false],
   ])("%j is outdated: %s", (scores, expected) => {
     expect(isScoreOutdated(keyword(scores))).toBe(expected);
+  });
+});
+
+describe("hasFloorAnswer", () => {
+  const signals = {
+    suggestReach: "hit" as const,
+    suggestPrefixLength: 2,
+    suggestPosition: 1,
+    serpRelevance: 0.8,
+    medianRatingCount: 1200,
+    flags: [],
+    officialPopularity: null,
+    estimatedTraffic: 4,
+  };
+
+  it.each([
+    ["floor", true],
+    ["absent", true],
+    ["listed", false],
+  ] as const)("reads a %s answer as a floor answer: %s", (state, expected) => {
+    expect(
+      hasFloorAnswer(
+        keyword({
+          scoreSignals: { ...signals, officialPopularityState: state },
+        }),
+      ),
+    ).toBe(expected);
+  });
+
+  it("reads no floor answer without signals", () => {
+    expect(hasFloorAnswer(keyword({ scoreSignals: null }))).toBe(false);
+    expect(hasFloorAnswer(keyword({}))).toBe(false);
   });
 });

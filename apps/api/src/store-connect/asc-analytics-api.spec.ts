@@ -118,6 +118,17 @@ describe('AscAnalyticsApi report requests', () => {
     });
   });
 
+  it.each([null, {}, { data: [] }, { data: {} }, { data: { id: '' } }])(
+    'refuses a created request it cannot read: %j',
+    async (body) => {
+      const { api } = recorded(ok(body, 201));
+
+      await expect(
+        api.createReportRequest('1476097583', 'ONGOING'),
+      ).rejects.toBeInstanceOf(AscError);
+    },
+  );
+
   it('answers forbidden when the key may not create requests', async () => {
     const { api } = recorded(failure(403, 'FORBIDDEN_ERROR'));
 

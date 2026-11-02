@@ -69,7 +69,7 @@ export function MarketAvailabilityNotice({
       {status && Icon ? (
         <>
           <Icon className="size-3.5 shrink-0" aria-hidden />
-          {statusLabel(status, country)}
+          <span>{statusLabel(status, country)}</span>
         </>
       ) : null}
     </p>

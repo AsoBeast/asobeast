@@ -236,6 +236,7 @@ model App {
   storeFunnelDays StoreFunnelDay[]
   storeFunnelPageDays StoreFunnelPageDay[]
   storeFunnelSearchTerms StoreFunnelSearchTerm[]
+  keywordFieldSync KeywordFieldSync?
   createdAt    DateTime         @default(now())
 
   @@unique([id, workspaceId])
@@ -244,6 +245,18 @@ model App {
   @@index([workspaceId])
   @@index([primaryAppId])
   @@index([groupId])
+}
+
+model KeywordFieldSync {
+  appId        String
+  workspaceId  String
+  app          App      @relation(fields: [appId, workspaceId], references: [id, workspaceId], onDelete: Cascade)
+  version      String?
+  syncedAt     DateTime?
+  lastError    String?
+
+  @@id([appId, workspaceId])
+  @@index([workspaceId])
 }
 
 model AppSnapshot {
@@ -599,15 +612,17 @@ model ReviewReply {
 }
 
 model Webhook {
-  id          String          @id @default(cuid())
-  workspaceId String
-  workspace   Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  url         String
-  events      String[]
-  secret      String?
-  active      Boolean         @default(true)
-  deliveries  AlertDelivery[]
-  createdAt   DateTime        @default(now())
+  id           String          @id @default(cuid())
+  workspaceId  String
+  workspace    Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  url          String
+  events       String[]
+  reviewScores Int[]           @default([])
+  secret       String?
+  active       Boolean         @default(true)
+  confirmDrops Boolean         @default(false)
+  deliveries   AlertDelivery[]
+  createdAt    DateTime        @default(now())
 
   @@index([workspaceId])
 }
@@ -618,7 +633,9 @@ model EmailAlert {
   workspace          Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   email              String
   events             String[]
+  reviewScores       Int[]           @default([])
   active             Boolean         @default(true)
+  confirmDrops       Boolean         @default(false)
   confirmedAt        DateTime?
   confirmationSentAt DateTime?
   unsubscribedAt     DateTime?

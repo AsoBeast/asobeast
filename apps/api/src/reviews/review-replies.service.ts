@@ -11,7 +11,7 @@ import {
   ReviewReplyItem,
   ReviewReplyPatchRequest,
 } from '@asobeast/shared';
-import { storeLabel } from '../alerts/alert-summary';
+import { storeName } from '../alerts/report/storefront';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
 import { toReviewReplyItem, WITH_POSTER } from './review-reply.mapper';
@@ -36,7 +36,7 @@ export function assertWithinReplyLimit(store: Store, text: string): void {
   const limit = REVIEW_REPLY_LIMITS[store];
   if (countChars(text) > limit) {
     throw new BadRequestException(
-      `A ${storeLabel(store)} reply is at most ${limit} characters`,
+      `A ${storeName(store)} reply is at most ${limit} characters`,
     );
   }
 }

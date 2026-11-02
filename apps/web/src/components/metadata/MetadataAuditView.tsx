@@ -1,20 +1,66 @@
 "use client";
 
 import { Suspense } from "react";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import {
+  useQuery,
+  useSuspenseQuery,
+  type UseQueryResult,
+} from "@tanstack/react-query";
 import { keywordFieldLocalizations } from "@asobeast/shared";
+import type {
+  AppLocalizationsResult,
+  MetadataAuditResult,
+} from "@asobeast/shared";
 import { AppLocalizationsSection } from "@/components/localizations/AppLocalizationsSection";
 import { useLocalization } from "@/components/app-detail/use-localization";
 import { useMarket } from "@/components/app-detail/use-market";
 import { KeywordFieldSuggestionCard } from "@/components/KeywordFieldSuggestionCard";
 import { MetadataFieldCard } from "@/components/MetadataFieldCard";
+import {
+  InlineQueryError,
+  failedRead,
+} from "@/components/layout/InlineQueryError";
 import { editLocalizationHref } from "@/lib/app-localizations";
 import { queryMarket } from "@/lib/market";
-import { metadataAuditOptions } from "@/lib/queries";
+import { appLocalizationsOptions, metadataAuditOptions } from "@/lib/queries";
 import { CoverageTable } from "./CoverageTable";
 import { MetadataAssistantPanel } from "./MetadataAssistantPanel";
 import { ScreenshotCaptionsCard } from "./ScreenshotCaptionsCard";
 import { ScreenshotCaptionsSkeleton } from "./skeletons";
+
+function FieldSuggestion({
+  id,
+  home,
+  read,
+  suggestion,
+}: {
+  id: string;
+  home: string;
+  read: UseQueryResult<AppLocalizationsResult>;
+  suggestion: MetadataAuditResult["keywordFieldSuggestion"];
+}) {
+  if (failedRead(read)) {
+    return (
+      <InlineQueryError
+        message="The localizations could not be read."
+        read={read}
+      />
+    );
+  }
+  if (suggestion === null) return null;
+  return (
+    <section className="flex flex-col gap-3">
+      <h2 className="text-lg font-medium">Suggestion</h2>
+      <KeywordFieldSuggestionCard
+        suggestion={suggestion}
+        editHref={editLocalizationHref(
+          id,
+          suggestion.localization ?? keywordFieldLocalizations(home)[0],
+        )}
+      />
+    </section>
+  );
+}
 
 export function MetadataAuditView({
   id,
@@ -32,6 +78,14 @@ export function MetadataAuditView({
   const { data: result } = useSuspenseQuery(
     metadataAuditOptions(id, queryMarket(market, home), localization),
   );
+  const localizations = useQuery({
+    ...appLocalizationsOptions(id),
+    enabled: keywordFields,
+    retry: false,
+  });
+  const storeManaged = localizations.data?.storeManaged ?? false;
+  const localizationsSettled =
+    !keywordFields || localizations.isSuccess || localizations.isError;
 
   return (
     <>
@@ -86,19 +140,13 @@ export function MetadataAuditView({
         )}
       </section>
 
-      {result.store === "APP_STORE" &&
-      result.keywordFieldSuggestion !== null ? (
-        <section className="flex flex-col gap-3">
-          <h2 className="text-lg font-medium">Suggestion</h2>
-          <KeywordFieldSuggestionCard
-            suggestion={result.keywordFieldSuggestion}
-            editHref={editLocalizationHref(
-              id,
-              result.keywordFieldSuggestion.localization ??
-                keywordFieldLocalizations(home)[0],
-            )}
-          />
-        </section>
+      {result.store === "APP_STORE" && !storeManaged && localizationsSettled ? (
+        <FieldSuggestion
+          id={id}
+          home={home}
+          read={localizations}
+          suggestion={result.keywordFieldSuggestion}
+        />
       ) : null}
     </>
   );

@@ -32,6 +32,17 @@ describe("toImportRows", () => {
     });
   });
 
+  it.each([
+    ["Poland", "pl"],
+    ["🇵🇱 Poland", "pl"],
+    ["PL", "PL"],
+    ["Atlantis", "Atlantis"],
+  ])("reads the country cell %j as %j", (cell, expected) => {
+    const { rows } = toImportRows([record(2, "habit", cell)], mapping);
+
+    expect(rows).toEqual([{ keyword: "habit", country: expected }]);
+  });
+
   it("leaves a column that is not mapped out of the row", () => {
     const { rows } = toImportRows([record(1, "habit", "us", "core", "n")], {
       keyword: 0,

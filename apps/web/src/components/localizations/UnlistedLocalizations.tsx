@@ -18,6 +18,7 @@ export function UnlistedLocalizations({
   result: AppLocalizationsResult;
 }) {
   const { add, pending, error } = useAddLocalization(id);
+  const managed = result.storeManaged;
   const reads = unlistedReads(result);
   if (reads.length === 0) return null;
 
@@ -27,9 +28,9 @@ export function UnlistedLocalizations({
         Not listed yet
       </h3>
       <p className="text-body text-muted-foreground">
-        Your markets read these localizations. Add one your app ships in App
-        Store Connect to type its keyword field; a localization the store serves
-        is added on its own after the next capture of that market.
+        {managed
+          ? "Your markets read these localizations. Add one your app ships in App Store Connect and the import brings its keyword field; a localization the store serves is added on its own after the next capture of that market."
+          : "Your markets read these localizations. Add one your app ships in App Store Connect to type its keyword field; a localization the store serves is added on its own after the next capture of that market."}
       </p>
       <ul
         aria-label="Localizations your markets read that are not listed"
@@ -45,15 +46,17 @@ export function UnlistedLocalizations({
               <span className="font-medium">{name}</span>
               <span className="ml-auto flex flex-wrap items-center justify-end gap-2">
                 <ReaderChips readers={readIn} />
-                <Button
-                  variant="outline"
-                  size="xs"
-                  aria-label={`Add ${name}`}
-                  disabled={pending}
-                  onClick={() => add(localization)}
-                >
-                  Add
-                </Button>
+                {managed ? null : (
+                  <Button
+                    variant="outline"
+                    size="xs"
+                    aria-label={`Add ${name}`}
+                    disabled={pending}
+                    onClick={() => add(localization)}
+                  >
+                    Add
+                  </Button>
+                )}
               </span>
             </li>
           );

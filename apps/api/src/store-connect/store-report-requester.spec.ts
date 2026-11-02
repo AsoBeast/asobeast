@@ -1,7 +1,8 @@
+import { Logger } from '@nestjs/common';
 import type { WorkspaceContext } from '../common/tenancy/workspace-context';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { AscAnalyticsApi } from './asc-analytics-api';
-import { AscError, AscForbiddenError } from './asc-errors';
+import { AscError, AscForbiddenError, AscUnreachableError } from './asc-errors';
 import type { OpenedConnection } from './store-connection.service';
 import { StoreReportRequester } from './store-report-requester';
 
@@ -18,6 +19,7 @@ function build(
     app: { findMany: jest.fn().mockResolvedValue(APPS) },
     storeReportRequest: {
       findMany: jest.fn().mockResolvedValue(requested),
+      update: jest.fn().mockResolvedValue({}),
       upsert,
     },
   };
@@ -305,6 +307,33 @@ describe('StoreReportRequester', () => {
     expect(placed(upsert).map((row) => row.appId)).toEqual(['app_2', 'app_2']);
   });
 
+  it('keeps placing the other apps when apple does not answer for one, and names it', async () => {
+    const warn = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
+    const { requester, connection, upsert, api } = build();
+    api.appsById.mockResolvedValue([
+      { id: '111', name: 'Focus' },
+      { id: '222', name: 'Habits' },
+    ]);
+    api.reportRequests.mockImplementation((storeAppId: string) =>
+      storeAppId === '111'
+        ? Promise.reject(
+            new AscUnreachableError('The operation was aborted due to timeout'),
+          )
+        : Promise.resolve([]),
+    );
+
+    const outcome = await requester.ensure(connection, 'APP_STORE');
+
+    expect(outcome.failed).toBe(1);
+    expect(placed(upsert).map((row) => row.appId)).toEqual(['app_2', 'app_2']);
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringMatching(/app_1 .*aborted due to timeout/),
+    );
+    warn.mockRestore();
+  });
+
   it('asks nothing without primary apps', async () => {
     const { requester, connection, prisma, api } = build();
     prisma.app.findMany.mockResolvedValue([]);
@@ -312,5 +341,91 @@ describe('StoreReportRequester', () => {
     await requester.ensure(connection, 'APP_STORE');
 
     expect(api.appsById).not.toHaveBeenCalled();
+  });
+  it('retires a request so the next run places it again', async () => {
+    const { requester, prisma } = build();
+
+    await requester.retire('req_1');
+
+    expect(prisma.storeReportRequest.update).toHaveBeenCalledWith({
+      where: { id: 'req_1' },
+      data: {
+        state: 'stopped',
+        remoteId: null,
+        reportId: null,
+        lastProcessingDate: null,
+        detailedReportId: null,
+        detailedLastProcessingDate: null,
+      },
+    });
+  });
+
+  it('records a request apple refuses as a duplicate as stopped and still places the other one', async () => {
+    const { requester, connection, upsert, api } = build();
+    api.createReportRequest.mockImplementation(
+      (_appId: string, accessType: string) =>
+        accessType === 'ONE_TIME_SNAPSHOT'
+          ? Promise.reject(
+              new AscError(
+                'You already have such an entity',
+                409,
+                'STATE_ERROR',
+              ),
+            )
+          : Promise.resolve({
+              id: 'remote-ONGOING',
+              accessType,
+              stoppedDueToInactivity: false,
+            }),
+    );
+
+    const outcome = await requester.ensure(connection, 'APP_STORE');
+
+    expect(outcome).toMatchObject({ failed: 0, forbidden: false });
+    expect(placed(upsert).filter((row) => row.appId === 'app_1')).toEqual([
+      {
+        appId: 'app_1',
+        accessType: 'ONE_TIME_SNAPSHOT',
+        state: 'stopped',
+        remoteId: null,
+      },
+      {
+        appId: 'app_1',
+        accessType: 'ONGOING',
+        state: 'requested',
+        remoteId: 'remote-ONGOING',
+      },
+    ]);
+  });
+
+  it('places again a request retired after apple lost it, adopting a listed one first', async () => {
+    const { requester, connection, upsert, api } = build([
+      { appId: 'app_1', accessType: 'ONGOING', remoteId: 'live-ongoing' },
+    ]);
+    api.reportRequests.mockResolvedValue([
+      {
+        id: 'live-ongoing',
+        accessType: 'ONGOING',
+        stoppedDueToInactivity: false,
+      },
+      {
+        id: 'listed-snapshot',
+        accessType: 'ONE_TIME_SNAPSHOT',
+        stoppedDueToInactivity: false,
+      },
+    ]);
+
+    await requester.ensure(connection, 'APP_STORE');
+
+    expect(api.createReportRequest).not.toHaveBeenCalledWith(
+      '111',
+      'ONE_TIME_SNAPSHOT',
+    );
+    expect(placed(upsert)).toContainEqual({
+      appId: 'app_1',
+      accessType: 'ONE_TIME_SNAPSHOT',
+      state: 'requested',
+      remoteId: 'listed-snapshot',
+    });
   });
 });

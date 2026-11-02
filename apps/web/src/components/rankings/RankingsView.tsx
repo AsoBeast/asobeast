@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
 import { keywordLabel } from "@asobeast/shared";
@@ -15,15 +16,23 @@ import {
 } from "@/components/ui/card";
 import {
   annotationsOptions,
+  appDetailOptions,
   changesOptions,
   keywordsOptions,
   rankingsOptions,
 } from "@/lib/queries";
-import { presetToRange, RANGE_PRESETS } from "@/lib/ranges";
+import {
+  presetDays,
+  presetToRange,
+  RANGE_PRESETS,
+  WIDEST_RANGE,
+} from "@/lib/ranges";
 import { keywordIdsParser, rangeParser } from "@/lib/search-params";
+import { ChartImageButtons } from "@/components/charts/ChartImageButtons";
 import { annotationsInMarkets } from "@/components/annotations/annotation-lines";
 import { MIN_TREND_POINTS } from "@/components/charts/ChartStates";
 import { exportRankings } from "./ranking-csv";
+import { rankingImageSpec } from "./ranking-image";
 import { buildRankingChart, MAX_SERIES } from "./pivot";
 import {
   InsufficientHistory,
@@ -40,6 +49,8 @@ export function RankingsView({ id }: { id: string }) {
   const [range, setRange] = useQueryState("range", rangeParser);
   const [selected, setSelected] = useQueryState("keywords", keywordIdsParser);
   const { data: tracked } = useSuspenseQuery(keywordsOptions(id));
+  const { data: detail } = useSuspenseQuery(appDetailOptions(id));
+  const chartRef = useRef<HTMLDivElement>(null);
 
   const effective =
     selected.length > 0
@@ -50,9 +61,7 @@ export function RankingsView({ id }: { id: string }) {
   const { data } = useSuspenseQuery(
     rankingsOptions(id, { ...bounds, keywordIds: effective }),
   );
-  const { data: changes } = useQuery(
-    changesOptions(id, Number(range.replace("d", ""))),
-  );
+  const { data: changes } = useQuery(changesOptions(id, presetDays(range)));
   const { data: annotations } = useQuery(annotationsOptions(id));
   const inScope = annotationsInMarkets(annotations?.annotations ?? [], [
     ...new Set(data.series.map((item) => item.country)),
@@ -61,7 +70,6 @@ export function RankingsView({ id }: { id: string }) {
     .filter((event) => !event.isCompetitor)
     .map((event) => event.capturedAt.slice(0, 10));
 
-  const widest = RANGE_PRESETS[RANGE_PRESETS.length - 1];
   const everChecked = tracked.some(
     (item) => effective.includes(item.keywordId) && item.latestDepth !== null,
   );
@@ -70,6 +78,20 @@ export function RankingsView({ id }: { id: string }) {
   const labels = new Map(
     tracked.map((item) => [item.keywordId, keywordLabel(item)]),
   );
+
+  const imageReady =
+    tracked.length > 0 && chart.checkedDays >= MIN_TREND_POINTS;
+  const makeImageJob = () => {
+    const container = chartRef.current;
+    const spec = rankingImageSpec({
+      chart,
+      kind: "rankings",
+      title: "Keyword rank positions",
+      app: detail,
+      countries: data.series.slice(0, MAX_SERIES).map((item) => item.country),
+    });
+    return container && spec ? { container, ...spec } : null;
+  };
 
   return (
     <Card>
@@ -113,6 +135,12 @@ export function RankingsView({ id }: { id: string }) {
             disabled={chart.checkedDays === 0}
             onClick={() => exportRankings(id, bounds, chart)}
           />
+          {imageReady ? (
+            <ChartImageButtons
+              subject="the rankings chart"
+              makeJob={makeImageJob}
+            />
+          ) : null}
           <PrintReportButton />
         </div>
 
@@ -122,7 +150,9 @@ export function RankingsView({ id }: { id: string }) {
           everChecked ? (
             <NoDataInRange
               onWiden={
-                range === widest ? undefined : () => void setRange(widest)
+                range === WIDEST_RANGE
+                  ? undefined
+                  : () => void setRange(WIDEST_RANGE)
               }
             />
           ) : (
@@ -133,13 +163,14 @@ export function RankingsView({ id }: { id: string }) {
         ) : (
           <>
             <RankingChart
+              chartRef={chartRef}
               data={chart}
               changeDates={changeDates}
               annotations={inScope}
             />
             {chart.totalSeries > MAX_SERIES ? (
               <p className="text-caption text-muted-foreground">
-                Showing {MAX_SERIES} of {chart.totalSeries} keywords.
+                {`Showing ${MAX_SERIES} of ${chart.totalSeries} keywords.`}
               </p>
             ) : null}
           </>

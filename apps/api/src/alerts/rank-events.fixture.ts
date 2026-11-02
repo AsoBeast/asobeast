@@ -1,7 +1,9 @@
 import {
   AlertBatchAppSection,
   RANK_DEPTH,
+  RankDroppedPayload,
   RankFirstPayload,
+  RankImprovedPayload,
   RankMilestonePayload,
   RankOvertakenPayload,
 } from '@asobeast/shared';
@@ -14,6 +16,36 @@ const keyword = {
   store: 'APP_STORE' as const,
   country: 'us',
 };
+
+export const drop = (
+  overrides: Partial<RankDroppedPayload> = {},
+): RankDroppedPayload => ({
+  event: 'rank.dropped',
+  occurredAt,
+  app,
+  keyword,
+  from: 9,
+  to: 15,
+  fromDepth: RANK_DEPTH,
+  toDepth: RANK_DEPTH,
+  threshold: 5,
+  ...overrides,
+});
+
+export const improvement = (
+  overrides: Partial<RankImprovedPayload> = {},
+): RankImprovedPayload => ({
+  event: 'rank.improved',
+  occurredAt,
+  app,
+  keyword,
+  from: 15,
+  to: 9,
+  fromDepth: RANK_DEPTH,
+  toDepth: RANK_DEPTH,
+  threshold: 5,
+  ...overrides,
+});
 
 export const milestone = (
   overrides: Partial<RankMilestonePayload> = {},

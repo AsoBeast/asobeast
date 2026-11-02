@@ -377,45 +377,41 @@ export class PipelineService {
   }
 
   async fanOutScoring(): Promise<number> {
-    return this.scoreEveryWorkspace(
-      'weekly scoring visits every workspace that tracks a phrase',
-      async () => {
-        const week = isoWeekKey();
-        return this.enqueueScores(
-          await this.trackedForScoring(),
-          () => week,
-          'weekly scoring',
-        );
-      },
-    );
+    return this.scoreEveryCollectedWorkspace(async () => {
+      const week = isoWeekKey();
+      return this.enqueueScores(
+        await this.trackedForScoring(),
+        () => week,
+        'weekly scoring',
+      );
+    });
   }
 
   async fanOutOutdatedScores(): Promise<number> {
-    return this.scoreEveryWorkspace(
-      'a formula change rescores every workspace that tracks a phrase',
-      async () => {
-        const tracked = await this.trackedForScoring();
-        const outdated = tracked.filter(({ keyword }) => {
-          const [latest] = keyword.metrics;
-          return (
-            latest !== undefined &&
-            latest.formulaVersion !== CURRENT_FORMULA_VERSIONS[keyword.store]
-          );
-        });
-        return this.enqueueScores(
-          outdated,
-          ({ keyword }) => CURRENT_FORMULA_VERSIONS[keyword.store],
-          'a formula rescore',
+    return this.scoreEveryCollectedWorkspace(async () => {
+      const tracked = await this.trackedForScoring();
+      const outdated = tracked.filter(({ keyword }) => {
+        const [latest] = keyword.metrics;
+        return (
+          latest !== undefined &&
+          latest.formulaVersion !== CURRENT_FORMULA_VERSIONS[keyword.store]
         );
-      },
-    );
+      });
+      return this.enqueueScores(
+        outdated,
+        ({ keyword }) => CURRENT_FORMULA_VERSIONS[keyword.store],
+        'a formula rescore',
+      );
+    });
   }
 
-  private async scoreEveryWorkspace(
-    justification: string,
+  private async scoreEveryCollectedWorkspace(
     work: () => Promise<number>,
   ): Promise<number> {
-    const { results, failures } = await this.fanOut.each(justification, work);
+    const { results, failures } = await this.fanOut.eachOf(
+      await this.activeWorkspaces.forDailyRun(),
+      work,
+    );
     const total = results.reduce((sum, count) => sum + count, 0);
     this.logger.log(`fan out scoring ${total}`);
     const failure = workspaceFailure(
@@ -426,8 +422,8 @@ export class PipelineService {
     return total;
   }
 
-  private trackedForScoring(): Promise<ScoringTarget[]> {
-    return this.prisma.trackedKeyword.findMany({
+  private async trackedForScoring(): Promise<ScoringTarget[]> {
+    const tracked = await this.prisma.trackedKeyword.findMany({
       where: { active: true },
       distinct: ['keywordId'],
       select: {
@@ -444,6 +440,21 @@ export class PipelineService {
         },
       },
     });
+    return this.coveredByPlan(tracked);
+  }
+
+  private async coveredByPlan(
+    tracked: ScoringTarget[],
+  ): Promise<ScoringTarget[]> {
+    const limit = await this.quota.limitFor('keywordMarkets');
+    if (limit === null) return tracked;
+    const { since } = await this.overLimit.state();
+    return applyKeywordLimit({
+      keywords: tracked,
+      limit,
+      overLimitSince: since,
+      now: new Date(),
+    }).covered;
   }
 
   private async enqueueScores(

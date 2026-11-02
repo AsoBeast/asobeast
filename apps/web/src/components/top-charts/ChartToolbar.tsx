@@ -4,7 +4,7 @@ import { STORES, type Store } from "@asobeast/shared";
 import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import { storeLabel } from "@/lib/format";
 import { useIsMobile } from "@/lib/use-is-mobile";
-import { ChartDayPicker } from "./ChartDayPicker";
+import { CapturedDayPicker } from "@/components/day-picker/CapturedDayPicker";
 import {
   ChartCompareFilter,
   ChartCountryFilter,
@@ -48,7 +48,7 @@ export function ChartToolbar(
         </>
       )}
       <div className="ml-auto flex flex-wrap items-center gap-2">
-        <ChartDayPicker
+        <CapturedDayPicker
           dates={dates}
           value={day}
           onSelect={(date) => onChange({ date })}

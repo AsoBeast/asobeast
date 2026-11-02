@@ -50,7 +50,7 @@ export function SetupProgress({
                 {states[step] === "done" ? (
                   <Check aria-hidden="true" className="size-4" />
                 ) : null}
-                {STEP_TITLES[step]}
+                <span>{STEP_TITLES[step]}</span>
               </a>
             </li>
           ))}

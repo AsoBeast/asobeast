@@ -2,9 +2,11 @@
 
 import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
+import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 import type { AppLocalizationsResult } from "@asobeast/shared";
 import { ErrorState } from "@/components/layout/ErrorState";
+import { useAuth } from "@/components/auth/use-auth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -16,14 +18,21 @@ import {
   APPLE_LOCALIZATIONS_URL,
   LOCALIZED_FIELDS_NOTE,
 } from "@/lib/localizations";
+import { useFocusGroupClaim } from "@/lib/focus-handoff";
 import {
   appLocalizationsOptions,
   marketSuggestionsOptions,
 } from "@/lib/queries";
+import { STORE_CONNECTIONS_PATH } from "@/lib/store-connection-copy";
 import { AddLocalizationDialog } from "./AddLocalizationDialog";
 import { FindLocalizationsButton } from "./FindLocalizationsButton";
+import {
+  ImportFromStoreButton,
+  STORE_IMPORT_FOCUS_KEY,
+} from "./ImportFromStoreButton";
 import { LocalizationList } from "./LocalizationList";
 import { LocalizationMatrix } from "./LocalizationMatrix";
+import { StopImportButton } from "./StopImportButton";
 import { UnlistedLocalizations } from "./UnlistedLocalizations";
 
 const HEADING_ID = "app-localizations-heading";
@@ -92,11 +101,17 @@ export function AppLocalizationsSection({
   id: string;
   canDraft: boolean;
 }) {
+  const { isOwner } = useAuth();
   const { data, error, isError, refetch } = useQuery({
     ...appLocalizationsOptions(id),
     retry: false,
   });
   const sectionRef = useScrollIntoViewOnHash(data !== undefined);
+  const controls = useFocusGroupClaim(
+    STORE_IMPORT_FOCUS_KEY,
+    isOwner &&
+      (data?.storeImport === "following" || data?.storeImport === "paused"),
+  );
 
   return (
     <section
@@ -110,12 +125,36 @@ export function AppLocalizationsSection({
           App Store localizations
         </h2>
         {data ? (
-          <div className="flex flex-wrap items-center gap-2">
+          <div ref={controls} className="flex flex-wrap items-center gap-2">
             <FindLocalizationsButton appId={id} />
-            <AddLocalizationDialog id={id} result={data} />
+            {data.storeImport === "following" ? null : (
+              <AddLocalizationDialog id={id} result={data} />
+            )}
+            {isOwner && data.storeImport === "available" ? (
+              <ImportFromStoreButton id={id} result={data} />
+            ) : null}
+            {isOwner &&
+            (data.storeImport === "following" ||
+              data.storeImport === "paused") ? (
+              <StopImportButton id={id} />
+            ) : null}
           </div>
         ) : null}
       </div>
+      {data?.storeImport === "paused" ? (
+        <p className="text-body text-muted-foreground">
+          Importing from App Store Connect is paused because the connection
+          needs attention in{" "}
+          <Link
+            href={STORE_CONNECTIONS_PATH}
+            className="font-medium text-foreground underline underline-offset-4"
+          >
+            Integrations
+          </Link>
+          . The fields are editable here again and follow the store once the key
+          works.
+        </p>
+      ) : null}
       {data ? (
         <LocalizationsPanel id={id} result={data} canDraft={canDraft} />
       ) : isError ? (

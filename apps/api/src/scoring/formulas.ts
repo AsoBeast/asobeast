@@ -1,11 +1,21 @@
-import { Store } from '@asobeast/shared';
+import { OfficialPopularityListing, Store } from '@asobeast/shared';
 
 import { SuggestReach } from './suggest-reach';
 
 export { toDifficulty100, toVolume } from '@asobeast/shared';
 export { clamp, linear, logScale } from './curves';
 
-export type OfficialPopularity = { value: number } | { absentBelow: number };
+export interface OfficialContext {
+  week: string;
+  floor: number;
+  lastAboveFloor: OfficialPopularityListing | null;
+}
+
+export type OfficialPopularity = (
+  { value: number } | { absentBelow: number }
+) & {
+  context?: OfficialContext;
+};
 
 export interface SerpApp {
   storeAppId?: string;

@@ -10,6 +10,7 @@ import {
   ACTION_OUTCOME_VERDICTS,
   ACTION_TREND_METRICS,
   ACTION_PRIORITIES,
+  ACTION_RULE_TITLES,
   ACTION_PRIORITY_BANDS,
   ACTION_RULES,
   ACTION_RULE_CATEGORY,
@@ -522,5 +523,17 @@ describe('the action update contract', () => {
       'DONE',
       'DISMISSED',
     ]);
+  });
+});
+
+describe('ACTION_RULE_TITLES', () => {
+  it('titles every rule in its order', () => {
+    expect(Object.keys(ACTION_RULE_TITLES)).toEqual([...ACTION_RULES]);
+  });
+
+  it('writes no dash punctuation in a title', () => {
+    expect(
+      Object.values(ACTION_RULE_TITLES).filter((title) => /[—–]/.test(title)),
+    ).toEqual([]);
   });
 });

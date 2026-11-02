@@ -23,7 +23,10 @@ describe('StoreJobsHandler', () => {
   const probeLocalization = jest.fn();
   const checkCategory = jest.fn().mockResolvedValue(undefined);
   const syncReviews = jest.fn().mockResolvedValue([]);
+  const checkKeyword = jest.fn().mockResolvedValue(undefined);
   const forWorkspace = jest.fn<Promise<boolean>, []>();
+  const scoresKeyword = jest.fn<Promise<boolean>, [string]>();
+  const scoreKeyword = jest.fn<Promise<void>, [string]>();
   const through = jest.fn(
     (_store: Store, _country: string | undefined, work: () => Promise<void>) =>
       work(),
@@ -40,14 +43,16 @@ describe('StoreJobsHandler', () => {
     runSpiderProbe.mockReset().mockResolvedValue(undefined);
     probeLocalization.mockReset().mockResolvedValue(undefined);
     forWorkspace.mockReset().mockResolvedValue(true);
+    scoresKeyword.mockReset().mockResolvedValue(true);
+    scoreKeyword.mockReset().mockResolvedValue(undefined);
     refreshListing.mockReset().mockImplementation(() => {
       seen = workspace.current;
       return Promise.resolve(null);
     });
     handler = new StoreJobsHandler(
       { refreshListing } as unknown as AppsService,
-      {} as RankingsService,
-      {} as ScoringService,
+      { checkKeyword } as unknown as RankingsService,
+      { scoreKeyword } as unknown as ScoringService,
       { checkCategory } as unknown as CategoryRanksService,
       { syncReviews } as unknown as ReviewsService,
       { runSpiderProbe } as unknown as SpiderService,
@@ -55,7 +60,7 @@ describe('StoreJobsHandler', () => {
       { through } as unknown as ProxyEgress,
       { of: countryOf } as unknown as JobTargetCountry,
       { resolve: resolveSubtitle } as unknown as SubtitleBackfill,
-      { forWorkspace } as unknown as CollectionEligibility,
+      { forWorkspace, scoresKeyword } as unknown as CollectionEligibility,
       { probe: probeLocalization } as unknown as LocalizationDetection,
     );
   });
@@ -107,6 +112,22 @@ describe('StoreJobsHandler', () => {
 
     expect(syncReviews).toHaveBeenNthCalledWith(1, payload, false);
     expect(syncReviews).toHaveBeenNthCalledWith(2, payload, true);
+  });
+
+  it('passes the final attempt of the job to the keyword check', async () => {
+    const keywordJob = (attemptsMade: number) =>
+      ({
+        ...job({ keywordId: 'kw1', workspaceId: 'ws_a' }),
+        name: JOBS.CHECK_KEYWORD,
+        attemptsMade,
+        opts: { attempts: 3 },
+      }) as Job;
+
+    await handler.handle(keywordJob(0));
+    await handler.handle(keywordJob(2));
+
+    expect(checkKeyword).toHaveBeenNthCalledWith(1, 'kw1', false);
+    expect(checkKeyword).toHaveBeenNthCalledWith(2, 'kw1', true);
   });
 
   it('runs the job inside the workspace its payload carries', async () => {
@@ -167,6 +188,32 @@ describe('StoreJobsHandler', () => {
     } as Job);
 
     expect(resolveSubtitle).toHaveBeenCalledWith(data);
+  });
+
+  describe('a keyword score', () => {
+    const score = {
+      name: JOBS.SCORE_KEYWORD,
+      id: '6',
+      data: { keywordId: 'kw1', workspaceId: 'ws_a' },
+      queueName: QUEUES.GPLAY,
+    } as Job;
+
+    it('scores the keyword while a workspace that tracks it may collect', async () => {
+      await handler.handle(score);
+
+      expect(scoresKeyword).toHaveBeenCalledWith('kw1');
+      expect(through).toHaveBeenCalledTimes(1);
+      expect(scoreKeyword).toHaveBeenCalledWith('kw1');
+    });
+
+    it('takes no egress endpoint once no workspace that tracks it may collect', async () => {
+      scoresKeyword.mockResolvedValue(false);
+
+      await handler.handle(score);
+
+      expect(through).not.toHaveBeenCalled();
+      expect(scoreKeyword).not.toHaveBeenCalled();
+    });
   });
 
   describe('a deep search probe', () => {

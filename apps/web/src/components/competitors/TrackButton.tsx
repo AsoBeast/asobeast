@@ -5,6 +5,7 @@ import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { addCompetitor, ApiError } from "@/lib/api";
+import { armFocusHandoff } from "@/lib/focus-handoff";
 import { invalidateCompetitorMutation } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
 
@@ -12,11 +13,15 @@ export function TrackButton({
   id,
   storeAppId,
   title,
+  label,
+  focusKey,
   className,
 }: {
   id: string;
   storeAppId: string;
   title: string;
+  label?: string;
+  focusKey?: string;
   className?: string;
 }) {
   const queryClient = useQueryClient();
@@ -41,8 +46,12 @@ export function TrackButton({
       variant="outline"
       size="sm"
       className={className}
-      disabled={mutation.isPending}
-      onClick={() => trackOnce()}
+      aria-label={label}
+      aria-disabled={mutation.isPending || undefined}
+      onClick={() => {
+        if (focusKey) armFocusHandoff(focusKey);
+        trackOnce();
+      }}
     >
       {mutation.isPending ? <Loader2 className="animate-spin" /> : <Plus />}
       Track

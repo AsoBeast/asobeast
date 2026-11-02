@@ -79,6 +79,7 @@ import {
   ratingsRangeParser,
   reviewScoreParser,
   searchParser,
+  serpDateParser,
   serpParser,
   breakdownParser,
   SORT_DIRECTIONS,
@@ -516,5 +517,15 @@ describe("planParam", () => {
     expect(planParam.parse("ultimate")).toBe("ultimate");
     expect(planParam.parse("trial")).toBeNull();
     expect(planParam.parse("free")).toBeNull();
+  });
+});
+
+describe("serpDate parser", () => {
+  it("accepts a calendar day", () => {
+    expect(serpDateParser.parse("2026-10-30")).toBe("2026-10-30");
+  });
+
+  it.each(["2026-02-30", "yesterday"])("refuses %s", (value) => {
+    expect(serpDateParser.parse(value)).toBeNull();
   });
 });

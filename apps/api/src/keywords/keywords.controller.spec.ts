@@ -1,5 +1,6 @@
 import { RATE_CLASS_KEY } from '../auth/rate-limit/rate-class';
 import { READ_ONLY_KEY } from '../auth/read-access';
+import { QUEUES_WORK_KEY } from '../redis/queues-work.decorator';
 import { KeywordsController } from './keywords.controller';
 
 const marker = (key: string, handler: keyof KeywordsController): unknown =>
@@ -18,5 +19,13 @@ describe('KeywordsController import markers', () => {
   it('leaves the import a write', () => {
     expect(marker(RATE_CLASS_KEY, 'importKeywords')).toBeUndefined();
     expect(marker(READ_ONLY_KEY, 'importKeywords')).toBeUndefined();
+  });
+});
+
+describe('KeywordsController bulk change markers', () => {
+  it('is a write that queues work', () => {
+    expect(marker(RATE_CLASS_KEY, 'bulk')).toBeUndefined();
+    expect(marker(READ_ONLY_KEY, 'bulk')).toBeUndefined();
+    expect(marker(QUEUES_WORK_KEY, 'bulk')).toBe(true);
   });
 });

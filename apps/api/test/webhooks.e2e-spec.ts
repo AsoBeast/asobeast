@@ -85,9 +85,11 @@ describe('WebhooksController (e2e)', () => {
     expect(webhook).not.toHaveProperty('secret');
     expect(webhook.active).toBe(true);
     expect(webhook.events).toEqual(['metadata.changed', 'rank.dropped']);
+    expect(webhook.channel).toBe('generic');
 
     const listed = await api.get('/webhooks').expect(200);
     expect(listed.body as WebhookItem[]).toHaveLength(1);
+    expect((listed.body as WebhookItem[])[0].channel).toBe('generic');
 
     const patched = await api
       .patch(`/webhooks/${webhook.id}`)
@@ -100,6 +102,44 @@ describe('WebhooksController (e2e)', () => {
     await api.delete(`/webhooks/${webhook.id}`).expect(204);
     const empty = await api.get('/webhooks').expect(200);
     expect(empty.body as WebhookItem[]).toHaveLength(0);
+  });
+
+  it('answers the chat tool a webhook url reaches', async () => {
+    const created = await api
+      .post('/webhooks')
+      .send({
+        url: 'https://hooks.slack.com/services/T1/B2/x',
+        events: ['rank.dropped'],
+      })
+      .expect(201);
+    expect((created.body as WebhookItem).channel).toBe('slack');
+
+    const listed = await api.get('/webhooks').expect(200);
+    expect((listed.body as WebhookItem[])[0].channel).toBe('slack');
+
+    const moved = await api
+      .patch(`/webhooks/${(created.body as WebhookItem).id}`)
+      .send({ url: 'https://discord.com/api/webhooks/123/abc' })
+      .expect(200);
+    expect((moved.body as WebhookItem).channel).toBe('discord');
+  });
+
+  it.each([
+    [
+      'https://api.telegram.org/bot123:ABC/sendMessage',
+      'a telegram url needs the chat to post to: add ?chat_id=<id> after sendMessage',
+    ],
+    [
+      'https://contoso.webhook.office.com/webhookb2/abc',
+      'office 365 connector urls stopped delivering in may 2026; create a workflow with the "send webhook alerts to a channel" template and paste its url',
+    ],
+  ])('refuses %s with the fix in the message', async (url, message) => {
+    const response = await api
+      .post('/webhooks')
+      .send({ url, events: ['rank.dropped'] })
+      .expect(400);
+
+    expect((response.body as { message: string }).message).toBe(message);
   });
 
   it('accepts the milestone, first rank and overtake events', async () => {
@@ -116,6 +156,93 @@ describe('WebhooksController (e2e)', () => {
       'rank.first',
       'rank.overtaken',
     ]);
+  });
+
+  it('accepts, keeps and replaces the star filter of a new review webhook', async () => {
+    const created = await api
+      .post('/webhooks')
+      .send({
+        url: 'https://hooks.example.com/asobeast',
+        events: ['review.new'],
+        reviewScores: [2, 1],
+      })
+      .expect(201);
+    const webhook = created.body as WebhookItem;
+    expect(webhook).toMatchObject({
+      events: ['review.new'],
+      reviewScores: [1, 2],
+    });
+
+    const listed = await api.get('/webhooks').expect(200);
+    expect((listed.body as WebhookItem[])[0].reviewScores).toEqual([1, 2]);
+
+    const kept = await api
+      .patch(`/webhooks/${webhook.id}`)
+      .send({ events: ['review.new', 'rank.dropped'] })
+      .expect(200);
+    expect((kept.body as WebhookItem).reviewScores).toEqual([1, 2]);
+
+    const replaced = await api
+      .patch(`/webhooks/${webhook.id}`)
+      .send({ reviewScores: [5] })
+      .expect(200);
+    expect((replaced.body as WebhookItem).reviewScores).toEqual([5]);
+
+    const everyStar = await api
+      .patch(`/webhooks/${webhook.id}`)
+      .send({ reviewScores: [5, 4, 3, 2, 1] })
+      .expect(200);
+    expect((everyStar.body as WebhookItem).reviewScores).toEqual([]);
+
+    const narrowed = await api
+      .patch(`/webhooks/${webhook.id}`)
+      .send({ reviewScores: [3] })
+      .expect(200);
+    expect((narrowed.body as WebhookItem).reviewScores).toEqual([3]);
+    const cleared = await api
+      .patch(`/webhooks/${webhook.id}`)
+      .send({ reviewScores: [] })
+      .expect(200);
+    expect((cleared.body as WebhookItem).reviewScores).toEqual([]);
+  });
+
+  it('stores every star for a webhook created without a filter', async () => {
+    const created = await api
+      .post('/webhooks')
+      .send({
+        url: 'https://hooks.example.com/asobeast',
+        events: ['review.new'],
+      })
+      .expect(201);
+
+    expect((created.body as WebhookItem).reviewScores).toEqual([]);
+  });
+
+  it('refuses a star outside one to five with a 400 envelope', async () => {
+    const created = await api
+      .post('/webhooks')
+      .send({
+        url: 'https://hooks.example.com/asobeast',
+        events: ['review.new'],
+      })
+      .expect(201);
+    const webhook = created.body as WebhookItem;
+
+    const response = await api
+      .patch(`/webhooks/${webhook.id}?token=secret`)
+      .send({ reviewScores: [9] })
+      .expect(400);
+    const body = response.body as ApiErrorEnvelope;
+    expect(body.path).toBe(`/webhooks/${webhook.id}`);
+    expect(JSON.stringify(body.message)).toContain('reviewScores');
+    await api
+      .post('/webhooks')
+      .send({
+        url: 'https://hooks.example.com/asobeast',
+        events: ['review.new'],
+        reviewScores: '5',
+      })
+      .expect(400);
   });
 
   it('replaces only the events of a signed webhook', async () => {
@@ -144,6 +271,113 @@ describe('WebhooksController (e2e)', () => {
     expect(stored.secret).toBe('supersecret');
     expect(stored.url).toBe('https://hooks.example.com/asobeast');
   });
+
+  it('creates a webhook without confirmed drops by default', async () => {
+    const created = await api
+      .post('/webhooks')
+      .send({
+        url: 'https://hooks.example.com/asobeast',
+        events: ['rank.dropped'],
+      })
+      .expect(201);
+    const webhook = created.body as WebhookItem;
+
+    expect(webhook.confirmDrops).toBe(false);
+    const stored = await prisma.webhook.findUniqueOrThrow({
+      where: { id: webhook.id },
+    });
+    expect(stored.confirmDrops).toBe(false);
+  });
+
+  it('keeps confirmed drops through the list and an events patch', async () => {
+    const created = await api
+      .post('/webhooks')
+      .send({
+        url: 'https://hooks.example.com/asobeast',
+        events: ['rank.dropped'],
+        confirmDrops: true,
+      })
+      .expect(201);
+    const webhook = created.body as WebhookItem;
+    expect(webhook.confirmDrops).toBe(true);
+
+    const listed = await api.get('/webhooks').expect(200);
+    expect(listed.body as WebhookItem[]).toEqual([
+      expect.objectContaining({ id: webhook.id, confirmDrops: true }),
+    ]);
+
+    const patched = await api
+      .patch(`/webhooks/${webhook.id}`)
+      .send({ events: ['rank.milestone'] })
+      .expect(200);
+    expect(patched.body as WebhookItem).toMatchObject({
+      events: ['rank.milestone'],
+      confirmDrops: true,
+    });
+  });
+
+  it('turns confirmed drops off and keeps the url, events and secret', async () => {
+    const created = await api
+      .post('/webhooks')
+      .send({
+        url: 'https://hooks.example.com/asobeast',
+        events: ['rank.dropped'],
+        secret: 'supersecret',
+        confirmDrops: true,
+      })
+      .expect(201);
+    const webhook = created.body as WebhookItem;
+
+    const patched = await api
+      .patch(`/webhooks/${webhook.id}`)
+      .send({ confirmDrops: false })
+      .expect(200);
+
+    expect(patched.body as WebhookItem).toMatchObject({
+      url: 'https://hooks.example.com/asobeast',
+      events: ['rank.dropped'],
+      hasSecret: true,
+      confirmDrops: false,
+    });
+    const stored = await prisma.webhook.findUniqueOrThrow({
+      where: { id: webhook.id },
+    });
+    expect(stored.secret).toBe('supersecret');
+    expect(stored.confirmDrops).toBe(false);
+  });
+
+  it.each([null, 'yes'])(
+    'refuses confirmDrops %p on create and on patch',
+    async (confirmDrops) => {
+      await api
+        .post('/webhooks')
+        .send({
+          url: 'https://hooks.example.com/asobeast',
+          events: ['rank.dropped'],
+          confirmDrops,
+        })
+        .expect(400);
+      const created = await api
+        .post('/webhooks')
+        .send({
+          url: 'https://hooks.example.com/asobeast',
+          events: ['rank.dropped'],
+          confirmDrops: true,
+        })
+        .expect(201);
+      const webhook = created.body as WebhookItem;
+
+      await api
+        .patch(`/webhooks/${webhook.id}`)
+        .send({ confirmDrops })
+        .expect(400);
+
+      const stored = await prisma.webhook.findUniqueOrThrow({
+        where: { id: webhook.id },
+      });
+      expect(stored.confirmDrops).toBe(true);
+    },
+  );
 
   it('rejects an invalid url', async () => {
     await api
@@ -304,6 +538,49 @@ describe('WebhooksController (e2e)', () => {
     });
     const [target] = mockFetch.mock.calls[0] as [URL];
     expect(target.toString()).toBe('https://hooks.example.com/asobeast');
+  });
+
+  it.each([
+    [
+      'https://prod-21.westeurope.logic.azure.com:443/workflows/abc/triggers/manual/paths/invoke?sig=SECRET',
+      'attachments',
+    ],
+    [
+      'https://api.telegram.org/bot123:SECRET/sendMessage?chat_id=-100',
+      'chat_id',
+    ],
+  ])(
+    'tests %s with its own body and keeps its token for delivery',
+    async (url, key) => {
+      const created = await api
+        .post('/webhooks')
+        .send({ url, events: ['metadata.changed'] })
+        .expect(201);
+      mockFetch.mockResolvedValue({ ok: true, status: 202 });
+
+      await api
+        .post(`/webhooks/${(created.body as WebhookItem).id}/test`)
+        .expect(201);
+
+      const [target, init] = mockFetch.mock.calls[0] as [URL, { body: string }];
+      expect(target.toString()).toContain('SECRET');
+      expect(JSON.parse(init.body)).toHaveProperty(key);
+    },
+  );
+
+  it('stores an empty star filter for a webhook created without one', async () => {
+    const webhook = await prisma.webhook.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        url: 'https://hooks.example.com/asobeast',
+        events: ['review.negative'],
+      },
+    });
+
+    const stored = await prisma.webhook.findUniqueOrThrow({
+      where: { id: webhook.id },
+    });
+    expect(stored.reviewScores).toEqual([]);
   });
 
   it('reports a private target as undelivered without reaching the network', async () => {

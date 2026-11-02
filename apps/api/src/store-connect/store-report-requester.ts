@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import type {
   Store,
   StoreReportAccess,
@@ -12,10 +12,10 @@ import type {
   AscReportRequest,
 } from './asc-analytics-api';
 import {
-  AscError,
   AscForbiddenError,
-  AscRateLimitedError,
-  AscRejectedKeyError,
+  isConflict,
+  isNotFound,
+  isSkippableError,
 } from './asc-errors';
 import type { OpenedConnection } from './store-connection.service';
 
@@ -23,7 +23,6 @@ export const ACCESS_TYPES: readonly AscAccessType[] = [
   'ONE_TIME_SNAPSHOT',
   'ONGOING',
 ];
-const NOT_FOUND = 404;
 
 export interface RequestOutcome {
   apps: number;
@@ -47,10 +46,14 @@ interface RequestedRow {
   remoteId: string | null;
 }
 
-const isAppFailure = (error: unknown): boolean =>
-  error instanceof AscError &&
-  !(error instanceof AscRejectedKeyError) &&
-  !(error instanceof AscRateLimitedError);
+const placementColumns = ({ state, remoteId }: Placement) => ({
+  state,
+  remoteId,
+  reportId: null,
+  lastProcessingDate: null,
+  detailedReportId: null,
+  detailedLastProcessingDate: null,
+});
 
 function inPlace(
   type: AscAccessType,
@@ -67,6 +70,8 @@ function inPlace(
 
 @Injectable()
 export class StoreReportRequester {
+  private readonly logger = new Logger(StoreReportRequester.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly workspace: WorkspaceContext,
@@ -107,11 +112,21 @@ export class StoreReportRequester {
           outcome,
         );
       } catch (error) {
-        if (!isAppFailure(error)) throw error;
+        if (!isSkippableError(error)) throw error;
         outcome.failed += 1;
+        this.logger.warn(
+          `report requests of app ${app.id} wait for the next sync: ${error.message}`,
+        );
       }
     }
     return outcome;
+  }
+
+  async retire(requestId: string): Promise<void> {
+    await this.prisma.storeReportRequest.update({
+      where: { id: requestId },
+      data: placementColumns({ state: 'stopped', remoteId: null }),
+    });
   }
 
   private async ensureApp(
@@ -176,6 +191,7 @@ export class StoreReportRequester {
       outcome.reportAccess = 'admin';
       return { state: 'requested', remoteId: created.id };
     } catch (error) {
+      if (isConflict(error)) return { state: 'stopped', remoteId: null };
       if (!(error instanceof AscForbiddenError)) throw error;
       outcome.reportAccess = 'readOnly';
       outcome.forbidden = true;
@@ -191,7 +207,7 @@ export class StoreReportRequester {
     try {
       return await api.reportRequests(storeAppId);
     } catch (error) {
-      if (error instanceof AscError && error.status === NOT_FOUND) return null;
+      if (isNotFound(error)) return null;
       throw error;
     }
   }
@@ -200,16 +216,9 @@ export class StoreReportRequester {
     connectionId: string,
     appId: string,
     accessType: AscAccessType,
-    { state, remoteId }: Placement,
+    placement: Placement,
   ): Promise<void> {
-    const reset = {
-      state,
-      remoteId,
-      reportId: null,
-      lastProcessingDate: null,
-      detailedReportId: null,
-      detailedLastProcessingDate: null,
-    };
+    const reset = placementColumns(placement);
     await this.prisma.storeReportRequest.upsert({
       where: { appId_accessType: { appId, accessType } },
       create: {

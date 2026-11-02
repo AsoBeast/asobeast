@@ -426,6 +426,16 @@ describe('ActionContextLoader', () => {
     );
   });
 
+  it('reads only the top 10 of each SERP day', async () => {
+    const prisma = buildPrisma();
+    await loaderFor(prisma, [keyword('kw_1', 'us')]).load(budget, NOW);
+
+    const serpArgs = prisma.serpEntry.findMany.mock.calls[0][0] as unknown as {
+      where: { position: unknown };
+    };
+    expect(serpArgs.where.position).toEqual({ lte: 10 });
+  });
+
   it('groups tracked keywords by market', async () => {
     const context = await loaderFor(buildPrisma(), [
       keyword('kw_1', 'us'),

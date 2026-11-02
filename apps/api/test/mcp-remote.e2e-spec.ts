@@ -6,7 +6,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient, Store } from '@prisma/client';
 import cookieParser from 'cookie-parser';
 import { API_TOKEN_PREFIX } from '@asobeast/shared';
-import type { ApiErrorEnvelope } from '@asobeast/shared';
+import type { ApiErrorEnvelope, SerpSnapshot } from '@asobeast/shared';
 import { MCP_TOOLS } from '@asobeast/mcp-tools';
 import request, { Response } from 'supertest';
 import { App } from 'supertest/types';
@@ -594,6 +594,54 @@ describe('Remote MCP transport (e2e)', () => {
 
     expect(result?.isError).toBe(true);
     expect(result?.content?.[0].text).not.toContain('2026-03-02');
+  });
+
+  it('answers the icon and title match of a serp snapshot', async () => {
+    const fixture = await prisma.app.findFirstOrThrow({
+      where: { storeAppId: '555000111' },
+    });
+    const keyword = await prisma.keyword.upsert({
+      where: {
+        text_store_country: {
+          text: 'gif maker',
+          store: Store.APP_STORE,
+          country: 'us',
+        },
+      },
+      update: {},
+      create: { text: 'gif maker', store: Store.APP_STORE, country: 'us' },
+    });
+    await prisma.trackedKeyword.create({
+      data: { appId: fixture.id, keywordId: keyword.id, source: 'MANUAL' },
+    });
+    await prisma.serpEntry.deleteMany({ where: { keywordId: keyword.id } });
+    await prisma.serpEntry.create({
+      data: {
+        keywordId: keyword.id,
+        date: new Date('2026-07-01T00:00:00.000Z'),
+        position: 1,
+        storeAppId: 'gif-store',
+        title: 'GIF Maker Studio',
+        iconUrl: 'https://is1-ssl.mzstatic.com/image/thumb/g/100x100bb.jpg',
+      },
+    });
+
+    const result = await callTool('serp_snapshot', { keywordId: keyword.id });
+    const snapshot = JSON.parse(
+      result?.content?.[0].text ?? '{}',
+    ) as SerpSnapshot;
+
+    expect(result?.isError).toBeUndefined();
+    expect(snapshot.entries[0]).toMatchObject({
+      iconUrl: 'https://is1-ssl.mzstatic.com/image/thumb/g/100x100bb.jpg',
+      titleMatch: 'phrase',
+      titleSegments: [
+        { text: 'GIF', match: 'exact' },
+        { text: ' ', match: 'none' },
+        { text: 'Maker', match: 'exact' },
+        { text: ' Studio', match: 'none' },
+      ],
+    });
   });
 
   it('answers keyword_breakdown through the remote endpoint', async () => {

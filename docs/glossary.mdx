@@ -61,7 +61,7 @@ How far a position check looked, stored on each observation. The default is 200,
 
 ## SERP
 
-The search results page for one keyword. asobeast stores the top 10 results per keyword and date, which is what powers volatility, entrants and movers.
+The search results page for one keyword. asobeast stores the top 50 results per keyword and date. Volatility, entrants and movers read the top 10 of it.
 
 ## Volatility
 
@@ -79,6 +79,10 @@ An app that appeared in a keyword's top 10 without having been there before. Ent
 
 An owned app entering or leaving the top 10, the top 3 or first place for a keyword between two consecutive checks. Fires the `rank.milestone` alert. See [Send alerts](/guides/alerts#milestones-first-rankings-and-overtakes).
 
+## Chart milestone
+
+An owned app entering or leaving first place, the top 3 or the top 10 of a store chart between two consecutive checks. Fires the `chart.milestone` alert. See [Chart moves](/guides/alerts#chart-moves).
+
 ## First ranking
 
 The first check in which an owned app ranks for a keyword it had no ranked check for. Fires the `rank.first` alert.
@@ -86,6 +90,10 @@ The first check in which an owned app ranks for a keyword it had no ranked check
 ## Overtake
 
 A tracked competitor moving from behind an owned app, or from not ranked, to ahead of it on a keyword between two consecutive checks. Fires the `rank.overtaken` alert.
+
+## Confirmed drop
+
+A rank drop or a loss of the top 10, the top 3 or first place that the next check still shows. A channel with **Confirm drops before alerting** receives only confirmed drops. See [Report drops only when they hold](/guides/alerts#report-drops-only-when-they-hold).
 
 ## Popularity score
 

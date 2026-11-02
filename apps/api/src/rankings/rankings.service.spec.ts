@@ -1,6 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import { Store } from '@prisma/client';
-import { AlertPayload, RANK_DEPTH } from '@asobeast/shared';
+import { AlertPayload, RANK_DEPTH, SERP_CAPTURE_DEPTH } from '@asobeast/shared';
 import { AlertsDispatcher } from '../alerts/alerts.dispatcher';
 import { CollectionEligibility } from '../auth/collection-eligibility.service';
 import { Env } from '../config/env';
@@ -14,6 +14,7 @@ import {
 } from '../store-providers/result-plausibility';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { SearchItem } from '../store-providers/types';
+import { EarlierRankings } from './earlier-rankings';
 import { RankingAlertsService } from './ranking-alerts.service';
 import { RankingsService } from './rankings.service';
 
@@ -69,6 +70,18 @@ const twoTenants = [
   },
 ];
 
+const earlierChecks = (options?: {
+  earlier?: { position: number | null; depth?: number }[];
+}) =>
+  jest
+    .fn<
+      Promise<{ position: number | null; depth: number }[]>,
+      [string, string, Date]
+    >()
+    .mockResolvedValue(
+      (options?.earlier ?? []).map((row) => ({ depth: RANK_DEPTH, ...row })),
+    );
+
 describe('RankingsService.checkKeyword', () => {
   beforeAll(() => {
     jest
@@ -82,9 +95,9 @@ describe('RankingsService.checkKeyword', () => {
     jest.useRealTimers();
   });
 
-  const buildSearchResults = (): SearchItem[] => {
+  const buildSearchResults = (count = 40): SearchItem[] => {
     const items: SearchItem[] = [];
-    for (let i = 1; i <= 40; i += 1) {
+    for (let i = 1; i <= count; i += 1) {
       items.push({ storeAppId: `other-${i}`, title: `Other ${i}` });
     }
     items[6] = { storeAppId: 'primary-store', title: 'Primary' };
@@ -95,6 +108,7 @@ describe('RankingsService.checkKeyword', () => {
   const setup = (options?: {
     tracked?: unknown[];
     previous?: { position: number | null; depth?: number } | null;
+    earlier?: { position: number | null; depth?: number }[];
     existingToday?: { position: number | null } | null;
     threshold?: number;
     country?: string;
@@ -222,13 +236,20 @@ describe('RankingsService.checkKeyword', () => {
         createMany,
         findFirst: serpFindFirst,
         findMany: jest
-          .fn<Promise<SerpRow[]>, [{ where: { date: Date } }]>()
+          .fn<
+            Promise<SerpRow[]>,
+            [{ where: { date: Date; position?: { lte: number } } }]
+          >()
           .mockImplementation(({ where }) =>
             Promise.resolve(
               serpRows(
                 where.date.getTime() === PREVIOUS_DAY.getTime()
                   ? options?.previousSerp
                   : options?.sameDaySerp,
+              ).filter(
+                (row) =>
+                  where.position === undefined ||
+                  row.position <= where.position.lte,
               ),
             ),
           ),
@@ -243,10 +264,12 @@ describe('RankingsService.checkKeyword', () => {
       get: () => options?.threshold ?? 5,
     } as unknown as ConfigService<Env, true>;
     const alerts = { dispatch } as unknown as AlertsDispatcher;
+    const earlierBefore = earlierChecks(options);
     const rankingAlerts = new RankingAlertsService(
       prisma as unknown as PrismaService,
       config,
       alerts,
+      { before: earlierBefore } as unknown as EarlierRankings,
     );
     const workspace = new WorkspaceContext();
     const forKeyword = jest
@@ -281,8 +304,10 @@ describe('RankingsService.checkKeyword', () => {
       trackedFindMany,
       keywordFindUnique,
       serpFindFirst,
+      serpFindMany: prisma.serpEntry.findMany,
       rankingFindFirst,
       rankingFindMany,
+      earlierBefore,
     };
   };
 
@@ -405,8 +430,19 @@ describe('RankingsService.checkKeyword', () => {
     expect(calls[0][0].where.app).not.toHaveProperty('country');
   });
 
-  it('persists the top ten entries with 1-based positions', async () => {
-    const { service, createMany, deleteMany, withTransaction } = setup();
+  it('persists the top fifty entries with 1-based positions', async () => {
+    const results = buildSearchResults(60);
+    results[49] = {
+      storeAppId: 'fiftieth',
+      title: 'Fiftieth',
+      developer: 'Deep Studio',
+      iconUrl: 'https://is1-ssl.mzstatic.com/image/thumb/b/512x512bb.jpg',
+      ratingAvg: 4.2,
+      ratingCount: 321,
+    };
+    const { service, createMany, deleteMany, withTransaction } = setup({
+      searchResults: results,
+    });
 
     await service.checkKeyword('kw1');
 
@@ -414,11 +450,29 @@ describe('RankingsService.checkKeyword', () => {
     expect(deleteMany.mock.calls[0][0].where.keywordId).toBe('kw1');
     expect(deleteMany.mock.calls[0][0].where.date).toBeInstanceOf(Date);
     const entries = createMany.mock.calls[0][0].data;
-    expect(entries).toHaveLength(10);
-    expect(entries[0].position).toBe(1);
-    expect(entries[9].position).toBe(10);
+    expect(entries).toHaveLength(SERP_CAPTURE_DEPTH);
+    expect(entries.map((entry) => entry.position)).toEqual(
+      Array.from({ length: 50 }, (_, index) => index + 1),
+    );
     expect(entries[6].storeAppId).toBe('primary-store');
+    expect(entries[49]).toMatchObject({
+      storeAppId: 'fiftieth',
+      developer: 'Deep Studio',
+      iconUrl: 'https://is1-ssl.mzstatic.com/image/thumb/b/512x512bb.jpg',
+      ratingAvg: 4.2,
+      ratingCount: 321,
+    });
     expect(entries.every((entry) => entry.keywordId === 'kw1')).toBe(true);
+  });
+
+  it('keeps every result when the store answers fewer than 50', async () => {
+    const { service, createMany } = setup({
+      searchResults: buildSearchResults().slice(0, 7),
+    });
+
+    await service.checkKeyword('kw1');
+
+    expect(createMany.mock.calls[0][0].data).toHaveLength(7);
   });
 
   it('persists the icon each serp entry was found with', async () => {
@@ -702,6 +756,58 @@ describe('RankingsService.checkKeyword', () => {
     expect(dispatch).not.toHaveBeenCalled();
   });
 
+  it('compares against the top 10 of a baseline that holds deeper rows', async () => {
+    const today = [
+      'other-1',
+      'other-2',
+      'other-3',
+      'newcomer',
+      'other-4',
+      'other-5',
+      'other-6',
+      'primary-store',
+      'other-8',
+      'other-9',
+      'other-10',
+    ].map((storeAppId) => ({ storeAppId, title: storeAppId }));
+    const { service, dispatch, serpFindMany } = setup({
+      tracked: primaryOnly,
+      previous: null,
+      previousSerp: [
+        ...previousTopTen('other-9', 'other-10'),
+        { storeAppId: 'newcomer', title: 'newcomer' },
+      ],
+      searchResults: today,
+    });
+
+    await service.checkKeyword('kw1');
+
+    expect(dispatch).toHaveBeenCalledTimes(1);
+    expect(dispatch.mock.calls[0][0]).toMatchObject({
+      event: 'serp.entrant',
+      entrants: [{ position: 4, storeAppId: 'newcomer' }],
+    });
+    expect(
+      (dispatch.mock.calls[0][0] as { entrants: unknown[] }).entrants,
+    ).toHaveLength(1);
+    expect(
+      serpFindMany.mock.calls.map(([query]) => query.where.position),
+    ).toEqual([{ lte: 10 }, { lte: 10 }]);
+  });
+
+  it('raises no entrant for results below the top 10 on the first deep day', async () => {
+    const { service, dispatch } = setup({
+      tracked: primaryOnly,
+      previous: null,
+      previousSerp: previousTopTen('other-9', 'other-10'),
+      searchResults: buildSearchResults(50),
+    });
+
+    await service.checkKeyword('kw1');
+
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+
   it('serves every workspace tracking the phrase from one search', async () => {
     const { service, workspace, search, upsert } = setup({
       tracked: [
@@ -804,6 +910,19 @@ describe('RankingsService.checkKeyword', () => {
       expect(withTransaction).not.toHaveBeenCalled();
     });
 
+    it('settles an app store search still empty on the last attempt without writing anything', async () => {
+      const { service, search, upsert, withTransaction } = setup({
+        searchResults: [],
+        previousSerp: [{ storeAppId: 'primary-store', title: 'Primary' }],
+      });
+
+      expect(await settled(service.checkKeyword('kw1', true))).toBeUndefined();
+
+      expect(search).toHaveBeenCalledTimes(1 + EMPTY_ANSWER_RETRIES.APP_STORE);
+      expect(upsert).not.toHaveBeenCalled();
+      expect(withTransaction).not.toHaveBeenCalled();
+    });
+
     it('refuses an empty google play search at once, as a soft block', async () => {
       const { service, search, upsert, keywordFindUnique } = setup({
         searchResults: [],
@@ -822,6 +941,26 @@ describe('RankingsService.checkKeyword', () => {
       });
 
       expect(search).toHaveBeenCalledTimes(1);
+      expect(upsert).not.toHaveBeenCalled();
+    });
+
+    it('still refuses an empty google play search on the last attempt', async () => {
+      const { service, upsert, keywordFindUnique } = setup({
+        searchResults: [],
+        previousSerp: [{ storeAppId: 'primary-store', title: 'Primary' }],
+      });
+      keywordFindUnique.mockResolvedValue({
+        id: 'kw1',
+        text: 'habit tracker',
+        store: Store.GOOGLE_PLAY,
+        country: 'us',
+      });
+
+      expect(await settled(service.checkKeyword('kw1', true))).toMatchObject({
+        constructor: ImplausibleResultError,
+        retryable: false,
+      });
+
       expect(upsert).not.toHaveBeenCalled();
     });
 
@@ -1063,6 +1202,273 @@ describe('RankingsService.checkKeyword', () => {
 
       expect(dispatch).not.toHaveBeenCalled();
       expect(rankingFindMany).not.toHaveBeenCalled();
+    });
+  });
+  describe('confirmed drops', () => {
+    const confirmedCheck = (options: {
+      earlier: { position: number | null }[];
+      previous: number;
+      today: number | null;
+      existingToday?: { position: number | null };
+    }) =>
+      setup({
+        tracked: primaryOnly,
+        earlier: options.earlier,
+        previous: { position: options.previous },
+        existingToday: options.existingToday,
+        searchResults: placed(
+          options.today === null ? {} : { 'primary-store': options.today },
+        ),
+      });
+
+    it('confirms a leave that holds', async () => {
+      const { service, dispatch } = confirmedCheck({
+        earlier: [{ position: 9 }],
+        previous: 11,
+        today: 12,
+      });
+
+      await service.checkKeyword('kw1');
+
+      expect(dispatched(dispatch)).toEqual([
+        expect.objectContaining({
+          event: 'rank.milestone',
+          tier: 10,
+          direction: 'left',
+          from: 9,
+          to: 12,
+          fromDepth: 200,
+          toDepth: 200,
+          confirmed: true,
+        }),
+      ]);
+    });
+
+    it('marks the return of a one day wobble as undoing', async () => {
+      const { service, dispatch } = confirmedCheck({
+        earlier: [{ position: 9 }],
+        previous: 11,
+        today: 9,
+      });
+
+      await service.checkKeyword('kw1');
+
+      const payloads = dispatched(dispatch);
+      expect(payloads).toEqual([
+        expect.objectContaining({
+          event: 'rank.milestone',
+          tier: 10,
+          direction: 'entered',
+          undoesDrop: true,
+        }),
+      ]);
+      expect(payloads[0]).not.toHaveProperty('confirmed');
+    });
+
+    it('confirms a threshold drop and the exit it caused', async () => {
+      const { service, dispatch } = confirmedCheck({
+        earlier: [{ position: 9 }],
+        previous: 15,
+        today: 15,
+      });
+
+      await service.checkKeyword('kw1');
+
+      expect(dispatched(dispatch)).toEqual([
+        expect.objectContaining({
+          event: 'rank.dropped',
+          from: 9,
+          to: 15,
+          confirmed: true,
+        }),
+        expect.objectContaining({
+          event: 'rank.milestone',
+          tier: 10,
+          direction: 'left',
+          confirmed: true,
+        }),
+      ]);
+    });
+
+    it('raises the ordinary drop beside the confirmed exit of a deepening fall', async () => {
+      const { service, dispatch } = confirmedCheck({
+        earlier: [{ position: 9 }],
+        previous: 11,
+        today: 20,
+      });
+
+      await service.checkKeyword('kw1');
+
+      const payloads = dispatched(dispatch);
+      expect(payloads).toEqual([
+        expect.objectContaining({ event: 'rank.dropped', from: 11, to: 20 }),
+        expect.objectContaining({
+          event: 'rank.milestone',
+          tier: 10,
+          direction: 'left',
+          from: 9,
+          to: 20,
+          confirmed: true,
+        }),
+      ]);
+      expect(payloads[0]).not.toHaveProperty('confirmed');
+    });
+
+    it('marks both events of a recovery as undoing', async () => {
+      const { service, dispatch } = confirmedCheck({
+        earlier: [{ position: 9 }],
+        previous: 20,
+        today: 9,
+      });
+
+      await service.checkKeyword('kw1');
+
+      expect(dispatched(dispatch)).toEqual([
+        expect.objectContaining({
+          event: 'rank.improved',
+          from: 20,
+          to: 9,
+          undoesDrop: true,
+        }),
+        expect.objectContaining({
+          event: 'rank.milestone',
+          tier: 10,
+          direction: 'entered',
+          undoesDrop: true,
+        }),
+      ]);
+    });
+
+    it('leaves a recovery after a reported fall unmarked', async () => {
+      const { service, dispatch } = confirmedCheck({
+        earlier: [{ position: 11 }, { position: 9 }],
+        previous: 20,
+        today: 15,
+      });
+
+      await service.checkKeyword('kw1');
+
+      const payloads = dispatched(dispatch);
+      expect(payloads).toEqual([
+        expect.objectContaining({ event: 'rank.improved', from: 20, to: 15 }),
+      ]);
+      expect(payloads[0]).not.toHaveProperty('undoesDrop');
+    });
+
+    it('leaves a rise past where a pending drop began unmarked', async () => {
+      const { service, dispatch } = confirmedCheck({
+        earlier: [{ position: 20 }],
+        previous: 30,
+        today: 8,
+      });
+
+      await service.checkKeyword('kw1');
+
+      const payloads = dispatched(dispatch);
+      expect(payloads).toEqual([
+        expect.objectContaining({ event: 'rank.improved', from: 30, to: 8 }),
+        expect.objectContaining({
+          event: 'rank.milestone',
+          tier: 10,
+          direction: 'entered',
+        }),
+      ]);
+      expect(payloads[0]).not.toHaveProperty('undoesDrop');
+      expect(payloads[1]).not.toHaveProperty('undoesDrop');
+    });
+
+    it('confirms an exit when the app is not found today', async () => {
+      const { service, dispatch } = confirmedCheck({
+        earlier: [{ position: 9 }],
+        previous: 11,
+        today: null,
+      });
+
+      await service.checkKeyword('kw1');
+
+      const payloads = dispatched(dispatch);
+      expect(payloads).toEqual([
+        expect.objectContaining({ event: 'rank.dropped', from: 11, to: null }),
+        expect.objectContaining({
+          event: 'rank.milestone',
+          tier: 10,
+          direction: 'left',
+          from: 9,
+          to: null,
+          confirmed: true,
+        }),
+      ]);
+      expect(payloads[0]).not.toHaveProperty('confirmed');
+    });
+
+    it('reports a fall that keeps going only once', async () => {
+      const { service, dispatch } = confirmedCheck({
+        earlier: [{ position: 15 }, { position: 9 }],
+        previous: 21,
+        today: 30,
+      });
+
+      await service.checkKeyword('kw1');
+
+      const payloads = dispatched(dispatch);
+      expect(payloads).toEqual([
+        expect.objectContaining({ event: 'rank.dropped', from: 21, to: 30 }),
+      ]);
+      expect(payloads[0]).not.toHaveProperty('confirmed');
+    });
+
+    it('confirms nothing on the second check of a keyword', async () => {
+      const { service, dispatch } = confirmedCheck({
+        earlier: [],
+        previous: 11,
+        today: 12,
+      });
+
+      await service.checkKeyword('kw1');
+
+      expect(dispatch).not.toHaveBeenCalled();
+    });
+
+    it('confirms nothing on the first check of a keyword', async () => {
+      const { service, dispatch, earlierBefore } = setup({
+        tracked: primaryOnly,
+        previous: null,
+        earlier: [{ position: 9 }],
+        searchResults: placed({ 'primary-store': 12 }),
+      });
+
+      await service.checkKeyword('kw1');
+
+      expect(dispatch).not.toHaveBeenCalled();
+      expect(earlierBefore).not.toHaveBeenCalled();
+    });
+
+    it('stays silent on an unchanged same day recheck', async () => {
+      const { service, dispatch } = confirmedCheck({
+        earlier: [{ position: 9 }],
+        previous: 11,
+        today: 12,
+        existingToday: { position: 12 },
+      });
+
+      await service.checkKeyword('kw1');
+
+      expect(dispatch).not.toHaveBeenCalled();
+    });
+
+    it('starts the window at the previous check for both alerts', async () => {
+      const { service, earlierBefore } = confirmedCheck({
+        earlier: [{ position: 9 }],
+        previous: 11,
+        today: 12,
+      });
+
+      await service.checkKeyword('kw1');
+
+      expect(earlierBefore.mock.calls).toEqual([
+        ['primary', 'kw1', PREVIOUS_DAY],
+        ['primary', 'kw1', PREVIOUS_DAY],
+      ]);
     });
   });
 });

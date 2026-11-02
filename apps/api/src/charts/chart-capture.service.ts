@@ -55,6 +55,8 @@ function entriesOf(
   });
 }
 
+const SPARSE_CHART_ENTRIES = 10;
+
 interface Progress {
   reachedStore: boolean;
 }
@@ -179,7 +181,7 @@ export class ChartCaptureService {
       this.prisma.chartCapture.findFirst({
         where: { ...key, date: { lt: date }, entries: { some: {} } },
         orderBy: { date: 'desc' },
-        select: { date: true },
+        select: { date: true, _count: { select: { entries: true } } },
       }),
       this.prisma.chartCapture.findFirst({
         where: { ...key, date: { lt: date } },
@@ -189,6 +191,7 @@ export class ChartCaptureService {
     ]);
     if (
       lastListed &&
+      lastListed._count.entries >= SPARSE_CHART_ENTRIES &&
       isImplausiblyEmpty({
         resultCount: 0,
         lastSeenOn: lastListed.date,
@@ -207,7 +210,7 @@ export class ChartCaptureService {
       : new StoreRequestError(
           key.store,
           'topCharts',
-          'the chart feed answered no entries and has no history',
+          'the chart feed answered no entries',
         );
   }
 }

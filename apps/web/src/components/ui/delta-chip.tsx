@@ -57,8 +57,7 @@ export function DeltaChip({
       )}
     >
       <Icon className="size-3.5" aria-hidden />
-      {magnitude}
-      {unit}
+      <span>{`${magnitude}${unit}`}</span>
     </span>
   );
 }
@@ -85,7 +84,7 @@ export function PositionDeltaChip({
       )}
     >
       <Icon className="size-3" aria-hidden />
-      {magnitude}
+      <span>{magnitude}</span>
     </span>
   );
 }
@@ -101,13 +100,14 @@ export function TrendChip({
 }) {
   if (value === null) {
     return (
-      <span className="text-xs text-muted-foreground">no {label} data</span>
+      <span className="text-xs text-muted-foreground">{`no ${label} data`}</span>
     );
   }
 
   const rounded = Math.round(value);
   const way = direction(rounded, "higher-is-better");
   const Icon = GLYPH[way];
+  const signed = rounded > 0 ? `+${rounded}` : String(rounded);
 
   return (
     <span
@@ -117,8 +117,7 @@ export function TrendChip({
       )}
     >
       <Icon className="size-3.5" aria-hidden />
-      {rounded > 0 ? `+${rounded}` : rounded}
-      {unit} {label}
+      <span>{`${signed}${unit} ${label}`}</span>
     </span>
   );
 }

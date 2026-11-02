@@ -204,6 +204,57 @@ describe('RankingsController serp-movers (e2e)', () => {
       isCompetitor: false,
     });
   });
+
+  it('leaves entrants below the top 10 out of serp movers', async () => {
+    const you = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: 'self-store',
+        country: 'us',
+        name: 'You',
+      },
+    });
+    const keyword = await prisma.keyword.create({
+      data: { text: 'habit tracker', store: Store.APP_STORE, country: 'us' },
+    });
+    await prisma.trackedKeyword.create({
+      data: {
+        appId: you.id,
+        keywordId: keyword.id,
+        source: 'MANUAL',
+        active: true,
+      },
+    });
+    const topTen = (date: Date) =>
+      Array.from({ length: 10 }, (_, index) => ({
+        keywordId: keyword.id,
+        date,
+        position: index + 1,
+        storeAppId: `top-${index + 1}`,
+        title: `Top ${index + 1}`,
+      }));
+    await prisma.serpEntry.createMany({
+      data: [
+        ...topTen(utcMidnight(1)),
+        ...topTen(utcMidnight(0)),
+        {
+          keywordId: keyword.id,
+          date: utcMidnight(0),
+          position: 11,
+          storeAppId: 'deep-app',
+          title: 'Deep',
+        },
+      ],
+    });
+
+    const response = await api
+      .get(`/apps/${you.id}/serp-movers?days=7`)
+      .expect(200);
+
+    const body = response.body as SerpMovers;
+    expect(body.items.map((item) => item.storeAppId)).not.toContain('deep-app');
+  });
 });
 
 describe('RankingsService serp entrant alerts (e2e)', () => {

@@ -1,5 +1,9 @@
 import { ASC_RETRY_PAUSE_MS } from './asc-requester';
-import { AscRateLimitedError, AscRejectedKeyError } from './asc-errors';
+import {
+  AscError,
+  AscRateLimitedError,
+  AscRejectedKeyError,
+} from './asc-errors';
 import {
   ascFixture,
   failure,
@@ -26,6 +30,46 @@ describe('AscRequester.page', () => {
     expect(requests[1].path).toBe(
       '/v1/analyticsReports/r-engagement-standard/instances?filter%5Bgranularity%5D=DAILY&cursor=Mg.AJ8&limit=200',
     );
+  });
+});
+
+describe('AscRequester.page on an answer it cannot read', () => {
+  it.each([
+    ['an empty or unparsable body', null],
+    ['an object without data', {}],
+    ['an error document with a success status', { errors: [] }],
+    ['data that is not a list', { data: {} }],
+    ['data that is text', { data: 'x' }],
+    ['a list instead of a document', []],
+    ['an entry that is not a resource', { data: [null] }],
+    ['an entry without an id', { data: [{ attributes: {} }] }],
+    ['an entry with an empty id', { data: [{ id: '' }] }],
+  ])('refuses %s', async (_, body) => {
+    const { requester } = recordedRequester(ok(body));
+
+    await expect(requester.page(read.path)).rejects.toEqual(
+      new AscError(
+        'App Store Connect answered with something AsoBeast could not read',
+        502,
+        null,
+      ),
+    );
+  });
+
+  it('reads an empty data list as a page with nothing on it', async () => {
+    const { requester } = recordedRequester(ok({ data: [] }));
+
+    await expect(requester.page(read.path)).resolves.toEqual([]);
+  });
+
+  it('refuses a later page it cannot read', async () => {
+    const { requester } = recordedRequester(ok(instancesPage1), ok(null));
+
+    await expect(
+      requester.page(
+        '/v1/analyticsReports/r-engagement-standard/instances?filter[granularity]=DAILY&limit=200',
+      ),
+    ).rejects.toBeInstanceOf(AscError);
   });
 });
 

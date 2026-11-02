@@ -1,3 +1,4 @@
+import type { AiProvider } from '@asobeast/shared';
 import { BadGatewayException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI, {
@@ -11,7 +12,9 @@ import OpenAI, {
   PermissionDeniedError,
   RateLimitError,
 } from 'openai';
+import { scrubText } from '../common/logging/log-redaction';
 import { Env } from '../config/env';
+import { AI_PROVIDER_WORDING, aiProviderOf } from './ai-provider';
 
 export const OPENAI_CLIENT = Symbol('OPENAI_CLIENT');
 
@@ -53,6 +56,7 @@ export interface AiCompletion {
 
 export interface AiClient {
   readonly model: string;
+  readonly provider: AiProvider;
   structured(request: AiStructuredRequest): Promise<AiCompletion>;
 }
 
@@ -87,68 +91,129 @@ const retryableStatus = (status: unknown): boolean =>
 const redact = (text: string): string =>
   text.replace(KEY_PATTERN, '[redacted]');
 
-const apiField = (error: APIError, field: string): string | null => {
-  const body: unknown = error.error;
-  if (typeof body !== 'object' || body === null) {
-    return null;
-  }
-  const value: unknown = Reflect.get(body, field);
+const isObject = (value: unknown): value is object =>
+  typeof value === 'object' && value !== null;
+
+const fieldOf = (body: unknown, field: string): unknown =>
+  isObject(body) ? Reflect.get(body, field) : undefined;
+
+const stringField = (body: unknown, field: string): string | null => {
+  const value = fieldOf(body, field);
   return typeof value === 'string' ? value : null;
 };
 
-const apiMessage = (error: APIError): string => {
-  const detail = apiField(error, 'message');
-  return detail === null ? 'no details' : redact(detail);
+const apiField = (error: APIError, field: string): string | null =>
+  stringField(error.error, field);
+
+const readableReason = (detail: string | null): string | null => {
+  const trimmed = detail?.trim();
+  return trimmed ? redact(trimmed) : null;
+};
+
+const providerReason = (error: APIError): string | null =>
+  readableReason(apiField(error, 'message'));
+
+const apiMessage = (error: APIError): string =>
+  providerReason(error) ?? 'no details';
+
+const missingModelMessage = (
+  error: NotFoundError,
+  model: string,
+  provider: AiProvider,
+): string => {
+  const { name, modelHint } = AI_PROVIDER_WORDING[provider];
+  const reason = provider === 'compatible' ? providerReason(error) : null;
+  const scope = reason === null ? '' : ` for this request (${reason})`;
+  return `${name} does not offer the model ${model}${scope}. ${modelHint}`;
 };
 
 export const classifyRequestError = (
   error: unknown,
   model: string,
+  provider: AiProvider = 'openai',
 ): AiRequestError => {
+  const { name, inSentence, key, account } = AI_PROVIDER_WORDING[provider];
   if (error instanceof AuthenticationError) {
     return new AiRequestError(
-      'OpenAI rejected the API key. Check OPENAI_API_KEY.',
+      `${name} rejected the API key. Check OPENAI_API_KEY.`,
       false,
     );
   }
   if (error instanceof PermissionDeniedError) {
-    return new AiRequestError(`The OpenAI key cannot use ${model}.`, false);
+    return new AiRequestError(`${key} cannot use ${model}.`, false);
   }
   if (error instanceof NotFoundError) {
     return new AiRequestError(
-      `OpenAI does not offer the model ${model}. Check AI_MODEL.`,
+      missingModelMessage(error, model, provider),
       false,
     );
   }
   if (error instanceof BadRequestError) {
     return new AiRequestError(
-      `OpenAI refused the request: ${apiMessage(error)}`,
+      `${name} refused the request: ${apiMessage(error)}`,
       false,
     );
   }
   if (error instanceof RateLimitError) {
     return apiField(error, 'code') === QUOTA_CODE
-      ? new AiRequestError('The OpenAI account has no remaining quota.', false)
-      : new AiRequestError('OpenAI is rate limiting requests.', true);
+      ? new AiRequestError(`${account} has no remaining quota.`, false)
+      : new AiRequestError(`${name} is rate limiting requests.`, true);
   }
   if (error instanceof InternalServerError) {
-    return new AiRequestError('OpenAI had an internal error.', true);
+    return new AiRequestError(`${name} had an internal error.`, true);
   }
   if (error instanceof APIConnectionTimeoutError) {
-    return new AiRequestError('OpenAI did not answer in time.', true);
+    return new AiRequestError(`${name} did not answer in time.`, true);
   }
   if (error instanceof APIConnectionError) {
-    return new AiRequestError('Could not reach OpenAI.', true);
+    return new AiRequestError(`Could not reach ${inSentence}.`, true);
   }
   return new AiRequestError(
-    'OpenAI request failed.',
+    `${name} request failed.`,
     error instanceof APIError && retryableStatus(error.status),
   );
+};
+
+const isChatCompletion = (
+  answer: unknown,
+): answer is OpenAI.Chat.Completions.ChatCompletion => {
+  const choices = fieldOf(answer, 'choices');
+  return (
+    Array.isArray(choices) &&
+    (choices.length === 0 || isObject(fieldOf(choices[0], 'message')))
+  );
+};
+
+const notACompletion = (
+  answer: unknown,
+  provider: AiProvider,
+): AiRequestError => {
+  const { name } = AI_PROVIDER_WORDING[provider];
+  const reason = readableReason(
+    stringField(fieldOf(answer, 'error'), 'message'),
+  );
+  return new AiRequestError(
+    reason
+      ? `${name} answered with an error: ${reason}`
+      : `${name} answered with something other than a chat completion. Check OPENAI_BASE_URL.`,
+    true,
+  );
+};
+
+const withoutSecret = (
+  failure: AiRequestError,
+  secret: string,
+): AiRequestError => {
+  const message = scrubText(failure.message, [secret]);
+  return message === failure.message
+    ? failure
+    : new AiRequestError(message, failure.retryable);
 };
 
 const DEFAULT_MAX_OUTPUT_TOKENS = 2048;
 const REQUEST_TIMEOUT_MS = 60_000;
 const MAX_RETRIES = 2;
+const WITHOUT_OPENAI_ACCOUNT = { organization: null, project: null } as const;
 
 const toContentPart = (
   part: AiContentPart,
@@ -176,17 +241,17 @@ class OpenAiClient implements AiClient {
   constructor(
     private readonly openai: OpenAI,
     readonly model: string,
+    readonly provider: AiProvider,
+    private readonly secret: string,
   ) {}
 
-  async structured(request: AiStructuredRequest): Promise<AiCompletion> {
+  private async complete(request: AiStructuredRequest): Promise<unknown> {
     const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
       { role: 'system', content: request.system },
       { role: 'user', content: request.content.map(toContentPart) },
     ];
-
-    let completion: OpenAI.Chat.Completions.ChatCompletion;
     try {
-      completion = await this.openai.chat.completions.create({
+      return await this.openai.chat.completions.create({
         model: this.model,
         messages,
         max_completion_tokens:
@@ -201,17 +266,36 @@ class OpenAiClient implements AiClient {
         },
       });
     } catch (error) {
-      throw classifyRequestError(error, this.model);
+      throw withoutSecret(
+        error instanceof SyntaxError
+          ? notACompletion(undefined, this.provider)
+          : classifyRequestError(error, this.model, this.provider),
+        this.secret,
+      );
     }
+  }
 
+  async structured(request: AiStructuredRequest): Promise<AiCompletion> {
+    const completion = await this.complete(request);
+    if (!isChatCompletion(completion)) {
+      throw withoutSecret(
+        notACompletion(completion, this.provider),
+        this.secret,
+      );
+    }
+    const { name } = AI_PROVIDER_WORDING[this.provider];
     const usage = usageOf(completion);
     const choice = completion.choices[0];
     if (!choice) {
-      throw new UnusableAnswerError('OpenAI returned no choices.', true, usage);
+      throw new UnusableAnswerError(
+        `${name} returned no choices.`,
+        true,
+        usage,
+      );
     }
     if (choice.message.refusal) {
       throw new UnusableAnswerError(
-        'OpenAI refused to analyze this listing.',
+        `${name} refused to analyze this listing.`,
         false,
         usage,
       );
@@ -225,7 +309,7 @@ class OpenAiClient implements AiClient {
     }
     if (choice.finish_reason === 'content_filter') {
       throw new UnusableAnswerError(
-        'OpenAI filtered the response.',
+        `${name} filtered the response.`,
         false,
         usage,
       );
@@ -233,7 +317,7 @@ class OpenAiClient implements AiClient {
     const content = choice.message.content;
     if (!content) {
       throw new UnusableAnswerError(
-        'OpenAI returned an empty response.',
+        `${name} returned an empty response.`,
         true,
         usage,
       );
@@ -242,13 +326,18 @@ class OpenAiClient implements AiClient {
       return { output: JSON.parse(content) as unknown, usage };
     } catch {
       throw new UnusableAnswerError(
-        'OpenAI returned an unreadable response.',
+        `${name} returned an unreadable response.`,
         true,
         usage,
       );
     }
   }
 }
+
+const configuredBaseUrl = (
+  config: ConfigService<Env, true>,
+): string | undefined =>
+  config.get('OPENAI_BASE_URL', { infer: true })?.trim() || undefined;
 
 export function createOpenAiClient(
   config: ConfigService<Env, true>,
@@ -258,12 +347,18 @@ export function createOpenAiClient(
     return null;
   }
   const model = config.get('AI_MODEL', { infer: true });
+  const baseURL = configuredBaseUrl(config);
+  const provider = aiProviderOf(baseURL);
   return new OpenAiClient(
     new OpenAI({
       apiKey,
+      baseURL: baseURL ?? null,
+      ...(provider === 'compatible' ? WITHOUT_OPENAI_ACCOUNT : {}),
       timeout: REQUEST_TIMEOUT_MS,
       maxRetries: MAX_RETRIES,
     }),
     model,
+    provider,
+    apiKey,
   );
 }

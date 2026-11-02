@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { runActions } from "@/lib/api";
 import { actionSummaryOptions, invalidateActionMutation } from "@/lib/queries";
 import { queuedToast } from "@/lib/queued-toast";
+import { useSingleFlight } from "@/lib/single-flight";
 
 const FOLLOW_INTERVAL_MS = 2_000;
 const FOLLOW_LIMIT_MS = 60_000;
@@ -35,6 +36,7 @@ export function GenerateNowButton({
     },
     onError: () => toast.error("Could not queue generation"),
   });
+  const runOnce = useSingleFlight(run);
 
   const summary = useQuery({
     ...actionSummaryOptions,
@@ -68,7 +70,12 @@ export function GenerateNowButton({
   const busy = run.isPending || followed !== null;
 
   return (
-    <Button disabled={busy} onClick={() => run.mutate()}>
+    <Button
+      aria-disabled={busy || undefined}
+      onClick={() => {
+        if (!busy) runOnce();
+      }}
+    >
       {busy ? "Generating…" : "Generate now"}
     </Button>
   );

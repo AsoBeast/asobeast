@@ -16,12 +16,16 @@ const TEMPLATE = toCsv(
   ],
 );
 
+const PARTS_HINT = `A long file is imported in parts of up to ${formatNumber(KEYWORD_IMPORT_LIMIT)} rows.`;
+
 export function ImportFileStep({
   fileName,
   onChoose,
+  disabled,
 }: {
   fileName: string | null;
   onChoose: (file: File | undefined) => void;
+  disabled: boolean;
 }) {
   return (
     <div className="flex flex-col gap-2">
@@ -32,6 +36,7 @@ export function ImportFileStep({
           type="file"
           accept=".csv,.tsv,.txt,text/csv,text/plain"
           className="max-w-xs"
+          disabled={disabled}
           onChange={(event) => onChoose(event.target.files?.[0])}
         />
         <Button
@@ -45,8 +50,8 @@ export function ImportFileStep({
       </div>
       <p className="text-xs text-muted-foreground">
         {fileName
-          ? `Reading ${fileName}. Up to ${formatNumber(KEYWORD_IMPORT_LIMIT)} rows per import.`
-          : `Up to ${formatNumber(KEYWORD_IMPORT_LIMIT)} rows per import. UTF-8 or UTF-16, separated by commas, semicolons, tabs or pipes.`}
+          ? `Reading ${fileName}. ${PARTS_HINT}`
+          : `${PARTS_HINT} UTF-8 or UTF-16, separated by commas, semicolons, tabs or pipes.`}
       </p>
     </div>
   );

@@ -24,7 +24,9 @@ import {
   ANALYSIS_COPY,
   analysisState,
   type AnalysisState,
+  imageLinksLine,
   progressLine,
+  sendsImageLinks,
 } from "./analysis-state";
 
 const ELAPSED_TICK_MS = 1_000;
@@ -131,8 +133,10 @@ function RunProgress({
             <span className="block h-full w-1/3 animate-pulse rounded-full bg-primary" />
           </span>
           <span className="text-sm text-muted-foreground">
-            {progressLine(analyzed)}
-            {elapsed === null ? null : <span aria-hidden> · {elapsed}s</span>}
+            <span>{progressLine(analyzed)}</span>
+            {elapsed === null ? null : (
+              <span aria-hidden>{` · ${elapsed}s`}</span>
+            )}
           </span>
           <span className="text-sm text-muted-foreground">
             {ANALYSIS_COPY.active}
@@ -179,9 +183,12 @@ function AnalysisIntro({
           Read the AI features guide
         </a>
       ) : null}
-      {state === "never" && audit.ai.model ? (
+      {sendsImageLinks(state) ? (
         <p className="text-caption text-muted-foreground">
-          Sends image links to OpenAI with {audit.ai.model}.
+          {imageLinksLine(
+            audit.ai.provider,
+            state === "never" ? audit.ai.model : null,
+          )}
         </p>
       ) : null}
     </div>

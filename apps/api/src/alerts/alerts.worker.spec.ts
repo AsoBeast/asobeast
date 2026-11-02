@@ -11,10 +11,10 @@ import { Env } from '../config/env';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { PrismaService } from '../prisma/prisma.service';
 import { AlertMail } from './alert-mail';
-import { AlertsWorker } from './alerts.worker';
+import { alertBackoff, AlertsWorker } from './alerts.worker';
 import { EmailAlertUnsubscribe } from './email-alert-unsubscribe.service';
 import { MailerService } from './mailer.service';
-import { WebhookDelivery } from './webhook-delivery';
+import { WebhookDelivery, WebhookRateLimitedError } from './webhook-delivery';
 
 const mockFetch = jest.fn<Promise<unknown>, unknown[]>();
 jest.mock('undici', () => ({
@@ -285,5 +285,19 @@ describe('AlertsWorker', () => {
     ];
     expect(data.status).toBe('failed');
     expect(data.detail).toBe('template broke');
+  });
+});
+
+describe('alertBackoff', () => {
+  it('waits as long as a rate limited service asked', () => {
+    expect(
+      alertBackoff(2, 'custom', new WebhookRateLimitedError(7000, 'x')),
+    ).toBe(7000);
+  });
+
+  it('backs off exponentially from five seconds for any other failure', () => {
+    expect(alertBackoff(1, 'custom', new Error('x'))).toBe(5000);
+    expect(alertBackoff(2, 'custom', new Error('x'))).toBe(10_000);
+    expect(alertBackoff(3)).toBe(20_000);
   });
 });

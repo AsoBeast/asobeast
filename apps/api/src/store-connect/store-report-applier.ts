@@ -12,6 +12,7 @@ import { pivotDetailedReport, pivotDiscoveryReport } from './discovery-report';
 import {
   funnelUpserts,
   pageUpserts,
+  reportTransaction,
   unresolvedTerritories,
 } from './store-funnel-rows';
 
@@ -127,7 +128,7 @@ export class StoreReportApplier {
         where: { id: stored.id },
         data: { appliedAt: new Date() },
       });
-    });
+    }, reportTransaction(pivot.rows));
     return { rows: pivot.rows, unresolved: pivot.unresolved };
   }
 }

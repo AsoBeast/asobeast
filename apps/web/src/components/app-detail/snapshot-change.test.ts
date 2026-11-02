@@ -1,6 +1,5 @@
-import { CHANGE_FIELDS } from "@asobeast/shared";
+import { CHANGE_FIELD_LABELS, CHANGE_FIELDS } from "@asobeast/shared";
 import { describe, expect, it } from "vitest";
-import { CHANGE_FIELD_LABELS } from "@/lib/change-fields";
 import { snapshotChangeCells, snapshotChangeLabel } from "./snapshot-change";
 
 describe("snapshotChangeLabel", () => {
@@ -16,7 +15,7 @@ describe("snapshotChangeLabel", () => {
     expect(snapshotChangeLabel({ field: "screenshotImages" })).toBe(
       "Screenshot images",
     );
-    expect(snapshotChangeLabel({ field: "whatsNew" })).toBe("What's New");
+    expect(snapshotChangeLabel({ field: "whatsNew" })).toBe("What's new");
   });
 
   it("names the fields only a snapshot diff reports", () => {

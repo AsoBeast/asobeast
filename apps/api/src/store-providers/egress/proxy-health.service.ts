@@ -8,7 +8,7 @@ import {
   StoreRequestError,
 } from '../errors';
 import { classifyFailure, cooldownMs } from './proxy-outcome';
-import { ProxyPoolUnavailableError } from './proxy-pool.service';
+import { LeasePacing, ProxyPoolUnavailableError } from './proxy-pool.service';
 
 const HEALTH_JUSTIFICATION =
   'endpoint health belongs to the shared pool, not to the workspace whose job observed it';
@@ -19,7 +19,7 @@ export interface HealthObservation {
   successes: number;
   failures: number;
   outcome: ProxyOutcome;
-  pacedUntil?: Date;
+  pacing?: LeasePacing;
 }
 
 export function observed(outcome: ProxyOutcome): HealthObservation {
@@ -92,13 +92,15 @@ export class ProxyHealthTracker {
         failures: true,
         consecutiveFailures: true,
         windowStartedAt: true,
+        lastUsedAt: true,
       },
     });
     const window = rollWindow(current, now);
+    const { pacing } = observation;
     const paced =
-      observation.pacedUntil === undefined
-        ? {}
-        : { pacedUntil: observation.pacedUntil };
+      pacing && current?.lastUsedAt?.getTime() === pacing.leasedAt.getTime()
+        ? { pacedUntil: pacing.until }
+        : {};
     const counted = {
       ...window,
       successes: window.successes + observation.successes,

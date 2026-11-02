@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import {
   useIsMutating,
   useMutation,
@@ -28,6 +28,7 @@ export function RefreshAction({ appId }: { appId: string }) {
   const reasonId = useId();
   const [refreshed, setRefreshed] = useState<RefreshedListing | null>(null);
   const busy = useIsMutating({ mutationKey: ["app-action", appId] }) > 0;
+  const button = useRef<HTMLButtonElement>(null);
 
   const mutation = useMutation({
     mutationKey: ["app-action", appId, "refresh"],
@@ -50,13 +51,13 @@ export function RefreshAction({ appId }: { appId: string }) {
   return (
     <>
       <Button
+        ref={button}
         variant="outline"
-        disabled={busy}
-        aria-disabled={refreshable ? undefined : true}
+        aria-disabled={busy || !refreshable || undefined}
         aria-describedby={refreshable ? undefined : reasonId}
         title={refreshable ? undefined : staleReason(country)}
         onClick={() => {
-          if (refreshable) refreshOnce(country);
+          if (refreshable && !busy) refreshOnce(country);
         }}
         aria-label={
           country === undefined
@@ -83,6 +84,7 @@ export function RefreshAction({ appId }: { appId: string }) {
         onOpenChange={(open) => {
           if (!open) setRefreshed(null);
         }}
+        returnFocus={button}
       />
     </>
   );

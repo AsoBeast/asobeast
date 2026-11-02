@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -9,12 +10,24 @@ import {
   type AppLocalizationsResult,
   type AppStoreLocalization,
 } from '@asobeast/shared';
+import { type SecretBox } from '../common/crypto/secret-box';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
 import { recordAppLocalizations } from './app-localization-records';
 import { toAppLocalizationItems } from './app-localizations';
 import { loadAppMarkets } from './app-markets';
-import { KeywordFieldWriter } from './keyword-field-writer';
+import {
+  fieldSyncOf,
+  importStateOf,
+  refuseManagedField,
+  STORE_IMPORT_FOLLOWING,
+  STORE_IMPORT_NEEDED,
+} from './keyword-field-managed';
+import { SECRET_BOX } from '../store-connect/secret-box.provider';
+import {
+  KeywordFieldWriter,
+  serializeKeywordField,
+} from './keyword-field-writer';
 import { ensureLocalizedFieldApp, KeywordApp } from './keywords.support';
 import { homeLocalization } from './localization-markets';
 
@@ -45,10 +58,47 @@ export class AppLocalizationsService {
     private readonly prisma: PrismaService,
     private readonly writer: KeywordFieldWriter,
     private readonly workspace: WorkspaceContext,
+    @Inject(SECRET_BOX) private readonly box: SecretBox | null,
   ) {}
 
   async list(appId: string): Promise<AppLocalizationsResult> {
     return this.resultOf(await ensureLocalizedFieldApp(this.prisma, appId));
+  }
+
+  async startImport(appId: string): Promise<AppLocalizationsResult> {
+    const app = await ensureLocalizedFieldApp(this.prisma, appId);
+    const state = await importStateOf(this.prisma, this.box, app.id);
+    if (state === 'following') {
+      throw new ConflictException(STORE_IMPORT_FOLLOWING);
+    }
+    if (state !== 'available') {
+      throw new ConflictException(STORE_IMPORT_NEEDED);
+    }
+    await this.prisma.keywordFieldSync.upsert({
+      where: {
+        appId_workspaceId: {
+          appId: app.id,
+          workspaceId: this.workspace.require('a keyword field import'),
+        },
+      },
+      create: {
+        appId: app.id,
+        workspaceId: this.workspace.require('a keyword field import'),
+      },
+      update: {},
+    });
+    return this.resultOf(app);
+  }
+
+  async stopImport(appId: string): Promise<void> {
+    const app = await ensureLocalizedFieldApp(this.prisma, appId);
+    const removed = await this.prisma.withTransaction(async (tx) => {
+      await serializeKeywordField(tx, app.id);
+      return tx.keywordFieldSync.deleteMany({ where: { appId: app.id } });
+    });
+    if (removed.count === 0) {
+      throw new NotFoundException('This app does not follow App Store Connect');
+    }
   }
 
   async add(
@@ -56,6 +106,7 @@ export class AppLocalizationsService {
     localization: AppStoreLocalization,
   ): Promise<AppLocalizationItem> {
     const app = await ensureLocalizedFieldApp(this.prisma, appId);
+    await refuseManagedField(this.prisma, this.box, app.id);
     if (itemOf(await this.resultOf(app), localization)) {
       throw alreadyShipped(localization);
     }
@@ -78,6 +129,7 @@ export class AppLocalizationsService {
     localization: AppStoreLocalization,
   ): Promise<void> {
     const app = await ensureLocalizedFieldApp(this.prisma, appId);
+    await refuseManagedField(this.prisma, this.box, app.id);
     if (localization === homeLocalization(app.country)) {
       throw notRemovable(app, localization);
     }
@@ -88,7 +140,7 @@ export class AppLocalizationsService {
   }
 
   private async resultOf(app: KeywordApp): Promise<AppLocalizationsResult> {
-    const [stored, fields, markets] = await Promise.all([
+    const [stored, fields, markets, sync, storeImport] = await Promise.all([
       this.prisma.appLocalization.findMany({
         where: { appId: app.id },
         select: { localization: true, origin: true },
@@ -98,6 +150,8 @@ export class AppLocalizationsService {
         select: { localization: true, phrases: true, updatedAt: true },
       }),
       loadAppMarkets(this.prisma, app),
+      fieldSyncOf(this.prisma, app.id),
+      importStateOf(this.prisma, this.box, app.id),
     ]);
     return {
       home: app.country,
@@ -108,6 +162,16 @@ export class AppLocalizationsService {
         stored,
         fields,
       }),
+      storeManaged: storeImport === 'following',
+      storeSync:
+        sync === null
+          ? null
+          : {
+              at: sync.syncedAt?.toISOString() ?? null,
+              version: sync.version,
+              error: sync.lastError,
+            },
+      storeImport,
     };
   }
 }

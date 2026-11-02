@@ -4,6 +4,14 @@ import { KeywordScope } from '@asobeast/shared';
 import { AlertsDispatcher } from '../alerts/alerts.dispatcher';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
+import { EarlierRankings } from './earlier-rankings';
+import {
+  ConfirmationWindow,
+  confirmedDrop,
+  confirmedExit,
+  undoesDrop,
+  undoesExit,
+} from './rank-confirmation';
 import {
   CompetitorCapture,
   overtaken,
@@ -12,6 +20,7 @@ import {
 } from './rank-milestones';
 import { appsByStoreAppId, toDateKey } from './rankings.support';
 import { detectEntrants, SerpSnapshotDay } from './serp-movers';
+import { TOP_TEN_ROWS } from './top-ten';
 
 interface PreviousRanking {
   date: Date;
@@ -28,12 +37,24 @@ export interface MilestoneCheck {
   competitors: CompetitorCapture[];
 }
 
+interface ConfirmedContext {
+  occurredAt: string;
+  app: { id: string; name: string | null };
+  keyword: KeywordScope;
+  depth: number;
+  window: ConfirmationWindow;
+}
+
+const undoingMark = (undoing: boolean): { undoesDrop?: true } =>
+  undoing ? { undoesDrop: true } : {};
+
 @Injectable()
 export class RankingAlertsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService<Env, true>,
     private readonly alerts: AlertsDispatcher,
+    private readonly earlier: EarlierRankings,
   ) {}
 
   async entrantBaseline(
@@ -98,9 +119,8 @@ export class RankingAlertsService {
       return;
     }
 
-    const threshold = this.config.get('ALERT_RANK_DROP_THRESHOLD', {
-      infer: true,
-    });
+    const threshold = this.dropThreshold();
+    const window = await this.windowFor(app.id, keyword.id, previous, position);
     const from = previous.position;
     const occurredAt = new Date().toISOString();
 
@@ -116,10 +136,10 @@ export class RankingAlertsService {
         toDepth: depth,
         threshold,
       });
-      return;
-    }
-
-    if (position !== null && (from === null || from - position >= threshold)) {
+    } else if (
+      position !== null &&
+      (from === null || from - position >= threshold)
+    ) {
       await this.alerts.dispatch({
         event: 'rank.improved',
         occurredAt,
@@ -130,8 +150,16 @@ export class RankingAlertsService {
         fromDepth: previous.depth,
         toDepth: depth,
         threshold,
+        ...undoingMark(undoesDrop(window)),
       });
     }
+    await this.dispatchConfirmedDrop({
+      occurredAt,
+      app,
+      keyword,
+      depth,
+      window,
+    });
   }
 
   async dispatchMilestoneAlerts(check: MilestoneCheck): Promise<void> {
@@ -167,6 +195,7 @@ export class RankingAlertsService {
       previous.position === null &&
       to !== null &&
       (await this.rankedEarlier(app.id, keyword.id, date));
+    const window = await this.windowFor(app.id, keyword.id, previous, to);
     const alert = positionAlert(previous.position, to, rankedEarlier);
     if (alert?.event === 'rank.first') {
       await this.alerts.dispatch({
@@ -189,8 +218,76 @@ export class RankingAlertsService {
         to,
         fromDepth: previous.depth,
         toDepth: depth,
+        ...undoingMark(
+          alert.milestone.direction === 'entered' &&
+            undoesExit(window, alert.milestone.tier),
+        ),
       });
     }
+    await this.dispatchConfirmedExit({
+      occurredAt,
+      app,
+      keyword,
+      depth,
+      window,
+    });
+  }
+
+  private dropThreshold(): number {
+    return this.config.get('ALERT_RANK_DROP_THRESHOLD', { infer: true });
+  }
+
+  private async windowFor(
+    appId: string,
+    keywordId: string,
+    previous: PreviousRanking,
+    today: number | null,
+  ): Promise<ConfirmationWindow> {
+    const older = await this.earlier.before(appId, keywordId, previous.date);
+    return {
+      checks: [previous, ...older],
+      today,
+      threshold: this.dropThreshold(),
+    };
+  }
+
+  private async dispatchConfirmedDrop(
+    context: ConfirmedContext,
+  ): Promise<void> {
+    const confirmed = confirmedDrop(context.window);
+    if (!confirmed) return;
+    await this.alerts.dispatch({
+      event: 'rank.dropped',
+      occurredAt: context.occurredAt,
+      app: context.app,
+      keyword: context.keyword,
+      from: confirmed.from,
+      to: context.window.today,
+      fromDepth: confirmed.fromDepth,
+      toDepth: context.depth,
+      threshold: context.window.threshold,
+      confirmed: true,
+    });
+  }
+
+  private async dispatchConfirmedExit(
+    context: ConfirmedContext,
+  ): Promise<void> {
+    const confirmed = confirmedExit(context.window);
+    if (!confirmed) return;
+    await this.alerts.dispatch({
+      event: 'rank.milestone',
+      occurredAt: context.occurredAt,
+      app: context.app,
+      keyword: context.keyword,
+      tier: confirmed.tier,
+      direction: 'left',
+      from: confirmed.from,
+      to: context.window.today,
+      fromDepth: confirmed.fromDepth,
+      toDepth: context.depth,
+      confirmed: true,
+    });
   }
 
   private async dispatchOvertakes(
@@ -273,7 +370,7 @@ export class RankingAlertsService {
     date: Date,
   ): Promise<SerpSnapshotDay | null> {
     const rows = await this.prisma.serpEntry.findMany({
-      where: { keywordId, date },
+      where: { keywordId, date, ...TOP_TEN_ROWS },
       orderBy: { position: 'asc' },
       select: { position: true, storeAppId: true, title: true },
     });

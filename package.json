@@ -1,6 +1,6 @@
 {
   "name": "asobeast",
-  "version": "1.13.0",
+  "version": "1.15.0",
   "private": true,
   "license": "AGPL-3.0-only",
   "repository": {
@@ -26,6 +26,7 @@
     "format:check": "prettier --check .",
     "check:rate-classes": "node .github/scripts/verify-rate-classes.mjs",
     "check:compose-limits": "node .github/scripts/verify-compose-limits.mjs",
+    "check:compose-env": "node .github/scripts/verify-compose-env.mjs",
     "check:compose-mounts": "node .github/scripts/verify-compose-mounts.mjs",
     "check:compose-web-origin": "node .github/scripts/verify-compose-web-origin.mjs",
     "check:env-documented": "node .github/scripts/verify-env-documented.mjs",
@@ -59,12 +60,12 @@
     "prepare": "husky"
   },
   "devDependencies": {
-    "@commitlint/cli": "^21.2.3",
-    "@commitlint/config-conventional": "^21.2.3",
+    "@commitlint/cli": "^21.2.4",
+    "@commitlint/config-conventional": "^21.2.4",
     "husky": "^9.1.7",
     "lint-staged": "^17.6.0",
-    "prettier": "^3.9.9",
-    "turbo": "^2.11.7"
+    "prettier": "^3.9.10",
+    "turbo": "^2.11.10"
   },
   "lint-staged": {
     "*.{ts,tsx,mts,cts,js,jsx,mjs,cjs,json,md,yml,yaml,css}": [

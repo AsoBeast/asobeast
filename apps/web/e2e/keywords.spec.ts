@@ -322,19 +322,19 @@ test("position deltas render arrows, a bare position and the captured-depth mark
   await expect(unrankedRow).toContainText(">200");
 });
 
-test("a stale position marks its facts button with the day of its last check", async ({
+test("a stale position marks its history button with the day of its last check", async ({
   page,
 }) => {
   await page.goto("/apps/app-1/keywords");
 
   const staleRow = page.getByRole("row", { name: /study timer/ });
-  const facts = staleRow.getByRole("button", {
-    name: `Position facts: study timer, last checked ${formatDayMonth(utcDaysAgo(3))}`,
+  const history = staleRow.getByRole("button", {
+    name: `Position history: study timer (US), last checked ${formatDayMonth(utcDaysAgo(3))}`,
   });
-  await expect(facts).toBeVisible();
+  await expect(history).toBeVisible();
   await expect(staleRow).not.toContainText(formatDayMonth(utcDaysAgo(3)));
 
-  await facts.click();
+  await history.click();
   await expect(page.getByRole("dialog")).toContainText(
     "the checks since then did not finish",
   );
@@ -417,11 +417,17 @@ test("exporting keywords downloads a bom-prefixed csv", async ({ page }) => {
     "volatility,popularity,difficulty,opportunity",
   );
   expect(content.split("\r\n")[0]).toContain(
+    "relevance,added,competitorsInTop10,scoredAt",
+  );
+  expect(content.split("\r\n")[0]).toContain(
     "scoredAt,scoringSource,formulaVersion,confidence,capturedAt",
   );
   expect(content).toContain("APPLE_SEARCH_SIGNALS,app-store-v2,HIGH");
   expect(content.split("\r\n")[0]).toContain(
-    "suggestReach,serpFlags,officialPopularity,scoreOutdated",
+    "suggestReach,serpFlags,officialPopularity,officialPopularityState",
+  );
+  expect(content.split("\r\n")[0]).toContain(
+    ",scoreOutdated,scoreComparability,",
   );
   expect(content).toContain(
     "Apple App Store and Google Play popularity and volume scores use different public signals and are not directly comparable",
@@ -727,7 +733,7 @@ test("the columns menu hides a column and remembers it", async ({ page }) => {
   await expect(
     menu.getByRole("menuitemcheckbox", { name: "Keyword" }),
   ).toHaveCount(0);
-  await expect(menu.getByRole("menuitemcheckbox")).toHaveCount(8);
+  await expect(menu.getByRole("menuitemcheckbox")).toHaveCount(10);
   await menu.getByRole("menuitemcheckbox", { name: "Source" }).click();
   await page.keyboard.press("Escape");
 
@@ -806,14 +812,22 @@ test("bulk actions only reach selected keywords the filters still show", async (
     page.getByRole("checkbox", { name: "Select all keywords" }),
   ).toBeChecked();
 
-  const updates: string[] = [];
-  page.on("request", (request) => {
-    if (request.method() === "PATCH" && request.url().includes("/keywords/"))
-      updates.push(new URL(request.url()).pathname);
+  const changes: unknown[] = [];
+  await page.route("**/api/backend/apps/app-1/keywords/bulk", (route) => {
+    changes.push(route.request().postDataJSON());
+    return route.fulfill({
+      json: {
+        action: "pause",
+        requested: 1,
+        changed: 1,
+        unchanged: 0,
+        missing: [],
+      },
+    });
   });
   await bulk.getByRole("button", { name: "Pause" }).click();
-  await expect.poll(() => updates.length).toBe(1);
-  expect(updates[0]).toContain("kw-2");
+  await expect.poll(() => changes.length).toBe(1);
+  expect(changes[0]).toEqual({ action: "pause", keywordIds: ["kw-2"] });
 });
 
 test("a column shown on a phone does not hide the rest on a wider screen", async ({
@@ -884,7 +898,9 @@ test("row actions reveal on keyboard focus, not only on hover", async ({
 }) => {
   await page.goto("/apps/app-1/keywords");
 
-  const action = page.getByRole("button", { name: /^View top 10 for/ }).first();
+  const action = page
+    .getByRole("button", { name: /^View search results for/ })
+    .first();
   const opacity = () =>
     action.evaluate((node) => getComputedStyle(node.parentElement!).opacity);
 

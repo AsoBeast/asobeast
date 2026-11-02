@@ -96,7 +96,7 @@ export function ChartTable({
       </div>
       <Table containerClassName="rounded-xl border">
         <TableCaption className="sr-only">
-          {chartTitle(page.chart)} on {formatDate(page.capture?.date ?? null)}
+          {`${chartTitle(page.chart)} on ${formatDate(page.capture?.date ?? null)}`}
         </TableCaption>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (

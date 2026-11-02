@@ -1,16 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { ExternalLink } from "lucide-react";
 import type { ChartEntryItem } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { StoreLinkButton } from "@/components/StoreLinkButton";
 import { useFocusClaim } from "@/lib/focus-handoff";
 import { AddAsCompetitor } from "./AddAsCompetitor";
 import {
   competitorFocusKey,
   rowLink,
-  storeUrl,
   type ChartRowContext,
 } from "./chart-actions";
 
@@ -43,20 +41,12 @@ export function RowActions({
           apps={context.apps}
         />
       )}
-      <Button variant="ghost" size="icon-sm" asChild>
-        <a
-          href={storeUrl(
-            context.chart.store,
-            entry.storeAppId,
-            context.chart.country,
-          )}
-          target="_blank"
-          rel="noreferrer"
-          aria-label={`Open ${entry.title} in the store`}
-        >
-          <ExternalLink aria-hidden />
-        </a>
-      </Button>
+      <StoreLinkButton
+        store={context.chart.store}
+        storeAppId={entry.storeAppId}
+        country={context.chart.country}
+        title={entry.title}
+      />
     </div>
   );
 }

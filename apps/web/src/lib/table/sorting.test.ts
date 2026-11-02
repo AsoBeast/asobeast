@@ -14,7 +14,14 @@ import {
 } from "./sorting";
 
 const DEFAULTS: SortDefaults = {
-  descFirst: new Set(["traffic", "difficulty", "opportunity", "volatility"]),
+  descFirst: new Set([
+    "traffic",
+    "difficulty",
+    "opportunity",
+    "volatility",
+    "added",
+    "competitors",
+  ]),
 };
 
 describe("sortingFromUrl", () => {

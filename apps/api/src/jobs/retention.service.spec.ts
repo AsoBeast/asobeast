@@ -11,6 +11,7 @@ const buildConfig = (days: Days): ConfigService<Env, true> => {
   const values: Days = {
     RETENTION_RANKINGS_DAYS: 365,
     RETENTION_SERP_DAYS: 90,
+    RETENTION_SERP_DEEP_DAYS: 30,
     RETENTION_SNAPSHOTS_DAYS: 180,
     RETENTION_CATEGORY_RANKS_DAYS: 365,
     RETENTION_CHARTS_DAYS: 365,
@@ -276,7 +277,92 @@ describe('RetentionService', () => {
 
     expect(deleted.keywordRanking).toBeUndefined();
     expect(prisma.serpEntry.deleteMany).toHaveBeenCalled();
-    expect(deleted.serpEntry).toBe(2);
+    expect(deleted.serpEntry).toBe(4);
+  });
+
+  describe('search results', () => {
+    beforeEach(() => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-07-13T09:30:00.000Z'));
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    const pruneSerp = async (days: Days) => {
+      const prisma = buildPrisma();
+      prisma.serpEntry.deleteMany
+        .mockResolvedValueOnce({ count: 2 })
+        .mockResolvedValueOnce({ count: 3 });
+      const service = new RetentionService(
+        buildConfig(days),
+        prisma as unknown as PrismaService,
+        crossTenant,
+      );
+      const deleted = await service.prune();
+      return { deleted, deleteMany: prisma.serpEntry.deleteMany };
+    };
+
+    it('prunes every old day and the rows below the top 10 sooner, reporting the sum', async () => {
+      const { deleted, deleteMany } = await pruneSerp({
+        RETENTION_SERP_DAYS: 90,
+        RETENTION_SERP_DEEP_DAYS: 30,
+      });
+
+      expect(deleteMany.mock.calls).toEqual([
+        [{ where: { date: { lt: new Date('2026-04-14T00:00:00.000Z') } } }],
+        [
+          {
+            where: {
+              position: { gt: 10 },
+              date: { lt: new Date('2026-06-13T00:00:00.000Z') },
+            },
+          },
+        ],
+      ]);
+      expect(deleted.serpEntry).toBe(5);
+    });
+
+    it('keeps the rows below the top 10 as long as the top 10 at 0', async () => {
+      const { deleted, deleteMany } = await pruneSerp({
+        RETENTION_SERP_DAYS: 90,
+        RETENTION_SERP_DEEP_DAYS: 0,
+      });
+
+      expect(deleteMany.mock.calls).toEqual([
+        [{ where: { date: { lt: new Date('2026-04-14T00:00:00.000Z') } } }],
+      ]);
+      expect(deleted.serpEntry).toBe(2);
+    });
+
+    it('still prunes the rows below the top 10 when the top 10 is kept forever', async () => {
+      const { deleted, deleteMany } = await pruneSerp({
+        RETENTION_SERP_DAYS: 0,
+        RETENTION_SERP_DEEP_DAYS: 30,
+      });
+
+      expect(deleteMany.mock.calls).toEqual([
+        [
+          {
+            where: {
+              position: { gt: 10 },
+              date: { lt: new Date('2026-06-13T00:00:00.000Z') },
+            },
+          },
+        ],
+      ]);
+      expect(deleted.serpEntry).toBe(2);
+    });
+
+    it('deletes no search result when both windows are 0', async () => {
+      const { deleted, deleteMany } = await pruneSerp({
+        RETENTION_SERP_DAYS: 0,
+        RETENTION_SERP_DEEP_DAYS: 0,
+      });
+
+      expect(deleteMany).not.toHaveBeenCalled();
+      expect(deleted.serpEntry).toBe(0);
+    });
   });
 
   it('rethrows when every pruner fails', async () => {
@@ -381,6 +467,7 @@ describe('RetentionService action pruning', () => {
       buildConfig({
         RETENTION_RANKINGS_DAYS: 0,
         RETENTION_SERP_DAYS: 0,
+        RETENTION_SERP_DEEP_DAYS: 0,
         RETENTION_SNAPSHOTS_DAYS: 0,
         RETENTION_CATEGORY_RANKS_DAYS: 0,
         RETENTION_CHARTS_DAYS: 0,

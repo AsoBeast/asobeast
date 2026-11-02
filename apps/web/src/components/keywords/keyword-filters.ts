@@ -1,9 +1,12 @@
-import type { ColumnFiltersState } from "@tanstack/react-table";
+import type { ColumnFiltersState, FilterFn } from "@tanstack/react-table";
 import type { inferParserType } from "nuqs";
+import type { TrackedKeywordItem } from "@asobeast/shared";
 import { BUCKET_LABELS } from "@/components/BucketBadge";
 import { gradeLabel } from "@/lib/grade";
 import type { keywordFilterParsers } from "@/lib/search-params";
 import { POSITION_BAND_LABELS } from "@/lib/table/facets";
+import { matchesKeywordSearch, parseKeywordSearch } from "./keyword-search";
+import type { KeywordTableFeatures } from "./keyword-table-features";
 import { SOURCE_LABELS } from "./SourceBadge";
 
 export type KeywordFilters = inferParserType<typeof keywordFilterParsers>;
@@ -51,7 +54,7 @@ export function keywordFilterChips(
   filters: KeywordFilters,
 ): KeywordFilterChip[] {
   const chips = [
-    filters.q ? { key: "q" as const, label: `Search: ${filters.q}` } : null,
+    filters.q ? { key: "q" as const, label: searchChipLabel(filters.q) } : null,
     listChip(
       "source",
       "Source",
@@ -91,4 +94,27 @@ export function tagOptions(
   return [...new Set([...present, ...selected])]
     .sort((left, right) => left.localeCompare(right))
     .map((value) => ({ value, label: value }));
+}
+
+export const keywordSearchFilter: FilterFn<
+  KeywordTableFeatures,
+  TrackedKeywordItem
+> = (row, columnId, value: string) =>
+  matchesKeywordSearch(
+    row.getValue<string>(columnId),
+    parseKeywordSearch(value),
+  );
+
+export function searchChipLabel(q: string): string {
+  const search = parseKeywordSearch(q);
+  return search.kind === "exact"
+    ? `Exact phrase: ${search.phrase}`
+    : `Search: ${q}`;
+}
+
+export function exactSearchEmptyBody(q: string): string | undefined {
+  const search = parseKeywordSearch(q);
+  return search.kind === "exact"
+    ? `No keyword is exactly "${search.phrase}" with these filters. Remove the quotes to match keywords that contain it.`
+    : undefined;
 }

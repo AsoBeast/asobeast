@@ -102,9 +102,7 @@ function UnshippedReads({
   return (
     <details open={open} className="rounded-lg border border-border px-3 py-2">
       <summary className="cursor-pointer text-body">
-        {market.toUpperCase()} also reads{" "}
-        {pluralize(reads.length, "localization")} you don&apos;t ship · up to{" "}
-        {formatNumber(reads.length * KEYWORD_FIELD_CHAR_LIMIT)} more characters
+        {`${market.toUpperCase()} also reads ${pluralize(reads.length, "localization")} you don't ship · up to ${formatNumber(reads.length * KEYWORD_FIELD_CHAR_LIMIT)} more characters`}
       </summary>
       <ul className="mt-3 flex flex-wrap gap-2">
         {reads.map((read) => (
@@ -133,8 +131,9 @@ function MarketReads({ id, market }: { id: string; market: string }) {
       market={market}
       aside={
         <span className="flex items-center gap-2 text-caption text-muted-foreground">
-          {pluralize(uniqueWordCount(data.localizations), "unique word")} ·{" "}
-          {pluralize(shipped.length, "localization")}
+          <span>
+            {`${pluralize(uniqueWordCount(data.localizations), "unique word")} · ${pluralize(shipped.length, "localization")}`}
+          </span>
           <InfoTip
             label="About market keyword fields"
             title="What a market reads"
@@ -145,7 +144,7 @@ function MarketReads({ id, market }: { id: string; market: string }) {
     >
       {shipped.length === 0 ? (
         <p className="text-body text-muted-foreground">
-          {market.toUpperCase()} reads none of the localizations this app ships.
+          {`${market.toUpperCase()} reads none of the localizations this app ships.`}
         </p>
       ) : (
         <ul className="flex flex-col gap-3">
@@ -182,8 +181,7 @@ export function MarketSearchReadsCard({
     return (
       <ReadsCard market={market}>
         <p className="text-body text-muted-foreground">
-          {market.toUpperCase()} is not an App Store storefront, so it has no
-          keyword field.
+          {`${market.toUpperCase()} is not an App Store storefront, so it has no keyword field.`}
         </p>
       </ReadsCard>
     );

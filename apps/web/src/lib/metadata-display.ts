@@ -1,13 +1,17 @@
-import type { LintSeverity, MetadataField } from "@asobeast/shared";
+import {
+  CHANGE_FIELD_LABELS,
+  type LintSeverity,
+  type MetadataField,
+} from "@asobeast/shared";
 
 export const METADATA_FIELD_LABELS: Record<MetadataField, string> = {
-  title: "Title",
-  subtitle: "Subtitle",
+  title: CHANGE_FIELD_LABELS.title,
+  subtitle: CHANGE_FIELD_LABELS.subtitle,
   keywordField: "Keyword field",
-  description: "Description",
+  description: CHANGE_FIELD_LABELS.description,
   promotionalText: "Promotional text",
-  whatsNew: "What's New",
-  shortDescription: "Short description",
+  whatsNew: CHANGE_FIELD_LABELS.whatsNew,
+  shortDescription: CHANGE_FIELD_LABELS.summary,
 };
 
 export const LINT_SEVERITY_VARIANT: Record<

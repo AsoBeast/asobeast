@@ -8,7 +8,8 @@
   }
 
   [data-slot="sidebar"],
-  [data-slot="sheet-overlay"]:has(+ [data-slot="sidebar"]),
+  [data-slot="sheet-overlay"],
+  [data-slot="sheet-content"],
   [data-sonner-toaster] {
     display: none;
   }

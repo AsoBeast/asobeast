@@ -47,6 +47,7 @@ describe('AuditAiService', () => {
 
     expect(service.configured).toBe(false);
     expect(service.model).toBeNull();
+    expect(service.provider).toBeNull();
     await expect(
       service.observe(inputs, 'app_1', 'usr_1'),
     ).rejects.toBeInstanceOf(ConflictException);
@@ -59,6 +60,7 @@ describe('AuditAiService', () => {
     const observations = await service.observe(inputs, 'app_1', 'usr_1');
 
     expect(service.model).toBe('gpt-4o');
+    expect(service.provider).toBe('openai');
     const [[, request]] = spend.mock.calls as Array<
       [
         unknown,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { FormEvent } from "react";
+import type { FormEvent, RefObject } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -23,6 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import { ApiError, importApp } from "@/lib/api";
 import { marketError } from "@/lib/countries";
+import { returnFocusTo } from "@/lib/focus-handoff";
 import { storeLabel } from "@/lib/format";
 import { appKeys, portfolioKey } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
@@ -89,10 +90,12 @@ export function ImportAppDialog({
   children,
   open: openProp,
   onOpenChange: onOpenChangeProp,
+  returnFocus,
 }: {
   children?: React.ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  returnFocus?: RefObject<HTMLElement | null>;
 }) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -197,7 +200,7 @@ export function ImportAppDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {children ? <DialogTrigger asChild>{children}</DialogTrigger> : null}
-      <DialogContent>
+      <DialogContent onCloseAutoFocus={returnFocusTo(returnFocus)}>
         <DialogHeader>
           <DialogTitle>Import an app</DialogTitle>
           <DialogDescription>

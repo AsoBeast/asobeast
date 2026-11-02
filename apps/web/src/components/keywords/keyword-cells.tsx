@@ -1,20 +1,9 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { History, LoaderCircle, StickyNote } from "lucide-react";
-import type {
-  PlayAcquisitions,
-  ScoreProvenance,
-  ScoringConfidence,
-  ScoringSource,
-  TrackedKeywordItem,
-} from "@asobeast/shared";
+import { LoaderCircle, StickyNote } from "lucide-react";
+import type { PlayAcquisitions, TrackedKeywordItem } from "@asobeast/shared";
 import { formatCheckedPosition } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
-import { PositionDeltaChip } from "@/components/ui/delta-chip";
-import { InfoTip } from "@/components/ui/info-tip";
-import { Meter } from "@/components/ui/meter";
-import { GradedNumber, gradeFill } from "@/components/ui/graded";
 import {
   Popover,
   PopoverContent,
@@ -25,199 +14,15 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { formatDateTime, formatMonth, formatNumber } from "@/lib/format";
+import { formatDate, formatMonth, formatNumber, pluralize } from "@/lib/format";
 import { isChecking, staleCheckDay } from "@/lib/keyword-checks";
 import { tagsLabel, visibleTags } from "@/lib/keyword-tags";
-import { grade, gradeLabel, type GradeMetric } from "@/lib/grade";
-import { positionHoldLines } from "./position-hold";
-import { staleCheckLabel, staleCheckLine } from "./stale-check";
+import { PositionReadout } from "./PositionReadout";
+import {
+  PositionHistoryPopover,
+  type PositionHistoryContext,
+} from "./PositionHistoryPopover";
 import { cn } from "@/lib/utils";
-
-const OUTDATED_SCORE_DETAIL =
-  "Scored by an older formula. It is rescored automatically; the new number replaces this one within a day.";
-
-const DERIVED_SCORE_DETAIL =
-  "Calculated from popularity and difficulty when the list loaded, so it carries no stored capture time. It is the same for every app that tracks the keyword.";
-
-type ScoreMetric = Extract<
-  GradeMetric,
-  "popularity" | "difficulty" | "opportunity"
->;
-
-function ScoreButton({
-  value,
-  label,
-  metric,
-  summary,
-  emphasize,
-  children,
-}: {
-  value: number | null;
-  label: string;
-  metric: ScoreMetric;
-  summary: string;
-  emphasize?: boolean;
-  children: ReactNode;
-}) {
-  if (value === null) {
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span
-            aria-label={`${label}: not scored yet`}
-            className="text-muted-foreground"
-          >
-            —
-          </span>
-        </TooltipTrigger>
-        <TooltipContent>Not scored yet</TooltipContent>
-      </Tooltip>
-    );
-  }
-  const valueLabel = Math.round(value);
-  const graded = grade(metric, valueLabel);
-  const gradeWords = graded ? `, ${gradeLabel(graded)}` : "";
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <button
-          type="button"
-          data-grade={graded ?? undefined}
-          aria-label={`${label} ${valueLabel}${gradeWords}. ${summary}. Show scoring details`}
-          className={cn(
-            "flex w-14 flex-col items-end gap-1 rounded-sm numeric font-mono outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-            emphasize
-              ? "font-semibold text-foreground"
-              : "text-muted-foreground",
-          )}
-        >
-          {valueLabel}
-          {graded ? <Meter value={value} fill={gradeFill(graded)} /> : null}
-        </button>
-      </TooltipTrigger>
-      <TooltipContent className="max-w-sm flex-col items-start gap-1.5">
-        {children}
-      </TooltipContent>
-    </Tooltip>
-  );
-}
-
-function scoreSummary(
-  provenance: ScoreProvenance | null,
-  outdated?: boolean,
-): string {
-  if (outdated) {
-    return "Older formula";
-  }
-  return provenance
-    ? `${SCORING_CONFIDENCE_LABELS[provenance.confidence]} confidence`
-    : "Legacy score";
-}
-
-export function ScoreCell({
-  value,
-  label,
-  metric,
-  provenance,
-  details,
-  outdated,
-  emphasize,
-}: {
-  value: number | null;
-  label: string;
-  metric: ScoreMetric;
-  provenance: ScoreProvenance | null;
-  details?: string[];
-  outdated?: boolean;
-  emphasize?: boolean;
-}) {
-  return (
-    <ScoreButton
-      value={value}
-      label={label}
-      metric={metric}
-      emphasize={emphasize}
-      summary={scoreSummary(provenance, outdated)}
-    >
-      {outdated ? <span>{OUTDATED_SCORE_DETAIL}</span> : null}
-      {details && details.length > 0 ? (
-        <ul className="flex flex-col gap-1">
-          {details.map((line) => (
-            <li key={line}>{line}</li>
-          ))}
-        </ul>
-      ) : null}
-      <ScoreProvenanceDetails provenance={provenance} />
-    </ScoreButton>
-  );
-}
-
-export function DerivedScoreCell({
-  value,
-  label,
-  metric,
-  emphasize,
-}: {
-  value: number | null;
-  label: string;
-  metric: ScoreMetric;
-  emphasize?: boolean;
-}) {
-  return (
-    <ScoreButton
-      value={value}
-      label={label}
-      metric={metric}
-      emphasize={emphasize}
-      summary="Derived score"
-    >
-      <span>{DERIVED_SCORE_DETAIL}</span>
-    </ScoreButton>
-  );
-}
-
-export const SCORING_SOURCE_LABELS: Record<ScoringSource, string> = {
-  APPLE_SUGGEST_SEARCH: "Apple suggest and search",
-  GOOGLE_PLAY_PREFIX_SEARCH: "Google Play prefix suggest and search",
-  APPLE_SUGGEST_REACH: "App Store suggest reach",
-  GOOGLE_PLAY_SUGGEST_REACH: "Google Play suggest reach",
-  APPLE_ADS_POPULARITY: "Apple Ads search popularity",
-  APPLE_SEARCH_SIGNALS: "App Store search signals",
-};
-
-export const SCORING_CONFIDENCE_LABELS: Record<ScoringConfidence, string> = {
-  LOW: "Low",
-  MEDIUM: "Medium",
-  HIGH: "High",
-};
-
-function capturedAtLabel(value: string): string {
-  return Number.isNaN(new Date(value).getTime())
-    ? "Capture time unavailable"
-    : formatDateTime(value);
-}
-
-function ScoreProvenanceDetails({
-  provenance,
-}: {
-  provenance: ScoreProvenance | null;
-}) {
-  if (!provenance) {
-    return <span>Legacy score — provenance unavailable</span>;
-  }
-  const confidence = SCORING_CONFIDENCE_LABELS[provenance.confidence];
-  return (
-    <>
-      <span>{SCORING_SOURCE_LABELS[provenance.source]}</span>
-      <span>Formula {provenance.formulaVersion}</span>
-      <span>{capturedAtLabel(provenance.capturedAt)}</span>
-      <Badge variant="secondary">{confidence} confidence</Badge>
-      <span className="max-w-xs text-background">
-        Confidence measures input completeness, not ranking accuracy.
-      </span>
-    </>
-  );
-}
 
 function volatilityBand(value: number): {
   label: string;
@@ -248,9 +53,11 @@ function volatilityBand(value: number): {
 export function PositionCell({
   keyword,
   today,
+  history,
 }: {
   keyword: TrackedKeywordItem;
   today: string;
+  history: PositionHistoryContext;
 }) {
   const label = formatCheckedPosition(
     keyword.latestPosition,
@@ -291,42 +98,14 @@ export function PositionCell({
     );
   }
   const staleOn = staleCheckDay(keyword, today);
-  const position = (
-    <span className="numeric font-mono inline-flex items-center gap-1.5">
-      {keyword.latestPosition === null ? (
-        <span className="text-muted-foreground">{label}</span>
-      ) : (
-        <GradedNumber
-          value={label}
-          grade={grade("position", keyword.latestPosition)}
-          label="Position"
-        />
-      )}
-      <PositionDeltaChip
-        value={staleOn === null ? keyword.positionDelta1d : null}
-      />
-    </span>
-  );
-  const facts = [
-    ...(staleOn === null ? [] : [staleCheckLine(staleOn)]),
-    ...positionHoldLines(keyword),
-  ];
-  if (facts.length === 0) {
-    return position;
-  }
-  const factsLabel = `Position facts: ${keyword.text}`;
   return (
     <span className="inline-flex items-center gap-1">
-      {position}
-      <InfoTip
-        label={
-          staleOn === null
-            ? factsLabel
-            : `${factsLabel}, ${staleCheckLabel(staleOn)}`
-        }
-        title="Position facts"
-        summary={facts.join(" · ")}
-        icon={staleOn === null ? undefined : History}
+      <PositionReadout keyword={keyword} label={label} staleOn={staleOn} />
+      <PositionHistoryPopover
+        keyword={keyword}
+        label={label}
+        staleOn={staleOn}
+        {...history}
       />
     </span>
   );
@@ -391,12 +170,12 @@ export function PlayAcquisitionsCell({
           className="numeric font-mono text-sm whitespace-nowrap"
           aria-label={`${acquisitions} acquisitions from ${visitors} store listing visitors in ${month}`}
         >
-          {acquisitions}
-          <span className="text-muted-foreground"> · {visitors}</span>
+          <span>{acquisitions}</span>
+          <span className="text-muted-foreground">{` · ${visitors}`}</span>
         </span>
       </TooltipTrigger>
       <TooltipContent>
-        Store listing acquisitions and visitors from this search term in {month}
+        {`Store listing acquisitions and visitors from this search term in ${month}`}
       </TooltipContent>
     </Tooltip>
   );
@@ -420,7 +199,7 @@ export function TagBadges({ tags }: { tags: readonly string[] }) {
       ))}
       {hidden > 0 ? (
         <span aria-hidden className="text-caption text-muted-foreground">
-          +{hidden}
+          {`+${hidden}`}
         </span>
       ) : null}
     </span>
@@ -447,5 +226,48 @@ export function NoteButton({ note }: { note: string }) {
         {note}
       </PopoverContent>
     </Popover>
+  );
+}
+
+export function AddedCell({ trackedAt }: { trackedAt: string | null }) {
+  if (trackedAt === null) {
+    return (
+      <span className="text-muted-foreground" aria-label="Added: unknown">
+        —
+      </span>
+    );
+  }
+  return (
+    <time dateTime={trackedAt} className="numeric text-sm whitespace-nowrap">
+      {formatDate(trackedAt)}
+    </time>
+  );
+}
+
+export function CompetitorsInTop10Cell({ value }: { value: number | null }) {
+  if (value === null) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span
+            className="text-muted-foreground"
+            aria-label="Competitors in top 10: not available"
+          >
+            —
+          </span>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-xs">
+          No competitors tracked, or no top 10 snapshot from today or yesterday
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+  return (
+    <span
+      className="numeric font-mono text-sm"
+      aria-label={`${pluralize(value, "competitor")} in the top 10`}
+    >
+      {value}
+    </span>
   );
 }

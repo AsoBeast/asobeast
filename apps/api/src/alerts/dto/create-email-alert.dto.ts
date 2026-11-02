@@ -1,9 +1,17 @@
-import { ArrayNotEmpty, IsArray, IsEmail, IsIn } from 'class-validator';
+import {
+  ArrayNotEmpty,
+  IsArray,
+  IsBoolean,
+  IsEmail,
+  IsIn,
+  ValidateIf,
+} from 'class-validator';
 import {
   EmailAlertCreateRequest,
   WEBHOOK_EVENTS,
   WebhookEvent,
 } from '@asobeast/shared';
+import { ReviewScoresFilter } from './review-scores.decorator';
 
 export class CreateEmailAlertDto implements EmailAlertCreateRequest {
   @IsEmail()
@@ -13,4 +21,10 @@ export class CreateEmailAlertDto implements EmailAlertCreateRequest {
   @ArrayNotEmpty()
   @IsIn(WEBHOOK_EVENTS, { each: true })
   events!: WebhookEvent[];
+
+  @ReviewScoresFilter()
+  reviewScores?: number[];
+  @ValidateIf((_, value) => value !== undefined)
+  @IsBoolean()
+  confirmDrops?: boolean;
 }

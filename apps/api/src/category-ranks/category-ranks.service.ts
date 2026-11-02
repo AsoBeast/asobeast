@@ -19,6 +19,8 @@ import { CheckCategoryPayload } from '../jobs/jobs.types';
 import { CategoryRankHistoryQueryDto } from './dto/category-rank-history-query.dto';
 import { LATEST_HOME_LISTING } from '../apps/listing';
 import { type ChartRef, isRankedIn, rankedChartsOf } from './ranked-charts';
+import { ChartAlertsService } from './chart-alerts.service';
+import { chartMoveScope } from './chart-move-scope';
 
 const DEFAULT_HISTORY_DAYS = 90;
 const MAX_HISTORY_DAYS = 365;
@@ -33,6 +35,8 @@ export interface CategoryBucket {
 
 interface AppBucketRow {
   id: string;
+  name: string | null;
+  isCompetitor: boolean;
   workspaceId: string;
   storeAppId: string;
   country: string;
@@ -80,6 +84,7 @@ export class CategoryRanksService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly charts: ChartCaptureService,
+    private readonly chartAlerts: ChartAlertsService,
   ) {}
 
   async buckets(appIds: string[]): Promise<CategoryBucket[]> {
@@ -112,13 +117,12 @@ export class CategoryRanksService {
     finalAttempt: boolean,
   ): Promise<void> {
     const { collection, genre, country, store } = payload;
-    const chart = await this.charts.captureToday(
-      chartKeyOf({ collection, genre, country, store }),
-      { finalAttempt },
-    );
+    const key = chartKeyOf({ collection, genre, country, store });
+    const chart = await this.charts.captureToday(key, { finalAttempt });
     const positionByStoreAppId = new Map(
       chart.entries.map((entry) => [entry.storeAppId, entry.position]),
     );
+    const scope = chartMoveScope(key);
 
     const rows = await this.loadAppBuckets({ store, country });
     const date = utcToday();
@@ -127,26 +131,49 @@ export class CategoryRanksService {
         continue;
       }
       const position = positionByStoreAppId.get(row.storeAppId) ?? null;
-      await this.prisma.categoryRank.upsert({
-        where: {
-          appId_date_collection_genre: {
-            appId: row.id,
-            date,
-            collection,
-            genre,
-          },
-        },
-        create: {
-          appId: row.id,
+      const changed = await this.record(row, {
+        collection,
+        genre,
+        date,
+        position,
+        depth: chart.depth,
+      });
+      if (changed && chart.entries.length > 0 && !row.isCompetitor) {
+        await this.chartAlerts.dispatch({
+          app: { id: row.id, name: row.name },
+          chart: scope,
           date,
-          collection,
-          genre,
           position,
           depth: chart.depth,
-        },
-        update: { position, depth: chart.depth },
-      });
+        });
+      }
     }
+  }
+
+  private async record(
+    row: AppBucketRow,
+    rank: {
+      collection: CategoryCollection;
+      genre: string;
+      date: Date;
+      position: number | null;
+      depth: number;
+    },
+  ): Promise<boolean> {
+    const { collection, genre, date, position, depth } = rank;
+    const where = {
+      appId_date_collection_genre: { appId: row.id, date, collection, genre },
+    };
+    const existing = await this.prisma.categoryRank.findUnique({
+      where,
+      select: { position: true },
+    });
+    await this.prisma.categoryRank.upsert({
+      where,
+      create: { appId: row.id, date, collection, genre, position, depth },
+      update: { position, depth },
+    });
+    return existing === null || existing.position !== position;
   }
 
   async history(
@@ -218,6 +245,8 @@ export class CategoryRanksService {
       where,
       select: {
         id: true,
+        name: true,
+        isCompetitor: true,
         workspaceId: true,
         storeAppId: true,
         country: true,
@@ -241,6 +270,8 @@ export class CategoryRanksService {
       }
       rows.push({
         id: app.id,
+        name: app.name,
+        isCompetitor: app.isCompetitor,
         workspaceId: app.workspaceId,
         storeAppId: app.storeAppId,
         country: app.country,

@@ -1,0 +1,2 @@
+ALTER TABLE "KeywordFieldSync" ALTER COLUMN "syncedAt" DROP DEFAULT;
+ALTER TABLE "KeywordFieldSync" ALTER COLUMN "syncedAt" DROP NOT NULL;

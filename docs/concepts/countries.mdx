@@ -95,6 +95,8 @@ If an app is not published in a market, asobeast tries again the next day and st
 
 The market switcher on the app overview, labelled **Market**, also scopes the keyword numbers. Until you choose a market it shows **All markets**: visibility, the tracked keyword count, the rank distribution, the movers and both history charts count every market the app tracks keywords in, as the portfolio dashboard does. An app with a single listing has no switcher and always counts every market.
 
+The **Ratings by market** card ignores the switcher's scope and lists every market, marking the one you chose. See [Compare ratings across markets](/guides/reviews#compare-ratings-across-markets).
+
 Choosing a market counts only the keywords tracked in it, and the 7 and 30 day changes are measured from that market's own latest check. The metadata coverage card counts every market whichever you choose, because it judges keywords against the home listing.
 
 The API takes the same choice as an optional `country` on `GET /apps/{id}/summary`, `GET /apps/{id}/visibility-history` and `GET /apps/{id}/rank-distribution-history`, and counts every market when it is omitted. The summary's `coverage` block counts every market either way.

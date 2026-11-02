@@ -1,24 +1,25 @@
 "use client";
 
-import { useState } from "react";
 import type { ReactNode } from "react";
-import { Clock, Loader2, MailCheck, MailX, Send, Trash2 } from "lucide-react";
-import type { WebhookEvent } from "@asobeast/shared";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  CheckIcon,
+  Clock,
+  Loader2,
+  MailCheck,
+  MailX,
+  Send,
+} from "lucide-react";
+import type { WebhookEvent } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { EVENT_LABELS } from "../alert-events";
+import {
+  eventBadgeLabel,
+  type AlertSubscriptionChange,
+} from "../alert-event-copy";
+import { CONFIRM_DROPS_BADGE } from "../ConfirmDropsField";
 import { DeliveriesSection } from "../DeliveriesSection";
+import { DeleteChannelDialog } from "./DeleteChannelDialog";
 import { EditEventsDialog } from "./EditEventsDialog";
 
 export interface AwaitingConfirmation {
@@ -42,7 +43,7 @@ function RowAction({
       <Button
         variant="outline"
         size="sm"
-        disabled={awaiting.pending}
+        aria-disabled={awaiting.pending || undefined}
         onClick={awaiting.onResend}
       >
         {awaiting.pending ? (
@@ -55,7 +56,12 @@ function RowAction({
     );
   }
   return (
-    <Button variant="outline" size="sm" disabled={testPending} onClick={onTest}>
+    <Button
+      variant="outline"
+      size="sm"
+      aria-disabled={testPending || undefined}
+      onClick={onTest}
+    >
       {testPending ? <Loader2 className="animate-spin" /> : <Send />}
       Send test
     </Button>
@@ -91,6 +97,8 @@ export function AlertChannelRow({
   channel,
   id,
   events,
+  confirmDrops,
+  reviewScores,
   tag,
   awaiting,
   active,
@@ -109,6 +117,8 @@ export function AlertChannelRow({
   channel: "webhook" | "email";
   id: string;
   events: WebhookEvent[];
+  confirmDrops: boolean;
+  reviewScores?: number[];
   tag?: ReactNode;
   awaiting?: AwaitingConfirmation;
   active: boolean;
@@ -121,10 +131,8 @@ export function AlertChannelRow({
   deletePending: boolean;
   onDelete: () => Promise<unknown>;
   eventsPending: boolean;
-  onEventsSave: (events: WebhookEvent[]) => Promise<unknown>;
+  onEventsSave: (change: AlertSubscriptionChange) => Promise<unknown>;
 }) {
-  const [confirmOpen, setConfirmOpen] = useState(false);
-
   return (
     <li className="flex flex-col gap-3 p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -143,14 +151,13 @@ export function AlertChannelRow({
             testPending={testPending}
             onTest={onTest}
           />
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={`Delete ${label}`}
-            onClick={() => setConfirmOpen(true)}
-          >
-            <Trash2 />
-          </Button>
+          <DeleteChannelDialog
+            label={label}
+            title={confirmTitle}
+            description={confirmDescription}
+            pending={deletePending}
+            onDelete={onDelete}
+          />
         </div>
       </div>
 
@@ -158,49 +165,28 @@ export function AlertChannelRow({
 
       <div className="flex flex-wrap items-center gap-1">
         {tag}
+        {confirmDrops ? (
+          <Badge variant="secondary">
+            <CheckIcon />
+            {CONFIRM_DROPS_BADGE}
+          </Badge>
+        ) : null}
         {events.map((event) => (
           <Badge key={event} variant="outline">
-            {EVENT_LABELS[event]}
+            {eventBadgeLabel(event, reviewScores)}
           </Badge>
         ))}
         <EditEventsDialog
           label={label}
           events={events}
+          confirmDrops={confirmDrops}
+          reviewScores={reviewScores}
           pending={eventsPending}
           onSave={onEventsSave}
         />
       </div>
 
       <DeliveriesSection channel={channel} id={id} />
-
-      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{confirmTitle}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {confirmDescription}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deletePending}>
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              disabled={deletePending}
-              onClick={(event) => {
-                event.preventDefault();
-                void onDelete().then(
-                  () => setConfirmOpen(false),
-                  () => undefined,
-                );
-              }}
-            >
-              {deletePending ? "Removing…" : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </li>
   );
 }
