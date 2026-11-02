@@ -1,6 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
-import { PLAN_LIMITS, QuotaDetail, SELF_HOSTED_LIMITS } from '@asobeast/shared';
+import { PLAN_LIMITS, QuotaDetail } from '@asobeast/shared';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
@@ -258,8 +258,24 @@ describe('QuotaService', () => {
     ).resolves.toBe('imported');
   });
 
-  it('caps competitors even on a self hosted instance', async () => {
-    const { quota, stored, tx, scoped } = build(false, { competitors: 10 });
+  it('admits a competitor past the hosted cap on a self hosted instance', async () => {
+    const { quota, stored, tx, appCount, scoped } = build(false, {
+      competitors: 25,
+    });
+
+    await expect(
+      scoped(() =>
+        quota.admitCompetitor('a1')(tx, () => {
+          stored.competitors += 1;
+          return Promise.resolve('added');
+        }),
+      ),
+    ).resolves.toBe('added');
+    expect(appCount).not.toHaveBeenCalled();
+  });
+
+  it('caps competitors per app on a hosted plan', async () => {
+    const { quota, stored, tx, scoped } = build(true, { competitors: 10 });
 
     await expect(
       detailOf(() =>
@@ -272,8 +288,10 @@ describe('QuotaService', () => {
       ),
     ).resolves.toMatchObject({
       resource: 'competitors',
-      limit: 10,
+      plan: 'indie',
+      limit: PLAN_LIMITS.indie.competitorsPerApp,
       used: 10,
+      upgradeTo: 'ultimate',
     });
   });
 
@@ -293,20 +311,19 @@ describe('QuotaService', () => {
     ).resolves.toBeUndefined();
   });
 
-  it('skips the pre-check on a self hosted instance, except for competitors', async () => {
+  it('skips the pre-check on a self hosted instance', async () => {
     const { quota, appCount, scoped } = build(false, {
       apps: 500,
-      competitors: 10,
+      competitors: 25,
     });
 
     await expect(
       scoped(() => quota.assertRoom('apps')),
     ).resolves.toBeUndefined();
-    expect(appCount).not.toHaveBeenCalled();
-
     await expect(
-      detailOf(() => scoped(() => quota.assertRoom('competitors', 'a1'))),
-    ).resolves.toMatchObject({ resource: 'competitors', used: 10 });
+      scoped(() => quota.assertRoom('competitors', 'a1')),
+    ).resolves.toBeUndefined();
+    expect(appCount).not.toHaveBeenCalled();
   });
 
   it('reports usage against the plan', async () => {
@@ -438,26 +455,11 @@ describe('QuotaService', () => {
     await expect(
       scoped(() => quota.limitFor('keywordMarkets')),
     ).resolves.toBeNull();
-    await expect(scoped(() => quota.limitFor('competitors'))).resolves.toBe(
-      SELF_HOSTED_LIMITS.competitorsPerApp,
-    );
+    await expect(
+      scoped(() => quota.limitFor('competitors')),
+    ).resolves.toBeNull();
     await expect(
       scoped(() => quota.limitFor('chartFollows')),
     ).resolves.toBeNull();
-  });
-
-  it('offers no upgrade path on a self hosted instance', async () => {
-    const { quota, stored, tx, scoped } = build(false, { competitors: 10 });
-
-    await expect(
-      detailOf(() =>
-        scoped(() =>
-          quota.admitCompetitor('a1')(tx, () => {
-            stored.competitors += 1;
-            return Promise.resolve(null);
-          }),
-        ),
-      ),
-    ).resolves.toMatchObject({ upgradeTo: null });
   });
 });

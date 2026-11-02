@@ -156,7 +156,7 @@ const ULTIMATE: PlanLimits = {
 export const SELF_HOSTED_LIMITS: PlanLimits = {
   apps: null,
   keywordMarkets: null,
-  competitorsPerApp: INDIE.competitorsPerApp,
+  competitorsPerApp: null,
   chartFollows: null,
   apiRequestsPerMinute: null,
   apiWritesPerMinute: null,
