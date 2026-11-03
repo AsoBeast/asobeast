@@ -6,12 +6,14 @@ import {
   PAYMENT_CONFIRMING,
   SOLD_THROUGH_LINK,
   confirmEmailParts,
+  featuresTitle,
   memberPlanLine,
   paymentNote,
   planAction,
   planActionLabel,
   planCallToAction,
   planCardLabel,
+  planHighlights,
   planStatusLine,
   savingPercent,
   trialBarLine,
@@ -492,5 +494,23 @@ describe("the wall around the checkout", () => {
   it("reads the annual saving from the plan prices", () => {
     expect(savingPercent("indie")).toBe(17);
     expect(savingPercent("ultimate")).toBe(17);
+  });
+});
+
+describe("the plan cards", () => {
+  it("names the two limits that tell the plans apart", () => {
+    expect(planHighlights("indie")).toEqual([
+      "5 apps",
+      "1,000 keyword markets",
+    ]);
+    expect(planHighlights("ultimate")).toEqual([
+      "50 apps",
+      "10,000 keyword markets",
+    ]);
+  });
+
+  it("titles the features after the selected plan", () => {
+    expect(featuresTitle("indie")).toBe("What Indie includes");
+    expect(featuresTitle("ultimate")).toBe("What Ultimate includes");
   });
 });

@@ -8,7 +8,7 @@ import {
   type PaidPlanName,
   type TrialOffer,
 } from "@asobeast/shared";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatNumber, pluralize } from "@/lib/format";
 
 export type PlanAction =
   "current" | "checkout" | "trial" | "change" | "resume" | "pending";
@@ -172,7 +172,17 @@ export const PAYMENT_TITLE = "Payment";
 
 export const CHOOSE_A_PLAN_TITLE = "Choose a plan";
 
-export const FEATURES_TITLE = "Features";
+export function featuresTitle(name: PaidPlanName): string {
+  return `What ${PLANS[name].displayName} includes`;
+}
+
+export function planHighlights(name: PaidPlanName): readonly string[] {
+  const { apps, keywordMarkets } = PLANS[name].limits;
+  return [
+    pluralize(apps ?? 0, "app"),
+    `${formatNumber(keywordMarkets ?? 0)} keyword markets`,
+  ];
+}
 
 export const FAQ_TITLE = "Questions";
 

@@ -74,7 +74,7 @@ export function BillingWall({
         </p>
         {offer ? <TrustRow lines={trustLines(offer, now)} /> : null}
       </header>
-      <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,36rem)]">
+      <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,28rem)] xl:gap-12">
         <PlanPicker
           interval={interval}
           onInterval={setInterval}

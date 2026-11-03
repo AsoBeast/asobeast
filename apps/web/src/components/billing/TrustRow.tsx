@@ -1,4 +1,4 @@
-import { Check } from "lucide-react";
+import { CheckMark } from "./CheckMark";
 
 export function TrustRow({ lines }: { lines: readonly string[] }) {
   return (
@@ -8,12 +8,7 @@ export function TrustRow({ lines }: { lines: readonly string[] }) {
     >
       {lines.map((line) => (
         <li key={line} className="flex items-center gap-2">
-          <span
-            aria-hidden="true"
-            className="flex size-5 shrink-0 items-center justify-center rounded-full bg-success-subtle text-success"
-          >
-            <Check className="size-3" />
-          </span>
+          <CheckMark className="size-5" />
           <span>{line}</span>
         </li>
       ))}

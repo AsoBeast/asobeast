@@ -1,5 +1,5 @@
 import { formatDate } from "../src/lib/format";
-import { type Page } from "@playwright/test";
+import { type Locator, type Page } from "@playwright/test";
 import { fulfillJson, seedSession } from "./plan-helpers.mts";
 import { expect, test } from "./reporting.mts";
 import {
@@ -346,6 +346,91 @@ test.describe("the billing wall", () => {
     const box = await wall.boundingBox();
     expect(box!.width).toBeLessThanOrEqual(1216);
     expect(Math.abs(box!.x - (1920 - box!.width) / 2)).toBeLessThanOrEqual(2);
+  });
+
+  test("shows each plan's price and the limits that tell them apart", async ({
+    page,
+    context,
+  }) => {
+    await seedViewer(context, "checkout-pending");
+    await seedSession(page);
+    await openBilling(page);
+
+    await page.goto("/upgrade");
+
+    const indie = page.getByRole("button", { name: "Indie, $10 per month" });
+    const ultimate = page.getByRole("button", {
+      name: "Ultimate, $99 per month",
+    });
+    await expect(indie).toHaveAttribute("aria-pressed", "true");
+    await expect(indie).toContainText("5 apps");
+    await expect(indie).toContainText("1,000 keyword markets");
+    await expect(ultimate).toContainText("50 apps");
+    const background = (button: Locator) =>
+      button.evaluate((node) => getComputedStyle(node).backgroundColor);
+    expect(await background(indie)).not.toBe(await background(ultimate));
+    const priceSize = await indie
+      .getByText("$10", { exact: true })
+      .evaluate((node) => getComputedStyle(node).fontSize);
+    expect(priceSize).toBe("36px");
+
+    await ultimate.click();
+
+    await expect(ultimate).toHaveAttribute("aria-pressed", "true");
+    expect(await background(ultimate)).not.toBe(await background(indie));
+    await expect(
+      page.getByRole("heading", { name: "What Ultimate includes" }),
+    ).toBeVisible();
+  });
+
+  test("names the saving inside the annual option", async ({
+    page,
+    context,
+  }) => {
+    await seedViewer(context, "checkout-pending");
+    await seedSession(page);
+    await openBilling(page);
+
+    await page.goto("/upgrade");
+
+    const annual = page.getByRole("tab", { name: /^Annual/ });
+    const badge = annual.getByText("Save 17%");
+    await expect(badge).toBeVisible();
+    const color = (locator: Locator) =>
+      locator.evaluate((node) => getComputedStyle(node).color);
+    expect(await color(badge)).not.toBe(
+      await color(annual.getByText("Annual", { exact: true })),
+    );
+    await annual.click();
+    await expect(
+      page.getByRole("button", { name: "Indie, $100 per year" }),
+    ).toHaveAttribute("aria-pressed", "true");
+  });
+
+  test("keeps the plans in view while the payment scrolls", async ({
+    page,
+    context,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 700 });
+    await seedViewer(context, "checkout-pending");
+    await seedSession(page);
+    await openBilling(page);
+
+    await page.goto("/upgrade");
+    await expect(
+      page.getByRole("heading", { level: 2, name: "Payment" }),
+    ).toBeVisible();
+    await page.evaluate(() => window.scrollTo(0, 600));
+
+    const plans = await page
+      .getByRole("heading", { level: 2, name: "Choose a plan" })
+      .boundingBox();
+    const payment = await page
+      .getByRole("heading", { level: 2, name: "Payment" })
+      .boundingBox();
+    expect(plans!.y).toBeGreaterThanOrEqual(0);
+    expect(plans!.y).toBeLessThanOrEqual(48);
+    expect(payment!.y).toBeLessThan(0);
   });
 
   test("writes its own order summary and follows the interval", async ({
