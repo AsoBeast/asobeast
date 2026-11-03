@@ -1,6 +1,7 @@
 import { formatDate } from "../src/lib/format";
 import { type Locator, type Page } from "@playwright/test";
 import { openEmbedded, STRIPE_STUB } from "./embedded-checkout.mts";
+import { holdRequest } from "./held-request.mts";
 import { fulfillJson, seedSession } from "./plan-helpers.mts";
 import { layoutBox } from "./layout-box.mts";
 import { expect, test } from "./reporting.mts";
@@ -750,6 +751,33 @@ test.describe("the billing wall", () => {
         page.locator('[data-mounted="cs_test_secret_price_ultimate_year"]'),
       ).toHaveCount(1);
       expect(priceIds).toEqual(["price_ultimate_year"]);
+    });
+
+    test("opens no checkout before the account plan answers", async ({
+      page,
+    }) => {
+      const bodies = await openEmbedded(page);
+      const plan = await holdRequest(
+        page,
+        /\/api\/backend\/auth\/plan$/,
+        "GET",
+        (route) => route.fulfill(fulfillJson(200, OFFERED_PLAN)),
+      );
+      const catalogRead = page.waitForResponse(
+        "**/api/backend/billing/catalog",
+      );
+
+      await page.goto("/upgrade");
+      await catalogRead;
+      await page.waitForTimeout(1_000);
+
+      expect(bodies).toEqual([]);
+      await expect(
+        page.getByRole("status", { name: "Checking your session" }),
+      ).toBeVisible();
+      plan.release();
+      await expect(page.locator("[data-mounted]")).toHaveCount(1);
+      expect(bodies).toHaveLength(1);
     });
 
     test("keeps the plans in view while the card form scrolls", async ({
