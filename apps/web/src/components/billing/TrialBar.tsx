@@ -16,11 +16,11 @@ export function TrialBar({
     <div
       role="region"
       aria-label={label}
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card pb-[env(safe-area-inset-bottom)] shadow-overlay print:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card pb-[env(safe-area-inset-bottom)] shadow-overlay page-gutter print:hidden sm:[--gutter:1.5rem]"
     >
-      <div className="page-checkout page-gutter flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-8 sm:py-4 sm:[--gutter:1.5rem]">
+      <div className="page-checkout flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-end sm:gap-8 sm:py-4">
         {parts ? (
-          <p className="text-subtitle font-normal text-muted-foreground">
+          <p className="text-subtitle font-normal text-muted-foreground sm:mr-auto">
             <span>{parts.before}</span>
             <span className="font-medium text-foreground">{parts.free}</span>
             <span>{parts.middle}</span>

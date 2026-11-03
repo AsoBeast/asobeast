@@ -488,6 +488,35 @@ test.describe("the billing wall", () => {
     expect((await button.boundingBox())!.height).toBe(44);
   });
 
+  test("keeps the checkout button at the right edge without a trial", async ({
+    page,
+    context,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await seedViewer(context, "checkout-pending");
+    await seedSession(page);
+    await openBilling(page, { ...OFFERED_PLAN, trialOffer: null });
+
+    await page.goto("/upgrade");
+
+    const strip = page.getByRole("region", { name: "Checkout" });
+    const button = strip.getByRole("button", { name: "Choose Indie" });
+    const panel = page.getByRole("region", { name: "Payment" });
+    const plans = page.getByRole("group", { name: "Plans" });
+    await expect(button).toBeVisible();
+    const [buttonBox, panelBox, plansBox] = await Promise.all([
+      button.boundingBox(),
+      panel.boundingBox(),
+      plans.boundingBox(),
+    ]);
+    expect(buttonBox!.x).toBeGreaterThan(panelBox!.x + panelBox!.width);
+    expect(
+      Math.abs(
+        buttonBox!.x + buttonBox!.width - (plansBox!.x + plansBox!.width),
+      ),
+    ).toBeLessThanOrEqual(2);
+  });
+
   test("writes its own order summary and follows the interval", async ({
     page,
     context,
