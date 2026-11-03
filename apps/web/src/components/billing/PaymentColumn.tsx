@@ -7,6 +7,7 @@ import {
   type BillingInterval,
   type BillingPrice,
   type PaidPlanName,
+  SUPPORT_EMAIL,
 } from "@asobeast/shared";
 import { Skeleton } from "@/components/ui/skeleton";
 import { sessionKeyOf } from "@/lib/embedded-checkout";
@@ -74,7 +75,7 @@ export function PaymentColumn({
       ) : null}
       <p className="text-caption text-muted-foreground">
         {trialPaymentNote(catalog, offer, now)} Need help?{" "}
-        <a href="mailto:hello@asobeast.dev" className="font-medium underline">
+        <a href={`mailto:${SUPPORT_EMAIL}`} className="font-medium underline">
           Contact support
         </a>
         .
