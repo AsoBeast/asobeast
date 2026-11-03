@@ -199,6 +199,10 @@ export const EVERY_PLAN_INCLUDES = "Every plan includes";
 
 export const SECURE_BY_STRIPE = "Secure payments processed by Stripe.";
 
+export const NEED_HELP = "Need help?";
+
+export const CONTACT_SUPPORT = "Contact support";
+
 const BUYS: readonly PlanAction[] = ["checkout", "trial"];
 
 export function buysPlan(action: PlanAction): boolean {

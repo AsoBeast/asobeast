@@ -15,6 +15,8 @@ import { sessionKeyOf } from "@/lib/embedded-checkout";
 import { INTERVAL_LABEL, summaryFromCatalog } from "@/lib/order-summary";
 import {
   PAYMENT_TITLE,
+  CONTACT_SUPPORT,
+  NEED_HELP,
   SECURE_BY_STRIPE,
   buysPlan,
   trialPaymentNote,
@@ -78,9 +80,10 @@ export function PaymentColumn({
         </p>
       ) : null}
       <p className="text-caption text-muted-foreground">
-        {trialPaymentNote(catalog, offer, now)} Need help?{" "}
+        <span>{trialPaymentNote(catalog, offer, now)}</span>{" "}
+        <span>{NEED_HELP}</span>{" "}
         <a href={`mailto:${SUPPORT_EMAIL}`} className="font-medium underline">
-          Contact support
+          {CONTACT_SUPPORT}
         </a>
         .
       </p>
