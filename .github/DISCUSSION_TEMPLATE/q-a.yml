@@ -1,0 +1,50 @@
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Search [earlier questions](https://github.com/AsoBeast/asobeast/discussions/categories/q-a) and the [troubleshooting guide](https://docs.asobeast.com/operations/troubleshooting) first, because most deployment questions already have an answer there.
+        If asobeast behaves differently than the [documentation](https://docs.asobeast.com) says, that is a bug, so [open an issue](https://github.com/AsoBeast/asobeast/issues/new/choose) instead.
+        Discussions are public, so never post an account email, an invoice or billing details here.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Self-hosting
+        - Hosted service
+        - MCP server
+        - HTTP API
+        - Keywords, rankings and scores
+        - Store connections
+        - Something else
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: asobeast version
+      description: The version at the bottom of the sidebar, or the image tag you run.
+      placeholder: 1.15.0
+    validations:
+      required: false
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: What you are trying to do, and what happens instead.
+    validations:
+      required: true
+  - type: textarea
+    id: tried
+    attributes:
+      label: What you tried
+      description: Commands, settings and documentation pages you already went through, with the log lines they produced.
+    validations:
+      required: false
+  - type: checkboxes
+    id: secrets
+    attributes:
+      label: Secret safety
+      options:
+        - label: I have not pasted a value from a .env file, the output of docker compose config, a store console key or an asob_ token into this public discussion.
+          required: true

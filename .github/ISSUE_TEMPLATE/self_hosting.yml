@@ -4,6 +4,9 @@ title: "ops: "
 labels:
   - self-hosting
 body:
+  - type: markdown
+    attributes:
+      value: A question about how to deploy or configure asobeast belongs in [Q&A](https://github.com/AsoBeast/asobeast/discussions/categories/q-a). Open this issue for a deployment that fails although it follows the documentation.
   - type: dropdown
     id: deployment
     attributes:

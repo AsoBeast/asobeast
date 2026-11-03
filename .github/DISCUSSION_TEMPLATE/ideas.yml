@@ -1,0 +1,28 @@
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Search [earlier ideas](https://github.com/AsoBeast/asobeast/discussions/categories/ideas) first and upvote one that matches, because the vote count is how interest is measured.
+        An idea that gathers support and a shape the maintainers agree on becomes a feature request issue.
+        The HTTP contract, the shared contract types and the MCP tool surface stay compatible throughout 1.x, so an idea that removes, renames or narrows any of them waits for 2.0.0. [Upgrade and roll back](https://docs.asobeast.com/install/upgrade) says what the promise covers.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: The user problem, who runs into it and how they work around it today.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Idea
+      description: What asobeast could do about it. A rough sketch is enough.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other tools or approaches you looked at.
+    validations:
+      required: false
