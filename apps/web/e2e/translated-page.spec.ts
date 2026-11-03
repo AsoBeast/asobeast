@@ -557,3 +557,29 @@ test("a translated play dialog shows the description of the method it switches t
   );
   expect(errors).toEqual([]);
 });
+
+test("a translated sidebar opens what's new and clears its dot", async ({
+  page,
+}) => {
+  const errors = collectDomErrors(page);
+  await page.addInitScript(() => {
+    if (!window.sessionStorage.getItem("seeded")) {
+      window.localStorage.setItem("asobeast.whatsNew.seen", "1.0.0");
+      window.sessionStorage.setItem("seeded", "1");
+    }
+  });
+  await page.goto("/");
+  const item = await hydrated(
+    page
+      .getByRole("navigation", { name: "Main" })
+      .getByRole("link", { name: /^What's New/ }),
+  );
+  await expect(item).toHaveAttribute("data-unread", "true");
+
+  await translateText(page);
+  await item.click();
+
+  await expect(page).toHaveURL("/whats-new");
+  await expect(item).toHaveAttribute("data-unread", "false");
+  expect(errors).toEqual([]);
+});

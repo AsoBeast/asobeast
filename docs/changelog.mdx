@@ -3,7 +3,7 @@ title: Changelog
 description: "Release Please owns versions, tags and CHANGELOG.md for asobeast, and every release publishes multi architecture container images to GHCR."
 icon: history
 mode: center
-keywords: ["changelog","releases","versions","release please"]
+keywords: ["changelog","releases","versions","release please","what's new"]
 ---
 
 Release Please owns versions, tags and `CHANGELOG.md`. The generated file in the repository is the complete record, and this page deliberately does not copy it, because a second copy would drift.
@@ -19,6 +19,10 @@ The `1.x` line takes normal feature work, constrained by the compatibility promi
 Compatibility for three surfaces throughout the `1.x` line: the HTTP contract, the `@asobeast/shared` contract types and the MCP tool surface. Breaking any of them requires `2.0.0`.
 
 Environment variables, the database schema and internal modules are outside that promise, and every schema change ships as a forward Prisma migration. See [Upgrade and roll back](/install/upgrade).
+
+## Read what changed in the app
+
+The **What's New** item at the foot of the app's sidebar opens the notes of every release up to the one your instance runs, written for the people who use AsoBeast rather than for contributors. Each release lists what is new, what improved and what was fixed, with no code. A red dot on the item's icon means a release arrived since you last opened the page. The browser remembers the last release you opened, so the dot is per browser and clears as soon as you open the page.
 
 ## Read the release notes
 

@@ -5,6 +5,7 @@ import { INTEGRATIONS_PATH } from "@asobeast/shared";
 import {
   LayoutDashboard,
   ListChecks,
+  Megaphone,
   Plug,
   Search,
   Settings,
@@ -15,6 +16,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AppIcon } from "@/components/AppIcon";
 import { ADMIN_ENTRY } from "@/components/admin/admin-links";
 import { useAuth } from "@/components/auth/use-auth";
+import { WHATS_NEW_LABEL, WHATS_NEW_PATH } from "./WhatsNewMenuItem";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,6 +47,7 @@ const GENERAL = [
   { href: "/actions", label: "Action Center", icon: ListChecks },
   { href: "/charts", label: "Top charts", icon: Trophy },
   { href: INTEGRATIONS_PATH, label: "Integrations", icon: Plug },
+  { href: WHATS_NEW_PATH, label: WHATS_NEW_LABEL, icon: Megaphone },
   { href: "/settings", label: "Settings", icon: Settings },
 ] as const;
 
