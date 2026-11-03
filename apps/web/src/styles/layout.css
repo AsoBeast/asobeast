@@ -13,6 +13,12 @@
   margin-inline: auto;
 }
 
+@utility page-checkout {
+  width: 100%;
+  max-width: 76rem;
+  margin-inline: auto;
+}
+
 @utility page-reading {
   width: 100%;
   max-width: 45rem;

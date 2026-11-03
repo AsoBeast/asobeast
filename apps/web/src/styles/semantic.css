@@ -8,6 +8,7 @@
   --primary: var(--brand-500);
   --primary-foreground: var(--neutral-950);
   --primary-hover: var(--brand-600);
+  --primary-subtle: color-mix(in srgb, var(--brand-500) 10%, var(--card));
   --secondary: var(--neutral-100);
   --secondary-foreground: var(--neutral-900);
   --muted: var(--neutral-100);
@@ -86,6 +87,7 @@
     --primary: var(--brand-500);
     --primary-foreground: var(--neutral-950);
     --primary-hover: var(--brand-600);
+    --primary-subtle: color-mix(in srgb, var(--brand-500) 14%, var(--card));
     --secondary: var(--neutral-850);
     --secondary-foreground: var(--neutral-50);
     --muted: var(--neutral-850);

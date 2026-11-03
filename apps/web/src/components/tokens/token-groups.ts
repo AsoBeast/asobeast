@@ -30,6 +30,7 @@ export const SEMANTIC_SURFACES = [
   "--primary",
   "--primary-foreground",
   "--primary-hover",
+  "--primary-subtle",
   "--secondary",
   "--secondary-foreground",
   "--muted",
@@ -237,6 +238,9 @@ export const TEXT_PAIRS: TextPair[] = [
   ...GAP_ROW_TEXT.map((token) => textOn(token, "--warning-subtle")),
   ...GRADE_TEXT.map((token) => textOn("--foreground", `${token}-subtle`)),
   textOn("--muted-foreground", "--success-subtle"),
+  ...["--foreground", "--muted-foreground"].map((token) =>
+    textOn(token, "--primary-subtle"),
+  ),
   ...["--foreground", "--muted-foreground", "--info"].map((token) =>
     textOn(token, "--info-subtle"),
   ),
