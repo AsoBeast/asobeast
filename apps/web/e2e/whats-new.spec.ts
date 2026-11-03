@@ -1,6 +1,8 @@
 import { version } from "../package.json";
+import { contrastRatio } from "../src/lib/contrast";
+import { hydrated } from "./hydrated.mts";
 import { expect, test } from "./session.mts";
-import type { Page } from "@playwright/test";
+import type { BrowserContext, Page } from "@playwright/test";
 
 const SEEN = "asobeast.whatsNew.seen";
 
@@ -9,6 +11,39 @@ const releases = (page: Page) =>
 
 const storedSeen = (page: Page) =>
   page.evaluate((key) => window.localStorage.getItem(key), SEEN);
+
+const seedSeen = (context: BrowserContext, value: string) =>
+  context.addInitScript(
+    ([key, seen]) => {
+      if (!window.sessionStorage.getItem("seeded")) {
+        window.localStorage.setItem(key, seen);
+        window.sessionStorage.setItem("seeded", "1");
+      }
+    },
+    [SEEN, value] as const,
+  );
+
+const footer = (page: Page) =>
+  page
+    .getByRole("navigation", { name: "Main" })
+    .locator('[data-slot="sidebar-footer"]');
+
+const whatsNew = (page: Page) =>
+  footer(page).getByRole("link", { name: /^What's New/ });
+
+const dot = (page: Page) => whatsNew(page).locator('[data-slot="unread-dot"]');
+
+async function expectUnread(page: Page) {
+  await expect(whatsNew(page)).toHaveAttribute("data-unread", "true");
+  await expect(whatsNew(page)).toHaveAccessibleName("What's New, new updates");
+  await expect(dot(page)).toBeVisible();
+}
+
+async function expectQuiet(page: Page) {
+  await expect(whatsNew(page)).toHaveAttribute("data-unread", "false");
+  await expect(whatsNew(page)).toHaveAccessibleName("What's New");
+  await expect(dot(page)).toBeHidden();
+}
 
 test.describe("the what's new page", () => {
   test("lists the releases up to the running version, newest first", async ({
@@ -131,5 +166,186 @@ test.describe("the what's new page", () => {
     await page.goto("/whats-new#release-1-0-0");
 
     await expect(page.locator("#release-1-0-0")).toBeInViewport();
+  });
+});
+
+test.describe("the what's new sidebar item", () => {
+  test("sits just before documentation", async ({ page }) => {
+    await page.goto("/");
+
+    const names = await footer(page).getByRole("link").allInnerTexts();
+    expect(names.slice(0, 2).map((name) => name.trim())).toEqual([
+      "What's New",
+      "Documentation",
+    ]);
+  });
+
+  test("shows the dot to a viewer who never opened the page", async ({
+    page,
+  }) => {
+    await page.goto("/");
+
+    await expectUnread(page);
+  });
+
+  test("shows the dot after an older release was seen", async ({
+    context,
+    page,
+  }) => {
+    await seedSeen(context, "1.0.0");
+    await page.goto("/");
+
+    await expectUnread(page);
+  });
+
+  test("is quiet once the newest release was seen", async ({
+    context,
+    page,
+  }) => {
+    await seedSeen(context, version);
+    await page.goto("/");
+
+    await expectQuiet(page);
+  });
+
+  test("is quiet for a release newer than the running one", async ({
+    context,
+    page,
+  }) => {
+    await seedSeen(context, "999.0.0");
+    await page.goto("/");
+
+    await expectQuiet(page);
+  });
+
+  test("clears the dot when the page opens and keeps it cleared", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await expectUnread(page);
+
+    await (await hydrated(whatsNew(page))).click();
+
+    await expect(page).toHaveURL("/whats-new");
+    await expect(whatsNew(page)).toHaveAttribute("data-active", "true");
+    await expectQuiet(page);
+    await page.reload();
+    await expectQuiet(page);
+  });
+
+  test("clears the dot in another tab", async ({ context, page }) => {
+    await page.goto("/");
+    await expectUnread(page);
+
+    const other = await context.newPage();
+    await other.goto("/whats-new");
+    await expect.poll(() => storedSeen(other)).toBe(version);
+
+    await expectQuiet(page);
+  });
+
+  test("keeps the dot on the icon when the sidebar is collapsed", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Toggle Sidebar" }).first().click();
+
+    await expect(dot(page)).toBeVisible();
+    const icon = await whatsNew(page).locator("svg").boundingBox();
+    const mark = await dot(page).boundingBox();
+    expect(icon && mark).toBeTruthy();
+    expect(mark!.x + mark!.width).toBeGreaterThan(icon!.x + icon!.width / 2);
+    expect(mark!.y).toBeLessThan(icon!.y + icon!.height / 2);
+
+    await whatsNew(page).hover();
+    await expect(page.getByRole("tooltip")).toHaveText(
+      "What's New, new updates",
+    );
+  });
+
+  test("shows in the phone sheet", async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto("/");
+    await page.getByRole("button", { name: "Toggle Sidebar" }).first().click();
+
+    await expect(whatsNew(page)).toBeVisible();
+    await expect(dot(page)).toBeVisible();
+  });
+
+  test("renders quiet on the server so hydration matches", async ({
+    context,
+    page,
+  }) => {
+    const warnings: string[] = [];
+    page.on("console", (message) => {
+      if (/hydrat/i.test(message.text())) warnings.push(message.text());
+    });
+    await seedSeen(context, "1.0.0");
+
+    const html = await (await page.request.get("/")).text();
+    expect(html).toContain('data-unread="false"');
+    await page.goto("/");
+    await expectUnread(page);
+    expect(warnings).toEqual([]);
+  });
+
+  test("moves nothing when the dot appears", async ({ context, page }) => {
+    await seedSeen(context, version);
+    await page.goto("/");
+    await expectQuiet(page);
+    const quiet = await whatsNew(page).boundingBox();
+
+    await page.evaluate(
+      (key) => window.localStorage.setItem(key, "1.0.0"),
+      SEEN,
+    );
+    await page.reload();
+    await expectUnread(page);
+
+    expect(await whatsNew(page).boundingBox()).toEqual(quiet);
+  });
+
+  for (const theme of ["light", "dark"] as const) {
+    test(`draws the dot at 3 to 1 against the ${theme} sidebar`, async ({
+      page,
+    }) => {
+      await page.addInitScript(
+        (value) => window.localStorage.setItem("theme", value),
+        theme,
+      );
+      await page.emulateMedia({ colorScheme: theme });
+      await page.goto("/");
+      await expectUnread(page);
+
+      const [mark, sidebar] = await dot(page).evaluate((element) => {
+        const container = element.closest('[data-slot="sidebar-inner"]');
+        return [
+          getComputedStyle(element).backgroundColor,
+          getComputedStyle(container ?? document.body).backgroundColor,
+        ];
+      });
+      expect(contrastRatio(mark, sidebar)).toBeGreaterThanOrEqual(3);
+    });
+  }
+
+  test("works when browser storage throws", async ({ page }) => {
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    await page.addInitScript(() => {
+      Storage.prototype.getItem = () => {
+        throw new Error("blocked");
+      };
+      Storage.prototype.setItem = () => {
+        throw new Error("blocked");
+      };
+    });
+    await page.goto("/");
+    await expectUnread(page);
+
+    await (await hydrated(whatsNew(page))).click();
+
+    await expect(page).toHaveURL("/whats-new");
+    await expectQuiet(page);
+    expect(errors).toEqual([]);
   });
 });
