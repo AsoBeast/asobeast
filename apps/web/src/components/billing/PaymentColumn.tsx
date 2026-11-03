@@ -48,7 +48,7 @@ export function PaymentColumn({
   return (
     <section
       aria-labelledby="payment-title"
-      className="flex min-w-0 flex-col gap-6 rounded-2xl border border-border bg-card p-4 shadow-raised sm:p-6 lg:col-start-1 lg:row-span-2 lg:row-start-1"
+      className="flex min-w-0 flex-col gap-6 rounded-2xl border border-border bg-card p-4 shadow-raised sm:p-6 lg:col-start-1 lg:row-start-1"
     >
       <h2 id="payment-title" className="text-display">
         {PAYMENT_TITLE}

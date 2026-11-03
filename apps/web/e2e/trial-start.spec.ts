@@ -172,10 +172,22 @@ test.describe("the billing wall", () => {
     expect(headings.indexOf("Payment")).toBeLessThan(
       headings.indexOf("Questions"),
     );
+    const panelBox = await page
+      .getByRole("region", { name: "Payment" })
+      .boundingBox();
     const questionsBox = await page
       .getByRole("heading", { level: 2, name: "Questions" })
       .boundingBox();
-    expect(questionsBox!.x).toBe(plansBox!.x);
+    expect(questionsBox!.y).toBeGreaterThan(panelBox!.y + panelBox!.height);
+    expect(Math.round(questionsBox!.x)).toBe(Math.round(panelBox!.x));
+    const questions = page
+      .getByRole("region", { name: "Questions" })
+      .getByRole("button");
+    const [first, second] = await Promise.all([
+      questions.nth(0).boundingBox(),
+      questions.nth(1).boundingBox(),
+    ]);
+    expect(Math.round(first!.y)).toBe(Math.round(second!.y));
   });
 
   test("puts the plans above the payment on a phone without scrolling sideways", async ({
@@ -209,6 +221,22 @@ test.describe("the billing wall", () => {
         () => document.documentElement.scrollWidth <= window.innerWidth,
       ),
     ).toBe(true);
+    const cards = page
+      .getByRole("group", { name: "Plans" })
+      .getByRole("button");
+    const [indie, ultimate] = await Promise.all([
+      cards.nth(0).boundingBox(),
+      cards.nth(1).boundingBox(),
+    ]);
+    expect(Math.round(indie!.y)).toBe(Math.round(ultimate!.y));
+    const questions = page
+      .getByRole("region", { name: "Questions" })
+      .getByRole("button");
+    const [first, second] = await Promise.all([
+      questions.nth(0).boundingBox(),
+      questions.nth(1).boundingBox(),
+    ]);
+    expect(first!.y).toBeLessThan(second!.y);
   });
 
   test("promises no secure payment when checkout is not configured", async ({
@@ -407,32 +435,6 @@ test.describe("the billing wall", () => {
     ).toHaveAttribute("aria-pressed", "true");
   });
 
-  test("keeps the plans in view while the payment scrolls", async ({
-    page,
-    context,
-  }) => {
-    await page.setViewportSize({ width: 1280, height: 700 });
-    await seedViewer(context, "checkout-pending");
-    await seedSession(page);
-    await openBilling(page);
-
-    await page.goto("/upgrade");
-    await expect(
-      page.getByRole("heading", { level: 2, name: "Payment" }),
-    ).toBeVisible();
-    await page.evaluate(() => window.scrollTo(0, 600));
-
-    const plans = await page
-      .getByRole("heading", { level: 2, name: "Choose a plan" })
-      .boundingBox();
-    const payment = await page
-      .getByRole("heading", { level: 2, name: "Payment" })
-      .boundingBox();
-    expect(plans!.y).toBeGreaterThanOrEqual(0);
-    expect(plans!.y).toBeLessThanOrEqual(48);
-    expect(payment!.y).toBeLessThan(0);
-  });
-
   test("frames the payment in one raised panel", async ({ page, context }) => {
     await seedViewer(context, "checkout-pending");
     await seedSession(page);
@@ -512,7 +514,10 @@ test.describe("the billing wall", () => {
           createEmbeddedCheckoutPage: async ({ fetchClientSecret }) => {
             const secret = await fetchClientSecret();
             return {
-              mount: (target) => target.setAttribute("data-mounted", secret),
+              mount: (target) => {
+                target.setAttribute("data-mounted", secret);
+                target.style.height = "40rem";
+              },
               unmount: () => {},
               destroy: () => {},
             };
@@ -670,6 +675,39 @@ test.describe("the billing wall", () => {
       });
       return bodies;
     }
+
+    test("keeps the plans in view while the card form scrolls", async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 1280, height: 700 });
+      await openEmbedded(page);
+
+      await page.goto("/upgrade");
+      await expect(page.locator("[data-mounted]")).toHaveCount(1);
+      await page.evaluate(() => window.scrollTo(0, 600));
+
+      const plans = await page
+        .getByRole("heading", { level: 2, name: "Choose a plan" })
+        .boundingBox();
+      const payment = await page
+        .getByRole("heading", { level: 2, name: "Payment" })
+        .boundingBox();
+      expect(plans!.y).toBeGreaterThanOrEqual(0);
+      expect(plans!.y).toBeLessThanOrEqual(48);
+      expect(payment!.y).toBeLessThan(0);
+
+      await page.evaluate(() =>
+        window.scrollTo(0, document.documentElement.scrollHeight),
+      );
+
+      const features = await page
+        .getByRole("region", { name: "What Indie includes" })
+        .boundingBox();
+      const questions = await page
+        .getByRole("heading", { level: 2, name: "Questions" })
+        .boundingBox();
+      expect(features!.y + features!.height).toBeLessThanOrEqual(questions!.y);
+    });
 
     test.describe("in the light theme", () => {
       test.use({ colorScheme: "light" });

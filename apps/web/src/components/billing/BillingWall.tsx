@@ -92,10 +92,10 @@ export function BillingWall({
           publishableKey={publishableKey}
           now={now}
         />
-        <PaywallFaq
-          items={paywallFaq(offer, planPriceLabel(selected, interval), now)}
-        />
       </div>
+      <PaywallFaq
+        items={paywallFaq(offer, planPriceLabel(selected, interval), now)}
+      />
       <TrialBar line={trialLine} label={trialLine ? "Your trial" : "Checkout"}>
         {publishableKey ? null : (
           <HostedAction

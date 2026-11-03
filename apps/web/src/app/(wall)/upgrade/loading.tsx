@@ -26,7 +26,7 @@ export default function Loading() {
           </div>
           <Skeleton className="h-64" />
         </div>
-        <div className="flex flex-col gap-6 rounded-2xl border border-border bg-card p-4 shadow-raised sm:p-6 lg:col-start-1 lg:row-span-2 lg:row-start-1">
+        <div className="flex flex-col gap-6 rounded-2xl border border-border bg-card p-4 shadow-raised sm:p-6 lg:col-start-1 lg:row-start-1">
           <Skeleton className="h-8 w-32" />
           <Skeleton className="h-[28rem] w-full rounded-xl" />
           <div className="flex flex-col gap-3">
@@ -34,6 +34,14 @@ export default function Loading() {
             <Skeleton className="h-5 w-full" />
             <Skeleton className="h-8 w-full" />
           </div>
+        </div>
+      </div>
+      <div className="flex flex-col gap-4">
+        <Skeleton className="h-8 w-40" />
+        <div className="grid gap-3 sm:grid-cols-2">
+          {Array.from({ length: 7 }, (_, index) => (
+            <Skeleton key={index} className="h-14 rounded-xl" />
+          ))}
         </div>
       </div>
     </div>
