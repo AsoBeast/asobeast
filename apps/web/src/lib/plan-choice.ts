@@ -6,9 +6,11 @@ import {
   type BillingCatalog,
   type BillingInterval,
   type PaidPlanName,
+  type PlanLimit,
+  type PlanLimits,
   type TrialOffer,
 } from "@asobeast/shared";
-import { formatDate, formatNumber, pluralize } from "@/lib/format";
+import { formatDate, pluralize } from "@/lib/format";
 
 export type PlanAction =
   "current" | "checkout" | "trial" | "change" | "resume" | "pending";
@@ -176,12 +178,19 @@ export function featuresTitle(name: PaidPlanName): string {
   return `What ${PLANS[name].displayName} includes`;
 }
 
+function limitLine(limit: PlanLimit, singular: string): string {
+  return limit === null ? `Unlimited ${singular}s` : pluralize(limit, singular);
+}
+
+export function limitHighlights({
+  apps,
+  keywordMarkets,
+}: Pick<PlanLimits, "apps" | "keywordMarkets">): readonly string[] {
+  return [limitLine(apps, "app"), limitLine(keywordMarkets, "keyword market")];
+}
+
 export function planHighlights(name: PaidPlanName): readonly string[] {
-  const { apps, keywordMarkets } = PLANS[name].limits;
-  return [
-    pluralize(apps ?? 0, "app"),
-    `${formatNumber(keywordMarkets ?? 0)} keyword markets`,
-  ];
+  return limitHighlights(PLANS[name].limits);
 }
 
 export const FAQ_TITLE = "Questions";

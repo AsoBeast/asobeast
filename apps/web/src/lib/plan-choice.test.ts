@@ -14,6 +14,7 @@ import {
   planCallToAction,
   planCardLabel,
   planHighlights,
+  limitHighlights,
   planStatusLine,
   savingPercent,
   trialBarParts,
@@ -526,6 +527,13 @@ describe("the plan cards", () => {
     expect(planHighlights("ultimate")).toEqual([
       "50 apps",
       "10,000 keyword markets",
+    ]);
+  });
+
+  it("names an unlimited limit instead of counting zero", () => {
+    expect(limitHighlights({ apps: null, keywordMarkets: 1 })).toEqual([
+      "Unlimited apps",
+      "1 keyword market",
     ]);
   });
 

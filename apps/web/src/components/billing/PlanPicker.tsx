@@ -9,7 +9,7 @@ import {
 } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
-import { formatNumber } from "@/lib/format";
+import { formatPlanLimit } from "@/lib/format";
 import { INTERVAL_LABEL, priceOf } from "@/lib/order-summary";
 import {
   CHOOSE_A_PLAN_TITLE,
@@ -161,7 +161,7 @@ export function PlanPicker({
           {LIMIT_ROWS.map(({ key, label }) => (
             <div key={key} className="flex justify-between gap-4 py-2">
               <dt className="font-normal text-muted-foreground">{label}</dt>
-              <dd className="tabular-nums">{formatNumber(limits[key] ?? 0)}</dd>
+              <dd className="tabular-nums">{formatPlanLimit(limits[key])}</dd>
             </div>
           ))}
         </dl>
