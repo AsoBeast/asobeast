@@ -38,11 +38,11 @@ describe('TrialClaimBackfill', () => {
       );
   });
 
-  it('reads only owners of workspaces that started a trial', async () => {
+  it('reads only owners of workspaces whose trial claims are settled', async () => {
     await build().run();
 
     expect(findMany).toHaveBeenCalledWith({
-      where: { role: 'owner', workspace: { trialStartedAt: { not: null } } },
+      where: { role: 'owner', workspace: { trialClaimedAt: { not: null } } },
       select: { id: true, email: true },
       orderBy: { id: 'asc' },
       take: BACKFILL_PAGE_SIZE,
