@@ -6,10 +6,12 @@ import {
   PLANS,
   planPriceLabel,
   type AccountPlan,
+  type AuthUser,
   type BillingCatalog,
   type BillingInterval,
   type PaidPlanName,
 } from "@asobeast/shared";
+import { SignUpSteps } from "@/components/auth/SignUpSteps";
 import { checkoutUiFor } from "@/lib/embedded-checkout";
 import { paywallFaq } from "@/lib/paywall-faq";
 import {
@@ -22,6 +24,7 @@ import {
   trustLines,
 } from "@/lib/plan-choice";
 import { planParam } from "@/lib/search-params";
+import { signUpSteps } from "@/lib/sign-up-steps";
 import { HostedAction } from "./HostedAction";
 import { PaymentColumn } from "./PaymentColumn";
 import { PaywallFaq } from "./PaywallFaq";
@@ -32,9 +35,11 @@ import { TrustRow } from "./TrustRow";
 const DEFAULT_PLAN: PaidPlanName = "indie";
 
 export function BillingWall({
+  user,
   plan,
   catalog,
 }: {
+  user: AuthUser | undefined;
   plan: AccountPlan | undefined;
   catalog: BillingCatalog | undefined;
 }) {
@@ -60,6 +65,7 @@ export function BillingWall({
   return (
     <div className="page-wide flex flex-col gap-8 pb-40 sm:pb-24">
       <header className="flex flex-col gap-3">
+        <SignUpSteps steps={signUpSteps(user)} />
         <h1 className="text-display tracking-tight text-balance">
           {paywallHeading(plan)}
         </h1>

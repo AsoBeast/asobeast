@@ -47,6 +47,27 @@ test.describe("the confirmation page", () => {
     expect(stripeRequests).toBe(0);
   });
 
+  test("shows the email step as the current one above the card", async ({
+    page,
+  }) => {
+    await openAs(page, "checkout-pending-unconfirmed");
+
+    await page.goto("/confirm-email");
+
+    const steps = page.getByRole("list", { name: "Sign up steps" });
+    await expect(steps.locator("[aria-current='step']")).toHaveText(
+      /Email confirmed/,
+    );
+    await expect(steps.getByRole("listitem").last()).toHaveText(
+      /Choose a plan/,
+    );
+    const [stepsBox, headingBox] = await Promise.all([
+      steps.boundingBox(),
+      page.getByRole("heading", { level: 1 }).boundingBox(),
+    ]);
+    expect(stepsBox!.y).toBeLessThan(headingBox!.y);
+  });
+
   test("sends one new link and says so", async ({ page }) => {
     await openAs(page, "checkout-pending-unconfirmed");
     let resends = 0;

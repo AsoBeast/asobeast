@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { TYPE_STEPS } from "@/lib/utils";
 import { declarations } from "./token-scope";
 
 const scale = declarations(
@@ -33,5 +34,12 @@ describe("the type scale", () => {
     const sizes = STEPS.map(rem);
     expect(sizes).toEqual([...sizes].sort((a, b) => b - a));
     expect(new Set(sizes).size).toBe(STEPS.length);
+  });
+
+  it("teaches the class merger every step of the scale", () => {
+    const declared = Object.keys(scale)
+      .filter((name) => !name.includes("--", 2))
+      .map((name) => name.replace("--text-", ""));
+    expect([...TYPE_STEPS].sort()).toEqual(declared.sort());
   });
 });

@@ -10,10 +10,5 @@ export default async function ConfirmEmailPage() {
   if (user.entryStep !== "confirm-email") {
     redirect(entryDestination(user, null));
   }
-  return (
-    <ConfirmEmailContent
-      email={user.email}
-      offered={user.trialAwaitsCheckout === true}
-    />
-  );
+  return <ConfirmEmailContent user={user} />;
 }

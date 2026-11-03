@@ -251,6 +251,51 @@ test.describe("the billing wall", () => {
     await expect(page.getByText("confirmation link")).toHaveCount(0);
   });
 
+  test("shows the sign up as three steps with the plan step current", async ({
+    page,
+    context,
+  }) => {
+    await seedViewer(context, "checkout-pending");
+    await seedSession(page);
+    await openBilling(page);
+
+    await page.goto("/upgrade");
+
+    const steps = page.getByRole("list", { name: "Sign up steps" });
+    await expect(steps.getByRole("listitem")).toHaveText([
+      /Account created/,
+      /Email confirmed/,
+      /Choose a plan/,
+    ]);
+    await expect(steps.locator("[aria-current='step']")).toHaveText(
+      /Choose a plan/,
+    );
+    await expect(
+      steps.getByRole("listitem").nth(0).locator("svg"),
+    ).toBeVisible();
+    const [stepsBox, headingBox] = await Promise.all([
+      steps.boundingBox(),
+      page.getByRole("heading", { level: 1 }).boundingBox(),
+    ]);
+    expect(stepsBox!.y).toBeLessThan(headingBox!.y);
+  });
+
+  test("shows no steps to an owner who owes none", async ({
+    page,
+    context,
+  }) => {
+    await seedViewer(context, "trialing");
+    await seedSession(page);
+    await openBilling(page, TRIALING_PLAN);
+
+    await page.goto("/upgrade");
+
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(page.getByRole("list", { name: "Sign up steps" })).toHaveCount(
+      0,
+    );
+  });
+
   test("writes its own order summary and follows the interval", async ({
     page,
     context,
