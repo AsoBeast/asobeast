@@ -72,7 +72,7 @@ export class TrialClaimBackfill
     let after: string | undefined;
     for (;;) {
       const owners = await this.prisma.user.findMany({
-        where: { role: 'owner', workspace: { trialStartedAt: { not: null } } },
+        where: { role: 'owner', workspace: { trialClaimedAt: { not: null } } },
         select: { id: true, email: true },
         orderBy: { id: 'asc' },
         take: BACKFILL_PAGE_SIZE,

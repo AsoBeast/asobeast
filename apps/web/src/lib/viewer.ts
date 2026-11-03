@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { unstable_rethrow } from "next/navigation";
 import type { AuthUser } from "@asobeast/shared";
 import { ApiError, getAuthMe } from "@/lib/api";
 import { adminAccessOf, type AdminAccess } from "@/lib/admin-access";
@@ -17,6 +18,26 @@ async function signedInViewer(): Promise<AuthUser | null> {
 }
 
 export const viewer = cache(signedInViewer);
+
+export const ENTRY_STEP_WAIT_MS = 3_000;
+
+export async function viewerWhenAnswered(): Promise<AuthUser | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const unanswered = new Promise<null>((resolve) => {
+    timer = setTimeout(resolve, ENTRY_STEP_WAIT_MS, null);
+  });
+  try {
+    return await Promise.race([
+      viewer().catch((error: unknown) => {
+        unstable_rethrow(error);
+        return null;
+      }),
+      unanswered,
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 export async function viewerIsOperator(): Promise<boolean> {
   return (await viewer())?.platformOperator === true;

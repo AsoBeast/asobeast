@@ -4,10 +4,14 @@ import type Stripe from 'stripe';
 import { TrialClaims } from '../auth/trial-claims';
 import { workspaceOwnerEmail } from '../auth/workspace-owner';
 import { PrismaService } from '../prisma/prisma.service';
+import { STRIPE_MAX_NETWORK_RETRIES, STRIPE_TIMEOUT_MS } from './stripe.client';
 import { isMissingResource } from './stripe-errors';
 import { StripeService } from './stripe.service';
 
 const SETTLE_LOCK = 2_847_513;
+
+const SETTLE_TIMEOUT_MS =
+  STRIPE_TIMEOUT_MS * (STRIPE_MAX_NETWORK_RETRIES + 1) + 5_000;
 
 export type TrialSettlement = 'skipped' | 'settled' | 'ended';
 
@@ -38,23 +42,23 @@ export class TrialStarts {
     const fingerprint = await this.cardFingerprintOf(subscription);
     const owner = await workspaceOwnerEmail(this.prisma, workspace.id);
 
-    const lost = await this.prisma.withTransaction(async (tx) => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${SETTLE_LOCK}, hashtext(${workspace.id}))`;
-      const current = await tx.workspace.findUnique({
-        where: { id: workspace.id },
-        select: { trialClaimedAt: true },
-      });
-      if (current?.trialClaimedAt) return null;
-      const lostClaims = await this.claim(tx, workspace.id, owner, fingerprint);
-      if (lostClaims.length === 0) await markSettled(tx, workspace.id);
-      return lostClaims;
-    });
-    if (lost === null) return 'skipped';
-    if (lost.length === 0) return 'settled';
-
-    await this.endTrial(workspace.id, subscription, lost);
-    await this.prisma.withTransaction((tx) => markSettled(tx, workspace.id));
-    return 'ended';
+    return this.prisma.withTransaction(
+      async (tx): Promise<TrialSettlement> => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(${SETTLE_LOCK}, hashtext(${workspace.id}))`;
+        const current = await tx.workspace.findUnique({
+          where: { id: workspace.id },
+          select: { trialClaimedAt: true },
+        });
+        if (current?.trialClaimedAt) return 'skipped';
+        const lost = await this.claim(tx, workspace.id, owner, fingerprint);
+        if (lost.length > 0) {
+          await this.endTrial(workspace.id, subscription, lost);
+        }
+        await markSettled(tx, workspace.id);
+        return lost.length === 0 ? 'settled' : 'ended';
+      },
+      { timeout: SETTLE_TIMEOUT_MS },
+    );
   }
 
   private async claim(

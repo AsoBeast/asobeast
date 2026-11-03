@@ -1,10 +1,5 @@
 import { type Page } from "@playwright/test";
-import {
-  PLAN_LIMITS,
-  UPGRADE_PATH,
-  type AccountPlan,
-  type AuthUser,
-} from "@asobeast/shared";
+import { PLAN_LIMITS, UPGRADE_PATH, type AccountPlan } from "@asobeast/shared";
 import { holdRequest } from "./held-request.mts";
 import { hydrated } from "./hydrated.mts";
 import {
@@ -16,7 +11,9 @@ import { fulfillJson, routePlan } from "./plan-helpers.mts";
 import { SERP_HISTORY_DAYS } from "./serp-history.mts";
 import type { SerpEntryItem, SerpSnapshot } from "@asobeast/shared";
 import { expect, test } from "./session.mts";
+import { openBilling } from "./trial-plans.mts";
 import { typeInto } from "./type.mts";
+import { seedViewer } from "./viewer.mts";
 
 const TRIAL_PLAN: AccountPlan = {
   plan: "trial",
@@ -35,20 +32,6 @@ const TRIAL_PLAN: AccountPlan = {
     apps: { used: 1, limit: PLAN_LIMITS.trial.apps },
     keywordMarkets: { used: 20, limit: PLAN_LIMITS.trial.keywordMarkets },
   },
-};
-
-const UNCONFIRMED_OWNER: AuthUser = {
-  id: "u1",
-  email: "owner@example.com",
-  emailVerified: false,
-  name: "Owner",
-  role: "owner",
-  plan: "free",
-  trialEndsAt: null,
-  planExpiresAt: null,
-  entitled: false,
-  trialAwaitsConfirmation: true,
-  platformOperator: false,
 };
 
 function collectDomErrors(page: Page): string[] {
@@ -138,20 +121,19 @@ test("a translated upgrade page keeps working when checkout starts", async ({
   expect(errors).toEqual([]);
 });
 
-test("a translated upgrade page shows the new label of a button it changed", async ({
+test("a translated confirmation page shows the new label of a button it changed", async ({
   page,
 }) => {
   const errors = collectDomErrors(page);
-  await page.route("**/api/backend/auth/me", (route) =>
-    route.fulfill(fulfillJson(200, UNCONFIRMED_OWNER)),
-  );
+  await seedViewer(page.context(), "checkout-pending-unconfirmed");
+  await openBilling(page);
   const resend = await holdRequest(
     page,
     /\/api\/backend\/auth\/verify\/resend$/,
     "POST",
     (route) => route.fulfill({ status: 204 }),
   );
-  await openUpgrade(page);
+  await page.goto("/confirm-email");
   const button = await hydrated(
     page.getByRole("button", { name: "Send a new link" }),
   );
