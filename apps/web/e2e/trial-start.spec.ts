@@ -1,7 +1,9 @@
 import { formatDate } from "../src/lib/format";
-import { type Page } from "@playwright/test";
+import { type Locator, type Page } from "@playwright/test";
 import { openEmbedded, STRIPE_STUB } from "./embedded-checkout.mts";
+import { holdRequest } from "./held-request.mts";
 import { fulfillJson, seedSession } from "./plan-helpers.mts";
+import { layoutBox } from "./layout-box.mts";
 import { expect, test } from "./reporting.mts";
 import {
   CATALOG,
@@ -15,7 +17,9 @@ import {
 import { seedViewer } from "./viewer.mts";
 import { summaryFromCatalog } from "../src/lib/order-summary";
 import { paywallFaq } from "../src/lib/paywall-faq";
-import { trustLines } from "../src/lib/plan-choice";
+import { trialBarParts, trustLines } from "../src/lib/plan-choice";
+
+const TRIAL_BUTTON = "Pay $0 today and start your free trial";
 
 async function register(page: Page, path = "/register") {
   await page.goto(path);
@@ -62,7 +66,7 @@ test.describe("the billing wall", () => {
       page.getByRole("button", { name: "Ultimate, $99 per month" }),
     ).toHaveAttribute("aria-pressed", "false");
     await expect(
-      page.getByRole("button", { name: "Start free trial" }),
+      page.getByRole("button", { name: TRIAL_BUTTON }),
     ).toBeEnabled();
   });
 
@@ -109,7 +113,7 @@ test.describe("the billing wall", () => {
 
     await page.goto("/upgrade");
     await page.getByRole("tab", { name: "Annual" }).click();
-    await page.getByRole("button", { name: "Start free trial" }).click();
+    await page.getByRole("button", { name: TRIAL_BUTTON }).click();
 
     await expect
       .poll(() => requested)
@@ -160,10 +164,10 @@ test.describe("the billing wall", () => {
     const payment = page.getByRole("heading", { level: 2, name: "Payment" });
     await expect(plans).toBeVisible();
     const [plansBox, paymentBox] = await Promise.all([
-      plans.boundingBox(),
-      payment.boundingBox(),
+      layoutBox(plans),
+      layoutBox(payment),
     ]);
-    expect(paymentBox!.x).toBeLessThan(plansBox!.x);
+    expect(paymentBox.x).toBeLessThan(plansBox.x);
     const headings = await page
       .getByRole("heading", { level: 2 })
       .allTextContents();
@@ -173,10 +177,22 @@ test.describe("the billing wall", () => {
     expect(headings.indexOf("Payment")).toBeLessThan(
       headings.indexOf("Questions"),
     );
-    const questionsBox = await page
-      .getByRole("heading", { level: 2, name: "Questions" })
-      .boundingBox();
-    expect(questionsBox!.x).toBe(plansBox!.x);
+    const panelBox = await layoutBox(
+      page.getByRole("region", { name: "Payment" }),
+    );
+    const questionsBox = await layoutBox(
+      page.getByRole("heading", { level: 2, name: "Questions" }),
+    );
+    expect(questionsBox.y).toBeGreaterThan(panelBox.y + panelBox.height);
+    expect(Math.round(questionsBox.x)).toBe(Math.round(panelBox.x));
+    const questions = page
+      .getByRole("region", { name: "Questions" })
+      .getByRole("button");
+    const [first, second] = await Promise.all([
+      layoutBox(questions.nth(0)),
+      layoutBox(questions.nth(1)),
+    ]);
+    expect(Math.round(first.y)).toBe(Math.round(second.y));
   });
 
   test("puts the plans above the payment on a phone without scrolling sideways", async ({
@@ -197,19 +213,35 @@ test.describe("the billing wall", () => {
     const payment = page.getByRole("heading", { level: 2, name: "Payment" });
     await expect(plans).toBeVisible();
     const [plansBox, paymentBox] = await Promise.all([
-      plans.boundingBox(),
-      payment.boundingBox(),
+      layoutBox(plans),
+      layoutBox(payment),
     ]);
-    expect(plansBox!.y).toBeLessThan(paymentBox!.y);
-    const questionsBox = await page
-      .getByRole("heading", { level: 2, name: "Questions" })
-      .boundingBox();
-    expect(paymentBox!.y).toBeLessThan(questionsBox!.y);
+    expect(plansBox.y).toBeLessThan(paymentBox.y);
+    const questionsBox = await layoutBox(
+      page.getByRole("heading", { level: 2, name: "Questions" }),
+    );
+    expect(paymentBox.y).toBeLessThan(questionsBox.y);
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= window.innerWidth,
       ),
     ).toBe(true);
+    const cards = page
+      .getByRole("group", { name: "Plans" })
+      .getByRole("button");
+    const [indie, ultimate] = await Promise.all([
+      layoutBox(cards.nth(0)),
+      layoutBox(cards.nth(1)),
+    ]);
+    expect(Math.round(indie.y)).toBe(Math.round(ultimate.y));
+    const questions = page
+      .getByRole("region", { name: "Questions" })
+      .getByRole("button");
+    const [first, second] = await Promise.all([
+      layoutBox(questions.nth(0)),
+      layoutBox(questions.nth(1)),
+    ]);
+    expect(first.y).toBeLessThan(second.y);
   });
 
   test("promises no secure payment when checkout is not configured", async ({
@@ -252,6 +284,301 @@ test.describe("the billing wall", () => {
     await expect(page.getByText("confirmation link")).toHaveCount(0);
   });
 
+  test("shows the sign up as three steps with the plan step current", async ({
+    page,
+    context,
+  }) => {
+    await seedViewer(context, "checkout-pending");
+    await seedSession(page);
+    await openBilling(page);
+
+    await page.goto("/upgrade");
+
+    const steps = page.getByRole("list", { name: "Sign up steps" });
+    await expect(steps.getByRole("listitem")).toHaveText([
+      /Account created/,
+      /Email confirmed/,
+      /Choose a plan/,
+    ]);
+    await expect(steps.locator("[aria-current='step']")).toHaveText(
+      /Choose a plan/,
+    );
+    await expect(
+      steps.getByRole("listitem").nth(0).locator("svg"),
+    ).toBeVisible();
+    const [stepsBox, headingBox] = await Promise.all([
+      layoutBox(steps),
+      layoutBox(page.getByRole("heading", { level: 1 })),
+    ]);
+    expect(stepsBox.y).toBeLessThan(headingBox.y);
+  });
+
+  test("leaves the session check when the session status cannot be read", async ({
+    page,
+    context,
+  }) => {
+    await seedViewer(context, "checkout-pending");
+    await seedSession(page);
+    await openBilling(page);
+    await page.route("**/api/backend/auth/status", (route) =>
+      route.fulfill({ status: 503 }),
+    );
+
+    await page.goto("/upgrade");
+
+    await expect(
+      page.getByRole("status", { name: "Checking your session" }),
+    ).toHaveCount(0, { timeout: 20_000 });
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  });
+
+  test("keeps the current plan badge inside its card on a narrow phone", async ({
+    page,
+    context,
+  }) => {
+    await page.setViewportSize({ width: 320, height: 800 });
+    await seedViewer(context, "trialing");
+    await seedSession(page);
+    await openBilling(page, {
+      ...TRIALING_PLAN,
+      plan: "ultimate",
+      displayName: "Ultimate",
+      trialing: false,
+      trialEndsAt: null,
+    });
+
+    await page.goto("/upgrade?plan=ultimate");
+
+    const card = page
+      .getByRole("group", { name: "Plans" })
+      .getByRole("button")
+      .nth(1);
+    const badge = card.getByText("Current", { exact: true });
+    await expect(badge).toBeVisible();
+    const [cardBox, badgeBox] = await Promise.all([
+      layoutBox(card),
+      layoutBox(badge),
+    ]);
+    expect(badgeBox.x + badgeBox.width).toBeLessThanOrEqual(
+      cardBox.x + cardBox.width,
+    );
+  });
+
+  test("shows no steps to an owner who owes none", async ({
+    page,
+    context,
+  }) => {
+    await seedViewer(context, "trialing");
+    await seedSession(page);
+    await openBilling(page, TRIALING_PLAN);
+
+    await page.goto("/upgrade");
+
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(page.getByRole("list", { name: "Sign up steps" })).toHaveCount(
+      0,
+    );
+  });
+
+  test("sets the heading in the hero size on a laptop and the display size on a phone", async ({
+    page,
+    context,
+  }) => {
+    await seedViewer(context, "checkout-pending");
+    await seedSession(page);
+    await openBilling(page);
+    const heading = page.getByRole("heading", { level: 1 });
+    const fontSize = () =>
+      heading.evaluate((h1) => getComputedStyle(h1).fontSize);
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto("/upgrade");
+    await expect(heading).toBeVisible();
+    expect(await fontSize()).toBe("36px");
+
+    await page.setViewportSize({ width: 375, height: 812 });
+    expect(await fontSize()).toBe("24px");
+  });
+
+  test("marks each trust line with a check", async ({ page, context }) => {
+    await seedViewer(context, "checkout-pending");
+    await seedSession(page);
+    await openBilling(page);
+    const now = new Date();
+    await page.clock.setFixedTime(now);
+    const lines = trustLines({ days: 7 }, now);
+
+    await page.goto("/upgrade");
+
+    const row = page.getByRole("list", { name: "Why the trial is safe" });
+    await expect(row.getByRole("listitem")).toHaveText(lines);
+    await expect(row.locator("svg")).toHaveCount(3);
+  });
+
+  test("holds the wall to the checkout width on a wide screen", async ({
+    page,
+    context,
+  }) => {
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    await seedViewer(context, "checkout-pending");
+    await seedSession(page);
+    await openBilling(page);
+
+    await page.goto("/upgrade");
+
+    const wall = page
+      .getByRole("heading", { level: 1 })
+      .locator("xpath=ancestor::div[contains(@class,'page-checkout')]");
+    const box = await layoutBox(wall);
+    expect(box.width).toBeLessThanOrEqual(1216);
+    expect(Math.abs(box.x - (1920 - box.width) / 2)).toBeLessThanOrEqual(2);
+  });
+
+  test("shows each plan's price and the limits that tell them apart", async ({
+    page,
+    context,
+  }) => {
+    await seedViewer(context, "checkout-pending");
+    await seedSession(page);
+    await openBilling(page);
+
+    await page.goto("/upgrade");
+
+    const indie = page.getByRole("button", { name: "Indie, $10 per month" });
+    const ultimate = page.getByRole("button", {
+      name: "Ultimate, $99 per month",
+    });
+    await expect(indie).toHaveAttribute("aria-pressed", "true");
+    await expect(indie).toContainText("5 apps");
+    await expect(indie).toContainText("1,000 keyword markets");
+    await expect(ultimate).toContainText("50 apps");
+    await expect(indie).toHaveAccessibleDescription(
+      "5 apps 1,000 keyword markets",
+    );
+    await expect(ultimate).toHaveAccessibleDescription(
+      "50 apps 10,000 keyword markets",
+    );
+    const background = (button: Locator) =>
+      button.evaluate((node) => getComputedStyle(node).backgroundColor);
+    expect(await background(indie)).not.toBe(await background(ultimate));
+    const priceSize = await indie
+      .getByText("$10", { exact: true })
+      .evaluate((node) => getComputedStyle(node).fontSize);
+    expect(priceSize).toBe("36px");
+
+    await ultimate.click();
+
+    await expect(ultimate).toHaveAttribute("aria-pressed", "true");
+    expect(await background(ultimate)).not.toBe(await background(indie));
+    await expect(
+      page.getByRole("heading", { name: "What Ultimate includes" }),
+    ).toBeVisible();
+  });
+
+  test("names the saving inside the annual option", async ({
+    page,
+    context,
+  }) => {
+    await seedViewer(context, "checkout-pending");
+    await seedSession(page);
+    await openBilling(page);
+
+    await page.goto("/upgrade");
+
+    const annual = page.getByRole("tab", { name: /^Annual/ });
+    const badge = annual.getByText("Save 17%");
+    await expect(badge).toBeVisible();
+    const color = (locator: Locator) =>
+      locator.evaluate((node) => getComputedStyle(node).color);
+    expect(await color(badge)).not.toBe(
+      await color(annual.getByText("Annual", { exact: true })),
+    );
+    await annual.click();
+    await expect(
+      page.getByRole("button", { name: "Indie, $100 per year" }),
+    ).toHaveAttribute("aria-pressed", "true");
+  });
+
+  test("frames the payment in one raised panel", async ({ page, context }) => {
+    await seedViewer(context, "checkout-pending");
+    await seedSession(page);
+    await openBilling(page);
+
+    await page.goto("/upgrade");
+
+    const panel = page.getByRole("region", { name: "Payment" });
+    const styles = await panel.evaluate((node) => {
+      const computed = getComputedStyle(node);
+      return {
+        border: computed.borderTopWidth,
+        background: computed.backgroundColor,
+        page: getComputedStyle(document.body).backgroundColor,
+      };
+    });
+    expect(styles.border).toBe("1px");
+    expect(styles.background).not.toBe(styles.page);
+    await expect(
+      panel.getByRole("region", { name: "Order summary" }),
+    ).toBeVisible();
+  });
+
+  test("draws the strip with the promise in the foreground and a tall button", async ({
+    page,
+    context,
+  }) => {
+    await seedViewer(context, "checkout-pending");
+    await seedSession(page);
+    await openBilling(page);
+    const now = new Date();
+    await page.clock.setFixedTime(now);
+    const parts = trialBarParts({ days: 7 }, now);
+
+    await page.goto("/upgrade");
+
+    const strip = page.getByRole("region", { name: "Your trial" });
+    const color = (locator: Locator) =>
+      locator.evaluate((node) => getComputedStyle(node).color);
+    const heading = await color(page.getByRole("heading", { level: 1 }));
+    expect(await color(strip.getByText(parts.free, { exact: true }))).toBe(
+      heading,
+    );
+    expect(await color(strip.getByText(parts.endsOn, { exact: true }))).toBe(
+      heading,
+    );
+    expect(
+      await color(strip.getByText(parts.before.trim(), { exact: true })),
+    ).not.toBe(heading);
+    const button = strip.getByRole("button", { name: TRIAL_BUTTON });
+    expect((await layoutBox(button)).height).toBe(44);
+  });
+
+  test("keeps the checkout button at the right edge without a trial", async ({
+    page,
+    context,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await seedViewer(context, "checkout-pending");
+    await seedSession(page);
+    await openBilling(page, { ...OFFERED_PLAN, trialOffer: null });
+
+    await page.goto("/upgrade");
+
+    const strip = page.getByRole("region", { name: "Checkout" });
+    const button = strip.getByRole("button", { name: "Choose Indie" });
+    const panel = page.getByRole("region", { name: "Payment" });
+    const plans = page.getByRole("group", { name: "Plans" });
+    await expect(button).toBeVisible();
+    const [buttonBox, panelBox, plansBox] = await Promise.all([
+      layoutBox(button),
+      layoutBox(panel),
+      layoutBox(plans),
+    ]);
+    expect(buttonBox.x).toBeGreaterThan(panelBox.x + panelBox.width);
+    expect(
+      Math.abs(buttonBox.x + buttonBox.width - (plansBox.x + plansBox.width)),
+    ).toBeLessThanOrEqual(2);
+  });
+
   test("writes its own order summary and follows the interval", async ({
     page,
     context,
@@ -268,9 +595,7 @@ test.describe("the billing wall", () => {
 
     await page.goto("/upgrade");
 
-    const summary = page
-      .getByRole("heading", { name: "Order summary" })
-      .locator("../..");
+    const summary = page.getByRole("region", { name: "Order summary" });
     await expect(summary).toContainText("Indie");
     await expect(summary).toContainText("Due today");
     await expect(summary).toContainText("$0.00");
@@ -350,7 +675,7 @@ test.describe("the billing wall", () => {
         page.locator('[data-mounted="cs_test_secret_price_indie_month"]'),
       ).toHaveAttribute("aria-label", "Stripe checkout for Indie, monthly");
       await expect(
-        page.getByRole("button", { name: "Start free trial" }),
+        page.getByRole("button", { name: TRIAL_BUTTON }),
       ).toHaveCount(0);
 
       await page.getByRole("tab", { name: "Annual" }).click();
@@ -477,6 +802,66 @@ test.describe("the billing wall", () => {
         page.locator('[data-mounted="cs_test_secret_price_ultimate_year"]'),
       ).toHaveCount(1);
       expect(priceIds).toEqual(["price_ultimate_year"]);
+    });
+
+    test("opens no checkout before the account plan answers", async ({
+      page,
+    }) => {
+      const bodies = await openEmbedded(page);
+      const plan = await holdRequest(
+        page,
+        /\/api\/backend\/auth\/plan$/,
+        "GET",
+        (route) => route.fulfill(fulfillJson(200, OFFERED_PLAN)),
+      );
+      const catalogRead = page.waitForResponse(
+        "**/api/backend/billing/catalog",
+      );
+
+      await page.goto("/upgrade");
+      await catalogRead;
+      await page.waitForTimeout(1_000);
+
+      expect(bodies).toEqual([]);
+      await expect(
+        page.getByRole("status", { name: "Checking your session" }),
+      ).toBeVisible();
+      plan.release();
+      await expect(page.locator("[data-mounted]")).toHaveCount(1);
+      expect(bodies).toHaveLength(1);
+    });
+
+    test("keeps the plans in view while the card form scrolls", async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 1280, height: 700 });
+      await openEmbedded(page);
+
+      await page.goto("/upgrade");
+      await expect(page.locator("[data-mounted]")).toHaveCount(1);
+      await page.evaluate(() => window.scrollTo(0, 600));
+
+      const plans = await layoutBox(
+        page.getByRole("heading", { level: 2, name: "Choose a plan" }),
+      );
+      const payment = await layoutBox(
+        page.getByRole("heading", { level: 2, name: "Payment" }),
+      );
+      expect(plans.y).toBeGreaterThanOrEqual(0);
+      expect(plans.y).toBeLessThanOrEqual(48);
+      expect(payment.y).toBeLessThan(0);
+
+      await page.evaluate(() =>
+        window.scrollTo(0, document.documentElement.scrollHeight),
+      );
+
+      const features = await layoutBox(
+        page.getByRole("region", { name: "What Indie includes" }),
+      );
+      const questions = await layoutBox(
+        page.getByRole("heading", { level: 2, name: "Questions" }),
+      );
+      expect(features.y + features.height).toBeLessThanOrEqual(questions.y);
     });
 
     test.describe("in the light theme", () => {
@@ -606,7 +991,7 @@ test.describe("the billing wall", () => {
       await page.goto("/upgrade");
 
       await expect(
-        page.getByRole("button", { name: "Start free trial" }),
+        page.getByRole("button", { name: TRIAL_BUTTON }),
       ).toBeVisible();
       await expect(page.locator("[data-mounted]")).toHaveCount(0);
     });

@@ -7,29 +7,23 @@ import {
   type BillingInterval,
   type PaidPlanName,
 } from "@asobeast/shared";
-import { Check } from "lucide-react";
+import { useId } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
-import { formatNumber } from "@/lib/format";
+import { formatPlanLimit } from "@/lib/format";
 import { INTERVAL_LABEL, priceOf } from "@/lib/order-summary";
 import {
   CHOOSE_A_PLAN_TITLE,
+  EVERY_PLAN_FEATURES,
   EVERY_PLAN_INCLUDES,
-  FEATURES_TITLE,
+  featuresTitle,
   planCardLabel,
+  planHighlights,
   savingPercent,
   type PlanAction,
 } from "@/lib/plan-choice";
 import { cn } from "@/lib/utils";
-
-const INCLUDED = [
-  "Daily keyword rank tracking across every storefront",
-  "Popularity, difficulty and opportunity scoring",
-  "Competitor discovery and metadata audits",
-  "AI audit and metadata drafts",
-  "Alerts by email and webhook",
-  "Personal API tokens and the MCP server",
-];
+import { CheckMark } from "./CheckMark";
 
 const LIMIT_ROWS = [
   { key: "apps", label: "Apps" },
@@ -56,29 +50,43 @@ function PlanOption({
   selected: boolean;
   onSelect: () => void;
 }) {
+  const highlightsId = useId();
+
   return (
     <button
       type="button"
       aria-pressed={selected}
       aria-label={planCardLabel(name, interval, action)}
+      aria-describedby={highlightsId}
       onClick={onSelect}
       className={cn(
-        "flex min-w-0 flex-col items-start gap-1 rounded-xl border-[1.5px] bg-card p-4 text-left transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
-        selected && "border-primary ring-1 ring-primary",
+        "flex min-w-0 flex-col items-start gap-3 rounded-2xl border bg-card p-4 text-left shadow-raised transition-[color,background-color,border-color,box-shadow] hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none sm:p-6",
+        selected &&
+          "border-primary bg-primary-subtle ring-1 ring-primary hover:bg-primary-subtle",
       )}
     >
-      <span className="flex items-center gap-2 text-body">
+      <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-title">
         <span>{PLANS[name].displayName}</span>
         {action === "current" ? (
           <Badge variant="secondary">Current</Badge>
         ) : null}
       </span>
-      <span>
-        <span className="text-display tabular-nums">{`$${priceOf(name, interval)}`}</span>
-        <span className="text-body text-muted-foreground">
+      <span aria-hidden="true" className="flex items-baseline gap-1">
+        <span className="text-display tabular-nums sm:text-hero">{`$${priceOf(name, interval)}`}</span>
+        <span className="text-subtitle font-normal text-muted-foreground">
           {PER_INTERVAL[interval]}
         </span>
       </span>
+      <ul
+        id={highlightsId}
+        className="flex flex-col gap-1 text-body text-muted-foreground"
+      >
+        {planHighlights(name).map((line) => (
+          <li key={line}>
+            <span>{line}</span>
+          </li>
+        ))}
+      </ul>
     </button>
   );
 }
@@ -99,28 +107,37 @@ export function PlanPicker({
   const { limits } = PLANS[selected];
 
   return (
-    <div className="flex min-w-0 flex-col gap-6 lg:col-start-2 lg:row-start-1">
+    <div className="flex min-w-0 flex-col gap-6 lg:sticky lg:top-6 lg:col-start-2 lg:row-start-1 lg:self-start">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-title">{CHOOSE_A_PLAN_TITLE}</h2>
+        <h2 className="text-display">{CHOOSE_A_PLAN_TITLE}</h2>
         <Tabs
           value={interval}
           onValueChange={(next) => onInterval(next as BillingInterval)}
         >
-          <TabsList aria-label="Billing interval">
+          <TabsList
+            aria-label="Billing interval"
+            className="rounded-xl p-1 group-data-horizontal/tabs:h-10"
+          >
             {BILLING_INTERVALS.map((value) => (
-              <TabsOption key={value} value={value}>
-                {INTERVAL_LABEL[value]}
+              <TabsOption
+                key={value}
+                value={value}
+                className="gap-2 rounded-lg px-3 text-subtitle"
+              >
+                <span>{INTERVAL_LABEL[value]}</span>
                 {value === "year" ? (
-                  <Badge variant="secondary">
-                    Save {savingPercent(selected)}%
-                  </Badge>
+                  <Badge variant="info">{`Save ${savingPercent(selected)}%`}</Badge>
                 ) : null}
               </TabsOption>
             ))}
           </TabsList>
         </Tabs>
       </div>
-      <div role="group" aria-label="Plans" className="grid grid-cols-2 gap-3">
+      <div
+        role="group"
+        aria-label="Plans"
+        className="grid grid-cols-2 gap-3 sm:gap-4"
+      >
         {PAID_PLAN_NAMES.map((name) => (
           <PlanOption
             key={name}
@@ -134,31 +151,26 @@ export function PlanPicker({
       </div>
       <section
         aria-labelledby="plan-features-title"
-        className="flex flex-col gap-3"
+        className="flex flex-col gap-4"
       >
         <h2 id="plan-features-title" className="text-title">
-          {FEATURES_TITLE}
+          {featuresTitle(selected)}
         </h2>
-        <dl className="grid gap-x-8 gap-y-2 text-body sm:grid-cols-2">
+        <dl className="divide-y divide-border text-subtitle">
           {LIMIT_ROWS.map(({ key, label }) => (
-            <div key={key} className="flex justify-between gap-4">
-              <dt className="text-muted-foreground">{label}</dt>
-              <dd className="font-medium tabular-nums">
-                {formatNumber(limits[key] ?? 0)}
-              </dd>
+            <div key={key} className="flex justify-between gap-4 py-2">
+              <dt className="font-normal text-muted-foreground">{label}</dt>
+              <dd className="tabular-nums">{formatPlanLimit(limits[key])}</dd>
             </div>
           ))}
         </dl>
         <p className="text-caption text-muted-foreground">
           {EVERY_PLAN_INCLUDES}
         </p>
-        <ul className="grid gap-2 text-body sm:grid-cols-2">
-          {INCLUDED.map((feature) => (
+        <ul className="flex flex-col gap-2 text-body">
+          {EVERY_PLAN_FEATURES.map((feature) => (
             <li key={feature} className="flex items-start gap-2">
-              <Check
-                aria-hidden="true"
-                className="mt-0.5 size-4 shrink-0 text-success"
-              />
+              <CheckMark className="mt-0.5 size-4" />
               <span>{feature}</span>
             </li>
           ))}

@@ -1,4 +1,9 @@
 @theme {
+  --text-hero: 2.25rem;
+  --text-hero--line-height: 1.1;
+  --text-hero--letter-spacing: -0.024em;
+  --text-hero--font-weight: 600;
+
   --text-display: 1.5rem;
   --text-display--line-height: 1.2;
   --text-display--letter-spacing: -0.018em;

@@ -6,10 +6,12 @@ import {
   PLANS,
   planPriceLabel,
   type AccountPlan,
+  type AuthUser,
   type BillingCatalog,
   type BillingInterval,
   type PaidPlanName,
 } from "@asobeast/shared";
+import { SignUpSteps } from "@/components/auth/SignUpSteps";
 import { checkoutUiFor } from "@/lib/embedded-checkout";
 import { paywallFaq } from "@/lib/paywall-faq";
 import {
@@ -18,10 +20,11 @@ import {
   paywallStatusLine,
   planAction,
   planActionLabel,
-  trialBarLine,
+  trialBarParts,
   trustLines,
 } from "@/lib/plan-choice";
 import { planParam } from "@/lib/search-params";
+import { signUpSteps } from "@/lib/sign-up-steps";
 import { HostedAction } from "./HostedAction";
 import { PaymentColumn } from "./PaymentColumn";
 import { PaywallFaq } from "./PaywallFaq";
@@ -32,9 +35,11 @@ import { TrustRow } from "./TrustRow";
 const DEFAULT_PLAN: PaidPlanName = "indie";
 
 export function BillingWall({
+  user,
   plan,
   catalog,
 }: {
+  user: AuthUser | undefined;
   plan: AccountPlan | undefined;
   catalog: BillingCatalog | undefined;
 }) {
@@ -54,21 +59,22 @@ export function BillingWall({
     checkoutUiFor(catalog) === "embedded" && buysPlan(action) && price
       ? (catalog?.publishableKey ?? null)
       : null;
-  const trialLine =
-    action === "trial" && offer ? trialBarLine(offer, now) : null;
+  const trialParts =
+    action === "trial" && offer ? trialBarParts(offer, now) : null;
 
   return (
-    <div className="page-wide flex flex-col gap-8 pb-40 sm:pb-24">
-      <header className="flex flex-col gap-3">
-        <h1 className="text-display tracking-tight text-balance">
+    <div className="page-checkout flex flex-col gap-8 pb-40 sm:pb-28">
+      <header className="flex flex-col gap-4">
+        <SignUpSteps steps={signUpSteps(user)} />
+        <h1 className="text-display tracking-tight text-balance sm:text-hero">
           {paywallHeading(plan)}
         </h1>
-        <p className="text-body text-muted-foreground">
+        <p className="max-w-prose text-subtitle font-normal text-muted-foreground">
           {paywallStatusLine(plan, now)}
         </p>
         {offer ? <TrustRow lines={trustLines(offer, now)} /> : null}
       </header>
-      <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,36rem)]">
+      <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,28rem)] xl:gap-12">
         <PlanPicker
           interval={interval}
           onInterval={setInterval}
@@ -86,11 +92,14 @@ export function BillingWall({
           publishableKey={publishableKey}
           now={now}
         />
-        <PaywallFaq
-          items={paywallFaq(offer, planPriceLabel(selected, interval), now)}
-        />
       </div>
-      <TrialBar line={trialLine} label={trialLine ? "Your trial" : "Checkout"}>
+      <PaywallFaq
+        items={paywallFaq(offer, planPriceLabel(selected, interval), now)}
+      />
+      <TrialBar
+        parts={trialParts}
+        label={trialParts ? "Your trial" : "Checkout"}
+      >
         {publishableKey ? null : (
           <HostedAction
             action={action}

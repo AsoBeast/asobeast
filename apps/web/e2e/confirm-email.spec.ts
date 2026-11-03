@@ -1,5 +1,6 @@
 import { type Page } from "@playwright/test";
 import { seedSession } from "./plan-helpers.mts";
+import { layoutBox } from "./layout-box.mts";
 import { expect, test } from "./reporting.mts";
 import { openBilling, openRegistration } from "./trial-plans.mts";
 import { seedViewer, type Viewer } from "./viewer.mts";
@@ -45,6 +46,27 @@ test.describe("the confirmation page", () => {
     ).toBeVisible();
     await expect(page.getByRole("button", { name: /Indie/ })).toHaveCount(0);
     expect(stripeRequests).toBe(0);
+  });
+
+  test("shows the email step as the current one above the card", async ({
+    page,
+  }) => {
+    await openAs(page, "checkout-pending-unconfirmed");
+
+    await page.goto("/confirm-email");
+
+    const steps = page.getByRole("list", { name: "Sign up steps" });
+    await expect(steps.locator("[aria-current='step']")).toHaveText(
+      /Email confirmed/,
+    );
+    await expect(steps.getByRole("listitem").last()).toHaveText(
+      /Choose a plan/,
+    );
+    const [stepsBox, headingBox] = await Promise.all([
+      layoutBox(steps),
+      layoutBox(page.getByRole("heading", { level: 1 })),
+    ]);
+    expect(stepsBox.y).toBeLessThan(headingBox.y);
   });
 
   test("sends one new link and says so", async ({ page }) => {

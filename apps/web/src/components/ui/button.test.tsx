@@ -19,6 +19,13 @@ const choose = (pending: boolean) => (
 );
 
 describe("Button", () => {
+  it("draws the extra large size at the touch target height", () => {
+    const markup = renderToStaticMarkup(<Button size="xl">Pay</Button>);
+
+    expect(markup).toContain("h-11");
+    expect(inner(<Button size="xl">Pay</Button>)).toBe("<span>Pay</span>");
+  });
+
   it("puts a plain label in a span", () => {
     expect(inner(<Button>Save</Button>)).toBe("<span>Save</span>");
   });

@@ -6,9 +6,11 @@ import {
   type BillingCatalog,
   type BillingInterval,
   type PaidPlanName,
+  type PlanLimit,
+  type PlanLimits,
   type TrialOffer,
 } from "@asobeast/shared";
-import { formatDate } from "@/lib/format";
+import { formatDate, pluralize } from "@/lib/format";
 
 export type PlanAction =
   "current" | "checkout" | "trial" | "change" | "resume" | "pending";
@@ -62,7 +64,7 @@ const STALLED_IN_SETTINGS =
 
 const ACTION_LABEL: Record<Exclude<PlanAction, "checkout">, string> = {
   current: "Current plan",
-  trial: "Start free trial",
+  trial: "Pay $0 today and start your free trial",
   change: "Change in the billing portal",
   resume: "Resume in the billing portal",
   pending: "Confirming your payment",
@@ -172,13 +174,54 @@ export const PAYMENT_TITLE = "Payment";
 
 export const CHOOSE_A_PLAN_TITLE = "Choose a plan";
 
-export const FEATURES_TITLE = "Features";
+export function featuresTitle(name: PaidPlanName): string {
+  return `What ${PLANS[name].displayName} includes`;
+}
+
+function limitLine(limit: PlanLimit, singular: string): string {
+  return limit === null ? `Unlimited ${singular}s` : pluralize(limit, singular);
+}
+
+export function limitHighlights({
+  apps,
+  keywordMarkets,
+}: Pick<PlanLimits, "apps" | "keywordMarkets">): readonly string[] {
+  return [limitLine(apps, "app"), limitLine(keywordMarkets, "keyword market")];
+}
+
+export function planHighlights(name: PaidPlanName): readonly string[] {
+  return limitHighlights(PLANS[name].limits);
+}
 
 export const FAQ_TITLE = "Questions";
 
 export const EVERY_PLAN_INCLUDES = "Every plan includes";
 
 export const SECURE_BY_STRIPE = "Secure payments processed by Stripe.";
+
+export const NEED_HELP = "Need help?";
+
+export const CONTACT_SUPPORT = "Contact support";
+
+export const CHECKOUT_UNREACHABLE = "Checkout could not be opened. Try again.";
+
+export const CHECKOUT_REOPENING = "Opening checkout…";
+
+export const CHECKOUT_PRICE_MISSING = "Checkout is not configured yet";
+
+export const CHECKOUT_START_FAILED = "Could not start checkout. Try again.";
+
+export const PORTAL_OPEN_FAILED =
+  "Could not open the billing portal. Try again.";
+
+export const EVERY_PLAN_FEATURES: readonly string[] = [
+  "Daily keyword rank tracking across every storefront",
+  "Popularity, difficulty and opportunity scoring",
+  "Competitor discovery and metadata audits",
+  "AI audit and metadata drafts",
+  "Alerts by email and webhook",
+  "Personal API tokens and the MCP server",
+];
 
 const BUYS: readonly PlanAction[] = ["checkout", "trial"];
 
@@ -210,9 +253,22 @@ export function trustLines(offer: TrialOffer, now: Date): readonly string[] {
   ];
 }
 
-export function trialBarLine(offer: TrialOffer, now: Date): string {
-  const endsOn = trialEndLabel(offer, now);
-  return `Your ${offer.days} day trial is 100% free, ending ${endsOn}. Cancel any time from settings.`;
+export interface TrialBarParts {
+  before: string;
+  free: string;
+  middle: string;
+  endsOn: string;
+  after: string;
+}
+
+export function trialBarParts(offer: TrialOffer, now: Date): TrialBarParts {
+  return {
+    before: `Your ${offer.days} day trial is `,
+    free: "100% free",
+    middle: ", ending ",
+    endsOn: trialEndLabel(offer, now),
+    after: ". Cancel any time from settings.",
+  };
 }
 
 export function planActionLabel(

@@ -9,9 +9,9 @@ import { useAuth } from "./use-auth";
 import { useSignedOutRedirect } from "./use-signed-out-redirect";
 
 export function UpgradeContent() {
-  const { isLoading, isMember, authenticated } = useAuth();
+  const { user, isLoading, isMember, authenticated } = useAuth();
   const signedOut = useSignedOutRedirect(true);
-  const { data: plan } = useQuery({
+  const { data: plan, isPending: planPending } = useQuery({
     ...accountPlanOptions,
     enabled: authenticated,
   });
@@ -21,7 +21,7 @@ export function UpgradeContent() {
   });
 
   if (isMember) return <MemberBilling plan={plan} />;
-  if (isLoading || signedOut) {
+  if (isLoading || signedOut || (authenticated && planPending)) {
     return (
       <div className="flex justify-center py-12">
         <SessionCheck />
@@ -29,5 +29,5 @@ export function UpgradeContent() {
     );
   }
 
-  return <BillingWall plan={plan} catalog={catalog} />;
+  return <BillingWall user={user} plan={plan} catalog={catalog} />;
 }

@@ -15,12 +15,12 @@ const LIGHT = { ...primitives, ...declarations(semantic, ":root") };
 const DARK = { ...primitives, ...declarations(semantic, "\\.dark") };
 
 describe("the checkout brand", () => {
-  it("paints each theme's page background behind the checkout", () => {
+  it("paints each theme's card surface behind the checkout", () => {
     expect(CHECKOUT_BRAND.light.backgroundColor).toBe(
-      hexOf(resolve("--background", LIGHT)),
+      hexOf(resolve("--card", LIGHT)),
     );
     expect(CHECKOUT_BRAND.dark.backgroundColor).toBe(
-      hexOf(resolve("--background", DARK)),
+      hexOf(resolve("--card", DARK)),
     );
   });
 

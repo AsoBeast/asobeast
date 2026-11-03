@@ -6,25 +6,33 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import type { FaqItem } from "@/lib/paywall-faq";
+import { READ_MORE, readMoreContext, type FaqItem } from "@/lib/paywall-faq";
 import { FAQ_TITLE } from "@/lib/plan-choice";
 
 export function PaywallFaq({ items }: { items: readonly FaqItem[] }) {
   return (
     <section
       aria-labelledby="paywall-faq-title"
-      className="flex min-w-0 flex-col gap-2 lg:col-start-2"
+      className="flex min-w-0 flex-col gap-4"
     >
-      <h2 id="paywall-faq-title" className="text-title">
+      <h2 id="paywall-faq-title" className="text-display">
         {FAQ_TITLE}
       </h2>
-      <Accordion type="single" collapsible>
+      <Accordion
+        type="single"
+        collapsible
+        className="grid items-start gap-3 sm:grid-cols-2"
+      >
         {items.map(({ question, answer, href }) => (
-          <AccordionItem key={question} value={question}>
-            <AccordionTrigger className="text-body font-medium">
+          <AccordionItem
+            key={question}
+            value={question}
+            className="rounded-xl border border-border bg-card px-4"
+          >
+            <AccordionTrigger className="py-4 text-subtitle">
               {question}
             </AccordionTrigger>
-            <AccordionContent className="flex flex-col items-start gap-1 text-body text-muted-foreground">
+            <AccordionContent className="flex flex-col items-start gap-2 pb-4 text-body text-muted-foreground">
               <p>{answer}</p>
               {href ? (
                 <a
@@ -33,11 +41,8 @@ export function PaywallFaq({ items }: { items: readonly FaqItem[] }) {
                   rel="noreferrer"
                   className="font-medium text-foreground underline decoration-primary underline-offset-4"
                 >
-                  Read more
-                  <span className="sr-only">
-                    {" "}
-                    about {question} (opens in a new tab)
-                  </span>
+                  {READ_MORE}
+                  <span className="sr-only">{readMoreContext(question)}</span>
                 </a>
               ) : null}
             </AccordionContent>

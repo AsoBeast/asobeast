@@ -13,6 +13,10 @@ import type { SerpEntryItem, SerpSnapshot } from "@asobeast/shared";
 import { expect, test } from "./session.mts";
 import { openBilling } from "./trial-plans.mts";
 import { typeInto } from "./type.mts";
+import {
+  CHECKOUT_UNCONFIGURED,
+  HANDLED_BY_STRIPE,
+} from "../src/lib/plan-choice";
 import { seedViewer } from "./viewer.mts";
 
 const TRIAL_PLAN: AccountPlan = {
@@ -48,7 +52,7 @@ function collectDomErrors(page: Page): string[] {
   return errors;
 }
 
-async function openUpgrade(page: Page): Promise<void> {
+async function routeUpgrade(page: Page): Promise<void> {
   await page.route("**/api/backend/auth/status", (route) =>
     route.fulfill(
       fulfillJson(200, {
@@ -75,6 +79,10 @@ async function openUpgrade(page: Page): Promise<void> {
       }),
     ),
   );
+}
+
+async function openUpgrade(page: Page): Promise<void> {
+  await routeUpgrade(page);
   await page.goto("/upgrade");
 }
 
@@ -95,6 +103,40 @@ async function translateText(page: Page): Promise<void> {
     }
   });
 }
+
+test("a translated upgrade page shows the payment note the catalog brings", async ({
+  page,
+}) => {
+  const errors = collectDomErrors(page);
+  await routeUpgrade(page);
+  const catalog = await holdRequest(
+    page,
+    /\/api\/backend\/billing\/catalog$/,
+    "GET",
+    (route) =>
+      route.fulfill(
+        fulfillJson(200, {
+          enabled: true,
+          prices: [
+            {
+              plan: "indie",
+              interval: "month",
+              priceId: "price_indie_month",
+              amountUsd: 10,
+            },
+          ],
+        }),
+      ),
+  );
+  await page.goto("/upgrade");
+  await hydrated(page.getByText(CHECKOUT_UNCONFIGURED));
+
+  await translateText(page);
+  catalog.release();
+
+  await expect(page.getByText(HANDLED_BY_STRIPE)).toBeVisible();
+  expect(errors).toEqual([]);
+});
 
 test("a translated upgrade page keeps working when checkout starts", async ({
   page,

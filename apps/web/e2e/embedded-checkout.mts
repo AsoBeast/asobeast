@@ -16,7 +16,10 @@ export const STRIPE_STUB = `
         return {
           mount: (target) =>
             secret.then(
-              (value) => target.setAttribute("data-mounted", value),
+              (value) => {
+                target.setAttribute("data-mounted", value);
+                target.style.height = "40rem";
+              },
               (error) => {
                 target.setAttribute("data-stripe-error", "");
                 throw new Error("fetchClientSecret failed: " + error);
