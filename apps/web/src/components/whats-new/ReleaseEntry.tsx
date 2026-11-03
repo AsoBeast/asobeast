@@ -61,7 +61,7 @@ export function ReleaseEntry({
         aria-labelledby={`${anchor}-version`}
         className="grid gap-3 sm:grid-cols-[8rem_1fr] sm:gap-8"
       >
-        <header className="flex flex-wrap items-center gap-x-3 gap-y-1 sm:sticky sm:top-6 sm:flex-col sm:items-start sm:self-start">
+        <header className="flex flex-wrap items-center gap-x-3 gap-y-1 sm:sticky sm:top-20 sm:flex-col sm:items-start sm:self-start">
           <h2
             id={`${anchor}-version`}
             className="text-title tracking-tight"

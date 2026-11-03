@@ -321,6 +321,25 @@ test.describe("the what's new sidebar item", () => {
     await expect(page.getByRole("dialog")).toHaveCount(0);
   });
 
+  test("keeps the version of an entry clear of the site header", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1512, height: 982 });
+    await page.goto("/whats-new");
+    await page.mouse.wheel(0, 500);
+    await expect
+      .poll(() => page.evaluate(() => window.scrollY))
+      .toBeGreaterThan(400);
+
+    const header = await page.locator("header").first().boundingBox();
+    const version = await releases(page)
+      .first()
+      .getByRole("heading", { level: 2 })
+      .boundingBox();
+    expect(header && version).toBeTruthy();
+    expect(version!.y).toBeGreaterThanOrEqual(header!.y + header!.height);
+  });
+
   test("renders quiet on the server so hydration matches", async ({
     context,
     page,
