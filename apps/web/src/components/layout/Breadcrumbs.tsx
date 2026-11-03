@@ -17,6 +17,7 @@ import { ADMIN_ROOT, adminSectionFrom } from "@/lib/admin-sections";
 import { APP_SECTIONS, appRouteFrom, sectionHref } from "@/lib/app-sections";
 import { appDetailOptions } from "@/lib/queries";
 import { useCachedQueryData } from "@/lib/use-cached-query-data";
+import { WHATS_NEW_LABEL, WHATS_NEW_PATH } from "./WhatsNewMenuItem";
 
 const WORKSPACE_LABELS: Record<string, string> = {
   "/": "Dashboard",
@@ -25,7 +26,7 @@ const WORKSPACE_LABELS: Record<string, string> = {
   [INTEGRATIONS_PATH]: "Integrations",
   [PLAY_SIGN_IN_PATH]: "Integrations",
   "/settings": "Settings",
-  "/whats-new": "What's New",
+  [WHATS_NEW_PATH]: WHATS_NEW_LABEL,
 };
 
 function sectionLabel(segment: string): string {

@@ -349,3 +349,23 @@ test.describe("the what's new sidebar item", () => {
     expect(errors).toEqual([]);
   });
 });
+
+test("the command palette opens what's new and clears the dot", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expectUnread(page);
+  await hydrated(whatsNew(page));
+
+  await page.keyboard.press("ControlOrMeta+k");
+  const palette = page.getByRole("dialog", { name: "Command palette" });
+  await expect(palette).toBeVisible();
+  await page.keyboard.type("what");
+  await expect(
+    palette.getByRole("option", { name: "What's New" }),
+  ).toBeVisible();
+  await page.keyboard.press("Enter");
+
+  await expect(page).toHaveURL("/whats-new");
+  await expectQuiet(page);
+});
