@@ -99,7 +99,7 @@ Posting replies through a sign in also needs **Reply to reviews** for your accou
   </Step>
 </Steps>
 
-Reading reports needs no Google Cloud IAM role and no project link: Play Console alone decides who may read the bucket.
+Reading reports needs no Google Cloud IAM role and no project link: Play Console alone decides who may read the bucket. Posting review replies goes through the Google Play Android Developer API, so enable it in the Google Cloud project of the service account, or, for a Google sign in, in the project of the instance's OAuth client.
 
 ## After connecting
 
