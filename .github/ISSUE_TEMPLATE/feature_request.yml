@@ -4,6 +4,9 @@ title: "feat: "
 labels:
   - enhancement
 body:
+  - type: markdown
+    attributes:
+      value: An idea that is still open to discussion belongs in [Ideas](https://github.com/AsoBeast/asobeast/discussions/categories/ideas), where others can vote on it. Open this issue once the problem and the shape of the change are agreed.
   - type: textarea
     id: problem
     attributes:

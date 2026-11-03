@@ -203,7 +203,7 @@ Release policy and the `1.x` compatibility promise: [upgrade and roll back](http
 
 ## Contributing
 
-Pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) first for the commit conventions, the compatibility promise and how the test suites are run. Bugs, questions and feature requests go to [GitHub issues](https://github.com/AsoBeast/asobeast/issues). Security reports go through [SECURITY.md](SECURITY.md), never a public issue.
+Pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) first for the commit conventions, the compatibility promise and how the test suites are run. Bugs go to [GitHub issues](https://github.com/AsoBeast/asobeast/issues), while questions and ideas go to [GitHub Discussions](https://github.com/AsoBeast/asobeast/discussions). Security reports go through [SECURITY.md](SECURITY.md), never a public issue.
 
 <a href="https://github.com/AsoBeast/asobeast/graphs/contributors"><img src="https://contrib.rocks/image?repo=AsoBeast/asobeast" alt="Contributors to AsoBeast" /></a>
 
