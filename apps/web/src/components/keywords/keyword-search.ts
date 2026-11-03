@@ -1,4 +1,4 @@
-import { normalizeText } from "@asobeast/shared";
+import { normalizeText, searchKey } from "@asobeast/shared";
 
 export type KeywordSearch =
   | { kind: "none" }
@@ -22,7 +22,7 @@ export function parseKeywordSearch(raw: string): KeywordSearch {
     isQuote(trimmed[trimmed.length - 1]) &&
     withoutQuotes(inner) === inner;
   if (quoted) {
-    const phrase = normalizeText(inner);
+    const phrase = searchKey(normalizeText(inner));
     return phrase === "" ? { kind: "none" } : { kind: "exact", phrase };
   }
   const fragment = withoutQuotes(raw).toLowerCase();
@@ -34,6 +34,9 @@ export function matchesKeywordSearch(
   search: KeywordSearch,
 ): boolean {
   if (search.kind === "none") return true;
-  if (search.kind === "exact") return normalizeText(text) === search.phrase;
-  return text.toLowerCase().includes(search.fragment);
+  if (search.kind === "exact")
+    return searchKey(normalizeText(text)) === search.phrase;
+  return searchKey(normalizeText(text)).includes(
+    searchKey(normalizeText(search.fragment)),
+  );
 }
