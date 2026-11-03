@@ -25,6 +25,7 @@ const WORKSPACE_LABELS: Record<string, string> = {
   [INTEGRATIONS_PATH]: "Integrations",
   [PLAY_SIGN_IN_PATH]: "Integrations",
   "/settings": "Settings",
+  "/whats-new": "What's New",
 };
 
 function sectionLabel(segment: string): string {
