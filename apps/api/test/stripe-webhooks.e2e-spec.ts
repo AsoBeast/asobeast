@@ -625,6 +625,28 @@ describe('Stripe webhooks', () => {
       expect((await workspaceRow()).trialClaimedAt).not.toBeNull();
     });
 
+    it('rolls the claims back with the marker when stripe cannot end a lost trial', async () => {
+      await prisma.trialClaim.create({ data: { key: CARD } });
+      subscriptions.set(
+        SUBSCRIPTION,
+        subscriptionOf('customer.subscription.trialing'),
+      );
+      const refused = jest
+        .spyOn(fake.subscriptions, 'update')
+        .mockRejectedValue(new Error('stripe is down'));
+
+      try {
+        await expect(
+          app.get(BillingReconciler).reconcileOne(WORKSPACE),
+        ).rejects.toThrow();
+      } finally {
+        refused.mockRestore();
+      }
+
+      await expect(claimKeys()).resolves.toEqual([CARD]);
+      expect((await workspaceRow()).trialClaimedAt).toBeNull();
+    });
+
     it('records no payment for the zero trial invoice', async () => {
       await project('customer.subscription.trialing');
 

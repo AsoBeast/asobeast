@@ -18,6 +18,7 @@ const trialing = (over: Partial<Stripe.Subscription> = {}) =>
 
 describe('TrialStarts', () => {
   const calls: string[] = [];
+  const transactionOptions: unknown[] = [];
   const settled = { at: null as Date | null };
   const claim = jest.fn<Promise<boolean>, [unknown, string]>();
   const claimCard = jest.fn<Promise<boolean>, [unknown, string]>();
@@ -42,8 +43,12 @@ describe('TrialStarts', () => {
   const prisma = {
     user: { findFirst: ownerOf },
     workspace: { updateMany },
-    withTransaction: async (run: (client: unknown) => Promise<unknown>) => {
+    withTransaction: async (
+      run: (client: unknown) => Promise<unknown>,
+      options: unknown,
+    ) => {
       calls.push('transaction');
+      transactionOptions.push(options);
       return run(tx);
     },
   } as unknown as PrismaService;
@@ -58,6 +63,7 @@ describe('TrialStarts', () => {
 
   beforeEach(() => {
     calls.length = 0;
+    transactionOptions.length = 0;
     settled.at = null;
     claim.mockReset().mockResolvedValue(true);
     claimCard.mockReset().mockResolvedValue(true);
@@ -158,6 +164,7 @@ describe('TrialStarts', () => {
       expect(endTrialNow).toHaveBeenCalledTimes(1);
       expect(endTrialNow).toHaveBeenCalledWith('sub_trial');
       expect(calls.slice(-3)).toEqual(['transaction', 'end', 'mark']);
+      expect(transactionOptions).toEqual([{ timeout: 65_000 }]);
       expect(warn).toHaveBeenCalledWith(expect.stringContaining(lost));
     },
   );
