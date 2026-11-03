@@ -39,9 +39,10 @@ describe('Mailboxes that had a trial before one trial per mailbox existed', () =
     owner: string,
     trialStartedAt: Date | null,
     members: string[] = [],
+    trialClaimedAt: Date | null = trialStartedAt,
   ) => {
     await prisma.workspace.create({
-      data: { id, name: owner, trialStartedAt },
+      data: { id, name: owner, trialStartedAt, trialClaimedAt },
     });
     await prisma.user.create({
       data: { workspaceId: id, email: owner, passwordHash: 'x', role: 'owner' },
@@ -75,6 +76,13 @@ describe('Mailboxes that had a trial before one trial per mailbox existed', () =
       ['colleague@example.com'],
     );
     await seedWorkspace('ws_fresh', 'never.tried@example.com', null);
+    await seedWorkspace(
+      'ws_settling',
+      'settling@example.com',
+      new Date(Date.now() - DAY_MS),
+      [],
+      null,
+    );
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
@@ -115,7 +123,7 @@ describe('Mailboxes that had a trial before one trial per mailbox existed', () =
     await prisma.$disconnect();
   });
 
-  it('claims the owner of the trialed workspace and nobody else', async () => {
+  it('claims the owner of the settled trial and leaves a trial still settling to its settlement', async () => {
     const keys = (await prisma.trialClaim.findMany()).map(({ key }) => key);
 
     expect(keys).toEqual([trialClaimKey('grownup@gmail.com')]);

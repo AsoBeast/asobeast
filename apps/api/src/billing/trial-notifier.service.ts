@@ -34,6 +34,7 @@ const TRIAL_SELECT = {
   subscriptionStatus: true,
   firstPaidAt: true,
   planExpiresAt: true,
+  dunningNotifiedAt: true,
 } as const;
 
 interface TrialRow {
@@ -48,6 +49,7 @@ interface TrialRow {
   subscriptionStatus: string | null;
   firstPaidAt: Date | null;
   planExpiresAt: Date | null;
+  dunningNotifiedAt: Date | null;
 }
 
 @Injectable()
@@ -87,7 +89,10 @@ export class TrialNotifier {
     for (const workspace of trials) {
       const day = noticeDayOf(workspace, now);
       if (day === null) continue;
-      if (day === LAST_NOTICE && isEntitled(workspace, now)) {
+      if (
+        day === LAST_NOTICE &&
+        (isEntitled(workspace, now) || declineAlreadyMailed(workspace))
+      ) {
         await this.record(workspace.id, LAST_NOTICE);
         continue;
       }
@@ -123,9 +128,7 @@ export class TrialNotifier {
       price: priceOf(workspace),
       endsOn: formatDay(workspace.trialEndsAt),
       cancelling: workspace.cancelAtPeriodEnd,
-      chargeFailed:
-        workspace.subscriptionStatus === 'past_due' &&
-        workspace.firstPaidAt === null,
+      chargeFailed: firstChargeFailed(workspace),
     };
   }
 
@@ -137,6 +140,17 @@ export class TrialNotifier {
       (trialEndsAt.getTime() - trialStartedAt.getTime()) / DAY_MS,
     );
   }
+}
+
+function firstChargeFailed(workspace: TrialRow): boolean {
+  return (
+    workspace.subscriptionStatus === 'past_due' &&
+    workspace.firstPaidAt === null
+  );
+}
+
+function declineAlreadyMailed(workspace: TrialRow): boolean {
+  return firstChargeFailed(workspace) && workspace.dunningNotifiedAt !== null;
 }
 
 function noticeDayOf(workspace: TrialRow, now: Date): TrialNoticeDay | null {
