@@ -1,4 +1,8 @@
-import type { OrderSummaryModel } from "@/lib/order-summary";
+import {
+  DUE_TODAY,
+  ORDER_SUMMARY_TITLE,
+  type OrderSummaryModel,
+} from "@/lib/order-summary";
 
 export function OrderSummary({ summary }: { summary: OrderSummaryModel }) {
   return (
@@ -7,7 +11,7 @@ export function OrderSummary({ summary }: { summary: OrderSummaryModel }) {
       className="flex flex-col gap-3 border-t border-border pt-6"
     >
       <h3 id="order-summary-title" className="text-title">
-        Order summary
+        {ORDER_SUMMARY_TITLE}
       </h3>
       <dl className="flex flex-col gap-3">
         <div className="flex items-baseline justify-between gap-4">
@@ -20,7 +24,7 @@ export function OrderSummary({ summary }: { summary: OrderSummaryModel }) {
           <dd className="tabular-nums">{summary.unitAmount}</dd>
         </div>
         <div className="flex items-baseline justify-between gap-4 border-t border-border pt-3">
-          <dt className="text-subtitle">Due today</dt>
+          <dt className="text-subtitle">{DUE_TODAY}</dt>
           <dd className="text-display tabular-nums">{summary.dueToday}</dd>
         </div>
       </dl>

@@ -14,6 +14,7 @@ import { formatPlanLimit } from "@/lib/format";
 import { INTERVAL_LABEL, priceOf } from "@/lib/order-summary";
 import {
   CHOOSE_A_PLAN_TITLE,
+  EVERY_PLAN_FEATURES,
   EVERY_PLAN_INCLUDES,
   featuresTitle,
   planCardLabel,
@@ -23,15 +24,6 @@ import {
 } from "@/lib/plan-choice";
 import { cn } from "@/lib/utils";
 import { CheckMark } from "./CheckMark";
-
-const INCLUDED = [
-  "Daily keyword rank tracking across every storefront",
-  "Popularity, difficulty and opportunity scoring",
-  "Competitor discovery and metadata audits",
-  "AI audit and metadata drafts",
-  "Alerts by email and webhook",
-  "Personal API tokens and the MCP server",
-];
 
 const LIMIT_ROWS = [
   { key: "apps", label: "Apps" },
@@ -176,7 +168,7 @@ export function PlanPicker({
           {EVERY_PLAN_INCLUDES}
         </p>
         <ul className="flex flex-col gap-2 text-body">
-          {INCLUDED.map((feature) => (
+          {EVERY_PLAN_FEATURES.map((feature) => (
             <li key={feature} className="flex items-start gap-2">
               <CheckMark className="mt-0.5 size-4" />
               <span>{feature}</span>

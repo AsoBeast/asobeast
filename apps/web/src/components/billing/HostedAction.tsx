@@ -11,18 +11,20 @@ import {
   recoversInPortal,
   startCheckout,
 } from "@/lib/api";
-import { buysPlan, type PlanAction } from "@/lib/plan-choice";
+import {
+  CHECKOUT_PRICE_MISSING,
+  CHECKOUT_START_FAILED,
+  PORTAL_OPEN_FAILED,
+  buysPlan,
+  type PlanAction,
+} from "@/lib/plan-choice";
 import { invalidateAuth } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
 import { useCheckoutTheme } from "./use-checkout-theme";
 
-const CHECKOUT_NOT_CONFIGURED = "Checkout is not configured yet";
-
 function failureMessage(error: unknown, action: PlanAction): string {
   if (error instanceof ApiError) return error.envelope.message;
-  return buysPlan(action)
-    ? "Could not start checkout. Try again."
-    : "Could not open the billing portal. Try again.";
+  return buysPlan(action) ? CHECKOUT_START_FAILED : PORTAL_OPEN_FAILED;
 }
 
 export function HostedAction({
@@ -40,7 +42,7 @@ export function HostedAction({
   const change = useMutation({
     mutationFn: () => {
       if (!buys) return openBillingPortal();
-      if (!price) return Promise.reject(new Error(CHECKOUT_NOT_CONFIGURED));
+      if (!price) return Promise.reject(new Error(CHECKOUT_PRICE_MISSING));
       return startCheckout(price.priceId, "hosted", theme);
     },
     onSuccess: ({ url }) => {
@@ -61,7 +63,7 @@ export function HostedAction({
         action === "current" || action === "pending" || (buys && !price)
       }
       aria-disabled={change.isPending || undefined}
-      title={!buys || price ? undefined : CHECKOUT_NOT_CONFIGURED}
+      title={!buys || price ? undefined : CHECKOUT_PRICE_MISSING}
       onClick={() => {
         if (!change.isPending) changeOnce();
       }}

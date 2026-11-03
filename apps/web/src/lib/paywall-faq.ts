@@ -7,6 +7,12 @@ export interface FaqItem {
   href?: string;
 }
 
+export const READ_MORE = "Read more";
+
+export function readMoreContext(question: string): string {
+  return ` about ${question} (opens in a new tab)`;
+}
+
 const CANCELLATION_GUIDE =
   "https://docs.asobeast.com/operations/billing#downgrade-and-cancellation";
 

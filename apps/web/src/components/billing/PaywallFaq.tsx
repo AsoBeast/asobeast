@@ -6,7 +6,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import type { FaqItem } from "@/lib/paywall-faq";
+import { READ_MORE, readMoreContext, type FaqItem } from "@/lib/paywall-faq";
 import { FAQ_TITLE } from "@/lib/plan-choice";
 
 export function PaywallFaq({ items }: { items: readonly FaqItem[] }) {
@@ -41,11 +41,8 @@ export function PaywallFaq({ items }: { items: readonly FaqItem[] }) {
                   rel="noreferrer"
                   className="font-medium text-foreground underline decoration-primary underline-offset-4"
                 >
-                  Read more
-                  <span className="sr-only">
-                    {" "}
-                    about {question} (opens in a new tab)
-                  </span>
+                  {READ_MORE}
+                  <span className="sr-only">{readMoreContext(question)}</span>
                 </a>
               ) : null}
             </AccordionContent>

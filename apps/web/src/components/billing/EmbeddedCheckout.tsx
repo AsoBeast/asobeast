@@ -7,19 +7,18 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError, startCheckout } from "@/lib/api";
 import { openAfterPrevious, sessionKeyOf } from "@/lib/embedded-checkout";
+import { CHECKOUT_REOPENING, CHECKOUT_UNREACHABLE } from "@/lib/plan-choice";
 import { useFocusAfterCommit } from "@/lib/focus-handoff";
 import { loadStripeOnce } from "@/lib/stripe-loader";
 
 type MountState = "loading" | "ready" | "failed" | "retrying";
 
-const UNREACHABLE = "Checkout could not be opened. Try again.";
-
-const REOPENING = "Opening checkout…";
-
 const CHECKOUT_OPEN_TIMEOUT_MS = 35_000;
 
 function failureOf(error: unknown): string {
-  return error instanceof ApiError ? error.envelope.message : UNREACHABLE;
+  return error instanceof ApiError
+    ? error.envelope.message
+    : CHECKOUT_UNREACHABLE;
 }
 
 async function clientSecretOf(
@@ -32,7 +31,7 @@ async function clientSecretOf(
     theme,
     AbortSignal.timeout(CHECKOUT_OPEN_TIMEOUT_MS),
   );
-  if (!session.clientSecret) throw new Error(UNREACHABLE);
+  if (!session.clientSecret) throw new Error(CHECKOUT_UNREACHABLE);
   return session.clientSecret;
 }
 
@@ -51,7 +50,7 @@ export function EmbeddedCheckout({
   const retry = useRef<HTMLButtonElement>(null);
   const handFocus = useFocusAfterCommit();
   const [state, setState] = useState<MountState>("loading");
-  const [failure, setFailure] = useState(UNREACHABLE);
+  const [failure, setFailure] = useState(CHECKOUT_UNREACHABLE);
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
@@ -60,7 +59,7 @@ export function EmbeddedCheckout({
     openAfterPrevious(async () => {
       if (!active) return;
       const stripe = await loadStripeOnce(publishableKey);
-      if (!stripe) throw new Error(UNREACHABLE);
+      if (!stripe) throw new Error(CHECKOUT_UNREACHABLE);
       if (!active) return;
       const clientSecret = await clientSecretOf(priceId, theme);
       if (!active) return;
@@ -93,7 +92,9 @@ export function EmbeddedCheckout({
       ) : null}
       {state === "failed" || state === "retrying" ? (
         <div className="flex flex-col items-start gap-2 text-body">
-          {state === "retrying" ? <p role="status">{REOPENING}</p> : null}
+          {state === "retrying" ? (
+            <p role="status">{CHECKOUT_REOPENING}</p>
+          ) : null}
           {state === "failed" ? <p role="alert">{failure}</p> : null}
           <Button
             ref={retry}

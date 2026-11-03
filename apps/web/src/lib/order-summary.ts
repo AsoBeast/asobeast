@@ -12,6 +12,10 @@ export const INTERVAL_LABEL: Record<BillingInterval, string> = {
   year: "Annual",
 };
 
+export const ORDER_SUMMARY_TITLE = "Order summary";
+
+export const DUE_TODAY = "Due today";
+
 const CANCEL_ANY_TIME = "Cancel any time from settings.";
 
 const NOTHING_BEFORE_THE_DATE = "Nothing is charged before the date above.";

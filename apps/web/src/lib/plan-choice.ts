@@ -203,6 +203,26 @@ export const NEED_HELP = "Need help?";
 
 export const CONTACT_SUPPORT = "Contact support";
 
+export const CHECKOUT_UNREACHABLE = "Checkout could not be opened. Try again.";
+
+export const CHECKOUT_REOPENING = "Opening checkout…";
+
+export const CHECKOUT_PRICE_MISSING = "Checkout is not configured yet";
+
+export const CHECKOUT_START_FAILED = "Could not start checkout. Try again.";
+
+export const PORTAL_OPEN_FAILED =
+  "Could not open the billing portal. Try again.";
+
+export const EVERY_PLAN_FEATURES: readonly string[] = [
+  "Daily keyword rank tracking across every storefront",
+  "Popularity, difficulty and opportunity scoring",
+  "Competitor discovery and metadata audits",
+  "AI audit and metadata drafts",
+  "Alerts by email and webhook",
+  "Personal API tokens and the MCP server",
+];
+
 const BUYS: readonly PlanAction[] = ["checkout", "trial"];
 
 export function buysPlan(action: PlanAction): boolean {
