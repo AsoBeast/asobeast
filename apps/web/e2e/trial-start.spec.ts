@@ -396,6 +396,12 @@ test.describe("the billing wall", () => {
     await expect(indie).toContainText("5 apps");
     await expect(indie).toContainText("1,000 keyword markets");
     await expect(ultimate).toContainText("50 apps");
+    await expect(indie).toHaveAccessibleDescription(
+      "5 apps 1,000 keyword markets",
+    );
+    await expect(ultimate).toHaveAccessibleDescription(
+      "50 apps 10,000 keyword markets",
+    );
     const background = (button: Locator) =>
       button.evaluate((node) => getComputedStyle(node).backgroundColor);
     expect(await background(indie)).not.toBe(await background(ultimate));

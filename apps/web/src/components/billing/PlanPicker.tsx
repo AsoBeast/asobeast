@@ -7,6 +7,7 @@ import {
   type BillingInterval,
   type PaidPlanName,
 } from "@asobeast/shared";
+import { useId } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import { formatPlanLimit } from "@/lib/format";
@@ -57,11 +58,14 @@ function PlanOption({
   selected: boolean;
   onSelect: () => void;
 }) {
+  const highlightsId = useId();
+
   return (
     <button
       type="button"
       aria-pressed={selected}
       aria-label={planCardLabel(name, interval, action)}
+      aria-describedby={highlightsId}
       onClick={onSelect}
       className={cn(
         "flex min-w-0 flex-col items-start gap-3 rounded-2xl border bg-card p-4 text-left shadow-raised transition-[color,background-color,border-color,box-shadow] hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none sm:p-6",
@@ -81,7 +85,10 @@ function PlanOption({
           {PER_INTERVAL[interval]}
         </span>
       </span>
-      <ul className="flex flex-col gap-1 text-body text-muted-foreground">
+      <ul
+        id={highlightsId}
+        className="flex flex-col gap-1 text-body text-muted-foreground"
+      >
         {planHighlights(name).map((line) => (
           <li key={line}>
             <span>{line}</span>
