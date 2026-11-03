@@ -161,6 +161,8 @@ Release Please owns package versions and `CHANGELOG.md`. Never bump a version or
 
 A release ships when the generated release pull request is merged. Mark a breaking change with `feat!` in the pull request title or a `BREAKING CHANGE:` footer at the end of the description so Release Please includes it in the generated changelog and computes the correct version; reserve it for the three surfaces the compatibility promise covers. Only the pull request title and that footer reach the changelog, so anything an operator must read before upgrading belongs in one of those. A pull request that ships more than one notable change lists each extra `feat:` or `fix:` line as its own paragraph at the end of the description, and Release Please records each of them. Refactors, documentation, build, test and chore changes stay out of the changelog. To correct a line after the merge, add a `BEGIN_COMMIT_OVERRIDE` block to the merged pull request description as the Release Please README describes.
 
+The app's **What's New** page reads its own notes, written for the people who use AsoBeast, from [`apps/web/src/lib/whats-new/`](apps/web/src/lib/whats-new). A pull request whose `feat` changes something a person sees adds one line there under the next version: what they can now do, in plain words, with no code, paths, variables or issue numbers. `release-notes.test.ts` refuses an entry that breaks those rules, and an entry for a version newer than the one running stays hidden until the release. To correct a published line, edit its entry in that folder in a new pull request.
+
 ### Before a release
 
 Two passes run before the release pull request is merged:
