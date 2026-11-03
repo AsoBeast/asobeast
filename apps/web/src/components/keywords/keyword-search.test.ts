@@ -51,6 +51,8 @@ describe("matchesKeywordSearch", () => {
     [contains("tracker"), "habit", false],
     [contains("cafe"), "café finder", true],
     [contains("café"), "cafe finder", true],
+    [contains("?"), "what?", true],
+    [contains("?"), "habit", false],
     [none, "anything", true],
   ])("matches %j against %j: %s", (search, text, expected) => {
     expect(matchesKeywordSearch(text, search)).toBe(expected);

@@ -36,7 +36,8 @@ export function matchesKeywordSearch(
   if (search.kind === "none") return true;
   if (search.kind === "exact")
     return searchKey(normalizeText(text)) === search.phrase;
-  return searchKey(normalizeText(text)).includes(
-    searchKey(normalizeText(search.fragment)),
-  );
+  const fragment = searchKey(normalizeText(search.fragment));
+  return fragment === ""
+    ? text.toLowerCase().includes(search.fragment)
+    : searchKey(normalizeText(text)).includes(fragment);
 }
