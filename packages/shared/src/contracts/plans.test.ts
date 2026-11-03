@@ -200,6 +200,7 @@ describe('plan limits', () => {
     expect(SELF_HOSTED_LIMITS).toMatchObject({
       apps: null,
       keywordMarkets: null,
+      competitorsPerApp: null,
       apiRequestsPerMinute: null,
       apiWritesPerMinute: null,
       apiRequestsPerDay: null,
@@ -228,10 +229,8 @@ describe('plan limits', () => {
     expect(QUOTA_RESOURCES).toContain('chartFollows');
   });
 
-  it('keeps the competitor cap on a self hosted instance', () => {
-    expect(SELF_HOSTED_LIMITS.competitorsPerApp).toBe(
-      PLAN_LIMITS.indie.competitorsPerApp,
-    );
+  it('leaves competitors per app uncapped on a self hosted instance', () => {
+    expect(SELF_HOSTED_LIMITS.competitorsPerApp).toBeNull();
   });
 });
 
