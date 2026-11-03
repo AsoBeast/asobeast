@@ -142,6 +142,7 @@ describe('searchKey', () => {
 describe('foldAccents', () => {
   it('folds case and diacritics but keeps punctuation and spacing', () => {
     expect(foldAccents('Café, Über!')).toBe('cafe, uber!');
+    expect(foldAccents('Café,  Über!')).toBe('cafe,  uber!');
   });
 
   it('differs from searchKey by preserving punctuation and spacing', () => {
