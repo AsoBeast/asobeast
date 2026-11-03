@@ -63,13 +63,13 @@ export function BillingWall({
     action === "trial" && offer ? trialBarLine(offer, now) : null;
 
   return (
-    <div className="page-wide flex flex-col gap-8 pb-40 sm:pb-24">
-      <header className="flex flex-col gap-3">
+    <div className="page-checkout flex flex-col gap-8 pb-40 sm:pb-28">
+      <header className="flex flex-col gap-4">
         <SignUpSteps steps={signUpSteps(user)} />
-        <h1 className="text-display tracking-tight text-balance">
+        <h1 className="text-display tracking-tight text-balance sm:text-hero">
           {paywallHeading(plan)}
         </h1>
-        <p className="text-body text-muted-foreground">
+        <p className="max-w-prose text-subtitle font-normal text-muted-foreground">
           {paywallStatusLine(plan, now)}
         </p>
         {offer ? <TrustRow lines={trustLines(offer, now)} /> : null}

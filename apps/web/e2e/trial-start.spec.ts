@@ -296,6 +296,58 @@ test.describe("the billing wall", () => {
     );
   });
 
+  test("sets the heading in the hero size on a laptop and the display size on a phone", async ({
+    page,
+    context,
+  }) => {
+    await seedViewer(context, "checkout-pending");
+    await seedSession(page);
+    await openBilling(page);
+    const heading = page.getByRole("heading", { level: 1 });
+    const fontSize = () =>
+      heading.evaluate((h1) => getComputedStyle(h1).fontSize);
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto("/upgrade");
+    await expect(heading).toBeVisible();
+    expect(await fontSize()).toBe("36px");
+
+    await page.setViewportSize({ width: 375, height: 812 });
+    expect(await fontSize()).toBe("24px");
+  });
+
+  test("marks each trust line with a check", async ({ page, context }) => {
+    await seedViewer(context, "checkout-pending");
+    await seedSession(page);
+    await openBilling(page);
+    const lines = trustLines({ days: 7 }, new Date());
+
+    await page.goto("/upgrade");
+
+    const row = page.getByRole("list", { name: "Why the trial is safe" });
+    await expect(row.getByRole("listitem")).toHaveText(lines);
+    await expect(row.locator("svg")).toHaveCount(3);
+  });
+
+  test("holds the wall to the checkout width on a wide screen", async ({
+    page,
+    context,
+  }) => {
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    await seedViewer(context, "checkout-pending");
+    await seedSession(page);
+    await openBilling(page);
+
+    await page.goto("/upgrade");
+
+    const wall = page
+      .getByRole("heading", { level: 1 })
+      .locator("xpath=ancestor::div[contains(@class,'page-checkout')]");
+    const box = await wall.boundingBox();
+    expect(box!.width).toBeLessThanOrEqual(1216);
+    expect(Math.abs(box!.x - (1920 - box!.width) / 2)).toBeLessThanOrEqual(2);
+  });
+
   test("writes its own order summary and follows the interval", async ({
     page,
     context,

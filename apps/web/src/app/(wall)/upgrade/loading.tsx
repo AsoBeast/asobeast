@@ -2,14 +2,19 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Loading() {
   return (
-    <div className="page-wide flex flex-col gap-8 pb-40 sm:pb-24">
-      <div className="flex flex-col gap-3">
-        <Skeleton className="h-8 w-80 max-w-full" />
-        <Skeleton className="h-4 w-full max-w-2xl" />
-        <div className="flex flex-wrap gap-x-8 gap-y-2">
-          <Skeleton className="h-4 w-64" />
-          <Skeleton className="h-4 w-48" />
-          <Skeleton className="h-4 w-44" />
+    <div className="page-checkout flex flex-col gap-8 pb-40 sm:pb-28">
+      <div className="flex flex-col gap-4">
+        <div className="flex gap-3">
+          <Skeleton className="h-6 w-32 rounded-full" />
+          <Skeleton className="h-6 w-32 rounded-full" />
+          <Skeleton className="h-6 w-32 rounded-full" />
+        </div>
+        <Skeleton className="h-9 w-96 max-w-full" />
+        <Skeleton className="h-5 w-full max-w-2xl" />
+        <div className="flex flex-wrap gap-x-8 gap-y-3">
+          <Skeleton className="h-5 w-56 rounded-full" />
+          <Skeleton className="h-5 w-56 rounded-full" />
+          <Skeleton className="h-5 w-56 rounded-full" />
         </div>
       </div>
       <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,36rem)]">
