@@ -43,10 +43,12 @@ test("the owner connects app store connect and sees the apps it reports", async 
     /Create a team key with the Admin role/,
   );
   await expect(
-    dialog.getByRole("link", { name: "Why an Admin key" }),
+    dialog.getByRole("link", {
+      name: "Step by step guide for App Store Connect",
+    }),
   ).toHaveAttribute(
     "href",
-    "https://docs.asobeast.com/guides/store-funnel#create-the-key",
+    "https://docs.asobeast.com/integrations/app-store-connect#create-the-key",
   );
   const key = dialog.getByLabel("Private key", { exact: true });
   await expect(key).toHaveAttribute("type", "password");
@@ -558,4 +560,72 @@ test("the off card links the setting that turns store connections on", async ({
     "href",
     "https://docs.asobeast.com/configuration/reference#store-consoles",
   );
+});
+
+const CONNECT_GUIDES = {
+  appStore:
+    "https://docs.asobeast.com/integrations/app-store-connect#create-the-key",
+  google:
+    "https://docs.asobeast.com/integrations/google-play#sign-in-with-google",
+  key: "https://docs.asobeast.com/integrations/google-play#use-a-service-account-key",
+} as const;
+
+test("the app store dialog links the steps that create the key", async ({
+  page,
+}) => {
+  await page.goto("/integrations#store-connections");
+
+  const dialog = await openSettledDialog(
+    page,
+    "Connect App Store Connect",
+    section(page),
+  );
+  const guide = dialog.getByRole("link", {
+    name: "Step by step guide for App Store Connect",
+  });
+  await expect(guide).toHaveAttribute("href", CONNECT_GUIDES.appStore);
+  await expect(guide).toHaveAttribute("target", "_blank");
+  await expect(
+    dialog.getByRole("link", { name: "Why an Admin key" }),
+  ).toHaveCount(0);
+});
+
+test("the play dialog links the steps of the method it shows", async ({
+  page,
+}) => {
+  await seed(page.context(), GOOGLE_SIGN_IN_COOKIE, "1");
+  await page.goto("/integrations#store-connections");
+
+  const dialog = await openSettledDialog(
+    page,
+    "Connect Google Play",
+    playCard(page),
+  );
+  const guide = dialog.getByRole("link", {
+    name: "Step by step guide for Google Play",
+  });
+  await expect(guide).toHaveAttribute("href", CONNECT_GUIDES.google);
+
+  const methods = dialog.getByRole("tablist", { name: "How to connect" });
+  const keyTab = methods.getByRole("tab", { name: "Service account key" });
+  await keyTab.click();
+
+  await expect(guide).toHaveAttribute("href", CONNECT_GUIDES.key);
+  await expect(keyTab).toBeFocused();
+});
+
+test("the play dialog without sign in links the service account steps", async ({
+  page,
+}) => {
+  await page.goto("/integrations#store-connections");
+
+  const dialog = await openSettledDialog(
+    page,
+    "Connect Google Play",
+    playCard(page),
+  );
+
+  await expect(
+    dialog.getByRole("link", { name: "Step by step guide for Google Play" }),
+  ).toHaveAttribute("href", CONNECT_GUIDES.key);
 });

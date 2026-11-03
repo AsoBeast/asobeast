@@ -6,6 +6,7 @@ import {
 import { describe, expect, it } from "vitest";
 import {
   appStateLabel,
+  CONNECT_GUIDES,
   connectionStatusLine,
   historyLine,
   INTEGRATIONS_GUIDE,
@@ -252,5 +253,17 @@ describe("setup guides", () => {
     expect(STORE_CONNECT_SETTING_GUIDE).toBe(
       "https://docs.asobeast.com/configuration/reference#store-consoles",
     );
+  });
+});
+
+describe("connect guides", () => {
+  it("links each connect method to its steps", () => {
+    expect(CONNECT_GUIDES).toEqual({
+      appStore:
+        "https://docs.asobeast.com/integrations/app-store-connect#create-the-key",
+      google:
+        "https://docs.asobeast.com/integrations/google-play#sign-in-with-google",
+      key: "https://docs.asobeast.com/integrations/google-play#use-a-service-account-key",
+    });
   });
 });

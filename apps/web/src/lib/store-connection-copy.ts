@@ -14,6 +14,13 @@ export const INTEGRATIONS_GUIDE =
   "https://docs.asobeast.com/integrations/overview";
 export const STORE_CONNECT_SETTING_GUIDE =
   "https://docs.asobeast.com/configuration/reference#store-consoles";
+export const CONNECT_GUIDES = {
+  appStore:
+    "https://docs.asobeast.com/integrations/app-store-connect#create-the-key",
+  google:
+    "https://docs.asobeast.com/integrations/google-play#sign-in-with-google",
+  key: "https://docs.asobeast.com/integrations/google-play#use-a-service-account-key",
+} as const;
 
 export interface StatusLine {
   tone: "warning" | "muted";
