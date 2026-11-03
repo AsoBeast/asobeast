@@ -216,6 +216,8 @@ Select rows with the checkboxes and the bar at the bottom of the table shows wha
 
 **Pause**, **Activate** and **Remove** send one request for up to 500 keywords, so a large selection costs one write against your plan's request budget rather than one per keyword. A selection over 500 is sent in several requests, one after another. Activating keywords that your plan has no room for is refused as a whole, with the limit in the message, and nothing changes. A keyword the request cannot find any more, for example because it was removed in another tab, is skipped and counted in the message. When a request fails the selection stays, so you can try again. **Tag** still changes one keyword at a time.
 
+**Show dynamics** opens a panel above the table that charts the selected keywords with the same rank chart the [Rankings](/guides/read-rankings) page draws. The market pills scope the chart together with the table, and the panel carries its own range tabs. The charted selection is a copy that lives in the address as `keywords` and `range`: filtering, sorting and bulk edits leave an open chart alone, and a copied link restores it. Each line has a removable chip, a selection wider than eight lines charts the first eight in the order shown and says so, and **Clear** empties the chart and closes the panel.
+
 Buckets classify scored keywords automatically so a large list stays readable.
 
 | Bucket | Meaning |
