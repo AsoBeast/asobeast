@@ -620,6 +620,9 @@ describe('Stripe webhooks', () => {
         slowUpdate.mockRestore();
       }
 
+      await expect(
+        prisma.billingEvent.findUniqueOrThrow({ where: { id: event.id } }),
+      ).resolves.toMatchObject({ outcome: 'applied' });
       expect(fake.subscriptionUpdates).toEqual([
         {
           params: { id: SUBSCRIPTION, trial_end: 'now' },
