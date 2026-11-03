@@ -1,5 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { Store } from '@prisma/client';
+import { PLAN_LIMITS } from '@asobeast/shared';
 import { AppCaptureService } from '../apps/app-capture.service';
 import { SubtitleBackfill } from '../apps/subtitle-backfill.service';
 import { KeywordsService } from '../keywords/keywords.service';
@@ -22,7 +23,7 @@ const passThroughEgress = {
 } as unknown as ProxyEgress;
 
 describe('CompetitorsService.add', () => {
-  const buildDeps = (competitorCount: number) => {
+  const buildDeps = (competitorCount: number, billingEnabled = false) => {
     const getApp = jest.fn().mockResolvedValue({
       title: 'Rival',
       iconUrl: 'https://icon',
@@ -98,7 +99,13 @@ describe('CompetitorsService.add', () => {
         count: jest.fn(() => Promise.resolve(competitors)),
       },
       appSnapshot: { create: jest.fn().mockResolvedValue(snapshot) },
-      workspace: { findFirst: jest.fn().mockResolvedValue({ plan: 'free' }) },
+      workspace: {
+        findFirst: jest.fn().mockResolvedValue({
+          plan: 'indie',
+          trialEndsAt: null,
+          planExpiresAt: null,
+        }),
+      },
       $executeRaw: jest.fn().mockResolvedValue(1),
     };
     const prisma = {
@@ -129,7 +136,8 @@ describe('CompetitorsService.add', () => {
       keywords as unknown as KeywordsService,
       capture,
       new QuotaService(prisma as unknown as PrismaService, workspace, {
-        get: (key: string) => (key === 'BILLING_ENABLED' ? false : null),
+        get: (key: string) =>
+          key === 'BILLING_ENABLED' ? billingEnabled : null,
       } as unknown as ConfigService<Env, true>),
     );
     return { service, prisma, upsert, keywords, getApp, workspace };
@@ -161,7 +169,7 @@ describe('CompetitorsService.add', () => {
   });
 
   it('refuses the primary app as its own competitor before the quota', async () => {
-    const { service, workspace, getApp } = buildDeps(10);
+    const { service, workspace, getApp } = buildDeps(10, true);
 
     await expect(
       workspace.run(DEFAULT_WORKSPACE_ID, () =>
@@ -175,12 +183,24 @@ describe('CompetitorsService.add', () => {
   });
 
   it('rejects once the competitor cap is reached', async () => {
-    const { service, workspace } = buildDeps(10);
+    const { service, workspace } = buildDeps(10, true);
 
     await expect(
       workspace.run(DEFAULT_WORKSPACE_ID, () =>
         service.add('primary', 'https://apps.apple.com/us/app/rival/id999'),
       ),
     ).rejects.toBeInstanceOf(QuotaExceededError);
+  });
+
+  it('adds a competitor past the hosted cap on a self hosted instance', async () => {
+    const { service, upsert, workspace } = buildDeps(
+      PLAN_LIMITS.indie.competitorsPerApp as number,
+    );
+
+    await workspace.run(DEFAULT_WORKSPACE_ID, () =>
+      service.add('primary', 'https://apps.apple.com/us/app/rival/id999'),
+    );
+
+    expect(upsert).toHaveBeenCalledTimes(1);
   });
 });
