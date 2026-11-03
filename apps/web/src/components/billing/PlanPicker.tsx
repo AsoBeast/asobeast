@@ -65,7 +65,7 @@ function PlanOption({
           "border-primary bg-primary-subtle ring-1 ring-primary hover:bg-primary-subtle",
       )}
     >
-      <span className="flex items-center gap-2 text-title">
+      <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-title">
         <span>{PLANS[name].displayName}</span>
         {action === "current" ? (
           <Badge variant="secondary">Current</Badge>

@@ -313,6 +313,38 @@ test.describe("the billing wall", () => {
     expect(stepsBox.y).toBeLessThan(headingBox.y);
   });
 
+  test("keeps the current plan badge inside its card on a narrow phone", async ({
+    page,
+    context,
+  }) => {
+    await page.setViewportSize({ width: 320, height: 800 });
+    await seedViewer(context, "trialing");
+    await seedSession(page);
+    await openBilling(page, {
+      ...TRIALING_PLAN,
+      plan: "ultimate",
+      displayName: "Ultimate",
+      trialing: false,
+      trialEndsAt: null,
+    });
+
+    await page.goto("/upgrade?plan=ultimate");
+
+    const card = page
+      .getByRole("group", { name: "Plans" })
+      .getByRole("button")
+      .nth(1);
+    const badge = card.getByText("Current", { exact: true });
+    await expect(badge).toBeVisible();
+    const [cardBox, badgeBox] = await Promise.all([
+      layoutBox(card),
+      layoutBox(badge),
+    ]);
+    expect(badgeBox.x + badgeBox.width).toBeLessThanOrEqual(
+      cardBox.x + cardBox.width,
+    );
+  });
+
   test("shows no steps to an owner who owes none", async ({
     page,
     context,
