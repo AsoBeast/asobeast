@@ -949,6 +949,9 @@ test("P-WEB-20 search folds accents on the keywords page", async ({ page }) => {
   await dialog.getByRole("button", { name: "Import 1 keyword" }).click();
   await expect(dialog).toBeHidden();
   await expect(page.getByText("Tracking 6 keywords")).toBeVisible();
+  await expect(
+    page.getByRole("cell", { name: "pomodoro", exact: true }),
+  ).toBeVisible();
 
   const search = page.getByRole("textbox", { name: "Search keywords" });
   await search.fill("cafe");
@@ -958,4 +961,7 @@ test("P-WEB-20 search folds accents on the keywords page", async ({ page }) => {
       .getByRole("table", { name: /Tracked keywords/ })
       .getByRole("row", { name: /café/ }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("cell", { name: "pomodoro", exact: true }),
+  ).toBeHidden();
 });
