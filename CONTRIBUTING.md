@@ -151,7 +151,7 @@ The hosted service is therefore charged for hosting, never for features. Self-ho
 
 The compatibility promise for the `1.x` line is the thing to check before you start: the HTTP contract, the `@asobeast/shared` contract types and the MCP tool surface stay compatible throughout `1.x`. Adding an endpoint, an optional field or a tool is fine. Removing or renaming anything on those three surfaces, or narrowing what a request accepts or a response guarantees, needs `2.0.0` and will not be merged into `1.x`. Environment variables, the database schema and internal modules sit outside the promise, and schema changes always ship as forward Prisma migrations.
 
-Open a feature request issue before a large `feat` so the design is agreed before you write it.
+Open a feature request issue before a large `feat` so the design is agreed before you write it. An idea that still needs shaping starts in [Ideas](https://github.com/AsoBeast/asobeast/discussions/categories/ideas), and a question about how the code works goes to [Q&A](https://github.com/AsoBeast/asobeast/discussions/categories/q-a).
 
 Use one branch and one pull request per change, with each commit a single logical step. Pull requests are squash merged: the title becomes the commit subject on `main` and the description becomes its body, so keep the description free of paragraphs that begin with a commit type unless they are meant as extra changelog lines.
 
