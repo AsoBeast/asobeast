@@ -471,3 +471,91 @@ for (const theme of THEMES) {
     ).toEqual([]);
   });
 }
+
+const GUIDES = {
+  "App Store Connect":
+    "https://docs.asobeast.com/integrations/app-store-connect",
+  "Google Play Console": "https://docs.asobeast.com/integrations/google-play",
+} as const;
+
+async function expectGuideLinks(page: Page) {
+  for (const [store, href] of Object.entries(GUIDES)) {
+    const link = section(page).getByRole("link", {
+      name: `Setup guide for ${store}`,
+    });
+    await expect(link).toHaveAttribute("href", href);
+    await expect(link).toHaveAttribute("target", "_blank");
+    await expect(link).toHaveAttribute("rel", /noopener/);
+    await expect(link).toHaveText(/^Setup guide/);
+  }
+}
+
+test("each store card links its setup guide before connecting", async ({
+  page,
+}) => {
+  await page.goto("/integrations#store-connections");
+
+  await expectGuideLinks(page);
+});
+
+for (const state of ["active", "rejected"] as const) {
+  test(`the setup guide stays on an ${state} connection`, async ({ page }) => {
+    await seed(page.context(), STORE_CONNECTION_COOKIE, state);
+    await seed(page.context(), PLAY_CONNECTION_COOKIE, "active");
+    await page.goto("/integrations#store-connections");
+
+    await expectGuideLinks(page);
+  });
+}
+
+test("a member sees the setup guides but no checklist", async ({ page }) => {
+  await seedViewer(page.context(), "member");
+  await page.goto("/integrations#store-connections");
+
+  await expectGuideLinks(page);
+  await expect(
+    section(page).getByRole("list", { name: /^Before you start/ }),
+  ).toHaveCount(0);
+});
+
+test("an empty card lists what the owner needs before starting", async ({
+  page,
+}) => {
+  await page.goto("/integrations#store-connections");
+
+  for (const store of Object.keys(GUIDES)) {
+    await expect(
+      section(page)
+        .getByRole("list", { name: `Before you start with ${store}` })
+        .getByRole("listitem"),
+    ).toHaveCount(3);
+  }
+});
+
+test("the section description links the integrations overview", async ({
+  page,
+}) => {
+  await page.goto("/integrations#store-connections");
+
+  const link = section(page).getByRole("link", {
+    name: /^Read the integrations overview/,
+  });
+  await expect(link).toHaveAttribute(
+    "href",
+    "https://docs.asobeast.com/integrations/overview",
+  );
+});
+
+test("the off card links the setting that turns store connections on", async ({
+  page,
+}) => {
+  await seed(page.context(), STORE_CONNECT_OFF_COOKIE, "1");
+  await page.goto("/integrations#store-connections");
+
+  await expect(
+    section(page).getByRole("link", { name: /^How to turn them on/ }),
+  ).toHaveAttribute(
+    "href",
+    "https://docs.asobeast.com/configuration/reference#store-consoles",
+  );
+});

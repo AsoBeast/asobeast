@@ -10,6 +10,10 @@ import { formatDate, formatDateTime } from "./format";
 
 export const STORE_CONNECTIONS_SECTION_ID = "store-connections";
 export const STORE_CONNECTIONS_PATH = `${INTEGRATIONS_PATH}#${STORE_CONNECTIONS_SECTION_ID}`;
+export const INTEGRATIONS_GUIDE =
+  "https://docs.asobeast.com/integrations/overview";
+export const STORE_CONNECT_SETTING_GUIDE =
+  "https://docs.asobeast.com/configuration/reference#store-consoles";
 
 export interface StatusLine {
   tone: "warning" | "muted";
@@ -18,6 +22,8 @@ export interface StatusLine {
 
 export interface StoreConsoleCopy {
   name: string;
+  guide: string;
+  before: readonly [string, string, string];
   connectLabel: string;
   replaceLabel: string;
   empty: string;
@@ -39,6 +45,12 @@ const connectedOn = (item: StoreConnectionItem): [string, string] => [
 export const STORE_CONSOLES: Record<Store, StoreConsoleCopy> = {
   APP_STORE: {
     name: "App Store Connect",
+    guide: "https://docs.asobeast.com/integrations/app-store-connect",
+    before: [
+      "You need the Account Holder or Admin role in App Store Connect to create a team key.",
+      "It takes about five minutes, and Apple lets you download the key file only once.",
+      "The first numbers appear one or two days after you connect.",
+    ],
     connectLabel: "Connect App Store Connect",
     replaceLabel: "Replace key",
     empty:
@@ -67,6 +79,12 @@ export const STORE_CONSOLES: Record<Store, StoreConsoleCopy> = {
   },
   GOOGLE_PLAY: {
     name: "Google Play Console",
+    guide: "https://docs.asobeast.com/integrations/google-play",
+    before: [
+      "You need Owner or Admin access to the Play Console developer account.",
+      "Copy the bucket id from Download reports in Play Console first.",
+      "It takes about ten minutes, and Google can take up to two days to apply a new service account's access.",
+    ],
     connectLabel: "Connect Google Play",
     replaceLabel: "Reconnect",
     empty:

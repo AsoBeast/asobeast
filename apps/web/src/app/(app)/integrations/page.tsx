@@ -2,12 +2,16 @@ import { Suspense } from "react";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { ApiTokensCard } from "@/components/integrations/ApiTokensCard";
 import { McpServerCard } from "@/components/integrations/McpServerCard";
+import { GuideLink } from "@/components/integrations/GuideLink";
 import { StoreConnectionsCard } from "@/components/integrations/StoreConnectionsCard";
 import { StoreConnectionsSkeleton } from "@/components/integrations/skeletons";
 import { SettingsSection } from "@/components/settings/SettingsSection";
 import { getQueryClient } from "@/lib/get-query-client";
 import { storeConnectionsOptions } from "@/lib/queries";
-import { STORE_CONNECTIONS_SECTION_ID } from "@/lib/store-connection-copy";
+import {
+  INTEGRATIONS_GUIDE,
+  STORE_CONNECTIONS_SECTION_ID,
+} from "@/lib/store-connection-copy";
 
 export default async function IntegrationsPage() {
   const queryClient = getQueryClient();
@@ -28,7 +32,19 @@ export default async function IntegrationsPage() {
         <SettingsSection
           id={STORE_CONNECTIONS_SECTION_ID}
           title="Store connections"
-          description="Connect App Store Connect or the Google Play Console so store listing visits, downloads and conversion appear beside your rankings."
+          description={
+            <>
+              Connect App Store Connect or the Google Play Console so store
+              listing visits, downloads and conversion appear beside your
+              rankings.{" "}
+              <GuideLink
+                href={INTEGRATIONS_GUIDE}
+                subject="store connections, API tokens and MCP"
+              >
+                Read the integrations overview
+              </GuideLink>
+            </>
+          }
         >
           <Suspense fallback={<StoreConnectionsSkeleton />}>
             <StoreConnectionsCard />
