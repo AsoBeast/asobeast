@@ -21,16 +21,22 @@ export const viewer = cache(signedInViewer);
 
 export const ENTRY_STEP_WAIT_MS = 3_000;
 
-export function viewerWhenAnswered(): Promise<AuthUser | null> {
-  return Promise.race([
-    viewer().catch((error: unknown) => {
-      unstable_rethrow(error);
-      return null;
-    }),
-    new Promise<null>((resolve) => {
-      setTimeout(resolve, ENTRY_STEP_WAIT_MS, null);
-    }),
-  ]);
+export async function viewerWhenAnswered(): Promise<AuthUser | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const unanswered = new Promise<null>((resolve) => {
+    timer = setTimeout(resolve, ENTRY_STEP_WAIT_MS, null);
+  });
+  try {
+    return await Promise.race([
+      viewer().catch((error: unknown) => {
+        unstable_rethrow(error);
+        return null;
+      }),
+      unanswered,
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export async function viewerIsOperator(): Promise<boolean> {
