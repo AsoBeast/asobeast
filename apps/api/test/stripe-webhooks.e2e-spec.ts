@@ -523,8 +523,13 @@ describe('Stripe webhooks', () => {
         trialEndsAt: TRIAL_END,
         billingInterval: 'month',
       });
+      expect(
+        isEntitled(
+          await workspaceRow(),
+          new Date(TRIAL_END.getTime() - 60_000),
+        ),
+      ).toBe(true);
       await expect(me()).resolves.toMatchObject({
-        entitled: true,
         trialing: true,
         trialAwaitsCheckout: false,
       });
