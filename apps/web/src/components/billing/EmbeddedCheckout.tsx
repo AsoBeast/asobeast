@@ -6,12 +6,17 @@ import type { CheckoutTheme } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError, startCheckout } from "@/lib/api";
-import { sessionKeyOf } from "@/lib/embedded-checkout";
+import { openAfterPrevious, sessionKeyOf } from "@/lib/embedded-checkout";
+import { useFocusAfterCommit } from "@/lib/focus-handoff";
 import { loadStripeOnce } from "@/lib/stripe-loader";
 
-type MountState = "loading" | "ready" | "failed";
+type MountState = "loading" | "ready" | "failed" | "retrying";
 
 const UNREACHABLE = "Checkout could not be opened. Try again.";
+
+const REOPENING = "Opening checkout…";
+
+const CHECKOUT_OPEN_TIMEOUT_MS = 35_000;
 
 function failureOf(error: unknown): string {
   return error instanceof ApiError ? error.envelope.message : UNREACHABLE;
@@ -21,7 +26,12 @@ async function clientSecretOf(
   priceId: string,
   theme: CheckoutTheme,
 ): Promise<string> {
-  const session = await startCheckout(priceId, "embedded", theme);
+  const session = await startCheckout(
+    priceId,
+    "embedded",
+    theme,
+    AbortSignal.timeout(CHECKOUT_OPEN_TIMEOUT_MS),
+  );
   if (!session.clientSecret) throw new Error(UNREACHABLE);
   return session.clientSecret;
 }
@@ -38,6 +48,8 @@ export function EmbeddedCheckout({
   label: string;
 }) {
   const container = useRef<HTMLDivElement>(null);
+  const retry = useRef<HTMLButtonElement>(null);
+  const handFocus = useFocusAfterCommit();
   const [state, setState] = useState<MountState>("loading");
   const [failure, setFailure] = useState(UNREACHABLE);
   const [attempt, setAttempt] = useState(0);
@@ -45,48 +57,51 @@ export function EmbeddedCheckout({
   useEffect(() => {
     let active = true;
     let checkout: StripeEmbeddedCheckout | null = null;
-    loadStripeOnce(publishableKey)
-      .then((stripe) => {
-        if (!stripe || !active) throw new Error(UNREACHABLE);
-        return stripe.createEmbeddedCheckoutPage({
-          fetchClientSecret: () =>
-            active
-              ? clientSecretOf(priceId, theme)
-              : Promise.reject(new Error(UNREACHABLE)),
-        });
-      })
-      .then((instance) => {
-        if (!active || !container.current) {
-          instance.destroy();
-          return;
-        }
-        checkout = instance;
-        instance.mount(container.current);
-        setState("ready");
-      })
-      .catch((error: unknown) => {
-        if (!active) return;
-        setFailure(failureOf(error));
-        setState("failed");
+    openAfterPrevious(async () => {
+      if (!active) return;
+      const stripe = await loadStripeOnce(publishableKey);
+      if (!stripe) throw new Error(UNREACHABLE);
+      if (!active) return;
+      const clientSecret = await clientSecretOf(priceId, theme);
+      if (!active) return;
+      const instance = await stripe.createEmbeddedCheckoutPage({
+        clientSecret,
       });
+      if (!active || !container.current) {
+        instance.destroy();
+        return;
+      }
+      checkout = instance;
+      instance.mount(container.current);
+      if (retry.current) handFocus(container.current, retry.current);
+      setState("ready");
+    }).catch((error: unknown) => {
+      if (!active) return;
+      setFailure(failureOf(error));
+      setState("failed");
+    });
     return () => {
       active = false;
       checkout?.destroy();
     };
-  }, [publishableKey, priceId, theme, attempt]);
+  }, [publishableKey, priceId, theme, attempt, handFocus]);
 
   return (
     <div className="flex flex-col gap-3">
       {state === "loading" ? (
         <Skeleton className="h-[28rem] w-full rounded-xl" />
       ) : null}
-      {state === "failed" ? (
+      {state === "failed" || state === "retrying" ? (
         <div className="flex flex-col items-start gap-2 text-body">
-          <p role="alert">{failure}</p>
+          {state === "retrying" ? <p role="status">{REOPENING}</p> : null}
+          {state === "failed" ? <p role="alert">{failure}</p> : null}
           <Button
+            ref={retry}
             variant="outline"
+            aria-disabled={state === "retrying"}
             onClick={() => {
-              setState("loading");
+              if (state === "retrying") return;
+              setState("retrying");
               setAttempt((count) => count + 1);
             }}
           >
@@ -99,8 +114,9 @@ export function EmbeddedCheckout({
         id={sessionKeyOf(priceId, theme)}
         className="rounded-xl"
         aria-label={label}
-        aria-busy={state === "loading"}
+        aria-busy={state === "loading" || state === "retrying"}
         role="region"
+        tabIndex={-1}
       />
     </div>
   );

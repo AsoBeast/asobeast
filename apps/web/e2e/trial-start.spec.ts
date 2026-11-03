@@ -1,5 +1,6 @@
 import { formatDate } from "../src/lib/format";
 import { type Locator, type Page } from "@playwright/test";
+import { openEmbedded, STRIPE_STUB } from "./embedded-checkout.mts";
 import { fulfillJson, seedSession } from "./plan-helpers.mts";
 import { layoutBox } from "./layout-box.mts";
 import { expect, test } from "./reporting.mts";
@@ -576,25 +577,6 @@ test.describe("the billing wall", () => {
   });
 
   test.describe("with a publishable key", () => {
-    const STRIPE_STUB = `
-      window.Stripe = function () {
-        return {
-          createEmbeddedCheckoutPage: async ({ fetchClientSecret }) => {
-            const secret = await fetchClientSecret();
-            return {
-              mount: (target) => {
-                target.setAttribute("data-mounted", secret);
-                target.style.height = "40rem";
-              },
-              unmount: () => {},
-              destroy: () => {},
-            };
-          },
-        };
-      };
-      window.Stripe.version = "endive";
-    `;
-
     test("mounts the embedded checkout and remounts it per plan and interval", async ({
       page,
       context,
@@ -660,6 +642,66 @@ test.describe("the billing wall", () => {
       ]);
     });
 
+    test("opens one session at a time while plans and intervals change quickly", async ({
+      page,
+    }) => {
+      const pageErrors: string[] = [];
+      page.on("pageerror", (error) => pageErrors.push(error.message));
+      await openEmbedded(page);
+      await page.unroute("**/api/backend/billing/checkout");
+      const answers: number[] = [];
+      let opening = false;
+      await page.route("**/api/backend/billing/checkout", async (route) => {
+        const { priceId } = route.request().postDataJSON() as {
+          priceId: string;
+        };
+        if (opening) {
+          answers.push(409);
+          await route.fulfill(
+            fulfillJson(409, {
+              statusCode: 409,
+              error: "Conflict",
+              message:
+                "A checkout is already being opened for this workspace. Try again in a couple of minutes.",
+              path: "/billing/checkout",
+              timestamp: new Date().toISOString(),
+            }),
+          );
+          return;
+        }
+        opening = true;
+        await new Promise((resolve) => setTimeout(resolve, 400));
+        opening = false;
+        answers.push(200);
+        await route.fulfill(
+          fulfillJson(200, {
+            url: "http://localhost:3000/?checkout=complete",
+            clientSecret: `cs_${priceId}_${answers.length}`,
+          }),
+        );
+      });
+
+      await page.goto("/upgrade");
+      await expect(
+        page.locator('[data-mounted="cs_price_indie_month_1"]'),
+      ).toHaveCount(1);
+      await page.getByRole("button", { name: /^Ultimate,/ }).click();
+      await page.getByRole("tab", { name: "Annual" }).click();
+      await page.getByRole("tab", { name: "Monthly" }).click();
+      await page.getByRole("button", { name: /^Indie,/ }).click();
+
+      await expect(page.locator("[data-mounted]")).toHaveAttribute(
+        "data-mounted",
+        /^cs_price_indie_month_\d+$/,
+      );
+      await expect(page.locator("[data-stripe-error]")).toHaveCount(0);
+      await expect(
+        page.getByText("A checkout is already being opened"),
+      ).toHaveCount(0);
+      expect(answers).not.toContain(409);
+      expect(pageErrors).toEqual([]);
+    });
+
     test("opens no checkout session for a plan left before stripe loaded", async ({
       page,
       context,
@@ -709,40 +751,6 @@ test.describe("the billing wall", () => {
       ).toHaveCount(1);
       expect(priceIds).toEqual(["price_ultimate_year"]);
     });
-
-    async function openEmbedded(page: Page) {
-      await seedViewer(page.context(), "checkout-pending");
-      await seedSession(page);
-      await openBilling(page);
-      await page.route("**/api/backend/billing/catalog", (route) =>
-        route.fulfill(
-          fulfillJson(200, { ...CATALOG, publishableKey: "pk_test_e2e" }),
-        ),
-      );
-      await page.route("https://js.stripe.com/**", (route) =>
-        route.fulfill({
-          status: 200,
-          contentType: "application/javascript",
-          body: STRIPE_STUB,
-        }),
-      );
-      const bodies: { priceId: string; ui: string; theme: string }[] = [];
-      await page.route("**/api/backend/billing/checkout", async (route) => {
-        const body = route.request().postDataJSON() as {
-          priceId: string;
-          ui: string;
-          theme: string;
-        };
-        bodies.push(body);
-        await route.fulfill(
-          fulfillJson(200, {
-            url: "http://localhost:3000/?checkout=complete",
-            clientSecret: `cs_${body.priceId}_${body.theme}_${bodies.length}`,
-          }),
-        );
-      });
-      return bodies;
-    }
 
     test("keeps the plans in view while the card form scrolls", async ({
       page,
@@ -862,6 +870,38 @@ test.describe("the billing wall", () => {
         );
         expect(bodies).toEqual(["dark", "dark"]);
       });
+    });
+
+    test("lets the next plan open after a checkout request stalls", async ({
+      page,
+    }) => {
+      await page.clock.install();
+      const bodies = await openEmbedded(page);
+      await page.unroute("**/api/backend/billing/checkout");
+      await page.route("**/api/backend/billing/checkout", async (route) => {
+        const body = route.request().postDataJSON() as { priceId: string };
+        bodies.push(body as (typeof bodies)[number]);
+        if (bodies.length === 1) return;
+        await route.fulfill(
+          fulfillJson(200, {
+            url: "http://localhost:3000/?checkout=complete",
+            clientSecret: `cs_${body.priceId}`,
+          }),
+        );
+      });
+
+      await page.goto("/upgrade");
+      await expect.poll(() => bodies.length).toBe(1);
+      await page.getByRole("button", { name: /^Ultimate,/ }).click();
+      await page.clock.fastForward(36_000);
+
+      await expect(
+        page.locator('[data-mounted="cs_price_ultimate_month"]'),
+      ).toHaveCount(1);
+      expect(bodies.map((body) => body.priceId)).toEqual([
+        "price_indie_month",
+        "price_ultimate_month",
+      ]);
     });
 
     test("keeps the hosted button without a key", async ({ page, context }) => {

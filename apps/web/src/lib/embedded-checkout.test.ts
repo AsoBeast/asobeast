@@ -1,7 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   checkoutThemeOf,
   checkoutUiFor,
+  OPEN_TURN_MS,
+  openAfterPrevious,
   sessionKeyOf,
 } from "./embedded-checkout";
 
@@ -38,5 +40,48 @@ describe("embedded checkout", () => {
       }),
     ).toBe("hosted");
     expect(checkoutUiFor(undefined)).toBe("hosted");
+  });
+
+  it("opens each checkout only after the one before it settled, failed or not", async () => {
+    const order: string[] = [];
+    let releaseFirst: () => void = () => {};
+    const first = openAfterPrevious(
+      () =>
+        new Promise<string>((_, reject) => {
+          order.push("first started");
+          releaseFirst = () => reject(new Error("refused"));
+        }),
+    );
+    const second = openAfterPrevious(async () => {
+      order.push("second started");
+      return "second";
+    });
+
+    await Promise.resolve();
+    expect(order).toEqual(["first started"]);
+    releaseFirst();
+
+    await expect(first).rejects.toThrow("refused");
+    await expect(second).resolves.toBe("second");
+    expect(order).toEqual(["first started", "second started"]);
+  });
+
+  it("lets the next checkout open once an open that never settles used its turn", async () => {
+    vi.useFakeTimers();
+    try {
+      openAfterPrevious(() => new Promise<never>(() => {}));
+      let opened = false;
+      const next = openAfterPrevious(async () => {
+        opened = true;
+      });
+
+      await vi.advanceTimersByTimeAsync(OPEN_TURN_MS - 1);
+      expect(opened).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      await next;
+      expect(opened).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

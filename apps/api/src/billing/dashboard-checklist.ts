@@ -1,3 +1,5 @@
+import { SUPPORT_EMAIL } from '@asobeast/shared';
+
 const SHARED = [
   'Settings, Checkout and Payment Links, Subscriptions: limit customers to one subscription, on',
   'Settings, Billing, Subscriptions and emails: Smart Retries on, then mark the subscription unpaid',
@@ -9,7 +11,7 @@ const SELLER = [
   'Settings, Billing, Subscriptions and emails: emails for failed payments, expiring cards and payments requiring authentication, on with the hosted invoice link',
   'Settings, Payment methods: card, Link, Apple Pay and Google Pay on; SEPA Direct Debit and Cash App Pay off',
   'Settings, Checkout: adaptive pricing off',
-  'Settings, Public details: legal name, support email hello@asobeast.dev, terms and privacy urls',
+  `Settings, Public details: legal name, support email ${SUPPORT_EMAIL}, terms and privacy urls`,
   'Radar: default rules',
   'Radar: free trial abuse control on, with Radar on payment methods saved for future use',
 ];
@@ -17,7 +19,7 @@ const SELLER = [
 const MANAGED_PAYMENTS = [
   'Settings, Managed Payments: activated, with the Managed Payments terms accepted',
   'Settings, Managed Payments: ask Stripe whether the Radar free trial abuse control applies; Link sends the trial start email and no reminder for a 7 day trial, asobeast sends its own',
-  'Settings, Business details: support email hello@asobeast.dev; Stripe escalates there and may refund on its own after 48 hours without an answer',
+  `Settings, Business details: support email ${SUPPORT_EMAIL}; Stripe escalates there and may refund on its own after 48 hours without an answer`,
   'Settings, Public details: statement descriptor ASOBEAST, printed after LINK.COM* on every card statement',
   'Settings, Checkout: terms of service and privacy policy urls for the checkout footer',
   'Settings, Billing, Subscriptions and emails: emails for failed payments and expiring cards on; Link sends receipts and invoices itself',

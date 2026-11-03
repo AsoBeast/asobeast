@@ -17,10 +17,12 @@ export function startCheckout(
   priceId: string,
   ui: CheckoutUi = "hosted",
   theme?: CheckoutTheme,
+  signal?: AbortSignal,
 ): Promise<BillingSession> {
   return apiFetch<BillingSession>("/billing/checkout", {
     method: "POST",
     body: JSON.stringify({ priceId, ui, theme } satisfies CheckoutRequest),
+    signal,
   });
 }
 

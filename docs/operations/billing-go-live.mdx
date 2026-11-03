@@ -24,7 +24,7 @@ Set every row in every sandbox and again in live mode. The catalog script prints
 | Checkout branding | Settings, Branding, Checkout | The icon, the dark background and the orange button | Every session sends its own background and button, and the dashboard values fill any field a session leaves out. Under Managed Payments only the background is applied; Link keeps its own payment panel and button |
 | Checkout links | Settings, Checkout and Payment Links | Terms of service and privacy policy links | Managed Payments prints them in the footer of the form |
 | Local payment methods | A request to Stripe Support | The configuration without local payment methods | Under Managed Payments the session cannot choose its payment methods, so the form offers card, Link, Apple Pay and Google Pay only once Support removes the local ones |
-| Public business details | Settings, Public details | Legal name, support email `hello@asobeast.dev`, terms and privacy URLs | Checkout and the portal print them |
+| Public business details | Settings, Public details | Legal name, support email `hello@asobeast.com`, terms and privacy URLs | Checkout and the portal print them |
 | Radar | Radar, Rules | The default rules, plus the free trial abuse control with Radar on payment methods saved for future use | A card fingerprint is only checked when Stripe exposes one; Radar sees cards across every merchant. Under Managed Payments ask Stripe whether the control applies |
 | Webhook endpoint | Developers, Webhooks | One endpoint per environment with the ten handled events on the pinned API version | See [Billing](/operations/billing#the-webhook-endpoint) |
 
