@@ -50,6 +50,7 @@ describe("matchesKeywordSearch", () => {
     [contains("tracker"), "habit tracker app", true],
     [contains("tracker"), "habit", false],
     [contains("cafe"), "café finder", true],
+    [contains("cafe"), "Café Finder", true],
     [contains("café"), "cafe finder", true],
     [contains("?"), "what?", true],
     [contains("?"), "habit", false],
