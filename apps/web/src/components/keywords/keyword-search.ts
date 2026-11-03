@@ -1,4 +1,4 @@
-import { normalizeText, searchKey } from "@asobeast/shared";
+import { lowerCase, normalizeText, searchKey } from "@asobeast/shared";
 
 export type KeywordSearch =
   | { kind: "none" }
@@ -12,6 +12,14 @@ const isQuote = (character: string | undefined): boolean =>
 
 const withoutQuotes = (text: string): string =>
   [...text].filter((character) => !isQuote(character)).join("");
+
+const ACCENTED_LETTER = /([\p{Script=Latin}\p{Script=Greek}])\p{M}+/gu;
+
+const foldAccents = (input: string): string =>
+  lowerCase(input)
+    .normalize("NFKD")
+    .replace(ACCENTED_LETTER, "$1")
+    .normalize("NFC");
 
 export function parseKeywordSearch(raw: string): KeywordSearch {
   const trimmed = raw.trim();
@@ -36,8 +44,8 @@ export function matchesKeywordSearch(
   if (search.kind === "none") return true;
   if (search.kind === "exact")
     return searchKey(normalizeText(text)) === search.phrase;
-  const fragment = searchKey(normalizeText(search.fragment));
-  return fragment === ""
+  const foldedFragment = searchKey(normalizeText(search.fragment));
+  return foldedFragment === ""
     ? text.toLowerCase().includes(search.fragment)
-    : searchKey(normalizeText(text)).includes(fragment);
+    : foldAccents(text).includes(foldAccents(search.fragment));
 }
