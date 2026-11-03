@@ -349,7 +349,7 @@ describe('AccountDeletionService', () => {
 
       await service.request(ACTOR, 'DELETE', NOW);
 
-      expect(stripe.cancelAtPeriodEnd).toHaveBeenCalledWith('sub_trial');
+      expect(stripe.cancelAtPeriodEnd).toHaveBeenCalledWith('sub_trial', NOW);
       expect(stripe.cancelAtPeriodEnd.mock.invocationCallOrder[0]).toBeLessThan(
         prisma.workspace.update.mock.invocationCallOrder[0],
       );
