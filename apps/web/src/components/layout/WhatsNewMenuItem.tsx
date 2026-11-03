@@ -3,7 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Megaphone } from "lucide-react";
-import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
+import {
+  SidebarMenuButton,
+  SidebarMenuItem,
+  useSidebar,
+} from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { hasUnseenRelease } from "@/lib/whats-new/release-notes";
 import { useSeenRelease } from "@/lib/whats-new/seen-release";
@@ -15,6 +19,7 @@ const UNREAD_SUFFIX = ", new updates";
 export function WhatsNewMenuItem({ latest }: { latest: string | null }) {
   const pathname = usePathname();
   const [seen] = useSeenRelease();
+  const { isMobile, setOpenMobile } = useSidebar();
   const unread = hasUnseenRelease(latest, seen);
   const name = unread ? `${WHATS_NEW_LABEL}${UNREAD_SUFFIX}` : WHATS_NEW_LABEL;
 
@@ -26,7 +31,14 @@ export function WhatsNewMenuItem({ latest }: { latest: string | null }) {
         tooltip={name}
         className="relative"
       >
-        <Link href={WHATS_NEW_PATH} aria-label={name} data-unread={unread}>
+        <Link
+          href={WHATS_NEW_PATH}
+          aria-label={name}
+          data-unread={unread}
+          onClick={() => {
+            if (isMobile) setOpenMobile(false);
+          }}
+        >
           <span
             aria-hidden
             data-slot="unread-dot"

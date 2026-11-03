@@ -311,6 +311,16 @@ test.describe("the what's new sidebar item", () => {
     await expect(dot(page)).toBeVisible();
   });
 
+  test("closes the phone sheet when it opens the page", async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto("/");
+    await page.getByRole("button", { name: "Toggle Sidebar" }).first().click();
+    await (await hydrated(whatsNew(page))).click();
+
+    await expect(page).toHaveURL("/whats-new");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  });
+
   test("renders quiet on the server so hydration matches", async ({
     context,
     page,
