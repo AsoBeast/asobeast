@@ -59,14 +59,14 @@ const CHECKOUT_BUTTON_COLOR = '#f89820';
 
 export const CHECKOUT_BRAND: Record<CheckoutTheme, CheckoutBrand> = {
   light: {
-    backgroundColor: '#fbfaf8',
+    backgroundColor: '#ffffff',
     buttonColor: CHECKOUT_BUTTON_COLOR,
     borderStyle: 'rounded',
     fontFamily: 'inter',
     displayName: PRODUCT_NAME,
   },
   dark: {
-    backgroundColor: '#110f0c',
+    backgroundColor: '#1b1815',
     buttonColor: CHECKOUT_BUTTON_COLOR,
     borderStyle: 'rounded',
     fontFamily: 'inter',
