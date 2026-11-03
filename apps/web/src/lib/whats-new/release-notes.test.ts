@@ -38,7 +38,12 @@ const sentences = (each: Release): string[] => [
 ];
 
 const CODE_LIKE = /[`_/<>{}]|#\d|—|–| - /;
+const IDENTIFIER =
+  /\b(?!(?:iPhone|iPad|iPod|iOS|iPadOS|iCloud|macOS|watchOS|tvOS|visionOS)\b)[a-z]+[A-Z][A-Za-z]*\b/;
 const LOWERCASE_NAME = /asobeast/;
+
+const looksLikeCode = (text: string) =>
+  CODE_LIKE.test(text) || IDENTIFIER.test(text) || LOWERCASE_NAME.test(text);
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 describe("parseVersion", () => {
@@ -183,10 +188,24 @@ describe("RELEASES", () => {
     expect(repeated).toEqual([]);
   });
 
+  it("refuses identifiers and allows the names of Apple's platforms", () => {
+    expect(
+      [
+        "Uses apiFetch now.",
+        "Kept in localStorage.",
+        "Set `x`.",
+        "See #12.",
+      ].map(looksLikeCode),
+    ).toEqual([true, true, true, true]);
+    expect(
+      ["Works on iPhone, iPad and iOS.", "Runs on macOS.", "AsoBeast."].map(
+        looksLikeCode,
+      ),
+    ).toEqual([false, false, false]);
+  });
+
   it("is written without code, paths, issue numbers or dashes", () => {
-    const offending = RELEASES.flatMap(sentences).filter(
-      (text) => CODE_LIKE.test(text) || LOWERCASE_NAME.test(text),
-    );
+    const offending = RELEASES.flatMap(sentences).filter(looksLikeCode);
     expect(offending).toEqual([]);
   });
 
