@@ -107,7 +107,7 @@ export class AccountDeletionService {
     if (operatorWouldBeLost) {
       throw new ConflictException(OPERATOR_WORKSPACE_DELETION_REFUSED);
     }
-    await this.cancelRunningTrial(workspaceId);
+    await this.cancelRunningTrial(workspaceId, now);
     const dueAt = new Date(now.getTime() + this.graceDays * DAY_MS);
     const workspace = await this.prisma.workspace.update({
       where: { id: workspaceId },
@@ -128,7 +128,10 @@ export class AccountDeletionService {
     return this.toStatus(workspace);
   }
 
-  private async cancelRunningTrial(workspaceId: string): Promise<void> {
+  private async cancelRunningTrial(
+    workspaceId: string,
+    requestedAt: Date,
+  ): Promise<void> {
     const subscription = await this.prisma.workspace.findUniqueOrThrow({
       where: { id: workspaceId },
       select: { subscriptionId: true, subscriptionStatus: true },
@@ -140,7 +143,10 @@ export class AccountDeletionService {
       return;
     }
     try {
-      await this.stripe.cancelAtPeriodEnd(subscription.subscriptionId);
+      await this.stripe.cancelAtPeriodEnd(
+        subscription.subscriptionId,
+        requestedAt,
+      );
     } catch (error) {
       if (!isMissingResource(error)) throw error;
       this.logger.warn(

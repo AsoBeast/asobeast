@@ -44,12 +44,13 @@ describe('Deleting a workspace during its trial (e2e)', () => {
       .send({ confirm: 'DELETE' })
       .expect(201);
 
-    expect(harness.fake.subscriptionUpdates).toEqual([
-      {
-        params: { id: 'sub_trial', cancel_at_period_end: true },
-        idempotencyKey: 'cancel-at-end:sub_trial',
-      },
-    ]);
+    expect(harness.fake.subscriptionUpdates).toHaveLength(1);
+    const [update] = harness.fake.subscriptionUpdates;
+    expect(update.params).toEqual({
+      id: 'sub_trial',
+      cancel_at_period_end: true,
+    });
+    expect(update.idempotencyKey).toMatch(/^cancel-at-end:sub_trial:\d+$/);
     const status = await harness.owner.get('/account/deletion').expect(200);
     expect((status.body as WorkspaceDeletionStatus).scheduled).toBe(true);
   });
@@ -65,6 +66,26 @@ describe('Deleting a workspace during its trial (e2e)', () => {
     await harness.owner.delete('/account/deletion').expect(200);
 
     expect(harness.fake.subscriptionUpdates).toEqual([]);
+  });
+
+  it('cancels the trial again when a deletion is scheduled after one was cancelled', async () => {
+    await holdSubscription('trialing');
+    await harness.owner
+      .post('/account/deletion')
+      .send({ confirm: 'DELETE' })
+      .expect(201);
+    await harness.owner.delete('/account/deletion').expect(200);
+
+    await harness.owner
+      .post('/account/deletion')
+      .send({ confirm: 'DELETE' })
+      .expect(201);
+
+    const keys = harness.fake.subscriptionUpdates.map(
+      ({ idempotencyKey }) => idempotencyKey,
+    );
+    expect(keys).toHaveLength(2);
+    expect(new Set(keys).size).toBe(2);
   });
 
   it('leaves a paying subscription alone', async () => {
