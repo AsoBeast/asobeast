@@ -5,6 +5,7 @@ import type {
   WebhookItem,
 } from "@asobeast/shared";
 import { holdRender } from "./chart-image.mts";
+import { openEmbedded } from "./embedded-checkout.mts";
 import {
   APP_GP_DETAIL,
   APP_GP_SERP_MOVERS,
@@ -21,6 +22,7 @@ import {
   pressFromKeyboard,
 } from "./held-request.mts";
 import { seedLocalizations } from "./localizations.mts";
+import { fulfillJson } from "./plan-helpers.mts";
 import { activateTwiceInOneTask, hydrated } from "./hydrated.mts";
 import {
   answerTrack,
@@ -1228,5 +1230,63 @@ test.describe("chart image controls keep focus", () => {
     await pressFromKeyboard(control);
 
     await expectFocusKeptWhileHeld(control, held);
+  });
+});
+
+test.describe("the embedded checkout retry keeps focus", () => {
+  test("keeps Try again focused while a retry runs and hands focus to the form", async ({
+    page,
+  }) => {
+    await openEmbedded(page);
+    await page.unroute("**/api/backend/billing/checkout");
+    const refused = fulfillJson(409, {
+      statusCode: 409,
+      error: "Conflict",
+      message: "A checkout is already being opened. Try again.",
+      path: "/billing/checkout",
+      timestamp: new Date().toISOString(),
+    });
+    const answers = [
+      refused,
+      refused,
+      fulfillJson(200, {
+        url: "http://localhost:3000/?checkout=complete",
+        clientSecret: "cs_after_retry",
+      }),
+    ];
+    const held: { release: () => void }[] = [];
+    await page.route("**/api/backend/billing/checkout", async (route) => {
+      const answer = answers.shift() ?? refused;
+      if (answers.length < 2) {
+        await new Promise<void>((resolve) => held.push({ release: resolve }));
+      }
+      await route.fulfill(answer);
+    });
+
+    await page.goto("/upgrade");
+    const retry = page.getByRole("button", { name: "Try again" });
+    await pressFromKeyboard(retry);
+    await expect(retry).toHaveAttribute("aria-disabled", "true");
+    await expect(retry).toBeFocused();
+    const payment = page.getByRole("region", { name: "Payment" });
+    await expect(payment.getByRole("status")).toHaveText("Opening checkout…");
+    await expect(payment.getByRole("alert")).toHaveCount(0);
+    await expect.poll(() => held.length).toBe(1);
+    held[0].release();
+    await expect(retry).not.toHaveAttribute("aria-disabled", "true");
+    await expect(retry).toBeFocused();
+    await expect(payment.getByRole("alert")).toHaveText(
+      "A checkout is already being opened. Try again.",
+    );
+
+    await page.keyboard.press("Enter");
+    await expect(retry).toHaveAttribute("aria-disabled", "true");
+    await expect.poll(() => held.length).toBe(2);
+    held[1].release();
+    const form = page.getByRole("region", {
+      name: "Stripe checkout for Indie, monthly",
+    });
+    await expect(form).toHaveAttribute("data-mounted", "cs_after_retry");
+    await expect(form).toBeFocused();
   });
 });

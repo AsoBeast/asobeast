@@ -4,11 +4,17 @@ import type {
   CheckoutUi,
 } from "@asobeast/shared";
 
+export const OPEN_TURN_MS = 40_000;
+
 let opening: Promise<unknown> = Promise.resolve();
+
+function turnEnds(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, OPEN_TURN_MS));
+}
 
 export function openAfterPrevious<T>(open: () => Promise<T>): Promise<T> {
   const next = opening.then(open);
-  opening = next.catch(() => undefined);
+  opening = Promise.race([next, turnEnds()]).catch(() => undefined);
   return next;
 }
 

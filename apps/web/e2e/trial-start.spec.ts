@@ -1,6 +1,6 @@
 import { formatDate } from "../src/lib/format";
 import { type Page } from "@playwright/test";
-import { holdRequest, pressFromKeyboard } from "./held-request.mts";
+import { openEmbedded, STRIPE_STUB } from "./embedded-checkout.mts";
 import { fulfillJson, seedSession } from "./plan-helpers.mts";
 import { expect, test } from "./reporting.mts";
 import {
@@ -304,34 +304,6 @@ test.describe("the billing wall", () => {
   });
 
   test.describe("with a publishable key", () => {
-    const STRIPE_STUB = `
-      window.Stripe = function () {
-        return {
-          createEmbeddedCheckoutPage: async ({
-            clientSecret,
-            fetchClientSecret,
-          }) => {
-            const secret = clientSecret
-              ? Promise.resolve(clientSecret)
-              : fetchClientSecret();
-            return {
-              mount: (target) =>
-                secret.then(
-                  (value) => target.setAttribute("data-mounted", value),
-                  (error) => {
-                    target.setAttribute("data-stripe-error", "");
-                    throw new Error("fetchClientSecret failed: " + error);
-                  },
-                ),
-              unmount: () => {},
-              destroy: () => {},
-            };
-          },
-        };
-      };
-      window.Stripe.version = "endive";
-    `;
-
     test("mounts the embedded checkout and remounts it per plan and interval", async ({
       page,
       context,
@@ -507,40 +479,6 @@ test.describe("the billing wall", () => {
       expect(priceIds).toEqual(["price_ultimate_year"]);
     });
 
-    async function openEmbedded(page: Page) {
-      await seedViewer(page.context(), "checkout-pending");
-      await seedSession(page);
-      await openBilling(page);
-      await page.route("**/api/backend/billing/catalog", (route) =>
-        route.fulfill(
-          fulfillJson(200, { ...CATALOG, publishableKey: "pk_test_e2e" }),
-        ),
-      );
-      await page.route("https://js.stripe.com/**", (route) =>
-        route.fulfill({
-          status: 200,
-          contentType: "application/javascript",
-          body: STRIPE_STUB,
-        }),
-      );
-      const bodies: { priceId: string; ui: string; theme: string }[] = [];
-      await page.route("**/api/backend/billing/checkout", async (route) => {
-        const body = route.request().postDataJSON() as {
-          priceId: string;
-          ui: string;
-          theme: string;
-        };
-        bodies.push(body);
-        await route.fulfill(
-          fulfillJson(200, {
-            url: "http://localhost:3000/?checkout=complete",
-            clientSecret: `cs_${body.priceId}_${body.theme}_${bodies.length}`,
-          }),
-        );
-      });
-      return bodies;
-    }
-
     test.describe("in the light theme", () => {
       test.use({ colorScheme: "light" });
 
@@ -626,56 +564,6 @@ test.describe("the billing wall", () => {
         );
         expect(bodies).toEqual(["dark", "dark"]);
       });
-    });
-
-    test("keeps Try again focused while a retry runs and hands focus to the form", async ({
-      page,
-    }) => {
-      await openEmbedded(page);
-      await page.unroute("**/api/backend/billing/checkout");
-      const refused = fulfillJson(409, {
-        statusCode: 409,
-        error: "Conflict",
-        message: "A checkout is already being opened. Try again.",
-        path: "/billing/checkout",
-        timestamp: new Date().toISOString(),
-      });
-      const answers = [
-        refused,
-        refused,
-        fulfillJson(200, {
-          url: "http://localhost:3000/?checkout=complete",
-          clientSecret: "cs_after_retry",
-        }),
-      ];
-      const held: { release: () => void }[] = [];
-      await page.route("**/api/backend/billing/checkout", async (route) => {
-        const answer = answers.shift() ?? refused;
-        if (answers.length < 2) {
-          await new Promise<void>((resolve) => held.push({ release: resolve }));
-        }
-        await route.fulfill(answer);
-      });
-
-      await page.goto("/upgrade");
-      const retry = page.getByRole("button", { name: "Try again" });
-      await pressFromKeyboard(retry);
-      await expect(retry).toHaveAttribute("aria-disabled", "true");
-      await expect(retry).toBeFocused();
-      await expect.poll(() => held.length).toBe(1);
-      held[0].release();
-      await expect(retry).not.toHaveAttribute("aria-disabled", "true");
-      await expect(retry).toBeFocused();
-
-      await page.keyboard.press("Enter");
-      await expect(retry).toHaveAttribute("aria-disabled", "true");
-      await expect.poll(() => held.length).toBe(2);
-      held[1].release();
-      const form = page.getByRole("region", {
-        name: "Stripe checkout for Indie, monthly",
-      });
-      await expect(form).toHaveAttribute("data-mounted", "cs_after_retry");
-      await expect(form).toBeFocused();
     });
 
     test("lets the next plan open after a checkout request stalls", async ({

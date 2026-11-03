@@ -14,6 +14,8 @@ type MountState = "loading" | "ready" | "failed" | "retrying";
 
 const UNREACHABLE = "Checkout could not be opened. Try again.";
 
+const REOPENING = "Opening checkout…";
+
 const CHECKOUT_OPEN_TIMEOUT_MS = 35_000;
 
 function failureOf(error: unknown): string {
@@ -89,7 +91,11 @@ export function EmbeddedCheckout({
       {state === "loading" ? <Skeleton className="h-[28rem] w-full" /> : null}
       {state === "failed" || state === "retrying" ? (
         <div className="flex flex-col items-start gap-2 text-body">
-          <p role="alert">{failure}</p>
+          {state === "retrying" ? (
+            <p role="status">{REOPENING}</p>
+          ) : (
+            <p role="alert">{failure}</p>
+          )}
           <Button
             ref={retry}
             variant="outline"
