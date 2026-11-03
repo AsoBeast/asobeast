@@ -1,5 +1,6 @@
 import { formatDate } from "../src/lib/format";
 import { type Page } from "@playwright/test";
+import { holdRequest, pressFromKeyboard } from "./held-request.mts";
 import { fulfillJson, seedSession } from "./plan-helpers.mts";
 import { expect, test } from "./reporting.mts";
 import {
@@ -625,6 +626,88 @@ test.describe("the billing wall", () => {
         );
         expect(bodies).toEqual(["dark", "dark"]);
       });
+    });
+
+    test("keeps Try again focused while a retry runs and hands focus to the form", async ({
+      page,
+    }) => {
+      await openEmbedded(page);
+      await page.unroute("**/api/backend/billing/checkout");
+      const refused = fulfillJson(409, {
+        statusCode: 409,
+        error: "Conflict",
+        message: "A checkout is already being opened. Try again.",
+        path: "/billing/checkout",
+        timestamp: new Date().toISOString(),
+      });
+      const answers = [
+        refused,
+        refused,
+        fulfillJson(200, {
+          url: "http://localhost:3000/?checkout=complete",
+          clientSecret: "cs_after_retry",
+        }),
+      ];
+      const held: { release: () => void }[] = [];
+      await page.route("**/api/backend/billing/checkout", async (route) => {
+        const answer = answers.shift() ?? refused;
+        if (answers.length < 2) {
+          await new Promise<void>((resolve) => held.push({ release: resolve }));
+        }
+        await route.fulfill(answer);
+      });
+
+      await page.goto("/upgrade");
+      const retry = page.getByRole("button", { name: "Try again" });
+      await pressFromKeyboard(retry);
+      await expect(retry).toHaveAttribute("aria-disabled", "true");
+      await expect(retry).toBeFocused();
+      await expect.poll(() => held.length).toBe(1);
+      held[0].release();
+      await expect(retry).not.toHaveAttribute("aria-disabled", "true");
+      await expect(retry).toBeFocused();
+
+      await page.keyboard.press("Enter");
+      await expect(retry).toHaveAttribute("aria-disabled", "true");
+      await expect.poll(() => held.length).toBe(2);
+      held[1].release();
+      const form = page.getByRole("region", {
+        name: "Stripe checkout for Indie, monthly",
+      });
+      await expect(form).toHaveAttribute("data-mounted", "cs_after_retry");
+      await expect(form).toBeFocused();
+    });
+
+    test("lets the next plan open after a checkout request stalls", async ({
+      page,
+    }) => {
+      await page.clock.install();
+      const bodies = await openEmbedded(page);
+      await page.unroute("**/api/backend/billing/checkout");
+      await page.route("**/api/backend/billing/checkout", async (route) => {
+        const body = route.request().postDataJSON() as { priceId: string };
+        bodies.push(body as (typeof bodies)[number]);
+        if (bodies.length === 1) return;
+        await route.fulfill(
+          fulfillJson(200, {
+            url: "http://localhost:3000/?checkout=complete",
+            clientSecret: `cs_${body.priceId}`,
+          }),
+        );
+      });
+
+      await page.goto("/upgrade");
+      await expect.poll(() => bodies.length).toBe(1);
+      await page.getByRole("button", { name: /^Ultimate,/ }).click();
+      await page.clock.fastForward(36_000);
+
+      await expect(
+        page.locator('[data-mounted="cs_price_ultimate_month"]'),
+      ).toHaveCount(1);
+      expect(bodies.map((body) => body.priceId)).toEqual([
+        "price_indie_month",
+        "price_ultimate_month",
+      ]);
     });
 
     test("keeps the hosted button without a key", async ({ page, context }) => {
