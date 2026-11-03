@@ -147,7 +147,7 @@ describe('TrialStarts', () => {
     ['mailbox', () => claim.mockResolvedValue(false)],
     ['card', () => claimCard.mockResolvedValue(false)],
   ])(
-    'ends the trial when the %s claim is lost, before it is marked',
+    'ends the trial inside the settling transaction when the %s claim is lost, before it is marked',
     async (lost, lose) => {
       lose();
 
@@ -157,7 +157,7 @@ describe('TrialStarts', () => {
 
       expect(endTrialNow).toHaveBeenCalledTimes(1);
       expect(endTrialNow).toHaveBeenCalledWith('sub_trial');
-      expect(calls.slice(-3)).toEqual(['end', 'transaction', 'mark']);
+      expect(calls.slice(-3)).toEqual(['transaction', 'end', 'mark']);
       expect(warn).toHaveBeenCalledWith(expect.stringContaining(lost));
     },
   );
