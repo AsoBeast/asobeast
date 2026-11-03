@@ -1,6 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { hasUnseenRelease } from "./release-notes";
 
 export const SEEN_RELEASE_KEY = "asobeast.whatsNew.seen";
 
@@ -41,7 +42,7 @@ const snapshot = () => unsaved ?? readSeenRelease(browserStorage);
 const serverSnapshot = () => undefined;
 
 function markSeen(version: string) {
-  if (snapshot() === version) return;
+  if (!hasUnseenRelease(version, snapshot())) return;
   unsaved = writeSeenRelease(browserStorage, version) ? null : version;
   listeners.forEach((listener) => listener());
 }

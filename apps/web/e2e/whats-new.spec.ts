@@ -121,6 +121,18 @@ test.describe("the what's new page", () => {
     await expect.poll(() => storedSeen(page)).toBe(version);
   });
 
+  test("keeps a newer seen release when this version opens the page", async ({
+    context,
+    page,
+  }) => {
+    await seedSeen(context, "999.0.0");
+    await page.goto("/whats-new");
+    await expect(releases(page).first()).toBeVisible();
+    await page.waitForLoadState("networkidle");
+
+    expect(await storedSeen(page)).toBe("999.0.0");
+  });
+
   test("renders when browser storage throws", async ({ page }) => {
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));
