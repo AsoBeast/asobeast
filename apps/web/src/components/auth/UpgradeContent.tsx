@@ -21,7 +21,7 @@ export function UpgradeContent() {
   });
 
   if (isMember) return <MemberBilling plan={plan} />;
-  if (isLoading || signedOut || planPending) {
+  if (isLoading || signedOut || (authenticated && planPending)) {
     return (
       <div className="flex justify-center py-12">
         <SessionCheck />

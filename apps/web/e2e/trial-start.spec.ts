@@ -313,6 +313,25 @@ test.describe("the billing wall", () => {
     expect(stepsBox.y).toBeLessThan(headingBox.y);
   });
 
+  test("leaves the session check when the session status cannot be read", async ({
+    page,
+    context,
+  }) => {
+    await seedViewer(context, "checkout-pending");
+    await seedSession(page);
+    await openBilling(page);
+    await page.route("**/api/backend/auth/status", (route) =>
+      route.fulfill({ status: 503 }),
+    );
+
+    await page.goto("/upgrade");
+
+    await expect(
+      page.getByRole("status", { name: "Checking your session" }),
+    ).toHaveCount(0, { timeout: 20_000 });
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  });
+
   test("keeps the current plan badge inside its card on a narrow phone", async ({
     page,
     context,
