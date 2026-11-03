@@ -1,0 +1,153 @@
+---
+title: "Connect Google Play"
+description: "Connect the Google Play Console to AsoBeast step by step, by signing in with Google or with a service account key: where the bucket id is, which Play Console permission to grant, what the card shows afterwards, how to fix every message it can show and how an operator turns on sign in with Google."
+icon: "play"
+keywords:
+  - "Google Play Console"
+  - "service account"
+  - "JSON key"
+  - "pubsite_prod"
+  - "bucket id"
+  - "Cloud Storage"
+  - "sign in with Google"
+  - "bulk reports"
+  - "connect"
+  - "troubleshooting"
+---
+
+Connecting the Google Play Console gives every Google Play app it can read a **Store funnel** card on its overview, with store listing visitors, acquisitions and conversion by market, a **Play installs** column on the keywords page with the installs each search term brought, and **Post to Google Play** for review replies. Google publishes no daily analytics API for store listings, so AsoBeast reads the monthly report files Play Console writes to a Cloud Storage bucket of your developer account. A workspace holds one Google Play connection.
+
+## Before you start
+
+- You need the **Owner** or an **Admin** of the Play Console developer account, to open **Download reports** and to invite a service account.
+- It takes about ten minutes. Google can take up to two days to apply a permission given to a new service account, so the connection may be refused until then.
+- You must be the owner of the AsoBeast workspace, and the **Store connections** section of Integrations must show a **Connect Google Play** button. If it says that store connections are off, the instance needs `STORE_CONNECT_ENCRYPTION_KEY` first, see [the overview](/integrations/overview#what-the-instance-needs-first).
+- Google writes a day into the files three to seven days after it ends, so the newest days of the card fill in over the following week.
+
+## Choose how to connect
+
+|  | Sign in with Google | Service account key |
+| --- | --- | --- |
+| Offered | When the instance has a Google OAuth client, as on the hosted service | Always |
+| Reads as | Your own Google account | A service account you invite in Play Console |
+| Setup | One consent screen | A Google Cloud project, a JSON key and an invitation |
+| Keeps working when | You keep access to the developer account and do not revoke it | The service account stays invited |
+
+The dialog opens on **Sign in with Google** when the instance offers it. Both ways need the bucket id.
+
+## Copy the bucket id
+
+<Steps>
+  <Step title="Open Download reports">
+    In [Play Console](https://play.google.com/console), open **Download reports** in the menu on the left, then **Statistics**.
+  </Step>
+  <Step title="Copy the Cloud Storage URI">
+    Press **Copy Cloud Storage URI** at the top of the page. It reads `gs://pubsite_prod_rev_` followed by digits, or `gs://pubsite_prod_` followed by digits on older accounts.
+  </Step>
+  <Step title="Keep the bucket id">
+    The bucket id is the part after `gs://`, for example `pubsite_prod_rev_01234567890987654321`. AsoBeast also accepts the whole URI and removes the `gs://` itself.
+  </Step>
+</Steps>
+
+## Sign in with Google
+
+<Steps>
+  <Step title="Open the dialog">
+    In AsoBeast, open **Integrations**, find the **Google Play Console** card under **Store connections** and press **Connect Google Play**. Keep **Sign in with Google** selected.
+  </Step>
+  <Step title="Paste the bucket id">
+    Paste it into **Bucket id** and press **Sign in with Google**. AsoBeast sends you to Google.
+  </Step>
+  <Step title="Choose the account">
+    Choose the Google account that owns the Play Console developer account, or one that has **View app information and download bulk reports** on the **Account permissions** tab of **Users and permissions**.
+  </Step>
+  <Step title="Allow the access AsoBeast asks for">
+    Keep **View your data in Google Cloud Storage** ticked: it is read only and lets AsoBeast read the report files. AsoBeast also asks to manage your Play Console, which it uses only to post the review replies you send from the reviews page. Leave that unticked and the connection still reads reports, but cannot post replies. Press **Continue**.
+  </Step>
+  <Step title="Return to AsoBeast">
+    Google sends you back to AsoBeast, which reads the bucket with your account before it stores anything, then shows the card on **Store connections**.
+  </Step>
+</Steps>
+
+AsoBeast keeps only the refresh token Google issues, sealed like every console key. To revoke it, remove AsoBeast under **Third party connections** in your [Google account](https://myaccount.google.com/connections); the connection is then marked refused until you sign in again.
+
+Posting replies through a sign in also needs **Reply to reviews** for your account in Play Console. A sign in that left Play Console access unticked shows **Review replies** as refused on the card; sign in with Google again and allow it.
+
+## Use a service account key
+
+<Steps>
+  <Step title="Open the Google Cloud console">
+    Sign in at [console.cloud.google.com](https://console.cloud.google.com) and pick a project, or create one with **New project**. Any project works: the bucket belongs to Google Play, not to the project.
+  </Step>
+  <Step title="Create the service account">
+    Open **IAM and Admin**, then **Service accounts**, and press **Create service account**. Name it, for example asobeast-reports, press **Create and continue**, skip the optional role and access steps and press **Done**. Copy the account's email address, which ends in `iam.gserviceaccount.com`.
+  </Step>
+  <Step title="Create a JSON key">
+    Open the service account, then the **Keys** tab, press **Add key**, **Create new key**, choose **JSON** and press **Create**. Google downloads the key file once. Keep it until it is connected.
+  </Step>
+  <Step title="Enable the API for replies">
+    To post review replies, open **APIs and services**, then **Library**, search for **Google Play Android Developer API** and press **Enable**. Reading reports does not need it.
+  </Step>
+  <Step title="Invite the service account in Play Console">
+    In Play Console, open **Users and permissions** and press **Invite new users**. Paste the service account's email address.
+  </Step>
+  <Step title="Grant the report permission on the account">
+    Open the **Account permissions** tab of the invitation and tick **View app information and download bulk reports (read only)**. Tick **Reply to reviews** as well to post replies. Press **Invite user** and confirm. Google grants the bucket only from the **Account permissions** tab, never from the permissions of single apps.
+  </Step>
+  <Step title="Connect it in AsoBeast">
+    In **Integrations**, press **Connect Google Play**, choose **Service account key**, paste the bucket id and choose the JSON key file, or paste its contents. Press **Connect Google Play**. AsoBeast reads the bucket with the key before it stores anything, so a refused account or a wrong bucket id is answered in the dialog. If Google refuses an account you invited in the last two days, wait and try again.
+  </Step>
+</Steps>
+
+Reading reports needs no Google Cloud IAM role and no project link: Play Console alone decides who may read the bucket.
+
+## After connecting
+
+The card lists the service account or the Google account, the bucket, the key ID and fingerprint for a key, and the day it was connected, then **Review replies**, the status line and **Apps this connection reports**. The status line reads **Waiting for the first store performance file, which Google writes to the bucket once a day.** until the first file is read.
+
+| App state | What it means |
+| --- | --- |
+| Reporting | The bucket holds report files for this app |
+| Waiting | The first sync has not finished |
+| No files in this bucket | The bucket has no files for this app. It belongs to another developer account |
+| No access to this app | Google refused this app's files to the account |
+| Stopped, verify to read again | Reading stopped. Press **Verify** |
+
+**Verify**, **Sync now**, **Reconnect** and **Disconnect** work as for [App Store Connect](/integrations/app-store-connect#after-connecting). What the numbers mean, and how the two report files are read, is in [Read impressions and conversion from your console](/guides/store-funnel#google-play).
+
+## Troubleshooting
+
+| What AsoBeast says | What it means | What to do |
+| --- | --- | --- |
+| Copy the bucket id that starts with pubsite_prod from Download reports in Play Console. | The bucket id is not in the expected format | Copy the Cloud Storage URI again from **Download reports** |
+| Choose the JSON key file Google Cloud downloaded for the service account, or paste its contents. | The key field does not hold a service account key | Choose the JSON file from the **Keys** tab, not another credential |
+| Google Cloud Storage has no bucket … | The bucket id is wrong. Cloud Storage answers this even to an account without access | Copy the Cloud Storage URI again from **Download reports** |
+| Google refused … access to … | The bucket exists and the service account may not read it | Grant **View app information and download bulk reports** on the **Account permissions** tab, and wait up to two days |
+| Your Google account … cannot read … | You signed in with an account without report access | Sign in with the account that owns the developer account |
+| Google refused the key of … | The key was deleted or disabled, or the service account was removed | Create a new JSON key and connect it |
+| Google no longer accepts the sign in of … | You revoked it, or the OAuth app of the instance is still in testing | Sign in with Google again; the operator publishes the consent screen to production |
+| Google did not grant access to Cloud Storage. | **View your data in Google Cloud Storage** was unticked | Sign in again and keep it ticked |
+| Google refused the OAuth client of this instance. | The operator's client ID, secret or redirect URI does not match | The operator checks [Set up Google sign in for the instance](#set-up-google-sign-in) |
+| This service account cannot reply to reviews. Give it the Reply to reviews permission in Play Console. | Google refused a reply because of the account's permissions | Tick **Reply to reviews** for the service account in **Users and permissions** |
+| The Google Play Android Developer API is not enabled … | Google refused a reply because the API is off in the project | Enable the API in the project the message names, wait a few minutes and post again |
+| Some store performance files could not be read or were too large. They are tried again on the next sync. | One file failed on every try today | Nothing. The next sync tries it again |
+
+## Set up Google sign in for the instance {#set-up-google-sign-in}
+
+An operator turns sign in with Google on once for a self hosted instance. The hosted service already has it.
+
+<Steps>
+  <Step title="Create the OAuth client">
+    In the Google Cloud console, open **APIs and services**, then **Credentials**, press **Create credentials**, **OAuth client ID**, and choose **Web application**. Add the authorized redirect URI `WEB_PUBLIC_URL` followed by `/integrations/google-play`, for example `https://aso.example.com/integrations/google-play`.
+  </Step>
+  <Step title="Publish the consent screen">
+    Add the scopes `https://www.googleapis.com/auth/devstorage.read_only` and `https://www.googleapis.com/auth/androidpublisher` to the consent screen, enable the Google Play Android Developer API in the same project, and publish the app to production. Google expires every sign in of an app left in testing after seven days. Until Google verifies the app, the consent screen warns that it is unverified, which is enough for a team that knows the instance.
+  </Step>
+  <Step title="Set the variables">
+    Set `GOOGLE_PLAY_OAUTH_CLIENT_ID`, `GOOGLE_PLAY_OAUTH_CLIENT_SECRET` and `WEB_PUBLIC_URL`, described in the [configuration reference](/configuration/reference#store-consoles), and restart the API. The dialog then offers **Sign in with Google**.
+  </Step>
+</Steps>
+
+## Replace or remove the connection
+
+Press **Reconnect** to connect another key or sign in in its place. Press **Disconnect** to delete the stored key or sign in; the numbers already stored stay hidden until you connect again. Disconnecting does not delete the key at Google: delete it on the service account's **Keys** tab, or remove AsoBeast under **Third party connections** in your Google account.

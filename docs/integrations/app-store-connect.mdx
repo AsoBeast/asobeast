@@ -1,0 +1,131 @@
+---
+title: "Connect App Store Connect"
+description: "Create an App Store Connect team key, connect it in AsoBeast and check that it works, step by step: which role to choose, where the issuer ID and the key ID are, what the card shows afterwards and how to fix every message it can show."
+icon: "tablet-smartphone"
+keywords:
+  - "App Store Connect"
+  - "team key"
+  - "API key"
+  - "issuer ID"
+  - "key ID"
+  - "p8"
+  - "Admin role"
+  - "connect"
+  - "troubleshooting"
+---
+
+Connecting App Store Connect gives every App Store app the key can see a **Store funnel** card on its overview, with impressions, product page views, Get taps and conversion by market from Apple's own report, the performance of your custom product pages, the import of the private keyword field on the metadata page, and **Post to App Store** for review replies. One key covers every app of the App Store Connect team, and a workspace holds one key.
+
+## Before you start
+
+- You need the **Account Holder** or **Admin** role in App Store Connect. Only those roles can create a team key.
+- It takes about five minutes. Apple lets you download the key file only once, so keep it somewhere safe until it is connected.
+- You must be the owner of the AsoBeast workspace, and the **Store connections** section of Integrations must show a **Connect App Store Connect** button. If it says that store connections are off, the instance needs `STORE_CONNECT_ENCRYPTION_KEY` first, see [the overview](/integrations/overview#what-the-instance-needs-first).
+- The first numbers appear one or two days after you connect, because Apple prepares the first report after AsoBeast asks for it.
+
+## Choose the key role
+
+A team key carries its own role, separate from the role of the person who creates it.
+
+| Role | Reports | Review replies |
+| --- | --- | --- |
+| Admin | Asks for and reads them | Posts and withdraws them |
+| Sales and Reports | Reads them once an Admin key asked for them | No |
+| Customer Support | No | Posts and withdraws them |
+
+Choose **Admin**. Apple lets only an Admin key ask for the reports, so this one key does everything AsoBeast offers.
+
+<Note>
+  For least privilege, connect the Admin key first, let the first sync ask Apple for the reports, then replace it with a **Sales and Reports** key. An App Store app imported after the switch needs the Admin key again, because its reports have not been asked for yet, and a Sales and Reports key cannot post replies.
+</Note>
+
+## Create the key
+
+<Steps>
+  <Step title="Open App Store Connect">
+    Sign in at [appstoreconnect.apple.com](https://appstoreconnect.apple.com) with an Account Holder or Admin account.
+  </Step>
+  <Step title="Open the team keys">
+    Press **Users and Access**, open the **Integrations** tab, choose **App Store Connect API** in the list on the left, then **Team Keys**.
+  </Step>
+  <Step title="Request access, the first time only">
+    If the page shows **Request Access**, the Account Holder presses it and accepts the terms. Apple turns the API on for the team at once, and the page then shows the team keys.
+  </Step>
+  <Step title="Generate the key">
+    Press the **\+** button beside **Active**, or **Generate API Key** when the list is empty. Name the key, for example AsoBeast, choose **Admin** under **Access** and press **Generate**. The key appears in the list.
+  </Step>
+  <Step title="Copy the issuer ID and the key ID">
+    The **Issuer ID** is shown above the list, a long value such as `57246542-96fe-1a63-e053-0824d011072a`. The **Key ID** is the ten letters and digits in the key's row. Copy both.
+  </Step>
+  <Step title="Download the key file">
+    Press **Download** in the key's row. Apple downloads `AuthKey_` followed by the key ID and `.p8`, and never offers the file again. If it is lost, revoke the key and generate a new one.
+  </Step>
+</Steps>
+
+<Warning>
+  The **In App Purchase** tab of the same page shows a different issuer ID and its own keys. Use the issuer ID and a key of **App Store Connect API**.
+</Warning>
+
+## Connect it in AsoBeast
+
+<Steps>
+  <Step title="Open Store connections">
+    In AsoBeast, open **Integrations** in the sidebar. The **App Store Connect** card is the first one under **Store connections**.
+  </Step>
+  <Step title="Open the dialog">
+    Press **Connect App Store Connect**.
+  </Step>
+  <Step title="Paste the two IDs">
+    Paste the issuer ID into **Issuer ID** and the key ID into **Key ID**.
+  </Step>
+  <Step title="Add the key file">
+    Choose the `.p8` file under **Private key**, or open it in a text editor and paste all of it, including the `BEGIN PRIVATE KEY` and `END PRIVATE KEY` lines.
+  </Step>
+  <Step title="Connect">
+    Press **Connect App Store Connect**. AsoBeast asks Apple whether the key works before it stores anything, so a mistyped ID or a revoked key is refused in the dialog. When Apple accepts it, the dialog closes with **App Store Connect connected** and the card shows the connection.
+  </Step>
+</Steps>
+
+## After connecting
+
+The card lists the issuer ID, the key ID, the key's fingerprint and the day it was connected, then:
+
+- **Review replies** reads **Not tried yet** until the first post, then **Allowed**, or names the role to add when Apple refused one.
+- The status line reads **Waiting for Apple's first report, usually within two days of connecting.** until the first files arrive, then **Last synced** and the time.
+- **Apps this key reports** lists every App Store app of the workspace with its state and the days of data stored.
+
+| App state | What it means |
+| --- | --- |
+| Reporting | Apple delivers the report for this app |
+| Waiting | The report was asked for and Apple has not delivered a file yet |
+| Not in this team | The key cannot see this app. It belongs to another App Store Connect team |
+| Needs an Admin key | The key may read reports but not ask for them. Connect an Admin key |
+| Stopped by Apple, verify to request again | Apple stopped the request, usually after a long time without downloads. Press **Verify** |
+
+| Control | What it does |
+| --- | --- |
+| **Verify** | Asks Apple again whether the stored key works. A key Apple refuses is marked rejected; a key it accepts again clears that and queues a sync |
+| **Sync now** | Queues the download of the reports Apple published since the last sync. A sync already waiting is not queued twice |
+| **Replace key** | Connects another key in place of this one |
+| **Disconnect** | Deletes the stored key and stops the downloads. The numbers already stored are kept, hidden while no key reports them, and appear again once you connect a key |
+
+AsoBeast downloads new files every day at 05:30 UTC. What the numbers mean is in [Read impressions and conversion from your console](/guides/store-funnel). To import an app's private keyword field through this key, see [When App Store Connect imports the field](/guides/metadata-workbench#when-app-store-connect-imports-the-field).
+
+## Troubleshooting
+
+| What AsoBeast says | What it means | What to do |
+| --- | --- | --- |
+| Paste the issuer ID shown above the team keys in App Store Connect. | The issuer ID is not in the expected format | Copy the **Issuer ID** above the team keys again, the whole value |
+| The key ID is ten letters and digits. | The key ID is too short, too long or has other characters | Copy the **Key ID** from the key's row |
+| Paste the whole contents of the .p8 file, or choose the file. | The private key field does not hold a key | Choose the `.p8` file, or paste all of it including the first and last lines |
+| App Store Connect refused this key. Check the issuer ID and the key ID, and that the key is active. | Apple did not accept the key | Check both IDs belong to this key and that it is listed under **Active**. A revoked key never works again |
+| Apple asks the account holder to accept the latest agreement in App Store Connect, under Business. Accept it, then verify the key again. | Apple refuses every key until the latest agreement is accepted | The Account Holder accepts it under **Business**, then press **Verify** |
+| This key can download reports but not request them. Connect an Admin key once; a Sales and Reports key can take over afterwards. | The key's role cannot ask Apple for reports | Press **Replace key** and connect an Admin key |
+| This App Store Connect key cannot respond to reviews. Connect a key with the Admin or Customer Support role. | Apple refused a reply because of the key's role | Replace the key with an Admin or Customer Support key |
+| Apple answered an error for some apps or reports, or sent a report AsoBeast could not read. They are tried again on the next sync. | One app or report failed on every try today | Nothing. The next sync tries it again; the other apps are up to date |
+| The stored key can no longer be decrypted, usually because STORE_CONNECT_ENCRYPTION_KEY changed without STORE_CONNECT_ENCRYPTION_KEY_PREVIOUS. Connect the key again. | The instance's encryption key changed | Connect the key again, or ask the operator to [rotate the key properly](/operations/rotate-secrets) |
+| App Store Connect asked to slow down. | Apple's hourly limit for the key was reached | Wait an hour and try again |
+
+## Replace or remove the key
+
+Press **Replace key** to connect another key in its place; the old key and its report requests are replaced. Press **Disconnect** to delete the stored key; the numbers already stored stay hidden until you connect again. Disconnecting does not revoke the key at Apple: to do that, press **Revoke** in the key's row under **Team Keys** in App Store Connect.
