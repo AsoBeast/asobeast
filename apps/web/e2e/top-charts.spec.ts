@@ -42,6 +42,15 @@ const formatDay = (date: string) =>
 
 const chartTable = (page: Page) => page.getByRole("table");
 
+const monthIndex = (date: string) =>
+  Number(date.slice(0, 4)) * 12 + Number(date.slice(5, 7));
+
+const stepBackToMonthOf = async (page: Page, shown: string, date: string) => {
+  for (let month = monthIndex(date); month < monthIndex(shown); month += 1) {
+    await page.getByRole("button", { name: "Previous month" }).click();
+  }
+};
+
 const kindRegion = (page: Page, name: string) =>
   page.getByRole("region", { name, exact: true });
 
@@ -410,23 +419,19 @@ test("picks a captured day", async ({ page }) => {
   await page.goto("/charts?view=table");
   const oldest = TOP_CHART_DATES.at(-1) ?? "";
   const newest = TOP_CHART_DATES[0];
+  const uncaptured = utcDaysAgo(4);
+  const grid = page.getByRole("grid");
 
   await page.getByRole("button", { name: /^Captured day/ }).click();
   await expect(
-    page.getByRole("grid").getByRole("button", { name: formatDay(newest) }),
+    grid.getByRole("button", { name: formatDay(newest) }),
   ).toBeEnabled();
+  await stepBackToMonthOf(page, newest, uncaptured);
   await expect(
-    page
-      .getByRole("grid")
-      .getByRole("button", { name: formatDay(utcDaysAgo(4)) }),
+    grid.getByRole("button", { name: formatDay(uncaptured) }),
   ).toBeDisabled();
-  if (oldest.slice(0, 7) !== newest.slice(0, 7)) {
-    await page.getByRole("button", { name: "Previous month" }).click();
-  }
-  await page
-    .getByRole("grid")
-    .getByRole("button", { name: formatDay(oldest) })
-    .click();
+  await stepBackToMonthOf(page, uncaptured, oldest);
+  await grid.getByRole("button", { name: formatDay(oldest) }).click();
 
   await expect(page).toHaveURL(new RegExp(`date=${oldest}`));
   await expect(chartTable(page).locator("caption")).toContainText(
@@ -1736,7 +1741,8 @@ test("names the requested country while a new country loads", async ({
 test("marks the chosen day apart from the other captured days", async ({
   page,
 }) => {
-  await page.goto("/charts?view=table");
+  const dayWithCapturedNeighbours = TOP_CHART_DATES[1];
+  await page.goto(`/charts?view=table&date=${dayWithCapturedNeighbours}`);
 
   await page.getByRole("button", { name: /^Captured day/ }).click();
   const chosen = page.locator('[data-captured][aria-pressed="true"]');
