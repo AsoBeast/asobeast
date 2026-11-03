@@ -56,7 +56,7 @@ export const CONNECT_FIRST: Record<Store, string> = {
 };
 
 export const PLAY_REPLY_SETUP_GUIDE =
-  'https://docs.asobeast.com/guides/store-funnel#use-a-service-account-key';
+  'https://docs.asobeast.com/integrations/google-play#use-a-service-account-key';
 
 export const playApiDisabled = (project: string | null): string =>
   `The Google Play Android Developer API is not enabled in ${project ? `Google Cloud project ${project}` : 'the Google Cloud project'} behind this connection: the OAuth client's project for a Google sign in, the service account's project for a key. Enable it there, then post again. See ${PLAY_REPLY_SETUP_GUIDE}`;
