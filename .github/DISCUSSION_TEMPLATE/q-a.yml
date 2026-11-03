@@ -46,5 +46,5 @@ body:
     attributes:
       label: Secret safety
       options:
-        - label: I have not pasted a value from a .env file, the output of docker compose config, a store console key or an asob_ token into this public discussion.
+        - label: I have removed every password, cookie, token, key and connection string from what I pasted, including values from a .env file, the output of docker compose config, store console keys and asob_ tokens.
           required: true
