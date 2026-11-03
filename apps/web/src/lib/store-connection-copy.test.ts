@@ -6,8 +6,11 @@ import {
 import { describe, expect, it } from "vitest";
 import {
   appStateLabel,
+  CONNECT_GUIDES,
   connectionStatusLine,
   historyLine,
+  INTEGRATIONS_GUIDE,
+  STORE_CONNECT_SETTING_GUIDE,
   STORE_CONSOLES,
   needsAdminKey,
   replyAccessLine,
@@ -223,5 +226,44 @@ describe("google play copy", () => {
     expect(forbidden({ ...PLAY, credential: "googleAccount" }).text).toContain(
       PLAY_REPLIES_NEED_CONSENT,
     );
+  });
+});
+
+describe("setup guides", () => {
+  it("links each store to its step by step guide", () => {
+    expect(STORE_CONSOLES.APP_STORE.guide).toBe(
+      "https://docs.asobeast.com/integrations/app-store-connect",
+    );
+    expect(STORE_CONSOLES.GOOGLE_PLAY.guide).toBe(
+      "https://docs.asobeast.com/integrations/google-play",
+    );
+  });
+
+  it("lists three sentences an owner needs before starting", () => {
+    for (const copy of Object.values(STORE_CONSOLES)) {
+      expect(copy.before).toHaveLength(3);
+      for (const line of copy.before) expect(line).toMatch(/^[A-Z].*\.$/);
+    }
+  });
+
+  it("links the overview and the operator setting", () => {
+    expect(INTEGRATIONS_GUIDE).toBe(
+      "https://docs.asobeast.com/integrations/overview",
+    );
+    expect(STORE_CONNECT_SETTING_GUIDE).toBe(
+      "https://docs.asobeast.com/configuration/reference#store-consoles",
+    );
+  });
+});
+
+describe("connect guides", () => {
+  it("links each connect method to its steps", () => {
+    expect(CONNECT_GUIDES).toEqual({
+      appStore:
+        "https://docs.asobeast.com/integrations/app-store-connect#create-the-key",
+      google:
+        "https://docs.asobeast.com/integrations/google-play#sign-in-with-google",
+      key: "https://docs.asobeast.com/integrations/google-play#use-a-service-account-key",
+    });
   });
 });

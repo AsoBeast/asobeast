@@ -122,7 +122,7 @@ describe('postRefusalOf', () => {
       'Google Cloud project 1076421972429',
     );
     expect(messageOf(exception)).toContain(
-      'https://docs.asobeast.com/guides/store-funnel#use-a-service-account-key',
+      'https://docs.asobeast.com/integrations/google-play#use-a-service-account-key',
     );
     expect(
       messageOf(

@@ -159,6 +159,15 @@
             ]
           },
           {
+            "group": "Integrations",
+            "icon": "plug",
+            "pages": [
+              "integrations/overview",
+              "integrations/app-store-connect",
+              "integrations/google-play"
+            ]
+          },
+          {
             "group": "Configuration",
             "icon": "settings",
             "pages": [

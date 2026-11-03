@@ -17,6 +17,8 @@ import {
   CHECKOUT_UNCONFIGURED,
   HANDLED_BY_STRIPE,
 } from "../src/lib/plan-choice";
+import { openSettledDialog } from "./dialog.mts";
+import { GOOGLE_SIGN_IN_COOKIE } from "./store-connections.mts";
 import { seedViewer } from "./viewer.mts";
 
 const TRIAL_PLAN: AccountPlan = {
@@ -522,6 +524,37 @@ test("a translated action sheet shows the status it changed to", async ({
   await markDone.click();
 
   await expect(status).toHaveText("Done");
+  expect(errors).toEqual([]);
+});
+
+test("a translated play dialog shows the description of the method it switches to", async ({
+  page,
+}) => {
+  const errors = collectDomErrors(page);
+  await page.context().addCookies([
+    {
+      name: GOOGLE_SIGN_IN_COOKIE,
+      value: "1",
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
+  await page.goto("/integrations#store-connections");
+  const dialog = await openSettledDialog(
+    page,
+    "Connect Google Play",
+    page.getByRole("region", { name: "Store connections" }),
+  );
+  const keyTab = await hydrated(
+    dialog.getByRole("tab", { name: "Service account key" }),
+  );
+
+  await translateText(page);
+  await keyTab.click();
+
+  await expect(dialog).toContainText(
+    "Use a Google Cloud service account invited in Play Console",
+  );
   expect(errors).toEqual([]);
 });
 

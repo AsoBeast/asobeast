@@ -4,14 +4,15 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { STORE_FUNNEL_GUIDE } from "@/components/overview/FunnelHelp";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ApiError, connectStore } from "@/lib/api";
 import { invalidateStoreConnectionMutation } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
+import { CONNECT_GUIDES } from "@/lib/store-connection-copy";
 import { AlertChannelDialog } from "@/components/settings/alert-channel/AlertChannelDialog";
+import { GuideLink } from "./GuideLink";
 
 const ISSUER_ID =
   /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
@@ -95,7 +96,16 @@ export function ConnectAppStoreDialog({
       open={open}
       onOpenChange={reset}
       label={label}
-      description="Create a team key with the Admin role in Users and Access, Integrations, so AsoBeast can ask Apple for the reports. AsoBeast checks it with Apple, stores it encrypted and never shows it again."
+      description={
+        <>
+          Create a team key with the Admin role in Users and Access,
+          Integrations, so AsoBeast can ask Apple for the reports. AsoBeast
+          checks it with Apple, stores it encrypted and never shows it again.{" "}
+          <GuideLink href={CONNECT_GUIDES.appStore} subject="App Store Connect">
+            Step by step guide
+          </GuideLink>
+        </>
+      }
       error={error}
       pending={mutation.isPending}
       onSubmit={submit}
@@ -156,15 +166,7 @@ export function ConnectAppStoreDialog({
         <p className="text-xs text-muted-foreground">
           Paste the key or choose the .p8 file you downloaded. A team key with
           the Admin role covers reports and replies; Sales and Reports reads
-          reports only, Customer Support replies only.{" "}
-          <a
-            href={`${STORE_FUNNEL_GUIDE}#create-the-key`}
-            target="_blank"
-            rel="noreferrer"
-            className="font-medium text-foreground underline decoration-primary underline-offset-4 hover:decoration-2"
-          >
-            Why an Admin key
-          </a>
+          reports only, Customer Support replies only.
         </p>
       </div>
     </AlertChannelDialog>

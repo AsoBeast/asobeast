@@ -42,14 +42,17 @@ import {
 import { useSingleFlight } from "@/lib/single-flight";
 import {
   connectionStatusLine,
+  STORE_CONNECT_SETTING_GUIDE,
   STORE_CONNECTIONS_SECTION_ID,
   STORE_CONSOLES,
+  type StoreConsoleCopy,
   needsAdminKey,
   replyAccessLine,
 } from "@/lib/store-connection-copy";
 import { cn } from "@/lib/utils";
 import { ConnectAppStoreDialog } from "./ConnectAppStoreDialog";
 import { ConnectPlayDialog } from "./ConnectPlayDialog";
+import { GuideLink } from "./GuideLink";
 import { StoreConnectionApps } from "./StoreConnectionApps";
 
 const OWNER_ONLY = "Only the workspace owner can connect a store.";
@@ -229,6 +232,33 @@ function ConnectionDetails({
   );
 }
 
+function BeforeYouStart({
+  store,
+  copy,
+}: {
+  store: Store;
+  copy: StoreConsoleCopy;
+}) {
+  const labelId = `before-you-start-${store}`;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <p id={labelId} className="text-label text-foreground">
+        <span>Before you start</span>
+        <span className="sr-only">{` with ${copy.name}`}</span>
+      </p>
+      <ul
+        aria-labelledby={labelId}
+        className="flex list-disc flex-col gap-1 pl-4 text-body text-muted-foreground"
+      >
+        {copy.before.map((line) => (
+          <li key={line}>{line}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function StoreConsoleCard({
   store,
   connection,
@@ -259,13 +289,19 @@ function StoreConsoleCard({
         ) : null}
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
+        <GuideLink href={copy.guide} subject={copy.name}>
+          Setup guide
+        </GuideLink>
         {connection ? (
           <ConnectionDetails
             item={connection}
             actions={owner ? <ConnectionActions item={connection} /> : null}
           />
         ) : (
-          <p className="text-body text-muted-foreground">{copy.empty}</p>
+          <>
+            <p className="text-body text-muted-foreground">{copy.empty}</p>
+            {owner ? <BeforeYouStart store={store} copy={copy} /> : null}
+          </>
         )}
       </CardContent>
     </Card>
@@ -293,8 +329,14 @@ export function StoreConnectionsCard() {
           <CardDescription>Store console</CardDescription>
           <CardTitle>Store connections</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex flex-col gap-3">
           <p className="text-body text-muted-foreground">{STORE_CONNECT_OFF}</p>
+          <GuideLink
+            href={STORE_CONNECT_SETTING_GUIDE}
+            subject="store connections"
+          >
+            How to turn them on
+          </GuideLink>
         </CardContent>
       </Card>
     );

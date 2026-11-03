@@ -8,7 +8,7 @@ export function SettingsSection({
 }: {
   id: string;
   title: string;
-  description: string;
+  description: ReactNode;
   children: ReactNode;
 }) {
   return (

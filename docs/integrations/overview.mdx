@@ -1,0 +1,64 @@
+---
+title: "Connect AsoBeast to your stores and tools"
+sidebarTitle: "Overview"
+description: "What the Integrations page connects, App Store Connect, the Google Play Console, personal API tokens and the MCP server, what each one unlocks, who can connect it and what the instance must have turned on first."
+icon: "plug"
+keywords:
+  - "integrations"
+  - "store connections"
+  - "App Store Connect"
+  - "Google Play Console"
+  - "API token"
+  - "MCP"
+  - "setup"
+---
+
+Everything AsoBeast connects to lives on one page: open **Integrations** in the sidebar. The page has two sections, **Store connections** for your store consoles and **API and MCP** for your own tools.
+
+## What you can connect
+
+| Integration | What you get | Who connects it | Guide |
+| --- | --- | --- | --- |
+| App Store Connect | Impressions, product page views, Get taps and conversion by market, custom product pages, the private keyword field import, and posting review replies | The workspace owner | [Connect App Store Connect](/integrations/app-store-connect) |
+| Google Play Console | Store listing visitors, acquisitions and conversion by market, installs per search term, and posting review replies | The workspace owner | [Connect Google Play](/integrations/google-play) |
+| Personal API tokens | Read, and with a write token change, your workspace from scripts and other tools | Every member, for themselves | [API tokens](/security/api-tokens) |
+| MCP server | Ask an AI assistant such as Claude, Codex or Cursor about your apps, and let it act when the token allows | Every member, with their own token | [Set up the MCP server](/mcp/setup) |
+
+None of them is required. Without a store connection AsoBeast reads public store data only: rankings, listings, reviews, ratings and charts all work.
+
+## Who can connect a store
+
+Only the workspace owner connects, verifies, syncs, replaces or disconnects a store console, because the key opens the whole developer account. Members see each connection's state and the apps it reports, and the cards tell them that only the owner can connect a store. A connection belongs to the workspace, so it keeps working when the owner signs out.
+
+Every member creates their own API tokens and connects their own AI assistant. A token acts as the member who created it.
+
+## What the instance needs first
+
+An operator turns these on once for the whole instance. On the hosted service they are already on.
+
+| Setting | Needed for | Without it |
+| --- | --- | --- |
+| `STORE_CONNECT_ENCRYPTION_KEY` | Every store connection, because AsoBeast seals each key with it before storing it | The section says that store connections are off on this instance and offers no connect button |
+| `GOOGLE_PLAY_OAUTH_CLIENT_ID`, `GOOGLE_PLAY_OAUTH_CLIENT_SECRET` and `WEB_PUBLIC_URL` | Connecting Google Play by signing in with Google | Google Play connects with a service account key only |
+
+How to create the key and the OAuth client is in the [configuration reference](/configuration/reference#store-consoles) and in [Set up Google sign in for the instance](/integrations/google-play#set-up-google-sign-in). How a stored key is protected is on [Store console credentials](/security/store-credentials).
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Connect App Store Connect" icon="tablet-smartphone" href="/integrations/app-store-connect">
+    Create a team key, connect it and read Apple's own funnel.
+  </Card>
+
+  <Card title="Connect Google Play" icon="play" href="/integrations/google-play">
+    Sign in with Google or invite a service account.
+  </Card>
+
+  <Card title="Set up the MCP server" icon="bot" href="/mcp/setup">
+    Connect an AI assistant to your workspace.
+  </Card>
+
+  <Card title="Create an API token" icon="key-round" href="/security/api-tokens">
+    Read and change your workspace from your own scripts.
+  </Card>
+</CardGroup>
