@@ -148,7 +148,7 @@ export function ConnectPlayDialog({
       submitLabel={method === "google" ? SIGN_IN_LABEL : label}
       description={
         <>
-          {METHODS[method].description}{" "}
+          <span>{METHODS[method].description}</span>{" "}
           <GuideLink href={METHODS[method].guide} subject="Google Play">
             Step by step guide
           </GuideLink>
