@@ -27,7 +27,7 @@ import { formatCategoryPosition, formatDayMonth } from "@/lib/format";
 import { appDetailOptions, categoryRanksOptions } from "@/lib/queries";
 import { presetToRange, RANGE_PRESETS, type RangePreset } from "@/lib/ranges";
 import { rangeParser } from "@/lib/search-params";
-import { MAX_SERIES } from "@/components/rankings/pivot";
+import { MAX_SERIES } from "@/components/charts/pivot";
 import {
   chartDepthOf,
   headlineChartHref,

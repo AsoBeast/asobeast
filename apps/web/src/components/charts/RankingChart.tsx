@@ -16,8 +16,8 @@ import {
   ChartLegend,
   ChartTooltip,
 } from "@/components/ui/chart";
-import { SeriesLegend } from "@/components/charts/SeriesLegend";
-import { SeriesTooltip } from "@/components/charts/SeriesTooltip";
+import { SeriesLegend } from "./SeriesLegend";
+import { SeriesTooltip } from "./SeriesTooltip";
 import { AnnotationTooltipNotes } from "@/components/annotations/AnnotationTooltipNotes";
 import {
   annotationLines,
@@ -32,12 +32,8 @@ import {
   RANK_AXIS_PROPS,
   seriesDash,
   TIME_AXIS_PROPS,
-} from "@/components/charts/theme";
-import {
-  markerLineProps,
-  RANK_TICKS,
-  rankTierAreas,
-} from "@/components/charts/rank-layers";
+} from "./theme";
+import { markerLineProps, RANK_TICKS, rankTierAreas } from "./rank-layers";
 import { formatDayMonth } from "@/lib/format";
 import { todayUtc } from "@/lib/ranges";
 import {

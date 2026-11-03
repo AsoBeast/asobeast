@@ -37,17 +37,17 @@ import { annotationsInMarkets } from "@/components/annotations/annotation-lines"
 import { MIN_TREND_POINTS } from "@/components/charts/ChartStates";
 import { exportRankings } from "./ranking-csv";
 import { rankingImageSpec } from "./ranking-image";
-import { buildRankingChart, MAX_SERIES } from "./pivot";
+import { buildRankingChart, MAX_SERIES } from "@/components/charts/pivot";
 import {
   InsufficientHistory,
   NoDataInRange,
   NoKeywordsInMarket,
   NoKeywordsTracked,
   NoPositionsYet,
-} from "./RankingStates";
+} from "@/components/charts/RankingStates";
 import { KeywordPicker } from "./KeywordPicker";
 import { RangePicker } from "./RangePicker";
-import { RankingChart } from "./RankingChart";
+import { RankingChart } from "@/components/charts/RankingChart";
 import { selectionForMarket } from "./selection";
 
 export function RankingsView({ id }: { id: string }) {

@@ -5,7 +5,7 @@ import {
   type TrackedKeywordItem,
 } from "@asobeast/shared";
 import { MIN_TREND_POINTS } from "@/components/charts/ChartStates";
-import { hasCheck, type RankingChartData } from "@/components/rankings/pivot";
+import { hasCheck, type RankingChartData } from "@/components/charts/pivot";
 import { formatDayMonth } from "@/lib/format";
 import type { RangePreset } from "@/lib/ranges";
 

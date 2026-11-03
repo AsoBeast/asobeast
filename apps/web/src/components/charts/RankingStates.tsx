@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { formatCheckedPosition } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
-import { CHART_HEIGHT } from "@/components/charts/theme";
+import { CHART_HEIGHT } from "./theme";
 import { formatCountry } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { lastCheckedIndex, NOT_CHECKED, type RankingChartData } from "./pivot";

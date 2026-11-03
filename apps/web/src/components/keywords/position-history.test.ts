@@ -4,7 +4,7 @@ import type {
   RankingPoint,
   TrackedKeywordItem,
 } from "@asobeast/shared";
-import { buildRankingChart } from "@/components/rankings/pivot";
+import { buildRankingChart } from "@/components/charts/pivot";
 import {
   changedFieldsLabel,
   changeSincePrevious,
