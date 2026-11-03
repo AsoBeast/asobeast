@@ -433,6 +433,29 @@ test.describe("the billing wall", () => {
     expect(payment!.y).toBeLessThan(0);
   });
 
+  test("frames the payment in one raised panel", async ({ page, context }) => {
+    await seedViewer(context, "checkout-pending");
+    await seedSession(page);
+    await openBilling(page);
+
+    await page.goto("/upgrade");
+
+    const panel = page.getByRole("region", { name: "Payment" });
+    const styles = await panel.evaluate((node) => {
+      const computed = getComputedStyle(node);
+      return {
+        border: computed.borderTopWidth,
+        background: computed.backgroundColor,
+        page: getComputedStyle(document.body).backgroundColor,
+      };
+    });
+    expect(styles.border).toBe("1px");
+    expect(styles.background).not.toBe(styles.page);
+    await expect(
+      panel.getByRole("region", { name: "Order summary" }),
+    ).toBeVisible();
+  });
+
   test("writes its own order summary and follows the interval", async ({
     page,
     context,
@@ -449,9 +472,7 @@ test.describe("the billing wall", () => {
 
     await page.goto("/upgrade");
 
-    const summary = page
-      .getByRole("heading", { name: "Order summary" })
-      .locator("../..");
+    const summary = page.getByRole("region", { name: "Order summary" });
     await expect(summary).toContainText("Indie");
     await expect(summary).toContainText("Due today");
     await expect(summary).toContainText("$0.00");

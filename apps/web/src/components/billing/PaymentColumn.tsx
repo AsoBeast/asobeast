@@ -8,6 +8,7 @@ import {
   type BillingPrice,
   type PaidPlanName,
 } from "@asobeast/shared";
+import { Lock } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { sessionKeyOf } from "@/lib/embedded-checkout";
 import { INTERVAL_LABEL, summaryFromCatalog } from "@/lib/order-summary";
@@ -47,9 +48,9 @@ export function PaymentColumn({
   return (
     <section
       aria-labelledby="payment-title"
-      className="flex min-w-0 flex-col gap-4 lg:col-start-1 lg:row-span-2 lg:row-start-1"
+      className="flex min-w-0 flex-col gap-6 rounded-2xl border border-border bg-card p-4 shadow-raised sm:p-6 lg:col-start-1 lg:row-span-2 lg:row-start-1"
     >
-      <h2 id="payment-title" className="text-title">
+      <h2 id="payment-title" className="text-display">
         {PAYMENT_TITLE}
       </h2>
       {publishableKey && price && theme ? (
@@ -62,7 +63,7 @@ export function PaymentColumn({
         />
       ) : null}
       {publishableKey && price && !theme ? (
-        <Skeleton className="h-[28rem] w-full" />
+        <Skeleton className="h-[28rem] w-full rounded-xl" />
       ) : null}
       {buysPlan(action) ? (
         <OrderSummary
@@ -70,7 +71,10 @@ export function PaymentColumn({
         />
       ) : null}
       {catalog?.enabled && buysPlan(action) ? (
-        <p className="text-caption text-muted-foreground">{SECURE_BY_STRIPE}</p>
+        <p className="flex items-center gap-2 text-caption text-muted-foreground">
+          <Lock aria-hidden="true" className="size-3.5 shrink-0" />
+          <span>{SECURE_BY_STRIPE}</span>
+        </p>
       ) : null}
       <p className="text-caption text-muted-foreground">
         {trialPaymentNote(catalog, offer, now)} Need help?{" "}

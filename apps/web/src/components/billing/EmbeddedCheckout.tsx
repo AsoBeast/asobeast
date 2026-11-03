@@ -77,7 +77,9 @@ export function EmbeddedCheckout({
 
   return (
     <div className="flex flex-col gap-3">
-      {state === "loading" ? <Skeleton className="h-[28rem] w-full" /> : null}
+      {state === "loading" ? (
+        <Skeleton className="h-[28rem] w-full rounded-xl" />
+      ) : null}
       {state === "failed" ? (
         <div className="flex flex-col items-start gap-2 text-body">
           <p role="alert">{failure}</p>
@@ -95,6 +97,7 @@ export function EmbeddedCheckout({
       <div
         ref={container}
         id={sessionKeyOf(priceId, theme)}
+        className="rounded-xl"
         aria-label={label}
         aria-busy={state === "loading"}
         role="region"
