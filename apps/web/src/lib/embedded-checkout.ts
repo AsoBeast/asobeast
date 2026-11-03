@@ -4,6 +4,14 @@ import type {
   CheckoutUi,
 } from "@asobeast/shared";
 
+let opening: Promise<unknown> = Promise.resolve();
+
+export function openAfterPrevious<T>(open: () => Promise<T>): Promise<T> {
+  const next = opening.then(open);
+  opening = next.catch(() => undefined);
+  return next;
+}
+
 export function sessionKeyOf(priceId: string, theme: CheckoutTheme): string {
   return `stripe-checkout-${priceId}-${theme}`;
 }

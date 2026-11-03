@@ -6,7 +6,7 @@ import type { CheckoutTheme } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError, startCheckout } from "@/lib/api";
-import { sessionKeyOf } from "@/lib/embedded-checkout";
+import { openAfterPrevious, sessionKeyOf } from "@/lib/embedded-checkout";
 import { loadStripeOnce } from "@/lib/stripe-loader";
 
 type MountState = "loading" | "ready" | "failed";
@@ -45,30 +45,28 @@ export function EmbeddedCheckout({
   useEffect(() => {
     let active = true;
     let checkout: StripeEmbeddedCheckout | null = null;
-    loadStripeOnce(publishableKey)
-      .then((stripe) => {
-        if (!stripe || !active) throw new Error(UNREACHABLE);
-        return stripe.createEmbeddedCheckoutPage({
-          fetchClientSecret: () =>
-            active
-              ? clientSecretOf(priceId, theme)
-              : Promise.reject(new Error(UNREACHABLE)),
-        });
-      })
-      .then((instance) => {
-        if (!active || !container.current) {
-          instance.destroy();
-          return;
-        }
-        checkout = instance;
-        instance.mount(container.current);
-        setState("ready");
-      })
-      .catch((error: unknown) => {
-        if (!active) return;
-        setFailure(failureOf(error));
-        setState("failed");
+    openAfterPrevious(async () => {
+      if (!active) return;
+      const stripe = await loadStripeOnce(publishableKey);
+      if (!stripe) throw new Error(UNREACHABLE);
+      if (!active) return;
+      const clientSecret = await clientSecretOf(priceId, theme);
+      if (!active) return;
+      const instance = await stripe.createEmbeddedCheckoutPage({
+        clientSecret,
       });
+      if (!active || !container.current) {
+        instance.destroy();
+        return;
+      }
+      checkout = instance;
+      instance.mount(container.current);
+      setState("ready");
+    }).catch((error: unknown) => {
+      if (!active) return;
+      setFailure(failureOf(error));
+      setState("failed");
+    });
     return () => {
       active = false;
       checkout?.destroy();

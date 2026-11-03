@@ -306,10 +306,22 @@ test.describe("the billing wall", () => {
     const STRIPE_STUB = `
       window.Stripe = function () {
         return {
-          createEmbeddedCheckoutPage: async ({ fetchClientSecret }) => {
-            const secret = await fetchClientSecret();
+          createEmbeddedCheckoutPage: async ({
+            clientSecret,
+            fetchClientSecret,
+          }) => {
+            const secret = clientSecret
+              ? Promise.resolve(clientSecret)
+              : fetchClientSecret();
             return {
-              mount: (target) => target.setAttribute("data-mounted", secret),
+              mount: (target) =>
+                secret.then(
+                  (value) => target.setAttribute("data-mounted", value),
+                  (error) => {
+                    target.setAttribute("data-stripe-error", "");
+                    throw new Error("fetchClientSecret failed: " + error);
+                  },
+                ),
               unmount: () => {},
               destroy: () => {},
             };
@@ -382,6 +394,66 @@ test.describe("the billing wall", () => {
         { priceId: "price_indie_year", ui: "embedded", theme: "light" },
         { priceId: "price_ultimate_year", ui: "embedded", theme: "light" },
       ]);
+    });
+
+    test("opens one session at a time while plans and intervals change quickly", async ({
+      page,
+    }) => {
+      const pageErrors: string[] = [];
+      page.on("pageerror", (error) => pageErrors.push(error.message));
+      await openEmbedded(page);
+      await page.unroute("**/api/backend/billing/checkout");
+      const answers: number[] = [];
+      let opening = false;
+      await page.route("**/api/backend/billing/checkout", async (route) => {
+        const { priceId } = route.request().postDataJSON() as {
+          priceId: string;
+        };
+        if (opening) {
+          answers.push(409);
+          await route.fulfill(
+            fulfillJson(409, {
+              statusCode: 409,
+              error: "Conflict",
+              message:
+                "A checkout is already being opened for this workspace. Try again in a couple of minutes.",
+              path: "/billing/checkout",
+              timestamp: new Date().toISOString(),
+            }),
+          );
+          return;
+        }
+        opening = true;
+        await new Promise((resolve) => setTimeout(resolve, 400));
+        opening = false;
+        answers.push(200);
+        await route.fulfill(
+          fulfillJson(200, {
+            url: "http://localhost:3000/?checkout=complete",
+            clientSecret: `cs_${priceId}_${answers.length}`,
+          }),
+        );
+      });
+
+      await page.goto("/upgrade");
+      await expect(
+        page.locator('[data-mounted="cs_price_indie_month_1"]'),
+      ).toHaveCount(1);
+      await page.getByRole("button", { name: /^Ultimate,/ }).click();
+      await page.getByRole("tab", { name: "Annual" }).click();
+      await page.getByRole("tab", { name: "Monthly" }).click();
+      await page.getByRole("button", { name: /^Indie,/ }).click();
+
+      await expect(page.locator("[data-mounted]")).toHaveAttribute(
+        "data-mounted",
+        /^cs_price_indie_month_\d+$/,
+      );
+      await expect(page.locator("[data-stripe-error]")).toHaveCount(0);
+      await expect(
+        page.getByText("A checkout is already being opened"),
+      ).toHaveCount(0);
+      expect(answers).not.toContain(409);
+      expect(pageErrors).toEqual([]);
     });
 
     test("opens no checkout session for a plan left before stripe loaded", async ({
