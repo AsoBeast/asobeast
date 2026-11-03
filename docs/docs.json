@@ -315,6 +315,10 @@
           {
             "label": "Issues",
             "href": "https://github.com/AsoBeast/asobeast/issues"
+          },
+          {
+            "label": "Discussions",
+            "href": "https://github.com/AsoBeast/asobeast/discussions"
           }
         ]
       },
