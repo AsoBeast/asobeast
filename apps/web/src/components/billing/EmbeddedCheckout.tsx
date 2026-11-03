@@ -91,11 +91,8 @@ export function EmbeddedCheckout({
       {state === "loading" ? <Skeleton className="h-[28rem] w-full" /> : null}
       {state === "failed" || state === "retrying" ? (
         <div className="flex flex-col items-start gap-2 text-body">
-          {state === "retrying" ? (
-            <p role="status">{REOPENING}</p>
-          ) : (
-            <p role="alert">{failure}</p>
-          )}
+          {state === "retrying" ? <p role="status">{REOPENING}</p> : null}
+          {state === "failed" ? <p role="alert">{failure}</p> : null}
           <Button
             ref={retry}
             variant="outline"
