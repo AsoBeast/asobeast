@@ -1,5 +1,6 @@
 import { type Page } from "@playwright/test";
 import { seedSession } from "./plan-helpers.mts";
+import { layoutBox } from "./layout-box.mts";
 import { expect, test } from "./reporting.mts";
 import { openBilling, openRegistration } from "./trial-plans.mts";
 import { seedViewer, type Viewer } from "./viewer.mts";
@@ -62,10 +63,10 @@ test.describe("the confirmation page", () => {
       /Choose a plan/,
     );
     const [stepsBox, headingBox] = await Promise.all([
-      steps.boundingBox(),
-      page.getByRole("heading", { level: 1 }).boundingBox(),
+      layoutBox(steps),
+      layoutBox(page.getByRole("heading", { level: 1 })),
     ]);
-    expect(stepsBox!.y).toBeLessThan(headingBox!.y);
+    expect(stepsBox.y).toBeLessThan(headingBox.y);
   });
 
   test("sends one new link and says so", async ({ page }) => {

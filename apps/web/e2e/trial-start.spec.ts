@@ -1,6 +1,7 @@
 import { formatDate } from "../src/lib/format";
 import { type Locator, type Page } from "@playwright/test";
 import { fulfillJson, seedSession } from "./plan-helpers.mts";
+import { layoutBox } from "./layout-box.mts";
 import { expect, test } from "./reporting.mts";
 import {
   CATALOG,
@@ -161,10 +162,10 @@ test.describe("the billing wall", () => {
     const payment = page.getByRole("heading", { level: 2, name: "Payment" });
     await expect(plans).toBeVisible();
     const [plansBox, paymentBox] = await Promise.all([
-      plans.boundingBox(),
-      payment.boundingBox(),
+      layoutBox(plans),
+      layoutBox(payment),
     ]);
-    expect(paymentBox!.x).toBeLessThan(plansBox!.x);
+    expect(paymentBox.x).toBeLessThan(plansBox.x);
     const headings = await page
       .getByRole("heading", { level: 2 })
       .allTextContents();
@@ -174,22 +175,22 @@ test.describe("the billing wall", () => {
     expect(headings.indexOf("Payment")).toBeLessThan(
       headings.indexOf("Questions"),
     );
-    const panelBox = await page
-      .getByRole("region", { name: "Payment" })
-      .boundingBox();
-    const questionsBox = await page
-      .getByRole("heading", { level: 2, name: "Questions" })
-      .boundingBox();
-    expect(questionsBox!.y).toBeGreaterThan(panelBox!.y + panelBox!.height);
-    expect(Math.round(questionsBox!.x)).toBe(Math.round(panelBox!.x));
+    const panelBox = await layoutBox(
+      page.getByRole("region", { name: "Payment" }),
+    );
+    const questionsBox = await layoutBox(
+      page.getByRole("heading", { level: 2, name: "Questions" }),
+    );
+    expect(questionsBox.y).toBeGreaterThan(panelBox.y + panelBox.height);
+    expect(Math.round(questionsBox.x)).toBe(Math.round(panelBox.x));
     const questions = page
       .getByRole("region", { name: "Questions" })
       .getByRole("button");
     const [first, second] = await Promise.all([
-      questions.nth(0).boundingBox(),
-      questions.nth(1).boundingBox(),
+      layoutBox(questions.nth(0)),
+      layoutBox(questions.nth(1)),
     ]);
-    expect(Math.round(first!.y)).toBe(Math.round(second!.y));
+    expect(Math.round(first.y)).toBe(Math.round(second.y));
   });
 
   test("puts the plans above the payment on a phone without scrolling sideways", async ({
@@ -210,14 +211,14 @@ test.describe("the billing wall", () => {
     const payment = page.getByRole("heading", { level: 2, name: "Payment" });
     await expect(plans).toBeVisible();
     const [plansBox, paymentBox] = await Promise.all([
-      plans.boundingBox(),
-      payment.boundingBox(),
+      layoutBox(plans),
+      layoutBox(payment),
     ]);
-    expect(plansBox!.y).toBeLessThan(paymentBox!.y);
-    const questionsBox = await page
-      .getByRole("heading", { level: 2, name: "Questions" })
-      .boundingBox();
-    expect(paymentBox!.y).toBeLessThan(questionsBox!.y);
+    expect(plansBox.y).toBeLessThan(paymentBox.y);
+    const questionsBox = await layoutBox(
+      page.getByRole("heading", { level: 2, name: "Questions" }),
+    );
+    expect(paymentBox.y).toBeLessThan(questionsBox.y);
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= window.innerWidth,
@@ -227,18 +228,18 @@ test.describe("the billing wall", () => {
       .getByRole("group", { name: "Plans" })
       .getByRole("button");
     const [indie, ultimate] = await Promise.all([
-      cards.nth(0).boundingBox(),
-      cards.nth(1).boundingBox(),
+      layoutBox(cards.nth(0)),
+      layoutBox(cards.nth(1)),
     ]);
-    expect(Math.round(indie!.y)).toBe(Math.round(ultimate!.y));
+    expect(Math.round(indie.y)).toBe(Math.round(ultimate.y));
     const questions = page
       .getByRole("region", { name: "Questions" })
       .getByRole("button");
     const [first, second] = await Promise.all([
-      questions.nth(0).boundingBox(),
-      questions.nth(1).boundingBox(),
+      layoutBox(questions.nth(0)),
+      layoutBox(questions.nth(1)),
     ]);
-    expect(first!.y).toBeLessThan(second!.y);
+    expect(first.y).toBeLessThan(second.y);
   });
 
   test("promises no secure payment when checkout is not configured", async ({
@@ -304,10 +305,10 @@ test.describe("the billing wall", () => {
       steps.getByRole("listitem").nth(0).locator("svg"),
     ).toBeVisible();
     const [stepsBox, headingBox] = await Promise.all([
-      steps.boundingBox(),
-      page.getByRole("heading", { level: 1 }).boundingBox(),
+      layoutBox(steps),
+      layoutBox(page.getByRole("heading", { level: 1 })),
     ]);
-    expect(stepsBox!.y).toBeLessThan(headingBox!.y);
+    expect(stepsBox.y).toBeLessThan(headingBox.y);
   });
 
   test("shows no steps to an owner who owes none", async ({
@@ -350,7 +351,9 @@ test.describe("the billing wall", () => {
     await seedViewer(context, "checkout-pending");
     await seedSession(page);
     await openBilling(page);
-    const lines = trustLines({ days: 7 }, new Date());
+    const now = new Date();
+    await page.clock.setFixedTime(now);
+    const lines = trustLines({ days: 7 }, now);
 
     await page.goto("/upgrade");
 
@@ -373,9 +376,9 @@ test.describe("the billing wall", () => {
     const wall = page
       .getByRole("heading", { level: 1 })
       .locator("xpath=ancestor::div[contains(@class,'page-checkout')]");
-    const box = await wall.boundingBox();
-    expect(box!.width).toBeLessThanOrEqual(1216);
-    expect(Math.abs(box!.x - (1920 - box!.width) / 2)).toBeLessThanOrEqual(2);
+    const box = await layoutBox(wall);
+    expect(box.width).toBeLessThanOrEqual(1216);
+    expect(Math.abs(box.x - (1920 - box.width) / 2)).toBeLessThanOrEqual(2);
   });
 
   test("shows each plan's price and the limits that tell them apart", async ({
@@ -473,7 +476,9 @@ test.describe("the billing wall", () => {
     await seedViewer(context, "checkout-pending");
     await seedSession(page);
     await openBilling(page);
-    const parts = trialBarParts({ days: 7 }, new Date());
+    const now = new Date();
+    await page.clock.setFixedTime(now);
+    const parts = trialBarParts({ days: 7 }, now);
 
     await page.goto("/upgrade");
 
@@ -491,7 +496,7 @@ test.describe("the billing wall", () => {
       await color(strip.getByText(parts.before.trim(), { exact: true })),
     ).not.toBe(heading);
     const button = strip.getByRole("button", { name: TRIAL_BUTTON });
-    expect((await button.boundingBox())!.height).toBe(44);
+    expect((await layoutBox(button)).height).toBe(44);
   });
 
   test("keeps the checkout button at the right edge without a trial", async ({
@@ -511,15 +516,13 @@ test.describe("the billing wall", () => {
     const plans = page.getByRole("group", { name: "Plans" });
     await expect(button).toBeVisible();
     const [buttonBox, panelBox, plansBox] = await Promise.all([
-      button.boundingBox(),
-      panel.boundingBox(),
-      plans.boundingBox(),
+      layoutBox(button),
+      layoutBox(panel),
+      layoutBox(plans),
     ]);
-    expect(buttonBox!.x).toBeGreaterThan(panelBox!.x + panelBox!.width);
+    expect(buttonBox.x).toBeGreaterThan(panelBox.x + panelBox.width);
     expect(
-      Math.abs(
-        buttonBox!.x + buttonBox!.width - (plansBox!.x + plansBox!.width),
-      ),
+      Math.abs(buttonBox.x + buttonBox.width - (plansBox.x + plansBox.width)),
     ).toBeLessThanOrEqual(2);
   });
 
@@ -751,27 +754,27 @@ test.describe("the billing wall", () => {
       await expect(page.locator("[data-mounted]")).toHaveCount(1);
       await page.evaluate(() => window.scrollTo(0, 600));
 
-      const plans = await page
-        .getByRole("heading", { level: 2, name: "Choose a plan" })
-        .boundingBox();
-      const payment = await page
-        .getByRole("heading", { level: 2, name: "Payment" })
-        .boundingBox();
-      expect(plans!.y).toBeGreaterThanOrEqual(0);
-      expect(plans!.y).toBeLessThanOrEqual(48);
-      expect(payment!.y).toBeLessThan(0);
+      const plans = await layoutBox(
+        page.getByRole("heading", { level: 2, name: "Choose a plan" }),
+      );
+      const payment = await layoutBox(
+        page.getByRole("heading", { level: 2, name: "Payment" }),
+      );
+      expect(plans.y).toBeGreaterThanOrEqual(0);
+      expect(plans.y).toBeLessThanOrEqual(48);
+      expect(payment.y).toBeLessThan(0);
 
       await page.evaluate(() =>
         window.scrollTo(0, document.documentElement.scrollHeight),
       );
 
-      const features = await page
-        .getByRole("region", { name: "What Indie includes" })
-        .boundingBox();
-      const questions = await page
-        .getByRole("heading", { level: 2, name: "Questions" })
-        .boundingBox();
-      expect(features!.y + features!.height).toBeLessThanOrEqual(questions!.y);
+      const features = await layoutBox(
+        page.getByRole("region", { name: "What Indie includes" }),
+      );
+      const questions = await layoutBox(
+        page.getByRole("heading", { level: 2, name: "Questions" }),
+      );
+      expect(features.y + features.height).toBeLessThanOrEqual(questions.y);
     });
 
     test.describe("in the light theme", () => {
