@@ -2,17 +2,24 @@
 
 import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
-import { isPublicRoute } from "@/lib/auth-routes";
+import { entryDestination, isPublicRoute } from "@/lib/auth-routes";
+import { checkoutReturned } from "@/lib/checkout-return";
 import { AccountNotice } from "./AccountNotice";
 import { SessionCheck } from "./SessionCheck";
+import { useLeaveFor } from "./use-leave-for";
 import { useSignedOutRedirect } from "./use-signed-out-redirect";
 
 export function AuthGate({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const isPublic = isPublicRoute(pathname);
-  const blocked = useSignedOutRedirect(!isPublic);
+  const signedOut = useSignedOutRedirect(!isPublic);
+  const leaving = useLeaveFor((user) =>
+    user.entryStep && !checkoutReturned(window.location.search)
+      ? entryDestination(user, null)
+      : null,
+  );
 
-  if (blocked) {
+  if (signedOut || leaving) {
     return (
       <main
         id="main-content"

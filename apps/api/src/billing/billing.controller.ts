@@ -48,7 +48,7 @@ export class BillingController {
     @CurrentUser() user: AccountUser,
     @Body() dto: CheckoutDto,
   ): Promise<BillingSession> {
-    return this.billing.checkout(user, dto.priceId, dto.ui);
+    return this.billing.checkout(user, dto.priceId, dto.ui, dto.theme);
   }
 
   @Post('portal')

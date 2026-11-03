@@ -555,6 +555,15 @@ const VIEWER_USERS: Record<Viewer, Partial<AuthUser>> = {
     role: "member",
     platformOperator: false,
   },
+  "lapsed-member": {
+    id: "u4",
+    email: "lapsed-member@example.com",
+    name: "Lapsed member",
+    role: "member",
+    plan: "free",
+    entitled: false,
+    platformOperator: false,
+  },
   "lapsed-operator": { plan: "free", entitled: false },
   "unconfirmed-operator": {
     plan: "free",
@@ -562,6 +571,7 @@ const VIEWER_USERS: Record<Viewer, Partial<AuthUser>> = {
     emailVerified: false,
     trialAwaitsConfirmation: true,
     trialAwaitsCheckout: true,
+    entryStep: "confirm-email",
   },
   "checkout-pending": {
     plan: "free",
@@ -569,6 +579,7 @@ const VIEWER_USERS: Record<Viewer, Partial<AuthUser>> = {
     platformOperator: false,
     trialAwaitsConfirmation: false,
     trialAwaitsCheckout: true,
+    entryStep: "choose-plan",
   },
   "checkout-pending-unconfirmed": {
     plan: "free",
@@ -577,6 +588,7 @@ const VIEWER_USERS: Record<Viewer, Partial<AuthUser>> = {
     emailVerified: false,
     trialAwaitsConfirmation: true,
     trialAwaitsCheckout: true,
+    entryStep: "confirm-email",
   },
   trialing: {
     plan: "indie",
@@ -607,6 +619,7 @@ const ACCOUNT_PLAN: AccountPlan = {
   },
 };
 const BILLING_COOKIE = "e2e_billing";
+const ACCOUNT_DOWN_COOKIE = "e2e_account_down";
 const METADATA_AI_COOKIE = "e2e_metadata_ai";
 const METADATA_AI_MODEL = "gpt-test";
 const REPLY_TRUNCATED_COOKIE = "e2e_reply_truncated";
@@ -2745,6 +2758,9 @@ const routes: Route[] = [
     method: "GET",
     pattern: /^\/auth\/me$/,
     handler: (_p, req, res) => {
+      if (hasCookie(req, ACCOUNT_DOWN_COOKIE, "1")) {
+        return json(res, 503, errorEnvelope(503, req.url ?? "/auth/me"));
+      }
       if (!signedIn(req)) {
         return json(res, 401, errorEnvelope(401, req.url ?? "/auth/me"));
       }

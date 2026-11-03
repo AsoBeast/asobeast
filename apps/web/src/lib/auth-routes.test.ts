@@ -82,16 +82,29 @@ describe("loginUrl", () => {
 });
 
 describe("entryDestination", () => {
-  const user = (entitled: boolean) => ({ entitled }) as AuthUser;
+  const user = (over: Partial<AuthUser>) =>
+    ({ entitled: false, ...over }) as AuthUser;
 
-  it("lands an entitled account in the application", () => {
-    expect(entryDestination(user(true), "ultimate")).toBe("/");
+  it("sends an unconfirmed owner to confirm the address and drops the plan", () => {
+    expect(
+      entryDestination(user({ entryStep: "confirm-email" }), "ultimate"),
+    ).toBe("/confirm-email");
   });
 
-  it("lands an account without a plan on the wall with the plan it chose", () => {
-    expect(entryDestination(user(false), null)).toBe("/upgrade");
-    expect(entryDestination(user(false), "ultimate")).toBe(
-      "/upgrade?plan=ultimate",
+  it("lands an owner who owes a plan on the wall with the plan it chose", () => {
+    expect(
+      entryDestination(user({ entryStep: "choose-plan" }), "ultimate"),
+    ).toBe("/upgrade?plan=ultimate");
+    expect(entryDestination(user({ entryStep: "choose-plan" }), null)).toBe(
+      "/upgrade",
     );
+  });
+
+  it("lands an entitled account in the application", () => {
+    expect(entryDestination(user({ entitled: true }), "ultimate")).toBe("/");
+  });
+
+  it("lets an account that owes no step in, entitled or not", () => {
+    expect(entryDestination(user({}), "indie")).toBe("/");
   });
 });

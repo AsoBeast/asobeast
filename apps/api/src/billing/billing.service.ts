@@ -1,4 +1,5 @@
 import {
+  ForbiddenException,
   Injectable,
   Logger,
   ServiceUnavailableException,
@@ -12,11 +13,13 @@ import {
   UPGRADE_PATH,
   type BillingCatalog,
   type BillingSession,
+  type CheckoutTheme,
   type CheckoutUi,
 } from '@asobeast/shared';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AccountUser } from '../auth/auth.types';
+import { EntrySteps } from '../auth/entry-steps';
 import { TrialOffers } from '../auth/trial-offers';
 import { BillingConflictError } from './billing.errors';
 import { BillingReconciler } from './billing-reconciler.service';
@@ -53,6 +56,9 @@ export const SUBSCRIPTION_NEEDS_ATTENTION =
 export const PAYMENT_PENDING =
   'Your last payment is still being confirmed. This usually takes a minute; if it has not completed within a day the attempt expires and you can try again.';
 
+export const CONFIRM_EMAIL_FIRST =
+  'Confirm your email address first. Open the link we sent you, then start the trial.';
+
 @Injectable()
 export class BillingService {
   private readonly logger = new Logger(BillingService.name);
@@ -64,6 +70,7 @@ export class BillingService {
     private readonly prisma: PrismaService,
     private readonly config: ConfigService<Env, true>,
     private readonly trialOffers: TrialOffers,
+    private readonly entrySteps: EntrySteps,
   ) {}
 
   async catalog(): Promise<BillingCatalog> {
@@ -76,6 +83,11 @@ export class BillingService {
     };
   }
 
+  private refuseUnconfirmed(user: AccountUser): void {
+    if (this.entrySteps.stepFor(user) !== 'confirm-email') return;
+    throw new ForbiddenException(CONFIRM_EMAIL_FIRST);
+  }
+
   private publishableKey(): Pick<BillingCatalog, 'publishableKey'> {
     const key = this.config.get('STRIPE_PUBLISHABLE_KEY', { infer: true });
     return key && this.stripe.enabled ? { publishableKey: key } : {};
@@ -85,7 +97,9 @@ export class BillingService {
     user: AccountUser,
     priceId: string,
     ui: CheckoutUi = 'hosted',
+    theme?: CheckoutTheme,
   ): Promise<BillingSession> {
+    this.refuseUnconfirmed(user);
     await this.prices.refreshIfStale();
     this.refuseUnprovisionableCheckout();
     const price = this.prices.require(priceId);
@@ -112,6 +126,7 @@ export class BillingService {
           taxCollection: this.taxCollection(),
           trial: trial ?? undefined,
           ui,
+          theme,
         }),
         `checkout:${workspaceId}:${attempt}`,
       );

@@ -1,12 +1,8 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { LogOut, Settings, User } from "lucide-react";
-import { toast } from "sonner";
 import type { AuthUser } from "@asobeast/shared";
-import { logout } from "@/lib/api";
-import { invalidateAuth } from "@/lib/queries";
 import { planInForceLabel } from "@/lib/plan-in-force";
 import { ADMIN_ENTRY, ADMIN_TOOLS } from "@/components/admin/admin-links";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ChangePasswordDialog } from "./ChangePasswordDialog";
 import { useAuth } from "./use-auth";
+import { useSignOut } from "./use-sign-out";
 
 function PlanInForceBadge({ user }: { user: AuthUser }) {
   return (
@@ -31,17 +28,8 @@ function PlanInForceBadge({ user }: { user: AuthUser }) {
 }
 
 export function UserMenu() {
-  const queryClient = useQueryClient();
   const { user } = useAuth();
-
-  const signOut = useMutation({
-    mutationFn: () => logout(),
-    onSuccess: () => {
-      invalidateAuth(queryClient);
-      window.location.replace("/login");
-    },
-    onError: () => toast.error("Could not sign out."),
-  });
+  const signOut = useSignOut();
 
   if (!user) return null;
 

@@ -29,6 +29,7 @@ import { EmailVerificationService } from './email-verification.service';
 import { sha256 } from './password-hash';
 import { canStartTrial } from './trial-grant';
 import { TrialOffers } from './trial-offers';
+import { EntrySteps } from './entry-steps';
 import { sessionClaimsOf } from './session-claims';
 import { endSessions, SessionStore } from './session-store';
 import { DEFAULT_WORKSPACE_ID } from '../common/tenancy/default-workspace';
@@ -57,6 +58,7 @@ export class AuthService {
     private readonly verification: EmailVerificationService,
     private readonly sessions: SessionStore,
     private readonly trialOffers: TrialOffers,
+    private readonly entrySteps: EntrySteps,
   ) {}
 
   private beforeSignIn<T>(work: () => Promise<T>): Promise<T> {
@@ -330,6 +332,7 @@ export class AuthService {
     user: AccountUser,
     tokenScope?: ApiTokenScope,
   ): Promise<AuthUser> {
+    const entryStep = this.entrySteps.stepFor(user);
     return {
       id: user.id,
       email: user.email,
@@ -347,6 +350,7 @@ export class AuthService {
       suspendedAt: user.workspace.suspendedAt?.toISOString() ?? null,
       suspendedReason: user.workspace.suspendedReason,
       ...(tokenScope === undefined ? {} : { tokenScope }),
+      ...(entryStep === undefined ? {} : { entryStep }),
     };
   }
 

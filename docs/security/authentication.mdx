@@ -115,13 +115,13 @@ Entitlement lives on the workspace, not the user, because a workspace has one pl
 
 The plan in force is derived, not just stored. A paid plan past its `planExpiresAt` falls back to an app side trial written before the card backed trial if one is still running, and to `free` otherwise, so an expired subscription never keeps the limits it paid for.
 
-## Email confirmation beside the trial
+## Email confirmation before the trial
 
-With billing enabled and SMTP configured, registration emails a single use link; opening it stamps the address as confirmed and nothing else. Only a hash of the link token is stored. Nothing waits for the confirmation: the trial starts at checkout on a card, which is the proof of identity, and Link checks the address inside Checkout on its own.
+With billing enabled and SMTP configured, registration emails a single use link; opening it stamps the address as confirmed and nothing else. Only a hash of the link token is stored. On such an instance the billing wall and every signed in page wait for the confirmation, and the server refuses a checkout with `403` until then. A member is never asked to wait, and neither is a workspace that ever held a subscription, a trial or a paid period.
 
 A workspace gets one trial, ever. `trialStartedAt` records it from the Stripe subscription and is never cleared, so a cancelled customer who returns is sold the plan rather than a second free week. A mailbox gets one too, as the next section explains. A workspace that holds a paid plan, or that ever held a subscription, is never offered one.
 
-`GET /auth/me` reports two fields. `trialAwaitsConfirmation` is `true` for an account that has not confirmed its address, in a workspace that may still start a trial, on an instance that sends confirmation email; it is informational, and the web app asks for the confirmation without making anything wait for it. `trialAwaitsCheckout` is `true` for an owner who may start the trial: the web app sends the account to the billing wall at `/upgrade` and shows a banner on every other page. Both are `false` for a member.
+`GET /auth/me` names the step a signed in account still owes as `entryStep`. It is `confirm-email` for an owner whose address is unconfirmed on an instance that sends confirmation email, and `choose-plan` for an owner whose workspace never held a subscription, a trial or a paid period. It is absent for everyone else: a member, an entitled owner, a workspace whose plan lapsed, and every instance with billing off. The web app sends an account with a step to `/confirm-email` or `/upgrade` from every signed in page. Two older fields stay beside it and are informational. `trialAwaitsConfirmation` is `true` for an account that has not confirmed its address, in a workspace that may still start a trial, on an instance that sends confirmation email. `trialAwaitsCheckout` is `true` for an owner who may start the trial. Both are `false` for a member.
 
 Registration survives a confirmation email that could not be sent, so a mail outage never costs the account. The signed in account asks for a fresh link with `POST /auth/verify/resend`, which retires the previous one; the confirmation page offers it whenever a link is refused. Opening a link while signed in as someone else is refused before the link is spent, so it stays usable for the account it belongs to. A deployment with billing and SMTP but no `WEB_PUBLIC_URL` refuses to boot, because every link it sent would carry no host.
 
@@ -155,6 +155,8 @@ Data belongs to the customer; capacity is what the plan pays for. An unentitled 
 | Reading apps, keywords, rankings, audits and reviews in the web app | Importing an app, tracking a keyword, adding a competitor |
 | Exporting anything already collected as CSV or JSON | On demand refresh, daily run, scoring, keyword suggestions, deep search, name search and top chart captures |
 | Reaching the account, plan and upgrade routes | Every other request authenticated with a personal API token, including the MCP server |
+
+A workspace that never held a plan is the exception: its owner is sent to the billing wall from every page, because there is nothing to read yet. Every other unentitled workspace keeps its reads as the table says.
 
 Reads stay open only to a browser session. A personal API token keeps the account, plan and upgrade routes, the account export among them, so a script can still take the data out, and is refused everywhere else, because the token surface is part of what the plan sells. Nothing is deleted when entitlement lapses.
 

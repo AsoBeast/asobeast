@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { APIResponse, Page } from "@playwright/test";
 import { SESSION_COOKIE } from "@asobeast/shared";
 import { collectPageErrors } from "./page-errors.mts";
 import { expect, test } from "./reporting.mts";
@@ -19,6 +19,14 @@ const DATA_PAGES = [
   "/integrations",
   "/apps/app-1",
 ] as const;
+
+async function serverRedirectOf(response: APIResponse): Promise<string> {
+  const location = response.headers()["location"];
+  if (location) return location;
+  return (
+    /NEXT_REDIRECT;replace;([^;"\\]+)/.exec(await response.text())?.[1] ?? ""
+  );
+}
 
 function renderErrors(page: Page): string[] {
   const errors = collectPageErrors(page);
@@ -63,14 +71,15 @@ for (const [name, path] of SIGNED_IN_ROUTES) {
 }
 
 for (const path of DATA_PAGES) {
-  test(`${path} redirects inside the render for a stale session`, async ({
+  test(`${path} redirects a stale session from the server`, async ({
     request,
   }) => {
     const response = await request.get(path, {
       headers: { cookie: `${SESSION_COOKIE}=stale` },
+      maxRedirects: 0,
     });
 
-    expect(await response.text()).toMatch(/NEXT_REDIRECT;replace;\/login/);
+    expect(await serverRedirectOf(response)).toMatch(/^\/login/);
   });
 }
 
@@ -95,11 +104,12 @@ test("a browser supplied requested path header never steers the redirect", async
       cookie: `${SESSION_COOKIE}=stale`,
       "x-asobeast-requested-path": "//evil.example/steal",
     },
+    maxRedirects: 0,
   });
 
-  const html = await response.text();
-  expect(html).toMatch(/NEXT_REDIRECT;replace;\/login\?next=%2Fcharts/);
-  expect(html).not.toContain("evil.example");
+  const target = await serverRedirectOf(response);
+  expect(target).toMatch(/^\/login\?next=%2Fcharts/);
+  expect(target).not.toContain("evil.example");
 });
 
 test("the stale session redirect does not trap the public routes", async ({

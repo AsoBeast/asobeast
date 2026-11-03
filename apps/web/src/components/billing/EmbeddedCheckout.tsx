@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { StripeEmbeddedCheckout } from "@stripe/stripe-js";
+import type { CheckoutTheme } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError, startCheckout } from "@/lib/api";
@@ -16,8 +17,11 @@ function failureOf(error: unknown): string {
   return error instanceof ApiError ? error.envelope.message : UNREACHABLE;
 }
 
-async function clientSecretOf(priceId: string): Promise<string> {
-  const session = await startCheckout(priceId, "embedded");
+async function clientSecretOf(
+  priceId: string,
+  theme: CheckoutTheme,
+): Promise<string> {
+  const session = await startCheckout(priceId, "embedded", theme);
   if (!session.clientSecret) throw new Error(UNREACHABLE);
   return session.clientSecret;
 }
@@ -25,10 +29,12 @@ async function clientSecretOf(priceId: string): Promise<string> {
 export function EmbeddedCheckout({
   publishableKey,
   priceId,
+  theme,
   label,
 }: {
   publishableKey: string;
   priceId: string;
+  theme: CheckoutTheme;
   label: string;
 }) {
   const container = useRef<HTMLDivElement>(null);
@@ -45,7 +51,7 @@ export function EmbeddedCheckout({
         return stripe.createEmbeddedCheckoutPage({
           fetchClientSecret: () =>
             active
-              ? clientSecretOf(priceId)
+              ? clientSecretOf(priceId, theme)
               : Promise.reject(new Error(UNREACHABLE)),
         });
       })
@@ -67,7 +73,7 @@ export function EmbeddedCheckout({
       active = false;
       checkout?.destroy();
     };
-  }, [publishableKey, priceId, attempt]);
+  }, [publishableKey, priceId, theme, attempt]);
 
   return (
     <div className="flex flex-col gap-3">
@@ -88,7 +94,7 @@ export function EmbeddedCheckout({
       ) : null}
       <div
         ref={container}
-        id={sessionKeyOf(priceId)}
+        id={sessionKeyOf(priceId, theme)}
         aria-label={label}
         aria-busy={state === "loading"}
         role="region"

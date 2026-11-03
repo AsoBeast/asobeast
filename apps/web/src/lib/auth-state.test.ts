@@ -24,10 +24,20 @@ const userOf = (over: Partial<AuthUser> = {}): AuthUser => ({
 });
 
 describe("authStateOf", () => {
-  it("sends an account that may start the trial to checkout", () => {
+  it("names the step the account still owes", () => {
     expect(
-      authStateOf(STATUS, userOf({ trialAwaitsCheckout: true })),
-    ).toMatchObject({ awaitingCheckout: true, trialing: false });
+      authStateOf(STATUS, userOf({ entryStep: "choose-plan" })).entryStep,
+    ).toBe("choose-plan");
+    expect(authStateOf(STATUS, userOf()).entryStep).toBeUndefined();
+  });
+
+  it("names no step for a signed out viewer", () => {
+    expect(
+      authStateOf(
+        { ...STATUS, authenticated: false },
+        userOf({ entryStep: "confirm-email" }),
+      ).entryStep,
+    ).toBeUndefined();
   });
 
   it("knows a stripe trial and counts it as a trial", () => {
@@ -39,7 +49,6 @@ describe("authStateOf", () => {
     ).toMatchObject({
       trialing: true,
       trialOnly: true,
-      awaitingCheckout: false,
     });
   });
 
@@ -55,14 +64,8 @@ describe("authStateOf", () => {
     ).toMatchObject({ trialOnly: true, trialing: false });
   });
 
-  it("reads the confirmation and the role", () => {
-    expect(
-      authStateOf(
-        STATUS,
-        userOf({ trialAwaitsConfirmation: true, role: "member" }),
-      ),
-    ).toMatchObject({
-      awaitingConfirmation: true,
+  it("reads the role", () => {
+    expect(authStateOf(STATUS, userOf({ role: "member" }))).toMatchObject({
       isMember: true,
       isOwner: false,
     });
@@ -73,8 +76,6 @@ describe("authStateOf", () => {
       authStateOf({ ...STATUS, authenticated: false }, userOf()),
     ).toMatchObject({
       user: undefined,
-      awaitingCheckout: false,
-      awaitingConfirmation: false,
       isMember: false,
     });
   });

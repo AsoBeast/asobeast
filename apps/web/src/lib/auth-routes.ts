@@ -1,4 +1,5 @@
 import {
+  CONFIRM_EMAIL_PATH,
   UPGRADE_PATH,
   type AuthUser,
   type PaidPlanName,
@@ -42,9 +43,12 @@ export function signedInDestination(next: string | null | undefined): string {
 }
 
 export function entryDestination(
-  user: Pick<AuthUser, "entitled">,
+  user: Pick<AuthUser, "entryStep">,
   plan: PaidPlanName | null,
 ): string {
-  if (user.entitled) return "/";
-  return plan ? `${UPGRADE_PATH}?plan=${plan}` : UPGRADE_PATH;
+  if (user.entryStep === "confirm-email") return CONFIRM_EMAIL_PATH;
+  if (user.entryStep === "choose-plan") {
+    return plan ? `${UPGRADE_PATH}?plan=${plan}` : UPGRADE_PATH;
+  }
+  return "/";
 }

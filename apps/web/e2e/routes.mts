@@ -67,10 +67,10 @@ export const SIGNED_OUT_ROUTES = [
 
 export const TRIAL_ROUTES = [
   [
-    "portfolio offering the trial",
-    "/",
+    "confirmation page",
+    "/confirm-email",
     {
-      e2e_viewer: "checkout-pending",
+      e2e_viewer: "checkout-pending-unconfirmed",
       e2e_billing: "1",
       e2e_plan: planCookie(OFFERED_PLAN),
     },
@@ -79,7 +79,7 @@ export const TRIAL_ROUTES = [
     "wall offering the trial",
     "/upgrade",
     {
-      e2e_viewer: "checkout-pending-unconfirmed",
+      e2e_viewer: "checkout-pending",
       e2e_billing: "1",
       e2e_plan: planCookie(OFFERED_PLAN),
     },
@@ -116,6 +116,8 @@ export const TRIAL_ROUTES = [
 >;
 
 export const DEV_ONLY_ROUTES = [["tokens", "/tokens"]] as const;
+
+export const ENTRY_STEP_ROUTES = [["confirm-email", "/confirm-email"]] as const;
 
 const APP_DIR = join(__dirname, "../src/app");
 

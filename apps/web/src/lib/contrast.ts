@@ -146,6 +146,16 @@ const luminance = ([red, green, blue]: Linear) =>
 const toByte = (channel: number) =>
   decodeSrgb(Math.round(encodeSrgb(channel) * 255) / 255);
 
+const hexByte = (channel: number) =>
+  Math.round(clamp(encodeSrgb(channel)) * 255)
+    .toString(16)
+    .padStart(2, "0");
+
+export function hexOf(color: string): string | null {
+  const linear = toLinear(color);
+  return linear && `#${linear.map(hexByte).join("")}`;
+}
+
 export function relativeLuminance(color: string): number | null {
   const linear = toLinear(color);
   return linear && luminance(linear);

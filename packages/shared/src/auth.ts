@@ -4,6 +4,8 @@ export const API_TOKEN_PREFIX = 'asob_';
 
 export const UPGRADE_PATH = '/upgrade';
 
+export const CONFIRM_EMAIL_PATH = '/confirm-email';
+
 export const SETTINGS_PATH = '/settings';
 
 export const INTEGRATIONS_PATH = '/integrations';

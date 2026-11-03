@@ -22,6 +22,7 @@ import { SignupCapacityGate } from './signup-capacity.gate';
 import { TrialClaimBackfill } from './trial-claim-backfill';
 import { TrialClaims } from './trial-claims';
 import { TrialOffers } from './trial-offers';
+import { EntrySteps } from './entry-steps';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { TrialOffers } from './trial-offers';
     EmailVerificationService,
     TrialClaims,
     TrialOffers,
+    EntrySteps,
     TrialClaimBackfill,
     PasswordResetService,
     SessionStore,
@@ -62,6 +64,7 @@ import { TrialOffers } from './trial-offers';
     SignupCapacityGate,
     TrialClaims,
     TrialOffers,
+    EntrySteps,
   ],
 })
 export class AuthModule {}

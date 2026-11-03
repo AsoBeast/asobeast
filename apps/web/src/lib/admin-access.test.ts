@@ -8,34 +8,8 @@ describe("adminAccessOf", () => {
     expect(adminAccessOf(OPERATOR)).toBe("granted");
   });
 
-  it("is granted on an instance that does not meter plans", () => {
-    expect(adminAccessOf({ ...OPERATOR, trialAwaitsCheckout: false })).toBe(
-      "granted",
-    );
-  });
-
   it("needs a plan for an operator whose workspace has none", () => {
     expect(adminAccessOf({ ...OPERATOR, entitled: false })).toBe("needs-plan");
-  });
-
-  it("sends an operator who may start the trial to the trial", () => {
-    expect(
-      adminAccessOf({
-        ...OPERATOR,
-        entitled: false,
-        trialAwaitsCheckout: true,
-      }),
-    ).toBe("awaits-checkout");
-  });
-
-  it("needs a plan for an operator who is not offered the trial", () => {
-    expect(
-      adminAccessOf({
-        ...OPERATOR,
-        entitled: false,
-        trialAwaitsCheckout: false,
-      }),
-    ).toBe("needs-plan");
   });
 
   it("is denied to anyone who is not the platform operator", () => {

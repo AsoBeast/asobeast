@@ -1,5 +1,6 @@
 import './helpers/enable-billing';
 import './helpers/enable-stripe';
+import { CHECKOUT_BRAND } from '@asobeast/shared';
 import type {
   AccountPlan,
   ApiErrorEnvelope,
@@ -147,6 +148,42 @@ describe('Billing checkout (e2e)', () => {
       });
     });
 
+    it('brands an embedded session after the dark page in english', async () => {
+      await harness.owner
+        .post(CHECKOUT)
+        .send({ priceId: INDIE_MONTHLY, ui: 'embedded', theme: 'dark' })
+        .expect(200);
+
+      const { params } = harness.fake.checkoutSessions[0];
+      expect(params.branding_settings).toEqual({
+        background_color: CHECKOUT_BRAND.dark.backgroundColor,
+        button_color: CHECKOUT_BRAND.dark.buttonColor,
+        border_style: 'rounded',
+        font_family: 'inter',
+        display_name: 'AsoBeast',
+      });
+      expect(params.locale).toBe('en');
+    });
+
+    it('brands a hosted session after the light page when no theme is named', async () => {
+      await checkout().expect(200);
+
+      const { params } = harness.fake.checkoutSessions[0];
+      expect(params.branding_settings).toMatchObject({
+        background_color: CHECKOUT_BRAND.light.backgroundColor,
+        button_color: CHECKOUT_BRAND.light.buttonColor,
+      });
+      expect(params.locale).toBe('en');
+    });
+
+    it('refuses an unknown theme with 400', async () => {
+      await harness.owner
+        .post(CHECKOUT)
+        .send({ priceId: INDIE_MONTHLY, theme: 'blue' })
+        .expect(400);
+      expect(harness.fake.checkoutSessions).toHaveLength(0);
+    });
+
     it('refuses an unknown ui with 400', async () => {
       await harness.owner
         .post(CHECKOUT)
@@ -187,6 +224,19 @@ describe('Billing checkout (e2e)', () => {
       expect(recordedSession().success_url).toBe(
         `${WEB}/?checkout=complete&session_id={CHECKOUT_SESSION_ID}`,
       );
+    });
+
+    it('opens checkout for an unconfirmed owner when the instance sends no confirmation mail', async () => {
+      await resetBillingState(harness, { trialEndsAt: null });
+      const me = await harness.owner.get('/auth/me').expect(200);
+      expect(me.body as AuthUser).toMatchObject({
+        emailVerified: false,
+        entryStep: 'choose-plan',
+      });
+
+      await checkout().expect(200);
+
+      expect(harness.fake.checkoutSessions).toHaveLength(1);
     });
 
     it('sells at full price and returns to settings without an offer', async () => {
