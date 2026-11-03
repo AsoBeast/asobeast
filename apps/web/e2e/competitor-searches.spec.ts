@@ -48,10 +48,12 @@ const trackInPage = async (page: Page) => {
     }
     const response = await route.fetch();
     const listed: TrackedKeywordItem[] = await response.json();
+    const market = new URL(request.url()).searchParams.get("country");
     const added = posts
       .flatMap((post) =>
         post.keywords.map((text) => ({ text, country: post.country ?? "us" })),
       )
+      .filter(({ country }) => market === null || country === market)
       .map(({ text, country }, index) =>
         manualKeyword("app-1", text, country, index),
       );
