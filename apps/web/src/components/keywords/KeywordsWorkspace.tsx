@@ -6,9 +6,14 @@ import { useQueryState } from "nuqs";
 import type { Store } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { countryParser, keywordViewParser } from "@/lib/search-params";
+import {
+  countryParser,
+  keywordIdsParser,
+  keywordViewParser,
+} from "@/lib/search-params";
 import { AddKeywordsDialog } from "./AddKeywordsDialog";
 import { ImportKeywordsDialog } from "./ImportKeywordsDialog";
+import { KeywordDynamicsPanel } from "./KeywordDynamicsPanel";
 import { KeywordsToolbar } from "./KeywordsToolbar";
 import { MarketSearchReadsCard } from "./MarketSearchReadsCard";
 import { KeywordsTable } from "./KeywordsTable";
@@ -29,6 +34,7 @@ export function KeywordsWorkspace({
 }) {
   const [country] = useQueryState("country", countryParser);
   const [view] = useQueryState("view", keywordViewParser);
+  const [selected] = useQueryState("keywords", keywordIdsParser);
   const market = country || homeCountry;
 
   return (
@@ -72,6 +78,13 @@ export function KeywordsWorkspace({
           different public signals and are not directly comparable.
         </AlertDescription>
       </Alert>
+      {selected.length > 0 ? (
+        <KeywordDynamicsPanel
+          id={id}
+          market={market}
+          homeCountry={homeCountry}
+        />
+      ) : null}
       <Suspense
         fallback={
           <div className="flex flex-col gap-3">

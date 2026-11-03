@@ -2,7 +2,7 @@
 
 import { useRef, useState, type RefObject } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Pause, Play, Trash2, X } from "lucide-react";
+import { ChartLine, Pause, Play, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import type { KeywordBulkAction, TrackedKeywordItem } from "@asobeast/shared";
 import {
@@ -104,18 +104,22 @@ function ConfirmRemove({
   );
 }
 
+export const SHOW_DYNAMICS_BUTTON_ID = "show-keyword-dynamics";
+
 export function KeywordsBulkActions({
   appId,
   selectedKeywords,
   marketTags,
   onClear,
   onExport,
+  onShowDynamics,
 }: {
   appId: string;
   selectedKeywords: readonly TrackedKeywordItem[];
   marketTags: readonly string[];
   onClear: () => void;
   onExport: () => void;
+  onShowDynamics: () => void;
 }) {
   const queryClient = useQueryClient();
   const selectedIds = selectedKeywords.map((keyword) => keyword.keywordId);
@@ -177,6 +181,15 @@ export function KeywordsBulkActions({
         {`${selectedIds.length} selected`}
       </span>
       <div className="flex flex-wrap items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          id={SHOW_DYNAMICS_BUTTON_ID}
+          onClick={onShowDynamics}
+        >
+          <ChartLine />
+          Show dynamics
+        </Button>
         <Button
           variant="outline"
           size="sm"

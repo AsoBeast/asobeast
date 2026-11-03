@@ -25,6 +25,7 @@ import { keywordTableFeatures } from "./keyword-table-features";
 import { exportKeywords } from "./keyword-csv";
 import { tagsIn } from "@/lib/keyword-tags";
 import { KeywordsBulkActions } from "./KeywordsBulkActions";
+import { useShowDynamics } from "./KeywordDynamicsPanel";
 import { KeywordsEmptyState } from "./KeywordsEmptyState";
 import { KeywordsDataTable } from "./KeywordsDataTable";
 import { KeywordsFilterBar } from "./KeywordsFilterBar";
@@ -56,6 +57,7 @@ export function KeywordsTable({
     dir: sortDirectionParser,
   });
   const [{ serp: serpId }, setSerpState] = useSerpParams();
+  const showDynamics = useShowDynamics();
   const [filters, setFilters] = useQueryStates(keywordFilterParsers);
   const [view] = useQueryState("view", keywordViewParser);
   const { data: keywords, dataUpdatedAt } = useSuspenseQuery(
@@ -192,6 +194,7 @@ export function KeywordsTable({
               marketTags={tagsIn(keywords)}
               onClear={clearSelection}
               onExport={() => exportKeywords(id, selectedKeywords, today)}
+              onShowDynamics={() => showDynamics(selectedIds)}
             />
           </div>
         ) : null}

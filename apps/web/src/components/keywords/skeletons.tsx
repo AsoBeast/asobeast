@@ -1,6 +1,20 @@
 import { ChartSkeleton } from "@/components/charts/ChartStates";
 import { CHART_HEIGHT } from "@/components/charts/theme";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CHART_HEIGHT } from "@/components/charts/theme";
+
+export function KeywordDynamicsSkeleton() {
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap gap-2">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <Skeleton key={index} className="h-6 w-28 rounded-full" />
+        ))}
+      </div>
+      <Skeleton className={`w-full ${CHART_HEIGHT.hero}`} />
+    </div>
+  );
+}
 
 export function KeywordsTableSkeleton() {
   return (
