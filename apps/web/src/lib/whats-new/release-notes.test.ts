@@ -174,6 +174,15 @@ describe("RELEASES", () => {
     }
   });
 
+  it("names every change of a release once", () => {
+    const repeated = RELEASES.filter(
+      (each) =>
+        new Set(each.changes.map((change) => change.title)).size !==
+        each.changes.length,
+    ).map((each) => each.version);
+    expect(repeated).toEqual([]);
+  });
+
   it("is written without code, paths, issue numbers or dashes", () => {
     const offending = RELEASES.flatMap(sentences).filter(
       (text) => CODE_LIKE.test(text) || LOWERCASE_NAME.test(text),
