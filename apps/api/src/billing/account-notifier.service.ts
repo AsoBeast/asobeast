@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { ACCOUNT_MAIL_CHANNEL, MailerService } from '../alerts/mailer.service';
 import type { AccountMail } from './account-mail';
+import { workspaceOwnerEmail } from '../auth/workspace-owner';
 import { billingNoticeEmail } from './billing-notice-email';
 
 export const ACCOUNT_CHANNEL = ACCOUNT_MAIL_CHANNEL;
@@ -39,7 +40,7 @@ export class AccountNotifier {
     event: string,
     mail: AccountMail,
   ): Promise<NoticeOutcome> {
-    const recipient = await this.owner(workspaceId);
+    const recipient = await workspaceOwnerEmail(this.prisma, workspaceId);
     if (!recipient || !this.mailer.enabled) {
       this.logger.log(
         `workspace ${workspaceId} has no way to receive ${event}; recording it unsent`,
@@ -59,15 +60,6 @@ export class AccountNotifier {
       await this.record(event, 'failed', detail);
       return 'failed';
     }
-  }
-
-  private async owner(workspaceId: string): Promise<string | null> {
-    const owner = await this.prisma.user.findFirst({
-      where: { workspaceId, role: 'owner' },
-      orderBy: { createdAt: 'asc' },
-      select: { email: true },
-    });
-    return owner?.email ?? null;
   }
 
   private async record(

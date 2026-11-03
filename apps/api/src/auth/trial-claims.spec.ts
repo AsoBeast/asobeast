@@ -12,15 +12,13 @@ const SECRET = 'a'.repeat(40);
 describe('TrialClaims', () => {
   const findUnique = jest.fn();
   const createMany = jest.fn();
-  const deleteMany = jest.fn();
   const db = {
-    trialClaim: { findUnique, createMany, deleteMany },
+    trialClaim: { findUnique, createMany },
   } as TrialClaimStore;
 
   beforeEach(() => {
     findUnique.mockReset().mockResolvedValue(null);
     createMany.mockReset().mockResolvedValue({ count: 1 });
-    deleteMany.mockReset().mockResolvedValue({ count: 1 });
   });
 
   describe('keyOf', () => {
@@ -112,14 +110,24 @@ describe('TrialClaims', () => {
     });
   });
 
-  describe('release', () => {
-    it('deletes the row of the mailbox by its key', async () => {
+  describe('the card', () => {
+    it('keys a fingerprint apart from a mailbox of the same text', () => {
       const claims = claimsWith(SECRET);
 
-      await claims.release(db, 'one+x@example.com');
+      expect(claims.cardKeyOf('fp_1')).toMatch(/^[A-Za-z0-9_-]{43}$/);
+      expect(claims.cardKeyOf('fp_1')).not.toBe(claims.keyOf('fp_1'));
+      expect(claims.cardKeyOf('fp_1')).not.toBe(claims.cardKeyOf('fp_2'));
+    });
 
-      expect(deleteMany).toHaveBeenCalledWith({
-        where: { key: claims.keyOf('one@example.com') },
+    it('claims a card once', async () => {
+      const claims = claimsWith(SECRET);
+
+      await expect(claims.claimCard(db, 'fp_1')).resolves.toBe(true);
+      createMany.mockResolvedValue({ count: 0 });
+      await expect(claims.claimCard(db, 'fp_1')).resolves.toBe(false);
+      expect(createMany).toHaveBeenCalledWith({
+        data: [{ key: claims.cardKeyOf('fp_1') }],
+        skipDuplicates: true,
       });
     });
   });

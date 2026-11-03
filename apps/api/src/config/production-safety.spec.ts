@@ -132,7 +132,9 @@ describe('production safety', () => {
           BILLING_ENABLED: 'true',
           TRIAL_DAYS: '0',
         }),
-      ).toThrow('TRIAL_DAYS must be at least 1 when BILLING_ENABLED is true');
+      ).toThrow(
+        'TRIAL_DAYS must be at least 1 when BILLING_ENABLED is true. It is the length of the Stripe trial every new account is offered at checkout, and Stripe refuses a trial shorter than a day.',
+      );
     });
 
     it('accepts a trial of one day', () => {
@@ -222,6 +224,51 @@ describe('production safety', () => {
 
     it('keeps managed payments off unless it is switched on', () => {
       expect(validateEnv(BASE).STRIPE_MANAGED_PAYMENTS).toBe(false);
+    });
+  });
+
+  describe('the publishable key', () => {
+    it.each([
+      ['pk_live_asobeast', 'sk_test_asobeast'],
+      ['pk_test_asobeast', 'sk_live_asobeast'],
+      ['pk_live_asobeast', 'rk_test_asobeast'],
+    ])('refuses to boot with %s beside %s', (publishable, secret) => {
+      expect(() =>
+        validateEnv({
+          ...BASE,
+          STRIPE_PUBLISHABLE_KEY: publishable,
+          STRIPE_SECRET_KEY: secret,
+        }),
+      ).toThrow(
+        /STRIPE_PUBLISHABLE_KEY is a (live|test) key but STRIPE_SECRET_KEY is a (live|test) key/,
+      );
+    });
+
+    it.each([
+      ['pk_test_asobeast', 'sk_test_asobeast'],
+      ['pk_live_asobeast', 'sk_live_asobeast'],
+      ['pk_live_asobeast', 'rk_live_asobeast'],
+    ])('boots with %s beside %s', (publishable, secret) => {
+      expect(() =>
+        validateEnv({
+          ...BASE,
+          STRIPE_PUBLISHABLE_KEY: publishable,
+          STRIPE_SECRET_KEY: secret,
+        }),
+      ).not.toThrow();
+    });
+
+    it('warns in production when the key has no secret beside it', () => {
+      expect(
+        productionWarnings(
+          production({
+            AUTH_COOKIE_SECURE: 'true',
+            STRIPE_PUBLISHABLE_KEY: 'pk_test_asobeast',
+          }),
+        ),
+      ).toContain(
+        'STRIPE_PUBLISHABLE_KEY is set but STRIPE_SECRET_KEY is not, so the wall cannot open a session. Set both, or clear STRIPE_PUBLISHABLE_KEY to keep the hosted Checkout redirect.',
+      );
     });
   });
 
@@ -490,7 +537,7 @@ describe('production safety', () => {
 
     it('warns when billing is on with no way to take payment', () => {
       expect(warningsFor({ BILLING_ENABLED: 'true' }).join(' ')).toContain(
-        'no STRIPE_SECRET_KEY',
+        'no STRIPE_SECRET_KEY. No account can start a trial or pay, because both need Checkout.',
       );
     });
 

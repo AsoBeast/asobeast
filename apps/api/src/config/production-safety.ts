@@ -5,6 +5,8 @@ const IMPLICIT_TLS_PORT = 465;
 
 const SANDBOX_KEY_PREFIXES = ['sk_test_', 'rk_test_'];
 
+const PUBLISHABLE_KEY_MODES = { pk_test_: 'test', pk_live_: 'live' } as const;
+
 const LOOPBACK_HOST =
   /^(?:localhost|.+\.localhost|127(?:\.\d{1,3}){3}|\[::1\])$/;
 
@@ -13,13 +15,13 @@ const logger = new Logger('ProductionSafety');
 export function assertProductionSafety(env: Env): void {
   if (env.BILLING_ENABLED && env.TRIAL_DAYS < 1) {
     throw new Error(
-      'TRIAL_DAYS must be at least 1 when BILLING_ENABLED is true. Every new account would otherwise be locked out the moment it registers, with no way to reach the paywall.',
+      'TRIAL_DAYS must be at least 1 when BILLING_ENABLED is true. It is the length of the Stripe trial every new account is offered at checkout, and Stripe refuses a trial shorter than a day.',
     );
   }
 
   if (env.BILLING_ENABLED && mailConfigured(env) && !env.WEB_PUBLIC_URL) {
     throw new Error(
-      'WEB_PUBLIC_URL must be set when BILLING_ENABLED is true and SMTP is configured. Email confirmation is mandatory in that combination, and the confirmation link would carry no host, so no new account could ever be confirmed or reach its trial.',
+      'WEB_PUBLIC_URL must be set when BILLING_ENABLED is true and SMTP is configured. Email confirmation is mandatory in that combination, and the confirmation link would carry no host, so no new account could ever be confirmed.',
     );
   }
 
@@ -36,6 +38,7 @@ export function assertProductionSafety(env: Env): void {
   }
 
   assertOneTaxCollector(env);
+  assertOneStripeAccount(env);
 
   if (env.PROXY_PROVIDER !== 'none' && !env.PROXY_API_KEY) {
     throw new Error(
@@ -131,7 +134,7 @@ export function productionWarnings(env: Env): string[] {
 
   if (env.BILLING_ENABLED && !mailConfigured(env)) {
     warnings.push(
-      `BILLING_ENABLED is true in production but SMTP_HOST and SMTP_FROM are not both set${missingHalf(env)}. This instance cannot send a single account email: nobody can confirm an address, so no registration reaches its trial; nobody is warned before a trial ends, so customers are locked out without notice; and nobody who forgets a password can recover the account without you editing the database. Configure SMTP, or set BILLING_ENABLED=false.`,
+      `BILLING_ENABLED is true in production but SMTP_HOST and SMTP_FROM are not both set${missingHalf(env)}. This instance cannot send a single account email: nobody can confirm an address; nobody is warned before a trial ends, so customers are locked out without notice; and nobody who forgets a password can recover the account without you editing the database. Configure SMTP, or set BILLING_ENABLED=false.`,
     );
   }
 
@@ -160,12 +163,35 @@ function assertOneTaxCollector(env: Env): void {
   }
 }
 
+function assertOneStripeAccount(env: Env): void {
+  if (!env.STRIPE_PUBLISHABLE_KEY || !env.STRIPE_SECRET_KEY) return;
+  const publishable = publishableModeOf(env.STRIPE_PUBLISHABLE_KEY);
+  const secret = isSandboxKey(env.STRIPE_SECRET_KEY) ? 'test' : 'live';
+  if (publishable === secret) return;
+  throw new Error(
+    `STRIPE_PUBLISHABLE_KEY is a ${publishable ?? 'unrecognised'} key but STRIPE_SECRET_KEY is a ${secret} key. The billing wall would mount Checkout against another account than the one that creates its sessions. Use the publishable key of the same Stripe account and mode, or clear STRIPE_PUBLISHABLE_KEY to keep the hosted Checkout redirect.`,
+  );
+}
+
+function publishableModeOf(key: string): 'test' | 'live' | null {
+  const prefix = Object.keys(PUBLISHABLE_KEY_MODES).find((candidate) =>
+    key.startsWith(candidate),
+  ) as keyof typeof PUBLISHABLE_KEY_MODES | undefined;
+  return prefix ? PUBLISHABLE_KEY_MODES[prefix] : null;
+}
+
 function stripeWarnings(env: Env): string[] {
   const warnings: string[] = [];
 
+  if (env.STRIPE_PUBLISHABLE_KEY && !env.STRIPE_SECRET_KEY) {
+    warnings.push(
+      'STRIPE_PUBLISHABLE_KEY is set but STRIPE_SECRET_KEY is not, so the wall cannot open a session. Set both, or clear STRIPE_PUBLISHABLE_KEY to keep the hosted Checkout redirect.',
+    );
+  }
+
   if (env.BILLING_ENABLED && !env.STRIPE_SECRET_KEY) {
     warnings.push(
-      'BILLING_ENABLED is true in production with no STRIPE_SECRET_KEY. Trials will expire with no way for a customer to pay. Configure Stripe, or leave billing off.',
+      'BILLING_ENABLED is true in production with no STRIPE_SECRET_KEY. No account can start a trial or pay, because both need Checkout. Configure Stripe, or leave billing off.',
     );
   }
 

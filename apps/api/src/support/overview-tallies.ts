@@ -21,6 +21,7 @@ export interface KeyedCount {
 }
 
 export interface WorkspaceRow extends PlanEntitlement {
+  subscriptionStatus: string | null;
   suspendedAt: Date | null;
   deletionDueAt: Date | null;
 }

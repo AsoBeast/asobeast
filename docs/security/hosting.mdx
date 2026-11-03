@@ -86,7 +86,7 @@ if ($request_method ~ ^(TRACE|TRACK)$) {
 
 Put the nginx rule inside the `server` block that proxies to host port 3001.
 
-## Set TRUST\_PROXY correctly
+## Set TRUST_PROXY correctly
 
 `TRUST_PROXY` is a hop count, and both apps read their own. The value is the number of proxies **you control** between the internet and that app. `true` still means 1 and `false` still means 0, so an existing setting keeps working.
 
@@ -146,7 +146,7 @@ The web proxy never passes a caller supplied `X-Forwarded-For` or `X-Real-IP` th
 
 Instead it sends exactly one address, the one its own `TRUST_PROXY` says it can trust, on the requests it relays for the browser and on the requests it makes while rendering a page. At `0` it sends none, and the API falls back to the connection. See [Web app configuration](/configuration/web).
 
-## Set WEB\_PUBLIC\_URL
+## Set WEB_PUBLIC_URL
 
 `WEB_PUBLIC_URL` builds absolute deep links inside alert payloads, and it is also the single origin the API allows through CORS. Set it to the origin a person would type. Only `http` and `https` are accepted, and the API refuses to boot on anything else, because a scheme the browser gives no origin to would otherwise become the allowed origin.
 
@@ -192,7 +192,7 @@ Some settings are individually valid and jointly unsafe. The API checks those co
 | Combination | What would happen |
 | --- | --- |
 | `NODE_ENV=production` with `AUTH_COOKIE_SECURE=false` | Session cookies ship without the `Secure` attribute, so anything on the network path can read them |
-| `BILLING_ENABLED=true` with `TRIAL_DAYS=0` | Every new account is locked out the moment it registers, with no route to the paywall |
+| `BILLING_ENABLED=true` with `TRIAL_DAYS=0` | Stripe refuses a trial shorter than a day, so no new account could start the trial it is offered at checkout |
 | `BILLING_ENABLED=true` with `AUTH_REGISTRATION_WORKSPACE=shared` | Hosted registration is open to strangers, so every one of them would land in the bootstrap workspace with read and write access to the data already there |
 
 The Docker image sets `NODE_ENV=production`, so the first check is live on every self hosted deployment. The Compose stack therefore defaults `AUTH_COOKIE_SECURE` to `true`. Chrome and Firefox keep the `Secure` cookie on `http://localhost`, so evaluating locally over plain HTTP works there. Safari does not, so a Safari user needs TLS. See [Signing in returns to the sign in form](/operations/troubleshooting#signing-in-returns-to-the-sign-in-form).
@@ -211,7 +211,7 @@ The mail warning is the one to read twice. Every individual mail guard is satisf
 | `AUTH_ALLOW_REGISTRATION=true` with `AUTH_REGISTRATION_WORKSPACE=shared` in production | Anyone who registers joins the bootstrap workspace as a member, so they see and can edit every tracked app, keyword and ranking in it |
 | `API_DOCS=public` in production | The whole OpenAPI surface is served to anonymous callers |
 | `ALERT_DELIVERY=instant` with no SMTP | Email alerts are generated and discarded. Webhook subscriptions live in the database, so this cannot see them |
-| `BILLING_ENABLED=true` with no SMTP | The instance can send no account email at all. Nobody confirms an address, so no registration reaches its trial; nobody is warned before a trial ends; and nobody who forgets a password can recover without you editing the database |
+| `BILLING_ENABLED=true` with no SMTP | The instance can send no account email at all. Nobody confirms an address; nobody is told when a trial ends or what it charges; and nobody who forgets a password can recover without you editing the database |
 | `SMTP_SECURE=true` on a port other than 465 | Implicit TLS is port 465. Ports 587 and 25 expect STARTTLS, so the connection usually hangs |
 
 ## Related

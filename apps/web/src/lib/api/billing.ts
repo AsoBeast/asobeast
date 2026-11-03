@@ -3,6 +3,7 @@ import type {
   BillingReconcileReport,
   BillingSession,
   CheckoutRequest,
+  CheckoutUi,
   ReconcileRequest,
 } from "@asobeast/shared";
 import { ApiError, apiFetch } from "./client";
@@ -11,10 +12,13 @@ export function getBillingCatalog(): Promise<BillingCatalog> {
   return apiFetch<BillingCatalog>("/billing/catalog");
 }
 
-export function startCheckout(priceId: string): Promise<BillingSession> {
+export function startCheckout(
+  priceId: string,
+  ui: CheckoutUi = "hosted",
+): Promise<BillingSession> {
   return apiFetch<BillingSession>("/billing/checkout", {
     method: "POST",
-    body: JSON.stringify({ priceId } satisfies CheckoutRequest),
+    body: JSON.stringify({ priceId, ui } satisfies CheckoutRequest),
   });
 }
 

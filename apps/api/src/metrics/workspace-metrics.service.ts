@@ -84,6 +84,7 @@ interface WorkspaceRow {
   plan: string;
   trialEndsAt: Date | null;
   planExpiresAt: Date | null;
+  subscriptionStatus: string | null;
   suspendedAt: Date | null;
 }
 
@@ -219,6 +220,7 @@ export class WorkspaceMetricsCollector {
         plan: true,
         trialEndsAt: true,
         planExpiresAt: true,
+        subscriptionStatus: true,
         suspendedAt: true,
       },
     });

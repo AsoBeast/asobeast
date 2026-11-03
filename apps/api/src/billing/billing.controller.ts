@@ -44,11 +44,11 @@ export class BillingController {
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @HttpCode(200)
   @ApiOperation({ summary: 'Start a Stripe Checkout session for a plan' })
-  async checkout(
+  checkout(
     @CurrentUser() user: AccountUser,
     @Body() dto: CheckoutDto,
   ): Promise<BillingSession> {
-    return { url: await this.billing.checkout(user, dto.priceId) };
+    return this.billing.checkout(user, dto.priceId, dto.ui);
   }
 
   @Post('portal')

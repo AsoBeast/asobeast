@@ -7,6 +7,7 @@ import {
   seedCookies,
   SIGNED_IN_ROUTES,
   SIGNED_OUT_ROUTES,
+  TRIAL_ROUTES,
   WORKSPACE_ROUTES,
 } from "./routes.mts";
 import {
@@ -127,6 +128,16 @@ for (const url of ["/apps/app-1", "/apps/app-1/actions"]) {
 
 for (const [name, path] of SIGNED_IN_ROUTES) {
   test(`${name} hydrates without an uncaught error`, async ({ page }) => {
+    await expectHydratesCleanly(page, name, path);
+  });
+}
+
+for (const [name, path, cookies] of TRIAL_ROUTES) {
+  test(`${name} hydrates without an uncaught error`, async ({
+    page,
+    context,
+  }) => {
+    await seedCookies(context, cookies);
     await expectHydratesCleanly(page, name, path);
   });
 }

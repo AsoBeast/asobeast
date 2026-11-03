@@ -75,10 +75,17 @@ export async function resetBillingState(
 ): Promise<void> {
   harness.fake.reset();
   await clearRateLimitCounters(harness.app);
+  await harness.prisma.$executeRawUnsafe('TRUNCATE TABLE "TrialClaim"');
   await harness.prisma.workspace.update({
     where: { id: WORKSPACE },
     data: {
       plan: 'free',
+      trialStartedAt: null,
+      trialDeclinedAt: null,
+      trialClaimedAt: null,
+      firstPaidAt: null,
+      billingInterval: null,
+      subscriptionEventAt: null,
       trialEndsAt: new Date(Date.now() + 7 * DAY_MS),
       planExpiresAt: null,
       billingCustomerId: null,

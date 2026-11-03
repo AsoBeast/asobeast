@@ -17,17 +17,12 @@ export class VerificationMailer {
     return this.mailer.enabled && this.web.configured;
   }
 
-  async send(
-    address: string,
-    token: string,
-    startsTrial: boolean,
-  ): Promise<void> {
+  async send(address: string, token: string): Promise<void> {
     const link = this.web.tokenLink(VERIFY_PATH, token, 'confirmation link');
     const email = await verificationEmail({
       origin: this.mailer.origin,
       address,
       link,
-      startsTrial,
       hours: VERIFICATION_HOURS,
     });
     await this.mailer.sendAccountMail({

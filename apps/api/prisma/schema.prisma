@@ -81,6 +81,9 @@ model Workspace {
   subscriptionStatus  String?
   subscriptionEventAt DateTime?
   cancelAtPeriodEnd   Boolean   @default(false)
+  trialClaimedAt      DateTime?
+  firstPaidAt         DateTime?
+  billingInterval     String?
   pendingPlan         String?
   overLimitSince      DateTime?
   overLimitNotifiedAt DateTime?

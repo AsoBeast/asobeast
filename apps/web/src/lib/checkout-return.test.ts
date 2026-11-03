@@ -3,8 +3,11 @@ import {
   checkoutReturned,
   pageReturnedFromCheckout,
   checkoutSessionId,
+  trialStartedToast,
   urlWithoutCheckout,
 } from "./checkout-return";
+import type { AccountPlan } from "@asobeast/shared";
+import { formatDate } from "./format";
 
 describe("checkoutReturned", () => {
   it("recognises the return Stripe sends the customer back with", () => {
@@ -83,5 +86,22 @@ describe("urlWithoutCheckout", () => {
     expect(urlWithoutCheckout("/settings", "?tab=plan")).toBe(
       "/settings?tab=plan",
     );
+  });
+});
+
+describe("trialStartedToast", () => {
+  const RENEWS = "2026-10-29T12:00:00.000Z";
+  const planOf = (over: Partial<AccountPlan>) =>
+    ({ trialing: true, renewsAt: RENEWS, ...over }) as AccountPlan;
+
+  it("names the first charge of a trial that started", () => {
+    expect(trialStartedToast(planOf({}))).toBe(
+      `Your free trial has started. The first charge is on ${formatDate(RENEWS)}.`,
+    );
+  });
+
+  it("says nothing for a purchase or a plan without a renewal", () => {
+    expect(trialStartedToast(planOf({ trialing: false }))).toBeNull();
+    expect(trialStartedToast(planOf({ renewsAt: null }))).toBeNull();
   });
 });

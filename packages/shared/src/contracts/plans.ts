@@ -131,7 +131,12 @@ const INDIE: PlanLimits = {
   },
 };
 
-const TRIAL: PlanLimits = { ...INDIE, aiCallsPerMonth: 25 };
+export const TRIAL_AI_CALLS_PER_MONTH = 25;
+
+const TRIAL: PlanLimits = {
+  ...INDIE,
+  aiCallsPerMonth: TRIAL_AI_CALLS_PER_MONTH,
+};
 
 const ULTIMATE: PlanLimits = {
   apps: 50,
@@ -257,6 +262,10 @@ export function effectivePlan(
     return TRIAL_PLAN;
   }
   return FREE_PLAN;
+}
+
+export function trialingLimits(limits: PlanLimits): PlanLimits {
+  return { ...limits, aiCallsPerMonth: TRIAL_AI_CALLS_PER_MONTH };
 }
 
 export const QUOTA_RESOURCES = [

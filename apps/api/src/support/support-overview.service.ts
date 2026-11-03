@@ -82,6 +82,7 @@ export class SupportOverviewService {
         plan: true,
         trialEndsAt: true,
         planExpiresAt: true,
+        subscriptionStatus: true,
         suspendedAt: true,
         deletionDueAt: true,
       },

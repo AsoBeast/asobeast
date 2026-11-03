@@ -8,7 +8,6 @@ export default function VerificationPreview() {
       origin={PREVIEW_ORIGIN}
       address="ada@example.com"
       link={`${PREVIEW_ORIGIN}${VERIFY_PATH}?token=0123456789abcdef`}
-      startsTrial
       hours={24}
     />
   );

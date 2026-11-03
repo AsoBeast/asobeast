@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { loginUrl, signInTarget, signedInDestination } from "./auth-routes";
+import type { AuthUser } from "@asobeast/shared";
+import {
+  entryDestination,
+  loginUrl,
+  signInTarget,
+  signedInDestination,
+} from "./auth-routes";
 
 describe("signedInDestination", () => {
   it.each([null, undefined, ""])("sends %p to the dashboard", (next) => {
@@ -71,6 +77,21 @@ describe("loginUrl", () => {
   it("builds the same address from a path and a query", () => {
     expect(loginUrl("/apps/app-1/keywords", "?sort=position")).toBe(
       "/login?next=%2Fapps%2Fapp-1%2Fkeywords%3Fsort%3Dposition",
+    );
+  });
+});
+
+describe("entryDestination", () => {
+  const user = (entitled: boolean) => ({ entitled }) as AuthUser;
+
+  it("lands an entitled account in the application", () => {
+    expect(entryDestination(user(true), "ultimate")).toBe("/");
+  });
+
+  it("lands an account without a plan on the wall with the plan it chose", () => {
+    expect(entryDestination(user(false), null)).toBe("/upgrade");
+    expect(entryDestination(user(false), "ultimate")).toBe(
+      "/upgrade?plan=ultimate",
     );
   });
 });

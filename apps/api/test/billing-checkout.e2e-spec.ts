@@ -1,6 +1,13 @@
 import './helpers/enable-billing';
 import './helpers/enable-stripe';
-import type { ApiErrorEnvelope, BillingSession } from '@asobeast/shared';
+import type {
+  AccountPlan,
+  ApiErrorEnvelope,
+  AuthUser,
+  BillingCatalog,
+  BillingSession,
+} from '@asobeast/shared';
+import request from 'supertest';
 import type Stripe from 'stripe';
 import {
   ALREADY_SUBSCRIBED,
@@ -8,6 +15,7 @@ import {
   PAYMENT_PENDING,
   SUBSCRIPTION_NEEDS_ATTENTION,
 } from '../src/billing/billing.service';
+import { trialSubmitMessage } from '../src/billing/checkout-session';
 import { WORKSPACE_METADATA_KEY } from '../src/billing/workspace-link';
 import {
   anonymously,
@@ -20,6 +28,8 @@ import {
   type BillingHarness,
 } from './helpers/billing-harness';
 import { checkoutSession, subscriptionFrom } from './helpers/fake-stripe';
+import { OWNER } from './helpers/session';
+import { trialClaimKey } from './helpers/trial-claim-key';
 
 const CHECKOUT = '/billing/checkout';
 const INDIE_MONTHLY = 'price_TestIndieMonthly';
@@ -97,6 +107,156 @@ describe('Billing checkout (e2e)', () => {
       checkoutSessionId: 'cs_test_2',
       checkoutClaimedAt: null,
       checkoutClaimToken: null,
+    });
+  });
+
+  describe('the embedded wall', () => {
+    const MARKER = 'checkout=complete&session_id={CHECKOUT_SESSION_ID}';
+
+    it('opens an embedded session for the wall', async () => {
+      await resetBillingState(harness, { trialEndsAt: null });
+      harness.fake.nextClientSecret = 'cs_test_wall_secret';
+
+      const response = await harness.owner
+        .post(CHECKOUT)
+        .send({ priceId: INDIE_MONTHLY, ui: 'embedded' })
+        .expect(200);
+
+      const [recorded] = harness.fake.checkoutSessions;
+      expect(recorded.params).toMatchObject({
+        ui_mode: 'embedded_page',
+        return_url: `${WEB}/?${MARKER}`,
+        subscription_data: { trial_period_days: 7 },
+      });
+      expect(recorded.params).not.toHaveProperty('success_url');
+      expect(recorded.params).not.toHaveProperty('cancel_url');
+      expect(response.body as BillingSession).toEqual({
+        url: `${WEB}/?${MARKER}`,
+        clientSecret: 'cs_test_wall_secret',
+      });
+    });
+
+    it('keeps the hosted session without ui', async () => {
+      const response = await checkout().expect(200);
+
+      expect(harness.fake.checkoutSessions[0].params).not.toHaveProperty(
+        'ui_mode',
+      );
+      expect(response.body as BillingSession).toEqual({
+        url: 'https://checkout.stripe.test/cs_test_2',
+      });
+    });
+
+    it('refuses an unknown ui with 400', async () => {
+      await harness.owner
+        .post(CHECKOUT)
+        .send({ priceId: INDIE_MONTHLY, ui: 'popup' })
+        .expect(400);
+      expect(harness.fake.checkoutSessions).toHaveLength(0);
+    });
+
+    it('names the publishable key on the catalog', async () => {
+      const catalog = await harness.owner.get('/billing/catalog').expect(200);
+
+      expect((catalog.body as BillingCatalog).publishableKey).toBe(
+        'pk_test_asobeast_e2e',
+      );
+    });
+  });
+
+  describe('the trial offer', () => {
+    const TRIAL_KEYS = {
+      payment_method_collection: 'always',
+      subscription_data: {
+        trial_period_days: 7,
+        trial_settings: { end_behavior: { missing_payment_method: 'cancel' } },
+      },
+      custom_text: { submit: { message: trialSubmitMessage(7) } },
+    };
+
+    const recordedSession = () => harness.fake.checkoutSessions[0].params;
+
+    it('opens a trial checkout for a fresh owner whose address is unconfirmed', async () => {
+      await resetBillingState(harness, { trialEndsAt: null });
+      const me = await harness.owner.get('/auth/me').expect(200);
+      expect((me.body as AuthUser).emailVerified).toBe(false);
+
+      await checkout().expect(200);
+
+      expect(recordedSession()).toMatchObject(TRIAL_KEYS);
+      expect(recordedSession().success_url).toBe(
+        `${WEB}/?checkout=complete&session_id={CHECKOUT_SESSION_ID}`,
+      );
+    });
+
+    it('sells at full price and returns to settings without an offer', async () => {
+      await checkout().expect(200);
+
+      expect(recordedSession()).not.toHaveProperty('payment_method_collection');
+      expect(recordedSession().subscription_data).not.toHaveProperty(
+        'trial_period_days',
+      );
+      expect(recordedSession().success_url).toBe(
+        `${WEB}/settings?checkout=complete&session_id={CHECKOUT_SESSION_ID}`,
+      );
+    });
+
+    it('sells at full price after a trial', async () => {
+      await resetBillingState(harness, {
+        trialEndsAt: null,
+        trialStartedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+      });
+
+      await checkout().expect(200);
+
+      expect(recordedSession().subscription_data).not.toHaveProperty(
+        'trial_period_days',
+      );
+    });
+
+    it('sells at full price to a claimed mailbox', async () => {
+      await resetBillingState(harness, { trialEndsAt: null });
+      await harness.prisma.trialClaim.create({
+        data: { key: trialClaimKey(OWNER.email) },
+      });
+
+      await checkout().expect(200);
+
+      expect(recordedSession().subscription_data).not.toHaveProperty(
+        'trial_period_days',
+      );
+    });
+
+    it('reports the offer on the plan and the user', async () => {
+      await resetBillingState(harness, { trialEndsAt: null });
+      const offerOf = async () => ({
+        plan: (await harness.owner.get('/auth/plan').expect(200))
+          .body as AccountPlan,
+        me: (await harness.owner.get('/auth/me').expect(200)).body as AuthUser,
+      });
+
+      const offered = await offerOf();
+      expect(offered.plan.trialOffer).toEqual({ days: 7 });
+      expect(offered.me.trialAwaitsCheckout).toBe(true);
+
+      await resetBillingState(harness, {
+        trialEndsAt: null,
+        trialStartedAt: new Date(),
+      });
+      const spent = await offerOf();
+      expect(spent.plan.trialOffer).toBeNull();
+      expect(spent.me.trialAwaitsCheckout).toBe(false);
+    });
+
+    it('offers nothing to a member', async () => {
+      await resetBillingState(harness, { trialEndsAt: null });
+
+      const me = await request(harness.app.getHttpServer())
+        .get('/auth/me')
+        .set('Authorization', `Bearer ${harness.memberToken}`)
+        .expect(200);
+
+      expect((me.body as AuthUser).trialAwaitsCheckout).toBe(false);
     });
   });
 

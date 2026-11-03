@@ -137,7 +137,7 @@ export function PlanCard() {
               label="AI calls this month"
               usage={plan.usage.aiCalls}
               counted="used"
-              note={aiUsageNote(plan.usage.aiCalls)}
+              note={aiUsageNote(plan.usage.aiCalls, plan.trialing === true)}
             />
           ) : null}
         </dl>

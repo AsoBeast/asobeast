@@ -14,7 +14,7 @@ const ADMIN_PATHS = [
 
 const NOTICE_TITLE = {
   "lapsed-operator": "Your workspace needs a plan to open the admin area",
-  "unconfirmed-operator": "Confirm your email to open the admin area",
+  "unconfirmed-operator": "Start your free trial to open the admin area",
 } as const;
 
 for (const viewer of UNPLANNED_OPERATORS) {
@@ -77,7 +77,7 @@ test.describe("what the notice offers", () => {
     );
   });
 
-  test("an operator who has not confirmed is not asked to pay", async ({
+  test("an operator who may start the trial is sent to it, not to a plan", async ({
     page,
     context,
   }) => {
@@ -87,7 +87,9 @@ test.describe("what the notice offers", () => {
     const notice = page.getByRole("region", {
       name: NOTICE_TITLE["unconfirmed-operator"],
     });
-    await expect(notice).toBeVisible();
+    await expect(
+      notice.getByRole("link", { name: "Start free trial" }),
+    ).toHaveAttribute("href", "/upgrade");
     await expect(
       notice.getByRole("link", { name: "Choose a plan" }),
     ).toHaveCount(0);

@@ -9,6 +9,16 @@ and `data.previous_attributes`. There is one file per event type in
 `customer.subscription.past_due` as named variants of `updated`, and
 `customer.discount.created` as the unhandled type.
 
+`customer.subscription.trialing` and `customer.subscription.trial_canceled` are a
+card backed trial assembled by hand from `customer.subscription.created` in the
+same synthetic `1800000xxx` family: the trial starts at `1800000150` and ends
+seven days later at `1800604950`, which is also the period end, so the trialing
+event sorts before `customer.subscription.updated` at `1800000300` and the
+cancellation at `1800000400` after it. `invoice.trial` is the zero trial invoice
+`in_TestTrial` those subscriptions name as their latest invoice, an `invoice.paid`
+envelope so the fake can serve its object. Being assembled, they never expire the
+way a captured trial would.
+
 The e2e suite signs each payload with `stripe.webhooks.generateTestHeaderString`
 and a known test secret, so signature verification is genuinely exercised rather
 than stubbed. It also fails when a fixture leaves the pinned version, carries

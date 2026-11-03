@@ -14,6 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ApiError, resendVerification, verifyEmail } from "@/lib/api";
+import { entryDestination } from "@/lib/auth-routes";
 import { useSingleFlight } from "@/lib/single-flight";
 import { SessionNotKeptAlert } from "./SessionNotKeptAlert";
 import { useSessionEntry } from "./use-session-entry";
@@ -23,6 +24,7 @@ export function VerifyEmailContent() {
 
   const { mutation, sessionDropped } = useSessionEntry({
     establish: () => verifyEmail(token),
+    destination: (user) => entryDestination(user, null),
   });
   const confirmOnce = useSingleFlight(mutation);
   const confirmLocked =

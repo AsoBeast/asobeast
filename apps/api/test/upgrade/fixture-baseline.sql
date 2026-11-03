@@ -9,6 +9,11 @@ VALUES ('usr_owner', 'ws_default', 'owner@asobeast.test', '$argon2id$v=19$m=6553
 INSERT INTO "Workspace" ("id", "name", "plan", "planExpiresAt", "billingCustomerId", "createdAt")
 VALUES ('ws_paid', 'Paid', 'premium', NULL, 'cus_drill', '2026-07-01 00:00:00');
 
+INSERT INTO "Workspace" ("id", "name", "plan", "planExpiresAt", "billingCustomerId", "subscriptionId", "subscriptionStatus", "subscriptionEventAt", "createdAt")
+VALUES
+  ('ws_subscribed', 'Subscribed', 'indie', '2026-09-01 00:00:00', 'cus_drill_subscribed', 'sub_drill_subscribed', 'active', '2026-07-15 00:00:00', '2026-07-01 00:00:00'),
+  ('ws_trialing', 'Trialing', 'indie', '2026-07-22 00:00:00', 'cus_drill_trialing', 'sub_drill_trialing', 'trialing', '2026-07-15 00:00:00', '2026-07-01 00:00:00');
+
 INSERT INTO "User" ("id", "workspaceId", "email", "passwordHash", "name", "role", "sessionVersion", "createdAt", "updatedAt")
 VALUES ('usr_paid', 'ws_paid', 'paid@asobeast.test', '$argon2id$v=19$m=65536,p=4,t=3$2IvW/k4zrYISwGU8gtJ1mg$uX4IjxOXBQ/mFJ00RvtEsTYYZqtWQcjrIgcumQ3vq3I', 'Drill Payer', 'owner', 0, '2026-07-01 00:00:00', '2026-07-01 00:00:00');
 

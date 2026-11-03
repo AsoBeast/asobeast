@@ -11,12 +11,21 @@ export const UNPLANNED_OPERATORS = [
   "unconfirmed-operator",
 ] as const;
 
+export const TRIAL_VIEWERS = [
+  "checkout-pending",
+  "checkout-pending-unconfirmed",
+  "trialing",
+] as const;
+
 export type Viewer =
-  (typeof VIEWERS)[number] | (typeof UNPLANNED_OPERATORS)[number];
+  | (typeof VIEWERS)[number]
+  | (typeof UNPLANNED_OPERATORS)[number]
+  | (typeof TRIAL_VIEWERS)[number];
 
 export const ALL_VIEWERS: readonly Viewer[] = [
   ...VIEWERS,
   ...UNPLANNED_OPERATORS,
+  ...TRIAL_VIEWERS,
 ];
 
 export async function seedViewer(

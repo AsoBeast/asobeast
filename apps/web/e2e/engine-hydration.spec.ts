@@ -1,6 +1,6 @@
 import { expectHydratesCleanly, settled } from "./page-errors.mts";
 import { expect, test } from "./session.mts";
-import { SIGNED_IN_ROUTES, seedCookies } from "./routes.mts";
+import { SIGNED_IN_ROUTES, TRIAL_ROUTES, seedCookies } from "./routes.mts";
 import { APP_EUR_ID, APP_HUF_ID, APP_JPY_ID } from "./fixtures.mts";
 
 const AFFECTED_ROUTES = [
@@ -17,6 +17,16 @@ for (const [name, path] of SIGNED_IN_ROUTES) {
   test(`${name} hydrates without an uncaught error in this engine`, async ({
     page,
   }) => {
+    await expectHydratesCleanly(page, name, path);
+  });
+}
+
+for (const [name, path, cookies] of TRIAL_ROUTES) {
+  test(`${name} hydrates without an uncaught error in this engine`, async ({
+    page,
+    context,
+  }) => {
+    await seedCookies(context, cookies);
     await expectHydratesCleanly(page, name, path);
   });
 }

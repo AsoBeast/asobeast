@@ -4,6 +4,7 @@ import type Stripe from 'stripe';
 import {
   BILLING_INTERVALS,
   PAID_PLAN_NAMES,
+  billingIntervalOf,
   PLANS,
   paidPlanOf,
   type BillingInterval,
@@ -137,13 +138,25 @@ export class PriceCatalog implements OnModuleInit {
   }
 
   planOf(subscription: Stripe.Subscription): PaidPlanName {
-    const price = subscription.items.data[0]?.price;
-    const priceId = price?.id ?? '';
+    const { price, priceId, listed } = this.priceOf(subscription);
     const plan =
-      this.find(priceId)?.plan ??
-      paidPlanOf(price?.metadata?.[PLAN_METADATA_KEY]);
+      listed?.plan ?? paidPlanOf(price?.metadata?.[PLAN_METADATA_KEY]);
     if (!plan) throw new UnknownPriceError(priceId);
     return plan;
+  }
+
+  intervalOf(subscription: Stripe.Subscription): BillingInterval {
+    const { price, priceId, listed } = this.priceOf(subscription);
+    const interval =
+      listed?.interval ?? billingIntervalOf(price?.recurring?.interval);
+    if (!interval) throw new UnknownPriceError(priceId);
+    return interval;
+  }
+
+  private priceOf(subscription: Stripe.Subscription) {
+    const price = subscription.items.data[0]?.price;
+    const priceId = price?.id ?? '';
+    return { price, priceId, listed: this.find(priceId) };
   }
 
   refresh(): Promise<void> {

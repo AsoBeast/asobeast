@@ -14,7 +14,7 @@ import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import { AccountNotifier, noticeSettled } from './account-notifier.service';
-import { paymentFailed } from './account-mail';
+import { paymentFailed, trialChargeFailed } from './account-mail';
 import { type BillingEventOutcome } from './billing-event-outcome';
 import { BillingEventQueue } from './billing-event-queue';
 import { entersDunning, leavesDunning } from './dunning';
@@ -22,6 +22,8 @@ import { PriceCatalog, UnknownPriceError } from './price-catalog';
 import { nextPhasePlan, scheduleIdOf } from './scheduled-plan';
 import type { SubscriptionStatus } from './subscription-status';
 import { projectionOf, stateFrom } from './subscription-state';
+import { FirstPayment } from './first-payment';
+import { TrialStarts } from './trial-starts';
 import { StripeService } from './stripe.service';
 import {
   customerIdOfEvent,
@@ -51,6 +53,8 @@ export class BillingWebhookService {
     private readonly notifier: AccountNotifier,
     private readonly config: ConfigService<Env, true>,
     private readonly events: BillingEventQueue,
+    private readonly trialStarts: TrialStarts,
+    private readonly firstPayment: FirstPayment,
   ) {}
 
   verify(payload: Buffer, signature: string | undefined): Stripe.Event {
@@ -228,6 +232,7 @@ export class BillingWebhookService {
       );
     }
 
+    const firstPaidAt = await this.firstPayment.record(workspace, subscription);
     const eventAt = new Date(event.created * 1000);
     if (
       workspace.subscriptionEventAt &&
@@ -239,18 +244,19 @@ export class BillingWebhookService {
       return 'ignored';
     }
 
-    const state = stateFrom(subscription, this.prices);
+    const everPaid = firstPaidAt !== null;
+    const state = stateFrom(subscription, this.prices, everPaid);
     const projected = await this.prisma.workspace.updateMany({
       where: {
         id: workspace.id,
         billingCustomerId: workspace.billingCustomerId,
       },
       data: {
-        ...projectionOf(state),
+        ...projectionOf(state, workspace, new Date()),
         subscriptionEventAt: eventAt,
         billingCustomerId: customerId,
         ...reopenedCapacity(state.plan),
-        ...(await this.dunning(workspace, state.status)),
+        ...(await this.dunning(workspace, state.status, everPaid)),
         ...(await this.pending(workspace, subscription, eventAt)),
       },
     });
@@ -262,6 +268,7 @@ export class BillingWebhookService {
     this.logger.log(
       `workspace ${workspace.id} is now ${state.plan} (${state.status})`,
     );
+    await this.trialStarts.settle(workspace, subscription);
     return 'applied';
   }
 
@@ -309,15 +316,22 @@ export class BillingWebhookService {
   private async dunning(
     workspace: Workspace,
     status: SubscriptionStatus,
+    everPaid: boolean,
   ): Promise<{ dunningNotifiedAt?: Date | null }> {
     if (leavesDunning(workspace, status)) return { dunningNotifiedAt: null };
     if (!entersDunning(workspace, status)) return {};
 
-    const outcome = await this.notifier.notify(
-      workspace.id,
-      'billing.payment_failed',
-      paymentFailed(),
-    );
+    const outcome = everPaid
+      ? await this.notifier.notify(
+          workspace.id,
+          'billing.payment_failed',
+          paymentFailed(),
+        )
+      : await this.notifier.notify(
+          workspace.id,
+          'billing.trial_charge_failed',
+          trialChargeFailed(),
+        );
     if (!noticeSettled(outcome)) return {};
     return { dunningNotifiedAt: new Date() };
   }

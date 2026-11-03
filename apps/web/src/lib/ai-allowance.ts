@@ -15,8 +15,15 @@ export function aiAllowanceSpent(usage: AiCallUsage | undefined): boolean {
   );
 }
 
-export function aiUsageNote(usage: AiCallUsage): string | undefined {
-  return usage.limit === 0 ? undefined : aiRenewalText(usage.resetsAt);
+const TRIAL_ALLOWANCE = "The trial allowance applies until the first charge.";
+
+export function aiUsageNote(
+  usage: AiCallUsage,
+  trialing = false,
+): string | undefined {
+  if (usage.limit === 0) return undefined;
+  const renewal = aiRenewalText(usage.resetsAt);
+  return trialing ? `${renewal}. ${TRIAL_ALLOWANCE}` : renewal;
 }
 
 export function aiCallsLeftText(usage: AiCallUsage): string | null {

@@ -266,4 +266,12 @@ describe('InstanceMetricsCollector when one measurement fails', () => {
     expect(metrics.proxyRequests).toEqual({ DATACENTER: 0, RESIDENTIAL: 0 });
     expect(metrics.pool.enabled).toBe(true);
   });
+
+  it('counts a trial as converted once it paid an invoice', async () => {
+    await collector.collect(NOW);
+
+    expect(workspaceCount).toHaveBeenCalledWith({
+      where: { trialStartedAt: { not: null }, firstPaidAt: { not: null } },
+    });
+  });
 });

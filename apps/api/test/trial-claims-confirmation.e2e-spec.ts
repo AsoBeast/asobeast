@@ -12,7 +12,7 @@ import { MailerService } from '../src/alerts/mailer.service';
 import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { restoreAuthEnv } from './helpers/auth-env';
-import { subscribeDuring } from './helpers/subscribe-during';
+import { trialClaimKey } from './helpers/trial-claim-key';
 import { testDb } from './helpers/test-db';
 import {
   clearRateLimitCounters,
@@ -25,7 +25,7 @@ interface SentMail {
   text: string;
 }
 
-describe('One trial per mailbox when the address must be confirmed', () => {
+describe('One trial per mailbox when the address is confirmed', () => {
   let app: INestApplication<App>;
   let prisma: PrismaClient;
   let sent: SentMail[];
@@ -112,110 +112,48 @@ describe('One trial per mailbox when the address must be confirmed', () => {
     await prisma.$disconnect();
   });
 
-  it('claims the mailbox when the address is confirmed, not when it registers', async () => {
+  it('claims no mailbox at registration or at confirmation', async () => {
     await register('farmer+1@example.com');
-
-    await expect(prisma.trialClaim.count()).resolves.toBe(0);
 
     const confirmed = await confirm('farmer+1@example.com');
-
-    expect(confirmed.plan).toBe('trial');
-    await expect(prisma.trialClaim.count()).resolves.toBe(1);
-  });
-
-  it('tells a copy of a trialed mailbox that no trial is waiting for it', async () => {
-    await register('farmer+1@example.com');
-    await confirm('farmer+1@example.com');
-
-    const copy = await register('farmer+2@example.com');
-
-    expect(copy.trialAwaitsConfirmation).toBe(false);
-    expect(copy.entitled).toBe(false);
-  });
-
-  it('starts no trial when that copy confirms its address', async () => {
-    await register('farmer+1@example.com');
-    await confirm('farmer+1@example.com');
-    await register('farmer+2@example.com');
-
-    const confirmed = await confirm('farmer+2@example.com');
 
     expect(confirmed.emailVerified).toBe(true);
     expect(confirmed.entitled).toBe(false);
     expect(confirmed.trialEndsAt).toBeNull();
+    await expect(prisma.trialClaim.count()).resolves.toBe(0);
   });
 
-  it('gives the trial to whichever copy confirms first when both registered before either did', async () => {
-    const first = await register('farmer+1@example.com');
-    const second = await register('farmer+2@example.com');
-    expect([first, second].map((a) => a.trialAwaitsConfirmation)).toEqual([
-      true,
-      true,
-    ]);
-
-    const winner = await confirm('farmer+2@example.com');
-    const loser = await confirm('farmer+1@example.com');
-
-    expect(winner.entitled).toBe(true);
-    expect(loser.entitled).toBe(false);
-    expect(loser.trialAwaitsConfirmation).toBe(false);
-  });
-
-  it('starts one trial when two copies of a mailbox confirm at the same time', async () => {
-    await register('farmer+1@example.com');
-    await register('farmer+2@example.com');
-
-    const confirmed = await Promise.all([
-      confirm('farmer+1@example.com'),
-      confirm('farmer+2@example.com'),
-    ]);
-
-    expect(confirmed.filter((account) => account.entitled)).toHaveLength(1);
-    await expect(
-      prisma.workspace.count({ where: { plan: 'trial' } }),
-    ).resolves.toBe(1);
-    await expect(prisma.trialClaim.count()).resolves.toBe(1);
-  });
-
-  it('does not let an unconfirmed registration use up the mailbox', async () => {
-    await register('farmer+1@example.com');
+  it('declines a mailbox that already had a trial at registration and keeps the table on confirmation', async () => {
+    await prisma.trialClaim.create({
+      data: { key: trialClaimKey('farmer@example.com') },
+    });
 
     const copy = await register('farmer+2@example.com');
     const confirmed = await confirm('farmer+2@example.com');
 
-    expect(copy.trialAwaitsConfirmation).toBe(true);
-    expect(confirmed.entitled).toBe(true);
+    expect(copy.trialAwaitsConfirmation).toBe(false);
+    expect(confirmed.emailVerified).toBe(true);
+    expect(confirmed.entitled).toBe(false);
+    await expect(
+      prisma.workspace.findFirstOrThrow({
+        where: { name: 'farmer+2@example.com' },
+        select: { trialDeclinedAt: true, trialStartedAt: true },
+      }),
+    ).resolves.toMatchObject({
+      trialDeclinedAt: expect.any(Date) as Date,
+      trialStartedAt: null,
+    });
+    await expect(
+      prisma.trialClaim.findMany({ select: { key: true } }),
+    ).resolves.toEqual([{ key: trialClaimKey('farmer@example.com') }]);
   });
 
-  it('tells a throwaway address that no trial is waiting for it', async () => {
+  it('tells a throwaway address that no confirmation waits on a trial', async () => {
     const throwaway = await register('fresh@mailinator.com');
 
     expect(throwaway.trialAwaitsConfirmation).toBe(false);
-  });
-
-  it('starts no trial when a throwaway address confirms', async () => {
-    await register('fresh@mailinator.com');
-
     const confirmed = await confirm('fresh@mailinator.com');
-
     expect(confirmed.emailVerified).toBe(true);
     expect(confirmed.entitled).toBe(false);
-  });
-
-  it('gives the mailbox back when a subscription lands while the address is confirmed', async () => {
-    await register('farmer+1@example.com');
-    const { workspaceId } = await prisma.user.findUniqueOrThrow({
-      where: { email: 'farmer+1@example.com' },
-    });
-
-    const confirmed = await subscribeDuring(prisma, workspaceId, () =>
-      confirm('farmer+1@example.com'),
-    );
-
-    expect(confirmed.plan).toBe('indie');
-    await expect(prisma.trialClaim.count()).resolves.toBe(0);
-    await register('farmer+2@example.com');
-    const copy = await confirm('farmer+2@example.com');
-    expect(copy.plan).toBe('trial');
   });
 });

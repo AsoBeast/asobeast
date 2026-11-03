@@ -2,7 +2,9 @@ import {
   CHECKOUT_RETURN_COMPLETE,
   CHECKOUT_RETURN_PARAM,
   CHECKOUT_SESSION_PARAM,
+  type AccountPlan,
 } from "@asobeast/shared";
+import { formatDate } from "./format";
 
 export function checkoutReturned(search: string): boolean {
   return (
@@ -28,4 +30,9 @@ export function urlWithoutCheckout(pathname: string, search: string): string {
   params.delete(CHECKOUT_SESSION_PARAM);
   const rest = params.toString();
   return rest ? `${pathname}?${rest}` : pathname;
+}
+
+export function trialStartedToast(plan: AccountPlan): string | null {
+  if (!plan.trialing || !plan.renewsAt) return null;
+  return `Your free trial has started. The first charge is on ${formatDate(plan.renewsAt)}.`;
 }

@@ -12,7 +12,6 @@ export interface VerificationEmailProps {
   origin: string | null;
   address: string;
   link: string;
-  startsTrial: boolean;
   hours: number;
 }
 
@@ -20,15 +19,12 @@ export function VerificationEmail({
   origin,
   address,
   link,
-  startsTrial,
   hours,
 }: VerificationEmailProps) {
-  const purpose = startsTrial
-    ? 'to start your trial'
-    : 'to finish setting up your account';
+  const message = `Confirm ${address} to finish setting up your account.`;
   return (
     <EmailLayout
-      preview={`Confirm ${address} ${purpose}.`}
+      preview={message}
       origin={origin}
       footer={
         <FooterLine>
@@ -37,7 +33,7 @@ export function VerificationEmail({
       }
     >
       <EmailHeading>Confirm your email</EmailHeading>
-      <EmailParagraph>{`Confirm ${address} ${purpose}.`}</EmailParagraph>
+      <EmailParagraph>{message}</EmailParagraph>
       <CallToAction href={link} label="Confirm email address" />
       <Notice>
         {`The link works for ${hours} hours. If you did not create an AsoBeast account, ignore this email and nothing happens.`}

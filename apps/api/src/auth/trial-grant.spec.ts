@@ -2,8 +2,6 @@ import {
   alreadyTrialed,
   canStartTrial,
   declineTrial,
-  grantTrial,
-  isGrant,
   trialAwaitsConfirmation,
   trialStillOpen,
   type TrialWorkspace,
@@ -11,32 +9,9 @@ import {
 
 const NOW = new Date('2026-08-10T00:00:00.000Z');
 
-describe('grantTrial', () => {
-  it('opens the trial now and ends it after the configured days', () => {
-    expect(grantTrial(7, NOW)).toEqual({
-      plan: 'trial',
-      trialStartedAt: NOW,
-      trialEndsAt: new Date('2026-08-17T00:00:00.000Z'),
-    });
-  });
-
-  it('honours a shorter trial length', () => {
-    expect(grantTrial(1, NOW).trialEndsAt).toEqual(
-      new Date('2026-08-11T00:00:00.000Z'),
-    );
-  });
-});
-
 describe('declineTrial', () => {
   it('records the refusal now and grants nothing', () => {
     expect(declineTrial(NOW)).toEqual({ trialDeclinedAt: NOW });
-  });
-});
-
-describe('isGrant', () => {
-  it('tells a granted trial from a refusal', () => {
-    expect(isGrant(grantTrial(7, NOW))).toBe(true);
-    expect(isGrant(declineTrial(NOW))).toBe(false);
   });
 });
 

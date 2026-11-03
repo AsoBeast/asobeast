@@ -90,7 +90,7 @@ Each entry below names the symptom the way you would describe it, then gives the
   </Accordion>
 
   <Accordion title="The admin area says my workspace needs a plan">
-    With billing on, the admin area, `/admin/queues`, `/docs` and `/metrics` open only while the operator's own workspace has a plan in force, so a lapsed trial or a trial still waiting for the email confirmation closes all of them. Confirm the email if the notice asks for it, choose a plan on the upgrade page, or set `plan` on the bootstrap workspace in the database. See [When the operator's workspace has no plan](/security/admin-surfaces#when-the-operators-workspace-has-no-plan).
+    With billing on, the admin area, `/admin/queues`, `/docs` and `/metrics` open only while the operator's own workspace has a plan in force, so a trial that was never started or that ended closes all of them. Start the trial or choose a plan on the upgrade page, as the notice offers, or set `plan` on the bootstrap workspace in the database. See [When the operator's workspace has no plan](/security/admin-surfaces#when-the-operators-workspace-has-no-plan).
   </Accordion>
 
   <Accordion title="Every admin surface answers 404 and no account is the operator">

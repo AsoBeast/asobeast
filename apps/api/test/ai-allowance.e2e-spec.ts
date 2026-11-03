@@ -95,7 +95,12 @@ describe('Monthly AI allowance (e2e)', () => {
   const setPlan = (plan: string, trialEndsAt: Date | null = null) =>
     prisma.workspace.update({
       where: { id: DEFAULT_WORKSPACE_ID },
-      data: { plan, trialEndsAt, planExpiresAt: null },
+      data: {
+        plan,
+        trialEndsAt,
+        planExpiresAt: null,
+        subscriptionStatus: null,
+      },
     });
 
   const spent = (
@@ -384,6 +389,35 @@ describe('Monthly AI allowance (e2e)', () => {
     expect(response.body).toMatchObject({
       aiAllowance: { plan: 'trial', limit: 25, upgradeTo: 'indie' },
     });
+  });
+
+  it('caps a trialing ultimate workspace at the trial allowance and lifts it once active', async () => {
+    await prisma.workspace.update({
+      where: { id: DEFAULT_WORKSPACE_ID },
+      data: {
+        plan: 'ultimate',
+        planExpiresAt: new Date(Date.now() + 7 * 86_400_000),
+        subscriptionStatus: 'trialing',
+      },
+    });
+    await spent(25);
+
+    const refused = await explain(actionId).expect(429);
+
+    expect(refused.body).toMatchObject({
+      aiAllowance: { plan: 'ultimate', limit: 25 },
+    });
+    const plan = await api.get('/auth/plan').expect(200);
+    expect((plan.body as AccountPlan).limits).toMatchObject({
+      apps: 50,
+      aiCallsPerMonth: 25,
+    });
+
+    await prisma.workspace.update({
+      where: { id: DEFAULT_WORKSPACE_ID },
+      data: { subscriptionStatus: 'active' },
+    });
+    await explain(actionId).expect(200);
   });
 
   it('answers that ai is configured with the model', async () => {

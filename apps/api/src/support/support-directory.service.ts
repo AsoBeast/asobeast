@@ -57,6 +57,7 @@ export class SupportDirectoryService {
                   plan: true,
                   trialEndsAt: true,
                   planExpiresAt: true,
+                  subscriptionStatus: true,
                 },
               },
             },

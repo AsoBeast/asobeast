@@ -17,11 +17,12 @@ Set every row in every sandbox and again in live mode. The catalog script prints
 | Limit customers to one subscription | Settings, Checkout and Payment Links, Subscriptions | On | The only thing that stops two checkout tabs both completing |
 | Manage failed payments | Settings, Billing, Subscriptions and emails | Smart Retries on, then mark the subscription unpaid | `past_due` stays entitled while Stripe retries; `unpaid` stops collection without losing the subscription, and the customer resumes it from the portal |
 | Customer emails | Settings, Billing, Subscriptions and emails | Failed payments, expiring cards and payments requiring authentication on, with the hosted invoice link | asobeast sends one dunning email and nothing when a renewal needs authentication; Stripe's emails carry the link |
-| Trial end behaviour | Settings, Billing, Subscriptions and emails | Leave as it is | asobeast trials run in the app and Checkout never starts a Stripe trial, so the setting never applies |
+| Trial end behaviour | Settings, Billing, Subscriptions and emails | Cancel if no payment method | Checkout collects a card for every trial and sets the same in code, so this only agrees with it |
+| Trial parameters | A sandbox Checkout session | Open the billing wall once and confirm the session shows \$0 today and the first charge date | Stripe's pages do not state that every trial parameter is accepted under Managed Payments, so check it in the sandbox before the first customer |
 | Payment methods | Settings, Payment methods | Card, Link, Apple Pay and Google Pay on; SEPA Direct Debit and Cash App Pay off | A delayed method leaves a subscription pending for days |
 | Adaptive pricing | Settings, Checkout | Off | The catalog and the web app are in USD |
 | Public business details | Settings, Public details | Legal name, support email `hello@asobeast.dev`, terms and privacy URLs | Checkout and the portal print them |
-| Radar | Radar, Rules | The default rules |  |
+| Radar | Radar, Rules | The default rules, plus the free trial abuse control with Radar on payment methods saved for future use | A card fingerprint is only checked when Stripe exposes one; Radar sees cards across every merchant. Under Managed Payments ask Stripe whether the control applies |
 | Webhook endpoint | Developers, Webhooks | One endpoint per environment with the ten handled events on the pinned API version | See [Billing](/operations/billing#the-webhook-endpoint) |
 
 ## Going live

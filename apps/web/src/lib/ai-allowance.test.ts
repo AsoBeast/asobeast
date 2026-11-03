@@ -106,3 +106,14 @@ describe("aiUsageNote", () => {
     ).toBeUndefined();
   });
 });
+
+describe("aiUsageNote on a trial", () => {
+  it("says the trial allowance lasts until the first charge", () => {
+    expect(
+      aiUsageNote(
+        { used: 3, limit: 25, resetsAt: "2026-11-01T00:00:00.000Z" },
+        true,
+      ),
+    ).toMatch(/\. The trial allowance applies until the first charge\.$/);
+  });
+});

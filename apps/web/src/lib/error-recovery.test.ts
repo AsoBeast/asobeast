@@ -52,6 +52,13 @@ describe("recoveryFor", () => {
     });
   });
 
+  it("says collection is paused and offers the plans or the trial", () => {
+    expect(recoveryFor(apiError(402))).toMatchObject({
+      title: "Collection is paused",
+      body: "Choose a plan, or start your free trial, to keep tracking keywords and running the daily pipeline.",
+    });
+  });
+
   it("sends an unentitled account to the upgrade page, not a retry", () => {
     expect(recoveryFor(apiError(402)).action).toEqual({
       kind: "link",

@@ -68,14 +68,14 @@ The Activation tile counts the apps imported in the last 30 days, across every w
 
 ## When the operator's workspace has no plan {#when-the-operators-workspace-has-no-plan}
 
-With billing on, the support tooling, the queue dashboard, the metrics scrape and the OpenAPI surface under the default `owner` setting need an entitled operator. An operator whose own workspace has no plan in force receives `404` from every one of them, exactly as a customer does, although `GET /auth/me` still reports `platformOperator: true` next to `entitled: false`. A plan is in force while a paid plan has not expired or a trial is running. The state is a natural one on a hosted instance: the bootstrap trial waits for the email confirmation, and every trial ends after `TRIAL_DAYS`.
+With billing on, the support tooling, the queue dashboard, the metrics scrape and the OpenAPI surface under the default `owner` setting need an entitled operator. An operator whose own workspace has no plan in force receives `404` from every one of them, exactly as a customer does, although `GET /auth/me` still reports `platformOperator: true` next to `entitled: false`. A plan is in force while a paid plan has not expired or a trial is running. The state is a natural one on a hosted instance: the bootstrap account starts its trial at checkout like everyone else, and a trial that ends without a plan closes the area again.
 
-The admin area reads `platformOperator`, `entitled` and `trialAwaitsConfirmation` from `GET /auth/me` and follows the same rule, so it says why instead of showing five tabs that cannot load.
+The admin area reads `platformOperator`, `entitled` and `trialAwaitsCheckout` from `GET /auth/me` and follows the same rule, so it says why instead of showing five tabs that cannot load.
 
 | Operator state | What the admin area shows |
 | --- | --- |
 | A plan is in force | The five tabs |
-| No plan, and the trial waits for the email to be confirmed | A notice to confirm the email, with no offer to pay |
+| No plan, and the trial is offered at checkout | A notice that the admin area opens with the trial, with a link to start it and to this page |
 | No plan, any other reason: the trial ended, the plan expired or none was ever set | A notice that the workspace needs a plan, with a link to the plans and to this page |
 
 The **Admin** entry stays in the sidebar, the command palette and the account menu, so the explanation is always one click away. To open the area again, choose a plan on the upgrade page, or set `plan` on the bootstrap workspace to `indie` or `ultimate` in the database, as described in [Authentication and accounts](/security/authentication#entitlements-and-the-paid-plan-seam).

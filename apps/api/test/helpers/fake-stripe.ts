@@ -18,10 +18,16 @@ export interface FakeStripe extends StripeApi {
   expired: string[];
   sessions: Map<string, Stripe.Checkout.Session>;
   subscriptionStore: Map<string, Stripe.Subscription>;
+  subscriptionUpdates: Recorded<
+    { id: string } & Stripe.SubscriptionUpdateParams
+  >[];
+  paymentMethodStore: Map<string, Stripe.PaymentMethod>;
+  invoiceStore: Map<string, Stripe.Invoice>;
   priceStore: Map<string, Stripe.Price>;
   schedules: Map<string, Stripe.SubscriptionSchedule>;
   failNext: Error | null;
   nextSessionUrl: string | null | undefined;
+  nextClientSecret: string | null | undefined;
   delayMs: number;
   reset(): void;
 }
@@ -33,6 +39,25 @@ class MissingResource extends Error {
   constructor(kind: string, id: string) {
     super(`No such ${kind}: '${id}'`);
   }
+}
+
+const REFUSED_UNDER_MANAGED_PAYMENTS = [
+  'automatic_tax',
+  'tax_id_collection',
+  'customer_update',
+  'custom_text',
+] as const;
+
+function refuseUnderManagedPayments(
+  params: Stripe.Checkout.SessionCreateParams,
+): void {
+  if (!params.managed_payments?.enabled) return;
+  const refused = REFUSED_UNDER_MANAGED_PAYMENTS.find((key) => key in params);
+  if (!refused) return;
+  throw new Stripe.errors.StripeInvalidRequestError({
+    type: 'invalid_request_error',
+    message: `You cannot use ${refused} with Managed Payments.`,
+  });
 }
 
 function respond<T>(value: T): Promise<Stripe.Response<T>> {
@@ -97,26 +122,44 @@ function customerIdOf(subscription: Stripe.Subscription): string {
     : subscription.customer.id;
 }
 
-const createdFixture = JSON.parse(
-  readFileSync(
-    join(
-      __dirname,
-      '..',
-      'fixtures',
-      'stripe',
-      'customer.subscription.created.json',
+function fixtureObject(name: string): unknown {
+  const event = JSON.parse(
+    readFileSync(
+      join(__dirname, '..', 'fixtures', 'stripe', `${name}.json`),
+      'utf8',
     ),
-    'utf8',
-  ),
-) as Stripe.Event;
+  ) as Stripe.Event;
+  return event.data.object;
+}
+
+function fixtureSubscription(name: string): Stripe.Subscription {
+  return fixtureObject(name) as Stripe.Subscription;
+}
+
+const CREATED = fixtureSubscription('customer.subscription.created');
+
+const TRIALING = fixtureSubscription('customer.subscription.trialing');
+
+export function fixtureInvoice(
+  name: string,
+  overrides: Partial<Stripe.Invoice> = {},
+): Stripe.Invoice {
+  return {
+    ...(fixtureObject(name) as Stripe.Invoice),
+    ...overrides,
+  };
+}
 
 export function subscriptionFrom(
   overrides: Partial<Stripe.Subscription>,
 ): Stripe.Subscription {
-  return {
-    ...(createdFixture.data.object as Stripe.Subscription),
-    ...overrides,
-  };
+  return { ...CREATED, ...overrides };
+}
+
+export function trialingSubscription(
+  overrides: Partial<Stripe.Subscription> = {},
+): Stripe.Subscription {
+  return { ...TRIALING, ...overrides };
 }
 
 export function checkoutSession(
@@ -150,6 +193,46 @@ export function catalogPrice(
   } as Stripe.Price;
 }
 
+const MONTH_SECONDS = 30 * 24 * 60 * 60;
+
+function applySubscriptionUpdate(
+  subscription: Stripe.Subscription,
+  params: Stripe.SubscriptionUpdateParams,
+): Stripe.Subscription {
+  if (params.trial_end !== 'now') {
+    return {
+      ...subscription,
+      cancel_at_period_end:
+        params.cancel_at_period_end ?? subscription.cancel_at_period_end,
+    };
+  }
+  const now = Math.floor(Date.now() / 1000);
+  return {
+    ...subscription,
+    status: 'active',
+    trial_end: now,
+    items: {
+      ...subscription.items,
+      data: subscription.items.data.map((item) => ({
+        ...item,
+        current_period_start: now,
+        current_period_end: now + MONTH_SECONDS,
+      })),
+    },
+  };
+}
+
+export function paymentMethod(
+  overrides: Partial<Stripe.PaymentMethod>,
+): Stripe.PaymentMethod {
+  return {
+    id: 'pm_TestCard',
+    object: 'payment_method',
+    type: 'card',
+    ...overrides,
+  } as Stripe.PaymentMethod;
+}
+
 export function fakeStripe(): FakeStripe {
   const signer = new Stripe(TEST_STRIPE_SECRET_KEY);
   let counter = 0;
@@ -164,10 +247,14 @@ export function fakeStripe(): FakeStripe {
     expired: [],
     sessions: new Map(),
     subscriptionStore: new Map(),
+    subscriptionUpdates: [],
+    paymentMethodStore: new Map(),
+    invoiceStore: new Map(),
     priceStore: new Map(),
     schedules: new Map(),
     failNext: null,
     nextSessionUrl: undefined,
+    nextClientSecret: undefined,
     delayMs: 0,
 
     customers: {
@@ -212,17 +299,26 @@ export function fakeStripe(): FakeStripe {
             fake.failNext = null;
             throw failure;
           }
+          refuseUnderManagedPayments(params);
           fake.checkoutSessions.push({
             params,
             idempotencyKey: options?.idempotencyKey,
           });
           const id = `cs_test_${next()}`;
+          const embedded = params.ui_mode === 'embedded_page';
           const session = checkoutSession({
             id,
-            url:
-              fake.nextSessionUrl === undefined
+            url: embedded
+              ? null
+              : fake.nextSessionUrl === undefined
                 ? `https://checkout.stripe.test/${id}`
                 : fake.nextSessionUrl,
+            client_secret: embedded
+              ? fake.nextClientSecret === undefined
+                ? `${id}_secret`
+                : fake.nextClientSecret
+              : null,
+            ui_mode: embedded ? 'embedded_page' : 'hosted_page',
             client_reference_id: params.client_reference_id ?? null,
           });
           fake.sessions.set(id, session);
@@ -253,6 +349,24 @@ export function fakeStripe(): FakeStripe {
         );
       },
       retrieve: (id) => found(fake.subscriptionStore, 'subscription', id),
+      update: async (id, params = {}, options) => {
+        const stored = await found(fake.subscriptionStore, 'subscription', id);
+        fake.subscriptionUpdates.push({
+          params: { id, ...params },
+          idempotencyKey: options?.idempotencyKey,
+        });
+        const updated = applySubscriptionUpdate(stored, params);
+        fake.subscriptionStore.set(id, updated);
+        return respond(updated);
+      },
+    },
+
+    paymentMethods: {
+      retrieve: (id) => found(fake.paymentMethodStore, 'payment_method', id),
+    },
+
+    invoices: {
+      retrieve: (id) => found(fake.invoiceStore, 'invoice', id),
     },
 
     prices: {
@@ -302,10 +416,14 @@ export function fakeStripe(): FakeStripe {
       fake.expired.length = 0;
       fake.sessions.clear();
       fake.subscriptionStore.clear();
+      fake.subscriptionUpdates.length = 0;
+      fake.paymentMethodStore.clear();
+      fake.invoiceStore.clear();
       fake.priceStore.clear();
       fake.schedules.clear();
       fake.failNext = null;
       fake.nextSessionUrl = undefined;
+      fake.nextClientSecret = undefined;
       fake.delayMs = 0;
       counter = 0;
     },

@@ -1,5 +1,6 @@
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
+import { OFFERED_PLAN, TRIALING_PLAN, planCookie } from "./trial-plans.mts";
 import type { BrowserContext } from "@playwright/test";
 
 export const APP = "app-1";
@@ -60,6 +61,56 @@ export const SIGNED_OUT_ROUTES = [
   ["verify", "/verify", {}],
   ["unsubscribe", "/unsubscribe", {}],
   ["confirm-alert", "/confirm-alert", {}],
+] as const satisfies ReadonlyArray<
+  readonly [string, string, Readonly<Record<string, string>>]
+>;
+
+export const TRIAL_ROUTES = [
+  [
+    "portfolio offering the trial",
+    "/",
+    {
+      e2e_viewer: "checkout-pending",
+      e2e_billing: "1",
+      e2e_plan: planCookie(OFFERED_PLAN),
+    },
+  ],
+  [
+    "wall offering the trial",
+    "/upgrade",
+    {
+      e2e_viewer: "checkout-pending-unconfirmed",
+      e2e_billing: "1",
+      e2e_plan: planCookie(OFFERED_PLAN),
+    },
+  ],
+  [
+    "portfolio while trialing",
+    "/",
+    {
+      e2e_viewer: "trialing",
+      e2e_billing: "1",
+      e2e_plan: planCookie(TRIALING_PLAN),
+    },
+  ],
+  [
+    "settings while trialing",
+    "/settings",
+    {
+      e2e_viewer: "trialing",
+      e2e_billing: "1",
+      e2e_plan: planCookie(TRIALING_PLAN),
+    },
+  ],
+  [
+    "wall while trialing",
+    "/upgrade",
+    {
+      e2e_viewer: "trialing",
+      e2e_billing: "1",
+      e2e_plan: planCookie(TRIALING_PLAN),
+    },
+  ],
 ] as const satisfies ReadonlyArray<
   readonly [string, string, Readonly<Record<string, string>>]
 >;

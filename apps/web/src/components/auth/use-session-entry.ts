@@ -10,15 +10,15 @@ export function useSessionEntry<T>({
   onFailure,
 }: {
   establish: () => Promise<T>;
-  destination?: () => string;
+  destination?: (result: T) => string;
   onFailure?: (error: unknown) => void;
 }) {
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: () => holdSession(establish),
-    onSuccess: () => {
+    onSuccess: (result) => {
       invalidateAuth(queryClient);
-      window.location.replace(destination());
+      window.location.replace(destination(result));
     },
     onError: (error) => {
       if (!(error instanceof SessionNotKeptError)) onFailure?.(error);

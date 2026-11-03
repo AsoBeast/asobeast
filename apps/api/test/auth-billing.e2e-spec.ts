@@ -100,7 +100,7 @@ describe('Auth (billing mode)', () => {
     await prisma.$disconnect();
   });
 
-  it('keeps registration open and stamps a seven day trial', async () => {
+  it('keeps registration open and withholds the trial', async () => {
     await request(app.getHttpServer())
       .post('/auth/register')
       .send({ email: 'first@example.com', password: 'supersecret1' })
@@ -112,23 +112,42 @@ describe('Auth (billing mode)', () => {
       .expect(201);
     const created = register.body as AuthUser;
 
-    expect(created.trialEndsAt).not.toBeNull();
-    const trialEndsAt = new Date(created.trialEndsAt as string).getTime();
-    expect(Math.abs(trialEndsAt - (Date.now() + 7 * DAY_MS))).toBeLessThan(
-      60 * 1000,
-    );
-    expect(created.entitled).toBe(true);
+    await expect(
+      prisma.user.findUniqueOrThrow({
+        where: { id: created.id },
+        select: { workspace: true },
+      }),
+    ).resolves.toMatchObject({
+      workspace: { plan: 'free', trialStartedAt: null, trialEndsAt: null },
+    });
+    const me = await request(app.getHttpServer())
+      .get('/auth/me')
+      .set('Cookie', sessionCookie(register))
+      .expect(200);
+    expect(me.body as AuthUser).toMatchObject({
+      entitled: false,
+      trialEndsAt: null,
+      trialAwaitsConfirmation: false,
+      trialAwaitsCheckout: true,
+    });
   });
 
-  it('starts the trial at registration and never asks to confirm an email it cannot send', async () => {
-    const register = await request(app.getHttpServer())
+  it('offers no trial to a throwaway address', async () => {
+    await registerOwner();
+    const throwaway = await request(app.getHttpServer())
       .post('/auth/register')
-      .send({ email: 'unmailed@example.com', password: 'supersecret1' })
+      .send({ email: 'fresh@mailinator.com', password: 'supersecret1' })
       .expect(201);
-    const created = register.body as AuthUser;
 
-    expect(created.entitled).toBe(true);
-    expect(created.trialAwaitsConfirmation).toBe(false);
+    expect(throwaway.body as AuthUser).toMatchObject({
+      trialAwaitsCheckout: false,
+    });
+    await expect(
+      prisma.workspace.findFirstOrThrow({
+        where: { name: 'fresh@mailinator.com' },
+        select: { trialDeclinedAt: true },
+      }),
+    ).resolves.toEqual({ trialDeclinedAt: expect.any(Date) as Date });
   });
 
   it('opens no trial over a plan the default workspace already pays for', async () => {
@@ -188,6 +207,15 @@ describe('Auth (billing mode)', () => {
     return { cookie: sessionCookie(res), id, workspaceId };
   };
 
+  const entitle = (workspaceId: string) =>
+    prisma.workspace.update({
+      where: { id: workspaceId },
+      data: {
+        plan: 'indie',
+        planExpiresAt: new Date(Date.now() + 30 * DAY_MS),
+      },
+    });
+
   const setEntitlement = (
     workspaceId: string,
     data: {
@@ -244,34 +272,7 @@ describe('Auth (billing mode)', () => {
     expect(await prisma.workspace.count()).toBe(before + 1);
   });
 
-  it('never grants a workspace a second trial', async () => {
-    const { workspaceId } = await registerOwner();
-    const started = await prisma.workspace.findUniqueOrThrow({
-      where: { id: workspaceId },
-      select: { trialStartedAt: true },
-    });
-    expect(started.trialStartedAt).not.toBeNull();
-
-    await setEntitlement(workspaceId, {
-      trialEndsAt: new Date(Date.now() - DAY_MS),
-    });
-    await prisma.$executeRawUnsafe(
-      'TRUNCATE TABLE "User" RESTART IDENTITY CASCADE',
-    );
-    await request(app.getHttpServer())
-      .post('/auth/register')
-      .send({ email: 'owner@example.com', password: 'supersecret1' })
-      .expect(201);
-
-    const after = await prisma.workspace.findUniqueOrThrow({
-      where: { id: workspaceId },
-      select: { trialStartedAt: true, trialEndsAt: true },
-    });
-    expect(after.trialStartedAt).toEqual(started.trialStartedAt);
-    expect(after.trialEndsAt!.getTime()).toBeLessThan(Date.now());
-  });
-
-  it('makes every hosted registration the owner of its own trialing workspace', async () => {
+  it('makes every hosted registration the owner of its own workspace', async () => {
     await registerOwner();
     const second = await request(app.getHttpServer())
       .post('/auth/register')
@@ -284,9 +285,6 @@ describe('Auth (billing mode)', () => {
     });
     expect(tenant.role).toBe('owner');
     expect(tenant.workspace.id).not.toBe(DEFAULT_WORKSPACE_ID);
-    expect(tenant.workspace.trialEndsAt).not.toBeNull();
-    expect(tenant.workspace.trialStartedAt).not.toBeNull();
-    expect(tenant.workspace.plan).toBe('trial');
   });
 
   it('gives a hosted account its own workspace and hides the first one', async () => {
@@ -322,7 +320,7 @@ describe('Auth (billing mode)', () => {
     expect(apps.body).toEqual([]);
   });
 
-  it('grants a fresh trial account full access', async () => {
+  it('lets a fresh account read before it holds a plan', async () => {
     const { cookie } = await registerOwner();
     await request(app.getHttpServer())
       .get('/apps')
@@ -332,6 +330,7 @@ describe('Auth (billing mode)', () => {
 
   it('reports the plan, its limits and usage against them', async () => {
     const { cookie, workspaceId } = await registerOwner();
+    await entitle(workspaceId);
     await prisma.app.create({
       data: {
         workspaceId,
@@ -347,16 +346,16 @@ describe('Auth (billing mode)', () => {
       .expect(200);
 
     expect(response.body as AccountPlan).toMatchObject({
-      plan: 'trial',
-      displayName: 'Trial',
+      plan: 'indie',
+      displayName: 'Indie',
       billing: true,
       entitled: true,
-      upgradeTo: 'indie',
+      upgradeTo: 'ultimate',
       upgradePath: UPGRADE_PATH,
-      limits: PLAN_LIMITS.trial,
+      limits: PLAN_LIMITS.indie,
       usage: {
-        apps: { used: 1, limit: PLAN_LIMITS.trial.apps },
-        keywordMarkets: { used: 0, limit: PLAN_LIMITS.trial.keywordMarkets },
+        apps: { used: 1, limit: PLAN_LIMITS.indie.apps },
+        keywordMarkets: { used: 0, limit: PLAN_LIMITS.indie.keywordMarkets },
       },
     });
   });
@@ -409,6 +408,9 @@ describe('Auth (billing mode)', () => {
         country: 'us',
       },
       select: { id: true },
+    });
+    await setEntitlement(workspaceId, {
+      trialEndsAt: new Date(Date.now() + DAY_MS),
     });
     const roster = app.get(ActiveWorkspaces);
 
@@ -573,6 +575,7 @@ describe('Auth (billing mode)', () => {
 
   it('refuses an import past the plan app limit with a typed quota envelope', async () => {
     const { cookie, workspaceId } = await registerOwner();
+    await entitle(workspaceId);
     await prisma.app.createMany({
       data: Array.from({ length: 5 }, (_, index) => ({
         workspaceId,
@@ -591,11 +594,11 @@ describe('Auth (billing mode)', () => {
 
     expect(envelope.quota).toEqual({
       resource: 'apps',
-      plan: 'trial',
+      plan: 'indie',
       limit: 5,
       used: 5,
       requested: 1,
-      upgradeTo: 'indie',
+      upgradeTo: 'ultimate',
     });
   });
 
@@ -611,6 +614,7 @@ describe('Auth (billing mode)', () => {
         where: { id: (tenant.body as AuthUser).id },
         select: { workspaceId: true },
       });
+      await entitle(workspaceId);
       const created = await prisma.app.create({
         data: {
           workspaceId,
@@ -648,7 +652,7 @@ describe('Auth (billing mode)', () => {
 
       const { message } = refused.body as ApiErrorEnvelope;
       expect(message).toMatch(
-        /^Run daily limit reached: the trial plan allows 5 requests per day\. Try again in \d+ (hours?|minutes?|seconds?)( \d+ minutes?)?\.$/,
+        /^Run daily limit reached: the indie plan allows 5 requests per day\. Try again in \d+ (hours?|minutes?|seconds?)( \d+ minutes?)?\.$/,
       );
       expect(message).not.toContain('runDaily');
     });
@@ -675,10 +679,10 @@ describe('Auth (billing mode)', () => {
       expect(envelope.rateLimit).toEqual({
         window: 'day',
         rateClass: 'store',
-        plan: 'trial',
+        plan: 'indie',
         limit: 5,
         resetSeconds: envelope.retryAfterSeconds,
-        upgradeTo: 'indie',
+        upgradeTo: 'ultimate',
         action: 'runDaily',
       });
     });

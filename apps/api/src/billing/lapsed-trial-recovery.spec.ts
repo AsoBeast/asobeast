@@ -7,11 +7,14 @@ import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AccountUser } from '../auth/auth.types';
+import type { TrialOffers } from '../auth/trial-offers';
 import { BillingConflictError } from './billing.errors';
 import { BillingReconciler } from './billing-reconciler.service';
 import { BillingService } from './billing.service';
 import { PriceCatalog } from './price-catalog';
 import { StripeService } from './stripe.service';
+import type { FirstPayment } from './first-payment';
+import type { TrialStarts } from './trial-starts';
 import { WORKSPACE_METADATA_KEY } from './workspace-link';
 
 const WORKSPACE = 'ws_lapsed';
@@ -112,6 +115,10 @@ function build(held: Stripe.Subscription[]) {
     {
       getBackend: () => ({ client: Promise.resolve({ set: jest.fn() }) }),
     } as unknown as Queue,
+    { settle: () => Promise.resolve('skipped') } as unknown as TrialStarts,
+    {
+      record: () => Promise.resolve(new Date('2026-09-01')),
+    } as unknown as FirstPayment,
   );
 
   const service = new BillingService(
@@ -120,6 +127,7 @@ function build(held: Stripe.Subscription[]) {
     reconciler,
     prisma,
     config,
+    { offerFor: () => Promise.resolve(null) } as unknown as TrialOffers,
   );
 
   return { service, reconciler, workspace, createCheckoutSession };

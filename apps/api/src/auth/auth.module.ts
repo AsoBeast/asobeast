@@ -21,6 +21,7 @@ import { DailyCapacity } from '../jobs/daily-capacity.service';
 import { SignupCapacityGate } from './signup-capacity.gate';
 import { TrialClaimBackfill } from './trial-claim-backfill';
 import { TrialClaims } from './trial-claims';
+import { TrialOffers } from './trial-offers';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { TrialClaims } from './trial-claims';
     WorkspaceTeamService,
     EmailVerificationService,
     TrialClaims,
+    TrialOffers,
     TrialClaimBackfill,
     PasswordResetService,
     SessionStore,
@@ -54,6 +56,12 @@ import { TrialClaims } from './trial-claims';
     SignupCapacityGate,
     DailyCapacity,
   ],
-  exports: [AuthService, CredentialResolver, SignupCapacityGate],
+  exports: [
+    AuthService,
+    CredentialResolver,
+    SignupCapacityGate,
+    TrialClaims,
+    TrialOffers,
+  ],
 })
 export class AuthModule {}

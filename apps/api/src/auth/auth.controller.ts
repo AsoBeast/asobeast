@@ -42,6 +42,7 @@ import { RequestPasswordResetDto } from './dto/request-password-reset.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { RetryAfterThrottlerGuard } from './rate-limit/retry-after-throttler.guard';
+import { TrialOffers } from './trial-offers';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -51,6 +52,7 @@ export class AuthController {
     private readonly accountPlan: AccountPlanService,
     private readonly verification: EmailVerificationService,
     private readonly reset: PasswordResetService,
+    private readonly trialOffers: TrialOffers,
   ) {}
 
   @Post('register')
@@ -100,15 +102,19 @@ export class AuthController {
   me(
     @CurrentUser() user: AccountUser,
     @CurrentTokenScope() tokenScope: ApiTokenScope | undefined,
-  ): AuthUser {
+  ): Promise<AuthUser> {
     return this.auth.toAuthUser(user, tokenScope);
   }
 
   @Get('plan')
   @AllowUnentitled()
   @ApiOperation({ summary: 'Workspace plan, limits and usage against them' })
-  plan(@CurrentUser() user: AccountUser): Promise<AccountPlan> {
-    return this.accountPlan.describe(user.workspace);
+  async plan(@CurrentUser() user: AccountUser): Promise<AccountPlan> {
+    return this.accountPlan.describe(
+      user.workspace,
+      new Date(),
+      await this.trialOffers.offerFor(user),
+    );
   }
 
   @Post('verify')
@@ -116,7 +122,7 @@ export class AuthController {
   @HttpCode(200)
   @UseGuards(RetryAfterThrottlerGuard)
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
-  @ApiOperation({ summary: 'Confirm an email address and start the trial' })
+  @ApiOperation({ summary: 'Confirm an email address' })
   async verify(
     @Req() req: Request,
     @Body() dto: VerifyEmailDto,

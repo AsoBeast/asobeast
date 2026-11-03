@@ -1,14 +1,17 @@
 import {
   PLANS,
+  paidPlanOf,
+  planPriceLabel,
   type AccountPlan,
   type BillingCatalog,
   type BillingInterval,
   type PaidPlanName,
+  type TrialOffer,
 } from "@asobeast/shared";
 import { formatDate } from "@/lib/format";
 
 export type PlanAction =
-  "current" | "checkout" | "change" | "resume" | "pending";
+  "current" | "checkout" | "trial" | "change" | "resume" | "pending";
 
 export const PAYMENT_CONFIRMING =
   "Your payment is being confirmed. This usually takes a minute; if it has not completed within a day the attempt expires and you can choose a plan again.";
@@ -49,19 +52,26 @@ const BILLED: Record<BillingInterval, string> = {
   year: "Billed yearly, two months free",
 };
 
-export const CONFIRM_EMAIL_TO_START_TRIAL =
-  "Confirm your email to start your free trial.";
+export const CONFIRM_YOUR_EMAIL = "Confirm your email address.";
 
-const CONFIRMATION_PENDING = `${CONFIRM_EMAIL_TO_START_TRIAL} Open the link we emailed you when you registered.`;
+const CONFIRMATION_PENDING = `${CONFIRM_YOUR_EMAIL} Open the link we emailed you when you registered.`;
+
+const START_ON_THE_PLAN_PAGE = "Start your free trial from the plan page.";
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 const STALLED_ON_THE_PAYWALL =
   "Your subscription stopped collecting. Add a payment method in the billing portal and it picks up where it left off.";
+
+const TRIAL_CHARGE_DECLINED =
+  "Your trial ended, but the card was declined. Update it in the billing portal to start your plan.";
 
 const STALLED_IN_SETTINGS =
   "Your subscription stopped collecting. Add a payment method in the billing portal and tracking resumes.";
 
 const ACTION_LABEL: Record<Exclude<PlanAction, "checkout">, string> = {
   current: "Current plan",
+  trial: "Start free trial",
   change: "Change in the billing portal",
   resume: "Resume in the billing portal",
   pending: "Confirming your payment",
@@ -75,14 +85,75 @@ function pending(plan: AccountPlan): boolean {
   return plan.subscriptionPending === true;
 }
 
+function cardTrialEnd(plan: AccountPlan): string | null {
+  return plan.trialing === true ? plan.trialEndsAt : null;
+}
+
+function declined(plan: AccountPlan): boolean {
+  return plan.trialChargeFailed === true;
+}
+
+export function trialPriceLabel(plan: AccountPlan): string | null {
+  const paid = paidPlanOf(plan.plan);
+  return paid && plan.billingInterval
+    ? planPriceLabel(paid, plan.billingInterval)
+    : null;
+}
+
+function nothingCharged(endsAt: string): string {
+  return `Cancelled. Your trial ends on ${formatDate(endsAt)} and nothing is charged.`;
+}
+
+function thenCharged(plan: AccountPlan): string {
+  const price = trialPriceLabel(plan);
+  return price ? `, then ${price}` : "";
+}
+
+export function trialBannerLine(
+  daysLeft: number,
+  plan: AccountPlan | undefined,
+): string {
+  if (plan?.cancelAtPeriodEnd && plan.trialEndsAt) {
+    return `Trial ends on ${formatDate(plan.trialEndsAt)}. Nothing will be charged.`;
+  }
+  const remaining = `Trial ends in ${daysLeft} day${daysLeft === 1 ? "" : "s"}`;
+  const price = plan ? trialPriceLabel(plan) : null;
+  return price
+    ? `${remaining}, then ${PLANS[plan?.plan ?? "free"].displayName} at ${price}.`
+    : `${remaining}.`;
+}
+
 export function planAction(
   plan: AccountPlan | undefined,
   name: PaidPlanName,
 ): PlanAction {
   if (plan?.plan === name) return "current";
   if (plan && pending(plan)) return "pending";
-  if (!plan?.subscribed) return "checkout";
+  if (!plan?.subscribed) return plan?.trialOffer ? "trial" : "checkout";
   return stalled(plan) ? "resume" : "change";
+}
+
+export function paywallHeading(plan: AccountPlan | undefined): string {
+  return plan?.trialOffer
+    ? `Start your ${plan.trialOffer.days} day free trial`
+    : "Keep optimizing without limits";
+}
+
+export function trialEndsOn(offer: TrialOffer, now: Date): Date {
+  return new Date(now.getTime() + offer.days * DAY_MS);
+}
+
+function trialLine(offer: TrialOffer, now: Date): string {
+  return `Pay $0 today. Your trial ends on ${formatDate(trialEndsOn(offer, now).toISOString())}, then the plan you choose is charged. Cancel any time from settings.`;
+}
+
+export function startTrialLine(offer: TrialOffer | null | undefined): string {
+  const trial = offer ? `${offer.days} day free trial` : "free trial";
+  return `Start your ${trial} to begin tracking. $0 today, cancel any time.`;
+}
+
+export function confirmationLine(email: string): string {
+  return `We sent a confirmation link to ${email}. You can start the trial now and confirm later.`;
 }
 
 export function planActionLabel(
@@ -92,17 +163,45 @@ export function planActionLabel(
   return action === "checkout" ? `Choose ${displayName}` : ACTION_LABEL[action];
 }
 
+function paywallTrialLine(plan: AccountPlan): string | null {
+  const trialEnd = cardTrialEnd(plan);
+  if (trialEnd) {
+    return plan.cancelAtPeriodEnd
+      ? nothingCharged(trialEnd)
+      : `Your trial runs until ${formatDate(trialEnd)}${thenCharged(plan)}. Change or cancel it in the billing portal.`;
+  }
+  if (declined(plan)) return TRIAL_CHARGE_DECLINED;
+  if (plan.plan === "trial" && plan.trialEndsAt) {
+    return `Your trial is active until ${formatDate(plan.trialEndsAt)}.`;
+  }
+  return null;
+}
+
+function settingsTrialLine(plan: AccountPlan): string | null {
+  if (plan.plan === "trial" && plan.trialEndsAt) {
+    return `Trial active until ${formatDate(plan.trialEndsAt)}.`;
+  }
+  const trialEnd = cardTrialEnd(plan);
+  if (!trialEnd) return null;
+  return plan.cancelAtPeriodEnd
+    ? nothingCharged(trialEnd)
+    : `Trial until ${formatDate(trialEnd)}${thenCharged(plan)}.`;
+}
+
 export function paywallStatusLine(
   plan: AccountPlan | undefined,
   awaitingConfirmation = false,
+  now = new Date(),
 ): string {
   if (!plan) {
     return awaitingConfirmation ? CONFIRMATION_PENDING : CHOOSE_A_PLAN;
   }
   if (pending(plan)) return PAYMENT_CONFIRMING;
-  if (plan.plan === "trial" && plan.trialEndsAt) {
-    return `Your trial is active until ${formatDate(plan.trialEndsAt)}.`;
+  if (plan.trialOffer && !plan.subscribed) {
+    return trialLine(plan.trialOffer, now);
   }
+  const trial = paywallTrialLine(plan);
+  if (trial) return trial;
   if (stalled(plan)) return STALLED_ON_THE_PAYWALL;
   if (awaitingConfirmation) return CONFIRMATION_PENDING;
   if (plan.trialEndsAt && !plan.entitled) {
@@ -119,14 +218,15 @@ export function planStatusLine(
   awaitingConfirmation = false,
 ): string {
   if (pending(plan)) return PAYMENT_CONFIRMING;
+  if (declined(plan)) return TRIAL_CHARGE_DECLINED;
   if (stalled(plan)) return STALLED_IN_SETTINGS;
+  if (plan.trialOffer && !plan.subscribed) return START_ON_THE_PLAN_PAGE;
   if (awaitingConfirmation) return CONFIRMATION_PENDING;
   if (!plan.entitled) {
     return "Your data stays readable and exportable; tracking resumes when you choose a plan.";
   }
-  if (plan.plan === "trial" && plan.trialEndsAt) {
-    return `Trial active until ${formatDate(plan.trialEndsAt)}.`;
-  }
+  const trial = settingsTrialLine(plan);
+  if (trial) return trial;
   if (plan.cancelAtPeriodEnd && plan.renewsAt) {
     return `Cancelled. Access continues until ${formatDate(plan.renewsAt)}.`;
   }
@@ -142,6 +242,16 @@ export function planCallToAction(plan: AccountPlan): string {
 export function paymentNote(catalog: BillingCatalog | undefined): string {
   if (!catalog?.enabled) return CHECKOUT_UNCONFIGURED;
   return catalog.managedPayments ? SOLD_THROUGH_LINK : HANDLED_BY_STRIPE;
+}
+
+export function trialPaymentNote(
+  catalog: BillingCatalog | undefined,
+  offer: TrialOffer | null | undefined,
+  now: Date,
+): string {
+  const note = paymentNote(catalog);
+  if (!offer || !catalog?.enabled) return note;
+  return `${note} Your card is verified now and charged on ${formatDate(trialEndsOn(offer, now).toISOString())}.`;
 }
 
 export function memberPlanLine(plan: AccountPlan | undefined): string {
