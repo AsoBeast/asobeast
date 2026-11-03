@@ -1,10 +1,11 @@
 import type { Locator, Page } from "@playwright/test";
+import type { KeywordAddRequest, TrackedKeywordItem } from "@asobeast/shared";
+import { manualKeyword } from "./fixtures.mts";
 import {
   activateInOneTask,
   activateTwiceInOneTask,
   hydrated,
 } from "./hydrated.mts";
-import { MOCK_API_URL } from "./localizations.mts";
 import { expect, test } from "./session.mts";
 
 const openSuggestions = async (page: Page, path: string) => {
@@ -32,19 +33,31 @@ const row = (page: Page, text: string) =>
     .filter({ hasNotText: "Tracking" });
 
 const KEYWORDS_URL = /\/api\/backend\/apps\/app-1\/keywords$/;
+const KEYWORD_LIST_URL = /\/api\/backend\/apps\/app-1\/keywords(\?.*)?$/;
 
 const trackButton = (page: Page, text: string) =>
   row(page, text).getByRole("button");
 
-const keywordPosts = (page: Page) => {
-  const posts: string[] = [];
-  page.on("request", (sent) => {
-    if (
-      sent.method() === "POST" &&
-      new URL(sent.url()).pathname.endsWith("/apps/app-1/keywords")
-    ) {
-      posts.push(sent.postData() ?? "");
+const trackInPage = async (page: Page) => {
+  const posts: KeywordAddRequest[] = [];
+  await page.route(KEYWORD_LIST_URL, async (route) => {
+    const request = route.request();
+    if (request.method() === "POST") {
+      posts.push(request.postDataJSON());
+      return route.fulfill({ status: 201, json: [] });
     }
+    const response = await route.fetch();
+    const listed: TrackedKeywordItem[] = await response.json();
+    const market = new URL(request.url()).searchParams.get("country");
+    const added = posts
+      .flatMap((post) =>
+        post.keywords.map((text) => ({ text, country: post.country ?? "us" })),
+      )
+      .filter(({ country }) => market === null || country === market)
+      .map(({ text, country }, index) =>
+        manualKeyword("app-1", text, country, index),
+      );
+    return route.fulfill({ response, json: [...listed, ...added] });
   });
   return posts;
 };
@@ -80,11 +93,8 @@ test("the competitor searches tab lists searches with their seed", async ({
   await expect(row(page, "deep work timer app")).toContainText("2 competitors");
 });
 
-test("a competitor search is tracked in one click", async ({
-  page,
-  request,
-}) => {
-  const posts = keywordPosts(page);
+test("a competitor search is tracked in one click", async ({ page }) => {
+  const posts = await trackInPage(page);
   await openTab(page, "/apps/app-1/keywords");
 
   await row(page, "focus timer for adhd")
@@ -94,12 +104,7 @@ test("a competitor search is tracked in one click", async ({
   await expect(page.getByText("Tracking focus timer for adhd")).toBeVisible();
   await expect(row(page, "focus timer for adhd")).toContainText("Tracked");
   expect(posts).toHaveLength(1);
-  expect(JSON.parse(posts[0])).toMatchObject({
-    keywords: ["focus timer for adhd"],
-  });
-  await request.post(`${MOCK_API_URL}/__reset/keywords/app-1`, {
-    failOnStatusCode: true,
-  });
+  expect(posts[0]).toMatchObject({ keywords: ["focus timer for adhd"] });
 });
 
 test("an empty competitor search explains why", async ({ page }) => {
@@ -197,26 +202,19 @@ test.describe("tracking a competitor search twice", () => {
 
   test("a tracked row keeps focus on its button and sends nothing more", async ({
     page,
-    request,
   }) => {
-    const posts = keywordPosts(page);
+    const posts = await trackInPage(page);
     await openTab(page, "/apps/app-1/keywords");
     const track = await hydrated(trackButton(page, "deep work timer app"));
 
-    try {
-      await track.click();
+    await track.click();
 
-      await expect(track).toHaveText("Tracked");
-      await expect(track).toHaveAttribute("aria-disabled", "true");
-      await expect(track).toBeFocused();
-      await page.keyboard.press("Enter");
-      await expect(track).toBeFocused();
-      expect(posts).toHaveLength(1);
-    } finally {
-      await request.post(`${MOCK_API_URL}/__reset/keywords/app-1`, {
-        failOnStatusCode: true,
-      });
-    }
+    await expect(track).toHaveText("Tracked");
+    await expect(track).toHaveAttribute("aria-disabled", "true");
+    await expect(track).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(track).toBeFocused();
+    expect(posts).toHaveLength(1);
   });
 });
 

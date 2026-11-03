@@ -321,6 +321,38 @@ export const STORE_HEALTH_BROKEN: StoreHealthReport = {
   degraded: true,
 };
 
+export function manualKeyword(
+  appId: string,
+  text: string,
+  country: string,
+  index: number,
+): TrackedKeywordItem {
+  return {
+    keywordId: `kw-${appId}-added-${index}`,
+    text,
+    country,
+    serpVolatility7d: null,
+    source: "MANUAL",
+    active: true,
+    latestPosition: null,
+    latestDepth: null,
+    latestCheckedOn: null,
+    previousPosition: null,
+    positionDelta1d: null,
+    positionDelta7d: null,
+    traffic: null,
+    difficulty: null,
+    volume: null,
+    relevance: null,
+    opportunity: null,
+    bucket: null,
+    scoredAt: null,
+    scoreProvenance: null,
+    trackedAt: new Date().toISOString(),
+    competitorsInTop10: null,
+  };
+}
+
 export const APP_1_KEYWORDS: TrackedKeywordItem[] = [
   {
     keywordId: "kw-1",
