@@ -2,7 +2,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AuthUser } from "@asobeast/shared";
 import { getAuthMe } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api";
-import { viewerAdminAccess, viewerIsOperator } from "./viewer";
+import {
+  ENTRY_STEP_WAIT_MS,
+  viewerAdminAccess,
+  viewerIsOperator,
+  viewerWhenAnswered,
+} from "./viewer";
 
 vi.mock("@/lib/api/auth", () => ({ getAuthMe: vi.fn() }));
 
@@ -98,5 +103,42 @@ describe("viewerAdminAccess", () => {
   it("rethrows anything that is not an api answer", async () => {
     me.mockRejectedValue(new TypeError("fetch failed"));
     await expect(viewerAdminAccess()).rejects.toThrow("fetch failed");
+  });
+});
+
+describe("viewerWhenAnswered", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("is the signed in account when the api answers", async () => {
+    me.mockResolvedValue(USER);
+    await expect(viewerWhenAnswered()).resolves.toEqual(USER);
+  });
+
+  it("is nobody when the api answers with a failure", async () => {
+    me.mockRejectedValue(
+      new ApiError({
+        statusCode: 503,
+        error: "Service Unavailable",
+        message: "Try again shortly",
+        path: "/auth/me",
+        timestamp: "2026-11-03T00:00:00.000Z",
+      }),
+    );
+    await expect(viewerWhenAnswered()).resolves.toBeNull();
+  });
+
+  it("is nobody when the api cannot be reached", async () => {
+    me.mockRejectedValue(new TypeError("fetch failed"));
+    await expect(viewerWhenAnswered()).resolves.toBeNull();
+  });
+
+  it("stops waiting for an api that does not answer", async () => {
+    vi.useFakeTimers();
+    me.mockReturnValue(new Promise<AuthUser>(() => {}));
+
+    const read = viewerWhenAnswered();
+    await vi.advanceTimersByTimeAsync(ENTRY_STEP_WAIT_MS);
+
+    await expect(read).resolves.toBeNull();
   });
 });

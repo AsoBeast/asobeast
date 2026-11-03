@@ -619,6 +619,7 @@ const ACCOUNT_PLAN: AccountPlan = {
   },
 };
 const BILLING_COOKIE = "e2e_billing";
+const ACCOUNT_DOWN_COOKIE = "e2e_account_down";
 const METADATA_AI_COOKIE = "e2e_metadata_ai";
 const METADATA_AI_MODEL = "gpt-test";
 const REPLY_TRUNCATED_COOKIE = "e2e_reply_truncated";
@@ -2757,6 +2758,9 @@ const routes: Route[] = [
     method: "GET",
     pattern: /^\/auth\/me$/,
     handler: (_p, req, res) => {
+      if (hasCookie(req, ACCOUNT_DOWN_COOKIE, "1")) {
+        return json(res, 503, errorEnvelope(503, req.url ?? "/auth/me"));
+      }
       if (!signedIn(req)) {
         return json(res, 401, errorEnvelope(401, req.url ?? "/auth/me"));
       }
