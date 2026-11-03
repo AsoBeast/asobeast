@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { unstable_rethrow } from "next/navigation";
 import type { AuthUser } from "@asobeast/shared";
 import { ApiError, getAuthMe } from "@/lib/api";
 import { adminAccessOf, type AdminAccess } from "@/lib/admin-access";
@@ -22,7 +23,10 @@ export const ENTRY_STEP_WAIT_MS = 3_000;
 
 export function viewerWhenAnswered(): Promise<AuthUser | null> {
   return Promise.race([
-    viewer().catch(() => null),
+    viewer().catch((error: unknown) => {
+      unstable_rethrow(error);
+      return null;
+    }),
     new Promise<null>((resolve) => {
       setTimeout(resolve, ENTRY_STEP_WAIT_MS, null);
     }),

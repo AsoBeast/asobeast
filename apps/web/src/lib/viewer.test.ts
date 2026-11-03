@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { redirect } from "next/navigation";
 import type { AuthUser } from "@asobeast/shared";
 import { getAuthMe } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api";
@@ -130,6 +131,11 @@ describe("viewerWhenAnswered", () => {
   it("is nobody when the api cannot be reached", async () => {
     me.mockRejectedValue(new TypeError("fetch failed"));
     await expect(viewerWhenAnswered()).resolves.toBeNull();
+  });
+
+  it("lets the sign in redirect of a refused session through", async () => {
+    me.mockImplementation(() => redirect("/login"));
+    await expect(viewerWhenAnswered()).rejects.toThrow("NEXT_REDIRECT");
   });
 
   it("stops waiting for an api that does not answer", async () => {
