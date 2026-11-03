@@ -57,6 +57,28 @@ test.describe("api status badge", () => {
     });
   }
 
+  test("keeps the shell when the account cannot be read", async ({
+    page,
+    context,
+  }) => {
+    await seedSession(page);
+    await context.addCookies([
+      {
+        name: "e2e_account_down",
+        value: "1",
+        domain: "localhost",
+        path: "/",
+      },
+    ]);
+
+    await page.goto("/settings");
+
+    await expect(page.getByRole("navigation", { name: "Main" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Something went wrong" }),
+    ).toHaveCount(0);
+  });
+
   test("reads unreachable once a later poll fails and recovers on the next answer", async ({
     page,
   }) => {

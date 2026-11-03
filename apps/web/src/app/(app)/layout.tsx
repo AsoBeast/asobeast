@@ -12,7 +12,7 @@ import {
   SIDEBAR_COOKIE_NAME,
   sidebarOpenFromCookie,
 } from "@/lib/sidebar-cookie";
-import { viewer } from "@/lib/viewer";
+import { viewerWhenAnswered } from "@/lib/viewer";
 
 export default async function AppLayout({
   children,
@@ -22,7 +22,7 @@ export default async function AppLayout({
     cookieStore.get(SIDEBAR_COOKIE_NAME)?.value,
   );
   const requested = (await headers()).get(REQUESTED_PATH_HEADER);
-  const user = await viewer();
+  const user = await viewerWhenAnswered();
   if (user?.entryStep && !checkoutReturned(searchOf(requested))) {
     redirect(entryDestination(user, null));
   }

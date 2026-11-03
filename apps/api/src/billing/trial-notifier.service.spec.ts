@@ -21,6 +21,7 @@ interface Row {
   subscriptionStatus: string | null;
   firstPaidAt: Date | null;
   planExpiresAt: Date | null;
+  dunningNotifiedAt: Date | null;
 }
 
 describe('TrialNotifier', () => {
@@ -60,6 +61,7 @@ describe('TrialNotifier', () => {
     subscriptionStatus: null,
     firstPaidAt: null,
     planExpiresAt: null,
+    dunningNotifiedAt: null,
     ...over,
   });
 
@@ -278,5 +280,24 @@ describe('TrialNotifier', () => {
     const [, event, mail] = mailOf(notify);
     expect(event).toBe('trial.day8');
     expect(mail.action?.label).toBe('Update your card');
+  });
+
+  it('records day 8 without a second email once the declined charge was mailed', async () => {
+    const { notifier, notify, update } = build(true, [
+      cardTrial({
+        plan: 'free',
+        subscriptionStatus: 'past_due',
+        trialNoticeDay: 5,
+        dunningNotifiedAt: at(7),
+      }),
+    ]);
+
+    await notifier.sweep(new Date(at(7).getTime() + 60 * 60 * 1000));
+
+    expect(notify).not.toHaveBeenCalled();
+    expect(update).toHaveBeenCalledWith({
+      where: { id: 'ws_1' },
+      data: { trialNoticeDay: 8 },
+    });
   });
 });
