@@ -62,7 +62,7 @@ const STALLED_IN_SETTINGS =
 
 const ACTION_LABEL: Record<Exclude<PlanAction, "checkout">, string> = {
   current: "Current plan",
-  trial: "Start free trial",
+  trial: "Pay $0 today and start your free trial",
   change: "Change in the billing portal",
   resume: "Resume in the billing portal",
   pending: "Confirming your payment",
@@ -220,9 +220,22 @@ export function trustLines(offer: TrialOffer, now: Date): readonly string[] {
   ];
 }
 
-export function trialBarLine(offer: TrialOffer, now: Date): string {
-  const endsOn = trialEndLabel(offer, now);
-  return `Your ${offer.days} day trial is 100% free, ending ${endsOn}. Cancel any time from settings.`;
+export interface TrialBarParts {
+  before: string;
+  free: string;
+  middle: string;
+  endsOn: string;
+  after: string;
+}
+
+export function trialBarParts(offer: TrialOffer, now: Date): TrialBarParts {
+  return {
+    before: `Your ${offer.days} day trial is `,
+    free: "100% free",
+    middle: ", ending ",
+    endsOn: trialEndLabel(offer, now),
+    after: ". Cancel any time from settings.",
+  };
 }
 
 export function planActionLabel(

@@ -14,7 +14,9 @@ import {
 import { seedViewer } from "./viewer.mts";
 import { summaryFromCatalog } from "../src/lib/order-summary";
 import { paywallFaq } from "../src/lib/paywall-faq";
-import { trustLines } from "../src/lib/plan-choice";
+import { trialBarParts, trustLines } from "../src/lib/plan-choice";
+
+const TRIAL_BUTTON = "Pay $0 today and start your free trial";
 
 async function register(page: Page, path = "/register") {
   await page.goto(path);
@@ -61,7 +63,7 @@ test.describe("the billing wall", () => {
       page.getByRole("button", { name: "Ultimate, $99 per month" }),
     ).toHaveAttribute("aria-pressed", "false");
     await expect(
-      page.getByRole("button", { name: "Start free trial" }),
+      page.getByRole("button", { name: TRIAL_BUTTON }),
     ).toBeEnabled();
   });
 
@@ -108,7 +110,7 @@ test.describe("the billing wall", () => {
 
     await page.goto("/upgrade");
     await page.getByRole("tab", { name: "Annual" }).click();
-    await page.getByRole("button", { name: "Start free trial" }).click();
+    await page.getByRole("button", { name: TRIAL_BUTTON }).click();
 
     await expect
       .poll(() => requested)
@@ -458,6 +460,34 @@ test.describe("the billing wall", () => {
     ).toBeVisible();
   });
 
+  test("draws the strip with the promise in the foreground and a tall button", async ({
+    page,
+    context,
+  }) => {
+    await seedViewer(context, "checkout-pending");
+    await seedSession(page);
+    await openBilling(page);
+    const parts = trialBarParts({ days: 7 }, new Date());
+
+    await page.goto("/upgrade");
+
+    const strip = page.getByRole("region", { name: "Your trial" });
+    const color = (locator: Locator) =>
+      locator.evaluate((node) => getComputedStyle(node).color);
+    const heading = await color(page.getByRole("heading", { level: 1 }));
+    expect(await color(strip.getByText(parts.free, { exact: true }))).toBe(
+      heading,
+    );
+    expect(await color(strip.getByText(parts.endsOn, { exact: true }))).toBe(
+      heading,
+    );
+    expect(
+      await color(strip.getByText(parts.before.trim(), { exact: true })),
+    ).not.toBe(heading);
+    const button = strip.getByRole("button", { name: TRIAL_BUTTON });
+    expect((await button.boundingBox())!.height).toBe(44);
+  });
+
   test("writes its own order summary and follows the interval", async ({
     page,
     context,
@@ -573,7 +603,7 @@ test.describe("the billing wall", () => {
         page.locator('[data-mounted="cs_test_secret_price_indie_month"]'),
       ).toHaveAttribute("aria-label", "Stripe checkout for Indie, monthly");
       await expect(
-        page.getByRole("button", { name: "Start free trial" }),
+        page.getByRole("button", { name: TRIAL_BUTTON }),
       ).toHaveCount(0);
 
       await page.getByRole("tab", { name: "Annual" }).click();
@@ -804,7 +834,7 @@ test.describe("the billing wall", () => {
       await page.goto("/upgrade");
 
       await expect(
-        page.getByRole("button", { name: "Start free trial" }),
+        page.getByRole("button", { name: TRIAL_BUTTON }),
       ).toBeVisible();
       await expect(page.locator("[data-mounted]")).toHaveCount(0);
     });

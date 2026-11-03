@@ -55,7 +55,8 @@ export function HostedAction({
 
   return (
     <Button
-      className="w-full sm:w-auto"
+      size="xl"
+      className="w-full sm:w-auto sm:min-w-72"
       disabled={
         action === "current" || action === "pending" || (buys && !price)
       }

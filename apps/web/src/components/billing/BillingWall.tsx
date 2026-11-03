@@ -20,7 +20,7 @@ import {
   paywallStatusLine,
   planAction,
   planActionLabel,
-  trialBarLine,
+  trialBarParts,
   trustLines,
 } from "@/lib/plan-choice";
 import { planParam } from "@/lib/search-params";
@@ -59,8 +59,8 @@ export function BillingWall({
     checkoutUiFor(catalog) === "embedded" && buysPlan(action) && price
       ? (catalog?.publishableKey ?? null)
       : null;
-  const trialLine =
-    action === "trial" && offer ? trialBarLine(offer, now) : null;
+  const trialParts =
+    action === "trial" && offer ? trialBarParts(offer, now) : null;
 
   return (
     <div className="page-checkout flex flex-col gap-8 pb-40 sm:pb-28">
@@ -96,7 +96,10 @@ export function BillingWall({
       <PaywallFaq
         items={paywallFaq(offer, planPriceLabel(selected, interval), now)}
       />
-      <TrialBar line={trialLine} label={trialLine ? "Your trial" : "Checkout"}>
+      <TrialBar
+        parts={trialParts}
+        label={trialParts ? "Your trial" : "Checkout"}
+      >
         {publishableKey ? null : (
           <HostedAction
             action={action}

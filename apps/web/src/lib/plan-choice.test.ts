@@ -16,7 +16,8 @@ import {
   planHighlights,
   planStatusLine,
   savingPercent,
-  trialBarLine,
+  trialBarParts,
+  trialEndLabel,
   trustLines,
   paywallHeading,
   paywallStatusLine,
@@ -231,7 +232,10 @@ describe("a trial offered on the wall", () => {
   it("starts a free trial instead of a checkout", () => {
     expect(planAction(offered, "indie")).toBe("trial");
     expect(planAction(offered, "ultimate")).toBe("trial");
-    expect(planActionLabel("trial", "Indie")).toBe("Start free trial");
+    expect(planActionLabel("trial", "Indie")).toBe(
+      "Pay $0 today and start your free trial",
+    );
+    expect(planActionLabel("checkout", "Indie")).toBe("Choose Indie");
   });
 
   it("never offers the trial over a held or pending subscription", () => {
@@ -477,9 +481,25 @@ describe("the wall around the checkout", () => {
   });
 
   it("names the trial end on the bar", () => {
-    expect(trialBarLine({ days: 7 }, NOW)).toBe(
+    expect(Object.values(trialBarParts({ days: 7 }, NOW)).join("")).toBe(
       `Your 7 day trial is 100% free, ending ${ENDS_ON}. Cancel any time from settings.`,
     );
+  });
+
+  it("splits the bar sentence so the promise and the date stand alone", () => {
+    expect(trialBarParts({ days: 7 }, NOW)).toEqual({
+      before: "Your 7 day trial is ",
+      free: "100% free",
+      middle: ", ending ",
+      endsOn: trialEndLabel({ days: 7 }, NOW),
+      after: ". Cancel any time from settings.",
+    });
+  });
+
+  it("keeps the emphasised parts free of edge spaces", () => {
+    const { free, endsOn } = trialBarParts({ days: 7 }, NOW);
+    expect(free).toBe(free.trim());
+    expect(endsOn).toBe(endsOn.trim());
   });
 
   it("names a plan card by its plan and price", () => {
