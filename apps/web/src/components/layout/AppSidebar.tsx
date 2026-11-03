@@ -14,7 +14,7 @@ import {
 import { PRODUCT_NAME } from "@/lib/brand";
 import { latestShown } from "@/lib/whats-new/release-notes";
 import { RELEASES } from "@/lib/whats-new/releases";
-import { appVersionLabel, releaseNotesUrl } from "./app-version";
+import { appVersion, appVersionLabel, releaseNotesUrl } from "./app-version";
 import { AppSwitcher } from "./AppSwitcher";
 import { SidebarNav } from "./SidebarNav";
 import { WhatsNewMenuItem } from "./WhatsNewMenuItem";
@@ -23,10 +23,7 @@ const DOCUMENTATION_URL = "https://docs.asobeast.com";
 
 export function AppSidebar() {
   const version = appVersionLabel();
-  const latest = latestShown(
-    RELEASES,
-    process.env.NEXT_PUBLIC_APP_VERSION ?? null,
-  );
+  const latest = latestShown(RELEASES, appVersion());
 
   return (
     <Sidebar variant="inset" collapsible="icon">
