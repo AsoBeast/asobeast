@@ -162,6 +162,33 @@ test.describe("the what's new page", () => {
     ).toBe(true);
   });
 
+  test("draws its loading state inside a phone screen", async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 720 });
+    const { promise: released, resolve: release } =
+      Promise.withResolvers<void>();
+    await page.route(/\/whats-new\?_rsc=/, async (route) => {
+      if (route.request().headers()["next-router-prefetch"]) {
+        return route.fallback();
+      }
+      await released;
+      return route.fallback();
+    });
+    await page.goto("/settings");
+    await page.getByRole("button", { name: "Toggle Sidebar" }).first().click();
+    await (await hydrated(whatsNew(page))).click();
+
+    await expect(
+      page.locator("main [data-slot='skeleton']").first(),
+    ).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth + 1,
+      ),
+    ).toBe(true);
+    release();
+    await expect(releases(page).first()).toBeVisible();
+  });
+
   test("links the technical notes in a new tab", async ({ page }) => {
     await page.goto("/whats-new");
 

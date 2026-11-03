@@ -7,7 +7,7 @@ export default function Loading() {
     <div className="page-reading flex flex-col gap-8">
       <div className="flex flex-col gap-2">
         <Skeleton className="h-7 w-40" />
-        <Skeleton className="h-4 w-80" />
+        <Skeleton className="h-4 w-72" />
         <Skeleton className="h-4 w-44" />
       </div>
       <div className="flex flex-col">
