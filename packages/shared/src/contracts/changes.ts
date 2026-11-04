@@ -109,6 +109,8 @@ export const WEBHOOK_EVENTS = [
   'review.new',
   'rating.dropped',
   'review.spike',
+  'app.delisted',
+  'app.unlisted_market',
 ] as const;
 export type WebhookEvent = (typeof WEBHOOK_EVENTS)[number];
 
@@ -122,6 +124,8 @@ export const ESSENTIAL_ALERT_EVENTS = [
   'rating.dropped',
   'review.spike',
   'review.negative',
+  'app.delisted',
+  'app.unlisted_market',
 ] as const satisfies readonly WebhookEvent[];
 
 export interface WebhookItem {

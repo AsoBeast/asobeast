@@ -30,6 +30,14 @@ describe("PICKER_EVENTS", () => {
     ]);
   });
 
+  it("ends the picker with the store availability events", () => {
+    expect(PICKER_EVENTS.slice(-3)).toEqual([
+      "chart.milestone",
+      "app.delisted",
+      "app.unlisted_market",
+    ]);
+  });
+
   it("names every event", () => {
     expect(Object.keys(EVENT_LABELS).sort()).toEqual(
       [...WEBHOOK_EVENTS].sort(),

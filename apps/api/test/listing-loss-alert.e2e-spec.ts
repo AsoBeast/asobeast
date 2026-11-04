@@ -6,6 +6,7 @@ import { PrismaClient, Store } from '@prisma/client';
 import type {
   AlertBatchPayload,
   AppUnlistedMarketPayload,
+  WebhookItem,
 } from '@asobeast/shared';
 import { Queue } from 'bullmq';
 import { App } from 'supertest/types';
@@ -220,13 +221,15 @@ describe('listing loss alerts (e2e)', () => {
   it('delivers an own delisting in the owned job and a competitor one beside its primary', async () => {
     const own = await seedApp('Own');
     const rival = await seedApp('Rival', own.id);
-    const hook = await prisma.webhook.create({
-      data: {
-        workspaceId: DEFAULT_WORKSPACE_ID,
-        url: 'https://hooks.example.com/availability',
-        events: ['app.delisted', 'metadata.changed'],
-      },
-    });
+    const hook = (
+      await api
+        .post('/webhooks')
+        .send({
+          url: 'https://hooks.example.com/availability',
+          events: ['app.delisted', 'metadata.changed'],
+        })
+        .expect(201)
+    ).body as WebhookItem;
     await lost(own.id);
     await lost(rival.id);
 

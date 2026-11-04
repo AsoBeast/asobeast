@@ -67,6 +67,8 @@ describe('alert contracts', () => {
       'review.new',
       'rating.dropped',
       'review.spike',
+      'app.delisted',
+      'app.unlisted_market',
     ]);
   });
 
@@ -81,6 +83,8 @@ describe('alert contracts', () => {
       'rating.dropped',
       'review.spike',
       'review.negative',
+      'app.delisted',
+      'app.unlisted_market',
     ]);
     expect(new Set(ESSENTIAL_ALERT_EVENTS).size).toBe(
       ESSENTIAL_ALERT_EVENTS.length,

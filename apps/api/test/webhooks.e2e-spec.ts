@@ -272,6 +272,27 @@ describe('WebhooksController (e2e)', () => {
     expect(stored.url).toBe('https://hooks.example.com/asobeast');
   });
 
+  it('subscribes to the store availability events', async () => {
+    const created = await api
+      .post('/webhooks')
+      .send({
+        url: 'https://hooks.example.com/asobeast',
+        events: ['app.delisted', 'app.unlisted_market'],
+      })
+      .expect(201);
+    const webhook = created.body as WebhookItem;
+    expect(webhook.events).toEqual(['app.delisted', 'app.unlisted_market']);
+    const listed = await api.get('/webhooks').expect(200);
+    expect(listed.body as WebhookItem[]).toContainEqual(
+      expect.objectContaining({ id: webhook.id }),
+    );
+    const patched = await api
+      .patch(`/webhooks/${webhook.id}`)
+      .send({ events: ['app.delisted'] })
+      .expect(200);
+    expect((patched.body as WebhookItem).events).toEqual(['app.delisted']);
+  });
+
   it('subscribes to rating drops and review spikes', async () => {
     const created = await api
       .post('/webhooks')

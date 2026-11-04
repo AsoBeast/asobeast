@@ -22,6 +22,8 @@ export const EVENT_LABELS: Record<WebhookEvent, string> = {
   "chart.entered": "Chart entered",
   "chart.left": "Chart left",
   "chart.milestone": "Chart milestone",
+  "app.delisted": "App delisted",
+  "app.unlisted_market": "Unlisted in a market",
 };
 
 export const PICKER_EVENTS: readonly WebhookEvent[] = [
@@ -41,6 +43,8 @@ export const PICKER_EVENTS: readonly WebhookEvent[] = [
   "chart.entered",
   "chart.left",
   "chart.milestone",
+  "app.delisted",
+  "app.unlisted_market",
 ];
 
 export interface AlertSubscriptionChange {
