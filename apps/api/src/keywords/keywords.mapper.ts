@@ -4,6 +4,7 @@ import {
   isCheckFresh,
   isScoringConfidence,
   isScoringSource,
+  KeywordMarkSegment,
   RankMilestoneTier,
   ScoreProvenance,
   ScoreSignals,
@@ -226,6 +227,18 @@ export interface AppFacts {
   marketTexts?: ReadonlyMap<string, string>;
   inKeywordField?: KeywordFieldIndex;
   uncovered?: (keyword: { country: string; text: string }) => boolean;
+  marks?: (keyword: {
+    country: string;
+    text: string;
+  }) => KeywordMarkSegment[] | null;
+}
+
+function listingMarks(
+  app: AppFacts,
+  keyword: TrackedKeywordRow['keyword'],
+): Pick<TrackedKeywordItem, 'matchedIn'> {
+  const segments = app.marks?.(keyword) ?? null;
+  return segments ? { matchedIn: segments } : {};
 }
 
 const NO_APP_FACTS: AppFacts = { snapshotText: '' };
@@ -278,5 +291,6 @@ export function toTrackedKeywordItem(
     ...(app.uncovered && row.active
       ? { uncovered: app.uncovered(row.keyword) }
       : {}),
+    ...listingMarks(app, row.keyword),
   };
 }

@@ -9,6 +9,7 @@ import { judgeKeywordCoverage } from '../metadata/keyword-coverage-judge';
 import { fieldPhrases } from '../metadata/listing-surfaces';
 import { PrismaService } from '../prisma/prisma.service';
 import { indexKeywordFields, storedKeywordFields } from './keyword-field-index';
+import { keywordMarker } from './keyword-marks';
 import { AppFacts } from './keywords.mapper';
 import { KeywordApp } from './keywords.support';
 
@@ -16,7 +17,7 @@ export async function listingFacts(
   prisma: PrismaService,
   app: Pick<KeywordApp, 'id' | 'country' | 'store'>,
   markets: readonly string[] = [],
-  options: { coverage?: boolean } = {},
+  options: { coverage?: boolean; marks?: boolean } = {},
 ): Promise<AppFacts> {
   const [listings, stored] = await Promise.all([
     latestListingTexts(prisma, app.id, app.country, [app.country, ...markets]),
@@ -33,7 +34,7 @@ export async function listingFacts(
     marketTexts,
     inKeywordField: indexKeywordFields(stored),
   };
-  if (!options.coverage) {
+  if (!options.coverage && !options.marks) {
     return facts;
   }
   const localized =
@@ -42,11 +43,15 @@ export async function listingFacts(
           ...listings.keys(),
         ])
       : new Map<string, LocalizedTexts[]>();
-  const keywordFields = fieldPhrases(stored);
+  const sources = { listings, localized, keywordFields: fieldPhrases(stored) };
   return {
     ...facts,
-    uncovered: (keyword) =>
-      judgeKeywordCoverage(app, keyword, { listings, localized, keywordFields })
-        .uncovered,
+    ...(options.coverage
+      ? {
+          uncovered: (keyword) =>
+            judgeKeywordCoverage(app, keyword, sources).uncovered,
+        }
+      : {}),
+    ...(options.marks ? { marks: keywordMarker(app, sources) } : {}),
   };
 }

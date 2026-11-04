@@ -37,10 +37,14 @@ const play = { id: 'app2', country: 'us', store: Store.GOOGLE_PLAY };
 
 const factsOf = (
   prisma: ReturnType<typeof buildPrisma>,
-  app: typeof appStore,
+  app: Pick<typeof appStore, 'id' | 'country'> & { store: Store },
   coverage?: boolean,
+  marks?: boolean,
 ) =>
-  listingFacts(prisma as unknown as PrismaService, app, ['us'], { coverage });
+  listingFacts(prisma as unknown as PrismaService, app, ['us'], {
+    coverage,
+    marks,
+  });
 
 describe('listingFacts', () => {
   it('judges App Store coverage with the captured localizations', async () => {
@@ -88,5 +92,23 @@ describe('listingFacts', () => {
     expect(prisma.appSnapshot.findMany).not.toHaveBeenCalled();
     expect(prisma.appLocalization.findMany).not.toHaveBeenCalled();
     expect(facts).not.toHaveProperty('uncovered');
+    expect(facts).not.toHaveProperty('marks');
+  });
+
+  it('marks the listing words with the sources coverage reads', async () => {
+    const prisma = buildPrisma();
+
+    const facts = await factsOf(prisma, appStore, false, true);
+
+    expect(prisma.keywordField.findMany).toHaveBeenCalledTimes(1);
+    expect(facts).not.toHaveProperty('uncovered');
+    expect(facts.marks?.({ country: 'us', text: 'deep sleep' })).toEqual([
+      { text: 'deep', surface: 'keywordField', match: 'exact' },
+      { text: ' sleep', surface: null },
+    ]);
+    expect(facts.marks?.({ country: 'us', text: 'temporizador' })).toEqual([
+      { text: 'temporizador', surface: 'title', match: 'exact' },
+    ]);
+    expect(facts.marks?.({ country: 'us', text: 'habit planner' })).toBeNull();
   });
 });

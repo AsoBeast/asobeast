@@ -1,7 +1,10 @@
+import { Store } from '@prisma/client';
 import type { KeywordMarkSegment, MetadataField } from '@asobeast/shared';
+import type { ListingTexts, LocalizedTexts } from '../apps/listing-texts';
+import { fieldPhrases } from '../metadata/listing-surfaces';
 import type { Surface } from '../metadata/localized-coverage';
 import { coversKeyword } from './keyword-coverage';
-import { markKeyword } from './keyword-marks';
+import { keywordMarker, markKeyword } from './keyword-marks';
 
 const surface = (field: MetadataField, value: string): Surface => ({
   field,
@@ -214,5 +217,141 @@ describe('markKeyword', () => {
       SPACE,
       { text: 'タイマー', surface: 'title', match: 'exact' },
     ]);
+  });
+});
+
+describe('keywordMarker', () => {
+  const texts = (overrides: Partial<ListingTexts>): ListingTexts => ({
+    id: 'snap',
+    title: '',
+    subtitle: null,
+    summary: null,
+    description: '',
+    ...overrides,
+  });
+
+  const marker = (
+    store: Store,
+    listings: [string, ListingTexts][],
+    fields: { localization: string; phrases: string[] }[] = [],
+    localized: [string, LocalizedTexts[]][] = [],
+  ) =>
+    keywordMarker(
+      { store, country: 'us' },
+      {
+        listings: new Map(listings),
+        localized: new Map(localized),
+        keywordFields: fieldPhrases(fields),
+      },
+    );
+
+  const surfacesOf = (marks: KeywordMarkSegment[] | null) =>
+    (marks ?? []).flatMap((segment) =>
+      segment.surface ? [`${segment.text}:${segment.surface}`] : [],
+    );
+
+  const HOME = texts({ title: 'Focus Timer', subtitle: 'Study sessions' });
+
+  it('judges a home keyword against the home listing and its saved field', () => {
+    const mark = marker(
+      Store.APP_STORE,
+      [['us', HOME]],
+      [{ localization: 'en-US', phrases: ['pomodoro'] }],
+    );
+
+    expect(
+      surfacesOf(mark({ country: 'us', text: 'focus study pomodoro' })),
+    ).toEqual(['focus:title', 'study:subtitle', 'pomodoro:keywordField']);
+  });
+
+  it('judges a market on its own listing and falls back to the home one', () => {
+    const mark = marker(Store.APP_STORE, [
+      ['us', HOME],
+      ['de', texts({ title: 'Gewohnheiten' })],
+    ]);
+
+    expect(surfacesOf(mark({ country: 'de', text: 'gewohnheiten' }))).toEqual([
+      'gewohnheiten:title',
+    ]);
+    expect(mark({ country: 'de', text: 'focus' })).toBeNull();
+    expect(surfacesOf(mark({ country: 'fr', text: 'focus' }))).toEqual([
+      'focus:title',
+    ]);
+  });
+
+  it('marks a keyword field only in a market that reads a saved one', () => {
+    const listings: [string, ListingTexts][] = [
+      ['us', HOME],
+      ['de', texts({ title: 'Gewohnheiten' })],
+    ];
+    const homeField = { localization: 'en-US', phrases: ['habit'] };
+
+    expect(
+      marker(Store.APP_STORE, listings, [homeField])({
+        country: 'de',
+        text: 'habit',
+      }),
+    ).toBeNull();
+    expect(
+      surfacesOf(
+        marker(Store.APP_STORE, listings, [
+          homeField,
+          { localization: 'de', phrases: ['habit'] },
+        ])({ country: 'de', text: 'habit' }),
+      ),
+    ).toEqual(['habit:keywordField']);
+  });
+
+  it('marks a word of another localization the market reads', () => {
+    const mark = marker(
+      Store.APP_STORE,
+      [['us', HOME]],
+      [],
+      [
+        [
+          'us',
+          [
+            {
+              localization: 'es-MX',
+              texts: texts({ title: 'Temporizador de enfoque' }),
+            },
+          ],
+        ],
+      ],
+    );
+
+    expect(
+      surfacesOf(mark({ country: 'us', text: 'enfoque temporizador' })),
+    ).toEqual(['enfoque temporizador:title']);
+  });
+
+  it('marks a Google Play title and short description and never the description', () => {
+    const mark = marker(
+      Store.GOOGLE_PLAY,
+      [
+        [
+          'us',
+          texts({
+            title: 'Focus Timer',
+            summary: 'Pomodoro sessions',
+            description: 'Plan your deep work.',
+          }),
+        ],
+      ],
+      [{ localization: 'en-US', phrases: ['habit'] }],
+      [
+        [
+          'us',
+          [{ localization: 'es-MX', texts: texts({ title: 'Temporizador' }) }],
+        ],
+      ],
+    );
+
+    expect(surfacesOf(mark({ country: 'us', text: 'focus pomodoro' }))).toEqual(
+      ['focus:title', 'pomodoro:shortDescription'],
+    );
+    expect(mark({ country: 'us', text: 'deep work' })).toBeNull();
+    expect(mark({ country: 'us', text: 'habit' })).toBeNull();
+    expect(mark({ country: 'us', text: 'temporizador' })).toBeNull();
   });
 });

@@ -1,5 +1,10 @@
 import request from 'supertest';
-import { createIsolationFixture, IsolationFixture } from './fixture';
+import type { TrackedKeywordItem } from '@asobeast/shared';
+import {
+  createIsolationFixture,
+  IsolationFixture,
+  SHARED_KEYWORD,
+} from './fixture';
 import { IsolationWorkspace } from './fixture';
 
 interface ScopedRead {
@@ -268,6 +273,34 @@ describe('Read isolation', () => {
         `/apps/${fixture.a.appleAppId}/keywords/${fixture.b.privateKeywordId}/breakdown`,
       )
       .expect(404);
+  });
+
+  it("never marks a word from another workspace's listing", async () => {
+    await fixture.db.appSnapshot.create({
+      data: {
+        appId: fixture.b.appleAppId,
+        title: 'Habit Tracker Pro',
+        description: 'Isolation description',
+        raw: { source: 'isolation', primaryGenreId: 6007, price: 0 },
+      },
+    });
+    const sharedOf = async (workspace: IsolationWorkspace) =>
+      (
+        (
+          await workspace.agent
+            .get(`/apps/${workspace.appleAppId}/keywords`)
+            .expect(200)
+        ).body as TrackedKeywordItem[]
+      ).find((item) => item.text === SHARED_KEYWORD && item.country === 'us');
+
+    const forA = await sharedOf(fixture.a);
+    const forB = await sharedOf(fixture.b);
+
+    expect(forA).toBeDefined();
+    expect(forA).not.toHaveProperty('matchedIn');
+    expect(forB?.matchedIn).toEqual([
+      { text: SHARED_KEYWORD, surface: 'title', match: 'exact' },
+    ]);
   });
 
   it('answers 404 for the localized listing of another workspace app', async () => {

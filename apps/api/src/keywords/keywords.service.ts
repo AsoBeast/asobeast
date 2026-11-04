@@ -53,6 +53,7 @@ export class KeywordsService {
       holdFacts?: boolean;
       competitorFacts?: boolean;
       coverageFacts?: boolean;
+      listingMarks?: boolean;
     } = {},
   ): Promise<TrackedKeywordItem[]> {
     const app = await ensureApp(this.prisma, appId);
@@ -67,7 +68,7 @@ export class KeywordsService {
           this.prisma,
           app,
           [...new Set(rows.map((row) => row.keyword.country))],
-          { coverage: options.coverageFacts },
+          { coverage: options.coverageFacts, marks: options.listingMarks },
         ),
         loadSerpDays(this.prisma, keywordIds),
         options.holdFacts

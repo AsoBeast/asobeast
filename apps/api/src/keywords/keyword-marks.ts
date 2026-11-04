@@ -4,6 +4,11 @@ import {
   type KeywordMarkSurface,
   type KeywordWordMatch,
 } from '@asobeast/shared';
+import { Store } from '@prisma/client';
+import {
+  CoverageSources,
+  keywordSurfaces,
+} from '../metadata/keyword-coverage-judge';
 import type { Surface } from '../metadata/localized-coverage';
 import { keywordWords, markWords, wordMatch } from './keyword-breakdown-fields';
 
@@ -119,4 +124,28 @@ export function markKeyword(
   return located.some(Boolean)
     ? absorbSeparators(segmentsOf(normalized, located))
     : null;
+}
+
+export type KeywordMarker = (keyword: {
+  country: string;
+  text: string;
+}) => KeywordMarkSegment[] | null;
+
+export function keywordMarker(
+  app: { store: Store; country: string },
+  sources: CoverageSources,
+): KeywordMarker {
+  const surfacesByMarket = new Map<string, Surface[]>();
+  const surfacesOf = (country: string): Surface[] => {
+    const known = surfacesByMarket.get(country);
+    if (known) return known;
+    const { surfaces, localized } = keywordSurfaces(app, country, sources);
+    const flattened = [
+      ...surfaces,
+      ...localized.flatMap((entry) => entry.surfaces),
+    ];
+    surfacesByMarket.set(country, flattened);
+    return flattened;
+  };
+  return ({ country, text }) => markKeyword(text, surfacesOf(country));
 }
