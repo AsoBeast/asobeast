@@ -11,7 +11,7 @@ const NONE = {
 describe("keywordTableCaption", () => {
   it("names the default columns", () => {
     expect(keywordTableCaption(NONE)).toBe(
-      "Tracked keywords with source, position and its daily change, popularity, difficulty, opportunity, 7 day change, and top 10 volatility.",
+      "Tracked keywords with source, position and its daily change, popularity, difficulty, opportunity, 7 day change, top 10 volatility, and a totals row.",
     );
   });
 
@@ -24,7 +24,7 @@ describe("keywordTableCaption", () => {
         insights: true,
       }),
     ).toBe(
-      "Tracked keywords with source, date added, position and its daily change, popularity, difficulty, opportunity, insight badges, Play installs per search term, 7 day change, top 10 volatility, and competitors in the top 10.",
+      "Tracked keywords with source, date added, position and its daily change, popularity, difficulty, opportunity, insight badges, Play installs per search term, 7 day change, top 10 volatility, competitors in the top 10, and a totals row.",
     );
   });
 });

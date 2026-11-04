@@ -20,6 +20,7 @@ export function keywordTableCaption(columns: KeywordCaptionColumns): string {
     "7 day change",
     "top 10 volatility",
     columns.competitors ? "competitors in the top 10" : null,
+    "a totals row",
   ].filter((phrase) => phrase !== null);
   return `Tracked keywords with ${formatList(phrases)}.`;
 }

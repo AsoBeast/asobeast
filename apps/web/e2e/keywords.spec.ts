@@ -154,7 +154,7 @@ test("a second click on a sort header flips the direction", async ({
     page
       .getByRole("table", { name: /Tracked keywords/ })
       .getByRole("row")
-      .last(),
+      .nth(-2),
   ).toContainText("time blocking");
   expect(requests).toEqual([]);
 });
@@ -238,18 +238,18 @@ test("the keyword, source and weekly change headers sort too", async ({
   await expect(page).toHaveURL(/sort=keyword/);
   await expect(rows.nth(1)).toContainText("focus timer");
   await expect(rows.nth(2)).toContainText("pomodoro");
-  await expect(rows.last()).toContainText("time blocking");
+  await expect(rows.nth(-2)).toContainText("time blocking");
 
   await page.getByRole("button", { name: "Source", exact: true }).click();
   await expect(page).toHaveURL(/sort=source/);
   await expect(rows.nth(1)).toContainText("time blocking");
-  await expect(rows.last()).toContainText("focus timer");
+  await expect(rows.nth(-2)).toContainText("focus timer");
 
   await page.getByRole("button", { name: "Δ7d", exact: true }).click();
   await expect(page).toHaveURL(/sort=delta7d/);
   await expect(rows.nth(1)).toContainText("focus timer");
   await expect(rows.nth(2)).toContainText("study timer");
-  await expect(rows.last()).toContainText("productivity app");
+  await expect(rows.nth(-2)).toContainText("productivity app");
 });
 
 test("a play app shows play installs per search term and sorts by them", async ({
@@ -285,7 +285,7 @@ test("a play app shows play installs per search term and sorts by them", async (
   await expect(page).toHaveURL(/sort=acquisitions/);
   await expect(rows.nth(1)).toContainText("lernphasen timer");
   await expect(rows.nth(2)).toContainText("pomodoro timer");
-  await expect(rows.last()).toContainText("fokus app");
+  await expect(rows.nth(-2)).toContainText("fokus app");
 });
 
 test("an app store app has no play installs column, even from a play sort link", async ({
@@ -586,14 +586,14 @@ test("searching narrows the rows, counts them and lives in the url", async ({
   await expect(page.getByText("5 of 5 keywords")).toBeVisible();
   await search.fill("pomo");
 
-  await expect(rows).toHaveCount(2);
+  await expect(rows).toHaveCount(3);
   await expect(rows.nth(1)).toContainText("pomodoro");
   await expect(page.getByText("1 of 5 keywords")).toBeVisible();
   await expect(page).toHaveURL(/q=pomo/);
 
   await search.fill("");
 
-  await expect(rows).toHaveCount(6);
+  await expect(rows).toHaveCount(7);
   await expect(page).not.toHaveURL(/q=/);
 });
 
@@ -644,14 +644,14 @@ test("a source facet narrows the rows and shows a removable chip", async ({
   await expect(
     page.getByRole("button", { name: "Filter by source, 1 selected" }),
   ).toBeVisible();
-  await expect(rows).toHaveCount(2);
+  await expect(rows).toHaveCount(3);
   await expect(rows.nth(1)).toContainText("productivity app");
   await expect(page.getByText("Source: Manual")).toBeVisible();
 
   await page.getByRole("button", { name: "Remove Source: Manual" }).click();
 
   await expect(page).not.toHaveURL(/source=/);
-  await expect(rows).toHaveCount(6);
+  await expect(rows).toHaveCount(7);
 });
 
 test("the status filter keeps paused rows and clear all empties the url", async ({
@@ -667,14 +667,14 @@ test("the status filter keeps paused rows and clear all empties the url", async 
   await page.getByRole("option", { name: "Paused" }).click();
 
   await expect(page).toHaveURL(/status=paused/);
-  await expect(rows).toHaveCount(2);
+  await expect(rows).toHaveCount(3);
   await expect(rows.nth(1)).toContainText("time blocking");
   await expect(page.getByText("Status: Paused")).toBeVisible();
 
   await page.getByRole("button", { name: "Clear all" }).click();
 
   await expect(page).not.toHaveURL(/status=|q=/);
-  await expect(rows).toHaveCount(6);
+  await expect(rows).toHaveCount(7);
 });
 
 test("the status filter names its value before the page hydrates", async ({
@@ -697,7 +697,7 @@ test("a grade facet keeps only rows of that grade", async ({ page }) => {
   await page.keyboard.press("Escape");
 
   await expect(page).toHaveURL(/pop=strong/);
-  await expect(table.getByRole("row")).toHaveCount(5);
+  await expect(table.getByRole("row")).toHaveCount(6);
   await expect(table.getByText("time blocking")).toHaveCount(0);
   const popularity = table.getByRole("button", { name: /^Popularity \d+/ });
   await expect(popularity).toHaveCount(4);
@@ -718,7 +718,7 @@ test("the position facet finds keywords that do not rank", async ({ page }) => {
   await page.keyboard.press("Escape");
 
   await expect(page).toHaveURL(/pos=unranked/);
-  await expect(rows).toHaveCount(2);
+  await expect(rows).toHaveCount(3);
   await expect(rows.nth(1)).toContainText("productivity app");
   await expect(rows.nth(1)).toContainText(">200");
 });
@@ -1088,7 +1088,7 @@ test.describe("the tags facet", () => {
     await page.keyboard.press("Escape");
 
     await expect(page).toHaveURL(/tag=core/);
-    await expect(rowsOf(page)).toHaveCount(3);
+    await expect(rowsOf(page)).toHaveCount(4);
     await expect(rowsOf(page).nth(1)).toContainText("focus timer");
     await expect(rowsOf(page).nth(2)).toContainText("pomodoro");
   });
@@ -1096,7 +1096,7 @@ test.describe("the tags facet", () => {
   test("keeps rows carrying either of two tags", async ({ page }) => {
     await page.goto("/apps/app-1/keywords?tag=core,testing");
 
-    await expect(rowsOf(page)).toHaveCount(4);
+    await expect(rowsOf(page)).toHaveCount(5);
     await expect(rowsOf(page).filter({ hasText: "time blocking" })).toHaveCount(
       1,
     );
@@ -1117,7 +1117,7 @@ test.describe("the tags facet", () => {
 
     await page.getByRole("button", { name: "Remove Tag: core" }).click();
     await expect(page).not.toHaveURL(/tag=/);
-    await expect(rowsOf(page)).toHaveCount(6);
+    await expect(rowsOf(page)).toHaveCount(7);
 
     await page.goto("/apps/app-1/keywords?tag=core&status=active");
     await page.getByRole("button", { name: "Clear all" }).click();

@@ -449,6 +449,25 @@ test("a translated keywords page brings back the badges a search hid", async ({
   expect(errors).toEqual([]);
 });
 
+test("a translated keywords page totals the keywords a search keeps", async ({
+  page,
+}) => {
+  const errors = collectDomErrors(page);
+  await page.goto("/apps/app-1/keywords");
+  const search = await hydrated(
+    page.getByRole("textbox", { name: "Search keywords" }),
+  );
+  const footer = page.locator("tfoot");
+  await expect(footer).toContainText("5 keywords");
+
+  await translateText(page);
+  await search.fill("timer");
+
+  await expect(footer).toContainText(/2 keywords/i);
+  await expect(footer).toContainText(/2 ranked, 0 not found/i);
+  expect(errors).toEqual([]);
+});
+
 test("a translated metadata page counts what is typed into a field", async ({
   page,
 }) => {

@@ -40,6 +40,12 @@ import {
   competitorsColumn,
   insightsColumn,
 } from "./keyword-fact-columns";
+import {
+  difficultyFooter,
+  keywordCountFooter,
+  popularityFooter,
+  positionFooter,
+} from "./KeywordTotalsFooters";
 import { DerivedScoreCell, ScoreCell } from "./score-cells";
 import {
   hasFloorAnswer,
@@ -148,6 +154,7 @@ function identityColumns() {
       header: ({ column }) => (
         <SortableHeader column={column} label="Keyword" />
       ),
+      footer: keywordCountFooter,
       cell: ({ row }) => (
         <span className="flex max-w-40 items-center gap-2 font-medium md:max-w-64">
           <span title={row.original.text} className="truncate">
@@ -226,6 +233,7 @@ function positionColumn(today: string, history: PositionHistoryContext) {
         selected,
       ),
     header: ({ column }) => <SortableHeader column={column} label="Position" />,
+    footer: positionFooter,
     cell: ({ row }) => (
       <PositionCell keyword={row.original} today={today} history={history} />
     ),
@@ -259,6 +267,7 @@ function scoreColumns() {
       header: ({ column }) => (
         <SortableHeader column={column} label="Popularity" />
       ),
+      footer: popularityFooter,
       cell: ({ row }) => (
         <ScoreCell
           value={scoreValue(row.original, "traffic")}
@@ -284,6 +293,7 @@ function scoreColumns() {
       header: ({ column }) => (
         <SortableHeader column={column} label="Difficulty" />
       ),
+      footer: difficultyFooter,
       cell: ({ row }) => (
         <ScoreCell
           value={scoreValue(row.original, "difficulty")}
