@@ -1221,3 +1221,59 @@ describe('filterBatch with a rank threshold', () => {
     );
   });
 });
+
+describe('assembleBatches report order', () => {
+  const now = new Date('2026-07-22T11:00:00.000Z');
+  const at = (id: string, from: number, to: number) =>
+    drop({
+      app: { id: 'a', name: 'Alpha' },
+      keyword: { ...drop().keyword, id, text: id },
+      from,
+      to,
+    });
+  const hop = at('popular', 9, 11);
+  const exit = at('niche', 3, 30);
+  const unscored = at('unscored', 9, 11);
+  const assembled = (traffic?: Map<string, number | null>) =>
+    assembleBatches({
+      events: [hop, exit, unscored].map((payload, index) =>
+        event(payload, 'a', `r${index}`),
+      ),
+      appById,
+      serpPrimariesByKeyword: new Map(),
+      now,
+      traffic,
+    }).owned;
+
+  it('orders the moves of a section by impact', () => {
+    const owned = assembled(
+      new Map<string, number | null>([
+        ['popular', 60],
+        ['niche', 20],
+      ]),
+    );
+
+    expect(owned.apps[0].rankDrops.map((alert) => alert.keyword.id)).toEqual([
+      'niche',
+      'popular',
+      'unscored',
+    ]);
+  });
+
+  it('keeps the flat events in arrival order', () => {
+    const owned = assembled(new Map([['popular', 60]]));
+
+    expect(owned.events.map((alert) => alert.event)).toHaveLength(3);
+    expect(
+      owned.events.map((alert) =>
+        alert.event === 'rank.dropped' ? alert.keyword.id : null,
+      ),
+    ).toEqual(['popular', 'niche', 'unscored']);
+  });
+
+  it('keeps arrival order without traffic', () => {
+    expect(
+      assembled().apps[0].rankDrops.map((alert) => alert.keyword.id),
+    ).toEqual(['popular', 'niche', 'unscored']);
+  });
+});

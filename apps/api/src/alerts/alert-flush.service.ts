@@ -25,6 +25,7 @@ import {
   OutboxEvent,
   ResolvedApp,
 } from './alert-batch';
+import { isRankMove } from './rank-impact';
 import { createDeliveryFlows } from './alert-delivery-flow';
 import { DELIVERABLE_EMAIL_ALERTS } from './deliverable-email-alerts';
 import { MailerService } from './mailer.service';
@@ -190,18 +191,42 @@ export class AlertFlushService {
       createdAt: row.createdAt,
     }));
 
-    const { appById, serpPrimariesByKeyword } = await this.resolve(events);
+    const [{ appById, serpPrimariesByKeyword }, traffic] = await Promise.all([
+      this.resolve(events),
+      this.trafficOf(events),
+    ]);
     const batches = assembleBatches({
       events,
       appById,
       serpPrimariesByKeyword,
       now: claimedAt,
+      traffic,
     });
 
     this.warnSkipped(claimId, batches.skipped);
     const delivery = await this.enqueue(batches, claimId);
     await this.completeClaim(claimId, rows.length);
     return { flushed: rows.length, ...delivery };
+  }
+
+  private async trafficOf(
+    events: readonly OutboxEvent[],
+  ): Promise<Map<string, number | null>> {
+    const keywordIds = [
+      ...new Set(
+        events.flatMap(({ payload }) =>
+          isRankMove(payload) ? [payload.keyword.id] : [],
+        ),
+      ),
+    ];
+    if (keywordIds.length === 0) return new Map();
+    const metrics = await this.prisma.keywordMetric.findMany({
+      where: { keywordId: { in: keywordIds } },
+      orderBy: { date: 'desc' },
+      distinct: ['keywordId'],
+      select: { keywordId: true, traffic: true },
+    });
+    return new Map(metrics.map((row) => [row.keywordId, row.traffic]));
   }
 
   private async claimSnapshot(): Promise<string[]> {

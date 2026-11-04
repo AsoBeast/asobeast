@@ -933,4 +933,64 @@ describe('Alert flush (e2e)', () => {
     });
     expect(await pendingJobs()).toHaveLength(0);
   });
+
+  it('orders the moves of a report by impact and keeps the events in arrival order', async () => {
+    const primary = await seedApp('impact-primary');
+    const keywords = await Promise.all(
+      ['popular', 'niche', 'unscored'].map((text) =>
+        prisma.keyword.upsert({
+          where: {
+            text_store_country: { text, store: Store.APP_STORE, country: 'us' },
+          },
+          update: {},
+          create: { text, store: Store.APP_STORE, country: 'us' },
+        }),
+      ),
+    );
+    const [popular, niche, unscored] = keywords;
+    const today = new Date(
+      `${new Date().toISOString().slice(0, 10)}T00:00:00.000Z`,
+    );
+    await prisma.keywordMetric.deleteMany({
+      where: { keywordId: { in: keywords.map((row) => row.id) } },
+    });
+    await prisma.keywordMetric.createMany({
+      data: [
+        { keywordId: popular.id, date: today, traffic: 60 },
+        { keywordId: niche.id, date: today, traffic: 20 },
+      ],
+    });
+    const moves: Array<[typeof popular, number, number]> = [
+      [popular, 9, 20],
+      [niche, 3, 30],
+      [unscored, 9, 20],
+    ];
+    for (const [keyword, from, to] of moves) {
+      await seedEvent('rank.dropped', primary, `rank:${keyword.id}`, {
+        ...rankPayload(primary, to),
+        keyword: { id: keyword.id, text: keyword.text },
+        from,
+      });
+    }
+    await prisma.webhook.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        url: 'https://hooks.example.com/impact',
+        events: ['rank.dropped'],
+      },
+    });
+
+    await api.post('/alerts/flush').expect(201);
+
+    const [job] = await pendingJobs();
+    const payload = job.data.payload as AlertBatchPayload;
+    expect(
+      payload.apps[0].rankDrops.map((alert) => alert.keyword.text),
+    ).toEqual(['niche', 'popular', 'unscored']);
+    expect(
+      payload.events.map((alert) =>
+        alert.event === 'rank.dropped' ? alert.keyword.text : null,
+      ),
+    ).toEqual(['popular', 'niche', 'unscored']);
+  });
 });

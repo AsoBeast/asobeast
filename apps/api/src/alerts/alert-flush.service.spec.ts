@@ -173,6 +173,7 @@ function buildHarness() {
       ]),
     },
     trackedKeyword: { findMany: jest.fn().mockResolvedValue([]) },
+    keywordMetric: { findMany: jest.fn().mockResolvedValue([]) },
     webhook: {
       findMany: jest.fn(() => {
         flushedWorkspaces.push(workspace.current);
@@ -768,5 +769,38 @@ describe('AlertFlushService', () => {
       'workspace ws_a failed to flush: serialization gave up',
       'workspace ws_b failed to flush: serialization gave up',
     ]);
+  });
+});
+
+describe('AlertFlushService report order', () => {
+  it('reads the newest traffic of the keywords the claim moved', async () => {
+    const harness = buildHarness();
+
+    await harness.service.flushEveryWorkspace();
+
+    expect(harness.prisma.keywordMetric.findMany).toHaveBeenCalledWith({
+      where: { keywordId: { in: [rankPayload.keyword.id] } },
+      orderBy: { date: 'desc' },
+      distinct: ['keywordId'],
+      select: { keywordId: true, traffic: true },
+    });
+  });
+
+  it('reads no traffic for a claim without a rank move', async () => {
+    const harness = buildHarness();
+    harness.setClaimLoader(() =>
+      Promise.resolve([
+        {
+          ...claimRow('row-1'),
+          event: competitorPayload.event,
+          appId: 'competitor1',
+          payload: competitorPayload,
+        },
+      ]),
+    );
+
+    await harness.service.flushEveryWorkspace();
+
+    expect(harness.prisma.keywordMetric.findMany).not.toHaveBeenCalled();
   });
 });
