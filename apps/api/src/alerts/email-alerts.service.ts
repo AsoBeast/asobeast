@@ -91,6 +91,7 @@ export class EmailAlertsService {
           reviewScores: dto.reviewScores ?? [],
           confirmedAt,
           confirmDrops: dto.confirmDrops,
+          ratingDropTenths: dto.ratingDropTenths,
         },
       });
       return { alert, ask: !confirmedAt };
@@ -110,6 +111,7 @@ export class EmailAlertsService {
       reviewScores: dto.reviewScores,
       active: dto.active,
       confirmDrops: dto.confirmDrops,
+      ratingDropTenths: dto.ratingDropTenths,
     };
     const saved = await this.underLock(workspaceId, async (tx) => {
       const current = await tx.emailAlert.findFirst({ where: { id } });

@@ -272,6 +272,58 @@ describe('WebhooksController (e2e)', () => {
     expect(stored.url).toBe('https://hooks.example.com/asobeast');
   });
 
+  it('stores, answers and patches the rating drop threshold', async () => {
+    const plain = await api
+      .post('/webhooks')
+      .send({
+        url: 'https://hooks.example.com/asobeast',
+        events: ['rank.dropped'],
+      })
+      .expect(201);
+    expect((plain.body as WebhookItem).ratingDropTenths).toBe(1);
+    const stored = await prisma.webhook.findUniqueOrThrow({
+      where: { id: (plain.body as WebhookItem).id },
+    });
+    expect(stored.ratingDropTenths).toBeNull();
+
+    const created = await api
+      .post('/webhooks')
+      .send({
+        url: 'https://hooks.example.com/asobeast',
+        events: ['rank.dropped'],
+        ratingDropTenths: 3,
+      })
+      .expect(201);
+    const webhook = created.body as WebhookItem;
+    expect(webhook.ratingDropTenths).toBe(3);
+    const listed = await api.get('/webhooks').expect(200);
+    expect(listed.body as WebhookItem[]).toContainEqual(
+      expect.objectContaining({ id: webhook.id, ratingDropTenths: 3 }),
+    );
+
+    const changed = await api
+      .patch(`/webhooks/${webhook.id}`)
+      .send({ ratingDropTenths: 2 })
+      .expect(200);
+    expect((changed.body as WebhookItem).ratingDropTenths).toBe(2);
+    const kept = await api
+      .patch(`/webhooks/${webhook.id}`)
+      .send({ events: ['rank.first'] })
+      .expect(200);
+    expect((kept.body as WebhookItem).ratingDropTenths).toBe(2);
+
+    for (const ratingDropTenths of [0, 11]) {
+      await api
+        .patch(`/webhooks/${webhook.id}`)
+        .send({ ratingDropTenths })
+        .expect(400);
+    }
+    const after = await prisma.webhook.findUniqueOrThrow({
+      where: { id: webhook.id },
+    });
+    expect(after.ratingDropTenths).toBe(2);
+  });
+
   it('creates a webhook without confirmed drops by default', async () => {
     const created = await api
       .post('/webhooks')

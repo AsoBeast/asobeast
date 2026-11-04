@@ -11,6 +11,7 @@ import {
   WEBHOOK_EVENTS,
   WebhookEvent,
 } from '@asobeast/shared';
+import { RatingDropTenths } from './rating-drop-tenths.decorator';
 import { ReviewScoresFilter } from './review-scores.decorator';
 
 export class CreateEmailAlertDto implements EmailAlertCreateRequest {
@@ -27,4 +28,7 @@ export class CreateEmailAlertDto implements EmailAlertCreateRequest {
   @ValidateIf((_, value) => value !== undefined)
   @IsBoolean()
   confirmDrops?: boolean;
+
+  @RatingDropTenths()
+  ratingDropTenths?: number;
 }

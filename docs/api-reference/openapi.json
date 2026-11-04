@@ -6964,6 +6964,13 @@
             ],
             "description": "The stars a review.new alert is raised for. Empty or omitted means every star."
           },
+          "ratingDropTenths": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10,
+            "example": 2,
+            "description": "The smallest fall of the average rating, in tenths of a star, a rating.dropped alert is raised for. Omitted means 1, a tenth of a star."
+          },
           "url": {
             "type": "string",
             "format": "uri"
@@ -7025,6 +7032,13 @@
             ],
             "description": "The stars a review.new alert is raised for. Empty or omitted means every star."
           },
+          "ratingDropTenths": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10,
+            "example": 2,
+            "description": "The smallest fall of the average rating, in tenths of a star, a rating.dropped alert is raised for. Omitted means 1, a tenth of a star."
+          },
           "url": {
             "type": "string",
             "format": "uri"
@@ -7085,6 +7099,13 @@
             ],
             "description": "The stars a review.new alert is raised for. Empty or omitted means every star."
           },
+          "ratingDropTenths": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10,
+            "example": 2,
+            "description": "The smallest fall of the average rating, in tenths of a star, a rating.dropped alert is raised for. Omitted means 1, a tenth of a star."
+          },
           "email": {
             "type": "string",
             "format": "email"
@@ -7141,6 +7162,13 @@
               2
             ],
             "description": "The stars a review.new alert is raised for. Empty or omitted means every star."
+          },
+          "ratingDropTenths": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10,
+            "example": 2,
+            "description": "The smallest fall of the average rating, in tenths of a star, a rating.dropped alert is raised for. Omitted means 1, a tenth of a star."
           },
           "email": {
             "type": "string",

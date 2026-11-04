@@ -214,6 +214,55 @@ describe('EmailAlertsController (e2e, smtp enabled)', () => {
     });
   });
 
+  it('stores, answers and patches the rating drop threshold', async () => {
+    const plain = await api
+      .post('/email-alerts')
+      .send({ email: 'ops@example.com', events: ['rank.dropped'] })
+      .expect(201);
+    expect((plain.body as EmailAlertItem).ratingDropTenths).toBe(1);
+    const stored = await prisma.emailAlert.findUniqueOrThrow({
+      where: { id: (plain.body as EmailAlertItem).id },
+    });
+    expect(stored.ratingDropTenths).toBeNull();
+
+    const created = await api
+      .post('/email-alerts')
+      .send({
+        email: 'ops@example.com',
+        events: ['rank.dropped'],
+        ratingDropTenths: 3,
+      })
+      .expect(201);
+    const alert = created.body as EmailAlertItem;
+    expect(alert.ratingDropTenths).toBe(3);
+    const listed = await api.get('/email-alerts').expect(200);
+    expect(listed.body as EmailAlertItem[]).toContainEqual(
+      expect.objectContaining({ id: alert.id, ratingDropTenths: 3 }),
+    );
+
+    const changed = await api
+      .patch(`/email-alerts/${alert.id}`)
+      .send({ ratingDropTenths: 2 })
+      .expect(200);
+    expect((changed.body as EmailAlertItem).ratingDropTenths).toBe(2);
+    const kept = await api
+      .patch(`/email-alerts/${alert.id}`)
+      .send({ events: ['rank.first'] })
+      .expect(200);
+    expect((kept.body as EmailAlertItem).ratingDropTenths).toBe(2);
+
+    for (const ratingDropTenths of [0, 11]) {
+      await api
+        .patch(`/email-alerts/${alert.id}`)
+        .send({ ratingDropTenths })
+        .expect(400);
+    }
+    const after = await prisma.emailAlert.findUniqueOrThrow({
+      where: { id: alert.id },
+    });
+    expect(after.ratingDropTenths).toBe(2);
+  });
+
   it('creates an email alert without confirmed drops by default', async () => {
     const created = await api
       .post('/email-alerts')

@@ -1,5 +1,10 @@
 import { Webhook } from '@prisma/client';
-import { webhookChannelOf, WebhookEvent, WebhookItem } from '@asobeast/shared';
+import {
+  RATING_DROP_DEFAULT_TENTHS,
+  webhookChannelOf,
+  WebhookEvent,
+  WebhookItem,
+} from '@asobeast/shared';
 
 export function toWebhookItem(webhook: Webhook): WebhookItem {
   return {
@@ -9,6 +14,7 @@ export function toWebhookItem(webhook: Webhook): WebhookItem {
     reviewScores: webhook.reviewScores,
     active: webhook.active,
     confirmDrops: webhook.confirmDrops,
+    ratingDropTenths: webhook.ratingDropTenths ?? RATING_DROP_DEFAULT_TENTHS,
     hasSecret: webhook.secret !== null,
     createdAt: webhook.createdAt.toISOString(),
     channel: webhookChannelOf(webhook.url),

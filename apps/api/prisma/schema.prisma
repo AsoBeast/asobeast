@@ -40,88 +40,88 @@ enum KeywordSource {
 }
 
 model Workspace {
-  id          String       @id @default(cuid())
-  name        String       @default("Default")
-  apps        App[]
-  appGroups   AppGroup[]
-  webhooks    Webhook[]
-  emailAlerts EmailAlert[]
-  alertEvents AlertEvent[]
-  users       User[]
-  invites     WorkspaceInvite[]
-  actions     ActionItem[]
-  actionEvents ActionEvent[]
-  aiCalls     AiCall[]
-  snapshotScreenshots SnapshotScreenshot[]
-  keywordFields KeywordField[]
-  appLocalizations AppLocalization[]
-  appSetups   AppSetup[]
-  keywordDiscoveries KeywordDiscovery[]
-  reviewReplies ReviewReply[]
-  chartFollows ChartFollow[]
-  storeConnections StoreConnection[]
-  storeReportRequests StoreReportRequest[]
-  storeReportInstances StoreReportInstance[]
-  storeFunnelDays StoreFunnelDay[]
-  storeFunnelPageDays StoreFunnelPageDay[]
+  id                     String                  @id @default(cuid())
+  name                   String                  @default("Default")
+  apps                   App[]
+  appGroups              AppGroup[]
+  webhooks               Webhook[]
+  emailAlerts            EmailAlert[]
+  alertEvents            AlertEvent[]
+  users                  User[]
+  invites                WorkspaceInvite[]
+  actions                ActionItem[]
+  actionEvents           ActionEvent[]
+  aiCalls                AiCall[]
+  snapshotScreenshots    SnapshotScreenshot[]
+  keywordFields          KeywordField[]
+  appLocalizations       AppLocalization[]
+  appSetups              AppSetup[]
+  keywordDiscoveries     KeywordDiscovery[]
+  reviewReplies          ReviewReply[]
+  chartFollows           ChartFollow[]
+  storeConnections       StoreConnection[]
+  storeReportRequests    StoreReportRequest[]
+  storeReportInstances   StoreReportInstance[]
+  storeFunnelDays        StoreFunnelDay[]
+  storeFunnelPageDays    StoreFunnelPageDay[]
   storeFunnelSearchTerms StoreFunnelSearchTerm[]
-  rankings    KeywordRanking[]
-  plan                String    @default("free")
-  trialStartedAt      DateTime?
-  trialDeclinedAt     DateTime?
-  trialEndsAt         DateTime?
-  trialNoticeDay      Int?
-  dunningNotifiedAt   DateTime?
-  downgradeWarnedAt   DateTime?
-  planExpiresAt       DateTime?
-  billingCustomerId   String?   @unique
-  checkoutSessionId   String?
-  checkoutClaimedAt   DateTime?
-  checkoutClaimToken  String?
-  subscriptionId      String?   @unique
-  subscriptionStatus  String?
-  subscriptionEventAt DateTime?
-  cancelAtPeriodEnd   Boolean   @default(false)
-  trialClaimedAt      DateTime?
-  firstPaidAt         DateTime?
-  billingInterval     String?
-  pendingPlan         String?
-  overLimitSince      DateTime?
-  overLimitNotifiedAt DateTime?
-  abuseFlaggedAt      DateTime?
-  suspendedAt         DateTime?
-  suspendedReason     String?
-  deletionRequestedAt DateTime?
-  deletionRequestedBy String?
-  deletionDueAt       DateTime?
-  erasureClaimedAt    DateTime?
-  createdAt   DateTime     @default(now())
+  rankings               KeywordRanking[]
+  plan                   String                  @default("free")
+  trialStartedAt         DateTime?
+  trialDeclinedAt        DateTime?
+  trialEndsAt            DateTime?
+  trialNoticeDay         Int?
+  dunningNotifiedAt      DateTime?
+  downgradeWarnedAt      DateTime?
+  planExpiresAt          DateTime?
+  billingCustomerId      String?                 @unique
+  checkoutSessionId      String?
+  checkoutClaimedAt      DateTime?
+  checkoutClaimToken     String?
+  subscriptionId         String?                 @unique
+  subscriptionStatus     String?
+  subscriptionEventAt    DateTime?
+  cancelAtPeriodEnd      Boolean                 @default(false)
+  trialClaimedAt         DateTime?
+  firstPaidAt            DateTime?
+  billingInterval        String?
+  pendingPlan            String?
+  overLimitSince         DateTime?
+  overLimitNotifiedAt    DateTime?
+  abuseFlaggedAt         DateTime?
+  suspendedAt            DateTime?
+  suspendedReason        String?
+  deletionRequestedAt    DateTime?
+  deletionRequestedBy    String?
+  deletionDueAt          DateTime?
+  erasureClaimedAt       DateTime?
+  createdAt              DateTime                @default(now())
 
   @@index([deletionDueAt])
 }
 
 model User {
-  id                String     @id @default(cuid())
-  workspaceId       String
-  workspace         Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  email             String     @unique
-  passwordHash      String
-  name              String?
-  role              String     @default("owner")
-  emailVerifiedAt   DateTime?
-  verificationHash  String?    @unique
+  id                    String            @id @default(cuid())
+  workspaceId           String
+  workspace             Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  email                 String            @unique
+  passwordHash          String
+  name                  String?
+  role                  String            @default("owner")
+  emailVerifiedAt       DateTime?
+  verificationHash      String?           @unique
   verificationExpiresAt DateTime?
-  resetHash         String?    @unique
-  resetExpiresAt    DateTime?
-  sessionVersion    Int        @default(0)
-  tokens            ApiToken[]
-  sessions          Session[]
-  actionEvents      ActionEvent[]
-  aiCalls           AiCall[]
-  storeConnections  StoreConnection[]
-  postedReviewReplies ReviewReply[] @relation("ReviewReplyPosts")
-  createdAt         DateTime   @default(now())
-  updatedAt         DateTime   @updatedAt
+  resetHash             String?           @unique
+  resetExpiresAt        DateTime?
+  sessionVersion        Int               @default(0)
+  tokens                ApiToken[]
+  sessions              Session[]
+  actionEvents          ActionEvent[]
+  aiCalls               AiCall[]
+  storeConnections      StoreConnection[]
+  postedReviewReplies   ReviewReply[]     @relation("ReviewReplyPosts")
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
 
   @@index([workspaceId])
 }
@@ -200,47 +200,47 @@ model AppGroup {
 }
 
 model App {
-  id           String           @id @default(cuid())
-  workspaceId  String
-  workspace    Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  store        Store
-  storeAppId   String
-  country      String           @default("us")
-  name         String?
-  iconUrl      String?
-  delistedAt   DateTime?
-  unlistedMarkets String[]       @default([])
-  isCompetitor Boolean          @default(false)
-  primaryAppId String?
-  primaryApp   App?             @relation("AppCompetitors", fields: [primaryAppId, workspaceId], references: [id, workspaceId], onDelete: Cascade)
-  competitors  App[]            @relation("AppCompetitors")
-  groupId      String?
-  group        AppGroup?        @relation(fields: [groupId, workspaceId], references: [id, workspaceId], onDelete: NoAction)
-  snapshots    AppSnapshot[]
-  tracked      TrackedKeyword[]
-  keywordFields KeywordField[]
-  appLocalizations AppLocalization[]
-  rankings     KeywordRanking[]
-  categoryRanks CategoryRank[]
-  changeEvents ChangeEvent[]
-  annotations  AppAnnotation[]
-  reviews      Review[]
-  reviewReplies ReviewReply[]
-  replyGuidelines String?
-  autoTrackRanked Boolean @default(false)
-  suggestProbes SuggestProbe[]
-  auditInsight AuditInsight?
-  appSetup     AppSetup?
-  auditScores  AuditScore[]
-  actions      ActionItem[]
-  actionEvents ActionEvent[]
-  storeReportRequests StoreReportRequest[]
-  storeFunnelDays StoreFunnelDay[]
-  storeFunnelPageDays StoreFunnelPageDay[]
+  id                     String                  @id @default(cuid())
+  workspaceId            String
+  workspace              Workspace               @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  store                  Store
+  storeAppId             String
+  country                String                  @default("us")
+  name                   String?
+  iconUrl                String?
+  delistedAt             DateTime?
+  unlistedMarkets        String[]                @default([])
+  isCompetitor           Boolean                 @default(false)
+  primaryAppId           String?
+  primaryApp             App?                    @relation("AppCompetitors", fields: [primaryAppId, workspaceId], references: [id, workspaceId], onDelete: Cascade)
+  competitors            App[]                   @relation("AppCompetitors")
+  groupId                String?
+  group                  AppGroup?               @relation(fields: [groupId, workspaceId], references: [id, workspaceId], onDelete: NoAction)
+  snapshots              AppSnapshot[]
+  tracked                TrackedKeyword[]
+  keywordFields          KeywordField[]
+  appLocalizations       AppLocalization[]
+  rankings               KeywordRanking[]
+  categoryRanks          CategoryRank[]
+  changeEvents           ChangeEvent[]
+  annotations            AppAnnotation[]
+  reviews                Review[]
+  reviewReplies          ReviewReply[]
+  replyGuidelines        String?
+  autoTrackRanked        Boolean                 @default(false)
+  suggestProbes          SuggestProbe[]
+  auditInsight           AuditInsight?
+  appSetup               AppSetup?
+  auditScores            AuditScore[]
+  actions                ActionItem[]
+  actionEvents           ActionEvent[]
+  storeReportRequests    StoreReportRequest[]
+  storeFunnelDays        StoreFunnelDay[]
+  storeFunnelPageDays    StoreFunnelPageDay[]
   storeFunnelSearchTerms StoreFunnelSearchTerm[]
-  keywordFieldSync KeywordFieldSync?
-  keywordDiscoveries KeywordDiscovery[]
-  createdAt    DateTime         @default(now())
+  keywordFieldSync       KeywordFieldSync?
+  keywordDiscoveries     KeywordDiscovery[]
+  createdAt              DateTime                @default(now())
 
   @@unique([id, workspaceId])
   @@unique([workspaceId, store, storeAppId, country])
@@ -251,21 +251,21 @@ model App {
 }
 
 model KeywordFieldSync {
-  appId        String
-  workspaceId  String
-  app          App      @relation(fields: [appId, workspaceId], references: [id, workspaceId], onDelete: Cascade)
-  version      String?
-  syncedAt     DateTime?
-  lastError    String?
+  appId       String
+  workspaceId String
+  app         App       @relation(fields: [appId, workspaceId], references: [id, workspaceId], onDelete: Cascade)
+  version     String?
+  syncedAt    DateTime?
+  lastError   String?
 
   @@id([appId, workspaceId])
   @@index([workspaceId])
 }
 
 model AppSnapshot {
-  id             String    @id @default(cuid())
+  id             String               @id @default(cuid())
   appId          String
-  app            App       @relation(fields: [appId], references: [id], onDelete: Cascade)
+  app            App                  @relation(fields: [appId], references: [id], onDelete: Cascade)
   country        String?
   localization   String?
   title          String
@@ -281,7 +281,7 @@ model AppSnapshot {
   storeUpdatedAt DateTime?
   raw            Json
   screenshots    SnapshotScreenshot[]
-  capturedAt     DateTime  @default(now())
+  capturedAt     DateTime             @default(now())
 
   @@index([appId, country, localization, capturedAt])
 }
@@ -317,17 +317,17 @@ model ScreenshotText {
 }
 
 model Keyword {
-  id          String           @id @default(cuid())
+  id          String             @id @default(cuid())
   text        String
   store       Store
-  country     String           @default("us")
+  country     String             @default("us")
   metrics     KeywordMetric[]
   tracked     TrackedKeyword[]
   rankings    KeywordRanking[]
   serpEntries SerpEntry[]
   actions     ActionItem[]
   discoveries KeywordDiscovery[]
-  createdAt   DateTime         @default(now())
+  createdAt   DateTime           @default(now())
 
   @@unique([text, store, country])
 }
@@ -360,12 +360,12 @@ model TrackedKeyword {
   app       App           @relation(fields: [appId], references: [id], onDelete: Cascade)
   keywordId String
   keyword   Keyword       @relation(fields: [keywordId], references: [id], onDelete: Cascade)
-  source     KeywordSource
-  active     Boolean       @default(true)
-  relevance  Int?
-  tags       String[]      @default([])
-  note       String?
-  createdAt  DateTime      @default(now())
+  source    KeywordSource
+  active    Boolean       @default(true)
+  relevance Int?
+  tags      String[]      @default([])
+  note      String?
+  createdAt DateTime      @default(now())
 
   @@id([appId, keywordId])
   @@index([keywordId])
@@ -555,16 +555,16 @@ model SerpEntry {
 }
 
 model ChangeEvent {
-  id         String   @id @default(cuid())
-  appId      String
-  app        App      @relation(fields: [appId], references: [id], onDelete: Cascade)
+  id           String   @id @default(cuid())
+  appId        String
+  app          App      @relation(fields: [appId], references: [id], onDelete: Cascade)
   country      String?
   localization String?
-  field      String
-  before     String?
-  after      String?
-  detail     Json?
-  capturedAt DateTime @default(now())
+  field        String
+  before       String?
+  after        String?
+  detail       Json?
+  capturedAt   DateTime @default(now())
 
   @@index([appId, country, localization, capturedAt])
 }
@@ -639,17 +639,18 @@ model ReviewReply {
 }
 
 model Webhook {
-  id           String          @id @default(cuid())
-  workspaceId  String
-  workspace    Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  url          String
-  events       String[]
-  reviewScores Int[]           @default([])
-  secret       String?
-  active       Boolean         @default(true)
-  confirmDrops Boolean         @default(false)
-  deliveries   AlertDelivery[]
-  createdAt    DateTime        @default(now())
+  id               String          @id @default(cuid())
+  workspaceId      String
+  workspace        Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  url              String
+  events           String[]
+  reviewScores     Int[]           @default([])
+  secret           String?
+  active           Boolean         @default(true)
+  confirmDrops     Boolean         @default(false)
+  ratingDropTenths Int?
+  deliveries       AlertDelivery[]
+  createdAt        DateTime        @default(now())
 
   @@index([workspaceId])
 }
@@ -663,6 +664,7 @@ model EmailAlert {
   reviewScores       Int[]           @default([])
   active             Boolean         @default(true)
   confirmDrops       Boolean         @default(false)
+  ratingDropTenths   Int?
   confirmedAt        DateTime?
   confirmationSentAt DateTime?
   unsubscribedAt     DateTime?
@@ -784,44 +786,44 @@ model ProxyHealth {
 model ProxySpend {
   month     String
   tier      ProxyTier
-  requests  Int      @default(0)
-  updatedAt DateTime @updatedAt
+  requests  Int       @default(0)
+  updatedAt DateTime  @updatedAt
 
   @@id([month, tier])
 }
 
 model ActionItem {
-  id             String    @id @default(cuid())
+  id             String        @id @default(cuid())
   workspaceId    String
-  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace      Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   appId          String
-  app            App       @relation(fields: [appId, workspaceId], references: [id, workspaceId], onDelete: Cascade)
+  app            App           @relation(fields: [appId, workspaceId], references: [id, workspaceId], onDelete: Cascade)
   keywordId      String?
-  keyword        Keyword?  @relation(fields: [keywordId], references: [id], onDelete: Cascade)
+  keyword        Keyword?      @relation(fields: [keywordId], references: [id], onDelete: Cascade)
   rule           String
   category       String
   store          Store
   country        String
   fingerprint    String
-  status         String    @default("OPEN")
+  status         String        @default("OPEN")
   priority       String
   impact         Int
   formulaVersion String
   evidence       Json
-  firstSeenAt    DateTime  @default(now())
+  firstSeenAt    DateTime      @default(now())
   lastSeenAt     DateTime
   resolvedAt     DateTime?
   snoozedUntil   DateTime?
   closedAt       DateTime?
   verifiedAt     DateTime?
-  reopenCount    Int       @default(0)
+  reopenCount    Int           @default(0)
   note           String?
   aiExplanation  String?
   aiModel        String?
   aiGeneratedAt  DateTime?
   events         ActionEvent[]
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
   @@unique([id, workspaceId])
   @@unique([workspaceId, fingerprint])
@@ -901,23 +903,23 @@ model StoreConnection {
 }
 
 model StoreReportRequest {
-  id                 String                @id @default(cuid())
-  workspaceId        String
-  workspace          Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  connectionId       String
-  connection         StoreConnection       @relation(fields: [connectionId], references: [id], onDelete: Cascade)
-  appId              String
-  app                App                   @relation(fields: [appId], references: [id], onDelete: Cascade)
-  accessType         String
-  state              String                @default("requested")
-  remoteId           String?
-  reportId           String?
-  lastProcessingDate DateTime?             @db.Date
-  detailedReportId   String?
-  detailedLastProcessingDate DateTime?     @db.Date
-  createdAt          DateTime              @default(now())
-  updatedAt          DateTime              @updatedAt
-  instances          StoreReportInstance[]
+  id                         String                @id @default(cuid())
+  workspaceId                String
+  workspace                  Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  connectionId               String
+  connection                 StoreConnection       @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  appId                      String
+  app                        App                   @relation(fields: [appId], references: [id], onDelete: Cascade)
+  accessType                 String
+  state                      String                @default("requested")
+  remoteId                   String?
+  reportId                   String?
+  lastProcessingDate         DateTime?             @db.Date
+  detailedReportId           String?
+  detailedLastProcessingDate DateTime?             @db.Date
+  createdAt                  DateTime              @default(now())
+  updatedAt                  DateTime              @updatedAt
+  instances                  StoreReportInstance[]
 
   @@unique([appId, accessType])
 }

@@ -1,5 +1,9 @@
 import { EmailAlert } from '@prisma/client';
-import { EmailAlertItem, WebhookEvent } from '@asobeast/shared';
+import {
+  EmailAlertItem,
+  RATING_DROP_DEFAULT_TENTHS,
+  WebhookEvent,
+} from '@asobeast/shared';
 
 export function toEmailAlertItem(alert: EmailAlert): EmailAlertItem {
   return {
@@ -9,6 +13,7 @@ export function toEmailAlertItem(alert: EmailAlert): EmailAlertItem {
     reviewScores: alert.reviewScores,
     active: alert.active,
     confirmDrops: alert.confirmDrops,
+    ratingDropTenths: alert.ratingDropTenths ?? RATING_DROP_DEFAULT_TENTHS,
     confirmed: alert.confirmedAt !== null,
     unsubscribed: alert.unsubscribedAt !== null,
     createdAt: alert.createdAt.toISOString(),
