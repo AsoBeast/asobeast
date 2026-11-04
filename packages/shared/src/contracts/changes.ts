@@ -223,8 +223,12 @@ export interface AlertDeliveryItem {
   createdAt: string;
 }
 
+export type EssentialAlertsNeed = 'smtp' | 'https';
+
 export interface AlertsConfig {
   emailEnabled: boolean;
+  rankDropThreshold?: number;
+  essentialAlertsNeed?: EssentialAlertsNeed | null;
 }
 
 export interface AlertFlushResult {

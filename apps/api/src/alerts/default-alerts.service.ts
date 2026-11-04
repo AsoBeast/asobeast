@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { ESSENTIAL_ALERT_EVENTS } from '@asobeast/shared';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
+import { essentialAlertsNeed } from './default-alerts-readiness';
 import { EmailAlertsService } from './email-alerts.service';
 import { MailerService } from './mailer.service';
 
@@ -31,8 +32,7 @@ export class DefaultAlertsService {
 
   get mailWorks(): boolean {
     return (
-      this.mailer.enabled &&
-      (this.mailer.origin?.startsWith('https://') ?? false)
+      essentialAlertsNeed(this.mailer.enabled, this.mailer.origin) === null
     );
   }
 

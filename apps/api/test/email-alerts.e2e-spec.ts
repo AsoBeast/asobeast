@@ -78,7 +78,11 @@ describe('EmailAlertsController (e2e, smtp enabled)', () => {
 
   it('reports email as enabled', async () => {
     const response = await api.get('/alerts/config').expect(200);
-    expect(response.body as AlertsConfig).toEqual({ emailEnabled: true });
+    expect(response.body as AlertsConfig).toEqual({
+      emailEnabled: true,
+      rankDropThreshold: 5,
+      essentialAlertsNeed: 'https',
+    });
   });
 
   it('runs the full crud round trip', async () => {
@@ -688,7 +692,10 @@ describe('EmailAlertsController (e2e, smtp disabled)', () => {
 
   it('reports email as disabled', async () => {
     const response = await api.get('/alerts/config').expect(200);
-    expect(response.body as AlertsConfig).toEqual({ emailEnabled: false });
+    expect(response.body as AlertsConfig).toMatchObject({
+      emailEnabled: false,
+      essentialAlertsNeed: 'smtp',
+    });
   });
 
   it('rejects creation with a 400 envelope', async () => {

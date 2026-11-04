@@ -6,6 +6,7 @@ import {
   AlertBatchPayload,
   AlertDeliveryStatus,
   AlertFlushResult,
+  AlertsConfig,
   CHANGE_FIELD_LABELS,
   CHANGE_FIELDS,
   ChangeDetail,
@@ -14,6 +15,7 @@ import {
   EmailAlertItem,
   EmailAlertUpdateRequest,
   ESSENTIAL_ALERT_EVENTS,
+  EssentialAlertsNeed,
   RANK_DROP_THRESHOLD_MAX,
   RANK_DROP_THRESHOLD_MIN,
   GranularAlertPayload,
@@ -177,6 +179,11 @@ describe('alert contracts', () => {
     expectTypeOf<EmailAlertUpdateRequest['rankDropThreshold']>().toEqualTypeOf<
       number | null | undefined
     >();
+  });
+
+  it('keeps the alert config fields optional', () => {
+    expectTypeOf<{ emailEnabled: true }>().toExtend<AlertsConfig>();
+    expectTypeOf<EssentialAlertsNeed>().toEqualTypeOf<'smtp' | 'https'>();
   });
 
   it('requires one of the two delivery scopes', () => {
