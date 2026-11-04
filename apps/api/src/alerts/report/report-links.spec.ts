@@ -26,7 +26,6 @@ describe('reportLinks', () => {
   });
 
   it.each([
-    ['availability', '/apps/a'],
     ['rankDrops', '/apps/a/keywords'],
     ['overtakes', '/apps/a/keywords'],
     ['serpEntrants', '/apps/a/rankings'],

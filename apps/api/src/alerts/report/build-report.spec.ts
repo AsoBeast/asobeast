@@ -472,9 +472,10 @@ describe('buildReport with store availability', () => {
     expect(groups[0].rows).toEqual([
       { kind: 'text', text: 'No longer listed in the App Store', detail: null },
     ]);
+    expect(groups[0].link).toBeNull();
   });
 
-  it('builds the group in a competitor card and links the competitors page', () => {
+  it('builds the group in a competitor card without a link', () => {
     const lost = appUnlistedMarket({ app: rival });
     const section = listingSection({
       competitors: [
@@ -501,10 +502,7 @@ describe('buildReport with store availability', () => {
         kind: 'availability',
         tone: 'neutral',
         total: 1,
-        link: {
-          href: `${ORIGIN}/apps/a/competitors`,
-          label: 'See all 1 competitors',
-        },
+        link: null,
       }),
     ]);
     expect(reportCounts(payload).availability).toBe(1);
