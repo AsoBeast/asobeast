@@ -12,6 +12,7 @@ export const seedSources = (store: Store): readonly KeywordSource[] =>
 export function seedCandidates(
   store: Store,
   listings: readonly ListingText[],
+  limit = MARKET_SEED_LIMIT,
 ): Candidate[] {
   const sources = seedSources(store);
   return interleaveDistinct(
@@ -25,7 +26,7 @@ export function seedCandidates(
         listing.languages,
       ).filter((candidate) => sources.includes(candidate.source)),
     ),
-    MARKET_SEED_LIMIT,
+    limit,
     (candidate) => candidate.text,
   );
 }

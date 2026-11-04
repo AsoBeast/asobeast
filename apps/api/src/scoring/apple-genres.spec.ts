@@ -1,4 +1,4 @@
-import { inferPopularityGenre } from './apple-genres';
+import { inferPopularityGenre, popularityGenreOf } from './apple-genres';
 
 const results = (...genreIds: Array<string | undefined>) =>
   genreIds.map((genreId) => ({ genreId }));
@@ -28,5 +28,17 @@ describe('inferPopularityGenre', () => {
   it('has no genre when nothing maps', () => {
     expect(inferPopularityGenre(results(undefined, '9999'))).toBeUndefined();
     expect(inferPopularityGenre([])).toBeUndefined();
+  });
+});
+
+describe('popularityGenreOf', () => {
+  it('maps a store genre given as a number or as text', () => {
+    expect(popularityGenreOf(6013)).toBe('HEALTH_FITNESS');
+    expect(popularityGenreOf('6013')).toBe('HEALTH_FITNESS');
+  });
+
+  it('has no genre for an unmapped or missing store genre', () => {
+    expect(popularityGenreOf(6019)).toBeUndefined();
+    expect(popularityGenreOf(null)).toBeUndefined();
   });
 });
