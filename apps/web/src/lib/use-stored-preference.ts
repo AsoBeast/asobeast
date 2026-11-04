@@ -6,11 +6,16 @@ const listeners = new Set<() => void>();
 const unsaved = new Map<string, string>();
 
 function subscribe(listener: () => void) {
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === null) unsaved.clear();
+    else unsaved.delete(event.key);
+    listener();
+  };
   listeners.add(listener);
-  window.addEventListener("storage", listener);
+  window.addEventListener("storage", onStorage);
   return () => {
     listeners.delete(listener);
-    window.removeEventListener("storage", listener);
+    window.removeEventListener("storage", onStorage);
   };
 }
 

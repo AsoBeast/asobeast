@@ -1080,3 +1080,30 @@ test.describe("dots", () => {
     ).toBeVisible();
   });
 });
+
+test("another tab's thresholds replace this tab's unsaved ones", async ({
+  page,
+  context,
+}) => {
+  await page.addInitScript(() => {
+    Storage.prototype.setItem = () => {
+      throw new DOMException("full", "QuotaExceededError");
+    };
+  });
+  await page.goto(MAP_URL);
+  const dialog = await openThresholds(page);
+  await dialog
+    .getByRole("spinbutton", { name: "Popularity at least" })
+    .fill("30");
+  await expectToggles(page, [6, 7, 6, 4]);
+
+  const other = await context.newPage();
+  await other.goto(MAP_URL);
+  const otherDialog = await openThresholds(other);
+  await otherDialog
+    .getByRole("spinbutton", { name: "Popularity at least" })
+    .fill("40");
+  await expectToggles(other, [4, 6, 8, 5]);
+
+  await expectToggles(page, [4, 6, 8, 5]);
+});
