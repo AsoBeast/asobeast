@@ -39,9 +39,9 @@ export interface MapPoints {
   unplotted: number;
 }
 
-export interface OverlayPlacement {
-  horizontal: "left" | "right";
-  vertical: "above" | "below";
+export interface OverlayPosition {
+  left: number;
+  top: number;
 }
 
 interface Size {
@@ -130,14 +130,23 @@ export function dotName(point: MapPoint, multiMarket: boolean): string {
     .join(", ");
 }
 
+const clamp = (value: number, max: number): number =>
+  Math.max(0, Math.min(value, max));
+
 export function placeOverlay(
   dot: { x: number; y: number },
   overlay: Size,
   surface: Size,
-): OverlayPlacement {
+): OverlayPosition {
+  const right = dot.x + OVERLAY_GAP;
+  const left =
+    right + overlay.width <= surface.width
+      ? right
+      : dot.x - OVERLAY_GAP - overlay.width;
+  const above = dot.y - OVERLAY_GAP - overlay.height;
+  const top = above >= 0 ? above : dot.y + OVERLAY_GAP;
   return {
-    horizontal:
-      dot.x + OVERLAY_GAP + overlay.width <= surface.width ? "right" : "left",
-    vertical: dot.y - OVERLAY_GAP - overlay.height >= 0 ? "above" : "below",
+    left: clamp(left, surface.width - overlay.width),
+    top: clamp(top, surface.height - overlay.height),
   };
 }

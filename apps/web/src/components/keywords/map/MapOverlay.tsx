@@ -4,7 +4,6 @@ import { useLayoutEffect, useRef } from "react";
 import { ArrowDownToLine } from "lucide-react";
 import { ZONE_LABELS } from "@/lib/keyword-zones";
 import {
-  OVERLAY_GAP,
   placeOverlay,
   pointName,
   rankWords,
@@ -17,13 +16,6 @@ export interface ActiveDot {
   y: number;
   surface: { width: number; height: number };
 }
-
-const TRANSFORMS = {
-  right: `${OVERLAY_GAP}px`,
-  left: `calc(-100% - ${OVERLAY_GAP}px)`,
-  above: `calc(-100% - ${OVERLAY_GAP}px)`,
-  below: `${OVERLAY_GAP}px`,
-} as const;
 
 const capitalized = (text: string): string =>
   `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
@@ -48,12 +40,13 @@ export function MapOverlay({
   useLayoutEffect(() => {
     const node = overlayRef.current;
     if (node === null || active === null) return;
-    const placement = placeOverlay(
+    const position = placeOverlay(
       active,
       { width: node.offsetWidth, height: node.offsetHeight },
       active.surface,
     );
-    node.style.transform = `translate(${TRANSFORMS[placement.horizontal]}, ${TRANSFORMS[placement.vertical]})`;
+    node.style.left = `${position.left}px`;
+    node.style.top = `${position.top}px`;
   }, [active]);
   if (active === null) return null;
   const { point } = active;
@@ -62,8 +55,7 @@ export function MapOverlay({
       ref={overlayRef}
       data-slot="map-overlay"
       aria-hidden
-      className="pointer-events-none absolute top-0 left-0 z-10 grid w-56 gap-1.5 rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-overlay"
-      style={{ left: active.x, top: active.y }}
+      className="pointer-events-none absolute top-0 left-0 z-10 grid w-56 max-w-full gap-1.5 rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-overlay"
     >
       <p className="font-medium wrap-anywhere">
         {pointName(point, multiMarket)}

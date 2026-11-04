@@ -385,26 +385,34 @@ describe("placeOverlay", () => {
 
   it("places it right of and above a dot with room", () => {
     expect(placeOverlay({ x: 100, y: 200 }, overlay, surface)).toEqual({
-      horizontal: "right",
-      vertical: "above",
+      left: 108,
+      top: 80,
     });
   });
 
   it("flips it left near the right edge", () => {
-    expect(placeOverlay({ x: 700, y: 200 }, overlay, surface).horizontal).toBe(
-      "left",
-    );
+    expect(placeOverlay({ x: 700, y: 200 }, overlay, surface).left).toBe(468);
   });
 
   it("flips it below near the top", () => {
-    expect(placeOverlay({ x: 100, y: 40 }, overlay, surface).vertical).toBe(
-      "below",
-    );
+    expect(placeOverlay({ x: 100, y: 40 }, overlay, surface).top).toBe(48);
   });
 
-  it("answers for a surface smaller than the overlay", () => {
+  it("keeps it inside a surface too narrow for either side", () => {
+    expect(
+      placeOverlay({ x: 120, y: 200 }, overlay, { width: 250, height: 360 }),
+    ).toEqual({ left: 0, top: 80 });
+  });
+
+  it("keeps it inside a surface too short for either side", () => {
+    expect(
+      placeOverlay({ x: 100, y: 100 }, overlay, { width: 800, height: 180 }),
+    ).toEqual({ left: 108, top: 68 });
+  });
+
+  it("pins it to the corner of a surface smaller than the overlay", () => {
     expect(
       placeOverlay({ x: 10, y: 10 }, overlay, { width: 100, height: 50 }),
-    ).toEqual({ horizontal: "left", vertical: "below" });
+    ).toEqual({ left: 0, top: 0 });
   });
 });

@@ -888,31 +888,34 @@ test.describe("dots", () => {
     expect(box.y + box.height).toBeLessThanOrEqual(region.y + region.height);
   });
 
-  test("no overlay leaves the chart", async ({ page }) => {
-    await page.goto(MAP_URL);
-    await expect(dots(page)).toHaveCount(23);
-    const named = await dots(page).evaluateAll((nodes) =>
-      nodes.map((node) => ({
-        id: node.getAttribute("data-map-keyword") ?? "",
-        text: (node.getAttribute("aria-label") ?? "").split(",")[0],
-      })),
-    );
-    for (const { id, text } of named) {
-      await dot(page, id).focus();
-      await expect(overlay(page).locator("p").first()).toHaveText(text);
-      const box = await overlay(page).boundingBox();
-      const region = await mapRegion(page).boundingBox();
-      if (!box || !region) throw new Error(`no overlay for ${id}`);
-      expect(box.y, id).toBeGreaterThanOrEqual(region.y);
-      expect(box.y + box.height, id).toBeLessThanOrEqual(
-        region.y + region.height,
+  for (const width of [1280, 375, 320]) {
+    test(`no overlay leaves the chart at ${width} px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto(MAP_URL);
+      await expect(dots(page)).toHaveCount(23);
+      const named = await dots(page).evaluateAll((nodes) =>
+        nodes.map((node) => ({
+          id: node.getAttribute("data-map-keyword") ?? "",
+          text: (node.getAttribute("aria-label") ?? "").split(",")[0],
+        })),
       );
-      expect(box.x, id).toBeGreaterThanOrEqual(region.x);
-      expect(box.x + box.width, id).toBeLessThanOrEqual(
-        region.x + region.width,
-      );
-    }
-  });
+      for (const { id, text } of named) {
+        await dot(page, id).focus();
+        await expect(overlay(page).locator("p").first()).toHaveText(text);
+        const box = await overlay(page).boundingBox();
+        const region = await mapRegion(page).boundingBox();
+        if (!box || !region) throw new Error(`no overlay for ${id}`);
+        expect(box.y, id).toBeGreaterThanOrEqual(region.y);
+        expect(box.y + box.height, id).toBeLessThanOrEqual(
+          region.y + region.height,
+        );
+        expect(box.x, id).toBeGreaterThanOrEqual(region.x);
+        expect(box.x + box.width, id).toBeLessThanOrEqual(
+          region.x + region.width,
+        );
+      }
+    });
+  }
 
   test("focus shows it too", async ({ page }) => {
     await page.goto(MAP_URL);
