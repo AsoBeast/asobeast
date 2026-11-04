@@ -78,9 +78,18 @@ test("the market pills scope the report to one storefront", async ({
   await expect(
     page.getByText("No keywords tracked in Poland yet"),
   ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Export CSV of rankings" }),
+  ).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "Copy image of the rankings chart" }),
+  ).toHaveCount(0);
 
   await pills.getByRole("button", { name: "All markets 5" }).click();
   await expect(page).not.toHaveURL(/country=/);
+  await expect(
+    page.getByRole("button", { name: "Export CSV of rankings" }),
+  ).toBeEnabled();
 });
 
 test("the serp movers card lists entrants with badges and a track action", async ({

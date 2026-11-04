@@ -67,7 +67,9 @@ export function RankingsView({ id }: { id: string }) {
   const { data } = useSuspenseQuery(
     rankingsOptions(id, { ...bounds, keywordIds: effective }),
   );
-  const { data: changes } = useQuery(changesOptions(id, presetDays(range)));
+  const { data: changes } = useQuery(
+    changesOptions(id, presetDays(range), country || undefined),
+  );
   const { data: annotations } = useQuery(annotationsOptions(id));
   const inScope = annotationsInMarkets(annotations?.annotations ?? [], [
     ...new Set(data.series.map((item) => item.country)),
@@ -85,8 +87,7 @@ export function RankingsView({ id }: { id: string }) {
     tracked.map((item) => [item.keywordId, keywordLabel(item)]),
   );
 
-  const imageReady =
-    tracked.length > 0 && chart.checkedDays >= MIN_TREND_POINTS;
+  const imageReady = scoped.length > 0 && chart.checkedDays >= MIN_TREND_POINTS;
   const makeImageJob = () => {
     const container = chartRef.current;
     const spec = rankingImageSpec({
@@ -142,7 +143,7 @@ export function RankingsView({ id }: { id: string }) {
           <ExportCsvButton
             subject="rankings"
             className="ml-auto print:hidden"
-            disabled={chart.checkedDays === 0}
+            disabled={scoped.length === 0 || chart.checkedDays === 0}
             onClick={() => exportRankings(id, bounds, chart)}
           />
           {imageReady ? (
