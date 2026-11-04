@@ -18,6 +18,8 @@ interface KeywordCaptures {
   positions: Map<string, number>;
 }
 
+const utcDate = (day: string): Date => new Date(`${day}T00:00:00.000Z`);
+
 const withinCapture = (position: number | undefined): position is number =>
   position !== undefined &&
   position >= 1 &&
@@ -62,30 +64,28 @@ export class DiscoveryCaptures {
   ): Promise<Map<string, CaptureReading>> {
     const readings = new Map<string, CaptureReading>();
     if (keywordIds.length === 0) return readings;
-    const fresh = {
-      keywordId: { in: [...keywordIds] },
-      date: {
-        gte: new Date(`${addUtcDays(today, -CHECK_FRESH_DAYS)}T00:00:00.000Z`),
+    const rows = await this.prisma.serpEntry.findMany({
+      where: {
+        keywordId: { in: [...keywordIds] },
+        date: {
+          gte: utcDate(addUtcDays(today, -CHECK_FRESH_DAYS)),
+          lte: utcDate(today),
+        },
+        OR: [{ position: 1 }, { storeAppId }],
       },
-    };
-    const [captured, placed] = await Promise.all([
-      this.prisma.serpEntry.findMany({
-        where: { ...fresh, position: 1 },
-        select: { keywordId: true, date: true },
-      }),
-      this.prisma.serpEntry.findMany({
-        where: { ...fresh, storeAppId },
-        select: { keywordId: true, date: true, position: true },
-      }),
-    ]);
+      select: { keywordId: true, date: true, position: true, storeAppId: true },
+    });
     const byKeyword = new Map<string, KeywordCaptures>();
-    for (const { keywordId, date } of captured) {
-      capturesOf(byKeyword, keywordId).days.push(utcDayOf(date));
-    }
-    for (const { keywordId, date, position } of placed) {
-      const { positions } = capturesOf(byKeyword, keywordId);
-      const day = utcDayOf(date);
-      positions.set(day, Math.min(positions.get(day) ?? position, position));
+    for (const row of rows) {
+      const { days, positions } = capturesOf(byKeyword, row.keywordId);
+      const day = utcDayOf(row.date);
+      if (row.position === 1) days.push(day);
+      if (row.storeAppId === storeAppId) {
+        positions.set(
+          day,
+          Math.min(positions.get(day) ?? row.position, row.position),
+        );
+      }
     }
     for (const [keywordId, { days, positions }] of byKeyword) {
       const reading = captureReading(days, positions);

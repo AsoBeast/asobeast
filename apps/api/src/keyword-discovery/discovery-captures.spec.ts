@@ -72,27 +72,27 @@ describe('captureResolves', () => {
 });
 
 describe('DiscoveryCaptures.read', () => {
-  const setup = (
-    captured: { keywordId: string; date: Date }[],
-    placed: { keywordId: string; date: Date; position: number }[],
-  ) => {
-    const findMany = jest.fn((args: { where: { position?: number } }) =>
-      Promise.resolve(args.where.position === 1 ? captured : placed),
-    );
+  const row = (
+    keywordId: string,
+    day: string,
+    position: number,
+    storeAppId = `other-${position}`,
+  ) => ({ keywordId, date: at(day), position, storeAppId });
+
+  const setup = (rows: ReturnType<typeof row>[]) => {
+    const findMany = jest.fn().mockResolvedValue(rows);
     const captures = new DiscoveryCaptures({
       serpEntry: { findMany },
     } as unknown as PrismaService);
     return { captures, findMany };
   };
 
-  it('reads the captures of today and yesterday for the given keywords', async () => {
-    const { captures, findMany } = setup(
-      [
-        { keywordId: 'kw-ranked', date: at(TODAY) },
-        { keywordId: 'kw-absent', date: at(YESTERDAY) },
-      ],
-      [{ keywordId: 'kw-ranked', date: at(TODAY), position: 12 }],
-    );
+  it('reads the captures of today and yesterday for the given keywords in one query', async () => {
+    const { captures, findMany } = setup([
+      row('kw-ranked', TODAY, 1),
+      row('kw-ranked', TODAY, 12, 'store1'),
+      row('kw-absent', YESTERDAY, 1),
+    ]);
 
     const readings = await captures.read(
       'store1',
@@ -104,22 +104,27 @@ describe('DiscoveryCaptures.read', () => {
       ['kw-ranked', { position: 12, depth: 50, checkedOn: TODAY }],
       ['kw-absent', { position: null, depth: 50, checkedOn: YESTERDAY }],
     ]);
-    const fresh = {
-      keywordId: { in: ['kw-ranked', 'kw-absent', 'kw-unseen'] },
-      date: { gte: at(YESTERDAY) },
-    };
+    expect(findMany).toHaveBeenCalledTimes(1);
     expect(findMany).toHaveBeenCalledWith({
-      where: { ...fresh, position: 1 },
-      select: { keywordId: true, date: true },
-    });
-    expect(findMany).toHaveBeenCalledWith({
-      where: { ...fresh, storeAppId: 'store1' },
-      select: { keywordId: true, date: true, position: true },
+      where: {
+        keywordId: { in: ['kw-ranked', 'kw-absent', 'kw-unseen'] },
+        date: { gte: at(YESTERDAY), lte: at(TODAY) },
+        OR: [{ position: 1 }, { storeAppId: 'store1' }],
+      },
+      select: { keywordId: true, date: true, position: true, storeAppId: true },
     });
   });
 
+  it('reads an app at the top of a capture', async () => {
+    const { captures } = setup([row('kw-top', TODAY, 1, 'store1')]);
+
+    await expect(captures.read('store1', ['kw-top'], TODAY)).resolves.toEqual(
+      new Map([['kw-top', { position: 1, depth: 50, checkedOn: TODAY }]]),
+    );
+  });
+
   it('makes no query for no keywords', async () => {
-    const { captures, findMany } = setup([], []);
+    const { captures, findMany } = setup([]);
 
     await expect(captures.read('store1', [], TODAY)).resolves.toEqual(
       new Map(),
