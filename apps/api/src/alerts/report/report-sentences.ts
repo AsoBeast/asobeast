@@ -17,23 +17,24 @@ import {
 import {
   PRIORITY_WORDS,
   milestonePhrase,
+  plural,
   reviewAuthor,
   reviewQuote,
   reviewTone,
   type ReviewAlert,
 } from './report-rows';
 import { chartName } from './report-chart-moves';
+import { ratingDropSentence } from './report-rating-drop';
+import { reviewSpikeSentence } from './report-review-spike';
 import { storefrontLabel } from './storefront';
+
+export { plural };
 
 export type GranularPayload = Exclude<AlertPayload, AlertBatchPayload>;
 
 export interface Sentence {
   emoji: string;
   text: string;
-}
-
-export function plural(count: number, singular: string): string {
-  return `${count} ${singular}${count === 1 ? '' : 's'}`;
 }
 
 export function listPhrase(items: readonly string[]): string {
@@ -175,6 +176,20 @@ export function sentenceOf(
       return {
         emoji: reviewEmoji(payload.review.score),
         text: reviewSentence(payload),
+      };
+    case 'rating.dropped':
+      return {
+        emoji: '📉',
+        text: ratingDropSentence(
+          payload,
+          appName(payload.app.name),
+          storefrontLabel(payload.country, withFlag),
+        ),
+      };
+    case 'review.spike':
+      return {
+        emoji: '💬',
+        text: reviewSpikeSentence(payload, appName(payload.app.name)),
       };
     case 'serp.entrant':
       return { emoji: '🆕', text: entrantSentence(payload, withFlag) };

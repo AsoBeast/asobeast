@@ -334,6 +334,8 @@ export type GranularAlertPayload =
   | RankOvertakenPayload
   | ReviewNegativePayload
   | ReviewNewPayload
+  | RatingDroppedPayload
+  | ReviewSpikePayload
   | DigestWeeklyPayload
   | SerpEntrantPayload
   | ActionOpenedPayload

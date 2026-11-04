@@ -16,7 +16,14 @@ import {
   withoutChartMoves,
 } from '../chart-events.fixture';
 import { milestone } from '../rank-events.fixture';
+import {
+  listingBatch,
+  listingSection,
+  ratingDropped,
+  reviewSpike,
+} from '../listing-events.fixture';
 import { buildReport, DEFAULT_CAPS, reportCounts } from './build-report';
+import { REPORT_GROUP_KINDS } from './report';
 
 const ORIGIN = 'https://aso.example.com';
 const ICON = 'https://is1-ssl.mzstatic.com/image/thumb/alpha/512x512bb.jpg';
@@ -287,8 +294,10 @@ describe('reportCounts', () => {
       chartMoves: 0,
       serpEntrants: 1,
       changes: 1,
+      ratingDrops: 0,
       negativeReviews: 0,
       newReviews: 0,
+      reviewSpikes: 0,
       actions: 0,
     });
   });
@@ -373,5 +382,68 @@ describe('buildReport with chart moves', () => {
 
   it('counts the merged moves, not the events', () => {
     expect(reportCounts(moves).chartMoves).toBe(1);
+  });
+});
+
+describe('buildReport with rating drops and review spikes', () => {
+  const section = listingSection({
+    changes: [],
+    ratingDrops: [ratingDropped()],
+    newReviews: [],
+    reviewSpikes: [reviewSpike(), reviewSpike({ date: '2026-11-03' })],
+  });
+  const payload = listingBatch(section, [
+    ratingDropped(),
+    reviewSpike(),
+    reviewSpike({ date: '2026-11-03' }),
+  ]);
+
+  it('titles the groups and places them in their order', () => {
+    const groups = buildReport(payload, ORIGIN).apps[0].groups;
+
+    expect(
+      groups.map((group) => [group.kind, group.title, group.tone]),
+    ).toEqual([
+      ['ratingDrops', 'Rating drops', 'down'],
+      ['reviewSpikes', 'Review spikes', 'down'],
+    ]);
+    expect(REPORT_GROUP_KINDS.indexOf('ratingDrops')).toBe(
+      REPORT_GROUP_KINDS.indexOf('changes') + 1,
+    );
+    expect(REPORT_GROUP_KINDS.indexOf('reviewSpikes')).toBe(
+      REPORT_GROUP_KINDS.indexOf('newReviews') + 1,
+    );
+  });
+
+  it('caps the rows and links the reviews page', () => {
+    const groups = buildReport(payload, ORIGIN, {
+      apps: 10,
+      competitors: 10,
+      rows: 1,
+    }).apps[0].groups;
+    const spikes = groups.find((group) => group.kind === 'reviewSpikes');
+
+    expect(spikes).toMatchObject({
+      total: 2,
+      link: {
+        href: `${ORIGIN}/apps/a/reviews`,
+        label: 'See all 2 in AsoBeast',
+      },
+    });
+    expect(spikes?.rows).toHaveLength(1);
+  });
+
+  it('counts both kinds', () => {
+    expect(reportCounts(payload)).toMatchObject({
+      ratingDrops: 1,
+      reviewSpikes: 2,
+    });
+  });
+
+  it('builds neither group for a section without them', () => {
+    const groups = buildReport(listingBatch(listingSection(), []), ORIGIN)
+      .apps[0];
+
+    expect(groups?.groups ?? []).toEqual([]);
   });
 });

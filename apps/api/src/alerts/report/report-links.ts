@@ -22,6 +22,8 @@ export interface ReportLinks {
   competitors: (appId: string, total: number) => ReportLink | null;
   action: (href: string | null) => ReportLink | null;
   reviews: (appId: string, score: number) => ReportLink | null;
+  ratingDrop: (appId: string, actionId: string | null) => ReportLink | null;
+  appReviews: (appId: string) => ReportLink | null;
 }
 
 const GROUP_PATHS: Record<AppPageGroupKind, string> = {
@@ -32,8 +34,10 @@ const GROUP_PATHS: Record<AppPageGroupKind, string> = {
   overtakes: '/keywords',
   serpEntrants: '/rankings',
   changes: '/changes',
+  ratingDrops: '/reviews',
   negativeReviews: '/reviews',
   newReviews: '/reviews',
+  reviewSpikes: '/reviews',
   actions: '/actions',
 };
 
@@ -82,5 +86,14 @@ export function reportLinks(origin: string | null): ReportLinks {
         `/apps/${appId}${GROUP_PATHS.newReviews}${groupQuery('newReviews', [score])}`,
         'Open reviews',
       ),
+    ratingDrop: (appId, actionId) =>
+      actionId
+        ? page(
+            `/actions?action=${encodeURIComponent(actionId)}`,
+            'Open the action',
+          )
+        : page(`/apps/${appId}${GROUP_PATHS.ratingDrops}`, 'Open reviews'),
+    appReviews: (appId) =>
+      page(`/apps/${appId}${GROUP_PATHS.reviewSpikes}`, 'Open reviews'),
   };
 }

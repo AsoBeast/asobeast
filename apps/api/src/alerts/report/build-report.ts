@@ -21,6 +21,8 @@ import {
   mergeChartMoves,
 } from './report-chart-moves';
 import { reportLinks, type ReportLinks } from './report-links';
+import { ratingDropRow } from './report-rating-drop';
+import { reviewSpikeRow, reviewSpikeTone } from './report-review-spike';
 import {
   actionRow,
   changeRows,
@@ -54,6 +56,8 @@ interface GroupSource {
 const always = (tone: GroupTone) => (): GroupTone => tone;
 
 const newReviewsOf = (section: Section) => section.newReviews ?? [];
+
+const reviewSpikesOf = (section: Section) => section.reviewSpikes ?? [];
 
 const GROUP_SOURCES: Record<ReportGroupKind, GroupSource> = {
   rankDrops: {
@@ -111,6 +115,11 @@ const GROUP_SOURCES: Record<ReportGroupKind, GroupSource> = {
     tone: always('neutral'),
     rows: (section) => section.changes.flatMap(changeRows),
   },
+  ratingDrops: {
+    title: 'Rating drops',
+    tone: always('down'),
+    rows: (section) => (section.ratingDrops ?? []).map(ratingDropRow),
+  },
   negativeReviews: {
     title: 'Negative reviews',
     tone: always('down'),
@@ -121,6 +130,11 @@ const GROUP_SOURCES: Record<ReportGroupKind, GroupSource> = {
     tone: (section) =>
       reviewsTone(newReviewsOf(section).map((alert) => alert.review.score)),
     rows: (section) => newReviewsOf(section).map(reviewRow),
+  },
+  reviewSpikes: {
+    title: 'Review spikes',
+    tone: (section) => reviewSpikeTone(reviewSpikesOf(section)),
+    rows: (section) => reviewSpikesOf(section).map(reviewSpikeRow),
   },
   actions: {
     title: 'New actions',
@@ -347,8 +361,10 @@ export interface ReportCounts {
   chartMoves: number;
   serpEntrants: number;
   changes: number;
+  ratingDrops: number;
   negativeReviews: number;
   newReviews: number;
+  reviewSpikes: number;
   actions: number;
 }
 
@@ -370,8 +386,10 @@ export function reportCounts(payload: AlertBatchPayload): ReportCounts {
     ),
     serpEntrants: count((section) => section.serpEntrants),
     changes: count((section) => section.changes),
+    ratingDrops: count((section) => section.ratingDrops),
     negativeReviews: count((section) => section.negativeReviews),
     newReviews: count((section) => section.newReviews),
+    reviewSpikes: count((section) => section.reviewSpikes),
     actions: count((section) => section.actions),
   };
 }

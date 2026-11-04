@@ -10,6 +10,12 @@ import {
   HTML_BUDGET_BYTES,
 } from './email-format';
 import {
+  listingBatch,
+  listingSection,
+  ratingDropped,
+  reviewSpike,
+} from './listing-events.fixture';
+import {
   actionOpened,
   alpha,
   batch,
@@ -813,5 +819,36 @@ describe('the plain text part of an alert email', () => {
     );
     expect(text).not.toContain('Unsubscribe:');
     expect(text).not.toContain('Manage email alerts:');
+  });
+});
+
+describe('the rating and review events by email', () => {
+  it('shows a tile for each kind only when it happened', async () => {
+    const email = await formatBatchEmail(
+      listingBatch(
+        listingSection({
+          ratingDrops: [ratingDropped()],
+          reviewSpikes: [reviewSpike()],
+        }),
+        [ratingDropped(), reviewSpike()],
+      ),
+    );
+
+    expect(email.html).toContain('Rating drops');
+    expect(email.html).toContain('Review spikes');
+    expect(email.html).toContain('4.44');
+  });
+
+  it('shows neither tile in a batch without them', async () => {
+    const email = await formatBatchEmail(batch);
+
+    expect(email.html).not.toContain('Rating drops');
+    expect(email.html).not.toContain('Review spikes');
+  });
+
+  it('subjects a single rating drop with its sentence', async () => {
+    expect((await formatEmail(ratingDropped())).subject).toBe(
+      "[asobeast] My App's average rating fell from 4.66 to 4.44 in US over 7 days",
+    );
   });
 });

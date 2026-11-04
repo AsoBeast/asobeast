@@ -15,6 +15,7 @@ import {
   chartMilestone,
 } from '../chart-events.fixture';
 import { firstRanking, milestone, overtake } from '../rank-events.fixture';
+import { ratingDropped, reviewSpike } from '../listing-events.fixture';
 import { listPhrase, plural, sentenceOf } from './report-sentences';
 
 const withFlags = (payload: Parameters<typeof sentenceOf>[0]) =>
@@ -274,5 +275,22 @@ describe('plural', () => {
   it('counts one and many', () => {
     expect(plural(1, 'change')).toBe('1 change');
     expect(plural(218, 'change')).toBe('218 changes');
+  });
+});
+
+describe('sentenceOf for the rating and review events', () => {
+  it('words a rating drop with its market and an emoji', () => {
+    expect(withFlags(ratingDropped())).toEqual({
+      emoji: '📉',
+      text: "My App's average rating fell from 4.66 to 4.44 in 🇺🇸 US over 7 days",
+    });
+    expect(sentenceOf(ratingDropped(), false).text).toContain('in US over');
+  });
+
+  it('words a review spike with an emoji', () => {
+    expect(withFlags(reviewSpike())).toEqual({
+      emoji: '💬',
+      text: 'A spike of 34 reviews for My App on 2 Nov 2026: median 4 a day, 71% at 2 stars or lower',
+    });
   });
 });

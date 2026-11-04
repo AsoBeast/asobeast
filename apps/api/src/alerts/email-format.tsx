@@ -74,6 +74,8 @@ function ownedStats(payload: AlertBatchPayload): Stat[] {
     { label: 'Listing changes', value: counts.changes, tone: 'neutral' },
     { label: 'Negative reviews', value: counts.negativeReviews, tone: 'down' },
     { label: 'New reviews', value: counts.newReviews, tone: 'neutral' },
+    { label: 'Rating drops', value: counts.ratingDrops, tone: 'down' },
+    { label: 'Review spikes', value: counts.reviewSpikes, tone: 'neutral' },
     { label: 'New actions', value: counts.actions, tone: 'neutral' },
   ];
   return stats.filter((stat) => stat.value > 0);
@@ -93,6 +95,8 @@ function ownedSummary(payload: AlertBatchPayload): string {
     plural(counts.firstRankings, 'first ranking'),
     plural(counts.overtakes, 'overtake'),
     plural(counts.chartMoves, 'chart move'),
+    plural(counts.ratingDrops, 'rating drop'),
+    plural(counts.reviewSpikes, 'review spike'),
   ].join(' · ');
 }
 

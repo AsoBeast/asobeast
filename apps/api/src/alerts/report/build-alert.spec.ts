@@ -16,7 +16,9 @@ import {
   chartMilestone,
 } from '../chart-events.fixture';
 import { firstRanking, milestone, overtake } from '../rank-events.fixture';
+import { ratingDropped, reviewSpike } from '../listing-events.fixture';
 import { buildAlert } from './build-alert';
+import { factsOf } from './report-facts';
 import type { ReportFact } from './report';
 
 const ORIGIN = 'https://aso.example.com';
@@ -328,5 +330,48 @@ describe('buildAlert', () => {
       label: 'Open the chart',
     });
     expect(buildAlert(chartEntered(), null).link).toBeNull();
+  });
+});
+
+describe('buildAlert for the rating and review events', () => {
+  it('tones a rating drop down and links its action when it has one', () => {
+    const withAction = buildAlert(ratingDropped({ actionId: 'act_1' }), ORIGIN);
+
+    expect(withAction).toMatchObject({
+      tone: 'down',
+      emoji: '📉',
+      link: {
+        href: `${ORIGIN}/actions?action=act_1`,
+        label: 'Open the action',
+      },
+    });
+    expect(withAction.apps[0].identity.role).toBe('primary');
+    expect(buildAlert(ratingDropped(), ORIGIN).link).toEqual({
+      href: `${ORIGIN}/apps/a/reviews`,
+      label: 'Open reviews',
+    });
+    expect(buildAlert(ratingDropped(), null).link).toBeNull();
+  });
+
+  it('links a review spike to the reviews page', () => {
+    expect(buildAlert(reviewSpike(), ORIGIN).link).toEqual({
+      href: `${ORIGIN}/apps/a/reviews`,
+      label: 'Open reviews',
+    });
+    expect(buildAlert(reviewSpike({ lowShare: 0.2 }), null).tone).toBe(
+      'neutral',
+    );
+  });
+
+  it('lists the facts its wording gives, with the flag only for chat', () => {
+    expect(buildAlert(ratingDropped(), null).facts).toEqual(
+      factsOf(ratingDropped()),
+    );
+    expect(factMap(buildAlert(ratingDropped(), null, false).facts).Market).toBe(
+      'US',
+    );
+    expect(buildAlert(reviewSpike(), null).facts).toEqual(
+      factsOf(reviewSpike()),
+    );
   });
 });
