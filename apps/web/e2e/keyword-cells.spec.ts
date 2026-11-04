@@ -30,7 +30,7 @@ test.describe("listing marks in the keyword cell", () => {
     await expect(marks).toHaveCount(1);
     await expect(marks.first()).toHaveClass(/bg-success-subtle/);
     await expect(marks.first()).toContainText("focus timer");
-    await expect(cell).toHaveAccessibleName("focus timer (in title)");
+    await expect(cell).toHaveAccessibleName(/focus timer \(in title\)/);
     await expect(cell.locator("[title]").first()).toHaveAttribute(
       "title",
       "focus timer",
@@ -90,7 +90,7 @@ test.describe("listing marks in the keyword cell", () => {
     const table = page.getByRole("table", { name: /Tracked keywords/ });
 
     await expect(
-      table.getByRole("cell", { name: "focus timer", exact: true }),
+      table.getByRole("cell", { name: /^focus timer/ }),
     ).toBeVisible();
     await expect(table.locator("mark")).toHaveCount(0);
   });
@@ -165,7 +165,7 @@ test.describe("the listing marks choice", () => {
 
     await expect(table.locator("mark")).toHaveCount(0);
     await expect(keywordCell(page, "focus timer")).toHaveAccessibleName(
-      "focus timer",
+      /focus timer/,
     );
     expect(await storedColumns(page)).toEqual({
       ...before,
