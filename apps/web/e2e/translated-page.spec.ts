@@ -485,6 +485,17 @@ test("a translated keywords table keeps drawing its listing marks", async ({
 
   await expect(table.locator("mark").first()).toBeVisible();
   await expect(table.locator("mark")).toHaveCount(8);
+
+  await page.getByRole("button", { name: /^columns$/i }).click();
+  const marks = page.getByRole("menuitemcheckbox", {
+    name: /^listing marks$/i,
+  });
+  await marks.click();
+  await expect(table.locator("mark")).toHaveCount(0);
+  await marks.click();
+  await page.keyboard.press("Escape");
+
+  await expect(table.locator("mark")).toHaveCount(8);
   expect(errors).toEqual([]);
 });
 
