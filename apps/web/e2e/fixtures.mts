@@ -67,6 +67,7 @@ import type {
 } from "@asobeast/shared";
 import { summarizeActions } from "./actions-summary.mts";
 import {
+  ESSENTIAL_ALERT_EVENTS,
   FIRST_RUN_HISTORY_DAYS,
   FIRST_RUN_STAGES,
   APP_RUN_STAGES,
@@ -3920,6 +3921,22 @@ export const EMAIL_ALERTS: EmailAlertItem[] = [
     ratingDropTenths: 1,
   },
 ];
+
+export const ESSENTIAL_ALERT_COOKIE = "e2e-essential-alert";
+
+export const ESSENTIAL_ALERT: EmailAlertItem = {
+  id: "email-essential",
+  email: "owner@example.com",
+  events: [...ESSENTIAL_ALERT_EVENTS],
+  reviewScores: [],
+  active: true,
+  confirmed: true,
+  createdAt: utcTimestampDaysAgo(1),
+  confirmDrops: true,
+  ratingDropTenths: 1,
+  rankDropThreshold: 10,
+  essential: true,
+};
 
 export const WEBHOOK_PAIR_COOKIE = "e2e-webhook-pair";
 

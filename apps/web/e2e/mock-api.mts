@@ -95,6 +95,8 @@ import {
   SUGGESTIONS,
   AWAITING_ALERT,
   AWAITING_ALERT_COOKIE,
+  ESSENTIAL_ALERT,
+  ESSENTIAL_ALERT_COOKIE,
   EMAIL_ALERTS,
   EMAIL_DELIVERIES,
   FIRST_RUN_COMPLETE,
@@ -291,6 +293,9 @@ import {
   type ChartKey,
   type ChartPage,
   isRatingDropTenths,
+  type AlertsConfig,
+  RANK_DROP_THRESHOLD_MAX,
+  RANK_DROP_THRESHOLD_MIN,
   normalizeReviewScores,
   RATING_DROP_DEFAULT_TENTHS,
   type Store,
@@ -1079,6 +1084,36 @@ function refusesEvents(events: unknown): boolean {
 function refusesRatingDropTenths(tenths: unknown): boolean {
   return tenths !== undefined && !isRatingDropTenths(tenths);
 }
+
+function alertsConfigOf(req: IncomingMessage): AlertsConfig {
+  const emailEnabled = !hasCookie(req, "e2e_smtp_off", "1");
+  return {
+    emailEnabled,
+    rankDropThreshold: 5,
+    essentialAlertsNeed: !emailEnabled
+      ? "smtp"
+      : hasCookie(req, "e2e_https_needed", "1")
+        ? "https"
+        : null,
+  };
+}
+
+function refusesThreshold(value: unknown): boolean {
+  if (value === undefined || value === null) return false;
+  return !(
+    typeof value === "number" &&
+    Number.isInteger(value) &&
+    value >= RANK_DROP_THRESHOLD_MIN &&
+    value <= RANK_DROP_THRESHOLD_MAX
+  );
+}
+
+const thresholdEnvelope = (path: string) =>
+  errorEnvelope(
+    400,
+    path,
+    `rankDropThreshold must be an integer between ${RANK_DROP_THRESHOLD_MIN} and ${RANK_DROP_THRESHOLD_MAX}`,
+  );
 
 const ratingDropTenthsEnvelope = (path: string) =>
   errorEnvelope(
@@ -3115,6 +3150,9 @@ const routes: Route[] = [
         if (refusesRatingDropTenths(body.ratingDropTenths)) {
           return json(res, 400, ratingDropTenthsEnvelope(req.url ?? "/"));
         }
+        if (refusesThreshold(body.rankDropThreshold)) {
+          return json(res, 400, thresholdEnvelope(req.url ?? "/"));
+        }
         const webhook: WebhookItem = {
           id: `hook-${webhooks.length + 1}`,
           url: body.url,
@@ -3126,6 +3164,7 @@ const routes: Route[] = [
           channel: webhookChannelOf(body.url),
           confirmDrops: body.confirmDrops === true,
           ratingDropTenths: body.ratingDropTenths ?? RATING_DROP_DEFAULT_TENTHS,
+          rankDropThreshold: body.rankDropThreshold ?? null,
         };
         webhooks.unshift(webhook);
         json(res, 201, webhook);
@@ -3160,11 +3199,17 @@ const routes: Route[] = [
         if (refusesRatingDropTenths(body.ratingDropTenths)) {
           return json(res, 400, ratingDropTenthsEnvelope(path));
         }
+        if (refusesThreshold(body.rankDropThreshold)) {
+          return json(res, 400, thresholdEnvelope(path));
+        }
         if (body.confirmDrops !== undefined) {
           webhook.confirmDrops = body.confirmDrops;
         }
         if (body.ratingDropTenths !== undefined) {
           webhook.ratingDropTenths = body.ratingDropTenths;
+        }
+        if (body.rankDropThreshold !== undefined) {
+          webhook.rankDropThreshold = body.rankDropThreshold;
         }
         json(res, 200, webhook);
       });
@@ -3173,8 +3218,7 @@ const routes: Route[] = [
   {
     method: "GET",
     pattern: /^\/alerts\/config$/,
-    handler: (_p, req, res) =>
-      json(res, 200, { emailEnabled: !hasCookie(req, "e2e_smtp_off", "1") }),
+    handler: (_p, req, res) => json(res, 200, alertsConfigOf(req)),
   },
   {
     method: "GET",
@@ -3219,11 +3263,13 @@ const routes: Route[] = [
         200,
         hasCookie(req, "e2e-empty-alerts", "1")
           ? []
-          : hasCookie(req, "e2e-unsubscribed-alert", "1")
-            ? [UNSUBSCRIBED_ALERT, ...emailAlerts]
-            : hasCookie(req, AWAITING_ALERT_COOKIE, "1")
-              ? [AWAITING_ALERT]
-              : emailAlerts,
+          : hasCookie(req, ESSENTIAL_ALERT_COOKIE, "1")
+            ? [ESSENTIAL_ALERT]
+            : hasCookie(req, "e2e-unsubscribed-alert", "1")
+              ? [UNSUBSCRIBED_ALERT, ...emailAlerts]
+              : hasCookie(req, AWAITING_ALERT_COOKIE, "1")
+                ? [AWAITING_ALERT]
+                : emailAlerts,
       ),
   },
   {
@@ -3233,6 +3279,9 @@ const routes: Route[] = [
       withBody<EmailAlertCreateRequest>(req, res, (body) => {
         if (refusesRatingDropTenths(body.ratingDropTenths)) {
           return json(res, 400, ratingDropTenthsEnvelope(req.url ?? "/"));
+        }
+        if (refusesThreshold(body.rankDropThreshold)) {
+          return json(res, 400, thresholdEnvelope(req.url ?? "/"));
         }
         const trusted = body.email === TRUSTED_RECIPIENT;
         const alert: EmailAlertItem = {
@@ -3245,6 +3294,7 @@ const routes: Route[] = [
           createdAt: new Date().toISOString(),
           confirmDrops: body.confirmDrops === true,
           ratingDropTenths: body.ratingDropTenths ?? RATING_DROP_DEFAULT_TENTHS,
+          rankDropThreshold: body.rankDropThreshold ?? null,
         };
         emailAlerts.unshift(alert);
         json(
@@ -3286,11 +3336,17 @@ const routes: Route[] = [
         if (refusesRatingDropTenths(body.ratingDropTenths)) {
           return json(res, 400, ratingDropTenthsEnvelope(path));
         }
+        if (refusesThreshold(body.rankDropThreshold)) {
+          return json(res, 400, thresholdEnvelope(path));
+        }
         if (body.confirmDrops !== undefined) {
           alert.confirmDrops = body.confirmDrops;
         }
         if (body.ratingDropTenths !== undefined) {
           alert.ratingDropTenths = body.ratingDropTenths;
+        }
+        if (body.rankDropThreshold !== undefined) {
+          alert.rankDropThreshold = body.rankDropThreshold;
         }
         json(res, 200, alert);
       });
