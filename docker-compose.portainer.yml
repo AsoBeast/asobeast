@@ -1,0 +1,30 @@
+name: asobeast
+
+services:
+  postgres:
+    extends:
+      file: docker-compose.pull.yml
+      service: postgres
+  redis:
+    extends:
+      file: docker-compose.pull.yml
+      service: redis
+  api:
+    extends:
+      file: docker-compose.pull.yml
+      service: api
+    env_file: !override
+      - path: stack.env
+        required: false
+    volumes: !reset []
+  web:
+    extends:
+      file: docker-compose.pull.yml
+      service: web
+volumes:
+  pgdata:
+  redisdata:
+networks:
+  frontend:
+  backend:
+    internal: true
