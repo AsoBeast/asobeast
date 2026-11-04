@@ -139,6 +139,12 @@ export class ListingCaptureService {
       return created;
     });
     if (pending > 0) await this.screenshotQueue.request(app.id, snapshot.id);
+    if (home && !app.isCompetitor) {
+      await this.listingAlerts.ratingDropped(
+        { id: app.id, name: normalized.title, country: app.country },
+        snapshot.capturedAt,
+      );
+    }
 
     const icons = home
       ? { before: app.iconUrl, after: normalized.iconUrl ?? null }
@@ -174,9 +180,6 @@ export class ListingCaptureService {
       await this.requestDetection(app.id, market);
     }
     if (home) {
-      if (!app.isCompetitor) {
-        await this.listingAlerts.ratingDropped(app, snapshot.capturedAt);
-      }
       await this.keywords.syncFromSnapshot(app.id);
       if (await this.releaseChangedFields(app, recorded)) {
         try {

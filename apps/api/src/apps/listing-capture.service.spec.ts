@@ -628,7 +628,7 @@ describe('ListingCaptureService market default localization', () => {
 });
 
 describe('ListingCaptureService rating drop alerts', () => {
-  it('judges the rating of a home capture once, after the changes', async () => {
+  it('judges the rating of a home capture once, before the changes', async () => {
     const recordRefresh = jest.fn().mockResolvedValue([]);
     const { service, ratingDropped } = build({ recordRefresh });
 
@@ -639,8 +639,8 @@ describe('ListingCaptureService rating drop alerts', () => {
       expect.objectContaining({ id: APP.id }),
       SNAPSHOT.capturedAt,
     );
-    expect(recordRefresh.mock.invocationCallOrder[0]).toBeLessThan(
-      ratingDropped.mock.invocationCallOrder[0],
+    expect(ratingDropped.mock.invocationCallOrder[0]).toBeLessThan(
+      recordRefresh.mock.invocationCallOrder[0],
     );
   });
 
@@ -661,5 +661,23 @@ describe('ListingCaptureService rating drop alerts', () => {
 
     await expect(service.refreshListing(APP.id)).rejects.toThrow('timeout');
     expect(ratingDropped).not.toHaveBeenCalled();
+  });
+});
+
+describe('ListingCaptureService rating drop timing', () => {
+  it('judges the rating with the captured title before the changes are recorded', async () => {
+    const recordRefresh = jest
+      .fn()
+      .mockRejectedValue(new Error('changes down'));
+    const { service, ratingDropped } = build({ recordRefresh });
+
+    await expect(service.refreshListing(APP.id)).rejects.toThrow(
+      'changes down',
+    );
+
+    expect(ratingDropped).toHaveBeenCalledWith(
+      { id: APP.id, name: 'Fixture', country: APP.country },
+      SNAPSHOT.capturedAt,
+    );
   });
 });
