@@ -160,7 +160,10 @@ test("About insights links the insights guide", async ({ page }) => {
   );
   await expect(
     dialog.getByRole("link", { name: "Read about insights" }),
-  ).toHaveAttribute("href", "https://docs.asobeast.com/guides/track-keywords");
+  ).toHaveAttribute(
+    "href",
+    "https://docs.asobeast.com/guides/track-keywords#insights-and-totals",
+  );
   await page.keyboard.press("Escape");
   await expect(
     page.getByRole("button", { name: "About insights" }),

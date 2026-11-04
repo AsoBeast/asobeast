@@ -47,6 +47,10 @@ The daily run checks every active keyword, so a newest check from today or yeste
 
 The keyword monitor can count, for each keyword, the competitors of the app that appear in the newest stored top 10 for that keyword in its market. The count reads the same SERP snapshot as the top 10 sheet and the volatility column, so it never makes a store request. It is a number from 0 to 10 when the app tracks at least one competitor and the snapshot is from today or yesterday UTC, and a dash otherwise, because a paused keyword is not checked and an older snapshot would describe a day that has passed. A competitor counts once however many times it appears. Your own app is never counted. The comparison matrix on the competitors page reads positions beyond 10 as well, so it can show a competitor that this count leaves out.
 
+## When does a keyword count as dropping?
+
+A keyword is dropping when its position got worse on each of its last three checks. The streak reads the stored checks newest first and counts each check whose position is a larger number than the one before it, or that did not find the app after a check that did. An equal or better position ends the run, and so do two checks in a row that did not find the app. The checks need not be on consecutive days, so a missed day does not reset the streak. A paused keyword, or one whose newest check is older than yesterday UTC, has no streak. The streak reads at most the last 60 checks and reaches the API as `dropStreak` on each item of the keyword list.
+
 ## How are positions charted?
 
 Ranking charts use a reversed Y axis, so position 1 sits at the top and an improving line rises. A `null` breaks the series rather than dropping it to the bottom of the chart. Every UTC day from the first check in the range to yesterday, or to today once today has a check, sits on the chart's axis. A day without a check therefore leaves a gap in the line with no marker, while a check that did not find the app leaves a gap with a hollow marker at the depth line. A ranked day between two gaps is drawn as a dot.

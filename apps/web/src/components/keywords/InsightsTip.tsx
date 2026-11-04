@@ -9,7 +9,8 @@ import {
   PAGE_ONE_CLOSE_MIN_POSITION,
 } from "@/lib/keyword-insights";
 
-export const INSIGHTS_GUIDE = "https://docs.asobeast.com/guides/track-keywords";
+export const INSIGHTS_GUIDE =
+  "https://docs.asobeast.com/guides/track-keywords#insights-and-totals";
 
 const RULES = [
   {
