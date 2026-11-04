@@ -20,11 +20,7 @@ import {
   sortDirectionParser,
 } from "@/lib/search-params";
 import { HIDDEN_KEYWORD_COLUMNS, keywordColumns } from "./keyword-columns";
-import {
-  exactSearchEmptyBody,
-  keywordSearchFilter,
-  keywordsAcrossZones,
-} from "./keyword-filters";
+import { exactSearchEmptyBody, keywordSearchFilter } from "./keyword-filters";
 import { keywordTableFeatures } from "./keyword-table-features";
 import { exportKeywords } from "./keyword-csv";
 import { tagsIn } from "@/lib/keyword-tags";
@@ -40,6 +36,7 @@ import {
 import { useSerpParams } from "./serp/use-serp-params";
 import { useKeywordColumnFilters } from "./use-zone-thresholds";
 import { KeywordMap } from "./map/KeywordMap";
+import { useKeywordsAcrossZones } from "./map/use-map-keywords";
 
 export function KeywordsTable({
   id,
@@ -141,6 +138,7 @@ export function KeywordsTable({
     selectedIds.length,
     () => setSelection({}),
   );
+  const mapKeywords = useKeywordsAcrossZones(table, view === "map");
   const isEmpty = keywords.length === 0;
   const addKeywords = useEmptiedListFocus(isEmpty);
 
@@ -166,7 +164,7 @@ export function KeywordsTable({
         />
         {view === "map" ? (
           <KeywordMap
-            keywords={keywordsAcrossZones(table)}
+            keywords={mapKeywords}
             history={{ appId: id, store, homeCountry, multiMarket }}
             market={country}
             today={today}
