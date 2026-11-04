@@ -21,11 +21,12 @@ import {
 import { directionOfKey, edgeDot, entryDot, neighbour } from "./dot-navigation";
 import { labelledIds, type MapPoint } from "./map-points";
 import {
+  dotIn,
   MapDotActionsContext,
   MapDotState,
   type MapDotActions,
 } from "./MapDot";
-import { MapOverlay, type ActiveDot } from "./MapOverlay";
+import { MapOverlay } from "./MapOverlay";
 
 const OPEN_KEYS = new Set(["Enter", " "]);
 const EDGE_KEYS: Readonly<Record<string, "first" | "last">> = {
@@ -46,10 +47,10 @@ function nextDotId(
 const isNavigationKey = (key: string): boolean =>
   directionOfKey(key) !== null || Object.hasOwn(EDGE_KEYS, key);
 
-const dotIn = (surface: HTMLElement | null, id: string) =>
-  surface?.querySelector<SVGGElement>(
-    `[data-map-keyword="${CSS.escape(id)}"]`,
-  ) ?? null;
+const keepUnless =
+  (keywordId: string) =>
+  (current: string | null): string | null =>
+    current === keywordId ? null : current;
 
 export function MapSurface({
   points,
@@ -68,7 +69,8 @@ export function MapSurface({
 }) {
   const surfaceRef = useRef<HTMLDivElement>(null);
   const anchorRef = useRef<Element | null>(null);
-  const [active, setActive] = useState<ActiveDot | null>(null);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [focusedId, setFocusedId] = useState<string | null>(null);
   const [rovingId, setRovingId] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const returnTo = useRef<string | null>(null);
@@ -79,36 +81,23 @@ export function MapSurface({
       : entryDot(points);
 
   const actions = useMemo<MapDotActions>(() => {
-    const activate = (point: MapPoint, element: Element) => {
-      const surface = surfaceRef.current?.getBoundingClientRect();
-      if (!surface) return;
-      const dot = element.getBoundingClientRect();
-      setActive({
-        point,
-        x: dot.left + dot.width / 2 - surface.left,
-        y: dot.top + dot.height / 2 - surface.top,
-        surface: { width: surface.width, height: surface.height },
-      });
-    };
-    const leave = (point: MapPoint) =>
-      setActive((current) =>
-        current?.point.keywordId === point.keywordId ? null : current,
-      );
     const open = (point: MapPoint, element: Element) => {
       if (point.depth === null) return;
       anchorRef.current = element;
       returnTo.current = point.keywordId;
-      setActive(null);
+      setHoveredId(null);
       setOpenId(point.keywordId);
     };
     return {
-      hover: activate,
-      unhover: leave,
-      focus(point, element) {
+      hover: (point) => setHoveredId(point.keywordId),
+      unhover: (point) => setHoveredId(keepUnless(point.keywordId)),
+      focus(point) {
         setRovingId(point.keywordId);
-        activate(point, element);
+        setFocusedId(point.keywordId);
       },
-      blur: leave,
+      blur(point, element) {
+        if (element.isConnected) setFocusedId(keepUnless(point.keywordId));
+      },
       open,
       key(point, event: KeyboardEvent<Element>) {
         if (OPEN_KEYS.has(event.key)) {
@@ -118,7 +107,8 @@ export function MapSurface({
           return;
         }
         if (event.key === "Escape") {
-          setActive(null);
+          setHoveredId(null);
+          setFocusedId(null);
           return;
         }
         if (!isNavigationKey(event.key)) return;
@@ -136,19 +126,26 @@ export function MapSurface({
       chosenZone: zone,
       labelled,
       rovingId: roving,
+      focusedId,
       openId,
       multiMarket: history.multiMarket,
     }),
-    [zone, labelled, roving, openId, history.multiMarket],
+    [zone, labelled, roving, focusedId, openId, history.multiMarket],
   );
   const openKeyword = openId === null ? undefined : keywords.get(openId);
+  const shownId = hoveredId ?? focusedId;
+  const shown = points.find((point) => point.keywordId === shownId) ?? null;
 
   return (
     <div ref={surfaceRef} className="relative">
       <MapDotActionsContext.Provider value={actions}>
         <MapDotState.Provider value={dotState}>{children}</MapDotState.Provider>
       </MapDotActionsContext.Provider>
-      <MapOverlay active={active} multiMarket={history.multiMarket} />
+      <MapOverlay
+        point={shown}
+        multiMarket={history.multiMarket}
+        surfaceRef={surfaceRef}
+      />
       <Popover
         open={openKeyword !== undefined}
         onOpenChange={(open) => {

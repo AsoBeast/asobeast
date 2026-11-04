@@ -1,21 +1,15 @@
 "use client";
 
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef, type RefObject } from "react";
 import { ArrowDownToLine } from "lucide-react";
 import { ZONE_LABELS } from "@/lib/keyword-zones";
+import { DOT_TARGET, dotIn } from "./MapDot";
 import {
   placeOverlay,
   pointName,
   rankWords,
   type MapPoint,
 } from "./map-points";
-
-export interface ActiveDot {
-  point: MapPoint;
-  x: number;
-  y: number;
-  surface: { width: number; height: number };
-}
 
 const capitalized = (text: string): string =>
   `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
@@ -29,27 +23,40 @@ function OverlayRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+function centreIn(element: Element, surface: DOMRect) {
+  const box = element.getBoundingClientRect();
+  return {
+    x: box.left + box.width / 2 - surface.left,
+    y: box.top + box.height / 2 - surface.top,
+  };
+}
+
 export function MapOverlay({
-  active,
+  point,
   multiMarket,
+  surfaceRef,
 }: {
-  active: ActiveDot | null;
+  point: MapPoint | null;
   multiMarket: boolean;
+  surfaceRef: RefObject<HTMLElement | null>;
 }) {
   const overlayRef = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     const node = overlayRef.current;
-    if (node === null || active === null) return;
+    const surface = surfaceRef.current;
+    if (node === null || surface === null || point === null) return;
+    const target = dotIn(surface, point.keywordId)?.querySelector(DOT_TARGET);
+    if (!target) return;
+    const box = surface.getBoundingClientRect();
     const position = placeOverlay(
-      active,
+      centreIn(target, box),
       { width: node.offsetWidth, height: node.offsetHeight },
-      active.surface,
+      { width: box.width, height: box.height },
     );
     node.style.left = `${position.left}px`;
     node.style.top = `${position.top}px`;
-  }, [active]);
-  if (active === null) return null;
-  const { point } = active;
+  }, [point, surfaceRef]);
+  if (point === null) return null;
   return (
     <div
       ref={overlayRef}

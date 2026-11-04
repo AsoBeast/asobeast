@@ -19,6 +19,7 @@ export interface MapDotStateValue {
   chosenZone: KeywordZone | null;
   labelled: ReadonlySet<string>;
   rovingId: string | null;
+  focusedId: string | null;
   openId: string | null;
   multiMarket: boolean;
 }
@@ -27,20 +28,28 @@ export const MapDotState = createContext<MapDotStateValue>({
   chosenZone: null,
   labelled: new Set(),
   rovingId: null,
+  focusedId: null,
   openId: null,
   multiMarket: false,
 });
 
 export interface MapDotActions {
-  hover(point: MapPoint, element: Element): void;
+  hover(point: MapPoint): void;
   unhover(point: MapPoint): void;
-  focus(point: MapPoint, element: Element): void;
-  blur(point: MapPoint): void;
+  focus(point: MapPoint): void;
+  blur(point: MapPoint, element: Element): void;
   key(point: MapPoint, event: KeyboardEvent<Element>): void;
   open(point: MapPoint, element: Element): void;
 }
 
 export const MapDotActionsContext = createContext<MapDotActions | null>(null);
+
+export const dotIn = (surface: HTMLElement | null, keywordId: string) =>
+  surface?.querySelector<SVGGElement>(
+    `[data-map-keyword="${CSS.escape(keywordId)}"]`,
+  ) ?? null;
+
+export const DOT_TARGET = "circle";
 
 export function DotGlyph({
   ranked,
@@ -95,7 +104,7 @@ function DotLabel({ point }: { point: MapPoint }) {
 }
 
 export function MapDotShape({ cx, cy, payload }: ScatterShapeProps) {
-  const { chosenZone, labelled, rovingId, openId, multiMarket } =
+  const { chosenZone, labelled, rovingId, focusedId, openId, multiMarket } =
     useContext(MapDotState);
   const actions = useContext(MapDotActionsContext);
   if (cx === undefined || cy === undefined || !isMapPoint(payload)) {
@@ -105,16 +114,25 @@ export function MapDotShape({ cx, cy, payload }: ScatterShapeProps) {
   const checked = payload.depth !== null;
   return (
     <g
+      ref={(node) => {
+        if (
+          node !== null &&
+          focusedId === payload.keywordId &&
+          document.activeElement === document.body
+        ) {
+          node.focus();
+        }
+      }}
       className="group outline-none"
       role={checked ? "button" : "img"}
       tabIndex={rovingId === payload.keywordId ? 0 : -1}
       aria-label={dotName(payload, multiMarket)}
       aria-haspopup={checked ? "dialog" : undefined}
       aria-expanded={checked ? openId === payload.keywordId : undefined}
-      onPointerEnter={(event) => actions?.hover(payload, event.currentTarget)}
+      onPointerEnter={() => actions?.hover(payload)}
       onPointerLeave={() => actions?.unhover(payload)}
-      onFocus={(event) => actions?.focus(payload, event.currentTarget)}
-      onBlur={() => actions?.blur(payload)}
+      onFocus={() => actions?.focus(payload)}
+      onBlur={(event) => actions?.blur(payload, event.currentTarget)}
       onKeyDown={(event) => actions?.key(payload, event)}
       onClick={(event) => actions?.open(payload, event.currentTarget)}
       transform={`translate(${cx} ${cy})`}

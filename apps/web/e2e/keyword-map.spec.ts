@@ -810,6 +810,8 @@ test.describe("zones and thresholds", () => {
 
 const dot = (page: Page, id: string) =>
   page.locator(`[data-map-keyword="${id}"]`);
+const dotTarget = (page: Page, id: string) =>
+  dot(page, id).locator("circle").first();
 const overlay = (page: Page) => page.locator('[data-slot="map-overlay"]');
 const activeDot = (page: Page) =>
   page.evaluate(
@@ -1078,6 +1080,67 @@ test.describe("dots", () => {
     await expect(
       page.getByRole("dialog", { name: "Position history focus timer" }),
     ).toBeVisible();
+  });
+});
+
+const KEYWORDS_REFETCH = /\/api\/backend\/apps\/app-map\/keywords\?/;
+
+async function answerRefetch(
+  page: Page,
+  edit: (rows: { keywordId: string; volume: number | null }[]) => unknown,
+) {
+  await page.route(KEYWORDS_REFETCH, async (route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    const response = await route.fetch();
+    await route.fulfill({ response, json: edit(await response.json()) });
+  });
+}
+
+test.describe("the overlay and the list it reads", () => {
+  test.setTimeout(60_000);
+
+  test("a refetch that changes a focused keyword updates its overlay", async ({
+    page,
+  }) => {
+    await page.goto(MAP_URL);
+    await dot(page, "kw-map-1").focus();
+    await expect(overlay(page)).toContainText(/Popularity\s*62/);
+
+    await answerRefetch(page, (rows) =>
+      rows.map((row) =>
+        row.keywordId === "kw-map-1" ? { ...row, volume: 70 } : row,
+      ),
+    );
+
+    await expect(overlay(page)).toContainText(/Popularity\s*70/, {
+      timeout: 25_000,
+    });
+    await expect(dot(page, "kw-map-1")).toBeFocused();
+  });
+
+  test("the overlay sits beside a labelled dot, not beside its label", async ({
+    page,
+  }) => {
+    await page.goto(MAP_URL);
+    await dot(page, "kw-map-1").focus();
+    const glyph = await dotTarget(page, "kw-map-1").boundingBox();
+    const box = await overlay(page).boundingBox();
+    if (!glyph || !box) throw new Error("no boxes");
+
+    expect(Math.abs(box.x - (glyph.x + glyph.width / 2 + 8))).toBeLessThan(2);
+  });
+
+  test("a focused dot shows its overlay again after another is hovered", async ({
+    page,
+  }) => {
+    await page.goto(MAP_URL);
+    await dot(page, "kw-map-1").focus();
+    await dotTarget(page, "kw-map-2").hover();
+    await expect(overlay(page)).toContainText("pomodoro app");
+
+    await page.mouse.move(0, 0);
+
+    await expect(overlay(page)).toContainText("focus timer");
   });
 });
 
