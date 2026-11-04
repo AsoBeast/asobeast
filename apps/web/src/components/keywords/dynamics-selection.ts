@@ -7,6 +7,12 @@ export interface ChartedSelection {
   charted: string[];
 }
 
+export const AUTO_SEED_COUNT = 3;
+
+export function defaultSeed(tracked: readonly TrackedKeywordItem[]): string[] {
+  return tracked.slice(0, AUTO_SEED_COUNT).map((item) => item.keywordId);
+}
+
 export function chartedSelection(
   selected: readonly string[],
   tracked: TrackedKeywordItem[],

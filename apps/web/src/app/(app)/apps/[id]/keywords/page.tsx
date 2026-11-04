@@ -1,7 +1,10 @@
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import type { TrackedKeywordItem } from "@asobeast/shared";
 import { KeywordsWorkspace } from "@/components/keywords/KeywordsWorkspace";
-import { chartedSelection } from "@/components/keywords/dynamics-selection";
+import {
+  chartedSelection,
+  defaultSeed,
+} from "@/components/keywords/dynamics-selection";
 import { hasMarketReads, ownsKeywordFields } from "@/lib/app-localizations";
 import { getQueryClient } from "@/lib/get-query-client";
 import { queryMarket } from "@/lib/market";
@@ -19,7 +22,7 @@ import {
   combinationParsers,
   COMBINATION_URL_KEYS,
   countryParser,
-  keywordIdsParser,
+  keywordChartSelectionParser,
   rangeParser,
 } from "@/lib/search-params";
 
@@ -45,7 +48,7 @@ export default async function KeywordsPage({
   const combinationsOpen = combinationParsers.open.parseServerSide(
     sp[COMBINATION_URL_KEYS.open],
   );
-  const selectedKeywords = keywordIdsParser.parseServerSide(sp.keywords);
+  const selection = keywordChartSelectionParser.parseServerSide(sp.keywords);
   const range = rangeParser.parseServerSide(sp.range);
 
   await Promise.all([
@@ -55,26 +58,26 @@ export default async function KeywordsPage({
       ? queryClient.prefetchQuery(keywordFieldOptions(id))
       : null,
   ]);
-  if (selectedKeywords.length > 0) {
-    const tracked =
-      queryClient.getQueryData<TrackedKeywordItem[]>(
-        keywordsOptions(id, market).queryKey,
-      ) ?? [];
-    const { charted } = chartedSelection(selectedKeywords, tracked);
-    if (charted.length > 0) {
-      await Promise.all([
-        queryClient.prefetchQuery(
-          rankingsOptions(id, { ...presetToRange(range), keywordIds: charted }),
-        ),
-        queryClient.prefetchQuery(
-          changesOptions(
-            id,
-            presetDays(range),
-            queryMarket(market, app.country),
-          ),
-        ),
-      ]);
-    }
+  const tracked =
+    queryClient.getQueryData<TrackedKeywordItem[]>(
+      keywordsOptions(id, market).queryKey,
+    ) ?? [];
+  const charted =
+    selection.mode === "hidden"
+      ? []
+      : chartedSelection(
+          selection.mode === "chart" ? selection.ids : defaultSeed(tracked),
+          tracked,
+        ).charted;
+  if (charted.length > 0) {
+    await Promise.all([
+      queryClient.prefetchQuery(
+        rankingsOptions(id, { ...presetToRange(range), keywordIds: charted }),
+      ),
+      queryClient.prefetchQuery(
+        changesOptions(id, presetDays(range), queryMarket(market, app.country)),
+      ),
+    ]);
   }
   const keywordFields = ownsKeywordFields(app);
   if (keywordFields && hasMarketReads(app.country, market)) {

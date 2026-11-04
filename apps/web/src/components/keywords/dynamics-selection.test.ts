@@ -4,6 +4,7 @@ import {
   chartLimitLine,
   cappingLine,
   chartedSelection,
+  defaultSeed,
   isCapped,
   overChartLimit,
   withoutKeyword,
@@ -110,6 +111,25 @@ describe("withoutKeyword", () => {
 
   it("empties when the last id goes", () => {
     expect(withoutKeyword(["kw-2"], "kw-2")).toEqual([]);
+  });
+});
+
+describe("defaultSeed", () => {
+  it("charts the first three keywords in the list's own order", () => {
+    expect(defaultSeed(tracked)).toEqual(["kw-1", "kw-2", "kw-3"]);
+  });
+
+  it("keeps the list order even when opportunity ranks differ", () => {
+    const shuffled = [tracked[4], tracked[0], tracked[2], tracked[1]];
+    expect(defaultSeed(shuffled)).toEqual(["kw-5", "kw-1", "kw-3"]);
+  });
+
+  it("charts what exists when the market tracks fewer than three", () => {
+    expect(defaultSeed(tracked.slice(0, 2))).toEqual(["kw-1", "kw-2"]);
+  });
+
+  it("charts nothing for an empty market", () => {
+    expect(defaultSeed([])).toEqual([]);
   });
 });
 

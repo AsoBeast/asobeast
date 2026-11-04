@@ -1,9 +1,17 @@
 "use client";
 
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useQuery,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
 import type { TrackedKeywordItem } from "@asobeast/shared";
-import { MIN_TREND_POINTS } from "@/components/charts/ChartStates";
+import {
+  ChartSkeleton,
+  MIN_TREND_POINTS,
+} from "@/components/charts/ChartStates";
+import { CHART_HEIGHT } from "@/components/charts/theme";
 import { buildRankingChart } from "@/components/charts/pivot";
 import { RankingChart } from "@/components/charts/RankingChart";
 import {
@@ -28,7 +36,7 @@ import {
   WIDEST_RANGE,
   type RangePreset,
 } from "@/lib/ranges";
-import { keywordIdsParser } from "@/lib/search-params";
+import { keywordChartSelectionParser } from "@/lib/search-params";
 import { survivingNeighbour, useFocusAfterCommit } from "@/lib/focus-handoff";
 import { listingChangeDays } from "./position-history";
 import {
@@ -93,17 +101,34 @@ function KeywordDynamicsBody({
   onClear: () => void;
   onWiden: () => void;
 }) {
-  const [, setKeywords] = useQueryState("keywords", keywordIdsParser);
+  const [, setKeywords] = useQueryState(
+    "keywords",
+    keywordChartSelectionParser,
+  );
   const focusAfterCommit = useFocusAfterCommit();
   const selection = chartedSelection(selected, tracked);
   const bounds = presetToRange(range);
-  const { data } = useSuspenseQuery(
-    rankingsOptions(id, { ...bounds, keywordIds: selection.charted }),
-  );
+  const rankingsRead = useQuery({
+    ...rankingsOptions(id, { ...bounds, keywordIds: selection.charted }),
+    placeholderData: keepPreviousData,
+  });
   const changesRead = useQuery(
     changesOptions(id, presetDays(range), queryMarket(market, homeCountry)),
   );
 
+  if (failedRead(rankingsRead)) {
+    return (
+      <InlineQueryError
+        message="Could not load the rank positions."
+        read={rankingsRead}
+      />
+    );
+  }
+  if (!rankingsRead.data) {
+    return <ChartSkeleton height={CHART_HEIGHT.hero} />;
+  }
+
+  const data = rankingsRead.data;
   const chart = buildRankingChart(data.series, bounds.to);
   const everChecked = tracked.some(
     (item) =>
@@ -130,7 +155,7 @@ function KeywordDynamicsBody({
         : document.getElementById(dynamicsChipId(neighbour)),
       trigger,
     );
-    void setKeywords(remaining);
+    void setKeywords({ mode: "chart", ids: remaining });
   };
 
   return (

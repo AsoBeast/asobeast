@@ -196,7 +196,7 @@ test("E-PH-20 a failed listing changes read keeps the chart and offers a retry",
   await page.route(CHANGES, (route) =>
     route.fulfill({ status: 500, json: { statusCode: 500, message: "boom" } }),
   );
-  await page.goto(PAGE);
+  await page.goto(`${PAGE}?range=7d`);
   const popover = await openHistory(page, "focus timer");
 
   await expect(chart(page, "focus timer")).toBeVisible();

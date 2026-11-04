@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   countryParser,
-  keywordIdsParser,
+  keywordChartSelectionParser,
   keywordViewParser,
 } from "@/lib/search-params";
 import { AddKeywordsDialog } from "./AddKeywordsDialog";
@@ -34,7 +34,7 @@ export function KeywordsWorkspace({
 }) {
   const [country] = useQueryState("country", countryParser);
   const [view] = useQueryState("view", keywordViewParser);
-  const [selected] = useQueryState("keywords", keywordIdsParser);
+  const [selection] = useQueryState("keywords", keywordChartSelectionParser);
   const market = country || homeCountry;
 
   return (
@@ -78,12 +78,15 @@ export function KeywordsWorkspace({
           different public signals and are not directly comparable.
         </AlertDescription>
       </Alert>
-      {selected.length > 0 ? (
-        <KeywordDynamicsPanel
-          id={id}
-          market={market}
-          homeCountry={homeCountry}
-        />
+      {selection.mode !== "hidden" ? (
+        <Suspense fallback={null}>
+          <KeywordDynamicsPanel
+            id={id}
+            market={market}
+            homeCountry={homeCountry}
+            selection={selection}
+          />
+        </Suspense>
       ) : null}
       <Suspense
         fallback={

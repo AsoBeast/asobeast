@@ -10,6 +10,7 @@ const MOCK_API_URL = `http://localhost:${process.env.MOCK_API_PORT ?? 4100}`;
 const PANEL = "Keyword dynamics";
 const CHART = "Keyword rank positions";
 const SERIES = "Charted series";
+const LIMIT_HINT = "Select 8 or fewer keywords to chart.";
 
 test.afterEach(async ({ request }) => {
   await request.post(`${MOCK_API_URL}/__reset/keywords/app-1`, {
@@ -26,6 +27,11 @@ const chartSeries = (page: Page) =>
     .getByRole("list", { name: SERIES })
     .getByRole("listitem");
 
+const panelIsClosed = async (page: Page) => {
+  await expect(page.getByRole("region", { name: PANEL })).toHaveCount(0);
+  await expect(page).toHaveURL(/keywords=$/);
+};
+
 async function openDynamics(page: Page, names: string[]) {
   await page.goto("/apps/app-1/keywords");
   for (const name of names) {
@@ -37,6 +43,41 @@ async function openDynamics(page: Page, names: string[]) {
   await expect(page.getByRole("region", { name: CHART })).toBeVisible();
   return panel;
 }
+
+test("a fresh visit opens the panel with the market's first three keywords", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/keywords");
+
+  await expect(page.getByRole("region", { name: PANEL })).toBeVisible();
+  await expect(page.getByRole("region", { name: CHART })).toBeVisible();
+  await expect(chartSeries(page)).toHaveText([
+    "focus timer (US)",
+    "pomodoro (US)",
+    "study timer (US)",
+  ]);
+  await expect(page).not.toHaveURL(/keywords=/);
+  await expect(page).not.toHaveURL(/range=/);
+});
+
+test("a market with fewer than three keywords charts what exists", async ({
+  page,
+  context,
+}) => {
+  await seedCookies(context, { [PL_HISTORY_COOKIE]: "1" });
+  await page.goto("/apps/app-1/keywords?country=pl");
+
+  await expect(page.getByRole("region", { name: PANEL })).toBeVisible();
+  await expect(chartSeries(page)).toHaveText(["minutnik skupienia (PL)"]);
+  await expect(page).not.toHaveURL(/keywords=/);
+});
+
+test("an empty market does not open the panel on its own", async ({ page }) => {
+  await page.goto("/apps/app-1/keywords?country=gb");
+
+  await expect(page.getByRole("region", { name: PANEL })).toHaveCount(0);
+  await expect(page).not.toHaveURL(/keywords=/);
+});
 
 test("the bulk bar opens the dynamics panel between the toolbar and the table", async ({
   page,
@@ -99,9 +140,7 @@ test("the bulk bar refuses to chart more than eight keywords", async ({
   const dynamics = page.getByRole("button", { name: "Show dynamics" });
   await expect(page.getByText("10 selected")).toBeVisible();
   await expect(dynamics).toHaveAttribute("aria-disabled", "true");
-  await expect(
-    page.getByText("Select 8 or fewer keywords to chart."),
-  ).toBeVisible();
+  await expect(page.getByText(LIMIT_HINT)).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Pause", exact: true }),
   ).not.toHaveAttribute("aria-disabled");
@@ -110,13 +149,29 @@ test("the bulk bar refuses to chart more than eight keywords", async ({
     await checkboxes.nth(index).uncheck();
   }
   await expect(dynamics).not.toHaveAttribute("aria-disabled");
-  await expect(
-    page.getByText("Select 8 or fewer keywords to chart."),
-  ).toHaveCount(0);
+  await expect(page.getByText(LIMIT_HINT)).toHaveCount(0);
 
   await dynamics.click();
   await expect(page.getByRole("region", { name: PANEL })).toBeVisible();
   await expect(page.getByText("Charting 8 of 8 keywords.")).toHaveCount(0);
+});
+
+test("a shared link with more than eight keywords charts the first eight and says so", async ({
+  page,
+}) => {
+  const ids = Array.from({ length: 9 }, (_, index) => `kw-bulk-${index + 1}`);
+  await page.goto(`/apps/app-bulk/keywords?keywords=${ids.join(",")}`);
+
+  await expect(page.getByRole("region", { name: PANEL })).toBeVisible();
+  await expect(page.getByText("Charting 8 of 9 keywords.")).toBeVisible();
+  await expect(
+    page
+      .getByRole("region", { name: PANEL })
+      .getByRole("group", { name: "Charted keywords" })
+      .getByRole("button"),
+  ).toHaveCount(9);
+  const selected = new URL(page.url()).searchParams.get("keywords") ?? "";
+  expect(selected.split(",")).toHaveLength(9);
 });
 
 test("removing a chip keeps the line out of the chart and the url", async ({
@@ -135,7 +190,7 @@ test("removing a chip keeps the line out of the chart and the url", async ({
   ).toBeFocused();
 });
 
-test("removing the last chip and Clear close the panel and clean the url", async ({
+test("removing the last chip and Clear keep the panel closed", async ({
   page,
 }) => {
   const panel = await openDynamics(page, ["focus timer", "pomodoro"]);
@@ -148,11 +203,14 @@ test("removing the last chip and Clear close the panel and clean the url", async
     .click();
 
   await expect(panel).toHaveCount(0);
-  await expect(page).not.toHaveURL(/keywords=/);
+  await expect(page).toHaveURL(/keywords=$/);
   await expect(page).not.toHaveURL(/range=/);
   await expect(
     page.getByRole("button", { name: "Show dynamics" }),
   ).toBeFocused();
+
+  await page.reload();
+  await panelIsClosed(page);
 
   await page.getByRole("checkbox", { name: "Select focus timer" }).check();
   await page.getByRole("button", { name: "Show dynamics" }).click();
@@ -167,8 +225,11 @@ test("removing the last chip and Clear close the panel and clean the url", async
     .click();
 
   await expect(page.getByRole("region", { name: PANEL })).toHaveCount(0);
-  await expect(page).not.toHaveURL(/keywords=/);
+  await expect(page).toHaveURL(/keywords=$/);
   await expect(page).not.toHaveURL(/range=/);
+
+  await page.reload();
+  await panelIsClosed(page);
 });
 
 test("table sorting, filtering and bulk actions leave an open chart alone", async ({
