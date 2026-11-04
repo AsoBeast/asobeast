@@ -54,9 +54,10 @@ export const keywordWords = (keyword: string): string[] => [
 
 export function wordMatcher(value: string): (word: string) => KeywordWordMatch {
   const exact = normalizeText(value);
-  const folded = searchKey(value);
+  let folded: string | undefined;
   return (word) => {
     if (containsTerm(exact, word)) return 'exact';
+    folded ??= searchKey(value);
     return containsTerm(folded, searchKey(word)) ? 'folded' : 'none';
   };
 }
