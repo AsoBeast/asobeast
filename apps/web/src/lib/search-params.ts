@@ -46,6 +46,7 @@ import {
 } from "./keyword-combinations";
 import { DEFAULT_MCP_CLIENT, MCP_CLIENTS } from "./mcp-snippets";
 import { GRADES } from "./grade";
+import { KEYWORD_ZONES } from "./keyword-zones";
 import { POSITION_BANDS, VERSUS, type ActivityStatus } from "./table/facets";
 
 export const planParam = parseAsStringLiteral(PAID_PLAN_NAMES);
@@ -91,6 +92,8 @@ export const positionBandParser = parseAsArrayOf(
 
 export const keywordTagsParser = parseAsArrayOf(parseAsString).withDefault([]);
 
+export const keywordZoneParser = parseAsStringLiteral(KEYWORD_ZONES);
+
 export const keywordFilterParsers = {
   q: searchParser,
   source: keywordSourceParser,
@@ -101,6 +104,7 @@ export const keywordFilterParsers = {
   opp: gradeFacetParser,
   pos: positionBandParser,
   tag: keywordTagsParser,
+  zone: keywordZoneParser,
 };
 
 export const COMBINATION_WORD_FILTERS = [
@@ -193,6 +197,13 @@ export type AppSort = (typeof APP_SORTS)[number];
 
 export const appSortParser =
   parseAsStringLiteral(APP_SORTS).withDefault("visibility");
+
+export const KEYWORD_VIEWS = ["table", "map"] as const;
+
+export type KeywordView = (typeof KEYWORD_VIEWS)[number];
+
+export const keywordViewParser =
+  parseAsStringLiteral(KEYWORD_VIEWS).withDefault("table");
 
 export const APP_VIEWS = ["cards", "table"] as const;
 

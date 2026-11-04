@@ -6,6 +6,7 @@ import {
 import { setTimeout as delay } from "node:timers/promises";
 import { BREAKDOWNS } from "./keyword-breakdowns.mts";
 import { SERP_HISTORY, serpOnDay } from "./serp-history.mts";
+import "./keyword-map.mts";
 import { planMockImport } from "./keyword-import.mts";
 import { summarizeActions } from "./actions-summary.mts";
 import { echoRequest } from "./echo-request.mts";

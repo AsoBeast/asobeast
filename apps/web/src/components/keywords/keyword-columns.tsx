@@ -21,6 +21,7 @@ import {
 import { DeltaChip } from "@/components/ui/delta-chip";
 import { SortableHeader } from "@/components/data-table/SortableHeader";
 import { tagsIn } from "@/lib/keyword-tags";
+import { keywordZoneFilter } from "./keyword-filters";
 import { KeywordRowActions } from "./KeywordRowActions";
 import type { PositionHistoryContext } from "./PositionHistoryPopover";
 import {
@@ -62,7 +63,11 @@ import { nullsLast } from "@/lib/table/sorting";
 
 export const SELECT_ALL_KEYWORDS = "Select all keywords";
 
-export const HIDDEN_KEYWORD_COLUMNS = { bucket: false, status: false };
+export const HIDDEN_KEYWORD_COLUMNS = {
+  bucket: false,
+  status: false,
+  zone: false,
+};
 
 function gradeFilter(
   metric: GradeMetric,
@@ -193,6 +198,12 @@ function filterColumns() {
       enableSorting: false,
       filterFn: (row, _id, status: ActivityStatus) =>
         statusFilter(row.original, status),
+    }),
+    columnHelper.accessor("keywordId", {
+      id: "zone",
+      enableHiding: false,
+      enableSorting: false,
+      filterFn: keywordZoneFilter,
     }),
   ];
 }

@@ -30,6 +30,12 @@ describe("chartImageFilename", () => {
     );
   });
 
+  it("names the opportunity map after the app without a keyword", () => {
+    expect(chartImageFilename({ ...base, chart: "opportunity-map" })).toBe(
+      "asobeast-opportunity-map-focus-timer-2026-09-28-2026-10-28.png",
+    );
+  });
+
   it("adds the keyword of a position history", () => {
     expect(
       chartImageFilename({

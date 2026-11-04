@@ -39,6 +39,27 @@ const POPOVERS: NamedPopover[] = [
         .click(),
   },
   {
+    name: "Zone thresholds",
+    path: "/apps/app-map/keywords?view=map",
+    open: (page) => page.getByRole("button", { name: "Thresholds" }).click(),
+  },
+  {
+    name: "Quick wins",
+    where: "the opportunity map legend",
+    path: "/apps/app-map/keywords?view=map",
+    open: (page) =>
+      page.getByRole("button", { name: "About Quick wins" }).click(),
+  },
+  {
+    name: "Position history focus timer",
+    where: "the opportunity map",
+    path: "/apps/app-map/keywords?view=map",
+    open: async (page) => {
+      await page.locator('[data-map-keyword="kw-map-1"]').focus();
+      await page.keyboard.press("Enter");
+    },
+  },
+  {
     name: "Choose keywords",
     path: "/apps/app-1/rankings",
     open: (page) => page.getByRole("button", { name: /selected$/ }).click(),

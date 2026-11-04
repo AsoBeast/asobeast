@@ -583,3 +583,98 @@ test("a translated sidebar opens what's new and clears its dot", async ({
   await expect(item).toHaveAttribute("data-unread", "false");
   expect(errors).toEqual([]);
 });
+
+test.describe("a translated opportunity map", () => {
+  const MAP = "/apps/app-map/keywords?view=map";
+  const toggle = (page: Page, name: string) =>
+    page
+      .getByRole("list", { name: "Zones" })
+      .getByRole("button", { name: new RegExp(`^${name} \\d+ keyword`) });
+  const mapRegion = (page: Page) =>
+    page.getByRole("region", { name: "Keyword opportunity map" });
+  const openTranslated = async (page: Page) => {
+    await page.goto(MAP);
+    await hydrated(toggle(page, "Quick wins"));
+    await translateText(page);
+  };
+
+  test("keeps working when a zone is pressed", async ({ page }) => {
+    const errors = collectDomErrors(page);
+    await openTranslated(page);
+
+    await toggle(page, "Quick wins").click();
+
+    await expect(page).toHaveURL(/zone=quickWins/);
+    await expect(toggle(page, "Quick wins")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await expect(
+      page.getByRole("checkbox", { name: /^Select (?!all keywords)/ }),
+    ).toHaveCount(8);
+    expect(errors).toEqual([]);
+  });
+
+  test("follows a threshold", async ({ page }) => {
+    const errors = collectDomErrors(page);
+    await openTranslated(page);
+
+    await page.getByRole("button", { name: "Thresholds" }).click();
+    const dialog = page.getByRole("dialog", { name: "Zone thresholds" });
+    await dialog
+      .getByRole("spinbutton", { name: "Popularity at least" })
+      .fill("30");
+
+    await expect(toggle(page, "Quick wins")).toHaveAccessibleName(
+      "Quick wins 6 keywords",
+    );
+    await expect(mapRegion(page)).toContainText("Popularity 30");
+    await expect(dialog).toBeVisible();
+    expect(errors).toEqual([]);
+  });
+
+  test("switches view", async ({ page }) => {
+    const errors = collectDomErrors(page);
+    await openTranslated(page);
+
+    await page.getByRole("tab", { name: "Table" }).click();
+    await expect(mapRegion(page)).toHaveCount(0);
+    await page.getByRole("tab", { name: "Map" }).click();
+
+    await expect(mapRegion(page)).toBeVisible();
+    expect(errors).toEqual([]);
+  });
+
+  test("follows a filter", async ({ page }) => {
+    const errors = collectDomErrors(page);
+    await openTranslated(page);
+
+    await page.getByRole("button", { name: "Filter by tags" }).click();
+    await page.getByRole("option", { name: /^core/ }).click();
+    await page.keyboard.press("Escape");
+
+    await expect(page.locator("[data-map-keyword]")).toHaveCount(4);
+    await expect(toggle(page, "Quick wins")).toHaveAccessibleName(
+      "Quick wins 3 keywords",
+    );
+    await expect(toggle(page, "Low priority")).toHaveAccessibleName(
+      "Low priority 0 keywords",
+    );
+    expect(errors).toEqual([]);
+  });
+
+  test("shows the overlay of a hovered dot while another has focus", async ({
+    page,
+  }) => {
+    const errors = collectDomErrors(page);
+    await openTranslated(page);
+
+    await page.locator('[data-map-keyword="kw-map-1"]').focus();
+    await page.locator('[data-map-keyword="kw-map-2"]').hover();
+
+    await expect(page.locator('[data-slot="map-overlay"]')).toContainText(
+      "pomodoro app",
+    );
+    expect(errors).toEqual([]);
+  });
+});

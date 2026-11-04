@@ -1,3 +1,5 @@
+import { ChartSkeleton } from "@/components/charts/ChartStates";
+import { CHART_HEIGHT } from "@/components/charts/theme";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function KeywordsTableSkeleton() {
@@ -59,6 +61,21 @@ export function KeywordCombinationsSkeleton() {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+export function KeywordMapSkeleton() {
+  return (
+    <div
+      data-slot="keyword-map-skeleton"
+      className="flex flex-col gap-4 rounded-xl border p-4"
+    >
+      <div className="flex items-center justify-between gap-4">
+        <Skeleton className="h-5 w-48" />
+        <Skeleton className="h-8 w-28" />
+      </div>
+      <ChartSkeleton height={CHART_HEIGHT.hero} />
     </div>
   );
 }

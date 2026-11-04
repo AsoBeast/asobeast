@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useState, type ComponentProps } from "react";
 import { ChartLine, History } from "lucide-react";
 import {
   keywordLabel,
@@ -30,7 +30,7 @@ export interface PositionHistoryContext {
   multiMarket: boolean;
 }
 
-interface PositionHistoryProps extends PositionHistoryContext {
+export interface PositionHistoryProps extends PositionHistoryContext {
   keyword: TrackedKeywordItem;
   label: string;
   staleOn: string | null;
@@ -103,9 +103,29 @@ function PositionHistoryContent({
   );
 }
 
+export function PositionHistoryPopoverContent({
+  onCloseAutoFocus,
+  ...props
+}: PositionHistoryProps & {
+  onCloseAutoFocus?: ComponentProps<typeof PopoverContent>["onCloseAutoFocus"];
+}) {
+  const ids = { eyebrow: useId(), title: useId(), market: useId() };
+  return (
+    <PopoverContent
+      align="end"
+      collisionPadding={16}
+      aria-labelledby={`${ids.eyebrow} ${ids.title}`}
+      aria-describedby={ids.market}
+      onCloseAutoFocus={onCloseAutoFocus}
+      className="max-h-(--radix-popover-content-available-height) w-md max-w-(--radix-popover-content-available-width) gap-2.5 overflow-y-auto p-3"
+    >
+      <PositionHistoryContent {...props} ids={ids} />
+    </PopoverContent>
+  );
+}
+
 export function PositionHistoryPopover(props: PositionHistoryProps) {
   const { keyword, staleOn, multiMarket } = props;
-  const ids = { eyebrow: useId(), title: useId(), market: useId() };
   const name = `Position history: ${multiMarket ? keywordLabel(keyword) : keyword.text}`;
   const Icon = staleOn === null ? ChartLine : History;
   return (
@@ -122,15 +142,7 @@ export function PositionHistoryPopover(props: PositionHistoryProps) {
           <Icon aria-hidden />
         </Button>
       </PopoverTrigger>
-      <PopoverContent
-        align="end"
-        collisionPadding={16}
-        aria-labelledby={`${ids.eyebrow} ${ids.title}`}
-        aria-describedby={ids.market}
-        className="max-h-(--radix-popover-content-available-height) w-md max-w-(--radix-popover-content-available-width) gap-2.5 overflow-y-auto p-3"
-      >
-        <PositionHistoryContent {...props} ids={ids} />
-      </PopoverContent>
+      <PositionHistoryPopoverContent {...props} />
     </Popover>
   );
 }

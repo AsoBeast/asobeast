@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { TrackedKeywordItem } from "@asobeast/shared";
-import { hasFloorAnswer, isScoreOutdated, scoreValue } from "./keyword-scores";
+import {
+  hasFloorAnswer,
+  isScoreOutdated,
+  scorePair,
+  scoreValue,
+} from "./keyword-scores";
 
 function keyword(scores: Partial<TrackedKeywordItem>): TrackedKeywordItem {
   return {
@@ -103,5 +108,26 @@ describe("hasFloorAnswer", () => {
   it("reads no floor answer without signals", () => {
     expect(hasFloorAnswer(keyword({ scoreSignals: null }))).toBe(false);
     expect(hasFloorAnswer(keyword({}))).toBe(false);
+  });
+});
+
+describe("scorePair", () => {
+  it.each<[Partial<TrackedKeywordItem>, ReturnType<typeof scorePair>]>([
+    [
+      { volume: 62, difficulty: 1.8 },
+      { popularity: 62, difficulty: 18 },
+    ],
+    [
+      { volume: 19.5, difficulty: 2.54 },
+      { popularity: 20, difficulty: 25 },
+    ],
+    [
+      { volume: 5000, difficulty: 2 },
+      { popularity: 100, difficulty: 20 },
+    ],
+    [{ volume: null, difficulty: 2 }, null],
+    [{ volume: 40, difficulty: null }, null],
+  ])("reads %j as %j", (scores, expected) => {
+    expect(scorePair(keyword(scores))).toEqual(expected);
   });
 });

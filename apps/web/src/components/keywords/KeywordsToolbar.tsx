@@ -1,13 +1,14 @@
 "use client";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { Plus, X } from "lucide-react";
+import { ChartScatter, Plus, TableProperties, X } from "lucide-react";
 import { useQueryState } from "nuqs";
 import type { Store } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import { formatCountry } from "@/lib/format";
 import { keywordCountriesOptions, keywordsOptions } from "@/lib/queries";
-import { countryParser } from "@/lib/search-params";
+import { countryParser, keywordViewParser } from "@/lib/search-params";
 import { cn } from "@/lib/utils";
 import { AddKeywordsDialog } from "./AddKeywordsDialog";
 
@@ -98,6 +99,31 @@ export function KeywordsToolbar({
         </span>{" "}
         active
       </p>
+      <KeywordViewSwitch />
     </div>
+  );
+}
+
+function KeywordViewSwitch() {
+  const [view, setView] = useQueryState("view", keywordViewParser);
+  return (
+    <Tabs
+      value={view}
+      onValueChange={(next) =>
+        void setView(keywordViewParser.parse(next) ?? view)
+      }
+      className="ml-auto"
+    >
+      <TabsList aria-label="Keyword view">
+        <TabsOption value="table">
+          <TableProperties aria-hidden />
+          <span>Table</span>
+        </TabsOption>
+        <TabsOption value="map">
+          <ChartScatter aria-hidden />
+          <span>Map</span>
+        </TabsOption>
+      </TabsList>
+    </Tabs>
   );
 }

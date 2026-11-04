@@ -19,6 +19,11 @@ export const LATER_RELEASES: readonly Release[] = [
         text: "Each store card on the Integrations page links to a step by step guide that walks you from an empty console to a working connection.",
       },
       {
+        kind: "new",
+        title: "Opportunity map",
+        text: "Switch the keywords page to Map to see every keyword placed by popularity and difficulty, sorted into quick wins, keywords worth fighting for, easy pickings and low priority. Press a zone to show only its keywords in the table.",
+      },
+      {
         kind: "improved",
         title: "A clearer sign up",
         text: "On the hosted service you confirm your email first, then pick a plan on one page that shows the price, what is included and the questions people ask most.",

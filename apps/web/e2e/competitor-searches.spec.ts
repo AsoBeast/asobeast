@@ -242,8 +242,8 @@ test("the tab runs once per visit", async ({ page }) => {
 test("every strategy tab stays reachable on a phone", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await openSuggestions(page, "/apps/app-1/keywords");
-  const strip = page.getByRole("tablist");
   const last = page.getByRole("tab", { name: "Reviews" });
+  const strip = page.getByRole("tablist").filter({ has: last });
 
   await strip.evaluate((list) => list.scrollTo({ left: list.scrollWidth }));
 

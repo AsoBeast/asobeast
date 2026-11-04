@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import {
   utcDayOf,
@@ -8,7 +8,7 @@ import {
   type TrackedKeywordItem,
 } from "@asobeast/shared";
 import { useTable, type RowSelectionState } from "@tanstack/react-table";
-import { useQueryStates } from "nuqs";
+import { useQueryState, useQueryStates } from "nuqs";
 import { useStoredColumnVisibility } from "@/components/data-table/useStoredColumnVisibility";
 import { useUrlSorting } from "@/components/data-table/useUrlSorting";
 import { keywordCountriesOptions, keywordsOptions } from "@/lib/queries";
@@ -16,18 +16,11 @@ import {
   KEYWORD_DEFAULT_SORT,
   keywordFilterParsers,
   keywordSortParser,
+  keywordViewParser,
   sortDirectionParser,
 } from "@/lib/search-params";
-import {
-  HIDDEN_KEYWORD_COLUMNS,
-  keywordColumns,
-  SELECT_ALL_KEYWORDS,
-} from "./keyword-columns";
-import {
-  exactSearchEmptyBody,
-  keywordColumnFilters,
-  keywordSearchFilter,
-} from "./keyword-filters";
+import { HIDDEN_KEYWORD_COLUMNS, keywordColumns } from "./keyword-columns";
+import { exactSearchEmptyBody, keywordSearchFilter } from "./keyword-filters";
 import { keywordTableFeatures } from "./keyword-table-features";
 import { exportKeywords } from "./keyword-csv";
 import { tagsIn } from "@/lib/keyword-tags";
@@ -36,7 +29,14 @@ import { KeywordsEmptyState } from "./KeywordsEmptyState";
 import { KeywordsDataTable } from "./KeywordsDataTable";
 import { KeywordsFilterBar } from "./KeywordsFilterBar";
 import { SerpSheet } from "./serp/SerpSheet";
+import {
+  useClearedSelectionFocus,
+  useEmptiedListFocus,
+} from "./use-keywords-table-focus";
 import { useSerpParams } from "./serp/use-serp-params";
+import { useKeywordColumnFilters } from "./use-zone-thresholds";
+import { KeywordMap } from "./map/KeywordMap";
+import { useKeywordsAcrossZones } from "./map/use-map-keywords";
 
 export function KeywordsTable({
   id,
@@ -55,6 +55,7 @@ export function KeywordsTable({
   });
   const [{ serp: serpId }, setSerpState] = useSerpParams();
   const [filters, setFilters] = useQueryStates(keywordFilterParsers);
+  const [view] = useQueryState("view", keywordViewParser);
   const { data: keywords, dataUpdatedAt } = useSuspenseQuery(
     keywordsOptions(id, country),
   );
@@ -63,12 +64,6 @@ export function KeywordsTable({
   const { data: markets } = useQuery(keywordCountriesOptions(id));
   const multiMarket = (markets?.length ?? 0) > 1;
   const [selection, setSelection] = useState<RowSelectionState>({});
-  const tableArea = useRef<HTMLDivElement>(null);
-  const refocusTable = useRef(false);
-  const clearSelection = () => {
-    refocusTable.current = true;
-    setSelection({});
-  };
 
   const rowSelection = useMemo(
     () => selectedKeywordsStillOnScreen(selection, keywords),
@@ -110,7 +105,7 @@ export function KeywordsTable({
     columns,
   );
 
-  const columnFilters = useMemo(() => keywordColumnFilters(filters), [filters]);
+  const columnFilters = useKeywordColumnFilters(filters);
 
   const table = useTable({
     features: keywordTableFeatures,
@@ -139,24 +134,13 @@ export function KeywordsTable({
     .rows.map((row) => row.original);
   const selectedIds = selectedKeywords.map((keyword) => keyword.keywordId);
 
-  useEffect(() => {
-    if (!refocusTable.current || selectedIds.length > 0) return;
-    refocusTable.current = false;
-    tableArea.current
-      ?.querySelector<HTMLElement>(`[aria-label="${SELECT_ALL_KEYWORDS}"]`)
-      ?.focus();
-  }, [selectedIds.length]);
-
+  const { tableArea, clearSelection } = useClearedSelectionFocus(
+    selectedIds.length,
+    () => setSelection({}),
+  );
+  const mapKeywords = useKeywordsAcrossZones(table, view === "map");
   const isEmpty = keywords.length === 0;
-  const showedTable = useRef(!isEmpty);
-  const addKeywords = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    const emptied = isEmpty && showedTable.current;
-    showedTable.current = !isEmpty;
-    if (emptied && document.activeElement === document.body) {
-      addKeywords.current?.focus();
-    }
-  }, [isEmpty]);
+  const addKeywords = useEmptiedListFocus(isEmpty);
 
   if (isEmpty) {
     return (
@@ -178,6 +162,15 @@ export function KeywordsTable({
           filters={filters}
           setFilters={setFilters}
         />
+        {view === "map" ? (
+          <KeywordMap
+            keywords={mapKeywords}
+            history={{ appId: id, store, homeCountry, multiMarket }}
+            market={country}
+            today={today}
+            onClearFilters={() => void setFilters(null)}
+          />
+        ) : null}
         <KeywordsDataTable
           table={table}
           emptyBody={exactSearchEmptyBody(filters.q)}
