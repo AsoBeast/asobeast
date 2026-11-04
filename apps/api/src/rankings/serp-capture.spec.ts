@@ -230,5 +230,17 @@ describe('SerpCapture', () => {
       expect(createMany).toHaveBeenCalledWith({ data: rows });
       expect(rows).toEqual(serpEntryRows('kw1', TODAY, items(60)));
     });
+
+    it('clears the day for a search that answered nothing', async () => {
+      const { capture, deleteMany, createMany, calls } = setup();
+
+      await expect(capture.store('kw1', TODAY, [])).resolves.toEqual([]);
+
+      expect(calls).toEqual(['delete', 'create']);
+      expect(deleteMany).toHaveBeenCalledWith({
+        where: { keywordId: 'kw1', date: TODAY },
+      });
+      expect(createMany).toHaveBeenCalledWith({ data: [] });
+    });
   });
 });
