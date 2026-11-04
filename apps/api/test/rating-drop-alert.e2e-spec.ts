@@ -155,12 +155,12 @@ describe('rating drop alert (e2e)', () => {
         .expect(201)
     ).body as WebhookItem;
 
-  it('collects one drop, keeps it on a rerun and deepens it', async () => {
+  it('collects one drop, keeps it on a rerun and collects a deeper one on its own', async () => {
     const rated = await seedApp();
 
     await refresh(rated.id);
     const [first] = await drops();
-    expect(first.dedupeKey).toBe(`rating.dropped:${rated.id}:${today()}`);
+    expect(first.dedupeKey).toBe(`rating.dropped:${rated.id}:${today()}:2`);
     expect(first.payload).toMatchObject({
       from: 4.6,
       to: 4.38,
@@ -175,8 +175,10 @@ describe('rating drop alert (e2e)', () => {
     registry.rating = { ratingAvg: 4.3, ratingCount: 840, version: '1.1.0' };
     await refresh(rated.id);
     const deepened = await drops();
-    expect(deepened).toHaveLength(1);
-    expect(deepened[0].payload).toMatchObject({ dropTenths: 3, to: 4.3 });
+    expect(deepened).toHaveLength(2);
+    expect(deepened.map((row) => row.dedupeKey)).toContain(
+      `rating.dropped:${rated.id}:${today()}:3`,
+    );
   });
 
   it('raises nothing with too few ratings, an old reference or a competitor', async () => {

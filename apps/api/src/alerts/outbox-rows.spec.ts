@@ -412,7 +412,7 @@ describe('outboxRows for the rating and review events', () => {
       {
         event: 'rating.dropped',
         appId: 'a',
-        dedupeKey: 'rating.dropped:a:2026-11-03',
+        dedupeKey: 'rating.dropped:a:2026-11-03:2',
         payload,
       },
     ]);
@@ -435,7 +435,7 @@ describe('outboxRows for the rating and review events', () => {
     const key = (payload: Parameters<typeof outboxRows>[0]) =>
       outboxRows(payload)[0].dedupeKey;
 
-    expect(key(ratingDropped({ dropTenths: 3 }))).toBe(key(ratingDropped()));
+    expect(key(ratingDropped({ to: 4.43 }))).toBe(key(ratingDropped()));
     expect(key(ratingDropped({ toDate: '2026-11-04' }))).not.toBe(
       key(ratingDropped()),
     );
@@ -443,5 +443,15 @@ describe('outboxRows for the rating and review events', () => {
     expect(key(reviewSpike({ date: '2026-11-03' }))).not.toBe(
       key(reviewSpike()),
     );
+  });
+});
+
+describe('outboxRows for a deeper rating drop', () => {
+  it('keys a deeper drop of the same day on its own', () => {
+    const key = (dropTenths: number) =>
+      outboxRows(ratingDropped({ dropTenths }))[0].dedupeKey;
+
+    expect(key(3)).not.toBe(key(2));
+    expect(key(2)).toBe(key(2));
   });
 });

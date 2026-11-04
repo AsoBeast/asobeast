@@ -102,7 +102,10 @@ export function outboxRows(payload: AlertPayload): OutboxRow[] {
 
   if (payload.event === 'rating.dropped') {
     return [
-      appRow(payload, `rating.dropped:${payload.app.id}:${payload.toDate}`),
+      appRow(
+        payload,
+        `rating.dropped:${payload.app.id}:${payload.toDate}:${payload.dropTenths}`,
+      ),
     ];
   }
 
