@@ -2,7 +2,7 @@
 title: Run a published release
 description: "Every GitHub release publishes multi architecture API and web images to GitHub Container Registry, tagged by version, minor, major, commit and latest."
 icon: package
-keywords: ["ghcr","container images","release","docker run","latest","pinned version"]
+keywords: ["ghcr","container images","release","docker run","latest","pinned version","portainer","app template"]
 ---
 
 Every release publishes a `latest` tag that follows the newest version, so a deployment that names no tag tracks the current release.
@@ -123,6 +123,16 @@ docker compose -f docker-compose.pull.yml -f docker-compose.tunnel.yml up -d --w
 <Note>
   The checked in `docker-compose.yml` builds both images from source and declares no `image`, so `docker compose pull` cannot move it onto a published tag. Use `docker-compose.pull.yml` for pinned images, or the `docker run` sequence above when you want no Compose file at all.
 </Note>
+
+## Deploy from Portainer
+
+`portainer-template.json` at the root of this repository is a Portainer app template. Paste `https://raw.githubusercontent.com/AsoBeast/asobeast/main/portainer-template.json` into **Settings**, then **App Templates**, open **App Templates** in your environment and pick **AsoBeast**. Portainer reads one templates URL at a time, so put your previous URL back once the stack is deployed.
+
+The form asks for `POSTGRES_PASSWORD` and `AUTH_SECRET`. Generate each with `openssl rand -hex 32`; the stack refuses to start without them. It also asks for `WEB_PUBLIC_URL` and the number of reverse proxies in front of port `3001`, which sets `TRUST_PROXY` on the web app.
+
+The template deploys `docker-compose.portainer.yml`, which extends every service of `docker-compose.pull.yml` and so runs the same images, limits and health checks. It drops two things Portainer cannot provide. The `apps/api/keys` bind mount would resolve inside Portainer's own data folder, and Docker Desktop refuses that path outright. The optional `apps/api/.env` and `apps/web/.env` files don't exist in a Portainer checkout either. Set further API settings as environment variables on the stack instead. A key file such as the Apple Ads or DKIM key needs the Compose path above.
+
+The session cookie is always secure, so sign in over HTTPS through a reverse proxy, or through `http://localhost:3001` in Chrome or Firefox. To update, take a backup and then use **Pull and redeploy** on the stack. The file on `main` pins the newest release, so a redeploy moves the stack to it and the API applies any pending migration on boot.
 
 ## Next steps
 

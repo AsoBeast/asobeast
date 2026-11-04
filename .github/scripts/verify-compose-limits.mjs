@@ -6,6 +6,7 @@ const COMPOSITIONS = [
   ["docker-compose.yml", "docker-compose.tunnel.yml"],
   ["docker-compose.pull.yml"],
   ["docker-compose.pull.yml", "docker-compose.tunnel.yml"],
+  ["docker-compose.portainer.yml"],
 ];
 
 function memoryLimit(service) {
