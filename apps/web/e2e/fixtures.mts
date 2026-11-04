@@ -60,6 +60,7 @@ import type {
   ListingMarket,
   MetadataAuditResult,
   MetadataDraft,
+  KeywordMarkSegment,
   TrackedKeywordItem,
   VisibilityHistory,
   WebhookItem,
@@ -2925,6 +2926,71 @@ export const APP_NEW_KEYWORDS: TrackedKeywordItem[] = [
   newAppKeyword(8, "exam timer", null, null),
 ];
 
+export const APP_MARKS_ID = "app-marks";
+
+export const APP_MARKS_DETAIL: AppDetail = {
+  ...APP_LONG_DETAIL,
+  id: APP_MARKS_ID,
+  storeAppId: "555123499",
+  name: "Focus Timer Pro",
+  latestSnapshot: {
+    id: "snap-marks",
+    title: "Focus Timer Pro: Pomodoro",
+    subtitle: "Study sessions and café finder",
+    summary: null,
+    ratingAvg: 4.7,
+    ratingCount: 1200,
+    installs: null,
+    price: 0,
+    version: "1.0.0",
+    capturedAt: utcTimestampDaysAgo(0),
+  },
+};
+
+const PLAIN_SPACE: KeywordMarkSegment = { text: " ", surface: null };
+
+const marksKeyword = (
+  index: number,
+  text: string,
+  matchedIn: KeywordMarkSegment[] | undefined,
+  over: Partial<TrackedKeywordItem> = {},
+): TrackedKeywordItem => ({
+  ...newAppKeyword(index, text, 5 + index, RANK_DEPTH),
+  keywordId: `kw-marks-${index}`,
+  ...(matchedIn ? { matchedIn } : {}),
+  ...over,
+});
+
+export const APP_MARKS_KEYWORDS: TrackedKeywordItem[] = [
+  marksKeyword(1, "focus timer", [
+    { text: "focus timer", surface: "title", match: "exact" },
+  ]),
+  marksKeyword(2, "focus study", [
+    { text: "focus", surface: "title", match: "exact" },
+    PLAIN_SPACE,
+    { text: "study", surface: "subtitle", match: "exact" },
+  ]),
+  marksKeyword(3, "habit tracker", [
+    { text: "habit tracker", surface: "keywordField", match: "exact" },
+  ]),
+  marksKeyword(4, "cafe finder", [
+    { text: "cafe", surface: "subtitle", match: "folded" },
+    PLAIN_SPACE,
+    { text: "finder", surface: "subtitle", match: "exact" },
+  ]),
+  marksKeyword(5, "unrelated words", undefined),
+  marksKeyword(
+    6,
+    "pomodoro tracker",
+    [
+      { text: "pomodoro", surface: "title", match: "exact" },
+      PLAIN_SPACE,
+      { text: "tracker", surface: "keywordField", match: "exact" },
+    ],
+    { active: false, note: "Seasonal, resume in January" },
+  ),
+];
+
 const listingSuggestions = (texts: string[]): KeywordSuggestion[] =>
   texts.map((text) => ({ text, strategy: "metadata" }));
 
@@ -3067,6 +3133,24 @@ export const DATASETS: Record<string, AppDataset> = {
     ratingsHistogram: EMPTY_RATINGS_HISTOGRAM,
     changes: EMPTY_CHANGES,
     changeImpact: emptyChangeImpact(APP_COMBOS_DETAIL),
+    discovery: EMPTY_DISCOVERY,
+    comparison: EMPTY_COMPARISON,
+  },
+  [APP_MARKS_ID]: {
+    detail: APP_MARKS_DETAIL,
+    summary: APP_2_SUMMARY,
+    keywords: APP_MARKS_KEYWORDS,
+    rankings: EMPTY_RANKINGS,
+    serpMovers: EMPTY_SERP_MOVERS,
+    visibility: EMPTY_VISIBILITY,
+    rankDistributionHistory: EMPTY_RANK_DISTRIBUTION_HISTORY,
+    categoryRanks: EMPTY_CATEGORY_RANKS,
+    competitors: [],
+    reviews: EMPTY_REVIEWS,
+    ratingsHistory: EMPTY_RATINGS_HISTORY,
+    ratingsHistogram: EMPTY_RATINGS_HISTOGRAM,
+    changes: EMPTY_CHANGES,
+    changeImpact: emptyChangeImpact(APP_MARKS_DETAIL),
     discovery: EMPTY_DISCOVERY,
     comparison: EMPTY_COMPARISON,
   },
