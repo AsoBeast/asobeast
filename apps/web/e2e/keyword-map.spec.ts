@@ -573,6 +573,29 @@ test.describe("zones and thresholds", () => {
     expect(Math.abs(area.width - plot.width * 0.2)).toBeLessThan(2);
   });
 
+  test("threshold labels stay inside the plot at the edges", async ({
+    page,
+  }) => {
+    await storeThresholds(page, '{"popularity":100,"difficulty":100}');
+    await page.goto(MAP_URL);
+    const plot = await page
+      .locator(".recharts-cartesian-grid")
+      .first()
+      .boundingBox();
+    if (!plot) throw new Error("no plot");
+
+    for (const text of ["Popularity 100", "Difficulty 100"]) {
+      const label = await chartSvg(page)
+        .locator("text", { hasText: text })
+        .boundingBox();
+      if (!label) throw new Error(`no label ${text}`);
+      expect(label.x).toBeGreaterThanOrEqual(plot.x);
+      expect(label.y).toBeGreaterThanOrEqual(plot.y);
+      expect(label.x + label.width).toBeLessThanOrEqual(plot.x + plot.width);
+      expect(label.y + label.height).toBeLessThanOrEqual(plot.y + plot.height);
+    }
+  });
+
   test("the thresholds popover redraws the map and persists", async ({
     page,
   }) => {

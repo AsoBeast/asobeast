@@ -21,6 +21,7 @@ const MIN_LABEL_WIDTH = 72;
 const MIN_LABEL_HEIGHT = 20;
 const LABEL_INSET = 6;
 const LABEL_BASELINE = 14;
+const THRESHOLD_LABEL_FLIP_FROM = 85;
 
 const TOP_ZONES: ReadonlySet<KeywordZone> = new Set([
   "quickWins",
@@ -99,29 +100,32 @@ export function zoneAreas({
   ));
 }
 
+const thresholdLabel = (
+  value: string,
+  position: "insideTopRight" | "insideBottomRight" | "insideBottomLeft",
+) => ({ value, position, fill: "var(--muted-foreground)", fontSize: 10 });
+
 export function thresholdLines(thresholds: ZoneThresholds) {
+  const nearTop = thresholds.popularity >= THRESHOLD_LABEL_FLIP_FROM;
+  const nearRight = thresholds.difficulty >= THRESHOLD_LABEL_FLIP_FROM;
   return [
     <ReferenceLine
       key="popularity"
       y={thresholds.popularity}
       {...THRESHOLD_LINE_PROPS}
-      label={{
-        value: `Popularity ${thresholds.popularity}`,
-        position: "insideBottomRight",
-        fill: "var(--muted-foreground)",
-        fontSize: 10,
-      }}
+      label={thresholdLabel(
+        `Popularity ${thresholds.popularity}`,
+        nearTop ? "insideTopRight" : "insideBottomRight",
+      )}
     />,
     <ReferenceLine
       key="difficulty"
       x={thresholds.difficulty}
       {...THRESHOLD_LINE_PROPS}
-      label={{
-        value: `Difficulty ${thresholds.difficulty}`,
-        position: "insideBottomLeft",
-        fill: "var(--muted-foreground)",
-        fontSize: 10,
-      }}
+      label={thresholdLabel(
+        `Difficulty ${thresholds.difficulty}`,
+        nearRight ? "insideBottomRight" : "insideBottomLeft",
+      )}
     />,
   ];
 }
