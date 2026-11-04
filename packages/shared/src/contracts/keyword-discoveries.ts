@@ -10,8 +10,9 @@ export const DISCOVERY_SOURCES = [
   'portfolio',
 ] as const;
 export type DiscoverySource = (typeof DISCOVERY_SOURCES)[number];
+const discoverySourceNames: readonly string[] = DISCOVERY_SOURCES;
 export const isDiscoverySource = (value: string): value is DiscoverySource =>
-  (DISCOVERY_SOURCES as readonly string[]).includes(value);
+  discoverySourceNames.includes(value);
 
 export const DISCOVERY_STATES = ['all', 'ranked', 'opportunity'] as const;
 export type DiscoveryState = (typeof DISCOVERY_STATES)[number];
