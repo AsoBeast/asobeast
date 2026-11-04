@@ -10,8 +10,11 @@ import {
   HTML_BUDGET_BYTES,
 } from './email-format';
 import {
+  appDelisted,
+  appUnlistedMarket,
   listingBatch,
   listingSection,
+  rival,
   ratingDropped,
   reviewSpike,
 } from './listing-events.fixture';
@@ -850,5 +853,48 @@ describe('the rating and review events by email', () => {
     expect((await formatEmail(ratingDropped())).subject).toBe(
       "[asobeast] My App's average rating fell from 4.66 to 4.44 in US over 7 days",
     );
+  });
+});
+
+describe('the availability events by email', () => {
+  it('shows a tile only when an app lost a listing', async () => {
+    const lost = await formatBatchEmail(
+      listingBatch(listingSection({ availability: [appDelisted()] }), [
+        appDelisted(),
+      ]),
+    );
+
+    expect(lost.html).toContain('Store availability');
+    expect(lost.html).toContain('No longer listed in the App Store');
+    expect((await formatBatchEmail(batch)).html).not.toContain(
+      'Store availability',
+    );
+  });
+
+  it('lists a competitor delisting under its card', async () => {
+    const gone = appUnlistedMarket({ app: rival });
+    const email = await formatBatchEmail({
+      ...listingBatch(
+        listingSection({
+          competitors: [
+            {
+              app: {
+                id: 'c',
+                name: 'Rival',
+                store: 'APP_STORE',
+                country: 'us',
+              },
+              changes: [],
+              availability: [gone],
+            },
+          ],
+        }),
+        [gone],
+      ),
+      scope: 'competitors',
+    });
+
+    expect(email.text).toContain('Rival');
+    expect(email.text).toContain('No longer listed in DE');
   });
 });

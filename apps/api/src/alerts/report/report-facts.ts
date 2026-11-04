@@ -14,6 +14,7 @@ import {
 import { summarizeActionEvidence } from '../action-lines';
 import type { ReportFact, ReportRow } from './report';
 import { chartLabel } from './report-chart-moves';
+import { availabilityFacts } from './report-availability';
 import { ratingDropFacts } from './report-rating-drop';
 import { reviewSpikeFacts } from './report-review-spike';
 import {
@@ -192,6 +193,15 @@ export function factsOf(
       );
     case 'review.spike':
       return reviewSpikeFacts(payload);
+    case 'app.delisted':
+    case 'app.unlisted_market':
+      return availabilityFacts(
+        payload,
+        storefrontLabel(payload.country, withFlag),
+        payload.event === 'app.unlisted_market'
+          ? storefrontLabel(payload.market, withFlag)
+          : '',
+      );
     case 'serp.entrant':
       return [
         fact('Keyword', keywordLabel(payload.keyword)),

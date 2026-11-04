@@ -15,7 +15,12 @@ import {
   chartMilestone,
 } from '../chart-events.fixture';
 import { firstRanking, milestone, overtake } from '../rank-events.fixture';
-import { ratingDropped, reviewSpike } from '../listing-events.fixture';
+import {
+  appDelisted,
+  appUnlistedMarket,
+  ratingDropped,
+  reviewSpike,
+} from '../listing-events.fixture';
 import { listPhrase, plural, sentenceOf } from './report-sentences';
 
 const withFlags = (payload: Parameters<typeof sentenceOf>[0]) =>
@@ -291,6 +296,19 @@ describe('sentenceOf for the rating and review events', () => {
     expect(withFlags(reviewSpike())).toEqual({
       emoji: '💬',
       text: 'A spike of 34 reviews for My App on 2 Nov 2026: median 4 a day, 71% at 2 stars or lower',
+    });
+  });
+});
+
+describe('sentenceOf for the availability events', () => {
+  it('words a delisting and an unlisted market with their emoji', () => {
+    expect(withFlags(appDelisted())).toEqual({
+      emoji: '🚫',
+      text: 'My App is no longer listed in the App Store (🇺🇸 US)',
+    });
+    expect(withFlags(appUnlistedMarket())).toEqual({
+      emoji: '🌍',
+      text: 'My App is no longer listed in the App Store in 🇩🇪 DE, where 12 keywords are tracked',
     });
   });
 });

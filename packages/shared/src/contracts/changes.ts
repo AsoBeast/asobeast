@@ -6,6 +6,8 @@ import type {
 } from './reviews';
 import type {
   AppAvailabilityPayload,
+  AppDelistedPayload,
+  AppUnlistedMarketPayload,
   RatingDroppedPayload,
 } from './listing-alerts';
 import type { DigestWeeklyPayload } from './portfolio';
@@ -355,6 +357,8 @@ export type GranularAlertPayload =
   | ReviewNewPayload
   | RatingDroppedPayload
   | ReviewSpikePayload
+  | AppDelistedPayload
+  | AppUnlistedMarketPayload
   | DigestWeeklyPayload
   | SerpEntrantPayload
   | ActionOpenedPayload

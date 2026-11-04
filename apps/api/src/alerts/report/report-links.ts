@@ -27,6 +27,7 @@ export interface ReportLinks {
 }
 
 const GROUP_PATHS: Record<AppPageGroupKind, string> = {
+  availability: '',
   rankDrops: '/keywords',
   rankImprovements: '/keywords',
   milestones: '/keywords',

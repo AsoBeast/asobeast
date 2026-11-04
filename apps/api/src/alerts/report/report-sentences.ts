@@ -24,6 +24,7 @@ import {
   type ReviewAlert,
 } from './report-rows';
 import { chartName } from './report-chart-moves';
+import { availabilitySentence } from './report-availability';
 import { ratingDropSentence } from './report-rating-drop';
 import { reviewSpikeSentence } from './report-review-spike';
 import { storefrontLabel } from './storefront';
@@ -190,6 +191,19 @@ export function sentenceOf(
       return {
         emoji: '💬',
         text: reviewSpikeSentence(payload, appName(payload.app.name)),
+      };
+    case 'app.delisted':
+    case 'app.unlisted_market':
+      return {
+        emoji: payload.event === 'app.delisted' ? '🚫' : '🌍',
+        text: availabilitySentence(
+          payload,
+          appName(payload.app.name),
+          storefrontLabel(payload.country, withFlag),
+          payload.event === 'app.unlisted_market'
+            ? storefrontLabel(payload.market, withFlag)
+            : '',
+        ),
       };
     case 'serp.entrant':
       return { emoji: '🆕', text: entrantSentence(payload, withFlag) };

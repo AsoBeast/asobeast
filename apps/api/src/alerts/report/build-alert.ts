@@ -1,4 +1,8 @@
-import { formatUtcInstant, isChartMovePayload } from '@asobeast/shared';
+import {
+  formatUtcInstant,
+  isAvailabilityPayload,
+  isChartMovePayload,
+} from '@asobeast/shared';
 import type {
   AlertReport,
   ReportGroup,
@@ -9,6 +13,7 @@ import type {
 } from './report';
 import { factsOf } from './report-facts';
 import { reportLinks, type ReportLinks } from './report-links';
+import { availabilityTone } from './report-availability';
 import { reviewSpikeTone } from './report-review-spike';
 import { changeRows, reviewTone } from './report-rows';
 import { appName, sentenceOf, type GranularPayload } from './report-sentences';
@@ -16,9 +21,9 @@ import { appName, sentenceOf, type GranularPayload } from './report-sentences';
 type AppPayload = Extract<GranularPayload, { app: unknown }>;
 
 function roleOf(payload: AppPayload): ReportIdentity['role'] {
-  return payload.event === 'metadata.changed' && payload.app.isCompetitor
-    ? 'competitor'
-    : 'primary';
+  const scoped =
+    payload.event === 'metadata.changed' || isAvailabilityPayload(payload);
+  return scoped && payload.app.isCompetitor === true ? 'competitor' : 'primary';
 }
 
 function changeGroups(payload: AppPayload, links: ReportLinks): ReportGroup[] {
@@ -97,6 +102,9 @@ function toneOf(payload: GranularPayload): ReportTone {
       return 'down';
     case 'review.spike':
       return reviewSpikeTone([payload]);
+    case 'app.delisted':
+    case 'app.unlisted_market':
+      return availabilityTone(payload);
     default:
       return 'neutral';
   }

@@ -16,7 +16,13 @@ import {
   chartMilestone,
 } from '../chart-events.fixture';
 import { firstRanking, milestone, overtake } from '../rank-events.fixture';
-import { ratingDropped, reviewSpike } from '../listing-events.fixture';
+import {
+  appDelisted,
+  appUnlistedMarket,
+  ratingDropped,
+  reviewSpike,
+  rival,
+} from '../listing-events.fixture';
 import { buildAlert } from './build-alert';
 import { factsOf } from './report-facts';
 import type { ReportFact } from './report';
@@ -373,5 +379,27 @@ describe('buildAlert for the rating and review events', () => {
     expect(buildAlert(reviewSpike(), null).facts).toEqual(
       factsOf(reviewSpike()),
     );
+  });
+});
+
+describe('buildAlert for the availability events', () => {
+  it('names the role, tone and link of an own delisting', () => {
+    const report = buildAlert(appDelisted(), ORIGIN);
+
+    expect(report.apps[0].identity.role).toBe('primary');
+    expect(report.tone).toBe('down');
+    expect(report.link).toEqual({
+      href: `${ORIGIN}/apps/a`,
+      label: 'Open app',
+    });
+    expect(report.facts).toEqual(factsOf(appDelisted()));
+    expect(buildAlert(appDelisted(), null).link).toBeNull();
+  });
+
+  it('gives a competitor the competitor role and a neutral tone', () => {
+    const report = buildAlert(appUnlistedMarket({ app: rival }), ORIGIN);
+
+    expect(report.apps[0].identity.role).toBe('competitor');
+    expect(report.tone).toBe('neutral');
   });
 });
