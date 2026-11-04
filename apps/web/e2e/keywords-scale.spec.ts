@@ -54,6 +54,7 @@ test("the header stays visible while the rows scroll", async ({ page }) => {
   await page.waitForLoadState("networkidle");
 
   const scroller = page.locator("[data-slot=table-container]");
+  await scroller.scrollIntoViewIfNeeded();
   await scroller.evaluate((node) => {
     node.scrollTop = 4000;
   });
