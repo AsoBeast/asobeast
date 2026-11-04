@@ -1,6 +1,6 @@
 "use client";
 
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
 import { MarketPills } from "@/components/layout/MarketPills";
 import { keywordCountriesOptions } from "@/lib/queries";
@@ -8,7 +8,9 @@ import { countryParser } from "@/lib/search-params";
 
 export function RankingsMarketPills({ id }: { id: string }) {
   const [country, setCountry] = useQueryState("country", countryParser);
-  const { data: markets } = useSuspenseQuery(keywordCountriesOptions(id));
+  const { data: markets } = useQuery(keywordCountriesOptions(id));
+
+  if (!markets) return null;
 
   return (
     <div className="print:hidden">

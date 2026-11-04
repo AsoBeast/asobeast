@@ -45,7 +45,7 @@ export default async function RankingsPage({
   const queryClient = getQueryClient();
   const [tracked] = await Promise.all([
     queryClient.fetchQuery(keywordsOptions(id)),
-    queryClient.fetchQuery(keywordCountriesOptions(id)),
+    queryClient.fetchQuery(keywordCountriesOptions(id)).catch(() => null),
   ]);
   const scoped = country
     ? tracked.filter((item) => item.country === country)
@@ -61,9 +61,7 @@ export default async function RankingsPage({
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
       <div className="page-full flex flex-col gap-6">
-        <Suspense fallback={null}>
-          <RankingsMarketPills id={id} />
-        </Suspense>
+        <RankingsMarketPills id={id} />
         <div className="grid gap-6 lg:grid-cols-3 print:grid-cols-1 [&>*]:min-w-0">
           <Suspense fallback={null}>
             <RankingsReportHeader id={id} />
