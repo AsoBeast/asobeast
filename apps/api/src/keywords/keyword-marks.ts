@@ -10,7 +10,11 @@ import {
   keywordSurfaces,
 } from '../metadata/keyword-coverage-judge';
 import type { Surface } from '../metadata/localized-coverage';
-import { keywordWords, markWords, wordMatch } from './keyword-breakdown-fields';
+import {
+  keywordWords,
+  markWords,
+  wordMatcher,
+} from './keyword-breakdown-fields';
 
 interface Find {
   surface: KeywordMarkSurface;
@@ -27,23 +31,34 @@ const strength = ({ surface, match }: Find): number =>
 const strongerFind = (current: Find | null, next: Find): Find =>
   current && strength(current) >= strength(next) ? current : next;
 
-function findOf(word: string, surfaces: readonly Surface[]): Find | null {
-  return surfaces.reduce<Find | null>((best, { field, value }) => {
-    if (!isMarkSurface(field) || value.length === 0) return best;
-    const match = wordMatch(value, word);
-    return match === 'none'
-      ? best
-      : strongerFind(best, { surface: field, match });
+interface MarkSurface {
+  surface: KeywordMarkSurface;
+  matchOf: (word: string) => KeywordWordMatch;
+}
+
+const markSurfaces = (surfaces: readonly Surface[]): MarkSurface[] =>
+  surfaces.flatMap(({ field, value }) =>
+    isMarkSurface(field) && value.length > 0
+      ? [{ surface: field, matchOf: wordMatcher(value) }]
+      : [],
+  );
+
+function findOf(word: string, surfaces: readonly MarkSurface[]): Find | null {
+  return surfaces.reduce<Find | null>((best, { surface, matchOf }) => {
+    const match = matchOf(word);
+    return match === 'none' ? best : strongerFind(best, { surface, match });
   }, null);
 }
 
+type WordFinder = (word: string) => Find | null;
+
 function wordsByFind(
   words: readonly string[],
-  surfaces: readonly Surface[],
+  findWord: WordFinder,
 ): Map<string, { find: Find; words: string[] }> {
   const groups = new Map<string, { find: Find; words: string[] }>();
   for (const word of words) {
-    const find = findOf(word, surfaces);
+    const find = findWord(word);
     if (!find) continue;
     const key = `${find.surface}|${find.match}`;
     const group = groups.get(key) ?? { find, words: [] };
@@ -113,11 +128,11 @@ function absorbSeparators(
   return merged;
 }
 
-export function markKeyword(
+function marksOn(
   text: string,
-  surfaces: readonly Surface[],
+  findWord: WordFinder,
 ): KeywordMarkSegment[] | null {
-  const groups = wordsByFind(keywordWords(text), surfaces);
+  const groups = wordsByFind(keywordWords(text), findWord);
   if (groups.size === 0) return null;
   const normalized = text.normalize('NFC');
   const located = locate(normalized, groups.values());
@@ -126,26 +141,44 @@ export function markKeyword(
     : null;
 }
 
+export const markKeyword = (
+  text: string,
+  surfaces: readonly Surface[],
+): KeywordMarkSegment[] | null => {
+  const prepared = markSurfaces(surfaces);
+  return marksOn(text, (word) => findOf(word, prepared));
+};
+
 export type KeywordMarker = (keyword: {
   country: string;
   text: string;
 }) => KeywordMarkSegment[] | null;
 
+function rememberedFinder(surfaces: readonly MarkSurface[]): WordFinder {
+  const finds = new Map<string, Find | null>();
+  return (word) => {
+    if (!finds.has(word)) finds.set(word, findOf(word, surfaces));
+    return finds.get(word) ?? null;
+  };
+}
+
 export function keywordMarker(
   app: { store: Store; country: string },
   sources: CoverageSources,
 ): KeywordMarker {
-  const surfacesByMarket = new Map<string, Surface[]>();
-  const surfacesOf = (country: string): Surface[] => {
-    const known = surfacesByMarket.get(country);
+  const finders = new Map<string, WordFinder>();
+  const finderOf = (country: string): WordFinder => {
+    const known = finders.get(country);
     if (known) return known;
     const { surfaces, localized } = keywordSurfaces(app, country, sources);
-    const flattened = [
-      ...surfaces,
-      ...localized.flatMap((entry) => entry.surfaces),
-    ];
-    surfacesByMarket.set(country, flattened);
-    return flattened;
+    const finder = rememberedFinder(
+      markSurfaces([
+        ...surfaces,
+        ...localized.flatMap((entry) => entry.surfaces),
+      ]),
+    );
+    finders.set(country, finder);
+    return finder;
   };
-  return ({ country, text }) => markKeyword(text, surfacesOf(country));
+  return ({ country, text }) => marksOn(text, finderOf(country));
 }

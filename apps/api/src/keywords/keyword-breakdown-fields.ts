@@ -52,10 +52,17 @@ export const keywordWords = (keyword: string): string[] => [
   ...new Set(tokenize(keyword)),
 ];
 
-export function wordMatch(value: string, word: string): KeywordWordMatch {
-  if (containsTerm(normalizeText(value), word)) return 'exact';
-  return containsTerm(searchKey(value), searchKey(word)) ? 'folded' : 'none';
+export function wordMatcher(value: string): (word: string) => KeywordWordMatch {
+  const exact = normalizeText(value);
+  const folded = searchKey(value);
+  return (word) => {
+    if (containsTerm(exact, word)) return 'exact';
+    return containsTerm(folded, searchKey(word)) ? 'folded' : 'none';
+  };
 }
+
+export const wordMatch = (value: string, word: string): KeywordWordMatch =>
+  wordMatcher(value)(word);
 
 interface Mark {
   start: number;
