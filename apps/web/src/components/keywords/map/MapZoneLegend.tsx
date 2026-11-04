@@ -13,7 +13,8 @@ import {
 } from "@/lib/keyword-zones";
 import { ZONE_FILLS } from "./zone-layers";
 
-const OPPORTUNITY_MAP_GUIDE = "https://docs.asobeast.com/guides/track-keywords";
+const OPPORTUNITY_MAP_GUIDE =
+  "https://docs.asobeast.com/guides/track-keywords#read-the-opportunity-map";
 
 const SWATCH_OPACITY = 0.5;
 

@@ -729,7 +729,7 @@ test.describe("zones and thresholds", () => {
       const link = tip.getByRole("link", { name: "Read the opportunity map" });
       await expect(link).toHaveAttribute(
         "href",
-        /^https:\/\/docs\.asobeast\.com\/guides\/track-keywords/,
+        "https://docs.asobeast.com/guides/track-keywords#read-the-opportunity-map",
       );
       await expect(link).toHaveAttribute("target", "_blank");
       await expect(link).toHaveAttribute("rel", /noreferrer/);
