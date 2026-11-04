@@ -95,6 +95,7 @@ export function KeywordsWorkspace({
           market={market}
           homeCountry={homeCountry}
           store={store}
+          view={view}
           selection={selection}
         />
       </Suspense>
@@ -121,19 +122,21 @@ function KeywordsMarketScope({
   market,
   homeCountry,
   store,
+  view,
   selection,
 }: {
   id: string;
   market: string;
   homeCountry: string;
   store: Store;
+  view: "table" | "map";
   selection: KeywordChartSelection;
 }) {
   const { data: tracked } = useSuspenseQuery(keywordsOptions(id, market));
   const chart = resolveChartSelection(selection, tracked);
   const open =
     selection.mode !== "hidden" &&
-    (selection.mode === "chart" || tracked.length > 0);
+    (selection.mode === "chart" || (tracked.length > 0 && view !== "map"));
   return (
     <>
       {open ? (
