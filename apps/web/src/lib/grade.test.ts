@@ -68,6 +68,14 @@ describe("grade", () => {
     expect(grade(metric, value)).toBe(expected);
   });
 
+  it.each([
+    [4.46, "strong"],
+    [3.96, "fair"],
+    [3.46, "weak"],
+  ])("grades a %s rating by the one decimal it shows", (value, expected) => {
+    expect(grade("rating", value)).toBe(expected);
+  });
+
   it.each(METRICS)("leaves a missing %s ungraded", (metric) => {
     expect(grade(metric, null)).toBeNull();
   });

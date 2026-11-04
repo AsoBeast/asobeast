@@ -1,3 +1,5 @@
+import { formatRating } from "./format";
+
 export const GRADES = ["strong", "fair", "weak", "poor"] as const;
 export type Grade = (typeof GRADES)[number];
 
@@ -23,10 +25,11 @@ export type GradeMetric = keyof typeof GRADE_SCALES;
 export function grade(metric: GradeMetric, value: number | null): Grade | null {
   if (value === null) return null;
   const { polarity, cuts } = GRADE_SCALES[metric];
+  const shown = metric === "rating" ? Number(formatRating(value)) : value;
   const index =
     polarity === "higher-is-better"
-      ? cuts.findIndex((cut) => value >= cut)
-      : cuts.findIndex((cut) => value <= cut);
+      ? cuts.findIndex((cut) => shown >= cut)
+      : cuts.findIndex((cut) => shown <= cut);
   return index === -1 ? "poor" : GRADES[index];
 }
 
