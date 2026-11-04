@@ -271,6 +271,65 @@ describe('EmailAlertsController (e2e, smtp enabled)', () => {
       .expect(400);
   });
 
+  it('stores, answers, patches and clears the rank drop threshold', async () => {
+    const plain = await api
+      .post('/email-alerts')
+      .send({ email: 'ops@example.com', events: ['rank.dropped'] })
+      .expect(201);
+    expect((plain.body as EmailAlertItem).rankDropThreshold).toBeNull();
+
+    const created = await api
+      .post('/email-alerts')
+      .send({
+        email: 'ops@example.com',
+        events: ['rank.dropped'],
+        rankDropThreshold: 10,
+      })
+      .expect(201);
+    const alert = created.body as EmailAlertItem;
+    expect(alert.rankDropThreshold).toBe(10);
+    const listed = await api.get('/email-alerts').expect(200);
+    expect(listed.body as EmailAlertItem[]).toContainEqual(
+      expect.objectContaining({ id: alert.id, rankDropThreshold: 10 }),
+    );
+
+    const path = `/email-alerts/${alert.id}`;
+    const changed = await api
+      .patch(path)
+      .send({ rankDropThreshold: 3 })
+      .expect(200);
+    expect(changed.body as EmailAlertItem).toMatchObject({
+      rankDropThreshold: 3,
+      events: ['rank.dropped'],
+    });
+    const kept = await api
+      .patch(path)
+      .send({ events: ['rank.first'] })
+      .expect(200);
+    expect((kept.body as EmailAlertItem).rankDropThreshold).toBe(3);
+    const cleared = await api
+      .patch(path)
+      .send({ rankDropThreshold: null })
+      .expect(200);
+    expect((cleared.body as EmailAlertItem).rankDropThreshold).toBeNull();
+    const stored = await prisma.emailAlert.findUniqueOrThrow({
+      where: { id: alert.id },
+    });
+    expect(stored.rankDropThreshold).toBeNull();
+
+    for (const rankDropThreshold of [0, 201, 1.5]) {
+      await api
+        .post('/email-alerts')
+        .send({
+          email: 'ops@example.com',
+          events: ['rank.dropped'],
+          rankDropThreshold,
+        })
+        .expect(400);
+      await api.patch(path).send({ rankDropThreshold }).expect(400);
+    }
+  });
+
   it('stores, answers and patches the rating drop threshold', async () => {
     const plain = await api
       .post('/email-alerts')

@@ -332,6 +332,68 @@ describe('WebhooksController (e2e)', () => {
       .expect(400);
   });
 
+  it('stores, answers, patches and clears the rank drop threshold', async () => {
+    const plain = await api
+      .post('/webhooks')
+      .send({
+        url: 'https://hooks.example.com/asobeast',
+        events: ['rank.dropped'],
+      })
+      .expect(201);
+    expect((plain.body as WebhookItem).rankDropThreshold).toBeNull();
+
+    const created = await api
+      .post('/webhooks')
+      .send({
+        url: 'https://hooks.example.com/asobeast',
+        events: ['rank.dropped'],
+        rankDropThreshold: 10,
+      })
+      .expect(201);
+    const webhook = created.body as WebhookItem;
+    expect(webhook.rankDropThreshold).toBe(10);
+    const listed = await api.get('/webhooks').expect(200);
+    expect(listed.body as WebhookItem[]).toContainEqual(
+      expect.objectContaining({ id: webhook.id, rankDropThreshold: 10 }),
+    );
+
+    const path = `/webhooks/${webhook.id}`;
+    const changed = await api
+      .patch(path)
+      .send({ rankDropThreshold: 3 })
+      .expect(200);
+    expect(changed.body as WebhookItem).toMatchObject({
+      rankDropThreshold: 3,
+      events: ['rank.dropped'],
+    });
+    const kept = await api
+      .patch(path)
+      .send({ events: ['rank.first'] })
+      .expect(200);
+    expect((kept.body as WebhookItem).rankDropThreshold).toBe(3);
+    const cleared = await api
+      .patch(path)
+      .send({ rankDropThreshold: null })
+      .expect(200);
+    expect((cleared.body as WebhookItem).rankDropThreshold).toBeNull();
+    const stored = await prisma.webhook.findUniqueOrThrow({
+      where: { id: webhook.id },
+    });
+    expect(stored.rankDropThreshold).toBeNull();
+
+    for (const rankDropThreshold of [0, 201, 1.5]) {
+      await api
+        .post('/webhooks')
+        .send({
+          url: 'https://hooks.example.com/asobeast',
+          events: ['rank.dropped'],
+          rankDropThreshold,
+        })
+        .expect(400);
+      await api.patch(path).send({ rankDropThreshold }).expect(400);
+    }
+  });
+
   it('stores, answers and patches the rating drop threshold', async () => {
     const plain = await api
       .post('/webhooks')

@@ -15,7 +15,11 @@ import type { KeywordScope } from './keywords';
 import type { SerpEntrantPayload } from './serp';
 import type { ActionOpenedPayload } from './actions';
 import type { ChartMovePayload } from './charts';
-import type { RankMilestoneDirection, RankMilestoneTier } from '../rank';
+import {
+  RANK_DEPTH,
+  type RankMilestoneDirection,
+  type RankMilestoneTier,
+} from '../rank';
 import type { WebhookChannel } from '../webhook-channel';
 
 export const CHANGE_FIELDS = [
@@ -128,6 +132,9 @@ export const ESSENTIAL_ALERT_EVENTS = [
   'app.unlisted_market',
 ] as const satisfies readonly WebhookEvent[];
 
+export const RANK_DROP_THRESHOLD_MIN = 1;
+export const RANK_DROP_THRESHOLD_MAX = RANK_DEPTH;
+
 export interface WebhookItem {
   id: string;
   url: string;
@@ -139,6 +146,7 @@ export interface WebhookItem {
   channel?: WebhookChannel;
   confirmDrops?: boolean;
   ratingDropTenths?: number;
+  rankDropThreshold?: number | null;
 }
 
 export interface WebhookCreateRequest {
@@ -148,6 +156,7 @@ export interface WebhookCreateRequest {
   secret?: string;
   confirmDrops?: boolean;
   ratingDropTenths?: number;
+  rankDropThreshold?: number | null;
 }
 
 export interface WebhookUpdateRequest {
@@ -158,6 +167,7 @@ export interface WebhookUpdateRequest {
   active?: boolean;
   confirmDrops?: boolean;
   ratingDropTenths?: number;
+  rankDropThreshold?: number | null;
 }
 
 export interface EmailAlertCreateRequest {
@@ -166,6 +176,7 @@ export interface EmailAlertCreateRequest {
   reviewScores?: number[];
   confirmDrops?: boolean;
   ratingDropTenths?: number;
+  rankDropThreshold?: number | null;
 }
 
 export interface EmailAlertUpdateRequest {
@@ -175,6 +186,7 @@ export interface EmailAlertUpdateRequest {
   active?: boolean;
   confirmDrops?: boolean;
   ratingDropTenths?: number;
+  rankDropThreshold?: number | null;
 }
 
 export interface WebhookTestResult {
@@ -194,6 +206,7 @@ export interface EmailAlertItem {
   createdAt: string;
   confirmDrops?: boolean;
   ratingDropTenths?: number;
+  rankDropThreshold?: number | null;
 }
 
 export type AlertChannel = 'webhook' | 'email';

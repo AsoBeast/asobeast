@@ -14,6 +14,8 @@ import {
   EmailAlertItem,
   EmailAlertUpdateRequest,
   ESSENTIAL_ALERT_EVENTS,
+  RANK_DROP_THRESHOLD_MAX,
+  RANK_DROP_THRESHOLD_MIN,
   GranularAlertPayload,
   isChangeField,
   RankDroppedPayload,
@@ -24,6 +26,7 @@ import {
   WebhookItem,
   WebhookUpdateRequest,
 } from './changes';
+import { RANK_DEPTH } from '../rank';
 import type { ChartLeftPayload, ChartMovePayload } from './charts';
 import type {
   ReviewNegativePayload,
@@ -163,6 +166,17 @@ describe('alert contracts', () => {
       changes: [],
     };
     expect(competitor.availability).toBeUndefined();
+  });
+
+  it('bounds a rank drop threshold by the checked depth', () => {
+    expect(RANK_DROP_THRESHOLD_MIN).toBe(1);
+    expect(RANK_DROP_THRESHOLD_MAX).toBe(RANK_DEPTH);
+    expectTypeOf<WebhookItem['rankDropThreshold']>().toEqualTypeOf<
+      number | null | undefined
+    >();
+    expectTypeOf<EmailAlertUpdateRequest['rankDropThreshold']>().toEqualTypeOf<
+      number | null | undefined
+    >();
   });
 
   it('requires one of the two delivery scopes', () => {

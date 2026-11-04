@@ -44,6 +44,7 @@ export class WebhooksService {
         secret: dto.secret ?? null,
         confirmDrops: dto.confirmDrops,
         ratingDropTenths: dto.ratingDropTenths,
+        rankDropThreshold: dto.rankDropThreshold ?? null,
       },
     });
     return toWebhookItem(webhook);
@@ -69,6 +70,9 @@ export class WebhooksService {
     }
     if (dto.ratingDropTenths !== undefined) {
       data.ratingDropTenths = dto.ratingDropTenths;
+    }
+    if (dto.rankDropThreshold !== undefined) {
+      data.rankDropThreshold = dto.rankDropThreshold;
     }
     if (dto.secret !== undefined) {
       data.secret = dto.secret === '' ? null : dto.secret;

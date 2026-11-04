@@ -14,6 +14,7 @@ import {
   WebhookCreateRequest,
   WebhookEvent,
 } from '@asobeast/shared';
+import { RankDropThresholdField } from './rank-drop-threshold.decorator';
 import { RatingDropTenths } from './rating-drop-tenths.decorator';
 import { ReviewScoresFilter } from './review-scores.decorator';
 import { WEBHOOK_URL_OPTIONS } from './webhook-url-options';
@@ -41,4 +42,7 @@ export class CreateWebhookDto implements WebhookCreateRequest {
 
   @RatingDropTenths()
   ratingDropTenths?: number;
+
+  @RankDropThresholdField()
+  rankDropThreshold?: number | null;
 }
