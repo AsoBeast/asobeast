@@ -13,6 +13,7 @@ import {
 } from '../jobs/jobs.types';
 import { PrismaService } from '../prisma/prisma.service';
 import { AlertMail } from './alert-mail';
+import { DefaultAlertIntro } from './default-alert-intro';
 import { isDeliverable } from './deliverable-email-alerts';
 import { MailerService } from './mailer.service';
 import { WebhookDelivery, WebhookRateLimitedError } from './webhook-delivery';
@@ -43,6 +44,7 @@ export class AlertsWorker extends WorkerHost {
     private readonly mailer: MailerService,
     private readonly workspace: WorkspaceContext,
     private readonly alertMail: AlertMail,
+    private readonly intro: DefaultAlertIntro,
   ) {
     super();
   }
@@ -84,7 +86,12 @@ export class AlertsWorker extends WorkerHost {
     const { emailAlertId, payload } = job.data;
     const alert = await this.prisma.emailAlert.findUnique({
       where: { id: emailAlertId },
-      select: { email: true, active: true, confirmedAt: true },
+      select: {
+        email: true,
+        active: true,
+        confirmedAt: true,
+        defaultOrigin: true,
+      },
     });
     if (!alert || !isDeliverable(alert)) {
       this.logger.debug(
@@ -92,13 +99,19 @@ export class AlertsWorker extends WorkerHost {
       );
       return;
     }
+    const claimedAt = alert.defaultOrigin
+      ? await this.intro.claim(emailAlertId)
+      : null;
     try {
       await this.mailer.send(
-        await this.alertMail.compose(emailAlertId, alert.email, payload),
+        await this.alertMail.compose(emailAlertId, alert.email, payload, {
+          intro: claimedAt !== null,
+        }),
       );
       await this.record('email', { emailAlertId }, payload.event, job, null);
       this.logger.debug(`delivered ${payload.event} to email ${emailAlertId}`);
     } catch (error) {
+      if (claimedAt) await this.intro.restore(emailAlertId, claimedAt);
       await this.record('email', { emailAlertId }, payload.event, job, error);
       throw error;
     }

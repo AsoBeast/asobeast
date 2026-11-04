@@ -898,3 +898,55 @@ describe('the availability events by email', () => {
     expect(email.text).toContain('No longer listed in DE');
   });
 });
+
+describe('the essential alerts sentence', () => {
+  const ORIGIN = 'https://aso.example.com';
+  const SENTENCE =
+    'You are getting this because AsoBeast turns on the essential alerts for new apps.';
+  const context = (intro?: boolean) => ({
+    origin: ORIGIN,
+    unsubscribe: null,
+    ...(intro === undefined ? {} : { intro }),
+  });
+
+  it('opens a daily update once, under the heading, with a settings link', async () => {
+    const email = await formatBatchEmail(batch, context(true));
+
+    expect(email.html.split(SENTENCE)).toHaveLength(2);
+    expect(email.html.indexOf(SENTENCE)).toBeGreaterThan(
+      email.html.indexOf('Daily app update'),
+    );
+    expect(email.html).toContain(`${ORIGIN}/settings#email-alerts`);
+    const lines = email.text.split('\n');
+    expect(lines[0]).toContain('Daily app update');
+    expect(lines[1]).toContain(SENTENCE);
+  });
+
+  it('opens a single alert the same way', async () => {
+    const email = await formatEmail(dropped, context(true));
+
+    expect(email.html).toContain(SENTENCE);
+    expect(email.text.split('\n')[1]).toContain(SENTENCE);
+  });
+
+  it.each([undefined, false])(
+    'leaves it out when intro is %p',
+    async (intro) => {
+      const email = await formatBatchEmail(batch, context(intro));
+
+      expect(email.html).not.toContain(SENTENCE);
+      expect(email.text).not.toContain(SENTENCE);
+    },
+  );
+
+  it('keeps the largest report under the HTML budget', async () => {
+    const email = await formatBatchEmail(
+      worstCaseBatch('owned_apps'),
+      context(true),
+    );
+
+    expect(Buffer.byteLength(email.html)).toBeLessThanOrEqual(
+      HTML_BUDGET_BYTES,
+    );
+  });
+});

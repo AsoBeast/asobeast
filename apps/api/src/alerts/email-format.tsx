@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 import { renderEmail, type EmailContent } from '../mail/render-email';
 import { AlertEmail } from './emails/alert-email';
 import { alertFooterText, type AlertEmailContext } from './emails/alert-footer';
+import { alertIntroText } from './emails/alert-intro';
 import { ReportEmail } from './emails/report-email';
 import type { Stat } from './emails/stat-grid';
 import type { AlertReport } from './report/report';
@@ -31,8 +32,15 @@ const HTML_TIERS: readonly ReportCaps[] = [
   { apps: 0, competitors: 0, rows: 0 },
 ];
 
+function withIntro(text: string, context: AlertEmailContext): string {
+  const intro = alertIntroText(context);
+  if (!intro) return text;
+  const [headline, ...rest] = text.split('\n');
+  return [headline, intro, ...rest].join('\n');
+}
+
 const withFooter = (text: string, context: AlertEmailContext): string =>
-  `${text}\n\n${alertFooterText(context)}`;
+  `${withIntro(text, context)}\n\n${alertFooterText(context)}`;
 
 export function alertEmailElement(
   payload: GranularPayload,

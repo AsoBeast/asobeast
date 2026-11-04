@@ -4,6 +4,7 @@ import { alertSettingsLink, atHost } from '../../mail/email-links';
 export interface AlertEmailContext {
   origin: string | null;
   unsubscribe: string | null;
+  intro?: boolean;
 }
 
 function subscriptionReason(origin: string | null): string {

@@ -8,6 +8,7 @@ import { AlertFlushService } from './alert-flush.service';
 import { AlertsController } from './alerts.controller';
 import { AlertsDispatcher } from './alerts.dispatcher';
 import { AlertsWorker } from './alerts.worker';
+import { DefaultAlertIntro } from './default-alert-intro';
 import { EmailAlertsController } from './email-alerts.controller';
 import { ConfirmationMailLimiter } from './confirmation-mail.limiter';
 import { EmailAlertConfirmationClaim } from './email-alert-confirmation-claim.service';
@@ -40,6 +41,7 @@ import { WebhooksService } from './webhooks.service';
     AlertAppIdentities,
     AlertsDispatcher,
     AlertsWorker,
+    DefaultAlertIntro,
   ],
   exports: [AlertsDispatcher, AlertFlushService, MailerService, BullModule],
 })

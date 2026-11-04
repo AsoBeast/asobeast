@@ -4,6 +4,7 @@ import { EmailHeading, EmailParagraph } from '../../mail/email-text';
 import type { ReportApp, ReportLink } from '../report/report';
 import { moreApps } from '../report/report-blocks';
 import { AlertFooter, type AlertEmailContext } from './alert-footer';
+import { AlertIntro } from './alert-intro';
 import { ReportCard, ReportNote } from './report-card';
 import { StatGrid, type Stat } from './stat-grid';
 
@@ -35,6 +36,7 @@ export function ReportEmail({
       footer={<AlertFooter context={context} />}
     >
       <EmailHeading>{headline}</EmailHeading>
+      {context.intro && <AlertIntro context={context} />}
       <StatGrid stats={stats} />
       <EmailParagraph>{window}</EmailParagraph>
       {apps.map((app) => (
