@@ -35,7 +35,11 @@ import {
   keywordColumnHelper as columnHelper,
   SORTABLE,
 } from "./keyword-column-helper";
-import { addedColumn, competitorsColumn } from "./keyword-fact-columns";
+import {
+  addedColumn,
+  competitorsColumn,
+  insightsColumn,
+} from "./keyword-fact-columns";
 import { DerivedScoreCell, ScoreCell } from "./score-cells";
 import {
   hasFloorAnswer,
@@ -100,6 +104,7 @@ export function keywordColumns({
     addedColumn(),
     positionColumn(today, { appId, store, homeCountry, multiMarket }),
     ...scoreColumns(),
+    insightsColumn(today),
     ...(store === "GOOGLE_PLAY" ? [acquisitionsColumn()] : []),
     deltaColumn(),
     volatilityColumn(),

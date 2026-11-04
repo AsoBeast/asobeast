@@ -21,11 +21,13 @@ export function KeywordsFilterBar({
   table,
   filters,
   setFilters,
+  today,
 }: {
   appId: string;
   table: Table<KeywordTableFeatures, TrackedKeywordItem>;
   filters: KeywordFilters;
   setFilters: SetValues<typeof keywordFilterParsers>;
+  today: string;
 }) {
   const shown = table.getRowModel().rows;
   const chips = keywordFilterChips(filters);
@@ -67,6 +69,7 @@ export function KeywordsFilterBar({
               exportKeywords(
                 appId,
                 shown.map((row) => row.original),
+                today,
               )
             }
           />

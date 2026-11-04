@@ -75,6 +75,7 @@ export function KeywordsDataTable({
           added: shown("added"),
           playInstalls,
           competitors: shown("competitors"),
+          insights: shown("insights"),
         })}
       </TableCaption>
       <TableHeader className="sticky top-0 z-20">

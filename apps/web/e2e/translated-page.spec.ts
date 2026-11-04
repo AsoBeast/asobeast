@@ -423,6 +423,32 @@ test("a translated keywords page counts the keywords it selects", async ({
   expect(errors).toEqual([]);
 });
 
+test("a translated keywords page brings back the badges a search hid", async ({
+  page,
+}) => {
+  const errors = collectDomErrors(page);
+  await page.goto("/apps/app-1/keywords");
+  const search = await hydrated(
+    page.getByRole("textbox", { name: "Search keywords" }),
+  );
+  const pomodoro = page.getByRole("row").filter({
+    has: page.getByRole("checkbox", { name: "Select pomodoro", exact: true }),
+  });
+  await expect(
+    pomodoro.getByRole("group", { name: /^Insights\./ }),
+  ).toBeVisible();
+
+  await translateText(page);
+  await search.fill("focus");
+  await expect(pomodoro).toHaveCount(0);
+  await search.fill("");
+
+  await expect(
+    pomodoro.getByRole("group", { name: /^Insights\. Dropping/ }),
+  ).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
 test("a translated metadata page counts what is typed into a field", async ({
   page,
 }) => {

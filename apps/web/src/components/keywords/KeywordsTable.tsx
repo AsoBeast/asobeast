@@ -161,6 +161,7 @@ export function KeywordsTable({
           table={table}
           filters={filters}
           setFilters={setFilters}
+          today={today}
         />
         {view === "map" ? (
           <KeywordMap
@@ -184,7 +185,7 @@ export function KeywordsTable({
               selectedKeywords={selectedKeywords}
               marketTags={tagsIn(keywords)}
               onClear={clearSelection}
-              onExport={() => exportKeywords(id, selectedKeywords)}
+              onExport={() => exportKeywords(id, selectedKeywords, today)}
             />
           </div>
         ) : null}

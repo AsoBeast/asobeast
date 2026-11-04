@@ -4,6 +4,7 @@ export interface KeywordCaptionColumns {
   added: boolean;
   playInstalls: boolean;
   competitors: boolean;
+  insights: boolean;
 }
 
 export function keywordTableCaption(columns: KeywordCaptionColumns): string {
@@ -14,6 +15,7 @@ export function keywordTableCaption(columns: KeywordCaptionColumns): string {
     "popularity",
     "difficulty",
     "opportunity",
+    columns.insights ? "insight badges" : null,
     columns.playInstalls ? "Play installs per search term" : null,
     "7 day change",
     "top 10 volatility",
