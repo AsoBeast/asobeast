@@ -4,48 +4,13 @@ import {
   reviewScoresLabel,
   type WebhookEvent,
 } from "@asobeast/shared";
+import { ALERT_RULE_ORDER, ALERT_RULES } from "./alert-rules";
 
-export const EVENT_LABELS: Record<WebhookEvent, string> = {
-  "metadata.changed": "Metadata changed",
-  "rank.dropped": "Rank dropped",
-  "rank.improved": "Rank improved",
-  "rank.milestone": "Rank milestone",
-  "rank.first": "First ranking",
-  "rank.overtaken": "Overtaken by competitor",
-  "review.new": "New review",
-  "review.negative": "Negative review",
-  "rating.dropped": "Rating dropped",
-  "review.spike": "Review spike",
-  "digest.weekly": "Weekly digest",
-  "serp.entrant": "SERP entrant",
-  "action.opened": "New action",
-  "chart.entered": "Chart entered",
-  "chart.left": "Chart left",
-  "chart.milestone": "Chart milestone",
-  "app.delisted": "App delisted",
-  "app.unlisted_market": "Unlisted in a market",
-};
+export const EVENT_LABELS = Object.fromEntries(
+  ALERT_RULE_ORDER.map((event) => [event, ALERT_RULES[event].title]),
+) as Record<WebhookEvent, string>;
 
-export const PICKER_EVENTS: readonly WebhookEvent[] = [
-  "metadata.changed",
-  "rank.dropped",
-  "rank.improved",
-  "rank.milestone",
-  "rank.first",
-  "rank.overtaken",
-  "review.new",
-  "review.negative",
-  "rating.dropped",
-  "review.spike",
-  "digest.weekly",
-  "serp.entrant",
-  "action.opened",
-  "chart.entered",
-  "chart.left",
-  "chart.milestone",
-  "app.delisted",
-  "app.unlisted_market",
-];
+export const PICKER_EVENTS = ALERT_RULE_ORDER;
 
 export interface AlertSubscriptionChange {
   events: WebhookEvent[];
