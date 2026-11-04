@@ -120,3 +120,126 @@ test.describe("listing marks in the keyword cell", () => {
     });
   }
 });
+
+const STORED_COLUMNS = "asobeast.columns.keywords";
+
+const storedColumns = (page: Page) =>
+  page.evaluate(
+    (key) => JSON.parse(window.localStorage.getItem(key) ?? "{}") as object,
+    STORED_COLUMNS,
+  );
+
+const openColumns = async (page: Page) => {
+  await (await hydrated(page.getByRole("button", { name: "Columns" }))).click();
+  return page.getByRole("menuitemcheckbox", { name: "Listing marks" });
+};
+
+test.describe("the listing marks choice", () => {
+  test("the Columns menu offers the listing marks, on by default", async ({
+    page,
+  }) => {
+    await openMarks(page);
+    const choice = await openColumns(page);
+    const menu = page.getByRole("menu");
+
+    await expect(choice).toHaveAttribute("aria-checked", "true");
+    for (const [name, tint] of [
+      ["Title", /bg-success-subtle/],
+      ["Subtitle", /bg-info-subtle/],
+      ["Keyword field", /bg-warning-subtle/],
+    ] as const) {
+      await expect(
+        menu.locator("mark").filter({ hasText: new RegExp(`^${name}$`) }),
+      ).toHaveClass(tint);
+    }
+  });
+
+  test("hiding the marks shows plain keywords and remembers it", async ({
+    page,
+  }) => {
+    await openMarks(page);
+    const before = await storedColumns(page);
+    await (await openColumns(page)).click();
+    await page.keyboard.press("Escape");
+    const table = page.getByRole("table", { name: /Tracked keywords/ });
+
+    await expect(table.locator("mark")).toHaveCount(0);
+    await expect(keywordCell(page, "focus timer")).toHaveAccessibleName(
+      "focus timer",
+    );
+    expect(await storedColumns(page)).toEqual({
+      ...before,
+      listingMarks: false,
+    });
+
+    await page.reload();
+    await hydrated(
+      page.getByRole("checkbox", { name: "Select focus timer", exact: true }),
+    );
+    await expect(table.locator("mark")).toHaveCount(0);
+    await expect(await openColumns(page)).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
+  });
+
+  test("showing them again removes the stored choice", async ({ page }) => {
+    await openMarks(page);
+    const choice = await openColumns(page);
+    await choice.click();
+    await expect(choice).toHaveAttribute("aria-checked", "false");
+    await choice.click();
+    await page.keyboard.press("Escape");
+
+    await expect(keywordCell(page, "focus timer").locator("mark")).toHaveCount(
+      1,
+    );
+    expect(await storedColumns(page)).not.toHaveProperty("listingMarks");
+  });
+
+  test("the menu keeps working with the keyboard", async ({ page }) => {
+    await openMarks(page);
+    const columns = await hydrated(
+      page.getByRole("button", { name: "Columns" }),
+    );
+    await columns.focus();
+    await page.keyboard.press("Enter");
+    const choice = page.getByRole("menuitemcheckbox", {
+      name: "Listing marks",
+    });
+    await expect(choice).toBeVisible();
+    await page.keyboard.press("End");
+    await expect(choice).toBeFocused();
+    await page.keyboard.press("Space");
+
+    await expect(choice).toHaveAttribute("aria-checked", "false");
+    await expect(choice).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(columns).toBeFocused();
+    await expect(
+      page.getByRole("table", { name: /Tracked keywords/ }).locator("mark"),
+    ).toHaveCount(0);
+  });
+
+  test("a Google Play app lists title and short description in the legend", async ({
+    page,
+  }) => {
+    await page.goto("/apps/app-gp/keywords");
+    await openColumns(page);
+    const legend = page.getByRole("menu").locator("mark");
+
+    await expect(legend).toHaveText(["Title", "Short description"]);
+  });
+
+  test("the choice is per browser, not part of the link", async ({ page }) => {
+    await openMarks(page);
+    const address = page.url();
+    await (await openColumns(page)).click();
+    await page.keyboard.press("Escape");
+
+    await expect(
+      page.getByRole("table", { name: /Tracked keywords/ }).locator("mark"),
+    ).toHaveCount(0);
+    expect(page.url()).toBe(address);
+  });
+});

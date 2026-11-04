@@ -128,6 +128,18 @@ describe("defaultColumnVisibility", () => {
 });
 
 describe("columnChoices", () => {
+  it("stores a view choice that is not a column the way it stores a column", () => {
+    const hidden = columnChoices({}, {}, { listingMarks: false }, {});
+
+    expect(hidden).toEqual({ listingMarks: false });
+    expect(columnChoices(hidden, hidden, { listingMarks: true }, {})).toEqual(
+      {},
+    );
+    expect(
+      parseColumnVisibility('{"listingMarks":false,"added":false}'),
+    ).toEqual({ listingMarks: false, added: false });
+  });
+
   const phone = { source: false, traffic: false, difficulty: false };
 
   it("keeps only what differs from the screen default", () => {
