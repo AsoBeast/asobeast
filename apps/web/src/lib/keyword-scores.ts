@@ -1,6 +1,6 @@
 import { isFloorAnswer, toDifficulty100 } from "@asobeast/shared";
 import type { KeywordSort, TrackedKeywordItem } from "@asobeast/shared";
-import type { ScorePair } from "@/lib/keyword-zones";
+import type { ScorePair } from "./keyword-zones";
 
 export function scoreValue(
   keyword: TrackedKeywordItem,

@@ -1,7 +1,7 @@
 import { formatCheckedPosition, utcDayOf } from "@asobeast/shared";
 import type { ScoreSignals, TrackedKeywordItem } from "@asobeast/shared";
 import { csvFilename, downloadCsv, toCsv } from "@/lib/csv";
-import { scoreValue } from "./keyword-scores";
+import { scoreValue } from "@/lib/keyword-scores";
 
 const SCORE_COMPARABILITY =
   "Apple App Store and Google Play popularity and volume scores use different public signals and are not directly comparable";

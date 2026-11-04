@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/card";
 import { zoneCounts, type KeywordZone } from "@/lib/keyword-zones";
 import { keywordZoneParser } from "@/lib/search-params";
-import { scorePair } from "../keyword-scores";
+import { scorePair } from "@/lib/keyword-scores";
 import type { PositionHistoryContext } from "../PositionHistoryPopover";
 import { useZoneThresholds } from "../use-zone-thresholds";
 import { KeywordMapChart } from "./KeywordMapChart";

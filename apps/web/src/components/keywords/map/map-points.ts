@@ -11,7 +11,7 @@ import {
   type KeywordZone,
   type ZoneThresholds,
 } from "@/lib/keyword-zones";
-import { hasFloorAnswer, scorePair } from "../keyword-scores";
+import { hasFloorAnswer, scorePair } from "@/lib/keyword-scores";
 import { opportunityOrder } from "./dot-navigation";
 
 export const MAP_LABEL_LIMIT = 5;

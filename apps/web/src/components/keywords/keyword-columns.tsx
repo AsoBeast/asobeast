@@ -42,7 +42,7 @@ import {
   isScoreOutdated,
   scoreValue,
   shownScore,
-} from "./keyword-scores";
+} from "@/lib/keyword-scores";
 import {
   difficultySignalLines,
   lowerConfidenceLines,
