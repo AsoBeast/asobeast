@@ -12,6 +12,7 @@ const AFFECTED_ROUTES = [
   ["admin-apps", "/admin/apps"],
   ["app-metadata-localization", "/apps/app-1/metadata?fieldLocale=es-MX"],
   ["top-charts-table", "/charts?view=table"],
+  ["app-keyword-marks", "/apps/app-marks/keywords"],
 ] as const;
 
 for (const [name, path] of SIGNED_IN_ROUTES) {
