@@ -83,27 +83,30 @@ function ownedStats(payload: AlertBatchPayload): Stat[] {
 
 function ownedSummary(payload: AlertBatchPayload): string {
   const counts = reportCounts(payload);
-  return [
-    plural(counts.rankDrops, 'rank drop'),
-    plural(counts.rankImprovements, 'rank improvement'),
-    plural(counts.serpEntrants, 'top 10 entrant'),
-    plural(counts.changes, 'listing change'),
-    plural(counts.negativeReviews, 'negative review'),
-    plural(counts.newReviews, 'new review'),
-    plural(counts.actions, 'new action'),
-    plural(counts.milestones, 'milestone'),
-    plural(counts.firstRankings, 'first ranking'),
-    plural(counts.overtakes, 'overtake'),
-    plural(counts.chartMoves, 'chart move'),
-    plural(counts.ratingDrops, 'rating drop'),
-    plural(counts.reviewSpikes, 'review spike'),
-  ].join(' · ');
+  const entries: Array<[number, string]> = [
+    [counts.rankDrops, 'rank drop'],
+    [counts.rankImprovements, 'rank improvement'],
+    [counts.serpEntrants, 'top 10 entrant'],
+    [counts.changes, 'listing change'],
+    [counts.negativeReviews, 'negative review'],
+    [counts.newReviews, 'new review'],
+    [counts.actions, 'new action'],
+    [counts.milestones, 'milestone'],
+    [counts.firstRankings, 'first ranking'],
+    [counts.overtakes, 'overtake'],
+    [counts.chartMoves, 'chart move'],
+    [counts.ratingDrops, 'rating drop'],
+    [counts.reviewSpikes, 'review spike'],
+  ];
+  return entries
+    .filter(([count]) => count > 0)
+    .map(([count, word]) => plural(count, word))
+    .join(' · ');
 }
 
 function batchPreview(payload: AlertBatchPayload, report: AlertReport): string {
-  return payload.scope === 'owned_apps'
-    ? `Summary: ${ownedSummary(payload)}`
-    : report.dateLabel;
+  const summary = payload.scope === 'owned_apps' ? ownedSummary(payload) : '';
+  return summary === '' ? report.dateLabel : `Summary: ${summary}`;
 }
 
 function reportElement(

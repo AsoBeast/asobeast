@@ -181,7 +181,7 @@ describe('formatBatchEmail', () => {
       '[asobeast] Daily app update: 3 changes across 2 apps',
     );
     expect(email.html).toContain(
-      'Summary: 1 rank drop · 0 rank improvements · 1 top 10 entrant · 1 listing change · 0 negative reviews',
+      'Summary: 1 rank drop · 1 top 10 entrant · 1 listing change',
     );
   });
 
@@ -493,7 +493,7 @@ describe('the new review alert', () => {
   it('counts and lists new reviews with their authors in a batch', async () => {
     const email = await formatBatchEmail(batchWithNewReviews);
 
-    expect(email.html).toContain('0 negative reviews · 2 new reviews');
+    expect(email.html).toContain('1 listing change · 2 new reviews');
     for (const part of [email.html, email.text]) {
       expect(part).toContain('New reviews');
       expect(part).toContain('Best habit tracker I have used');
@@ -554,7 +554,7 @@ describe('formatBatchEmail for the new rank events', () => {
     );
 
     expect(email.html).toContain(
-      '· 0 new actions · 1 milestone · 1 first ranking · 1 overtake',
+      'Summary: 1 milestone · 1 first ranking · 1 overtake',
     );
     for (const title of [
       'Milestones',
@@ -568,14 +568,12 @@ describe('formatBatchEmail for the new rank events', () => {
     expect(email.html).not.toContain('<Rival & Co>');
   });
 
-  it('counts zero for a section queued before the new arrays existed', async () => {
+  it('leaves out the counts a section queued before the new arrays existed lacks', async () => {
     const email = await formatBatchEmail(
       rankBatch(withoutRankEvents(rankEventSection())),
     );
 
-    expect(email.html).toContain(
-      '0 milestones · 0 first rankings · 0 overtakes',
-    );
+    expect(email.html).not.toMatch(/milestone|first ranking|overtake/);
   });
 });
 
@@ -589,7 +587,7 @@ describe('formatBatchEmail for chart moves', () => {
     const email = await formatBatchEmail(moves);
 
     expect(email.html).toMatch(/>1<\/p><p[^>]*>Chart moves<\/p>/);
-    expect(email.html).toContain('· 0 overtakes · 1 chart move');
+    expect(email.html).toMatch(/Summary: [^<]*1 chart move/);
   });
 
   it('lists the merged row in html and text', async () => {
@@ -837,6 +835,20 @@ describe('the rating and review events by email', () => {
     expect(email.html).toContain('Rating drops');
     expect(email.html).toContain('Review spikes');
     expect(email.html).toContain('4.44');
+  });
+
+  it('names both counts in the preview text', async () => {
+    const email = await formatBatchEmail(
+      listingBatch(
+        listingSection({
+          ratingDrops: [ratingDropped()],
+          reviewSpikes: [reviewSpike()],
+        }),
+        [ratingDropped(), reviewSpike()],
+      ),
+    );
+
+    expect(email.html).toContain('Summary: 1 rating drop · 1 review spike');
   });
 
   it('shows neither tile in a batch without them', async () => {
