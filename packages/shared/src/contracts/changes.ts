@@ -1,5 +1,10 @@
 import type { Store } from '../index';
-import type { ReviewNegativePayload, ReviewNewPayload } from './reviews';
+import type {
+  ReviewNegativePayload,
+  ReviewNewPayload,
+  ReviewSpikePayload,
+} from './reviews';
+import type { RatingDroppedPayload } from './listing-alerts';
 import type { DigestWeeklyPayload } from './portfolio';
 import type { KeywordScope } from './keywords';
 import type { SerpEntrantPayload } from './serp';
@@ -110,6 +115,7 @@ export interface WebhookItem {
   createdAt: string;
   channel?: WebhookChannel;
   confirmDrops?: boolean;
+  ratingDropTenths?: number;
 }
 
 export interface WebhookCreateRequest {
@@ -118,6 +124,7 @@ export interface WebhookCreateRequest {
   reviewScores?: number[];
   secret?: string;
   confirmDrops?: boolean;
+  ratingDropTenths?: number;
 }
 
 export interface WebhookUpdateRequest {
@@ -127,6 +134,7 @@ export interface WebhookUpdateRequest {
   secret?: string;
   active?: boolean;
   confirmDrops?: boolean;
+  ratingDropTenths?: number;
 }
 
 export interface EmailAlertCreateRequest {
@@ -134,6 +142,7 @@ export interface EmailAlertCreateRequest {
   events: WebhookEvent[];
   reviewScores?: number[];
   confirmDrops?: boolean;
+  ratingDropTenths?: number;
 }
 
 export interface EmailAlertUpdateRequest {
@@ -142,6 +151,7 @@ export interface EmailAlertUpdateRequest {
   reviewScores?: number[];
   active?: boolean;
   confirmDrops?: boolean;
+  ratingDropTenths?: number;
 }
 
 export interface WebhookTestResult {
@@ -160,6 +170,7 @@ export interface EmailAlertItem {
   confirmationSent?: boolean;
   createdAt: string;
   confirmDrops?: boolean;
+  ratingDropTenths?: number;
 }
 
 export type AlertChannel = 'webhook' | 'email';
@@ -306,8 +317,10 @@ export interface AlertBatchAppSection {
   chartMoves?: ChartMovePayload[];
   serpEntrants: SerpEntrantPayload[];
   changes: MetadataChangedPayload[];
+  ratingDrops?: RatingDroppedPayload[];
   negativeReviews: ReviewNegativePayload[];
   newReviews?: ReviewNewPayload[];
+  reviewSpikes?: ReviewSpikePayload[];
   actions: ActionOpenedPayload[];
   competitors: AlertBatchCompetitorSection[];
 }

@@ -25,6 +25,7 @@ export * from './store-connect';
 export * from './store-funnel';
 export * from './spider';
 export * from './reviews';
+export * from './listing-alerts';
 export * from './portfolio';
 export * from './auth';
 export * from './actions';
