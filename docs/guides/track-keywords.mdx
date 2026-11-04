@@ -1,23 +1,8 @@
 ---
-title: "Track keywords"
+title: Track keywords
 description: "Add keywords per storefront on the keyword monitor, import a list from a CSV file, see which keyword fields each market reads, and know what every added market costs in daily store requests."
-icon: "key"
-keywords:
-  - "keywords"
-  - "keyword monitor"
-  - "market"
-  - "keyword field"
-  - "suggestions"
-  - "bulk"
-  - "budget"
-  - "import"
-  - "CSV"
-  - "spreadsheet"
-  - "tags"
-  - "Astro"
-  - "AppFollow"
-  - "Sonar"
-  - "switch"
+icon: key
+keywords: ["keywords","keyword monitor","market","keyword field","suggestions","bulk","budget","import","CSV","spreadsheet","tags","Astro","AppFollow","Sonar","switch"]
 ---
 
 The keyword monitor is where you decide what asobeast checks every day. Each keyword you add belongs to one storefront, and every keyword in every market adds one store search to the daily run.
@@ -269,7 +254,7 @@ The controls above the table narrow the rows without reloading them.
 
 | Control | What it keeps | Address key |
 | --- | --- | --- |
-| Search keywords | Phrases that contain the text you type, ignoring accents, case, punctuation and extra spaces. A phrase in quotes, such as `"habit tracker"`, keeps only the keyword that is exactly that phrase | `q` |
+| Search keywords | Phrases that contain the text you type, ignoring accents and case. A phrase in quotes, such as `"habit tracker"`, keeps only the keyword that is exactly that phrase | `q` |
 | Source | Keywords added from the chosen sources | `source` |
 | Bucket | Keywords in the chosen buckets | `bucket` |
 | Status | Active or paused keywords | `status` |
@@ -279,7 +264,7 @@ The controls above the table narrow the rows without reloading them.
 
 Every active filter shows as a chip under the controls. Remove one chip to drop that filter, or use **Clear all**. The count next to the controls reads how many keywords are shown out of how many are tracked in the market, and **Export CSV** exports exactly the rows shown, in the order shown. The grade words are defined in [How are scores graded?](/concepts/scoring#how-are-scores-graded).
 
-Plain and quoted searches ignore accents, so `cafe` finds `café` and `"cafe finder"` finds `café finder`. A quoted search also ignores case, punctuation and extra spaces, so `"Habit  Tracker"` finds `habit tracker` and not `habit tracker app`. A quote with no closing quote is dropped and the rest is searched as plain text, and the chip reads **Exact phrase** only when both quotes are there.
+Plain searches ignore accents and case, so `cafe` finds `café`. A quoted search also ignores punctuation and extra spaces, so `"Habit  Tracker"` finds `habit tracker` and not `habit tracker app`. A quote with no closing quote is dropped and the rest is searched as plain text, and the chip reads **Exact phrase** only when both quotes are there.
 
 The **Tags** column shows up to three tags and how many more a keyword carries. A note icon next to the keyword shows its note when you point at it or focus it.
 
