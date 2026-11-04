@@ -77,6 +77,7 @@ model Workspace {
   billingCustomerId      String?                 @unique
   checkoutSessionId      String?
   checkoutClaimedAt      DateTime?
+  defaultAlertsAt        DateTime?
   checkoutClaimToken     String?
   subscriptionId         String?                 @unique
   subscriptionStatus     String?
@@ -639,18 +640,19 @@ model ReviewReply {
 }
 
 model Webhook {
-  id               String          @id @default(cuid())
-  workspaceId      String
-  workspace        Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  url              String
-  events           String[]
-  reviewScores     Int[]           @default([])
-  secret           String?
-  active           Boolean         @default(true)
-  confirmDrops     Boolean         @default(false)
-  ratingDropTenths Int?
-  deliveries       AlertDelivery[]
-  createdAt        DateTime        @default(now())
+  id                String          @id @default(cuid())
+  workspaceId       String
+  workspace         Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  url               String
+  events            String[]
+  reviewScores      Int[]           @default([])
+  secret            String?
+  active            Boolean         @default(true)
+  confirmDrops      Boolean         @default(false)
+  ratingDropTenths  Int?
+  rankDropThreshold Int?
+  deliveries        AlertDelivery[]
+  createdAt         DateTime        @default(now())
 
   @@index([workspaceId])
 }
@@ -665,6 +667,9 @@ model EmailAlert {
   active             Boolean         @default(true)
   confirmDrops       Boolean         @default(false)
   ratingDropTenths   Int?
+  rankDropThreshold  Int?
+  defaultOrigin      Boolean         @default(false)
+  introSentAt        DateTime?
   confirmedAt        DateTime?
   confirmationSentAt DateTime?
   unsubscribedAt     DateTime?
