@@ -303,18 +303,18 @@ test.describe("the edit events dialog keeps focus", () => {
   test("Save events keeps focus while the save runs", async ({ page }) => {
     await page.goto("/settings");
     const row = webhookList(page).getByRole("listitem").first();
-    const edit = row.getByRole("button", { name: "Edit events" });
+    const edit = row.getByRole("button", { name: "Edit rules" });
     await pressFromKeyboard(edit);
-    const dialog = page.getByRole("dialog", { name: "Edit events" });
+    const dialog = page.getByRole("dialog", { name: "Edit rules" });
     await dialog
-      .getByRole("checkbox", { name: "SERP entrant", exact: true })
+      .getByRole("switch", { name: "SERP entrant", exact: true })
       .click();
     const held = await holdRequest(
       page,
       /\/api\/backend\/webhooks\/[^/]+$/,
       "PATCH",
     );
-    const save = dialog.getByRole("button", { name: "Save events" });
+    const save = dialog.getByRole("button", { name: "Save rules" });
 
     await pressFromKeyboard(save);
 

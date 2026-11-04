@@ -56,7 +56,7 @@ function EmailAlertRow({ alert }: { alert: EmailAlertItem }) {
     onSuccess: (saved) => {
       seedEmailAlert(queryClient, saved);
       invalidateEmailAlertMutation(queryClient);
-      toast.success("Email alert events saved");
+      toast.success("Email alert rules saved");
     },
     onError: () => toast.error("Could not save the email alert events"),
   });

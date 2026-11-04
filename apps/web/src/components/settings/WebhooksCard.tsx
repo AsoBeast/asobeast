@@ -44,7 +44,7 @@ function WebhookRow({ webhook }: { webhook: WebhookItem }) {
     onSuccess: (saved) => {
       seedWebhook(queryClient, saved);
       invalidateWebhookMutation(queryClient);
-      toast.success("Webhook events saved");
+      toast.success("Webhook rules saved");
     },
     onError: () => toast.error("Could not save the webhook events"),
   });

@@ -7,7 +7,7 @@ import { expectFitsViewport, openSettledDialog } from "./dialog.mts";
 
 const LABEL = "Confirm drops before alerting";
 const BADGE = "Confirmed drops";
-const EDIT_EVENTS = "Edit events";
+const EDIT_EVENTS = "Edit rules";
 const SERP_ENTRANT = "SERP entrant";
 const RANK_MILESTONE = "Rank milestone";
 
@@ -63,7 +63,7 @@ async function createChannel(
 
 async function savedPatch(page: Page, dialog: Locator): Promise<unknown> {
   const patch = page.waitForRequest((request) => request.method() === "PATCH");
-  await dialog.getByRole("button", { name: "Save events" }).click();
+  await dialog.getByRole("button", { name: "Save rules" }).click();
   return (await patch).postDataJSON() as unknown;
 }
 
@@ -120,7 +120,7 @@ for (const channel of CHANNELS) {
       /slips from #9 to #11 and comes back sends nothing/,
     );
     await expect(
-      dialog.getByRole("group", { name: "Events" }).getByRole("checkbox"),
+      dialog.getByRole("group", { name: "Alert rules" }).getByRole("switch"),
     ).toHaveCount(WEBHOOK_EVENTS.length);
   });
 
@@ -169,7 +169,7 @@ for (const channel of CHANNELS) {
     const { row } = await createChannel(page, channel, true);
 
     const dialog = await openSettledDialog(page, EDIT_EVENTS, row);
-    await dialog.getByRole("checkbox", { name: SERP_ENTRANT }).click();
+    await dialog.getByRole("switch", { name: SERP_ENTRANT }).click();
 
     expect(await savedPatch(page, dialog)).toEqual({
       events: ["metadata.changed", "serp.entrant"],
@@ -192,7 +192,7 @@ for (const channel of CHANNELS) {
 
     const dialog = await openSettledDialog(page, EDIT_EVENTS, row);
     await confirmDrops(dialog).click();
-    await dialog.getByRole("button", { name: "Save events" }).click();
+    await dialog.getByRole("button", { name: "Save rules" }).click();
     await expect(dialog).toBeHidden();
 
     const reopened = await openSettledDialog(page, EDIT_EVENTS, row);
@@ -237,7 +237,7 @@ for (const channel of CHANNELS) {
 
     const dialog = await openSettledDialog(page, EDIT_EVENTS, row);
     await confirmDrops(dialog).click();
-    await dialog.getByRole("button", { name: "Save events" }).click();
+    await dialog.getByRole("button", { name: "Save rules" }).click();
 
     await expect(page.getByText(/Could not save the .* events/)).toBeVisible();
     await expect(dialog).toBeVisible();
@@ -289,7 +289,7 @@ test("the edit dialog marks the setting of a confirming row", async ({
 
   const dialog = await openSettledDialog(page, EDIT_EVENTS, row);
   await expect(confirmDrops(dialog)).toBeChecked();
-  await dialog.getByRole("checkbox", { name: RANK_MILESTONE }).click();
+  await dialog.getByRole("switch", { name: RANK_MILESTONE }).click();
 
   expect(await savedPatch(page, dialog)).toEqual({
     events: ["metadata.changed", "rank.milestone"],

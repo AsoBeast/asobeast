@@ -25,7 +25,7 @@ import {
   reviewScoresToSend,
   type AlertSubscriptionChange,
 } from "../alert-event-copy";
-import { AlertSubscriptionFields } from "../alert-events";
+import { AlertRules } from "../alert-rules/AlertRules";
 import { ConfirmDropsField } from "../ConfirmDropsField";
 
 export function EditEventsDialog({
@@ -87,20 +87,20 @@ export function EditEventsDialog({
       <DialogTrigger asChild>
         <Button variant="ghost" size="xs">
           <Pencil />
-          Edit events
+          Edit rules
         </Button>
       </DialogTrigger>
       <DialogContent>
         <form onSubmit={submit} className="flex min-h-0 flex-col gap-4">
           <DialogHeader>
-            <DialogTitle>Edit events</DialogTitle>
+            <DialogTitle>Edit rules</DialogTitle>
             <DialogDescription>
-              Choose the events delivered to{" "}
+              Choose the rules that deliver alerts to{" "}
               <span className="break-all text-foreground">{label}</span>.
             </DialogDescription>
           </DialogHeader>
           <DialogBody>
-            <AlertSubscriptionFields
+            <AlertRules
               events={selected}
               stars={stars}
               ratingTenths={ratingTenths}
@@ -111,7 +111,7 @@ export function EditEventsDialog({
             <ConfirmDropsField checked={confirming} onChange={setConfirming} />
             {selected.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                Select at least one event to save.
+                Switch on at least one rule to save.
               </p>
             ) : null}
           </DialogBody>
@@ -121,7 +121,7 @@ export function EditEventsDialog({
               aria-disabled={pending || blocked || undefined}
             >
               {pending ? <Loader2 className="animate-spin" /> : null}
-              Save events
+              Save rules
             </Button>
           </DialogFooter>
         </form>

@@ -218,7 +218,7 @@ test("a translated alert dialog changes its rating threshold", async ({
   const dialog = await openSettledDialog(page, "Add webhook");
 
   await translateText(page);
-  await dialog.getByRole("checkbox", { name: /rating dropped/i }).click();
+  await dialog.getByRole("switch", { name: /rating dropped/i }).click();
   const threshold = dialog.getByRole("combobox", {
     name: /rating drop threshold/i,
   });

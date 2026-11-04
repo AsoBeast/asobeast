@@ -16,7 +16,7 @@ import {
   ratingDropTenthsToSend,
   reviewScoresToSend,
 } from "./alert-event-copy";
-import { AlertSubscriptionFields } from "./alert-events";
+import { AlertRules } from "./alert-rules/AlertRules";
 import { ConfirmDropsField } from "./ConfirmDropsField";
 import { AlertChannelDialog } from "./alert-channel/AlertChannelDialog";
 import { channelHint, deliversToChat } from "./webhook-channel-copy";
@@ -87,7 +87,7 @@ export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
       return;
     }
     if (events.length === 0) {
-      setError("Select at least one event");
+      setError("Switch on at least one rule");
       return;
     }
     if (needsAStar(events, stars)) {
@@ -130,7 +130,7 @@ export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
         )}
       </div>
 
-      <AlertSubscriptionFields
+      <AlertRules
         events={events}
         stars={stars}
         ratingTenths={ratingTenths}

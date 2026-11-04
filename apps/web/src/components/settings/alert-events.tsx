@@ -7,7 +7,7 @@ import {
   REVIEW_SCORES,
   ratingDropLabel,
 } from "@asobeast/shared";
-import type { ReviewScore, WebhookEvent } from "@asobeast/shared";
+import type { ReviewScore } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -17,7 +17,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { EVENT_LABELS, PICKER_EVENTS } from "./alert-event-copy";
 
 const STARS_HELP =
   "Reviews with these stars arrive as new reviews. When Negative review is ticked too, a low review outside these stars still arrives as a negative review.";
@@ -43,45 +42,6 @@ function ToggleChip({
       <CheckIcon className={checked ? undefined : "invisible"} />
       {children}
     </Button>
-  );
-}
-
-export function EventSelection({
-  value,
-  onChange,
-}: {
-  value: WebhookEvent[];
-  onChange: (next: WebhookEvent[]) => void;
-}) {
-  const labelId = useId();
-
-  function toggle(event: WebhookEvent) {
-    onChange(
-      value.includes(event)
-        ? value.filter((item) => item !== event)
-        : [...value, event],
-    );
-  }
-
-  return (
-    <div className="flex flex-col gap-2">
-      <Label id={labelId}>Events</Label>
-      <div
-        role="group"
-        aria-labelledby={labelId}
-        className="flex flex-wrap gap-2"
-      >
-        {PICKER_EVENTS.map((event) => (
-          <ToggleChip
-            key={event}
-            checked={value.includes(event)}
-            onClick={() => toggle(event)}
-          >
-            {EVENT_LABELS[event]}
-          </ToggleChip>
-        ))}
-      </div>
-    </div>
   );
 }
 
@@ -173,36 +133,5 @@ export function RatingDropSelection({
         {RATING_DROP_HELP}
       </p>
     </div>
-  );
-}
-
-export function AlertSubscriptionFields({
-  events,
-  stars,
-  ratingTenths,
-  onEventsChange,
-  onStarsChange,
-  onRatingTenthsChange,
-}: {
-  events: WebhookEvent[];
-  stars: number[];
-  ratingTenths: number;
-  onEventsChange: (next: WebhookEvent[]) => void;
-  onStarsChange: (next: number[]) => void;
-  onRatingTenthsChange: (next: number) => void;
-}) {
-  return (
-    <>
-      <EventSelection value={events} onChange={onEventsChange} />
-      {events.includes("review.new") ? (
-        <ReviewStarSelection value={stars} onChange={onStarsChange} />
-      ) : null}
-      {events.includes("rating.dropped") ? (
-        <RatingDropSelection
-          value={ratingTenths}
-          onChange={onRatingTenthsChange}
-        />
-      ) : null}
-    </>
   );
 }
