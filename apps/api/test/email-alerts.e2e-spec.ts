@@ -271,6 +271,35 @@ describe('EmailAlertsController (e2e, smtp enabled)', () => {
       .expect(400);
   });
 
+  it('settles the default alerts marker on the first creation only', async () => {
+    await prisma.workspace.update({
+      where: { id: DEFAULT_WORKSPACE_ID },
+      data: { defaultAlertsAt: null },
+    });
+    const marker = async () =>
+      (
+        await prisma.workspace.findUniqueOrThrow({
+          where: { id: DEFAULT_WORKSPACE_ID },
+        })
+      ).defaultAlertsAt;
+
+    const first = await api
+      .post('/email-alerts')
+      .send({ email: 'ops@example.com', events: ['rank.dropped'] })
+      .expect(201);
+    const settled = await marker();
+    expect(settled).not.toBeNull();
+
+    await api
+      .delete(`/email-alerts/${(first.body as EmailAlertItem).id}`)
+      .expect(204);
+    await api
+      .post('/email-alerts')
+      .send({ email: 'ops@example.com', events: ['rank.first'] })
+      .expect(201);
+    expect(await marker()).toEqual(settled);
+  });
+
   it('stores, answers, patches and clears the rank drop threshold', async () => {
     const plain = await api
       .post('/email-alerts')

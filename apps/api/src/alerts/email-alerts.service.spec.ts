@@ -13,6 +13,7 @@ import {
   CONFIRMATION_RESEND_COOLDOWN_SECONDS,
   EmailAlertsService,
 } from './email-alerts.service';
+import type { DefaultAlertsMarker } from './default-alerts-marker';
 import { MailerService } from './mailer.service';
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -31,6 +32,7 @@ const waiting = (confirmationSentAt: Date | null) => ({
 
 const build = () => {
   const findFirst = jest.fn();
+  const marker = jest.fn().mockResolvedValue(true);
   const refund = jest.fn().mockResolvedValue(undefined);
   const tx = {
     $executeRaw: jest.fn().mockResolvedValue(1),
@@ -60,8 +62,17 @@ const build = () => {
     { require: jest.fn(() => 'ws_1') } as unknown as WorkspaceContext,
     {} as AlertMail,
     confirmation as unknown as EmailAlertConfirmation,
+    { claim: marker } as unknown as DefaultAlertsMarker,
   );
-  return { service, findFirst, confirmation, refund, withTransaction, tx };
+  return {
+    service,
+    findFirst,
+    confirmation,
+    refund,
+    withTransaction,
+    tx,
+    marker,
+  };
 };
 
 describe('EmailAlertsService', () => {
@@ -189,6 +200,7 @@ describe('EmailAlertsService', () => {
           workspace,
           {} as EmailAlertUnsubscribe,
         ),
+        { claim: jest.fn() } as unknown as DefaultAlertsMarker,
       );
 
       await expect(
@@ -211,5 +223,45 @@ describe('EmailAlertsService', () => {
         service.resendConfirmation('ea_1', 'owner@example.com'),
       ).rejects.toBeInstanceOf(ServiceUnavailableException);
     });
+  });
+});
+
+describe('EmailAlertsService and the default alerts marker', () => {
+  it('settles the marker in the transaction that creates the alert', async () => {
+    const { service, tx, marker } = build();
+
+    await service.create(
+      { email: 'ops@example.com', events: ['metadata.changed'] },
+      'owner@example.com',
+    );
+
+    expect(marker).toHaveBeenCalledWith(tx);
+    expect(tx.emailAlert.create.mock.invocationCallOrder[0]).toBeLessThan(
+      marker.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('fails the creation when the marker cannot be written', async () => {
+    const { service, marker } = build();
+    marker.mockRejectedValue(new Error('marker failed'));
+
+    await expect(
+      service.create(
+        { email: 'ops@example.com', events: ['metadata.changed'] },
+        'owner@example.com',
+      ),
+    ).rejects.toThrow('marker failed');
+  });
+
+  it('never settles the marker on an update', async () => {
+    const { service, marker } = build();
+
+    await service.update(
+      'ea_1',
+      { events: ['rank.first'] },
+      'owner@example.com',
+    );
+
+    expect(marker).not.toHaveBeenCalled();
   });
 });

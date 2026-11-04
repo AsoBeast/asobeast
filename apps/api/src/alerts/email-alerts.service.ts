@@ -16,6 +16,7 @@ import { CreateEmailAlertDto } from './dto/create-email-alert.dto';
 import { UpdateEmailAlertDto } from './dto/update-email-alert.dto';
 import { toEmailAlertItem } from './email-alerts.mapper';
 import { AlertMail } from './alert-mail';
+import { DefaultAlertsMarker } from './default-alerts-marker';
 import { sampleAlertPayload } from './email-alert-sample';
 import type { ConfirmationRefund } from './confirmation-mail.limiter';
 import { EmailAlertConfirmation } from './email-alert-confirmation.service';
@@ -60,6 +61,7 @@ export class EmailAlertsService {
     private readonly workspace: WorkspaceContext,
     private readonly alertMail: AlertMail,
     private readonly confirmation: EmailAlertConfirmation,
+    private readonly marker: DefaultAlertsMarker,
   ) {}
 
   async list(): Promise<EmailAlertItem[]> {
@@ -91,6 +93,7 @@ export class EmailAlertsService {
           rankDropThreshold: dto.rankDropThreshold ?? null,
         },
       });
+      await this.marker.claim(tx);
       return { alert, ask: !confirmedAt };
     });
     return this.answer(saved, requestedBy);

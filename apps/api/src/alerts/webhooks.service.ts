@@ -9,6 +9,7 @@ import {
   WebhookItem,
   WebhookTestResult,
 } from '@asobeast/shared';
+import { DefaultAlertsMarker } from './default-alerts-marker';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateWebhookDto } from './dto/create-webhook.dto';
@@ -24,6 +25,7 @@ export class WebhooksService {
     private readonly prisma: PrismaService,
     private readonly delivery: WebhookDelivery,
     private readonly workspace: WorkspaceContext,
+    private readonly marker: DefaultAlertsMarker,
   ) {}
 
   async list(): Promise<WebhookItem[]> {
@@ -35,17 +37,22 @@ export class WebhooksService {
 
   async create(dto: CreateWebhookDto): Promise<WebhookItem> {
     this.assertTarget(dto.url);
-    const webhook = await this.prisma.webhook.create({
-      data: {
-        workspaceId: this.workspace.require('a webhook'),
-        url: dto.url,
-        events: dto.events,
-        reviewScores: dto.reviewScores ?? [],
-        secret: dto.secret ?? null,
-        confirmDrops: dto.confirmDrops,
-        ratingDropTenths: dto.ratingDropTenths,
-        rankDropThreshold: dto.rankDropThreshold ?? null,
-      },
+    const workspaceId = this.workspace.require('a webhook');
+    const webhook = await this.prisma.withTransaction(async (tx) => {
+      const created = await tx.webhook.create({
+        data: {
+          workspaceId,
+          url: dto.url,
+          events: dto.events,
+          reviewScores: dto.reviewScores ?? [],
+          secret: dto.secret ?? null,
+          confirmDrops: dto.confirmDrops,
+          ratingDropTenths: dto.ratingDropTenths,
+          rankDropThreshold: dto.rankDropThreshold ?? null,
+        },
+      });
+      await this.marker.claim(tx);
+      return created;
     });
     return toWebhookItem(webhook);
   }
