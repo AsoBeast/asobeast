@@ -1159,3 +1159,43 @@ describe('availability batching', () => {
     ).toEqual([own]);
   });
 });
+
+describe('a rating drop that deepened before the flush', () => {
+  const now = new Date('2026-11-03T04:00:00.000Z');
+  const alpha = { id: 'a', name: 'Alpha' };
+  const shallow = ratingDropped({ app: alpha, dropTenths: 3 });
+  const deep = ratingDropped({ app: alpha, dropTenths: 4 });
+  const nextDay = ratingDropped({
+    app: alpha,
+    dropTenths: 2,
+    toDate: '2026-11-04',
+  });
+  const owned = (payloads: (typeof shallow)[]) =>
+    assembleBatches({
+      events: payloads.map((payload, index) =>
+        event(payload, 'a', `r${index}`),
+      ),
+      appById,
+      serpPrimariesByKeyword: new Map(),
+      now,
+    }).owned;
+
+  it('reports only the deepest drop of an app and day', () => {
+    const batch = owned([shallow, deep]);
+
+    expect(batch.apps[0].ratingDrops).toEqual([deep]);
+    expect(batch.events).toEqual([deep]);
+    expect(batch.totals).toEqual({ events: 1, apps: 1 });
+  });
+
+  it('keeps the deepest whichever arrived first', () => {
+    expect(owned([deep, shallow]).apps[0].ratingDrops).toEqual([deep]);
+  });
+
+  it('keeps the drops of another day', () => {
+    expect(owned([shallow, deep, nextDay]).apps[0].ratingDrops).toEqual([
+      deep,
+      nextDay,
+    ]);
+  });
+});
