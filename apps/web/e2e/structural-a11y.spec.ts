@@ -35,6 +35,7 @@ for (const path of [
   "/apps/app-1/reviews",
   "/apps/app-1/keywords",
   "/apps/app-floor/keywords",
+  "/apps/app-map/keywords?view=map",
   "/apps/app-1/competitors",
   "/settings",
   "/integrations",
@@ -171,5 +172,25 @@ for (const { path, table, region, cookies } of SCROLLING_TABLES) {
 
     await expect(page.getByRole("region", { name: region })).toHaveCount(0);
     expect(await scrollViolations(page)).toEqual([]);
+  });
+}
+
+for (const width of [320, 375, 1440]) {
+  test(`the map names every control and adds no scroll region at ${width} px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/apps/app-map/keywords?view=map");
+    const map = page.getByRole("region", { name: "Keyword opportunity map" });
+    await expect(map).toBeVisible();
+    await page.waitForLoadState("networkidle");
+
+    expect(await structuralViolations(page)).toEqual([]);
+    expect(await scrollViolations(page)).toEqual([]);
+    await expect(
+      page
+        .locator('[data-slot="card"]', { hasText: "Opportunity map" })
+        .getByRole("region"),
+    ).toHaveCount(1);
   });
 }

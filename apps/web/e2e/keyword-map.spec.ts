@@ -615,8 +615,8 @@ test.describe("zones and thresholds", () => {
         name: "Popularity at least",
       });
 
-      if (/^[-0-9.]*$/.test(input)) await field.fill(input);
-      else await field.pressSequentially(input);
+      await field.fill(/^[-0-9.]*$/.test(input) ? input : "");
+      await field.pressSequentially(/^[-0-9.]*$/.test(input) ? "" : input);
 
       await expect(field).toHaveAttribute("aria-invalid", "true");
       await expect(dialog.getByRole("alert")).toHaveText(
