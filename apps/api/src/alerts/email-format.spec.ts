@@ -883,6 +883,17 @@ describe('the availability events by email', () => {
     );
   });
 
+  it('names the availability count in the preview text', async () => {
+    const lost = await formatBatchEmail(
+      listingBatch(
+        listingSection({ availability: [appDelisted(), appUnlistedMarket()] }),
+        [appDelisted(), appUnlistedMarket()],
+      ),
+    );
+
+    expect(lost.html).toContain('Summary: 2 availability changes');
+  });
+
   it('lists a competitor delisting under its card', async () => {
     const gone = appUnlistedMarket({ app: rival });
     const email = await formatBatchEmail({
