@@ -214,6 +214,42 @@ describe('EmailAlertsController (e2e, smtp enabled)', () => {
     });
   });
 
+  it('subscribes to rating drops and review spikes', async () => {
+    const created = await api
+      .post('/email-alerts')
+      .send({
+        email: 'ops@example.com',
+        events: ['rating.dropped', 'review.spike'],
+        ratingDropTenths: 2,
+      })
+      .expect(201);
+    const alert = created.body as EmailAlertItem;
+    expect(alert).toMatchObject({
+      events: ['rating.dropped', 'review.spike'],
+      ratingDropTenths: 2,
+    });
+    const listed = await api.get('/email-alerts').expect(200);
+    expect(listed.body as EmailAlertItem[]).toContainEqual(
+      expect.objectContaining({
+        id: alert.id,
+        events: ['rating.dropped', 'review.spike'],
+      }),
+    );
+
+    const patched = await api
+      .patch(`/email-alerts/${alert.id}`)
+      .send({ events: ['review.spike'] })
+      .expect(200);
+    expect(patched.body as EmailAlertItem).toMatchObject({
+      events: ['review.spike'],
+      ratingDropTenths: 2,
+    });
+    await api
+      .post('/email-alerts')
+      .send({ email: 'ops@example.com', events: ['rating.vanished'] })
+      .expect(400);
+  });
+
   it('stores, answers and patches the rating drop threshold', async () => {
     const plain = await api
       .post('/email-alerts')

@@ -102,8 +102,22 @@ export const WEBHOOK_EVENTS = [
   'chart.left',
   'chart.milestone',
   'review.new',
+  'rating.dropped',
+  'review.spike',
 ] as const;
 export type WebhookEvent = (typeof WEBHOOK_EVENTS)[number];
+
+export const ESSENTIAL_ALERT_EVENTS = [
+  'rank.dropped',
+  'rank.milestone',
+  'rank.first',
+  'metadata.changed',
+  'chart.entered',
+  'chart.left',
+  'rating.dropped',
+  'review.spike',
+  'review.negative',
+] as const satisfies readonly WebhookEvent[];
 
 export interface WebhookItem {
   id: string;

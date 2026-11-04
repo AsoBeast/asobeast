@@ -272,6 +272,45 @@ describe('WebhooksController (e2e)', () => {
     expect(stored.url).toBe('https://hooks.example.com/asobeast');
   });
 
+  it('subscribes to rating drops and review spikes', async () => {
+    const created = await api
+      .post('/webhooks')
+      .send({
+        url: 'https://hooks.example.com/asobeast',
+        events: ['rating.dropped', 'review.spike'],
+        ratingDropTenths: 2,
+      })
+      .expect(201);
+    const webhook = created.body as WebhookItem;
+    expect(webhook).toMatchObject({
+      events: ['rating.dropped', 'review.spike'],
+      ratingDropTenths: 2,
+    });
+    const listed = await api.get('/webhooks').expect(200);
+    expect(listed.body as WebhookItem[]).toContainEqual(
+      expect.objectContaining({
+        id: webhook.id,
+        events: ['rating.dropped', 'review.spike'],
+      }),
+    );
+
+    const patched = await api
+      .patch(`/webhooks/${webhook.id}`)
+      .send({ events: ['review.spike'] })
+      .expect(200);
+    expect(patched.body as WebhookItem).toMatchObject({
+      events: ['review.spike'],
+      ratingDropTenths: 2,
+    });
+    await api
+      .post('/webhooks')
+      .send({
+        url: 'https://hooks.example.com/asobeast',
+        events: ['rating.vanished'],
+      })
+      .expect(400);
+  });
+
   it('stores, answers and patches the rating drop threshold', async () => {
     const plain = await api
       .post('/webhooks')

@@ -3,15 +3,27 @@ import { INestApplication } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient, Store } from '@prisma/client';
-import type { RatingDroppedPayload } from '@asobeast/shared';
+import type {
+  AlertBatchPayload,
+  EmailAlertItem,
+  RatingDroppedPayload,
+  WebhookItem,
+} from '@asobeast/shared';
 import { Queue } from 'bullmq';
 import { App } from 'supertest/types';
+import { formatBatchEmail } from '../src/alerts/email-format';
+import { MailerService } from '../src/alerts/mailer.service';
 import { AppModule } from '../src/app.module';
 import { ListingCaptureService } from '../src/apps/listing-capture.service';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
-import { DeliverAlertPayload, QUEUES } from '../src/jobs/jobs.types';
+import {
+  DeliverAlertPayload,
+  DeliverEmailPayload,
+  QUEUES,
+} from '../src/jobs/jobs.types';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import { NormalizedApp, StoreProvider } from '../src/store-providers/types';
+import { ownerAgent, useCookies } from './helpers/session';
 import { asWorkspace } from './helpers/tenancy';
 import { testDb } from './helpers/test-db';
 import { obliterateQueues, pauseQueues } from './obliterate-queues';
@@ -49,6 +61,7 @@ describe('rating drop alert (e2e)', () => {
   let app: INestApplication<App>;
   let prisma: PrismaClient;
   let capture: ListingCaptureService;
+  let api: Awaited<ReturnType<typeof ownerAgent>>;
   const registry = new RatingRegistry();
 
   beforeAll(async () => {
@@ -57,8 +70,11 @@ describe('rating drop alert (e2e)', () => {
     })
       .overrideProvider(StoreProviderRegistry)
       .useValue(registry)
+      .overrideProvider(MailerService)
+      .useValue({ enabled: true, send: jest.fn() })
       .compile();
     app = moduleFixture.createNestApplication();
+    useCookies(app);
     await app.init();
     await pauseQueues(app);
     prisma = testDb();
@@ -68,13 +84,14 @@ describe('rating drop alert (e2e)', () => {
       update: {},
       create: { id: DEFAULT_WORKSPACE_ID, name: 'Default' },
     });
+    api = await ownerAgent(app);
   });
 
   beforeEach(async () => {
     registry.rating = { ratingAvg: 4.38, ratingCount: 830, version: '1.1.0' };
     jest.restoreAllMocks();
     await prisma.$executeRawUnsafe(
-      'TRUNCATE TABLE "App", "Keyword", "AlertEvent", "Webhook" RESTART IDENTITY CASCADE',
+      'TRUNCATE TABLE "App", "Keyword", "AlertEvent", "Webhook", "EmailAlert" RESTART IDENTITY CASCADE',
     );
   });
 
@@ -126,6 +143,18 @@ describe('rating drop alert (e2e)', () => {
 
   const today = () => new Date().toISOString().slice(0, 10);
 
+  const subscribe = async (ratingDropTenths: number): Promise<WebhookItem> =>
+    (
+      await api
+        .post('/webhooks')
+        .send({
+          url: `https://hooks.example.com/drops-${ratingDropTenths}`,
+          events: ['rating.dropped'],
+          ratingDropTenths,
+        })
+        .expect(201)
+    ).body as WebhookItem;
+
   it('collects one drop, keeps it on a rerun and deepens it', async () => {
     const rated = await seedApp();
 
@@ -175,14 +204,7 @@ describe('rating drop alert (e2e)', () => {
         key === 'ALERT_DELIVERY' ? 'instant' : read(key),
       );
     const rated = await seedApp();
-    const strict = await prisma.webhook.create({
-      data: {
-        workspaceId: DEFAULT_WORKSPACE_ID,
-        url: 'https://hooks.example.com/strict',
-        events: ['rating.dropped'],
-        ratingDropTenths: 3,
-      },
-    });
+    const strict = await subscribe(3);
     const queue = app.get<Queue<DeliverAlertPayload>>(
       getQueueToken(QUEUES.ALERTS),
       { strict: false },
@@ -200,5 +222,49 @@ describe('rating drop alert (e2e)', () => {
     const jobs = await queued();
     expect(jobs).toHaveLength(1);
     expect((jobs[0].data.payload as RatingDroppedPayload).dropTenths).toBe(3);
+  });
+
+  it('delivers a batched drop to the channels whose threshold it meets', async () => {
+    const rated = await seedApp();
+    const loose = await subscribe(2);
+    const strict = await subscribe(3);
+    const mail = (
+      await api
+        .post('/email-alerts')
+        .send({
+          email: 'ops@example.com',
+          events: ['rating.dropped', 'review.spike'],
+        })
+        .expect(201)
+    ).body as EmailAlertItem;
+    await prisma.emailAlert.update({
+      where: { id: mail.id },
+      data: { confirmedAt: new Date() },
+    });
+
+    await refresh(rated.id);
+    await api.post('/alerts/flush').expect(201);
+
+    const jobs = await app
+      .get<Queue<DeliverAlertPayload | DeliverEmailPayload>>(
+        getQueueToken(QUEUES.ALERTS),
+        { strict: false },
+      )
+      .getJobs(['wait', 'paused', 'delayed', 'waiting-children']);
+    const batchFor = (id: string) =>
+      jobs.find((job) =>
+        'webhookId' in job.data
+          ? job.data.webhookId === id
+          : job.data.emailAlertId === id,
+      )?.data.payload as AlertBatchPayload | undefined;
+    expect(batchFor(loose.id)?.apps[0].ratingDrops).toEqual([
+      expect.objectContaining({ dropTenths: 2 }),
+    ]);
+    expect(batchFor(strict.id)).toBeUndefined();
+    const email = await formatBatchEmail(
+      batchFor(mail.id) as AlertBatchPayload,
+    );
+    expect(email.text).toContain('Rating drops');
+    expect(email.text).toContain('4.38');
   });
 });

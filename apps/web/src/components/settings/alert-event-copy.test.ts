@@ -20,6 +20,15 @@ describe("PICKER_EVENTS", () => {
     );
   });
 
+  it("puts Rating dropped and Review spike right after Negative review", () => {
+    const negative = PICKER_EVENTS.indexOf("review.negative");
+
+    expect(PICKER_EVENTS.slice(negative + 1, negative + 3)).toEqual([
+      "rating.dropped",
+      "review.spike",
+    ]);
+  });
+
   it("names every event", () => {
     expect(Object.keys(EVENT_LABELS).sort()).toEqual(
       [...WEBHOOK_EVENTS].sort(),

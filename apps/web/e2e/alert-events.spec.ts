@@ -163,6 +163,8 @@ test("the event chips follow the order of the contract", async ({ page }) => {
     "Overtaken by competitor",
     "New review",
     "Negative review",
+    "Rating dropped",
+    "Review spike",
     "Weekly digest",
     "SERP entrant",
     "New action",

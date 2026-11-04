@@ -6994,7 +6994,9 @@
                 "chart.entered",
                 "chart.left",
                 "chart.milestone",
-                "review.new"
+                "review.new",
+                "rating.dropped",
+                "review.spike"
               ]
             }
           },
@@ -7062,7 +7064,9 @@
                 "chart.entered",
                 "chart.left",
                 "chart.milestone",
-                "review.new"
+                "review.new",
+                "rating.dropped",
+                "review.spike"
               ]
             }
           },
@@ -7129,7 +7133,9 @@
                 "chart.entered",
                 "chart.left",
                 "chart.milestone",
-                "review.new"
+                "review.new",
+                "rating.dropped",
+                "review.spike"
               ]
             }
           },
@@ -7193,7 +7199,9 @@
                 "chart.entered",
                 "chart.left",
                 "chart.milestone",
-                "review.new"
+                "review.new",
+                "rating.dropped",
+                "review.spike"
               ]
             }
           },
