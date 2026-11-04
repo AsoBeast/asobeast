@@ -301,7 +301,7 @@ describe('Row level security', () => {
             },
           }),
         ),
-      ).rejects.toThrow();
+      ).rejects.toThrow('KeywordDiscovery_appId_workspaceId_fkey');
     });
   });
 });
