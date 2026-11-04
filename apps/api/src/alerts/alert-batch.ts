@@ -23,6 +23,7 @@ import {
   ReviewSpikePayload,
   SerpEntrantPayload,
 } from '@asobeast/shared';
+import { withDeepestRatingDrops } from './deepest-rating-drops';
 import { byImpact, type KeywordTraffic } from './rank-impact';
 
 export interface ResolvedApp {
@@ -461,7 +462,9 @@ function withMovesByImpact(
 }
 
 export function assembleBatches(input: AssembleInput): AssembledBatches {
-  const events = [...input.events].sort(compareOutboxEvents);
+  const events = withDeepestRatingDrops(
+    [...input.events].sort(compareOutboxEvents),
+  );
   const classification = classifyBatch({ ...input, events });
   const ownedSections = new Map<string, MutableSection>();
   const competitorSections = new Map<string, MutableSection>();

@@ -112,14 +112,16 @@ export function outboxRows(payload: AlertPayload): OutboxRow[] {
   }
 
   if (payload.event === 'app.delisted') {
-    return [appRow(payload, `delisted:${payload.app.id}:${payload.date}`)];
+    return [
+      appRow(payload, `delisted:${payload.app.id}:${payload.occurredAt}`),
+    ];
   }
 
   if (payload.event === 'app.unlisted_market') {
     return [
       appRow(
         payload,
-        `unlisted:${payload.app.id}:${payload.market}:${payload.date}`,
+        `unlisted:${payload.app.id}:${payload.market}:${payload.occurredAt}`,
       ),
     ];
   }

@@ -688,9 +688,25 @@ describe('ListingCaptureService listing loss alerts', () => {
       expect(listingLost).toHaveBeenCalledWith(
         expect.objectContaining({ id: APP.id }),
         market,
+        expect.any(Date),
       );
     },
   );
+
+  it('dates the alert with the moment it records the loss', async () => {
+    const { service, listingLost, updateMany } = build({ getApp: missing() });
+
+    await service.refreshListing(APP.id);
+
+    const [{ data }] = updateMany.mock.calls[0] as [
+      { data: { delistedAt: Date } },
+    ];
+    expect(listingLost).toHaveBeenCalledWith(
+      expect.objectContaining({ id: APP.id }),
+      'us',
+      data.delistedAt,
+    );
+  });
 
   it('alerts nothing when the loss was already recorded', async () => {
     const { service, listingLost, updateMany } = build({ getApp: missing() });

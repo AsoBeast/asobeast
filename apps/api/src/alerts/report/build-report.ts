@@ -189,6 +189,7 @@ function groupLink(
   if (kind === 'chartMoves') {
     return links.charts(section.chartMoves?.[0]?.chart ?? null, total);
   }
+  if (kind === 'availability') return null;
   return links.group(
     section.app.id,
     kind,
@@ -255,7 +256,7 @@ function competitorApp(
         kind: 'availability',
         title: GROUP_SOURCES.availability.title,
         tone: 'neutral',
-        link: build.links.competitors(primaryId, availabilityRows.length),
+        link: null,
       },
       availabilityRows,
       build.caps,

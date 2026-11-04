@@ -119,6 +119,7 @@ describe('ListingAlerts.ratingDropped', () => {
 });
 
 describe('ListingAlerts.listingLost', () => {
+  const LOST_AT = new Date('2026-11-03T23:59:59.000Z');
   const OWN = {
     id: 'app_1',
     name: 'My App',
@@ -151,19 +152,24 @@ describe('ListingAlerts.listingLost', () => {
   it('dispatches a delisting of the home storefront without a read', async () => {
     const { service, findFirst, count, dispatch } = lost(null);
 
-    await service.listingLost(OWN, 'us');
+    await service.listingLost(OWN, 'us', LOST_AT);
 
     expect(findFirst).not.toHaveBeenCalled();
     expect(count).not.toHaveBeenCalled();
     expect(dispatch).toHaveBeenCalledWith(
-      expect.objectContaining({ event: 'app.delisted', country: 'us' }),
+      expect.objectContaining({
+        event: 'app.delisted',
+        country: 'us',
+        occurredAt: LOST_AT.toISOString(),
+        date: '2026-11-03',
+      }),
     );
   });
 
   it('dispatches a lost market the app was listed in with its keywords', async () => {
     const { service, findFirst, count, dispatch } = lost({ id: 'snap' }, 3);
 
-    await service.listingLost(OWN, 'de');
+    await service.listingLost(OWN, 'de', LOST_AT);
 
     expect(findFirst).toHaveBeenCalledWith({
       where: { appId: 'app_1', country: 'de', localization: null },
@@ -188,7 +194,7 @@ describe('ListingAlerts.listingLost', () => {
   it('counts the keywords of a competitor primary', async () => {
     const { service, count } = lost({ id: 'snap' });
 
-    await service.listingLost(RIVAL, 'de');
+    await service.listingLost(RIVAL, 'de', LOST_AT);
 
     expect(count).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -200,7 +206,7 @@ describe('ListingAlerts.listingLost', () => {
   it('dispatches nothing for a market the app was never listed in', async () => {
     const { service, count, dispatch } = lost(null);
 
-    await service.listingLost(OWN, 'fr');
+    await service.listingLost(OWN, 'fr', LOST_AT);
 
     expect(count).not.toHaveBeenCalled();
     expect(dispatch).not.toHaveBeenCalled();
@@ -211,7 +217,9 @@ describe('ListingAlerts.listingLost', () => {
     const { service, dispatch } = lost(null);
     dispatch.mockRejectedValue(new Error('outbox down'));
 
-    await expect(service.listingLost(OWN, 'us')).resolves.toBeUndefined();
+    await expect(
+      service.listingLost(OWN, 'us', LOST_AT),
+    ).resolves.toBeUndefined();
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('app_1'));
     warn.mockRestore();
   });

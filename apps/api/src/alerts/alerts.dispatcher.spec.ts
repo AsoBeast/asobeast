@@ -833,7 +833,9 @@ describe('AlertsDispatcher availability events', () => {
 
     await inWorkspace(() => dispatcher.dispatch(appDelisted()));
 
-    expect(prisma.updates[0].where.dedupeKey).toBe('delisted:a:2026-11-03');
+    expect(prisma.updates[0].where.dedupeKey).toBe(
+      'delisted:a:2026-11-03T03:10:00.000Z',
+    );
   });
 });
 

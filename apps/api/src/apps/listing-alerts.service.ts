@@ -35,9 +35,9 @@ export class ListingAlerts {
     }
   }
 
-  async listingLost(app: App, market: string): Promise<void> {
+  async listingLost(app: App, market: string, lostAt: Date): Promise<void> {
     try {
-      await this.raiseListingLoss(app, market, new Date());
+      await this.raiseListingLoss(app, market, lostAt);
     } catch (error: unknown) {
       this.logger.warn(
         `listing loss alert for app ${app.id} in ${market} failed: ${error instanceof Error ? error.message : String(error)}`,
