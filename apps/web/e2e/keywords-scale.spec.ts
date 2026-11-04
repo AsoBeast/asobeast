@@ -90,6 +90,10 @@ test("the table reports its full row count to assistive tech", async ({
 
   await expect(page.locator("table")).toHaveAttribute(
     "aria-rowcount",
-    String(BULK_KEYWORD_COUNT + 1),
+    String(BULK_KEYWORD_COUNT + 2),
+  );
+  await expect(page.locator("tfoot tr")).toHaveAttribute(
+    "aria-rowindex",
+    String(BULK_KEYWORD_COUNT + 2),
   );
 });

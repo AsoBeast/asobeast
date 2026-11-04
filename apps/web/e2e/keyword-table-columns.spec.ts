@@ -66,7 +66,7 @@ test("sorts by Added with the newest first and writes the sort to the address", 
   ).toHaveAttribute("aria-sort", "descending");
   const rows = page.getByRole("row");
   await expect(rows.nth(1)).toContainText("time blocking");
-  await expect(rows.last()).toContainText("focus timer");
+  await expect(rows.nth(-2)).toContainText("focus timer");
 
   await page.getByRole("button", { name: "Added", exact: true }).click();
 
@@ -187,7 +187,7 @@ test("a phrase in quotes matches the whole keyword and says so in a chip", async
     .fill('"focus timer"');
 
   await expect(page).toHaveURL(/q=%22focus\+timer%22/);
-  await expect(page.getByRole("row")).toHaveCount(2);
+  await expect(page.getByRole("row")).toHaveCount(3);
   await expect(page.getByRole("row").nth(1)).toContainText("focus timer");
   await expect(page.getByText("Exact phrase: focus timer")).toBeVisible();
 });
@@ -206,7 +206,7 @@ test("a quoted phrase that is only part of a keyword finds nothing and offers th
 
   await page.getByRole("textbox", { name: "Search keywords" }).fill("timer");
 
-  await expect(page.getByRole("row")).toHaveCount(3);
+  await expect(page.getByRole("row")).toHaveCount(4);
 });
 
 test("an unbalanced quote searches for the words while the closing quote is still to come", async ({
@@ -216,7 +216,7 @@ test("an unbalanced quote searches for the words while the closing quote is stil
 
   await page.getByRole("textbox", { name: "Search keywords" }).fill('"focus');
 
-  await expect(page.getByRole("row")).toHaveCount(2);
+  await expect(page.getByRole("row")).toHaveCount(3);
   await expect(page.getByText('Search: "focus')).toBeVisible();
 });
 

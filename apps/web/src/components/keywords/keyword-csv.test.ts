@@ -6,6 +6,8 @@ import {
 } from "@asobeast/shared";
 import { keywordCsv } from "./keyword-csv";
 
+const TODAY = "2026-11-03";
+
 function keyword(
   text: string,
   latestDepth: number | null = RANK_DEPTH,
@@ -35,60 +37,70 @@ function keyword(
 
 describe("keywordCsv", () => {
   it("neutralizes a formula-like keyword through the shared escaper", () => {
-    expect(keywordCsv([keyword("=cmd|'/c calc'!A1")])).toContain(
+    expect(keywordCsv([keyword("=cmd|'/c calc'!A1")], TODAY)).toContain(
       "'=cmd|'/c calc'!A1",
     );
   });
 
   it("renders a checked but unranked position at the captured depth", () => {
-    expect(keywordCsv([keyword("focus timer")])).toContain(
+    expect(keywordCsv([keyword("focus timer")], TODAY)).toContain(
       `focus timer,MANUAL,true,>${RANK_DEPTH},`,
     );
   });
 
   it("leaves the position empty for a keyword that was never checked", () => {
-    expect(keywordCsv([keyword("focus timer", null)])).toContain(
+    expect(keywordCsv([keyword("focus timer", null)], TODAY)).toContain(
       "focus timer,MANUAL,true,,",
     );
   });
 
   it("exports a stored difficulty past its scale clamped to 100", () => {
-    const row = keywordCsv([{ ...keyword("geography quiz"), difficulty: 48.2 }])
+    const row = keywordCsv(
+      [{ ...keyword("geography quiz"), difficulty: 48.2 }],
+      TODAY,
+    )
       .split("\r\n")[1]
       .split(",");
     expect(row[8]).toBe("100");
   });
 
   it("adds the score evidence after the capture time", () => {
-    expect(keywordCsv([keyword("focus timer")]).split("\r\n")[0]).toContain(
+    expect(
+      keywordCsv([keyword("focus timer")], TODAY).split("\r\n")[0],
+      TODAY,
+    ).toContain(
       "capturedAt,suggestReach,serpFlags,officialPopularity,officialPopularityState,officialPopularityFloor,officialPopularityWeek,lastAboveFloorValue,lastAboveFloorWeek,scoreOutdated,scoreComparability",
     );
   });
 
   it("exports the signals of a scored row", () => {
-    const row = keywordCsv([
-      {
-        ...keyword("geoguessr"),
-        scoreSignals: {
-          suggestReach: "hit",
-          suggestPrefixLength: 4,
-          suggestPosition: 4,
-          serpRelevance: 0.1,
-          medianRatingCount: 800,
-          flags: ["brand", "padded"],
-          officialPopularity: 71,
-          estimatedTraffic: 4.2,
+    const row = keywordCsv(
+      [
+        {
+          ...keyword("geoguessr"),
+          scoreSignals: {
+            suggestReach: "hit",
+            suggestPrefixLength: 4,
+            suggestPosition: 4,
+            serpRelevance: 0.1,
+            medianRatingCount: 800,
+            flags: ["brand", "padded"],
+            officialPopularity: 71,
+            estimatedTraffic: 4.2,
+          },
+          scoreOutdated: false,
         },
-        scoreOutdated: false,
-      },
-    ]);
+      ],
+      TODAY,
+    );
     expect(row).toContain(",hit,brand padded,71,,,,,,false,");
   });
 
   it("leaves the evidence empty for a row without signals", () => {
-    const row = keywordCsv([
-      { ...keyword("focus timer"), scoreSignals: null, scoreOutdated: true },
-    ]);
+    const row = keywordCsv(
+      [{ ...keyword("focus timer"), scoreSignals: null, scoreOutdated: true }],
+      TODAY,
+    );
     expect(row).toContain(",,,,,,,,,true,");
     expect(row).not.toMatch(/null|undefined/);
   });
@@ -106,9 +118,10 @@ describe("keywordCsv", () => {
       ...overrides,
     });
     const rowOf = (scoreSignals: ScoreSignals) =>
-      keywordCsv([
-        { ...keyword("world flags"), scoreSignals, scoreOutdated: false },
-      ]).split("\r\n")[1];
+      keywordCsv(
+        [{ ...keyword("world flags"), scoreSignals, scoreOutdated: false }],
+        TODAY,
+      ).split("\r\n")[1];
 
     it("exports a term listed at the floor with its last value", () => {
       expect(
@@ -145,35 +158,43 @@ describe("keywordCsv", () => {
   });
 
   it("appends the tags and the note after the existing columns", () => {
-    const header = keywordCsv([keyword("focus timer")]).split("\r\n")[0];
+    const header = keywordCsv([keyword("focus timer")], TODAY).split("\r\n")[0];
 
     expect(header.endsWith(",scoreComparability,tags,note,country")).toBe(true);
-    expect(header.split(",")).toHaveLength(32);
+    expect(header.split(",")).toHaveLength(33);
   });
 
   it("joins the tags and leaves a missing tag list and note empty", () => {
-    const [, tagged, bare] = keywordCsv([
-      { ...keyword("focus timer"), tags: ["core", "exam season"], note: "May" },
-      keyword("pomodoro"),
-    ]).split("\r\n");
+    const [, tagged, bare] = keywordCsv(
+      [
+        {
+          ...keyword("focus timer"),
+          tags: ["core", "exam season"],
+          note: "May",
+        },
+        keyword("pomodoro"),
+      ],
+      TODAY,
+    ).split("\r\n");
 
     expect(tagged.endsWith(",core; exam season,May,us")).toBe(true);
     expect(bare.endsWith(",,us")).toBe(true);
   });
 
   it("neutralizes a formula-like note", () => {
-    const [, row] = keywordCsv([
-      { ...keyword("focus timer"), note: "=HYPERLINK(1)" },
-    ]).split("\r\n");
+    const [, row] = keywordCsv(
+      [{ ...keyword("focus timer"), note: "=HYPERLINK(1)" }],
+      TODAY,
+    ).split("\r\n");
 
     expect(row.endsWith(",'=HYPERLINK(1),us")).toBe(true);
   });
 
   it("exports the market of every row in lower case", () => {
-    const [, us, pl] = keywordCsv([
-      keyword("focus timer"),
-      { ...keyword("zegar"), country: "pl" },
-    ]).split("\r\n");
+    const [, us, pl] = keywordCsv(
+      [keyword("focus timer"), { ...keyword("zegar"), country: "pl" }],
+      TODAY,
+    ).split("\r\n");
 
     expect(us.endsWith(",us")).toBe(true);
     expect(pl.endsWith(",pl")).toBe(true);
@@ -181,15 +202,16 @@ describe("keywordCsv", () => {
 });
 
 function cellOf(row: TrackedKeywordItem, column: string): string {
-  const [header, line] = keywordCsv([row]).split("\r\n");
+  const [header, line] = keywordCsv([row], TODAY).split("\r\n");
   return line.split(",")[header.split(",").indexOf(column)];
 }
 
 describe("keywordCsv added day", () => {
   it("sits after relevance", () => {
-    expect(keywordCsv([keyword("focus timer")]).split("\r\n")[0]).toContain(
-      "bucket,relevance,added,",
-    );
+    expect(
+      keywordCsv([keyword("focus timer")], TODAY).split("\r\n")[0],
+      TODAY,
+    ).toContain("bucket,relevance,added,");
   });
 
   it("exports the UTC day the keyword was added", () => {
@@ -211,9 +233,10 @@ describe("keywordCsv added day", () => {
 
 describe("keywordCsv competitors in the top 10", () => {
   it("sits after the added day", () => {
-    expect(keywordCsv([keyword("focus timer")]).split("\r\n")[0]).toContain(
-      "relevance,added,competitorsInTop10,scoredAt",
-    );
+    expect(
+      keywordCsv([keyword("focus timer")], TODAY).split("\r\n")[0],
+      TODAY,
+    ).toContain("relevance,added,competitorsInTop10,scoredAt");
   });
 
   it.each([
@@ -228,5 +251,45 @@ describe("keywordCsv competitors in the top 10", () => {
         "competitorsInTop10",
       ),
     ).toBe(expected);
+  });
+});
+
+describe("keywordCsv insights", () => {
+  it("sits after the opportunity", () => {
+    expect(
+      keywordCsv([keyword("focus timer")], TODAY).split("\r\n")[0],
+    ).toContain(",opportunity,insights,bucket,");
+  });
+
+  it("writes every applicable insight, not only the two the table shows", () => {
+    expect(
+      cellOf(
+        {
+          ...keyword("pomodoro"),
+          dropStreak: 3,
+          latestPosition: 12,
+          latestCheckedOn: TODAY,
+          volume: 45,
+          difficulty: 1.2,
+          relevance: 80,
+          uncovered: true,
+        },
+        "insights",
+      ),
+    ).toBe("Dropping; Page 1 close; Beatable; Not in listing");
+  });
+
+  it("writes the insights of the day it is given", () => {
+    const row = {
+      ...keyword("pomodoro"),
+      dropStreak: 3,
+      latestPosition: 12,
+      latestCheckedOn: "2026-11-01",
+    };
+    expect(cellOf(row, "insights")).toBe("Dropping");
+  });
+
+  it("leaves the cell empty without an insight", () => {
+    expect(cellOf(keyword("focus timer"), "insights")).toBe("");
   });
 });

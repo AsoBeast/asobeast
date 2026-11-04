@@ -4,6 +4,7 @@ import { useRef } from "react";
 import { flexRender, type Table as TableInstance } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import type { TrackedKeywordItem } from "@asobeast/shared";
+import { DataTableFooter } from "@/components/data-table/DataTableFooter";
 import { FilteredEmpty } from "@/components/data-table/FilteredEmpty";
 import { keywordTableCaption } from "./keyword-caption";
 import type { KeywordTableFeatures } from "./keyword-table-features";
@@ -68,13 +69,15 @@ export function KeywordsDataTable({
     <Table
       containerRef={scrollRef}
       containerClassName="max-h-[70svh] overflow-y-auto overscroll-contain rounded-xl border bg-card"
-      aria-rowcount={rows.length + 1}
+      aria-rowcount={rows.length + (rows.length > 0 ? 2 : 1)}
     >
       <TableCaption className="sr-only">
         {keywordTableCaption({
           added: shown("added"),
           playInstalls,
           competitors: shown("competitors"),
+          insights: shown("insights"),
+          totals: rows.length > 0,
         })}
       </TableCaption>
       <TableHeader className="sticky top-0 z-20">
@@ -146,6 +149,13 @@ export function KeywordsDataTable({
           </tr>
         ) : null}
       </TableBody>
+      {rows.length > 0 ? (
+        <DataTableFooter
+          table={table}
+          rowIndex={rows.length + 2}
+          cellClassName={(id) => STICKY_COLUMNS[id]}
+        />
+      ) : null}
     </Table>
   );
 }

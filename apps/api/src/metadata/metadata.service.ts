@@ -25,13 +25,8 @@ import { storedKeywordFields } from '../keywords/keyword-field-index';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { suggestKeywordField } from './keyword-field-suggestion';
-import {
-  FieldPhrases,
-  fieldPhrases,
-  judgingSurfaces,
-  keywordFieldOf,
-} from './listing-surfaces';
-import { judgeFields, LocalizedSurfaces, Surface } from './localized-coverage';
+import { judgeKeywordCoverage } from './keyword-coverage-judge';
+import { FieldPhrases, fieldPhrases, keywordFieldOf } from './listing-surfaces';
 import {
   latestListingTexts,
   latestLocalizedTexts,
@@ -278,18 +273,20 @@ export class MetadataService {
     keywordFields: FieldPhrases,
   ): JudgedCoverageRow[] {
     return active.map((item) => {
-      const judging = listings.has(item.country) ? item.country : app.country;
-      const { surfaces, localized: localizedSurfaces } = judgingSurfaces(
-        {
-          store: app.store,
-          country: judging,
-          home: judging === app.country,
-          listing: listings.get(judging),
-          captured: localized.get(judging) ?? [],
-        },
-        keywordFields,
+      const { fields, listingCountry, uncovered } = judgeKeywordCoverage(
+        app,
+        item,
+        { listings, localized, keywordFields },
       );
-      return this.coverageRow(item, surfaces, localizedSurfaces, judging);
+      return {
+        keywordId: item.keywordId,
+        text: item.text,
+        bucket: item.bucket,
+        fields,
+        uncovered,
+        country: item.country,
+        listingCountry,
+      };
     });
   }
 
@@ -307,24 +304,6 @@ export class MetadataService {
       limit: limit.limit,
       indexed: limit.indexed,
       issues,
-    };
-  }
-
-  private coverageRow(
-    item: TrackedKeywordItem,
-    surfaces: Surface[],
-    localized: LocalizedSurfaces[],
-    listingCountry: string,
-  ): JudgedCoverageRow {
-    const fields = judgeFields(item.text, surfaces, localized);
-    return {
-      keywordId: item.keywordId,
-      text: item.text,
-      bucket: item.bucket,
-      fields,
-      uncovered: fields.every((field) => !field.covered),
-      country: item.country,
-      listingCountry,
     };
   }
 

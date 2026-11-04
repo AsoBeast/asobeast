@@ -8,6 +8,7 @@ import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import { FirstPositionChecks } from './first-position-checks';
 import { KeywordTracker } from './keyword-tracker';
+import * as listingFactsModule from './listing-facts';
 import { KeywordsService } from './keywords.service';
 import { MarketListingRequests } from './market-listing.requests';
 
@@ -782,6 +783,29 @@ describe('KeywordsService.listTracked competitors in the top 10', () => {
       null,
       null,
     ]);
+  });
+
+  describe('coverage facts', () => {
+    afterEach(() => jest.restoreAllMocks());
+
+    it('asks the listing facts for coverage only when the list asks for it', async () => {
+      const facts = jest
+        .spyOn(listingFactsModule, 'listingFacts')
+        .mockResolvedValue({ snapshotText: '' });
+
+      await buildService(buildPrisma([])).listTracked(
+        'app1',
+        undefined,
+        undefined,
+        { coverageFacts: true },
+      );
+      await buildService(buildPrisma([])).listTracked('app1');
+
+      expect(facts.mock.calls.map((call) => call[3])).toEqual([
+        { coverage: true },
+        { coverage: undefined },
+      ]);
+    });
   });
 });
 

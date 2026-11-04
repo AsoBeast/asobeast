@@ -3,6 +3,9 @@
 import { InfoTip } from "@/components/ui/info-tip";
 import { SortableHeader } from "@/components/data-table/SortableHeader";
 import { nullsLast } from "@/lib/table/sorting";
+import { insightsOf } from "@/lib/keyword-insights";
+import { InsightsCell } from "./InsightsCell";
+import { InsightsTip } from "./InsightsTip";
 import { AddedCell, CompetitorsInTop10Cell } from "./keyword-cells";
 import {
   keywordColumnHelper as columnHelper,
@@ -45,4 +48,19 @@ export function competitorsColumn() {
       ),
     },
   );
+}
+
+export function insightsColumn(today: string) {
+  return columnHelper.accessor((row) => insightsOf(row, today).length, {
+    id: "insights",
+    meta: { label: "Insights" },
+    enableSorting: false,
+    header: () => (
+      <span className="inline-flex items-center gap-1">
+        <span>Insights</span>
+        <InsightsTip />
+      </span>
+    ),
+    cell: ({ row }) => <InsightsCell keyword={row.original} today={today} />,
+  });
 }

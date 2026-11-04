@@ -1,7 +1,8 @@
 import { formatCheckedPosition, utcDayOf } from "@asobeast/shared";
 import type { ScoreSignals, TrackedKeywordItem } from "@asobeast/shared";
 import { csvFilename, downloadCsv, toCsv } from "@/lib/csv";
-import { scoreValue } from "./keyword-scores";
+import { insightsCsv } from "@/lib/keyword-insights";
+import { scoreValue } from "@/lib/keyword-scores";
 
 const SCORE_COMPARABILITY =
   "Apple App Store and Google Play popularity and volume scores use different public signals and are not directly comparable";
@@ -17,6 +18,7 @@ const KEYWORD_CSV_HEADERS = [
   "popularity",
   "difficulty",
   "opportunity",
+  "insights",
   "bucket",
   "relevance",
   "added",
@@ -71,7 +73,7 @@ function evidenceColumns(
   ];
 }
 
-export function keywordCsv(rows: TrackedKeywordItem[]): string {
+export function keywordCsv(rows: TrackedKeywordItem[], today: string): string {
   const csvRows = rows.map((keyword) => [
     keyword.text,
     keyword.source,
@@ -83,6 +85,7 @@ export function keywordCsv(rows: TrackedKeywordItem[]): string {
     roundOrNull(scoreValue(keyword, "traffic")),
     roundOrNull(scoreValue(keyword, "difficulty")),
     roundOrNull(keyword.opportunity),
+    insightsCsv(keyword, today),
     keyword.bucket,
     keyword.relevance,
     keyword.trackedAt ? utcDayOf(new Date(keyword.trackedAt)) : null,
@@ -104,6 +107,7 @@ export function keywordCsv(rows: TrackedKeywordItem[]): string {
 export function exportKeywords(
   appId: string,
   rows: TrackedKeywordItem[],
+  today: string,
 ): void {
-  downloadCsv(csvFilename("keywords", appId), keywordCsv(rows));
+  downloadCsv(csvFilename("keywords", appId), keywordCsv(rows, today));
 }

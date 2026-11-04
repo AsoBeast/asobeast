@@ -24,6 +24,11 @@ export const LATER_RELEASES: readonly Release[] = [
         text: "Switch the keywords page to Map to see every keyword placed by popularity and difficulty, sorted into quick wins, keywords worth fighting for, easy pickings and low priority. Press a zone to show only its keywords in the table.",
       },
       {
+        kind: "new",
+        title: "Insights and totals on the keywords table",
+        text: "Each keyword can carry up to two short verdicts, such as Dropping, Page 1 close, Beatable or Not in listing, and the last row of the table adds up the keywords you are looking at: how many rank, their average position and their average popularity and difficulty.",
+      },
+      {
         kind: "improved",
         title: "A clearer sign up",
         text: "On the hosted service you confirm your email first, then pick a plan on one page that shows the price, what is included and the questions people ask most.",

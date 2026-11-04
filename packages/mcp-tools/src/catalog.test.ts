@@ -16,6 +16,12 @@ describe("the tool catalog", () => {
     expect(description).toContain("competitorsInTop10");
   });
 
+  it("describes the drop streak and the listing coverage of list_keywords", () => {
+    const description = toolByName("list_keywords")?.description ?? "";
+    expect(description).toContain("dropStreak");
+    expect(description).toContain("uncovered");
+  });
+
   it("lists no write tool among the read tools", () => {
     for (const tool of MCP_TOOLS) {
       expect(tool.kind).toBe("read");

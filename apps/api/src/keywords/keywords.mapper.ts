@@ -13,6 +13,7 @@ import {
 } from '@asobeast/shared';
 import { appOpportunity } from '../scoring/keyword-opportunity';
 import { readScoreSignals } from '../scoring/score-signals';
+import { dropStreakOf } from './keyword-drop-streak';
 import type { RetainedPositionFacts } from './keyword-position-facts';
 import { KeywordFieldIndex, reportedSource } from './keyword-field-index';
 
@@ -168,9 +169,29 @@ type PositionFacts = Pick<
   Partial<
     Pick<
       TrackedKeywordItem,
-      'bestPosition' | 'positionDeltaFromBest' | 'daysInTier' | 'heldTier'
+      | 'bestPosition'
+      | 'positionDeltaFromBest'
+      | 'daysInTier'
+      | 'heldTier'
+      | 'dropStreak'
     >
   >;
+
+function dropStreakFact(
+  rankings: TrackedKeywordRow['keyword']['rankings'],
+  active: boolean,
+  today: Date,
+): number | null {
+  const latest = rankings[0];
+  if (
+    !active ||
+    !latest ||
+    !isCheckFresh(utcDayOf(latest.date), utcDayOf(today))
+  ) {
+    return null;
+  }
+  return dropStreakOf(rankings);
+}
 
 function positionFacts(
   rankings: TrackedKeywordRow['keyword']['rankings'],
@@ -180,6 +201,7 @@ function positionFacts(
   const latest = rankings[0] ?? null;
   const latestPosition = latest?.position ?? null;
   const previousPosition = previousDayPosition(rankings);
+  const today = new Date();
   return {
     latestPosition,
     latestDepth: latest?.depth ?? null,
@@ -192,7 +214,10 @@ function positionFacts(
     positionDelta7d: positionDelta7d(rankings),
     ...(hold === undefined
       ? {}
-      : heldFacts(hold, latestPosition, active, new Date())),
+      : {
+          ...heldFacts(hold, latestPosition, active, today),
+          dropStreak: dropStreakFact(rankings, active, today),
+        }),
   };
 }
 
@@ -200,6 +225,7 @@ export interface AppFacts {
   snapshotText: string;
   marketTexts?: ReadonlyMap<string, string>;
   inKeywordField?: KeywordFieldIndex;
+  uncovered?: (keyword: { country: string; text: string }) => boolean;
 }
 
 const NO_APP_FACTS: AppFacts = { snapshotText: '' };
@@ -249,5 +275,8 @@ export function toTrackedKeywordItem(
     tags: row.tags,
     note: row.note,
     trackedAt: row.createdAt.toISOString(),
+    ...(app.uncovered && row.active
+      ? { uncovered: app.uncovered(row.keyword) }
+      : {}),
   };
 }

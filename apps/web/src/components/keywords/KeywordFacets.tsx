@@ -28,7 +28,7 @@ import {
   tagOptions,
   type KeywordFilters,
 } from "./keyword-filters";
-import { shownScore } from "./keyword-scores";
+import { shownScore } from "@/lib/keyword-scores";
 import { SOURCE_LABELS } from "./SourceBadge";
 
 type KeywordTable = Table<KeywordTableFeatures, TrackedKeywordItem>;

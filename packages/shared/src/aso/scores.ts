@@ -5,6 +5,8 @@ export const CURRENT_FORMULA_VERSIONS: Record<Store, string> = {
   GOOGLE_PLAY: 'google-play-v5',
 };
 
+export const KEYWORD_MIN_RELEVANCE = 60;
+
 const SCORE_DISPLAY_MAX = 100;
 
 function toDisplayScale(score: number): number {

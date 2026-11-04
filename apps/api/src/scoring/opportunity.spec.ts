@@ -1,6 +1,8 @@
+import { KEYWORD_MIN_RELEVANCE } from '@asobeast/shared';
 import {
   computeOpportunity,
   OPPORTUNITY_HIGH,
+  OPPORTUNITY_MIN_RELEVANCE,
   REACH_CURVE,
   SUFFICIENT_VOLUME,
 } from './opportunity';
@@ -62,5 +64,12 @@ describe('computeOpportunity', () => {
 
   it('names one threshold for a high opportunity', () => {
     expect(OPPORTUNITY_HIGH).toBe(35);
+  });
+});
+
+describe('OPPORTUNITY_MIN_RELEVANCE', () => {
+  it('is the shared relevance minimum, still 60', () => {
+    expect(OPPORTUNITY_MIN_RELEVANCE).toBe(KEYWORD_MIN_RELEVANCE);
+    expect(OPPORTUNITY_MIN_RELEVANCE).toBe(60);
   });
 });

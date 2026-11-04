@@ -97,6 +97,12 @@ const POPOVERS: NamedPopover[] = [
       page.getByRole("button", { name: "About ratings by market" }).click(),
   },
   {
+    name: "Insights",
+    path: "/apps/app-1/keywords",
+    open: (page) =>
+      page.getByRole("button", { name: "About insights" }).click(),
+  },
+  {
     name: "Competitors in the top 10",
     path: "/apps/app-1/keywords",
     open: async (page) => {
@@ -142,4 +148,24 @@ test("the day picker dialog passes axe in both themes", async ({ page }) => {
 
     expect(await dialogNameViolations(page)).toEqual([]);
   }
+});
+
+test("About insights links the insights guide", async ({ page }) => {
+  await page.goto("/apps/app-1/keywords");
+  await page.getByRole("button", { name: "About insights" }).click();
+
+  const dialog = page.getByRole("dialog", { name: "Insights", exact: true });
+  await expect(dialog).toHaveAccessibleDescription(
+    "Up to 2 verdicts per keyword, worked out from the numbers on its row.",
+  );
+  await expect(
+    dialog.getByRole("link", { name: "Read about insights" }),
+  ).toHaveAttribute(
+    "href",
+    "https://docs.asobeast.com/guides/track-keywords#insights-and-totals",
+  );
+  await page.keyboard.press("Escape");
+  await expect(
+    page.getByRole("button", { name: "About insights" }),
+  ).toBeFocused();
 });

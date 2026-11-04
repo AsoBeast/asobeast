@@ -49,7 +49,11 @@ export class KeywordsService {
     appId: string,
     sort?: KeywordSort,
     country?: string,
-    options: { holdFacts?: boolean; competitorFacts?: boolean } = {},
+    options: {
+      holdFacts?: boolean;
+      competitorFacts?: boolean;
+      coverageFacts?: boolean;
+    } = {},
   ): Promise<TrackedKeywordItem[]> {
     const app = await ensureApp(this.prisma, appId);
     const rows = await this.prisma.trackedKeyword.findMany({
@@ -59,9 +63,12 @@ export class KeywordsService {
     const keywordIds = rows.map((row) => row.keywordId);
     const [facts, serpDays, hold, acquisitions, competitors] =
       await Promise.all([
-        listingFacts(this.prisma, app, [
-          ...new Set(rows.map((row) => row.keyword.country)),
-        ]),
+        listingFacts(
+          this.prisma,
+          app,
+          [...new Set(rows.map((row) => row.keyword.country))],
+          { coverage: options.coverageFacts },
+        ),
         loadSerpDays(this.prisma, keywordIds),
         options.holdFacts
           ? retainedPositionFacts(this.prisma, appId, keywordIds)

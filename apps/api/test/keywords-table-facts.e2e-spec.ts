@@ -3,7 +3,7 @@ import { join } from 'path';
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient, Store } from '@prisma/client';
-import { TrackedKeywordItem } from '@asobeast/shared';
+import { MetadataAuditResult, TrackedKeywordItem } from '@asobeast/shared';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { utcToday } from '../src/analytics/analytics.support';
@@ -333,6 +333,259 @@ describe('KeywordsController table facts (e2e)', () => {
       const sorted = await list(primary.id, { sort: 'competitors' });
 
       expect(sorted.map((item) => item.text)).toEqual(['two', 'one', 'none']);
+    });
+  });
+  describe('dropStreak', () => {
+    const DAY_MS = 24 * 60 * 60 * 1000;
+    const daysAgo = (days: number): Date =>
+      new Date(utcToday().getTime() - days * DAY_MS);
+
+    const rank = (
+      appId: string,
+      keywordId: string,
+      oldestFirst: (number | null)[],
+    ) =>
+      prisma.keywordRanking.createMany({
+        data: oldestFirst.map((position, index) => ({
+          appId,
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          keywordId,
+          date: daysAgo(oldestFirst.length - 1 - index),
+          position,
+        })),
+      });
+
+    it('counts the checks in a row at which the position got worse', async () => {
+      const primary = await seedApp();
+      const keywordId = await track(primary.id, 'pomodoro');
+      await rank(primary.id, keywordId, [3, 5, 7, 9]);
+
+      const [item] = await list(primary.id);
+
+      expect(item.dropStreak).toBe(3);
+    });
+
+    it('ends the run at an unchanged position', async () => {
+      const primary = await seedApp();
+      const keywordId = await track(primary.id, 'pomodoro');
+      await rank(primary.id, keywordId, [3, 5, 5, 7, 9]);
+
+      const [item] = await list(primary.id);
+
+      expect(item.dropStreak).toBe(2);
+    });
+
+    it('answers null for a paused keyword', async () => {
+      const primary = await seedApp();
+      const keywordId = await track(primary.id, 'pomodoro');
+      await rank(primary.id, keywordId, [3, 5, 7, 9]);
+      await api
+        .patch(`/apps/${primary.id}/keywords/${keywordId}`)
+        .send({ active: false })
+        .expect(200);
+
+      const [item] = await list(primary.id);
+
+      expect(item.dropStreak).toBeNull();
+    });
+
+    it('leaves the field off the answers that do not ask for it', async () => {
+      const primary = await seedApp();
+      const keywordId = await track(primary.id, 'pomodoro');
+      await rank(primary.id, keywordId, [3, 5, 7, 9]);
+
+      const field = await api
+        .put(`/apps/${primary.id}/keyword-field`)
+        .send({ text: 'pomodoro' })
+        .expect(200);
+      const audit = await api
+        .get(`/apps/${primary.id}/metadata/audit`)
+        .expect(200);
+
+      expect(JSON.stringify(field.body)).not.toContain('dropStreak');
+      expect(JSON.stringify(audit.body)).not.toContain('dropStreak');
+    });
+  });
+  describe('uncovered', () => {
+    const seedListing = (
+      appId: string,
+      texts: {
+        title: string;
+        subtitle?: string;
+        summary?: string;
+        description?: string;
+      },
+      where: { country?: string; localization?: string } = {},
+    ) =>
+      prisma.appSnapshot.create({
+        data: {
+          appId,
+          description: '',
+          raw: {},
+          ...texts,
+          ...where,
+        },
+      });
+
+    const trackIn = async (
+      appId: string,
+      text: string,
+      country = 'us',
+      store: Store = Store.APP_STORE,
+    ) => {
+      const keyword = await prisma.keyword.create({
+        data: { text, store, country },
+      });
+      await prisma.trackedKeyword.create({
+        data: { appId, keywordId: keyword.id, source: 'MANUAL', active: true },
+      });
+      return keyword.id;
+    };
+
+    const verdicts = async (appId: string) =>
+      new Map(
+        (await list(appId)).map((item) => [
+          `${item.country}:${item.text}`,
+          item.uncovered,
+        ]),
+      );
+
+    const auditVerdicts = async (appId: string, country?: string) => {
+      const audit = (
+        await api
+          .get(`/apps/${appId}/metadata/audit`)
+          .query(country ? { country } : {})
+          .expect(200)
+      ).body as MetadataAuditResult;
+      return new Map(
+        audit.coverage.map((row) => [
+          `${row.country}:${row.text}`,
+          row.uncovered,
+        ]),
+      );
+    };
+
+    const expectAgreement = async (appId: string, markets: string[]) => {
+      const listed = await verdicts(appId);
+      const audited = new Map(
+        (
+          await Promise.all(
+            markets.map((market) => auditVerdicts(appId, market)),
+          )
+        ).flatMap((rows) => [...rows]),
+      );
+      for (const [key, verdict] of audited) {
+        expect([key, listed.get(key)]).toEqual([key, verdict]);
+      }
+      expect(audited.size).toBe(
+        [...listed.values()].filter((verdict) => verdict !== undefined).length,
+      );
+    };
+
+    const seedFocusTimer = async () => {
+      const primary = await seedApp();
+      await seedListing(primary.id, {
+        title: 'Focus Timer',
+        subtitle: 'Pomodoro and study',
+      });
+      await seedListing(
+        primary.id,
+        { title: 'Licznik skupienia', subtitle: 'Nauka' },
+        { country: 'pl' },
+      );
+      await trackIn(primary.id, 'focus timer');
+      await trackIn(primary.id, 'pomodoro');
+      await trackIn(primary.id, 'habit planner');
+      await trackIn(primary.id, 'licznik', 'pl');
+      await trackIn(primary.id, 'pomodoro', 'pl');
+      return primary;
+    };
+
+    it('answers whether a field of the listing of its market holds each keyword', async () => {
+      const primary = await seedFocusTimer();
+      const field = await api
+        .put(`/apps/${primary.id}/keyword-field`)
+        .send({ text: 'deep work' })
+        .expect(200);
+
+      const byKey = await verdicts(primary.id);
+
+      expect(byKey.get('us:focus timer')).toBe(false);
+      expect(byKey.get('us:pomodoro')).toBe(false);
+      expect(byKey.get('us:habit planner')).toBe(true);
+      expect(byKey.get('pl:licznik')).toBe(false);
+      expect(byKey.get('pl:pomodoro')).toBe(true);
+      expect(byKey.get('us:deep work')).toBe(false);
+      expect(JSON.stringify(field.body)).not.toContain('uncovered');
+    });
+
+    it('agrees with the metadata coverage table in every market', async () => {
+      const primary = await seedFocusTimer();
+
+      await expectAgreement(primary.id, ['us', 'pl']);
+    });
+
+    it('agrees with the coverage table through a captured localization', async () => {
+      const primary = await seedFocusTimer();
+      await prisma.appLocalization.create({
+        data: {
+          appId: primary.id,
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          localization: 'es-MX',
+          origin: 'manual',
+        },
+      });
+      await seedListing(
+        primary.id,
+        { title: 'Temporizador de enfoque' },
+        { localization: 'es-MX' },
+      );
+      await trackIn(primary.id, 'temporizador');
+
+      expect((await verdicts(primary.id)).get('us:temporizador')).toBe(false);
+      await expectAgreement(primary.id, ['us', 'pl']);
+    });
+
+    it('judges a Google Play keyword in the title and both descriptions', async () => {
+      const primary = await prisma.app.create({
+        data: {
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          store: Store.GOOGLE_PLAY,
+          storeAppId: 'com.focus.timer',
+          country: 'us',
+          name: 'Focus Timer',
+        },
+      });
+      await seedListing(primary.id, {
+        title: 'Focus Timer',
+        summary: 'Pomodoro sessions',
+        description: 'Plan your deep work.',
+      });
+      for (const text of ['focus timer', 'pomodoro', 'deep work', 'habits']) {
+        await trackIn(primary.id, text, 'us', Store.GOOGLE_PLAY);
+      }
+
+      const byKey = await verdicts(primary.id);
+
+      expect(byKey.get('us:focus timer')).toBe(false);
+      expect(byKey.get('us:pomodoro')).toBe(false);
+      expect(byKey.get('us:deep work')).toBe(false);
+      expect(byKey.get('us:habits')).toBe(true);
+      await expectAgreement(primary.id, ['us']);
+    });
+
+    it('leaves the verdict off a paused keyword', async () => {
+      const primary = await seedApp();
+      await seedListing(primary.id, { title: 'Focus Timer' });
+      const keywordId = await trackIn(primary.id, 'habit planner');
+      await api
+        .patch(`/apps/${primary.id}/keywords/${keywordId}`)
+        .send({ active: false })
+        .expect(200);
+
+      const [item] = await list(primary.id);
+
+      expect(item).not.toHaveProperty('uncovered');
     });
   });
 });

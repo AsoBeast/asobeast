@@ -7,6 +7,8 @@ import {
   readKeywordFile,
 } from "./parse-keyword-file";
 
+const TODAY = "2026-11-03";
+
 const tracked = (
   text: string,
   extra: Partial<TrackedKeywordItem> = {},
@@ -34,7 +36,7 @@ const tracked = (
 });
 
 const importedFrom = (rows: TrackedKeywordItem[]) => {
-  const bytes = new TextEncoder().encode(keywordCsv(rows));
+  const bytes = new TextEncoder().encode(keywordCsv(rows, TODAY));
   const file = readKeywordFile(bytes.buffer as ArrayBuffer);
   return {
     file,
@@ -88,8 +90,8 @@ describe("importing the keyword export", () => {
     expect(file).toMatchObject({ encoding: "utf-8", delimiter: "," });
     expect(view).toEqual({
       hasHeader: true,
-      mapping: { keyword: 0, country: 31, tags: 29, note: 30 },
+      mapping: { keyword: 0, country: 32, tags: 30, note: 31 },
     });
-    expect(mapped).toMatchObject({ columns: 32, ignoredColumns: 28 });
+    expect(mapped).toMatchObject({ columns: 33, ignoredColumns: 29 });
   });
 });

@@ -547,6 +547,106 @@ describe('toTrackedKeywordItem', () => {
   });
 });
 
+describe('uncovered', () => {
+  const judged = (verdict: boolean) => ({
+    snapshotText: '',
+    uncovered: jest.fn().mockReturnValue(verdict),
+  });
+
+  it('answers the coverage verdict of an active keyword', () => {
+    const app = judged(true);
+
+    const item = toTrackedKeywordItem(row(), app);
+
+    expect(item.uncovered).toBe(true);
+    expect(app.uncovered).toHaveBeenCalledWith(
+      expect.objectContaining({ text: 'habit tracker', country: 'us' }),
+    );
+  });
+
+  it('leaves the verdict off a paused keyword', () => {
+    const item = toTrackedKeywordItem(row({ active: false }), judged(true));
+
+    expect(item).not.toHaveProperty('uncovered');
+  });
+
+  it('leaves the verdict off when the list did not ask for coverage', () => {
+    const item = toTrackedKeywordItem(row(), facts(''));
+
+    expect(item).not.toHaveProperty('uncovered');
+  });
+});
+
+describe('dropStreak', () => {
+  const day = (offset: number): string => {
+    const date = new Date();
+    date.setUTCHours(0, 0, 0, 0);
+    date.setUTCDate(date.getUTCDate() - offset);
+    return date.toISOString();
+  };
+
+  const listed = (
+    positions: (number | null)[],
+    newestOffset = 0,
+    active = true,
+  ): TrackedKeywordRow => {
+    const base = row();
+    return {
+      ...base,
+      active,
+      keyword: {
+        ...base.keyword,
+        rankings: positions.map((position, index) => ({
+          position,
+          date: new Date(day(newestOffset + index)),
+          depth: 200,
+        })),
+      },
+    };
+  };
+
+  const noHold = null;
+
+  it('counts the checks in a row at which the position got worse', () => {
+    const item = toTrackedKeywordItem(
+      listed([9, 7, 5, 3]),
+      undefined,
+      null,
+      noHold,
+    );
+    expect(item.dropStreak).toBe(3);
+  });
+
+  it('answers zero when the newest check did not fall', () => {
+    const item = toTrackedKeywordItem(listed([5, 5]), undefined, null, noHold);
+    expect(item.dropStreak).toBe(0);
+  });
+
+  it('still answers the streak when the newest check is from yesterday', () => {
+    const item = toTrackedKeywordItem(
+      listed([9, 7, 5], 1),
+      undefined,
+      null,
+      noHold,
+    );
+    expect(item.dropStreak).toBe(2);
+  });
+
+  it.each<[string, TrackedKeywordRow]>([
+    ['a paused keyword', listed([9, 7, 5, 3], 0, false)],
+    ['a keyword never checked', listed([])],
+    ['a keyword whose newest check is two days old', listed([9, 7, 5, 3], 2)],
+  ])('answers null for %s', (_case, tracked) => {
+    const item = toTrackedKeywordItem(tracked, undefined, null, noHold);
+    expect(item.dropStreak).toBeNull();
+  });
+
+  it('leaves the streak out when the list did not ask for the position facts', () => {
+    const item = toTrackedKeywordItem(listed([9, 7, 5, 3]));
+    expect(item).not.toHaveProperty('dropStreak');
+  });
+});
+
 describe('heldFacts', () => {
   const today = new Date('2026-10-18T12:00:00.000Z');
   const facts = (latestDate: string): RetainedPositionFacts => ({

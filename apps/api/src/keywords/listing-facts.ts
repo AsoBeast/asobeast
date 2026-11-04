@@ -1,17 +1,26 @@
-import { latestListingTexts, relevanceText } from '../apps/listing-texts';
+import { Store } from '@prisma/client';
+import {
+  latestListingTexts,
+  latestLocalizedTexts,
+  LocalizedTexts,
+  relevanceText,
+} from '../apps/listing-texts';
+import { judgeKeywordCoverage } from '../metadata/keyword-coverage-judge';
+import { fieldPhrases } from '../metadata/listing-surfaces';
 import { PrismaService } from '../prisma/prisma.service';
-import { loadKeywordFieldIndex } from './keyword-field-index';
+import { indexKeywordFields, storedKeywordFields } from './keyword-field-index';
 import { AppFacts } from './keywords.mapper';
 import { KeywordApp } from './keywords.support';
 
 export async function listingFacts(
   prisma: PrismaService,
-  app: Pick<KeywordApp, 'id' | 'country'>,
+  app: Pick<KeywordApp, 'id' | 'country' | 'store'>,
   markets: readonly string[] = [],
+  options: { coverage?: boolean } = {},
 ): Promise<AppFacts> {
-  const [listings, inKeywordField] = await Promise.all([
+  const [listings, stored] = await Promise.all([
     latestListingTexts(prisma, app.id, app.country, [app.country, ...markets]),
-    loadKeywordFieldIndex(prisma, app.id),
+    storedKeywordFields(prisma, app.id),
   ]);
   const home = listings.get(app.country);
   const marketTexts = new Map(
@@ -19,9 +28,25 @@ export async function listingFacts(
       .filter(([market]) => market !== app.country)
       .map(([market, listing]) => [market, relevanceText(listing)]),
   );
-  return {
+  const facts: AppFacts = {
     snapshotText: home ? relevanceText(home) : '',
     marketTexts,
-    inKeywordField,
+    inKeywordField: indexKeywordFields(stored),
+  };
+  if (!options.coverage) {
+    return facts;
+  }
+  const localized =
+    app.store === Store.APP_STORE
+      ? await latestLocalizedTexts(prisma, app.id, app.country, [
+          ...listings.keys(),
+        ])
+      : new Map<string, LocalizedTexts[]>();
+  const keywordFields = fieldPhrases(stored);
+  return {
+    ...facts,
+    uncovered: (keyword) =>
+      judgeKeywordCoverage(app, keyword, { listings, localized, keywordFields })
+        .uncovered,
   };
 }

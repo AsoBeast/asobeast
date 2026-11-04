@@ -12,7 +12,7 @@ import {
 import type { keywordFilterParsers } from "@/lib/search-params";
 import { POSITION_BAND_LABELS } from "@/lib/table/facets";
 import { matchesKeywordSearch, parseKeywordSearch } from "./keyword-search";
-import { scorePair } from "./keyword-scores";
+import { scorePair } from "@/lib/keyword-scores";
 import type { KeywordTableFeatures } from "./keyword-table-features";
 import { SOURCE_LABELS } from "./SourceBadge";
 

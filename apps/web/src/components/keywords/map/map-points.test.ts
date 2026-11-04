@@ -4,7 +4,7 @@ import type {
   TrackedKeywordItem,
 } from "@asobeast/shared";
 import { DEFAULT_ZONE_THRESHOLDS, zoneCounts } from "@/lib/keyword-zones";
-import { scorePair } from "../keyword-scores";
+import { scorePair } from "@/lib/keyword-scores";
 import {
   dotLabel,
   dotName,
