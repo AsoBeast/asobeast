@@ -26,6 +26,7 @@ import type { BulkTagChange, BulkTagMode } from "@/lib/keyword-tags";
 import { invalidateKeywordMutation } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
 import { BulkTagPopover } from "./BulkTagPopover";
+import { chartLimitLine, overChartLimit } from "./dynamics-selection";
 
 interface BulkChange {
   action: KeywordBulkAction;
@@ -123,6 +124,7 @@ export function KeywordsBulkActions({
 }) {
   const queryClient = useQueryClient();
   const selectedIds = selectedKeywords.map((keyword) => keyword.keywordId);
+  const overCap = overChartLimit(selectedIds.length);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const removed = useRef(false);
 
@@ -185,11 +187,19 @@ export function KeywordsBulkActions({
           variant="outline"
           size="sm"
           id={SHOW_DYNAMICS_BUTTON_ID}
-          onClick={onShowDynamics}
+          aria-disabled={overCap || undefined}
+          onClick={() => {
+            if (!overCap) onShowDynamics();
+          }}
         >
           <ChartLine />
           Show dynamics
         </Button>
+        {overCap ? (
+          <span className="text-caption text-muted-foreground">
+            {chartLimitLine()}
+          </span>
+        ) : null}
         <Button
           variant="outline"
           size="sm"

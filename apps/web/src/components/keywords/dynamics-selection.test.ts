@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { TrackedKeywordItem } from "@asobeast/shared";
 import {
+  chartLimitLine,
   cappingLine,
   chartedSelection,
   isCapped,
+  overChartLimit,
   withoutKeyword,
 } from "./dynamics-selection";
 
@@ -108,5 +110,22 @@ describe("withoutKeyword", () => {
 
   it("empties when the last id goes", () => {
     expect(withoutKeyword(["kw-2"], "kw-2")).toEqual([]);
+  });
+});
+
+describe("overChartLimit", () => {
+  it("is false at the cap", () => {
+    expect(overChartLimit(8)).toBe(false);
+  });
+
+  it("is true past the cap", () => {
+    expect(overChartLimit(9)).toBe(true);
+    expect(overChartLimit(500)).toBe(true);
+  });
+});
+
+describe("chartLimitLine", () => {
+  it("asks for a selection the chart can draw", () => {
+    expect(chartLimitLine()).toBe("Select 8 or fewer keywords to chart.");
   });
 });

@@ -28,3 +28,8 @@ export function withoutKeyword(
 ): string[] {
   return selected.filter((id) => id !== keywordId);
 }
+
+export const overChartLimit = (count: number): boolean => count > MAX_SERIES;
+
+export const chartLimitLine = (): string =>
+  `Select ${MAX_SERIES} or fewer keywords to chart.`;

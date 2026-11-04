@@ -86,35 +86,37 @@ test("a range preset writes to the url and re-keys the chart read", async ({
   await expect(chartSeries(page)).toHaveText(["focus timer (US)"]);
 });
 
-test("a selection over eight keywords charts the first eight and says so", async ({
+test("the bulk bar refuses to chart more than eight keywords", async ({
   page,
 }) => {
   await page.goto("/apps/app-bulk/keywords");
   const checkboxes = page.getByRole("checkbox", {
     name: /^Select bulk keyword/,
   });
-  for (let index = 0; index < 9; index += 1) {
+  for (let index = 0; index < 10; index += 1) {
     await checkboxes.nth(index).check();
   }
-  await expect(page.getByText("9 selected")).toBeVisible();
-  const requested = page.waitForRequest(
-    /\/api\/backend\/apps\/app-bulk\/rankings\?/,
-  );
-  await page.getByRole("button", { name: "Show dynamics" }).click();
-
-  const request = await requested;
-  expect(
-    new URL(request.url()).searchParams.get("keywordIds")?.split(","),
-  ).toHaveLength(8);
-  await expect(page.getByText("Charting 8 of 9 keywords.")).toBeVisible();
+  const dynamics = page.getByRole("button", { name: "Show dynamics" });
+  await expect(page.getByText("10 selected")).toBeVisible();
+  await expect(dynamics).toHaveAttribute("aria-disabled", "true");
   await expect(
-    page
-      .getByRole("region", { name: PANEL })
-      .getByRole("group", { name: "Charted keywords" })
-      .getByRole("button"),
-  ).toHaveCount(9);
-  const selected = new URL(page.url()).searchParams.get("keywords") ?? "";
-  expect(selected.split(",")).toHaveLength(9);
+    page.getByText("Select 8 or fewer keywords to chart."),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Pause", exact: true }),
+  ).not.toHaveAttribute("aria-disabled");
+
+  for (let index = 0; index < 2; index += 1) {
+    await checkboxes.nth(index).uncheck();
+  }
+  await expect(dynamics).not.toHaveAttribute("aria-disabled");
+  await expect(
+    page.getByText("Select 8 or fewer keywords to chart."),
+  ).toHaveCount(0);
+
+  await dynamics.click();
+  await expect(page.getByRole("region", { name: PANEL })).toBeVisible();
+  await expect(page.getByText("Charting 8 of 8 keywords.")).toHaveCount(0);
 });
 
 test("removing a chip keeps the line out of the chart and the url", async ({
