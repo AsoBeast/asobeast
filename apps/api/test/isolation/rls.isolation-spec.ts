@@ -1,8 +1,15 @@
+import { Store } from '@prisma/client';
 import { CrossTenantAccess } from '../../src/common/tenancy/cross-tenant-access';
 import { TENANT_TABLES } from '../../src/common/tenancy/tenant-tables';
 import { WorkspaceContext } from '../../src/common/tenancy/workspace-context';
+import { DiscoveryCandidates } from '../../src/keyword-discovery/discovery-candidates.service';
+import { DiscoveryPopularity } from '../../src/keyword-discovery/discovery-popularity.service';
 import { PrismaService } from '../../src/prisma/prisma.service';
-import { createIsolationFixture, IsolationFixture } from './fixture';
+import {
+  createIsolationFixture,
+  IsolationFixture,
+  IsolationWorkspace,
+} from './fixture';
 
 const SCOPED_TABLES = [
   'app',
@@ -11,6 +18,7 @@ const SCOPED_TABLES = [
   'appSnapshot',
   'snapshotScreenshot',
   'trackedKeyword',
+  'keywordDiscovery',
   'keywordField',
   'keywordRanking',
   'categoryRank',
@@ -230,5 +238,121 @@ describe('Row level security', () => {
 
     expect(privileges.canCreate).toBe(false);
     expect(role).toEqual({ rolsuper: false, rolbypassrls: false });
+  });
+
+  describe('keyword discoveries', () => {
+    const discoveryOf = (owner: IsolationWorkspace) => ({
+      appId_keywordId: {
+        appId: owner.appleAppId,
+        keywordId: owner.discoveryKeywordId,
+      },
+    });
+
+    it("never reads another workspace's discovery", async () => {
+      const seen = await workspace.run(fixture.a.id, () =>
+        prisma.keywordDiscovery.findMany({ select: { workspaceId: true } }),
+      );
+
+      expect(seen.length).toBeGreaterThan(0);
+      expect(new Set(seen.map((row) => row.workspaceId))).toEqual(
+        new Set([fixture.a.id]),
+      );
+      await expect(
+        workspace.run(fixture.a.id, () =>
+          prisma.keywordDiscovery.findUnique({ where: discoveryOf(fixture.b) }),
+        ),
+      ).resolves.toBeNull();
+    });
+
+    it("never changes or removes another workspace's discovery", async () => {
+      const changed = await workspace.run(fixture.a.id, () =>
+        prisma.keywordDiscovery.updateMany({
+          where: { appId: fixture.b.appleAppId },
+          data: { dismissedAt: new Date() },
+        }),
+      );
+      const removed = await workspace.run(fixture.a.id, () =>
+        prisma.keywordDiscovery.deleteMany({
+          where: { appId: fixture.b.appleAppId },
+        }),
+      );
+      const untouched =
+        await crossTenant.becauseThisWorkIsNotOwnedByOneWorkspace(
+          'the isolation suite reads the other workspace on purpose',
+          () =>
+            prisma.keywordDiscovery.findUnique({
+              where: discoveryOf(fixture.b),
+              select: { dismissedAt: true },
+            }),
+        );
+
+      expect(changed.count).toBe(0);
+      expect(removed.count).toBe(0);
+      expect(untouched).toEqual({ dismissedAt: null });
+    });
+
+    it('never proposes a phrase only another workspace tracks', async () => {
+      const candidates = new DiscoveryCandidates(
+        prisma,
+        new DiscoveryPopularity(prisma),
+      );
+      const apple = await workspace.run(fixture.a.id, () =>
+        prisma.app.findUniqueOrThrow({
+          where: { id: fixture.a.appleAppId },
+          select: {
+            id: true,
+            workspaceId: true,
+            store: true,
+            country: true,
+            storeAppId: true,
+          },
+        }),
+      );
+
+      const peerText = 'workspace peer phrase';
+      const peerKeyword = await fixture.db.keyword.create({
+        data: { text: peerText, store: Store.APP_STORE, country: 'us' },
+      });
+      await fixture.db.trackedKeyword.create({
+        data: {
+          appId: fixture.a.competitorId,
+          keywordId: peerKeyword.id,
+          source: 'MANUAL',
+        },
+      });
+
+      try {
+        const proposed = await workspace.run(fixture.a.id, () =>
+          candidates.forMarket(apple, 'us', 'Shared Fixture'),
+        );
+
+        expect(proposed.map(({ text }) => text)).not.toContain(
+          `${fixture.b.id} only`,
+        );
+        expect(
+          proposed
+            .filter(({ source }) => source === 'portfolio')
+            .map(({ text }) => text),
+        ).toEqual([peerText]);
+      } finally {
+        await fixture.db.keyword.delete({ where: { id: peerKeyword.id } });
+      }
+    });
+
+    it("refuses a discovery that names another workspace's app", async () => {
+      await expect(
+        workspace.run(fixture.a.id, () =>
+          prisma.keywordDiscovery.create({
+            data: {
+              appId: fixture.b.appleAppId,
+              workspaceId: fixture.a.id,
+              keywordId: fixture.a.privateKeywordId,
+              source: 'portfolio',
+              relevance: 60,
+            },
+          }),
+        ),
+      ).rejects.toThrow('KeywordDiscovery_appId_workspaceId_fkey');
+    });
   });
 });

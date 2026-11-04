@@ -43,6 +43,26 @@ describe('seedCandidates', () => {
     ).toBe(true);
   });
 
+  it('answers every candidate of the seeded sources under a larger limit', () => {
+    const LONG: ListingText = {
+      title: 'Habit Tracker Daily Planner Streaks Goals Routine Reminders',
+      subtitle: 'Mood Journal Water Sleep Focus Timer Fitness Diary Notes',
+      summary: 'A long summary that is never seeded on the app store',
+      languages: ['en'],
+    };
+
+    const limited = seedCandidates(Store.APP_STORE, [LONG]);
+    const all = seedCandidates(Store.APP_STORE, [LONG], 200);
+
+    expect(limited).toHaveLength(MARKET_SEED_LIMIT);
+    expect(all.length).toBeGreaterThan(MARKET_SEED_LIMIT);
+    expect(
+      all.every((candidate) =>
+        ['TITLE', 'SUBTITLE'].includes(candidate.source),
+      ),
+    ).toBe(true);
+  });
+
   it('seeds nothing from no listing', () => {
     expect(seedCandidates(Store.APP_STORE, [])).toEqual([]);
   });

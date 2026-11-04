@@ -29,6 +29,13 @@ const POPULARITY_GENRE_BY_STORE_GENRE: Record<string, string> = {
   '6027': 'PRODUCTIVITY_UTILITIES',
 };
 
+export const popularityGenreOf = (
+  storeGenreId: number | string | null,
+): string | undefined =>
+  storeGenreId === null
+    ? undefined
+    : POPULARITY_GENRE_BY_STORE_GENRE[String(storeGenreId)];
+
 export function inferPopularityGenre(
   results: Array<{ genreId?: string }>,
 ): string | undefined {

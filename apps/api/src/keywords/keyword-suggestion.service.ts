@@ -11,17 +11,11 @@ import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
 import { extractCandidates } from './extraction';
 import { ensureApp, trackedTexts } from './keywords.support';
 import { listingLanguages } from './listing-languages';
-import { mineReviewPhrases } from './review-mining';
 import { seasonalSuggestions } from './seasonal-suggestions';
 import { StoreSuggestions } from './store-suggestions';
+import { competitorPhrases, recentReviewPhrases } from './suggestion-phrases';
 import { SuggestionRequest } from './suggestion-request';
-import {
-  HOME_LISTING,
-  LATEST_HOME_LISTING,
-  NEWEST_FIRST,
-} from '../apps/listing';
-
-const REVIEW_MINING_CAP = 500;
+import { HOME_LISTING, NEWEST_FIRST } from '../apps/listing';
 
 @Injectable()
 export class KeywordSuggestionService {
@@ -68,7 +62,13 @@ export class KeywordSuggestionService {
   ): Promise<KeywordSuggestion[]> {
     const { appId, limit, tracked, market, languages } = request;
     if (strategy === 'competitors') {
-      return this.suggestFromCompetitors(appId, tracked, limit, languages.home);
+      return competitorPhrases(
+        this.prisma,
+        appId,
+        tracked,
+        languages.home,
+        limit,
+      );
     }
     if (strategy === 'seasonal') {
       return Promise.resolve(
@@ -76,73 +76,15 @@ export class KeywordSuggestionService {
       );
     }
     if (strategy === 'reviews') {
-      return this.suggestFromReviews(appId, tracked, limit, languages.home);
+      return recentReviewPhrases(
+        this.prisma,
+        appId,
+        tracked,
+        languages.home,
+        limit,
+      );
     }
     return this.suggestFromMetadata(appId, tracked, limit, languages.home);
-  }
-
-  private async suggestFromReviews(
-    appId: string,
-    excluded: Set<string>,
-    limit: number,
-    languages: readonly string[],
-  ): Promise<KeywordSuggestion[]> {
-    const reviews = await this.prisma.review.findMany({
-      where: { appId },
-      orderBy: { reviewedAt: 'desc' },
-      take: REVIEW_MINING_CAP,
-      select: { title: true, text: true },
-    });
-    return mineReviewPhrases(reviews, excluded, languages).slice(0, limit);
-  }
-
-  private async suggestFromCompetitors(
-    appId: string,
-    excluded: Set<string>,
-    limit: number,
-    languages: readonly string[],
-  ): Promise<KeywordSuggestion[]> {
-    const competitors = await this.prisma.app.findMany({
-      where: { primaryAppId: appId },
-      select: {
-        snapshots: {
-          ...LATEST_HOME_LISTING,
-          select: { title: true, subtitle: true },
-        },
-      },
-    });
-
-    const counts = new Map<string, number>();
-    for (const competitor of competitors) {
-      const snapshot = competitor.snapshots[0];
-      if (!snapshot) {
-        continue;
-      }
-      const texts = new Set(
-        extractCandidates(
-          {
-            title: snapshot.title,
-            subtitle: snapshot.subtitle ?? undefined,
-          },
-          languages,
-        ).map((candidate) => candidate.text),
-      );
-      for (const text of texts) {
-        if (excluded.has(text)) {
-          continue;
-        }
-        counts.set(text, (counts.get(text) ?? 0) + 1);
-      }
-    }
-
-    return [...counts.entries()]
-      .sort(([, a], [, b]) => b - a)
-      .slice(0, limit)
-      .map(([text, usedByCount]) => ({
-        text,
-        strategy: 'competitors' as const,
-        usedByCount,
-      }));
   }
 
   private async suggestFromMetadata(

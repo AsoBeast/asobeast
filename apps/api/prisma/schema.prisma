@@ -56,6 +56,7 @@ model Workspace {
   keywordFields KeywordField[]
   appLocalizations AppLocalization[]
   appSetups   AppSetup[]
+  keywordDiscoveries KeywordDiscovery[]
   reviewReplies ReviewReply[]
   chartFollows ChartFollow[]
   storeConnections StoreConnection[]
@@ -226,6 +227,7 @@ model App {
   reviews      Review[]
   reviewReplies ReviewReply[]
   replyGuidelines String?
+  autoTrackRanked Boolean @default(false)
   suggestProbes SuggestProbe[]
   auditInsight AuditInsight?
   appSetup     AppSetup?
@@ -237,6 +239,7 @@ model App {
   storeFunnelPageDays StoreFunnelPageDay[]
   storeFunnelSearchTerms StoreFunnelSearchTerm[]
   keywordFieldSync KeywordFieldSync?
+  keywordDiscoveries KeywordDiscovery[]
   createdAt    DateTime         @default(now())
 
   @@unique([id, workspaceId])
@@ -323,9 +326,33 @@ model Keyword {
   rankings    KeywordRanking[]
   serpEntries SerpEntry[]
   actions     ActionItem[]
+  discoveries KeywordDiscovery[]
   createdAt   DateTime         @default(now())
 
   @@unique([text, store, country])
+}
+
+model KeywordDiscovery {
+  appId       String
+  workspaceId String
+  app         App       @relation(fields: [appId, workspaceId], references: [id, workspaceId], onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  keywordId   String
+  keyword     Keyword   @relation(fields: [keywordId], references: [id], onDelete: Cascade)
+  source      String
+  relevance   Int
+  position    Int?
+  depth       Int?
+  checkedOn   DateTime? @db.Date
+  queuedAt    DateTime?
+  seenAt      DateTime  @default(now())
+  dismissedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@id([appId, keywordId])
+  @@index([workspaceId])
+  @@index([keywordId])
+  @@index([appId, seenAt])
 }
 
 model TrackedKeyword {

@@ -220,6 +220,15 @@ describe('Workspace deletion (e2e)', () => {
         factors: {},
       },
     });
+    await prisma.keywordDiscovery.create({
+      data: {
+        appId: owned.id,
+        workspaceId,
+        keywordId: keyword.id,
+        source: 'title',
+        relevance: 90,
+      },
+    });
     await prisma.suggestProbe.create({
       data: {
         appId: owned.id,
@@ -442,6 +451,7 @@ describe('Workspace deletion (e2e)', () => {
       appAnnotation,
       auditInsight,
       auditScore,
+      keywordDiscovery,
       suggestProbe,
       actionItem,
       actionEvent,
@@ -483,6 +493,7 @@ describe('Workspace deletion (e2e)', () => {
       prisma.appAnnotation.count({ where: { appId: target.appId } }),
       prisma.auditInsight.count({ where: { appId: target.appId } }),
       prisma.auditScore.count({ where: { appId: target.appId } }),
+      prisma.keywordDiscovery.count({ where: { appId: target.appId } }),
       prisma.suggestProbe.count({ where: { appId: target.appId } }),
       prisma.actionItem.count({ where: { id: target.actionId } }),
       prisma.actionEvent.count({ where: { actionId: target.actionId } }),
@@ -522,6 +533,7 @@ describe('Workspace deletion (e2e)', () => {
       AppAnnotation: appAnnotation,
       AuditInsight: auditInsight,
       AuditScore: auditScore,
+      KeywordDiscovery: keywordDiscovery,
       SuggestProbe: suggestProbe,
       ActionItem: actionItem,
       ActionEvent: actionEvent,

@@ -70,10 +70,13 @@ export function estimateTraffic(stats: KeywordStats): number {
     : estimate;
 }
 
+export const officialTraffic = (popularity: number): number =>
+  clamp(popularity / POPULARITY_SCALE);
+
 export function computeTraffic(stats: KeywordStats): number {
   const { official } = stats;
   if (official && 'value' in official) {
-    return clamp(official.value / POPULARITY_SCALE);
+    return officialTraffic(official.value);
   }
   const estimate = estimateTraffic(stats);
   return official
