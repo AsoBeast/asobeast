@@ -52,40 +52,47 @@ function findOf(word: string, surfaces: readonly MarkSurface[]): Find | null {
 
 type WordFinder = (word: string) => Find | null;
 
-function wordsByFind(
-  words: readonly string[],
-  findWord: WordFinder,
-): Map<string, { find: Find; words: string[] }> {
-  const groups = new Map<string, { find: Find; words: string[] }>();
-  for (const word of words) {
-    const find = findWord(word);
-    if (!find) continue;
-    const key = `${find.surface}|${find.match}`;
-    const group = groups.get(key) ?? { find, words: [] };
-    group.words.push(word);
-    groups.set(key, group);
+interface Located {
+  find: Find;
+  span: number;
+}
+
+const claims = (current: Located | null, next: Located): boolean =>
+  current === null ||
+  next.span > current.span ||
+  (next.span === current.span &&
+    strongerFind(current.find, next.find) === next.find);
+
+function claimSpan(
+  located: (Located | null)[],
+  start: number,
+  next: Located,
+): void {
+  for (let index = start; index < start + next.span; index += 1) {
+    if (claims(located[index], next)) located[index] = next;
   }
-  return groups;
 }
 
 function locate(
   text: string,
-  groups: Iterable<{ find: Find; words: string[] }>,
+  words: readonly string[],
+  findWord: WordFinder,
 ): (Find | null)[] {
-  const located = Array.from<Find | null>({ length: text.length }).fill(null);
-  for (const { find, words } of groups) {
+  const located = Array.from<Located | null>({ length: text.length }).fill(
+    null,
+  );
+  for (const word of words) {
+    const find = findWord(word);
+    if (!find) continue;
     let at = 0;
-    for (const segment of markWords(text, words)) {
-      const end = at + segment.text.length;
+    for (const segment of markWords(text, [word])) {
       if (segment.match === 'exact') {
-        for (let index = at; index < end; index += 1) {
-          located[index] = strongerFind(located[index], find);
-        }
+        claimSpan(located, at, { find, span: segment.text.length });
       }
-      at = end;
+      at += segment.text.length;
     }
   }
-  return located;
+  return located.map((entry) => entry?.find ?? null);
 }
 
 const sameFind = (a: KeywordMarkSegment, b: KeywordMarkSegment) =>
@@ -132,10 +139,8 @@ function marksOn(
   text: string,
   findWord: WordFinder,
 ): KeywordMarkSegment[] | null {
-  const groups = wordsByFind(keywordWords(text), findWord);
-  if (groups.size === 0) return null;
   const normalized = text.normalize('NFC');
-  const located = locate(normalized, groups.values());
+  const located = locate(normalized, keywordWords(text), findWord);
   return located.some(Boolean)
     ? absorbSeparators(segmentsOf(normalized, located))
     : null;

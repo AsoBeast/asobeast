@@ -212,10 +212,25 @@ describe('markKeyword', () => {
     const keyword = 'cafe\u0301 finder';
     const marks = markKeyword(keyword, LISTING);
 
-    expect(marks).not.toBeNull();
+    expect(marks).toEqual([
+      { text: 'café finder', surface: 'subtitle', match: 'exact' },
+    ]);
     expect(marks?.map((segment) => segment.text).join('')).toBe(
       keyword.normalize('NFC'),
     );
+  });
+
+  it('keeps a longer word on its own surface when a shorter word sits inside it', () => {
+    expect(
+      markKeyword('タイマー タイ', [
+        surface('title', '集中タイ'),
+        surface('subtitle', 'タイマーアプリ'),
+      ]),
+    ).toEqual([
+      { text: 'タイマー', surface: 'subtitle', match: 'exact' },
+      SPACE,
+      { text: 'タイ', surface: 'title', match: 'exact' },
+    ]);
   });
 
   it('marks every run of a repeated word', () => {
