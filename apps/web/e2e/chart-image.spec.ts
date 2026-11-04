@@ -247,18 +247,22 @@ test.describe("the opportunity map image", () => {
   });
 
   test("Download PNG saves a readable name", async ({ page }) => {
+    const dayBefore = utcDaysAgo(0);
     await page.goto(MAP);
     await expect(mapRegion(page)).toBeVisible();
-    const today = utcDaysAgo(0);
 
     const [file] = await Promise.all([
       page.waitForEvent("download"),
       downloadMap(page).click(),
     ]);
+    const dayAfter = utcDaysAgo(0);
 
-    expect(file.suggestedFilename()).toBe(
-      `asobeast-opportunity-map-opportunity-map-lab-${today}-${today}.png`,
-    );
+    expect(
+      [dayBefore, dayAfter].map(
+        (day) =>
+          `asobeast-opportunity-map-opportunity-map-lab-${day}-${day}.png`,
+      ),
+    ).toContain(file.suggestedFilename());
     const path = await file.path();
     expect(isPng(readFileSync(path))).toBe(true);
   });
