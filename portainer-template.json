@@ -17,8 +17,8 @@
       "env": [
         {
           "name": "POSTGRES_PASSWORD",
-          "label": "Database password (required)",
-          "description": "Generate one with: openssl rand -hex 32. Keep it the same on every redeploy, or the API can't reach its database."
+          "label": "Database password (required, letters and digits only)",
+          "description": "Generate one with: openssl rand -hex 32. It goes into the database URL unencoded, so characters such as # @ / : % break the connection. Keep it the same on every redeploy, or the API can't reach its database."
         },
         {
           "name": "AUTH_SECRET",
