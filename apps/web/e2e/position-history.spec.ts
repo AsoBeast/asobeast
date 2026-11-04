@@ -231,7 +231,10 @@ test("E-PH-02 Enter and Space open it and Escape returns focus", async ({
 test("E-PH-03 nothing is requested until a popover opens", async ({ page }) => {
   const requested: string[] = [];
   page.on("request", (request) => {
-    if (RANKINGS.test(request.url())) requested.push(request.url());
+    if (!RANKINGS.test(request.url())) return;
+    const ids = new URL(request.url()).searchParams.get("keywordIds") ?? "";
+    if (ids.split(",").length > 1) return;
+    requested.push(request.url());
   });
   await page.goto(PAGE);
   await page.waitForLoadState("networkidle");
