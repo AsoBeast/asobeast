@@ -1,3 +1,4 @@
+import { Store } from '@prisma/client';
 import { CrossTenantAccess } from '../../src/common/tenancy/cross-tenant-access';
 import { TENANT_TABLES } from '../../src/common/tenancy/tenant-tables';
 import { WorkspaceContext } from '../../src/common/tenancy/workspace-context';
@@ -308,16 +309,34 @@ describe('Row level security', () => {
         }),
       );
 
-      const proposed = await workspace.run(fixture.a.id, () =>
-        candidates.forMarket(apple, 'us', 'Shared Fixture'),
-      );
+      const peerText = 'workspace peer phrase';
+      const peerKeyword = await fixture.db.keyword.create({
+        data: { text: peerText, store: Store.APP_STORE, country: 'us' },
+      });
+      await fixture.db.trackedKeyword.create({
+        data: {
+          appId: fixture.a.competitorId,
+          keywordId: peerKeyword.id,
+          source: 'MANUAL',
+        },
+      });
 
-      expect(proposed.map(({ text }) => text)).not.toContain(
-        `${fixture.b.id} only`,
-      );
-      expect(proposed.filter(({ source }) => source === 'portfolio')).toEqual(
-        [],
-      );
+      try {
+        const proposed = await workspace.run(fixture.a.id, () =>
+          candidates.forMarket(apple, 'us', 'Shared Fixture'),
+        );
+
+        expect(proposed.map(({ text }) => text)).not.toContain(
+          `${fixture.b.id} only`,
+        );
+        expect(
+          proposed
+            .filter(({ source }) => source === 'portfolio')
+            .map(({ text }) => text),
+        ).toEqual([peerText]);
+      } finally {
+        await fixture.db.keyword.delete({ where: { id: peerKeyword.id } });
+      }
     });
 
     it("refuses a discovery that names another workspace's app", async () => {
