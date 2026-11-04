@@ -93,6 +93,11 @@ export const EXPORT_TABLE_KEYS: readonly ExportTableKey[] = [
   { name: 'storeFunnelPageDay', key: ID },
   { name: 'storeFunnelSearchTerm', key: ID },
   { name: 'keywordFieldSync', key: ['appId', 'workspaceId'] },
+  {
+    name: 'keywordDiscovery',
+    key: ['appId', 'keywordId'],
+    include: { keyword: true },
+  },
   { name: 'webhook', key: ID },
   { name: 'emailAlert', key: ID },
   { name: 'alertDelivery', key: ID },

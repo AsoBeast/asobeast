@@ -2,7 +2,11 @@ import { CrossTenantAccess } from '../../src/common/tenancy/cross-tenant-access'
 import { TENANT_TABLES } from '../../src/common/tenancy/tenant-tables';
 import { WorkspaceContext } from '../../src/common/tenancy/workspace-context';
 import { PrismaService } from '../../src/prisma/prisma.service';
-import { createIsolationFixture, IsolationFixture } from './fixture';
+import {
+  createIsolationFixture,
+  IsolationFixture,
+  IsolationWorkspace,
+} from './fixture';
 
 const SCOPED_TABLES = [
   'app',
@@ -11,6 +15,7 @@ const SCOPED_TABLES = [
   'appSnapshot',
   'snapshotScreenshot',
   'trackedKeyword',
+  'keywordDiscovery',
   'keywordField',
   'keywordRanking',
   'categoryRank',
@@ -230,5 +235,73 @@ describe('Row level security', () => {
 
     expect(privileges.canCreate).toBe(false);
     expect(role).toEqual({ rolsuper: false, rolbypassrls: false });
+  });
+
+  describe('keyword discoveries', () => {
+    const discoveryOf = (owner: IsolationWorkspace) => ({
+      appId_keywordId: {
+        appId: owner.appleAppId,
+        keywordId: owner.discoveryKeywordId,
+      },
+    });
+
+    it("never reads another workspace's discovery", async () => {
+      const seen = await workspace.run(fixture.a.id, () =>
+        prisma.keywordDiscovery.findMany({ select: { workspaceId: true } }),
+      );
+
+      expect(seen.length).toBeGreaterThan(0);
+      expect(new Set(seen.map((row) => row.workspaceId))).toEqual(
+        new Set([fixture.a.id]),
+      );
+      await expect(
+        workspace.run(fixture.a.id, () =>
+          prisma.keywordDiscovery.findUnique({ where: discoveryOf(fixture.b) }),
+        ),
+      ).resolves.toBeNull();
+    });
+
+    it("never changes or removes another workspace's discovery", async () => {
+      const changed = await workspace.run(fixture.a.id, () =>
+        prisma.keywordDiscovery.updateMany({
+          where: { appId: fixture.b.appleAppId },
+          data: { dismissedAt: new Date() },
+        }),
+      );
+      const removed = await workspace.run(fixture.a.id, () =>
+        prisma.keywordDiscovery.deleteMany({
+          where: { appId: fixture.b.appleAppId },
+        }),
+      );
+      const untouched =
+        await crossTenant.becauseThisWorkIsNotOwnedByOneWorkspace(
+          'the isolation suite reads the other workspace on purpose',
+          () =>
+            prisma.keywordDiscovery.findUnique({
+              where: discoveryOf(fixture.b),
+              select: { dismissedAt: true },
+            }),
+        );
+
+      expect(changed.count).toBe(0);
+      expect(removed.count).toBe(0);
+      expect(untouched).toEqual({ dismissedAt: null });
+    });
+
+    it("refuses a discovery that names another workspace's app", async () => {
+      await expect(
+        workspace.run(fixture.a.id, () =>
+          prisma.keywordDiscovery.create({
+            data: {
+              appId: fixture.b.appleAppId,
+              workspaceId: fixture.a.id,
+              keywordId: fixture.a.privateKeywordId,
+              source: 'portfolio',
+              relevance: 60,
+            },
+          }),
+        ),
+      ).rejects.toThrow();
+    });
   });
 });

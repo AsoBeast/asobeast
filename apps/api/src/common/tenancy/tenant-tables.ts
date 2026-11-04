@@ -17,6 +17,7 @@ export const TENANT_TABLES = [
   'ChangeEvent',
   'ChartFollow',
   'EmailAlert',
+  'KeywordDiscovery',
   'KeywordField',
   'KeywordFieldSync',
   'KeywordRanking',

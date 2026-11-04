@@ -42,6 +42,7 @@ export interface IsolationWorkspace {
   keywordId: string;
   otherMarketKeywordId: string;
   privateKeywordId: string;
+  discoveryKeywordId: string;
   webhookId: string;
   emailAlertId: string;
   actionId: string;
@@ -308,6 +309,19 @@ async function seedWorkspace(
     });
   }
 
+  const discoveryKeyword = await db.keyword.create({
+    data: { text: `${id} discovery`, store: Store.APP_STORE, country: 'us' },
+  });
+  await db.keywordDiscovery.create({
+    data: {
+      appId: apple.id,
+      workspaceId: id,
+      keywordId: discoveryKeyword.id,
+      source: 'title',
+      relevance: 90,
+    },
+  });
+
   for (const [index, day] of [0, 1, 2].entries()) {
     await db.keywordRanking.create({
       data: {
@@ -520,6 +534,7 @@ async function seedWorkspace(
     keywordId: keyword.id,
     otherMarketKeywordId: otherMarket.id,
     privateKeywordId: privateKeyword.id,
+    discoveryKeywordId: discoveryKeyword.id,
     webhookId: webhook.id,
     emailAlertId: emailAlert.id,
     actionId: action.id,

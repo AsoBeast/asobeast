@@ -369,4 +369,55 @@ describe('Account export credential state (e2e)', () => {
       });
     }
   });
+
+  it('exports a keyword discovery with its keyword', async () => {
+    const app = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: 'APP_STORE',
+        storeAppId: '551000004',
+        name: 'Discovering Export',
+      },
+    });
+    try {
+      const keyword = await prisma.keyword.create({
+        data: { text: PAGED_KEYWORDS[1], store: 'APP_STORE' },
+      });
+      await prisma.keywordDiscovery.create({
+        data: {
+          appId: app.id,
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          keywordId: keyword.id,
+          source: 'subtitle',
+          relevance: 90,
+        },
+      });
+
+      const { lines } = await exportAs({ cookie: ownerCookie });
+
+      expect(
+        lines
+          .filter(
+            (line) =>
+              line.table === 'keywordDiscovery' && line.row?.appId === app.id,
+          )
+          .map((line) => line.row),
+      ).toEqual([
+        expect.objectContaining({
+          appId: app.id,
+          keywordId: keyword.id,
+          source: 'subtitle',
+          keyword: expect.objectContaining({
+            id: keyword.id,
+            text: PAGED_KEYWORDS[1],
+          }) as unknown,
+        }),
+      ]);
+    } finally {
+      await prisma.app.delete({ where: { id: app.id } });
+      await prisma.keyword.deleteMany({
+        where: { store: 'APP_STORE', text: { in: PAGED_KEYWORDS } },
+      });
+    }
+  });
 });
