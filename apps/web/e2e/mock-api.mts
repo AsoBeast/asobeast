@@ -290,7 +290,9 @@ import {
   type ChartFollowItem,
   type ChartKey,
   type ChartPage,
+  isRatingDropTenths,
   normalizeReviewScores,
+  RATING_DROP_DEFAULT_TENTHS,
   type Store,
   webhookChannelOf,
 } from "@asobeast/shared";
@@ -1073,6 +1075,17 @@ function withBody<T>(
 function refusesEvents(events: unknown): boolean {
   return events !== undefined && !(Array.isArray(events) && events.length > 0);
 }
+
+function refusesRatingDropTenths(tenths: unknown): boolean {
+  return tenths !== undefined && !isRatingDropTenths(tenths);
+}
+
+const ratingDropTenthsEnvelope = (path: string) =>
+  errorEnvelope(
+    400,
+    path,
+    "ratingDropTenths must be an integer between 1 and 10",
+  );
 
 function trackedFromKeywordField(
   text: string,
@@ -3099,6 +3112,9 @@ const routes: Route[] = [
     pattern: /^\/webhooks$/,
     handler: (_p, req, res) => {
       withBody<WebhookCreateRequest>(req, res, (body) => {
+        if (refusesRatingDropTenths(body.ratingDropTenths)) {
+          return json(res, 400, ratingDropTenthsEnvelope(req.url ?? "/"));
+        }
         const webhook: WebhookItem = {
           id: `hook-${webhooks.length + 1}`,
           url: body.url,
@@ -3109,6 +3125,7 @@ const routes: Route[] = [
           createdAt: new Date().toISOString(),
           channel: webhookChannelOf(body.url),
           confirmDrops: body.confirmDrops === true,
+          ratingDropTenths: body.ratingDropTenths ?? RATING_DROP_DEFAULT_TENTHS,
         };
         webhooks.unshift(webhook);
         json(res, 201, webhook);
@@ -3140,8 +3157,14 @@ const routes: Route[] = [
         }
         if (body.active !== undefined) webhook.active = body.active;
         if (body.secret !== undefined) webhook.hasSecret = body.secret !== "";
+        if (refusesRatingDropTenths(body.ratingDropTenths)) {
+          return json(res, 400, ratingDropTenthsEnvelope(path));
+        }
         if (body.confirmDrops !== undefined) {
           webhook.confirmDrops = body.confirmDrops;
+        }
+        if (body.ratingDropTenths !== undefined) {
+          webhook.ratingDropTenths = body.ratingDropTenths;
         }
         json(res, 200, webhook);
       });
@@ -3208,6 +3231,9 @@ const routes: Route[] = [
     pattern: /^\/email-alerts$/,
     handler: (_p, req, res) => {
       withBody<EmailAlertCreateRequest>(req, res, (body) => {
+        if (refusesRatingDropTenths(body.ratingDropTenths)) {
+          return json(res, 400, ratingDropTenthsEnvelope(req.url ?? "/"));
+        }
         const trusted = body.email === TRUSTED_RECIPIENT;
         const alert: EmailAlertItem = {
           id: `email-${emailAlerts.length + 1}`,
@@ -3218,6 +3244,7 @@ const routes: Route[] = [
           confirmed: trusted,
           createdAt: new Date().toISOString(),
           confirmDrops: body.confirmDrops === true,
+          ratingDropTenths: body.ratingDropTenths ?? RATING_DROP_DEFAULT_TENTHS,
         };
         emailAlerts.unshift(alert);
         json(
@@ -3256,8 +3283,14 @@ const routes: Route[] = [
           alert.reviewScores = normalizeReviewScores(body.reviewScores);
         }
         if (body.active !== undefined) alert.active = body.active;
+        if (refusesRatingDropTenths(body.ratingDropTenths)) {
+          return json(res, 400, ratingDropTenthsEnvelope(path));
+        }
         if (body.confirmDrops !== undefined) {
           alert.confirmDrops = body.confirmDrops;
+        }
+        if (body.ratingDropTenths !== undefined) {
+          alert.ratingDropTenths = body.ratingDropTenths;
         }
         json(res, 200, alert);
       });

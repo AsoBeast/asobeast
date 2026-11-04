@@ -111,6 +111,7 @@ function EmailAlertRow({ alert }: { alert: EmailAlertItem }) {
       events={alert.events}
       confirmDrops={alert.confirmDrops === true}
       reviewScores={alert.reviewScores}
+      ratingDropTenths={alert.ratingDropTenths}
       awaiting={
         awaitsConfirmation(alert)
           ? {

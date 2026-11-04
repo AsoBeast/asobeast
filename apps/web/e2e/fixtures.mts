@@ -3904,6 +3904,7 @@ export const WEBHOOKS: WebhookItem[] = [
     hasSecret: true,
     createdAt: utcTimestampDaysAgo(5),
     channel: "generic",
+    ratingDropTenths: 1,
   },
 ];
 
@@ -3916,6 +3917,7 @@ export const EMAIL_ALERTS: EmailAlertItem[] = [
     active: true,
     confirmed: true,
     createdAt: utcTimestampDaysAgo(3),
+    ratingDropTenths: 1,
   },
 ];
 

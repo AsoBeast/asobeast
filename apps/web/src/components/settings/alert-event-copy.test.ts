@@ -5,6 +5,7 @@ import {
   PICKER_EVENTS,
   eventBadgeLabel,
   needsAStar,
+  ratingDropTenthsToSend,
   reviewScoresToSend,
 } from "./alert-event-copy";
 
@@ -72,5 +73,28 @@ describe("eventBadgeLabel", () => {
 
   it("ignores the stars on another event", () => {
     expect(eventBadgeLabel("rank.dropped", [1])).toBe("Rank dropped");
+  });
+});
+
+describe("ratingDropTenthsToSend", () => {
+  it("sends the threshold only while Rating dropped is ticked", () => {
+    expect(ratingDropTenthsToSend(["rating.dropped"], 3)).toBe(3);
+    expect(ratingDropTenthsToSend(["rank.dropped"], 3)).toBeUndefined();
+  });
+});
+
+describe("eventBadgeLabel for a rating drop", () => {
+  it("names the threshold of a rating drop", () => {
+    expect(eventBadgeLabel("rating.dropped", undefined, 2)).toBe(
+      "Rating dropped · 0.2 stars",
+    );
+    expect(eventBadgeLabel("rating.dropped", undefined, 1)).toBe(
+      "Rating dropped · 0.1 star",
+    );
+    expect(eventBadgeLabel("rating.dropped", undefined)).toBe("Rating dropped");
+  });
+
+  it("ignores the threshold on another event", () => {
+    expect(eventBadgeLabel("rank.dropped", undefined, 3)).toBe("Rank dropped");
   });
 });

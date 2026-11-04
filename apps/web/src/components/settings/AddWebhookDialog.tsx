@@ -4,14 +4,18 @@ import { useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { REVIEW_SCORES } from "@asobeast/shared";
+import { RATING_DROP_DEFAULT_TENTHS, REVIEW_SCORES } from "@asobeast/shared";
 import type { WebhookEvent } from "@asobeast/shared";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ApiError, createWebhook } from "@/lib/api";
 import { invalidateWebhookMutation } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
-import { needsAStar, reviewScoresToSend } from "./alert-event-copy";
+import {
+  needsAStar,
+  ratingDropTenthsToSend,
+  reviewScoresToSend,
+} from "./alert-event-copy";
 import { AlertSubscriptionFields } from "./alert-events";
 import { ConfirmDropsField } from "./ConfirmDropsField";
 import { AlertChannelDialog } from "./alert-channel/AlertChannelDialog";
@@ -25,6 +29,7 @@ export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
   const [url, setUrl] = useState("");
   const [events, setEvents] = useState<WebhookEvent[]>(["metadata.changed"]);
   const [stars, setStars] = useState<number[]>([...REVIEW_SCORES]);
+  const [ratingTenths, setRatingTenths] = useState(RATING_DROP_DEFAULT_TENTHS);
   const [secret, setSecret] = useState("");
   const [confirmChoice, setConfirmChoice] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -35,6 +40,7 @@ export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
         url,
         events,
         reviewScores: reviewScoresToSend(events, stars),
+        ratingDropTenths: ratingDropTenthsToSend(events, ratingTenths),
         secret: secret.trim() === "" ? undefined : secret,
         confirmDrops,
       }),
@@ -61,6 +67,7 @@ export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
     setUrl("");
     setEvents(["metadata.changed"]);
     setStars([...REVIEW_SCORES]);
+    setRatingTenths(RATING_DROP_DEFAULT_TENTHS);
     setSecret("");
     setConfirmChoice(null);
     setError(null);
@@ -126,8 +133,10 @@ export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
       <AlertSubscriptionFields
         events={events}
         stars={stars}
+        ratingTenths={ratingTenths}
         onEventsChange={setEvents}
         onStarsChange={setStars}
+        onRatingTenthsChange={setRatingTenths}
       />
 
       <ConfirmDropsField checked={confirmDrops} onChange={setConfirmChoice} />

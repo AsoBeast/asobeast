@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import AxeBuilder from "@axe-core/playwright";
 import type { Locator, Page } from "@playwright/test";
 import { WEBHOOK_EVENTS } from "@asobeast/shared";
 import { expect, test } from "./session.mts";
@@ -699,3 +700,134 @@ test("the webhook dialog names the chat tool a url reaches", async ({
   await expect(row.getByText("Slack", { exact: true })).toBeVisible();
   await expect(page.getByText(slack)).toHaveCount(0);
 });
+
+const RATING_DROPPED = "Rating dropped";
+const RATING_THRESHOLD = "Rating drop threshold";
+
+function ratingThreshold(dialog: Locator): Locator {
+  return dialog.getByRole("combobox", { name: RATING_THRESHOLD });
+}
+
+async function pickThreshold(
+  page: Page,
+  dialog: Locator,
+  label: string,
+): Promise<void> {
+  await ratingThreshold(dialog).click();
+  await page.getByRole("option", { name: label, exact: true }).click();
+  await expect(ratingThreshold(dialog)).toHaveText(label);
+}
+
+for (const channel of CHANNELS) {
+  test(`${channel.trigger} shows the rating threshold only while Rating dropped is ticked`, async ({
+    page,
+  }) => {
+    const dialog = await openWithEvents(page, channel, [SERP_ENTRANT]);
+    await expect(ratingThreshold(dialog)).toHaveCount(0);
+
+    await setSelected(eventOption(dialog, RATING_DROPPED), true);
+    await expect(ratingThreshold(dialog)).toHaveText("0.1 star");
+    await expect(ratingThreshold(dialog)).toHaveAccessibleDescription(
+      "Alert when the average rating falls by at least this much against seven days earlier. Needs 20 ratings. Reviews are not counted, the number shown in the store is.",
+    );
+
+    await setSelected(eventOption(dialog, RATING_DROPPED), false);
+    await expect(ratingThreshold(dialog)).toHaveCount(0);
+  });
+
+  test(`${channel.trigger} sends, shows and edits the rating threshold`, async ({
+    page,
+  }) => {
+    const created = await openWithEvents(page, channel, [RATING_DROPPED]);
+    await pickThreshold(page, created, "0.3 stars");
+
+    const { row, body } = await submitChannel(page, channel, created);
+
+    expect(body).toMatchObject({
+      events: ["rating.dropped"],
+      ratingDropTenths: 3,
+    });
+    await expect(row.locator('[data-slot="badge"]')).toHaveText([
+      "Rating dropped · 0.3 stars",
+    ]);
+
+    const dialog = await openSettledDialog(page, EDIT_EVENTS, row);
+    await expect(ratingThreshold(dialog)).toHaveText("0.3 stars");
+    await pickThreshold(page, dialog, "0.5 stars");
+    const patch = page.waitForRequest(
+      (request) => request.method() === "PATCH",
+    );
+    await dialog.getByRole("button", { name: "Save events" }).click();
+
+    expect((await patch).postDataJSON()).toMatchObject({
+      events: ["rating.dropped"],
+      ratingDropTenths: 5,
+    });
+    await expect(row.locator('[data-slot="badge"]')).toHaveText([
+      "Rating dropped · 0.5 stars",
+    ]);
+  });
+
+  test(`${channel.trigger} sends no rating threshold without Rating dropped`, async ({
+    page,
+  }) => {
+    const dialog = await openWithEvents(page, channel, [SERP_ENTRANT]);
+
+    const { body } = await submitChannel(page, channel, dialog);
+
+    expect(body).not.toHaveProperty("ratingDropTenths");
+  });
+
+  test(`${channel.trigger} discards a threshold change closed with Escape`, async ({
+    page,
+  }) => {
+    const created = await openWithEvents(page, channel, [RATING_DROPPED]);
+    await pickThreshold(page, created, "0.2 stars");
+    const { row } = await submitChannel(page, channel, created);
+    const dialog = await openSettledDialog(page, EDIT_EVENTS, row);
+    await pickThreshold(page, dialog, "0.5 stars");
+
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+
+    const reopened = await openSettledDialog(page, EDIT_EVENTS, row);
+    await expect(ratingThreshold(reopened)).toHaveText("0.2 stars");
+  });
+
+  test(`${channel.trigger} picks a rating threshold from the keyboard`, async ({
+    page,
+  }) => {
+    const dialog = await openWithEvents(page, channel, [RATING_DROPPED]);
+    const trigger = ratingThreshold(dialog);
+
+    await trigger.focus();
+    await page.keyboard.press("Enter");
+    await expect(
+      page.getByRole("option", { name: "0.1 star", exact: true }),
+    ).toBeFocused();
+    await page.keyboard.press("ArrowDown");
+    await expect(
+      page.getByRole("option", { name: "0.2 stars", exact: true }),
+    ).toBeFocused();
+    await page.keyboard.press("Enter");
+
+    await expect(trigger).toHaveText("0.2 stars");
+    await expect(trigger).toBeFocused();
+  });
+
+  test(`${channel.trigger} fits a phone and passes axe with the rating threshold open`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    const dialog = await openWithEvents(page, channel, [RATING_DROPPED]);
+
+    await expectFitsViewport(page, dialog);
+    await ratingThreshold(dialog).click();
+    await expect(page.getByRole("listbox")).toBeVisible();
+    const { violations } = await new AxeBuilder({ page })
+      .include('[role="dialog"]')
+      .include('[role="listbox"]')
+      .analyze();
+    expect(violations).toEqual([]);
+  });
+}

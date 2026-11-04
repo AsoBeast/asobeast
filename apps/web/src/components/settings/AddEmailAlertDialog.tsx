@@ -4,14 +4,18 @@ import { useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { REVIEW_SCORES } from "@asobeast/shared";
+import { RATING_DROP_DEFAULT_TENTHS, REVIEW_SCORES } from "@asobeast/shared";
 import type { WebhookEvent } from "@asobeast/shared";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ApiError, createEmailAlert } from "@/lib/api";
 import { invalidateEmailAlertMutation } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
-import { needsAStar, reviewScoresToSend } from "./alert-event-copy";
+import {
+  needsAStar,
+  ratingDropTenthsToSend,
+  reviewScoresToSend,
+} from "./alert-event-copy";
 import { AlertSubscriptionFields } from "./alert-events";
 import { ConfirmDropsField } from "./ConfirmDropsField";
 import { AlertChannelDialog } from "./alert-channel/AlertChannelDialog";
@@ -23,6 +27,7 @@ export function AddEmailAlertDialog({ trigger }: { trigger?: ReactNode }) {
   const [email, setEmail] = useState("");
   const [events, setEvents] = useState<WebhookEvent[]>(["metadata.changed"]);
   const [stars, setStars] = useState<number[]>([...REVIEW_SCORES]);
+  const [ratingTenths, setRatingTenths] = useState(RATING_DROP_DEFAULT_TENTHS);
   const [confirmDrops, setConfirmDrops] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,6 +37,7 @@ export function AddEmailAlertDialog({ trigger }: { trigger?: ReactNode }) {
         email,
         events,
         reviewScores: reviewScoresToSend(events, stars),
+        ratingDropTenths: ratingDropTenthsToSend(events, ratingTenths),
         confirmDrops,
       }),
     onSuccess: (saved) => {
@@ -67,6 +73,7 @@ export function AddEmailAlertDialog({ trigger }: { trigger?: ReactNode }) {
     setEmail("");
     setEvents(["metadata.changed"]);
     setStars([...REVIEW_SCORES]);
+    setRatingTenths(RATING_DROP_DEFAULT_TENTHS);
     setConfirmDrops(true);
     setError(null);
   }
@@ -117,8 +124,10 @@ export function AddEmailAlertDialog({ trigger }: { trigger?: ReactNode }) {
       <AlertSubscriptionFields
         events={events}
         stars={stars}
+        ratingTenths={ratingTenths}
         onEventsChange={setEvents}
         onStarsChange={setStars}
+        onRatingTenthsChange={setRatingTenths}
       />
 
       <ConfirmDropsField checked={confirmDrops} onChange={setConfirmDrops} />
