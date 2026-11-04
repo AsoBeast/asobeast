@@ -2,12 +2,14 @@ import {
   ACTION_PRIORITIES,
   ActionOpenedPayload,
   AlertBatchApp,
+  AppAvailabilityPayload,
   AlertBatchAppSection,
   AlertBatchCompetitorSection,
   AlertBatchPayload,
   AlertBatchScope,
   ChartMovePayload,
   GranularAlertPayload,
+  isAvailabilityPayload,
   isChartMovePayload,
   MetadataChangedPayload,
   RankDroppedPayload,
@@ -92,6 +94,7 @@ export interface AssembledBatches {
 
 interface MutableSection {
   app: AlertBatchApp;
+  availability: AppAvailabilityPayload[];
   rankDrops: RankDroppedPayload[];
   rankImprovements: RankImprovedPayload[];
   rankMilestones: RankMilestonePayload[];
@@ -186,7 +189,7 @@ function resolveEventApp(
   return app;
 }
 
-function classifyMetadata(
+function classifyScoped(
   event: OutboxEvent,
   app: ResolvedApp,
   appById: Map<string, ResolvedApp>,
@@ -219,8 +222,11 @@ function classifyAppEvent(
 ): void {
   const app = resolveEventApp(event, appById, result);
   if (!app) return;
-  if (event.payload.event === 'metadata.changed') {
-    classifyMetadata(event, app, appById, result);
+  if (
+    event.payload.event === 'metadata.changed' ||
+    isAvailabilityPayload(event.payload)
+  ) {
+    classifyScoped(event, app, appById, result);
     return;
   }
   if (app.isCompetitor) {
@@ -279,6 +285,7 @@ export function classifyBatch(
 function createSection(app: ResolvedApp): MutableSection {
   return {
     app: toBatchApp(app),
+    availability: [],
     rankDrops: [],
     rankImprovements: [],
     rankMilestones: [],
@@ -314,7 +321,8 @@ function addOwnedSignal(
   for (const primary of signal.primaries) {
     const section = sectionFor(sections, primary);
     const payload = signal.event.payload;
-    if (payload.event === 'rank.dropped') section.rankDrops.push(payload);
+    if (isAvailabilityPayload(payload)) section.availability.push(payload);
+    else if (payload.event === 'rank.dropped') section.rankDrops.push(payload);
     else if (payload.event === 'rank.improved') {
       section.rankImprovements.push(payload);
     } else if (payload.event === 'rank.milestone') {
@@ -353,8 +361,11 @@ function addCompetitorSignal(
     competitor = { app: toBatchApp(signal.competitor), changes: [] };
     section.competitors.set(signal.competitor.id, competitor);
   }
-  if (signal.event.payload.event === 'metadata.changed') {
-    competitor.changes.push(signal.event.payload);
+  const { payload } = signal.event;
+  if (payload.event === 'metadata.changed') {
+    competitor.changes.push(payload);
+  } else if (isAvailabilityPayload(payload)) {
+    competitor.availability = [...(competitor.availability ?? []), payload];
   }
 }
 
@@ -382,6 +393,7 @@ function finalizeSections(
   return [...sections.values()]
     .map((section): AlertBatchAppSection => ({
       app: section.app,
+      availability: section.availability,
       rankDrops: section.rankDrops,
       rankImprovements: section.rankImprovements,
       rankMilestones: section.rankMilestones,

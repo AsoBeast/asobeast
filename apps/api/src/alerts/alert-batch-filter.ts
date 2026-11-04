@@ -1,13 +1,38 @@
 import {
   AlertBatchAppSection,
+  AlertBatchCompetitorSection,
   AlertBatchPayload,
   GranularAlertPayload,
 } from '@asobeast/shared';
 import { reachesChannel } from './confirm-drops';
 import { reviewGate } from './review-routing';
 
+const allowedOf = <T extends GranularAlertPayload>(
+  list: readonly T[],
+  allowed: ReadonlySet<string>,
+): T[] => list.filter((payload) => allowed.has(payload.event));
+
+function competitorsAllowed(
+  competitors: readonly AlertBatchCompetitorSection[],
+  allowed: ReadonlySet<string>,
+): AlertBatchCompetitorSection[] {
+  return competitors.flatMap((competitor) => {
+    const changes = allowed.has('metadata.changed') ? competitor.changes : [];
+    const availability = allowedOf(competitor.availability ?? [], allowed);
+    if (changes.length === 0 && availability.length === 0) return [];
+    return [
+      {
+        app: competitor.app,
+        changes,
+        ...(availability.length > 0 ? { availability } : {}),
+      },
+    ];
+  });
+}
+
 function sectionHasContent(section: AlertBatchAppSection): boolean {
   return (
+    (section.availability ?? []).length > 0 ||
     section.rankDrops.length > 0 ||
     section.rankImprovements.length > 0 ||
     section.rankMilestones.length > 0 ||
@@ -45,6 +70,10 @@ export function filterBatch(
   const apps = batch.apps
     .map((section): AlertBatchAppSection => ({
       app: section.app,
+      availability:
+        batch.scope === 'owned_apps'
+          ? allowedOf(section.availability ?? [], allowed)
+          : [],
       rankDrops: ownedOnly('rank.dropped', section.rankDrops),
       rankImprovements: ownedOnly('rank.improved', section.rankImprovements),
       rankMilestones: ownedOnly('rank.milestone', section.rankMilestones),
@@ -76,8 +105,8 @@ export function filterBatch(
           ? section.actions
           : [],
       competitors:
-        batch.scope === 'competitors' && allowed.has('metadata.changed')
-          ? section.competitors
+        batch.scope === 'competitors'
+          ? competitorsAllowed(section.competitors, allowed)
           : [],
     }))
     .filter(sectionHasContent);

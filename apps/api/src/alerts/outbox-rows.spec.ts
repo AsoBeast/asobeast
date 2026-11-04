@@ -17,7 +17,12 @@ import {
   chartMilestone,
   productivityChart,
 } from './chart-events.fixture';
-import { ratingDropped, reviewSpike } from './listing-events.fixture';
+import {
+  appDelisted,
+  appUnlistedMarket,
+  ratingDropped,
+  reviewSpike,
+} from './listing-events.fixture';
 import { outboxRows } from './outbox-rows';
 
 const milestone: RankMilestonePayload = {
@@ -443,5 +448,29 @@ describe('outboxRows for the rating and review events', () => {
     expect(key(reviewSpike({ date: '2026-11-03' }))).not.toBe(
       key(reviewSpike()),
     );
+  });
+});
+
+describe('outboxRows for the availability events', () => {
+  it('keys a delisting by app and day', () => {
+    expect(outboxRows(appDelisted())).toEqual([
+      {
+        event: 'app.delisted',
+        appId: 'a',
+        dedupeKey: 'delisted:a:2026-11-03',
+        payload: appDelisted(),
+      },
+    ]);
+  });
+
+  it('keys an unlisted market by app, market and day', () => {
+    const key = (market: string) =>
+      outboxRows(appUnlistedMarket({ market }))[0].dedupeKey;
+
+    expect(key('de')).toBe('unlisted:a:de:2026-11-03');
+    expect(key('fr')).not.toBe(key('de'));
+    expect(
+      outboxRows(appUnlistedMarket({ trackedKeywords: 3 }))[0].dedupeKey,
+    ).toBe(key('de'));
   });
 });

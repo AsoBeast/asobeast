@@ -1,6 +1,7 @@
 import {
   ActionOpenedPayload,
   AlertPayload,
+  AppAvailabilityPayload,
   ChartMovePayload,
   isChartMovePayload,
   RankDroppedPayload,
@@ -54,7 +55,8 @@ function appRow(
     | RankOvertakenPayload
     | ReviewAlertPayload
     | RatingDroppedPayload
-    | ReviewSpikePayload,
+    | ReviewSpikePayload
+    | AppAvailabilityPayload,
   dedupeKey: string,
 ): OutboxRow {
   return { event: payload.event, appId: payload.app.id, dedupeKey, payload };
@@ -103,6 +105,19 @@ export function outboxRows(payload: AlertPayload): OutboxRow[] {
   if (payload.event === 'rating.dropped') {
     return [
       appRow(payload, `rating.dropped:${payload.app.id}:${payload.toDate}`),
+    ];
+  }
+
+  if (payload.event === 'app.delisted') {
+    return [appRow(payload, `delisted:${payload.app.id}:${payload.date}`)];
+  }
+
+  if (payload.event === 'app.unlisted_market') {
+    return [
+      appRow(
+        payload,
+        `unlisted:${payload.app.id}:${payload.market}:${payload.date}`,
+      ),
     ];
   }
 

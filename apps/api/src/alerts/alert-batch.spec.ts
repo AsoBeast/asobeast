@@ -28,7 +28,12 @@ import {
   chartMoveBatch,
   withoutChartMoves,
 } from './chart-events.fixture';
-import { ratingDropped, reviewSpike } from './listing-events.fixture';
+import {
+  appDelisted,
+  appUnlistedMarket,
+  ratingDropped,
+  reviewSpike,
+} from './listing-events.fixture';
 import {
   drop,
   improvement as rankImprovement,
@@ -1071,5 +1076,86 @@ describe('rating drop and review spike batching', () => {
     expect(
       filterBatch(competitors, new Set(['rating.dropped', 'review.spike'])),
     ).toBeNull();
+  });
+});
+
+describe('availability batching', () => {
+  const now = new Date('2026-11-03T04:00:00.000Z');
+  const charlie = { id: 'c', name: 'Charlie', isCompetitor: true };
+  const own = appDelisted({
+    app: { id: 'a', name: 'Alpha', isCompetitor: false },
+  });
+  const rivalGone = appDelisted({ app: charlie });
+  const rivalMarket = appUnlistedMarket({ app: charlie });
+  const rivalChange: MetadataChangedPayload = {
+    event: 'metadata.changed',
+    occurredAt: '2026-11-03T03:00:00.000Z',
+    app: { id: 'c', name: 'Charlie', isCompetitor: true },
+    changes: [{ field: 'title', before: 'Old', after: 'New' }],
+  };
+  const assembled = () =>
+    assembleBatches({
+      events: [
+        event(own, 'a', 'o1'),
+        event(rivalGone, 'c', 'c1'),
+        event(rivalMarket, 'c', 'c2'),
+        event(rivalChange, 'c', 'c3'),
+      ],
+      appById,
+      serpPrimariesByKeyword: new Map(),
+      now,
+    });
+
+  it('files an own delisting in the owned section', () => {
+    const { owned } = assembled();
+
+    expect(owned.apps[0].availability).toEqual([own]);
+    expect(owned.totals.events).toBe(1);
+  });
+
+  it('files a competitor availability beside its changes under the primary', () => {
+    const { competitors, skipped } = assembled();
+
+    const [entry] = competitors.apps[0].competitors;
+    expect(competitors.apps[0].competitors).toHaveLength(1);
+    expect(entry.app.id).toBe('c');
+    expect(entry.changes).toEqual([rivalChange]);
+    expect(entry.availability).toEqual([rivalGone, rivalMarket]);
+    expect(skipped.competitor_owned_signal).toBe(0);
+  });
+
+  it('still refuses the rating and review events of a competitor', () => {
+    const result = classifyBatch({
+      events: [
+        event(ratingDropped({ app: { id: 'c', name: 'Charlie' } }), 'c'),
+        event(reviewSpike({ app: { id: 'c', name: 'Charlie' } }), 'c'),
+      ],
+      appById,
+      serpPrimariesByKeyword: new Map(),
+    });
+
+    expect(result.skipped.competitor_owned_signal).toBe(2);
+  });
+
+  it('keeps per competitor only what a channel lists', () => {
+    const { owned, competitors } = assembled();
+    const unlistedOnly = filterBatch(
+      competitors,
+      new Set(['app.unlisted_market']),
+    );
+    const changesOnly = filterBatch(competitors, new Set(['metadata.changed']));
+
+    expect(unlistedOnly?.apps[0].competitors).toEqual([
+      expect.objectContaining({ changes: [], availability: [rivalMarket] }),
+    ]);
+    expect(unlistedOnly?.events).toEqual([rivalMarket]);
+    expect(unlistedOnly?.totals).toEqual({ events: 1, apps: 1 });
+    const changed = changesOnly?.apps[0].competitors[0];
+    expect(changed?.changes).toEqual([rivalChange]);
+    expect(changed).not.toHaveProperty('availability');
+    expect(filterBatch(owned, new Set(['app.unlisted_market']))).toBeNull();
+    expect(
+      filterBatch(owned, new Set(['app.delisted']))?.apps[0].availability,
+    ).toEqual([own]);
   });
 });
