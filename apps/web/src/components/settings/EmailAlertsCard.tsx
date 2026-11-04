@@ -172,6 +172,10 @@ function SetupHint({ need }: { need: EssentialAlertsNeed | null | undefined }) {
 export function EmailAlertsCard() {
   const { data: config } = useSuspenseQuery(alertsConfigOptions);
   const { data } = useSuspenseQuery(emailAlertsOptions);
+  const essentialNeed =
+    config.essentialAlertsPending === false
+      ? undefined
+      : config.essentialAlertsNeed;
 
   return (
     <AlertChannelCard
@@ -179,13 +183,13 @@ export function EmailAlertsCard() {
       action={config.emailEnabled ? <AddEmailAlertDialog /> : null}
     >
       {config.emailEnabled ? (
-        <EssentialAlertsNotice need={config.essentialAlertsNeed} />
+        <EssentialAlertsNotice need={essentialNeed} />
       ) : null}
       {!config.emailEnabled ? (
-        <SetupHint need={config.essentialAlertsNeed} />
+        <SetupHint need={essentialNeed} />
       ) : data.length === 0 ? (
         <AlertChannelEmpty>
-          {config.essentialAlertsNeed === null
+          {essentialNeed === null
             ? ESSENTIAL_ALERTS_EMPTY
             : "No email alerts yet. Add a recipient to receive metadata and rank alerts by email."}
         </AlertChannelEmpty>

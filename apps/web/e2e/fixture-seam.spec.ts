@@ -358,6 +358,10 @@ test("the alerts config names the instance threshold and what the essentials nee
     emailEnabled: true,
     rankDropThreshold: 5,
     essentialAlertsNeed: null,
+    essentialAlertsPending: true,
+  });
+  await expect(config("e2e_essentials_settled=1")).resolves.toMatchObject({
+    essentialAlertsPending: false,
   });
   await expect(config("e2e_smtp_off=1")).resolves.toMatchObject({
     emailEnabled: false,

@@ -140,3 +140,54 @@ test("the essential alert fits a 320px screen", async ({ page, context }) => {
     ),
   ).toBe(true);
 });
+
+test("an empty email card promises the essential alerts only while they are due", async ({
+  page,
+  context,
+}) => {
+  await seedCookie(context, "e2e-empty-alerts");
+  await page.goto("/settings");
+
+  await expect(
+    page.getByText(
+      "No email alerts yet. Add a recipient, or wait for the essential alerts that turn on after your first daily run.",
+    ),
+  ).toBeVisible();
+
+  await seedCookie(context, "e2e_essentials_settled");
+  await page.reload();
+
+  await expect(
+    page.getByText(
+      "No email alerts yet. Add a recipient to receive metadata and rank alerts by email.",
+    ),
+  ).toBeVisible();
+  await expect(page.getByText(/wait for the essential alerts/)).toHaveCount(0);
+});
+
+for (const { cookie, sentence, ready } of [
+  {
+    cookie: "e2e_https_needed",
+    sentence: /turns on the essential alerts after your first daily run once/,
+    ready: (page: import("@playwright/test").Page) =>
+      page.getByRole("button", { name: "Add email alert" }),
+  },
+  {
+    cookie: "e2e_smtp_off",
+    sentence: /AsoBeast turns on the essential alerts for a new workspace/,
+    ready: (page: import("@playwright/test").Page) =>
+      page.getByText("Email alerts are disabled."),
+  },
+]) {
+  test(`a settled workspace hears nothing about the essential alerts with ${cookie}`, async ({
+    page,
+    context,
+  }) => {
+    await seedCookie(context, cookie);
+    await seedCookie(context, "e2e_essentials_settled");
+    await page.goto("/settings");
+
+    await expect(ready(page)).toBeVisible();
+    await expect(page.getByText(sentence)).toHaveCount(0);
+  });
+}

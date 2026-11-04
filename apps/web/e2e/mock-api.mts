@@ -1095,6 +1095,7 @@ function alertsConfigOf(req: IncomingMessage): AlertsConfig {
       : hasCookie(req, "e2e_https_needed", "1")
         ? "https"
         : null,
+    essentialAlertsPending: !hasCookie(req, "e2e_essentials_settled", "1"),
   };
 }
 
