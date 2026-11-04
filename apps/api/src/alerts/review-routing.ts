@@ -24,7 +24,7 @@ function listsNewReview(subscription: Subscription, score: number): boolean {
 export function receivesInstant(
   subscription: Subscription,
   payload: AlertPayload,
-  instanceThreshold = 0,
+  instanceThreshold: number,
 ): boolean {
   if (!subscription.events.includes(payload.event)) return false;
   if (
