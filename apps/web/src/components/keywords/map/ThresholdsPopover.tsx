@@ -57,11 +57,13 @@ function ThresholdField({
         }}
         onBlur={() => setDraft(null)}
       />
-      {invalid ? (
-        <p id={errorId} role="alert" className="text-caption text-destructive">
-          {INVALID_THRESHOLD}
-        </p>
-      ) : null}
+      <div className="min-h-lh text-caption">
+        {invalid ? (
+          <p id={errorId} role="alert" className="text-destructive">
+            {INVALID_THRESHOLD}
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 }

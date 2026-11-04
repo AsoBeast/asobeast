@@ -692,6 +692,27 @@ test.describe("zones and thresholds", () => {
     await expectToggles(page, [8, 7, 4, 4]);
   });
 
+  test("a click on reset lands when the popover opens upward", async ({
+    page,
+  }) => {
+    await storeThresholds(page, '{"popularity":30,"difficulty":25}');
+    await page.goto(MAP_URL);
+    const trigger = page.getByRole("button", { name: "Thresholds" });
+    await trigger.evaluate((node) => node.scrollIntoView({ block: "end" }));
+    const dialog = await openThresholds(page);
+    const opened = await dialog.boundingBox();
+    const anchor = await trigger.boundingBox();
+    expect(opened && anchor && opened.y < anchor.y).toBe(true);
+    await dialog
+      .getByRole("spinbutton", { name: "Popularity at least" })
+      .fill("150");
+    await expect(dialog.getByRole("alert")).toBeVisible();
+
+    await dialog.getByRole("button", { name: "Reset" }).click();
+
+    await expectToggles(page, [8, 7, 4, 4]);
+  });
+
   test("closing returns focus to the trigger", async ({ page }) => {
     await page.goto(MAP_URL);
     await openThresholds(page);
