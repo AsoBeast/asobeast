@@ -1,6 +1,7 @@
 import type { TrackedKeywordItem } from "@asobeast/shared";
 import { MAX_SERIES } from "@/components/charts/pivot";
 import { selectionForMarket } from "@/components/rankings/selection";
+import type { KeywordChartSelection } from "@/lib/search-params";
 
 export interface ChartedSelection {
   effective: string[];
@@ -19,6 +20,18 @@ export function chartedSelection(
 ): ChartedSelection {
   const effective = selectionForMarket(tracked, selected);
   return { effective, charted: effective.slice(0, MAX_SERIES) };
+}
+
+export function resolveChartSelection(
+  selection: KeywordChartSelection,
+  tracked: readonly TrackedKeywordItem[],
+): ChartedSelection {
+  if (selection.mode === "hidden") {
+    return { effective: [], charted: [] };
+  }
+  const requested =
+    selection.mode === "chart" ? selection.ids : defaultSeed(tracked);
+  return chartedSelection(requested, [...tracked]);
 }
 
 export const isCapped = (selection: ChartedSelection): boolean =>

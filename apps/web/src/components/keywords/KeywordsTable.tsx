@@ -46,11 +46,13 @@ export function KeywordsTable({
   store,
   country,
   homeCountry,
+  chartedIds,
 }: {
   id: string;
   store: Store;
   country: string;
   homeCountry: string;
+  chartedIds: readonly string[];
 }) {
   const [{ sort, dir }, setSortParams] = useQueryStates({
     sort: keywordSortParser,
@@ -82,10 +84,11 @@ export function KeywordsTable({
         homeCountry,
         multiMarket,
         today,
+        chartedIds,
         onOpenSerp: (keywordId) =>
           void setSerpState({ serp: keywordId, serpDate: null }),
       }),
-    [id, store, homeCountry, multiMarket, setSerpState, today],
+    [id, store, homeCountry, multiMarket, setSerpState, today, chartedIds],
   );
 
   const { sorting, onSortingChange } = useUrlSorting(
@@ -138,6 +141,7 @@ export function KeywordsTable({
     .getFilteredSelectedRowModel()
     .rows.map((row) => row.original);
   const selectedIds = selectedKeywords.map((keyword) => keyword.keywordId);
+  const chartedSet = useMemo(() => new Set(chartedIds), [chartedIds]);
 
   const { tableArea, clearSelection } = useClearedSelectionFocus(
     selectedIds.length,
@@ -181,6 +185,7 @@ export function KeywordsTable({
         <ListingMarksContext value={marks.checked}>
           <KeywordsDataTable
             table={table}
+            chartedSet={chartedSet}
             emptyBody={exactSearchEmptyBody(filters.q)}
             onClearFilters={() => void setFilters(null)}
           />

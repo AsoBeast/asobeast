@@ -7,6 +7,7 @@ import {
   defaultSeed,
   isCapped,
   overChartLimit,
+  resolveChartSelection,
   withoutKeyword,
 } from "./dynamics-selection";
 
@@ -130,6 +131,60 @@ describe("defaultSeed", () => {
 
   it("charts nothing for an empty market", () => {
     expect(defaultSeed([])).toEqual([]);
+  });
+});
+
+describe("resolveChartSelection", () => {
+  it("charts nothing while the panel is hidden", () => {
+    expect(resolveChartSelection({ mode: "hidden" }, tracked)).toEqual({
+      effective: [],
+      charted: [],
+    });
+  });
+
+  it("seeds the first three in the market's own order", () => {
+    const { effective, charted } = resolveChartSelection(
+      { mode: "auto" },
+      tracked,
+    );
+    expect(effective).toEqual(["kw-1", "kw-2", "kw-3"]);
+    expect(charted).toEqual(effective);
+  });
+
+  it("keeps an explicit selection the market tracks", () => {
+    const { effective, charted } = resolveChartSelection(
+      { mode: "chart", ids: ["kw-5", "kw-2"] },
+      tracked,
+    );
+    expect(effective).toEqual(["kw-5", "kw-2"]);
+    expect(charted).toEqual(effective);
+  });
+
+  it("falls back to the top keywords when no explicit id survives", () => {
+    const { effective } = resolveChartSelection(
+      { mode: "chart", ids: ["kw-gone"] },
+      tracked,
+    );
+    expect(effective).toEqual(["kw-1", "kw-2", "kw-3", "kw-4", "kw-5"]);
+  });
+
+  it("caps the charted slice for a shared link over the limit", () => {
+    const { effective, charted } = resolveChartSelection(
+      {
+        mode: "chart",
+        ids: tracked.map((item) => item.keywordId).reverse(),
+      },
+      tracked,
+    );
+    expect(effective).toHaveLength(12);
+    expect(charted).toHaveLength(8);
+  });
+
+  it("charts nothing for an empty market", () => {
+    expect(resolveChartSelection({ mode: "auto" }, []).effective).toEqual([]);
+    expect(
+      resolveChartSelection({ mode: "chart", ids: ["kw-1"] }, []).effective,
+    ).toEqual([]);
   });
 });
 

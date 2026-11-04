@@ -95,6 +95,7 @@ export function keywordColumns({
   homeCountry,
   multiMarket,
   today,
+  chartedIds,
   onOpenSerp,
 }: {
   appId: string;
@@ -102,10 +103,12 @@ export function keywordColumns({
   homeCountry: string;
   multiMarket: boolean;
   today: string;
+  chartedIds: readonly string[];
   onOpenSerp: (keywordId: string) => void;
 }) {
+  const charted = new Set(chartedIds);
   return columnHelper.columns([
-    ...identityColumns(),
+    ...identityColumns(charted),
     addedColumn(),
     positionColumn(today, { appId, store, homeCountry, multiMarket }),
     ...scoreColumns(),
@@ -119,7 +122,7 @@ export function keywordColumns({
   ]);
 }
 
-function identityColumns() {
+function identityColumns(charted: ReadonlySet<string>) {
   return [
     columnHelper.display({
       id: "select",
@@ -154,7 +157,12 @@ function identityColumns() {
         <SortableHeader column={column} label="Keyword" />
       ),
       footer: keywordCountFooter,
-      cell: ({ row }) => <KeywordCell keyword={row.original} />,
+      cell: ({ row }) => (
+        <KeywordCell
+          keyword={row.original}
+          onChart={charted.has(row.original.keywordId)}
+        />
+      ),
     }),
     columnHelper.accessor((row) => row.tags ?? [], {
       id: "tags",

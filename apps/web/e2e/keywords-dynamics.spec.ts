@@ -51,13 +51,72 @@ test("a fresh visit opens the panel with the market's first three keywords", asy
 
   await expect(page.getByRole("region", { name: PANEL })).toBeVisible();
   await expect(page.getByRole("region", { name: CHART })).toBeVisible();
+  await expect(
+    page.getByText("Charted rows are highlighted in the table."),
+  ).toBeVisible();
   await expect(chartSeries(page)).toHaveText([
     "focus timer (US)",
     "pomodoro (US)",
     "study timer (US)",
   ]);
+  for (const text of ["focus timer", "pomodoro", "study timer"]) {
+    await expect(
+      page.getByRole("cell", { name: new RegExp(`${text}.*on the chart`) }),
+    ).toBeVisible();
+  }
+  await expect(
+    page.getByRole("cell", { name: /productivity app.*on the chart/ }),
+  ).toHaveCount(0);
   await expect(page).not.toHaveURL(/keywords=/);
   await expect(page).not.toHaveURL(/range=/);
+});
+
+test("the highlight follows the chart, not the ticked rows", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/keywords");
+
+  await page.getByRole("checkbox", { name: "Select productivity app" }).check();
+  await expect(page.getByText("1 selected")).toBeVisible();
+  await expect(
+    page.getByRole("cell", { name: /productivity app.*on the chart/ }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("cell", { name: /focus timer.*on the chart/ }),
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: "Show dynamics" }).click();
+  await expect(page).toHaveURL(/keywords=kw-4/);
+  await expect(
+    page.getByRole("cell", { name: /productivity app.*on the chart/ }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("cell", { name: /focus timer.*on the chart/ }),
+  ).toHaveCount(0);
+});
+
+test("removing a chip drops the row highlight with the series", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/keywords");
+  await page.getByRole("checkbox", { name: "Select focus timer" }).check();
+  await page.getByRole("checkbox", { name: "Select pomodoro" }).check();
+  await page.getByRole("button", { name: "Show dynamics" }).click();
+  await expect(
+    page.getByRole("cell", { name: /focus timer.*on the chart/ }),
+  ).toBeVisible();
+
+  await page
+    .getByRole("button", { name: "Remove focus timer (US) from the chart" })
+    .click();
+
+  await expect(page).toHaveURL(/keywords=kw-2/);
+  await expect(
+    page.getByRole("cell", { name: /focus timer.*on the chart/ }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("cell", { name: /pomodoro.*on the chart/ }),
+  ).toBeVisible();
 });
 
 test("a market with fewer than three keywords charts what exists", async ({
@@ -280,6 +339,9 @@ test("the market pills scope the chart and its change markers", async ({
     .click();
   await expect(page).toHaveURL(/country=pl/);
   await expect(chartSeries(page)).toHaveText(["minutnik skupienia (PL)"]);
+  await expect(
+    page.getByRole("cell", { name: /minutnik skupienia.*on the chart/ }),
+  ).toBeVisible();
   await expect(chart.locator(".metadata-change-marker")).toHaveCount(3);
   await expect
     .poll(() => (changeRequests.at(-1) ?? "").includes("country=pl"))

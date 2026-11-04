@@ -1,16 +1,20 @@
 "use client";
 
 import { Suspense } from "react";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { Info, Plus, Upload } from "lucide-react";
 import { useQueryState } from "nuqs";
 import type { Store } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { keywordsOptions } from "@/lib/queries";
 import {
   countryParser,
   keywordChartSelectionParser,
   keywordViewParser,
+  type KeywordChartSelection,
 } from "@/lib/search-params";
+import { resolveChartSelection } from "./dynamics-selection";
 import { AddKeywordsDialog } from "./AddKeywordsDialog";
 import { ImportKeywordsDialog } from "./ImportKeywordsDialog";
 import { KeywordDynamicsPanel } from "./KeywordDynamicsPanel";
@@ -78,16 +82,6 @@ export function KeywordsWorkspace({
           different public signals and are not directly comparable.
         </AlertDescription>
       </Alert>
-      {selection.mode !== "hidden" ? (
-        <Suspense fallback={null}>
-          <KeywordDynamicsPanel
-            id={id}
-            market={market}
-            homeCountry={homeCountry}
-            selection={selection}
-          />
-        </Suspense>
-      ) : null}
       <Suspense
         fallback={
           <div className="flex flex-col gap-3">
@@ -96,11 +90,12 @@ export function KeywordsWorkspace({
           </div>
         }
       >
-        <KeywordsTable
+        <KeywordsMarketScope
           id={id}
-          store={store}
-          country={market}
+          market={market}
           homeCountry={homeCountry}
+          store={store}
+          selection={selection}
         />
       </Suspense>
       <SuggestionsPanel id={id} country={market} store={store} />
@@ -118,5 +113,45 @@ export function KeywordsWorkspace({
         />
       ) : null}
     </div>
+  );
+}
+
+function KeywordsMarketScope({
+  id,
+  market,
+  homeCountry,
+  store,
+  selection,
+}: {
+  id: string;
+  market: string;
+  homeCountry: string;
+  store: Store;
+  selection: KeywordChartSelection;
+}) {
+  const { data: tracked } = useSuspenseQuery(keywordsOptions(id, market));
+  const chart = resolveChartSelection(selection, tracked);
+  const open =
+    selection.mode !== "hidden" &&
+    (selection.mode === "chart" || tracked.length > 0);
+  return (
+    <>
+      {open ? (
+        <KeywordDynamicsPanel
+          id={id}
+          market={market}
+          homeCountry={homeCountry}
+          selection={selection}
+          chart={chart}
+        />
+      ) : null}
+      <KeywordsTable
+        id={id}
+        store={store}
+        country={market}
+        homeCountry={homeCountry}
+        chartedIds={chart.effective}
+      />
+    </>
   );
 }

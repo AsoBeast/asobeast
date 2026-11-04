@@ -41,9 +41,9 @@ import { survivingNeighbour, useFocusAfterCommit } from "@/lib/focus-handoff";
 import { listingChangeDays } from "./position-history";
 import {
   cappingLine,
-  chartedSelection,
   isCapped,
   withoutKeyword,
+  type ChartedSelection,
 } from "./dynamics-selection";
 import { dynamicsChipId, DynamicsChips } from "./DynamicsChips";
 
@@ -51,7 +51,7 @@ export function KeywordDynamicsChart({
   id,
   market,
   homeCountry,
-  selected,
+  chart,
   range,
   onClear,
   onWiden,
@@ -59,7 +59,7 @@ export function KeywordDynamicsChart({
   id: string;
   market: string;
   homeCountry: string;
-  selected: readonly string[];
+  chart: ChartedSelection;
   range: RangePreset;
   onClear: () => void;
   onWiden: () => void;
@@ -73,7 +73,7 @@ export function KeywordDynamicsChart({
       id={id}
       market={market}
       homeCountry={homeCountry}
-      selected={selected}
+      chart={chart}
       range={range}
       tracked={tracked}
       onClear={onClear}
@@ -86,7 +86,7 @@ function KeywordDynamicsBody({
   id,
   market,
   homeCountry,
-  selected,
+  chart,
   range,
   tracked,
   onClear,
@@ -95,7 +95,7 @@ function KeywordDynamicsBody({
   id: string;
   market: string;
   homeCountry: string;
-  selected: readonly string[];
+  chart: ChartedSelection;
   range: RangePreset;
   tracked: TrackedKeywordItem[];
   onClear: () => void;
@@ -106,10 +106,9 @@ function KeywordDynamicsBody({
     keywordChartSelectionParser,
   );
   const focusAfterCommit = useFocusAfterCommit();
-  const selection = chartedSelection(selected, tracked);
   const bounds = presetToRange(range);
   const rankingsRead = useQuery({
-    ...rankingsOptions(id, { ...bounds, keywordIds: selection.charted }),
+    ...rankingsOptions(id, { ...bounds, keywordIds: chart.charted }),
     placeholderData: keepPreviousData,
   });
   const changesRead = useQuery(
@@ -129,10 +128,10 @@ function KeywordDynamicsBody({
   }
 
   const data = rankingsRead.data;
-  const chart = buildRankingChart(data.series, bounds.to);
+  const chartData = buildRankingChart(data.series, bounds.to);
   const everChecked = tracked.some(
     (item) =>
-      selection.charted.includes(item.keywordId) && item.latestDepth !== null,
+      chart.effective.includes(item.keywordId) && item.latestDepth !== null,
   );
   const changeDays = listingChangeDays(changesRead.data?.events ?? [], {
     country: market,
@@ -140,13 +139,13 @@ function KeywordDynamicsBody({
   });
 
   const removeChip = (keywordId: string, trigger: HTMLElement) => {
-    const remaining = withoutKeyword(selected, keywordId);
+    const remaining = withoutKeyword(chart.effective, keywordId);
     if (remaining.length === 0) {
       onClear();
       return;
     }
     const neighbour = survivingNeighbour(
-      selection.effective,
+      chart.effective,
       (candidate) => candidate === keywordId,
     );
     focusAfterCommit(
@@ -161,12 +160,12 @@ function KeywordDynamicsBody({
   return (
     <div className="flex flex-col gap-3">
       <DynamicsChips
-        selected={selection.effective}
+        selected={chart.effective}
         tracked={tracked}
-        chart={chart}
+        chart={chartData}
         onRemove={removeChip}
       />
-      {chart.checkedDays === 0 ? (
+      {chartData.checkedDays === 0 ? (
         everChecked ? (
           <NoDataInRange
             onWiden={range === WIDEST_RANGE ? undefined : onWiden}
@@ -174,14 +173,14 @@ function KeywordDynamicsBody({
         ) : (
           <NoPositionsYet />
         )
-      ) : chart.checkedDays < MIN_TREND_POINTS ? (
-        <InsufficientHistory data={chart} />
+      ) : chartData.checkedDays < MIN_TREND_POINTS ? (
+        <InsufficientHistory data={chartData} />
       ) : (
-        <RankingChart data={chart} changeDates={[...changeDays.keys()]} />
+        <RankingChart data={chartData} changeDates={[...changeDays.keys()]} />
       )}
-      {isCapped(selection) ? (
+      {isCapped(chart) ? (
         <p className="text-caption text-muted-foreground">
-          {cappingLine(selection)}
+          {cappingLine(chart)}
         </p>
       ) : null}
       {failedRead(changesRead) ? (
