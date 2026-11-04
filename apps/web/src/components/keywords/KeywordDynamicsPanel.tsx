@@ -55,7 +55,12 @@ export function KeywordDynamicsPanel({
   const headingRef = useFocusClaim(DYNAMICS_FOCUS_KEY);
 
   const clear = () => {
-    document.getElementById(SHOW_DYNAMICS_BUTTON_ID)?.focus();
+    const survivor =
+      document.getElementById(SHOW_DYNAMICS_BUTTON_ID) ??
+      document.querySelector<HTMLInputElement>(
+        'input[aria-label="Search keywords"]',
+      );
+    survivor?.focus();
     void setKeywords({ mode: "hidden" });
     void setRange(null);
   };
