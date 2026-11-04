@@ -41,6 +41,7 @@ import {
   reviewNewPayload,
 } from './review-alert-payloads';
 import { newReviewRow } from './new-review-row';
+import { ReviewSpikeAlerts } from './review-spike-alerts.service';
 import { reviewLanguage } from './review-language';
 import { toReviewTranslation, TranslationColumns } from './review-translation';
 import { StoredReview, storedReviewChanges } from './stored-review-changes';
@@ -67,6 +68,7 @@ export class ReviewsService {
     private readonly registry: StoreProviderRegistry,
     private readonly config: ConfigService<Env, true>,
     private readonly alerts: AlertsDispatcher,
+    private readonly spikes: ReviewSpikeAlerts,
   ) {}
 
   async syncReviews(
@@ -140,6 +142,7 @@ export class ReviewsService {
       const alertApp = { id: app.id, name: app.name };
       await this.dispatchNegativeAlerts(alertApp, inserted);
       await this.dispatchNewReviewAlerts(alertApp, inserted);
+      if (inserted.length > 0) await this.spikes.raise(app, inserted);
     }
 
     return inserted;

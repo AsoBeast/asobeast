@@ -13,6 +13,7 @@ import { StoreProviderRegistry } from '../store-providers/store-provider.registr
 import { ReviewResult } from '../store-providers/types';
 import { EMPTY_ANSWER_RETRIES } from '../store-providers/result-plausibility';
 import { WITH_POSTER } from './review-reply.mapper';
+import type { ReviewSpikeAlerts } from './review-spike-alerts.service';
 import { ReviewsService } from './reviews.service';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -96,11 +97,13 @@ const buildDeps = (options: {
     .fn<Promise<boolean>, [string]>()
     .mockResolvedValue(options.listens ?? false);
   const alerts = { dispatch, listensTo };
+  const raise = jest.fn().mockResolvedValue(undefined);
   const service = new ReviewsService(
     prisma as unknown as PrismaService,
     registry as unknown as StoreProviderRegistry,
     config as unknown as ConfigService<Env, true>,
     alerts as unknown as AlertsDispatcher,
+    { raise } as unknown as ReviewSpikeAlerts,
   );
   return {
     service,
@@ -109,6 +112,7 @@ const buildDeps = (options: {
     updateMany,
     dispatch,
     listensTo,
+    raise,
   };
 };
 
@@ -345,6 +349,7 @@ describe('ReviewsService.syncReviews', () => {
       registry as unknown as StoreProviderRegistry,
       { get: jest.fn() } as unknown as ConfigService<Env, true>,
       { dispatch: jest.fn() } as unknown as AlertsDispatcher,
+      { raise: jest.fn() } as unknown as ReviewSpikeAlerts,
     );
 
     await expect(
@@ -824,6 +829,7 @@ describe('ReviewsService.list', () => {
       {} as StoreProviderRegistry,
       {} as ConfigService<Env, true>,
       {} as AlertsDispatcher,
+      {} as ReviewSpikeAlerts,
     );
 
     const list = await service.list('app1', {
@@ -856,5 +862,45 @@ describe('ReviewsService.list', () => {
       },
       include: { reply: { include: WITH_POSTER } },
     });
+  });
+});
+
+describe('ReviewsService review spikes', () => {
+  it('judges the reviews a daily sync inserted after the other alerts', async () => {
+    const { service, raise, dispatch } = buildDeps({
+      pages: [[makeReview('a'), makeReview('b')]],
+      existing: [],
+    });
+
+    await service.syncReviews({ appId: 'app1', pages: 1, backfill: false });
+
+    expect(raise).toHaveBeenCalledTimes(1);
+    expect(raise).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'app1', name: 'Mine', country: 'us' }),
+      [
+        expect.objectContaining({ reviewId: 'a' }),
+        expect.objectContaining({ reviewId: 'b' }),
+      ],
+    );
+    const alerted = dispatch.mock.invocationCallOrder.at(-1) ?? 0;
+    expect(raise.mock.invocationCallOrder[0]).toBeGreaterThan(alerted);
+  });
+
+  it('judges neither a backfill nor a sync that inserted nothing', async () => {
+    const backfill = buildDeps({ pages: [[makeReview('a')]], existing: [] });
+    await backfill.service.syncReviews({
+      appId: 'app1',
+      pages: 1,
+      backfill: true,
+    });
+    expect(backfill.raise).not.toHaveBeenCalled();
+
+    const known = buildDeps({ pages: [[makeReview('a')]], existing: ['a'] });
+    await known.service.syncReviews({
+      appId: 'app1',
+      pages: 1,
+      backfill: false,
+    });
+    expect(known.raise).not.toHaveBeenCalled();
   });
 });

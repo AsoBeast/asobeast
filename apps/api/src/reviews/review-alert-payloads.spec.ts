@@ -4,6 +4,7 @@ import {
   alertReviewBody,
   REVIEW_ALERT_TEXT_MAX,
   reviewNegativePayload,
+  reviewSpikePayload,
 } from './review-alert-payloads';
 
 const review: ReviewResult = {
@@ -76,6 +77,33 @@ describe('reviewNegativePayload', () => {
       occurredAt: '2026-10-28T03:12:00.000Z',
       app: { id: 'a', name: 'My App' },
       review: alertReviewBody(review),
+    });
+  });
+});
+
+describe('reviewSpikePayload', () => {
+  it('carries the spike, the share of low reviews and the theme', () => {
+    expect(
+      reviewSpikePayload(
+        { id: 'app_1', name: 'My App' },
+        { day: '2026-11-02', count: 34, median: 4, threshold: 12, low: 24 },
+        {
+          lowScoreMax: 2,
+          topTheme: { phrase: 'crash', kind: 'complaint', mentions: 9 },
+        },
+        new Date('2026-11-03T05:00:00.000Z'),
+      ),
+    ).toEqual({
+      event: 'review.spike',
+      occurredAt: '2026-11-03T05:00:00.000Z',
+      app: { id: 'app_1', name: 'My App' },
+      date: '2026-11-02',
+      count: 34,
+      median: 4,
+      threshold: 12,
+      lowShare: 0.71,
+      lowScoreMax: 2,
+      topTheme: { phrase: 'crash', kind: 'complaint', mentions: 9 },
     });
   });
 });
