@@ -11,6 +11,7 @@ import { AlertDeliveriesService } from './alert-deliveries.service';
 import { Env } from '../config/env';
 import { AlertFlushService } from './alert-flush.service';
 import { essentialAlertsNeed } from './default-alerts-readiness';
+import { DefaultAlertsService } from './default-alerts.service';
 import { ListDeliveriesQueryDto } from './dto/list-deliveries-query.dto';
 import { MailerService } from './mailer.service';
 import { QueuesWork } from '../redis/queues-work.decorator';
@@ -23,11 +24,12 @@ export class AlertsController {
     private readonly deliveries: AlertDeliveriesService,
     private readonly flush: AlertFlushService,
     private readonly settings: ConfigService<Env, true>,
+    private readonly defaults: DefaultAlertsService,
   ) {}
 
   @Get('config')
   @ApiOperation({ summary: 'Probe which alert channels are available' })
-  config(): AlertsConfig {
+  async config(): Promise<AlertsConfig> {
     return {
       emailEnabled: this.mailer.enabled,
       rankDropThreshold: this.settings.get('ALERT_RANK_DROP_THRESHOLD', {
@@ -37,6 +39,7 @@ export class AlertsController {
         this.mailer.enabled,
         this.mailer.origin,
       ),
+      essentialAlertsPending: await this.defaults.pending(),
     };
   }
 

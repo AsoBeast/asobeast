@@ -57,6 +57,10 @@ export class DefaultAlertsService {
     return created.confirmed === false ? 'unconfirmed' : 'created';
   }
 
+  async pending(): Promise<boolean> {
+    return !(await this.isSettled());
+  }
+
   private get requiresVerifiedOwner(): boolean {
     return this.config.get('BILLING_ENABLED', { infer: true });
   }

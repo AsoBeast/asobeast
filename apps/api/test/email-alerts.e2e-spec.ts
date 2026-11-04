@@ -78,7 +78,7 @@ describe('EmailAlertsController (e2e, smtp enabled)', () => {
 
   it('reports email as enabled', async () => {
     const response = await api.get('/alerts/config').expect(200);
-    expect(response.body as AlertsConfig).toEqual({
+    expect(response.body as AlertsConfig).toMatchObject({
       emailEnabled: true,
       rankDropThreshold: 5,
       essentialAlertsNeed: 'https',

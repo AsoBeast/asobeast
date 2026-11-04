@@ -121,3 +121,15 @@ describe('DefaultAlertsService.createFor', () => {
     expect(createDefault).not.toHaveBeenCalled();
   });
 });
+
+describe('DefaultAlertsService.pending', () => {
+  it.each([
+    [false, true],
+    [true, false],
+  ])(
+    'answers a workspace settled %p as pending %p',
+    async (settled, pending) => {
+      await expect(build({ settled }).service.pending()).resolves.toBe(pending);
+    },
+  );
+});

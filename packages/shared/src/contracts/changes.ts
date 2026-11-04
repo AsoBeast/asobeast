@@ -229,6 +229,7 @@ export interface AlertsConfig {
   emailEnabled: boolean;
   rankDropThreshold?: number;
   essentialAlertsNeed?: EssentialAlertsNeed | null;
+  essentialAlertsPending?: boolean;
 }
 
 export interface AlertFlushResult {

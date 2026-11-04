@@ -1,7 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient, Store } from '@prisma/client';
-import { ESSENTIAL_ALERT_EVENTS } from '@asobeast/shared';
+import { ESSENTIAL_ALERT_EVENTS, type AlertsConfig } from '@asobeast/shared';
 import { App } from 'supertest/types';
 import { DefaultAlertsService } from '../src/alerts/default-alerts.service';
 import { MailerService } from '../src/alerts/mailer.service';
@@ -120,6 +120,20 @@ describe('essential email alerts (e2e)', () => {
     await prisma.emailAlert.deleteMany();
     await expect(run()).resolves.toBe('settled');
     expect(await prisma.emailAlert.count()).toBe(0);
+  });
+
+  it('tells settings whether the essential alerts are still due', async () => {
+    const agent = await ownerAgent(app);
+    const pending = async () =>
+      ((await agent.get('/alerts/config').expect(200)).body as AlertsConfig)
+        .essentialAlertsPending;
+
+    await expect(pending()).resolves.toBe(true);
+    await rankToday();
+    await expect(run()).resolves.toBe('created');
+    await expect(pending()).resolves.toBe(false);
+    await prisma.emailAlert.deleteMany();
+    await expect(pending()).resolves.toBe(false);
   });
 
   it('waits for a primary app ranked on the day', async () => {
