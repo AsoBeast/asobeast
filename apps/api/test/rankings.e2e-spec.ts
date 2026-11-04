@@ -346,9 +346,14 @@ describe('RankingsController serp-movers (e2e)', () => {
       .get(`/apps/${you.id}/serp-movers?days=30`)
       .expect(200);
 
+    const everyItems = (every.body as SerpMovers).items;
+    expect(everyItems.map((item) => item.storeAppId).sort()).toEqual([
+      'london-store',
+      'stranger-store',
+    ]);
     expect(
-      (every.body as SerpMovers).items.map((item) => item.storeAppId).sort(),
-    ).toEqual(['london-store', 'stranger-store']);
+      everyItems.find((item) => item.storeAppId === 'london-store'),
+    ).toMatchObject({ appId: rival.id, isCompetitor: true });
   });
 });
 
