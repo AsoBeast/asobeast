@@ -6,6 +6,7 @@ import { EarlierRankings } from './earlier-rankings';
 import { RankingAlertsService } from './ranking-alerts.service';
 import { RankingsController } from './rankings.controller';
 import { RankingsService } from './rankings.service';
+import { SerpCapture } from './serp-capture';
 import { SerpController } from './serp.controller';
 import { SerpService } from './serp.service';
 
@@ -17,7 +18,8 @@ import { SerpService } from './serp.service';
     RankingAlertsService,
     EarlierRankings,
     SerpService,
+    SerpCapture,
   ],
-  exports: [RankingsService, SerpService],
+  exports: [RankingsService, SerpService, SerpCapture],
 })
 export class RankingsModule {}

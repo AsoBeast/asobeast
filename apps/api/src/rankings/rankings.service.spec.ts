@@ -17,6 +17,7 @@ import { SearchItem } from '../store-providers/types';
 import { EarlierRankings } from './earlier-rankings';
 import { RankingAlertsService } from './ranking-alerts.service';
 import { RankingsService } from './rankings.service';
+import { SerpCapture } from './serp-capture';
 
 interface SerpFixture {
   storeAppId: string;
@@ -285,7 +286,10 @@ describe('RankingsService.checkKeyword', () => {
       );
     const service = new RankingsService(
       prisma as unknown as PrismaService,
-      registry as unknown as StoreProviderRegistry,
+      new SerpCapture(
+        prisma as unknown as PrismaService,
+        registry as unknown as StoreProviderRegistry,
+      ),
       rankingAlerts,
       workspace,
       new CrossTenantAccess(workspace),

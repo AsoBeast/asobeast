@@ -1,28 +1,15 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Store } from '@prisma/client';
-import {
-  KeywordScope,
-  RANK_DEPTH,
-  RankingSeries,
-  SERP_CAPTURE_DEPTH,
-} from '@asobeast/shared';
+import { KeywordScope, RANK_DEPTH, RankingSeries } from '@asobeast/shared';
 import { CollectionEligibility } from '../auth/collection-eligibility.service';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
-import { ImplausibleResultError } from '../store-providers/errors';
-import {
-  askAgainWhileEmpty,
-  EMPTY_ANSWER_RETRIES,
-  isImplausiblyEmpty,
-  settleOnLastAttempt,
-} from '../store-providers/result-plausibility';
-import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
-import { SearchItem } from '../store-providers/types';
 import { RankingHistoryQueryDto } from './dto/ranking-history-query.dto';
 import { CompetitorCapture, RankCapture } from './rank-milestones';
 import { RankingAlertsService } from './ranking-alerts.service';
 import { DAY_MS, toDateKey, utcToday } from './rankings.support';
+import { positionsByStoreAppId, SerpCapture } from './serp-capture';
 import { SerpSnapshotDay } from './serp-movers';
 import { topTenOf } from './top-ten';
 
@@ -55,11 +42,9 @@ interface RecordInput {
 
 @Injectable()
 export class RankingsService {
-  private readonly logger = new Logger(RankingsService.name);
-
   constructor(
     private readonly prisma: PrismaService,
-    private readonly registry: StoreProviderRegistry,
+    private readonly capture: SerpCapture,
     private readonly rankingAlerts: RankingAlertsService,
     private readonly workspace: WorkspaceContext,
     private readonly crossTenant: CrossTenantAccess,
@@ -88,34 +73,13 @@ export class RankingsService {
       return;
     }
 
-    const results = await this.search(keyword, finalAttempt);
+    const results = await this.capture.search(keyword, finalAttempt);
     if (!results) return;
 
-    const positionByStoreAppId = new Map<string, number>();
-    results.forEach((item, index) => {
-      if (!positionByStoreAppId.has(item.storeAppId)) {
-        positionByStoreAppId.set(item.storeAppId, index + 1);
-      }
-    });
-
+    const positionByStoreAppId = positionsByStoreAppId(results);
     const date = utcToday();
-    const entries = results.slice(0, SERP_CAPTURE_DEPTH).map((item, index) => ({
-      keywordId,
-      date,
-      position: index + 1,
-      storeAppId: item.storeAppId,
-      title: item.title,
-      developer: item.developer ?? null,
-      iconUrl: item.iconUrl ?? null,
-      ratingAvg: item.ratingAvg ?? null,
-      ratingCount: item.ratingCount ?? null,
-    }));
     const baseline = await this.rankingAlerts.entrantBaseline(keywordId, date);
-
-    await this.prisma.withTransaction(async (tx) => {
-      await tx.serpEntry.deleteMany({ where: { keywordId, date } });
-      await tx.serpEntry.createMany({ data: entries });
-    });
+    const entries = await this.capture.store(keywordId, date, results);
 
     const today: SerpSnapshotDay = {
       date: toDateKey(date),
@@ -144,45 +108,6 @@ export class RankingsService {
         }
       });
     }
-  }
-
-  private async search(
-    keyword: KeywordScope,
-    finalAttempt: boolean,
-  ): Promise<SearchItem[] | null> {
-    const provider = this.registry.get(keyword.store);
-    const ask = () =>
-      provider.search(keyword.text, keyword.country, RANK_DEPTH);
-    const results = await ask();
-    if (results.length > 0) return results;
-
-    const today = utcToday();
-    const lastRanked = await this.prisma.serpEntry.findFirst({
-      where: { keywordId: keyword.id, date: { lt: today } },
-      orderBy: { date: 'desc' },
-      select: { date: true },
-    });
-    if (
-      !lastRanked ||
-      !isImplausiblyEmpty({
-        resultCount: 0,
-        lastSeenOn: lastRanked.date,
-        today,
-      })
-    ) {
-      return results;
-    }
-    const retries = EMPTY_ANSWER_RETRIES[keyword.store];
-    const again = await askAgainWhileEmpty(ask, retries, results);
-    if (again.length > 0) return again;
-    return settleOnLastAttempt(
-      new ImplausibleResultError(
-        keyword.store,
-        `"${keyword.text}" returned no results in ${keyword.country} but ranked apps on ${toDateKey(lastRanked.date)}`,
-        { retryable: retries > 0 },
-      ),
-      { finalAttempt, logger: this.logger, next: 'check', settled: null },
-    );
   }
 
   private async collectableFor(
