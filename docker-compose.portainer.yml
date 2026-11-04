@@ -13,13 +13,14 @@ services:
     extends:
       file: docker-compose.pull.yml
       service: api
-    env_file: !reset []
+    env_file: !override
+      - path: stack.env
+        required: false
     volumes: !reset []
   web:
     extends:
       file: docker-compose.pull.yml
       service: web
-    env_file: !reset []
 volumes:
   pgdata:
   redisdata:

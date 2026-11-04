@@ -6,7 +6,7 @@
       "title": "AsoBeast",
       "name": "asobeast",
       "description": "App Store Optimization for iOS and Android apps: tracks your App Store and Google Play keyword rankings every day, along with competitors, reviews and a list of fixes ranked by impact. Source: https://github.com/AsoBeast/asobeast",
-      "categories": ["Analytics", "Development"],
+      "categories": ["Analytics", "Monitoring"],
       "platform": "linux",
       "logo": "https://raw.githubusercontent.com/AsoBeast/asobeast/main/assets/android-chrome-512x512.png",
       "restart_policy": "unless-stopped",
@@ -44,11 +44,15 @@
             {
               "text": "One reverse proxy",
               "value": "1"
+            },
+            {
+              "text": "Two reverse proxies",
+              "value": "2"
             }
           ]
         }
       ],
-      "note": "Set a <b>database password</b> and a <b>session secret</b> before you deploy. <code>openssl rand -hex 32</code> makes both, and the stack won't start without them. AsoBeast listens on port <code>3001</code>. Its session cookie is always secure, so sign in over https: put a reverse proxy with a certificate in front and set the address and proxy count above. Chrome and Firefox also accept it on <code>http://localhost:3001</code>, which works from another machine through <code>ssh -N -L 3001:localhost:3001 you@&lt;your-host&gt;</code>. The first account created at <code>/register</code> becomes the owner and registration closes after that, so create it right away. Data lives in the <code>pgdata</code> and <code>redisdata</code> volumes, and the stack needs about 2.5 GB of memory. To update, back up, then pull and redeploy the stack: the compose file on <code>main</code> always pins the newest release. Docs: <a href=\"https://docs.asobeast.com/install/published-images#deploy-from-portainer\" target=\"_blank\">docs.asobeast.com/install/published-images</a>"
+      "note": "Set a <b>database password</b> and a <b>session secret</b> before you deploy. <code>openssl rand -hex 32</code> makes both, and the stack won't start without them. AsoBeast listens on port <code>3001</code>. Its session cookie is always secure, so sign in over https: put a reverse proxy with a certificate in front and set the address and proxy count above. Chrome and Firefox also accept it on <code>http://localhost:3001</code>, which works from another machine through <code>ssh -N -L 3001:localhost:3001 you@&lt;your-host&gt;</code>. The first account created at <code>/register</code> becomes the owner and registration closes after that, so create it right away. Any other API setting, such as SMTP or OpenAI, goes in as an extra environment variable on the stack. Data lives in the <code>&lt;stack name&gt;_pgdata</code> and <code>&lt;stack name&gt;_redisdata</code> volumes, and the stack needs about 2.5 GB of memory. To update, back up, then pull and redeploy the stack: the compose file on <code>main</code> pins the current release. Docs: <a href=\"https://docs.asobeast.com/install/published-images#deploy-from-portainer\" target=\"_blank\">docs.asobeast.com/install/published-images</a>"
     }
   ]
 }
