@@ -3975,13 +3975,10 @@ const routes: Route[] = [
       if (!dataset) return json(res, 404, errorEnvelope(404, path));
       const query = new URL(path, "http://localhost").searchParams;
       const market = query.get("country");
-      if (market !== null && !isStorefront(dataset.detail.store, market)) {
-        return json(res, 400, errorEnvelope(400, path));
-      }
       if (market === null) return json(res, 200, dataset.serpMovers);
       const inMarket = new Set(
         dataset.keywords
-          .filter((item) => item.country === market)
+          .filter((item) => item.country === market && item.active)
           .map((item) => item.keywordId),
       );
       return json(res, 200, {
