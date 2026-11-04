@@ -19,12 +19,14 @@ export function KeywordMapChart({
   thresholds,
   zone,
   describedBy,
+  onZone,
   chartRef,
 }: {
   points: readonly MapPoint[];
   thresholds: ZoneThresholds;
   zone: KeywordZone | null;
   describedBy: string;
+  onZone: (zone: KeywordZone) => void;
   chartRef?: Ref<HTMLDivElement>;
 }) {
   const dotState = useMemo(
@@ -49,7 +51,7 @@ export function KeywordMapChart({
           aria-describedby={describedBy}
           margin={CHART_MARGIN}
         >
-          {zoneAreas({ thresholds, selected: zone })}
+          {zoneAreas({ thresholds, selected: zone, onZone })}
           <CartesianGrid {...GRID_PROPS} />
           <XAxis
             {...SCORE_AXIS_PROPS}

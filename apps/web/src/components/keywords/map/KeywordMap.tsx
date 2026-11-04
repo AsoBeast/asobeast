@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo } from "react";
+import { useCallback, useId, useMemo } from "react";
 import { useQueryState } from "nuqs";
 import type { TrackedKeywordItem } from "@asobeast/shared";
 import { ChartNotice, trendState } from "@/components/charts/ChartStates";
@@ -8,16 +8,21 @@ import { CHART_HEIGHT } from "@/components/charts/theme";
 import { Button } from "@/components/ui/button";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { zoneCounts, type KeywordZone } from "@/lib/keyword-zones";
 import { keywordZoneParser } from "@/lib/search-params";
+import { scorePair } from "../keyword-scores";
 import { useZoneThresholds } from "../use-zone-thresholds";
 import { KeywordMapChart } from "./KeywordMapChart";
 import { mapPoints, type MapPoint } from "./map-points";
 import { DotGlyph } from "./MapDot";
+import { MapZoneLegend, MapZoneTable } from "./MapZoneLegend";
+import { ThresholdsPopover } from "./ThresholdsPopover";
 
 const KEYBOARD_HELP =
   "Tab moves to the dots. Arrow keys move to the nearest dot, Home and End jump to the highest and lowest opportunity, Enter opens the position history.";
@@ -60,21 +65,15 @@ function ShapeKey({ points }: { points: readonly MapPoint[] }) {
   );
 }
 
-function MapBody({
+function MapNotice({
   keywords,
+  points,
   onClearFilters,
 }: {
   keywords: readonly TrackedKeywordItem[];
+  points: readonly MapPoint[];
   onClearFilters: () => void;
 }) {
-  const helpId = useId();
-  const { thresholds } = useZoneThresholds();
-  const [zone] = useQueryState("zone", keywordZoneParser);
-  const { points, unplotted } = useMemo(
-    () => mapPoints(keywords, thresholds),
-    [keywords, thresholds],
-  );
-
   if (keywords.length === 0) {
     return (
       <ChartNotice
@@ -88,43 +87,18 @@ function MapBody({
       />
     );
   }
-  const state = trendState(points.length);
-  if (state === "empty") {
-    return (
-      <ChartNotice
-        height={CHART_HEIGHT.hero}
-        title="Nothing to map yet"
-        body="No tracked keyword has both a popularity and a difficulty yet. Scores arrive with the weekly scoring run."
-      />
-    );
-  }
-  if (state === "insufficient") {
-    return (
-      <ChartNotice
-        height={CHART_HEIGHT.hero}
-        title="Too few scored keywords"
-        body={`The map needs at least 4 keywords with both scores. ${points.length} of 4 so far.`}
-      />
-    );
-  }
-  return (
-    <>
-      <KeywordMapChart
-        points={points}
-        thresholds={thresholds}
-        zone={zone}
-        describedBy={helpId}
-      />
-      {unplotted > 0 ? (
-        <p className="text-caption text-muted-foreground">
-          {unplottedCaption(unplotted)}
-        </p>
-      ) : null}
-      <ShapeKey points={points} />
-      <p id={helpId} className="sr-only">
-        {KEYBOARD_HELP}
-      </p>
-    </>
+  return trendState(points.length) === "empty" ? (
+    <ChartNotice
+      height={CHART_HEIGHT.hero}
+      title="Nothing to map yet"
+      body="No tracked keyword has both a popularity and a difficulty yet. Scores arrive with the weekly scoring run."
+    />
+  ) : (
+    <ChartNotice
+      height={CHART_HEIGHT.hero}
+      title="Too few scored keywords"
+      body={`The map needs at least 4 keywords with both scores. ${points.length} of 4 so far.`}
+    />
   );
 }
 
@@ -135,14 +109,69 @@ export function KeywordMap({
   keywords: readonly TrackedKeywordItem[];
   onClearFilters: () => void;
 }) {
+  const helpId = useId();
+  const { thresholds } = useZoneThresholds();
+  const [zone, setZone] = useQueryState("zone", keywordZoneParser);
+  const { points, unplotted } = useMemo(
+    () => mapPoints(keywords, thresholds),
+    [keywords, thresholds],
+  );
+  const counts = useMemo(
+    () => zoneCounts(keywords.map(scorePair), thresholds),
+    [keywords, thresholds],
+  );
+  const ready = keywords.length > 0 && trendState(points.length) === "ready";
+  const toggleZone = useCallback(
+    (pressed: KeywordZone) =>
+      void setZone((current) => (current === pressed ? null : pressed)),
+    [setZone],
+  );
+
   return (
     <Card className="print:break-inside-avoid">
       <CardHeader>
         <CardDescription>Opportunity map</CardDescription>
         <CardTitle>Popularity by difficulty</CardTitle>
+        {ready ? (
+          <CardAction>
+            <ThresholdsPopover />
+          </CardAction>
+        ) : null}
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
-        <MapBody keywords={keywords} onClearFilters={onClearFilters} />
+        {ready ? (
+          <>
+            <MapZoneLegend
+              counts={counts}
+              thresholds={thresholds}
+              selected={zone}
+              onToggle={toggleZone}
+            />
+            <KeywordMapChart
+              points={points}
+              thresholds={thresholds}
+              zone={zone}
+              describedBy={helpId}
+              onZone={toggleZone}
+            />
+            {unplotted > 0 ? (
+              <p className="text-caption text-muted-foreground">
+                {unplottedCaption(unplotted)}
+              </p>
+            ) : null}
+            <ShapeKey points={points} />
+            <MapZoneTable counts={counts} thresholds={thresholds} />
+            <p id={helpId} className="sr-only">
+              {KEYBOARD_HELP}
+            </p>
+          </>
+        ) : (
+          <MapNotice
+            keywords={keywords}
+            points={points}
+            onClearFilters={onClearFilters}
+          />
+        )}
       </CardContent>
     </Card>
   );

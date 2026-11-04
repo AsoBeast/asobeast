@@ -15,7 +15,7 @@ export const ZONE_FILLS: Record<KeywordZone, string> = {
   lowPriority: "var(--muted-foreground)",
 };
 
-export const ZONE_FILL_OPACITY = 0.08;
+const ZONE_FILL_OPACITY = 0.08;
 const SELECTED_FILL_OPACITY = 0.18;
 const MIN_LABEL_WIDTH = 72;
 const MIN_LABEL_HEIGHT = 20;
@@ -76,9 +76,11 @@ function ZoneLabel({ value, viewBox }: LabelProps) {
 export function zoneAreas({
   thresholds,
   selected,
+  onZone,
 }: {
   thresholds: ZoneThresholds;
   selected: KeywordZone | null;
+  onZone: (zone: KeywordZone) => void;
 }) {
   return KEYWORD_ZONES.map((zone) => (
     <ReferenceArea
@@ -90,6 +92,9 @@ export function zoneAreas({
       }
       ifOverflow="hidden"
       label={{ value: zone, content: ZoneLabel }}
+      className={`zone-${zone}`}
+      style={{ cursor: "pointer" }}
+      onClick={() => onZone(zone)}
     />
   ));
 }

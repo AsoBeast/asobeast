@@ -404,3 +404,346 @@ test.describe("the opportunity map", () => {
     });
   }
 });
+
+const legend = (page: Page) => page.getByRole("list", { name: "Zones" });
+const toggle = (page: Page, name: string) =>
+  legend(page).getByRole("button", {
+    name: new RegExp(`^${name} \\d+ keyword`),
+  });
+
+async function expectToggles(page: Page, counts: number[]) {
+  const names = [
+    "Quick wins",
+    "Worth fighting for",
+    "Easy pickings",
+    "Low priority",
+  ];
+  for (const [index, name] of names.entries()) {
+    await expect(toggle(page, name)).toHaveAccessibleName(
+      `${name} ${counts[index]} ${counts[index] === 1 ? "keyword" : "keywords"}`,
+    );
+  }
+}
+
+async function openThresholds(page: Page) {
+  await page.getByRole("button", { name: "Thresholds" }).click();
+  const dialog = page.getByRole("dialog", { name: "Zone thresholds" });
+  await expect(dialog).toBeVisible();
+  return dialog;
+}
+
+const blockStorage = (page: Page) =>
+  page.addInitScript(() => {
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      get() {
+        throw new DOMException("blocked", "SecurityError");
+      },
+    });
+  });
+
+test.describe("zones and thresholds", () => {
+  test("four toggles with counts", async ({ page }) => {
+    await page.goto(MAP_URL);
+    await expectToggles(page, [8, 7, 4, 4]);
+    for (const name of [
+      "Quick wins",
+      "Worth fighting for",
+      "Easy pickings",
+      "Low priority",
+    ]) {
+      await expect(toggle(page, name)).toHaveAttribute("aria-pressed", "false");
+    }
+  });
+
+  test("a toggle presses a zone", async ({ page }) => {
+    await page.goto(MAP_URL);
+
+    await toggle(page, "Quick wins").click();
+    await expect(page).toHaveURL(/zone=quickWins/);
+    await expect(toggle(page, "Quick wins")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await expectRows(page, 8);
+    await expect(
+      page.getByRole("list", { name: "Active filters" }),
+    ).toContainText("Zone: Quick wins");
+    await expect(page.locator('[data-dimmed="true"]')).toHaveCount(15);
+
+    await toggle(page, "Quick wins").click();
+    await expect(page).not.toHaveURL(/zone=/);
+
+    await toggle(page, "Quick wins").click();
+    await toggle(page, "Easy pickings").click();
+    await expect(page).toHaveURL(/zone=easyPickings/);
+    await expect(
+      page.getByRole("list", { name: "Active filters" }).getByRole("listitem"),
+    ).toHaveCount(1);
+  });
+
+  test("the keyboard presses it and keeps focus", async ({ page }) => {
+    await page.goto(MAP_URL);
+    const quickWins = toggle(page, "Quick wins");
+    await quickWins.focus();
+
+    await page.keyboard.press("Space");
+    await expect(page).toHaveURL(/zone=quickWins/);
+    await expectRows(page, 8);
+    await expect(quickWins).toBeFocused();
+
+    await page.keyboard.press("Enter");
+    await expect(page).not.toHaveURL(/zone=/);
+    await expectRows(page, TOTAL);
+    await expect(quickWins).toBeFocused();
+  });
+
+  test("counts follow the other filters", async ({ page }) => {
+    await page.goto(`${MAP_URL}&tag=core`);
+    await expectToggles(page, [3, 1, 0, 0]);
+    await toggle(page, "Quick wins").click();
+    await expectToggles(page, [3, 1, 0, 0]);
+  });
+
+  test("unplotted keywords are in no zone", async ({ page }) => {
+    await page.goto(MAP_URL);
+    const table = page.getByRole("table", { name: "Opportunity map zones" });
+    await expect(
+      table.getByRole("row", { name: /Not on the map/ }),
+    ).toContainText("2");
+    const box = await table.locator("..").boundingBox();
+    expect(box && box.width <= 1 && box.height <= 1).toBe(true);
+  });
+
+  test("the hidden table lists every zone", async ({ page }) => {
+    await page.goto(MAP_URL);
+    const table = page.getByRole("table", { name: "Opportunity map zones" });
+    await expect(table.getByRole("columnheader")).toHaveText([
+      "Zone",
+      "Rule",
+      "Keywords",
+    ]);
+    const rows = table.locator("tbody tr");
+    await expect(rows).toHaveCount(5);
+    await expect(rows.nth(0)).toContainText("Quick wins");
+    await expect(rows.nth(0)).toContainText(
+      "Popularity 20 or more and difficulty 25 or less",
+    );
+    await expect(rows.nth(0)).toContainText("8");
+  });
+
+  test("a click on an empty zone presses it", async ({ page }) => {
+    const clickEmptyQuickWins = async () => {
+      const box = await page.locator(".zone-quickWins").first().boundingBox();
+      if (!box) throw new Error("no quick wins area");
+      await page.mouse.click(
+        box.x + box.width * 0.2,
+        box.y + box.height * 0.125,
+      );
+    };
+    await page.goto(MAP_URL);
+
+    await clickEmptyQuickWins();
+    await expect(page).toHaveURL(/zone=quickWins/);
+    await expect(
+      page.getByRole("list", { name: "Active filters" }),
+    ).toBeVisible();
+    await clickEmptyQuickWins();
+    await expect(page).not.toHaveURL(/zone=/);
+  });
+
+  test("a click on a dot never presses the zone", async ({ page }) => {
+    await page.goto(MAP_URL);
+    await page
+      .locator('[data-map-keyword="kw-map-1"] circle')
+      .first()
+      .click({ force: true });
+    await expect(page).not.toHaveURL(/zone=/);
+  });
+
+  test("an area moves with its threshold", async ({ page }) => {
+    await storeThresholds(page, '{"popularity":20,"difficulty":20}');
+    await page.goto(MAP_URL);
+    const plot = await page
+      .locator(".recharts-cartesian-grid")
+      .first()
+      .boundingBox();
+    const area = await page.locator(".zone-quickWins").first().boundingBox();
+    if (!plot || !area) throw new Error("no plot");
+    expect(Math.abs(area.width - plot.width * 0.2)).toBeLessThan(2);
+  });
+
+  test("the thresholds popover redraws the map and persists", async ({
+    page,
+  }) => {
+    await page.goto(MAP_URL);
+    const dialog = await openThresholds(page);
+    const popularity = dialog.getByRole("spinbutton", {
+      name: "Popularity at least",
+    });
+    const difficulty = dialog.getByRole("spinbutton", {
+      name: "Difficulty at most",
+    });
+    await expect(popularity).toHaveValue("20");
+    await expect(difficulty).toHaveValue("25");
+
+    await popularity.fill("30");
+    await expect(chartSvg(page)).toContainText("Popularity 30");
+    await expectToggles(page, [6, 7, 6, 4]);
+
+    await page.reload();
+    await expectToggles(page, [6, 7, 6, 4]);
+    expect(page.url()).not.toMatch(/popularity|difficulty|threshold/i);
+  });
+
+  test("the other threshold", async ({ page }) => {
+    await page.goto(MAP_URL);
+    const dialog = await openThresholds(page);
+    await dialog
+      .getByRole("spinbutton", { name: "Difficulty at most" })
+      .fill("20");
+    await expectToggles(page, [5, 10, 3, 5]);
+  });
+
+  for (const input of ["150", "-1", "abc", "2.5", ""]) {
+    test(`an invalid threshold ${JSON.stringify(input)} waits`, async ({
+      page,
+    }) => {
+      await page.goto(MAP_URL);
+      const dialog = await openThresholds(page);
+      const field = dialog.getByRole("spinbutton", {
+        name: "Popularity at least",
+      });
+
+      if (/^[-0-9.]*$/.test(input)) await field.fill(input);
+      else await field.pressSequentially(input);
+
+      await expect(field).toHaveAttribute("aria-invalid", "true");
+      await expect(dialog.getByRole("alert")).toHaveText(
+        "Enter a whole number from 0 to 100",
+      );
+      await expectToggles(page, [8, 7, 4, 4]);
+
+      await dialog
+        .getByRole("spinbutton", { name: "Difficulty at most" })
+        .focus();
+      await expect(field).toHaveValue("20");
+      await expect(field).not.toHaveAttribute("aria-invalid");
+    });
+  }
+
+  test("reset", async ({ page }) => {
+    await storeThresholds(page, '{"popularity":30,"difficulty":40}');
+    await page.goto(MAP_URL);
+    const dialog = await openThresholds(page);
+    const reset = dialog.getByRole("button", { name: "Reset" });
+
+    await reset.focus();
+    await page.keyboard.press("Enter");
+    await expect(
+      dialog.getByRole("spinbutton", { name: "Popularity at least" }),
+    ).toHaveValue("20");
+    await expectToggles(page, [8, 7, 4, 4]);
+    await expect(reset).toHaveAttribute("aria-disabled", "true");
+    await expect(reset).not.toHaveAttribute("disabled");
+    await expect(reset).toBeFocused();
+
+    await page.keyboard.press("Enter");
+    await expectToggles(page, [8, 7, 4, 4]);
+    await expect(reset).toBeFocused();
+  });
+
+  test("closing returns focus to the trigger", async ({ page }) => {
+    await page.goto(MAP_URL);
+    await openThresholds(page);
+    await page.keyboard.press("Escape");
+    await expect(
+      page.getByRole("dialog", { name: "Zone thresholds" }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Thresholds" }),
+    ).toBeFocused();
+  });
+
+  test("thresholds are not in the link", async ({ page, browser }) => {
+    await page.goto(MAP_URL);
+    const dialog = await openThresholds(page);
+    await dialog
+      .getByRole("spinbutton", { name: "Popularity at least" })
+      .fill("30");
+    await expectToggles(page, [6, 7, 6, 4]);
+    await page.keyboard.press("Escape");
+    await toggle(page, "Quick wins").click();
+    await expect(page).toHaveURL(/zone=quickWins/);
+    expect(page.url()).not.toMatch(/popularity|difficulty|threshold/i);
+
+    const fresh = await browser.newContext();
+    await fresh.addCookies(await page.context().cookies());
+    const other = await fresh.newPage();
+    await other.goto(page.url());
+    await expectToggles(other, [8, 7, 4, 4]);
+    await fresh.close();
+  });
+
+  test("blocked storage still applies thresholds for the session", async ({
+    page,
+  }) => {
+    await blockStorage(page);
+    await page.goto(MAP_URL);
+    const dialog = await openThresholds(page);
+    await dialog
+      .getByRole("spinbutton", { name: "Popularity at least" })
+      .fill("30");
+    await expectToggles(page, [6, 7, 6, 4]);
+  });
+
+  test("zone InfoTips", async ({ page }) => {
+    await page.goto(MAP_URL);
+    for (const name of [
+      "Quick wins",
+      "Worth fighting for",
+      "Easy pickings",
+      "Low priority",
+    ]) {
+      const about = legend(page).getByRole("button", { name: `About ${name}` });
+      await about.focus();
+      await page.keyboard.press("Enter");
+      const tip = page.getByRole("dialog", { name });
+      await expect(tip).toBeVisible();
+      const link = tip.getByRole("link", { name: "Read the opportunity map" });
+      await expect(link).toHaveAttribute(
+        "href",
+        /^https:\/\/docs\.asobeast\.com\/guides\/track-keywords/,
+      );
+      await expect(link).toHaveAttribute("target", "_blank");
+      await expect(link).toHaveAttribute("rel", /noreferrer/);
+      await page.keyboard.press("Escape");
+      await expect(tip).toHaveCount(0);
+      await expect(about).toBeFocused();
+    }
+    await legend(page)
+      .getByRole("button", { name: "About Quick wins" })
+      .click();
+    await expect(
+      page.getByRole("dialog", { name: "Quick wins" }),
+    ).toHaveAccessibleDescription(
+      /Popularity 20 or more and difficulty 25 or less/,
+    );
+  });
+
+  test("the legend fits at 320 px", async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 900 });
+    await page.goto(MAP_URL);
+    const items = legend(page).getByRole("listitem");
+    const first = await items.nth(0).boundingBox();
+    const second = await items.nth(1).boundingBox();
+    const third = await items.nth(2).boundingBox();
+    expect(first && second && Math.abs(first.y - second.y) < 2).toBe(true);
+    expect(first && third && third.y > first.y).toBe(true);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+  });
+});

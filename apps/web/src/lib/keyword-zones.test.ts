@@ -5,7 +5,9 @@ import {
   parseThresholdInput,
   parseZoneThresholds,
   serializeZoneThresholds,
+  KEYWORD_ZONES,
   zoneCounts,
+  zoneMeaning,
   zoneOf,
   zoneRule,
   type KeywordZone,
@@ -162,5 +164,22 @@ describe("isDefaultThresholds", () => {
     expect(isDefaultThresholds({ popularity: 20, difficulty: 25 })).toBe(true);
     expect(isDefaultThresholds({ popularity: 21, difficulty: 25 })).toBe(false);
     expect(isDefaultThresholds({ popularity: 20, difficulty: 24 })).toBe(false);
+  });
+});
+
+describe("zoneMeaning", () => {
+  it("gives each zone its own sentence without dash punctuation", () => {
+    const sentences = KEYWORD_ZONES.map(zoneMeaning);
+    expect(new Set(sentences).size).toBe(KEYWORD_ZONES.length);
+    for (const sentence of sentences) {
+      expect(sentence.length).toBeGreaterThan(0);
+      expect(sentence).not.toMatch(/[\u2013\u2014]| - /);
+    }
+  });
+
+  it("words the widest thresholds", () => {
+    expect(zoneRule("quickWins", { popularity: 0, difficulty: 100 })).toBe(
+      "Popularity 0 or more and difficulty 100 or less",
+    );
   });
 });
