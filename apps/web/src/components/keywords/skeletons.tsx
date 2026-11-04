@@ -1,7 +1,6 @@
 import { ChartSkeleton } from "@/components/charts/ChartStates";
 import { CHART_HEIGHT } from "@/components/charts/theme";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CHART_HEIGHT } from "@/components/charts/theme";
 
 export function KeywordDynamicsSkeleton() {
   return (
