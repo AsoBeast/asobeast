@@ -69,6 +69,14 @@ const cases: Array<{
       { text: 'timer', surface: 'title', match: 'exact' },
     ],
   },
+  {
+    keyword: 'focus app timer',
+    marks: [
+      { text: 'focus', surface: 'title', match: 'exact' },
+      { text: ' app ', surface: null },
+      { text: 'timer', surface: 'title', match: 'exact' },
+    ],
+  },
   { keyword: 'nothing here', marks: null },
   {
     keyword: 'タイマー',
