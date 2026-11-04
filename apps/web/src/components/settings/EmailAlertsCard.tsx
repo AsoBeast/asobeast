@@ -113,6 +113,7 @@ function EmailAlertRow({ alert }: { alert: EmailAlertItem }) {
       confirmDrops={alert.confirmDrops === true}
       reviewScores={alert.reviewScores}
       ratingDropTenths={alert.ratingDropTenths}
+      rankDropThreshold={alert.rankDropThreshold}
       awaiting={
         awaitsConfirmation(alert)
           ? {

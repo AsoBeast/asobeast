@@ -16,6 +16,7 @@ import {
   ratingDropTenthsToSend,
   reviewScoresToSend,
 } from "./alert-event-copy";
+import { rankThresholdError, rankThresholdToSend } from "./alert-thresholds";
 import { AlertRules } from "./alert-rules/AlertRules";
 import { ConfirmDropsField } from "./ConfirmDropsField";
 import { AlertChannelDialog } from "./alert-channel/AlertChannelDialog";
@@ -28,6 +29,7 @@ export function AddEmailAlertDialog({ trigger }: { trigger?: ReactNode }) {
   const [events, setEvents] = useState<WebhookEvent[]>(["metadata.changed"]);
   const [stars, setStars] = useState<number[]>([...REVIEW_SCORES]);
   const [ratingTenths, setRatingTenths] = useState(RATING_DROP_DEFAULT_TENTHS);
+  const [rankText, setRankText] = useState("");
   const [confirmDrops, setConfirmDrops] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,6 +40,7 @@ export function AddEmailAlertDialog({ trigger }: { trigger?: ReactNode }) {
         events,
         reviewScores: reviewScoresToSend(events, stars),
         ratingDropTenths: ratingDropTenthsToSend(events, ratingTenths),
+        rankDropThreshold: rankThresholdToSend(events, rankText),
         confirmDrops,
       }),
     onSuccess: (saved) => {
@@ -74,6 +77,7 @@ export function AddEmailAlertDialog({ trigger }: { trigger?: ReactNode }) {
     setEvents(["metadata.changed"]);
     setStars([...REVIEW_SCORES]);
     setRatingTenths(RATING_DROP_DEFAULT_TENTHS);
+    setRankText("");
     setConfirmDrops(true);
     setError(null);
   }
@@ -92,6 +96,11 @@ export function AddEmailAlertDialog({ trigger }: { trigger?: ReactNode }) {
     }
     if (needsAStar(events, stars)) {
       setError("Pick at least one star");
+      return;
+    }
+    const thresholdError = rankThresholdError(events, rankText);
+    if (thresholdError) {
+      setError(thresholdError);
       return;
     }
 
@@ -125,9 +134,11 @@ export function AddEmailAlertDialog({ trigger }: { trigger?: ReactNode }) {
         events={events}
         stars={stars}
         ratingTenths={ratingTenths}
+        rankText={rankText}
         onEventsChange={setEvents}
         onStarsChange={setStars}
         onRatingTenthsChange={setRatingTenths}
+        onRankTextChange={setRankText}
       />
 
       <ConfirmDropsField checked={confirmDrops} onChange={setConfirmDrops} />

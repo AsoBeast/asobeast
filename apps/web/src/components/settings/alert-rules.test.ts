@@ -35,6 +35,7 @@ describe("ALERT_RULES", () => {
 
     expect(Object.fromEntries(controlled)).toEqual({
       "rank.dropped": "rank-threshold",
+      "rank.improved": "rank-follows",
       "rating.dropped": "rating-tenths",
       "review.new": "review-stars",
     });

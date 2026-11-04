@@ -10,7 +10,7 @@ export const ALERT_RULE_GROUPS = [
 export type AlertRuleGroup = (typeof ALERT_RULE_GROUPS)[number];
 
 export type RuleControl =
-  "none" | "rank-threshold" | "rating-tenths" | "review-stars";
+  "none" | "rank-threshold" | "rank-follows" | "rating-tenths" | "review-stars";
 
 export interface AlertRule {
   title: string;
@@ -42,6 +42,7 @@ export const ALERT_RULES: Record<WebhookEvent, AlertRule> = {
     "Rank improved",
     "Rankings",
     "A keyword climbs by at least the same number of positions.",
+    "rank-follows",
   ),
   "rank.milestone": rule(
     "Rank milestone",

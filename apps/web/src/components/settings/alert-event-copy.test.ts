@@ -93,16 +93,29 @@ describe("ratingDropTenthsToSend", () => {
 
 describe("eventBadgeLabel for a rating drop", () => {
   it("names the threshold of a rating drop", () => {
-    expect(eventBadgeLabel("rating.dropped", undefined, 2)).toBe(
-      "Rating dropped · 0.2 stars",
-    );
-    expect(eventBadgeLabel("rating.dropped", undefined, 1)).toBe(
-      "Rating dropped · 0.1 star",
-    );
+    expect(
+      eventBadgeLabel("rating.dropped", undefined, { ratingDropTenths: 2 }),
+    ).toBe("Rating dropped · 0.2 stars");
+    expect(
+      eventBadgeLabel("rating.dropped", undefined, { ratingDropTenths: 1 }),
+    ).toBe("Rating dropped · 0.1 star");
     expect(eventBadgeLabel("rating.dropped", undefined)).toBe("Rating dropped");
   });
 
   it("ignores the threshold on another event", () => {
-    expect(eventBadgeLabel("rank.dropped", undefined, 3)).toBe("Rank dropped");
+    expect(
+      eventBadgeLabel("rank.dropped", undefined, { ratingDropTenths: 3 }),
+    ).toBe("Rank dropped");
+  });
+});
+
+describe("eventBadgeLabel for a rank drop", () => {
+  it("names the threshold of the subscription", () => {
+    expect(
+      eventBadgeLabel("rank.dropped", undefined, { rankDropThreshold: 10 }),
+    ).toBe("Rank dropped · 10+");
+    expect(
+      eventBadgeLabel("rank.dropped", undefined, { rankDropThreshold: null }),
+    ).toBe("Rank dropped");
   });
 });

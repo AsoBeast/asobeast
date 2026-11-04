@@ -100,6 +100,7 @@ export function AlertChannelRow({
   confirmDrops,
   reviewScores,
   ratingDropTenths,
+  rankDropThreshold,
   tag,
   awaiting,
   active,
@@ -121,6 +122,7 @@ export function AlertChannelRow({
   confirmDrops: boolean;
   reviewScores?: number[];
   ratingDropTenths?: number;
+  rankDropThreshold?: number | null;
   tag?: ReactNode;
   awaiting?: AwaitingConfirmation;
   active: boolean;
@@ -177,7 +179,10 @@ export function AlertChannelRow({
         ) : null}
         {events.map((event) => (
           <Badge key={event} variant="outline">
-            {eventBadgeLabel(event, reviewScores, ratingDropTenths)}
+            {eventBadgeLabel(event, reviewScores, {
+              ratingDropTenths,
+              rankDropThreshold,
+            })}
           </Badge>
         ))}
         <EditEventsDialog
@@ -186,6 +191,7 @@ export function AlertChannelRow({
           confirmDrops={confirmDrops}
           reviewScores={reviewScores}
           ratingDropTenths={ratingDropTenths}
+          rankDropThreshold={rankDropThreshold ?? null}
           pending={eventsPending}
           onSave={onEventsSave}
         />

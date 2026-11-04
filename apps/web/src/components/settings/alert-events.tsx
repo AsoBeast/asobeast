@@ -9,7 +9,9 @@ import {
 } from "@asobeast/shared";
 import type { ReviewScore } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { parseRankDropThreshold } from "./alert-thresholds";
 import {
   Select,
   SelectContent,
@@ -131,6 +133,55 @@ export function RatingDropSelection({
       </Select>
       <p id={helpId} className="text-sm text-muted-foreground">
         {RATING_DROP_HELP}
+      </p>
+    </div>
+  );
+}
+
+const rankHelp = (instance: number | null): string =>
+  instance === null
+    ? "Leave empty to use the instance value. A smaller value counts as the lowest value this instance detects."
+    : `Leave empty to use the instance value, ${instance}. A smaller value counts as ${instance}, the lowest value this instance detects.`;
+
+export function RankDropField({
+  value,
+  onChange,
+  instance,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+  instance: number | null;
+}) {
+  const inputId = useId();
+  const helpId = useId();
+  const errorId = useId();
+  const { error } = parseRankDropThreshold(value);
+
+  return (
+    <div className="flex flex-col gap-2">
+      <Label htmlFor={inputId}>Rank drop positions</Label>
+      <div className="flex items-center gap-2">
+        <Input
+          id={inputId}
+          type="text"
+          inputMode="numeric"
+          autoComplete="off"
+          value={value}
+          placeholder={instance === null ? undefined : String(instance)}
+          aria-invalid={error !== null}
+          aria-describedby={error ? `${errorId} ${helpId}` : helpId}
+          className="w-24"
+          onChange={(event) => onChange(event.target.value)}
+        />
+        <span className="text-sm text-muted-foreground">positions</span>
+      </div>
+      {error ? (
+        <p id={errorId} className="text-sm text-destructive">
+          {error}
+        </p>
+      ) : null}
+      <p id={helpId} className="text-sm text-muted-foreground">
+        {rankHelp(instance)}
       </p>
     </div>
   );

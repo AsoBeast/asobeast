@@ -327,6 +327,40 @@ test.describe("the edit events dialog keeps focus", () => {
   });
 });
 
+test("Save rules keeps focus while a save with a rank threshold runs", async ({
+  page,
+}) => {
+  await page.goto("/settings");
+  const row = webhookList(page).getByRole("listitem").first();
+  await pressFromKeyboard(row.getByRole("button", { name: "Edit rules" }));
+  const dialog = page.getByRole("dialog", { name: "Edit rules" });
+  const rankDropped = dialog.getByRole("switch", {
+    name: "Rank dropped",
+    exact: true,
+  });
+  if ((await rankDropped.getAttribute("aria-checked")) !== "true") {
+    await rankDropped.click();
+  }
+  await dialog.getByRole("textbox", { name: "Rank drop positions" }).fill("12");
+  const held = await holdRequest(
+    page,
+    /\/api\/backend\/webhooks\/[^/]+$/,
+    "PATCH",
+  );
+  const save = dialog.getByRole("button", { name: "Save rules" });
+  const patch = page.waitForRequest((request) => request.method() === "PATCH");
+
+  await pressFromKeyboard(save);
+
+  await expect(save).toHaveAttribute("aria-disabled", "true");
+  await expect(save).toBeFocused();
+  expect((await patch).postDataJSON()).toMatchObject({
+    rankDropThreshold: 12,
+  });
+  held.release();
+  await expect(dialog).toBeHidden();
+});
+
 test.describe("alert rows keep focus", () => {
   test.beforeEach(({ context }) => seedCookie(context, WEBHOOK_PAIR_COOKIE));
 

@@ -1,10 +1,10 @@
 import {
   normalizeReviewScores,
-  ratingDropLabel,
   reviewScoresLabel,
   type WebhookEvent,
 } from "@asobeast/shared";
 import { ALERT_RULE_ORDER, ALERT_RULES } from "./alert-rules";
+import { thresholdBadge } from "./alert-thresholds";
 
 export const EVENT_LABELS = Object.fromEntries(
   ALERT_RULE_ORDER.map((event) => [event, ALERT_RULES[event].title]),
@@ -17,6 +17,7 @@ export interface AlertSubscriptionChange {
   reviewScores?: number[];
   confirmDrops?: boolean;
   ratingDropTenths?: number;
+  rankDropThreshold?: number | null;
 }
 
 export function reviewScoresToSend(
@@ -42,16 +43,27 @@ export function needsAStar(
   return events.includes("review.new") && ticked.length === 0;
 }
 
+export interface ChannelThresholds {
+  ratingDropTenths?: number;
+  rankDropThreshold?: number | null;
+}
+
 export function eventBadgeLabel(
   event: WebhookEvent,
   reviewScores: readonly number[] | undefined,
-  ratingDropTenths?: number,
+  thresholds: ChannelThresholds = {},
 ): string {
   if (event === "review.new" && reviewScores && reviewScores.length > 0) {
     return `${EVENT_LABELS[event]} · ${reviewScoresLabel(reviewScores)}`;
   }
-  if (event === "rating.dropped" && ratingDropTenths !== undefined) {
-    return `${EVENT_LABELS[event]} · ${ratingDropLabel(ratingDropTenths)}`;
+  if (event === "rating.dropped" && thresholds.ratingDropTenths !== undefined) {
+    return thresholdBadge(event, thresholds.ratingDropTenths);
+  }
+  if (
+    event === "rank.dropped" &&
+    typeof thresholds.rankDropThreshold === "number"
+  ) {
+    return thresholdBadge(event, thresholds.rankDropThreshold);
   }
   return EVENT_LABELS[event];
 }

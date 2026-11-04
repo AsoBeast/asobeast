@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import AxeBuilder from "@axe-core/playwright";
 import type { Locator, Page } from "@playwright/test";
 import { WEBHOOK_EVENTS } from "@asobeast/shared";
@@ -125,5 +126,153 @@ for (const theme of THEMES) {
       ])
       .analyze();
     expect(violations).toEqual([]);
+  });
+}
+
+const rankField = (dialog: Locator) =>
+  dialog.getByRole("textbox", { name: "Rank drop positions" });
+
+const CHANNELS = [
+  {
+    trigger: "Add email alert",
+    field: "Recipient email",
+    target: (tag: string) => `rank-${tag}-${randomUUID()}@example.com`,
+    path: "/api/backend/email-alerts",
+  },
+  {
+    trigger: "Add webhook",
+    field: "Endpoint URL",
+    target: (tag: string) =>
+      `https://hooks.example.com/rank-${tag}-${randomUUID()}`,
+    path: "/api/backend/webhooks",
+  },
+] as const;
+
+for (const channel of CHANNELS) {
+  test(`${channel.trigger} sets the rank drop positions inline`, async ({
+    page,
+  }) => {
+    await page.goto("/settings");
+    const dialog = await openSettledDialog(page, channel.trigger);
+    await expect(rankField(dialog)).toHaveCount(0);
+
+    await ruleSwitch(dialog, "Rank dropped").click();
+    await expect(rankField(dialog)).toHaveAttribute("placeholder", "5");
+    await expect(rankField(dialog)).toHaveAccessibleDescription(
+      "Leave empty to use the instance value, 5. A smaller value counts as 5, the lowest value this instance detects.",
+    );
+    await ruleSwitch(dialog, "Rank improved").click();
+    await expect(dialog.getByText("Uses the rank drop value.")).toBeVisible();
+
+    await rankField(dialog).fill("10");
+    const target = channel.target("inline");
+    await page.getByLabel(channel.field).fill(target);
+    const post = page.waitForRequest(
+      (request) =>
+        request.method() === "POST" &&
+        new URL(request.url()).pathname === channel.path,
+    );
+    await dialog
+      .getByRole("button", { name: channel.trigger, exact: true })
+      .click();
+
+    expect((await post).postDataJSON()).toMatchObject({
+      rankDropThreshold: 10,
+    });
+    const row = page.getByRole("listitem").filter({ hasText: target }).first();
+    await expect(
+      row.locator('[data-slot="badge"]').filter({ hasText: "Rank dropped" }),
+    ).toHaveText("Rank dropped · 10+");
+  });
+
+  test(`${channel.trigger} sends no rank drop positions when the field is empty`, async ({
+    page,
+  }) => {
+    await page.goto("/settings");
+    const dialog = await openSettledDialog(page, channel.trigger);
+    await ruleSwitch(dialog, "Rank dropped").click();
+    await page.getByLabel(channel.field).fill(channel.target("empty"));
+    const post = page.waitForRequest(
+      (request) =>
+        request.method() === "POST" &&
+        new URL(request.url()).pathname === channel.path,
+    );
+    await dialog
+      .getByRole("button", { name: channel.trigger, exact: true })
+      .click();
+
+    expect((await post).postDataJSON()).not.toHaveProperty("rankDropThreshold");
+  });
+
+  test(`${channel.trigger} refuses rank drop positions out of range`, async ({
+    page,
+  }) => {
+    await page.goto("/settings");
+    const dialog = await openSettledDialog(page, channel.trigger);
+    await ruleSwitch(dialog, "Rank dropped").click();
+    let posted = false;
+    page.on("request", (request) => {
+      if (request.method() === "POST") posted = true;
+    });
+
+    for (const text of ["0", "201"]) {
+      await rankField(dialog).fill(text);
+      await expect(rankField(dialog)).toHaveAttribute("aria-invalid", "true");
+      await expect(rankField(dialog)).toBeFocused();
+      await expect(
+        dialog.getByText("Enter a whole number from 1 to 200").first(),
+      ).toBeVisible();
+    }
+    await page.getByLabel(channel.field).fill(channel.target("range"));
+    await dialog
+      .getByRole("button", { name: channel.trigger, exact: true })
+      .click();
+    await expect(dialog).toBeVisible();
+    expect(posted).toBe(false);
+  });
+}
+
+test("the essential alert reopens on its positions and clears them", async ({
+  page,
+  context,
+}) => {
+  await context.addCookies([
+    { name: "e2e-essential-alert", value: "1", url: "http://localhost:3000" },
+  ]);
+  await page.goto("/settings");
+  const row = page
+    .getByRole("listitem")
+    .filter({ hasText: "owner@example.com" })
+    .first();
+  await expect(
+    row.locator('[data-slot="badge"]').filter({ hasText: "Rank dropped" }),
+  ).toHaveText("Rank dropped · 10+");
+  const dialog = await openSettledDialog(page, "Edit rules", row);
+  await expect(rankField(dialog)).toHaveValue("10");
+
+  await rankField(dialog).fill("");
+  const patch = page.waitForRequest((request) => request.method() === "PATCH");
+  await dialog.getByRole("button", { name: "Save rules" }).click();
+
+  expect((await patch).postDataJSON()).toMatchObject({
+    rankDropThreshold: null,
+  });
+});
+
+for (const width of [320, 390]) {
+  test(`the rank drop field fits under its rule at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 800 });
+    const dialog = await openAddEmailAlert(page);
+    await ruleSwitch(dialog, "Rank dropped").click();
+
+    await expect(rankField(dialog)).toBeVisible();
+    await expectFitsViewport(page, dialog);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
   });
 }
