@@ -653,6 +653,22 @@ test.describe("zones and thresholds", () => {
     await expect(reset).toBeFocused();
   });
 
+  test("a click on reset lands while an invalid value shows", async ({
+    page,
+  }) => {
+    await storeThresholds(page, '{"popularity":30,"difficulty":25}');
+    await page.goto(MAP_URL);
+    const dialog = await openThresholds(page);
+    await dialog
+      .getByRole("spinbutton", { name: "Popularity at least" })
+      .fill("150");
+    await expect(dialog.getByRole("alert")).toBeVisible();
+
+    await dialog.getByRole("button", { name: "Reset" }).click();
+
+    await expectToggles(page, [8, 7, 4, 4]);
+  });
+
   test("closing returns focus to the trigger", async ({ page }) => {
     await page.goto(MAP_URL);
     await openThresholds(page);

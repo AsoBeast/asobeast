@@ -86,12 +86,24 @@ export function ThresholdsPopover() {
         collisionPadding={16}
         className="flex w-80 max-w-(--radix-popover-content-available-width) flex-col gap-3 text-body"
       >
-        <PopoverHeader>
-          <PopoverTitle id={titleId}>Zone thresholds</PopoverTitle>
-          <PopoverDescription>
-            The two numbers that cut the map into zones. Kept in this browser.
-          </PopoverDescription>
-        </PopoverHeader>
+        <div className="flex items-start justify-between gap-3">
+          <PopoverHeader>
+            <PopoverTitle id={titleId}>Zone thresholds</PopoverTitle>
+            <PopoverDescription>
+              The two numbers that cut the map into zones. Kept in this browser.
+            </PopoverDescription>
+          </PopoverHeader>
+          <Button
+            variant="outline"
+            size="sm"
+            aria-disabled={isDefault || undefined}
+            onClick={() => {
+              if (!isDefault) resetThresholds();
+            }}
+          >
+            Reset
+          </Button>
+        </div>
         <ThresholdField
           label="Popularity at least"
           value={thresholds.popularity}
@@ -105,17 +117,6 @@ export function ThresholdsPopover() {
         <p className="text-caption text-muted-foreground">
           {`Quick wins are ${zoneRule("quickWins", thresholds).toLowerCase()}.`}
         </p>
-        <Button
-          variant="outline"
-          size="sm"
-          aria-disabled={isDefault || undefined}
-          onClick={() => {
-            if (!isDefault) resetThresholds();
-          }}
-          className="self-start"
-        >
-          Reset
-        </Button>
       </PopoverContent>
     </Popover>
   );
