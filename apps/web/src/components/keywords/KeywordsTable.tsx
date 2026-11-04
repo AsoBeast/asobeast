@@ -29,7 +29,7 @@ import { useShowDynamics } from "./KeywordDynamicsPanel";
 import { KeywordsEmptyState } from "./KeywordsEmptyState";
 import { KeywordsDataTable } from "./KeywordsDataTable";
 import { KeywordsFilterBar } from "./KeywordsFilterBar";
-import { ListingMarksContext } from "./keyword-cells";
+import { ChartedKeywordsContext, ListingMarksContext } from "./keyword-cells";
 import { listingMarksOption } from "./listing-marks-option";
 import { SerpSheet } from "./serp/SerpSheet";
 import {
@@ -84,11 +84,10 @@ export function KeywordsTable({
         homeCountry,
         multiMarket,
         today,
-        chartedIds,
         onOpenSerp: (keywordId) =>
           void setSerpState({ serp: keywordId, serpDate: null }),
       }),
-    [id, store, homeCountry, multiMarket, setSerpState, today, chartedIds],
+    [id, store, homeCountry, multiMarket, setSerpState, today],
   );
 
   const { sorting, onSortingChange } = useUrlSorting(
@@ -141,7 +140,11 @@ export function KeywordsTable({
     .getFilteredSelectedRowModel()
     .rows.map((row) => row.original);
   const selectedIds = selectedKeywords.map((keyword) => keyword.keywordId);
-  const chartedSet = useMemo(() => new Set(chartedIds), [chartedIds]);
+  const chartedKey = chartedIds.join(",");
+  const chartedSet = useMemo(
+    () => new Set(chartedKey ? chartedKey.split(",") : []),
+    [chartedKey],
+  );
 
   const { tableArea, clearSelection } = useClearedSelectionFocus(
     selectedIds.length,
@@ -183,12 +186,14 @@ export function KeywordsTable({
           />
         ) : null}
         <ListingMarksContext value={marks.checked}>
-          <KeywordsDataTable
-            table={table}
-            chartedSet={chartedSet}
-            emptyBody={exactSearchEmptyBody(filters.q)}
-            onClearFilters={() => void setFilters(null)}
-          />
+          <ChartedKeywordsContext value={chartedSet}>
+            <KeywordsDataTable
+              table={table}
+              chartedSet={chartedSet}
+              emptyBody={exactSearchEmptyBody(filters.q)}
+              onClearFilters={() => void setFilters(null)}
+            />
+          </ChartedKeywordsContext>
         </ListingMarksContext>
 
         {selectedIds.length > 0 ? (

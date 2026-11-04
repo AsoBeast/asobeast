@@ -233,14 +233,13 @@ export function NoteButton({ note }: { note: string }) {
 
 export const ListingMarksContext = createContext(true);
 
-export function KeywordCell({
-  keyword,
-  onChart = false,
-}: {
-  keyword: TrackedKeywordItem;
-  onChart?: boolean;
-}) {
+export const ChartedKeywordsContext = createContext<ReadonlySet<string>>(
+  new Set(),
+);
+
+export function KeywordCell({ keyword }: { keyword: TrackedKeywordItem }) {
   const marks = useContext(ListingMarksContext);
+  const onChart = useContext(ChartedKeywordsContext).has(keyword.keywordId);
   return (
     <span className="flex max-w-40 items-center gap-2 font-medium md:max-w-64">
       <span title={keyword.text} className="truncate">
