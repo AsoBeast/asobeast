@@ -1,3 +1,6 @@
+"use client";
+
+import { useLayoutEffect, useRef } from "react";
 import { ArrowDownToLine } from "lucide-react";
 import { ZONE_LABELS } from "@/lib/keyword-zones";
 import {
@@ -7,8 +10,6 @@ import {
   rankWords,
   type MapPoint,
 } from "./map-points";
-
-export const OVERLAY_SIZE = { width: 224, height: 112 } as const;
 
 export interface ActiveDot {
   point: MapPoint;
@@ -43,19 +44,26 @@ export function MapOverlay({
   active: ActiveDot | null;
   multiMarket: boolean;
 }) {
+  const overlayRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const node = overlayRef.current;
+    if (node === null || active === null) return;
+    const placement = placeOverlay(
+      active,
+      { width: node.offsetWidth, height: node.offsetHeight },
+      active.surface,
+    );
+    node.style.transform = `translate(${TRANSFORMS[placement.horizontal]}, ${TRANSFORMS[placement.vertical]})`;
+  }, [active]);
   if (active === null) return null;
   const { point } = active;
-  const placement = placeOverlay(active, OVERLAY_SIZE, active.surface);
   return (
     <div
+      ref={overlayRef}
       data-slot="map-overlay"
       aria-hidden
       className="pointer-events-none absolute top-0 left-0 z-10 grid w-56 gap-1.5 rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-overlay"
-      style={{
-        left: active.x,
-        top: active.y,
-        transform: `translate(${TRANSFORMS[placement.horizontal]}, ${TRANSFORMS[placement.vertical]})`,
-      }}
+      style={{ left: active.x, top: active.y }}
     >
       <p className="font-medium wrap-anywhere">
         {pointName(point, multiMarket)}
