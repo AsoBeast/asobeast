@@ -1,6 +1,11 @@
 import type { ReactNode } from 'react';
 import { Column, Img, Link, Row, Section, Text } from 'react-email';
-import type { ReportApp, ReportGroup } from '../report/report';
+import {
+  isRankMoveGroup,
+  type ReportApp,
+  type ReportGroup,
+} from '../report/report';
+import { omissionWords } from '../report/report-blocks';
 import { identityLine } from '../report/storefront';
 import { ReportRowView } from './report-rows';
 
@@ -54,20 +59,18 @@ export function ReportNote({ children }: { children: ReactNode }) {
 }
 
 function GroupNote({ group }: { group: ReportGroup }) {
-  const hidden = group.total - group.rows.length;
-  if (hidden <= 0) return null;
+  const words = omissionWords(group);
+  if (!words) return null;
+  if (!group.link) return <ReportNote>{words}</ReportNote>;
   return (
     <ReportNote>
-      {group.link ? (
-        <Link
-          href={group.link.href}
-          className="text-brand-ink underline dark:text-brand"
-        >
-          {group.link.label}
-        </Link>
-      ) : (
-        `+${hidden} more`
-      )}
+      {isRankMoveGroup(group.kind) ? `${words} · ` : null}
+      <Link
+        href={group.link.href}
+        className="text-brand-ink underline dark:text-brand"
+      >
+        {group.link.label}
+      </Link>
     </ReportNote>
   );
 }

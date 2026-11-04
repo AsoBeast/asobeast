@@ -425,7 +425,7 @@ describe('formatBatchEmail', () => {
     const second = await formatBatchEmail(large);
 
     expect(second).toEqual(first);
-    expect(first.text).toContain('+980 more');
+    expect(first.text).toContain('and 995 smaller moves');
     expect(first.text.length).toBeLessThan(10_000);
     expect(first.html.length).toBeLessThan(28_000);
     expect(first.text).toContain('22 Jul 2026');
@@ -732,7 +732,7 @@ describe('formatBatchEmail in the branded layout', () => {
 
   it('shows fewer lines in html than in text only when the report would not fit', async () => {
     const worst = await formatBatchEmail(worstCaseBatch('owned_apps'), linked);
-    const lastRow = 'meditation and sleep tracker keyword 19';
+    const lastRow = 'meditation and sleep tracker keyword 4';
     expect(worst.text).toContain(`${lastRow}  #4 → #12`);
     expect(worst.html).not.toContain(`>${lastRow}<`);
     expect(worst.html).toContain('>meditation and sleep tracker keyword 0<');
@@ -750,8 +750,8 @@ describe('formatBatchEmail in the branded layout', () => {
       linked,
     );
     expect(usual.html).not.toContain('See all');
-    expect(full.html).toContain('>game 19<');
-    expect(full.html).not.toContain('>game 20<');
+    expect(full.html).toContain('>game 4<');
+    expect(full.html).not.toContain('>game 5<');
     expect(full.html).toMatch(
       /href="https:\/\/aso\.example\.com\/apps\/a\/keywords"[^>]*>See all 25 in AsoBeast<\/a>/,
     );
@@ -948,5 +948,23 @@ describe('the essential alerts sentence', () => {
     expect(Buffer.byteLength(email.html)).toBeLessThanOrEqual(
       HTML_BUDGET_BYTES,
     );
+  });
+});
+
+describe('the top five moves by email', () => {
+  it('lists five moves of an app and counts the rest', async () => {
+    const rankDrops = Array.from({ length: 28 }, (_, index) => ({
+      ...alpha.rankDrops[0],
+      keyword: { ...dropped.keyword, id: `m${index}`, text: `move ${index}` },
+    }));
+    const email = await formatBatchEmail({
+      ...batch,
+      apps: [{ ...alpha, rankDrops }],
+    });
+
+    expect(email.text).toContain('move 4');
+    expect(email.text).not.toContain('move 5 ');
+    expect(email.text).toContain('and 23 smaller moves');
+    expect(email.html).toContain('and 23 smaller moves');
   });
 });

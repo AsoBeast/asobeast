@@ -7,11 +7,13 @@ import {
   worstCaseBatch,
 } from '../email-fixtures.fixture';
 import { buildReport } from './build-report';
+import type { ReportGroup } from './report';
 import {
   competitorsOmission,
   groupLines,
   groupOmission,
   rowText,
+  omissionWords,
 } from './report-blocks';
 
 const ORIGIN = 'https://aso.example.com';
@@ -76,7 +78,7 @@ describe('groupLines', () => {
       .groups;
 
     expect(groupLines(drops).at(-1)).toBe(
-      `See all 25: ${ORIGIN}/apps/app_0/keywords`,
+      `and 20 smaller moves · See all 25: ${ORIGIN}/apps/app_0/keywords`,
     );
   });
 });
@@ -89,9 +91,9 @@ describe('omissions', () => {
       .groups;
 
     expect(groupOmission(drops, markdown)).toBe(
-      `[See all 25](${ORIGIN}/apps/app_0/keywords)`,
+      `and 20 smaller moves · [See all 25](${ORIGIN}/apps/app_0/keywords)`,
     );
-    expect(groupOmission(bare, markdown)).toBe('+5 more');
+    expect(groupOmission(bare, markdown)).toBe('and 20 smaller moves');
   });
 
   it('says nothing for a group that was not cut', () => {
@@ -115,5 +117,45 @@ describe('omissions', () => {
     expect(
       competitorsOmission(buildReport(competitorBatch, null).apps[0]),
     ).toBeNull();
+  });
+});
+
+describe('omissionWords', () => {
+  const group = (kind: ReportGroup['kind'], total: number, shown: number) =>
+    ({
+      kind,
+      title: 'Group',
+      tone: 'neutral',
+      rows: Array.from({ length: shown }, () => ({
+        kind: 'text',
+        text: 'row',
+        detail: null,
+      })),
+      total,
+      link: null,
+    }) as ReportGroup;
+
+  it('counts the smaller moves of a rank group', () => {
+    expect(omissionWords(group('rankDrops', 28, 5))).toBe(
+      'and 23 smaller moves',
+    );
+    expect(omissionWords(group('overtakes', 6, 5))).toBe('and 1 smaller move');
+  });
+
+  it('counts the rest of any other group', () => {
+    expect(omissionWords(group('changes', 28, 20))).toBe('+8 more');
+  });
+
+  it('says nothing for a whole group', () => {
+    expect(omissionWords(group('rankDrops', 4, 4))).toBeNull();
+  });
+
+  it('keeps a plain link for a group that is not a move', () => {
+    expect(
+      groupOmission({
+        ...group('changes', 28, 20),
+        link: { href: `${ORIGIN}/x`, label: 'See all 28 in AsoBeast' },
+      }),
+    ).toBe(`See all 28: ${ORIGIN}/x`);
   });
 });

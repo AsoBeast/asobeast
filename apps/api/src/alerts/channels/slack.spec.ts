@@ -92,9 +92,9 @@ describe('slackBody for a batch', () => {
     const bare = batchMessage(worstCaseBatch('owned_apps'), null);
 
     expect(textOf(linked.blocks[3])).toMatch(
-      /\n<https:\/\/aso\.example\.com\/apps\/app_0\/keywords\|See all 25>$/,
+      /\nand 20 smaller moves · <https:\/\/aso\.example\.com\/apps\/app_0\/keywords\|See all 25>$/,
     );
-    expect(textOf(bare.blocks[3])).toMatch(/\n\+5 more$/);
+    expect(textOf(bare.blocks[3])).toMatch(/\nand 20 smaller moves$/);
     expect(bare.blocks.some((block) => block.type === 'actions')).toBe(false);
   });
 

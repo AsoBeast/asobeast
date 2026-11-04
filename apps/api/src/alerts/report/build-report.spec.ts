@@ -26,7 +26,7 @@ import {
   reviewSpike,
 } from '../listing-events.fixture';
 import { buildReport, DEFAULT_CAPS, reportCounts } from './build-report';
-import { REPORT_GROUP_KINDS } from './report';
+import { MOVES_PER_APP, REPORT_GROUP_KINDS } from './report';
 
 const ORIGIN = 'https://aso.example.com';
 const ICON = 'https://is1-ssl.mzstatic.com/image/thumb/alpha/512x512bb.jpg';
@@ -181,11 +181,11 @@ describe('buildReport', () => {
     ]);
   });
 
-  it('cuts every group at the row cap and keeps the total', () => {
+  it('cuts a rank group at five moves and keeps the total', () => {
     const report = buildReport(worstCaseBatch('owned_apps'), ORIGIN);
     const drops = report.apps[0].groups[0];
 
-    expect(drops.rows).toHaveLength(DEFAULT_CAPS.rows);
+    expect(drops.rows).toHaveLength(MOVES_PER_APP);
     expect(drops.total).toBe(25);
     expect(drops.link).toEqual({
       href: `${ORIGIN}/apps/app_0/keywords`,
@@ -508,5 +508,52 @@ describe('buildReport with store availability', () => {
       }),
     ]);
     expect(reportCounts(payload).availability).toBe(1);
+  });
+});
+
+describe('buildReport move caps', () => {
+  const many = <T>(count: number, make: (index: number) => T): T[] =>
+    Array.from({ length: count }, (_, index) => make(index));
+  const moves = many(28, (index) => ({
+    ...alpha.rankDrops[0],
+    keyword: {
+      ...alpha.rankDrops[0].keyword,
+      id: `k${index}`,
+      text: `k${index}`,
+    },
+  }));
+  const report = (rankDrops: typeof moves, rows = DEFAULT_CAPS.rows) =>
+    buildReport({ ...batch, apps: [{ ...alpha, rankDrops }] }, ORIGIN, {
+      ...DEFAULT_CAPS,
+      rows,
+    }).apps[0].groups.find((group) => group.kind === 'rankDrops');
+
+  it('lists five moves of a rank group and keeps the total', () => {
+    expect(report(moves)).toMatchObject({ total: 28 });
+    expect(report(moves)?.rows).toHaveLength(5);
+  });
+
+  it('lowers the move cap with a smaller tier and never raises it', () => {
+    expect(report(moves, 3)?.rows).toHaveLength(3);
+  });
+
+  it('lists a group of four whole', () => {
+    expect(report(moves.slice(0, 4))).toMatchObject({ total: 4 });
+    expect(report(moves.slice(0, 4))?.rows).toHaveLength(4);
+  });
+
+  it('keeps the row cap for a group that is not a move', () => {
+    const changes = many(28, (index) => ({
+      ...alpha.changes[0],
+      changes: [
+        { field: 'title' as const, before: `a${index}`, after: `b${index}` },
+      ],
+    }));
+    const group = buildReport(
+      { ...batch, apps: [{ ...alpha, changes }] },
+      ORIGIN,
+    ).apps[0].groups.find((entry) => entry.kind === 'changes');
+
+    expect(group?.rows).toHaveLength(DEFAULT_CAPS.rows);
   });
 });

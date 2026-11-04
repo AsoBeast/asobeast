@@ -1,6 +1,7 @@
 import type { AlertPayload } from '@asobeast/shared';
 import {
   actionOpened,
+  alpha,
   batch,
   competitorBatch,
   digest,
@@ -215,5 +216,39 @@ describe('formatWebhookBody for the rating and review events', () => {
         formatWebhookBody('https://hooks.example.com/x', payload, ORIGIN),
       ).toBe(JSON.stringify(payload));
     }
+  });
+});
+
+describe('formatWebhookBody for a report of many moves', () => {
+  const rankDrops = Array.from({ length: 28 }, (_, index) => ({
+    ...alpha.rankDrops[0],
+    keyword: {
+      ...alpha.rankDrops[0].keyword,
+      id: `m${index}`,
+      text: `move ${index}`,
+    },
+  }));
+  const many = { ...batch, apps: [{ ...alpha, rankDrops }] };
+
+  it.each([
+    DISCORD,
+    SLACK,
+    'https://prod-21.westeurope.logic.azure.com/workflows/a/triggers/manual/paths/invoke?sig=x',
+    'https://api.telegram.org/bot1:A/sendMessage?chat_id=-100',
+    'https://chat.googleapis.com/v1/spaces/S/messages?key=k&token=t',
+  ])('lists five moves and counts the rest for %s', (url) => {
+    const body = formatWebhookBody(url, many, ORIGIN);
+
+    expect(body).toContain('move 4');
+    expect(body).not.toContain('move 5 ');
+    expect(body).toContain('and 23 smaller moves');
+  });
+
+  it('sends the generic hook every move', () => {
+    const body = JSON.parse(
+      formatWebhookBody('https://hooks.example.com/x', many, ORIGIN),
+    ) as typeof many;
+
+    expect(body.apps[0].rankDrops).toHaveLength(28);
   });
 });
