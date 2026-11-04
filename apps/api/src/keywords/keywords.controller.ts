@@ -67,7 +67,7 @@ export class KeywordsController {
   @ApiOperation({
     summary: 'List tracked keywords for an app',
     description:
-      'competitorsInTop10 is the number of distinct competitors of the app in the newest stored top 10 of the keyword, or null when the app has no competitor or the newest snapshot is older than yesterday UTC. trackedAt is when the app started tracking the keyword in that market.',
+      "competitorsInTop10 is the number of distinct competitors of the app in the newest stored top 10 of the keyword, or null when the app has no competitor or the newest snapshot is older than yesterday UTC. trackedAt is when the app started tracking the keyword in that market. dropStreak is the number of consecutive checks, newest first, at which the position got worse (a larger number, or not found after a ranked position), 0 when the newest check did not fall, and null for a paused keyword or one whose newest check is older than yesterday UTC. uncovered is set on active keywords only and is true when no field of the listing of the keyword's market (title, subtitle and saved keyword field on the App Store, title and descriptions on Google Play) holds it, the same verdict as the metadata coverage table.",
   })
   list(
     @Param('id') id: string,
@@ -76,6 +76,7 @@ export class KeywordsController {
     return this.keywords.listTracked(id, query.sort, query.country, {
       holdFacts: true,
       competitorFacts: true,
+      coverageFacts: true,
     });
   }
 

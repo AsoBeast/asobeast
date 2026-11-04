@@ -225,6 +225,7 @@ export interface AppFacts {
   snapshotText: string;
   marketTexts?: ReadonlyMap<string, string>;
   inKeywordField?: KeywordFieldIndex;
+  uncovered?: (keyword: { country: string; text: string }) => boolean;
 }
 
 const NO_APP_FACTS: AppFacts = { snapshotText: '' };
@@ -274,5 +275,8 @@ export function toTrackedKeywordItem(
     tags: row.tags,
     note: row.note,
     trackedAt: row.createdAt.toISOString(),
+    ...(app.uncovered && row.active
+      ? { uncovered: app.uncovered(row.keyword) }
+      : {}),
   };
 }

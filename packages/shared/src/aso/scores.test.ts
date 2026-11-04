@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { toDifficulty100, toVolume } from './scores';
+import { KEYWORD_MIN_RELEVANCE, toDifficulty100, toVolume } from './scores';
 
 describe.each([
   ['toVolume', toVolume],
@@ -15,5 +15,11 @@ describe.each([
     [-1, 0],
   ])('converts a stored score of %s to %s', (score, expected) => {
     expect(toDisplay(score)).toBe(expected);
+  });
+});
+
+describe('KEYWORD_MIN_RELEVANCE', () => {
+  it('is the relevance a keyword needs to count as relevant', () => {
+    expect(KEYWORD_MIN_RELEVANCE).toBe(60);
   });
 });

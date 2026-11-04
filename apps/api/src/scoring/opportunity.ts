@@ -1,7 +1,8 @@
+import { KEYWORD_MIN_RELEVANCE } from '@asobeast/shared';
 import { clamp } from './curves';
 
 export const OPPORTUNITY_HIGH = 35;
-export const OPPORTUNITY_MIN_RELEVANCE = 60;
+export const OPPORTUNITY_MIN_RELEVANCE = KEYWORD_MIN_RELEVANCE;
 export const SUFFICIENT_VOLUME = 30;
 export const REACH_CURVE = 1.25;
 

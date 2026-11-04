@@ -58,6 +58,7 @@ export interface TrackedKeywordItem {
   daysInTier?: number | null;
   heldTier?: RankMilestoneTier | null;
   dropStreak?: number | null;
+  uncovered?: boolean;
   traffic: number | null;
   difficulty: number | null;
   volume: number | null;

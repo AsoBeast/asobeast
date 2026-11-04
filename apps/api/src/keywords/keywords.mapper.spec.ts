@@ -547,6 +547,36 @@ describe('toTrackedKeywordItem', () => {
   });
 });
 
+describe('uncovered', () => {
+  const judged = (verdict: boolean) => ({
+    snapshotText: '',
+    uncovered: jest.fn().mockReturnValue(verdict),
+  });
+
+  it('answers the coverage verdict of an active keyword', () => {
+    const app = judged(true);
+
+    const item = toTrackedKeywordItem(row(), app);
+
+    expect(item.uncovered).toBe(true);
+    expect(app.uncovered).toHaveBeenCalledWith(
+      expect.objectContaining({ text: 'habit tracker', country: 'us' }),
+    );
+  });
+
+  it('leaves the verdict off a paused keyword', () => {
+    const item = toTrackedKeywordItem(row({ active: false }), judged(true));
+
+    expect(item).not.toHaveProperty('uncovered');
+  });
+
+  it('leaves the verdict off when the list did not ask for coverage', () => {
+    const item = toTrackedKeywordItem(row(), facts(''));
+
+    expect(item).not.toHaveProperty('uncovered');
+  });
+});
+
 describe('dropStreak', () => {
   const day = (offset: number): string => {
     const date = new Date();
