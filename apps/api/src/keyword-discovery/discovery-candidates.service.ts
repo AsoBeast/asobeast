@@ -33,7 +33,7 @@ export interface DiscoveryApp {
   storeAppId: string;
 }
 
-export const DISCOVERY_SOURCE_CAPS = {
+const DISCOVERY_SOURCE_CAPS = {
   competitors: 60,
   reviews: 40,
   popularity: 60,
@@ -63,7 +63,7 @@ const sourced = (
     .filter((text) => text.length > 0)
     .map((text) => ({ text, source }));
 
-const listingWords = (listings: readonly ListingText[]): string[] =>
+const listingFieldTexts = (listings: readonly ListingText[]): string[] =>
   listings.flatMap(({ title, subtitle, summary }) =>
     [title, subtitle, summary].filter((text): text is string => text !== null),
   );
@@ -173,7 +173,7 @@ export class DiscoveryCandidates {
     const terms = await this.popularity.genreTerms(market, genre);
     const overlapping = overlappingTerms(
       terms,
-      listingWords(listings),
+      listingFieldTexts(listings),
       listingLanguages(app.store, market),
     );
     return sourced(
