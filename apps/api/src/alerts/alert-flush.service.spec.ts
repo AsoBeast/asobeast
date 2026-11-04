@@ -187,7 +187,9 @@ function buildHarness() {
   });
   const flowProducer = { addBulk } as unknown as FlowProducer;
   const workspace = new WorkspaceContext();
-  const getConfig = jest.fn<(key: string) => unknown>();
+  const getConfig = jest.fn<(key: string) => unknown>((key) =>
+    key === 'ALERT_RANK_DROP_THRESHOLD' ? 5 : undefined,
+  );
   const config = { get: getConfig } as unknown as ConfigService<Env, true>;
   const mailer = { enabled: true } as MailerService;
   const service = new AlertFlushService(
@@ -509,6 +511,7 @@ describe('AlertFlushService', () => {
         reviewScores: true,
         confirmDrops: true,
         ratingDropTenths: true,
+        rankDropThreshold: true,
       },
     });
   });
@@ -526,6 +529,7 @@ describe('AlertFlushService', () => {
         reviewScores: true,
         confirmDrops: true,
         ratingDropTenths: true,
+        rankDropThreshold: true,
       },
     });
   });

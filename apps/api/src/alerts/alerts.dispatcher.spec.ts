@@ -62,7 +62,9 @@ const overtake: RankOvertakenPayload = {
 
 const buildConfig = (delivery: 'batched' | 'instant') =>
   ({
-    get: jest.fn(() => delivery),
+    get: jest.fn((key: string) =>
+      key === 'ALERT_RANK_DROP_THRESHOLD' ? 5 : delivery,
+    ),
   }) as unknown as ConfigService<Env, true>;
 
 interface UpdateArgs {
@@ -341,6 +343,7 @@ describe('AlertsDispatcher', () => {
         events: true,
         reviewScores: true,
         ratingDropTenths: true,
+        rankDropThreshold: true,
       },
     });
     expect(add).toHaveBeenCalledWith(
@@ -371,6 +374,7 @@ describe('AlertsDispatcher', () => {
         events: true,
         reviewScores: true,
         ratingDropTenths: true,
+        rankDropThreshold: true,
       },
     });
   });
@@ -400,6 +404,7 @@ describe('AlertsDispatcher', () => {
         events: true,
         reviewScores: true,
         ratingDropTenths: true,
+        rankDropThreshold: true,
       },
     });
   });
@@ -564,6 +569,7 @@ describe('AlertsDispatcher', () => {
           events: true,
           reviewScores: true,
           ratingDropTenths: true,
+          rankDropThreshold: true,
         },
       });
     });
@@ -586,6 +592,7 @@ describe('AlertsDispatcher', () => {
           events: true,
           reviewScores: true,
           ratingDropTenths: true,
+          rankDropThreshold: true,
         },
       });
     });
@@ -607,6 +614,7 @@ describe('AlertsDispatcher', () => {
           events: true,
           reviewScores: true,
           ratingDropTenths: true,
+          rankDropThreshold: true,
         },
       });
     });
@@ -623,6 +631,7 @@ describe('AlertsDispatcher', () => {
           events: true,
           reviewScores: true,
           ratingDropTenths: true,
+          rankDropThreshold: true,
         },
       });
     });
@@ -826,4 +835,86 @@ describe('AlertsDispatcher availability events', () => {
 
     expect(prisma.updates[0].where.dedupeKey).toBe('delisted:a:2026-11-03');
   });
+});
+
+describe('AlertsDispatcher rank thresholds in instant mode', () => {
+  const instant = () => {
+    const prisma = buildPrisma();
+    const { add, queue } = buildQueue();
+    const dispatcher = new AlertsDispatcher(
+      prisma as unknown as PrismaService,
+      { enabled: true } as MailerService,
+      buildConfig('instant'),
+      queue,
+      workspace,
+      new AlertAppIdentities(prisma as unknown as PrismaService),
+    );
+    prisma.webhook.findMany.mockResolvedValue([
+      {
+        id: 'wh10',
+        events: ['rank.dropped'],
+        reviewScores: [],
+        rankDropThreshold: 10,
+      },
+      {
+        id: 'wh3',
+        events: ['rank.dropped'],
+        reviewScores: [],
+        rankDropThreshold: 3,
+      },
+    ]);
+    prisma.emailAlert.findMany.mockResolvedValue([
+      {
+        id: 'ea7',
+        events: ['rank.dropped'],
+        reviewScores: [],
+        rankDropThreshold: 7,
+      },
+    ]);
+    return { add, dispatcher };
+  };
+  const moved = (positions: number) => ({
+    ...rankPayload,
+    from: 4,
+    to: 4 + positions,
+    threshold: 5,
+  });
+  const queued = (add: jest.Mock) =>
+    add.mock.calls.map(([, data]) => {
+      const { webhookId, emailAlertId, payload } = data as {
+        webhookId?: string;
+        emailAlertId?: string;
+        payload: { threshold: number };
+      };
+      return [webhookId ?? emailAlertId, payload.threshold];
+    });
+
+  it.each([
+    [5, [['wh3', 5]]],
+    [6, [['wh3', 5]]],
+    [
+      8,
+      [
+        ['wh3', 5],
+        ['ea7', 7],
+      ],
+    ],
+    [
+      12,
+      [
+        ['wh10', 10],
+        ['wh3', 5],
+        ['ea7', 7],
+      ],
+    ],
+  ])(
+    'sends a %p place drop to the channels it reaches',
+    async (positions, expected) => {
+      const { add, dispatcher } = instant();
+
+      await inWorkspace(() => dispatcher.dispatch(moved(positions)));
+
+      expect(queued(add)).toEqual(expected);
+    },
+  );
 });

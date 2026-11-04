@@ -16,6 +16,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AlertAppIdentities } from './alert-app-identities';
 import { ALERT_BACKOFF } from './alert-delivery-flow';
 import { confirmDropsWhere } from './confirm-drops';
+import { subscriptionThreshold, withThreshold } from './rank-threshold';
 import { DELIVERABLE_EMAIL_ALERTS } from './deliverable-email-alerts';
 import { MailerService } from './mailer.service';
 import { OutboxRow, outboxRows } from './outbox-rows';
@@ -61,6 +62,10 @@ export class AlertsDispatcher {
       where: { ...DELIVERABLE_EMAIL_ALERTS, events: { has: event } },
     });
     return emails > 0;
+  }
+
+  private instanceThreshold(): number {
+    return this.config.get('ALERT_RANK_DROP_THRESHOLD', { infer: true });
   }
 
   private batched(payload: AlertPayload): boolean {
@@ -118,10 +123,12 @@ export class AlertsDispatcher {
         events: true,
         reviewScores: true,
         ratingDropTenths: true,
+        rankDropThreshold: true,
       },
     });
+    const instance = this.instanceThreshold();
     const targets = webhooks.filter((webhook) =>
-      receivesInstant(webhook, payload),
+      receivesInstant(webhook, payload, instance),
     );
     const scope = this.workspace.scopeFor('instant alert delivery');
     await Promise.all(
@@ -130,7 +137,10 @@ export class AlertsDispatcher {
           JOBS.DELIVER_ALERT,
           {
             webhookId: webhook.id,
-            payload,
+            payload: withThreshold(
+              payload,
+              subscriptionThreshold(webhook, instance),
+            ),
             ...scope,
           },
           { backoff: ALERT_BACKOFF },
@@ -155,9 +165,13 @@ export class AlertsDispatcher {
         events: true,
         reviewScores: true,
         ratingDropTenths: true,
+        rankDropThreshold: true,
       },
     });
-    const targets = alerts.filter((alert) => receivesInstant(alert, payload));
+    const instance = this.instanceThreshold();
+    const targets = alerts.filter((alert) =>
+      receivesInstant(alert, payload, instance),
+    );
     const scope = this.workspace.scopeFor('instant alert delivery');
     await Promise.all(
       targets.map((alert) =>
@@ -165,7 +179,10 @@ export class AlertsDispatcher {
           JOBS.DELIVER_EMAIL,
           {
             emailAlertId: alert.id,
-            payload,
+            payload: withThreshold(
+              payload,
+              subscriptionThreshold(alert, instance),
+            ),
             ...scope,
           },
           { backoff: ALERT_BACKOFF },

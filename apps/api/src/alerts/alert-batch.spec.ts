@@ -1162,3 +1162,62 @@ describe('availability batching', () => {
     ).toEqual([own]);
   });
 });
+
+describe('filterBatch with a rank threshold', () => {
+  const now = new Date('2026-07-22T11:00:00.000Z');
+  const small = drop({
+    from: 4,
+    to: 9,
+    keyword: { ...drop().keyword, id: 'k1' },
+  });
+  const nine = drop({
+    from: 4,
+    to: 13,
+    keyword: { ...drop().keyword, id: 'k2' },
+  });
+  const ten = drop({
+    from: 4,
+    to: 14,
+    keyword: { ...drop().keyword, id: 'k3' },
+  });
+  const climb = rankImprovement({
+    from: 20,
+    to: 14,
+    keyword: { ...drop().keyword, id: 'k4' },
+  });
+  const owned = assembleBatches({
+    events: [small, nine, ten, climb].map((payload, index) =>
+      event({ ...payload, app: { id: 'a', name: 'Alpha' } }, 'a', `r${index}`),
+    ),
+    appById,
+    serpPrimariesByKeyword: new Map(),
+    now,
+  }).owned;
+  const rankEvents = new Set(['rank.dropped', 'rank.improved']);
+
+  it('keeps only the moves that reach the threshold and names it', () => {
+    const filtered = filterBatch(owned, rankEvents, { rankThreshold: 10 });
+
+    expect(filtered?.apps[0].rankDrops).toEqual([
+      expect.objectContaining({ to: 14, threshold: 10 }),
+    ]);
+    expect(filtered?.apps[0].rankImprovements).toEqual([]);
+    expect(filtered?.events).toEqual([
+      expect.objectContaining({ event: 'rank.dropped', to: 14, threshold: 10 }),
+    ]);
+    expect(filtered?.totals).toEqual({ events: 1, apps: 1 });
+  });
+
+  it('answers null when no move reaches the threshold', () => {
+    expect(filterBatch(owned, rankEvents, { rankThreshold: 50 })).toBeNull();
+  });
+
+  it('leaves every move and its threshold alone without one', () => {
+    const filtered = filterBatch(owned, rankEvents);
+
+    expect(filtered?.apps[0].rankDrops).toHaveLength(3);
+    expect(filtered?.apps[0].rankDrops.map((alert) => alert.threshold)).toEqual(
+      [5, 5, 5],
+    );
+  });
+});

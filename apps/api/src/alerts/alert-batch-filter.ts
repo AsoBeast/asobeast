@@ -5,6 +5,7 @@ import {
   GranularAlertPayload,
 } from '@asobeast/shared';
 import { reachesChannel } from './confirm-drops';
+import { withRankMovesAtLeast } from './rank-threshold';
 import { withRatingDropsAtLeast } from './rating-routing';
 import { reviewGate } from './review-routing';
 
@@ -55,6 +56,7 @@ export interface BatchFilterOptions {
   reviewScores?: readonly number[];
   confirmDrops?: boolean;
   ratingDropTenths?: number | null;
+  rankThreshold?: number;
 }
 
 export function filterBatch(
@@ -63,7 +65,10 @@ export function filterBatch(
   options: BatchFilterOptions = {},
 ): AlertBatchPayload | null {
   const { reviewScores = [], confirmDrops = false } = options;
-  const batch = withRatingDropsAtLeast(input, options.ratingDropTenths);
+  const batch = withRankMovesAtLeast(
+    withRatingDropsAtLeast(input, options.ratingDropTenths),
+    options.rankThreshold,
+  );
   const keeps = reviewGate(batch.events, allowed, reviewScores);
   const events = batch.events.filter(
     (event) => keeps(event) && reachesChannel(event, confirmDrops),

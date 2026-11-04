@@ -387,6 +387,7 @@ export class AlertFlushService {
           reviewScores: true,
           confirmDrops: true,
           ratingDropTenths: true,
+          rankDropThreshold: true,
         },
       }),
       this.mailer.enabled
@@ -398,10 +399,14 @@ export class AlertFlushService {
               reviewScores: true,
               confirmDrops: true,
               ratingDropTenths: true,
+              rankDropThreshold: true,
             },
           })
         : Promise.resolve([]),
     ]);
+    const instanceThreshold = this.config.get('ALERT_RANK_DROP_THRESHOLD', {
+      infer: true,
+    });
     const deliveries = [
       ...webhooks.flatMap((subscription) =>
         createDeliveryFlows({
@@ -410,6 +415,7 @@ export class AlertFlushService {
           flushId,
           kind: 'webhook',
           subscription,
+          instanceThreshold,
           jobName: JOBS.DELIVER_ALERT,
         }),
       ),
@@ -420,6 +426,7 @@ export class AlertFlushService {
           flushId,
           kind: 'email',
           subscription,
+          instanceThreshold,
           jobName: JOBS.DELIVER_EMAIL,
         }),
       ),
