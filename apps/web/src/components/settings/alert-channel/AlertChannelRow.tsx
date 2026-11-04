@@ -144,9 +144,11 @@ export function AlertChannelRow({
         <div className="flex items-center gap-2">
           <Switch
             checked={active}
-            disabled={activePending}
+            aria-disabled={activePending || undefined}
             aria-label={`Toggle ${label}`}
-            onCheckedChange={onActiveChange}
+            onCheckedChange={(next) => {
+              if (!activePending) onActiveChange(next);
+            }}
           />
           <RowAction
             awaiting={awaiting}

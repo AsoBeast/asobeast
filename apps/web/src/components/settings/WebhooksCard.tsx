@@ -36,6 +36,7 @@ function WebhookRow({ webhook }: { webhook: WebhookItem }) {
     onSuccess: () => invalidateWebhookMutation(queryClient),
     onError: () => toast.error("Could not update webhook"),
   });
+  const toggleOnce = useSingleFlight(toggle);
 
   const editEvents = useMutation({
     mutationFn: (change: AlertSubscriptionChange) =>
@@ -99,7 +100,7 @@ function WebhookRow({ webhook }: { webhook: WebhookItem }) {
       }
       active={webhook.active}
       activePending={toggle.isPending}
-      onActiveChange={(active) => toggle.mutate(active)}
+      onActiveChange={toggleOnce}
       confirmTitle="Delete this webhook?"
       confirmDescription={`AsoBeast will stop delivering alerts to ${label}. This cannot be undone.`}
       testPending={test.isPending}

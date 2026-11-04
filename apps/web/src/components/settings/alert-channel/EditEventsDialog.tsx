@@ -66,7 +66,7 @@ export function EditEventsDialog({
 
   function submit(formEvent: FormEvent<HTMLFormElement>) {
     formEvent.preventDefault();
-    if (blocked) return;
+    if (blocked || pending) return;
     const tenths = ratingDropTenthsToSend(selected, ratingTenths);
     const change: AlertSubscriptionChange = {
       events: selected,
@@ -116,7 +116,10 @@ export function EditEventsDialog({
             ) : null}
           </DialogBody>
           <DialogFooter>
-            <Button type="submit" disabled={pending || blocked}>
+            <Button
+              type="submit"
+              aria-disabled={pending || blocked || undefined}
+            >
               {pending ? <Loader2 className="animate-spin" /> : null}
               Save events
             </Button>

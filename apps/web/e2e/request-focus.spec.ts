@@ -299,6 +299,34 @@ async function deleteWebhooksInBrowser(page: Page, rows: WebhookItem[]) {
   });
 }
 
+test.describe("the edit events dialog keeps focus", () => {
+  test("Save events keeps focus while the save runs", async ({ page }) => {
+    await page.goto("/settings");
+    const row = webhookList(page).getByRole("listitem").first();
+    const edit = row.getByRole("button", { name: "Edit events" });
+    await pressFromKeyboard(edit);
+    const dialog = page.getByRole("dialog", { name: "Edit events" });
+    await dialog
+      .getByRole("checkbox", { name: "SERP entrant", exact: true })
+      .click();
+    const held = await holdRequest(
+      page,
+      /\/api\/backend\/webhooks\/[^/]+$/,
+      "PATCH",
+    );
+    const save = dialog.getByRole("button", { name: "Save events" });
+
+    await pressFromKeyboard(save);
+
+    await expect(save).toHaveAttribute("aria-disabled", "true");
+    await expect(save).not.toHaveAttribute("disabled");
+    await expect(save).toBeFocused();
+    held.release();
+    await expect(dialog).toBeHidden();
+    await expect(edit).toBeFocused();
+  });
+});
+
 test.describe("alert rows keep focus", () => {
   test.beforeEach(({ context }) => seedCookie(context, WEBHOOK_PAIR_COOKIE));
 
@@ -333,6 +361,44 @@ test.describe("alert rows keep focus", () => {
     await expect.poll(() => posts.length).toBe(1);
     await expect(send).not.toHaveAttribute("aria-disabled", "true");
     expect(posts).toHaveLength(1);
+  });
+
+  test("the channel switch keeps focus while it saves", async ({ page }) => {
+    const held = await holdRequest(
+      page,
+      /\/api\/backend\/webhooks\/[^/]+$/,
+      "PATCH",
+    );
+    await page.goto("/settings");
+    const toggle = webhookList(page)
+      .getByRole("switch", { name: `Toggle ${WEBHOOK_PAIR[0].url}` })
+      .first();
+
+    await (await hydrated(toggle)).focus();
+    await page.keyboard.press("Space");
+
+    await expectFocusKeptWhileHeld(toggle, held);
+  });
+
+  test("two activations of the channel switch in one task send one save", async ({
+    page,
+  }) => {
+    const patches: string[] = [];
+    page.on("request", (request) => {
+      if (request.method() === "PATCH" && /\/webhooks\//.test(request.url())) {
+        patches.push(request.url());
+      }
+    });
+    await page.goto("/settings");
+    const toggle = webhookList(page)
+      .getByRole("switch", { name: `Toggle ${WEBHOOK_PAIR[0].url}` })
+      .first();
+
+    await activateTwiceInOneTask(toggle);
+
+    await expect.poll(() => patches.length).toBe(1);
+    await expect(toggle).not.toHaveAttribute("aria-disabled", "true");
+    expect(patches).toHaveLength(1);
   });
 
   test("Resend confirmation keeps focus while it sends", async ({ page }) => {

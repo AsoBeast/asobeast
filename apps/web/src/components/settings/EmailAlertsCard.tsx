@@ -48,6 +48,7 @@ function EmailAlertRow({ alert }: { alert: EmailAlertItem }) {
     onSuccess: () => invalidateEmailAlertMutation(queryClient),
     onError: () => toast.error("Could not update email alert"),
   });
+  const toggleOnce = useSingleFlight(toggle);
 
   const editEvents = useMutation({
     mutationFn: (change: AlertSubscriptionChange) =>
@@ -123,7 +124,7 @@ function EmailAlertRow({ alert }: { alert: EmailAlertItem }) {
       }
       active={alert.active}
       activePending={toggle.isPending}
-      onActiveChange={(active) => toggle.mutate(active)}
+      onActiveChange={toggleOnce}
       confirmTitle="Delete this email alert?"
       confirmDescription={`AsoBeast will stop emailing ${alert.email}. This cannot be undone.`}
       testPending={test.isPending}
