@@ -2,6 +2,7 @@ import { describe, expect, expectTypeOf, it } from 'vitest';
 import {
   AlertBatchApp,
   AlertBatchAppSection,
+  AlertBatchCompetitorSection,
   AlertBatchPayload,
   AlertDeliveryStatus,
   AlertFlushResult,
@@ -29,7 +30,10 @@ import type {
   ReviewNewPayload,
   ReviewSpikePayload,
 } from './reviews';
-import type { RatingDroppedPayload } from './listing-alerts';
+import type {
+  AppAvailabilityPayload,
+  RatingDroppedPayload,
+} from './listing-alerts';
 
 const batch = (scope: AlertBatchPayload['scope']): AlertBatchPayload => ({
   event: 'alerts.batch',
@@ -141,6 +145,20 @@ describe('alert contracts', () => {
       url: string;
       events: ['review.spike'];
     }>().toExtend<WebhookCreateRequest>();
+  });
+
+  it('keeps the availability group optional on both section kinds', () => {
+    expectTypeOf<AlertBatchAppSection['availability']>().toEqualTypeOf<
+      AppAvailabilityPayload[] | undefined
+    >();
+    expectTypeOf<AlertBatchCompetitorSection['availability']>().toEqualTypeOf<
+      AppAvailabilityPayload[] | undefined
+    >();
+    const competitor: AlertBatchCompetitorSection = {
+      app: { id: 'c', name: 'Rival', store: 'APP_STORE', country: 'us' },
+      changes: [],
+    };
+    expect(competitor.availability).toBeUndefined();
   });
 
   it('requires one of the two delivery scopes', () => {

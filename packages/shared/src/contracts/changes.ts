@@ -4,7 +4,10 @@ import type {
   ReviewNewPayload,
   ReviewSpikePayload,
 } from './reviews';
-import type { RatingDroppedPayload } from './listing-alerts';
+import type {
+  AppAvailabilityPayload,
+  RatingDroppedPayload,
+} from './listing-alerts';
 import type { DigestWeeklyPayload } from './portfolio';
 import type { KeywordScope } from './keywords';
 import type { SerpEntrantPayload } from './serp';
@@ -319,10 +322,12 @@ export interface AlertBatchApp extends AlertAppIdentity {
 export interface AlertBatchCompetitorSection {
   app: AlertBatchApp;
   changes: MetadataChangedPayload[];
+  availability?: AppAvailabilityPayload[];
 }
 
 export interface AlertBatchAppSection {
   app: AlertBatchApp;
+  availability?: AppAvailabilityPayload[];
   rankDrops: RankDroppedPayload[];
   rankImprovements: RankImprovedPayload[];
   rankMilestones: RankMilestonePayload[];
