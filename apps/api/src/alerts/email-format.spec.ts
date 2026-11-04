@@ -178,10 +178,13 @@ describe('formatBatchEmail', () => {
     expect(email.text).not.toMatch(/T\d{2}:\d{2}/);
   });
 
-  it('counts each category in the subject with plurals', async () => {
+  it('heads the report with its counts and leads the subject with its most urgent change', async () => {
     const email = await formatBatchEmail(batch);
     expect(email.subject).toBe(
-      '[asobeast] Daily app update: 3 changes across 2 apps',
+      '[asobeast] Alpha dropped from #3 to #12 for "game" in US and 2 more changes',
+    );
+    expect(email.text.split('\n')[0]).toBe(
+      'Daily app update: 3 changes across 2 apps',
     );
     expect(email.html).toContain(
       'Summary: 1 rank drop · 0 rank improvements · 1 top 10 entrant · 1 listing change · 0 negative reviews',
@@ -194,8 +197,8 @@ describe('formatBatchEmail', () => {
       apps: [bravo],
       totals: { events: 1, apps: 1 },
     });
-    expect(single.subject).toBe(
-      '[asobeast] Daily app update: 1 change across 1 app',
+    expect(single.text.split('\n')[0]).toBe(
+      'Daily app update: 1 change across 1 app',
     );
   });
 
@@ -966,5 +969,42 @@ describe('the top five moves by email', () => {
     expect(email.text).not.toContain('move 5 ');
     expect(email.text).toContain('and 23 smaller moves');
     expect(email.html).toContain('and 23 smaller moves');
+  });
+});
+
+describe('the subject of a daily update', () => {
+  it('keeps the competitor watch headline', async () => {
+    expect((await formatBatchEmail(competitorBatch)).subject).toMatch(
+      /^\[asobeast\] Competitor watch: /,
+    );
+  });
+
+  it('falls back to the headline when nothing leads', async () => {
+    const email = await formatBatchEmail({
+      ...batch,
+      apps: [],
+      totals: { events: 0, apps: 0 },
+      events: [],
+    });
+
+    expect(email.subject).toBe(
+      '[asobeast] Daily app update: 0 changes across 0 apps',
+    );
+  });
+
+  it('never carries a line break or a tab', async () => {
+    const quoted = {
+      ...negative,
+      review: { ...negative.review, text: 'broken\n\tagain' },
+    };
+    const email = await formatBatchEmail({
+      ...batch,
+      apps: [{ ...emptySection(alpha.app), negativeReviews: [quoted] }],
+      totals: { events: 1, apps: 1 },
+      events: [quoted],
+    });
+
+    expect(email.subject).not.toMatch(/[\n\t]/);
+    expect(email.subject.startsWith('[asobeast] A ')).toBe(true);
   });
 });

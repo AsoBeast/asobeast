@@ -21,7 +21,12 @@ import {
   ratingDropped,
   reviewSpike,
 } from '../listing-events.fixture';
-import { listPhrase, plural, sentenceOf } from './report-sentences';
+import {
+  foldedMilestoneSentence,
+  listPhrase,
+  plural,
+  sentenceOf,
+} from './report-sentences';
 
 const withFlags = (payload: Parameters<typeof sentenceOf>[0]) =>
   sentenceOf(payload, true);
@@ -310,5 +315,18 @@ describe('sentenceOf for the availability events', () => {
       emoji: '🌍',
       text: 'My App is no longer listed in the App Store in 🇩🇪 DE, where 12 keywords are tracked',
     });
+  });
+});
+
+describe('foldedMilestoneSentence', () => {
+  it.each([
+    [10, 2, 'Where Am I? lost 2 top 10 spots in US'],
+    [3, 1, 'Where Am I? lost 1 top 3 spot in US'],
+    [1, 3, 'Where Am I? lost first place for 3 keywords in US'],
+    [1, 1, 'Where Am I? lost first place for 1 keyword in US'],
+  ] as const)('folds tier %p with %p keywords', (tier, count, sentence) => {
+    expect(foldedMilestoneSentence('Where Am I?', tier, count, 'US')).toBe(
+      sentence,
+    );
   });
 });

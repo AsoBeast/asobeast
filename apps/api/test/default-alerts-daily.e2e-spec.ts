@@ -137,7 +137,9 @@ describe('essential alerts after the daily run (e2e)', () => {
     });
     expect(mails()).toHaveLength(1);
     expect(mails()[0].to).toBe(OWNER_EMAIL);
-    expect(mails()[0].subject.startsWith('[asobeast]')).toBe(true);
+    expect(mails()[0].subject).toMatch(
+      /^\[asobeast\] .+ dropped from #4 to #15 for "essential keyword" in US$/,
+    );
     expect(mails()[0].text).toContain(SENTENCE);
 
     await queueDrop(primary.id, keyword.id, 'second-drop');

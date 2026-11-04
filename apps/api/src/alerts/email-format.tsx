@@ -15,6 +15,7 @@ import {
   type ReportCaps,
 } from './report/build-report';
 import { plural, type GranularPayload } from './report/report-sentences';
+import { leadOf } from './report/report-lead';
 import { reportText } from './report/report-text';
 
 const WITHOUT_LINKS: AlertEmailContext = { origin: null, unsubscribe: null };
@@ -142,31 +143,38 @@ export function batchEmailElement(
   return reportElement(payload, buildReport(payload, context.origin), context);
 }
 
+interface BatchParts {
+  subject: string;
+  text: string;
+}
+
 async function fittingReport(
   payload: AlertBatchPayload,
   context: AlertEmailContext,
-  text: string,
+  parts: BatchParts,
   tier = 0,
 ): Promise<EmailContent> {
   const report = buildReport(payload, context.origin, HTML_TIERS[tier]);
   const email = await renderEmail(
-    `[asobeast] ${report.headline}`,
+    parts.subject,
     reportElement(payload, report, context),
-    text,
+    parts.text,
   );
   const smallerTier = tier + 1 < HTML_TIERS.length;
   return smallerTier && Buffer.byteLength(email.html) > HTML_BUDGET_BYTES
-    ? fittingReport(payload, context, text, tier + 1)
+    ? fittingReport(payload, context, parts, tier + 1)
     : email;
 }
+
+const subjectOf = (line: string): string =>
+  `[asobeast] ${line.replace(/\s+/g, ' ').trim()}`;
 
 export function formatBatchEmail(
   payload: AlertBatchPayload,
   context: AlertEmailContext = WITHOUT_LINKS,
 ): Promise<EmailContent> {
-  const text = withFooter(
-    reportText(buildReport(payload, context.origin)),
-    context,
-  );
-  return fittingReport(payload, context, text);
+  const report = buildReport(payload, context.origin);
+  const text = withFooter(reportText(report), context);
+  const subject = subjectOf(leadOf(payload) ?? report.headline);
+  return fittingReport(payload, context, { subject, text });
 }
