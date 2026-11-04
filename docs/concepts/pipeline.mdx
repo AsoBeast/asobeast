@@ -120,6 +120,8 @@ While `delistedAt` is set:
 
 Stored history stays, position checks and chart reads go on, and the daily run keeps asking the store. The first home capture that finds the app again clears `delistedAt`, so the notice and the badges go away and the run pill counts the listing again. A market that does not list the app leaves `delistedAt` alone, because many apps are sold in some storefronts only; the run pill stops expecting that one listing instead, as [How do you follow today's run for one app?](#how-do-you-follow-todays-run-for-one-app) describes.
 
+The first answer that sets `delistedAt`, and the first that adds a market after a stored listing of it, also raises the `app.delisted` and `app.unlisted_market` alerts. See [Delisted apps and unlisted markets](/guides/alerts#delisted-apps-and-unlisted-markets).
+
 ## What does Run daily do after a failure?
 
 Run daily collects today's work again for one app. A job that failed earlier today, because a store was down or blocked, is queued again with a fresh set of attempts, and its failed record leaves the dashboard. A job that is still waiting, running or finished today is left alone, so a second click does not queue it again. Chart reads are queued per app, so Run daily on a second app still records its chart positions when another app of the workspace read the same charts earlier that day, from the capture already stored and without asking the store again.
