@@ -328,8 +328,8 @@ for (const channel of CHANNELS) {
     }
 
     await setSelected(eventOption(dialog, SERP_ENTRANT), true);
-    await setSelected(eventOptions(dialog).first(), true);
-    const labels = ["Rank dropped", SERP_ENTRANT];
+    await setSelected(eventOption(dialog, RANK_MILESTONE), true);
+    const labels = [RANK_MILESTONE, SERP_ENTRANT];
 
     const target = channel.target();
     await page.getByLabel(channel.field).fill(target);

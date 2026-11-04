@@ -101,3 +101,9 @@ describe("the dismissal", () => {
     expect(writeDismissed(throwing, "app-1")).toBe(false);
   });
 });
+
+describe("alertsNudgeState with the essential alerts", () => {
+  it("hides the nudge once the essential alert is the only channel", () => {
+    expect(alertsNudgeState({ ...READY, channels: 1 })).toBe("hidden");
+  });
+});

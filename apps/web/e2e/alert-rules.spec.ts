@@ -20,6 +20,18 @@ const rules = (dialog: Locator) =>
 const ruleSwitch = (dialog: Locator, name: string) =>
   rules(dialog).getByRole("switch", { name, exact: true });
 
+async function setRule(
+  dialog: Locator,
+  name: string,
+  on: boolean,
+): Promise<void> {
+  const rule = ruleSwitch(dialog, name);
+  if ((await rule.getAttribute("aria-checked")) !== String(on)) {
+    await rule.click();
+  }
+  await expect(rule).toHaveAttribute("aria-checked", String(on));
+}
+
 async function openAddEmailAlert(page: Page): Promise<Locator> {
   await page.goto("/settings");
   return openSettledDialog(page, "Add email alert");
@@ -59,7 +71,7 @@ for (const viewport of [
 
 test("a rule switched on from the keyboard is saved", async ({ page }) => {
   const dialog = await openAddEmailAlert(page);
-  const rule = ruleSwitch(dialog, "Review spike");
+  const rule = ruleSwitch(dialog, "Weekly digest");
 
   await rule.focus();
   await page.keyboard.press("Space");
@@ -75,7 +87,7 @@ test("a rule switched on from the keyboard is saved", async ({ page }) => {
     .getByRole("button", { name: "Add email alert", exact: true })
     .click();
   const body = (await post).postDataJSON() as { events: string[] };
-  expect(body.events).toContain("review.spike");
+  expect(body.events).toContain("digest.weekly");
 });
 
 test("the stars show under New review only while it is on", async ({
@@ -85,7 +97,7 @@ test("the stars show under New review only while it is on", async ({
   const stars = dialog.getByRole("group", { name: "New review stars" });
   await expect(stars).toHaveCount(0);
 
-  await ruleSwitch(dialog, "New review").click();
+  await setRule(dialog, "New review", true);
   await expect(stars).toBeVisible();
   for (const star of await stars.getByRole("checkbox").all()) {
     await star.click();
@@ -99,7 +111,7 @@ test("the stars show under New review only while it is on", async ({
     dialog.getByText("Pick at least one star", { exact: true }),
   ).toBeVisible();
 
-  await ruleSwitch(dialog, "New review").click();
+  await setRule(dialog, "New review", false);
   await expect(stars).toHaveCount(0);
 });
 
@@ -154,14 +166,16 @@ for (const channel of CHANNELS) {
   }) => {
     await page.goto("/settings");
     const dialog = await openSettledDialog(page, channel.trigger);
+    await setRule(dialog, "Rank dropped", false);
     await expect(rankField(dialog)).toHaveCount(0);
 
-    await ruleSwitch(dialog, "Rank dropped").click();
+    await setRule(dialog, "Rank dropped", true);
+    await rankField(dialog).fill("");
     await expect(rankField(dialog)).toHaveAttribute("placeholder", "5");
     await expect(rankField(dialog)).toHaveAccessibleDescription(
       "Leave empty to use the instance value, 5. A smaller value counts as 5, the lowest value this instance detects.",
     );
-    await ruleSwitch(dialog, "Rank improved").click();
+    await setRule(dialog, "Rank improved", true);
     await expect(dialog.getByText("Uses the rank drop value.")).toBeVisible();
 
     await rankField(dialog).fill("10");
@@ -190,7 +204,8 @@ for (const channel of CHANNELS) {
   }) => {
     await page.goto("/settings");
     const dialog = await openSettledDialog(page, channel.trigger);
-    await ruleSwitch(dialog, "Rank dropped").click();
+    await setRule(dialog, "Rank dropped", true);
+    await rankField(dialog).fill("");
     await page.getByLabel(channel.field).fill(channel.target("empty"));
     const post = page.waitForRequest(
       (request) =>
@@ -209,7 +224,7 @@ for (const channel of CHANNELS) {
   }) => {
     await page.goto("/settings");
     const dialog = await openSettledDialog(page, channel.trigger);
-    await ruleSwitch(dialog, "Rank dropped").click();
+    await setRule(dialog, "Rank dropped", true);
     let posted = false;
     page.on("request", (request) => {
       if (request.method() === "POST") posted = true;
@@ -265,7 +280,7 @@ for (const width of [320, 390]) {
   }) => {
     await page.setViewportSize({ width, height: 800 });
     const dialog = await openAddEmailAlert(page);
-    await ruleSwitch(dialog, "Rank dropped").click();
+    await setRule(dialog, "Rank dropped", true);
 
     await expect(rankField(dialog)).toBeVisible();
     await expectFitsViewport(page, dialog);

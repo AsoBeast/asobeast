@@ -38,6 +38,23 @@ function badges(row: Locator): Locator {
   return row.locator('[data-slot="badge"]');
 }
 
+async function keepOnlyMetadata(dialog: Locator): Promise<void> {
+  const rules = dialog
+    .getByRole("group", { name: "Alert rules" })
+    .getByRole("switch");
+  for (const rule of await rules.all()) {
+    const name = await rule.evaluate(
+      (control) =>
+        document.getElementById(control.getAttribute("aria-labelledby") ?? "")
+          ?.textContent,
+    );
+    const wanted = String(name === "Metadata changed");
+    if ((await rule.getAttribute("aria-checked")) !== wanted) {
+      await rule.click();
+    }
+  }
+}
+
 async function createChannel(
   page: Page,
   channel: Channel,
@@ -45,6 +62,7 @@ async function createChannel(
 ): Promise<{ row: Locator; body: unknown }> {
   await page.goto("/settings");
   const dialog = await openSettledDialog(page, channel.trigger);
+  await keepOnlyMetadata(dialog);
   await confirmDrops(dialog).setChecked(confirming);
   const target = channel.target();
   await page.getByLabel(channel.field).fill(target);

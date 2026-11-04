@@ -1,4 +1,5 @@
 import {
+  ESSENTIAL_ALERT_EVENTS,
   normalizeReviewScores,
   reviewScoresLabel,
   type WebhookEvent,
@@ -11,6 +12,12 @@ export const EVENT_LABELS = Object.fromEntries(
 ) as Record<WebhookEvent, string>;
 
 export const PICKER_EVENTS = ALERT_RULE_ORDER;
+
+export const DEFAULT_ALERT_EVENTS: readonly WebhookEvent[] = [
+  ...ESSENTIAL_ALERT_EVENTS,
+];
+
+export const DEFAULT_RANK_TEXT = "10";
 
 export interface AlertSubscriptionChange {
   events: WebhookEvent[];

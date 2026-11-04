@@ -12,6 +12,8 @@ import { ApiError, createEmailAlert } from "@/lib/api";
 import { invalidateEmailAlertMutation } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
 import {
+  DEFAULT_ALERT_EVENTS,
+  DEFAULT_RANK_TEXT,
   needsAStar,
   ratingDropTenthsToSend,
   reviewScoresToSend,
@@ -26,10 +28,12 @@ export function AddEmailAlertDialog({ trigger }: { trigger?: ReactNode }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
-  const [events, setEvents] = useState<WebhookEvent[]>(["metadata.changed"]);
+  const [events, setEvents] = useState<WebhookEvent[]>([
+    ...DEFAULT_ALERT_EVENTS,
+  ]);
   const [stars, setStars] = useState<number[]>([...REVIEW_SCORES]);
   const [ratingTenths, setRatingTenths] = useState(RATING_DROP_DEFAULT_TENTHS);
-  const [rankText, setRankText] = useState("");
+  const [rankText, setRankText] = useState(DEFAULT_RANK_TEXT);
   const [confirmDrops, setConfirmDrops] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -74,10 +78,10 @@ export function AddEmailAlertDialog({ trigger }: { trigger?: ReactNode }) {
     setOpen(next);
     if (next) return;
     setEmail("");
-    setEvents(["metadata.changed"]);
+    setEvents([...DEFAULT_ALERT_EVENTS]);
     setStars([...REVIEW_SCORES]);
     setRatingTenths(RATING_DROP_DEFAULT_TENTHS);
-    setRankText("");
+    setRankText(DEFAULT_RANK_TEXT);
     setConfirmDrops(true);
     setError(null);
   }
