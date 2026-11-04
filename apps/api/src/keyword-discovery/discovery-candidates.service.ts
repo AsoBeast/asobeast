@@ -186,17 +186,18 @@ export class DiscoveryCandidates {
     app: DiscoveryApp,
     market: string,
   ): Promise<SourcedText[]> {
-    const rows = await this.prisma.trackedKeyword.findMany({
+    const keywords = await this.prisma.keyword.findMany({
       where: {
-        appId: { not: app.id },
-        keyword: { store: app.store, country: market },
+        store: app.store,
+        country: market,
+        tracked: { some: { appId: { not: app.id } } },
       },
       orderBy: { createdAt: 'desc' },
       take: DISCOVERY_SOURCE_CAPS.portfolio,
-      select: { keyword: { select: { text: true } } },
+      select: { text: true },
     });
     return sourced(
-      rows.map(({ keyword }) => keyword.text),
+      keywords.map(({ text }) => text),
       'portfolio',
     );
   }

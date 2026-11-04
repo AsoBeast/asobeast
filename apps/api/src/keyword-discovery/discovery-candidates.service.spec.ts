@@ -44,11 +44,6 @@ const setup = (fixture: Fixture = {}) => {
     subtitle: 'Daily Streak Planner',
     summary: 'Build better routines',
   };
-  const trackedFindMany = jest
-    .fn()
-    .mockResolvedValue(
-      (fixture.portfolio ?? []).map((text) => ({ keyword: { text } })),
-    );
   const prisma = {
     appLocalization: { findMany: jest.fn().mockResolvedValue([]) },
     appSnapshot: {
@@ -68,13 +63,16 @@ const setup = (fixture: Fixture = {}) => {
         })),
       ),
     },
-    trackedKeyword: { findMany: trackedFindMany },
     keyword: {
-      findMany: jest.fn().mockResolvedValue(
-        (fixture.metrics ?? []).map(({ text, traffic }) => ({
-          text,
-          metrics: [{ traffic }],
-        })),
+      findMany: jest.fn((args: { where: { tracked?: unknown } }) =>
+        Promise.resolve(
+          args.where.tracked
+            ? (fixture.portfolio ?? []).map((text) => ({ text }))
+            : (fixture.metrics ?? []).map(({ text, traffic }) => ({
+                text,
+                metrics: [{ traffic }],
+              })),
+        ),
       ),
     },
     searchTermPopularity: {
@@ -96,7 +94,7 @@ const setup = (fixture: Fixture = {}) => {
     prisma as unknown as PrismaService,
     new DiscoveryPopularity(prisma as unknown as PrismaService),
   );
-  return { service, prisma, trackedFindMany };
+  return { service, prisma };
 };
 
 const bySource = (candidates: PoolCandidate[], source: string) =>
@@ -232,7 +230,7 @@ describe('DiscoveryCandidates.forMarket', () => {
   });
 
   it("proposes the phrases the workspace's other apps track in the market", async () => {
-    const { service, trackedFindMany } = setup({
+    const { service, prisma } = setup({
       portfolio: ['meditation timer'],
     });
 
@@ -241,16 +239,17 @@ describe('DiscoveryCandidates.forMarket', () => {
     expect(textsOf(bySource(candidates, 'portfolio'))).toEqual([
       'meditation timer',
     ]);
-    expect(trackedFindMany).toHaveBeenCalledWith({
+    expect(prisma.keyword.findMany).toHaveBeenCalledWith({
       where: {
-        appId: { not: 'app1' },
-        keyword: { store: Store.APP_STORE, country: 'de' },
+        store: Store.APP_STORE,
+        country: 'de',
+        tracked: { some: { appId: { not: 'app1' } } },
       },
       orderBy: { createdAt: 'desc' },
       take: 60,
-      select: { keyword: { select: { text: true } } },
+      select: { text: true },
     });
-    expect(JSON.stringify(trackedFindMany.mock.calls)).not.toContain(
+    expect(JSON.stringify(prisma.keyword.findMany.mock.calls)).not.toContain(
       'workspaceId',
     );
   });

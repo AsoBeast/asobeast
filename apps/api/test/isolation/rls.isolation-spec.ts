@@ -1,6 +1,8 @@
 import { CrossTenantAccess } from '../../src/common/tenancy/cross-tenant-access';
 import { TENANT_TABLES } from '../../src/common/tenancy/tenant-tables';
 import { WorkspaceContext } from '../../src/common/tenancy/workspace-context';
+import { DiscoveryCandidates } from '../../src/keyword-discovery/discovery-candidates.service';
+import { DiscoveryPopularity } from '../../src/keyword-discovery/discovery-popularity.service';
 import { PrismaService } from '../../src/prisma/prisma.service';
 import {
   createIsolationFixture,
@@ -286,6 +288,36 @@ describe('Row level security', () => {
       expect(changed.count).toBe(0);
       expect(removed.count).toBe(0);
       expect(untouched).toEqual({ dismissedAt: null });
+    });
+
+    it('never proposes a phrase only another workspace tracks', async () => {
+      const candidates = new DiscoveryCandidates(
+        prisma,
+        new DiscoveryPopularity(prisma),
+      );
+      const apple = await workspace.run(fixture.a.id, () =>
+        prisma.app.findUniqueOrThrow({
+          where: { id: fixture.a.appleAppId },
+          select: {
+            id: true,
+            workspaceId: true,
+            store: true,
+            country: true,
+            storeAppId: true,
+          },
+        }),
+      );
+
+      const proposed = await workspace.run(fixture.a.id, () =>
+        candidates.forMarket(apple, 'us', 'Shared Fixture'),
+      );
+
+      expect(proposed.map(({ text }) => text)).not.toContain(
+        `${fixture.b.id} only`,
+      );
+      expect(proposed.filter(({ source }) => source === 'portfolio')).toEqual(
+        [],
+      );
     });
 
     it("refuses a discovery that names another workspace's app", async () => {
