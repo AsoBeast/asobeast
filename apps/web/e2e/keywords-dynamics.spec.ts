@@ -1,6 +1,10 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
-import { PL_HISTORY_COOKIE, utcDaysAgo } from "./fixtures.mts";
+import {
+  PL_HISTORY_COOKIE,
+  RANKINGS_FAIL_COOKIE,
+  utcDaysAgo,
+} from "./fixtures.mts";
 import { seedCookies } from "./routes.mts";
 
 test.describe.configure({ mode: "serial" });
@@ -226,9 +230,10 @@ test("a shared link with more than eight keywords charts the first eight and say
   await expect(
     page
       .getByRole("region", { name: PANEL })
-      .getByRole("group", { name: "Charted keywords" })
+      .getByRole("group", { name: "Selected keywords" })
       .getByRole("button"),
   ).toHaveCount(9);
+  await expect(chartSeries(page)).toHaveCount(8);
   const selected = new URL(page.url()).searchParams.get("keywords") ?? "";
   expect(selected.split(",")).toHaveLength(9);
 });
@@ -289,6 +294,43 @@ test("removing the last chip and Clear keep the panel closed", async ({
 
   await page.reload();
   await panelIsClosed(page);
+});
+
+test("Clear with no checked rows keeps focus on the page", async ({ page }) => {
+  await page.goto("/apps/app-1/keywords");
+  await expect(page.getByRole("region", { name: PANEL })).toBeVisible();
+
+  await page
+    .getByRole("region", { name: PANEL })
+    .getByRole("button", { name: "Clear", exact: true })
+    .click();
+
+  await expect(page.getByRole("region", { name: PANEL })).toHaveCount(0);
+  await expect(
+    page.getByRole("textbox", { name: "Search keywords" }),
+  ).toBeFocused();
+});
+
+test("a failed rankings read offers Retry and recovers", async ({
+  page,
+  context,
+}) => {
+  await seedCookies(context, { [RANKINGS_FAIL_COOKIE]: "1" });
+  await page.goto("/apps/app-1/keywords");
+
+  await expect(
+    page.getByRole("region", { name: PANEL }).getByRole("alert"),
+  ).toHaveText("Could not load the rank positions.", { timeout: 15_000 });
+
+  await context.clearCookies({ name: RANKINGS_FAIL_COOKIE });
+  await page.getByRole("button", { name: "Retry" }).click();
+
+  await expect(page.getByRole("region", { name: CHART })).toBeVisible();
+  await expect(chartSeries(page)).toHaveText([
+    "focus timer (US)",
+    "pomodoro (US)",
+    "study timer (US)",
+  ]);
 });
 
 test("table sorting, filtering and bulk actions leave an open chart alone", async ({

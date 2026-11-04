@@ -24,7 +24,7 @@ export function DynamicsChips({
   return (
     <div
       role="group"
-      aria-label="Charted keywords"
+      aria-label="Selected keywords"
       className="flex flex-wrap items-center gap-2"
     >
       {selected.map((keywordId) => (

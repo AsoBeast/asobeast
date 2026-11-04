@@ -21,7 +21,9 @@ test("table renders fixture keywords and distinguishes a paused row", async ({
     "productivity app",
   ]) {
     await expect(
-      page.getByRole("cell", { name: new RegExp(`^${text}`) }),
+      page.getByRole("cell", {
+        name: new RegExp(`^${text}(\\s*,\\s*on the chart)?$`),
+      }),
     ).toBeVisible();
   }
 

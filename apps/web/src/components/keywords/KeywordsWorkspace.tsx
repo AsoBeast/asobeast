@@ -153,7 +153,7 @@ function KeywordsMarketScope({
         store={store}
         country={market}
         homeCountry={homeCountry}
-        chartedIds={chart.effective}
+        chartedIds={open ? chart.charted : []}
       />
     </>
   );

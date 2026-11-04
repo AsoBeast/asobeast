@@ -85,4 +85,11 @@ describe("selectionForMarket", () => {
       "kw-1",
     ]);
   });
+
+  it("drops a repeated id before it can take a chart slot", () => {
+    expect(selectionForMarket(usTracked, ["kw-1", "kw-1", "kw-2"])).toEqual([
+      "kw-1",
+      "kw-2",
+    ]);
+  });
 });

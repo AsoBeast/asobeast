@@ -24,7 +24,7 @@ export function selectionForMarket(
   selected: readonly string[],
 ): string[] {
   const known = new Set(tracked.map((item) => item.keywordId));
-  const surviving = selected.filter((id) => known.has(id));
+  const surviving = [...new Set(selected)].filter((id) => known.has(id));
   return surviving.length > 0
     ? surviving
     : topByOpportunity(tracked, DEFAULT_SELECTION);

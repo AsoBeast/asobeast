@@ -115,7 +115,14 @@ function KeywordDynamicsBody({
     changesOptions(id, presetDays(range), queryMarket(market, homeCountry)),
   );
 
-  if (failedRead(rankingsRead)) {
+  const data = rankingsRead.data;
+  const seriesIds = new Set(data?.series.map((item) => item.keywordId) ?? []);
+  const selectionPending =
+    rankingsRead.isPlaceholderData &&
+    (seriesIds.size !== chart.charted.length ||
+      chart.charted.some((keywordId) => !seriesIds.has(keywordId)));
+
+  if (failedRead(rankingsRead) || (rankingsRead.isError && selectionPending)) {
     return (
       <InlineQueryError
         message="Could not load the rank positions."
@@ -123,15 +130,14 @@ function KeywordDynamicsBody({
       />
     );
   }
-  if (!rankingsRead.data) {
+  if (!data) {
     return <ChartSkeleton height={CHART_HEIGHT.hero} />;
   }
 
-  const data = rankingsRead.data;
   const chartData = buildRankingChart(data.series, bounds.to);
   const everChecked = tracked.some(
     (item) =>
-      chart.effective.includes(item.keywordId) && item.latestDepth !== null,
+      chart.charted.includes(item.keywordId) && item.latestDepth !== null,
   );
   const changeDays = listingChangeDays(changesRead.data?.events ?? [], {
     country: market,
@@ -165,7 +171,9 @@ function KeywordDynamicsBody({
         chart={chartData}
         onRemove={removeChip}
       />
-      {chartData.checkedDays === 0 ? (
+      {selectionPending ? (
+        <ChartSkeleton height={CHART_HEIGHT.hero} />
+      ) : chartData.checkedDays === 0 ? (
         everChecked ? (
           <NoDataInRange
             onWiden={range === WIDEST_RANGE ? undefined : onWiden}

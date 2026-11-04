@@ -2335,6 +2335,16 @@ export const APP_BULK_KEYWORDS: TrackedKeywordItem[] = Array.from(
   }),
 );
 
+const APP_BULK_RANKINGS: RankingSeries = {
+  series: APP_BULK_KEYWORDS.slice(0, 12).map((keyword, index) => ({
+    keywordId: keyword.keywordId,
+    text: keyword.text,
+    store: "APP_STORE",
+    country: "us",
+    points: pointsFrom([12 + (index % 4), 10, 9, 7, 5, 4, 3, 2]),
+  })),
+};
+
 export const APP_UNCHECKED_TEXTS = ["geo guess game", "where am i"] as const;
 
 export const APP_UNCHECKED_KEYWORDS: TrackedKeywordItem[] =
@@ -3104,7 +3114,7 @@ export const DATASETS: Record<string, AppDataset> = {
     detail: APP_BULK_DETAIL,
     summary: APP_2_SUMMARY,
     keywords: APP_BULK_KEYWORDS,
-    rankings: EMPTY_RANKINGS,
+    rankings: APP_BULK_RANKINGS,
     serpMovers: EMPTY_SERP_MOVERS,
     visibility: EMPTY_VISIBILITY,
     rankDistributionHistory: EMPTY_RANK_DISTRIBUTION_HISTORY,
