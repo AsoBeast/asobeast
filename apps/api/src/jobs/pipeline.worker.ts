@@ -30,6 +30,10 @@ import { RedisOutageLog } from '../redis/redis-outage-log';
 import { ApplePopularitySync } from '../scoring/apple-popularity.sync';
 import { ProxyPoolMaintenance } from '../store-providers/egress/proxy-pool.maintenance';
 import { DailyBudgetService } from './daily-budget.service';
+import {
+  DefaultAlertsRun,
+  type DefaultAlertsTally,
+} from './default-alerts-run';
 import { DigestDispatcher } from './digest.dispatcher';
 import { reportJobFailure } from './job-failure';
 import { requireJobScope } from './job-workspace';
@@ -77,6 +81,7 @@ export class PipelineWorker extends WorkerHost implements OnModuleInit {
     private readonly outage: RedisOutageLog,
     private readonly sweep: LocalizationSweep,
     private readonly storeReports: StoreReportFanOut,
+    private readonly defaultAlerts: DefaultAlertsRun,
   ) {
     super();
   }
@@ -240,11 +245,12 @@ export class PipelineWorker extends WorkerHost implements OnModuleInit {
       return;
     }
     if (job.name === JOBS.DAILY_COMPLETE) {
+      const targets = job.data as DailyCompletePayload;
       const actions = await this.generateActions();
+      const defaults = await this.createDefaultAlerts(targets.date);
       const result = await this.alertFlush.flushEveryWorkspace();
       const client = await this.pipelineQueue.getBackend().client;
       await client.set(LAST_DAILY_RUN_KEY, new Date().toISOString());
-      const targets = job.data as DailyCompletePayload;
       this.logger.log(
         `daily pipeline complete ${JSON.stringify({
           date: targets.date,
@@ -259,6 +265,7 @@ export class PipelineWorker extends WorkerHost implements OnModuleInit {
           actionsResolved: actions?.resolved ?? null,
           actionsVerified: actions?.verified ?? null,
           actionsSuppressed: actions?.suppressedByCap ?? null,
+          defaultAlerts: defaults,
         })}`,
       );
       return;
@@ -344,6 +351,17 @@ export class PipelineWorker extends WorkerHost implements OnModuleInit {
     );
     await this.actionsNotifier.notify(result.openedActions);
     return result;
+  }
+
+  private async createDefaultAlerts(
+    date: string,
+  ): Promise<DefaultAlertsTally | null> {
+    try {
+      return await this.defaultAlerts.run(date);
+    } catch (error) {
+      this.logger.error('default alerts failed', error);
+      return null;
+    }
   }
 
   private async generateActions(): Promise<ActionGenerationResult | null> {

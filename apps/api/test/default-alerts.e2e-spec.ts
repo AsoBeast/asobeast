@@ -56,6 +56,7 @@ describe('essential email alerts (e2e)', () => {
   });
 
   afterAll(async () => {
+    await verifyOwner(false);
     await prisma.$disconnect();
     await obliterateQueues(app);
     await app.close();
