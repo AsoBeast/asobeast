@@ -1,4 +1,8 @@
-import { ratingDroppedPayload } from './listing-alert-payloads';
+import {
+  delistedPayload,
+  ratingDroppedPayload,
+  unlistedMarketPayload,
+} from './listing-alert-payloads';
 import type { RatingDrop } from './rating-drop';
 
 const drop: RatingDrop = {
@@ -28,6 +32,38 @@ describe('ratingDroppedPayload', () => {
       country: 'us',
       ...drop,
       actionId: 'act_1',
+    });
+  });
+});
+
+describe('availability payloads', () => {
+  const app = {
+    id: 'app_1',
+    name: 'My App',
+    country: 'us',
+    store: 'APP_STORE' as const,
+    isCompetitor: false,
+  };
+  const now = new Date('2026-11-03T03:10:00.000Z');
+
+  it('describes a delisting in the home storefront', () => {
+    expect(delistedPayload(app, now)).toEqual({
+      event: 'app.delisted',
+      occurredAt: '2026-11-03T03:10:00.000Z',
+      app: { id: 'app_1', name: 'My App', isCompetitor: false },
+      store: 'APP_STORE',
+      country: 'us',
+      date: '2026-11-03',
+    });
+  });
+
+  it('describes a lost market with its tracked keywords', () => {
+    expect(unlistedMarketPayload(app, 'de', 12, now)).toMatchObject({
+      event: 'app.unlisted_market',
+      country: 'us',
+      market: 'de',
+      trackedKeywords: 12,
+      date: '2026-11-03',
     });
   });
 });

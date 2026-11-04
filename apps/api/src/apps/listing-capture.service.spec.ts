@@ -140,6 +140,7 @@ const build = (overrides: {
     overrides.recordDefault ?? jest.fn().mockResolvedValue(undefined);
   const storeReports = { enqueue: jest.fn().mockResolvedValue({}) };
   const ratingDropped = jest.fn().mockResolvedValue(undefined);
+  const listingLost = jest.fn().mockResolvedValue(undefined);
   const service = new ListingCaptureService(
     prisma,
     registry,
@@ -152,7 +153,7 @@ const build = (overrides: {
     { request: detect } as unknown as LocalizationDetection,
     { record: recordDefault } as unknown as MarketLocalizationRecorder,
     storeReports as unknown as StoreReportQueue,
-    { ratingDropped } as unknown as ListingAlerts,
+    { ratingDropped, listingLost } as unknown as ListingAlerts,
   );
   return {
     service,
@@ -163,6 +164,7 @@ const build = (overrides: {
     recordDefault,
     storeReports,
     ratingDropped,
+    listingLost,
     tx,
     updateMany,
   };
@@ -661,5 +663,59 @@ describe('ListingCaptureService rating drop alerts', () => {
 
     await expect(service.refreshListing(APP.id)).rejects.toThrow('timeout');
     expect(ratingDropped).not.toHaveBeenCalled();
+  });
+});
+
+describe('ListingCaptureService listing loss alerts', () => {
+  const missing = () =>
+    jest
+      .fn()
+      .mockRejectedValue(
+        new StoreAppNotFoundError(Store.APP_STORE, APP.storeAppId),
+      );
+
+  it.each([
+    [undefined, 'us'],
+    ['de', 'de'],
+  ])(
+    'alerts once when the market %p just lost the listing',
+    async (country, market) => {
+      const { service, listingLost } = build({ getApp: missing() });
+
+      await expect(service.refreshListing(APP.id, country)).resolves.toBeNull();
+
+      expect(listingLost).toHaveBeenCalledTimes(1);
+      expect(listingLost).toHaveBeenCalledWith(
+        expect.objectContaining({ id: APP.id }),
+        market,
+      );
+    },
+  );
+
+  it('alerts nothing when the loss was already recorded', async () => {
+    const { service, listingLost, updateMany } = build({ getApp: missing() });
+    updateMany.mockResolvedValue({ count: 0 });
+
+    await expect(service.refreshListing(APP.id)).resolves.toBeNull();
+    await expect(service.refreshListing(APP.id, 'de')).resolves.toBeNull();
+
+    expect(listingLost).not.toHaveBeenCalled();
+  });
+
+  it('still answers the store error on an on demand refresh', async () => {
+    const { service, listingLost } = build({ getApp: missing() });
+
+    await expect(service.refresh(APP.id)).rejects.toThrow(
+      StoreAppNotFoundError,
+    );
+    expect(listingLost).toHaveBeenCalledTimes(1);
+  });
+
+  it('alerts nothing for a capture that succeeds', async () => {
+    const { service, listingLost } = build({});
+
+    await service.refreshListing(APP.id);
+
+    expect(listingLost).not.toHaveBeenCalled();
   });
 });
