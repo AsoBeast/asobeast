@@ -191,6 +191,12 @@ function KeywordDynamicsBody({
           {cappingLine(chart)}
         </p>
       ) : null}
+      {rankingsRead.isError ? (
+        <InlineQueryError
+          message="Could not refresh the rank positions."
+          read={rankingsRead}
+        />
+      ) : null}
       {failedRead(changesRead) ? (
         <InlineQueryError
           message="Could not load the listing changes."
