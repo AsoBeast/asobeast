@@ -22,6 +22,7 @@ import { snapshotIcon, toSnapshotData } from './apps.mapper';
 import { toChangeSnapshot } from './change-snapshot';
 import { withKnownSubtitle } from './known-subtitle';
 import { listingIn, NEWEST_FIRST, storedMarket } from './listing';
+import { ListingAlerts } from './listing-alerts.service';
 import { LocalizationDetection } from './localization-detection.service';
 import { LocalizedListingCapture } from './localized-listing-capture.service';
 import { MarketLocalizationRecorder } from './market-localization-recorder';
@@ -43,6 +44,7 @@ export class ListingCaptureService {
     private readonly detection: LocalizationDetection,
     private readonly recorder: MarketLocalizationRecorder,
     private readonly storeReports: StoreReportQueue,
+    private readonly listingAlerts: ListingAlerts,
   ) {}
 
   async refresh(
@@ -172,6 +174,9 @@ export class ListingCaptureService {
       await this.requestDetection(app.id, market);
     }
     if (home) {
+      if (!app.isCompetitor) {
+        await this.listingAlerts.ratingDropped(app, snapshot.capturedAt);
+      }
       await this.keywords.syncFromSnapshot(app.id);
       if (await this.releaseChangedFields(app, recorded)) {
         try {

@@ -1,6 +1,7 @@
 import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { ActionRunModule } from '../actions/action-run.module';
+import { AlertsModule } from '../alerts/alerts.module';
 import { ChangesModule } from '../changes/changes.module';
 import { FLOW_PRODUCERS, QUEUES } from '../jobs/jobs.types';
 import { KeywordsModule } from '../keywords/keywords.module';
@@ -14,6 +15,7 @@ import { AppSetupService } from './app-setup.service';
 import { AppsController } from './apps.controller';
 import { AppsService } from './apps.service';
 import { FirstRunScheduler } from './first-run.scheduler';
+import { ListingAlerts } from './listing-alerts.service';
 import { ListingCaptureService } from './listing-capture.service';
 import { ListingReadService } from './listing-read.service';
 import { LocalizationDetectionController } from './localization-detection.controller';
@@ -31,6 +33,7 @@ import { SubtitleBackfill } from './subtitle-backfill.service';
 @Module({
   imports: [
     ActionRunModule,
+    AlertsModule,
     StoreProvidersModule,
     StoreConnectModule,
     KeywordsModule,
@@ -58,6 +61,7 @@ import { SubtitleBackfill } from './subtitle-backfill.service';
     AppSetupService,
     FirstRunScheduler,
     ListingCaptureService,
+    ListingAlerts,
     ListingReadService,
     LocalizationDetection,
     LocalizedListingCapture,

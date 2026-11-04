@@ -1,10 +1,13 @@
 import { getQueueToken } from '@nestjs/bullmq';
 import { Job, Queue } from 'bullmq';
 import { AlertFlushService } from '../../src/alerts/alert-flush.service';
+import { ListingCaptureService } from '../../src/apps/listing-capture.service';
 import { AuditService } from '../../src/audit/audit.service';
+import { WorkspaceContext } from '../../src/common/tenancy/workspace-context';
 import { JobWorkspaceMissingError } from '../../src/jobs/job-workspace';
 import { QUEUES } from '../../src/jobs/jobs.types';
 import { PipelineService } from '../../src/jobs/pipeline.service';
+import { PrismaService } from '../../src/prisma/prisma.service';
 import { RetentionService } from '../../src/jobs/retention.service';
 import { StoreJobsHandler } from '../../src/jobs/store-jobs.handler';
 import { createIsolationFixture, IsolationFixture } from './fixture';
@@ -185,5 +188,46 @@ describe('Job isolation', () => {
       _count: { _all: true },
     });
     expect(after).toEqual(before);
+  });
+
+  it('keeps a rating drop alert in the workspace whose capture raised it', async () => {
+    const workspaces = [fixture.a, fixture.b];
+    const scope = fixture.app.get(WorkspaceContext);
+    const prisma = fixture.app.get(PrismaService);
+    for (const workspace of workspaces) {
+      await fixture.db.appSnapshot.create({
+        data: {
+          appId: workspace.appleAppId,
+          title: 'Shared Fixture',
+          description: 'Shared description',
+          raw: {},
+          ratingAvg: 4.8,
+          ratingCount: 100,
+          version: '1.0.0',
+          capturedAt: new Date(Date.now() - 8 * 86_400_000),
+        },
+      });
+      await scope.run(workspace.id, () =>
+        fixture.app
+          .get(ListingCaptureService)
+          .refreshListing(workspace.appleAppId),
+      );
+    }
+
+    for (const workspace of workspaces) {
+      const stored = await fixture.db.alertEvent.findMany({
+        where: { workspaceId: workspace.id, event: 'rating.dropped' },
+        select: { appId: true },
+      });
+      const visible = await scope.run(workspace.id, () =>
+        prisma.alertEvent.findMany({
+          where: { event: 'rating.dropped' },
+          select: { appId: true },
+        }),
+      );
+
+      expect(stored).toEqual([{ appId: workspace.appleAppId }]);
+      expect(visible).toEqual([{ appId: workspace.appleAppId }]);
+    }
   });
 });
