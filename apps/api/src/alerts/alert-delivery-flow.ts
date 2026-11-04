@@ -3,6 +3,7 @@ import { DefaultJobOptions, FlowJob } from 'bullmq';
 import { JOB_OPTIONS } from '../jobs/job-options';
 import { JOBS, QUEUES } from '../jobs/jobs.types';
 import { filterBatch } from './alert-batch-filter';
+import { withRatingDropsAtLeast } from './rating-routing';
 
 const ALERT_DELIVERY_DEDUPE_SECONDS = 7 * 24 * 60 * 60;
 
@@ -29,6 +30,7 @@ interface CreateDeliveryFlowsInput {
     events: string[];
     reviewScores: number[];
     confirmDrops?: boolean;
+    ratingDropTenths?: number | null;
   };
   jobName: typeof JOBS.DELIVER_ALERT | typeof JOBS.DELIVER_EMAIL;
 }
@@ -39,14 +41,16 @@ export function createDeliveryFlows(
   const allowed = new Set(input.subscription.events);
   const { reviewScores } = input.subscription;
   const confirmDrops = input.subscription.confirmDrops === true;
+  const atThreshold = (batch: AlertBatchPayload) =>
+    withRatingDropsAtLeast(batch, input.subscription.ratingDropTenths);
   const owned = filterBatch(
-    input.batches.owned,
+    atThreshold(input.batches.owned),
     allowed,
     reviewScores,
     confirmDrops,
   );
   const competitors = filterBatch(
-    input.batches.competitors,
+    atThreshold(input.batches.competitors),
     allowed,
     reviewScores,
     confirmDrops,

@@ -17,6 +17,7 @@ import {
 } from '../jobs/jobs.types';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
+import { ratingDropped } from './listing-events.fixture';
 import { AlertAppIdentities } from './alert-app-identities';
 import { AlertsDispatcher } from './alerts.dispatcher';
 import { chartEntered } from './chart-events.fixture';
@@ -335,7 +336,12 @@ describe('AlertsDispatcher', () => {
     expect(prisma.alertEvent.create).not.toHaveBeenCalled();
     expect(prisma.webhook.findMany).toHaveBeenCalledWith({
       where: { active: true, events: { has: 'chart.entered' } },
-      select: { id: true, events: true, reviewScores: true },
+      select: {
+        id: true,
+        events: true,
+        reviewScores: true,
+        ratingDropTenths: true,
+      },
     });
     expect(add).toHaveBeenCalledWith(
       JOBS.DELIVER_ALERT,
@@ -360,7 +366,12 @@ describe('AlertsDispatcher', () => {
 
     expect(prisma.webhook.findMany).toHaveBeenCalledWith({
       where: { active: true, events: { has: 'rank.overtaken' } },
-      select: { id: true, events: true, reviewScores: true },
+      select: {
+        id: true,
+        events: true,
+        reviewScores: true,
+        ratingDropTenths: true,
+      },
     });
   });
 
@@ -384,7 +395,12 @@ describe('AlertsDispatcher', () => {
         confirmedAt: { not: null },
         events: { has: 'rank.overtaken' },
       },
-      select: { id: true, events: true, reviewScores: true },
+      select: {
+        id: true,
+        events: true,
+        reviewScores: true,
+        ratingDropTenths: true,
+      },
     });
   });
 
@@ -543,7 +559,12 @@ describe('AlertsDispatcher', () => {
           events: { has: 'rank.dropped' },
           confirmDrops: false,
         },
-        select: { id: true, events: true, reviewScores: true },
+        select: {
+          id: true,
+          events: true,
+          reviewScores: true,
+          ratingDropTenths: true,
+        },
       });
     });
 
@@ -560,7 +581,12 @@ describe('AlertsDispatcher', () => {
           events: { has: 'rank.dropped' },
           confirmDrops: true,
         },
-        select: { id: true, events: true, reviewScores: true },
+        select: {
+          id: true,
+          events: true,
+          reviewScores: true,
+          ratingDropTenths: true,
+        },
       });
     });
 
@@ -576,7 +602,12 @@ describe('AlertsDispatcher', () => {
           events: { has: 'rank.milestone' },
           confirmDrops: true,
         },
-        select: { id: true, events: true, reviewScores: true },
+        select: {
+          id: true,
+          events: true,
+          reviewScores: true,
+          ratingDropTenths: true,
+        },
       });
     });
 
@@ -587,7 +618,12 @@ describe('AlertsDispatcher', () => {
 
       expect(prisma.webhook.findMany).toHaveBeenCalledWith({
         where: { active: true, events: { has: 'rank.milestone' } },
-        select: { id: true, events: true, reviewScores: true },
+        select: {
+          id: true,
+          events: true,
+          reviewScores: true,
+          ratingDropTenths: true,
+        },
       });
     });
 
@@ -692,5 +728,58 @@ describe('AlertsDispatcher', () => {
       expect(prisma.app.findUnique).not.toHaveBeenCalled();
       expect(prisma.webhook.findMany).toHaveBeenCalledTimes(1);
     });
+  });
+});
+
+describe('AlertsDispatcher rating drops', () => {
+  const dispatcherWith = (delivery: 'batched' | 'instant') => {
+    const prisma = buildPrisma();
+    const { add, queue } = buildQueue();
+    const dispatcher = new AlertsDispatcher(
+      prisma as unknown as PrismaService,
+      { enabled: false } as MailerService,
+      buildConfig(delivery),
+      queue,
+      workspace,
+      new AlertAppIdentities(prisma as unknown as PrismaService),
+    );
+    return { prisma, add, dispatcher };
+  };
+
+  it('queues a drop only for the channels whose threshold it meets', async () => {
+    const { prisma, add, dispatcher } = dispatcherWith('instant');
+    prisma.webhook.findMany.mockResolvedValue([
+      {
+        id: 'wh2',
+        events: ['rating.dropped'],
+        reviewScores: [],
+        ratingDropTenths: 2,
+      },
+      {
+        id: 'wh3',
+        events: ['rating.dropped'],
+        reviewScores: [],
+        ratingDropTenths: 3,
+      },
+    ]);
+
+    await inWorkspace(() => dispatcher.dispatch(ratingDropped()));
+
+    expect(add).toHaveBeenCalledTimes(1);
+    expect(add).toHaveBeenCalledWith(
+      JOBS.DELIVER_ALERT,
+      expect.objectContaining({ webhookId: 'wh2' }),
+      { backoff: { type: 'custom' } },
+    );
+  });
+
+  it('collects a drop under its app and day in batched mode', async () => {
+    const { prisma, dispatcher } = dispatcherWith('batched');
+
+    await inWorkspace(() => dispatcher.dispatch(ratingDropped()));
+
+    expect(prisma.updates[0].where.dedupeKey).toBe(
+      'rating.dropped:a:2026-11-03',
+    );
   });
 });

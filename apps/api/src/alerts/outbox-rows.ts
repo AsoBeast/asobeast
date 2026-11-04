@@ -8,6 +8,8 @@ import {
   RankImprovedPayload,
   RankMilestonePayload,
   RankOvertakenPayload,
+  RatingDroppedPayload,
+  ReviewSpikePayload,
 } from '@asobeast/shared';
 import {
   newReviewKey,
@@ -50,7 +52,9 @@ function appRow(
     | RankMilestonePayload
     | RankFirstPayload
     | RankOvertakenPayload
-    | ReviewAlertPayload,
+    | ReviewAlertPayload
+    | RatingDroppedPayload
+    | ReviewSpikePayload,
   dedupeKey: string,
 ): OutboxRow {
   return { event: payload.event, appId: payload.app.id, dedupeKey, payload };
@@ -94,6 +98,16 @@ export function outboxRows(payload: AlertPayload): OutboxRow[] {
 
   if (payload.event === 'review.new') {
     return [appRow(payload, `review.new:${newReviewKey(payload)}`)];
+  }
+
+  if (payload.event === 'rating.dropped') {
+    return [
+      appRow(payload, `rating.dropped:${payload.app.id}:${payload.toDate}`),
+    ];
+  }
+
+  if (payload.event === 'review.spike') {
+    return [appRow(payload, `review.spike:${payload.app.id}:${payload.date}`)];
   }
 
   if (payload.event === 'serp.entrant') {

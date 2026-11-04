@@ -113,7 +113,12 @@ export class AlertsDispatcher {
         events: { has: payload.event },
         ...confirmDropsWhere(payload),
       },
-      select: { id: true, events: true, reviewScores: true },
+      select: {
+        id: true,
+        events: true,
+        reviewScores: true,
+        ratingDropTenths: true,
+      },
     });
     const targets = webhooks.filter((webhook) =>
       receivesInstant(webhook, payload),
@@ -145,7 +150,12 @@ export class AlertsDispatcher {
         events: { has: payload.event },
         ...confirmDropsWhere(payload),
       },
-      select: { id: true, events: true, reviewScores: true },
+      select: {
+        id: true,
+        events: true,
+        reviewScores: true,
+        ratingDropTenths: true,
+      },
     });
     const targets = alerts.filter((alert) => receivesInstant(alert, payload));
     const scope = this.workspace.scopeFor('instant alert delivery');

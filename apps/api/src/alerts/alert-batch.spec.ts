@@ -28,6 +28,7 @@ import {
   chartMoveBatch,
   withoutChartMoves,
 } from './chart-events.fixture';
+import { ratingDropped, reviewSpike } from './listing-events.fixture';
 import {
   drop,
   improvement as rankImprovement,
@@ -1003,5 +1004,72 @@ describe('chart move batching', () => {
 
     expect(filtered?.apps[0].chartMoves).toEqual([]);
     expect(filtered?.apps[0].rankDrops).toEqual([rank]);
+  });
+});
+
+describe('rating drop and review spike batching', () => {
+  const now = new Date('2026-11-03T04:00:00.000Z');
+  const drop2 = ratingDropped({ app: { id: 'a', name: 'Alpha' } });
+  const spike = reviewSpike({ app: { id: 'a', name: 'Alpha' } });
+  const owned = () =>
+    assembleBatches({
+      events: [event(drop2, 'a', 'r1'), event(spike, 'a', 's1')],
+      appById,
+      serpPrimariesByKeyword: new Map(),
+      now,
+    }).owned;
+
+  it('places both in the section of their owned app', () => {
+    const batch = owned();
+
+    expect(batch.apps[0]).toMatchObject({
+      ratingDrops: [drop2],
+      reviewSpikes: [spike],
+    });
+    expect(batch.totals).toEqual({ events: 2, apps: 1 });
+  });
+
+  it('refuses both for a competitor', () => {
+    const result = classifyBatch({
+      events: [
+        event({ ...drop2, app: { id: 'c', name: 'Charlie' } }, 'c'),
+        event({ ...spike, app: { id: 'c', name: 'Charlie' } }, 'c'),
+      ],
+      appById,
+      serpPrimariesByKeyword: new Map(),
+    });
+
+    expect(result.skipped.competitor_owned_signal).toBe(2);
+    expect(result.owned).toHaveLength(0);
+  });
+
+  it('keeps only the events a channel lists', () => {
+    const spikes = filterBatch(owned(), new Set(['review.spike']));
+    const drops = filterBatch(owned(), new Set(['rating.dropped']));
+
+    expect(spikes?.events).toEqual([spike]);
+    expect(spikes?.apps[0]).toMatchObject({
+      ratingDrops: [],
+      reviewSpikes: [spike],
+    });
+    expect(drops?.events).toEqual([drop2]);
+    expect(drops?.apps[0]).toMatchObject({
+      ratingDrops: [drop2],
+      reviewSpikes: [],
+    });
+    expect(filterBatch(owned(), new Set(['rank.dropped']))).toBeNull();
+  });
+
+  it('never carries them in the competitor scope', () => {
+    const competitors = assembleBatches({
+      events: [event(drop2, 'a', 'r1'), event(spike, 'a', 's1')],
+      appById,
+      serpPrimariesByKeyword: new Map(),
+      now,
+    }).competitors;
+
+    expect(
+      filterBatch(competitors, new Set(['rating.dropped', 'review.spike'])),
+    ).toBeNull();
   });
 });

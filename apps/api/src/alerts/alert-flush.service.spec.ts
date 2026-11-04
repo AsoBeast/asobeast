@@ -508,6 +508,7 @@ describe('AlertFlushService', () => {
         events: true,
         reviewScores: true,
         confirmDrops: true,
+        ratingDropTenths: true,
       },
     });
   });
@@ -524,6 +525,7 @@ describe('AlertFlushService', () => {
         events: true,
         reviewScores: true,
         confirmDrops: true,
+        ratingDropTenths: true,
       },
     });
   });

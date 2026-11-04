@@ -386,6 +386,7 @@ export class AlertFlushService {
           events: true,
           reviewScores: true,
           confirmDrops: true,
+          ratingDropTenths: true,
         },
       }),
       this.mailer.enabled
@@ -396,6 +397,7 @@ export class AlertFlushService {
               events: true,
               reviewScores: true,
               confirmDrops: true,
+              ratingDropTenths: true,
             },
           })
         : Promise.resolve([]),
