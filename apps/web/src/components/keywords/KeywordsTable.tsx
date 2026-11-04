@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import {
   utcDayOf,
@@ -18,11 +18,7 @@ import {
   keywordSortParser,
   sortDirectionParser,
 } from "@/lib/search-params";
-import {
-  HIDDEN_KEYWORD_COLUMNS,
-  keywordColumns,
-  SELECT_ALL_KEYWORDS,
-} from "./keyword-columns";
+import { HIDDEN_KEYWORD_COLUMNS, keywordColumns } from "./keyword-columns";
 import { exactSearchEmptyBody, keywordSearchFilter } from "./keyword-filters";
 import { keywordTableFeatures } from "./keyword-table-features";
 import { exportKeywords } from "./keyword-csv";
@@ -32,6 +28,10 @@ import { KeywordsEmptyState } from "./KeywordsEmptyState";
 import { KeywordsDataTable } from "./KeywordsDataTable";
 import { KeywordsFilterBar } from "./KeywordsFilterBar";
 import { SerpSheet } from "./serp/SerpSheet";
+import {
+  useClearedSelectionFocus,
+  useEmptiedListFocus,
+} from "./use-keywords-table-focus";
 import { useSerpParams } from "./serp/use-serp-params";
 import { useKeywordColumnFilters } from "./use-zone-thresholds";
 
@@ -60,12 +60,6 @@ export function KeywordsTable({
   const { data: markets } = useQuery(keywordCountriesOptions(id));
   const multiMarket = (markets?.length ?? 0) > 1;
   const [selection, setSelection] = useState<RowSelectionState>({});
-  const tableArea = useRef<HTMLDivElement>(null);
-  const refocusTable = useRef(false);
-  const clearSelection = () => {
-    refocusTable.current = true;
-    setSelection({});
-  };
 
   const rowSelection = useMemo(
     () => selectedKeywordsStillOnScreen(selection, keywords),
@@ -136,24 +130,12 @@ export function KeywordsTable({
     .rows.map((row) => row.original);
   const selectedIds = selectedKeywords.map((keyword) => keyword.keywordId);
 
-  useEffect(() => {
-    if (!refocusTable.current || selectedIds.length > 0) return;
-    refocusTable.current = false;
-    tableArea.current
-      ?.querySelector<HTMLElement>(`[aria-label="${SELECT_ALL_KEYWORDS}"]`)
-      ?.focus();
-  }, [selectedIds.length]);
-
+  const { tableArea, clearSelection } = useClearedSelectionFocus(
+    selectedIds.length,
+    () => setSelection({}),
+  );
   const isEmpty = keywords.length === 0;
-  const showedTable = useRef(!isEmpty);
-  const addKeywords = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    const emptied = isEmpty && showedTable.current;
-    showedTable.current = !isEmpty;
-    if (emptied && document.activeElement === document.body) {
-      addKeywords.current?.focus();
-    }
-  }, [isEmpty]);
+  const addKeywords = useEmptiedListFocus(isEmpty);
 
   if (isEmpty) {
     return (
