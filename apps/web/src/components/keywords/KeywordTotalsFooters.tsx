@@ -1,5 +1,6 @@
 import type { Table } from "@tanstack/react-table";
 import type { TrackedKeywordItem } from "@asobeast/shared";
+import { formatNumber, pluralize } from "@/lib/format";
 import { keywordTotals, type KeywordTotals } from "@/lib/keyword-totals";
 import type { KeywordTableFeatures } from "./keyword-table-features";
 
@@ -42,16 +43,16 @@ function Figures({ lead, detail }: { lead: string; detail?: string }) {
 
 const countsOf = ({ ranked, notFound, unchecked }: KeywordTotals): string =>
   [
-    `${ranked} ranked`,
-    `${notFound} not found`,
-    ...(unchecked > 0 ? [`${unchecked} not checked`] : []),
+    `${formatNumber(ranked)} ranked`,
+    `${formatNumber(notFound)} not found`,
+    ...(unchecked > 0 ? [`${formatNumber(unchecked)} not checked`] : []),
   ].join(", ");
 
 export function keywordCountFooter({ table }: FooterContext) {
   const totals = totalsOf(table);
   return (
     <span className="flex flex-col gap-0.5">
-      <span className="font-medium">{`${totals.count} ${totals.count === 1 ? "keyword" : "keywords"}`}</span>
+      <span className="font-medium">{pluralize(totals.count, "keyword")}</span>
       <span className="text-caption text-muted-foreground">
         {countsOf(totals)}
       </span>
@@ -66,7 +67,7 @@ export function positionFooter({ table }: FooterContext) {
   ) : (
     <Figures
       lead={`avg ${averagePosition}`}
-      detail={`${topTen} in the top 10`}
+      detail={`${formatNumber(topTen)} in the top 10`}
     />
   );
 }

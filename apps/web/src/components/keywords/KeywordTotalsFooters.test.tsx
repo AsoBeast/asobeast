@@ -124,4 +124,21 @@ describe("the keyword totals footers", () => {
       expect(html).not.toMatch(/>[^<]+<(?!\/)/);
     }
   });
+
+  it("groups the digits of a large count like the row count", () => {
+    const many = tableOf(
+      Array.from({ length: 1234 }, (_, index) =>
+        keyword({ latestPosition: index % 2 === 0 ? 5 : null }),
+      ),
+    );
+
+    expect(textsOf(renderToStaticMarkup(keywordCountFooter(many)))).toEqual([
+      "1,234 keywords",
+      "617 ranked, 617 not found",
+    ]);
+    expect(textsOf(renderToStaticMarkup(positionFooter(many)))).toEqual([
+      "avg 5",
+      "617 in the top 10",
+    ]);
+  });
 });
