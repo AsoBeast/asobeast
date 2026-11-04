@@ -617,7 +617,7 @@ describe('filterBatch with confirmed drops', () => {
     'rank.milestone',
   ]);
   const filtered = (confirmDrops: boolean) => {
-    const result = filterBatch(batches.owned, rankEvents, [], confirmDrops);
+    const result = filterBatch(batches.owned, rankEvents, { confirmDrops });
     if (!result) throw new Error('expected an owned batch');
     return result;
   };
@@ -660,15 +660,14 @@ describe('filterBatch with confirmed drops', () => {
   it('sends a confirming channel no report when nothing reaches it', () => {
     const { owned } = batchOf([ordinaryDrop]);
 
-    expect(filterBatch(owned, rankEvents, [], true)).toBeNull();
+    expect(filterBatch(owned, rankEvents, { confirmDrops: true })).toBeNull();
   });
 
   it('leaves the competitor scope alone', () => {
     const competitors = filterBatch(
       batches.competitors,
       new Set(['metadata.changed']),
-      [],
-      true,
+      { confirmDrops: true },
     );
     if (!competitors) throw new Error('expected a competitor batch');
 
@@ -777,7 +776,9 @@ describe('review.new batching', () => {
   });
 
   it('keeps the picked stars and counts only them', () => {
-    const filtered = filterBatch(owned(), new Set(['review.new']), [1, 2]);
+    const filtered = filterBatch(owned(), new Set(['review.new']), {
+      reviewScores: [1, 2],
+    });
 
     expect(filtered?.apps[0].newReviews).toEqual([low]);
     expect(filtered?.events).toEqual([low]);
@@ -785,7 +786,9 @@ describe('review.new batching', () => {
   });
 
   it('drops a section left with no picked star', () => {
-    expect(filterBatch(owned(), new Set(['review.new']), [1])).toBeNull();
+    expect(
+      filterBatch(owned(), new Set(['review.new']), { reviewScores: [1] }),
+    ).toBeNull();
   });
 
   it('keeps every star without a filter', () => {
