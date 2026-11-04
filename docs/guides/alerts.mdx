@@ -57,7 +57,7 @@ Alerts are not part of the guided setup, because nothing can move before positio
 | `rank.overtaken` | A tracked competitor moves above an owned app | None |
 | `review.negative` | A review lands at or below the rating cutoff | `ALERT_REVIEW_SCORE_MAX`, default 2, range 1 to 4 |
 | `review.new` | A review the store returns for the first time | Optional star filter per channel |
-| `rating.dropped` | The displayed average rating of an owned app is at least one tenth of a star lower than seven days earlier | Optional threshold per channel, 1 to 10 tenths |
+| `rating.dropped` | The displayed average rating of an owned app is at least one tenth of a star lower than seven to ten days earlier | Optional threshold per channel, 1 to 10 tenths |
 | `review.spike` | Reviews dated one day pass the larger of 5 and three times the median of the previous 28 days | None |
 | `app.delisted` | A capture finds that the store no longer lists an owned app or a competitor in its home storefront | None |
 | `app.unlisted_market` | A capture finds that a market storefront no longer lists an app it listed before | None |
@@ -148,7 +148,7 @@ Both events report a fact about one owned app and one day, read from what AsoBea
 
 ### Rating drops
 
-`rating.dropped` compares the average rating the store shows for the home listing of an owned app, as stored with each snapshot, with the newest snapshot taken seven to ten days earlier. Both snapshots need at least 20 ratings, because below that one review moves the average by more than a tenth. The averages are compared in whole hundredths and the drop is counted in whole tenths of a star, so a fall from 4.64 to 4.55 is nine hundredths and raises nothing, while 4.66 to 4.55 is one tenth.
+`rating.dropped` compares the average rating the store shows for the home listing of an owned app, as stored with each snapshot, with the newest snapshot taken seven to ten days earlier. Both snapshots need at least 20 ratings, because below that one review moves the average by more than a tenth. The drop is counted in whole tenths of a star, so a fall from 4.64 to 4.55 is nine hundredths and raises nothing, while 4.66 to 4.55 is one tenth.
 
 Each channel chooses how big a drop it wants with the **Rating drop threshold** control in Settings, which appears while **Rating dropped** is ticked. Over the API it is `ratingDropTenths`, an integer from 1 to 10 on a webhook or an email alert. Omitted means 1, a tenth of a star, and a `PATCH` without it leaves it as it is.
 

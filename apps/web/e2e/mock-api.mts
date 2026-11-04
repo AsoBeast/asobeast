@@ -3186,6 +3186,12 @@ const routes: Route[] = [
             errorEnvelope(400, path, "events should not be empty"),
           );
         }
+        if (refusesRatingDropTenths(body.ratingDropTenths)) {
+          return json(res, 400, ratingDropTenthsEnvelope(path));
+        }
+        if (refusesThreshold(body.rankDropThreshold)) {
+          return json(res, 400, thresholdEnvelope(path));
+        }
         if (body.url !== undefined) {
           webhook.url = body.url;
           webhook.channel = webhookChannelOf(body.url);
@@ -3196,12 +3202,6 @@ const routes: Route[] = [
         }
         if (body.active !== undefined) webhook.active = body.active;
         if (body.secret !== undefined) webhook.hasSecret = body.secret !== "";
-        if (refusesRatingDropTenths(body.ratingDropTenths)) {
-          return json(res, 400, ratingDropTenthsEnvelope(path));
-        }
-        if (refusesThreshold(body.rankDropThreshold)) {
-          return json(res, 400, thresholdEnvelope(path));
-        }
         if (body.confirmDrops !== undefined) {
           webhook.confirmDrops = body.confirmDrops;
         }
@@ -3327,18 +3327,18 @@ const routes: Route[] = [
             errorEnvelope(400, path, "events should not be empty"),
           );
         }
-        if (body.email !== undefined) alert.email = body.email;
-        if (body.events !== undefined) alert.events = body.events;
-        if (body.reviewScores !== undefined) {
-          alert.reviewScores = normalizeReviewScores(body.reviewScores);
-        }
-        if (body.active !== undefined) alert.active = body.active;
         if (refusesRatingDropTenths(body.ratingDropTenths)) {
           return json(res, 400, ratingDropTenthsEnvelope(path));
         }
         if (refusesThreshold(body.rankDropThreshold)) {
           return json(res, 400, thresholdEnvelope(path));
         }
+        if (body.email !== undefined) alert.email = body.email;
+        if (body.events !== undefined) alert.events = body.events;
+        if (body.reviewScores !== undefined) {
+          alert.reviewScores = normalizeReviewScores(body.reviewScores);
+        }
+        if (body.active !== undefined) alert.active = body.active;
         if (body.confirmDrops !== undefined) {
           alert.confirmDrops = body.confirmDrops;
         }

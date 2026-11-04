@@ -64,3 +64,11 @@ describe('rating drop wording', () => {
     );
   });
 });
+
+describe('rating drop version label', () => {
+  it('never doubles the v of a version that carries one', () => {
+    expect(ratingDropRow(ratingDropped({ version: 'v2.4' })).note).toBe(
+      'down 2 tenths · v2.4',
+    );
+  });
+});

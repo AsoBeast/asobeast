@@ -92,7 +92,7 @@ export function ReviewStarSelection({
 }
 
 const RATING_DROP_HELP =
-  "Alert when the average rating falls by at least this much against seven days earlier. Needs 20 ratings. Reviews are not counted, the number shown in the store is.";
+  "Alert when the average rating falls by at least this much against seven to ten days earlier. Needs 20 ratings. Reviews are not counted, the number shown in the store is.";
 
 const ratingDropChoices = (value: number): number[] =>
   [...new Set<number>([...RATING_DROP_TENTHS_CHOICES, value])].sort(

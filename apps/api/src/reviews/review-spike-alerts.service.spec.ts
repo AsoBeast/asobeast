@@ -154,3 +154,27 @@ describe('ReviewSpikeAlerts.raise', () => {
     warn.mockRestore();
   });
 });
+
+describe('ReviewSpikeAlerts without a theme', () => {
+  it('still dispatches the spike when the theme lookup fails', async () => {
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+    const { service, dispatch, dayTheme } = build([
+      ...quietHistory,
+      spiking(new Date('2026-11-02'), 7, 5),
+    ]);
+    dayTheme.mockRejectedValue(new Error('themes down'));
+
+    await service.raise(
+      APP,
+      Array.from({ length: 7 }, (_, index) =>
+        review(`r${index}`, '2026-11-02T10:00:00.000Z'),
+      ),
+      NOW,
+    );
+
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({ event: 'review.spike', topTheme: null }),
+    );
+    warn.mockRestore();
+  });
+});
