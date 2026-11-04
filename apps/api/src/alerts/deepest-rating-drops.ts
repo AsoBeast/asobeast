@@ -1,28 +1,25 @@
+import type { RatingDroppedPayload } from '@asobeast/shared';
 import type { OutboxEvent } from './alert-batch';
 
-function ratingDropDay(event: OutboxEvent): string | null {
-  return event.payload.event === 'rating.dropped'
-    ? `${event.payload.app.id}:${event.payload.toDate}`
-    : null;
+type RatingDropEvent = OutboxEvent & { payload: RatingDroppedPayload };
+
+function isRatingDrop(event: OutboxEvent): event is RatingDropEvent {
+  return event.payload.event === 'rating.dropped';
 }
 
-function dropTenthsOf(event: OutboxEvent): number {
-  return event.payload.event === 'rating.dropped'
-    ? event.payload.dropTenths
-    : 0;
+function dropDay(event: RatingDropEvent): string {
+  return `${event.payload.app.id}:${event.payload.toDate}`;
 }
 
 export function withDeepestRatingDrops(events: OutboxEvent[]): OutboxEvent[] {
-  const deepest = new Map<string, OutboxEvent>();
-  for (const event of events) {
-    const day = ratingDropDay(event);
-    const kept = day === null ? undefined : deepest.get(day);
-    if (day !== null && (!kept || dropTenthsOf(event) > dropTenthsOf(kept))) {
-      deepest.set(day, event);
+  const deepest = new Map<string, RatingDropEvent>();
+  for (const event of events.filter(isRatingDrop)) {
+    const kept = deepest.get(dropDay(event));
+    if (!kept || event.payload.dropTenths > kept.payload.dropTenths) {
+      deepest.set(dropDay(event), event);
     }
   }
-  return events.filter((event) => {
-    const day = ratingDropDay(event);
-    return day === null || deepest.get(day) === event;
-  });
+  return events.filter(
+    (event) => !isRatingDrop(event) || deepest.get(dropDay(event)) === event,
+  );
 }
