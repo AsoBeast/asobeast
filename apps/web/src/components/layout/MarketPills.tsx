@@ -11,6 +11,12 @@ const pill = (selected: boolean) =>
       : "hover:bg-muted",
   );
 
+const count = (selected: boolean) =>
+  cn(
+    "numeric font-mono text-caption",
+    selected ? "text-background" : "text-muted-foreground",
+  );
+
 export function MarketPills({
   markets,
   value,
@@ -38,7 +44,7 @@ export function MarketPills({
           className={pill(value === null)}
         >
           <span className="font-medium">{allLabel}</span>
-          <span className="numeric font-mono text-caption opacity-70">
+          <span className={count(value === null)}>
             {markets.reduce((sum, entry) => sum + entry.count, 0)}
           </span>
         </button>
@@ -55,9 +61,7 @@ export function MarketPills({
             className={pill(selected)}
           >
             <span className="font-medium">{entry.country.toUpperCase()}</span>
-            <span className="numeric font-mono text-caption opacity-70">
-              {entry.count}
-            </span>
+            <span className={count(selected)}>{entry.count}</span>
           </button>
         );
       })}
