@@ -118,6 +118,19 @@ describe("page 1 close", () => {
     expect(has(ranked(12, "2026-11-01"), "pageOneClose")).toBe(false);
   });
 
+  it("refuses a check of unknown age", () => {
+    expect(
+      has(
+        keyword({
+          latestPosition: 12,
+          latestDepth: 200,
+          latestCheckedOn: undefined,
+        }),
+        "pageOneClose",
+      ),
+    ).toBe(false);
+  });
+
   it("refuses a keyword never checked", () => {
     expect(
       has(

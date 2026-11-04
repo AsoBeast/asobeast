@@ -44,6 +44,7 @@ const isPageOneClose = (row: TrackedKeywordItem, today: string): boolean =>
   row.latestPosition !== null &&
   row.latestPosition >= PAGE_ONE_CLOSE_MIN_POSITION &&
   row.latestPosition <= PAGE_ONE_CLOSE_MAX_POSITION &&
+  typeof row.latestCheckedOn === "string" &&
   staleCheckDay(row, today) === null;
 
 function isBeatable(row: TrackedKeywordItem): boolean {
