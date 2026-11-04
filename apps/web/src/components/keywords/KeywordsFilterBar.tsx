@@ -3,7 +3,10 @@
 import type { SetValues } from "nuqs";
 import type { Table } from "@tanstack/react-table";
 import type { TrackedKeywordItem } from "@asobeast/shared";
-import { ColumnMenu } from "@/components/data-table/ColumnMenu";
+import {
+  ColumnMenu,
+  type ViewOption,
+} from "@/components/data-table/ColumnMenu";
 import { FilterChips } from "@/components/data-table/FilterChips";
 import { RowCount } from "@/components/data-table/RowCount";
 import { SearchInput } from "@/components/data-table/SearchInput";
@@ -22,12 +25,14 @@ export function KeywordsFilterBar({
   filters,
   setFilters,
   today,
+  viewOptions,
 }: {
   appId: string;
   table: Table<KeywordTableFeatures, TrackedKeywordItem>;
   filters: KeywordFilters;
   setFilters: SetValues<typeof keywordFilterParsers>;
   today: string;
+  viewOptions: readonly ViewOption[];
 }) {
   const shown = table.getRowModel().rows;
   const chips = keywordFilterChips(filters);
@@ -61,7 +66,10 @@ export function KeywordsFilterBar({
           noun="keyword"
         />
         <div className="ml-auto flex items-center gap-2">
-          <ColumnMenu columns={table.getAllLeafColumns()} />
+          <ColumnMenu
+            columns={table.getAllLeafColumns()}
+            options={viewOptions}
+          />
           <ExportCsvButton
             subject="keywords"
             disabled={shown.length === 0}

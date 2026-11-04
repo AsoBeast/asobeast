@@ -3,7 +3,12 @@ import { join } from 'path';
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient, Store } from '@prisma/client';
-import { MetadataAuditResult, TrackedKeywordItem } from '@asobeast/shared';
+import {
+  KeywordBreakdown,
+  KeywordMarkSegment,
+  MetadataAuditResult,
+  TrackedKeywordItem,
+} from '@asobeast/shared';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { utcToday } from '../src/analytics/analytics.support';
@@ -74,6 +79,41 @@ describe('KeywordsController table facts (e2e)', () => {
         active: true,
         createdAt,
       },
+    });
+    return keyword.id;
+  };
+
+  const seedListing = (
+    appId: string,
+    texts: {
+      title: string;
+      subtitle?: string;
+      summary?: string;
+      description?: string;
+    },
+    where: { country?: string; localization?: string } = {},
+  ) =>
+    prisma.appSnapshot.create({
+      data: {
+        appId,
+        description: '',
+        raw: {},
+        ...texts,
+        ...where,
+      },
+    });
+
+  const trackIn = async (
+    appId: string,
+    text: string,
+    country = 'us',
+    store: Store = Store.APP_STORE,
+  ) => {
+    const keyword = await prisma.keyword.create({
+      data: { text, store, country },
+    });
+    await prisma.trackedKeyword.create({
+      data: { appId, keywordId: keyword.id, source: 'MANUAL', active: true },
     });
     return keyword.id;
   };
@@ -407,41 +447,6 @@ describe('KeywordsController table facts (e2e)', () => {
     });
   });
   describe('uncovered', () => {
-    const seedListing = (
-      appId: string,
-      texts: {
-        title: string;
-        subtitle?: string;
-        summary?: string;
-        description?: string;
-      },
-      where: { country?: string; localization?: string } = {},
-    ) =>
-      prisma.appSnapshot.create({
-        data: {
-          appId,
-          description: '',
-          raw: {},
-          ...texts,
-          ...where,
-        },
-      });
-
-    const trackIn = async (
-      appId: string,
-      text: string,
-      country = 'us',
-      store: Store = Store.APP_STORE,
-    ) => {
-      const keyword = await prisma.keyword.create({
-        data: { text, store, country },
-      });
-      await prisma.trackedKeyword.create({
-        data: { appId, keywordId: keyword.id, source: 'MANUAL', active: true },
-      });
-      return keyword.id;
-    };
-
     const verdicts = async (appId: string) =>
       new Map(
         (await list(appId)).map((item) => [
@@ -586,6 +591,261 @@ describe('KeywordsController table facts (e2e)', () => {
       const [item] = await list(primary.id);
 
       expect(item).not.toHaveProperty('uncovered');
+    });
+  });
+
+  describe('matchedIn', () => {
+    const marksOf = async (appId: string) =>
+      new Map(
+        (await list(appId)).map((item) => [
+          `${item.country}:${item.text}`,
+          item.matchedIn,
+        ]),
+      );
+
+    const placesOf = (segments: KeywordMarkSegment[] | undefined) =>
+      (segments ?? []).flatMap((segment) =>
+        segment.surface
+          ? [`${segment.text}:${segment.surface}:${segment.match}`]
+          : [],
+      );
+
+    const seedHome = async () => {
+      const primary = await seedApp();
+      await seedListing(primary.id, {
+        title: 'Focus Timer Pro',
+        subtitle: 'Study sessions and café finder',
+      });
+      await api
+        .put(`/apps/${primary.id}/keyword-field`)
+        .send({ text: 'pomodoro,habit' })
+        .expect(200);
+      return primary;
+    };
+
+    it('marks the title, the subtitle and the saved keyword field', async () => {
+      const primary = await seedHome();
+      await trackIn(primary.id, 'focus timer');
+      await trackIn(primary.id, 'focus study');
+
+      const marks = await marksOf(primary.id);
+
+      expect(marks.get('us:focus timer')).toEqual([
+        { text: 'focus timer', surface: 'title', match: 'exact' },
+      ]);
+      expect(marks.get('us:focus study')).toEqual([
+        { text: 'focus', surface: 'title', match: 'exact' },
+        { text: ' ', surface: null },
+        { text: 'study', surface: 'subtitle', match: 'exact' },
+      ]);
+      expect(marks.get('us:pomodoro')).toEqual([
+        { text: 'pomodoro', surface: 'keywordField', match: 'exact' },
+      ]);
+    });
+
+    it('leaves the field off a keyword with no word in the listing', async () => {
+      const primary = await seedHome();
+      await trackIn(primary.id, 'unrelated words');
+
+      const item = (await list(primary.id)).find(
+        (row) => row.text === 'unrelated words',
+      );
+
+      expect(item).toBeDefined();
+      expect(item).not.toHaveProperty('matchedIn');
+    });
+
+    it('marks a word of another localization the market reads', async () => {
+      const primary = await seedHome();
+      await prisma.appLocalization.create({
+        data: {
+          appId: primary.id,
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          localization: 'es-MX',
+          origin: 'manual',
+        },
+      });
+      await seedListing(
+        primary.id,
+        { title: 'Temporizador de enfoque' },
+        { localization: 'es-MX' },
+      );
+      await api
+        .put(`/apps/${primary.id}/keyword-field`)
+        .query({ localization: 'es-MX' })
+        .send({ text: 'concentracion' })
+        .expect(200);
+      await trackIn(primary.id, 'enfoque temporizador');
+
+      const marks = await marksOf(primary.id);
+
+      expect(placesOf(marks.get('us:enfoque temporizador'))).toEqual([
+        'enfoque temporizador:title:exact',
+      ]);
+      expect(placesOf(marks.get('us:concentracion'))).toEqual([
+        'concentracion:keywordField:exact',
+      ]);
+    });
+
+    it('marks a keyword field only in a market that reads a saved one', async () => {
+      const primary = await seedHome();
+      await seedListing(
+        primary.id,
+        { title: 'Gewohnheiten', subtitle: 'Fokus' },
+        { country: 'de' },
+      );
+      await trackIn(primary.id, 'habit', 'de');
+
+      expect((await marksOf(primary.id)).get('de:habit')).toBeUndefined();
+
+      await api
+        .put(`/apps/${primary.id}/keyword-field`)
+        .query({ country: 'de', localization: 'de' })
+        .send({ text: 'habit' })
+        .expect(200);
+
+      expect(placesOf((await marksOf(primary.id)).get('de:habit'))).toEqual([
+        'habit:keywordField:exact',
+      ]);
+    });
+
+    it('judges a market on its own listing and falls back to the home one', async () => {
+      const primary = await seedHome();
+      await seedListing(
+        primary.id,
+        { title: 'Gewohnheiten' },
+        { country: 'de' },
+      );
+      await trackIn(primary.id, 'gewohnheiten', 'de');
+      await trackIn(primary.id, 'focus', 'de');
+      await trackIn(primary.id, 'focus', 'fr');
+
+      const marks = await marksOf(primary.id);
+
+      expect(placesOf(marks.get('de:gewohnheiten'))).toEqual([
+        'gewohnheiten:title:exact',
+      ]);
+      expect(marks.get('de:focus')).toBeUndefined();
+      expect(placesOf(marks.get('fr:focus'))).toEqual(['focus:title:exact']);
+    });
+
+    it('marks a paused keyword too', async () => {
+      const primary = await seedHome();
+      const keywordId = await trackIn(primary.id, 'focus timer');
+      await api
+        .patch(`/apps/${primary.id}/keywords/${keywordId}`)
+        .send({ active: false })
+        .expect(200);
+
+      expect(
+        placesOf((await marksOf(primary.id)).get('us:focus timer')),
+      ).toEqual(['focus timer:title:exact']);
+    });
+
+    it('marks a word found only with accents ignored as folded', async () => {
+      const primary = await seedHome();
+      await trackIn(primary.id, 'cafe finder');
+
+      expect((await marksOf(primary.id)).get('us:cafe finder')).toEqual([
+        { text: 'cafe', surface: 'subtitle', match: 'folded' },
+        { text: ' ', surface: null },
+        { text: 'finder', surface: 'subtitle', match: 'exact' },
+      ]);
+    });
+
+    it('splits every keyword into runs that join back into its text', async () => {
+      const primary = await seedHome();
+      for (const text of ['focus timer', 'study app', 'cafe finder']) {
+        await trackIn(primary.id, text);
+      }
+
+      for (const item of await list(primary.id)) {
+        if (item.matchedIn === undefined) continue;
+        expect(item.matchedIn.map((segment) => segment.text).join('')).toBe(
+          item.text,
+        );
+      }
+    });
+
+    it('marks a Google Play title and short description and never the description', async () => {
+      const primary = await prisma.app.create({
+        data: {
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          store: Store.GOOGLE_PLAY,
+          storeAppId: 'com.focus.timer',
+          country: 'us',
+          name: 'Focus Timer',
+        },
+      });
+      await seedListing(primary.id, {
+        title: 'Focus Timer',
+        summary: 'Pomodoro sessions',
+        description: 'Plan your deep work.',
+      });
+      for (const text of ['focus pomodoro', 'deep work']) {
+        await trackIn(primary.id, text, 'us', Store.GOOGLE_PLAY);
+      }
+
+      const marks = await marksOf(primary.id);
+
+      expect(placesOf(marks.get('us:focus pomodoro'))).toEqual([
+        'focus:title:exact',
+        'pomodoro:shortDescription:exact',
+      ]);
+      expect(marks.get('us:deep work')).toBeUndefined();
+    });
+
+    it('agrees with the coverage table and the keyword breakdown', async () => {
+      const primary = await seedHome();
+      const studyId = await trackIn(primary.id, 'focus study');
+      for (const text of ['focus timer', 'unrelated words', 'cafe finder']) {
+        await trackIn(primary.id, text);
+      }
+      const audit = (
+        await api.get(`/apps/${primary.id}/metadata/audit`).expect(200)
+      ).body as MetadataAuditResult;
+      const marks = await marksOf(primary.id);
+
+      for (const row of audit.coverage.filter((each) => !each.uncovered)) {
+        const segments = marks.get(`${row.country}:${row.text}`) ?? [];
+        expect(
+          segments.every(
+            (segment) => segment.surface !== null || segment.text.trim() === '',
+          ),
+        ).toBe(true);
+      }
+      const breakdown = (
+        await api
+          .get(`/apps/${primary.id}/keywords/${studyId}/breakdown`)
+          .expect(200)
+      ).body as KeywordBreakdown;
+      const fields = breakdown.apps[0].listings[0].fields;
+      const wordIn = (field: string, word: string) =>
+        fields
+          .find((each) => each.field === field)
+          ?.words.find((each) => each.word === word)?.match;
+
+      expect(wordIn('title', 'focus')).toBe('exact');
+      expect(wordIn('subtitle', 'study')).toBe('exact');
+      expect(placesOf(marks.get('us:focus study'))).toEqual([
+        'focus:title:exact',
+        'study:subtitle:exact',
+      ]);
+    });
+
+    it('leaves the marks off the answers that do not ask for them', async () => {
+      const primary = await seedHome();
+
+      const added = await api
+        .post(`/apps/${primary.id}/keywords`)
+        .send({ keywords: ['focus timer'] })
+        .expect(201);
+      const audit = await api
+        .get(`/apps/${primary.id}/metadata/audit`)
+        .expect(200);
+
+      expect(JSON.stringify(added.body)).not.toContain('matchedIn');
+      expect(JSON.stringify(audit.body)).not.toContain('matchedIn');
     });
   });
 });

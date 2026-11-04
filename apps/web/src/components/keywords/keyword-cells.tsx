@@ -1,8 +1,10 @@
 "use client";
 
+import { createContext, useContext } from "react";
 import { LoaderCircle, StickyNote } from "lucide-react";
 import type { PlayAcquisitions, TrackedKeywordItem } from "@asobeast/shared";
 import { formatCheckedPosition } from "@asobeast/shared";
+import { MatchedText } from "@/components/keyword-match/MatchedText";
 import { Badge } from "@/components/ui/badge";
 import {
   Popover,
@@ -226,6 +228,28 @@ export function NoteButton({ note }: { note: string }) {
         {note}
       </PopoverContent>
     </Popover>
+  );
+}
+
+export const ListingMarksContext = createContext(true);
+
+export function KeywordCell({ keyword }: { keyword: TrackedKeywordItem }) {
+  const marks = useContext(ListingMarksContext);
+  return (
+    <span className="flex max-w-40 items-center gap-2 font-medium md:max-w-64">
+      <span title={keyword.text} className="truncate">
+        <MatchedText
+          segments={marks ? keyword.matchedIn : null}
+          fallback={keyword.text}
+        />
+      </span>
+      {keyword.note ? <NoteButton note={keyword.note} /> : null}
+      {!keyword.active ? (
+        <Badge variant="secondary" className="shrink-0">
+          Paused
+        </Badge>
+      ) : null}
+    </span>
   );
 }
 

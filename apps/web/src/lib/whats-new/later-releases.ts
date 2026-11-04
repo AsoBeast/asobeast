@@ -29,6 +29,11 @@ export const LATER_RELEASES: readonly Release[] = [
         text: "Each keyword can carry up to two short verdicts, such as Dropping, Page 1 close, Beatable or Not in listing, and the last row of the table adds up the keywords you are looking at: how many rank, their average position and their average popularity and difficulty.",
       },
       {
+        kind: "new",
+        title: "See which words your listing holds",
+        text: "Inside each keyword on the keywords table, the words your title, subtitle or saved keyword field already hold are highlighted, each place in its own colour, and on Google Play the title and short description. Turn the highlights off under Columns.",
+      },
+      {
         kind: "improved",
         title: "A clearer sign up",
         text: "On the hosted service you confirm your email first, then pick a plan on one page that shows the price, what is included and the questions people ask most.",

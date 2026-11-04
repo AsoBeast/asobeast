@@ -279,6 +279,22 @@ Under the facts, a chart draws the keyword's position over the last 7, 30 or 90 
 
 When an active keyword's newest check is older than yesterday UTC, the chart button beside its position turns into a clock, the popover opens with the day of that check, and the change since yesterday is hidden. The position is the one from that day. See [How do I know a position is current?](/concepts/positions#how-do-i-know-a-position-is-current) for what stops a check.
 
+### See which words your listing holds
+
+Each keyword in the table marks the words that the listing of the keyword's own market already holds. On the App Store a word is marked when it appears in the title, the subtitle or the keyword field you saved, in any localization the storefront reads. On Google Play it is marked when it appears in the title or the short description. A word that none of those places holds stays plain, so a keyword with no mark is not in your listing at all.
+
+| Mark | The word is in |
+| --- | --- |
+| Green | the title |
+| Blue | the subtitle on the App Store, the short description on Google Play |
+| Amber | the keyword field you saved, App Store only |
+
+A word found in more than one place takes the first of those, in that order. Every mark also has a hidden label such as "in title" for screen readers, so colour is never the only signal, and the **Columns** menu shows the colours next to the **Listing marks** choice. A dotted mark is a word that matches only when accents are ignored, the same dotted mark as in the [keyword breakdown](/guides/competitors#why-does-a-competitor-rank-above-you).
+
+The marks use the word rules of the [coverage table](/guides/metadata-workbench#check-keyword-coverage): a keyword that the coverage table calls covered has every word marked. They also show what coverage cannot, because words found in different places are marked even when no single field holds the whole phrase. The description is never marked, and a market where you saved no keyword field that it reads shows no amber marks. Markets are judged on their own listing, or on your home listing when the market has none captured.
+
+The **Listing marks** choice in the **Columns** menu hides the marks. It is remembered in this browser, is not part of the link and is on by default. The CSV export does not change. The same data is in the `matchedIn` field of `list_keywords` and of `GET /apps/{id}/keywords`: the keyword text in consecutive runs, each with the place that holds it (`title`, `subtitle`, `shortDescription` or `keywordField`, or `null`) and whether it matched `exact` or only with accents ignored (`folded`).
+
 ### Insights and totals
 
 The **Insights** column gives each keyword up to two verdicts worked out from the numbers on its row. Each badge is a word, never only a colour, and pointing at one shows the reason behind it.
@@ -294,7 +310,7 @@ When more than two apply, the table shows the first two in the order of the tabl
 
 The last row of the table totals the keywords it shows: how many there are, how many rank, how many were checked and not found and how many were never checked, the average position of the ranked ones and how many sit in the top 10, and the average popularity and difficulty of the scored ones. It counts the rows left after every filter and the search, so a narrowed table reads its own totals, and a paused keyword on screen counts like any other. Each figure sits under its column, so hiding a column hides its figure. The row stays at the bottom of the table while the rows above it scroll.
 
-**Columns** hides and shows columns. Two columns start hidden: **Added**, the UTC day the app started tracking the keyword in that market, and **Competitors in top 10**, how many of your competitors are in the newest stored top 10 of the keyword. Both sort like the others, **Added** newest first and **Competitors in top 10** with the most first, and both are in the CSV. A dash in **Competitors in top 10** means you track no competitors or the keyword has no top 10 snapshot from today or yesterday. See [How many competitors are in the top 10?](/concepts/positions#how-many-competitors-are-in-the-top-10) The choice is remembered in this browser and is not part of the link. On a phone the table starts with the keyword, position and opportunity columns, and the filters move into a **Filters** panel.
+**Columns** hides and shows columns. Two columns start hidden: **Added**, the UTC day the app started tracking the keyword in that market, and **Competitors in top 10**, how many of your competitors are in the newest stored top 10 of the keyword. Both sort like the others, **Added** newest first and **Competitors in top 10** with the most first, and both are in the CSV. A dash in **Competitors in top 10** means you track no competitors or the keyword has no top 10 snapshot from today or yesterday. See [How many competitors are in the top 10?](/concepts/positions#how-many-competitors-are-in-the-top-10) It also holds **Listing marks**, which is not a column but hides the marks inside the keyword column. The choice is remembered in this browser and is not part of the link. On a phone the table starts with the keyword, position and opportunity columns, and the filters move into a **Filters** panel.
 
 ## Read the opportunity map
 

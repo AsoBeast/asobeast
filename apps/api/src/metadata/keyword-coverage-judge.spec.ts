@@ -1,6 +1,9 @@
 import { Store } from '@prisma/client';
 import { ListingTexts, LocalizedTexts } from '../apps/listing-texts';
-import { judgeKeywordCoverage } from './keyword-coverage-judge';
+import {
+  judgeKeywordCoverage,
+  keywordSurfaces,
+} from './keyword-coverage-judge';
 import { fieldPhrases } from './listing-surfaces';
 
 const texts = (overrides: Partial<ListingTexts> = {}): ListingTexts => ({
@@ -174,5 +177,64 @@ describe('judgeKeywordCoverage', () => {
 
     expect(coverage.fields.every((field) => !field.covered)).toBe(true);
     expect(coverage.uncovered).toBe(true);
+  });
+});
+
+describe('keywordSurfaces', () => {
+  const home = texts({ title: 'Focus Timer', subtitle: 'Study sessions' });
+
+  it.each([
+    { market: 'de', listings: ['us', 'de'], judged: 'de' },
+    { market: 'de', listings: ['us'], judged: 'us' },
+    { market: 'us', listings: ['us'], judged: 'us' },
+    { market: 'de', listings: [], judged: 'us' },
+  ])(
+    'judges a keyword of $market in $judged when the listings are $listings',
+    ({ market, listings, judged }) => {
+      const judging = keywordSurfaces(
+        appStore,
+        market,
+        sources(listings.map((country) => [country, home])),
+      );
+
+      expect(judging.listingCountry).toBe(judged);
+    },
+  );
+
+  it('answers the surfaces coverage judges in that market', () => {
+    const judging = keywordSurfaces(
+      appStore,
+      'us',
+      sources(
+        [['us', home]],
+        [
+          [
+            'us',
+            [
+              {
+                localization: 'es-MX',
+                texts: texts({ title: 'Temporizador' }),
+              },
+            ],
+          ],
+        ],
+        [{ localization: 'en-US', phrases: ['pomodoro'] }],
+      ),
+    );
+
+    expect(judging.surfaces).toEqual([
+      { field: 'title', value: 'Focus Timer' },
+      { field: 'subtitle', value: 'Study sessions' },
+      { field: 'keywordField', value: 'pomodoro' },
+    ]);
+    expect(judging.localized).toEqual([
+      {
+        localization: 'es-MX',
+        surfaces: [
+          { field: 'title', value: 'Temporizador' },
+          { field: 'subtitle', value: '' },
+        ],
+      },
+    ]);
   });
 });

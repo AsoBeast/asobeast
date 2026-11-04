@@ -16,6 +16,7 @@ import { readScoreSignals } from '../scoring/score-signals';
 import { dropStreakOf } from './keyword-drop-streak';
 import type { RetainedPositionFacts } from './keyword-position-facts';
 import { KeywordFieldIndex, reportedSource } from './keyword-field-index';
+import type { KeywordMarker } from './keyword-marks';
 
 const DELTA_WINDOW_DAYS = 7;
 
@@ -226,6 +227,15 @@ export interface AppFacts {
   marketTexts?: ReadonlyMap<string, string>;
   inKeywordField?: KeywordFieldIndex;
   uncovered?: (keyword: { country: string; text: string }) => boolean;
+  marks?: KeywordMarker;
+}
+
+function listingMarks(
+  app: AppFacts,
+  keyword: TrackedKeywordRow['keyword'],
+): Pick<TrackedKeywordItem, 'matchedIn'> {
+  const segments = app.marks?.(keyword) ?? null;
+  return segments ? { matchedIn: segments } : {};
 }
 
 const NO_APP_FACTS: AppFacts = { snapshotText: '' };
@@ -278,5 +288,6 @@ export function toTrackedKeywordItem(
     ...(app.uncovered && row.active
       ? { uncovered: app.uncovered(row.keyword) }
       : {}),
+    ...listingMarks(app, row.keyword),
   };
 }

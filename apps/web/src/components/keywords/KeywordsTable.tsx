@@ -28,6 +28,8 @@ import { KeywordsBulkActions } from "./KeywordsBulkActions";
 import { KeywordsEmptyState } from "./KeywordsEmptyState";
 import { KeywordsDataTable } from "./KeywordsDataTable";
 import { KeywordsFilterBar } from "./KeywordsFilterBar";
+import { ListingMarksContext } from "./keyword-cells";
+import { listingMarksOption } from "./listing-marks-option";
 import { SerpSheet } from "./serp/SerpSheet";
 import {
   useClearedSelectionFocus,
@@ -105,6 +107,7 @@ export function KeywordsTable({
     columns,
   );
 
+  const marks = listingMarksOption(store, visibility, setVisibility);
   const columnFilters = useKeywordColumnFilters(filters);
 
   const table = useTable({
@@ -162,6 +165,7 @@ export function KeywordsTable({
           filters={filters}
           setFilters={setFilters}
           today={today}
+          viewOptions={[marks]}
         />
         {view === "map" ? (
           <KeywordMap
@@ -172,11 +176,13 @@ export function KeywordsTable({
             onClearFilters={() => void setFilters(null)}
           />
         ) : null}
-        <KeywordsDataTable
-          table={table}
-          emptyBody={exactSearchEmptyBody(filters.q)}
-          onClearFilters={() => void setFilters(null)}
-        />
+        <ListingMarksContext value={marks.checked}>
+          <KeywordsDataTable
+            table={table}
+            emptyBody={exactSearchEmptyBody(filters.q)}
+            onClearFilters={() => void setFilters(null)}
+          />
+        </ListingMarksContext>
 
         {selectedIds.length > 0 ? (
           <div className="sticky bottom-4 z-30 flex justify-center">

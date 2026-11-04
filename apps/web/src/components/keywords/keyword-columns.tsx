@@ -9,7 +9,6 @@ import type {
   TrackedKeywordItem,
 } from "@asobeast/shared";
 import type { KeywordTableFeatures } from "./keyword-table-features";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { InfoTip } from "@/components/ui/info-tip";
@@ -25,7 +24,7 @@ import { keywordZoneFilter } from "./keyword-filters";
 import { KeywordRowActions } from "./KeywordRowActions";
 import type { PositionHistoryContext } from "./PositionHistoryPopover";
 import {
-  NoteButton,
+  KeywordCell,
   PlayAcquisitionsCell,
   PositionCell,
   TagBadges,
@@ -155,19 +154,7 @@ function identityColumns() {
         <SortableHeader column={column} label="Keyword" />
       ),
       footer: keywordCountFooter,
-      cell: ({ row }) => (
-        <span className="flex max-w-40 items-center gap-2 font-medium md:max-w-64">
-          <span title={row.original.text} className="truncate">
-            {row.original.text}
-          </span>
-          {row.original.note ? <NoteButton note={row.original.note} /> : null}
-          {!row.original.active ? (
-            <Badge variant="secondary" className="shrink-0">
-              Paused
-            </Badge>
-          ) : null}
-        </span>
-      ),
+      cell: ({ row }) => <KeywordCell keyword={row.original} />,
     }),
     columnHelper.accessor((row) => row.tags ?? [], {
       id: "tags",

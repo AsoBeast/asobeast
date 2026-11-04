@@ -10,6 +10,7 @@ import {
   SuggestReachStatus,
 } from '../index';
 import type { RankMilestoneTier } from '../rank';
+import type { KeywordWordMatch } from './keyword-breakdown';
 import type { AppStoreLocalization } from '../storefronts/app-store-localizations';
 import type { PaidPlanName, QuotaUsage } from './plans';
 
@@ -39,6 +40,20 @@ export interface ScoreProvenance {
   formulaVersion: string;
   capturedAt: string;
   confidence: ScoringConfidence;
+}
+
+export const KEYWORD_MARK_SURFACES = [
+  'title',
+  'subtitle',
+  'shortDescription',
+  'keywordField',
+] as const;
+export type KeywordMarkSurface = (typeof KEYWORD_MARK_SURFACES)[number];
+
+export interface KeywordMarkSegment {
+  text: string;
+  surface: KeywordMarkSurface | null;
+  match?: Exclude<KeywordWordMatch, 'none'>;
 }
 
 export interface TrackedKeywordItem {
@@ -75,6 +90,7 @@ export interface TrackedKeywordItem {
   trackedAt?: string;
   competitorsInTop10?: number | null;
   playAcquisitions?: PlayAcquisitions | null;
+  matchedIn?: KeywordMarkSegment[];
 }
 
 export interface PlayAcquisitions {
