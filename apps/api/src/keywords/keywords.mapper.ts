@@ -4,7 +4,6 @@ import {
   isCheckFresh,
   isScoringConfidence,
   isScoringSource,
-  KeywordMarkSegment,
   RankMilestoneTier,
   ScoreProvenance,
   ScoreSignals,
@@ -17,6 +16,7 @@ import { readScoreSignals } from '../scoring/score-signals';
 import { dropStreakOf } from './keyword-drop-streak';
 import type { RetainedPositionFacts } from './keyword-position-facts';
 import { KeywordFieldIndex, reportedSource } from './keyword-field-index';
+import type { KeywordMarker } from './keyword-marks';
 
 const DELTA_WINDOW_DAYS = 7;
 
@@ -227,10 +227,7 @@ export interface AppFacts {
   marketTexts?: ReadonlyMap<string, string>;
   inKeywordField?: KeywordFieldIndex;
   uncovered?: (keyword: { country: string; text: string }) => boolean;
-  marks?: (keyword: {
-    country: string;
-    text: string;
-  }) => KeywordMarkSegment[] | null;
+  marks?: KeywordMarker;
 }
 
 function listingMarks(
