@@ -47,6 +47,8 @@ function nextDotId(
 const isNavigationKey = (key: string): boolean =>
   directionOfKey(key) !== null || Object.hasOwn(EDGE_KEYS, key);
 
+const ROVING_DOT = '[data-map-keyword][tabindex="0"]';
+
 const keepUnless =
   (keywordId: string) =>
   (current: string | null): string | null =>
@@ -167,7 +169,12 @@ export function MapSurface({
             onCloseAutoFocus={(event) => {
               event.preventDefault();
               const id = returnTo.current;
-              if (id !== null) dotIn(surfaceRef.current, id)?.focus();
+              if (id === null) return;
+              const surface = surfaceRef.current;
+              (
+                dotIn(surface, id) ??
+                surface?.querySelector<SVGGElement>(ROVING_DOT)
+              )?.focus();
             }}
           />
         )}

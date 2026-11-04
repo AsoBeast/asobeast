@@ -1142,6 +1142,23 @@ test.describe("the overlay and the list it reads", () => {
 
     await expect(overlay(page)).toContainText("focus timer");
   });
+
+  test("focus survives the open keyword leaving the list", async ({ page }) => {
+    await page.goto(MAP_URL);
+    await dot(page, "kw-map-1").focus();
+    await page.keyboard.press("Enter");
+    const history = page.getByRole("dialog", {
+      name: "Position history focus timer",
+    });
+    await expect(history).toBeVisible();
+
+    await answerRefetch(page, (rows) =>
+      rows.filter((row) => row.keywordId !== "kw-map-1"),
+    );
+
+    await expect(history).toHaveCount(0, { timeout: 25_000 });
+    expect(await activeDot(page)).not.toBeNull();
+  });
 });
 
 test("another tab's thresholds replace this tab's unsaved ones", async ({
