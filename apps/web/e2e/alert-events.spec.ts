@@ -728,7 +728,7 @@ for (const channel of CHANNELS) {
     await setSelected(eventOption(dialog, RATING_DROPPED), true);
     await expect(ratingThreshold(dialog)).toHaveText("0.1 star");
     await expect(ratingThreshold(dialog)).toHaveAccessibleDescription(
-      "Alert when the average rating falls by at least this much against seven days earlier. Needs 20 ratings. Reviews are not counted, the number shown in the store is.",
+      "Alert when the average rating falls by at least this much against seven to ten days earlier. Needs 20 ratings. Reviews are not counted, the number shown in the store is.",
     );
 
     await setSelected(eventOption(dialog, RATING_DROPPED), false);

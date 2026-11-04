@@ -1,4 +1,9 @@
-import { newRatingDrop, ratingDropAt, type RatedSnapshot } from './rating-drop';
+import {
+  newRatingDrop,
+  RATING_DROP_HISTORY_DAYS,
+  ratingDropAt,
+  type RatedSnapshot,
+} from './rating-drop';
 
 const NOW = new Date('2026-11-03T03:10:00.000Z');
 const daysAgo = (days: number): Date =>
@@ -104,5 +109,34 @@ describe('newRatingDrop', () => {
   it('raises nothing without a drop', () => {
     expect(newRatingDrop([snap(0, 4.5), snap(7, 4.5)])).toBeNull();
     expect(newRatingDrop([])).toBeNull();
+  });
+});
+
+describe('rating drop review fixes', () => {
+  it('counts a decline under a tenth as nothing even with more decimals', () => {
+    expect(ratingDropAt([snap(0, 4.55), snap(7, 4.649)], 0)).toBeNull();
+    expect(ratingDropAt([snap(0, 4.4), snap(7, 4.5)], 0)?.dropTenths).toBe(1);
+  });
+
+  it('names no version when the reference has none', () => {
+    expect(
+      ratingDropAt([snap(0, 4.3, 1200, '1.1.0'), snap(7, 4.5, 1200, null)], 0)
+        ?.version,
+    ).toBeNull();
+  });
+
+  it('compares with the last rated capture, skipping an unrated one', () => {
+    expect(
+      newRatingDrop([
+        snap(0, 4.3),
+        snap(0.5, null),
+        snap(1, 4.3),
+        snap(8, 4.5),
+      ]),
+    ).toBeNull();
+  });
+
+  it('reaches the reference of a previous capture ten days back', () => {
+    expect(RATING_DROP_HISTORY_DAYS).toBe(20);
   });
 });

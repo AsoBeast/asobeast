@@ -66,7 +66,7 @@ describe('ListingAlerts.ratingDropped', () => {
     expect(dispatch).not.toHaveBeenCalled();
   });
 
-  it('reads the home listing of the fourteen days ending at the capture', async () => {
+  it('reads the home listing of the twenty days ending at the capture', async () => {
     const { service, findMany } = build([]);
 
     await service.ratingDropped(APP, CAPTURED);
@@ -77,7 +77,7 @@ describe('ListingAlerts.ratingDropped', () => {
           appId: 'app_1',
           country: null,
           localization: null,
-          capturedAt: { gte: daysAgo(14), lte: CAPTURED },
+          capturedAt: { gte: daysAgo(20), lte: CAPTURED },
         },
         orderBy: { capturedAt: 'desc' },
       }),
