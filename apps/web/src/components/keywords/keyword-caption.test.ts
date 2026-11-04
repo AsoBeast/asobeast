@@ -6,6 +6,7 @@ const NONE = {
   playInstalls: false,
   competitors: false,
   insights: false,
+  totals: true,
 };
 
 describe("keywordTableCaption", () => {
@@ -22,9 +23,16 @@ describe("keywordTableCaption", () => {
         playInstalls: true,
         competitors: true,
         insights: true,
+        totals: true,
       }),
     ).toBe(
       "Tracked keywords with source, date added, position and its daily change, popularity, difficulty, opportunity, insight badges, Play installs per search term, 7 day change, top 10 volatility, competitors in the top 10, and a totals row.",
+    );
+  });
+
+  it("names no totals row while the table shows none", () => {
+    expect(keywordTableCaption({ ...NONE, totals: false })).toBe(
+      "Tracked keywords with source, position and its daily change, popularity, difficulty, opportunity, 7 day change, and top 10 volatility.",
     );
   });
 });

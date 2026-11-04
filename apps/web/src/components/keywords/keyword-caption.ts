@@ -5,6 +5,7 @@ export interface KeywordCaptionColumns {
   playInstalls: boolean;
   competitors: boolean;
   insights: boolean;
+  totals: boolean;
 }
 
 export function keywordTableCaption(columns: KeywordCaptionColumns): string {
@@ -20,7 +21,7 @@ export function keywordTableCaption(columns: KeywordCaptionColumns): string {
     "7 day change",
     "top 10 volatility",
     columns.competitors ? "competitors in the top 10" : null,
-    "a totals row",
+    columns.totals ? "a totals row" : null,
   ].filter((phrase) => phrase !== null);
   return `Tracked keywords with ${formatList(phrases)}.`;
 }
