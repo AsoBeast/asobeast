@@ -1,5 +1,6 @@
 import { isFloorAnswer, toDifficulty100 } from "@asobeast/shared";
 import type { KeywordSort, TrackedKeywordItem } from "@asobeast/shared";
+import type { ScorePair } from "@/lib/keyword-zones";
 
 export function scoreValue(
   keyword: TrackedKeywordItem,
@@ -27,3 +28,16 @@ export const isScoreOutdated = (keyword: TrackedKeywordItem): boolean =>
 
 export const shownScore = (value: number | null): number | null =>
   value === null ? null : Math.round(value);
+
+const clampScore = (value: number): number => Math.min(100, Math.max(0, value));
+
+export function scorePair(keyword: TrackedKeywordItem): ScorePair | null {
+  const popularity = shownScore(scoreValue(keyword, "traffic"));
+  const difficulty = shownScore(scoreValue(keyword, "difficulty"));
+  return popularity === null || difficulty === null
+    ? null
+    : {
+        popularity: clampScore(popularity),
+        difficulty: clampScore(difficulty),
+      };
+}
