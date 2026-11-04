@@ -138,8 +138,6 @@ describe('listing loss alerts (e2e)', () => {
   const rows = (event: string) =>
     prisma.alertEvent.findMany({ where: { event } });
 
-  const today = () => new Date().toISOString().slice(0, 10);
-
   it('alerts a home delisting once and again only after the app came back', async () => {
     const own = await seedApp('Own');
 
@@ -147,16 +145,18 @@ describe('listing loss alerts (e2e)', () => {
     await lost(own.id);
     const [row, ...rest] = await rows('app.delisted');
     expect(rest).toEqual([]);
-    expect(row.dedupeKey).toBe(`delisted:${own.id}:${today()}`);
     expect(row.payload).toMatchObject({ country: 'us', store: 'APP_STORE' });
     const stored = await prisma.app.findUniqueOrThrow({
       where: { id: own.id },
     });
     expect(stored.delistedAt).not.toBeNull();
+    expect(row.dedupeKey).toBe(
+      `delisted:${own.id}:${stored.delistedAt?.toISOString()}`,
+    );
 
     await refresh(own.id);
     await lost(own.id);
-    expect(await rows('app.delisted')).toHaveLength(1);
+    expect(await rows('app.delisted')).toHaveLength(2);
   });
 
   it('alerts a competitor delisting with the competitor mark', async () => {
@@ -179,8 +179,9 @@ describe('listing loss alerts (e2e)', () => {
 
     const [row, ...rest] = await rows('app.unlisted_market');
     expect(rest).toEqual([]);
-    expect(row.dedupeKey).toBe(`unlisted:${own.id}:de:${today()}`);
-    expect(row.payload as unknown as AppUnlistedMarketPayload).toMatchObject({
+    const payload = row.payload as unknown as AppUnlistedMarketPayload;
+    expect(row.dedupeKey).toBe(`unlisted:${own.id}:de:${payload.occurredAt}`);
+    expect(payload).toMatchObject({
       market: 'de',
       trackedKeywords: 2,
     });
