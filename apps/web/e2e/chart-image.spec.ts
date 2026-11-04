@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import type { Page } from "@playwright/test";
 import {
   clipboardPng,
@@ -218,5 +219,107 @@ test.describe("states without a trend offer no image", () => {
       page.getByText("Nothing captured in this range"),
     ).toBeVisible();
     await expect(buttons(page)).toHaveCount(0);
+  });
+});
+
+test.describe("the opportunity map image", () => {
+  const MAP = "/apps/app-map/keywords?view=map";
+  const mapRegion = (page: Page) =>
+    page.getByRole("region", { name: "Keyword opportunity map" });
+  const copyMap = (page: Page) =>
+    page.getByRole("button", {
+      name: "Copy image of the opportunity map",
+      exact: true,
+    });
+  const downloadMap = (page: Page) =>
+    page.getByRole("button", {
+      name: "Download PNG of the opportunity map",
+      exact: true,
+    });
+
+  test("the buttons are named from their visible words", async ({ page }) => {
+    await page.goto(MAP);
+    await expect(mapRegion(page)).toBeVisible();
+    await expect(copyMap(page)).toHaveCount(1);
+    await expect(downloadMap(page)).toHaveCount(1);
+    await expect(copyMap(page)).not.toHaveAttribute("aria-label", /.+/);
+    await expect(downloadMap(page)).not.toHaveAttribute("aria-label", /.+/);
+  });
+
+  test("Download PNG saves a readable name", async ({ page }) => {
+    await page.goto(MAP);
+    await expect(mapRegion(page)).toBeVisible();
+    const today = utcDaysAgo(0);
+
+    const [file] = await Promise.all([
+      page.waitForEvent("download"),
+      downloadMap(page).click(),
+    ]);
+
+    expect(file.suggestedFilename()).toBe(
+      `asobeast-opportunity-map-opportunity-map-lab-${today}-${today}.png`,
+    );
+    const path = await file.path();
+    expect(isPng(readFileSync(path))).toBe(true);
+  });
+
+  const copiedReading = async (page: Page, url: string) => {
+    await page.goto(url);
+    await expect(mapRegion(page)).toBeVisible();
+    await copyMap(page).click();
+    await expect(page.getByText("Chart copied")).toBeVisible();
+    const png = await clipboardPng(page);
+    expect(isPng(png)).toBe(true);
+    return readPng(page, png, "--chart-1");
+  };
+
+  test("Copy image puts a PNG of the map on the clipboard", async ({
+    page,
+  }) => {
+    const reading = await copiedReading(page, MAP);
+    expect(reading.width).toBeGreaterThan(600);
+    expect(reading.corner).toEqual(reading.background);
+    expect(reading.seriesPixels).toBeGreaterThan(100);
+  });
+
+  test("the picture follows the dark theme", async ({ page }) => {
+    await page.addInitScript(() =>
+      window.localStorage.setItem("theme", "dark"),
+    );
+    await page.emulateMedia({ colorScheme: "dark" });
+    const reading = await copiedReading(page, MAP);
+    expect(reading.corner).toEqual(reading.background);
+    expect(reading.seriesPixels).toBeGreaterThan(100);
+  });
+
+  test("the picture keeps the dimmed dots of a zone", async ({ page }) => {
+    const full = await copiedReading(page, MAP);
+    const zoned = await copiedReading(page, `${MAP}&zone=quickWins`);
+    expect(zoned.seriesPixels).toBeGreaterThan(0);
+    expect(zoned.seriesPixels).toBeLessThan(full.seriesPixels);
+  });
+
+  test("no image without a chart", async ({ page }) => {
+    for (const url of [
+      "/apps/app-tags/keywords?view=map",
+      "/apps/app-unchecked/keywords?view=map",
+      `${MAP}&q=zzzz`,
+    ]) {
+      await page.goto(url);
+      await expect(
+        page.locator('[data-slot="card"]', { hasText: "Opportunity map" }),
+      ).toBeVisible();
+      await expect(copyMap(page)).toHaveCount(0);
+      await expect(downloadMap(page)).toHaveCount(0);
+    }
+  });
+
+  test("while a copy runs the button keeps focus", async ({ page }) => {
+    await page.goto(MAP);
+    await expect(mapRegion(page)).toBeVisible();
+    await copyMap(page).focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByText("Chart copied")).toBeVisible();
+    await expect(copyMap(page)).toBeFocused();
   });
 });

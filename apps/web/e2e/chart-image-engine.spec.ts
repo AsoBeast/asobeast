@@ -51,3 +51,43 @@ test("Download PNG saves a picture in this engine", async ({ page }) => {
     /^asobeast-rankings-focus-timer-.*\.png$/,
   );
 });
+
+const opportunityMap = (page: Page) =>
+  page.getByRole("region", { name: "Keyword opportunity map" });
+
+test("Copy image draws the opportunity map in this engine", async ({
+  page,
+}) => {
+  await recordClipboardPng(page);
+  await page.goto("/apps/app-map/keywords?view=map");
+  await expect(opportunityMap(page)).toBeVisible();
+
+  await page
+    .getByRole("button", { name: "Copy image of the opportunity map" })
+    .click();
+  await expect(page.getByText("Chart copied")).toBeVisible();
+
+  const png = await writtenPng(page);
+  expect(isPng(png)).toBe(true);
+  const reading = await readPng(page, png, "--chart-1");
+  expect(reading.corner).toEqual(reading.background);
+  expect(reading.seriesPixels).toBeGreaterThan(100);
+});
+
+test("Download PNG saves the opportunity map in this engine", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-map/keywords?view=map");
+  await expect(opportunityMap(page)).toBeVisible();
+
+  const [file] = await Promise.all([
+    page.waitForEvent("download"),
+    page
+      .getByRole("button", { name: "Download PNG of the opportunity map" })
+      .click(),
+  ]);
+
+  expect(file.suggestedFilename()).toMatch(
+    /^asobeast-opportunity-map-opportunity-map-lab-.*\.png$/,
+  );
+});

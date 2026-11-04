@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useId, useMemo } from "react";
+import { useCallback, useId, useMemo, useRef } from "react";
 import { useQueryState } from "nuqs";
 import type { TrackedKeywordItem } from "@asobeast/shared";
 import { ChartNotice, trendState } from "@/components/charts/ChartStates";
@@ -8,7 +8,6 @@ import { CHART_HEIGHT } from "@/components/charts/theme";
 import { Button } from "@/components/ui/button";
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -22,6 +21,7 @@ import { useZoneThresholds } from "../use-zone-thresholds";
 import { KeywordMapChart } from "./KeywordMapChart";
 import { mapPoints, type MapPoint } from "./map-points";
 import { DotGlyph } from "./MapDot";
+import { MapImageButtons } from "./MapImageButtons";
 import { MapSurface } from "./MapSurface";
 import { MapZoneLegend, MapZoneTable } from "./MapZoneLegend";
 import { ThresholdsPopover } from "./ThresholdsPopover";
@@ -107,15 +107,18 @@ function MapNotice({
 export function KeywordMap({
   keywords,
   history,
+  market,
   today,
   onClearFilters,
 }: {
   keywords: readonly TrackedKeywordItem[];
   history: PositionHistoryContext;
+  market: string;
   today: string;
   onClearFilters: () => void;
 }) {
   const helpId = useId();
+  const chartRef = useRef<HTMLDivElement>(null);
   const { thresholds } = useZoneThresholds();
   const [zone, setZone] = useQueryState("zone", keywordZoneParser);
   const { points, unplotted } = useMemo(
@@ -142,15 +145,20 @@ export function KeywordMap({
       <CardHeader>
         <CardDescription>Opportunity map</CardDescription>
         <CardTitle>Popularity by difficulty</CardTitle>
-        {ready ? (
-          <CardAction>
-            <ThresholdsPopover />
-          </CardAction>
-        ) : null}
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         {ready ? (
           <>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <ThresholdsPopover />
+              <MapImageButtons
+                chartRef={chartRef}
+                appId={history.appId}
+                store={history.store}
+                market={market}
+                today={today}
+              />
+            </div>
             <MapZoneLegend
               counts={counts}
               thresholds={thresholds}
@@ -170,6 +178,7 @@ export function KeywordMap({
                 zone={zone}
                 describedBy={helpId}
                 onZone={toggleZone}
+                chartRef={chartRef}
               />
             </MapSurface>
             {unplotted > 0 ? (

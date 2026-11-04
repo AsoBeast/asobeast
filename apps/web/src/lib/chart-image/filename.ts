@@ -15,7 +15,7 @@ export function slugPart(value: string): string {
 }
 
 export interface ChartImageName {
-  chart: "rankings" | "position-history";
+  chart: "rankings" | "position-history" | "opportunity-map";
   appName: string | null;
   appId: string;
   keyword?: string;
