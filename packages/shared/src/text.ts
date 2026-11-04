@@ -159,9 +159,13 @@ export function isStopword(token: string): boolean {
 
 const ACCENTED_LETTER = /([\p{Script=Latin}\p{Script=Greek}])\p{M}+/gu;
 
-export function searchKey(input: string): string {
-  return normalizeText(input)
+export function foldAccents(input: string): string {
+  return lowerCase(input)
     .normalize('NFKD')
     .replace(ACCENTED_LETTER, '$1')
     .normalize('NFC');
+}
+
+export function searchKey(input: string): string {
+  return foldAccents(normalizeText(input));
 }

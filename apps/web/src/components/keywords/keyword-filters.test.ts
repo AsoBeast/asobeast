@@ -109,6 +109,18 @@ describe("the quoted search", () => {
     ]);
   });
 
+  it("keeps accents in an exact phrase chip", () => {
+    expect(keywordFilterChips({ ...NONE, q: '"Café Finder"' })).toEqual([
+      { key: "q", label: "Exact phrase: café finder" },
+    ]);
+  });
+
+  it("keeps accents in the exact phrase empty state", () => {
+    expect(exactSearchEmptyBody('"Café Finder"')).toBe(
+      'No keyword is exactly "café finder" with these filters. Remove the quotes to match keywords that contain it.',
+    );
+  });
+
   it("names an unbalanced quote as a plain search", () => {
     expect(keywordFilterChips({ ...NONE, q: '"focus' })).toEqual([
       { key: "q", label: 'Search: "focus' },

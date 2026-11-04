@@ -45,10 +45,17 @@ describe("matchesKeywordSearch", () => {
     [exact("habit tracker"), "my habit tracker", false],
     [exact("habit tracker"), "habit", false],
     [exact("café"), "café", true],
-    [exact("café"), "cafe", false],
+    [exact("café"), "cafe", true],
     [exact("dr mario"), "dr. mario", true],
     [contains("tracker"), "habit tracker app", true],
     [contains("tracker"), "habit", false],
+    [contains("cafe"), "café finder", true],
+    [contains("cafe"), "Café Finder", true],
+    [contains("café"), "cafe finder", true],
+    [contains("?"), "what?", true],
+    [contains("?"), "habit", false],
+    [contains("c++"), "c++ library", true],
+    [contains("c++"), "cafe", false],
     [none, "anything", true],
   ])("matches %j against %j: %s", (search, text, expected) => {
     expect(matchesKeywordSearch(text, search)).toBe(expected);

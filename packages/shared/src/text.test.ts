@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  foldAccents,
   isStopword,
   normalizeText,
   searchKey,
@@ -135,5 +136,16 @@ describe('searchKey', () => {
 
   it('leaves normalizeText unchanged', () => {
     expect(normalizeText('Géo  Quiz!')).toBe('géo quiz');
+  });
+});
+
+describe('foldAccents', () => {
+  it('folds case and diacritics but keeps punctuation and spacing', () => {
+    expect(foldAccents('Café, Über!')).toBe('cafe, uber!');
+    expect(foldAccents('Café,  Über!')).toBe('cafe,  uber!');
+  });
+
+  it('differs from searchKey by preserving punctuation and spacing', () => {
+    expect(searchKey('Café, Über!')).toBe('cafe uber');
   });
 });

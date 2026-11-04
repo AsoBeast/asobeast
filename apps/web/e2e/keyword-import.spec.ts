@@ -942,3 +942,26 @@ test("P-WEB-19 reads an AppFollow export from its header row", async ({
   await expect(dialog.getByRole("status")).toHaveText("2 new");
   await expect(rowOf(dialog, /alpha one/).getByText("8")).toBeVisible();
 });
+
+test("P-WEB-20 search folds accents on the keywords page", async ({ page }) => {
+  const dialog = await openDialog(page);
+  await choose(dialog, "keyword\ncafé\n");
+  await dialog.getByRole("button", { name: "Import 1 keyword" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByText("Tracking 6 keywords")).toBeVisible();
+  await expect(
+    page.getByRole("cell", { name: "pomodoro", exact: true }),
+  ).toBeVisible();
+
+  const search = page.getByRole("textbox", { name: "Search keywords" });
+  await search.fill("cafe");
+
+  await expect(
+    page
+      .getByRole("table", { name: /Tracked keywords/ })
+      .getByRole("row", { name: /café/ }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("cell", { name: "pomodoro", exact: true }),
+  ).toBeHidden();
+});

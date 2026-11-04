@@ -1,4 +1,4 @@
-import { normalizeText } from "@asobeast/shared";
+import { foldAccents, normalizeText, searchKey } from "@asobeast/shared";
 
 export type KeywordSearch =
   | { kind: "none" }
@@ -34,6 +34,7 @@ export function matchesKeywordSearch(
   search: KeywordSearch,
 ): boolean {
   if (search.kind === "none") return true;
-  if (search.kind === "exact") return normalizeText(text) === search.phrase;
-  return text.toLowerCase().includes(search.fragment);
+  if (search.kind === "exact")
+    return searchKey(text) === searchKey(search.phrase);
+  return foldAccents(text).includes(foldAccents(search.fragment));
 }
