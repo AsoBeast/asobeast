@@ -41,6 +41,16 @@ describe('captureReading', () => {
     });
   });
 
+  it.each([
+    [1, 1],
+    [DISCOVERY_CAPTURE_DEPTH, DISCOVERY_CAPTURE_DEPTH],
+    [0, null],
+  ])('reads a captured position %i as %p', (position, read) => {
+    expect(
+      captureReading([TODAY], new Map([[TODAY, position]]))?.position,
+    ).toBe(read);
+  });
+
   it('never reads a position past the capture depth', () => {
     expect(captureReading([YESTERDAY], new Map([[YESTERDAY, 51]]))).toEqual({
       position: null,
