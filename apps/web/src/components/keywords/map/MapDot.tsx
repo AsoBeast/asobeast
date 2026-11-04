@@ -106,7 +106,7 @@ export function MapDotShape({ cx, cy, payload }: ScatterShapeProps) {
   return (
     <g
       className="group outline-none"
-      role="button"
+      role={checked ? "button" : "img"}
       tabIndex={rovingId === payload.keywordId ? 0 : -1}
       aria-label={dotName(payload, multiMarket)}
       aria-haspopup={checked ? "dialog" : undefined}
