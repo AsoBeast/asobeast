@@ -208,6 +208,16 @@ describe('markKeyword', () => {
     },
   );
 
+  it('joins the runs of a decomposed keyword into its composed text', () => {
+    const keyword = 'cafe\u0301 finder';
+    const marks = markKeyword(keyword, LISTING);
+
+    expect(marks).not.toBeNull();
+    expect(marks?.map((segment) => segment.text).join('')).toBe(
+      keyword.normalize('NFC'),
+    );
+  });
+
   it('marks every run of a repeated word', () => {
     expect(markKeyword('go go', [surface('title', 'Go Timer')])).toEqual([
       { text: 'go go', surface: 'title', match: 'exact' },
