@@ -21,6 +21,7 @@ import {
   mergeChartMoves,
 } from './report-chart-moves';
 import { reportLinks, type ReportLinks } from './report-links';
+import { availabilityRow } from './report-availability';
 import { ratingDropRow } from './report-rating-drop';
 import { reviewSpikeRow, reviewSpikeTone } from './report-review-spike';
 import {
@@ -60,6 +61,11 @@ const newReviewsOf = (section: Section) => section.newReviews ?? [];
 const reviewSpikesOf = (section: Section) => section.reviewSpikes ?? [];
 
 const GROUP_SOURCES: Record<ReportGroupKind, GroupSource> = {
+  availability: {
+    title: 'Store availability',
+    tone: always('down'),
+    rows: (section) => (section.availability ?? []).map(availabilityRow),
+  },
   rankDrops: {
     title: 'Rank drops',
     tone: always('down'),
@@ -178,6 +184,7 @@ function groupLink(
   if (kind === 'chartMoves') {
     return links.charts(section.chartMoves?.[0]?.chart ?? null, total);
   }
+  if (kind === 'availability') return null;
   return links.group(
     section.app.id,
     kind,
@@ -236,20 +243,33 @@ function competitorApp(
   primaryId: string,
   build: Build,
 ): ReportApp {
-  const rows = competitor.changes.flatMap(changeRows);
-  const changes = capped(
-    {
-      kind: 'changes',
-      title: GROUP_SOURCES.changes.title,
-      tone: 'neutral',
-      link: build.links.group(primaryId, 'changes', rows.length),
-    },
-    rows,
-    build.caps,
-  );
+  const availabilityRows = (competitor.availability ?? []).map(availabilityRow);
+  const listingChanges = competitor.changes.flatMap(changeRows);
+  const groups = [
+    capped(
+      {
+        kind: 'availability',
+        title: GROUP_SOURCES.availability.title,
+        tone: 'neutral',
+        link: null,
+      },
+      availabilityRows,
+      build.caps,
+    ),
+    capped(
+      {
+        kind: 'changes',
+        title: GROUP_SOURCES.changes.title,
+        tone: 'neutral',
+        link: build.links.group(primaryId, 'changes', listingChanges.length),
+      },
+      listingChanges,
+      build.caps,
+    ),
+  ];
   return {
     ...shell(competitor.app, 'competitor', build),
-    groups: rows.length > 0 ? [changes] : [],
+    groups: groups.filter((group) => group.total > 0),
   };
 }
 
@@ -353,6 +373,7 @@ export function buildReport(
 }
 
 export interface ReportCounts {
+  availability: number;
   rankDrops: number;
   rankImprovements: number;
   milestones: number;
@@ -375,6 +396,16 @@ export function reportCounts(payload: AlertBatchPayload): ReportCounts {
       0,
     );
   return {
+    availability: payload.apps.reduce(
+      (sum, section) =>
+        sum +
+        (section.availability ?? []).length +
+        section.competitors.reduce(
+          (inner, competitor) => inner + (competitor.availability ?? []).length,
+          0,
+        ),
+      0,
+    ),
     rankDrops: count((section) => section.rankDrops),
     rankImprovements: count((section) => section.rankImprovements),
     milestones: count((section) => section.rankMilestones),

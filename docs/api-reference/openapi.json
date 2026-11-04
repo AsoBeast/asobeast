@@ -6996,7 +6996,9 @@
                 "chart.milestone",
                 "review.new",
                 "rating.dropped",
-                "review.spike"
+                "review.spike",
+                "app.delisted",
+                "app.unlisted_market"
               ]
             }
           },
@@ -7066,7 +7068,9 @@
                 "chart.milestone",
                 "review.new",
                 "rating.dropped",
-                "review.spike"
+                "review.spike",
+                "app.delisted",
+                "app.unlisted_market"
               ]
             }
           },
@@ -7135,7 +7139,9 @@
                 "chart.milestone",
                 "review.new",
                 "rating.dropped",
-                "review.spike"
+                "review.spike",
+                "app.delisted",
+                "app.unlisted_market"
               ]
             }
           },
@@ -7201,7 +7207,9 @@
                 "chart.milestone",
                 "review.new",
                 "rating.dropped",
-                "review.spike"
+                "review.spike",
+                "app.delisted",
+                "app.unlisted_market"
               ]
             }
           },

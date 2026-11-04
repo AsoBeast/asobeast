@@ -6,7 +6,10 @@ import {
 import { appLink, webLink } from '../../mail/email-links';
 import type { ReportGroupKind, ReportLink } from './report';
 
-export type AppPageGroupKind = Exclude<ReportGroupKind, 'chartMoves'>;
+export type AppPageGroupKind = Exclude<
+  ReportGroupKind,
+  'chartMoves' | 'availability'
+>;
 
 export interface ReportLinks {
   home: ReportLink | null;

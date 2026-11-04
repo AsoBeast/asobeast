@@ -11,7 +11,7 @@ import {
   emptySection,
   newReview,
 } from './email-fixtures.fixture';
-import { ratingDropped } from './listing-events.fixture';
+import { appDelisted, ratingDropped } from './listing-events.fixture';
 import { drop, milestone } from './rank-events.fixture';
 
 const batchesOf = (payloads: GranularAlertPayload[]) =>
@@ -183,5 +183,26 @@ describe('createDeliveryFlows with a rating drop threshold', () => {
         jobName: JOBS.DELIVER_EMAIL,
       }),
     ).toEqual([]);
+  });
+});
+
+describe('createDeliveryFlows with availability events', () => {
+  it('sends an own delisting in the owned job', () => {
+    const flows = createDeliveryFlows({
+      batches: batchesOf([appDelisted()]),
+      workspaceId: 'ws_1',
+      flushId: 'f1',
+      kind: 'webhook',
+      subscription: {
+        id: 'wh1',
+        events: ['app.delisted', 'app.unlisted_market', 'metadata.changed'],
+        reviewScores: [],
+      },
+      jobName: JOBS.DELIVER_ALERT,
+    });
+    const { payload } = flows[0].flow.data as { payload: AlertBatchPayload };
+
+    expect(payload.scope).toBe('owned_apps');
+    expect(payload.apps[0].availability).toEqual([appDelisted()]);
   });
 });

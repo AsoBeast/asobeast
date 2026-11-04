@@ -13,6 +13,7 @@ const NEW_REVIEW = "New review";
 const STAR_LABELS = ["1 star", "2 stars", "3 stars", "4 stars", "5 stars"];
 const CHART_ENTERED = "Chart entered";
 const CHART_MILESTONE = "Chart milestone";
+const LAST_EVENT = "Unlisted in a market";
 
 const VIEWPORTS = [
   { width: 1280, height: 720 },
@@ -172,6 +173,8 @@ test("the event chips follow the order of the contract", async ({ page }) => {
     "Chart entered",
     "Chart left",
     "Chart milestone",
+    "App delisted",
+    "Unlisted in a market",
   ]);
 });
 
@@ -557,7 +560,7 @@ for (const channel of CHANNELS) {
     await page.keyboard.press("Space");
     await expect(three).toHaveAttribute(SELECTED_ATTRIBUTE, "true");
 
-    await eventOption(dialog, CHART_MILESTONE).focus();
+    await eventOption(dialog, LAST_EVENT).focus();
     await page.keyboard.press("Tab");
     await expect(starOption(dialog, "1 star")).toBeFocused();
     await starOption(dialog, "5 stars").focus();

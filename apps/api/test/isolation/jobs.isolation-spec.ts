@@ -9,6 +9,7 @@ import { QUEUES } from '../../src/jobs/jobs.types';
 import { PipelineService } from '../../src/jobs/pipeline.service';
 import { PrismaService } from '../../src/prisma/prisma.service';
 import { ReviewsService } from '../../src/reviews/reviews.service';
+import { StoreAppNotFoundError } from '../../src/store-providers/errors';
 import { StoreProviderRegistry } from '../../src/store-providers/store-provider.registry';
 import type { ReviewResult } from '../../src/store-providers/types';
 import { RetentionService } from '../../src/jobs/retention.service';
@@ -296,5 +297,44 @@ describe('Job isolation', () => {
       expect(stored).toEqual([{ appId: workspace.appleAppId }]);
       expect(visible).toEqual([{ appId: workspace.appleAppId }]);
     }
+  });
+
+  it('keeps a competitor delisting alert in the workspace that tracks it', async () => {
+    const scope = fixture.app.get(WorkspaceContext);
+    const prisma = fixture.app.get(PrismaService);
+    const registry = fixture.app.get(StoreProviderRegistry);
+    const original = registry.get.bind(registry);
+    const spy = jest.spyOn(registry, 'get').mockImplementation((store) => ({
+      ...original(store),
+      getApp: (storeAppId: string) =>
+        Promise.reject(new StoreAppNotFoundError(store, storeAppId)),
+    }));
+    for (const workspace of [fixture.a, fixture.b]) {
+      await scope.run(workspace.id, () =>
+        fixture.app
+          .get(ListingCaptureService)
+          .refreshListing(workspace.competitorId),
+      );
+    }
+    spy.mockRestore();
+
+    const ids = [];
+    for (const workspace of [fixture.a, fixture.b]) {
+      const stored = await fixture.db.alertEvent.findMany({
+        where: { workspaceId: workspace.id, event: 'app.delisted' },
+        select: { appId: true },
+      });
+      const visible = await scope.run(workspace.id, () =>
+        prisma.alertEvent.findMany({
+          where: { event: 'app.delisted' },
+          select: { appId: true },
+        }),
+      );
+
+      expect(stored).toEqual([{ appId: workspace.competitorId }]);
+      expect(visible).toEqual([{ appId: workspace.competitorId }]);
+      ids.push(workspace.competitorId);
+    }
+    expect(new Set(ids).size).toBe(2);
   });
 });

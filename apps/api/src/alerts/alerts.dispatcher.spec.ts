@@ -17,7 +17,7 @@ import {
 } from '../jobs/jobs.types';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
-import { ratingDropped } from './listing-events.fixture';
+import { appDelisted, ratingDropped } from './listing-events.fixture';
 import { AlertAppIdentities } from './alert-app-identities';
 import { AlertsDispatcher } from './alerts.dispatcher';
 import { chartEntered } from './chart-events.fixture';
@@ -780,6 +780,52 @@ describe('AlertsDispatcher rating drops', () => {
 
     expect(prisma.updates[0].where.dedupeKey).toBe(
       'rating.dropped:a:2026-11-03:2',
+    );
+  });
+});
+
+describe('AlertsDispatcher availability events', () => {
+  const dispatcherWith = (delivery: 'batched' | 'instant') => {
+    const prisma = buildPrisma();
+    const { add, queue } = buildQueue();
+    const dispatcher = new AlertsDispatcher(
+      prisma as unknown as PrismaService,
+      { enabled: false } as MailerService,
+      buildConfig(delivery),
+      queue,
+      workspace,
+      new AlertAppIdentities(prisma as unknown as PrismaService),
+    );
+    return { prisma, add, dispatcher };
+  };
+
+  it('queues a delisting for a channel that lists it', async () => {
+    const { prisma, add, dispatcher } = dispatcherWith('instant');
+    prisma.webhook.findMany.mockResolvedValue([
+      { id: 'wh1', events: ['app.delisted'], reviewScores: [] },
+    ]);
+
+    await inWorkspace(() => dispatcher.dispatch(appDelisted()));
+
+    expect(prisma.webhook.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { active: true, events: { has: 'app.delisted' } },
+      }),
+    );
+    expect(add).toHaveBeenCalledWith(
+      JOBS.DELIVER_ALERT,
+      expect.objectContaining({ webhookId: 'wh1' }),
+      { backoff: { type: 'custom' } },
+    );
+  });
+
+  it('collects a delisting under its key in batched mode', async () => {
+    const { prisma, dispatcher } = dispatcherWith('batched');
+
+    await inWorkspace(() => dispatcher.dispatch(appDelisted()));
+
+    expect(prisma.updates[0].where.dedupeKey).toBe(
+      'delisted:a:2026-11-03T03:10:00.000Z',
     );
   });
 });

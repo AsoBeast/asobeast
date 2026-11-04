@@ -34,6 +34,7 @@ export type ReportRow =
     };
 
 export const REPORT_GROUP_KINDS = [
+  'availability',
   'rankDrops',
   'rankImprovements',
   'milestones',

@@ -2,7 +2,7 @@
 title: Send alerts
 description: "asobeast delivers rank, chart, SERP, metadata, review and action events by signed webhook or SMTP email. Batched delivery is resumable and deduplicated."
 icon: bell
-keywords: ["alerts","webhook","SMTP","email","batched delivery","signature","ALERT_DELIVERY","milestone","first ranking","overtake","unsubscribe","List-Unsubscribe","DKIM","confirm recipient","double opt in","chart.entered","chart.left","chart.milestone","top charts","new review","review stars"]
+keywords: ["alerts","webhook","SMTP","email","batched delivery","signature","ALERT_DELIVERY","milestone","first ranking","overtake","unsubscribe","List-Unsubscribe","DKIM","confirm recipient","double opt in","chart.entered","chart.left","chart.milestone","top charts","new review","review stars","rating.dropped","review.spike","rating drop","review spike","app.delisted","app.unlisted_market","delisted","unlisted market"]
 ---
 
 Alerts fan out to two channel types, webhooks and email, and both carry the same events. Every attempt is recorded in a delivery log so a failing endpoint is visible instead of retrying silently.
@@ -39,6 +39,8 @@ Alerts are not part of the guided setup, because nothing can move before positio
 | `review.new` | A review the store returns for the first time | Optional star filter per channel |
 | `rating.dropped` | The displayed average rating of an owned app is at least one tenth of a star lower than seven to ten days earlier | Optional threshold per channel, 1 to 10 tenths |
 | `review.spike` | Reviews dated one day pass the larger of 5 and three times the median of the previous 28 days | None |
+| `app.delisted` | A capture finds that the store no longer lists an owned app or a competitor in its home storefront | None |
+| `app.unlisted_market` | A capture finds that a market storefront no longer lists an app it listed before | None |
 | `action.opened` | An action opens or reopens at or above the priority floor | `ALERT_ACTIONS_MIN_PRIORITY`, default `high` |
 | `metadata.changed` | A snapshot differs from the previous one | None |
 | `serp.entrant` | A new app enters a tracked keyword's top 10 | None |
@@ -47,7 +49,7 @@ Alerts are not part of the guided setup, because nothing can move before positio
 | `chart.milestone` | An owned app enters or leaves first place, the top 3 or the top 10 of a chart | None |
 | `digest.weekly` | The weekly portfolio digest | `CRON_DIGEST` |
 
-A new event never joins an existing subscription, `rating.dropped` and `review.spike` included. To opt in, open **Edit events** on the channel in Settings, tick the events and save. A webhook keeps its url and its secret. The same dialog holds the [confirm drops](#report-drops-only-when-they-hold) setting.
+A new event never joins an existing subscription, `rating.dropped`, `review.spike`, `app.delisted` and `app.unlisted_market` included. To opt in, open **Edit events** on the channel in Settings, tick the events and save. A webhook keeps its url and its secret. The same dialog holds the [confirm drops](#report-drops-only-when-they-hold) setting.
 
 ### Choose the stars of new reviews
 
@@ -141,6 +143,17 @@ When the snapshots show that a new version shipped in between, the alert names i
 A sync raises the spike only when the reviews it inserted carried the day over the line, so a later sync of the same day never raises it twice. The payload carries `count`, `median`, `threshold`, `lowShare` (the share at or below `ALERT_REVIEW_SCORE_MAX`), `lowScoreMax` and `topTheme`, the first theme of the day's reviews when one stands out.
 
 In batched delivery both are deduplicated per app and day and folded into the owned app report as **Rating drops** and **Review spikes** groups. Instant delivery sends each as it happens. Both appear in the delivery log like any event.
+
+## Delisted apps and unlisted markets
+
+`app.delisted` and `app.unlisted_market` tell you the store stopped listing an app, the moment a listing capture first finds out. They fire once when the state begins: never while it holds and never when it clears. An app that comes back and is removed again alerts again.
+
+- `app.delisted` fires when a capture of the home storefront answers that the app does not exist, the same answer that records `delistedAt`.
+- `app.unlisted_market` fires when a capture of another storefront answers the same, but only when AsoBeast stored a listing of the app in that storefront before. An app that was never sold in a storefront was not taken down there, so tracking a keyword in a market the app never had raises nothing.
+
+Both fire for your own apps and for competitors. Your own app's alerts arrive in the owned app report under **Store availability**, first among its groups; a competitor's arrive in the competitor report next to its listing changes, with a neutral tone, because a rival leaving the store is not bad news for you. The unlisted market alert counts the keywords still tracked in that storefront, `trackedKeywords`, because their daily checks keep running there; for a competitor it counts the keywords of the app it is a competitor of.
+
+Detection needs no subscription: the alerts are recorded for every workspace the daily run collects for and delivered to the channels that list them. A single not found answer, after the store request's own retries, is enough. If a store ever answers that way for an app it still lists, the alert fires and the next capture that finds the app clears the notice without another alert. See [What happens when the store stops listing an app?](/concepts/pipeline#what-happens-when-the-store-stops-listing-an-app) for everything else the state changes.
 
 ## Webhook delivery
 
@@ -280,6 +293,32 @@ A review spike carries the day and the numbers it was judged by.
   "lowShare": 0.71,
   "lowScoreMax": 2,
   "topTheme": { "phrase": "crash on launch", "kind": "complaint", "mentions": 9 }
+}
+```
+
+A delisting names the store, the home storefront and the UTC day of the capture. An unlisted market adds the market and the keywords tracked there.
+
+```json
+{
+  "event": "app.delisted",
+  "occurredAt": "2026-11-03T03:10:00.000Z",
+  "app": { "id": "cm1a", "name": "My App", "isCompetitor": false, "store": "APP_STORE", "country": "us" },
+  "store": "APP_STORE",
+  "country": "us",
+  "date": "2026-11-03"
+}
+```
+
+```json
+{
+  "event": "app.unlisted_market",
+  "occurredAt": "2026-11-03T03:10:00.000Z",
+  "app": { "id": "cm1r", "name": "Rival Focus", "isCompetitor": true, "store": "APP_STORE", "country": "us" },
+  "store": "APP_STORE",
+  "country": "us",
+  "market": "de",
+  "date": "2026-11-03",
+  "trackedKeywords": 12
 }
 ```
 

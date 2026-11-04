@@ -155,6 +155,14 @@ One chart of a category a workspace asked the daily run to capture every day. Th
 
 One store, storefront, category and device: the unit a follow counts and the top charts page shows side by side. See [Read top charts](/guides/top-charts).
 
+## Delisted
+
+An app the store no longer lists in its home storefront, recorded as `delistedAt` by the first capture that finds out. Fires the `app.delisted` alert. See [Delisted apps and unlisted markets](/guides/alerts#delisted-apps-and-unlisted-markets).
+
+## Unlisted market
+
+A storefront other than the home one that no longer lists an app it listed before. Fires the `app.unlisted_market` alert. See [Delisted apps and unlisted markets](/guides/alerts#delisted-apps-and-unlisted-markets).
+
 ## Snapshot
 
 A captured copy of a listing's metadata at one moment, stored with the raw store payload so a corrected parser can reprocess it.

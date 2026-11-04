@@ -17,8 +17,11 @@ import {
 } from '../chart-events.fixture';
 import { milestone } from '../rank-events.fixture';
 import {
+  appDelisted,
+  appUnlistedMarket,
   listingBatch,
   listingSection,
+  rival,
   ratingDropped,
   reviewSpike,
 } from '../listing-events.fixture';
@@ -286,6 +289,7 @@ describe('buildReport', () => {
 describe('reportCounts', () => {
   it('counts every kind of fact across the apps', () => {
     expect(reportCounts(batch)).toEqual({
+      availability: 0,
       rankDrops: 1,
       rankImprovements: 0,
       milestones: 0,
@@ -445,5 +449,62 @@ describe('buildReport with rating drops and review spikes', () => {
       .apps[0];
 
     expect(groups?.groups ?? []).toEqual([]);
+  });
+});
+
+describe('buildReport with store availability', () => {
+  it('puts the availability group first in an owned app', () => {
+    const section = listingSection({
+      availability: [appDelisted()],
+      ratingDrops: [ratingDropped()],
+    });
+    const groups = buildReport(
+      listingBatch(section, [appDelisted(), ratingDropped()]),
+      ORIGIN,
+    ).apps[0].groups;
+
+    expect(
+      groups.map((group) => [group.kind, group.title, group.tone]),
+    ).toEqual([
+      ['availability', 'Store availability', 'down'],
+      ['ratingDrops', 'Rating drops', 'down'],
+    ]);
+    expect(groups[0].rows).toEqual([
+      { kind: 'text', text: 'No longer listed in the App Store', detail: null },
+    ]);
+    expect(groups[0].link).toBeNull();
+  });
+
+  it('builds the group in a competitor card without a link', () => {
+    const lost = appUnlistedMarket({ app: rival });
+    const section = listingSection({
+      competitors: [
+        {
+          app: { id: 'c', name: 'Rival', store: 'APP_STORE', country: 'us' },
+          changes: [],
+          availability: [lost],
+        },
+      ],
+    });
+    const payload = {
+      ...listingBatch(section, [lost]),
+      scope: 'competitors' as const,
+    };
+
+    const [card] = buildReport(payload, ORIGIN, {
+      apps: 10,
+      competitors: 10,
+      rows: 0,
+    }).apps[0].competitors;
+
+    expect(card.groups).toEqual([
+      expect.objectContaining({
+        kind: 'availability',
+        tone: 'neutral',
+        total: 1,
+        link: null,
+      }),
+    ]);
+    expect(reportCounts(payload).availability).toBe(1);
   });
 });

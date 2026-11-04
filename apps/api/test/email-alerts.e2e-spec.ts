@@ -214,6 +214,27 @@ describe('EmailAlertsController (e2e, smtp enabled)', () => {
     });
   });
 
+  it('subscribes to the store availability events', async () => {
+    const created = await api
+      .post('/email-alerts')
+      .send({
+        email: 'ops@example.com',
+        events: ['app.delisted', 'app.unlisted_market'],
+      })
+      .expect(201);
+    const alert = created.body as EmailAlertItem;
+    expect(alert.events).toEqual(['app.delisted', 'app.unlisted_market']);
+    const listed = await api.get('/email-alerts').expect(200);
+    expect(listed.body as EmailAlertItem[]).toContainEqual(
+      expect.objectContaining({ id: alert.id }),
+    );
+    const patched = await api
+      .patch(`/email-alerts/${alert.id}`)
+      .send({ events: ['app.delisted'] })
+      .expect(200);
+    expect((patched.body as EmailAlertItem).events).toEqual(['app.delisted']);
+  });
+
   it('subscribes to rating drops and review spikes', async () => {
     const created = await api
       .post('/email-alerts')

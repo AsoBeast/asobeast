@@ -14,6 +14,8 @@ import {
   chartMilestone,
 } from './chart-events.fixture';
 import {
+  appDelisted,
+  appUnlistedMarket,
   listingBatch,
   listingSection,
   ratingDropped,
@@ -40,6 +42,12 @@ const everyPayload: AlertPayload[] = [
   chartMilestone(),
   ratingDropped(),
   reviewSpike(),
+  appDelisted(),
+  appUnlistedMarket(),
+  listingBatch(
+    listingSection({ availability: [appDelisted(), appUnlistedMarket()] }),
+    [appDelisted(), appUnlistedMarket()],
+  ),
   listingBatch(
     listingSection({
       ratingDrops: [ratingDropped()],
@@ -176,6 +184,8 @@ describe('formatWebhookBody for the rating and review events', () => {
   const single = [
     [ratingDropped(), 'average rating fell from 4.66 to 4.44', '4.44'],
     [reviewSpike(), 'A spike of 34 reviews for My App', '34'],
+    [appDelisted(), 'is no longer listed in the App Store', '3 Nov 2026'],
+    [appUnlistedMarket(), 'where 12 keywords are tracked', '12'],
   ] as const;
   const batched = listingBatch(
     listingSection({

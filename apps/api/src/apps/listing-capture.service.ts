@@ -224,8 +224,12 @@ export class ListingCaptureService {
         this.registry.get(app.store).getApp(app.storeAppId, market),
       );
     } catch (error: unknown) {
-      if (error instanceof StoreAppNotFoundError) {
-        await this.recordUnlisted(app, market);
+      const lostAt = new Date();
+      if (
+        error instanceof StoreAppNotFoundError &&
+        (await this.recordUnlisted(app, market, lostAt))
+      ) {
+        await this.listingAlerts.listingLost(app, market, lostAt);
       }
       throw error;
     }
@@ -255,18 +259,23 @@ export class ListingCaptureService {
     }
   }
 
-  private async recordUnlisted(app: App, market: string): Promise<void> {
-    await this.prisma.app.updateMany(
+  private async recordUnlisted(
+    app: App,
+    market: string,
+    lostAt: Date,
+  ): Promise<boolean> {
+    const recorded = await this.prisma.app.updateMany(
       market === app.country
         ? {
             where: { id: app.id, delistedAt: null },
-            data: { delistedAt: new Date() },
+            data: { delistedAt: lostAt },
           }
         : {
             where: { id: app.id, NOT: { unlistedMarkets: { has: market } } },
             data: { unlistedMarkets: { push: market } },
           },
     );
+    return recorded.count > 0;
   }
 
   private async requestDetection(appId: string, market: string): Promise<void> {

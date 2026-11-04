@@ -1,5 +1,7 @@
 import type {
   AlertBatchAppSection,
+  AppDelistedPayload,
+  AppUnlistedMarketPayload,
   AlertBatchPayload,
   GranularAlertPayload,
   RatingDroppedPayload,
@@ -43,6 +45,36 @@ export const reviewSpike = (
   topTheme: { phrase: 'crash on launch', kind: 'complaint', mentions: 9 },
   ...overrides,
 });
+
+const availabilityApp = { ...app, isCompetitor: false };
+
+export const appDelisted = (
+  overrides: Partial<AppDelistedPayload> = {},
+): AppDelistedPayload => ({
+  event: 'app.delisted',
+  occurredAt,
+  app: availabilityApp,
+  store: 'APP_STORE',
+  country: 'us',
+  date: '2026-11-03',
+  ...overrides,
+});
+
+export const appUnlistedMarket = (
+  overrides: Partial<AppUnlistedMarketPayload> = {},
+): AppUnlistedMarketPayload => ({
+  event: 'app.unlisted_market',
+  occurredAt,
+  app: availabilityApp,
+  store: 'APP_STORE',
+  country: 'us',
+  market: 'de',
+  date: '2026-11-03',
+  trackedKeywords: 12,
+  ...overrides,
+});
+
+export const rival = { id: 'c', name: 'Rival', isCompetitor: true };
 
 export const listingSection = (
   overrides: Partial<AlertBatchAppSection> = {},

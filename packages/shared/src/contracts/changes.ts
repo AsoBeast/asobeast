@@ -4,7 +4,12 @@ import type {
   ReviewNewPayload,
   ReviewSpikePayload,
 } from './reviews';
-import type { RatingDroppedPayload } from './listing-alerts';
+import type {
+  AppAvailabilityPayload,
+  AppDelistedPayload,
+  AppUnlistedMarketPayload,
+  RatingDroppedPayload,
+} from './listing-alerts';
 import type { DigestWeeklyPayload } from './portfolio';
 import type { KeywordScope } from './keywords';
 import type { SerpEntrantPayload } from './serp';
@@ -104,6 +109,8 @@ export const WEBHOOK_EVENTS = [
   'review.new',
   'rating.dropped',
   'review.spike',
+  'app.delisted',
+  'app.unlisted_market',
 ] as const;
 export type WebhookEvent = (typeof WEBHOOK_EVENTS)[number];
 
@@ -117,6 +124,8 @@ export const ESSENTIAL_ALERT_EVENTS = [
   'rating.dropped',
   'review.spike',
   'review.negative',
+  'app.delisted',
+  'app.unlisted_market',
 ] as const satisfies readonly WebhookEvent[];
 
 export interface WebhookItem {
@@ -319,10 +328,12 @@ export interface AlertBatchApp extends AlertAppIdentity {
 export interface AlertBatchCompetitorSection {
   app: AlertBatchApp;
   changes: MetadataChangedPayload[];
+  availability?: AppAvailabilityPayload[];
 }
 
 export interface AlertBatchAppSection {
   app: AlertBatchApp;
+  availability?: AppAvailabilityPayload[];
   rankDrops: RankDroppedPayload[];
   rankImprovements: RankImprovedPayload[];
   rankMilestones: RankMilestonePayload[];
@@ -350,6 +361,8 @@ export type GranularAlertPayload =
   | ReviewNewPayload
   | RatingDroppedPayload
   | ReviewSpikePayload
+  | AppDelistedPayload
+  | AppUnlistedMarketPayload
   | DigestWeeklyPayload
   | SerpEntrantPayload
   | ActionOpenedPayload

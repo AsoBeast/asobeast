@@ -64,6 +64,7 @@ export async function formatEmail(
 function ownedStats(payload: AlertBatchPayload): Stat[] {
   const counts = reportCounts(payload);
   const stats: Stat[] = [
+    { label: 'Store availability', value: counts.availability, tone: 'down' },
     { label: 'Rank drops', value: counts.rankDrops, tone: 'down' },
     { label: 'Rank improvements', value: counts.rankImprovements, tone: 'up' },
     { label: 'Overtaken', value: counts.overtakes, tone: 'down' },
@@ -97,6 +98,7 @@ function ownedSummary(payload: AlertBatchPayload): string {
     [counts.chartMoves, 'chart move'],
     [counts.ratingDrops, 'rating drop'],
     [counts.reviewSpikes, 'review spike'],
+    [counts.availability, 'availability change'],
   ];
   return entries
     .filter(([count]) => count > 0)
