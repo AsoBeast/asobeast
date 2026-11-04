@@ -335,4 +335,75 @@ describe('KeywordsController table facts (e2e)', () => {
       expect(sorted.map((item) => item.text)).toEqual(['two', 'one', 'none']);
     });
   });
+  describe('dropStreak', () => {
+    const DAY_MS = 24 * 60 * 60 * 1000;
+    const daysAgo = (days: number): Date =>
+      new Date(utcToday().getTime() - days * DAY_MS);
+
+    const rank = (
+      appId: string,
+      keywordId: string,
+      oldestFirst: (number | null)[],
+    ) =>
+      prisma.keywordRanking.createMany({
+        data: oldestFirst.map((position, index) => ({
+          appId,
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          keywordId,
+          date: daysAgo(oldestFirst.length - 1 - index),
+          position,
+        })),
+      });
+
+    it('counts the checks in a row at which the position got worse', async () => {
+      const primary = await seedApp();
+      const keywordId = await track(primary.id, 'pomodoro');
+      await rank(primary.id, keywordId, [3, 5, 7, 9]);
+
+      const [item] = await list(primary.id);
+
+      expect(item.dropStreak).toBe(3);
+    });
+
+    it('ends the run at an unchanged position', async () => {
+      const primary = await seedApp();
+      const keywordId = await track(primary.id, 'pomodoro');
+      await rank(primary.id, keywordId, [3, 5, 5, 7, 9]);
+
+      const [item] = await list(primary.id);
+
+      expect(item.dropStreak).toBe(2);
+    });
+
+    it('answers null for a paused keyword', async () => {
+      const primary = await seedApp();
+      const keywordId = await track(primary.id, 'pomodoro');
+      await rank(primary.id, keywordId, [3, 5, 7, 9]);
+      await api
+        .patch(`/apps/${primary.id}/keywords/${keywordId}`)
+        .send({ active: false })
+        .expect(200);
+
+      const [item] = await list(primary.id);
+
+      expect(item.dropStreak).toBeNull();
+    });
+
+    it('leaves the field off the answers that do not ask for it', async () => {
+      const primary = await seedApp();
+      const keywordId = await track(primary.id, 'pomodoro');
+      await rank(primary.id, keywordId, [3, 5, 7, 9]);
+
+      const field = await api
+        .put(`/apps/${primary.id}/keyword-field`)
+        .send({ text: 'pomodoro' })
+        .expect(200);
+      const audit = await api
+        .get(`/apps/${primary.id}/metadata/audit`)
+        .expect(200);
+
+      expect(JSON.stringify(field.body)).not.toContain('dropStreak');
+      expect(JSON.stringify(audit.body)).not.toContain('dropStreak');
+    });
+  });
 });
