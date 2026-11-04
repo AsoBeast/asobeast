@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
+import type { TrackedKeywordItem } from "@asobeast/shared";
+import { DEFAULT_ZONE_THRESHOLDS } from "@/lib/keyword-zones";
 import {
   exactSearchEmptyBody,
   keywordColumnFilters,
   keywordFilterChips,
   keywordSearchFilter,
+  keywordZoneFilter,
   type KeywordFilters,
   tagOptions,
 } from "./keyword-filters";
@@ -18,25 +21,29 @@ const NONE: KeywordFilters = {
   opp: [],
   pos: [],
   tag: [],
+  zone: null,
 };
 
 describe("keywordColumnFilters", () => {
   it("applies nothing when every filter is at its default", () => {
-    expect(keywordColumnFilters(NONE)).toEqual([]);
+    expect(keywordColumnFilters(NONE, DEFAULT_ZONE_THRESHOLDS)).toEqual([]);
   });
 
   it("maps each active filter to its column", () => {
     expect(
-      keywordColumnFilters({
-        ...NONE,
-        source: ["MANUAL"],
-        bucket: ["primary"],
-        status: "paused",
-        pop: ["strong"],
-        diff: ["fair"],
-        opp: ["weak"],
-        pos: ["unranked"],
-      }),
+      keywordColumnFilters(
+        {
+          ...NONE,
+          source: ["MANUAL"],
+          bucket: ["primary"],
+          status: "paused",
+          pop: ["strong"],
+          diff: ["fair"],
+          opp: ["weak"],
+          pos: ["unranked"],
+        },
+        DEFAULT_ZONE_THRESHOLDS,
+      ),
     ).toEqual([
       { id: "source", value: ["MANUAL"] },
       { id: "bucket", value: ["primary"] },
@@ -66,6 +73,7 @@ describe("keywordFilterChips", () => {
         opp: ["weak"],
         pos: ["top3", "unranked"],
         tag: [],
+        zone: null,
       }),
     ).toEqual([
       { key: "q", label: "Search: pomo" },
@@ -84,7 +92,7 @@ describe("tag filters", () => {
   it("filters the tags column and names the tags in a chip", () => {
     const filters = { ...NONE, tag: ["brand", "core"] };
 
-    expect(keywordColumnFilters(filters)).toEqual([
+    expect(keywordColumnFilters(filters, DEFAULT_ZONE_THRESHOLDS)).toEqual([
       { id: "tags", value: ["brand", "core"] },
     ]);
     expect(keywordFilterChips(filters)).toEqual([
@@ -144,5 +152,58 @@ describe("the quoted search", () => {
 
     expect(filter("focus timer", '"focus timer"')).toBe(true);
     expect(filter("focus timer app", '"focus timer"')).toBe(false);
+  });
+});
+
+describe("zone filters", () => {
+  const thresholds = { popularity: 30, difficulty: 40 };
+
+  it("carries the zone and the thresholds in the filter value", () => {
+    expect(
+      keywordColumnFilters({ ...NONE, zone: "quickWins" }, thresholds),
+    ).toEqual([{ id: "zone", value: { zone: "quickWins", thresholds } }]);
+  });
+
+  it("puts the zone after every other active filter", () => {
+    expect(
+      keywordColumnFilters(
+        { ...NONE, status: "active", tag: ["core"], zone: "lowPriority" },
+        thresholds,
+      ),
+    ).toEqual([
+      { id: "status", value: "active" },
+      { id: "tags", value: ["core"] },
+      { id: "zone", value: { zone: "lowPriority", thresholds } },
+    ]);
+  });
+
+  it("names the zone in a chip after the tag chip", () => {
+    expect(keywordFilterChips({ ...NONE, zone: "worthFighting" })).toEqual([
+      { key: "zone", label: "Zone: Worth fighting for" },
+    ]);
+    expect(
+      keywordFilterChips({ ...NONE, tag: ["core"], zone: "quickWins" }),
+    ).toEqual([
+      { key: "tag", label: "Tag: core" },
+      { key: "zone", label: "Zone: Quick wins" },
+    ]);
+  });
+
+  it("keeps only the rows whose shown scores fall in the zone", () => {
+    const rowOf = (scores: Partial<TrackedKeywordItem>) =>
+      ({ original: scores }) as unknown as Parameters<
+        typeof keywordZoneFilter
+      >[0];
+    const inZone = (scores: Partial<TrackedKeywordItem>) =>
+      keywordZoneFilter(
+        rowOf(scores),
+        "zone",
+        { zone: "quickWins", thresholds: DEFAULT_ZONE_THRESHOLDS },
+        () => undefined,
+      );
+
+    expect(inZone({ volume: 62, difficulty: 1.8 })).toBe(true);
+    expect(inZone({ volume: 62, difficulty: 2.6 })).toBe(false);
+    expect(inZone({ volume: null, difficulty: 1 })).toBe(false);
   });
 });

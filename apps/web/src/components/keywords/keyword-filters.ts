@@ -3,9 +3,16 @@ import type { inferParserType } from "nuqs";
 import type { TrackedKeywordItem } from "@asobeast/shared";
 import { BUCKET_LABELS } from "@/components/BucketBadge";
 import { gradeLabel } from "@/lib/grade";
+import {
+  ZONE_LABELS,
+  zoneOf,
+  type ZoneFilterValue,
+  type ZoneThresholds,
+} from "@/lib/keyword-zones";
 import type { keywordFilterParsers } from "@/lib/search-params";
 import { POSITION_BAND_LABELS } from "@/lib/table/facets";
 import { matchesKeywordSearch, parseKeywordSearch } from "./keyword-search";
+import { scorePair } from "./keyword-scores";
 import type { KeywordTableFeatures } from "./keyword-table-features";
 import { SOURCE_LABELS } from "./SourceBadge";
 
@@ -26,8 +33,9 @@ export const STATUS_LABELS: Record<KeywordFilters["status"], string> = {
 
 export function keywordColumnFilters(
   filters: KeywordFilters,
+  thresholds: ZoneThresholds,
 ): ColumnFiltersState {
-  return [
+  const listed = [
     { id: "source", value: filters.source },
     { id: "bucket", value: filters.bucket },
     { id: "status", value: filters.status },
@@ -37,6 +45,9 @@ export function keywordColumnFilters(
     { id: "position", value: filters.pos },
     { id: "tags", value: filters.tag },
   ].filter((filter) => filter.value.length > 0 && filter.value !== "all");
+  return filters.zone === null
+    ? listed
+    : [...listed, { id: "zone", value: { zone: filters.zone, thresholds } }];
 }
 
 function listChip<T>(
@@ -83,6 +94,9 @@ export function keywordFilterChips(
       (value) => POSITION_BAND_LABELS[value],
     ),
     listChip("tag", "Tag", filters.tag, (value) => value),
+    filters.zone === null
+      ? null
+      : { key: "zone" as const, label: `Zone: ${ZONE_LABELS[filters.zone]}` },
   ];
   return chips.filter((chip) => chip !== null);
 }
@@ -104,6 +118,12 @@ export const keywordSearchFilter: FilterFn<
     row.getValue<string>(columnId),
     parseKeywordSearch(value),
   );
+
+export const keywordZoneFilter: FilterFn<
+  KeywordTableFeatures,
+  TrackedKeywordItem
+> = (row, _columnId, { zone, thresholds }: ZoneFilterValue) =>
+  zoneOf(scorePair(row.original), thresholds) === zone;
 
 export function searchChipLabel(q: string): string {
   const search = parseKeywordSearch(q);

@@ -25,6 +25,7 @@ import {
 } from "./ranges";
 import { DEFAULT_MCP_CLIENT, MCP_CLIENTS } from "./mcp-snippets";
 import { GRADES } from "./grade";
+import { KEYWORD_ZONES } from "./keyword-zones";
 import { POSITION_BANDS } from "./table/facets";
 import {
   planParam,
@@ -36,6 +37,7 @@ import {
   combinationStatusParser,
   combinationWordsParser,
   keywordFilterParsers,
+  keywordZoneParser,
   draftLocaleParser,
   ACTION_GROUPS,
   ACTION_SORTS,
@@ -527,5 +529,22 @@ describe("serpDate parser", () => {
 
   it.each(["2026-02-30", "yesterday"])("refuses %s", (value) => {
     expect(serpDateParser.parse(value)).toBeNull();
+  });
+});
+
+describe("keywordZone parser", () => {
+  it.each(KEYWORD_ZONES)("round trips %s", (zone) => {
+    expect(keywordZoneParser.parse(keywordZoneParser.serialize(zone))).toBe(
+      zone,
+    );
+  });
+
+  it.each(["sideways", "", "quickwins"])("ignores %j", (value) => {
+    expect(keywordZoneParser.parseServerSide(value)).toBeNull();
+  });
+
+  it("has no default and is a keyword filter", () => {
+    expect(Reflect.get(keywordZoneParser, "defaultValue")).toBeUndefined();
+    expect(Object.keys(keywordFilterParsers)).toContain("zone");
   });
 });

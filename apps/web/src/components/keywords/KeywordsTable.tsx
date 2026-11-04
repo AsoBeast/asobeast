@@ -23,11 +23,7 @@ import {
   keywordColumns,
   SELECT_ALL_KEYWORDS,
 } from "./keyword-columns";
-import {
-  exactSearchEmptyBody,
-  keywordColumnFilters,
-  keywordSearchFilter,
-} from "./keyword-filters";
+import { exactSearchEmptyBody, keywordSearchFilter } from "./keyword-filters";
 import { keywordTableFeatures } from "./keyword-table-features";
 import { exportKeywords } from "./keyword-csv";
 import { tagsIn } from "@/lib/keyword-tags";
@@ -37,6 +33,7 @@ import { KeywordsDataTable } from "./KeywordsDataTable";
 import { KeywordsFilterBar } from "./KeywordsFilterBar";
 import { SerpSheet } from "./serp/SerpSheet";
 import { useSerpParams } from "./serp/use-serp-params";
+import { useKeywordColumnFilters } from "./use-zone-thresholds";
 
 export function KeywordsTable({
   id,
@@ -110,7 +107,7 @@ export function KeywordsTable({
     columns,
   );
 
-  const columnFilters = useMemo(() => keywordColumnFilters(filters), [filters]);
+  const columnFilters = useKeywordColumnFilters(filters);
 
   const table = useTable({
     features: keywordTableFeatures,
