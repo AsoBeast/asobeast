@@ -303,7 +303,8 @@ test("a refused rating drop threshold leaves the email alert as it was", async (
 
   const listed = await page.request.get(`${MOCK_API_URL}/email-alerts`);
   const rows = (await listed.json()) as EmailAlertItem[];
-  expect(rows.find((row) => row.id === alert.id)?.events).toEqual([
-    "rank.dropped",
-  ]);
+  expect(rows.find((row) => row.id === alert.id)).toMatchObject({
+    events: ["rank.dropped"],
+    ratingDropTenths: alert.ratingDropTenths,
+  });
 });
