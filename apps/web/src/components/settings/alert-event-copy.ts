@@ -1,5 +1,6 @@
 import {
   normalizeReviewScores,
+  ratingDropLabel,
   reviewScoresLabel,
   type WebhookEvent,
 } from "@asobeast/shared";
@@ -13,6 +14,8 @@ export const EVENT_LABELS: Record<WebhookEvent, string> = {
   "rank.overtaken": "Overtaken by competitor",
   "review.new": "New review",
   "review.negative": "Negative review",
+  "rating.dropped": "Rating dropped",
+  "review.spike": "Review spike",
   "digest.weekly": "Weekly digest",
   "serp.entrant": "SERP entrant",
   "action.opened": "New action",
@@ -30,6 +33,8 @@ export const PICKER_EVENTS: readonly WebhookEvent[] = [
   "rank.overtaken",
   "review.new",
   "review.negative",
+  "rating.dropped",
+  "review.spike",
   "digest.weekly",
   "serp.entrant",
   "action.opened",
@@ -42,6 +47,7 @@ export interface AlertSubscriptionChange {
   events: WebhookEvent[];
   reviewScores?: number[];
   confirmDrops?: boolean;
+  ratingDropTenths?: number;
 }
 
 export function reviewScoresToSend(
@@ -51,6 +57,13 @@ export function reviewScoresToSend(
   return events.includes("review.new")
     ? normalizeReviewScores(ticked)
     : undefined;
+}
+
+export function ratingDropTenthsToSend(
+  events: readonly WebhookEvent[],
+  tenths: number,
+): number | undefined {
+  return events.includes("rating.dropped") ? tenths : undefined;
 }
 
 export function needsAStar(
@@ -63,8 +76,13 @@ export function needsAStar(
 export function eventBadgeLabel(
   event: WebhookEvent,
   reviewScores: readonly number[] | undefined,
+  ratingDropTenths?: number,
 ): string {
-  return event === "review.new" && reviewScores && reviewScores.length > 0
-    ? `${EVENT_LABELS[event]} · ${reviewScoresLabel(reviewScores)}`
-    : EVENT_LABELS[event];
+  if (event === "review.new" && reviewScores && reviewScores.length > 0) {
+    return `${EVENT_LABELS[event]} · ${reviewScoresLabel(reviewScores)}`;
+  }
+  if (event === "rating.dropped" && ratingDropTenths !== undefined) {
+    return `${EVENT_LABELS[event]} · ${ratingDropLabel(ratingDropTenths)}`;
+  }
+  return EVENT_LABELS[event];
 }

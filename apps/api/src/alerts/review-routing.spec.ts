@@ -1,5 +1,6 @@
 import type { AlertPayload } from '@asobeast/shared';
 import { dropped, negative, newReview } from './email-fixtures.fixture';
+import { ratingDropped } from './listing-events.fixture';
 import {
   receivesInstant,
   reviewGate,
@@ -141,5 +142,30 @@ describe('reviewGate', () => {
   it('keeps an unrelated event only when the channel lists it', () => {
     expect(kept(['rank.dropped'])).toEqual([dropped]);
     expect(kept([NEW])).not.toContain(dropped);
+  });
+});
+
+describe('receivesInstant for a rating drop', () => {
+  const RATING = 'rating.dropped';
+  const drop = (dropTenths: number) => ratingDropped({ dropTenths });
+  const listing = (ratingDropTenths?: number): Subscription => ({
+    events: [RATING],
+    reviewScores: [],
+    ratingDropTenths,
+  });
+
+  it('holds a drop to the threshold of the channel', () => {
+    expect(receivesInstant(listing(3), drop(2))).toBe(false);
+    expect(receivesInstant(listing(3), drop(3))).toBe(true);
+    expect(receivesInstant(listing(3), drop(5))).toBe(true);
+  });
+
+  it('gives a channel without a threshold every drop', () => {
+    expect(receivesInstant(listing(), drop(1))).toBe(true);
+    expect(receivesInstant(subscription([RATING]), drop(1))).toBe(true);
+  });
+
+  it('gives a channel that lists no rating drop nothing', () => {
+    expect(receivesInstant(subscription([NEW]), drop(5))).toBe(false);
   });
 });

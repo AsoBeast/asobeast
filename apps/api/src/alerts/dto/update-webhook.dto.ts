@@ -14,6 +14,7 @@ import {
   WebhookEvent,
   WebhookUpdateRequest,
 } from '@asobeast/shared';
+import { RatingDropTenths } from './rating-drop-tenths.decorator';
 import { ReviewScoresFilter } from './review-scores.decorator';
 import { WEBHOOK_URL_OPTIONS } from './webhook-url-options';
 
@@ -44,4 +45,7 @@ export class UpdateWebhookDto implements WebhookUpdateRequest {
   @ValidateIf((_, value) => value !== undefined)
   @IsBoolean()
   confirmDrops?: boolean;
+
+  @RatingDropTenths()
+  ratingDropTenths?: number;
 }

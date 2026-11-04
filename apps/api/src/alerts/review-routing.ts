@@ -1,4 +1,5 @@
 import {
+  listsRatingDrop,
   listsReviewScore,
   type AlertPayload,
   type GranularAlertPayload,
@@ -8,6 +9,7 @@ import { reviewKey } from './review-fingerprint';
 export interface Subscription {
   events: readonly string[];
   reviewScores: readonly number[];
+  ratingDropTenths?: number | null;
 }
 
 function listsNewReview(subscription: Subscription, score: number): boolean {
@@ -27,6 +29,9 @@ export function receivesInstant(
   }
   if (payload.event === 'review.negative') {
     return !listsNewReview(subscription, payload.review.score);
+  }
+  if (payload.event === 'rating.dropped') {
+    return listsRatingDrop(subscription.ratingDropTenths, payload.dropTenths);
   }
   return true;
 }

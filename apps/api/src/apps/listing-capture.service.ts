@@ -22,6 +22,7 @@ import { snapshotIcon, toSnapshotData } from './apps.mapper';
 import { toChangeSnapshot } from './change-snapshot';
 import { withKnownSubtitle } from './known-subtitle';
 import { listingIn, NEWEST_FIRST, storedMarket } from './listing';
+import { ListingAlerts } from './listing-alerts.service';
 import { LocalizationDetection } from './localization-detection.service';
 import { LocalizedListingCapture } from './localized-listing-capture.service';
 import { MarketLocalizationRecorder } from './market-localization-recorder';
@@ -43,6 +44,7 @@ export class ListingCaptureService {
     private readonly detection: LocalizationDetection,
     private readonly recorder: MarketLocalizationRecorder,
     private readonly storeReports: StoreReportQueue,
+    private readonly listingAlerts: ListingAlerts,
   ) {}
 
   async refresh(
@@ -137,6 +139,12 @@ export class ListingCaptureService {
       return created;
     });
     if (pending > 0) await this.screenshotQueue.request(app.id, snapshot.id);
+    if (home && !app.isCompetitor) {
+      await this.listingAlerts.ratingDropped(
+        { id: app.id, name: normalized.title, country: app.country },
+        snapshot.capturedAt,
+      );
+    }
 
     const icons = home
       ? { before: app.iconUrl, after: normalized.iconUrl ?? null }

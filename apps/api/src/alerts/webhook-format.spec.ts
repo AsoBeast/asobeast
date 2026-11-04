@@ -13,6 +13,12 @@ import {
   chartLeft,
   chartMilestone,
 } from './chart-events.fixture';
+import {
+  listingBatch,
+  listingSection,
+  ratingDropped,
+  reviewSpike,
+} from './listing-events.fixture';
 import { firstRanking, milestone, overtake } from './rank-events.fixture';
 import { formatWebhookBody } from './webhook-format';
 
@@ -32,6 +38,15 @@ const everyPayload: AlertPayload[] = [
   chartEntered(),
   chartLeft(),
   chartMilestone(),
+  ratingDropped(),
+  reviewSpike(),
+  listingBatch(
+    listingSection({
+      ratingDrops: [ratingDropped()],
+      reviewSpikes: [reviewSpike()],
+    }),
+    [ratingDropped(), reviewSpike()],
+  ),
   batch,
   competitorBatch,
 ];
@@ -147,5 +162,48 @@ describe('formatWebhookBody', () => {
     expect(formatWebhookBody(DISCORD, batch, ORIGIN)).toBe(
       formatWebhookBody(DISCORD, batch, ORIGIN),
     );
+  });
+});
+
+describe('formatWebhookBody for the rating and review events', () => {
+  const CHAT_URLS = [
+    DISCORD,
+    SLACK,
+    'https://prod-21.westeurope.logic.azure.com/workflows/a/triggers/manual/paths/invoke?sig=x',
+    'https://api.telegram.org/bot1:A/sendMessage?chat_id=-100',
+    'https://chat.googleapis.com/v1/spaces/S/messages?key=k&token=t',
+  ];
+  const single = [
+    [ratingDropped(), 'average rating fell from 4.66 to 4.44', '4.44'],
+    [reviewSpike(), 'A spike of 34 reviews for My App', '34'],
+  ] as const;
+  const batched = listingBatch(
+    listingSection({
+      ratingDrops: [ratingDropped()],
+      reviewSpikes: [reviewSpike()],
+    }),
+    [ratingDropped(), reviewSpike()],
+  );
+
+  it.each(CHAT_URLS)('words both alone and in a report for %s', (url) => {
+    for (const [payload, headline, value] of single) {
+      const body = formatWebhookBody(url, payload, ORIGIN);
+
+      expect(() => JSON.parse(body) as unknown).not.toThrow();
+      expect(body).toContain(headline.replaceAll("'", ''));
+      expect(body).toContain(value);
+    }
+    const report = formatWebhookBody(url, batched, ORIGIN);
+    expect(report).toContain('Rating drops');
+    expect(report).toContain('Review spikes');
+    expect(report).toContain('4.44');
+  });
+
+  it('sends the generic hook the payload itself', () => {
+    for (const payload of [ratingDropped(), reviewSpike(), batched]) {
+      expect(
+        formatWebhookBody('https://hooks.example.com/x', payload, ORIGIN),
+      ).toBe(JSON.stringify(payload));
+    }
   });
 });

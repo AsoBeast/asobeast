@@ -11,6 +11,7 @@ import {
   emptySection,
   newReview,
 } from './email-fixtures.fixture';
+import { ratingDropped } from './listing-events.fixture';
 import { drop, milestone } from './rank-events.fixture';
 
 const batchesOf = (payloads: GranularAlertPayload[]) =>
@@ -138,5 +139,49 @@ describe('createDeliveryFlows', () => {
     expect(payload.apps[0].newReviews).toEqual([reviews[0], reviews[2]]);
     expect(payload.events).toEqual([reviews[0], reviews[2]]);
     expect(payload.totals.events).toBe(2);
+  });
+});
+
+describe('createDeliveryFlows with a rating drop threshold', () => {
+  it('carries only the drops at or above the threshold', () => {
+    const small = ratingDropped({ dropTenths: 1 });
+    const large = ratingDropped({ dropTenths: 3, toDate: '2026-11-04' });
+
+    const flows = createDeliveryFlows({
+      batches: batchesOf([small, large]),
+      workspaceId: 'ws_1',
+      flushId: 'f1',
+      kind: 'email',
+      subscription: {
+        id: 'ea1',
+        events: ['rating.dropped'],
+        reviewScores: [],
+        ratingDropTenths: 3,
+      },
+      jobName: JOBS.DELIVER_EMAIL,
+    });
+    const { payload } = flows[0].flow.data as { payload: AlertBatchPayload };
+
+    expect(flows).toHaveLength(1);
+    expect(payload.events).toEqual([large]);
+    expect(payload.apps[0].ratingDrops).toEqual([large]);
+  });
+
+  it('builds no flow when every drop is below the threshold', () => {
+    expect(
+      createDeliveryFlows({
+        batches: batchesOf([ratingDropped({ dropTenths: 1 })]),
+        workspaceId: 'ws_1',
+        flushId: 'f1',
+        kind: 'email',
+        subscription: {
+          id: 'ea1',
+          events: ['rating.dropped'],
+          reviewScores: [],
+          ratingDropTenths: 2,
+        },
+        jobName: JOBS.DELIVER_EMAIL,
+      }),
+    ).toEqual([]);
   });
 });

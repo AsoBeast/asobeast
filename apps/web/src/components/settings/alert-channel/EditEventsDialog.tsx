@@ -3,7 +3,10 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { Loader2, Pencil } from "lucide-react";
-import { selectedReviewScores } from "@asobeast/shared";
+import {
+  RATING_DROP_DEFAULT_TENTHS,
+  selectedReviewScores,
+} from "@asobeast/shared";
 import type { WebhookEvent } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   needsAStar,
+  ratingDropTenthsToSend,
   reviewScoresToSend,
   type AlertSubscriptionChange,
 } from "../alert-event-copy";
@@ -29,12 +33,14 @@ export function EditEventsDialog({
   events,
   confirmDrops,
   reviewScores,
+  ratingDropTenths = RATING_DROP_DEFAULT_TENTHS,
   pending,
   onSave,
 }: {
   label: string;
   events: WebhookEvent[];
   reviewScores?: number[];
+  ratingDropTenths?: number;
   confirmDrops: boolean;
   pending: boolean;
   onSave: (change: AlertSubscriptionChange) => Promise<unknown>;
@@ -45,6 +51,7 @@ export function EditEventsDialog({
     selectedReviewScores(reviewScores),
   );
   const [confirming, setConfirming] = useState(confirmDrops);
+  const [ratingTenths, setRatingTenths] = useState(ratingDropTenths);
   const blocked = selected.length === 0 || needsAStar(selected, stars);
 
   function changeOpen(next: boolean) {
@@ -52,6 +59,7 @@ export function EditEventsDialog({
       setSelected(events);
       setStars(selectedReviewScores(reviewScores));
       setConfirming(confirmDrops);
+      setRatingTenths(ratingDropTenths);
     }
     setOpen(next);
   }
@@ -59,15 +67,16 @@ export function EditEventsDialog({
   function submit(formEvent: FormEvent<HTMLFormElement>) {
     formEvent.preventDefault();
     if (blocked) return;
+    const tenths = ratingDropTenthsToSend(selected, ratingTenths);
     const change: AlertSubscriptionChange = {
       events: selected,
       reviewScores: reviewScoresToSend(selected, stars),
+      ...(confirming === confirmDrops ? {} : { confirmDrops: confirming }),
+      ...(tenths === undefined || tenths === ratingDropTenths
+        ? {}
+        : { ratingDropTenths: tenths }),
     };
-    void onSave(
-      confirming === confirmDrops
-        ? change
-        : { ...change, confirmDrops: confirming },
-    ).then(
+    void onSave(change).then(
       () => setOpen(false),
       () => undefined,
     );
@@ -94,8 +103,10 @@ export function EditEventsDialog({
             <AlertSubscriptionFields
               events={selected}
               stars={stars}
+              ratingTenths={ratingTenths}
               onEventsChange={setSelected}
               onStarsChange={setStars}
+              onRatingTenthsChange={setRatingTenths}
             />
             <ConfirmDropsField checked={confirming} onChange={setConfirming} />
             {selected.length === 0 ? (

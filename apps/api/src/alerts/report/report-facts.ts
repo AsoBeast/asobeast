@@ -14,6 +14,8 @@ import {
 import { summarizeActionEvidence } from '../action-lines';
 import type { ReportFact, ReportRow } from './report';
 import { chartLabel } from './report-chart-moves';
+import { ratingDropFacts } from './report-rating-drop';
+import { reviewSpikeFacts } from './report-review-spike';
 import {
   EMPTY_VALUE,
   PRIORITY_WORDS,
@@ -25,6 +27,7 @@ import {
   type ReviewAlert,
 } from './report-rows';
 import { appName, plural, type GranularPayload } from './report-sentences';
+import { storefrontLabel } from './storefront';
 
 const DIGEST_APP_CAP = 10;
 
@@ -164,7 +167,10 @@ function rankEventFacts(
   ];
 }
 
-export function factsOf(payload: GranularPayload): ReportFact[] {
+export function factsOf(
+  payload: GranularPayload,
+  withFlag = true,
+): ReportFact[] {
   switch (payload.event) {
     case 'metadata.changed':
       return changeFacts(payload);
@@ -179,6 +185,13 @@ export function factsOf(payload: GranularPayload): ReportFact[] {
     case 'review.negative':
     case 'review.new':
       return reviewFacts(payload);
+    case 'rating.dropped':
+      return ratingDropFacts(
+        payload,
+        storefrontLabel(payload.country, withFlag),
+      );
+    case 'review.spike':
+      return reviewSpikeFacts(payload);
     case 'serp.entrant':
       return [
         fact('Keyword', keywordLabel(payload.keyword)),

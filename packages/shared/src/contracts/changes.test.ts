@@ -12,6 +12,7 @@ import {
   EmailAlertCreateRequest,
   EmailAlertItem,
   EmailAlertUpdateRequest,
+  ESSENTIAL_ALERT_EVENTS,
   GranularAlertPayload,
   isChangeField,
   RankDroppedPayload,
@@ -23,7 +24,12 @@ import {
   WebhookUpdateRequest,
 } from './changes';
 import type { ChartLeftPayload, ChartMovePayload } from './charts';
-import type { ReviewNegativePayload, ReviewNewPayload } from './reviews';
+import type {
+  ReviewNegativePayload,
+  ReviewNewPayload,
+  ReviewSpikePayload,
+} from './reviews';
+import type { RatingDroppedPayload } from './listing-alerts';
 
 const batch = (scope: AlertBatchPayload['scope']): AlertBatchPayload => ({
   event: 'alerts.batch',
@@ -55,7 +61,29 @@ describe('alert contracts', () => {
       'chart.left',
       'chart.milestone',
       'review.new',
+      'rating.dropped',
+      'review.spike',
     ]);
+  });
+
+  it('lists the essential events once, each a known event', () => {
+    expect(ESSENTIAL_ALERT_EVENTS).toEqual([
+      'rank.dropped',
+      'rank.milestone',
+      'rank.first',
+      'metadata.changed',
+      'chart.entered',
+      'chart.left',
+      'rating.dropped',
+      'review.spike',
+      'review.negative',
+    ]);
+    expect(new Set(ESSENTIAL_ALERT_EVENTS).size).toBe(
+      ESSENTIAL_ALERT_EVENTS.length,
+    );
+    for (const event of ESSENTIAL_ALERT_EVENTS) {
+      expect(WEBHOOK_EVENTS).toContain(event);
+    }
   });
 
   it('carries the author on a new review and not on a negative one', () => {
@@ -77,6 +105,41 @@ describe('alert contracts', () => {
     expectTypeOf<{
       url: string;
       events: ['review.new'];
+    }>().toExtend<WebhookCreateRequest>();
+  });
+
+  it('keeps the rating drop threshold and the listing groups optional', () => {
+    expectTypeOf<WebhookItem['ratingDropTenths']>().toEqualTypeOf<
+      number | undefined
+    >();
+    expectTypeOf<EmailAlertItem['ratingDropTenths']>().toEqualTypeOf<
+      number | undefined
+    >();
+    expectTypeOf<WebhookCreateRequest['ratingDropTenths']>().toEqualTypeOf<
+      number | undefined
+    >();
+    expectTypeOf<WebhookUpdateRequest['ratingDropTenths']>().toEqualTypeOf<
+      number | undefined
+    >();
+    expectTypeOf<EmailAlertCreateRequest['ratingDropTenths']>().toEqualTypeOf<
+      number | undefined
+    >();
+    expectTypeOf<EmailAlertUpdateRequest['ratingDropTenths']>().toEqualTypeOf<
+      number | undefined
+    >();
+    expectTypeOf<AlertBatchAppSection['ratingDrops']>().toEqualTypeOf<
+      RatingDroppedPayload[] | undefined
+    >();
+    expectTypeOf<AlertBatchAppSection['reviewSpikes']>().toEqualTypeOf<
+      ReviewSpikePayload[] | undefined
+    >();
+    expectTypeOf<{
+      url: string;
+      events: ['rating.dropped'];
+    }>().toExtend<WebhookCreateRequest>();
+    expectTypeOf<{
+      url: string;
+      events: ['review.spike'];
     }>().toExtend<WebhookCreateRequest>();
   });
 

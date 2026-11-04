@@ -15,10 +15,13 @@ import {
   RankImprovedPayload,
   RankMilestonePayload,
   RankOvertakenPayload,
+  RatingDroppedPayload,
   ReviewNegativePayload,
   ReviewNewPayload,
+  ReviewSpikePayload,
   SerpEntrantPayload,
 } from '@asobeast/shared';
+import { withDeepestRatingDrops } from './deepest-rating-drops';
 
 export interface ResolvedApp {
   id: string;
@@ -98,8 +101,10 @@ interface MutableSection {
   chartMoves: ChartMovePayload[];
   serpEntrants: SerpEntrantPayload[];
   changes: MetadataChangedPayload[];
+  ratingDrops: RatingDroppedPayload[];
   negativeReviews: ReviewNegativePayload[];
   newReviews: ReviewNewPayload[];
+  reviewSpikes: ReviewSpikePayload[];
   actions: ActionOpenedPayload[];
   competitors: Map<string, AlertBatchCompetitorSection>;
 }
@@ -283,8 +288,10 @@ function createSection(app: ResolvedApp): MutableSection {
     chartMoves: [],
     serpEntrants: [],
     changes: [],
+    ratingDrops: [],
     negativeReviews: [],
     newReviews: [],
+    reviewSpikes: [],
     actions: [],
     competitors: new Map(),
   };
@@ -327,6 +334,10 @@ function addOwnedSignal(
       section.negativeReviews.push(payload);
     } else if (payload.event === 'review.new') {
       section.newReviews.push(payload);
+    } else if (payload.event === 'rating.dropped') {
+      section.ratingDrops.push(payload);
+    } else if (payload.event === 'review.spike') {
+      section.reviewSpikes.push(payload);
     } else if (payload.event === 'action.opened') {
       section.actions.push(payload);
     }
@@ -380,8 +391,10 @@ function finalizeSections(
       chartMoves: section.chartMoves,
       serpEntrants: section.serpEntrants,
       changes: section.changes,
+      ratingDrops: section.ratingDrops,
       negativeReviews: section.negativeReviews,
       newReviews: section.newReviews,
+      reviewSpikes: section.reviewSpikes,
       actions: [...section.actions].sort(compareActions),
       competitors: [...section.competitors.values()].sort(compareSections),
     }))
@@ -417,7 +430,9 @@ function assembleScope(
 }
 
 export function assembleBatches(input: AssembleInput): AssembledBatches {
-  const events = [...input.events].sort(compareOutboxEvents);
+  const events = withDeepestRatingDrops(
+    [...input.events].sort(compareOutboxEvents),
+  );
   const classification = classifyBatch({ ...input, events });
   const ownedSections = new Map<string, MutableSection>();
   const competitorSections = new Map<string, MutableSection>();

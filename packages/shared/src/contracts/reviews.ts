@@ -202,3 +202,22 @@ export interface ReviewNewPayload {
   app: { id: string; name: string | null } & AlertAppIdentity;
   review: AlertReviewBody & { author: string | null };
 }
+
+export interface ReviewSpikeTheme {
+  phrase: string;
+  kind: ReviewThemeKind;
+  mentions: number;
+}
+
+export interface ReviewSpikePayload {
+  event: 'review.spike';
+  occurredAt: string;
+  app: { id: string; name: string | null } & AlertAppIdentity;
+  date: string;
+  count: number;
+  median: number;
+  threshold: number;
+  lowShare: number;
+  lowScoreMax: number;
+  topTheme: ReviewSpikeTheme | null;
+}

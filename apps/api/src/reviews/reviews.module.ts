@@ -9,6 +9,7 @@ import { ReviewRepliesService } from './review-replies.service';
 import { ReviewReplyAssistant } from './review-reply-assistant.service';
 import { ReviewReplyPoster } from './review-reply-poster.service';
 import { ReviewReplyGuidelinesController } from './review-reply-guidelines.controller';
+import { ReviewSpikeAlerts } from './review-spike-alerts.service';
 import { ReviewThemesService } from './review-themes.service';
 import { ReviewTranslationController } from './review-translation.controller';
 import { ReviewTranslator } from './review-translator.service';
@@ -29,6 +30,7 @@ import { ReviewsService } from './reviews.service';
     ReviewRepliesService,
     ReviewReplyAssistant,
     ReviewReplyPoster,
+    ReviewSpikeAlerts,
     ReviewThemesService,
     ReviewTranslator,
   ],

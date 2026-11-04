@@ -286,3 +286,25 @@ test("an email alert keeps the confirm drops setting like the api", async ({
     confirmDrops: false,
   } satisfies Partial<EmailAlertItem>);
 });
+
+test("a refused rating drop threshold leaves the email alert as it was", async ({
+  page,
+}) => {
+  const created = await page.request.post(`${MOCK_API_URL}/email-alerts`, {
+    data: { email: "tenths-seam@example.com", events: ["rank.dropped"] },
+  });
+  const alert = (await created.json()) as EmailAlertItem;
+
+  const refused = await page.request.patch(
+    `${MOCK_API_URL}/email-alerts/${alert.id}`,
+    { data: { events: ["rank.first"], ratingDropTenths: 11 } },
+  );
+  expect(refused.status()).toBe(400);
+
+  const listed = await page.request.get(`${MOCK_API_URL}/email-alerts`);
+  const rows = (await listed.json()) as EmailAlertItem[];
+  expect(rows.find((row) => row.id === alert.id)).toMatchObject({
+    events: ["rank.dropped"],
+    ratingDropTenths: alert.ratingDropTenths,
+  });
+});

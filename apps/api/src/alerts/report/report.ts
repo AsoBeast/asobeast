@@ -42,8 +42,10 @@ export const REPORT_GROUP_KINDS = [
   'chartMoves',
   'serpEntrants',
   'changes',
+  'ratingDrops',
   'negativeReviews',
   'newReviews',
+  'reviewSpikes',
   'actions',
 ] as const;
 export type ReportGroupKind = (typeof REPORT_GROUP_KINDS)[number];

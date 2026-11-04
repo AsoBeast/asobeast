@@ -2,7 +2,6 @@ import {
   AlertBatchAppSection,
   AlertBatchPayload,
   GranularAlertPayload,
-  WebhookEvent,
 } from '@asobeast/shared';
 import { reachesChannel } from './confirm-drops';
 import { reviewGate } from './review-routing';
@@ -17,8 +16,10 @@ function sectionHasContent(section: AlertBatchAppSection): boolean {
     (section.chartMoves ?? []).length > 0 ||
     section.serpEntrants.length > 0 ||
     section.changes.length > 0 ||
+    (section.ratingDrops ?? []).length > 0 ||
     section.negativeReviews.length > 0 ||
     (section.newReviews ?? []).length > 0 ||
+    (section.reviewSpikes ?? []).length > 0 ||
     section.actions.length > 0 ||
     section.competitors.length > 0
   );
@@ -35,7 +36,7 @@ export function filterBatch(
     (event) => keeps(event) && reachesChannel(event, confirmDrops),
   );
   const ownedOnly = <T extends GranularAlertPayload>(
-    event: WebhookEvent,
+    event: GranularAlertPayload['event'],
     list: T[],
   ): T[] =>
     batch.scope === 'owned_apps' && allowed.has(event)
@@ -61,6 +62,7 @@ export function filterBatch(
         batch.scope === 'owned_apps' && allowed.has('metadata.changed')
           ? section.changes
           : [],
+      ratingDrops: ownedOnly('rating.dropped', section.ratingDrops ?? []),
       negativeReviews: ownedOnly(
         'review.negative',
         section.negativeReviews,
@@ -68,6 +70,7 @@ export function filterBatch(
       newReviews: ownedOnly('review.new', section.newReviews ?? []).filter(
         keeps,
       ),
+      reviewSpikes: ownedOnly('review.spike', section.reviewSpikes ?? []),
       actions:
         batch.scope === 'owned_apps' && allowed.has('action.opened')
           ? section.actions

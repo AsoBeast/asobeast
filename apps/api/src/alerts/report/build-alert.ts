@@ -9,6 +9,7 @@ import type {
 } from './report';
 import { factsOf } from './report-facts';
 import { reportLinks, type ReportLinks } from './report-links';
+import { reviewSpikeTone } from './report-review-spike';
 import { changeRows, reviewTone } from './report-rows';
 import { appName, sentenceOf, type GranularPayload } from './report-sentences';
 
@@ -65,6 +66,12 @@ function linkOf(
   if (payload.event === 'review.new') {
     return links.reviews(payload.app.id, payload.review.score);
   }
+  if (payload.event === 'rating.dropped') {
+    return links.ratingDrop(payload.app.id, payload.actionId);
+  }
+  if (payload.event === 'review.spike') {
+    return links.appReviews(payload.app.id);
+  }
   if ('app' in payload) return links.app(payload.app.id);
   return links.home;
 }
@@ -86,6 +93,10 @@ function toneOf(payload: GranularPayload): ReportTone {
       return payload.direction === 'entered' ? 'up' : 'down';
     case 'review.new':
       return reviewTone(payload.review.score);
+    case 'rating.dropped':
+      return 'down';
+    case 'review.spike':
+      return reviewSpikeTone([payload]);
     default:
       return 'neutral';
   }
@@ -110,6 +121,6 @@ export function buildAlert(
     link: linkOf(payload, links),
     apps: 'app' in payload ? [alertApp(payload, links)] : [],
     omittedApps: 0,
-    facts: factsOf(payload),
+    facts: factsOf(payload, withFlag),
   };
 }

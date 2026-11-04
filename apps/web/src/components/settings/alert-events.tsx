@@ -2,10 +2,21 @@
 
 import { useId } from "react";
 import { CheckIcon } from "lucide-react";
-import { REVIEW_SCORES } from "@asobeast/shared";
+import {
+  RATING_DROP_TENTHS_CHOICES,
+  REVIEW_SCORES,
+  ratingDropLabel,
+} from "@asobeast/shared";
 import type { ReviewScore, WebhookEvent } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { EVENT_LABELS, PICKER_EVENTS } from "./alert-event-copy";
 
 const STARS_HELP =
@@ -118,22 +129,79 @@ export function ReviewStarSelection({
   );
 }
 
+const RATING_DROP_HELP =
+  "Alert when the average rating falls by at least this much against seven to ten days earlier. Needs 20 ratings. Reviews are not counted, the number shown in the store is.";
+
+const ratingDropChoices = (value: number): number[] =>
+  [...new Set<number>([...RATING_DROP_TENTHS_CHOICES, value])].sort(
+    (left, right) => left - right,
+  );
+
+export function RatingDropSelection({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (next: number) => void;
+}) {
+  const triggerId = useId();
+  const helpId = useId();
+
+  return (
+    <div className="flex flex-col gap-2">
+      <Label htmlFor={triggerId}>Rating drop threshold</Label>
+      <Select
+        value={String(value)}
+        onValueChange={(next) => onChange(Number(next))}
+      >
+        <SelectTrigger
+          id={triggerId}
+          aria-describedby={helpId}
+          className="w-[160px]"
+        >
+          <SelectValue>{ratingDropLabel(value)}</SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          {ratingDropChoices(value).map((tenths) => (
+            <SelectItem key={tenths} value={String(tenths)}>
+              {ratingDropLabel(tenths)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <p id={helpId} className="text-sm text-muted-foreground">
+        {RATING_DROP_HELP}
+      </p>
+    </div>
+  );
+}
+
 export function AlertSubscriptionFields({
   events,
   stars,
+  ratingTenths,
   onEventsChange,
   onStarsChange,
+  onRatingTenthsChange,
 }: {
   events: WebhookEvent[];
   stars: number[];
+  ratingTenths: number;
   onEventsChange: (next: WebhookEvent[]) => void;
   onStarsChange: (next: number[]) => void;
+  onRatingTenthsChange: (next: number) => void;
 }) {
   return (
     <>
       <EventSelection value={events} onChange={onEventsChange} />
       {events.includes("review.new") ? (
         <ReviewStarSelection value={stars} onChange={onStarsChange} />
+      ) : null}
+      {events.includes("rating.dropped") ? (
+        <RatingDropSelection
+          value={ratingTenths}
+          onChange={onRatingTenthsChange}
+        />
       ) : null}
     </>
   );

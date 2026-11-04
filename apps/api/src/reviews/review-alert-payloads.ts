@@ -3,8 +3,11 @@ import {
   type AlertReviewBody,
   type ReviewNegativePayload,
   type ReviewNewPayload,
+  type ReviewSpikePayload,
+  type ReviewSpikeTheme,
 } from '@asobeast/shared';
 import type { ReviewResult } from '../store-providers/types';
+import type { Spike } from './review-spike';
 
 export const REVIEW_ALERT_TEXT_MAX = 500;
 
@@ -46,5 +49,28 @@ export function reviewNewPayload(
     occurredAt: occurredAt.toISOString(),
     app,
     review: { ...alertReviewBody(review), author: review.userName ?? null },
+  };
+}
+
+const share = (part: number, whole: number): number =>
+  whole === 0 ? 0 : Math.round((part / whole) * 100) / 100;
+
+export function reviewSpikePayload(
+  app: ReviewAlertApp,
+  spike: Spike,
+  context: { lowScoreMax: number; topTheme: ReviewSpikeTheme | null },
+  occurredAt: Date,
+): ReviewSpikePayload {
+  return {
+    event: 'review.spike',
+    occurredAt: occurredAt.toISOString(),
+    app,
+    date: spike.day,
+    count: spike.count,
+    median: spike.median,
+    threshold: spike.threshold,
+    lowShare: share(spike.low, spike.count),
+    lowScoreMax: context.lowScoreMax,
+    topTheme: context.topTheme,
   };
 }

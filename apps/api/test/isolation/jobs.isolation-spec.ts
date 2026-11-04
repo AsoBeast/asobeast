@@ -1,10 +1,16 @@
 import { getQueueToken } from '@nestjs/bullmq';
 import { Job, Queue } from 'bullmq';
 import { AlertFlushService } from '../../src/alerts/alert-flush.service';
+import { ListingCaptureService } from '../../src/apps/listing-capture.service';
 import { AuditService } from '../../src/audit/audit.service';
+import { WorkspaceContext } from '../../src/common/tenancy/workspace-context';
 import { JobWorkspaceMissingError } from '../../src/jobs/job-workspace';
 import { QUEUES } from '../../src/jobs/jobs.types';
 import { PipelineService } from '../../src/jobs/pipeline.service';
+import { PrismaService } from '../../src/prisma/prisma.service';
+import { ReviewsService } from '../../src/reviews/reviews.service';
+import { StoreProviderRegistry } from '../../src/store-providers/store-provider.registry';
+import type { ReviewResult } from '../../src/store-providers/types';
 import { RetentionService } from '../../src/jobs/retention.service';
 import { StoreJobsHandler } from '../../src/jobs/store-jobs.handler';
 import { createIsolationFixture, IsolationFixture } from './fixture';
@@ -185,5 +191,110 @@ describe('Job isolation', () => {
       _count: { _all: true },
     });
     expect(after).toEqual(before);
+  });
+
+  it('keeps a rating drop alert in the workspace whose capture raised it', async () => {
+    const workspaces = [fixture.a, fixture.b];
+    const scope = fixture.app.get(WorkspaceContext);
+    const prisma = fixture.app.get(PrismaService);
+    for (const workspace of workspaces) {
+      await fixture.db.appSnapshot.create({
+        data: {
+          appId: workspace.appleAppId,
+          title: 'Shared Fixture',
+          description: 'Shared description',
+          raw: {},
+          ratingAvg: 4.8,
+          ratingCount: 100,
+          version: '1.0.0',
+          capturedAt: new Date(Date.now() - 8 * 86_400_000),
+        },
+      });
+      await scope.run(workspace.id, () =>
+        fixture.app
+          .get(ListingCaptureService)
+          .refreshListing(workspace.appleAppId),
+      );
+    }
+
+    for (const workspace of workspaces) {
+      const stored = await fixture.db.alertEvent.findMany({
+        where: { workspaceId: workspace.id, event: 'rating.dropped' },
+        select: { appId: true },
+      });
+      const visible = await scope.run(workspace.id, () =>
+        prisma.alertEvent.findMany({
+          where: { event: 'rating.dropped' },
+          select: { appId: true },
+        }),
+      );
+
+      expect(stored).toEqual([{ appId: workspace.appleAppId }]);
+      expect(visible).toEqual([{ appId: workspace.appleAppId }]);
+    }
+  });
+
+  it('keeps a review spike alert in the workspace whose sync raised it', async () => {
+    const scope = fixture.app.get(WorkspaceContext);
+    const prisma = fixture.app.get(PrismaService);
+    const noon = (daysAgo: number) => {
+      const now = new Date();
+      return new Date(
+        Date.UTC(
+          now.getUTCFullYear(),
+          now.getUTCMonth(),
+          now.getUTCDate(),
+          12,
+        ) -
+          daysAgo * 86_400_000,
+      );
+    };
+    const burst: ReviewResult[] = Array.from({ length: 9 }, (_, index) => ({
+      reviewId: `spike-${index}`,
+      score: 1,
+      text: 'crashes on launch',
+      updatedAt: noon(1),
+    }));
+    const registry = fixture.app.get(StoreProviderRegistry);
+    const original = registry.get.bind(registry);
+    const spy = jest.spyOn(registry, 'get').mockImplementation((store) => ({
+      ...original(store),
+      reviews: () => Promise.resolve(burst),
+    }));
+    for (const workspace of [fixture.a, fixture.b]) {
+      await fixture.db.review.createMany({
+        data: Array.from({ length: 40 }, (_, back) => ({
+          appId: workspace.appleAppId,
+          reviewId: `history-${back}`,
+          score: 5,
+          text: 'calm',
+          reviewedAt: noon(back + 2),
+        })),
+      });
+      await scope.run(workspace.id, () =>
+        fixture.app.get(ReviewsService).syncReviews({
+          appId: workspace.appleAppId,
+          pages: 1,
+          backfill: false,
+        }),
+      );
+    }
+    spy.mockRestore();
+
+    for (const workspace of [fixture.a, fixture.b]) {
+      const stored = await fixture.db.alertEvent.findMany({
+        where: { workspaceId: workspace.id, event: 'review.spike' },
+        select: { appId: true },
+      });
+      const visible = await scope.run(workspace.id, () =>
+        prisma.alertEvent.findMany({
+          where: { event: 'review.spike' },
+          select: { appId: true },
+        }),
+      );
+
+      expect(stored).toEqual([{ appId: workspace.appleAppId }]);
+      expect(visible).toEqual([{ appId: workspace.appleAppId }]);
+    }
   });
 });

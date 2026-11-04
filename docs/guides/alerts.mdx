@@ -37,6 +37,8 @@ Alerts are not part of the guided setup, because nothing can move before positio
 | `rank.overtaken` | A tracked competitor moves above an owned app | None |
 | `review.negative` | A review lands at or below the rating cutoff | `ALERT_REVIEW_SCORE_MAX`, default 2, range 1 to 4 |
 | `review.new` | A review the store returns for the first time | Optional star filter per channel |
+| `rating.dropped` | The displayed average rating of an owned app is at least one tenth of a star lower than seven to ten days earlier | Optional threshold per channel, 1 to 10 tenths |
+| `review.spike` | Reviews dated one day pass the larger of 5 and three times the median of the previous 28 days | None |
 | `action.opened` | An action opens or reopens at or above the priority floor | `ALERT_ACTIONS_MIN_PRIORITY`, default `high` |
 | `metadata.changed` | A snapshot differs from the previous one | None |
 | `serp.entrant` | A new app enters a tracked keyword's top 10 | None |
@@ -45,7 +47,7 @@ Alerts are not part of the guided setup, because nothing can move before positio
 | `chart.milestone` | An owned app enters or leaves first place, the top 3 or the top 10 of a chart | None |
 | `digest.weekly` | The weekly portfolio digest | `CRON_DIGEST` |
 
-A new event never joins an existing subscription. To opt in, open **Edit events** on the channel in Settings, tick the events and save. A webhook keeps its url and its secret. The same dialog holds the [confirm drops](#report-drops-only-when-they-hold) setting.
+A new event never joins an existing subscription, `rating.dropped` and `review.spike` included. To opt in, open **Edit events** on the channel in Settings, tick the events and save. A webhook keeps its url and its secret. The same dialog holds the [confirm drops](#report-drops-only-when-they-hold) setting.
 
 ### Choose the stars of new reviews
 
@@ -111,6 +113,34 @@ An app is in a chart when it sits within the depth the store answers: 100 on the
 Three cases fire nothing. A chart for which the store listed no apps raises no event, because an empty answer does not show that the app left, and the next check compares with the check before that day. Competitor apps raise none, because the competitor report lists listing changes only and the chart page already marks them. An app that changes its price class or its category raises none either: the chart it leaves keeps its last check and the new chart starts with a first check.
 
 In batched delivery the facts are deduplicated per app, chart and day, and each app's card in the owned app report gets a **Chart moves** group with a link to the chart page. Instant delivery sends one notification per event, so one move can send two. See [Read top charts](/guides/top-charts) for the chart page and [Follow category ranks](/guides/category-ranks) for the charts an app is checked in.
+
+## Rating drops and review spikes
+
+Both events report a fact about one owned app and one day, read from what AsoBeast already stored. Neither asks the store for anything, and competitors raise neither.
+
+### Rating drops
+
+`rating.dropped` compares the average rating the store shows for the home listing of an owned app, as stored with each snapshot, with the newest snapshot taken seven to ten days earlier. Both snapshots need at least 20 ratings, because below that one review moves the average by more than a tenth. The drop is counted in whole tenths of a star, so a fall from 4.64 to 4.55 is nine hundredths and raises nothing, while 4.66 to 4.55 is one tenth.
+
+Each channel chooses how big a drop it wants with the **Rating drop threshold** control in Settings, which appears while **Rating dropped** is ticked. Over the API it is `ratingDropTenths`, an integer from 1 to 10 on a webhook or an email alert. Omitted means 1, a tenth of a star, and a `PATCH` without it leaves it as it is.
+
+A fall stays visible in a seven day comparison for seven days. So a drop is reported the day it appears and again only when it grows, never on the days it merely persists. A channel with a threshold of 3 tenths hears the day the drop reaches 3 tenths and every day it deepens past it.
+
+When the snapshots show that a new version shipped in between, the alert names it. The alert links to the open **Investigate falling review scores** action when there is one, and to the reviews page otherwise. That Action Center rule reads review scores rather than the displayed average and stays as it is. Only the home market is judged.
+
+### Review spikes
+
+`review.spike` fires when the reviews dated one day are more than `max(5, 3 × median)`, where the median is taken over the previous 28 days and a day without reviews counts as zero. Days before the app's first stored review are not counted, and seven days of history are needed before any day is judged. Days are the store's own review dates, today and yesterday in UTC, never the day a review was stored, so a backfill or an app that resumes raises nothing.
+
+| App | Usual reviews a day | First count that fires |
+| --- | --- | --- |
+| A quiet utility | 0 | 6 |
+| A steady app | 4 | 13 |
+| A busy game | 200 | 601 |
+
+A sync raises the spike only when the reviews it inserted carried the day over the line, so a later sync of the same day never raises it twice. The payload carries `count`, `median`, `threshold`, `lowShare` (the share at or below `ALERT_REVIEW_SCORE_MAX`), `lowScoreMax` and `topTheme`, the first theme of the day's reviews when one stands out.
+
+In batched delivery both are deduplicated per app and day and folded into the owned app report as **Rating drops** and **Review spikes** groups. Instant delivery sends each as it happens. Both appear in the delivery log like any event.
 
 ## Webhook delivery
 
@@ -213,6 +243,43 @@ A new review carries the author as well.
     "version": "3.1.0",
     "reviewedAt": "2026-10-28T01:40:00.000Z"
   }
+}
+```
+
+A rating drop carries both averages, both rating counts and both days. `dropTenths` is the drop in whole tenths, `version` the version that shipped in between or `null`, and `actionId` the open rating decline action or `null`.
+
+```json
+{
+  "event": "rating.dropped",
+  "occurredAt": "2026-11-03T03:10:00.000Z",
+  "app": { "id": "cm1a", "name": "My App", "store": "APP_STORE", "country": "us" },
+  "country": "us",
+  "from": 4.66,
+  "to": 4.44,
+  "fromCount": 1200,
+  "toCount": 1260,
+  "fromDate": "2026-10-27",
+  "toDate": "2026-11-03",
+  "dropTenths": 2,
+  "version": "2.4",
+  "actionId": null
+}
+```
+
+A review spike carries the day and the numbers it was judged by.
+
+```json
+{
+  "event": "review.spike",
+  "occurredAt": "2026-11-03T05:00:00.000Z",
+  "app": { "id": "cm1a", "name": "My App", "store": "APP_STORE", "country": "us" },
+  "date": "2026-11-02",
+  "count": 34,
+  "median": 4,
+  "threshold": 12,
+  "lowShare": 0.71,
+  "lowScoreMax": 2,
+  "topTheme": { "phrase": "crash on launch", "kind": "complaint", "mentions": 9 }
 }
 ```
 

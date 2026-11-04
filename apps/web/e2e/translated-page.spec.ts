@@ -210,6 +210,30 @@ test("a translated settings page opens the delivery log", async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
+test("a translated alert dialog changes its rating threshold", async ({
+  page,
+}) => {
+  const errors = collectDomErrors(page);
+  await page.goto("/settings");
+  const dialog = await openSettledDialog(page, "Add webhook");
+
+  await translateText(page);
+  await dialog.getByRole("checkbox", { name: /rating dropped/i }).click();
+  const threshold = dialog.getByRole("combobox", {
+    name: /rating drop threshold/i,
+  });
+  await expect(threshold).toBeVisible();
+  await translateText(page);
+  await threshold.click();
+  await page.getByRole("option", { name: /0\.3 stars/i }).click();
+  await translateText(page);
+  await threshold.click();
+  await page.getByRole("option", { name: /0\.5 stars/i }).click();
+
+  await expect(threshold).toHaveText(/0\.5 stars/i);
+  expect(errors).toEqual([]);
+});
+
 const REVIEW_FILTERS = [
   "Filter by date",
   "Filter by version",

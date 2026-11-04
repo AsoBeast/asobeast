@@ -30,6 +30,8 @@ describe('reportLinks', () => {
     ['overtakes', '/apps/a/keywords'],
     ['serpEntrants', '/apps/a/rankings'],
     ['changes', '/apps/a/changes'],
+    ['ratingDrops', '/apps/a/reviews'],
+    ['reviewSpikes', '/apps/a/reviews'],
     ['actions', '/apps/a/actions'],
   ] as const)('sends the %s group to %s', (kind, path) => {
     expect(reportLinks(ORIGIN).group('a', kind, 32)).toEqual({
@@ -102,5 +104,31 @@ describe('reportLinks', () => {
       href: `${ORIGIN}/charts?store=APP_STORE&country=us&genre=6007&device=iphone&view=table&collection=free&date=2026-07-22`,
       label: 'Open the chart',
     });
+  });
+});
+
+describe('the rating and review links', () => {
+  it('opens the action of a rating drop, else the reviews page', () => {
+    const links = reportLinks(ORIGIN);
+
+    expect(links.ratingDrop('a', 'act_1')).toEqual({
+      href: `${ORIGIN}/actions?action=act_1`,
+      label: 'Open the action',
+    });
+    expect(links.ratingDrop('a', null)).toEqual({
+      href: `${ORIGIN}/apps/a/reviews`,
+      label: 'Open reviews',
+    });
+    expect(links.appReviews('a')).toEqual({
+      href: `${ORIGIN}/apps/a/reviews`,
+      label: 'Open reviews',
+    });
+  });
+
+  it('builds neither without an origin', () => {
+    const links = reportLinks(null);
+
+    expect(links.ratingDrop('a', 'act_1')).toBeNull();
+    expect(links.appReviews('a')).toBeNull();
   });
 });

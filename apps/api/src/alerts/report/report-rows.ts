@@ -25,6 +25,10 @@ import type { GroupTone, ReportRow } from './report';
 export type ReviewAlert = ReviewNegativePayload | ReviewNewPayload;
 
 const VALUE_MAX = 80;
+
+export function plural(count: number, singular: string): string {
+  return `${count} ${singular}${count === 1 ? '' : 's'}`;
+}
 export const EMPTY_VALUE = '—';
 const NO_REVIEW_TEXT = 'no written review';
 

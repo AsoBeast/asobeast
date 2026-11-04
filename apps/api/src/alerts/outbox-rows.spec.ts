@@ -17,6 +17,7 @@ import {
   chartMilestone,
   productivityChart,
 } from './chart-events.fixture';
+import { ratingDropped, reviewSpike } from './listing-events.fixture';
 import { outboxRows } from './outbox-rows';
 
 const milestone: RankMilestonePayload = {
@@ -400,5 +401,57 @@ describe('outboxRows for the chart events', () => {
     expect(outboxRows(chartEntered({ chart }))[0].dedupeKey).not.toBe(
       outboxRows(chartEntered())[0].dedupeKey,
     );
+  });
+});
+
+describe('outboxRows for the rating and review events', () => {
+  it('keys a rating drop by app and the day of its newest snapshot', () => {
+    const payload = ratingDropped();
+
+    expect(outboxRows(payload)).toEqual([
+      {
+        event: 'rating.dropped',
+        appId: 'a',
+        dedupeKey: 'rating.dropped:a:2026-11-03:2',
+        payload,
+      },
+    ]);
+  });
+
+  it('keys a review spike by app and its day', () => {
+    const payload = reviewSpike();
+
+    expect(outboxRows(payload)).toEqual([
+      {
+        event: 'review.spike',
+        appId: 'a',
+        dedupeKey: 'review.spike:a:2026-11-02',
+        payload,
+      },
+    ]);
+  });
+
+  it('shares a key within a day and splits two days', () => {
+    const key = (payload: Parameters<typeof outboxRows>[0]) =>
+      outboxRows(payload)[0].dedupeKey;
+
+    expect(key(ratingDropped({ to: 4.43 }))).toBe(key(ratingDropped()));
+    expect(key(ratingDropped({ toDate: '2026-11-04' }))).not.toBe(
+      key(ratingDropped()),
+    );
+    expect(key(reviewSpike({ count: 40 }))).toBe(key(reviewSpike()));
+    expect(key(reviewSpike({ date: '2026-11-03' }))).not.toBe(
+      key(reviewSpike()),
+    );
+  });
+});
+
+describe('outboxRows for a deeper rating drop', () => {
+  it('keys a deeper drop of the same day on its own', () => {
+    const key = (dropTenths: number) =>
+      outboxRows(ratingDropped({ dropTenths }))[0].dedupeKey;
+
+    expect(key(3)).not.toBe(key(2));
+    expect(key(2)).toBe(key(2));
   });
 });
