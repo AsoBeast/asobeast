@@ -24,6 +24,8 @@ import { ConfirmDropsField } from "./ConfirmDropsField";
 import { AlertChannelDialog } from "./alert-channel/AlertChannelDialog";
 import { awaitsConfirmation, recipientToast } from "./email-alert-recipient";
 
+const INVALID_ADDRESS = "Enter a valid email address";
+
 export function AddEmailAlertDialog({ trigger }: { trigger?: ReactNode }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -91,7 +93,7 @@ export function AddEmailAlertDialog({ trigger }: { trigger?: ReactNode }) {
     setError(null);
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError("Enter a valid email address");
+      setError(INVALID_ADDRESS);
       return;
     }
     if (events.length === 0) {
@@ -130,7 +132,7 @@ export function AddEmailAlertDialog({ trigger }: { trigger?: ReactNode }) {
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           placeholder="alerts@example.com"
-          aria-invalid={error !== null}
+          aria-invalid={error === INVALID_ADDRESS}
         />
       </div>
 

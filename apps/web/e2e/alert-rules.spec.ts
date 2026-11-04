@@ -149,6 +149,7 @@ const CHANNELS = [
     trigger: "Add email alert",
     field: "Recipient email",
     target: (tag: string) => `rank-${tag}-${randomUUID()}@example.com`,
+    refused: "alerts@localhost",
     path: "/api/backend/email-alerts",
   },
   {
@@ -156,6 +157,7 @@ const CHANNELS = [
     field: "Endpoint URL",
     target: (tag: string) =>
       `https://hooks.example.com/rank-${tag}-${randomUUID()}`,
+    refused: "ftp://hooks.example.com",
     path: "/api/backend/webhooks",
   },
 ] as const;
@@ -244,6 +246,32 @@ for (const channel of CHANNELS) {
       .click();
     await expect(dialog).toBeVisible();
     expect(posted).toBe(false);
+  });
+
+  test(`${channel.trigger} marks only the field a refusal names`, async ({
+    page,
+  }) => {
+    await page.goto("/settings");
+    const dialog = await openSettledDialog(page, channel.trigger);
+    const target = page.getByLabel(channel.field);
+    const submit = dialog.getByRole("button", {
+      name: channel.trigger,
+      exact: true,
+    });
+    await setRule(dialog, "Rank dropped", true);
+    await rankField(dialog).fill("0");
+    await target.fill(channel.target("named"));
+    await submit.click();
+
+    await expect(
+      dialog.getByText("Enter a whole number from 1 to 200").first(),
+    ).toBeVisible();
+    await expect(target).not.toHaveAttribute("aria-invalid", "true");
+
+    await rankField(dialog).fill("10");
+    await target.fill(channel.refused);
+    await submit.click();
+    await expect(target).toHaveAttribute("aria-invalid", "true");
   });
 }
 

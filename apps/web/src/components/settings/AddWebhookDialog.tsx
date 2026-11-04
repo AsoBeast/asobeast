@@ -24,6 +24,8 @@ import { channelHint, deliversToChat } from "./webhook-channel-copy";
 
 const HINT_ID = "webhook-channel-hint";
 
+const INVALID_URL = "Enter a valid http(s) URL";
+
 export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -87,7 +89,7 @@ export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
         throw new Error();
       }
     } catch {
-      setError("Enter a valid http(s) URL");
+      setError(INVALID_URL);
       return;
     }
     if (events.length === 0) {
@@ -129,7 +131,7 @@ export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
           value={url}
           onChange={(event) => setUrl(event.target.value)}
           placeholder="https://hooks.example.com/asobeast"
-          aria-invalid={error !== null}
+          aria-invalid={error === INVALID_URL}
           aria-describedby={hint ? HINT_ID : undefined}
         />
         {hint && (
