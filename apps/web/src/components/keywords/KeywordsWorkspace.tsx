@@ -6,13 +6,13 @@ import { useQueryState } from "nuqs";
 import type { Store } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { countryParser } from "@/lib/search-params";
+import { countryParser, keywordViewParser } from "@/lib/search-params";
 import { AddKeywordsDialog } from "./AddKeywordsDialog";
 import { ImportKeywordsDialog } from "./ImportKeywordsDialog";
 import { KeywordsToolbar } from "./KeywordsToolbar";
 import { MarketSearchReadsCard } from "./MarketSearchReadsCard";
 import { KeywordsTable } from "./KeywordsTable";
-import { KeywordsTableSkeleton } from "./skeletons";
+import { KeywordMapSkeleton, KeywordsTableSkeleton } from "./skeletons";
 import { KeywordCombinations } from "./KeywordCombinations";
 import { SuggestionsPanel } from "./SuggestionsPanel";
 
@@ -28,6 +28,7 @@ export function KeywordsWorkspace({
   keywordFields: boolean;
 }) {
   const [country] = useQueryState("country", countryParser);
+  const [view] = useQueryState("view", keywordViewParser);
   const market = country || homeCountry;
 
   return (
@@ -71,7 +72,14 @@ export function KeywordsWorkspace({
           different public signals and are not directly comparable.
         </AlertDescription>
       </Alert>
-      <Suspense fallback={<KeywordsTableSkeleton />}>
+      <Suspense
+        fallback={
+          <div className="flex flex-col gap-3">
+            {view === "map" ? <KeywordMapSkeleton /> : null}
+            <KeywordsTableSkeleton />
+          </div>
+        }
+      >
         <KeywordsTable
           id={id}
           store={store}

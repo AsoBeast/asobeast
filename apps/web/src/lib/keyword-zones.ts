@@ -7,6 +7,9 @@ export const KEYWORD_ZONES = [
 
 export type KeywordZone = (typeof KEYWORD_ZONES)[number];
 
+export const isKeywordZone = (value: unknown): value is KeywordZone =>
+  KEYWORD_ZONES.some((zone) => zone === value);
+
 export interface ScorePair {
   popularity: number;
   difficulty: number;

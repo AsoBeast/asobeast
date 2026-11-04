@@ -8,7 +8,7 @@ import {
   type TrackedKeywordItem,
 } from "@asobeast/shared";
 import { useTable, type RowSelectionState } from "@tanstack/react-table";
-import { useQueryStates } from "nuqs";
+import { useQueryState, useQueryStates } from "nuqs";
 import { useStoredColumnVisibility } from "@/components/data-table/useStoredColumnVisibility";
 import { useUrlSorting } from "@/components/data-table/useUrlSorting";
 import { keywordCountriesOptions, keywordsOptions } from "@/lib/queries";
@@ -16,10 +16,15 @@ import {
   KEYWORD_DEFAULT_SORT,
   keywordFilterParsers,
   keywordSortParser,
+  keywordViewParser,
   sortDirectionParser,
 } from "@/lib/search-params";
 import { HIDDEN_KEYWORD_COLUMNS, keywordColumns } from "./keyword-columns";
-import { exactSearchEmptyBody, keywordSearchFilter } from "./keyword-filters";
+import {
+  exactSearchEmptyBody,
+  keywordSearchFilter,
+  keywordsAcrossZones,
+} from "./keyword-filters";
 import { keywordTableFeatures } from "./keyword-table-features";
 import { exportKeywords } from "./keyword-csv";
 import { tagsIn } from "@/lib/keyword-tags";
@@ -34,6 +39,7 @@ import {
 } from "./use-keywords-table-focus";
 import { useSerpParams } from "./serp/use-serp-params";
 import { useKeywordColumnFilters } from "./use-zone-thresholds";
+import { KeywordMap } from "./map/KeywordMap";
 
 export function KeywordsTable({
   id,
@@ -52,6 +58,7 @@ export function KeywordsTable({
   });
   const [{ serp: serpId }, setSerpState] = useSerpParams();
   const [filters, setFilters] = useQueryStates(keywordFilterParsers);
+  const [view] = useQueryState("view", keywordViewParser);
   const { data: keywords, dataUpdatedAt } = useSuspenseQuery(
     keywordsOptions(id, country),
   );
@@ -157,6 +164,12 @@ export function KeywordsTable({
           filters={filters}
           setFilters={setFilters}
         />
+        {view === "map" ? (
+          <KeywordMap
+            keywords={keywordsAcrossZones(table)}
+            onClearFilters={() => void setFilters(null)}
+          />
+        ) : null}
         <KeywordsDataTable
           table={table}
           emptyBody={exactSearchEmptyBody(filters.q)}

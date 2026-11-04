@@ -1,4 +1,8 @@
-import type { ColumnFiltersState, FilterFn } from "@tanstack/react-table";
+import type {
+  ColumnFiltersState,
+  FilterFn,
+  Table,
+} from "@tanstack/react-table";
 import type { inferParserType } from "nuqs";
 import type { TrackedKeywordItem } from "@asobeast/shared";
 import { BUCKET_LABELS } from "@/components/BucketBadge";
@@ -124,6 +128,14 @@ export const keywordZoneFilter: FilterFn<
   TrackedKeywordItem
 > = (row, _columnId, { zone, thresholds }: ZoneFilterValue) =>
   zoneOf(scorePair(row.original), thresholds) === zone;
+
+export const keywordsAcrossZones = (
+  table: Table<KeywordTableFeatures, TrackedKeywordItem>,
+): TrackedKeywordItem[] =>
+  table
+    .getColumn("zone")
+    ?.getFacetedRowModel()
+    .rows.map((row) => row.original) ?? [];
 
 export function searchChipLabel(q: string): string {
   const search = parseKeywordSearch(q);

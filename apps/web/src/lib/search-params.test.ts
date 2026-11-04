@@ -38,6 +38,8 @@ import {
   combinationWordsParser,
   keywordFilterParsers,
   keywordZoneParser,
+  keywordViewParser,
+  KEYWORD_VIEWS,
   draftLocaleParser,
   ACTION_GROUPS,
   ACTION_SORTS,
@@ -123,6 +125,7 @@ const LITERAL_PARSERS: readonly LiteralParserCase[] = [
   ["appSort", appSortParser, APP_SORTS, "visibility"],
   ["appView", appViewParser, APP_VIEWS, "cards"],
   ["chartView", chartViewParser, CHART_VIEWS, "columns"],
+  ["keywordView", keywordViewParser, KEYWORD_VIEWS, "table"],
 ] as const;
 
 const NUMERIC_PARSERS = [
@@ -466,6 +469,7 @@ describe("combination parsers", () => {
   it("use address keys no other keyword monitor control uses", () => {
     const taken = new Set([
       ...Object.keys(keywordFilterParsers),
+      "view",
       "country",
       "sort",
       "dir",

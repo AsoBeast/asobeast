@@ -332,3 +332,19 @@ DATASETS[APP_MAP_ID] = {
   keywords: APP_MAP_KEYWORDS,
   rankings: MAP_RANKINGS,
 };
+
+export const APP_MAP_GP_ID = "app-map-gp";
+
+DATASETS[APP_MAP_GP_ID] = {
+  ...DATASETS["app-gp"],
+  detail: {
+    ...DATASETS["app-gp"].detail,
+    id: APP_MAP_GP_ID,
+    name: "Opportunity Map Play",
+  },
+  keywords: APP_MAP_KEYWORDS.map((keyword) => ({
+    ...keyword,
+    country: DATASETS["app-gp"].detail.country,
+    scoreSignals: null,
+  })),
+};

@@ -75,3 +75,20 @@ export const FADE_STOPS = [
 export const TIME_TOOLTIP_PROPS = {
   labelFormatter: (value: unknown) => formatDayMonth(String(value)),
 } as const;
+
+export const SCORE_AXIS_TICKS = [0, 25, 50, 75, 100];
+
+export const SCORE_AXIS_PROPS = {
+  type: "number",
+  domain: [0, 100],
+  ticks: SCORE_AXIS_TICKS,
+  allowDecimals: false,
+  tickLine: false,
+  axisLine: false,
+  tickMargin: 8,
+} as const;
+
+export const THRESHOLD_LINE_PROPS = {
+  stroke: "var(--muted-foreground)",
+  strokeDasharray: "4 3",
+} as const;

@@ -198,6 +198,13 @@ export type AppSort = (typeof APP_SORTS)[number];
 export const appSortParser =
   parseAsStringLiteral(APP_SORTS).withDefault("visibility");
 
+export const KEYWORD_VIEWS = ["table", "map"] as const;
+
+export type KeywordView = (typeof KEYWORD_VIEWS)[number];
+
+export const keywordViewParser =
+  parseAsStringLiteral(KEYWORD_VIEWS).withDefault("table");
+
 export const APP_VIEWS = ["cards", "table"] as const;
 
 export type AppView = (typeof APP_VIEWS)[number];
