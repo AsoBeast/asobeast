@@ -7,7 +7,12 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { EmailAlert, Prisma } from '@prisma/client';
-import { EmailAlertItem, WebhookTestResult } from '@asobeast/shared';
+import {
+  EmailAlertItem,
+  PRODUCT_NAME,
+  WebhookEvent,
+  WebhookTestResult,
+} from '@asobeast/shared';
 import { describeWait } from '../auth/rate-limit/describe-wait';
 import { RequestThrottledError } from '../auth/rate-limit/rate-limit.errors';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
@@ -39,6 +44,12 @@ interface Written {
 
 interface Saved extends Written {
   refund: ConfirmationRefund | null;
+}
+
+export interface DefaultSubscription {
+  events: WebhookEvent[];
+  rankDropThreshold: number;
+  confirmDrops: boolean;
 }
 
 const NOT_SENT_MESSAGE = 'The confirmation email could not be sent';
@@ -97,6 +108,36 @@ export class EmailAlertsService {
       return { alert, ask: !confirmedAt };
     });
     return this.answer(saved, requestedBy);
+  }
+
+  async createDefault(
+    email: string,
+    subscription: DefaultSubscription,
+  ): Promise<EmailAlertItem | null> {
+    const workspaceId = this.workspace.require('the essential email alerts');
+    const confirmedAt = await this.confirmation.confirmationFor(email);
+    const saved = await this.underLock(workspaceId, async (tx) => {
+      if (!(await this.marker.claim(tx))) return null;
+      const [alerts, webhooks] = await Promise.all([
+        tx.emailAlert.count(),
+        tx.webhook.count(),
+      ]);
+      if (alerts > 0 || webhooks > 0) return null;
+      if (!confirmedAt) await assertRoomToWait(tx);
+      const alert = await tx.emailAlert.create({
+        data: {
+          workspaceId,
+          email,
+          ...subscription,
+          reviewScores: [],
+          confirmedAt,
+          defaultOrigin: true,
+          introSentAt: null,
+        },
+      });
+      return { alert, ask: !confirmedAt };
+    });
+    return saved ? this.answer(saved, PRODUCT_NAME) : null;
   }
 
   async update(
@@ -190,15 +231,24 @@ export class EmailAlertsService {
     }
   }
 
-  private async underLock(
+  private underLock(
     workspaceId: string,
     write: (tx: Prisma.TransactionClient) => Promise<Written>,
-  ): Promise<Saved> {
+  ): Promise<Saved>;
+  private underLock(
+    workspaceId: string,
+    write: (tx: Prisma.TransactionClient) => Promise<Written | null>,
+  ): Promise<Saved | null>;
+  private async underLock(
+    workspaceId: string,
+    write: (tx: Prisma.TransactionClient) => Promise<Written | null>,
+  ): Promise<Saved | null> {
     const claimed: { refund: ConfirmationRefund | null } = { refund: null };
     try {
       return await this.prisma.withTransaction(async (tx) => {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(${EMAIL_ALERT_LOCK}, hashtext(${workspaceId}))`;
         const written = await write(tx);
+        if (!written) return null;
         if (written.ask) {
           claimed.refund = await this.confirmation.allowMailTo(
             written.alert.email,

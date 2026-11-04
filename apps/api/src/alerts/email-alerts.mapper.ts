@@ -18,5 +18,6 @@ export function toEmailAlertItem(alert: EmailAlert): EmailAlertItem {
     confirmed: alert.confirmedAt !== null,
     unsubscribed: alert.unsubscribedAt !== null,
     createdAt: alert.createdAt.toISOString(),
+    ...(alert.defaultOrigin ? { essential: true } : {}),
   };
 }

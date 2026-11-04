@@ -207,6 +207,7 @@ export interface EmailAlertItem {
   confirmDrops?: boolean;
   ratingDropTenths?: number;
   rankDropThreshold?: number | null;
+  essential?: boolean;
 }
 
 export type AlertChannel = 'webhook' | 'email';
