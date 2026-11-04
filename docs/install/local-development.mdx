@@ -95,7 +95,7 @@ Run a throwaway SMTP sink and point the API at it.
 docker run -p 1025:1025 -p 8025:8025 axllent/mailpit
 ```
 
-Then set `SMTP_HOST=localhost`, `SMTP_PORT=1025`, `SMTP_FROM="AsoBeast <alerts@localhost>"` and `WEB_PUBLIC_URL=http://localhost:3000` in `apps/api/.env`, so the logo and buttons appear, add an email alert on the settings page, and read the messages at `http://localhost:8025`. Mailpit's HTML check tab reports client support for a delivered message.
+Then set `SMTP_HOST=localhost`, `SMTP_PORT=1025`, `SMTP_FROM="AsoBeast <alerts@localhost>"` and `WEB_PUBLIC_URL=http://localhost:3000` in `apps/api/.env`, so the logo and buttons appear, add an email alert on the settings page, and read the messages at `http://localhost:8025`. Mailpit's HTML check tab reports client support for a delivered message. Set `WEB_PUBLIC_URL` to an `https` address, for example `https://aso.localhost`, to see the essential alerts turn on after the first daily run.
 
 ## Preview email templates
 
