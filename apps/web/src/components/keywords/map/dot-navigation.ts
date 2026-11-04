@@ -17,8 +17,10 @@ const DIRECTION_KEYS: Readonly<Record<string, DotDirection>> = {
 
 const SECONDARY_WEIGHT = 2;
 
-const compareStrings = (left: string, right: string): number =>
-  left < right ? -1 : left > right ? 1 : 0;
+function compareStrings(left: string, right: string): number {
+  if (left === right) return 0;
+  return left < right ? -1 : 1;
+}
 
 const byTextThenId = (left: NavDot, right: NavDot): number =>
   compareStrings(left.text, right.text) ||

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, type Ref } from "react";
+import type { Ref } from "react";
 import { CartesianGrid, Scatter, ScatterChart, XAxis, YAxis } from "recharts";
 import {
   CHART_HEIGHT,
@@ -29,7 +29,6 @@ export function KeywordMapChart({
   onZone: (zone: KeywordZone) => void;
   chartRef?: Ref<HTMLDivElement>;
 }) {
-  const data = useMemo(() => [...points], [points]);
   return (
     <ChartContainer
       ref={chartRef}
@@ -74,7 +73,7 @@ export function KeywordMapChart({
           }}
         />
         {thresholdLines(thresholds)}
-        <Scatter data={data} shape={MapDotShape} isAnimationActive={false} />
+        <Scatter data={points} shape={MapDotShape} isAnimationActive={false} />
       </ScatterChart>
     </ChartContainer>
   );

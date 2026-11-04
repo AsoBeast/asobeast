@@ -93,8 +93,7 @@ export function zoneAreas({
       }
       ifOverflow="hidden"
       label={{ value: zone, content: ZoneLabel }}
-      className={`zone-${zone}`}
-      style={{ cursor: "pointer" }}
+      className={`zone-${zone} cursor-pointer`}
       onClick={() => onZone(zone)}
     />
   ));
