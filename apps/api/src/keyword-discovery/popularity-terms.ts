@@ -8,8 +8,7 @@ export interface PopularityTerm {
 }
 
 const byPopularity = (a: PopularityTerm, b: PopularityTerm): number =>
-  b.popularity - a.popularity ||
-  (a.term < b.term ? -1 : a.term > b.term ? 1 : 0);
+  b.popularity - a.popularity || a.term.localeCompare(b.term);
 
 export function overlappingTerms(
   terms: readonly PopularityTerm[],

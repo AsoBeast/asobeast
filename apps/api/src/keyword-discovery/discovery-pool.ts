@@ -37,13 +37,15 @@ const outranks = (a: PoolCandidate, b: PoolCandidate): boolean =>
     ? a.relevance > b.relevance
     : sourceRank(a.source) < sourceRank(b.source);
 
+const UNKNOWN_TRAFFIC = -1;
+
 const largerTraffic = (a: number | null, b: number | null): number | null =>
-  a === null ? b : b === null ? a : Math.max(a, b);
+  a === null || b === null ? (a ?? b) : Math.max(a, b);
 
 const byPoolOrder = (a: PoolCandidate, b: PoolCandidate): number =>
   b.relevance - a.relevance ||
-  (b.traffic ?? -Infinity) - (a.traffic ?? -Infinity) ||
-  (a.text < b.text ? -1 : a.text > b.text ? 1 : 0);
+  (b.traffic ?? UNKNOWN_TRAFFIC) - (a.traffic ?? UNKNOWN_TRAFFIC) ||
+  a.text.localeCompare(b.text);
 
 export function buildPool(
   candidates: readonly PoolCandidate[],
