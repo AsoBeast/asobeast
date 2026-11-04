@@ -11,7 +11,8 @@ const average = (value: number): string => value.toFixed(2);
 
 const count = (value: number): string => value.toLocaleString('en-US');
 
-const versionLabel = (version: string): string => `v${version}`;
+const versionLabel = (version: string): string =>
+  `v${version.replace(/^v/i, '')}`;
 
 function daysBetween(from: string, to: string): number {
   return Math.round((Date.parse(to) - Date.parse(from)) / DAY_MS);

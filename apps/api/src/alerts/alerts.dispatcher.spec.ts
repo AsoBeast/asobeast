@@ -779,7 +779,7 @@ describe('AlertsDispatcher rating drops', () => {
     await inWorkspace(() => dispatcher.dispatch(ratingDropped()));
 
     expect(prisma.updates[0].where.dedupeKey).toBe(
-      'rating.dropped:a:2026-11-03',
+      'rating.dropped:a:2026-11-03:2',
     );
   });
 });

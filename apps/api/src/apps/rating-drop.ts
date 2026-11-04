@@ -3,7 +3,8 @@ import { utcDayOf } from '@asobeast/shared';
 export const RATING_DROP_WINDOW_DAYS = 7;
 export const RATING_DROP_REFERENCE_SLACK_DAYS = 3;
 export const RATING_DROP_MIN_COUNT = 20;
-export const RATING_DROP_HISTORY_DAYS = 14;
+export const RATING_DROP_HISTORY_DAYS =
+  2 * (RATING_DROP_WINDOW_DAYS + RATING_DROP_REFERENCE_SLACK_DAYS);
 
 const DAY_MS = 86_400_000;
 const NEAREST_REFERENCE_MS = RATING_DROP_WINDOW_DAYS * DAY_MS;
@@ -36,7 +37,10 @@ const rated = (snapshot: RatedSnapshot | undefined): snapshot is Rated =>
   snapshot.ratingCount !== null &&
   snapshot.ratingCount >= RATING_DROP_MIN_COUNT;
 
-const hundredths = (average: number): number => Math.round(average * 100);
+const TENTH_TOLERANCE = 1e-9;
+
+const wholeTenths = (from: number, to: number): number =>
+  Math.floor((from - to) * 10 + TENTH_TOLERANCE);
 
 function referenceOf(
   history: readonly RatedSnapshot[],
@@ -55,7 +59,9 @@ function referenceOf(
 }
 
 const shippedVersion = (latest: Rated, reference: Rated): string | null =>
-  latest.version !== null && latest.version !== reference.version
+  latest.version !== null &&
+  reference.version !== null &&
+  latest.version !== reference.version
     ? latest.version
     : null;
 
@@ -67,9 +73,7 @@ export function ratingDropAt(
   if (!rated(latest)) return null;
   const reference = referenceOf(history, index, latest);
   if (!reference) return null;
-  const dropTenths = Math.floor(
-    (hundredths(reference.ratingAvg) - hundredths(latest.ratingAvg)) / 10,
-  );
+  const dropTenths = wholeTenths(reference.ratingAvg, latest.ratingAvg);
   if (dropTenths < 1) return null;
   return {
     from: reference.ratingAvg,
@@ -88,6 +92,10 @@ export function newRatingDrop(
 ): RatingDrop | null {
   const current = ratingDropAt(history, 0);
   if (!current) return null;
-  const previous = ratingDropAt(history, 1);
+  const previousIndex = history.findIndex(
+    (snapshot, index) => index > 0 && rated(snapshot),
+  );
+  const previous =
+    previousIndex > 0 ? ratingDropAt(history, previousIndex) : null;
   return current.dropTenths > (previous?.dropTenths ?? 0) ? current : null;
 }

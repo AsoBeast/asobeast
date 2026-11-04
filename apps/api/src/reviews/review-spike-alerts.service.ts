@@ -86,7 +86,14 @@ export class ReviewSpikeAlerts {
         oldestDay: oldestAt ? utcDayOf(oldestAt) : null,
       });
       if (!spike) continue;
-      const topTheme = await this.themes.dayTheme(app, day);
+      const topTheme = await this.themes
+        .dayTheme(app, day)
+        .catch((error: unknown) => {
+          this.logger.warn(
+            `review theme for app ${app.id} on ${day} failed: ${error instanceof Error ? error.message : String(error)}`,
+          );
+          return null;
+        });
       await this.alerts.dispatch(
         reviewSpikePayload(
           { id: app.id, name: app.name },

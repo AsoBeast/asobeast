@@ -200,7 +200,7 @@ describe('formatWebhookBody for the rating and review events', () => {
       const body = formatWebhookBody(url, payload, ORIGIN);
 
       expect(() => JSON.parse(body) as unknown).not.toThrow();
-      expect(body).toContain(headline.replace("'", ''));
+      expect(body).toContain(headline.replaceAll("'", ''));
       expect(body).toContain(value);
     }
     const report = formatWebhookBody(url, batched, ORIGIN);
