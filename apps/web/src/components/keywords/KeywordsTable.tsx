@@ -167,6 +167,8 @@ export function KeywordsTable({
         {view === "map" ? (
           <KeywordMap
             keywords={keywordsAcrossZones(table)}
+            history={{ appId: id, store, homeCountry, multiMarket }}
+            today={today}
             onClearFilters={() => void setFilters(null)}
           />
         ) : null}

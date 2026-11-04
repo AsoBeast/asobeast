@@ -747,3 +747,247 @@ test.describe("zones and thresholds", () => {
     ).toBe(true);
   });
 });
+
+const dot = (page: Page, id: string) =>
+  page.locator(`[data-map-keyword="${id}"]`);
+const overlay = (page: Page) => page.locator('[data-slot="map-overlay"]');
+const activeDot = (page: Page) =>
+  page.evaluate(
+    () => document.activeElement?.getAttribute("data-map-keyword") ?? null,
+  );
+
+test.describe("dots", () => {
+  test("a dot is named in words", async ({ page }) => {
+    await page.goto(MAP_URL);
+    await expect(
+      page.getByRole("button", {
+        name: "focus timer, position 3, popularity 62, difficulty 18, opportunity 82, Quick wins",
+        exact: true,
+      }),
+    ).toHaveCount(1);
+    await expect(dot(page, "kw-map-3")).toHaveAccessibleName(
+      /^study timer, not in the top 200, /,
+    );
+    await expect(dot(page, "kw-map-8")).toHaveAccessibleName(
+      /popularity 41, floor answer/,
+    );
+    await expect(dot(page, "kw-map-7")).toHaveAccessibleName(/, paused$/);
+  });
+
+  test("hover shows the overlay", async ({ page }) => {
+    await page.goto(MAP_URL);
+    await dot(page, "kw-map-1").hover();
+
+    const shown = overlay(page);
+    await expect(shown).toBeVisible();
+    await expect(shown).toHaveAttribute("aria-hidden", "true");
+    for (const text of [
+      "focus timer",
+      /Position\s*3/,
+      /Popularity\s*62/,
+      /Difficulty\s*18/,
+      /Opportunity\s*82/,
+      "Quick wins",
+    ]) {
+      await expect(shown).toContainText(text);
+    }
+    const region = await mapRegion(page).boundingBox();
+    const box = await shown.boundingBox();
+    expect(
+      region &&
+        box &&
+        box.x >= region.x - 1 &&
+        box.x + box.width <= region.x + region.width + 1,
+    ).toBe(true);
+
+    await page.mouse.move(0, 0);
+    await expect(shown).toHaveCount(0);
+  });
+
+  test("the overlay says what a floor answer is", async ({ page }) => {
+    await page.goto(MAP_URL);
+    await dot(page, "kw-map-8").hover();
+    await expect(overlay(page)).toContainText("Floor answer");
+    await dot(page, "kw-map-2").hover();
+    await expect(overlay(page)).not.toContainText("Floor answer");
+    await dot(page, "kw-map-3").hover();
+    await expect(overlay(page)).toContainText("Not in the top 200");
+  });
+
+  test("the overlay stays inside the chart", async ({ page }) => {
+    await page.goto(MAP_URL);
+    await dot(page, "kw-map-10").hover();
+    const region = await mapRegion(page).boundingBox();
+    const box = await overlay(page).boundingBox();
+    const target = await dot(page, "kw-map-10").boundingBox();
+    if (!region || !box || !target) throw new Error("no boxes");
+
+    expect(box.x + box.width).toBeLessThanOrEqual(target.x + target.width / 2);
+    expect(box.y).toBeGreaterThanOrEqual(target.y + target.height / 2);
+    expect(box.x).toBeGreaterThanOrEqual(region.x);
+    expect(box.y + box.height).toBeLessThanOrEqual(region.y + region.height);
+  });
+
+  test("focus shows it too", async ({ page }) => {
+    await page.goto(MAP_URL);
+    await dot(page, "kw-map-1").focus();
+    await expect(overlay(page)).toContainText("focus timer");
+    await dot(page, "kw-map-1").blur();
+    await expect(overlay(page)).toHaveCount(0);
+  });
+
+  test("one tab stop", async ({ page }) => {
+    await page.goto(MAP_URL);
+    await expect(page.locator('[data-map-keyword][tabindex="0"]')).toHaveCount(
+      1,
+    );
+    await expect(dot(page, "kw-map-3")).toHaveAttribute("tabindex", "0");
+
+    await legend(page)
+      .getByRole("button", { name: "About Low priority" })
+      .focus();
+    await page.keyboard.press("Tab");
+    expect(await activeDot(page)).toBe("kw-map-3");
+
+    await page.keyboard.press("Tab");
+    expect(await activeDot(page)).toBeNull();
+
+    await page.keyboard.press("Shift+Tab");
+    expect(await activeDot(page)).toBe("kw-map-3");
+  });
+
+  test("roving focus", async ({ page }) => {
+    await page.goto(MAP_URL);
+    await dot(page, "kw-map-6").focus();
+    await page.keyboard.press("ArrowRight");
+    expect(await activeDot(page)).toBe("kw-map-13");
+    await expect(page.locator('[data-map-keyword][tabindex="0"]')).toHaveCount(
+      1,
+    );
+    await expect(dot(page, "kw-map-13")).toHaveAttribute("tabindex", "0");
+
+    await page.keyboard.press("Tab");
+    await page.keyboard.press("Shift+Tab");
+    expect(await activeDot(page)).toBe("kw-map-13");
+  });
+
+  test("arrows go to the nearest dot", async ({ page }) => {
+    await page.goto(MAP_URL);
+    const from = async (id: string, key: string) => {
+      await dot(page, id).focus();
+      await page.keyboard.press(key);
+      return activeDot(page);
+    };
+
+    expect(await from("kw-map-6", "ArrowRight")).toBe("kw-map-13");
+    expect(await from("kw-map-6", "ArrowLeft")).toBe("kw-map-1");
+    expect(await from("kw-map-6", "ArrowUp")).toBe("kw-map-1");
+    expect(await from("kw-map-6", "ArrowDown")).toBe("kw-map-2");
+    expect(await from("kw-map-19", "ArrowLeft")).toBe("kw-map-19");
+    expect(await from("kw-map-6", "Home")).toBe("kw-map-3");
+    expect(await from("kw-map-6", "End")).toBe("kw-map-21");
+  });
+
+  test("the keys do not scroll or step Recharts", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 1600 });
+    await page.goto(MAP_URL);
+    await dot(page, "kw-map-6").focus();
+    const before = await page.evaluate(() => window.scrollY);
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("ArrowUp");
+    expect(await page.evaluate(() => window.scrollY)).toBe(before);
+    await expect(page.locator(".recharts-tooltip-wrapper")).toHaveCount(0);
+  });
+
+  test("focus survives a hover", async ({ page }) => {
+    await page.goto(MAP_URL);
+    await dot(page, "kw-map-1").focus();
+    await dot(page, "kw-map-2").hover();
+    await expect(overlay(page)).toContainText("pomodoro app");
+    await page.mouse.move(0, 0);
+    expect(await activeDot(page)).toBe("kw-map-1");
+  });
+
+  test("Enter, Space and a click open the history beside the dot", async ({
+    page,
+  }) => {
+    await page.goto(MAP_URL);
+    const history = page.getByRole("dialog", {
+      name: "Position history focus timer",
+    });
+
+    await dot(page, "kw-map-1").focus();
+    await page.keyboard.press("Enter");
+    await expect(history).toBeVisible();
+    await expect(history.getByRole("region")).toBeVisible();
+    const box = await history.boundingBox();
+    const target = await dot(page, "kw-map-1").boundingBox();
+    if (!box || !target) throw new Error("no boxes");
+    const gap = Math.max(
+      0,
+      box.y - (target.y + target.height),
+      target.y - (box.y + box.height),
+    );
+    expect(gap).toBeLessThan(400);
+
+    await page.keyboard.press("Escape");
+    await expect(history).toHaveCount(0);
+    await expect(dot(page, "kw-map-1")).toBeFocused();
+
+    await page.keyboard.press("Space");
+    await expect(history).toBeVisible();
+    await page.getByText("Popularity by difficulty").click();
+    await expect(history).toHaveCount(0);
+    await expect(dot(page, "kw-map-1")).toBeFocused();
+
+    await dot(page, "kw-map-1").click();
+    await expect(history).toBeVisible();
+    await expect(page).not.toHaveURL(/zone=/);
+  });
+
+  test("a not ranking dot opens its history too", async ({ page }) => {
+    await page.goto(MAP_URL);
+    await dot(page, "kw-map-3").click();
+    const history = page.getByRole("dialog", {
+      name: "Position history study timer",
+    });
+    await expect(history).toBeVisible();
+    await expect(history).toContainText(">200");
+  });
+
+  test("dimmed and paused dots still work", async ({ page }) => {
+    await page.goto(`${MAP_URL}&zone=quickWins`);
+    await dot(page, "kw-map-9").focus();
+    await expect(overlay(page)).toContainText("productivity");
+    await page.keyboard.press("Enter");
+    await expect(
+      page.getByRole("dialog", { name: "Position history productivity" }),
+    ).toBeVisible();
+    await page.keyboard.press("Escape");
+
+    await dot(page, "kw-map-7").click();
+    await expect(
+      page.getByRole("dialog", { name: "Position history paused phrase" }),
+    ).toBeVisible();
+  });
+
+  test("the dialog from a dot is named like the table row's", async ({
+    page,
+  }) => {
+    await page.goto(MAP_URL);
+    await page
+      .getByRole("button", { name: "Position history: focus timer" })
+      .click();
+    const named = page.getByRole("dialog", {
+      name: "Position history focus timer",
+    });
+    await expect(named).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(named).toHaveCount(0);
+
+    await dot(page, "kw-map-1").click();
+    await expect(
+      page.getByRole("dialog", { name: "Position history focus timer" }),
+    ).toBeVisible();
+  });
+});

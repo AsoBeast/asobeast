@@ -17,10 +17,12 @@ import {
 import { zoneCounts, type KeywordZone } from "@/lib/keyword-zones";
 import { keywordZoneParser } from "@/lib/search-params";
 import { scorePair } from "../keyword-scores";
+import type { PositionHistoryContext } from "../PositionHistoryPopover";
 import { useZoneThresholds } from "../use-zone-thresholds";
 import { KeywordMapChart } from "./KeywordMapChart";
 import { mapPoints, type MapPoint } from "./map-points";
 import { DotGlyph } from "./MapDot";
+import { MapSurface } from "./MapSurface";
 import { MapZoneLegend, MapZoneTable } from "./MapZoneLegend";
 import { ThresholdsPopover } from "./ThresholdsPopover";
 
@@ -104,9 +106,13 @@ function MapNotice({
 
 export function KeywordMap({
   keywords,
+  history,
+  today,
   onClearFilters,
 }: {
   keywords: readonly TrackedKeywordItem[];
+  history: PositionHistoryContext;
+  today: string;
   onClearFilters: () => void;
 }) {
   const helpId = useId();
@@ -119,6 +125,10 @@ export function KeywordMap({
   const counts = useMemo(
     () => zoneCounts(keywords.map(scorePair), thresholds),
     [keywords, thresholds],
+  );
+  const keywordsById = useMemo(
+    () => new Map(keywords.map((keyword) => [keyword.keywordId, keyword])),
+    [keywords],
   );
   const ready = keywords.length > 0 && trendState(points.length) === "ready";
   const toggleZone = useCallback(
@@ -147,13 +157,21 @@ export function KeywordMap({
               selected={zone}
               onToggle={toggleZone}
             />
-            <KeywordMapChart
+            <MapSurface
               points={points}
-              thresholds={thresholds}
               zone={zone}
-              describedBy={helpId}
-              onZone={toggleZone}
-            />
+              keywords={keywordsById}
+              history={history}
+              today={today}
+            >
+              <KeywordMapChart
+                points={points}
+                thresholds={thresholds}
+                zone={zone}
+                describedBy={helpId}
+                onZone={toggleZone}
+              />
+            </MapSurface>
             {unplotted > 0 ? (
               <p className="text-caption text-muted-foreground">
                 {unplottedCaption(unplotted)}
