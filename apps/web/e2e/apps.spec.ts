@@ -879,8 +879,11 @@ test("app overview renders summary numbers and a utc refresh date", async ({
       .locator("[data-grade]", { hasText: "Position 12, weak" }),
   ).toHaveAttribute("data-grade", "weak");
 
-  await expect(page.getByText("Metadata coverage")).toBeVisible();
-  await expect(page.getByText("productivity app")).toBeVisible();
+  const coverage = page
+    .locator("[data-slot=card]")
+    .filter({ has: page.getByText("Metadata coverage", { exact: true }) });
+  await expect(coverage).toBeVisible();
+  await expect(coverage.getByText("productivity app")).toBeVisible();
 
   const refreshDate = utcDateFormatter.format(
     new Date(APP_1_SUMMARY.lastRefreshAt ?? ""),
