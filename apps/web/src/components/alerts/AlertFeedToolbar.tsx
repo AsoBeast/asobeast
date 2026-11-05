@@ -16,6 +16,7 @@ import {
 import { RowCount } from "@/components/data-table/RowCount";
 import { SearchInput } from "@/components/data-table/SearchInput";
 import { EVENT_LABELS } from "@/components/settings/alert-event-copy";
+import { storeLabel } from "@/lib/format";
 import { appsOptions } from "@/lib/queries";
 import { alertFeedParsers } from "@/lib/search-params";
 
@@ -32,7 +33,7 @@ const TYPE_OPTIONS = ALERT_FEED_EVENTS.map((event) => ({
 }));
 
 const appName = (app: AppListItem): string =>
-  `${app.name ?? "Untitled app"} · ${app.country.toUpperCase()}`;
+  `${app.name ?? "Untitled app"} · ${storeLabel(app.store)} · ${app.country.toUpperCase()}`;
 
 function appLabels(
   apps: readonly AppListItem[] | undefined,

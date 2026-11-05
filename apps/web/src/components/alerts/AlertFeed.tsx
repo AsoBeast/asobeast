@@ -94,18 +94,19 @@ export function AlertFeed() {
   return (
     <>
       <AlertFeedHeader />
-      {events.length === 0 && !filtered ? null : (
-        <AlertFeedToolbar
-          shown={shown.length}
-          loaded={events.length}
-          hasMore={feed.hasNextPage}
-          searchBox={searchBox}
-          onClearAll={clearAll}
-        />
-      )}
+      <AlertFeedToolbar
+        shown={shown.length}
+        loaded={events.length}
+        hasMore={feed.hasNextPage}
+        searchBox={searchBox}
+        onClearAll={clearAll}
+      />
       {shown.length === 0 ? (
         <AlertFeedEmpty
           filtered={filtered}
+          searchedOnly={
+            feed.hasNextPage && query.trim() !== "" ? events.length : null
+          }
           action={
             <Button variant="outline" onClick={clearAll}>
               Clear filters
@@ -122,6 +123,7 @@ export function AlertFeed() {
         <AlertFeedEnd
           hasMore={feed.hasNextPage}
           loading={feed.isFetchingNextPage}
+          failed={feed.isFetchNextPageError}
           onLoadMore={() => feed.fetchNextPage({ cancelRefetch: false })}
         />
       )}

@@ -507,4 +507,76 @@ test.describe("alerts page", () => {
       await expect(page.getByRole("main").getByRole("alert")).toHaveCount(0);
     });
   });
+
+  test.describe("controls after a clear or a failure", () => {
+    test("keeps focus in the search when a clear leaves nothing recorded", async ({
+      page,
+      context,
+    }) => {
+      await feedState(context, "empty");
+      await page.goto("/alerts?type=rank.dropped");
+      await (
+        await hydrated(page.getByRole("button", { name: "Clear filters" }))
+      ).click();
+
+      await expect(page.getByText("Nothing recorded yet")).toBeVisible();
+      await expect(
+        page.getByRole("textbox", { name: "Search alerts" }),
+      ).toBeFocused();
+    });
+
+    test("says when the next page could not be loaded and retries it", async ({
+      page,
+    }) => {
+      test.setTimeout(60_000);
+      let failing = true;
+      await page.route(
+        (url) => isFeedRead(url) && url.searchParams.has("cursor"),
+        (route) =>
+          failing
+            ? route.fulfill({ status: 500, json: { statusCode: 500 } })
+            : route.fallback(),
+      );
+      await page.goto("/alerts");
+      const loadMore = await hydrated(
+        page.getByRole("button", { name: "Load more" }),
+      );
+
+      await loadMore.click();
+
+      await expect(
+        page.getByRole("alert").filter({ hasText: "could not be loaded" }),
+      ).toBeVisible({ timeout: 25_000 });
+      await expect(loadMore).toBeVisible();
+      failing = false;
+      await loadMore.click();
+      await expect(rows(page)).toHaveCount(ALERT_EVENT_ITEMS.length);
+    });
+
+    test("says a search covered the loaded events only", async ({ page }) => {
+      await page.goto("/alerts");
+      await (
+        await hydrated(page.getByRole("textbox", { name: "Search alerts" }))
+      ).fill("zzzz nothing matches");
+
+      await expect(page.getByText("No loaded events match")).toBeVisible();
+      await expect(
+        page.getByText(/Only the 50 loaded events were searched/),
+      ).toBeVisible();
+    });
+
+    test("names the store of every app it filters by", async ({ page }) => {
+      await page.goto("/alerts");
+      await (
+        await hydrated(page.getByRole("button", { name: /^Filter by app/ }))
+      ).click();
+      const labels = await page.getByRole("option").allInnerTexts();
+
+      expect(labels.length).toBeGreaterThan(1);
+      expect(new Set(labels).size).toBe(labels.length);
+      for (const label of labels) {
+        expect(label).toMatch(/· (App Store|Google Play) ·/);
+      }
+    });
+  });
 });

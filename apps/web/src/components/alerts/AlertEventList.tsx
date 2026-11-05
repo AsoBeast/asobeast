@@ -49,10 +49,12 @@ export function AlertEventList({
 export function AlertFeedEnd({
   hasMore,
   loading,
+  failed,
   onLoadMore,
 }: {
   hasMore: boolean;
   loading: boolean;
+  failed: boolean;
   onLoadMore: () => Promise<unknown>;
 }) {
   const footer = useRef<HTMLDivElement>(null);
@@ -70,8 +72,13 @@ export function AlertFeedEnd({
       ref={footer}
       data-slot="feed-end"
       tabIndex={-1}
-      className="flex justify-center rounded-lg py-2 outline-none"
+      className="flex flex-col items-center gap-2 rounded-lg py-2 outline-none"
     >
+      {failed && !loading ? (
+        <p role="alert" className="text-caption text-destructive">
+          More events could not be loaded. Try again.
+        </p>
+      ) : null}
       {hasMore ? (
         <Button
           ref={button}

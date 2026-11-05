@@ -47,11 +47,23 @@ export function AlertFeedSkeleton() {
 
 export function AlertFeedEmpty({
   filtered,
+  searchedOnly,
   action,
 }: {
   filtered: boolean;
+  searchedOnly: number | null;
   action?: React.ReactNode;
 }) {
+  if (searchedOnly !== null) {
+    return (
+      <EmptyState
+        icon={Filter}
+        title="No loaded events match"
+        body={`Only the ${searchedOnly} loaded events were searched. Load more to search further back, or clear the filters.`}
+        action={action}
+      />
+    );
+  }
   if (filtered) {
     return (
       <EmptyState
