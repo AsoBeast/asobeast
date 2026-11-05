@@ -39,7 +39,7 @@ async function secondStep(page: Page): Promise<string> {
     .click();
   const second = page
     .getByRole("list", { name: "Checklist steps" })
-    .getByRole("listitem")
+    .locator(":scope > li")
     .nth(1);
   const text = (await second.textContent()) ?? "";
   await page.keyboard.press("Escape");

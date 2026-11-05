@@ -10,7 +10,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PopoverDescription, PopoverTitle } from "@/components/ui/popover";
 import { Progress } from "@/components/ui/progress";
-import { GOAL_COPY, ITEM_COPY } from "./checklist-copy";
+import {
+  GOAL_COPY,
+  ITEM_COPY,
+  ITEM_TIPS,
+  type ChecklistTip,
+} from "./checklist-copy";
 import { nextItemId, pillLabel, ringFraction } from "./checklist-progress";
 
 export interface ChecklistPanelProps {
@@ -30,6 +35,63 @@ function DoneRow({ item }: { item: WorkspaceChecklistItem }) {
       <span className="flex-1">{item.title}</span>
       <span className="text-caption text-muted-foreground">Done</span>
     </li>
+  );
+}
+
+const TIP_LINK =
+  "text-foreground underline decoration-primary underline-offset-4 hover:decoration-2";
+
+function TipLink({
+  tip,
+  appId,
+  onNavigate,
+}: {
+  tip: ChecklistTip;
+  appId: string | null;
+  onNavigate: () => void;
+}) {
+  const href = tip.href(appId);
+  if (href === null) return <span>{tip.label}</span>;
+  if (tip.external) {
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noreferrer noopener"
+        className={TIP_LINK}
+      >
+        <span>{tip.label}</span>
+        <span className="sr-only"> (opens in a new tab)</span>
+      </a>
+    );
+  }
+  return (
+    <Link href={href} onClick={onNavigate} className={TIP_LINK}>
+      {tip.label}
+    </Link>
+  );
+}
+
+function ChecklistTips({
+  item,
+  onNavigate,
+}: {
+  item: WorkspaceChecklistItem;
+  onNavigate: () => void;
+}) {
+  const tips = ITEM_TIPS[item.id];
+  if (tips.length === 0) return null;
+  return (
+    <ul
+      aria-label={`Worth knowing about ${item.title}`}
+      className="flex flex-col gap-1 text-caption"
+    >
+      {tips.map((tip) => (
+        <li key={tip.label}>
+          <TipLink tip={tip} appId={item.appId} onNavigate={onNavigate} />
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -67,6 +129,7 @@ function OpenRow({
             </Link>
           </Button>
         )}
+        <ChecklistTips item={item} onNavigate={onNavigate} />
       </div>
     </li>
   );

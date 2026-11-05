@@ -13,8 +13,9 @@ const popover = (page: Page) =>
   page.getByRole("dialog", { name: "Setup checklist" });
 const steps = (page: Page) =>
   popover(page).getByRole("list", { name: "Checklist steps" });
+const stepRows = (page: Page) => steps(page).locator(":scope > li");
 const row = (page: Page, title: string) =>
-  steps(page).getByRole("listitem").filter({ hasText: title });
+  stepRows(page).filter({ hasText: title });
 
 async function openPill(page: Page, path = "/apps/app-1"): Promise<void> {
   await page.goto(path);
@@ -71,7 +72,7 @@ test("the popover lists the steps in order with the next one marked", async ({
   await seedChecklist(context, "partial");
   await openPill(page);
 
-  const items = steps(page).getByRole("listitem");
+  const items = stepRows(page);
   await expect(items).toHaveCount(8);
   await expect(items.first()).toContainText("Import an app");
   await expect(row(page, "Import an app")).toContainText("Done");
@@ -166,7 +167,7 @@ for (const [scenario, missing] of [
     await seedChecklist(context, scenario);
     await openPill(page);
 
-    await expect(steps(page).getByRole("listitem")).toHaveCount(7);
+    await expect(stepRows(page)).toHaveCount(7);
     await expect(row(page, missing)).toHaveCount(0);
     await expect(pill(page)).toHaveAccessibleName(/ of 7 done/);
   });
@@ -481,4 +482,88 @@ test("a failed read keeps settings and hides the pill", async ({
     page.getByRole("heading", { name: "Alerts", exact: true }),
   ).toBeVisible();
   await expect(pill(page)).toHaveCount(0);
+});
+
+const tipsOf = (page: Page, title: string) =>
+  popover(page).getByRole("list", { name: `Worth knowing about ${title}` });
+
+test("an open step lists the features beside it", async ({ page, context }) => {
+  await seedChecklist(context, "partial");
+  await openPill(page);
+
+  const tips = tipsOf(page, "Track keywords in a second market").getByRole(
+    "link",
+  );
+  await expect(tips).toHaveCount(4);
+  await expect(tips.first()).toHaveAccessibleName(
+    "Search a keyword exactly by putting it in quotes",
+  );
+  for (const tip of await tips.all()) {
+    await expect(tip).toHaveAttribute("href", "/apps/app-1/keywords");
+  }
+});
+
+test("a done step lists no features", async ({ page, context }) => {
+  await seedChecklist(context, "partial");
+  await openPill(page);
+
+  await expect(tipsOf(page, "Import an app")).toHaveCount(0);
+  await expect(tipsOf(page, "Add a competitor")).toHaveCount(0);
+});
+
+test("the documentation tip opens in a new tab", async ({ page, context }) => {
+  await seedChecklist(context, "partial");
+  await openPill(page);
+
+  const docs = tipsOf(page, "Fill your keyword field").getByRole("link", {
+    name: /Chinese, Japanese and Thai/,
+  });
+  await expect(docs).toHaveAttribute("target", "_blank");
+  await expect(docs).toHaveAttribute("rel", /noreferrer/);
+  await expect(docs).toHaveAttribute("rel", /noopener/);
+  await expect(docs).toHaveAccessibleName(/\(opens in a new tab\)$/);
+});
+
+test("a tip navigates and closes the popover", async ({ page, context }) => {
+  await seedChecklist(context, "partial");
+  await openPill(page);
+
+  await tipsOf(page, "Track keywords in a second market")
+    .getByRole("link", { name: /^Open a score/ })
+    .click();
+
+  await expect(page).toHaveURL(/\/apps\/app-1\/keywords$/);
+  await expect(popover(page)).toHaveCount(0);
+});
+
+test("a long popover scrolls inside while the page does not", async ({
+  page,
+  context,
+}) => {
+  await seedChecklist(context, "fresh");
+  await page.setViewportSize({ width: 320, height: 640 });
+  await openPill(page);
+
+  expect(
+    await popover(page).evaluate(
+      (element) => element.scrollHeight > element.clientHeight,
+    ),
+  ).toBe(true);
+  expect(await overflows(page)).toBe(false);
+});
+
+test("tab walks an open step's action and then its tips", async ({
+  page,
+  context,
+}) => {
+  await seedChecklist(context, "partial");
+  await openPill(page);
+  const action = popover(page).getByRole("link", { name: "Add a market" });
+
+  await action.focus();
+  await page.keyboard.press("Tab");
+
+  await expect(
+    tipsOf(page, "Track keywords in a second market").getByRole("link").first(),
+  ).toBeFocused();
 });
