@@ -14,7 +14,8 @@ const rowOf = (page: Page, text: string) =>
 
 const lastRankedTitle = (text: string) => {
   const keyword = APP_MARKS_KEYWORDS.find((row) => row.text === text);
-  return `Last ranked #${keyword?.lastRankedPosition} on ${formatDate(keyword?.lastRankedOn ?? null)}`;
+  if (!keyword?.lastRankedOn) throw new Error(`no last ranked day for ${text}`);
+  return `Last ranked #${keyword.lastRankedPosition} on ${formatDate(keyword.lastRankedOn)}`;
 };
 
 const keywordCell = (page: Page, text: string) =>
