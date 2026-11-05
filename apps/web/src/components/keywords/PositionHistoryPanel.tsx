@@ -14,7 +14,7 @@ import {
 import {
   buildRankingChart,
   type RankingChartData,
-} from "@/components/rankings/pivot";
+} from "@/components/charts/pivot";
 import { RangePicker } from "@/components/rankings/RangePicker";
 import { changesOptions, rankingsOptions } from "@/lib/queries";
 import { formatDayMonth } from "@/lib/format";

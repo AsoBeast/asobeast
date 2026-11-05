@@ -42,6 +42,56 @@ test("a range preset writes to the url", async ({ page }) => {
   await expect(page).toHaveURL(/range=7d/);
 });
 
+test("the market pills scope the report to one storefront", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/rankings");
+
+  const pills = page.getByRole("group", { name: "Report markets" });
+  await expect(pills).toBeVisible();
+  await expect(
+    pills.getByRole("button", { name: "All markets 5" }),
+  ).toHaveAttribute("aria-pressed", "true");
+
+  await pills.getByRole("button", { name: "US 5" }).click();
+  await expect(page).toHaveURL(/country=us/);
+  await expect(pills.getByRole("button", { name: "US 5" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(page.getByRole("button", { name: "5 selected" })).toBeVisible();
+  await expect(
+    page
+      .getByRole("region", { name: "Keyword rank positions" })
+      .getByRole("list", { name: "Charted series" })
+      .getByRole("listitem"),
+  ).toHaveText([
+    "focus timer (US)",
+    "pomodoro (US)",
+    "study timer (US)",
+    "productivity app (US)",
+    "time blocking (US)",
+  ]);
+
+  await pills.getByRole("button", { name: "PL 0" }).click();
+  await expect(page).toHaveURL(/country=pl/);
+  await expect(
+    page.getByText("No keywords tracked in Poland yet"),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Export CSV of rankings" }),
+  ).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "Copy image of the rankings chart" }),
+  ).toHaveCount(0);
+
+  await pills.getByRole("button", { name: "All markets 5" }).click();
+  await expect(page).not.toHaveURL(/country=/);
+  await expect(
+    page.getByRole("button", { name: "Export CSV of rankings" }),
+  ).toBeEnabled();
+});
+
 test("the serp movers card lists entrants with badges and a track action", async ({
   page,
 }) => {
@@ -63,6 +113,57 @@ test("the serp movers card lists entrants with badges and a track action", async
 
   await page.getByRole("tab", { name: "14d" }).click();
   await expect(page).toHaveURL(/movers=14/);
+});
+
+test("the serp movers card follows the market pills", async ({ page }) => {
+  await page.goto("/apps/app-1/rankings?country=us");
+
+  await expect(page.getByText("SERP movers (United States)")).toBeVisible();
+  await expect(
+    page.getByRole("listitem").filter({ hasText: "Rival Focus" }),
+  ).toBeVisible();
+
+  await page
+    .getByRole("group", { name: "Report markets" })
+    .getByRole("button", { name: "GB 0" })
+    .click();
+  await expect(page).toHaveURL(/country=gb/);
+  await expect(page.getByText("SERP movers (United Kingdom)")).toBeVisible();
+  await expect(
+    page.getByText(
+      "Nobody broke into the top 10 for your tracked keywords in United Kingdom",
+    ),
+  ).toBeVisible();
+
+  await page
+    .getByRole("group", { name: "Report markets" })
+    .getByRole("button", { name: "All markets 5" })
+    .click();
+  await expect(page).not.toHaveURL(/country=/);
+  await expect(page.getByText("SERP movers", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("listitem").filter({ hasText: "Rival Focus" }),
+  ).toBeVisible();
+});
+
+test("metadata change markers sit under the plot area", async ({ page }) => {
+  await page.goto("/apps/app-1/rankings");
+
+  const chart = page.getByRole("region", { name: "Keyword rank positions" });
+  const markers = chart.locator(".metadata-change-marker");
+  await expect(markers).toHaveCount(3);
+
+  const tops = await markers.evaluateAll((nodes) =>
+    nodes.map((node) => {
+      const surface = node.closest("svg")?.getBoundingClientRect();
+      const box = node.getBoundingClientRect();
+      if (!surface || surface.height === 0) return 0;
+      return (box.top - surface.top) / surface.height;
+    }),
+  );
+  for (const top of tops) {
+    expect(top).toBeGreaterThan(0.7);
+  }
 });
 
 test("the ranking tooltip shows each captured-depth marker", async ({

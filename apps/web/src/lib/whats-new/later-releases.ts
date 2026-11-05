@@ -34,6 +34,16 @@ export const LATER_RELEASES: readonly Release[] = [
         text: "Inside each keyword on the keywords table, the words your title, subtitle or saved keyword field already hold are highlighted, each place in its own colour, and on Google Play the title and short description. Turn the highlights off under Columns.",
       },
       {
+        kind: "new",
+        title: "Chart the keywords you pick",
+        text: "Tick keywords on the keywords table and press Show dynamics to see their positions as one chart above the list. The charted rows are highlighted, the chart follows the market you switch to, and a link with an open chart reopens it for whoever you send it to.",
+      },
+      {
+        kind: "improved",
+        title: "Rankings and movers by market",
+        text: "The rankings report and its movers table follow the market pills at the top of the page, so All markets watches every storefront and one pill watches just that one.",
+      },
+      {
         kind: "improved",
         title: "A clearer sign up",
         text: "On the hosted service you confirm your email first, then pick a plan on one page that shows the price, what is included and the questions people ask most.",

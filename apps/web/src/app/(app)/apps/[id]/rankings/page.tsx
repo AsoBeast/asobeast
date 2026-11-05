@@ -1,23 +1,23 @@
 import { Suspense } from "react";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { AnnotationsCard } from "@/components/annotations/AnnotationsCard";
+import { RankingsMarketPills } from "@/components/rankings/RankingsMarketPills";
 import { RankingsReportHeader } from "@/components/rankings/RankingsReportHeader";
 import { RankingsView } from "@/components/rankings/RankingsView";
 import { SerpMoversCard } from "@/components/rankings/SerpMoversCard";
 import { RankingChartSkeleton } from "@/components/rankings/skeletons";
-import {
-  DEFAULT_SELECTION,
-  topByOpportunity,
-} from "@/components/rankings/selection";
+import { selectionForMarket } from "@/components/rankings/selection";
 import { getQueryClient } from "@/lib/get-query-client";
 import {
   annotationsOptions,
+  keywordCountriesOptions,
   keywordsOptions,
   rankingsOptions,
   serpMoversOptions,
 } from "@/lib/queries";
 import { presetToRange } from "@/lib/ranges";
 import {
+  countryParser,
   keywordIdsParser,
   moverDaysParser,
   rangeParser,
@@ -32,6 +32,7 @@ export default async function RankingsPage({
     range?: string | string[];
     keywords?: string | string[];
     movers?: string | string[];
+    country?: string | string[];
   }>;
 }) {
   const { id } = await params;
@@ -39,34 +40,41 @@ export default async function RankingsPage({
   const range = rangeParser.parseServerSide(sp.range);
   const selected = keywordIdsParser.parseServerSide(sp.keywords);
   const moverDays = moverDaysParser.parseServerSide(sp.movers);
+  const country = countryParser.parseServerSide(sp.country);
 
   const queryClient = getQueryClient();
-  const tracked = await queryClient.fetchQuery(keywordsOptions(id));
-  const effective =
-    selected.length > 0
-      ? selected
-      : topByOpportunity(tracked, DEFAULT_SELECTION);
+  const [tracked] = await Promise.all([
+    queryClient.fetchQuery(keywordsOptions(id)),
+    queryClient.fetchQuery(keywordCountriesOptions(id)).catch(() => null),
+  ]);
+  const scoped = country
+    ? tracked.filter((item) => item.country === country)
+    : tracked;
+  const effective = selectionForMarket(scoped, selected);
 
   void queryClient.prefetchQuery(
     rankingsOptions(id, { ...presetToRange(range), keywordIds: effective }),
   );
-  void queryClient.prefetchQuery(serpMoversOptions(id, moverDays));
+  void queryClient.prefetchQuery(serpMoversOptions(id, moverDays, country));
   await queryClient.prefetchQuery(annotationsOptions(id));
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <div className="page-full grid gap-6 lg:grid-cols-3 print:grid-cols-1 [&>*]:min-w-0">
-        <Suspense fallback={null}>
-          <RankingsReportHeader id={id} />
-        </Suspense>
-        <div className="lg:col-span-2 print:col-span-1">
-          <Suspense fallback={<RankingChartSkeleton />}>
-            <RankingsView id={id} />
+      <div className="page-full flex flex-col gap-6">
+        <RankingsMarketPills id={id} />
+        <div className="grid gap-6 lg:grid-cols-3 print:grid-cols-1 [&>*]:min-w-0">
+          <Suspense fallback={null}>
+            <RankingsReportHeader id={id} />
           </Suspense>
-        </div>
-        <div className="flex flex-col gap-6">
-          <SerpMoversCard id={id} />
-          <AnnotationsCard id={id} />
+          <div className="lg:col-span-2 print:col-span-1">
+            <Suspense fallback={<RankingChartSkeleton />}>
+              <RankingsView id={id} />
+            </Suspense>
+          </div>
+          <div className="flex flex-col gap-6">
+            <SerpMoversCard id={id} />
+            <AnnotationsCard id={id} />
+          </div>
         </div>
       </div>
     </HydrationBoundary>

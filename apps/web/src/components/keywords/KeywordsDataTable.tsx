@@ -31,10 +31,12 @@ const VIRTUALIZE_ABOVE = 50;
 
 export function KeywordsDataTable({
   table,
+  chartedSet,
   emptyBody,
   onClearFilters,
 }: {
   table: TableInstance<KeywordTableFeatures, TrackedKeywordItem>;
+  chartedSet: ReadonlySet<string>;
   emptyBody?: string;
   onClearFilters: () => void;
 }) {
@@ -128,8 +130,10 @@ export function KeywordsDataTable({
             data-index={index}
             aria-rowindex={index + 2}
             data-state={row.getIsSelected() ? "selected" : undefined}
+            data-charted={chartedSet.has(row.id) || undefined}
             className={cn(
               "group/row",
+              "data-[charted]:bg-accent",
               !row.original.active && "text-muted-foreground",
             )}
           >

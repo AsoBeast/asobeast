@@ -168,7 +168,11 @@ const APP_SCOPED_OPTIONS = [
     appKeys.keywordBreakdown(APP, "kw-1"),
   ],
   ["rankings", rankingsOptions(APP, RANGE), appKeys.rankings(APP, RANGE)],
-  ["serpMovers", serpMoversOptions(APP, 7), appKeys.serpMovers(APP, 7)],
+  [
+    "serpMovers",
+    serpMoversOptions(APP, 7, null),
+    appKeys.serpMovers(APP, 7, null),
+  ],
   ["visibility", visibilityOptions(APP, RANGE), appKeys.visibility(APP, RANGE)],
   [
     "market visibility",
@@ -304,7 +308,11 @@ const ROOT_TO_LEAF = [
     appKeys.marketKeywordFields(APP, "de"),
   ],
   ["compareRoot", appKeys.compareRoot(APP), appKeys.compare(APP, true)],
-  ["serpMoversRoot", appKeys.serpMoversRoot(APP), appKeys.serpMovers(APP, 7)],
+  [
+    "serpMoversRoot",
+    appKeys.serpMoversRoot(APP),
+    appKeys.serpMovers(APP, 7, null),
+  ],
   ["discoveryRoot", appKeys.discoveryRoot(APP), appKeys.discovery(APP, 30)],
   ["changesRoot", appKeys.changesRoot(APP), appKeys.changes(APP, 90)],
   [

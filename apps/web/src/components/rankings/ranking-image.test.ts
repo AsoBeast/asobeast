@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RankingSeriesItem } from "@asobeast/shared";
-import { buildRankingChart } from "./pivot";
+import { buildRankingChart } from "@/components/charts/pivot";
 import { rankingImageSpec, type ImageApp } from "./ranking-image";
 
 const APP: ImageApp = {

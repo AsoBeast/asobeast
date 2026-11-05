@@ -255,6 +255,106 @@ describe('RankingsController serp-movers (e2e)', () => {
     const body = response.body as SerpMovers;
     expect(body.items.map((item) => item.storeAppId)).not.toContain('deep-app');
   });
+
+  it('scopes entrants to one market when the query names a country', async () => {
+    const you = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: 'self-store',
+        country: 'us',
+        name: 'You',
+      },
+    });
+    const rival = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: 'london-store',
+        country: 'gb',
+        name: 'Londoner',
+        isCompetitor: true,
+        primaryAppId: you.id,
+      },
+    });
+    const home = await prisma.keyword.create({
+      data: { text: 'habit tracker', store: Store.APP_STORE, country: 'us' },
+    });
+    const british = await prisma.keyword.create({
+      data: { text: 'habit tracker', store: Store.APP_STORE, country: 'gb' },
+    });
+    await prisma.trackedKeyword.createMany({
+      data: [
+        { appId: you.id, keywordId: home.id, source: 'MANUAL', active: true },
+        {
+          appId: you.id,
+          keywordId: british.id,
+          source: 'MANUAL',
+          active: true,
+        },
+      ],
+    });
+
+    const day1 = utcMidnight(1);
+    const day2 = utcMidnight(0);
+    await prisma.serpEntry.createMany({
+      data: [
+        {
+          keywordId: home.id,
+          date: day1,
+          position: 1,
+          storeAppId: 'self-store',
+          title: 'You',
+        },
+        {
+          keywordId: home.id,
+          date: day2,
+          position: 2,
+          storeAppId: 'stranger-store',
+          title: 'Stranger',
+        },
+        {
+          keywordId: british.id,
+          date: day1,
+          position: 1,
+          storeAppId: 'self-store',
+          title: 'You',
+        },
+        {
+          keywordId: british.id,
+          date: day2,
+          position: 2,
+          storeAppId: 'london-store',
+          title: 'Londoner',
+        },
+      ],
+    });
+
+    const scoped = await api
+      .get(`/apps/${you.id}/serp-movers?days=30&country=gb`)
+      .expect(200);
+
+    const scopedBody = scoped.body as SerpMovers;
+    expect(scopedBody.items).toHaveLength(1);
+    expect(scopedBody.items[0]).toMatchObject({
+      storeAppId: 'london-store',
+      appId: rival.id,
+      isCompetitor: true,
+    });
+
+    const every = await api
+      .get(`/apps/${you.id}/serp-movers?days=30`)
+      .expect(200);
+
+    const everyItems = (every.body as SerpMovers).items;
+    expect(everyItems.map((item) => item.storeAppId).sort()).toEqual([
+      'london-store',
+      'stranger-store',
+    ]);
+    expect(
+      everyItems.find((item) => item.storeAppId === 'london-store'),
+    ).toMatchObject({ appId: rival.id, isCompetitor: true });
+  });
 });
 
 describe('RankingsService serp entrant alerts (e2e)', () => {

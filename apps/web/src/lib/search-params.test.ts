@@ -71,6 +71,7 @@ import {
   VERSUS_FILTERS,
   versusParser,
   keywordBucketParser,
+  keywordChartSelectionParser,
   keywordIdsParser,
   keywordSourceParser,
   keywordStatusParser,
@@ -565,5 +566,59 @@ describe("alert feed parsers", () => {
     expect(alertFeedParsers.type.parseServerSide(undefined)).toEqual([]);
     expect(alertFeedParsers.app.parseServerSide(undefined)).toBeNull();
     expect(alertFeedParsers.q.parseServerSide(undefined)).toBe("");
+  });
+});
+
+describe("keywordChartSelectionParser", () => {
+  const serialize = createSerializer({ keywords: keywordChartSelectionParser });
+
+  it("defaults to the hidden mode when the param is missing", () => {
+    expect(keywordChartSelectionParser.parseServerSide(undefined)).toEqual({
+      mode: "hidden",
+    });
+    expect(serialize({ keywords: { mode: "hidden" } })).toBe("");
+  });
+
+  it("reads an empty value as hidden and leaves the default out of the address", () => {
+    expect(keywordChartSelectionParser.parseServerSide("")).toEqual({
+      mode: "hidden",
+    });
+    expect(serialize({ keywords: { mode: "hidden" } })).toBe("");
+  });
+
+  it("reads a comma list as the charted ids and writes them back", () => {
+    expect(keywordChartSelectionParser.parseServerSide("kw-1,kw-2")).toEqual({
+      mode: "chart",
+      ids: ["kw-1", "kw-2"],
+    });
+    expect(
+      serialize({ keywords: { mode: "chart", ids: ["kw-1", "kw-2"] } }),
+    ).toBe("?keywords=kw-1,kw-2");
+  });
+
+  it("reads a bare comma list and empty segments as hidden", () => {
+    expect(keywordChartSelectionParser.parseServerSide(",")).toEqual({
+      mode: "hidden",
+    });
+  });
+
+  it("compares selections by mode and ids", () => {
+    const parser = keywordChartSelectionParser;
+    expect(
+      parser.eq(
+        { mode: "chart", ids: ["kw-1", "kw-2"] },
+        { mode: "chart", ids: ["kw-1", "kw-2"] },
+      ),
+    ).toBe(true);
+    expect(
+      parser.eq(
+        { mode: "chart", ids: ["kw-1"] },
+        { mode: "chart", ids: ["kw-2"] },
+      ),
+    ).toBe(false);
+    expect(parser.eq({ mode: "chart", ids: [] }, { mode: "hidden" })).toBe(
+      false,
+    );
+    expect(parser.eq({ mode: "hidden" }, { mode: "hidden" })).toBe(true);
   });
 });
