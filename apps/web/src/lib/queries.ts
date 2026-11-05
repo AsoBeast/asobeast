@@ -168,8 +168,8 @@ export const appKeys = {
     [...appKeys.detail(id), "rankings", params] as const,
   serpMoversRoot: (id: string) =>
     [...appKeys.detail(id), "serp-movers"] as const,
-  serpMovers: (id: string, days: number) =>
-    [...appKeys.detail(id), "serp-movers", { days }] as const,
+  serpMovers: (id: string, days: number, country: string | null) =>
+    [...appKeys.detail(id), "serp-movers", { days, country }] as const,
   categoryRanks: (id: string, params: RangeParams) =>
     [...appKeys.detail(id), "category-ranks", params] as const,
   audit: (id: string) => [...appKeys.detail(id), "audit"] as const,
@@ -732,10 +732,14 @@ export const rankingsOptions = (id: string, params: RankingParams) =>
     queryFn: () => getRankings(id, params),
   });
 
-export const serpMoversOptions = (id: string, days: number) =>
+export const serpMoversOptions = (
+  id: string,
+  days: number,
+  country: string | null,
+) =>
   queryOptions({
-    queryKey: appKeys.serpMovers(id, days),
-    queryFn: () => getSerpMovers(id, days),
+    queryKey: appKeys.serpMovers(id, days, country),
+    queryFn: () => getSerpMovers(id, days, country ?? undefined),
   });
 
 export const visibilityOptions = (

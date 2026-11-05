@@ -5,7 +5,7 @@ import {
   type ChartCaption,
 } from "@/lib/chart-image/caption";
 import { chartImageFilename } from "@/lib/chart-image/filename";
-import type { RankingChartData } from "./pivot";
+import type { RankingChartData } from "@/components/charts/pivot";
 
 export interface ImageApp {
   id: string;

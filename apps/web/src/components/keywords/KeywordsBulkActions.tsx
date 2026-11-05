@@ -2,7 +2,7 @@
 
 import { useRef, useState, type RefObject } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Pause, Play, Trash2, X } from "lucide-react";
+import { ChartLine, Pause, Play, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import type { KeywordBulkAction, TrackedKeywordItem } from "@asobeast/shared";
 import {
@@ -26,6 +26,7 @@ import type { BulkTagChange, BulkTagMode } from "@/lib/keyword-tags";
 import { invalidateKeywordMutation } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
 import { BulkTagPopover } from "./BulkTagPopover";
+import { chartLimitLine, overChartLimit } from "./dynamics-selection";
 
 interface BulkChange {
   action: KeywordBulkAction;
@@ -104,21 +105,26 @@ function ConfirmRemove({
   );
 }
 
+export const SHOW_DYNAMICS_BUTTON_ID = "show-keyword-dynamics";
+
 export function KeywordsBulkActions({
   appId,
   selectedKeywords,
   marketTags,
   onClear,
   onExport,
+  onShowDynamics,
 }: {
   appId: string;
   selectedKeywords: readonly TrackedKeywordItem[];
   marketTags: readonly string[];
   onClear: () => void;
   onExport: () => void;
+  onShowDynamics: () => void;
 }) {
   const queryClient = useQueryClient();
   const selectedIds = selectedKeywords.map((keyword) => keyword.keywordId);
+  const overCap = overChartLimit(selectedIds.length);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const removed = useRef(false);
 
@@ -177,6 +183,23 @@ export function KeywordsBulkActions({
         {`${selectedIds.length} selected`}
       </span>
       <div className="flex flex-wrap items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          id={SHOW_DYNAMICS_BUTTON_ID}
+          aria-disabled={overCap || undefined}
+          onClick={() => {
+            if (!overCap) onShowDynamics();
+          }}
+        >
+          <ChartLine />
+          Show dynamics
+        </Button>
+        {overCap ? (
+          <span className="text-caption text-muted-foreground">
+            {chartLimitLine()}
+          </span>
+        ) : null}
         <Button
           variant="outline"
           size="sm"

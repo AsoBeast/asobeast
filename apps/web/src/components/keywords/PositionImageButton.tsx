@@ -4,7 +4,7 @@ import type { RefObject } from "react";
 import { Copy } from "lucide-react";
 import type { Store, TrackedKeywordItem } from "@asobeast/shared";
 import { useChartImage } from "@/components/charts/use-chart-image";
-import type { RankingChartData } from "@/components/rankings/pivot";
+import type { RankingChartData } from "@/components/charts/pivot";
 import { rankingImageSpec } from "@/components/rankings/ranking-image";
 import { Button } from "@/components/ui/button";
 import { appDetailOptions } from "@/lib/queries";

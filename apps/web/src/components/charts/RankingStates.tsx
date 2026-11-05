@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { formatCheckedPosition } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
-import { CHART_HEIGHT } from "@/components/charts/theme";
+import { CHART_HEIGHT } from "./theme";
+import { formatCountry } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { lastCheckedIndex, NOT_CHECKED, type RankingChartData } from "./pivot";
 
@@ -42,6 +43,34 @@ export function NoKeywordsTracked({ id }: { id: string }) {
         <Button asChild size="sm" className="print:hidden">
           <Link href={`/apps/${id}/keywords`}>Go to keywords</Link>
         </Button>
+      }
+    />
+  );
+}
+
+export function NoKeywordsInMarket({
+  id,
+  country,
+  action,
+}: {
+  id: string;
+  country: string;
+  action?: React.ReactNode;
+}) {
+  return (
+    <Frame
+      title={`No keywords tracked in ${formatCountry(country)} yet`}
+      body="Track keywords for this market to follow their positions here."
+      action={
+        action === undefined ? (
+          <Button asChild size="sm" className="print:hidden">
+            <Link href={`/apps/${id}/keywords?country=${country}`}>
+              Go to keywords
+            </Link>
+          </Button>
+        ) : (
+          action
+        )
       }
     />
   );

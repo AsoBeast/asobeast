@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext } from "react";
-import { LoaderCircle, StickyNote } from "lucide-react";
+import { ChartLine, LoaderCircle, StickyNote } from "lucide-react";
 import type { PlayAcquisitions, TrackedKeywordItem } from "@asobeast/shared";
 import { formatCheckedPosition } from "@asobeast/shared";
 import { MatchedText } from "@/components/keyword-match/MatchedText";
@@ -234,8 +234,13 @@ export function NoteButton({ note }: { note: string }) {
 
 export const ListingMarksContext = createContext(true);
 
+export const ChartedKeywordsContext = createContext<ReadonlySet<string>>(
+  new Set(),
+);
+
 export function KeywordCell({ keyword }: { keyword: TrackedKeywordItem }) {
   const marks = useContext(ListingMarksContext);
+  const onChart = useContext(ChartedKeywordsContext).has(keyword.keywordId);
   return (
     <span className="flex max-w-40 items-center gap-2 font-medium md:max-w-64">
       <span title={keyword.text} className="truncate">
@@ -243,7 +248,14 @@ export function KeywordCell({ keyword }: { keyword: TrackedKeywordItem }) {
           segments={marks ? keyword.matchedIn : null}
           fallback={keyword.text}
         />
+        {onChart ? <span className="sr-only">, on the chart</span> : null}
       </span>
+      {onChart ? (
+        <ChartLine
+          aria-hidden
+          className="size-3.5 shrink-0 text-muted-foreground"
+        />
+      ) : null}
       <KeywordClassBadge
         keywordClass={keyword.keywordClass}
         source={keyword.keywordClassSource}

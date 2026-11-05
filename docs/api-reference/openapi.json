@@ -3998,6 +3998,17 @@
             }
           },
           {
+            "name": "country",
+            "required": false,
+            "in": "query",
+            "description": "The storefront whose tracked keywords are described. Omitted means every market the app tracks.",
+            "schema": {
+              "pattern": "^[a-z]{2}$",
+              "example": "us",
+              "type": "string"
+            }
+          },
+          {
             "name": "days",
             "required": true,
             "in": "query",

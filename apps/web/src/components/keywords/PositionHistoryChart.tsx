@@ -39,7 +39,7 @@ import {
   NOT_CHECKED,
   notFoundKey,
   type RankingChartData,
-} from "@/components/rankings/pivot";
+} from "@/components/charts/pivot";
 import { formatDayMonth } from "@/lib/format";
 import {
   changedFieldsLabel,

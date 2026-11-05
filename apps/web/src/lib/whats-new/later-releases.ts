@@ -35,6 +35,16 @@ export const LATER_RELEASES: readonly Release[] = [
       },
       {
         kind: "new",
+        title: "Chart the keywords you pick",
+        text: "Tick keywords on the keywords table and press Show dynamics to see their positions as one chart above the list. The charted rows are highlighted, the chart follows the market you switch to, and a link with an open chart reopens it for whoever you send it to.",
+      },
+      {
+        kind: "improved",
+        title: "Rankings and movers by market",
+        text: "The rankings report and its movers table follow the market pills at the top of the page, so All markets watches every storefront and one pill watches just that one.",
+      },
+      {
+        kind: "new",
         title: "Brand and generic keywords",
         text: "Each keyword is marked as your own brand, a competitor's brand or a generic search. A B or CB badge sits after the keyword, a Type filter keeps one kind, the export carries the type, and the menu of a keyword lets you set it yourself when it reads wrong.",
       },
