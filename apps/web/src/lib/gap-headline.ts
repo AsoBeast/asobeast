@@ -88,3 +88,31 @@ export function headlineText(headline: GapHeadline): string {
     headline.threats === 0 ? [] : [`${pluralize(headline.threats, "threat")}.`];
   return [winnable, ...biggest, ...threats].join(" ");
 }
+
+export interface HeadlineLink {
+  label: string;
+  href: string;
+}
+
+export function headlineLink(
+  appId: string,
+  headline: GapHeadline,
+  country: string,
+): HeadlineLink | null {
+  const page = `/apps/${appId}/competitors`;
+  if (headline.kind === "noCompetitors") {
+    return { label: "Add a competitor", href: `${page}#competitor-search` };
+  }
+  if (headline.kind !== "summary") return null;
+  const query = new URLSearchParams({
+    gaps: headline.biggest === null ? "threats" : "winnable",
+  });
+  if (country !== "") query.set("gapCountry", country);
+  if (headline.biggest !== null)
+    query.set("keyword", headline.biggest.keywordId);
+  return {
+    label:
+      headline.biggest === null ? "See the threats" : "See the winnable gaps",
+    href: `${page}?${query.toString()}`,
+  };
+}

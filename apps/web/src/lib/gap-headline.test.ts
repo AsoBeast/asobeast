@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { CompetitorGapKeyword, CompetitorGaps } from "@asobeast/shared";
-import { gapHeadline, headlineText } from "./gap-headline";
+import { gapHeadline, headlineLink, headlineText } from "./gap-headline";
 
 const RIVAL = { id: "comp-1", name: "Rival Focus" };
 
@@ -112,5 +112,56 @@ describe("gapHeadline", () => {
     ],
   ])("says why nothing can be compared", (coverage, text) => {
     expect(textOf({ ...gaps([row()]), coverage })).toBe(text);
+  });
+});
+
+describe("headlineLink", () => {
+  const scope = { competitors: [RIVAL], country: "", home: "us" };
+
+  it("links the biggest winnable gap to its breakdown", () => {
+    expect(
+      headlineLink("app-1", gapHeadline(gaps([row()]), scope), ""),
+    ).toEqual({
+      label: "See the winnable gaps",
+      href: "/apps/app-1/competitors?gaps=winnable&keyword=kw-4",
+    });
+  });
+
+  it("keeps the market the overview looks at", () => {
+    const german = row({ country: "de", keywordId: "kw-de" });
+
+    expect(
+      headlineLink(
+        "app-1",
+        gapHeadline(gaps([], [german]), { ...scope, country: "de" }),
+        "de",
+      ),
+    ).toEqual({
+      label: "See the threats",
+      href: "/apps/app-1/competitors?gaps=threats&gapCountry=de",
+    });
+  });
+
+  it("links an app without competitors to the add form", () => {
+    expect(
+      headlineLink(
+        "app-2",
+        gapHeadline(
+          {
+            ...gaps([]),
+            coverage: { competitors: 0, delisted: 0, markets: [] },
+          },
+          scope,
+        ),
+        "",
+      ),
+    ).toEqual({
+      label: "Add a competitor",
+      href: "/apps/app-2/competitors#competitor-search",
+    });
+  });
+
+  it("links nothing when there is nothing to act on", () => {
+    expect(headlineLink("app-1", gapHeadline(gaps([]), scope), "")).toBeNull();
   });
 });

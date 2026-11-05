@@ -9,40 +9,13 @@ import {
 } from "@/components/layout/InlineQueryError";
 import { Card, CardContent } from "@/components/ui/card";
 import { InfoTip } from "@/components/ui/info-tip";
-import {
-  gapHeadline,
-  headlineText,
-  type GapHeadline,
-} from "@/lib/gap-headline";
+import { gapHeadline, headlineLink, headlineText } from "@/lib/gap-headline";
 import {
   appDetailOptions,
   competitorAnalysisOptions,
   competitorsOptions,
 } from "@/lib/queries";
 import { GapHeadlineSkeleton } from "./skeletons";
-
-interface HeadlineLink {
-  label: string;
-  href: string;
-}
-
-function linkOf(id: string, headline: GapHeadline): HeadlineLink | null {
-  const competitors = `/apps/${id}/competitors`;
-  if (headline.kind === "noCompetitors") {
-    return {
-      label: "Add a competitor",
-      href: `${competitors}#competitor-search`,
-    };
-  }
-  if (headline.kind !== "summary") return null;
-  if (headline.biggest !== null) {
-    return {
-      label: "See the winnable gaps",
-      href: `${competitors}?gaps=winnable&keyword=${encodeURIComponent(headline.biggest.keywordId)}`,
-    };
-  }
-  return { label: "See the threats", href: `${competitors}?gaps=threats` };
-}
 
 function GapHeadlineBody({ id, home }: { id: string; home: string }) {
   const { country } = useKeywordScope(id);
@@ -57,12 +30,13 @@ function GapHeadlineBody({ id, home }: { id: string; home: string }) {
     );
   }
   if (read.data === undefined) return <GapHeadlineSkeleton />;
+  const market = country ?? "";
   const headline = gapHeadline(read.data.gaps, {
     competitors: competitors ?? [],
-    country: country ?? "",
+    country: market,
     home,
   });
-  const link = linkOf(id, headline);
+  const link = headlineLink(id, headline, market);
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
       <p className="min-w-0 flex-1 text-body wrap-anywhere">
