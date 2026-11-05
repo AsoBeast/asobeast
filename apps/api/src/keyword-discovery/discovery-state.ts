@@ -2,6 +2,7 @@ import {
   DISCOVERY_RECOMMENDED,
   DiscoveryRowState,
   KeywordDiscoveryCounts,
+  RANK_DEPTH,
   utcDayOf,
 } from '@asobeast/shared';
 import {
@@ -71,10 +72,19 @@ export const pendingWindowStart = (now: Date): Date =>
   new Date(now.getTime() - PENDING_WINDOW_MS);
 
 export function isPending(
-  row: { queuedAt: Date | null; checkedOn: string | null },
+  row: {
+    queuedAt: Date | null;
+    checkedOn: string | null;
+    depth: number | null;
+  },
   now: Date,
 ): boolean {
   if (row.queuedAt === null) return false;
   if (row.queuedAt < pendingWindowStart(now)) return false;
-  return row.checkedOn === null || row.checkedOn < utcDayOf(row.queuedAt);
+  return (
+    row.checkedOn === null ||
+    row.checkedOn < utcDayOf(row.queuedAt) ||
+    row.depth === null ||
+    row.depth < RANK_DEPTH
+  );
 }

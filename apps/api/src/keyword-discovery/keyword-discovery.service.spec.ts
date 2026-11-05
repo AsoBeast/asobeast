@@ -38,7 +38,7 @@ interface Fixture {
   store?: Store;
   isCompetitor?: boolean;
   rows?: Row[];
-  queued?: { queuedAt: Date; checkedOn: Date | null }[];
+  queued?: { queuedAt: Date; checkedOn: Date | null; depth: number | null }[];
   newestCheck?: Date | null;
   listed?: Map<string, number>;
   cron?: string;
@@ -185,10 +185,15 @@ describe('KeywordDiscoveryService.list', () => {
   it('reports the weekly checks', async () => {
     const { service, findMany } = build({
       queued: [
-        { queuedAt: new Date('2026-11-11T07:30:00Z'), checkedOn: null },
+        {
+          queuedAt: new Date('2026-11-11T07:30:00Z'),
+          checkedOn: null,
+          depth: null,
+        },
         {
           queuedAt: new Date('2026-11-09T07:30:00Z'),
           checkedOn: new Date('2026-11-09T00:00:00Z'),
+          depth: 200,
         },
       ],
       newestCheck: new Date('2026-11-09T00:00:00Z'),
@@ -199,7 +204,7 @@ describe('KeywordDiscoveryService.list', () => {
         appId: 'app1',
         queuedAt: { gte: new Date('2026-11-09T00:00:00Z') },
       },
-      select: { queuedAt: true, checkedOn: true },
+      select: { queuedAt: true, checkedOn: true, depth: true },
     });
     expect(checks).toEqual({
       perWeek: 40,
@@ -214,8 +219,16 @@ describe('KeywordDiscoveryService.list', () => {
     const monday = new Date('2026-11-09T06:00:00Z');
     const { service, findMany } = build({
       queued: [
-        { queuedAt: new Date('2026-11-08T22:00:00Z'), checkedOn: null },
-        { queuedAt: new Date('2026-11-09T01:00:00Z'), checkedOn: null },
+        {
+          queuedAt: new Date('2026-11-08T22:00:00Z'),
+          checkedOn: null,
+          depth: null,
+        },
+        {
+          queuedAt: new Date('2026-11-09T01:00:00Z'),
+          checkedOn: null,
+          depth: null,
+        },
       ],
     });
     const { checks } = await service.list('app1', ALL, monday);
@@ -224,7 +237,7 @@ describe('KeywordDiscoveryService.list', () => {
         appId: 'app1',
         queuedAt: { gte: new Date('2026-11-08T06:00:00Z') },
       },
-      select: { queuedAt: true, checkedOn: true },
+      select: { queuedAt: true, checkedOn: true, depth: true },
     });
     expect(checks).toMatchObject({ usedThisWeek: 1, pending: 2 });
   });

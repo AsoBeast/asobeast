@@ -82,7 +82,11 @@ describe('isPending', () => {
   it('is pending while a check queued within a day has not run', () => {
     expect(
       isPending(
-        { queuedAt: new Date('2026-11-10T07:30:00Z'), checkedOn: null },
+        {
+          queuedAt: new Date('2026-11-10T07:30:00Z'),
+          checkedOn: null,
+          depth: null,
+        },
         now,
       ),
     ).toBe(true);
@@ -91,6 +95,7 @@ describe('isPending', () => {
         {
           queuedAt: new Date('2026-11-10T07:30:00Z'),
           checkedOn: '2026-11-03',
+          depth: 200,
         },
         now,
       ),
@@ -103,19 +108,39 @@ describe('isPending', () => {
         {
           queuedAt: new Date('2026-11-10T07:30:00Z'),
           checkedOn: '2026-11-10',
+          depth: 200,
         },
         now,
       ),
     ).toBe(false);
     expect(
       isPending(
-        { queuedAt: new Date('2026-11-09T11:00:00Z'), checkedOn: null },
+        {
+          queuedAt: new Date('2026-11-09T11:00:00Z'),
+          checkedOn: null,
+          depth: null,
+        },
         now,
       ),
     ).toBe(false);
   });
 
+  it('is pending while only a shallow capture answered since the check was queued', () => {
+    expect(
+      isPending(
+        {
+          queuedAt: new Date('2026-11-10T07:30:00Z'),
+          checkedOn: '2026-11-10',
+          depth: 50,
+        },
+        now,
+      ),
+    ).toBe(true);
+  });
+
   it('is not pending when nothing was queued', () => {
-    expect(isPending({ queuedAt: null, checkedOn: null }, now)).toBe(false);
+    expect(
+      isPending({ queuedAt: null, checkedOn: null, depth: null }, now),
+    ).toBe(false);
   });
 });
