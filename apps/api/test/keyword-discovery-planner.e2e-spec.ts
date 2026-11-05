@@ -11,7 +11,6 @@ import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { WorkspaceContext } from '../src/common/tenancy/workspace-context';
 import { JOBS, QUEUES } from '../src/jobs/jobs.types';
 import { KeywordDiscoveryPlanner } from '../src/keyword-discovery/discovery-planner.service';
-import { KeywordDiscoveryModule } from '../src/keyword-discovery/keyword-discovery.module';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import { FakeRegistry } from './helpers/mcp-fixtures';
 import { obliterateQueues, pauseQueues } from './obliterate-queues';
@@ -75,7 +74,7 @@ describe('keyword discovery planner (e2e)', () => {
       stdio: 'ignore',
     });
     const moduleFixture = await Test.createTestingModule({
-      imports: [AppModule, KeywordDiscoveryModule],
+      imports: [AppModule],
     })
       .overrideProvider(StoreProviderRegistry)
       .useValue(new FakeRegistry())
