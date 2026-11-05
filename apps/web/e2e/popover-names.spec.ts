@@ -85,6 +85,18 @@ const POPOVERS: NamedPopover[] = [
       page.getByRole("button", { name: /^Filter by source/ }).click(),
   },
   {
+    name: "Filter by app",
+    path: "/alerts",
+    open: (page) =>
+      page.getByRole("button", { name: /^Filter by app/ }).click(),
+  },
+  {
+    name: "Filter by event type",
+    path: "/alerts",
+    open: (page) =>
+      page.getByRole("button", { name: /^Filter by event type/ }).click(),
+  },
+  {
     name: "How actions are generated",
     path: "/actions",
     open: (page) =>

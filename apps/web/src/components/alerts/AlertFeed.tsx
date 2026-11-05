@@ -1,14 +1,18 @@
 "use client";
 
-import { useDeferredValue, useMemo } from "react";
+import { useDeferredValue, useMemo, useRef } from "react";
 import { useSuspenseInfiniteQuery } from "@tanstack/react-query";
-import { useQueryStates } from "nuqs";
 import { isAlertFeedEvent } from "@asobeast/shared";
+import { Button } from "@/components/ui/button";
 import { InfoTip } from "@/components/ui/info-tip";
 import { alertEventFilters, alertEventsOptions } from "@/lib/queries";
-import { alertFeedParsers } from "@/lib/search-params";
 import { AlertEventList, AlertFeedEnd } from "./AlertEventList";
 import { AlertFeedEmpty } from "./AlertFeedStates";
+import {
+  AlertFeedToolbar,
+  CLEARED_ALERT_FEED,
+  useAlertFeedView,
+} from "./AlertFeedToolbar";
 import { dayGroups, searchEvents } from "./alert-feed-view";
 
 const ALERTS_GUIDE = "https://docs.asobeast.com/guides/alerts";
@@ -39,7 +43,7 @@ function AlertFeedHeader() {
 }
 
 function useFeedFilters() {
-  const [view] = useQueryStates(alertFeedParsers);
+  const [view, setView] = useAlertFeedView();
   const app = useDeferredValue(view.app);
   const types = useDeferredValue(view.type.join(","));
   const query = useDeferredValue(view.q);
@@ -51,11 +55,12 @@ function useFeedFilters() {
       }),
     [app, types],
   );
-  return { filters, query };
+  return { filters, query, setView };
 }
 
 export function AlertFeed() {
-  const { filters, query } = useFeedFilters();
+  const { filters, query, setView } = useFeedFilters();
+  const searchBox = useRef<HTMLDivElement>(null);
   const feed = useSuspenseInfiniteQuery(alertEventsOptions(filters));
   const events = useMemo(
     () => feed.data.pages.flatMap((page) => page.events),
@@ -64,12 +69,32 @@ export function AlertFeed() {
   const shown = useMemo(() => searchEvents(events, query), [events, query]);
   const now = feed.dataUpdatedAt;
   const filtered = Object.keys(filters).length > 0 || query.trim() !== "";
+  const clearAll = () => {
+    void setView(CLEARED_ALERT_FEED);
+    searchBox.current?.querySelector("input")?.focus();
+  };
 
   return (
     <>
       <AlertFeedHeader />
+      {events.length === 0 && !filtered ? null : (
+        <AlertFeedToolbar
+          shown={shown.length}
+          loaded={events.length}
+          hasMore={feed.hasNextPage}
+          searchBox={searchBox}
+          onClearAll={clearAll}
+        />
+      )}
       {shown.length === 0 ? (
-        <AlertFeedEmpty filtered={filtered} />
+        <AlertFeedEmpty
+          filtered={filtered}
+          action={
+            <Button variant="outline" onClick={clearAll}>
+              Clear filters
+            </Button>
+          }
+        />
       ) : (
         <AlertEventList groups={dayGroups(shown, now)} now={now} />
       )}

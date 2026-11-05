@@ -17,7 +17,8 @@ const feedState = (context: BrowserContext, value: string) =>
     { name: ALERT_EVENTS_COOKIE, value, url: "http://localhost:3000" },
   ]);
 
-const rows = (page: Page) => page.getByRole("main").getByRole("listitem");
+const rows = (page: Page) =>
+  page.getByRole("main").getByRole("region").getByRole("listitem");
 
 const dayHeadings = (page: Page) =>
   page.getByRole("main").getByRole("heading", { level: 2 });
@@ -182,4 +183,169 @@ test.describe("alerts page", () => {
       await expect(arabic.locator('[dir="auto"]')).toHaveCount(1);
     });
   }
+
+  test.describe("filters", () => {
+    const facet = (page: Page, name: string) =>
+      page.getByRole("button", { name: new RegExp(`^Filter by ${name}`) });
+
+    const feedRequests = (page: Page) => {
+      const seen: URL[] = [];
+      page.on("request", (request) => {
+        const url = new URL(request.url());
+        if (isFeedRead(url) && url.searchParams.get("limit") !== "1") {
+          seen.push(url);
+        }
+      });
+      return seen;
+    };
+
+    test("narrows to one app through the url and a chip", async ({ page }) => {
+      const seen = feedRequests(page);
+      await page.goto("/alerts");
+      await (await hydrated(facet(page, "app"))).click();
+      await page.getByRole("option", { name: /Focus Timer/ }).click();
+      await page.keyboard.press("Escape");
+
+      await expect(page).toHaveURL(/[?&]app=app-1/);
+      await expect
+        .poll(() =>
+          seen.some((url) => url.searchParams.get("appId") === "app-1"),
+        )
+        .toBe(true);
+      await expect(rows(page).filter({ hasText: "Tomato Clock" })).toHaveCount(
+        0,
+      );
+      const chips = page.getByRole("list", { name: "Active filters" });
+      await expect(chips).toContainText("App: Focus Timer");
+
+      await chips.getByRole("button", { name: /^Remove App/ }).click();
+
+      await expect(page).not.toHaveURL(/[?&]app=/);
+      await expect(
+        rows(page).filter({ hasText: "Tomato Clock" }),
+      ).not.toHaveCount(0);
+    });
+
+    test("opens filtered by an app from the address without asking again", async ({
+      page,
+    }) => {
+      const seen = feedRequests(page);
+      await page.goto("/alerts?app=app-gp");
+      await hydrated(facet(page, "app"));
+
+      await expect(rows(page)).toHaveCount(
+        ALERT_EVENT_ITEMS.filter(
+          (item) => item.appId === "app-gp" || item.primaryAppId === "app-gp",
+        ).length,
+      );
+      await page.waitForLoadState("networkidle");
+      expect(seen).toEqual([]);
+    });
+
+    test("filters by event types and ignores an unknown one", async ({
+      page,
+    }) => {
+      const seen = feedRequests(page);
+      await page.goto("/alerts");
+      await (await hydrated(facet(page, "event type"))).click();
+      await page.getByRole("option", { name: /Rank dropped/ }).click();
+      await page.getByRole("option", { name: /Chart entered/ }).click();
+      await page.keyboard.press("Escape");
+
+      await expect(page).toHaveURL(/type=rank\.dropped(,|%2C)chart\.entered/);
+      await expect
+        .poll(() =>
+          seen.some(
+            (url) =>
+              url.searchParams.get("type") === "chart.entered,rank.dropped",
+          ),
+        )
+        .toBe(true);
+      await expect(rows(page).first()).toBeVisible();
+      for (const row of await rows(page).all()) {
+        await expect(row.locator(".sr-only")).toHaveText(
+          /^(Rank dropped|Chart entered): $/,
+        );
+      }
+
+      await facet(page, "event type").click();
+      await page.getByRole("option", { name: /Rank dropped/ }).click();
+      await page.getByRole("option", { name: /Chart entered/ }).click();
+      await page.keyboard.press("Escape");
+      await expect(page).not.toHaveURL(/type=/);
+
+      seen.length = 0;
+      await page.goto("/alerts?type=nope");
+      await expect(rows(page)).toHaveCount(ALERT_EVENT_PAGE_SIZE);
+      expect(seen.some((url) => url.search.includes("nope"))).toBe(false);
+    });
+
+    test("searches the loaded events in the browser", async ({ page }) => {
+      const seen = feedRequests(page);
+      await page.goto("/alerts");
+      const search = await hydrated(
+        page.getByRole("textbox", { name: "Search alerts" }),
+      );
+      await page.waitForLoadState("networkidle");
+      seen.length = 0;
+
+      await search.fill("germany");
+
+      await expect(page).toHaveURL(/q=germany/);
+      await expect(rows(page).first()).toBeVisible();
+      for (const row of await rows(page).all()) {
+        await expect(row).toContainText("Germany");
+      }
+      await expect(page.getByText(/^\d+ of 50 events$/)).toBeVisible();
+      await expect(
+        page.getByText(
+          "Searching the 50 loaded events. Load more to search further.",
+        ),
+      ).toBeVisible();
+      expect(seen).toEqual([]);
+
+      await search.fill("");
+      await expect(rows(page)).toHaveCount(ALERT_EVENT_PAGE_SIZE);
+      await expect(search).toBeFocused();
+    });
+
+    test("clears every filter from the empty state and focuses the search", async ({
+      page,
+    }) => {
+      await page.goto("/alerts?app=app-1&type=rank.dropped");
+      const search = await hydrated(
+        page.getByRole("textbox", { name: "Search alerts" }),
+      );
+      await search.fill("zzzz nothing matches");
+      await expect(page.getByText("No events match")).toBeVisible();
+
+      await page.getByRole("button", { name: "Clear filters" }).click();
+
+      await expect(page).not.toHaveURL(/[?&](app|type|q)=/);
+      await expect(search).toBeFocused();
+      await expect(rows(page)).toHaveCount(ALERT_EVENT_PAGE_SIZE);
+    });
+
+    test("narrows by app, type and text together and clears them all", async ({
+      page,
+    }) => {
+      await page.goto("/alerts?app=app-1&type=rank.dropped,rank.improved");
+      const search = await hydrated(
+        page.getByRole("textbox", { name: "Search alerts" }),
+      );
+      await search.fill("pomodoro");
+      await expect(page).toHaveURL(/q=pomodoro/);
+      for (const row of await rows(page).all()) {
+        await expect(row).toContainText("pomodoro");
+      }
+
+      await page
+        .getByRole("list", { name: "Active filters" })
+        .getByRole("button", { name: "Clear all" })
+        .click();
+
+      await expect(page).not.toHaveURL(/[?&](app|type|q)=/);
+      await expect(search).toBeFocused();
+    });
+  });
 });
