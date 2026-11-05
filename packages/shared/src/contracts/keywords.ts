@@ -93,6 +93,8 @@ export interface TrackedKeywordItem {
   matchedIn?: KeywordMarkSegment[];
   keywordClass?: KeywordClass;
   keywordClassSource?: KeywordClassSource;
+  lastRankedPosition?: number | null;
+  lastRankedOn?: string | null;
 }
 
 export interface PlayAcquisitions {

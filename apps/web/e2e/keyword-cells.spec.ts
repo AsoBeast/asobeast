@@ -1,18 +1,25 @@
 import type { Page } from "@playwright/test";
+import { formatDate } from "../src/lib/format";
 import { contrastViolations, THEMES } from "./contrast-check.mts";
+import { APP_MARKS_KEYWORDS } from "./fixtures.mts";
 import { hydrated } from "./hydrated.mts";
 import { expect, test } from "./session.mts";
 
 const PAGE = "/apps/app-marks/keywords";
 
+const rowOf = (page: Page, text: string) =>
+  page.getByRole("row").filter({
+    has: page.getByRole("checkbox", { name: `Select ${text}`, exact: true }),
+  });
+
+const lastRankedTitle = (text: string) => {
+  const keyword = APP_MARKS_KEYWORDS.find((row) => row.text === text);
+  if (!keyword?.lastRankedOn) throw new Error(`no last ranked day for ${text}`);
+  return `Last ranked #${keyword.lastRankedPosition} on ${formatDate(keyword.lastRankedOn)}`;
+};
+
 const keywordCell = (page: Page, text: string) =>
-  page
-    .getByRole("row")
-    .filter({
-      has: page.getByRole("checkbox", { name: `Select ${text}`, exact: true }),
-    })
-    .getByRole("cell")
-    .nth(1);
+  rowOf(page, text).getByRole("cell").nth(1);
 
 const openMarks = async (page: Page) => {
   await page.goto(PAGE);
@@ -245,4 +252,80 @@ test.describe("the listing marks choice", () => {
     ).toHaveCount(0);
     expect(page.url()).toBe(address);
   });
+});
+
+test.describe("the last position of a keyword that lost its rank", () => {
+  test("a keyword that lost its rank says where it was", async ({ page }) => {
+    await openMarks(page);
+    const position = rowOf(page, "lost yesterday").getByText(">200 (was #14)", {
+      exact: true,
+    });
+
+    await expect(position).toBeVisible();
+    await expect(position).toHaveAttribute(
+      "title",
+      lastRankedTitle("lost yesterday"),
+    );
+    await expect(
+      rowOf(page, "lost yesterday").getByText(/since yesterday/),
+    ).toHaveCount(0);
+  });
+
+  test("the hint outlives the first day", async ({ page }) => {
+    await openMarks(page);
+
+    await expect(
+      rowOf(page, "lost for days").getByText(">200 (was #9)", { exact: true }),
+    ).toHaveAttribute("title", lastRankedTitle("lost for days"));
+  });
+
+  test("an older api still shows the day before", async ({ page }) => {
+    await openMarks(page);
+    const position = rowOf(page, "lost on an older api").getByText(
+      ">200 (was #6)",
+      { exact: true },
+    );
+
+    await expect(position).toBeVisible();
+    await expect(position).not.toHaveAttribute("title");
+  });
+
+  test("a keyword that never ranked shows no hint", async ({ page }) => {
+    await openMarks(page);
+    const row = rowOf(page, "never ranked");
+
+    await expect(row.getByText(">200", { exact: true })).toBeVisible();
+    await expect(row).not.toContainText("(was");
+  });
+
+  test("the position history popover keeps its own readout", async ({
+    page,
+  }) => {
+    await openMarks(page);
+    await rowOf(page, "lost yesterday")
+      .getByRole("button", { name: "Position history: lost yesterday" })
+      .click();
+    const history = page.getByRole("dialog", {
+      name: "Position history lost yesterday",
+    });
+
+    await expect(history).toBeVisible();
+    await expect(history.getByText(">200", { exact: true })).toBeVisible();
+    await expect(history).not.toContainText("(was");
+  });
+
+  for (const width of [320, 375]) {
+    test(`the hint never widens the page at ${width} px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 800 });
+      await openMarks(page);
+      await expect(
+        rowOf(page, "lost on an older api").getByText(">200 (was #6)"),
+      ).toBeVisible();
+
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - window.innerWidth,
+      );
+      expect(overflow).toBeLessThanOrEqual(0);
+    });
+  }
 });

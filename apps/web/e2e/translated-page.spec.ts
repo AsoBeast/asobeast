@@ -577,6 +577,26 @@ test("a translated keywords table keeps drawing its listing marks", async ({
   expect(errors).toEqual([]);
 });
 
+test("a translated keywords table keeps the last position of a lost keyword", async ({
+  page,
+}) => {
+  const errors = collectDomErrors(page);
+  await page.goto("/apps/app-marks/keywords");
+  const table = page.getByRole("table", { name: /tracked keywords/i });
+  const sort = await hydrated(
+    table.getByRole("button", { name: /^position$/i }),
+  );
+  await expect(table.getByText(">200 (was #14)")).toBeVisible();
+
+  await translateText(page);
+  await sort.click();
+  await sort.click();
+
+  await expect(table.getByText(/>200 \(was #14\)/i)).toBeVisible();
+  await expect(table.getByText(/>200 \(was #9\)/i)).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
 test("a translated metadata page counts what is typed into a field", async ({
   page,
 }) => {

@@ -3010,6 +3010,26 @@ export const APP_MARKS_KEYWORDS: TrackedKeywordItem[] = [
     ],
     { active: false, note: "Seasonal, resume in January" },
   ),
+  marksKeyword(7, "lost yesterday", undefined, {
+    latestPosition: null,
+    previousPosition: 14,
+    lastRankedPosition: 14,
+    lastRankedOn: "2026-10-21",
+  }),
+  marksKeyword(8, "lost for days", undefined, {
+    latestPosition: null,
+    lastRankedPosition: 9,
+    lastRankedOn: "2026-10-10",
+  }),
+  marksKeyword(9, "lost on an older api", undefined, {
+    latestPosition: null,
+    previousPosition: 6,
+  }),
+  marksKeyword(10, "never ranked", undefined, {
+    latestPosition: null,
+    lastRankedPosition: null,
+    lastRankedOn: null,
+  }),
 ];
 
 const listingSuggestions = (texts: string[]): KeywordSuggestion[] =>

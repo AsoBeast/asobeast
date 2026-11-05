@@ -89,6 +89,13 @@ describe("the tool catalog", () => {
     expect(summary).toContain("note");
   });
 
+  it("tells an agent how to read the last ranked position of list_keywords", () => {
+    const description = toolByName("list_keywords")?.description ?? "";
+
+    expect(description).toContain("lastRankedPosition");
+    expect(description).toContain("lastRankedOn");
+  });
+
   it("tells an agent how to read the listing marks of list_keywords", () => {
     const description = toolByName("list_keywords")?.description ?? "";
 

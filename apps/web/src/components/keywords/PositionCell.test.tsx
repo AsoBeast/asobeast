@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { TrackedKeywordItem } from "@asobeast/shared";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { formatDate } from "@/lib/format";
 import { PositionCell } from "./keyword-cells";
 
 const TODAY = "2026-10-22";
@@ -149,5 +150,84 @@ describe("PositionCell", () => {
 
     expect(markup).toContain("&gt;200");
     expect(markup).toContain('aria-label="Position history: focus timer"');
+  });
+
+  it("W-POS-11 a keyword that lost its rank says where it was in one string", () => {
+    const markup = render(
+      keyword({
+        latestPosition: null,
+        previousPosition: null,
+        positionDelta1d: null,
+        lastRankedPosition: 14,
+        lastRankedOn: "2026-10-21",
+      }),
+    );
+
+    expect(markup).toContain(">&gt;200 (was #14)<");
+    expect(markup).toContain(
+      `title="Last ranked #14 on ${formatDate("2026-10-21")}"`,
+    );
+    expect(markup).not.toContain("since yesterday");
+  });
+
+  it("W-POS-12 an older api shows the position of the day before", () => {
+    const markup = render(
+      keyword({
+        latestPosition: null,
+        previousPosition: 6,
+        positionDelta1d: null,
+      }),
+    );
+
+    expect(markup).toContain(">&gt;200 (was #6)<");
+    expect(markup).not.toContain("Last ranked");
+  });
+
+  it("W-POS-13 a ranked keyword carries no hint and keeps its chip", () => {
+    const markup = render(
+      keyword({ lastRankedPosition: null, lastRankedOn: null }),
+    );
+
+    expect(markup).not.toContain("(was");
+    expect(markup).toContain("since yesterday");
+  });
+
+  it("W-POS-14 a stale lost keyword keeps the hint and the clock", () => {
+    const markup = render(
+      keyword({
+        latestPosition: null,
+        latestCheckedOn: "2026-10-19",
+        lastRankedPosition: 14,
+        lastRankedOn: "2026-10-12",
+      }),
+    );
+
+    expect(markup).toContain("(was #14)");
+    expect(markup).toContain(CLOCK);
+  });
+
+  it("W-POS-15 a keyword never checked or never ranked carries no hint", () => {
+    const checking = render(
+      keyword({
+        latestPosition: null,
+        latestDepth: null,
+        latestCheckedOn: null,
+        lastRankedPosition: null,
+        lastRankedOn: null,
+      }),
+    );
+    const neverRanked = render(
+      keyword({
+        latestPosition: null,
+        previousPosition: null,
+        lastRankedPosition: null,
+        lastRankedOn: null,
+      }),
+    );
+
+    expect(checking).toContain("Checking…");
+    expect(checking).not.toContain("(was");
+    expect(neverRanked).toContain(">&gt;200<");
+    expect(neverRanked).not.toContain("(was");
   });
 });

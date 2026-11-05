@@ -3,6 +3,7 @@ import {
   CURRENT_FORMULA_VERSIONS,
   isCheckFresh,
   isKeywordClass,
+  isRanked,
   isScoringConfidence,
   isScoringSource,
   KeywordClass,
@@ -123,6 +124,31 @@ function previousDayPosition(
   return previous ? previous.position : null;
 }
 
+type LastRankedFacts = Required<
+  Pick<TrackedKeywordItem, 'lastRankedPosition' | 'lastRankedOn'>
+>;
+
+const NOT_LOST: LastRankedFacts = {
+  lastRankedPosition: null,
+  lastRankedOn: null,
+};
+
+function lastRankedFacts(
+  rankings: Pick<KeywordRanking, 'position' | 'date'>[],
+): LastRankedFacts {
+  const [latest, ...earlier] = rankings;
+  if (!latest || isRanked(latest.position)) {
+    return NOT_LOST;
+  }
+  const found = earlier.find(
+    (ranking): ranking is typeof ranking & { position: number } =>
+      isRanked(ranking.position),
+  );
+  return found
+    ? { lastRankedPosition: found.position, lastRankedOn: utcDayOf(found.date) }
+    : NOT_LOST;
+}
+
 export interface HeldFacts {
   bestPosition: number | null;
   positionDeltaFromBest: number | null;
@@ -171,6 +197,7 @@ type PositionFacts = Pick<
   | 'positionDelta1d'
   | 'positionDelta7d'
 > &
+  LastRankedFacts &
   Partial<
     Pick<
       TrackedKeywordItem,
@@ -217,6 +244,7 @@ function positionFacts(
         ? latestPosition - previousPosition
         : null,
     positionDelta7d: positionDelta7d(rankings),
+    ...lastRankedFacts(rankings),
     ...(hold === undefined
       ? {}
       : {

@@ -125,6 +125,25 @@ describe('KeywordsController table facts (e2e)', () => {
     (await api.get(`/apps/${appId}/keywords`).query(query).expect(200))
       .body as TrackedKeywordItem[];
 
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  const daysAgo = (days: number): Date =>
+    new Date(utcToday().getTime() - days * DAY_MS);
+
+  const rank = (
+    appId: string,
+    keywordId: string,
+    oldestFirst: (number | null)[],
+  ) =>
+    prisma.keywordRanking.createMany({
+      data: oldestFirst.map((position, index) => ({
+        appId,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        keywordId,
+        date: daysAgo(oldestFirst.length - 1 - index),
+        position,
+      })),
+    });
+
   describe('trackedAt', () => {
     it('carries the instant each keyword started being tracked', async () => {
       const primary = await seedApp();
@@ -376,25 +395,6 @@ describe('KeywordsController table facts (e2e)', () => {
     });
   });
   describe('dropStreak', () => {
-    const DAY_MS = 24 * 60 * 60 * 1000;
-    const daysAgo = (days: number): Date =>
-      new Date(utcToday().getTime() - days * DAY_MS);
-
-    const rank = (
-      appId: string,
-      keywordId: string,
-      oldestFirst: (number | null)[],
-    ) =>
-      prisma.keywordRanking.createMany({
-        data: oldestFirst.map((position, index) => ({
-          appId,
-          workspaceId: DEFAULT_WORKSPACE_ID,
-          keywordId,
-          date: daysAgo(oldestFirst.length - 1 - index),
-          position,
-        })),
-      });
-
     it('counts the checks in a row at which the position got worse', async () => {
       const primary = await seedApp();
       const keywordId = await track(primary.id, 'pomodoro');
@@ -444,6 +444,46 @@ describe('KeywordsController table facts (e2e)', () => {
 
       expect(JSON.stringify(field.body)).not.toContain('dropStreak');
       expect(JSON.stringify(audit.body)).not.toContain('dropStreak');
+    });
+  });
+  describe('lastRankedPosition', () => {
+    it('answers where a keyword ranked before it dropped out', async () => {
+      const primary = await seedApp();
+      const keywordId = await track(primary.id, 'pomodoro');
+      await rank(primary.id, keywordId, [14, null, null]);
+
+      const [item] = await list(primary.id);
+
+      expect(item).toMatchObject({
+        latestPosition: null,
+        previousPosition: null,
+        lastRankedPosition: 14,
+        lastRankedOn: daysAgo(2).toISOString().slice(0, 10),
+      });
+    });
+
+    it('answers null for a keyword ranked on its latest check', async () => {
+      const primary = await seedApp();
+      const keywordId = await track(primary.id, 'pomodoro');
+      await rank(primary.id, keywordId, [14, null, 9]);
+
+      const [item] = await list(primary.id);
+
+      expect(item).toMatchObject({
+        latestPosition: 9,
+        lastRankedPosition: null,
+        lastRankedOn: null,
+      });
+    });
+
+    it('sends both keys for a keyword never checked', async () => {
+      const primary = await seedApp();
+      await track(primary.id, 'pomodoro');
+
+      const [item] = await list(primary.id);
+
+      expect(item).toHaveProperty('lastRankedPosition', null);
+      expect(item).toHaveProperty('lastRankedOn', null);
     });
   });
   describe('uncovered', () => {
