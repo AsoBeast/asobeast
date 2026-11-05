@@ -24,6 +24,7 @@ An app is one row with a home storefront. Keywords are separate rows scoped by t
 | `AppSetup` | The guided setup of one tracked app: status, skipped steps, countries reviewed, selected markets | Keyed on app. Started by the import and kept on the account, so every member and every device sees the same progress. Deleted with its app |
 | `KeywordDiscovery` | One phrase discovery proposed for an app, with the position its last check found, the depth that check covered and when it was dismissed | Tenant owned. Keyed on app and keyword. Its keyword and the search results it reads are shared like every `Keyword` and `SerpEntry`. Removed after 60 days without being proposed |
 | `KeywordMetric` | Persisted popularity and difficulty for a day | Keyed on keyword and date |
+| `KeywordInspection` | One on demand inspection of a keyword in one storefront: its scores and provenance, the top 50 search results, the autocomplete and its status | Tenant owned. Points at the shared keyword, kept until deleted. See [Inspect any keyword](/guides/keyword-inspections) |
 | `KeywordRanking` | One position observation | Keyed on app, keyword and date. Carries `depth` |
 | `SerpEntry` | One search result row for a keyword and day | Keyed on keyword, date and position |
 | `CategoryRank` | A free, paid or grossing chart position | Keyed on app, date, collection and genre |

@@ -13,6 +13,7 @@ const {
   CHART_TOOLS,
   COMPETITOR_TOOLS,
   INSIGHT_TOOLS,
+  INSPECTION_TOOLS,
   KEYWORD_TOOLS,
   MCP_TOOLS,
   MCP_WRITE_TOOLS,
@@ -41,6 +42,11 @@ const GROUPS = [
     title: "Keywords",
     tools: KEYWORD_TOOLS,
     note: "Keywords are per market, so pass `country` to scope to one storefront. `strategy` chooses the suggestion source: metadata, search, similar, developer, competitors, seasonal, reviews or competitorSearch, which expands phrases from your competitors' listings through the store's search suggestions. The `seasonal` strategy offers English holiday keywords only in the English language storefronts that observe the event, so it is empty for any other storefront. See [Seasonal suggestions](/guides/track-keywords#seasonal-suggestions). `keyword_fields` lists the private App Store keyword fields the owner saved, one per localization, with the markets that read each one. `app_localizations` lists the localizations the app ships, each with its field and the markets that read it, and `market_keyword_fields` reports what one storefront's search reads, for the home storefront unless you pass `country`. See [Which localizations does an app ship?](/concepts/countries#which-localizations-does-an-app-ship).\n\nEvery parameter is validated by the tool before a request leaves, against the same bounds the API enforces. A `country` is a lowercase two letter storefront code, a date is `YYYY-MM-DD`, and a `limit` or `days` window is refused rather than sent when it sits outside the range the endpoint accepts.",
+  },
+  {
+    title: "Keyword inspections",
+    tools: INSPECTION_TOOLS,
+    note: "An inspection researches one phrase in one storefront whether or not any app tracks it, and the workspace keeps every run. `list_keyword_inspections` lists them newest first and `get_keyword_inspection` reads one in full: the top 50 search results, the store autocomplete, the scores with their source and confidence, a summary of the top 10 and the change since the previous run of the same phrase. `inspect_keyword` under Changes queues a new one. Both read tools answer stored rows and never reach the store. See [Inspect any keyword](/guides/keyword-inspections).",
   },
   {
     title: "Competitors",
@@ -86,7 +92,7 @@ Each tool wraps one route on the HTTP API, so the data an agent can reach and th
 No tool imports an app, edits metadata, writes the iOS keyword field, refreshes a listing, runs the daily pipeline, calls an AI feature or touches billing, tokens, webhooks or settings. Those either spend store capacity in bulk, spend your AI allowance, or publish a decision you should own. An agent proposes them and you decide.
 `;
 
-const CHANGES_NOTE = `\`track_keywords\` takes a \`country\` and defaults to the app's home storefront. It accepts up to 50 phrases a call, queues the same store scoring job the web app queues for each new phrase, and counts against the plan's keyword market limit, so it spends store request capacity. In a market other than the home storefront it also starts the daily capture of that market's listing for the app and each competitor. \`untrack_keyword\` and \`remove_competitor\` delete, and take the ids that \`list_keywords\` and \`list_competitors\` return. \`add_competitor\` fetches the listing from the live store before it answers. \`set_action_status\` takes \`snoozedUntil\` as a UTC date and an optional \`note\`, and the change is recorded in the action history under the name of the person who minted the token.
+const CHANGES_NOTE = `\`track_keywords\` takes a \`country\` and defaults to the app's home storefront. It accepts up to 50 phrases a call, queues the same store scoring job the web app queues for each new phrase, and counts against the plan's keyword market limit, so it spends store request capacity. In a market other than the home storefront it also starts the daily capture of that market's listing for the app and each competitor. \`untrack_keyword\` and \`remove_competitor\` delete, and take the ids that \`list_keywords\` and \`list_competitors\` return. \`add_competitor\` fetches the listing from the live store before it answers. \`set_action_status\` takes \`snoozedUntil\` as a UTC date and an optional \`note\`, and the change is recorded in the action history under the name of the person who minted the token. \`inspect_keyword\` queues a store job and answers the pending inspection at once; each one spends one on demand score of the hourly allowance, and an inspection of the same phrase and storefront that is still pending is answered instead of queuing another.
 
 Every change goes through the same route, validation, plan write budget and quota as the web app, so a refused change reads the way the web app's refusal does. If a change fails with a server error, a timeout or an answer that cannot be read, it may or may not have been applied, and the message says so. Read the current state before retrying.`;
 
@@ -149,7 +155,7 @@ function render() {
     "---",
     "title: MCP tool reference",
     "sidebarTitle: Tools",
-    `description: "${reads} read only tools covering apps, keywords, competitors, top charts, annotations, rankings, SERPs, audits, reviews, analytics and the Action Center, plus ${writes} opt in tools that change keywords, competitors, actions and annotations."`,
+    `description: "${reads} read only tools covering apps, keywords, keyword inspections, competitors, top charts, annotations, rankings, SERPs, audits, reviews, analytics and the Action Center, plus ${writes} opt in tools that change keywords, competitors, actions and annotations or queue a keyword inspection."`,
     "icon: wrench",
     'keywords: ["MCP tools","list_apps","ranking_history","serp_movers","app_audit","actions_summary","track_keywords","set_action_status","read only","write tools"]',
     "mode: wide",

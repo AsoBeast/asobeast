@@ -4720,6 +4720,158 @@
         ]
       }
     },
+    "/keyword-inspections": {
+      "post": {
+        "description": "Queues a live inspection of a keyword the workspace does not need to track: the top 50 search results, the store autocomplete, popularity, difficulty and opportunity with their source and confidence, and a competition summary of the top 10. Answers at once with the pending inspection; poll GET /keyword-inspections/{id} until status is DONE or FAILED. An inspection of the same keyword and storefront that is still pending is answered instead of queuing another. A queued inspection spends one on demand score of the hourly allowance; a request the validation refuses spends nothing.",
+        "operationId": "KeywordInspectionsController_request",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestKeywordInspectionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Inspect any keyword in one storefront",
+        "tags": [
+          "keyword-inspections"
+        ]
+      },
+      "get": {
+        "description": "Lists the inspections of the workspace, newest first, optionally filtered to one keyword, store or storefront. Reads stored rows only.",
+        "operationId": "KeywordInspectionsController_list",
+        "parameters": [
+          {
+            "name": "keyword",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 80,
+              "example": "habit tracker",
+              "type": "string"
+            }
+          },
+          {
+            "name": "store",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "APP_STORE",
+                "GOOGLE_PLAY"
+              ]
+            }
+          },
+          {
+            "name": "country",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "pattern": "^[a-z]{2}$",
+              "example": "us",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "default": 50,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "List keyword inspections",
+        "tags": [
+          "keyword-inspections"
+        ]
+      }
+    },
+    "/keyword-inspections/{inspectionId}": {
+      "get": {
+        "description": "Answers the inspection with its search results, suggestions, scores and competition summary, and the change since the previous completed inspection of the same keyword and storefront. Reads stored rows only.",
+        "operationId": "KeywordInspectionsController_get",
+        "parameters": [
+          {
+            "name": "inspectionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Read one keyword inspection",
+        "tags": [
+          "keyword-inspections"
+        ]
+      },
+      "delete": {
+        "operationId": "KeywordInspectionsController_remove",
+        "parameters": [
+          {
+            "name": "inspectionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Delete a keyword inspection",
+        "tags": [
+          "keyword-inspections"
+        ]
+      }
+    },
     "/apps/{id}/summary": {
       "get": {
         "description": "Visibility, rank distribution, movers, coverage and counts of the app, for every market or one, with shareOfVoice: the visibility of the app as a percentage of the summed visibility of the app and the tracked competitors checked on the same day, over the same keywords, and the 7 day change; the reason is named when there is none. discoveries counts the keywords the app could rank for that it does not track, and how many of them it already ranks for; see keyword discovery.",
@@ -8312,6 +8464,33 @@
           "collection",
           "genre",
           "device"
+        ]
+      },
+      "RequestKeywordInspectionDto": {
+        "type": "object",
+        "properties": {
+          "keyword": {
+            "type": "string",
+            "maxLength": 80,
+            "example": "habit tracker"
+          },
+          "store": {
+            "enum": [
+              "APP_STORE",
+              "GOOGLE_PLAY"
+            ],
+            "type": "string"
+          },
+          "country": {
+            "type": "string",
+            "example": "us",
+            "pattern": "^[a-z]{2}$"
+          }
+        },
+        "required": [
+          "keyword",
+          "store",
+          "country"
         ]
       },
       "ReviewReplyPatchDto": {

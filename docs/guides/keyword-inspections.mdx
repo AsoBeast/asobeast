@@ -1,0 +1,83 @@
+---
+title: Inspect any keyword
+description: "Research one phrase in one storefront before any app tracks it: the top 50 search results, the store autocomplete, popularity, difficulty and opportunity with their source, a summary of the top 10 and the change since the last run."
+icon: text-search
+keywords: ["keyword inspection","keyword research","inspect keyword","search results","autocomplete","popularity","difficulty","opportunity","compare runs"]
+---
+
+A keyword inspection answers one question before you commit to a keyword: is this phrase worth tracking in this storefront? It reads the live store for any phrase, whether or not one of your apps tracks it, and keeps the answer in your workspace so you can come back to it and compare it with a later run.
+
+Tracking a keyword is still how positions are collected every day. An inspection is a single reading you request, and nothing about it is tracked afterwards. See [Track keywords](/guides/track-keywords) for the daily side.
+
+## Run an inspection
+
+Open **Keyword inspector** in the sidebar, type the phrase as a user would type it into store search, pick the store and the storefront, and start the inspection. The same request is `POST /keyword-inspections` on the API with `keyword`, `store` and `country`, and `inspect_keyword` for an agent connected over MCP with a write token.
+
+The phrase is normalized the way a tracked keyword is: lower case, at most 80 characters and five words. A storefront is a lowercase two letter code the store serves, and the same phrase in two storefronts is two inspections. See [Countries and markets](/concepts/countries).
+
+The inspection runs as a store job, so the request answers at once with a pending inspection and the page fills in when the job finishes, usually within a minute or two. An agent reads the result with `get_keyword_inspection`, and the API with `GET /keyword-inspections/{id}`. A phrase and storefront whose inspection is still pending answers that inspection instead of queuing a second one.
+
+### What it costs
+
+Each queued inspection spends one on demand score, the same allowance as scoring a tracked keyword, so on a metered instance it counts against the hourly allowance of your plan. A request the validation refuses and a repeat of a pending inspection spend nothing. See [A spent on demand allowance names its action](/api-reference/rate-limits#a-spent-on-demand-allowance-names-its-action).
+
+Every inspection is one search plus a few autocomplete lookups, the same evidence the scoring job reads for a tracked keyword. Google Play adds a detail lookup for each of the top 10 results, which is where its ratings and update dates come from. The requests go through the same store rate limits as the daily run. See [The daily pipeline and rate limits](/concepts/pipeline).
+
+### When an inspection fails
+
+A store that times out or blocks the request is retried like any other store job. When the last attempt fails, the inspection is marked failed with the reason the store gave, and you can start a new one.
+
+## Read the scores
+
+An inspection carries the three keyword scores on the 0 to 100 scale: popularity as `volume`, difficulty as `difficulty100`, and opportunity, which weighs the two together. The scoring is the same as for a tracked keyword, so the numbers of an inspection and of a tracked keyword in the same storefront are comparable. See [What are the three scores?](/concepts/scoring#what-are-the-three-scores) and [How is opportunity calculated?](/concepts/scoring#how-is-opportunity-calculated)
+
+Opportunity here is the keyword's own, without the relevance of any app, because an inspection belongs to no app.
+
+The provenance names the source of the popularity and its confidence. `APPLE_ADS_POPULARITY` is Apple's own number, available when the instance has an Apple Ads connection, and every other source is an estimate from public signals. See [What evidence does a score carry?](/concepts/scoring#what-evidence-does-a-score-carry) and [Can asobeast use Apple's own numbers?](/concepts/scoring#can-asobeast-use-apples-own-numbers)
+
+### Search results and autocomplete
+
+The results list the top 50 apps the store returned, in order, with title, developer, rating, rating count and the date of the last update where the store reports it. Each title is graded against the phrase: an exact match holds the phrase, all words holds every word in any order, some words holds part of it and none holds nothing. Positions are 1 based. See [Positions and rank depth](/concepts/positions).
+
+The suggestions are what the store autocomplete offers for the phrase, up to ten, in the store's order. A phrase the autocomplete offers is one users type, and its longer suggestions are candidates for an inspection of their own.
+
+### Competition summary
+
+The summary reads the top 10 results, the first screen of answers a searcher sees:
+
+| Figure | What it tells you |
+| --- | --- |
+| Median and strongest rating count | How established the apps you would have to pass are |
+| Apps over 100,000 ratings | How many heavyweights hold the first page |
+| Exact and full title matches | How many results target the phrase in their title |
+| Median days since update and apps updated in the last 30 days | How actively the leaders are maintained |
+
+A first page held by a few heavyweights with the phrase in their titles is hard to break into, however popular the phrase is. A page of results that only mention part of the phrase, or that have not been updated in months, is the opening the opportunity score looks for.
+
+## Compare with the previous run
+
+Every inspection of a phrase and storefront is kept, so running it again later shows how the search moved. The newest inspection compares itself with the last completed one of the same phrase and storefront: its popularity, difficulty and result count, and the apps that entered or left the top 10 in between.
+
+The history lives on the keyword inspection page, filtered to one phrase, store or storefront, and on `GET /keyword-inspections` with the same filters. An agent lists it with `list_keyword_inspections`.
+
+Inspections belong to your workspace. Another workspace on the same instance never sees them, even for the same phrase, and they are part of the workspace export and are erased with the workspace. Deleting an inspection removes that run only. See [Data model](/concepts/data-model).
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Track keywords" icon="list-checks" href="/guides/track-keywords">
+    Collect positions every day for the phrases worth keeping.
+  </Card>
+
+  <Card title="Keyword scoring" icon="calculator" href="/concepts/scoring">
+    How popularity, difficulty and opportunity are calculated.
+  </Card>
+
+  <Card title="MCP tool reference" icon="wrench" href="/mcp/tools">
+    The inspection tools an agent can call.
+  </Card>
+
+  <Card title="Rate limits" icon="gauge" href="/api-reference/rate-limits">
+    The on demand allowance an inspection spends.
+  </Card>
+</CardGroup>
