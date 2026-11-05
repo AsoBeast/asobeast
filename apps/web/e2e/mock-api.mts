@@ -4,6 +4,12 @@ import {
   type ServerResponse,
 } from "node:http";
 import { setTimeout as delay } from "node:timers/promises";
+import {
+  ALERT_EVENT_ITEMS,
+  ALERT_EVENTS_COOKIE,
+  ALERT_EVENTS_SLOW_MS,
+  filterAlertEvents,
+} from "./alert-feed-fixtures.mts";
 import { BREAKDOWNS } from "./keyword-breakdowns.mts";
 import { SERP_HISTORY, serpOnDay } from "./serp-history.mts";
 import "./keyword-map.mts";
@@ -3351,6 +3357,31 @@ const routes: Route[] = [
         }
         json(res, 200, alert);
       });
+    },
+  },
+  {
+    method: "GET",
+    pattern: /^\/alerts\/events$/,
+    handler: async (_p, req, res) => {
+      const path = req.url ?? "/";
+      const state = cookieValue(req, ALERT_EVENTS_COOKIE);
+      if (state === "error") return json(res, 500, errorEnvelope(500, path));
+      if (state === "slow") await delay(ALERT_EVENTS_SLOW_MS);
+      if (state === "empty") {
+        return json(res, 200, { events: [], nextCursor: null });
+      }
+      const answer = filterAlertEvents(
+        ALERT_EVENT_ITEMS,
+        new URL(path, "http://localhost").searchParams,
+      );
+      if (answer.status !== 200) {
+        return json(
+          res,
+          answer.status,
+          errorEnvelope(answer.status, path, answer.message),
+        );
+      }
+      json(res, 200, answer.body);
     },
   },
   {
