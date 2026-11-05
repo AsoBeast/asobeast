@@ -155,21 +155,24 @@ export class KeywordDiscoveryService {
     store: Store,
     keywords: readonly { text: string; country: string }[],
   ): Promise<Map<string, Map<string, number>>> {
-    const byCountry = new Map<string, Map<string, number>>();
-    if (store !== Store.APP_STORE) return byCountry;
-    const countries = new Set(keywords.map(({ country }) => country));
-    for (const country of countries) {
-      byCountry.set(
-        country,
-        await this.popularity.listedTraffic(
-          country,
-          keywords
-            .filter((keyword) => keyword.country === country)
-            .map(({ text }) => text),
+    if (store !== Store.APP_STORE) return new Map();
+    const countries = [...new Set(keywords.map(({ country }) => country))];
+    return new Map(
+      await Promise.all(
+        countries.map(
+          async (country) =>
+            [
+              country,
+              await this.popularity.listedTraffic(
+                country,
+                keywords
+                  .filter((keyword) => keyword.country === country)
+                  .map(({ text }) => text),
+              ),
+            ] as const,
         ),
-      );
-    }
-    return byCountry;
+      ),
+    );
   }
 
   private async checks(
