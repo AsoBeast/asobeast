@@ -24,6 +24,7 @@ import {
   budgetOptions,
   emailAlertsOptions,
   webhooksOptions,
+  workspaceChecklistOptions,
 } from "@/lib/queries";
 import { viewerIsOperator } from "@/lib/viewer";
 
@@ -44,6 +45,7 @@ export default async function SettingsPage({
     queryClient.prefetchQuery(alertsConfigOptions),
     queryClient.prefetchQuery(alertDeliveryOptions),
     queryClient.prefetchQuery(budgetOptions),
+    queryClient.prefetchQuery(workspaceChecklistOptions),
   ]);
 
   return (

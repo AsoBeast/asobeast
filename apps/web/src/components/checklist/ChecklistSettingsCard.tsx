@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { workspaceChecklistOptions } from "@/lib/queries";
 import { pillLabel } from "./checklist-progress";
+import { GoalPicker } from "./GoalPicker";
 import { useChecklistSave } from "./use-checklist-save";
 
 export function ChecklistSettingsCard() {
@@ -39,9 +40,10 @@ export function ChecklistSettingsCard() {
           item is done.
         </CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-col gap-3">
+      <CardContent className="flex flex-col gap-4">
         {checklist ? (
           <>
+            <GoalPicker as="h3" />
             <div className="flex flex-wrap items-center justify-between gap-3">
               <Label htmlFor={switchId}>Show the setup checklist</Label>
               <div className="flex items-center gap-3">

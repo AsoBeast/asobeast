@@ -43,10 +43,11 @@ function useProgressAnnouncement(progress: ChecklistProgress | null): string {
 
 export function ChecklistPill() {
   const { authenticated, user } = useAuth();
-  const { data: checklist } = useQuery({
-    ...workspaceChecklistOptions,
-    enabled: authenticated && user?.entitled === true,
-  });
+  return authenticated && user?.entitled === true ? <EntitledPill /> : null;
+}
+
+function EntitledPill() {
+  const { data: checklist } = useQuery(workspaceChecklistOptions);
   const [collapsedValue, saveCollapsed] =
     useStoredPreference(CHECKLIST_COLLAPSED);
   const [open, setOpen] = useState(false);

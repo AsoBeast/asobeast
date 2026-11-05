@@ -2,6 +2,7 @@ import { type Page } from "@playwright/test";
 import { PLAN_LIMITS, UPGRADE_PATH, type AccountPlan } from "@asobeast/shared";
 import { holdRequest } from "./held-request.mts";
 import { hydrated } from "./hydrated.mts";
+import { startedSetup } from "./setup-session.mts";
 import { seedChecklist } from "./workspace-checklist.mts";
 import {
   chooseImportFile,
@@ -928,6 +929,27 @@ test("a translated checklist pill opens, shrinks, cancels a hide and follows a s
     .click();
 
   await expect(page).toHaveURL(/\/apps\/app-1\/keywords$/);
+  await expect(page.getByRole("button", { name: "Try again" })).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test("a translated setup page chooses a goal", async ({ page, context }) => {
+  const errors = collectDomErrors(page);
+  await startedSetup(context, "app-1");
+  await seedChecklist(context, "partial");
+  await page.goto("/apps/app-1/setup");
+  const research = await hydrated(
+    page.getByRole("button", { name: /^Research an idea/i }),
+  );
+
+  await translateText(page);
+  await research.click();
+  await expect(research).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: /^Improve my rankings/i }).click();
+
+  await expect(
+    page.getByRole("button", { name: /^Improve my rankings/i }),
+  ).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("button", { name: "Try again" })).toHaveCount(0);
   expect(errors).toEqual([]);
 });

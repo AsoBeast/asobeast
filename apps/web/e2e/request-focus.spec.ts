@@ -32,6 +32,7 @@ import {
 } from "./serp-track.mts";
 import { expect, test } from "./session.mts";
 import { STORE_CONNECTION_COOKIE } from "./store-connections.mts";
+import { startedSetup } from "./setup-session.mts";
 import { seedChecklist } from "./workspace-checklist.mts";
 
 const seedCookie = (context: BrowserContext, name: string, value = "1") =>
@@ -1517,4 +1518,18 @@ test("the checklist switch keeps focus while it saves", async ({
   await page.keyboard.press("Space");
 
   await expectFocusKeptWhileHeld(toggle, held);
+});
+
+test("a goal keeps focus while its save runs", async ({ page, context }) => {
+  await startedSetup(context, "app-1");
+  await seedChecklist(context, "partial");
+  await page.goto("/apps/app-1/setup");
+  const research = page
+    .getByRole("group", { name: "What would you like to get done?" })
+    .getByRole("button", { name: /^Research an idea/ });
+  const held = await holdRequest(page, /\/workspace\/checklist$/, "PATCH");
+
+  await pressFromKeyboard(research);
+
+  await expectFocusKeptWhileHeld(research, held);
 });

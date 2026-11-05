@@ -10,6 +10,7 @@ import {
   marketSuggestionsOptions,
   pickerSuggestionsOptions,
   setupOptions,
+  workspaceChecklistOptions,
 } from "@/lib/queries";
 
 export default async function SetupPage({
@@ -23,6 +24,7 @@ export default async function SetupPage({
   if (app.isCompetitor) notFound();
   await Promise.all([
     queryClient.prefetchQuery(setupOptions(id)),
+    queryClient.prefetchQuery(workspaceChecklistOptions),
     queryClient.prefetchQuery(marketSuggestionsOptions(id)),
     queryClient.prefetchQuery(competitorsOptions(id)),
     queryClient.prefetchQuery(firstRunOptions(id)),
