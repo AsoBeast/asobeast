@@ -19,6 +19,7 @@ export interface ChecklistPanelProps {
   summaryId: string;
   collapsed: boolean;
   onToggleCollapsed: () => void;
+  onHide: () => void;
   onNavigate: () => void;
 }
 
@@ -77,6 +78,7 @@ export function ChecklistPanel({
   summaryId,
   collapsed,
   onToggleCollapsed,
+  onHide,
   onNavigate,
 }: ChecklistPanelProps) {
   const { done, total, goal, items } = checklist;
@@ -125,6 +127,9 @@ export function ChecklistPanel({
       <div className="flex flex-wrap justify-end gap-2 border-t pt-2">
         <Button variant="ghost" size="sm" onClick={onToggleCollapsed}>
           {collapsed ? "Expand the pill" : "Shrink the pill"}
+        </Button>
+        <Button variant="ghost" size="sm" onClick={onHide}>
+          Hide checklist
         </Button>
       </div>
     </div>

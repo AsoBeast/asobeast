@@ -32,6 +32,7 @@ import {
 } from "./serp-track.mts";
 import { expect, test } from "./session.mts";
 import { STORE_CONNECTION_COOKIE } from "./store-connections.mts";
+import { seedChecklist } from "./workspace-checklist.mts";
 
 const seedCookie = (context: BrowserContext, name: string, value = "1") =>
   context.addCookies([{ name, value, domain: "localhost", path: "/" }]);
@@ -1473,4 +1474,47 @@ test.describe("the keyword breakdown returns focus to the button that opened it"
       await expect(opener).toBeFocused();
     });
   }
+});
+
+test("hiding the checklist keeps focus on the confirm action while it saves", async ({
+  page,
+  context,
+}) => {
+  await seedChecklist(context, "partial");
+  await page.goto("/apps/app-1");
+  await (
+    await hydrated(
+      page.getByRole("button", { name: /done in the setup checklist$/ }),
+    )
+  ).click();
+  await page
+    .getByRole("dialog", { name: "Setup checklist" })
+    .getByRole("button", { name: "Hide checklist" })
+    .click();
+  const confirm = page
+    .getByRole("alertdialog")
+    .getByRole("button", { name: /^(Hide checklist|Hiding…)$/ });
+  const held = await holdRequest(page, /\/workspace\/checklist$/, "PATCH");
+
+  await pressFromKeyboard(confirm);
+  await expect(confirm).toHaveAttribute("aria-disabled", "true");
+  await expect(confirm).toBeFocused();
+  held.release();
+
+  await expect(page.locator("#main-content")).toBeFocused();
+});
+
+test("the checklist switch keeps focus while it saves", async ({
+  page,
+  context,
+}) => {
+  await seedChecklist(context, "partial");
+  await page.goto("/settings");
+  const toggle = page.getByRole("switch", { name: "Show the setup checklist" });
+  const held = await holdRequest(page, /\/workspace\/checklist$/, "PATCH");
+
+  await (await hydrated(toggle)).focus();
+  await page.keyboard.press("Space");
+
+  await expectFocusKeptWhileHeld(toggle, held);
 });

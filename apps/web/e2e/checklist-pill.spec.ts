@@ -1,6 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
 import { THEMES } from "./contrast-check.mts";
+import { holdRequest } from "./held-request.mts";
 import { hydrated } from "./hydrated.mts";
 import { expect, test } from "./session.mts";
 import { seedChecklist } from "./workspace-checklist.mts";
@@ -277,4 +278,207 @@ test("the bulk bar stays above the pill", async ({ page, context }) => {
   await expect(
     page.getByRole("dialog", { name: "Tag keywords" }),
   ).toBeVisible();
+});
+
+const checklistPatches = (page: Page): string[] => {
+  const sent: string[] = [];
+  page.on("request", (request) => {
+    if (
+      request.method() === "PATCH" &&
+      request.url().endsWith("/workspace/checklist")
+    ) {
+      sent.push(request.postData() ?? "");
+    }
+  });
+  return sent;
+};
+
+const hideDialog = (page: Page) =>
+  page.getByRole("alertdialog", { name: "Hide the setup checklist?" });
+
+async function startHiding(page: Page): Promise<void> {
+  await openPill(page);
+  await popover(page).getByRole("button", { name: "Hide checklist" }).click();
+  await expect(hideDialog(page)).toBeVisible();
+}
+
+test("hiding asks first and sends nothing yet", async ({ page, context }) => {
+  await seedChecklist(context, "partial");
+  const sent = checklistPatches(page);
+  await startHiding(page);
+
+  await expect(popover(page)).toHaveCount(0);
+  await expect(hideDialog(page)).toContainText(
+    "It stays hidden for everyone in this workspace",
+  );
+  await expect(hideDialog(page)).toContainText("Settings, Getting started");
+  expect(sent).toEqual([]);
+});
+
+for (const close of ["Cancel", "Escape"] as const) {
+  test(`${close} closes the hide dialog and returns focus to the pill`, async ({
+    page,
+    context,
+  }) => {
+    await seedChecklist(context, "partial");
+    await startHiding(page);
+
+    if (close === "Cancel") {
+      await hideDialog(page).getByRole("button", { name: "Cancel" }).click();
+    } else {
+      await page.keyboard.press("Escape");
+    }
+
+    await expect(hideDialog(page)).toHaveCount(0);
+    await expect(pill(page)).toBeFocused();
+  });
+}
+
+test("confirming hides the pill for good and hands focus to the page", async ({
+  page,
+  context,
+}) => {
+  await seedChecklist(context, "partial");
+  const sent = checklistPatches(page);
+  await startHiding(page);
+
+  await hideDialog(page)
+    .getByRole("button", { name: "Hide checklist", exact: true })
+    .click();
+
+  await expect(pill(page)).toHaveCount(0);
+  await expect(
+    page.getByText("Setup checklist hidden. Show it again in Settings."),
+  ).toBeVisible();
+  await expect(page.locator("#main-content")).toBeFocused();
+  expect(sent.map((body) => JSON.parse(body) as unknown)).toEqual([
+    { dismissed: true },
+  ]);
+
+  await page.reload();
+  await expect(page.getByRole("heading").first()).toBeVisible();
+  await expect(pill(page)).toHaveCount(0);
+});
+
+test("a failed hide keeps the dialog and the pill", async ({
+  page,
+  context,
+}) => {
+  await seedChecklist(context, "partial");
+  await context.addCookies([
+    {
+      name: "e2e_checklist_fail",
+      value: "1",
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
+  await startHiding(page);
+  const confirm = hideDialog(page).getByRole("button", {
+    name: "Hide checklist",
+    exact: true,
+  });
+
+  await confirm.click();
+
+  await expect(
+    page.getByText("Could not hide the setup checklist"),
+  ).toBeVisible();
+  await expect(hideDialog(page)).toBeVisible();
+  await expect(confirm).not.toHaveAttribute("aria-disabled", "true");
+  await expect(
+    page.getByRole("button", { name: PILL_NAME, includeHidden: true }),
+  ).toHaveCount(1);
+});
+
+const settingsSwitch = (page: Page) =>
+  page.getByRole("switch", { name: "Show the setup checklist" });
+
+test("settings shows the checklist under getting started", async ({
+  page,
+  context,
+}) => {
+  await seedChecklist(context, "partial");
+  await page.goto("/settings");
+
+  const section = page.locator("section#getting-started");
+  await expect(
+    section.getByRole("heading", { name: "Getting started" }),
+  ).toBeVisible();
+  await expect(section).toContainText("2 of 8 done");
+  await expect(await hydrated(settingsSwitch(page))).toBeChecked();
+});
+
+test("the settings switch hides and shows the pill", async ({
+  page,
+  context,
+}) => {
+  await seedChecklist(context, "partial");
+  const sent = checklistPatches(page);
+  await page.goto("/settings");
+  const toggle = await hydrated(settingsSwitch(page));
+
+  await toggle.focus();
+  await page.keyboard.press("Space");
+  await expect(toggle).not.toBeChecked();
+  await expect(toggle).toBeFocused();
+  await expect(page.locator("section#getting-started")).toContainText(
+    "The checklist is hidden for everyone in this workspace.",
+  );
+  await expect(pill(page)).toHaveCount(0);
+
+  await page.keyboard.press("Space");
+  await expect(toggle).toBeChecked();
+  await expect(toggle).toBeFocused();
+  await expect(await hydrated(pill(page))).toBeVisible();
+  expect(sent.map((body) => JSON.parse(body) as unknown)).toEqual([
+    { dismissed: true },
+    { dismissed: false },
+  ]);
+});
+
+test("the settings switch ignores a press while it saves", async ({
+  page,
+  context,
+}) => {
+  await seedChecklist(context, "partial");
+  const sent = checklistPatches(page);
+  await page.goto("/settings");
+  const toggle = await hydrated(settingsSwitch(page));
+  const held = await holdRequest(page, /\/workspace\/checklist$/, "PATCH");
+
+  await toggle.focus();
+  await page.keyboard.press("Space");
+  await expect(toggle).toHaveAttribute("aria-disabled", "true");
+  await page.keyboard.press("Space");
+  await expect(toggle).toBeFocused();
+
+  held.release();
+  await expect(toggle).not.toHaveAttribute("aria-disabled", "true");
+  await expect(toggle).not.toBeChecked();
+  expect(sent).toHaveLength(1);
+});
+
+test("a failed read keeps settings and hides the pill", async ({
+  page,
+  context,
+}) => {
+  await seedChecklist(context, "partial");
+  await context.addCookies([
+    {
+      name: "e2e_checklist_read_fail",
+      value: "1",
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
+  await page.goto("/settings");
+
+  const section = page.locator("section#getting-started");
+  await expect(section).toContainText("Could not load the setup checklist.");
+  await expect(section.getByRole("button", { name: "Retry" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Alerts", exact: true }),
+  ).toBeVisible();
+  await expect(pill(page)).toHaveCount(0);
 });

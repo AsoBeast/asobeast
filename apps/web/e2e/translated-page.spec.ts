@@ -901,7 +901,7 @@ test("a translated gap analysis switches its tabs and market", async ({
   expect(errors).toEqual([]);
 });
 
-test("a translated checklist pill opens, shrinks and follows a step", async ({
+test("a translated checklist pill opens, shrinks, cancels a hide and follows a step", async ({
   page,
   context,
 }) => {
@@ -916,7 +916,16 @@ test("a translated checklist pill opens, shrinks and follows a step", async ({
   await pill.click();
   const popover = page.getByRole("dialog");
   await popover.getByRole("button", { name: /shrink the pill/i }).click();
-  await popover.getByRole("link", { name: /add a market/i }).click();
+  await popover.getByRole("button", { name: /hide checklist/i }).click();
+  await page
+    .getByRole("alertdialog")
+    .getByRole("button", { name: "Cancel" })
+    .click();
+  await pill.click();
+  await page
+    .getByRole("dialog")
+    .getByRole("link", { name: /add a market/i })
+    .click();
 
   await expect(page).toHaveURL(/\/apps\/app-1\/keywords$/);
   await expect(page.getByRole("button", { name: "Try again" })).toHaveCount(0);
