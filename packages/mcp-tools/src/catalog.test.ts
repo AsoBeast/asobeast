@@ -95,6 +95,20 @@ describe("the tool catalog", () => {
     expect(description).toContain("absent");
   });
 
+  it("tells an agent how to read the keyword class of list_keywords", () => {
+    const description = toolByName("list_keywords")?.description ?? "";
+
+    for (const word of [
+      "keywordClass",
+      "keywordClassSource",
+      "ownBrand",
+      "competitorBrand",
+      "generic",
+    ]) {
+      expect(description).toContain(word);
+    }
+  });
+
   it("tells an agent how to read the latest check day", () => {
     const description = toolByName("list_keywords")?.description ?? "";
 

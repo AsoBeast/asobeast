@@ -1098,3 +1098,123 @@ describe('KeywordsService country tracking', () => {
     );
   });
 });
+
+describe('KeywordsService keyword class', () => {
+  const homeApp = {
+    id: 'app1',
+    store: Store.APP_STORE,
+    country: 'us',
+    storeAppId: 's',
+  };
+  const brandRow = {
+    name: 'Forest: Stay Focused',
+    snapshots: [{ raw: { developer: 'Seekrtech Inc.' } }],
+    competitors: [{ name: 'Todoist - To-Do List' }],
+  };
+  const tracked = (keywordId: string, text: string) => ({
+    keywordId,
+    source: 'MANUAL',
+    active: true,
+    relevance: null,
+    tags: [],
+    note: null,
+    keywordClass: null,
+    createdAt: new Date('2026-10-01T00:00:00.000Z'),
+    keyword: {
+      text,
+      country: 'us',
+      store: 'APP_STORE',
+      rankings: [],
+      metrics: [],
+    },
+  });
+
+  const buildPrisma = () => {
+    const prisma = {
+      keywordField: { findMany: jest.fn().mockResolvedValue([]) },
+      app: {
+        findFirst: jest.fn(({ select }: { select: { name?: boolean } }) =>
+          Promise.resolve(select.name ? brandRow : homeApp),
+        ),
+      },
+      appSnapshot: { findFirst: jest.fn().mockResolvedValue(null) },
+      trackedKeyword: {
+        findMany: jest
+          .fn()
+          .mockResolvedValue([
+            tracked('kwOwn', 'forest'),
+            tracked('kwRival', 'todoist'),
+            tracked('kwGeneric', 'habit tracker'),
+          ]),
+        findUnique: jest.fn().mockResolvedValue({
+          active: true,
+          keyword: { store: Store.APP_STORE, country: 'us' },
+        }),
+        update: jest.fn().mockResolvedValue({}),
+      },
+      serpEntry: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+    };
+    return prisma;
+  };
+
+  const buildService = (prisma: ReturnType<typeof buildPrisma>) =>
+    new KeywordsService(
+      prisma as unknown as PrismaService,
+      new KeywordTracker(
+        prisma as unknown as PrismaService,
+        { add: jest.fn() } as unknown as Queue,
+        { add: jest.fn() } as unknown as Queue,
+        new WorkspaceContext(),
+      ),
+      quotaOff(prisma as unknown as PrismaService),
+      { request: jest.fn() } as unknown as MarketListingRequests,
+      { schedule: jest.fn() } as unknown as FirstPositionChecks,
+    );
+
+  const brandQueries = (prisma: ReturnType<typeof buildPrisma>) =>
+    (
+      prisma.app.findFirst.mock.calls as [{ select: { name?: boolean } }][]
+    ).filter(([args]) => args.select.name).length;
+
+  it('answers the class of every keyword when the list asks for it', async () => {
+    const prisma = buildPrisma();
+    const items = await buildService(prisma).listTracked(
+      'app1',
+      undefined,
+      undefined,
+      { brandFacts: true },
+    );
+    expect(
+      Object.fromEntries(
+        items.map((item) => [
+          item.keywordId,
+          [item.keywordClass, item.keywordClassSource],
+        ]),
+      ),
+    ).toEqual({
+      kwOwn: ['ownBrand', 'detected'],
+      kwRival: ['competitorBrand', 'detected'],
+      kwGeneric: ['generic', 'detected'],
+    });
+    expect(brandQueries(prisma)).toBe(1);
+  });
+
+  it('reads no brand profile and answers no class without the option', async () => {
+    const prisma = buildPrisma();
+    const items = await buildService(prisma).listTracked('app1');
+    expect(brandQueries(prisma)).toBe(0);
+    expect(items.every((item) => !('keywordClass' in item))).toBe(true);
+  });
+
+  it('answers the class after an update', async () => {
+    const prisma = buildPrisma();
+    const item = await buildService(prisma).updateKeyword('app1', 'kwOwn', {
+      note: 'x',
+    });
+    expect(item.keywordClass).toBe('ownBrand');
+    expect(item.keywordClassSource).toBe('detected');
+  });
+});

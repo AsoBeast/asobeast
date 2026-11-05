@@ -54,6 +54,7 @@ export class KeywordsService {
       competitorFacts?: boolean;
       coverageFacts?: boolean;
       listingMarks?: boolean;
+      brandFacts?: boolean;
     } = {},
   ): Promise<TrackedKeywordItem[]> {
     const app = await ensureApp(this.prisma, appId);
@@ -68,7 +69,11 @@ export class KeywordsService {
           this.prisma,
           app,
           [...new Set(rows.map((row) => row.keyword.country))],
-          { coverage: options.coverageFacts, marks: options.listingMarks },
+          {
+            coverage: options.coverageFacts,
+            marks: options.listingMarks,
+            brand: options.brandFacts,
+          },
         ),
         loadSerpDays(this.prisma, keywordIds),
         options.holdFacts
@@ -404,9 +409,9 @@ export class KeywordsService {
     appId: string,
     keywordId: string,
   ): Promise<TrackedKeywordItem> {
-    const item = (await this.listTracked(appId)).find(
-      (tracked) => tracked.keywordId === keywordId,
-    );
+    const item = (
+      await this.listTracked(appId, undefined, undefined, { brandFacts: true })
+    ).find((tracked) => tracked.keywordId === keywordId);
     if (!item) {
       throw new NotFoundException(`Keyword ${keywordId} is not tracked`);
     }
