@@ -235,6 +235,18 @@ describe('the market listing title', () => {
 });
 
 describe('category names across plurals', () => {
+  it('keeps two spaceless names when one only contains the other', () => {
+    const profile = brandProfileOf({
+      title: null,
+      developer: null,
+      competitorTitles: ['微信: x', '微信支付: y'],
+    });
+
+    expect(
+      classOf('微信支付', { listingWords: contentWords('微信') }, profile),
+    ).toBe('competitorBrand');
+  });
+
   it('drops a name two competitors share in singular and plural', () => {
     const profile = brandProfileOf({
       title: null,

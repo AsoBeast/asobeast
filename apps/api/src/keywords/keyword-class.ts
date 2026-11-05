@@ -33,7 +33,9 @@ const containsName = (words: readonly string[], name: BrandName): boolean =>
   );
 
 const sameName = (left: BrandName, right: BrandName): boolean =>
-  left.size === right.size && containsName([...left], right);
+  left.size === right.size &&
+  containsName([...left], right) &&
+  containsName([...right], left);
 
 const isName = (name: BrandName | null): name is BrandName => name !== null;
 
