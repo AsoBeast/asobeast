@@ -41,7 +41,7 @@ export const LATER_RELEASES: readonly Release[] = [
       {
         kind: "improved",
         title: "Where a dropped keyword last ranked",
-        text: "A keyword that falls out of the search results now shows the position it last held beside its own, for as long as it stays out, and pointing at it tells you the day it ranked there.",
+        text: "A keyword that falls out of the search results now shows the position it last held beside its own, as long as it ranked within its last 60 checks, and pointing at it tells you the day it ranked there.",
       },
       {
         kind: "improved",

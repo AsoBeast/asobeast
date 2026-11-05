@@ -3014,12 +3014,12 @@ export const APP_MARKS_KEYWORDS: TrackedKeywordItem[] = [
     latestPosition: null,
     previousPosition: 14,
     lastRankedPosition: 14,
-    lastRankedOn: utcDaysAgo(1),
+    lastRankedOn: "2026-10-21",
   }),
   marksKeyword(8, "lost for days", undefined, {
     latestPosition: null,
     lastRankedPosition: 9,
-    lastRankedOn: utcDaysAgo(12),
+    lastRankedOn: "2026-10-10",
   }),
   marksKeyword(9, "lost on an older api", undefined, {
     latestPosition: null,

@@ -438,6 +438,17 @@ describe('toTrackedKeywordItem', () => {
         previous: { previousPosition: null, positionDelta1d: null },
       },
       {
+        situation: 'picks the newest ranked check, not the best or the oldest',
+        rankings: [
+          { position: null, date: '2026-07-04' },
+          { position: 9, date: '2026-07-02' },
+          { position: 3, date: '2026-07-01' },
+          { position: 20, date: '2026-06-30' },
+        ],
+        expected: { lastRankedPosition: 9, lastRankedOn: '2026-07-02' },
+        previous: { previousPosition: null, positionDelta1d: null },
+      },
+      {
         situation: 'ranked today',
         rankings: [
           { position: 4, date: '2026-07-02' },

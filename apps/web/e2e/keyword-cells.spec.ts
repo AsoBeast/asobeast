@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { formatDate } from "../src/lib/format";
 import { contrastViolations, THEMES } from "./contrast-check.mts";
-import { utcDaysAgo } from "./fixtures.mts";
+import { APP_MARKS_KEYWORDS } from "./fixtures.mts";
 import { hydrated } from "./hydrated.mts";
 import { expect, test } from "./session.mts";
 
@@ -11,6 +11,11 @@ const rowOf = (page: Page, text: string) =>
   page.getByRole("row").filter({
     has: page.getByRole("checkbox", { name: `Select ${text}`, exact: true }),
   });
+
+const lastRankedTitle = (text: string) => {
+  const keyword = APP_MARKS_KEYWORDS.find((row) => row.text === text);
+  return `Last ranked #${keyword?.lastRankedPosition} on ${formatDate(keyword?.lastRankedOn ?? null)}`;
+};
 
 const keywordCell = (page: Page, text: string) =>
   rowOf(page, text).getByRole("cell").nth(1);
@@ -258,7 +263,7 @@ test.describe("the last position of a keyword that lost its rank", () => {
     await expect(position).toBeVisible();
     await expect(position).toHaveAttribute(
       "title",
-      `Last ranked #14 on ${formatDate(utcDaysAgo(1))}`,
+      lastRankedTitle("lost yesterday"),
     );
     await expect(
       rowOf(page, "lost yesterday").getByText(/since yesterday/),
@@ -270,10 +275,7 @@ test.describe("the last position of a keyword that lost its rank", () => {
 
     await expect(
       rowOf(page, "lost for days").getByText(">200 (was #9)", { exact: true }),
-    ).toHaveAttribute(
-      "title",
-      `Last ranked #9 on ${formatDate(utcDaysAgo(12))}`,
-    );
+    ).toHaveAttribute("title", lastRankedTitle("lost for days"));
   });
 
   test("an older api still shows the day before", async ({ page }) => {
@@ -312,7 +314,7 @@ test.describe("the last position of a keyword that lost its rank", () => {
   });
 
   for (const width of [320, 375]) {
-    test(`the hint fits at ${width} px`, async ({ page }) => {
+    test(`the hint never widens the page at ${width} px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 800 });
       await openMarks(page);
       await expect(
