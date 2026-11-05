@@ -40,6 +40,7 @@ import {
   skipStep,
   type SetupTransition,
 } from "./setup-transitions";
+import { GoalPicker } from "@/components/checklist/GoalPicker";
 import { useFirstRunDiscovery } from "./use-first-run-discovery";
 import { useSetup } from "./use-setup";
 
@@ -54,6 +55,15 @@ const activeCount = (
 ): number | null => (keywords ? activeKeywordCount(keywords) : null);
 
 export function SetupChecklist({ id }: { id: string }) {
+  return (
+    <div className="flex flex-col gap-6">
+      <GoalPicker />
+      <SetupBody id={id} />
+    </div>
+  );
+}
+
+function SetupBody({ id }: { id: string }) {
   const { data: app } = useSuspenseQuery(appDetailOptions(id));
   const { setup, apply } = useSetup(id);
   const start = () => apply(beginSetup(app.country));

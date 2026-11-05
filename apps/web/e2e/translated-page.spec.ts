@@ -2,6 +2,8 @@ import { type Page } from "@playwright/test";
 import { PLAN_LIMITS, UPGRADE_PATH, type AccountPlan } from "@asobeast/shared";
 import { holdRequest } from "./held-request.mts";
 import { hydrated } from "./hydrated.mts";
+import { startedSetup } from "./setup-session.mts";
+import { seedChecklist } from "./workspace-checklist.mts";
 import {
   chooseImportFile,
   openImportDialog,
@@ -897,5 +899,57 @@ test("a translated gap analysis switches its tabs and market", async ({
 
   await expect(page).toHaveURL(/gapCountry=de/);
   await expect(section.getByRole("tab", { name: /\(1\)$/ })).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test("a translated checklist pill opens, shrinks, cancels a hide and follows a step", async ({
+  page,
+  context,
+}) => {
+  const errors = collectDomErrors(page);
+  await seedChecklist(context, "partial");
+  await page.goto("/apps/app-1");
+  const pill = await hydrated(
+    page.getByRole("button", { name: /done in the setup checklist$/i }),
+  );
+
+  await translateText(page);
+  await pill.click();
+  const popover = page.getByRole("dialog");
+  await popover.getByRole("button", { name: /shrink the pill/i }).click();
+  await popover.getByRole("button", { name: /hide checklist/i }).click();
+  await page
+    .getByRole("alertdialog")
+    .getByRole("button", { name: "Cancel" })
+    .click();
+  await pill.click();
+  await page
+    .getByRole("dialog")
+    .getByRole("link", { name: /add a market/i })
+    .click();
+
+  await expect(page).toHaveURL(/\/apps\/app-1\/keywords$/);
+  await expect(page.getByRole("button", { name: "Try again" })).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test("a translated setup page chooses a goal", async ({ page, context }) => {
+  const errors = collectDomErrors(page);
+  await startedSetup(context, "app-1");
+  await seedChecklist(context, "partial");
+  await page.goto("/apps/app-1/setup");
+  const research = await hydrated(
+    page.getByRole("button", { name: /^Research an idea/i }),
+  );
+
+  await translateText(page);
+  await research.click();
+  await expect(research).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: /^Improve my rankings/i }).click();
+
+  await expect(
+    page.getByRole("button", { name: /^Improve my rankings/i }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "Try again" })).toHaveCount(0);
   expect(errors).toEqual([]);
 });

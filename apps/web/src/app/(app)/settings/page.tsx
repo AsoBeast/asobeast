@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { PlanSection } from "@/components/settings/PlanSection";
 import { TeamCard } from "@/components/settings/TeamCard";
+import { ChecklistSettingsCard } from "@/components/checklist/ChecklistSettingsCard";
 import { SettingsSection } from "@/components/settings/SettingsSection";
 import { BudgetCard } from "@/components/settings/BudgetCard";
 import { DeliveryCard } from "@/components/settings/DeliveryCard";
@@ -68,6 +69,14 @@ export default async function SettingsPage({
             </Suspense>
           </SettingsSection>
         ) : null}
+
+        <SettingsSection
+          id="getting-started"
+          title="Getting started"
+          description="Your goal and the setup checklist that follows you across every page."
+        >
+          <ChecklistSettingsCard />
+        </SettingsSection>
 
         <SettingsSection
           id="alerts"

@@ -47,6 +47,14 @@ const LISTS: ScopedRead[] = [
     identity: (body) => ids((body as { items: { id: string }[] }).items),
   },
   {
+    name: 'GET /workspace/checklist',
+    path: () => '/workspace/checklist',
+    identity: (body) =>
+      (body as { items: { id: string; appId: string | null }[] }).items.map(
+        (item) => `${item.id}:${item.appId}`,
+      ),
+  },
+  {
     name: 'GET /webhooks',
     path: () => '/webhooks',
     identity: ids,
@@ -277,6 +285,32 @@ describe('Read isolation', () => {
       expect(response.status).toBe(404);
     },
   );
+
+  it('answers each workspace its own checklist goal and dismissal', async () => {
+    const dismissedAt = new Date('2026-11-04T08:00:00.000Z');
+    await fixture.db.workspace.update({
+      where: { id: fixture.a.id },
+      data: { checklistGoal: 'use_with_ai', checklistDismissedAt: dismissedAt },
+    });
+    await fixture.db.workspace.update({
+      where: { id: fixture.b.id },
+      data: { checklistGoal: 'research_idea', checklistDismissedAt: null },
+    });
+
+    const [forA, forB] = await Promise.all([
+      fixture.a.agent.get('/workspace/checklist').expect(200),
+      fixture.b.agent.get('/workspace/checklist').expect(200),
+    ]);
+
+    expect(forA.body).toMatchObject({
+      goal: 'use_with_ai',
+      dismissedAt: dismissedAt.toISOString(),
+    });
+    expect(forB.body).toMatchObject({
+      goal: 'research_idea',
+      dismissedAt: null,
+    });
+  });
 
   it('keeps another workspace rankings out of the gap lists and the share of voice', async () => {
     const gapsOf = async (workspace: IsolationWorkspace) =>

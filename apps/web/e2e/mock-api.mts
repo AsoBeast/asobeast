@@ -264,12 +264,14 @@ import type {
   WorkspaceDeletionStatus,
   AppSetupState,
   AppSetupUpdateRequest,
+  WorkspaceChecklistUpdateRequest,
   KeywordComparison,
   SerpEntryItem,
   SerpSnapshot,
   StoreImportState,
 } from "@asobeast/shared";
 import {
+  WORKSPACE_GOALS,
   COUNTRY_PATTERN,
   DELETION_CONFIRMATION,
   KEYWORD_BULK_ADD_LIMIT,
@@ -313,6 +315,16 @@ import {
   webhookChannelOf,
 } from "@asobeast/shared";
 import { SETUP_SESSION_COOKIE } from "./setup-session.mts";
+import {
+  CHECKLIST_COOKIE,
+  CHECKLIST_FAIL_COOKIE,
+  CHECKLIST_READ_FAIL_COOKIE,
+  checklistOf,
+  HIDDEN_BY_DEFAULT,
+  isChecklistScenario,
+  VISIBLE,
+  type ChecklistPreferences,
+} from "./workspace-checklist.mts";
 import {
   ALL_VIEWERS,
   OWNER_ID,
@@ -462,6 +474,48 @@ function setupSession(req: IncomingMessage): Map<string, AppSetupState> {
   const setups = setupSessions.get(session) ?? new Map();
   setupSessions.set(session, setups);
   return setups;
+}
+
+const checklistSessions = new Map<string, ChecklistPreferences>();
+
+const checklistSessionOf = (req: IncomingMessage): string =>
+  cookieValue(req, SETUP_SESSION_COOKIE) ?? "";
+
+function checklistPreferencesOf(req: IncomingMessage): ChecklistPreferences {
+  return checklistSessions.get(checklistSessionOf(req)) ?? VISIBLE;
+}
+
+function workspaceChecklistAnswer(req: IncomingMessage) {
+  const scenario = cookieValue(req, CHECKLIST_COOKIE);
+  return isChecklistScenario(scenario)
+    ? checklistOf(scenario, checklistPreferencesOf(req))
+    : checklistOf("partial", HIDDEN_BY_DEFAULT);
+}
+
+function refusesChecklistPatch(
+  patch: WorkspaceChecklistUpdateRequest,
+): boolean {
+  const goal: unknown = patch.goal;
+  const dismissed: unknown = patch.dismissed;
+  const knownGoal =
+    goal === undefined ||
+    goal === null ||
+    WORKSPACE_GOALS.some((candidate) => candidate === goal);
+  const knownDismissal =
+    dismissed === undefined || typeof dismissed === "boolean";
+  return !knownGoal || !knownDismissal;
+}
+
+function patchChecklistPreferences(
+  current: ChecklistPreferences,
+  patch: WorkspaceChecklistUpdateRequest,
+): ChecklistPreferences {
+  const goal = patch.goal === undefined ? current.goal : patch.goal;
+  if (patch.dismissed === undefined) return { ...current, goal };
+  const dismissedAt = patch.dismissed
+    ? (current.dismissedAt ?? new Date().toISOString())
+    : null;
+  return { goal, dismissedAt };
 }
 
 function setupOf(
@@ -3472,6 +3526,41 @@ const routes: Route[] = [
       isPolishListingOf(dataset, query) ? APP_1_PL_DETAIL : dataset.detail,
     ),
   ),
+  {
+    method: "GET",
+    pattern: /^\/workspace\/checklist$/,
+    handler: (_p, req, res) => {
+      if (hasCookie(req, CHECKLIST_READ_FAIL_COOKIE, "1")) {
+        return json(res, 500, errorEnvelope(500, req.url ?? "/"));
+      }
+      json(res, 200, workspaceChecklistAnswer(req));
+    },
+  },
+  {
+    method: "PATCH",
+    pattern: /^\/workspace\/checklist$/,
+    handler: (_p, req, res) => {
+      const path = req.url ?? "/";
+      withBody<WorkspaceChecklistUpdateRequest>(req, res, (patch) => {
+        if (refusesChecklistPatch(patch)) {
+          return json(res, 400, errorEnvelope(400, path));
+        }
+        if (hasCookie(req, CHECKLIST_FAIL_COOKIE, "1")) {
+          return json(res, 500, errorEnvelope(500, path));
+        }
+        const scenario = cookieValue(req, CHECKLIST_COOKIE);
+        if (!isChecklistScenario(scenario)) {
+          return json(res, 200, checklistOf("partial", HIDDEN_BY_DEFAULT));
+        }
+        const next = patchChecklistPreferences(
+          checklistPreferencesOf(req),
+          patch,
+        );
+        checklistSessions.set(checklistSessionOf(req), next);
+        json(res, 200, checklistOf(scenario, next));
+      });
+    },
+  },
   appRoute(/^\/apps\/([^/]+)\/setup$/, (dataset, _query, req) =>
     setupOf(req, dataset.detail),
   ),

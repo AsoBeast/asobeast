@@ -107,6 +107,7 @@ import {
   getSummary,
   getVisibilityHistory,
   getWebhooks,
+  getWorkspaceChecklist,
   type ActionActivityScope,
   type ActionFilters,
   type ActionSummaryScope,
@@ -476,10 +477,12 @@ export function invalidateStoreConnectionMutation(client: QueryClient): void {
   void client.invalidateQueries({
     predicate: (query) => query.queryKey.includes("funnel"),
   });
+  invalidateWorkspaceChecklist(client);
 }
 
 export function invalidateApiTokenMutation(client: QueryClient): void {
   void client.invalidateQueries({ queryKey: apiTokenKeys.all });
+  invalidateWorkspaceChecklist(client);
 }
 
 export function invalidatePasswordChange(client: QueryClient): void {
@@ -972,6 +975,20 @@ export const setupOptions = (id: string) =>
     refetchOnWindowFocus: true,
   });
 
+export const workspaceChecklistKey = ["workspace-checklist"] as const;
+
+export const workspaceChecklistOptions = queryOptions({
+  queryKey: workspaceChecklistKey,
+  queryFn: getWorkspaceChecklist,
+  staleTime: 60 * 1000,
+  retry: false,
+  refetchOnWindowFocus: true,
+});
+
+export function invalidateWorkspaceChecklist(client: QueryClient): void {
+  void client.invalidateQueries({ queryKey: workspaceChecklistKey });
+}
+
 export const serpOptions = (keywordId: string, date: string | null = null) =>
   queryOptions({
     queryKey: appKeys.serp(keywordId, date),
@@ -1103,6 +1120,7 @@ export function invalidateKeywordMutation(
   });
   void client.invalidateQueries({ queryKey: appKeys.marketSuggestions(id) });
   void client.invalidateQueries({ queryKey: appKeys.firstRun(id) });
+  invalidateWorkspaceChecklist(client);
 }
 
 export function invalidateMarketSeed(
@@ -1170,6 +1188,7 @@ export function removeAppQueries(client: QueryClient, id: string): void {
   client.removeQueries({ queryKey: appKeys.detail(id) });
   client.removeQueries({ queryKey: appKeys.suggestionsRoot(id) });
   void client.invalidateQueries({ queryKey: alertEventKeys.all });
+  invalidateWorkspaceChecklist(client);
 }
 
 export function invalidateAppListing(client: QueryClient, id: string): void {
@@ -1254,6 +1273,7 @@ export function invalidateReviewReplyMutation(
     refetchType: "none",
   });
   void client.invalidateQueries({ queryKey: appKeys.reviewThemesRoot(id) });
+  invalidateWorkspaceChecklist(client);
 }
 
 export function invalidateReviewReplyPost(
@@ -1279,6 +1299,7 @@ export function invalidateCompetitorMutation(
   void client.invalidateQueries({ queryKey: portfolioKey });
   void client.invalidateQueries({ queryKey: appKeys.firstRun(id) });
   invalidateLocalSuggestions(client, id);
+  invalidateWorkspaceChecklist(client);
 }
 
 export function invalidateLinkMutation(
@@ -1294,10 +1315,12 @@ export function invalidateLinkMutation(
 
 export function invalidateWebhookMutation(client: QueryClient): void {
   void client.invalidateQueries({ queryKey: webhookKeys.all });
+  invalidateWorkspaceChecklist(client);
 }
 
 export function invalidateEmailAlertMutation(client: QueryClient): void {
   void client.invalidateQueries({ queryKey: emailAlertKeys.all });
+  invalidateWorkspaceChecklist(client);
 }
 
 export function invalidateAnnotationMutation(

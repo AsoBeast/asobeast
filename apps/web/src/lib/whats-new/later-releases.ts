@@ -15,6 +15,11 @@ export const LATER_RELEASES: readonly Release[] = [
       },
       {
         kind: "new",
+        title: "Setup checklist",
+        text: "A small pill at the bottom right of every page counts what is left to set up, such as a second market, a competitor or an alert, and opens a list that links straight to each step and to features worth knowing beside it. Tell AsoBeast what you want to get done and the list starts with what matters most. Hide it for your workspace and bring it back under Settings.",
+      },
+      {
+        kind: "new",
         title: "Setup guides for store connections",
         text: "Each store card on the Integrations page links to a step by step guide that walks you from an empty console to a working connection.",
       },

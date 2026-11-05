@@ -5974,6 +5974,60 @@
         ]
       }
     },
+    "/workspace/checklist": {
+      "get": {
+        "description": "The goal the workspace chose, whether the checklist was hidden and up to eight items, ordered for the goal and each derived on read from rows the workspace already holds: an imported app, an app that tracks keywords in two markets, a competitor, a connected store console, a personal API token that has been used, a confirmed email alert or an active webhook, a reply the owner marked, a saved keyword field. An item that cannot be done is left out: the keyword field when the workspace has apps and none is on the App Store, the console when the instance has no store connection key, the reply until a review is stored. appId is the app a link should open (the oldest one that does not satisfy the item) and null for workspace wide items. done and total count the items listed.",
+        "operationId": "ChecklistController_read",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Read the setup checklist of this workspace",
+        "tags": [
+          "auth"
+        ]
+      },
+      "patch": {
+        "description": "Changes the fields given and keeps the rest; an empty body changes nothing. goal is improve_rankings, research_idea, use_with_ai or null to clear it, and it orders the checklist. dismissed true hides the checklist for every member and keeps the time of the first dismissal when sent again; false shows it again. Answers the whole checklist. Answers 400 for an unknown goal or a body that is not these two fields, 402 when no plan is in force and 403 to a read scoped token.",
+        "operationId": "ChecklistController_update",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateWorkspaceChecklistDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Choose the goal of this workspace or hide the setup checklist",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/actions": {
       "get": {
         "operationId": "ActionsController_list",
@@ -8417,6 +8471,25 @@
           "date",
           "label"
         ]
+      },
+      "UpdateWorkspaceChecklistDto": {
+        "type": "object",
+        "properties": {
+          "goal": {
+            "nullable": true,
+            "enum": [
+              "improve_rankings",
+              "research_idea",
+              "use_with_ai"
+            ],
+            "type": "string",
+            "example": "improve_rankings"
+          },
+          "dismissed": {
+            "type": "boolean",
+            "example": true
+          }
+        }
       },
       "BulkUpdateActionsDto": {
         "type": "object",

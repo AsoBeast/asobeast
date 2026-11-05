@@ -1,0 +1,80 @@
+---
+title: "Follow the setup checklist"
+description: "The setup checklist lists up to eight things worth doing first, derived from your own data and ordered by the goal you choose."
+icon: "list-checks"
+keywords:
+  - "setup checklist"
+  - "getting started"
+  - "goal"
+  - "progress pill"
+  - "onboarding"
+---
+
+By the end of this page you know what the floating checklist counts, how to change its order and how to hide it and bring it back.
+
+## What is the checklist?
+
+A pill at the bottom right of every page reads how far the workspace has come, for example **2 of 8 done**. Press it to open the list. Each open step says what it is for and links to the page that does it, and the first open step is marked **Next**.
+
+Nothing on the list is ticked by hand. Each step is worked out from data AsoBeast already holds, so a step turns done the moment the thing it asks for exists. A change you make in AsoBeast updates the count at once; a change made elsewhere, such as your AI client using its token, shows when you return to the tab or reload the page.
+
+The checklist belongs to the workspace, so everyone in it sees the same steps. The pill disappears once every step is done or once someone hides it. **Shrink the pill** at the foot of the list turns it into a small ring; that choice is kept in your browser only.
+
+## Choose a goal
+
+The guided setup of an app opens with **What would you like to get done?** and three answers:
+
+- **Improve my rankings** starts with the keyword field, a competitor and a second market.
+- **Research an idea** starts with a competitor, a second market and the keyword field.
+- **Use AsoBeast from my AI** starts with your AI client and an alert.
+
+The goal only changes the order of the steps. It belongs to the workspace, and you can change it any time on the setup page of an app or under **Settings**, **Getting started**.
+
+## What each step counts
+
+| Step | Done when | Where to do it |
+| --- | --- | --- |
+| Import an app | The workspace tracks at least one app of its own | [Import an app](/guides/import-an-app) |
+| Track keywords in a second market | One app tracks active keywords in two storefronts | [Track the same keyword in a second market](/guides/track-keywords#track-the-same-keyword-in-a-second-market) |
+| Add a competitor | One app has a competitor | [Add a competitor](/guides/competitors#add-a-competitor) |
+| Connect a store console | App Store Connect or the Google Play Console is connected and its key works | [Connect a store console](/guides/store-funnel#connect-a-store-console) |
+| Connect your AI client | A personal token has been used at least once, not only created | [Connect an agent](/mcp/setup) |
+| Turn on an alert | An active webhook, or an active email alert whose address is confirmed | [Subscribe to events](/guides/alerts#subscribe-to-events) |
+| Reply to a review | A reply you marked as replied or posted from AsoBeast | [Reply to reviews](/guides/reviews#reply-to-reviews) |
+| Fill your keyword field | An App Store app has a saved keyword field with at least one phrase | [Edit the iOS keyword field](/guides/metadata-workbench#edit-the-ios-keyword-field) |
+
+A step that works on one app links to the oldest app that does not satisfy it yet, so a workspace with three apps lands on the one still missing a competitor.
+
+## Why a step may be missing
+
+A step that cannot be done is left out rather than shown locked, and the total shrinks with it:
+
+- **Fill your keyword field** is missing when the workspace has apps and none of them is on the App Store, because Google Play has no keyword field. See [What does each store index?](/concepts/stores#what-does-each-store-index)
+- **Connect a store console** is missing when the instance cannot hold a console key. See [What the instance needs first](/integrations/overview#what-the-instance-needs-first).
+- **Reply to a review** is missing until the workspace has stored a review.
+
+## Hide the checklist and bring it back
+
+**Hide checklist** at the foot of the list asks first, then hides the pill for everyone in the workspace. To bring it back, open **Settings**, **Getting started** and turn on **Show the setup checklist**.
+
+A step you undo shows as open again. If you remove your only competitor, the checklist reads one step fewer done and the pill comes back unless it is hidden.
+
+## Worth knowing next to each step
+
+Under each open step the list links to features that are already in AsoBeast and live on the same page, so you find them while you work on that step. They include the exact phrase search and the pasted keyword list on the keywords page ([Read the table](/guides/track-keywords#read-the-table)), the card that shows how much each market's search reads ([See what each market reads](/guides/track-keywords#see-what-each-market-reads)), the localizations your app could add ([See which localizations your app ships](/guides/metadata-workbench#see-which-localizations-your-app-ships)), the guideline checks of every field ([Lint your metadata](/guides/metadata-workbench#lint-your-metadata)), the typed webhook events ([Webhook delivery](/guides/alerts#webhook-delivery)) and the keyword cleanup actions of the [Action Center](/guides/action-center).
+
+One feature has no screen to point at: an operator can check the popularity estimate against Apple's own numbers. See [Can asobeast use Apple's own numbers?](/concepts/scoring#can-asobeast-use-apples-own-numbers)
+
+## Your first results
+
+While the first positions of your oldest app are being collected, the top of the list reads **Checking where your app already ranks**. Once they are in it reads **Your first positions are in** with a link to the rankings of that app; see [Read rankings and SERPs](/guides/read-rankings). This row is not a step and does not count toward the total.
+
+## Read the checklist from an agent
+
+The `workspace_checklist` tool in the [MCP tool reference](/mcp/tools) and `GET /workspace/checklist` in the [API reference](/api-reference/introduction) answer the same thing the pill shows: the goal, when the checklist was hidden, and each step with whether it is done and the app its link opens. Choosing a goal or hiding the checklist is `PATCH /workspace/checklist`, which a person does from the interface or a write scoped token sends; no MCP tool changes it.
+
+## Troubleshooting
+
+- **The pill never appears.** Every step is done, someone in the workspace hid it, or the workspace has no plan in force and is paused. **Settings**, **Getting started** shows which, and says so when the checklist could not be read.
+- **A step stays open after you did it.** A change made outside this tab is read when you return to it after a minute or more, or when you reload the page. A token used only from an AI client shows as done after that read.
+- **The pill is a ring with no words.** It was shrunk in this browser. Open it and press **Expand the pill**.
