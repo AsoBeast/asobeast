@@ -25,6 +25,7 @@ import {
   type PositionHistoryContext,
 } from "./PositionHistoryPopover";
 import { cn } from "@/lib/utils";
+import { KeywordClassBadge } from "./KeywordClassBadge";
 
 function volatilityBand(value: number): {
   label: string;
@@ -243,6 +244,10 @@ export function KeywordCell({ keyword }: { keyword: TrackedKeywordItem }) {
           fallback={keyword.text}
         />
       </span>
+      <KeywordClassBadge
+        keywordClass={keyword.keywordClass}
+        source={keyword.keywordClassSource}
+      />
       {keyword.note ? <NoteButton note={keyword.note} /> : null}
       {!keyword.active ? (
         <Badge variant="secondary" className="shrink-0">

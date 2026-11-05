@@ -478,6 +478,29 @@ test("a translated keywords page counts the keywords it selects", async ({
   expect(errors).toEqual([]);
 });
 
+test("a translated keywords page filters by type and clears it", async ({
+  page,
+}) => {
+  const errors = collectDomErrors(page);
+  await page.goto("/apps/app-1/keywords");
+  const typeFilter = await hydrated(
+    page.getByRole("button", { name: "Filter by type" }),
+  );
+
+  await translateText(page);
+  await typeFilter.click();
+  await page.getByRole("option", { name: /Own brand/ }).click();
+  await page.keyboard.press("Escape");
+  await expect(page).toHaveURL(/type=ownBrand/);
+  await page.getByRole("button", { name: /^Remove Type/ }).click();
+
+  await expect(page).not.toHaveURL(/type=/);
+  await expect(
+    page.getByRole("table", { name: /Tracked keywords/i }),
+  ).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
 test("a translated keywords page brings back the badges a search hid", async ({
   page,
 }) => {

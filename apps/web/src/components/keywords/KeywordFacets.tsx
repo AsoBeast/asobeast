@@ -23,6 +23,7 @@ import {
   positionBandOf,
 } from "@/lib/table/facets";
 import { KEYWORD_CLASS_OPTIONS } from "./keyword-class";
+import { KeywordTypeTip } from "./KeywordTypeTip";
 import type { KeywordTableFeatures } from "./keyword-table-features";
 import {
   STATUS_LABELS,
@@ -132,17 +133,20 @@ export function KeywordFacets({
         options={STATUS_OPTIONS}
         onChange={(status) => void setFilters({ status })}
       />
-      <FacetFilter
-        title="Type"
-        options={KEYWORD_CLASS_OPTIONS}
-        selected={filters.type}
-        counts={facetCounts(
-          table,
-          "type",
-          (row) => row.original.keywordClass ?? null,
-        )}
-        onChange={(type) => void setFilters({ type })}
-      />
+      <span className="inline-flex items-center gap-1">
+        <FacetFilter
+          title="Type"
+          options={KEYWORD_CLASS_OPTIONS}
+          selected={filters.type}
+          counts={facetCounts(
+            table,
+            "type",
+            (row) => row.original.keywordClass ?? null,
+          )}
+          onChange={(type) => void setFilters({ type })}
+        />
+        <KeywordTypeTip />
+      </span>
       <TagFacet table={table} selected={filters.tag} setFilters={setFilters} />
       <FacetFilter
         title="Popularity"

@@ -85,6 +85,12 @@ const POPOVERS: NamedPopover[] = [
       page.getByRole("button", { name: /^Filter by source/ }).click(),
   },
   {
+    name: "Keyword types",
+    path: "/apps/app-1/keywords",
+    open: (page) =>
+      page.getByRole("button", { name: "About keyword types" }).click(),
+  },
+  {
     name: "How actions are generated",
     path: "/actions",
     open: (page) =>
@@ -168,4 +174,28 @@ test("About insights links the insights guide", async ({ page }) => {
   await expect(
     page.getByRole("button", { name: "About insights" }),
   ).toBeFocused();
+});
+
+test("About keyword types links the keyword types page", async ({ page }) => {
+  await page.goto("/apps/app-1/keywords");
+  await page.getByRole("button", { name: "About keyword types" }).click();
+
+  const dialog = page.getByRole("dialog", {
+    name: "Keyword types",
+    exact: true,
+  });
+  await expect(dialog).toHaveAccessibleDescription(/^Own brand: /);
+  const link = dialog.getByRole("link", { name: "Read about keyword types" });
+  await expect(link).toHaveAttribute(
+    "href",
+    "https://docs.asobeast.com/concepts/keyword-types",
+  );
+  await expect(link).toHaveAttribute("target", "_blank");
+  await page.keyboard.press("Escape");
+  await expect(
+    page.getByRole("button", { name: "About keyword types" }),
+  ).toBeFocused();
+  await expect(
+    page.getByRole("button", { name: "Keyword", exact: true }),
+  ).toBeVisible();
 });

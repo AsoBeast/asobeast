@@ -15,8 +15,8 @@ test("table renders fixture keywords and distinguishes a paused row", async ({
 
   await expect(page.getByText("Tracking 5 keywords · 4 active")).toBeVisible();
   for (const text of [
-    "focus timer",
-    "pomodoro",
+    "focus timer Brand keyword",
+    "pomodoro Competitor brand keyword",
     "study timer",
     "productivity app",
   ]) {

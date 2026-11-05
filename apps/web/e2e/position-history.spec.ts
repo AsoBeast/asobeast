@@ -296,7 +296,10 @@ test("E-PH-06 a failed read stays inside the popover and retries", async ({
     { timeout: 15_000 },
   );
   await expect(
-    page.getByRole("cell", { name: "pomodoro", exact: true }),
+    page.getByRole("cell", {
+      name: "pomodoro Competitor brand keyword",
+      exact: true,
+    }),
   ).toBeVisible();
 
   await context.clearCookies({ name: RANKINGS_FAIL_COOKIE });
