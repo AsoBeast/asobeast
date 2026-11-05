@@ -7,7 +7,10 @@ import {
 import { KEYWORD_SORTS, type OfficialPopularityState } from '../index';
 import {
   KEYWORD_BULK_ACTIONS,
+  KEYWORD_CLASSES,
+  KEYWORD_CLASS_SOURCES,
   KEYWORD_IMPORT_REASONS,
+  isKeywordClass,
   KEYWORD_IMPORT_STATUSES,
   keywordLabel,
   type KeywordImportSummary,
@@ -145,5 +148,28 @@ describe('the score signals contract', () => {
     expectTypeOf<ScoreSignals['officialPopularity']>().toEqualTypeOf<
       number | null
     >();
+  });
+});
+
+describe('keyword class', () => {
+  it('lists the three classes and the two sources the filter, the dto and the mock read', () => {
+    expect(KEYWORD_CLASSES).toEqual(['ownBrand', 'competitorBrand', 'generic']);
+    expect(KEYWORD_CLASS_SOURCES).toEqual(['detected', 'owner']);
+  });
+
+  it.each(KEYWORD_CLASSES)('accepts %s as a class', (value) => {
+    expect(isKeywordClass(value)).toBe(true);
+  });
+
+  it.each([
+    ['brand'],
+    [''],
+    ['OwnBrand'],
+    [null],
+    [undefined],
+    [3],
+    [['generic']],
+  ])('refuses %j as a class', (value) => {
+    expect(isKeywordClass(value)).toBe(false);
   });
 });

@@ -6,6 +6,7 @@ import type {
 } from "@asobeast/shared";
 import { updateKeyword } from "@/lib/api";
 import { appKeys, invalidateKeywordMutation } from "@/lib/queries";
+import { optimisticKeyword } from "./keyword-class";
 import { rollbackKeywordUpdate } from "./keyword-rollback";
 
 export function useKeywordUpdate(appId: string, keyword: TrackedKeywordItem) {
@@ -25,7 +26,9 @@ export function useKeywordUpdate(appId: string, keyword: TrackedKeywordItem) {
         { queryKey: appKeys.keywordsRoot(appId) },
         (rows) =>
           rows?.map((row) =>
-            row.keywordId === keyword.keywordId ? { ...row, ...update } : row,
+            row.keywordId === keyword.keywordId
+              ? optimisticKeyword(row, update)
+              : row,
           ),
       );
       return { previous };
