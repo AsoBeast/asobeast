@@ -20,6 +20,7 @@ Every schedule is a cron expression evaluated in UTC. The defaults below come fr
 | `CRON_STORE_REPORTS` | `30 5 * * *` | Daily 05:30 | Downloads the reports each connected store console published since the last sync. Never scheduled without `STORE_CONNECT_ENCRYPTION_KEY` |
 | `CRON_AUDIT` | `0 6 * * *` | Daily 06:00 | Writes the daily audit score snapshot |
 | `CRON_LOCALIZATION_SWEEP` | `0 7 * * 1` | Monday 07:00 | Queues the lookups that detect the App Store localizations every app ships. An empty value removes it |
+| `CRON_DISCOVERY` | `30 7 * * 1` | Monday 07:30 | Queues the capped rank searches of keyword discovery. An empty value removes it |
 | `CRON_DIGEST` | `0 8 * * 1` | Monday 08:00 | Sends the weekly digest webhook |
 
 Batched alerts do not have their own schedule. They send once the daily pipeline reports every child job settled, so the delivery time depends on workload and retries rather than on a fixed clock.

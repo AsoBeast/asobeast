@@ -29,6 +29,7 @@ import { DigestDispatcher } from './digest.dispatcher';
 import { GplayWorker } from './gplay.worker';
 import { ActiveWorkspaces } from './active-workspaces';
 import { DefaultAlertsRun } from './default-alerts-run';
+import { KeywordDiscoverySweep } from './keyword-discovery-sweep.service';
 import { LocalizationSweep } from './localization-sweep.service';
 import { StoreReportFanOut } from './store-report-fanout';
 import { StoreConnectModule } from '../store-connect/store-connect.module';
@@ -130,6 +131,7 @@ const bullBoardModules: DynamicModule[] =
     DefaultAlertsRun,
     ActiveWorkspaces,
     LocalizationSweep,
+    KeywordDiscoverySweep,
     StoreReportFanOut,
     CapacityService,
     DailyBudgetService,
