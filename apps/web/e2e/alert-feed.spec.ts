@@ -177,10 +177,19 @@ test.describe("alerts page", () => {
     await feedState(context, "slow");
     await page.goto("/alerts", { waitUntil: "commit" });
 
-    await expect(
-      page.getByRole("status", { name: "Loading alerts" }),
-    ).toBeVisible();
+    const skeleton = page
+      .getByRole("status", { name: "Loading alerts" })
+      .locator("[data-feed-row]")
+      .first();
+    await expect(skeleton).toBeVisible();
+    const placeholder = await skeleton.boundingBox();
     await expect(rows(page)).toHaveCount(ALERT_EVENT_PAGE_SIZE);
+    const loaded = await rows(page).first().boundingBox();
+
+    expect(Math.abs((loaded?.y ?? 0) - (placeholder?.y ?? 0))).toBeLessThan(3);
+    expect(
+      Math.abs((loaded?.height ?? 0) - (placeholder?.height ?? 0)),
+    ).toBeLessThan(3);
   });
 
   for (const width of [320, 375]) {

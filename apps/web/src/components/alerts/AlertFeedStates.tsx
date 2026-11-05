@@ -3,8 +3,20 @@ import { BellOff, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 const SKELETON_ROWS = 8;
+
+function TextLine({ type, width }: { type: string; width: string }) {
+  return (
+    <div className={type}>
+      <Skeleton
+        shape="text"
+        className={cn("inline-block align-middle", width)}
+      />
+    </div>
+  );
+}
 
 export function AlertFeedSkeleton() {
   return (
@@ -14,12 +26,19 @@ export function AlertFeedSkeleton() {
       aria-label="Loading alerts"
       className="flex flex-col gap-6"
     >
-      <Skeleton className="h-8 w-40" />
-      <Skeleton className="h-9 w-full max-w-xl" />
+      <TextLine type="text-display" width="w-24" />
       <div className="flex flex-col gap-2">
-        <Skeleton shape="text" className="w-24" />
+        <Skeleton className="h-8 w-full max-w-xl" />
+        <TextLine type="text-body" width="w-32" />
+      </div>
+      <div className="flex flex-col gap-2">
+        <TextLine type="text-label" width="w-24" />
         {Array.from({ length: SKELETON_ROWS }, (_, index) => (
-          <Skeleton key={index} className="h-16 w-full rounded-lg" />
+          <Skeleton
+            key={index}
+            data-feed-row
+            className="h-18 w-full rounded-lg"
+          />
         ))}
       </div>
     </div>
