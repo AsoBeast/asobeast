@@ -4,6 +4,7 @@ import type {
   PortfolioSummary,
   RankDistributionHistory,
   StoreFunnelReport,
+  VisibilityComparison,
   VisibilityHistory,
 } from "@asobeast/shared";
 import { apiFetch, withQuery } from "./client";
@@ -30,11 +31,13 @@ export function getVisibilityHistory(
   appId: string,
   { from, to }: RangeParams = {},
   country?: string,
+  compare?: VisibilityComparison,
 ): Promise<VisibilityHistory> {
   const params = new URLSearchParams();
   if (from) params.set("from", from);
   if (to) params.set("to", to);
   if (country) params.set("country", country);
+  if (compare) params.set("compare", compare);
   return apiFetch<VisibilityHistory>(
     withQuery(`/apps/${appId}/visibility-history`, params),
   );

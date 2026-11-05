@@ -1,5 +1,6 @@
 import type {
   CompetitorAddRequest,
+  CompetitorAnalysis,
   CompetitorDiscovery,
   CompetitorItem,
   CompetitorSuggestions,
@@ -45,4 +46,10 @@ export function getCompetitorSuggestions(
   return apiFetch<CompetitorSuggestions>(
     `/apps/${appId}/competitors/suggestions`,
   );
+}
+
+export function getCompetitorAnalysis(
+  appId: string,
+): Promise<CompetitorAnalysis> {
+  return apiFetch<CompetitorAnalysis>(`/apps/${appId}/competitors/analysis`);
 }

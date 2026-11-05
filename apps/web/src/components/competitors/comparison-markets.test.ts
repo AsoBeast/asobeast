@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { comparisonMarkets, marketOptions } from "./comparison-markets";
+import {
+  comparisonMarkets,
+  gapMarkets,
+  marketOptions,
+} from "./comparison-markets";
 
 const rows = (...countries: string[]) =>
   countries.map((country) => ({ country }));
@@ -50,5 +54,28 @@ describe("marketOptions", () => {
       { value: "us", label: "United States" },
       { value: "de", label: "Germany" },
     ]);
+  });
+});
+
+describe("gapMarkets", () => {
+  it("lists the compared markets home first, then by name", () => {
+    expect(
+      gapMarkets(
+        {
+          competitors: 1,
+          delisted: 0,
+          markets: [
+            { country: "pl", keywords: 2, compared: 0 },
+            { country: "de", keywords: 1, compared: 1 },
+            { country: "us", keywords: 8, compared: 8 },
+          ],
+        },
+        "us",
+      ),
+    ).toEqual(["us", "de", "pl"]);
+  });
+
+  it("lists nothing without coverage", () => {
+    expect(gapMarkets(undefined, "us")).toEqual([]);
   });
 });

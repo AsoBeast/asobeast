@@ -47,6 +47,7 @@ import {
   type CombinationWordCount,
 } from "./keyword-combinations";
 import { DEFAULT_MCP_CLIENT, MCP_CLIENTS } from "./mcp-snippets";
+import { GAP_TABS } from "./gap-lists";
 import { GRADES } from "./grade";
 import { KEYWORD_ZONES } from "./keyword-zones";
 import { POSITION_BANDS, VERSUS, type ActivityStatus } from "./table/facets";
@@ -526,3 +527,43 @@ export const alertFeedParsers = {
 };
 
 export const loadAlertFeedSearch = createLoader(alertFeedParsers);
+
+export const gapTabParser = parseAsStringLiteral(GAP_TABS).withDefault("gaps");
+
+export const GAP_SORTS = [
+  "keyword",
+  "competitor",
+  "theirs",
+  "yours",
+  "popularity",
+  "difficulty",
+  "opportunity",
+  "reason",
+  "margin",
+] as const;
+
+export const GAP_DEFAULT_SORT = "opportunity";
+
+export const gapSortParser =
+  parseAsStringLiteral(GAP_SORTS).withDefault(GAP_DEFAULT_SORT);
+
+export const gapTableParsers = {
+  sort: gapSortParser,
+  dir: sortDirectionParser,
+  q: searchParser,
+  country: countryParser,
+};
+
+export const GAP_URL_KEYS = {
+  sort: "gapSort",
+  dir: "gapDir",
+  q: "gapQ",
+  country: "gapCountry",
+} as const satisfies Record<keyof typeof gapTableParsers, string>;
+
+export const VISIBILITY_VIEWS = ["visibility", "share"] as const;
+
+export type VisibilityView = (typeof VISIBILITY_VIEWS)[number];
+
+export const visibilityViewParser =
+  parseAsStringLiteral(VISIBILITY_VIEWS).withDefault("visibility");
