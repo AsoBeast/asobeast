@@ -21,6 +21,7 @@ import { WorkspaceFanOut } from '../common/tenancy/workspace-fanout';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisOutageLog } from '../redis/redis-outage-log';
 import { PublishedStatusService } from '../store-providers/canary/published-status.service';
+import { KeywordDiscoverySweep } from './keyword-discovery-sweep.service';
 import { LocalizationSweep } from './localization-sweep.service';
 import { StoreReportFanOut } from './store-report-fanout';
 import { StoreCanaryService } from '../store-providers/canary/store-canary.service';
@@ -64,6 +65,7 @@ describe('PipelineWorker', () => {
     popularityEnabled = false,
     statusCron = '17 * * * *',
     sweepCron = '0 7 * * 1',
+    discoveryCron = '30 7 * * 1',
   ) => {
     const client = { set: jest.fn().mockResolvedValue('OK') };
     const pipelineQueue = {
@@ -84,7 +86,9 @@ describe('PipelineWorker', () => {
           ? canaryCron
           : key === 'CRON_LOCALIZATION_SWEEP'
             ? sweepCron
-            : `value:${key}`,
+            : key === 'CRON_DISCOVERY'
+              ? discoveryCron
+              : `value:${key}`,
       ),
     };
     const pipeline = {
@@ -129,6 +133,7 @@ describe('PipelineWorker', () => {
       run: jest.fn().mockResolvedValue({ countries: 1, rows: 2, week: 'w' }),
     };
     const sweep = { run: jest.fn().mockResolvedValue(3) };
+    const discoverySweep = { run: jest.fn().mockResolvedValue(40) };
     const storeReports = {
       enabled: false,
       run: jest.fn().mockResolvedValue(2),
@@ -162,6 +167,7 @@ describe('PipelineWorker', () => {
       sweep as unknown as LocalizationSweep,
       storeReports as unknown as StoreReportFanOut,
       defaultAlerts as unknown as DefaultAlertsRun,
+      discoverySweep as unknown as KeywordDiscoverySweep,
     );
     return {
       worker,
@@ -181,6 +187,7 @@ describe('PipelineWorker', () => {
       tracking,
       popularity,
       sweep,
+      discoverySweep,
       storeReports,
       defaultAlerts,
     };
@@ -254,6 +261,7 @@ describe('PipelineWorker', () => {
       'audit',
       'store-canary',
       'localization-sweep',
+      'keyword-discovery',
     ]);
     expect(
       pipelineQueue.upsertJobScheduler.mock.calls.map(
@@ -267,6 +275,7 @@ describe('PipelineWorker', () => {
       JOBS.AUDIT_SNAPSHOT,
       JOBS.STORE_CANARY,
       JOBS.LOCALIZATION_SWEEP,
+      JOBS.KEYWORD_DISCOVERY,
     ]);
   });
 
@@ -440,6 +449,55 @@ describe('PipelineWorker', () => {
         expect(crossTenant).toHaveBeenCalledTimes(1);
       } finally {
         crossTenant.mockRestore();
+      }
+    });
+  });
+
+  describe('the weekly keyword discovery', () => {
+    it('schedules the discovery with its pattern in utc', async () => {
+      const { worker, pipelineQueue } = build();
+
+      await worker.registerSchedules();
+
+      expect(pipelineQueue.upsertJobScheduler).toHaveBeenCalledWith(
+        'keyword-discovery',
+        { pattern: '30 7 * * 1', tz: 'UTC' },
+        { name: JOBS.KEYWORD_DISCOVERY },
+      );
+    });
+
+    it('removes the discovery scheduler when its pattern is emptied', async () => {
+      const { worker, pipelineQueue } = build(
+        false,
+        '0 2,8,14,20 * * *',
+        false,
+        false,
+        '17 * * * *',
+        '0 7 * * 1',
+        '',
+      );
+
+      await worker.registerSchedules();
+
+      expect(
+        pipelineQueue.upsertJobScheduler.mock.calls.map(([key]) => key),
+      ).not.toContain('keyword-discovery');
+      expect(pipelineQueue.removeJobScheduler).toHaveBeenCalledWith(
+        'keyword-discovery',
+      );
+    });
+
+    it('runs the discovery sweep once for its job and logs what it queued', async () => {
+      const { worker, discoverySweep } = build();
+      const log = jest.spyOn(Logger.prototype, 'log');
+
+      try {
+        await worker.process(job(JOBS.KEYWORD_DISCOVERY));
+
+        expect(discoverySweep.run).toHaveBeenCalledTimes(1);
+        expect(log).toHaveBeenCalledWith('keyword discovery {"queued":40}');
+      } finally {
+        log.mockRestore();
       }
     });
   });

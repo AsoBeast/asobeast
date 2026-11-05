@@ -237,6 +237,18 @@ describe('Pipeline store routing (e2e)', () => {
     });
     expect(gplayRow?.total).toBe(0);
     expect(appStoreOnly.utilization).toBe(appStoreRow?.utilization);
+    expect(appStoreRow?.discovery).toEqual({
+      checksPerWeek: 40,
+      requestsPerWeek: 40,
+    });
+    expect(appStoreOnly.discovery).toEqual({
+      checksPerWeek:
+        (appStoreRow?.discovery?.checksPerWeek ?? 0) +
+        (gplayRow?.discovery?.checksPerWeek ?? 0),
+      requestsPerWeek:
+        (appStoreRow?.discovery?.requestsPerWeek ?? 0) +
+        (gplayRow?.discovery?.requestsPerWeek ?? 0),
+    });
 
     await seedApp(Store.GOOGLE_PLAY, 'gplay-1');
     const mixed = await asWorkspace(app, () => budget.estimate());

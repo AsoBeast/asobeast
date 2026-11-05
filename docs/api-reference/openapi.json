@@ -4492,6 +4492,231 @@
         ]
       }
     },
+    "/apps/{id}/keyword-discoveries": {
+      "get": {
+        "description": "Reads stored rows only and reaches no store. A weekly job and a manual refresh build the list from the listing of each market, the home titles and subtitles of competitors, review phrases, Apple popularity weeks for the genre of the app and the phrases the workspace tracks for other apps, leaving out what the app tracks, active or paused, and what was dismissed. position is 1 based; null with a depth means checked and not found within that depth, and a null depth means never checked. depth 50 comes from another search of the phrase today or yesterday, 200 from the search of the app itself. state is ranked when the app has a position, opportunity when it has none, relevance is at least 60 and opportunity at least 35, and open otherwise. traffic and difficulty come from a score some tracker already produced, or, for an unscored App Store term, from the popularity Apple lists; a discovery is never scored, so opportunity is null until the keyword has a score. recommended marks the first 50 rows in list order and counts cover every open row of the requested market, whatever the state filter and the limit. unfit is the number of ranked rows that did not fit the plan while auto track is on. checks reports the weekly cap of searches, how many were queued this ISO week, how many are still waiting, the day of the newest check and the next weekly run, null when the schedule is off.",
+        "operationId": "KeywordDiscoveryController_list",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "country",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "pattern": "^[a-z]{2}$",
+              "example": "de",
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "all",
+              "type": "string",
+              "enum": [
+                "all",
+                "ranked",
+                "opportunity"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 200,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "List the keywords an app ranks for or could rank for that it does not track",
+        "tags": [
+          "keywords"
+        ]
+      }
+    },
+    "/apps/{id}/keyword-discoveries/track": {
+      "post": {
+        "description": "Tracks the discoveries named by keywordIds, or every ranked discovery with allRanked true, optionally in one market; exactly one of the two is required. Ids that are not open discoveries of the app are ignored. Tracking spends the keyword room of the plan the way a manual add does: skipped counts the rows over that room, which stay discoveries. A known position from a check of today or yesterday becomes the first position of the keyword and every other row queues its first position check. Answers 403 and writes nothing when another request took the last keyword slots in the meantime.",
+        "operationId": "KeywordDiscoveryController_track",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KeywordDiscoveryTrackDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Track keyword discoveries",
+        "tags": [
+          "keywords"
+        ]
+      }
+    },
+    "/apps/{id}/keyword-discoveries/dismiss": {
+      "post": {
+        "description": "Hides the named discoveries for good: a dismissed phrase is never proposed again for the app. dismissed counts the rows this request dismissed, so a second dismiss of the same ids answers 0.",
+        "operationId": "KeywordDiscoveryController_dismiss",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KeywordDiscoveryDismissDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Dismiss keyword discoveries",
+        "tags": [
+          "keywords"
+        ]
+      }
+    },
+    "/apps/{id}/keyword-discoveries/refresh": {
+      "post": {
+        "description": "Rebuilds the list from stored data, reads the positions other searches of the same phrases found today or yesterday for free, and queues at most the checks left of the weekly cap (40 per app on the App Store and 20 on Google Play, counted from Monday 00:00 UTC and shared with the weekly run). Spends one deep search allowance only when at least one check is queued; queued 0 costs nothing. Answers 202.",
+        "operationId": "KeywordDiscoveryController_refresh",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Refresh keyword discoveries",
+        "tags": [
+          "keywords"
+        ]
+      }
+    },
+    "/apps/{id}/keyword-discoveries/settings": {
+      "patch": {
+        "description": "Switching autoTrackRanked on tracks every ranked discovery that fits the keyword room of the plan at once, and every later check that finds the app tracks its phrase too; tracked and skipped report what this request tracked. Switching it off tracks nothing and leaves tracked keywords alone.",
+        "operationId": "KeywordDiscoveryController_updateSettings",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KeywordDiscoverySettingsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Change the keyword discovery settings of an app",
+        "tags": [
+          "keywords"
+        ]
+      }
+    },
     "/apps/{id}/summary": {
       "get": {
         "description": "Visibility, rank distribution, movers, coverage and counts of the app, for every market or one, with shareOfVoice: the visibility of the app as a percentage of the summed visibility of the app and the tracked competitors checked on the same day, over the same keywords, and the 7 day change; the reason is named when there is none.",
@@ -7979,6 +8204,56 @@
           "collection",
           "genre",
           "device"
+        ]
+      },
+      "KeywordDiscoveryTrackDto": {
+        "type": "object",
+        "properties": {
+          "keywordIds": {
+            "minItems": 1,
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 64
+            }
+          },
+          "allRanked": {
+            "type": "boolean"
+          },
+          "country": {
+            "type": "string",
+            "example": "de",
+            "pattern": "^[a-z]{2}$"
+          }
+        }
+      },
+      "KeywordDiscoveryDismissDto": {
+        "type": "object",
+        "properties": {
+          "keywordIds": {
+            "minItems": 1,
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 64
+            }
+          }
+        },
+        "required": [
+          "keywordIds"
+        ]
+      },
+      "KeywordDiscoverySettingsDto": {
+        "type": "object",
+        "properties": {
+          "autoTrackRanked": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "autoTrackRanked"
         ]
       },
       "ReviewReplyPatchDto": {

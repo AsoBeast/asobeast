@@ -22,6 +22,7 @@ An app is one row with a home storefront. Keywords are separate rows scoped by t
 | `KeywordField` | The iOS keyword field of one App Store localization | Keyed on app and localization. Holds the normalized phrases in the order they were saved, and is private to the owner |
 | `AppLocalization` | One App Store localization the app ships beyond the default one of its home storefront | Keyed on app and localization. Origin is `manual` or `detected`. Deleted with its app |
 | `AppSetup` | The guided setup of one tracked app: status, skipped steps, countries reviewed, selected markets | Keyed on app. Started by the import and kept on the account, so every member and every device sees the same progress. Deleted with its app |
+| `KeywordDiscovery` | One phrase discovery proposed for an app, with the position its last check found, the depth that check covered and when it was dismissed | Tenant owned. Keyed on app and keyword. Its keyword and the search results it reads are shared like every `Keyword` and `SerpEntry`. Removed after 60 days without being proposed |
 | `KeywordMetric` | Persisted popularity and difficulty for a day | Keyed on keyword and date |
 | `KeywordRanking` | One position observation | Keyed on app, keyword and date. Carries `depth` |
 | `SerpEntry` | One search result row for a keyword and day | Keyed on keyword, date and position |

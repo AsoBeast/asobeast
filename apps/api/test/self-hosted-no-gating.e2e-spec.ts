@@ -218,6 +218,53 @@ describe('Self hosted deployments carry no plan gating', () => {
       .expect(200);
   });
 
+  it('refreshes keyword discoveries without a meter but still stops at the weekly cap', async () => {
+    const discoveryApp = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: 'self-hosted-discovery',
+        country: 'us',
+      },
+    });
+    await prisma.keyword.createMany({
+      data: Array.from({ length: 45 }, (_, index) => ({
+        text: `self hosted discovery ${index}`,
+        store: Store.APP_STORE,
+        country: 'us',
+      })),
+      skipDuplicates: true,
+    });
+    const keywords = await prisma.keyword.findMany({
+      where: { text: { startsWith: 'self hosted discovery ' } },
+      select: { id: true },
+    });
+    await prisma.keywordDiscovery.createMany({
+      data: keywords.map(({ id }) => ({
+        appId: discoveryApp.id,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        keywordId: id,
+        source: 'title',
+        relevance: 70,
+      })),
+    });
+    const refresh = () =>
+      request(app.getHttpServer())
+        .post(`/apps/${discoveryApp.id}/keyword-discoveries/refresh`)
+        .set('Cookie', cookie)
+        .expect(202);
+
+    expect((await refresh()).body).toEqual({ queued: 40, resolved: 0 });
+    for (let again = 0; again < 15; again += 1) {
+      expect((await refresh()).body).toEqual({ queued: 0, resolved: 0 });
+    }
+    await prisma.keywordDiscovery.updateMany({
+      where: { appId: discoveryApp.id, queuedAt: { not: null } },
+      data: { checkedOn: new Date(), depth: 200 },
+    });
+    expect((await refresh()).body).toEqual({ queued: 0, resolved: 0 });
+  });
+
   it('serves a personal api token the same surface as a session', async () => {
     const plaintext = `asob_${'c'.repeat(48)}`;
     await prisma.apiToken.create({

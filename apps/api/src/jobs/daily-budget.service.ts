@@ -4,6 +4,8 @@ import {
   BudgetCompletion,
   BudgetQuota,
   DailyBudget,
+  DISCOVERY_CHECKS_PER_RUN,
+  DiscoveryBudget,
   Store,
   STORES,
   StoreDailyBudget,
@@ -16,7 +18,7 @@ import { DailyCategoryBuckets } from './daily-category-buckets.service';
 import { DailyTargets, DailyTargetsCollector } from './daily-targets.service';
 import { localizationReads } from './localization-reads';
 import { OverLimitRegistry } from './over-limit.registry';
-import { requestsFor } from './request-weights';
+import { requestsFor, requestsPerJob } from './request-weights';
 
 const HOUR_MS = 3_600_000;
 
@@ -32,18 +34,20 @@ export class DailyBudgetService {
   ) {}
 
   async estimate(): Promise<DailyBudget> {
-    const [targets, shipped] = await Promise.all([
+    const [targets, shipped, discoveryApps] = await Promise.all([
       this.targets.collect(),
       this.targets.shipped(),
+      this.targets.discoveryApps(),
     ]);
     const buckets = await this.categoryBuckets.of(
       targets.apps.map((app) => app.id),
     );
 
     const stores = await Promise.all(
-      STORES.map((store) =>
-        this.storeBudget(store, { ...targets, shipped }, buckets),
-      ),
+      STORES.map(async (store) => ({
+        ...(await this.storeBudget(store, { ...targets, shipped }, buckets)),
+        discovery: this.discoveryBudget(store, discoveryApps),
+      })),
     );
     const total = sum(stores, (store) => store.total);
     const capacityPerDay = sum(stores, (store) => store.capacityPerDay);
@@ -61,6 +65,30 @@ export class DailyBudgetService {
       completion: this.projectCompletion(stores),
       marketListings: sum(stores, (store) => store.marketListings ?? 0),
       localizations: sum(stores, (store) => store.localizations ?? 0),
+      discovery: {
+        checksPerWeek: sum(stores, (store) => store.discovery.checksPerWeek),
+        requestsPerWeek: sum(
+          stores,
+          (store) => store.discovery.requestsPerWeek,
+        ),
+      },
+    };
+  }
+
+  private discoveryBudget(
+    store: Store,
+    apps: readonly { store: Store }[],
+  ): DiscoveryBudget {
+    const scheduled = Boolean(
+      this.config.get('CRON_DISCOVERY', { infer: true }),
+    );
+    const checksPerWeek = scheduled
+      ? apps.filter((app) => app.store === store).length *
+        DISCOVERY_CHECKS_PER_RUN[store]
+      : 0;
+    return {
+      checksPerWeek,
+      requestsPerWeek: checksPerWeek * requestsPerJob(store, 'keywords'),
     };
   }
 

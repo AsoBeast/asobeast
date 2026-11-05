@@ -131,6 +131,7 @@ export const EnvSchema = z.object({
   CRON_DIGEST: cronPattern('0 8 * * 1'),
   CRON_AUDIT: cronPattern('0 6 * * *'),
   CRON_LOCALIZATION_SWEEP: optionalCronPattern('0 7 * * 1'),
+  CRON_DISCOVERY: optionalCronPattern('30 7 * * 1'),
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().int().positive().default(587),
   SMTP_SECURE: z

@@ -158,11 +158,11 @@ describe('DiscoveryCandidates.forMarket', () => {
         { title: 'Streak Keeper', subtitle: 'Goal tracker', summary: null },
       ],
       reviews: [
-        reviewSaying('love the widget'),
-        reviewSaying('the widget is great'),
-        reviewSaying('widget works'),
-        reviewSaying('dark mode please'),
-        reviewSaying('need dark mode'),
+        reviewSaying('love the dark mode'),
+        reviewSaying('the dark mode is great'),
+        reviewSaying('dark mode works'),
+        reviewSaying('focus timer please'),
+        reviewSaying('need focus timer'),
       ],
     };
     const home = await setup(fixture).service.forMarket(
@@ -177,9 +177,22 @@ describe('DiscoveryCandidates.forMarket', () => {
     );
 
     expect(textsOf(bySource(home, 'competitors'))).toContain('streak keeper');
-    expect(textsOf(bySource(home, 'reviews'))).toEqual(['widget']);
+    expect(textsOf(bySource(home, 'reviews'))).toEqual(['dark mode']);
     expect(bySource(abroad, 'competitors')).toEqual([]);
     expect(bySource(abroad, 'reviews')).toEqual([]);
+  });
+
+  it('never proposes a single review word however many reviews use it', async () => {
+    const candidates = await setup({
+      reviews: [
+        reviewSaying('great widget, great day'),
+        reviewSaying('great widget for every day'),
+        reviewSaying('great widget, simple day'),
+        reviewSaying('the great widget'),
+      ],
+    }).service.forMarket(app(), 'us', SNAPSHOT_TEXT);
+
+    expect(textsOf(bySource(candidates, 'reviews'))).toEqual(['great widget']);
   });
 
   it("proposes popular terms of the app's genre that share a listing word", async () => {

@@ -232,6 +232,30 @@ describe('Read-only token scope (e2e)', () => {
         '/apps/app_missing/keyword-field',
         { text: 'habit' },
       ],
+      [
+        'tracking a keyword discovery',
+        'post',
+        '/apps/app_missing/keyword-discoveries/track',
+        { allRanked: true },
+      ],
+      [
+        'dismissing a keyword discovery',
+        'post',
+        '/apps/app_missing/keyword-discoveries/dismiss',
+        { keywordIds: ['kw_missing'] },
+      ],
+      [
+        'refreshing keyword discoveries',
+        'post',
+        '/apps/app_missing/keyword-discoveries/refresh',
+        undefined,
+      ],
+      [
+        'changing the keyword discovery settings',
+        'patch',
+        '/apps/app_missing/keyword-discoveries/settings',
+        { autoTrackRanked: true },
+      ],
     ] as const;
 
     it.each(LOCALIZATION_WRITES)(
