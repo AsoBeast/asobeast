@@ -48,6 +48,21 @@ test.describe("alerts page", () => {
     await expect(first.locator(".sr-only")).toHaveText("Metadata changed: ");
   });
 
+  test("shows the UTC clock time of each event under its UTC day", async ({
+    page,
+  }) => {
+    await page.goto("/alerts");
+
+    const late = rows(page).filter({ hasText: LONG_ALERT_KEYWORD });
+    const early = rows(page).filter({ hasText: '"timer" in GB' });
+
+    await expect(late.locator("time")).toHaveText("11:59 PM UTC");
+    await expect(early.locator("time")).toHaveText("12:00 AM UTC");
+    await expect(rows(page).first().locator("time")).toHaveText(
+      /^\d{1,2}:\d{2} (AM|PM) UTC$/,
+    );
+  });
+
   test("splits the events just before and after midnight UTC", async ({
     page,
   }) => {

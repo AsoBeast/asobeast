@@ -5,6 +5,7 @@ import {
   formatCountry,
   formatDate,
   formatDateTime,
+  formatUtcClock,
   formatDayMonth,
   formatMonth,
   formatMeasure,
@@ -254,5 +255,15 @@ describe("pluralize", () => {
 
   it("accepts an irregular plural", () => {
     expect(pluralize(2, "category", "categories")).toBe("2 categories");
+  });
+});
+
+describe("formatUtcClock", () => {
+  it.each([
+    ["2026-11-03T23:59:59.000Z", "11:59 PM UTC"],
+    ["2026-11-04T00:00:01.000Z", "12:00 AM UTC"],
+    ["2026-11-04T12:05:00.000Z", "12:05 PM UTC"],
+  ])("writes %s as %s whatever the runner's zone", (value, expected) => {
+    expect(formatUtcClock(value)).toBe(expected);
   });
 });

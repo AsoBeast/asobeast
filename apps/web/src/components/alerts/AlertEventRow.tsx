@@ -6,7 +6,7 @@ import { EVENT_LABELS } from "@/components/settings/alert-event-copy";
 import {
   formatCountry,
   formatDateTime,
-  formatRelativeTime,
+  formatUtcClock,
   storeLabel,
 } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -47,11 +47,9 @@ function Sentence({ item }: { item: AlertEventItem }) {
 
 export function AlertEventRow({
   item,
-  now,
   isNew,
 }: {
   item: AlertEventItem;
-  now: number;
   isNew: boolean;
 }) {
   const { icon: Icon, tone } = ALERT_EVENT_ICONS[item.event];
@@ -86,7 +84,7 @@ export function AlertEventRow({
           title={formatDateTime(item.occurredAt)}
           className="text-caption text-muted-foreground"
         >
-          {formatRelativeTime(item.occurredAt, now)}
+          {formatUtcClock(item.occurredAt)}
         </time>
       </div>
     </li>

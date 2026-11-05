@@ -84,7 +84,6 @@ export function AlertFeed() {
     [feed.data.pages],
   );
   const shown = useMemo(() => searchEvents(events, query), [events, query]);
-  const now = feed.dataUpdatedAt;
   const filtered = Object.keys(filters).length > 0 || query.trim() !== "";
   const clearAll = () => {
     void setView(CLEARED_ALERT_FEED);
@@ -114,8 +113,7 @@ export function AlertFeed() {
         />
       ) : (
         <AlertEventList
-          groups={dayGroups(shown, now)}
-          now={now}
+          groups={dayGroups(shown, feed.dataUpdatedAt)}
           seenAt={seenAt}
         />
       )}

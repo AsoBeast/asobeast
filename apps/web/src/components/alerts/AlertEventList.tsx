@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef } from "react";
-import type { AlertEventItem } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import { isNewSince } from "@/lib/alerts-seen";
 import { useFocusAfterCommit } from "@/lib/focus-handoff";
@@ -10,11 +9,9 @@ import type { DayGroup } from "./alert-feed-view";
 
 export function AlertEventList({
   groups,
-  now,
   seenAt,
 }: {
   groups: readonly DayGroup[];
-  now: number;
   seenAt: string | null;
 }) {
   return (
@@ -34,11 +31,10 @@ export function AlertEventList({
               {`${group.label} · ${group.events.length}`}
             </h2>
             <ul className="flex list-none flex-col gap-2 p-0">
-              {group.events.map((item: AlertEventItem) => (
+              {group.events.map((item) => (
                 <AlertEventRow
                   key={item.id}
                   item={item}
-                  now={now}
                   isNew={isNewSince(item.occurredAt, seenAt)}
                 />
               ))}
