@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import {
   isCheckFresh,
   KeywordDiscoveryTrackResult,
+  RANK_DEPTH,
   utcDayOf,
 } from '@asobeast/shared';
 import { QuotaExceededError } from '../auth/quota.errors';
@@ -31,6 +32,7 @@ const hasKnownPosition =
   (today: string) =>
   (row: TrackRow): row is KnownPosition =>
     row.depth !== null &&
+    (row.position !== null || row.depth >= RANK_DEPTH) &&
     row.checkedOn !== null &&
     isCheckFresh(row.checkedOn, today);
 

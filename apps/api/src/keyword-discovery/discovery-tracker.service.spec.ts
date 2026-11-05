@@ -148,6 +148,17 @@ describe('DiscoveryTracker', () => {
     );
   });
 
+  it('schedules the deep check of a fresh capture that missed the app instead of recording it', async () => {
+    const { service, tx, checks } = build(1);
+    await service.trackRows(
+      app,
+      [row({ position: null, depth: 50, checkedOn: TODAY })],
+      TODAY,
+    );
+    expect(tx.keywordRanking.createMany).not.toHaveBeenCalled();
+    expect(checks.schedule).toHaveBeenCalledWith('app1', ['k1']);
+  });
+
   it('requests the listing of every other market once', async () => {
     const { service, listings } = build(3);
     await service.trackRows(
