@@ -49,11 +49,11 @@ So adding a competitor costs zero extra store requests on keywords you already t
 
 The comparison view puts your listing beside each competitor field by field, with character counts against the store limits.
 
-The gap analysis is the useful half: it shows phrases competitors index that you do not, so you can decide whether they belong in your own title, subtitle, keyword field or short description. Adding one from there tracks it with the source `COMPETITOR`, which starts its relevance lower than a keyword drawn from your own listing. See [Popularity, difficulty and opportunity](/concepts/scoring).
+The gap analysis is the useful half: it shows phrases competitors index that you do not, so you can decide whether they belong in your own title, subtitle, keyword field or short description. Adding one from there tracks it with the source `COMPETITOR`, which starts its relevance lower than a keyword drawn from your own listing. See [Popularity, difficulty and opportunity](/concepts/scoring). For where competitors outrank you on the keywords you already track, see [Gap analysis](#gap-analysis).
 
 ## Collapse a section
 
-The competitors tab has three sections: the add form together with the competitors you track, **Apps you don’t track yet**, and the comparison matrix. Each section collapses behind its title. The window tabs of the discovery section and the only gaps switch of the matrix stay beside their titles while the section is collapsed. The choice is remembered in this browser and is not part of the link. When you print the page, a collapsed section prints its title and nothing else.
+The competitors tab has four sections: the add form together with the competitors you track, **Gap analysis**, **Apps you don’t track yet**, and the comparison matrix. Each section collapses behind its title. The window tabs of the discovery section and the only gaps switch of the matrix stay beside their titles while the section is collapsed. The choice is remembered in this browser and is not part of the link. When you print the page, a collapsed section prints its title and nothing else.
 
 ## Read the comparison matrix
 
@@ -70,6 +70,44 @@ A dash in place of a position means no check has run yet for that app and keywor
 Discovery sorts the same way, by appearances, keywords, best position, average position or rating, and searches by app name.
 
 To find searches around what competitors target, use **Competitor searches** in **Suggestions** on the keywords page. See [Get keyword suggestions](/guides/track-keywords#get-keyword-suggestions).
+
+## Gap analysis
+
+The **Gap analysis** section of the competitors tab sorts the keywords you track into four counted lists. It reads the same daily checks as the matrix, so it costs no extra store request.
+
+| List | A keyword is in it when |
+| --- | --- |
+| **Keyword gaps** | A competitor ranks in the top 30 and you are unranked or below 100 |
+| **Winnable now** | It is a keyword gap and its difficulty is below its popularity, or the best competitor ranks 11 or lower |
+| **Threats** | You rank in the top 30 and a competitor is **closing in**, 1 to 3 places below you and higher than on its previous check, or **overtook you**, passing you in the last 7 days and still ahead |
+| **You lead** | You rank and you are ahead of every competitor that ranks, or none of them ranks |
+
+Each list is sorted by opportunity, then by popularity. A row names the market, the best competitor with both positions, the popularity, the difficulty and the opportunity. A threat also says why, such as `Closing in, rose 2` or `Overtook you on Nov 1`, and a lead says by how many places.
+
+### Which competitors count
+
+A delisted competitor never counts, in any list. A competitor you added after the last daily check is not compared until its first check, so no list claims you lead over an app nobody looked at. A keyword whose latest check is older than yesterday UTC stays in **Keyword gaps** with a clock that names the day of the last check, and is left out of **Threats**, because a threat needs a fresh check of both apps.
+
+### Reading an empty list
+
+An empty list says why it is empty:
+
+- **Add a competitor to see gaps** when you track none.
+- **Every competitor you track is delisted** when none of them can be compared.
+- **Your competitors have not been checked yet** when no keyword of the market was compared, for example right after you add a competitor or a market.
+- **No keyword gaps right now** only when the comparison ran and found nothing.
+
+### Filter, search and export
+
+The **market** select appears when your keywords span markets and keeps the rows of one. The tab, the market, the search and the sort are part of the link. **Export CSV** writes the rows of the open tab, in the order shown. See [Export the gap lists to CSV](/guides/export-data#export-the-gap-lists-to-csv). Pressing a keyword opens its breakdown, described in [Why does a competitor rank above you?](#why-does-a-competitor-rank-above-you).
+
+### The Gap badge in the matrix is stricter on purpose
+
+The **Gap** badge of the matrix marks a keyword where a competitor ranks in the top 10 and you rank below 30. The **Keyword gaps** list asks a wider question, a competitor in the top 30 and you below 100. Both stay as they are. The `theyRankYouDont`, `youRankTheyDont` and `outranked` lists of `GET /apps/{id}/competitors/analysis` are unchanged too; the four lists answer beside them with a `coverage` block.
+
+### The overview line
+
+Under the visibility chart of the overview, one sentence sums up the market you are looking at, for example `2 winnable gaps. Biggest: productivity app, Rival Focus ranks #8, you are not ranked. 2 threats.` with a link to the biggest gap. It reads `No winnable gaps or threats right now.` when the comparison found nothing, and one of the sentences above when nothing could be compared.
 
 ## Why does a competitor rank above you?
 

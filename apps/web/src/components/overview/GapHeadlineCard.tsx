@@ -96,7 +96,7 @@ export function GapHeadlineCard({ id }: { id: string }) {
             summary="The line counts the same lists as the Gap analysis on the competitors page, for the market you are looking at."
           >
             <a
-              href="https://docs.asobeast.com/guides/competitors"
+              href="https://docs.asobeast.com/guides/competitors#gap-analysis"
               target="_blank"
               rel="noreferrer"
               className="font-medium text-foreground underline decoration-primary underline-offset-4 hover:decoration-2"

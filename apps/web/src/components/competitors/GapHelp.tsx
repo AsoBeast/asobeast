@@ -46,7 +46,7 @@ export function GapHelp() {
         it marks only the keywords a competitor holds on the first page.
       </p>
       <a
-        href="https://docs.asobeast.com/guides/competitors"
+        href="https://docs.asobeast.com/guides/competitors#gap-analysis"
         target="_blank"
         rel="noreferrer"
         className="font-medium text-foreground underline decoration-primary underline-offset-4 hover:decoration-2"

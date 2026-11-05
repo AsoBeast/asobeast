@@ -74,7 +74,22 @@ Both days are calculated over the keywords tracked today, each with the populari
 | --- | --- |
 | [Portfolio](/guides/portfolio) | Each app shows its visibility with the 7 day change and a 30 day sparkline. A group shows one blended number over the keywords of all its listings |
 | [Change impact](/guides/listing-changes#measure-the-impact-of-a-change) | Covers one market and only the keywords checked on both days, and weights both numbers by the popularity on the last check before the change, so only positions move it |
+| [Share of voice](#share-of-voice) | Divides your visibility by the summed visibility of your app and the competitors checked that day, over the same keywords |
 | [Action Center](/guides/action-center) | Calculated per market from the keywords checked each day, weighted by today's popularity. `rank.investigate_drop` and `rank.investigate_unexplained_drop` read a fall in it, after a listing change or without one, and `market.improve_country` reads the gap between a market and the home market |
+
+## Share of voice
+
+Share of voice is your visibility divided by the summed visibility of your app and the competitors you track that were checked that day, over the same keywords, as a percentage.
+
+Three keywords with popularity 8, 5 and 3 on the raw scale, where you rank 3, 12 and nowhere, competitor A ranks 9, 4 and 8, and competitor B ranks only the third keyword at 2, give visibilities of 33.4, 34.4 and 11.8. Your share of voice is 33.4 divided by 79.6, 42.0 percent. Against competitor A alone it is 49.3 percent.
+
+Only the competitors checked on a day count on that day, so adding a competitor does not rewrite the days before its first check. The chart tooltip says how many were counted, for example `vs 1 competitor`, and the line steps on the day one is added.
+
+A number is missing, with its reason, when you track no competitor, when none was checked on the latest day yet, or when nobody ranks for the keywords at all. A share of 0 with competitors ranking is a real 0.
+
+The **non branded** share leaves out the keywords classed as your own brand or a competitor's brand. See [Keyword type](/glossary#keyword-type). It appears only once your keywords carry a class.
+
+It is shown under the visibility number on the overview and behind the **Share of voice** view of the visibility chart. The API answers it as `shareOfVoice` and `nonBrandedShareOfVoice` on `GET /apps/{id}/summary`, and as daily series on `GET /apps/{id}/visibility-history?compare=competitors`, and the `app_summary` and `visibility_history` MCP tools read the same. Compare it with itself over time: 42 percent of a small set of competitors is not a market share.
 
 ## How should I read it?
 
