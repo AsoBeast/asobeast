@@ -16,6 +16,7 @@ const NONE: KeywordFilters = {
   source: [],
   bucket: [],
   status: "all",
+  type: [],
   pop: [],
   diff: [],
   opp: [],
@@ -68,6 +69,7 @@ describe("keywordFilterChips", () => {
         source: ["MANUAL", "TITLE"],
         bucket: ["longtail"],
         status: "active",
+        type: ["ownBrand", "generic"],
         pop: ["strong", "fair"],
         diff: ["poor"],
         opp: ["weak"],
@@ -80,11 +82,26 @@ describe("keywordFilterChips", () => {
       { key: "source", label: "Source: Manual, Title" },
       { key: "bucket", label: "Bucket: Long tail" },
       { key: "status", label: "Status: Active" },
+      { key: "type", label: "Type: Own brand, Generic" },
       { key: "pop", label: "Popularity: strong, fair" },
       { key: "diff", label: "Difficulty: poor" },
       { key: "opp", label: "Opportunity: weak" },
       { key: "pos", label: "Position: Top 3, Not ranking" },
     ]);
+  });
+});
+
+describe("type filters", () => {
+  it("filters the type column only when a class is chosen", () => {
+    expect(
+      keywordColumnFilters(
+        { ...NONE, type: ["ownBrand"] },
+        DEFAULT_ZONE_THRESHOLDS,
+      ),
+    ).toEqual([{ id: "type", value: ["ownBrand"] }]);
+    expect(
+      keywordColumnFilters({ ...NONE, type: [] }, DEFAULT_ZONE_THRESHOLDS),
+    ).toEqual([]);
   });
 });
 

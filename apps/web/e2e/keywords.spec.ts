@@ -5,7 +5,7 @@ import { expect, test } from "./session.mts";
 import { hoverForTooltip } from "./hover.mts";
 import { hydrated } from "./hydrated.mts";
 import { seedCookies } from "./routes.mts";
-import { utcDaysAgo } from "./fixtures.mts";
+import { PL_HISTORY_COOKIE, utcDaysAgo } from "./fixtures.mts";
 import { formatDayMonth } from "../src/lib/format";
 
 test("table renders fixture keywords and distinguishes a paused row", async ({
@@ -652,6 +652,85 @@ test("a source facet narrows the rows and shows a removable chip", async ({
 
   await expect(page).not.toHaveURL(/source=/);
   await expect(rows).toHaveCount(7);
+});
+
+test.describe("the type facet", () => {
+  const rowsOf = (page: Page) =>
+    page.getByRole("table", { name: /Tracked keywords/ }).getByRole("row");
+
+  test("counts each class, narrows the rows and writes the url", async ({
+    page,
+  }) => {
+    await page.goto("/apps/app-1/keywords");
+    const rows = rowsOf(page);
+
+    await page.getByRole("button", { name: "Filter by type" }).click();
+    await expect(page.getByRole("option")).toHaveText([
+      /Own brand\s*1/,
+      /Competitor brand\s*1/,
+      /Generic\s*3/,
+    ]);
+    await page.getByRole("option", { name: /Own brand/ }).click();
+
+    await expect(page).toHaveURL(/type=ownBrand/);
+    await expect(rows).toHaveCount(3);
+    await expect(rows.nth(1)).toContainText("focus timer");
+    await expect(page.getByText("1 of 5 keywords")).toBeVisible();
+
+    await page.getByRole("option", { name: /Competitor brand/ }).click();
+    await page.keyboard.press("Escape");
+
+    await expect(page).toHaveURL(/type=ownBrand,competitorBrand/);
+    await expect(rows).toHaveCount(4);
+    await expect(
+      page.getByText("Type: Own brand, Competitor brand"),
+    ).toBeVisible();
+
+    await page
+      .getByRole("button", { name: "Remove Type: Own brand, Competitor brand" })
+      .click();
+
+    await expect(page).not.toHaveURL(/type=/);
+    await expect(rows).toHaveCount(7);
+  });
+
+  test("opens a shared link with the generic rows and the facet ticked", async ({
+    page,
+  }) => {
+    await page.goto("/apps/app-1/keywords?type=generic");
+
+    await expect(rowsOf(page)).toHaveCount(5);
+    await expect(page.getByText("Type: Generic")).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Filter by type, 1 selected" }),
+    ).toBeVisible();
+  });
+
+  test("the phone sheet offers the type facet", async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 800 });
+    await page.goto("/apps/app-1/keywords");
+    await page.waitForLoadState("networkidle");
+
+    await page.getByRole("button", { name: /^Filters/ }).click();
+    await expect(
+      page.getByRole("dialog").getByRole("button", { name: "Filter by type" }),
+    ).toBeVisible();
+  });
+
+  test("a keyword without a class matches no type and shows without one", async ({
+    page,
+    context,
+  }) => {
+    await seedCookies(context, { [PL_HISTORY_COOKIE]: "1" });
+    const table = page.getByRole("table", { name: /Tracked keywords/ });
+
+    await page.goto("/apps/app-1/keywords?country=pl");
+    await expect(table).toContainText("minutnik skupienia");
+
+    await page.goto("/apps/app-1/keywords?country=pl&type=generic");
+    await expect(page.getByText("Type: Generic")).toBeVisible();
+    await expect(table).not.toContainText("minutnik skupienia");
+  });
 });
 
 test("the status filter keeps paused rows and clear all empties the url", async ({

@@ -22,6 +22,7 @@ import {
   POSITION_BANDS,
   positionBandOf,
 } from "@/lib/table/facets";
+import { KEYWORD_CLASS_OPTIONS } from "./keyword-class";
 import type { KeywordTableFeatures } from "./keyword-table-features";
 import {
   STATUS_LABELS,
@@ -130,6 +131,17 @@ export function KeywordFacets({
         value={filters.status}
         options={STATUS_OPTIONS}
         onChange={(status) => void setFilters({ status })}
+      />
+      <FacetFilter
+        title="Type"
+        options={KEYWORD_CLASS_OPTIONS}
+        selected={filters.type}
+        counts={facetCounts(
+          table,
+          "type",
+          (row) => row.original.keywordClass ?? null,
+        )}
+        onChange={(type) => void setFilters({ type })}
       />
       <TagFacet table={table} selected={filters.tag} setFilters={setFilters} />
       <FacetFilter
