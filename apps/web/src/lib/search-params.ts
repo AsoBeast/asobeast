@@ -1,4 +1,5 @@
 import {
+  ALERT_FEED_EVENTS,
   ALL_WORKSPACES,
   ACTION_CATEGORIES,
   ACTION_PRIORITIES,
@@ -482,5 +483,11 @@ export const CHART_SORTS = ["position", "movement", "app", "genre"] as const;
 export const chartTableParsers = {
   sort: parseAsStringLiteral(CHART_SORTS).withDefault("position"),
   dir: sortDirectionParser,
+  q: searchParser,
+};
+
+export const alertFeedParsers = {
+  app: parseAsString,
+  type: parseAsArrayOf(parseAsStringLiteral(ALERT_FEED_EVENTS)).withDefault([]),
   q: searchParser,
 };

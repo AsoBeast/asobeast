@@ -28,6 +28,7 @@ import { GRADES } from "./grade";
 import { KEYWORD_ZONES } from "./keyword-zones";
 import { POSITION_BANDS } from "./table/facets";
 import {
+  alertFeedParsers,
   planParam,
   chartParsers,
   chartTableParsers,
@@ -550,5 +551,19 @@ describe("keywordZone parser", () => {
   it("has no default and is a keyword filter", () => {
     expect(Reflect.get(keywordZoneParser, "defaultValue")).toBeUndefined();
     expect(Object.keys(keywordFilterParsers)).toContain("zone");
+  });
+});
+
+describe("alert feed parsers", () => {
+  it("keeps only the feed events of a type list", () => {
+    expect(
+      alertFeedParsers.type.parse("rank.dropped,nope,chart.entered"),
+    ).toEqual(["rank.dropped", "chart.entered"]);
+  });
+
+  it("defaults to every type, no app and no search", () => {
+    expect(alertFeedParsers.type.parseServerSide(undefined)).toEqual([]);
+    expect(alertFeedParsers.app.parseServerSide(undefined)).toBeNull();
+    expect(alertFeedParsers.q.parseServerSide(undefined)).toBe("");
   });
 });
