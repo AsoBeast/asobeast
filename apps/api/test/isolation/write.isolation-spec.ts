@@ -30,6 +30,26 @@ describe('Write isolation', () => {
     ).resolves.toBe(1);
   });
 
+  it('saves the checklist goal and dismissal of the caller workspace only', async () => {
+    await fixture.a.agent
+      .patch('/workspace/checklist')
+      .send({ goal: 'research_idea', dismissed: true })
+      .expect(200);
+
+    const [a, b] = await Promise.all(
+      [fixture.a.id, fixture.b.id].map((id) =>
+        fixture.db.workspace.findUniqueOrThrow({
+          where: { id },
+          select: { checklistGoal: true, checklistDismissedAt: true },
+        }),
+      ),
+    );
+
+    expect(a.checklistGoal).toBe('research_idea');
+    expect(a.checklistDismissedAt).toBeInstanceOf(Date);
+    expect(b).toEqual({ checklistGoal: null, checklistDismissedAt: null });
+  });
+
   it('stamps the caller workspace on a create that names none', async () => {
     const created = await fixture.a.agent
       .post('/webhooks')

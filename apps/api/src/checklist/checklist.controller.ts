@@ -1,7 +1,8 @@
-import { Controller, Get } from '@nestjs/common';
+import { Body, Controller, Get, Patch } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { WorkspaceChecklist } from '@asobeast/shared';
 import { ChecklistService } from './checklist.service';
+import { UpdateWorkspaceChecklistDto } from './dto/update-workspace-checklist.dto';
 
 @ApiTags('auth')
 @Controller('workspace/checklist')
@@ -16,5 +17,17 @@ export class ChecklistController {
   })
   read(): Promise<WorkspaceChecklist> {
     return this.checklist.read();
+  }
+
+  @Patch()
+  @ApiOperation({
+    summary: 'Choose the goal of this workspace or hide the setup checklist',
+    description:
+      'Changes the fields given and keeps the rest; an empty body changes nothing. goal is improve_rankings, research_idea, use_with_ai or null to clear it, and it orders the checklist. dismissed true hides the checklist for every member and keeps the time of the first dismissal when sent again; false shows it again. Answers the whole checklist. Answers 400 for an unknown goal or a body that is not these two fields, 402 when no plan is in force and 403 to a read scoped token.',
+  })
+  update(
+    @Body() dto: UpdateWorkspaceChecklistDto,
+  ): Promise<WorkspaceChecklist> {
+    return this.checklist.update(dto);
   }
 }

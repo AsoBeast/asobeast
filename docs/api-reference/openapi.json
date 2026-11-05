@@ -5770,6 +5770,37 @@
         "tags": [
           "auth"
         ]
+      },
+      "patch": {
+        "description": "Changes the fields given and keeps the rest; an empty body changes nothing. goal is improve_rankings, research_idea, use_with_ai or null to clear it, and it orders the checklist. dismissed true hides the checklist for every member and keeps the time of the first dismissal when sent again; false shows it again. Answers the whole checklist. Answers 400 for an unknown goal or a body that is not these two fields, 402 when no plan is in force and 403 to a read scoped token.",
+        "operationId": "ChecklistController_update",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateWorkspaceChecklistDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Choose the goal of this workspace or hide the setup checklist",
+        "tags": [
+          "auth"
+        ]
       }
     },
     "/actions": {
@@ -8165,6 +8196,25 @@
           "date",
           "label"
         ]
+      },
+      "UpdateWorkspaceChecklistDto": {
+        "type": "object",
+        "properties": {
+          "goal": {
+            "nullable": true,
+            "enum": [
+              "improve_rankings",
+              "research_idea",
+              "use_with_ai"
+            ],
+            "type": "string",
+            "example": "improve_rankings"
+          },
+          "dismissed": {
+            "type": "boolean",
+            "example": true
+          }
+        }
       },
       "BulkUpdateActionsDto": {
         "type": "object",

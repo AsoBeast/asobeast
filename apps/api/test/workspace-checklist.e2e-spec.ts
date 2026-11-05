@@ -23,6 +23,7 @@ describe('Workspace checklist (e2e)', () => {
   let prisma: PrismaClient;
   let api: Awaited<ReturnType<typeof ownerAgent>>;
   let readToken: string;
+  let writeToken: string;
   let created = 0;
 
   beforeAll(async () => {
@@ -47,6 +48,13 @@ describe('Workspace checklist (e2e)', () => {
       email: 'checklist-reader@example.com',
       workspaceId: DEFAULT_WORKSPACE_ID,
       role: 'member',
+    });
+    writeToken = await seedApiToken(prisma, {
+      seed: 'checklistwrite',
+      email: 'checklist-writer@example.com',
+      workspaceId: DEFAULT_WORKSPACE_ID,
+      role: 'member',
+      scope: 'write',
     });
   });
 
@@ -101,6 +109,16 @@ describe('Workspace checklist (e2e)', () => {
   const read = async () =>
     (await api.get('/workspace/checklist').expect(200))
       .body as WorkspaceChecklist;
+
+  const patch = async (body: object) =>
+    (await api.patch('/workspace/checklist').send(body).expect(200))
+      .body as WorkspaceChecklist;
+
+  const stored = () =>
+    prisma.workspace.findUniqueOrThrow({
+      where: { id: DEFAULT_WORKSPACE_ID },
+      select: { checklistGoal: true, checklistDismissedAt: true },
+    });
 
   const itemOf = async (
     id: WorkspaceChecklistItemId,
@@ -391,5 +409,84 @@ describe('Workspace checklist (e2e)', () => {
 
   it('answers 404 below the route', async () => {
     await api.get('/workspace/checklist/x').expect(404);
+  });
+
+  describe('PATCH', () => {
+    it('saves a goal and answers the reordered list', async () => {
+      const saved = await patch({ goal: 'improve_rankings' });
+
+      expect(saved.goal).toBe('improve_rankings');
+      expect(ids(saved)[1]).toBe('fill_keyword_field');
+      await expect(stored()).resolves.toMatchObject({
+        checklistGoal: 'improve_rankings',
+      });
+      await expect(read()).resolves.toEqual(saved);
+    });
+
+    it('changes and clears the goal', async () => {
+      await patch({ goal: 'use_with_ai' });
+      const cleared = await patch({ goal: null });
+
+      expect(cleared.goal).toBeNull();
+      expect(ids(cleared)).toEqual(EMPTY_ORDER);
+      await expect(stored()).resolves.toMatchObject({ checklistGoal: null });
+    });
+
+    it('hides the list once and shows it again', async () => {
+      const hidden = await patch({ dismissed: true });
+      expect(hidden.dismissedAt).toEqual(expect.any(String));
+
+      const again = await patch({ dismissed: true });
+      expect(again.dismissedAt).toBe(hidden.dismissedAt);
+
+      const shown = await patch({ dismissed: false });
+      expect(shown.dismissedAt).toBeNull();
+      await expect(stored()).resolves.toMatchObject({
+        checklistDismissedAt: null,
+      });
+    });
+
+    it('changes nothing for an empty body', async () => {
+      await patch({ goal: 'research_idea', dismissed: true });
+      const before = await stored();
+
+      const answered = await patch({});
+
+      expect(answered.goal).toBe('research_idea');
+      await expect(stored()).resolves.toEqual(before);
+    });
+
+    it.each([
+      ['an unknown goal', { goal: 'speed' }],
+      ['a goal that is not text', { goal: 3 }],
+      ['a dismissal that is not a boolean', { dismissed: 'yes' }],
+      ['a null dismissal', { dismissed: null }],
+      ['a field it does not take', { workspaceId: 'ws_other' }],
+      ['a goal with a NUL character', { goal: 'research\u0000idea' }],
+    ])('refuses %s with 400', async (_name, body) => {
+      await api.patch('/workspace/checklist').send(body).expect(400);
+
+      await expect(stored()).resolves.toEqual({
+        checklistGoal: null,
+        checklistDismissedAt: null,
+      });
+    });
+
+    it('refuses a read scoped token and takes a write scoped one', async () => {
+      await request(app.getHttpServer())
+        .patch('/workspace/checklist')
+        .set('Authorization', `Bearer ${readToken}`)
+        .send({ dismissed: true })
+        .expect(403);
+
+      await request(app.getHttpServer())
+        .patch('/workspace/checklist')
+        .set('Authorization', `Bearer ${writeToken}`)
+        .send({ goal: 'use_with_ai' })
+        .expect(200);
+      await expect(stored()).resolves.toMatchObject({
+        checklistGoal: 'use_with_ai',
+      });
+    });
   });
 });
