@@ -7,6 +7,7 @@ import {
   IsISO8601,
   IsOptional,
   IsString,
+  Matches,
   Max,
   MaxLength,
   Min,
@@ -19,6 +20,9 @@ import {
 import { commaList } from '../../common/comma-list';
 
 const LIMIT = QUERY_BOUNDS.alertEventsLimit;
+
+const UTC_DATE_OR_INSTANT =
+  /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2}))?$/;
 
 export class ListAlertEventsQueryDto {
   @ApiPropertyOptional({ enum: ALERT_FEED_EVENTS, isArray: true })
@@ -37,6 +41,9 @@ export class ListAlertEventsQueryDto {
   @ApiPropertyOptional({ example: '2026-11-01T00:00:00.000Z' })
   @IsOptional()
   @IsISO8601({ strict: true })
+  @Matches(UTC_DATE_OR_INSTANT, {
+    message: 'since must be a date or an instant with a time zone',
+  })
   since?: string;
 
   @ApiPropertyOptional()
