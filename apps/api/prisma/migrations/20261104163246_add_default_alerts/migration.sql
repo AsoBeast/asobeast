@@ -9,4 +9,4 @@ ALTER TABLE "Webhook" ADD COLUMN     "rankDropThreshold" INTEGER;
 -- AlterTable
 ALTER TABLE "Workspace" ADD COLUMN     "defaultAlertsAt" TIMESTAMP(3);
 
-UPDATE "Workspace" SET "defaultAlertsAt" = CURRENT_TIMESTAMP;
+UPDATE "Workspace" SET "defaultAlertsAt" = "createdAt";

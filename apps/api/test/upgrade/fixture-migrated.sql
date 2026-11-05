@@ -58,4 +58,7 @@ UPDATE "Workspace"
 SET "firstPaidAt" = "subscriptionEventAt"
 WHERE "id" = 'ws_subscribed';
 
+UPDATE "Workspace"
+SET "defaultAlertsAt" = "createdAt";
+
 COMMIT;
