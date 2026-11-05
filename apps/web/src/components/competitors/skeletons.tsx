@@ -56,3 +56,29 @@ export function ComparisonMatrixSkeleton() {
     </Card>
   );
 }
+
+export function GapAnalysisSkeleton() {
+  return (
+    <div className="flex flex-col gap-4" aria-hidden>
+      <div className="flex flex-wrap items-center gap-2">
+        <Skeleton className="h-8 w-96 max-w-full" />
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <Skeleton className="h-8 w-56" />
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="ml-auto h-8 w-40" />
+      </div>
+      <div className="flex flex-col rounded-xl border">
+        <Skeleton className="h-10 rounded-none rounded-t-xl" />
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div key={index} className="flex h-12 items-center gap-4 px-2">
+            <Skeleton className="h-4 flex-1" />
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 w-10" />
+            <Skeleton className="h-4 w-10" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

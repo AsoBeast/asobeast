@@ -79,7 +79,7 @@ test("the comparison matrix sorts by your position both ways", async ({
   const rows = matrixRows(page);
   await expect(rows.nth(1)).toContainText("focus timer");
 
-  const you = page.getByRole("button", { name: "You", exact: true });
+  const you = matrix(page).getByRole("button", { name: "You", exact: true });
   await you.click();
 
   await expect(page).toHaveURL(/sort=you/);
@@ -95,10 +95,9 @@ test("the comparison matrix sorts by your position both ways", async ({
   await expect(rows.nth(1)).toContainText("time blocking");
   await expect(rows.nth(4)).toContainText("focus timer");
   await expect(rows.nth(5)).toContainText("productivity app");
-  await expect(page.getByRole("columnheader", { name: "You" })).toHaveAttribute(
-    "aria-sort",
-    "descending",
-  );
+  await expect(
+    matrix(page).getByRole("columnheader", { name: "You" }),
+  ).toHaveAttribute("aria-sort", "descending");
 });
 
 test("the comparison matrix sorts by a competitor and by popularity", async ({
@@ -115,7 +114,9 @@ test("the comparison matrix sorts by a competitor and by popularity", async ({
   await expect(rows.nth(1)).toContainText("pomodoro");
   await expect(rows.nth(5)).toContainText("time blocking");
 
-  await page.getByRole("button", { name: "Difficulty", exact: true }).click();
+  await matrix(page)
+    .getByRole("button", { name: "Difficulty", exact: true })
+    .click();
   await expect(page).toHaveURL(/sort=difficulty/);
   await expect(rows.nth(1)).toContainText("pomodoro");
   await expect(rows.nth(5)).toContainText("time blocking");

@@ -1,5 +1,6 @@
 export const COMPETITOR_SECTION = {
   tracked: "competitors.tracked",
+  gaps: "competitors.gaps",
   discovery: "competitors.discovery",
   matrix: "competitors.matrix",
 } as const;

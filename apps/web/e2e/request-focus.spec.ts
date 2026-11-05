@@ -1446,3 +1446,31 @@ test("Load more keeps focus while the next alerts load and hands it to the end",
   held.release();
   await expect(page.locator('[data-slot="feed-end"]')).toBeFocused();
 });
+
+test.describe("the keyword breakdown returns focus to the button that opened it", () => {
+  const openerOf = (page: Page, table: RegExp) =>
+    page
+      .getByRole("table", { name: table })
+      .getByRole("button", { name: "pomodoro, why apps rank" })
+      .first();
+
+  for (const [where, table] of [
+    ["a gap row", /^Keyword/],
+    ["the matrix", /compared with each tracked competitor/],
+  ] as const) {
+    test(`from ${where}`, async ({ page }) => {
+      await page.goto("/apps/app-1/competitors?gaps=threats");
+      await page.waitForLoadState("networkidle");
+      const opener = openerOf(page, table);
+
+      await opener.focus();
+      await page.keyboard.press("Enter");
+      await expect(
+        page.getByRole("dialog", { name: "Why apps rank for this keyword" }),
+      ).toBeVisible();
+      await page.keyboard.press("Escape");
+
+      await expect(opener).toBeFocused();
+    });
+  }
+});

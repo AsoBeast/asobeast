@@ -22,6 +22,7 @@ import { formatCountry } from "@/lib/format";
 import { keywordBreakdownOptions } from "@/lib/queries";
 import { breakdownParser } from "@/lib/search-params";
 import { BreakdownAppCard } from "./BreakdownAppCard";
+import { useBreakdownOpener } from "./breakdown-opener";
 import { COMPETITOR_SECTION } from "./competitor-sections";
 
 function BreakdownSkeleton() {
@@ -111,6 +112,7 @@ export function KeywordBreakdownSheet({ appId }: { appId: string }) {
   if (keywordId !== "" && keywordId !== shownId) setShownId(keywordId);
   const read = useBreakdown(appId, shownId);
   const close = () => void setKeywordId(null);
+  const opener = useBreakdownOpener();
 
   return (
     <Sheet
@@ -123,16 +125,17 @@ export function KeywordBreakdownSheet({ appId }: { appId: string }) {
         side="right"
         className="w-full sm:max-w-xl"
         onCloseAutoFocus={(event) => {
-          const opener =
+          const target =
+            opener.connected() ??
             document.querySelector<HTMLButtonElement>(
               `[data-breakdown-keyword="${CSS.escape(shownId)}"]`,
             ) ??
             document.querySelector<HTMLButtonElement>(
               `[data-section="${COMPETITOR_SECTION.matrix}"]`,
             );
-          if (!opener) return;
+          if (!target) return;
           event.preventDefault();
-          opener.focus();
+          target.focus();
         }}
       >
         <SheetHeader>
