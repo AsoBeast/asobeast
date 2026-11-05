@@ -497,6 +497,18 @@ describe('Workspace checklist (e2e)', () => {
       });
     });
 
+    it('keeps the first dismissal when hides arrive together', async () => {
+      const answers = await Promise.all(
+        Array.from({ length: 8 }, () => patch({ dismissed: true })),
+      );
+      const stamped = (await stored()).checklistDismissedAt?.toISOString();
+
+      expect(stamped).toEqual(expect.any(String));
+      expect(new Set(answers.map((answer) => answer.dismissedAt))).toEqual(
+        new Set([stamped]),
+      );
+    });
+
     it('changes nothing for an empty body', async () => {
       await patch({ goal: 'research_idea', dismissed: true });
       const before = await stored();

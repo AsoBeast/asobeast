@@ -32,20 +32,19 @@ export async function describeChecklist(
   );
 }
 
-export function checklistChanges(
-  patch: WorkspaceChecklistUpdateRequest,
-  currentDismissedAt: Date | null,
+export function dismissalWrite(
+  dismissed: boolean,
   now: Date,
-): Prisma.WorkspaceUpdateInput {
-  const changes: Prisma.WorkspaceUpdateInput = {};
-  if (patch.goal !== undefined) changes.checklistGoal = patch.goal;
-  if (patch.dismissed === true && currentDismissedAt === null) {
-    changes.checklistDismissedAt = now;
-  }
-  if (patch.dismissed === false && currentDismissedAt !== null) {
-    changes.checklistDismissedAt = null;
-  }
-  return changes;
+): Pick<Prisma.WorkspaceUpdateManyArgs, 'where' | 'data'> {
+  return dismissed
+    ? {
+        where: { checklistDismissedAt: null },
+        data: { checklistDismissedAt: now },
+      }
+    : {
+        where: { checklistDismissedAt: { not: null } },
+        data: { checklistDismissedAt: null },
+      };
 }
 
 @Injectable()
@@ -64,19 +63,16 @@ export class ChecklistService {
 
   update(patch: WorkspaceChecklistUpdateRequest): Promise<WorkspaceChecklist> {
     return this.prisma.withTransaction(async (tx) => {
-      const current = await tx.workspace.findFirst({
-        select: { checklistDismissedAt: true },
-      });
-      const changes = checklistChanges(
-        patch,
-        current?.checklistDismissedAt ?? null,
-        new Date(),
-      );
-      if (Object.keys(changes).length > 0) {
+      const id = this.workspace.require('a workspace checklist');
+      if (patch.goal !== undefined) {
         await tx.workspace.update({
-          where: { id: this.workspace.require('a workspace checklist') },
-          data: changes,
+          where: { id },
+          data: { checklistGoal: patch.goal },
         });
+      }
+      if (patch.dismissed !== undefined) {
+        const { where, data } = dismissalWrite(patch.dismissed, new Date());
+        await tx.workspace.updateMany({ where: { ...where, id }, data });
       }
       return describeChecklist(tx, this.box !== null);
     });
