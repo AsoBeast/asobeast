@@ -14,6 +14,7 @@ const row = (
   relevance: null,
   tags: [],
   note: null,
+  keywordClass: null,
   createdAt: new Date('2026-10-20T08:30:00.000Z'),
   keyword: {
     text: 'habit tracker',
@@ -680,5 +681,81 @@ describe('heldFacts', () => {
     const held = heldFacts(facts('2026-10-18'), 2, false, today);
     expect(held.daysInTier).toBeNull();
     expect(held.heldTier).toBeNull();
+  });
+});
+
+describe('keyword class', () => {
+  const signals = {
+    suggestReach: 'hit',
+    suggestPrefixLength: 2,
+    suggestPosition: 8,
+    serpRelevance: 0.3,
+    medianRatingCount: 45_000,
+    flags: ['brand'],
+    officialPopularity: null,
+    estimatedTraffic: 6.2,
+    entryDifficulty: null,
+  };
+  const scored = (keywordClass: string | null = null) =>
+    row({
+      keywordClass,
+      keyword: {
+        ...row().keyword,
+        metrics: [{ ...row().keyword.metrics[0], stats: { signals } }],
+      },
+    });
+
+  it('answers neither field when the list did not ask for the class', () => {
+    const item = toTrackedKeywordItem(scored(), facts(''));
+    expect(item).not.toHaveProperty('keywordClass');
+    expect(item).not.toHaveProperty('keywordClassSource');
+  });
+
+  it('answers the detected class from the text, the market and the stored signals', () => {
+    const classOf = jest.fn().mockReturnValue('competitorBrand');
+    const item = toTrackedKeywordItem(scored(), { ...facts(''), classOf });
+    expect(item.keywordClass).toBe('competitorBrand');
+    expect(item.keywordClassSource).toBe('detected');
+    expect(classOf).toHaveBeenCalledWith({
+      text: 'habit tracker',
+      country: 'us',
+      flags: ['brand'],
+      serpRelevance: 0.3,
+    });
+  });
+
+  it('hands an unscored keyword no flags and no relevance', () => {
+    const classOf = jest.fn().mockReturnValue('generic');
+    toTrackedKeywordItem(row({ keyword: { ...row().keyword, metrics: [] } }), {
+      ...facts(''),
+      classOf,
+    });
+    expect(classOf).toHaveBeenCalledWith({
+      text: 'habit tracker',
+      country: 'us',
+      flags: [],
+      serpRelevance: null,
+    });
+  });
+
+  it("answers the owner's stored class without detecting one", () => {
+    const classOf = jest.fn().mockReturnValue('generic');
+    const item = toTrackedKeywordItem(scored('ownBrand'), {
+      ...facts(''),
+      classOf,
+    });
+    expect(item.keywordClass).toBe('ownBrand');
+    expect(item.keywordClassSource).toBe('owner');
+    expect(classOf).not.toHaveBeenCalled();
+  });
+
+  it('ignores a stored value it does not know', () => {
+    const classOf = jest.fn().mockReturnValue('generic');
+    const item = toTrackedKeywordItem(scored('brand'), {
+      ...facts(''),
+      classOf,
+    });
+    expect(item.keywordClass).toBe('generic');
+    expect(item.keywordClassSource).toBe('detected');
   });
 });

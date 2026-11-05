@@ -161,7 +161,7 @@ describe("keywordCsv", () => {
     const header = keywordCsv([keyword("focus timer")], TODAY).split("\r\n")[0];
 
     expect(header.endsWith(",scoreComparability,tags,note,country")).toBe(true);
-    expect(header.split(",")).toHaveLength(33);
+    expect(header.split(",")).toHaveLength(34);
   });
 
   it("joins the tags and leaves a missing tag list and note empty", () => {
@@ -211,7 +211,7 @@ describe("keywordCsv added day", () => {
     expect(
       keywordCsv([keyword("focus timer")], TODAY).split("\r\n")[0],
       TODAY,
-    ).toContain("bucket,relevance,added,");
+    ).toContain("keywordClass,relevance,added,");
   });
 
   it("exports the UTC day the keyword was added", () => {
@@ -291,5 +291,24 @@ describe("keywordCsv insights", () => {
 
   it("leaves the cell empty without an insight", () => {
     expect(cellOf(keyword("focus timer"), "insights")).toBe("");
+  });
+});
+
+describe("keywordCsv keyword class", () => {
+  it("sits right after the bucket", () => {
+    expect(
+      keywordCsv([keyword("focus timer")], TODAY).split("\r\n")[0],
+    ).toContain(",insights,bucket,keywordClass,relevance,");
+  });
+
+  it.each([
+    ["ownBrand", "ownBrand"],
+    ["competitorBrand", "competitorBrand"],
+    ["generic", "generic"],
+    [undefined, ""],
+  ] as const)("exports %s as %j", (keywordClass, expected) => {
+    expect(
+      cellOf({ ...keyword("focus timer"), keywordClass }, "keywordClass"),
+    ).toBe(expected);
   });
 });

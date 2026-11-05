@@ -4,6 +4,7 @@ import type { FilterFn } from "@tanstack/react-table";
 import { ListOrdered } from "lucide-react";
 import type {
   KeywordBucket,
+  KeywordClass,
   KeywordSource,
   Store,
   TrackedKeywordItem,
@@ -75,6 +76,7 @@ export const SELECT_ALL_KEYWORDS = "Select all keywords";
 export const HIDDEN_KEYWORD_COLUMNS = {
   bucket: false,
   status: false,
+  type: false,
   zone: false,
 };
 
@@ -197,6 +199,13 @@ function filterColumns() {
       enableSorting: false,
       filterFn: (row, _id, status: ActivityStatus) =>
         statusFilter(row.original, status),
+    }),
+    columnHelper.accessor((row) => row.keywordClass, {
+      id: "type",
+      enableHiding: false,
+      enableSorting: false,
+      filterFn: (row, id, selected: KeywordClass[]) =>
+        oneOf(row.getValue<KeywordClass | undefined>(id), selected),
     }),
     columnHelper.accessor("keywordId", {
       id: "zone",

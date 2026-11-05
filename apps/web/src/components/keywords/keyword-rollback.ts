@@ -6,12 +6,16 @@ import type {
 function revertedFields(
   update: KeywordUpdateRequest,
   before: TrackedKeywordItem,
-): KeywordUpdateRequest {
+): Partial<TrackedKeywordItem> {
   return {
     ...("active" in update && { active: before.active }),
     ...("relevance" in update && { relevance: before.relevance }),
     ...("tags" in update && { tags: before.tags }),
     ...("note" in update && { note: before.note }),
+    ...("keywordClass" in update && {
+      keywordClass: before.keywordClass,
+      keywordClassSource: before.keywordClassSource,
+    }),
   };
 }
 

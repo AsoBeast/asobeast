@@ -6,6 +6,7 @@ import {
   ACTION_RULES,
   ACTION_STATUSES,
   KEYWORD_BUCKETS,
+  KEYWORD_CLASSES,
   KEYWORD_SORTS,
   KEYWORD_SOURCES,
   KEYWORD_SUGGESTION_STRATEGIES,
@@ -95,11 +96,16 @@ export const keywordTagsParser = parseAsArrayOf(parseAsString).withDefault([]);
 
 export const keywordZoneParser = parseAsStringLiteral(KEYWORD_ZONES);
 
+export const keywordClassParser = parseAsArrayOf(
+  parseAsStringLiteral(KEYWORD_CLASSES),
+).withDefault([]);
+
 export const keywordFilterParsers = {
   q: searchParser,
   source: keywordSourceParser,
   bucket: keywordBucketParser,
   status: keywordStatusParser,
+  type: keywordClassParser,
   pop: gradeFacetParser,
   diff: gradeFacetParser,
   opp: gradeFacetParser,

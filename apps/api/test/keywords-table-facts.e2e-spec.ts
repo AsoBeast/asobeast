@@ -848,4 +848,153 @@ describe('KeywordsController table facts (e2e)', () => {
       expect(JSON.stringify(audit.body)).not.toContain('matchedIn');
     });
   });
+
+  describe('keywordClass', () => {
+    const seedForest = async () => {
+      const primary = await prisma.app.create({
+        data: {
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          store: Store.APP_STORE,
+          storeAppId: '111',
+          country: 'us',
+          name: 'Forest: Stay Focused',
+        },
+      });
+      await prisma.appSnapshot.create({
+        data: {
+          appId: primary.id,
+          title: 'Forest: Stay Focused',
+          description: 'Plant a tree and stay off your phone.',
+          raw: { developer: 'Seekrtech Inc.' },
+        },
+      });
+      const rival = await prisma.app.create({
+        data: {
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          store: Store.APP_STORE,
+          storeAppId: '222',
+          country: 'us',
+          name: 'Todoist - To-Do List',
+          isCompetitor: true,
+          primaryAppId: primary.id,
+        },
+      });
+      return { primary, rival };
+    };
+
+    const scoreSignals = (flags: string[], serpRelevance: number) => ({
+      signals: {
+        suggestReach: 'hit',
+        suggestPrefixLength: 2,
+        suggestPosition: 1,
+        serpRelevance,
+        medianRatingCount: null,
+        flags,
+        officialPopularity: null,
+        estimatedTraffic: null,
+      },
+    });
+
+    const score = (keywordId: string, flags: string[], serpRelevance: number) =>
+      prisma.keywordMetric.create({
+        data: {
+          keywordId,
+          date: utcToday(),
+          traffic: 5,
+          difficulty: 5,
+          stats: scoreSignals(flags, serpRelevance),
+        },
+      });
+
+    const classesOf = async (appId: string) =>
+      Object.fromEntries(
+        (await list(appId)).map((item) => [
+          item.text,
+          [item.keywordClass, item.keywordClassSource],
+        ]),
+      );
+
+    it('reads the own name, the developer and a competitor name from the stored listings', async () => {
+      const { primary } = await seedForest();
+      for (const text of ['forest', 'seekrtech', 'todoist', 'habit tracker']) {
+        await track(primary.id, text);
+      }
+
+      await expect(classesOf(primary.id)).resolves.toEqual({
+        forest: ['ownBrand', 'detected'],
+        seekrtech: ['ownBrand', 'detected'],
+        todoist: ['competitorBrand', 'detected'],
+        'habit tracker': ['generic', 'detected'],
+      });
+    });
+
+    it('reads the title of the keyword market as an own name there only', async () => {
+      const { primary } = await seedForest();
+      await seedListing(
+        primary.id,
+        { title: 'Wald: Konzentration', description: 'Pflanze einen Baum.' },
+        { country: 'de' },
+      );
+      await trackIn(primary.id, 'wald', 'de');
+      await trackIn(primary.id, 'wald', 'us');
+
+      const classes = (await list(primary.id)).map((item) => [
+        item.country,
+        item.keywordClass,
+      ]);
+
+      expect(classes).toEqual(
+        expect.arrayContaining([
+          ['de', 'ownBrand'],
+          ['us', 'generic'],
+        ]),
+      );
+    });
+
+    it('reads a competitor brand as generic once the competitor is removed', async () => {
+      const { primary, rival } = await seedForest();
+      await track(primary.id, 'todoist');
+      await api
+        .delete(`/apps/${primary.id}/competitors/${rival.id}`)
+        .expect(204);
+
+      const [item] = await list(primary.id);
+
+      expect(item.keywordClass).toBe('generic');
+    });
+
+    it('reads a flagged brand search with no name to match as a competitor brand', async () => {
+      const { primary } = await seedForest();
+      await score(await track(primary.id, 'geoguessr'), ['brand'], 0.05);
+
+      const [item] = await list(primary.id);
+
+      expect(item.keywordClass).toBe('competitorBrand');
+    });
+
+    it('reads a name match as generic when most of the page targets the phrase', async () => {
+      const { primary } = await seedForest();
+      await score(await track(primary.id, 'forest'), [], 0.9);
+
+      const [item] = await list(primary.id);
+
+      expect(item.keywordClass).toBe('generic');
+    });
+
+    it('leaves the field off the answers that do not ask for it', async () => {
+      const { primary } = await seedForest();
+      await track(primary.id, 'forest');
+
+      const field = await api
+        .put(`/apps/${primary.id}/keyword-field`)
+        .send({ text: 'todoist' })
+        .expect(200);
+      const audit = await api
+        .get(`/apps/${primary.id}/metadata/audit`)
+        .expect(200);
+
+      expect(JSON.stringify(field.body)).not.toContain('keywordClass');
+      expect(JSON.stringify(audit.body)).not.toContain('keywordClass');
+    });
+  });
 });

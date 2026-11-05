@@ -1,0 +1,48 @@
+---
+title: Keyword types
+sidebarTitle: Keyword types
+description: "Every tracked keyword is an own brand, a competitor brand or a generic search. asobeast decides the type from stored listings and search pages, and you can set it yourself."
+icon: tag
+keywords: ["keyword type","brand","branded","competitor brand","generic","non branded","keywordClass"]
+---
+
+Every tracked keyword has a type. A search for the name of your app behaves nothing like a search for what your app does: you rank first for your own name almost by default, and a competitor's name is a search you rarely win. Splitting the three kinds of search keeps a good position on your own name from hiding a weak one on the searches that bring new users.
+
+## What is a keyword type?
+
+| Type | The keyword holds | Example for an app titled **Forest: Stay Focused** |
+| --- | --- | --- |
+| Own brand | the name of your app or of its developer | `forest`, `forest app` |
+| Competitor brand | the name of one of your competitors, or of another app that dominates the search | `todoist`, `todoist alternative` |
+| Generic | anything else | `focus timer`, `pomodoro` |
+
+## How is the type decided?
+
+asobeast reads the type from data it already stores, every time the keyword list is read, so it follows your listings and scores without a separate job.
+
+1. **Names.** The name of an app is the leading words of its title: the part before the first separator such as `:`, `|` or a spaced dash, or the whole title when it is a single word. A lead of more than three words reads as a description, not a name, and a title of two or more words with no separator gives no name. The developer name, without legal words such as `Inc`, `LLC` or `Labs`, is a second name of your own app, and the leading words of your title in the keyword's own market, such as a localized name, are a third.
+2. **Whole names only.** A keyword holds a name when it contains every word of it, whatever else it holds. Plurals and accents do not matter, so `forests` holds `forest` and `café` holds `cafe`. A keyword made only of filler words such as `the` or `app` is generic.
+3. **Your own names first.** A keyword that holds your name is an own brand even when a competitor uses the same word.
+4. **Category words are not names.** A competitor name whose every word your own listing of that market already uses, or a name two competitors share, even as singular and plural, is a category word and never makes a keyword a brand.
+5. **The search page.** When the last scoring run flagged the search as a brand search, because one app with far more ratings than the rest holds the phrase in its name, the keyword is a competitor brand even when no name you track matches, unless it holds a category word from the step above. When the search was not flagged and at least half of the top 10 titles already target the phrase, the keyword is generic whatever the names say, because nobody types a phrase that half the page uses as a name.
+
+The type is a judgement from stored data. It can change after a listing changes, a competitor is added or removed, or the weekly scoring run reads the search page again.
+
+## Why does a keyword read as a brand or not?
+
+A brand that is also a common word, such as **Notion** or **Things**, is where the rules disagree most. The name says brand, while a search page full of apps that use the word says generic. A keyword your own title describes, such as `focus timer` for **Focus Timer: Pomodoro**, reads as an own brand until the search page shows that most results target it. When the type is wrong for your market, set it yourself.
+
+## Set the type yourself
+
+Open the row menu of a keyword on the keywords page and choose **Keyword type**, then **Own brand**, **Competitor brand** or **Generic**. Your choice wins over the detected type until you choose **Detected automatically**, which goes back to what asobeast reads. The badge of a brand type you set adds "set by you" to the words a screen reader announces and a pointer shows.
+
+Through the API, `PATCH /apps/{id}/keywords/{keywordId}` takes `keywordClass` with `ownBrand`, `competitorBrand` or `generic`, or `null` to go back to the detected type. See the [API reference](/api-reference/introduction).
+
+## Where the type shows
+
+| Place | What you see |
+| --- | --- |
+| Keywords table | a **B** badge on an own brand and a **CB** badge on a competitor brand, after the keyword; a generic keyword has no badge |
+| **Type** filter | keeps the types you tick, written to the page address as `type` |
+| CSV export | the `keywordClass` column, see [Export data](/guides/export-data#export-keywords-to-csv) |
+| API and MCP | `keywordClass` and `keywordClassSource` on every item of `GET /apps/{id}/keywords` and of the [`list_keywords`](/mcp/tools) tool, where the source is `detected` or `owner` |

@@ -1,8 +1,15 @@
 import { getQueueToken } from '@nestjs/bullmq';
+import { Store } from '@prisma/client';
+import { TrackedKeywordItem } from '@asobeast/shared';
 import { Queue } from 'bullmq';
 import request from 'supertest';
 import { QUEUES } from '../../src/jobs/jobs.types';
-import { createIsolationFixture, IsolationFixture } from './fixture';
+import {
+  createIsolationFixture,
+  IsolationFixture,
+  IsolationWorkspace,
+  SHARED_KEYWORD,
+} from './fixture';
 
 describe('Adversarial isolation attempts', () => {
   let fixture: IsolationFixture;
@@ -85,6 +92,56 @@ describe('Adversarial isolation attempts', () => {
       select: { tags: true },
     });
     expect(untouched.tags).toEqual([]);
+  });
+
+  it('never lets a competitor of the other workspace make a keyword a brand', async () => {
+    const classOfShared = async (workspace: IsolationWorkspace) => {
+      const response = await workspace.agent
+        .get(`/apps/${workspace.appleAppId}/keywords`)
+        .expect(200);
+      return (response.body as TrackedKeywordItem[]).find(
+        (item) => item.text === SHARED_KEYWORD && item.country === 'us',
+      )?.keywordClass;
+    };
+    const rival = await fixture.db.app.create({
+      data: {
+        workspaceId: fixture.b.id,
+        store: Store.APP_STORE,
+        storeAppId: 'habit-rival',
+        country: 'us',
+        name: 'Habit Tracker: Daily Goals',
+        isCompetitor: true,
+        primaryAppId: fixture.b.appleAppId,
+      },
+    });
+    try {
+      await expect(classOfShared(fixture.b)).resolves.toBe('competitorBrand');
+      await expect(classOfShared(fixture.a)).resolves.toBe('generic');
+    } finally {
+      await fixture.db.app.delete({ where: { id: rival.id } });
+    }
+  });
+
+  it('refuses to set the class of a keyword tracked by the other workspace', async () => {
+    await fixture.b.agent
+      .patch(`/apps/${fixture.a.appleAppId}/keywords/${fixture.a.keywordId}`)
+      .send({ keywordClass: 'generic' })
+      .expect(404);
+    await fixture.b.agent
+      .patch(
+        `/apps/${fixture.b.appleAppId}/keywords/${fixture.a.privateKeywordId}`,
+      )
+      .send({ keywordClass: 'generic' })
+      .expect(404);
+
+    const untouched = await fixture.db.trackedKeyword.findMany({
+      where: {
+        appId: fixture.a.appleAppId,
+        keywordId: { in: [fixture.a.keywordId, fixture.a.privateKeywordId] },
+      },
+      select: { keywordClass: true },
+    });
+    expect(untouched).toEqual([{ keywordClass: null }, { keywordClass: null }]);
   });
 
   it('refuses to remove a keyword tracked by the other workspace', async () => {

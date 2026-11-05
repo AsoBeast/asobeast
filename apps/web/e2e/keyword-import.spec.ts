@@ -950,7 +950,10 @@ test("P-WEB-20 search folds accents on the keywords page", async ({ page }) => {
   await expect(dialog).toBeHidden();
   await expect(page.getByText("Tracking 6 keywords")).toBeVisible();
   await expect(
-    page.getByRole("cell", { name: "pomodoro", exact: true }),
+    page.getByRole("cell", {
+      name: "pomodoro Competitor brand keyword",
+      exact: true,
+    }),
   ).toBeVisible();
 
   const search = page.getByRole("textbox", { name: "Search keywords" });
@@ -962,6 +965,9 @@ test("P-WEB-20 search folds accents on the keywords page", async ({ page }) => {
       .getByRole("row", { name: /café/ }),
   ).toBeVisible();
   await expect(
-    page.getByRole("cell", { name: "pomodoro", exact: true }),
+    page.getByRole("cell", {
+      name: "pomodoro Competitor brand keyword",
+      exact: true,
+    }),
   ).toBeHidden();
 });

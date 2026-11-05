@@ -11,6 +11,7 @@ import {
 } from "@/lib/keyword-zones";
 import type { keywordFilterParsers } from "@/lib/search-params";
 import { POSITION_BAND_LABELS } from "@/lib/table/facets";
+import { KEYWORD_CLASS_LABELS } from "./keyword-class";
 import { matchesKeywordSearch, parseKeywordSearch } from "./keyword-search";
 import { scorePair } from "@/lib/keyword-scores";
 import type { KeywordTableFeatures } from "./keyword-table-features";
@@ -39,6 +40,7 @@ export function keywordColumnFilters(
     { id: "source", value: filters.source },
     { id: "bucket", value: filters.bucket },
     { id: "status", value: filters.status },
+    { id: "type", value: filters.type },
     { id: "traffic", value: filters.pop },
     { id: "difficulty", value: filters.diff },
     { id: "opportunity", value: filters.opp },
@@ -84,6 +86,12 @@ export function keywordFilterChips(
           label: `Status: ${STATUS_LABELS[filters.status]}`,
         }
       : null,
+    listChip(
+      "type",
+      "Type",
+      filters.type,
+      (value) => KEYWORD_CLASS_LABELS[value],
+    ),
     listChip("pop", "Popularity", filters.pop, gradeLabel),
     listChip("diff", "Difficulty", filters.diff, gradeLabel),
     listChip("opp", "Opportunity", filters.opp, gradeLabel),

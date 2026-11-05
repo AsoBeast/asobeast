@@ -35,7 +35,8 @@ export function KeywordFiltersSheet({
         <SheetHeader>
           <SheetTitle>Filters</SheetTitle>
           <SheetDescription>
-            Narrow the keywords by source, bucket, status, grade and position.
+            Narrow the keywords by source, bucket, status, type, grade and
+            position.
           </SheetDescription>
         </SheetHeader>
         <div className="flex flex-col items-start gap-2">

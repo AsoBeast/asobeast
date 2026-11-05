@@ -90,8 +90,23 @@ describe("importing the keyword export", () => {
     expect(file).toMatchObject({ encoding: "utf-8", delimiter: "," });
     expect(view).toEqual({
       hasHeader: true,
-      mapping: { keyword: 0, country: 32, tags: 30, note: 31 },
+      mapping: { keyword: 0, country: 33, tags: 31, note: 32 },
     });
-    expect(mapped).toMatchObject({ columns: 33, ignoredColumns: 29 });
+    expect(mapped).toMatchObject({ columns: 34, ignoredColumns: 30 });
+  });
+
+  it("U-RT-05 imports an export that carries keyword classes as before", () => {
+    const { mapped } = importedFrom([
+      tracked("forest", { keywordClass: "ownBrand", tags: ["core"] }),
+      tracked("todoist", { keywordClass: "competitorBrand", country: "pl" }),
+      tracked("focus timer", { keywordClass: "generic", note: "May" }),
+    ]);
+
+    expect(mapped.rows).toEqual([
+      { keyword: "forest", country: "us", tags: ["core"] },
+      { keyword: "todoist", country: "pl" },
+      { keyword: "focus timer", country: "us", note: "May" },
+    ]);
+    expect(mapped).toMatchObject({ columns: 34, ignoredColumns: 30 });
   });
 });
