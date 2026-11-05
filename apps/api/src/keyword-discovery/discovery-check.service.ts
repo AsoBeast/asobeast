@@ -1,6 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { isDiscoverySource, RANK_DEPTH } from '@asobeast/shared';
-import { QuotaExceededError } from '../auth/quota.errors';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { DiscoverKeywordPayload } from '../jobs/jobs.types';
 import { listingFacts } from '../keywords/listing-facts';
@@ -9,7 +8,6 @@ import { PrismaService } from '../prisma/prisma.service';
 import { positionsByStoreAppId, SerpCapture } from '../rankings/serp-capture';
 import { toDateKey, utcToday } from '../rankings/rankings.support';
 import { discoveryRelevance } from './discovery-pool';
-import { TrackRow } from './discovery-track-plan';
 import { DiscoveryTracker } from './discovery-tracker.service';
 
 const CHECKED_APP_SELECT = {
@@ -25,8 +23,6 @@ const CHECKED_APP_SELECT = {
 
 @Injectable()
 export class DiscoveryCheck {
-  private readonly logger = new Logger(DiscoveryCheck.name);
-
   constructor(
     private readonly prisma: PrismaService,
     private readonly capture: SerpCapture,
@@ -70,15 +66,17 @@ export class DiscoveryCheck {
       data: { position, depth: RANK_DEPTH, checkedOn: date, relevance },
     });
     if (!app.autoTrackRanked || position === null) return;
-    await this.autoTrack(app, {
-      keywordId,
-      text: keyword.text,
-      country: keyword.country,
-      source,
-      position,
-      depth: RANK_DEPTH,
-      checkedOn: toDateKey(date),
-    });
+    await this.tracker.autoTrack(app, [
+      {
+        keywordId,
+        text: keyword.text,
+        country: keyword.country,
+        source,
+        position,
+        depth: RANK_DEPTH,
+        checkedOn: toDateKey(date),
+      },
+    ]);
   }
 
   private async nobodyTracks(keywordId: string): Promise<boolean> {
@@ -96,16 +94,5 @@ export class DiscoveryCheck {
   private async listingText(app: KeywordApp, market: string): Promise<string> {
     const facts = await listingFacts(this.prisma, app, [market]);
     return facts.marketTexts?.get(market) ?? facts.snapshotText;
-  }
-
-  private async autoTrack(app: KeywordApp, row: TrackRow): Promise<void> {
-    try {
-      await this.tracker.trackRows(app, [row]);
-    } catch (error: unknown) {
-      if (!(error instanceof QuotaExceededError)) throw error;
-      this.logger.log(
-        `kept ${row.keywordId} of ${app.id} as a discovery, because the plan had no keyword room left: ${error.message}`,
-      );
-    }
   }
 }

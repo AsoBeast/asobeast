@@ -210,6 +210,47 @@ describe('KeywordDiscoveryService.list', () => {
     });
   });
 
+  it('keeps a check queued late on Sunday pending after Monday begins', async () => {
+    const monday = new Date('2026-11-09T06:00:00Z');
+    const { service, findMany } = build({
+      queued: [
+        { queuedAt: new Date('2026-11-08T22:00:00Z'), checkedOn: null },
+        { queuedAt: new Date('2026-11-09T01:00:00Z'), checkedOn: null },
+      ],
+    });
+    const { checks } = await service.list('app1', ALL, monday);
+    expect(findMany).toHaveBeenCalledWith({
+      where: {
+        appId: 'app1',
+        queuedAt: { gte: new Date('2026-11-08T06:00:00Z') },
+      },
+      select: { queuedAt: true, checkedOn: true },
+    });
+    expect(checks).toMatchObject({ usedThisWeek: 1, pending: 2 });
+  });
+
+  it('reads only the newest score of each keyword', async () => {
+    const { service, findMany } = build();
+    await service.list('app1', ALL, NOW);
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        select: expect.objectContaining({
+          keyword: {
+            select: {
+              text: true,
+              country: true,
+              metrics: {
+                orderBy: { date: 'desc' },
+                take: 1,
+                select: { traffic: true, difficulty: true },
+              },
+            },
+          },
+        }) as object,
+      }),
+    );
+  });
+
   it('answers no next run while the schedule is off', async () => {
     const { service } = build({ cron: '', store: Store.GOOGLE_PLAY });
     const { checks } = await service.list('app1', ALL, NOW);

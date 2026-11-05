@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import {
   isCheckFresh,
   KeywordDiscoveryTrackResult,
   utcDayOf,
 } from '@asobeast/shared';
+import { QuotaExceededError } from '../auth/quota.errors';
 import { QuotaService } from '../auth/quota.service';
 import { FirstPositionChecks } from '../keywords/first-position-checks';
 import { KeywordTracker } from '../keywords/keyword-tracker';
@@ -30,6 +31,8 @@ const hasKnownPosition =
 
 @Injectable()
 export class DiscoveryTracker {
+  private readonly logger = new Logger(DiscoveryTracker.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly quota: QuotaService,
@@ -70,26 +73,56 @@ export class DiscoveryTracker {
     return { tracked, skipped };
   }
 
+  async autoTrack(
+    app: KeywordApp,
+    rows: readonly TrackRow[],
+    today = utcDayOf(new Date()),
+  ): Promise<void> {
+    if (rows.length === 0) return;
+    const allowed = new Set(
+      (
+        await this.prisma.keywordDiscovery.findMany({
+          where: {
+            appId: app.id,
+            keywordId: { in: rows.map(({ keywordId }) => keywordId) },
+            dismissedAt: null,
+            app: { autoTrackRanked: true },
+          },
+          select: { keywordId: true },
+        })
+      ).map(({ keywordId }) => keywordId),
+    );
+    try {
+      await this.trackRows(
+        app,
+        rows.filter(({ keywordId }) => allowed.has(keywordId)),
+        today,
+      );
+    } catch (error: unknown) {
+      if (!(error instanceof QuotaExceededError)) throw error;
+      this.logger.log(
+        `kept ${rows.length} ranked discoveries of ${app.id} as discoveries, because the plan had no keyword room left: ${error.message}`,
+      );
+    }
+  }
+
   private async recordKnownPositions(
     tx: Prisma.TransactionClient,
     app: KeywordApp,
     rows: readonly KnownPosition[],
   ): Promise<void> {
-    for (const { keywordId, checkedOn, position, depth } of rows) {
-      const date = utcDate(checkedOn);
-      await tx.keywordRanking.upsert({
-        where: { appId_keywordId_date: { appId: app.id, keywordId, date } },
-        create: {
-          appId: app.id,
-          workspaceId: app.workspaceId,
-          keywordId,
-          date,
-          position,
-          depth,
-        },
-        update: { position, depth },
-      });
-    }
+    if (rows.length === 0) return;
+    await tx.keywordRanking.createMany({
+      data: rows.map(({ keywordId, checkedOn, position, depth }) => ({
+        appId: app.id,
+        workspaceId: app.workspaceId,
+        keywordId,
+        date: utcDate(checkedOn),
+        position,
+        depth,
+      })),
+      skipDuplicates: true,
+    });
   }
 
   private async scheduleFollowUps(

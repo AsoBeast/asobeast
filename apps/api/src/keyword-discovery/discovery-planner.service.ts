@@ -27,6 +27,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { captureResolves, DiscoveryCaptures } from './discovery-captures';
 import { discoveryRelevance } from './discovery-pool';
 import { DiscoveryPoolStore } from './discovery-pool-store';
+import { DiscoveryTracker } from './discovery-tracker.service';
 import {
   isDue,
   remainingChecks,
@@ -46,7 +47,7 @@ interface OpenRow extends ScheduledRow {
 
 interface Readings {
   rows: OpenRow[];
-  resolved: number;
+  resolved: OpenRow[];
 }
 
 type ListingTextOf = (market: string) => string;
@@ -59,6 +60,7 @@ export class KeywordDiscoveryPlanner {
     private readonly prisma: PrismaService,
     private readonly pool: DiscoveryPoolStore,
     private readonly captures: DiscoveryCaptures,
+    private readonly tracker: DiscoveryTracker,
     @InjectQueue(QUEUES.APP_STORE) private readonly appStoreQueue: Queue,
     @InjectQueue(QUEUES.GPLAY) private readonly gplayQueue: Queue,
     private readonly workspace: WorkspaceContext,
@@ -72,7 +74,11 @@ export class KeywordDiscoveryPlanner {
     const app = await ensurePrimaryApp(this.prisma, appId, COMPETITOR_REFUSAL);
     const listing = await this.prisma.app.findFirst({
       where: { id: appId },
-      select: { delistedAt: true, unlistedMarkets: true },
+      select: {
+        delistedAt: true,
+        unlistedMarkets: true,
+        autoTrackRanked: true,
+      },
     });
     const today = utcDayOf(now);
     const markets = await loadAppMarkets(this.prisma, app);
@@ -82,16 +88,25 @@ export class KeywordDiscoveryPlanner {
     for (const market of markets) {
       await this.pool.store(app, market, listingTextOf(market), now);
     }
-    const open = await this.openRows(app.id, listing?.unlistedMarkets ?? []);
+    const unlisted = new Set(listing?.unlistedMarkets ?? []);
+    const open = await this.openRows(
+      app.id,
+      markets.filter((market) => !unlisted.has(market)),
+    );
     const { rows, resolved } = await this.applyCaptures(
       app,
       open,
       today,
       listingTextOf,
     );
-    if (listing?.delistedAt) return { queued: 0, resolved };
+    if (listing?.delistedAt) return { queued: 0, resolved: resolved.length };
+    if (listing?.autoTrackRanked) {
+      await this.tracker.autoTrack(app, resolved, today);
+    }
     const selected = await this.reserve(app, rows, now, today);
-    if (selected.length === 0) return { queued: 0, resolved };
+    if (selected.length === 0) {
+      return { queued: 0, resolved: resolved.length };
+    }
     try {
       await spend?.();
       await this.enqueue(app, selected, now);
@@ -99,12 +114,12 @@ export class KeywordDiscoveryPlanner {
       await this.release(app.id, selected, now);
       throw error;
     }
-    return { queued: selected.length, resolved };
+    return { queued: selected.length, resolved: resolved.length };
   }
 
   private async openRows(
     appId: string,
-    unlistedMarkets: readonly string[],
+    markets: readonly string[],
   ): Promise<OpenRow[]> {
     const rows = await this.prisma.keywordDiscovery.findMany({
       where: {
@@ -112,7 +127,7 @@ export class KeywordDiscoveryPlanner {
         dismissedAt: null,
         keyword: {
           tracked: { none: { appId } },
-          country: { notIn: [...unlistedMarkets] },
+          country: { in: [...markets] },
         },
       },
       select: {
@@ -153,7 +168,7 @@ export class KeywordDiscoveryPlanner {
       due.map(({ keywordId }) => keywordId),
       today,
     );
-    let resolved = 0;
+    const resolved: OpenRow[] = [];
     const rows: OpenRow[] = [];
     for (const row of open) {
       const reading = readings.get(row.keywordId);
@@ -161,32 +176,54 @@ export class KeywordDiscoveryPlanner {
         rows.push(row);
         continue;
       }
-      if (captureResolves(reading)) resolved += 1;
-      const read = { ...row, ...reading };
-      rows.push(read);
-      if (
-        row.checkedOn === reading.checkedOn &&
-        row.position === reading.position &&
-        row.depth === reading.depth
-      ) {
+      const read: OpenRow = {
+        ...row,
+        ...reading,
+        relevance: discoveryRelevance(
+          row.source,
+          row.text,
+          listingTextOf(row.country),
+          { position: reading.position, checked: true },
+        ),
+      };
+      if (!(await this.recordReading(app.id, row, read))) {
+        rows.push(row);
         continue;
       }
-      await this.prisma.keywordDiscovery.update({
-        where: { appId_keywordId: { appId: app.id, keywordId: row.keywordId } },
-        data: {
-          position: reading.position,
-          depth: reading.depth,
-          checkedOn: utcDate(reading.checkedOn),
-          relevance: discoveryRelevance(
-            row.source,
-            row.text,
-            listingTextOf(row.country),
-            { position: reading.position, checked: true },
-          ),
-        },
-      });
+      rows.push(read);
+      if (captureResolves(reading)) resolved.push(read);
     }
     return { rows, resolved };
+  }
+
+  private async recordReading(
+    appId: string,
+    stored: OpenRow,
+    read: OpenRow,
+  ): Promise<boolean> {
+    if (
+      stored.checkedOn === read.checkedOn &&
+      stored.position === read.position &&
+      stored.depth === read.depth
+    ) {
+      return true;
+    }
+    const { count } = await this.prisma.keywordDiscovery.updateMany({
+      where: {
+        appId,
+        keywordId: stored.keywordId,
+        position: stored.position,
+        depth: stored.depth,
+        checkedOn: stored.checkedOn === null ? null : utcDate(stored.checkedOn),
+      },
+      data: {
+        position: read.position,
+        depth: read.depth,
+        checkedOn: read.checkedOn === null ? null : utcDate(read.checkedOn),
+        relevance: read.relevance,
+      },
+    });
+    return count > 0;
   }
 
   private reserve(

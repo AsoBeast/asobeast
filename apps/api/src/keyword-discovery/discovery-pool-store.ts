@@ -128,8 +128,12 @@ export class DiscoveryPoolStore {
       if (known.source === row.source && known.relevance === relevance) {
         continue;
       }
-      await this.prisma.keywordDiscovery.update({
-        where: { appId_keywordId: { appId: app.id, keywordId: row.keywordId } },
+      await this.prisma.keywordDiscovery.updateMany({
+        where: {
+          appId: app.id,
+          keywordId: row.keywordId,
+          checkedOn: known.checkedOn,
+        },
         data: { source: row.source, relevance },
       });
     }

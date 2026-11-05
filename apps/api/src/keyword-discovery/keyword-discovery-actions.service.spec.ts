@@ -168,6 +168,14 @@ describe('KeywordDiscoveryActions', () => {
     expect(tracker.trackRows).toHaveBeenCalledTimes(1);
   });
 
+  it('leaves the switch off when tracking is refused', async () => {
+    const { actions, prisma, tracker } = build();
+    const refusal = new Error('keyword room taken');
+    tracker.trackRows.mockRejectedValueOnce(refusal);
+    await expect(actions.updateSettings('app1', true)).rejects.toBe(refusal);
+    expect(prisma.app.update).not.toHaveBeenCalled();
+  });
+
   it('tracks nothing when auto track is switched off', async () => {
     const { actions, tracker } = build();
     await expect(actions.updateSettings('app1', false)).resolves.toEqual({

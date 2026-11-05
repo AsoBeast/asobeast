@@ -74,13 +74,13 @@ A read scoped token can list, a write scoped token can also change. Agents read 
 
 ## Cost and storage
 
-`GET /jobs/budget` reports the weekly searches in a `discovery` block per store and in total, apart from the daily `total`. See [Capacity](/operations/capacity). A discovery that no run has proposed for 60 days is removed. The search results a discovery stores cost about 5 MB per app once retention settles.
+`GET /jobs/budget` reports the weekly searches in a `discovery` block per store and in total, apart from the daily `total`. See [Capacity](/operations/capacity). A discovery that no run has proposed for 60 days is removed, except a dismissed one, which is kept so the phrase stays dismissed. The search results a discovery stores cost about 5 MB per app once retention settles.
 
 ## Troubleshooting
 
 <AccordionGroup>
   <Accordion title="Nothing is listed">
-    The listing of the app may not be captured yet, the store may no longer list the app, or none of the sources holds a phrase. A delisted app keeps its list but gets no searches, and neither does a market where the app is not sold.
+    The listing of the app may not be captured yet, the store may no longer list the app, or none of the sources holds a phrase. A delisted app keeps its list but gets no searches, and neither does a market where the app is not sold or where you no longer track any keyword.
   </Accordion>
   <Accordion title="The last check date never moves">
     The weekly cap may be used, the workspace may be paused (suspended, or without a plan in force on a hosted instance), or `CRON_DISCOVERY` may be empty.

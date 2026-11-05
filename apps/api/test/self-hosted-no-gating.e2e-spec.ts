@@ -258,6 +258,11 @@ describe('Self hosted deployments carry no plan gating', () => {
     for (let again = 0; again < 15; again += 1) {
       expect((await refresh()).body).toEqual({ queued: 0, resolved: 0 });
     }
+    await prisma.keywordDiscovery.updateMany({
+      where: { appId: discoveryApp.id, queuedAt: { not: null } },
+      data: { checkedOn: new Date(), depth: 200 },
+    });
+    expect((await refresh()).body).toEqual({ queued: 0, resolved: 0 });
   });
 
   it('serves a personal api token the same surface as a session', async () => {

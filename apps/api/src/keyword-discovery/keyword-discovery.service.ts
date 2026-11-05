@@ -22,6 +22,7 @@ import { weekStartOf } from './discovery-schedule';
 import {
   discoveryStateOf,
   isPending,
+  pendingWindowStart,
   rankDiscoveries,
   unfitCount,
 } from './discovery-state';
@@ -179,9 +180,14 @@ export class KeywordDiscoveryService {
     app: KeywordApp,
     now: Date,
   ): Promise<KeywordDiscoveryChecks> {
+    const weekStart = weekStartOf(now);
+    const windowStart = pendingWindowStart(now);
     const [queued, newest] = await Promise.all([
       this.prisma.keywordDiscovery.findMany({
-        where: { appId: app.id, queuedAt: { gte: weekStartOf(now) } },
+        where: {
+          appId: app.id,
+          queuedAt: { gte: windowStart < weekStart ? windowStart : weekStart },
+        },
         select: { queuedAt: true, checkedOn: true },
       }),
       this.prisma.keywordDiscovery.aggregate({
@@ -192,7 +198,9 @@ export class KeywordDiscoveryService {
     const cron = this.config.get('CRON_DISCOVERY', { infer: true });
     return {
       perWeek: DISCOVERY_CHECKS_PER_RUN[app.store],
-      usedThisWeek: queued.length,
+      usedThisWeek: queued.filter(
+        ({ queuedAt }) => queuedAt !== null && queuedAt >= weekStart,
+      ).length,
       pending: queued.filter((row) =>
         isPending(
           { queuedAt: row.queuedAt, checkedOn: dayOf(row.checkedOn) },

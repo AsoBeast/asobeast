@@ -115,15 +115,14 @@ export class KeywordDiscoveryActions {
     autoTrackRanked: boolean,
   ): Promise<KeywordDiscoverySettings> {
     const app = await this.primaryApp(appId);
+    const result = autoTrackRanked
+      ? await this.trackOpen(app, { position: { not: null } })
+      : { tracked: 0, skipped: 0 };
     await this.prisma.app.update({
       where: { id: appId },
       data: { autoTrackRanked },
     });
-    if (!autoTrackRanked) return { autoTrackRanked, tracked: 0, skipped: 0 };
-    return {
-      autoTrackRanked,
-      ...(await this.trackOpen(app, { position: { not: null } })),
-    };
+    return { autoTrackRanked, ...result };
   }
 
   private async trackOpen(

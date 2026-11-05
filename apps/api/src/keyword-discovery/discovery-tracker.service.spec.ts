@@ -29,7 +29,7 @@ const row = (overrides: Partial<TrackRow> = {}): TrackRow => ({
   ...overrides,
 });
 
-interface RankingCreate {
+interface RankingRow {
   keywordId: string;
   position: number | null;
   depth: number;
@@ -41,13 +41,16 @@ const build = (created = 1, limit: number | null = null) => {
       createMany: jest.fn().mockResolvedValue({ count: created }),
     },
     keywordRanking: {
-      upsert: jest
-        .fn<Promise<unknown>, [{ create: RankingCreate }]>()
-        .mockResolvedValue({}),
+      createMany: jest
+        .fn<Promise<unknown>, [{ data: RankingRow[] }]>()
+        .mockResolvedValue({ count: 0 }),
     },
   };
   const prisma = {
     trackedKeyword: { findMany: jest.fn().mockResolvedValue([]) },
+    keywordDiscovery: {
+      findMany: jest.fn().mockResolvedValue([{ keywordId: 'k1' }]),
+    },
   };
   const quota = {
     usage: jest.fn().mockResolvedValue({
@@ -70,7 +73,7 @@ const build = (created = 1, limit: number | null = null) => {
     checks as unknown as FirstPositionChecks,
     listings as unknown as MarketListingRequests,
   );
-  return { service, tx, quota, tracker, checks, listings };
+  return { service, prisma, tx, quota, tracker, checks, listings };
 };
 
 describe('DiscoveryTracker', () => {
@@ -116,31 +119,28 @@ describe('DiscoveryTracker', () => {
       ],
       TODAY,
     );
-    expect(tx.keywordRanking.upsert).toHaveBeenCalledTimes(2);
-    expect(tx.keywordRanking.upsert).toHaveBeenCalledWith({
-      where: {
-        appId_keywordId_date: {
+    expect(tx.keywordRanking.createMany).toHaveBeenCalledTimes(1);
+    expect(tx.keywordRanking.createMany).toHaveBeenCalledWith({
+      data: [
+        {
           appId: 'app1',
+          workspaceId: 'ws',
           keywordId: 'k1',
           date: new Date('2026-11-05T00:00:00.000Z'),
+          position: 4,
+          depth: 50,
         },
-      },
-      create: {
-        appId: 'app1',
-        workspaceId: 'ws',
-        keywordId: 'k1',
-        date: new Date('2026-11-05T00:00:00.000Z'),
-        position: 4,
-        depth: 50,
-      },
-      update: { position: 4, depth: 50 },
+        {
+          appId: 'app1',
+          workspaceId: 'ws',
+          keywordId: 'k2',
+          date: new Date('2026-11-04T00:00:00.000Z'),
+          position: null,
+          depth: 200,
+        },
+      ],
+      skipDuplicates: true,
     });
-    expect(
-      tx.keywordRanking.upsert.mock.calls.map(
-        ([{ create }]) =>
-          `${create.keywordId}:${create.position}:${create.depth}`,
-      ),
-    ).toEqual(['k1:4:50', 'k2:null:200']);
     expect(checks.schedule).toHaveBeenCalledWith('app1', ['k3', 'k4']);
     expect(tracker.enqueueFirstScores).toHaveBeenCalledWith(
       ['k1', 'k2', 'k3', 'k4'],
@@ -204,5 +204,63 @@ describe('DiscoveryTracker', () => {
       skipped: 0,
     });
     expect(quota.admitKeywordMarkets).not.toHaveBeenCalled();
+  });
+
+  describe('autoTrack', () => {
+    const refusal = () =>
+      new QuotaExceededError({
+        resource: 'keywordMarkets',
+        plan: 'indie',
+        limit: 1,
+        used: 1,
+        requested: 1,
+      } as never);
+
+    it('tracks only the rows still open while the switch is on', async () => {
+      const { service, prisma, tx } = build(1);
+      await service.autoTrack(
+        app,
+        [row(), row({ keywordId: 'k2', text: 'dismissed meanwhile' })],
+        TODAY,
+      );
+      expect(prisma.keywordDiscovery.findMany).toHaveBeenCalledWith({
+        where: {
+          appId: 'app1',
+          keywordId: { in: ['k1', 'k2'] },
+          dismissedAt: null,
+          app: { autoTrackRanked: true },
+        },
+        select: { keywordId: true },
+      });
+      expect(tx.trackedKeyword.createMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: [expect.objectContaining({ keywordId: 'k1' })],
+        }),
+      );
+    });
+
+    it('tracks nothing once the switch was turned off', async () => {
+      const { service, prisma, quota } = build(1);
+      prisma.keywordDiscovery.findMany.mockResolvedValueOnce([]);
+      await service.autoTrack(app, [row()], TODAY);
+      expect(quota.admitKeywordMarkets).not.toHaveBeenCalled();
+    });
+
+    it('keeps the rows as discoveries when the plan has no keyword room left', async () => {
+      const { service, quota } = build(1);
+      quota.admitKeywordMarkets.mockRejectedValueOnce(refusal());
+      await expect(
+        service.autoTrack(app, [row()], TODAY),
+      ).resolves.toBeUndefined();
+    });
+
+    it('rethrows any other failure', async () => {
+      const { service, quota } = build(1);
+      const failure = new Error('database down');
+      quota.admitKeywordMarkets.mockRejectedValueOnce(failure);
+      await expect(service.autoTrack(app, [row()], TODAY)).rejects.toBe(
+        failure,
+      );
+    });
   });
 });

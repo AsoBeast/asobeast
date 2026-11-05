@@ -92,6 +92,7 @@ export class KeywordDiscoveryController {
   }
 
   @Patch('keyword-discoveries/settings')
+  @QueuesWork()
   @ApiOperation({
     summary: 'Change the keyword discovery settings of an app',
     description:

@@ -67,11 +67,14 @@ export const unfitCount = (
   autoTrackRanked: boolean,
 ): number => (autoTrackRanked ? counts.ranked : 0);
 
+export const pendingWindowStart = (now: Date): Date =>
+  new Date(now.getTime() - PENDING_WINDOW_MS);
+
 export function isPending(
   row: { queuedAt: Date | null; checkedOn: string | null },
   now: Date,
 ): boolean {
   if (row.queuedAt === null) return false;
-  if (now.getTime() - row.queuedAt.getTime() > PENDING_WINDOW_MS) return false;
+  if (row.queuedAt < pendingWindowStart(now)) return false;
   return row.checkedOn === null || row.checkedOn < utcDayOf(row.queuedAt);
 }

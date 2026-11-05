@@ -6,6 +6,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CaptureReading, DiscoveryCaptures } from './discovery-captures';
 import { KeywordDiscoveryPlanner } from './discovery-planner.service';
 import { DiscoveryPoolStore } from './discovery-pool-store';
+import { DiscoveryTracker } from './discovery-tracker.service';
 
 jest.mock('../keywords/app-markets', () => ({
   loadAppMarkets: jest.fn(() => Promise.resolve(['us', 'de'])),
@@ -52,6 +53,7 @@ interface BuildOptions {
   readings?: Map<string, CaptureReading>;
   delistedAt?: Date | null;
   unlistedMarkets?: string[];
+  autoTrackRanked?: boolean;
 }
 
 const build = (options: BuildOptions = {}) => {
@@ -78,12 +80,12 @@ const build = (options: BuildOptions = {}) => {
         isCompetitor: false,
         delistedAt: options.delistedAt ?? null,
         unlistedMarkets: options.unlistedMarkets ?? [],
+        autoTrackRanked: options.autoTrackRanked ?? false,
       }),
     },
     keywordDiscovery: {
       findMany: jest.fn().mockResolvedValue(options.rows ?? []),
-      update: jest.fn().mockResolvedValue({}),
-      updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
     withTransaction: jest.fn((run: (client: typeof tx) => Promise<unknown>) =>
       run(tx),
@@ -93,17 +95,28 @@ const build = (options: BuildOptions = {}) => {
   const captures = {
     read: jest.fn().mockResolvedValue(options.readings ?? new Map()),
   };
+  const tracker = { autoTrack: jest.fn().mockResolvedValue(undefined) };
   const appStoreQueue = { addBulk: jest.fn().mockResolvedValue([]) };
   const gplayQueue = { addBulk: jest.fn().mockResolvedValue([]) };
   const planner = new KeywordDiscoveryPlanner(
     prisma as unknown as PrismaService,
     pool as unknown as DiscoveryPoolStore,
     captures as unknown as DiscoveryCaptures,
+    tracker as unknown as DiscoveryTracker,
     appStoreQueue as unknown as Queue,
     gplayQueue as unknown as Queue,
     { correlationId: 'corr' } as unknown as WorkspaceContext,
   );
-  return { planner, prisma, tx, pool, captures, appStoreQueue, gplayQueue };
+  return {
+    planner,
+    prisma,
+    tx,
+    pool,
+    captures,
+    tracker,
+    appStoreQueue,
+    gplayQueue,
+  };
 };
 
 const queuedIds = (queue: { addBulk: jest.Mock }): string[] => {
@@ -132,7 +145,7 @@ describe('KeywordDiscoveryPlanner', () => {
     );
   });
 
-  it('reads only open rows of listed markets', async () => {
+  it('reads only open rows of the markets the app is listed in', async () => {
     const { planner, prisma } = build({ unlistedMarkets: ['de'] });
     await planner.plan('app1', undefined, NOW);
     expect(prisma.keywordDiscovery.findMany).toHaveBeenCalledWith(
@@ -142,7 +155,7 @@ describe('KeywordDiscoveryPlanner', () => {
           dismissedAt: null,
           keyword: {
             tracked: { none: { appId: 'app1' } },
-            country: { notIn: ['de'] },
+            country: { in: ['us'] },
           },
         },
       }),
@@ -159,8 +172,14 @@ describe('KeywordDiscoveryPlanner', () => {
     });
     const result = await planner.plan('app1', undefined, NOW);
     expect(result).toEqual({ queued: 1, resolved: 1 });
-    expect(prisma.keywordDiscovery.update).toHaveBeenCalledWith({
-      where: { appId_keywordId: { appId: 'app1', keywordId: 'found' } },
+    expect(prisma.keywordDiscovery.updateMany).toHaveBeenCalledWith({
+      where: {
+        appId: 'app1',
+        keywordId: 'found',
+        position: null,
+        depth: null,
+        checkedOn: null,
+      },
       data: expect.objectContaining({
         position: 4,
         depth: 50,
@@ -168,6 +187,68 @@ describe('KeywordDiscoveryPlanner', () => {
       }) as object,
     });
     expect(queuedIds(appStoreQueue)).toEqual(['absent']);
+  });
+
+  it('keeps a row a concurrent check already wrote and still queues nothing twice', async () => {
+    const { planner, prisma, appStoreQueue } = build({
+      rows: [open('raced')],
+      readings: new Map([
+        ['raced', { position: null, depth: 50, checkedOn: '2026-11-11' }],
+      ]),
+    });
+    prisma.keywordDiscovery.updateMany.mockResolvedValueOnce({ count: 0 });
+    await expect(planner.plan('app1', undefined, NOW)).resolves.toEqual({
+      queued: 1,
+      resolved: 0,
+    });
+    expect(queuedIds(appStoreQueue)).toEqual(['raced']);
+  });
+
+  it('orders the checks by the relevance a capture reading recalculated', async () => {
+    const { planner, appStoreQueue } = build({
+      rows: [
+        open('was ranked', {
+          source: 'reviews',
+          relevance: 95,
+          position: 3,
+          depth: 200,
+          checkedOn: new Date('2026-11-01T00:00:00Z'),
+        }),
+        open('missed today', {
+          relevance: 80,
+          depth: 50,
+          checkedOn: new Date('2026-11-11T00:00:00Z'),
+        }),
+      ],
+      queuedThisWeek: 39,
+      readings: new Map([
+        ['was ranked', { position: null, depth: 50, checkedOn: '2026-11-11' }],
+      ]),
+    });
+    await planner.plan('app1', undefined, NOW);
+    expect(queuedIds(appStoreQueue)).toEqual(['missed today']);
+  });
+
+  it('auto tracks the rows a fresh capture ranked while auto track is on', async () => {
+    const reading = { position: 4, depth: 50, checkedOn: '2026-11-11' };
+    const on = build({
+      rows: [open('found'), open('other')],
+      readings: new Map([['found', reading]]),
+      autoTrackRanked: true,
+    });
+    await on.planner.plan('app1', undefined, NOW);
+    expect(on.tracker.autoTrack).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'app1' }),
+      [expect.objectContaining({ keywordId: 'found', ...reading })],
+      '2026-11-11',
+    );
+
+    const off = build({
+      rows: [open('found')],
+      readings: new Map([['found', reading]]),
+    });
+    await off.planner.plan('app1', undefined, NOW);
+    expect(off.tracker.autoTrack).not.toHaveBeenCalled();
   });
 
   it('queues nothing and spends nothing for a delisted app', async () => {

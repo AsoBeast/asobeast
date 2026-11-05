@@ -58,8 +58,7 @@ const build = (
         )
         .mockResolvedValueOnce(options.stored ?? []),
       createMany: jest.fn().mockResolvedValue({ count: 0 }),
-      update: jest.fn().mockResolvedValue({}),
-      updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
   };
   const candidates = {
@@ -161,9 +160,9 @@ describe('DiscoveryPoolStore', () => {
     );
     await store.store(app, 'us', '', NOW);
     expect(prisma.keywordDiscovery.createMany).not.toHaveBeenCalled();
-    expect(prisma.keywordDiscovery.update).toHaveBeenCalledTimes(1);
-    expect(prisma.keywordDiscovery.update).toHaveBeenCalledWith({
-      where: { appId_keywordId: { appId: 'app1', keywordId: 'id:streaks' } },
+    expect(prisma.keywordDiscovery.updateMany).toHaveBeenCalledTimes(2);
+    expect(prisma.keywordDiscovery.updateMany).toHaveBeenCalledWith({
+      where: { appId: 'app1', keywordId: 'id:streaks', checkedOn: null },
       data: { source: 'subtitle', relevance: 90 },
     });
   });
@@ -184,7 +183,7 @@ describe('DiscoveryPoolStore', () => {
       },
     );
     await store.store(app, 'us', '', NOW);
-    expect(prisma.keywordDiscovery.update).not.toHaveBeenCalled();
+    expect(prisma.keywordDiscovery.updateMany).toHaveBeenCalledTimes(1);
   });
 
   it('writes nothing for an empty pool', async () => {

@@ -1,5 +1,4 @@
 import { Store } from '@prisma/client';
-import { QuotaExceededError } from '../auth/quota.errors';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { utcToday } from '../rankings/rankings.support';
 import { SerpCapture } from '../rankings/serp-capture';
@@ -71,7 +70,7 @@ const build = (fixture: Fixture = {}) => {
     store: jest.fn().mockResolvedValue([]),
   };
   const tracker = {
-    trackRows: jest.fn().mockResolvedValue({ tracked: 1, skipped: 0 }),
+    autoTrack: jest.fn().mockResolvedValue(undefined),
   };
   const crossTenant = {
     becauseThisWorkIsNotOwnedByOneWorkspace: jest.fn(
@@ -194,8 +193,8 @@ describe('DiscoveryCheck', () => {
   it('tracks a ranked discovery when auto track is on', async () => {
     const { check, tracker, row } = build({ autoTrackRanked: true });
     await check.run(payload, false);
-    expect(tracker.trackRows).toHaveBeenCalledTimes(1);
-    expect(tracker.trackRows).toHaveBeenCalledWith(row.app, [
+    expect(tracker.autoTrack).toHaveBeenCalledTimes(1);
+    expect(tracker.autoTrack).toHaveBeenCalledWith(row.app, [
       {
         keywordId: 'k1',
         text: 'habit tracker',
@@ -211,32 +210,18 @@ describe('DiscoveryCheck', () => {
   it('tracks nothing while auto track is off or the app was not found', async () => {
     const off = build();
     await off.check.run(payload, false);
-    expect(off.tracker.trackRows).not.toHaveBeenCalled();
+    expect(off.tracker.autoTrack).not.toHaveBeenCalled();
 
     const unranked = build({ autoTrackRanked: true });
     unranked.capture.search.mockResolvedValueOnce(results(60));
     await unranked.check.run(payload, false);
-    expect(unranked.tracker.trackRows).not.toHaveBeenCalled();
+    expect(unranked.tracker.autoTrack).not.toHaveBeenCalled();
   });
 
-  it('keeps the discovery when the plan has no keyword room left', async () => {
-    const { check, tracker } = build({ autoTrackRanked: true });
-    tracker.trackRows.mockRejectedValueOnce(
-      new QuotaExceededError({
-        resource: 'keywordMarkets',
-        plan: 'indie',
-        limit: 1,
-        used: 1,
-        requested: 1,
-      } as never),
-    );
-    await expect(check.run(payload, false)).resolves.toBeUndefined();
-  });
-
-  it('rethrows any other failure of auto track', async () => {
+  it('lets a failure of auto track fail the check', async () => {
     const { check, tracker } = build({ autoTrackRanked: true });
     const failure = new Error('database down');
-    tracker.trackRows.mockRejectedValueOnce(failure);
+    tracker.autoTrack.mockRejectedValueOnce(failure);
     await expect(check.run(payload, false)).rejects.toBe(failure);
   });
 
