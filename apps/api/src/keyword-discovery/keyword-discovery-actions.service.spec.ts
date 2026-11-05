@@ -40,6 +40,7 @@ const build = (found: object | null = { ...app, isCompetitor: false }) => {
   };
   const tracker = {
     trackRows: jest.fn().mockResolvedValue({ tracked: 1, skipped: 0 }),
+    autoTrack: jest.fn().mockResolvedValue(undefined),
   };
   const planner = {
     plan: jest.fn().mockResolvedValue({ queued: 3, resolved: 1 }),
@@ -174,6 +175,15 @@ describe('KeywordDiscoveryActions', () => {
     tracker.trackRows.mockRejectedValueOnce(refusal);
     await expect(actions.updateSettings('app1', true)).rejects.toBe(refusal);
     expect(prisma.app.update).not.toHaveBeenCalled();
+  });
+
+  it('hands the rows a check ranked while the switch was turned on to auto track', async () => {
+    const { actions, tracker } = build();
+    await actions.updateSettings('app1', true);
+    expect(tracker.autoTrack).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'app1' }),
+      [expect.objectContaining({ keywordId: 'k1', position: 4 })],
+    );
   });
 
   it('tracks nothing when auto track is switched off', async () => {

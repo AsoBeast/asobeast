@@ -122,6 +122,9 @@ export class KeywordDiscoveryActions {
       where: { id: appId },
       data: { autoTrackRanked },
     });
+    if (autoTrackRanked) {
+      await this.tracker.autoTrack(app, await this.openRanked(app));
+    }
     return { autoTrackRanked, ...result };
   }
 
@@ -130,6 +133,21 @@ export class KeywordDiscoveryActions {
     filter: Prisma.KeywordDiscoveryWhereInput,
     country?: string,
   ): Promise<KeywordDiscoveryTrackResult> {
+    return this.tracker.trackRows(
+      app,
+      await this.openRows(app, filter, country),
+    );
+  }
+
+  private openRanked(app: KeywordApp): Promise<TrackRow[]> {
+    return this.openRows(app, { position: { not: null } });
+  }
+
+  private async openRows(
+    app: KeywordApp,
+    filter: Prisma.KeywordDiscoveryWhereInput,
+    country?: string,
+  ): Promise<TrackRow[]> {
     const rows = await this.prisma.keywordDiscovery.findMany({
       where: {
         ...filter,
@@ -143,7 +161,7 @@ export class KeywordDiscoveryActions {
       orderBy: [{ relevance: 'desc' }, { keyword: { text: 'asc' } }],
       select: TRACK_ROW_SELECT,
     });
-    return this.tracker.trackRows(app, trackRowsOf(rows));
+    return trackRowsOf(rows);
   }
 
   private primaryApp(appId: string): Promise<KeywordApp> {
