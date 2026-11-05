@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
+import { KeywordsModule } from '../keywords/keywords.module';
 import { AnalyticsController } from './analytics.controller';
 import { AnalyticsService } from './analytics.service';
+import { BrandKeywords } from './brand-keywords';
 import { DigestService } from './digest.service';
 import { PortfolioController } from './portfolio.controller';
 import { PortfolioInsightsService } from './portfolio-insights.service';
@@ -9,6 +11,7 @@ import { PortfolioService } from './portfolio.service';
 import { ShareOfVoiceService } from './share-of-voice.service';
 
 @Module({
+  imports: [KeywordsModule],
   controllers: [AnalyticsController, PortfolioController],
   providers: [
     AnalyticsService,
@@ -17,6 +20,7 @@ import { ShareOfVoiceService } from './share-of-voice.service';
     PortfolioSignals,
     PortfolioInsightsService,
     ShareOfVoiceService,
+    BrandKeywords,
   ],
   exports: [AnalyticsService, DigestService, PortfolioService],
 })

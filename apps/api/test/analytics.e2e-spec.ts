@@ -552,6 +552,82 @@ describe('AnalyticsController (e2e)', () => {
       .expect(400);
   });
 
+  const classify = async (
+    appId: string,
+    classes: Record<string, 'ownBrand' | 'competitorBrand' | 'generic'>,
+  ) => {
+    for (const [text, keywordClass] of Object.entries(classes)) {
+      await prisma.trackedKeyword.updateMany({
+        where: { appId, keyword: { text } },
+        data: { keywordClass },
+      });
+    }
+  };
+
+  const genericExcept = (
+    brands: Record<string, 'ownBrand' | 'competitorBrand'>,
+  ) =>
+    Object.fromEntries(
+      SEEDED_TRAFFIC.map(([text]) => [text, brands[text] ?? 'generic']),
+    );
+
+  const nonBrandedVisibility = (positions: (number | null)[]) =>
+    visibility(
+      SEEDED_TRAFFIC.flatMap(([text, traffic], index) =>
+        text === 'habit' ? [] : [{ traffic, position: positions[index] }],
+      ),
+    );
+
+  it('leaves brand keywords out of the non branded share of voice', async () => {
+    const id = await seed();
+    await addRival(id, rivalChecks(D0, [3, null, 5, 2]));
+    await classify(id, genericExcept({ habit: 'ownBrand' }));
+
+    const summary = await summaryOf(id);
+    const history = await historyOf(id, { compare: 'competitors' });
+
+    const expected = shareOf(nonBrandedVisibility([11, 14, null, 1]), [
+      nonBrandedVisibility([3, null, 5, 2]),
+    ]);
+    expect(summary.nonBrandedShareOfVoice).toEqual({
+      current: expected,
+      delta7d: null,
+      competitors: 1,
+    });
+    expect(summary.nonBrandedShareOfVoice?.current).not.toBe(
+      summary.shareOfVoice?.current,
+    );
+    expect(history.nonBrandedShareOfVoice).toEqual([
+      { date: '2026-06-30', share: expected, competitors: 1 },
+    ]);
+  });
+
+  it('answers the same two shares when every keyword is generic', async () => {
+    const id = await seed();
+    await addRival(id, rivalChecks(D0, [3, null, 5, 2]));
+    await classify(id, genericExcept({}));
+
+    const summary = await summaryOf(id);
+
+    expect(summary.nonBrandedShareOfVoice).toEqual(summary.shareOfVoice);
+  });
+
+  it('measures no non branded share when every keyword is a brand', async () => {
+    const id = await seed();
+    await addRival(id, rivalChecks(D0, [3, null, 5, 2]));
+    await classify(
+      id,
+      Object.fromEntries(SEEDED_TRAFFIC.map(([text]) => [text, 'ownBrand'])),
+    );
+
+    expect((await summaryOf(id)).nonBrandedShareOfVoice).toEqual({
+      current: null,
+      delta7d: null,
+      competitors: 0,
+      reason: 'nobodyRanks',
+    });
+  });
+
   it('narrows the summary to the keywords of one market', async () => {
     const id = await seed();
     await seedGermanMarket(id);

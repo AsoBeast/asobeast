@@ -135,7 +135,11 @@ export class AnalyticsService {
         loadKeywordFieldIndex(this.prisma, appId),
       ]);
     const covered = everyMarket ?? market;
-    const share = await this.shares.summary(competitorIds, market);
+    const share = await this.shares.summary(
+      { appId, country },
+      competitorIds,
+      market,
+    );
 
     return {
       visibility: this.visibilitySummary(market.rows, market.referenceDate),
@@ -181,10 +185,12 @@ export class AnalyticsService {
     if (query.compare !== 'competitors') {
       return { points };
     }
-    return {
-      points,
-      ...(await this.shares.history(appId, rows, { from, to })),
-    };
+    const shares = await this.shares.history(
+      { appId, country: query.country },
+      rows,
+      { from, to },
+    );
+    return { points, ...shares };
   }
 
   async rankDistributionHistory(
