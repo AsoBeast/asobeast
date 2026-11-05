@@ -17,7 +17,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { formatDate, formatMonth, formatNumber, pluralize } from "@/lib/format";
-import { isChecking, staleCheckDay } from "@/lib/keyword-checks";
+import { isChecking, lostPosition, staleCheckDay } from "@/lib/keyword-checks";
 import { tagsLabel, visibleTags } from "@/lib/keyword-tags";
 import { PositionReadout } from "./PositionReadout";
 import {
@@ -102,7 +102,12 @@ export function PositionCell({
   const staleOn = staleCheckDay(keyword, today);
   return (
     <span className="inline-flex items-center gap-1">
-      <PositionReadout keyword={keyword} label={label} staleOn={staleOn} />
+      <PositionReadout
+        keyword={keyword}
+        label={label}
+        staleOn={staleOn}
+        lost={lostPosition(keyword)}
+      />
       <PositionHistoryPopover
         keyword={keyword}
         label={label}

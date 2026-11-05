@@ -17,6 +17,29 @@ export const staleCheckDay = (
     ? row.latestCheckedOn
     : null;
 
+export interface LostPosition {
+  position: number;
+  on: string | null;
+}
+
+export function lostPosition(
+  row: Pick<
+    TrackedKeywordItem,
+    | "latestPosition"
+    | "latestDepth"
+    | "previousPosition"
+    | "lastRankedPosition"
+    | "lastRankedOn"
+  >,
+): LostPosition | null {
+  if (row.latestDepth === null || row.latestPosition !== null) return null;
+  const position =
+    row.lastRankedPosition === undefined
+      ? row.previousPosition
+      : row.lastRankedPosition;
+  return position === null ? null : { position, on: row.lastRankedOn ?? null };
+}
+
 export function keywordsPollInterval(
   rows: readonly TrackedKeywordItem[] | undefined,
   updates: number,
