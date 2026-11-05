@@ -12,9 +12,13 @@ import {
   chartParsers,
   keywordFilterParsers,
   reviewScoreParser,
+  serpDateParser,
   serpParser,
 } from "@/lib/search-params";
-import { parseKeywordSearch } from "@/components/keywords/keyword-search";
+import {
+  matchesKeywordSearch,
+  parseKeywordSearch,
+} from "@/components/keywords/keyword-search";
 import { alertEventHref } from "./alert-event-href";
 
 const app = { id: "app-1", name: "Focus Timer" };
@@ -131,6 +135,12 @@ describe("alertEventHref", () => {
     expect(alertEventHref(item)).toBe(
       "/apps/app-1/keywords?country=de&q=say+%22hi%22",
     );
+    expect(
+      matchesKeywordSearch(
+        'say "hi"',
+        parseKeywordSearch(queryOf(alertEventHref(item)).get("q") ?? ""),
+      ),
+    ).toBe(true);
   });
 
   it("opens the keyword breakdown of an overtake", () => {
@@ -162,8 +172,13 @@ describe("alertEventHref", () => {
       }),
     );
 
-    expect(href).toBe("/apps/app-1/keywords?country=us&serp=kw-9");
+    expect(href).toBe(
+      "/apps/app-1/keywords?country=us&serp=kw-9&serpDate=2026-11-03",
+    );
     expect(serpParser.parse(queryOf(href).get("serp") ?? "")).toBe("kw-9");
+    expect(serpDateParser.parse(queryOf(href).get("serpDate") ?? "")).toBe(
+      "2026-11-03",
+    );
   });
 
   it("opens the changes of the primary app of a competitor", () => {

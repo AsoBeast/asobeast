@@ -40,5 +40,7 @@ export function matchesKeywordSearch(
   if (search.kind === "none") return true;
   if (search.kind === "exact")
     return searchKey(text) === searchKey(search.phrase);
-  return foldAccents(text).includes(foldAccents(search.fragment));
+  return foldAccents(withoutQuotes(text)).includes(
+    foldAccents(search.fragment),
+  );
 }

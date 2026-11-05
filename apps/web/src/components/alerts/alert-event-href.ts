@@ -34,6 +34,7 @@ export function alertEventHref(item: AlertEventItem): string | null {
       return appPath(primaryAppId, "keywords", {
         country: payload.keyword.country,
         serp: payload.keyword.id,
+        serpDate: payload.date,
       });
     case "metadata.changed":
       return appPath(primaryAppId, "changes");
