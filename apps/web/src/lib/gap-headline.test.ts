@@ -96,11 +96,11 @@ describe("gapHeadline", () => {
   it.each([
     [
       { competitors: 0, delisted: 0, markets: [] },
-      "Add a competitor to see gaps",
+      "Add a competitor to see gaps.",
     ],
     [
       { competitors: 0, delisted: 2, markets: [] },
-      "Every competitor you track is delisted",
+      "Every competitor you track is delisted.",
     ],
     [
       {
@@ -108,7 +108,7 @@ describe("gapHeadline", () => {
         delisted: 0,
         markets: [{ country: "us", keywords: 3, compared: 0 }],
       },
-      "Your competitors have not been checked yet",
+      "Your competitors have not been checked yet.",
     ],
   ])("says why nothing can be compared", (coverage, text) => {
     expect(textOf({ ...gaps([row()]), coverage })).toBe(text);

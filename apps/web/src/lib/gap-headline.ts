@@ -57,9 +57,9 @@ export function gapHeadline(
 }
 
 const EMPTY_TEXT: Record<Exclude<GapEmpty, "none">, string> = {
-  noCompetitors: "Add a competitor to see gaps",
-  allDelisted: "Every competitor you track is delisted",
-  notCompared: "Your competitors have not been checked yet",
+  noCompetitors: "Add a competitor to see gaps.",
+  allDelisted: "Every competitor you track is delisted.",
+  notCompared: "Your competitors have not been checked yet.",
 };
 
 function biggestText(
