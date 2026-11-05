@@ -7,6 +7,7 @@ import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 
 const SUGGEST_PROBE_DAYS = 7;
+const KEYWORD_DISCOVERY_DAYS = 60;
 const SCREENSHOT_TEXT_DAYS = 90;
 const ABANDONED_RESERVATION_MS = 60 * 60 * 1000;
 
@@ -39,6 +40,7 @@ export class RetentionService {
       ['alertDelivery', () => this.pruneDeliveries(now)],
       ['alertEvent', () => this.pruneAlertEvents(now)],
       ['suggestProbe', () => this.pruneSuggestProbes(now)],
+      ['keywordDiscovery', () => this.pruneKeywordDiscoveries(now)],
       ['auditScore', () => this.pruneAuditScores(now)],
       ['actionItem', () => this.pruneActions(now)],
       ['billingEvent', () => this.pruneBillingEvents(now)],
@@ -201,6 +203,13 @@ export class RetentionService {
   private async pruneSuggestProbes(now: Date): Promise<number> {
     const { count } = await this.prisma.suggestProbe.deleteMany({
       where: { day: { lt: this.cutoff(SUGGEST_PROBE_DAYS, now) } },
+    });
+    return count;
+  }
+
+  private async pruneKeywordDiscoveries(now: Date): Promise<number> {
+    const { count } = await this.prisma.keywordDiscovery.deleteMany({
+      where: { seenAt: { lt: this.cutoff(KEYWORD_DISCOVERY_DAYS, now) } },
     });
     return count;
   }

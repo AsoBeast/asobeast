@@ -138,6 +138,26 @@ describe('Retention against an upgraded baseline database', () => {
       })),
     });
 
+    for (const [index, age] of [61, 59].entries()) {
+      const keyword = await prisma.keyword.create({
+        data: {
+          text: `drill discovery ${index}`,
+          store: 'APP_STORE',
+          country: 'us',
+        },
+      });
+      await prisma.keywordDiscovery.create({
+        data: {
+          appId: 'app_ios',
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          keywordId: keyword.id,
+          source: 'title',
+          relevance: 90,
+          seenAt: daysBefore(age),
+        },
+      });
+    }
+
     deleted = await pruneAtNow(retention);
   });
 
@@ -203,6 +223,16 @@ describe('Retention against an upgraded baseline database', () => {
   it('keeps a suggest probe inside its fixed window', async () => {
     expect(deleted.suggestProbe).toBe(0);
     await expect(prisma.suggestProbe.count()).resolves.toBe(1);
+  });
+
+  it('prunes a keyword discovery not proposed for sixty days and keeps a newer one', async () => {
+    expect(deleted.keywordDiscovery).toBe(1);
+    const remaining = await prisma.keywordDiscovery.findMany({
+      select: { keyword: { select: { text: true } } },
+    });
+    expect(remaining.map(({ keyword }) => keyword.text)).toEqual([
+      'drill discovery 1',
+    ]);
   });
 
   it('prunes closed actions and never prunes open or snoozed ones by age', async () => {
