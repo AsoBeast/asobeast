@@ -87,7 +87,10 @@ function EntitledPill() {
   return (
     <>
       <div aria-hidden className="h-12 print:hidden" />
-      <div className="fixed right-[max(1rem,env(safe-area-inset-right))] bottom-[max(1rem,env(safe-area-inset-bottom))] z-10 print:hidden">
+      <div
+        data-slot="checklist-pill"
+        className="fixed right-[max(1rem,env(safe-area-inset-right))] bottom-[max(1rem,env(safe-area-inset-bottom))] z-10 print:hidden"
+      >
         <p role="status" className="sr-only">
           {announcement}
         </p>

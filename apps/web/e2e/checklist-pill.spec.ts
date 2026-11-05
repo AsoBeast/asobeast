@@ -669,3 +669,42 @@ test("a workspace without an app reads no first run", async ({
   expect(sent).toEqual([]);
   await expect(popover(page)).not.toContainText("Checking where your app");
 });
+
+test("the pill never hides the control a keyboard user focuses", async ({
+  page,
+  context,
+}) => {
+  await seedChecklist(context, "partial");
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.goto("/apps/app-1/competitors");
+  const pillBox = await (await hydrated(pill(page))).boundingBox();
+  if (pillBox === null) throw new Error("the pill has no box");
+
+  const covered: string[] = [];
+  for (let stop = 0; stop < 40; stop += 1) {
+    await page.keyboard.press("Tab");
+    const hidden = await page.evaluate((pillBox) => {
+      const active = document.activeElement;
+      if (!active || active === document.body) return null;
+      if (active.closest('[data-slot="checklist-pill"]')) return null;
+      const rect = active.getBoundingClientRect();
+      const overlap =
+        Math.max(
+          0,
+          Math.min(rect.right, pillBox.x + pillBox.width) -
+            Math.max(rect.left, pillBox.x),
+        ) *
+        Math.max(
+          0,
+          Math.min(rect.bottom, pillBox.y + pillBox.height) -
+            Math.max(rect.top, pillBox.y),
+        );
+      return overlap > 0
+        ? (active.textContent?.trim().slice(0, 40) ?? active.tagName)
+        : null;
+    }, pillBox);
+    if (hidden !== null) covered.push(hidden);
+  }
+
+  expect(covered).toEqual([]);
+});
