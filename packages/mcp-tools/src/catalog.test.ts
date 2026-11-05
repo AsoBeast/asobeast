@@ -177,9 +177,11 @@ describe("the tool catalog", () => {
       "appId",
       "left out",
       "up to eight",
+      "web app",
     ]) {
       expect(description).toContain(word);
     }
+    expect(description).not.toContain("call the tool that does it");
   });
 
   it("says the workspace checklist needs a newer api on a 404", () => {
