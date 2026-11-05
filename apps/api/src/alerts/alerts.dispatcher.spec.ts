@@ -69,12 +69,13 @@ const buildConfig = (delivery: 'batched' | 'instant') =>
   }) as unknown as ConfigService<Env, true>;
 
 interface UpdateArgs {
-  where: { dedupeKey: string; flushedAt: null; flushId: null };
+  where: { dedupeKey: string; flushedAt?: null; flushId?: null };
   data: {
     event: string;
     appId: string | null;
     keywordId: string | null;
     payload: RankDroppedPayload;
+    flushedAt?: Date;
   };
 }
 
@@ -1015,7 +1016,33 @@ describe('AlertsDispatcher records instant events', () => {
     warn.mockRestore();
   });
 
-  it('never rewrites the settled row of an event recorded before', async () => {
+  it('keeps the latest event of a key and settles a row left pending', async () => {
+    const prisma = buildPrisma();
+    prisma.alertEvent.updateMany.mockImplementation((args: UpdateArgs) => {
+      prisma.updates.push(args);
+      return Promise.resolve({ count: 1 });
+    });
+    const { add, dispatcher } = instantDispatcher(prisma);
+
+    await inWorkspace(() => dispatcher.dispatch(rankPayload));
+
+    expect(prisma.updates).toEqual([
+      {
+        where: { dedupeKey: 'rank:app1:kw1:2026-07-22' },
+        data: {
+          event: 'rank.dropped',
+          appId: 'app1',
+          keywordId: 'kw1',
+          payload: rankPayload,
+          flushedAt: expect.any(Date) as unknown,
+        },
+      },
+    ]);
+    expect(prisma.alertEvent.create).not.toHaveBeenCalled();
+    expectDelivered(add);
+  });
+
+  it('overwrites the row a concurrent dispatch created first', async () => {
     const prisma = buildPrisma();
     prisma.alertEvent.create.mockRejectedValue(
       new Prisma.PrismaClientKnownRequestError('unique', {
@@ -1029,9 +1056,10 @@ describe('AlertsDispatcher records instant events', () => {
       inWorkspace(() => dispatcher.dispatch(rankPayload)),
     ).resolves.toBeUndefined();
 
-    expect(
-      prisma.updates.every((update) => update.where.flushedAt === null),
-    ).toBe(true);
+    expect(prisma.updates).toHaveLength(2);
+    expect(prisma.updates[1].where).toEqual({
+      dedupeKey: 'rank:app1:kw1:2026-07-22',
+    });
     expectDelivered(add);
   });
 

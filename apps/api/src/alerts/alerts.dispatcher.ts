@@ -22,6 +22,25 @@ import { MailerService } from './mailer.service';
 import { OutboxRow, outboxRows } from './outbox-rows';
 import { receivesInstant } from './review-routing';
 
+function outboxWrite(row: OutboxRow, settledAt: Date | null) {
+  const data = {
+    event: row.event,
+    appId: row.appId,
+    keywordId: row.keywordId,
+    payload: row.payload as unknown as Prisma.InputJsonValue,
+  };
+  if (settledAt === null) {
+    return {
+      where: { dedupeKey: row.dedupeKey, flushedAt: null, flushId: null },
+      data,
+    };
+  }
+  return {
+    where: { dedupeKey: row.dedupeKey },
+    data: { ...data, flushedAt: settledAt },
+  };
+}
+
 @Injectable()
 export class AlertsDispatcher {
   private readonly logger = new Logger(AlertsDispatcher.name);
@@ -99,25 +118,14 @@ export class AlertsDispatcher {
     row: OutboxRow,
     settledAt: Date | null,
   ): Promise<void> {
-    const json = row.payload as unknown as Prisma.InputJsonValue;
-    const data = {
-      event: row.event,
-      appId: row.appId,
-      keywordId: row.keywordId,
-      payload: json,
-    };
-    const where = { dedupeKey: row.dedupeKey, flushedAt: null, flushId: null };
-    const updated = await this.prisma.alertEvent.updateMany({
-      where,
-      data,
-    });
+    const { where, data } = outboxWrite(row, settledAt);
+    const updated = await this.prisma.alertEvent.updateMany({ where, data });
     if (updated.count > 0) return;
     try {
       await this.prisma.alertEvent.create({
         data: {
           workspaceId: this.workspace.require('an outbox alert'),
           dedupeKey: row.dedupeKey,
-          flushedAt: settledAt,
           ...data,
         },
       });
