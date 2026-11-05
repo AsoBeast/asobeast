@@ -96,6 +96,8 @@ model Workspace {
   deletionRequestedBy    String?
   deletionDueAt          DateTime?
   erasureClaimedAt       DateTime?
+  checklistGoal          String?
+  checklistDismissedAt   DateTime?
   createdAt              DateTime                @default(now())
 
   @@index([deletionDueAt])
