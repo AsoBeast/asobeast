@@ -15,7 +15,6 @@ import type { keywordFilterParsers } from "@/lib/search-params";
 import type { KeywordTableFeatures } from "./keyword-table-features";
 import { exportKeywords } from "./keyword-csv";
 import { keywordFilterChips, type KeywordFilters } from "./keyword-filters";
-import { useIsMobile } from "@/lib/use-is-mobile";
 import { KeywordFacets } from "./KeywordFacets";
 import { KeywordFiltersSheet } from "./KeywordFiltersSheet";
 
@@ -36,7 +35,6 @@ export function KeywordsFilterBar({
 }) {
   const shown = table.getRowModel().rows;
   const chips = keywordFilterChips(filters);
-  const isMobile = useIsMobile();
 
   return (
     <div className="flex flex-col gap-2">
@@ -46,20 +44,21 @@ export function KeywordsFilterBar({
           value={filters.q}
           onSearch={(q, options) => void setFilters({ q }, options)}
         />
-        {isMobile ? (
+        <div className="contents md:hidden">
           <KeywordFiltersSheet
             table={table}
             filters={filters}
             setFilters={setFilters}
             active={chips.filter((chip) => chip.key !== "q").length}
           />
-        ) : (
+        </div>
+        <div className="hidden md:contents">
           <KeywordFacets
             table={table}
             filters={filters}
             setFilters={setFilters}
           />
-        )}
+        </div>
         <RowCount
           shown={shown.length}
           total={table.getPreFilteredRowModel().rows.length}
