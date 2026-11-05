@@ -5,6 +5,7 @@ export * from "./apps";
 export * from "./keywords";
 export * from "./localizations";
 export * from "./setup";
+export * from "./workspace-checklist";
 export * from "./rankings";
 export * from "./competitors";
 export * from "./annotations";

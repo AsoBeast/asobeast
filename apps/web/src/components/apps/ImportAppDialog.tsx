@@ -25,7 +25,11 @@ import { ApiError, importApp } from "@/lib/api";
 import { marketError } from "@/lib/countries";
 import { returnFocusTo } from "@/lib/focus-handoff";
 import { storeLabel } from "@/lib/format";
-import { appKeys, portfolioKey } from "@/lib/queries";
+import {
+  appKeys,
+  invalidateWorkspaceChecklist,
+  portfolioKey,
+} from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
 import { classifyInput, isStoreAddress } from "./store-search";
 import { StoreSearchField } from "./StoreSearchField";
@@ -115,6 +119,7 @@ export function ImportAppDialog({
     onSuccess: (app) => {
       void queryClient.invalidateQueries({ queryKey: appKeys.all });
       void queryClient.invalidateQueries({ queryKey: portfolioKey });
+      invalidateWorkspaceChecklist(queryClient);
       setOpen(false);
       toast.success(`Imported ${app.name ?? "app"}`);
       router.push(`/apps/${app.id}/setup`);

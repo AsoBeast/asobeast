@@ -79,6 +79,10 @@ import {
   invalidateLinkMutation,
   invalidateSetupMutation,
   invalidateWebhookMutation,
+  invalidateWorkspaceChecklist,
+  invalidateStoreConnectionMutation,
+  workspaceChecklistKey,
+  workspaceChecklistOptions,
   seedEmailAlert,
   seedWebhook,
   keywordCountriesOptions,
@@ -819,6 +823,7 @@ describe("invalidation sets", () => {
       appKeys.marketKeywordFieldsRoot(APP),
       appKeys.marketSuggestions(APP),
       appKeys.firstRun(APP),
+      workspaceChecklistKey,
     ]);
   });
 
@@ -839,6 +844,7 @@ describe("invalidation sets", () => {
       appKeys.marketKeywordFieldsRoot(APP),
       appKeys.marketSuggestions(APP),
       appKeys.firstRun(APP),
+      workspaceChecklistKey,
       appKeys.listingMarkets(APP),
       budgetKey,
     ]);
@@ -859,6 +865,7 @@ describe("invalidation sets", () => {
       appKeys.marketKeywordFieldsRoot(APP),
       appKeys.marketSuggestions(APP),
       appKeys.firstRun(APP),
+      workspaceChecklistKey,
       appKeys.metadataAuditRoot(APP),
     ]);
   });
@@ -878,6 +885,7 @@ describe("invalidation sets", () => {
       appKeys.marketKeywordFieldsRoot(APP),
       appKeys.marketSuggestions(APP),
       appKeys.firstRun(APP),
+      workspaceChecklistKey,
       appKeys.metadataAuditRoot(APP),
       accountPlanKey,
     ]);
@@ -898,6 +906,7 @@ describe("invalidation sets", () => {
       appKeys.marketKeywordFieldsRoot(APP),
       appKeys.marketSuggestions(APP),
       appKeys.firstRun(APP),
+      workspaceChecklistKey,
       appKeys.importPreviewRoot(APP),
     ]);
   });
@@ -913,7 +922,11 @@ describe("invalidation sets", () => {
   it("marks the review lists and the themes stale after a reply change", () => {
     expect(
       invalidatedKeys((client) => invalidateReviewReplyMutation(client, APP)),
-    ).toEqual([appKeys.reviewsRoot(APP), appKeys.reviewThemesRoot(APP)]);
+    ).toEqual([
+      appKeys.reviewsRoot(APP),
+      appKeys.reviewThemesRoot(APP),
+      workspaceChecklistKey,
+    ]);
   });
 
   it("invalidates everything a competitor mutation changes", () => {
@@ -928,6 +941,7 @@ describe("invalidation sets", () => {
       portfolioKey,
       appKeys.firstRun(APP),
       appKeys.suggestionsRoot(APP),
+      workspaceChecklistKey,
     ]);
   });
 
@@ -970,6 +984,7 @@ describe("invalidation sets", () => {
       authMeKey,
       accountPlanKey,
       apiTokenKeys.all,
+      workspaceChecklistKey,
     ]);
   });
 
@@ -977,9 +992,41 @@ describe("invalidation sets", () => {
     ["api token", invalidateApiTokenMutation, apiTokenKeys.all],
     ["webhook", invalidateWebhookMutation, webhookKeys.all],
     ["email alert", invalidateEmailAlertMutation, emailAlertKeys.all],
-    ["ai allowance", invalidateAiUsage, accountPlanKey],
-  ] as const)("invalidates only the %s list", (_name, invalidate, key) => {
-    expect(invalidatedKeys(invalidate)).toEqual([key]);
+  ] as const)(
+    "invalidates the %s list and the workspace checklist",
+    (_name, invalidate, key) => {
+      expect(invalidatedKeys(invalidate)).toEqual([key, workspaceChecklistKey]);
+    },
+  );
+
+  it("invalidates only the ai allowance", () => {
+    expect(invalidatedKeys(invalidateAiUsage)).toEqual([accountPlanKey]);
+  });
+
+  it("refreshes the connections, the funnels and the checklist after a store connection change", () => {
+    const client = new QueryClient();
+    const funnel = ["apps", APP, "funnel"];
+    client.setQueryData(funnel, {});
+    client.setQueryData(workspaceChecklistKey, {});
+
+    invalidateStoreConnectionMutation(client);
+
+    expect(client.getQueryState(funnel)?.isInvalidated).toBe(true);
+    expect(client.getQueryState(workspaceChecklistKey)?.isInvalidated).toBe(
+      true,
+    );
+  });
+
+  it("reads the workspace checklist once a minute and never retries it", () => {
+    expect(workspaceChecklistOptions.queryKey).toEqual(["workspace-checklist"]);
+    expect(workspaceChecklistOptions.staleTime).toBe(60_000);
+    expect(workspaceChecklistOptions.retry).toBe(false);
+  });
+
+  it("invalidates exactly the workspace checklist", () => {
+    expect(invalidatedKeys(invalidateWorkspaceChecklist)).toEqual([
+      workspaceChecklistKey,
+    ]);
   });
 });
 
