@@ -292,6 +292,48 @@ describe("the keyword_breakdown tool", () => {
   });
 });
 
+describe("the keyword_discoveries tool", () => {
+  const tool = () => {
+    const found = toolByName("keyword_discoveries");
+    if (!found) throw new Error("keyword_discoveries is not in the catalog");
+    return found;
+  };
+
+  it("lists keyword_discoveries as a read tool", () => {
+    expect(MCP_TOOLS.map((each) => each.name)).toContain("keyword_discoveries");
+    expect(MCP_WRITE_TOOLS.map((each) => each.name)).not.toContain(
+      "keyword_discoveries",
+    );
+    expect(annotationsOf(tool()).readOnlyHint).toBe(true);
+  });
+
+  it("wraps the list route with its query", () => {
+    expect(
+      requestOf(tool(), {
+        appId: "app-1",
+        country: "de",
+        state: "ranked",
+        limit: 50,
+      }),
+    ).toEqual({
+      method: "GET",
+      path: "/apps/app-1/keyword-discoveries",
+      params: { country: "de", state: "ranked", limit: 50 },
+    });
+  });
+
+  it("refuses a state outside the discovery states", () => {
+    expect(
+      tool().inputSchema.safeParse({ appId: "app-1", state: "tracked" })
+        .success,
+    ).toBe(false);
+    expect(
+      tool().inputSchema.safeParse({ appId: "app-1", state: "opportunity" })
+        .success,
+    ).toBe(true);
+  });
+});
+
 describe("the keyword_suggestions allowance", () => {
   it("says when a store suggestion spends the allowance", () => {
     const description = toolByName("keyword_suggestions")?.description ?? "";

@@ -10,6 +10,8 @@ import { KeywordDiscoveryPlanner } from './discovery-planner.service';
 import { DiscoveryPoolStore } from './discovery-pool-store';
 import { DiscoveryPopularity } from './discovery-popularity.service';
 import { DiscoveryTracker } from './discovery-tracker.service';
+import { KeywordDiscoveryController } from './keyword-discovery.controller';
+import { KeywordDiscoveryService } from './keyword-discovery.service';
 
 @Module({
   imports: [
@@ -20,6 +22,7 @@ import { DiscoveryTracker } from './discovery-tracker.service';
       { name: QUEUES.GPLAY },
     ),
   ],
+  controllers: [KeywordDiscoveryController],
   providers: [
     DiscoveryPopularity,
     DiscoveryCandidates,
@@ -28,6 +31,7 @@ import { DiscoveryTracker } from './discovery-tracker.service';
     DiscoveryTracker,
     KeywordDiscoveryPlanner,
     DiscoveryCheck,
+    KeywordDiscoveryService,
   ],
   exports: [
     DiscoveryPopularity,

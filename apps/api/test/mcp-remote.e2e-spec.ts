@@ -457,6 +457,54 @@ describe('Remote MCP transport (e2e)', () => {
     );
   });
 
+  it('matches the rest api for the keyword discoveries of an app', async () => {
+    const appId = await fixtureAppId();
+    const keyword = await prisma.keyword.upsert({
+      where: {
+        text_store_country: {
+          text: 'remote discovery',
+          store: Store.APP_STORE,
+          country: 'us',
+        },
+      },
+      update: {},
+      create: {
+        text: 'remote discovery',
+        store: Store.APP_STORE,
+        country: 'us',
+      },
+    });
+    await prisma.keywordDiscovery.upsert({
+      where: { appId_keywordId: { appId, keywordId: keyword.id } },
+      update: {},
+      create: {
+        appId,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        keywordId: keyword.id,
+        source: 'title',
+        relevance: 90,
+      },
+    });
+
+    const [viaMcp, viaRest] = await Promise.all([
+      callTool('keyword_discoveries', { appId, state: 'all' }),
+      request(app.getHttpServer())
+        .get(`/apps/${appId}/keyword-discoveries?state=all`)
+        .set('Authorization', `Bearer ${TOKEN}`)
+        .expect(200),
+    ]);
+
+    expect(viaMcp?.isError).toBeUndefined();
+    expect(JSON.parse(viaMcp?.content?.[0].text ?? 'null')).toEqual(
+      viaRest.body,
+    );
+    expect(
+      (viaRest.body as { items: { keywordId: string }[] }).items.map(
+        ({ keywordId }) => keywordId,
+      ),
+    ).toEqual([keyword.id]);
+  });
+
   it('matches the rest api for the market suggestions of an app', async () => {
     const appId = await fixtureAppId();
 

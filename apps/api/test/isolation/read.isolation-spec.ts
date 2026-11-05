@@ -135,6 +135,14 @@ const LISTS: ScopedRead[] = [
     identity: (body) => ids((body as { items: { id: string }[] }).items),
   },
   {
+    name: 'GET /apps/:id/keyword-discoveries',
+    path: (workspace) => `/apps/${workspace.appleAppId}/keyword-discoveries`,
+    identity: (body) =>
+      (body as { items: { keywordId: string }[] }).items
+        .map((item) => item.keywordId)
+        .sort(),
+  },
+  {
     name: 'GET /apps/:id/localizations',
     path: (workspace) => `/apps/${workspace.appleAppId}/localizations`,
     identity: (body) =>
@@ -273,6 +281,21 @@ describe('Read isolation', () => {
         `/apps/${fixture.a.appleAppId}/keywords/${fixture.b.privateKeywordId}/breakdown`,
       )
       .expect(404);
+  });
+
+  it("never lists another workspace's keyword discoveries", async () => {
+    const own = await fixture.b.agent
+      .get(`/apps/${fixture.b.appleAppId}/keyword-discoveries`)
+      .expect(200);
+    expect(JSON.stringify(own.body)).toContain(fixture.b.discoveryKeywordId);
+
+    const refused = await fixture.a.agent
+      .get(`/apps/${fixture.b.appleAppId}/keyword-discoveries`)
+      .expect(404);
+
+    expect(JSON.stringify(refused.body)).not.toContain(
+      fixture.b.discoveryKeywordId,
+    );
   });
 
   it("never marks a word from another workspace's listing", async () => {

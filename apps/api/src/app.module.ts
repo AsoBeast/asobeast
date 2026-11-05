@@ -31,6 +31,7 @@ import { MetadataModule } from './metadata/metadata.module';
 import { HealthModule } from './health/health.module';
 import { QuotaModule } from './auth/quota.module';
 import { JobsModule } from './jobs/jobs.module';
+import { KeywordDiscoveryModule } from './keyword-discovery/keyword-discovery.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { FailFastRedisModule } from './redis/fail-fast-redis.module';
@@ -56,6 +57,7 @@ import { envConfigModule } from './config/env-config.module';
     JobsModule,
     MetricsModule,
     AppsModule,
+    KeywordDiscoveryModule,
     AnalyticsModule,
     AnnotationsModule,
     StoreConnectModule,
