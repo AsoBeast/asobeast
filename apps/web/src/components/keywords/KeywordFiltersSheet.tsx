@@ -1,6 +1,6 @@
 "use client";
 
-import type { ComponentProps } from "react";
+import { useRef, useState, type ComponentProps, type RefObject } from "react";
 import { ListFilter } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,16 +12,39 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { useIsMobile } from "@/lib/use-is-mobile";
 import { KeywordFacets } from "./KeywordFacets";
+
+const isRendered = (element: HTMLElement | null): boolean =>
+  (element?.getClientRects().length ?? 0) > 0;
+
+const firstControl = (group: HTMLElement | null): HTMLElement | null =>
+  group?.querySelector<HTMLElement>('button:not([aria-disabled="true"])') ??
+  null;
 
 export function KeywordFiltersSheet({
   active,
+  inlineFacets,
   ...facets
-}: ComponentProps<typeof KeywordFacets> & { active: number }) {
+}: ComponentProps<typeof KeywordFacets> & {
+  active: number;
+  inlineFacets: RefObject<HTMLElement | null>;
+}) {
+  const [open, setOpen] = useState(false);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const isMobile = useIsMobile();
+  if (open && !isMobile) setOpen(false);
+
+  const onCloseAutoFocus = (event: Event) => {
+    if (isRendered(trigger.current)) return;
+    event.preventDefault();
+    firstControl(inlineFacets.current)?.focus();
+  };
+
   return (
-    <Sheet>
+    <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button ref={trigger} variant="outline" size="sm">
           <ListFilter aria-hidden />
           Filters
           {active > 0 ? (
@@ -31,7 +54,11 @@ export function KeywordFiltersSheet({
           ) : null}
         </Button>
       </SheetTrigger>
-      <SheetContent side="bottom" className="max-h-[80svh]">
+      <SheetContent
+        side="bottom"
+        className="max-h-[80svh]"
+        onCloseAutoFocus={onCloseAutoFocus}
+      >
         <SheetHeader>
           <SheetTitle>Filters</SheetTitle>
           <SheetDescription>

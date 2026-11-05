@@ -772,6 +772,24 @@ test("the status filter names its value before the page hydrates", async ({
   ).toHaveText("All statuses");
 });
 
+test("widening the window closes the phone filters and keeps focus on a facet", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 800 });
+  await page.goto("/apps/app-1/keywords");
+  await (
+    await hydrated(page.getByRole("button", { name: /^Filters/ }))
+  ).click();
+  await expect(page.getByRole("dialog", { name: "Filters" })).toBeVisible();
+
+  await page.setViewportSize({ width: 1280, height: 800 });
+
+  await expect(page.getByRole("dialog", { name: "Filters" })).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Filter by source" }),
+  ).toBeFocused();
+});
+
 test("a grade facet keeps only rows of that grade", async ({ page }) => {
   await page.goto("/apps/app-1/keywords");
   const table = page.getByRole("table", { name: /Tracked keywords/ });

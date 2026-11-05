@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import type { SetValues } from "nuqs";
 import type { Table } from "@tanstack/react-table";
 import type { TrackedKeywordItem } from "@asobeast/shared";
@@ -35,6 +36,7 @@ export function KeywordsFilterBar({
 }) {
   const shown = table.getRowModel().rows;
   const chips = keywordFilterChips(filters);
+  const inlineFacets = useRef<HTMLDivElement>(null);
 
   return (
     <div className="flex flex-col gap-2">
@@ -50,9 +52,10 @@ export function KeywordsFilterBar({
             filters={filters}
             setFilters={setFilters}
             active={chips.filter((chip) => chip.key !== "q").length}
+            inlineFacets={inlineFacets}
           />
         </div>
-        <div className="hidden md:contents">
+        <div ref={inlineFacets} className="hidden md:contents">
           <KeywordFacets
             table={table}
             filters={filters}
