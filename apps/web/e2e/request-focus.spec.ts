@@ -1390,3 +1390,23 @@ test.describe("the embedded checkout retry keeps focus", () => {
     await expect(form).toBeFocused();
   });
 });
+
+test("Load more keeps focus while the next alerts load and hands it to the end", async ({
+  page,
+}) => {
+  const held = await holdRequest(
+    page,
+    /\/api\/backend\/alerts\/events\?.*cursor=/,
+    "GET",
+  );
+  await page.goto("/alerts");
+  const loadMore = page.getByRole("button", { name: "Load more" });
+
+  await pressFromKeyboard(loadMore);
+
+  await expect(loadMore).toHaveAttribute("aria-disabled", "true");
+  await expect(loadMore).not.toHaveAttribute("disabled");
+  await expect(loadMore).toBeFocused();
+  held.release();
+  await expect(page.locator('[data-slot="feed-end"]')).toBeFocused();
+});

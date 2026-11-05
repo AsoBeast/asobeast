@@ -491,3 +491,5 @@ export const alertFeedParsers = {
   type: parseAsArrayOf(parseAsStringLiteral(ALERT_FEED_EVENTS)).withDefault([]),
   q: searchParser,
 };
+
+export const loadAlertFeedSearch = createLoader(alertFeedParsers);
