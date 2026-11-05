@@ -35,6 +35,24 @@ const withoutKeywords = (
   return { rows: kept(voices.rows), rivals: voices.rivals.map(kept) };
 };
 
+export interface ShareContext {
+  competitorIds: string[];
+  excluded: ReadonlySet<string> | null;
+}
+
+function measuredWith<T>(
+  voices: Voices,
+  excluded: ReadonlySet<string> | null,
+  measure: (voices: Voices) => T,
+): { shareOfVoice: T; nonBrandedShareOfVoice?: T } {
+  return {
+    shareOfVoice: measure(voices),
+    ...(excluded
+      ? { nonBrandedShareOfVoice: measure(withoutKeywords(voices, excluded)) }
+      : {}),
+  };
+}
+
 @Injectable()
 export class ShareOfVoiceService {
   constructor(
@@ -42,18 +60,22 @@ export class ShareOfVoiceService {
     private readonly brands: BrandKeywords,
   ) {}
 
-  async competitorIds(appId: string): Promise<string[]> {
+  async context(scope: ShareScope): Promise<ShareContext> {
     const competitors = await this.prisma.app.findMany({
-      where: { primaryAppId: appId },
+      where: { primaryAppId: scope.appId },
       orderBy: { createdAt: 'asc' },
       select: { id: true },
     });
-    return competitors.map(({ id }) => id);
+    const competitorIds = competitors.map(({ id }) => id);
+    const excluded =
+      competitorIds.length === 0
+        ? null
+        : await this.brands.excluded(scope.appId, scope.country);
+    return { competitorIds, excluded };
   }
 
   async summary(
-    scope: ShareScope,
-    competitorIds: readonly string[],
+    { competitorIds, excluded }: ShareContext,
     { rows, referenceDate }: KeywordWindow,
   ): Promise<Pick<AppSummary, 'shareOfVoice' | 'nonBrandedShareOfVoice'>> {
     const measure = ({ rows, rivals }: Voices) =>
@@ -63,18 +85,10 @@ export class ShareOfVoiceService {
         shareOfVoice: measure({ rows, rivals: competitorIds.map(() => []) }),
       };
     }
-    const [voices, excluded] = await Promise.all([
-      this.voices(rows, competitorIds, {
-        in: [referenceDate, addDays(referenceDate, -SHARE_DELTA_DAYS)],
-      }),
-      this.brands.excluded(scope.appId, scope.country),
-    ]);
-    return {
-      shareOfVoice: measure(voices),
-      ...(excluded
-        ? { nonBrandedShareOfVoice: measure(withoutKeywords(voices, excluded)) }
-        : {}),
-    };
+    const voices = await this.voices(rows, competitorIds, {
+      in: [referenceDate, addDays(referenceDate, -SHARE_DELTA_DAYS)],
+    });
+    return measuredWith(voices, excluded, measure);
   }
 
   async history(
@@ -84,22 +98,14 @@ export class ShareOfVoiceService {
   ): Promise<
     Pick<VisibilityHistory, 'shareOfVoice' | 'nonBrandedShareOfVoice'>
   > {
-    const competitorIds = await this.competitorIds(scope.appId);
+    const { competitorIds, excluded } = await this.context(scope);
     if (competitorIds.length === 0) {
       return { shareOfVoice: [] };
     }
-    const [voices, excluded] = await Promise.all([
-      this.voices(rows, competitorIds, range),
-      this.brands.excluded(scope.appId, scope.country),
-    ]);
-    const measure = ({ rows, rivals }: Voices) =>
-      shareOfVoicePoints(rows, rivals);
-    return {
-      shareOfVoice: measure(voices),
-      ...(excluded
-        ? { nonBrandedShareOfVoice: measure(withoutKeywords(voices, excluded)) }
-        : {}),
-    };
+    const voices = await this.voices(rows, competitorIds, range);
+    return measuredWith(voices, excluded, ({ rows, rivals }) =>
+      shareOfVoicePoints(rows, rivals),
+    );
   }
 
   private async voices(

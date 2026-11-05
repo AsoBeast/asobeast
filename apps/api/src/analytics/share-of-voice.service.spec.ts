@@ -48,7 +48,10 @@ describe('ShareOfVoiceService.summary', () => {
     const prisma = fakePrisma();
     const shares = sharesOf(prisma);
 
-    await shares.summary(SCOPE, ['rival'], { rows: [ROW], referenceDate: D0 });
+    await shares.summary(
+      { competitorIds: ['rival'], excluded: null },
+      { rows: [ROW], referenceDate: D0 },
+    );
 
     const [query] = prisma.keywordRanking.findMany.mock.calls[0] as [
       { where: { date: unknown } },
@@ -60,10 +63,13 @@ describe('ShareOfVoiceService.summary', () => {
     const prisma = fakePrisma();
     const shares = sharesOf(prisma);
 
-    const { shareOfVoice } = await shares.summary(SCOPE, ['rival'], {
-      rows: [ROW],
-      referenceDate: null,
-    });
+    const { shareOfVoice } = await shares.summary(
+      { competitorIds: ['rival'], excluded: null },
+      {
+        rows: [ROW],
+        referenceDate: null,
+      },
+    );
 
     expect(prisma.keywordRanking.findMany).not.toHaveBeenCalled();
     expect(shareOfVoice?.reason).toBe('notChecked');
@@ -73,10 +79,13 @@ describe('ShareOfVoiceService.summary', () => {
     const prisma = fakePrisma();
     const shares = sharesOf(prisma);
 
-    const { shareOfVoice } = await shares.summary(SCOPE, [], {
-      rows: [ROW],
-      referenceDate: D0,
-    });
+    const { shareOfVoice } = await shares.summary(
+      { competitorIds: [], excluded: null },
+      {
+        rows: [ROW],
+        referenceDate: D0,
+      },
+    );
 
     expect(prisma.keywordRanking.findMany).not.toHaveBeenCalled();
     expect(shareOfVoice?.reason).toBe('noCompetitors');
@@ -85,36 +94,41 @@ describe('ShareOfVoiceService.summary', () => {
 
 describe('ShareOfVoiceService non branded share', () => {
   it('reads no keyword class without a competitor', async () => {
+    const prisma = fakePrisma();
+    prisma.app.findMany.mockResolvedValue([]);
     const brands = fakeBrands(new Set());
-    const shares = sharesOf(fakePrisma(), brands);
 
-    const answer = await shares.summary(SCOPE, [], {
-      rows: [ROW],
-      referenceDate: D0,
+    expect(await sharesOf(prisma, brands).context(SCOPE)).toEqual({
+      competitorIds: [],
+      excluded: null,
     });
-
     expect(brands.excluded).not.toHaveBeenCalled();
-    expect(answer).not.toHaveProperty('nonBrandedShareOfVoice');
+  });
+
+  it('reads the keyword classes of the market with competitors', async () => {
+    const brands = fakeBrands(new Set(['k1']));
+
+    expect(await sharesOf(fakePrisma(), brands).context(SCOPE)).toEqual({
+      competitorIds: ['rival'],
+      excluded: new Set(['k1']),
+    });
+    expect(brands.excluded).toHaveBeenCalledWith('app', undefined);
   });
 
   it('answers no non branded share when no class is known', async () => {
-    const shares = sharesOf(fakePrisma(), fakeBrands(null));
-
-    const answer = await shares.summary(SCOPE, ['rival'], {
-      rows: [ROW],
-      referenceDate: D0,
-    });
+    const answer = await sharesOf(fakePrisma()).summary(
+      { competitorIds: ['rival'], excluded: null },
+      { rows: [ROW], referenceDate: D0 },
+    );
 
     expect(answer).not.toHaveProperty('nonBrandedShareOfVoice');
   });
 
   it('measures nothing when every keyword is a brand', async () => {
-    const shares = sharesOf(fakePrisma(), fakeBrands(new Set(['k1'])));
-
-    const answer = await shares.summary(SCOPE, ['rival'], {
-      rows: [ROW],
-      referenceDate: D0,
-    });
+    const answer = await sharesOf(fakePrisma()).summary(
+      { competitorIds: ['rival'], excluded: new Set(['k1']) },
+      { rows: [ROW], referenceDate: D0 },
+    );
 
     expect(answer.nonBrandedShareOfVoice).toEqual({
       current: null,

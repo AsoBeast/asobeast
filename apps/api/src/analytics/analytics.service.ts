@@ -115,7 +115,7 @@ export class AnalyticsService {
   async summary(appId: string, country?: string): Promise<AppSummary> {
     await this.ensureApp(appId);
 
-    const [market, everyMarket, snapshot, competitorIds, inKeywordField] =
+    const [market, everyMarket, snapshot, shareContext, inKeywordField] =
       await Promise.all([
         keywordWindow(this.prisma, { appId, country }, SUMMARY_WINDOW_DAYS),
         country
@@ -131,15 +131,11 @@ export class AnalyticsService {
             capturedAt: true,
           },
         }),
-        this.shares.competitorIds(appId),
+        this.shares.context({ appId, country }),
         loadKeywordFieldIndex(this.prisma, appId),
       ]);
     const covered = everyMarket ?? market;
-    const share = await this.shares.summary(
-      { appId, country },
-      competitorIds,
-      market,
-    );
+    const share = await this.shares.summary(shareContext, market);
 
     return {
       visibility: this.visibilitySummary(market.rows, market.referenceDate),
@@ -153,7 +149,7 @@ export class AnalyticsService {
       ),
       lastRefreshAt: snapshot?.capturedAt.toISOString() ?? null,
       trackedKeywords: market.rows.length,
-      competitors: competitorIds.length,
+      competitors: shareContext.competitorIds.length,
       ...share,
     };
   }
