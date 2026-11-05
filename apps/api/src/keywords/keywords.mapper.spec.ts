@@ -396,6 +396,98 @@ describe('toTrackedKeywordItem', () => {
     expect(item.positionDelta1d).toBeNull();
   });
 
+  describe('last ranked position', () => {
+    const lastRanked = (row: TrackedKeywordRow) => {
+      const item = toTrackedKeywordItem(row);
+      return {
+        lastRankedPosition: item.lastRankedPosition,
+        lastRankedOn: item.lastRankedOn,
+      };
+    };
+
+    it.each([
+      {
+        situation: 'lost yesterday',
+        rankings: [
+          { position: null, date: '2026-07-02' },
+          { position: 14, date: '2026-07-01' },
+        ],
+        expected: { lastRankedPosition: 14, lastRankedOn: '2026-07-01' },
+        previous: { previousPosition: 14, positionDelta1d: null },
+      },
+      {
+        situation: 'lost for three checks',
+        rankings: [
+          { position: null, date: '2026-07-04' },
+          { position: null, date: '2026-07-03' },
+          { position: null, date: '2026-07-02' },
+          { position: 9, date: '2026-06-29' },
+        ],
+        expected: { lastRankedPosition: 9, lastRankedOn: '2026-06-29' },
+        previous: { previousPosition: null, positionDelta1d: null },
+      },
+      {
+        situation: 'skips the unranked checks between',
+        rankings: [
+          { position: null, date: '2026-07-04' },
+          { position: null, date: '2026-07-03' },
+          { position: 9, date: '2026-07-02' },
+        ],
+        expected: { lastRankedPosition: 9, lastRankedOn: '2026-07-02' },
+        previous: { previousPosition: null, positionDelta1d: null },
+      },
+      {
+        situation: 'ranked today',
+        rankings: [
+          { position: 4, date: '2026-07-02' },
+          { position: 6, date: '2026-07-01' },
+        ],
+        expected: { lastRankedPosition: null, lastRankedOn: null },
+        previous: { previousPosition: 6, positionDelta1d: -2 },
+      },
+      {
+        situation: 'never ranked in the window',
+        rankings: [
+          { position: null, date: '2026-07-02' },
+          { position: null, date: '2026-07-01' },
+        ],
+        expected: { lastRankedPosition: null, lastRankedOn: null },
+        previous: { previousPosition: null, positionDelta1d: null },
+      },
+      {
+        situation: 'never checked',
+        rankings: [],
+        expected: { lastRankedPosition: null, lastRankedOn: null },
+        previous: { previousPosition: null, positionDelta1d: null },
+      },
+      {
+        situation: 'a gap in the checks',
+        rankings: [
+          { position: null, date: '2026-07-10' },
+          { position: 11, date: '2026-07-01' },
+        ],
+        expected: { lastRankedPosition: 11, lastRankedOn: '2026-07-01' },
+        previous: { previousPosition: null, positionDelta1d: null },
+      },
+      {
+        situation: 'the first check found nothing',
+        rankings: [{ position: null, date: '2026-07-02' }],
+        expected: { lastRankedPosition: null, lastRankedOn: null },
+        previous: { previousPosition: null, positionDelta1d: null },
+      },
+    ])('$situation', ({ rankings, expected, previous }) => {
+      const active = withRankings(rankings);
+      const item = toTrackedKeywordItem(active);
+
+      expect(lastRanked(active)).toEqual(expected);
+      expect({
+        previousPosition: item.previousPosition,
+        positionDelta1d: item.positionDelta1d,
+      }).toEqual(previous);
+      expect(lastRanked({ ...active, active: false })).toEqual(expected);
+    });
+  });
+
   const holdDay = (offset: number): string => {
     const date = new Date();
     date.setUTCHours(0, 0, 0, 0);

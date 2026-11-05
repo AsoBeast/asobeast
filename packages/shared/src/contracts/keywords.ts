@@ -91,6 +91,8 @@ export interface TrackedKeywordItem {
   competitorsInTop10?: number | null;
   playAcquisitions?: PlayAcquisitions | null;
   matchedIn?: KeywordMarkSegment[];
+  lastRankedPosition?: number | null;
+  lastRankedOn?: string | null;
 }
 
 export interface PlayAcquisitions {
