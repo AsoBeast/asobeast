@@ -13,6 +13,8 @@ The Y axis is reversed, so position 1 is at the top and a rising line is an impr
 
 The chart covers every market the app tracks, so each series is named with its storefront, as in `habit tracker (US)`. The same phrase in two markets is two keyword rows checked by two searches, and the labels are what keeps them apart on the chart, in its legend and in the CSV export. Rank alerts name the market the same way.
 
+Market pills at the top of the page scope the report to one storefront. **All markets** keeps every market the app tracks; picking one narrows the keyword picker, the chart and the SERP movers card to that storefront, and the address carries the choice as `country`. The keyword monitor charts selected rows with the same chart in its dynamics panel; see [Track keywords](/guides/track-keywords#bulk-manage-keywords).
+
 | What you see | What it means |
 | --- | --- |
 | A line rising toward the top | Position improving |
@@ -33,7 +35,7 @@ An annotation is a named event pinned to one UTC day: a release, a listing chang
 
 Add annotations on the rankings page of an app: pick a date, write a short label and save. A tag groups the markers of one campaign, and the list keeps every marker with its date for one click removal.
 
-The metadata change lines asobeast draws on its own show what the store reports; annotations show what you did. Both on one chart is usually the whole story.
+The metadata change marks asobeast draws on its own sit under the rank chart, one small marker on the day the store reported a change, and show what the store did; annotations show what you did. Both on one chart is usually the whole story.
 
 Agents write annotations too. A token with the write scope carries `add_annotation` and `delete_annotation`, so an agent that ships a listing change can leave the marker itself. See [MCP tool reference](/mcp/tools).
 
@@ -60,6 +62,8 @@ For every tracked keyword and day, asobeast keeps the top 50 search results with
 | Entrants | Apps that appeared in the top 10 that were not there before |
 | Movers | Apps whose position changed materially between snapshots |
 | Volatility | How much of the top 10 changed hands over the recent window |
+
+The **SERP movers** card on this page lists the entrants and follows the market the pills at the top of the page have selected, so **All markets** watches every storefront and one pill watches that storefront only.
 
 ### Open the search results
 

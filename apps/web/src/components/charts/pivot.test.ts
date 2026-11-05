@@ -6,7 +6,7 @@ import {
   lastCheckedIndex,
   loneKey,
 } from "./pivot";
-import { rankingCsv } from "./ranking-csv";
+import { rankingCsv } from "../rankings/ranking-csv";
 
 const series = (over: Partial<RankingSeriesItem>): RankingSeriesItem => ({
   keywordId: "kw-1",

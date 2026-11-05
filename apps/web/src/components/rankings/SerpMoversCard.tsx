@@ -16,10 +16,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TrackButton } from "@/components/competitors/TrackButton";
-import { formatDate } from "@/lib/format";
+import { formatCountry, formatDate } from "@/lib/format";
 import { serpMoversOptions } from "@/lib/queries";
 import { MOVER_WINDOWS } from "@/lib/ranges";
-import { moverDaysParser } from "@/lib/search-params";
+import { countryParser, moverDaysParser } from "@/lib/search-params";
 import { PrintRangeLabel } from "./RangePicker";
 
 function groupByDay(items: SerpMoverItem[]): [string, SerpMoverItem[]][] {
@@ -35,14 +35,27 @@ function groupByDay(items: SerpMoverItem[]): [string, SerpMoverItem[]][] {
   return [...groups.entries()];
 }
 
-function SerpMoversList({ id, days }: { id: string; days: number }) {
-  const { data } = useSuspenseQuery(serpMoversOptions(id, days));
+function SerpMoversList({
+  id,
+  days,
+  country,
+}: {
+  id: string;
+  days: number;
+  country: string | null;
+}) {
+  const { data } = useSuspenseQuery(serpMoversOptions(id, days, country));
+  const market = country ? formatCountry(country) : null;
 
   if (data.items.length === 0) {
     return (
       <EmptyState
         title={`No new entrants in the last ${days} days`}
-        body="Nobody broke into the top 10 for your tracked keywords in this window. Widen it to look further back."
+        body={
+          market
+            ? `Nobody broke into the top 10 for your tracked keywords in ${market} in this window. Widen it to look further back.`
+            : "Nobody broke into the top 10 for your tracked keywords in this window. Widen it to look further back."
+        }
       />
     );
   }
@@ -107,12 +120,17 @@ function SerpMoversSkeleton() {
 
 export function SerpMoversCard({ id }: { id: string }) {
   const [days, setDays] = useQueryState("movers", moverDaysParser);
+  const [country] = useQueryState("country", countryParser);
 
   return (
     <Card>
       <CardHeader className="flex-row items-start justify-between gap-4">
         <div className="flex flex-col gap-1.5">
-          <CardDescription>SERP movers</CardDescription>
+          <CardDescription>
+            {country
+              ? `SERP movers (${formatCountry(country)})`
+              : "SERP movers"}
+          </CardDescription>
           <CardTitle>New entrants in your keywords’ top 10</CardTitle>
         </div>
         <Tabs
@@ -131,7 +149,7 @@ export function SerpMoversCard({ id }: { id: string }) {
       </CardHeader>
       <CardContent>
         <Suspense fallback={<SerpMoversSkeleton />}>
-          <SerpMoversList id={id} days={days} />
+          <SerpMoversList id={id} days={days} country={country} />
         </Suspense>
       </CardContent>
     </Card>

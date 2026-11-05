@@ -307,6 +307,33 @@ export const overviewRangeParsers = {
 
 export const keywordIdsParser = parseAsArrayOf(parseAsString).withDefault([]);
 
+export type KeywordChartSelection =
+  { mode: "chart"; ids: string[] } | { mode: "hidden" };
+
+const toChartSelection = (ids: string[]): KeywordChartSelection => {
+  const kept = ids.filter((id) => id !== "");
+  return kept.length > 0 ? { mode: "chart", ids: kept } : { mode: "hidden" };
+};
+
+const sameIds = (a: readonly string[], b: readonly string[]): boolean =>
+  a.length === b.length && a.every((id, index) => id === b[index]);
+
+const sameChartSelection = (
+  a: KeywordChartSelection,
+  b: KeywordChartSelection,
+): boolean => {
+  if (a.mode !== b.mode) return false;
+  if (a.mode === "chart" && b.mode === "chart") return sameIds(a.ids, b.ids);
+  return true;
+};
+
+export const keywordChartSelectionParser = createParser({
+  parse: (query) => toChartSelection(keywordIdsParser.parse(query) ?? []),
+  serialize: (selection) =>
+    selection.mode === "chart" ? keywordIdsParser.serialize(selection.ids) : "",
+  eq: sameChartSelection,
+}).withDefault({ mode: "hidden" });
+
 export const marketParser = parseAsString.withDefault("");
 
 export const onlyGapsParser = parseAsBoolean.withDefault(false);

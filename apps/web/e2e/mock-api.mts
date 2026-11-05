@@ -4053,7 +4053,32 @@ const routes: Route[] = [
       ),
     (req) => hasCookie(req, RANKINGS_FAIL_COOKIE, "1"),
   ),
-  appRoute(/^\/apps\/([^/]+)\/serp-movers$/, (dataset) => dataset.serpMovers),
+  {
+    method: "GET",
+    pattern: /^\/apps\/([^/]+)\/serp-movers$/,
+    handler: ([id], req, res) => {
+      const path = req.url ?? "/";
+      if (id === ERROR_ID || hasCookie(req, "e2e-fail-app", "1")) {
+        return json(res, 500, errorEnvelope(500, path));
+      }
+      const dataset = DATASETS[id];
+      if (!dataset) return json(res, 404, errorEnvelope(404, path));
+      const query = new URL(path, "http://localhost").searchParams;
+      const market = query.get("country");
+      if (market === null) return json(res, 200, dataset.serpMovers);
+      const inMarket = new Set(
+        dataset.keywords
+          .filter((item) => item.country === market && item.active)
+          .map((item) => item.keywordId),
+      );
+      return json(res, 200, {
+        windowDays: dataset.serpMovers.windowDays,
+        items: dataset.serpMovers.items.filter((item) =>
+          inMarket.has(item.keywordId),
+        ),
+      });
+    },
+  },
   {
     method: "GET",
     pattern: /^\/apps\/([^/]+)\/annotations$/,

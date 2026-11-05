@@ -183,7 +183,11 @@ export class SerpService {
     }
 
     const tracked = await this.prisma.trackedKeyword.findMany({
-      where: { appId, active: true },
+      where: {
+        appId,
+        active: true,
+        keyword: query.country ? { country: query.country } : undefined,
+      },
       select: { keywordId: true, keyword: { select: { text: true } } },
     });
     const textByKeyword = new Map(
@@ -201,7 +205,7 @@ export class SerpService {
     const byStoreAppId = await appsByStoreAppId(
       this.prisma,
       app.store,
-      app.country,
+      query.country ?? app.country,
       movers.map((mover) => mover.storeAppId),
     );
 

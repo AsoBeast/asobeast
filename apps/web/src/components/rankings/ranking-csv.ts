@@ -1,6 +1,6 @@
 import { formatCheckedPosition } from "@asobeast/shared";
 import { csvFilename, downloadCsv, toCsv } from "@/lib/csv";
-import { hasCheck, type RankingChartData } from "./pivot";
+import { hasCheck, type RankingChartData } from "@/components/charts/pivot";
 
 export function rankingCsv(data: RankingChartData): string {
   const headers = [

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import type { TrackedKeywordItem } from "@asobeast/shared";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,20 +19,19 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { keywordsOptions } from "@/lib/queries";
-import { DEFAULT_SELECTION, topByOpportunity } from "./selection";
+import { DEFAULT_SELECTION, pickerLabel, topByOpportunity } from "./selection";
 
 export function KeywordPicker({
-  id,
+  tracked,
   value,
   onChange,
 }: {
-  id: string;
+  tracked: TrackedKeywordItem[];
   value: string[];
   onChange: (next: string[]) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const { data: tracked } = useSuspenseQuery(keywordsOptions(id));
+  const label = pickerLabel(tracked);
 
   const toggle = (keywordId: string) => {
     onChange(
@@ -66,7 +65,7 @@ export function KeywordPicker({
               {tracked.map((keyword) => (
                 <CommandItem
                   key={keyword.keywordId}
-                  value={keyword.text}
+                  value={label(keyword)}
                   onSelect={() => toggle(keyword.keywordId)}
                 >
                   <Check
@@ -77,7 +76,7 @@ export function KeywordPicker({
                         : "opacity-0",
                     )}
                   />
-                  <span className="truncate">{keyword.text}</span>
+                  <span className="truncate">{label(keyword)}</span>
                 </CommandItem>
               ))}
             </CommandGroup>

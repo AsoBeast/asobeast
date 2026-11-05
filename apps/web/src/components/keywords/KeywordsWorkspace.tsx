@@ -1,14 +1,23 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useRef, type RefObject } from "react";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { Info, Plus, Upload } from "lucide-react";
 import { useQueryState } from "nuqs";
 import type { Store } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { countryParser, keywordViewParser } from "@/lib/search-params";
+import { keywordsOptions } from "@/lib/queries";
+import {
+  countryParser,
+  keywordChartSelectionParser,
+  keywordViewParser,
+  type KeywordChartSelection,
+} from "@/lib/search-params";
+import { resolveChartSelection } from "./dynamics-selection";
 import { AddKeywordsDialog } from "./AddKeywordsDialog";
 import { ImportKeywordsDialog } from "./ImportKeywordsDialog";
+import { KeywordDynamicsPanel } from "./KeywordDynamicsPanel";
 import { KeywordsToolbar } from "./KeywordsToolbar";
 import { MarketSearchReadsCard } from "./MarketSearchReadsCard";
 import { KeywordsTable } from "./KeywordsTable";
@@ -29,7 +38,9 @@ export function KeywordsWorkspace({
 }) {
   const [country] = useQueryState("country", countryParser);
   const [view] = useQueryState("view", keywordViewParser);
+  const [selection] = useQueryState("keywords", keywordChartSelectionParser);
   const market = country || homeCountry;
+  const clearFocus = useRef<HTMLButtonElement>(null);
 
   return (
     <div className="flex flex-col gap-6">
@@ -50,7 +61,7 @@ export function KeywordsWorkspace({
             </Button>
           </ImportKeywordsDialog>
           <AddKeywordsDialog appId={id} store={store} country={market}>
-            <Button>
+            <Button ref={clearFocus}>
               <Plus />
               Add keywords
             </Button>
@@ -80,11 +91,13 @@ export function KeywordsWorkspace({
           </div>
         }
       >
-        <KeywordsTable
+        <KeywordsMarketScope
           id={id}
-          store={store}
-          country={market}
+          market={market}
           homeCountry={homeCountry}
+          store={store}
+          selection={selection}
+          clearFocus={clearFocus}
         />
       </Suspense>
       <SuggestionsPanel id={id} country={market} store={store} />
@@ -102,5 +115,45 @@ export function KeywordsWorkspace({
         />
       ) : null}
     </div>
+  );
+}
+
+function KeywordsMarketScope({
+  id,
+  market,
+  homeCountry,
+  store,
+  selection,
+  clearFocus,
+}: {
+  id: string;
+  market: string;
+  homeCountry: string;
+  store: Store;
+  selection: KeywordChartSelection;
+  clearFocus: RefObject<HTMLButtonElement | null>;
+}) {
+  const { data: tracked } = useSuspenseQuery(keywordsOptions(id, market));
+  const chart = resolveChartSelection(selection, tracked);
+  const open = selection.mode === "chart";
+  return (
+    <>
+      {open ? (
+        <KeywordDynamicsPanel
+          id={id}
+          market={market}
+          homeCountry={homeCountry}
+          chart={chart}
+          clearFocus={clearFocus}
+        />
+      ) : null}
+      <KeywordsTable
+        id={id}
+        store={store}
+        country={market}
+        homeCountry={homeCountry}
+        chartedIds={open ? chart.charted : []}
+      />
+    </>
   );
 }
