@@ -12,14 +12,17 @@ import {
   PortfolioSummary,
   RankDistributionHistory,
   RatingsHistory,
+  TrackedKeywordItem,
   VisibilityHistory,
   setupSummary,
+  visibility,
 } from '@asobeast/shared';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { testDb } from './helpers/test-db';
 import { ownerAgent, useCookies } from './helpers/session';
 import { DigestService } from '../src/analytics/digest.service';
+import { KeywordsService } from '../src/keywords/keywords.service';
 import { obliterateQueues, settleBootRegistration } from './obliterate-queues';
 import { asWorkspace } from './helpers/tenancy';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
@@ -295,6 +298,355 @@ describe('AnalyticsController (e2e)', () => {
     expect(summary.trackedKeywords).toBe(4);
     expect(summary.competitors).toBe(0);
     expect(summary.lastRefreshAt).toBe(D0.toISOString());
+  });
+
+  interface RivalCheck {
+    text: string;
+    date: Date;
+    position: number | null;
+    country?: string;
+  }
+
+  const addRival = async (
+    primaryId: string,
+    checks: RivalCheck[],
+    storeAppId = 'rival-1',
+  ): Promise<string> => {
+    const rival = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId,
+        country: 'us',
+        name: `Rival ${storeAppId}`,
+        isCompetitor: true,
+        primaryAppId: primaryId,
+      },
+    });
+    for (const check of checks) {
+      const keyword = await prisma.keyword.findFirstOrThrow({
+        where: { text: check.text, country: check.country ?? 'us' },
+      });
+      await prisma.keywordRanking.create({
+        data: {
+          appId: rival.id,
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          keywordId: keyword.id,
+          date: check.date,
+          position: check.position,
+          depth: 100,
+        },
+      });
+    }
+    return rival.id;
+  };
+
+  const SEEDED_TRAFFIC: [string, number][] = [
+    ['habit tracker', 8],
+    ['streak app', 5],
+    ['daily goals', 8],
+    ['habit', 9],
+  ];
+
+  const visibilityOf = (positions: (number | null)[]) =>
+    visibility(
+      SEEDED_TRAFFIC.map(([, traffic], index) => ({
+        traffic,
+        position: positions[index],
+      })),
+    );
+
+  const shareOf = (you: number, rivals: number[]) =>
+    Math.round((you / rivals.reduce((sum, v) => sum + v, you)) * 1000) / 10;
+
+  const rivalChecks = (
+    date: Date,
+    positions: (number | null)[],
+  ): RivalCheck[] =>
+    SEEDED_TRAFFIC.map(([text], index) => ({
+      text,
+      date,
+      position: positions[index],
+    }));
+
+  const summaryOf = async (id: string, country?: string) =>
+    (
+      await api
+        .get(`/apps/${id}/summary`)
+        .query(country ? { country } : {})
+        .expect(200)
+    ).body as AppSummary;
+
+  it('answers share of voice against the tracked competitors', async () => {
+    const id = await seed();
+    await addRival(id, [
+      ...rivalChecks(D0, [3, null, 5, 2]),
+      ...rivalChecks(D7, [4, 2, null, 1]),
+    ]);
+
+    const { shareOfVoice, competitors } = await summaryOf(id);
+
+    const now = shareOf(visibilityOf([11, 14, null, 1]), [
+      visibilityOf([3, null, 5, 2]),
+    ]);
+    const before = shareOf(visibilityOf([24, 6, null, 2]), [
+      visibilityOf([4, 2, null, 1]),
+    ]);
+    expect(competitors).toBe(1);
+    expect(shareOfVoice).toEqual({
+      current: now,
+      delta7d: Math.round((now - before) * 10) / 10,
+      competitors: 1,
+    });
+  });
+
+  it('says why there is no share of voice', async () => {
+    const alone = await seed();
+    expect((await summaryOf(alone)).shareOfVoice).toEqual({
+      current: null,
+      delta7d: null,
+      competitors: 0,
+      reason: 'noCompetitors',
+    });
+
+    await addRival(alone, rivalChecks(D7, [1, 1, 1, 1]));
+    expect((await summaryOf(alone)).shareOfVoice).toEqual({
+      current: null,
+      delta7d: null,
+      competitors: 0,
+      reason: 'notChecked',
+    });
+  });
+
+  it('names a day on which nobody ranks', async () => {
+    const id = await seed();
+    await prisma.keywordRanking.updateMany({
+      where: { date: D0 },
+      data: { position: null },
+    });
+    await addRival(id, rivalChecks(D0, [null, null, null, null]));
+
+    expect((await summaryOf(id)).shareOfVoice).toEqual({
+      current: null,
+      delta7d: null,
+      competitors: 1,
+      reason: 'nobodyRanks',
+    });
+  });
+
+  it('counts only the market asked for', async () => {
+    const id = await seed();
+    await seedGermanMarket(id);
+    await addRival(id, [
+      { text: 'gewohnheiten', country: 'de', date: D7, position: 1 },
+    ]);
+
+    const german = await summaryOf(id, 'de');
+    const american = await summaryOf(id, 'us');
+
+    expect(german.shareOfVoice?.current).toBe(
+      shareOf(visibility([{ traffic: 10, position: 3 }]), [
+        visibility([{ traffic: 10, position: 1 }]),
+      ]),
+    );
+    expect(american.shareOfVoice?.reason).toBe('notChecked');
+  });
+
+  it('counts a delisted competitor on the days it was checked', async () => {
+    const id = await seed();
+    const rival = await addRival(id, rivalChecks(D0, [3, null, 5, 2]));
+    await prisma.app.update({
+      where: { id: rival },
+      data: { delistedAt: D0 },
+    });
+
+    expect((await summaryOf(id)).shareOfVoice?.current).toBe(
+      shareOf(visibilityOf([11, 14, null, 1]), [visibilityOf([3, null, 5, 2])]),
+    );
+  });
+
+  const historyOf = async (id: string, query: Record<string, string>) =>
+    (
+      await api
+        .get(`/apps/${id}/visibility-history`)
+        .query({ from: '2026-06-20', to: '2026-07-01', ...query })
+        .expect(200)
+    ).body as VisibilityHistory;
+
+  it('charts share of voice when asked', async () => {
+    const id = await seed();
+    await addRival(id, rivalChecks(D0, [3, null, 5, 2]));
+
+    const history = await historyOf(id, { compare: 'competitors' });
+
+    expect(history.points.map((point) => point.date)).toEqual([
+      '2026-06-23',
+      '2026-06-30',
+    ]);
+    expect(history.shareOfVoice).toEqual([
+      {
+        date: '2026-06-30',
+        share: shareOf(visibilityOf([11, 14, null, 1]), [
+          visibilityOf([3, null, 5, 2]),
+        ]),
+        competitors: 1,
+      },
+    ]);
+  });
+
+  it('charts share of voice of one market', async () => {
+    const id = await seed();
+    await seedGermanMarket(id);
+    await addRival(id, [
+      { text: 'gewohnheiten', country: 'de', date: D7, position: 1 },
+    ]);
+
+    const history = await historyOf(id, {
+      compare: 'competitors',
+      country: 'de',
+    });
+
+    expect(history.shareOfVoice).toEqual([
+      {
+        date: '2026-06-23',
+        share: shareOf(visibility([{ traffic: 10, position: 3 }]), [
+          visibility([{ traffic: 10, position: 1 }]),
+        ]),
+        competitors: 1,
+      },
+    ]);
+  });
+
+  it('answers the history unchanged without compare', async () => {
+    const id = await seed();
+    await addRival(id, rivalChecks(D0, [3, null, 5, 2]));
+
+    const history = await historyOf(id, {});
+
+    expect(Object.keys(history)).toEqual(['points']);
+  });
+
+  it('refuses an unknown comparison', async () => {
+    const id = await seed();
+
+    const response = await api
+      .get(`/apps/${id}/visibility-history`)
+      .query({ compare: 'apps' })
+      .expect(400);
+
+    expect((response.body as ApiErrorEnvelope).statusCode).toBe(400);
+  });
+
+  it('charts no share of voice without a competitor', async () => {
+    const id = await seed();
+
+    expect(
+      (await historyOf(id, { compare: 'competitors' })).shareOfVoice,
+    ).toEqual([]);
+  });
+
+  it('caps a compared range at 180 days as well', async () => {
+    const id = await seed();
+
+    await api
+      .get(`/apps/${id}/visibility-history`)
+      .query({ from: '2025-01-01', to: '2026-07-01', compare: 'competitors' })
+      .expect(400);
+  });
+
+  const classify = async (
+    appId: string,
+    classes: Record<string, 'ownBrand' | 'competitorBrand' | 'generic'>,
+  ) => {
+    for (const [text, keywordClass] of Object.entries(classes)) {
+      await prisma.trackedKeyword.updateMany({
+        where: { appId, keyword: { text } },
+        data: { keywordClass },
+      });
+    }
+  };
+
+  const genericExcept = (
+    brands: Record<string, 'ownBrand' | 'competitorBrand'>,
+  ) =>
+    Object.fromEntries(
+      SEEDED_TRAFFIC.map(([text]) => [text, brands[text] ?? 'generic']),
+    );
+
+  const nonBrandedVisibility = (positions: (number | null)[]) =>
+    visibility(
+      SEEDED_TRAFFIC.flatMap(([text, traffic], index) =>
+        text === 'habit' ? [] : [{ traffic, position: positions[index] }],
+      ),
+    );
+
+  it('leaves brand keywords out of the non branded share of voice', async () => {
+    const id = await seed();
+    await addRival(id, rivalChecks(D0, [3, null, 5, 2]));
+    await classify(id, genericExcept({ habit: 'ownBrand' }));
+
+    const summary = await summaryOf(id);
+    const history = await historyOf(id, { compare: 'competitors' });
+
+    const expected = shareOf(nonBrandedVisibility([11, 14, null, 1]), [
+      nonBrandedVisibility([3, null, 5, 2]),
+    ]);
+    expect(summary.nonBrandedShareOfVoice).toEqual({
+      current: expected,
+      delta7d: null,
+      competitors: 1,
+    });
+    expect(summary.nonBrandedShareOfVoice?.current).not.toBe(
+      summary.shareOfVoice?.current,
+    );
+    expect(history.nonBrandedShareOfVoice).toEqual([
+      { date: '2026-06-30', share: expected, competitors: 1 },
+    ]);
+  });
+
+  it('classes each keyword as the keywords list does', async () => {
+    const id = await seed();
+    await addRival(id, rivalChecks(D0, [3, null, 5, 2]));
+    await classify(id, { 'streak app': 'competitorBrand' });
+
+    const listed = (await api.get(`/apps/${id}/keywords`).expect(200))
+      .body as TrackedKeywordItem[];
+    const classes = await asWorkspace(app, () =>
+      app.get(KeywordsService).keywordClasses(id),
+    );
+
+    expect(Object.fromEntries(classes)).toEqual(
+      Object.fromEntries(
+        listed.map((item) => [item.keywordId, item.keywordClass]),
+      ),
+    );
+    expect(new Set(classes.values()).size).toBeGreaterThan(1);
+  });
+
+  it('answers the same two shares when every keyword is generic', async () => {
+    const id = await seed();
+    await addRival(id, rivalChecks(D0, [3, null, 5, 2]));
+    await classify(id, genericExcept({}));
+
+    const summary = await summaryOf(id);
+
+    expect(summary.nonBrandedShareOfVoice).toEqual(summary.shareOfVoice);
+  });
+
+  it('measures no non branded share when every keyword is a brand', async () => {
+    const id = await seed();
+    await addRival(id, rivalChecks(D0, [3, null, 5, 2]));
+    await classify(
+      id,
+      Object.fromEntries(SEEDED_TRAFFIC.map(([text]) => [text, 'ownBrand'])),
+    );
+
+    expect((await summaryOf(id)).nonBrandedShareOfVoice).toEqual({
+      current: null,
+      delta7d: null,
+      competitors: 0,
+      reason: 'nobodyRanks',
+    });
   });
 
   it('narrows the summary to the keywords of one market', async () => {

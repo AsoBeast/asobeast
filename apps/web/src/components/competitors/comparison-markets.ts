@@ -1,4 +1,7 @@
-import type { KeywordComparisonRow } from "@asobeast/shared";
+import type {
+  CompetitorGapCoverage,
+  KeywordComparisonRow,
+} from "@asobeast/shared";
 import { formatCountry } from "@/lib/format";
 
 export const ALL_MARKETS = "all";
@@ -24,3 +27,8 @@ export const marketOptions = (markets: readonly string[]) => [
   { value: ALL_MARKETS, label: "All markets" },
   ...markets.map((market) => ({ value: market, label: formatCountry(market) })),
 ];
+
+export const gapMarkets = (
+  coverage: CompetitorGapCoverage | undefined,
+  home: string,
+): string[] => comparisonMarkets(coverage?.markets ?? [], home);

@@ -142,7 +142,7 @@ function KeywordCell({
   row: KeywordComparisonRow;
   scores: readonly ComparisonScore[];
   market: string | null;
-  onOpenBreakdown: (keywordId: string) => void;
+  onOpenBreakdown: (keywordId: string, opener: HTMLElement) => void;
 }) {
   return (
     <div className="flex flex-col gap-0.5">
@@ -152,7 +152,9 @@ function KeywordCell({
           title={row.text}
           aria-label={`${row.text}, why apps rank`}
           data-breakdown-keyword={row.keywordId}
-          onClick={() => onOpenBreakdown(row.keywordId)}
+          onClick={(event) =>
+            onOpenBreakdown(row.keywordId, event.currentTarget)
+          }
           className="max-w-32 truncate rounded-sm text-left font-medium underline decoration-muted-foreground decoration-dotted underline-offset-4 hover:decoration-primary md:max-w-64"
         >
           {row.text}
@@ -207,7 +209,7 @@ function CompetitorHeading({ competitor }: { competitor: MatrixCompetitor }) {
 
 export function comparisonColumns(
   competitors: readonly MatrixCompetitor[],
-  onOpenBreakdown: (keywordId: string) => void,
+  onOpenBreakdown: (keywordId: string, opener: HTMLElement) => void,
   scope: MatrixScope,
 ) {
   const competitorIds = competitors.map((competitor) => competitor.id);

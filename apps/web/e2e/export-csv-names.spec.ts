@@ -22,7 +22,11 @@ for (const [path, names] of [
   ["/apps/app-1/reviews", ["Export CSV of reviews"]],
   [
     "/apps/app-1/competitors",
-    ["Export CSV of competitors", "Export CSV of the comparison"],
+    [
+      "Export CSV of competitors",
+      "Export CSV of keyword gaps",
+      "Export CSV of the comparison",
+    ],
   ],
 ] as const) {
   test(`${path} names its export buttons from the visible words`, async ({

@@ -10,9 +10,10 @@ const PAGE = "/apps/app-1/competitors";
 const TRACKED = "Track the apps you rank against";
 const DISCOVERY = "Apps you don’t track yet";
 const MATRIX = "Your position against every competitor";
+const GAPS = "Where competitors beat you";
 const COOKIE = "asobeast_collapsed";
 const LOG_COOKIE = "e2e_request_log";
-const SECTIONS = [TRACKED, DISCOVERY, MATRIX];
+const SECTIONS = [TRACKED, GAPS, DISCOVERY, MATRIX];
 
 const trigger = (page: Page, name: string) =>
   page.getByRole("button", { name, exact: true });

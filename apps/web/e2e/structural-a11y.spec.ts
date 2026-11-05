@@ -69,7 +69,7 @@ test("the competitors page with every section collapsed names no missing control
 }) => {
   await seedCookies(context, {
     asobeast_collapsed:
-      "competitors.tracked%2Ccompetitors.discovery%2Ccompetitors.matrix",
+      "competitors.tracked%2Ccompetitors.gaps%2Ccompetitors.discovery%2Ccompetitors.matrix",
   });
   await page.goto("/apps/app-1/competitors");
   await page.waitForLoadState("networkidle");

@@ -876,3 +876,26 @@ test("a translated alerts page loads more, filters and searches", async ({
   await expect(page).not.toHaveURL(/q=germany/);
   expect(errors).toEqual([]);
 });
+
+test("a translated gap analysis switches its tabs and market", async ({
+  page,
+}) => {
+  const errors = collectDomErrors(page);
+  await page.goto("/apps/app-1/competitors");
+  const section = page.getByRole("region", {
+    name: /where competitors beat you/i,
+  });
+  const winnable = await hydrated(
+    section.getByRole("tab", { name: "Winnable now (2)" }),
+  );
+
+  await translateText(page);
+  await winnable.click();
+  await section.getByRole("tab", { name: /^threats/i }).click();
+  await section.getByRole("combobox", { name: "Filter by gap market" }).click();
+  await page.getByRole("option", { name: /germany/i }).click();
+
+  await expect(page).toHaveURL(/gapCountry=de/);
+  await expect(section.getByRole("tab", { name: /\(1\)$/ })).toBeVisible();
+  expect(errors).toEqual([]);
+});

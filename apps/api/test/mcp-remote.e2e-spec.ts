@@ -9,6 +9,7 @@ import { API_TOKEN_PREFIX } from '@asobeast/shared';
 import type {
   AlertEventList,
   ApiErrorEnvelope,
+  CompetitorAnalysis,
   SerpSnapshot,
 } from '@asobeast/shared';
 import { MCP_TOOLS } from '@asobeast/mcp-tools';
@@ -516,20 +517,28 @@ describe('Remote MCP transport (e2e)', () => {
     expect(result?.content?.[0].text).toContain('zz');
   });
 
-  it('analyses competitors and reports the three gap lists', async () => {
+  it('analyses competitors and reports every gap list with its coverage', async () => {
     const result = await callTool('competitor_analysis', {
       appId: await fixtureAppId(),
     });
 
     expect(result?.isError).toBeUndefined();
-    const analysis = JSON.parse(result?.content?.[0].text ?? '{}') as {
-      gaps: Record<string, unknown[]>;
-    };
+    const analysis = JSON.parse(
+      result?.content?.[0].text ?? '{}',
+    ) as CompetitorAnalysis;
     expect(Object.keys(analysis.gaps).sort()).toEqual([
+      'coverage',
+      'keywordGaps',
+      'lead',
       'outranked',
       'theyRankYouDont',
+      'threats',
+      'winnable',
       'youRankTheyDont',
     ]);
+    expect(analysis.gaps.coverage).toEqual(
+      expect.objectContaining({ delisted: 0 }),
+    );
   });
 
   it('compares keyword positions and honours onlyGaps', async () => {

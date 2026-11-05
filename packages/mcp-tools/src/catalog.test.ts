@@ -318,6 +318,47 @@ describe("the keyword_comparison unchecked ids", () => {
   });
 });
 
+describe("the visibility_history comparison", () => {
+  const tool = () => toolByName("visibility_history");
+
+  it("asks for share of voice when compared with competitors", () => {
+    expect(tool()?.request({ appId: "app-1", compare: "competitors" })).toEqual(
+      {
+        path: "/apps/app-1/visibility-history",
+        params: {
+          from: undefined,
+          to: undefined,
+          country: undefined,
+          compare: "competitors",
+        },
+      },
+    );
+  });
+
+  it("refuses an unknown comparison", () => {
+    expect(
+      tool()?.inputSchema.safeParse({ appId: "app-1", compare: "apps" })
+        .success,
+    ).toBe(false);
+  });
+
+  it.each(["app_summary", "visibility_history"])(
+    "names share of voice in %s",
+    (name) => {
+      expect(toolByName(name)?.description).toContain("shareOfVoice");
+    },
+  );
+});
+
+describe("the competitor_analysis gap lists", () => {
+  it.each(["keywordGaps", "winnable", "threats", "lead", "coverage"])(
+    "names %s",
+    (field) => {
+      expect(toolByName("competitor_analysis")?.description).toContain(field);
+    },
+  );
+});
+
 describe("the competitor, comparison and chart tools", () => {
   it.each([
     "list_competitors",

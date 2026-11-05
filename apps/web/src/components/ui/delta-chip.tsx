@@ -93,10 +93,12 @@ export function TrendChip({
   label,
   value,
   unit = "",
+  digits = 0,
 }: {
   label: string;
   value: number | null;
   unit?: string;
+  digits?: number;
 }) {
   if (value === null) {
     return (
@@ -104,10 +106,12 @@ export function TrendChip({
     );
   }
 
-  const rounded = Math.round(value);
+  const scale = 10 ** digits;
+  const rounded = Math.round(value * scale) / scale;
   const way = direction(rounded, "higher-is-better");
   const Icon = GLYPH[way];
-  const signed = rounded > 0 ? `+${rounded}` : String(rounded);
+  const shown = rounded.toFixed(digits);
+  const signed = rounded > 0 ? `+${shown}` : shown;
 
   return (
     <span

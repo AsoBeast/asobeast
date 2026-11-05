@@ -12,6 +12,7 @@ import { FirstRunTimeline } from "@/components/onboarding/FirstRunTimeline";
 import { CategoryRankCard } from "@/components/overview/CategoryRankCard";
 import { CoverageCard } from "@/components/overview/CoverageCard";
 import { FunnelCard } from "@/components/overview/FunnelCard";
+import { GapHeadlineCard } from "@/components/overview/GapHeadlineCard";
 import { MoversCard } from "@/components/overview/MoversCard";
 import { RatingsByMarketCard } from "@/components/overview/RatingsByMarketCard";
 import { KNOWN_SECTIONS } from "@/components/layout/known-sections";
@@ -21,6 +22,7 @@ import { RankDistributionHistoryChart } from "@/components/overview/RankDistribu
 import {
   ChartCardSkeleton,
   FunnelCardSkeleton,
+  GapHeadlineCardSkeleton,
   PanelCardSkeleton,
   StatCardsSkeleton,
 } from "@/components/overview/skeletons";
@@ -156,6 +158,10 @@ export default async function AppOverviewPage({
             <RankDistributionChart id={id} />
           </Suspense>
         </div>
+
+        <Suspense fallback={<GapHeadlineCardSkeleton />}>
+          <GapHeadlineCard id={id} />
+        </Suspense>
 
         <RankDistributionHistoryChart id={id} />
 

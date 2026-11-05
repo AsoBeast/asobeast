@@ -1,5 +1,9 @@
 import request from 'supertest';
-import type { TrackedKeywordItem } from '@asobeast/shared';
+import type {
+  AppSummary,
+  CompetitorAnalysis,
+  TrackedKeywordItem,
+} from '@asobeast/shared';
 import {
   createIsolationFixture,
   IsolationFixture,
@@ -204,6 +208,11 @@ const BY_ID = [
     path: (w: IsolationWorkspace) => `/apps/${w.appleAppId}/visibility-history`,
   },
   {
+    name: 'GET /apps/:id/visibility-history?compare=competitors',
+    path: (w: IsolationWorkspace) =>
+      `/apps/${w.appleAppId}/visibility-history?compare=competitors`,
+  },
+  {
     name: 'GET /apps/:id/ratings-history',
     path: (w: IsolationWorkspace) => `/apps/${w.appleAppId}/ratings-history`,
   },
@@ -260,6 +269,47 @@ describe('Read isolation', () => {
       expect(response.status).toBe(404);
     },
   );
+
+  it('keeps another workspace rankings out of the gap lists and the share of voice', async () => {
+    const gapsOf = async (workspace: IsolationWorkspace) =>
+      (
+        await workspace.agent
+          .get(`/apps/${workspace.appleAppId}/competitors/analysis`)
+          .expect(200)
+      ).body as CompetitorAnalysis;
+    const keywordIds = (rows: { keywordId: string }[] | undefined) =>
+      (rows ?? []).map(({ keywordId }) => keywordId);
+
+    const forA = await gapsOf(fixture.a);
+    const forB = await gapsOf(fixture.b);
+
+    expect(keywordIds(forA.gaps.lead)).toEqual([fixture.a.keywordId]);
+    expect(keywordIds(forB.gaps.lead)).toEqual([]);
+    expect(keywordIds(forB.gaps.outranked)).toEqual([fixture.b.keywordId]);
+    for (const [answer, other] of [
+      [forA, fixture.b],
+      [forB, fixture.a],
+    ] as const) {
+      expect(JSON.stringify(answer)).not.toContain(other.appleAppId);
+      expect(JSON.stringify(answer)).not.toContain(other.competitorId);
+    }
+
+    const shareOf = async (workspace: IsolationWorkspace) =>
+      (
+        (
+          await workspace.agent
+            .get(`/apps/${workspace.appleAppId}/summary`)
+            .expect(200)
+        ).body as AppSummary
+      ).shareOfVoice;
+    const shareA = await shareOf(fixture.a);
+    const shareB = await shareOf(fixture.b);
+
+    expect(shareA?.competitors).toBe(1);
+    expect(shareB?.competitors).toBe(1);
+    expect(shareA?.current).toBeGreaterThan(50);
+    expect(shareB?.current).toBeLessThan(50);
+  });
 
   it("refuses a breakdown of another workspace's private keyword", async () => {
     await fixture.b.agent

@@ -20,7 +20,7 @@ async function trackDiscoverySlot(page: Page): Promise<void> {
       const column = root?.matches(".flex-col")
         ? root
         : root?.firstElementChild;
-      return column?.children[1] ?? null;
+      return column?.children[2] ?? null;
     };
     const sample = () => {
       const height = Math.round(slot()?.getBoundingClientRect().height ?? 0);

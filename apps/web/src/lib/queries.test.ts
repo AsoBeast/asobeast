@@ -50,6 +50,7 @@ import {
   changesOptions,
   competitorsOptions,
   comparisonOptions,
+  competitorAnalysisOptions,
   keywordBreakdownOptions,
   discoveryOptions,
   competitorSuggestionsOptions,
@@ -174,6 +175,16 @@ const APP_SCOPED_OPTIONS = [
     appKeys.serpMovers(APP, 7, null),
   ],
   ["visibility", visibilityOptions(APP, RANGE), appKeys.visibility(APP, RANGE)],
+  [
+    "compared visibility",
+    visibilityOptions(APP, RANGE, undefined, "competitors"),
+    appKeys.visibility(APP, RANGE, undefined, "competitors"),
+  ],
+  [
+    "competitor analysis",
+    competitorAnalysisOptions(APP),
+    appKeys.competitorAnalysis(APP),
+  ],
   [
     "market visibility",
     visibilityOptions(APP, RANGE, "de"),
@@ -309,6 +320,16 @@ const ROOT_TO_LEAF = [
   ],
   ["compareRoot", appKeys.compareRoot(APP), appKeys.compare(APP, true)],
   [
+    "compare to analysis",
+    appKeys.compareRoot(APP),
+    appKeys.competitorAnalysis(APP),
+  ],
+  [
+    "visibility to compared",
+    appKeys.visibility(APP, RANGE),
+    appKeys.visibility(APP, RANGE, undefined, "competitors"),
+  ],
+  [
     "serpMoversRoot",
     appKeys.serpMoversRoot(APP),
     appKeys.serpMovers(APP, 7, null),
@@ -382,6 +403,24 @@ describe("appKeys", () => {
     ].map((key) => JSON.stringify(key));
 
     expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it("keys a compared visibility apart from every market and the plain one", () => {
+    const keys = [
+      appKeys.visibility(APP, RANGE),
+      appKeys.visibility(APP, RANGE, "de"),
+      appKeys.visibility(APP, RANGE, undefined, "competitors"),
+      appKeys.visibility(APP, RANGE, "de", "competitors"),
+    ].map((key) => JSON.stringify(key));
+
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it("refreshes the gap analysis with keywords, competitors and runs", () => {
+    const analysis = appKeys.competitorAnalysis(APP);
+
+    expect(isPrefixOf(appKeys.compareRoot(APP), analysis)).toBe(true);
+    expect(isPrefixOf(appKeys.detail(APP), analysis)).toBe(true);
   });
 
   it("keys a reviews export apart from the list it was filtered from", () => {

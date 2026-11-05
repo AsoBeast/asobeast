@@ -5,16 +5,18 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  addUtcDays,
   CompetitorAnalysis,
   CompetitorDiscovery,
-  CompetitorGapKeyword,
   CompetitorItem,
   CompetitorMetadataRow,
   countChars,
   KeywordComparison,
   parseStoreUrl,
   PositionMapPoint,
+  THREAT_WINDOW_DAYS,
   TrackedKeywordItem,
+  utcDayOf,
   visibility,
 } from '@asobeast/shared';
 import { QuotaService } from '../auth/quota.service';
@@ -22,7 +24,14 @@ import { AppCaptureService } from '../apps/app-capture.service';
 import { toCompetitorItem } from '../apps/apps.mapper';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { toDifficulty100 } from '../scoring/formulas';
+import {
+  competitorGapLists,
+  GapRow,
+  GapScope,
+  threatReadScope,
+} from './competitor-gap-lists';
+import { existingGapLists } from './competitor-gaps';
+import { recentChecks } from './competitor-recent-checks';
 import { aggregateDiscovery } from './discovery';
 import { DiscoveryQueryDto } from './dto/discovery-query.dto';
 import { LATEST_HOME_LISTING } from '../apps/listing';
@@ -40,12 +49,27 @@ function utcToday(): Date {
 interface AppRow {
   id: string;
   name: string | null;
+  delistedAt: Date | null;
   snapshots: {
     title: string;
     subtitle: string | null;
     ratingAvg: number | null;
   }[];
 }
+
+const gapScope = (primaryId: string, competitors: AppRow[]): GapScope => ({
+  primaryId,
+  competitors: competitors.map((competitor) => ({
+    id: competitor.id,
+    delisted: competitor.delistedAt !== null,
+  })),
+});
+
+const gapRows = (
+  comparison: KeywordComparison,
+  tracked: ReadonlyMap<string, TrackedKeywordItem>,
+): GapRow[] =>
+  comparison.rows.map((row) => ({ row, item: tracked.get(row.keywordId) }));
 
 @Injectable()
 export class CompetitorsService {
@@ -147,13 +171,26 @@ export class CompetitorsService {
     }
 
     const trackedById = new Map(tracked.map((item) => [item.keywordId, item]));
+    const scope = gapScope(appId, competitors);
+    const rows = gapRows(comparison, trackedById);
+    const today = utcDayOf(new Date());
+    const read = threatReadScope(rows, scope);
+    const recent = await recentChecks(
+      this.prisma,
+      read.appIds,
+      read.keywordIds,
+      addUtcDays(today, -(THREAT_WINDOW_DAYS + 1)),
+    );
 
     return {
       metadataComparison: [
         this.metadataRow(primary, true),
         ...competitors.map((competitor) => this.metadataRow(competitor, false)),
       ],
-      gaps: this.gaps(comparison, trackedById),
+      gaps: {
+        ...existingGapLists(comparison, trackedById),
+        ...competitorGapLists({ scope, rows, recent, today }),
+      },
       positionMap: this.positionMap(primary, competitors, comparison),
     };
   }
@@ -221,52 +258,6 @@ export class CompetitorsService {
     };
   }
 
-  private gaps(
-    comparison: KeywordComparison,
-    tracked: Map<string, TrackedKeywordItem>,
-  ): CompetitorAnalysis['gaps'] {
-    const theyRankYouDont: CompetitorGapKeyword[] = [];
-    const youRankTheyDont: CompetitorGapKeyword[] = [];
-    const outranked: CompetitorGapKeyword[] = [];
-
-    for (const row of comparison.rows) {
-      const best = comparison.competitors
-        .map((competitor) => ({
-          id: competitor.id,
-          position: row.positions[competitor.id] ?? null,
-        }))
-        .filter(
-          (entry): entry is { id: string; position: number } =>
-            entry.position !== null,
-        )
-        .sort((a, b) => a.position - b.position)[0];
-
-      const item = tracked.get(row.keywordId);
-      const base = {
-        keywordId: row.keywordId,
-        text: row.text,
-        volume: item?.volume ?? null,
-        difficulty:
-          row.difficulty === null ? null : toDifficulty100(row.difficulty),
-        opportunity: item?.opportunity ?? null,
-        yourPosition: row.you,
-        bestCompetitorPosition: best?.position ?? null,
-        bestCompetitorId: best?.id ?? null,
-      };
-
-      if (row.you === null && best) {
-        theyRankYouDont.push({ ...base, gap: null });
-      } else if (row.you !== null && !best) {
-        youRankTheyDont.push({ ...base, gap: null });
-      } else if (row.you !== null && best && row.you > best.position) {
-        outranked.push({ ...base, gap: row.you - best.position });
-      }
-    }
-
-    theyRankYouDont.sort((a, b) => (b.opportunity ?? 0) - (a.opportunity ?? 0));
-    return { theyRankYouDont, youRankTheyDont, outranked };
-  }
-
   private positionMap(
     primary: AppRow,
     competitors: AppRow[],
@@ -307,6 +298,7 @@ export class CompetitorsService {
     return {
       id: true,
       name: true,
+      delistedAt: true,
       snapshots: {
         ...LATEST_HOME_LISTING,
         select: { title: true, subtitle: true, ratingAvg: true },

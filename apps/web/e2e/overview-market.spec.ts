@@ -120,7 +120,7 @@ test("names no market on the cards of an app with one listing", async ({
 }) => {
   await page.goto("/apps/app-2");
 
-  await expect(card(page, "Visibility")).toBeVisible();
+  await expect(card(page, "Visibility").first()).toBeVisible();
   await expect(page.getByRole("combobox", { name: SWITCHER })).toHaveCount(0);
 });
 

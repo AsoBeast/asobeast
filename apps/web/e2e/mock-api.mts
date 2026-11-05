@@ -11,6 +11,7 @@ import {
   filterAlertEvents,
 } from "./alert-feed-fixtures.mts";
 import { BREAKDOWNS } from "./keyword-breakdowns.mts";
+import { analysisOf, visibilityComparedFor } from "./gap-mock.mts";
 import { SERP_HISTORY, serpOnDay } from "./serp-history.mts";
 import "./keyword-map.mts";
 import "./keyword-insights.mts";
@@ -174,6 +175,8 @@ import {
   CROWDED_COMPARISON,
   UNCHECKED_COMPARISON,
   UNCHECKED_COMPARISON_COOKIE,
+  GAP_STATE_COOKIE,
+  FAIL_ANALYSIS_COOKIE,
   CROWDED_COMPETITORS,
   CROWDED_COMPETITORS_COOKIE,
   DELISTED_AT,
@@ -4051,7 +4054,7 @@ const routes: Route[] = [
   ),
   {
     method: "GET",
-    pattern: /^\/__log\/(discovery|compare)-requests\/([^/]+)$/,
+    pattern: /^\/__log\/(discovery|compare|analysis)-requests\/([^/]+)$/,
     handler: ([kind, token], _req, res) =>
       json(res, 200, { count: loggedRequests.get(`${kind}:${token}`) ?? 0 }),
   },
@@ -4196,9 +4199,18 @@ const routes: Route[] = [
       json(res, 200, { reset: true });
     },
   },
+  appRoute(/^\/apps\/([^/]+)\/visibility-history$/, (dataset, query) =>
+    query.get("compare") === "competitors"
+      ? visibilityComparedFor(dataset, query)
+      : dataset.visibility,
+  ),
   appRoute(
-    /^\/apps\/([^/]+)\/visibility-history$/,
-    (dataset) => dataset.visibility,
+    /^\/apps\/([^/]+)\/competitors\/analysis$/,
+    (dataset, _query, req) => {
+      countLoggedRequest("analysis", req);
+      return analysisOf(dataset, cookieValue(req, GAP_STATE_COOKIE));
+    },
+    (req) => hasCookie(req, FAIL_ANALYSIS_COOKIE, "1"),
   ),
   appRoute(
     /^\/apps\/([^/]+)\/rank-distribution-history$/,

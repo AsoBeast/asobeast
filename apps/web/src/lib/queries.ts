@@ -15,6 +15,7 @@ import type {
   ReviewReplyItem,
   ReviewTranslation,
   Store,
+  VisibilityComparison,
   WebhookItem,
 } from "@asobeast/shared";
 import { isStoreSuggestionStrategy, QUERY_BOUNDS } from "@asobeast/shared";
@@ -65,6 +66,7 @@ import {
   getChanges,
   getEmailAlerts,
   getComparison,
+  getCompetitorAnalysis,
   getKeywordBreakdown,
   getCompetitorDiscovery,
   getCompetitorSuggestions,
@@ -137,6 +139,8 @@ export const appKeys = {
     [...appKeys.funnelRoot(id), days, ...marketKey(country)] as const,
   keywordsRoot: (id: string) => [...appKeys.detail(id), "keywords"] as const,
   compareRoot: (id: string) => [...appKeys.detail(id), "compare"] as const,
+  competitorAnalysis: (id: string) =>
+    [...appKeys.compareRoot(id), "analysis"] as const,
   keywords: (id: string, country?: string) =>
     [...appKeys.detail(id), "keywords", { country }] as const,
   keywordCountries: (id: string) =>
@@ -178,12 +182,18 @@ export const appKeys = {
   audit: (id: string) => [...appKeys.detail(id), "audit"] as const,
   auditHistory: (id: string, params: RangeParams) =>
     [...appKeys.detail(id), "audit-history", params] as const,
-  visibility: (id: string, params: RangeParams, country?: string) =>
+  visibility: (
+    id: string,
+    params: RangeParams,
+    country?: string,
+    compare?: VisibilityComparison,
+  ) =>
     [
       ...appKeys.detail(id),
       "visibility",
       params,
       ...marketKey(country),
+      ...(compare ? [compare] : []),
     ] as const,
   rankDistribution: (id: string, params: RangeParams, country?: string) =>
     [
@@ -771,10 +781,17 @@ export const visibilityOptions = (
   id: string,
   params: RangeParams,
   country?: string,
+  compare?: VisibilityComparison,
 ) =>
   queryOptions({
-    queryKey: appKeys.visibility(id, params, country),
-    queryFn: () => getVisibilityHistory(id, params, country),
+    queryKey: appKeys.visibility(id, params, country, compare),
+    queryFn: () => getVisibilityHistory(id, params, country, compare),
+  });
+
+export const competitorAnalysisOptions = (id: string) =>
+  queryOptions({
+    queryKey: appKeys.competitorAnalysis(id),
+    queryFn: () => getCompetitorAnalysis(id),
   });
 
 export const categoryRanksOptions = (id: string, params: RangeParams) =>

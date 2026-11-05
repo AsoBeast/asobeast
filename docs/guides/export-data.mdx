@@ -73,6 +73,23 @@ The file always ends with `country`, like the keyword export, whether the matrix
 
 Positions are written the way the matrix shows them: an app that does not rank exports as `>200`, and an app with no check yet exports an empty cell. Two competitors with the same name get `(2)`, `(3)` after the name so every column header stays unique, and a competitor without a name is headed `Competitor`. What winning, losing, tied and a gap mean is explained in [Read the comparison matrix](/guides/competitors#read-the-comparison-matrix).
 
+## Export the gap lists to CSV
+
+Each tab of **Gap analysis** on the competitors page exports its own file with the rows shown, in the order shown, after the market and the search. The files are named `keyword-gaps`, `winnable-keywords`, `keyword-threats` and `keywords-you-lead`, followed by the app id and the date.
+
+| Column | What it holds |
+| --- | --- |
+| `keyword` | The tracked phrase |
+| `market` | The two letter code of the market the keyword is tracked in |
+| `competitor` | The best ranking competitor, or the threatening one, empty when no competitor ranks |
+| `theirPosition` | That competitor's position, empty when no competitor ranks |
+| `yourPosition` | Your position, `>200` when the check did not find your app |
+| `popularity`, `difficulty`, `opportunity` | The scores on the 0 to 100 scale, empty when unscored |
+| `reason`, `change` | Threats only: `closing` or `overtook`, and how many places the competitor rose on its last check |
+| `margin` | You lead only: how many places you are ahead, empty when no competitor ranks |
+
+What each list means is explained in [Gap analysis](/guides/competitors#gap-analysis).
+
 ## Export reviews to CSV
 
 The reviews list exports up to 200 reviews that match the star, version, period and reply state filters, in the order the page shows them, newest or lowest first, and keeps only the reviews the search matches, named `reviews-<appId>-<date>.csv`. The reviews endpoint returns at most 200 reviews in one request and does not page, so older reviews are not in the file. When more reviews match the filters than the file holds, a notice after the download says how many it holds. With a search, the file holds the reviews that match it among the ones loaded, up to 200, and the notice says how many it found, how many were searched and how many match the filters in all, because a search cannot reach reviews that did not load. Narrow the filters to reach a different set, for example one version at a time.

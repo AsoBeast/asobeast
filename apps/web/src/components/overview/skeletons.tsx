@@ -88,3 +88,17 @@ export function RatingsByMarketSkeleton() {
     </div>
   );
 }
+
+export function GapHeadlineSkeleton() {
+  return <Skeleton aria-hidden className="h-6 w-full max-w-xl" />;
+}
+
+export function GapHeadlineCardSkeleton() {
+  return (
+    <Card className="py-4">
+      <CardContent className="flex min-h-9 items-center">
+        <GapHeadlineSkeleton />
+      </CardContent>
+    </Card>
+  );
+}

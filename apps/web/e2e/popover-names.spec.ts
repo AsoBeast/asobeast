@@ -121,6 +121,12 @@ const POPOVERS: NamedPopover[] = [
       page.getByRole("button", { name: "About insights" }).click(),
   },
   {
+    name: "How the gap lists are chosen",
+    path: "/apps/app-1/competitors",
+    open: (page) =>
+      page.getByRole("button", { name: "About gap analysis" }).click(),
+  },
+  {
     name: "Competitors in the top 10",
     path: "/apps/app-1/keywords",
     open: async (page) => {

@@ -27,7 +27,15 @@ import { DEFAULT_MCP_CLIENT, MCP_CLIENTS } from "./mcp-snippets";
 import { GRADES } from "./grade";
 import { KEYWORD_ZONES } from "./keyword-zones";
 import { POSITION_BANDS } from "./table/facets";
+import { GAP_TABS } from "./gap-lists";
 import {
+  GAP_SORTS,
+  GAP_URL_KEYS,
+  gapSortParser,
+  gapTableParsers,
+  gapTabParser,
+  VISIBILITY_VIEWS,
+  visibilityViewParser,
   alertFeedParsers,
   planParam,
   chartParsers,
@@ -644,5 +652,64 @@ describe("keywordChartSelectionParser", () => {
       false,
     );
     expect(parser.eq({ mode: "hidden" }, { mode: "hidden" })).toBe(true);
+  });
+});
+
+describe("the gap analysis url state", () => {
+  it("defaults the tab to the keyword gaps and reads the four tabs", () => {
+    expect(gapTabParser.defaultValue).toBe("gaps");
+    expect(GAP_TABS.map((tab) => gapTabParser.parse(tab))).toEqual([
+      "gaps",
+      "winnable",
+      "threats",
+      "lead",
+    ]);
+    expect(gapTabParser.parse("other")).toBeNull();
+  });
+
+  it("defaults the sort to opportunity and reads its own columns", () => {
+    expect(gapSortParser.defaultValue).toBe("opportunity");
+    expect(GAP_SORTS.every((sort) => gapSortParser.parse(sort) === sort)).toBe(
+      true,
+    );
+    expect(gapSortParser.parse("volume")).toBeNull();
+  });
+
+  it("keeps its own keys apart from the matrix", () => {
+    expect(Object.values(GAP_URL_KEYS)).toEqual([
+      "gapSort",
+      "gapDir",
+      "gapQ",
+      "gapCountry",
+    ]);
+    expect(Object.values(GAP_URL_KEYS)).not.toEqual(
+      expect.arrayContaining(["sort", "dir", "q", "country"]),
+    );
+  });
+
+  it("writes a tab other than the first and nothing for the first", () => {
+    const serialize = createSerializer({ gaps: gapTabParser });
+
+    expect(serialize({ gaps: "winnable" })).toBe("?gaps=winnable");
+    expect(serialize({ gaps: "gaps" })).toBe("");
+  });
+
+  it("writes the share of voice view and nothing for visibility", () => {
+    const serialize = createSerializer({ visView: visibilityViewParser });
+
+    expect(visibilityViewParser.defaultValue).toBe("visibility");
+    expect(VISIBILITY_VIEWS).toEqual(["visibility", "share"]);
+    expect(serialize({ visView: "share" })).toBe("?visView=share");
+    expect(serialize({ visView: "visibility" })).toBe("");
+  });
+
+  it("renames the table keys when serialized", () => {
+    const serialize = createSerializer(gapTableParsers, {
+      urlKeys: GAP_URL_KEYS,
+    });
+
+    expect(
+      serialize({ sort: "popularity", dir: "asc", q: "focus", country: "de" }),
+    ).toBe("?gapSort=popularity&gapDir=asc&gapQ=focus&gapCountry=de");
   });
 });

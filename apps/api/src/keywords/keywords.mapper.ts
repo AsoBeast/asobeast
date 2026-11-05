@@ -270,8 +270,10 @@ export interface AppFacts {
   classOf?: KeywordClassOf;
 }
 
-function classFacts(
-  row: TrackedKeywordRow,
+export function classFacts(
+  row: Pick<TrackedKeywordRow, 'keywordClass'> & {
+    keyword: Pick<TrackedKeywordRow['keyword'], 'text' | 'country'>;
+  },
   classOf: KeywordClassOf | undefined,
   signals: ScoreSignals | null,
 ): Pick<TrackedKeywordItem, 'keywordClass' | 'keywordClassSource'> {
