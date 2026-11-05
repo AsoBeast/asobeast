@@ -2,7 +2,7 @@ import type {
   AlertDeliveryItem,
   AlertDeliveryStatus,
   AlertEventList,
-  AlertFeedEvent,
+  AlertEventQuery,
   AlertFlushResult,
   AlertsConfig,
   EmailAlertCreateRequest,
@@ -130,14 +130,6 @@ export function getDeliveries(
 ): Promise<AlertDeliveryItem[]> {
   const params = new URLSearchParams(filter);
   return apiFetch<AlertDeliveryItem[]>(`/alerts/deliveries?${params}`);
-}
-
-export interface AlertEventQuery {
-  appId?: string;
-  type?: readonly AlertFeedEvent[];
-  since?: string;
-  cursor?: string;
-  limit?: number;
 }
 
 export function getAlertEvents(

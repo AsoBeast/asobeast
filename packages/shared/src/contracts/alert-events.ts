@@ -46,3 +46,11 @@ export interface AlertEventList {
   events: AlertEventItem[];
   nextCursor: string | null;
 }
+
+export interface AlertEventQuery {
+  appId?: string;
+  type?: readonly AlertFeedEvent[];
+  since?: string;
+  cursor?: string;
+  limit?: number;
+}

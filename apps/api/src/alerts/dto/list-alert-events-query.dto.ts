@@ -15,6 +15,7 @@ import {
 import {
   ALERT_FEED_EVENTS,
   QUERY_BOUNDS,
+  type AlertEventQuery,
   type AlertFeedEvent,
 } from '@asobeast/shared';
 import { commaList } from '../../common/comma-list';
@@ -24,7 +25,7 @@ const LIMIT = QUERY_BOUNDS.alertEventsLimit;
 const UTC_DATE_OR_INSTANT =
   /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2}))?$/;
 
-export class ListAlertEventsQueryDto {
+export class ListAlertEventsQueryDto implements AlertEventQuery {
   @ApiPropertyOptional({ enum: ALERT_FEED_EVENTS, isArray: true })
   @IsOptional()
   @Transform(commaList)
