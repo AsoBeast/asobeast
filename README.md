@@ -72,6 +72,10 @@ A guide for each of these lives in the [documentation](https://docs.asobeast.com
 
 Runs the published images on Railway with PostgreSQL and Redis, and generates every secret for you. See [deploy on Railway](https://docs.asobeast.com/install/railway).
 
+[![Deploy on RepoCloud](https://d16t0pc4846x52.cloudfront.net/deploylobe.svg)](https://repocloud.io/details/AsoBeast/)
+
+One-click template, no other instructions required.
+
 ### Docker Compose
 
 You need [Docker](https://docs.docker.com/get-docker/) with Compose, roughly 2 GB of memory and 5 GB of disk.
