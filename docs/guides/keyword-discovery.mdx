@@ -1,0 +1,88 @@
+---
+title: Discover keywords your app already ranks for
+sidebarTitle: Keyword discovery
+description: "A weekly job lists the phrases near your app's own vocabulary that you do not track yet, checks where the app ranks for each within a fixed number of store searches, and leaves the choice to track them to you."
+icon: telescope
+keywords: ["keyword discovery","discovered keywords","ranked keywords","auto track","recommended","opportunities","keyword_discoveries","CRON_DISCOVERY"]
+---
+
+Keyword discovery finds phrases your app ranks for, or could rank for, that you do not track yet. A weekly job and a manual refresh build the list, check where the app stands on each phrase, and keep it for you to review. Nothing is tracked until you say so, unless you switch on auto track. Building the list reads no store at all; checking it spends a capped number of searches.
+
+## Where candidates come from
+
+| Source | What it reads | Markets |
+| --- | --- | --- |
+| Your listing | The title and subtitle of the listing in each market (the title and short description on Google Play), in every localization the storefront captures | Every market of the app |
+| Competitors | The titles and subtitles of your competitors' home listings | The home market only |
+| Reviews | Phrases of two words or more that at least three of your newest reviews use | The home market only |
+| Apple popularity | Popular terms of the app's genre in the newest week Apple lists, that share a word with your listing | App Store only, and only when the instance has [Apple Ads configured](/configuration/reference) |
+| Your other apps | Phrases the workspace tracks for its other apps in the same store and market | Every market of the app |
+
+Competitors and reviews feed the home market only, because asobeast captures both for the home storefront.
+
+One phrase found by several sources is listed once, under the source with the highest starting relevance. A phrase the app tracks in that market, active or paused, is left out, and so is a phrase you dismissed. Each market keeps the best 200 candidates, ordered by relevance and then popularity.
+
+## How the rank is found
+
+When another search of the same phrase in the same storefront ran today or yesterday, for any workspace on the instance, its stored results answer for free. They hold the top 50, so a discovery read this way shows depth 50. A phrase whose stored results do not contain your app may still rank between 51 and 200, so it stays due for a search of its own. Otherwise one search reads the top 200 for the phrase.
+
+The rank column reads like the tracked table: a number is the position, `>50` or `>200` means checked and not found within that depth, and a dash means not checked yet.
+
+A search of a phrase nobody tracks stores its results for everybody, exactly as a daily check does. A search of a phrase some workspace tracks stores nothing, because the daily run owns that day's results. A discovery never writes a position history for your app until you track it.
+
+## The weekly cap
+
+Each app gets at most 40 searches a week on the App Store and 20 on Google Play, where one search costs about eight requests. The week starts on Monday at 00:00 UTC. **Refresh** shares the same cap, so a refresh after the Monday run usually finds nothing left to search, though it still rebuilds the list and reads other searches for free. The cap applies on self hosted instances too, because it protects the address of the machine that runs asobeast.
+
+The weekly run starts on `CRON_DISCOVERY`, Monday 07:30 UTC by default; an empty value switches it off. See the [configuration reference](/configuration/reference). Its searches queue behind the daily run and never delay it. A phrase is searched again after seven days.
+
+Refresh spends one deep search of the plan's on demand allowance, and only when it queues at least one search. See [Rate limits and quotas](/api-reference/rate-limits).
+
+## States
+
+| State | Meaning |
+| --- | --- |
+| Ranked | The app has a position for the phrase |
+| Opportunities | Not ranked, relevance at least 60 and opportunity at least 35 |
+| All | Every open discovery |
+
+**Recommended** marks the first 50 in list order.
+
+Opportunity needs popularity and difficulty, and a discovery is never scored: a score costs several store requests and would spend the weekly budget many times over. Popularity and difficulty therefore come from a score some tracker of the phrase already produced, or, for an App Store term Apple lists, from Apple's own popularity. Opportunities is often empty until keywords are scored. Tracking a discovery queues its first score.
+
+## Track, dismiss and auto track
+
+Tracking a discovery spends the plan's keyword room the way a manual add does. What does not fit stays a discovery, and the answer says how many did not fit your plan. A phrase another app of the workspace already tracks in that market costs no extra room. A position found today or yesterday becomes the first position of the tracked keyword; every other phrase gets its first check within minutes.
+
+The tracked keyword's source is Suggested for review, popularity and other app phrases, and Title, Subtitle, Description or Competitor for the others. See [Popularity, difficulty and opportunity](/concepts/scoring).
+
+Dismiss is permanent for the phrase. If you stop tracking a phrase that came from discovery, it returns to the list with what discovery last observed.
+
+**Auto track ranked** tracks every ranked discovery that fits at once, and every later search that finds the app tracks its phrase too. Switching it off leaves tracked keywords alone.
+
+## Through the API and MCP
+
+| Route | What it does |
+| --- | --- |
+| `GET /apps/{id}/keyword-discoveries` | Lists discoveries, with `country`, `state` and `limit` |
+| `POST /apps/{id}/keyword-discoveries/track` | Tracks `keywordIds`, or every ranked discovery with `allRanked: true` |
+| `POST /apps/{id}/keyword-discoveries/dismiss` | Dismisses `keywordIds` |
+| `POST /apps/{id}/keyword-discoveries/refresh` | Rebuilds the list and queues the searches left this week |
+| `PATCH /apps/{id}/keyword-discoveries/settings` | Switches `autoTrackRanked` |
+
+A read scoped token can list, a write scoped token can also change. Agents read the list with the `keyword_discoveries` tool; tracking is not an MCP write tool. See [asobeast API](/api-reference/introduction) and the [MCP tool reference](/mcp/tools).
+
+## Cost and storage
+
+`GET /jobs/budget` reports the weekly searches in a `discovery` block per store and in total, apart from the daily `total`. See [Capacity](/operations/capacity). A discovery that no run has proposed for 60 days is removed, except a dismissed one, which is kept so the phrase stays dismissed. The search results a discovery stores cost about 5 MB per app once retention settles.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Nothing is listed">
+    The listing of the app may not be captured yet, the store may no longer list the app, or none of the sources holds a phrase. A delisted app keeps its list but gets no searches, and neither does a market where the app is not sold or where you no longer track any keyword.
+  </Accordion>
+  <Accordion title="The last check date never moves">
+    The weekly cap may be used, the workspace may be paused (suspended, or without a plan in force on a hosted instance), or `CRON_DISCOVERY` may be empty.
+  </Accordion>
+</AccordionGroup>

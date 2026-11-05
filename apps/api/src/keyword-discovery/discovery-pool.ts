@@ -6,6 +6,7 @@ import {
   normalizeText,
 } from '@asobeast/shared';
 import { checkKeywordText } from '../keywords/keywords.support';
+import { defaultRelevance, RankingEvidence } from '../scoring/relevance';
 
 export interface PoolCandidate {
   text: string;
@@ -28,6 +29,14 @@ export const keywordSourceOf = {
   popularity: 'SUGGESTED',
   portfolio: 'SUGGESTED',
 } as const satisfies Record<DiscoverySource, KeywordSource>;
+
+export const discoveryRelevance = (
+  source: DiscoverySource,
+  text: string,
+  listingText: string,
+  ranking?: RankingEvidence,
+): number =>
+  defaultRelevance(keywordSourceOf[source], text, listingText, ranking);
 
 const sourceRank = (source: DiscoverySource): number =>
   DISCOVERY_SOURCES.indexOf(source);

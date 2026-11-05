@@ -49,6 +49,7 @@ import { PipelineService } from './pipeline.service';
 import { reportQueueError } from './queue-error-reporter';
 import { registerInBackground } from './schedule-registration';
 import { AccountDeletionService } from '../account/account-deletion.service';
+import { KeywordDiscoverySweep } from './keyword-discovery-sweep.service';
 import { LocalizationSweep } from './localization-sweep.service';
 import { RetentionService } from './retention.service';
 import { StoreReportFanOut } from './store-report-fanout';
@@ -82,6 +83,7 @@ export class PipelineWorker extends WorkerHost implements OnModuleInit {
     private readonly sweep: LocalizationSweep,
     private readonly storeReports: StoreReportFanOut,
     private readonly defaultAlerts: DefaultAlertsRun,
+    private readonly discoverySweep: KeywordDiscoverySweep,
   ) {
     super();
   }
@@ -131,7 +133,16 @@ export class PipelineWorker extends WorkerHost implements OnModuleInit {
     await this.scheduleStoreCanary();
     await this.schedulePublishedStatus();
     await this.scheduleApplePopularity();
-    await this.scheduleLocalizationSweep();
+    await this.scheduleOptional(
+      'localization-sweep',
+      this.config.get('CRON_LOCALIZATION_SWEEP', { infer: true }),
+      JOBS.LOCALIZATION_SWEEP,
+    );
+    await this.scheduleOptional(
+      'keyword-discovery',
+      this.config.get('CRON_DISCOVERY', { infer: true }),
+      JOBS.KEYWORD_DISCOVERY,
+    );
     await this.scheduleStoreReports();
     await this.rescoreOutdatedKeywords();
   }
@@ -199,18 +210,19 @@ export class PipelineWorker extends WorkerHost implements OnModuleInit {
     );
   }
 
-  private async scheduleLocalizationSweep(): Promise<void> {
-    const pattern = this.config.get('CRON_LOCALIZATION_SWEEP', {
-      infer: true,
-    });
+  private async scheduleOptional(
+    schedulerId: string,
+    pattern: string,
+    name: string,
+  ): Promise<void> {
     if (!pattern) {
-      await this.pipelineQueue.removeJobScheduler('localization-sweep');
+      await this.pipelineQueue.removeJobScheduler(schedulerId);
       return;
     }
     await this.pipelineQueue.upsertJobScheduler(
-      'localization-sweep',
+      schedulerId,
       { pattern, tz: 'UTC' },
-      { name: JOBS.LOCALIZATION_SWEEP },
+      { name },
     );
   }
 
@@ -312,6 +324,11 @@ export class PipelineWorker extends WorkerHost implements OnModuleInit {
     if (job.name === JOBS.LOCALIZATION_SWEEP) {
       const queued = await this.sweep.run();
       this.logger.log(`localization sweep ${JSON.stringify({ queued })}`);
+      return;
+    }
+    if (job.name === JOBS.KEYWORD_DISCOVERY) {
+      const queued = await this.discoverySweep.run();
+      this.logger.log(`keyword discovery ${JSON.stringify({ queued })}`);
       return;
     }
     throw new Error(`Unknown pipeline job ${job.name}`);

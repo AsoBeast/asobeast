@@ -16,6 +16,11 @@ export interface ScoreEnqueueResult {
   enqueued: true;
 }
 
+export interface DiscoveryBudget {
+  checksPerWeek: number;
+  requestsPerWeek: number;
+}
+
 export interface StoreDailyBudget {
   store: Store;
   apps: number;
@@ -27,6 +32,7 @@ export interface StoreDailyBudget {
   utilization: number;
   marketListings?: number;
   localizations?: number;
+  discovery?: DiscoveryBudget;
 }
 
 export interface BudgetQuota {
@@ -55,6 +61,7 @@ export interface DailyBudget {
   completion: BudgetCompletion;
   marketListings?: number;
   localizations?: number;
+  discovery?: DiscoveryBudget;
 }
 
 export interface StoreDemand {

@@ -81,6 +81,20 @@ describe('Remote MCP boundaries between workspaces', () => {
     },
   );
 
+  it('cannot read another workspace keyword discoveries through a tool', async () => {
+    const own = await callTool(fixture.b.token, 'keyword_discoveries', {
+      appId: fixture.b.appleAppId,
+    }).expect(200);
+    expect(own.text).toContain(fixture.b.discoveryKeywordId);
+
+    const response = await callTool(fixture.a.token, 'keyword_discoveries', {
+      appId: fixture.b.appleAppId,
+    }).expect(200);
+
+    expect(decode(response.text).result?.isError).toBe(true);
+    expect(response.text).not.toContain(fixture.b.discoveryKeywordId);
+  });
+
   it('cannot read another workspace action through a tool', async () => {
     const response = await callTool(fixture.a.token, 'get_action', {
       actionId: fixture.b.actionId,

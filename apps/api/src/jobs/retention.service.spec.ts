@@ -39,6 +39,9 @@ const buildPrisma = () => ({
   alertEvent: { deleteMany: jest.fn().mockResolvedValue({ count: 9 }) },
   billingEvent: { deleteMany: jest.fn().mockResolvedValue({ count: 11 }) },
   suggestProbe: { deleteMany: jest.fn().mockResolvedValue({ count: 7 }) },
+  keywordDiscovery: {
+    deleteMany: jest.fn().mockResolvedValue({ count: 17 }),
+  },
   appSnapshot: {
     findMany: jest.fn().mockResolvedValue([{ id: 'a' }, { id: 'b' }]),
     deleteMany: jest.fn().mockResolvedValue({ count: 5 }),
@@ -375,6 +378,7 @@ describe('RetentionService', () => {
     prisma.alertDelivery.deleteMany.mockImplementation(boom);
     prisma.alertEvent.deleteMany.mockImplementation(boom);
     prisma.suggestProbe.deleteMany.mockImplementation(boom);
+    prisma.keywordDiscovery.deleteMany.mockImplementation(boom);
     prisma.appSnapshot.deleteMany.mockImplementation(boom);
     prisma.auditScore.deleteMany.mockImplementation(boom);
     prisma.actionItem.deleteMany.mockImplementation(boom);
@@ -488,6 +492,7 @@ describe('RetentionService action pruning', () => {
 
     const {
       suggestProbe,
+      keywordDiscovery,
       aiCallReservation,
       screenshotText,
       session,
@@ -497,6 +502,7 @@ describe('RetentionService action pruning', () => {
       true,
     );
     expect(suggestProbe).toBeGreaterThanOrEqual(0);
+    expect(keywordDiscovery).toBeGreaterThanOrEqual(0);
     expect(aiCallReservation).toBeGreaterThanOrEqual(0);
     expect(screenshotText).toBeGreaterThanOrEqual(0);
     expect(session).toBeGreaterThanOrEqual(0);
@@ -515,6 +521,49 @@ describe('RetentionService action pruning', () => {
     ]) {
       expect(table.deleteMany).not.toHaveBeenCalled();
     }
+  });
+});
+
+describe('RetentionService keyword discoveries', () => {
+  afterEach(() => jest.useRealTimers());
+
+  it('prunes discoveries not proposed for sixty days and keeps every dismissed one and every one queued this week', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-11-05T09:30:00.000Z'));
+    const prisma = buildPrisma();
+    const service = new RetentionService(
+      buildConfig({}),
+      prisma as unknown as PrismaService,
+      crossTenant,
+    );
+
+    const deleted = await service.prune();
+
+    expect(deleted.keywordDiscovery).toBe(17);
+    expect(prisma.keywordDiscovery.deleteMany).toHaveBeenCalledWith({
+      where: {
+        seenAt: { lt: new Date('2026-09-06T00:00:00.000Z') },
+        dismissedAt: null,
+        OR: [
+          { queuedAt: null },
+          { queuedAt: { lt: new Date('2026-11-02T00:00:00.000Z') } },
+        ],
+      },
+    });
+  });
+
+  it('keeps the other rules running when the discovery prune fails', async () => {
+    const prisma = buildPrisma();
+    prisma.keywordDiscovery.deleteMany.mockRejectedValue(new Error('boom'));
+    const service = new RetentionService(
+      buildConfig({}),
+      prisma as unknown as PrismaService,
+      crossTenant,
+    );
+
+    const deleted = await service.prune();
+
+    expect(deleted.keywordDiscovery).toBeUndefined();
+    expect(deleted.suggestProbe).toBe(7);
   });
 });
 

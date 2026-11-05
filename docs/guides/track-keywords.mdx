@@ -165,6 +165,8 @@ Suggestions come from four places.
 
 When one of several store lookups fails, the suggestions that answered are kept.
 
+To see phrases your app already ranks for without tracking them first, read [Discover keywords your app already ranks for](/guides/keyword-discovery).
+
 **Competitor searches** read the title and subtitle of each competitor's listing in the market shown (the title and short description on Google Play) and keep the phrases of two words or more, up to five, as seeds. Phrases that several competitors use come first. A phrase that only one competitor uses seeds too, unless it is only that competitor's brand name, the first part of its title. The store's search suggestions then say what people type around each seed. A search must contain the words of its seed, and asobeast leaves out phrases you already track in that market, competitor titles and app names. Each row names its seed and how many competitors use it, so a row from one competitor is a weaker signal than a row from several. When a competitor has no listing in that market yet, its home listing is read. One lookup spends one keyword suggestion. An app with no competitors, whose competitors have no listing yet, or whose listings hold no phrase of two words or more spends none.
 
 A suggestion lookup is the one user initiated exception to the rule that store requests only happen in the queue. It is bounded by a person clicking, so it stays small, but a lookup that reaches the store spends one request of the hourly suggestions allowance. The Search tab with no active tracked keyword and the More by developer tab with no developer id in the newest listing have nothing to ask the store, so they answer an empty list and cost nothing. See [Rate limits and quotas](/api-reference/rate-limits).
@@ -394,5 +396,9 @@ A customer of a hosted instance watches their keyword markets on the plan card i
 
   <Card title="Export data" icon="file-down" href="/guides/export-data">
     Take the keyword table out as CSV.
+  </Card>
+
+  <Card title="Keyword discovery" icon="telescope" href="/guides/keyword-discovery">
+    Find the phrases your app ranks for before you track them.
   </Card>
 </CardGroup>

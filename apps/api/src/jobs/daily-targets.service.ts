@@ -82,6 +82,13 @@ export class DailyTargetsCollector {
     };
   }
 
+  async discoveryApps(): Promise<AppTarget[]> {
+    return this.prisma.app.findMany({
+      where: { isCompetitor: false, delistedAt: null },
+      select: { id: true, store: true, country: true },
+    });
+  }
+
   async shipped(): Promise<Map<string, string[]>> {
     const apps = await this.prisma.app.findMany({
       where: { store: 'APP_STORE', isCompetitor: false },

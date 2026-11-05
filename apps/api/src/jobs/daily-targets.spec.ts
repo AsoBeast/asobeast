@@ -1,4 +1,8 @@
-import { marketListingTargets } from './daily-targets.service';
+import { PrismaService } from '../prisma/prisma.service';
+import {
+  DailyTargetsCollector,
+  marketListingTargets,
+} from './daily-targets.service';
 
 const apps = [
   { id: 'primary', store: 'APP_STORE' as const, primaryAppId: null },
@@ -50,6 +54,27 @@ describe('marketListingTargets', () => {
       id: 'other',
       store: 'GOOGLE_PLAY',
       country: 'de',
+    });
+  });
+});
+
+describe('DailyTargetsCollector.discoveryApps', () => {
+  it('reads the primary apps the store still lists', async () => {
+    const findMany = jest
+      .fn()
+      .mockResolvedValue([
+        { id: 'primary', store: 'APP_STORE', country: 'us' },
+      ]);
+    const collector = new DailyTargetsCollector({
+      app: { findMany },
+    } as unknown as PrismaService);
+
+    await expect(collector.discoveryApps()).resolves.toEqual([
+      { id: 'primary', store: 'APP_STORE', country: 'us' },
+    ]);
+    expect(findMany).toHaveBeenCalledWith({
+      where: { isCompetitor: false, delistedAt: null },
+      select: { id: true, store: true, country: true },
     });
   });
 });

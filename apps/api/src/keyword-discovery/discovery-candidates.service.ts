@@ -19,10 +19,9 @@ import {
 } from '../keywords/suggestion-phrases';
 import { PrismaService } from '../prisma/prisma.service';
 import { popularityGenreOf } from '../scoring/apple-genres';
-import { defaultRelevance } from '../scoring/relevance';
 import { primaryGenreId } from '../store-providers/raw-facts';
 import { DiscoveryPopularity } from './discovery-popularity.service';
-import { keywordSourceOf, PoolCandidate } from './discovery-pool';
+import { discoveryRelevance, PoolCandidate } from './discovery-pool';
 import { overlappingTerms } from './popularity-terms';
 
 export interface DiscoveryApp {
@@ -39,6 +38,11 @@ const DISCOVERY_SOURCE_CAPS = {
   popularity: 60,
   portfolio: 60,
 } as const;
+
+const MIN_REVIEW_PHRASE_WORDS = 2;
+
+const wordCount = (text: string): number =>
+  text.split(' ').filter((word) => word.length > 0).length;
 
 const LISTING_SOURCE: Record<CandidateSource, DiscoverySource> = {
   TITLE: 'title',
@@ -101,7 +105,7 @@ export class DiscoveryCandidates {
     return found.map(({ text, source }) => ({
       text,
       source,
-      relevance: defaultRelevance(keywordSourceOf[source], text, snapshotText),
+      relevance: discoveryRelevance(source, text, snapshotText),
       traffic: traffic.get(text) ?? null,
     }));
   }
@@ -150,13 +154,16 @@ export class DiscoveryCandidates {
       app.id,
       new Set(),
       listingLanguages(app.store, app.country),
-      DISCOVERY_SOURCE_CAPS.reviews,
+      Number.POSITIVE_INFINITY,
     );
     return sourced(
       phrases
         .filter(
-          ({ usedByCount }) => (usedByCount ?? 0) >= REVIEW_THEME_MIN_MENTIONS,
+          ({ text, usedByCount }) =>
+            (usedByCount ?? 0) >= REVIEW_THEME_MIN_MENTIONS &&
+            wordCount(text) >= MIN_REVIEW_PHRASE_WORDS,
         )
+        .slice(0, DISCOVERY_SOURCE_CAPS.reviews)
         .map(({ text }) => text),
       'reviews',
     );

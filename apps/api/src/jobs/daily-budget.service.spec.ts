@@ -1,6 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import { Store } from '@prisma/client';
-import { PLAN_LIMITS } from '@asobeast/shared';
+import { DailyBudget, PLAN_LIMITS } from '@asobeast/shared';
 import { QuotaService } from '../auth/quota.service';
 import {
   CategoryBucket,
@@ -43,13 +43,20 @@ const BUCKETS: CategoryBucket[] = [
 describe('DailyBudgetService', () => {
   const collect = jest.fn<Promise<DailyTargets>, []>();
   const shipped = jest.fn<Promise<Map<string, string[]>>, []>();
+  const discoveryApps = jest.fn<
+    Promise<{ id: string; store: Store; country: string }[]>,
+    []
+  >();
   const buckets = jest.fn<Promise<CategoryBucket[]>, []>();
   const followed = jest.fn<Promise<CategoryBucket[]>, []>();
   const perDay = jest.fn<Promise<number>, [Store]>();
 
-  const build = (quota: Partial<QuotaService> = { enforced: false }) =>
+  const build = (
+    quota: Partial<QuotaService> = { enforced: false },
+    discoveryCron = '30 7 * * 1',
+  ) =>
     new DailyBudgetService(
-      { collect, shipped } as unknown as DailyTargetsCollector,
+      { collect, shipped, discoveryApps } as unknown as DailyTargetsCollector,
       new DailyCategoryBuckets(
         { buckets } as unknown as CategoryRanksService,
         { buckets: followed } as unknown as ChartFollowsService,
@@ -59,7 +66,10 @@ describe('DailyBudgetService', () => {
       {
         state: jest.fn().mockResolvedValue({ since: null, notifiedAt: null }),
       } as unknown as OverLimitRegistry,
-      { get: () => '0 3 * * *' } as unknown as ConfigService<Env, true>,
+      {
+        get: (key: string) =>
+          key === 'CRON_DISCOVERY' ? discoveryCron : '0 3 * * *',
+      } as unknown as ConfigService<Env, true>,
     );
 
   beforeAll(() => {
@@ -75,6 +85,7 @@ describe('DailyBudgetService', () => {
   beforeEach(() => {
     collect.mockReset().mockResolvedValue(targetsOf());
     shipped.mockReset().mockResolvedValue(new Map());
+    discoveryApps.mockReset().mockResolvedValue([]);
     buckets.mockReset().mockResolvedValue(BUCKETS);
     followed.mockReset().mockResolvedValue([]);
     perDay
@@ -107,6 +118,52 @@ describe('DailyBudgetService', () => {
         marketListings: 0,
       }),
     ]);
+  });
+
+  describe('the weekly discovery checks', () => {
+    const dailyPart = (budget: DailyBudget) => ({
+      ...budget,
+      discovery: undefined,
+      stores: budget.stores.map((store) => ({
+        ...store,
+        discovery: undefined,
+      })),
+    });
+    const primaryApps = [
+      { id: 'apple-a', store: Store.APP_STORE, country: 'us' },
+      { id: 'apple-b', store: Store.APP_STORE, country: 'de' },
+      { id: 'gplay-a', store: Store.GOOGLE_PLAY, country: 'us' },
+    ];
+
+    it('reports the weekly checks and requests of every listed primary app beside the daily budget', async () => {
+      const without = await build().estimate();
+      discoveryApps.mockResolvedValue(primaryApps);
+
+      const budget = await build().estimate();
+
+      expect(
+        budget.stores.map(({ store, discovery }) => [store, discovery]),
+      ).toEqual([
+        ['APP_STORE', { checksPerWeek: 80, requestsPerWeek: 80 }],
+        ['GOOGLE_PLAY', { checksPerWeek: 20, requestsPerWeek: 160 }],
+      ]);
+      expect(budget.discovery).toEqual({
+        checksPerWeek: 100,
+        requestsPerWeek: 240,
+      });
+      expect(dailyPart(budget)).toEqual(dailyPart(without));
+    });
+
+    it('reports no weekly checks while the schedule is off', async () => {
+      discoveryApps.mockResolvedValue(primaryApps);
+
+      const budget = await build({ enforced: false }, '').estimate();
+
+      expect(budget.discovery).toEqual({
+        checksPerWeek: 0,
+        requestsPerWeek: 0,
+      });
+    });
   });
 
   it('counts a followed chart once beside the charts the apps sit in', async () => {

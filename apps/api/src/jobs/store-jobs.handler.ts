@@ -6,6 +6,7 @@ import { SubtitleBackfill } from '../apps/subtitle-backfill.service';
 import { CollectionEligibility } from '../auth/collection-eligibility.service';
 import { CategoryRanksService } from '../category-ranks/category-ranks.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
+import { DiscoveryCheck } from '../keyword-discovery/discovery-check.service';
 import { SpiderService } from '../keywords/spider.service';
 import { RankingsService } from '../rankings/rankings.service';
 import { ReviewsService } from '../reviews/reviews.service';
@@ -16,6 +17,7 @@ import {
   CheckCategoryPayload,
   CheckKeywordPayload,
   DetectLocalizationPayload,
+  DiscoverKeywordPayload,
   JOBS,
   RefreshAppPayload,
   ResolveSubtitlePayload,
@@ -29,6 +31,7 @@ import { isFinalAttempt } from './final-attempt';
 const ELIGIBILITY_GATED_JOBS: ReadonlySet<string> = new Set([
   JOBS.SPIDER_PROBE,
   JOBS.DETECT_LOCALIZATION,
+  JOBS.DISCOVER_KEYWORD,
 ]);
 
 @Injectable()
@@ -46,6 +49,7 @@ export class StoreJobsHandler {
     private readonly subtitles: SubtitleBackfill,
     private readonly eligibility: CollectionEligibility,
     private readonly localizations: LocalizationDetection,
+    private readonly discoveryCheck: DiscoveryCheck,
   ) {}
 
   async handle(job: Job): Promise<void> {
@@ -108,6 +112,12 @@ export class StoreJobsHandler {
         return;
       case JOBS.DETECT_LOCALIZATION:
         await this.localizations.probe(job.data as DetectLocalizationPayload);
+        return;
+      case JOBS.DISCOVER_KEYWORD:
+        await this.discoveryCheck.run(
+          job.data as DiscoverKeywordPayload,
+          isFinalAttempt(job),
+        );
         return;
       default:
         throw new Error(`Unknown job ${job.name}`);
