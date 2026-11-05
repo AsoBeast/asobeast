@@ -1262,6 +1262,17 @@ describe("keyword suggestion keys", () => {
 });
 
 describe("removing an app", () => {
+  it("refreshes the workspace checklist that may link to it", () => {
+    const client = new QueryClient();
+    client.setQueryData(workspaceChecklistKey, {});
+
+    removeAppQueries(client, APP);
+
+    expect(client.getQueryState(workspaceChecklistKey)?.isInvalidated).toBe(
+      true,
+    );
+  });
+
   it("refreshes the alert events that may name it", () => {
     const client = new QueryClient();
     client.setQueryData(alertEventKeys.newest, {});
