@@ -527,7 +527,7 @@ describe('RetentionService action pruning', () => {
 describe('RetentionService keyword discoveries', () => {
   afterEach(() => jest.useRealTimers());
 
-  it('prunes discoveries not proposed for sixty days and keeps every dismissed one', async () => {
+  it('prunes discoveries not proposed for sixty days and keeps every dismissed one and every one queued this week', async () => {
     jest.useFakeTimers().setSystemTime(new Date('2026-11-05T09:30:00.000Z'));
     const prisma = buildPrisma();
     const service = new RetentionService(
@@ -543,6 +543,10 @@ describe('RetentionService keyword discoveries', () => {
       where: {
         seenAt: { lt: new Date('2026-09-06T00:00:00.000Z') },
         dismissedAt: null,
+        OR: [
+          { queuedAt: null },
+          { queuedAt: { lt: new Date('2026-11-02T00:00:00.000Z') } },
+        ],
       },
     });
   });

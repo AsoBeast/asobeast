@@ -4,6 +4,7 @@ import { SERP_DEPTH } from '@asobeast/shared';
 import { aiCallCutoff } from '../ai/ai-period';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { Env } from '../config/env';
+import { weekStartOf } from '../keyword-discovery/discovery-schedule';
 import { PrismaService } from '../prisma/prisma.service';
 
 const SUGGEST_PROBE_DAYS = 7;
@@ -212,6 +213,7 @@ export class RetentionService {
       where: {
         seenAt: { lt: this.cutoff(KEYWORD_DISCOVERY_DAYS, now) },
         dismissedAt: null,
+        OR: [{ queuedAt: null }, { queuedAt: { lt: weekStartOf(now) } }],
       },
     });
     return count;
