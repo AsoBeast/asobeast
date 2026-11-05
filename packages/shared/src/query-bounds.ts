@@ -27,6 +27,7 @@ export const QUERY_BOUNDS = {
   suggestionsLimit: { min: 1, max: 100, default: 30 },
   storeSearchLimit: { min: 1, max: 25, default: 10 },
   recentChangesLimit: { min: 1, max: 50, default: 20 },
+  alertEventsLimit: { min: 1, max: 100, default: 50 },
   serpMoverDays: { min: 1, max: 30, default: 7 },
   changeTimelineDays: { min: 1, max: 365, default: 90 },
   chartDates: { min: 1, max: 365, default: 90 },
