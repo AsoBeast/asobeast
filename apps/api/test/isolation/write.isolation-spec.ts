@@ -235,6 +235,54 @@ describe('Write isolation', () => {
     ).resolves.toBe(1);
   });
 
+  it("never tracks or dismisses another workspace's keyword discoveries", async () => {
+    const foreign = [fixture.b.discoveryKeywordId];
+
+    await expect(
+      fixture.a.agent
+        .post(`/apps/${fixture.a.appleAppId}/keyword-discoveries/track`)
+        .send({ keywordIds: foreign })
+        .expect(200),
+    ).resolves.toMatchObject({ body: { tracked: 0, skipped: 0 } });
+    await expect(
+      fixture.a.agent
+        .post(`/apps/${fixture.a.appleAppId}/keyword-discoveries/dismiss`)
+        .send({ keywordIds: foreign })
+        .expect(200),
+    ).resolves.toMatchObject({ body: { dismissed: 0 } });
+    for (const [method, action, body] of [
+      ['post', 'track', { keywordIds: foreign }],
+      ['post', 'dismiss', { keywordIds: foreign }],
+      ['post', 'refresh', {}],
+      ['patch', 'settings', { autoTrackRanked: true }],
+    ] as const) {
+      await fixture.a.agent[method](
+        `/apps/${fixture.b.appleAppId}/keyword-discoveries/${action}`,
+      )
+        .send(body)
+        .expect(404);
+    }
+
+    await expect(
+      fixture.db.keywordDiscovery.findUniqueOrThrow({
+        where: {
+          appId_keywordId: {
+            appId: fixture.b.appleAppId,
+            keywordId: fixture.b.discoveryKeywordId,
+          },
+        },
+      }),
+    ).resolves.toMatchObject({ dismissedAt: null, queuedAt: null });
+    await expect(
+      fixture.db.app.findUniqueOrThrow({ where: { id: fixture.b.appleAppId } }),
+    ).resolves.toMatchObject({ autoTrackRanked: false });
+    await expect(
+      fixture.db.trackedKeyword.count({
+        where: { keywordId: fixture.b.discoveryKeywordId },
+      }),
+    ).resolves.toBe(0);
+  });
+
   it('refuses to write the keyword field of another workspace app', async () => {
     await fixture.a.agent
       .put(`/apps/${fixture.b.appleAppId}/keyword-field`)

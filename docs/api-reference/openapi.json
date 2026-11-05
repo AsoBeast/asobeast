@@ -4559,6 +4559,164 @@
         ]
       }
     },
+    "/apps/{id}/keyword-discoveries/track": {
+      "post": {
+        "description": "Tracks the discoveries named by keywordIds, or every ranked discovery with allRanked true, optionally in one market; exactly one of the two is required. Ids that are not open discoveries of the app are ignored. Tracking spends the keyword room of the plan the way a manual add does: skipped counts the rows over that room, which stay discoveries. A known position from a check of today or yesterday becomes the first position of the keyword and every other row queues its first position check. Answers 403 and writes nothing when another request took the last keyword slots in the meantime.",
+        "operationId": "KeywordDiscoveryController_track",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KeywordDiscoveryTrackDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Track keyword discoveries",
+        "tags": [
+          "keywords"
+        ]
+      }
+    },
+    "/apps/{id}/keyword-discoveries/dismiss": {
+      "post": {
+        "description": "Hides the named discoveries for good: a dismissed phrase is never proposed again for the app. dismissed counts the rows this request dismissed, so a second dismiss of the same ids answers 0.",
+        "operationId": "KeywordDiscoveryController_dismiss",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KeywordDiscoveryDismissDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Dismiss keyword discoveries",
+        "tags": [
+          "keywords"
+        ]
+      }
+    },
+    "/apps/{id}/keyword-discoveries/refresh": {
+      "post": {
+        "description": "Rebuilds the list from stored data, reads the positions other searches of the same phrases found today or yesterday for free, and queues at most the checks left of the weekly cap (40 per app on the App Store and 20 on Google Play, counted from Monday 00:00 UTC and shared with the weekly run). Spends one deep search allowance only when at least one check is queued; queued 0 costs nothing. Answers 202.",
+        "operationId": "KeywordDiscoveryController_refresh",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Refresh keyword discoveries",
+        "tags": [
+          "keywords"
+        ]
+      }
+    },
+    "/apps/{id}/keyword-discoveries/settings": {
+      "patch": {
+        "description": "Switching autoTrackRanked on tracks every ranked discovery that fits the keyword room of the plan at once, and every later check that finds the app tracks its phrase too; tracked and skipped report what this request tracked. Switching it off tracks nothing and leaves tracked keywords alone.",
+        "operationId": "KeywordDiscoveryController_updateSettings",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KeywordDiscoverySettingsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Change the keyword discovery settings of an app",
+        "tags": [
+          "keywords"
+        ]
+      }
+    },
     "/apps/{id}/summary": {
       "get": {
         "operationId": "AnalyticsController_getSummary",
@@ -8031,6 +8189,56 @@
           "collection",
           "genre",
           "device"
+        ]
+      },
+      "KeywordDiscoveryTrackDto": {
+        "type": "object",
+        "properties": {
+          "keywordIds": {
+            "minItems": 1,
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 64
+            }
+          },
+          "allRanked": {
+            "type": "boolean"
+          },
+          "country": {
+            "type": "string",
+            "example": "de",
+            "pattern": "^[a-z]{2}$"
+          }
+        }
+      },
+      "KeywordDiscoveryDismissDto": {
+        "type": "object",
+        "properties": {
+          "keywordIds": {
+            "minItems": 1,
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 64
+            }
+          }
+        },
+        "required": [
+          "keywordIds"
+        ]
+      },
+      "KeywordDiscoverySettingsDto": {
+        "type": "object",
+        "properties": {
+          "autoTrackRanked": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "autoTrackRanked"
         ]
       },
       "ReviewReplyPatchDto": {

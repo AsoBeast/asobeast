@@ -1,13 +1,39 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import { KeywordDiscoveryList } from '@asobeast/shared';
+import {
+  KeywordDiscoveryDismissResult,
+  KeywordDiscoveryList,
+  KeywordDiscoveryRefreshResult,
+  KeywordDiscoverySettings,
+  KeywordDiscoveryTrackResult,
+} from '@asobeast/shared';
+import { SpendsStoreCapacity } from '../auth/decorators/spends-store-capacity.decorator';
+import { OnDemandLimiter } from '../auth/on-demand.limiter';
+import { QueuesWork } from '../redis/queues-work.decorator';
 import { KeywordDiscoveriesQueryDto } from './dto/keyword-discoveries-query.dto';
+import { KeywordDiscoveryDismissDto } from './dto/keyword-discovery-dismiss.dto';
+import { KeywordDiscoverySettingsDto } from './dto/keyword-discovery-settings.dto';
+import { KeywordDiscoveryTrackDto } from './dto/keyword-discovery-track.dto';
+import { KeywordDiscoveryActions } from './keyword-discovery-actions.service';
 import { KeywordDiscoveryService } from './keyword-discovery.service';
 
 @ApiTags('keywords')
 @Controller('apps/:id')
 export class KeywordDiscoveryController {
-  constructor(private readonly discoveries: KeywordDiscoveryService) {}
+  constructor(
+    private readonly discoveries: KeywordDiscoveryService,
+    private readonly actions: KeywordDiscoveryActions,
+    private readonly limiter: OnDemandLimiter,
+  ) {}
 
   @Get('keyword-discoveries')
   @ApiOperation({
@@ -21,5 +47,60 @@ export class KeywordDiscoveryController {
     @Query() query: KeywordDiscoveriesQueryDto,
   ): Promise<KeywordDiscoveryList> {
     return this.discoveries.list(id, query);
+  }
+
+  @Post('keyword-discoveries/track')
+  @QueuesWork()
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Track keyword discoveries',
+    description:
+      'Tracks the discoveries named by keywordIds, or every ranked discovery with allRanked true, optionally in one market; exactly one of the two is required. Ids that are not open discoveries of the app are ignored. Tracking spends the keyword room of the plan the way a manual add does: skipped counts the rows over that room, which stay discoveries. A known position from a check of today or yesterday becomes the first position of the keyword and every other row queues its first position check. Answers 403 and writes nothing when another request took the last keyword slots in the meantime.',
+  })
+  track(
+    @Param('id') id: string,
+    @Body() dto: KeywordDiscoveryTrackDto,
+  ): Promise<KeywordDiscoveryTrackResult> {
+    return this.actions.track(id, dto);
+  }
+
+  @Post('keyword-discoveries/dismiss')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Dismiss keyword discoveries',
+    description:
+      'Hides the named discoveries for good: a dismissed phrase is never proposed again for the app. dismissed counts the rows this request dismissed, so a second dismiss of the same ids answers 0.',
+  })
+  dismiss(
+    @Param('id') id: string,
+    @Body() dto: KeywordDiscoveryDismissDto,
+  ): Promise<KeywordDiscoveryDismissResult> {
+    return this.actions.dismiss(id, dto.keywordIds);
+  }
+
+  @Post('keyword-discoveries/refresh')
+  @QueuesWork()
+  @SpendsStoreCapacity()
+  @HttpCode(202)
+  @ApiOperation({
+    summary: 'Refresh keyword discoveries',
+    description:
+      'Rebuilds the list from stored data, reads the positions other searches of the same phrases found today or yesterday for free, and queues at most the checks left of the weekly cap (40 per app on the App Store and 20 on Google Play, counted from Monday 00:00 UTC and shared with the weekly run). Spends one deep search allowance only when at least one check is queued; queued 0 costs nothing. Answers 202.',
+  })
+  refresh(@Param('id') id: string): Promise<KeywordDiscoveryRefreshResult> {
+    return this.actions.refresh(id, () => this.limiter.consume('spider'));
+  }
+
+  @Patch('keyword-discoveries/settings')
+  @ApiOperation({
+    summary: 'Change the keyword discovery settings of an app',
+    description:
+      'Switching autoTrackRanked on tracks every ranked discovery that fits the keyword room of the plan at once, and every later check that finds the app tracks its phrase too; tracked and skipped report what this request tracked. Switching it off tracks nothing and leaves tracked keywords alone.',
+  })
+  updateSettings(
+    @Param('id') id: string,
+    @Body() dto: KeywordDiscoverySettingsDto,
+  ): Promise<KeywordDiscoverySettings> {
+    return this.actions.updateSettings(id, dto.autoTrackRanked);
   }
 }

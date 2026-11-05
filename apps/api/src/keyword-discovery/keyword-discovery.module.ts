@@ -10,6 +10,7 @@ import { KeywordDiscoveryPlanner } from './discovery-planner.service';
 import { DiscoveryPoolStore } from './discovery-pool-store';
 import { DiscoveryPopularity } from './discovery-popularity.service';
 import { DiscoveryTracker } from './discovery-tracker.service';
+import { KeywordDiscoveryActions } from './keyword-discovery-actions.service';
 import { KeywordDiscoveryController } from './keyword-discovery.controller';
 import { KeywordDiscoveryService } from './keyword-discovery.service';
 
@@ -32,6 +33,7 @@ import { KeywordDiscoveryService } from './keyword-discovery.service';
     KeywordDiscoveryPlanner,
     DiscoveryCheck,
     KeywordDiscoveryService,
+    KeywordDiscoveryActions,
   ],
   exports: [
     DiscoveryPopularity,
