@@ -21,9 +21,20 @@ import {
 export interface OutboxRow {
   event: string;
   appId: string | null;
+  keywordId: string | null;
   dedupeKey: string;
   payload: AlertPayload;
 }
+
+type KeylessRow = Omit<OutboxRow, 'keywordId'>;
+
+const CONFIRMED_RANK_KEY = 'rank.confirmed';
+const CONFIRMED_MILESTONE_KEY = 'milestone.confirmed';
+
+export const CONFIRMED_KEY_PREFIXES = [
+  `${CONFIRMED_RANK_KEY}:`,
+  `${CONFIRMED_MILESTONE_KEY}:`,
+] as const;
 
 function dayOf(occurredAt: string): string {
   return occurredAt.slice(0, 10);
@@ -37,14 +48,14 @@ const actionOpenedKey = (payload: ActionOpenedPayload): string =>
 const rankKey = (payload: RankDroppedPayload | RankImprovedPayload): string => {
   const prefix =
     payload.event === 'rank.dropped' && payload.confirmed === true
-      ? 'rank.confirmed'
+      ? CONFIRMED_RANK_KEY
       : 'rank';
   return `${prefix}:${payload.app.id}:${payload.keyword.id}:${dayOf(payload.occurredAt)}`;
 };
 
 const milestoneKey = (payload: RankMilestonePayload): string => {
   const prefix =
-    payload.confirmed === true ? 'milestone.confirmed' : 'milestone';
+    payload.confirmed === true ? CONFIRMED_MILESTONE_KEY : 'milestone';
   return `${prefix}:${payload.app.id}:${payload.keyword.id}:${dayOf(payload.occurredAt)}`;
 };
 
@@ -58,11 +69,11 @@ function appRow(
     | ReviewSpikePayload
     | AppAvailabilityPayload,
   dedupeKey: string,
-): OutboxRow {
+): KeylessRow {
   return { event: payload.event, appId: payload.app.id, dedupeKey, payload };
 }
 
-function chartRow(payload: ChartMovePayload, prefix: string): OutboxRow {
+function chartRow(payload: ChartMovePayload, prefix: string): KeylessRow {
   const { app, chart, date } = payload;
   return {
     event: payload.event,
@@ -72,7 +83,18 @@ function chartRow(payload: ChartMovePayload, prefix: string): OutboxRow {
   };
 }
 
+function keywordIdOf(payload: AlertPayload): string | null {
+  return 'keyword' in payload && payload.keyword ? payload.keyword.id : null;
+}
+
 export function outboxRows(payload: AlertPayload): OutboxRow[] {
+  return rowsOf(payload).map((row) => ({
+    ...row,
+    keywordId: keywordIdOf(row.payload),
+  }));
+}
+
+function rowsOf(payload: AlertPayload): KeylessRow[] {
   if (payload.event === 'metadata.changed') {
     const day = dayOf(payload.occurredAt);
     return payload.changes.map((change) => ({

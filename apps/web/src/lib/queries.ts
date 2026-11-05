@@ -1,5 +1,6 @@
 import type {
   AlertChannel,
+  AlertFeedEvent,
   ChartFollowItem,
   ChartPage,
   AppAuditResult,
@@ -19,6 +20,7 @@ import type {
 import { isStoreSuggestionStrategy, QUERY_BOUNDS } from "@asobeast/shared";
 import {
   hashKey,
+  infiniteQueryOptions,
   queryOptions,
   skipToken,
   type QueryClient,
@@ -42,6 +44,7 @@ import {
   getActions,
   getActionSummary,
   getAlertDeliveryStatus,
+  getAlertEvents,
   getAppActions,
   getAppScreenshots,
   getAlertsConfig,
@@ -270,6 +273,28 @@ export const deliveryKeys = {
   list: (channel: AlertChannel, id: string) =>
     ["alert-deliveries", channel, id] as const,
 };
+
+export interface AlertEventFilters {
+  appId?: string;
+  type?: AlertFeedEvent[];
+}
+
+export const alertEventKeys = {
+  all: ["alert-events"] as const,
+  list: (filters: AlertEventFilters) =>
+    ["alert-events", "list", filters] as const,
+  newest: ["alert-events", "newest"] as const,
+};
+
+export function alertEventFilters(view: {
+  app: string | null;
+  type: readonly AlertFeedEvent[];
+}): AlertEventFilters {
+  return {
+    ...(view.app ? { appId: view.app } : {}),
+    ...(view.type.length > 0 ? { type: [...view.type].sort() } : {}),
+  };
+}
 
 export const healthKey = ["health"] as const;
 
@@ -956,6 +981,35 @@ export const alertDeliveryOptions = queryOptions({
   queryFn: getAlertDeliveryStatus,
 });
 
+const ALERT_NEWEST_POLL_MS = 5 * 60_000;
+
+export const ALERT_EVENTS_PAGE = QUERY_BOUNDS.alertEventsLimit.default;
+
+export const alertEventsOptions = (filters: AlertEventFilters) =>
+  infiniteQueryOptions({
+    queryKey: alertEventKeys.list(filters),
+    queryFn: ({ pageParam }) =>
+      getAlertEvents({
+        ...filters,
+        cursor: pageParam,
+        limit: ALERT_EVENTS_PAGE,
+      }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last) => last.nextCursor ?? undefined,
+  });
+
+export const alertNewestOptions = queryOptions({
+  queryKey: alertEventKeys.newest,
+  queryFn: () => getAlertEvents({ limit: 1 }),
+  staleTime: 60_000,
+  refetchInterval: ALERT_NEWEST_POLL_MS,
+});
+
+export const alertNewestOnVisitOptions = queryOptions({
+  ...alertNewestOptions,
+  refetchOnMount: "always",
+});
+
 export const healthOptions = queryOptions({
   queryKey: healthKey,
   queryFn: getHealth,
@@ -1091,12 +1145,14 @@ export function invalidateRunResults(client: QueryClient, id: string): void {
     queryKey: appKeys.detail(id),
     predicate: (query) => JSON.stringify(query.queryKey) !== runStatus,
   });
+  void client.invalidateQueries({ queryKey: alertEventKeys.all });
   invalidateLocalSuggestions(client, id);
 }
 
 export function removeAppQueries(client: QueryClient, id: string): void {
   client.removeQueries({ queryKey: appKeys.detail(id) });
   client.removeQueries({ queryKey: appKeys.suggestionsRoot(id) });
+  void client.invalidateQueries({ queryKey: alertEventKeys.all });
 }
 
 export function invalidateAppListing(client: QueryClient, id: string): void {

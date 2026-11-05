@@ -23,7 +23,7 @@ import {
   ratingDropped,
   reviewSpike,
 } from './listing-events.fixture';
-import { outboxRows } from './outbox-rows';
+import { CONFIRMED_KEY_PREFIXES, outboxRows } from './outbox-rows';
 
 const milestone: RankMilestonePayload = {
   event: 'rank.milestone',
@@ -254,6 +254,7 @@ describe('outboxRows for the rank milestone events', () => {
       {
         event: 'rank.milestone',
         appId: 'app1',
+        keywordId: 'kw1',
         dedupeKey: 'milestone:app1:kw1:2026-07-22',
         payload: milestone,
       },
@@ -265,6 +266,7 @@ describe('outboxRows for the rank milestone events', () => {
       {
         event: 'rank.first',
         appId: 'app1',
+        keywordId: 'kw1',
         dedupeKey: 'first:app1:kw1:2026-07-22',
         payload: firstRanking,
       },
@@ -377,6 +379,7 @@ describe('outboxRows for the chart events', () => {
       {
         event: 'chart.entered',
         appId: 'a',
+        keywordId: null,
         dedupeKey: 'chart:a:free:6007:2026-07-22',
         payload: chartEntered(),
       },
@@ -417,6 +420,7 @@ describe('outboxRows for the rating and review events', () => {
       {
         event: 'rating.dropped',
         appId: 'a',
+        keywordId: null,
         dedupeKey: 'rating.dropped:a:2026-11-03:2',
         payload,
       },
@@ -430,6 +434,7 @@ describe('outboxRows for the rating and review events', () => {
       {
         event: 'review.spike',
         appId: 'a',
+        keywordId: null,
         dedupeKey: 'review.spike:a:2026-11-02',
         payload,
       },
@@ -457,6 +462,7 @@ describe('outboxRows for the availability events', () => {
       {
         event: 'app.delisted',
         appId: 'a',
+        keywordId: null,
         dedupeKey: 'delisted:a:2026-11-03T03:10:00.000Z',
         payload: appDelisted(),
       },
@@ -493,5 +499,125 @@ describe('outboxRows for a deeper rating drop', () => {
 
     expect(key(3)).not.toBe(key(2));
     expect(key(2)).toBe(key(2));
+  });
+});
+
+describe('outboxRows keyword column', () => {
+  const dropped: RankDroppedPayload = {
+    event: 'rank.dropped',
+    occurredAt: milestone.occurredAt,
+    app: milestone.app,
+    keyword: milestone.keyword,
+    from: 9,
+    to: 15,
+    fromDepth: RANK_DEPTH,
+    toDepth: RANK_DEPTH,
+    threshold: 5,
+  };
+  const entrant: SerpEntrantPayload = {
+    event: 'serp.entrant',
+    occurredAt: milestone.occurredAt,
+    keyword: { id: 'kw9', text: 'game' },
+    date: '2026-07-22',
+    entrants: [],
+  };
+  const changed: MetadataChangedPayload = {
+    event: 'metadata.changed',
+    occurredAt: milestone.occurredAt,
+    app: { id: 'app1', name: 'App One', isCompetitor: false },
+    changes: [
+      { field: 'title', before: 'a', after: 'b' },
+      { field: 'subtitle', before: 'c', after: 'd' },
+    ],
+  };
+  const negative: ReviewNegativePayload = {
+    event: 'review.negative',
+    occurredAt: milestone.occurredAt,
+    app: milestone.app,
+    review: {
+      score: 1,
+      title: 'Bad',
+      text: 'crashes',
+      version: '1.0',
+      reviewedAt: milestone.occurredAt,
+    },
+  };
+  const keywordIds = (payload: Parameters<typeof outboxRows>[0]) =>
+    outboxRows(payload).map((row) => row.keywordId);
+
+  it.each([
+    ['a rank drop', dropped, 'kw1'],
+    ['a rank gain', { ...dropped, event: 'rank.improved' as const }, 'kw1'],
+    ['a milestone', milestone, 'kw1'],
+    ['a first ranking', firstRanking, 'kw1'],
+    ['an overtake', overtake, 'kw1'],
+    ['an action about a keyword', actionOpened, 'k1'],
+  ])('stores the keyword of %s', (_case, payload, keywordId) => {
+    expect(keywordIds(payload)).toEqual([keywordId]);
+  });
+
+  it('stores the keyword of an entrant, which has no app', () => {
+    expect(outboxRows(entrant)).toMatchObject([
+      { appId: null, keywordId: 'kw9' },
+    ]);
+  });
+
+  it.each([
+    ['a metadata change', changed, [null, null]],
+    ['a negative review', negative, [null]],
+    [
+      'a new review',
+      {
+        ...negative,
+        event: 'review.new' as const,
+        review: { ...negative.review, author: 'Sam' },
+      },
+      [null],
+    ],
+    ['a chart entry', chartEntered(), [null]],
+    ['a chart exit', chartLeft(), [null]],
+    ['a chart milestone', chartMilestone({ from: null, to: 7 }), [null]],
+    ['an action without a keyword', { ...actionOpened, keyword: null }, [null]],
+  ])('stores no keyword for %s', (_case, payload, expected) => {
+    expect(keywordIds(payload)).toEqual(expected);
+  });
+});
+
+describe('CONFIRMED_KEY_PREFIXES', () => {
+  const dropped: RankDroppedPayload = {
+    event: 'rank.dropped',
+    occurredAt: milestone.occurredAt,
+    app: milestone.app,
+    keyword: milestone.keyword,
+    from: 9,
+    to: 15,
+    fromDepth: RANK_DEPTH,
+    toDepth: RANK_DEPTH,
+    threshold: 5,
+  };
+  const keyOf = (payload: Parameters<typeof outboxRows>[0]): string =>
+    outboxRows(payload)[0].dedupeKey;
+  const confirmedKey = (key: string) =>
+    CONFIRMED_KEY_PREFIXES.some((prefix) => key.startsWith(prefix));
+
+  it('names the two confirmed copies', () => {
+    expect(CONFIRMED_KEY_PREFIXES).toEqual([
+      'rank.confirmed:',
+      'milestone.confirmed:',
+    ]);
+  });
+
+  it('starts the key of a confirmed drop and exit with its prefix', () => {
+    expect(keyOf({ ...dropped, confirmed: true })).toMatch(
+      new RegExp(`^${CONFIRMED_KEY_PREFIXES[0]}`),
+    );
+    expect(keyOf({ ...milestone, direction: 'left', confirmed: true })).toMatch(
+      new RegExp(`^${CONFIRMED_KEY_PREFIXES[1]}`),
+    );
+  });
+
+  it('starts an ordinary key with neither prefix', () => {
+    expect(confirmedKey(keyOf(dropped))).toBe(false);
+    expect(confirmedKey(keyOf(milestone))).toBe(false);
   });
 });

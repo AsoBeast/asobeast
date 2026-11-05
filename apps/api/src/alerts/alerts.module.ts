@@ -2,6 +2,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { FLOW_PRODUCERS, QUEUES } from '../jobs/jobs.types';
 import { AlertAppIdentities } from './alert-app-identities';
+import { AlertEventFeed } from './alert-event-feed.service';
 import { AlertDeliveriesService } from './alert-deliveries.service';
 import { AlertMail } from './alert-mail';
 import { AlertFlushService } from './alert-flush.service';
@@ -37,6 +38,7 @@ import { WebhooksService } from './webhooks.service';
     ConfirmationMailLimiter,
     AlertMail,
     AlertDeliveriesService,
+    AlertEventFeed,
     AlertFlushService,
     WebhookDelivery,
     MailerService,

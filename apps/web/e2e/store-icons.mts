@@ -6,6 +6,7 @@ import {
   STORE_SEARCH_ICON_URL,
 } from "./fixtures.mts";
 import { SERP_ICON_URLS, SERP_PLAY_ICON_URL } from "./serp-history.mts";
+import { ALERT_FEED_ICON_URL } from "./alert-feed-fixtures.mts";
 
 export const ICON_PIXEL = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
@@ -36,6 +37,7 @@ export const test = base.extend<{ storeIcons: void }>({
         SIMILAR_ICON_URL,
         ...SERP_ICON_URLS,
         SERP_PLAY_ICON_URL,
+        ALERT_FEED_ICON_URL,
       ]) {
         await context.route(optimizedIcon(iconUrl), (route) =>
           route.fulfill({ contentType: "image/png", body: ICON_PIXEL }),

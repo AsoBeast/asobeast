@@ -35,7 +35,7 @@ export function FacetFilter<T extends string>({
   title: string;
   options: ReadonlyArray<FacetOption<T>>;
   selected: readonly T[];
-  counts: ReadonlyMap<unknown, number>;
+  counts?: ReadonlyMap<unknown, number>;
   onChange: (next: T[]) => void;
 }) {
   const toggle = (value: T) =>
@@ -106,9 +106,11 @@ export function FacetFilter<T extends string>({
                       />
                     ) : null}
                     {option.label}
-                    <span className="ml-auto numeric font-mono text-xs text-muted-foreground">
-                      {counts.get(option.value) ?? 0}
-                    </span>
+                    {counts ? (
+                      <span className="ml-auto numeric font-mono text-xs text-muted-foreground">
+                        {counts.get(option.value) ?? 0}
+                      </span>
+                    ) : null}
                   </CommandItem>
                 );
               })}

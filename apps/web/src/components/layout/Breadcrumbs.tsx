@@ -22,6 +22,7 @@ import { WHATS_NEW_LABEL, WHATS_NEW_PATH } from "./WhatsNewMenuItem";
 const WORKSPACE_LABELS: Record<string, string> = {
   "/": "Dashboard",
   "/actions": "Action Center",
+  "/alerts": "Alerts",
   "/charts": "Top charts",
   [INTEGRATIONS_PATH]: "Integrations",
   [PLAY_SIGN_IN_PATH]: "Integrations",

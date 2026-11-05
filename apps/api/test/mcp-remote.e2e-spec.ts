@@ -3,14 +3,21 @@ import { execSync } from 'child_process';
 import { join } from 'path';
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { PrismaClient, Store } from '@prisma/client';
+import { Prisma, PrismaClient, Store } from '@prisma/client';
 import cookieParser from 'cookie-parser';
 import { API_TOKEN_PREFIX } from '@asobeast/shared';
-import type { ApiErrorEnvelope, SerpSnapshot } from '@asobeast/shared';
+import type {
+  AlertEventList,
+  ApiErrorEnvelope,
+  SerpSnapshot,
+} from '@asobeast/shared';
 import { MCP_TOOLS } from '@asobeast/mcp-tools';
 import request, { Response } from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
+import { outboxRows } from '../src/alerts/outbox-rows';
+import { drop } from '../src/alerts/rank-events.fixture';
+import { sentenceOf } from '../src/alerts/report/report-sentences';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { sha256 } from '../src/auth/password-hash';
 import { RequestRateLimiter } from '../src/auth/rate-limit/request-rate.limiter';
@@ -642,6 +649,37 @@ describe('Remote MCP transport (e2e)', () => {
         { text: ' Studio', match: 'none' },
       ],
     });
+  });
+
+  it('lists the recorded alert events through alert_events', async () => {
+    const appId = await fixtureAppId();
+    const payload = drop({ app: { id: appId, name: 'Fixture' } });
+    const [row] = outboxRows(payload);
+    const created = await prisma.alertEvent.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        event: row.event,
+        appId: row.appId,
+        keywordId: row.keywordId,
+        dedupeKey: row.dedupeKey,
+        payload: row.payload as unknown as Prisma.InputJsonValue,
+      },
+    });
+
+    const all = await callTool('alert_events', {});
+    const feed = JSON.parse(all?.content?.[0].text ?? '{}') as AlertEventList;
+    const charts = await callTool('alert_events', { type: ['chart.entered'] });
+    const chartFeed = JSON.parse(
+      charts?.content?.[0].text ?? '{}',
+    ) as AlertEventList;
+
+    expect(all?.isError).toBeUndefined();
+    expect(feed.events.find((event) => event.id === created.id)).toMatchObject({
+      event: 'rank.dropped',
+      sentence: sentenceOf(payload, false).text,
+      payload,
+    });
+    expect(chartFeed.events.map((event) => event.id)).not.toContain(created.id);
   });
 
   it('answers keyword_breakdown through the remote endpoint', async () => {

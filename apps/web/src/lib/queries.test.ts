@@ -1,4 +1,5 @@
 import {
+  hashKey,
   QueryClient,
   QueryObserver,
   type QueryKey,
@@ -27,6 +28,11 @@ import {
   actionSummaryOptions,
   actionSummaryFor,
   alertsConfigKey,
+  alertEventFilters,
+  alertEventKeys,
+  alertEventsOptions,
+  alertNewestOnVisitOptions,
+  alertNewestOptions,
   apiTokenKeys,
   appKeys,
   importPreviewRequest,
@@ -471,8 +477,13 @@ describe("appKeys", () => {
     client.setQueryData(appKeys.keywords(APP, "de"), []);
     client.setQueryData(appKeys.listing(APP, "de"), {});
     client.setQueryData(appKeys.runStatus(APP), {});
+    client.setQueryData(alertEventKeys.newest, {});
 
     invalidateRunResults(client, APP);
+
+    expect(client.getQueryState(alertEventKeys.newest)?.isInvalidated).toBe(
+      true,
+    );
 
     expect(
       client.getQueryState(appKeys.keywords(APP, "de"))?.isInvalidated,
@@ -1163,6 +1174,23 @@ describe("keyword suggestion keys", () => {
   });
 });
 
+describe("removing an app", () => {
+  it("refreshes the alert events that may name it", () => {
+    const client = new QueryClient();
+    client.setQueryData(alertEventKeys.newest, {});
+    client.setQueryData(alertEventKeys.list({}), {});
+
+    removeAppQueries(client, APP);
+
+    expect(client.getQueryState(alertEventKeys.newest)?.isInvalidated).toBe(
+      true,
+    );
+    expect(client.getQueryState(alertEventKeys.list({}))?.isInvalidated).toBe(
+      true,
+    );
+  });
+});
+
 describe("refetchFailedQueries", () => {
   it("refetches the queries in error and nothing else", async () => {
     const client = new QueryClient();
@@ -1222,5 +1250,88 @@ describe("refetchFailedQueries", () => {
     await refetchFailedQueries(client);
 
     expect(page).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("alert event queries", () => {
+  it("keys two filter sets apart and the same filters together", () => {
+    const left = alertEventFilters({
+      app: "app-1",
+      type: ["rank.dropped", "chart.entered"],
+    });
+    const right = alertEventFilters({
+      app: "app-1",
+      type: ["chart.entered", "rank.dropped"],
+    });
+
+    expect(hashKey(alertEventKeys.list(left))).toBe(
+      hashKey(alertEventKeys.list(right)),
+    );
+    expect(hashKey(alertEventKeys.list(left))).not.toBe(
+      hashKey(alertEventKeys.list(alertEventFilters({ app: null, type: [] }))),
+    );
+  });
+
+  it("drops an empty app and an empty type list", () => {
+    expect(alertEventFilters({ app: "", type: [] })).toEqual({});
+    expect(alertEventFilters({ app: null, type: [] })).toEqual({});
+  });
+
+  it("keeps the newest event outside the lists and inside the feed", () => {
+    const list = alertEventKeys.list({});
+
+    expect(isPrefixOf(list, alertEventKeys.newest)).toBe(false);
+    expect(isPrefixOf(alertEventKeys.all, alertEventKeys.newest)).toBe(true);
+    expect(isPrefixOf(alertEventKeys.all, list)).toBe(true);
+  });
+
+  it("pages by the cursor the previous page answered", async () => {
+    const requested: string[] = [];
+    vi.stubGlobal("fetch", (input: RequestInfo | URL) => {
+      requested.push(String(input));
+      return Promise.resolve(
+        new Response(JSON.stringify({ events: [], nextCursor: "c2" }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      );
+    });
+    const options = alertEventsOptions({ appId: "app-1" });
+
+    const page = await new QueryClient().fetchInfiniteQuery({
+      ...options,
+      initialPageParam: "c1",
+    });
+    vi.unstubAllGlobals();
+
+    const query = new URL(requested[0], "http://localhost").searchParams;
+    expect(query.get("cursor")).toBe("c1");
+    expect(query.get("appId")).toBe("app-1");
+    expect(query.get("limit")).toBe(
+      String(QUERY_BOUNDS.alertEventsLimit.default),
+    );
+    expect(
+      options.getNextPageParam(page.pages[0], page.pages, "c1", ["c1"]),
+    ).toBe("c2");
+    expect(
+      options.getNextPageParam(
+        { events: [], nextCursor: null },
+        page.pages,
+        "c1",
+        ["c1"],
+      ),
+    ).toBeUndefined();
+  });
+});
+
+describe("the newest alert event", () => {
+  it("is polled every five minutes while the app is open", () => {
+    expect(alertNewestOptions.refetchInterval).toBe(5 * 60_000);
+    expect(alertNewestOptions.refetchIntervalInBackground).not.toBe(true);
+  });
+
+  it("is read again whenever the alerts page opens", () => {
+    expect(alertNewestOnVisitOptions.queryKey).toEqual(alertEventKeys.newest);
+    expect(alertNewestOnVisitOptions.refetchOnMount).toBe("always");
   });
 });

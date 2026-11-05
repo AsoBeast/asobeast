@@ -183,6 +183,10 @@ function formatClock(instant: Date): string {
   return `${hours % 12 || 12}:${minutes} ${hours < 12 ? "AM" : "PM"}`;
 }
 
+export function formatUtcClock(value: string): string {
+  return `${formatClock(new Date(value))} UTC`;
+}
+
 export function formatDateTime(value: string): string {
   const instant = new Date(value);
   return `${dateFormatter.format(instant)}, ${formatClock(instant)} UTC`;

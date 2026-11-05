@@ -916,6 +916,41 @@ describe('Alert flush (e2e)', () => {
     expect(await pendingJobs()).toHaveLength(0);
   });
 
+  it('leaves a row recorded as already settled out of the status and the flush', async () => {
+    const primary = await seedApp('settled-primary');
+    await seedEvent(
+      'rank.dropped',
+      primary,
+      `rank:${primary}:kw1:2026-07-22`,
+      rankPayload(primary, 12),
+    );
+    const settledAt = new Date('2026-07-22T10:00:00.000Z');
+    const settledId = await seedEvent(
+      'rank.dropped',
+      primary,
+      `rank:${primary}:kw2:2026-07-22`,
+      rankPayload(primary, 20),
+    );
+    await prisma.alertEvent.update({
+      where: { id: settledId },
+      data: { flushedAt: settledAt },
+    });
+
+    const status = await api.get('/alerts/delivery').expect(200);
+    expect(status.body).toMatchObject({ pending: 1, claimed: 0 });
+
+    await expect(asWorkspace(app, () => flushService.flush())).resolves.toEqual(
+      { flushed: 1, channels: 0, notifications: 0 },
+    );
+    await expect(
+      prisma.alertEvent.findUniqueOrThrow({ where: { id: settledId } }),
+    ).resolves.toMatchObject({
+      flushedAt: settledAt,
+      flushId: null,
+      claimedAt: null,
+    });
+  });
+
   it('sends nothing when the outbox is empty', async () => {
     await prisma.webhook.create({
       data: {

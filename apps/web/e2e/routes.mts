@@ -8,6 +8,7 @@ export const APP = "app-1";
 export const SIGNED_IN_ROUTES = [
   ["portfolio", "/"],
   ["action-center", "/actions"],
+  ["alerts", "/alerts"],
   ["top-charts", "/charts"],
   ["settings", "/settings"],
   ["integrations", "/integrations"],
