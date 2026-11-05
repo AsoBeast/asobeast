@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Bell,
   ClipboardCheck,
   FileText,
   Gauge,
@@ -23,6 +24,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { INTEGRATIONS_PATH } from "@asobeast/shared";
 import { ADMIN_ENTRY } from "@/components/admin/admin-links";
+import { AlertsUnreadDot } from "@/components/alerts/AlertsUnreadDot";
 import { useAuth } from "@/components/auth/use-auth";
 import {
   SidebarGroup,
@@ -59,6 +61,7 @@ const SECTION_ICONS: Record<AppSectionSegment, LucideIcon> = {
 const WORKSPACE = [
   { href: "/", label: "Dashboard", icon: LayoutGrid },
   { href: "/actions", label: "Action Center", icon: ListChecks },
+  { href: "/alerts", label: "Alerts", icon: Bell },
   { href: "/charts", label: "Top charts", icon: Trophy },
   { href: INTEGRATIONS_PATH, label: "Integrations", icon: Plug },
   { href: "/settings", label: "Settings", icon: Settings },
@@ -145,6 +148,7 @@ export function SidebarNav() {
                 onNavigate={close}
               >
                 {href === "/actions" ? <OpenActionBadge /> : null}
+                {href === "/alerts" ? <AlertsUnreadDot /> : null}
               </NavLink>
             ))}
             {isOperator ? (

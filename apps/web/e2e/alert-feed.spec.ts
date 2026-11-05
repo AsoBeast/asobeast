@@ -6,6 +6,8 @@ import {
   LONG_ALERT_KEYWORD,
 } from "./alert-feed-fixtures.mts";
 import { hydrated } from "./hydrated.mts";
+import { ALERTS_SEEN_COOKIE_NAME } from "../src/lib/alerts-seen";
+import { SIDEBAR_COOKIE_NAME } from "../src/lib/sidebar-cookie";
 import { expect, test } from "./session.mts";
 
 const FEED_PATH = "/api/backend/alerts/events";
@@ -346,6 +348,139 @@ test.describe("alerts page", () => {
 
       await expect(page).not.toHaveURL(/[?&](app|type|q)=/);
       await expect(search).toBeFocused();
+    });
+  });
+
+  test.describe("unread dot and new marks", () => {
+    const NEWEST = ALERT_EVENT_ITEMS[0].occurredAt;
+    const BEFORE_THREE = ALERT_EVENT_ITEMS[3].occurredAt;
+
+    const seen = (context: BrowserContext, instant: string) =>
+      context.addCookies([
+        {
+          name: ALERTS_SEEN_COOKIE_NAME,
+          value: encodeURIComponent(instant),
+          url: "http://localhost:3000",
+        },
+      ]);
+
+    const alertsItem = (page: Page) =>
+      page
+        .getByRole("navigation", { name: "Main" })
+        .getByRole("link", { name: /^Alerts/ });
+
+    const dot = (page: Page) => page.locator('[data-slot="alerts-unread"]');
+
+    const newRows = (page: Page) =>
+      rows(page).filter({ has: page.getByText("New", { exact: true }) });
+
+    test("sits between the Action Center and Top charts", async ({ page }) => {
+      await page.goto("/alerts");
+      const names = await page
+        .getByRole("navigation", { name: "Main" })
+        .getByRole("link")
+        .allInnerTexts();
+      const position = names.findIndex((name) => name.startsWith("Alerts"));
+
+      expect(names[position - 1]).toMatch(/^Action Center/);
+      expect(names[position + 1]).toMatch(/^Top charts/);
+      await expect(alertsItem(page)).toHaveAttribute("aria-current", "page");
+    });
+
+    test("shows a dot until the newest event is seen", async ({
+      page,
+      context,
+    }) => {
+      await page.goto("/");
+      await expect(dot(page)).toBeVisible();
+      await expect(alertsItem(page)).toHaveAccessibleName(/, new alerts$/);
+
+      await seen(context, NEWEST);
+      await page.reload();
+      await page.waitForLoadState("networkidle");
+      await expect(dot(page)).toHaveCount(0);
+
+      await seen(context, BEFORE_THREE);
+      await page.reload();
+      await expect(dot(page)).toBeVisible();
+    });
+
+    test("a visit clears the dot and keeps the new marks while it lasts", async ({
+      page,
+      context,
+    }) => {
+      await seen(context, BEFORE_THREE);
+      await page.goto("/");
+      await expect(dot(page)).toBeVisible();
+
+      await (await hydrated(alertsItem(page))).click();
+
+      await expect(page).toHaveURL("/alerts");
+      await expect(newRows(page)).toHaveCount(3);
+      await expect(dot(page)).toHaveCount(0);
+      expect(await page.evaluate(() => document.cookie)).toContain(
+        `${ALERTS_SEEN_COOKIE_NAME}=${encodeURIComponent(NEWEST)}`,
+      );
+
+      await page
+        .getByRole("navigation", { name: "Main" })
+        .getByRole("link", { name: /^Dashboard/ })
+        .click();
+      await expect(page).toHaveURL("/");
+      await alertsItem(page).click();
+      await expect(rows(page).first()).toBeVisible();
+      await expect(newRows(page)).toHaveCount(0);
+    });
+
+    test("marks nothing new in a browser that never visited", async ({
+      page,
+    }) => {
+      await page.goto("/alerts");
+
+      await expect(rows(page)).toHaveCount(ALERT_EVENT_PAGE_SIZE);
+      await expect(newRows(page)).toHaveCount(0);
+    });
+
+    test("renders the new marks in the server html and never the dot", async ({
+      page,
+      context,
+    }) => {
+      await seen(context, BEFORE_THREE);
+
+      const alerts = await (await page.request.get("/alerts")).text();
+      const home = await (await page.request.get("/")).text();
+
+      expect(alerts.match(/>New</g)).toHaveLength(3);
+      expect(alerts).not.toContain('data-slot="alerts-unread"');
+      expect(home).not.toContain('data-slot="alerts-unread"');
+    });
+
+    test("keeps the dot on the icon of a collapsed sidebar", async ({
+      page,
+      context,
+    }) => {
+      await context.addCookies([
+        {
+          name: SIDEBAR_COOKIE_NAME,
+          value: "false",
+          url: "http://localhost:3000",
+        },
+      ]);
+      await page.goto("/");
+
+      await expect(dot(page)).toBeVisible();
+    });
+
+    test("shows no dot and no error when the newest read fails", async ({
+      page,
+      context,
+    }) => {
+      await feedState(context, "error");
+      await page.goto("/");
+      await page.waitForLoadState("networkidle");
+
+      await expect(dot(page)).toHaveCount(0);
+      await expect(page.getByRole("main").getByRole("alert")).toHaveCount(0);
     });
   });
 });

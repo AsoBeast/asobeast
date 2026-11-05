@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { AlertEventItem } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
+import { Badge } from "@/components/ui/badge";
 import { EVENT_LABELS } from "@/components/settings/alert-event-copy";
 import {
   formatCountry,
@@ -47,9 +48,11 @@ function Sentence({ item }: { item: AlertEventItem }) {
 export function AlertEventRow({
   item,
   now,
+  isNew,
 }: {
   item: AlertEventItem;
   now: number;
+  isNew: boolean;
 }) {
   const { icon: Icon, tone } = ALERT_EVENT_ICONS[item.event];
   const meta = metaOf(item);
@@ -76,13 +79,16 @@ export function AlertEventRow({
           {meta ? <span>{meta}</span> : null}
         </div>
       </div>
-      <time
-        dateTime={item.occurredAt}
-        title={formatDateTime(item.occurredAt)}
-        className="shrink-0 text-caption text-muted-foreground"
-      >
-        {formatRelativeTime(item.occurredAt, now)}
-      </time>
+      <div className="flex shrink-0 flex-col items-end gap-1">
+        {isNew ? <Badge variant="info">New</Badge> : null}
+        <time
+          dateTime={item.occurredAt}
+          title={formatDateTime(item.occurredAt)}
+          className="text-caption text-muted-foreground"
+        >
+          {formatRelativeTime(item.occurredAt, now)}
+        </time>
+      </div>
     </li>
   );
 }

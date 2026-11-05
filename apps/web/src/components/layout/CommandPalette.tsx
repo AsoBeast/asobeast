@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { INTEGRATIONS_PATH } from "@asobeast/shared";
 import {
+  Bell,
   LayoutDashboard,
   ListChecks,
   Megaphone,
@@ -45,6 +46,7 @@ import { appsOptions } from "@/lib/queries";
 const GENERAL = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/actions", label: "Action Center", icon: ListChecks },
+  { href: "/alerts", label: "Alerts", icon: Bell },
   { href: "/charts", label: "Top charts", icon: Trophy },
   { href: INTEGRATIONS_PATH, label: "Integrations", icon: Plug },
   { href: WHATS_NEW_PATH, label: WHATS_NEW_LABEL, icon: Megaphone },

@@ -1,11 +1,16 @@
 "use client";
 
-import { useDeferredValue, useMemo, useRef } from "react";
-import { useSuspenseInfiniteQuery } from "@tanstack/react-query";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useQuery, useSuspenseInfiniteQuery } from "@tanstack/react-query";
 import { isAlertFeedEvent } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import { InfoTip } from "@/components/ui/info-tip";
-import { alertEventFilters, alertEventsOptions } from "@/lib/queries";
+import { useAlertsSeen } from "@/components/layout/AlertsSeen";
+import {
+  alertEventFilters,
+  alertEventsOptions,
+  alertNewestOptions,
+} from "@/lib/queries";
 import { AlertEventList, AlertFeedEnd } from "./AlertEventList";
 import { AlertFeedEmpty } from "./AlertFeedStates";
 import {
@@ -58,7 +63,18 @@ function useFeedFilters() {
   return { filters, query, setView };
 }
 
+function useVisitMark(): string | null {
+  const { seenAt, markSeen } = useAlertsSeen();
+  const [seenAtVisit] = useState(seenAt);
+  const newest = useQuery(alertNewestOptions).data?.events[0]?.occurredAt;
+  useEffect(() => {
+    if (newest) markSeen(newest);
+  }, [newest, markSeen]);
+  return seenAtVisit;
+}
+
 export function AlertFeed() {
+  const seenAt = useVisitMark();
   const { filters, query, setView } = useFeedFilters();
   const searchBox = useRef<HTMLDivElement>(null);
   const feed = useSuspenseInfiniteQuery(alertEventsOptions(filters));
@@ -96,7 +112,11 @@ export function AlertFeed() {
           }
         />
       ) : (
-        <AlertEventList groups={dayGroups(shown, now)} now={now} />
+        <AlertEventList
+          groups={dayGroups(shown, now)}
+          now={now}
+          seenAt={seenAt}
+        />
       )}
       {events.length === 0 ? null : (
         <AlertFeedEnd
