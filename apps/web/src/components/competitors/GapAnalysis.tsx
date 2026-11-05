@@ -39,6 +39,8 @@ import { GapTable } from "./GapTable";
 import type { GapColumnScope } from "./gap-columns";
 import { GapAnalysisSkeleton } from "./skeletons";
 
+const GAP_TAB_STATE = gapTabParser.withOptions({ history: "push" });
+
 function useGapScope(
   appId: string,
   multiMarket: boolean,
@@ -73,10 +75,7 @@ function GapLists({
   home: string;
   today: string;
 }) {
-  const [tab, setTab] = useQueryState(
-    "gaps",
-    gapTabParser.withOptions({ history: "push" }),
-  );
+  const [tab, setTab] = useQueryState("gaps", GAP_TAB_STATE);
   const [params, setParams] = useQueryStates(gapTableParsers, {
     urlKeys: GAP_URL_KEYS,
   });
