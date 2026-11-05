@@ -40,6 +40,9 @@ const build = (created = 1, limit: number | null = null) => {
     trackedKeyword: {
       createMany: jest.fn().mockResolvedValue({ count: created }),
     },
+    keywordDiscovery: {
+      findMany: jest.fn().mockResolvedValue([{ keywordId: 'k1' }]),
+    },
     keywordRanking: {
       createMany: jest
         .fn<Promise<unknown>, [{ data: RankingRow[] }]>()
@@ -48,9 +51,6 @@ const build = (created = 1, limit: number | null = null) => {
   };
   const prisma = {
     trackedKeyword: { findMany: jest.fn().mockResolvedValue([]) },
-    keywordDiscovery: {
-      findMany: jest.fn().mockResolvedValue([{ keywordId: 'k1' }]),
-    },
   };
   const quota = {
     usage: jest.fn().mockResolvedValue({
@@ -73,7 +73,7 @@ const build = (created = 1, limit: number | null = null) => {
     checks as unknown as FirstPositionChecks,
     listings as unknown as MarketListingRequests,
   );
-  return { service, prisma, tx, quota, tracker, checks, listings };
+  return { service, tx, quota, tracker, checks, listings };
 };
 
 describe('DiscoveryTracker', () => {
@@ -216,14 +216,14 @@ describe('DiscoveryTracker', () => {
         requested: 1,
       } as never);
 
-    it('tracks only the rows still open while the switch is on', async () => {
-      const { service, prisma, tx } = build(1);
+    it('rechecks the dismissal and the switch inside the admission', async () => {
+      const { service, tx } = build(1);
       await service.autoTrack(
         app,
         [row(), row({ keywordId: 'k2', text: 'dismissed meanwhile' })],
         TODAY,
       );
-      expect(prisma.keywordDiscovery.findMany).toHaveBeenCalledWith({
+      expect(tx.keywordDiscovery.findMany).toHaveBeenCalledWith({
         where: {
           appId: 'app1',
           keywordId: { in: ['k1', 'k2'] },
@@ -239,11 +239,19 @@ describe('DiscoveryTracker', () => {
       );
     });
 
-    it('tracks nothing once the switch was turned off', async () => {
-      const { service, prisma, quota } = build(1);
-      prisma.keywordDiscovery.findMany.mockResolvedValueOnce([]);
+    it('creates no tracked row when the switch or the dismissal changed before the admission', async () => {
+      const { service, tx, checks, tracker } = build(1);
+      tx.keywordDiscovery.findMany.mockResolvedValueOnce([]);
       await service.autoTrack(app, [row()], TODAY);
-      expect(quota.admitKeywordMarkets).not.toHaveBeenCalled();
+      expect(tx.trackedKeyword.createMany).not.toHaveBeenCalled();
+      expect(checks.schedule).not.toHaveBeenCalled();
+      expect(tracker.enqueueFirstScores).not.toHaveBeenCalled();
+    });
+
+    it('never rechecks the switch for a manual track', async () => {
+      const { service, tx } = build(1);
+      await service.trackRows(app, [row()], TODAY);
+      expect(tx.keywordDiscovery.findMany).not.toHaveBeenCalled();
     });
 
     it('keeps the rows as discoveries when the plan has no keyword room left', async () => {

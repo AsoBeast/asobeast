@@ -18,6 +18,11 @@ import { planDiscoveryTrack, TrackRow } from './discovery-track-plan';
 
 type KnownPosition = TrackRow & { depth: number; checkedOn: string };
 
+type Admissible = (
+  tx: Prisma.TransactionClient,
+  chosen: TrackRow[],
+) => Promise<TrackRow[]>;
+
 const NOTHING_TRACKED: KeywordDiscoveryTrackResult = { tracked: 0, skipped: 0 };
 
 const utcDate = (day: string): Date => new Date(`${day}T00:00:00.000Z`);
@@ -41,10 +46,36 @@ export class DiscoveryTracker {
     private readonly listings: MarketListingRequests,
   ) {}
 
-  async trackRows(
+  trackRows(
     app: KeywordApp,
     rows: readonly TrackRow[],
     today = utcDayOf(new Date()),
+  ): Promise<KeywordDiscoveryTrackResult> {
+    return this.track(app, rows, today, (_, chosen) => Promise.resolve(chosen));
+  }
+
+  async autoTrack(
+    app: KeywordApp,
+    rows: readonly TrackRow[],
+    today = utcDayOf(new Date()),
+  ): Promise<void> {
+    try {
+      await this.track(app, rows, today, (tx, chosen) =>
+        this.stillAutoTracked(tx, app, chosen),
+      );
+    } catch (error: unknown) {
+      if (!(error instanceof QuotaExceededError)) throw error;
+      this.logger.log(
+        `kept ${rows.length} ranked discoveries of ${app.id} as discoveries, because the plan had no keyword room left: ${error.message}`,
+      );
+    }
+  }
+
+  private async track(
+    app: KeywordApp,
+    rows: readonly TrackRow[],
+    today: string,
+    admissible: Admissible,
   ): Promise<KeywordDiscoveryTrackResult> {
     if (rows.length === 0) return NOTHING_TRACKED;
     const tracking = await loadTrackingStates(this.prisma, app, rows);
@@ -54,56 +85,54 @@ export class DiscoveryTracker {
       await this.room(),
     );
     if (chosen.length === 0) return { tracked: 0, skipped };
-    const known = chosen.filter(hasKnownPosition(today));
-    const tracked = await this.quota.admitKeywordMarkets(async (tx) => {
-      const { count } = await tx.trackedKeyword.createMany({
-        data: chosen.map(({ keywordId, source }) => ({
-          appId: app.id,
-          keywordId,
-          source: keywordSourceOf[source],
-          active: true,
-        })),
-        skipDuplicates: true,
-      });
-      if (count > 0) await this.recordKnownPositions(tx, app, known);
-      return count;
-    });
-    if (tracked === 0) return { tracked: 0, skipped };
-    await this.scheduleFollowUps(app, chosen, known);
-    return { tracked, skipped };
+    const { count, admitted } = await this.quota.admitKeywordMarkets(
+      async (tx) => {
+        const admitted = await admissible(tx, chosen);
+        if (admitted.length === 0) return { count: 0, admitted };
+        const created = await tx.trackedKeyword.createMany({
+          data: admitted.map(({ keywordId, source }) => ({
+            appId: app.id,
+            keywordId,
+            source: keywordSourceOf[source],
+            active: true,
+          })),
+          skipDuplicates: true,
+        });
+        if (created.count > 0) {
+          await this.recordKnownPositions(
+            tx,
+            app,
+            admitted.filter(hasKnownPosition(today)),
+          );
+        }
+        return { count: created.count, admitted };
+      },
+    );
+    if (count === 0) return { tracked: 0, skipped };
+    await this.scheduleFollowUps(
+      app,
+      admitted,
+      admitted.filter(hasKnownPosition(today)),
+    );
+    return { tracked: count, skipped };
   }
 
-  async autoTrack(
+  private async stillAutoTracked(
+    tx: Prisma.TransactionClient,
     app: KeywordApp,
     rows: readonly TrackRow[],
-    today = utcDayOf(new Date()),
-  ): Promise<void> {
-    if (rows.length === 0) return;
-    const allowed = new Set(
-      (
-        await this.prisma.keywordDiscovery.findMany({
-          where: {
-            appId: app.id,
-            keywordId: { in: rows.map(({ keywordId }) => keywordId) },
-            dismissedAt: null,
-            app: { autoTrackRanked: true },
-          },
-          select: { keywordId: true },
-        })
-      ).map(({ keywordId }) => keywordId),
-    );
-    try {
-      await this.trackRows(
-        app,
-        rows.filter(({ keywordId }) => allowed.has(keywordId)),
-        today,
-      );
-    } catch (error: unknown) {
-      if (!(error instanceof QuotaExceededError)) throw error;
-      this.logger.log(
-        `kept ${rows.length} ranked discoveries of ${app.id} as discoveries, because the plan had no keyword room left: ${error.message}`,
-      );
-    }
+  ): Promise<TrackRow[]> {
+    const eligible = await tx.keywordDiscovery.findMany({
+      where: {
+        appId: app.id,
+        keywordId: { in: rows.map(({ keywordId }) => keywordId) },
+        dismissedAt: null,
+        app: { autoTrackRanked: true },
+      },
+      select: { keywordId: true },
+    });
+    const ids = new Set(eligible.map(({ keywordId }) => keywordId));
+    return rows.filter(({ keywordId }) => ids.has(keywordId));
   }
 
   private async recordKnownPositions(
