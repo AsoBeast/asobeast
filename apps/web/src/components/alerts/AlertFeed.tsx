@@ -20,7 +20,8 @@ import {
 } from "./AlertFeedToolbar";
 import { dayGroups, searchEvents } from "./alert-feed-view";
 
-const ALERTS_GUIDE = "https://docs.asobeast.com/guides/alerts";
+const ALERTS_GUIDE =
+  "https://docs.asobeast.com/guides/alerts#see-what-the-run-detected";
 
 const WHAT_THE_PAGE_LISTS =
   "Every event the daily run detected for your apps in the last 30 days, whether or not an alert channel is subscribed. Delivery is separate: channels are set up in Settings.";
