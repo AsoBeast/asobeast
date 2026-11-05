@@ -72,6 +72,7 @@ interface UpdateArgs {
   data: {
     event: string;
     appId: string | null;
+    keywordId: string | null;
     payload: RankDroppedPayload;
   };
 }
@@ -150,10 +151,40 @@ describe('AlertsDispatcher', () => {
     expect(args.data).toEqual({
       event: 'rank.dropped',
       appId: 'app1',
+      keywordId: 'kw1',
       payload: rankPayload,
     });
     expect(add).not.toHaveBeenCalled();
   });
+
+  it.each([
+    ['a rank alert', rankPayload, 'kw1'],
+    ['a chart alert', chartEntered(), null],
+  ])(
+    'writes the keyword of %s beside its outbox payload',
+    async (_case, payload, keywordId) => {
+      const prisma = buildPrisma();
+      const { queue } = buildQueue();
+      const dispatcher = new AlertsDispatcher(
+        prisma as unknown as PrismaService,
+        { enabled: true } as MailerService,
+        buildConfig('batched'),
+        queue,
+        workspace,
+        new AlertAppIdentities(prisma as unknown as PrismaService),
+      );
+
+      await inWorkspace(() => dispatcher.dispatch(payload));
+
+      expect(prisma.updates[0].data.keywordId).toBe(keywordId);
+      expect(prisma.alertEvent.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          keywordId,
+          dedupeKey: prisma.updates[0].where.dedupeKey,
+        }) as unknown,
+      });
+    },
+  );
 
   it('updates the latest values only before a row is claimed', async () => {
     const prisma = buildPrisma();
@@ -290,6 +321,7 @@ describe('AlertsDispatcher', () => {
     expect(prisma.updates[0].data).toEqual({
       event: 'rank.milestone',
       appId: 'app1',
+      keywordId: 'kw1',
       payload: milestone,
     });
   });
@@ -314,6 +346,7 @@ describe('AlertsDispatcher', () => {
     expect(prisma.updates[0].data).toEqual({
       event: 'chart.entered',
       appId: 'a',
+      keywordId: null,
       payload: chartEntered(),
     });
   });

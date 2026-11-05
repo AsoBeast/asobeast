@@ -85,7 +85,12 @@ export class AlertsDispatcher {
 
   private async collectRow(row: OutboxRow): Promise<void> {
     const json = row.payload as unknown as Prisma.InputJsonValue;
-    const data = { event: row.event, appId: row.appId, payload: json };
+    const data = {
+      event: row.event,
+      appId: row.appId,
+      keywordId: row.keywordId,
+      payload: json,
+    };
     const where = { dedupeKey: row.dedupeKey, flushedAt: null, flushId: null };
     const updated = await this.prisma.alertEvent.updateMany({
       where,
