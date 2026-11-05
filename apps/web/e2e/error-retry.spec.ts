@@ -1,8 +1,14 @@
-import type { Route } from "@playwright/test";
+import type { Page, Route } from "@playwright/test";
 import { hydrated } from "./hydrated.mts";
 import { expect, test } from "./session.mts";
 
 const COMPARE_PATH = "/api/backend/apps/app-1/keywords/compare";
+
+const matrixRow = (page: Page, text: string) =>
+  page
+    .getByRole("table", { name: /compared with each tracked competitor/ })
+    .getByRole("row")
+    .filter({ hasText: text });
 
 const isGapsRead = (url: URL) =>
   url.pathname === COMPARE_PATH && url.searchParams.get("onlyGaps") === "true";
@@ -38,9 +44,7 @@ test("try again refetches a comparison that failed after the competitors page wa
 
   await expect(boundary).toBeHidden();
   await expect(page).toHaveURL(/onlyGaps=true/);
-  await expect(
-    page.getByRole("row").filter({ hasText: "productivity app" }),
-  ).toBeVisible();
+  await expect(matrixRow(page, "productivity app")).toBeVisible();
 });
 
 test("a double press on try again refetches once and keeps the page", async ({
@@ -76,9 +80,7 @@ test("a double press on try again refetches once and keeps the page", async ({
   await boundary.getByRole("button", { name: "Try again" }).dblclick();
 
   await expect(boundary).toBeHidden();
-  await expect(
-    page.getByRole("row").filter({ hasText: "productivity app" }),
-  ).toBeVisible();
+  await expect(matrixRow(page, "productivity app")).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("data-kept", "true");
   expect(reads).toHaveLength(1);
 });
