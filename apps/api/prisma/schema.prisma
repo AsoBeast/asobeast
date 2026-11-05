@@ -57,6 +57,7 @@ model Workspace {
   appLocalizations              AppLocalization[]
   appSetups                     AppSetup[]
   keywordDiscoveries            KeywordDiscovery[]
+  keywordInspections            KeywordInspection[]
   reviewReplies                 ReviewReply[]
   chartFollows                  ChartFollow[]
   storeConnections              StoreConnection[]
@@ -324,19 +325,45 @@ model ScreenshotText {
 }
 
 model Keyword {
-  id          String             @id @default(cuid())
+  id          String              @id @default(cuid())
   text        String
   store       Store
-  country     String             @default("us")
+  country     String              @default("us")
   metrics     KeywordMetric[]
   tracked     TrackedKeyword[]
   rankings    KeywordRanking[]
   serpEntries SerpEntry[]
   actions     ActionItem[]
   discoveries KeywordDiscovery[]
-  createdAt   DateTime           @default(now())
+  inspections KeywordInspection[]
+  createdAt   DateTime            @default(now())
 
   @@unique([text, store, country])
+}
+
+model KeywordInspection {
+  id             String    @id @default(cuid())
+  workspaceId    String
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  keywordId      String
+  keyword        Keyword   @relation(fields: [keywordId], references: [id], onDelete: Cascade)
+  status         String    @default("PENDING")
+  traffic        Float?
+  difficulty     Float?
+  resultCount    Int?
+  scoringSource  String?
+  formulaVersion String?
+  confidence     String?
+  stats          Json?
+  results        Json?
+  suggestions    Json?
+  failure        String?
+  requestedAt    DateTime  @default(now())
+  completedAt    DateTime?
+
+  @@index([workspaceId, requestedAt])
+  @@index([workspaceId, keywordId, requestedAt])
+  @@index([keywordId])
 }
 
 model KeywordDiscovery {

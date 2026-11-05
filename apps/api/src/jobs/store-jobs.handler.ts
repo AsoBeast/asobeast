@@ -7,6 +7,7 @@ import { CollectionEligibility } from '../auth/collection-eligibility.service';
 import { CategoryRanksService } from '../category-ranks/category-ranks.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { DiscoveryCheck } from '../keyword-discovery/discovery-check.service';
+import { KeywordInspectionRunner } from '../keyword-inspections/keyword-inspection.runner';
 import { SpiderService } from '../keywords/spider.service';
 import { RankingsService } from '../rankings/rankings.service';
 import { ReviewsService } from '../reviews/reviews.service';
@@ -18,6 +19,7 @@ import {
   CheckKeywordPayload,
   DetectLocalizationPayload,
   DiscoverKeywordPayload,
+  InspectKeywordPayload,
   JOBS,
   RefreshAppPayload,
   ResolveSubtitlePayload,
@@ -32,6 +34,7 @@ const ELIGIBILITY_GATED_JOBS: ReadonlySet<string> = new Set([
   JOBS.SPIDER_PROBE,
   JOBS.DETECT_LOCALIZATION,
   JOBS.DISCOVER_KEYWORD,
+  JOBS.INSPECT_KEYWORD,
 ]);
 
 @Injectable()
@@ -50,6 +53,7 @@ export class StoreJobsHandler {
     private readonly eligibility: CollectionEligibility,
     private readonly localizations: LocalizationDetection,
     private readonly discoveryCheck: DiscoveryCheck,
+    private readonly inspections: KeywordInspectionRunner,
   ) {}
 
   async handle(job: Job): Promise<void> {
@@ -99,6 +103,12 @@ export class StoreJobsHandler {
       case JOBS.SCORE_KEYWORD:
         await this.scoring.scoreKeyword(
           (job.data as ScoreKeywordPayload).keywordId,
+        );
+        return;
+      case JOBS.INSPECT_KEYWORD:
+        await this.inspections.run(
+          (job.data as InspectKeywordPayload).inspectionId,
+          isFinalAttempt(job),
         );
         return;
       case JOBS.SYNC_REVIEWS:
