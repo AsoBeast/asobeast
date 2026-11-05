@@ -323,10 +323,15 @@ describe('Workspace checklist (e2e)', () => {
       appId: null,
     });
 
-    await prisma.apiToken.updateMany({
-      where: { name: 'e2e' },
-      data: { lastUsedAt: new Date() },
-    });
+    const viaToken = await request(app.getHttpServer())
+      .get('/workspace/checklist')
+      .set('Authorization', `Bearer ${readToken}`)
+      .expect(200);
+    const fromToken = (viaToken.body as WorkspaceChecklist).items.find(
+      (item) => item.id === 'connect_ai_client',
+    );
+
+    expect(fromToken?.done).toBe(true);
     await expect(itemOf('connect_ai_client')).resolves.toMatchObject({
       done: true,
     });

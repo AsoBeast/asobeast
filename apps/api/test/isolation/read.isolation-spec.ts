@@ -278,6 +278,32 @@ describe('Read isolation', () => {
     },
   );
 
+  it('answers each workspace its own checklist goal and dismissal', async () => {
+    const dismissedAt = new Date('2026-11-04T08:00:00.000Z');
+    await fixture.db.workspace.update({
+      where: { id: fixture.a.id },
+      data: { checklistGoal: 'use_with_ai', checklistDismissedAt: dismissedAt },
+    });
+    await fixture.db.workspace.update({
+      where: { id: fixture.b.id },
+      data: { checklistGoal: 'research_idea', checklistDismissedAt: null },
+    });
+
+    const [forA, forB] = await Promise.all([
+      fixture.a.agent.get('/workspace/checklist').expect(200),
+      fixture.b.agent.get('/workspace/checklist').expect(200),
+    ]);
+
+    expect(forA.body).toMatchObject({
+      goal: 'use_with_ai',
+      dismissedAt: dismissedAt.toISOString(),
+    });
+    expect(forB.body).toMatchObject({
+      goal: 'research_idea',
+      dismissedAt: null,
+    });
+  });
+
   it('keeps another workspace rankings out of the gap lists and the share of voice', async () => {
     const gapsOf = async (workspace: IsolationWorkspace) =>
       (

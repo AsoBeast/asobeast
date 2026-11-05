@@ -21,6 +21,10 @@ describe('Workspace checklist without a plan (e2e)', () => {
       plan: 'free',
       trialEndsAt: new Date(Date.now() - 1_000),
     });
+    await harness.prisma.workspace.update({
+      where: { id: WORKSPACE },
+      data: { checklistDismissedAt: null },
+    });
 
     await harness.owner
       .patch('/workspace/checklist')
