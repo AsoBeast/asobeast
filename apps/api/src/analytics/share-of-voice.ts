@@ -12,7 +12,7 @@ import {
   visibilityAt,
 } from './analytics.support';
 
-const SHARE_DELTA_DAYS = 7;
+export const SHARE_DELTA_DAYS = 7;
 
 export interface VoiceShare {
   share: number | null;

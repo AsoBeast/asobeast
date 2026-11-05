@@ -6,11 +6,10 @@ import { BrandKeywords } from './brand-keywords';
 import { RivalDates, rivalRankings } from './rival-rankings';
 import {
   rivalRows,
+  SHARE_DELTA_DAYS,
   shareOfVoicePoints,
   shareOfVoiceSummary,
 } from './share-of-voice';
-
-const SHARE_DELTA_DAYS = 7;
 
 export interface ShareRange {
   from: Date;
