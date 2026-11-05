@@ -1166,6 +1166,23 @@ describe("keyword suggestion keys", () => {
   });
 });
 
+describe("removing an app", () => {
+  it("refreshes the alert events that may name it", () => {
+    const client = new QueryClient();
+    client.setQueryData(alertEventKeys.newest, {});
+    client.setQueryData(alertEventKeys.list({}), {});
+
+    removeAppQueries(client, APP);
+
+    expect(client.getQueryState(alertEventKeys.newest)?.isInvalidated).toBe(
+      true,
+    );
+    expect(client.getQueryState(alertEventKeys.list({}))?.isInvalidated).toBe(
+      true,
+    );
+  });
+});
+
 describe("refetchFailedQueries", () => {
   it("refetches the queries in error and nothing else", async () => {
     const client = new QueryClient();

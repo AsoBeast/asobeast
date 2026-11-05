@@ -1154,6 +1154,7 @@ export function invalidateRunResults(client: QueryClient, id: string): void {
 export function removeAppQueries(client: QueryClient, id: string): void {
   client.removeQueries({ queryKey: appKeys.detail(id) });
   client.removeQueries({ queryKey: appKeys.suggestionsRoot(id) });
+  void client.invalidateQueries({ queryKey: alertEventKeys.all });
 }
 
 export function invalidateAppListing(client: QueryClient, id: string): void {
