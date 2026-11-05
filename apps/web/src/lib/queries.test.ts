@@ -32,6 +32,7 @@ import {
   alertEventKeys,
   alertEventsOptions,
   alertNewestOnVisitOptions,
+  alertNewestOptions,
   apiTokenKeys,
   appKeys,
   importPreviewRequest,
@@ -1316,6 +1317,11 @@ describe("alert event queries", () => {
 });
 
 describe("the newest alert event", () => {
+  it("is polled every five minutes while the app is open", () => {
+    expect(alertNewestOptions.refetchInterval).toBe(5 * 60_000);
+    expect(alertNewestOptions.refetchIntervalInBackground).not.toBe(true);
+  });
+
   it("is read again whenever the alerts page opens", () => {
     expect(alertNewestOnVisitOptions.queryKey).toEqual(alertEventKeys.newest);
     expect(alertNewestOnVisitOptions.refetchOnMount).toBe("always");

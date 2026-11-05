@@ -977,6 +977,8 @@ export const alertDeliveryOptions = queryOptions({
   queryFn: getAlertDeliveryStatus,
 });
 
+const ALERT_NEWEST_POLL_MS = 5 * 60_000;
+
 export const ALERT_EVENTS_PAGE = QUERY_BOUNDS.alertEventsLimit.default;
 
 export const alertEventsOptions = (filters: AlertEventFilters) =>
@@ -996,6 +998,7 @@ export const alertNewestOptions = queryOptions({
   queryKey: alertEventKeys.newest,
   queryFn: () => getAlertEvents({ limit: 1 }),
   staleTime: 60_000,
+  refetchInterval: ALERT_NEWEST_POLL_MS,
 });
 
 export const alertNewestOnVisitOptions = queryOptions({
