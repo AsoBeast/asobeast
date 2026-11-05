@@ -39,6 +39,11 @@ const DISCOVERY_SOURCE_CAPS = {
   portfolio: 60,
 } as const;
 
+const MIN_REVIEW_PHRASE_WORDS = 2;
+
+const wordCount = (text: string): number =>
+  text.split(' ').filter((word) => word.length > 0).length;
+
 const LISTING_SOURCE: Record<CandidateSource, DiscoverySource> = {
   TITLE: 'title',
   SUBTITLE: 'subtitle',
@@ -149,13 +154,16 @@ export class DiscoveryCandidates {
       app.id,
       new Set(),
       listingLanguages(app.store, app.country),
-      DISCOVERY_SOURCE_CAPS.reviews,
+      Number.POSITIVE_INFINITY,
     );
     return sourced(
       phrases
         .filter(
-          ({ usedByCount }) => (usedByCount ?? 0) >= REVIEW_THEME_MIN_MENTIONS,
+          ({ text, usedByCount }) =>
+            (usedByCount ?? 0) >= REVIEW_THEME_MIN_MENTIONS &&
+            wordCount(text) >= MIN_REVIEW_PHRASE_WORDS,
         )
+        .slice(0, DISCOVERY_SOURCE_CAPS.reviews)
         .map(({ text }) => text),
       'reviews',
     );
