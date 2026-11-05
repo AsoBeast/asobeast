@@ -272,6 +272,9 @@ export class KeywordsService {
       ...(data.relevance === undefined ? {} : { relevance: data.relevance }),
       ...(data.tags === undefined ? {} : { tags: data.tags }),
       ...(data.note === undefined ? {} : { note: data.note }),
+      ...(data.keywordClass === undefined
+        ? {}
+        : { keywordClass: data.keywordClass }),
     };
     if (data.active === true) {
       await this.quota.admitKeywordMarkets(async (tx) => {

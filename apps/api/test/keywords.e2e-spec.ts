@@ -2884,4 +2884,112 @@ describe('KeywordsController (e2e)', () => {
         .expect(404);
     });
   });
+
+  describe('keyword class', () => {
+    const tracked = async (): Promise<{ id: string; keywordId: string }> => {
+      const id = await importApp();
+      const added = await api
+        .post(`/apps/${id}/keywords`)
+        .send({ keywords: ['streak counter'] })
+        .expect(201);
+      const [item] = added.body as TrackedKeywordItem[];
+      return { id, keywordId: item.keywordId };
+    };
+
+    const patch = (id: string, keywordId: string, body: object) =>
+      api.patch(`/apps/${id}/keywords/${keywordId}`).send(body);
+
+    const listed = async (id: string, keywordId: string) =>
+      (
+        (await api.get(`/apps/${id}/keywords`).expect(200))
+          .body as TrackedKeywordItem[]
+      ).find((item) => item.keywordId === keywordId);
+
+    const stored = (keywordId: string) =>
+      prisma.trackedKeyword.findFirstOrThrow({
+        where: { keywordId },
+        select: { keywordClass: true },
+      });
+
+    it("keeps the owner's class across reads and other edits", async () => {
+      const { id, keywordId } = await tracked();
+      expect((await listed(id, keywordId))?.keywordClass).toBe('generic');
+
+      const patched = await patch(id, keywordId, {
+        keywordClass: 'ownBrand',
+      }).expect(200);
+      expect(patched.body).toMatchObject({
+        keywordClass: 'ownBrand',
+        keywordClassSource: 'owner',
+      });
+      expect(await listed(id, keywordId)).toMatchObject({
+        keywordClass: 'ownBrand',
+        keywordClassSource: 'owner',
+      });
+
+      await patch(id, keywordId, { note: 'x' }).expect(200);
+      expect(await listed(id, keywordId)).toMatchObject({
+        keywordClass: 'ownBrand',
+        keywordClassSource: 'owner',
+      });
+    });
+
+    it('goes back to the detected class with null', async () => {
+      const { id, keywordId } = await tracked();
+      await patch(id, keywordId, { keywordClass: 'ownBrand' }).expect(200);
+
+      const cleared = await patch(id, keywordId, {
+        keywordClass: null,
+      }).expect(200);
+
+      expect(cleared.body).toMatchObject({
+        keywordClass: 'generic',
+        keywordClassSource: 'detected',
+      });
+      await expect(stored(keywordId)).resolves.toEqual({ keywordClass: null });
+    });
+
+    it.each(['brand', '', 3])(
+      'refuses %j as a class and stores nothing',
+      async (keywordClass) => {
+        const { id, keywordId } = await tracked();
+
+        await patch(id, keywordId, { keywordClass }).expect(400);
+
+        await expect(stored(keywordId)).resolves.toEqual({
+          keywordClass: null,
+        });
+      },
+    );
+
+    it('sets the class of a paused keyword', async () => {
+      const { id, keywordId } = await tracked();
+      await patch(id, keywordId, { active: false }).expect(200);
+
+      const patched = await patch(id, keywordId, {
+        keywordClass: 'competitorBrand',
+      }).expect(200);
+
+      expect(patched.body).toMatchObject({
+        active: false,
+        keywordClass: 'competitorBrand',
+        keywordClassSource: 'owner',
+      });
+    });
+
+    it('answers 404 for a keyword another app tracks', async () => {
+      const { keywordId } = await tracked();
+      const other = await prisma.app.create({
+        data: {
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          store: Store.APP_STORE,
+          storeAppId: 'other-app',
+          country: 'us',
+        },
+      });
+
+      await patch(other.id, keywordId, { keywordClass: 'generic' }).expect(404);
+      await expect(stored(keywordId)).resolves.toEqual({ keywordClass: null });
+    });
+  });
 });

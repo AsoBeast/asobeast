@@ -1217,4 +1217,30 @@ describe('KeywordsService keyword class', () => {
     expect(item.keywordClass).toBe('ownBrand');
     expect(item.keywordClassSource).toBe('detected');
   });
+
+  const updateData = (prisma: ReturnType<typeof buildPrisma>) =>
+    (prisma.trackedKeyword.update.mock.calls as [{ data: unknown }][])[0][0]
+      .data;
+
+  it("stores the owner's class and nothing else", async () => {
+    const prisma = buildPrisma();
+    await buildService(prisma).updateKeyword('app1', 'kwOwn', {
+      keywordClass: 'ownBrand',
+    });
+    expect(updateData(prisma)).toEqual({ keywordClass: 'ownBrand' });
+  });
+
+  it("clears the owner's class with null", async () => {
+    const prisma = buildPrisma();
+    await buildService(prisma).updateKeyword('app1', 'kwOwn', {
+      keywordClass: null,
+    });
+    expect(updateData(prisma)).toEqual({ keywordClass: null });
+  });
+
+  it('leaves the class alone when the update does not name it', async () => {
+    const prisma = buildPrisma();
+    await buildService(prisma).updateKeyword('app1', 'kwOwn', { note: 'x' });
+    expect(updateData(prisma)).toEqual({ note: 'x' });
+  });
 });

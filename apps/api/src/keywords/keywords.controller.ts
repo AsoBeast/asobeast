@@ -203,6 +203,8 @@ export class KeywordsController {
   @QueuesWork()
   @ApiOperation({
     summary: 'Update a tracked keyword active flag or relevance',
+    description:
+      'Changes any of active, relevance, tags, note and keywordClass. keywordClass sets the class of the keyword to ownBrand, competitorBrand or generic whatever the detection says, and null goes back to the detected class. The answer carries keywordClass and keywordClassSource.',
   })
   update(
     @Param('id') id: string,

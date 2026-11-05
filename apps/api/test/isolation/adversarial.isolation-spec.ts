@@ -122,6 +122,28 @@ describe('Adversarial isolation attempts', () => {
     }
   });
 
+  it('refuses to set the class of a keyword tracked by the other workspace', async () => {
+    await fixture.b.agent
+      .patch(`/apps/${fixture.a.appleAppId}/keywords/${fixture.a.keywordId}`)
+      .send({ keywordClass: 'generic' })
+      .expect(404);
+    await fixture.b.agent
+      .patch(
+        `/apps/${fixture.b.appleAppId}/keywords/${fixture.a.privateKeywordId}`,
+      )
+      .send({ keywordClass: 'generic' })
+      .expect(404);
+
+    const untouched = await fixture.db.trackedKeyword.findMany({
+      where: {
+        appId: fixture.a.appleAppId,
+        keywordId: { in: [fixture.a.keywordId, fixture.a.privateKeywordId] },
+      },
+      select: { keywordClass: true },
+    });
+    expect(untouched).toEqual([{ keywordClass: null }, { keywordClass: null }]);
+  });
+
   it('refuses to remove a keyword tracked by the other workspace', async () => {
     await fixture.a.agent
       .delete(`/apps/${fixture.b.appleAppId}/keywords/${fixture.b.keywordId}`)

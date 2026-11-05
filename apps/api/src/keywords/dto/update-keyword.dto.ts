@@ -4,6 +4,7 @@ import {
   ArrayMaxSize,
   IsArray,
   IsBoolean,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -17,9 +18,11 @@ import {
 } from 'class-validator';
 import {
   isKeywordTag,
+  KEYWORD_CLASSES,
   KEYWORD_NOTE_MAX_LENGTH,
   KEYWORD_TAG_RULE,
   KEYWORD_TAGS_MAX,
+  KeywordClass,
   KeywordUpdateRequest,
   normalizeKeywordNote,
   normalizeKeywordTags,
@@ -86,4 +89,14 @@ export class UpdateKeywordDto implements KeywordUpdateRequest {
   @IsString()
   @MaxLength(KEYWORD_NOTE_MAX_LENGTH)
   note?: string | null;
+
+  @ApiPropertyOptional({
+    enum: KEYWORD_CLASSES,
+    nullable: true,
+    example: 'ownBrand',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsIn(KEYWORD_CLASSES)
+  keywordClass?: KeywordClass | null;
 }
