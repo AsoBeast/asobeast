@@ -419,6 +419,11 @@ test("exporting keywords downloads a bom-prefixed csv", async ({ page }) => {
   expect(content.split("\r\n")[0]).toContain(
     "relevance,added,competitorsInTop10,scoredAt",
   );
+  expect(content.split("\r\n")[0]).toContain(",bucket,keywordClass,relevance,");
+  const focusTimer = content
+    .split("\r\n")
+    .find((line) => line.startsWith("focus timer,"));
+  expect(focusTimer).toContain(",primary,ownBrand,");
   expect(content.split("\r\n")[0]).toContain(
     "scoredAt,scoringSource,formulaVersion,confidence,capturedAt",
   );
