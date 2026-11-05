@@ -795,11 +795,12 @@ test.describe("zones and thresholds", () => {
     await page.setViewportSize({ width: 320, height: 900 });
     await page.goto(MAP_URL);
     const items = legend(page).getByRole("listitem");
-    const first = await items.nth(0).boundingBox();
-    const second = await items.nth(1).boundingBox();
-    const third = await items.nth(2).boundingBox();
-    expect(first && second && Math.abs(first.y - second.y) < 2).toBe(true);
-    expect(first && third && third.y > first.y).toBe(true);
+    await expect(items).toHaveCount(4);
+    const [first, second, third] = await items.evaluateAll((elements) =>
+      elements.map((element) => element.getBoundingClientRect().y),
+    );
+    expect(Math.abs(first - second)).toBeLessThan(2);
+    expect(third).toBeGreaterThan(first);
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= window.innerWidth,
