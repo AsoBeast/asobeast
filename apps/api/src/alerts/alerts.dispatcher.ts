@@ -40,9 +40,10 @@ export class AlertsDispatcher {
     try {
       const payload = await this.identities.attach(raw);
       if (this.batched(payload)) {
-        await this.collect(payload);
+        await this.collect(payload, null);
         return;
       }
+      await this.recordSettled(payload);
       await Promise.all([
         this.dispatchWebhooks(payload),
         this.dispatchEmails(payload),
@@ -77,13 +78,27 @@ export class AlertsDispatcher {
     );
   }
 
-  private async collect(payload: AlertPayload): Promise<void> {
-    for (const row of outboxRows(payload)) {
-      await this.collectRow(row);
+  private async recordSettled(payload: AlertPayload): Promise<void> {
+    try {
+      await this.collect(payload, new Date());
+    } catch (error) {
+      this.logger.warn(`alert record failed: ${(error as Error).message}`);
     }
   }
 
-  private async collectRow(row: OutboxRow): Promise<void> {
+  private async collect(
+    payload: AlertPayload,
+    settledAt: Date | null,
+  ): Promise<void> {
+    for (const row of outboxRows(payload)) {
+      await this.collectRow(row, settledAt);
+    }
+  }
+
+  private async collectRow(
+    row: OutboxRow,
+    settledAt: Date | null,
+  ): Promise<void> {
     const json = row.payload as unknown as Prisma.InputJsonValue;
     const data = {
       event: row.event,
@@ -102,6 +117,7 @@ export class AlertsDispatcher {
         data: {
           workspaceId: this.workspace.require('an outbox alert'),
           dedupeKey: row.dedupeKey,
+          flushedAt: settledAt,
           ...data,
         },
       });
