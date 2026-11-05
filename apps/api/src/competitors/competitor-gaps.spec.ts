@@ -1,22 +1,17 @@
+import { GapRow } from './competitor-gap-lists';
 import {
   bestCompetitor,
   existingGapLists,
   gapKeyword,
 } from './competitor-gaps';
-import {
-  GapEntry,
-  gapEntry,
-  OTHER,
-  RIVAL,
-  trackedById,
-} from './competitor-gaps.fixture';
+import { gapEntry, OTHER, RIVAL, trackedById } from './competitor-gaps.fixture';
 
 const competitors = [
   { id: RIVAL, name: 'Rival' },
   { id: OTHER, name: 'Other' },
 ];
 
-const listsOf = (entries: GapEntry[]) =>
+const listsOf = (entries: GapRow[]) =>
   existingGapLists(
     { competitors, rows: entries.map(({ row }) => row) },
     trackedById(entries),

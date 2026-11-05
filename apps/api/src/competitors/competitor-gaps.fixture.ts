@@ -1,11 +1,12 @@
 import { KeywordComparisonRow, TrackedKeywordItem } from '@asobeast/shared';
 import { trackedKeyword } from '../actions/rules/rule-context.fixture';
+import { GapRow } from './competitor-gap-lists';
 
 export const PRIMARY = 'app-you';
 export const RIVAL = 'app-rival';
 export const OTHER = 'app-other';
 
-export interface GapEntryInput {
+export interface GapRowInput {
   keywordId?: string;
   text?: string;
   country?: string;
@@ -19,12 +20,7 @@ export interface GapEntryInput {
   tracked?: boolean;
 }
 
-export interface GapEntry {
-  row: KeywordComparisonRow;
-  item: TrackedKeywordItem | undefined;
-}
-
-export function gapEntry(input: GapEntryInput = {}): GapEntry {
+export function gapEntry(input: GapRowInput = {}): GapRow {
   const keywordId = input.keywordId ?? `kw-${input.text ?? 'habit tracker'}`;
   const text = input.text ?? 'habit tracker';
   const country = input.country ?? 'us';
@@ -54,7 +50,7 @@ export function gapEntry(input: GapEntryInput = {}): GapEntry {
 }
 
 export const trackedById = (
-  entries: readonly GapEntry[],
+  entries: readonly GapRow[],
 ): Map<string, TrackedKeywordItem> =>
   new Map(
     entries.flatMap(({ item }) => (item ? [[item.keywordId, item]] : [])),
