@@ -24,6 +24,7 @@ import {
   STORES,
   Store,
 } from '@asobeast/shared';
+import { commaList } from '../../common/comma-list';
 
 export const ACTIONS_DEFAULT_LIMIT = QUERY_BOUNDS.actionsLimit.default;
 export const ACTIONS_MAX_LIMIT = QUERY_BOUNDS.actionsLimit.max;
@@ -32,34 +33,24 @@ export const ACTIONS_DEFAULT_STATUSES: readonly ActionStatus[] = [
   'SNOOZED',
 ];
 
-const toArray = ({ value }: { value: unknown }): unknown => {
-  if (typeof value === 'string') {
-    return value
-      .split(',')
-      .map((entry) => entry.trim())
-      .filter((entry) => entry.length > 0);
-  }
-  return value;
-};
-
 export class ListActionsQueryDto {
   @ApiPropertyOptional({ enum: ACTION_STATUSES, isArray: true })
   @IsOptional()
-  @Transform(toArray)
+  @Transform(commaList)
   @IsArray()
   @IsIn(ACTION_STATUSES, { each: true })
   status?: ActionStatus[];
 
   @ApiPropertyOptional({ enum: ACTION_PRIORITIES, isArray: true })
   @IsOptional()
-  @Transform(toArray)
+  @Transform(commaList)
   @IsArray()
   @IsIn(ACTION_PRIORITIES, { each: true })
   priority?: ActionPriority[];
 
   @ApiPropertyOptional({ enum: ACTION_RULES, isArray: true })
   @IsOptional()
-  @Transform(toArray)
+  @Transform(commaList)
   @IsArray()
   @IsIn(ACTION_RULES, { each: true })
   rule?: ActionRule[];
