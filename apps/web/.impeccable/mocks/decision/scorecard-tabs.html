@@ -1,0 +1,56 @@
+<!doctype html><html><head><meta charset="utf-8"><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"><style>:root{--bg:oklch(.985 .003 75);--card:#fff;--fg:oklch(.212 .008 75);--mut:oklch(.508 .01 75);--bd:oklch(.92 .005 75);--side:oklch(.962 .004 75);--brand:oklch(.762 .164 64.4);--brand7:oklch(.52 .13 50);--hi:oklch(.46 .15 240);--mid:oklch(.55 .13 240);--lo:oklch(.56 .06 240);--b1:oklch(.9 .1 240);--up:oklch(.51 .13 152);--down:oklch(.53 .19 22);--tint:oklch(.96 .03 240)}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1440px;height:900px;overflow:hidden;background:var(--bg);color:var(--fg);font:14px/1.45 "IBM Plex Sans",sans-serif}
+.mono{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
+.app{display:grid;grid-template-columns:232px 1fr;height:900px}
+.side{background:var(--side);padding:20px 16px;display:flex;flex-direction:column;gap:4px}
+.brand{font-weight:700;font-size:18px;margin-bottom:22px;display:flex;gap:8px;align-items:center}
+.brand i{width:26px;height:26px;border-radius:7px;background:var(--brand);display:inline-block}
+.nav{padding:6px 8px;border-radius:6px;color:oklch(.3 .009 75)}
+.nav.on{background:oklch(.92 .005 75);font-weight:600}
+.lab{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
+.main{display:flex;flex-direction:column;min-width:0}
+.top{height:52px;border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 24px;gap:12px;color:var(--mut)}
+.form{display:flex;gap:10px;align-items:center}
+.in{height:36px;border:1px solid var(--bd);border-radius:7px;background:var(--card);padding:0 12px;display:flex;align-items:center;color:var(--fg)}
+.btn{height:36px;border-radius:7px;background:var(--brand);color:#1b1206;font-weight:600;padding:0 16px;display:flex;align-items:center}
+.ghost{height:30px;border:1px solid var(--bd);border-radius:999px;padding:0 12px;display:inline-flex;align-items:center;gap:6px;background:var(--card);font-size:13px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px}
+.badge{font-size:11.5px;padding:1px 7px;border-radius:999px;border:1px solid var(--bd);white-space:nowrap}
+.exact{background:var(--tint);color:var(--hi);border-color:transparent}
+.new{background:oklch(.95 .05 152);color:var(--up);border-color:transparent}
+</style></head><body><div class="app"><aside class="side"><div class="brand"><i></i>AsoBeast</div><div class="lab" style="margin:4px 8px 6px">Workspace</div><div class="nav">Dashboard</div><div class="nav">Action Center</div><div class="nav">Alerts</div><div class="nav">Top charts</div><div class="nav on">Keyword inspector</div><div class="nav">Integrations</div><div class="nav">Settings</div></aside><main class="main"><div class="top">Keyword inspector</div><style>
+.wrap{padding:20px 28px;display:flex;flex-direction:column;gap:16px}
+.sc{display:grid;grid-template-columns:1.2fr repeat(3,150px) 1.4fr;gap:0;padding:0}
+.cell{padding:16px 18px;border-right:1px solid var(--bd)}.cell:last-child{border:0}
+.cell b{font-size:30px;font-weight:600;display:block;line-height:1.15}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.tabs{display:flex;gap:26px;border-bottom:1px solid var(--bd)}
+.tab{padding:10px 0;color:var(--mut)}.tab.on{color:var(--fg);font-weight:600;box-shadow:inset 0 -2px var(--brand)}
+.res{display:grid;grid-template-columns:36px 44px 1fr 140px 80px 100px 120px;gap:14px;align-items:center;padding:10px 8px;border-bottom:1px solid var(--bd)}
+.ic{width:40px;height:40px;border-radius:10px;background:var(--side);display:grid;place-items:center;color:var(--mut);font-weight:600}
+.res small{display:block;color:var(--mut);font-size:12px}
+</style>
+<div class="wrap">
+ <div class="form"><div class="in" style="flex:1;width:560px">habit tracker</div><div class="in" style="width:140px">App Store ▾</div><div class="in" style="width:150px">US · United States ▾</div><div class="btn">Inspect</div><span class="ghost" style="margin-left:auto">Recent inspections ▾</span></div>
+ <div class="card sc">
+  <div class="cell"><div style="font-size:22px;font-weight:650">“habit tracker”</div><div style="color:var(--mut);font-size:13px">App Store · US · 2 min ago · High confidence</div><div style="font-size:13px;margin-top:8px">Since Nov 4: <b style="display:inline;font-size:13px;color:var(--up)">pop +23</b> · <b style="display:inline;font-size:13px;color:var(--down)">diff +14</b></div></div>
+  <div class="cell"><span class="lab">Popularity</span><b class="mono">65</b></div>
+  <div class="cell"><span class="lab">Difficulty</span><b class="mono">48</b></div>
+  <div class="cell"><span class="lab">Opportunity</span><b class="mono" style="color:var(--up)">60</b></div>
+  <div class="cell"><span class="lab">Next hops from autocomplete</span><div class="chips"><span class="ghost">habit tracker app</span><span class="ghost">… free</span><span class="ghost">… widget</span><span class="ghost">… for adhd</span><span class="ghost">… and planner</span><span class="ghost">+3</span></div></div>
+ </div>
+ <div class="tabs"><span class="tab on">Results 50</span><span class="tab">Competition</span><span class="tab">Changes 2</span><span class="tab">History 5</span></div>
+ <div>
+  <div class="res lab"><span>#</span><span></span><span>App</span><span>Developer</span><span>Rating</span><span>Ratings</span><span>Title match</span></div>
+  <div class="res"><span class="mono">1</span><span class="ic">H</span><span>Habit Tracker: Daily Goals</span><span style="color:var(--mut)">Northwind Labs</span><span class="mono">4.8</span><span class="mono">251.3K</span><span class="badge exact" style="justify-self:start">Exact phrase</span></div>
+  <div class="res"><span class="mono">2</span><span class="ic">S</span><span>Streaks Planner</span><span style="color:var(--mut)">Bright Loop</span><span class="mono">4.7</span><span class="mono">118.4K</span><span class="badge" style="justify-self:start">No match</span></div>
+  <div class="res"><span class="mono">3</span><span class="ic">R</span><span>Routine Builder: Habits</span><span style="color:var(--mut)">Kettle Apps</span><span class="mono">4.6</span><span class="mono">42.9K</span><span class="badge" style="justify-self:start">Some words</span></div>
+  <div class="res"><span class="mono">4</span><span class="ic">D</span><span>Daily Habit &amp; Goal Tracker</span><span style="color:var(--mut)">Pine Studio</span><span class="mono">4.5</span><span class="mono">18.2K</span><span class="badge" style="justify-self:start">All words</span></div>
+  <div class="res"><span class="mono">5</span><span class="ic">A</span><span>Atomic Routine</span><span style="color:var(--mut)">Small Steps Co</span><span class="mono">4.4</span><span class="mono">9.9K</span><span class="badge" style="justify-self:start">No match</span></div>
+  <div class="res" style="background:oklch(.97 .04 152)"><span class="mono">6</span><span class="ic">M</span><span>Momentum: Habit Tracker <span class="badge new">Entered</span></span><span style="color:var(--mut)">Fieldnote</span><span class="mono">4.7</span><span class="mono">7.4K</span><span class="badge exact" style="justify-self:start">Exact phrase</span></div>
+  <div class="res"><span class="mono">7</span><span class="ic">G</span><span>Good Day Journal</span><span style="color:var(--mut)">Harbor Mobile</span><span class="mono">4.3</span><span class="mono">3.1K</span><span class="badge" style="justify-self:start">No match</span></div>
+  <div class="res"><span class="mono">8</span><span class="ic">T</span><span>Tiny Habits Log</span><span style="color:var(--mut)">Ollo</span><span class="mono">4.2</span><span class="mono">1.6K</span><span class="badge" style="justify-self:start">Some words</span></div>
+ </div>
+</div>
+</main></div></body></html>

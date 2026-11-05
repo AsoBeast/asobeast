@@ -78,6 +78,11 @@ export const LATER_RELEASES: readonly Release[] = [
         text: "Tick keywords on the keywords table and press Show dynamics to see their positions as one chart above the list. The charted rows are highlighted, the chart follows the market you switch to, and a link with an open chart reopens it for whoever you send it to.",
       },
       {
+        kind: "new",
+        title: "Inspect any keyword",
+        text: "Keyword inspector in the sidebar reads any keyword in any country straight from the store, without tracking it: the top 50 apps, the autocomplete, popularity, difficulty and opportunity, and how strong the top ten are. Every inspection is kept, so the next one of the same keyword shows what changed since.",
+      },
+      {
         kind: "improved",
         title: "Where a dropped keyword last ranked",
         text: "A keyword that falls out of the search results now shows the position it last held beside its own, as long as it ranked within its last 60 checks, and pointing at it tells you the day it ranked there.",

@@ -13,6 +13,7 @@ import {
   Lightbulb,
   ListChecks,
   Plug,
+  ScanSearch,
   Settings,
   Star,
   Swords,
@@ -63,6 +64,7 @@ const WORKSPACE = [
   { href: "/actions", label: "Action Center", icon: ListChecks },
   { href: "/alerts", label: "Alerts", icon: Bell },
   { href: "/charts", label: "Top charts", icon: Trophy },
+  { href: "/inspect", label: "Keyword inspector", icon: ScanSearch },
   { href: INTEGRATIONS_PATH, label: "Integrations", icon: Plug },
   { href: "/settings", label: "Settings", icon: Settings },
 ] as const;

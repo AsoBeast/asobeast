@@ -1,0 +1,93 @@
+<!doctype html><html><head><meta charset="utf-8"><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"><style>:root{--bg:oklch(.985 .003 75);--card:#fff;--fg:oklch(.212 .008 75);--mut:oklch(.508 .01 75);--bd:oklch(.92 .005 75);--side:oklch(.962 .004 75);--brand:oklch(.762 .164 64.4);--brand7:oklch(.52 .13 50);--hi:oklch(.46 .15 240);--mid:oklch(.55 .13 240);--lo:oklch(.56 .06 240);--b1:oklch(.9 .1 240);--up:oklch(.51 .13 152);--down:oklch(.53 .19 22);--tint:oklch(.96 .03 240)}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1440px;height:900px;overflow:hidden;background:var(--bg);color:var(--fg);font:14px/1.45 "IBM Plex Sans",sans-serif}
+.mono{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
+.app{display:grid;grid-template-columns:232px 1fr;height:900px}
+.side{background:var(--side);padding:20px 16px;display:flex;flex-direction:column;gap:4px}
+.brand{font-weight:700;font-size:18px;margin-bottom:22px;display:flex;gap:8px;align-items:center}
+.brand i{width:26px;height:26px;border-radius:7px;background:var(--brand);display:inline-block}
+.nav{padding:6px 8px;border-radius:6px;color:oklch(.3 .009 75)}
+.nav.on{background:oklch(.92 .005 75);font-weight:600}
+.lab{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
+.main{display:flex;flex-direction:column;min-width:0}
+.top{height:52px;border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 24px;gap:12px;color:var(--mut)}
+.form{display:flex;gap:10px;align-items:center}
+.in{height:36px;border:1px solid var(--bd);border-radius:7px;background:var(--card);padding:0 12px;display:flex;align-items:center;color:var(--fg)}
+.btn{height:36px;border-radius:7px;background:var(--brand);color:#1b1206;font-weight:600;padding:0 16px;display:flex;align-items:center}
+.ghost{height:30px;border:1px solid var(--bd);border-radius:999px;padding:0 12px;display:inline-flex;align-items:center;gap:6px;background:var(--card);font-size:13px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px}
+.badge{font-size:11.5px;padding:1px 7px;border-radius:999px;border:1px solid var(--bd);white-space:nowrap}
+.exact{background:var(--tint);color:var(--hi);border-color:transparent}
+.new{background:oklch(.95 .05 152);color:var(--up);border-color:transparent}
+</style></head><body><div class="app"><aside class="side"><div class="brand"><i></i>AsoBeast</div><div class="lab" style="margin:4px 8px 6px">Workspace</div><div class="nav">Dashboard</div><div class="nav">Action Center</div><div class="nav">Alerts</div><div class="nav">Top charts</div><div class="nav on">Keyword inspector</div><div class="nav">Integrations</div><div class="nav">Settings</div></aside><main class="main"><div class="top">Keyword inspector</div><style>
+.wrap{padding:22px 28px;display:flex;flex-direction:column;gap:18px}
+.head{display:flex;justify-content:space-between;align-items:center}
+h1{font-size:24px;font-weight:650}
+.grid{display:grid;grid-template-columns:1fr 430px;gap:18px}
+.map{padding:16px 18px}
+.maph{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.rail{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center}
+.rail .ghost:before{content:"+";color:var(--brand7);font-weight:700}
+.sel{padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.scores{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.sc{border:1px solid var(--bd);border-radius:9px;padding:9px 11px}
+.sc b{font-size:26px;font-weight:600;display:block;line-height:1.2}
+.bar{height:4px;border-radius:2px;background:var(--side);margin-top:6px}.bar i{display:block;height:4px;border-radius:2px;background:var(--hi)}
+.delta{font-size:13px;color:var(--mut)}.delta b{color:var(--up);font-weight:600}
+.row{display:grid;grid-template-columns:22px 1fr 44px 58px;gap:8px;align-items:center;padding:6px 4px;border-top:1px solid var(--bd);font-size:13px}
+.row.lit{background:oklch(.97 .04 152);border-radius:6px}
+.row small{color:var(--mut);display:block;font-size:11.5px}
+</style>
+<div class="wrap">
+ <div class="head"><h1>Keyword inspector</h1>
+  <div class="form"><div class="in" style="width:300px">habit tracker</div><div class="in" style="width:130px">App Store ▾</div><div class="in" style="width:110px">US ▾</div><div class="btn">Inspect</div></div></div>
+ <div class="grid">
+  <div class="card map">
+   <div class="maph"><div><b>Keyword map</b> <span style="color:var(--mut)">· App Store · United States · 14 inspected</span></div><div class="lab">Size = results with the phrase in the title</div></div>
+   <svg width="100%" height="560" viewBox="0 0 860 560" font-family="IBM Plex Sans" font-size="12.5">
+    <rect x="50" y="10" width="330" height="240" fill="oklch(.96 .03 240)" rx="6"/>
+    <text x="62" y="32" fill="var(--hi)" font-weight="600" font-size="12">SWEET SPOT · popular, easy</text>
+    <g stroke="var(--bd)"><line x1="50" y1="10" x2="50" y2="500"/><line x1="50" y1="500" x2="850" y2="500"/>
+    <line x1="50" y1="255" x2="850" y2="255" stroke-dasharray="3 4"/><line x1="450" y1="10" x2="450" y2="500" stroke-dasharray="3 4"/></g>
+    <text x="440" y="530" fill="var(--mut)" text-anchor="middle">Difficulty →</text>
+    <text x="20" y="260" fill="var(--mut)" transform="rotate(-90 20 260)" text-anchor="middle">Popularity →</text>
+    <g fill="var(--mid)" fill-opacity=".85">
+     <circle cx="230" cy="140" r="9"/><text x="244" y="144" fill="var(--fg)">habit tracker widget</text>
+     <circle cx="160" cy="200" r="7"/><text x="172" y="204" fill="var(--fg)">streak counter</text>
+     <circle cx="560" cy="110" r="13"/><text x="578" y="114" fill="var(--fg)">habit tracker app</text>
+     <circle cx="700" cy="70" r="15"/><text x="720" y="74" fill="var(--fg)">daily planner</text>
+     <circle cx="330" cy="330" r="8"/><text x="344" y="334" fill="var(--fg)">routine builder</text>
+     <circle cx="620" cy="380" r="10"/><text x="636" y="384" fill="var(--fg)">mood journal</text>
+     <circle cx="210" cy="420" r="6"/><text x="222" y="424" fill="var(--fg)">tiny habits log</text>
+     <circle cx="760" cy="300" r="11"/><text x="676" y="326" fill="var(--fg)">goal tracker</text>
+     <circle cx="120" cy="300" r="6"/><text x="132" y="304" fill="var(--fg)">habit streaks free</text>
+    </g>
+    <circle cx="470" cy="170" r="22" fill="none" stroke="var(--brand)" stroke-width="3"/>
+    <circle cx="470" cy="170" r="12" fill="var(--brand)"/>
+    <path d="M470 170 L400 230" stroke="var(--brand7)" stroke-dasharray="4 4" fill="none"/>
+    <rect x="482" y="186" width="118" height="24" rx="6" fill="var(--fg)"/><text x="492" y="203" fill="#fff" font-weight="600">habit tracker</text>
+    <circle cx="400" cy="230" r="7" fill="none" stroke="var(--brand7)" stroke-dasharray="3 3"/><text x="300" y="250" fill="var(--brand7)">inspecting “for adhd”…</text>
+   </svg>
+   <div class="rail"><span class="lab" style="margin-right:4px">Next from habit tracker</span><span class="ghost">habit tracker free</span><span class="ghost" style="border-color:var(--brand7)">habit tracker for adhd</span><span class="ghost">habit tracker and planner</span><span class="ghost">habit tracker streaks</span><span class="ghost">habit tracker daily</span></div>
+  </div>
+  <div class="card sel">
+   <div><div style="font-size:20px;font-weight:650">“habit tracker”</div><div style="color:var(--mut);font-size:13px">App Store · United States · inspected 2 min ago</div></div>
+   <div class="scores">
+    <div class="sc"><span class="lab">Popularity</span><b class="mono">65</b><div class="bar"><i style="width:65%"></i></div></div>
+    <div class="sc"><span class="lab">Difficulty</span><b class="mono">48</b><div class="bar"><i style="width:48%;background:var(--mid)"></i></div></div>
+    <div class="sc"><span class="lab">Opportunity</span><b class="mono">60</b><div class="bar"><i style="width:60%;background:var(--up)"></i></div></div>
+   </div>
+   <div class="delta">Since Nov 4: popularity <b>+23</b>, difficulty <b style="color:var(--down)">+14</b> · <span class="badge">High confidence</span></div>
+   <div><div style="display:flex;justify-content:space-between;margin-bottom:4px"><b>Top 10</b><span class="lab">8.6K median ratings · 2 heavyweights</span></div>
+    <div class="row"><span class="mono">1</span><span>Habit Tracker: Daily Goals<small>Northwind Labs</small></span><span class="mono">4.8</span><span class="badge exact">Exact</span></div>
+    <div class="row"><span class="mono">2</span><span>Streaks Planner<small>Bright Loop</small></span><span class="mono">4.7</span><span class="badge">None</span></div>
+    <div class="row"><span class="mono">3</span><span>Routine Builder: Habits<small>Kettle Apps</small></span><span class="mono">4.6</span><span class="badge">Some</span></div>
+    <div class="row"><span class="mono">4</span><span>Daily Habit &amp; Goal Tracker<small>Pine Studio</small></span><span class="mono">4.5</span><span class="badge">All</span></div>
+    <div class="row"><span class="mono">5</span><span>Atomic Routine<small>Small Steps Co</small></span><span class="mono">4.4</span><span class="badge">None</span></div>
+    <div class="row lit"><span class="mono">6</span><span>Momentum: Habit Tracker<small>New in the top 10</small></span><span class="mono">4.7</span><span class="badge new">Entered</span></div>
+    <div class="row"><span class="mono">7</span><span>Good Day Journal<small>Harbor Mobile</small></span><span class="mono">4.3</span><span class="badge">None</span></div>
+   </div>
+  </div>
+ </div>
+</div>
+</main></div></body></html>

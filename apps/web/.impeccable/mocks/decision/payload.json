@@ -1,0 +1,73 @@
+{
+  "title": "Keyword inspector: choose the page structure",
+  "question": "Same AsoBeast look, new structure for exploring around a keyword. Lock one, steer, or re-roll.",
+  "options": [
+    {
+      "id": "opportunity-map",
+      "label": "Opportunity map",
+      "kicker": "THE ROLL",
+      "lineage": "Popularity by difficulty plot as the page's spine",
+      "thesis": "Every keyword you inspect lands as a point on one popularity by difficulty map, so exploring is moving toward the empty, high value corner.",
+      "palette": ["#fbfaf8", "#24211e", "#f39a2a", "#1d5ea6", "#2c8a4f"],
+      "materials": ["IBM Plex Sans and Mono", "AsoBeast score blues", "hairline cards"],
+      "viewport": "Search bar on top; a large map of this storefront's inspected keywords on the left with the sweet spot tinted; the selected keyword's scores and top 10 in a column on the right; autocomplete suggestions not inspected yet in a rail under the map.",
+      "raised": [
+        {"from": "Airport wayfinding", "raise": "The suggestion rail always shows the next hops from the selected keyword and re-signs itself after each inspection."},
+        {"from": "Gate board", "raise": "Apps that entered or left the top 10 since the last run stay highlighted until you open them."}
+      ],
+      "risk": "Needs a few inspections before the map says much; the first visit is a single point.",
+      "html": ".impeccable/mocks/decision/opportunity-map.html"
+    },
+    {
+      "id": "workbench",
+      "label": "Research workbench",
+      "lineage": "Three pane mail client layout",
+      "thesis": "A keyword queue on the left, the live store results in the middle, the scores on the right: the whole session on one screen with no page scroll.",
+      "palette": ["#fbfaf8", "#24211e", "#f39a2a", "#1d5ea6", "#2c8a4f"],
+      "materials": ["IBM Plex Sans and Mono", "AsoBeast score blues", "dense rows"],
+      "viewport": "Left pane lists inspected keywords grouped by seed, with uninspected suggestions queued under each; the middle pane is the store results list; the right pane stacks popularity, difficulty, opportunity and the top 10 summary.",
+      "risk": "Three panes get tight under 1280 px and collapse to one pane on phones.",
+      "html": ".impeccable/mocks/decision/workbench.html"
+    },
+    {
+      "id": "scorecard-tabs",
+      "label": "Scorecard and tabs",
+      "lineage": "Sticky summary header over tabbed detail",
+      "thesis": "A compact scorecard with the verdict and the next hops stays pinned, and the detail lives behind tabs instead of one long scroll.",
+      "palette": ["#fbfaf8", "#24211e", "#f39a2a", "#1d5ea6", "#2c8a4f"],
+      "materials": ["IBM Plex Sans and Mono", "AsoBeast score blues", "underline tabs"],
+      "viewport": "Search bar, then a one row scorecard: keyword, three scores, change since last run and autocomplete chips; below it tabs for Results, Competition, Changes and History, Results open by default.",
+      "risk": "The most familiar of the three; tabs hide the competition summary until clicked.",
+      "html": ".impeccable/mocks/decision/scorecard-tabs.html"
+    },
+    {
+      "id": "challenger-wayfinding",
+      "label": "Airport wayfinding",
+      "verdict": "declined",
+      "lineage": "Terminal signage: only the choices ahead at each junction",
+      "thesis": "Each inspection is a junction that signs only the next keywords to try.",
+      "palette": ["#f6c800", "#111111", "#ffffff"],
+      "materials": ["sign bands", "pictograms"],
+      "viewport": "One band per decision point.",
+      "case": "Loses on clarity: researchers need the whole field, not one junction at a time.",
+      "kept": "Next hops re-sign after every inspection.",
+      "risk": "Hides the data behind a sequence."
+    },
+    {
+      "id": "challenger-gate-board",
+      "label": "Gate board",
+      "verdict": "declined",
+      "lineage": "Departure boards that rerank in place",
+      "thesis": "The top 10 as a board whose changes stay lit.",
+      "palette": ["#1a1a1a", "#f2f2f2", "#ffb000"],
+      "materials": ["fixed column grid", "tabular figures"],
+      "viewport": "A board of the top results reranking between runs.",
+      "case": "Loses on exploration: it watches one keyword instead of moving between many.",
+      "kept": "Top 10 changes stay highlighted until seen.",
+      "risk": "Built for watching, not exploring."
+    }
+  ],
+  "reroll": true,
+  "steer": true,
+  "buildPath": {"value": "code"}
+}
