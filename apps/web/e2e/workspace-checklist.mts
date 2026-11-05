@@ -18,6 +18,7 @@ export const CHECKLIST_SCENARIOS = [
   "play-only",
   "no-console",
   "no-reviews",
+  "collecting",
 ] as const;
 export type ChecklistScenario = (typeof CHECKLIST_SCENARIOS)[number];
 
@@ -62,6 +63,7 @@ const FACTS: Record<ChecklistScenario, ChecklistFacts> = {
   },
   "no-console": { ...PARTIAL, consoleAvailable: false },
   "no-reviews": { ...PARTIAL, reviewsStored: false },
+  collecting: { ...PARTIAL, apps: [{ ...FOCUS_TIMER, id: "app-new" }] },
 };
 
 export const VISIBLE: ChecklistPreferences = { goal: null, dismissedAt: null };

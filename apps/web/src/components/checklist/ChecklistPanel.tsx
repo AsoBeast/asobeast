@@ -17,6 +17,8 @@ import {
   type ChecklistTip,
 } from "./checklist-copy";
 import { nextItemId, pillLabel, ringFraction } from "./checklist-progress";
+import { CHECKLIST_LINK } from "./checklist-link";
+import { FirstResults } from "./FirstResults";
 
 export interface ChecklistPanelProps {
   checklist: WorkspaceChecklist;
@@ -38,9 +40,6 @@ function DoneRow({ item }: { item: WorkspaceChecklistItem }) {
   );
 }
 
-const TIP_LINK =
-  "text-foreground underline decoration-primary underline-offset-4 hover:decoration-2";
-
 function TipLink({
   tip,
   appId,
@@ -58,7 +57,7 @@ function TipLink({
         href={href}
         target="_blank"
         rel="noreferrer noopener"
-        className={TIP_LINK}
+        className={CHECKLIST_LINK}
       >
         <span>{tip.label}</span>
         <span className="sr-only"> (opens in a new tab)</span>
@@ -66,7 +65,7 @@ function TipLink({
     );
   }
   return (
-    <Link href={href} onClick={onNavigate} className={TIP_LINK}>
+    <Link href={href} onClick={onNavigate} className={CHECKLIST_LINK}>
       {tip.label}
     </Link>
   );
@@ -160,7 +159,7 @@ export function ChecklistPanel({
             <Link
               href="/settings#getting-started"
               onClick={onNavigate}
-              className="text-foreground underline decoration-primary underline-offset-4"
+              className={CHECKLIST_LINK}
             >
               Change
             </Link>
@@ -172,6 +171,10 @@ export function ChecklistPanel({
         aria-label="Setup progress"
         getValueLabel={() => progress}
         indicatorClassName="bg-success"
+      />
+      <FirstResults
+        appId={items.find((item) => item.id === "import_app")?.appId ?? null}
+        onNavigate={onNavigate}
       />
       <ol aria-label="Checklist steps" className="flex flex-col gap-3">
         {items.map((item) =>

@@ -567,3 +567,105 @@ test("tab walks an open step's action and then its tips", async ({
     tipsOf(page, "Track keywords in a second market").getByRole("link").first(),
   ).toBeFocused();
 });
+
+const firstRunRequests = (page: Page, appId: string): string[] => {
+  const sent: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().endsWith(`/apps/${appId}/first-run`)) {
+      sent.push(request.url());
+    }
+  });
+  return sent;
+};
+
+test("the popover says the first positions are being checked", async ({
+  page,
+  context,
+}) => {
+  await seedChecklist(context, "collecting");
+  await openPill(page);
+
+  const checking = popover(page).getByText(
+    "Checking where your app already ranks",
+  );
+  await expect(checking).toBeVisible();
+  await expect(checking.locator("xpath=..").getByRole("link")).toHaveCount(0);
+  await expect(pill(page)).toHaveAccessibleName(
+    "2 of 8 done in the setup checklist",
+  );
+});
+
+test("the popover says the first positions are in", async ({
+  page,
+  context,
+}) => {
+  await seedChecklist(context, "partial");
+  await context.addCookies([
+    { name: "e2e_history_days", value: "2", domain: "localhost", path: "/" },
+  ]);
+  await openPill(page);
+
+  await expect(popover(page)).toContainText("Your first positions are in");
+  await expect(
+    popover(page).getByRole("link", { name: "See where it ranks" }),
+  ).toHaveAttribute("href", "/apps/app-1/rankings");
+  await expect(popover(page)).toContainText("2 of 8 done");
+});
+
+test("a finished first run shows no row", async ({ page, context }) => {
+  await seedChecklist(context, "partial");
+  await openPill(page);
+  await expect(steps(page)).toBeVisible();
+
+  await expect(popover(page)).not.toContainText("Your first positions are in");
+  await expect(popover(page)).not.toContainText("Checking where your app");
+});
+
+test("the first run is read only while the popover is open", async ({
+  page,
+  context,
+}) => {
+  await seedChecklist(context, "collecting");
+  const sent = firstRunRequests(page, "app-new");
+  await page.goto("/apps/app-1");
+  const button = await hydrated(pill(page));
+  await page.waitForLoadState("networkidle");
+  expect(sent).toEqual([]);
+
+  await button.click();
+  await expect(
+    popover(page).getByText("Checking where your app already ranks"),
+  ).toBeVisible();
+  expect(sent.length).toBeGreaterThanOrEqual(1);
+});
+
+test("a failed first run read shows no row and no error", async ({
+  page,
+  context,
+}) => {
+  await seedChecklist(context, "collecting");
+  await context.addCookies([
+    { name: "e2e_first_run_fail", value: "1", domain: "localhost", path: "/" },
+  ]);
+  await openPill(page);
+  await page.waitForLoadState("networkidle");
+
+  await expect(popover(page)).not.toContainText("Checking where your app");
+  await expect(popover(page).getByRole("alert")).toHaveCount(0);
+});
+
+test("a workspace without an app reads no first run", async ({
+  page,
+  context,
+}) => {
+  await seedChecklist(context, "fresh");
+  const sent: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().endsWith("/first-run")) sent.push(request.url());
+  });
+  await openPill(page);
+  await page.waitForLoadState("networkidle");
+
+  expect(sent).toEqual([]);
+  await expect(popover(page)).not.toContainText("Checking where your app");
+});
