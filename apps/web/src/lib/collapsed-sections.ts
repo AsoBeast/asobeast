@@ -1,3 +1,5 @@
+import { readCookieValue } from "./cookie-value";
+
 export const COLLAPSED_COOKIE_NAME = "asobeast_collapsed";
 export const COLLAPSED_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 export const COLLAPSED_VALUE_MAX_CHARS = 1024;
@@ -43,18 +45,5 @@ export function collapsedCookie(value: string): string {
 }
 
 export function readCollapsedCookie(cookieString: string): string | undefined {
-  for (const pair of cookieString.split(";")) {
-    const separator = pair.indexOf("=");
-    if (
-      separator > 0 &&
-      pair.slice(0, separator).trim() === COLLAPSED_COOKIE_NAME
-    ) {
-      try {
-        return decodeURIComponent(pair.slice(separator + 1).trim());
-      } catch {
-        return undefined;
-      }
-    }
-  }
-  return undefined;
+  return readCookieValue(cookieString, COLLAPSED_COOKIE_NAME);
 }
