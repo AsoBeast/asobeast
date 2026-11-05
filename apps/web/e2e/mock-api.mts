@@ -246,6 +246,7 @@ import type {
   RankingSeries,
   KeywordBulkRequest,
   KeywordBulkResult,
+  KeywordClass,
   KeywordUpdateRequest,
   TrackedKeywordItem,
   WebhookCreateRequest,
@@ -264,6 +265,7 @@ import {
   DELETION_CONFIRMATION,
   KEYWORD_BULK_ADD_LIMIT,
   KEYWORD_IMPORT_LIMIT,
+  isKeywordClass,
   isKeywordTag,
   KEYWORD_FIELD_CHAR_LIMIT,
   KEYWORD_TAGS_MAX,
@@ -385,16 +387,25 @@ function applyBulkChange(
   };
 }
 
-const annotations = new Map<
-  string,
-  Map<string, Pick<TrackedKeywordItem, "tags" | "note">>
->();
+interface KeywordAnnotation extends Pick<TrackedKeywordItem, "tags" | "note"> {
+  keywordClassOverride?: KeywordClass | null;
+}
+
+const annotations = new Map<string, Map<string, KeywordAnnotation>>();
 
 function annotated(
   appId: string,
   keyword: TrackedKeywordItem,
 ): TrackedKeywordItem {
-  return { ...keyword, ...annotations.get(appId)?.get(keyword.keywordId) };
+  const { keywordClassOverride, ...stored } =
+    annotations.get(appId)?.get(keyword.keywordId) ?? {};
+  return {
+    ...keyword,
+    ...stored,
+    ...(keywordClassOverride
+      ? { keywordClass: keywordClassOverride, keywordClassSource: "owner" }
+      : {}),
+  };
 }
 
 const APP_ANNOTATION_SEED: AppAnnotationItem[] = [
@@ -3734,20 +3745,39 @@ const routes: Route[] = [
         ) {
           return json(res, 400, errorEnvelope(400, path, "invalid tags"));
         }
+        if (
+          body.keywordClass !== undefined &&
+          body.keywordClass !== null &&
+          !isKeywordClass(body.keywordClass)
+        ) {
+          return json(
+            res,
+            400,
+            errorEnvelope(
+              400,
+              path,
+              "keywordClass must be one of the following values: ownBrand, competitorBrand, generic",
+            ),
+          );
+        }
         const current = annotated(id, keyword);
-        const stored = {
+        const appAnnotations = annotations.get(id) ?? new Map();
+        const previous: KeywordAnnotation | undefined =
+          appAnnotations.get(keywordId);
+        appAnnotations.set(keywordId, {
           tags: tags ?? current.tags ?? [],
           note:
             body.note === undefined
               ? (current.note ?? null)
               : normalizeKeywordNote(body.note),
-        };
-        const appAnnotations = annotations.get(id) ?? new Map();
-        appAnnotations.set(keywordId, stored);
+          keywordClassOverride:
+            body.keywordClass === undefined
+              ? previous?.keywordClassOverride
+              : body.keywordClass,
+        });
         annotations.set(id, appAnnotations);
         json(res, 200, {
-          ...current,
-          ...stored,
+          ...annotated(id, keyword),
           active: body.active ?? current.active,
         });
       });
