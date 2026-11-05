@@ -380,6 +380,20 @@ describe('GET /alerts/events (e2e)', () => {
     expect(second.nextCursor).toBeNull();
   });
 
+  it('reads past every skipped row ahead of the newest event', async () => {
+    const gone = await createApp('feed-many-removed', 'Removed', apps.primary);
+    for (const ago of [1, 2, 3, 4, 5, 6]) {
+      await seed(onApp(metadata, gone), { ago });
+    }
+    const newest = await seed(onApp(drop(), apps.primary), { ago: 10 });
+    await prisma.app.delete({ where: { id: gone } });
+
+    const body = await list('?limit=1');
+
+    expect(ids(body)).toEqual([newest]);
+    expect(body.nextCursor).toBeNull();
+  });
+
   it('reads an empty type as every feed event', async () => {
     const row = await seed(onApp(drop(), apps.primary));
 

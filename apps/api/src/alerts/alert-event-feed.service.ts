@@ -40,7 +40,7 @@ interface FeedHomes {
   trackers: ReadonlyMap<string, readonly string[]>;
 }
 
-const MAX_BATCHES = 4;
+const BATCH_ROWS = 100;
 
 const UNSCOPED: FeedScope = { appIds: null, keywordIds: [], preferred: null };
 
@@ -67,18 +67,23 @@ export class AlertEventFeed {
       appIds: scope.appIds,
       keywordIds: scope.keywordIds,
     };
+    const size = Math.max(query.limit + 1, BATCH_ROWS);
     const events: AlertEventItem[] = [];
-    for (let batch = 0; batch < MAX_BATCHES; batch += 1) {
-      const wanted = query.limit - events.length;
-      const rows = await this.rowsOf({ ...filter, cursor }, wanted + 1);
-      const read = rows.slice(0, wanted);
-      const homes = await this.homesOf(read);
-      events.push(...this.itemsOf(read, homes, scope.preferred));
-      if (rows.length <= wanted) return { events, nextCursor: null };
-      cursor = read[read.length - 1];
-      if (events.length === query.limit) break;
-    }
-    return { events, nextCursor: cursor ? encodeCursor(cursor) : null };
+    let rows: FeedRow[] = [];
+    do {
+      rows = await this.rowsOf({ ...filter, cursor }, size);
+      const homes = await this.homesOf(rows);
+      for (const [index, row] of rows.entries()) {
+        const item = this.itemOf(row, homes, scope.preferred);
+        if (item) events.push(item);
+        if (events.length === query.limit) {
+          const more = index < rows.length - 1 || rows.length === size;
+          return { events, nextCursor: more ? encodeCursor(row) : null };
+        }
+      }
+      cursor = rows.at(-1) ?? cursor;
+    } while (rows.length === size);
+    return { events, nextCursor: null };
   }
 
   private rowsOf(filter: FeedFilter, take: number): Promise<FeedRow[]> {
@@ -158,20 +163,17 @@ export class AlertEventFeed {
     return { live: new Map(apps.map((app) => [app.id, app])), trackers };
   }
 
-  private itemsOf(
-    page: FeedRow[],
+  private itemOf(
+    row: FeedRow,
     homes: FeedHomes,
     preferred: string | null,
-  ): AlertEventItem[] {
-    return page.flatMap((row) => {
-      const home = primaryAppOf({ row, preferred, ...homes });
-      if (home === REMOVED_APP) return [];
-      const item = toAlertEventItem(row, home);
-      if (item === null) {
-        this.logger.warn(`alert event ${row.id} is unreadable, skipping it`);
-        return [];
-      }
-      return [item];
-    });
+  ): AlertEventItem | null {
+    const home = primaryAppOf({ row, preferred, ...homes });
+    if (home === REMOVED_APP) return null;
+    const item = toAlertEventItem(row, home);
+    if (item === null) {
+      this.logger.warn(`alert event ${row.id} is unreadable, skipping it`);
+    }
+    return item;
   }
 }
