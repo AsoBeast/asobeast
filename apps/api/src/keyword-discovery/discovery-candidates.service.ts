@@ -19,10 +19,9 @@ import {
 } from '../keywords/suggestion-phrases';
 import { PrismaService } from '../prisma/prisma.service';
 import { popularityGenreOf } from '../scoring/apple-genres';
-import { defaultRelevance } from '../scoring/relevance';
 import { primaryGenreId } from '../store-providers/raw-facts';
 import { DiscoveryPopularity } from './discovery-popularity.service';
-import { keywordSourceOf, PoolCandidate } from './discovery-pool';
+import { discoveryRelevance, PoolCandidate } from './discovery-pool';
 import { overlappingTerms } from './popularity-terms';
 
 export interface DiscoveryApp {
@@ -101,7 +100,7 @@ export class DiscoveryCandidates {
     return found.map(({ text, source }) => ({
       text,
       source,
-      relevance: defaultRelevance(keywordSourceOf[source], text, snapshotText),
+      relevance: discoveryRelevance(source, text, snapshotText),
       traffic: traffic.get(text) ?? null,
     }));
   }
