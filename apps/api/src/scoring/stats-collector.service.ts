@@ -3,7 +3,11 @@ import { Store } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { outcomeOf } from '../store-providers/egress/proxy-health.service';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
-import { SearchItem, StoreProvider } from '../store-providers/types';
+import {
+  SearchItem,
+  StoreProvider,
+  SuggestItem,
+} from '../store-providers/types';
 import { inferPopularityGenre } from './apple-genres';
 import { KeywordStats } from './formulas';
 import { OfficialPopularityLookup } from './official-popularity';
@@ -32,10 +36,22 @@ export interface CollectedKeywordStats {
   evidence: ScoringEvidence;
 }
 
+export interface KeywordTarget {
+  text: string;
+  store: Store;
+  country: string;
+}
+
+export interface InspectedKeywordStats extends CollectedKeywordStats {
+  results: SearchItem[];
+  suggestions: SuggestItem[];
+}
+
 interface SuggestSignals {
   reach: SuggestReach;
   continuations: number | null;
   requests: number;
+  suggestions: SuggestItem[];
 }
 
 interface DetailCollection {
@@ -62,7 +78,11 @@ export class StatsCollectorService {
     if (!keyword) {
       return null;
     }
+    const { stats, evidence } = await this.collectFor(keyword);
+    return { stats, evidence };
+  }
 
+  async collectFor(keyword: KeywordTarget): Promise<InspectedKeywordStats> {
     const provider = this.registry.get(keyword.store);
     const results = await provider.search(
       keyword.text,
@@ -73,10 +93,8 @@ export class StatsCollectorService {
       keyword.store === Store.GOOGLE_PLAY
         ? await this.enrichTop10(provider, results, keyword.country)
         : this.searchTopTen(results);
-    const { reach, continuations, requests } = await this.suggestSignals(
-      provider,
-      keyword,
-    );
+    const { reach, continuations, requests, suggestions } =
+      await this.suggestSignals(provider, keyword);
     const suggestCompleted = reach.status !== 'unavailable';
     const official = await this.officialPopularity.for(
       keyword,
@@ -84,6 +102,8 @@ export class StatsCollectorService {
     );
 
     return {
+      results,
+      suggestions,
       stats: {
         store: keyword.store,
         keywordText: keyword.text,
@@ -115,7 +135,7 @@ export class StatsCollectorService {
 
   private async suggestSignals(
     provider: StoreProvider,
-    { text, store, country }: { text: string; store: Store; country: string },
+    { text, store, country }: KeywordTarget,
   ): Promise<SuggestSignals> {
     const lookup = countingLookup((term) => provider.suggest(term, country));
     const { reach } = await probeSuggestReach(
@@ -132,7 +152,9 @@ export class StatsCollectorService {
       store === Store.APP_STORE
         ? await countContinuations(text, lookup.ask)
         : null;
-    return { reach, continuations, requests: lookup.requests() };
+    const suggestions =
+      reach.status === 'unavailable' ? [] : await offered(lookup.ask, text);
+    return { reach, continuations, requests: lookup.requests(), suggestions };
   }
 
   private searchTopTen(results: SearchItem[]): DetailCollection {
@@ -232,6 +254,17 @@ function identityOf(
 
 function storeDidNotAnswer(error: unknown): boolean {
   return outcomeOf(error) !== null || STORE_SERVER_ERROR.test(messageOf(error));
+}
+
+async function offered(
+  ask: (term: string) => Promise<SuggestItem[]>,
+  text: string,
+): Promise<SuggestItem[]> {
+  try {
+    return await ask(text);
+  } catch {
+    return [];
+  }
 }
 
 function daysSince(date: Date): number {
