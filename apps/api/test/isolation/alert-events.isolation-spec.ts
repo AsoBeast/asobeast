@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client';
 import type { AlertEventList } from '@asobeast/shared';
 import { drop } from '../../src/alerts/rank-events.fixture';
+import { mcpAs, textOf } from '../helpers/mcp-rpc';
 import {
   createIsolationFixture,
   IsolationFixture,
@@ -74,6 +75,19 @@ describe('GET /alerts/events isolation', () => {
       expect(JSON.stringify(body)).not.toContain(other.appleAppId);
     },
   );
+
+  it('lists only the caller workspace events through alert_events', async () => {
+    const envelope = await mcpAs(fixture.app, fixture.a.token).callTool(
+      'alert_events',
+      {},
+    );
+    const body = JSON.parse(textOf(envelope)) as AlertEventList;
+
+    expect(body.events.map((event) => event.id)).toContain(
+      rowIds.get(fixture.a.id),
+    );
+    expect(textOf(envelope)).not.toContain(fixture.b.appleAppId);
+  });
 
   it('answers 404 for an app of the other workspace', async () => {
     await fixture.a.agent

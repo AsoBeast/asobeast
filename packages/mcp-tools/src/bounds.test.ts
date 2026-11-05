@@ -24,6 +24,7 @@ const NUMERIC: Array<[string, string, keyof typeof QUERY_BOUNDS]> = [
   ["serp_movers", "days", "serpMoverDays"],
   ["changes_timeline", "days", "changeTimelineDays"],
   ["change_impact", "days", "changeTimelineDays"],
+  ["alert_events", "limit", "alertEventsLimit"],
   ["actions_activity", "days", "actionActivityDays"],
 ];
 
