@@ -196,7 +196,7 @@ test("E-PH-20 a failed listing changes read keeps the chart and offers a retry",
   await page.route(CHANGES, (route) =>
     route.fulfill({ status: 500, json: { statusCode: 500, message: "boom" } }),
   );
-  await page.goto(`${PAGE}?range=7d`);
+  await page.goto(PAGE);
   const popover = await openHistory(page, "focus timer");
 
   await expect(chart(page, "focus timer")).toBeVisible();
@@ -231,10 +231,7 @@ test("E-PH-02 Enter and Space open it and Escape returns focus", async ({
 test("E-PH-03 nothing is requested until a popover opens", async ({ page }) => {
   const requested: string[] = [];
   page.on("request", (request) => {
-    if (!RANKINGS.test(request.url())) return;
-    const ids = new URL(request.url()).searchParams.get("keywordIds") ?? "";
-    if (ids.split(",").length > 1) return;
-    requested.push(request.url());
+    if (RANKINGS.test(request.url())) requested.push(request.url());
   });
   await page.goto(PAGE);
   await page.waitForLoadState("networkidle");
@@ -299,7 +296,7 @@ test("E-PH-06 a failed read stays inside the popover and retries", async ({
     { timeout: 15_000 },
   );
   await expect(
-    page.getByRole("cell", { name: /pomodoro.*on the chart/ }),
+    page.getByRole("cell", { name: "pomodoro", exact: true }),
   ).toBeVisible();
 
   await context.clearCookies({ name: RANKINGS_FAIL_COOKIE });

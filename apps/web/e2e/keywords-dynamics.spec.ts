@@ -33,11 +33,11 @@ const chartSeries = (page: Page) =>
 
 const panelIsClosed = async (page: Page) => {
   await expect(page.getByRole("region", { name: PANEL })).toHaveCount(0);
-  await expect(page).toHaveURL(/keywords=$/);
+  await expect(page).not.toHaveURL(/keywords=\S/);
 };
 
-async function openDynamics(page: Page, names: string[]) {
-  await page.goto("/apps/app-1/keywords");
+async function openDynamics(page: Page, names: string[], url?: string) {
+  await page.goto(url ?? "/apps/app-1/keywords");
   for (const name of names) {
     await page.getByRole("checkbox", { name: `Select ${name}` }).check();
   }
@@ -48,29 +48,11 @@ async function openDynamics(page: Page, names: string[]) {
   return panel;
 }
 
-test("a fresh visit opens the panel with the market's first three keywords", async ({
-  page,
-}) => {
+test("a fresh visit keeps the panel closed", async ({ page }) => {
   await page.goto("/apps/app-1/keywords");
 
-  await expect(page.getByRole("region", { name: PANEL })).toBeVisible();
-  await expect(page.getByRole("region", { name: CHART })).toBeVisible();
-  await expect(
-    page.getByText("Charted rows are highlighted in the table."),
-  ).toBeVisible();
-  await expect(chartSeries(page)).toHaveText([
-    "focus timer (US)",
-    "pomodoro (US)",
-    "study timer (US)",
-  ]);
-  for (const text of ["focus timer", "pomodoro", "study timer"]) {
-    await expect(
-      page.getByRole("cell", { name: new RegExp(`${text}.*on the chart`) }),
-    ).toBeVisible();
-  }
-  await expect(
-    page.getByRole("cell", { name: /productivity app.*on the chart/ }),
-  ).toHaveCount(0);
+  await expect(page.getByRole("region", { name: PANEL })).toHaveCount(0);
+  await expect(page.getByRole("cell", { name: /on the chart/ })).toHaveCount(0);
   await expect(page).not.toHaveURL(/keywords=/);
   await expect(page).not.toHaveURL(/range=/);
 });
@@ -78,10 +60,11 @@ test("a fresh visit opens the panel with the market's first three keywords", asy
 test("the highlight follows the chart, not the ticked rows", async ({
   page,
 }) => {
-  await page.goto("/apps/app-1/keywords");
+  await openDynamics(page, ["focus timer", "pomodoro"]);
+  await expect(page).toHaveURL(/keywords=kw-1,kw-2/);
 
   await page.getByRole("checkbox", { name: "Select productivity app" }).check();
-  await expect(page.getByText("1 selected")).toBeVisible();
+  await expect(page.getByText("3 selected")).toBeVisible();
   await expect(
     page.getByRole("cell", { name: /productivity app.*on the chart/ }),
   ).toHaveCount(0);
@@ -89,6 +72,8 @@ test("the highlight follows the chart, not the ticked rows", async ({
     page.getByRole("cell", { name: /focus timer.*on the chart/ }),
   ).toBeVisible();
 
+  await page.getByRole("checkbox", { name: "Select focus timer" }).uncheck();
+  await page.getByRole("checkbox", { name: "Select pomodoro" }).uncheck();
   await page.getByRole("button", { name: "Show dynamics" }).click();
   await expect(page).toHaveURL(/keywords=kw-4/);
   await expect(
@@ -102,10 +87,7 @@ test("the highlight follows the chart, not the ticked rows", async ({
 test("removing a chip drops the row highlight with the series", async ({
   page,
 }) => {
-  await page.goto("/apps/app-1/keywords");
-  await page.getByRole("checkbox", { name: "Select focus timer" }).check();
-  await page.getByRole("checkbox", { name: "Select pomodoro" }).check();
-  await page.getByRole("button", { name: "Show dynamics" }).click();
+  await openDynamics(page, ["focus timer", "pomodoro"]);
   await expect(
     page.getByRole("cell", { name: /focus timer.*on the chart/ }),
   ).toBeVisible();
@@ -123,16 +105,37 @@ test("removing a chip drops the row highlight with the series", async ({
   ).toBeVisible();
 });
 
-test("a market with fewer than three keywords charts what exists", async ({
+test("removing a chip on a fresh link visit keeps focus in the panel", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/keywords?keywords=kw-1,kw-2,kw-3");
+  await expect(page.getByRole("region", { name: PANEL })).toBeVisible();
+
+  await page
+    .getByRole("button", { name: "Remove focus timer (US) from the chart" })
+    .press("Enter");
+
+  await expect(page).toHaveURL(/keywords=kw-2,kw-3/);
+  await expect(
+    page.getByRole("button", { name: "Remove pomodoro (US) from the chart" }),
+  ).toBeFocused();
+});
+
+test("a market with fewer keywords charts what it tracks", async ({
   page,
   context,
 }) => {
   await seedCookies(context, { [PL_HISTORY_COOKIE]: "1" });
-  await page.goto("/apps/app-1/keywords?country=pl");
 
-  await expect(page.getByRole("region", { name: PANEL })).toBeVisible();
+  await openDynamics(
+    page,
+    ["minutnik skupienia"],
+    "/apps/app-1/keywords?country=pl",
+  );
+
   await expect(chartSeries(page)).toHaveText(["minutnik skupienia (PL)"]);
-  await expect(page).not.toHaveURL(/keywords=/);
+  await expect(page).toHaveURL(/country=pl/);
+  await expect(page).toHaveURL(/keywords=kw-pl-history/);
 });
 
 test("an empty market does not open the panel on its own", async ({ page }) => {
@@ -232,8 +235,18 @@ test("a shared link with more than eight keywords charts the first eight and say
       .getByRole("region", { name: PANEL })
       .getByRole("group", { name: "Selected keywords" })
       .getByRole("button"),
-  ).toHaveCount(9);
+  ).toHaveCount(8);
   await expect(chartSeries(page)).toHaveCount(8);
+  const swatches = page
+    .getByRole("region", { name: PANEL })
+    .getByRole("group", { name: "Selected keywords" })
+    .locator("[data-swatch]");
+  await expect(swatches).toHaveCount(8);
+  for (const swatch of await swatches.all()) {
+    expect(await swatch.evaluate((node) => node.style.backgroundColor)).toMatch(
+      /var\(--chart-\d\)/,
+    );
+  }
   const selected = new URL(page.url()).searchParams.get("keywords") ?? "";
   expect(selected.split(",")).toHaveLength(9);
 });
@@ -267,7 +280,7 @@ test("removing the last chip and Clear keep the panel closed", async ({
     .click();
 
   await expect(panel).toHaveCount(0);
-  await expect(page).toHaveURL(/keywords=$/);
+  await expect(page).not.toHaveURL(/keywords=\S/);
   await expect(page).not.toHaveURL(/range=/);
   await expect(
     page.getByRole("button", { name: "Show dynamics" }),
@@ -289,7 +302,7 @@ test("removing the last chip and Clear keep the panel closed", async ({
     .click();
 
   await expect(page.getByRole("region", { name: PANEL })).toHaveCount(0);
-  await expect(page).toHaveURL(/keywords=$/);
+  await expect(page).not.toHaveURL(/keywords=\S/);
   await expect(page).not.toHaveURL(/range=/);
 
   await page.reload();
@@ -297,7 +310,7 @@ test("removing the last chip and Clear keep the panel closed", async ({
 });
 
 test("Clear with no checked rows keeps focus on the page", async ({ page }) => {
-  await page.goto("/apps/app-1/keywords");
+  await page.goto("/apps/app-1/keywords?keywords=kw-1,kw-2");
   await expect(page.getByRole("region", { name: PANEL })).toBeVisible();
 
   await page
@@ -307,7 +320,7 @@ test("Clear with no checked rows keeps focus on the page", async ({ page }) => {
 
   await expect(page.getByRole("region", { name: PANEL })).toHaveCount(0);
   await expect(
-    page.getByRole("textbox", { name: "Search keywords" }),
+    page.getByRole("button", { name: "Add keywords" }).first(),
   ).toBeFocused();
 });
 
@@ -316,7 +329,7 @@ test("a failed rankings read offers Retry and recovers", async ({
   context,
 }) => {
   await seedCookies(context, { [RANKINGS_FAIL_COOKIE]: "1" });
-  await page.goto("/apps/app-1/keywords");
+  await page.goto("/apps/app-1/keywords?keywords=kw-1,kw-2,kw-3");
 
   await expect(
     page.getByRole("region", { name: PANEL }).getByRole("alert"),
@@ -419,12 +432,20 @@ test("stale ids in a shared link fall back to the market's top keywords", async 
   ]);
 });
 
-test("an empty market tells the panel so", async ({ page }) => {
+test("an empty market tells the panel so and Clear keeps focus", async ({
+  page,
+}) => {
   await page.goto("/apps/app-1/keywords?keywords=kw-1&country=gb");
 
+  const panel = page.getByRole("region", { name: PANEL });
   await expect(
-    page
-      .getByRole("region", { name: PANEL })
-      .getByText("No keywords tracked in United Kingdom yet"),
+    panel.getByText("No keywords tracked in United Kingdom yet"),
   ).toBeVisible();
+
+  await panel.getByRole("button", { name: "Clear", exact: true }).click();
+
+  await expect(page.getByRole("region", { name: PANEL })).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Add keywords" }).first(),
+  ).toBeFocused();
 });

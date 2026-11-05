@@ -195,7 +195,6 @@ test.describe("the totals row", () => {
     await expect(keywordTotal(page)).toHaveText("500 keywords");
 
     const scroller = page.locator('[data-slot="table-container"]');
-    await scroller.scrollIntoViewIfNeeded();
     await scroller.evaluate((element) => {
       element.scrollTop = element.scrollHeight / 2;
     });
