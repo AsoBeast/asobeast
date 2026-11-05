@@ -31,6 +31,8 @@ import {
   alertEventFilters,
   alertEventKeys,
   alertEventsOptions,
+  alertNewestOptions,
+  alertNewestOnVisitOptions,
   apiTokenKeys,
   appKeys,
   importPreviewRequest,
@@ -1294,5 +1296,38 @@ describe("alert event queries", () => {
         ["c1"],
       ),
     ).toBeUndefined();
+  });
+});
+
+describe("the newest alert event", () => {
+  it("follows the cursor past a page that skipped every row", async () => {
+    const answers = [
+      { events: [], nextCursor: "c1" },
+      { events: [{ id: "evt-1" }], nextCursor: "c2" },
+    ];
+    const requested: string[] = [];
+    vi.stubGlobal("fetch", (input: RequestInfo | URL) => {
+      requested.push(String(input));
+      return Promise.resolve(
+        new Response(JSON.stringify(answers[requested.length - 1]), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      );
+    });
+
+    const newest = await new QueryClient().fetchQuery(alertNewestOptions);
+    vi.unstubAllGlobals();
+
+    expect(newest.events.map((event) => event.id)).toEqual(["evt-1"]);
+    expect(requested).toHaveLength(2);
+    expect(
+      new URL(requested[1], "http://localhost").searchParams.get("cursor"),
+    ).toBe("c1");
+  });
+
+  it("is read again whenever the alerts page opens", () => {
+    expect(alertNewestOnVisitOptions.queryKey).toEqual(alertEventKeys.newest);
+    expect(alertNewestOnVisitOptions.refetchOnMount).toBe("always");
   });
 });

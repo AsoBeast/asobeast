@@ -48,10 +48,19 @@ describe("AlertsSeenProvider", () => {
     expect(captured(T10).markup).toBe(`<span>${T10}</span>`);
   });
 
-  it("prefers the browser cookie over the value the layout passed", () => {
+  it("renders the value the layout passed even when the cookie moved on", () => {
     stubDocument(seenCookie(T11).split(";")[0]);
 
-    expect(captured(T10).markup).toBe(`<span>${T11}</span>`);
+    expect(captured(T10).markup).toBe(`<span>${T10}</span>`);
+  });
+
+  it("never moves back a later visit another tab wrote", () => {
+    const writes = stubDocument(seenCookie(T11).split(";")[0]);
+    const { markSeen } = captured(null).value;
+
+    markSeen(T10);
+
+    expect(writes).toEqual([]);
   });
 
   it("writes a later visit and ignores an earlier or unreadable one", () => {

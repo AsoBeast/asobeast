@@ -23,9 +23,8 @@ interface AlertsSeen {
 
 const AlertsSeenContext = createContext<AlertsSeen | null>(null);
 
-function seed(initial: string | null): string | null {
-  if (typeof document === "undefined") return initial;
-  return parseSeen(readSeenCookie(document.cookie)) ?? initial;
+function cookieSeen(): string | null {
+  return parseSeen(readSeenCookie(document.cookie));
 }
 
 export function AlertsSeenProvider({
@@ -35,16 +34,20 @@ export function AlertsSeenProvider({
   initial: string | null;
   children: ReactNode;
 }) {
-  const [seenAt, setSeenAt] = useState(() => seed(initial));
+  const [seenAt, setSeenAt] = useState(initial);
   const latest = useRef(seenAt);
 
   const markSeen = useCallback((instant: string) => {
     const shown = parseSeen(instant);
     if (shown === null) return;
-    const next = laterOf(latest.current, shown);
-    if (next === latest.current) return;
+    const current = latest.current;
+    const known = cookieSeen();
+    const stored = known === null ? current : laterOf(current, known);
+    const next = laterOf(stored, shown);
+    if (next === current) return;
     latest.current = next;
     setSeenAt(next);
+    if (next === known) return;
     document.cookie = seenCookie(next);
   }, []);
 

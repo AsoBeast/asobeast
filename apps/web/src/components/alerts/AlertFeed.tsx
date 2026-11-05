@@ -9,7 +9,7 @@ import { useAlertsSeen } from "@/components/layout/AlertsSeen";
 import {
   alertEventFilters,
   alertEventsOptions,
-  alertNewestOptions,
+  alertNewestOnVisitOptions,
 } from "@/lib/queries";
 import { AlertEventList, AlertFeedEnd } from "./AlertEventList";
 import { AlertFeedEmpty } from "./AlertFeedStates";
@@ -67,7 +67,8 @@ function useFeedFilters() {
 function useVisitMark(): string | null {
   const { seenAt, markSeen } = useAlertsSeen();
   const [seenAtVisit] = useState(seenAt);
-  const newest = useQuery(alertNewestOptions).data?.events[0]?.occurredAt;
+  const newest = useQuery(alertNewestOnVisitOptions).data?.events[0]
+    ?.occurredAt;
   useEffect(() => {
     if (newest) markSeen(newest);
   }, [newest, markSeen]);
