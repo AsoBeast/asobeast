@@ -1,6 +1,5 @@
 import type {
   AlertChannel,
-  AlertEventList,
   AlertFeedEvent,
   ChartFollowItem,
   ChartPage,
@@ -993,17 +992,9 @@ export const alertEventsOptions = (filters: AlertEventFilters) =>
     getNextPageParam: (last) => last.nextCursor ?? undefined,
   });
 
-async function newestAlertEvent(): Promise<AlertEventList> {
-  let page = await getAlertEvents({ limit: 1 });
-  while (page.events.length === 0 && page.nextCursor !== null) {
-    page = await getAlertEvents({ limit: 1, cursor: page.nextCursor });
-  }
-  return page;
-}
-
 export const alertNewestOptions = queryOptions({
   queryKey: alertEventKeys.newest,
-  queryFn: newestAlertEvent,
+  queryFn: () => getAlertEvents({ limit: 1 }),
   staleTime: 60_000,
 });
 
