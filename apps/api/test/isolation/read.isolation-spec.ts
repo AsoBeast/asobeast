@@ -1,5 +1,5 @@
 import request from 'supertest';
-import type { TrackedKeywordItem } from '@asobeast/shared';
+import type { CompetitorAnalysis, TrackedKeywordItem } from '@asobeast/shared';
 import {
   createIsolationFixture,
   IsolationFixture,
@@ -260,6 +260,31 @@ describe('Read isolation', () => {
       expect(response.status).toBe(404);
     },
   );
+
+  it('keeps another workspace rankings out of the gap lists', async () => {
+    const gapsOf = async (workspace: IsolationWorkspace) =>
+      (
+        await workspace.agent
+          .get(`/apps/${workspace.appleAppId}/competitors/analysis`)
+          .expect(200)
+      ).body as CompetitorAnalysis;
+    const keywordIds = (rows: { keywordId: string }[] | undefined) =>
+      (rows ?? []).map(({ keywordId }) => keywordId);
+
+    const forA = await gapsOf(fixture.a);
+    const forB = await gapsOf(fixture.b);
+
+    expect(keywordIds(forA.gaps.lead)).toEqual([fixture.a.keywordId]);
+    expect(keywordIds(forB.gaps.lead)).toEqual([]);
+    expect(keywordIds(forB.gaps.outranked)).toEqual([fixture.b.keywordId]);
+    for (const [answer, other] of [
+      [forA, fixture.b],
+      [forB, fixture.a],
+    ] as const) {
+      expect(JSON.stringify(answer)).not.toContain(other.appleAppId);
+      expect(JSON.stringify(answer)).not.toContain(other.competitorId);
+    }
+  });
 
   it("refuses a breakdown of another workspace's private keyword", async () => {
     await fixture.b.agent

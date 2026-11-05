@@ -3,10 +3,21 @@ import { join } from 'path';
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient, Store } from '@prisma/client';
-import { CompetitorAnalysis, CompetitorDiscovery } from '@asobeast/shared';
+import {
+  CompetitorAnalysis,
+  CompetitorDiscovery,
+  CompetitorGapKeyword,
+  KeywordComparison,
+  TrackedKeywordItem,
+} from '@asobeast/shared';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
-import { addDays, utcToday } from '../src/analytics/analytics.support';
+import {
+  addDays,
+  toDateKey,
+  utcToday,
+} from '../src/analytics/analytics.support';
+import { existingGapLists } from '../src/competitors/competitor-gaps';
 import { testDb } from './helpers/test-db';
 import { ownerAgent, useCookies } from './helpers/session';
 import { obliterateQueues, settleBootRegistration } from './obliterate-queues';
@@ -176,6 +187,287 @@ describe('CompetitorsController (e2e)', () => {
     expect(you?.name).toBe('Habit Tracker');
     expect(analysis.positionMap).toHaveLength(2);
   });
+  interface Check {
+    date: Date;
+    you: number | null;
+    them?: number | null;
+  }
+
+  const competitorOf = (primaryId: string) =>
+    prisma.app.findFirstOrThrow({ where: { primaryAppId: primaryId } });
+
+  const addCompetitor = (primaryId: string, storeAppId: string) =>
+    prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId,
+        country: 'us',
+        name: `Rival ${storeAppId}`,
+        isCompetitor: true,
+        primaryAppId: primaryId,
+      },
+    });
+
+  const ranking = (
+    appId: string,
+    keywordId: string,
+    date: Date,
+    position: number | null,
+  ) =>
+    prisma.keywordRanking.create({
+      data: {
+        appId,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        keywordId,
+        date,
+        position,
+        depth: 100,
+      },
+    });
+
+  interface TrackedChecks {
+    primaryId: string;
+    competitorId: string | null;
+    text: string;
+    checks: Check[];
+    country?: string;
+  }
+
+  const trackChecks = async ({
+    primaryId,
+    competitorId,
+    text,
+    checks,
+    country = 'us',
+  }: TrackedChecks): Promise<string> => {
+    const keyword = await prisma.keyword.create({
+      data: { text, store: Store.APP_STORE, country },
+    });
+    await prisma.trackedKeyword.create({
+      data: {
+        appId: primaryId,
+        keywordId: keyword.id,
+        source: 'MANUAL',
+        active: true,
+      },
+    });
+    await prisma.keywordMetric.create({
+      data: { keywordId: keyword.id, date: D0, traffic: 7, difficulty: 3 },
+    });
+    for (const check of checks) {
+      await ranking(primaryId, keyword.id, check.date, check.you);
+      if (competitorId !== null && check.them !== undefined) {
+        await ranking(competitorId, keyword.id, check.date, check.them);
+      }
+    }
+    return keyword.id;
+  };
+
+  const primaryApp = () =>
+    prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: 'alone',
+        country: 'us',
+        name: 'Alone',
+      },
+    });
+
+  const analysisOf = async (id: string): Promise<CompetitorAnalysis> =>
+    (await api.get(`/apps/${id}/competitors/analysis`).expect(200))
+      .body as CompetitorAnalysis;
+
+  const textsOf = (rows: CompetitorGapKeyword[] | undefined) =>
+    (rows ?? []).map((row) => row.text);
+
+  const seedWithOvertake = async (): Promise<string> => {
+    const id = await seed();
+    const competitor = await competitorOf(id);
+    await trackChecks({
+      primaryId: id,
+      competitorId: competitor.id,
+      text: 'focus',
+      checks: [
+        { date: D0, you: 12, them: 8 },
+        { date: addDays(D0, -1), you: 9, them: 10 },
+      ],
+    });
+    return id;
+  };
+
+  it('answers the keyword gaps, winnable keywords, threats and leads', async () => {
+    const id = await seedWithOvertake();
+
+    const { gaps } = await analysisOf(id);
+
+    expect(textsOf(gaps.keywordGaps)).toEqual(['habit tracker']);
+    expect(textsOf(gaps.winnable)).toEqual(['habit tracker']);
+    expect(gaps.winnable?.[0]).toMatchObject({
+      difficulty: 30,
+      volume: 70,
+      country: 'us',
+      lastCheckedOn: toDateKey(D0),
+    });
+    expect(gaps.threats).toEqual([
+      expect.objectContaining({
+        text: 'focus',
+        threat: 'overtook',
+        yourPosition: 12,
+        bestCompetitorPosition: 8,
+        competitorDelta: 2,
+        overtookOn: toDateKey(D0),
+      }),
+    ]);
+    expect((gaps.lead ?? []).map(({ text, gap }) => ({ text, gap }))).toEqual(
+      expect.arrayContaining([
+        { text: 'streak counter', gap: null },
+        { text: 'sleep timer', gap: 6 },
+      ]),
+    );
+    expect(gaps.lead).toHaveLength(2);
+    expect(gaps.coverage).toEqual({
+      competitors: 1,
+      delisted: 0,
+      markets: [{ country: 'us', keywords: 5, compared: 5 }],
+    });
+  });
+
+  it('keeps the three older gap tables as the unchanged builders answer them', async () => {
+    const id = await seedWithOvertake();
+
+    const analysis = await analysisOf(id);
+    const comparison = (
+      await api.get(`/apps/${id}/keywords/compare`).expect(200)
+    ).body as KeywordComparison;
+    const tracked = (await api.get(`/apps/${id}/keywords`).expect(200))
+      .body as TrackedKeywordItem[];
+
+    expect({
+      theyRankYouDont: analysis.gaps.theyRankYouDont,
+      youRankTheyDont: analysis.gaps.youRankTheyDont,
+      outranked: analysis.gaps.outranked,
+    }).toEqual(
+      existingGapLists(
+        comparison,
+        new Map(tracked.map((item) => [item.keywordId, item])),
+      ),
+    );
+  });
+
+  it('leaves a delisted competitor out of every new list', async () => {
+    const id = await seedWithOvertake();
+    const competitor = await competitorOf(id);
+    await prisma.app.update({
+      where: { id: competitor.id },
+      data: { delistedAt: D0 },
+    });
+
+    const { gaps } = await analysisOf(id);
+
+    expect(gaps.theyRankYouDont).toHaveLength(1);
+    expect(gaps).toMatchObject({
+      keywordGaps: [],
+      winnable: [],
+      threats: [],
+      lead: [],
+      coverage: { competitors: 0, delisted: 1 },
+    });
+  });
+
+  it('claims no lead over a competitor nobody checked yet', async () => {
+    const id = await seed();
+    await addCompetitor(id, 'late');
+
+    const { gaps } = await analysisOf(id);
+
+    expect(gaps.lead).toEqual([]);
+    expect(gaps.coverage?.competitors).toBe(2);
+  });
+
+  it('keeps a stale gap with the day of its last check and no threat', async () => {
+    const primary = await primaryApp();
+    const competitor = await addCompetitor(primary.id, 'rival');
+    const stale = addDays(utcToday(), -3);
+    await trackChecks({
+      primaryId: primary.id,
+      competitorId: competitor.id,
+      text: 'stale gap',
+      checks: [{ date: stale, you: null, them: 5 }],
+    });
+    await trackChecks({
+      primaryId: primary.id,
+      competitorId: competitor.id,
+      text: 'stale threat',
+      checks: [
+        { date: stale, you: 5, them: 7 },
+        { date: addDays(stale, -1), you: 5, them: 9 },
+      ],
+    });
+
+    const { gaps } = await analysisOf(primary.id);
+
+    expect(gaps.keywordGaps).toEqual([
+      expect.objectContaining({
+        text: 'stale gap',
+        lastCheckedOn: toDateKey(stale),
+      }),
+    ]);
+    expect(gaps.threats).toEqual([]);
+  });
+
+  it('answers empty lists for an app without competitors', async () => {
+    const primary = await primaryApp();
+    await trackChecks({
+      primaryId: primary.id,
+      competitorId: null,
+      text: 'lonely',
+      checks: [{ date: D0, you: 4 }],
+    });
+
+    const { gaps } = await analysisOf(primary.id);
+
+    expect(gaps).toMatchObject({
+      keywordGaps: [],
+      winnable: [],
+      threats: [],
+      lead: [],
+      coverage: {
+        competitors: 0,
+        delisted: 0,
+        markets: [{ country: 'us', keywords: 1, compared: 0 }],
+      },
+    });
+  });
+
+  it('answers each market of a keyword on its own row', async () => {
+    const id = await seed();
+    const competitor = await competitorOf(id);
+    await trackChecks({
+      primaryId: id,
+      competitorId: competitor.id,
+      text: 'habit tracker',
+      checks: [{ date: D0, you: null, them: 4 }],
+      country: 'de',
+    });
+
+    const { gaps } = await analysisOf(id);
+
+    expect(
+      (gaps.keywordGaps ?? []).map(({ text, country }) => ({ text, country })),
+    ).toEqual(
+      expect.arrayContaining([
+        { text: 'habit tracker', country: 'us' },
+        { text: 'habit tracker', country: 'de' },
+      ]),
+    );
+    expect(gaps.coverage?.markets).toEqual([
+      { country: 'de', keywords: 1, compared: 1 },
+      { country: 'us', keywords: 4, compared: 4 },
+    ]);
+  });
+
   it('counts the title and subtitle of the comparison in characters', async () => {
     const id = await seed();
     await prisma.appSnapshot.updateMany({

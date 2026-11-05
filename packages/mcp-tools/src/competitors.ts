@@ -17,7 +17,7 @@ export const COMPETITOR_TOOLS: ReadTool[] = [
     name: "competitor_analysis",
     title: "Competitor analysis",
     description:
-      "Positioning against the competitors of one app: a metadata comparison (title and subtitle with their character counts), three keyword gap lists (theyRankYouDont, youRankTheyDont and outranked, each row with volume, difficulty, opportunity and both positions), and a position map of visibility and rating per app. Position is 1-based; null means checked but not found within the row's depth. Apple and Google Play figures are not comparable, so an app is only ever compared with competitors on its own store.",
+      "Positioning against the competitors of one app: a metadata comparison (title and subtitle with their character counts), the three keyword gap lists (theyRankYouDont, youRankTheyDont and outranked), four lists of where competitors beat you or you lead (keywordGaps, winnable, threats and lead, each row with volume, difficulty, opportunity, both positions, the market, the day of the last check and, for a threat, whether the competitor is closing in or overtook you), a coverage block naming how many competitors could be compared in each market, and a position map of visibility and rating per app. Position is 1-based; null means checked but not found within the row's depth. Apple and Google Play figures are not comparable, so an app is only ever compared with competitors on its own store.",
     inputSchema: z.object({ appId }),
     request: ({ appId }) => ({
       path: `/apps/${seg(appId)}/competitors/analysis`,

@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  addUtcDays,
   CompetitorAnalysis,
   CompetitorDiscovery,
   CompetitorItem,
@@ -13,6 +14,9 @@ import {
   KeywordComparison,
   parseStoreUrl,
   PositionMapPoint,
+  THREAT_WINDOW_DAYS,
+  TrackedKeywordItem,
+  utcDayOf,
   visibility,
 } from '@asobeast/shared';
 import { QuotaService } from '../auth/quota.service';
@@ -20,7 +24,9 @@ import { AppCaptureService } from '../apps/app-capture.service';
 import { toCompetitorItem } from '../apps/apps.mapper';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { competitorGapLists, GapRow, GapScope } from './competitor-gap-lists';
 import { existingGapLists } from './competitor-gaps';
+import { recentChecks } from './competitor-recent-checks';
 import { aggregateDiscovery } from './discovery';
 import { DiscoveryQueryDto } from './dto/discovery-query.dto';
 import { LATEST_HOME_LISTING } from '../apps/listing';
@@ -38,12 +44,27 @@ function utcToday(): Date {
 interface AppRow {
   id: string;
   name: string | null;
+  delistedAt: Date | null;
   snapshots: {
     title: string;
     subtitle: string | null;
     ratingAvg: number | null;
   }[];
 }
+
+const gapScope = (primaryId: string, competitors: AppRow[]): GapScope => ({
+  primaryId,
+  competitors: competitors.map((competitor) => ({
+    id: competitor.id,
+    delisted: competitor.delistedAt !== null,
+  })),
+});
+
+const gapRows = (
+  comparison: KeywordComparison,
+  tracked: ReadonlyMap<string, TrackedKeywordItem>,
+): GapRow[] =>
+  comparison.rows.map((row) => ({ row, item: tracked.get(row.keywordId) }));
 
 @Injectable()
 export class CompetitorsService {
@@ -145,13 +166,28 @@ export class CompetitorsService {
     }
 
     const trackedById = new Map(tracked.map((item) => [item.keywordId, item]));
+    const today = utcDayOf(new Date());
+    const recent = await recentChecks(
+      this.prisma,
+      [appId, ...competitors.map((competitor) => competitor.id)],
+      comparison.rows.map((row) => row.keywordId),
+      addUtcDays(today, -(THREAT_WINDOW_DAYS + 1)),
+    );
 
     return {
       metadataComparison: [
         this.metadataRow(primary, true),
         ...competitors.map((competitor) => this.metadataRow(competitor, false)),
       ],
-      gaps: existingGapLists(comparison, trackedById),
+      gaps: {
+        ...existingGapLists(comparison, trackedById),
+        ...competitorGapLists({
+          scope: gapScope(appId, competitors),
+          rows: gapRows(comparison, trackedById),
+          recent,
+          today,
+        }),
+      },
       positionMap: this.positionMap(primary, competitors, comparison),
     };
   }
@@ -259,6 +295,7 @@ export class CompetitorsService {
     return {
       id: true,
       name: true,
+      delistedAt: true,
       snapshots: {
         ...LATEST_HOME_LISTING,
         select: { title: true, subtitle: true, ratingAvg: true },

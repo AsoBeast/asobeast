@@ -19,6 +19,11 @@ import {
   CompetitorDiscovery,
   CompetitorItem,
   CompetitorSuggestions,
+  GAP_TOP,
+  GAP_YOU_BELOW,
+  THREAT_WINDOW_DAYS,
+  THREAT_WITHIN,
+  WINNABLE_COMPETITOR_FROM,
 } from '@asobeast/shared';
 import { SpendsStoreCapacity } from '../auth/decorators/spends-store-capacity.decorator';
 import { OnDemandLimiter } from '../auth/on-demand.limiter';
@@ -28,6 +33,8 @@ import { AddCompetitorDto } from './dto/add-competitor.dto';
 import { DiscoveryQueryDto } from './dto/discovery-query.dto';
 import { StoreDeadlineInterceptor } from '../store-providers/store-deadline.interceptor';
 import { QueuesWork } from '../redis/queues-work.decorator';
+
+const ANALYSIS_DESCRIPTION = `Metadata of the app and each competitor, the three keyword gap lists (theyRankYouDont, youRankTheyDont, outranked), a position map, and four lists over the active tracked keywords of every market and the competitors that can be compared: keywordGaps (a competitor ranks within the top ${GAP_TOP} and the app is unranked or below ${GAP_YOU_BELOW}), winnable (a keyword gap where difficulty is below popularity or the best competitor ranks ${WINNABLE_COMPETITOR_FROM} or worse), threats (the app ranks within the top ${GAP_TOP} and a competitor is 1 to ${THREAT_WITHIN} positions below it and rose on its last check, or passed the app in the last ${THREAT_WINDOW_DAYS} days and is still ahead; checks older than yesterday UTC are left out) and lead (the app is ahead of every competitor that ranks). Rows are sorted by opportunity, then popularity. coverage says how many competitors could be compared in each market, so an empty list is not read as winning. Delisted competitors are left out of the four lists. Stored data only; no store request.`;
 
 @ApiTags('competitors')
 @Controller('apps/:id/competitors')
@@ -39,7 +46,10 @@ export class CompetitorsController {
   ) {}
 
   @Get('analysis')
-  @ApiOperation({ summary: 'Keyword gap and positioning analysis' })
+  @ApiOperation({
+    summary: 'Keyword gap and positioning analysis',
+    description: ANALYSIS_DESCRIPTION,
+  })
   analysis(@Param('id') id: string): Promise<CompetitorAnalysis> {
     return this.competitors.analysis(id);
   }

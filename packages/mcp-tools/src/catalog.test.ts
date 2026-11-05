@@ -311,6 +311,15 @@ describe("the keyword_comparison unchecked ids", () => {
   });
 });
 
+describe("the competitor_analysis gap lists", () => {
+  it.each(["keywordGaps", "winnable", "threats", "lead", "coverage"])(
+    "names %s",
+    (field) => {
+      expect(toolByName("competitor_analysis")?.description).toContain(field);
+    },
+  );
+});
+
 describe("the competitor, comparison and chart tools", () => {
   it.each([
     "list_competitors",
