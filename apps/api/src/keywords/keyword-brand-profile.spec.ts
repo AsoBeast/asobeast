@@ -66,14 +66,14 @@ describe('loadBrandProfile', () => {
     });
     await expect(
       loadBrandProfile(prisma, { id: 'app1', store: Store.APP_STORE }),
-    ).resolves.toEqual({ own: [], competitors: [] });
+    ).resolves.toEqual({ own: [], competitors: [], categories: [] });
   });
 
   it('answers an empty profile when the app is gone', async () => {
     const { prisma } = prismaWith(null);
     await expect(
       loadBrandProfile(prisma, { id: 'app1', store: Store.APP_STORE }),
-    ).resolves.toEqual({ own: [], competitors: [] });
+    ).resolves.toEqual({ own: [], competitors: [], categories: [] });
   });
 });
 

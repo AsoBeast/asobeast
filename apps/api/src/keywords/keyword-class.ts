@@ -14,6 +14,7 @@ export const CATEGORY_NAME_COMPETITORS = 2;
 export interface BrandProfile {
   own: readonly BrandName[];
   competitors: readonly BrandName[];
+  categories: readonly BrandName[];
 }
 
 export interface ClassifiableKeyword {
@@ -47,16 +48,16 @@ export function brandProfileOf(input: {
   const named = input.competitorTitles
     .map((title) => (title === null ? null : brandNameOf(title)))
     .filter(isName);
+  const shared = (name: BrandName) =>
+    named.filter((other) => sameName(name, other)).length >=
+    CATEGORY_NAME_COMPETITORS;
   return {
     own: [
       input.title === null ? null : brandNameOf(input.title),
       developerNameOf(input.developer),
     ].filter(isName),
-    competitors: named.filter(
-      (name) =>
-        named.filter((other) => sameName(name, other)).length <
-        CATEGORY_NAME_COMPETITORS,
-    ),
+    competitors: named.filter((name) => !shared(name)),
+    categories: named.filter(shared),
   };
 }
 
@@ -65,11 +66,11 @@ export function profileForListing(
   listing: { words: readonly string[]; title: string | null },
 ): BrandProfile {
   const marketName = listing.title === null ? null : brandNameOf(listing.title);
+  const listed = (name: BrandName) => containsName(listing.words, name);
   return {
     own: [...profile.own, marketName].filter(isName),
-    competitors: profile.competitors.filter(
-      (name) => !containsName(listing.words, name),
-    ),
+    competitors: profile.competitors.filter((name) => !listed(name)),
+    categories: [...profile.categories, ...profile.competitors.filter(listed)],
   };
 }
 
@@ -87,8 +88,9 @@ export function classifyKeyword(
 ): KeywordClass {
   const words = contentWords(keyword.text);
   if (overruledBySerp(keyword)) return 'generic';
-  if (profile.own.some((name) => containsName(words, name))) return 'ownBrand';
-  const named = profile.competitors.some((name) => containsName(words, name));
-  if (named || keyword.flags.includes('brand')) return 'competitorBrand';
-  return 'generic';
+  const holds = (name: BrandName) => containsName(words, name);
+  if (profile.own.some(holds)) return 'ownBrand';
+  if (profile.competitors.some(holds)) return 'competitorBrand';
+  if (profile.categories.some(holds)) return 'generic';
+  return keyword.flags.includes('brand') ? 'competitorBrand' : 'generic';
 }

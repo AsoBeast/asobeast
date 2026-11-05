@@ -117,6 +117,31 @@ describe('the competitor names', () => {
     ).toBe('generic');
   });
 
+  it('never reads the brand flag on a category word two competitors share', () => {
+    const flagged = { flags: BRAND, serpRelevance: 0.1 };
+
+    expect(
+      classOf(
+        'focus timer',
+        flagged,
+        profileOf('Focus Timer: x', 'Focus Timer - y'),
+      ),
+    ).toBe('generic');
+  });
+
+  it('never reads the brand flag on a competitor name the own listing uses', () => {
+    expect(classOf('focus timer', { flags: BRAND, serpRelevance: 0.1 })).toBe(
+      'competitorBrand',
+    );
+    expect(
+      classOf('focus timer', {
+        flags: BRAND,
+        serpRelevance: 0.1,
+        listingWords: contentWords('a focus timer for study'),
+      }),
+    ).toBe('generic');
+  });
+
   it('checks the own name before a competitor with the same name', () => {
     const profile = brandProfileOf({
       title: 'Forest: x',
@@ -185,7 +210,7 @@ describe('brandProfileOf', () => {
         developer: null,
         competitorTitles: [null, null],
       }),
-    ).toEqual({ own: [], competitors: [] });
+    ).toEqual({ own: [], competitors: [], categories: [] });
   });
 });
 
@@ -199,6 +224,7 @@ describe('profileForListing', () => {
     ).toEqual({
       own: forestProfile.own,
       competitors: [new Set(['todoist'])],
+      categories: [new Set(['focus', 'timer'])],
     });
   });
 });
