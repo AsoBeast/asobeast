@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type ComponentProps, type RefObject } from "react";
+import { useState, type ComponentProps, type RefObject } from "react";
 import { ListFilter } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,15 +12,9 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { firstFocusable } from "@/lib/focus-handoff";
 import { useIsMobile } from "@/lib/use-is-mobile";
 import { KeywordFacets } from "./KeywordFacets";
-
-const isRendered = (element: HTMLElement | null): boolean =>
-  (element?.getClientRects().length ?? 0) > 0;
-
-const firstControl = (group: HTMLElement | null): HTMLElement | null =>
-  group?.querySelector<HTMLElement>('button:not([aria-disabled="true"])') ??
-  null;
 
 export function KeywordFiltersSheet({
   active,
@@ -31,20 +25,20 @@ export function KeywordFiltersSheet({
   inlineFacets: RefObject<HTMLElement | null>;
 }) {
   const [open, setOpen] = useState(false);
-  const trigger = useRef<HTMLButtonElement>(null);
   const isMobile = useIsMobile();
   if (open && !isMobile) setOpen(false);
 
   const onCloseAutoFocus = (event: Event) => {
-    if (isRendered(trigger.current)) return;
+    const facet = firstFocusable(inlineFacets.current);
+    if (!facet?.getClientRects().length) return;
     event.preventDefault();
-    firstControl(inlineFacets.current)?.focus();
+    facet.focus();
   };
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button ref={trigger} variant="outline" size="sm">
+        <Button variant="outline" size="sm">
           <ListFilter aria-hidden />
           Filters
           {active > 0 ? (

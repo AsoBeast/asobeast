@@ -174,6 +174,9 @@ export function useFocusClaim(key: string): RefCallback<HTMLElement> {
 
 const FOCUSABLE = "a[href], button:not(:disabled)";
 
+export const firstFocusable = (group: Element | null): HTMLElement | null =>
+  group?.querySelector<HTMLElement>(FOCUSABLE) ?? null;
+
 export function useFocusGroupClaim(
   key: string,
   controlPresent: boolean,
@@ -182,7 +185,7 @@ export function useFocusGroupClaim(
 
   useEffect(() => {
     if (controlPresent) return;
-    const target = group.current?.querySelector<HTMLElement>(FOCUSABLE);
+    const target = firstFocusable(group.current);
     if (!target || !isClaimable(armed, key, Date.now())) return;
     armed = null;
     target.focus();
