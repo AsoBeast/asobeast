@@ -8,6 +8,7 @@ export * from './keyword-breakdown';
 export * from './localizations';
 export * from './markets';
 export * from './setup';
+export * from './workspace-checklist';
 export * from './rankings';
 export * from './category-ranks';
 export * from './charts';
