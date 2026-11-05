@@ -32,6 +32,18 @@ describe("delta chips", () => {
     );
   });
 
+  it("keeps the decimals a trend asks for", () => {
+    expect(textOf(<TrendChip label="7d" value={3.5} digits={1} />)).toBe(
+      "<span>+3.5 7d</span>",
+    );
+    expect(textOf(<TrendChip label="7d" value={-1.24} digits={1} />)).toBe(
+      "<span>-1.2 7d</span>",
+    );
+    expect(textOf(<TrendChip label="7d" value={0.04} digits={1} />)).toBe(
+      "<span>0.0 7d</span>",
+    );
+  });
+
   it("writes a trend without data as one text", () => {
     const markup = renderToString(<TrendChip label="30d" value={null} />);
 

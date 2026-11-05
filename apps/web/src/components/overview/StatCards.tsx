@@ -14,6 +14,7 @@ import { useKeywordScope } from "@/components/app-detail/use-market";
 import { appSummaryOptions } from "@/lib/queries";
 import { TrendChip } from "@/components/ui/delta-chip";
 import { VisibilityHelp } from "@/components/visibility/VisibilityHelp";
+import { ShareOfVoiceLine } from "./ShareOfVoiceLine";
 
 export function StatCards({ id }: { id: string }) {
   const { country, switchable } = useKeywordScope(id);
@@ -34,9 +35,12 @@ export function StatCards({ id }: { id: string }) {
             {Math.round(summary.visibility.current)}
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex gap-3">
-          <TrendChip label="7d" value={summary.visibility.delta7d} />
-          <TrendChip label="30d" value={summary.visibility.delta30d} />
+        <CardContent className="flex flex-col gap-3">
+          <div className="flex gap-3">
+            <TrendChip label="7d" value={summary.visibility.delta7d} />
+            <TrendChip label="30d" value={summary.visibility.delta30d} />
+          </div>
+          <ShareOfVoiceLine summary={summary} />
         </CardContent>
       </Card>
 
