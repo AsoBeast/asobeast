@@ -38,7 +38,7 @@ export const APP_TOOLS: ReadTool[] = [
     name: "app_summary",
     title: "App summary",
     description:
-      "Headline metrics for one app: tracked keyword count, visibility, average position and recent movement. Position is 1-based; null means checked but not found within depth 200 (render as >200). Pass country to count only the keywords tracked in one market; the coverage block always counts every market.",
+      "Headline metrics for one app: tracked keyword count, visibility, average position, recent movement and shareOfVoice, the app's visibility against the tracked competitors on the same keywords. Position is 1-based; null means checked but not found within depth 200 (render as >200). Pass country to count only the keywords tracked in one market; the coverage block always counts every market.",
     inputSchema: z.object({
       appId: z.string().describe("The app id from list_apps."),
       country: keywordMarket,

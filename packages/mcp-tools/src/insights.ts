@@ -6,6 +6,7 @@ import {
   COUNTRY_PATTERN,
   isAlertFeedEvent,
   QUERY_BOUNDS,
+  VISIBILITY_COMPARISONS,
 } from "@asobeast/shared";
 import { utcDate } from "./calendar-date";
 import { defineReadTool, seg, type ReadTool } from "./define";
@@ -88,11 +89,22 @@ export const INSIGHT_TOOLS: ReadTool[] = [
     name: "visibility_history",
     title: "Visibility history",
     description:
-      "Daily visibility score (0-100) history for one app over a date window. Higher is more visible across tracked keywords: each active tracked keyword counts in proportion to its popularity, discounted by position as 1 / log2(position + 1), and 0 when not found, so 100 means position 1 for every keyword with a popularity above 0, and a keyword with popularity 0 cannot move the score. History is calculated over the keywords tracked today, so compare the score with itself over time rather than across apps or stores. Pass country for the keywords of one market.",
-    inputSchema: z.object({ appId, from, to, country: keywordMarket }),
-    request: ({ appId, from, to, country }) => ({
+      "Daily visibility score (0-100) history for one app over a date window. Higher is more visible across tracked keywords: each active tracked keyword counts in proportion to its popularity, discounted by position as 1 / log2(position + 1), and 0 when not found, so 100 means position 1 for every keyword with a popularity above 0, and a keyword with popularity 0 cannot move the score. History is calculated over the keywords tracked today, so compare the score with itself over time rather than across apps or stores. Pass country for the keywords of one market. Pass compare=competitors to also get shareOfVoice, a daily series of the app's visibility as a percentage of the summed visibility of the app and the tracked competitors checked that day, with the number of competitors counted.",
+    inputSchema: z.object({
+      appId,
+      from,
+      to,
+      country: keywordMarket,
+      compare: z
+        .enum(VISIBILITY_COMPARISONS)
+        .optional()
+        .describe(
+          "competitors adds the shareOfVoice series against the tracked competitors.",
+        ),
+    }),
+    request: ({ appId, from, to, country, compare }) => ({
       path: `/apps/${seg(appId)}/visibility-history`,
-      params: { from, to, country },
+      params: { from, to, country, compare },
     }),
   }),
 

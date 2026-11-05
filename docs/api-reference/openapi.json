@@ -4494,6 +4494,7 @@
     },
     "/apps/{id}/summary": {
       "get": {
+        "description": "Visibility, rank distribution, movers, coverage and counts of the app, for every market or one, with shareOfVoice: the visibility of the app as a percentage of the summed visibility of the app and the tracked competitors checked on the same day, over the same keywords, and the 7 day change; the reason is named when there is none.",
         "operationId": "AnalyticsController_getSummary",
         "parameters": [
           {
@@ -4536,6 +4537,7 @@
     },
     "/apps/{id}/visibility-history": {
       "get": {
+        "description": "Daily visibility of the app over a date window, for every market or one. compare=competitors also answers shareOfVoice, the app's visibility as a percentage of the summed visibility of the app and the tracked competitors checked that day, with the number of competitors counted on each day.",
         "operationId": "AnalyticsController_getVisibilityHistory",
         "parameters": [
           {
@@ -4555,6 +4557,18 @@
               "pattern": "^[a-z]{2}$",
               "example": "de",
               "type": "string"
+            }
+          },
+          {
+            "name": "compare",
+            "required": false,
+            "in": "query",
+            "description": "competitors adds shareOfVoice and nonBrandedShareOfVoice series: the app visibility divided by the summed visibility of the app and the tracked competitors checked that day.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "competitors"
+              ]
             }
           },
           {

@@ -6,6 +6,7 @@ import { PortfolioController } from './portfolio.controller';
 import { PortfolioInsightsService } from './portfolio-insights.service';
 import { PortfolioSignals } from './portfolio-signals.service';
 import { PortfolioService } from './portfolio.service';
+import { ShareOfVoiceService } from './share-of-voice.service';
 
 @Module({
   controllers: [AnalyticsController, PortfolioController],
@@ -15,6 +16,7 @@ import { PortfolioService } from './portfolio.service';
     PortfolioService,
     PortfolioSignals,
     PortfolioInsightsService,
+    ShareOfVoiceService,
   ],
   exports: [AnalyticsService, DigestService, PortfolioService],
 })
