@@ -1021,6 +1021,97 @@
         ]
       }
     },
+    "/alerts/events": {
+      "get": {
+        "description": "Lists the alert events the pipeline recorded for the workspace in the last 30 days, newest first, whether or not any webhook or email alert is subscribed. Each item carries the event, the time it was recorded, the app, the market, one plain sentence and the typed payload. review.new and digest.weekly are never listed, and a drop or exit repeated for subscribers that wait for confirmation is listed once. type takes one or more feed events, comma separated or repeated. appId includes the app's competitors and the search result entrants of the keywords it tracks. since is an ISO 8601 date or instant and is exclusive. Page with nextCursor, which is null on the last page. Answers 400 for an unknown type, a bad since, cursor or limit, and 404 for an app that is not in the workspace.",
+        "operationId": "AlertsController_listEvents",
+        "parameters": [
+          {
+            "name": "type",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "metadata.changed",
+                  "rank.dropped",
+                  "rank.improved",
+                  "rank.milestone",
+                  "rank.first",
+                  "rank.overtaken",
+                  "review.negative",
+                  "serp.entrant",
+                  "action.opened",
+                  "chart.entered",
+                  "chart.left",
+                  "chart.milestone",
+                  "rating.dropped",
+                  "review.spike",
+                  "app.delisted",
+                  "app.unlisted_market"
+                ]
+              }
+            }
+          },
+          {
+            "name": "appId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 64,
+              "type": "string"
+            }
+          },
+          {
+            "name": "since",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "2026-11-01T00:00:00.000Z",
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 200,
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "List the events the daily run detected",
+        "tags": [
+          "alerts"
+        ]
+      }
+    },
     "/health": {
       "get": {
         "operationId": "HealthController_check",

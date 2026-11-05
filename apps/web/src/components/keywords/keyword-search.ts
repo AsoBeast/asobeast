@@ -13,6 +13,10 @@ const isQuote = (character: string | undefined): boolean =>
 const withoutQuotes = (text: string): string =>
   [...text].filter((character) => !isQuote(character)).join("");
 
+export function exactKeywordSearch(text: string): string {
+  return withoutQuotes(text) === text ? `"${text}"` : text;
+}
+
 export function parseKeywordSearch(raw: string): KeywordSearch {
   const trimmed = raw.trim();
   const inner = trimmed.slice(1, -1);
@@ -36,5 +40,7 @@ export function matchesKeywordSearch(
   if (search.kind === "none") return true;
   if (search.kind === "exact")
     return searchKey(text) === searchKey(search.phrase);
-  return foldAccents(text).includes(foldAccents(search.fragment));
+  return foldAccents(withoutQuotes(text)).includes(
+    foldAccents(search.fragment),
+  );
 }

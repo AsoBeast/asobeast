@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import { Queue } from 'bullmq';
@@ -68,11 +69,13 @@ const buildConfig = (delivery: 'batched' | 'instant') =>
   }) as unknown as ConfigService<Env, true>;
 
 interface UpdateArgs {
-  where: { dedupeKey: string; flushedAt: null; flushId: null };
+  where: { dedupeKey: string; flushedAt?: null; flushId?: null };
   data: {
     event: string;
     appId: string | null;
+    keywordId: string | null;
     payload: RankDroppedPayload;
+    flushedAt?: Date;
   };
 }
 
@@ -150,10 +153,40 @@ describe('AlertsDispatcher', () => {
     expect(args.data).toEqual({
       event: 'rank.dropped',
       appId: 'app1',
+      keywordId: 'kw1',
       payload: rankPayload,
     });
     expect(add).not.toHaveBeenCalled();
   });
+
+  it.each([
+    ['a rank alert', rankPayload, 'kw1'],
+    ['a chart alert', chartEntered(), null],
+  ])(
+    'writes the keyword of %s beside its outbox payload',
+    async (_case, payload, keywordId) => {
+      const prisma = buildPrisma();
+      const { queue } = buildQueue();
+      const dispatcher = new AlertsDispatcher(
+        prisma as unknown as PrismaService,
+        { enabled: true } as MailerService,
+        buildConfig('batched'),
+        queue,
+        workspace,
+        new AlertAppIdentities(prisma as unknown as PrismaService),
+      );
+
+      await inWorkspace(() => dispatcher.dispatch(payload));
+
+      expect(prisma.updates[0].data.keywordId).toBe(keywordId);
+      expect(prisma.alertEvent.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          keywordId,
+          dedupeKey: prisma.updates[0].where.dedupeKey,
+        }) as unknown,
+      });
+    },
+  );
 
   it('updates the latest values only before a row is claimed', async () => {
     const prisma = buildPrisma();
@@ -266,7 +299,7 @@ describe('AlertsDispatcher', () => {
 
     await inWorkspace(() => dispatcher.dispatch(rankPayload));
 
-    expect(prisma.alertEvent.create).not.toHaveBeenCalled();
+    expect(prisma.alertEvent.create).toHaveBeenCalledTimes(1);
     expect(prisma.webhook.findMany).toHaveBeenCalledTimes(1);
   });
 
@@ -290,6 +323,7 @@ describe('AlertsDispatcher', () => {
     expect(prisma.updates[0].data).toEqual({
       event: 'rank.milestone',
       appId: 'app1',
+      keywordId: 'kw1',
       payload: milestone,
     });
   });
@@ -314,6 +348,7 @@ describe('AlertsDispatcher', () => {
     expect(prisma.updates[0].data).toEqual({
       event: 'chart.entered',
       appId: 'a',
+      keywordId: null,
       payload: chartEntered(),
     });
   });
@@ -335,7 +370,7 @@ describe('AlertsDispatcher', () => {
 
     await inWorkspace(() => dispatcher.dispatch(chartEntered()));
 
-    expect(prisma.alertEvent.create).not.toHaveBeenCalled();
+    expect(prisma.alertEvent.create).toHaveBeenCalledTimes(1);
     expect(prisma.webhook.findMany).toHaveBeenCalledWith({
       where: { active: true, events: { has: 'chart.entered' } },
       select: {
@@ -919,4 +954,130 @@ describe('AlertsDispatcher rank thresholds in instant mode', () => {
       expect(queued(add)).toEqual(expected);
     },
   );
+});
+
+describe('AlertsDispatcher records instant events', () => {
+  const instantDispatcher = (prisma: ReturnType<typeof buildPrisma>) => {
+    prisma.webhook.findMany.mockResolvedValue([
+      { id: 'wh1', events: ['rank.dropped'], reviewScores: [] },
+    ]);
+    const { add, queue } = buildQueue();
+    const dispatcher = new AlertsDispatcher(
+      prisma as unknown as PrismaService,
+      { enabled: false } as MailerService,
+      buildConfig('instant'),
+      queue,
+      workspace,
+      new AlertAppIdentities(prisma as unknown as PrismaService),
+    );
+    return { add, dispatcher };
+  };
+
+  const expectDelivered = (add: jest.Mock) => {
+    expect(add).toHaveBeenCalledWith(
+      JOBS.DELIVER_ALERT,
+      expect.objectContaining({ webhookId: 'wh1', payload: rankPayload }),
+      { backoff: { type: 'custom' } },
+    );
+  };
+
+  it('writes a settled outbox row and still delivers the event', async () => {
+    const prisma = buildPrisma();
+    const { add, dispatcher } = instantDispatcher(prisma);
+
+    await inWorkspace(() => dispatcher.dispatch(rankPayload));
+
+    expect(prisma.alertEvent.create).toHaveBeenCalledWith({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        dedupeKey: 'rank:app1:kw1:2026-07-22',
+        flushedAt: expect.any(Date) as unknown,
+        event: 'rank.dropped',
+        appId: 'app1',
+        keywordId: 'kw1',
+        payload: rankPayload,
+      },
+    });
+    expectDelivered(add);
+  });
+
+  it('delivers the event when recording it fails', async () => {
+    const prisma = buildPrisma();
+    prisma.alertEvent.create.mockRejectedValue(new Error('database gone'));
+    const warn = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
+    const { add, dispatcher } = instantDispatcher(prisma);
+
+    await inWorkspace(() => dispatcher.dispatch(rankPayload));
+
+    expectDelivered(add);
+    expect(warn).toHaveBeenCalledWith('alert record failed: database gone');
+    warn.mockRestore();
+  });
+
+  it('keeps the latest event of a key and settles a row left pending', async () => {
+    const prisma = buildPrisma();
+    prisma.alertEvent.updateMany.mockImplementation((args: UpdateArgs) => {
+      prisma.updates.push(args);
+      return Promise.resolve({ count: 1 });
+    });
+    const { add, dispatcher } = instantDispatcher(prisma);
+
+    await inWorkspace(() => dispatcher.dispatch(rankPayload));
+
+    expect(prisma.updates).toEqual([
+      {
+        where: { dedupeKey: 'rank:app1:kw1:2026-07-22' },
+        data: {
+          event: 'rank.dropped',
+          appId: 'app1',
+          keywordId: 'kw1',
+          payload: rankPayload,
+          flushedAt: expect.any(Date) as unknown,
+        },
+      },
+    ]);
+    expect(prisma.alertEvent.create).not.toHaveBeenCalled();
+    expectDelivered(add);
+  });
+
+  it('overwrites the row a concurrent dispatch created first', async () => {
+    const prisma = buildPrisma();
+    prisma.alertEvent.create.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('unique', {
+        code: 'P2002',
+        clientVersion: 'test',
+      }),
+    );
+    const { add, dispatcher } = instantDispatcher(prisma);
+
+    await expect(
+      inWorkspace(() => dispatcher.dispatch(rankPayload)),
+    ).resolves.toBeUndefined();
+
+    expect(prisma.updates).toHaveLength(2);
+    expect(prisma.updates[1].where).toEqual({
+      dedupeKey: 'rank:app1:kw1:2026-07-22',
+    });
+    expectDelivered(add);
+  });
+
+  it('records no row for the weekly digest', async () => {
+    const prisma = buildPrisma();
+    const { dispatcher } = instantDispatcher(prisma);
+
+    await inWorkspace(() =>
+      dispatcher.dispatch({
+        event: 'digest.weekly',
+        occurredAt: '2026-07-22T10:00:00.000Z',
+        window: { from: '2026-07-15', to: '2026-07-22' },
+        apps: [],
+        groups: [],
+      } as never),
+    );
+
+    expect(prisma.alertEvent.create).not.toHaveBeenCalled();
+    expect(prisma.alertEvent.updateMany).not.toHaveBeenCalled();
+  });
 });

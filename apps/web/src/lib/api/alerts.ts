@@ -1,6 +1,8 @@
 import type {
   AlertDeliveryItem,
   AlertDeliveryStatus,
+  AlertEventList,
+  AlertEventQuery,
   AlertFlushResult,
   AlertsConfig,
   EmailAlertCreateRequest,
@@ -128,4 +130,18 @@ export function getDeliveries(
 ): Promise<AlertDeliveryItem[]> {
   const params = new URLSearchParams(filter);
   return apiFetch<AlertDeliveryItem[]>(`/alerts/deliveries?${params}`);
+}
+
+export function getAlertEvents(
+  query: AlertEventQuery = {},
+): Promise<AlertEventList> {
+  const params = new URLSearchParams();
+  if (query.appId) params.set("appId", query.appId);
+  if (query.type && query.type.length > 0) {
+    params.set("type", query.type.join(","));
+  }
+  if (query.since) params.set("since", query.since);
+  if (query.cursor) params.set("cursor", query.cursor);
+  if (query.limit !== undefined) params.set("limit", String(query.limit));
+  return apiFetch<AlertEventList>(withQuery("/alerts/events", params));
 }

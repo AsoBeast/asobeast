@@ -2,7 +2,7 @@
 title: Send alerts
 description: "asobeast delivers rank, chart, SERP, metadata, review and action events by signed webhook or SMTP email. Batched delivery is resumable and deduplicated."
 icon: bell
-keywords: ["alerts","webhook","SMTP","email","batched delivery","signature","ALERT_DELIVERY","milestone","first ranking","overtake","unsubscribe","List-Unsubscribe","DKIM","confirm recipient","double opt in","chart.entered","chart.left","chart.milestone","top charts","new review","review stars","rating.dropped","review.spike","rating drop","review spike","app.delisted","app.unlisted_market","delisted","unlisted market","essential alerts","alert rules","rank drop threshold","subject line"]
+keywords: ["alerts","webhook","SMTP","email","batched delivery","signature","ALERT_DELIVERY","milestone","first ranking","overtake","unsubscribe","List-Unsubscribe","DKIM","confirm recipient","double opt in","chart.entered","chart.left","chart.milestone","top charts","new review","review stars","rating.dropped","review.spike","rating drop","review spike","app.delisted","app.unlisted_market","delisted","unlisted market","essential alerts","alert rules","rank drop threshold","subject line","alerts page","alert feed","alert_events"]
 ---
 
 Alerts fan out to two channel types, webhooks and email, and both carry the same events. Every attempt is recorded in a delivery log so a failing endpoint is visible instead of retrying silently.
@@ -45,6 +45,27 @@ The first email the alert sends opens with one sentence, and only the first does
 ## The nudge on the overview
 
 Alerts are not part of the guided setup, because nothing can move before positions exist. Once an app has two daily captures and your workspace still has no webhook and no email alert, which is rare once the essential alerts are on, the app overview shows a card offering to add one: an email alert when SMTP is configured, a webhook otherwise. **Not now** hides the card in that browser, and adding any channel hides it everywhere.
+
+## See what the run detected
+
+**Alerts** in the sidebar lists every event the daily run recorded for your workspace in the last 30 days, newest first and grouped by UTC day. It works whether or not you have set up a webhook or an email alert, because the run records what it detects before any subscription is consulted. Each row shows the event, the app and its market, one plain sentence and how long ago it happened. The sentence links to where the event happened: a rank event opens the keywords table filtered to that keyword in its market, an overtake opens the keyword breakdown, a search result entrant opens the search results, a metadata change opens the changes timeline, a negative review opens the reviews with its stars, an action opens it in the Action Center and a chart move opens the chart table of that day.
+
+Filter the list by **App**, which includes that app's competitors and the search result entrants of its keywords, and by **Event type**. **Search alerts** looks through the sentences, the app names, the event names and the market names of the events already loaded, so press **Load more** to search further back. The filters live in the address, so a link opens the same view.
+
+Rows that arrived since your last visit carry a **New** mark, and a blue dot on **Alerts** in the sidebar shows that something new was recorded. The last visit is kept in a cookie in that browser, so another browser or device keeps its own. A browser that never opened the page shows the dot but marks no row as new.
+
+The page leaves some events out:
+
+- New reviews, which belong on the reviews page and are recorded only while a channel listens for them.
+- The weekly digest, which is a summary rather than an event.
+- The repeated copy of a drop or exit that a channel waiting for [confirmed drops](#report-drops-only-when-they-hold) receives, because it is the same fall.
+- Events of an app you removed.
+
+The list shows what was detected, not what was sent. An event on the page does not mean an email or a webhook went out; the delivery log in Settings says that. The page looks back 30 days at most, and fewer when `RETENTION_ALERT_EVENTS_DAYS` is set lower. With `ALERT_DELIVERY=instant` the events are recorded as well, so the page fills the same way in either mode.
+
+### Read the events over the API and MCP
+
+`GET /alerts/events` answers the same list with `appId`, `type`, `since`, `cursor` and `limit`, newest first, and pages with `nextCursor`. See [asobeast API](/api-reference/introduction). An agent reads it as the `alert_events` tool; see [MCP tool reference](/mcp/tools).
 
 ## Subscribe to events
 
@@ -458,9 +479,9 @@ Run a throwaway SMTP sink, and preview every template without sending anything. 
 
 ## Read the delivery history
 
-Every attempt on every channel is logged with its outcome and surfaced per channel on the settings page. Rows follow `RETENTION_DELIVERIES_DAYS`, which defaults to 30 days.
+Every attempt on every channel is logged with its outcome and surfaced per channel on the settings page. The delivery log lists attempts per channel, while the [alerts page](#see-what-the-run-detected) lists the events themselves. Rows follow `RETENTION_DELIVERIES_DAYS`, which defaults to 30 days.
 
-Completed batch claims follow `RETENTION_ALERT_EVENTS_DAYS`, also 30 days by default. Claims that have not finished are retained regardless, so a stuck flush is never pruned out from under its retry.
+Completed batch claims follow `RETENTION_ALERT_EVENTS_DAYS`, also 30 days by default. The alerts page reads the same claims, so a value under 30 shortens its history. Claims that have not finished are retained regardless, so a stuck flush is never pruned out from under its retry.
 
 ## Troubleshooting
 

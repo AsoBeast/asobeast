@@ -28,6 +28,7 @@ import { GRADES } from "./grade";
 import { KEYWORD_ZONES } from "./keyword-zones";
 import { POSITION_BANDS } from "./table/facets";
 import {
+  alertFeedParsers,
   planParam,
   chartParsers,
   chartTableParsers,
@@ -575,6 +576,20 @@ describe("keyword type parser", () => {
     expect(keywordFilterParsers.type.parseServerSide("brand,generic")).toEqual([
       "generic",
     ]);
+  });
+});
+
+describe("alert feed parsers", () => {
+  it("keeps only the feed events of a type list", () => {
+    expect(
+      alertFeedParsers.type.parse("rank.dropped,nope,chart.entered"),
+    ).toEqual(["rank.dropped", "chart.entered"]);
+  });
+
+  it("defaults to every type, no app and no search", () => {
+    expect(alertFeedParsers.type.parseServerSide(undefined)).toEqual([]);
+    expect(alertFeedParsers.app.parseServerSide(undefined)).toBeNull();
+    expect(alertFeedParsers.q.parseServerSide(undefined)).toBe("");
   });
 });
 

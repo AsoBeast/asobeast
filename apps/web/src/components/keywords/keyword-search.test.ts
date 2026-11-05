@@ -61,3 +61,11 @@ describe("matchesKeywordSearch", () => {
     expect(matchesKeywordSearch(text, search)).toBe(expected);
   });
 });
+
+describe("a keyword holding quote marks", () => {
+  it("is found by the search that leaves its quote marks out", () => {
+    expect(
+      matchesKeywordSearch('say "hi" app', parseKeywordSearch('say "hi"')),
+    ).toBe(true);
+  });
+});

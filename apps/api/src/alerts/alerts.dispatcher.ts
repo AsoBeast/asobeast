@@ -22,6 +22,25 @@ import { MailerService } from './mailer.service';
 import { OutboxRow, outboxRows } from './outbox-rows';
 import { receivesInstant } from './review-routing';
 
+function outboxWrite(row: OutboxRow, settledAt: Date | null) {
+  const data = {
+    event: row.event,
+    appId: row.appId,
+    keywordId: row.keywordId,
+    payload: row.payload as unknown as Prisma.InputJsonValue,
+  };
+  if (settledAt === null) {
+    return {
+      where: { dedupeKey: row.dedupeKey, flushedAt: null, flushId: null },
+      data,
+    };
+  }
+  return {
+    where: { dedupeKey: row.dedupeKey },
+    data: { ...data, flushedAt: settledAt },
+  };
+}
+
 @Injectable()
 export class AlertsDispatcher {
   private readonly logger = new Logger(AlertsDispatcher.name);
@@ -40,9 +59,10 @@ export class AlertsDispatcher {
     try {
       const payload = await this.identities.attach(raw);
       if (this.batched(payload)) {
-        await this.collect(payload);
+        await this.collect(payload, null);
         return;
       }
+      await this.recordSettled(payload);
       await Promise.all([
         this.dispatchWebhooks(payload),
         this.dispatchEmails(payload),
@@ -77,20 +97,29 @@ export class AlertsDispatcher {
     );
   }
 
-  private async collect(payload: AlertPayload): Promise<void> {
-    for (const row of outboxRows(payload)) {
-      await this.collectRow(row);
+  private async recordSettled(payload: AlertPayload): Promise<void> {
+    try {
+      await this.collect(payload, new Date());
+    } catch (error) {
+      this.logger.warn(`alert record failed: ${(error as Error).message}`);
     }
   }
 
-  private async collectRow(row: OutboxRow): Promise<void> {
-    const json = row.payload as unknown as Prisma.InputJsonValue;
-    const data = { event: row.event, appId: row.appId, payload: json };
-    const where = { dedupeKey: row.dedupeKey, flushedAt: null, flushId: null };
-    const updated = await this.prisma.alertEvent.updateMany({
-      where,
-      data,
-    });
+  private async collect(
+    payload: AlertPayload,
+    settledAt: Date | null,
+  ): Promise<void> {
+    for (const row of outboxRows(payload)) {
+      await this.collectRow(row, settledAt);
+    }
+  }
+
+  private async collectRow(
+    row: OutboxRow,
+    settledAt: Date | null,
+  ): Promise<void> {
+    const { where, data } = outboxWrite(row, settledAt);
+    const updated = await this.prisma.alertEvent.updateMany({ where, data });
     if (updated.count > 0) return;
     try {
       await this.prisma.alertEvent.create({

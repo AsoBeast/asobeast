@@ -14,6 +14,7 @@ const ROUTES: ReadonlyArray<readonly [string, string, RouteSetup?]> = [
   ["app overview", "/apps/app-long"],
   ["keyword workspace", "/apps/app-long/keywords"],
   ["portfolio", "/"],
+  ["alerts", "/alerts"],
   ["app audit", "/apps/app-long/audit"],
   ["play audit", "/apps/app-gp/audit"],
   ["competitors", "/apps/app-1/competitors"],

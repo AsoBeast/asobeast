@@ -704,6 +704,7 @@ model AlertEvent {
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   event       String
   appId       String?
+  keywordId   String?
   dedupeKey   String?
   payload     Json
   createdAt   DateTime  @default(now())
@@ -714,6 +715,7 @@ model AlertEvent {
   @@unique([workspaceId, dedupeKey])
   @@index([workspaceId, flushedAt, claimedAt])
   @@index([workspaceId, flushId])
+  @@index([workspaceId, createdAt(sort: Desc), id(sort: Desc)])
   @@index([createdAt])
 }
 

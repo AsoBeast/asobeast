@@ -832,3 +832,27 @@ test.describe("a translated opportunity map", () => {
     expect(errors).toEqual([]);
   });
 });
+
+test("a translated alerts page loads more, filters and searches", async ({
+  page,
+}) => {
+  const errors = collectDomErrors(page);
+  await page.goto("/alerts");
+  await hydrated(page.getByRole("button", { name: "Load more" }));
+
+  await translateText(page);
+  await page.getByRole("button", { name: "Load more" }).click();
+  await expect(page.locator('[data-slot="feed-end"]')).toHaveText(
+    /every event of the last 30 days/i,
+  );
+  await page.getByRole("button", { name: /^Filter by event type/ }).click();
+  await page.getByRole("option", { name: /Rank dropped/ }).click();
+  await page.keyboard.press("Escape");
+  await expect(page).toHaveURL(/type=rank\.dropped/);
+  await page.getByRole("textbox", { name: "Search alerts" }).fill("germany");
+  await expect(page).toHaveURL(/q=germany/);
+  await page.getByRole("button", { name: /^Remove Search/ }).click();
+
+  await expect(page).not.toHaveURL(/q=germany/);
+  expect(errors).toEqual([]);
+});

@@ -59,6 +59,26 @@ describe("insight tools", () => {
     expect(new URL(calls[1]!.url).searchParams.get("date")).toBe("2026-07-20");
   });
 
+  it("routes alert_events with its types joined and no absent app", async () => {
+    const { server, tools } = createHarness();
+    const { calls, client } = stubFetch(() => ({
+      status: 200,
+      body: { events: [], nextCursor: null },
+    }));
+    registerCatalogTools(server, client, INSIGHT_TOOLS);
+
+    await tools.get("alert_events")!.handler({
+      type: ["rank.dropped", "chart.entered"],
+      since: "2026-11-01",
+    });
+
+    const url = new URL(calls[0]!.url);
+    expect(url.pathname).toBe("/alerts/events");
+    expect(url.searchParams.get("type")).toBe("rank.dropped,chart.entered");
+    expect(url.searchParams.get("since")).toBe("2026-11-01");
+    expect(url.searchParams.has("appId")).toBe(false);
+  });
+
   it("routes change_impact with its window and market", async () => {
     const { server, tools } = createHarness();
     const { calls, client } = stubFetch(() => ({ status: 200, body: {} }));
