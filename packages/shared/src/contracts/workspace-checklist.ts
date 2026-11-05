@@ -46,6 +46,7 @@ export interface ChecklistAppFacts {
   markets: number;
   competitors: number;
   keywordFields: number;
+  reviewsNeedingReply: number;
 }
 
 export interface ChecklistFacts {
@@ -150,7 +151,14 @@ function applicableItems(facts: ChecklistFacts): WorkspaceChecklistItem[] {
     workspaceItem('connect_ai_client', facts.usedTokens),
     workspaceItem('turn_on_alert', facts.alertChannels),
     ...(facts.reviewsStored
-      ? [workspaceItem('reply_to_review', facts.replies, apps[0]?.id ?? null)]
+      ? [
+          workspaceItem(
+            'reply_to_review',
+            facts.replies,
+            (apps.find((app) => app.reviewsNeedingReply > 0) ?? apps[0])?.id ??
+              null,
+          ),
+        ]
       : []),
     ...(apps.length === 0 || appStoreApps.length > 0
       ? [

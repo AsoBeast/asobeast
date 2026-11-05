@@ -370,6 +370,57 @@ describe('Workspace checklist (e2e)', () => {
     });
   });
 
+  it('ignores the reviews and replies of a competitor', async () => {
+    const primary = await createApp();
+    const rival = await createApp({ primaryAppId: primary.id });
+    const review = await prisma.review.create({
+      data: { appId: rival.id, reviewId: 'rival-1', score: 1, text: 'Slow' },
+    });
+    await expect(itemOf('reply_to_review')).resolves.toBeUndefined();
+
+    await prisma.review.create({
+      data: { appId: primary.id, reviewId: 'own-1', score: 2, text: 'Meh' },
+    });
+    await prisma.reviewReply.create({
+      data: {
+        reviewId: review.id,
+        appId: rival.id,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        text: 'Not ours to answer.',
+        repliedAt: new Date(),
+      },
+    });
+    await expect(itemOf('reply_to_review')).resolves.toMatchObject({
+      done: false,
+      appId: primary.id,
+    });
+  });
+
+  it('points the reply at the oldest app with a review that needs one', async () => {
+    const first = await createApp();
+    const second = await createApp();
+    const answered = await prisma.review.create({
+      data: { appId: first.id, reviewId: 'first-1', score: 2, text: 'Meh' },
+    });
+    await prisma.reviewReply.create({
+      data: {
+        reviewId: answered.id,
+        appId: first.id,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        text: 'Thanks.',
+        repliedAt: new Date(),
+      },
+    });
+    await prisma.review.create({
+      data: { appId: second.id, reviewId: 'second-1', score: 1, text: 'Bad' },
+    });
+
+    await expect(itemOf('reply_to_review')).resolves.toMatchObject({
+      done: true,
+      appId: second.id,
+    });
+  });
+
   it('orders the list for the stored goal and ignores an unknown one', async () => {
     await prisma.workspace.update({
       where: { id: DEFAULT_WORKSPACE_ID },

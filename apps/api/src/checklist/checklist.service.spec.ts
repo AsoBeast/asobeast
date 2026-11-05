@@ -23,7 +23,11 @@ const fakeTx = (checklistGoal: string | null) =>
     apiToken: { count: jest.fn().mockResolvedValue(0) },
     webhook: { count: jest.fn().mockResolvedValue(0) },
     emailAlert: { count: jest.fn().mockResolvedValue(0) },
-    review: { findFirst: jest.fn().mockResolvedValue(null) },
+    review: {
+      findFirst: jest.fn().mockResolvedValue(null),
+      findMany: jest.fn().mockResolvedValue([]),
+      fields: { repliedAt: {} },
+    },
     reviewReply: { count: jest.fn().mockResolvedValue(0) },
     $queryRaw: jest.fn().mockResolvedValue([]),
   }) as unknown as Prisma.TransactionClient;

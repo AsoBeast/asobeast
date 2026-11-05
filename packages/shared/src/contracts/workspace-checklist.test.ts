@@ -34,6 +34,7 @@ const app = (
   markets: 1,
   competitors: 0,
   keywordFields: 0,
+  reviewsNeedingReply: 0,
   ...overrides,
 });
 
@@ -264,6 +265,25 @@ describe('buildChecklist', () => {
         'reply_to_review',
       ),
     ).toMatchObject({ done: true });
+  });
+
+  it('points the reply at the oldest app with a review that needs one', () => {
+    const checklist = buildChecklist(
+      facts({
+        apps: [
+          app('a'),
+          app('b', { reviewsNeedingReply: 1 }),
+          app('c', { reviewsNeedingReply: 1 }),
+        ],
+        reviewsStored: true,
+      }),
+      null,
+      null,
+    );
+    expect(itemOf(checklist, 'reply_to_review')).toMatchObject({
+      done: false,
+      appId: 'b',
+    });
   });
 
   it('marks the workspace items from their counts', () => {

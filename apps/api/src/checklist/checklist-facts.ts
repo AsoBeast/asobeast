@@ -1,8 +1,11 @@
 import type { Prisma } from '@prisma/client';
 import type { ChecklistAppFacts, ChecklistFacts } from '@asobeast/shared';
 import { DELIVERABLE_EMAIL_ALERTS } from '../alerts/deliverable-email-alerts';
+import { replyStateWhere } from '../reviews/review-list-query';
 
 type Tx = Prisma.TransactionClient;
+
+const OWN_APP = { app: { isCompetitor: false } } as const;
 
 function readPrimaryApps(tx: Tx) {
   return tx.app.findMany({
@@ -41,6 +44,18 @@ async function readAppsWithKeywordFields(tx: Tx): Promise<Set<string>> {
   return new Set(rows.map((row) => row.appId));
 }
 
+async function readAppsNeedingReply(tx: Tx): Promise<Set<string>> {
+  const rows = await tx.review.findMany({
+    where: {
+      ...OWN_APP,
+      ...replyStateWhere('needs_reply', tx.review.fields.repliedAt),
+    },
+    select: { appId: true },
+    distinct: ['appId'],
+  });
+  return new Set(rows.map((row) => row.appId));
+}
+
 async function readAlertChannels(tx: Tx): Promise<number> {
   const webhooks = await tx.webhook.count({ where: { active: true } });
   const emails = await tx.emailAlert.count({
@@ -57,12 +72,14 @@ export async function readChecklistFacts(
   const markets = await readMarketsByApp(tx);
   const withCompetitors = await readAppsWithCompetitors(tx);
   const withKeywordFields = await readAppsWithKeywordFields(tx);
+  const needingReply = await readAppsNeedingReply(tx);
   const apps: ChecklistAppFacts[] = primaryApps.map((app) => ({
     id: app.id,
     store: app.store,
     markets: markets.get(app.id) ?? 0,
     competitors: withCompetitors.has(app.id) ? 1 : 0,
     keywordFields: withKeywordFields.has(app.id) ? 1 : 0,
+    reviewsNeedingReply: needingReply.has(app.id) ? 1 : 0,
   }));
   return {
     apps,
@@ -75,9 +92,10 @@ export async function readChecklistFacts(
     }),
     alertChannels: await readAlertChannels(tx),
     reviewsStored:
-      (await tx.review.findFirst({ select: { id: true } })) !== null,
+      (await tx.review.findFirst({ where: OWN_APP, select: { id: true } })) !==
+      null,
     replies: await tx.reviewReply.count({
-      where: { repliedAt: { not: null } },
+      where: { ...OWN_APP, repliedAt: { not: null } },
     }),
   };
 }

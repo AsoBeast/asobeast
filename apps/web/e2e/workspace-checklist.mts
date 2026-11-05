@@ -33,6 +33,7 @@ const FOCUS_TIMER: ChecklistAppFacts = {
   markets: 1,
   competitors: 1,
   keywordFields: 0,
+  reviewsNeedingReply: 1,
 };
 
 const PARTIAL: ChecklistFacts = {
