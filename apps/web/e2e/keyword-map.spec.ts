@@ -792,7 +792,7 @@ test.describe("zones and thresholds", () => {
     );
   });
 
-  test("the map card keeps its place at 320 px while the page hydrates", async ({
+  test("the map card keeps its server rendered place at 320 px after hydration", async ({
     page,
     context,
   }) => {
@@ -805,16 +805,18 @@ test.describe("zones and thresholds", () => {
     );
     await serverRender.goto(MAP_URL);
     await expect(mapCard(serverRender)).toBeVisible();
+    await serverRender.evaluate(() => document.fonts.ready);
     const served = await mapCard(serverRender).boundingBox();
     await serverRender.close();
 
     await page.setViewportSize({ width: 320, height: 900 });
     await page.goto(MAP_URL);
     await hydrated(page.getByRole("button", { name: "Columns" }));
-    await page.waitForLoadState("networkidle");
+    await expect(dots(page).first()).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
     const settled = await mapCard(page).boundingBox();
 
-    expect(served?.y).toBeDefined();
+    expect(served).not.toBeNull();
     expect(settled?.y).toBe(served?.y);
   });
 

@@ -772,22 +772,23 @@ test("the status filter names its value before the page hydrates", async ({
   ).toHaveText("All statuses");
 });
 
-test("widening the window closes the phone filters and keeps focus on a facet", async ({
+test("each width offers one way to filter, and widening closes the phone filters onto a facet", async ({
   page,
 }) => {
+  const filters = page.getByRole("button", { name: /^Filters/ });
+  const sourceFacet = page.getByRole("button", { name: "Filter by source" });
+  const sheet = page.getByRole("dialog", { name: "Filters" });
   await page.setViewportSize({ width: 375, height: 800 });
   await page.goto("/apps/app-1/keywords");
-  await (
-    await hydrated(page.getByRole("button", { name: /^Filters/ }))
-  ).click();
-  await expect(page.getByRole("dialog", { name: "Filters" })).toBeVisible();
+  await expect(sourceFacet).toHaveCount(0);
+  await (await hydrated(filters)).click();
+  await expect(sheet).toBeVisible();
 
   await page.setViewportSize({ width: 1280, height: 800 });
 
-  await expect(page.getByRole("dialog", { name: "Filters" })).toHaveCount(0);
-  await expect(
-    page.getByRole("button", { name: "Filter by source" }),
-  ).toBeFocused();
+  await expect(sheet).toHaveCount(0);
+  await expect(filters).toHaveCount(0);
+  await expect(sourceFacet).toBeFocused();
 });
 
 test("the phone filters open at a width the larger default font keeps narrow", async ({
