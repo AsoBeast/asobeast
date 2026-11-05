@@ -71,6 +71,12 @@ describe('JobTargetCountry', () => {
     ).resolves.toBe('jp');
   });
 
+  it('takes the market of the keyword a discovery check searches', async () => {
+    await expect(
+      target.of(job(JOBS.DISCOVER_KEYWORD, { appId: 'a1', keywordId: 'k1' })),
+    ).resolves.toBe('jp');
+  });
+
   it('reports no storefront when the row is gone', async () => {
     findUnique.mockResolvedValue(null);
 

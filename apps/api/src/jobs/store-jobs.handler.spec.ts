@@ -6,6 +6,7 @@ import { SubtitleBackfill } from '../apps/subtitle-backfill.service';
 import { CollectionEligibility } from '../auth/collection-eligibility.service';
 import { CategoryRanksService } from '../category-ranks/category-ranks.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
+import { DiscoveryCheck } from '../keyword-discovery/discovery-check.service';
 import { SpiderService } from '../keywords/spider.service';
 import { RankingsService } from '../rankings/rankings.service';
 import { ReviewsService } from '../reviews/reviews.service';
@@ -21,6 +22,7 @@ describe('StoreJobsHandler', () => {
   const resolveSubtitle = jest.fn();
   const runSpiderProbe = jest.fn();
   const probeLocalization = jest.fn();
+  const runDiscoveryCheck = jest.fn<Promise<void>, [unknown, boolean]>();
   const checkCategory = jest.fn().mockResolvedValue(undefined);
   const syncReviews = jest.fn().mockResolvedValue([]);
   const checkKeyword = jest.fn().mockResolvedValue(undefined);
@@ -42,6 +44,7 @@ describe('StoreJobsHandler', () => {
     countryOf.mockReset().mockResolvedValue('us');
     runSpiderProbe.mockReset().mockResolvedValue(undefined);
     probeLocalization.mockReset().mockResolvedValue(undefined);
+    runDiscoveryCheck.mockReset().mockResolvedValue(undefined);
     forWorkspace.mockReset().mockResolvedValue(true);
     scoresKeyword.mockReset().mockResolvedValue(true);
     scoreKeyword.mockReset().mockResolvedValue(undefined);
@@ -62,6 +65,7 @@ describe('StoreJobsHandler', () => {
       { resolve: resolveSubtitle } as unknown as SubtitleBackfill,
       { forWorkspace, scoresKeyword } as unknown as CollectionEligibility,
       { probe: probeLocalization } as unknown as LocalizationDetection,
+      { run: runDiscoveryCheck } as unknown as DiscoveryCheck,
     );
   });
 
@@ -238,6 +242,38 @@ describe('StoreJobsHandler', () => {
 
       expect(through).not.toHaveBeenCalled();
       expect(runSpiderProbe).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('a keyword discovery check', () => {
+    const check = (attemptsMade = 0) =>
+      ({
+        name: JOBS.DISCOVER_KEYWORD,
+        id: '6',
+        data: { appId: 'a1', keywordId: 'k1', workspaceId: 'ws_a' },
+        queueName: QUEUES.APP_STORE,
+        attemptsMade,
+        opts: { attempts: 3 },
+      }) as Job;
+
+    it('runs the check with its final attempt through one egress endpoint', async () => {
+      await handler.handle(check(0));
+      await handler.handle(check(2));
+
+      expect(through).toHaveBeenCalledTimes(2);
+      expect(runDiscoveryCheck.mock.calls).toEqual([
+        [check().data, false],
+        [check().data, true],
+      ]);
+    });
+
+    it('takes no egress endpoint once its workspace may no longer collect', async () => {
+      forWorkspace.mockResolvedValue(false);
+
+      await handler.handle(check());
+
+      expect(through).not.toHaveBeenCalled();
+      expect(runDiscoveryCheck).not.toHaveBeenCalled();
     });
   });
 
