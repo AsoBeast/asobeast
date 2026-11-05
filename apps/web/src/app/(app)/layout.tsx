@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { AuthGate } from "@/components/auth/AuthGate";
+import { ChecklistPill } from "@/components/checklist/ChecklistPill";
 import { AlertsSeenProvider } from "@/components/layout/AlertsSeen";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { InsetHeader } from "@/components/layout/InsetHeader";
@@ -46,6 +47,7 @@ export default async function AppLayout({
             >
               <SystemBanner />
               {children}
+              <ChecklistPill />
             </main>
           </AuthGate>
         </SidebarInset>

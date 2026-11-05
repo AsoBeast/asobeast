@@ -1,6 +1,8 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
+import { hydrated } from "./hydrated.mts";
 import { expect, test } from "./session.mts";
+import { seedChecklist } from "./workspace-checklist.mts";
 
 interface NamedPopover {
   name: string;
@@ -10,6 +12,18 @@ interface NamedPopover {
 }
 
 const POPOVERS: NamedPopover[] = [
+  {
+    name: "Setup checklist",
+    path: "/apps/app-1",
+    open: async (page) => {
+      await seedChecklist(page.context(), "partial");
+      await page.reload();
+      const pill = page.getByRole("button", {
+        name: /done in the setup checklist$/,
+      });
+      await (await hydrated(pill)).click();
+    },
+  },
   {
     name: "Choose captured day",
     path: "/charts?view=table",

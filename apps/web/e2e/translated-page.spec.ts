@@ -2,6 +2,7 @@ import { type Page } from "@playwright/test";
 import { PLAN_LIMITS, UPGRADE_PATH, type AccountPlan } from "@asobeast/shared";
 import { holdRequest } from "./held-request.mts";
 import { hydrated } from "./hydrated.mts";
+import { seedChecklist } from "./workspace-checklist.mts";
 import {
   chooseImportFile,
   openImportDialog,
@@ -897,5 +898,27 @@ test("a translated gap analysis switches its tabs and market", async ({
 
   await expect(page).toHaveURL(/gapCountry=de/);
   await expect(section.getByRole("tab", { name: /\(1\)$/ })).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test("a translated checklist pill opens, shrinks and follows a step", async ({
+  page,
+  context,
+}) => {
+  const errors = collectDomErrors(page);
+  await seedChecklist(context, "partial");
+  await page.goto("/apps/app-1");
+  const pill = await hydrated(
+    page.getByRole("button", { name: /done in the setup checklist$/i }),
+  );
+
+  await translateText(page);
+  await pill.click();
+  const popover = page.getByRole("dialog");
+  await popover.getByRole("button", { name: /shrink the pill/i }).click();
+  await popover.getByRole("link", { name: /add a market/i }).click();
+
+  await expect(page).toHaveURL(/\/apps\/app-1\/keywords$/);
+  await expect(page.getByRole("button", { name: "Try again" })).toHaveCount(0);
   expect(errors).toEqual([]);
 });
