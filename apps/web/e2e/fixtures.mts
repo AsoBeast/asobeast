@@ -14,7 +14,10 @@ import type {
   ChartMover,
   ChartPage,
   CategoryRankSeriesItem,
+  CompetitorAnalysis,
   CompetitorDiscovery,
+  CompetitorGapKeyword,
+  CompetitorGaps,
   DailyBudget,
   EmailAlertItem,
   FirstRunStatus,
@@ -762,7 +765,16 @@ export const APP_1_SUMMARY: AppSummary = {
   lastRefreshAt: utcTimestampDaysAgo(0),
   trackedKeywords: 5,
   competitors: 1,
+  shareOfVoice: { current: 42, delta7d: 3.5, competitors: 1 },
+  nonBrandedShareOfVoice: { current: 51.3, delta7d: -1.2, competitors: 1 },
 };
+
+const NOT_CHECKED_SHARE = {
+  current: null,
+  delta7d: null,
+  competitors: 0,
+  reason: "notChecked",
+} as const;
 
 export const APP_1_MARKET_SUMMARIES: Record<string, AppSummary> = {
   us: {
@@ -783,6 +795,15 @@ export const APP_1_MARKET_SUMMARIES: Record<string, AppSummary> = {
     },
     movers: { up: [], down: [] },
     trackedKeywords: 2,
+    shareOfVoice: NOT_CHECKED_SHARE,
+    nonBrandedShareOfVoice: undefined,
+  },
+  de: {
+    ...APP_1_SUMMARY,
+    visibility: { current: 24.1, delta7d: 1, delta30d: null },
+    trackedKeywords: 1,
+    shareOfVoice: NOT_CHECKED_SHARE,
+    nonBrandedShareOfVoice: undefined,
   },
 };
 
@@ -791,6 +812,25 @@ export const APP_1_VISIBILITY: VisibilityHistory = {
     date: utcDaysAgo(29 - index),
     visibility: 50 + (index % 12),
   })),
+};
+
+const sharePoints = (days: number, base: number) =>
+  Array.from({ length: days }, (_, index) => ({
+    date: utcDaysAgo(days - 1 - index),
+    share: base + (index % 9),
+    competitors: 1,
+  }));
+
+export const APP_1_VISIBILITY_COMPARE: VisibilityHistory = {
+  ...APP_1_VISIBILITY,
+  shareOfVoice: sharePoints(8, 36),
+  nonBrandedShareOfVoice: sharePoints(8, 45),
+};
+
+export const APP_1_VISIBILITY_COMPARE_SHORT: VisibilityHistory = {
+  points: APP_1_VISIBILITY.points.slice(-3),
+  shareOfVoice: sharePoints(3, 40),
+  nonBrandedShareOfVoice: sharePoints(3, 48),
 };
 
 export const APP_1_RANK_DISTRIBUTION_HISTORY: RankDistributionHistory = {
@@ -1419,6 +1459,12 @@ export const APP_2_SUMMARY: AppSummary = {
   lastRefreshAt: null,
   trackedKeywords: 0,
   competitors: 0,
+  shareOfVoice: {
+    current: null,
+    delta7d: null,
+    competitors: 0,
+    reason: "noCompetitors",
+  },
 };
 
 export const APP_2_DETAIL: AppDetail = {
@@ -2888,6 +2934,234 @@ export const APP_GP: AppListItem = {
   groupId: null,
 };
 
+export const GAP_STATE_COOKIE = "e2e_gap_state";
+export const FAIL_ANALYSIS_COOKIE = "e2e_fail_analysis";
+
+const gapRow = (
+  row: Omit<CompetitorGapKeyword, "gap" | "lastCheckedOn" | "country"> &
+    Partial<CompetitorGapKeyword>,
+): CompetitorGapKeyword => ({
+  gap: null,
+  country: "us",
+  lastCheckedOn: utcDaysAgo(0),
+  ...row,
+});
+
+const GAP_PRODUCTIVITY = gapRow({
+  keywordId: "kw-4",
+  text: "productivity app",
+  volume: 65,
+  difficulty: 60,
+  opportunity: 38,
+  yourPosition: null,
+  bestCompetitorPosition: 8,
+  bestCompetitorId: "comp-1",
+});
+const GAP_DEEP = gapRow({
+  keywordId: "kw-gap-deep",
+  text: "deep focus",
+  volume: 20,
+  difficulty: 80,
+  opportunity: 9,
+  yourPosition: null,
+  bestCompetitorPosition: 5,
+  bestCompetitorId: "comp-1",
+});
+const GAP_FAR = gapRow({
+  keywordId: "kw-gap-far",
+  text: "study timer",
+  volume: null,
+  difficulty: null,
+  opportunity: null,
+  yourPosition: 150,
+  bestCompetitorPosition: 25,
+  bestCompetitorId: "comp-1",
+});
+const GAP_STALE = gapRow({
+  keywordId: "kw-gap-stale",
+  text: "flow state",
+  volume: 40,
+  difficulty: 70,
+  opportunity: 20,
+  yourPosition: null,
+  bestCompetitorPosition: 9,
+  bestCompetitorId: "comp-1",
+  lastCheckedOn: utcDaysAgo(5),
+});
+const THREAT_OVERTOOK = gapRow({
+  keywordId: "kw-2",
+  text: "pomodoro",
+  volume: 70,
+  difficulty: 70,
+  opportunity: 31,
+  yourPosition: 12,
+  bestCompetitorPosition: 4,
+  bestCompetitorId: "comp-1",
+  threat: "overtook",
+  competitorDelta: 2,
+  overtookOn: utcDaysAgo(3),
+});
+const THREAT_CLOSING = gapRow({
+  keywordId: "kw-de-1",
+  text: "pomodoro",
+  country: "de",
+  volume: 5,
+  difficulty: 30,
+  opportunity: 12,
+  yourPosition: 7,
+  bestCompetitorPosition: 9,
+  bestCompetitorId: "comp-1",
+  threat: "closing",
+  competitorDelta: 2,
+  overtookOn: null,
+});
+const LEAD_FOCUS = gapRow({
+  keywordId: "kw-1",
+  text: "focus timer",
+  volume: 55,
+  difficulty: 40,
+  opportunity: 33,
+  yourPosition: 3,
+  bestCompetitorPosition: 9,
+  bestCompetitorId: "comp-1",
+  gap: 6,
+});
+const LEAD_ALONE = gapRow({
+  keywordId: "kw-5",
+  text: "time blocking",
+  volume: null,
+  difficulty: null,
+  opportunity: null,
+  yourPosition: 45,
+  bestCompetitorPosition: null,
+  bestCompetitorId: null,
+});
+
+const olderList = (
+  row: CompetitorGapKeyword,
+  gap: number | null = null,
+): CompetitorGapKeyword => ({
+  keywordId: row.keywordId,
+  text: row.text,
+  volume: row.volume,
+  difficulty: row.difficulty,
+  opportunity: row.opportunity,
+  yourPosition: row.yourPosition,
+  bestCompetitorPosition: row.bestCompetitorPosition,
+  bestCompetitorId: row.bestCompetitorId,
+  gap,
+});
+
+const APP_1_GAPS: CompetitorGaps = {
+  theyRankYouDont: [GAP_PRODUCTIVITY, GAP_STALE, GAP_DEEP].map((row) =>
+    olderList(row),
+  ),
+  youRankTheyDont: [olderList(LEAD_ALONE)],
+  outranked: [olderList(THREAT_OVERTOOK, 8), olderList(GAP_FAR, 125)],
+  keywordGaps: [GAP_PRODUCTIVITY, GAP_STALE, GAP_DEEP, GAP_FAR],
+  winnable: [GAP_PRODUCTIVITY, GAP_FAR],
+  threats: [THREAT_OVERTOOK, THREAT_CLOSING],
+  lead: [LEAD_FOCUS, LEAD_ALONE],
+  coverage: {
+    competitors: 1,
+    delisted: 0,
+    markets: [
+      { country: "de", keywords: 1, compared: 1 },
+      { country: "pl", keywords: 2, compared: 0 },
+      { country: "us", keywords: 8, compared: 8 },
+    ],
+  },
+};
+
+export const APP_1_ANALYSIS: CompetitorAnalysis = {
+  metadataComparison: [
+    {
+      appId: "app-1",
+      name: "Focus Timer",
+      isYou: true,
+      title: "Focus Timer",
+      titleChars: 11,
+      subtitle: "Pomodoro & deep work",
+      subtitleChars: 20,
+    },
+    {
+      appId: "comp-1",
+      name: "Rival Focus",
+      isYou: false,
+      title: "Rival Focus",
+      titleChars: 11,
+      subtitle: null,
+      subtitleChars: 0,
+    },
+  ],
+  gaps: APP_1_GAPS,
+  positionMap: [
+    {
+      appId: "app-1",
+      name: "Focus Timer",
+      isYou: true,
+      visibility: 62.4,
+      ratingAvg: 4.6,
+    },
+    {
+      appId: "comp-1",
+      name: "Rival Focus",
+      isYou: false,
+      visibility: 58.1,
+      ratingAvg: 4.2,
+    },
+  ],
+};
+
+const withoutLists = (
+  coverage: NonNullable<CompetitorGaps["coverage"]>,
+): CompetitorAnalysis => ({
+  ...APP_1_ANALYSIS,
+  gaps: {
+    ...APP_1_GAPS,
+    keywordGaps: [],
+    winnable: [],
+    threats: [],
+    lead: [],
+    coverage,
+  },
+});
+
+const UNCOMPARED_US = [{ country: "us", keywords: 5, compared: 0 }];
+
+export const GAP_STATES: Record<string, CompetitorAnalysis> = {
+  "no-competitors": withoutLists({
+    competitors: 0,
+    delisted: 0,
+    markets: UNCOMPARED_US,
+  }),
+  "all-delisted": withoutLists({
+    competitors: 0,
+    delisted: 1,
+    markets: UNCOMPARED_US,
+  }),
+  "nothing-to-win": withoutLists({
+    competitors: 1,
+    delisted: 0,
+    markets: [{ country: "us", keywords: 5, compared: 5 }],
+  }),
+};
+
+export const EMPTY_ANALYSIS: CompetitorAnalysis = {
+  metadataComparison: [],
+  gaps: {
+    theyRankYouDont: [],
+    youRankTheyDont: [],
+    outranked: [],
+    keywordGaps: [],
+    winnable: [],
+    threats: [],
+    lead: [],
+    coverage: { competitors: 0, delisted: 0, markets: [] },
+  },
+  positionMap: [],
+};
+
 export interface AppDataset {
   detail: AppDetail;
   summary: AppSummary;
@@ -2906,6 +3180,8 @@ export interface AppDataset {
   changeImpact: ChangeImpactReport;
   discovery: CompetitorDiscovery;
   comparison: KeywordComparison;
+  competitorAnalysis?: CompetitorAnalysis;
+  visibilityCompare?: VisibilityHistory;
 }
 
 const newAppKeyword = (
@@ -3084,6 +3360,8 @@ export const DATASETS: Record<string, AppDataset> = {
     changeImpact: APP_1_CHANGE_IMPACT,
     discovery: APP_1_DISCOVERY,
     comparison: APP_1_COMPARISON,
+    competitorAnalysis: APP_1_ANALYSIS,
+    visibilityCompare: APP_1_VISIBILITY_COMPARE,
   },
   "app-2": {
     detail: APP_2_DETAIL,
