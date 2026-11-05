@@ -91,6 +91,8 @@ export interface TrackedKeywordItem {
   competitorsInTop10?: number | null;
   playAcquisitions?: PlayAcquisitions | null;
   matchedIn?: KeywordMarkSegment[];
+  keywordClass?: KeywordClass;
+  keywordClassSource?: KeywordClassSource;
   lastRankedPosition?: number | null;
   lastRankedOn?: string | null;
 }
@@ -166,7 +168,22 @@ export interface KeywordUpdateRequest {
   relevance?: number | null;
   tags?: string[];
   note?: string | null;
+  keywordClass?: KeywordClass | null;
 }
+
+export const KEYWORD_CLASSES = [
+  'ownBrand',
+  'competitorBrand',
+  'generic',
+] as const;
+export type KeywordClass = (typeof KEYWORD_CLASSES)[number];
+
+export const KEYWORD_CLASS_SOURCES = ['detected', 'owner'] as const;
+export type KeywordClassSource = (typeof KEYWORD_CLASS_SOURCES)[number];
+
+export const isKeywordClass = (value: unknown): value is KeywordClass =>
+  typeof value === 'string' &&
+  KEYWORD_CLASSES.some((keywordClass) => keywordClass === value);
 
 export const KEYWORD_BULK_ACTIONS = ['pause', 'resume', 'untrack'] as const;
 export type KeywordBulkAction = (typeof KEYWORD_BULK_ACTIONS)[number];

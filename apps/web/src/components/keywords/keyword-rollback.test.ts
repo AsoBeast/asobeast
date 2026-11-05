@@ -84,4 +84,51 @@ describe("rollbackKeywordUpdate", () => {
       }),
     ).toBeUndefined();
   });
+
+  it("restores the class and its source and keeps a concurrent tags and note edit", () => {
+    const previous = [
+      keyword("kw-1", {
+        keywordClass: "ownBrand",
+        keywordClassSource: "detected",
+      }),
+    ];
+    const current = [
+      keyword("kw-1", {
+        keywordClass: "generic",
+        keywordClassSource: "owner",
+        tags: ["core"],
+        note: "Push in May",
+      }),
+    ];
+
+    expect(
+      rollbackKeywordUpdate(current, previous, "kw-1", {
+        keywordClass: "generic",
+      }),
+    ).toEqual([
+      keyword("kw-1", {
+        keywordClass: "ownBrand",
+        keywordClassSource: "detected",
+        tags: ["core"],
+        note: "Push in May",
+      }),
+    ]);
+  });
+
+  it("leaves the class alone when the update did not name it", () => {
+    const previous = [keyword("kw-1", { keywordClass: "ownBrand" })];
+    const current = [
+      keyword("kw-1", {
+        keywordClass: "generic",
+        keywordClassSource: "owner",
+        note: "x",
+      }),
+    ];
+
+    expect(
+      rollbackKeywordUpdate(current, previous, "kw-1", { note: "x" }),
+    ).toEqual([
+      keyword("kw-1", { keywordClass: "generic", keywordClassSource: "owner" }),
+    ]);
+  });
 });

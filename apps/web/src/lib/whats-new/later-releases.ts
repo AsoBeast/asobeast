@@ -49,6 +49,11 @@ export const LATER_RELEASES: readonly Release[] = [
         text: "The rankings report and its movers table follow the market pills at the top of the page, so All markets watches every storefront and one pill watches just that one.",
       },
       {
+        kind: "new",
+        title: "Brand and generic keywords",
+        text: "Each keyword is marked as your own brand, a competitor's brand or a generic search. A B or CB badge sits after the keyword, a Type filter keeps one kind, the export carries the type, and the menu of a keyword lets you set it yourself when it reads wrong.",
+      },
+      {
         kind: "improved",
         title: "A clearer sign up",
         text: "On the hosted service you confirm your email first, then pick a plan on one page that shows the price, what is included and the questions people ask most.",

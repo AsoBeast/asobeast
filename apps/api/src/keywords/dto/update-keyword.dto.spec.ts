@@ -54,4 +54,31 @@ describe('UpdateKeywordDto', () => {
     expect(errors).toEqual([]);
     expect(dto.note).toBeNull();
   });
+
+  it.each(['ownBrand', 'competitorBrand', 'generic', null])(
+    'accepts %j as a keyword class',
+    async (keywordClass) => {
+      const { dto, errors } = await validated({ keywordClass });
+
+      expect(errors).toEqual([]);
+      expect(dto.keywordClass).toBe(keywordClass);
+    },
+  );
+
+  it('accepts a body without a keyword class', async () => {
+    const { dto, errors } = await validated({ note: 'x' });
+
+    expect(errors).toEqual([]);
+    expect(dto.keywordClass).toBeUndefined();
+  });
+
+  it.each(['brand', '', 3, ['generic']])(
+    'refuses %j as a keyword class without throwing',
+    async (keywordClass) => {
+      const { errors } = await validated({ keywordClass });
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0].property).toBe('keywordClass');
+    },
+  );
 });

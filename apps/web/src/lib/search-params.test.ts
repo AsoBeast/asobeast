@@ -555,6 +555,30 @@ describe("keywordZone parser", () => {
   });
 });
 
+describe("keyword type parser", () => {
+  const serialize = createSerializer({ type: keywordFilterParsers.type });
+
+  it("reads a comma list of classes and defaults to none", () => {
+    expect(
+      keywordFilterParsers.type.parseServerSide("ownBrand,generic"),
+    ).toEqual(["ownBrand", "generic"]);
+    expect(keywordFilterParsers.type.parseServerSide(undefined)).toEqual([]);
+  });
+
+  it("round trips the selected classes and keeps none out of the url", () => {
+    expect(serialize({ type: ["ownBrand", "competitorBrand"] })).toBe(
+      "?type=ownBrand,competitorBrand",
+    );
+    expect(serialize({ type: [] })).toBe("");
+  });
+
+  it("drops a class it does not know", () => {
+    expect(keywordFilterParsers.type.parseServerSide("brand,generic")).toEqual([
+      "generic",
+    ]);
+  });
+});
+
 describe("alert feed parsers", () => {
   it("keeps only the feed events of a type list", () => {
     expect(

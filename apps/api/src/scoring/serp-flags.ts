@@ -16,7 +16,7 @@ export const BRAND_TYPO_MIN_LENGTH = 6;
 export const BRAND_DOUBLE_TYPO_MIN_LENGTH = 9;
 
 const TITLE_SEPARATOR = /\s[-–—|·•]\s|[:,]/;
-const DEVELOPER_SUFFIXES = new Set([
+export const DEVELOPER_SUFFIXES: ReadonlySet<string> = new Set([
   'inc',
   'llc',
   'ltd',

@@ -67,7 +67,7 @@ export class KeywordsController {
   @ApiOperation({
     summary: 'List tracked keywords for an app',
     description:
-      "competitorsInTop10 is the number of distinct competitors of the app in the newest stored top 10 of the keyword, or null when the app has no competitor or the newest snapshot is older than yesterday UTC. trackedAt is when the app started tracking the keyword in that market. dropStreak is the number of consecutive checks, newest first, at which the position got worse (a larger number, or not found after a ranked position), 0 when the newest check did not fall, and null for a paused keyword or one whose newest check is older than yesterday UTC. uncovered is set on active keywords only and is true when no field of the listing of the keyword's market (title, subtitle and saved keyword field on the App Store, title and descriptions on Google Play) holds it, the same verdict as the metadata coverage table. matchedIn is present when a word of the keyword is found in the listing of the keyword's market: the keyword text split into runs, each marked with the strongest place that holds the word (title, subtitle, shortDescription or keywordField) and whether it matched exactly or only with accents ignored. It is absent when no word is found. The App Store judges title, subtitle and the saved keyword field of every localization the market reads; Google Play judges title and short description. lastRankedPosition is the newest position at which the app was found before the latest check when the latest check did not find it, and lastRankedOn is its UTC day; both are null when the latest check found the app, when no check within the stored history did, or when the keyword was never checked. previousPosition is only the position of the day before the latest check.",
+      "competitorsInTop10 is the number of distinct competitors of the app in the newest stored top 10 of the keyword, or null when the app has no competitor or the newest snapshot is older than yesterday UTC. trackedAt is when the app started tracking the keyword in that market. dropStreak is the number of consecutive checks, newest first, at which the position got worse (a larger number, or not found after a ranked position), 0 when the newest check did not fall, and null for a paused keyword or one whose newest check is older than yesterday UTC. uncovered is set on active keywords only and is true when no field of the listing of the keyword's market (title, subtitle and saved keyword field on the App Store, title and descriptions on Google Play) holds it, the same verdict as the metadata coverage table. matchedIn is present when a word of the keyword is found in the listing of the keyword's market: the keyword text split into runs, each marked with the strongest place that holds the word (title, subtitle, shortDescription or keywordField) and whether it matched exactly or only with accents ignored. It is absent when no word is found. The App Store judges title, subtitle and the saved keyword field of every localization the market reads; Google Play judges title and short description. keywordClass is ownBrand, competitorBrand or generic: the keyword holds the whole brand name of the app (the lead of its home title or of its title in the keyword's market, or its developer) or of a competitor, or the stored search page flagged it as a brand search. When the page shows most top results already target the phrase, the keyword is generic unless the brand flag is raised. keywordClassSource is owner when the owner set the class and detected otherwise. lastRankedPosition is the newest position at which the app was found before the latest check when the latest check did not find it, and lastRankedOn is its UTC day; both are null when the latest check found the app, when no check within the stored history did, or when the keyword was never checked. previousPosition is only the position of the day before the latest check.",
   })
   list(
     @Param('id') id: string,
@@ -78,6 +78,7 @@ export class KeywordsController {
       competitorFacts: true,
       coverageFacts: true,
       listingMarks: true,
+      brandFacts: true,
     });
   }
 
@@ -202,6 +203,8 @@ export class KeywordsController {
   @QueuesWork()
   @ApiOperation({
     summary: 'Update a tracked keyword active flag or relevance',
+    description:
+      'Changes any of active, relevance, tags, note and keywordClass. keywordClass sets the class of the keyword to ownBrand, competitorBrand or generic whatever the detection says, and null goes back to the detected class. The answer carries keywordClass and keywordClassSource.',
   })
   update(
     @Param('id') id: string,

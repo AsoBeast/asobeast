@@ -358,6 +358,8 @@ export function manualKeyword(
 export const APP_1_KEYWORDS: TrackedKeywordItem[] = [
   {
     keywordId: "kw-1",
+    keywordClass: "ownBrand",
+    keywordClassSource: "detected",
     text: "focus timer",
     trackedAt: utcTimestampDaysAgo(30),
     uncovered: false,
@@ -405,6 +407,8 @@ export const APP_1_KEYWORDS: TrackedKeywordItem[] = [
   },
   {
     keywordId: "kw-2",
+    keywordClass: "competitorBrand",
+    keywordClassSource: "detected",
     text: "pomodoro",
     trackedAt: utcTimestampDaysAgo(20),
     uncovered: false,
@@ -448,6 +452,8 @@ export const APP_1_KEYWORDS: TrackedKeywordItem[] = [
   },
   {
     keywordId: "kw-3",
+    keywordClass: "generic",
+    keywordClassSource: "detected",
     text: "study timer",
     trackedAt: utcTimestampDaysAgo(10),
     uncovered: false,
@@ -481,6 +487,8 @@ export const APP_1_KEYWORDS: TrackedKeywordItem[] = [
   },
   {
     keywordId: "kw-4",
+    keywordClass: "generic",
+    keywordClassSource: "detected",
     text: "productivity app",
     trackedAt: utcTimestampDaysAgo(5),
     uncovered: true,
@@ -509,6 +517,8 @@ export const APP_1_KEYWORDS: TrackedKeywordItem[] = [
   },
   {
     keywordId: "kw-5",
+    keywordClass: "generic",
+    keywordClassSource: "detected",
     text: "time blocking",
     trackedAt: utcTimestampDaysAgo(2),
     competitorsInTop10: null,
@@ -3561,6 +3571,22 @@ DATASETS[APP_TAGS_ID] = {
     tags: [],
     note: null,
   })),
+};
+
+export const APP_CLASS_ID = "app-class";
+
+DATASETS[APP_CLASS_ID] = {
+  ...DATASETS[APP_TAGS_ID],
+  detail: { ...APP_1_DETAIL, id: APP_CLASS_ID, name: "Class Lab" },
+  keywords: structuredClone(DATASETS[APP_TAGS_ID].keywords),
+};
+
+export const APP_CLASS_FOCUS_ID = "app-class-focus";
+
+DATASETS[APP_CLASS_FOCUS_ID] = {
+  ...DATASETS[APP_TAGS_ID],
+  detail: { ...APP_1_DETAIL, id: APP_CLASS_FOCUS_ID, name: "Class Focus Lab" },
+  keywords: structuredClone(DATASETS[APP_TAGS_ID].keywords),
 };
 
 export const APP_BULK_BAR_ID = "app-bulk-bar";

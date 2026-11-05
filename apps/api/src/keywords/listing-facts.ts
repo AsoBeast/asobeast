@@ -8,6 +8,7 @@ import {
 import { judgeKeywordCoverage } from '../metadata/keyword-coverage-judge';
 import { fieldPhrases } from '../metadata/listing-surfaces';
 import { PrismaService } from '../prisma/prisma.service';
+import { keywordClassifier, loadBrandProfile } from './keyword-brand-profile';
 import { indexKeywordFields, storedKeywordFields } from './keyword-field-index';
 import { keywordMarker } from './keyword-marks';
 import { AppFacts } from './keywords.mapper';
@@ -17,11 +18,12 @@ export async function listingFacts(
   prisma: PrismaService,
   app: Pick<KeywordApp, 'id' | 'country' | 'store'>,
   markets: readonly string[] = [],
-  options: { coverage?: boolean; marks?: boolean } = {},
+  options: { coverage?: boolean; marks?: boolean; brand?: boolean } = {},
 ): Promise<AppFacts> {
-  const [listings, stored] = await Promise.all([
+  const [listings, stored, profile] = await Promise.all([
     latestListingTexts(prisma, app.id, app.country, [app.country, ...markets]),
     storedKeywordFields(prisma, app.id),
+    options.brand ? loadBrandProfile(prisma, app) : null,
   ]);
   const home = listings.get(app.country);
   const marketTexts = new Map(
@@ -29,10 +31,22 @@ export async function listingFacts(
       .filter(([market]) => market !== app.country)
       .map(([market, listing]) => [market, relevanceText(listing)]),
   );
+  const snapshotText = home ? relevanceText(home) : '';
   const facts: AppFacts = {
-    snapshotText: home ? relevanceText(home) : '',
+    snapshotText,
     marketTexts,
     inKeywordField: indexKeywordFields(stored),
+    ...(profile
+      ? {
+          classOf: keywordClassifier(profile, {
+            snapshotText,
+            marketTexts,
+            marketTitles: new Map(
+              [...listings].map(([market, listing]) => [market, listing.title]),
+            ),
+          }),
+        }
+      : {}),
   };
   if (!options.coverage && !options.marks) {
     return facts;

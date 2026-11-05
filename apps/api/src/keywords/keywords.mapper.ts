@@ -2,12 +2,15 @@ import { Keyword, KeywordMetric, KeywordRanking } from '@prisma/client';
 import {
   CURRENT_FORMULA_VERSIONS,
   isCheckFresh,
+  isKeywordClass,
   isRanked,
   isScoringConfidence,
   isScoringSource,
+  KeywordClass,
   RankMilestoneTier,
   ScoreProvenance,
   ScoreSignals,
+  SerpFlag,
   tierOf,
   TrackedKeywordItem,
   utcDayOf,
@@ -28,6 +31,7 @@ export interface TrackedKeywordRow {
   relevance: number | null;
   tags: string[];
   note: string | null;
+  keywordClass: string | null;
   createdAt: Date;
   keyword: {
     text: string;
@@ -250,12 +254,40 @@ function positionFacts(
   };
 }
 
+export type KeywordClassOf = (keyword: {
+  text: string;
+  country: string;
+  flags: readonly SerpFlag[];
+  serpRelevance: number | null;
+}) => KeywordClass;
+
 export interface AppFacts {
   snapshotText: string;
   marketTexts?: ReadonlyMap<string, string>;
   inKeywordField?: KeywordFieldIndex;
   uncovered?: (keyword: { country: string; text: string }) => boolean;
   marks?: KeywordMarker;
+  classOf?: KeywordClassOf;
+}
+
+function classFacts(
+  row: TrackedKeywordRow,
+  classOf: KeywordClassOf | undefined,
+  signals: ScoreSignals | null,
+): Pick<TrackedKeywordItem, 'keywordClass' | 'keywordClassSource'> {
+  if (!classOf) return {};
+  if (isKeywordClass(row.keywordClass)) {
+    return { keywordClass: row.keywordClass, keywordClassSource: 'owner' };
+  }
+  return {
+    keywordClass: classOf({
+      text: row.keyword.text,
+      country: row.keyword.country,
+      flags: signals?.flags ?? [],
+      serpRelevance: signals?.serpRelevance ?? null,
+    }),
+    keywordClassSource: 'detected',
+  };
 }
 
 function listingMarks(
@@ -317,5 +349,6 @@ export function toTrackedKeywordItem(
       ? { uncovered: app.uncovered(row.keyword) }
       : {}),
     ...listingMarks(app, row.keyword),
+    ...classFacts(row, app.classOf, signals),
   };
 }

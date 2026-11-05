@@ -91,7 +91,10 @@ test.describe("listing marks in the keyword cell", () => {
     const table = page.getByRole("table", { name: /Tracked keywords/ });
 
     await expect(
-      table.getByRole("cell", { name: "focus timer", exact: true }),
+      table.getByRole("cell", {
+        name: "focus timer Brand keyword",
+        exact: true,
+      }),
     ).toBeVisible();
     await expect(table.locator("mark")).toHaveCount(0);
   });
