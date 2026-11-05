@@ -357,16 +357,17 @@ model KeywordDiscovery {
 }
 
 model TrackedKeyword {
-  appId     String
-  app       App           @relation(fields: [appId], references: [id], onDelete: Cascade)
-  keywordId String
-  keyword   Keyword       @relation(fields: [keywordId], references: [id], onDelete: Cascade)
-  source    KeywordSource
-  active    Boolean       @default(true)
-  relevance Int?
-  tags      String[]      @default([])
-  note      String?
-  createdAt DateTime      @default(now())
+  appId        String
+  app          App           @relation(fields: [appId], references: [id], onDelete: Cascade)
+  keywordId    String
+  keyword      Keyword       @relation(fields: [keywordId], references: [id], onDelete: Cascade)
+  source       KeywordSource
+  active       Boolean       @default(true)
+  relevance    Int?
+  tags         String[]      @default([])
+  note         String?
+  keywordClass String?
+  createdAt    DateTime      @default(now())
 
   @@id([appId, keywordId])
   @@index([keywordId])
