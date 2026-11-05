@@ -58,7 +58,7 @@ export function GapTable({
 }: {
   appId: string;
   tab: GapTab;
-  rows: readonly CompetitorGapKeyword[];
+  rows: CompetitorGapKeyword[];
   marketName: string | null;
   scope: GapColumnScope;
   params: GapTableParams;
@@ -85,7 +85,7 @@ export function GapTable({
 
   const table = useTable({
     features: dataTableFeatures,
-    data: rows as CompetitorGapKeyword[],
+    data: rows,
     columns,
     getRowId: (row) => row.keywordId,
     state: {
