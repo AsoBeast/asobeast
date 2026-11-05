@@ -12,6 +12,7 @@ import {
   PortfolioSummary,
   RankDistributionHistory,
   RatingsHistory,
+  TrackedKeywordItem,
   VisibilityHistory,
   setupSummary,
   visibility,
@@ -21,6 +22,7 @@ import { AppModule } from '../src/app.module';
 import { testDb } from './helpers/test-db';
 import { ownerAgent, useCookies } from './helpers/session';
 import { DigestService } from '../src/analytics/digest.service';
+import { KeywordsService } from '../src/keywords/keywords.service';
 import { obliterateQueues, settleBootRegistration } from './obliterate-queues';
 import { asWorkspace } from './helpers/tenancy';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
@@ -600,6 +602,25 @@ describe('AnalyticsController (e2e)', () => {
     expect(history.nonBrandedShareOfVoice).toEqual([
       { date: '2026-06-30', share: expected, competitors: 1 },
     ]);
+  });
+
+  it('classes each keyword as the keywords list does', async () => {
+    const id = await seed();
+    await addRival(id, rivalChecks(D0, [3, null, 5, 2]));
+    await classify(id, { 'streak app': 'competitorBrand' });
+
+    const listed = (await api.get(`/apps/${id}/keywords`).expect(200))
+      .body as TrackedKeywordItem[];
+    const classes = await asWorkspace(app, () =>
+      app.get(KeywordsService).keywordClasses(id),
+    );
+
+    expect(Object.fromEntries(classes)).toEqual(
+      Object.fromEntries(
+        listed.map((item) => [item.keywordId, item.keywordClass]),
+      ),
+    );
+    expect(new Set(classes.values()).size).toBeGreaterThan(1);
   });
 
   it('answers the same two shares when every keyword is generic', async () => {

@@ -9,14 +9,14 @@ export class BrandKeywords {
     appId: string,
     country: string | undefined,
   ): Promise<ReadonlySet<string> | null> {
-    const items = await this.keywords.listTracked(appId, undefined, country, {
-      brandFacts: true,
-    });
-    if (items.some((item) => item.keywordClass === undefined)) return null;
+    const classes = [...(await this.keywords.keywordClasses(appId, country))];
+    if (classes.some(([, keywordClass]) => keywordClass === undefined)) {
+      return null;
+    }
     return new Set(
-      items
-        .filter((item) => item.keywordClass !== 'generic')
-        .map((item) => item.keywordId),
+      classes
+        .filter(([, keywordClass]) => keywordClass !== 'generic')
+        .map(([keywordId]) => keywordId),
     );
   }
 }

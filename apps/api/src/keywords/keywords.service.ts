@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { KeywordSource, Store } from '@prisma/client';
 import {
   assertStorefront,
+  KeywordClass,
   KeywordComparison,
   KeywordCountrySummary,
   KeywordSort,
@@ -13,6 +14,7 @@ import {
 import { QuotaService } from '../auth/quota.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { classifyBuckets } from './buckets';
+import { trackedKeywordClasses } from './keyword-classes';
 import { FirstPositionChecks } from './first-position-checks';
 import { KeywordTracker, keywordRows } from './keyword-tracker';
 import {
@@ -44,6 +46,14 @@ export class KeywordsService {
     private readonly listings: MarketListingRequests,
     private readonly checks: FirstPositionChecks,
   ) {}
+
+  async keywordClasses(
+    appId: string,
+    country?: string,
+  ): Promise<ReadonlyMap<string, KeywordClass | undefined>> {
+    const app = await ensureApp(this.prisma, appId);
+    return trackedKeywordClasses(this.prisma, app, country);
+  }
 
   async listTracked(
     appId: string,

@@ -1,13 +1,16 @@
 import { KeywordClass } from '@asobeast/shared';
-import { trackedKeyword } from '../actions/rules/rule-context.fixture';
 import { KeywordsService } from '../keywords/keywords.service';
 import { BrandKeywords } from './brand-keywords';
 
-const item = (keywordId: string, keywordClass?: KeywordClass) =>
-  trackedKeyword({ keywordId, ...(keywordClass ? { keywordClass } : {}) });
+const item = (
+  keywordId: string,
+  keywordClass?: KeywordClass,
+): [string, KeywordClass | undefined] => [keywordId, keywordClass];
 
 const build = (items: ReturnType<typeof item>[]) => {
-  const keywords = { listTracked: jest.fn().mockResolvedValue(items) };
+  const keywords = {
+    keywordClasses: jest.fn().mockResolvedValue(new Map(items)),
+  };
   return {
     keywords,
     brands: new BrandKeywords(keywords as unknown as KeywordsService),
@@ -50,8 +53,6 @@ describe('BrandKeywords.excluded', () => {
 
     await brands.excluded('app', 'de');
 
-    expect(keywords.listTracked).toHaveBeenCalledWith('app', undefined, 'de', {
-      brandFacts: true,
-    });
+    expect(keywords.keywordClasses).toHaveBeenCalledWith('app', 'de');
   });
 });
