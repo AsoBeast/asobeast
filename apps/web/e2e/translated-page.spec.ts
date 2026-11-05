@@ -218,7 +218,7 @@ test("a translated alert dialog changes its rating threshold", async ({
   const dialog = await openSettledDialog(page, "Add webhook");
 
   await translateText(page);
-  await dialog.getByRole("checkbox", { name: /rating dropped/i }).click();
+  await dialog.getByRole("switch", { name: /rating dropped/i }).click();
   const threshold = dialog.getByRole("combobox", {
     name: /rating drop threshold/i,
   });
@@ -231,6 +231,37 @@ test("a translated alert dialog changes its rating threshold", async ({
   await page.getByRole("option", { name: /0\.5 stars/i }).click();
 
   await expect(threshold).toHaveText(/0\.5 stars/i);
+  expect(errors).toEqual([]);
+});
+
+test("a translated settings page edits the essential alert", async ({
+  page,
+  context,
+}) => {
+  const errors = collectDomErrors(page);
+  await context.addCookies([
+    { name: "e2e-essential-alert", value: "1", url: "http://localhost:3000" },
+  ]);
+  await page.goto("/settings");
+  const row = page
+    .getByRole("listitem")
+    .filter({ hasText: "owner@example.com" })
+    .first();
+  await expect(row.getByText("Essential alerts")).toBeVisible();
+
+  await translateText(page);
+  await row.getByRole("button", { name: /edit rules/i }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByRole("switch", { name: /new review/i }).click();
+  await expect(
+    dialog.getByRole("group", { name: /new review stars/i }),
+  ).toBeVisible();
+  await translateText(page);
+  await dialog.getByRole("switch", { name: /rank dropped/i }).click();
+
+  await expect(
+    dialog.getByRole("textbox", { name: /rank drop positions/i }),
+  ).toHaveCount(0);
   expect(errors).toEqual([]);
 });
 

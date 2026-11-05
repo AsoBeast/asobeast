@@ -27,6 +27,7 @@ import { StoreCanaryService } from '../store-providers/canary/store-canary.servi
 import { ProxyPoolMaintenance } from '../store-providers/egress/proxy-pool.maintenance';
 import { PipelineService } from './pipeline.service';
 import { ApplePopularitySync } from '../scoring/apple-popularity.sync';
+import type { DefaultAlertsRun } from './default-alerts-run';
 import { PipelineWorker } from './pipeline.worker';
 import { AccountDeletionService } from '../account/account-deletion.service';
 import { RetentionService } from './retention.service';
@@ -132,6 +133,9 @@ describe('PipelineWorker', () => {
       enabled: false,
       run: jest.fn().mockResolvedValue(2),
     };
+    const defaultAlerts = {
+      run: jest.fn().mockResolvedValue({ created: 1 }),
+    };
     const worker = new PipelineWorker(
       pipelineQueue as unknown as Queue,
       config as unknown as ConfigService<Env, true>,
@@ -157,6 +161,7 @@ describe('PipelineWorker', () => {
       new RedisOutageLog(),
       sweep as unknown as LocalizationSweep,
       storeReports as unknown as StoreReportFanOut,
+      defaultAlerts as unknown as DefaultAlertsRun,
     );
     return {
       worker,
@@ -177,6 +182,7 @@ describe('PipelineWorker', () => {
       popularity,
       sweep,
       storeReports,
+      defaultAlerts,
     };
   };
 
@@ -794,5 +800,26 @@ describe('PipelineWorker', () => {
     await expect(worker.process(job('unknown'))).rejects.toThrow(
       'Unknown pipeline job unknown',
     );
+  });
+
+  it('turns the essential alerts on before the flush', async () => {
+    const { worker, alertFlush, defaultAlerts } = build();
+
+    await worker.process(job(JOBS.DAILY_COMPLETE, payload));
+
+    expect(defaultAlerts.run).toHaveBeenCalledWith(payload.date);
+    expect(defaultAlerts.run.mock.invocationCallOrder[0]).toBeLessThan(
+      alertFlush.flushEveryWorkspace.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('logs a failure of the essential alerts and still flushes', async () => {
+    const { worker, alertFlush, defaultAlerts } = build();
+    defaultAlerts.run.mockRejectedValue(new Error('defaults down'));
+
+    await expect(
+      worker.process(job(JOBS.DAILY_COMPLETE, payload)),
+    ).resolves.toBeUndefined();
+    expect(alertFlush.flushEveryWorkspace).toHaveBeenCalledTimes(1);
   });
 });

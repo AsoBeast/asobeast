@@ -70,7 +70,7 @@ test("settings exposes the weekly digest event", async ({ page }) => {
 
   await page.getByRole("button", { name: "Add webhook" }).first().click();
   await expect(
-    page.getByRole("checkbox", { name: "Weekly digest" }),
+    page.getByRole("switch", { name: "Weekly digest" }),
   ).toBeVisible();
 });
 

@@ -21,6 +21,10 @@ import { CONFIRM_DROPS_BADGE } from "../ConfirmDropsField";
 import { DeliveriesSection } from "../DeliveriesSection";
 import { DeleteChannelDialog } from "./DeleteChannelDialog";
 import { EditEventsDialog } from "./EditEventsDialog";
+import {
+  ESSENTIAL_ALERTS_BADGE,
+  ESSENTIAL_ALERTS_LINE,
+} from "../essential-alerts-copy";
 
 export interface AwaitingConfirmation {
   pending: boolean;
@@ -100,6 +104,8 @@ export function AlertChannelRow({
   confirmDrops,
   reviewScores,
   ratingDropTenths,
+  rankDropThreshold,
+  essential = false,
   tag,
   awaiting,
   active,
@@ -121,6 +127,8 @@ export function AlertChannelRow({
   confirmDrops: boolean;
   reviewScores?: number[];
   ratingDropTenths?: number;
+  rankDropThreshold?: number | null;
+  essential?: boolean;
   tag?: ReactNode;
   awaiting?: AwaitingConfirmation;
   active: boolean;
@@ -144,9 +152,11 @@ export function AlertChannelRow({
         <div className="flex items-center gap-2">
           <Switch
             checked={active}
-            disabled={activePending}
+            aria-disabled={activePending || undefined}
             aria-label={`Toggle ${label}`}
-            onCheckedChange={onActiveChange}
+            onCheckedChange={(next) => {
+              if (!activePending) onActiveChange(next);
+            }}
           />
           <RowAction
             awaiting={awaiting}
@@ -163,9 +173,16 @@ export function AlertChannelRow({
         </div>
       </div>
 
+      {essential ? (
+        <p className="text-sm text-muted-foreground">{ESSENTIAL_ALERTS_LINE}</p>
+      ) : null}
+
       <ConfirmationNotice awaiting={awaiting} />
 
       <div className="flex flex-wrap items-center gap-1">
+        {essential ? (
+          <Badge variant="info">{ESSENTIAL_ALERTS_BADGE}</Badge>
+        ) : null}
         {tag}
         {confirmDrops ? (
           <Badge variant="secondary">
@@ -175,7 +192,10 @@ export function AlertChannelRow({
         ) : null}
         {events.map((event) => (
           <Badge key={event} variant="outline">
-            {eventBadgeLabel(event, reviewScores, ratingDropTenths)}
+            {eventBadgeLabel(event, reviewScores, {
+              ratingDropTenths,
+              rankDropThreshold,
+            })}
           </Badge>
         ))}
         <EditEventsDialog
@@ -184,6 +204,7 @@ export function AlertChannelRow({
           confirmDrops={confirmDrops}
           reviewScores={reviewScores}
           ratingDropTenths={ratingDropTenths}
+          rankDropThreshold={rankDropThreshold ?? null}
           pending={eventsPending}
           onSave={onEventsSave}
         />

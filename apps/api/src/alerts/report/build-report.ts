@@ -4,6 +4,8 @@ import {
   type AlertBatchPayload,
 } from '@asobeast/shared';
 import {
+  isRankMoveGroup,
+  MOVES_PER_APP,
   REPORT_GROUP_KINDS,
   type AlertReport,
   type GroupTone,
@@ -161,7 +163,10 @@ function capped(
   rows: ReportRow[],
   caps: ReportCaps,
 ): ReportGroup {
-  return { ...head, rows: rows.slice(0, caps.rows), total: rows.length };
+  const cap = isRankMoveGroup(head.kind)
+    ? Math.min(caps.rows, MOVES_PER_APP)
+    : caps.rows;
+  return { ...head, rows: rows.slice(0, cap), total: rows.length };
 }
 
 function reviewScoresOf(section: Section, kind: ReportGroupKind): number[] {

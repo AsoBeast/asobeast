@@ -24,6 +24,7 @@ import {
   SerpEntrantPayload,
 } from '@asobeast/shared';
 import { withDeepestRatingDrops } from './deepest-rating-drops';
+import { byImpact, type KeywordTraffic } from './rank-impact';
 
 export interface ResolvedApp {
   id: string;
@@ -48,6 +49,7 @@ export interface AssembleInput {
   appById: Map<string, ResolvedApp>;
   serpPrimariesByKeyword: Map<string, string[]>;
   now: Date;
+  traffic?: KeywordTraffic;
 }
 
 export const BATCH_SKIP_REASONS = [
@@ -441,6 +443,24 @@ function assembleScope(
   };
 }
 
+function withMovesByImpact(
+  batch: AlertBatchPayload,
+  traffic: KeywordTraffic | undefined,
+): AlertBatchPayload {
+  if (!traffic) return batch;
+  return {
+    ...batch,
+    apps: batch.apps.map((section) => ({
+      ...section,
+      rankDrops: byImpact(section.rankDrops, traffic),
+      rankImprovements: byImpact(section.rankImprovements, traffic),
+      rankMilestones: byImpact(section.rankMilestones, traffic),
+      firstRankings: byImpact(section.firstRankings, traffic),
+      overtakes: byImpact(section.overtakes, traffic),
+    })),
+  };
+}
+
 export function assembleBatches(input: AssembleInput): AssembledBatches {
   const events = withDeepestRatingDrops(
     [...input.events].sort(compareOutboxEvents),
@@ -455,11 +475,14 @@ export function assembleBatches(input: AssembleInput): AssembledBatches {
     addCompetitorSignal(competitorSections, signal),
   );
   return {
-    owned: assembleScope(
-      'owned_apps',
-      classification.owned,
-      ownedSections,
-      input.now,
+    owned: withMovesByImpact(
+      assembleScope(
+        'owned_apps',
+        classification.owned,
+        ownedSections,
+        input.now,
+      ),
+      input.traffic,
     ),
     competitors: assembleScope(
       'competitors',

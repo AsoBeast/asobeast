@@ -617,7 +617,7 @@ describe('filterBatch with confirmed drops', () => {
     'rank.milestone',
   ]);
   const filtered = (confirmDrops: boolean) => {
-    const result = filterBatch(batches.owned, rankEvents, [], confirmDrops);
+    const result = filterBatch(batches.owned, rankEvents, { confirmDrops });
     if (!result) throw new Error('expected an owned batch');
     return result;
   };
@@ -660,15 +660,14 @@ describe('filterBatch with confirmed drops', () => {
   it('sends a confirming channel no report when nothing reaches it', () => {
     const { owned } = batchOf([ordinaryDrop]);
 
-    expect(filterBatch(owned, rankEvents, [], true)).toBeNull();
+    expect(filterBatch(owned, rankEvents, { confirmDrops: true })).toBeNull();
   });
 
   it('leaves the competitor scope alone', () => {
     const competitors = filterBatch(
       batches.competitors,
       new Set(['metadata.changed']),
-      [],
-      true,
+      { confirmDrops: true },
     );
     if (!competitors) throw new Error('expected a competitor batch');
 
@@ -777,7 +776,9 @@ describe('review.new batching', () => {
   });
 
   it('keeps the picked stars and counts only them', () => {
-    const filtered = filterBatch(owned(), new Set(['review.new']), [1, 2]);
+    const filtered = filterBatch(owned(), new Set(['review.new']), {
+      reviewScores: [1, 2],
+    });
 
     expect(filtered?.apps[0].newReviews).toEqual([low]);
     expect(filtered?.events).toEqual([low]);
@@ -785,7 +786,9 @@ describe('review.new batching', () => {
   });
 
   it('drops a section left with no picked star', () => {
-    expect(filterBatch(owned(), new Set(['review.new']), [1])).toBeNull();
+    expect(
+      filterBatch(owned(), new Set(['review.new']), { reviewScores: [1] }),
+    ).toBeNull();
   });
 
   it('keeps every star without a filter', () => {
@@ -1157,6 +1160,121 @@ describe('availability batching', () => {
     expect(
       filterBatch(owned, new Set(['app.delisted']))?.apps[0].availability,
     ).toEqual([own]);
+  });
+});
+
+describe('filterBatch with a rank threshold', () => {
+  const now = new Date('2026-07-22T11:00:00.000Z');
+  const small = drop({
+    from: 4,
+    to: 9,
+    keyword: { ...drop().keyword, id: 'k1' },
+  });
+  const nine = drop({
+    from: 4,
+    to: 13,
+    keyword: { ...drop().keyword, id: 'k2' },
+  });
+  const ten = drop({
+    from: 4,
+    to: 14,
+    keyword: { ...drop().keyword, id: 'k3' },
+  });
+  const climb = rankImprovement({
+    from: 20,
+    to: 14,
+    keyword: { ...drop().keyword, id: 'k4' },
+  });
+  const owned = assembleBatches({
+    events: [small, nine, ten, climb].map((payload, index) =>
+      event({ ...payload, app: { id: 'a', name: 'Alpha' } }, 'a', `r${index}`),
+    ),
+    appById,
+    serpPrimariesByKeyword: new Map(),
+    now,
+  }).owned;
+  const rankEvents = new Set(['rank.dropped', 'rank.improved']);
+
+  it('keeps only the moves that reach the threshold and names it', () => {
+    const filtered = filterBatch(owned, rankEvents, { rankThreshold: 10 });
+
+    expect(filtered?.apps[0].rankDrops).toEqual([
+      expect.objectContaining({ to: 14, threshold: 10 }),
+    ]);
+    expect(filtered?.apps[0].rankImprovements).toEqual([]);
+    expect(filtered?.events).toEqual([
+      expect.objectContaining({ event: 'rank.dropped', to: 14, threshold: 10 }),
+    ]);
+    expect(filtered?.totals).toEqual({ events: 1, apps: 1 });
+  });
+
+  it('answers null when no move reaches the threshold', () => {
+    expect(filterBatch(owned, rankEvents, { rankThreshold: 50 })).toBeNull();
+  });
+
+  it('leaves every move and its threshold alone without one', () => {
+    const filtered = filterBatch(owned, rankEvents);
+
+    expect(filtered?.apps[0].rankDrops).toHaveLength(3);
+    expect(filtered?.apps[0].rankDrops.map((alert) => alert.threshold)).toEqual(
+      [5, 5, 5],
+    );
+  });
+});
+
+describe('assembleBatches report order', () => {
+  const now = new Date('2026-07-22T11:00:00.000Z');
+  const at = (id: string, from: number, to: number) =>
+    drop({
+      app: { id: 'a', name: 'Alpha' },
+      keyword: { ...drop().keyword, id, text: id },
+      from,
+      to,
+    });
+  const hop = at('popular', 9, 11);
+  const exit = at('niche', 3, 30);
+  const unscored = at('unscored', 9, 11);
+  const assembled = (traffic?: Map<string, number | null>) =>
+    assembleBatches({
+      events: [hop, exit, unscored].map((payload, index) =>
+        event(payload, 'a', `r${index}`),
+      ),
+      appById,
+      serpPrimariesByKeyword: new Map(),
+      now,
+      traffic,
+    }).owned;
+
+  it('orders the moves of a section by impact', () => {
+    const owned = assembled(
+      new Map<string, number | null>([
+        ['popular', 60],
+        ['niche', 20],
+      ]),
+    );
+
+    expect(owned.apps[0].rankDrops.map((alert) => alert.keyword.id)).toEqual([
+      'niche',
+      'popular',
+      'unscored',
+    ]);
+  });
+
+  it('keeps the flat events in arrival order', () => {
+    const owned = assembled(new Map([['popular', 60]]));
+
+    expect(owned.events.map((alert) => alert.event)).toHaveLength(3);
+    expect(
+      owned.events.map((alert) =>
+        alert.event === 'rank.dropped' ? alert.keyword.id : null,
+      ),
+    ).toEqual(['popular', 'niche', 'unscored']);
+  });
+
+  it('keeps arrival order without traffic', () => {
+    expect(
+      assembled().apps[0].rankDrops.map((alert) => alert.keyword.id),
+    ).toEqual(['popular', 'niche', 'unscored']);
   });
 });
 

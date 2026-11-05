@@ -55,6 +55,7 @@ const deliveredEvents = (
       events: ['rank.dropped', 'rank.milestone'],
       confirmDrops,
     },
+    instanceThreshold: 5,
     jobName: JOBS.DELIVER_ALERT,
   }).map(
     ({ flow }) => (flow.data as { payload: AlertBatchPayload }).payload.events,
@@ -78,6 +79,7 @@ describe('createDeliveryFlows', () => {
         events: ['rank.dropped', 'metadata.changed', 'serp.entrant'],
         reviewScores: [],
       },
+      instanceThreshold: 5,
       jobName: JOBS.DELIVER_ALERT,
     });
 
@@ -132,6 +134,7 @@ describe('createDeliveryFlows', () => {
       flushId: 'f1',
       kind: 'webhook',
       subscription: { id: 'wh1', events: ['review.new'], reviewScores: [5] },
+      instanceThreshold: 5,
       jobName: JOBS.DELIVER_ALERT,
     });
     const { payload } = flow.data as { payload: AlertBatchPayload };
@@ -158,6 +161,7 @@ describe('createDeliveryFlows with a rating drop threshold', () => {
         reviewScores: [],
         ratingDropTenths: 3,
       },
+      instanceThreshold: 5,
       jobName: JOBS.DELIVER_EMAIL,
     });
     const { payload } = flows[0].flow.data as { payload: AlertBatchPayload };
@@ -180,6 +184,7 @@ describe('createDeliveryFlows with a rating drop threshold', () => {
           reviewScores: [],
           ratingDropTenths: 2,
         },
+        instanceThreshold: 5,
         jobName: JOBS.DELIVER_EMAIL,
       }),
     ).toEqual([]);
@@ -198,11 +203,48 @@ describe('createDeliveryFlows with availability events', () => {
         events: ['app.delisted', 'app.unlisted_market', 'metadata.changed'],
         reviewScores: [],
       },
+      instanceThreshold: 5,
       jobName: JOBS.DELIVER_ALERT,
     });
     const { payload } = flows[0].flow.data as { payload: AlertBatchPayload };
 
     expect(payload.scope).toBe('owned_apps');
     expect(payload.apps[0].availability).toEqual([appDelisted()]);
+  });
+});
+
+describe('createDeliveryFlows with a rank drop threshold', () => {
+  const moves = [
+    drop({ from: 4, to: 10, keyword: { ...drop().keyword, id: 'k1' } }),
+    drop({ from: 4, to: 20, keyword: { ...drop().keyword, id: 'k2' } }),
+  ];
+  const deliver = (rankDropThreshold: number | null) =>
+    createDeliveryFlows({
+      batches: batchesOf(moves),
+      workspaceId: 'ws_1',
+      flushId: 'f1',
+      kind: 'email',
+      subscription: {
+        id: 'ea1',
+        events: ['rank.dropped'],
+        reviewScores: [],
+        rankDropThreshold,
+      },
+      instanceThreshold: 5,
+      jobName: JOBS.DELIVER_EMAIL,
+    }).map(({ flow }) => (flow.data as { payload: AlertBatchPayload }).payload);
+
+  it('carries only the moves the subscription asks for', () => {
+    const [payload] = deliver(10);
+
+    expect(payload.events).toEqual([
+      expect.objectContaining({ to: 20, threshold: 10 }),
+    ]);
+  });
+
+  it('carries every move at the instance value without one', () => {
+    const [payload] = deliver(null);
+
+    expect(payload.events).toHaveLength(2);
   });
 });

@@ -7,6 +7,7 @@ import {
   type Subscription,
 } from './review-routing';
 
+const INSTANCE = 5;
 const NEW = 'review.new';
 const NEGATIVE = 'review.negative';
 
@@ -85,7 +86,7 @@ describe('receivesInstant', () => {
       false,
     ],
   ])('delivers to %s: %s', (_case, target, payload, delivered) => {
-    expect(receivesInstant(target, payload)).toBe(delivered);
+    expect(receivesInstant(target, payload, INSTANCE)).toBe(delivered);
   });
 });
 
@@ -155,17 +156,39 @@ describe('receivesInstant for a rating drop', () => {
   });
 
   it('holds a drop to the threshold of the channel', () => {
-    expect(receivesInstant(listing(3), drop(2))).toBe(false);
-    expect(receivesInstant(listing(3), drop(3))).toBe(true);
-    expect(receivesInstant(listing(3), drop(5))).toBe(true);
+    expect(receivesInstant(listing(3), drop(2), INSTANCE)).toBe(false);
+    expect(receivesInstant(listing(3), drop(3), INSTANCE)).toBe(true);
+    expect(receivesInstant(listing(3), drop(5), INSTANCE)).toBe(true);
   });
 
   it('gives a channel without a threshold every drop', () => {
-    expect(receivesInstant(listing(), drop(1))).toBe(true);
-    expect(receivesInstant(subscription([RATING]), drop(1))).toBe(true);
+    expect(receivesInstant(listing(), drop(1), INSTANCE)).toBe(true);
+    expect(receivesInstant(subscription([RATING]), drop(1), INSTANCE)).toBe(
+      true,
+    );
   });
 
   it('gives a channel that lists no rating drop nothing', () => {
-    expect(receivesInstant(subscription([NEW]), drop(5))).toBe(false);
+    expect(receivesInstant(subscription([NEW]), drop(5), INSTANCE)).toBe(false);
+  });
+});
+
+describe('receivesInstant for a rank move', () => {
+  const moved = (positions: number) => ({
+    ...dropped,
+    from: 4,
+    to: 4 + positions,
+  });
+  const at = (rankDropThreshold: number | null): Subscription => ({
+    events: ['rank.dropped'],
+    reviewScores: [],
+    rankDropThreshold,
+  });
+
+  it('holds a move to the threshold of the channel, never below the instance', () => {
+    expect(receivesInstant(at(10), moved(9), INSTANCE)).toBe(false);
+    expect(receivesInstant(at(10), moved(10), INSTANCE)).toBe(true);
+    expect(receivesInstant(at(3), moved(5), INSTANCE)).toBe(true);
+    expect(receivesInstant(at(null), moved(5), INSTANCE)).toBe(true);
   });
 });

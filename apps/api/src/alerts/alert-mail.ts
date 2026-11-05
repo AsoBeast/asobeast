@@ -19,11 +19,13 @@ export class AlertMail {
     emailAlertId: string,
     to: string,
     payload: AlertPayload,
+    options: { intro?: boolean } = {},
   ): Promise<OutgoingMail> {
     const links = this.unsubscribes.links({ alertId: emailAlertId, email: to });
     const email = await formatEmail(payload, {
       origin: this.mailer.origin,
       unsubscribe: links?.page ?? null,
+      intro: options.intro === true,
     });
     return { to, ...email, headers: oneClickHeaders(links) };
   }

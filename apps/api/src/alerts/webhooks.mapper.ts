@@ -15,6 +15,7 @@ export function toWebhookItem(webhook: Webhook): WebhookItem {
     active: webhook.active,
     confirmDrops: webhook.confirmDrops,
     ratingDropTenths: webhook.ratingDropTenths ?? RATING_DROP_DEFAULT_TENTHS,
+    rankDropThreshold: webhook.rankDropThreshold,
     hasSecret: webhook.secret !== null,
     createdAt: webhook.createdAt.toISOString(),
     channel: webhookChannelOf(webhook.url),

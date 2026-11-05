@@ -6,6 +6,7 @@ import { FactTable } from '../../mail/fact-table';
 import { Notice } from '../../mail/notice';
 import type { AlertReport } from '../report/report';
 import { AlertFooter, type AlertEmailContext } from './alert-footer';
+import { AlertIntro } from './alert-intro';
 import { CardHeader } from './report-card';
 import { ReportRowView } from './report-rows';
 
@@ -26,6 +27,7 @@ export function AlertEmail({ report, context }: AlertEmailProps) {
       footer={<AlertFooter context={context} />}
     >
       <EmailHeading>{report.headline}</EmailHeading>
+      {context.intro && <AlertIntro context={context} />}
       {app && (
         <Section className="mb-[16px]">
           <CardHeader app={app} />

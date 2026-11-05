@@ -2,7 +2,7 @@
 title: Send alerts
 description: "asobeast delivers rank, chart, SERP, metadata, review and action events by signed webhook or SMTP email. Batched delivery is resumable and deduplicated."
 icon: bell
-keywords: ["alerts","webhook","SMTP","email","batched delivery","signature","ALERT_DELIVERY","milestone","first ranking","overtake","unsubscribe","List-Unsubscribe","DKIM","confirm recipient","double opt in","chart.entered","chart.left","chart.milestone","top charts","new review","review stars","rating.dropped","review.spike","rating drop","review spike","app.delisted","app.unlisted_market","delisted","unlisted market"]
+keywords: ["alerts","webhook","SMTP","email","batched delivery","signature","ALERT_DELIVERY","milestone","first ranking","overtake","unsubscribe","List-Unsubscribe","DKIM","confirm recipient","double opt in","chart.entered","chart.left","chart.milestone","top charts","new review","review stars","rating.dropped","review.spike","rating drop","review spike","app.delisted","app.unlisted_market","delisted","unlisted market","essential alerts","alert rules","rank drop threshold","subject line"]
 ---
 
 Alerts fan out to two channel types, webhooks and email, and both carry the same events. Every attempt is recorded in a delivery log so a failing endpoint is visible instead of retrying silently.
@@ -22,16 +22,36 @@ Batched delivery is durable. A flush claims a fixed snapshot of pending rows bef
 
 There is no separate alert schedule. `CRON_DAILY` controls when processing starts, while workload and retry duration decide when the report goes out.
 
+## Essential alerts
+
+A new workspace gets one email alert without opening Settings. After the first daily run that checks a primary app of the workspace, and before that run's report is sent, AsoBeast creates an email alert to the workspace owner with the essential events, a rank drop threshold of 10, [confirmed drops](#report-drops-only-when-they-hold) and the batched report. The first email can therefore already hold that run's changes.
+
+The essential events are `rank.dropped`, `rank.milestone`, `rank.first`, `metadata.changed`, `chart.entered`, `chart.left`, `rating.dropped`, `review.spike`, `review.negative`, `app.delisted` and `app.unlisted_market`. `rank.milestone` covers the top 10, the top 3 and first place, and `metadata.changed` covers your own listing as well as your competitors'. One alert covers every app of the workspace.
+
+| Condition | When it fails |
+| --- | --- |
+| SMTP is configured | Nothing is created, and the next daily run tries again |
+| `WEB_PUBLIC_URL` is an `https` address | Nothing is created, and the next daily run tries again |
+| The workspace never configured an email alert or a webhook | Nothing is created, ever |
+| The workspace is entitled and not suspended | Nothing is created, and the next daily run tries again |
+| The owner's address is verified, where the instance requires verification | Nothing is created, and the next daily run tries again |
+
+On an instance that verifies sign ups the alert is confirmed at once. A self hosted instance never verifies an account, so there the alert is created waiting for confirmation and the owner receives the usual confirmation email, sent by AsoBeast. The Compose stacks default `WEB_PUBLIC_URL` to `http://localhost:3001`, so a stack without a public `https` address gets no essential alerts.
+
+It happens once per workspace. Deleting the alert, pausing it or unsubscribing from it never brings it back, and creating any email alert or webhook by hand settles the workspace too. A workspace that existed before this release is left as it was. The same starting point is one click away: **Add email alert** opens with the essential rules on and a rank drop value of 10.
+
+The first email the alert sends opens with one sentence, and only the first does: "You are getting this because AsoBeast turns on the essential alerts for new apps. Change or stop them in Settings."
+
 ## The nudge on the overview
 
-Alerts are not part of the guided setup, because nothing can move before positions exist. Once an app has two daily captures and your workspace has no webhook and no email alert, the app overview shows a card offering to add one: an email alert when SMTP is configured, a webhook otherwise. **Not now** hides the card in that browser, and adding any channel hides it everywhere.
+Alerts are not part of the guided setup, because nothing can move before positions exist. Once an app has two daily captures and your workspace still has no webhook and no email alert, which is rare once the essential alerts are on, the app overview shows a card offering to add one: an email alert when SMTP is configured, a webhook otherwise. **Not now** hides the card in that browser, and adding any channel hides it everywhere.
 
 ## Subscribe to events
 
 | Event | Fires when | Threshold setting |
 | --- | --- | --- |
-| `rank.dropped` | An owned app position falls | `ALERT_RANK_DROP_THRESHOLD`, default 5 |
-| `rank.improved` | An owned app position rises | `ALERT_RANK_DROP_THRESHOLD`, default 5 |
+| `rank.dropped` | An owned app position falls | The channel's rank drop value, default `ALERT_RANK_DROP_THRESHOLD` |
+| `rank.improved` | An owned app position rises | The channel's rank drop value, default `ALERT_RANK_DROP_THRESHOLD` |
 | `rank.milestone` | An owned app enters or leaves the top 10, the top 3 or first place | None |
 | `rank.first` | An owned app ranks for a keyword it has never ranked for | None |
 | `rank.overtaken` | A tracked competitor moves above an owned app | None |
@@ -49,7 +69,13 @@ Alerts are not part of the guided setup, because nothing can move before positio
 | `chart.milestone` | An owned app enters or leaves first place, the top 3 or the top 10 of a chart | None |
 | `digest.weekly` | The weekly portfolio digest | `CRON_DIGEST` |
 
-A new event never joins an existing subscription, `rating.dropped`, `review.spike`, `app.delisted` and `app.unlisted_market` included. To opt in, open **Edit events** on the channel in Settings, tick the events and save. A webhook keeps its url and its secret. The same dialog holds the [confirm drops](#report-drops-only-when-they-hold) setting.
+A new event never joins an existing subscription, `rating.dropped`, `review.spike`, `app.delisted` and `app.unlisted_market` included. To opt in, open **Edit rules** on the channel in Settings, switch the rules on and save. A webhook keeps its url and its secret. The same dialog holds the [confirm drops](#report-drops-only-when-they-hold) setting.
+
+### Choose rules
+
+The dialogs that add an email alert or a webhook, and **Edit rules** on a channel, list every event as a rule, grouped into rankings, charts, reviews and ratings, listings and reports. Each rule has a switch and a sentence saying when it fires. Three rules take a value inline while they are on: **Rank dropped** takes the positions a keyword must move, **Rating dropped** takes the tenths of a star, and **New review** takes the stars. **Rank improved** follows the rank drop value.
+
+Over the API the rank drop value is `rankDropThreshold`, an integer from 1 to 200 on an email alert or a webhook. `null` clears it and an omitted field leaves it as it is. Without a value the channel uses `ALERT_RANK_DROP_THRESHOLD`. A value below `ALERT_RANK_DROP_THRESHOLD` is accepted and counts as that value, because the instance never detects a smaller move: detection always uses `ALERT_RANK_DROP_THRESHOLD`, and a channel's value only filters what that channel receives. The field in Settings says the same.
 
 ### Choose the stars of new reviews
 
@@ -92,7 +118,7 @@ Turn on **Confirm drops before alerting** on a webhook or an email alert, in the
 What the setting changes:
 
 - It covers `rank.dropped`, and `rank.milestone` when the app leaves the top 10, the top 3 or first place. Entering a tier, `rank.first`, `rank.overtaken` and every other event arrive as before.
-- A drop counts as confirmed when the check after it is still down against the check before the drop began: for `rank.dropped`, at least `ALERT_RANK_DROP_THRESHOLD` places lower or not found, and for a milestone, still outside the tier. The alert shows that earlier position as the start and the second check as the end, so a drop that deepens reports the final position.
+- A drop counts as confirmed when the check after it is still down against the check before the drop began: for `rank.dropped`, at least `ALERT_RANK_DROP_THRESHOLD` places lower or not found, and for a milestone, still outside the tier. A channel with its own higher rank drop value receives a confirmed drop only when the whole drop reaches it, so checks of 9, 14 and 20 on an instance at 5 reach a channel at 10 once, as a drop from 9 to 20. The alert shows that earlier position as the start and the second check as the end, so a drop that deepens reports the final position.
 - If the keyword recovers, nothing is sent. The alerts that would have undone the drop are skipped too: the matching "back in the top 10" milestone and the `rank.improved` that follows it. A `rank.improved` that ends at least `ALERT_RANK_DROP_THRESHOLD` places above where the drop began is real news and is sent, and so is a recovery after a drop the channel was told about.
 - A keyword that keeps falling is reported once. Checks of 9, 11 and 18 report leaving the top 10, from 9 to 18, and no separate `rank.dropped`, because the first step was smaller than the threshold. The next report needs a new drop that begins after a check that did not confirm one.
 - Only stored checks count. A day with no check neither confirms nor cancels a drop, so a keyword paused and resumed is judged on its first stored check after the pause.
@@ -406,13 +432,19 @@ The recipient limit counts every workspace together on purpose: it protects the 
 
 ### What an alert email looks like
 
-Every alert email uses the AsoBeast layout: a header with the logo, the details of what happened, a button back into the app and a footer saying why the recipient gets it. The button opens the app page, the action for `action.opened`, or the portfolio for the weekly digest. Instant delivery sends one email per event, and batched delivery sends the daily app update and the competitor watch. Subjects start with `[asobeast]` and never change, so mail filters keep working. Every email also has a plain text part.
+Every alert email uses the AsoBeast layout: a header with the logo, the details of what happened, a button back into the app and a footer saying why the recipient gets it. The button opens the app page, the action for `action.opened`, or the portfolio for the weekly digest. Instant delivery sends one email per event, and batched delivery sends the daily app update and the competitor watch. Subjects start with `[asobeast]`, so a filter on the prefix keeps working. Every email also has a plain text part.
 
 The button, the logo, the settings link and the unsubscribe link are built from `WEB_PUBLIC_URL`. Without it the email shows text only and no link.
 
-A daily update lists up to 20 rows per section. A longer section ends with a link to the page that lists every row, `See all 32`, or with the count of the rows left out when `WEB_PUBLIC_URL` is unset. When the report would grow past what Gmail shows before clipping, the HTML part shows fewer rows per section and fewer competitors per app, while the plain text part keeps 20. Listing changes name each field the way App Store Connect and the Play Console do, and an icon change reads `Icon changed` instead of printing the image address.
+A daily update lists the five biggest rank moves of each group and up to 20 rows in every other section. A longer section ends with a link to the page that lists every row, `See all 32`, or with the count of the rows left out when `WEB_PUBLIC_URL` is unset. When the report would grow past what Gmail shows before clipping, the HTML part shows fewer rows per section and fewer competitors per app, while the plain text part keeps its rows. Listing changes name each field the way App Store Connect and the Play Console do, and an icon change reads `Icon changed` instead of printing the image address.
 
 Each card opens with the app icon, the app name linking to its page in AsoBeast, and its store and storefront, so a competitor card reads `Competitor · App Store · US`. A rank move lines up as the keyword, the move and what it crossed. An icon change shows the previous and the new icon side by side, and the plain text part reads `Icon changed`. Dates read like `24 Oct 2026` in UTC, and an instant alert adds the minute, `24 Oct 2026, 03:10 UTC`.
+
+### Report order
+
+Rank moves in each app are ordered by their impact: the keyword's traffic times the change in position weight, the same weight the visibility score uses, so a top 3 exit on a niche keyword can outrank a small hop on a popular one. Each app lists the five biggest moves of each group and ends the group with a line such as "and 23 smaller moves" and the link to the rest. The JSON webhook still carries every move, ordered the same way, and its flat `events` array keeps the order the facts arrived in.
+
+The subject of a daily update is its most important sentence, for example `[asobeast] Where Am I? lost 2 top 10 spots in US and 3 more changes`. A delisting comes first, then lost milestones, rank drops, rating drops, review spikes and negative reviews. The competitor watch keeps its own subject.
 
 ### Unsubscribe from an email
 
@@ -443,6 +475,8 @@ Completed batch claims follow `RETENTION_ALERT_EVENTS_DAYS`, also 30 days by def
 - **A new recipient receives nothing.** The alert shows **Awaiting confirmation**. Ask them to open the confirmation email, check the spam folder, or press **Resend confirmation**. Without `WEB_PUBLIC_URL` no confirmation email can be sent at all.
 - **Adding a recipient answers 429.** The recipient's mailbox already had 5 confirmation emails today under any spelling of its address, or the workspace had 20. The message says which, and the limit resets at midnight UTC.
 - **Resend confirmation answers 429.** A confirmation email went to that alert less than an hour ago. The message says how long to wait.
+- **No essential alerts appeared.** Check that SMTP is configured, that `WEB_PUBLIC_URL` is an `https` address, that the workspace never configured an email alert or a webhook, and, on an instance that verifies sign ups, that the owner confirmed the sign up email. See [Essential alerts](#essential-alerts).
+- **The first email did not say why it came.** Only the first email of the essential alert carries the sentence; the ones after it do not.
 - **Reports arrive at an unpredictable hour.** In batched mode the flush waits for every child job to settle, including retries. `CRON_DAILY` sets the start, not the delivery time.
 
 ## Related

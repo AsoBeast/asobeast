@@ -14,8 +14,10 @@ export function toEmailAlertItem(alert: EmailAlert): EmailAlertItem {
     active: alert.active,
     confirmDrops: alert.confirmDrops,
     ratingDropTenths: alert.ratingDropTenths ?? RATING_DROP_DEFAULT_TENTHS,
+    rankDropThreshold: alert.rankDropThreshold,
     confirmed: alert.confirmedAt !== null,
     unsubscribed: alert.unsubscribedAt !== null,
     createdAt: alert.createdAt.toISOString(),
+    ...(alert.defaultOrigin ? { essential: true } : {}),
   };
 }

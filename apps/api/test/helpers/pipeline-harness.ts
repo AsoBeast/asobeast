@@ -29,6 +29,14 @@ import { PipelineService } from '../../src/jobs/pipeline.service';
 import { PipelineWorker } from '../../src/jobs/pipeline.worker';
 import { RetentionService } from '../../src/jobs/retention.service';
 import { StoreJobsHandler } from '../../src/jobs/store-jobs.handler';
+import { DefaultAlertsRun } from '../../src/jobs/default-alerts-run';
+import { LocalizationSweep } from '../../src/jobs/localization-sweep.service';
+import { StoreReportFanOut } from '../../src/jobs/store-report-fanout';
+import { ErrorTracking } from '../../src/observability/error-tracking.service';
+import { RedisOutageLog } from '../../src/redis/redis-outage-log';
+import { ApplePopularitySync } from '../../src/scoring/apple-popularity.sync';
+import { PublishedStatusService } from '../../src/store-providers/canary/published-status.service';
+import { StoreCanaryService } from '../../src/store-providers/canary/store-canary.service';
 import {
   closeWorkers,
   obliterateQueues,
@@ -154,6 +162,14 @@ export async function createPipelineHarness(): Promise<PipelineHarness> {
     app.get(WorkspaceContext),
     app.get(WorkspaceFanOut),
     app.get(ProxyPoolMaintenance),
+    app.get(StoreCanaryService),
+    app.get(PublishedStatusService),
+    app.get(ErrorTracking),
+    app.get(ApplePopularitySync),
+    app.get(RedisOutageLog),
+    app.get(LocalizationSweep),
+    app.get(StoreReportFanOut),
+    app.get(DefaultAlertsRun),
   );
 
   const workerFor = (

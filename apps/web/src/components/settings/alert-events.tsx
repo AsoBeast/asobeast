@@ -7,9 +7,11 @@ import {
   REVIEW_SCORES,
   ratingDropLabel,
 } from "@asobeast/shared";
-import type { ReviewScore, WebhookEvent } from "@asobeast/shared";
+import type { ReviewScore } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { parseRankDropThreshold } from "./alert-thresholds";
 import {
   Select,
   SelectContent,
@@ -17,7 +19,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { EVENT_LABELS, PICKER_EVENTS } from "./alert-event-copy";
 
 const STARS_HELP =
   "Reviews with these stars arrive as new reviews. When Negative review is ticked too, a low review outside these stars still arrives as a negative review.";
@@ -43,45 +44,6 @@ function ToggleChip({
       <CheckIcon className={checked ? undefined : "invisible"} />
       {children}
     </Button>
-  );
-}
-
-export function EventSelection({
-  value,
-  onChange,
-}: {
-  value: WebhookEvent[];
-  onChange: (next: WebhookEvent[]) => void;
-}) {
-  const labelId = useId();
-
-  function toggle(event: WebhookEvent) {
-    onChange(
-      value.includes(event)
-        ? value.filter((item) => item !== event)
-        : [...value, event],
-    );
-  }
-
-  return (
-    <div className="flex flex-col gap-2">
-      <Label id={labelId}>Events</Label>
-      <div
-        role="group"
-        aria-labelledby={labelId}
-        className="flex flex-wrap gap-2"
-      >
-        {PICKER_EVENTS.map((event) => (
-          <ToggleChip
-            key={event}
-            checked={value.includes(event)}
-            onClick={() => toggle(event)}
-          >
-            {EVENT_LABELS[event]}
-          </ToggleChip>
-        ))}
-      </div>
-    </div>
   );
 }
 
@@ -176,33 +138,51 @@ export function RatingDropSelection({
   );
 }
 
-export function AlertSubscriptionFields({
-  events,
-  stars,
-  ratingTenths,
-  onEventsChange,
-  onStarsChange,
-  onRatingTenthsChange,
+const rankHelp = (instance: number | null): string =>
+  instance === null
+    ? "Leave empty to use the instance value. A smaller value counts as the lowest value this instance detects."
+    : `Leave empty to use the instance value, ${instance}. A smaller value counts as ${instance}, the lowest value this instance detects.`;
+
+export function RankDropField({
+  value,
+  onChange,
+  instance,
 }: {
-  events: WebhookEvent[];
-  stars: number[];
-  ratingTenths: number;
-  onEventsChange: (next: WebhookEvent[]) => void;
-  onStarsChange: (next: number[]) => void;
-  onRatingTenthsChange: (next: number) => void;
+  value: string;
+  onChange: (next: string) => void;
+  instance: number | null;
 }) {
+  const inputId = useId();
+  const helpId = useId();
+  const errorId = useId();
+  const { error } = parseRankDropThreshold(value);
+
   return (
-    <>
-      <EventSelection value={events} onChange={onEventsChange} />
-      {events.includes("review.new") ? (
-        <ReviewStarSelection value={stars} onChange={onStarsChange} />
-      ) : null}
-      {events.includes("rating.dropped") ? (
-        <RatingDropSelection
-          value={ratingTenths}
-          onChange={onRatingTenthsChange}
+    <div className="flex flex-col gap-2">
+      <Label htmlFor={inputId}>Rank drop positions</Label>
+      <div className="flex items-center gap-2">
+        <Input
+          id={inputId}
+          type="text"
+          inputMode="numeric"
+          autoComplete="off"
+          value={value}
+          placeholder={instance === null ? undefined : String(instance)}
+          aria-invalid={error !== null}
+          aria-describedby={error ? `${errorId} ${helpId}` : helpId}
+          className="w-24"
+          onChange={(event) => onChange(event.target.value)}
         />
+        <span className="text-sm text-muted-foreground">positions</span>
+      </div>
+      {error ? (
+        <p id={errorId} className="text-sm text-destructive">
+          {error}
+        </p>
       ) : null}
-    </>
+      <p id={helpId} className="text-sm text-muted-foreground">
+        {rankHelp(instance)}
+      </p>
+    </div>
   );
 }

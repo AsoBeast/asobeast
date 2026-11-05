@@ -1,11 +1,14 @@
 import { getQueueToken } from '@nestjs/bullmq';
 import { Job, Queue } from 'bullmq';
 import { AlertFlushService } from '../../src/alerts/alert-flush.service';
+import { DefaultAlertsService } from '../../src/alerts/default-alerts.service';
 import { ListingCaptureService } from '../../src/apps/listing-capture.service';
 import { AuditService } from '../../src/audit/audit.service';
 import { WorkspaceContext } from '../../src/common/tenancy/workspace-context';
 import { JobWorkspaceMissingError } from '../../src/jobs/job-workspace';
 import { QUEUES } from '../../src/jobs/jobs.types';
+import { DefaultAlertsRun } from '../../src/jobs/default-alerts-run';
+import { utcDateKey } from '../../src/jobs/jobs.types';
 import { PipelineService } from '../../src/jobs/pipeline.service';
 import { PrismaService } from '../../src/prisma/prisma.service';
 import { ReviewsService } from '../../src/reviews/reviews.service';
@@ -336,5 +339,53 @@ describe('Job isolation', () => {
       ids.push(workspace.competitorId);
     }
     expect(new Set(ids).size).toBe(2);
+  });
+
+  it('creates the essential alert of each workspace for its own owner', async () => {
+    const date = utcDateKey();
+    const workspaces = [fixture.a, fixture.b];
+    for (const workspace of workspaces) {
+      await fixture.db.webhook.deleteMany({
+        where: { workspaceId: workspace.id },
+      });
+      await fixture.db.emailAlert.deleteMany({
+        where: { workspaceId: workspace.id },
+      });
+      await fixture.db.workspace.update({
+        where: { id: workspace.id },
+        data: { defaultAlertsAt: null },
+      });
+      await fixture.db.keywordRanking.upsert({
+        where: {
+          appId_keywordId_date: {
+            appId: workspace.appleAppId,
+            keywordId: workspace.keywordId,
+            date: new Date(`${date}T00:00:00.000Z`),
+          },
+        },
+        update: {},
+        create: {
+          appId: workspace.appleAppId,
+          workspaceId: workspace.id,
+          keywordId: workspace.keywordId,
+          date: new Date(`${date}T00:00:00.000Z`),
+          position: 7,
+        },
+      });
+    }
+    const mail = jest
+      .spyOn(fixture.app.get(DefaultAlertsService), 'mailWorks', 'get')
+      .mockReturnValue(true);
+
+    await fixture.app.get(DefaultAlertsRun).run(date);
+    mail.mockRestore();
+
+    for (const workspace of workspaces) {
+      const alerts = await fixture.db.emailAlert.findMany({
+        where: { defaultOrigin: true, email: workspace.email },
+        select: { workspaceId: true },
+      });
+      expect(alerts).toEqual([{ workspaceId: workspace.id }]);
+    }
   });
 });

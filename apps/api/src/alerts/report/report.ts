@@ -51,6 +51,19 @@ export const REPORT_GROUP_KINDS = [
 ] as const;
 export type ReportGroupKind = (typeof REPORT_GROUP_KINDS)[number];
 
+export const MOVES_PER_APP = 5;
+
+const RANK_MOVE_KINDS: ReadonlySet<ReportGroupKind> = new Set([
+  'rankDrops',
+  'rankImprovements',
+  'milestones',
+  'firstRankings',
+  'overtakes',
+]);
+
+export const isRankMoveGroup = (kind: ReportGroupKind): boolean =>
+  RANK_MOVE_KINDS.has(kind);
+
 export interface ReportGroup {
   kind: ReportGroupKind;
   title: string;

@@ -27,6 +27,7 @@ import { AppStoreWorker } from './app-store.worker';
 import { DigestDispatcher } from './digest.dispatcher';
 import { GplayWorker } from './gplay.worker';
 import { ActiveWorkspaces } from './active-workspaces';
+import { DefaultAlertsRun } from './default-alerts-run';
 import { LocalizationSweep } from './localization-sweep.service';
 import { StoreReportFanOut } from './store-report-fanout';
 import { StoreConnectModule } from '../store-connect/store-connect.module';
@@ -124,6 +125,7 @@ const bullBoardModules: DynamicModule[] =
     ScoringController,
   ],
   providers: [
+    DefaultAlertsRun,
     ActiveWorkspaces,
     LocalizationSweep,
     StoreReportFanOut,

@@ -6,7 +6,7 @@ import {
   useSuspenseQuery,
 } from "@tanstack/react-query";
 import { toast } from "sonner";
-import type { EmailAlertItem } from "@asobeast/shared";
+import type { EmailAlertItem, EssentialAlertsNeed } from "@asobeast/shared";
 import {
   ApiError,
   deleteEmailAlert,
@@ -29,6 +29,8 @@ import {
 import { AddEmailAlertDialog } from "./AddEmailAlertDialog";
 import type { AlertSubscriptionChange } from "./alert-event-copy";
 import { AlertChannelRow } from "./alert-channel/AlertChannelRow";
+import { ESSENTIAL_ALERTS_EMPTY } from "./essential-alerts-copy";
+import { EssentialAlertsNotice } from "./essential-alerts-notice";
 import { useSharedFlight, useSingleFlight } from "@/lib/single-flight";
 
 const SMTP_VARS = [
@@ -48,6 +50,7 @@ function EmailAlertRow({ alert }: { alert: EmailAlertItem }) {
     onSuccess: () => invalidateEmailAlertMutation(queryClient),
     onError: () => toast.error("Could not update email alert"),
   });
+  const toggleOnce = useSingleFlight(toggle);
 
   const editEvents = useMutation({
     mutationFn: (change: AlertSubscriptionChange) =>
@@ -55,7 +58,7 @@ function EmailAlertRow({ alert }: { alert: EmailAlertItem }) {
     onSuccess: (saved) => {
       seedEmailAlert(queryClient, saved);
       invalidateEmailAlertMutation(queryClient);
-      toast.success("Email alert events saved");
+      toast.success("Email alert rules saved");
     },
     onError: () => toast.error("Could not save the email alert events"),
   });
@@ -112,6 +115,8 @@ function EmailAlertRow({ alert }: { alert: EmailAlertItem }) {
       confirmDrops={alert.confirmDrops === true}
       reviewScores={alert.reviewScores}
       ratingDropTenths={alert.ratingDropTenths}
+      rankDropThreshold={alert.rankDropThreshold}
+      essential={alert.essential === true}
       awaiting={
         awaitsConfirmation(alert)
           ? {
@@ -123,7 +128,7 @@ function EmailAlertRow({ alert }: { alert: EmailAlertItem }) {
       }
       active={alert.active}
       activePending={toggle.isPending}
-      onActiveChange={(active) => toggle.mutate(active)}
+      onActiveChange={toggleOnce}
       confirmTitle="Delete this email alert?"
       confirmDescription={`AsoBeast will stop emailing ${alert.email}. This cannot be undone.`}
       testPending={test.isPending}
@@ -136,7 +141,7 @@ function EmailAlertRow({ alert }: { alert: EmailAlertItem }) {
   );
 }
 
-function SetupHint() {
+function SetupHint({ need }: { need: EssentialAlertsNeed | null | undefined }) {
   return (
     <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
       <p className="font-medium text-foreground">Email alerts are disabled.</p>
@@ -157,6 +162,9 @@ function SetupHint() {
         <code className="font-mono text-xs">SMTP_HOST</code> and{" "}
         <code className="font-mono text-xs">SMTP_FROM</code> are required.
       </p>
+      <div className="mt-3">
+        <EssentialAlertsNotice need={need} />
+      </div>
     </div>
   );
 }
@@ -164,18 +172,26 @@ function SetupHint() {
 export function EmailAlertsCard() {
   const { data: config } = useSuspenseQuery(alertsConfigOptions);
   const { data } = useSuspenseQuery(emailAlertsOptions);
+  const essentialNeed =
+    config.essentialAlertsPending === false
+      ? undefined
+      : config.essentialAlertsNeed;
 
   return (
     <AlertChannelCard
       title="Email"
       action={config.emailEnabled ? <AddEmailAlertDialog /> : null}
     >
+      {config.emailEnabled ? (
+        <EssentialAlertsNotice need={essentialNeed} />
+      ) : null}
       {!config.emailEnabled ? (
-        <SetupHint />
+        <SetupHint need={essentialNeed} />
       ) : data.length === 0 ? (
         <AlertChannelEmpty>
-          No email alerts yet. Add a recipient to receive metadata and rank
-          alerts by email.
+          {essentialNeed === null
+            ? ESSENTIAL_ALERTS_EMPTY
+            : "No email alerts yet. Add a recipient to receive metadata and rank alerts by email."}
         </AlertChannelEmpty>
       ) : (
         <AlertChannelList label="Configured email alerts and their subscribed events.">

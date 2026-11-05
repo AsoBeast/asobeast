@@ -1,4 +1,9 @@
-import type { ReportApp, ReportGroup, ReportRow } from './report';
+import {
+  isRankMoveGroup,
+  type ReportApp,
+  type ReportGroup,
+  type ReportRow,
+} from './report';
 
 export interface ReportBlock {
   title: string;
@@ -28,15 +33,23 @@ export type LinkFormat = (label: string, href: string) => string;
 
 const plainLink: LinkFormat = (label, href) => `${label}: ${href}`;
 
+export function omissionWords(group: ReportGroup): string | null {
+  const hidden = group.total - group.rows.length;
+  if (hidden <= 0) return null;
+  return isRankMoveGroup(group.kind)
+    ? `and ${hidden} smaller move${hidden === 1 ? '' : 's'}`
+    : `+${hidden} more`;
+}
+
 export function groupOmission(
   group: ReportGroup,
   link: LinkFormat = plainLink,
 ): string | null {
-  const hidden = group.total - group.rows.length;
-  if (hidden <= 0) return null;
-  return group.link
-    ? link(`See all ${group.total}`, group.link.href)
-    : `+${hidden} more`;
+  const words = omissionWords(group);
+  if (!words) return null;
+  if (!group.link) return words;
+  const seeAll = link(`See all ${group.total}`, group.link.href);
+  return isRankMoveGroup(group.kind) ? `${words} · ${seeAll}` : seeAll;
 }
 
 export const moreApps = (count: number): string =>

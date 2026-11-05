@@ -1,57 +1,30 @@
 import {
+  ESSENTIAL_ALERT_EVENTS,
   normalizeReviewScores,
-  ratingDropLabel,
   reviewScoresLabel,
   type WebhookEvent,
 } from "@asobeast/shared";
+import { ALERT_RULE_ORDER, ALERT_RULES } from "./alert-rules";
+import { thresholdBadge } from "./alert-thresholds";
 
-export const EVENT_LABELS: Record<WebhookEvent, string> = {
-  "metadata.changed": "Metadata changed",
-  "rank.dropped": "Rank dropped",
-  "rank.improved": "Rank improved",
-  "rank.milestone": "Rank milestone",
-  "rank.first": "First ranking",
-  "rank.overtaken": "Overtaken by competitor",
-  "review.new": "New review",
-  "review.negative": "Negative review",
-  "rating.dropped": "Rating dropped",
-  "review.spike": "Review spike",
-  "digest.weekly": "Weekly digest",
-  "serp.entrant": "SERP entrant",
-  "action.opened": "New action",
-  "chart.entered": "Chart entered",
-  "chart.left": "Chart left",
-  "chart.milestone": "Chart milestone",
-  "app.delisted": "App delisted",
-  "app.unlisted_market": "Unlisted in a market",
-};
+export const EVENT_LABELS = Object.fromEntries(
+  ALERT_RULE_ORDER.map((event) => [event, ALERT_RULES[event].title]),
+) as Record<WebhookEvent, string>;
 
-export const PICKER_EVENTS: readonly WebhookEvent[] = [
-  "metadata.changed",
-  "rank.dropped",
-  "rank.improved",
-  "rank.milestone",
-  "rank.first",
-  "rank.overtaken",
-  "review.new",
-  "review.negative",
-  "rating.dropped",
-  "review.spike",
-  "digest.weekly",
-  "serp.entrant",
-  "action.opened",
-  "chart.entered",
-  "chart.left",
-  "chart.milestone",
-  "app.delisted",
-  "app.unlisted_market",
+export const PICKER_EVENTS = ALERT_RULE_ORDER;
+
+export const DEFAULT_ALERT_EVENTS: readonly WebhookEvent[] = [
+  ...ESSENTIAL_ALERT_EVENTS,
 ];
+
+export const DEFAULT_RANK_TEXT = "10";
 
 export interface AlertSubscriptionChange {
   events: WebhookEvent[];
   reviewScores?: number[];
   confirmDrops?: boolean;
   ratingDropTenths?: number;
+  rankDropThreshold?: number | null;
 }
 
 export function reviewScoresToSend(
@@ -77,16 +50,27 @@ export function needsAStar(
   return events.includes("review.new") && ticked.length === 0;
 }
 
+export interface ChannelThresholds {
+  ratingDropTenths?: number;
+  rankDropThreshold?: number | null;
+}
+
 export function eventBadgeLabel(
   event: WebhookEvent,
   reviewScores: readonly number[] | undefined,
-  ratingDropTenths?: number,
+  thresholds: ChannelThresholds = {},
 ): string {
   if (event === "review.new" && reviewScores && reviewScores.length > 0) {
     return `${EVENT_LABELS[event]} · ${reviewScoresLabel(reviewScores)}`;
   }
-  if (event === "rating.dropped" && ratingDropTenths !== undefined) {
-    return `${EVENT_LABELS[event]} · ${ratingDropLabel(ratingDropTenths)}`;
+  if (event === "rating.dropped" && thresholds.ratingDropTenths !== undefined) {
+    return thresholdBadge(event, thresholds.ratingDropTenths);
+  }
+  if (
+    event === "rank.dropped" &&
+    typeof thresholds.rankDropThreshold === "number"
+  ) {
+    return thresholdBadge(event, thresholds.rankDropThreshold);
   }
   return EVENT_LABELS[event];
 }

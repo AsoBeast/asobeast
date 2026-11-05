@@ -66,9 +66,11 @@ describe('reportText', () => {
     );
     const bare = reportText(buildReport(worstCaseBatch('owned_apps'), null));
 
-    expect(linked).toContain(`    See all 25: ${ORIGIN}/apps/app_0/keywords`);
+    expect(linked).toContain(
+      `    and 20 smaller moves · See all 25: ${ORIGIN}/apps/app_0/keywords`,
+    );
     expect(linked).toContain(`+2 more apps · Open AsoBeast: ${ORIGIN}/`);
-    expect(bare).toContain('    +5 more');
+    expect(bare).toContain('    and 20 smaller moves');
     expect(bare.endsWith('+2 more apps')).toBe(true);
     expect(bare).not.toContain('more lines');
   });

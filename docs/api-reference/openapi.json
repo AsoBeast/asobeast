@@ -6971,6 +6971,14 @@
             "example": 2,
             "description": "The smallest fall of the average rating, in tenths of a star, a rating.dropped alert is raised for. Omitted means 1, a tenth of a star."
           },
+          "rankDropThreshold": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 200,
+            "example": 10,
+            "description": "Positions a keyword must move before rank.dropped or rank.improved reaches this subscription. Null or omitted uses ALERT_RANK_DROP_THRESHOLD, and a smaller value counts as ALERT_RANK_DROP_THRESHOLD."
+          },
           "url": {
             "type": "string",
             "format": "uri"
@@ -7043,6 +7051,14 @@
             "example": 2,
             "description": "The smallest fall of the average rating, in tenths of a star, a rating.dropped alert is raised for. Omitted means 1, a tenth of a star."
           },
+          "rankDropThreshold": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 200,
+            "example": 10,
+            "description": "Positions a keyword must move before rank.dropped or rank.improved reaches this subscription. Null or omitted uses ALERT_RANK_DROP_THRESHOLD, and a smaller value counts as ALERT_RANK_DROP_THRESHOLD."
+          },
           "url": {
             "type": "string",
             "format": "uri"
@@ -7114,6 +7130,14 @@
             "example": 2,
             "description": "The smallest fall of the average rating, in tenths of a star, a rating.dropped alert is raised for. Omitted means 1, a tenth of a star."
           },
+          "rankDropThreshold": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 200,
+            "example": 10,
+            "description": "Positions a keyword must move before rank.dropped or rank.improved reaches this subscription. Null or omitted uses ALERT_RANK_DROP_THRESHOLD, and a smaller value counts as ALERT_RANK_DROP_THRESHOLD."
+          },
           "email": {
             "type": "string",
             "format": "email"
@@ -7181,6 +7205,14 @@
             "maximum": 10,
             "example": 2,
             "description": "The smallest fall of the average rating, in tenths of a star, a rating.dropped alert is raised for. Omitted means 1, a tenth of a star."
+          },
+          "rankDropThreshold": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 200,
+            "example": 10,
+            "description": "Positions a keyword must move before rank.dropped or rank.improved reaches this subscription. Null or omitted uses ALERT_RANK_DROP_THRESHOLD, and a smaller value counts as ALERT_RANK_DROP_THRESHOLD."
           },
           "email": {
             "type": "string",

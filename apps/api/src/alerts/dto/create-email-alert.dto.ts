@@ -11,6 +11,7 @@ import {
   WEBHOOK_EVENTS,
   WebhookEvent,
 } from '@asobeast/shared';
+import { RankDropThresholdField } from './rank-drop-threshold.decorator';
 import { RatingDropTenths } from './rating-drop-tenths.decorator';
 import { ReviewScoresFilter } from './review-scores.decorator';
 
@@ -31,4 +32,7 @@ export class CreateEmailAlertDto implements EmailAlertCreateRequest {
 
   @RatingDropTenths()
   ratingDropTenths?: number;
+
+  @RankDropThresholdField()
+  rankDropThreshold?: number | null;
 }

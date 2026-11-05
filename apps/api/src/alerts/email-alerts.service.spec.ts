@@ -1,5 +1,6 @@
 import { Logger, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { ESSENTIAL_ALERT_EVENTS, PRODUCT_NAME } from '@asobeast/shared';
 import { describeWait } from '../auth/rate-limit/describe-wait';
 import { RequestThrottledError } from '../auth/rate-limit/rate-limit.errors';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
@@ -12,7 +13,9 @@ import { EmailAlertUnsubscribe } from './email-alert-unsubscribe.service';
 import {
   CONFIRMATION_RESEND_COOLDOWN_SECONDS,
   EmailAlertsService,
+  MAX_UNCONFIRMED_EMAIL_ALERTS,
 } from './email-alerts.service';
+import type { DefaultAlertsMarker } from './default-alerts-marker';
 import { MailerService } from './mailer.service';
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -31,6 +34,7 @@ const waiting = (confirmationSentAt: Date | null) => ({
 
 const build = () => {
   const findFirst = jest.fn();
+  const marker = jest.fn().mockResolvedValue(true);
   const refund = jest.fn().mockResolvedValue(undefined);
   const tx = {
     $executeRaw: jest.fn().mockResolvedValue(1),
@@ -40,6 +44,7 @@ const build = () => {
       findFirst: jest.fn().mockResolvedValue(waiting(null)),
       update: jest.fn().mockResolvedValue(waiting(null)),
     },
+    webhook: { count: jest.fn().mockResolvedValue(0) },
   };
   const withTransaction = jest.fn(
     async (run: (client: typeof tx) => Promise<unknown>) => run(tx),
@@ -60,8 +65,17 @@ const build = () => {
     { require: jest.fn(() => 'ws_1') } as unknown as WorkspaceContext,
     {} as AlertMail,
     confirmation as unknown as EmailAlertConfirmation,
+    { claim: marker } as unknown as DefaultAlertsMarker,
   );
-  return { service, findFirst, confirmation, refund, withTransaction, tx };
+  return {
+    service,
+    findFirst,
+    confirmation,
+    refund,
+    withTransaction,
+    tx,
+    marker,
+  };
 };
 
 describe('EmailAlertsService', () => {
@@ -189,6 +203,7 @@ describe('EmailAlertsService', () => {
           workspace,
           {} as EmailAlertUnsubscribe,
         ),
+        { claim: jest.fn() } as unknown as DefaultAlertsMarker,
       );
 
       await expect(
@@ -211,5 +226,137 @@ describe('EmailAlertsService', () => {
         service.resendConfirmation('ea_1', 'owner@example.com'),
       ).rejects.toBeInstanceOf(ServiceUnavailableException);
     });
+  });
+});
+
+describe('EmailAlertsService and the default alerts marker', () => {
+  it('settles the marker in the transaction that creates the alert', async () => {
+    const { service, tx, marker } = build();
+
+    await service.create(
+      { email: 'ops@example.com', events: ['metadata.changed'] },
+      'owner@example.com',
+    );
+
+    expect(marker).toHaveBeenCalledWith(tx);
+    expect(tx.emailAlert.create.mock.invocationCallOrder[0]).toBeLessThan(
+      marker.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('fails the creation when the marker cannot be written', async () => {
+    const { service, marker } = build();
+    marker.mockRejectedValue(new Error('marker failed'));
+
+    await expect(
+      service.create(
+        { email: 'ops@example.com', events: ['metadata.changed'] },
+        'owner@example.com',
+      ),
+    ).rejects.toThrow('marker failed');
+  });
+
+  it('never settles the marker on an update', async () => {
+    const { service, marker } = build();
+
+    await service.update(
+      'ea_1',
+      { events: ['rank.first'] },
+      'owner@example.com',
+    );
+
+    expect(marker).not.toHaveBeenCalled();
+  });
+});
+
+describe('EmailAlertsService.createDefault', () => {
+  const subscription = {
+    events: [...ESSENTIAL_ALERT_EVENTS],
+    rankDropThreshold: 10,
+    confirmDrops: true,
+  };
+
+  it('writes the essential subscription for a verified owner', async () => {
+    const { service, tx, confirmation } = build();
+    const confirmedAt = new Date('2026-11-04T05:00:00.000Z');
+    confirmation.confirmationFor.mockResolvedValue(confirmedAt);
+    tx.emailAlert.create.mockResolvedValue({
+      ...waiting(null),
+      confirmedAt,
+      defaultOrigin: true,
+    });
+
+    const item = await service.createDefault('owner@example.com', subscription);
+
+    expect(tx.emailAlert.create).toHaveBeenCalledWith({
+      data: {
+        workspaceId: 'ws_1',
+        email: 'owner@example.com',
+        ...subscription,
+        reviewScores: [],
+        confirmedAt,
+        defaultOrigin: true,
+        introSentAt: null,
+      },
+    });
+    expect(item).toMatchObject({ essential: true, confirmed: true });
+    expect(confirmation.issue).not.toHaveBeenCalled();
+  });
+
+  it('writes nothing when the marker is already settled', async () => {
+    const { service, tx, marker } = build();
+    marker.mockResolvedValue(false);
+
+    await expect(
+      service.createDefault('owner@example.com', subscription),
+    ).resolves.toBeNull();
+    expect(tx.emailAlert.create).not.toHaveBeenCalled();
+  });
+
+  it.each(['emailAlert', 'webhook'] as const)(
+    'writes nothing when a %s already exists',
+    async (table) => {
+      const { service, tx } = build();
+      tx[table].count.mockResolvedValue(1);
+
+      await expect(
+        service.createDefault('owner@example.com', subscription),
+      ).resolves.toBeNull();
+      expect(tx.emailAlert.create).not.toHaveBeenCalled();
+    },
+  );
+
+  it('asks an unverified owner to confirm in the name of the product', async () => {
+    const { service, confirmation } = build();
+
+    const item = await service.createDefault('owner@example.com', subscription);
+
+    expect(confirmation.allowMailTo).toHaveBeenCalledWith('ops@example.com');
+    expect(confirmation.issue).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'ea_1' }),
+      PRODUCT_NAME,
+      expect.any(Function),
+    );
+    expect(item?.confirmationSent).toBe(true);
+  });
+
+  it('rolls back when the confirmation allowance refuses', async () => {
+    const { service, confirmation } = build();
+    confirmation.allowMailTo.mockRejectedValue(new Error('too many'));
+
+    await expect(
+      service.createDefault('owner@example.com', subscription),
+    ).rejects.toThrow('too many');
+  });
+
+  it('holds the cap of recipients waiting to confirm', async () => {
+    const { service, tx } = build();
+    tx.emailAlert.count
+      .mockResolvedValueOnce(0)
+      .mockResolvedValueOnce(MAX_UNCONFIRMED_EMAIL_ALERTS);
+
+    await expect(
+      service.createDefault('owner@example.com', subscription),
+    ).rejects.toThrow(String(MAX_UNCONFIRMED_EMAIL_ALERTS));
   });
 });

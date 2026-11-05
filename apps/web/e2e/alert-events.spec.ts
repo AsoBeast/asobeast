@@ -7,13 +7,12 @@ import { expectFitsViewport, openSettledDialog } from "./dialog.mts";
 
 const SELECTED_ATTRIBUTE = "aria-checked";
 const SERP_ENTRANT = "SERP entrant";
-const EDIT_EVENTS = "Edit events";
+const EDIT_EVENTS = "Edit rules";
 const RANK_MILESTONE = "Rank milestone";
 const NEW_REVIEW = "New review";
 const STAR_LABELS = ["1 star", "2 stars", "3 stars", "4 stars", "5 stars"];
 const CHART_ENTERED = "Chart entered";
 const CHART_MILESTONE = "Chart milestone";
-const LAST_EVENT = "Unlisted in a market";
 
 const VIEWPORTS = [
   { width: 1280, height: 720 },
@@ -36,11 +35,11 @@ const CHANNELS = [
 ] as const;
 
 function eventOptions(dialog: Locator): Locator {
-  return dialog.getByRole("group", { name: "Events" }).getByRole("checkbox");
+  return dialog.getByRole("group", { name: "Alert rules" }).getByRole("switch");
 }
 
 function eventOption(dialog: Locator, name: string): Locator {
-  return dialog.getByRole("checkbox", { name, exact: true });
+  return dialog.getByRole("switch", { name, exact: true });
 }
 
 async function deliverEveryDrop(dialog: Locator): Promise<void> {
@@ -152,29 +151,36 @@ function expectSameBox(actual: Box, expected: Box, message: string): void {
   expect(actual.height, message).toBeCloseTo(expected.height, 1);
 }
 
-test("the event chips follow the order of the contract", async ({ page }) => {
+test("the rules follow the order of their groups", async ({ page }) => {
   await page.goto("/settings");
   const dialog = await openSettledDialog(page, "Add webhook");
+  const names = await eventOptions(dialog).evaluateAll((switches) =>
+    switches.map(
+      (control) =>
+        document.getElementById(control.getAttribute("aria-labelledby") ?? "")
+          ?.textContent,
+    ),
+  );
 
-  await expect(eventOptions(dialog)).toHaveText([
-    "Metadata changed",
+  expect(names).toEqual([
     "Rank dropped",
     "Rank improved",
     "Rank milestone",
     "First ranking",
     "Overtaken by competitor",
+    "SERP entrant",
+    "Chart entered",
+    "Chart left",
+    "Chart milestone",
     "New review",
     "Negative review",
     "Rating dropped",
     "Review spike",
-    "Weekly digest",
-    "SERP entrant",
-    "New action",
-    "Chart entered",
-    "Chart left",
-    "Chart milestone",
+    "Metadata changed",
     "App delisted",
     "Unlisted in a market",
+    "Weekly digest",
+    "New action",
   ]);
 });
 
@@ -193,15 +199,15 @@ for (const channel of CHANNELS) {
     const patch = page.waitForRequest(
       (request) => request.method() === "PATCH",
     );
-    await dialog.getByRole("button", { name: "Save events" }).click();
+    await dialog.getByRole("button", { name: "Save rules" }).click();
 
     expect((await patch).postDataJSON()).toEqual({
-      events: ["serp.entrant", "rank.milestone"],
+      events: ["rank.milestone", "serp.entrant"],
     });
     await expect(dialog).toBeHidden();
     await expect(row.locator('[data-slot="badge"]')).toHaveText([
-      SERP_ENTRANT,
       RANK_MILESTONE,
+      SERP_ENTRANT,
     ]);
   });
 
@@ -220,7 +226,7 @@ for (const channel of CHANNELS) {
     );
     const dialog = await openSettledDialog(page, EDIT_EVENTS, row);
     await setSelected(eventOption(dialog, RANK_MILESTONE), true);
-    await dialog.getByRole("button", { name: "Save events" }).click();
+    await dialog.getByRole("button", { name: "Save rules" }).click();
     await expect(dialog).toBeHidden();
 
     const reopened = await openSettledDialog(page, EDIT_EVENTS, row);
@@ -248,7 +254,7 @@ for (const channel of CHANNELS) {
     const dialog = await openSettledDialog(page, EDIT_EVENTS, row);
     await setSelected(eventOption(dialog, RANK_MILESTONE), true);
 
-    await dialog.getByRole("button", { name: "Save events" }).click();
+    await dialog.getByRole("button", { name: "Save rules" }).click();
 
     await expect(page.getByText(/Could not save the .* events/)).toBeVisible();
     await expect(dialog).toBeVisible();
@@ -267,10 +273,10 @@ for (const channel of CHANNELS) {
     await setSelected(eventOption(dialog, SERP_ENTRANT), false);
 
     await expect(
-      dialog.getByRole("button", { name: "Save events" }),
+      dialog.getByRole("button", { name: "Save rules" }),
     ).toBeDisabled();
     await expect(
-      dialog.getByText("Select at least one event to save."),
+      dialog.getByText("Switch on at least one rule to save."),
     ).toBeVisible();
   });
 
@@ -321,15 +327,9 @@ for (const channel of CHANNELS) {
       await setSelected(option, false);
     }
 
-    const chosen = [
-      eventOption(dialog, SERP_ENTRANT),
-      eventOptions(dialog).first(),
-    ];
-    const labels: string[] = [];
-    for (const option of chosen) {
-      await setSelected(option, true);
-      labels.push((await option.innerText()).trim());
-    }
+    await setSelected(eventOption(dialog, SERP_ENTRANT), true);
+    await setSelected(eventOption(dialog, RANK_MILESTONE), true);
+    const labels = [RANK_MILESTONE, SERP_ENTRANT];
 
     const target = channel.target();
     await page.getByLabel(channel.field).fill(target);
@@ -379,10 +379,8 @@ for (const channel of CHANNELS) {
     await page.goto("/settings");
     const dialog = await openSettledDialog(page, channel.trigger);
 
-    const group = dialog.getByRole("group", { name: "Events" });
-    await expect(group.getByRole("checkbox")).toHaveCount(
-      WEBHOOK_EVENTS.length,
-    );
+    const group = dialog.getByRole("group", { name: "Alert rules" });
+    await expect(group.getByRole("switch")).toHaveCount(WEBHOOK_EVENTS.length);
   });
 
   test(`${channel.trigger} shows the stars only while New review is ticked`, async ({
@@ -496,7 +494,7 @@ for (const channel of CHANNELS) {
     const patch = page.waitForRequest(
       (request) => request.method() === "PATCH",
     );
-    await dialog.getByRole("button", { name: "Save events" }).click();
+    await dialog.getByRole("button", { name: "Save rules" }).click();
 
     expect((await patch).postDataJSON()).toEqual({
       events: ["review.new"],
@@ -518,7 +516,7 @@ for (const channel of CHANNELS) {
     await pickStars(dialog, []);
 
     await expect(
-      dialog.getByRole("button", { name: "Save events" }),
+      dialog.getByRole("button", { name: "Save rules" }),
     ).toBeDisabled();
     await expect(dialog.getByText("Pick at least one star.")).toBeVisible();
   });
@@ -560,18 +558,12 @@ for (const channel of CHANNELS) {
     await page.keyboard.press("Space");
     await expect(three).toHaveAttribute(SELECTED_ATTRIBUTE, "true");
 
-    await eventOption(dialog, LAST_EVENT).focus();
+    await eventOption(dialog, NEW_REVIEW).focus();
     await page.keyboard.press("Tab");
     await expect(starOption(dialog, "1 star")).toBeFocused();
     await starOption(dialog, "5 stars").focus();
     await page.keyboard.press("Tab");
-    await expect(
-      dialog.getByRole("checkbox", { name: "Confirm drops before alerting" }),
-    ).toBeFocused();
-    await page.keyboard.press("Tab");
-    await expect(
-      dialog.getByRole("button", { name: "Save events" }),
-    ).toBeFocused();
+    await expect(eventOption(dialog, "Negative review")).toBeFocused();
   });
 
   test(`${channel.trigger} fits a phone with the star group`, async ({
@@ -597,8 +589,9 @@ for (const channel of CHANNELS) {
       await page.goto("/settings");
       const dialog = await openSettledDialog(page, channel.trigger);
 
-      const group = dialog.getByRole("group", { name: "Events" });
+      const group = dialog.getByRole("group", { name: "Alert rules" });
       const option = eventOption(dialog, SERP_ENTRANT);
+      await option.scrollIntoViewIfNeeded();
       const optionBox = await boxOf(option);
       const groupBox = await boxOf(group);
       const center = centerOf(optionBox);
@@ -638,6 +631,7 @@ for (const channel of CHANNELS) {
 
       const group = starGroup(dialog);
       const option = starOption(dialog, "2 stars");
+      await option.scrollIntoViewIfNeeded();
       const optionBox = await boxOf(option);
       const groupBox = await boxOf(group);
       const center = centerOf(optionBox);
@@ -760,7 +754,7 @@ for (const channel of CHANNELS) {
     const patch = page.waitForRequest(
       (request) => request.method() === "PATCH",
     );
-    await dialog.getByRole("button", { name: "Save events" }).click();
+    await dialog.getByRole("button", { name: "Save rules" }).click();
 
     expect((await patch).postDataJSON()).toMatchObject({
       events: ["rating.dropped"],

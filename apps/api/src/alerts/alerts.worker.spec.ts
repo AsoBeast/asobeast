@@ -12,6 +12,7 @@ import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { PrismaService } from '../prisma/prisma.service';
 import { AlertMail } from './alert-mail';
 import { alertBackoff, AlertsWorker } from './alerts.worker';
+import type { DefaultAlertIntro } from './default-alert-intro';
 import { EmailAlertUnsubscribe } from './email-alert-unsubscribe.service';
 import { MailerService } from './mailer.service';
 import { WebhookDelivery, WebhookRateLimitedError } from './webhook-delivery';
@@ -56,6 +57,8 @@ describe('AlertsWorker', () => {
   const emailFind = jest.fn();
   const deliveryCreate = jest.fn();
   const send = jest.fn();
+  const claim = jest.fn();
+  const restore = jest.fn();
   let worker: AlertsWorker;
   let delivery: WebhookDelivery;
   let workerAt: (origin: string | null) => AlertsWorker;
@@ -66,6 +69,8 @@ describe('AlertsWorker', () => {
     deliveryCreate.mockReset().mockResolvedValue(undefined);
     mockFetch.mockReset();
     send.mockReset();
+    claim.mockReset().mockResolvedValue(null);
+    restore.mockReset().mockResolvedValue(undefined);
     const prisma = {
       webhook: { findUnique: webhookFind },
       emailAlert: { findUnique: emailFind },
@@ -89,6 +94,7 @@ describe('AlertsWorker', () => {
         linked,
         new WorkspaceContext(),
         new AlertMail(linked, unsubscribes),
+        { claim, restore } as unknown as DefaultAlertIntro,
       );
     };
     worker = buildWorker(mailer.origin);
@@ -299,5 +305,86 @@ describe('alertBackoff', () => {
     expect(alertBackoff(1, 'custom', new Error('x'))).toBe(5000);
     expect(alertBackoff(2, 'custom', new Error('x'))).toBe(10_000);
     expect(alertBackoff(3)).toBe(20_000);
+  });
+});
+
+describe('AlertsWorker essential alerts intro', () => {
+  const emailFind = jest.fn();
+  const send = jest.fn();
+  const claim = jest.fn();
+  const restore = jest.fn();
+  let worker: AlertsWorker;
+  const compose = jest.spyOn(AlertMail.prototype, 'compose');
+
+  beforeEach(() => {
+    emailFind.mockReset();
+    send.mockReset().mockResolvedValue(undefined);
+    claim.mockReset();
+    restore.mockReset().mockResolvedValue(undefined);
+    compose.mockReset().mockResolvedValue({
+      to: 'ops@example.com',
+      subject: 's',
+      html: 'h',
+      text: 't',
+      headers: {},
+    });
+    const prisma = {
+      emailAlert: { findUnique: emailFind },
+      alertDelivery: { create: jest.fn().mockResolvedValue(undefined) },
+    } as unknown as PrismaService;
+    const mailer = { send, origin: null } as unknown as MailerService;
+    worker = new AlertsWorker(
+      prisma,
+      {} as WebhookDelivery,
+      mailer,
+      new WorkspaceContext(),
+      new AlertMail(mailer, {} as EmailAlertUnsubscribe),
+      { claim, restore } as unknown as DefaultAlertIntro,
+    );
+  });
+
+  afterAll(() => compose.mockRestore());
+
+  const essential = { ...confirmedAlert, defaultOrigin: true };
+
+  it('opens the first email of an essential alert with the sentence', async () => {
+    emailFind.mockResolvedValue(essential);
+    claim.mockResolvedValue(new Date());
+
+    await worker.process(emailJob('ea_1'));
+
+    expect(claim).toHaveBeenCalledWith('ea_1');
+    expect(compose).toHaveBeenCalledWith('ea_1', 'ops@example.com', payload, {
+      intro: true,
+    });
+  });
+
+  it('sends a later email without the sentence', async () => {
+    emailFind.mockResolvedValue(essential);
+    claim.mockResolvedValue(null);
+
+    await worker.process(emailJob('ea_1'));
+
+    expect(compose).toHaveBeenCalledWith('ea_1', 'ops@example.com', payload, {
+      intro: false,
+    });
+  });
+
+  it('gives the sentence back when the send fails', async () => {
+    const claimedAt = new Date();
+    emailFind.mockResolvedValue(essential);
+    claim.mockResolvedValue(claimedAt);
+    send.mockRejectedValue(new Error('smtp down'));
+
+    await expect(worker.process(emailJob('ea_1'))).rejects.toThrow('smtp down');
+    expect(restore).toHaveBeenCalledWith('ea_1', claimedAt);
+  });
+
+  it('never claims for an alert someone made by hand', async () => {
+    emailFind.mockResolvedValue({ ...confirmedAlert, defaultOrigin: false });
+
+    await worker.process(emailJob('ea_1'));
+
+    expect(claim).not.toHaveBeenCalled();
   });
 });

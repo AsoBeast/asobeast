@@ -85,14 +85,14 @@ describe('discordBody for a batch', () => {
     const [embed] = batchMessage(worstCaseBatch('owned_apps')).embeds;
 
     expect(embed.fields[0].value).toMatch(
-      /\n\[See all 25\]\(https:\/\/aso\.example\.com\/apps\/app_0\/keywords\)$/,
+      /\nand 20 smaller moves · \[See all 25\]\(https:\/\/aso\.example\.com\/apps\/app_0\/keywords\)$/,
     );
   });
 
   it('counts the rest without an origin', () => {
     const [embed] = batchMessage(worstCaseBatch('owned_apps'), null).embeds;
 
-    expect(embed.fields[0].value).toMatch(/\n\+5 more$/);
+    expect(embed.fields[0].value).toMatch(/\nand 20 smaller moves$/);
     expect(embed.url).toBeUndefined();
   });
 

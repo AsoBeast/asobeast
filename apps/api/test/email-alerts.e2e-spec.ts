@@ -78,7 +78,11 @@ describe('EmailAlertsController (e2e, smtp enabled)', () => {
 
   it('reports email as enabled', async () => {
     const response = await api.get('/alerts/config').expect(200);
-    expect(response.body as AlertsConfig).toEqual({ emailEnabled: true });
+    expect(response.body as AlertsConfig).toMatchObject({
+      emailEnabled: true,
+      rankDropThreshold: 5,
+      essentialAlertsNeed: 'https',
+    });
   });
 
   it('runs the full crud round trip', async () => {
@@ -269,6 +273,94 @@ describe('EmailAlertsController (e2e, smtp enabled)', () => {
       .post('/email-alerts')
       .send({ email: 'ops@example.com', events: ['rating.vanished'] })
       .expect(400);
+  });
+
+  it('settles the default alerts marker on the first creation only', async () => {
+    await prisma.workspace.update({
+      where: { id: DEFAULT_WORKSPACE_ID },
+      data: { defaultAlertsAt: null },
+    });
+    const marker = async () =>
+      (
+        await prisma.workspace.findUniqueOrThrow({
+          where: { id: DEFAULT_WORKSPACE_ID },
+        })
+      ).defaultAlertsAt;
+
+    const first = await api
+      .post('/email-alerts')
+      .send({ email: 'ops@example.com', events: ['rank.dropped'] })
+      .expect(201);
+    const settled = await marker();
+    expect(settled).not.toBeNull();
+
+    await api
+      .delete(`/email-alerts/${(first.body as EmailAlertItem).id}`)
+      .expect(204);
+    await api
+      .post('/email-alerts')
+      .send({ email: 'ops@example.com', events: ['rank.first'] })
+      .expect(201);
+    expect(await marker()).toEqual(settled);
+  });
+
+  it('stores, answers, patches and clears the rank drop threshold', async () => {
+    const plain = await api
+      .post('/email-alerts')
+      .send({ email: 'ops@example.com', events: ['rank.dropped'] })
+      .expect(201);
+    expect((plain.body as EmailAlertItem).rankDropThreshold).toBeNull();
+
+    const created = await api
+      .post('/email-alerts')
+      .send({
+        email: 'ops@example.com',
+        events: ['rank.dropped'],
+        rankDropThreshold: 10,
+      })
+      .expect(201);
+    const alert = created.body as EmailAlertItem;
+    expect(alert.rankDropThreshold).toBe(10);
+    const listed = await api.get('/email-alerts').expect(200);
+    expect(listed.body as EmailAlertItem[]).toContainEqual(
+      expect.objectContaining({ id: alert.id, rankDropThreshold: 10 }),
+    );
+
+    const path = `/email-alerts/${alert.id}`;
+    const changed = await api
+      .patch(path)
+      .send({ rankDropThreshold: 3 })
+      .expect(200);
+    expect(changed.body as EmailAlertItem).toMatchObject({
+      rankDropThreshold: 3,
+      events: ['rank.dropped'],
+    });
+    const kept = await api
+      .patch(path)
+      .send({ events: ['rank.first'] })
+      .expect(200);
+    expect((kept.body as EmailAlertItem).rankDropThreshold).toBe(3);
+    const cleared = await api
+      .patch(path)
+      .send({ rankDropThreshold: null })
+      .expect(200);
+    expect((cleared.body as EmailAlertItem).rankDropThreshold).toBeNull();
+    const stored = await prisma.emailAlert.findUniqueOrThrow({
+      where: { id: alert.id },
+    });
+    expect(stored.rankDropThreshold).toBeNull();
+
+    for (const rankDropThreshold of [0, 201, 1.5]) {
+      await api
+        .post('/email-alerts')
+        .send({
+          email: 'ops@example.com',
+          events: ['rank.dropped'],
+          rankDropThreshold,
+        })
+        .expect(400);
+      await api.patch(path).send({ rankDropThreshold }).expect(400);
+    }
   });
 
   it('stores, answers and patches the rating drop threshold', async () => {
@@ -600,7 +692,10 @@ describe('EmailAlertsController (e2e, smtp disabled)', () => {
 
   it('reports email as disabled', async () => {
     const response = await api.get('/alerts/config').expect(200);
-    expect(response.body as AlertsConfig).toEqual({ emailEnabled: false });
+    expect(response.body as AlertsConfig).toMatchObject({
+      emailEnabled: false,
+      essentialAlertsNeed: 'smtp',
+    });
   });
 
   it('rejects creation with a 400 envelope', async () => {

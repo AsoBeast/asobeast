@@ -25,7 +25,12 @@ import {
   reviewScoresToSend,
   type AlertSubscriptionChange,
 } from "../alert-event-copy";
-import { AlertSubscriptionFields } from "../alert-events";
+import {
+  rankTextOf,
+  rankThresholdChange,
+  rankThresholdError,
+} from "../alert-thresholds";
+import { AlertRules } from "../alert-rules/AlertRules";
 import { ConfirmDropsField } from "../ConfirmDropsField";
 
 export function EditEventsDialog({
@@ -34,6 +39,7 @@ export function EditEventsDialog({
   confirmDrops,
   reviewScores,
   ratingDropTenths = RATING_DROP_DEFAULT_TENTHS,
+  rankDropThreshold = null,
   pending,
   onSave,
 }: {
@@ -41,6 +47,7 @@ export function EditEventsDialog({
   events: WebhookEvent[];
   reviewScores?: number[];
   ratingDropTenths?: number;
+  rankDropThreshold?: number | null;
   confirmDrops: boolean;
   pending: boolean;
   onSave: (change: AlertSubscriptionChange) => Promise<unknown>;
@@ -52,7 +59,11 @@ export function EditEventsDialog({
   );
   const [confirming, setConfirming] = useState(confirmDrops);
   const [ratingTenths, setRatingTenths] = useState(ratingDropTenths);
-  const blocked = selected.length === 0 || needsAStar(selected, stars);
+  const [rankText, setRankText] = useState(rankTextOf(rankDropThreshold));
+  const blocked =
+    selected.length === 0 ||
+    needsAStar(selected, stars) ||
+    rankThresholdError(selected, rankText) !== null;
 
   function changeOpen(next: boolean) {
     if (next) {
@@ -60,13 +71,14 @@ export function EditEventsDialog({
       setStars(selectedReviewScores(reviewScores));
       setConfirming(confirmDrops);
       setRatingTenths(ratingDropTenths);
+      setRankText(rankTextOf(rankDropThreshold));
     }
     setOpen(next);
   }
 
   function submit(formEvent: FormEvent<HTMLFormElement>) {
     formEvent.preventDefault();
-    if (blocked) return;
+    if (blocked || pending) return;
     const tenths = ratingDropTenthsToSend(selected, ratingTenths);
     const change: AlertSubscriptionChange = {
       events: selected,
@@ -75,6 +87,7 @@ export function EditEventsDialog({
       ...(tenths === undefined || tenths === ratingDropTenths
         ? {}
         : { ratingDropTenths: tenths }),
+      ...rankThresholdChange(selected, rankText, rankDropThreshold),
     };
     void onSave(change).then(
       () => setOpen(false),
@@ -87,38 +100,43 @@ export function EditEventsDialog({
       <DialogTrigger asChild>
         <Button variant="ghost" size="xs">
           <Pencil />
-          Edit events
+          Edit rules
         </Button>
       </DialogTrigger>
       <DialogContent>
         <form onSubmit={submit} className="flex min-h-0 flex-col gap-4">
           <DialogHeader>
-            <DialogTitle>Edit events</DialogTitle>
+            <DialogTitle>Edit rules</DialogTitle>
             <DialogDescription>
-              Choose the events delivered to{" "}
+              Choose the rules that deliver alerts to{" "}
               <span className="break-all text-foreground">{label}</span>.
             </DialogDescription>
           </DialogHeader>
           <DialogBody>
-            <AlertSubscriptionFields
+            <AlertRules
               events={selected}
               stars={stars}
               ratingTenths={ratingTenths}
+              rankText={rankText}
               onEventsChange={setSelected}
               onStarsChange={setStars}
               onRatingTenthsChange={setRatingTenths}
+              onRankTextChange={setRankText}
             />
             <ConfirmDropsField checked={confirming} onChange={setConfirming} />
             {selected.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                Select at least one event to save.
+                Switch on at least one rule to save.
               </p>
             ) : null}
           </DialogBody>
           <DialogFooter>
-            <Button type="submit" disabled={pending || blocked}>
+            <Button
+              type="submit"
+              aria-disabled={pending || blocked || undefined}
+            >
               {pending ? <Loader2 className="animate-spin" /> : null}
-              Save events
+              Save rules
             </Button>
           </DialogFooter>
         </form>

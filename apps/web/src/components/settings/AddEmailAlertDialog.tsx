@@ -12,22 +12,30 @@ import { ApiError, createEmailAlert } from "@/lib/api";
 import { invalidateEmailAlertMutation } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
 import {
+  DEFAULT_ALERT_EVENTS,
+  DEFAULT_RANK_TEXT,
   needsAStar,
   ratingDropTenthsToSend,
   reviewScoresToSend,
 } from "./alert-event-copy";
-import { AlertSubscriptionFields } from "./alert-events";
+import { rankThresholdError, rankThresholdToSend } from "./alert-thresholds";
+import { AlertRules } from "./alert-rules/AlertRules";
 import { ConfirmDropsField } from "./ConfirmDropsField";
 import { AlertChannelDialog } from "./alert-channel/AlertChannelDialog";
 import { awaitsConfirmation, recipientToast } from "./email-alert-recipient";
+
+const INVALID_ADDRESS = "Enter a valid email address";
 
 export function AddEmailAlertDialog({ trigger }: { trigger?: ReactNode }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
-  const [events, setEvents] = useState<WebhookEvent[]>(["metadata.changed"]);
+  const [events, setEvents] = useState<WebhookEvent[]>([
+    ...DEFAULT_ALERT_EVENTS,
+  ]);
   const [stars, setStars] = useState<number[]>([...REVIEW_SCORES]);
   const [ratingTenths, setRatingTenths] = useState(RATING_DROP_DEFAULT_TENTHS);
+  const [rankText, setRankText] = useState(DEFAULT_RANK_TEXT);
   const [confirmDrops, setConfirmDrops] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,6 +46,7 @@ export function AddEmailAlertDialog({ trigger }: { trigger?: ReactNode }) {
         events,
         reviewScores: reviewScoresToSend(events, stars),
         ratingDropTenths: ratingDropTenthsToSend(events, ratingTenths),
+        rankDropThreshold: rankThresholdToSend(events, rankText),
         confirmDrops,
       }),
     onSuccess: (saved) => {
@@ -71,9 +80,10 @@ export function AddEmailAlertDialog({ trigger }: { trigger?: ReactNode }) {
     setOpen(next);
     if (next) return;
     setEmail("");
-    setEvents(["metadata.changed"]);
+    setEvents([...DEFAULT_ALERT_EVENTS]);
     setStars([...REVIEW_SCORES]);
     setRatingTenths(RATING_DROP_DEFAULT_TENTHS);
+    setRankText(DEFAULT_RANK_TEXT);
     setConfirmDrops(true);
     setError(null);
   }
@@ -83,15 +93,20 @@ export function AddEmailAlertDialog({ trigger }: { trigger?: ReactNode }) {
     setError(null);
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError("Enter a valid email address");
+      setError(INVALID_ADDRESS);
       return;
     }
     if (events.length === 0) {
-      setError("Select at least one event");
+      setError("Switch on at least one rule");
       return;
     }
     if (needsAStar(events, stars)) {
       setError("Pick at least one star");
+      return;
+    }
+    const thresholdError = rankThresholdError(events, rankText);
+    if (thresholdError) {
+      setError(thresholdError);
       return;
     }
 
@@ -117,17 +132,19 @@ export function AddEmailAlertDialog({ trigger }: { trigger?: ReactNode }) {
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           placeholder="alerts@example.com"
-          aria-invalid={error !== null}
+          aria-invalid={error === INVALID_ADDRESS}
         />
       </div>
 
-      <AlertSubscriptionFields
+      <AlertRules
         events={events}
         stars={stars}
         ratingTenths={ratingTenths}
+        rankText={rankText}
         onEventsChange={setEvents}
         onStarsChange={setStars}
         onRatingTenthsChange={setRatingTenths}
+        onRankTextChange={setRankText}
       />
 
       <ConfirmDropsField checked={confirmDrops} onChange={setConfirmDrops} />

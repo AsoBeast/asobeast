@@ -16,12 +16,15 @@ import {
   ratingDropTenthsToSend,
   reviewScoresToSend,
 } from "./alert-event-copy";
-import { AlertSubscriptionFields } from "./alert-events";
+import { rankThresholdError, rankThresholdToSend } from "./alert-thresholds";
+import { AlertRules } from "./alert-rules/AlertRules";
 import { ConfirmDropsField } from "./ConfirmDropsField";
 import { AlertChannelDialog } from "./alert-channel/AlertChannelDialog";
 import { channelHint, deliversToChat } from "./webhook-channel-copy";
 
 const HINT_ID = "webhook-channel-hint";
+
+const INVALID_URL = "Enter a valid http(s) URL";
 
 export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
   const queryClient = useQueryClient();
@@ -30,6 +33,7 @@ export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
   const [events, setEvents] = useState<WebhookEvent[]>(["metadata.changed"]);
   const [stars, setStars] = useState<number[]>([...REVIEW_SCORES]);
   const [ratingTenths, setRatingTenths] = useState(RATING_DROP_DEFAULT_TENTHS);
+  const [rankText, setRankText] = useState("");
   const [secret, setSecret] = useState("");
   const [confirmChoice, setConfirmChoice] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +45,7 @@ export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
         events,
         reviewScores: reviewScoresToSend(events, stars),
         ratingDropTenths: ratingDropTenthsToSend(events, ratingTenths),
+        rankDropThreshold: rankThresholdToSend(events, rankText),
         secret: secret.trim() === "" ? undefined : secret,
         confirmDrops,
       }),
@@ -68,6 +73,7 @@ export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
     setEvents(["metadata.changed"]);
     setStars([...REVIEW_SCORES]);
     setRatingTenths(RATING_DROP_DEFAULT_TENTHS);
+    setRankText("");
     setSecret("");
     setConfirmChoice(null);
     setError(null);
@@ -83,15 +89,20 @@ export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
         throw new Error();
       }
     } catch {
-      setError("Enter a valid http(s) URL");
+      setError(INVALID_URL);
       return;
     }
     if (events.length === 0) {
-      setError("Select at least one event");
+      setError("Switch on at least one rule");
       return;
     }
     if (needsAStar(events, stars)) {
       setError("Pick at least one star");
+      return;
+    }
+    const thresholdError = rankThresholdError(events, rankText);
+    if (thresholdError) {
+      setError(thresholdError);
       return;
     }
     if (secret.trim() !== "" && secret.length < 8) {
@@ -120,7 +131,7 @@ export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
           value={url}
           onChange={(event) => setUrl(event.target.value)}
           placeholder="https://hooks.example.com/asobeast"
-          aria-invalid={error !== null}
+          aria-invalid={error === INVALID_URL}
           aria-describedby={hint ? HINT_ID : undefined}
         />
         {hint && (
@@ -130,13 +141,15 @@ export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
         )}
       </div>
 
-      <AlertSubscriptionFields
+      <AlertRules
         events={events}
         stars={stars}
         ratingTenths={ratingTenths}
+        rankText={rankText}
         onEventsChange={setEvents}
         onStarsChange={setStars}
         onRatingTenthsChange={setRatingTenths}
+        onRankTextChange={setRankText}
       />
 
       <ConfirmDropsField checked={confirmDrops} onChange={setConfirmChoice} />

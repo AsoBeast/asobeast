@@ -145,6 +145,18 @@ function actionSentence(alert: ActionOpenedPayload): string {
   return `${PRIORITY_WORDS[priority]} priority ${kind} for ${appName(alert.app.name)}: ${ACTION_RULE_TITLES[rule]} (impact ${impact})`;
 }
 
+export function foldedMilestoneSentence(
+  app: string,
+  tier: RankMilestonePayload['tier'],
+  count: number,
+  market: string,
+): string {
+  const where = market ? ` in ${market}` : '';
+  return tier === 1
+    ? `${app} lost first place for ${plural(count, 'keyword')}${where}`
+    : `${app} lost ${count} top ${tier} spot${count === 1 ? '' : 's'}${where}`;
+}
+
 export function sentenceOf(
   payload: GranularPayload,
   withFlag: boolean,

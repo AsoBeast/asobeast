@@ -178,10 +178,13 @@ describe('formatBatchEmail', () => {
     expect(email.text).not.toMatch(/T\d{2}:\d{2}/);
   });
 
-  it('counts each category in the subject with plurals', async () => {
+  it('heads the report with its counts and leads the subject with its most urgent change', async () => {
     const email = await formatBatchEmail(batch);
     expect(email.subject).toBe(
-      '[asobeast] Daily app update: 3 changes across 2 apps',
+      '[asobeast] Alpha dropped from #3 to #12 for "game" in US and 2 more changes',
+    );
+    expect(email.text.split('\n')[0]).toBe(
+      'Daily app update: 3 changes across 2 apps',
     );
     expect(email.html).toContain(
       'Summary: 1 rank drop · 1 top 10 entrant · 1 listing change',
@@ -194,8 +197,8 @@ describe('formatBatchEmail', () => {
       apps: [bravo],
       totals: { events: 1, apps: 1 },
     });
-    expect(single.subject).toBe(
-      '[asobeast] Daily app update: 1 change across 1 app',
+    expect(single.text.split('\n')[0]).toBe(
+      'Daily app update: 1 change across 1 app',
     );
   });
 
@@ -425,7 +428,7 @@ describe('formatBatchEmail', () => {
     const second = await formatBatchEmail(large);
 
     expect(second).toEqual(first);
-    expect(first.text).toContain('+980 more');
+    expect(first.text).toContain('and 995 smaller moves');
     expect(first.text.length).toBeLessThan(10_000);
     expect(first.html.length).toBeLessThan(28_000);
     expect(first.text).toContain('22 Jul 2026');
@@ -730,7 +733,7 @@ describe('formatBatchEmail in the branded layout', () => {
 
   it('shows fewer lines in html than in text only when the report would not fit', async () => {
     const worst = await formatBatchEmail(worstCaseBatch('owned_apps'), linked);
-    const lastRow = 'meditation and sleep tracker keyword 19';
+    const lastRow = 'meditation and sleep tracker keyword 4';
     expect(worst.text).toContain(`${lastRow}  #4 → #12`);
     expect(worst.html).not.toContain(`>${lastRow}<`);
     expect(worst.html).toContain('>meditation and sleep tracker keyword 0<');
@@ -748,8 +751,8 @@ describe('formatBatchEmail in the branded layout', () => {
       linked,
     );
     expect(usual.html).not.toContain('See all');
-    expect(full.html).toContain('>game 19<');
-    expect(full.html).not.toContain('>game 20<');
+    expect(full.html).toContain('>game 4<');
+    expect(full.html).not.toContain('>game 5<');
     expect(full.html).toMatch(
       /href="https:\/\/aso\.example\.com\/apps\/a\/keywords"[^>]*>See all 25 in AsoBeast<\/a>/,
     );
@@ -919,5 +922,112 @@ describe('the availability events by email', () => {
 
     expect(email.text).toContain('Rival');
     expect(email.text).toContain('No longer listed in DE');
+  });
+});
+
+describe('the essential alerts sentence', () => {
+  const ORIGIN = 'https://aso.example.com';
+  const SENTENCE =
+    'You are getting this because AsoBeast turns on the essential alerts for new apps.';
+  const context = (intro?: boolean) => ({
+    origin: ORIGIN,
+    unsubscribe: null,
+    ...(intro === undefined ? {} : { intro }),
+  });
+
+  it('opens a daily update once, under the heading, with a settings link', async () => {
+    const email = await formatBatchEmail(batch, context(true));
+
+    expect(email.html.split(SENTENCE)).toHaveLength(2);
+    expect(email.html.indexOf(SENTENCE)).toBeGreaterThan(
+      email.html.indexOf('Daily app update'),
+    );
+    expect(email.html).toContain(`${ORIGIN}/settings#email-alerts`);
+    const lines = email.text.split('\n');
+    expect(lines[0]).toContain('Daily app update');
+    expect(lines[1]).toContain(SENTENCE);
+  });
+
+  it('opens a single alert the same way', async () => {
+    const email = await formatEmail(dropped, context(true));
+
+    expect(email.html).toContain(SENTENCE);
+    expect(email.text.split('\n')[1]).toContain(SENTENCE);
+  });
+
+  it.each([undefined, false])(
+    'leaves it out when intro is %p',
+    async (intro) => {
+      const email = await formatBatchEmail(batch, context(intro));
+
+      expect(email.html).not.toContain(SENTENCE);
+      expect(email.text).not.toContain(SENTENCE);
+    },
+  );
+
+  it('keeps the largest report under the HTML budget', async () => {
+    const email = await formatBatchEmail(
+      worstCaseBatch('owned_apps'),
+      context(true),
+    );
+
+    expect(Buffer.byteLength(email.html)).toBeLessThanOrEqual(
+      HTML_BUDGET_BYTES,
+    );
+  });
+});
+
+describe('the top five moves by email', () => {
+  it('lists five moves of an app and counts the rest', async () => {
+    const rankDrops = Array.from({ length: 28 }, (_, index) => ({
+      ...alpha.rankDrops[0],
+      keyword: { ...dropped.keyword, id: `m${index}`, text: `move ${index}` },
+    }));
+    const email = await formatBatchEmail({
+      ...batch,
+      apps: [{ ...alpha, rankDrops }],
+    });
+
+    expect(email.text).toContain('move 4');
+    expect(email.text).not.toContain('move 5 ');
+    expect(email.text).toContain('and 23 smaller moves');
+    expect(email.html).toContain('and 23 smaller moves');
+  });
+});
+
+describe('the subject of a daily update', () => {
+  it('keeps the competitor watch headline', async () => {
+    expect((await formatBatchEmail(competitorBatch)).subject).toMatch(
+      /^\[asobeast\] Competitor watch: /,
+    );
+  });
+
+  it('falls back to the headline when nothing leads', async () => {
+    const email = await formatBatchEmail({
+      ...batch,
+      apps: [],
+      totals: { events: 0, apps: 0 },
+      events: [],
+    });
+
+    expect(email.subject).toBe(
+      '[asobeast] Daily app update: 0 changes across 0 apps',
+    );
+  });
+
+  it('never carries a line break or a tab', async () => {
+    const quoted = {
+      ...negative,
+      review: { ...negative.review, text: 'broken\n\tagain' },
+    };
+    const email = await formatBatchEmail({
+      ...batch,
+      apps: [{ ...emptySection(alpha.app), negativeReviews: [quoted] }],
+      totals: { events: 1, apps: 1 },
+      events: [quoted],
+    });
+
+    expect(email.subject).not.toMatch(/[\n\t]/);
+    expect(email.subject.startsWith('[asobeast] A ')).toBe(true);
   });
 });
