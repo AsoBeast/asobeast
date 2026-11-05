@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { TrackedKeywordItem } from "@asobeast/shared";
-import { optimisticKeyword } from "./keyword-class";
+import {
+  classChoice,
+  DETECTED_CHOICE,
+  optimisticKeyword,
+} from "./keyword-class";
 
 const row = {
   keywordId: "kw-1",
@@ -30,5 +34,23 @@ describe("optimisticKeyword", () => {
       note: "x",
       active: false,
     });
+  });
+});
+
+describe("classChoice", () => {
+  it.each([
+    [
+      { keywordClass: "ownBrand", keywordClassSource: "detected" },
+      DETECTED_CHOICE,
+    ],
+    [{ keywordClass: "ownBrand" }, DETECTED_CHOICE],
+    [{}, DETECTED_CHOICE],
+    [{ keywordClass: "generic", keywordClassSource: "owner" }, "generic"],
+    [
+      { keywordClass: "competitorBrand", keywordClassSource: "owner" },
+      "competitorBrand",
+    ],
+  ] as const)("checks %j as %s", (row, choice) => {
+    expect(classChoice(row)).toBe(choice);
   });
 });

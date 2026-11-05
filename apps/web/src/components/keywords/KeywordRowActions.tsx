@@ -6,9 +6,9 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { MoreHorizontal, Sparkles, Tag, Trash2 } from "lucide-react";
+import { MoreHorizontal, Shapes, Sparkles, Tag, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import type { TrackedKeywordItem } from "@asobeast/shared";
+import { isKeywordClass, type TrackedKeywordItem } from "@asobeast/shared";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,7 +24,12 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
@@ -32,6 +37,11 @@ import { removeKeyword, scoreKeyword } from "@/lib/api";
 import { queuedToast } from "@/lib/queued-toast";
 import { invalidateKeywordMutation, invalidateKeywords } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
+import {
+  classChoice,
+  DETECTED_CHOICE,
+  KEYWORD_CLASS_OPTIONS,
+} from "./keyword-class";
 import { KeywordAnnotationsDialog } from "./KeywordAnnotationsDialog";
 import { useKeywordUpdate } from "./useKeywordUpdate";
 
@@ -48,7 +58,8 @@ export function KeywordRowActions({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
 
-  const toggle = useKeywordUpdate(appId, keyword);
+  const update = useKeywordUpdate(appId, keyword);
+  const checkedClass = classChoice(keyword);
 
   const scoreKey = ["keyword-score", keyword.keywordId];
   const scoring = useIsMutating({ mutationKey: scoreKey }) > 0;
@@ -81,8 +92,8 @@ export function KeywordRowActions({
     <div className="flex items-center justify-end gap-2">
       <Switch
         checked={keyword.active}
-        disabled={toggle.isPending}
-        onCheckedChange={(next) => toggle.mutate({ active: next })}
+        disabled={update.isPending}
+        onCheckedChange={(next) => update.mutate({ active: next })}
         aria-label="Track keyword"
       />
 
@@ -102,6 +113,35 @@ export function KeywordRowActions({
             <Tag />
             Edit tags and note
           </DropdownMenuItem>
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <Shapes />
+              Keyword type
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              <DropdownMenuRadioGroup
+                value={checkedClass}
+                onValueChange={(choice) => {
+                  if (choice === checkedClass) return;
+                  update.mutate({
+                    keywordClass: isKeywordClass(choice) ? choice : null,
+                  });
+                }}
+              >
+                <DropdownMenuRadioItem value={DETECTED_CHOICE}>
+                  <span>Detected automatically</span>
+                </DropdownMenuRadioItem>
+                {KEYWORD_CLASS_OPTIONS.map((option) => (
+                  <DropdownMenuRadioItem
+                    key={option.value}
+                    value={option.value}
+                  >
+                    <span>{option.label}</span>
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
           <DropdownMenuItem disabled={scoring} onSelect={() => scoreOnce()}>
             <Sparkles />
             Score now

@@ -9,6 +9,7 @@ import { openEmbedded } from "./embedded-checkout.mts";
 import {
   APP_GP_DETAIL,
   APP_GP_SERP_MOVERS,
+  APP_CLASS_FOCUS_ID,
   APP_IMPORT_FOCUS_ID,
   AWAITING_ALERT_COOKIE,
   CROWDED_COMPETITORS_COOKIE,
@@ -54,6 +55,41 @@ const becameInert = (control: Locator) =>
 
 const storeConnections = (page: Page) =>
   page.getByRole("region", { name: "Store connections" });
+
+test("choosing a keyword type from the keyboard returns focus to the row menu", async ({
+  page,
+}) => {
+  await page.goto(`/apps/${APP_CLASS_FOCUS_ID}/keywords`);
+  const actions = page
+    .getByRole("row")
+    .filter({
+      has: page.getByRole("checkbox", { name: "Select pomodoro", exact: true }),
+    })
+    .getByRole("button", { name: "Keyword actions" });
+  const held = await holdRequest(
+    page,
+    new RegExp(`/api/backend/apps/${APP_CLASS_FOCUS_ID}/keywords/[^/?]+$`),
+    "PATCH",
+  );
+
+  await pressFromKeyboard(actions);
+  await page.getByRole("menuitem", { name: "Keyword type" }).focus();
+  await page.keyboard.press("ArrowRight");
+  await page
+    .getByRole("menuitemradio", { name: "Detected automatically" })
+    .focus();
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter");
+
+  await expect(actions).toBeFocused();
+  held.release();
+  await page.waitForLoadState("networkidle");
+  await expect(actions).toBeFocused();
+  expect(
+    await page.evaluate(() => document.activeElement === document.body),
+  ).toBe(false);
+});
 
 test.describe("store connection controls keep focus", () => {
   test.beforeEach(({ context }) =>

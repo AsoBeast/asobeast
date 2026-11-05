@@ -16,6 +16,18 @@ export const KEYWORD_CLASS_OPTIONS = KEYWORD_CLASSES.map((value) => ({
   label: KEYWORD_CLASS_LABELS[value],
 }));
 
+export const DETECTED_CHOICE = "detected";
+
+export type KeywordClassChoice = KeywordClass | typeof DETECTED_CHOICE;
+
+export function classChoice(
+  row: Pick<TrackedKeywordItem, "keywordClass" | "keywordClassSource">,
+): KeywordClassChoice {
+  return row.keywordClassSource === "owner" && row.keywordClass
+    ? row.keywordClass
+    : DETECTED_CHOICE;
+}
+
 export function optimisticKeyword(
   row: TrackedKeywordItem,
   update: KeywordUpdateRequest,

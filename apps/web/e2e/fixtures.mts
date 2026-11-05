@@ -3543,6 +3543,22 @@ DATASETS[APP_TAGS_ID] = {
   })),
 };
 
+export const APP_CLASS_ID = "app-class";
+
+DATASETS[APP_CLASS_ID] = {
+  ...DATASETS[APP_TAGS_ID],
+  detail: { ...APP_1_DETAIL, id: APP_CLASS_ID, name: "Class Lab" },
+  keywords: structuredClone(DATASETS[APP_TAGS_ID].keywords),
+};
+
+export const APP_CLASS_FOCUS_ID = "app-class-focus";
+
+DATASETS[APP_CLASS_FOCUS_ID] = {
+  ...DATASETS[APP_TAGS_ID],
+  detail: { ...APP_1_DETAIL, id: APP_CLASS_FOCUS_ID, name: "Class Focus Lab" },
+  keywords: structuredClone(DATASETS[APP_TAGS_ID].keywords),
+};
+
 export const APP_BULK_BAR_ID = "app-bulk-bar";
 
 DATASETS[APP_BULK_BAR_ID] = {
