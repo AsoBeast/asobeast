@@ -747,6 +747,7 @@ describe('Remote MCP transport (e2e)', () => {
     const shared = [
       { tool: 'list_apps', route: '/apps' },
       { tool: 'portfolio', route: '/portfolio' },
+      { tool: 'workspace_checklist', route: '/workspace/checklist' },
     ];
 
     for (const { tool, route } of shared) {

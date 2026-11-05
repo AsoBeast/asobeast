@@ -154,9 +154,38 @@ describe("the tool catalog", () => {
       "get_app",
       "app_summary",
       "app_run_status",
+      "workspace_checklist",
       "portfolio",
       "market_suggestions",
     ]);
+  });
+
+  it("reads the workspace checklist with no argument", () => {
+    const tool = toolByName("workspace_checklist");
+
+    expect(tool?.request({})).toEqual({ path: "/workspace/checklist" });
+    expect(tool?.inputSchema.safeParse({}).success).toBe(true);
+    expect(tool && annotationsOf(tool)).toMatchObject({ readOnlyHint: true });
+  });
+
+  it("tells an agent how to read the workspace checklist", () => {
+    const description = toolByName("workspace_checklist")?.description ?? "";
+
+    for (const word of [
+      "goal",
+      "dismissedAt",
+      "appId",
+      "left out",
+      "up to eight",
+    ]) {
+      expect(description).toContain(word);
+    }
+  });
+
+  it("says the workspace checklist needs a newer api on a 404", () => {
+    expect(toolByName("workspace_checklist")?.unavailableOn404).toContain(
+      "newer asobeast API",
+    );
   });
 
   it("places the market suggestions after the portfolio in the apps group", () => {

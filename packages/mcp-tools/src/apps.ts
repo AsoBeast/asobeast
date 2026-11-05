@@ -63,6 +63,17 @@ export const APP_TOOLS: ReadTool[] = [
   }),
 
   defineReadTool({
+    name: "workspace_checklist",
+    title: "Workspace setup checklist",
+    description:
+      "Where the workspace stands on getting set up: the goal it chose (improve_rankings, research_idea, use_with_ai or null), dismissedAt when the checklist was hidden, and up to eight items ordered for the goal, each with done and the appId a link should open (the oldest app that does not satisfy it, null for workspace wide items). The items are an imported app, keywords tracked in a second market, a competitor, a connected store console, a used personal API token, an alert channel, a marked review reply and a saved keyword field. An item that cannot be done is left out of items and total: the keyword field when no app is on the App Store, the console when the instance has no store connection key, the reply until a review is stored. Use it to say what to do next, then call the tool that does it. Reads stored rows only.",
+    inputSchema: z.object({}),
+    request: () => ({ path: "/workspace/checklist" }),
+    unavailableOn404:
+      "The workspace checklist is not available on this instance; it needs a newer asobeast API.",
+  }),
+
+  defineReadTool({
     name: "portfolio",
     title: "Portfolio summary",
     description:
