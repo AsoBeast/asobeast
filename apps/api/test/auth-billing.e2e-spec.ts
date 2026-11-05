@@ -506,6 +506,11 @@ describe('Auth (billing mode)', () => {
     expect(apps.body).toHaveLength(1);
 
     await request(app.getHttpServer())
+      .get('/alerts/events')
+      .set('Cookie', cookie)
+      .expect(200);
+
+    await request(app.getHttpServer())
       .post('/apps')
       .set('Cookie', cookie)
       .send({ url: 'https://apps.apple.com/us/app/new/id999' })
