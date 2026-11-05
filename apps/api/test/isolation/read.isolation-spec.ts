@@ -47,6 +47,14 @@ const LISTS: ScopedRead[] = [
     identity: (body) => ids((body as { items: { id: string }[] }).items),
   },
   {
+    name: 'GET /workspace/checklist',
+    path: () => '/workspace/checklist',
+    identity: (body) =>
+      (body as { items: { id: string; appId: string | null }[] }).items.map(
+        (item) => `${item.id}:${item.appId}`,
+      ),
+  },
+  {
     name: 'GET /webhooks',
     path: () => '/webhooks',
     identity: ids,
