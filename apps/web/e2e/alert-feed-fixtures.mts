@@ -85,6 +85,14 @@ interface ItemSeed {
   country?: string | null;
 }
 
+function marketOf(payload: GranularAlertPayload): string | null {
+  if ("chart" in payload) return payload.chart.country;
+  if ("keyword" in payload && payload.keyword && "country" in payload.keyword) {
+    return payload.keyword.country;
+  }
+  return "app" in payload ? (payload.app.country ?? null) : null;
+}
+
 function item(seed: ItemSeed): AlertEventItem {
   const app = "app" in seed.payload ? seed.payload.app : null;
   return {
@@ -96,7 +104,7 @@ function item(seed: ItemSeed): AlertEventItem {
     appName: app?.name ?? null,
     iconUrl: app?.iconUrl ?? null,
     store: app?.store ?? null,
-    country: seed.country ?? app?.country ?? null,
+    country: seed.country ?? marketOf(seed.payload),
     primaryAppId: seed.primaryAppId,
     payload: seed.payload,
   };
