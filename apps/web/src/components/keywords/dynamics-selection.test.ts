@@ -4,7 +4,6 @@ import {
   chartLimitLine,
   cappingLine,
   chartedSelection,
-  defaultSeed,
   isCapped,
   overChartLimit,
   resolveChartSelection,
@@ -115,40 +114,12 @@ describe("withoutKeyword", () => {
   });
 });
 
-describe("defaultSeed", () => {
-  it("charts the first three keywords in the list's own order", () => {
-    expect(defaultSeed(tracked)).toEqual(["kw-1", "kw-2", "kw-3"]);
-  });
-
-  it("keeps the list order even when opportunity ranks differ", () => {
-    const shuffled = [tracked[4], tracked[0], tracked[2], tracked[1]];
-    expect(defaultSeed(shuffled)).toEqual(["kw-5", "kw-1", "kw-3"]);
-  });
-
-  it("charts what exists when the market tracks fewer than three", () => {
-    expect(defaultSeed(tracked.slice(0, 2))).toEqual(["kw-1", "kw-2"]);
-  });
-
-  it("charts nothing for an empty market", () => {
-    expect(defaultSeed([])).toEqual([]);
-  });
-});
-
 describe("resolveChartSelection", () => {
   it("charts nothing while the panel is hidden", () => {
     expect(resolveChartSelection({ mode: "hidden" }, tracked)).toEqual({
       effective: [],
       charted: [],
     });
-  });
-
-  it("seeds the first three in the market's own order", () => {
-    const { effective, charted } = resolveChartSelection(
-      { mode: "auto" },
-      tracked,
-    );
-    expect(effective).toEqual(["kw-1", "kw-2", "kw-3"]);
-    expect(charted).toEqual(effective);
   });
 
   it("keeps an explicit selection the market tracks", () => {
@@ -181,7 +152,6 @@ describe("resolveChartSelection", () => {
   });
 
   it("charts nothing for an empty market", () => {
-    expect(resolveChartSelection({ mode: "auto" }, []).effective).toEqual([]);
     expect(
       resolveChartSelection({ mode: "chart", ids: ["kw-1"] }, []).effective,
     ).toEqual([]);

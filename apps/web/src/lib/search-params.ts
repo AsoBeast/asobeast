@@ -308,7 +308,7 @@ export const overviewRangeParsers = {
 export const keywordIdsParser = parseAsArrayOf(parseAsString).withDefault([]);
 
 export type KeywordChartSelection =
-  { mode: "auto" } | { mode: "chart"; ids: string[] } | { mode: "hidden" };
+  { mode: "chart"; ids: string[] } | { mode: "hidden" };
 
 const toChartSelection = (ids: string[]): KeywordChartSelection => {
   const kept = ids.filter((id) => id !== "");
@@ -332,7 +332,7 @@ export const keywordChartSelectionParser = createParser({
   serialize: (selection) =>
     selection.mode === "chart" ? keywordIdsParser.serialize(selection.ids) : "",
   eq: sameChartSelection,
-}).withDefault({ mode: "auto" });
+}).withDefault({ mode: "hidden" });
 
 export const marketParser = parseAsString.withDefault("");
 

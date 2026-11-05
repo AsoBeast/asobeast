@@ -557,18 +557,18 @@ describe("keywordZone parser", () => {
 describe("keywordChartSelectionParser", () => {
   const serialize = createSerializer({ keywords: keywordChartSelectionParser });
 
-  it("defaults to the auto mode when the param is missing", () => {
+  it("defaults to the hidden mode when the param is missing", () => {
     expect(keywordChartSelectionParser.parseServerSide(undefined)).toEqual({
-      mode: "auto",
+      mode: "hidden",
     });
-    expect(serialize({ keywords: { mode: "auto" } })).toBe("");
+    expect(serialize({ keywords: { mode: "hidden" } })).toBe("");
   });
 
-  it("reads an empty value as explicitly hidden and writes it back", () => {
+  it("reads an empty value as hidden and leaves the default out of the address", () => {
     expect(keywordChartSelectionParser.parseServerSide("")).toEqual({
       mode: "hidden",
     });
-    expect(serialize({ keywords: { mode: "hidden" } })).toBe("?keywords=");
+    expect(serialize({ keywords: { mode: "hidden" } })).toBe("");
   });
 
   it("reads a comma list as the charted ids and writes them back", () => {
@@ -604,7 +604,6 @@ describe("keywordChartSelectionParser", () => {
     expect(parser.eq({ mode: "chart", ids: [] }, { mode: "hidden" })).toBe(
       false,
     );
-    expect(parser.eq({ mode: "auto" }, { mode: "hidden" })).toBe(false);
-    expect(parser.eq({ mode: "auto" }, { mode: "auto" })).toBe(true);
+    expect(parser.eq({ mode: "hidden" }, { mode: "hidden" })).toBe(true);
   });
 });

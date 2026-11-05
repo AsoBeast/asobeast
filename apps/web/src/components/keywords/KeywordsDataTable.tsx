@@ -123,33 +123,30 @@ export function KeywordsDataTable({
             <td colSpan={columnCount} style={{ height: before }} />
           </tr>
         ) : null}
-        {visible.map(({ index, row }) => {
-          const charted = chartedSet.has(row.id);
-          return (
-            <TableRow
-              key={row.id}
-              ref={virtualize ? virtualizer.measureElement : undefined}
-              data-index={index}
-              aria-rowindex={index + 2}
-              data-state={row.getIsSelected() ? "selected" : undefined}
-              data-charted={charted || undefined}
-              className={cn(
-                "group/row",
-                charted && "data-[charted]:bg-accent",
-                !row.original.active && "text-muted-foreground",
-              )}
-            >
-              {row.getVisibleCells().map((cell) => (
-                <TableCell
-                  key={cell.id}
-                  className={cn(STICKY_COLUMNS[cell.column.id])}
-                >
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </TableCell>
-              ))}
-            </TableRow>
-          );
-        })}
+        {visible.map(({ index, row }) => (
+          <TableRow
+            key={row.id}
+            ref={virtualize ? virtualizer.measureElement : undefined}
+            data-index={index}
+            aria-rowindex={index + 2}
+            data-state={row.getIsSelected() ? "selected" : undefined}
+            data-charted={chartedSet.has(row.id) || undefined}
+            className={cn(
+              "group/row",
+              "data-[charted]:bg-accent",
+              !row.original.active && "text-muted-foreground",
+            )}
+          >
+            {row.getVisibleCells().map((cell) => (
+              <TableCell
+                key={cell.id}
+                className={cn(STICKY_COLUMNS[cell.column.id])}
+              >
+                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+              </TableCell>
+            ))}
+          </TableRow>
+        ))}
         {after > 0 ? (
           <tr aria-hidden>
             <td colSpan={columnCount} style={{ height: after }} />

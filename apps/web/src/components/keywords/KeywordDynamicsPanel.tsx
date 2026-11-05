@@ -1,16 +1,18 @@
 "use client";
 
-import { Suspense, useCallback, useDeferredValue, useId } from "react";
+import {
+  Suspense,
+  useCallback,
+  useDeferredValue,
+  useId,
+  type RefObject,
+} from "react";
 import { useQueryState } from "nuqs";
 import { Button } from "@/components/ui/button";
 import { RangePicker } from "@/components/rankings/RangePicker";
 import { RANGE_PRESETS, WIDEST_RANGE } from "@/lib/ranges";
 import { armFocusHandoff, useFocusClaim } from "@/lib/focus-handoff";
-import {
-  keywordChartSelectionParser,
-  rangeParser,
-  type KeywordChartSelection,
-} from "@/lib/search-params";
+import { keywordChartSelectionParser, rangeParser } from "@/lib/search-params";
 import type { ChartedSelection } from "./dynamics-selection";
 import { SHOW_DYNAMICS_BUTTON_ID } from "./KeywordsBulkActions";
 import { KeywordDynamicsChart } from "./KeywordDynamicsChart";
@@ -36,14 +38,14 @@ export function KeywordDynamicsPanel({
   id,
   market,
   homeCountry,
-  selection,
   chart,
+  clearFocus,
 }: {
   id: string;
   market: string;
   homeCountry: string;
-  selection: KeywordChartSelection;
   chart: ChartedSelection;
+  clearFocus: RefObject<HTMLButtonElement | null>;
 }) {
   const [range, setRange] = useQueryState("range", rangeParser);
   const [, setKeywords] = useQueryState(
@@ -55,19 +57,18 @@ export function KeywordDynamicsPanel({
   const headingRef = useFocusClaim(DYNAMICS_FOCUS_KEY);
 
   const clear = () => {
-    const survivor =
-      document.getElementById(SHOW_DYNAMICS_BUTTON_ID) ??
-      document.querySelector<HTMLInputElement>(
-        'input[aria-label="Search keywords"]',
-      );
-    survivor?.focus();
+    const opener = document.getElementById(SHOW_DYNAMICS_BUTTON_ID);
+    if (opener) {
+      opener.focus();
+    } else {
+      clearFocus.current?.focus();
+    }
     void setKeywords({ mode: "hidden" });
     void setRange(null);
   };
 
   return (
     <section
-      key={selection.mode}
       aria-labelledby={headingId}
       className="flex flex-col gap-3 rounded-xl border bg-card p-4"
     >

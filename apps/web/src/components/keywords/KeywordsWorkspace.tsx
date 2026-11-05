@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useRef, type RefObject } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Info, Plus, Upload } from "lucide-react";
 import { useQueryState } from "nuqs";
@@ -40,6 +40,7 @@ export function KeywordsWorkspace({
   const [view] = useQueryState("view", keywordViewParser);
   const [selection] = useQueryState("keywords", keywordChartSelectionParser);
   const market = country || homeCountry;
+  const clearFocus = useRef<HTMLButtonElement>(null);
 
   return (
     <div className="flex flex-col gap-6">
@@ -60,7 +61,7 @@ export function KeywordsWorkspace({
             </Button>
           </ImportKeywordsDialog>
           <AddKeywordsDialog appId={id} store={store} country={market}>
-            <Button>
+            <Button ref={clearFocus}>
               <Plus />
               Add keywords
             </Button>
@@ -95,8 +96,8 @@ export function KeywordsWorkspace({
           market={market}
           homeCountry={homeCountry}
           store={store}
-          view={view}
           selection={selection}
+          clearFocus={clearFocus}
         />
       </Suspense>
       <SuggestionsPanel id={id} country={market} store={store} />
@@ -122,21 +123,19 @@ function KeywordsMarketScope({
   market,
   homeCountry,
   store,
-  view,
   selection,
+  clearFocus,
 }: {
   id: string;
   market: string;
   homeCountry: string;
   store: Store;
-  view: "table" | "map";
   selection: KeywordChartSelection;
+  clearFocus: RefObject<HTMLButtonElement | null>;
 }) {
   const { data: tracked } = useSuspenseQuery(keywordsOptions(id, market));
   const chart = resolveChartSelection(selection, tracked);
-  const open =
-    selection.mode !== "hidden" &&
-    (selection.mode === "chart" || (tracked.length > 0 && view !== "map"));
+  const open = selection.mode === "chart";
   return (
     <>
       {open ? (
@@ -144,8 +143,8 @@ function KeywordsMarketScope({
           id={id}
           market={market}
           homeCountry={homeCountry}
-          selection={selection}
           chart={chart}
+          clearFocus={clearFocus}
         />
       ) : null}
       <KeywordsTable

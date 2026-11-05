@@ -9,16 +9,8 @@ import {
 } from "@asobeast/shared";
 import { useTable, type RowSelectionState } from "@tanstack/react-table";
 import { useQueryState, useQueryStates } from "nuqs";
-import { useStoredColumnVisibility } from "@/components/data-table/useStoredColumnVisibility";
-import { useUrlSorting } from "@/components/data-table/useUrlSorting";
 import { keywordCountriesOptions, keywordsOptions } from "@/lib/queries";
-import {
-  KEYWORD_DEFAULT_SORT,
-  keywordFilterParsers,
-  keywordSortParser,
-  keywordViewParser,
-  sortDirectionParser,
-} from "@/lib/search-params";
+import { keywordFilterParsers, keywordViewParser } from "@/lib/search-params";
 import { HIDDEN_KEYWORD_COLUMNS, keywordColumns } from "./keyword-columns";
 import { exactSearchEmptyBody, keywordSearchFilter } from "./keyword-filters";
 import { keywordTableFeatures } from "./keyword-table-features";
@@ -30,7 +22,6 @@ import { KeywordsEmptyState } from "./KeywordsEmptyState";
 import { KeywordsDataTable } from "./KeywordsDataTable";
 import { KeywordsFilterBar } from "./KeywordsFilterBar";
 import { ChartedKeywordsContext, ListingMarksContext } from "./keyword-cells";
-import { listingMarksOption } from "./listing-marks-option";
 import { SerpSheet } from "./serp/SerpSheet";
 import {
   useClearedSelectionFocus,
@@ -38,6 +29,7 @@ import {
 } from "./use-keywords-table-focus";
 import { useSerpParams } from "./serp/use-serp-params";
 import { useKeywordColumnFilters } from "./use-zone-thresholds";
+import { useKeywordsTableControls } from "./use-keywords-table-controls";
 import { KeywordMap } from "./map/KeywordMap";
 import { useKeywordsAcrossZones } from "./map/use-map-keywords";
 
@@ -54,10 +46,6 @@ export function KeywordsTable({
   homeCountry: string;
   chartedIds: readonly string[];
 }) {
-  const [{ sort, dir }, setSortParams] = useQueryStates({
-    sort: keywordSortParser,
-    dir: sortDirectionParser,
-  });
   const [{ serp: serpId }, setSerpState] = useSerpParams();
   const showDynamics = useShowDynamics();
   const [filters, setFilters] = useQueryStates(keywordFilterParsers);
@@ -90,28 +78,8 @@ export function KeywordsTable({
     [id, store, homeCountry, multiMarket, setSerpState, today],
   );
 
-  const { sorting, onSortingChange } = useUrlSorting(
-    sort === null || columns.some((column) => column.id === sort)
-      ? { sort, dir }
-      : { sort: null, dir: null },
-    columns,
-    (next) =>
-      void setSortParams({
-        sort:
-          next.sort === null || next.sort === KEYWORD_DEFAULT_SORT
-            ? null
-            : keywordSortParser.parse(next.sort),
-        dir: next.dir,
-      }),
-    { remember: "keywords", defaultSort: KEYWORD_DEFAULT_SORT },
-  );
-
-  const [visibility, setVisibility] = useStoredColumnVisibility(
-    "keywords",
-    columns,
-  );
-
-  const marks = listingMarksOption(store, visibility, setVisibility);
+  const { sorting, onSortingChange, visibility, setVisibility, marks } =
+    useKeywordsTableControls({ store, columns });
   const columnFilters = useKeywordColumnFilters(filters);
 
   const table = useTable({

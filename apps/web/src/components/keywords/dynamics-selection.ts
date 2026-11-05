@@ -8,12 +8,6 @@ export interface ChartedSelection {
   charted: string[];
 }
 
-export const AUTO_SEED_COUNT = 3;
-
-export function defaultSeed(tracked: readonly TrackedKeywordItem[]): string[] {
-  return tracked.slice(0, AUTO_SEED_COUNT).map((item) => item.keywordId);
-}
-
 export function chartedSelection(
   selected: readonly string[],
   tracked: TrackedKeywordItem[],
@@ -29,9 +23,7 @@ export function resolveChartSelection(
   if (selection.mode === "hidden") {
     return { effective: [], charted: [] };
   }
-  const requested =
-    selection.mode === "chart" ? selection.ids : defaultSeed(tracked);
-  return chartedSelection(requested, [...tracked]);
+  return chartedSelection(selection.ids, [...tracked]);
 }
 
 export const isCapped = (selection: ChartedSelection): boolean =>
