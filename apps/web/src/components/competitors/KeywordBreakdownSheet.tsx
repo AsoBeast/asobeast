@@ -126,7 +126,7 @@ export function KeywordBreakdownSheet({ appId }: { appId: string }) {
         className="w-full sm:max-w-xl"
         onCloseAutoFocus={(event) => {
           const target =
-            opener.connected() ??
+            opener.openerOf(shownId) ??
             document.querySelector<HTMLButtonElement>(
               `[data-breakdown-keyword="${CSS.escape(shownId)}"]`,
             ) ??

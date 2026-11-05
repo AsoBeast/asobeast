@@ -13,8 +13,16 @@ import { breakdownParser } from "@/lib/search-params";
 
 export interface BreakdownOpener {
   remember: (element: HTMLElement) => void;
-  connected: () => HTMLElement | null;
+  openerOf: (keywordId: string) => HTMLElement | null;
 }
+
+export const openerFor = (
+  element: HTMLElement | null,
+  keywordId: string,
+): HTMLElement | null =>
+  element?.isConnected && element.dataset.breakdownKeyword === keywordId
+    ? element
+    : null;
 
 const BreakdownOpenerContext = createContext<BreakdownOpener | null>(null);
 
@@ -25,7 +33,7 @@ export function BreakdownOpenerProvider({ children }: { children: ReactNode }) {
       remember: (element) => {
         ref.current = element;
       },
-      connected: () => (ref.current?.isConnected ? ref.current : null),
+      openerOf: (keywordId) => openerFor(ref.current, keywordId),
     }),
     [],
   );
