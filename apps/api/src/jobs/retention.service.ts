@@ -209,7 +209,10 @@ export class RetentionService {
 
   private async pruneKeywordDiscoveries(now: Date): Promise<number> {
     const { count } = await this.prisma.keywordDiscovery.deleteMany({
-      where: { seenAt: { lt: this.cutoff(KEYWORD_DISCOVERY_DAYS, now) } },
+      where: {
+        seenAt: { lt: this.cutoff(KEYWORD_DISCOVERY_DAYS, now) },
+        dismissedAt: null,
+      },
     });
     return count;
   }

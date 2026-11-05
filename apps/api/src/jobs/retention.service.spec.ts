@@ -527,7 +527,7 @@ describe('RetentionService action pruning', () => {
 describe('RetentionService keyword discoveries', () => {
   afterEach(() => jest.useRealTimers());
 
-  it('prunes discoveries in any state that were not proposed for sixty days', async () => {
+  it('prunes discoveries not proposed for sixty days and keeps every dismissed one', async () => {
     jest.useFakeTimers().setSystemTime(new Date('2026-11-05T09:30:00.000Z'));
     const prisma = buildPrisma();
     const service = new RetentionService(
@@ -540,7 +540,10 @@ describe('RetentionService keyword discoveries', () => {
 
     expect(deleted.keywordDiscovery).toBe(17);
     expect(prisma.keywordDiscovery.deleteMany).toHaveBeenCalledWith({
-      where: { seenAt: { lt: new Date('2026-09-06T00:00:00.000Z') } },
+      where: {
+        seenAt: { lt: new Date('2026-09-06T00:00:00.000Z') },
+        dismissedAt: null,
+      },
     });
   });
 

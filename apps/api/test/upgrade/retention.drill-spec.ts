@@ -138,7 +138,13 @@ describe('Retention against an upgraded baseline database', () => {
       })),
     });
 
-    for (const [index, age] of [61, 59].entries()) {
+    for (const [index, [age, dismissedAt]] of (
+      [
+        [61, null],
+        [59, null],
+        [61, ANCIENT],
+      ] as const
+    ).entries()) {
       const keyword = await prisma.keyword.create({
         data: {
           text: `drill discovery ${index}`,
@@ -154,6 +160,7 @@ describe('Retention against an upgraded baseline database', () => {
           source: 'title',
           relevance: 90,
           seenAt: daysBefore(age),
+          dismissedAt,
         },
       });
     }
@@ -225,13 +232,14 @@ describe('Retention against an upgraded baseline database', () => {
     await expect(prisma.suggestProbe.count()).resolves.toBe(1);
   });
 
-  it('prunes a keyword discovery not proposed for sixty days and keeps a newer one', async () => {
+  it('prunes a keyword discovery not proposed for sixty days and keeps a newer or dismissed one', async () => {
     expect(deleted.keywordDiscovery).toBe(1);
     const remaining = await prisma.keywordDiscovery.findMany({
       select: { keyword: { select: { text: true } } },
     });
-    expect(remaining.map(({ keyword }) => keyword.text)).toEqual([
+    expect(remaining.map(({ keyword }) => keyword.text).sort()).toEqual([
       'drill discovery 1',
+      'drill discovery 2',
     ]);
   });
 
