@@ -24,7 +24,12 @@ import { AppCaptureService } from '../apps/app-capture.service';
 import { toCompetitorItem } from '../apps/apps.mapper';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { competitorGapLists, GapRow, GapScope } from './competitor-gap-lists';
+import {
+  competitorGapLists,
+  GapRow,
+  GapScope,
+  threatReadScope,
+} from './competitor-gap-lists';
 import { existingGapLists } from './competitor-gaps';
 import { recentChecks } from './competitor-recent-checks';
 import { aggregateDiscovery } from './discovery';
@@ -166,11 +171,14 @@ export class CompetitorsService {
     }
 
     const trackedById = new Map(tracked.map((item) => [item.keywordId, item]));
+    const scope = gapScope(appId, competitors);
+    const rows = gapRows(comparison, trackedById);
     const today = utcDayOf(new Date());
+    const read = threatReadScope(rows, scope);
     const recent = await recentChecks(
       this.prisma,
-      [appId, ...competitors.map((competitor) => competitor.id)],
-      comparison.rows.map((row) => row.keywordId),
+      read.appIds,
+      read.keywordIds,
       addUtcDays(today, -(THREAT_WINDOW_DAYS + 1)),
     );
 
@@ -181,12 +189,7 @@ export class CompetitorsService {
       ],
       gaps: {
         ...existingGapLists(comparison, trackedById),
-        ...competitorGapLists({
-          scope: gapScope(appId, competitors),
-          rows: gapRows(comparison, trackedById),
-          recent,
-          today,
-        }),
+        ...competitorGapLists({ scope, rows, recent, today }),
       },
       positionMap: this.positionMap(primary, competitors, comparison),
     };

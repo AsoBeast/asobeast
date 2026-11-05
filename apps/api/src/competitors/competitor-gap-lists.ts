@@ -162,6 +162,21 @@ export type RecentChecks = ReadonlyMap<
   ReadonlyMap<string, CheckSeries>
 >;
 
+export interface ThreatReadScope {
+  appIds: string[];
+  keywordIds: string[];
+}
+
+export const threatReadScope = (
+  rows: readonly GapRow[],
+  scope: GapScope,
+): ThreatReadScope => ({
+  appIds: [scope.primaryId, ...comparable(scope).map(({ id }) => id)],
+  keywordIds: checkedRows(rows, scope)
+    .filter(({ row }) => row.you !== null && row.you <= GAP_TOP)
+    .map(({ row }) => row.keywordId),
+});
+
 export function threatRows(
   rows: readonly GapRow[],
   scope: GapScope,

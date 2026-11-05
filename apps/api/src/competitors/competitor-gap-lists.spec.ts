@@ -6,6 +6,7 @@ import {
   keywordGapsOf,
   leadsOf,
   RecentChecks,
+  threatReadScope,
   threatRows,
   winnableOf,
 } from './competitor-gap-lists';
@@ -504,5 +505,31 @@ describe('competitorGapLists', () => {
       lead: [],
       coverage: { competitors: 0 },
     });
+  });
+});
+
+describe('threatReadScope', () => {
+  it('reads only the keywords the app ranks in the top 30 and the comparable apps', () => {
+    const entries = [
+      gapEntry({ keywordId: 'top', you: 30, positions: { [RIVAL]: 31 } }),
+      gapEntry({ keywordId: 'below', you: 31, positions: { [RIVAL]: 32 } }),
+      gapEntry({ keywordId: 'absent', you: null, positions: { [RIVAL]: 2 } }),
+      gapEntry({
+        keywordId: 'unchecked',
+        you: null,
+        unchecked: [PRIMARY],
+      }),
+    ];
+
+    expect(threatReadScope(entries, scope([OTHER]))).toEqual({
+      appIds: [PRIMARY, RIVAL],
+      keywordIds: ['top'],
+    });
+  });
+
+  it('reads nothing without a comparable competitor', () => {
+    expect(
+      threatReadScope([gapEntry({ you: 3 })], scope([RIVAL, OTHER])),
+    ).toEqual({ appIds: [PRIMARY], keywordIds: ['kw-habit tracker'] });
   });
 });

@@ -18,8 +18,8 @@ const appRow = (id: string, delistedAt: Date | null = null) => ({
   snapshots: [],
 });
 
-const build = (delistedAt: Date | null) => {
-  const entry = gapEntry({ positions: { [RIVAL]: 5 } });
+const build = (delistedAt: Date | null, you: number | null = null) => {
+  const entry = gapEntry({ you, positions: { [RIVAL]: 5 } });
   const comparison: KeywordComparison = {
     competitors: [{ id: RIVAL, name: RIVAL }],
     rows: [entry.row],
@@ -46,7 +46,7 @@ const build = (delistedAt: Date | null) => {
 
 describe('CompetitorsService.analysis', () => {
   it('reads the checks since the day before the threat window', async () => {
-    const { prisma, service } = build(null);
+    const { prisma, service } = build(null, 7);
 
     await service.analysis(PRIMARY);
 
@@ -62,6 +62,22 @@ describe('CompetitorsService.analysis', () => {
       gte: new Date(`${since}T00:00:00.000Z`),
     });
     expect(competitors.select.delistedAt).toBe(true);
+  });
+
+  it('reads no checks for a keyword the app is outside the top 30 on', async () => {
+    const { prisma, service } = build(null, 31);
+
+    await service.analysis(PRIMARY);
+
+    expect(prisma.keywordRanking.findMany).not.toHaveBeenCalled();
+  });
+
+  it('reads no checks of a delisted competitor', async () => {
+    const { prisma, service } = build(new Date('2026-10-01'), 7);
+
+    await service.analysis(PRIMARY);
+
+    expect(prisma.keywordRanking.findMany).not.toHaveBeenCalled();
   });
 
   it('answers the gap lists beside the older ones', async () => {
