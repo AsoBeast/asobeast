@@ -2,6 +2,7 @@ import {
   CompetitorGapCoverage,
   CompetitorGapKeyword,
   CompetitorGapMarket,
+  CompetitorGaps,
   GAP_TOP,
   GAP_YOU_BELOW,
   KeywordComparisonRow,
@@ -9,6 +10,7 @@ import {
   WINNABLE_COMPETITOR_FROM,
 } from '@asobeast/shared';
 import { BestCompetitor, bestCompetitor, gapKeyword } from './competitor-gaps';
+import { CheckSeries, strongestThreat } from './competitor-threats';
 
 export interface GapCompetitor {
   id: string;
@@ -152,5 +154,72 @@ export function gapCoverage(
     markets: [...markets.values()].sort((a, b) =>
       a.country.localeCompare(b.country),
     ),
+  };
+}
+
+export type RecentChecks = ReadonlyMap<
+  string,
+  ReadonlyMap<string, CheckSeries>
+>;
+
+export function threatRows(
+  rows: readonly GapRow[],
+  scope: GapScope,
+  recent: RecentChecks,
+  today: string,
+): CompetitorGapKeyword[] {
+  const rivals = comparable(scope);
+  return checkedRows(rows, scope)
+    .flatMap((entry) => {
+      const checks = recent.get(entry.row.keywordId);
+      const threat = strongestThreat({
+        you: checks?.get(scope.primaryId) ?? [],
+        rivals: rivals.map(({ id }) => ({ id, series: checks?.get(id) ?? [] })),
+        today,
+      });
+      if (threat === null) return [];
+      const best = {
+        id: threat.competitorId,
+        position: threat.competitorPosition,
+      };
+      return [
+        {
+          ...gapRow(entry, best, null),
+          threat: threat.kind,
+          competitorDelta: threat.competitorDelta,
+          overtookOn: threat.overtookOn,
+        },
+      ];
+    })
+    .sort(byOpportunity);
+}
+
+export interface GapListsInput {
+  scope: GapScope;
+  rows: readonly GapRow[];
+  recent: RecentChecks;
+  today: string;
+}
+
+export type GapLists = Required<
+  Pick<
+    CompetitorGaps,
+    'keywordGaps' | 'winnable' | 'threats' | 'lead' | 'coverage'
+  >
+>;
+
+export function competitorGapLists({
+  scope,
+  rows,
+  recent,
+  today,
+}: GapListsInput): GapLists {
+  const keywordGaps = keywordGapsOf(rows, scope);
+  return {
+    keywordGaps,
+    winnable: winnableOf(keywordGaps),
+    threats: threatRows(rows, scope, recent, today),
+    lead: leadsOf(rows, scope),
+    coverage: gapCoverage(rows, scope),
   };
 }

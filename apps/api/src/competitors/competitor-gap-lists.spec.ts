@@ -1,11 +1,15 @@
 import {
+  competitorGapLists,
   GapRow,
   GapScope,
   gapCoverage,
   keywordGapsOf,
   leadsOf,
+  RecentChecks,
+  threatRows,
   winnableOf,
 } from './competitor-gap-lists';
+import { CheckSeries } from './competitor-threats';
 import { gapEntry, OTHER, PRIMARY, RIVAL } from './competitor-gaps.fixture';
 
 const scope = (
@@ -346,6 +350,159 @@ describe('gapCoverage', () => {
       competitors: 0,
       delisted: 0,
       markets: [{ country: 'us', keywords: 1, compared: 0 }],
+    });
+  });
+});
+
+describe('threatRows', () => {
+  const TODAY = '2026-11-03';
+  const checks = (now: number | null, before: number | null): CheckSeries => [
+    { date: TODAY, position: now },
+    { date: '2026-11-02', position: before },
+  ];
+  const recentFor = (
+    keywordId: string,
+    byApp: Record<string, CheckSeries>,
+  ): RecentChecks => new Map([[keywordId, new Map(Object.entries(byApp))]]);
+  const closingEntry = (overrides: Parameters<typeof gapEntry>[0] = {}) =>
+    gapEntry({
+      keywordId: 'kw-threat',
+      you: 5,
+      positions: { [RIVAL]: 7 },
+      latestCheckedOn: TODAY,
+      ...overrides,
+    });
+  const closingChecks = recentFor('kw-threat', {
+    [PRIMARY]: checks(5, 5),
+    [RIVAL]: checks(7, 9),
+  });
+
+  it('names the threatening competitor with why it threatens', () => {
+    const [row] = threatRows([closingEntry()], scope(), closingChecks, TODAY);
+
+    expect(row).toEqual(
+      expect.objectContaining({
+        threat: 'closing',
+        competitorDelta: 2,
+        overtookOn: null,
+        bestCompetitorId: RIVAL,
+        bestCompetitorPosition: 7,
+        yourPosition: 5,
+        gap: null,
+        country: 'us',
+        lastCheckedOn: TODAY,
+      }),
+    );
+  });
+
+  it('never names a delisted competitor', () => {
+    expect(
+      threatRows([closingEntry()], scope([RIVAL]), closingChecks, TODAY),
+    ).toEqual([]);
+    expect(
+      threatRows([closingEntry()], scope([RIVAL, OTHER]), closingChecks, TODAY),
+    ).toEqual([]);
+  });
+
+  it('leaves out a keyword the app was never checked on', () => {
+    expect(
+      threatRows(
+        [closingEntry({ unchecked: [PRIMARY] })],
+        scope(),
+        closingChecks,
+        TODAY,
+      ),
+    ).toEqual([]);
+  });
+
+  it('keeps a stale keyword in the gaps and out of the threats', () => {
+    const stale = gapEntry({
+      keywordId: 'kw-stale',
+      you: null,
+      positions: { [RIVAL]: 4 },
+      latestCheckedOn: '2026-10-30',
+    });
+    const recent = recentFor('kw-stale', {
+      [PRIMARY]: [{ date: '2026-10-30', position: 20 }],
+      [RIVAL]: checks(22, 25),
+    });
+    const lists = competitorGapLists({
+      scope: scope(),
+      rows: [stale],
+      recent,
+      today: TODAY,
+    });
+
+    expect(lists.threats).toEqual([]);
+    expect(lists.keywordGaps.map(({ keywordId }) => keywordId)).toEqual([
+      'kw-stale',
+    ]);
+  });
+});
+
+describe('competitorGapLists', () => {
+  const TODAY = '2026-11-03';
+
+  it('assembles every list and the coverage', () => {
+    const entries = [
+      gapEntry({ text: 'gap', positions: { [RIVAL]: 12 }, opportunity: 30 }),
+      gapEntry({ text: 'lead', you: 2, positions: { [RIVAL]: 8 } }),
+      gapEntry({ text: 'threat', you: 5, positions: { [RIVAL]: 6 } }),
+    ];
+    const recent: RecentChecks = new Map([
+      [
+        'kw-threat',
+        new Map([
+          [
+            PRIMARY,
+            [
+              { date: TODAY, position: 5 },
+              { date: '2026-11-02', position: 5 },
+            ],
+          ],
+          [
+            RIVAL,
+            [
+              { date: TODAY, position: 6 },
+              { date: '2026-11-02', position: 9 },
+            ],
+          ],
+        ]),
+      ],
+    ]);
+    const lists = competitorGapLists({
+      scope: scope([], [RIVAL]),
+      rows: entries,
+      recent,
+      today: TODAY,
+    });
+
+    expect(textsOf(lists.keywordGaps)).toEqual(['gap']);
+    expect(textsOf(lists.winnable)).toEqual(['gap']);
+    expect(textsOf(lists.threats)).toEqual(['threat']);
+    expect(textsOf(lists.lead)).toEqual(['lead', 'threat']);
+    expect(lists.coverage.competitors).toBe(1);
+    expect(
+      textsOf(lists.threats).filter((text) =>
+        textsOf(lists.keywordGaps).includes(text),
+      ),
+    ).toEqual([]);
+  });
+
+  it('answers empty lists without a competitor', () => {
+    const lists = competitorGapLists({
+      scope: scope([], []),
+      rows: [gapEntry({ you: 3 })],
+      recent: new Map(),
+      today: TODAY,
+    });
+
+    expect(lists).toMatchObject({
+      keywordGaps: [],
+      winnable: [],
+      threats: [],
+      lead: [],
+      coverage: { competitors: 0 },
     });
   });
 });
