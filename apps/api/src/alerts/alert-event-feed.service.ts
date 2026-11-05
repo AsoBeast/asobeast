@@ -22,7 +22,11 @@ import {
   type FeedRow,
   type LiveApp,
 } from './alert-event-item';
-import { feedWhere, feedWindowStart } from './alert-feed-where';
+import {
+  feedWhere,
+  feedWindowStart,
+  type FeedFilter,
+} from './alert-feed-where';
 import { ListAlertEventsQueryDto } from './dto/list-alert-events-query.dto';
 
 interface FeedScope {
@@ -35,6 +39,8 @@ interface FeedHomes {
   live: ReadonlyMap<string, LiveApp>;
   trackers: ReadonlyMap<string, readonly string[]>;
 }
+
+const MAX_BATCHES = 4;
 
 const UNSCOPED: FeedScope = { appIds: null, keywordIds: [], preferred: null };
 
@@ -52,19 +58,34 @@ export class AlertEventFeed {
     query: ListAlertEventsQueryDto,
     now = new Date(),
   ): Promise<AlertEventList> {
-    const cursor = this.cursorOf(query.cursor);
+    let cursor = this.cursorOf(query.cursor);
     const scope = await this.scopeOf(query.appId);
-    const rows = await this.prisma.alertEvent.findMany({
-      where: feedWhere({
-        types: query.type ?? ALERT_FEED_EVENTS,
-        since: feedWindowStart(now),
-        after: query.since ? new Date(query.since) : null,
-        appIds: scope.appIds,
-        keywordIds: scope.keywordIds,
-        cursor,
-      }),
+    const filter: Omit<FeedFilter, 'cursor'> = {
+      types: query.type?.length ? query.type : ALERT_FEED_EVENTS,
+      since: feedWindowStart(now),
+      after: query.since ? new Date(query.since) : null,
+      appIds: scope.appIds,
+      keywordIds: scope.keywordIds,
+    };
+    const events: AlertEventItem[] = [];
+    for (let batch = 0; batch < MAX_BATCHES; batch += 1) {
+      const wanted = query.limit - events.length;
+      const rows = await this.rowsOf({ ...filter, cursor }, wanted + 1);
+      const read = rows.slice(0, wanted);
+      const homes = await this.homesOf(read);
+      events.push(...this.itemsOf(read, homes, scope.preferred));
+      if (rows.length <= wanted) return { events, nextCursor: null };
+      cursor = read[read.length - 1];
+      if (events.length === query.limit) break;
+    }
+    return { events, nextCursor: cursor ? encodeCursor(cursor) : null };
+  }
+
+  private rowsOf(filter: FeedFilter, take: number): Promise<FeedRow[]> {
+    return this.prisma.alertEvent.findMany({
+      where: feedWhere(filter),
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-      take: query.limit + 1,
+      take,
       select: {
         id: true,
         event: true,
@@ -74,12 +95,6 @@ export class AlertEventFeed {
         createdAt: true,
       },
     });
-    const page = rows.slice(0, query.limit);
-    const last = page.at(-1);
-    return {
-      events: this.itemsOf(page, await this.homesOf(page), scope.preferred),
-      nextCursor: rows.length > query.limit && last ? encodeCursor(last) : null,
-    };
   }
 
   private cursorOf(value: string | undefined): FeedCursor | null {

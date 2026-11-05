@@ -361,6 +361,29 @@ describe('GET /alerts/events (e2e)', () => {
     ]);
   });
 
+  it('fills a page past the rows of a removed app', async () => {
+    const gone = await createApp('feed-removed', 'Removed', apps.primary);
+    for (const ago of [1, 2, 3]) {
+      await seed(onApp(metadata, gone), { ago });
+    }
+    const older = await seed(onApp(drop(), apps.primary), { ago: 10 });
+    const oldest = await seed(onApp(negative, apps.primary), { ago: 20 });
+    await prisma.app.delete({ where: { id: gone } });
+
+    const first = await list('?limit=1');
+    const second = await list(`?limit=1&cursor=${first.nextCursor}`);
+
+    expect(ids(first)).toEqual([older]);
+    expect(ids(second)).toEqual([oldest]);
+    expect(second.nextCursor).toBeNull();
+  });
+
+  it('reads an empty type as every feed event', async () => {
+    const row = await seed(onApp(drop(), apps.primary));
+
+    expect(ids(await list('?type='))).toEqual([row]);
+  });
+
   it('skips an unreadable row and still answers the page', async () => {
     const readable = await seed(onApp(drop(), apps.primary), { ago: 5 });
     const broken = await seed(onApp(negative, apps.primary), { ago: 6 });
