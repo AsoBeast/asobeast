@@ -37,7 +37,15 @@ export async function listingFacts(
     marketTexts,
     inKeywordField: indexKeywordFields(stored),
     ...(profile
-      ? { classOf: keywordClassifier(profile, { snapshotText, marketTexts }) }
+      ? {
+          classOf: keywordClassifier(profile, {
+            snapshotText,
+            marketTexts,
+            marketTitles: new Map(
+              [...listings].map(([market, listing]) => [market, listing.title]),
+            ),
+          }),
+        }
       : {}),
   };
   if (!options.coverage && !options.marks) {

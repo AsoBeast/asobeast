@@ -928,6 +928,29 @@ describe('KeywordsController table facts (e2e)', () => {
       });
     });
 
+    it('reads the title of the keyword market as an own name there only', async () => {
+      const { primary } = await seedForest();
+      await seedListing(
+        primary.id,
+        { title: 'Wald: Konzentration', description: 'Pflanze einen Baum.' },
+        { country: 'de' },
+      );
+      await trackIn(primary.id, 'wald', 'de');
+      await trackIn(primary.id, 'wald', 'us');
+
+      const classes = (await list(primary.id)).map((item) => [
+        item.country,
+        item.keywordClass,
+      ]);
+
+      expect(classes).toEqual(
+        expect.arrayContaining([
+          ['de', 'ownBrand'],
+          ['us', 'generic'],
+        ]),
+      );
+    });
+
     it('reads a competitor brand as generic once the competitor is removed', async () => {
       const { primary, rival } = await seedForest();
       await track(primary.id, 'todoist');

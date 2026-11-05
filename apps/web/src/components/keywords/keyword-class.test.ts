@@ -3,6 +3,7 @@ import type { TrackedKeywordItem } from "@asobeast/shared";
 import {
   classChoice,
   DETECTED_CHOICE,
+  answeredKeyword,
   optimisticKeyword,
 } from "./keyword-class";
 
@@ -52,5 +53,38 @@ describe("classChoice", () => {
     ],
   ] as const)("checks %j as %s", (row, choice) => {
     expect(classChoice(row)).toBe(choice);
+  });
+});
+
+describe("answeredKeyword", () => {
+  const owned = {
+    ...row,
+    keywordClass: "generic",
+    keywordClassSource: "owner",
+  } as TrackedKeywordItem;
+
+  it("takes the class the server answered after a reset", () => {
+    expect(
+      answeredKeyword(owned, {
+        ...owned,
+        keywordClass: "ownBrand",
+        keywordClassSource: "detected",
+        note: "server",
+      }),
+    ).toEqual({
+      ...owned,
+      keywordClass: "ownBrand",
+      keywordClassSource: "detected",
+    });
+  });
+
+  it("keeps the row when the answer carries no class", () => {
+    expect(
+      answeredKeyword(owned, {
+        ...owned,
+        keywordClass: undefined,
+        keywordClassSource: undefined,
+      }),
+    ).toEqual(owned);
   });
 });

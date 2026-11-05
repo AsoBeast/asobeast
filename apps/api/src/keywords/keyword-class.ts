@@ -33,7 +33,7 @@ const containsName = (words: readonly string[], name: BrandName): boolean =>
   );
 
 const sameName = (left: BrandName, right: BrandName): boolean =>
-  left.size === right.size && [...left].every((word) => right.has(word));
+  left.size === right.size && containsName([...left], right);
 
 const isName = (name: BrandName | null): name is BrandName => name !== null;
 
@@ -60,12 +60,13 @@ export function brandProfileOf(input: {
 
 export function profileForListing(
   profile: BrandProfile,
-  listingWords: readonly string[],
+  listing: { words: readonly string[]; title: string | null },
 ): BrandProfile {
+  const marketName = listing.title === null ? null : brandNameOf(listing.title);
   return {
-    own: profile.own,
+    own: [...profile.own, marketName].filter(isName),
     competitors: profile.competitors.filter(
-      (name) => !containsName(listingWords, name),
+      (name) => !containsName(listing.words, name),
     ),
   };
 }
@@ -83,7 +84,7 @@ export function classifyKeyword(
   profile: BrandProfile,
 ): KeywordClass {
   const words = contentWords(keyword.text);
-  if (words.length === 0 || overruledBySerp(keyword)) return 'generic';
+  if (overruledBySerp(keyword)) return 'generic';
   if (profile.own.some((name) => containsName(words, name))) return 'ownBrand';
   const named = profile.competitors.some((name) => containsName(words, name));
   if (named || keyword.flags.includes('brand')) return 'competitorBrand';

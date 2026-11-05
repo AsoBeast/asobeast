@@ -186,6 +186,64 @@ test.describe("the keyword type menu", () => {
     ).toBeVisible();
   });
 
+  test("sends a second choice only after the first one landed and keeps the last", async ({
+    page,
+  }) => {
+    await page.goto(LAB);
+    const held = await holdRequest(page, PATCH_URL, "PATCH");
+    const sent: unknown[] = [];
+    page.on("request", (request) => {
+      if (request.method() === "PATCH" && PATCH_URL.test(request.url())) {
+        sent.push(request.postDataJSON());
+      }
+    });
+    const row = rowOf(page, "study timer");
+
+    await choose(page, "study timer", "Own brand");
+    await expect.poll(() => sent).toHaveLength(1);
+    await choose(page, "study timer", "Competitor brand");
+    await expect(
+      row.getByTitle("Competitor brand keyword, set by you"),
+    ).toBeVisible();
+    expect(sent).toEqual([{ keywordClass: "ownBrand" }]);
+
+    held.release();
+    await expect
+      .poll(() => sent)
+      .toEqual([
+        { keywordClass: "ownBrand" },
+        { keywordClass: "competitorBrand" },
+      ]);
+    await page.waitForLoadState("networkidle");
+    await page.reload();
+    await expect(
+      row.getByTitle("Competitor brand keyword, set by you"),
+    ).toBeVisible();
+  });
+
+  test("keeps the detected type a reset answered when the list cannot reload", async ({
+    page,
+  }) => {
+    await page.goto(LAB);
+    const row = rowOf(page, "focus timer");
+    await choose(page, "focus timer", "Generic");
+    await expect(row.getByTitle(/brand keyword/i)).toHaveCount(0);
+    await page.waitForLoadState("networkidle");
+    await page.route(
+      /\/api\/backend\/apps\/app-class\/keywords(\?|$)/,
+      (route) =>
+        route.request().method() === "GET"
+          ? route.fulfill({ status: 500, body: "{}" })
+          : route.fallback(),
+    );
+
+    await choose(page, "focus timer", "Detected automatically");
+
+    await expect(
+      row.getByTitle("Brand keyword", { exact: true }),
+    ).toBeVisible();
+  });
+
   test("shows a failed change and keeps the type it had", async ({
     page,
     context,

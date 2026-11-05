@@ -111,4 +111,22 @@ describe('keywordClassifier', () => {
     classOf(keyword('de'));
     expect(get).toHaveBeenCalledTimes(1);
   });
+
+  it('reads the title of the keyword market as an own name', () => {
+    const classOf = keywordClassifier(
+      brandProfileOf({
+        title: 'WeChat',
+        developer: null,
+        competitorTitles: [],
+      }),
+      {
+        snapshotText: 'WeChat',
+        marketTexts: new Map([['cn', '微信']]),
+        marketTitles: new Map([['cn', '微信']]),
+      },
+    );
+
+    expect(classOf({ ...keyword('cn'), text: '微信' })).toBe('ownBrand');
+    expect(classOf({ ...keyword('us'), text: '微信' })).toBe('generic');
+  });
 });

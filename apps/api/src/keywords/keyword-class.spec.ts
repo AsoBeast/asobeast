@@ -31,7 +31,7 @@ const classOf = (
 ) =>
   classifyKeyword(
     { text, flags: [], serpRelevance: null, ...overrides },
-    profileForListing(profile, listingWords),
+    profileForListing(profile, { words: listingWords, title: null }),
   );
 
 const BRAND: SerpFlag[] = ['brand'];
@@ -192,10 +192,68 @@ describe('brandProfileOf', () => {
 describe('profileForListing', () => {
   it('drops the competitor names the own listing already uses and keeps the own names', () => {
     expect(
-      profileForListing(forestProfile, contentWords('a focus timer app')),
+      profileForListing(forestProfile, {
+        words: contentWords('a focus timer app'),
+        title: null,
+      }),
     ).toEqual({
       own: forestProfile.own,
       competitors: [new Set(['todoist'])],
     });
+  });
+});
+
+describe('the market listing title', () => {
+  const homeOnly = brandProfileOf({
+    title: 'WeChat',
+    developer: null,
+    competitorTitles: [],
+  });
+
+  it('is an own name of the keywords of that market', () => {
+    const market = profileForListing(homeOnly, { words: [], title: '微信' });
+
+    expect(
+      classifyKeyword(
+        { text: '微信', flags: BRAND, serpRelevance: 0.1 },
+        market,
+      ),
+    ).toBe('ownBrand');
+    expect(
+      classifyKeyword(
+        { text: 'wechat', flags: [], serpRelevance: null },
+        market,
+      ),
+    ).toBe('ownBrand');
+  });
+
+  it('adds no name for a market without a listing', () => {
+    expect(profileForListing(homeOnly, { words: [], title: null }).own).toEqual(
+      homeOnly.own,
+    );
+  });
+});
+
+describe('category names across plurals', () => {
+  it('drops a name two competitors share in singular and plural', () => {
+    const profile = brandProfileOf({
+      title: null,
+      developer: null,
+      competitorTitles: ['Focus Timer: x', 'Focus Timers: y'],
+    });
+
+    expect(classOf('focus timer', {}, profile)).toBe('generic');
+  });
+});
+
+describe('a keyword of stopwords only', () => {
+  it('reads the brand flag', () => {
+    expect(classOf('the app', { flags: BRAND, serpRelevance: 0.1 })).toBe(
+      'competitorBrand',
+    );
+  });
+
+  it('stays generic without the flag', () => {
+    expect(classOf('the app', { serpRelevance: 0.1 })).toBe('generic');
   });
 });

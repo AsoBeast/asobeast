@@ -39,3 +39,16 @@ export function optimisticKeyword(
     ...(keywordClass ? { keywordClass, keywordClassSource: "owner" } : {}),
   };
 }
+
+export function answeredKeyword(
+  row: TrackedKeywordItem,
+  answer: TrackedKeywordItem,
+): TrackedKeywordItem {
+  return answer.keywordClass === undefined
+    ? row
+    : {
+        ...row,
+        keywordClass: answer.keywordClass,
+        keywordClassSource: answer.keywordClassSource,
+      };
+}

@@ -37,16 +37,22 @@ export async function loadBrandProfile(
 
 export function keywordClassifier(
   profile: BrandProfile,
-  texts: { snapshotText: string; marketTexts?: ReadonlyMap<string, string> },
+  texts: {
+    snapshotText: string;
+    marketTexts?: ReadonlyMap<string, string>;
+    marketTitles?: ReadonlyMap<string, string>;
+  },
 ): KeywordClassOf {
   const profiles = new Map<string, BrandProfile>();
   const profileOf = (country: string): BrandProfile => {
     const known = profiles.get(country);
     if (known) return known;
-    const market = profileForListing(
-      profile,
-      contentWords(texts.marketTexts?.get(country) ?? texts.snapshotText),
-    );
+    const market = profileForListing(profile, {
+      words: contentWords(
+        texts.marketTexts?.get(country) ?? texts.snapshotText,
+      ),
+      title: texts.marketTitles?.get(country) ?? null,
+    });
     profiles.set(country, market);
     return market;
   };
