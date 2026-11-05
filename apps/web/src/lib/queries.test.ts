@@ -1021,6 +1021,7 @@ describe("invalidation sets", () => {
     expect(workspaceChecklistOptions.queryKey).toEqual(["workspace-checklist"]);
     expect(workspaceChecklistOptions.staleTime).toBe(60_000);
     expect(workspaceChecklistOptions.retry).toBe(false);
+    expect(workspaceChecklistOptions.refetchOnWindowFocus).toBe(true);
   });
 
   it("invalidates exactly the workspace checklist", () => {

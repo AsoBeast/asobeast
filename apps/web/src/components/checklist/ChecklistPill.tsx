@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type RefObject } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useAuth } from "@/components/auth/use-auth";
@@ -10,7 +10,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { useFocusAfterCommit } from "@/lib/focus-handoff";
+import { focusIsLost, useFocusAfterCommit } from "@/lib/focus-handoff";
 import { workspaceChecklistOptions } from "@/lib/queries";
 import { useStoredPreference } from "@/lib/use-stored-preference";
 import { cn } from "@/lib/utils";
@@ -41,6 +41,23 @@ function useProgressAnnouncement(progress: ChecklistProgress | null): string {
   return announcement;
 }
 
+function useFocusRescue(
+  visible: boolean,
+  open: boolean,
+  content: RefObject<HTMLDivElement | null>,
+): void {
+  const wasVisible = useRef(false);
+  useEffect(() => {
+    if (focusIsLost()) {
+      if (visible && open) content.current?.focus();
+      if (wasVisible.current && !visible) {
+        document.getElementById("main-content")?.focus();
+      }
+    }
+    wasVisible.current = visible;
+  });
+}
+
 export function ChecklistPill() {
   const { authenticated, user } = useAuth();
   return authenticated && user?.entitled === true ? <EntitledPill /> : null;
@@ -53,6 +70,7 @@ function EntitledPill() {
   const [open, setOpen] = useState(false);
   const [hiding, setHiding] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
+  const content = useRef<HTMLDivElement>(null);
   const focusAfterCommit = useFocusAfterCommit();
   const { save, pending } = useChecklistSave();
   const titleId = useId();
@@ -61,7 +79,10 @@ function EntitledPill() {
     checklist ? { done: checklist.done, total: checklist.total } : null,
   );
 
-  if (!checklist || !pillVisible(checklist)) return null;
+  const visible = checklist !== undefined && pillVisible(checklist);
+  useFocusRescue(visible, open, content);
+
+  if (!visible || !checklist) return null;
 
   const collapsed = collapsedValue === "1";
   const label = pillLabel(checklist.done, checklist.total);
@@ -110,12 +131,13 @@ function EntitledPill() {
             </Button>
           </PopoverTrigger>
           <PopoverContent
+            ref={content}
             side="top"
             align="end"
             collisionPadding={16}
             aria-labelledby={titleId}
             aria-describedby={summaryId}
-            className="max-h-(--radix-popover-content-available-height) w-96 max-w-(--radix-popover-content-available-width) overflow-y-auto p-4"
+            className="max-h-(--radix-popover-content-available-height) w-96 print:hidden max-w-(--radix-popover-content-available-width) overflow-y-auto p-4"
           >
             <ChecklistPanel
               checklist={checklist}

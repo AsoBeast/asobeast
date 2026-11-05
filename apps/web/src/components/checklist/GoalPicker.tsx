@@ -5,6 +5,10 @@ import { useQuery } from "@tanstack/react-query";
 import { CheckCircle2 } from "lucide-react";
 import { WORKSPACE_GOALS, type WorkspaceGoal } from "@asobeast/shared";
 import { useAuth } from "@/components/auth/use-auth";
+import {
+  failedRead,
+  InlineQueryError,
+} from "@/components/layout/InlineQueryError";
 import { Button } from "@/components/ui/button";
 import { workspaceChecklistOptions } from "@/lib/queries";
 import { cn } from "@/lib/utils";
@@ -13,15 +17,20 @@ import { useChecklistSave } from "./use-checklist-save";
 
 export function GoalPicker({ as: Heading = "h2" }: { as?: "h2" | "h3" }) {
   const { authenticated } = useAuth();
-  const { data: checklist } = useQuery({
+  const read = useQuery({
     ...workspaceChecklistOptions,
     enabled: authenticated,
   });
+  const checklist = read.data;
   const { save, pending } = useChecklistSave();
   const [announcement, setAnnouncement] = useState("");
   const headingId = useId();
 
-  if (!checklist) return null;
+  if (!checklist) {
+    return failedRead(read) ? (
+      <InlineQueryError message="Could not load your goal." read={read} />
+    ) : null;
+  }
 
   const choose = (goal: WorkspaceGoal) => {
     if (pending || checklist.goal === goal) return;

@@ -16,7 +16,7 @@ By the end of this page you know what the floating checklist counts, how to chan
 
 A pill at the bottom right of every page reads how far the workspace has come, for example **2 of 8 done**. Press it to open the list. Each open step says what it is for and links to the page that does it, and the first open step is marked **Next**.
 
-Nothing on the list is ticked by hand. Each step is worked out from data AsoBeast already holds, so a step turns done the moment the thing it asks for exists, and the count follows within a minute or when you return to the tab.
+Nothing on the list is ticked by hand. Each step is worked out from data AsoBeast already holds, so a step turns done the moment the thing it asks for exists. A change you make in AsoBeast updates the count at once; a change made elsewhere, such as your AI client using its token, shows when you return to the tab or reload the page.
 
 The checklist belongs to the workspace, so everyone in it sees the same steps. The pill disappears once every step is done or once someone hides it. **Shrink the pill** at the foot of the list turns it into a small ring; that choice is kept in your browser only.
 
@@ -76,5 +76,5 @@ The `workspace_checklist` tool in the [MCP tool reference](/mcp/tools) and `GET 
 ## Troubleshooting
 
 - **The pill never appears.** Every step is done, someone in the workspace hid it, or the workspace has no plan in force and is paused. **Settings**, **Getting started** shows which, and says so when the checklist could not be read.
-- **A step stays open after you did it.** The count is read again within a minute and whenever you return to the tab. A token used only from an AI client shows as done after the next read.
+- **A step stays open after you did it.** A change made outside this tab is read when you return to it after a minute or more, or when you reload the page. A token used only from an AI client shows as done after that read.
 - **The pill is a ring with no words.** It was shrunk in this browser. Open it and press **Expand the pill**.

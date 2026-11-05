@@ -242,6 +242,73 @@ test("the pill is left out of print", async ({ page, context }) => {
   await expect(button).toBeHidden();
 });
 
+test("an open popover is left out of print", async ({ page, context }) => {
+  await seedChecklist(context, "partial");
+  await openPill(page);
+
+  await page.emulateMedia({ media: "print" });
+  await expect(page.locator('[data-slot="popover-content"]')).toBeHidden();
+});
+
+async function refetchOnReturn(page: Page): Promise<void> {
+  await page.clock.fastForward("01:05");
+  await page.evaluate(() => {
+    window.dispatchEvent(new Event("visibilitychange"));
+  });
+}
+
+const switchScenario = (page: Page, scenario: string) =>
+  page.context().addCookies([
+    {
+      name: "e2e_checklist",
+      value: scenario,
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
+
+test("a refetch that removes the focused step keeps focus in the popover", async ({
+  page,
+  context,
+}) => {
+  await seedChecklist(context, "partial");
+  await page.clock.install();
+  await openPill(page);
+  await popover(page).getByRole("link", { name: "Open reviews" }).focus();
+
+  await switchScenario(page, "no-reviews");
+  await refetchOnReturn(page);
+
+  await expect(
+    popover(page).getByRole("link", { name: "Open reviews" }),
+  ).toHaveCount(0);
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          document.activeElement?.closest('[role="dialog"]') !== null &&
+          document.activeElement !== document.body,
+      ),
+    )
+    .toBe(true);
+});
+
+test("a refetch that completes the checklist hands focus to the page", async ({
+  page,
+  context,
+}) => {
+  await seedChecklist(context, "partial");
+  await page.clock.install();
+  await page.goto("/apps/app-1");
+  await (await hydrated(pill(page))).focus();
+
+  await switchScenario(page, "complete");
+  await refetchOnReturn(page);
+
+  await expect(pill(page)).toHaveCount(0);
+  await expect(page.locator("#main-content")).toBeFocused();
+});
+
 for (const theme of THEMES) {
   test(`the open popover has no contrast violation in the ${theme} theme`, async ({
     page,
@@ -639,10 +706,7 @@ test("the first run is read only while the popover is open", async ({
   expect(sent.length).toBeGreaterThanOrEqual(1);
 });
 
-test("a failed first run read shows no row and no error", async ({
-  page,
-  context,
-}) => {
+test("a failed first run read offers a retry", async ({ page, context }) => {
   await seedChecklist(context, "collecting");
   await context.addCookies([
     { name: "e2e_first_run_fail", value: "1", domain: "localhost", path: "/" },
@@ -651,7 +715,13 @@ test("a failed first run read shows no row and no error", async ({
   await page.waitForLoadState("networkidle");
 
   await expect(popover(page)).not.toContainText("Checking where your app");
-  await expect(popover(page).getByRole("alert")).toHaveCount(0);
+  await expect(popover(page).getByRole("alert")).toHaveText(
+    "Could not check your first positions.",
+    { timeout: 15_000 },
+  );
+  await expect(
+    popover(page).getByRole("button", { name: "Retry" }),
+  ).toBeVisible();
 });
 
 test("a workspace without an app reads no first run", async ({

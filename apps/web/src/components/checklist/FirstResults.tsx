@@ -3,6 +3,10 @@
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
+import {
+  failedRead,
+  InlineQueryError,
+} from "@/components/layout/InlineQueryError";
 import { firstRunOptions } from "@/lib/queries";
 import { CHECKLIST_LINK } from "./checklist-link";
 import { firstResultsRow } from "./first-results";
@@ -14,11 +18,19 @@ export function FirstResults({
   appId: string | null;
   onNavigate: () => void;
 }) {
-  const { data } = useQuery({
+  const read = useQuery({
     ...firstRunOptions(appId ?? ""),
     enabled: appId !== null,
   });
-  const row = firstResultsRow(data, appId);
+  if (failedRead(read)) {
+    return (
+      <InlineQueryError
+        message="Could not check your first positions."
+        read={read}
+      />
+    );
+  }
+  const row = firstResultsRow(read.data, appId);
   if (row === null) return null;
   if (row.kind === "checking") {
     return (

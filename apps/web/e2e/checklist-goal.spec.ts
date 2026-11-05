@@ -150,6 +150,29 @@ test("a failed save rolls the goal back", async ({ page, context }) => {
   );
 });
 
+test("a failed goal read offers a retry on the setup page", async ({
+  page,
+  context,
+}) => {
+  await startedSetup(context, "app-1");
+  await seedChecklist(context, "partial");
+  await context.addCookies([
+    {
+      name: "e2e_checklist_read_fail",
+      value: "1",
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
+  await page.goto(SETUP_PATH);
+
+  await expect(
+    page.getByRole("alert").filter({ hasText: "Could not load your goal." }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Retry" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: QUESTION })).toHaveCount(0);
+});
+
 for (const status of ["completed", "dismissed"] as const) {
   test(`the question stays when the setup is ${status}`, async ({
     page,

@@ -982,6 +982,7 @@ export const workspaceChecklistOptions = queryOptions({
   queryFn: getWorkspaceChecklist,
   staleTime: 60 * 1000,
   retry: false,
+  refetchOnWindowFocus: true,
 });
 
 export function invalidateWorkspaceChecklist(client: QueryClient): void {
