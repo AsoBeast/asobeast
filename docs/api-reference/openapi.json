@@ -4719,7 +4719,7 @@
     },
     "/apps/{id}/summary": {
       "get": {
-        "description": "Visibility, rank distribution, movers, coverage and counts of the app, for every market or one, with shareOfVoice: the visibility of the app as a percentage of the summed visibility of the app and the tracked competitors checked on the same day, over the same keywords, and the 7 day change; the reason is named when there is none.",
+        "description": "Visibility, rank distribution, movers, coverage and counts of the app, for every market or one, with shareOfVoice: the visibility of the app as a percentage of the summed visibility of the app and the tracked competitors checked on the same day, over the same keywords, and the 7 day change; the reason is named when there is none. discoveries counts the keywords the app could rank for that it does not track, and how many of them it already ranks for; see keyword discovery.",
         "operationId": "AnalyticsController_getSummary",
         "parameters": [
           {
@@ -4938,6 +4938,7 @@
     },
     "/portfolio": {
       "get": {
+        "description": "Every primary app of the workspace with its visibility, sparkline and counts, the groups and the totals. discoveries counts the keywords each app could rank for that it does not track, and how many of them it already ranks for; see keyword discovery.",
         "operationId": "PortfolioController_getPortfolio",
         "parameters": [],
         "responses": {

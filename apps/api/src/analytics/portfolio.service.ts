@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { AppSetup } from '@prisma/client';
 import {
+  KeywordDiscoveryCount,
   PortfolioApp,
   PortfolioGroup,
   PortfolioSummary,
@@ -20,6 +21,7 @@ import {
 import { countChangeDays } from './change-days';
 import { delistedAt, setupStateOf } from '../apps/apps.mapper';
 import { HOME_EVENTS, LATEST_HOME_LISTING } from '../apps/listing';
+import { countDiscoveries } from '../keyword-discovery/discovery-counts';
 
 const CHANGES_WINDOW_DAYS = 7;
 
@@ -50,8 +52,14 @@ export class PortfolioService {
     });
 
     const homeKeywords = this.activeHomeKeywords(apps);
+    const discoveries = countDiscoveries(
+      this.prisma,
+      apps.map(({ id }) => id),
+    );
     const [members, changes7d] = await Promise.all([
-      Promise.all(apps.map((app) => this.portfolioMember(app, homeKeywords))),
+      Promise.all(
+        apps.map((app) => this.portfolioMember(app, homeKeywords, discoveries)),
+      ),
       this.workspaceChanges(CHANGES_WINDOW_DAYS),
     ]);
 
@@ -99,11 +107,14 @@ export class PortfolioService {
       appSetup: AppSetup | null;
     },
     homeKeywords: Promise<Map<string, number>>,
+    discoveryCounts: Promise<Map<string, KeywordDiscoveryCount>>,
   ): Promise<GroupMember & { app: PortfolioApp }> {
-    const [{ rows, referenceDate: reference }, keywords] = await Promise.all([
-      sparklineRows(this.prisma, app.id),
-      homeKeywords,
-    ]);
+    const [{ rows, referenceDate: reference }, keywords, discoveries] =
+      await Promise.all([
+        sparklineRows(this.prisma, app.id),
+        homeKeywords,
+        discoveryCounts,
+      ]);
 
     return {
       appId: app.id,
@@ -132,6 +143,7 @@ export class PortfolioService {
           competitors: app._count.competitors,
           keywords: keywords.get(app.id) ?? 0,
         }),
+        discoveries: discoveries.get(app.id),
       },
     };
   }

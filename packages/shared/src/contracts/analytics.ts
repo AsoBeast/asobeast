@@ -1,3 +1,5 @@
+import type { KeywordDiscoveryCount } from './keyword-discoveries';
+
 export interface VisibilitySummary {
   current: number;
   delta7d: number | null;
@@ -73,6 +75,7 @@ export interface AppSummary {
   competitors: number;
   shareOfVoice?: ShareOfVoice;
   nonBrandedShareOfVoice?: ShareOfVoice;
+  discoveries?: KeywordDiscoveryCount;
 }
 
 export interface VisibilityPoint {

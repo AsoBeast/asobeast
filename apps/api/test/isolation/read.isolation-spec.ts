@@ -2,6 +2,7 @@ import request from 'supertest';
 import type {
   AppSummary,
   CompetitorAnalysis,
+  PortfolioSummary,
   TrackedKeywordItem,
 } from '@asobeast/shared';
 import {
@@ -380,6 +381,52 @@ describe('Read isolation', () => {
     expect(JSON.stringify(refused.body)).not.toContain(
       fixture.b.discoveryKeywordId,
     );
+  });
+
+  it("never counts another workspace's keyword discoveries", async () => {
+    const extra = await fixture.db.keyword.create({
+      data: { text: 'a second discovery', store: 'APP_STORE', country: 'us' },
+    });
+    await fixture.db.keywordDiscovery.create({
+      data: {
+        appId: fixture.a.appleAppId,
+        workspaceId: fixture.a.id,
+        keywordId: extra.id,
+        source: 'subtitle',
+        relevance: 90,
+        position: 7,
+        depth: 200,
+        checkedOn: new Date('2026-11-02T00:00:00.000Z'),
+      },
+    });
+    const discoveriesOf = async (workspace: IsolationWorkspace) => {
+      const portfolio = (await workspace.agent.get('/portfolio').expect(200))
+        .body as PortfolioSummary;
+      const summary = (
+        await workspace.agent
+          .get(`/apps/${workspace.appleAppId}/summary`)
+          .expect(200)
+      ).body as AppSummary;
+      return {
+        portfolio: portfolio.apps.find(
+          (entry) => entry.id === workspace.appleAppId,
+        )?.discoveries,
+        summary: summary.discoveries,
+      };
+    };
+
+    try {
+      expect(await discoveriesOf(fixture.a)).toEqual({
+        portfolio: { open: 2, ranked: 1 },
+        summary: { open: 2, ranked: 1 },
+      });
+      expect(await discoveriesOf(fixture.b)).toEqual({
+        portfolio: { open: 1, ranked: 0 },
+        summary: { open: 1, ranked: 0 },
+      });
+    } finally {
+      await fixture.db.keyword.delete({ where: { id: extra.id } });
+    }
   });
 
   it("never marks a word from another workspace's listing", async () => {

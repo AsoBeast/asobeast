@@ -9,6 +9,7 @@ describe('PortfolioService.portfolio', () => {
   const trackedFindMany = jest.fn();
   const trackedGroupBy = jest.fn();
   const changeEventFindMany = jest.fn();
+  const discoveryGroupBy = jest.fn();
 
   beforeEach(async () => {
     appFindMany.mockReset();
@@ -16,6 +17,7 @@ describe('PortfolioService.portfolio', () => {
     trackedFindMany.mockReset();
     trackedGroupBy.mockReset().mockResolvedValue([]);
     changeEventFindMany.mockReset();
+    discoveryGroupBy.mockReset().mockResolvedValue([]);
 
     const moduleRef = await Test.createTestingModule({
       providers: [
@@ -30,6 +32,7 @@ describe('PortfolioService.portfolio', () => {
               groupBy: trackedGroupBy,
             },
             changeEvent: { findMany: changeEventFindMany },
+            keywordDiscovery: { groupBy: discoveryGroupBy },
           },
         },
       ],
@@ -85,6 +88,7 @@ describe('PortfolioService.portfolio', () => {
           total: 3,
           next: 'competitors',
         },
+        discoveries: { open: 0, ranked: 0 },
       },
     ]);
     expect(result.groups).toEqual([]);

@@ -49,6 +49,7 @@ import { bucketPositions, rankDistributionAt } from './rank-distribution';
 import { collapseRatings } from './ratings-history';
 import { ShareOfVoiceService } from './share-of-voice.service';
 import { HOME_LISTING, NEWEST_FIRST } from '../apps/listing';
+import { countDiscoveries } from '../keyword-discovery/discovery-counts';
 
 const SUMMARY_WINDOW_DAYS = 31;
 const COVERAGE_LIMIT = 5;
@@ -115,25 +116,32 @@ export class AnalyticsService {
   async summary(appId: string, country?: string): Promise<AppSummary> {
     await this.ensureApp(appId);
 
-    const [market, everyMarket, snapshot, shareContext, inKeywordField] =
-      await Promise.all([
-        keywordWindow(this.prisma, { appId, country }, SUMMARY_WINDOW_DAYS),
-        country
-          ? keywordWindow(this.prisma, { appId }, SUMMARY_WINDOW_DAYS)
-          : null,
-        this.prisma.appSnapshot.findFirst({
-          where: { appId, ...HOME_LISTING },
-          orderBy: NEWEST_FIRST,
-          select: {
-            title: true,
-            subtitle: true,
-            description: true,
-            capturedAt: true,
-          },
-        }),
-        this.shares.context({ appId, country }),
-        loadKeywordFieldIndex(this.prisma, appId),
-      ]);
+    const [
+      market,
+      everyMarket,
+      snapshot,
+      shareContext,
+      inKeywordField,
+      discoveries,
+    ] = await Promise.all([
+      keywordWindow(this.prisma, { appId, country }, SUMMARY_WINDOW_DAYS),
+      country
+        ? keywordWindow(this.prisma, { appId }, SUMMARY_WINDOW_DAYS)
+        : null,
+      this.prisma.appSnapshot.findFirst({
+        where: { appId, ...HOME_LISTING },
+        orderBy: NEWEST_FIRST,
+        select: {
+          title: true,
+          subtitle: true,
+          description: true,
+          capturedAt: true,
+        },
+      }),
+      this.shares.context({ appId, country }),
+      loadKeywordFieldIndex(this.prisma, appId),
+      countDiscoveries(this.prisma, [appId], country),
+    ]);
     const covered = everyMarket ?? market;
     const share = await this.shares.summary(shareContext, market);
 
@@ -151,6 +159,7 @@ export class AnalyticsService {
       trackedKeywords: market.rows.length,
       competitors: shareContext.competitorIds.length,
       ...share,
+      discoveries: discoveries.get(appId),
     };
   }
 
