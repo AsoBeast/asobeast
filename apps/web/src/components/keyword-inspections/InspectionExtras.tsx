@@ -3,54 +3,37 @@ import type {
   KeywordInspectionDelta,
 } from "@asobeast/shared";
 import { formatDateTime, formatList } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { scoreChange, signedChange } from "./inspection-format";
 
-export function InspectionSuggestions({
-  inspection,
+function ScoreChange({
+  label,
+  change,
+  higherIsBetter,
 }: {
-  inspection: KeywordInspection;
+  label: string;
+  change: number | null;
+  higherIsBetter: boolean;
 }) {
+  const better =
+    change === null || change === 0 ? null : change > 0 === higherIsBetter;
   return (
-    <section
-      aria-labelledby="inspection-suggestions"
-      className="flex flex-col gap-2"
-    >
-      <h3 id="inspection-suggestions" className="text-body font-semibold">
-        Store autocomplete
-      </h3>
-      {inspection.suggestions.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          The store suggested nothing for this keyword.
-        </p>
-      ) : (
-        <ol className="flex flex-wrap gap-2">
-          {inspection.suggestions.map((suggestion) => (
-            <li
-              key={suggestion.term}
-              className="rounded-full border px-3 py-1 text-sm"
-            >
-              <span className="mr-1 text-muted-foreground">
-                {suggestion.position}.
-              </span>
-              {suggestion.term}
-            </li>
-          ))}
-        </ol>
+    <span className="inline-flex items-baseline gap-1">
+      {label}
+      <span
+        className={cn(
+          "numeric font-mono font-medium",
+          better === null && "text-muted-foreground",
+          better === true && "text-signal-up",
+          better === false && "text-signal-down",
+        )}
+      >
+        {signedChange(change)}
+      </span>
+      {better === null ? null : (
+        <span className="sr-only">{better ? "(better)" : "(worse)"}</span>
       )}
-    </section>
-  );
-}
-
-function MoverLine({ label, titles }: { label: string; titles: string[] }) {
-  return (
-    <p className="text-sm">
-      <span className="font-medium">{label}: </span>
-      {titles.length === 0 ? (
-        <span className="text-muted-foreground">none</span>
-      ) : (
-        formatList(titles)
-      )}
-    </p>
+    </span>
   );
 }
 
@@ -62,31 +45,33 @@ export function InspectionDelta({
   previous: KeywordInspectionDelta;
 }) {
   return (
-    <section aria-labelledby="inspection-delta" className="flex flex-col gap-2">
-      <h3 id="inspection-delta" className="text-body font-semibold">
+    <section
+      aria-labelledby="inspection-delta"
+      className="flex flex-col gap-1 text-sm"
+    >
+      <h3 id="inspection-delta" className="sr-only">
         Since the previous inspection
       </h3>
-      <p className="text-sm text-muted-foreground">
-        Compared with the run of {formatDateTime(previous.completedAt)}.
-      </p>
-      <p className="flex flex-wrap items-center gap-4 text-sm">
-        <span>
-          Popularity{" "}
-          <span className="numeric font-mono font-medium">
-            {signedChange(scoreChange(inspection.volume, previous.volume))}
-          </span>
+      <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <span className="text-muted-foreground">
+          Since {formatDateTime(previous.completedAt)}
         </span>
-        <span>
-          Difficulty{" "}
-          <span className="numeric font-mono font-medium">
-            {signedChange(
-              scoreChange(inspection.difficulty100, previous.difficulty100),
-            )}
-          </span>
-        </span>
+        <ScoreChange
+          label="Popularity"
+          change={scoreChange(inspection.volume, previous.volume)}
+          higherIsBetter
+        />
+        <ScoreChange
+          label="Difficulty"
+          change={scoreChange(inspection.difficulty100, previous.difficulty100)}
+          higherIsBetter={false}
+        />
       </p>
-      <MoverLine label="Entered the top 10" titles={previous.entered} />
-      <MoverLine label="Left the top 10" titles={previous.left} />
+      {previous.left.length > 0 ? (
+        <p className="text-muted-foreground">
+          Left the top 10: {formatList(previous.left)}
+        </p>
+      ) : null}
     </section>
   );
 }

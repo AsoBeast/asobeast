@@ -24,7 +24,7 @@ test("inspects a keyword and shows its scores and results", async ({
   const results = page.getByRole("table");
   await expect(results.getByText(INSPECTED_APPS[0])).toBeVisible();
   await expect(
-    results.getByText("Exact phrase", { exact: true }),
+    results.getByRole("cell", { name: "Exact phrase" }),
   ).toBeVisible();
   await expect(
     page.getByRole("listitem").filter({ hasText: "habit tracker app" }),

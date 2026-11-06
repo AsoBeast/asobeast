@@ -25,6 +25,7 @@ import { ApiError, requestKeywordInspection } from "@/lib/api";
 import { storeLabel } from "@/lib/format";
 import { seedKeywordInspection } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
+import { cn } from "@/lib/utils";
 
 export interface InspectFormValues {
   keyword: string;
@@ -40,9 +41,11 @@ const failureMessage = (error: unknown): string =>
 export function InspectForm({
   initial,
   onInspected,
+  className,
 }: {
   initial: InspectFormValues;
   onInspected: (inspection: KeywordInspection) => void;
+  className?: string;
 }) {
   const queryClient = useQueryClient();
   const [keyword, setKeyword] = useState(initial.keyword);
@@ -63,14 +66,16 @@ export function InspectForm({
   return (
     <form
       aria-label="Inspect a keyword"
-      className="flex flex-wrap items-end gap-3"
+      className={cn("flex flex-wrap items-end gap-3", className)}
       onSubmit={(event) => {
         event.preventDefault();
         if (ready) submit({ keyword: keyword.trim(), store, country });
       }}
     >
       <div className="flex min-w-56 flex-1 flex-col gap-2">
-        <Label htmlFor="inspect-keyword">Keyword</Label>
+        <Label htmlFor="inspect-keyword" className="xl:sr-only">
+          Keyword
+        </Label>
         <Input
           id="inspect-keyword"
           value={keyword}
@@ -80,7 +85,9 @@ export function InspectForm({
         />
       </div>
       <div className="flex flex-col gap-2">
-        <Label htmlFor="inspect-store">Store</Label>
+        <Label htmlFor="inspect-store" className="xl:sr-only">
+          Store
+        </Label>
         <Select value={store} onValueChange={(next) => setStore(next as Store)}>
           <SelectTrigger id="inspect-store" className="w-[180px]">
             <SelectValue>{storeLabel(store)}</SelectValue>
@@ -95,7 +102,9 @@ export function InspectForm({
         </Select>
       </div>
       <div className="flex flex-col gap-2">
-        <Label htmlFor="inspect-country">Country</Label>
+        <Label htmlFor="inspect-country" className="xl:sr-only">
+          Country
+        </Label>
         <CountrySelect
           id="inspect-country"
           store={store}

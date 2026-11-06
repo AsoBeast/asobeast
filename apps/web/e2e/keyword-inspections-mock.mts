@@ -89,7 +89,7 @@ export function requestInspection(
   inspectionIds += 1;
   const pending: KeywordInspection = {
     id: `inspection-${inspectionIds}`,
-    keywordId: `inspected-keyword-${inspectionIds}`,
+    keywordId: `inspected-keyword-${request.store}-${request.country}-${request.keyword.trim().toLowerCase()}`,
     keyword: request.keyword.trim().toLowerCase(),
     store: request.store,
     country: request.country,

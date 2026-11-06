@@ -11,21 +11,24 @@ import { isNotFound, requestKeywordInspection } from "@/lib/api";
 import { formatCountry, formatDateTime, storeLabel } from "@/lib/format";
 import { keywordInspectionOptions, seedKeywordInspection } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
-import { InspectionDelta, InspectionSuggestions } from "./InspectionExtras";
+import { InspectionDelta } from "./InspectionExtras";
 import { InspectionResultsTable } from "./InspectionResultsTable";
 import { InspectionCompetition, InspectionScores } from "./InspectionScores";
-import { InspectionDetailSkeleton } from "./skeletons";
+import {
+  InspectionDetailSkeleton,
+  InspectionScoresSkeleton,
+} from "./skeletons";
 
 function InspectionHeading({ inspection }: { inspection: KeywordInspection }) {
   const when = inspection.completedAt ?? inspection.requestedAt;
   return (
-    <div className="flex flex-col gap-1">
-      <h2 className="text-title">“{inspection.keyword}”</h2>
+    <header className="flex flex-col gap-0.5">
+      <h2 className="text-title text-balance">“{inspection.keyword}”</h2>
       <p className="text-sm text-muted-foreground">
         {storeLabel(inspection.store)} · {formatCountry(inspection.country)} ·{" "}
         {formatDateTime(when)}
       </p>
-    </div>
+    </header>
   );
 }
 
@@ -87,13 +90,11 @@ function CompletedInspection({
           previous={inspection.previous}
         />
       ) : null}
-      <InspectionCompetition inspection={inspection} />
-      <InspectionSuggestions inspection={inspection} />
       <section
         aria-labelledby="inspection-results"
-        className="flex flex-col gap-2"
+        className="flex flex-col gap-1"
       >
-        <h3 id="inspection-results" className="text-body font-semibold">
+        <h3 id="inspection-results" className="text-sm font-medium">
           Search results
         </h3>
         {inspection.results.length === 0 ? (
@@ -104,9 +105,11 @@ function CompletedInspection({
           <InspectionResultsTable
             keyword={inspection.keyword}
             results={inspection.results}
+            entered={inspection.previous?.entered ?? []}
           />
         )}
       </section>
+      <InspectionCompetition inspection={inspection} />
     </>
   );
 }
@@ -145,13 +148,16 @@ export function InspectionDetail({
     >
       <InspectionHeading inspection={inspection} />
       {inspection.status === "PENDING" ? (
-        <p
-          role="status"
-          className="flex items-center gap-2 text-sm text-muted-foreground"
-        >
-          <Loader2 aria-hidden className="size-4 animate-spin" />
-          Reading the store. This usually takes a few seconds.
-        </p>
+        <>
+          <p
+            role="status"
+            className="flex items-center gap-2 text-sm text-muted-foreground"
+          >
+            <Loader2 aria-hidden className="size-4 animate-spin" />
+            Reading the store. This usually takes a few seconds.
+          </p>
+          <InspectionScoresSkeleton />
+        </>
       ) : null}
       {inspection.status === "FAILED" ? (
         <FailedInspection inspection={inspection} onInspected={onInspected} />
