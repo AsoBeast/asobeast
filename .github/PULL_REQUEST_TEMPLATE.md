@@ -8,7 +8,7 @@ Closes #
 
 ## Screenshot
 
-<!-- Required when anything in the web app looks or behaves differently. One "after" shot of the main state is enough; a fix adds "before". A flow one picture cannot show gets a short video instead. Never show real customer data, a token or a console key. Reference the file here and attach it with gh 2.99 or later:
+<!-- Required when anything in the web app looks or behaves differently. One "after" shot of the main state is enough; a fix adds "before". A flow one picture cannot show adds a short video. Never show real customer data, a token or a console key. Reference the file here and attach it with gh 2.99 or later:
      ![Discovered tab in the light theme](./after.png)
      gh pr create --body-file body.md --attach './after.png#Discovered tab in the light theme'
      gh pr edit <number> --attach './after.png#Discovered tab in the light theme'
@@ -20,7 +20,7 @@ Closes #
 
 -
 
-**Compatibility:** <!-- additive, or no contract change. A breaking change needs the next major version and a BREAKING CHANGE: footer. -->
+**Compatibility:** <!-- additive, or no contract change. A breaking change to the HTTP contract, the @asobeast/shared contract types or the MCP tools needs the next major version and a BREAKING CHANGE: footer; nothing else takes the footer. -->
 
 ## How it was checked
 

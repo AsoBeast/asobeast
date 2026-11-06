@@ -160,7 +160,7 @@ Use one branch and one pull request per change, with each commit a single logica
 The description is read by a person deciding whether the change is right, and it stays in `git log` as the squash commit body. Keep it to one screen, about 250 words outside `<details>` blocks, and follow `.github/PULL_REQUEST_TEMPLATE.md`:
 
 - **What changes** comes first, in one to three sentences about what a person can now do or no longer runs into. How it works belongs in the code, `AGENTS.md` or `/docs`.
-- **Screenshot**: every change a person can see carries at least one image of the main state, and a fix shows before and after. Reference the file in the body and attach it with `gh` 2.99 or later, which uploads it and rewrites the reference:
+- **Screenshot**: every change a person can see in the web app carries at least one image of the main state, and a fix shows before and after. Reference the file in the body and attach it with `gh` 2.99 or later, which uploads it and rewrites the reference:
 
   ```bash
   gh pr create --body-file body.md --attach './after.png#Discovered tab in the light theme'
