@@ -10,7 +10,7 @@ export function OrderSummary({ summary }: { summary: OrderSummaryModel }) {
       aria-labelledby="order-summary-title"
       className="flex flex-col gap-3 border-t border-border pt-6"
     >
-      <h3 id="order-summary-title" className="text-title">
+      <h3 id="order-summary-title" className="text-heading">
         {ORDER_SUMMARY_TITLE}
       </h3>
       <dl className="flex flex-col gap-3">
@@ -24,12 +24,12 @@ export function OrderSummary({ summary }: { summary: OrderSummaryModel }) {
           <dd className="tabular-nums">{summary.unitAmount}</dd>
         </div>
         <div className="flex items-baseline justify-between gap-4 border-t border-border pt-3">
-          <dt className="text-subtitle">{DUE_TODAY}</dt>
-          <dd className="text-display tabular-nums">{summary.dueToday}</dd>
+          <dt className="text-heading">{DUE_TODAY}</dt>
+          <dd className="text-title tabular-nums">{summary.dueToday}</dd>
         </div>
       </dl>
       {summary.thenLine ? (
-        <p className="text-subtitle font-normal">{summary.thenLine}</p>
+        <p className="text-heading font-normal">{summary.thenLine}</p>
       ) : null}
       <p className="text-body text-muted-foreground">{summary.cancelLine}</p>
     </section>

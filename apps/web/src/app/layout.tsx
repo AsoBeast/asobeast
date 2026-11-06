@@ -1,9 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Toaster } from "@/components/ui/sonner";
 import { Providers } from "./providers";
-import "@fontsource-variable/ibm-plex-sans/wght.css";
-import "@fontsource/ibm-plex-mono/400.css";
-import "@fontsource/ibm-plex-mono/500.css";
+import "@fontsource-variable/geist/wght.css";
 import "./globals.css";
 import { CheckoutReturn } from "@/components/billing/CheckoutReturn";
 import { STREAMING_SEGMENT_GUARD } from "@/lib/streaming-segment-guard";
@@ -28,8 +26,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+    { media: "(prefers-color-scheme: light)", color: "#faf9f7" },
+    { media: "(prefers-color-scheme: dark)", color: "#0c0b0a" },
   ],
 };
 

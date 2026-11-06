@@ -108,7 +108,7 @@ export function ReviewThemesStrip({
             href={THEMES_GUIDE}
             target="_blank"
             rel="noreferrer"
-            className="font-medium text-foreground underline decoration-primary underline-offset-4 hover:decoration-2"
+            className="font-medium text-foreground underline decoration-faint-foreground underline-offset-4 hover:decoration-2"
           >
             Read how themes are found
           </a>

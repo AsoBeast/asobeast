@@ -27,7 +27,7 @@ export function ActionWorkByScope({
 
   return (
     <section aria-labelledby="where-heading" className="flex flex-col gap-3">
-      <h2 id="where-heading" className="text-title">
+      <h2 id="where-heading" className="text-heading">
         Where the work is
       </h2>
       {rows.length === 0 ? (
@@ -45,7 +45,7 @@ export function ActionWorkByScope({
                 className="grid min-h-10 grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 rounded-md px-2 py-2 text-body outline-none transition-colors duration-150 hover:bg-muted/40 focus-visible:ring-3 focus-visible:ring-ring/50"
               >
                 <span className="truncate">{row.label}</span>
-                <span className="numeric font-mono">
+                <span className="numeric">
                   {formatNumber(row.total)}
                   <span className="sr-only"> open</span>
                 </span>

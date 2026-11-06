@@ -12,7 +12,7 @@ export function FirstRun() {
   return (
     <div className="page-reading flex flex-col items-center gap-4 rounded-xl border border-dashed px-6 py-20 text-center">
       <div className="flex flex-col gap-2">
-        <h1 className="text-display tracking-tight text-balance">
+        <h1 className="text-title tracking-tight text-balance">
           Track your first app
         </h1>
         <p className="text-body text-muted-foreground">

@@ -37,7 +37,7 @@ export function MetadataFieldCard({
           id={countId}
           aria-live="polite"
           className={cn(
-            "numeric font-mono text-body",
+            "numeric text-body",
             over ? "font-semibold text-signal-down" : "text-muted-foreground",
           )}
         >

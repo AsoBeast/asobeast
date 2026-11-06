@@ -1,24 +1,36 @@
 import { contrastRatio } from "@/lib/contrast";
 
 export const NEUTRAL_RAMP = [
-  "--neutral-50",
-  "--neutral-100",
-  "--neutral-200",
-  "--neutral-300",
-  "--neutral-400",
-  "--neutral-500",
-  "--neutral-600",
-  "--neutral-700",
-  "--neutral-800",
-  "--neutral-850",
-  "--neutral-900",
-  "--neutral-950",
   "--neutral-white",
+  "--neutral-page",
+  "--neutral-surface-2",
+  "--neutral-line-2",
+  "--neutral-line",
+  "--neutral-previous",
+  "--neutral-ink-3",
+  "--neutral-ink-2",
+  "--neutral-ink",
+  "--neutral-dark-page",
+  "--neutral-dark-surface",
+  "--neutral-dark-surface-2",
+  "--neutral-dark-line-2",
+  "--neutral-dark-line",
+  "--neutral-dark-previous",
+  "--neutral-dark-ink-3",
+  "--neutral-dark-ink-2",
+  "--neutral-dark-ink",
 ];
 
-export const BRAND_RAMP = ["--brand-500", "--brand-600", "--brand-700"];
+export const BRAND_RAMP = [
+  "--brand-500",
+  "--brand-600",
+  "--brand-ink",
+  "--brand-series",
+  "--brand-tint",
+  "--brand-dark-tint",
+];
 
-export const BLUE_RAMP = ["--blue-400", "--blue-700"];
+export const BLUE_RAMP = ["--blue-400", "--blue-600", "--blue-700"];
 
 export const SEMANTIC_SURFACES = [
   "--background",
@@ -35,10 +47,12 @@ export const SEMANTIC_SURFACES = [
   "--secondary-foreground",
   "--muted",
   "--muted-foreground",
+  "--faint-foreground",
   "--accent",
   "--accent-foreground",
   "--destructive",
   "--border",
+  "--border-subtle",
   "--input",
   "--ring",
 ];
@@ -89,6 +103,8 @@ export const CHART_SERIES = [
   "--chart-7",
   "--chart-8",
 ];
+
+export const CHART_GUIDES = ["--chart-previous", "--chart-tint"];
 
 export const SIDEBAR_TOKENS = [
   "--sidebar",
@@ -183,6 +199,12 @@ export const TEXT_PAIRS: TextPair[] = [
     background: "--muted",
     floor: 4.5,
   },
+  ...["--background", "--card", "--muted", "--popover"].map((background) =>
+    textOn("--faint-foreground", background),
+  ),
+  textOn("--foreground", "--chart-tint"),
+  textOn("--foreground", "--accent"),
+  textOn("--muted-foreground", "--accent"),
   {
     label: "primary-foreground on primary",
     foreground: "--primary-foreground",

@@ -15,8 +15,7 @@
   },
   "dependencies": {
     "@asobeast/shared": "workspace:*",
-    "@fontsource-variable/ibm-plex-sans": "^5.3.0",
-    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "@fontsource-variable/geist": "^5.2.9",
     "@sentry/nextjs": "^11.9.0",
     "@stripe/stripe-js": "10.1.0",
     "@tanstack/react-query": "^5.105.0",

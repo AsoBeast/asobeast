@@ -64,7 +64,7 @@ export function ReleaseEntry({
         <header className="flex flex-wrap items-center gap-x-3 gap-y-1 sm:sticky sm:top-20 sm:flex-col sm:items-start sm:self-start">
           <h2
             id={`${anchor}-version`}
-            className="text-title tracking-tight"
+            className="text-heading tracking-tight"
             translate="no"
           >
             <span className="sr-only">Version </span>
@@ -87,7 +87,7 @@ export function ReleaseEntry({
             )}
           />
           <div className="flex flex-col gap-1.5">
-            <p className="text-subtitle font-semibold text-balance text-foreground">
+            <p className="text-heading font-semibold text-balance text-foreground">
               {release.title}
             </p>
             <p className="text-body text-muted-foreground">{release.summary}</p>

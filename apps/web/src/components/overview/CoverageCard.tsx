@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 function CoverageStat({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-lg bg-muted/50 py-2 text-center">
-      <div className="text-lg font-semibold numeric font-mono">{value}</div>
+      <div className="text-lg font-semibold numeric">{value}</div>
       <div className="text-xs text-muted-foreground">{label}</div>
     </div>
   );
@@ -77,7 +77,7 @@ export function CoverageCard({ id }: { id: string }) {
                 <Link key={keyword.keywordId} href={`/apps/${id}/keywords`}>
                   <Badge variant="secondary" className="gap-1">
                     {keyword.text}
-                    <span className="numeric font-mono text-muted-foreground">
+                    <span className="numeric text-muted-foreground">
                       {Math.round(keyword.opportunity)}
                     </span>
                   </Badge>

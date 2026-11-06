@@ -27,7 +27,7 @@ function Section({
 }) {
   return (
     <section className="flex flex-col gap-3">
-      <h3 className="text-subtitle">{title}</h3>
+      <h3 className="text-heading">{title}</h3>
       {children}
     </section>
   );

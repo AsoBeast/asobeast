@@ -26,7 +26,7 @@ export function importColumns(lines: readonly number[]) {
       id: "line",
       header: "Line",
       cell: ({ row }) => (
-        <span className="numeric font-mono text-muted-foreground">
+        <span className="numeric text-muted-foreground">
           {row.original.line}
         </span>
       ),

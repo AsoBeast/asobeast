@@ -3,9 +3,9 @@ import { cn } from "./utils";
 
 describe("cn", () => {
   it("lets a type step replace a primitive's font size", () => {
-    expect(cn("text-base leading-snug", "text-display")).toBe("text-display");
-    expect(cn("text-sm text-foreground", "text-subtitle")).toBe(
-      "text-foreground text-subtitle",
+    expect(cn("text-base leading-snug", "text-title")).toBe("text-title");
+    expect(cn("text-sm text-foreground", "text-heading")).toBe(
+      "text-foreground text-heading",
     );
   });
 

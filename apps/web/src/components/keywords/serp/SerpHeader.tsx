@@ -78,7 +78,7 @@ export function SerpHeader({
     <div className="flex flex-col gap-3 px-4 pt-4">
       <div className="flex min-w-0 flex-col gap-0.5">
         {text ? (
-          <p translate="no" dir="auto" className="text-title wrap-anywhere">
+          <p translate="no" dir="auto" className="text-heading wrap-anywhere">
             {text}
           </p>
         ) : null}

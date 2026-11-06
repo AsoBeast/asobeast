@@ -81,7 +81,7 @@ function PositionHistoryContent({
           keyword={keyword}
           label={label}
           staleOn={staleOn}
-          className="text-title"
+          className="text-heading"
         />
       </div>
       {staleOn === null ? null : (

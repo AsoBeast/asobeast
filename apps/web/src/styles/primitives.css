@@ -1,78 +1,74 @@
 :root {
-  --font-plex-sans:
-    "IBM Plex Sans Variable", ui-sans-serif, system-ui, sans-serif;
-  --font-plex-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --font-geist-sans:
+    "Geist Variable", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    ui-sans-serif, system-ui, sans-serif;
+  --font-system-mono:
+    ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
 
-  --neutral-50: oklch(0.985 0.003 75);
-  --neutral-100: oklch(0.962 0.004 75);
-  --neutral-200: oklch(0.92 0.005 75);
-  --neutral-300: oklch(0.858 0.006 75);
-  --neutral-400: oklch(0.742 0.008 75);
-  --neutral-500: oklch(0.62 0.009 75);
-  --neutral-600: oklch(0.508 0.01 75);
-  --neutral-700: oklch(0.4 0.01 75);
-  --neutral-800: oklch(0.305 0.009 75);
-  --neutral-850: oklch(0.258 0.008 75);
-  --neutral-900: oklch(0.212 0.008 75);
-  --neutral-950: oklch(0.168 0.007 75);
-  --neutral-white: oklch(1 0 0);
+  --neutral-white: #ffffff;
+  --neutral-page: #faf9f7;
+  --neutral-surface-2: #f4f2ee;
+  --neutral-line-2: #eeebe6;
+  --neutral-line: #e7e4df;
+  --neutral-previous: #cdc8c0;
+  --neutral-ink-3: #716b64;
+  --neutral-ink-2: #6b665f;
+  --neutral-ink: #1c1917;
 
-  --brand-500: oklch(0.762 0.164 64.4);
-  --brand-600: oklch(0.701 0.164 58);
-  --brand-700: oklch(0.52 0.13 50);
+  --neutral-dark-page: #0c0b0a;
+  --neutral-dark-surface: #141311;
+  --neutral-dark-surface-2: #1c1a17;
+  --neutral-dark-line-2: #221f1c;
+  --neutral-dark-line: #2a2724;
+  --neutral-dark-previous: #3d3933;
+  --neutral-dark-ink-3: #8a847b;
+  --neutral-dark-ink-2: #a39d94;
+  --neutral-dark-ink: #efece7;
 
-  --blue-400: oklch(0.73 0.122 240);
-  --blue-700: oklch(0.452 0.132 240);
+  --brand-500: #f89820;
+  --brand-600: #e8891a;
+  --brand-ink: #1c1408;
+  --brand-series: #d2700a;
+  --brand-tint: #fbeedb;
+  --brand-dark-tint: #2b2114;
 
-  --green-400: oklch(0.75 0.16 152);
-  --green-600: oklch(0.51 0.13 152);
-  --red-400: oklch(0.7 0.17 22);
-  --red-600: oklch(0.53 0.19 22);
-  --crimson-400: oklch(0.695 0.19 20);
-  --crimson-600: oklch(0.53 0.2 20);
-  --amber-400: oklch(0.75 0.15 55);
-  --amber-600: oklch(0.53 0.13 55);
-  --yellow-400: oklch(0.82 0.12 90);
-  --yellow-600: oklch(0.52 0.105 90);
+  --orange-band-1: #5c2804;
+  --orange-band-2: #7a3606;
+  --orange-band-3: #9a4708;
+  --orange-band-4: #b4580a;
+  --orange-band-5: #d2700a;
+  --orange-dark-band-1: #ffc46b;
+  --orange-dark-band-2: #f89820;
+  --orange-dark-band-3: #d98a1c;
+  --orange-dark-band-4: #b86f16;
+  --orange-dark-band-5: #9a5a14;
 
-  --score-low-400: oklch(0.62 0.05 240);
-  --score-mid-400: oklch(0.7 0.11 240);
-  --score-high-400: oklch(0.79 0.16 240);
-  --score-low-600: oklch(0.56 0.06 240);
-  --score-mid-600: oklch(0.55 0.13 240);
-  --score-high-600: oklch(0.46 0.15 240);
+  --blue-700: #1d4ed8;
+  --blue-600: #2563eb;
+  --blue-400: #60a5fa;
+  --teal-700: #0f766e;
+  --teal-400: #2dd4bf;
+  --violet-600: #7c3aed;
+  --violet-400: #a78bfa;
+  --rose-600: #db2777;
+  --rose-400: #f472b6;
+  --grey-500: #6b7280;
+  --grey-400: #9ca3af;
+  --umber-700: #8a5a2b;
+  --umber-400: #c9a27a;
+  --olive-700: #5f6b1f;
+  --olive-400: #b5c45a;
 
-  --band-1-400: oklch(0.9 0.1 240);
-  --band-2-400: oklch(0.79 0.14 238);
-  --band-3-400: oklch(0.68 0.15 236);
-  --band-4-400: oklch(0.58 0.14 234);
-  --band-5-400: oklch(0.48 0.12 232);
-  --band-1-600: oklch(0.3 0.12 240);
-  --band-2-600: oklch(0.38 0.15 238);
-  --band-3-600: oklch(0.46 0.16 236);
-  --band-4-600: oklch(0.54 0.14 234);
-  --band-5-600: oklch(0.62 0.11 232);
-
-  --series-1-400: oklch(0.7 0.15 240);
-  --series-2-400: oklch(0.78 0.15 65);
-  --series-3-400: oklch(0.62 0.13 165);
-  --series-4-400: oklch(0.84 0.13 350);
-  --series-5-400: oklch(0.74 0.11 200);
-  --series-6-400: oklch(0.66 0.16 40);
-  --series-7-400: oklch(0.9 0.14 105);
-  --series-8-400: oklch(0.68 0.15 305);
-  --series-1-600: oklch(0.52 0.15 240);
-  --series-2-600: oklch(0.63 0.15 65);
-  --series-3-600: oklch(0.48 0.13 165);
-  --series-4-600: oklch(0.66 0.13 350);
-  --series-5-600: oklch(0.58 0.11 200);
-  --series-6-600: oklch(0.53 0.16 40);
-  --series-7-600: oklch(0.6 0.14 105);
-  --series-8-600: oklch(0.46 0.15 305);
-
-  --hairline-8: oklch(1 0 0 / 8%);
-  --hairline-10: oklch(1 0 0 / 10%);
-  --hairline-15: oklch(1 0 0 / 15%);
+  --green-700: #137a3a;
+  --green-tint: #e4f5e9;
+  --green-400: #4ade80;
+  --green-dark-tint: #0d2a18;
+  --red-700: #c2272d;
+  --red-tint: #fde6e6;
+  --red-400: #f87171;
+  --red-dark-tint: #3b1414;
+  --warn-700: #a3520a;
+  --warn-400: #f0b64a;
 
   --radius: 0.5rem;
 }

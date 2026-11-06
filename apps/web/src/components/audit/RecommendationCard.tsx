@@ -26,7 +26,7 @@ export function RecommendationCard({
       <CardContent className="flex flex-col gap-2">
         <div className="flex items-start justify-between gap-3">
           <h4 className="text-body font-medium">{item.label}</h4>
-          <span className="numeric shrink-0 font-mono text-body font-semibold">
+          <span className="numeric shrink-0 text-body font-semibold">
             {liftLabel(item.lift)}
           </span>
         </div>

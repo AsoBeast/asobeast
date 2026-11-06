@@ -1,31 +1,20 @@
 const STEPS = [
-  {
-    name: "display",
-    sample: "Search visibility over time",
-    className: "text-display",
-  },
-  { name: "title", sample: "Tracked keywords", className: "text-title" },
-  {
-    name: "subtitle",
-    sample: "Where your keywords rank",
-    className: "text-subtitle",
-  },
+  { name: "metric", sample: "62.4", className: "text-metric numeric" },
+  { name: "title", sample: "Keywords", className: "text-title" },
+  { name: "heading", sample: "Keyword movers", className: "text-heading" },
   {
     name: "body",
-    sample: "The phrases you want this app to rank for, tracked per market.",
+    sample: "Four keywords moved since yesterday, two of them into the top 10.",
     className: "text-body",
   },
-  { name: "label", sample: "OPPORTUNITY", className: "text-label uppercase" },
+  { name: "dense", sample: "focus timer", className: "text-dense" },
+  { name: "label", sample: "Opportunity", className: "text-label" },
   {
     name: "caption",
     sample: "Checked 3 days ago · depth 200",
     className: "text-caption",
   },
-  {
-    name: "numeric",
-    sample: "1,234,567",
-    className: "text-numeric numeric font-mono",
-  },
+  { name: "tick", sample: "Nov 6", className: "text-tick" },
 ] as const;
 
 const RANKS = [
@@ -86,15 +75,9 @@ export function TypeScale() {
               {RANKS.map((row) => (
                 <tr key={row.keyword}>
                   <td className="py-1.5">{row.keyword}</td>
-                  <td className="numeric font-mono py-1.5 text-right">
-                    {row.position}
-                  </td>
-                  <td className="numeric font-mono py-1.5 text-right">
-                    {row.traffic}
-                  </td>
-                  <td className="numeric font-mono py-1.5 text-right">
-                    {row.score}
-                  </td>
+                  <td className="numeric py-1.5 text-right">{row.position}</td>
+                  <td className="numeric py-1.5 text-right">{row.traffic}</td>
+                  <td className="numeric py-1.5 text-right">{row.score}</td>
                 </tr>
               ))}
             </tbody>
@@ -112,9 +95,7 @@ export function TypeScale() {
             Deep Focus Pomodoro Timer and Habit Builder for Students and Remote
             Teams Pro
           </span>
-          <span className="numeric font-mono shrink-0 text-sm text-signal-up">
-            +12
-          </span>
+          <span className="numeric shrink-0 text-sm text-signal-up">+12</span>
         </div>
       </div>
 

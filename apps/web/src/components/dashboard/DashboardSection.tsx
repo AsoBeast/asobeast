@@ -24,7 +24,7 @@ export function DashboardSection({
     >
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex min-w-0 flex-col gap-1">
-          <h2 id={headingId} className="text-title">
+          <h2 id={headingId} className="text-heading">
             {title}
           </h2>
           {description ? (

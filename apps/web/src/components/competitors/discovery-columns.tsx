@@ -50,7 +50,7 @@ export function discoveryColumns(appId: string) {
         <SortableHeader column={column} label="Appearances" />
       ),
       cell: ({ row }) => (
-        <span className="numeric font-mono">{row.original.appearances}</span>
+        <span className="numeric">{row.original.appearances}</span>
       ),
     }),
     columnHelper.accessor("keywordCount", {
@@ -64,7 +64,7 @@ export function discoveryColumns(appId: string) {
       cell: ({ row }) => (
         <Tooltip>
           <TooltipTrigger asChild>
-            <span className="numeric font-mono underline decoration-dotted underline-offset-4">
+            <span className="numeric underline decoration-dotted underline-offset-4">
               {row.original.keywordCount}
             </span>
           </TooltipTrigger>
@@ -137,7 +137,7 @@ function RatingCell({ item }: { item: CompetitorDiscoveryItem }) {
         label="Rating"
       />
       {item.ratingCount !== null ? (
-        <span className="numeric font-mono text-muted-foreground">
+        <span className="numeric text-muted-foreground">
           {` · ${formatNumber(item.ratingCount)}`}
         </span>
       ) : null}

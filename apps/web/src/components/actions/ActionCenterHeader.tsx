@@ -26,7 +26,7 @@ export function ActionCenterHeader({
         <div className="flex items-center gap-2">
           <Heading
             className={
-              appId ? "text-title" : "text-display tracking-tight text-balance"
+              appId ? "text-heading" : "text-title tracking-tight text-balance"
             }
           >
             {appId ? "Actions" : "Action Center"}
@@ -40,7 +40,7 @@ export function ActionCenterHeader({
               href={ACTION_CENTER_GUIDE}
               target="_blank"
               rel="noreferrer"
-              className="font-medium text-foreground underline decoration-primary underline-offset-4 hover:decoration-2"
+              className="font-medium text-foreground underline decoration-faint-foreground underline-offset-4 hover:decoration-2"
             >
               Read how the Action Center works
             </a>

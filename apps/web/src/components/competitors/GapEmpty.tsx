@@ -36,7 +36,7 @@ export function GapEmpty({
         action={
           <a
             href="#competitor-search"
-            className="text-sm font-medium underline decoration-primary underline-offset-4"
+            className="text-sm font-medium underline decoration-faint-foreground underline-offset-4"
           >
             Add a competitor
           </a>

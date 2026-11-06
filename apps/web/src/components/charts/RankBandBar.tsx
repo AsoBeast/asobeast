@@ -42,7 +42,7 @@ export function RankBandBar({
           {segments.map((segment) => (
             <div key={segment.key} className="contents">
               <dt>{segment.label}</dt>
-              <dd className="numeric text-right font-mono">
+              <dd className="numeric text-right">
                 {formatNumber(segment.count)}
               </dd>
             </div>

@@ -35,7 +35,7 @@ export function PriorityToggles({
             }
           >
             {ACTION_PRIORITY_LABEL[priority]}
-            <span aria-hidden className="numeric font-mono">
+            <span aria-hidden className="numeric">
               {formatNumber(count)}
             </span>
           </Button>

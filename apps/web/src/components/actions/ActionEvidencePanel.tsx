@@ -30,7 +30,7 @@ function EvidenceLists({ lists }: { lists: EvidenceList[] }) {
             <Badge variant="outline" className="h-auto whitespace-normal">
               {entry.text}
               {entry.detail ? (
-                <span className="numeric font-mono text-muted-foreground">
+                <span className="numeric text-muted-foreground">
                   {entry.detail}
                 </span>
               ) : null}
@@ -66,7 +66,7 @@ export function ActionEvidencePanel({
             className="flex flex-col gap-0.5 border-b border-dashed border-border/60 pb-1"
           >
             <dt className="text-caption text-muted-foreground">{fact.label}</dt>
-            <dd className="numeric font-mono font-medium">
+            <dd className="numeric font-medium">
               <FactValue fact={fact} />
             </dd>
           </div>

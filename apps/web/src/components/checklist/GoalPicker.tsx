@@ -47,7 +47,7 @@ export function GoalPicker({ as: Heading = "h2" }: { as?: "h2" | "h3" }) {
   return (
     <section aria-labelledby={headingId} className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
-        <Heading id={headingId} className="text-title tracking-tight">
+        <Heading id={headingId} className="text-heading tracking-tight">
           What would you like to get done?
         </Heading>
         <p className="text-body text-muted-foreground">

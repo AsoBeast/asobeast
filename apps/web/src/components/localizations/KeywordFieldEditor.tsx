@@ -47,7 +47,7 @@ function KeywordFieldUsage({
           id={countId}
           aria-live="polite"
           className={cn(
-            "numeric font-mono",
+            "numeric",
             over ? "font-medium text-signal-down" : "text-muted-foreground",
           )}
         >

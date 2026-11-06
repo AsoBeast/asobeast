@@ -37,9 +37,7 @@ function Average({ row, name }: { row: Row; name: string }) {
 function RatingCount({ row }: { row: Row }) {
   if (row.state === "uncaptured") return <Dash label={NOT_CAPTURED} />;
   if (row.ratingCount === null) return <Dash label={NO_RATING} />;
-  return (
-    <span className="numeric font-mono">{formatNumber(row.ratingCount)}</span>
-  );
+  return <span className="numeric">{formatNumber(row.ratingCount)}</span>;
 }
 
 export function MarketRatingRow({
@@ -57,7 +55,7 @@ export function MarketRatingRow({
     >
       <TableCell>
         <span className="flex flex-wrap items-center gap-2">
-          <span className="numeric font-mono">{row.country.toUpperCase()}</span>
+          <span className="numeric">{row.country.toUpperCase()}</span>
           <span>{name}</span>
           {row.home ? <Badge variant="secondary">Home</Badge> : null}
           {selected ? <Badge variant="info">Selected</Badge> : null}

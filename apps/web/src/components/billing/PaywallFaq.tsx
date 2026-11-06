@@ -15,7 +15,7 @@ export function PaywallFaq({ items }: { items: readonly FaqItem[] }) {
       aria-labelledby="paywall-faq-title"
       className="flex min-w-0 flex-col gap-4"
     >
-      <h2 id="paywall-faq-title" className="text-display">
+      <h2 id="paywall-faq-title" className="text-title">
         {FAQ_TITLE}
       </h2>
       <Accordion
@@ -29,7 +29,7 @@ export function PaywallFaq({ items }: { items: readonly FaqItem[] }) {
             value={question}
             className="rounded-xl border border-border bg-card px-4"
           >
-            <AccordionTrigger className="py-4 text-subtitle">
+            <AccordionTrigger className="py-4 text-heading">
               {question}
             </AccordionTrigger>
             <AccordionContent className="flex flex-col items-start gap-2 pb-4 text-body text-muted-foreground">
@@ -39,7 +39,7 @@ export function PaywallFaq({ items }: { items: readonly FaqItem[] }) {
                   href={href}
                   target="_blank"
                   rel="noreferrer"
-                  className="font-medium text-foreground underline decoration-primary underline-offset-4"
+                  className="font-medium text-foreground underline decoration-faint-foreground underline-offset-4"
                 >
                   {READ_MORE}
                   <span className="sr-only">{readMoreContext(question)}</span>

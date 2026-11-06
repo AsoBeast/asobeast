@@ -36,12 +36,12 @@ export function AuditScoreHero({
               value={overall}
               label={scoreRingLabel(overall, grade, confidence)}
             >
-              <span className="numeric font-mono text-4xl font-semibold">
+              <span className="numeric text-4xl font-semibold">
                 {overall === null ? "—" : Math.round(overall)}
               </span>
             </ScoreRing>
             <div className="flex flex-col gap-1">
-              <span className="numeric font-mono text-2xl font-semibold">
+              <span className="numeric text-2xl font-semibold">
                 {grade ?? "—"}
               </span>
               <span className="text-body text-muted-foreground">

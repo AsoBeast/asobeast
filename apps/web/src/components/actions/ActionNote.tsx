@@ -63,7 +63,7 @@ export function ActionNote({ item }: { item: ActionItem }) {
         <span
           aria-live="polite"
           className={cn(
-            "numeric font-mono text-caption",
+            "numeric text-caption",
             noteLimit.over > 0
               ? "font-medium text-destructive"
               : "text-muted-foreground",

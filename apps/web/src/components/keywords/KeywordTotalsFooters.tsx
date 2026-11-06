@@ -33,7 +33,7 @@ function Missing({ label }: { label: string }) {
 function Figures({ lead, detail }: { lead: string; detail?: string }) {
   return (
     <span className="flex flex-col gap-0.5">
-      <span className="numeric font-mono">{lead}</span>
+      <span className="numeric">{lead}</span>
       {detail === undefined ? null : (
         <span className="text-caption text-muted-foreground">{detail}</span>
       )}

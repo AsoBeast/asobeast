@@ -20,7 +20,7 @@ export function PositionReadout({
   className?: string;
 }) {
   return (
-    <span className="numeric font-mono inline-flex shrink-0 items-center gap-1.5">
+    <span className="numeric inline-flex shrink-0 items-center gap-1.5">
       {keyword.latestPosition === null ? (
         <span
           title={

@@ -19,7 +19,7 @@ function ShareRow({
       <p className="flex items-center gap-1">
         <span>{label}</span>
         {measured ? (
-          <span className="numeric font-mono font-medium text-foreground">
+          <span className="numeric font-medium text-foreground">
             {shareLine(block)}
           </span>
         ) : null}

@@ -83,21 +83,17 @@ function TrackedSummary({
   return (
     <p className="text-body text-muted-foreground" aria-live="polite">
       Tracking{" "}
-      <span className="numeric font-mono font-medium text-foreground">
+      <span className="numeric font-medium text-foreground">
         {keywords.length}
       </span>
       {partial ? (
         <span>
           {" of "}
-          <span className="numeric font-mono font-medium text-foreground">
-            {total}
-          </span>
+          <span className="numeric font-medium text-foreground">{total}</span>
         </span>
       ) : null}
       <span>{` keyword${keywords.length === 1 ? "" : "s"} · `}</span>
-      <span className="numeric font-mono font-medium text-foreground">
-        {active}
-      </span>{" "}
+      <span className="numeric font-medium text-foreground">{active}</span>{" "}
       active
     </p>
   );
