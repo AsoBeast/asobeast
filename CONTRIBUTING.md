@@ -170,13 +170,14 @@ The description is read by a person deciding whether the change is right, and it
   The text after `#` is the alt text. `gh` uploads only for accounts with write access to this repository, so a pull request from a fork uploads the image against the fork instead, through the endpoint `gh` itself calls, and pastes the printed address into `![Discovered tab in the light theme](…)`. The image renders in this repository like any other attachment:
 
   ```bash
-  FORK_ID=$(gh api "repos/$(gh api user --jq .login)/asobeast" --jq .id)
+  FORK=your-name/asobeast
+  FORK_ID=$(gh api "repos/$FORK" --jq .id)
   gh api --method POST -H 'Content-Type: application/octet-stream' \
     "https://uploads.github.com/user-attachments/assets?name=after.png&content_type=image/png&repository_id=$FORK_ID" \
     --input after.png --jq .url
   ```
 
-  Paste the printed address straight into the description: until a description or comment references it, it answers 404 to everyone but the uploader, so checking the link before that proves nothing. The endpoint is undocumented, so when it refuses, drag the image into the description in the browser instead. Never capture real customer data, a token or a console key.
+  `FORK` is the owner and name of your fork, which an organization or a rename can make differ from your login and `asobeast`. Paste the printed address straight into the description: until a description or comment references it, it answers 404 to everyone but the uploader, so checking the link before that proves nothing. The endpoint is undocumented, so when it refuses, drag the image into the description in the browser instead. Never capture real customer data, a token or a console key.
 
 - **Worth a look** names at most three decisions or risky spots, one line each.
 - **How it was checked** says in two or three sentences what was tested by hand, where, what failed and was fixed, and what was not run. CI reports the suites, so pass counts do not belong here. A long QA table goes in a `<details>` block.
