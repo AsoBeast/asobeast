@@ -18,6 +18,21 @@ import "./keyword-insights.mts";
 import { planMockImport } from "./keyword-import.mts";
 import { summarizeActions } from "./actions-summary.mts";
 import { echoRequest } from "./echo-request.mts";
+import {
+  discoveriesFor,
+  DISCOVERY_FAIL_WRITE_COOKIE,
+  DISCOVERY_NONE_COOKIE,
+  DISCOVERY_PENDING_COOKIE,
+  DISCOVERY_REFUSE_COOKIE,
+  DISCOVERY_SPENT_COOKIE,
+  DISCOVERY_UNFIT_COOKIE,
+  dismissDiscoveries,
+  refreshDiscoveries,
+  resetDiscoveries,
+  setDiscoverySettings,
+  spiderRefusedEnvelope,
+  trackDiscoveries,
+} from "./keyword-discoveries.mts";
 import { funnelFor } from "./store-funnel.mts";
 import {
   STORE_CONNECT_OFF_COOKIE,
@@ -194,6 +209,9 @@ import {
 } from "./portfolio-insights.mts";
 import type {
   AccountPlan,
+  KeywordDiscoveryDismissRequest,
+  KeywordDiscoverySettingsRequest,
+  KeywordDiscoveryTrackRequest,
   AppAnnotationCreateRequest,
   AppAnnotationItem,
   AppDetail,
@@ -1041,6 +1059,32 @@ function appRoute(
         200,
         pick(dataset, new URL(path, "http://localhost").searchParams, req),
       );
+    },
+  };
+}
+
+function discoveryWrite<T>(
+  method: "POST" | "PATCH",
+  pattern: RegExp,
+  handle: (
+    id: string,
+    req: IncomingMessage,
+    res: ServerResponse,
+    body: T,
+  ) => void,
+): Route {
+  return {
+    method,
+    pattern,
+    handler: ([id], req, res) => {
+      withBody<T>(req, res, (body) => {
+        const path = req.url ?? "/";
+        if (!DATASETS[id]) return json(res, 404, errorEnvelope(404, path));
+        if (hasCookie(req, DISCOVERY_FAIL_WRITE_COOKIE, "1")) {
+          return json(res, 500, errorEnvelope(500, path));
+        }
+        handle(id, req, res, body);
+      });
     },
   };
 }
@@ -3628,6 +3672,62 @@ const routes: Route[] = [
   appRoute(/^\/apps\/([^/]+)\/funnel$/, (dataset, query) =>
     funnelFor(dataset.detail.id, query.get("country")),
   ),
+  appRoute(/^\/apps\/([^/]+)\/keyword-discoveries$/, (dataset, query, req) =>
+    discoveriesFor(
+      dataset.detail.id,
+      dataset.detail.store,
+      query.get("country"),
+      {
+        pending: hasCookie(req, DISCOVERY_PENDING_COOKIE, "1"),
+        none: hasCookie(req, DISCOVERY_NONE_COOKIE, "1"),
+        unfit: hasCookie(req, DISCOVERY_UNFIT_COOKIE, "1"),
+      },
+    ),
+  ),
+  discoveryWrite(
+    "POST",
+    /^\/apps\/([^/]+)\/keyword-discoveries\/track$/,
+    (id, req, res, body: KeywordDiscoveryTrackRequest) =>
+      json(
+        res,
+        200,
+        trackDiscoveries(id, body, hasCookie(req, DISCOVERY_UNFIT_COOKIE, "1")),
+      ),
+  ),
+  discoveryWrite(
+    "POST",
+    /^\/apps\/([^/]+)\/keyword-discoveries\/dismiss$/,
+    (id, _req, res, body: KeywordDiscoveryDismissRequest) =>
+      json(res, 200, dismissDiscoveries(id, body.keywordIds)),
+  ),
+  discoveryWrite(
+    "POST",
+    /^\/apps\/([^/]+)\/keyword-discoveries\/refresh$/,
+    (id, req, res) =>
+      hasCookie(req, DISCOVERY_REFUSE_COOKIE, "1")
+        ? json(res, 429, spiderRefusedEnvelope(req.url ?? "/"), {
+            "retry-after": "4",
+          })
+        : json(
+            res,
+            202,
+            refreshDiscoveries(id, hasCookie(req, DISCOVERY_SPENT_COOKIE, "1")),
+          ),
+  ),
+  discoveryWrite(
+    "PATCH",
+    /^\/apps\/([^/]+)\/keyword-discoveries\/settings$/,
+    (id, _req, res, body: KeywordDiscoverySettingsRequest) =>
+      json(res, 200, setDiscoverySettings(id, body.autoTrackRanked)),
+  ),
+  {
+    method: "POST",
+    pattern: /^\/__reset\/keyword-discoveries(?:\/([^/]+))?$/,
+    handler: ([id], _req, res) => {
+      resetDiscoveries(id);
+      json(res, 200, { reset: true });
+    },
+  },
   appRoute(/^\/apps\/([^/]+)\/summary$/, (dataset, query) =>
     dataset.detail.id === "app-1"
       ? (APP_1_MARKET_SUMMARIES[query.get("country") ?? ""] ?? dataset.summary)
