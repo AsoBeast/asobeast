@@ -9,7 +9,6 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import type { PortfolioApp } from "@asobeast/shared";
 import { ChartNotice, trendState } from "@/components/charts/ChartStates";
 import { SeriesFade, useFadeId } from "@/components/charts/SeriesFade";
 import { SeriesTooltip } from "@/components/charts/SeriesTooltip";
@@ -29,10 +28,7 @@ import {
   ChartTooltip,
 } from "@/components/ui/chart";
 import { formatDayMonth, formatNumber } from "@/lib/format";
-import {
-  portfolioVisibility,
-  type PortfolioVisibility,
-} from "./visibility-series";
+import type { PortfolioVisibility } from "./visibility-series";
 
 type Row = PortfolioVisibility["rows"][number];
 
@@ -108,8 +104,7 @@ export function ChartLegend({
   );
 }
 
-export function VisibilityByAppChart({ apps }: { apps: PortfolioApp[] }) {
-  const data = portfolioVisibility(apps);
+export function VisibilityByAppChart({ data }: { data: PortfolioVisibility }) {
   const fadeId = useFadeId();
   const height = CHART_HEIGHT.tall;
 

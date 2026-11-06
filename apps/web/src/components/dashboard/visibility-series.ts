@@ -1,6 +1,7 @@
 import type { PortfolioApp } from "@asobeast/shared";
+import { storeLabel } from "@/lib/format";
 
-export const CHARTED_APPS = 5;
+const CHARTED_APPS = 5;
 
 export interface VisibilitySeries {
   key: string;
@@ -18,17 +19,23 @@ export interface PortfolioVisibility {
 const charted = (app: PortfolioApp): boolean =>
   app.lastCapturedAt !== null && app.sparkline.length > 0;
 
+const nameOf = (app: PortfolioApp): string => app.name ?? "Untitled app";
+
 function labelsOf(apps: PortfolioApp[]): Map<string, string> {
-  const names = new Map<string, number>();
-  for (const app of apps) {
-    const name = app.name ?? "Untitled app";
-    names.set(name, (names.get(name) ?? 0) + 1);
-  }
+  const namesakes = (app: PortfolioApp) =>
+    apps.filter((other) => nameOf(other) === nameOf(app));
   return new Map(
     apps.map((app) => {
-      const name = app.name ?? "Untitled app";
-      const shared = (names.get(name) ?? 0) > 1;
-      return [app.id, shared ? `${name} · ${app.country.toUpperCase()}` : name];
+      const same = namesakes(app);
+      if (same.length < 2) return [app.id, nameOf(app)];
+      const parts = [nameOf(app)];
+      if (same.some((other) => other.store !== app.store)) {
+        parts.push(storeLabel(app.store));
+      }
+      if (same.some((other) => other.country !== app.country)) {
+        parts.push(app.country.toUpperCase());
+      }
+      return [app.id, parts.join(" · ")];
     }),
   );
 }

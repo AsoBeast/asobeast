@@ -25,7 +25,7 @@ function changeLabel(change: MoverChange): string {
   return `${change.kind === "up" ? "up" : "down"} ${change.size} in 7 days`;
 }
 
-export const rankingsHref = (mover: PortfolioKeywordMover) =>
+const rankingsHref = (mover: PortfolioKeywordMover) =>
   `/apps/${mover.appId}/rankings?keywords=${mover.keywordId}`;
 
 function MoverLine({
@@ -57,8 +57,8 @@ function MoverLine({
           {mover.country.toUpperCase()}
         </span>
       </span>
-      <span className="numeric relative whitespace-nowrap text-muted-foreground">
-        {`${formatRankPosition(mover.from, mover.fromDepth)} → `}
+      <span className="numeric relative text-right whitespace-nowrap text-muted-foreground">
+        <span>{`${formatRankPosition(mover.from, mover.fromDepth)} → `}</span>
         <span className="font-medium text-foreground">
           {formatRankPosition(mover.to, mover.toDepth)}
         </span>

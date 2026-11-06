@@ -476,6 +476,13 @@ export const CHANGE_OWNERS = ["all", "yours", "competitors"] as const;
 
 export type ChangeOwner = (typeof CHANGE_OWNERS)[number];
 
+export const MOVER_VIEWS = ["all", "up", "down"] as const;
+
+export type MoverView = (typeof MOVER_VIEWS)[number];
+
+export const moverViewParser =
+  parseAsStringLiteral(MOVER_VIEWS).withDefault("all");
+
 export const changeOwnerParser =
   parseAsStringLiteral(CHANGE_OWNERS).withDefault("all");
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { movementSentence } from "./movement-sentence";
+import type { PortfolioInsights } from "@asobeast/shared";
+import { appsThatMoved, movementSentence } from "./movement-sentence";
 
 const movement = (up: number, down: number, entered = 0, lost = 0) => ({
   up,
@@ -37,5 +38,18 @@ describe("movementSentence", () => {
     expect(movementSentence(movement(0, 2), 2, true)).toBe(
       "In the last 7 days 2 keywords fell across 2 apps.",
     );
+  });
+});
+
+describe("appsThatMoved", () => {
+  it("counts only the apps with a keyword that climbed or fell", () => {
+    const insight = (appId: string, up: number, down: number) => ({
+      appId,
+      movement: movement(up, down),
+    });
+    const insights = {
+      apps: [insight("a", 4, 0), insight("b", 0, 0), insight("c", 0, 1)],
+    } as unknown as PortfolioInsights;
+    expect(appsThatMoved(insights)).toBe(2);
   });
 });

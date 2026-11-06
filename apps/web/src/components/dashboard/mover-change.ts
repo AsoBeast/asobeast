@@ -1,6 +1,6 @@
 import type { KeywordMover } from "@asobeast/shared";
 
-export const BAR_CAP = 20;
+const BAR_CAP = 20;
 
 export type MoverChange =
   | { kind: "new"; share: number }

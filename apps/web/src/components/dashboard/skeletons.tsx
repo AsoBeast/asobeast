@@ -3,6 +3,7 @@ import { ChartSkeleton } from "@/components/charts/ChartStates";
 import { CHART_HEIGHT } from "@/components/charts/theme";
 import {
   Card,
+  CardAction,
   CardContent,
   CardFooter,
   CardHeader,
@@ -10,7 +11,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatTileGroup, StatTileSkeleton } from "@/components/ui/stat-tile";
 
-export const PULSE_GRID = "grid-cols-2 @3xl/dashboard:grid-cols-4";
+const PULSE_GRID = "grid-cols-2 @3xl/dashboard:grid-cols-4";
 
 export const PULSE_STRIP = `${PULSE_GRID} rounded-none border-0`;
 
@@ -63,6 +64,11 @@ function PanelSkeleton({
     <Card className="h-full">
       <CardHeader>
         <Skeleton className="h-5 w-32" />
+        {columns ? (
+          <CardAction>
+            <Skeleton className="h-8 w-44" />
+          </CardAction>
+        ) : null}
       </CardHeader>
       <CardContent className="flex flex-1 flex-col gap-1 px-2">
         {columns ? <Skeleton className="mx-2 h-4 w-24" /> : null}

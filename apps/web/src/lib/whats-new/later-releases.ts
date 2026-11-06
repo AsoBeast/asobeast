@@ -16,7 +16,7 @@ export const LATER_RELEASES: readonly Release[] = [
       {
         kind: "improved",
         title: "A dashboard that starts with what moved",
-        text: "The dashboard now opens with one sentence about the keywords that climbed and fell this week, a chart of visibility for your most visible apps, and your keyword movers beside the next things to do. The apps table shows a trend line for each app, and an app's run of version updates is folded into one line under listing changes.",
+        text: "The dashboard now opens with one sentence about the keywords that climbed and fell this week, a chart of visibility for your most visible apps, and your keyword movers beside the next things to do. The apps table shows a trend line for each app and keeps audit, changes and last collected under Columns, and an app's run of version updates is folded into one line under listing changes.",
       },
       {
         kind: "new",

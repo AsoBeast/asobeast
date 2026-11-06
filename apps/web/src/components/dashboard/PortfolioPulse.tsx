@@ -109,23 +109,18 @@ export function PortfolioPulse() {
           note={`${formatNumber(changes7d.own)} by you · ${formatNumber(changes7d.competitors)} by competitors`}
         />
       </StatTileGroup>
-      <section
-        aria-labelledby="visibility-heading"
-        className="flex flex-col gap-3 border-t border-border px-4 pt-3 pb-4"
-      >
+      <div className="flex flex-col gap-3 border-t border-border px-4 pt-3 pb-4">
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-          <h2 id="visibility-heading" className="text-heading">
-            Visibility by app
-          </h2>
+          <h2 className="text-heading">Visibility by app</h2>
           <ChartLegend series={charted.series} />
         </div>
-        <VisibilityByAppChart apps={portfolio.apps} />
+        <VisibilityByAppChart data={charted} />
         <p className="text-caption text-faint-foreground">
           {charted.omitted > 0
-            ? `Last 30 days · the ${pluralize(charted.series.length, "most visible app")} · ${pluralize(charted.omitted, "more app")} in the table below`
+            ? `Last 30 days · the ${pluralize(charted.series.length, "most visible app")} · ${pluralize(charted.omitted, "more app")} under Apps`
             : "Last 30 days"}
         </p>
-      </section>
+      </div>
     </Card>
   );
 }

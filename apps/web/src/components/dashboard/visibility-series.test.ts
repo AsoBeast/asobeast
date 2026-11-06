@@ -75,4 +75,18 @@ describe("portfolioVisibility", () => {
       "Tomato",
     ]);
   });
+
+  it("names the store when one app is charted from both stores", () => {
+    const result = portfolioVisibility([
+      app("a", 9, [["2026-11-05", 9]], { name: "Focus" }),
+      app("b", 4, [["2026-11-05", 4]], {
+        name: "Focus",
+        store: "GOOGLE_PLAY",
+      }),
+    ]);
+    expect(result.series.map((series) => series.label)).toEqual([
+      "Focus · App Store",
+      "Focus · Google Play",
+    ]);
+  });
 });

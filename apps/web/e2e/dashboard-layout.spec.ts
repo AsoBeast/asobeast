@@ -71,6 +71,34 @@ test("apps and listing changes share a row once the sidebar collapses", async ({
   }).toPass();
 });
 
+test("the table view gives the apps the full width", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/?view=table");
+  await page.getByRole("button", { name: "Toggle Sidebar" }).first().click();
+  await expect(page.locator("[data-slot=sidebar]")).toHaveAttribute(
+    "data-state",
+    "collapsed",
+  );
+
+  const apps = page.getByRole("region", { name: "Apps" });
+  const changes = page
+    .getByRole("heading", { name: "Listing changes", level: 2 })
+    .locator("xpath=ancestor::*[@data-slot='card'][1]");
+  await expect(async () => {
+    const appsBox = (await apps.boundingBox())!;
+    const changesBox = (await changes.boundingBox())!;
+    expect(changesBox.y).toBeGreaterThanOrEqual(appsBox.y + appsBox.height);
+    expect(Math.round(changesBox.width)).toBe(Math.round(appsBox.width));
+  }).toPass();
+  expect(
+    await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth <=
+        document.documentElement.clientWidth,
+    ),
+  ).toBe(true);
+});
+
 test("the header states what the dashboard covers", async ({ page }) => {
   await page.goto("/");
 

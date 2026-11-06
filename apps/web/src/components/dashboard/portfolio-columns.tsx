@@ -208,7 +208,7 @@ export const portfolioColumns = columnHelper.columns([
         if (actions === null) return EMPTY;
         return (
           <span className="numeric whitespace-nowrap">
-            {formatNumber(actions.open)}
+            <span>{formatNumber(actions.open)}</span>
             {actions.critical > 0 ? (
               <span className="text-priority-critical">{` · ${formatNumber(actions.critical)} critical`}</span>
             ) : null}

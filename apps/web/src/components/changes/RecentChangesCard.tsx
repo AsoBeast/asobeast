@@ -41,10 +41,14 @@ const ownedBy =
 
 function VersionRun({ events }: { events: ChangeEventItem[] }) {
   const newest = events[0];
-  const oldest = events[events.length - 1];
+  const first = formatDayMonth(
+    events[events.length - 1].capturedAt.slice(0, 10),
+  );
+  const last = formatDayMonth(newest.capturedAt.slice(0, 10));
+  const span = first === last ? first : `${first} to ${last}`;
   return (
     <span className="text-muted-foreground">
-      {`${events.length} version updates, ${formatDayMonth(oldest.capturedAt.slice(0, 10))} to ${formatDayMonth(newest.capturedAt.slice(0, 10))} · latest `}
+      <span>{`${events.length} version updates, ${span} · latest `}</span>
       <span className="font-medium text-foreground">{newest.after ?? "—"}</span>
     </span>
   );

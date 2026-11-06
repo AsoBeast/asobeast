@@ -99,13 +99,28 @@ test("keyword movers filter climbers and fallers", async ({ page }) => {
   await expect(fallerRow).toHaveCount(1);
 
   await card.getByRole("tab", { name: "Climbers" }).click();
+  await expect(page).toHaveURL(/[?&]movers=up/);
   await expect(fallerRow).toHaveCount(0);
   await expect(moverRows(page)).toHaveCount(
     PORTFOLIO_INSIGHTS.movers.up.length,
   );
 
   await card.getByRole("tab", { name: "Fallers" }).click();
+  await expect(page).toHaveURL(/[?&]movers=down/);
   await expect(fallerRow).toHaveCount(1);
+  await expect(moverRows(page)).toHaveCount(
+    PORTFOLIO_INSIGHTS.movers.down.length,
+  );
+});
+
+test("the movers filter survives a reload", async ({ page }) => {
+  await page.goto("/?movers=down");
+
+  const card = moversCard(page);
+  await expect(card.getByRole("tab", { name: "Fallers" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
   await expect(moverRows(page)).toHaveCount(
     PORTFOLIO_INSIGHTS.movers.down.length,
   );

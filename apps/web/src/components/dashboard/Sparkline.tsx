@@ -1,5 +1,6 @@
 import type { VisibilityPoint } from "@asobeast/shared";
 import { cn } from "@/lib/utils";
+import { seriesColor } from "@/components/charts/theme";
 import { areaPath, monotonePath, sparklinePoints } from "./sparkline-path";
 
 const BOX = { width: 120, height: 48, padding: 3 };
@@ -21,16 +22,16 @@ export function TrendLine({ points }: { points: VisibilityPoint[] }) {
   return (
     <svg
       role="img"
-      aria-label={`visibility, last 30 days: ${direction}, now ${last}`}
+      aria-label={`visibility, last 30 days: ${direction}, now ${Math.round(last)}`}
       width={TREND_BOX.width}
       height={TREND_BOX.height}
       viewBox={`0 0 ${TREND_BOX.width} ${TREND_BOX.height}`}
-      className="block shrink-0 text-chart-1"
+      className="block shrink-0"
     >
       <path
         d={monotonePath(sparklinePoints(values, TREND_BOX))}
         fill="none"
-        stroke="currentColor"
+        stroke={seriesColor(0)}
         strokeWidth={1.5}
         strokeLinecap="round"
         strokeLinejoin="round"
