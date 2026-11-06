@@ -4,6 +4,41 @@ import { areaPath, monotonePath, sparklinePoints } from "./sparkline-path";
 
 const BOX = { width: 120, height: 48, padding: 3 };
 
+const TREND_BOX = { width: 72, height: 22, padding: 2 };
+
+export function TrendLine({ points }: { points: VisibilityPoint[] }) {
+  if (points.length < 2) {
+    return (
+      <span className="text-caption whitespace-nowrap text-faint-foreground">
+        Not enough history
+      </span>
+    );
+  }
+  const values = points.map((point) => point.visibility);
+  const first = values[0];
+  const last = values[values.length - 1];
+  const direction = last > first ? "up" : last < first ? "down" : "flat";
+  return (
+    <svg
+      role="img"
+      aria-label={`visibility, last 30 days: ${direction}, now ${last}`}
+      width={TREND_BOX.width}
+      height={TREND_BOX.height}
+      viewBox={`0 0 ${TREND_BOX.width} ${TREND_BOX.height}`}
+      className="block shrink-0 text-chart-1"
+    >
+      <path
+        d={monotonePath(sparklinePoints(values, TREND_BOX))}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function Sparkline({ points }: { points: VisibilityPoint[] }) {
   if (points.length < 2) {
     return (

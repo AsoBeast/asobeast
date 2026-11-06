@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Star } from "lucide-react";
 import type { PortfolioApp, PortfolioAppInsight } from "@asobeast/shared";
 import { GradedNumber } from "@/components/ui/graded";
 import { formatCompact, formatRating, pluralize } from "@/lib/format";
@@ -13,7 +12,7 @@ function RatingFact({ rating }: { rating: PortfolioAppInsight["rating"] }) {
   if (rating.average === null) return null;
   return (
     <span className="inline-flex items-center gap-1">
-      <Star className="size-3.5" aria-hidden />
+      <span aria-hidden>Rating</span>
       <GradedNumber
         value={formatRating(rating.average)}
         grade={grade("rating", rating.average)}

@@ -13,11 +13,13 @@ import {
   formatDate,
   formatNumber,
   formatRating,
+  pluralize,
   storeLabel,
 } from "@/lib/format";
 import { grade } from "@/lib/grade";
 import { nullsLast } from "@/lib/table/sorting";
 import { MovementValue } from "./MovementValue";
+import { TrendLine } from "./Sparkline";
 
 export interface PortfolioTableRow {
   app: PortfolioApp;
@@ -39,9 +41,17 @@ const captured = (row: PortfolioTableRow): PortfolioAppInsight | undefined =>
 
 function AppCell({ app }: { app: PortfolioApp }) {
   const name = app.name ?? "Untitled app";
+  const meta = [
+    storeLabel(app.store),
+    app.country.toUpperCase(),
+    pluralize(app.trackedKeywords, "keyword"),
+    app.groupName,
+  ]
+    .filter((part) => part !== null)
+    .join(" · ");
   return (
     <div className="flex max-w-44 min-w-0 items-center gap-3 @xl/dashboard:max-w-72">
-      <AppIcon src={app.iconUrl} size={32} />
+      <AppIcon src={app.iconUrl} size={24} />
       <div className="flex min-w-0 flex-col">
         <Link
           href={`/apps/${app.id}`}
@@ -49,9 +59,8 @@ function AppCell({ app }: { app: PortfolioApp }) {
         >
           {name}
         </Link>
-        <span className="truncate text-caption text-muted-foreground">
-          {storeLabel(app.store)} · {app.country.toUpperCase()}
-          {app.groupName ? ` · ${app.groupName}` : null}
+        <span className="truncate text-label text-muted-foreground">
+          {meta}
         </span>
         {app.delistedAt ? <DelistedBadge since={app.delistedAt} /> : null}
       </div>
@@ -68,10 +77,21 @@ export const portfolioColumns = columnHelper.columns([
     header: ({ column }) => <SortableHeader column={column} label="App" />,
     cell: ({ row }) => <AppCell app={row.original.app} />,
   }),
+  columnHelper.display({
+    id: "trend",
+    meta: { label: "Trend" },
+    header: () => "Trend",
+    cell: ({ row }) =>
+      row.original.app.lastCapturedAt === null ? (
+        EMPTY
+      ) : (
+        <TrendLine points={row.original.app.sparkline} />
+      ),
+  }),
   columnHelper.accessor((row) => row.app.visibility.current, {
     id: "visibility",
     ...NUMBER_SORT,
-    meta: { label: "Visibility", phone: true },
+    meta: { label: "Visibility", phone: true, numeric: true },
     header: ({ column }) => (
       <SortableHeader column={column} label="Visibility" />
     ),
@@ -87,13 +107,17 @@ export const portfolioColumns = columnHelper.columns([
   columnHelper.accessor((row) => nullsLast(row.app.visibility.delta7d), {
     id: "change",
     ...NUMBER_SORT,
-    meta: { label: "7d", phone: true },
+    meta: { label: "7d", phone: true, numeric: true },
     header: ({ column }) => <SortableHeader column={column} label="7d" />,
     cell: ({ row }) =>
       row.original.app.lastCapturedAt === null ? (
         EMPTY
       ) : (
-        <TrendChip label="7d" value={row.original.app.visibility.delta7d} />
+        <TrendChip
+          label="7d"
+          value={row.original.app.visibility.delta7d}
+          form="pill"
+        />
       ),
   }),
   columnHelper.accessor(
@@ -101,7 +125,7 @@ export const portfolioColumns = columnHelper.columns([
     {
       id: "top10",
       ...NUMBER_SORT,
-      meta: { label: "In top 10" },
+      meta: { label: "In top 10", numeric: true },
       header: ({ column }) => (
         <SortableHeader column={column} label="In top 10" />
       ),
@@ -119,8 +143,8 @@ export const portfolioColumns = columnHelper.columns([
   ),
   columnHelper.display({
     id: "movement",
-    meta: { label: "Movement" },
-    header: () => "Movement",
+    meta: { label: "Moved", numeric: true },
+    header: () => "Moved",
     cell: ({ row }) => {
       const insight = captured(row.original);
       return insight ? (
@@ -137,7 +161,7 @@ export const portfolioColumns = columnHelper.columns([
     {
       id: "rating",
       ...NUMBER_SORT,
-      meta: { label: "Rating" },
+      meta: { label: "Rating", numeric: true },
       header: ({ column }) => <SortableHeader column={column} label="Rating" />,
       cell: ({ row }) => {
         const average = captured(row.original)?.rating.average ?? null;
@@ -155,7 +179,7 @@ export const portfolioColumns = columnHelper.columns([
   ),
   columnHelper.display({
     id: "audit",
-    meta: { label: "Audit" },
+    meta: { label: "Audit", numeric: true, hiddenByDefault: true },
     header: () => "Audit",
     cell: ({ row }) => {
       const score = captured(row.original)?.audit?.current ?? null;
@@ -175,23 +199,27 @@ export const portfolioColumns = columnHelper.columns([
     {
       id: "actions",
       ...NUMBER_SORT,
-      meta: { label: "Open actions", phone: true },
+      meta: { label: "Open actions", phone: true, numeric: true },
       header: ({ column }) => (
         <SortableHeader column={column} label="Open actions" />
       ),
       cell: ({ row }) => {
         const actions = captured(row.original)?.actions ?? null;
-        return actions === null ? (
-          EMPTY
-        ) : (
-          <span className="numeric">{formatNumber(actions.open)}</span>
+        if (actions === null) return EMPTY;
+        return (
+          <span className="numeric whitespace-nowrap">
+            {formatNumber(actions.open)}
+            {actions.critical > 0 ? (
+              <span className="text-priority-critical">{` · ${formatNumber(actions.critical)} critical`}</span>
+            ) : null}
+          </span>
         );
       },
     },
   ),
   columnHelper.display({
     id: "changes",
-    meta: { label: "Changes 7d" },
+    meta: { label: "Changes 7d", numeric: true, hiddenByDefault: true },
     header: () => "Changes 7d",
     cell: ({ row }) => {
       const changes = captured(row.original)?.changes7d;
@@ -207,7 +235,7 @@ export const portfolioColumns = columnHelper.columns([
   columnHelper.accessor((row) => nullsLast(row.app.lastCapturedAt), {
     id: "updated",
     ...NUMBER_SORT,
-    meta: { label: "Last collected" },
+    meta: { label: "Last collected", hiddenByDefault: true },
     header: ({ column }) => (
       <SortableHeader column={column} label="Last collected" />
     ),

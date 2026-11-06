@@ -3,6 +3,7 @@ import type { PortfolioApp, PortfolioAppInsight } from "@asobeast/shared";
 import { RankBandBar } from "@/components/charts/RankBandBar";
 import { AppIcon } from "@/components/AppIcon";
 import { Badge } from "@/components/ui/badge";
+import { Separated } from "@/components/ui/separated";
 import { Card } from "@/components/ui/card";
 import { TrendChip } from "@/components/ui/delta-chip";
 import {
@@ -32,17 +33,20 @@ export function AppStats({ app }: { app: PortfolioApp }) {
 export function AppBadges({ app }: { app: PortfolioApp }) {
   const setup = setupChipText(app.setup);
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      <Badge variant="secondary" className="w-fit">
-        {storeLabel(app.store)}
-      </Badge>
-      <Badge
-        variant="outline"
-        className="w-fit"
-        title={`Home storefront · ${formatCountry(app.country)}`}
-      >
-        {app.country.toUpperCase()}
-      </Badge>
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-label text-muted-foreground">
+      <span>
+        <Separated
+          parts={[
+            storeLabel(app.store),
+            <span
+              key="country"
+              title={`Home storefront · ${formatCountry(app.country)}`}
+            >
+              {app.country.toUpperCase()}
+            </span>,
+          ]}
+        />
+      </span>
       {app.delistedAt ? <DelistedBadge since={app.delistedAt} /> : null}
       {setup ? (
         <Badge variant="info" asChild className="relative z-20 min-h-6 w-fit">
@@ -78,11 +82,11 @@ export function PortfolioAppCard({
   const name = app.name ?? "Untitled app";
 
   return (
-    <Card className="@container/app-card relative h-full gap-0 p-4 transition-colors hover:bg-muted/40">
+    <Card className="@container/app-card relative h-full gap-0 p-4 transition-colors hover:bg-muted">
       <AppCardLink
         id={app.id}
         name={name}
-        className="absolute inset-0 z-10 rounded-xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+        className="absolute inset-0 z-10 rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
       />
 
       <div className="absolute top-2 right-2 z-20">
@@ -108,7 +112,7 @@ export function PortfolioAppCard({
           <>
             <div className="flex flex-col gap-1">
               <div className="flex items-baseline gap-2">
-                <span className="numeric text-3xl font-semibold">
+                <span className="numeric text-metric">
                   {Math.round(app.visibility.current)}
                 </span>
                 <TrendChip label="7d" value={app.visibility.delta7d} />
@@ -166,7 +170,7 @@ export function PortfolioGroupMember({
         </div>
         {app.lastCapturedAt === null ? null : (
           <div className="flex flex-col items-end gap-1">
-            <span className="numeric text-2xl font-semibold">
+            <span className="numeric text-title">
               {Math.round(app.visibility.current)}
             </span>
             <TrendChip label="7d" value={app.visibility.delta7d} />
