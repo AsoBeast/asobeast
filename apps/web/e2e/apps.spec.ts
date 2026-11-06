@@ -885,7 +885,9 @@ test("app overview renders summary numbers and a utc refresh date", async ({
   ).toHaveAttribute("data-grade", "weak");
 
   const coverage = card(page, "Metadata coverage");
-  await expect(coverage).toBeVisible();
+  await expect(
+    coverage.getByText("Metadata coverage", { exact: true }),
+  ).toBeVisible();
   await expect(coverage.getByText("productivity app")).toBeVisible();
 
   const refreshDate = utcDateFormatter.format(
