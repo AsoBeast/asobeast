@@ -13,6 +13,7 @@ import {
   SnapshotDiffResult,
   SUPPORTED_STORES,
 } from '@asobeast/shared';
+import { KeywordDiscoveryPlanner } from '../keyword-discovery/discovery-planner.service';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { StoreNotSupportedError } from '../store-providers/errors';
@@ -57,6 +58,7 @@ export class AppsService {
     private readonly firstRun: FirstRunScheduler,
     private readonly localizations: LocalizedListingCapture,
     private readonly setups: AppSetupService,
+    private readonly discoveries: KeywordDiscoveryPlanner,
   ) {}
 
   private queueFor(store: Store): Queue {
@@ -116,6 +118,7 @@ export class AppsService {
     );
 
     await this.scheduleFirstRun(app.id);
+    await this.scheduleFirstDiscovery(app.id);
 
     return toAppDetail(app, snapshot, [], null);
   }
@@ -136,6 +139,16 @@ export class AppsService {
     } catch (error: unknown) {
       this.logger.error(
         `could not schedule the first run for ${appId}, so its positions wait for the next daily run: ${reason(error)}`,
+      );
+    }
+  }
+
+  private async scheduleFirstDiscovery(appId: string): Promise<void> {
+    try {
+      await this.discoveries.plan(appId);
+    } catch (error: unknown) {
+      this.logger.error(
+        `could not plan the first keyword discoveries of ${appId}, so they wait for the weekly job: ${reason(error)}`,
       );
     }
   }
