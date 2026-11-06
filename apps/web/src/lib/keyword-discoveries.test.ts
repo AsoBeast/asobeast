@@ -5,6 +5,8 @@ import type {
 } from "@asobeast/shared";
 import { describe, expect, it } from "vitest";
 import {
+  discoveriesHref,
+  discoveriesLine,
   discoveryFooter,
   discoverySourceLabel,
   discoveryTabLabel,
@@ -257,6 +259,39 @@ describe("refreshedToast", () => {
     );
     expect(refreshedToast({ queued: 0, resolved: 0 })).toBe(
       "Nothing new to check this week",
+    );
+  });
+});
+
+describe("discoveriesLine", () => {
+  it("counts the discoveries and the ranked ones", () => {
+    expect(discoveriesLine({ open: 153, ranked: 28 })).toBe(
+      "153 keyword discoveries, 28 where you already rank",
+    );
+    expect(discoveriesLine({ open: 1, ranked: 1 })).toBe(
+      "1 keyword discovery, 1 where you already rank",
+    );
+    expect(discoveriesLine({ open: 5, ranked: 0 })).toBe(
+      "5 keyword discoveries",
+    );
+    expect(discoveriesLine({ open: 1234, ranked: 0 })).toBe(
+      "1,234 keyword discoveries",
+    );
+  });
+
+  it("says nothing without a discovery", () => {
+    expect(discoveriesLine({ open: 0, ranked: 0 })).toBeNull();
+    expect(discoveriesLine(undefined)).toBeNull();
+  });
+});
+
+describe("discoveriesHref", () => {
+  it("opens the discovered tab, in a market when one is named", () => {
+    expect(discoveriesHref("app-1")).toBe(
+      "/apps/app-1/keywords?tab=discovered",
+    );
+    expect(discoveriesHref("app-1", "de")).toBe(
+      "/apps/app-1/keywords?tab=discovered&country=de",
     );
   });
 });

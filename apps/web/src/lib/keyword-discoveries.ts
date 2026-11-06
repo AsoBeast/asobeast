@@ -1,5 +1,6 @@
 import type {
   DiscoverySource,
+  KeywordDiscoveryCount,
   DiscoveryState,
   KeywordDiscoveryChecks,
   KeywordDiscoveryCounts,
@@ -138,3 +139,20 @@ export function refreshedToast({
     ? "No checks to queue this week. The list was refreshed from other searches."
     : "Nothing new to check this week";
 }
+
+export function discoveriesLine(
+  count: KeywordDiscoveryCount | undefined,
+): string | null {
+  if (!count || count.open === 0) return null;
+  const found = pluralize(
+    count.open,
+    "keyword discovery",
+    "keyword discoveries",
+  );
+  return count.ranked > 0
+    ? `${found}, ${count.ranked} where you already rank`
+    : found;
+}
+
+export const discoveriesHref = (appId: string, country?: string): string =>
+  `/apps/${appId}/keywords?tab=discovered${country ? `&country=${country}` : ""}`;
