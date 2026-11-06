@@ -19,6 +19,7 @@ import {
   withoutDiscoveries,
 } from "@/lib/keyword-discoveries";
 import {
+  invalidateKeywordDiscoveries,
   invalidateKeywordDiscoveryMutation,
   keywordDiscoveriesOptions,
 } from "@/lib/queries";
@@ -48,7 +49,8 @@ export function useDiscoveryActions(
     client.setQueryData<KeywordDiscoveryList>(queryKey, (list) =>
       list ? withoutDiscoveries(list, ids) : list,
     );
-  const refetch = () => invalidateKeywordDiscoveryMutation(client, id);
+  const refetchTracked = () => invalidateKeywordDiscoveryMutation(client, id);
+  const refetchDiscoveries = () => invalidateKeywordDiscoveries(client, id);
 
   const track = useMutation({
     mutationKey: ["keyword-discovery", id, market, "track"],
@@ -58,7 +60,7 @@ export function useDiscoveryActions(
       if (result.skipped === 0) removeRows(removes);
       onTracked();
       toast.success(trackedToast(result));
-      refetch();
+      refetchTracked();
     },
     onError: failed("Could not track the keywords"),
   });
@@ -69,7 +71,7 @@ export function useDiscoveryActions(
       dismissKeywordDiscoveries(id, [...ids]),
     onSuccess: (_result, ids) => {
       removeRows(ids);
-      refetch();
+      refetchDiscoveries();
     },
     onError: failed("Could not dismiss the keywords"),
   });
@@ -79,7 +81,7 @@ export function useDiscoveryActions(
     mutationFn: () => refreshKeywordDiscoveries(id),
     onSuccess: (result) => {
       toast.success(refreshedToast(result));
-      refetch();
+      refetchDiscoveries();
     },
     onError: failed("Could not refresh the discoveries"),
   });
@@ -96,10 +98,12 @@ export function useDiscoveryActions(
       return { previous };
     },
     onSuccess: (result) => {
-      if (result.tracked > 0 || result.skipped > 0) {
-        toast.success(trackedToast(result));
+      if (result.tracked === 0 && result.skipped === 0) {
+        refetchDiscoveries();
+        return;
       }
-      refetch();
+      toast.success(trackedToast(result));
+      refetchTracked();
     },
     onError: (error, _enabled, context) => {
       if (context?.previous) client.setQueryData(queryKey, context.previous);

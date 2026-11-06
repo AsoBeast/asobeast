@@ -73,6 +73,7 @@ import {
   invalidateKeywordImport,
   invalidateKeywordFieldMutation,
   invalidateLocalizationMutation,
+  invalidateKeywordDiscoveries,
   invalidateKeywordDiscoveryMutation,
   invalidateKeywordMutation,
   invalidateMarketSeed,
@@ -841,6 +842,16 @@ describe("invalidation sets", () => {
     expect(isPrefixOf(appKeys.keywordDiscoveriesRoot(APP), key)).toBe(true);
     expect(isPrefixOf(appKeys.keywordsRoot(APP), key)).toBe(false);
     expect(key).not.toEqual(keywordDiscoveriesOptions(APP, "de").queryKey);
+  });
+
+  it("invalidates the discoveries and their counts after a dismiss or a refresh", () => {
+    expect(
+      invalidatedKeys((client) => invalidateKeywordDiscoveries(client, APP)),
+    ).toEqual([
+      appKeys.keywordDiscoveriesRoot(APP),
+      appKeys.summary(APP),
+      portfolioKey,
+    ]);
   });
 
   it("invalidates the discoveries and everything a track changes", () => {

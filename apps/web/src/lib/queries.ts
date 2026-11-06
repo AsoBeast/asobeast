@@ -1140,6 +1140,17 @@ export function invalidateKeywordMutation(
   invalidateWorkspaceChecklist(client);
 }
 
+export function invalidateKeywordDiscoveries(
+  client: QueryClient,
+  id: string,
+): void {
+  void client.invalidateQueries({
+    queryKey: appKeys.keywordDiscoveriesRoot(id),
+  });
+  void client.invalidateQueries({ queryKey: appKeys.summary(id) });
+  void client.invalidateQueries({ queryKey: portfolioKey });
+}
+
 export function invalidateKeywordDiscoveryMutation(
   client: QueryClient,
   id: string,
