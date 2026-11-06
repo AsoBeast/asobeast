@@ -5,6 +5,7 @@ import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { ListingCaptureService } from '../src/apps/listing-capture.service';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
+import { ScreenshotRecorder } from '../src/screenshots/screenshot-recorder';
 import { StoreAppNotFoundError } from '../src/store-providers/errors';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import { NormalizedApp, StoreProvider } from '../src/store-providers/types';
@@ -94,6 +95,7 @@ describe('listing loss ordering (e2e)', () => {
 
   beforeEach(async () => {
     registry.missing = false;
+    jest.restoreAllMocks();
     await prisma.$executeRawUnsafe(
       'TRUNCATE TABLE "App", "Keyword", "AlertEvent", "Webhook" RESTART IDENTITY CASCADE',
     );
@@ -142,6 +144,37 @@ describe('listing loss ordering (e2e)', () => {
       new StoreAppNotFoundError(Store.APP_STORE, listed.storeAppId),
     );
     await notFound;
+  };
+
+  const holdCaptureTransaction = () => {
+    const recorder = app.get(ScreenshotRecorder);
+    const record = recorder.record.bind(recorder);
+    let entered: () => void = () => undefined;
+    let release: () => void = () => undefined;
+    const inside = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const released = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    jest.spyOn(recorder, 'record').mockImplementationOnce(async (...args) => {
+      entered();
+      await released;
+      return record(...args);
+    });
+    return { inside, release };
+  };
+
+  const waitingForListingLock = async () => {
+    for (let attempt = 0; attempt < 100; attempt += 1) {
+      const [{ waiting }] = await prisma.$queryRaw<{ waiting: number }[]>`
+        SELECT count(*)::int AS waiting FROM pg_locks
+        WHERE locktype = 'advisory' AND NOT granted
+      `;
+      if (waiting > 0) return;
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    throw new Error('the loss write never waited for the listing lock');
   };
 
   const stored = (id: string) =>
@@ -193,6 +226,30 @@ describe('listing loss ordering (e2e)', () => {
     await lostWhileFound(rival);
 
     expect((await stored(rival.id)).delistedAt).toBeNull();
+    expect(await rows('app.delisted')).toEqual([]);
+  });
+
+  it('makes the loss write wait for a capture that is still committing', async () => {
+    const own = await seedApp('Own');
+    await refresh(own.id);
+    const heldRead = registry.holdNextRead();
+    const notFound = refresh(own.id);
+    await heldRead;
+    const committing = holdCaptureTransaction();
+    const found = refresh(own.id);
+    await committing.inside;
+
+    registry.answerHeldRead(
+      new StoreAppNotFoundError(Store.APP_STORE, own.storeAppId),
+    );
+    try {
+      await waitingForListingLock();
+    } finally {
+      committing.release();
+    }
+    await Promise.all([found, notFound]);
+
+    expect((await stored(own.id)).delistedAt).toBeNull();
     expect(await rows('app.delisted')).toEqual([]);
   });
 
