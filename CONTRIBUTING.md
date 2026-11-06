@@ -108,7 +108,7 @@ A pull request is ready for review only after three passes, run in this order on
 
 1. **Agent code review.** After everything is done, run the code review skills from the `agent-skills` plugin (`agent-skills:review` and `agent-skills:code-review-and-quality`) over the branch. Make sure everything is correct, every edge case is handled, there are no errors or bugs, and the code quality is very good. Fix what it finds and run it again until it finds nothing new.
 2. **OpenCodeReview against `main`.** After all changes are in, run `/open-code-review:review` and ask it to review this pull request against `main`. Run it again after any fix it leads to.
-3. **Manual QA by a subagent.** Have a subagent on Sonnet 5.5 test the functionality the plan or issue describes, and every edge case of it, on a running stack. Driving the browser with `agent-browser` costs far fewer tokens than screenshots and is preferred. Keep one screenshot of the main state for the description, and summarize what was tested, what failed and what was not run under **How it was checked**.
+3. **Manual QA by a subagent.** Have a subagent on Sonnet 5.5 test the functionality the plan or issue describes, and every edge case of it, on a running stack. Driving the browser with `agent-browser` costs far fewer tokens than screenshots and is preferred. When the change is visible, keep one screenshot of the main state for the description. Either way, summarize what was tested, what failed and what was not run under **How it was checked**.
 
 A fix made in any pass sends the work back through the reviews, so both code reviews run once more after the last fix and the final review covers the final diff.
 
@@ -160,7 +160,7 @@ Use one branch and one pull request per change, with each commit a single logica
 The description is read by a person deciding whether the change is right, and it stays in `git log` as the squash commit body. Keep it to one screen, about 250 words outside `<details>` blocks, and follow `.github/PULL_REQUEST_TEMPLATE.md`:
 
 - **What changes** comes first, in one to three sentences about what a person can now do or no longer runs into. How it works belongs in the code, `AGENTS.md` or `/docs`.
-- **Screenshot**: every change a person can see carries at least one image of the main state, and a fix shows before and after. Reference the file in the body and attach it with `gh`, which uploads it and rewrites the reference:
+- **Screenshot**: every change a person can see carries at least one image of the main state, and a fix shows before and after. Reference the file in the body and attach it with `gh` 2.99 or later, which uploads it and rewrites the reference:
 
   ```bash
   gh pr create --body-file body.md --attach './after.png#Discovered tab in the light theme'
