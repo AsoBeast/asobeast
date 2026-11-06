@@ -176,7 +176,7 @@ The description is read by a person deciding whether the change is right, and it
     --input after.png --jq .url
   ```
 
-  The endpoint is undocumented, so when it refuses, drag the image into the description in the browser instead. Never capture real customer data, a token or a console key.
+  Paste the printed address straight into the description: until a description or comment references it, it answers 404 to everyone but the uploader, so checking the link before that proves nothing. The endpoint is undocumented, so when it refuses, drag the image into the description in the browser instead. Never capture real customer data, a token or a console key.
 
 - **Worth a look** names at most three decisions or risky spots, one line each.
 - **How it was checked** says in two or three sentences what was tested by hand, where, what failed and was fixed, and what was not run. CI reports the suites, so pass counts do not belong here. A long QA table goes in a `<details>` block.
