@@ -269,23 +269,23 @@ export class ListingCaptureService {
     lostAt: Date,
   ): Promise<boolean> {
     const unseen = notCapturedSince(app, market, startedAt);
+    const loss: Prisma.AppUpdateManyArgs =
+      market === app.country
+        ? {
+            where: { id: app.id, delistedAt: null, ...unseen },
+            data: { delistedAt: lostAt },
+          }
+        : {
+            where: {
+              id: app.id,
+              NOT: { unlistedMarkets: { has: market } },
+              ...unseen,
+            },
+            data: { unlistedMarkets: { push: market } },
+          };
     return this.prisma.withTransaction(async (tx) => {
       await lockListing(tx, app.id, market);
-      const recorded = await tx.app.updateMany(
-        market === app.country
-          ? {
-              where: { id: app.id, delistedAt: null, ...unseen },
-              data: { delistedAt: lostAt },
-            }
-          : {
-              where: {
-                id: app.id,
-                NOT: { unlistedMarkets: { has: market } },
-                ...unseen,
-              },
-              data: { unlistedMarkets: { push: market } },
-            },
-      );
+      const recorded = await tx.app.updateMany(loss);
       return recorded.count > 0;
     });
   }
