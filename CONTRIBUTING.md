@@ -104,11 +104,11 @@ Every fix must include a test that fails before the correction and passes afterw
 
 ## Review and QA before merge
 
-A pull request is ready for review only after three passes, run in this order once the implementation and its tests are finished. They are written for Claude Code, which is how most of this repository is built. A contributor using other tools runs the equivalent and says so under **How it was verified**.
+A pull request is ready for review only after three passes, run in this order once the implementation and its tests are finished. They are written for Claude Code, which is how most of this repository is built. A contributor using other tools runs the equivalent and says so under **How it was checked**.
 
 1. **Agent code review.** After everything is done, run the code review skills from the `agent-skills` plugin (`agent-skills:review` and `agent-skills:code-review-and-quality`) over the branch. Make sure everything is correct, every edge case is handled, there are no errors or bugs, and the code quality is very good. Fix what it finds and run it again until it finds nothing new.
 2. **OpenCodeReview against `main`.** After all changes are in, run `/open-code-review:review` and ask it to review this pull request against `main`. Run it again after any fix it leads to.
-3. **Manual QA by a subagent.** Have a subagent on Sonnet 5.5 test the functionality the plan or issue describes, and every edge case of it, on a running stack. Driving the browser with `agent-browser` costs far fewer tokens than screenshots and is preferred. Record what was tested and the outcome in the pull request description.
+3. **Manual QA by a subagent.** Have a subagent on Sonnet 5.5 test the functionality the plan or issue describes, and every edge case of it, on a running stack. Driving the browser with `agent-browser` costs far fewer tokens than screenshots and is preferred. Keep one screenshot of the main state for the description, and summarize what was tested, what failed and what was not run under **How it was checked**.
 
 A fix made in any pass sends the work back through the reviews, so both code reviews run once more after the last fix and the final review covers the final diff.
 
@@ -154,6 +154,25 @@ The compatibility promise for the `1.x` line is the thing to check before you st
 Open a feature request issue before a large `feat` so the design is agreed before you write it. An idea that still needs shaping starts in [Ideas](https://github.com/AsoBeast/asobeast/discussions/categories/ideas), and a question about how the code works goes to [Q&A](https://github.com/AsoBeast/asobeast/discussions/categories/q-a).
 
 Use one branch and one pull request per change, with each commit a single logical step. Pull requests are squash merged: the title becomes the commit subject on `main` and the description becomes its body, so keep the description free of paragraphs that begin with a commit type unless they are meant as extra changelog lines.
+
+### Writing the description
+
+The description is read by a person deciding whether the change is right, and it stays in `git log` as the squash commit body. Keep it to one screen, about 250 words outside `<details>` blocks, and follow `.github/PULL_REQUEST_TEMPLATE.md`:
+
+- **What changes** comes first, in one to three sentences about what a person can now do or no longer runs into. How it works belongs in the code, `AGENTS.md` or `/docs`.
+- **Screenshot**: every change a person can see carries at least one image of the main state, and a fix shows before and after. Reference the file in the body and attach it with `gh`, which uploads it and rewrites the reference:
+
+  ```bash
+  gh pr create --body-file body.md --attach './after.png#Discovered tab in the light theme'
+  gh pr edit 123 --attach './after.png#Discovered tab in the light theme'
+  ```
+
+  The text after `#` is the alt text. Never capture real customer data, a token or a console key.
+
+- **Worth a look** names at most three decisions or risky spots, one line each.
+- **How it was checked** says in two or three sentences what was tested by hand, where, what failed and was fixed, and what was not run. CI reports the suites, so pass counts do not belong here. A long QA table goes in a `<details>` block.
+
+Delete the template's comments before opening the pull request.
 
 ## Versions and changelog
 
