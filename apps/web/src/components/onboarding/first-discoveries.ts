@@ -26,13 +26,16 @@ function headlineOf({ counts }: KeywordDiscoveryList): string {
     : `${found} None of them rank yet. Track the ones that fit your app.`;
 }
 
+const isCollecting = ({ checks, counts }: KeywordDiscoveryList): boolean =>
+  checks.checkedAt === null &&
+  counts.ranked === 0 &&
+  (checks.pending > 0 || checks.nextRunAt !== null);
+
 export function firstDiscoveries(
   list: KeywordDiscoveryList | undefined,
 ): FirstDiscoveries | null {
   if (!list) return null;
-  if (list.checks.checkedAt === null && list.counts.ranked === 0) {
-    return { status: "collecting" };
-  }
+  if (isCollecting(list)) return { status: "collecting" };
   if (list.items.length === 0) return null;
   return {
     status: "ready",

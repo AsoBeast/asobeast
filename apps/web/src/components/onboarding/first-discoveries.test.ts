@@ -43,7 +43,7 @@ const list = (
     usedThisWeek: 0,
     pending: 0,
     checkedAt,
-    nextRunAt: null,
+    nextRunAt: "2026-11-09T07:30:00.000Z",
   },
 });
 
@@ -58,6 +58,16 @@ describe("firstDiscoveries", () => {
       status: "collecting",
     });
     expect(firstDiscoveries(list([], null))).toEqual({ status: "collecting" });
+  });
+
+  it("lists the unchecked rows when no check is scheduled", () => {
+    const idle = list([item("timer", null, null)], null);
+    idle.checks.nextRunAt = null;
+
+    expect(firstDiscoveries(idle)).toMatchObject({
+      status: "ready",
+      rows: [{ text: "timer", rank: "not checked yet" }],
+    });
   });
 
   it("shows the first five rows in list order with their rank", () => {
