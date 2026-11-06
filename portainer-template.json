@@ -28,7 +28,7 @@
         {
           "name": "ASOBEAST_PORT",
           "label": "Host port for the web UI",
-          "description": "The port on this machine AsoBeast answers on. Keep 3001 unless another service already uses it, and use the same port in the address below.",
+          "description": "The port on this machine AsoBeast answers on. Keep 3001 unless another service already uses it. An address you type below must use the same port.",
           "default": "3001"
         },
         {
