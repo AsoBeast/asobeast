@@ -73,6 +73,7 @@ import {
   invalidateKeywordImport,
   invalidateKeywordFieldMutation,
   invalidateLocalizationMutation,
+  invalidateKeywordDiscoveryMutation,
   invalidateKeywordMutation,
   invalidateMarketSeed,
   invalidateKeywords,
@@ -89,6 +90,7 @@ import {
   keywordFieldOptions,
   appLocalizationsOptions,
   marketKeywordFieldsOptions,
+  keywordDiscoveriesOptions,
   keywordsOptions,
   appListingOptions,
   listingMarketsOptions,
@@ -145,6 +147,11 @@ const APP_SCOPED_OPTIONS = [
   ["summary", appSummaryOptions(APP), appKeys.summary(APP)],
   ["market summary", appSummaryOptions(APP, "de"), appKeys.summary(APP, "de")],
   ["keywords", keywordsOptions(APP, "us"), appKeys.keywords(APP, "us")],
+  [
+    "keywordDiscoveries",
+    keywordDiscoveriesOptions(APP, "us"),
+    appKeys.keywordDiscoveries(APP, "us"),
+  ],
   [
     "keywordCountries",
     keywordCountriesOptions(APP),
@@ -825,6 +832,32 @@ describe("invalidation sets", () => {
       appKeys.firstRun(APP),
       workspaceChecklistKey,
     ]);
+  });
+
+  it("keys the keyword discoveries per market under the app and their root", () => {
+    const key = keywordDiscoveriesOptions(APP, "us").queryKey;
+
+    expect(isPrefixOf(appKeys.detail(APP), key)).toBe(true);
+    expect(isPrefixOf(appKeys.keywordDiscoveriesRoot(APP), key)).toBe(true);
+    expect(isPrefixOf(appKeys.keywordsRoot(APP), key)).toBe(false);
+    expect(key).not.toEqual(keywordDiscoveriesOptions(APP, "de").queryKey);
+  });
+
+  it("invalidates the discoveries and everything a track changes", () => {
+    const keys = invalidatedKeys((client) =>
+      invalidateKeywordDiscoveryMutation(client, APP),
+    );
+
+    expect(keys[0]).toEqual(appKeys.keywordDiscoveriesRoot(APP));
+    expect(keys).toEqual(
+      expect.arrayContaining([
+        appKeys.keywordsRoot(APP),
+        appKeys.summary(APP),
+        portfolioKey,
+        appKeys.firstRun(APP),
+      ]),
+    );
+    expect(keys).not.toContainEqual(budgetKey);
   });
 
   it("refreshes the listing markets and the budget after a market seed", () => {
