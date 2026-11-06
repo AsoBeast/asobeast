@@ -326,7 +326,7 @@ function removeRows(
   return before - discoveries.items.length;
 }
 
-const UNFIT_TRACKED = 3;
+const UNFIT_ROOM = 1;
 
 export function trackDiscoveries(
   appId: string,
@@ -335,15 +335,21 @@ export function trackDiscoveries(
 ): KeywordDiscoveryTrackResult {
   const discoveries = seeded(appId);
   if (request.allRanked) {
+    const ranked = discoveries.items.filter(
+      (item) =>
+        item.state === "ranked" &&
+        (request.country === undefined || item.country === request.country),
+    );
+    const fits = new Set(
+      ranked
+        .slice(0, unfit ? UNFIT_ROOM : ranked.length)
+        .map(({ keywordId }) => keywordId),
+    );
     const tracked = removeRows(
       discoveries,
-      (item) =>
-        item.state !== "ranked" ||
-        (request.country !== undefined && item.country !== request.country),
+      (item) => !fits.has(item.keywordId),
     );
-    return unfit
-      ? { tracked: Math.min(tracked, UNFIT_TRACKED), skipped: DISCOVERY_UNFIT }
-      : { tracked, skipped: 0 };
+    return { tracked, skipped: ranked.length - tracked };
   }
   const ids = new Set(request.keywordIds ?? []);
   const tracked = removeRows(discoveries, (item) => !ids.has(item.keywordId));

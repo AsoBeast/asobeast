@@ -322,6 +322,9 @@ test("pending checks poll until they land", async ({ page, context }) => {
   const reads = discoveryReads(page);
   await page.goto(DISCOVERED);
   await expect(page.getByText("3 checks pending")).toBeVisible();
+  await hydrated(
+    page.getByRole("button", { name: "Refresh discoveries", exact: true }),
+  );
 
   await page.clock.runFor(16_000);
 
@@ -492,7 +495,14 @@ test.describe("discovery actions", () => {
     await (await hydrated(control(page, "Track all ranked (3)"))).click();
 
     await expect(
-      toast(page, "Tracking 3 keywords. 12 did not fit your plan."),
+      toast(page, "Tracking 1 keyword. 2 did not fit your plan."),
+    ).toBeVisible();
+    await page.waitForLoadState("networkidle");
+    await expect(rowOf(page, "focus timer app")).toHaveCount(0);
+    await expect(rowOf(page, "pomodoro clock")).toBeVisible();
+    await expect(rowOf(page, "deep work")).toBeVisible();
+    await expect(
+      states(page).getByRole("tab", { name: "Ranked 2" }),
     ).toBeVisible();
   });
 
