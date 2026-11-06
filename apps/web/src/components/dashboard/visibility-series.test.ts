@@ -53,6 +53,21 @@ describe("portfolioVisibility", () => {
     expect(result.days).toBe(2);
   });
 
+  it("needs the history in one app, not across apps", () => {
+    const result = portfolioVisibility([
+      app("a", 12, [
+        ["2026-11-01", 11],
+        ["2026-11-02", 12],
+      ]),
+      app("b", 8, [
+        ["2026-11-03", 8],
+        ["2026-11-04", 9],
+      ]),
+    ]);
+    expect(result.rows).toHaveLength(4);
+    expect(result.days).toBe(2);
+  });
+
   it("leaves out an app without a capture or history", () => {
     const result = portfolioVisibility([
       app("a", 0, [], {}),

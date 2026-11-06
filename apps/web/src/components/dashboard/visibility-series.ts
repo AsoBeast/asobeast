@@ -74,7 +74,7 @@ export function portfolioVisibility(
   return {
     rows,
     series,
-    days: rows.length,
+    days: Math.max(0, ...shown.map((app) => app.sparkline.length)),
     omitted: withHistory.length - shown.length,
   };
 }

@@ -31,9 +31,9 @@ const MOVER_LABELS: Record<MoverView, string> = {
 };
 
 const EMPTY: Record<MoverView, string> = {
-  all: "No movement this week.",
-  up: "No keyword climbed this week.",
-  down: "No keyword fell this week.",
+  all: "No movement in the last 7 days.",
+  up: "No keyword climbed in the last 7 days.",
+  down: "No keyword fell in the last 7 days.",
 };
 
 function quietOf(insights: PortfolioInsights): string | null {

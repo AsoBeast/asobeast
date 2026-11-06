@@ -117,7 +117,7 @@ export function PortfolioPulse() {
         <VisibilityByAppChart data={charted} />
         <p className="text-caption text-faint-foreground">
           {charted.omitted > 0
-            ? `Last 30 days · the ${pluralize(charted.series.length, "most visible app")} · ${pluralize(charted.omitted, "more app")} under Apps`
+            ? `Last 30 days · ${charted.series.length} of ${pluralize(charted.series.length + charted.omitted, "app")} with history, the rest under Apps`
             : "Last 30 days"}
         </p>
       </div>
