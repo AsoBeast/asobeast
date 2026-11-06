@@ -29,6 +29,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DiscoveredApps } from "./DiscoveredApps";
 import { KeywordPicker } from "./KeywordPicker";
+import { FirstDiscoveries } from "./FirstDiscoveries";
 import {
   activeKeywordCount,
   keywordsStepDescription,
@@ -203,6 +204,7 @@ export function KeywordsStep({
       <p className="text-sm text-muted-foreground">
         {homeKeywordsLine(tracked, error, homeMarket)}
       </p>
+      <FirstDiscoveries id={appId} country={homeMarket} />
       {tracked ? (
         <KeywordPicker appId={appId} country={homeMarket} tracked={tracked} />
       ) : null}

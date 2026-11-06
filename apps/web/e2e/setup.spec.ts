@@ -641,6 +641,100 @@ test("the discovered list says positions are still collected on a new app", asyn
   await expect(page.getByText("No suggestions yet.")).toHaveCount(0);
 });
 
+test.describe("the first discoveries inside the keywords step", () => {
+  const firstResults = (page: Page) =>
+    stepCard(page, "Track keywords").getByRole("region", {
+      name: "Your first results are ready",
+    });
+
+  test.beforeEach(({ request }) =>
+    request.post(`${MOCK_API_URL}/__reset/keyword-discoveries/app-1`),
+  );
+
+  test("shows the five best discoveries with their rank", async ({ page }) => {
+    await startSetup(page, "app-1");
+
+    const results = firstResults(page);
+    await expect(
+      results.getByText(
+        "Found 9 keywords near your listing. Your app already ranks for 3 of them.",
+      ),
+    ).toBeVisible();
+    await expect(results.getByRole("listitem")).toHaveText([
+      "“focus timer app” · #3",
+      "“pomodoro clock” · #45",
+      "“deep work” · #120",
+      "“study planner” · >200",
+      "“time blocker” · >200",
+    ]);
+    await expect(
+      results.getByRole("link", { name: "See all discoveries" }),
+    ).toHaveAttribute("href", "/apps/app-1/keywords?tab=discovered&country=us");
+  });
+
+  test("says the first discoveries are being collected", async ({
+    page,
+    context,
+  }) => {
+    await context.addCookies([
+      {
+        name: "e2e_discovery_none",
+        value: "1",
+        domain: "localhost",
+        path: "/",
+      },
+    ]);
+    await startSetup(page, "app-1");
+
+    const keywords = stepCard(page, "Track keywords");
+    await expect(
+      keywords.getByRole("region", {
+        name: "Looking for keywords near your listing",
+      }),
+    ).toBeVisible();
+    await expect(
+      keywords.getByRole("link", { name: "See all discoveries" }),
+    ).toHaveCount(0);
+  });
+
+  test("a failed read offers a retry and keeps the step working", async ({
+    page,
+  }) => {
+    let failing = true;
+    await page.route(
+      "**/api/backend/apps/app-1/keyword-discoveries*",
+      (route) =>
+        failing ? route.fulfill({ status: 500, body: "{}" }) : route.fallback(),
+    );
+    await startSetup(page, "app-1");
+
+    const keywords = stepCard(page, "Track keywords");
+    await expect(
+      keywords.getByText("Could not load the first results."),
+    ).toBeVisible({ timeout: 20_000 });
+    await expect(
+      keywords.getByText("4 of 10 tracked in United States"),
+    ).toBeVisible();
+
+    failing = false;
+    await keywords.getByRole("button", { name: "Retry" }).click();
+
+    await expect(firstResults(page)).toBeVisible();
+  });
+
+  test("fits a narrow screen", async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 800 });
+    await startSetup(page, "app-1");
+
+    await expect(firstResults(page)).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+  });
+});
+
 test("setup can be dismissed on a narrow dark layout", async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("theme", "dark"));
   await page.setViewportSize({ width: 390, height: 844 });
