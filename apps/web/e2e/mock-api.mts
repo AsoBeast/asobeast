@@ -155,6 +155,7 @@ import {
   UNSUBSCRIBED_RECIPIENT,
   OVER_LIMIT_BUDGET,
   PORTFOLIO,
+  UNDISCOVERED_BUDGET,
   RATE_LIMIT_RESET_SECONDS,
   RECENT_CHANGES,
   SCREENSHOTS,
@@ -2259,6 +2260,7 @@ const BUDGETS_BY_QUOTA = new Map<string | undefined, DailyBudget>([
   ["lapsed", LAPSED_BUDGET],
   ["over", OVER_LIMIT_BUDGET],
   ["markets", MARKET_BUDGET],
+  ["undiscovered", UNDISCOVERED_BUDGET],
 ]);
 const INSIGHTS_HOLD_COOKIE = "e2e_insights_hold";
 

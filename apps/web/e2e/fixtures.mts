@@ -4104,6 +4104,12 @@ export const HOT_BUDGET: DailyBudget = {
 
 export const MARKET_BUDGET: DailyBudget = { ...BUDGET, marketListings: 3 };
 
+export const UNDISCOVERED_BUDGET: DailyBudget = {
+  ...BUDGET,
+  discovery: undefined,
+  stores: BUDGET.stores.map((store) => ({ ...store, discovery: undefined })),
+};
+
 export const LAPSED_BUDGET: DailyBudget = {
   ...BUDGET,
   quota: {

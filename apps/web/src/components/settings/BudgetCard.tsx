@@ -19,6 +19,7 @@ import {
 } from "@/lib/utilization";
 import { UtilizationMeter } from "@/components/capacity/UtilizationMeter";
 import { budgetCompletionSentence } from "./budget-completion";
+import { discoveryNote } from "./discovery-note";
 import { localizationsNote, marketListingsNote } from "./market-listings-note";
 
 const WARNING_COPY =
@@ -31,6 +32,7 @@ export function BudgetCard() {
   const notes = [
     marketListingsNote(budget.marketListings),
     localizationsNote(budget.localizations),
+    discoveryNote(budget.discovery),
   ].filter((note): note is string => note !== null);
 
   const rows = [
