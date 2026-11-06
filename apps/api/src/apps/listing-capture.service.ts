@@ -22,6 +22,7 @@ import { snapshotIcon, toSnapshotData } from './apps.mapper';
 import { toChangeSnapshot } from './change-snapshot';
 import { withKnownSubtitle } from './known-subtitle';
 import { listingIn, NEWEST_FIRST, storedMarket } from './listing';
+import { lockListing } from './listing-lock';
 import { ListingAlerts } from './listing-alerts.service';
 import { LocalizationDetection } from './localization-detection.service';
 import { LocalizedListingCapture } from './localized-listing-capture.service';
@@ -123,6 +124,7 @@ export class ListingCaptureService {
 
     let pending = 0;
     const snapshot = await this.prisma.withTransaction(async (tx) => {
+      await lockListing(tx, app.id, market);
       const created = await tx.appSnapshot.create({
         data: toSnapshotData(
           app.id,
@@ -219,6 +221,7 @@ export class ListingCaptureService {
   }
 
   private async readListing(app: App, market: string): Promise<NormalizedApp> {
+    const startedAt = new Date();
     try {
       return await this.egress.through(app.store, market, () =>
         this.registry.get(app.store).getApp(app.storeAppId, market),
@@ -227,7 +230,7 @@ export class ListingCaptureService {
       const lostAt = new Date();
       if (
         error instanceof StoreAppNotFoundError &&
-        (await this.recordUnlisted(app, market, lostAt))
+        (await this.recordUnlisted(app, market, startedAt, lostAt))
       ) {
         await this.listingAlerts.listingLost(app, market, lostAt);
       }
@@ -259,23 +262,32 @@ export class ListingCaptureService {
     }
   }
 
-  private async recordUnlisted(
+  private recordUnlisted(
     app: App,
     market: string,
+    startedAt: Date,
     lostAt: Date,
   ): Promise<boolean> {
-    const recorded = await this.prisma.app.updateMany(
+    const unseen = notCapturedSince(app, market, startedAt);
+    const loss: Prisma.AppUpdateManyArgs =
       market === app.country
         ? {
-            where: { id: app.id, delistedAt: null },
+            where: { id: app.id, delistedAt: null, ...unseen },
             data: { delistedAt: lostAt },
           }
         : {
-            where: { id: app.id, NOT: { unlistedMarkets: { has: market } } },
+            where: {
+              id: app.id,
+              NOT: { unlistedMarkets: { has: market } },
+              ...unseen,
+            },
             data: { unlistedMarkets: { push: market } },
-          },
-    );
-    return recorded.count > 0;
+          };
+    return this.prisma.withTransaction(async (tx) => {
+      await lockListing(tx, app.id, market);
+      const recorded = await tx.app.updateMany(loss);
+      return recorded.count > 0;
+    });
   }
 
   private async requestDetection(appId: string, market: string): Promise<void> {
@@ -291,4 +303,15 @@ export class ListingCaptureService {
 
 function reason(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function notCapturedSince(app: App, market: string, startedAt: Date) {
+  return {
+    snapshots: {
+      none: {
+        ...listingIn(app.country, market),
+        capturedAt: { gte: startedAt },
+      },
+    },
+  } satisfies Prisma.AppWhereInput;
 }

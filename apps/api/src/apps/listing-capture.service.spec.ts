@@ -59,6 +59,30 @@ const captured = (changes: unknown[]) => ({
   complete: true,
 });
 
+const notCapturedSince = (country: string | null) => ({
+  snapshots: {
+    none: {
+      country,
+      localization: null,
+      capturedAt: { gte: expect.any(Date) as Date },
+    },
+  },
+});
+
+type RawCall = [TemplateStringsArray, ...unknown[]];
+
+const statementOf = ([sql]: RawCall) => sql.join('?');
+
+const marketWrites = (tx: { $executeRaw: jest.Mock }) =>
+  (tx.$executeRaw.mock.calls as RawCall[]).filter((call) =>
+    statementOf(call).includes('unlistedMarkets'),
+  );
+
+const lockCalls = (tx: { $executeRaw: jest.Mock }) =>
+  (tx.$executeRaw.mock.calls as RawCall[])
+    .map((call, index) => ({ call, index }))
+    .filter(({ call }) => statementOf(call).includes('pg_advisory_xact_lock'));
+
 const build = (overrides: {
   syncFromSnapshot?: jest.Mock;
   recordRefresh?: jest.Mock;
@@ -72,22 +96,21 @@ const build = (overrides: {
   getApp?: jest.Mock;
   fieldSyncRow?: unknown;
 }) => {
+  const updateMany = jest.fn().mockResolvedValue({ count: 1 });
   const tx = {
     appSnapshot: {
       create: jest
         .fn()
         .mockResolvedValue({ ...SNAPSHOT, raw: overrides.raw ?? SNAPSHOT.raw }),
     },
-    app: { update: jest.fn().mockResolvedValue(APP) },
+    app: { update: jest.fn().mockResolvedValue(APP), updateMany },
     $executeRaw: jest.fn().mockResolvedValue(1),
   };
-  const updateMany = jest.fn().mockResolvedValue({ count: 1 });
   const prisma = {
     app: {
       findFirst: jest
         .fn()
         .mockResolvedValue(overrides.app === undefined ? APP : overrides.app),
-      updateMany,
     },
     appSnapshot: {
       findFirst: jest.fn().mockResolvedValue(overrides.previous ?? null),
@@ -269,7 +292,11 @@ describe('ListingCaptureService delisted apps', () => {
     await expect(service.refreshListing(APP.id)).resolves.toBeNull();
 
     expect(updateMany).toHaveBeenCalledWith({
-      where: { id: APP.id, delistedAt: null },
+      where: {
+        id: APP.id,
+        delistedAt: null,
+        ...notCapturedSince(null),
+      },
       data: { delistedAt: expect.any(Date) as Date },
     });
     expect(record).not.toHaveBeenCalled();
@@ -292,7 +319,11 @@ describe('ListingCaptureService delisted apps', () => {
 
     expect(updateMany).toHaveBeenCalledTimes(1);
     expect(updateMany).toHaveBeenCalledWith({
-      where: { id: APP.id, NOT: { unlistedMarkets: { has: 'cn' } } },
+      where: {
+        id: APP.id,
+        NOT: { unlistedMarkets: { has: 'cn' } },
+        ...notCapturedSince('cn'),
+      },
       data: { unlistedMarkets: { push: 'cn' } },
     });
   });
@@ -347,10 +378,9 @@ describe('ListingCaptureService delisted apps', () => {
 
     await service.refreshListing(APP.id, 'cn');
 
-    expect(tx.$executeRaw).toHaveBeenCalledTimes(1);
-    expect(tx.$executeRaw.mock.calls[0]).toEqual(
-      expect.arrayContaining(['cn', APP.id]),
-    );
+    const writes = marketWrites(tx);
+    expect(writes).toHaveLength(1);
+    expect(writes[0]).toEqual(expect.arrayContaining(['cn', APP.id]));
   });
 
   it('touches no market on a home capture', async () => {
@@ -358,7 +388,7 @@ describe('ListingCaptureService delisted apps', () => {
 
     await service.refreshListing(APP.id);
 
-    expect(tx.$executeRaw).not.toHaveBeenCalled();
+    expect(marketWrites(tx)).toEqual([]);
   });
 });
 
@@ -751,5 +781,72 @@ describe('ListingCaptureService rating drop timing', () => {
       { id: APP.id, name: 'Fixture', country: APP.country },
       SNAPSHOT.capturedAt,
     );
+  });
+});
+
+describe('ListingCaptureService listing order', () => {
+  const missing = () =>
+    jest
+      .fn()
+      .mockRejectedValue(
+        new StoreAppNotFoundError(Store.APP_STORE, APP.storeAppId),
+      );
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('takes the listing lock before the snapshot is written', async () => {
+    const { service, tx } = build({});
+
+    await service.refreshListing(APP.id, 'cn');
+
+    const [lock] = lockCalls(tx);
+    expect(lock.call).toContain(`${APP.id}~cn`);
+    expect(tx.$executeRaw.mock.invocationCallOrder[lock.index]).toBeLessThan(
+      tx.appSnapshot.create.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('takes the listing lock before a loss is written', async () => {
+    const { service, tx, updateMany } = build({ getApp: missing() });
+
+    await service.refreshListing(APP.id);
+
+    const [lock] = lockCalls(tx);
+    expect(lock.call).toContain(`${APP.id}~us`);
+    expect(tx.$executeRaw.mock.invocationCallOrder[lock.index]).toBeLessThan(
+      updateMany.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('compares the loss against the time the read started', async () => {
+    const started = new Date('2026-11-06T10:00:00.000Z');
+    const answered = new Date('2026-11-06T10:00:07.000Z');
+    jest.useFakeTimers({ now: started });
+    const getApp = jest.fn(() => {
+      jest.setSystemTime(answered);
+      return Promise.reject(
+        new StoreAppNotFoundError(Store.APP_STORE, APP.storeAppId),
+      );
+    });
+    const { service, updateMany } = build({ getApp });
+
+    await service.refreshListing(APP.id);
+
+    expect(updateMany).toHaveBeenCalledWith({
+      where: {
+        id: APP.id,
+        delistedAt: null,
+        snapshots: {
+          none: {
+            country: null,
+            localization: null,
+            capturedAt: { gte: started },
+          },
+        },
+      },
+      data: { delistedAt: answered },
+    });
   });
 });
