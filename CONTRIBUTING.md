@@ -167,7 +167,17 @@ The description is read by a person deciding whether the change is right, and it
   gh pr edit 123 --attach './after.png#Discovered tab in the light theme'
   ```
 
-  The text after `#` is the alt text. `gh` uploads only for accounts with write access to this repository, so a pull request from a fork drags the file into the description in the browser instead. Never capture real customer data, a token or a console key.
+  The text after `#` is the alt text. `gh` uploads only for accounts with write access to this repository, so a pull request from a fork has two other ways in. With a browser, drag the image into the description, or into a comment on the pull request and link that comment under **Screenshot**. Without one, as when an agent opens the pull request, push the image to a branch of the fork that the pull request never includes and link its raw address:
+
+  ```bash
+  git worktree add --orphan -b pr-screenshots ../pr-screenshots
+  cp after.png ../pr-screenshots/716-discovered.png
+  git -C ../pr-screenshots add 716-discovered.png
+  git -C ../pr-screenshots commit -m "docs(repo): add a pull request screenshot"
+  git -C ../pr-screenshots push origin pr-screenshots
+  ```
+
+  The reference is then `![Discovered tab in the light theme](https://raw.githubusercontent.com/<fork owner>/asobeast/pr-screenshots/716-discovered.png)`. Later screenshots go on the same branch, and the branch stays, because deleting it breaks every image it holds. Never capture real customer data, a token or a console key.
 
 - **Worth a look** names at most three decisions or risky spots, one line each.
 - **How it was checked** says in two or three sentences what was tested by hand, where, what failed and was fixed, and what was not run. CI reports the suites, so pass counts do not belong here. A long QA table goes in a `<details>` block.

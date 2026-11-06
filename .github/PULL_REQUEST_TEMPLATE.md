@@ -12,7 +12,7 @@ Closes #
      ![Discovered tab in the light theme](./after.png)
      gh pr create --body-file body.md --attach './after.png#Discovered tab in the light theme'
      gh pr edit <number> --attach './after.png#Discovered tab in the light theme'
-     gh uploads only for accounts with write access, so from a fork drag the file into this box in the browser instead.
+     gh uploads only for accounts with write access. From a fork, drag the file into this box or into a pull request comment you link here, or, without a browser, link it from a branch of your fork as CONTRIBUTING.md shows.
      With no visible change, write "No visible change." -->
 
 ## Worth a look
