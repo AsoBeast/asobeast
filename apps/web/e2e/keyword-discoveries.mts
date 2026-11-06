@@ -268,6 +268,15 @@ function pendingOf(discoveries: AppDiscoveries, variant: DiscoveryVariant) {
   return discoveries.pendingReads.shift() ?? 0;
 }
 
+function unfitOf(
+  variant: DiscoveryVariant,
+  autoTrackRanked: boolean,
+  ranked: number,
+): number {
+  if (variant.unfit) return DISCOVERY_UNFIT;
+  return autoTrackRanked ? ranked : 0;
+}
+
 export function discoveriesFor(
   appId: string,
   store: Store,
@@ -297,11 +306,7 @@ export function discoveriesFor(
     items,
     counts,
     autoTrackRanked,
-    unfit: variant.unfit
-      ? DISCOVERY_UNFIT
-      : autoTrackRanked
-        ? counts.ranked
-        : 0,
+    unfit: unfitOf(variant, autoTrackRanked, counts.ranked),
     checks: {
       perWeek: DISCOVERY_CHECKS_PER_RUN[store],
       usedThisWeek: variant.none ? 0 : discoveries.usedThisWeek,

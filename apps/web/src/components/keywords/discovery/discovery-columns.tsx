@@ -24,7 +24,7 @@ import {
   type DiscoveryScore,
 } from "./discovery-rows";
 
-export const DISCOVERY_GUIDE =
+const DISCOVERY_GUIDE =
   "https://docs.asobeast.com/guides/keyword-discovery#how-the-rank-is-found";
 
 const SOURCE_VARIANT: Record<
