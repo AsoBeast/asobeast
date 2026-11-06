@@ -4246,6 +4246,12 @@ export const RECENT_CHANGES: ChangeTimeline = {
   ],
 };
 
+export const VARIED_RECENT_CHANGES: ChangeTimeline = {
+  events: RECENT_CHANGES.events.map((event) =>
+    event.field === "version" ? { ...event, field: "subtitle" } : event,
+  ),
+};
+
 export const WEBHOOKS: WebhookItem[] = [
   {
     id: "hook-1",

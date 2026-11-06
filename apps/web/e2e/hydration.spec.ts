@@ -196,14 +196,16 @@ test("the dashboard open action count is in the html the server sent", async ({
 }) => {
   const html = await page.request.get("/").then((response) => response.text());
 
-  const { critical, high } = ACTION_SUMMARY.openByPriority;
+  const { critical, high, medium, low } = ACTION_SUMMARY.openByPriority;
   expect(sectionText(html, "Open actions", "</div>")).toBe(
-    `${ACTION_SUMMARY.open} ${critical} critical · ${high} high`,
+    `${ACTION_SUMMARY.open} ${critical} critical ${high} high · ${medium} medium · ${low} low`,
   );
 
   await page.goto("/");
   await expect(
-    page.getByText("Open actions").locator("xpath=following-sibling::span[1]"),
+    page
+      .getByText("Open actions")
+      .locator("xpath=following-sibling::span[1]/span/span[1]"),
   ).toHaveText(String(ACTION_SUMMARY.open));
 });
 

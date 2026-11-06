@@ -159,6 +159,7 @@ import {
   UNDISCOVERED_BUDGET,
   RATE_LIMIT_RESET_SECONDS,
   RECENT_CHANGES,
+  VARIED_RECENT_CHANGES,
   SCREENSHOTS,
   SERP_SNAPSHOTS,
   WEBHOOK_PAIR,
@@ -3248,7 +3249,14 @@ const routes: Route[] = [
   {
     method: "GET",
     pattern: /^\/changes\/recent$/,
-    handler: (_p, _q, res) => json(res, 200, RECENT_CHANGES),
+    handler: (_p, req, res) =>
+      json(
+        res,
+        200,
+        hasCookie(req, "recent_changes_varied", "1")
+          ? VARIED_RECENT_CHANGES
+          : RECENT_CHANGES,
+      ),
   },
   {
     method: "GET",

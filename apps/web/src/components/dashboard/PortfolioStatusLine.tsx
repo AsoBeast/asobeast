@@ -75,18 +75,11 @@ function StatusLine({ budget }: { budget: DailyBudget | null }) {
   const fresh = freshness(run, budget);
 
   return (
-    <div
+    <p
       data-slot="portfolio-status"
-      className="flex flex-col gap-1 text-body text-muted-foreground"
+      className="text-label text-muted-foreground"
     >
-      <p>
-        <Separated parts={inventory(portfolio.totals)} />
-      </p>
-      {fresh.length > 0 ? (
-        <p>
-          <Separated parts={fresh} />
-        </p>
-      ) : null}
-    </div>
+      <Separated parts={[...inventory(portfolio.totals), ...fresh]} />
+    </p>
   );
 }

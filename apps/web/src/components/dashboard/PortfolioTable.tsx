@@ -16,6 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { appListParsers, appSortParser } from "@/lib/search-params";
+import { isNumericColumn } from "@/lib/table/column-visibility";
 import { ariaSort } from "@/lib/table/sorting";
 import { portfolioColumns, type PortfolioTableRow } from "./portfolio-columns";
 
@@ -52,7 +53,7 @@ export function PortfolioTable({ rows }: { rows: PortfolioTableRow[] }) {
       <div className="flex justify-end">
         <ColumnMenu columns={table.getAllLeafColumns()} />
       </div>
-      <Table containerClassName="rounded-xl border">
+      <Table containerClassName="rounded-lg border bg-card">
         <TableCaption className="sr-only">Apps in this workspace</TableCaption>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
@@ -60,6 +61,7 @@ export function PortfolioTable({ rows }: { rows: PortfolioTableRow[] }) {
               {headerGroup.headers.map((header) => (
                 <TableHead
                   key={header.id}
+                  numeric={isNumericColumn(header.column.columnDef.meta)}
                   aria-sort={ariaSort(header.column.getIsSorted())}
                 >
                   {flexRender(
@@ -75,7 +77,10 @@ export function PortfolioTable({ rows }: { rows: PortfolioTableRow[] }) {
           {table.getRowModel().rows.map((row) => (
             <TableRow key={row.id}>
               {row.getVisibleCells().map((cell) => (
-                <TableCell key={cell.id}>
+                <TableCell
+                  key={cell.id}
+                  numeric={isNumericColumn(cell.column.columnDef.meta)}
+                >
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </TableCell>
               ))}

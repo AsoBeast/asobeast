@@ -68,7 +68,7 @@ function count(value: string | null): string {
   return value === null ? "—" : formatNumber(Number(value));
 }
 
-function ChangeValue({
+export function ChangeValue({
   event,
   dense,
 }: {

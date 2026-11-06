@@ -1,46 +1,71 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import type { ActionSummary } from "@asobeast/shared";
+import type { ActionSummary, PortfolioMovement } from "@asobeast/shared";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { TrendChip } from "@/components/ui/delta-chip";
 import { StatTile, StatTileGroup } from "@/components/ui/stat-tile";
-import { formatNumber } from "@/lib/format";
+import { formatNumber, pluralize } from "@/lib/format";
 import {
   actionSummaryOptions,
   portfolioInsightsOptions,
   portfolioOptions,
 } from "@/lib/queries";
-import { cn } from "@/lib/utils";
-import { MovementValue } from "./MovementValue";
-import { PULSE_GRID } from "./skeletons";
+import { ChartLegend, VisibilityByAppChart } from "./VisibilityByAppChart";
+import { PULSE_STRIP } from "./skeletons";
+import { portfolioVisibility } from "./visibility-series";
 
-function Top10Note({
-  delta,
-  tracked,
-}: {
-  delta: number | null;
-  tracked: number;
-}) {
+function Figure({ value, children }: { value: string; children?: ReactNode }) {
   return (
-    <span className="flex flex-wrap items-center gap-x-1">
-      <TrendChip label="7d" value={delta} />
-      <span>of {formatNumber(tracked)} tracked</span>
+    <span className="flex flex-wrap items-center gap-2">
+      <span>{value}</span>
+      {children}
     </span>
   );
 }
 
-function OpenActionsNote({ summary }: { summary: ActionSummary }) {
-  if (summary.generatedAt === null) return "not generated yet";
-  const { critical, high } = summary.openByPriority;
-  if (critical === 0 && high === 0) return "waiting on you";
+function MovedValue({ movement }: { movement: PortfolioMovement }) {
   return (
-    <>
-      <span className={cn(critical > 0 && "text-priority-critical")}>
-        {formatNumber(critical)} critical
-      </span>{" "}
-      · {formatNumber(high)} high
-    </>
+    <Figure value={formatNumber(movement.up + movement.down)}>
+      {movement.up > 0 ? (
+        <Badge variant="up">
+          <span aria-hidden>{`▲ ${formatNumber(movement.up)}`}</span>
+          <span className="sr-only">{`${formatNumber(movement.up)} climbed`}</span>
+        </Badge>
+      ) : null}
+      {movement.down > 0 ? (
+        <Badge variant="down">
+          <span aria-hidden>{`▼ ${formatNumber(movement.down)}`}</span>
+          <span className="sr-only">{`${formatNumber(movement.down)} fell`}</span>
+        </Badge>
+      ) : null}
+    </Figure>
   );
+}
+
+function movedNote({ entered, lost }: PortfolioMovement): string {
+  return `${formatNumber(entered)} started ranking · ${formatNumber(lost)} dropped out`;
+}
+
+function ActionsValue({ summary }: { summary: ActionSummary }) {
+  if (summary.generatedAt === null) return <Figure value="—" />;
+  const { critical } = summary.openByPriority;
+  return (
+    <Figure value={formatNumber(summary.open)}>
+      {critical > 0 ? (
+        <Badge variant="down">{`${formatNumber(critical)} critical`}</Badge>
+      ) : null}
+    </Figure>
+  );
+}
+
+function actionsNote(summary: ActionSummary): string {
+  if (summary.generatedAt === null) return "Not generated yet";
+  const { high, medium, low } = summary.openByPriority;
+  if (summary.open === 0) return "Nothing waiting on you";
+  return `${formatNumber(high)} high · ${formatNumber(medium)} medium · ${formatNumber(low)} low`;
 }
 
 export function PortfolioPulse() {
@@ -50,34 +75,52 @@ export function PortfolioPulse() {
   if (portfolio.apps.length === 0) return null;
 
   const { top10, top10Delta7d, movement, changes7d } = insights.totals;
+  const charted = portfolioVisibility(portfolio.apps);
 
   return (
-    <StatTileGroup className={PULSE_GRID}>
-      <StatTile
-        label="Keywords in top 10"
-        value={formatNumber(top10)}
-        note={
-          <Top10Note
-            delta={top10Delta7d}
-            tracked={portfolio.totals.trackedKeywords}
-          />
-        }
-      />
-      <StatTile
-        label="Keyword movement"
-        value={<MovementValue movement={movement} />}
-        note={`${formatNumber(movement.entered)} new · ${formatNumber(movement.lost)} lost in 7 days`}
-      />
-      <StatTile
-        label="Open actions"
-        value={actions.generatedAt === null ? "—" : formatNumber(actions.open)}
-        note={<OpenActionsNote summary={actions} />}
-      />
-      <StatTile
-        label="Changes this week"
-        value={formatNumber(changes7d.own + changes7d.competitors)}
-        note={`${formatNumber(changes7d.competitors)} by competitors · ${formatNumber(changes7d.own)} yours`}
-      />
-    </StatTileGroup>
+    <Card className="gap-0 py-0">
+      <StatTileGroup className={PULSE_STRIP}>
+        <StatTile
+          label="Keywords in top 10"
+          value={
+            <Figure value={formatNumber(top10)}>
+              <TrendChip label="7d" value={top10Delta7d} form="pill" />
+            </Figure>
+          }
+          note={`of ${formatNumber(portfolio.totals.trackedKeywords)} tracked`}
+        />
+        <StatTile
+          label="Moved in 7 days"
+          value={<MovedValue movement={movement} />}
+          note={movedNote(movement)}
+        />
+        <StatTile
+          label="Open actions"
+          value={<ActionsValue summary={actions} />}
+          note={actionsNote(actions)}
+        />
+        <StatTile
+          label="Listing changes in 7 days"
+          value={
+            <Figure
+              value={formatNumber(changes7d.own + changes7d.competitors)}
+            />
+          }
+          note={`${formatNumber(changes7d.own)} by you · ${formatNumber(changes7d.competitors)} by competitors`}
+        />
+      </StatTileGroup>
+      <div className="flex flex-col gap-3 border-t border-border px-4 pt-3 pb-4">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <h2 className="text-heading">Visibility by app</h2>
+          <ChartLegend series={charted.series} />
+        </div>
+        <VisibilityByAppChart data={charted} />
+        <p className="text-caption text-faint-foreground">
+          {charted.omitted > 0
+            ? `Last 30 days · ${charted.series.length} of ${pluralize(charted.series.length + charted.omitted, "app")} with history, the rest under Apps`
+            : "Last 30 days"}
+        </p>
+      </div>
+    </Card>
   );
 }

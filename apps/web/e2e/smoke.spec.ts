@@ -46,18 +46,20 @@ test("home renders the portfolio grid with totals and per-app cards", async ({
     page.getByText(first.country.toUpperCase(), { exact: true }).first(),
   ).toBeVisible();
 
-  await expect(page.getByText("Changes this week")).toBeVisible();
+  await expect(page.getByText("Listing changes in 7 days")).toBeVisible();
   await expect(
     page.getByRole("img", { name: "visibility, last 30 days" }).first(),
   ).toBeVisible();
 });
 
-test("recent changes feed renders fixture events on the dashboard", async ({
+test("listing changes feed renders fixture events on the dashboard", async ({
   page,
 }) => {
   await page.goto("/");
 
-  await expect(page.getByText("Across your portfolio")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Listing changes", level: 2 }),
+  ).toBeVisible();
   await expect(page.getByText("Focus Timer Pro")).toBeVisible();
 });
 

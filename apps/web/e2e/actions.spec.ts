@@ -448,7 +448,9 @@ test("the portfolio dashboard links into the action center", async ({
 }) => {
   await page.goto("/");
 
-  await expect(page.getByText("Top actions")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Do next", level: 2 }),
+  ).toBeVisible();
   await page.getByRole("link", { name: "Open the Action Center" }).click();
 
   await expect(page).toHaveURL(/\/actions$/);
