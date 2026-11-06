@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import type { Page } from "@playwright/test";
 import { contrastViolations, THEMES } from "./contrast-check.mts";
 import { holdRequest } from "./held-request.mts";
+import { hydrated } from "./hydrated.mts";
 import {
   APP_MAP_GP_ID,
   APP_MAP_ID,
@@ -789,6 +790,34 @@ test.describe("zones and thresholds", () => {
     ).toHaveAccessibleDescription(
       /Popularity 20 or more and difficulty 25 or less/,
     );
+  });
+
+  test("the map card keeps its server rendered place at 320 px after hydration", async ({
+    page,
+    context,
+  }) => {
+    const serverRender = await context.newPage();
+    await serverRender.setViewportSize({ width: 320, height: 900 });
+    await serverRender.route("**/_next/static/chunks/**", (route) =>
+      route.request().resourceType() === "script"
+        ? route.abort()
+        : route.continue(),
+    );
+    await serverRender.goto(MAP_URL);
+    await expect(mapCard(serverRender)).toBeVisible();
+    await serverRender.evaluate(() => document.fonts.ready);
+    const served = await mapCard(serverRender).boundingBox();
+    await serverRender.close();
+
+    await page.setViewportSize({ width: 320, height: 900 });
+    await page.goto(MAP_URL);
+    await hydrated(page.getByRole("button", { name: "Columns" }));
+    await expect(dots(page).first()).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    const settled = await mapCard(page).boundingBox();
+
+    expect(served).not.toBeNull();
+    expect(settled?.y).toBe(served?.y);
   });
 
   test("the legend fits at 320 px", async ({ page }) => {

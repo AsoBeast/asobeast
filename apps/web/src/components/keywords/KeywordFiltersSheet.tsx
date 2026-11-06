@@ -1,6 +1,6 @@
 "use client";
 
-import type { ComponentProps } from "react";
+import { useState, type ComponentProps, type RefObject } from "react";
 import { ListFilter } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,14 +12,31 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { firstFocusable } from "@/lib/focus-handoff";
+import { useIsMobile } from "@/lib/use-is-mobile";
 import { KeywordFacets } from "./KeywordFacets";
 
 export function KeywordFiltersSheet({
   active,
+  inlineFacets,
   ...facets
-}: ComponentProps<typeof KeywordFacets> & { active: number }) {
+}: ComponentProps<typeof KeywordFacets> & {
+  active: number;
+  inlineFacets: RefObject<HTMLElement | null>;
+}) {
+  const [open, setOpen] = useState(false);
+  const isMobile = useIsMobile();
+  if (open && !isMobile) setOpen(false);
+
+  const onCloseAutoFocus = (event: Event) => {
+    const facet = firstFocusable(inlineFacets.current);
+    if (!facet?.getClientRects().length) return;
+    event.preventDefault();
+    facet.focus();
+  };
+
   return (
-    <Sheet>
+    <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         <Button variant="outline" size="sm">
           <ListFilter aria-hidden />
@@ -31,7 +48,11 @@ export function KeywordFiltersSheet({
           ) : null}
         </Button>
       </SheetTrigger>
-      <SheetContent side="bottom" className="max-h-[80svh]">
+      <SheetContent
+        side="bottom"
+        className="max-h-[80svh]"
+        onCloseAutoFocus={onCloseAutoFocus}
+      >
         <SheetHeader>
           <SheetTitle>Filters</SheetTitle>
           <SheetDescription>
