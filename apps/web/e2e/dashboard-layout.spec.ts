@@ -38,14 +38,15 @@ test("the dashboard outline reads in visual order on a phone", async ({
   await page.goto("/");
   await expect(mainHeadings(page)).toHaveText([
     "Dashboard",
-    "Top actions",
+    "Visibility by app",
     "Keyword movers",
+    "Do next",
     "Apps",
-    "Recent changes",
+    "Listing changes",
   ]);
 });
 
-test("apps and recent changes share a row once the sidebar collapses", async ({
+test("apps and listing changes share a row once the sidebar collapses", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -58,7 +59,7 @@ test("apps and recent changes share a row once the sidebar collapses", async ({
 
   const apps = page.getByRole("region", { name: "Apps" });
   const changes = page
-    .getByRole("heading", { name: "Recent changes", level: 2 })
+    .getByRole("heading", { name: "Listing changes", level: 2 })
     .locator("xpath=ancestor::*[@data-slot='card'][1]");
 
   await expect(async () => {
@@ -132,8 +133,9 @@ test("the movement tile reads its counts aloud", async ({ page }) => {
   const { up, down } = PORTFOLIO_INSIGHTS.totals.movement;
   const tile = page
     .locator('[data-slot="stat-tile"]')
-    .filter({ hasText: "Keyword movement" });
-  await expect(tile).toContainText(`${up} climbing, ${down} falling`);
+    .filter({ hasText: "Moved in 7 days" });
+  await expect(tile).toContainText(`${up} climbed`);
+  await expect(tile).toContainText(`${down} fell`);
 });
 
 test("the apps heading stays put when the insights stream in", async ({
@@ -145,7 +147,7 @@ test("the apps heading stays put when the insights stream in", async ({
 
   const heading = page.getByRole("heading", { name: "Apps", level: 2 });
   await expect(
-    page.getByRole("heading", { name: "Top actions", level: 2 }),
+    page.getByRole("heading", { name: "Do next", level: 2 }),
   ).toBeVisible();
   await expect(
     page.locator('[data-slot="stat-tile-skeleton"]').first(),
@@ -212,9 +214,9 @@ const undersizedTargets = (page: Page, minimum: number) =>
 
 const rowLinkHeights = async (page: Page) => {
   const rows = [
-    cardOf(page, "Top actions").getByRole("listitem").getByRole("link"),
+    cardOf(page, "Do next").getByRole("listitem").getByRole("link"),
     cardOf(page, "Keyword movers").getByRole("listitem").getByRole("link"),
-    cardOf(page, "Recent changes").locator('a[href$="/changes"]'),
+    cardOf(page, "Listing changes").locator('a[href$="/changes"]'),
   ];
   const heights = await Promise.all(
     rows.map((row) =>
@@ -288,11 +290,11 @@ for (const { width, collapse, rows } of [
 
     await expect
       .poll(async () => {
-        const actions = (await cardOf(page, "Top actions").boundingBox())!;
         const movers = (await cardOf(page, "Keyword movers").boundingBox())!;
+        const actions = (await cardOf(page, "Do next").boundingBox())!;
         return {
-          stacked: movers.y >= actions.y + actions.height,
-          aligned: Math.round(movers.x) === Math.round(actions.x),
+          stacked: actions.y >= movers.y + movers.height,
+          aligned: Math.round(actions.x) === Math.round(movers.x),
         };
       })
       .toEqual({ stacked: true, aligned: true });
@@ -312,14 +314,16 @@ test("keyboard focus follows the visual order of the dashboard", async ({
   await page.keyboard.press("Enter");
 
   const names: string[] = [];
-  for (let step = 0; step < 17; step += 1) {
+  for (let step = 0; step < 26; step += 1) {
     await page.keyboard.press("Tab");
     names.push(
       await page.evaluate(() => {
         const active = document.activeElement as HTMLElement;
         return (
           active.getAttribute("aria-label") ??
-          active.innerText.replace(/\s+/g, " ").trim()
+          (active.innerText ?? active.textContent ?? "")
+            .replace(/\s+/g, " ")
+            .trim()
         );
       }),
     );
@@ -328,15 +332,16 @@ test("keyboard focus follows the visual order of the dashboard", async ({
 
   expect(names[0]).toBe("Import app");
   expect(names[1]).toMatch(/of the daily request budget$/);
-  expect(names[2]).toMatch(/^Critical .* Focus Timer · App Store · US$/);
   const order = [
-    at(/^Open the Action Center$/),
+    at(/^All$/),
     at(/^focus timer .*Focus Timer US/),
+    at(/^Critical .* Focus Timer · App Store · US$/i),
+    at(/^Open the Action Center$/),
     at(/^About visibility$/),
     at(/^Sort by$/),
     at(/^Cards$/),
     at(/^Focus Timer$/),
   ];
-  expect(order.every((index) => index > 2)).toBe(true);
+  expect(order.every((index) => index > 1)).toBe(true);
   expect(order).toEqual([...order].sort((a, b) => a - b));
 });

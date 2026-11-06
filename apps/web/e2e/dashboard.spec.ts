@@ -17,7 +17,7 @@ test("a fresh install invites an import instead of showing an empty dashboard", 
   await expect(
     page.getByRole("heading", { name: "Track your first app", level: 1 }),
   ).toBeVisible();
-  await expect(page.getByText("Changes this week")).toHaveCount(0);
+  await expect(page.getByText("Listing changes in 7 days")).toHaveCount(0);
   await expect(page.getByRole("main").getByRole("listitem")).toHaveCount(3);
 });
 
@@ -125,14 +125,16 @@ test("the summary tiles state the window they measure", async ({ page }) => {
 
   for (const label of [
     "Keywords in top 10",
-    "Keyword movement",
+    "Moved in 7 days",
     "Open actions",
-    "Changes this week",
+    "Listing changes in 7 days",
   ]) {
     await expect(page.getByText(label, { exact: true })).toBeVisible();
   }
   await expect(page.getByText(/by competitors/)).toBeVisible();
-  await expect(page.getByText(/lost in 7 days/)).toBeVisible();
+  await expect(
+    page.getByText(/^\d+ started ranking · \d+ dropped out$/),
+  ).toBeVisible();
 });
 
 test("the open actions tile says so when no action set has been generated", async ({
@@ -152,34 +154,28 @@ test("the open actions tile says so when no action set has been generated", asyn
     .getByText("Open actions", { exact: true })
     .locator("xpath=..");
   await expect(tile).toContainText("—");
-  await expect(tile).toContainText("not generated yet");
+  await expect(tile).toContainText("Not generated yet");
 });
 
-test("the top 10 trend sits level with the rest of its note", async ({
-  page,
-}) => {
+test("the top 10 trend sits level with its figure", async ({ page }) => {
   await page.goto("/");
 
-  const note = page
+  const value = page
     .locator('[data-slot="stat-tile"]')
     .filter({ hasText: "Keywords in top 10" })
     .locator(":scope > span")
-    .nth(2);
-  await expect(note).toContainText("tracked");
+    .nth(1);
+  await expect(value).toContainText("7d");
 
-  const offset = await note.evaluate((node) => {
-    const chip = node.querySelector(".numeric")!.getBoundingClientRect();
-    const text = document.createRange();
-    const words = [...node.querySelectorAll("*"), node]
-      .flatMap((el) => [...el.childNodes])
-      .find(
-        (child) =>
-          child.nodeType === 3 && child.textContent!.includes("tracked"),
-      )!;
-    text.selectNodeContents(words);
-    const box = text.getBoundingClientRect();
-    return Math.abs(chip.top + chip.height / 2 - (box.top + box.height / 2));
+  const offset = await value.evaluate((node) => {
+    const figure = node.querySelector(":scope > span > span:first-child")!;
+    const chip = node.querySelector(":scope > span > span:last-child")!;
+    const middle = (box: DOMRect) => box.top + box.height / 2;
+    return Math.abs(
+      middle(figure.getBoundingClientRect()) -
+        middle(chip.getBoundingClientRect()),
+    );
   });
 
-  expect(offset).toBeLessThanOrEqual(1);
+  expect(offset).toBeLessThanOrEqual(2);
 });

@@ -1,24 +1,36 @@
 "use client";
 
+import { useState } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import type {
-  PortfolioInsights,
-  PortfolioKeywordMover,
-} from "@asobeast/shared";
-import { AppIcon } from "@/components/AppIcon";
-import { MoverList } from "@/components/rankings/MoverRow";
+import type { PortfolioInsights } from "@asobeast/shared";
 import {
   Card,
+  CardAction,
   CardContent,
-  CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import { portfolioInsightsOptions, portfolioOptions } from "@/lib/queries";
+import { byMagnitude } from "./mover-change";
+import { MoverBreakdown } from "./MoverBreakdown";
 
-const rankingsHref = (mover: PortfolioKeywordMover) =>
-  `/apps/${mover.appId}/rankings?keywords=${mover.keywordId}`;
+const ALL_MOVERS = 8;
+
+type MoverView = "all" | "up" | "down";
+
+const MOVER_VIEWS: Array<[MoverView, string]> = [
+  ["all", "All"],
+  ["up", "Climbers"],
+  ["down", "Fallers"],
+];
+
+const EMPTY: Record<MoverView, string> = {
+  all: "No movement this week.",
+  up: "No keyword climbed this week.",
+  down: "No keyword fell this week.",
+};
 
 function quietSentence(insights: PortfolioInsights): string | null {
   const { up, down } = insights.totals.movement;
@@ -34,62 +46,43 @@ export function PortfolioMoversCard() {
   const { data: portfolio } = useSuspenseQuery(portfolioOptions);
   const apps = new Map(portfolio.apps.map((app) => [app.id, app]));
   const quiet = quietSentence(insights);
+  const [view, setView] = useState<MoverView>("all");
+  const { up, down } = insights.movers;
+  const all = byMagnitude([...up, ...down]).slice(0, ALL_MOVERS);
 
-  const moverContext = (mover: PortfolioKeywordMover) => {
-    const app = apps.get(mover.appId);
-    return (
-      <>
-        <AppIcon src={app?.iconUrl ?? null} size={16} />
-        <span className="sr-only">{app?.name ?? "Unknown app"}</span>
-        <span className="text-caption text-muted-foreground">
-          {mover.country.toUpperCase()}
-        </span>
-      </>
-    );
-  };
-
-  const list = (movers: PortfolioKeywordMover[], title?: string) => (
-    <MoverList
-      title={title}
-      movers={movers}
-      renderHref={rankingsHref}
-      renderContext={moverContext}
-      rowClassName="min-h-10"
-    />
-  );
+  const shown = { all, up, down }[view];
 
   return (
-    <Card className="@container/movers">
+    <Card className="h-full">
       <CardHeader>
         <CardTitle asChild>
           <h2>Keyword movers</h2>
         </CardTitle>
-        <CardDescription>
-          Largest position changes in the last 7 days, across every app.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {quiet ? (
-          <p className="text-sm text-muted-foreground">{quiet}</p>
-        ) : (
-          <>
-            <div className="hidden gap-6 @md/movers:grid @md/movers:grid-cols-2">
-              {list(insights.movers.up, "Climbers")}
-              {list(insights.movers.down, "Fallers")}
-            </div>
-            <Tabs defaultValue="up" className="@md/movers:hidden">
-              <TabsList>
-                <TabsTrigger value="up">Climbers</TabsTrigger>
-                <TabsTrigger value="down">Fallers</TabsTrigger>
+        {quiet ? null : (
+          <CardAction>
+            <Tabs
+              value={view}
+              onValueChange={(next) => setView(next as MoverView)}
+            >
+              <TabsList aria-label="Movers shown">
+                {MOVER_VIEWS.map(([value, label]) => (
+                  <TabsOption key={value} value={value}>
+                    {label}
+                  </TabsOption>
+                ))}
               </TabsList>
-              <TabsContent value="up">{list(insights.movers.up)}</TabsContent>
-              <TabsContent value="down">
-                {list(insights.movers.down)}
-              </TabsContent>
             </Tabs>
-          </>
+          </CardAction>
+        )}
+      </CardHeader>
+      <CardContent className="flex-1 px-2">
+        {quiet ? (
+          <p className="px-2 text-body text-muted-foreground">{quiet}</p>
+        ) : (
+          <MoverBreakdown movers={shown} apps={apps} empty={EMPTY[view]} />
         )}
       </CardContent>
+      <CardFooter>Largest position changes in the last 7 days</CardFooter>
     </Card>
   );
 }

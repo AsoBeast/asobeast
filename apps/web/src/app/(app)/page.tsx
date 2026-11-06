@@ -11,9 +11,15 @@ import {
   runStatusOptions,
 } from "@/lib/queries";
 import { AppsDashboard } from "@/components/dashboard/AppsDashboard";
+import { AppsRow } from "@/components/dashboard/AppsRow";
 import { FirstRunGate } from "@/components/dashboard/FirstRunGate";
 import { PortfolioPulse } from "@/components/dashboard/PortfolioPulse";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
+import {
+  DashboardLede,
+  DashboardLedeSkeleton,
+} from "@/components/dashboard/DashboardLede";
+import { DoNextCard } from "@/components/dashboard/DoNextCard";
 import { AppsToolbar } from "@/components/dashboard/AppsToolbar";
 import { DashboardSection } from "@/components/dashboard/DashboardSection";
 import { PortfolioMoversCard } from "@/components/dashboard/PortfolioMoversCard";
@@ -23,6 +29,7 @@ import {
 } from "@/components/dashboard/PortfolioStatusLine";
 import {
   AppsDashboardSkeleton,
+  DoNextCardSkeleton,
   PortfolioMoversCardSkeleton,
   PortfolioStatusLineSkeleton,
   PortfolioPulseSkeleton,
@@ -30,11 +37,9 @@ import {
 import { BudgetBanner } from "@/components/settings/BudgetBanner";
 import { RecentChangesCard } from "@/components/changes/RecentChangesCard";
 import { OnboardingBanner } from "@/components/onboarding/OnboardingBanner";
-import { ActionsSummaryCard } from "@/components/actions/ActionsSummaryCard";
 import { DASHBOARD_ACTION_LIMIT } from "@/lib/action-filters";
 import { appViewParser } from "@/lib/search-params";
 import { viewerIsOperator } from "@/lib/viewer";
-import { ActionsSummaryCardSkeleton } from "@/components/actions/skeletons";
 
 export default async function Page({
   searchParams,
@@ -71,7 +76,13 @@ export default async function Page({
             </Suspense>
           ) : null}
 
-          <DashboardHeader>
+          <DashboardHeader
+            lede={
+              <Suspense fallback={<DashboardLedeSkeleton />}>
+                <DashboardLede />
+              </Suspense>
+            }
+          >
             <Suspense fallback={<PortfolioStatusLineSkeleton />}>
               {operator ? (
                 <OperatorPortfolioStatusLine />
@@ -87,36 +98,35 @@ export default async function Page({
 
           <div className="grid gap-6 @5xl/dashboard:grid-cols-12 [&>*]:min-w-0">
             <div className="@5xl/dashboard:col-span-7">
-              <Suspense fallback={<ActionsSummaryCardSkeleton />}>
-                <ActionsSummaryCard />
-              </Suspense>
-            </div>
-            <div className="@5xl/dashboard:col-span-5">
               <Suspense fallback={<PortfolioMoversCardSkeleton />}>
                 <PortfolioMoversCard />
               </Suspense>
             </div>
-          </div>
-
-          <div className="grid gap-6 @6xl/dashboard:grid-cols-12 [&>*]:min-w-0">
-            <DashboardSection
-              id="apps"
-              title="Apps"
-              className="@6xl/dashboard:col-span-8"
-              toolbar={
-                <Suspense fallback={null}>
-                  <AppsToolbar />
-                </Suspense>
-              }
-            >
-              <Suspense fallback={<AppsDashboardSkeleton view={view} />}>
-                <AppsDashboard />
+            <div className="@5xl/dashboard:col-span-5">
+              <Suspense fallback={<DoNextCardSkeleton />}>
+                <DoNextCard />
               </Suspense>
-            </DashboardSection>
-            <div className="@6xl/dashboard:col-span-4">
-              <RecentChangesCard today={today} />
             </div>
           </div>
+
+          <AppsRow
+            apps={
+              <DashboardSection
+                id="apps"
+                title="Apps"
+                toolbar={
+                  <Suspense fallback={null}>
+                    <AppsToolbar />
+                  </Suspense>
+                }
+              >
+                <Suspense fallback={<AppsDashboardSkeleton view={view} />}>
+                  <AppsDashboard />
+                </Suspense>
+              </DashboardSection>
+            }
+            changes={<RecentChangesCard today={today} />}
+          />
         </div>
       </FirstRunGate>
     </HydrationBoundary>

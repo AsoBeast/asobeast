@@ -1,0 +1,78 @@
+import { describe, expect, it } from "vitest";
+import type { PortfolioApp } from "@asobeast/shared";
+import { portfolioVisibility } from "./visibility-series";
+
+function app(
+  id: string,
+  current: number,
+  points: Array<[string, number]>,
+  overrides: Partial<PortfolioApp> = {},
+): PortfolioApp {
+  return {
+    id,
+    store: "APP_STORE",
+    storeAppId: id,
+    country: "us",
+    name: id,
+    iconUrl: null,
+    groupId: null,
+    groupName: null,
+    visibility: { current, delta7d: null },
+    sparkline: points.map(([date, visibility]) => ({ date, visibility })),
+    trackedKeywords: 1,
+    competitors: 0,
+    lastCapturedAt: "2026-11-06T03:00:00.000Z",
+    ...overrides,
+  };
+}
+
+describe("portfolioVisibility", () => {
+  it("charts the most visible apps and counts the rest", () => {
+    const apps = [
+      app("a", 10, [["2026-11-05", 10]]),
+      app("b", 30, [["2026-11-05", 30]]),
+      app("c", 20, [["2026-11-05", 20]]),
+    ];
+    const result = portfolioVisibility(apps, 2);
+    expect(result.series.map((series) => series.appId)).toEqual(["b", "c"]);
+    expect(result.omitted).toBe(1);
+  });
+
+  it("joins every app's days and leaves a missing day null", () => {
+    const result = portfolioVisibility([
+      app("a", 12, [
+        ["2026-11-04", 11],
+        ["2026-11-05", 12],
+      ]),
+      app("b", 8, [["2026-11-05", 8]]),
+    ]);
+    expect(result.rows).toEqual([
+      { date: "2026-11-04", app0: 11, app1: null },
+      { date: "2026-11-05", app0: 12, app1: 8 },
+    ]);
+    expect(result.days).toBe(2);
+  });
+
+  it("leaves out an app without a capture or history", () => {
+    const result = portfolioVisibility([
+      app("a", 0, [], {}),
+      app("b", 0, [["2026-11-05", 0]], { lastCapturedAt: null }),
+      app("c", 5, [["2026-11-05", 5]]),
+    ]);
+    expect(result.series.map((series) => series.appId)).toEqual(["c"]);
+    expect(result.omitted).toBe(0);
+  });
+
+  it("names the market when two charted apps share a name", () => {
+    const result = portfolioVisibility([
+      app("a", 9, [["2026-11-05", 9]], { name: "Focus", country: "us" }),
+      app("b", 4, [["2026-11-05", 4]], { name: "Focus", country: "de" }),
+      app("c", 2, [["2026-11-05", 2]], { name: "Tomato" }),
+    ]);
+    expect(result.series.map((series) => series.label)).toEqual([
+      "Focus · US",
+      "Focus · DE",
+      "Tomato",
+    ]);
+  });
+});

@@ -3,10 +3,8 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { CircleCheck } from "lucide-react";
 import { ACTION_PRIORITIES } from "@asobeast/shared";
 import type { ActionItem, ActionSummary } from "@asobeast/shared";
-import { AppIcon } from "@/components/AppIcon";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -15,18 +13,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { DASHBOARD_ACTION_LIMIT, TOP_ACTION_LIMIT } from "@/lib/action-filters";
-import { storeLabel } from "@/lib/format";
-import {
-  actionsOptions,
-  actionSummaryOptions,
-  actionSummaryFor,
-  portfolioOptions,
-} from "@/lib/queries";
+import { TOP_ACTION_LIMIT } from "@/lib/action-filters";
+import { actionsOptions, actionSummaryFor } from "@/lib/queries";
 import { ACTION_PRIORITY_LABEL } from "./action-copy";
 import { actionHeadline } from "./action-headline";
 import { ActionPriorityBadge } from "./ActionPriorityBadge";
-import { PriorityBar } from "./PriorityBar";
 
 const openActions = (limit: number) => ({
   status: ["OPEN" as const],
@@ -107,72 +98,6 @@ function TopActionLink({
   );
 }
 
-function ActionScopeLine({
-  item,
-  iconUrl,
-}: {
-  item: ActionItem;
-  iconUrl: string | null;
-}) {
-  const { appName, store, country } = item.scope;
-  return (
-    <span className="flex min-w-0 items-center gap-2 text-caption text-muted-foreground">
-      <AppIcon src={iconUrl} size={16} />
-      <span className="truncate">
-        {appName ?? "Unknown app"} · {storeLabel(store)} ·{" "}
-        {country.toUpperCase()}
-      </span>
-    </span>
-  );
-}
-
-function PortfolioActionList({ summary }: { summary: ActionSummary }) {
-  const { data: list } = useSuspenseQuery(
-    actionsOptions(openActions(DASHBOARD_ACTION_LIMIT)),
-  );
-  const { data: portfolio } = useSuspenseQuery(portfolioOptions);
-  if (list.items.length === 0) return <EmptyActions summary={summary} />;
-
-  const icons = new Map(portfolio.apps.map((app) => [app.id, app.iconUrl]));
-
-  return (
-    <ul className="flex list-none flex-col gap-1 p-0">
-      {list.items.slice(0, DASHBOARD_ACTION_LIMIT).map((item) => (
-        <li key={item.id}>
-          <TopActionLink item={item} href={`/actions?action=${item.id}`}>
-            <ActionScopeLine
-              item={item}
-              iconUrl={icons.get(item.scope.appId) ?? null}
-            />
-          </TopActionLink>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function AllClear() {
-  return (
-    <p className="flex items-center gap-2 text-sm text-muted-foreground">
-      <CircleCheck className="size-4 text-signal-up" aria-hidden />
-      Nothing needs you right now.
-    </p>
-  );
-}
-
-function PortfolioActions() {
-  const { data: summary } = useSuspenseQuery(actionSummaryOptions);
-  if (summary.generatedAt !== null && summary.open === 0) return <AllClear />;
-
-  return (
-    <>
-      <PriorityBar counts={summary.openByPriority} />
-      <PriorityCounts summary={summary} />
-      <PortfolioActionList summary={summary} />
-    </>
-  );
-}
-
 function AppActions({ appId }: { appId: string }) {
   const { data: summary } = useSuspenseQuery(actionSummaryFor(appId));
 
@@ -184,22 +109,21 @@ function AppActions({ appId }: { appId: string }) {
   );
 }
 
-export function ActionsSummaryCard({ appId }: { appId?: string }) {
-  const href = appId ? `/apps/${appId}/actions` : "/actions";
-  const Title = appId ? "div" : "h2";
+export function ActionsSummaryCard({ appId }: { appId: string }) {
+  const href = `/apps/${appId}/actions`;
 
   return (
     <Card>
       <CardHeader>
         <CardTitle asChild>
-          <Title>Top actions</Title>
+          <div>Top actions</div>
         </CardTitle>
         <CardDescription>
           The highest-impact open work, computed from your stored data.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        {appId ? <AppActions appId={appId} /> : <PortfolioActions />}
+        <AppActions appId={appId} />
 
         <Link
           href={href}
