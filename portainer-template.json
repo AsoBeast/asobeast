@@ -26,18 +26,23 @@
           "description": "Signs sign-in sessions. Generate one with: openssl rand -hex 32. The API refuses to start when it is shorter than 32 characters."
         },
         {
+          "name": "ASOBEAST_PORT",
+          "label": "Host port for the web UI",
+          "description": "The port on this machine AsoBeast answers on. Keep 3001 unless another service already uses it. An address you type below must use the same port.",
+          "default": "3001"
+        },
+        {
           "name": "WEB_PUBLIC_URL",
           "label": "Address you open AsoBeast at",
-          "description": "Builds the links in alert, confirmation and password reset emails. Use your https address when AsoBeast sits behind a reverse proxy.",
-          "default": "http://localhost:3001"
+          "description": "Builds the links in alert, confirmation and password reset emails. Leave it empty to use http://localhost on the host port above, or enter your https address when AsoBeast sits behind a reverse proxy."
         },
         {
           "name": "TRUST_PROXY",
-          "label": "Reverse proxies in front of port 3001",
+          "label": "Reverse proxies in front of AsoBeast",
           "description": "The number of proxies you control between the internet and AsoBeast, so rate limits see each visitor's own address.",
           "select": [
             {
-              "text": "None, port 3001 is reached directly",
+              "text": "None, AsoBeast's port is reached directly",
               "value": "0",
               "default": true
             },
@@ -52,7 +57,7 @@
           ]
         }
       ],
-      "note": "Set a <b>database password</b> and a <b>session secret</b> before you deploy. <code>openssl rand -hex 32</code> makes both, and the stack won't start without them. AsoBeast listens on port <code>3001</code>. Its session cookie is always secure, so sign in over https: put a reverse proxy with a certificate in front and set the address and proxy count above. Chrome and Firefox also accept it on <code>http://localhost:3001</code>, which works from another machine through <code>ssh -N -L 3001:localhost:3001 you@&lt;your-host&gt;</code>. The first account created at <code>/register</code> becomes the owner and registration closes after that, so create it right away. Any other API setting, such as SMTP or OpenAI, goes in as an extra environment variable on the stack. Data lives in the <code>&lt;stack name&gt;_pgdata</code> and <code>&lt;stack name&gt;_redisdata</code> volumes, and the stack needs about 2.5 GB of memory. To update, back up, then pull and redeploy the stack: the compose file on <code>main</code> pins the current release. Docs: <a href=\"https://docs.asobeast.com/install/published-images#deploy-from-portainer\" target=\"_blank\">docs.asobeast.com/install/published-images</a>"
+      "note": "Set a <b>database password</b> and a <b>session secret</b> before you deploy. <code>openssl rand -hex 32</code> makes both, and the stack won't start without them. AsoBeast listens on the host port you choose, <code>3001</code> unless you change it. Its session cookie is always secure, so sign in over https: put a reverse proxy with a certificate in front and set the address and proxy count above. Chrome and Firefox also accept it on <code>http://localhost:3001</code> (or your port), which works from another machine through <code>ssh -N -L 3001:localhost:3001 you@&lt;your-host&gt;</code>, with the second 3001 replaced by your host port when you changed it. The first account created at <code>/register</code> becomes the owner and registration closes after that, so create it right away. Any other API setting, such as SMTP or OpenAI, goes in as an extra environment variable on the stack. Data lives in the <code>&lt;stack name&gt;_pgdata</code> and <code>&lt;stack name&gt;_redisdata</code> volumes, and the stack needs about 2.5 GB of memory. To update, back up, then pull and redeploy the stack: the compose file on <code>main</code> pins the current release. Docs: <a href=\"https://docs.asobeast.com/install/published-images#deploy-from-portainer\" target=\"_blank\">docs.asobeast.com/install/published-images</a>"
     }
   ]
 }

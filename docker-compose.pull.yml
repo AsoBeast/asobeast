@@ -82,7 +82,7 @@ services:
       NODE_ENV: production
       AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET in .env}
       AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-true}
-      WEB_PUBLIC_URL: ${WEB_PUBLIC_URL:-http://localhost:3001}
+      WEB_PUBLIC_URL: ${WEB_PUBLIC_URL:-http://localhost:${ASOBEAST_PORT:-3001}}
       TRUST_PROXY: 1
       LOG_LEVEL: ${LOG_LEVEL:-log}
     volumes:
@@ -128,7 +128,7 @@ services:
       TRUST_PROXY: ${TRUST_PROXY:-0}
       STATUS_PAGE_URL: ${STATUS_PAGE_URL:-}
     ports:
-      - "3001:3000"
+      - "${ASOBEAST_PORT:-3001}:3000"
     depends_on:
       api:
         condition: service_healthy

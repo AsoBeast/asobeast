@@ -62,7 +62,7 @@ There is no manual migration step. The API waits for PostgreSQL and Redis to rep
 
 ## What is exposed?
 
-Only host port 3001, published to port 3000 in the `web` container. The API, PostgreSQL and Redis stay on Docker networks that are not reachable from the host, and the `backend` network is marked `internal`.
+Only one host port, 3001 unless `ASOBEAST_PORT` in the root `.env` names another, published to port 3000 in the `web` container. The API, PostgreSQL and Redis stay on Docker networks that are not reachable from the host, and the `backend` network is marked `internal`.
 
 The browser never talks to the API directly. It calls `/api/backend/*` on the web origin, and the Next.js proxy forwards those requests to `API_INTERNAL_URL`, which Compose sets to `http://api:4000`. The web image reads that value at runtime, so pointing it at a different API needs no rebuild.
 
@@ -78,13 +78,15 @@ Every service has a health check and a restart policy, and the application conta
 | `http://localhost:3001/admin/queues` | The queue dashboard, for the signed in platform operator |
 | `http://localhost:3001/docs` | The OpenAPI surface, for the signed in platform operator under the default `API_DOCS=owner` |
 
+With `ASOBEAST_PORT` set, use that port in each address.
+
 <Warning>
   `/admin/queues` and `/docs` answer 404 to anyone who is not a signed in owner. That is deliberate. A 403 would confirm the surface exists, so the gate answers as though it does not.
 </Warning>
 
 ## Customize the installation
 
-The root `.env` carries only `POSTGRES_PASSWORD` and `AUTH_SECRET`. Everything else has a working default, including `WEB_PUBLIC_URL`, which builds every link in an email and defaults to `http://localhost:3001`. Set it in the root `.env` when a person reaches the stack at another origin. See [Hosting behind TLS and a reverse proxy](/security/hosting).
+The root `.env` carries only `POSTGRES_PASSWORD` and `AUTH_SECRET`. Everything else has a working default, including `WEB_PUBLIC_URL`, which builds every link in an email and defaults to `http://localhost:3001`. Set it in the root `.env` when a person reaches the stack at another origin. See [Hosting behind TLS and a reverse proxy](/security/hosting). When another service already uses port 3001, set `ASOBEAST_PORT` there to a free port; the default `WEB_PUBLIC_URL` follows it, so open `http://localhost:<port>` instead.
 
 Copy `apps/api/.env.example` to `apps/api/.env` only when you want an optional feature such as email alerts, the AI assisted audit, a different collection schedule or different retention windows. Compose loads that file when it exists and ignores it when it does not. See [Configuration reference](/configuration/reference).
 
