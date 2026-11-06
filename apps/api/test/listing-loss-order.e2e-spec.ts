@@ -170,6 +170,7 @@ describe('listing loss ordering (e2e)', () => {
       const [{ waiting }] = await prisma.$queryRaw<{ waiting: number }[]>`
         SELECT count(*)::int AS waiting FROM pg_locks
         WHERE locktype = 'advisory' AND NOT granted
+          AND database = (SELECT oid FROM pg_database WHERE datname = current_database())
       `;
       if (waiting > 0) return;
       await new Promise((resolve) => setTimeout(resolve, 20));
