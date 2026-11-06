@@ -25,7 +25,7 @@ export function AdminTable<TData extends RowData>({
   caption: string;
 }) {
   return (
-    <Table containerClassName="rounded-xl border">
+    <Table containerClassName="rounded-lg border bg-card">
       <TableCaption className="sr-only">{caption}</TableCaption>
       <TableHeader>
         {table.getHeaderGroups().map((headerGroup) => (
@@ -33,6 +33,7 @@ export function AdminTable<TData extends RowData>({
             {headerGroup.headers.map((header) => (
               <TableHead
                 key={header.id}
+                numeric={header.column.columnDef.meta?.numeric}
                 aria-sort={ariaSort(header.column.getIsSorted())}
               >
                 {flexRender(
@@ -48,7 +49,10 @@ export function AdminTable<TData extends RowData>({
         {table.getRowModel().rows.map((row) => (
           <TableRow key={row.id}>
             {row.getVisibleCells().map((cell) => (
-              <TableCell key={cell.id}>
+              <TableCell
+                key={cell.id}
+                numeric={cell.column.columnDef.meta?.numeric}
+              >
                 {flexRender(cell.column.columnDef.cell, cell.getContext())}
               </TableCell>
             ))}

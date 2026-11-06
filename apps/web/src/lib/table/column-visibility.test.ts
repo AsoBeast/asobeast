@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   columnChoices,
   defaultColumnVisibility,
+  isNumericColumn,
   parseColumnVisibility,
   phoneColumnVisibility,
   readStoredColumns,
@@ -191,5 +192,14 @@ describe("columnChoices", () => {
     expect(columnChoices({ source: false }, { source: false }, {}, {})).toEqual(
       {},
     );
+  });
+});
+
+describe("isNumericColumn", () => {
+  it("reads the numeric flag of a column's meta", () => {
+    expect(isNumericColumn({ label: "Apps", numeric: true })).toBe(true);
+    expect(isNumericColumn({ label: "Plan" })).toBe(false);
+    expect(isNumericColumn({ numeric: "yes" })).toBe(false);
+    expect(isNumericColumn(undefined)).toBe(false);
   });
 });

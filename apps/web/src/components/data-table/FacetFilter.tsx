@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ListFilter } from "lucide-react";
+import { Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -51,17 +51,15 @@ export function FacetFilter<T extends string>({
         <Button
           variant="outline"
           size="sm"
-          className="border-dashed"
           aria-label={
             selected.length > 0
               ? `Filter by ${title.toLowerCase()}, ${selected.length} selected`
               : `Filter by ${title.toLowerCase()}`
           }
         >
-          <ListFilter aria-hidden />
           {title}
           {selected.length > 0 ? (
-            <Badge variant="secondary" className="numeric font-mono">
+            <Badge variant="secondary" className="numeric">
               {selected.length}
             </Badge>
           ) : null}
@@ -94,7 +92,7 @@ export function FacetFilter<T extends string>({
                       className={cn(
                         "flex size-4 items-center justify-center rounded-[4px] border border-input",
                         checked &&
-                          "border-primary bg-primary text-primary-foreground",
+                          "border-foreground bg-foreground text-background",
                       )}
                     >
                       {checked ? <Check className="size-3" /> : null}
@@ -107,7 +105,7 @@ export function FacetFilter<T extends string>({
                     ) : null}
                     {option.label}
                     {counts ? (
-                      <span className="ml-auto numeric font-mono text-xs text-muted-foreground">
+                      <span className="ml-auto numeric text-label text-faint-foreground">
                         {counts.get(option.value) ?? 0}
                       </span>
                     ) : null}

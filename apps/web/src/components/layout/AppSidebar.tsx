@@ -26,12 +26,12 @@ export function AppSidebar() {
   const latest = latestShown(RELEASES, appVersion());
 
   return (
-    <Sidebar variant="inset" collapsible="icon">
+    <Sidebar collapsible="icon">
       <nav aria-label="Main" className="flex min-h-0 flex-1 flex-col">
         <SidebarHeader>
           <Link
             href="/"
-            className="flex items-center gap-2 rounded-md p-2 text-title focus-visible:ring-3 focus-visible:ring-sidebar-ring/50 focus-visible:outline-none group-data-[collapsible=icon]:p-1.5"
+            className="flex items-center gap-2 rounded-md p-2 text-heading focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:outline-none group-data-[collapsible=icon]:p-1.5"
           >
             <Image
               src="/brand/mark.png"
@@ -71,8 +71,7 @@ export function AppSidebar() {
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
-          <div className="px-2 pb-1 text-caption text-muted-foreground group-data-[collapsible=icon]:hidden">
-            <p>Open source ASO toolkit for the App Store and Google Play.</p>
+          <div className="px-2 pb-1 text-caption text-faint-foreground group-data-[collapsible=icon]:hidden">
             {version ? (
               <p>
                 <a
@@ -80,7 +79,7 @@ export function AppSidebar() {
                   rel="noreferrer noopener"
                   target="_blank"
                   title="Release notes"
-                  className="rounded-sm underline decoration-muted-foreground decoration-dotted underline-offset-4 hover:text-foreground hover:decoration-primary focus-visible:ring-3 focus-visible:ring-sidebar-ring/50 focus-visible:outline-none"
+                  className="rounded-sm underline decoration-border underline-offset-4 hover:text-foreground hover:decoration-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:outline-none"
                 >
                   <span translate="no">{version}</span>
                   <span className="sr-only"> release notes</span>

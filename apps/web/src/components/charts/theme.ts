@@ -22,14 +22,17 @@ export function seriesDash(index: number): string | undefined {
 }
 
 export const CHART_HEIGHT = {
-  compact: "h-[240px]",
-  tall: "h-[300px]",
-  hero: "h-[360px]",
+  compact: "h-[200px]",
+  tall: "h-[200px] md:h-[268px]",
+  hero: "h-[300px] md:h-[360px]",
 } as const;
 
 export const CHART_MARGIN = { left: 4, right: 8, top: 8 } as const;
 
-export const GRID_PROPS = { vertical: false } as const;
+export const GRID_PROPS = {
+  vertical: false,
+  stroke: "var(--border-subtle)",
+} as const;
 
 export const TIME_AXIS_PROPS = {
   dataKey: "date",
@@ -59,17 +62,39 @@ export const LINE_PROPS = {
   type: "monotone",
   strokeWidth: 2,
   dot: false,
-  activeDot: { r: 4 },
+  activeDot: { r: 3.5, strokeWidth: 2, stroke: "var(--card)" },
+  isAnimationActive: false,
+} as const;
+
+export const COUNT_LINE_PROPS = {
+  ...LINE_PROPS,
+  type: "stepAfter",
+} as const;
+
+export const PREVIOUS_LINE_PROPS = {
+  type: "monotone",
+  stroke: "var(--chart-previous)",
+  strokeWidth: 1.5,
+  dot: false,
+  activeDot: false,
+  isAnimationActive: false,
+} as const;
+
+export const PENDING_LINE_PROPS = {
+  strokeDasharray: "4 4",
+  dot: false,
+  activeDot: false,
+  isAnimationActive: false,
 } as const;
 
 export const CHANGE_MARKER_PROPS = {
-  stroke: "var(--warning)",
-  strokeDasharray: "4 3",
+  stroke: "var(--faint-foreground)",
+  strokeDasharray: "3 3",
 } as const;
 
 export const FADE_STOPS = [
-  { offset: "5%", opacity: 0.28 },
-  { offset: "95%", opacity: 0 },
+  { offset: "0%", opacity: 0.16 },
+  { offset: "100%", opacity: 0 },
 ] as const;
 
 export const TIME_TOOLTIP_PROPS = {
@@ -89,6 +114,6 @@ export const SCORE_AXIS_PROPS = {
 } as const;
 
 export const THRESHOLD_LINE_PROPS = {
-  stroke: "var(--muted-foreground)",
-  strokeDasharray: "4 3",
+  stroke: "var(--faint-foreground)",
+  strokeDasharray: "3 3",
 } as const;

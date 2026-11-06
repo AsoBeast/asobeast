@@ -17,7 +17,7 @@ export function rankTierAreas() {
       y1={tier.from}
       y2={tier.to}
       fill={tier.fill}
-      fillOpacity={0.08}
+      fillOpacity={0.06}
       ifOverflow="hidden"
       label={{ value: tier.label, content: RankBandLabel }}
     />

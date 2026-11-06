@@ -13,7 +13,7 @@ const pill = (selected: boolean) =>
 
 const count = (selected: boolean) =>
   cn(
-    "numeric font-mono text-caption",
+    "numeric text-caption",
     selected ? "text-background" : "text-muted-foreground",
   );
 
