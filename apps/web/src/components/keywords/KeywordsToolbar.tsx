@@ -3,7 +3,7 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { ChartScatter, Plus, TableProperties, X } from "lucide-react";
 import { useQueryState } from "nuqs";
-import type { Store } from "@asobeast/shared";
+import type { Store, TrackedKeywordItem } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import { MarketPills } from "@/components/layout/MarketPills";
 import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
@@ -16,19 +16,19 @@ export function KeywordsToolbar({
   store,
   market,
   homeCountry,
+  showTrackedControls = true,
 }: {
   id: string;
   store: Store;
   market: string;
   homeCountry: string;
+  showTrackedControls?: boolean;
 }) {
   const [, setCountry] = useQueryState("country", countryParser);
   const { data: markets } = useSuspenseQuery(keywordCountriesOptions(id));
   const { data: keywords } = useSuspenseQuery(keywordsOptions(id, market));
 
   const total = markets.reduce((sum, entry) => sum + entry.keywordCount, 0);
-  const active = keywords.filter((keyword) => keyword.active).length;
-  const partial = keywords.length !== total;
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -63,27 +63,43 @@ export function KeywordsToolbar({
         </button>
       ) : null}
 
-      <p className="text-body text-muted-foreground" aria-live="polite">
-        Tracking{" "}
-        <span className="numeric font-mono font-medium text-foreground">
-          {keywords.length}
-        </span>
-        {partial ? (
-          <span>
-            {" of "}
-            <span className="numeric font-mono font-medium text-foreground">
-              {total}
-            </span>
-          </span>
-        ) : null}
-        <span>{` keyword${keywords.length === 1 ? "" : "s"} · `}</span>
-        <span className="numeric font-mono font-medium text-foreground">
-          {active}
-        </span>{" "}
-        active
-      </p>
-      <KeywordViewSwitch />
+      {showTrackedControls ? (
+        <TrackedSummary keywords={keywords} total={total} />
+      ) : null}
+      {showTrackedControls ? <KeywordViewSwitch /> : null}
     </div>
+  );
+}
+
+function TrackedSummary({
+  keywords,
+  total,
+}: {
+  keywords: TrackedKeywordItem[];
+  total: number;
+}) {
+  const active = keywords.filter((keyword) => keyword.active).length;
+  const partial = keywords.length !== total;
+  return (
+    <p className="text-body text-muted-foreground" aria-live="polite">
+      Tracking{" "}
+      <span className="numeric font-mono font-medium text-foreground">
+        {keywords.length}
+      </span>
+      {partial ? (
+        <span>
+          {" of "}
+          <span className="numeric font-mono font-medium text-foreground">
+            {total}
+          </span>
+        </span>
+      ) : null}
+      <span>{` keyword${keywords.length === 1 ? "" : "s"} · `}</span>
+      <span className="numeric font-mono font-medium text-foreground">
+        {active}
+      </span>{" "}
+      active
+    </p>
   );
 }
 

@@ -140,6 +140,15 @@ const POPOVERS: NamedPopover[] = [
     open: (page) =>
       page.getByRole("button", { name: "About gap analysis" }).click(),
   },
+  ...["Rank", "Relevance", "Opportunity"].map((metric) => ({
+    name: metric,
+    where: "the discovered keywords",
+    path: "/apps/app-1/keywords?tab=discovered",
+    open: (page: Page) =>
+      page
+        .getByRole("button", { name: `About ${metric.toLowerCase()}` })
+        .click(),
+  })),
   {
     name: "Competitors in the top 10",
     path: "/apps/app-1/keywords",

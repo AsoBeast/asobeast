@@ -92,3 +92,17 @@ export function KeywordMapSkeleton() {
     </div>
   );
 }
+
+export function DiscoveredSkeleton() {
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap gap-2">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <Skeleton key={index} className="h-8 w-28" />
+        ))}
+      </div>
+      <KeywordsTableSkeleton />
+      <Skeleton className="h-4 w-96 max-w-full" />
+    </div>
+  );
+}

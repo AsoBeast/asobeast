@@ -2,6 +2,7 @@ import { type Page } from "@playwright/test";
 import { PLAN_LIMITS, UPGRADE_PATH, type AccountPlan } from "@asobeast/shared";
 import { holdRequest } from "./held-request.mts";
 import { hydrated } from "./hydrated.mts";
+import { MOCK_API_URL } from "./localizations.mts";
 import { startedSetup } from "./setup-session.mts";
 import { seedChecklist } from "./workspace-checklist.mts";
 import {
@@ -899,6 +900,37 @@ test("a translated gap analysis switches its tabs and market", async ({
 
   await expect(page).toHaveURL(/gapCountry=de/);
   await expect(section.getByRole("tab", { name: /\(1\)$/ })).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test("a translated keywords page switches to its discoveries and their states", async ({
+  page,
+}) => {
+  await page.request.post(`${MOCK_API_URL}/__reset/keyword-discoveries/app-1`);
+  const errors = collectDomErrors(page);
+  await page.goto("/apps/app-1/keywords");
+  const discovered = await hydrated(
+    page
+      .getByRole("tablist", { name: "Keyword lists" })
+      .getByRole("tab", { name: /^Discovered 9/ }),
+  );
+
+  await translateText(page);
+  await discovered.click();
+  const states = page.getByRole("tablist", {
+    name: "Discovered keyword states",
+  });
+  await states.getByRole("tab", { name: /^ranked/i }).click();
+  await states.getByRole("tab", { name: /^opportunities/i }).click();
+  await page
+    .getByRole("tablist", { name: "Keyword lists" })
+    .getByRole("tab", { name: /^tracked/i })
+    .click();
+
+  await expect(page).not.toHaveURL(/tab=/);
+  await expect(
+    page.getByRole("table", { name: /tracked keywords/i }),
+  ).toBeVisible();
   expect(errors).toEqual([]);
 });
 

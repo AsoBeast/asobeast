@@ -535,7 +535,9 @@ test.describe("zones and thresholds", () => {
 
   test("a click on an empty zone presses it", async ({ page }) => {
     const clickEmptyQuickWins = async () => {
-      const box = await page.locator(".zone-quickWins").first().boundingBox();
+      const zone = page.locator(".zone-quickWins").first();
+      await zone.scrollIntoViewIfNeeded();
+      const box = await zone.boundingBox();
       if (!box) throw new Error("no quick wins area");
       await page.mouse.click(
         box.x + box.width * 0.2,

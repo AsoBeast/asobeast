@@ -18,6 +18,7 @@ export const GRADE_SCALES = {
   coverage: { polarity: "higher-is-better", cuts: [80, 50, 25] },
   rating: { polarity: "higher-is-better", cuts: [4.5, 4, 3.5] },
   audit: { polarity: "higher-is-better", cuts: [70, 55, 40] },
+  relevance: { polarity: "higher-is-better", cuts: [80, 60, 40] },
 } as const satisfies Record<string, GradeScale>;
 
 export type GradeMetric = keyof typeof GRADE_SCALES;
