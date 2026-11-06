@@ -71,9 +71,12 @@ export function StatTile({
 
 function SkeletonLine({ step, width }: { step: string; width: string }) {
   return (
-    <span className={step}>
-      <Skeleton className={cn("inline-block h-[1em] align-middle", width)} />
-    </span>
+    <div className={step}>
+      <Skeleton
+        shape="text"
+        className={cn("inline-block align-middle", width)}
+      />
+    </div>
   );
 }
 

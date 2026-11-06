@@ -4,14 +4,16 @@ import { Slot } from "radix-ui";
 
 import { cn } from "@/lib/utils";
 
+const FLAT = "bg-secondary text-muted-foreground [a]:hover:bg-accent";
+
 const badgeVariants = cva(
   "group/badge inline-flex h-[22px] w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-md border border-transparent px-[7px] text-label whitespace-nowrap numeric transition-[color,background-color,border-color] duration-150 ease-out focus-visible:ring-2 focus-visible:ring-ring has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 aria-invalid:border-destructive [&>svg]:pointer-events-none [&>svg]:size-3!",
   {
     variants: {
       variant: {
-        default: "bg-secondary text-muted-foreground [a]:hover:bg-accent",
-        secondary: "bg-secondary text-muted-foreground [a]:hover:bg-accent",
-        flat: "bg-secondary text-muted-foreground [a]:hover:bg-accent",
+        default: FLAT,
+        secondary: FLAT,
+        flat: FLAT,
         up: "bg-signal-up-subtle text-signal-up",
         down: "bg-signal-down-subtle text-signal-down",
         destructive: "bg-signal-down-subtle text-destructive",

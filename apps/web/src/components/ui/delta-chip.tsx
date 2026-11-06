@@ -55,7 +55,17 @@ export function DeltaChip({
     return <span className="text-muted-foreground">—</span>;
   }
   if (value === 0) {
-    return <span className="numeric text-muted-foreground">0</span>;
+    return (
+      <span
+        className={cn(
+          "numeric text-muted-foreground",
+          formOf("flat", form),
+          className,
+        )}
+      >
+        0
+      </span>
+    );
   }
 
   const way = direction(value, polarity);

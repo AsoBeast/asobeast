@@ -162,7 +162,7 @@
   }
 
   ::selection {
-    background: var(--chart-tint);
+    background: color-mix(in srgb, var(--primary) 30%, transparent);
     color: var(--foreground);
   }
 }

@@ -2,9 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import Image from "next/image";
-
-export const iconRadius = (size: number) =>
-  Math.max(4, Math.round(size * 0.225));
+import { iconRadius } from "./app-icon-radius";
 
 export function AppIconImage({
   src,

@@ -1,4 +1,5 @@
-import { AppIconImage, iconRadius } from "./AppIconImage";
+import { AppIconImage } from "./AppIconImage";
+import { iconRadius } from "./app-icon-radius";
 
 function AppIconPlaceholder({ size }: { size: number }) {
   return (

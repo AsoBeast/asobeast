@@ -204,7 +204,7 @@ function ConversionChip({ value }: { value: number }) {
         ? "text-signal-down"
         : "text-muted-foreground";
   return (
-    <span className={cn("numeric normal-case", tone)}>
+    <span className={cn("numeric", tone)}>
       {`Conversion ${value > 0 ? "+" : ""}${value}%`}
     </span>
   );
