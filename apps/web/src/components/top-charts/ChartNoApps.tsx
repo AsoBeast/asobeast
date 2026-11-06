@@ -1,6 +1,5 @@
 "use client";
 
-import { Trophy } from "lucide-react";
 import type { ChartCaptureSummary, ChartPage } from "@asobeast/shared";
 import { EmptyState } from "@/components/ui/empty-state";
 import { noAppsBody } from "./chart-actions";
@@ -15,7 +14,6 @@ export function ChartNoApps({
   return (
     <EmptyState
       className={className}
-      icon={Trophy}
       title="No apps in this chart"
       body={noAppsBody(page.chart, page.capture.date)}
     />

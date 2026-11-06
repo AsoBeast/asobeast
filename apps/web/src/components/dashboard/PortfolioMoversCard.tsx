@@ -39,11 +39,7 @@ export function PortfolioMoversCard() {
     const app = apps.get(mover.appId);
     return (
       <>
-        <AppIcon
-          src={app?.iconUrl ?? null}
-          name={app?.name ?? null}
-          size={16}
-        />
+        <AppIcon src={app?.iconUrl ?? null} size={16} />
         <span className="sr-only">{app?.name ?? "Unknown app"}</span>
         <span className="text-caption text-muted-foreground">
           {mover.country.toUpperCase()}

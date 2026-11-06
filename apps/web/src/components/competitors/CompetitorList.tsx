@@ -73,7 +73,7 @@ function CompetitorCard({
   return (
     <Card ref={card} className="gap-0 p-4">
       <div className="flex items-start gap-4">
-        <AppIcon src={competitor.iconUrl} name={competitor.name} />
+        <AppIcon src={competitor.iconUrl} />
         <div className="flex min-w-0 flex-1 flex-col gap-2">
           <div className="flex min-w-0 flex-col gap-1">
             <span className="truncate font-medium">{name}</span>

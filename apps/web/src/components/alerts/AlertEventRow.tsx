@@ -38,7 +38,7 @@ function Sentence({ item }: { item: AlertEventItem }) {
   return (
     <Link
       href={href}
-      className="rounded-sm text-body font-medium text-foreground underline-offset-4 decoration-primary hover:underline"
+      className="rounded-sm text-body font-medium text-foreground underline-offset-4 decoration-faint-foreground hover:underline"
     >
       {content}
     </Link>
@@ -70,7 +70,7 @@ export function AlertEventRow({
         <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-caption text-muted-foreground">
           {item.appName === null ? null : (
             <span className="flex min-w-0 items-center gap-1.5">
-              <AppIcon src={item.iconUrl} name={item.appName} size={20} />
+              <AppIcon src={item.iconUrl} size={20} />
               <bdi className="wrap-anywhere">{item.appName}</bdi>
             </span>
           )}

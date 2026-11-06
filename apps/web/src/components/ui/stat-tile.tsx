@@ -12,7 +12,7 @@ export function StatTileGroup({
     <div
       data-slot="stat-tile-group"
       className={cn(
-        "grid grid-cols-[repeat(auto-fit,minmax(min(100%,12rem),1fr))] gap-3",
+        "grid grid-cols-[repeat(auto-fit,minmax(min(100%,12rem),1fr))] overflow-hidden rounded-lg border border-border bg-card",
         className,
       )}
     >
@@ -47,18 +47,18 @@ export function StatTile({
         ? { type: "button", onClick: onSelect, "aria-pressed": !!selected }
         : {})}
       className={cn(
-        "row-span-3 grid grid-rows-subgrid gap-1 rounded-xl border bg-card px-4 py-3",
+        "row-span-3 -mr-px -mb-px grid grid-rows-subgrid gap-1 border-r border-b border-border bg-card px-5 pt-3.5 pb-4",
         onSelect &&
-          "cursor-pointer text-left transition-colors outline-none hover:bg-muted focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 data-[selected=true]:border-primary data-[selected=true]:ring-2 data-[selected=true]:ring-primary",
+          "cursor-pointer text-left transition-colors duration-150 ease-out outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset data-[selected=true]:shadow-[inset_0_-2px_0_var(--foreground)]",
         className,
       )}
     >
-      <span className="text-label text-balance text-muted-foreground uppercase">
+      <span className="text-label text-balance text-muted-foreground">
         {label}
-        {info ? <span className="ml-1 normal-case">{info}</span> : null}
+        {info ? <span className="ml-1">{info}</span> : null}
       </span>
-      <span className="numeric self-end font-mono text-display">{value}</span>
-      <span className="text-caption text-balance text-muted-foreground">
+      <span className="numeric self-end text-metric">{value}</span>
+      <span className="text-caption text-balance text-faint-foreground">
         {note}
       </span>
     </Tile>

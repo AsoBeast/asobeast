@@ -75,7 +75,7 @@ function ListingBlock({
           No keyword field saved for {localizationName(localization)}.{" "}
           <Link
             href={editLocalizationHref(appId, localization)}
-            className="underline decoration-primary underline-offset-4"
+            className="underline decoration-faint-foreground underline-offset-4"
           >
             Edit it on the metadata page
           </Link>
@@ -106,7 +106,7 @@ export function BreakdownAppCard({
     >
       <div className="flex items-start gap-3">
         <span aria-hidden>
-          <AppIcon src={app.iconUrl} name={app.name} size={32} />
+          <AppIcon src={app.iconUrl} size={32} />
         </span>
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <h3
@@ -125,7 +125,7 @@ export function BreakdownAppCard({
           ) : null}
         </div>
         {position === null ? (
-          <span className="shrink-0 font-mono text-sm text-muted-foreground">
+          <span className="shrink-0 numeric text-body text-muted-foreground">
             {rankingLabel(app.ranking)}
           </span>
         ) : (

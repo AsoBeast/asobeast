@@ -73,7 +73,7 @@ function SuggestionRow({
         disabled={disabled}
         onCheckedChange={(checked) => onToggle(checked === true)}
       />
-      <AppIcon src={row.iconUrl} name={row.title} size={ICON_SIZE} />
+      <AppIcon src={row.iconUrl} size={ICON_SIZE} />
       <Label
         htmlFor={checkboxId}
         className="flex min-w-0 flex-1 flex-col items-start gap-0.5 font-normal"
@@ -82,7 +82,7 @@ function SuggestionRow({
         <span className="truncate text-caption text-muted-foreground">
           {row.developer ?? "Unknown developer"}
         </span>
-        <span className="numeric font-mono text-caption text-muted-foreground">
+        <span className="numeric text-caption text-muted-foreground">
           {suggestionMeta(row, store)}
         </span>
       </Label>

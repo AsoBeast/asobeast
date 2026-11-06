@@ -16,8 +16,10 @@ function Table({
   containerRef,
   scrollLabel,
   scrollFocus = "always",
+  density = "default",
   ...props
 }: React.ComponentProps<"table"> & {
+  density?: "default" | "compact";
   containerClassName?: string;
   containerRef?: React.Ref<HTMLDivElement>;
   scrollLabel?: string;
@@ -48,7 +50,8 @@ function Table({
     >
       <table
         data-slot="table"
-        className={cn("w-full caption-bottom text-sm", className)}
+        data-density={density}
+        className={cn("w-full caption-bottom text-dense", className)}
         {...props}
       />
     </div>
@@ -59,7 +62,7 @@ function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
   return (
     <thead
       data-slot="table-header"
-      className={cn("[&_tr]:border-b", className)}
+      className={cn("[&_tr]:border-b [&_tr]:border-border", className)}
       {...props}
     />
   );
@@ -80,7 +83,7 @@ function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
     <tfoot
       data-slot="table-footer"
       className={cn(
-        "border-t bg-muted/50 font-medium [&>tr]:last:border-b-0",
+        "border-t border-border bg-card font-medium [&>tr]:last:border-b-0",
         className,
       )}
       {...props}
@@ -93,7 +96,7 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
     <tr
       data-slot="table-row"
       className={cn(
-        "border-b bg-card transition-colors hover:bg-muted has-aria-expanded:bg-muted data-[state=selected]:bg-accent",
+        "border-b border-border-subtle bg-card transition-colors duration-150 ease-out hover:bg-muted has-aria-expanded:bg-muted data-[state=selected]:bg-accent data-[state=selected]:shadow-[inset_2px_0_0_var(--chart-1)]",
         className,
       )}
       {...props}
@@ -101,12 +104,20 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
   );
 }
 
-function TableHead({ className, ...props }: React.ComponentProps<"th">) {
+const NUMERIC_CELL = "text-right numeric";
+
+function TableHead({
+  className,
+  numeric = false,
+  ...props
+}: React.ComponentProps<"th"> & { numeric?: boolean }) {
   return (
     <th
       data-slot="table-head"
+      data-numeric={numeric || undefined}
       className={cn(
-        "h-9 px-2 text-left align-middle text-label font-medium whitespace-nowrap text-muted-foreground uppercase [&_button]:uppercase [&:has([role=checkbox])]:pr-0",
+        "h-9 px-4 text-left align-middle text-label whitespace-nowrap text-faint-foreground in-data-[density=compact]:h-8 in-data-[density=compact]:px-3 [&:has([role=checkbox])]:pr-0",
+        numeric && NUMERIC_CELL,
         className,
       )}
       {...props}
@@ -114,12 +125,18 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
   );
 }
 
-function TableCell({ className, ...props }: React.ComponentProps<"td">) {
+function TableCell({
+  className,
+  numeric = false,
+  ...props
+}: React.ComponentProps<"td"> & { numeric?: boolean }) {
   return (
     <td
       data-slot="table-cell"
+      data-numeric={numeric || undefined}
       className={cn(
-        "px-2 py-1.5 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0",
+        "h-11 px-4 py-1.5 align-middle whitespace-nowrap in-data-[density=compact]:h-9 in-data-[density=compact]:px-3 in-data-[density=compact]:py-1 [&:has([role=checkbox])]:pr-0",
+        numeric && NUMERIC_CELL,
         className,
       )}
       {...props}
@@ -134,7 +151,7 @@ function TableCaption({
   return (
     <caption
       data-slot="table-caption"
-      className={cn("mt-4 text-sm text-muted-foreground", className)}
+      className={cn("mt-3 text-caption text-faint-foreground", className)}
       {...props}
     />
   );

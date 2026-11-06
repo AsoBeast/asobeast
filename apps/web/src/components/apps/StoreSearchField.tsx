@@ -47,7 +47,7 @@ function ResultRow({
         onClick={() => onPick(result)}
         className="flex w-full min-w-0 items-center gap-3 rounded-md px-2 py-1.5 text-left outline-none transition-colors duration-150 hover:bg-muted/40 focus-visible:ring-3 focus-visible:ring-ring/50"
       >
-        <AppIcon src={result.iconUrl} name={result.title} size={ICON_SIZE} />
+        <AppIcon src={result.iconUrl} size={ICON_SIZE} />
         <span className="flex min-w-0 flex-col">
           <span className="truncate text-body font-medium">{result.title}</span>
           {result.developer ? (
@@ -57,7 +57,7 @@ function ResultRow({
           ) : null}
         </span>
         {rating ? (
-          <span className="numeric ml-auto shrink-0 font-mono text-caption text-muted-foreground">
+          <span className="numeric ml-auto shrink-0 text-caption text-muted-foreground">
             {rating}
           </span>
         ) : null}

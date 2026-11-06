@@ -31,7 +31,7 @@ function SheetOverlay({
     <SheetPrimitive.Overlay
       data-slot="sheet-overlay"
       className={cn(
-        "fixed inset-0 z-50 bg-black/10 duration-150 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+        "fixed inset-0 z-50 bg-black/25 duration-200 dark:bg-black/60 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
         className,
       )}
       {...props}
@@ -70,7 +70,7 @@ function SheetContent({
       <SheetPrimitive.Content
         data-slot="sheet-content"
         className={cn(
-          "fixed z-50 flex flex-col gap-4 overflow-y-auto overscroll-contain border-border bg-popover p-4 text-sm text-popover-foreground shadow-overlay duration-150 outline-none data-open:animate-in data-closed:animate-out",
+          "fixed z-50 flex flex-col gap-4 overflow-y-auto overscroll-contain border-border bg-popover p-4 text-body text-popover-foreground shadow-overlay duration-200 outline-none data-open:animate-in data-closed:animate-out",
           SHEET_SIDES[side],
           className,
         )}
@@ -129,7 +129,7 @@ function SheetDescription({
   return (
     <SheetPrimitive.Description
       data-slot="sheet-description"
-      className={cn("text-sm text-muted-foreground", className)}
+      className={cn("text-dense text-muted-foreground", className)}
       {...props}
     />
   );

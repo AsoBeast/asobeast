@@ -68,7 +68,7 @@ export function ChartColumn({
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="flex flex-col gap-0.5">
-          <h2 id={headingId} className="text-title">
+          <h2 id={headingId} className="text-heading">
             {label}
           </h2>
           <p className="text-caption text-muted-foreground">
@@ -79,7 +79,7 @@ export function ChartColumn({
           {page.capture ? capture : null}
           <Link
             href={tableHref(chart, search)}
-            className="text-sm underline decoration-primary underline-offset-4"
+            className="text-sm underline decoration-faint-foreground underline-offset-4"
           >
             Open table<span className="sr-only">{` of ${label}`}</span>
           </Link>
@@ -92,10 +92,10 @@ export function ChartColumn({
               key={entry.storeAppId}
               className="flex items-center gap-2 py-2 first:pt-0 last:pb-0"
             >
-              <span className="numeric w-6 shrink-0 text-right font-mono">
+              <span className="numeric w-6 shrink-0 text-right">
                 {entry.position}
               </span>
-              <AppIcon src={entry.iconUrl} name={entry.title} size={28} />
+              <AppIcon src={entry.iconUrl} size={28} />
               <div className="flex min-w-20 flex-1 flex-col">
                 <span className="truncate font-medium" translate="no">
                   {entry.title}

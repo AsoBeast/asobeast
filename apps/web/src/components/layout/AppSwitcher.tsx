@@ -55,7 +55,7 @@ function TriggerLabel({
   return (
     <>
       {current ? (
-        <AppIcon src={current.iconUrl} name={current.name} size={24} />
+        <AppIcon src={current.iconUrl} size={24} />
       ) : (
         <span
           aria-hidden
@@ -151,7 +151,7 @@ export function AppSwitcher() {
                       value={`${appLabel(app)} ${appMarket(app)}`}
                       onSelect={() => select(app.id)}
                     >
-                      <AppIcon src={app.iconUrl} name={app.name} size={20} />
+                      <AppIcon src={app.iconUrl} size={20} />
                       <span className="truncate">{appLabel(app)}</span>
                       <Badge variant="secondary" className="ml-auto">
                         {storeLabel(app.store)}

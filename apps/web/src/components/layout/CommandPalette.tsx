@@ -139,7 +139,7 @@ export function CommandPalette() {
                       )
                     }
                   >
-                    <AppIcon src={item.iconUrl} name={item.name} size={20} />
+                    <AppIcon src={item.iconUrl} size={20} />
                     <span className="truncate">
                       {item.name ?? "Untitled app"}
                     </span>

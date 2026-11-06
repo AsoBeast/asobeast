@@ -1,7 +1,6 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Trophy } from "lucide-react";
 import type { ReactNode } from "react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatDate } from "@/lib/format";
@@ -23,7 +22,6 @@ export function ChartEmpty({
   return (
     <EmptyState
       className={className}
-      icon={Trophy}
       title={
         captured
           ? `No capture of this chart on ${formatDate(date)}`

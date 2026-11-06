@@ -91,7 +91,7 @@ export function PositionCell({
     return (
       <span
         title="Not ranking"
-        className={cn(pill, "numeric font-mono text-muted-foreground")}
+        className={cn(pill, "numeric text-muted-foreground")}
       >
         <span aria-hidden>{formatRankPosition(value)}</span>
         <span className="sr-only">Not ranking</span>
@@ -155,7 +155,7 @@ function KeywordCell({
           onClick={(event) =>
             onOpenBreakdown(row.keywordId, event.currentTarget)
           }
-          className="max-w-32 truncate rounded-sm text-left font-medium underline decoration-muted-foreground decoration-dotted underline-offset-4 hover:decoration-primary md:max-w-64"
+          className="max-w-32 truncate rounded-sm text-left font-medium underline decoration-muted-foreground decoration-dotted underline-offset-4 hover:decoration-foreground md:max-w-64"
         >
           {row.text}
         </button>
@@ -185,7 +185,7 @@ function KeywordCell({
 function MarketCell({ country }: { country: string }) {
   const name = formatCountry(country);
   return (
-    <span title={name} className="font-mono text-xs text-muted-foreground">
+    <span title={name} className="text-label text-faint-foreground">
       <span aria-hidden>{country.toUpperCase()}</span>
       <span className="sr-only">{name}</span>
     </span>
@@ -196,7 +196,7 @@ function CompetitorHeading({ competitor }: { competitor: MatrixCompetitor }) {
   return (
     <span className="flex flex-col items-center gap-1 md:w-24">
       <span aria-hidden>
-        <AppIcon src={competitor.iconUrl} name={competitor.name} size={20} />
+        <AppIcon src={competitor.iconUrl} size={20} />
       </span>
       <span className="sr-only md:not-sr-only">
         <span className="line-clamp-2 text-center break-words whitespace-normal">

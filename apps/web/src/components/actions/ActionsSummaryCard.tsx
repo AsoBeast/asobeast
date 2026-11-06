@@ -117,7 +117,7 @@ function ActionScopeLine({
   const { appName, store, country } = item.scope;
   return (
     <span className="flex min-w-0 items-center gap-2 text-caption text-muted-foreground">
-      <AppIcon src={iconUrl} name={appName} size={16} />
+      <AppIcon src={iconUrl} size={16} />
       <span className="truncate">
         {appName ?? "Unknown app"} · {storeLabel(store)} ·{" "}
         {country.toUpperCase()}
