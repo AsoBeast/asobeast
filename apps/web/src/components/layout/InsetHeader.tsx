@@ -11,7 +11,7 @@ export function InsetHeader() {
   return (
     <header className="sticky top-0 z-30 flex h-[52px] shrink-0 items-center gap-2 page-gutter border-b border-border bg-card [--gutter:0.75rem] sm:[--gutter:1rem] print:hidden">
       <SidebarTrigger />
-      <Separator orientation="vertical" className="!h-4" />
+      <Separator orientation="vertical" className="!h-4 !self-center" />
       <Breadcrumbs />
       <div className="flex shrink-0 items-center gap-1">
         <PageActions />

@@ -217,3 +217,22 @@ test("the shell declares its colour scheme and safe-area gutters", async ({
     .evaluate((node) => getComputedStyle(node).paddingLeft);
   expect(Number.parseFloat(gutter)).toBeGreaterThanOrEqual(16);
 });
+
+test("the header separator sits centred beside the breadcrumb", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+
+  const header = page.getByRole("banner");
+  const separator = header.locator('[data-slot="separator"]').first();
+  const [bar, line] = await Promise.all([
+    header.boundingBox(),
+    separator.boundingBox(),
+  ]);
+  const barMiddle = bar!.y + bar!.height / 2;
+  const lineMiddle = line!.y + line!.height / 2;
+
+  expect(line!.height).toBeGreaterThan(0);
+  expect(Math.abs(lineMiddle - barMiddle)).toBeLessThanOrEqual(1);
+});
