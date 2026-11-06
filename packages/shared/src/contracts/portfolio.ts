@@ -4,6 +4,7 @@ import type {
   RankDistribution,
 } from './analytics';
 import type { Store } from '../index';
+import type { KeywordDiscoveryCount } from './keyword-discoveries';
 import type { AppSetupSummary } from './setup';
 
 export interface PortfolioApp {
@@ -22,6 +23,7 @@ export interface PortfolioApp {
   lastCapturedAt: string | null;
   setup?: AppSetupSummary;
   delistedAt?: string | null;
+  discoveries?: KeywordDiscoveryCount;
 }
 
 export interface PortfolioGroup {

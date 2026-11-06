@@ -13,7 +13,7 @@ test("the route lists cover every page in the app directory", () => {
     ...SIGNED_OUT_ROUTES,
     ...DEV_ONLY_ROUTES,
     ...ENTRY_STEP_ROUTES,
-  ].map(([, path]) => path);
+  ].map(([, path]) => new URL(path, "http://localhost").pathname);
 
-  expect(pageRoutes().sort()).toEqual([...listed].sort());
+  expect(pageRoutes().sort()).toEqual([...new Set(listed)].sort());
 });

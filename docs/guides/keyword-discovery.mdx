@@ -60,6 +60,37 @@ Dismiss is permanent for the phrase. If you stop tracking a phrase that came fro
 
 **Auto track ranked** tracks every ranked discovery that fits at once, and every later search that finds the app tracks its phrase too. Switching it off leaves tracked keywords alone.
 
+## The Discovered tab
+
+The keywords page has two tabs, **Tracked** and **Discovered**, each with its count. A dot on **Discovered** says there are discoveries to review. The tab lists the discoveries of the market the market chips select, and the chips are the same as on the tracked table. The tab and its sub tab are kept in the page address (`?tab=discovered&state=ranked`), so a link opens the same view.
+
+| Sub tab | Shows |
+| --- | --- |
+| All | Every open discovery of the market |
+| Ranked | Discoveries the app has a position for |
+| Opportunities | Discoveries that are not ranked yet and are worth tracking, as [States](#states) explains |
+
+| Column | What it shows |
+| --- | --- |
+| Keyword | The phrase, with a **Recommended** badge on the first 50 of the list |
+| Source | Your title, Your subtitle, Your description (Your short description on Google Play), Competitors, Reviews, Apple popularity or Your other apps |
+| Rank | The position, `>50` or `>200` when checked and not found within that depth, a dash when not checked yet |
+| Popularity, Difficulty | The scores some tracker already produced, a dash when there is none |
+| Relevance | How close the phrase is to your listing |
+| Opportunity | Popularity weighed against difficulty, a dash until both exist |
+
+The list keeps the order the API answers, relevance first and then popularity, and shows 50 rows at a time with **Show 50 more** below. The line under the table says when the list was last checked, how many searches the week allows and how many were used, and the day of the next weekly run. While searches are still queued it counts them and the list updates by itself. When auto track is on and some ranked discoveries did not fit the plan, it says how many.
+
+## Track, dismiss and refresh
+
+Each row has **Track** and **Dismiss**. Tick rows to use **Track selected**, or use **Track recommended** for the rows with the badge and **Track all ranked** for every ranked discovery of the market; each button names how many it tracks. Nothing asks for confirmation, because a tracked keyword returns to the list when you stop tracking it. A message says how many keywords are now tracked and how many did not fit your plan.
+
+The **Auto-track ranked** switch is the setting [Track, dismiss and auto track](#track-dismiss-and-auto-track) describes. **Refresh** rebuilds the list and queues the searches left this week. It spends one deep search of the on demand allowance only when it queues at least one search, and a refresh that finds nothing left to search says so and spends nothing.
+
+## First results after an import
+
+An import builds the first list from the listing it just captured and queues its searches right away, without spending an on demand allowance. The keywords step of the guided setup then shows **Your first results are ready** with the five best discoveries and their rank, and a link to the Discovered tab, or says the first results are still being collected. The portfolio card of the app and the tracked keywords tile of its overview name how many discoveries the app has and how many it already ranks for, for the market the overview shows.
+
 ## Through the API and MCP
 
 | Route | What it does |
@@ -82,6 +113,7 @@ A read scoped token can list, a write scoped token can also change. Agents read 
   <Accordion title="Nothing is listed">
     The listing of the app may not be captured yet, the store may no longer list the app, or none of the sources holds a phrase. A delisted app keeps its list but gets no searches, and neither does a market where the app is not sold or where you no longer track any keyword.
   </Accordion>
+
   <Accordion title="The last check date never moves">
     The weekly cap may be used, the workspace may be paused (suspended, or without a plan in force on a hosted instance), or `CRON_DISCOVERY` may be empty.
   </Accordion>

@@ -3,6 +3,7 @@ import {
   ACTION_PRIORITIES,
   ACTION_RULES,
   ACTION_STATUSES,
+  DISCOVERY_STATES,
   KEYWORD_BUCKETS,
   KEYWORD_SORTS,
   KEYWORD_SOURCES,
@@ -68,7 +69,10 @@ import {
   countryParser,
   matrixFilterParsers,
   discoveryDaysParser,
+  discoveryStateParser,
   KEYWORD_STATUSES,
+  KEYWORDS_TABS,
+  keywordsTabParser,
   COVERAGE_SORTS,
   coverageSortParser,
   DISCOVERY_SORTS,
@@ -136,6 +140,8 @@ const LITERAL_PARSERS: readonly LiteralParserCase[] = [
   ["appView", appViewParser, APP_VIEWS, "cards"],
   ["chartView", chartViewParser, CHART_VIEWS, "columns"],
   ["keywordView", keywordViewParser, KEYWORD_VIEWS, "table"],
+  ["keywordsTab", keywordsTabParser, KEYWORDS_TABS, "tracked"],
+  ["discoveryState", discoveryStateParser, DISCOVERY_STATES, "all"],
 ] as const;
 
 const NUMERIC_PARSERS = [

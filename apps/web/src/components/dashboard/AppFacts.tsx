@@ -4,6 +4,7 @@ import type { PortfolioApp, PortfolioAppInsight } from "@asobeast/shared";
 import { GradedNumber } from "@/components/ui/graded";
 import { formatCompact, formatRating, pluralize } from "@/lib/format";
 import { grade } from "@/lib/grade";
+import { discoveriesHref, discoveriesLine } from "@/lib/keyword-discoveries";
 
 const FACT_LINK =
   "relative z-20 inline-flex min-h-6 items-center underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none";
@@ -65,6 +66,17 @@ function ActionsFact({
   );
 }
 
+function DiscoveriesFact({ app }: { app: PortfolioApp }) {
+  const line = discoveriesLine(app.discoveries);
+  if (line === null) return null;
+  return (
+    <Link href={discoveriesHref(app.id)} className={FACT_LINK}>
+      {line}
+      <ForApp app={app} />
+    </Link>
+  );
+}
+
 function ReviewsFact({ app, count }: { app: PortfolioApp; count: number }) {
   if (count === 0) return null;
   return (
@@ -92,6 +104,7 @@ export function AppFacts({
       <RatingFact rating={insight.rating} />
       {compact ? null : <AuditFact audit={insight.audit} />}
       <ActionsFact app={app} actions={insight.actions} />
+      <DiscoveriesFact app={app} />
       {compact ? null : (
         <ReviewsFact app={app} count={insight.negativeReviews7d} />
       )}

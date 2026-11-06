@@ -15,6 +15,7 @@ import {
   CHART_COMPARE_WINDOWS,
   CHART_DEVICES,
   COUNTRY_PATTERN,
+  DISCOVERY_STATES,
   OVERALL_GENRE,
   PAID_PLAN_NAMES,
   REVIEW_REPLY_STATES,
@@ -349,6 +350,14 @@ export const onlyGapsParser = parseAsBoolean.withDefault(false);
 export const suggestionStrategyParser = parseAsStringLiteral(
   KEYWORD_SUGGESTION_STRATEGIES,
 ).withDefault("metadata");
+
+export const KEYWORDS_TABS = ["tracked", "discovered"] as const;
+export type KeywordsTab = (typeof KEYWORDS_TABS)[number];
+export const keywordsTabParser =
+  parseAsStringLiteral(KEYWORDS_TABS).withDefault("tracked");
+
+export const discoveryStateParser =
+  parseAsStringLiteral(DISCOVERY_STATES).withDefault("all");
 
 export const serpParser = parseAsString.withDefault("");
 

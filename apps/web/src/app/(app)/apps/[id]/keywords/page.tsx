@@ -5,6 +5,7 @@ import { getQueryClient } from "@/lib/get-query-client";
 import {
   appDetailOptions,
   keywordCountriesOptions,
+  keywordDiscoveriesOptions,
   keywordFieldOptions,
   keywordsOptions,
   marketKeywordFieldsOptions,
@@ -13,6 +14,7 @@ import {
   combinationParsers,
   COMBINATION_URL_KEYS,
   countryParser,
+  keywordsTabParser,
 } from "@/lib/search-params";
 
 export default async function KeywordsPage({
@@ -23,6 +25,7 @@ export default async function KeywordsPage({
   searchParams: Promise<{
     country?: string | string[];
     combos?: string | string[];
+    tab?: string | string[];
   }>;
 }) {
   const { id } = await params;
@@ -32,6 +35,9 @@ export default async function KeywordsPage({
   const app = await queryClient.fetchQuery(appDetailOptions(id));
   const market = countryParser.parseServerSide(sp.country) || app.country;
   const isAppStore = app.store === "APP_STORE";
+  const discoveries = !app.isCompetitor;
+  const discovered =
+    discoveries && keywordsTabParser.parseServerSide(sp.tab) === "discovered";
   const combinationsOpen = combinationParsers.open.parseServerSide(
     sp[COMBINATION_URL_KEYS.open],
   );
@@ -41,6 +47,9 @@ export default async function KeywordsPage({
     queryClient.prefetchQuery(keywordsOptions(id, market)),
     isAppStore && combinationsOpen
       ? queryClient.prefetchQuery(keywordFieldOptions(id))
+      : null,
+    discovered
+      ? queryClient.prefetchQuery(keywordDiscoveriesOptions(id, market))
       : null,
   ]);
   const keywordFields = ownsKeywordFields(app);
@@ -56,6 +65,7 @@ export default async function KeywordsPage({
           homeCountry={app.country}
           store={app.store}
           keywordFields={keywordFields}
+          discoveries={discoveries}
         />
       </div>
     </HydrationBoundary>

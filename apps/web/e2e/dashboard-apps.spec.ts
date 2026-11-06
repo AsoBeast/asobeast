@@ -78,6 +78,35 @@ test("a storefront member shows its rating and open actions", async ({
   ).toHaveCount(0);
 });
 
+test("an app card links its keyword discoveries", async ({ page }) => {
+  await page.goto("/");
+
+  const member = appsRegion(page)
+    .locator('[data-slot="card"]')
+    .filter({ hasText: "Storefronts" })
+    .getByRole("listitem")
+    .filter({ has: page.getByText("US", { exact: true }) });
+  const discoveries = member.getByRole("link", {
+    name: /^11 keyword discoveries, 4 where you already rank for Focus Timer/,
+  });
+  await expect(discoveries).toHaveAttribute(
+    "href",
+    "/apps/app-1/keywords?tab=discovered",
+  );
+  await expect(
+    card(page, "Habit Tracker").getByRole("link", {
+      name: /keyword discover/,
+    }),
+  ).toHaveCount(0);
+
+  await (await hydrated(discoveries)).click();
+
+  await expect(page).toHaveURL(/\/apps\/app-1\/keywords\?tab=discovered$/);
+  await expect(
+    page.getByRole("heading", { name: "Discovered keywords" }),
+  ).toBeVisible();
+});
+
 test("a sparse app card leaves out what it does not have", async ({ page }) => {
   await page.goto("/");
 

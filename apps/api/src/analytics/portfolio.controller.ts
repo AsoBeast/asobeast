@@ -13,7 +13,11 @@ export class PortfolioController {
   ) {}
 
   @Get()
-  @ApiOperation({ summary: 'Portfolio dashboard summary for the workspace' })
+  @ApiOperation({
+    summary: 'Portfolio dashboard summary for the workspace',
+    description:
+      'Every primary app of the workspace with its visibility, sparkline and counts, the groups and the totals. discoveries counts the keywords each app could rank for that it does not track, and how many of them it already ranks for; see keyword discovery.',
+  })
   getPortfolio(): Promise<PortfolioSummary> {
     return this.portfolio.portfolio();
   }

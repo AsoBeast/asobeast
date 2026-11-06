@@ -22,6 +22,7 @@ export const SIGNED_IN_ROUTES = [
   ["admin-apps", "/admin/apps"],
   ["app-overview", `/apps/${APP}`],
   ["app-keywords", `/apps/${APP}/keywords`],
+  ["app-keywords-discovered", `/apps/${APP}/keywords?tab=discovered`],
   ["app-rankings", `/apps/${APP}/rankings`],
   ["app-competitors", `/apps/${APP}/competitors`],
   ["app-audit", `/apps/${APP}/audit`],

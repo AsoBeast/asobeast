@@ -722,6 +722,8 @@ export const SERP_SNAPSHOTS: Record<string, SerpSnapshot> = {
   },
 };
 
+export const APP_1_DISCOVERY_COUNT = { open: 11, ranked: 4 } as const;
+
 export const APP_1_SUMMARY: AppSummary = {
   visibility: { current: 62.4, delta7d: 5, delta30d: -3 },
   rankDistribution: {
@@ -767,6 +769,7 @@ export const APP_1_SUMMARY: AppSummary = {
   competitors: 1,
   shareOfVoice: { current: 42, delta7d: 3.5, competitors: 1 },
   nonBrandedShareOfVoice: { current: 51.3, delta7d: -1.2, competitors: 1 },
+  discoveries: APP_1_DISCOVERY_COUNT,
 };
 
 const NOT_CHECKED_SHARE = {
@@ -781,6 +784,7 @@ export const APP_1_MARKET_SUMMARIES: Record<string, AppSummary> = {
     ...APP_1_SUMMARY,
     visibility: { current: 71.2, delta7d: 4, delta30d: -1 },
     trackedKeywords: 3,
+    discoveries: { open: 9, ranked: 3 },
   },
   pl: {
     ...APP_1_SUMMARY,
@@ -797,6 +801,7 @@ export const APP_1_MARKET_SUMMARIES: Record<string, AppSummary> = {
     trackedKeywords: 2,
     shareOfVoice: NOT_CHECKED_SHARE,
     nonBrandedShareOfVoice: undefined,
+    discoveries: { open: 2, ranked: 1 },
   },
   de: {
     ...APP_1_SUMMARY,
@@ -804,6 +809,7 @@ export const APP_1_MARKET_SUMMARIES: Record<string, AppSummary> = {
     trackedKeywords: 1,
     shareOfVoice: NOT_CHECKED_SHARE,
     nonBrandedShareOfVoice: undefined,
+    discoveries: { open: 0, ranked: 0 },
   },
 };
 
@@ -3943,6 +3949,7 @@ export const PORTFOLIO: PortfolioSummary = {
       trackedKeywords: 5,
       competitors: 1,
       lastCapturedAt: utcTimestampDaysAgo(0),
+      discoveries: APP_1_DISCOVERY_COUNT,
     },
     {
       id: "app-2",
@@ -3958,6 +3965,7 @@ export const PORTFOLIO: PortfolioSummary = {
       trackedKeywords: 0,
       competitors: 0,
       lastCapturedAt: utcTimestampDaysAgo(1),
+      discoveries: { open: 0, ranked: 0 },
     },
     {
       id: "app-1-de",
@@ -4059,6 +4067,7 @@ export const BUDGET: DailyBudget = {
       total: 21,
       capacityPerDay: 21600,
       utilization: 0.001,
+      discovery: { checksPerWeek: 40, requestsPerWeek: 40 },
     },
     {
       store: "GOOGLE_PLAY",
@@ -4070,8 +4079,10 @@ export const BUDGET: DailyBudget = {
       total: 0,
       capacityPerDay: 14400,
       utilization: 0,
+      discovery: { checksPerWeek: 0, requestsPerWeek: 0 },
     },
   ],
+  discovery: { checksPerWeek: 40, requestsPerWeek: 40 },
   quota: {
     plan: "indie",
     apps: { used: 3, limit: 5 },
@@ -4092,6 +4103,12 @@ export const HOT_BUDGET: DailyBudget = {
 };
 
 export const MARKET_BUDGET: DailyBudget = { ...BUDGET, marketListings: 3 };
+
+export const UNDISCOVERED_BUDGET: DailyBudget = {
+  ...BUDGET,
+  discovery: undefined,
+  stores: BUDGET.stores.map((store) => ({ ...store, discovery: undefined })),
+};
 
 export const LAPSED_BUDGET: DailyBudget = {
   ...BUDGET,

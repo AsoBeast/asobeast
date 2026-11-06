@@ -20,6 +20,7 @@ export async function expectHydratesCleanly(
 ): Promise<void> {
   const errors = await settled(page, path);
 
-  expect(new URL(page.url()).pathname, `${name} redirected away`).toBe(path);
+  const { pathname, search } = new URL(page.url());
+  expect(`${pathname}${search}`, `${name} redirected away`).toBe(path);
   expect(errors, `${name} (${path}) threw: ${errors.join(", ")}`).toEqual([]);
 }

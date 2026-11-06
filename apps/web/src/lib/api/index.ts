@@ -3,6 +3,7 @@ export * from "./ai";
 export * from "./error-digest";
 export * from "./apps";
 export * from "./keywords";
+export * from "./keyword-discoveries";
 export * from "./localizations";
 export * from "./setup";
 export * from "./workspace-checklist";

@@ -79,6 +79,7 @@ import {
   getAppLocalizations,
   getKeywordField,
   getKeywords,
+  getKeywordDiscoveries,
   getMarketKeywordFields,
   getListingMarkets,
   getMarketAvailability,
@@ -120,6 +121,7 @@ import {
 import { withReviewReply, withReviewRow } from "./review-reply-cache";
 import { runProgressInterval } from "./run-progress";
 import { keywordsPollInterval } from "./keyword-checks";
+import { keywordDiscoveriesPollInterval } from "./keyword-discoveries";
 import { firstImportPollInterval } from "./app-localizations";
 import {
   hasPendingScreenshots,
@@ -146,6 +148,10 @@ export const appKeys = {
     [...appKeys.detail(id), "keywords", { country }] as const,
   keywordCountries: (id: string) =>
     [...appKeys.detail(id), "keyword-countries"] as const,
+  keywordDiscoveriesRoot: (id: string) =>
+    [...appKeys.detail(id), "keyword-discoveries"] as const,
+  keywordDiscoveries: (id: string, country?: string) =>
+    [...appKeys.keywordDiscoveriesRoot(id), { country }] as const,
   importPreviewRoot: (id: string) =>
     [...appKeys.detail(id), "keyword-import-preview"] as const,
   importPreview: (id: string, request: KeywordImportRequest | null) =>
@@ -677,6 +683,17 @@ export const keywordsOptions = (id: string, country?: string) =>
       keywordsPollInterval(query.state.data, query.state.dataUpdateCount),
   });
 
+export const keywordDiscoveriesOptions = (id: string, country?: string) =>
+  queryOptions({
+    queryKey: appKeys.keywordDiscoveries(id, country),
+    queryFn: () => getKeywordDiscoveries(id, country),
+    refetchInterval: (query) =>
+      keywordDiscoveriesPollInterval(
+        query.state.data,
+        query.state.dataUpdateCount,
+      ),
+  });
+
 export const keywordCountriesOptions = (id: string) =>
   queryOptions({
     queryKey: appKeys.keywordCountries(id),
@@ -1120,7 +1137,21 @@ export function invalidateKeywordMutation(
   });
   void client.invalidateQueries({ queryKey: appKeys.marketSuggestions(id) });
   void client.invalidateQueries({ queryKey: appKeys.firstRun(id) });
+  void client.invalidateQueries({
+    queryKey: appKeys.keywordDiscoveriesRoot(id),
+  });
   invalidateWorkspaceChecklist(client);
+}
+
+export function invalidateKeywordDiscoveries(
+  client: QueryClient,
+  id: string,
+): void {
+  void client.invalidateQueries({
+    queryKey: appKeys.keywordDiscoveriesRoot(id),
+  });
+  void client.invalidateQueries({ queryKey: appKeys.summary(id) });
+  void client.invalidateQueries({ queryKey: portfolioKey });
 }
 
 export function invalidateMarketSeed(

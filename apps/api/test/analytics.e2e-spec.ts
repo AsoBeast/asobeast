@@ -863,6 +863,96 @@ describe('AnalyticsController (e2e)', () => {
     });
   });
 
+  describe('keyword discoveries', () => {
+    const discover = async (
+      appId: string,
+      rows: Array<{
+        text: string;
+        country: string;
+        position?: number | null;
+        dismissed?: boolean;
+      }>,
+    ): Promise<void> => {
+      for (const { text, country, position = null, dismissed } of rows) {
+        const keyword = await prisma.keyword.upsert({
+          where: {
+            text_store_country: { text, store: Store.APP_STORE, country },
+          },
+          update: {},
+          create: { text, store: Store.APP_STORE, country },
+        });
+        await prisma.keywordDiscovery.create({
+          data: {
+            appId,
+            workspaceId: DEFAULT_WORKSPACE_ID,
+            keywordId: keyword.id,
+            source: 'title',
+            relevance: 80,
+            position,
+            depth: position === null ? null : 200,
+            checkedOn: position === null ? null : D0,
+            seenAt: D0,
+            dismissedAt: dismissed ? D0 : null,
+          },
+        });
+      }
+    };
+
+    it('counts the open discoveries and the ranked ones on the summary', async () => {
+      const id = await seed();
+      await discover(id, [
+        { text: 'focus timer', country: 'us', position: 4 },
+        { text: 'study planner', country: 'us' },
+        {
+          text: 'dismissed phrase',
+          country: 'us',
+          position: 2,
+          dismissed: true,
+        },
+        { text: 'habit tracker', country: 'us', position: 11 },
+        { text: 'fokus timer', country: 'de', position: 9 },
+      ]);
+
+      expect(
+        (await api.get(`/apps/${id}/summary`).expect(200)).body,
+      ).toMatchObject({
+        discoveries: { open: 3, ranked: 2 },
+      });
+      expect(
+        (
+          await api
+            .get(`/apps/${id}/summary`)
+            .query({ country: 'de' })
+            .expect(200)
+        ).body,
+      ).toMatchObject({ discoveries: { open: 1, ranked: 1 } });
+    });
+
+    it('answers zero discoveries for an app without any', async () => {
+      const id = await seed();
+
+      expect(
+        ((await api.get(`/apps/${id}/summary`).expect(200)).body as AppSummary)
+          .discoveries,
+      ).toEqual({ open: 0, ranked: 0 });
+    });
+
+    it('counts the discoveries of every app on the portfolio', async () => {
+      const id = await seed();
+      await discover(id, [
+        { text: 'focus timer', country: 'us', position: 4 },
+        { text: 'fokus timer', country: 'de' },
+      ]);
+
+      const portfolio = (await api.get('/portfolio').expect(200))
+        .body as PortfolioSummary;
+
+      expect(
+        portfolio.apps.find((entry) => entry.id === id)?.discoveries,
+      ).toEqual({ open: 2, ranked: 1 });
+    });
+  });
+
   it('summarises the setup from its row and the live home counts', async () => {
     const id = await seed();
     const updatedAt = new Date('2026-10-14T09:00:00.000Z');

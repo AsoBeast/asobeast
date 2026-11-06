@@ -21,7 +21,7 @@ export class AnalyticsController {
   @ApiOperation({
     summary: 'Dashboard summary for an app',
     description:
-      'Visibility, rank distribution, movers, coverage and counts of the app, for every market or one, with shareOfVoice: the visibility of the app as a percentage of the summed visibility of the app and the tracked competitors checked on the same day, over the same keywords, and the 7 day change; the reason is named when there is none.',
+      'Visibility, rank distribution, movers, coverage and counts of the app, for every market or one, with shareOfVoice: the visibility of the app as a percentage of the summed visibility of the app and the tracked competitors checked on the same day, over the same keywords, and the 7 day change; the reason is named when there is none. discoveries counts the keywords the app could rank for that it does not track, and how many of them it already ranks for; see keyword discovery.',
   })
   getSummary(
     @Param('id') id: string,

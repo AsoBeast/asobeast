@@ -339,9 +339,8 @@ test.describe("while the api is slow", () => {
       await page.goto(path);
       await page.waitForLoadState("networkidle");
 
-      expect(new URL(page.url()).pathname, `${name} redirected away`).toBe(
-        path,
-      );
+      const { pathname, search } = new URL(page.url());
+      expect(`${pathname}${search}`, `${name} redirected away`).toBe(path);
       expect(errors, `${name} (${path}) threw: ${errors.join(", ")}`).toEqual(
         [],
       );

@@ -4,6 +4,7 @@ import { ActionRunModule } from '../actions/action-run.module';
 import { AlertsModule } from '../alerts/alerts.module';
 import { ChangesModule } from '../changes/changes.module';
 import { FLOW_PRODUCERS, QUEUES } from '../jobs/jobs.types';
+import { KeywordDiscoveryModule } from '../keyword-discovery/keyword-discovery.module';
 import { KeywordsModule } from '../keywords/keywords.module';
 import { ScreenshotsModule } from '../screenshots/screenshots.module';
 import { StoreConnectModule } from '../store-connect/store-connect.module';
@@ -37,6 +38,7 @@ import { SubtitleBackfill } from './subtitle-backfill.service';
     StoreProvidersModule,
     StoreConnectModule,
     KeywordsModule,
+    KeywordDiscoveryModule,
     ChangesModule,
     ScreenshotsModule,
     BullModule.registerQueue(

@@ -73,6 +73,7 @@ import {
   invalidateKeywordImport,
   invalidateKeywordFieldMutation,
   invalidateLocalizationMutation,
+  invalidateKeywordDiscoveries,
   invalidateKeywordMutation,
   invalidateMarketSeed,
   invalidateKeywords,
@@ -89,6 +90,7 @@ import {
   keywordFieldOptions,
   appLocalizationsOptions,
   marketKeywordFieldsOptions,
+  keywordDiscoveriesOptions,
   keywordsOptions,
   appListingOptions,
   listingMarketsOptions,
@@ -145,6 +147,11 @@ const APP_SCOPED_OPTIONS = [
   ["summary", appSummaryOptions(APP), appKeys.summary(APP)],
   ["market summary", appSummaryOptions(APP, "de"), appKeys.summary(APP, "de")],
   ["keywords", keywordsOptions(APP, "us"), appKeys.keywords(APP, "us")],
+  [
+    "keywordDiscoveries",
+    keywordDiscoveriesOptions(APP, "us"),
+    appKeys.keywordDiscoveries(APP, "us"),
+  ],
   [
     "keywordCountries",
     keywordCountriesOptions(APP),
@@ -823,7 +830,27 @@ describe("invalidation sets", () => {
       appKeys.marketKeywordFieldsRoot(APP),
       appKeys.marketSuggestions(APP),
       appKeys.firstRun(APP),
+      appKeys.keywordDiscoveriesRoot(APP),
       workspaceChecklistKey,
+    ]);
+  });
+
+  it("keys the keyword discoveries per market under the app and their root", () => {
+    const key = keywordDiscoveriesOptions(APP, "us").queryKey;
+
+    expect(isPrefixOf(appKeys.detail(APP), key)).toBe(true);
+    expect(isPrefixOf(appKeys.keywordDiscoveriesRoot(APP), key)).toBe(true);
+    expect(isPrefixOf(appKeys.keywordsRoot(APP), key)).toBe(false);
+    expect(key).not.toEqual(keywordDiscoveriesOptions(APP, "de").queryKey);
+  });
+
+  it("invalidates the discoveries and their counts after a dismiss or a refresh", () => {
+    expect(
+      invalidatedKeys((client) => invalidateKeywordDiscoveries(client, APP)),
+    ).toEqual([
+      appKeys.keywordDiscoveriesRoot(APP),
+      appKeys.summary(APP),
+      portfolioKey,
     ]);
   });
 
@@ -844,6 +871,7 @@ describe("invalidation sets", () => {
       appKeys.marketKeywordFieldsRoot(APP),
       appKeys.marketSuggestions(APP),
       appKeys.firstRun(APP),
+      appKeys.keywordDiscoveriesRoot(APP),
       workspaceChecklistKey,
       appKeys.listingMarkets(APP),
       budgetKey,
@@ -865,6 +893,7 @@ describe("invalidation sets", () => {
       appKeys.marketKeywordFieldsRoot(APP),
       appKeys.marketSuggestions(APP),
       appKeys.firstRun(APP),
+      appKeys.keywordDiscoveriesRoot(APP),
       workspaceChecklistKey,
       appKeys.metadataAuditRoot(APP),
     ]);
@@ -885,6 +914,7 @@ describe("invalidation sets", () => {
       appKeys.marketKeywordFieldsRoot(APP),
       appKeys.marketSuggestions(APP),
       appKeys.firstRun(APP),
+      appKeys.keywordDiscoveriesRoot(APP),
       workspaceChecklistKey,
       appKeys.metadataAuditRoot(APP),
       accountPlanKey,
@@ -906,6 +936,7 @@ describe("invalidation sets", () => {
       appKeys.marketKeywordFieldsRoot(APP),
       appKeys.marketSuggestions(APP),
       appKeys.firstRun(APP),
+      appKeys.keywordDiscoveriesRoot(APP),
       workspaceChecklistKey,
       appKeys.importPreviewRoot(APP),
     ]);

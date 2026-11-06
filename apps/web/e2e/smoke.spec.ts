@@ -90,6 +90,36 @@ test("settings names the next run in the request budget card", async ({
   ).toBeVisible();
 });
 
+test("settings names the weekly discovery searches beside the daily budget", async ({
+  page,
+  context,
+}) => {
+  const note =
+    "Keyword discovery adds up to 40 searches a week, about 40 requests, outside this daily total.";
+
+  await page.goto("/settings");
+
+  await expect(page.getByText(note)).toBeVisible();
+  await expect(
+    page.getByText("Daily request budget", { exact: true }),
+  ).toBeVisible();
+
+  await context.addCookies([
+    {
+      name: "e2e_budget_quota",
+      value: "undiscovered",
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
+  await page.goto("/settings");
+
+  await expect(
+    page.getByText("Daily request budget", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText(/^Keyword discovery adds/)).toHaveCount(0);
+});
+
 test("settings lists email alerts and expands their delivery log", async ({
   page,
 }) => {

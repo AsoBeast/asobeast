@@ -9,6 +9,7 @@ import {
   ApiErrorEnvelope,
   AppDetail,
   AppGroupSummary,
+  DISCOVERY_CHECKS_PER_RUN,
   MarketAvailability,
   MarketAvailabilityResult,
   SnapshotDiffResult,
@@ -19,6 +20,7 @@ import { testDb } from './helpers/test-db';
 import { ownerAgent, useCookies } from './helpers/session';
 import { obliterateQueues, pauseQueues } from './obliterate-queues';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
+import { KeywordDiscoveryPlanner } from '../src/keyword-discovery/discovery-planner.service';
 import { AppsService } from '../src/apps/apps.service';
 import { FirstRunScheduler } from '../src/apps/first-run.scheduler';
 import { SubtitleBackfill } from '../src/apps/subtitle-backfill.service';
@@ -1298,6 +1300,93 @@ describe('AppsController (e2e)', () => {
           await Promise.all(imports.map((imported) => checksOf(imported.id))),
         ),
       );
+    });
+
+    describe('the first keyword discoveries', () => {
+      const discoveryChecks = async (): Promise<Job[]> =>
+        (await queue(QUEUES.APP_STORE).getJobs(['prioritized'])).filter(
+          (job) => job.name === JOBS.DISCOVER_KEYWORD,
+        );
+
+      it('stores the listing phrases and queues their capped checks without spending', async () => {
+        registry.title = 'Focus Timer Pomodoro Study Planner Habit Tracker';
+        const planner = app.get(KeywordDiscoveryPlanner);
+        const plan = jest.spyOn(planner, 'plan');
+
+        const imported = await importApp(APP_STORE_URL);
+
+        expect(plan).toHaveBeenCalledTimes(1);
+        expect(plan).toHaveBeenCalledWith(imported.id);
+        plan.mockRestore();
+        const rows = await prisma.keywordDiscovery.findMany({
+          where: { appId: imported.id },
+          select: {
+            source: true,
+            queuedAt: true,
+            keyword: { select: { country: true } },
+          },
+        });
+        expect(new Set(rows.map(({ source }) => source))).toEqual(
+          new Set(['title', 'subtitle']),
+        );
+        expect(rows.every(({ keyword }) => keyword.country === 'us')).toBe(
+          true,
+        );
+        const checks = await discoveryChecks();
+        expect(checks.length).toBeGreaterThan(0);
+        expect(checks.length).toBeLessThanOrEqual(
+          DISCOVERY_CHECKS_PER_RUN.APP_STORE,
+        );
+        expect(checks.every((job) => job.opts.priority === 1)).toBe(true);
+        expect(rows.filter(({ queuedAt }) => queuedAt !== null)).toHaveLength(
+          checks.length,
+        );
+      });
+
+      it('plans nothing for an app it already has', async () => {
+        await importApp(APP_STORE_URL);
+        const planner = app.get(KeywordDiscoveryPlanner);
+        const plan = jest.spyOn(planner, 'plan');
+
+        await importApp(APP_STORE_URL);
+
+        expect(plan).not.toHaveBeenCalled();
+        plan.mockRestore();
+      });
+
+      it('discovers nothing for a competitor', async () => {
+        const primary = await importApp(APP_STORE_URL);
+        const planner = app.get(KeywordDiscoveryPlanner);
+        const plan = jest.spyOn(planner, 'plan');
+
+        const added = await api
+          .post(`/apps/${primary.id}/competitors`)
+          .send({ url: 'https://apps.apple.com/us/app/rival/id9876543210' })
+          .expect(201);
+
+        expect(plan).not.toHaveBeenCalled();
+        plan.mockRestore();
+        expect(
+          await prisma.keywordDiscovery.count({
+            where: { appId: (added.body as { id: string }).id },
+          }),
+        ).toBe(0);
+      });
+
+      it('still imports when the first discoveries cannot be planned', async () => {
+        const planner = app.get(KeywordDiscoveryPlanner);
+        const failing = jest
+          .spyOn(planner, 'plan')
+          .mockRejectedValueOnce(new Error('redis is unreachable'));
+
+        const imported = await importApp(APP_STORE_URL);
+
+        expect(failing).toHaveBeenCalledTimes(1);
+        expect(imported.id).toBeDefined();
+        expect(await prisma.app.count()).toBe(1);
+        expect(await countOn(QUEUES.PIPELINE, JOBS.ACTIONS)).toBe(1);
+        failing.mockRestore();
+      });
     });
 
     it('queues no subtitle backfill when the import read the product page', async () => {
