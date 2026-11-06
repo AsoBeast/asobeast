@@ -12,6 +12,7 @@ import { GradedNumber } from "@/components/ui/graded";
 import { InfoTip } from "@/components/ui/info-tip";
 import { grade } from "@/lib/grade";
 import { discoverySourceLabel } from "@/lib/keyword-discoveries";
+import { DiscoveryRowActions } from "./discovery-row-actions";
 import type { KeywordTableFeatures } from "../keyword-table-features";
 import {
   difficultyScore,
@@ -216,6 +217,14 @@ const scoreColumns = [
   }),
 ];
 
+const actionsColumn = columnHelper.display({
+  id: "actions",
+  enableHiding: false,
+  meta: { label: "Actions" },
+  header: () => <span className="sr-only">Actions</span>,
+  cell: ({ row }) => <DiscoveryRowActions item={row.original} />,
+});
+
 export const discoveryColumns = (store: Store) =>
   columnHelper.columns([
     selectColumn,
@@ -223,4 +232,5 @@ export const discoveryColumns = (store: Store) =>
     sourceColumn(store),
     rankColumn,
     ...scoreColumns,
+    actionsColumn,
   ]);

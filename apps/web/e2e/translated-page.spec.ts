@@ -934,6 +934,33 @@ test("a translated keywords page switches to its discoveries and their states", 
   expect(errors).toEqual([]);
 });
 
+test("a translated discovered list tracks, auto tracks and refreshes", async ({
+  page,
+}) => {
+  await page.request.post(`${MOCK_API_URL}/__reset/keyword-discoveries/app-1`);
+  const errors = collectDomErrors(page);
+  await page.goto("/apps/app-1/keywords?tab=discovered");
+  const track = await hydrated(
+    page.getByRole("button", { name: "Track work sprint", exact: true }),
+  );
+
+  await translateText(page);
+  await track.click();
+  await expect(
+    page.getByRole("rowheader", { name: /^work sprint/i }),
+  ).toHaveCount(0);
+  const toggle = page.getByRole("switch", { name: /auto-track ranked/i });
+  await toggle.click();
+  await expect(toggle).toBeChecked();
+  await page.getByRole("button", { name: /^refresh discoveries$/i }).click();
+  await page.waitForLoadState("networkidle");
+
+  await expect(
+    page.getByRole("heading", { name: /discovered keywords/i }),
+  ).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
 test("a translated checklist pill opens, shrinks, cancels a hide and follows a step", async ({
   page,
   context,

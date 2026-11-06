@@ -1,10 +1,17 @@
+import AxeBuilder from "@axe-core/playwright";
 import type { Page, Request } from "@playwright/test";
+import { activateTwiceInOneTask, hydrated } from "./hydrated.mts";
 import { expect, test } from "./session.mts";
 import { APP_GP_DETAIL } from "./fixtures.mts";
 import {
+  DISCOVERY_FAIL_WRITE_COOKIE,
   DISCOVERY_NONE_COOKIE,
   DISCOVERY_PAGED_APP,
   DISCOVERY_PENDING_COOKIE,
+  DISCOVERY_REFRESH_QUEUED,
+  DISCOVERY_REFUSE_COOKIE,
+  DISCOVERY_SPENT_COOKIE,
+  DISCOVERY_UNFIT_COOKIE,
 } from "./keyword-discoveries.mts";
 
 const MOCK_API_URL = `http://localhost:${process.env.MOCK_API_PORT ?? 4100}`;
@@ -292,4 +299,262 @@ test("the discovered list fits a narrow screen", async ({ page }) => {
       page.getByRole("region", { name: "Keyword discoveries" }),
     ).toBeVisible();
   }
+});
+
+const writes = (page: Page, action: string): unknown[] => {
+  const bodies: unknown[] = [];
+  page.on("request", (request) => {
+    if (
+      request.method() !== "GET" &&
+      request.url().endsWith(`/apps/app-1/keyword-discoveries/${action}`)
+    ) {
+      bodies.push(request.postDataJSON() ?? null);
+    }
+  });
+  return bodies;
+};
+
+const toast = (page: Page, text: string | RegExp) =>
+  page.locator("[data-sonner-toast]").filter({ hasText: text });
+
+const control = (page: Page, name: string) =>
+  page.getByRole("button", { name, exact: true });
+
+test.describe("discovery actions", () => {
+  test("tracking a row removes it and lowers the counts", async ({ page }) => {
+    const bodies = writes(page, "track");
+    await page.goto(DISCOVERED);
+    const track = await hydrated(control(page, "Track pomodoro clock"));
+
+    await track.click();
+
+    await expect(toast(page, "Tracking 1 keyword")).toBeVisible();
+    await expect(rowOf(page, "pomodoro clock")).toHaveCount(0);
+    await expect(
+      lists(page).getByRole("tab", { name: /^Discovered 8/ }),
+    ).toBeVisible();
+    await expect(
+      states(page).getByRole("tab", { name: "Ranked 2" }),
+    ).toBeVisible();
+    expect(bodies).toHaveLength(1);
+    expect(bodies).toEqual([{ keywordIds: ["disc-app-1-us-pomodoro-clock"] }]);
+  });
+
+  test("dismissing a row removes it", async ({ page }) => {
+    const bodies = writes(page, "dismiss");
+    await page.goto(DISCOVERED);
+
+    await (await hydrated(control(page, "Dismiss deep work"))).click();
+
+    await expect(rowOf(page, "deep work")).toHaveCount(0);
+    await expect(
+      states(page).getByRole("tab", { name: "All 8" }),
+    ).toBeVisible();
+    expect(bodies).toHaveLength(1);
+  });
+
+  test("a double click tracks once", async ({ page }) => {
+    const bodies = writes(page, "track");
+    await page.goto(DISCOVERED);
+
+    await activateTwiceInOneTask(
+      await hydrated(control(page, "Track work sprint")),
+    );
+
+    await expect(rowOf(page, "work sprint")).toHaveCount(0);
+    expect(bodies).toHaveLength(1);
+  });
+
+  test("the selected rows are tracked in one request", async ({ page }) => {
+    const bodies = writes(page, "track");
+    await page.goto(DISCOVERED);
+    const trackSelected = control(page, "Track selected (0)");
+    await expect(trackSelected).toHaveAttribute("aria-disabled", "true");
+
+    for (const keyword of ["deep work", "concentration", "focus music"]) {
+      await (
+        await hydrated(
+          page.getByRole("checkbox", { name: `Select ${keyword}` }),
+        )
+      ).check();
+    }
+    await control(page, "Track selected (3)").click();
+
+    await expect(toast(page, "Tracking 3 keywords")).toBeVisible();
+    await expect(keywordsIn(page)).toHaveCount(6);
+    await expect(control(page, "Track selected (0)")).toBeVisible();
+    expect(bodies).toHaveLength(1);
+    expect((bodies[0] as { keywordIds: string[] }).keywordIds).toHaveLength(3);
+  });
+
+  test("the recommended rows are tracked together", async ({ page }) => {
+    const bodies = writes(page, "track");
+    await page.goto(DISCOVERED);
+
+    await (await hydrated(control(page, "Track recommended (9)"))).click();
+
+    await expect(toast(page, "Tracking 9 keywords")).toBeVisible();
+    expect((bodies[0] as { keywordIds: string[] }).keywordIds).toHaveLength(9);
+  });
+
+  test("every ranked row of the market is tracked by one request", async ({
+    page,
+  }) => {
+    const bodies = writes(page, "track");
+    await page.goto(DISCOVERED);
+
+    await (await hydrated(control(page, "Track all ranked (3)"))).click();
+
+    await expect(toast(page, "Tracking 3 keywords")).toBeVisible();
+    expect(bodies).toEqual([{ allRanked: true, country: "us" }]);
+    await expect(
+      states(page).getByRole("tab", { name: "Ranked 0" }),
+    ).toBeVisible();
+  });
+
+  test("what did not fit the plan is named", async ({ page, context }) => {
+    await context.addCookies([cookie(DISCOVERY_UNFIT_COOKIE)]);
+    await page.goto(DISCOVERED);
+
+    await expect(page.getByText("12 did not fit your plan")).toBeVisible();
+    await expect(
+      page.getByRole("switch", { name: "Auto-track ranked" }),
+    ).toBeChecked();
+
+    await (await hydrated(control(page, "Track all ranked (3)"))).click();
+
+    await expect(
+      toast(page, "Tracking 3 keywords. 12 did not fit your plan."),
+    ).toBeVisible();
+  });
+
+  test("auto tracking keeps focus and tracks the ranked rows", async ({
+    page,
+  }) => {
+    const bodies = writes(page, "settings");
+    await page.goto(DISCOVERED);
+    const toggle = await hydrated(
+      page.getByRole("switch", { name: "Auto-track ranked" }),
+    );
+    await expect(toggle).not.toBeChecked();
+
+    await toggle.focus();
+    await page.keyboard.press("Space");
+
+    await expect(toggle).toBeChecked();
+    await expect(toast(page, "Tracking 4 keywords")).toBeVisible();
+    await expect(
+      states(page).getByRole("tab", { name: "Ranked 0" }),
+    ).toBeVisible();
+    await expect(toggle).toBeFocused();
+    expect(bodies).toEqual([{ autoTrackRanked: true }]);
+  });
+
+  test("a refresh queues checks and polls for them", async ({ page }) => {
+    const bodies = writes(page, "refresh");
+    await page.goto(DISCOVERED);
+
+    await (await hydrated(control(page, "Refresh discoveries"))).click();
+
+    await expect(
+      toast(page, `Queued ${DISCOVERY_REFRESH_QUEUED} checks`),
+    ).toBeVisible();
+    await expect(
+      page.getByText(`${DISCOVERY_REFRESH_QUEUED} checks pending`),
+    ).toBeVisible();
+    expect(bodies).toHaveLength(1);
+  });
+
+  test("a refresh with no checks left says the list was refreshed", async ({
+    page,
+    context,
+  }) => {
+    await context.addCookies([cookie(DISCOVERY_SPENT_COOKIE)]);
+    await page.goto(DISCOVERED);
+
+    await (await hydrated(control(page, "Refresh discoveries"))).click();
+
+    await expect(
+      toast(
+        page,
+        "No checks to queue this week. The list was refreshed from other searches.",
+      ),
+    ).toBeVisible();
+  });
+
+  test("a refused refresh names the limit and stays usable", async ({
+    page,
+    context,
+  }) => {
+    await context.addCookies([cookie(DISCOVERY_REFUSE_COOKIE)]);
+    await page.goto(DISCOVERED);
+    const refresh = await hydrated(control(page, "Refresh discoveries"));
+
+    await refresh.focus();
+    await page.keyboard.press("Enter");
+
+    await expect(toast(page, /^Deep search limit reached/)).toBeVisible();
+    await expect(refresh).toBeFocused();
+    await expect(refresh).not.toHaveAttribute("aria-disabled", "true");
+  });
+
+  test("a failed track keeps the row and its focus", async ({
+    page,
+    context,
+  }) => {
+    await context.addCookies([cookie(DISCOVERY_FAIL_WRITE_COOKIE)]);
+    await page.goto(DISCOVERED);
+    const track = await hydrated(control(page, "Track focus timer app"));
+
+    await track.focus();
+    await page.keyboard.press("Enter");
+
+    await expect(toast(page, /unexpected error/i)).toBeVisible();
+    await expect(rowOf(page, "focus timer app")).toHaveCount(1);
+    await expect(track).toBeFocused();
+    await expect(track).not.toHaveAttribute("aria-disabled", "true");
+  });
+
+  test("the controls are reached from the keyboard in order", async ({
+    page,
+  }) => {
+    await page.goto(DISCOVERED);
+    await (
+      await hydrated(states(page).getByRole("tab", { name: "All 9" }))
+    ).focus();
+
+    for (const next of [
+      page.getByRole("switch", { name: "Auto-track ranked" }),
+      control(page, "Refresh discoveries"),
+      control(page, "Track selected (0)"),
+      control(page, "Track recommended (9)"),
+      control(page, "Track all ranked (3)"),
+    ]) {
+      await page.keyboard.press("Tab");
+      await expect(next).toBeFocused();
+    }
+
+    const firstRow = rowOf(page, "focus timer app");
+    await firstRow.getByRole("checkbox").focus();
+    for (const next of [
+      control(page, "Track focus timer app"),
+      control(page, "Dismiss focus timer app"),
+    ]) {
+      await page.keyboard.press("Tab");
+      await expect(next).toBeFocused();
+    }
+  });
+
+  test("the tab with a selection passes axe", async ({ page }) => {
+    await page.goto(DISCOVERED);
+    await (
+      await hydrated(page.getByRole("checkbox", { name: "Select deep work" }))
+    ).check();
+
+    const { violations } = await new AxeBuilder({ page })
+      .include("main")
+      .analyze();
+
+    expect(violations.map(({ id }) => id)).toEqual([]);
+  });
 });
