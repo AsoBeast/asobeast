@@ -74,7 +74,6 @@ import {
   invalidateKeywordFieldMutation,
   invalidateLocalizationMutation,
   invalidateKeywordDiscoveries,
-  invalidateKeywordDiscoveryMutation,
   invalidateKeywordMutation,
   invalidateMarketSeed,
   invalidateKeywords,
@@ -831,6 +830,7 @@ describe("invalidation sets", () => {
       appKeys.marketKeywordFieldsRoot(APP),
       appKeys.marketSuggestions(APP),
       appKeys.firstRun(APP),
+      appKeys.keywordDiscoveriesRoot(APP),
       workspaceChecklistKey,
     ]);
   });
@@ -854,23 +854,6 @@ describe("invalidation sets", () => {
     ]);
   });
 
-  it("invalidates the discoveries and everything a track changes", () => {
-    const keys = invalidatedKeys((client) =>
-      invalidateKeywordDiscoveryMutation(client, APP),
-    );
-
-    expect(keys[0]).toEqual(appKeys.keywordDiscoveriesRoot(APP));
-    expect(keys).toEqual(
-      expect.arrayContaining([
-        appKeys.keywordsRoot(APP),
-        appKeys.summary(APP),
-        portfolioKey,
-        appKeys.firstRun(APP),
-      ]),
-    );
-    expect(keys).not.toContainEqual(budgetKey);
-  });
-
   it("refreshes the listing markets and the budget after a market seed", () => {
     expect(
       invalidatedKeys((client) => {
@@ -888,6 +871,7 @@ describe("invalidation sets", () => {
       appKeys.marketKeywordFieldsRoot(APP),
       appKeys.marketSuggestions(APP),
       appKeys.firstRun(APP),
+      appKeys.keywordDiscoveriesRoot(APP),
       workspaceChecklistKey,
       appKeys.listingMarkets(APP),
       budgetKey,
@@ -909,6 +893,7 @@ describe("invalidation sets", () => {
       appKeys.marketKeywordFieldsRoot(APP),
       appKeys.marketSuggestions(APP),
       appKeys.firstRun(APP),
+      appKeys.keywordDiscoveriesRoot(APP),
       workspaceChecklistKey,
       appKeys.metadataAuditRoot(APP),
     ]);
@@ -929,6 +914,7 @@ describe("invalidation sets", () => {
       appKeys.marketKeywordFieldsRoot(APP),
       appKeys.marketSuggestions(APP),
       appKeys.firstRun(APP),
+      appKeys.keywordDiscoveriesRoot(APP),
       workspaceChecklistKey,
       appKeys.metadataAuditRoot(APP),
       accountPlanKey,
@@ -950,6 +936,7 @@ describe("invalidation sets", () => {
       appKeys.marketKeywordFieldsRoot(APP),
       appKeys.marketSuggestions(APP),
       appKeys.firstRun(APP),
+      appKeys.keywordDiscoveriesRoot(APP),
       workspaceChecklistKey,
       appKeys.importPreviewRoot(APP),
     ]);

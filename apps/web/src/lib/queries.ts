@@ -1137,6 +1137,9 @@ export function invalidateKeywordMutation(
   });
   void client.invalidateQueries({ queryKey: appKeys.marketSuggestions(id) });
   void client.invalidateQueries({ queryKey: appKeys.firstRun(id) });
+  void client.invalidateQueries({
+    queryKey: appKeys.keywordDiscoveriesRoot(id),
+  });
   invalidateWorkspaceChecklist(client);
 }
 
@@ -1149,16 +1152,6 @@ export function invalidateKeywordDiscoveries(
   });
   void client.invalidateQueries({ queryKey: appKeys.summary(id) });
   void client.invalidateQueries({ queryKey: portfolioKey });
-}
-
-export function invalidateKeywordDiscoveryMutation(
-  client: QueryClient,
-  id: string,
-): void {
-  void client.invalidateQueries({
-    queryKey: appKeys.keywordDiscoveriesRoot(id),
-  });
-  invalidateKeywordMutation(client, id);
 }
 
 export function invalidateMarketSeed(

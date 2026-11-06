@@ -303,6 +303,19 @@ test("an empty state names its reason and offers every row", async ({
   await expect(page.getByText("Nothing to review")).toBeVisible();
 });
 
+test("Show all keeps focus on the panel when its empty state leaves", async ({
+  page,
+}) => {
+  await page.goto(`${DISCOVERED}&state=ranked&country=gb`);
+
+  await pressFromKeyboard(page.getByRole("button", { name: "Show all" }));
+
+  await expect(page.getByText("Nothing to review")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Discovered keywords" }),
+  ).toBeFocused();
+});
+
 test("pending checks poll until they land", async ({ page, context }) => {
   await context.addCookies([cookie(DISCOVERY_PENDING_COOKIE)]);
   await page.clock.install();
@@ -330,11 +343,11 @@ test("the pending spinner holds still under reduced motion", async ({
 
   const pending = page.getByText("3 checks pending");
   await expect(pending).toBeVisible();
+  const spinner = page.locator("p").filter({ has: pending }).locator("svg");
+  await expect(spinner).toHaveCount(1);
   expect(
-    await pending.evaluate(
-      (element) =>
-        getComputedStyle(element.parentElement!.querySelector("svg")!)
-          .animationName,
+    await spinner.evaluate(
+      (element) => getComputedStyle(element).animationName,
     ),
   ).toBe("none");
 });
@@ -518,6 +531,24 @@ test.describe("discovery actions", () => {
       page.getByText(`${DISCOVERY_REFRESH_QUEUED} checks pending`),
     ).toBeVisible();
     expect(bodies).toHaveLength(1);
+  });
+
+  test("a refresh under auto track also reloads the tracked keywords", async ({
+    page,
+    context,
+  }) => {
+    await context.addCookies([cookie(DISCOVERY_UNFIT_COOKIE)]);
+    await page.goto(DISCOVERED);
+    const refresh = await hydrated(control(page, "Refresh discoveries"));
+    const trackedReload = page.waitForRequest(
+      (request) =>
+        request.method() === "GET" &&
+        /\/api\/backend\/apps\/app-1\/keywords(\?|$)/.test(request.url()),
+    );
+
+    await refresh.click();
+
+    await trackedReload;
   });
 
   test("a refresh with no checks left says the list was refreshed", async ({

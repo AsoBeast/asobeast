@@ -20,7 +20,7 @@ import {
 } from "@/lib/keyword-discoveries";
 import {
   invalidateKeywordDiscoveries,
-  invalidateKeywordDiscoveryMutation,
+  invalidateKeywordMutation,
   keywordDiscoveriesOptions,
 } from "@/lib/queries";
 import { useKeyedSingleFlight, useSingleFlight } from "@/lib/single-flight";
@@ -49,8 +49,12 @@ export function useDiscoveryActions(
     client.setQueryData<KeywordDiscoveryList>(queryKey, (list) =>
       list ? withoutDiscoveries(list, ids) : list,
     );
-  const refetchTracked = () => invalidateKeywordDiscoveryMutation(client, id);
+  const refetchTracked = () => invalidateKeywordMutation(client, id);
   const refetchDiscoveries = () => invalidateKeywordDiscoveries(client, id);
+  const setAutoTrack = (autoTrackRanked: boolean) =>
+    client.setQueryData<KeywordDiscoveryList>(queryKey, (list) =>
+      list ? { ...list, autoTrackRanked } : list,
+    );
 
   const track = useMutation({
     mutationKey: ["keyword-discovery", id, market, "track"],
@@ -81,7 +85,10 @@ export function useDiscoveryActions(
     mutationFn: () => refreshKeywordDiscoveries(id),
     onSuccess: (result) => {
       toast.success(refreshedToast(result));
-      refetchDiscoveries();
+      const autoTracks =
+        client.getQueryData<KeywordDiscoveryList>(queryKey)?.autoTrackRanked;
+      if (autoTracks) refetchTracked();
+      else refetchDiscoveries();
     },
     onError: failed("Could not refresh the discoveries"),
   });
@@ -90,13 +97,7 @@ export function useDiscoveryActions(
     mutationKey: ["keyword-discovery", id, market, "settings"],
     mutationFn: (autoTrackRanked: boolean) =>
       setKeywordDiscoverySettings(id, autoTrackRanked),
-    onMutate: (autoTrackRanked) => {
-      const previous = client.getQueryData<KeywordDiscoveryList>(queryKey);
-      if (previous) {
-        client.setQueryData(queryKey, { ...previous, autoTrackRanked });
-      }
-      return { previous };
-    },
+    onMutate: (autoTrackRanked) => setAutoTrack(autoTrackRanked),
     onSuccess: (result) => {
       if (result.tracked === 0 && result.skipped === 0) {
         refetchDiscoveries();
@@ -105,8 +106,9 @@ export function useDiscoveryActions(
       toast.success(trackedToast(result));
       refetchTracked();
     },
-    onError: (error, _enabled, context) => {
-      if (context?.previous) client.setQueryData(queryKey, context.previous);
+    onError: (error, enabled) => {
+      setAutoTrack(!enabled);
+      refetchDiscoveries();
       failed("Could not change auto tracking")(error);
     },
   });

@@ -125,7 +125,10 @@ function DiscoveredList({
                 <Button
                   variant="link"
                   size="sm"
-                  onClick={() => setState("all")}
+                  onClick={(event) => {
+                    handOffFocus(heading.current, event.currentTarget);
+                    setState("all");
+                  }}
                 >
                   Show all
                 </Button>
