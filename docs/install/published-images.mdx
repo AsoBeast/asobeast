@@ -77,7 +77,7 @@ docker run -d --name asobeast-web --restart unless-stopped \
   "ghcr.io/asobeast/asobeast-web:$ASOBEAST_IMAGE_TAG"
 ```
 
-The API image applies database migrations and seeds the default workspace when it starts. Add any optional API setting as a further `--env` flag on the API container.
+Change the first number of `--publish` to serve on another host port. The API image applies database migrations and seeds the default workspace when it starts. Add any optional API setting as a further `--env` flag on the API container.
 
 ## Why two networks?
 
@@ -105,7 +105,7 @@ docker compose -f docker-compose.pull.yml up -d --wait
 
 Downloading from `main` gets the current file, and that file defaults to the release it was published with, so the copy on your disk is pinned even though the download URL is not. Release Please bumps that default on every release and continuous integration fails when it drifts, so the file you fetch today runs today's release and keeps running it until you say otherwise.
 
-Two variables in the root `.env` change what it pulls. `ASOBEAST_IMAGE_TAG` selects a different release, which is how you pin an older one or roll back. `ASOBEAST_IMAGE_OWNER` selects the registry namespace and exists for forks. Both are read only by this file.
+Two variables in the root `.env` change what it pulls. `ASOBEAST_IMAGE_TAG` selects a different release, which is how you pin an older one or roll back. `ASOBEAST_IMAGE_OWNER` selects the registry namespace and exists for forks. Both are read only by this file. `ASOBEAST_PORT` moves the host port from 3001, exactly as in [Self host with Docker Compose](/install/docker-compose#customize-the-installation).
 
 The file declares no pull policy, so Compose fetches an image it does not already have and otherwise starts what is on disk. Changing the tag is therefore enough to upgrade, and a restart with the tag unchanged never needs the registry, which matters on a machine that reboots without network. Only a moving tag such as `latest` needs an explicit fetch:
 

@@ -150,7 +150,7 @@ Instead it sends exactly one address, the one its own `TRUST_PROXY` says it can 
 
 `WEB_PUBLIC_URL` builds absolute deep links inside alert payloads, and it is also the single origin the API allows through CORS. Set it to the origin a person would type. Only `http` and `https` are accepted, and the API refuses to boot on anything else, because a scheme the browser gives no origin to would otherwise become the allowed origin.
 
-The Compose stacks set it from the root `.env` and default it to `http://localhost:3001`, the port they publish, so a confirmation email opens the stack that sent it. A value in `apps/api/.env` does not reach them, because that file also configures `pnpm dev`, which serves on port 3000.
+The Compose stacks set it from the root `.env` and default it to `http://localhost` on `ASOBEAST_PORT` (3001 unless you set it), the port they publish, so a confirmation email opens the stack that sent it. A value in `apps/api/.env` does not reach them, because that file also configures `pnpm dev`, which serves on port 3000.
 
 Unset, the `link` field is `null` rather than a `localhost` guess that would not open for anyone, and the API sends no CORS headers at all. See [Send alerts](/guides/alerts).
 
@@ -158,7 +158,7 @@ Sending nothing is the right default here. The browser only ever talks to the we
 
 ## What does Compose expose?
 
-The base stack publishes only host port 3001, mapped to port 3000 in the web container. The API, PostgreSQL and Redis stay on Docker networks, and the backend network is marked `internal`.
+The base stack publishes only host port 3001, or `ASOBEAST_PORT`, mapped to port 3000 in the web container. The API, PostgreSQL and Redis stay on Docker networks, and the backend network is marked `internal`.
 
 Composing `docker-compose.tunnel.yml` removes even that, so the machine publishes nothing at all and `cloudflared` reaches the web container over the `frontend` network. A reverse proxy on the host needs port 3001; a tunnel does not. See [Self host with Docker Compose](/install/docker-compose).
 
