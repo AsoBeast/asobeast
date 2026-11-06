@@ -12,11 +12,13 @@ export function KeywordsWorkspace({
   homeCountry,
   store,
   keywordFields,
+  discoveries,
 }: {
   id: string;
   homeCountry: string;
   store: Store;
   keywordFields: boolean;
+  discoveries: boolean;
 }) {
   const [country] = useQueryState("country", countryParser);
   const [tab] = useKeywordsTab();
@@ -24,8 +26,8 @@ export function KeywordsWorkspace({
 
   return (
     <div className="flex flex-col gap-6">
-      <KeywordsTabs id={id} market={market} />
-      {tab === "discovered" ? (
+      {discoveries ? <KeywordsTabs id={id} market={market} /> : null}
+      {discoveries && tab === "discovered" ? (
         <DiscoveredKeywords
           id={id}
           store={store}

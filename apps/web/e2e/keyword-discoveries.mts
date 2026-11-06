@@ -21,6 +21,8 @@ export const DISCOVERY_SPENT_COOKIE = "e2e_discovery_spent";
 export const DISCOVERY_REFUSE_COOKIE = "e2e_discovery_refuse";
 export const DISCOVERY_FAIL_WRITE_COOKIE = "e2e_discovery_fail_write";
 export const DISCOVERY_SPIDER_LIMIT = 30;
+export const DISCOVERY_COMPETITOR_REFUSAL =
+  "A competitor app has no keyword discoveries; use its primary app";
 
 export const DISCOVERY_COOKIE_PENDING = 3;
 export const DISCOVERY_UNFIT = 12;

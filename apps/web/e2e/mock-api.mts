@@ -20,6 +20,7 @@ import { summarizeActions } from "./actions-summary.mts";
 import { echoRequest } from "./echo-request.mts";
 import {
   discoveriesFor,
+  DISCOVERY_COMPETITOR_REFUSAL,
   DISCOVERY_FAIL_WRITE_COOKIE,
   DISCOVERY_NONE_COOKIE,
   DISCOVERY_PENDING_COOKIE,
@@ -3674,18 +3675,39 @@ const routes: Route[] = [
   appRoute(/^\/apps\/([^/]+)\/funnel$/, (dataset, query) =>
     funnelFor(dataset.detail.id, query.get("country")),
   ),
-  appRoute(/^\/apps\/([^/]+)\/keyword-discoveries$/, (dataset, query, req) =>
-    discoveriesFor(
-      dataset.detail.id,
-      dataset.detail.store,
-      query.get("country"),
-      {
-        pending: hasCookie(req, DISCOVERY_PENDING_COOKIE, "1"),
-        none: hasCookie(req, DISCOVERY_NONE_COOKIE, "1"),
-        unfit: hasCookie(req, DISCOVERY_UNFIT_COOKIE, "1"),
-      },
-    ),
-  ),
+  {
+    method: "GET",
+    pattern: /^\/apps\/([^/]+)\/keyword-discoveries$/,
+    handler: ([id], req, res) => {
+      const path = req.url ?? "/";
+      if (id === ERROR_ID || hasCookie(req, "e2e-fail-app", "1")) {
+        return json(res, 500, errorEnvelope(500, path));
+      }
+      const dataset = DATASETS[id];
+      if (!dataset) return json(res, 404, errorEnvelope(404, path));
+      if (dataset.detail.isCompetitor) {
+        return json(
+          res,
+          400,
+          errorEnvelope(400, path, DISCOVERY_COMPETITOR_REFUSAL),
+        );
+      }
+      json(
+        res,
+        200,
+        discoveriesFor(
+          id,
+          dataset.detail.store,
+          new URL(path, "http://localhost").searchParams.get("country"),
+          {
+            pending: hasCookie(req, DISCOVERY_PENDING_COOKIE, "1"),
+            none: hasCookie(req, DISCOVERY_NONE_COOKIE, "1"),
+            unfit: hasCookie(req, DISCOVERY_UNFIT_COOKIE, "1"),
+          },
+        ),
+      );
+    },
+  },
   discoveryWrite(
     "POST",
     /^\/apps\/([^/]+)\/keyword-discoveries\/track$/,

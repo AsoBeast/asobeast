@@ -2,7 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import type { Page, Request } from "@playwright/test";
 import { activateTwiceInOneTask, hydrated } from "./hydrated.mts";
 import { expect, test } from "./session.mts";
-import { APP_GP_DETAIL } from "./fixtures.mts";
+import { APP_GP_DETAIL, APP_RIVAL_ID } from "./fixtures.mts";
 import {
   DISCOVERY_FAIL_WRITE_COOKIE,
   DISCOVERY_NONE_COOKIE,
@@ -101,6 +101,22 @@ test("the keyword lists switch between tracked and discovered through the url", 
   await expect(
     page.getByRole("table", { name: /Tracked keywords/ }),
   ).toBeVisible();
+});
+
+test("a competitor's keywords page offers no discoveries", async ({ page }) => {
+  const reads: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().includes("/keyword-discoveries"))
+      reads.push(request.url());
+  });
+  await page.goto(`/apps/${APP_RIVAL_ID}/keywords?tab=discovered`);
+
+  await expect(
+    page.getByRole("heading", { name: "Tracked keywords" }),
+  ).toBeVisible();
+  await expect(lists(page)).toHaveCount(0);
+  await page.waitForLoadState("networkidle");
+  expect(reads).toEqual([]);
 });
 
 test("a deep link opens one state of the discovered list", async ({ page }) => {
