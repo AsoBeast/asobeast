@@ -1,4 +1,4 @@
-<!-- Keep this to one screen: about 250 words outside <details>. Write for a teammate who has not read the issue. Say what a person notices first and how it works second. Delete every comment before you open the pull request, because the description becomes the squash commit on main. -->
+<!-- Keep this to one screen: about 250 words outside <details>. Write for a teammate who has not read the issue. Say what a person notices first and how it works second. Delete every comment before you open the pull request, because the title becomes the changelog line and the description becomes the squash commit body on main. Delete the Closes line when no issue applies. -->
 
 Closes #
 
@@ -8,7 +8,7 @@ Closes #
 
 ## Screenshot
 
-<!-- Required when anything in the web app looks or behaves differently. One "after" shot of the main state is enough; a fix adds "before". A flow one picture cannot show gets a short video instead. Reference the file here and attach it:
+<!-- Required when anything in the web app looks or behaves differently. One "after" shot of the main state is enough; a fix adds "before". A flow one picture cannot show gets a short video instead. Never show real customer data, a token or a console key. Reference the file here and attach it:
      ![Discovered tab in the light theme](./after.png)
      gh pr create --body-file body.md --attach './after.png#Discovered tab in the light theme'
      gh pr edit <number> --attach './after.png#Discovered tab in the light theme'
@@ -32,6 +32,7 @@ Closes #
 - [ ] Code review (`agent-skills`) and `/open-code-review:review` ran on the final diff, findings fixed
 - [ ] Manual QA covered the plan and its edge cases
 - [ ] A screenshot is attached, or nothing visible changed
+- [ ] New behaviour has unit tests, and contract changes have e2e tests
 - [ ] A `fix` has a regression test that failed before the fix
 - [ ] Nothing on the HTTP contract, `@asobeast/shared` contract types or MCP tools is removed, renamed or narrowed
 - [ ] A visible `feat` has its What's New line
