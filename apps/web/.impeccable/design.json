@@ -1,0 +1,471 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-06T13:34:10+00:00",
+  "title": "Design System: AsoBeast",
+  "extensions": {
+    "colorMeta": {
+      "brand": {
+        "role": "primary",
+        "displayName": "Brand Orange",
+        "canonical": "#f5a524",
+        "tonalRamp": [
+          "#251905",
+          "#60410e",
+          "#9c6917",
+          "#d79120",
+          "#f6b142",
+          "#f9ca7d",
+          "#fce2b9",
+          "#fefaf4"
+        ]
+      },
+      "series": {
+        "role": "primary",
+        "displayName": "Burnt Orange",
+        "canonical": "#e07b0a",
+        "tonalRamp": [
+          "#221202",
+          "#583004",
+          "#8e4e06",
+          "#c56c09",
+          "#e48d2b",
+          "#edb16e",
+          "#f5d5b0",
+          "#fdf8f3"
+        ]
+      },
+      "previous": {
+        "role": "neutral",
+        "displayName": "Previous Period",
+        "canonical": "#cdc8c0",
+        "tonalRamp": [
+          "#1f1e1d",
+          "#514f4b",
+          "#827f7a",
+          "#b4b0a9",
+          "#d4cfc9",
+          "#e1deda",
+          "#efedeb",
+          "#fcfcfc"
+        ]
+      },
+      "info": {
+        "role": "secondary",
+        "displayName": "Information Blue",
+        "canonical": "#2563eb",
+        "tonalRamp": [
+          "#060f23",
+          "#0f275c",
+          "#183f95",
+          "#2157ce",
+          "#4378ee",
+          "#7ea3f3",
+          "#b9cdf9",
+          "#f4f7fe"
+        ]
+      },
+      "up": {
+        "role": "signal",
+        "displayName": "Up",
+        "canonical": "#15803d",
+        "tonalRamp": [
+          "#031309",
+          "#083218",
+          "#0d5127",
+          "#127036",
+          "#359157",
+          "#74b48c",
+          "#b4d6c1",
+          "#f3f9f5"
+        ]
+      },
+      "down": {
+        "role": "signal",
+        "displayName": "Down",
+        "canonical": "#c2272d",
+        "tonalRamp": [
+          "#1d0607",
+          "#4c0f12",
+          "#7b191d",
+          "#aa2228",
+          "#ca4449",
+          "#db7f82",
+          "#ebbabb",
+          "#fcf4f4"
+        ]
+      },
+      "warn": {
+        "role": "signal",
+        "displayName": "Warn",
+        "canonical": "#a3520a",
+        "tonalRamp": [
+          "#180c02",
+          "#402004",
+          "#683406",
+          "#8f4809",
+          "#af692b",
+          "#c8986e",
+          "#e1c7b0",
+          "#faf6f3"
+        ]
+      },
+      "page": {
+        "role": "neutral",
+        "displayName": "Page",
+        "canonical": "#faf9f7",
+        "tonalRamp": [
+          "#262525",
+          "#626261",
+          "#9f9e9d",
+          "#dcdbd9",
+          "#fbfaf8",
+          "#fcfbfa",
+          "#fdfdfc",
+          "#ffffff"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Surface",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#262626",
+          "#646464",
+          "#a2a2a2",
+          "#e0e0e0",
+          "#ffffff",
+          "#ffffff",
+          "#ffffff",
+          "#ffffff"
+        ]
+      },
+      "surface-2": {
+        "role": "neutral",
+        "displayName": "Surface 2",
+        "canonical": "#f4f2ee",
+        "tonalRamp": [
+          "#252424",
+          "#605f5d",
+          "#9b9a97",
+          "#d6d5d1",
+          "#f5f4f0",
+          "#f8f7f5",
+          "#fbfbfa",
+          "#fefefe"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Line",
+        "canonical": "#e7e4df",
+        "tonalRamp": [
+          "#232221",
+          "#5b5a58",
+          "#93918e",
+          "#cbc8c4",
+          "#eae8e3",
+          "#f1efec",
+          "#f7f6f5",
+          "#fefefd"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#1c1917",
+        "tonalRamp": [
+          "#040403",
+          "#0b0a09",
+          "#12100f",
+          "#191614",
+          "#3b3836",
+          "#787775",
+          "#b6b5b4",
+          "#f4f4f3"
+        ]
+      },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Ink 2",
+        "canonical": "#6b665f",
+        "tonalRamp": [
+          "#100f0e",
+          "#2a2825",
+          "#44413c",
+          "#5e5a53",
+          "#7f7b75",
+          "#a7a4a0",
+          "#cfcecc",
+          "#f8f7f7"
+        ]
+      },
+      "ink-3": {
+        "role": "neutral",
+        "displayName": "Ink 3",
+        "canonical": "#767069",
+        "tonalRamp": [
+          "#121110",
+          "#2e2c29",
+          "#4b4743",
+          "#68625c",
+          "#89837d",
+          "#aeaaa6",
+          "#d3d1cf",
+          "#f8f8f8"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "title": {
+        "displayName": "Title",
+        "purpose": "The page title, once per page."
+      },
+      "metric": {
+        "displayName": "Metric",
+        "purpose": "The value of a metric tab, one strip per page."
+      },
+      "heading": {
+        "displayName": "Heading",
+        "purpose": "Every panel and section heading."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Lede sentences, action titles, dialog text."
+      },
+      "dense": {
+        "displayName": "Dense",
+        "purpose": "Table cells, list rows, navigation, controls."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Column headers, metadata, pills; sentence case, no tracking."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Chart axis ticks only."
+      }
+    },
+    "shadows": [
+      {
+        "name": "segment",
+        "value": "0 1px 2px rgba(0,0,0,0.06)",
+        "purpose": "The raised pill of a segmented control."
+      },
+      {
+        "name": "overlay",
+        "value": "0 8px 24px rgba(0,0,0,0.12)",
+        "purpose": "Menus, popovers, dialogs and sheets in the light theme."
+      },
+      {
+        "name": "overlay-dark",
+        "value": "0 1px 0 rgba(255,255,255,0.06) inset, 0 12px 32px rgba(0,0,0,0.6)",
+        "purpose": "Overlays in the dark theme."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-standard",
+        "value": "cubic-bezier(0, 0, 0.2, 1)",
+        "purpose": "Ease out for every state change."
+      },
+      {
+        "name": "duration-state",
+        "value": "150ms",
+        "purpose": "Hover, focus, segmented changes."
+      },
+      {
+        "name": "duration-overlay",
+        "value": "200ms",
+        "purpose": "Menus, popovers, dialogs."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      },
+      {
+        "name": "xl",
+        "value": "1280px"
+      }
+    ],
+    "darkTheme": {
+      "page": "#0c0b0a",
+      "surface": "#141311",
+      "surface-2": "#1c1a17",
+      "line": "#2a2724",
+      "line-2": "#221f1c",
+      "ink": "#efece7",
+      "ink-2": "#a39d94",
+      "ink-3": "#8a847b",
+      "series": "#f5a524",
+      "series-tint": "#2b2114",
+      "previous": "#3d3933",
+      "up": "#4ade80",
+      "up-tint": "#0d2a18",
+      "down": "#f87171",
+      "down-tint": "#3b1414",
+      "warn": "#f0b64a",
+      "info": "#60a5fa"
+    }
+  },
+  "components": [
+    {
+      "name": "Primary button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one filled action in a view.",
+      "html": "<button class=\"ds-btn-primary\">Import app</button>",
+      "css": ".ds-btn-primary { font-family: Geist, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif; font-size: 13px; font-weight: 500; height: 34px; padding: 0 14px; border: 0; border-radius: 6px; background: #f5a524; color: #1c1408; cursor: pointer; transition: background 150ms ease-out; } .ds-btn-primary:hover { background: #e8950f; } .ds-btn-primary:focus-visible { outline: 2px solid #f5a524; outline-offset: 2px; }"
+    },
+    {
+      "name": "Outline button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Secondary actions and dialog triggers.",
+      "html": "<button class=\"ds-btn-outline\">Print report</button>",
+      "css": ".ds-btn-outline { font-family: Geist, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif; font-size: 13px; font-weight: 500; height: 34px; padding: 0 12px; border: 1px solid #e7e4df; border-radius: 6px; background: #ffffff; color: #1c1917; cursor: pointer; transition: background 150ms ease-out; } .ds-btn-outline:hover { background: #f4f2ee; } .ds-btn-outline:focus-visible { outline: 2px solid #1c1917; outline-offset: 2px; }"
+    },
+    {
+      "name": "Delta pills",
+      "kind": "chip",
+      "refersTo": "pill-up",
+      "description": "A change beside its value: up, down, flat.",
+      "html": "<span class=\"ds-pill ds-pill-up\">+5</span> <span class=\"ds-pill ds-pill-down\">\u25bc3</span> <span class=\"ds-pill ds-pill-flat\">0</span>",
+      "css": ".ds-pill { font-family: Geist, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif; display: inline-flex; align-items: center; height: 22px; padding: 0 7px; border-radius: 6px; font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums; } .ds-pill-up { background: #e4f5e9; color: #15803d; } .ds-pill-down { background: #fde6e6; color: #c2272d; } .ds-pill-flat { background: #f4f2ee; color: #6b665f; }"
+    },
+    {
+      "name": "Segmented control",
+      "kind": "nav",
+      "refersTo": "nav-item",
+      "description": "Switches a view inside a panel header.",
+      "html": "<div class=\"ds-seg\"><button class=\"ds-seg-on\">All</button><button>Climbers</button><button>Fallers</button></div>",
+      "css": ".ds-seg { display: inline-flex; gap: 2px; padding: 2px; border-radius: 6px; background: #f4f2ee; } .ds-seg button { font-family: Geist, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif; font-size: 12px; font-weight: 500; padding: 3px 10px; border: 0; border-radius: 4px; background: transparent; color: #6b665f; cursor: pointer; transition: background 150ms ease-out, color 150ms ease-out; } .ds-seg button:hover { color: #1c1917; } .ds-seg .ds-seg-on { background: #ffffff; color: #1c1917; box-shadow: 0 1px 2px rgba(0,0,0,0.06); } .ds-seg button:focus-visible { outline: 2px solid #1c1917; outline-offset: 1px; }"
+    },
+    {
+      "name": "Metric tab",
+      "kind": "custom",
+      "refersTo": "metric-tab",
+      "description": "One tab of the metric strip; the active one drives the chart.",
+      "html": "<div class=\"ds-metric ds-metric-on\"><div class=\"ds-metric-l\">Visibility</div><div class=\"ds-metric-v\">62 <span class=\"ds-pill ds-pill-up\">+5</span></div><div class=\"ds-metric-s\">vs 57 seven days ago</div></div>",
+      "css": ".ds-metric { font-family: Geist, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif; position: relative; width: 260px; padding: 14px 20px 16px; background: #ffffff; border: 1px solid #e7e4df; border-radius: 8px 8px 0 0; color: #1c1917; } .ds-metric-l { font-size: 13px; font-weight: 500; color: #6b665f; } .ds-metric-v { display: flex; align-items: center; gap: 10px; margin-top: 6px; font-size: 28px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; font-variant-numeric: tabular-nums; } .ds-metric-s { margin-top: 6px; font-size: 12px; color: #767069; } .ds-metric-on::after { content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: #1c1917; } .ds-pill { display: inline-flex; align-items: center; height: 22px; padding: 0 7px; border-radius: 6px; font-size: 12px; font-weight: 500; } .ds-pill-up { background: #e4f5e9; color: #15803d; }"
+    },
+    {
+      "name": "Breakdown row",
+      "kind": "custom",
+      "refersTo": "list-row",
+      "description": "A mover with the size of the move drawn behind its name.",
+      "html": "<div class=\"ds-row\"><div class=\"ds-row-bar\" style=\"width:40%\"></div><div class=\"ds-row-kw\"><span class=\"ds-row-ic\"></span>focus timer <span class=\"ds-row-m\">US</span></div><div class=\"ds-row-n\">14 \u2192 <b>6</b></div><div class=\"ds-row-d\">\u25b2 8</div></div>",
+      "css": ".ds-row { font-family: Geist, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif; position: relative; display: grid; grid-template-columns: 1fr 72px 64px; align-items: center; height: 36px; padding: 0 8px; width: 420px; border-radius: 6px; font-size: 13px; color: #1c1917; font-variant-numeric: tabular-nums; background: #ffffff; } .ds-row:hover { background: #f6f4f0; } .ds-row > * { position: relative; } .ds-row-bar { position: absolute; left: 8px; top: 5px; bottom: 5px; border-radius: 4px; background: #fbeedb; } .ds-row-kw { display: flex; align-items: center; gap: 8px; font-weight: 500; } .ds-row-ic { width: 16px; height: 16px; border-radius: 4px; background: #1d4ed8; } .ds-row-m { color: #767069; font-weight: 400; font-size: 12px; } .ds-row-n { text-align: right; color: #6b665f; } .ds-row-n b { color: #1c1917; font-weight: 600; } .ds-row-d { text-align: right; color: #15803d; font-weight: 500; }"
+    },
+    {
+      "name": "Table",
+      "kind": "custom",
+      "refersTo": "table-row",
+      "description": "Dense rows, sentence case headers, numbers right aligned.",
+      "html": "<table class=\"ds-table\"><thead><tr><th>App</th><th class=\"n\">Visibility</th><th class=\"n\">7d</th><th class=\"n\">Top 10</th></tr></thead><tbody><tr><td><b>Focus Timer</b><br><small>App Store \u00b7 US \u00b7 5 keywords</small></td><td class=\"n\"><b>62</b></td><td class=\"n\"><span class=\"ds-pill ds-pill-up\">+5</span></td><td class=\"n\">3</td></tr><tr><td><b>Tomato Clock</b><br><small>Google Play \u00b7 DE \u00b7 3 keywords</small></td><td class=\"n\"><b>25</b></td><td class=\"n\"><span class=\"ds-pill ds-pill-up\">+3</span></td><td class=\"n\">2</td></tr></tbody></table>",
+      "css": ".ds-table { font-family: Geist, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif; width: 520px; border-collapse: collapse; font-size: 13px; color: #1c1917; font-variant-numeric: tabular-nums; background: #ffffff; border: 1px solid #e7e4df; border-radius: 8px; } .ds-table th { text-align: left; font-weight: 500; font-size: 12px; color: #767069; padding: 10px 16px; border-bottom: 1px solid #e7e4df; } .ds-table td { height: 44px; padding: 0 16px; border-bottom: 1px solid #eeebe6; } .ds-table tr:last-child td { border-bottom: 0; } .ds-table tbody tr:hover td { background: #f6f4f0; } .ds-table .n { text-align: right; } .ds-table td b { font-weight: 500; } .ds-table td.n b { font-weight: 600; font-size: 14px; } .ds-table small { color: #767069; font-size: 12px; } .ds-pill { display: inline-flex; align-items: center; height: 22px; padding: 0 7px; border-radius: 6px; font-size: 12px; font-weight: 500; } .ds-pill-up { background: #e4f5e9; color: #15803d; }"
+    },
+    {
+      "name": "Sidebar item",
+      "kind": "nav",
+      "refersTo": "nav-item-active",
+      "description": "A navigation row with its icon and count.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-nav-on\" href=\"#\"><svg viewBox=\"0 0 24 24\"><rect x=\"3\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"14\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"3\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"/></svg>Dashboard</a><a href=\"#\"><svg viewBox=\"0 0 24 24\"><path d=\"m3 17 2 2 4-4M3 7l2 2 4-4M13 6h8M13 12h8M13 18h8\"/></svg>Action Center<span>20</span></a></nav>",
+      "css": ".ds-nav { font-family: Geist, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif; width: 208px; display: flex; flex-direction: column; gap: 2px; background: #ffffff; padding: 4px; } .ds-nav a { display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 8px; border-radius: 6px; color: #6b665f; text-decoration: none; font-size: 13px; font-weight: 500; transition: background 150ms ease-out, color 150ms ease-out; } .ds-nav a:hover { background: #f6f4f0; color: #1c1917; } .ds-nav a.ds-nav-on { background: #f4f2ee; color: #1c1917; } .ds-nav a:focus-visible { outline: 2px solid #1c1917; outline-offset: 1px; } .ds-nav svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; } .ds-nav span { margin-left: auto; color: #767069; font-size: 12px; }"
+    },
+    {
+      "name": "Select",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "A range or market select.",
+      "html": "<button class=\"ds-select\"><svg viewBox=\"0 0 24 24\"><rect x=\"3\" y=\"4\" width=\"18\" height=\"18\" rx=\"2\"/><path d=\"M16 2v4M8 2v4M3 10h18\"/></svg>Last 30 days<svg viewBox=\"0 0 24 24\"><path d=\"m6 9 6 6 6-6\"/></svg></button>",
+      "css": ".ds-select { font-family: Geist, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif; display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px 0 12px; border: 1px solid #e7e4df; border-radius: 6px; background: #ffffff; color: #1c1917; font-size: 13px; cursor: pointer; transition: background 150ms ease-out; } .ds-select:hover { background: #f4f2ee; } .ds-select:focus-visible { outline: 2px solid #1c1917; outline-offset: 2px; } .ds-select svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Morning Standings",
+    "overview": "**Creative North Star: \"The Morning Standings\"**\n\nAsoBeast is opened once a day, after the daily run, to learn what moved. The system is built for that glance: one calm page of panels on a warm neutral ground, a single orange that belongs to the brand and to the data alike, numbers set in tabular figures that line up like a standings table, and change always written as a signed figure beside its value. It sits at the finish level of Vercel, Plausible, Linear and Adapty, which the owner named as the bar, and it is the category standard played straight rather than a theme: a visitor who has used any of those products knows where everything is before they notice the colour.\n\nThe old look is the anti-reference. It boxed every section in the same card with a grey sentence under its title, repeated a pill for every attribute, put an icon beside every heading, spread text over two sizes and used the brand orange, blue, amber and a mono face at once. This system replaces that with a short type scale, panels only where a block is an object, pills only for a change or a state, icons only where a row needs a type glyph, and one accent family.",
+    "keyCharacteristics": [
+      "One sans face, Geist, with tabular figures everywhere a number can be compared.",
+      "One hue family for the brand and the data: the brightest shade on the single primary button, a deeper shade on chart lines, the palest tint behind inline bars.",
+      "Green and red mean direction and nothing else, and never travel without a sign, an arrow or a word.",
+      "Flat panels with a hairline border on a warm neutral ground; no shadow below an overlay.",
+      "A metric strip that drives one chart, a sentence that says what moved, lists with inline bars, tables at 44 px."
+    ],
+    "rules": [
+      {
+        "name": "The One Family Rule",
+        "body": "The brand orange and the data orange are shades of one hue; nothing else on a screen is orange. A warning is a word, not an orange fill, and the active navigation item is neutral.",
+        "section": "colors"
+      },
+      {
+        "name": "The Direction Only Rule",
+        "body": "Green and red appear on a change, a signal or a critical word, and on nothing that is merely a category. Grades are words with a quiet marker, never a painted column.",
+        "section": "colors"
+      },
+      {
+        "name": "The No Blue By Default Rule",
+        "body": "Blue is held in reserve for information badges and a second series. It never leads a screen.",
+        "section": "colors"
+      },
+      {
+        "name": "The Five Sizes Rule",
+        "body": "A screen uses title, heading, body or dense, label and caption, plus the metric size in one strip. No raw `text-sm` or `text-base` in a primitive; every size is a named step.",
+        "section": "typography"
+      },
+      {
+        "name": "The Sentence Case Rule",
+        "body": "Labels and column headers are sentence case with no letter spacing; the old tracked uppercase label is retired.",
+        "section": "typography"
+      },
+      {
+        "name": "The Tabular Rule",
+        "body": "A number that sits in a column or beside another number is tabular, right aligned with its header, with one count of decimals per column and the unit in the header; dates and ids stay left.",
+        "section": "typography"
+      },
+      {
+        "name": "The Object Rule",
+        "body": "A panel exists only around a block that is an object: a metric strip with its chart, a list, a table, the action queue. Headings, sentences and a lone figure sit on the page.",
+        "section": "layout"
+      },
+      {
+        "name": "The Two Densities Rule",
+        "body": "Lists are 36 px rows, tables 44 px with a 36 px compact option, navigation 32 px. Nothing in the shell is taller than 44 px except a chart.",
+        "section": "layout"
+      },
+      {
+        "name": "The Flat Page Rule",
+        "body": "No shadow below an overlay. A flat container carries a line or a tint, never both plus a shadow.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** open every page with a page title and, where the page is daily, one sentence that says what moved since the last run.",
+      "**Do** put the metric strip first and let its active tab drive the one chart below it.",
+      "**Do** write every delta with a sign or an arrow and colour, never colour alone, and keep green for better and red for worse.",
+      "**Do** right align every number that can be compared, with its header, in tabular figures.",
+      "**Do** keep one primary button per view and make dialog triggers outline.",
+      "**Do** use the store's own app icon everywhere an app is named in a row.",
+      "**Do** separate sections with space and panel edges, and say in a footer line when and how deep the data was read."
+    ],
+    "donts": [
+      "**Don't** put a muted sentence under a heading, an eyebrow above it, or an icon beside it.",
+      "**Don't** box a heading, a sentence or a lone figure in a panel, and never nest a panel in a panel.",
+      "**Don't** use a pill for a source, a store, a market, a tag or a category, or on every row of a list.",
+      "**Don't** use orange for a warning, a data bar on another page, a link underline or an active navigation item.",
+      "**Don't** colour a position or a score by grade; show the grade word with a quiet marker at the extremes only.",
+      "**Don't** draw a meter under a number in a table, a sparkline fill, or a shadow below an overlay.",
+      "**Don't** use uppercase tracked labels, a second typeface, or a monospace face for numbers.",
+      "**Don't** render a letter tile where an app icon belongs."
+    ]
+  }
+}
