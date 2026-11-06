@@ -1,12 +1,13 @@
-import type {
-  KeywordDiscoveryDismissRequest,
-  KeywordDiscoveryDismissResult,
-  KeywordDiscoveryList,
-  KeywordDiscoveryRefreshResult,
-  KeywordDiscoverySettings,
-  KeywordDiscoverySettingsRequest,
-  KeywordDiscoveryTrackRequest,
-  KeywordDiscoveryTrackResult,
+import {
+  DISCOVERY_LIST_LIMIT,
+  type KeywordDiscoveryDismissRequest,
+  type KeywordDiscoveryDismissResult,
+  type KeywordDiscoveryList,
+  type KeywordDiscoveryRefreshResult,
+  type KeywordDiscoverySettings,
+  type KeywordDiscoverySettingsRequest,
+  type KeywordDiscoveryTrackRequest,
+  type KeywordDiscoveryTrackResult,
 } from "@asobeast/shared";
 import { apiFetch, marketParams, withQuery } from "./client";
 
@@ -17,8 +18,10 @@ export function getKeywordDiscoveries(
   appId: string,
   country?: string,
 ): Promise<KeywordDiscoveryList> {
+  const params = marketParams(country);
+  params.set("limit", String(DISCOVERY_LIST_LIMIT.max));
   return apiFetch<KeywordDiscoveryList>(
-    withQuery(discoveriesPath(appId), marketParams(country)),
+    withQuery(discoveriesPath(appId), params),
   );
 }
 

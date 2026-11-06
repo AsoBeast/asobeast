@@ -37,7 +37,7 @@ afterEach(() => {
 });
 
 describe("keyword discovery calls", () => {
-  it("reads the whole list of one market", async () => {
+  it("reads the whole list of one market, up to the largest page", async () => {
     const sent = stubFetch();
 
     await getKeywordDiscoveries("app-1", "de");
@@ -47,9 +47,9 @@ describe("keyword discovery calls", () => {
       expect.stringMatching(/\/apps\/app-1\/keyword-discoveries$/),
       expect.stringMatching(/\/apps\/app-1\/keyword-discoveries$/),
     ]);
-    expect(sent[0].url).toMatch(/\?country=de$/);
-    expect(sent[1].url).not.toContain("?");
-    expect(sent.every(({ url }) => !/state=|limit=/.test(url))).toBe(true);
+    expect(sent[0].url).toMatch(/\?country=de&limit=500$/);
+    expect(sent[1].url).toMatch(/\?limit=500$/);
+    expect(sent.every(({ url }) => !url.includes("state="))).toBe(true);
     expect(sent.every(({ method }) => method === undefined)).toBe(true);
   });
 
