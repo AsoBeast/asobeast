@@ -11,6 +11,11 @@ const utcDateFormatter = new Intl.DateTimeFormat("en-US", {
   day: "numeric",
 });
 
+const card = (page: Page, title: string) =>
+  page
+    .locator('[data-slot="card"]')
+    .filter({ has: page.getByText(title, { exact: true }) });
+
 test("importing an app posts to the api and shows the new app", async ({
   page,
 }) => {
@@ -879,15 +884,16 @@ test("app overview renders summary numbers and a utc refresh date", async ({
       .locator("[data-grade]", { hasText: "Position 12, weak" }),
   ).toHaveAttribute("data-grade", "weak");
 
-  await expect(page.getByText("Metadata coverage")).toBeVisible();
-  await expect(page.getByText("productivity app")).toBeVisible();
+  const coverage = card(page, "Metadata coverage");
+  await expect(
+    coverage.getByText("Metadata coverage", { exact: true }),
+  ).toBeVisible();
+  await expect(coverage.getByText("productivity app")).toBeVisible();
 
   const refreshDate = utcDateFormatter.format(
     new Date(APP_1_SUMMARY.lastRefreshAt ?? ""),
   );
-  const lastRefresh = page
-    .locator("[data-slot=card]")
-    .filter({ has: page.getByText("Last refresh", { exact: true }) });
+  const lastRefresh = card(page, "Last refresh");
   await expect(lastRefresh).toBeVisible();
   await expect(
     lastRefresh.getByText(refreshDate, { exact: true }),

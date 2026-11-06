@@ -821,14 +821,25 @@ test.describe("zones and thresholds", () => {
   });
 
   test("the legend fits at 320 px", async ({ page }) => {
-    await page.setViewportSize({ width: 320, height: 900 });
+    const narrow = { width: 320, height: 900 };
+    await page.setViewportSize(narrow);
     await page.goto(MAP_URL);
     const items = legend(page).getByRole("listitem");
-    const first = await items.nth(0).boundingBox();
-    const second = await items.nth(1).boundingBox();
-    const third = await items.nth(2).boundingBox();
-    expect(first && second && Math.abs(first.y - second.y) < 2).toBe(true);
-    expect(first && third && third.y > first.y).toBe(true);
+    await expect(items).toHaveCount(4);
+    const boxes = await items.evaluateAll((elements) =>
+      elements.map((element) => {
+        const { y, left, right } = element.getBoundingClientRect();
+        return { y, left, right };
+      }),
+    );
+    const [first, second, third, fourth] = boxes;
+    expect(Math.abs(first.y - second.y)).toBeLessThan(2);
+    expect(Math.abs(third.y - fourth.y)).toBeLessThan(2);
+    expect(third.y).toBeGreaterThan(first.y);
+    for (const { left, right } of boxes) {
+      expect(left).toBeGreaterThanOrEqual(0);
+      expect(right).toBeLessThanOrEqual(narrow.width);
+    }
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= window.innerWidth,
