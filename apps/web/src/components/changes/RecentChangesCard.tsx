@@ -62,10 +62,13 @@ function EntryRow({
   iconUrl: string | null;
 }) {
   const event = entryEvent(entry);
-  const field =
+  const label =
     entry.kind === "versions"
       ? "Versions"
       : localizedLabel(CHANGE_FIELD_LABELS[event.field], event.localization);
+  const field = event.country
+    ? `${label} · ${event.country.toUpperCase()}`
+    : label;
   return (
     <Link
       href={`/apps/${event.appId}/changes`}

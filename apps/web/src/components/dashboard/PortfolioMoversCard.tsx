@@ -13,18 +13,22 @@ import {
 import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import { useQueryState } from "nuqs";
 import { portfolioInsightsOptions, portfolioOptions } from "@/lib/queries";
-import { moverViewParser, type MoverView } from "@/lib/search-params";
+import {
+  MOVER_VIEWS,
+  moverViewParser,
+  type MoverView,
+} from "@/lib/search-params";
 import { byMagnitude } from "./mover-change";
-import { hasWeekOfHistory } from "./movement-sentence";
+import { hasWeekOfHistory, quietSentence } from "./movement-sentence";
 import { MoverBreakdown } from "./MoverBreakdown";
 
 const ALL_MOVERS = 8;
 
-const MOVER_VIEWS: Array<[MoverView, string]> = [
-  ["all", "All"],
-  ["up", "Climbers"],
-  ["down", "Fallers"],
-];
+const MOVER_LABELS: Record<MoverView, string> = {
+  all: "All",
+  up: "Climbers",
+  down: "Fallers",
+};
 
 const EMPTY: Record<MoverView, string> = {
   all: "No movement this week.",
@@ -32,19 +36,16 @@ const EMPTY: Record<MoverView, string> = {
   down: "No keyword fell this week.",
 };
 
-function quietSentence(insights: PortfolioInsights): string | null {
+function quietOf(insights: PortfolioInsights): string | null {
   const { up, down } = insights.totals.movement;
-  if (up + down > 0) return null;
-  return hasWeekOfHistory(insights)
-    ? "No keyword moved this week."
-    : "Movement appears after a week of daily runs.";
+  return up + down > 0 ? null : quietSentence(hasWeekOfHistory(insights));
 }
 
 export function PortfolioMoversCard() {
   const { data: insights } = useSuspenseQuery(portfolioInsightsOptions);
   const { data: portfolio } = useSuspenseQuery(portfolioOptions);
   const apps = new Map(portfolio.apps.map((app) => [app.id, app]));
-  const quiet = quietSentence(insights);
+  const quiet = quietOf(insights);
   const [view, setView] = useQueryState("movers", moverViewParser);
   const { up, down } = insights.movers;
   const all = byMagnitude([...up, ...down]).slice(0, ALL_MOVERS);
@@ -66,9 +67,9 @@ export function PortfolioMoversCard() {
               }
             >
               <TabsList aria-label="Movers shown">
-                {MOVER_VIEWS.map(([value, label]) => (
+                {MOVER_VIEWS.map((value) => (
                   <TabsOption key={value} value={value}>
-                    {label}
+                    {MOVER_LABELS[value]}
                   </TabsOption>
                 ))}
               </TabsList>

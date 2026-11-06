@@ -154,14 +154,14 @@ test("keyword movers say so in a quiet week", async ({ page }) => {
   await page.goto("/");
 
   const card = moversCard(page);
-  await expect(card).toContainText("No keyword moved this week.");
+  await expect(card).toContainText("No keyword moved in the last 7 days.");
   await expect(card.getByRole("list")).toHaveCount(0);
 });
 
 for (const { cookie, sentence } of [
   {
     cookie: "portfolio_insights_unranked",
-    sentence: "No keyword moved this week.",
+    sentence: "No keyword moved in the last 7 days.",
   },
   {
     cookie: "portfolio_insights_fresh",

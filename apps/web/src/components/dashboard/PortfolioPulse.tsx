@@ -32,13 +32,13 @@ function MovedValue({ movement }: { movement: PortfolioMovement }) {
       {movement.up > 0 ? (
         <Badge variant="up">
           <span aria-hidden>{`▲ ${formatNumber(movement.up)}`}</span>
-          <span className="sr-only">{`${movement.up} climbed`}</span>
+          <span className="sr-only">{`${formatNumber(movement.up)} climbed`}</span>
         </Badge>
       ) : null}
       {movement.down > 0 ? (
         <Badge variant="down">
           <span aria-hidden>{`▼ ${formatNumber(movement.down)}`}</span>
-          <span className="sr-only">{`${movement.down} fell`}</span>
+          <span className="sr-only">{`${formatNumber(movement.down)} fell`}</span>
         </Badge>
       ) : null}
     </Figure>

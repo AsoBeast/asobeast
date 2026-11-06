@@ -19,12 +19,13 @@ export function moverChange(mover: KeywordMover): MoverChange {
   };
 }
 
+const weight = (mover: KeywordMover): number => {
+  const change = moverChange(mover);
+  return change.kind === "new" || change.kind === "lost"
+    ? BAR_CAP * BAR_CAP
+    : change.size;
+};
+
 export function byMagnitude<T extends KeywordMover>(movers: T[]): T[] {
-  const weight = (mover: T) => {
-    const change = moverChange(mover);
-    return change.kind === "new" || change.kind === "lost"
-      ? Number.POSITIVE_INFINITY
-      : change.size;
-  };
   return [...movers].sort((a, b) => weight(b) - weight(a));
 }

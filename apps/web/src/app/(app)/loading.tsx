@@ -1,11 +1,11 @@
 import {
   AppsDashboardSkeleton,
+  DashboardLedeSkeleton,
   DoNextCardSkeleton,
   PortfolioMoversCardSkeleton,
   PortfolioStatusLineSkeleton,
   PortfolioPulseSkeleton,
 } from "@/components/dashboard/skeletons";
-import { DashboardLedeSkeleton } from "@/components/dashboard/DashboardLede";
 import { ChangeTimelineSkeleton } from "@/components/changes/skeletons";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";

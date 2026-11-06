@@ -15,10 +15,7 @@ import { AppsRow } from "@/components/dashboard/AppsRow";
 import { FirstRunGate } from "@/components/dashboard/FirstRunGate";
 import { PortfolioPulse } from "@/components/dashboard/PortfolioPulse";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
-import {
-  DashboardLede,
-  DashboardLedeSkeleton,
-} from "@/components/dashboard/DashboardLede";
+import { DashboardLede } from "@/components/dashboard/DashboardLede";
 import { DoNextCard } from "@/components/dashboard/DoNextCard";
 import { AppsToolbar } from "@/components/dashboard/AppsToolbar";
 import { DashboardSection } from "@/components/dashboard/DashboardSection";
@@ -29,6 +26,7 @@ import {
 } from "@/components/dashboard/PortfolioStatusLine";
 import {
   AppsDashboardSkeleton,
+  DashboardLedeSkeleton,
   DoNextCardSkeleton,
   PortfolioMoversCardSkeleton,
   PortfolioStatusLineSkeleton,

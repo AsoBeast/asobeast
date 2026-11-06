@@ -22,7 +22,7 @@ function changeText(change: MoverChange): string {
 function changeLabel(change: MoverChange): string {
   if (change.kind === "new") return "started ranking";
   if (change.kind === "lost") return "dropped out of the results";
-  return `${change.kind === "up" ? "up" : "down"} ${change.size} in 7 days`;
+  return `${change.kind === "up" ? "up" : "down"} ${formatNumber(change.size)} in 7 days`;
 }
 
 const rankingsHref = (mover: PortfolioKeywordMover) =>

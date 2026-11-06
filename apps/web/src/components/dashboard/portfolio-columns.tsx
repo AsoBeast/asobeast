@@ -9,6 +9,7 @@ import { SortableHeader } from "@/components/data-table/SortableHeader";
 import type { DataTableFeatures } from "@/components/data-table/table-features";
 import { TrendChip } from "@/components/ui/delta-chip";
 import { GradedNumber } from "@/components/ui/graded";
+import { Separated } from "@/components/ui/separated";
 import {
   formatDate,
   formatNumber,
@@ -46,9 +47,7 @@ function AppCell({ app }: { app: PortfolioApp }) {
     app.country.toUpperCase(),
     pluralize(app.trackedKeywords, "keyword"),
     app.groupName,
-  ]
-    .filter((part) => part !== null)
-    .join(" · ");
+  ].filter((part) => part !== null);
   return (
     <div className="flex max-w-44 min-w-0 items-center gap-3 @xl/dashboard:max-w-72">
       <AppIcon src={app.iconUrl} size={24} />
@@ -60,7 +59,7 @@ function AppCell({ app }: { app: PortfolioApp }) {
           {name}
         </Link>
         <span className="truncate text-label text-muted-foreground">
-          {meta}
+          <Separated parts={meta} />
         </span>
         {app.delistedAt ? <DelistedBadge since={app.delistedAt} /> : null}
       </div>

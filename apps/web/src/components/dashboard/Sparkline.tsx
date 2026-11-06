@@ -7,6 +7,14 @@ const BOX = { width: 120, height: 48, padding: 3 };
 
 const TREND_BOX = { width: 72, height: 22, padding: 2 };
 
+type Direction = "up" | "down" | "flat";
+
+function trendDirection(first: number, last: number): Direction {
+  if (last > first) return "up";
+  if (last < first) return "down";
+  return "flat";
+}
+
 export function TrendLine({ points }: { points: VisibilityPoint[] }) {
   if (points.length < 2) {
     return (
@@ -18,7 +26,7 @@ export function TrendLine({ points }: { points: VisibilityPoint[] }) {
   const values = points.map((point) => point.visibility);
   const first = values[0];
   const last = values[values.length - 1];
-  const direction = last > first ? "up" : last < first ? "down" : "flat";
+  const direction = trendDirection(first, last);
   return (
     <svg
       role="img"
@@ -52,7 +60,7 @@ export function Sparkline({ points }: { points: VisibilityPoint[] }) {
   const values = points.map((point) => point.visibility);
   const first = values[0];
   const last = values[values.length - 1];
-  const direction = last > first ? "up" : last < first ? "down" : "flat";
+  const direction = trendDirection(first, last);
   const plotted = sparklinePoints(values, BOX);
   const [endX, endY] = plotted[plotted.length - 1];
 
@@ -67,7 +75,7 @@ export function Sparkline({ points }: { points: VisibilityPoint[] }) {
     >
       <svg
         role="img"
-        aria-label={`visibility, last 30 days: ${direction}, now ${last}`}
+        aria-label={`visibility, last 30 days: ${direction}, now ${Math.round(last)}`}
         viewBox={`0 0 ${BOX.width} ${BOX.height}`}
         preserveAspectRatio="none"
         className="block h-full w-full"

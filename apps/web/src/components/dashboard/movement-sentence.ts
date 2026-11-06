@@ -7,17 +7,18 @@ export const hasWeekOfHistory = (insights: PortfolioInsights): boolean =>
 export const appsThatMoved = (insights: PortfolioInsights): number =>
   insights.apps.filter((app) => app.movement.up + app.movement.down > 0).length;
 
+export const quietSentence = (weekOfHistory: boolean): string =>
+  weekOfHistory
+    ? "No keyword moved in the last 7 days."
+    : "Movement appears after a week of daily runs.";
+
 export function movementSentence(
   movement: PortfolioMovement,
   apps: number,
   weekOfHistory: boolean,
 ): string {
   const { up, down } = movement;
-  if (up + down === 0) {
-    return weekOfHistory
-      ? "No keyword moved in the last 7 days."
-      : "Movement appears after a week of daily runs.";
-  }
+  if (up + down === 0) return quietSentence(weekOfHistory);
 
   const moved = [
     up > 0 ? `${pluralize(up, "keyword")} climbed` : null,

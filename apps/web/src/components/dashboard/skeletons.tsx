@@ -11,6 +11,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatTileGroup, StatTileSkeleton } from "@/components/ui/stat-tile";
 
+export const LEDE = "max-w-[70ch] text-body text-foreground";
+
 const PULSE_GRID = "grid-cols-2 @3xl/dashboard:grid-cols-4";
 
 export const PULSE_STRIP = `${PULSE_GRID} rounded-none border-0`;
@@ -140,5 +142,16 @@ export function AppsDashboardSkeleton({ view = "cards" }: { view?: AppView }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+export function DashboardLedeSkeleton() {
+  return (
+    <div aria-hidden className={LEDE}>
+      <Skeleton
+        shape="text"
+        className="inline-block w-80 max-w-full align-middle"
+      />
+    </div>
   );
 }
