@@ -17,7 +17,7 @@ export interface PortfolioVisibility {
 }
 
 const charted = (app: PortfolioApp): boolean =>
-  app.lastCapturedAt !== null && app.sparkline.length > 0;
+  app.lastCapturedAt !== null && app.sparkline.length > 1;
 
 const nameOf = (app: PortfolioApp): string => app.name ?? "Untitled app";
 

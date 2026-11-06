@@ -230,6 +230,29 @@ test("listing changes show eight rows and reveal the rest", async ({
   await expect(rows).toHaveCount(RECENT_CHANGES.events.length);
 });
 
+test("showing more listing changes hands focus to the first revealed row", async ({
+  page,
+}) => {
+  await page.context().addCookies([
+    {
+      name: "recent_changes_varied",
+      value: "1",
+      url: "http://localhost:3000",
+    },
+  ]);
+  await page.goto("/");
+
+  const card = changesCard(page);
+  const rows = card.getByRole("link", { name: /Focus Timer|Rival Focus/ });
+  await expect(rows).toHaveCount(VISIBLE_CHANGES);
+  const more = card.getByRole("button", { name: /^Show \d+ more$/ });
+  await more.focus();
+  await page.keyboard.press("Enter");
+
+  await expect(rows).toHaveCount(RECENT_CHANGES.events.length);
+  await expect(rows.nth(VISIBLE_CHANGES)).toBeFocused();
+});
+
 test("listing changes fold one app's version updates into one row", async ({
   page,
 }) => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
+import { focusIsLost } from "@/lib/focus-handoff";
 import { formatDayMonth } from "@/lib/format";
 import { localizedLabel } from "@/lib/localizations";
 import { portfolioOptions, recentChangesOptions } from "@/lib/queries";
@@ -105,6 +106,18 @@ function RecentChangesList({ today }: { today: string }) {
   const { data: portfolio } = useSuspenseQuery(portfolioOptions);
   const [owner, setOwner] = useQueryState("changes", changeOwnerParser);
   const [expanded, setExpanded] = useState(false);
+  const list = useRef<HTMLDivElement>(null);
+  const revealing = useRef(false);
+
+  useEffect(() => {
+    if (!revealing.current) return;
+    revealing.current = false;
+    if (!focusIsLost()) return;
+    list.current
+      ?.querySelectorAll<HTMLElement>("a[href]")
+      .item(VISIBLE_CHANGES)
+      ?.focus();
+  }, [expanded]);
 
   if (data.events.length === 0) {
     return (
@@ -125,7 +138,7 @@ function RecentChangesList({ today }: { today: string }) {
   const byEvent = new Map(shown.map((entry) => [entryEvent(entry).id, entry]));
 
   return (
-    <div className="flex flex-col gap-3">
+    <div ref={list} className="flex flex-col gap-3">
       {mixed ? (
         <Tabs
           value={owner}
@@ -180,7 +193,10 @@ function RecentChangesList({ today }: { today: string }) {
           variant="ghost"
           size="sm"
           className="self-start"
-          onClick={() => setExpanded(true)}
+          onClick={() => {
+            revealing.current = true;
+            setExpanded(true);
+          }}
         >
           {`Show ${hidden} more`}
         </Button>
