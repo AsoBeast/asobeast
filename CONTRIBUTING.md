@@ -177,7 +177,7 @@ The description is read by a person deciding whether the change is right, and it
   git -C ../pr-screenshots push origin pr-screenshots
   ```
 
-  The reference is then `![Discovered tab in the light theme](https://raw.githubusercontent.com/<fork owner>/asobeast/pr-screenshots/716-discovered.png)`. Later screenshots go on the same branch, and the branch stays, because deleting it breaks every image it holds. Never capture real customer data, a token or a console key.
+  The reference is then `![Discovered tab in the light theme](https://raw.githubusercontent.com/<fork owner>/asobeast/pr-screenshots/716-discovered.png)`. `--orphan` needs Git 2.42 or later, and only the first screenshot runs that line: later ones are copied into `../pr-screenshots`, committed and pushed the same way. When that folder is gone, `git worktree prune` and `git worktree add ../pr-screenshots pr-screenshots` bring the branch back with its earlier images. The branch stays, because deleting it breaks every image it holds. Never capture real customer data, a token or a console key.
 
 - **Worth a look** names at most three decisions or risky spots, one line each.
 - **How it was checked** says in two or three sentences what was tested by hand, where, what failed and was fixed, and what was not run. CI reports the suites, so pass counts do not belong here. A long QA table goes in a `<details>` block.
