@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { flexRender, type Table as TanstackTable } from "@tanstack/react-table";
 import type { KeywordDiscoveryItem } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { focusIsLost } from "@/lib/focus-handoff";
 import { formatNumber } from "@/lib/format";
 import type { KeywordTableFeatures } from "../keyword-table-features";
 import { DISCOVERY_PAGE_SIZE } from "./discovery-rows";
@@ -27,6 +28,18 @@ export function DiscoveryRows({ table }: { table: DiscoveryTable }) {
   const rows = table.getRowModel().rows;
   const shown = rows.slice(0, pages * DISCOVERY_PAGE_SIZE);
   const next = Math.min(DISCOVERY_PAGE_SIZE, rows.length - shown.length);
+  const body = useRef<HTMLTableSectionElement>(null);
+  const revealedFrom = useRef<number | null>(null);
+
+  useEffect(() => {
+    const first = revealedFrom.current;
+    if (first === null) return;
+    revealedFrom.current = null;
+    if (!focusIsLost()) return;
+    body.current?.rows[first]
+      ?.querySelector<HTMLElement>("[data-discovery-select]")
+      ?.focus();
+  });
 
   return (
     <div className="flex flex-col gap-3">
@@ -53,7 +66,7 @@ export function DiscoveryRows({ table }: { table: DiscoveryTable }) {
             </TableRow>
           ))}
         </TableHeader>
-        <TableBody>
+        <TableBody ref={body}>
           {shown.map((row) => (
             <TableRow
               key={row.id}
@@ -87,7 +100,10 @@ export function DiscoveryRows({ table }: { table: DiscoveryTable }) {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setPages((count) => count + 1)}
+              onClick={() => {
+                revealedFrom.current = shown.length;
+                setPages((count) => count + 1);
+              }}
             >
               {`Show ${next} more`}
             </Button>

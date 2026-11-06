@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Page, Request } from "@playwright/test";
+import { pressFromKeyboard } from "./held-request.mts";
 import { activateTwiceInOneTask, hydrated } from "./hydrated.mts";
 import { expect, test } from "./session.mts";
 import { APP_GP_DETAIL, APP_RIVAL_ID } from "./fixtures.mts";
@@ -243,6 +244,23 @@ test("a long list pages fifty rows at a time and marks the best fifty", async ({
   await expect(
     rowOf(page, "discovered phrase 051").getByText("Recommended"),
   ).toHaveCount(0);
+});
+
+test("loading the last page hands focus to the first row it reveals", async ({
+  page,
+}) => {
+  await page.goto(`/apps/${DISCOVERY_PAGED_APP}/keywords?tab=discovered`);
+
+  await pressFromKeyboard(page.getByRole("button", { name: "Show 50 more" }));
+  await expect(keywordsIn(page)).toHaveCount(100);
+  const last = page.getByRole("button", { name: "Show 20 more" });
+  await expect(last).toBeFocused();
+  await page.keyboard.press("Enter");
+
+  await expect(keywordsIn(page)).toHaveCount(120);
+  await expect(
+    page.getByRole("checkbox", { name: "Select discovered phrase 101" }),
+  ).toBeFocused();
 });
 
 test("the footer says when the list was checked and what the week holds", async ({
