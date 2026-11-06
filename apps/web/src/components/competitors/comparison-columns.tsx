@@ -185,7 +185,7 @@ function KeywordCell({
 function MarketCell({ country }: { country: string }) {
   const name = formatCountry(country);
   return (
-    <span title={name} className="text-label text-faint-foreground">
+    <span title={name} className="text-label text-muted-foreground">
       <span aria-hidden>{country.toUpperCase()}</span>
       <span className="sr-only">{name}</span>
     </span>

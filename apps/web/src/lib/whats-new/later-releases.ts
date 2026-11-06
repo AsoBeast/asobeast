@@ -11,7 +11,7 @@ export const LATER_RELEASES: readonly Release[] = [
       {
         kind: "improved",
         title: "A calmer, sharper look",
-        text: "AsoBeast has a new typeface, warmer neutral colours and flatter panels with fine borders. Numbers line up in columns, labels are easier to read, and the brand orange now marks only the main action on each page.",
+        text: "AsoBeast has a new typeface, warmer neutral colours and flatter panels with fine borders. Numbers line up in columns, labels are easier to read, and the brand orange is kept for the main action on each page.",
       },
       {
         kind: "new",

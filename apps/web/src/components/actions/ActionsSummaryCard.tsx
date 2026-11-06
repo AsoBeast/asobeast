@@ -93,7 +93,7 @@ function TopActionLink({
   return (
     <Link
       href={href}
-      className="flex min-h-10 flex-col gap-1 rounded-md px-2 py-2 text-sm outline-none transition-colors hover:bg-muted/40 focus-visible:ring-3 focus-visible:ring-ring/50"
+      className="flex min-h-10 flex-col gap-1 rounded-md px-2 py-2 text-sm outline-none transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring"
     >
       <span className="flex items-start gap-2">
         <ActionPriorityBadge priority={item.priority} />

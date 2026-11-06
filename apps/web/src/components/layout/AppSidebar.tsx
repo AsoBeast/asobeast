@@ -72,6 +72,7 @@ export function AppSidebar() {
             </SidebarMenuItem>
           </SidebarMenu>
           <div className="px-2 pb-1 text-caption text-faint-foreground group-data-[collapsible=icon]:hidden">
+            <p>Open source ASO toolkit for the App Store and Google Play.</p>
             {version ? (
               <p>
                 <a

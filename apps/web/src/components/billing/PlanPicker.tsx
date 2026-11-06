@@ -60,7 +60,7 @@ function PlanOption({
       aria-describedby={highlightsId}
       onClick={onSelect}
       className={cn(
-        "flex min-w-0 flex-col items-start gap-3 rounded-2xl border bg-card p-4 text-left shadow-raised transition-[color,background-color,border-color,box-shadow] hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none sm:p-6",
+        "flex min-w-0 flex-col items-start gap-3 rounded-2xl border bg-card p-4 text-left shadow-raised transition-[color,background-color,border-color,box-shadow] hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:p-6",
         selected &&
           "border-primary bg-primary-subtle ring-1 ring-primary hover:bg-primary-subtle",
       )}
@@ -122,7 +122,7 @@ export function PlanPicker({
               <TabsOption
                 key={value}
                 value={value}
-                className="gap-2 rounded-lg px-3 text-heading"
+                className="gap-2 rounded-lg px-3 text-body font-medium"
               >
                 <span>{INTERVAL_LABEL[value]}</span>
                 {value === "year" ? (
@@ -156,7 +156,7 @@ export function PlanPicker({
         <h2 id="plan-features-title" className="text-heading">
           {featuresTitle(selected)}
         </h2>
-        <dl className="divide-y divide-border text-heading">
+        <dl className="divide-y divide-border text-body font-medium">
           {LIMIT_ROWS.map(({ key, label }) => (
             <div key={key} className="flex justify-between gap-4 py-2">
               <dt className="font-normal text-muted-foreground">{label}</dt>

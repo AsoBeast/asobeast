@@ -128,7 +128,7 @@ function KeywordButton({
       {multiMarket && country ? (
         <span
           title={formatCountry(country)}
-          className="text-label text-faint-foreground"
+          className="text-label text-muted-foreground"
         >
           <span aria-hidden>{country.toUpperCase()}</span>
           <span className="sr-only">{formatCountry(country)}</span>

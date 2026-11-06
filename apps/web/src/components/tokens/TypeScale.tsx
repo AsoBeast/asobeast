@@ -56,7 +56,7 @@ export function TypeScale() {
               the numeric treatment.
             </caption>
             <thead>
-              <tr className="border-b text-left text-label text-muted-foreground uppercase">
+              <tr className="border-b text-left text-label text-muted-foreground">
                 <th scope="col" className="py-1.5 font-medium">
                   Keyword
                 </th>

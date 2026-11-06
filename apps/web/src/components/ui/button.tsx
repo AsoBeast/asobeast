@@ -20,7 +20,7 @@ const buttonVariants = cva(
           "text-muted-foreground hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground",
         destructive:
           "border-border bg-card text-destructive hover:border-destructive hover:bg-signal-down-subtle",
-        link: "h-auto px-0 text-foreground underline decoration-faint-foreground underline-offset-4 hover:decoration-foreground",
+        link: "text-foreground underline decoration-faint-foreground underline-offset-4 hover:decoration-foreground",
       },
       size: {
         default:
@@ -29,7 +29,7 @@ const buttonVariants = cva(
         sm: "h-7 gap-1 px-2.5 text-label has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
         lg: "h-9 gap-1.5 px-3.5 has-data-[icon=inline-end]:pr-3 has-data-[icon=inline-start]:pl-3",
         xl: "h-11 gap-2 rounded-lg px-6 text-body has-data-[icon=inline-end]:pr-5 has-data-[icon=inline-start]:pl-5",
-        icon: "size-[34px]",
+        icon: "size-8 md:size-[34px]",
         "icon-xs": "size-6 rounded-sm [&_svg:not([class*='size-'])]:size-3",
         "icon-sm": "size-7",
         "icon-lg": "size-9",

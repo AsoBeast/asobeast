@@ -96,7 +96,7 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
     <tr
       data-slot="table-row"
       className={cn(
-        "border-b border-border-subtle bg-card transition-colors duration-150 ease-out hover:bg-muted has-aria-expanded:bg-muted data-[state=selected]:bg-accent data-[state=selected]:shadow-[inset_2px_0_0_var(--chart-1)]",
+        "border-b border-border-subtle bg-card transition-colors duration-150 ease-out hover:bg-muted has-aria-expanded:bg-muted data-[state=selected]:bg-accent data-[state=selected]:[&>td:first-child]:shadow-[inset_2px_0_0_var(--foreground)]",
         className,
       )}
       {...props}
@@ -116,7 +116,7 @@ function TableHead({
       data-slot="table-head"
       data-numeric={numeric || undefined}
       className={cn(
-        "h-9 px-4 text-left align-middle text-label whitespace-nowrap text-faint-foreground in-data-[density=compact]:h-8 in-data-[density=compact]:px-3 [&:has([role=checkbox])]:pr-0",
+        "h-9 px-2 text-left align-middle md:px-4 text-label whitespace-nowrap text-faint-foreground in-data-[density=compact]:h-8 md:in-data-[density=compact]:px-3 [&:has([role=checkbox])]:pr-0",
         numeric && NUMERIC_CELL,
         className,
       )}
@@ -135,7 +135,7 @@ function TableCell({
       data-slot="table-cell"
       data-numeric={numeric || undefined}
       className={cn(
-        "h-11 px-4 py-1.5 align-middle whitespace-nowrap in-data-[density=compact]:h-9 in-data-[density=compact]:px-3 in-data-[density=compact]:py-1 [&:has([role=checkbox])]:pr-0",
+        "h-11 px-2 py-1.5 align-middle md:px-4 whitespace-nowrap in-data-[density=compact]:h-9 md:in-data-[density=compact]:px-3 in-data-[density=compact]:py-1 [&:has([role=checkbox])]:pr-0",
         numeric && NUMERIC_CELL,
         className,
       )}

@@ -13,10 +13,7 @@ export function SerpSection({
   const headingId = useId();
   return (
     <section aria-labelledby={headingId} className="flex flex-col pt-4">
-      <h3
-        id={headingId}
-        className="px-4 pb-1 text-label text-muted-foreground uppercase"
-      >
+      <h3 id={headingId} className="px-4 pb-1 text-label text-muted-foreground">
         {heading}
       </h3>
       {children}

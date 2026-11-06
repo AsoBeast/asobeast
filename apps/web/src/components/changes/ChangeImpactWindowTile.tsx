@@ -18,7 +18,7 @@ import {
 function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-0.5">
-      <dt className="text-label text-muted-foreground uppercase">{label}</dt>
+      <dt className="text-label text-muted-foreground">{label}</dt>
       {children}
     </div>
   );

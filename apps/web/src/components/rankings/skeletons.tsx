@@ -1,3 +1,4 @@
+import { CHART_HEIGHT } from "@/components/charts/theme";
 import {
   Card,
   CardAction,
@@ -5,6 +6,7 @@ import {
   CardHeader,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 export function RankingChartSkeleton() {
   return (
@@ -22,7 +24,7 @@ export function RankingChartSkeleton() {
             <Skeleton key={index} className="h-7 w-24 rounded-full" />
           ))}
         </div>
-        <Skeleton className="h-[360px] w-full" />
+        <Skeleton className={cn(CHART_HEIGHT.hero, "w-full")} />
       </CardContent>
     </Card>
   );

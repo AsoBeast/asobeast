@@ -45,7 +45,7 @@ function ResultRow({
         ref={buttonRef}
         type="button"
         onClick={() => onPick(result)}
-        className="flex w-full min-w-0 items-center gap-3 rounded-md px-2 py-1.5 text-left outline-none transition-colors duration-150 hover:bg-muted/40 focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="flex w-full min-w-0 items-center gap-3 rounded-md px-2 py-1.5 text-left outline-none transition-colors duration-150 hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring"
       >
         <AppIcon src={result.iconUrl} size={ICON_SIZE} />
         <span className="flex min-w-0 flex-col">

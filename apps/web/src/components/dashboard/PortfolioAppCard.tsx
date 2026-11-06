@@ -82,7 +82,7 @@ export function PortfolioAppCard({
       <AppCardLink
         id={app.id}
         name={name}
-        className="absolute inset-0 z-10 rounded-xl focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+        className="absolute inset-0 z-10 rounded-xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
       />
 
       <div className="absolute top-2 right-2 z-20">
@@ -149,7 +149,7 @@ export function PortfolioGroupMember({
       <AppCardLink
         id={app.id}
         name={name}
-        className="absolute inset-0 z-10 rounded-lg focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+        className="absolute inset-0 z-10 rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
       />
 
       <div className="absolute top-2 right-0 z-20">

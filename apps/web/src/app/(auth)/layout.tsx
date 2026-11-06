@@ -12,7 +12,7 @@ export default function AuthLayout({
       <header className="page-gutter flex items-center justify-between py-4 sm:[--gutter:1.5rem]">
         <Link
           href="/"
-          className="flex items-center gap-2 rounded-md text-heading focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+          className="flex items-center gap-2 rounded-md text-heading focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
           <Image
             src="/brand/mark.png"

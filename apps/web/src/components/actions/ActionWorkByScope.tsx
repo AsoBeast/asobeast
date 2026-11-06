@@ -42,7 +42,7 @@ export function ActionWorkByScope({
                   event.preventDefault();
                   void setView({ [facet]: [row.key] }, { history: "replace" });
                 }}
-                className="grid min-h-10 grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 rounded-md px-2 py-2 text-body outline-none transition-colors duration-150 hover:bg-muted/40 focus-visible:ring-3 focus-visible:ring-ring/50"
+                className="grid min-h-10 grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 rounded-md px-2 py-2 text-body outline-none transition-colors duration-150 hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <span className="truncate">{row.label}</span>
                 <span className="numeric">

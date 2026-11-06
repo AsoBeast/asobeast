@@ -67,7 +67,7 @@ export function ChartStat({
         height,
       )}
     >
-      <p className="text-label text-muted-foreground uppercase">{label}</p>
+      <p className="text-label text-muted-foreground">{label}</p>
       <p className="numeric text-title">{value}</p>
       <p className="text-caption text-muted-foreground">{note}</p>
     </div>

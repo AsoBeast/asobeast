@@ -139,15 +139,11 @@ function ChangeValue({
   return (
     <span className="grid gap-1 sm:grid-cols-2">
       <span className="flex flex-col gap-0.5 rounded-md bg-muted/50 px-2 py-1">
-        <span className="text-label text-muted-foreground uppercase">
-          Before
-        </span>
+        <span className="text-label text-muted-foreground">Before</span>
         <span className="break-words text-muted-foreground">{from}</span>
       </span>
       <span className="flex flex-col gap-0.5 rounded-md bg-success-subtle px-2 py-1">
-        <span className="text-label text-muted-foreground uppercase">
-          After
-        </span>
+        <span className="text-label text-muted-foreground">After</span>
         <span className="break-words font-medium">{to}</span>
       </span>
     </span>
@@ -270,7 +266,7 @@ function ChangeList({
     <div className="flex flex-col gap-6">
       {Array.from(groups.entries()).map(([day, events]) => (
         <section key={day} className="flex flex-col gap-2">
-          <h2 className="flex items-center gap-2 text-label text-muted-foreground uppercase">
+          <h2 className="flex items-center gap-2 text-label text-muted-foreground">
             <span aria-hidden className="size-1.5 rounded-full bg-border" />
             {formatDate(day)}
             {market === undefined ? (

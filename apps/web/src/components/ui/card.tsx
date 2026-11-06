@@ -45,7 +45,7 @@ function CardTitle({
     <Comp
       data-slot="card-title"
       className={cn(
-        "font-heading text-heading text-card-foreground",
+        "font-heading text-heading font-semibold text-card-foreground",
         className,
       )}
       {...props}

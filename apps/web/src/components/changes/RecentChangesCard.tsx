@@ -90,9 +90,7 @@ function RecentChangesList({ today }: { today: string }) {
       ) : (
         groupChangesByDay(shown, today).map((group) => (
           <section key={group.day} className="flex flex-col gap-1">
-            <h3 className="text-label text-muted-foreground uppercase">
-              {group.label}
-            </h3>
+            <h3 className="text-label text-muted-foreground">{group.label}</h3>
             <div className="divide-y">
               {group.events.map((event) => (
                 <Link

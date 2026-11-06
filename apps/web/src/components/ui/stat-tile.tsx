@@ -1,5 +1,9 @@
 import type { ReactNode } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+
+const TILE_SHAPE =
+  "row-span-3 grid grid-rows-subgrid gap-1 bg-card px-5 pt-3.5 pb-4 shadow-[-1px_0_0_var(--border),0_-1px_0_var(--border)]";
 
 export function StatTileGroup({
   className,
@@ -47,9 +51,9 @@ export function StatTile({
         ? { type: "button", onClick: onSelect, "aria-pressed": !!selected }
         : {})}
       className={cn(
-        "row-span-3 -mr-px -mb-px grid grid-rows-subgrid gap-1 border-r border-b border-border bg-card px-5 pt-3.5 pb-4",
+        TILE_SHAPE,
         onSelect &&
-          "cursor-pointer text-left transition-colors duration-150 ease-out outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset data-[selected=true]:shadow-[inset_0_-2px_0_var(--foreground)]",
+          "cursor-pointer text-left transition-colors duration-150 ease-out outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset data-[selected=true]:shadow-[-1px_0_0_var(--border),0_-1px_0_var(--border),inset_0_-2px_0_var(--foreground)]",
         className,
       )}
     >
@@ -62,5 +66,23 @@ export function StatTile({
         {note}
       </span>
     </Tile>
+  );
+}
+
+function SkeletonLine({ step, width }: { step: string; width: string }) {
+  return (
+    <span className={step}>
+      <Skeleton className={cn("inline-block h-[1em] align-middle", width)} />
+    </span>
+  );
+}
+
+export function StatTileSkeleton() {
+  return (
+    <div data-slot="stat-tile-skeleton" aria-hidden className={TILE_SHAPE}>
+      <SkeletonLine step="text-label" width="w-24" />
+      <SkeletonLine step="self-end text-metric" width="w-12" />
+      <SkeletonLine step="text-caption" width="w-28" />
+    </div>
   );
 }
