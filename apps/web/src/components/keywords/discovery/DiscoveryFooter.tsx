@@ -26,7 +26,10 @@ export function DiscoveryFooter({
         aria-live="polite"
         className={cn("inline-flex items-center gap-1.5", !pending && "hidden")}
       >
-        <LoaderCircle aria-hidden className="size-3.5 animate-spin" />
+        <LoaderCircle
+          aria-hidden
+          className="size-3.5 motion-safe:animate-spin"
+        />
         <span>{pendingChecksText(list.checks.pending)}</span>
       </p>
       {list.unfit > 0 ? (

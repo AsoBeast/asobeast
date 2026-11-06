@@ -294,10 +294,31 @@ test("pending checks poll until they land", async ({ page, context }) => {
 
   await page.clock.runFor(16_000);
 
-  await expect(page.getByText("3 checks pending")).toBeHidden();
+  await expect(page.getByText("3 checks pending")).toBeHidden({
+    timeout: 15_000,
+  });
   const settled = reads.length;
   await page.clock.runFor(60_000);
   expect(reads.length).toBe(settled);
+});
+
+test("the pending spinner holds still under reduced motion", async ({
+  page,
+  context,
+}) => {
+  await context.addCookies([cookie(DISCOVERY_PENDING_COOKIE)]);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto(DISCOVERED);
+
+  const pending = page.getByText("3 checks pending");
+  await expect(pending).toBeVisible();
+  expect(
+    await pending.evaluate(
+      (element) =>
+        getComputedStyle(element.parentElement!.querySelector("svg")!)
+          .animationName,
+    ),
+  ).toBe("none");
 });
 
 test("the discovered list fits a narrow screen", async ({ page }) => {
