@@ -190,7 +190,7 @@ test.describe("the totals row", () => {
   test("stays at the bottom of a long table and totals every row", async ({
     page,
   }) => {
-    await page.setViewportSize({ width: 1280, height: 1500 });
+    await page.setViewportSize({ width: 1280, height: 1800 });
     await page.goto("/apps/app-bulk/keywords");
     await expect(keywordTotal(page)).toHaveText("500 keywords");
 
