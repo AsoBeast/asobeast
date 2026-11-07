@@ -128,7 +128,7 @@ export const EnvSchema = z.object({
       .string()
       .refine((origin) => !builtFromPortAddress(origin), {
         error:
-          'ASOBEAST_PORT must be a port number such as 3001, not an address. The Compose stacks build the default WEB_PUBLIC_URL from it, which turned it into an origin that does not parse. Set ASOBEAST_PORT to the port alone, or set WEB_PUBLIC_URL to the origin the web app is served from',
+          'WEB_PUBLIC_URL is not an origin that parses. When WEB_PUBLIC_URL is not set, the Compose stacks build it from ASOBEAST_PORT, which then holds an address where a port number such as 3001 belongs. Set ASOBEAST_PORT to the port alone, or set WEB_PUBLIC_URL to the origin the web app is served from',
         abort: true,
       })
       .pipe(

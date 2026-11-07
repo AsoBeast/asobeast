@@ -318,10 +318,10 @@ describe('WEB_PUBLIC_URL built from ASOBEAST_PORT', () => {
     validateEnv({ AUTH_SECRET: 'a'.repeat(32), WEB_PUBLIC_URL: origin });
 
   it.each(['http://localhost:127.0.0.1:3999', 'http://localhost:0.0.0.0:3001'])(
-    'names ASOBEAST_PORT when an address reached the default origin %s',
+    'names the unparsable origin before the ASOBEAST_PORT it may come from %s',
     (origin) => {
       expect(() => withOrigin(origin)).toThrow(
-        'ASOBEAST_PORT must be a port number such as 3001',
+        'WEB_PUBLIC_URL is not an origin that parses. When WEB_PUBLIC_URL is not set, the Compose stacks build it from ASOBEAST_PORT',
       );
     },
   );
