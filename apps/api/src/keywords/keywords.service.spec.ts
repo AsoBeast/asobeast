@@ -1142,7 +1142,11 @@ describe('KeywordsService keyword class', () => {
           Promise.resolve(select.name ? brandRow : homeApp),
         ),
       },
-      appSnapshot: { findFirst: jest.fn().mockResolvedValue(null) },
+      appSnapshot: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      appLocalization: { findMany: jest.fn().mockResolvedValue([]) },
       trackedKeyword: {
         findMany: jest
           .fn()

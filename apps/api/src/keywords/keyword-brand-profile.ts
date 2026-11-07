@@ -40,7 +40,7 @@ export function keywordClassifier(
   texts: {
     snapshotText: string;
     marketTexts?: ReadonlyMap<string, string>;
-    marketTitles?: ReadonlyMap<string, string>;
+    marketTitles?: ReadonlyMap<string, readonly string[]>;
   },
 ): KeywordClassOf {
   const profiles = new Map<string, BrandProfile>();
@@ -51,7 +51,7 @@ export function keywordClassifier(
       words: contentWords(
         texts.marketTexts?.get(country) ?? texts.snapshotText,
       ),
-      title: texts.marketTitles?.get(country) ?? null,
+      titles: texts.marketTitles?.get(country) ?? [],
     });
     profiles.set(country, market);
     return market;
