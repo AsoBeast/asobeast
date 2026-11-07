@@ -51,7 +51,7 @@ Set `AUTH_ALLOW_REGISTRATION=true` only when further sign ups should stay availa
 
 Type your app's name into the import dialog and pick it from the results, or paste its App Store or Google Play URL. asobeast then does the following, in order.
 
-1. Parses the store and the home storefront from the URL. A bare iTunes id, or a URL with no country segment, falls back to `DEFAULT_COUNTRY`, which defaults to `us`.
+1. Parses the store and the home storefront from the URL. A bare iTunes id, or a URL with no country segment, falls back to `DEFAULT_COUNTRY`, which defaults to `gb`.
 2. Fetches the listing and writes the first metadata snapshot, keeping the raw payload so a later parser fix can reprocess it.
 3. Extracts keywords from the indexed fields and starts tracking them in the home storefront.
 4. Schedules its own first pass: a rank check for every tracked keyword, a score for every tracked keyword and one action generation run for your workspace.

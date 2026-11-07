@@ -25,7 +25,7 @@ describe('parseStoreUrl — App Store URLs', () => {
     expect(parseStoreUrl('https://apps.apple.com/app/anything/id42')).toEqual({
       store: 'APP_STORE',
       storeAppId: '42',
-      country: 'us',
+      country: 'gb',
     });
   });
 
@@ -53,7 +53,7 @@ describe('parseStoreUrl — Google Play URLs', () => {
     ).toEqual({
       store: 'GOOGLE_PLAY',
       storeAppId: 'com.foo.bar',
-      country: 'us',
+      country: 'gb',
     });
   });
 
@@ -81,7 +81,7 @@ describe('parseStoreUrl — bare identifiers', () => {
     expect(parseStoreUrl('1234567890')).toEqual({
       store: 'APP_STORE',
       storeAppId: '1234567890',
-      country: 'us',
+      country: 'gb',
     });
   });
 
@@ -89,7 +89,7 @@ describe('parseStoreUrl — bare identifiers', () => {
     expect(parseStoreUrl('com.foo.bar')).toEqual({
       store: 'GOOGLE_PLAY',
       storeAppId: 'com.foo.bar',
-      country: 'us',
+      country: 'gb',
     });
   });
 
@@ -97,22 +97,22 @@ describe('parseStoreUrl — bare identifiers', () => {
     expect(parseStoreUrl('  com.foo.bar  ')).toEqual({
       store: 'GOOGLE_PLAY',
       storeAppId: 'com.foo.bar',
-      country: 'us',
+      country: 'gb',
     });
   });
 });
 
 describe('parseStoreUrl — canonical App Store ids', () => {
   it.each([
-    ['0570060128', '570060128'],
-    ['https://apps.apple.com/us/app/duolingo/id0570060128', '570060128'],
-    ['https://apps.apple.com/us/app/anything/id000042', '42'],
-    ['9007199254740991', '9007199254740991'],
-  ])('resolves %j to the listing id %j', (input, storeAppId) => {
+    ['0570060128', '570060128', 'gb'],
+    ['https://apps.apple.com/us/app/duolingo/id0570060128', '570060128', 'us'],
+    ['https://apps.apple.com/us/app/anything/id000042', '42', 'us'],
+    ['9007199254740991', '9007199254740991', 'gb'],
+  ])('resolves %j to the listing id %j', (input, storeAppId, country) => {
     expect(parseStoreUrl(input)).toEqual({
       store: 'APP_STORE',
       storeAppId,
-      country: 'us',
+      country,
     });
   });
 
@@ -140,7 +140,7 @@ describe('parseStoreUrl — a store url pasted without a scheme', () => {
     expect(parseStoreUrl('itunes.apple.com/app/id42')).toEqual({
       store: 'APP_STORE',
       storeAppId: '42',
-      country: 'us',
+      country: 'gb',
     });
   });
 

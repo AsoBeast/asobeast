@@ -5,7 +5,12 @@ import type { FormEvent, RefObject } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { STORES, type Store, type StoreSearchResult } from "@asobeast/shared";
+import {
+  DEFAULT_COUNTRY,
+  STORES,
+  type Store,
+  type StoreSearchResult,
+} from "@asobeast/shared";
 import { useRouter } from "next/navigation";
 import { CountrySelect } from "@/components/CountrySelect";
 import { Button } from "@/components/ui/button";
@@ -36,10 +41,9 @@ import { StoreSearchField } from "./StoreSearchField";
 import { useStoreSearch } from "./useStoreSearch";
 
 const DEFAULT_STORE: Store = "APP_STORE";
-const DEFAULT_COUNTRY = "us";
 
 const PLACEHOLDERS: Record<Store, string> = {
-  APP_STORE: "Focus Timer or apps.apple.com/us/app/…/id123",
+  APP_STORE: "Focus Timer or apps.apple.com/gb/app/…/id123",
   GOOGLE_PLAY: "Focus Timer or com.example.app",
 };
 

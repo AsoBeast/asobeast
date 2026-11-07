@@ -26,7 +26,7 @@ describe("chartKeyFrom", () => {
   it("fills the default country and the store's device", () => {
     expect(chartKeyFrom(SEARCH)).toEqual({
       store: "APP_STORE",
-      country: "us",
+      country: "gb",
       collection: "free",
       genre: "overall",
       device: "iphone",
@@ -55,7 +55,7 @@ describe("chartKeyFrom", () => {
 
   it("keeps a storefront the store has and replaces one it lacks", () => {
     expect(chartKeyFrom({ ...SEARCH, country: "de" }).country).toBe("de");
-    expect(chartKeyFrom({ ...SEARCH, country: "zz" }).country).toBe("us");
+    expect(chartKeyFrom({ ...SEARCH, country: "zz" }).country).toBe("gb");
   });
 });
 
@@ -77,7 +77,7 @@ describe("chartTitle", () => {
         genre: "6014",
         collection: "paid",
       }),
-    ).toBe("Top paid · Games · United States");
+    ).toBe("Top paid · Games · United Kingdom");
   });
 });
 

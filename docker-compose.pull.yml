@@ -78,7 +78,7 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       PORT: 4000
-      DEFAULT_COUNTRY: us
+      DEFAULT_COUNTRY: gb
       NODE_ENV: production
       AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET in .env}
       AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-true}

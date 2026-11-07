@@ -138,7 +138,7 @@ export const isFloorAnswer = (
   state: OfficialPopularityState | null | undefined,
 ): boolean => state === 'floor' || state === 'absent';
 
-export const DEFAULT_COUNTRY = 'us';
+export const DEFAULT_COUNTRY = 'gb';
 
 export const SERP_DEPTH = 10;
 export const SERP_CAPTURE_DEPTH = 50;

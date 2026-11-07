@@ -67,7 +67,7 @@ export const EnvSchema = z.object({
   REDIS_PORT: z.coerce.number().int().positive().default(6380),
   REDIS_DB: z.coerce.number().int().min(0).default(0),
   PORT: z.coerce.number().int().positive().default(4000),
-  DEFAULT_COUNTRY: z.string().min(1).default('us'),
+  DEFAULT_COUNTRY: z.string().min(1).default('gb'),
   CRON_DAILY: cronPattern('0 3 * * *'),
   CRON_SCORING: cronPattern('0 4 * * 0'),
   SCRAPE_ITUNES_RPM: z.coerce.number().int().positive().default(15),

@@ -30,7 +30,7 @@ describe('@asobeast/shared constants', () => {
   });
 
   it('defaults to the US region', () => {
-    expect(DEFAULT_COUNTRY).toBe('us');
+    expect(DEFAULT_COUNTRY).toBe('gb');
   });
 
   it('captures the top 50 search results, never fewer than the top 10', () => {
