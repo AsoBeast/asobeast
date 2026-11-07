@@ -21,6 +21,10 @@ import { trialBarParts, trustLines } from "../src/lib/plan-choice";
 
 const TRIAL_BUTTON = "Pay $0 today and start your free trial";
 
+test.use({ timezoneId: "UTC" });
+
+const utcClock = (now = new Date()) => ({ now, timeZone: "UTC" });
+
 async function register(page: Page, path = "/register") {
   await page.goto(path);
   await page.getByLabel("Email").fill("owner@example.com");
@@ -52,7 +56,7 @@ test.describe("the billing wall", () => {
         `Pay $0 today. Your trial ends on ${endsOn}, then the plan you choose is charged. Cancel any time from settings.`,
       ),
     ).toBeVisible();
-    for (const line of trustLines({ days: 7 }, new Date())) {
+    for (const line of trustLines({ days: 7 }, utcClock())) {
       await expect(page.getByText(line, { exact: true })).toBeVisible();
     }
     await expect(page.getByRole("tab", { name: "Monthly" })).toBeVisible();
@@ -406,7 +410,7 @@ test.describe("the billing wall", () => {
     await openBilling(page);
     const now = new Date();
     await page.clock.setFixedTime(now);
-    const lines = trustLines({ days: 7 }, now);
+    const lines = trustLines({ days: 7 }, utcClock(now));
 
     await page.goto("/upgrade");
 
@@ -531,7 +535,7 @@ test.describe("the billing wall", () => {
     await openBilling(page);
     const now = new Date();
     await page.clock.setFixedTime(now);
-    const parts = trialBarParts({ days: 7 }, now);
+    const parts = trialBarParts({ days: 7 }, utcClock(now));
 
     await page.goto("/upgrade");
 
@@ -590,7 +594,7 @@ test.describe("the billing wall", () => {
       "indie",
       "month",
       { days: 7 },
-      new Date(),
+      utcClock(),
     );
 
     await page.goto("/upgrade");
@@ -614,7 +618,7 @@ test.describe("the billing wall", () => {
     await seedViewer(context, "checkout-pending");
     await seedSession(page);
     await openBilling(page);
-    const items = paywallFaq({ days: 7 }, "$10 per month", new Date());
+    const items = paywallFaq({ days: 7 }, "$10 per month", utcClock());
 
     await page.goto("/upgrade");
 
@@ -1039,6 +1043,38 @@ test.describe("the billing wall", () => {
     ).toBeVisible();
     await expect(page).toHaveURL("http://localhost:3000/");
     expect(reconciles).toBe(1);
+  });
+});
+
+test.describe("the trial end in a time zone ahead of UTC", () => {
+  test.use({ timezoneId: "Europe/Warsaw" });
+
+  test("names the first charge on the day checkout names, late in the UTC day", async ({
+    page,
+    context,
+  }) => {
+    await seedViewer(context, "checkout-pending");
+    await seedSession(page);
+    await openBilling(page);
+    await page.clock.setFixedTime(new Date("2026-11-06T23:30:00.000Z"));
+
+    await page.goto("/upgrade");
+
+    await expect(
+      page.getByRole("region", { name: "Order summary" }),
+    ).toContainText("Then $10.00 on Nov 14, 2026");
+    await expect(
+      page.getByRole("region", { name: "Your trial" }),
+    ).toContainText("ending Nov 14, 2026");
+    await expect(
+      page.getByRole("list", { name: "Why the trial is safe" }),
+    ).toContainText("cancel before Nov 14, 2026");
+    const questions = page.getByRole("region", { name: "Questions" });
+    await questions
+      .getByRole("button", { name: "Will I be charged today?" })
+      .click();
+    await expect(questions).toContainText("is charged on Nov 14, 2026");
+    await expect(page.getByText(/Nov 13, 2026/)).toHaveCount(0);
   });
 });
 
