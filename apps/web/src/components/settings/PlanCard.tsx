@@ -2,7 +2,7 @@
 
 import { Suspense } from "react";
 import Link from "next/link";
-import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import type { AccountPlan, QuotaUsage } from "@asobeast/shared";
@@ -24,10 +24,11 @@ import {
   MEMBER_BILLING_NOTE,
   planAction,
   planCallToAction,
+  planOnSale,
   planStatusLine,
 } from "@/lib/plan-choice";
 import { aiUsageNote } from "@/lib/ai-allowance";
-import { accountPlanOptions } from "@/lib/queries";
+import { accountPlanOptions, billingCatalogOptions } from "@/lib/queries";
 import { formatQuotaUsage, hasNoCapacity } from "@/lib/quota-usage";
 import { useSingleFlight } from "@/lib/single-flight";
 
@@ -109,6 +110,10 @@ function BillingActions({ plan }: { plan: AccountPlan }) {
 
 export function PlanCard() {
   const { data: plan } = useSuspenseQuery(accountPlanOptions);
+  const { data: catalog } = useQuery({
+    ...billingCatalogOptions,
+    enabled: plan.billing,
+  });
   const { isMember, isOwner } = useAuth();
 
   if (!plan.billing) return null;
@@ -124,7 +129,7 @@ export function PlanCard() {
           )}
         </CardTitle>
         <p className="text-body text-muted-foreground">
-          {planStatusLine(plan)}
+          {planStatusLine(planOnSale(plan, catalog) ?? plan)}
         </p>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">

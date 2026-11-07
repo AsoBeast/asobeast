@@ -95,6 +95,19 @@ test.describe("an instance whose checkout is not configured", () => {
     ).toBeVisible();
     await expect(page.getByText(/free trial/)).toHaveCount(0);
   });
+
+  test("the settings plan card promises no trial either", async ({ page }) => {
+    await openUnconfigured(page, "customer");
+
+    await page.goto("/settings");
+
+    await expect(
+      page.getByText(
+        "Your data stays readable and exportable; tracking resumes when you choose a plan.",
+      ),
+    ).toBeVisible();
+    await expect(page.getByText(/free trial/)).toHaveCount(0);
+  });
 });
 
 const refusal = (statusCode: number, error: string, message: string) => ({
