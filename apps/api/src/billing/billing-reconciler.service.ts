@@ -165,7 +165,11 @@ export class BillingReconciler {
     workspace: Workspace,
     subscription: Stripe.Subscription,
   ): Promise<boolean> {
-    const drifted = await this.alignDrift(workspace, subscription);
+    const drifted = await this.align(workspace, subscription, (desired) =>
+      this.logger.error(
+        `workspace ${workspace.id} drifted from Stripe: local ${workspace.plan}/${workspace.subscriptionStatus ?? 'none'}, Stripe ${desired.plan}/${desired.status}`,
+      ),
+    );
     const settlement = await this.trialStarts.settle(workspace, subscription);
     if (settlement.outcome !== 'ended') return drifted;
     const ended = await this.alignEndedTrial(
@@ -173,19 +177,6 @@ export class BillingReconciler {
       settlement.subscription,
     );
     return drifted || ended;
-  }
-
-  private async alignDrift(
-    workspace: Workspace,
-    subscription: Stripe.Subscription,
-  ): Promise<boolean> {
-    const desired = await this.desiredState(workspace, subscription);
-    if (matches(workspace, desired)) return false;
-    this.logger.error(
-      `workspace ${workspace.id} drifted from Stripe: local ${workspace.plan}/${workspace.subscriptionStatus ?? 'none'}, Stripe ${desired.plan}/${desired.status}`,
-    );
-    await this.project(workspace, desired);
-    return true;
   }
 
   private async alignEndedTrial(
@@ -196,21 +187,24 @@ export class BillingReconciler {
       where: { id: workspaceId },
     });
     if (!workspace) return false;
-    const desired = await this.desiredState(workspace, subscription);
-    if (matches(workspace, desired)) return false;
-    this.logger.warn(
-      `workspace ${workspaceId} lost a trial claim, so it now holds subscription ${subscription.id} as ${desired.plan}/${desired.status}`,
+    return this.align(workspace, subscription, (desired) =>
+      this.logger.warn(
+        `workspace ${workspaceId} lost a trial claim, so it now holds subscription ${subscription.id} as ${desired.plan}/${desired.status}`,
+      ),
     );
-    await this.project(workspace, desired);
-    return true;
   }
 
-  private async desiredState(
+  private async align(
     workspace: Workspace,
     subscription: Stripe.Subscription,
-  ): Promise<SubscriptionState> {
+    announce: (desired: SubscriptionState) => void,
+  ): Promise<boolean> {
     const firstPaidAt = await this.firstPayment.record(workspace, subscription);
-    return stateFrom(subscription, this.prices, firstPaidAt !== null);
+    const desired = stateFrom(subscription, this.prices, firstPaidAt !== null);
+    if (matches(workspace, desired)) return false;
+    announce(desired);
+    await this.project(workspace, desired);
+    return true;
   }
 
   private async project(
