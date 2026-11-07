@@ -21,6 +21,7 @@ import {
   buysPlan,
   trialPaymentNote,
   type PlanAction,
+  type ViewerClock,
 } from "@/lib/plan-choice";
 import { EmbeddedCheckout } from "./EmbeddedCheckout";
 import { OrderSummary } from "./OrderSummary";
@@ -34,7 +35,7 @@ export function PaymentColumn({
   action,
   price,
   publishableKey,
-  now,
+  clock,
 }: {
   plan: AccountPlan | undefined;
   catalog: BillingCatalog | undefined;
@@ -43,7 +44,7 @@ export function PaymentColumn({
   action: PlanAction;
   price: BillingPrice | undefined;
   publishableKey: string | null;
-  now: Date;
+  clock: ViewerClock;
 }) {
   const offer = action === "trial" ? plan?.trialOffer : null;
   const theme = useCheckoutTheme();
@@ -70,7 +71,7 @@ export function PaymentColumn({
       ) : null}
       {buysPlan(action) ? (
         <OrderSummary
-          summary={summaryFromCatalog(name, interval, offer, now)}
+          summary={summaryFromCatalog(name, interval, offer, clock)}
         />
       ) : null}
       {catalog?.enabled && buysPlan(action) ? (
@@ -80,7 +81,7 @@ export function PaymentColumn({
         </p>
       ) : null}
       <p className="text-caption text-muted-foreground">
-        <span>{trialPaymentNote(catalog, offer, now)}</span>{" "}
+        <span>{trialPaymentNote(catalog, offer, clock)}</span>{" "}
         <span>{NEED_HELP}</span>{" "}
         <a href={`mailto:${SUPPORT_EMAIL}`} className="font-medium underline">
           {CONTACT_SUPPORT}

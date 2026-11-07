@@ -2,12 +2,12 @@ import { describe, expect, it } from "vitest";
 import { formatDate } from "./format";
 import { summaryFromCatalog } from "./order-summary";
 
-const NOW = new Date("2026-10-22T12:00:00.000Z");
+const CLOCK = { now: new Date("2026-10-22T12:00:00.000Z"), timeZone: "UTC" };
 const ENDS_ON = formatDate("2026-10-29T12:00:00.000Z");
 
 describe("summaryFromCatalog", () => {
   it("charges nothing today and names the first charge of a trial", () => {
-    expect(summaryFromCatalog("indie", "month", { days: 7 }, NOW)).toEqual({
+    expect(summaryFromCatalog("indie", "month", { days: 7 }, CLOCK)).toEqual({
       planName: "Indie",
       intervalLabel: "Monthly",
       unitAmount: "$10.00",
@@ -19,7 +19,7 @@ describe("summaryFromCatalog", () => {
   });
 
   it("charges the price today without a trial", () => {
-    expect(summaryFromCatalog("indie", "month", null, NOW)).toMatchObject({
+    expect(summaryFromCatalog("indie", "month", null, CLOCK)).toMatchObject({
       dueToday: "$10.00",
       thenLine: null,
       cancelLine: "Cancel any time from settings.",
@@ -28,7 +28,7 @@ describe("summaryFromCatalog", () => {
 
   it("reads the annual price of a plan", () => {
     expect(
-      summaryFromCatalog("ultimate", "year", { days: 7 }, NOW),
+      summaryFromCatalog("ultimate", "year", { days: 7 }, CLOCK),
     ).toMatchObject({
       planName: "Ultimate",
       intervalLabel: "Annual",

@@ -14,12 +14,22 @@ const compactFormatter = new Intl.NumberFormat("en-US", {
   notation: "compact",
   maximumFractionDigits: 1,
 });
-const dateFormatter = new Intl.DateTimeFormat("en-US", {
-  timeZone: "UTC",
-  year: "numeric",
-  month: "short",
-  day: "numeric",
-});
+const zonedDateFormatters = new Map<string, Intl.DateTimeFormat>();
+
+function dateFormatterIn(timeZone: string): Intl.DateTimeFormat {
+  const cached = zonedDateFormatters.get(timeZone);
+  if (cached) return cached;
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+  zonedDateFormatters.set(timeZone, formatter);
+  return formatter;
+}
+
+const dateFormatter = dateFormatterIn("UTC");
 const dayMonthFormatter = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC",
   month: "short",
@@ -167,6 +177,10 @@ export function formatPrice(value: number, currency?: string | null): string {
 export function formatDate(value: string | null): string {
   if (!value) return "—";
   return dateFormatter.format(new Date(value));
+}
+
+export function formatDateIn(instant: Date, timeZone: string): string {
+  return dateFormatterIn(timeZone).format(instant);
 }
 
 export function formatDayMonth(value: string): string {

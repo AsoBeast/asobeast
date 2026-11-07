@@ -10,7 +10,7 @@ import {
   type PlanLimits,
   type TrialOffer,
 } from "@asobeast/shared";
-import { formatDate, pluralize } from "@/lib/format";
+import { formatDate, formatDateIn, pluralize } from "@/lib/format";
 
 export type PlanAction =
   "current" | "checkout" | "trial" | "change" | "resume" | "pending";
@@ -132,16 +132,24 @@ export function paywallHeading(plan: AccountPlan | undefined): string {
     : "Keep optimizing without limits";
 }
 
+export interface ViewerClock {
+  now: Date;
+  timeZone: string;
+}
+
 export function trialEndsOn(offer: TrialOffer, now: Date): Date {
   return new Date(now.getTime() + offer.days * DAY_MS);
 }
 
-export function trialEndLabel(offer: TrialOffer, now: Date): string {
-  return formatDate(trialEndsOn(offer, now).toISOString());
+export function trialEndLabel(
+  offer: TrialOffer,
+  { now, timeZone }: ViewerClock,
+): string {
+  return formatDateIn(trialEndsOn(offer, now), timeZone);
 }
 
-function trialLine(offer: TrialOffer, now: Date): string {
-  return `Pay $0 today. Your trial ends on ${trialEndLabel(offer, now)}, then the plan you choose is charged. Cancel any time from settings.`;
+function trialLine(offer: TrialOffer, clock: ViewerClock): string {
+  return `Pay $0 today. Your trial ends on ${trialEndLabel(offer, clock)}, then the plan you choose is charged. Cancel any time from settings.`;
 }
 
 export const CONFIRM_EMAIL_TITLE = "Confirm your email";
@@ -244,8 +252,11 @@ export function savingPercent(name: PaidPlanName): number {
   return Math.round(((12 * monthlyUsd - annualUsd) / (12 * monthlyUsd)) * 100);
 }
 
-export function trustLines(offer: TrialOffer, now: Date): readonly string[] {
-  const endsOn = trialEndLabel(offer, now);
+export function trustLines(
+  offer: TrialOffer,
+  clock: ViewerClock,
+): readonly string[] {
+  const endsOn = trialEndLabel(offer, clock);
   return [
     `No risk: cancel before ${endsOn} and nothing is charged`,
     `Pay nothing for the first ${offer.days} days`,
@@ -261,12 +272,15 @@ export interface TrialBarParts {
   after: string;
 }
 
-export function trialBarParts(offer: TrialOffer, now: Date): TrialBarParts {
+export function trialBarParts(
+  offer: TrialOffer,
+  clock: ViewerClock,
+): TrialBarParts {
   return {
     before: `Your ${offer.days} day trial is `,
     free: "100% free",
     middle: ", ending ",
-    endsOn: trialEndLabel(offer, now),
+    endsOn: trialEndLabel(offer, clock),
     after: ". Cancel any time from settings.",
   };
 }
@@ -305,12 +319,12 @@ function settingsTrialLine(plan: AccountPlan): string | null {
 
 export function paywallStatusLine(
   plan: AccountPlan | undefined,
-  now = new Date(),
+  clock: ViewerClock,
 ): string {
   if (!plan) return CHOOSE_A_PLAN;
   if (pending(plan)) return PAYMENT_CONFIRMING;
   if (plan.trialOffer && !plan.subscribed) {
-    return trialLine(plan.trialOffer, now);
+    return trialLine(plan.trialOffer, clock);
   }
   const trial = paywallTrialLine(plan);
   if (trial) return trial;
@@ -354,11 +368,11 @@ export function paymentNote(catalog: BillingCatalog | undefined): string {
 export function trialPaymentNote(
   catalog: BillingCatalog | undefined,
   offer: TrialOffer | null | undefined,
-  now: Date,
+  clock: ViewerClock,
 ): string {
   const note = paymentNote(catalog);
   if (!offer || !catalog?.enabled) return note;
-  return `${note} Your card is verified now and charged on ${trialEndLabel(offer, now)}.`;
+  return `${note} Your card is verified now and charged on ${trialEndLabel(offer, clock)}.`;
 }
 
 export function memberPlanLine(plan: AccountPlan | undefined): string {
