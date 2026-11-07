@@ -43,8 +43,9 @@ export function FilterChips({
     const buttons = [
       ...(list.current?.querySelectorAll<HTMLElement>(REMOVE_BUTTON) ?? []),
     ];
+    const leaving = (each: HTMLElement) => each.dataset.chipKey === chip.key;
     focusAfterCommit(
-      survivingNeighbour(buttons, (each) => each === button) ?? fallback(),
+      survivingNeighbour(buttons, leaving) ?? fallback(),
       button,
     );
     chip.onRemove();
@@ -73,6 +74,7 @@ export function FilterChips({
             <button
               type="button"
               data-chip-remove
+              data-chip-key={chip.key}
               aria-label={`Remove ${chip.label}`}
               onClick={(event) => remove(chip, event.currentTarget)}
               className="inline-flex size-5 shrink-0 items-center justify-center rounded-full opacity-70 outline-none hover:opacity-100 focus-visible:ring-2 focus-visible:ring-ring"

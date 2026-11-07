@@ -43,6 +43,18 @@ test("removing the last chip hands focus to a control above the chips", async ({
   await expect(page.getByRole("button", { name: /^Export CSV/ })).toBeFocused();
 });
 
+test("removing the last chip skips a disabled Export CSV", async ({ page }) => {
+  await page.goto("/apps/app-1/keywords?q=zzzz");
+  await expect(
+    page.getByRole("button", { name: /^Export CSV/ }),
+  ).toBeDisabled();
+
+  await pressFromKeyboard(page, "Remove Search: zzzz");
+
+  await expect(chips(page)).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Columns" })).toBeFocused();
+});
+
 test("Clear all hands focus to a control above the chips", async ({ page }) => {
   await page.goto(KEYWORDS);
 
@@ -51,4 +63,20 @@ test("Clear all hands focus to a control above the chips", async ({ page }) => {
   await expect(chips(page)).toHaveCount(0);
   await expect.poll(() => focusedName(page)).not.toBe("body");
   await expect(page.getByRole("button", { name: /^Export CSV/ })).toBeFocused();
+});
+
+test("removing a chip the address repeats hands focus to a chip that stays", async ({
+  page,
+}) => {
+  await page.goto("/alerts?app=app-1&type=rank.dropped,rank.dropped");
+  const repeated = chips(page).getByRole("button", { name: /^Remove Event:/ });
+  await expect(repeated).toHaveCount(2);
+
+  await (await hydrated(repeated.first())).focus();
+  await page.keyboard.press("Enter");
+
+  await expect(repeated).toHaveCount(0);
+  await expect(
+    chips(page).getByRole("button", { name: /^Remove App:/ }),
+  ).toBeFocused();
 });
