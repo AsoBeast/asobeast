@@ -286,9 +286,10 @@ describe('AppsController (e2e)', () => {
         'preguntados',
         'juegos',
         'trivia',
-        'juegos trivia',
+        'preguntas gratis',
       ]),
     );
+    expect(texts).not.toContain('juegos trivia');
     expect(texts.filter((text) => /(^| )(de|para|tu)( |$)/.test(text))).toEqual(
       [],
     );
@@ -351,7 +352,6 @@ describe('AppsController (e2e)', () => {
         'TITLE make',
         'TITLE drama',
         'TITLE mad',
-        'DESCRIPTION rpg waiting',
         'DESCRIPTION rpg',
         'DESCRIPTION waiting',
         'DESCRIPTION magazines',
