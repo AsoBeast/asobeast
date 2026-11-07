@@ -19,6 +19,7 @@ import { EVENT_LABELS } from "@/components/settings/alert-event-copy";
 import { storeLabel } from "@/lib/format";
 import { appsOptions } from "@/lib/queries";
 import { alertFeedParsers } from "@/lib/search-params";
+import { useHydrated } from "@/lib/use-hydrated";
 
 export const useAlertFeedView = () => useQueryStates(alertFeedParsers);
 
@@ -97,8 +98,9 @@ export function AlertFeedToolbar({
   onClearAll: () => void;
 }) {
   const [view, setView] = useAlertFeedView();
+  const hydrated = useHydrated();
   const { data: apps } = useQuery(appsOptions);
-  const labels = appLabels(apps, view.app);
+  const labels = appLabels(hydrated ? apps : undefined, view.app);
 
   return (
     <div className="flex flex-col gap-2">
