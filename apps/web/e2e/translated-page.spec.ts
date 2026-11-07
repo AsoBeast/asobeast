@@ -14,6 +14,7 @@ import { fulfillJson, routePlan } from "./plan-helpers.mts";
 import { SERP_HISTORY_DAYS } from "./serp-history.mts";
 import type { SerpEntryItem, SerpSnapshot } from "@asobeast/shared";
 import { expect, test } from "./session.mts";
+import { translateText } from "./translate.mts";
 import { openBilling } from "./trial-plans.mts";
 import { typeInto } from "./type.mts";
 import {
@@ -46,7 +47,7 @@ const TRIAL_PLAN: AccountPlan = {
 function collectDomErrors(page: Page): string[] {
   const errors: string[] = [];
   const record = (message: string) => {
-    if (/NotFoundError|insertBefore|removeChild/.test(message)) {
+    if (/NotFoundError|insertBefore|removeChild|#418/.test(message)) {
       errors.push(message);
     }
   };
@@ -89,24 +90,6 @@ async function routeUpgrade(page: Page): Promise<void> {
 async function openUpgrade(page: Page): Promise<void> {
   await routeUpgrade(page);
   await page.goto("/upgrade");
-}
-
-async function translateText(page: Page): Promise<void> {
-  await page.evaluate(() => {
-    const walker = document.createTreeWalker(
-      document.body,
-      NodeFilter.SHOW_TEXT,
-    );
-    const texts: Text[] = [];
-    while (walker.nextNode()) texts.push(walker.currentNode as Text);
-    for (const text of texts.filter((node) => node.data.trim())) {
-      const outer = document.createElement("font");
-      const inner = document.createElement("font");
-      inner.textContent = text.data.toUpperCase();
-      outer.append(inner);
-      text.replaceWith(outer);
-    }
-  });
 }
 
 test("a translated upgrade page shows the payment note the catalog brings", async ({

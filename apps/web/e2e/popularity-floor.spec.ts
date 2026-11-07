@@ -3,6 +3,7 @@ import type { Page } from "@playwright/test";
 import { contrastViolations, THEMES } from "./contrast-check.mts";
 import { hydrated } from "./hydrated.mts";
 import { expect, test } from "./session.mts";
+import { translateText } from "./translate.mts";
 
 const PAGE = "/apps/app-floor/keywords";
 
@@ -171,21 +172,7 @@ test("a translated page keeps the floor tooltip working", async ({ page }) => {
   await page.goto(PAGE);
   const button = await hydrated(floorPopularity(page));
 
-  await page.evaluate(() => {
-    const walker = document.createTreeWalker(
-      document.body,
-      NodeFilter.SHOW_TEXT,
-    );
-    const texts: Text[] = [];
-    while (walker.nextNode()) texts.push(walker.currentNode as Text);
-    for (const text of texts.filter((node) => node.data.trim())) {
-      const outer = document.createElement("font");
-      const inner = document.createElement("font");
-      inner.textContent = text.data.toUpperCase();
-      outer.append(inner);
-      text.replaceWith(outer);
-    }
-  });
+  await translateText(page);
   await button.focus();
 
   await expect(tooltip(page)).toContainText(/Apple answered its floor value/i);
