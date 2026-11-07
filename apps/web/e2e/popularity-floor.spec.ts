@@ -3,7 +3,7 @@ import type { Page } from "@playwright/test";
 import { contrastViolations, THEMES } from "./contrast-check.mts";
 import { hydrated } from "./hydrated.mts";
 import { expect, test } from "./session.mts";
-import { translateText } from "./translate.mts";
+import { collectDomErrors, translateText } from "./translate.mts";
 
 const PAGE = "/apps/app-floor/keywords";
 
@@ -167,8 +167,7 @@ for (const theme of THEMES) {
 }
 
 test("a translated page keeps the floor tooltip working", async ({ page }) => {
-  const errors: string[] = [];
-  page.on("pageerror", (error) => errors.push(error.message));
+  const errors = collectDomErrors(page);
   await page.goto(PAGE);
   const button = await hydrated(floorPopularity(page));
 
@@ -177,5 +176,5 @@ test("a translated page keeps the floor tooltip working", async ({ page }) => {
 
   await expect(tooltip(page)).toContainText(/Apple answered its floor value/i);
   await expect(button).toContainText("41");
-  expect(errors.filter((message) => /NotFoundError/.test(message))).toEqual([]);
+  expect(errors).toEqual([]);
 });

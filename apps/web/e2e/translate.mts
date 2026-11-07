@@ -3,6 +3,21 @@ import { expect, type Page } from "@playwright/test";
 const SKIPPED_TEXT =
   "script, style, noscript, textarea, font, #recharts_measurement_span";
 
+const DOM_ERROR =
+  /NotFoundError|insertBefore|removeChild|#418|Hydration failed because/;
+
+export function collectDomErrors(page: Page): string[] {
+  const errors: string[] = [];
+  const record = (message: string) => {
+    if (DOM_ERROR.test(message)) errors.push(message);
+  };
+  page.on("pageerror", (error) => record(`${error.name}: ${error.message}`));
+  page.on("console", (message) => {
+    if (message.type() === "error") record(message.text());
+  });
+  return errors;
+}
+
 export async function translateText(page: Page): Promise<void> {
   await expect
     .poll(

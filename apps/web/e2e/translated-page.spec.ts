@@ -14,7 +14,7 @@ import { fulfillJson, routePlan } from "./plan-helpers.mts";
 import { SERP_HISTORY_DAYS } from "./serp-history.mts";
 import type { SerpEntryItem, SerpSnapshot } from "@asobeast/shared";
 import { expect, test } from "./session.mts";
-import { translateText } from "./translate.mts";
+import { collectDomErrors, translateText } from "./translate.mts";
 import { openBilling } from "./trial-plans.mts";
 import { typeInto } from "./type.mts";
 import {
@@ -43,20 +43,6 @@ const TRIAL_PLAN: AccountPlan = {
     keywordMarkets: { used: 20, limit: PLAN_LIMITS.trial.keywordMarkets },
   },
 };
-
-function collectDomErrors(page: Page): string[] {
-  const errors: string[] = [];
-  const record = (message: string) => {
-    if (/NotFoundError|insertBefore|removeChild|#418/.test(message)) {
-      errors.push(message);
-    }
-  };
-  page.on("pageerror", (error) => record(`${error.name}: ${error.message}`));
-  page.on("console", (message) => {
-    if (message.type() === "error") record(message.text());
-  });
-  return errors;
-}
 
 async function routeUpgrade(page: Page): Promise<void> {
   await page.route("**/api/backend/auth/status", (route) =>
