@@ -2,6 +2,7 @@ import { ExternalLink } from "lucide-react";
 import { appVersion, RELEASES_URL } from "@/components/layout/app-version";
 import { MarkReleasesSeen } from "@/components/whats-new/MarkReleasesSeen";
 import { ReleaseTimeline } from "@/components/whats-new/ReleaseTimeline";
+import { ScrollToLinkedRelease } from "@/components/whats-new/ScrollToLinkedRelease";
 import { releasesUpTo } from "@/lib/whats-new/release-notes";
 import { RELEASES } from "@/lib/whats-new/releases";
 
@@ -29,6 +30,7 @@ export default function WhatsNewPage() {
       </div>
       <ReleaseTimeline releases={releases} />
       <MarkReleasesSeen version={releases[0]?.version ?? null} />
+      <ScrollToLinkedRelease />
     </div>
   );
 }

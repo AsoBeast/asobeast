@@ -1,6 +1,7 @@
 import { version } from "../package.json";
 import { contrastRatio } from "../src/lib/contrast";
 import { hydrated } from "./hydrated.mts";
+import { revealAfterLoad } from "./late-reveal.mts";
 import { expect, test } from "./session.mts";
 import type { BrowserContext, Page } from "@playwright/test";
 
@@ -205,6 +206,16 @@ test.describe("the what's new page", () => {
     await page.goto("/whats-new#release-1-0-0");
 
     await expect(page.locator("#release-1-0-0")).toBeInViewport();
+  });
+
+  test("deep links a release that streams in after the page loaded", async ({
+    page,
+  }) => {
+    const heldReveals = await revealAfterLoad(page);
+    await page.goto("/whats-new#release-1-0-0");
+
+    await expect(page.locator("#release-1-0-0")).toBeInViewport();
+    expect(await heldReveals()).toBeGreaterThan(0);
   });
 });
 
