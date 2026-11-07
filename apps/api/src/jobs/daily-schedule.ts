@@ -1,3 +1,5 @@
+import { CronExpressionParser } from 'cron-parser';
+
 const DAILY_PATTERN = /^(\d{1,2})\s+(\d{1,2})\s+\*\s+\*\s+\*$/;
 const WEEKLY_PATTERN = /^(\d{1,2})\s+(\d{1,2})\s+\*\s+\*\s+([0-7])$/;
 const DAY_MS = 24 * 60 * 60_000;
@@ -43,6 +45,17 @@ export function nextWeeklyRun(cron: string, now: Date): Date | null {
   return new Date(
     candidate > now.getTime() ? candidate : candidate + WEEK_DAYS * DAY_MS,
   );
+}
+
+export function nextRun(cron: string, now: Date): Date | null {
+  if (cron.trim() === '') return null;
+  try {
+    return CronExpressionParser.parse(cron, { currentDate: now, tz: 'UTC' })
+      .next()
+      .toDate();
+  } catch {
+    return null;
+  }
 }
 
 export function previousDailyRun(cron: string, now: Date): Date | null {

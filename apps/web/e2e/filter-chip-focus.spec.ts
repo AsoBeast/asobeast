@@ -65,17 +65,18 @@ test("Clear all hands focus to a control above the chips", async ({ page }) => {
   await expect(page.getByRole("button", { name: /^Export CSV/ })).toBeFocused();
 });
 
-test("removing a chip the address repeats hands focus to a chip that stays", async ({
+test("a value the address repeats draws one chip, and removing it hands focus to a chip that stays", async ({
   page,
 }) => {
   await page.goto("/alerts?app=app-1&type=rank.dropped,rank.dropped");
   const repeated = chips(page).getByRole("button", { name: /^Remove Event:/ });
-  await expect(repeated).toHaveCount(2);
+  await expect(repeated).toHaveCount(1);
 
-  await (await hydrated(repeated.first())).focus();
+  await (await hydrated(repeated)).focus();
   await page.keyboard.press("Enter");
 
   await expect(repeated).toHaveCount(0);
+  await expect(page).not.toHaveURL(/type=/);
   await expect(
     chips(page).getByRole("button", { name: /^Remove App:/ }),
   ).toBeFocused();
