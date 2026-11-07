@@ -3,7 +3,6 @@ import {
   discoveryStateOf,
   isPending,
   rankDiscoveries,
-  unfitCount,
 } from './discovery-state';
 
 describe('discoveryStateOf', () => {
@@ -65,14 +64,6 @@ describe('rankDiscoveries', () => {
       item('d', 60, null),
     ]);
     expect(counts).toEqual({ all: 4, ranked: 2, opportunity: 1 });
-  });
-});
-
-describe('unfitCount', () => {
-  it('counts the open ranked rows only while auto track is on', () => {
-    const counts = { all: 9, ranked: 3, opportunity: 2 };
-    expect(unfitCount(counts, true)).toBe(3);
-    expect(unfitCount(counts, false)).toBe(0);
   });
 });
 

@@ -37,6 +37,13 @@ const RECONCILE_JUSTIFICATION =
 
 type Outcome = 'corrected' | 'agreed' | 'unreachable';
 
+const nothingReconciled = (): BillingReconcileReport => ({
+  checked: 0,
+  corrected: 0,
+  orphanSubscriptions: [],
+  unreconciled: [],
+});
+
 @Injectable()
 export class BillingReconciler {
   private readonly logger = new Logger(BillingReconciler.name);
@@ -71,7 +78,9 @@ export class BillingReconciler {
         if (!workspace) throw new NotFoundException('Workspace not found');
         await this.prices.refreshIfStale();
 
-        const outcome = await this.attempt(workspace, sessionId);
+        const outcome = this.stripe.enabled
+          ? await this.attempt(workspace, sessionId)
+          : 'agreed';
         if (outcome === 'unreachable') {
           throw new ServiceUnavailableException(
             'Stripe could not be reached, so this workspace keeps the plan it already has. Try again shortly.',
@@ -88,14 +97,7 @@ export class BillingReconciler {
   }
 
   private async sweep(): Promise<BillingReconcileReport> {
-    if (!this.stripe.enabled) {
-      return {
-        checked: 0,
-        corrected: 0,
-        orphanSubscriptions: [],
-        unreconciled: [],
-      };
-    }
+    if (!this.stripe.enabled) return nothingReconciled();
 
     const known = await this.prisma.workspace.findMany({
       where: {

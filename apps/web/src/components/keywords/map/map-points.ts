@@ -84,6 +84,14 @@ export function mapPoints(
   return { points, unplotted };
 }
 
+const plottedCount = (keywords: readonly TrackedKeywordItem[]): number =>
+  keywords.filter((keyword) => scorePair(keyword) !== null).length;
+
+export const filtersNarrowMap = (
+  shown: readonly TrackedKeywordItem[],
+  all: readonly TrackedKeywordItem[],
+): boolean => plottedCount(shown) < plottedCount(all);
+
 export function labelledIds(
   points: readonly MapPoint[],
   zone: KeywordZone | null,
@@ -92,11 +100,16 @@ export function labelledIds(
     (point) =>
       point.opportunity !== null && (zone === null || point.zone === zone),
   );
-  return new Set(
-    opportunityOrder(eligible)
-      .slice(0, MAP_LABEL_LIMIT)
-      .map((point) => point.keywordId),
-  );
+  const spots = new Set<string>();
+  const labelled = new Set<string>();
+  for (const point of opportunityOrder(eligible)) {
+    if (labelled.size === MAP_LABEL_LIMIT) break;
+    const spot = `${point.difficulty}:${point.popularity}`;
+    if (spots.has(spot)) continue;
+    spots.add(spot);
+    labelled.add(point.keywordId);
+  }
+  return labelled;
 }
 
 export const dotLabel = (text: string): string =>

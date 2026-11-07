@@ -1,4 +1,8 @@
 import type { APIRequestContext, Page } from "@playwright/test";
+import {
+  DISCOVERY_NONE_COOKIE,
+  DISCOVERY_PENDING_COOKIE,
+} from "./keyword-discoveries.mts";
 import { expect, test } from "./session.mts";
 import { storedSetup } from "./setup-session.mts";
 
@@ -676,14 +680,14 @@ test.describe("the first discoveries inside the keywords step", () => {
     page,
     context,
   }) => {
-    await context.addCookies([
-      {
-        name: "e2e_discovery_none",
+    await context.addCookies(
+      [DISCOVERY_NONE_COOKIE, DISCOVERY_PENDING_COOKIE].map((name) => ({
+        name,
         value: "1",
         domain: "localhost",
         path: "/",
-      },
-    ]);
+      })),
+    );
     await startSetup(page, "app-1");
 
     const keywords = stepCard(page, "Track keywords");
@@ -695,6 +699,36 @@ test.describe("the first discoveries inside the keywords step", () => {
     await expect(
       keywords.getByRole("link", { name: "See all discoveries" }),
     ).toHaveCount(0);
+  });
+
+  test("promises no first discoveries when nothing is queued", async ({
+    page,
+    context,
+  }) => {
+    await context.addCookies([
+      {
+        name: DISCOVERY_NONE_COOKIE,
+        value: "1",
+        domain: "localhost",
+        path: "/",
+      },
+    ]);
+    const read = page.waitForResponse((response) =>
+      response.url().includes("/apps/app-1/keyword-discoveries"),
+    );
+    await startSetup(page, "app-1");
+    await read;
+
+    const keywords = stepCard(page, "Track keywords");
+    await expect(
+      keywords.getByRole("button", { name: "Skip this step" }),
+    ).toBeVisible();
+    await expect(
+      keywords.getByRole("region", {
+        name: "Looking for keywords near your listing",
+      }),
+    ).toHaveCount(0);
+    await expect(keywords.getByText("within minutes")).toHaveCount(0);
   });
 
   test("a failed read offers a retry and keeps the step working", async ({

@@ -111,4 +111,37 @@ describe('listingFacts', () => {
     ]);
     expect(facts.marks?.({ country: 'us', text: 'habit planner' })).toBeNull();
   });
+
+  it('reads the localized title of the keyword market as a name of the app', async () => {
+    const prisma = {
+      ...buildPrisma(),
+      app: {
+        findFirst: jest.fn().mockResolvedValue({
+          name: 'talabat: Food & Grocery',
+          snapshots: [],
+          competitors: [],
+        }),
+      },
+    };
+    prisma.appSnapshot.findFirst.mockResolvedValue(
+      listing('talabat: Food & Grocery', 'Everyday delivery made easy'),
+    );
+    prisma.appSnapshot.findMany.mockResolvedValue([
+      { ...listing('طلبات: الطعام والبقالة وغيره'), localization: 'ar' },
+    ]);
+    prisma.appLocalization.findMany.mockResolvedValue([]);
+
+    const facts = await listingFacts(
+      prisma as unknown as PrismaService,
+      { id: 'app3', country: 'kw', store: Store.APP_STORE },
+      ['kw'],
+      { brand: true },
+    );
+    const classOf = (text: string) =>
+      facts.classOf?.({ text, country: 'kw', flags: [], serpRelevance: null });
+
+    expect(classOf('طلبات')).toBe('ownBrand');
+    expect(classOf('talabat')).toBe('ownBrand');
+    expect(classOf('الطعام')).toBe('generic');
+  });
 });

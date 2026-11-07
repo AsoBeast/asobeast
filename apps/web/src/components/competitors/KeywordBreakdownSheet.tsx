@@ -43,8 +43,11 @@ const useBreakdown = (appId: string, keywordId: string) =>
     enabled: keywordId !== "",
   });
 
+const waitsForConnection = (read: BreakdownRead) =>
+  read.data === undefined && read.fetchStatus === "paused";
+
 const unavailable = (read: BreakdownRead) =>
-  isNotFound(read.error) || failedRead(read);
+  isNotFound(read.error) || failedRead(read) || waitsForConnection(read);
 
 function BreakdownBody({
   appId,
@@ -92,6 +95,13 @@ function BreakdownBody({
         message="The breakdown could not be loaded."
         read={read}
       />
+    );
+  }
+  if (waitsForConnection(read)) {
+    return (
+      <p role="status" className="text-sm text-muted-foreground">
+        You are offline. The breakdown loads when the connection is back.
+      </p>
     );
   }
   return <BreakdownSkeleton />;

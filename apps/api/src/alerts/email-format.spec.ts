@@ -921,7 +921,9 @@ describe('the availability events by email', () => {
     });
 
     expect(email.text).toContain('Rival');
-    expect(email.text).toContain('No longer listed in DE');
+    expect(email.text).toContain(
+      'No longer listed in DE · 12 keywords tracked',
+    );
   });
 });
 

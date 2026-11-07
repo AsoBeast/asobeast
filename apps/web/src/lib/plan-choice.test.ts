@@ -14,9 +14,11 @@ import {
   planCallToAction,
   planCardLabel,
   planHighlights,
+  planOnSale,
   limitHighlights,
   planStatusLine,
   savingPercent,
+  sellingTrial,
   trialBarParts,
   trialEndLabel,
   trustLines,
@@ -565,5 +567,38 @@ describe("the plan cards", () => {
   it("titles the features after the selected plan", () => {
     expect(featuresTitle("indie")).toBe("What Indie includes");
     expect(featuresTitle("ultimate")).toBe("What Ultimate includes");
+  });
+});
+
+describe("planOnSale", () => {
+  const offered = planOf({
+    plan: "free",
+    entitled: false,
+    subscribed: false,
+    trialOffer: { days: 7 },
+  });
+  const selling: BillingCatalog = { enabled: true, prices: [] };
+  const unconfigured: BillingCatalog = { enabled: false, prices: [] };
+
+  it("keeps the trial offer while checkout can start it", () => {
+    expect(planOnSale(offered, selling)).toBe(offered);
+    expect(sellingTrial(selling)).toBe(true);
+  });
+
+  it("drops the trial offer where checkout is not configured", () => {
+    const shown = planOnSale(offered, unconfigured);
+
+    expect(shown?.trialOffer).toBeNull();
+    expect(paywallHeading(shown)).toBe("Keep optimizing without limits");
+    expect(paywallStatusLine(shown, CLOCK)).not.toContain("$0");
+    expect(sellingTrial(unconfigured)).toBe(false);
+  });
+
+  it("keeps the trial offer while the catalog is loading or has failed", () => {
+    expect(planOnSale(offered, undefined)).toBe(offered);
+    expect(paywallHeading(planOnSale(offered, undefined))).toBe(
+      "Start your 7 day free trial",
+    );
+    expect(sellingTrial(undefined)).toBe(true);
   });
 });
