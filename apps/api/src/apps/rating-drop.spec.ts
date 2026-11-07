@@ -112,6 +112,48 @@ describe('newRatingDrop', () => {
   });
 });
 
+describe('newRatingDrop over a daily history', () => {
+  const steady = Array.from({ length: 10 }, () => 4.6);
+
+  const alertedTenths = (ratings: readonly number[]): (number | null)[] =>
+    ratings.map(
+      (_rating, day) =>
+        newRatingDrop(
+          ratings
+            .slice(0, day + 1)
+            .map((ratingAvg, index) => snap(day - index, ratingAvg))
+            .reverse(),
+        )?.dropTenths ?? null,
+    );
+
+  it('alerts a fall, stays quiet through a partial recovery and its return, and alerts a deeper fall', () => {
+    expect(alertedTenths([...steady, 4.3, 4.5, 4.3, 4.2]).slice(10)).toEqual([
+      3,
+      null,
+      null,
+      4,
+    ]);
+  });
+
+  it('stays quiet when the rating returns to an alerted depth after a full recovery', () => {
+    expect(alertedTenths([...steady, 4.3, 4.6, 4.3]).slice(10)).toEqual([
+      3,
+      null,
+      null,
+    ]);
+  });
+
+  it('alerts a new fall once the reference has caught up with the first one', () => {
+    const persisting = Array.from({ length: 8 }, () => 4.3);
+
+    expect(alertedTenths([...steady, ...persisting, 4.0]).slice(10)).toEqual([
+      3,
+      ...Array.from({ length: 7 }, () => null),
+      3,
+    ]);
+  });
+});
+
 describe('rating drop review fixes', () => {
   it('counts a decline under a tenth as nothing even with more decimals', () => {
     expect(ratingDropAt([snap(0, 4.55), snap(7, 4.649)], 0)).toBeNull();
