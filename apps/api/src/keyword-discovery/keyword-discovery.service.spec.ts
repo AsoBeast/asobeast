@@ -4,6 +4,7 @@ import { Store } from '@prisma/client';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import { DiscoveryPopularity } from './discovery-popularity.service';
+import { DiscoveryTracker } from './discovery-tracker.service';
 import { KeywordDiscoveryService } from './keyword-discovery.service';
 
 const NOW = new Date('2026-11-11T12:00:00Z');
@@ -43,6 +44,7 @@ interface Fixture {
   listed?: Map<string, number>;
   cron?: string;
   autoTrackRanked?: boolean;
+  unfit?: number;
 }
 
 const build = (fixture: Fixture = {}) => {
@@ -76,12 +78,14 @@ const build = (fixture: Fixture = {}) => {
   const config = {
     get: jest.fn(() => fixture.cron ?? '30 7 * * 1'),
   };
+  const tracker = { unfit: jest.fn().mockResolvedValue(fixture.unfit ?? 0) };
   const service = new KeywordDiscoveryService(
     prisma as unknown as PrismaService,
     popularity as unknown as DiscoveryPopularity,
     config as unknown as ConfigService<Env, true>,
+    tracker as unknown as DiscoveryTracker,
   );
-  return { service, prisma, popularity, findMany };
+  return { service, prisma, popularity, findMany, tracker };
 };
 
 const ALL = { state: 'all' as const, limit: 200 };
@@ -169,17 +173,24 @@ describe('KeywordDiscoveryService.list', () => {
     expect(ranked.items[0]?.recommended).toBe(true);
   });
 
-  it('reports unfit ranked rows only while auto track is on', async () => {
-    const rows = [row('ranked', { position: 3, depth: 50 })];
-    expect((await build({ rows }).service.list('app1', ALL, NOW)).unfit).toBe(
-      0,
+  it('reports the ranked rows the plan has no room for only while auto track is on', async () => {
+    const rows = [
+      row('ranked', { position: 3, depth: 50 }),
+      row('unranked', { depth: 200 }),
+    ];
+    const off = build({ rows, unfit: 1 });
+    expect((await off.service.list('app1', ALL, NOW)).unfit).toBe(0);
+    expect(off.tracker.unfit).not.toHaveBeenCalled();
+
+    const on = build({ rows, autoTrackRanked: true, unfit: 1 });
+    expect(await on.service.list('app1', ALL, NOW)).toMatchObject({
+      autoTrackRanked: true,
+      unfit: 1,
+    });
+    expect(on.tracker.unfit).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'app1' }),
+      [expect.objectContaining({ keywordId: 'ranked', state: 'ranked' })],
     );
-    const on = await build({ rows, autoTrackRanked: true }).service.list(
-      'app1',
-      ALL,
-      NOW,
-    );
-    expect(on).toMatchObject({ autoTrackRanked: true, unfit: 1 });
   });
 
   it('reports the weekly checks', async () => {
