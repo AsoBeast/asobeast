@@ -10,6 +10,11 @@ import { assertProductionSafety } from './production-safety';
 import { assertSmtpDkimConfiguration } from './smtp-dkim-config';
 import { TrustedProxyHops } from './trusted-proxy';
 
+const DEFAULT_ORIGIN_WITH_ADDRESS = /^http:\/\/localhost:(?!\d+$).*:\d+$/;
+
+const builtFromPortAddress = (origin: string): boolean =>
+  DEFAULT_ORIGIN_WITH_ADDRESS.test(origin);
+
 /**
  * Typed environment configuration.
  *
@@ -120,11 +125,19 @@ export const EnvSchema = z.object({
   WEB_PUBLIC_URL: z.preprocess(
     blankAsUndefined,
     z
-      .url({
-        protocol: /^https?$/,
+      .string()
+      .refine((origin) => !builtFromPortAddress(origin), {
         error:
-          'WEB_PUBLIC_URL must be the http or https origin the web app is served from, for example https://aso.example.com',
+          'WEB_PUBLIC_URL is not an origin that parses. When WEB_PUBLIC_URL is not set, the Compose stacks build it from ASOBEAST_PORT, which then holds an address where a port number such as 3001 belongs. Set ASOBEAST_PORT to the port alone, or set WEB_PUBLIC_URL to the origin the web app is served from',
+        abort: true,
       })
+      .pipe(
+        z.url({
+          protocol: /^https?$/,
+          error:
+            'WEB_PUBLIC_URL must be the http or https origin the web app is served from, for example https://aso.example.com',
+        }),
+      )
       .optional(),
   ),
   CRON_RETENTION: cronPattern('0 5 * * *'),

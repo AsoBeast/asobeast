@@ -106,9 +106,14 @@ function* fieldGrams(text: string, isUsable: TokenTest): Generator<Gram> {
   }
 }
 
+export type CandidateTest = (text: string, source: CandidateSource) => boolean;
+
+const acceptsEvery: CandidateTest = () => true;
+
 export function extractCandidates(
   input: ExtractionInput,
   languages: readonly string[] = [],
+  accepts: CandidateTest = acceptsEvery,
 ): Candidate[] {
   const isUsable = usableIn(functionWordTest(languages));
   const fields: Field[] = [
@@ -124,6 +129,9 @@ export function extractCandidates(
       continue;
     }
     for (const { text, size } of fieldGrams(field.text, isUsable)) {
+      if (!accepts(text, field.source)) {
+        continue;
+      }
       const existing = byText.get(text);
       if (!existing || field.weight > existing.weight) {
         byText.set(text, {

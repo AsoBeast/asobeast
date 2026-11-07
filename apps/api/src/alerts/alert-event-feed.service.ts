@@ -69,17 +69,19 @@ export class AlertEventFeed {
     };
     const size = Math.max(query.limit + 1, BATCH_ROWS);
     const events: AlertEventItem[] = [];
+    let lastListed: FeedRow | null = null;
     let rows: FeedRow[] = [];
     do {
       rows = await this.rowsOf({ ...filter, cursor }, size);
       const homes = await this.homesOf(rows);
-      for (const [index, row] of rows.entries()) {
+      for (const row of rows) {
         const item = this.itemOf(row, homes, scope.preferred);
-        if (item) events.push(item);
-        if (events.length === query.limit) {
-          const more = index < rows.length - 1 || rows.length === size;
-          return { events, nextCursor: more ? encodeCursor(row) : null };
+        if (item === null) continue;
+        if (lastListed !== null && events.length === query.limit) {
+          return { events, nextCursor: encodeCursor(lastListed) };
         }
+        events.push(item);
+        lastListed = row;
       }
       cursor = rows.at(-1) ?? cursor;
     } while (rows.length === size);

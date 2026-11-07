@@ -19,17 +19,26 @@ const rankOf = (item: KeywordDiscoveryList["items"][number]): string =>
     ? (rankText(item) ?? "not checked yet")
     : `#${item.position}`;
 
-function headlineOf({ counts }: KeywordDiscoveryList): string {
+function uncheckedSentence({ items, counts }: KeywordDiscoveryList): string {
+  if (items.some(({ checkedOn }) => checkedOn !== null)) {
+    return "None of them rank yet.";
+  }
+  return items.length < counts.all
+    ? "None of the ones shown has been checked yet."
+    : "None of them has been checked yet.";
+}
+
+function headlineOf(list: KeywordDiscoveryList): string {
+  const { counts } = list;
   const found = `Found ${pluralize(counts.all, "keyword")} near your listing.`;
-  return counts.ranked > 0
-    ? `${found} Your app already ranks for ${counts.ranked} of them.`
-    : `${found} None of them rank yet. Track the ones that fit your app.`;
+  if (counts.ranked > 0) {
+    return `${found} Your app already ranks for ${counts.ranked} of them.`;
+  }
+  return `${found} ${uncheckedSentence(list)} Track the ones that fit your app.`;
 }
 
 const isCollecting = ({ checks, counts }: KeywordDiscoveryList): boolean =>
-  checks.checkedAt === null &&
-  counts.ranked === 0 &&
-  (checks.pending > 0 || checks.nextRunAt !== null);
+  checks.checkedAt === null && counts.ranked === 0 && checks.pending > 0;
 
 export function firstDiscoveries(
   list: KeywordDiscoveryList | undefined,

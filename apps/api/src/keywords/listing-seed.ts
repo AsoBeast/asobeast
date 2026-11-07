@@ -1,13 +1,31 @@
 import { KeywordSource, Store } from '@prisma/client';
 import { MARKET_SEED_LIMIT } from '@asobeast/shared';
-import { Candidate, extractCandidates } from './extraction';
+import {
+  Candidate,
+  CandidateSource,
+  CandidateTest,
+  extractCandidates,
+} from './extraction';
 import { interleaveDistinct } from './interleave';
+import { fieldCoverage } from './keyword-coverage';
 import { ListingText } from './listing-texts';
 
 export const seedSources = (store: Store): readonly KeywordSource[] =>
   store === Store.GOOGLE_PLAY
     ? ['TITLE', 'DESCRIPTION']
     : ['TITLE', 'SUBTITLE'];
+
+function seededFieldHolds(
+  listing: ListingText,
+  sources: readonly KeywordSource[],
+): CandidateTest {
+  const fields: Record<CandidateSource, (keyword: string) => boolean> = {
+    TITLE: fieldCoverage(listing.title),
+    SUBTITLE: fieldCoverage(listing.subtitle ?? ''),
+    DESCRIPTION: fieldCoverage(listing.summary ?? ''),
+  };
+  return (text, source) => sources.includes(source) && fields[source](text);
+}
 
 export function seedCandidates(
   store: Store,
@@ -24,7 +42,8 @@ export function seedCandidates(
           summary: listing.summary ?? undefined,
         },
         listing.languages,
-      ).filter((candidate) => sources.includes(candidate.source)),
+        seededFieldHolds(listing, sources),
+      ),
     ),
     limit,
     (candidate) => candidate.text,

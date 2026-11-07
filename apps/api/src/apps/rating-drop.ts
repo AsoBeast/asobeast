@@ -65,10 +65,15 @@ const shippedVersion = (latest: Rated, reference: Rated): string | null =>
     ? latest.version
     : null;
 
-export function ratingDropAt(
+interface MeasuredDrop {
+  drop: RatingDrop;
+  reference: Rated;
+}
+
+function measuredDropAt(
   history: readonly RatedSnapshot[],
   index: number,
-): RatingDrop | null {
+): MeasuredDrop | null {
   const latest = history[index];
   if (!rated(latest)) return null;
   const reference = referenceOf(history, index, latest);
@@ -76,26 +81,48 @@ export function ratingDropAt(
   const dropTenths = wholeTenths(reference.ratingAvg, latest.ratingAvg);
   if (dropTenths < 1) return null;
   return {
-    from: reference.ratingAvg,
-    to: latest.ratingAvg,
-    fromCount: reference.ratingCount,
-    toCount: latest.ratingCount,
-    fromDate: utcDayOf(reference.capturedAt),
-    toDate: utcDayOf(latest.capturedAt),
-    dropTenths,
-    version: shippedVersion(latest, reference),
+    reference,
+    drop: {
+      from: reference.ratingAvg,
+      to: latest.ratingAvg,
+      fromCount: reference.ratingCount,
+      toCount: latest.ratingCount,
+      fromDate: utcDayOf(reference.capturedAt),
+      toDate: utcDayOf(latest.capturedAt),
+      dropTenths,
+      version: shippedVersion(latest, reference),
+    },
   };
+}
+
+export function ratingDropAt(
+  history: readonly RatedSnapshot[],
+  index: number,
+): RatingDrop | null {
+  return measuredDropAt(history, index)?.drop ?? null;
+}
+
+function deepestShownSince(
+  history: readonly RatedSnapshot[],
+  reference: Rated,
+): number {
+  return history.reduce((deepest, snapshot, index) => {
+    if (index === 0 || snapshot.capturedAt <= reference.capturedAt) {
+      return deepest;
+    }
+    const earlier = ratingDropAt(history, index);
+    return earlier
+      ? Math.max(deepest, wholeTenths(reference.ratingAvg, earlier.to))
+      : deepest;
+  }, 0);
 }
 
 export function newRatingDrop(
   history: readonly RatedSnapshot[],
 ): RatingDrop | null {
-  const current = ratingDropAt(history, 0);
+  const current = measuredDropAt(history, 0);
   if (!current) return null;
-  const previousIndex = history.findIndex(
-    (snapshot, index) => index > 0 && rated(snapshot),
-  );
-  const previous =
-    previousIndex > 0 ? ratingDropAt(history, previousIndex) : null;
-  return current.dropTenths > (previous?.dropTenths ?? 0) ? current : null;
+  return current.drop.dropTenths > deepestShownSince(history, current.reference)
+    ? current.drop
+    : null;
 }

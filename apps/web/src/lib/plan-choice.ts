@@ -116,6 +116,18 @@ export function trialBannerLine(
     : `${remaining}.`;
 }
 
+export function sellingTrial(catalog: BillingCatalog | undefined): boolean {
+  return catalog?.enabled !== false;
+}
+
+export function planOnSale(
+  plan: AccountPlan | undefined,
+  catalog: BillingCatalog | undefined,
+): AccountPlan | undefined {
+  if (!plan?.trialOffer || sellingTrial(catalog)) return plan;
+  return { ...plan, trialOffer: null };
+}
+
 export function planAction(
   plan: AccountPlan | undefined,
   name: PaidPlanName,

@@ -36,6 +36,35 @@ test("pressing a keyword opens its breakdown", async ({ page }) => {
   );
 });
 
+test("an offline browser reads a notice in the sheet, then the breakdown", async ({
+  page,
+  context,
+}) => {
+  await page.goto(PAGE);
+  await page.waitForLoadState("networkidle");
+  const opener = await hydrated(keywordButton(page, "United States"));
+
+  await context.setOffline(true);
+  await opener.click();
+
+  await expect(sheet(page).getByRole("status")).toHaveText(
+    "You are offline. The breakdown loads when the connection is back.",
+  );
+  await expect(sheet(page)).toHaveAccessibleDescription(
+    "Each app's listing judged against one tracked keyword.",
+  );
+  await expect(sheet(page).getByRole("button", { name: "Retry" })).toHaveCount(
+    0,
+  );
+  await context.setOffline(false);
+  await expect(card(page, /Rival Focus/)).toBeVisible();
+  await expect(
+    sheet(page).getByText(
+      "You are offline. The breakdown loads when the connection is back.",
+    ),
+  ).toHaveCount(0);
+});
+
 test("the breakdown is described only by elements it renders", async ({
   page,
 }) => {

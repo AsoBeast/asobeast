@@ -2,6 +2,12 @@ import type { AuthUser } from "@asobeast/shared";
 
 export type SignUpStepState = "done" | "current" | "upcoming";
 
+export const SIGN_UP_STEP_STATE_TEXT: Record<SignUpStepState, string | null> = {
+  done: " (completed)",
+  current: null,
+  upcoming: " (not started)",
+};
+
 export interface SignUpStep {
   label: string;
   state: SignUpStepState;
