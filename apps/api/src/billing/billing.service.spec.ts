@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   ForbiddenException,
   ServiceUnavailableException,
 } from '@nestjs/common';
@@ -12,6 +13,7 @@ import type { TrialOffers } from '../auth/trial-offers';
 import {
   BillingService,
   CONFIRM_EMAIL_FIRST,
+  NO_BILLING_ACCOUNT,
   PAYMENT_PENDING,
   SUBSCRIPTION_NEEDS_ATTENTION,
 } from './billing.service';
@@ -146,6 +148,7 @@ describe('BillingService', () => {
     const service = new BillingService(
       {
         enabled: values['STRIPE_SECRET_KEY'] !== undefined,
+        requireConfigured: () => undefined,
         createCustomer,
         customerExists,
         createCheckoutSession,
@@ -790,17 +793,28 @@ describe('BillingService', () => {
     });
   });
 
-  it('opens the portal on a fresh customer when the stored one is gone', async () => {
-    const { service, customerExists, createPortalSession } =
+  it('refuses the portal when stripe no longer knows the stored customer', async () => {
+    const { service, customerExists, createCustomer, createPortalSession } =
       build('cus_deleted');
     customerExists.mockResolvedValue(false);
 
-    await service.portal(owner('cus_deleted'));
-
-    expect(createPortalSession).toHaveBeenCalledWith(
-      expect.objectContaining({ customer: 'cus_created' }),
-      expect.any(String),
+    await expect(service.portal(owner('cus_deleted'))).rejects.toThrow(
+      new ConflictException(NO_BILLING_ACCOUNT),
     );
+    expect(createCustomer).not.toHaveBeenCalled();
+    expect(createPortalSession).not.toHaveBeenCalled();
+  });
+
+  it('refuses the portal for a workspace with no customer without asking stripe', async () => {
+    const { service, customerExists, createCustomer, createPortalSession } =
+      build(null);
+
+    await expect(service.portal(owner(null))).rejects.toThrow(
+      new ConflictException(NO_BILLING_ACCOUNT),
+    );
+    expect(customerExists).not.toHaveBeenCalled();
+    expect(createCustomer).not.toHaveBeenCalled();
+    expect(createPortalSession).not.toHaveBeenCalled();
   });
 
   it('sells at full price without an offer', async () => {

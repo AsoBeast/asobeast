@@ -8,6 +8,9 @@ describe('StripeService', () => {
     const service = new StripeService(createStripeClient(undefined));
 
     expect(service.enabled).toBe(false);
+    expect(() => service.requireConfigured()).toThrow(
+      ServiceUnavailableException,
+    );
     expect(() =>
       service.createCustomer({ email: 'owner@example.com' }, 'key'),
     ).toThrow(ServiceUnavailableException);
@@ -17,6 +20,7 @@ describe('StripeService', () => {
     const service = new StripeService(createStripeClient('sk_test_key'));
 
     expect(service.enabled).toBe(true);
+    expect(() => service.requireConfigured()).not.toThrow();
   });
 
   it('carries an idempotency key on every mutation it makes', async () => {

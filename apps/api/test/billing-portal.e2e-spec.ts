@@ -1,7 +1,7 @@
 import './helpers/enable-billing';
 import './helpers/enable-stripe';
-import type { BillingSession } from '@asobeast/shared';
-import { WORKSPACE_METADATA_KEY } from '../src/billing/workspace-link';
+import type { ApiErrorEnvelope, BillingSession } from '@asobeast/shared';
+import { NO_BILLING_ACCOUNT } from '../src/billing/billing.service';
 import {
   anonymously,
   asMember,
@@ -9,10 +9,8 @@ import {
   startBillingHarness,
   stopBillingHarness,
   workspaceRow,
-  WORKSPACE,
   type BillingHarness,
 } from './helpers/billing-harness';
-import { OWNER } from './helpers/session';
 
 const PORTAL = '/billing/portal';
 
@@ -20,6 +18,19 @@ describe('Billing portal (e2e)', () => {
   let harness: BillingHarness;
 
   const portal = () => harness.owner.post(PORTAL);
+
+  const expectRefused = async (storedCustomer: string | null) => {
+    const response = await portal().expect(409);
+
+    expect((response.body as ApiErrorEnvelope).message).toBe(
+      NO_BILLING_ACCOUNT,
+    );
+    expect(harness.fake.createdCustomers).toHaveLength(0);
+    expect(harness.fake.portalSessions).toHaveLength(0);
+    await expect(workspaceRow(harness)).resolves.toMatchObject({
+      billingCustomerId: storedCustomer,
+    });
+  };
 
   beforeAll(async () => {
     harness = await startBillingHarness();
@@ -46,22 +57,12 @@ describe('Billing portal (e2e)', () => {
     expect(recorded.idempotencyKey).toMatch(/^portal:[^:]+:\d+$/);
   });
 
-  it('creates and stores the customer of a workspace that has none yet', async () => {
-    await portal().expect(200);
-
-    const [customer] = harness.fake.createdCustomers;
-    expect(customer.params).toEqual({
-      email: OWNER.email,
-      name: 'Default',
-      metadata: { [WORKSPACE_METADATA_KEY]: WORKSPACE },
-    });
-    expect(harness.fake.portalSessions[0].params.customer).toBe('cus_test_1');
-    await expect(workspaceRow(harness)).resolves.toMatchObject({
-      billingCustomerId: 'cus_test_1',
-    });
+  it('refuses a workspace with no billing account and creates no customer', async () => {
+    await expectRefused(null);
   });
 
   it('opens only for an owner, ten times a minute', async () => {
+    await resetBillingState(harness, { billingCustomerId: 'cus_test_stored' });
     await asMember(harness, PORTAL).expect(403);
     await anonymously(harness, PORTAL).expect(401);
 
@@ -71,26 +72,19 @@ describe('Billing portal (e2e)', () => {
     await portal().expect(429);
   });
 
-  it('opens the portal on a fresh customer when stripe no longer knows the stored one', async () => {
+  it('refuses a stored customer stripe no longer knows', async () => {
     await resetBillingState(harness, {
       billingCustomerId: 'cus_from_another_account',
     });
     harness.fake.unknownCustomers.add('cus_from_another_account');
 
-    await portal().expect(200);
-
-    expect(harness.fake.portalSessions[0].params.customer).toBe('cus_test_1');
+    await expectRefused('cus_from_another_account');
   });
 
-  it('opens the portal on a fresh customer when the stored one was deleted', async () => {
+  it('refuses a stored customer that was deleted', async () => {
     await resetBillingState(harness, { billingCustomerId: 'cus_deleted' });
     harness.fake.deletedCustomers.push('cus_deleted');
 
-    await portal().expect(200);
-
-    expect(harness.fake.portalSessions[0].params.customer).toBe('cus_test_1');
-    await expect(workspaceRow(harness)).resolves.toMatchObject({
-      billingCustomerId: 'cus_test_1',
-    });
+    await expectRefused('cus_deleted');
   });
 });

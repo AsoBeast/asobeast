@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   ForbiddenException,
   Injectable,
   Logger,
@@ -55,6 +56,9 @@ export const SUBSCRIPTION_NEEDS_ATTENTION =
 
 export const PAYMENT_PENDING =
   'Your last payment is still being confirmed. This usually takes a minute; if it has not completed within a day the attempt expires and you can try again.';
+
+export const NO_BILLING_ACCOUNT =
+  'This workspace has no billing account yet. Choose a plan on the upgrade page to start one.';
 
 export const CONFIRM_EMAIL_FIRST =
   'Confirm your email address first. Open the link we sent you, then start the trial.';
@@ -269,7 +273,12 @@ export class BillingService {
   }
 
   async portal(user: AccountUser): Promise<string> {
-    const customerId = await this.customerFor(user);
+    this.stripe.requireConfigured();
+    const customerId = await this.liveCustomer(
+      user.workspaceId,
+      await this.storedCustomer(),
+    );
+    if (!customerId) throw new ConflictException(NO_BILLING_ACCOUNT);
     const session = await this.stripe.createPortalSession(
       { customer: customerId, return_url: this.returnUrl() },
       `portal:${user.workspaceId}:${minuteBucket()}`,
@@ -338,14 +347,22 @@ export class BillingService {
     return workspace;
   }
 
+  private async liveCustomer(
+    workspaceId: string,
+    stored: string | null,
+  ): Promise<string | null> {
+    if (!stored) return null;
+    if (await this.stripe.customerExists(stored)) return stored;
+    this.logger.warn(
+      `workspace ${workspaceId} names stripe customer ${stored} that Stripe has no record of`,
+    );
+    return null;
+  }
+
   private async customerFor(user: AccountUser): Promise<string> {
     const stored = await this.storedCustomer();
-    if (stored && (await this.stripe.customerExists(stored))) return stored;
-    if (stored) {
-      this.logger.warn(
-        `workspace ${user.workspaceId} names stripe customer ${stored} that Stripe has no record of; replacing it`,
-      );
-    }
+    const live = await this.liveCustomer(user.workspaceId, stored);
+    if (live) return live;
 
     const customer = await this.stripe.createCustomer(
       {
