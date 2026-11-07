@@ -1,4 +1,3 @@
-import { SearchX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 
@@ -13,7 +12,6 @@ export function FilteredEmpty({
 }) {
   return (
     <EmptyState
-      icon={SearchX}
       title={title}
       body={body}
       className="border-0"

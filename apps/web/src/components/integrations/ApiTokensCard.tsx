@@ -314,7 +314,7 @@ export function ApiTokensCard() {
                     </TableCell>
                     <TableCell
                       translate="no"
-                      className="numeric font-mono text-xs text-muted-foreground"
+                      className="font-mono text-xs text-muted-foreground"
                     >
                       {token.prefix}…
                     </TableCell>

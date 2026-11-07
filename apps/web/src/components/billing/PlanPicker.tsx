@@ -60,20 +60,20 @@ function PlanOption({
       aria-describedby={highlightsId}
       onClick={onSelect}
       className={cn(
-        "flex min-w-0 flex-col items-start gap-3 rounded-2xl border bg-card p-4 text-left shadow-raised transition-[color,background-color,border-color,box-shadow] hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none sm:p-6",
+        "flex min-w-0 flex-col items-start gap-3 rounded-2xl border bg-card p-4 text-left shadow-raised transition-[color,background-color,border-color,box-shadow] hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:p-6",
         selected &&
           "border-primary bg-primary-subtle ring-1 ring-primary hover:bg-primary-subtle",
       )}
     >
-      <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-title">
+      <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-heading">
         <span>{PLANS[name].displayName}</span>
         {action === "current" ? (
           <Badge variant="secondary">Current</Badge>
         ) : null}
       </span>
       <span aria-hidden="true" className="flex items-baseline gap-1">
-        <span className="text-display tabular-nums sm:text-hero">{`$${priceOf(name, interval)}`}</span>
-        <span className="text-subtitle font-normal text-muted-foreground">
+        <span className="text-title tabular-nums sm:text-hero">{`$${priceOf(name, interval)}`}</span>
+        <span className="text-heading font-normal text-muted-foreground">
           {PER_INTERVAL[interval]}
         </span>
       </span>
@@ -109,7 +109,7 @@ export function PlanPicker({
   return (
     <div className="flex min-w-0 flex-col gap-6 lg:sticky lg:top-6 lg:col-start-2 lg:row-start-1 lg:self-start">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-display">{CHOOSE_A_PLAN_TITLE}</h2>
+        <h2 className="text-title">{CHOOSE_A_PLAN_TITLE}</h2>
         <Tabs
           value={interval}
           onValueChange={(next) => onInterval(next as BillingInterval)}
@@ -122,7 +122,7 @@ export function PlanPicker({
               <TabsOption
                 key={value}
                 value={value}
-                className="gap-2 rounded-lg px-3 text-subtitle"
+                className="gap-2 rounded-lg px-3 text-body font-medium"
               >
                 <span>{INTERVAL_LABEL[value]}</span>
                 {value === "year" ? (
@@ -153,10 +153,10 @@ export function PlanPicker({
         aria-labelledby="plan-features-title"
         className="flex flex-col gap-4"
       >
-        <h2 id="plan-features-title" className="text-title">
+        <h2 id="plan-features-title" className="text-heading">
           {featuresTitle(selected)}
         </h2>
-        <dl className="divide-y divide-border text-subtitle">
+        <dl className="divide-y divide-border text-body font-medium">
           {LIMIT_ROWS.map(({ key, label }) => (
             <div key={key} className="flex justify-between gap-4 py-2">
               <dt className="font-normal text-muted-foreground">{label}</dt>

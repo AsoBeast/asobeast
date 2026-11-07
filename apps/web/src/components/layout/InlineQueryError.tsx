@@ -25,7 +25,7 @@ export function InlineQueryError({
 }) {
   const retrying = read.isFetching;
   return (
-    <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+    <div className="flex flex-wrap items-center gap-3 text-body text-muted-foreground">
       <span role="alert">{message}</span>
       <Button
         size="sm"

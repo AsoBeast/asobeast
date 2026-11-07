@@ -124,7 +124,7 @@ export function InsufficientHistory({ data }: { data: RankingChartData }) {
               <dt className="max-w-40 truncate text-caption text-muted-foreground">
                 {data.seriesLabels[keywordId] ?? keywordId}
               </dt>
-              <dd className="numeric font-mono text-title">
+              <dd className="numeric text-title">
                 {formatCheckedPosition(
                   typeof value === "number" ? value : null,
                   depths?.[keywordId] ?? null,

@@ -19,7 +19,7 @@ export function ActionRail({
         aria-labelledby="progress-heading"
         className="flex flex-col gap-3"
       >
-        <h2 id="progress-heading" className="text-title">
+        <h2 id="progress-heading" className="text-heading">
           Progress
         </h2>
         <Suspense fallback={<ChartSkeleton height={CHART_HEIGHT.compact} />}>

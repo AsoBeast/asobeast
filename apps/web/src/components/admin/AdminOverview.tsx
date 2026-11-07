@@ -45,7 +45,7 @@ function ActivationTile({ activation }: { activation: AdminActivation }) {
             href={ACTIVATION_GUIDE}
             target="_blank"
             rel="noreferrer"
-            className="font-medium text-foreground underline decoration-primary underline-offset-4 hover:decoration-2"
+            className="font-medium text-foreground underline decoration-faint-foreground underline-offset-4 hover:decoration-2"
           >
             Read how activation is counted
           </a>
@@ -111,9 +111,7 @@ function CountList({
       {rows.map((row) => (
         <div key={row.key} className="contents">
           <dt className="text-muted-foreground">{row.label}</dt>
-          <dd className="numeric text-right font-mono">
-            {formatNumber(row.count)}
-          </dd>
+          <dd className="numeric text-right">{formatNumber(row.count)}</dd>
         </div>
       ))}
     </dl>

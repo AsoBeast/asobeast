@@ -1,7 +1,7 @@
 import { ChartSkeleton } from "@/components/charts/ChartStates";
 import { CHART_HEIGHT } from "@/components/charts/theme";
 import { Skeleton } from "@/components/ui/skeleton";
-import { StatTileGroup } from "@/components/ui/stat-tile";
+import { StatTileGroup, StatTileSkeleton } from "@/components/ui/stat-tile";
 
 export const OVERVIEW_GRID = "grid-cols-2 @3xl/actions:grid-cols-4";
 
@@ -33,15 +33,7 @@ export function ActionOverviewSkeleton() {
   return (
     <StatTileGroup className={OVERVIEW_GRID}>
       {Array.from({ length: 4 }, (_, index) => (
-        <div
-          key={index}
-          data-slot="stat-tile-skeleton"
-          className="row-span-3 grid grid-rows-subgrid gap-1 rounded-xl border bg-card px-4 py-3"
-        >
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-7 w-12 self-end" />
-          <Skeleton className="h-5 w-28" />
-        </div>
+        <StatTileSkeleton key={index} />
       ))}
     </StatTileGroup>
   );

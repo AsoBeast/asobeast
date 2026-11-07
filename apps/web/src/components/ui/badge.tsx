@@ -4,25 +4,26 @@ import { Slot } from "radix-ui";
 
 import { cn } from "@/lib/utils";
 
+const FLAT = "bg-secondary text-muted-foreground [a]:hover:bg-accent";
+
 const badgeVariants = cva(
-  "group/badge inline-flex h-5 w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-4xl border border-transparent px-2 py-0.5 text-xs font-medium whitespace-nowrap transition-[color,background-color,border-color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&>svg]:pointer-events-none [&>svg]:size-3!",
+  "group/badge inline-flex h-[22px] w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-md border border-transparent px-[7px] text-label whitespace-nowrap numeric transition-[color,background-color,border-color] duration-150 ease-out focus-visible:ring-2 focus-visible:ring-ring has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 aria-invalid:border-destructive [&>svg]:pointer-events-none [&>svg]:size-3!",
   {
     variants: {
       variant: {
-        default:
-          "bg-primary text-primary-foreground [a]:hover:bg-primary-hover",
-        secondary:
-          "bg-secondary text-secondary-foreground [a]:hover:bg-secondary/80",
-        destructive:
-          "bg-destructive/10 text-destructive focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 [a]:hover:bg-destructive/20",
-        success: "bg-success-subtle text-success [a]:hover:bg-success/20",
-        warning: "bg-warning-subtle text-warning [a]:hover:bg-warning/20",
-        info: "bg-info/10 text-info [a]:hover:bg-info/20",
+        default: FLAT,
+        secondary: FLAT,
+        flat: FLAT,
+        up: "bg-signal-up-subtle text-signal-up",
+        down: "bg-signal-down-subtle text-signal-down",
+        destructive: "bg-signal-down-subtle text-destructive",
+        success: "bg-success-subtle text-success",
+        warning: "bg-warning-subtle text-warning",
+        info: "bg-info-subtle text-info",
         outline:
-          "border-border text-foreground [a]:hover:bg-muted [a]:hover:text-muted-foreground",
-        ghost:
-          "hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50",
-        link: "text-foreground underline decoration-primary underline-offset-4 hover:decoration-2",
+          "border-border text-muted-foreground [a]:hover:bg-muted [a]:hover:text-foreground",
+        ghost: "text-muted-foreground hover:bg-muted hover:text-foreground",
+        link: "px-0 text-foreground underline decoration-faint-foreground underline-offset-4 hover:decoration-foreground",
       },
     },
     defaultVariants: {

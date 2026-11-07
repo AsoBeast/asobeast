@@ -56,7 +56,7 @@ export function MapZoneLegend({
                 }}
               />
               <span className="min-w-0">{name}</span>
-              <span className="ml-auto numeric font-mono">{String(count)}</span>
+              <span className="ml-auto numeric">{String(count)}</span>
             </Button>
             <InfoTip
               label={`About ${name}`}
@@ -67,7 +67,7 @@ export function MapZoneLegend({
                 href={OPPORTUNITY_MAP_GUIDE}
                 target="_blank"
                 rel="noreferrer"
-                className="font-medium text-foreground underline decoration-primary underline-offset-4 hover:decoration-2"
+                className="font-medium text-foreground underline decoration-faint-foreground underline-offset-4 hover:decoration-2"
               >
                 Read the opportunity map
               </a>

@@ -35,7 +35,7 @@ function Rating({
   if (average === null) return null;
   return (
     <span className="col-start-3 row-start-2 flex items-center text-caption text-muted-foreground sm:col-start-4 sm:row-start-1 sm:pt-0.5">
-      <span aria-hidden className="flex items-center gap-1.5 numeric font-mono">
+      <span aria-hidden className="flex items-center gap-1.5 numeric">
         <Star className="size-3 fill-current" />
         <span>{formatRating(average)}</span>
         {count === null ? null : <span>{formatCompact(count)}</span>}
@@ -113,7 +113,7 @@ export function SerpRow({
       )}
     >
       <span className="col-start-1 row-span-2 row-start-1 flex flex-col items-end gap-0.5 text-right">
-        <span className="numeric font-mono font-medium">{entry.position}</span>
+        <span className="numeric font-medium">{entry.position}</span>
         <span className="text-caption">
           <MovementCell
             entry={movedOf(entry)}
@@ -124,7 +124,7 @@ export function SerpRow({
         </span>
       </span>
       <span className="col-start-2 row-span-2 row-start-1">
-        <AppIcon src={entry.iconUrl ?? null} name={entry.title} size={40} />
+        <AppIcon src={entry.iconUrl ?? null} size={40} />
       </span>
       <SerpAppText
         title={entry.title}

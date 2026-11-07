@@ -20,7 +20,7 @@ export function RatingsByMarketHelp() {
         href={RATINGS_BY_MARKET_GUIDE}
         target="_blank"
         rel="noreferrer"
-        className="font-medium text-foreground underline decoration-primary underline-offset-4 hover:decoration-2"
+        className="font-medium text-foreground underline decoration-faint-foreground underline-offset-4 hover:decoration-2"
       >
         Read how ratings by market are read
       </a>

@@ -165,11 +165,11 @@ function DayGrid({
                     tabIndex={date === focused ? 0 : -1}
                     onClick={() => onSelect(date)}
                     className={cn(
-                      "numeric size-9 rounded-md font-mono text-sm text-muted-foreground disabled:cursor-not-allowed",
+                      "numeric size-9 rounded-md text-sm text-muted-foreground disabled:cursor-not-allowed",
                       date === value
                         ? "bg-primary text-primary-foreground hover:bg-primary-hover"
                         : "data-captured:bg-secondary data-captured:text-foreground data-captured:hover:bg-accent",
-                      "focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1 focus-visible:outline-ring",
+                      "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-1 focus-visible:outline-ring",
                     )}
                   >
                     {Number(date.slice(-2))}

@@ -79,7 +79,7 @@ function RankCell({ item }: { item: KeywordDiscoveryItem }) {
   }
   if (item.position === null) {
     return (
-      <span className="numeric font-mono text-muted-foreground">
+      <span className="numeric text-muted-foreground">
         <span aria-hidden>{text}</span>
         <span className="sr-only">{rankLabel(item)}</span>
       </span>
@@ -115,7 +115,7 @@ function MetricHeader({
           href={DISCOVERY_GUIDE}
           target="_blank"
           rel="noreferrer"
-          className="font-medium text-foreground underline decoration-primary underline-offset-4 hover:decoration-2"
+          className="font-medium text-foreground underline decoration-faint-foreground underline-offset-4 hover:decoration-2"
         >
           Read about keyword discovery
         </a>

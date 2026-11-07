@@ -121,14 +121,14 @@ function KeywordButton({
         onClick={(event: MouseEvent<HTMLButtonElement>) =>
           onOpen(row.keywordId, event.currentTarget)
         }
-        className="max-w-40 truncate rounded-sm text-left font-medium underline decoration-muted-foreground decoration-dotted underline-offset-4 hover:decoration-primary md:max-w-64"
+        className="max-w-40 truncate rounded-sm text-left font-medium underline decoration-muted-foreground decoration-dotted underline-offset-4 hover:decoration-foreground md:max-w-64"
       >
         {row.text}
       </button>
       {multiMarket && country ? (
         <span
           title={formatCountry(country)}
-          className="font-mono text-xs text-muted-foreground"
+          className="text-label text-muted-foreground"
         >
           <span aria-hidden>{country.toUpperCase()}</span>
           <span className="sr-only">{formatCountry(country)}</span>
@@ -151,7 +151,7 @@ function CompetitorCell({
   return (
     <span className="inline-flex items-center gap-2">
       <span aria-hidden>
-        <AppIcon src={competitor?.iconUrl ?? null} name={name} size={20} />
+        <AppIcon src={competitor?.iconUrl ?? null} size={20} />
       </span>
       <span className="max-w-40 truncate" title={name}>
         {name}
@@ -281,7 +281,7 @@ export function gapColumns(scope: GapColumnScope) {
         row.original.gap === null ? (
           <Dash label={NO_COMPETITOR} />
         ) : (
-          <span className="numeric font-mono">{leadText(row.original)}</span>
+          <span className="numeric">{leadText(row.original)}</span>
         ),
     }),
   ]);

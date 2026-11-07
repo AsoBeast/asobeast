@@ -27,9 +27,7 @@ export function ReviewCountsStrip({
   return (
     <section aria-label="Reply status" className="flex flex-col gap-2">
       <div className="flex items-center gap-1">
-        <h2 className="text-label text-muted-foreground uppercase">
-          Reply status
-        </h2>
+        <h2 className="text-label text-muted-foreground">Reply status</h2>
         <InfoTip
           label="About reply status"
           title="Reply status"
@@ -39,7 +37,7 @@ export function ReviewCountsStrip({
             href={REPLY_STATES_GUIDE}
             target="_blank"
             rel="noreferrer"
-            className="font-medium text-foreground underline decoration-primary underline-offset-4 hover:decoration-2"
+            className="font-medium text-foreground underline decoration-faint-foreground underline-offset-4 hover:decoration-2"
           >
             Read how replies work
           </a>

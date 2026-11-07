@@ -41,7 +41,7 @@ export function SnapshotFacts({ id }: { id: string }) {
 
   return (
     <div className="flex items-center gap-3">
-      <AppIcon src={detail.iconUrl} name={detail.name} size={48} />
+      <AppIcon src={detail.iconUrl} size={48} />
       {facts.length > 0 ? (
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-body text-muted-foreground">
           {facts.map((fact) => (

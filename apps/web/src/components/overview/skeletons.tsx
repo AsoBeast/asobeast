@@ -1,5 +1,7 @@
+import { CHART_HEIGHT } from "@/components/charts/theme";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 export function StatCardsSkeleton() {
   return (
@@ -27,7 +29,7 @@ export function ChartCardSkeleton() {
         <Skeleton className="h-5 w-48" />
       </CardHeader>
       <CardContent>
-        <Skeleton className="h-[240px] w-full" />
+        <Skeleton className={cn(CHART_HEIGHT.compact, "w-full")} />
       </CardContent>
     </Card>
   );

@@ -56,7 +56,11 @@ test("orders the other markets by rating count and puts a market without one las
   const codes = await table(page)
     .locator("tbody tr")
     .evaluateAll((rows) =>
-      rows.map((row) => row.querySelector("td span.font-mono")?.textContent),
+      rows.map(
+        (row) =>
+          row.querySelector("td:first-child span > span:first-child")
+            ?.textContent,
+      ),
     );
   expect(codes).toEqual(["US", "DE", "PL", "BR", "BA", "JP"]);
   await expect(rowOf(page, "BA")).toContainText("Bosnia & Herzegovina");

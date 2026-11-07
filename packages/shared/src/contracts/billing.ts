@@ -66,7 +66,7 @@ export const CHECKOUT_BRAND: Record<CheckoutTheme, CheckoutBrand> = {
     displayName: PRODUCT_NAME,
   },
   dark: {
-    backgroundColor: '#1b1815',
+    backgroundColor: '#141311',
     buttonColor: CHECKOUT_BUTTON_COLOR,
     borderStyle: 'rounded',
     fontFamily: 'inter',

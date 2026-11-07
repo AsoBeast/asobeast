@@ -1,6 +1,8 @@
+import { CHART_HEIGHT } from "@/components/charts/theme";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { StatTileGroup } from "@/components/ui/stat-tile";
+import { cn } from "@/lib/utils";
+import { StatTileGroup, StatTileSkeleton } from "@/components/ui/stat-tile";
 
 export function ReviewCountsSkeleton() {
   return (
@@ -8,7 +10,7 @@ export function ReviewCountsSkeleton() {
       <Skeleton className="h-4 w-28" />
       <StatTileGroup className="grid-cols-3">
         {Array.from({ length: 3 }).map((_, index) => (
-          <Skeleton key={index} className="h-[5.5rem] rounded-xl" />
+          <StatTileSkeleton key={index} />
         ))}
       </StatTileGroup>
     </div>
@@ -38,7 +40,7 @@ export function ReviewsPageSkeleton() {
           <Skeleton className="h-5 w-64" />
         </CardHeader>
         <CardContent>
-          <Skeleton className="h-[240px] w-full" />
+          <Skeleton className={cn(CHART_HEIGHT.compact, "w-full")} />
         </CardContent>
       </Card>
       <Card>

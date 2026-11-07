@@ -84,7 +84,7 @@ function MoverList({
           key={mover.storeAppId}
           className="flex items-center gap-3 py-2 first:pt-0 last:pb-0"
         >
-          <AppIcon src={mover.iconUrl} name={mover.title} size={28} />
+          <AppIcon src={mover.iconUrl} size={28} />
           <span className="min-w-0 flex-1 truncate" translate="no">
             {mover.title}
           </span>
@@ -109,9 +109,7 @@ function TrendingLists({ page }: { page: ChartPage }) {
         {LISTS.map(({ id, label }) => (
           <TabsTrigger key={id} value={id}>
             {label}
-            <span className="numeric font-mono">
-              {page.trending[id].length}
-            </span>
+            <span className="numeric">{page.trending[id].length}</span>
           </TabsTrigger>
         ))}
       </TabsList>

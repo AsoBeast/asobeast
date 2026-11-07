@@ -19,7 +19,7 @@ const columnHelper = createColumnHelper<DataTableFeatures, AdminApp>();
 function AppName({ app }: { app: AdminApp }) {
   return (
     <div className="flex max-w-64 min-w-0 items-center gap-3">
-      <AppIcon src={app.iconUrl} name={app.name} size={32} />
+      <AppIcon src={app.iconUrl} size={32} />
       <div className="flex min-w-0 flex-col">
         <span className="truncate font-medium">
           {app.name ?? "Untitled app"}
@@ -36,7 +36,7 @@ function AppName({ app }: { app: AdminApp }) {
 }
 
 const countCell = (value: number) => (
-  <span className="numeric font-mono">{formatNumber(value)}</span>
+  <span className="numeric">{formatNumber(value)}</span>
 );
 
 export const appColumns = columnHelper.columns([
@@ -90,7 +90,7 @@ export const appColumns = columnHelper.columns([
   columnHelper.accessor("competitors", {
     id: "competitors",
     ...NUMBER_SORT,
-    meta: { label: "Competitors" },
+    meta: { label: "Competitors", numeric: true },
     header: ({ column }) => (
       <SortableHeader column={column} label="Competitors" />
     ),
@@ -99,7 +99,7 @@ export const appColumns = columnHelper.columns([
   columnHelper.accessor("keywordMarkets", {
     id: "keywordMarkets",
     ...NUMBER_SORT,
-    meta: { label: "Keyword markets" },
+    meta: { label: "Keyword markets", numeric: true },
     header: ({ column }) => (
       <SortableHeader column={column} label="Keyword markets" />
     ),

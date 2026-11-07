@@ -9,6 +9,11 @@ export const LATER_RELEASES: readonly Release[] = [
       "AsoBeast now tells you when something new arrives and explains each update in plain words. Connecting App Store Connect or Google Play comes with a guide for every step.",
     changes: [
       {
+        kind: "improved",
+        title: "A calmer, sharper look",
+        text: "AsoBeast has a new typeface, warmer neutral colours and flatter panels with fine borders. Numbers line up in columns, labels are easier to read, and the brand orange is kept for the main action on each page.",
+      },
+      {
         kind: "new",
         title: "What's New",
         text: "A What's New item at the bottom of the sidebar opens this page, and a red dot on its icon tells you when there is an update you have not read yet.",

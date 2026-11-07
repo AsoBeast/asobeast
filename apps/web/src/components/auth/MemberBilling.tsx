@@ -17,7 +17,7 @@ export function MemberBilling({ plan }: { plan: AccountPlan | undefined }) {
     <Card className="mx-auto w-full max-w-xl">
       <CardHeader>
         <CardTitle asChild>
-          <h1 className="text-display tracking-tight text-balance">
+          <h1 className="text-title tracking-tight text-balance">
             {MEMBER_BILLING_TITLE}
           </h1>
         </CardTitle>

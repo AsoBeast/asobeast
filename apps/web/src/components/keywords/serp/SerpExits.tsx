@@ -26,7 +26,7 @@ export function SerpExits({
               </span>
             </span>
             <span className="col-start-2 row-span-2 row-start-1">
-              <AppIcon src={exit.iconUrl} name={exit.title} size={40} />
+              <AppIcon src={exit.iconUrl} size={40} />
             </span>
             <SerpAppText
               title={exit.title}

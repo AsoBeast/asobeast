@@ -1,7 +1,7 @@
 import type { AppView } from "@/lib/search-params";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { StatTileGroup } from "@/components/ui/stat-tile";
+import { StatTileGroup, StatTileSkeleton } from "@/components/ui/stat-tile";
 
 export const PULSE_GRID = "grid-cols-2 @3xl/dashboard:grid-cols-4";
 
@@ -12,15 +12,7 @@ export function PortfolioPulseSkeleton() {
   return (
     <StatTileGroup className={PULSE_GRID}>
       {Array.from({ length: 4 }).map((_, index) => (
-        <div
-          key={index}
-          data-slot="stat-tile-skeleton"
-          className="row-span-3 grid grid-rows-subgrid gap-1 rounded-xl border bg-card px-4 py-3"
-        >
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-7 w-12 self-end" />
-          <Skeleton className="h-5 w-28" />
-        </div>
+        <StatTileSkeleton key={index} />
       ))}
     </StatTileGroup>
   );
@@ -73,7 +65,7 @@ function AppCardSkeleton() {
           <Skeleton className="size-12 rounded-xl" />
           <div className="flex flex-1 flex-col gap-2">
             <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-5 w-24 rounded-4xl" />
+            <Skeleton className="h-[22px] w-24 rounded-md" />
           </div>
         </div>
         <div className="flex flex-col gap-1">

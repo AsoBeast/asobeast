@@ -28,7 +28,7 @@ function YouCell({ row }: { row: AuditBenchmarkRow }) {
   return (
     <TableCell>
       <span className="flex flex-col gap-1">
-        <span className="numeric font-mono">
+        <span className="numeric">
           {formatBenchmarkValue(row.metric, row.you)}
         </span>
         <Meter value={benchmarkRatio(row) * 100} tone="health" />
@@ -87,10 +87,10 @@ export function AuditBenchmarks({
               <TableRow key={row.metric}>
                 <TableCell>{row.label}</TableCell>
                 <YouCell row={row} />
-                <TableCell className="numeric font-mono">
+                <TableCell className="numeric">
                   {formatBenchmarkValue(row.metric, row.median)}
                 </TableCell>
-                <TableCell className="numeric font-mono">
+                <TableCell className="numeric">
                   {formatBenchmarkValue(row.metric, row.best)}
                 </TableCell>
               </TableRow>

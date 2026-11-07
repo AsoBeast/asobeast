@@ -43,7 +43,7 @@ export function SystemBanner() {
             <a
               href={notice.href}
               {...(internal ? {} : { target: "_blank", rel: "noreferrer" })}
-              className="font-medium underline underline-offset-4 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+              className="font-medium underline underline-offset-4 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             >
               {notice.linkLabel}
             </a>

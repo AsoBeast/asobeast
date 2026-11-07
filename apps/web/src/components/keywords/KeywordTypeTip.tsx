@@ -13,7 +13,7 @@ export function KeywordTypeTip() {
         href={KEYWORD_TYPES_GUIDE}
         target="_blank"
         rel="noreferrer"
-        className="underline decoration-primary underline-offset-4 hover:decoration-2"
+        className="underline decoration-faint-foreground underline-offset-4 hover:decoration-2"
       >
         Read about keyword types
       </a>

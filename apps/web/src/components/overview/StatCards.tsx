@@ -33,7 +33,7 @@ export function StatCards({ id }: { id: string }) {
             <span>{`Visibility${label}`}</span>
             <VisibilityHelp />
           </CardDescription>
-          <CardTitle className="numeric font-mono text-3xl">
+          <CardTitle className="numeric text-3xl">
             {Math.round(summary.visibility.current)}
           </CardTitle>
         </CardHeader>
@@ -49,7 +49,7 @@ export function StatCards({ id }: { id: string }) {
       <Card>
         <CardHeader>
           <CardDescription>{`Tracked keywords${label}`}</CardDescription>
-          <CardTitle className="numeric font-mono text-3xl">
+          <CardTitle className="numeric text-3xl">
             {summary.trackedKeywords}
           </CardTitle>
         </CardHeader>
@@ -62,7 +62,7 @@ export function StatCards({ id }: { id: string }) {
       <Card>
         <CardHeader>
           <CardDescription>Competitors</CardDescription>
-          <CardTitle className="numeric font-mono text-3xl">
+          <CardTitle className="numeric text-3xl">
             {summary.competitors}
           </CardTitle>
         </CardHeader>
@@ -104,7 +104,7 @@ function DiscoveriesLink({
   return (
     <Link
       href={discoveriesHref(id, country)}
-      className="font-medium text-foreground underline decoration-primary underline-offset-4 hover:decoration-2 print:hidden"
+      className="font-medium text-foreground underline decoration-faint-foreground underline-offset-4 hover:decoration-2 print:hidden"
     >
       {line}
     </Link>

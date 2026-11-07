@@ -8,6 +8,7 @@ import { TypeScale } from "./TypeScale";
 import {
   BLUE_RAMP,
   BRAND_RAMP,
+  CHART_GUIDES,
   CHART_SERIES,
   NEUTRAL_RAMP,
   pairContrast,
@@ -18,7 +19,7 @@ import {
   TEXT_PAIRS,
 } from "./token-groups";
 
-const ELEVATIONS = ["flat", "raised", "overlay"] as const;
+const ELEVATIONS = ["flat", "segment", "overlay"] as const;
 const RADII = ["sm", "md", "lg", "xl", "2xl"] as const;
 
 const ALL_TOKENS = Array.from(
@@ -30,6 +31,7 @@ const ALL_TOKENS = Array.from(
     ...RESERVED_SIGNALS,
     ...RANK_BANDS,
     ...CHART_SERIES,
+    ...CHART_GUIDES,
     ...SIDEBAR_TOKENS,
   ]),
 );

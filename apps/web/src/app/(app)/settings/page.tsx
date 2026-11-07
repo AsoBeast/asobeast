@@ -50,7 +50,7 @@ export default async function SettingsPage({
     <HydrationBoundary state={dehydrate(queryClient)}>
       <div className="page-reading flex flex-col gap-8">
         <div className="flex flex-col gap-1">
-          <h1 className="text-display tracking-tight text-balance">Settings</h1>
+          <h1 className="text-title tracking-tight text-balance">Settings</h1>
           <p className="text-body text-muted-foreground">
             Your plan, alerts, team and workspace.
           </p>

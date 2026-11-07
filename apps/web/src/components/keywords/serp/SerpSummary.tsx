@@ -34,7 +34,7 @@ function GuideLink() {
       href={SEARCH_RESULTS_GUIDE}
       target="_blank"
       rel="noreferrer"
-      className="underline decoration-primary underline-offset-4 hover:decoration-2"
+      className="underline decoration-faint-foreground underline-offset-4 hover:decoration-2"
     >
       Read about search results
     </a>
@@ -64,7 +64,7 @@ function Item({
 }
 
 const Value = ({ children }: { children: ReactNode }) => (
-  <span className="numeric font-mono text-base font-medium">{children}</span>
+  <span className="numeric text-base font-medium">{children}</span>
 );
 
 const Note = ({ children }: { children: ReactNode }) => (
@@ -84,7 +84,7 @@ function PositionValue({
         <>
           <Button
             variant="link"
-            className="h-auto p-0 numeric font-mono text-base font-medium"
+            className="h-auto p-0 numeric text-base font-medium"
             aria-label={`Jump to your row at #${position.position}`}
             onClick={() => jumpToRow(position.position)}
           >

@@ -205,13 +205,13 @@ export function PrimitiveGallery() {
               <TableBody>
                 <TableRow>
                   <TableCell>focus timer</TableCell>
-                  <TableCell className="numeric font-mono">3</TableCell>
-                  <TableCell className="numeric font-mono">5,000</TableCell>
+                  <TableCell className="numeric">3</TableCell>
+                  <TableCell className="numeric">5,000</TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell>productivity app</TableCell>
-                  <TableCell className="numeric font-mono">&gt;200</TableCell>
-                  <TableCell className="numeric font-mono">8,000</TableCell>
+                  <TableCell className="numeric">&gt;200</TableCell>
+                  <TableCell className="numeric">8,000</TableCell>
                 </TableRow>
               </TableBody>
             </Table>

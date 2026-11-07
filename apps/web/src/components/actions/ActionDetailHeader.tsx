@@ -31,7 +31,7 @@ export function ActionDetailHeader({ item }: { item: ActionItem }) {
           <span>{ACTION_STATUS_LABEL[item.status]}</span>
         </Badge>
       </div>
-      <SheetTitle className="text-title text-balance">
+      <SheetTitle className="text-heading text-balance">
         {actionHeadline(item)}
       </SheetTitle>
       <SheetDescription>

@@ -33,12 +33,12 @@ export function AuditTopFixes({
                   className="flex items-start justify-between gap-3 text-sm"
                 >
                   <span>
-                    <span className="numeric font-mono text-muted-foreground">
+                    <span className="numeric text-muted-foreground">
                       {index + 1}.{" "}
                     </span>
                     {item.label}
                   </span>
-                  <span className="numeric shrink-0 font-mono font-semibold">
+                  <span className="numeric shrink-0 font-semibold">
                     {liftLabel(item.lift)}
                   </span>
                 </li>

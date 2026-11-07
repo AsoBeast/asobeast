@@ -69,7 +69,7 @@ function ReadRow({ id, read }: { id: string; read: MarketLocalizationRead }) {
           max={read.charactersLimit}
           tone="health"
         />
-        <span className="numeric shrink-0 font-mono text-caption text-muted-foreground">
+        <span className="numeric shrink-0 text-caption text-muted-foreground">
           {read.phrases.length === 0
             ? "Empty"
             : `${read.charactersUsed}/${read.charactersLimit}`}

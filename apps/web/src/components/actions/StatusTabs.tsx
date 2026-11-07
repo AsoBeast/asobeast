@@ -45,7 +45,7 @@ function Tabbed({
             >
               {preset.label}
               {count === null ? null : (
-                <span className="numeric font-mono text-muted-foreground">
+                <span className="numeric text-muted-foreground">
                   {formatNumber(count)}
                 </span>
               )}

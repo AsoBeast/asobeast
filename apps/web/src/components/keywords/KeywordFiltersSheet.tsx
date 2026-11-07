@@ -42,7 +42,7 @@ export function KeywordFiltersSheet({
           <ListFilter aria-hidden />
           Filters
           {active > 0 ? (
-            <Badge variant="secondary" className="numeric font-mono">
+            <Badge variant="secondary" className="numeric">
               {active}
             </Badge>
           ) : null}

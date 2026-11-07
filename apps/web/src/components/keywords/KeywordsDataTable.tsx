@@ -25,7 +25,7 @@ const STICKY_COLUMNS: Record<string, string | undefined> = {
   keyword: "sticky left-10 z-10 bg-inherit",
 };
 
-const ROW_HEIGHT = 41;
+const ROW_HEIGHT = 45;
 const OVERSCAN = 12;
 const VIRTUALIZE_ABOVE = 50;
 
