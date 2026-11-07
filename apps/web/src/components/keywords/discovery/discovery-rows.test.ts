@@ -102,13 +102,13 @@ describe("emptyStateOf", () => {
     });
   });
 
-  it("promises first results only while a check is queued", () => {
+  it("promises no result and no time while a check is queued", () => {
     const queued = list([], null);
     queued.checks.pending = 2;
     queued.checks.nextRunAt = "2026-11-09T07:30:00.000Z";
     expect(emptyStateOf(queued, 0, "all")).toEqual({
       kind: "never_run",
-      body: "AsoBeast is checking the keywords near your listing. The first results appear within minutes.",
+      body: "AsoBeast has queued checks of the keywords near your listing. Any it finds in this market appear here.",
     });
     const weekly = list([], null);
     weekly.checks.nextRunAt = "2026-11-09T07:30:00.000Z";
@@ -118,12 +118,12 @@ describe("emptyStateOf", () => {
     });
   });
 
-  it("promises no weekly run while weekly runs are off", () => {
+  it("claims no schedule it cannot read", () => {
     const off = list([], null);
     off.checks.nextRunAt = null;
     expect(emptyStateOf(off, 0, "all")).toEqual({
       kind: "never_run",
-      body: "Weekly runs are off. Press Refresh to look for keywords near your listing now.",
+      body: "AsoBeast has not looked for keywords near your listing yet. Press Refresh to look now.",
     });
   });
 

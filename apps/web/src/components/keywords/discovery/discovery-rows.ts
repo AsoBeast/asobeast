@@ -72,10 +72,10 @@ function neverRunBody({
   nextRunAt,
 }: KeywordDiscoveryList["checks"]): string {
   if (pending > 0) {
-    return "AsoBeast is checking the keywords near your listing. The first results appear within minutes.";
+    return "AsoBeast has queued checks of the keywords near your listing. Any it finds in this market appear here.";
   }
   return nextRunAt === null
-    ? "Weekly runs are off. Press Refresh to look for keywords near your listing now."
+    ? "AsoBeast has not looked for keywords near your listing yet. Press Refresh to look now."
     : "AsoBeast looks for keywords near your listing once a week. Press Refresh to look now.";
 }
 
