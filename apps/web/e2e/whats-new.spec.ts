@@ -98,6 +98,7 @@ test.describe("the what's new page", () => {
 
   test("groups the changes under words", async ({ page }) => {
     await page.goto("/whats-new");
+    await expect(releases(page).first()).toBeVisible();
 
     const groups = await releases(page)
       .getByRole("heading", { level: 3 })
@@ -337,6 +338,7 @@ test.describe("the what's new sidebar item", () => {
   }) => {
     await page.setViewportSize({ width: 1512, height: 982 });
     await page.goto("/whats-new");
+    await expect(releases(page).first()).toBeVisible();
     await page.mouse.wheel(0, 500);
     await expect
       .poll(() => page.evaluate(() => window.scrollY))
