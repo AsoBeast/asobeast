@@ -12,7 +12,12 @@ import {
   type KeywordDiscoveryTrackResult,
   type Store,
 } from "@asobeast/shared";
-import { utcDaysAgo, utcTimestampDaysAgo } from "./fixtures.mts";
+import {
+  APP_TRANSLATED_DISCOVERY_STATES_ID,
+  APP_TRANSLATED_DISCOVERY_TRACK_ID,
+  utcDaysAgo,
+  utcTimestampDaysAgo,
+} from "./fixtures.mts";
 
 export const DISCOVERY_PENDING_COOKIE = "e2e_discovery_pending";
 export const DISCOVERY_NONE_COOKIE = "e2e_discovery_none";
@@ -173,6 +178,8 @@ const SEEDS: Record<string, readonly Seed[]> = {
   "app-1": KEYWORD_DISCOVERIES_APP_1,
   [DISCOVERY_SEAM_APP]: KEYWORD_DISCOVERIES_APP_1,
   [DISCOVERY_FOCUS_APP]: KEYWORD_DISCOVERIES_APP_1,
+  [APP_TRANSLATED_DISCOVERY_STATES_ID]: KEYWORD_DISCOVERIES_APP_1,
+  [APP_TRANSLATED_DISCOVERY_TRACK_ID]: KEYWORD_DISCOVERIES_APP_1,
   "app-gp": PLAY_SEEDS,
   [DISCOVERY_PAGED_APP]: PAGED_SEEDS,
 };

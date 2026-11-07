@@ -3857,6 +3857,19 @@ DATASETS[APP_TAGS_ID] = {
   })),
 };
 
+export const APP_TRANSLATED_DISCOVERY_STATES_ID = "app-translated-states";
+export const APP_TRANSLATED_DISCOVERY_TRACK_ID = "app-translated-track";
+
+for (const [id, name] of [
+  [APP_TRANSLATED_DISCOVERY_STATES_ID, "Discovery States Lab"],
+  [APP_TRANSLATED_DISCOVERY_TRACK_ID, "Discovery Track Lab"],
+] as const) {
+  DATASETS[id] = {
+    ...DATASETS["app-1"],
+    detail: { ...APP_1_DETAIL, id, name },
+  };
+}
+
 export const APP_CLASS_ID = "app-class";
 
 DATASETS[APP_CLASS_ID] = {
