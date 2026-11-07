@@ -1536,6 +1536,8 @@ test("a goal keeps focus while its save runs", async ({ page, context }) => {
 });
 
 test.describe("keyword discovery controls keep focus", () => {
+  test.describe.configure({ mode: "serial" });
+
   const discovered = (state = "") =>
     `/apps/${DISCOVERY_FOCUS_APP}/keywords?tab=discovered${state}`;
   const write = (action: string) =>
