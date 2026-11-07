@@ -273,6 +273,7 @@ export class BillingService {
   }
 
   async portal(user: AccountUser): Promise<string> {
+    this.stripe.requireConfigured();
     const customerId = await this.liveCustomer(
       user.workspaceId,
       await this.storedCustomer(),

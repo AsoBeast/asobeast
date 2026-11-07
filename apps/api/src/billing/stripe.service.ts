@@ -19,10 +19,12 @@ export class StripeService {
     return this.client !== null;
   }
 
+  requireConfigured(): void {
+    if (!this.client) throw notConfigured();
+  }
+
   private get stripe(): StripeApi {
-    if (!this.client) {
-      throw new ServiceUnavailableException('Billing is not configured');
-    }
+    if (!this.client) throw notConfigured();
     return this.client;
   }
 
@@ -131,4 +133,8 @@ export class StripeService {
   ): Stripe.Event {
     return this.stripe.webhooks.constructEvent(payload, signature, secret);
   }
+}
+
+function notConfigured(): ServiceUnavailableException {
+  return new ServiceUnavailableException('Billing is not configured');
 }

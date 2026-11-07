@@ -148,6 +148,7 @@ describe('BillingService', () => {
     const service = new BillingService(
       {
         enabled: values['STRIPE_SECRET_KEY'] !== undefined,
+        requireConfigured: () => undefined,
         createCustomer,
         customerExists,
         createCheckoutSession,
