@@ -12,6 +12,7 @@ import type {
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
+import { decodeCursor } from '../src/alerts/alert-event-cursor';
 import { chartEntered } from '../src/alerts/chart-events.fixture';
 import {
   actionOpened,
@@ -442,6 +443,23 @@ describe('GET /alerts/events (e2e)', () => {
 
     expect(ids(first)).toEqual([newest]);
     expect(first.nextCursor).toEqual(expect.any(String));
+    expect(decodeCursor(first.nextCursor ?? '')?.id).toBe(newest);
+    expect(ids(second)).toEqual([older]);
+    expect(second.nextCursor).toBeNull();
+  });
+
+  it('answers a cursor when the next event lies a whole batch of skipped rows away', async () => {
+    const newest = await seed(onApp(drop(), apps.primary), { ago: 1 });
+    for (let ago = 2; ago <= 121; ago += 1) {
+      await unreadable(ago);
+    }
+    const older = await seed(onApp(metadata, apps.primary), { ago: 130 });
+
+    const first = await list('?limit=1');
+    const second = await list(`?limit=1&cursor=${first.nextCursor}`);
+
+    expect(ids(first)).toEqual([newest]);
+    expect(decodeCursor(first.nextCursor ?? '')?.id).toBe(newest);
     expect(ids(second)).toEqual([older]);
     expect(second.nextCursor).toBeNull();
   });
