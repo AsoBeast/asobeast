@@ -1505,6 +1505,9 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "The workspace has no billing account Stripe knows yet"
           }
         },
         "summary": "Open the Stripe customer portal for this workspace",
