@@ -96,3 +96,111 @@ test.describe("an instance whose checkout is not configured", () => {
     await expect(page.getByText(/free trial/)).toHaveCount(0);
   });
 });
+
+const refusal = (statusCode: number, error: string, message: string) => ({
+  statusCode,
+  error,
+  message,
+  path: "/billing/reconcile",
+  timestamp: new Date().toISOString(),
+});
+
+async function returnFromCheckout(
+  page: Page,
+  status: number,
+  body: unknown,
+): Promise<() => number> {
+  await seedViewer(page.context(), "checkout-pending");
+  await seedSession(page);
+  await openBilling(page, OFFERED_PLAN);
+  let reconciles = 0;
+  await page.route("**/api/backend/billing/reconcile", async (route) => {
+    reconciles += 1;
+    await route.fulfill(fulfillJson(status, body));
+  });
+  await page.goto("/?checkout=complete&session_id=cs_e2e");
+  return () => reconciles;
+}
+
+test.describe("a checkout return the reconcile settles for good", () => {
+  test("sends an owner without a plan to the wall after a refusal", async ({
+    page,
+  }) => {
+    const reconciles = await returnFromCheckout(
+      page,
+      403,
+      refusal(403, "Forbidden", "Only the workspace owner can do this."),
+    );
+
+    await expect(page).toHaveURL(/\/upgrade$/);
+    expect(reconciles()).toBe(1);
+  });
+
+  test("sends an owner without a plan to the wall where Stripe is off", async ({
+    page,
+  }) => {
+    const reconciles = await returnFromCheckout(page, 200, {
+      checked: 1,
+      corrected: 0,
+      orphanSubscriptions: [],
+      unreconciled: [],
+    });
+
+    await expect(page).toHaveURL(/\/upgrade$/);
+    expect(reconciles()).toBe(1);
+  });
+});
+
+test.describe("a checkout return the reconcile cannot settle yet", () => {
+  test("keeps the marker after a rate limit so the next load retries", async ({
+    page,
+  }) => {
+    let reconciled = false;
+    const refetched = page.waitForResponse(
+      (response) => reconciled && response.url().endsWith("/auth/me"),
+    );
+    page.on("response", (response) => {
+      if (response.url().endsWith("/billing/reconcile")) reconciled = true;
+    });
+    const reconciles = await returnFromCheckout(
+      page,
+      429,
+      refusal(429, "Too Many Requests", "Too many requests. Try again later."),
+    );
+
+    await refetched;
+    expect(reconciles()).toBe(1);
+    await expect(page).toHaveURL(/\/\?checkout=complete&session_id=cs_e2e$/);
+
+    await page.reload();
+
+    await expect.poll(reconciles).toBe(2);
+    await expect(page).toHaveURL(/\/\?checkout=complete&session_id=cs_e2e$/);
+  });
+
+  test("keeps the marker when the plan read fails after a reconcile", async ({
+    page,
+  }) => {
+    await page.route("**/api/backend/auth/plan", (route) =>
+      route.fulfill(
+        fulfillJson(
+          403,
+          refusal(403, "Forbidden", "Only the workspace owner can do this."),
+        ),
+      ),
+    );
+    const planRefused = page.waitForResponse((response) =>
+      response.url().endsWith("/auth/plan"),
+    );
+    const reconciles = await returnFromCheckout(page, 200, {
+      checked: 1,
+      corrected: 1,
+      orphanSubscriptions: [],
+      unreconciled: [],
+    });
+
+    await planRefused;
+    await expect.poll(reconciles).toBe(1);
+    await expect(page).toHaveURL(/\/\?checkout=complete&session_id=cs_e2e$/);
+  });
+});
