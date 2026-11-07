@@ -27,9 +27,7 @@ function headlineOf({ counts }: KeywordDiscoveryList): string {
 }
 
 const isCollecting = ({ checks, counts }: KeywordDiscoveryList): boolean =>
-  checks.checkedAt === null &&
-  counts.ranked === 0 &&
-  (checks.pending > 0 || checks.nextRunAt !== null);
+  checks.checkedAt === null && counts.ranked === 0 && checks.pending > 0;
 
 export function firstDiscoveries(
   list: KeywordDiscoveryList | undefined,

@@ -49,7 +49,7 @@ export const opportunityScore = (item: KeywordDiscoveryItem): DiscoveryScore =>
 
 export type DiscoveryEmptyState =
   | { kind: "none" }
-  | { kind: "never_run" }
+  | { kind: "never_run"; body: string }
   | { kind: "nothing_here"; title: string; body: string };
 
 const NOTHING_HERE: Record<DiscoveryState, { title: string; body: string }> = {
@@ -67,6 +67,18 @@ const NOTHING_HERE: Record<DiscoveryState, { title: string; body: string }> = {
   },
 };
 
+function neverRunBody({
+  pending,
+  nextRunAt,
+}: KeywordDiscoveryList["checks"]): string {
+  if (pending > 0) {
+    return "AsoBeast is checking the keywords near your listing. The first results appear within minutes.";
+  }
+  return nextRunAt === null
+    ? "Weekly runs are off. Press Refresh to look for keywords near your listing now."
+    : "AsoBeast looks for keywords near your listing once a week. Press Refresh to look now.";
+}
+
 export function emptyStateOf(
   list: KeywordDiscoveryList,
   rows: number,
@@ -74,7 +86,7 @@ export function emptyStateOf(
 ): DiscoveryEmptyState {
   if (rows > 0) return { kind: "none" };
   if (list.items.length === 0 && list.checks.checkedAt === null) {
-    return { kind: "never_run" };
+    return { kind: "never_run", body: neverRunBody(list.checks) };
   }
   return { kind: "nothing_here", ...NOTHING_HERE[state] };
 }

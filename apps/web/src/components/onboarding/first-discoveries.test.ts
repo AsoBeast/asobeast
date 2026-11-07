@@ -53,11 +53,27 @@ describe("firstDiscoveries", () => {
     expect(firstDiscoveries(list([]))).toBeNull();
   });
 
-  it("says discovery is collecting before the first check", () => {
-    expect(firstDiscoveries(list([item("timer", null, null)], null))).toEqual({
+  it("says discovery is collecting while its first checks are queued", () => {
+    const queued = (items: KeywordDiscoveryItem[]) => {
+      const pending = list(items, null);
+      pending.checks.pending = 3;
+      return pending;
+    };
+
+    expect(firstDiscoveries(queued([item("timer", null, null)]))).toEqual({
       status: "collecting",
     });
-    expect(firstDiscoveries(list([], null))).toEqual({ status: "collecting" });
+    expect(firstDiscoveries(queued([]))).toEqual({ status: "collecting" });
+  });
+
+  it("promises no results for an app with nothing queued before the weekly run", () => {
+    expect(firstDiscoveries(list([], null))).toBeNull();
+    expect(
+      firstDiscoveries(list([item("timer", null, null)], null)),
+    ).toMatchObject({
+      status: "ready",
+      rows: [{ text: "timer", rank: "not checked yet" }],
+    });
   });
 
   it("lists the unchecked rows when no check is scheduled", () => {
