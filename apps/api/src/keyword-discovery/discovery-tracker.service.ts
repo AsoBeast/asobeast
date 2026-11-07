@@ -56,6 +56,15 @@ export class DiscoveryTracker {
     return this.track(app, rows, today, (_, chosen) => Promise.resolve(chosen));
   }
 
+  async unfit(app: KeywordApp, ranked: readonly TrackRow[]): Promise<number> {
+    if (ranked.length === 0) return 0;
+    const [tracking, room] = await Promise.all([
+      loadTrackingStates(this.prisma, app, ranked),
+      this.room(),
+    ]);
+    return planDiscoveryTrack(ranked, tracking, room).skipped;
+  }
+
   async autoTrack(
     app: KeywordApp,
     rows: readonly TrackRow[],

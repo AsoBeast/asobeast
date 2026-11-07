@@ -1,5 +1,9 @@
 import { Check, ChevronRight } from "lucide-react";
-import type { SignUpStep, SignUpStepState } from "@/lib/sign-up-steps";
+import {
+  SIGN_UP_STEP_STATE_TEXT,
+  type SignUpStep,
+  type SignUpStepState,
+} from "@/lib/sign-up-steps";
 import { cn } from "@/lib/utils";
 
 const MARK: Record<SignUpStepState, string> = {
@@ -48,6 +52,11 @@ export function SignUpSteps({ steps }: { steps: readonly SignUpStep[] }) {
             )}
           </span>
           <span className={LABEL[step.state]}>{step.label}</span>
+          {SIGN_UP_STEP_STATE_TEXT[step.state] ? (
+            <span className="sr-only">
+              {SIGN_UP_STEP_STATE_TEXT[step.state]}
+            </span>
+          ) : null}
         </li>
       ))}
     </ol>

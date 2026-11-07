@@ -111,7 +111,7 @@ export function keywordColumns({
     addedColumn(),
     positionColumn(today, { appId, store, homeCountry, multiMarket }),
     ...scoreColumns(),
-    insightsColumn(today),
+    insightsColumn(today, multiMarket),
     ...(store === "GOOGLE_PLAY" ? [acquisitionsColumn()] : []),
     deltaColumn(),
     volatilityColumn(),

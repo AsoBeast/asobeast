@@ -59,6 +59,13 @@ describe('availability wording', () => {
       'Rival',
       'US',
       'DE',
+      'Rival, a competitor, is no longer listed in the App Store in DE, where 12 keywords are tracked',
+    ],
+    [
+      appUnlistedMarket({ app: rival, trackedKeywords: 0 }),
+      'Rival',
+      'US',
+      'DE',
       'Rival, a competitor, is no longer listed in the App Store in DE',
     ],
   ])('words %#', (alert, app, home, market, sentence) => {
@@ -87,7 +94,7 @@ describe('availability wording', () => {
     ]);
   });
 
-  it('builds a row per fact, the keywords only for an own app above zero', () => {
+  it('builds a row per fact, the keywords only above zero', () => {
     expect(availabilityRow(appDelisted())).toEqual({
       kind: 'text',
       text: 'No longer listed in the App Store',
@@ -100,7 +107,7 @@ describe('availability wording', () => {
       availabilityRow(appUnlistedMarket({ trackedKeywords: 0 })),
     ).toMatchObject({ text: 'No longer listed in DE' });
     expect(availabilityRow(appUnlistedMarket({ app: rival }))).toMatchObject({
-      text: 'No longer listed in DE',
+      text: 'No longer listed in DE · 12 keywords tracked',
     });
   });
 

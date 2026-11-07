@@ -1,4 +1,5 @@
 import { isEntitled, type WorkspaceEntitlement } from './entitlement';
+import { OWNER_ROLE } from './workspace-roles';
 
 export interface TrialDecline {
   trialDeclinedAt: Date;
@@ -41,6 +42,7 @@ export function trialStillOpen(workspace: { id: string; plan: string }) {
 }
 
 export interface TrialCandidate {
+  role: string;
   emailVerifiedAt: Date | null;
   workspace: TrialWorkspace;
 }
@@ -50,6 +52,8 @@ export function trialAwaitsConfirmation(
   now: Date,
 ): boolean {
   return (
-    account.emailVerifiedAt === null && canStartTrial(account.workspace, now)
+    account.role === OWNER_ROLE &&
+    account.emailVerifiedAt === null &&
+    canStartTrial(account.workspace, now)
   );
 }

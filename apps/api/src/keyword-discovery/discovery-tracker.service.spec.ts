@@ -217,6 +217,31 @@ describe('DiscoveryTracker', () => {
     expect(quota.admitKeywordMarkets).not.toHaveBeenCalled();
   });
 
+  describe('unfit', () => {
+    const ranked = [
+      row({ position: 3, depth: 50, checkedOn: TODAY }),
+      row({ keywordId: 'k2', text: 'goals', position: 8, depth: 50 }),
+    ];
+
+    it('counts no ranked row as unfit on a plan without a keyword limit', async () => {
+      const { service, quota } = build(0, null);
+      expect(await service.unfit(app, ranked)).toBe(0);
+      expect(quota.admitKeywordMarkets).not.toHaveBeenCalled();
+    });
+
+    it('counts the ranked rows over the keyword room left', async () => {
+      expect(await build(0, 1).service.unfit(app, ranked)).toBe(1);
+      expect(await build(0, 0).service.unfit(app, ranked)).toBe(2);
+      expect(await build(0, 5).service.unfit(app, ranked)).toBe(0);
+    });
+
+    it('reads no usage for no ranked rows', async () => {
+      const { service, quota } = build(0, 0);
+      expect(await service.unfit(app, [])).toBe(0);
+      expect(quota.usage).not.toHaveBeenCalled();
+    });
+  });
+
   describe('autoTrack', () => {
     const refusal = () =>
       new QuotaExceededError({

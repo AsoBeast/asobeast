@@ -14,6 +14,7 @@ import { fulfillJson, routePlan } from "./plan-helpers.mts";
 import { SERP_HISTORY_DAYS } from "./serp-history.mts";
 import type { SerpEntryItem, SerpSnapshot } from "@asobeast/shared";
 import { expect, test } from "./session.mts";
+import { collectDomErrors, translateText } from "./translate.mts";
 import { openBilling } from "./trial-plans.mts";
 import { typeInto } from "./type.mts";
 import {
@@ -42,20 +43,6 @@ const TRIAL_PLAN: AccountPlan = {
     keywordMarkets: { used: 20, limit: PLAN_LIMITS.trial.keywordMarkets },
   },
 };
-
-function collectDomErrors(page: Page): string[] {
-  const errors: string[] = [];
-  const record = (message: string) => {
-    if (/NotFoundError|insertBefore|removeChild/.test(message)) {
-      errors.push(message);
-    }
-  };
-  page.on("pageerror", (error) => record(`${error.name}: ${error.message}`));
-  page.on("console", (message) => {
-    if (message.type() === "error") record(message.text());
-  });
-  return errors;
-}
 
 async function routeUpgrade(page: Page): Promise<void> {
   await page.route("**/api/backend/auth/status", (route) =>
@@ -89,24 +76,6 @@ async function routeUpgrade(page: Page): Promise<void> {
 async function openUpgrade(page: Page): Promise<void> {
   await routeUpgrade(page);
   await page.goto("/upgrade");
-}
-
-async function translateText(page: Page): Promise<void> {
-  await page.evaluate(() => {
-    const walker = document.createTreeWalker(
-      document.body,
-      NodeFilter.SHOW_TEXT,
-    );
-    const texts: Text[] = [];
-    while (walker.nextNode()) texts.push(walker.currentNode as Text);
-    for (const text of texts.filter((node) => node.data.trim())) {
-      const outer = document.createElement("font");
-      const inner = document.createElement("font");
-      inner.textContent = text.data.toUpperCase();
-      outer.append(inner);
-      text.replaceWith(outer);
-    }
-  });
 }
 
 test("a translated upgrade page shows the payment note the catalog brings", async ({
@@ -516,7 +485,7 @@ test("a translated keywords page brings back the badges a search hid", async ({
     has: page.getByRole("checkbox", { name: "Select pomodoro", exact: true }),
   });
   await expect(
-    pomodoro.getByRole("group", { name: /^Insights\./ }),
+    pomodoro.getByRole("group", { name: "Insights", exact: true }),
   ).toBeVisible();
 
   await translateText(page);
@@ -525,7 +494,9 @@ test("a translated keywords page brings back the badges a search hid", async ({
   await search.fill("");
 
   await expect(
-    pomodoro.getByRole("group", { name: /^Insights\. Dropping/ }),
+    pomodoro
+      .getByRole("group", { name: "Insights", exact: true })
+      .getByRole("button", { name: /^Dropping/ }),
   ).toBeVisible();
   expect(errors).toEqual([]);
 });

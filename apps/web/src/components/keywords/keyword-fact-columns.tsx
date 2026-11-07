@@ -50,7 +50,7 @@ export function competitorsColumn() {
   );
 }
 
-export function insightsColumn(today: string) {
+export function insightsColumn(today: string, multiMarket: boolean) {
   return columnHelper.accessor((row) => insightsOf(row, today).length, {
     id: "insights",
     meta: { label: "Insights" },
@@ -61,6 +61,12 @@ export function insightsColumn(today: string) {
         <InsightsTip />
       </span>
     ),
-    cell: ({ row }) => <InsightsCell keyword={row.original} today={today} />,
+    cell: ({ row }) => (
+      <InsightsCell
+        keyword={row.original}
+        today={today}
+        multiMarket={multiMarket}
+      />
+    ),
   });
 }

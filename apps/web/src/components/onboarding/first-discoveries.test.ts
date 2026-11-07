@@ -53,11 +53,27 @@ describe("firstDiscoveries", () => {
     expect(firstDiscoveries(list([]))).toBeNull();
   });
 
-  it("says discovery is collecting before the first check", () => {
-    expect(firstDiscoveries(list([item("timer", null, null)], null))).toEqual({
+  it("says discovery is collecting while its first checks are queued", () => {
+    const queued = (items: KeywordDiscoveryItem[]) => {
+      const pending = list(items, null);
+      pending.checks.pending = 3;
+      return pending;
+    };
+
+    expect(firstDiscoveries(queued([item("timer", null, null)]))).toEqual({
       status: "collecting",
     });
-    expect(firstDiscoveries(list([], null))).toEqual({ status: "collecting" });
+    expect(firstDiscoveries(queued([]))).toEqual({ status: "collecting" });
+  });
+
+  it("promises no results for an app with nothing queued before the weekly run", () => {
+    expect(firstDiscoveries(list([], null))).toBeNull();
+    expect(
+      firstDiscoveries(list([item("timer", null, null)], null)),
+    ).toMatchObject({
+      status: "ready",
+      rows: [{ text: "timer", rank: "not checked yet" }],
+    });
   });
 
   it("lists the unchecked rows when no check is scheduled", () => {
@@ -108,6 +124,33 @@ describe("firstDiscoveries", () => {
     expect(firstDiscoveries(list([item("timer", null, 200)]))).toMatchObject({
       headline:
         "Found 1 keyword near your listing. None of them rank yet. Track the ones that fit your app.",
+    });
+  });
+
+  it("tells unchecked keywords from checked ones that do not rank", () => {
+    expect(
+      firstDiscoveries(list([item("timer", null, null)], null)),
+    ).toMatchObject({
+      headline:
+        "Found 1 keyword near your listing. None of them has been checked yet. Track the ones that fit your app.",
+    });
+  });
+
+  it("reads the check state from the rows, not from another market's check", () => {
+    expect(
+      firstDiscoveries(list([item("timer", null, null)], "2026-11-03")),
+    ).toMatchObject({
+      headline:
+        "Found 1 keyword near your listing. None of them has been checked yet. Track the ones that fit your app.",
+    });
+  });
+
+  it("speaks only of the rows it was sent when the list is longer", () => {
+    const partial = list([item("timer", null, null)], null);
+    partial.counts.all = 30;
+    expect(firstDiscoveries(partial)).toMatchObject({
+      headline:
+        "Found 30 keywords near your listing. None of the ones shown has been checked yet. Track the ones that fit your app.",
     });
   });
 

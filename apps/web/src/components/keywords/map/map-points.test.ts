@@ -243,8 +243,9 @@ describe("labelledIds", () => {
 
   it("breaks equal opportunities by text then id", () => {
     const tied = mapPoints(
-      ["delta", "alpha", "echo", "charlie", "bravo", "foxtrot"].map((text) =>
-        keyword({ text, volume: 50, difficulty: 2, opportunity: 70 }),
+      ["delta", "alpha", "echo", "charlie", "bravo", "foxtrot"].map(
+        (text, index) =>
+          keyword({ text, volume: 50, difficulty: 2 + index, opportunity: 70 }),
       ),
       DEFAULT_ZONE_THRESHOLDS,
     ).points;
@@ -258,6 +259,25 @@ describe("labelledIds", () => {
       "echo",
     ]);
     expect([...labelledIds(tied, null)]).toEqual([...ids]);
+  });
+
+  it("labels one of the dots stacked on the same spot and gives the slot to the next", () => {
+    const at = (text: string, difficulty: number, opportunity: number) =>
+      keyword({ text, volume: 40, difficulty, opportunity });
+    const stacked = mapPoints(
+      [
+        at("seat map pro", 1.5, 77),
+        at("red eye fare alerts", 1.5, 77),
+        ...["one", "two", "three", "four", "five"].map((text, index) =>
+          at(text, 3 + index, 60 - index),
+        ),
+      ],
+      DEFAULT_ZONE_THRESHOLDS,
+    ).points;
+
+    expect(textsOf(stacked, labelledIds(stacked, null)).sort()).toEqual(
+      ["four", "one", "red eye fare alerts", "three", "two"].sort(),
+    );
   });
 
   it("never labels a point without an opportunity and labels fewer when fewer qualify", () => {

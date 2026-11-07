@@ -122,7 +122,7 @@ describe('keywordClassifier', () => {
       {
         snapshotText: 'WeChat',
         marketTexts: new Map([['cn', '微信']]),
-        marketTitles: new Map([['cn', '微信']]),
+        marketTitles: new Map([['cn', ['微信']]]),
       },
     );
 

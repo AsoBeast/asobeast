@@ -165,6 +165,50 @@ describe('BillingReconciler', () => {
     expect(update).not.toHaveBeenCalled();
   });
 
+  describe('a reconcile on demand while Stripe is not configured', () => {
+    const claimed = () =>
+      workspaceOf({
+        plan: 'indie',
+        subscriptionId: null,
+        subscriptionStatus: null,
+        billingCustomerId: null,
+      });
+
+    it('keeps a plan it cannot check against Stripe', async () => {
+      const { reconciler, update, rows } = build({
+        enabled: false,
+        workspaces: [claimed()],
+      });
+
+      await expect(reconciler.reconcileOne('ws_1')).resolves.toEqual({
+        checked: 1,
+        corrected: 0,
+        orphanSubscriptions: [],
+        unreconciled: [],
+      });
+      expect(update).not.toHaveBeenCalled();
+      expect(rows[0]?.plan).toBe('indie');
+    });
+
+    it('answers the same for a checkout return instead of blaming Stripe', async () => {
+      const { reconciler, update } = build({
+        enabled: false,
+        workspaces: [claimed()],
+        session: new ServiceUnavailableException('Billing is not configured'),
+      });
+
+      await expect(
+        reconciler.reconcileOne('ws_1', 'cs_test_returned'),
+      ).resolves.toEqual({
+        checked: 1,
+        corrected: 0,
+        orphanSubscriptions: [],
+        unreconciled: [],
+      });
+      expect(update).not.toHaveBeenCalled();
+    });
+  });
+
   it('leaves a workspace that already agrees with Stripe alone', async () => {
     const { reconciler, update } = build({ workspaces: [workspaceOf()] });
 

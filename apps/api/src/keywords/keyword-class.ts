@@ -63,12 +63,12 @@ export function brandProfileOf(input: {
 
 export function profileForListing(
   profile: BrandProfile,
-  listing: { words: readonly string[]; title: string | null },
+  listing: { words: readonly string[]; titles: readonly string[] },
 ): BrandProfile {
-  const marketName = listing.title === null ? null : brandNameOf(listing.title);
+  const marketNames = listing.titles.map(brandNameOf).filter(isName);
   const listed = (name: BrandName) => containsName(listing.words, name);
   return {
-    own: [...profile.own, marketName].filter(isName),
+    own: [...profile.own, ...marketNames],
     competitors: profile.competitors.filter((name) => !listed(name)),
     categories: [...profile.categories, ...profile.competitors.filter(listed)],
   };
