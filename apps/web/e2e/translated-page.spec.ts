@@ -1,5 +1,9 @@
 import { type Page } from "@playwright/test";
 import { PLAN_LIMITS, UPGRADE_PATH, type AccountPlan } from "@asobeast/shared";
+import {
+  APP_TRANSLATED_DISCOVERY_STATES_ID,
+  APP_TRANSLATED_DISCOVERY_TRACK_ID,
+} from "./fixtures.mts";
 import { holdRequest } from "./held-request.mts";
 import { hydrated } from "./hydrated.mts";
 import { MOCK_API_URL } from "./localizations.mts";
@@ -906,9 +910,11 @@ test("a translated gap analysis switches its tabs and market", async ({
 test("a translated keywords page switches to its discoveries and their states", async ({
   page,
 }) => {
-  await page.request.post(`${MOCK_API_URL}/__reset/keyword-discoveries/app-1`);
+  await page.request.post(
+    `${MOCK_API_URL}/__reset/keyword-discoveries/${APP_TRANSLATED_DISCOVERY_STATES_ID}`,
+  );
   const errors = collectDomErrors(page);
-  await page.goto("/apps/app-1/keywords");
+  await page.goto(`/apps/${APP_TRANSLATED_DISCOVERY_STATES_ID}/keywords`);
   const discovered = await hydrated(
     page
       .getByRole("tablist", { name: "Keyword lists" })
@@ -937,9 +943,13 @@ test("a translated keywords page switches to its discoveries and their states", 
 test("a translated discovered list tracks, auto tracks and refreshes", async ({
   page,
 }) => {
-  await page.request.post(`${MOCK_API_URL}/__reset/keyword-discoveries/app-1`);
+  await page.request.post(
+    `${MOCK_API_URL}/__reset/keyword-discoveries/${APP_TRANSLATED_DISCOVERY_TRACK_ID}`,
+  );
   const errors = collectDomErrors(page);
-  await page.goto("/apps/app-1/keywords?tab=discovered");
+  await page.goto(
+    `/apps/${APP_TRANSLATED_DISCOVERY_TRACK_ID}/keywords?tab=discovered`,
+  );
   const track = await hydrated(
     page.getByRole("button", { name: "Track work sprint", exact: true }),
   );
