@@ -50,6 +50,9 @@ test("an offline browser reads a notice in the sheet, then the breakdown", async
   await expect(sheet(page).getByRole("status")).toHaveText(
     "You are offline. The breakdown loads when the connection is back.",
   );
+  await expect(sheet(page)).toHaveAccessibleDescription(
+    "Each app's listing judged against one tracked keyword.",
+  );
   await expect(sheet(page).getByRole("button", { name: "Retry" })).toHaveCount(
     0,
   );

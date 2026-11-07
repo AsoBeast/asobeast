@@ -55,5 +55,7 @@ describe("SignUpSteps", () => {
       "Email confirmed",
       "Choose a plan (not started)",
     ]);
+    expect(markup).toContain('<span class="sr-only"> (completed)</span>');
+    expect(markup).toContain('<span class="sr-only"> (not started)</span>');
   });
 });

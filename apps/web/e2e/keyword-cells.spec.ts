@@ -330,6 +330,22 @@ test.describe("the last position of a keyword that lost its rank", () => {
     ).toBeVisible();
   });
 
+  test("the position history popover names the day after several unranked checks", async ({
+    page,
+  }) => {
+    await openMarks(page);
+    await rowOf(page, "lost for days")
+      .getByRole("button", { name: "Position history: lost for days" })
+      .press("Enter");
+    const history = page.getByRole("dialog", {
+      name: "Position history lost for days",
+    });
+
+    await expect(
+      history.getByText(lastRankedTitle("lost for days"), { exact: true }),
+    ).toBeVisible();
+  });
+
   test("the position history popover of an older api names no day", async ({
     page,
   }) => {
