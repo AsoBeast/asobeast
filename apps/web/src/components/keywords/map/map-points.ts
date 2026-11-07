@@ -84,6 +84,14 @@ export function mapPoints(
   return { points, unplotted };
 }
 
+const plottedCount = (keywords: readonly TrackedKeywordItem[]): number =>
+  keywords.filter((keyword) => scorePair(keyword) !== null).length;
+
+export const filtersNarrowMap = (
+  shown: readonly TrackedKeywordItem[],
+  all: readonly TrackedKeywordItem[],
+): boolean => plottedCount(shown) < plottedCount(all);
+
 export function labelledIds(
   points: readonly MapPoint[],
   zone: KeywordZone | null,
