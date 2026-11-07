@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { hydrated } from "./hydrated.mts";
 import { expect, test } from "./session.mts";
 import { APP_INSIGHTS_ID, INSIGHT_MATRIX } from "./keyword-insights.mts";
 
@@ -11,7 +12,7 @@ const keywordRow = (page: Page, text: string) =>
   });
 
 const insightsOfRow = (page: Page, text: string) =>
-  keywordRow(page, text).getByRole("group", { name: /^Insights\./ });
+  keywordRow(page, text).getByRole("group", { name: "Insights", exact: true });
 
 async function badgesOf(page: Page, text: string): Promise<string[]> {
   const group = insightsOfRow(page, text);
@@ -43,17 +44,40 @@ test("the Insights column judges every keyword of the app", async ({
   expect(await badgesOf(page, "time blocking")).toEqual([]);
 });
 
-test("a badge group carries the words and the detail of each badge", async ({
+test("a badge group names its badges and leaves the reasons to its popover", async ({
   page,
 }) => {
   await page.goto(KEYWORDS);
+  const group = insightsOfRow(page, "pomodoro");
 
-  await expect(insightsOfRow(page, "pomodoro")).toHaveAccessibleName(
-    "Insights. Dropping: Fell on 3 checks in a row. Page 1 close: 2 places from the top 10",
+  await expect(group).toHaveAccessibleName("Insights");
+  await expect(group.getByRole("button")).toHaveAccessibleName(
+    "Dropping, Page 1 close: reasons for pomodoro (US)",
   );
-  await expect(
-    insightsOfRow(page, "pomodoro").getByText("Dropping"),
-  ).toHaveAttribute("title", "Fell on 3 checks in a row");
+  await expect(group.getByText("Fell on 3 checks in a row")).toHaveCount(0);
+});
+
+test("the reasons of a badge group open from the keyboard", async ({
+  page,
+}) => {
+  await page.goto(KEYWORDS);
+  const reasons = insightsOfRow(page, "pomodoro").getByRole("button", {
+    name: "Dropping, Page 1 close: reasons for pomodoro (US)",
+  });
+
+  await (await hydrated(reasons)).focus();
+  await page.keyboard.press("Enter");
+  const popover = page.getByRole("dialog", { name: "Insights" });
+
+  await expect(popover).toBeVisible();
+  await expect(popover).toHaveAccessibleDescription("pomodoro (US)");
+  await expect(popover.getByRole("listitem")).toHaveText([
+    "Dropping: Fell on 3 checks in a row",
+    "Page 1 close: 2 places from the top 10",
+  ]);
+  await page.keyboard.press("Escape");
+  await expect(popover).toBeHidden();
+  await expect(reasons).toBeFocused();
 });
 
 test("each rule badges only the rows past its boundary", async ({ page }) => {

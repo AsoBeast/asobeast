@@ -516,7 +516,7 @@ test("a translated keywords page brings back the badges a search hid", async ({
     has: page.getByRole("checkbox", { name: "Select pomodoro", exact: true }),
   });
   await expect(
-    pomodoro.getByRole("group", { name: /^Insights\./ }),
+    pomodoro.getByRole("group", { name: "Insights", exact: true }),
   ).toBeVisible();
 
   await translateText(page);
@@ -525,7 +525,9 @@ test("a translated keywords page brings back the badges a search hid", async ({
   await search.fill("");
 
   await expect(
-    pomodoro.getByRole("group", { name: /^Insights\. Dropping/ }),
+    pomodoro
+      .getByRole("group", { name: "Insights", exact: true })
+      .getByRole("button", { name: /^Dropping/ }),
   ).toBeVisible();
   expect(errors).toEqual([]);
 });
