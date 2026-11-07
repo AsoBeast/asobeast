@@ -19,6 +19,7 @@ import {
   paywallHeading,
   paywallStatusLine,
   planAction,
+  planOnSale,
   planActionLabel,
   trialBarParts,
   trustLines,
@@ -36,7 +37,7 @@ const DEFAULT_PLAN: PaidPlanName = "indie";
 
 export function BillingWall({
   user,
-  plan,
+  plan: accountPlan,
   catalog,
 }: {
   user: AuthUser | undefined;
@@ -49,6 +50,7 @@ export function BillingWall({
   );
   const [interval, setInterval] = useState<BillingInterval>("month");
   const [now] = useState(() => new Date());
+  const plan = planOnSale(accountPlan, catalog);
   const offer = plan?.trialOffer ?? null;
   const action = planAction(plan, selected);
   const price = catalog?.prices.find(
