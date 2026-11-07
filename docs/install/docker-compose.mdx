@@ -86,7 +86,7 @@ With `ASOBEAST_PORT` set, use that port in each address.
 
 ## Customize the installation
 
-The root `.env` carries only `POSTGRES_PASSWORD` and `AUTH_SECRET`. Everything else has a working default, including `WEB_PUBLIC_URL`, which builds every link in an email and defaults to `http://localhost:3001`. Set it in the root `.env` when a person reaches the stack at another origin. See [Hosting behind TLS and a reverse proxy](/security/hosting). When another service already uses port 3001, set `ASOBEAST_PORT` there to a free port; the default `WEB_PUBLIC_URL` follows it, so open `http://localhost:<port>` instead.
+The root `.env` carries only `POSTGRES_PASSWORD` and `AUTH_SECRET`. Everything else has a working default, including `WEB_PUBLIC_URL`, which builds every link in an email and defaults to `http://localhost:3001`. Set it in the root `.env` when a person reaches the stack at another origin. See [Hosting behind TLS and a reverse proxy](/security/hosting). When another service already uses port 3001, set `ASOBEAST_PORT` there to a free port number, such as `3002`; the default `WEB_PUBLIC_URL` follows it, so open `http://localhost:<port>` instead. The value is a port number only. An address such as `127.0.0.1:3002` is refused when the API starts.
 
 Copy `apps/api/.env.example` to `apps/api/.env` only when you want an optional feature such as email alerts, the AI assisted audit, a different collection schedule or different retention windows. Compose loads that file when it exists and ignores it when it does not. See [Configuration reference](/configuration/reference).
 
