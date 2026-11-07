@@ -127,6 +127,15 @@ describe("firstDiscoveries", () => {
     });
   });
 
+  it("tells unchecked keywords from checked ones that do not rank", () => {
+    expect(
+      firstDiscoveries(list([item("timer", null, null)], null)),
+    ).toMatchObject({
+      headline:
+        "Found 1 keyword near your listing. None of them has been checked yet. Track the ones that fit your app.",
+    });
+  });
+
   it("keeps a ranked list that has not been checked this week", () => {
     expect(firstDiscoveries(list([item("timer", 4, 200)], null))).toMatchObject(
       { status: "ready" },
