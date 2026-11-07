@@ -264,6 +264,18 @@ describe('KeywordDiscoveryService.list', () => {
     );
   });
 
+  it('answers the next run of a schedule that names its weekday', async () => {
+    const { service } = build({ cron: '30 7 * * MON' });
+    const { checks } = await service.list('app1', ALL, NOW);
+    expect(checks.nextRunAt).toBe('2026-11-16T07:30:00.000Z');
+  });
+
+  it('answers the next run of a schedule that runs on several days', async () => {
+    const { service } = build({ cron: '30 7 * * MON,THU' });
+    const { checks } = await service.list('app1', ALL, NOW);
+    expect(checks.nextRunAt).toBe('2026-11-12T07:30:00.000Z');
+  });
+
   it('answers no next run while the schedule is off', async () => {
     const { service } = build({ cron: '', store: Store.GOOGLE_PLAY });
     const { checks } = await service.list('app1', ALL, NOW);

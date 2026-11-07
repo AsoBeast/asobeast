@@ -11,7 +11,7 @@ import {
   utcDayOf,
 } from '@asobeast/shared';
 import { Env } from '../config/env';
-import { nextWeeklyRun } from '../jobs/daily-schedule';
+import { nextRun } from '../jobs/daily-schedule';
 import { ensurePrimaryApp, KeywordApp } from '../keywords/keywords.support';
 import { PrismaService } from '../prisma/prisma.service';
 import { appOpportunity } from '../scoring/keyword-opportunity';
@@ -212,9 +212,7 @@ export class KeywordDiscoveryService {
         ),
       ).length,
       checkedAt: dayOf(newest._max.checkedOn),
-      nextRunAt: cron
-        ? (nextWeeklyRun(cron, now)?.toISOString() ?? null)
-        : null,
+      nextRunAt: nextRun(cron, now)?.toISOString() ?? null,
     };
   }
 }
