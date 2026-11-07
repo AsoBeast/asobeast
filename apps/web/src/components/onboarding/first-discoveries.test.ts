@@ -136,6 +136,24 @@ describe("firstDiscoveries", () => {
     });
   });
 
+  it("reads the check state from the rows, not from another market's check", () => {
+    expect(
+      firstDiscoveries(list([item("timer", null, null)], "2026-11-03")),
+    ).toMatchObject({
+      headline:
+        "Found 1 keyword near your listing. None of them has been checked yet. Track the ones that fit your app.",
+    });
+  });
+
+  it("speaks only of the rows it was sent when the list is longer", () => {
+    const partial = list([item("timer", null, null)], null);
+    partial.counts.all = 30;
+    expect(firstDiscoveries(partial)).toMatchObject({
+      headline:
+        "Found 30 keywords near your listing. None of the ones shown has been checked yet. Track the ones that fit your app.",
+    });
+  });
+
   it("keeps a ranked list that has not been checked this week", () => {
     expect(firstDiscoveries(list([item("timer", 4, 200)], null))).toMatchObject(
       { status: "ready" },
