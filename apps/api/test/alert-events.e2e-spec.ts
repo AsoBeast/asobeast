@@ -411,6 +411,41 @@ describe('GET /alerts/events (e2e)', () => {
     expect(ids(await list())).toEqual([readable]);
   });
 
+  const unreadable = async (ago: number): Promise<string> => {
+    const id = await seed(onApp(negative, apps.primary), { ago });
+    await prisma.alertEvent.update({ where: { id }, data: { payload: {} } });
+    return id;
+  };
+
+  it('ends the feed when only skipped rows follow the last event', async () => {
+    const gone = await createApp('feed-tail-removed', 'Removed', apps.primary);
+    const newest = await seed(onApp(drop(), apps.primary), { ago: 1 });
+    await unreadable(2);
+    await seed(onApp(metadata, gone), { ago: 3 });
+    await unreadable(4);
+    await prisma.app.delete({ where: { id: gone } });
+
+    const body = await list('?limit=1');
+
+    expect(ids(body)).toEqual([newest]);
+    expect(body.nextCursor).toBeNull();
+  });
+
+  it('answers a cursor when an event follows the skipped rows', async () => {
+    const newest = await seed(onApp(drop(), apps.primary), { ago: 1 });
+    await unreadable(2);
+    await unreadable(3);
+    const older = await seed(onApp(metadata, apps.primary), { ago: 4 });
+
+    const first = await list('?limit=1');
+    const second = await list(`?limit=1&cursor=${first.nextCursor}`);
+
+    expect(ids(first)).toEqual([newest]);
+    expect(first.nextCursor).toEqual(expect.any(String));
+    expect(ids(second)).toEqual([older]);
+    expect(second.nextCursor).toBeNull();
+  });
+
   it('stores the keyword column and the time index', async () => {
     const columns = await prisma.$queryRaw<{ column_name: string }[]>`
       SELECT column_name FROM information_schema.columns
