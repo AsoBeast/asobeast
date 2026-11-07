@@ -577,6 +577,37 @@ describe('Stripe webhooks', () => {
       expect(fake.subscriptionUpdates).toEqual([]);
     });
 
+    it('projects the trial a lost claim ended when the reconcile lands first', async () => {
+      await prisma.trialClaim.create({ data: { key: CARD } });
+      fake.invoiceStore.set(
+        'in_TrialPaid',
+        fixtureInvoice('invoice.paid', { id: 'in_TrialPaid' }),
+      );
+      subscriptions.set(SUBSCRIPTION, {
+        ...subscriptionOf('customer.subscription.trialing'),
+        latest_invoice: 'in_TrialPaid',
+      });
+
+      await app.get(BillingReconciler).reconcileOne(WORKSPACE);
+
+      const row = await workspaceRow();
+      expect(row).toMatchObject({
+        plan: 'indie',
+        subscriptionStatus: 'active',
+        trialStartedAt: TRIAL_START,
+      });
+      expect(row.trialEndsAt?.getTime()).toBeLessThanOrEqual(Date.now());
+      expect(row.firstPaidAt).not.toBeNull();
+      expect(row.trialClaimedAt).not.toBeNull();
+      await expect(me()).resolves.toMatchObject({ trialing: false });
+      expect(fake.subscriptionUpdates).toEqual([
+        {
+          params: { id: SUBSCRIPTION, trial_end: 'now' },
+          idempotencyKey: `trial-end:${SUBSCRIPTION}`,
+        },
+      ]);
+    });
+
     it('settles the claims once when the reconcile and the webhook race', async () => {
       const event = fixture('customer.subscription.trialing');
       subscriptions.set(

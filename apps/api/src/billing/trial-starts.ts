@@ -13,7 +13,11 @@ const SETTLE_LOCK = 2_847_513;
 const SETTLE_TIMEOUT_MS =
   STRIPE_TIMEOUT_MS * (STRIPE_MAX_NETWORK_RETRIES + 1) + 5_000;
 
-export type TrialSettlement = 'skipped' | 'settled' | 'ended';
+export type TrialSettlement =
+  | { outcome: 'skipped' | 'settled' }
+  | { outcome: 'ended'; subscription: Stripe.Subscription };
+
+const SKIPPED: TrialSettlement = { outcome: 'skipped' };
 
 export interface TrialSettlementSubject {
   id: string;
@@ -37,7 +41,7 @@ export class TrialStarts {
     subscription: Stripe.Subscription,
   ): Promise<TrialSettlement> {
     if (!subscription.trial_start || workspace.trialClaimedAt !== null) {
-      return 'skipped';
+      return SKIPPED;
     }
     const fingerprint = await this.cardFingerprintOf(subscription);
     const owner = await workspaceOwnerEmail(this.prisma, workspace.id);
@@ -49,13 +53,16 @@ export class TrialStarts {
           where: { id: workspace.id },
           select: { trialClaimedAt: true },
         });
-        if (current?.trialClaimedAt) return 'skipped';
+        if (current?.trialClaimedAt) return SKIPPED;
         const lost = await this.claim(tx, workspace.id, owner, fingerprint);
-        if (lost.length > 0) {
-          await this.endTrial(workspace.id, subscription, lost);
-        }
+        const ended =
+          lost.length > 0
+            ? await this.endTrial(workspace.id, subscription, lost)
+            : null;
         await markSettled(tx, workspace.id);
-        return lost.length === 0 ? 'settled' : 'ended';
+        return ended
+          ? { outcome: 'ended', subscription: ended }
+          : { outcome: 'settled' };
       },
       { timeout: SETTLE_TIMEOUT_MS },
     );
@@ -85,18 +92,19 @@ export class TrialStarts {
     workspaceId: string,
     subscription: Stripe.Subscription,
     lost: ClaimName[],
-  ): Promise<void> {
+  ): Promise<Stripe.Subscription> {
     const which = lost.join(' and ');
     if (subscription.status !== 'trialing') {
       this.logger.warn(
         `workspace ${workspaceId} lost the ${which} claim of subscription ${subscription.id}, whose trial already ended`,
       );
-      return;
+      return subscription;
     }
-    await this.stripe.endTrialNow(subscription.id);
+    const ended = await this.stripe.endTrialNow(subscription.id);
     this.logger.warn(
       `workspace ${workspaceId} lost the ${which} claim, so the trial of subscription ${subscription.id} was ended at stripe and the plan is charged now`,
     );
+    return ended;
   }
 
   private async cardFingerprintOf(
