@@ -5,41 +5,43 @@ const SKIPPED_TEXT =
 
 export async function translateText(page: Page): Promise<void> {
   await expect
-    .poll(() =>
-      page.evaluate((skipped) => {
-        const reactField = (node: Node, prefix: string): unknown =>
-          Object.entries(node).find(([key]) => key.startsWith(prefix))?.[1];
-        const ownedByReact = (text: Text) => {
-          if (reactField(text, "__reactFiber")) return true;
-          const props = text.parentElement
-            ? (reactField(text.parentElement, "__reactProps") as
-                { children?: unknown } | undefined)
-            : undefined;
-          return ["string", "number", "bigint"].includes(
-            typeof props?.children,
+    .poll(
+      () =>
+        page.evaluate((skipped) => {
+          const reactField = (node: Node, prefix: string): unknown =>
+            Object.entries(node).find(([key]) => key.startsWith(prefix))?.[1];
+          const ownedByReact = (text: Text) => {
+            if (reactField(text, "__reactFiber")) return true;
+            const props = text.parentElement
+              ? (reactField(text.parentElement, "__reactProps") as
+                  { children?: unknown } | undefined)
+              : undefined;
+            return ["string", "number", "bigint"].includes(
+              typeof props?.children,
+            );
+          };
+          const walker = document.createTreeWalker(
+            document.body,
+            NodeFilter.SHOW_TEXT,
           );
-        };
-        const walker = document.createTreeWalker(
-          document.body,
-          NodeFilter.SHOW_TEXT,
-        );
-        const texts: Text[] = [];
-        while (walker.nextNode()) {
-          const text = walker.currentNode as Text;
-          if (text.data.trim() && !text.parentElement?.closest(skipped)) {
-            texts.push(text);
+          const texts: Text[] = [];
+          while (walker.nextNode()) {
+            const text = walker.currentNode as Text;
+            if (text.data.trim() && !text.parentElement?.closest(skipped)) {
+              texts.push(text);
+            }
           }
-        }
-        if (!texts.every(ownedByReact)) return false;
-        for (const text of texts) {
-          const outer = document.createElement("font");
-          const inner = document.createElement("font");
-          inner.textContent = text.data.toUpperCase();
-          outer.append(inner);
-          text.replaceWith(outer);
-        }
-        return true;
-      }, SKIPPED_TEXT),
+          if (!texts.every(ownedByReact)) return false;
+          for (const text of texts) {
+            const outer = document.createElement("font");
+            const inner = document.createElement("font");
+            inner.textContent = text.data.toUpperCase();
+            outer.append(inner);
+            text.replaceWith(outer);
+          }
+          return true;
+        }, SKIPPED_TEXT),
+      { message: "every text node to translate is hydrated by React" },
     )
     .toBe(true);
 }
