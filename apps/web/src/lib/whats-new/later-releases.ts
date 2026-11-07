@@ -4,9 +4,9 @@ export const LATER_RELEASES: readonly Release[] = [
   {
     version: "1.16.0",
     date: "2026-11-03",
-    title: "Know what changed and connect your stores faster",
+    title: "Find new keywords and know what changed",
     summary:
-      "AsoBeast now tells you when something new arrives and explains each update in plain words. Connecting App Store Connect or Google Play comes with a guide for every step.",
+      "AsoBeast now finds the keywords your app already ranks for, shows where competitors beat you and lists what the daily run noticed on one page. Each update is explained in plain words, and connecting App Store Connect or Google Play comes with a guide for every step.",
     changes: [
       {
         kind: "new",
@@ -57,6 +57,46 @@ export const LATER_RELEASES: readonly Release[] = [
         kind: "new",
         title: "Brand and generic keywords",
         text: "Each keyword is marked as your own brand, a competitor's brand or a generic search. A B or CB badge sits after the keyword, a Type filter keeps one kind, the export carries the type, and the menu of a keyword lets you set it yourself when it reads wrong.",
+      },
+      {
+        kind: "new",
+        title: "Discovered keywords",
+        text: "A Discovered tab beside your tracked keywords lists the searches your app already ranks for, or could rank for, that you do not track yet, with their popularity, difficulty and opportunity. Track one, the ones you tick or every ranked one at once, dismiss the ones you do not want, or switch on Auto-track ranked. The list is checked again every week.",
+      },
+      {
+        kind: "improved",
+        title: "Search keywords with or without accents",
+        text: "The search box of the keywords table ignores accents, so cafe finds café and uber finds über.",
+      },
+      {
+        kind: "new",
+        title: "Keyword gaps, threats and where you lead",
+        text: "A Gap analysis section on the competitors page lists the keywords a competitor ranks for and you do not, the gaps you can win now, the competitors closing in on you and the keywords where you lead. The overview sums them up in one line under the visibility chart.",
+      },
+      {
+        kind: "new",
+        title: "Share of voice",
+        text: "The visibility card shows what part of the visibility you and your tracked competitors hold together is yours, with and without brand keywords, and the visibility chart switches between visibility and share of voice.",
+      },
+      {
+        kind: "new",
+        title: "Alerts page",
+        text: "An Alerts item in the sidebar lists what the daily run noticed in the last 30 days, such as rank moves, rating drops and listing changes, even if you never set up an alert. Filter it by app or by kind, search it, and a dot on the sidebar item tells you something arrived since your last visit.",
+      },
+      {
+        kind: "new",
+        title: "Essential alerts from the first day",
+        text: "When your AsoBeast can send email, the owner of a new workspace gets an email alert for the changes that matter most once its first app is checked. Every email alert and webhook lists its rules with a switch for each and can set its own rank drop threshold, and the daily report starts with the biggest moves.",
+      },
+      {
+        kind: "new",
+        title: "Rating drop and review spike alerts",
+        text: "Get told when the rating of your app falls by as much as you choose, and when far more reviews than usual arrive on one day.",
+      },
+      {
+        kind: "new",
+        title: "Alerts when an app leaves the store",
+        text: "Get told when the store stops listing your app or a competitor in its home country or in one of the other countries you track.",
       },
       {
         kind: "improved",

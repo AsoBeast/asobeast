@@ -179,6 +179,25 @@ describe("RELEASES", () => {
     }
   });
 
+  it("names every feature 1.16.0 shows", () => {
+    const titles = RELEASES.find(
+      (each) => each.version === "1.16.0",
+    )?.changes.map((change) => change.title);
+
+    expect(titles).toEqual(
+      expect.arrayContaining([
+        "Discovered keywords",
+        "Search keywords with or without accents",
+        "Keyword gaps, threats and where you lead",
+        "Share of voice",
+        "Alerts page",
+        "Essential alerts from the first day",
+        "Rating drop and review spike alerts",
+        "Alerts when an app leaves the store",
+      ]),
+    );
+  });
+
   it("names every change of a release once", () => {
     const repeated = RELEASES.filter(
       (each) =>
