@@ -312,3 +312,29 @@ describe('RETENTION_STORE_REPORTS_DAYS', () => {
     ).toThrow();
   });
 });
+
+describe('WEB_PUBLIC_URL built from ASOBEAST_PORT', () => {
+  const withOrigin = (origin: string) =>
+    validateEnv({ AUTH_SECRET: 'a'.repeat(32), WEB_PUBLIC_URL: origin });
+
+  it.each(['http://localhost:127.0.0.1:3999', 'http://localhost:0.0.0.0:3001'])(
+    'names the unparsable origin before the ASOBEAST_PORT it may come from %s',
+    (origin) => {
+      expect(() => withOrigin(origin)).toThrow(
+        'WEB_PUBLIC_URL is not an origin that parses. When WEB_PUBLIC_URL is not set, the Compose stacks build it from ASOBEAST_PORT',
+      );
+    },
+  );
+
+  it('keeps the default origin a port number builds', () => {
+    expect(withOrigin('http://localhost:3999').WEB_PUBLIC_URL).toBe(
+      'http://localhost:3999',
+    );
+  });
+
+  it('keeps naming WEB_PUBLIC_URL for any other malformed origin', () => {
+    expect(() => withOrigin('ftp://aso.example.com')).toThrow(
+      'WEB_PUBLIC_URL must be the http or https origin',
+    );
+  });
+});

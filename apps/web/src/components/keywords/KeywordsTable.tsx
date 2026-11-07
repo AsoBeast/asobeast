@@ -31,6 +31,7 @@ import { useSerpParams } from "./serp/use-serp-params";
 import { useKeywordColumnFilters } from "./use-zone-thresholds";
 import { useKeywordsTableControls } from "./use-keywords-table-controls";
 import { KeywordMap } from "./map/KeywordMap";
+import { filtersNarrowMap } from "./map/map-points";
 import { useKeywordsAcrossZones } from "./map/use-map-keywords";
 
 export function KeywordsTable({
@@ -147,6 +148,7 @@ export function KeywordsTable({
         {view === "map" ? (
           <KeywordMap
             keywords={mapKeywords}
+            narrowed={filtersNarrowMap(mapKeywords, keywords)}
             history={{ appId: id, store, homeCountry, multiMarket }}
             market={country}
             today={today}

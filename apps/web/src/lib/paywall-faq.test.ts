@@ -2,12 +2,12 @@ import { describe, expect, it } from "vitest";
 import { formatDate } from "./format";
 import { paywallFaq } from "./paywall-faq";
 
-const NOW = new Date("2026-10-22T12:00:00.000Z");
+const CLOCK = { now: new Date("2026-10-22T12:00:00.000Z"), timeZone: "UTC" };
 const ENDS_ON = formatDate("2026-10-29T12:00:00.000Z");
 
 describe("paywallFaq", () => {
   it("answers seven questions, the first with the trial end date", () => {
-    const items = paywallFaq({ days: 7 }, "$10 per month", NOW);
+    const items = paywallFaq({ days: 7 }, "$10 per month", CLOCK);
 
     expect(items).toHaveLength(7);
     expect(items[0]).toEqual({
@@ -17,14 +17,16 @@ describe("paywallFaq", () => {
   });
 
   it("says when the plan is charged without a trial", () => {
-    expect(paywallFaq(null, "$10 per month", NOW)[0]).toEqual({
+    expect(paywallFaq(null, "$10 per month", CLOCK)[0]).toEqual({
       question: "When am I charged?",
       answer: "Today, for the first period. The plan renews until you cancel.",
     });
   });
 
   it("links every other answer to the page that states it", () => {
-    for (const item of paywallFaq({ days: 7 }, "$10 per month", NOW).slice(1)) {
+    for (const item of paywallFaq({ days: 7 }, "$10 per month", CLOCK).slice(
+      1,
+    )) {
       expect(item.href).toMatch(
         /^https:\/\/(docs\.asobeast\.com|github\.com)\//,
       );

@@ -16,6 +16,8 @@ const trialing = (over: Partial<Stripe.Subscription> = {}) =>
     ...over,
   }) as unknown as Stripe.Subscription;
 
+const ENDED = trialing({ status: 'active', trial_end: 1_800_000_200 });
+
 describe('TrialStarts', () => {
   const calls: string[] = [];
   const transactionOptions: unknown[] = [];
@@ -69,7 +71,7 @@ describe('TrialStarts', () => {
     claimCard.mockReset().mockResolvedValue(true);
     endTrialNow.mockReset().mockImplementation(() => {
       calls.push('end');
-      return Promise.resolve({});
+      return Promise.resolve(ENDED);
     });
     retrievePaymentMethod.mockReset().mockImplementation(() => {
       calls.push('card');
@@ -84,21 +86,21 @@ describe('TrialStarts', () => {
   it('does nothing for a subscription without a trial', async () => {
     await expect(
       starts().settle(WORKSPACE, trialing({ trial_start: null })),
-    ).resolves.toBe('skipped');
+    ).resolves.toEqual({ outcome: 'skipped' });
     expect(calls).toEqual([]);
   });
 
   it('does nothing once the claims are settled', async () => {
     await expect(
       starts().settle({ ...WORKSPACE, trialClaimedAt: new Date() }, trialing()),
-    ).resolves.toBe('skipped');
+    ).resolves.toEqual({ outcome: 'skipped' });
     expect(calls).toEqual([]);
   });
 
   it('claims the mailbox and the card and marks the trial settled', async () => {
-    await expect(starts().settle(WORKSPACE, trialing())).resolves.toBe(
-      'settled',
-    );
+    await expect(starts().settle(WORKSPACE, trialing())).resolves.toEqual({
+      outcome: 'settled',
+    });
 
     expect(calls).toEqual(['card', 'transaction', 'mark']);
     expect(retrievePaymentMethod).toHaveBeenCalledWith('pm_card');
@@ -131,9 +133,9 @@ describe('TrialStarts', () => {
   it('claims only the mailbox for a link method', async () => {
     retrievePaymentMethod.mockResolvedValue({ type: 'link' });
 
-    await expect(starts().settle(WORKSPACE, trialing())).resolves.toBe(
-      'settled',
-    );
+    await expect(starts().settle(WORKSPACE, trialing())).resolves.toEqual({
+      outcome: 'settled',
+    });
     expect(claimCard).not.toHaveBeenCalled();
     expect(claim).toHaveBeenCalled();
   });
@@ -141,9 +143,9 @@ describe('TrialStarts', () => {
   it('claims no mailbox when the workspace has no owner', async () => {
     ownerOf.mockResolvedValue(null);
 
-    await expect(starts().settle(WORKSPACE, trialing())).resolves.toBe(
-      'settled',
-    );
+    await expect(starts().settle(WORKSPACE, trialing())).resolves.toEqual({
+      outcome: 'settled',
+    });
     expect(claim).not.toHaveBeenCalled();
     expect(claimCard).toHaveBeenCalledWith(tx, 'fp_1');
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('ws_trial'));
@@ -157,9 +159,10 @@ describe('TrialStarts', () => {
     async (lost, lose) => {
       lose();
 
-      await expect(starts().settle(WORKSPACE, trialing())).resolves.toBe(
-        'ended',
-      );
+      await expect(starts().settle(WORKSPACE, trialing())).resolves.toEqual({
+        outcome: 'ended',
+        subscription: ENDED,
+      });
 
       expect(endTrialNow).toHaveBeenCalledTimes(1);
       expect(endTrialNow).toHaveBeenCalledWith('sub_trial');
@@ -171,10 +174,12 @@ describe('TrialStarts', () => {
 
   it('marks a lost trial that already left trialing without ending it', async () => {
     claim.mockResolvedValue(false);
+    const left = trialing({ status: 'active' });
 
-    await expect(
-      starts().settle(WORKSPACE, trialing({ status: 'active' })),
-    ).resolves.toBe('ended');
+    await expect(starts().settle(WORKSPACE, left)).resolves.toEqual({
+      outcome: 'ended',
+      subscription: left,
+    });
     expect(endTrialNow).not.toHaveBeenCalled();
     expect(settled.at).not.toBeNull();
   });
@@ -193,9 +198,9 @@ describe('TrialStarts', () => {
   it('claims nothing when a concurrent settle won the lock first', async () => {
     settled.at = new Date();
 
-    await expect(starts().settle(WORKSPACE, trialing())).resolves.toBe(
-      'skipped',
-    );
+    await expect(starts().settle(WORKSPACE, trialing())).resolves.toEqual({
+      outcome: 'skipped',
+    });
     expect(claim).not.toHaveBeenCalled();
     expect(claimCard).not.toHaveBeenCalled();
     expect(endTrialNow).not.toHaveBeenCalled();

@@ -63,11 +63,6 @@ export function rankDiscoveries<T extends Ranked>(
   };
 }
 
-export const unfitCount = (
-  counts: KeywordDiscoveryCounts,
-  autoTrackRanked: boolean,
-): number => (autoTrackRanked ? counts.ranked : 0);
-
 export const pendingWindowStart = (now: Date): Date =>
   new Date(now.getTime() - PENDING_WINDOW_MS);
 

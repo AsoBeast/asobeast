@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { hydrated } from "./hydrated.mts";
 import { collectPageErrors } from "./page-errors.mts";
 import { seedCookies } from "./routes.mts";
 import { expect, test } from "./session.mts";
@@ -9,6 +10,11 @@ const draftRequest = (page: Page) =>
       request.method() === "POST" &&
       request.url().endsWith("/metadata/assistant"),
   );
+
+const generateDrafts = async (page: Page) =>
+  (
+    await hydrated(page.getByRole("button", { name: "Generate drafts" }))
+  ).click();
 
 test.beforeEach(async ({ context }) => {
   await seedCookies(context, { e2e_metadata_ai: "1" });
@@ -42,7 +48,7 @@ test("drafts a chosen localization and sends it to the api", async ({
   ).toBeVisible();
 
   const request = draftRequest(page);
-  await page.getByRole("button", { name: "Generate drafts" }).click();
+  await generateDrafts(page);
   expect((await request).postDataJSON()).toEqual({
     fields: ["title", "subtitle", "keywordField"],
     localization: "es-MX",
@@ -83,7 +89,7 @@ test("a google play app never sends a localization", async ({ page }) => {
     page.getByRole("combobox", { name: "Localization" }),
   ).toHaveCount(0);
   const request = draftRequest(page);
-  await page.getByRole("button", { name: "Generate drafts" }).click();
+  await generateDrafts(page);
   expect((await request).postDataJSON()).toEqual({
     fields: ["title", "shortDescription", "description"],
   });
@@ -100,7 +106,7 @@ test("a deep link to another app store language keeps it and hydrates cleanly", 
     "Japanese",
   );
   const request = draftRequest(page);
-  await page.getByRole("button", { name: "Generate drafts" }).click();
+  await generateDrafts(page);
   expect((await request).postDataJSON()).toMatchObject({ localization: "ja" });
   await page.waitForLoadState("networkidle");
   expect(errors).toEqual([]);
@@ -112,7 +118,7 @@ for (const width of [375, 768, 820, 1440]) {
   }) => {
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/apps/app-long/metadata");
-    await page.getByRole("button", { name: "Generate drafts" }).click();
+    await generateDrafts(page);
 
     const copies = page.getByRole("button", { name: /^Copy .+ draft$/ });
     await expect(copies).toHaveCount(3);

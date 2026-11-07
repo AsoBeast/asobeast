@@ -31,7 +31,7 @@ const classOf = (
 ) =>
   classifyKeyword(
     { text, flags: [], serpRelevance: null, ...overrides },
-    profileForListing(profile, { words: listingWords, title: null }),
+    profileForListing(profile, { words: listingWords, titles: [] }),
   );
 
 const BRAND: SerpFlag[] = ['brand'];
@@ -219,7 +219,7 @@ describe('profileForListing', () => {
     expect(
       profileForListing(forestProfile, {
         words: contentWords('a focus timer app'),
-        title: null,
+        titles: [],
       }),
     ).toEqual({
       own: forestProfile.own,
@@ -237,7 +237,7 @@ describe('the market listing title', () => {
   });
 
   it('is an own name of the keywords of that market', () => {
-    const market = profileForListing(homeOnly, { words: [], title: '微信' });
+    const market = profileForListing(homeOnly, { words: [], titles: ['微信'] });
 
     expect(
       classifyKeyword(
@@ -254,7 +254,7 @@ describe('the market listing title', () => {
   });
 
   it('adds no name for a market without a listing', () => {
-    expect(profileForListing(homeOnly, { words: [], title: null }).own).toEqual(
+    expect(profileForListing(homeOnly, { words: [], titles: [] }).own).toEqual(
       homeOnly.own,
     );
   });

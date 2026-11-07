@@ -14,6 +14,20 @@ import { keywordMarker } from './keyword-marks';
 import { AppFacts } from './keywords.mapper';
 import { KeywordApp } from './keywords.support';
 
+const marketTitlesOf = (
+  listings: ReadonlyMap<string, { title: string }>,
+  localized: ReadonlyMap<string, readonly LocalizedTexts[]>,
+): Map<string, string[]> =>
+  new Map(
+    [...listings].map(([market, listing]) => [
+      market,
+      [
+        listing.title,
+        ...(localized.get(market) ?? []).map(({ texts }) => texts.title),
+      ],
+    ]),
+  );
+
 export async function listingFacts(
   prisma: PrismaService,
   app: Pick<KeywordApp, 'id' | 'country' | 'store'>,
@@ -32,6 +46,13 @@ export async function listingFacts(
       .map(([market, listing]) => [market, relevanceText(listing)]),
   );
   const snapshotText = home ? relevanceText(home) : '';
+  const localized =
+    app.store === Store.APP_STORE &&
+    (options.coverage || options.marks || options.brand)
+      ? await latestLocalizedTexts(prisma, app.id, app.country, [
+          ...listings.keys(),
+        ])
+      : new Map<string, LocalizedTexts[]>();
   const facts: AppFacts = {
     snapshotText,
     marketTexts,
@@ -41,9 +62,7 @@ export async function listingFacts(
           classOf: keywordClassifier(profile, {
             snapshotText,
             marketTexts,
-            marketTitles: new Map(
-              [...listings].map(([market, listing]) => [market, listing.title]),
-            ),
+            marketTitles: marketTitlesOf(listings, localized),
           }),
         }
       : {}),
@@ -51,12 +70,6 @@ export async function listingFacts(
   if (!options.coverage && !options.marks) {
     return facts;
   }
-  const localized =
-    app.store === Store.APP_STORE
-      ? await latestLocalizedTexts(prisma, app.id, app.country, [
-          ...listings.keys(),
-        ])
-      : new Map<string, LocalizedTexts[]>();
   const sources = { listings, localized, keywordFields: fieldPhrases(stored) };
   return {
     ...facts,

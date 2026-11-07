@@ -93,7 +93,7 @@ describe('BillingWebhookService', () => {
     const constructEvent = jest.fn().mockReturnValue(eventOf());
     const notify = jest.fn().mockResolvedValue('delivered');
     const enqueue = jest.fn().mockResolvedValue(undefined);
-    const settle = jest.fn().mockResolvedValue('skipped');
+    const settle = jest.fn().mockResolvedValue({ outcome: 'skipped' });
     const record = jest
       .fn()
       .mockResolvedValue(over.neverPaid ? null : new Date('2026-09-01'));

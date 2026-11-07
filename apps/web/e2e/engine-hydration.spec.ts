@@ -149,6 +149,7 @@ test.describe("the opportunity map in this engine", () => {
 
   test("one tab stop, arrows and Home and End", async ({ page }) => {
     await page.goto(MAP);
+    await dot(page, "kw-map-3").waitFor();
     await expect(dot(page, "kw-map-3")).toHaveAttribute("tabindex", "0");
     await page
       .getByRole("list", { name: "Zones" })

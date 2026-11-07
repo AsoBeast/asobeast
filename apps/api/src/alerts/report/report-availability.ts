@@ -13,10 +13,8 @@ const inStore = (store: Store): string =>
 const keywordsTracked = (count: number): string =>
   count === 1 ? '1 keyword is tracked' : `${count} keywords are tracked`;
 
-const ownKeywords = (alert: AppAvailabilityPayload): number =>
-  alert.event === 'app.unlisted_market' && !alert.app.isCompetitor
-    ? alert.trackedKeywords
-    : 0;
+const trackedThere = (alert: AppAvailabilityPayload): number =>
+  alert.event === 'app.unlisted_market' ? alert.trackedKeywords : 0;
 
 export function availabilitySentence(
   alert: AppAvailabilityPayload,
@@ -27,7 +25,7 @@ export function availabilitySentence(
   const who = alert.app.isCompetitor ? `${app}, a competitor,` : app;
   const listed = `${who} is no longer listed in ${inStore(alert.store)}`;
   if (alert.event === 'app.delisted') return `${listed} (${home})`;
-  const keywords = ownKeywords(alert);
+  const keywords = trackedThere(alert);
   return keywords > 0
     ? `${listed} in ${market}, where ${keywordsTracked(keywords)}`
     : `${listed} in ${market}`;
@@ -65,7 +63,7 @@ export function availabilityRow(alert: AppAvailabilityPayload): ReportRow {
       detail: null,
     };
   }
-  const keywords = ownKeywords(alert);
+  const keywords = trackedThere(alert);
   const market = `No longer listed in ${alert.market.toUpperCase()}`;
   return {
     kind: 'text',

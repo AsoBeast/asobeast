@@ -5,7 +5,7 @@ import {
   type TrialOffer,
 } from "@asobeast/shared";
 import { formatUsd } from "@/lib/format";
-import { trialEndLabel } from "@/lib/plan-choice";
+import { trialEndLabel, type ViewerClock } from "@/lib/plan-choice";
 
 export const INTERVAL_LABEL: Record<BillingInterval, string> = {
   month: "Monthly",
@@ -38,7 +38,7 @@ export function summaryFromCatalog(
   name: PaidPlanName,
   interval: BillingInterval,
   offer: TrialOffer | null | undefined,
-  now: Date,
+  clock: ViewerClock,
 ): OrderSummaryModel {
   const unitAmount = formatUsd(priceOf(name, interval));
   return {
@@ -47,7 +47,7 @@ export function summaryFromCatalog(
     unitAmount,
     dueToday: offer ? formatUsd(0) : unitAmount,
     thenLine: offer
-      ? `Then ${unitAmount} on ${trialEndLabel(offer, now)}`
+      ? `Then ${unitAmount} on ${trialEndLabel(offer, clock)}`
       : null,
     cancelLine: offer
       ? `${CANCEL_ANY_TIME} ${NOTHING_BEFORE_THE_DATE}`

@@ -37,6 +37,13 @@ const RECONCILE_JUSTIFICATION =
 
 type Outcome = 'corrected' | 'agreed' | 'unreachable';
 
+const nothingReconciled = (): BillingReconcileReport => ({
+  checked: 0,
+  corrected: 0,
+  orphanSubscriptions: [],
+  unreconciled: [],
+});
+
 @Injectable()
 export class BillingReconciler {
   private readonly logger = new Logger(BillingReconciler.name);
@@ -71,7 +78,9 @@ export class BillingReconciler {
         if (!workspace) throw new NotFoundException('Workspace not found');
         await this.prices.refreshIfStale();
 
-        const outcome = await this.attempt(workspace, sessionId);
+        const outcome = this.stripe.enabled
+          ? await this.attempt(workspace, sessionId)
+          : 'agreed';
         if (outcome === 'unreachable') {
           throw new ServiceUnavailableException(
             'Stripe could not be reached, so this workspace keeps the plan it already has. Try again shortly.',
@@ -88,14 +97,7 @@ export class BillingReconciler {
   }
 
   private async sweep(): Promise<BillingReconcileReport> {
-    if (!this.stripe.enabled) {
-      return {
-        checked: 0,
-        corrected: 0,
-        orphanSubscriptions: [],
-        unreconciled: [],
-      };
-    }
+    if (!this.stripe.enabled) return nothingReconciled();
 
     const known = await this.prisma.workspace.findMany({
       where: {
@@ -165,21 +167,52 @@ export class BillingReconciler {
     workspace: Workspace,
     subscription: Stripe.Subscription,
   ): Promise<boolean> {
+    const drifted = await this.align(workspace, subscription, (desired) =>
+      this.logger.error(
+        `workspace ${workspace.id} drifted from Stripe: local ${workspace.plan}/${workspace.subscriptionStatus ?? 'none'}, Stripe ${desired.plan}/${desired.status}`,
+      ),
+    );
+    const settlement = await this.trialStarts.settle(workspace, subscription);
+    if (settlement.outcome !== 'ended') return drifted;
+    const ended = await this.alignEndedTrial(
+      workspace.id,
+      settlement.subscription,
+    );
+    return drifted || ended;
+  }
+
+  private async alignEndedTrial(
+    workspaceId: string,
+    subscription: Stripe.Subscription,
+  ): Promise<boolean> {
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+    });
+    if (!workspace) return false;
+    return this.align(workspace, subscription, (desired) =>
+      this.logger.warn(
+        `workspace ${workspaceId} lost a trial claim, so it now holds subscription ${subscription.id} as ${desired.plan}/${desired.status}`,
+      ),
+    );
+  }
+
+  private async align(
+    workspace: Workspace,
+    subscription: Stripe.Subscription,
+    announce: (desired: SubscriptionState) => void,
+  ): Promise<boolean> {
     const firstPaidAt = await this.firstPayment.record(workspace, subscription);
     const desired = stateFrom(subscription, this.prices, firstPaidAt !== null);
-    const drifted = !matches(workspace, desired);
-    if (drifted) await this.project(workspace, desired);
-    await this.trialStarts.settle(workspace, subscription);
-    return drifted;
+    if (matches(workspace, desired)) return false;
+    announce(desired);
+    await this.project(workspace, desired);
+    return true;
   }
 
   private async project(
     workspace: Workspace,
     desired: SubscriptionState,
   ): Promise<void> {
-    this.logger.error(
-      `workspace ${workspace.id} drifted from Stripe: local ${workspace.plan}/${workspace.subscriptionStatus ?? 'none'}, Stripe ${desired.plan}/${desired.status}`,
-    );
     await this.prisma.workspace.update({
       where: { id: workspace.id },
       data: projectionOf(desired, workspace, new Date()),

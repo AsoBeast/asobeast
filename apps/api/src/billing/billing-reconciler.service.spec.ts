@@ -89,7 +89,7 @@ describe('BillingReconciler', () => {
       Promise.resolve(rows.map((row) => ({ ...row }))),
     );
     const redisSet = jest.fn(() => Promise.resolve('OK'));
-    const settle = jest.fn().mockResolvedValue('skipped');
+    const settle = jest.fn().mockResolvedValue({ outcome: 'skipped' });
     const record = jest
       .fn()
       .mockResolvedValue(over.neverPaid ? null : new Date('2026-09-01'));
@@ -103,12 +103,13 @@ describe('BillingReconciler', () => {
         ? Promise.reject(over.session)
         : Promise.resolve(over.session),
     );
+    const findUnique = jest.fn(() =>
+      Promise.resolve(rows[0] ? { ...rows[0] } : null),
+    );
     const prisma = {
       workspace: {
         findMany,
-        findUnique: jest.fn(() =>
-          Promise.resolve(rows[0] ? { ...rows[0] } : null),
-        ),
+        findUnique,
         update,
         updateMany: update,
       },
@@ -147,6 +148,7 @@ describe('BillingReconciler', () => {
       listCustomerSubscriptions,
       retrieveSubscription,
       findMany,
+      findUnique,
       rows,
     };
   };
@@ -161,6 +163,50 @@ describe('BillingReconciler', () => {
       unreconciled: [],
     });
     expect(update).not.toHaveBeenCalled();
+  });
+
+  describe('a reconcile on demand while Stripe is not configured', () => {
+    const claimed = () =>
+      workspaceOf({
+        plan: 'indie',
+        subscriptionId: null,
+        subscriptionStatus: null,
+        billingCustomerId: null,
+      });
+
+    it('keeps a plan it cannot check against Stripe', async () => {
+      const { reconciler, update, rows } = build({
+        enabled: false,
+        workspaces: [claimed()],
+      });
+
+      await expect(reconciler.reconcileOne('ws_1')).resolves.toEqual({
+        checked: 1,
+        corrected: 0,
+        orphanSubscriptions: [],
+        unreconciled: [],
+      });
+      expect(update).not.toHaveBeenCalled();
+      expect(rows[0]?.plan).toBe('indie');
+    });
+
+    it('answers the same for a checkout return instead of blaming Stripe', async () => {
+      const { reconciler, update } = build({
+        enabled: false,
+        workspaces: [claimed()],
+        session: new ServiceUnavailableException('Billing is not configured'),
+      });
+
+      await expect(
+        reconciler.reconcileOne('ws_1', 'cs_test_returned'),
+      ).resolves.toEqual({
+        checked: 1,
+        corrected: 0,
+        orphanSubscriptions: [],
+        unreconciled: [],
+      });
+      expect(update).not.toHaveBeenCalled();
+    });
   });
 
   it('leaves a workspace that already agrees with Stripe alone', async () => {
@@ -197,6 +243,91 @@ describe('BillingReconciler', () => {
     expect(update.mock.invocationCallOrder[0]).toBeLessThan(
       settle.mock.invocationCallOrder[0],
     );
+  });
+
+  describe('a trial a lost claim ended', () => {
+    const ENDED_PERIOD_END = PERIOD_END + 3_600;
+    const ended = subscriptionOf({
+      status: 'active',
+      items: {
+        data: [
+          {
+            current_period_end: ENDED_PERIOD_END,
+            price: { id: 'price_indie_month' },
+          },
+        ],
+      },
+    });
+    const trialingRow = () => workspaceOf({ subscriptionStatus: 'trialing' });
+
+    it('is projected once the settlement ended it', async () => {
+      const { reconciler, settle, update, record } = build({
+        workspaces: [trialingRow()],
+        subscription: subscriptionOf({ status: 'trialing' }),
+      });
+      settle.mockResolvedValue({ outcome: 'ended', subscription: ended });
+
+      await expect(reconciler.reconcile()).resolves.toMatchObject({
+        corrected: 1,
+      });
+
+      expect(update).toHaveBeenCalledTimes(1);
+      const [args] = update.mock.calls[0] as [
+        { data: Record<string, unknown> },
+      ];
+      expect(args.data).toMatchObject({
+        plan: 'indie',
+        subscriptionStatus: 'active',
+        planExpiresAt: new Date(ENDED_PERIOD_END * 1000),
+      });
+      expect(record).toHaveBeenLastCalledWith(
+        expect.objectContaining({ id: 'ws_1' }),
+        ended,
+      );
+    });
+
+    it('is compared with the row the first projection wrote', async () => {
+      const { reconciler, settle, update, rows } = build({
+        workspaces: [workspaceOf({ plan: 'ultimate' })],
+        subscription: subscriptionOf({ status: 'trialing' }),
+      });
+      settle.mockResolvedValue({ outcome: 'ended', subscription: ended });
+
+      await reconciler.reconcile();
+
+      expect(update).toHaveBeenCalledTimes(2);
+      expect(rows[0]).toMatchObject({
+        plan: 'indie',
+        subscriptionStatus: 'active',
+      });
+    });
+
+    it('writes nothing more when the row already agrees', async () => {
+      const { reconciler, settle, update } = build({
+        workspaces: [workspaceOf()],
+      });
+      settle.mockResolvedValue({
+        outcome: 'ended',
+        subscription: subscriptionOf(),
+      });
+
+      await expect(reconciler.reconcile()).resolves.toMatchObject({
+        corrected: 0,
+      });
+      expect(update).not.toHaveBeenCalled();
+    });
+
+    it('is not looked for after a settled trial', async () => {
+      const { reconciler, settle, findUnique } = build({
+        workspaces: [trialingRow()],
+        subscription: subscriptionOf({ status: 'trialing' }),
+      });
+      settle.mockResolvedValue({ outcome: 'settled' });
+
+      await reconciler.reconcile();
+
+      expect(findUnique).not.toHaveBeenCalled();
+    });
   });
 
   it('records the first payment before it corrects the plan', async () => {

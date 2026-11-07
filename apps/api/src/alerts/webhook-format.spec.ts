@@ -21,6 +21,7 @@ import {
   listingSection,
   ratingDropped,
   reviewSpike,
+  rival,
 } from './listing-events.fixture';
 import { firstRanking, milestone, overtake } from './rank-events.fixture';
 import { formatWebhookBody } from './webhook-format';
@@ -187,6 +188,11 @@ describe('formatWebhookBody for the rating and review events', () => {
     [reviewSpike(), 'A spike of 34 reviews for My App', '34'],
     [appDelisted(), 'is no longer listed in the App Store', '3 Nov 2026'],
     [appUnlistedMarket(), 'where 12 keywords are tracked', '12'],
+    [
+      appUnlistedMarket({ app: rival }),
+      'a competitor, is no longer listed in the App Store in 🇩🇪 DE, where 12 keywords are tracked',
+      '12',
+    ],
   ] as const;
   const batched = listingBatch(
     listingSection({

@@ -3,7 +3,11 @@
 import { useCallback, useId, useMemo, useRef } from "react";
 import { useQueryState } from "nuqs";
 import type { TrackedKeywordItem } from "@asobeast/shared";
-import { ChartNotice, trendState } from "@/components/charts/ChartStates";
+import {
+  ChartNotice,
+  MIN_TREND_POINTS,
+  trendState,
+} from "@/components/charts/ChartStates";
 import { CHART_HEIGHT } from "@/components/charts/theme";
 import { Button } from "@/components/ui/button";
 import {
@@ -67,51 +71,80 @@ function ShapeKey({ points }: { points: readonly MapPoint[] }) {
   );
 }
 
+function unscoredBody(count: number): string {
+  return count === 1
+    ? "1 keyword matches these filters, and it does not have both a popularity and a difficulty."
+    : `${count} keywords match these filters, and none has both a popularity and a difficulty.`;
+}
+
+function tooFewDetail(narrowed: boolean, plotted: number): string {
+  return narrowed
+    ? `These filters leave ${plotted}.`
+    : `${plotted} of ${MIN_TREND_POINTS} so far.`;
+}
+
 function MapNotice({
   keywords,
   points,
+  narrowed,
   onClearFilters,
 }: {
   keywords: readonly TrackedKeywordItem[];
   points: readonly MapPoint[];
+  narrowed: boolean;
   onClearFilters: () => void;
 }) {
+  const clearButton = (
+    <Button variant="outline" size="sm" onClick={onClearFilters}>
+      Clear filters
+    </Button>
+  );
+  const clear = narrowed ? clearButton : undefined;
   if (keywords.length === 0) {
     return (
       <ChartNotice
         height={CHART_HEIGHT.hero}
         title="No keywords match these filters"
-        action={
-          <Button variant="outline" size="sm" onClick={onClearFilters}>
-            Clear filters
-          </Button>
-        }
+        action={clearButton}
       />
     );
   }
-  return trendState(points.length) === "empty" ? (
-    <ChartNotice
-      height={CHART_HEIGHT.hero}
-      title="Nothing to map yet"
-      body="No tracked keyword has both a popularity and a difficulty yet. Scores arrive with the weekly scoring run."
-    />
-  ) : (
+  if (trendState(points.length) === "empty") {
+    return narrowed ? (
+      <ChartNotice
+        height={CHART_HEIGHT.hero}
+        title="No scored keywords match these filters"
+        body={unscoredBody(keywords.length)}
+        action={clear}
+      />
+    ) : (
+      <ChartNotice
+        height={CHART_HEIGHT.hero}
+        title="Nothing to map yet"
+        body="No tracked keyword has both a popularity and a difficulty yet. Scores arrive with the weekly scoring run."
+      />
+    );
+  }
+  return (
     <ChartNotice
       height={CHART_HEIGHT.hero}
       title="Too few scored keywords"
-      body={`The map needs at least 4 keywords with both scores. ${points.length} of 4 so far.`}
+      body={`The map needs at least ${MIN_TREND_POINTS} keywords with both scores. ${tooFewDetail(narrowed, points.length)}`}
+      action={clear}
     />
   );
 }
 
 export function KeywordMap({
   keywords,
+  narrowed,
   history,
   market,
   today,
   onClearFilters,
 }: {
   keywords: readonly TrackedKeywordItem[];
+  narrowed: boolean;
   history: PositionHistoryContext;
   market: string;
   today: string;
@@ -196,6 +229,7 @@ export function KeywordMap({
           <MapNotice
             keywords={keywords}
             points={points}
+            narrowed={narrowed}
             onClearFilters={onClearFilters}
           />
         )}

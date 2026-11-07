@@ -173,7 +173,7 @@ Both events report a fact about one owned app and one day, read from what AsoBea
 
 Each channel chooses how big a drop it wants with the **Rating drop threshold** control in Settings, which appears while **Rating dropped** is ticked. Over the API it is `ratingDropTenths`, an integer from 1 to 10 on a webhook or an email alert. Omitted means 1, a tenth of a star, and a `PATCH` without it leaves it as it is.
 
-A fall stays visible in a seven day comparison for seven days. So a drop is reported the day it appears and again only when it grows, never on the days it merely persists. A channel with a threshold of 3 tenths hears the day the drop reaches 3 tenths and every day it deepens past it.
+A fall stays visible in a seven day comparison for seven days. So a drop is reported the day it appears and again only when it grows, never on the days it merely persists. Growing is measured from the snapshot the drop is compared with: a rating that recovers part of the way and then falls back to the depth already reported raises nothing, and one that falls deeper is reported again. A channel with a threshold of 3 tenths hears the day the drop reaches 3 tenths and every day it deepens past it.
 
 When the snapshots show that a new version shipped in between, the alert names it. The alert links to the open **Investigate falling review scores** action when there is one, and to the reviews page otherwise. That Action Center rule reads review scores rather than the displayed average and stays as it is. Only the home market is judged.
 
