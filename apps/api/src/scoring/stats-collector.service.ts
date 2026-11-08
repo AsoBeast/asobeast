@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Store } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { outcomeOf } from '../store-providers/egress/proxy-health.service';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { SearchItem, StoreProvider } from '../store-providers/types';
 import { inferPopularityGenre } from './apple-genres';
@@ -152,6 +153,7 @@ export class StatsCollectorService {
     const targets = results.slice(0, TOP_STRENGTH);
     const enriched: KeywordStats['top10'] = [];
     let failed = 0;
+    let refused = 0;
     for (const item of targets) {
       try {
         const app = await provider.getApp(item.storeAppId, country);
@@ -177,12 +179,13 @@ export class StatsCollectorService {
           `detail lookup failed for "${item.storeAppId}", keeping its search entry: ${messageOf(error)}`,
         );
         failed += 1;
+        if (outcomeOf(error) !== null) refused += 1;
         enriched.push(this.toStrength(item));
       }
     }
     const successCount = targets.length - failed;
     if (
-      targets.length >= MIN_JUDGED_DETAILS &&
+      (targets.length >= MIN_JUDGED_DETAILS || refused > 0) &&
       successCount < targets.length * MIN_DETAIL_SUCCESS_SHARE
     ) {
       throw new Error(

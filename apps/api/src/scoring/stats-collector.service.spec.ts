@@ -1,5 +1,6 @@
 import { Store } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { StoreRequestError } from '../store-providers/errors';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { SearchItem, SuggestItem } from '../store-providers/types';
 import { OfficialPopularityLookup } from './official-popularity';
@@ -290,6 +291,25 @@ describe('StatsCollectorService', () => {
     expect(collected?.stats.top10).toHaveLength(1);
     expect(collected?.evidence.detailTargetCount).toBe(1);
     expect(collected?.evidence.detailSuccessCount).toBe(0);
+  });
+
+  it('retries a one result search when the store refused its detail lookup', async () => {
+    const getApp = jest
+      .fn()
+      .mockRejectedValue(
+        new StoreRequestError(Store.GOOGLE_PLAY, 'getApp', 'HTTP 429'),
+      );
+    const search = jest.fn().mockResolvedValue(buildSearch().slice(0, 1));
+    const { registry } = buildGplayProvider({ getApp, search });
+    const service = new StatsCollectorService(
+      buildGplayPrisma(),
+      registry,
+      noOfficial,
+    );
+
+    await expect(service.collect('kw1')).rejects.toThrow(
+      'only 0 of 1 detail lookups succeeded',
+    );
   });
 
   it('still refuses a small page once three lookups fail', async () => {
