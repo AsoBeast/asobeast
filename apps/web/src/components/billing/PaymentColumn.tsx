@@ -10,6 +10,7 @@ import {
   SUPPORT_EMAIL,
 } from "@asobeast/shared";
 import { Lock } from "lucide-react";
+import { LegalLinks } from "@/components/layout/LegalLinks";
 import { Skeleton } from "@/components/ui/skeleton";
 import { sessionKeyOf } from "@/lib/embedded-checkout";
 import { INTERVAL_LABEL, summaryFromCatalog } from "@/lib/order-summary";
@@ -36,6 +37,7 @@ export function PaymentColumn({
   price,
   publishableKey,
   clock,
+  billing,
 }: {
   plan: AccountPlan | undefined;
   catalog: BillingCatalog | undefined;
@@ -45,6 +47,7 @@ export function PaymentColumn({
   price: BillingPrice | undefined;
   publishableKey: string | null;
   clock: ViewerClock;
+  billing: boolean;
 }) {
   const offer = action === "trial" ? plan?.trialOffer : null;
   const theme = useCheckoutTheme();
@@ -88,6 +91,7 @@ export function PaymentColumn({
         </a>
         .
       </p>
+      {billing ? <LegalLinks /> : null}
     </section>
   );
 }

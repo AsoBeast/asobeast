@@ -7,7 +7,8 @@ import { TrialNotifier } from './trial-notifier.service';
 
 const START = new Date('2026-08-01T00:00:00.000Z');
 const ENDS = new Date('2026-08-08T00:00:00.000Z');
-const DAY_MS = 24 * 60 * 60 * 1000;
+const HOUR_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * HOUR_MS;
 
 interface Row {
   id: string;
@@ -25,10 +26,17 @@ interface Row {
 }
 
 describe('TrialNotifier', () => {
-  const build = (billing: boolean, rows: Row[]) => {
+  const build = (
+    billing: boolean,
+    rows: Row[],
+    refused: { id: string }[] = [],
+  ) => {
     const notify = jest.fn().mockResolvedValue('delivered');
     const update = jest.fn().mockResolvedValue({});
-    const findMany = jest.fn().mockResolvedValue(rows);
+    const findMany = jest.fn(
+      (args: { where: { trialStartedAt?: unknown } }): Promise<unknown[]> =>
+        Promise.resolve(args.where.trialStartedAt ? rows : refused),
+    );
 
     const notifier = new TrialNotifier(
       { workspace: { findMany, update } } as unknown as PrismaService,
@@ -192,7 +200,9 @@ describe('TrialNotifier', () => {
     expect(mail.body[0]).toBe(
       'Your 7 day trial of Indie runs until 2026-08-08.',
     );
-    expect(mail.body.join(' ')).toContain('your card is charged $10 per month');
+    expect(mail.body.join(' ')).toContain(
+      'your card is charged $10 per month plus any VAT or sales tax, renewing monthly until you cancel',
+    );
   });
 
   it('notifies a legacy trial with the copy it started with', async () => {
@@ -207,12 +217,77 @@ describe('TrialNotifier', () => {
 
   it('tells a cancelled card trial that nothing is charged', async () => {
     const { notifier, notify } = build(true, [
-      cardTrial({ cancelAtPeriodEnd: true, trialNoticeDay: 5 }),
+      cardTrial({ cancelAtPeriodEnd: true, trialNoticeDay: 3 }),
     ]);
 
-    await notifier.sweep(at(7));
+    await notifier.sweep(new Date(ENDS.getTime() - 74 * HOUR_MS));
 
     expect(mailOf(notify)[2].body.join(' ')).toContain('nothing is charged');
+  });
+
+  it('sends the charge reminder 74 hours ahead and states the time left', async () => {
+    const { notifier, notify, update } = build(true, [
+      cardTrial({ trialNoticeDay: 3 }),
+    ]);
+
+    await notifier.sweep(new Date(ENDS.getTime() - 74 * HOUR_MS));
+
+    const [, event, mail] = notify.mock.calls[0] as [
+      string,
+      string,
+      { subject: string; body: string[] },
+    ];
+    expect(event).toBe('trial.day5');
+    expect(mail.subject).toBe('3 days left on your asobeast trial');
+    expect(mail.body[0]).toContain('plus any VAT or sales tax');
+    expect(update).toHaveBeenCalledWith({
+      where: { id: 'ws_1' },
+      data: { trialNoticeDay: 5 },
+    });
+  });
+
+  it('waits for stripe to report the end of a trial that is still trialing', async () => {
+    const { notifier, notify, update } = build(true, [
+      cardTrial({ trialNoticeDay: 5 }),
+    ]);
+
+    await expect(notifier.sweep(at(7))).resolves.toBe(0);
+    expect(notify).not.toHaveBeenCalled();
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it('emails a refused trial once and retries a failed send', async () => {
+    const { notifier, notify, update, findMany } = build(
+      true,
+      [],
+      [{ id: 'ws_refused' }],
+    );
+
+    await expect(notifier.sweep(START)).resolves.toBe(1);
+    expect(findMany).toHaveBeenCalledWith({
+      where: {
+        trialRefusedSubscriptionId: { not: null },
+        trialNoticeDay: null,
+        subscriptionId: null,
+      },
+      select: { id: true },
+    });
+    expect(notify).toHaveBeenCalledWith(
+      'ws_refused',
+      'trial.refused',
+      expect.objectContaining({
+        subject: 'Your asobeast free trial could not start',
+      }) as Record<string, unknown>,
+    );
+    expect(update).toHaveBeenCalledWith({
+      where: { id: 'ws_refused' },
+      data: { trialNoticeDay: 8 },
+    });
+
+    update.mockClear();
+    notify.mockResolvedValue('failed');
+    await expect(notifier.sweep(START)).resolves.toBe(0);
+    expect(update).not.toHaveBeenCalled();
   });
 
   it('skips day 8 for a workspace that is still entitled and records it', async () => {
@@ -220,7 +295,7 @@ describe('TrialNotifier', () => {
       cardTrial({
         subscriptionStatus: 'active',
         planExpiresAt: at(40),
-        trialNoticeDay: 7,
+        trialNoticeDay: 5,
       }),
     ]);
 
@@ -255,7 +330,7 @@ describe('TrialNotifier', () => {
       cardTrial({
         plan: 'free',
         subscriptionStatus: 'canceled',
-        trialNoticeDay: 7,
+        trialNoticeDay: 5,
       }),
     ]);
 

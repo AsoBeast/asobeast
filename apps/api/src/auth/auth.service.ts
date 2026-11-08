@@ -40,6 +40,7 @@ import { isEntitled } from './entitlement';
 import type { ChangePasswordDto } from './dto/change-password.dto';
 import type { RegisterDto } from './dto/register.dto';
 import { SignupCapacityGate } from './signup-capacity.gate';
+import { termsAcceptance } from './terms-acceptance';
 import { lockRegistration } from './registration-lock';
 import type { LoginDto } from './dto/login.dto';
 
@@ -112,6 +113,7 @@ export class AuthService {
           passwordHash,
           name: dto.name ?? null,
           role: bootstrap || ownWorkspace ? 'owner' : 'member',
+          ...termsAcceptance(this.billing),
         },
         include: { workspace: true },
       });

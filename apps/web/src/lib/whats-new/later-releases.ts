@@ -3,7 +3,7 @@ import type { Release } from "./release-notes";
 export const LATER_RELEASES: readonly Release[] = [
   {
     version: "1.17.0",
-    date: "2026-11-07",
+    date: "2026-11-08",
     title: "A calmer, sharper look",
     summary:
       "Every page in AsoBeast has a new typeface, warmer colours and quieter panels.",
@@ -12,6 +12,40 @@ export const LATER_RELEASES: readonly Release[] = [
         kind: "improved",
         title: "A calmer, sharper look",
         text: "AsoBeast has a new typeface, warmer neutral colours and flatter panels with fine borders. Numbers line up in columns, labels are easier to read, and the brand orange is kept for the main action on each page.",
+      },
+    ],
+  },
+  {
+    version: "1.16.1",
+    date: "2026-11-08",
+    title: "Clearer sign up and billing",
+    summary:
+      "Signing up and paying now say exactly what you agree to and what you will be charged, and a trial that cannot run never costs you anything.",
+    changes: [
+      {
+        kind: "improved",
+        title: "Terms at sign up",
+        text: "Creating an account now names the Terms of Service and the Privacy Policy, and both are linked from the sidebar and the plan page.",
+      },
+      {
+        kind: "improved",
+        title: "What you pay, stated in full",
+        text: "The plan page and the trial emails now state the price, the billing period, that tax is added and that the plan renews until you cancel.",
+      },
+      {
+        kind: "fixed",
+        title: "No charge when a trial cannot start",
+        text: "A card or email that already had a free trial is no longer charged by surprise. The trial is cancelled, nothing is charged, and you are told why and offered a plan.",
+      },
+      {
+        kind: "fixed",
+        title: "A reminder three days before the first charge",
+        text: "The reminder before your first charge now arrives at least three days ahead, and its subject says how long is left.",
+      },
+      {
+        kind: "fixed",
+        title: "Deleting a workspace stops the next charge",
+        text: "Asking to delete a workspace now stops any further charge on a paid plan as well as on a trial, and cancelling the deletion starts the renewal again.",
       },
     ],
   },

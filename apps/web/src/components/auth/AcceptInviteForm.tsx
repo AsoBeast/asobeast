@@ -19,10 +19,11 @@ import { Label } from "@/components/ui/label";
 import { ApiError, acceptInvite } from "@/lib/api";
 import { passwordError } from "@/lib/password";
 import { useSingleFlight } from "@/lib/single-flight";
+import { LegalConsent } from "./LegalConsent";
 import { SessionNotKeptAlert } from "./SessionNotKeptAlert";
 import { useSessionEntry } from "./use-session-entry";
 
-export function AcceptInviteForm() {
+export function AcceptInviteForm({ billing }: { billing: boolean }) {
   const token = useSearchParams().get("token") ?? "";
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
@@ -141,6 +142,7 @@ export function AcceptInviteForm() {
               {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
               Accept invitation
             </Button>
+            {billing ? <LegalConsent /> : null}
           </form>
         </CardContent>
       </Card>

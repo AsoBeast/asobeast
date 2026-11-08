@@ -17,15 +17,18 @@ import { AiGateway } from '../ai/ai-gateway.service';
 import { Env } from '../config/env';
 import { QuotaService } from './quota.service';
 import { isEntitled, type WorkspaceEntitlement } from './entitlement';
+import { heldPlanOf, type HeldPlanSource } from './entry-step';
 
-type WorkspacePlan = WorkspaceEntitlement & {
-  billingCustomerId: string | null;
-  subscriptionId: string | null;
-  subscriptionStatus: string | null;
-  cancelAtPeriodEnd: boolean;
-  billingInterval: string | null;
-  firstPaidAt: Date | null;
-};
+type WorkspacePlan = WorkspaceEntitlement &
+  HeldPlanSource & {
+    billingCustomerId: string | null;
+    subscriptionId: string | null;
+    subscriptionStatus: string | null;
+    cancelAtPeriodEnd: boolean;
+    billingInterval: string | null;
+    firstPaidAt: Date | null;
+    trialRefusedSubscriptionId: string | null;
+  };
 
 @Injectable()
 export class AccountPlanService {
@@ -63,6 +66,9 @@ export class AccountPlanService {
         workspace.subscriptionStatus === 'past_due' &&
         workspace.firstPaidAt === null,
       ...(billing ? { trialOffer: offer } : {}),
+      ...(billing && refusedTrialStands(workspace)
+        ? { trialRefused: true }
+        : {}),
       billingInterval: billingIntervalOf(workspace.billingInterval),
       cancelAtPeriodEnd: workspace.cancelAtPeriodEnd,
       trialEndsAt: workspace.trialEndsAt?.toISOString() ?? null,
@@ -80,4 +86,10 @@ export class AccountPlanService {
       },
     };
   }
+}
+
+function refusedTrialStands(workspace: WorkspacePlan): boolean {
+  return (
+    workspace.trialRefusedSubscriptionId !== null && !heldPlanOf(workspace)
+  );
 }

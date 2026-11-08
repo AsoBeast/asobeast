@@ -12,11 +12,17 @@ export function useLeaveFor(
 ): boolean {
   const hydrated = useHydrated();
   const { data: status } = useQuery(authStatusOptions);
-  const { data: user } = useQuery({
+  const {
+    data: user,
+    isRefetchError,
+    fetchStatus,
+  } = useQuery({
     ...options,
     enabled: Boolean(status?.authenticated),
   });
-  const destination = hydrated && user ? destinationOf(user) : null;
+  const answerIsCurrent = !isRefetchError && fetchStatus === "idle";
+  const destination =
+    hydrated && user && answerIsCurrent ? destinationOf(user) : null;
   const left = useRef(false);
 
   useEffect(() => {

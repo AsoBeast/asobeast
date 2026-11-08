@@ -4,7 +4,7 @@ import {
   CHECKOUT_UNCONFIGURED,
   HANDLED_BY_STRIPE,
   PAYMENT_CONFIRMING,
-  SOLD_THROUGH_LINK,
+  HANDLED_BY_LINK,
   confirmEmailParts,
   featuresTitle,
   memberPlanLine,
@@ -24,6 +24,7 @@ import {
   trustLines,
   paywallHeading,
   paywallStatusLine,
+  TRIAL_REFUSED,
   suspensionNotice,
   trialBannerLine,
   trialEndsOn,
@@ -127,6 +128,12 @@ describe("planActionLabel", () => {
 });
 
 describe("paywallStatusLine", () => {
+  it("tells a refused trial why it did not start, ahead of everything else", () => {
+    const refused = planOf({ trialOffer: null, trialRefused: true });
+
+    expect(paywallStatusLine(refused, CLOCK)).toBe(TRIAL_REFUSED);
+  });
+
   it("asks a fresh workspace to choose", () => {
     expect(paywallStatusLine(undefined, CLOCK)).toContain("Choose a plan");
   });
@@ -274,7 +281,7 @@ describe("a trial offered on the wall", () => {
   });
 
   it("names the zero charge, the end date and how to cancel", () => {
-    const line = `Pay $0 today. Your trial ends on ${ENDS_ON}, then the plan you choose is charged. Cancel any time from settings.`;
+    const line = `Pay $0 today. Your trial ends on ${ENDS_ON}, then the plan you choose is charged, plus any VAT or sales tax, and renews until you cancel. Cancel any time from settings.`;
 
     expect(paywallStatusLine(offered, CLOCK)).toBe(line);
   });
@@ -382,13 +389,16 @@ describe("paymentNote", () => {
     ...over,
   });
 
-  it("names link as the reseller and the tax line under managed payments", () => {
+  it("names link as the merchant of record, never a seller, and the tax line under managed payments", () => {
     expect(paymentNote(catalogOf({ managedPayments: true }))).toBe(
-      SOLD_THROUGH_LINK,
+      HANDLED_BY_LINK,
     );
-    expect(SOLD_THROUGH_LINK).toContain("Link");
-    expect(SOLD_THROUGH_LINK).toContain("VAT");
-    expect(SOLD_THROUGH_LINK).toContain("local currency");
+    expect(HANDLED_BY_LINK).toContain(
+      "Link, a Stripe affiliate and the merchant of record",
+    );
+    expect(HANDLED_BY_LINK).not.toMatch(/reseller|seller of record/);
+    expect(HANDLED_BY_LINK).toContain("VAT");
+    expect(HANDLED_BY_LINK).toContain("local currency");
   });
 
   it("keeps today's sentence when this business sells", () => {
