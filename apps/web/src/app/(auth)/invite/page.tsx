@@ -1,10 +1,13 @@
 import { Suspense } from "react";
 import { AcceptInviteForm } from "@/components/auth/AcceptInviteForm";
+import { getAuthStatus } from "@/lib/api";
 
-export default function InvitePage() {
+export default async function InvitePage() {
+  const { billing } = await getAuthStatus();
+
   return (
     <Suspense>
-      <AcceptInviteForm />
+      <AcceptInviteForm billing={billing} />
     </Suspense>
   );
 }

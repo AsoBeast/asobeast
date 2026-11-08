@@ -9,7 +9,7 @@ import { useAuth } from "./use-auth";
 import { useSignedOutRedirect } from "./use-signed-out-redirect";
 
 export function UpgradeContent() {
-  const { user, isLoading, isMember, authenticated } = useAuth();
+  const { user, status, isLoading, isMember, authenticated } = useAuth();
   const signedOut = useSignedOutRedirect(true);
   const { data: plan, isPending: planPending } = useQuery({
     ...accountPlanOptions,
@@ -29,5 +29,12 @@ export function UpgradeContent() {
     );
   }
 
-  return <BillingWall user={user} plan={plan} catalog={catalog} />;
+  return (
+    <BillingWall
+      user={user}
+      plan={plan}
+      catalog={catalog}
+      billing={status?.billing === true}
+    />
+  );
 }

@@ -53,7 +53,7 @@ test.describe("the billing wall", () => {
     const endsOn = formatDate(new Date(Date.now() + 7 * DAY_MS).toISOString());
     await expect(
       page.getByText(
-        `Pay $0 today. Your trial ends on ${endsOn}, then the plan you choose is charged. Cancel any time from settings.`,
+        `Pay $0 today. Your trial ends on ${endsOn}, then the plan you choose is charged, plus any VAT or sales tax, and renews until you cancel. Cancel any time from settings.`,
       ),
     ).toBeVisible();
     for (const line of trustLines({ days: 7 }, utcClock())) {
@@ -618,7 +618,11 @@ test.describe("the billing wall", () => {
     await seedViewer(context, "checkout-pending");
     await seedSession(page);
     await openBilling(page);
-    const items = paywallFaq({ days: 7 }, "$10 per month", utcClock());
+    const items = paywallFaq(
+      { days: 7 },
+      "$10 per month plus any VAT or sales tax, renewing monthly until you cancel",
+      utcClock(),
+    );
 
     await page.goto("/upgrade");
 
@@ -1062,7 +1066,7 @@ test.describe("the trial end in a time zone ahead of UTC", () => {
 
     await expect(
       page.getByRole("region", { name: "Order summary" }),
-    ).toContainText("Then $10.00 on Nov 14, 2026");
+    ).toContainText("From Nov 14, 2026: $10 per month");
     await expect(
       page.getByRole("region", { name: "Your trial" }),
     ).toContainText("ending Nov 14, 2026");
@@ -1073,7 +1077,7 @@ test.describe("the trial end in a time zone ahead of UTC", () => {
     await questions
       .getByRole("button", { name: "Will I be charged today?" })
       .click();
-    await expect(questions).toContainText("is charged on Nov 14, 2026");
+    await expect(questions).toContainText("From Nov 14, 2026: $10 per month");
     await expect(page.getByText(/Nov 13, 2026/)).toHaveCount(0);
   });
 });

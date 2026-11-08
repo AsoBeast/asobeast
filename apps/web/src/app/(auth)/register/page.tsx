@@ -10,7 +10,7 @@ export default async function RegisterPage() {
 
   return (
     <Suspense>
-      <RegisterForm />
+      <RegisterForm billing={status.billing} />
     </Suspense>
   );
 }

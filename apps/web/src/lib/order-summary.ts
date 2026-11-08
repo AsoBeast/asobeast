@@ -1,5 +1,6 @@
 import {
   PLANS,
+  planRenewalTerms,
   type BillingInterval,
   type PaidPlanName,
   type TrialOffer,
@@ -25,7 +26,7 @@ export interface OrderSummaryModel {
   intervalLabel: string;
   unitAmount: string;
   dueToday: string;
-  thenLine: string | null;
+  thenLine: string;
   cancelLine: string;
 }
 
@@ -41,14 +42,15 @@ export function summaryFromCatalog(
   clock: ViewerClock,
 ): OrderSummaryModel {
   const unitAmount = formatUsd(priceOf(name, interval));
+  const renewalTerms = planRenewalTerms(name, interval);
   return {
     planName: PLANS[name].displayName,
     intervalLabel: INTERVAL_LABEL[interval],
     unitAmount,
     dueToday: offer ? formatUsd(0) : unitAmount,
     thenLine: offer
-      ? `Then ${unitAmount} on ${trialEndLabel(offer, clock)}`
-      : null,
+      ? `From ${trialEndLabel(offer, clock)}: ${renewalTerms}.`
+      : `Then ${renewalTerms}.`,
     cancelLine: offer
       ? `${CANCEL_ANY_TIME} ${NOTHING_BEFORE_THE_DATE}`
       : CANCEL_ANY_TIME,

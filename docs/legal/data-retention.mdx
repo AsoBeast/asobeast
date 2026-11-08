@@ -58,10 +58,10 @@ Deletion is confirmed, delayed and reversible. An immediate irreversible delete 
     As the workspace owner, open **Settings**, go to **Workspace** and press **Delete workspace**. The dialog enables its action only once you type `DELETE`. From the API, send `POST /account/deletion` with `{"confirm":"DELETE"}`. Anything other than the literal `DELETE` is refused. The workspace of the platform operator answers `409 Conflict` while other accounts exist, as [Deleting the operator workspace](/security/admin-surfaces#deleting-the-operator-workspace) explains.
   </Step>
   <Step title="Nothing happens yet">
-    The workspace keeps running for the grace period, seven days by default and set by `ACCOUNT_DELETION_GRACE_DAYS`. Every member sees a banner on every page naming the earliest erasure date, and **Settings** shows who asked and when. `GET /account/deletion` reports the same.
+    The workspace keeps running for the grace period, seven days by default and set by `ACCOUNT_DELETION_GRACE_DAYS`. The subscription is set to end with its period, so no further charge lands during the wait. Every member sees a banner on every page naming the earliest erasure date, and **Settings** shows who asked and when. `GET /account/deletion` reports the same.
   </Step>
   <Step title="Change your mind">
-    The owner presses **Cancel deletion** in **Settings**, or sends `DELETE /account/deletion`. Nothing was removed, so nothing needs restoring. A member sees the status but cannot cancel it. Once the retention run has started releasing the workspace at Stripe, cancelling answers `409 Conflict`: the subscription may already be gone, so erasure finishes. If Stripe could not be reached, the run lets go and cancelling works again.
+    The owner presses **Cancel deletion** in **Settings**, or sends `DELETE /account/deletion`. Nothing was removed, so nothing needs restoring, and a subscription the deletion stopped renews again. A member sees the status but cannot cancel it. Once the retention run has started releasing the workspace at Stripe, cancelling answers `409 Conflict`: the subscription may already be gone, so erasure finishes. If Stripe could not be reached, the run lets go and cancelling works again.
   </Step>
   <Step title="Erasure">
     On the first retention run after the grace period ends, the workspace row is deleted and every tenant owned table cascades with it. The due date is therefore the earliest erasure, not an exact time. A workspace that pays is released at Stripe first: its Stripe customer is deleted, which cancels every subscription so nothing is charged again. If Stripe cannot be reached, the workspace waits for the next run rather than being erased while its subscription still bills.
@@ -88,7 +88,7 @@ Five things survive, deliberately, and pretending otherwise would be dishonest.
 
 Beyond the application:
 
-- **Your payment provider keeps its own records.** Stripe retains payment and invoice data under its own legal obligations, and we cannot delete what a subprocessor is required to keep. When a plan was sold through Link, Link keeps the receipt and invoice as the seller of record. Ask them directly.
+- **Your payment provider keeps its own records.** Stripe retains payment and invoice data under its own legal obligations, and we cannot delete what a subprocessor is required to keep. When a plan was paid through Link, Link keeps the receipt and invoice as the merchant of record. Ask them directly.
 - **Backups contain deleted data until they rotate.** This is the real deletion horizon and it is worth stating plainly: erasure removes your data from the live database immediately, and from backups after the backup retention window passes. The shipped schedule keeps 14 daily and 8 weekly archives, and the offsite copies default to the same window, so that window is 56 days. See [Backups](/operations/backups), which is where a deployment records its own window if it changed it.
 - **Server logs** carry workspace identifiers, never your keywords or listings, and rotate with the hosting platform.
 

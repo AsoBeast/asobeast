@@ -1284,12 +1284,14 @@ async function openUpgradeSoldBy(page: Page, managedPayments: boolean) {
   await page.goto("/upgrade");
 }
 
-test("the upgrade page names link as the reseller under managed payments", async ({
+test("the upgrade page names link as the merchant of record under managed payments", async ({
   page,
 }) => {
   await openUpgradeSoldBy(page, true);
 
-  await expect(page.getByText(/Sold through Link, our reseller/)).toBeVisible();
+  await expect(
+    page.getByText(/Payments are handled by Link, a Stripe affiliate/),
+  ).toBeVisible();
   await expect(page.getByText(/sales tax or VAT/)).toBeVisible();
   await expect(page.getByText(/Payments are handled by Stripe/)).toHaveCount(0);
 });

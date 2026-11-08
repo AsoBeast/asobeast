@@ -16,6 +16,7 @@ import { latestShown } from "@/lib/whats-new/release-notes";
 import { RELEASES } from "@/lib/whats-new/releases";
 import { appVersion, appVersionLabel, releaseNotesUrl } from "./app-version";
 import { AppSwitcher } from "./AppSwitcher";
+import { SidebarLegalLinks } from "./SidebarLegalLinks";
 import { SidebarNav } from "./SidebarNav";
 import { WhatsNewMenuItem } from "./WhatsNewMenuItem";
 
@@ -73,6 +74,7 @@ export function AppSidebar() {
           </SidebarMenu>
           <div className="px-2 pb-1 text-caption text-muted-foreground group-data-[collapsible=icon]:hidden">
             <p>Open source ASO toolkit for the App Store and Google Play.</p>
+            <SidebarLegalLinks />
             {version ? (
               <p>
                 <a
