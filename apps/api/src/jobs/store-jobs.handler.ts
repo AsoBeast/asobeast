@@ -56,8 +56,11 @@ export class StoreJobsHandler {
     await this.workspace.runScope(requireJobScope(job), async () => {
       if (!(await this.mayCollect(job))) return;
       const country = await this.targetCountry.of(job);
-      await this.egress.through(jobStore(job), country, () =>
-        this.dispatch(job),
+      await this.egress.through(
+        jobStore(job),
+        country,
+        () => this.dispatch(job),
+        { waitForLocal: job.name !== JOBS.SCORE_KEYWORD },
       );
     });
   }
