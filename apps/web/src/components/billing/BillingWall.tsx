@@ -40,10 +40,12 @@ export function BillingWall({
   user,
   plan: accountPlan,
   catalog,
+  billing,
 }: {
   user: AuthUser | undefined;
   plan: AccountPlan | undefined;
   catalog: BillingCatalog | undefined;
+  billing: boolean;
 }) {
   const [selected, setSelected] = useQueryState(
     "plan",
@@ -94,6 +96,7 @@ export function BillingWall({
           price={price}
           publishableKey={publishableKey}
           clock={clock}
+          billing={billing}
         />
       </div>
       <PaywallFaq
