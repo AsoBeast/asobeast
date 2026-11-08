@@ -10,6 +10,7 @@ import {
   SUPPORT_EMAIL,
 } from "@asobeast/shared";
 import { Lock } from "lucide-react";
+import { LegalLinks } from "@/components/layout/LegalLinks";
 import { Skeleton } from "@/components/ui/skeleton";
 import { sessionKeyOf } from "@/lib/embedded-checkout";
 import { INTERVAL_LABEL, summaryFromCatalog } from "@/lib/order-summary";
@@ -88,6 +89,7 @@ export function PaymentColumn({
         </a>
         .
       </p>
+      {plan?.billing ? <LegalLinks /> : null}
     </section>
   );
 }

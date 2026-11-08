@@ -26,11 +26,12 @@ import {
   type AuthFieldError,
 } from "./field-error";
 import { FieldErrorMessage } from "./FieldErrorMessage";
+import { LegalConsent } from "./LegalConsent";
 import { SessionNotKeptAlert } from "./SessionNotKeptAlert";
 import { useSessionEntry } from "./use-session-entry";
 import { useSingleFlight } from "@/lib/single-flight";
 
-export function RegisterForm() {
+export function RegisterForm({ billing }: { billing: boolean }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -138,6 +139,7 @@ export function RegisterForm() {
               {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
               Create account
             </Button>
+            {billing ? <LegalConsent /> : null}
           </form>
         </CardContent>
       </Card>

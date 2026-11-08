@@ -29,7 +29,7 @@ import {
 import { StripeService } from './stripe.service';
 import { effectOf } from './subscription-status';
 import { FirstPayment } from './first-payment';
-import { TrialStarts } from './trial-starts';
+import { TrialStarts, isRefusedTrial, notRefusedTrial } from './trial-starts';
 import { belongsToWorkspace } from './workspace-link';
 
 const RECONCILE_JUSTIFICATION =
@@ -167,33 +167,14 @@ export class BillingReconciler {
     workspace: Workspace,
     subscription: Stripe.Subscription,
   ): Promise<boolean> {
+    if (isRefusedTrial(workspace, subscription)) return false;
     const drifted = await this.align(workspace, subscription, (desired) =>
       this.logger.error(
         `workspace ${workspace.id} drifted from Stripe: local ${workspace.plan}/${workspace.subscriptionStatus ?? 'none'}, Stripe ${desired.plan}/${desired.status}`,
       ),
     );
     const settlement = await this.trialStarts.settle(workspace, subscription);
-    if (settlement.outcome !== 'ended') return drifted;
-    const ended = await this.alignEndedTrial(
-      workspace.id,
-      settlement.subscription,
-    );
-    return drifted || ended;
-  }
-
-  private async alignEndedTrial(
-    workspaceId: string,
-    subscription: Stripe.Subscription,
-  ): Promise<boolean> {
-    const workspace = await this.prisma.workspace.findUnique({
-      where: { id: workspaceId },
-    });
-    if (!workspace) return false;
-    return this.align(workspace, subscription, (desired) =>
-      this.logger.warn(
-        `workspace ${workspaceId} lost a trial claim, so it now holds subscription ${subscription.id} as ${desired.plan}/${desired.status}`,
-      ),
-    );
+    return drifted || settlement.outcome === 'refused';
   }
 
   private async align(
@@ -213,8 +194,8 @@ export class BillingReconciler {
     workspace: Workspace,
     desired: SubscriptionState,
   ): Promise<void> {
-    await this.prisma.workspace.update({
-      where: { id: workspace.id },
+    await this.prisma.workspace.updateMany({
+      where: { id: workspace.id, ...notRefusedTrial(desired.subscriptionId) },
       data: projectionOf(desired, workspace, new Date()),
     });
   }

@@ -21,11 +21,17 @@ export interface StripeApi {
       'create' | 'retrieve' | 'expire'
     >;
   };
-  subscriptions: Pick<Stripe['subscriptions'], 'list' | 'retrieve' | 'update'>;
+  subscriptions: Pick<
+    Stripe['subscriptions'],
+    'list' | 'retrieve' | 'update' | 'cancel'
+  >;
   paymentMethods: Pick<Stripe['paymentMethods'], 'retrieve'>;
   invoices: Pick<Stripe['invoices'], 'retrieve'>;
   prices: Pick<Stripe['prices'], 'list'>;
-  subscriptionSchedules: Pick<Stripe['subscriptionSchedules'], 'retrieve'>;
+  subscriptionSchedules: Pick<
+    Stripe['subscriptionSchedules'],
+    'retrieve' | 'release'
+  >;
   billingPortal: {
     sessions: Pick<Stripe['billingPortal']['sessions'], 'create'>;
   };

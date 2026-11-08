@@ -21,6 +21,10 @@ export interface FakeStripe extends StripeApi {
   subscriptionUpdates: Recorded<
     { id: string } & Stripe.SubscriptionUpdateParams
   >[];
+  subscriptionCancels: Recorded<
+    { id: string } & Stripe.SubscriptionCancelParams
+  >[];
+  releasedSchedules: string[];
   paymentMethodStore: Map<string, Stripe.PaymentMethod>;
   invoiceStore: Map<string, Stripe.Invoice>;
   priceStore: Map<string, Stripe.Price>;
@@ -248,6 +252,8 @@ export function fakeStripe(): FakeStripe {
     sessions: new Map(),
     subscriptionStore: new Map(),
     subscriptionUpdates: [],
+    subscriptionCancels: [],
+    releasedSchedules: [],
     paymentMethodStore: new Map(),
     invoiceStore: new Map(),
     priceStore: new Map(),
@@ -359,6 +365,20 @@ export function fakeStripe(): FakeStripe {
         fake.subscriptionStore.set(id, updated);
         return respond(updated);
       },
+      cancel: async (id, params = {}, options) => {
+        const stored = await found(fake.subscriptionStore, 'subscription', id);
+        fake.subscriptionCancels.push({
+          params: { id, ...params },
+          idempotencyKey: options?.idempotencyKey,
+        });
+        const cancelled: Stripe.Subscription = {
+          ...stored,
+          status: 'canceled',
+          ended_at: Math.floor(Date.now() / 1000),
+        };
+        fake.subscriptionStore.set(id, cancelled);
+        return respond(cancelled);
+      },
     },
 
     paymentMethods: {
@@ -383,6 +403,15 @@ export function fakeStripe(): FakeStripe {
 
     subscriptionSchedules: {
       retrieve: (id) => found(fake.schedules, 'subscription_schedule', id),
+      release: async (id) => {
+        const schedule = await found(
+          fake.schedules,
+          'subscription_schedule',
+          id,
+        );
+        fake.releasedSchedules.push(id);
+        return respond(schedule);
+      },
     },
 
     billingPortal: {
@@ -417,6 +446,8 @@ export function fakeStripe(): FakeStripe {
       fake.sessions.clear();
       fake.subscriptionStore.clear();
       fake.subscriptionUpdates.length = 0;
+      fake.subscriptionCancels.length = 0;
+      fake.releasedSchedules.length = 0;
       fake.paymentMethodStore.clear();
       fake.invoiceStore.clear();
       fake.priceStore.clear();

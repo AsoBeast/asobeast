@@ -238,7 +238,7 @@ export const EnvSchema = z.object({
   STRIPE_PRICE_ULTIMATE_MONTHLY: optionalText,
   STRIPE_PRICE_ULTIMATE_YEARLY: optionalText,
   CRON_BILLING_RECONCILE: cronPattern('0 7 * * *'),
-  CRON_TRIAL_NOTICES: cronPattern('0 9 * * *'),
+  CRON_TRIAL_NOTICES: cronPattern('0 * * * *'),
   BILLING_ENABLED: z
     .enum(['true', 'false'])
     .default('false')

@@ -84,6 +84,7 @@ model Workspace {
   subscriptionEventAt    DateTime?
   cancelAtPeriodEnd      Boolean                 @default(false)
   trialClaimedAt         DateTime?
+  trialRefusedSubscriptionId String?
   firstPaidAt            DateTime?
   billingInterval        String?
   pendingPlan            String?
@@ -95,6 +96,7 @@ model Workspace {
   deletionRequestedAt    DateTime?
   deletionRequestedBy    String?
   deletionDueAt          DateTime?
+  deletionStoppedRenewal Boolean @default(false)
   erasureClaimedAt       DateTime?
   checklistGoal          String?
   checklistDismissedAt   DateTime?
@@ -117,6 +119,8 @@ model User {
   resetHash             String?           @unique
   resetExpiresAt        DateTime?
   sessionVersion        Int               @default(0)
+  termsAcceptedAt       DateTime?
+  termsVersion          String?
   tokens                ApiToken[]
   sessions              Session[]
   actionEvents          ActionEvent[]

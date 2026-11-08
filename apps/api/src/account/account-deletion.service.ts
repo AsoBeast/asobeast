@@ -6,10 +6,12 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { User } from '@prisma/client';
+import type Stripe from 'stripe';
 import {
   DELETION_CONFIRMATION,
   type WorkspaceDeletionStatus,
 } from '@asobeast/shared';
+import { scheduleIdOf } from '../billing/scheduled-plan';
 import { isMissingResource, reasonOf } from '../billing/stripe-errors';
 import { StripeService } from '../billing/stripe.service';
 import { lockRegistration } from '../auth/registration-lock';
@@ -31,11 +33,29 @@ const OPERATOR_SURVIVAL_JUSTIFICATION =
 export const OPERATOR_WORKSPACE_DELETION_REFUSED =
   'This workspace holds the platform operator, so it cannot be deleted while other accounts exist. Deleting it would leave the instance without an operator.';
 
+const ERASURE_UNDER_WAY =
+  'This workspace is already being erased, so its deletion can no longer be cancelled';
+
 const NO_DELETION_SCHEDULED = {
   deletionRequestedAt: null,
   deletionRequestedBy: null,
   deletionDueAt: null,
+  deletionStoppedRenewal: false,
 };
+
+const RENEWING_STATUSES: ReadonlySet<Stripe.Subscription.Status> = new Set([
+  'trialing',
+  'active',
+  'past_due',
+]);
+
+function renews(subscription: Stripe.Subscription): boolean {
+  return RENEWING_STATUSES.has(subscription.status);
+}
+
+function endsWithItsPeriod(subscription: Stripe.Subscription): boolean {
+  return subscription.cancel_at_period_end || subscription.cancel_at !== null;
+}
 
 interface InstanceAccounts {
   user: {
@@ -107,7 +127,7 @@ export class AccountDeletionService {
     if (operatorWouldBeLost) {
       throw new ConflictException(OPERATOR_WORKSPACE_DELETION_REFUSED);
     }
-    await this.cancelRunningTrial(workspaceId, now);
+    const stoppedRenewal = await this.stopRenewal(workspaceId, now);
     const dueAt = new Date(now.getTime() + this.graceDays * DAY_MS);
     const workspace = await this.prisma.workspace.update({
       where: { id: workspaceId },
@@ -115,6 +135,7 @@ export class AccountDeletionService {
         deletionRequestedAt: now,
         deletionRequestedBy: actor.email,
         deletionDueAt: dueAt,
+        ...(stoppedRenewal ? { deletionStoppedRenewal: true } : {}),
       },
       select: {
         deletionRequestedAt: true,
@@ -128,47 +149,84 @@ export class AccountDeletionService {
     return this.toStatus(workspace);
   }
 
-  private async cancelRunningTrial(
+  private async stopRenewal(
     workspaceId: string,
     requestedAt: Date,
-  ): Promise<void> {
-    const subscription = await this.prisma.workspace.findUniqueOrThrow({
+  ): Promise<boolean> {
+    const { subscriptionId } = await this.prisma.workspace.findUniqueOrThrow({
       where: { id: workspaceId },
-      select: { subscriptionId: true, subscriptionStatus: true },
+      select: { subscriptionId: true },
     });
-    if (
-      subscription.subscriptionStatus !== 'trialing' ||
-      !subscription.subscriptionId
-    ) {
-      return;
-    }
+    if (!subscriptionId || !this.stripe.enabled) return false;
+    const subscription = await this.liveSubscription(subscriptionId);
+    if (!subscription || !renews(subscription)) return false;
+    if (endsWithItsPeriod(subscription)) return false;
+
+    const schedule = scheduleIdOf(subscription);
+    if (schedule) await this.stripe.releaseSchedule(schedule);
+    await this.stripe.cancelAtPeriodEnd(subscriptionId, requestedAt);
+    this.logger.warn(
+      `workspace ${workspaceId} scheduled its deletion, so subscription ${subscriptionId} now ends with its period and charges nothing more`,
+    );
+    return true;
+  }
+
+  private async liveSubscription(
+    id: string,
+  ): Promise<Stripe.Subscription | null> {
     try {
-      await this.stripe.cancelAtPeriodEnd(
-        subscription.subscriptionId,
-        requestedAt,
-      );
+      return await this.stripe.retrieveSubscription(id);
     } catch (error) {
       if (!isMissingResource(error)) throw error;
-      this.logger.warn(
-        `workspace ${workspaceId} records trial subscription ${subscription.subscriptionId}, which stripe no longer holds; scheduling the deletion without cancelling it`,
-      );
-      return;
+      this.logger.warn(`stripe no longer holds subscription ${id}`);
+      return null;
     }
-    this.logger.warn(
-      `workspace ${workspaceId} scheduled its deletion during a trial, so subscription ${subscription.subscriptionId} now ends with the trial and charges nothing`,
+  }
+
+  private async restoreRenewal(
+    workspaceId: string,
+    subscriptionId: string,
+    requestedAt: Date,
+  ): Promise<void> {
+    const subscription = await this.liveSubscription(subscriptionId);
+    if (!subscription || !renews(subscription)) return;
+    await this.stripe.keepRenewing(subscriptionId, requestedAt);
+    this.logger.log(
+      `workspace ${workspaceId} cancelled its deletion, so subscription ${subscriptionId} renews again`,
     );
   }
 
   async cancel(): Promise<WorkspaceDeletionStatus> {
     const workspaceId = this.workspace.require('a deletion cancellation');
+    const scheduled = await this.prisma.workspace.findUniqueOrThrow({
+      where: { id: workspaceId },
+      select: {
+        subscriptionId: true,
+        deletionRequestedAt: true,
+        deletionStoppedRenewal: true,
+        erasureClaimedAt: true,
+      },
+    });
+    if (scheduled.erasureClaimedAt)
+      throw new ConflictException(ERASURE_UNDER_WAY);
+    if (
+      scheduled.deletionStoppedRenewal &&
+      scheduled.subscriptionId &&
+      scheduled.deletionRequestedAt &&
+      this.stripe.enabled
+    ) {
+      await this.restoreRenewal(
+        workspaceId,
+        scheduled.subscriptionId,
+        scheduled.deletionRequestedAt,
+      );
+    }
     const { count } = await this.prisma.workspace.updateMany({
       where: { id: workspaceId, erasureClaimedAt: null },
       data: NO_DELETION_SCHEDULED,
     });
     if (count === 0) {
-      throw new ConflictException(
-        'This workspace is already being erased, so its deletion can no longer be cancelled',
-      );
+      throw new ConflictException(ERASURE_UNDER_WAY);
     }
     this.logger.log(`workspace ${workspaceId} deletion cancelled`);
     return this.status();

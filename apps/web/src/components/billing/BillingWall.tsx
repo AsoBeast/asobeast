@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useQueryState } from "nuqs";
 import {
   PLANS,
-  planPriceLabel,
+  planRenewalTerms,
   type AccountPlan,
   type AuthUser,
   type BillingCatalog,
@@ -97,7 +97,7 @@ export function BillingWall({
         />
       </div>
       <PaywallFaq
-        items={paywallFaq(offer, planPriceLabel(selected, interval), clock)}
+        items={paywallFaq(offer, planRenewalTerms(selected, interval), clock)}
       />
       <TrialBar
         parts={trialParts}
