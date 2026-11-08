@@ -10,6 +10,7 @@ import type { Env } from '../config/env';
 type RawClient = Pick<PrismaClient, '$executeRaw'>;
 
 const SCOPED_QUERY_TIMEOUT_MS = 20_000;
+const FREE_CONNECTION_WAIT_MS = 10_000;
 const DISCONNECT_DEADLINE_MS = 2_000;
 
 const logger = new Logger('PrismaService');
@@ -27,6 +28,7 @@ function createPrismaClient(
 ) {
   const base = new PrismaClient({
     adapter: new PrismaPg({ connectionString }),
+    transactionOptions: { maxWait: FREE_CONNECTION_WAIT_MS },
   });
 
   return base.$extends({
