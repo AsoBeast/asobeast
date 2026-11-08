@@ -17,7 +17,7 @@ const WITHDRAWN = {
   deletionRequestedAt: null,
   deletionRequestedBy: null,
   deletionDueAt: null,
-  deletionStoppedRenewal: false,
+  deletionStoppedSubscriptionId: null,
   erasureClaimedAt: null,
 };
 const ACTOR = { email: 'owner@example.com' } as User;
@@ -223,6 +223,29 @@ describe('AccountDeletionService', () => {
       expect(prisma.user.count).not.toHaveBeenCalled();
     });
 
+    it('restores the renewal it stopped before it withdraws a due deletion', async () => {
+      scope.workspaceId = OPERATOR_WORKSPACE;
+      prisma.workspace.findMany.mockResolvedValue([{ id: OPERATOR_WORKSPACE }]);
+      prisma.user.count.mockResolvedValue(1);
+      prisma.workspace.findUniqueOrThrow.mockResolvedValue({
+        deletionRequestedAt: NOW,
+        deletionStoppedSubscriptionId: 'sub_live',
+        erasureClaimedAt: null,
+      });
+      stripe.retrieveSubscription.mockResolvedValue({
+        status: 'active',
+        cancel_at_period_end: true,
+      });
+      stripe.keepRenewing.mockResolvedValue({});
+
+      await service.eraseDue(NOW);
+
+      expect(stripe.keepRenewing).toHaveBeenCalledWith('sub_live', NOW);
+      expect(stripe.keepRenewing.mock.invocationCallOrder[0]).toBeLessThan(
+        prisma.workspace.update.mock.invocationCallOrder[0],
+      );
+    });
+
     it('cancels a due deletion without claiming it or asking stripe while accounts exist', async () => {
       const error = jest.spyOn(Logger.prototype, 'error').mockImplementation();
       prisma.user.count.mockResolvedValue(3);
@@ -375,7 +398,7 @@ describe('AccountDeletionService', () => {
         expect(prisma.workspace.update).toHaveBeenCalledWith(
           expect.objectContaining({
             data: expect.objectContaining({
-              deletionStoppedRenewal: true,
+              deletionStoppedSubscriptionId: 'sub_live',
             }) as Record<string, unknown>,
           }),
         );
@@ -407,7 +430,7 @@ describe('AccountDeletionService', () => {
         expect(prisma.workspace.update).toHaveBeenCalledWith(
           expect.objectContaining({
             data: expect.not.objectContaining({
-              deletionStoppedRenewal: true,
+              deletionStoppedSubscriptionId: 'sub_live',
             }) as Record<string, unknown>,
           }),
         );
@@ -490,9 +513,8 @@ describe('AccountDeletionService', () => {
     describe('when the owner cancels the deletion', () => {
       const scheduled = (over: Record<string, unknown> = {}) =>
         prisma.workspace.findUniqueOrThrow.mockResolvedValue({
-          subscriptionId: 'sub_live',
           deletionRequestedAt: NOW,
-          deletionStoppedRenewal: true,
+          deletionStoppedSubscriptionId: 'sub_live',
           erasureClaimedAt: null,
           deletionRequestedBy: null,
           deletionDueAt: null,
@@ -516,14 +538,14 @@ describe('AccountDeletionService', () => {
         expect(prisma.workspace.updateMany).toHaveBeenCalledWith(
           expect.objectContaining({
             data: expect.objectContaining({
-              deletionStoppedRenewal: false,
+              deletionStoppedSubscriptionId: null,
             }) as Record<string, unknown>,
           }),
         );
       });
 
       it('leaves alone a subscription the deletion did not stop', async () => {
-        scheduled({ deletionStoppedRenewal: false });
+        scheduled({ deletionStoppedSubscriptionId: null });
 
         await service.cancel();
 

@@ -40,7 +40,7 @@ const NO_DELETION_SCHEDULED = {
   deletionRequestedAt: null,
   deletionRequestedBy: null,
   deletionDueAt: null,
-  deletionStoppedRenewal: false,
+  deletionStoppedSubscriptionId: null,
 };
 
 const RENEWING_STATUSES: ReadonlySet<Stripe.Subscription.Status> = new Set([
@@ -127,7 +127,7 @@ export class AccountDeletionService {
     if (operatorWouldBeLost) {
       throw new ConflictException(OPERATOR_WORKSPACE_DELETION_REFUSED);
     }
-    const stoppedRenewal = await this.stopRenewal(workspaceId, now);
+    const stopped = await this.stopRenewal(workspaceId, now);
     const dueAt = new Date(now.getTime() + this.graceDays * DAY_MS);
     const workspace = await this.prisma.workspace
       .update({
@@ -136,7 +136,7 @@ export class AccountDeletionService {
           deletionRequestedAt: now,
           deletionRequestedBy: actor.email,
           deletionDueAt: dueAt,
-          ...(stoppedRenewal ? { deletionStoppedRenewal: true } : {}),
+          ...(stopped ? { deletionStoppedSubscriptionId: stopped } : {}),
         },
         select: {
           deletionRequestedAt: true,
@@ -145,11 +145,11 @@ export class AccountDeletionService {
         },
       })
       .catch(async (error: unknown) => {
-        if (stoppedRenewal) {
-          await this.restoreRenewal(workspaceId, stoppedRenewal, now).catch(
+        if (stopped) {
+          await this.restoreRenewal(workspaceId, stopped, now).catch(
             (restoreError: unknown) =>
               this.logger.error(
-                `workspace ${workspaceId} could not restore subscription ${stoppedRenewal} after its deletion request failed: ${reasonOf(restoreError)}`,
+                `workspace ${workspaceId} could not restore subscription ${stopped} after its deletion request failed: ${reasonOf(restoreError)}`,
               ),
           );
         }
@@ -195,6 +195,35 @@ export class AccountDeletionService {
     }
   }
 
+  private scheduledDeletion(workspaceId: string) {
+    return this.prisma.workspace.findUniqueOrThrow({
+      where: { id: workspaceId },
+      select: {
+        deletionRequestedAt: true,
+        deletionStoppedSubscriptionId: true,
+        erasureClaimedAt: true,
+      },
+    });
+  }
+
+  private async restoreStoppedRenewal(
+    workspaceId: string,
+    scheduled: {
+      deletionRequestedAt: Date | null;
+      deletionStoppedSubscriptionId: string | null;
+    },
+  ): Promise<void> {
+    const stopped = scheduled.deletionStoppedSubscriptionId;
+    if (!stopped || !scheduled.deletionRequestedAt || !this.stripe.enabled) {
+      return;
+    }
+    await this.restoreRenewal(
+      workspaceId,
+      stopped,
+      scheduled.deletionRequestedAt,
+    );
+  }
+
   private async restoreRenewal(
     workspaceId: string,
     subscriptionId: string,
@@ -211,29 +240,11 @@ export class AccountDeletionService {
 
   async cancel(): Promise<WorkspaceDeletionStatus> {
     const workspaceId = this.workspace.require('a deletion cancellation');
-    const scheduled = await this.prisma.workspace.findUniqueOrThrow({
-      where: { id: workspaceId },
-      select: {
-        subscriptionId: true,
-        deletionRequestedAt: true,
-        deletionStoppedRenewal: true,
-        erasureClaimedAt: true,
-      },
-    });
-    if (scheduled.erasureClaimedAt)
+    const scheduled = await this.scheduledDeletion(workspaceId);
+    if (scheduled.erasureClaimedAt) {
       throw new ConflictException(ERASURE_UNDER_WAY);
-    if (
-      scheduled.deletionStoppedRenewal &&
-      scheduled.subscriptionId &&
-      scheduled.deletionRequestedAt &&
-      this.stripe.enabled
-    ) {
-      await this.restoreRenewal(
-        workspaceId,
-        scheduled.subscriptionId,
-        scheduled.deletionRequestedAt,
-      );
     }
+    await this.restoreStoppedRenewal(workspaceId, scheduled);
     const { count } = await this.prisma.workspace.updateMany({
       where: { id: workspaceId, erasureClaimedAt: null },
       data: NO_DELETION_SCHEDULED,
@@ -264,6 +275,10 @@ export class AccountDeletionService {
 
   private async erase(workspaceId: string, now: Date): Promise<boolean> {
     if (await this.leavesAccountsWithoutOperator(workspaceId, this.prisma)) {
+      await this.restoreStoppedRenewal(
+        workspaceId,
+        await this.scheduledDeletion(workspaceId),
+      );
       return this.withdraw(workspaceId, this.prisma);
     }
     const claimed = await this.claim(workspaceId, now);

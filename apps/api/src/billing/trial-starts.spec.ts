@@ -197,10 +197,36 @@ describe('TrialStarts', () => {
     claim.mockResolvedValue(false);
 
     await expect(
-      starts().settle(WORKSPACE, trialing({ status: 'canceled' })),
+      starts().settle(
+        WORKSPACE,
+        trialing({
+          status: 'canceled',
+          ended_at: 1_800_000_160,
+          trial_end: 1_800_600_000,
+        }),
+      ),
     ).resolves.toEqual({ outcome: 'refused' });
     expect(cancelRefusedTrial).not.toHaveBeenCalled();
     expect(settled.at).not.toBeNull();
+  });
+
+  it('never refuses a subscription that ended after its trial', async () => {
+    claim.mockResolvedValue(false);
+
+    await expect(
+      starts().settle(
+        WORKSPACE,
+        trialing({
+          status: 'canceled',
+          ended_at: 1_800_700_000,
+          trial_end: 1_800_600_000,
+        }),
+      ),
+    ).resolves.toEqual({ outcome: 'settled' });
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { id: 'ws_trial', trialClaimedAt: null },
+      data: { trialClaimedAt: expect.any(Date) as Date },
+    });
   });
 
   it('marks a lost trial that already left trialing without refusing it', async () => {

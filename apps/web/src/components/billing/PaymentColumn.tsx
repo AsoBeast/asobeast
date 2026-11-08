@@ -10,6 +10,7 @@ import {
   SUPPORT_EMAIL,
 } from "@asobeast/shared";
 import { Lock } from "lucide-react";
+import { useAuth } from "@/components/auth/use-auth";
 import { LegalLinks } from "@/components/layout/LegalLinks";
 import { Skeleton } from "@/components/ui/skeleton";
 import { sessionKeyOf } from "@/lib/embedded-checkout";
@@ -49,6 +50,7 @@ export function PaymentColumn({
 }) {
   const offer = action === "trial" ? plan?.trialOffer : null;
   const theme = useCheckoutTheme();
+  const { status } = useAuth();
 
   return (
     <section
@@ -89,7 +91,7 @@ export function PaymentColumn({
         </a>
         .
       </p>
-      {plan?.billing ? <LegalLinks /> : null}
+      {status?.billing ? <LegalLinks /> : null}
     </section>
   );
 }

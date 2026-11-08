@@ -108,10 +108,7 @@ export class TrialStarts {
   ): Promise<boolean> {
     if (lost.length === 0) return false;
     const which = lost.join(' and ');
-    if (
-      subscription.status !== 'trialing' &&
-      subscription.status !== 'canceled'
-    ) {
+    if (subscription.status !== 'trialing' && !endedInTrial(subscription)) {
       this.logger.warn(
         `workspace ${workspaceId} lost the ${which} claim of subscription ${subscription.id}, whose trial already ended`,
       );
@@ -151,6 +148,19 @@ export class TrialStarts {
       throw error;
     });
   }
+}
+
+function endedInTrial({
+  status,
+  ended_at,
+  trial_end,
+}: Stripe.Subscription): boolean {
+  return (
+    status === 'canceled' &&
+    ended_at !== null &&
+    trial_end !== null &&
+    ended_at < trial_end
+  );
 }
 
 function markSettled(tx: Prisma.TransactionClient, workspaceId: string) {

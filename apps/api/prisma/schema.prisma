@@ -96,7 +96,7 @@ model Workspace {
   deletionRequestedAt    DateTime?
   deletionRequestedBy    String?
   deletionDueAt          DateTime?
-  deletionStoppedRenewal Boolean @default(false)
+  deletionStoppedSubscriptionId String?
   erasureClaimedAt       DateTime?
   checklistGoal          String?
   checklistDismissedAt   DateTime?

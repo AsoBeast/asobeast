@@ -588,8 +588,17 @@ describe('Stripe webhooks', () => {
       await prisma.trialClaim.create({ data: { key: CARD } });
       await project('customer.subscription.trialing');
 
-      await deliver('customer.subscription.trialing');
+      const later = {
+        ...fixture('customer.subscription.trialing'),
+        id: 'evt_TestAfterRefusal',
+        created: Math.floor(Date.now() / 1000),
+      };
+      await send(later).expect(200);
+      await webhook.process(later.id);
 
+      await expect(
+        prisma.billingEvent.findUniqueOrThrow({ where: { id: later.id } }),
+      ).resolves.toMatchObject({ outcome: 'ignored' });
       expect(fake.subscriptionCancels).toHaveLength(1);
       await expectRefused();
     });
