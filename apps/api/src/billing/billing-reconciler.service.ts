@@ -194,10 +194,15 @@ export class BillingReconciler {
     workspace: Workspace,
     desired: SubscriptionState,
   ): Promise<void> {
-    await this.prisma.workspace.updateMany({
+    const { count } = await this.prisma.workspace.updateMany({
       where: { id: workspace.id, ...notRefusedTrial(desired.subscriptionId) },
       data: projectionOf(desired, workspace, new Date()),
     });
+    if (count === 0) {
+      this.logger.warn(
+        `workspace ${workspace.id} was not projected onto subscription ${desired.subscriptionId}, because its trial was refused or the row is gone`,
+      );
+    }
   }
 
   private async desiredSubscription(

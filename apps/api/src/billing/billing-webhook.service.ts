@@ -234,7 +234,7 @@ export class BillingWebhookService {
 
     if (isRefusedTrial(workspace, subscription)) {
       this.logger.log(
-        `stripe event ${event.id} names subscription ${subscription.id}, a trial workspace ${workspace.id} was refused`,
+        `stripe event ${event.id} names subscription ${subscription.id}, whose trial on workspace ${workspace.id} was refused, so it is ignored`,
       );
       return 'ignored';
     }

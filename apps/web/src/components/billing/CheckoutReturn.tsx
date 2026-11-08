@@ -33,7 +33,11 @@ function forgetCheckout(): void {
 
 function leaveForTheOwedStep(client: QueryClient): void {
   const user = client.getQueryData(authMeOptions.queryKey);
-  if (user?.entryStep) window.location.replace(entryDestination(user, null));
+  if (!user?.entryStep) return;
+  const destination = entryDestination(user, null);
+  if (window.location.pathname !== destination) {
+    window.location.replace(destination);
+  }
 }
 
 export function CheckoutReturn() {
