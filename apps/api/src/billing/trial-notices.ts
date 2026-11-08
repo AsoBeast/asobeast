@@ -44,7 +44,11 @@ function isDue(
 ): boolean {
   const at = now.getTime();
   if (day === CHARGE_REMINDER) {
-    return endsAt !== null && at >= endsAt.getTime() - CHARGE_REMINDER_LEAD_MS;
+    return (
+      endsAt !== null &&
+      endsAt.getTime() - startedAt.getTime() > CHARGE_REMINDER_LEAD_MS &&
+      at >= endsAt.getTime() - CHARGE_REMINDER_LEAD_MS
+    );
   }
   if (day === TRIAL_ENDED_NOTICE) {
     return endsAt !== null && at >= endsAt.getTime();

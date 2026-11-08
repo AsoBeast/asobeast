@@ -83,6 +83,17 @@ describe('dueTrialNotice', () => {
     expect(dueTrialNotice(fourteen, at(11))).toBe(CHARGE_REMINDER);
   });
 
+  it('welcomes a trial too short for the reminder and sends no reminder', () => {
+    const short = {
+      trialStartedAt: START,
+      trialEndsAt: at(3),
+      trialNoticeDay: null,
+    };
+
+    expect(dueTrialNotice(short, START)).toBe(0);
+    expect(dueTrialNotice({ ...short, trialNoticeDay: 0 }, at(1))).toBeNull();
+  });
+
   it('stops once the closing notice has gone out', () => {
     expect(dueTrialNotice(progress(TRIAL_ENDED_NOTICE), at(30))).toBeNull();
   });
