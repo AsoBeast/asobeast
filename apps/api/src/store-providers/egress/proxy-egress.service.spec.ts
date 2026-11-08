@@ -342,6 +342,25 @@ describe('ProxyEgress', () => {
     ).rejects.toBe(parse);
   });
 
+  it('still retries a blocked job on residential egress when its outcome cannot be recorded', async () => {
+    const blocked = new StoreRequestError(
+      Store.APP_STORE,
+      'search',
+      'HTTP 403 forbidden',
+    );
+    record.mockRejectedValue(new Error('database restarting'));
+    claim.mockResolvedValue({} as Dispatcher);
+    const work = jest
+      .fn<Promise<string>, []>()
+      .mockRejectedValueOnce(blocked)
+      .mockResolvedValue('via residential');
+
+    await expect(egress.through(Store.APP_STORE, 'us', work)).resolves.toBe(
+      'via residential',
+    );
+    expect(claim).toHaveBeenCalledTimes(1);
+  });
+
   it('never cools an endpoint down for a database timeout inside the job', async () => {
     const expired = new Prisma.PrismaClientKnownRequestError(
       'Transaction API error: A query cannot be executed on an expired transaction. The timeout for this transaction was 20000 ms',
