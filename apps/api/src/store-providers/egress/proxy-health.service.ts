@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma, ProxyOutcome, Store } from '@prisma/client';
 import { CrossTenantAccess } from '../../common/tenancy/cross-tenant-access';
+import { isDatabaseError } from '../../prisma/database-fault';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   ImplausibleResultError,
@@ -48,6 +49,7 @@ function rollWindow(current: HealthWindow | null, now: Date): HealthWindow {
 }
 
 export function outcomeOf(error: unknown): ProxyOutcome | null {
+  if (isDatabaseError(error)) return null;
   if (error instanceof ImplausibleResultError) {
     return error.retryable ? null : ProxyOutcome.SILENT;
   }

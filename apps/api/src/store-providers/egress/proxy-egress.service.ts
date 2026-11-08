@@ -70,6 +70,22 @@ export class ProxyEgress implements OnModuleInit {
   }
 
   private async settle(
+    lease: ProxyLease,
+    store: Store,
+    meter: EgressMeter,
+    thrown: unknown,
+  ): Promise<ProxyOutcome | null> {
+    try {
+      return await this.recordOutcome(lease, store, meter, thrown);
+    } catch (error) {
+      this.logger.warn(
+        `could not record the outcome of endpoint ${lease.endpointId}: ${String(error)}`,
+      );
+      return null;
+    }
+  }
+
+  private async recordOutcome(
     { endpointId, leasedAt }: ProxyLease,
     store: Store,
     meter: EgressMeter,
