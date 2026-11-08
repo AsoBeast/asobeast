@@ -9,6 +9,7 @@ const HOUR_MS = 60 * 60 * 1000;
 
 interface Options {
   dbUp?: boolean;
+  dbHangs?: boolean;
   redisUp?: boolean;
   lastRun?: string | null;
   appCount?: number;
@@ -22,6 +23,7 @@ interface Options {
 function build(options: Options = {}) {
   const {
     dbUp = true,
+    dbHangs = false,
     redisUp = true,
     lastRun = new Date().toISOString(),
     appCount = 1,
@@ -45,7 +47,9 @@ function build(options: Options = {}) {
       : jest.fn().mockRejectedValue(new Error('unreachable'));
 
   const prisma = {
-    $queryRaw: databaseCall([{ '?column?': 1 }]),
+    $queryRaw: dbHangs
+      ? jest.fn(() => new Promise(() => undefined))
+      : databaseCall([{ '?column?': 1 }]),
     app: { count: databaseCall(appCount) },
     actionItem: {
       aggregate: databaseCall({ _max: { lastSeenAt: actions.generatedAt } }),
@@ -176,6 +180,17 @@ describe('HealthController', () => {
       pipeline: null,
     });
     expect((error as DatabaseUnavailableError).retryAfterSeconds).toBe(5);
+  });
+
+  it('answers the database as down when every connection stays busy', async () => {
+    const startedAt = Date.now();
+
+    const error = await build({ dbHangs: true })
+      .check()
+      .catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(DatabaseUnavailableError);
+    expect(Date.now() - startedAt).toBeLessThan(3_000);
   });
 
   it('reports redis up and no pipeline when only the database is down', async () => {
