@@ -146,7 +146,12 @@ export class AccountDeletionService {
       })
       .catch(async (error: unknown) => {
         if (stoppedRenewal) {
-          await this.restoreRenewal(workspaceId, stoppedRenewal, now);
+          await this.restoreRenewal(workspaceId, stoppedRenewal, now).catch(
+            (restoreError: unknown) =>
+              this.logger.error(
+                `workspace ${workspaceId} could not restore subscription ${stoppedRenewal} after its deletion request failed: ${reasonOf(restoreError)}`,
+              ),
+          );
         }
         throw error;
       });
@@ -197,6 +202,7 @@ export class AccountDeletionService {
   ): Promise<void> {
     const subscription = await this.liveSubscription(subscriptionId);
     if (!subscription || !renews(subscription)) return;
+    if (!subscription.cancel_at_period_end) return;
     await this.stripe.keepRenewing(subscriptionId, requestedAt);
     this.logger.log(
       `workspace ${workspaceId} cancelled its deletion, so subscription ${subscriptionId} renews again`,

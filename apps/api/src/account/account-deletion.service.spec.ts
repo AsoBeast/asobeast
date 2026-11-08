@@ -454,12 +454,29 @@ describe('AccountDeletionService', () => {
 
     it('renews again when the schedule cannot be written', async () => {
       stripe.keepRenewing.mockResolvedValue({});
+      stripe.cancelAtPeriodEnd.mockImplementation(() => {
+        live({ cancel_at_period_end: true });
+        return Promise.resolve({});
+      });
       prisma.workspace.update.mockRejectedValueOnce(new Error('db is down'));
 
       await expect(service.request(ACTOR, 'DELETE', NOW)).rejects.toThrow(
         'db is down',
       );
       expect(stripe.keepRenewing).toHaveBeenCalledWith('sub_live', NOW);
+    });
+
+    it('answers the write failure even when the renewal cannot be restored', async () => {
+      stripe.keepRenewing.mockRejectedValue(new Error('stripe is down'));
+      stripe.cancelAtPeriodEnd.mockImplementation(() => {
+        live({ cancel_at_period_end: true });
+        return Promise.resolve({});
+      });
+      prisma.workspace.update.mockRejectedValueOnce(new Error('db is down'));
+
+      await expect(service.request(ACTOR, 'DELETE', NOW)).rejects.toThrow(
+        'db is down',
+      );
     });
 
     it('schedules the deletion when stripe no longer holds the subscription', async () => {
@@ -511,6 +528,14 @@ describe('AccountDeletionService', () => {
         await service.cancel();
 
         expect(stripe.retrieveSubscription).not.toHaveBeenCalled();
+        expect(stripe.keepRenewing).not.toHaveBeenCalled();
+      });
+
+      it('writes nothing when the subscription no longer ends with its period', async () => {
+        live({ cancel_at_period_end: false });
+
+        await service.cancel();
+
         expect(stripe.keepRenewing).not.toHaveBeenCalled();
       });
 

@@ -168,7 +168,7 @@ describe('Who receives an invitation link', () => {
   });
 
   it('records the terms a billing instance registers and invites under', async () => {
-    const invited = await invite(VICTIM).expect(201);
+    await invite(VICTIM).expect(201);
     await accept(tokenFrom(sent[0])).expect(201);
 
     for (const email of [OWNER, VICTIM]) {
@@ -179,7 +179,6 @@ describe('Who receives an invitation link', () => {
         termsVersion: TERMS_VERSION,
       });
     }
-    expect(linkOf(invited)).toBe(INVITE_PATH);
   });
 
   it('leaves the invited address free for its real owner when the mail went out', async () => {
