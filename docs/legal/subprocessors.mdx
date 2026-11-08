@@ -13,7 +13,7 @@ A subprocessor is a third party that processes data on our behalf. This page sta
 | Subprocessor | Purpose | What reaches it |
 | --- | --- | --- |
 | Hosting provider | Runs the application, the PostgreSQL database and the Redis queue | Everything the service stores, at rest and in transit inside the deployment |
-| Stripe and Link | Subscriptions, payments, the customer portal and, as reseller and merchant of record, tax collection, receipts and payment support | Your billing name, email and address, any tax id you enter, payment details you enter in Stripe's own interface, and a workspace identifier. **We never see or store card details**. Link uses what you give it at checkout under its own privacy policy, as the seller of record |
+| Stripe and Link | Subscriptions, payments, the customer portal and, as a Stripe affiliate and the merchant of record, tax collection, receipts and payment support | Your billing name, email and address, any tax id you enter, payment details you enter in Stripe's own interface, and a workspace identifier. **We never see or store card details**. Link uses what you give it at checkout under its own privacy policy, as the merchant of record |
 | Webshare | Datacenter network egress for store requests | The store request itself, which carries the keyword phrase and the storefront. No account data |
 | SMTP provider | Alert emails, email confirmation and billing notices | Recipient address and the message body, which can name your apps and keywords |
 | Object storage provider | Offsite backup archives | An encrypted database archive. The decryption key is not stored on the server that produced it and is never sent to the provider, so the provider holds ciphertext it cannot read |

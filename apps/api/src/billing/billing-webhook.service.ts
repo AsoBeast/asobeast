@@ -23,7 +23,7 @@ import { nextPhasePlan, scheduleIdOf } from './scheduled-plan';
 import type { SubscriptionStatus } from './subscription-status';
 import { projectionOf, stateFrom } from './subscription-state';
 import { FirstPayment } from './first-payment';
-import { TrialStarts } from './trial-starts';
+import { TrialStarts, isRefusedTrial, notRefusedTrial } from './trial-starts';
 import { StripeService } from './stripe.service';
 import {
   customerIdOfEvent,
@@ -232,6 +232,13 @@ export class BillingWebhookService {
       );
     }
 
+    if (isRefusedTrial(workspace, subscription)) {
+      this.logger.log(
+        `stripe event ${event.id} names subscription ${subscription.id}, whose trial on workspace ${workspace.id} was refused, so it is ignored`,
+      );
+      return 'ignored';
+    }
+
     const firstPaidAt = await this.firstPayment.record(workspace, subscription);
     const eventAt = new Date(event.created * 1000);
     if (
@@ -250,6 +257,7 @@ export class BillingWebhookService {
       where: {
         id: workspace.id,
         billingCustomerId: workspace.billingCustomerId,
+        ...notRefusedTrial(subscription.id),
       },
       data: {
         ...projectionOf(state, workspace, new Date()),
@@ -262,7 +270,7 @@ export class BillingWebhookService {
     });
     if (projected.count === 0) {
       throw new Error(
-        `workspace ${workspace.id} changed stripe customer while event ${event.id} was applied; retrying against the stored one`,
+        `workspace ${workspace.id} changed while event ${event.id} was applied; retrying against the stored row`,
       );
     }
     this.logger.log(

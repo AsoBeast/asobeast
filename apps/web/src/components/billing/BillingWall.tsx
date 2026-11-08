@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useQueryState } from "nuqs";
 import {
   PLANS,
-  planPriceLabel,
+  planRenewalTerms,
   type AccountPlan,
   type AuthUser,
   type BillingCatalog,
@@ -40,10 +40,12 @@ export function BillingWall({
   user,
   plan: accountPlan,
   catalog,
+  billing,
 }: {
   user: AuthUser | undefined;
   plan: AccountPlan | undefined;
   catalog: BillingCatalog | undefined;
+  billing: boolean;
 }) {
   const [selected, setSelected] = useQueryState(
     "plan",
@@ -94,10 +96,11 @@ export function BillingWall({
           price={price}
           publishableKey={publishableKey}
           clock={clock}
+          billing={billing}
         />
       </div>
       <PaywallFaq
-        items={paywallFaq(offer, planPriceLabel(selected, interval), clock)}
+        items={paywallFaq(offer, planRenewalTerms(selected, interval), clock)}
       />
       <TrialBar
         parts={trialParts}

@@ -196,7 +196,7 @@ See [Authentication and accounts](/security/authentication).
 | `STRIPE_PRICE_ULTIMATE_MONTHLY` | empty | No | Price id for Ultimate monthly. Empty resolves it from `asobeast_ultimate_month` |
 | `STRIPE_PRICE_ULTIMATE_YEARLY` | empty | No | Price id for Ultimate annual. Empty resolves it from `asobeast_ultimate_year` |
 | `CRON_BILLING_RECONCILE` | `0 7 * * *` | No | Daily reconciliation of local subscription state against Stripe, UTC |
-| `CRON_TRIAL_NOTICES` | `0 9 * * *` | No | Daily sweep that sends the trial milestone emails, which name the plan, the first charge and how to cancel, UTC |
+| `CRON_TRIAL_NOTICES` | `0 * * * *` | No | Hourly sweep that sends the trial emails, which name the plan, the first charge and how to cancel, so the reminder lands at least 72 hours before the charge. A daily value makes it late, UTC |
 | `AUTH_COOKIE_SECURE` | `false` | No | Marks the session cookie `Secure`. **Refuses to boot** when `false` and `NODE_ENV` is `production`. The Docker image sets `NODE_ENV=production`, so the Compose stack defaults this to `true` |
 | `TRUST_PROXY` | `0`, and `1` pinned in the Compose stack | No | How many proxies you control sit between the internet and the API, counting the web app as one. Compose pins it to `1` because the web app is always exactly one hop in front of the API there. `true` means 1 and `false` means 0. The API reads that many entries back from the right of `X-Forwarded-For`, so auth throttling keys on the real client address. Both apps warn at startup in production when `0`. See [Hosting](/security/hosting) |
 

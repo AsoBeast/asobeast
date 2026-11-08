@@ -104,6 +104,86 @@ test.describe("a checkout that started the trial", () => {
     ).toBeVisible();
     await expect(page).toHaveURL("http://localhost:3000/");
   });
+
+  test("stays on the dashboard when the account refresh fails", async ({
+    page,
+    context,
+  }) => {
+    await seedViewer(context, "checkout-pending");
+    await seedSession(page);
+    await openBilling(page, OFFERED_PLAN);
+    let reconciled = false;
+    let refreshFailed = false;
+    const accountLoaded = page.waitForResponse("**/api/backend/auth/me");
+    await page.route("**/api/backend/auth/me", async (route) => {
+      if (!reconciled || refreshFailed) return route.continue();
+      refreshFailed = true;
+      return route.abort("failed");
+    });
+    await page.route("**/api/backend/billing/reconcile", async (route) => {
+      await accountLoaded;
+      await seedViewer(context, "trialing");
+      reconciled = true;
+      await route.fulfill(
+        fulfillJson(200, {
+          checked: 1,
+          corrected: 1,
+          orphanSubscriptions: [],
+          unreconciled: [],
+        }),
+      );
+    });
+    await page.route("**/api/backend/auth/plan", (route) =>
+      route.fulfill(
+        fulfillJson(200, reconciled ? TRIALING_PLAN : OFFERED_PLAN),
+      ),
+    );
+
+    await page.goto("/?checkout=complete&session_id=cs_e2e");
+    await expect(page).toHaveURL("http://localhost:3000/");
+    await page.evaluate(() =>
+      window.dispatchEvent(new Event("visibilitychange")),
+    );
+
+    await expect(
+      page.getByText("Trial ends in 5 days, then Indie at $10 per month."),
+    ).toBeVisible();
+    await expect(page).toHaveURL("http://localhost:3000/");
+    expect(refreshFailed).toBe(true);
+  });
+
+  test("stays on the dashboard while the phone is offline", async ({
+    page,
+    context,
+  }) => {
+    await seedViewer(context, "checkout-pending");
+    await seedSession(page);
+    await openBilling(page, TRIALING_PLAN);
+    const accountLoaded = page.waitForResponse("**/api/backend/auth/me");
+    await page.route("**/api/backend/billing/reconcile", async (route) => {
+      await accountLoaded;
+      await seedViewer(context, "trialing");
+      await context.setOffline(true);
+      await route.fulfill(
+        fulfillJson(404, {
+          statusCode: 404,
+          error: "Not Found",
+          message: "Workspace not found",
+          path: "/billing/reconcile",
+          timestamp: new Date().toISOString(),
+        }),
+      );
+    });
+
+    await page.goto("/?checkout=complete&session_id=cs_e2e");
+    await expect(page).toHaveURL("http://localhost:3000/");
+    await context.setOffline(false);
+
+    await expect(
+      page.getByText("Trial ends in 5 days, then Indie at $10 per month."),
+    ).toBeVisible();
+    await expect(page).toHaveURL("http://localhost:3000/");
+  });
 });
 
 test.describe("an account that owes nothing", () => {

@@ -34,6 +34,17 @@ const workspaceOf = (over: Partial<Workspace> = {}): Workspace =>
     ...over,
   }) as Workspace;
 
+type RefusalBranch = {
+  trialRefusedSubscriptionId: string | null | { not: string };
+};
+
+const refusalMatches = (workspace: Workspace, branch: RefusalBranch) => {
+  const expected = branch.trialRefusedSubscriptionId;
+  return expected === null || typeof expected === 'string'
+    ? workspace.trialRefusedSubscriptionId === expected
+    : workspace.trialRefusedSubscriptionId !== expected.not;
+};
+
 const stripeErrorOf = (over: {
   type?: string;
   code?: string;
@@ -70,10 +81,17 @@ describe('BillingReconciler', () => {
   }) => {
     const rows = over.workspaces ?? [];
     const update = jest.fn(
-      (args: { where: Partial<Workspace>; data: Partial<Workspace> }) => {
+      (args: {
+        where: Partial<Workspace> & { OR?: RefusalBranch[] };
+        data: Partial<Workspace>;
+      }) => {
         const row = rows.find((workspace) =>
-          Object.entries(args.where).every(
-            ([key, value]) => workspace[key as keyof Workspace] === value,
+          Object.entries(args.where).every(([key, value]) =>
+            key === 'OR'
+              ? (value as RefusalBranch[]).some((branch) =>
+                  refusalMatches(workspace, branch),
+                )
+              : workspace[key as keyof Workspace] === value,
           ),
         );
         if (row) Object.assign(row, args.data);
@@ -245,88 +263,81 @@ describe('BillingReconciler', () => {
     );
   });
 
-  describe('a trial a lost claim ended', () => {
-    const ENDED_PERIOD_END = PERIOD_END + 3_600;
-    const ended = subscriptionOf({
-      status: 'active',
-      items: {
-        data: [
-          {
-            current_period_end: ENDED_PERIOD_END,
-            price: { id: 'price_indie_month' },
-          },
-        ],
-      },
-    });
-    const trialingRow = () => workspaceOf({ subscriptionStatus: 'trialing' });
-
-    it('is projected once the settlement ended it', async () => {
-      const { reconciler, settle, update, record } = build({
-        workspaces: [trialingRow()],
-        subscription: subscriptionOf({ status: 'trialing' }),
+  describe('a trial a lost claim refused', () => {
+    it('counts as a correction and is not projected again', async () => {
+      const { reconciler, settle, update } = build({
+        workspaces: [workspaceOf()],
       });
-      settle.mockResolvedValue({ outcome: 'ended', subscription: ended });
+      settle.mockResolvedValue({ outcome: 'refused' });
 
       await expect(reconciler.reconcile()).resolves.toMatchObject({
         corrected: 1,
       });
-
-      expect(update).toHaveBeenCalledTimes(1);
-      const [args] = update.mock.calls[0] as [
-        { data: Record<string, unknown> },
-      ];
-      expect(args.data).toMatchObject({
-        plan: 'indie',
-        subscriptionStatus: 'active',
-        planExpiresAt: new Date(ENDED_PERIOD_END * 1000),
-      });
-      expect(record).toHaveBeenLastCalledWith(
-        expect.objectContaining({ id: 'ws_1' }),
-        ended,
-      );
-    });
-
-    it('is compared with the row the first projection wrote', async () => {
-      const { reconciler, settle, update, rows } = build({
-        workspaces: [workspaceOf({ plan: 'ultimate' })],
-        subscription: subscriptionOf({ status: 'trialing' }),
-      });
-      settle.mockResolvedValue({ outcome: 'ended', subscription: ended });
-
-      await reconciler.reconcile();
-
-      expect(update).toHaveBeenCalledTimes(2);
-      expect(rows[0]).toMatchObject({
-        plan: 'indie',
-        subscriptionStatus: 'active',
-      });
-    });
-
-    it('writes nothing more when the row already agrees', async () => {
-      const { reconciler, settle, update } = build({
-        workspaces: [workspaceOf()],
-      });
-      settle.mockResolvedValue({
-        outcome: 'ended',
-        subscription: subscriptionOf(),
-      });
-
-      await expect(reconciler.reconcile()).resolves.toMatchObject({
-        corrected: 0,
-      });
       expect(update).not.toHaveBeenCalled();
     });
 
-    it('is not looked for after a settled trial', async () => {
-      const { reconciler, settle, findUnique } = build({
-        workspaces: [trialingRow()],
+    it('is never brought back once it was refused', async () => {
+      const { reconciler, settle, update, record, retrieveSubscription } =
+        build({
+          workspaces: [
+            workspaceOf({
+              plan: 'free',
+              subscriptionId: null,
+              subscriptionStatus: null,
+              trialRefusedSubscriptionId: 'sub_1',
+            }),
+          ],
+          subscription: subscriptionOf({ status: 'canceled' }),
+          session: { client_reference_id: 'ws_1', subscription: 'sub_1' },
+        });
+
+      await expect(
+        reconciler.reconcileOne('ws_1', 'cs_1'),
+      ).resolves.toMatchObject({ corrected: 0 });
+      expect(retrieveSubscription).toHaveBeenCalledWith('sub_1');
+      expect(update).not.toHaveBeenCalled();
+      expect(settle).not.toHaveBeenCalled();
+      expect(record).not.toHaveBeenCalled();
+    });
+
+    it('writes no projection over a refusal that landed meanwhile', async () => {
+      const { reconciler, record, rows } = build({
+        workspaces: [workspaceOf()],
         subscription: subscriptionOf({ status: 'trialing' }),
       });
-      settle.mockResolvedValue({ outcome: 'settled' });
+      record.mockImplementation(() => {
+        Object.assign(rows[0], {
+          plan: 'free',
+          subscriptionId: null,
+          subscriptionStatus: null,
+          trialRefusedSubscriptionId: 'sub_1',
+        });
+        return Promise.resolve(null);
+      });
 
       await reconciler.reconcile();
 
-      expect(findUnique).not.toHaveBeenCalled();
+      expect(rows[0]).toMatchObject({
+        plan: 'free',
+        subscriptionId: null,
+        trialRefusedSubscriptionId: 'sub_1',
+      });
+    });
+
+    it('still projects another subscription of a refused workspace', async () => {
+      const { reconciler, rows } = build({
+        workspaces: [
+          workspaceOf({
+            plan: 'free',
+            subscriptionStatus: 'canceled',
+            trialRefusedSubscriptionId: 'sub_refused',
+          }),
+        ],
+      });
+
+      await reconciler.reconcile();
+
+      expect(rows[0]).toMatchObject({ plan: 'indie' });
     });
   });
 

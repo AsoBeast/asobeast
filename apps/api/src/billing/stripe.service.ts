@@ -95,11 +95,11 @@ export class StripeService {
     return this.stripe.subscriptions.retrieve(id);
   }
 
-  endTrialNow(id: string): Promise<Stripe.Subscription> {
-    return this.stripe.subscriptions.update(
+  cancelRefusedTrial(id: string): Promise<Stripe.Subscription> {
+    return this.stripe.subscriptions.cancel(
       id,
-      { trial_end: 'now' },
-      { idempotencyKey: `trial-end:${id}` },
+      { invoice_now: false, prorate: false },
+      { idempotencyKey: `trial-refused:${id}` },
     );
   }
 
@@ -116,6 +116,18 @@ export class StripeService {
       { cancel_at_period_end: true },
       { idempotencyKey: `cancel-at-end:${id}:${requestedAt.getTime()}` },
     );
+  }
+
+  keepRenewing(id: string, requestedAt: Date): Promise<Stripe.Subscription> {
+    return this.stripe.subscriptions.update(
+      id,
+      { cancel_at_period_end: false },
+      { idempotencyKey: `keep-renewing:${id}:${requestedAt.getTime()}` },
+    );
+  }
+
+  releaseSchedule(id: string): Promise<Stripe.SubscriptionSchedule> {
+    return this.stripe.subscriptionSchedules.release(id);
   }
 
   retrieveInvoice(id: string): Promise<Stripe.Invoice> {

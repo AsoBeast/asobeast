@@ -25,6 +25,7 @@ import { sha256 } from './password-hash';
 import { PublicWebUrl } from './public-web-url';
 import type { AccountUser } from './auth.types';
 import { refuseSessionSwap } from './session-swap';
+import { termsAcceptance } from './terms-acceptance';
 import { MEMBER_ROLE, OWNER_ROLE, workspaceRoleOf } from './workspace-roles';
 
 const INVITE_DAYS = 7;
@@ -151,6 +152,7 @@ export class WorkspaceTeamService {
           passwordHash,
           name,
           role: workspaceRoleOf(invite.role),
+          ...termsAcceptance(this.auth.billing),
         },
         include: { workspace: true },
       });

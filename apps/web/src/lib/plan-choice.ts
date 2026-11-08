@@ -18,14 +18,17 @@ export type PlanAction =
 export const PAYMENT_CONFIRMING =
   "Your payment is being confirmed. This usually takes a minute; if it has not completed within a day the attempt expires and you can choose a plan again.";
 
-export const SOLD_THROUGH_LINK =
-  "Sold through Link, our reseller. Prices are in US dollars; checkout adds sales tax or VAT where it applies and can charge in your local currency. Cancel any time from settings.";
+export const HANDLED_BY_LINK =
+  "Payments are handled by Link, a Stripe affiliate and the merchant of record. Prices are in US dollars; checkout adds sales tax or VAT where it applies and can charge in your local currency. Cancel any time from settings.";
 
 export const HANDLED_BY_STRIPE =
   "Payments are handled by Stripe. Cancel any time from settings.";
 
 export const CHECKOUT_UNCONFIGURED =
   "Checkout is not configured on this instance.";
+
+export const TRIAL_REFUSED =
+  "This card or email has already had a free trial. Choose a plan to start today.";
 
 export const COLLECTION_PAUSED =
   "Collection is paused. Everything AsoBeast has already gathered stays readable and exportable.";
@@ -161,7 +164,7 @@ export function trialEndLabel(
 }
 
 function trialLine(offer: TrialOffer, clock: ViewerClock): string {
-  return `Pay $0 today. Your trial ends on ${trialEndLabel(offer, clock)}, then the plan you choose is charged. Cancel any time from settings.`;
+  return `Pay $0 today. Your trial ends on ${trialEndLabel(offer, clock)}, then the plan you choose is charged, plus any VAT or sales tax, and renews until you cancel. Cancel any time from settings.`;
 }
 
 export const CONFIRM_EMAIL_TITLE = "Confirm your email";
@@ -335,6 +338,7 @@ export function paywallStatusLine(
 ): string {
   if (!plan) return CHOOSE_A_PLAN;
   if (pending(plan)) return PAYMENT_CONFIRMING;
+  if (plan.trialRefused) return TRIAL_REFUSED;
   if (plan.trialOffer && !plan.subscribed) {
     return trialLine(plan.trialOffer, clock);
   }
@@ -374,7 +378,7 @@ export function planCallToAction(plan: AccountPlan): string {
 
 export function paymentNote(catalog: BillingCatalog | undefined): string {
   if (!catalog?.enabled) return CHECKOUT_UNCONFIGURED;
-  return catalog.managedPayments ? SOLD_THROUGH_LINK : HANDLED_BY_STRIPE;
+  return catalog.managedPayments ? HANDLED_BY_LINK : HANDLED_BY_STRIPE;
 }
 
 export function trialPaymentNote(
