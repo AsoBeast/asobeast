@@ -24,6 +24,7 @@ const COMPETITOR_DEPTH = 25;
 const TITLE_MATCH_DEPTH = 30;
 export const MIN_DETAIL_SUCCESS_SHARE = 0.5;
 const MIN_JUDGED_DETAILS = 3;
+const STORE_SERVER_ERROR = /failed with status 5\d\d/;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export interface CollectedKeywordStats {
@@ -153,7 +154,7 @@ export class StatsCollectorService {
     const targets = results.slice(0, TOP_STRENGTH);
     const enriched: KeywordStats['top10'] = [];
     let failed = 0;
-    let refused = 0;
+    let unanswered = 0;
     for (const item of targets) {
       try {
         const app = await provider.getApp(item.storeAppId, country);
@@ -179,13 +180,13 @@ export class StatsCollectorService {
           `detail lookup failed for "${item.storeAppId}", keeping its search entry: ${messageOf(error)}`,
         );
         failed += 1;
-        if (outcomeOf(error) !== null) refused += 1;
+        if (storeDidNotAnswer(error)) unanswered += 1;
         enriched.push(this.toStrength(item));
       }
     }
     const successCount = targets.length - failed;
     if (
-      (targets.length >= MIN_JUDGED_DETAILS || refused > 0) &&
+      (targets.length >= MIN_JUDGED_DETAILS || unanswered > 0) &&
       successCount < targets.length * MIN_DETAIL_SUCCESS_SHARE
     ) {
       throw new Error(
@@ -227,6 +228,10 @@ function identityOf(
     storeAppId: item.storeAppId,
     ...(item.developer === undefined ? {} : { developer: item.developer }),
   };
+}
+
+function storeDidNotAnswer(error: unknown): boolean {
+  return outcomeOf(error) !== null || STORE_SERVER_ERROR.test(messageOf(error));
 }
 
 function daysSince(date: Date): number {

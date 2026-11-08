@@ -312,6 +312,50 @@ describe('StatsCollectorService', () => {
     );
   });
 
+  const collectTwoResults = (getApp: jest.Mock) => {
+    const search = jest.fn().mockResolvedValue(buildSearch().slice(0, 2));
+    const { registry } = buildGplayProvider({ getApp, search });
+    return new StatsCollectorService(
+      buildGplayPrisma(),
+      registry,
+      noOfficial,
+    ).collect('kw1');
+  };
+
+  it('retries a small page when the store answered its detail lookups with a server error', async () => {
+    const unavailable = new StoreRequestError(
+      Store.GOOGLE_PLAY,
+      'getApp',
+      'HttpError: Request to https://play.google.com/store/apps/details?id=app0 failed with status 503',
+    );
+
+    await expect(
+      collectTwoResults(jest.fn().mockRejectedValue(unavailable)),
+    ).rejects.toThrow('only 0 of 2 detail lookups succeeded');
+  });
+
+  it('keeps both search entries of a two result page whose details cannot be read', async () => {
+    const collected = await collectTwoResults(
+      jest.fn().mockRejectedValue(new Error('unexpected page shape')),
+    );
+
+    expect(collected?.stats.top10).toHaveLength(2);
+    expect(collected?.evidence.detailSuccessCount).toBe(0);
+  });
+
+  it('accepts a two result page with one refused and one read detail', async () => {
+    const getApp = jest
+      .fn()
+      .mockRejectedValueOnce(
+        new StoreRequestError(Store.GOOGLE_PLAY, 'getApp', 'HTTP 429'),
+      )
+      .mockResolvedValue(buildApp());
+
+    const collected = await collectTwoResults(getApp);
+
+    expect(collected?.evidence.detailSuccessCount).toBe(1);
+  });
+
   it('still refuses a small page once three lookups fail', async () => {
     const getApp = jest.fn().mockRejectedValue(new Error('rate limited'));
     const search = jest.fn().mockResolvedValue(buildSearch().slice(0, 3));
