@@ -40,67 +40,67 @@ enum KeywordSource {
 }
 
 model Workspace {
-  id                     String                  @id @default(cuid())
-  name                   String                  @default("Default")
-  apps                   App[]
-  appGroups              AppGroup[]
-  webhooks               Webhook[]
-  emailAlerts            EmailAlert[]
-  alertEvents            AlertEvent[]
-  users                  User[]
-  invites                WorkspaceInvite[]
-  actions                ActionItem[]
-  actionEvents           ActionEvent[]
-  aiCalls                AiCall[]
-  snapshotScreenshots    SnapshotScreenshot[]
-  keywordFields          KeywordField[]
-  appLocalizations       AppLocalization[]
-  appSetups              AppSetup[]
-  keywordDiscoveries     KeywordDiscovery[]
-  reviewReplies          ReviewReply[]
-  chartFollows           ChartFollow[]
-  storeConnections       StoreConnection[]
-  storeReportRequests    StoreReportRequest[]
-  storeReportInstances   StoreReportInstance[]
-  storeFunnelDays        StoreFunnelDay[]
-  storeFunnelPageDays    StoreFunnelPageDay[]
-  storeFunnelSearchTerms StoreFunnelSearchTerm[]
-  rankings               KeywordRanking[]
-  plan                   String                  @default("free")
-  trialStartedAt         DateTime?
-  trialDeclinedAt        DateTime?
-  trialEndsAt            DateTime?
-  trialNoticeDay         Int?
-  dunningNotifiedAt      DateTime?
-  downgradeWarnedAt      DateTime?
-  planExpiresAt          DateTime?
-  billingCustomerId      String?                 @unique
-  checkoutSessionId      String?
-  checkoutClaimedAt      DateTime?
-  defaultAlertsAt        DateTime?
-  checkoutClaimToken     String?
-  subscriptionId         String?                 @unique
-  subscriptionStatus     String?
-  subscriptionEventAt    DateTime?
-  cancelAtPeriodEnd      Boolean                 @default(false)
-  trialClaimedAt         DateTime?
-  trialRefusedSubscriptionId String?
-  firstPaidAt            DateTime?
-  billingInterval        String?
-  pendingPlan            String?
-  overLimitSince         DateTime?
-  overLimitNotifiedAt    DateTime?
-  abuseFlaggedAt         DateTime?
-  suspendedAt            DateTime?
-  suspendedReason        String?
-  deletionRequestedAt    DateTime?
-  deletionRequestedBy    String?
-  deletionDueAt          DateTime?
+  id                            String                  @id @default(cuid())
+  name                          String                  @default("Default")
+  apps                          App[]
+  appGroups                     AppGroup[]
+  webhooks                      Webhook[]
+  emailAlerts                   EmailAlert[]
+  alertEvents                   AlertEvent[]
+  users                         User[]
+  invites                       WorkspaceInvite[]
+  actions                       ActionItem[]
+  actionEvents                  ActionEvent[]
+  aiCalls                       AiCall[]
+  snapshotScreenshots           SnapshotScreenshot[]
+  keywordFields                 KeywordField[]
+  appLocalizations              AppLocalization[]
+  appSetups                     AppSetup[]
+  keywordDiscoveries            KeywordDiscovery[]
+  reviewReplies                 ReviewReply[]
+  chartFollows                  ChartFollow[]
+  storeConnections              StoreConnection[]
+  storeReportRequests           StoreReportRequest[]
+  storeReportInstances          StoreReportInstance[]
+  storeFunnelDays               StoreFunnelDay[]
+  storeFunnelPageDays           StoreFunnelPageDay[]
+  storeFunnelSearchTerms        StoreFunnelSearchTerm[]
+  rankings                      KeywordRanking[]
+  plan                          String                  @default("free")
+  trialStartedAt                DateTime?
+  trialDeclinedAt               DateTime?
+  trialEndsAt                   DateTime?
+  trialNoticeDay                Int?
+  dunningNotifiedAt             DateTime?
+  downgradeWarnedAt             DateTime?
+  planExpiresAt                 DateTime?
+  billingCustomerId             String?                 @unique
+  checkoutSessionId             String?
+  checkoutClaimedAt             DateTime?
+  defaultAlertsAt               DateTime?
+  checkoutClaimToken            String?
+  subscriptionId                String?                 @unique
+  subscriptionStatus            String?
+  subscriptionEventAt           DateTime?
+  cancelAtPeriodEnd             Boolean                 @default(false)
+  trialClaimedAt                DateTime?
+  trialRefusedSubscriptionId    String?
+  firstPaidAt                   DateTime?
+  billingInterval               String?
+  pendingPlan                   String?
+  overLimitSince                DateTime?
+  overLimitNotifiedAt           DateTime?
+  abuseFlaggedAt                DateTime?
+  suspendedAt                   DateTime?
+  suspendedReason               String?
+  deletionRequestedAt           DateTime?
+  deletionRequestedBy           String?
+  deletionDueAt                 DateTime?
   deletionStoppedSubscriptionId String?
-  erasureClaimedAt       DateTime?
-  checklistGoal          String?
-  checklistDismissedAt   DateTime?
-  createdAt              DateTime                @default(now())
+  erasureClaimedAt              DateTime?
+  checklistGoal                 String?
+  checklistDismissedAt          DateTime?
+  createdAt                     DateTime                @default(now())
 
   @@index([deletionDueAt])
 }
