@@ -113,7 +113,7 @@ Compose sets a memory ceiling per service and rotates every container log.
 | --- | --- | --- | --- |
 | `api` | 1024 MB | ~230 MB | The kernel stops the container and `restart: unless-stopped` brings it back. In flight jobs are retried on the next run |
 | `web` | 384 MB | ~58 MB | The kernel stops the container and Compose restarts it. The API keeps running, so nothing is lost |
-| `postgres` | 384 MB | ~48 MB | The kernel stops the container. This is the one to watch, because recovery on the next start replays the write ahead log |
+| `postgres` | 384 MB | ~48 MB | The kernel kills one backend, PostgreSQL drops every connection and replays the write ahead log, and requests fail with `the database system is in recovery mode` until it finishes. Compose lowers its memory settings to keep it under the ceiling. Store jobs caught by a restart go back to the queue without spending an attempt |
 | `redis` | 320 MB | ~14 MB | Redis refuses writes before the kernel gets involved. See below |
 
 The ceilings sum to roughly 2.1 GB, which is why [System requirements](/install/requirements) asks for about 2.5 GB. The at rest figures come from an idle stack with a small portfolio.
@@ -169,6 +169,7 @@ A reading that cannot be taken is left out of the scrape instead of being report
 | --- | --- | --- |
 | PostgreSQL refuses to write and the disk is full | Container logs are not the cause once rotation is on. Look at the `pgdata` volume | Tighten the `RETENTION_*` windows and re run the retention job |
 | A container restarts on its own with no error in its log | The kernel stopped it at its memory ceiling | `docker inspect <container>` and read `State.OOMKilled` |
+| Errors say `the database system is in recovery mode` | The kernel killed a PostgreSQL process at the ceiling. The container stays up, so read its log for `terminated by signal 9` | Raise the `postgres` memory ceiling |
 | Jobs fail with `OOM command not allowed` | Redis reached `maxmemory` | Check for a retention gap leaving completed jobs behind, then raise the ceiling if the working set is genuinely larger |
 | The API answers but the queue never drains | Not a memory limit. See [Troubleshooting](/operations/troubleshooting) |  |
 
