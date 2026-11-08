@@ -15,16 +15,17 @@ export const TRIAL_NOTICE_DAYS = [
 
 export type TrialNoticeDay = (typeof TRIAL_NOTICE_DAYS)[number];
 
-const CHARGE_REMINDER_LEAD_MS = 74 * HOUR_MS;
+const PROMISED_REMINDER_HOURS = 72;
+
+const HOURLY_SWEEP_MARGIN_HOURS = 2;
+
+const CHARGE_REMINDER_LEAD_MS =
+  (PROMISED_REMINDER_HOURS + HOURLY_SWEEP_MARGIN_HOURS) * HOUR_MS;
 
 export interface TrialProgress {
   trialStartedAt: Date | null;
   trialEndsAt: Date | null;
   trialNoticeDay: number | null;
-}
-
-export function trialDay(startedAt: Date, now: Date): number {
-  return Math.floor((now.getTime() - startedAt.getTime()) / DAY_MS);
 }
 
 export function timeLeftLabel(endsAt: Date, now: Date): string {

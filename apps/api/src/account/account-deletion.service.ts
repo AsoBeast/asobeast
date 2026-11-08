@@ -129,20 +129,27 @@ export class AccountDeletionService {
     }
     const stoppedRenewal = await this.stopRenewal(workspaceId, now);
     const dueAt = new Date(now.getTime() + this.graceDays * DAY_MS);
-    const workspace = await this.prisma.workspace.update({
-      where: { id: workspaceId },
-      data: {
-        deletionRequestedAt: now,
-        deletionRequestedBy: actor.email,
-        deletionDueAt: dueAt,
-        ...(stoppedRenewal ? { deletionStoppedRenewal: true } : {}),
-      },
-      select: {
-        deletionRequestedAt: true,
-        deletionRequestedBy: true,
-        deletionDueAt: true,
-      },
-    });
+    const workspace = await this.prisma.workspace
+      .update({
+        where: { id: workspaceId },
+        data: {
+          deletionRequestedAt: now,
+          deletionRequestedBy: actor.email,
+          deletionDueAt: dueAt,
+          ...(stoppedRenewal ? { deletionStoppedRenewal: true } : {}),
+        },
+        select: {
+          deletionRequestedAt: true,
+          deletionRequestedBy: true,
+          deletionDueAt: true,
+        },
+      })
+      .catch(async (error: unknown) => {
+        if (stoppedRenewal) {
+          await this.restoreRenewal(workspaceId, stoppedRenewal, now);
+        }
+        throw error;
+      });
     this.logger.warn(
       `workspace ${workspaceId} deletion requested by ${actor.email}, due ${dueAt.toISOString()}`,
     );
@@ -152,15 +159,15 @@ export class AccountDeletionService {
   private async stopRenewal(
     workspaceId: string,
     requestedAt: Date,
-  ): Promise<boolean> {
+  ): Promise<string | null> {
     const { subscriptionId } = await this.prisma.workspace.findUniqueOrThrow({
       where: { id: workspaceId },
       select: { subscriptionId: true },
     });
-    if (!subscriptionId || !this.stripe.enabled) return false;
+    if (!subscriptionId || !this.stripe.enabled) return null;
     const subscription = await this.liveSubscription(subscriptionId);
-    if (!subscription || !renews(subscription)) return false;
-    if (endsWithItsPeriod(subscription)) return false;
+    if (!subscription || !renews(subscription)) return null;
+    if (endsWithItsPeriod(subscription)) return null;
 
     const schedule = scheduleIdOf(subscription);
     if (schedule) await this.stripe.releaseSchedule(schedule);
@@ -168,7 +175,7 @@ export class AccountDeletionService {
     this.logger.warn(
       `workspace ${workspaceId} scheduled its deletion, so subscription ${subscriptionId} now ends with its period and charges nothing more`,
     );
-    return true;
+    return subscriptionId;
   }
 
   private async liveSubscription(

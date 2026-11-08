@@ -452,6 +452,16 @@ describe('AccountDeletionService', () => {
       expect(prisma.workspace.update).not.toHaveBeenCalled();
     });
 
+    it('renews again when the schedule cannot be written', async () => {
+      stripe.keepRenewing.mockResolvedValue({});
+      prisma.workspace.update.mockRejectedValueOnce(new Error('db is down'));
+
+      await expect(service.request(ACTOR, 'DELETE', NOW)).rejects.toThrow(
+        'db is down',
+      );
+      expect(stripe.keepRenewing).toHaveBeenCalledWith('sub_live', NOW);
+    });
+
     it('schedules the deletion when stripe no longer holds the subscription', async () => {
       stripe.retrieveSubscription.mockRejectedValue(MISSING);
 

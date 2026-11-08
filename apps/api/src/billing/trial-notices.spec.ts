@@ -3,7 +3,6 @@ import {
   TRIAL_ENDED_NOTICE,
   dueTrialNotice,
   timeLeftLabel,
-  trialDay,
 } from './trial-notices';
 
 const START = new Date('2026-08-01T09:30:00.000Z');
@@ -14,14 +13,6 @@ const DAY_MS = 24 * HOUR_MS;
 const at = (days: number) => new Date(START.getTime() + days * DAY_MS);
 const hoursBeforeEnd = (hours: number) =>
   new Date(ENDS.getTime() - hours * HOUR_MS);
-
-describe('trialDay', () => {
-  it('counts whole days since the trial opened', () => {
-    expect(trialDay(START, START)).toBe(0);
-    expect(trialDay(START, at(2.9))).toBe(2);
-    expect(trialDay(START, at(3))).toBe(3);
-  });
-});
 
 describe('dueTrialNotice', () => {
   const progress = (trialNoticeDay: number | null) => ({

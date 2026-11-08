@@ -128,6 +128,7 @@ export class TrialNotifier {
       where: {
         trialRefusedSubscriptionId: { not: null },
         trialNoticeDay: null,
+        subscriptionId: null,
       },
       select: { id: true },
     });
