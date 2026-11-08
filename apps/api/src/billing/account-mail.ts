@@ -139,7 +139,7 @@ function cardTrialNotice(
             'Everything collected so far stays yours. Resume the plan from Settings, Billing to keep the daily collection running.',
           ]
         : [
-            `On ${endsOn} your ${plan} plan starts and your card is charged ${price}.`,
+            `Your ${plan} trial ends on ${endsOn}. Your card is then charged ${price}.`,
             'To stop that, cancel from Settings, Billing before then; everything collected stays yours either way.',
           ],
       action: BILLING_SETTINGS,

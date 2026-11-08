@@ -125,7 +125,7 @@ describe('account mail', () => {
       const body = card(5).body.join(' ');
 
       expect(body).toContain(
-        `On 2026-10-28 your Indie plan starts and your card is charged ${TERMS}.`,
+        `Your Indie trial ends on 2026-10-28. Your card is then charged ${TERMS}.`,
       );
       expect(body).toContain('cancel from Settings, Billing before then');
       expect(card(5).action).toEqual({

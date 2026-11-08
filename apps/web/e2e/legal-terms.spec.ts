@@ -1,5 +1,5 @@
 import { expect, test } from "./reporting.mts";
-import { seedSession } from "./plan-helpers.mts";
+import { fulfillJson, seedSession } from "./plan-helpers.mts";
 import { OFFERED_PLAN, openBilling, openRegistration } from "./trial-plans.mts";
 import { seedViewer } from "./viewer.mts";
 import { TERMS_OF_SERVICE_URL, PRIVACY_POLICY_URL } from "../src/lib/legal";
@@ -70,6 +70,35 @@ test.describe("the terms on a billing instance", () => {
     await expect(
       sidebar.getByRole("link", { name: "Privacy Policy" }),
     ).toHaveAttribute("href", PRIVACY_POLICY_URL);
+  });
+
+  test("returning from a refused trial lands on the wall with the reason", async ({
+    page,
+    context,
+  }) => {
+    await seedViewer(context, "checkout-pending");
+    await seedSession(page);
+    await openBilling(page, {
+      ...OFFERED_PLAN,
+      trialOffer: null,
+      trialRefused: true,
+    });
+    await page.route("**/api/backend/billing/reconcile", async (route) => {
+      await page.waitForTimeout(1_500);
+      await route.fulfill(
+        fulfillJson(200, {
+          checked: 1,
+          corrected: 0,
+          orphanSubscriptions: [],
+          unreconciled: [],
+        }),
+      );
+    });
+
+    await page.goto("/?checkout=complete&session_id=cs_test_refused");
+
+    await expect(page).toHaveURL(/\/upgrade$/);
+    await expect(page.getByText(TRIAL_REFUSED)).toBeVisible();
   });
 
   test("a refused trial is told why and offered a normal checkout", async ({

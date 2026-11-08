@@ -1,16 +1,22 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ApiError, reconcileBilling } from "@/lib/api";
+import { entryDestination } from "@/lib/auth-routes";
 import {
   checkoutReturned,
   checkoutSessionId,
   trialStartedToast,
   urlWithoutCheckout,
 } from "@/lib/checkout-return";
-import { accountPlanOptions, invalidateAuth, refetchAuth } from "@/lib/queries";
+import {
+  accountPlanOptions,
+  authMeOptions,
+  invalidateAuth,
+  refetchAuth,
+} from "@/lib/queries";
 
 const SETTLED_REFUSALS: ReadonlySet<number> = new Set([400, 401, 403, 404]);
 
@@ -23,6 +29,11 @@ function refused(error: unknown): boolean {
 function forgetCheckout(): void {
   const { pathname, search } = window.location;
   window.history.replaceState(null, "", urlWithoutCheckout(pathname, search));
+}
+
+function leaveForTheOwedStep(client: QueryClient): void {
+  const user = client.getQueryData(authMeOptions.queryKey);
+  if (user?.entryStep) window.location.replace(entryDestination(user, null));
 }
 
 export function CheckoutReturn() {
@@ -44,6 +55,7 @@ export function CheckoutReturn() {
           if (welcome) toast.success(welcome);
           await refetchAuth(client);
           forgetCheckout();
+          leaveForTheOwedStep(client);
         },
         async (error: unknown) => {
           if (!refused(error)) return invalidateAuth(client);
@@ -51,6 +63,7 @@ export function CheckoutReturn() {
             await refetchAuth(client);
           } finally {
             forgetCheckout();
+            leaveForTheOwedStep(client);
           }
         },
       )
