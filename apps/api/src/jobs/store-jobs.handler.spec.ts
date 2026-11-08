@@ -29,10 +29,10 @@ describe('StoreJobsHandler', () => {
   const forWorkspace = jest.fn<Promise<boolean>, []>();
   const scoresKeyword = jest.fn<Promise<boolean>, [string]>();
   const scoreKeyword = jest.fn<Promise<void>, [string]>();
-  const through = jest.fn<
-    Promise<void>,
-    [Store, string | undefined, () => Promise<void>, { waitForLocal: boolean }?]
-  >((_store, _country, work) => work());
+  const through = jest.fn(
+    (_store: Store, _country: string | undefined, work: () => Promise<void>) =>
+      work(),
+  );
   const countryOf = jest.fn<Promise<string | undefined>, [Job]>();
   const workspace = new WorkspaceContext();
   let seen: string | undefined;
@@ -170,33 +170,7 @@ describe('StoreJobsHandler', () => {
       Store.APP_STORE,
       'us',
       expect.any(Function) as () => Promise<void>,
-      { waitForLocal: true },
     );
-  });
-
-  it('lets a score job take any free endpoint, which a position check never does', async () => {
-    const scoreJob = {
-      name: JOBS.SCORE_KEYWORD,
-      id: '7',
-      data: { keywordId: 'k1', workspaceId: 'ws_a' },
-      queueName: QUEUES.GPLAY,
-    } as Job;
-    const checkJob = {
-      name: JOBS.CHECK_KEYWORD,
-      id: '8',
-      data: { keywordId: 'k1', workspaceId: 'ws_a' },
-      queueName: QUEUES.GPLAY,
-      opts: {},
-      attemptsMade: 0,
-    } as Job;
-
-    await handler.handle(scoreJob);
-    await handler.handle(checkJob);
-
-    expect(through.mock.calls.map((call) => call[3])).toEqual([
-      { waitForLocal: false },
-      { waitForLocal: true },
-    ]);
   });
 
   it('routes a play job through the store its queue serves', async () => {
