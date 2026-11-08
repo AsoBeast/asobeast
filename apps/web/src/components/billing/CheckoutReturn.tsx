@@ -31,8 +31,13 @@ function forgetCheckout(): void {
   window.history.replaceState(null, "", urlWithoutCheckout(pathname, search));
 }
 
+function refreshedAccount(client: QueryClient) {
+  const account = client.getQueryState(authMeOptions.queryKey);
+  return account?.isInvalidated ? undefined : account?.data;
+}
+
 function leaveForTheOwedStep(client: QueryClient): void {
-  const user = client.getQueryData(authMeOptions.queryKey);
+  const user = refreshedAccount(client);
   if (!user?.entryStep) return;
   const destination = entryDestination(user, null);
   if (window.location.pathname !== destination) {
