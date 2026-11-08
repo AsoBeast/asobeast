@@ -63,9 +63,13 @@ function buildApp(overrides: Record<string, unknown> = {}) {
 }
 
 function buildGplayProvider(
-  overrides: { getApp?: jest.Mock; suggest?: jest.Mock } = {},
+  overrides: {
+    getApp?: jest.Mock;
+    suggest?: jest.Mock;
+    search?: jest.Mock;
+  } = {},
 ) {
-  const search = jest.fn().mockResolvedValue(buildSearch());
+  const search = overrides.search ?? jest.fn().mockResolvedValue(buildSearch());
   const getApp = overrides.getApp ?? jest.fn().mockResolvedValue(buildApp());
   const suggest = overrides.suggest ?? jest.fn().mockResolvedValue([]);
   const registry = {
@@ -268,6 +272,38 @@ describe('StatsCollectorService', () => {
 
     await expect(service.collect('kw1')).rejects.toThrow(
       'only 0 of 10 detail lookups succeeded',
+    );
+  });
+
+  it('scores a one result search whose only detail lookup fails on its search entry', async () => {
+    const getApp = jest.fn().mockRejectedValue(new Error('parse failure'));
+    const search = jest.fn().mockResolvedValue(buildSearch().slice(0, 1));
+    const { registry } = buildGplayProvider({ getApp, search });
+    const service = new StatsCollectorService(
+      buildGplayPrisma(),
+      registry,
+      noOfficial,
+    );
+
+    const collected = await service.collect('kw1');
+
+    expect(collected?.stats.top10).toHaveLength(1);
+    expect(collected?.evidence.detailTargetCount).toBe(1);
+    expect(collected?.evidence.detailSuccessCount).toBe(0);
+  });
+
+  it('still refuses a small page once three lookups fail', async () => {
+    const getApp = jest.fn().mockRejectedValue(new Error('rate limited'));
+    const search = jest.fn().mockResolvedValue(buildSearch().slice(0, 3));
+    const { registry } = buildGplayProvider({ getApp, search });
+    const service = new StatsCollectorService(
+      buildGplayPrisma(),
+      registry,
+      noOfficial,
+    );
+
+    await expect(service.collect('kw1')).rejects.toThrow(
+      'only 0 of 3 detail lookups succeeded',
     );
   });
 

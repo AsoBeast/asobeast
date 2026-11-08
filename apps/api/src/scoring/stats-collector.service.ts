@@ -22,6 +22,7 @@ const TOP_STRENGTH = 10;
 const COMPETITOR_DEPTH = 25;
 const TITLE_MATCH_DEPTH = 30;
 export const MIN_DETAIL_SUCCESS_SHARE = 0.5;
+const MIN_JUDGED_DETAILS = 3;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export interface CollectedKeywordStats {
@@ -180,7 +181,10 @@ export class StatsCollectorService {
       }
     }
     const successCount = targets.length - failed;
-    if (successCount < targets.length * MIN_DETAIL_SUCCESS_SHARE) {
+    if (
+      targets.length >= MIN_JUDGED_DETAILS &&
+      successCount < targets.length * MIN_DETAIL_SUCCESS_SHARE
+    ) {
       throw new Error(
         `only ${successCount} of ${targets.length} detail lookups succeeded`,
       );
