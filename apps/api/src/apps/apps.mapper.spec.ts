@@ -36,6 +36,29 @@ describe('toSnapshotData', () => {
       title: 'Habit Tracker',
     });
   });
+
+  it('embeds the page extract under one raw key', () => {
+    const pageExtract = {
+      previewVideoUrls: ['https://apptrailers.itunes.apple.com/trailer.m3u8'],
+      appEvents: [],
+      featuredStories: [],
+      editorsChoice: null,
+      accessibilityStatement: null,
+    };
+
+    expect(toSnapshotData('app_1', { ...NORMALIZED, pageExtract }).raw).toEqual(
+      {
+        icon: 'https://cdn.test/icon.png',
+        pageExtract,
+      },
+    );
+  });
+
+  it('keeps the captured payload untouched without a page extract', () => {
+    expect(toSnapshotData('app_1', NORMALIZED).raw).toEqual({
+      icon: 'https://cdn.test/icon.png',
+    });
+  });
 });
 
 describe('snapshotIcon', () => {

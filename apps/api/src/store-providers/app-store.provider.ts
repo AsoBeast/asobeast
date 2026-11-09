@@ -18,6 +18,7 @@ import {
   isMissingApp,
 } from './app-store.lib';
 import { lookupLanguage, pageLanguage } from './app-store-languages';
+import { AppStorePageExtract, parseAppStorePage } from './app-store-page';
 import { StoreAppNotFoundError, StoreRequestError } from './errors';
 import { listedInIphoneSearch } from './iphone-search';
 import { ownSubtitle } from './own-subtitle';
@@ -40,9 +41,11 @@ const COLLECTION_CONSTANTS: Record<CategoryCollection, string> = {
   grossing: 'topgrossingapplications',
 };
 
-interface SubtitleRead {
+interface PageRead {
   subtitle?: string;
   unavailable: boolean;
+  extract?: AppStorePageExtract;
+  extractUnavailable: boolean;
 }
 
 @Injectable()
@@ -69,10 +72,14 @@ export class AppStoreProvider implements StoreProvider {
         }),
       storeAppId,
     );
-    const read: SubtitleRead =
+    const read: PageRead =
       raw.subtitle === undefined
-        ? await this.readSubtitle(storeAppId, country, localization)
-        : { subtitle: raw.subtitle, unavailable: false };
+        ? await this.readPage(storeAppId, country, localization)
+        : {
+            subtitle: raw.subtitle,
+            unavailable: false,
+            extractUnavailable: false,
+          };
     return this.toNormalizedApp(raw, read);
   }
 
@@ -202,34 +209,58 @@ export class AppStoreProvider implements StoreProvider {
     };
   }
 
-  private async readSubtitle(
+  private async readPage(
     storeAppId: string,
     country: string,
     localization?: AppStoreLocalization,
-  ): Promise<SubtitleRead> {
+  ): Promise<PageRead> {
+    let html: string | null = null;
+    let subtitle: string | undefined;
+    let listingFailed = false;
     try {
-      const subtitle = await this.withRetry('page', async (deadline) =>
-        listingSubtitle(
-          await this.lib.page({
-            id: Number(storeAppId),
-            country,
-            ...deadline,
-            ...(localization ? { language: pageLanguage(localization) } : {}),
-          }),
-        ),
-      );
-      return { subtitle, unavailable: false };
+      subtitle = await this.withRetry('page', async (deadline) => {
+        const fetched = await this.lib.page({
+          id: Number(storeAppId),
+          country,
+          ...deadline,
+          ...(localization ? { language: pageLanguage(localization) } : {}),
+        });
+        html = fetched;
+        return listingSubtitle(fetched);
+      });
     } catch (error) {
+      listingFailed = true;
       this.logger.warn(
         `subtitle scrape failed for ${storeAppId}: ${messageOf(error)}`,
       );
-      return { unavailable: true };
+    }
+    const extract =
+      html === null ? undefined : this.pageExtractOf(storeAppId, html);
+    return {
+      ...(subtitle !== undefined ? { subtitle } : {}),
+      unavailable: listingFailed,
+      ...(extract !== undefined ? { extract } : {}),
+      extractUnavailable: extract === undefined,
+    };
+  }
+
+  private pageExtractOf(
+    storeAppId: string,
+    html: string,
+  ): AppStorePageExtract | undefined {
+    try {
+      return parseAppStorePage(html);
+    } catch (error) {
+      this.logger.warn(
+        `page extract unavailable for ${storeAppId}: ${messageOf(error)}`,
+      );
+      return undefined;
     }
   }
 
   private toNormalizedApp(
     raw: AppStoreAppResult,
-    read: SubtitleRead,
+    read: PageRead,
   ): NormalizedApp {
     return {
       store: this.store,
@@ -238,6 +269,8 @@ export class AppStoreProvider implements StoreProvider {
       subtitle:
         ownSubtitle(this.store, { subtitle: read.subtitle, raw }) ?? undefined,
       subtitleUnavailable: read.unavailable,
+      ...(read.extract !== undefined ? { pageExtract: read.extract } : {}),
+      pageExtractUnavailable: read.extractUnavailable,
       description: raw.description,
       iconUrl: raw.icon,
       ratingAvg: raw.score,

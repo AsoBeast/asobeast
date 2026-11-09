@@ -4,6 +4,7 @@ import {
   MarketAvailabilityResult,
 } from '@asobeast/shared';
 import { Store } from '@prisma/client';
+import { AppStorePageExtract } from './app-store-page';
 
 export interface NormalizedApp {
   store: Store;
@@ -11,6 +12,8 @@ export interface NormalizedApp {
   title: string;
   subtitle?: string;
   subtitleUnavailable?: boolean;
+  pageExtract?: AppStorePageExtract;
+  pageExtractUnavailable?: boolean;
   summary?: string;
   description: string;
   iconUrl?: string;
