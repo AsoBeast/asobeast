@@ -13,6 +13,16 @@ export const LATER_RELEASES: readonly Release[] = [
         title: "Inspect any keyword",
         text: "Keyword inspector in the sidebar reads any keyword in any country straight from the store, without tracking it: the top 50 apps, the autocomplete, popularity, difficulty and opportunity, and how strong the top ten are. Each keyword you inspect lands on a map beside the others, its store suggestions inspect in one click, and the next inspection of the same keyword shows what changed since.",
       },
+      {
+        kind: "fixed",
+        title: "Play installs finds more search terms",
+        text: "Google writes most search terms under explore traffic rather than search, and the column used to read only search, so months could look empty that never were. It now reads both, while the placeholders Google writes when it names no term stay out of the column.",
+      },
+      {
+        kind: "improved",
+        title: "An empty month says so",
+        text: "When the newest monthly report names no search term on any source, the column now states that fact with the month, instead of leaving a row of unexplained dashes.",
+      },
     ],
   },
   {

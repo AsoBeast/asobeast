@@ -21,6 +21,7 @@ import {
 import { DeltaChip } from "@/components/ui/delta-chip";
 import { SortableHeader } from "@/components/data-table/SortableHeader";
 import { tagsIn } from "@/lib/keyword-tags";
+import { noSearchTermsFact } from "@/lib/funnel";
 import { keywordZoneFilter } from "./keyword-filters";
 import { KeywordRowActions } from "./KeywordRowActions";
 import type { PositionHistoryContext } from "./PositionHistoryPopover";
@@ -97,6 +98,7 @@ export function keywordColumns({
   homeCountry,
   multiMarket,
   today,
+  noSearchTermsMonth,
   onOpenSerp,
 }: {
   appId: string;
@@ -104,6 +106,7 @@ export function keywordColumns({
   homeCountry: string;
   multiMarket: boolean;
   today: string;
+  noSearchTermsMonth: string | null;
   onOpenSerp: (keywordId: string) => void;
 }) {
   return columnHelper.columns([
@@ -112,7 +115,9 @@ export function keywordColumns({
     positionColumn(today, { appId, store, homeCountry, multiMarket }),
     ...scoreColumns(),
     insightsColumn(today, multiMarket),
-    ...(store === "GOOGLE_PLAY" ? [acquisitionsColumn()] : []),
+    ...(store === "GOOGLE_PLAY"
+      ? [acquisitionsColumn({ noSearchTermsMonth })]
+      : []),
     deltaColumn(),
     volatilityColumn(),
     competitorsColumn(),
@@ -327,7 +332,15 @@ function scoreColumns() {
   ];
 }
 
-function acquisitionsColumn() {
+const PLAY_INSTALLS_SUMMARY =
+  "The acquisitions and store listing visitors this keyword brought through Google Play search and explore, from the newest complete month Play Console reported. A dash means Google reported no visitors for it.";
+
+function acquisitionsColumn({
+  noSearchTermsMonth,
+}: {
+  noSearchTermsMonth: string | null;
+}) {
+  const fact = noSearchTermsFact(noSearchTermsMonth);
   return columnHelper.accessor(
     (row) => nullsLast(row.playAcquisitions?.acquisitions ?? null),
     {
@@ -341,12 +354,17 @@ function acquisitionsColumn() {
           <InfoTip
             label="About Play installs"
             title="Play installs"
-            summary="The acquisitions and store listing visitors this keyword brought as a Google Play search term, from the newest complete month Play Console reported. A dash means Google reported no visitors for it."
-          />
+            summary={PLAY_INSTALLS_SUMMARY}
+          >
+            {fact ? <p className="text-muted-foreground">{fact}</p> : null}
+          </InfoTip>
         </span>
       ),
       cell: ({ row }) => (
-        <PlayAcquisitionsCell value={row.original.playAcquisitions ?? null} />
+        <PlayAcquisitionsCell
+          value={row.original.playAcquisitions ?? null}
+          fact={fact}
+        />
       ),
     },
   );

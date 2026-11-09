@@ -150,21 +150,21 @@ export function VolatilityCell({ value }: { value: number | null }) {
 
 export function PlayAcquisitionsCell({
   value,
+  fact,
 }: {
   value: PlayAcquisitions | null;
+  fact?: string | null;
 }) {
   if (!value) {
+    const message = fact ?? "No Play Console data";
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          <span
-            className="text-muted-foreground"
-            aria-label="No Play Console data"
-          >
+          <span className="text-muted-foreground" aria-label={message}>
             —
           </span>
         </TooltipTrigger>
-        <TooltipContent>No Play Console data</TooltipContent>
+        <TooltipContent>{message}</TooltipContent>
       </Tooltip>
     );
   }
