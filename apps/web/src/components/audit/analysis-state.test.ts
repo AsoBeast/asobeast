@@ -9,9 +9,9 @@ import {
   ANALYSIS_ACTION,
   ANALYSIS_COPY,
   analysisState,
-  imageLinksLine,
+  creativeSentLine,
   progressLine,
-  sendsImageLinks,
+  sendsCreative,
   type AnalysisState,
 } from "./analysis-state";
 
@@ -104,40 +104,40 @@ describe("progressLine", () => {
   });
 });
 
-describe("imageLinksLine", () => {
+describe("creativeSentLine", () => {
   it("names OpenAI when the API names it", () => {
-    expect(imageLinksLine("openai", "gpt-5.6-luna")).toBe(
-      "Sends image links to OpenAI with gpt-5.6-luna.",
+    expect(creativeSentLine("openai", "gpt-5.6-luna")).toBe(
+      "Sends the icon and screenshots to OpenAI with gpt-5.6-luna.",
     );
   });
 
   it("names OpenAI when an older API reports no provider", () => {
-    expect(imageLinksLine(undefined, "gpt-5.6-luna")).toBe(
-      "Sends image links to OpenAI with gpt-5.6-luna.",
+    expect(creativeSentLine(undefined, "gpt-5.6-luna")).toBe(
+      "Sends the icon and screenshots to OpenAI with gpt-5.6-luna.",
     );
   });
 
   it("never names OpenAI or a host for a compatible provider", () => {
-    const line = imageLinksLine("compatible", "llava");
+    const line = creativeSentLine("compatible", "llava");
 
     expect(line).toBe(
-      "Sends image links to llava on the AI provider this instance is configured with.",
+      "Sends the icon and screenshots to llava on the AI provider this instance is configured with.",
     );
     expect(line).not.toMatch(/openai/i);
   });
 
   it.each([
-    ["openai" as const, "Sends image links to OpenAI."],
+    ["openai" as const, "Sends the icon and screenshots to OpenAI."],
     [
       "compatible" as const,
-      "Sends image links to the AI provider this instance is configured with.",
+      "Sends the icon and screenshots to the AI provider this instance is configured with.",
     ],
   ])("leaves out a model it cannot vouch for (%s)", (provider, line) => {
-    expect(imageLinksLine(provider, null)).toBe(line);
+    expect(creativeSentLine(provider, null)).toBe(line);
   });
 });
 
-describe("sendsImageLinks", () => {
+describe("sendsCreative", () => {
   it.each<[AnalysisState, boolean]>([
     ["unconfigured", false],
     ["never", true],
@@ -146,7 +146,7 @@ describe("sendsImageLinks", () => {
     ["current", false],
     ["stale", true],
     ["failed", true],
-  ])("%s sends image links: %s", (state, sends) => {
-    expect(sendsImageLinks(state)).toBe(sends);
+  ])("%s sends the creative: %s", (state, sends) => {
+    expect(sendsCreative(state)).toBe(sends);
   });
 });

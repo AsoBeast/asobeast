@@ -40,7 +40,6 @@ export interface AiStructuredRequest {
   system: string;
   content: AiContentPart[];
   schema: AiSchema;
-  maxOutputTokens?: number;
 }
 
 export interface AiTokenUsage {
@@ -210,8 +209,7 @@ const withoutSecret = (
     : new AiRequestError(message, failure.retryable);
 };
 
-const DEFAULT_MAX_OUTPUT_TOKENS = 2048;
-const REQUEST_TIMEOUT_MS = 60_000;
+const REQUEST_TIMEOUT_MS = 180_000;
 const MAX_RETRIES = 2;
 const WITHOUT_OPENAI_ACCOUNT = { organization: null, project: null } as const;
 
@@ -237,13 +235,24 @@ const usageOf = (
       }
     : null;
 
+interface ClientSettings {
+  model: string;
+  provider: AiProvider;
+  secret: string;
+  maxOutputTokens: number;
+}
+
 class OpenAiClient implements AiClient {
+  readonly model: string;
+  readonly provider: AiProvider;
+
   constructor(
     private readonly openai: OpenAI,
-    readonly model: string,
-    readonly provider: AiProvider,
-    private readonly secret: string,
-  ) {}
+    private readonly settings: ClientSettings,
+  ) {
+    this.model = settings.model;
+    this.provider = settings.provider;
+  }
 
   private async complete(request: AiStructuredRequest): Promise<unknown> {
     const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
@@ -254,8 +263,7 @@ class OpenAiClient implements AiClient {
       return await this.openai.chat.completions.create({
         model: this.model,
         messages,
-        max_completion_tokens:
-          request.maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS,
+        max_completion_tokens: this.settings.maxOutputTokens,
         response_format: {
           type: 'json_schema',
           json_schema: {
@@ -270,7 +278,7 @@ class OpenAiClient implements AiClient {
         error instanceof SyntaxError
           ? notACompletion(undefined, this.provider)
           : classifyRequestError(error, this.model, this.provider),
-        this.secret,
+        this.settings.secret,
       );
     }
   }
@@ -280,7 +288,7 @@ class OpenAiClient implements AiClient {
     if (!isChatCompletion(completion)) {
       throw withoutSecret(
         notACompletion(completion, this.provider),
-        this.secret,
+        this.settings.secret,
       );
     }
     const { name } = AI_PROVIDER_WORDING[this.provider];
@@ -357,8 +365,11 @@ export function createOpenAiClient(
       timeout: REQUEST_TIMEOUT_MS,
       maxRetries: MAX_RETRIES,
     }),
-    model,
-    provider,
-    apiKey,
+    {
+      model,
+      provider,
+      secret: apiKey,
+      maxOutputTokens: config.get('AI_MAX_OUTPUT_TOKENS', { infer: true }),
+    },
   );
 }

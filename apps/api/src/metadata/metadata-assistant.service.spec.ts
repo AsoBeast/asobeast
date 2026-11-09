@@ -4,7 +4,6 @@ import { AiGateway } from '../ai/ai-gateway.service';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { MetadataAssistantService } from './metadata-assistant.service';
-import { DRAFT_MAX_OUTPUT_TOKENS } from './metadata-drafts';
 import { MetadataService } from './metadata.service';
 
 const gateway = (ai: ReturnType<typeof buildAi>) => ai as unknown as AiGateway;
@@ -88,23 +87,6 @@ describe('MetadataAssistantService', () => {
     expect(spend).not.toHaveBeenCalled();
   });
 
-  it('gives a localized draft room to reason before it answers', async () => {
-    const spend = jest.fn().mockRejectedValue(new Error('stop'));
-
-    await expect(
-      appStoreService(spend).generate(
-        'app-1',
-        { localization: 'es-MX' },
-        'usr_1',
-      ),
-    ).rejects.toThrow('stop');
-    expect(spend).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ maxOutputTokens: DRAFT_MAX_OUTPUT_TOKENS }),
-    );
-    expect(DRAFT_MAX_OUTPUT_TOKENS).toBeGreaterThanOrEqual(4096);
-  });
-
   it('tells a localized draft the keyword field saved for its localization', async () => {
     const spend = jest.fn().mockRejectedValue(new Error('stop'));
 
@@ -129,7 +111,7 @@ describe('MetadataAssistantService', () => {
     expect(spend).toHaveBeenCalledTimes(1);
     expect(spend).toHaveBeenCalledWith(
       { feature: 'metadataDrafts', appId: 'app-1', userId: 'usr_1' },
-      expect.objectContaining({ maxOutputTokens: DRAFT_MAX_OUTPUT_TOKENS }),
+      expect.anything(),
     );
   });
 

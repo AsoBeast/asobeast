@@ -45,6 +45,7 @@ const config = (
     OPENAI_API_KEY: key,
     AI_MODEL: model,
     OPENAI_BASE_URL: baseUrl,
+    AI_MAX_OUTPUT_TOKENS: 8192,
   };
   return {
     get: (name: keyof Env) => values[name],
@@ -197,6 +198,17 @@ describe('createOpenAiClient', () => {
         image_url: { url: 'https://cdn/icon.png', detail: 'low' },
       },
     ]);
+  });
+
+  it('asks every request for the configured output ceiling', async () => {
+    mockCreate.mockResolvedValue(stop('{"ok":true}'));
+
+    await build().structured(request);
+
+    const [[payload]] = mockCreate.mock.calls as Array<
+      [{ max_completion_tokens: number }]
+    >;
+    expect(payload.max_completion_tokens).toBe(8192);
   });
 
   it('rejects a refusal', async () => {
